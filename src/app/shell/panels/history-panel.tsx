@@ -2,6 +2,8 @@ import { observer } from "mobx-react-lite";
 import type { AppHost } from "@/app/host/app-host";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { EditorHistoryRecord } from "@/domain/editor/editor-history";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
@@ -26,9 +28,9 @@ export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHos
   const isReady = history?.isReady ?? true;
 
   return (
-    <div className="history-panel stack">
-      <section className="placeholder-section history-actions-section">
-        <div className="placeholder-section-header">
+    <div className={cm(styles, "history-panel stack")}>
+      <section className={cm(styles, "placeholder-section history-actions-section")}>
+        <div className={cm(styles, "placeholder-section-header")}>
           <h3>{t("workbench.section.historyActions")}</h3>
           {/*
             AI-REMOVED 2026-05-10:
@@ -43,9 +45,9 @@ export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHos
             <span className="pill">{`${undoDepth}/${redoDepth}`}</span>
           */}
         </div>
-        <div className="history-action-grid">
+        <div className={cm(styles, "history-action-grid")}>
           <button
-            className="history-action-button"
+            className={cm(styles, "history-action-button")}
             data-ui-button-id="history-action-undo"
             disabled={!canUndo}
             onClick={() => {
@@ -54,13 +56,13 @@ export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHos
             title={t("workbench.button.undo")}
             type="button"
           >
-            <span aria-hidden="true" className="button-icon">
-              <WorkbenchIcon className="button-icon-image" kind="undo" />
+            <span aria-hidden="true" className={cm(styles, "button-icon")}>
+              <WorkbenchIcon className={cm(styles, "button-icon-image")} kind="undo" />
             </span>
-            <span className="history-action-label">{t("workbench.button.undo")}</span>
+            <span className={cm(styles, "history-action-label")}>{t("workbench.button.undo")}</span>
           </button>
           <button
-            className="history-action-button"
+            className={cm(styles, "history-action-button")}
             data-ui-button-id="history-action-redo"
             disabled={!canRedo}
             onClick={() => {
@@ -69,10 +71,10 @@ export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHos
             title={t("workbench.button.redo")}
             type="button"
           >
-            <span aria-hidden="true" className="button-icon">
-              <WorkbenchIcon className="button-icon-image" kind="redo" />
+            <span aria-hidden="true" className={cm(styles, "button-icon")}>
+              <WorkbenchIcon className={cm(styles, "button-icon-image")} kind="redo" />
             </span>
-            <span className="history-action-label">{t("workbench.button.redo")}</span>
+            <span className={cm(styles, "history-action-label")}>{t("workbench.button.redo")}</span>
           </button>
           {/*
             AI-REMOVED 2026-05-10:
@@ -98,8 +100,8 @@ export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHos
         </div>
       </section>
 
-      <section className="placeholder-section history-lane-section">
-        <div className="placeholder-section-header">
+      <section className={cm(styles, "placeholder-section history-lane-section")}>
+        <div className={cm(styles, "placeholder-section-header")}>
           <h3>{t("workbench.section.historyLane")}</h3>
           {/*
             AI-REMOVED 2026-05-10:
@@ -115,11 +117,11 @@ export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHos
           */}
         </div>
         {isReady && records.length === 0 ? (
-          <div className="history-empty-state">
+          <div className={cm(styles, "history-empty-state")}>
             <h3>{t("workbench.history.emptyTitle")}</h3>
           </div>
         ) : (
-          <div className="history-record-list">
+          <div className={cm(styles, "history-record-list")}>
             {records.map((record) => (
               <HistoryRecordButton
                 currentSequence={cursorSequence}
@@ -133,9 +135,9 @@ export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHos
             ))}
             {records.length > 0 ? (
               <button
-                className={cursorSequence === 0
+                className={cm(styles, cursorSequence === 0
                   ? "history-record-button is-current"
-                  : "history-record-button"}
+                  : "history-record-button")}
                 data-history-record-sequence="0"
                 disabled={editor === null || cursorSequence === 0}
                 onClick={() => {
@@ -143,9 +145,9 @@ export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHos
                 }}
                 type="button"
               >
-                <span className="history-record-main">
-                  <span className="history-record-sequence">#0</span>
-                  <span className="history-record-title">{t("workbench.history.initialState")}</span>
+                <span className={cm(styles, "history-record-main")}>
+                  <span className={cm(styles, "history-record-sequence")}>#0</span>
+                  <span className={cm(styles, "history-record-title")}>{t("workbench.history.initialState")}</span>
                 </span>
                 {/*
                   AI-REMOVED 2026-05-10:
@@ -192,17 +194,17 @@ function HistoryRecordButton({
 
   return (
     <button
-      className={isCurrent
+      className={cm(styles, isCurrent
         ? "history-record-button is-current"
-        : "history-record-button"}
+        : "history-record-button")}
       data-history-record-sequence={record.sequence}
       disabled={isCurrent}
       onClick={onRestore}
       type="button"
     >
-      <span className="history-record-main">
-        <span className="history-record-sequence">{`#${record.sequence}`}</span>
-        <span className="history-record-title">{record.action.label}</span>
+      <span className={cm(styles, "history-record-main")}>
+        <span className={cm(styles, "history-record-sequence")}>{`#${record.sequence}`}</span>
+        <span className={cm(styles, "history-record-title")}>{record.action.label}</span>
       </span>
       {/*
         AI-REMOVED 2026-05-10:

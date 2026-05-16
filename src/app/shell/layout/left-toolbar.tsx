@@ -5,6 +5,8 @@ import {
 } from "@/app/shell/shared/ui-shell-null-handlers";
 import type { AppHost } from "@/app/host/app-host";
 import type { ActivePanel } from "@/app/state/state-impl";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 // AI-REMOVED 2026-05-10:
 // Reason: 左侧删除模式按钮已废弃，不再注册到主工具栏。
@@ -102,8 +104,8 @@ export const LeftToolbar = observer(function LeftToolbar({
   });
 
   return (
-    <aside className="left-toolbar panel-surface">
-      <div className="toolbar-rail-group">
+    <aside className={cm(styles, "left-toolbar panel-surface")}>
+      <div className={cm(styles, "toolbar-rail-group")}>
         {PRIMARY_TOOLBAR_ITEMS.map((item) => {
           const label = t(item.labelKey);
           const isActive = leftDockOpen && activePanel === item.panel;
@@ -112,7 +114,7 @@ export const LeftToolbar = observer(function LeftToolbar({
             <button
               aria-label={label}
               aria-pressed={isActive}
-              className={isActive ? "rail-button is-active" : "rail-button"}
+              className={cm(styles, isActive ? "rail-button is-active" : "rail-button")}
               key={item.id}
               onClick={() => {
                 if (leftDockOpen && isActive) {
@@ -126,15 +128,15 @@ export const LeftToolbar = observer(function LeftToolbar({
               title={label}
               type="button"
             >
-              <span className="rail-button-short">
+              <span className={cm(styles, "rail-button-short")}>
                 <WorkbenchIcon kind={item.icon} />
               </span>
-              <span className="rail-button-label">{label}</span>
+              <span className={cm(styles, "rail-button-label")}>{label}</span>
             </button>
           );
         })}
       </div>
-      <div className="toolbar-rail-group toolbar-rail-utility">
+      <div className={cm(styles, "toolbar-rail-group toolbar-rail-utility")}>
         {utilityToolbarItems.map((item) => {
           const label = t(item.labelKey);
           const isDebugLogButton = item.id === "utility-debug-log";
@@ -155,18 +157,18 @@ export const LeftToolbar = observer(function LeftToolbar({
             <button
               aria-label={label}
               aria-pressed={isDebugLogButton || isToolboxButton || isHelpButton || isSettingsButton ? isActive : undefined}
-              className={isActive
+              className={cm(styles, isActive
                 ? "rail-button rail-button-utility is-active"
-                : "rail-button rail-button-utility"}
+                : "rail-button rail-button-utility")}
               key={item.id}
               onClick={handleClick}
               title={label}
               type="button"
             >
-              <span className="rail-button-short">
+              <span className={cm(styles, "rail-button-short")}>
                 <WorkbenchIcon kind={item.icon} />
               </span>
-              <span className="rail-button-label">{label}</span>
+              <span className={cm(styles, "rail-button-label")}>{label}</span>
             </button>
           );
         })}

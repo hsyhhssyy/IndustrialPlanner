@@ -9,6 +9,8 @@ import {
   WORKBENCH_SETTINGS_GROUPS,
   WorkbenchSettingsDialogController,
 } from "@/app/shell/state/settings-dialog-state";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 const SETTINGS_DIALOG_SECTION_SCROLL_OFFSET = 10;
 
@@ -128,14 +130,14 @@ export const SettingsDialog = observer(function SettingsDialog({
       titleId="settings-dialog-title"
     >
         <div
-          className={hideGroupSidebar
+          className={cm(styles, hideGroupSidebar
             ? "settings-dialog-layout settings-dialog-layout-single-pane"
-            : "settings-dialog-layout"}
+            : "settings-dialog-layout")}
         >
           {hideGroupSidebar ? null : (
-            <aside className="settings-dialog-sidebar">
-              <div className="settings-dialog-sidebar-title">{t("settingsDialog.groups")}</div>
-              <div aria-label={t("settingsDialog.groups")} className="settings-dialog-tree" role="tree">
+            <aside className={cm(styles, "settings-dialog-sidebar")}>
+              <div className={cm(styles, "settings-dialog-sidebar-title")}>{t("settingsDialog.groups")}</div>
+              <div aria-label={t("settingsDialog.groups")} className={cm(styles, "settings-dialog-tree")} role="tree">
                 {WORKBENCH_SETTINGS_GROUPS.map((group) => {
                   const isActive = group.id === selectedGroup.id;
 
@@ -143,9 +145,9 @@ export const SettingsDialog = observer(function SettingsDialog({
                     <button
                       aria-selected={isActive}
                       aria-controls={`settings-dialog-group-${group.id}`}
-                      className={isActive
+                      className={cm(styles, isActive
                         ? "settings-dialog-tree-button is-active"
-                        : "settings-dialog-tree-button"}
+                        : "settings-dialog-tree-button")}
                       key={group.id}
                       onClick={() => {
                         controller.selectGroup(group.id);
@@ -153,17 +155,17 @@ export const SettingsDialog = observer(function SettingsDialog({
                       role="treeitem"
                       type="button"
                     >
-                      <span className="settings-dialog-tree-label">{t(group.labelKey)}</span>
+                      <span className={cm(styles, "settings-dialog-tree-label")}>{t(group.labelKey)}</span>
                     </button>
                   );
                 })}
               </div>
             </aside>
           )}
-          <div className="settings-dialog-content" ref={contentRef}>
+          <div className={cm(styles, "settings-dialog-content")} ref={contentRef}>
             {WORKBENCH_SETTINGS_GROUPS.map((group) => (
               <section
-                className="settings-dialog-group-section"
+                className={cm(styles, "settings-dialog-group-section")}
                 id={`settings-dialog-group-${group.id}`}
                 key={group.id}
                 ref={(element) => {
@@ -176,11 +178,11 @@ export const SettingsDialog = observer(function SettingsDialog({
                   sectionRefs.current.set(group.id, element);
                 }}
               >
-                <div className="settings-dialog-group-header">
+                <div className={cm(styles, "settings-dialog-group-header")}>
                   <h3>{t(group.labelKey)}</h3>
                   <p>{t(group.descriptionKey)}</p>
                 </div>
-                <div className="settings-dialog-settings-list">
+                <div className={cm(styles, "settings-dialog-settings-list")}>
                   {group.items.map((setting) => {
                     const isEditable = controller.isSettingEditable(setting.id);
 
@@ -189,20 +191,18 @@ export const SettingsDialog = observer(function SettingsDialog({
                     return (
                       <article
                         aria-disabled={!isEditable}
-                        className={
-                          [
-                            "settings-dialog-setting-card",
-                            isEditable ? "" : "is-disabled",
-                            isKeybinding ? "is-keybinding" : "",
-                          ].filter(Boolean).join(" ")
-                        }
+                        className={cm(styles, [
+                          "settings-dialog-setting-card",
+                          isEditable ? "" : "is-disabled",
+                          isKeybinding ? "is-keybinding" : "",
+                        ].filter(Boolean).join(" "))}
                         key={setting.id}
                       >
-                        <div className="settings-dialog-setting-copy">
+                        <div className={cm(styles, "settings-dialog-setting-copy")}>
                           <h4>{resolveSettingLabel(setting, t)}</h4>
                           {!isKeybinding && <p>{resolveSettingDescription(setting, t)}</p>}
                         </div>
-                        <div className="settings-dialog-setting-control">
+                        <div className={cm(styles, "settings-dialog-setting-control")}>
                           {renderSettingControl({
                             controller,
                             setting,
@@ -286,7 +286,7 @@ function renderSettingControl(options: {
 
   if (setting.kind === "select") {
     return (
-      <label className="settings-dialog-field-shell" htmlFor={`setting-${setting.id}`}>
+      <label className={cm(styles, "settings-dialog-field-shell")} htmlFor={`setting-${setting.id}`}>
         <select
           disabled={!isEditable}
           id={`setting-${setting.id}`}
@@ -310,7 +310,7 @@ function renderSettingControl(options: {
     const numericValue = typeof value === "number" ? value : setting.defaultValue;
 
     return (
-      <label className="settings-dialog-slider-shell" htmlFor={`setting-${setting.id}`}>
+      <label className={cm(styles, "settings-dialog-slider-shell")} htmlFor={`setting-${setting.id}`}>
         <input
           disabled={!isEditable}
           id={`setting-${setting.id}`}
@@ -324,7 +324,7 @@ function renderSettingControl(options: {
           type="range"
           value={numericValue}
         />
-        <span className="settings-dialog-slider-value">{numericValue}%</span>
+        <span className={cm(styles, "settings-dialog-slider-value")}>{numericValue}%</span>
       </label>
     );
   }
@@ -338,9 +338,9 @@ function renderSettingControl(options: {
     return (
       <button
         aria-pressed={isCapturing}
-        className={isCapturing
+        className={cm(styles, isCapturing
           ? "settings-dialog-keybinding-button is-capturing"
-          : "settings-dialog-keybinding-button"}
+          : "settings-dialog-keybinding-button")}
         data-setting-id={setting.id}
         disabled={!isEditable}
         id={`setting-${setting.id}`}
@@ -368,9 +368,9 @@ function renderSettingControl(options: {
 
   return (
     <label
-      className={isEditable
+      className={cm(styles, isEditable
         ? "settings-dialog-switch-shell"
-        : "settings-dialog-switch-shell is-disabled"}
+        : "settings-dialog-switch-shell is-disabled")}
       htmlFor={`setting-${setting.id}`}
     >
       <input
@@ -383,10 +383,10 @@ function renderSettingControl(options: {
         }}
         type="checkbox"
       />
-      <span className="settings-dialog-switch-track" aria-hidden="true">
-        <span className="settings-dialog-switch-thumb" />
+      <span className={cm(styles, "settings-dialog-switch-track")} aria-hidden="true">
+        <span className={cm(styles, "settings-dialog-switch-thumb")} />
       </span>
-      <span className="settings-dialog-switch-label">
+      <span className={cm(styles, "settings-dialog-switch-label")}>
         {t(checked ? "settingsOption.enabled" : "settingsOption.disabled")}
       </span>
     </label>

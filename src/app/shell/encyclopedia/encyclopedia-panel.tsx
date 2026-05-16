@@ -19,6 +19,8 @@ import {
   resolveItemIcon,
   resolveItemName,
 } from "@/app/shell/encyclopedia/encyclopedia-browser";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -70,7 +72,7 @@ function Breadcrumb({
   t: (key: string) => string;
 }) {
   if (stack.length === 0) {
-    return <span className="encyclopedia-breadcrumb-current">{t("encyclopedia.home")}</span>;
+    return <span className={cm(styles, "encyclopedia-breadcrumb-current")}>{t("encyclopedia.home")}</span>;
   }
 
   const chips = stack.map((entry, i) => {
@@ -80,30 +82,30 @@ function Breadcrumb({
     const isLast = i === stack.length - 1;
 
     return (
-      <span key={`${entry.type}-${entry.id}`} className="encyclopedia-breadcrumb-segment">
+      <span key={`${entry.type}-${entry.id}`} className={cm(styles, "encyclopedia-breadcrumb-segment")}>
         <button
           type="button"
-          className={`encyclopedia-breadcrumb-link${isLast ? " is-active" : ""}`}
+          className={cm(styles, `encyclopedia-breadcrumb-link${isLast ? " is-active" : ""}`)}
           onClick={() => onNavigate(i)}
           disabled={isLast}
         >
           {label}
         </button>
-        {!isLast && <span className="encyclopedia-breadcrumb-sep">/</span>}
+        {!isLast && <span className={cm(styles, "encyclopedia-breadcrumb-sep")}>/</span>}
       </span>
     );
   });
 
   return (
-    <div className={`encyclopedia-breadcrumb${isTouch ? " is-touch" : ""}`}>
+    <div className={cm(styles, `encyclopedia-breadcrumb${isTouch ? " is-touch" : ""}`)}>
       <button
         type="button"
-        className="encyclopedia-breadcrumb-link is-home"
+        className={cm(styles, "encyclopedia-breadcrumb-link is-home")}
         onClick={() => onNavigate(-1)}
       >
         {t("encyclopedia.home")}
       </button>
-      <span className="encyclopedia-breadcrumb-sep">/</span>
+      <span className={cm(styles, "encyclopedia-breadcrumb-sep")}>/</span>
       {chips}
     </div>
   );
@@ -133,18 +135,18 @@ function RecipeGroup({
   const sorted = [...recipes].sort((a, b) => a.durationSeconds - b.durationSeconds);
 
   return (
-    <section className="encyclopedia-recipe-group">
+    <section className={cm(styles, "encyclopedia-recipe-group")}>
       <button
         type="button"
-        className="encyclopedia-recipe-group-header"
+        className={cm(styles, "encyclopedia-recipe-group-header")}
         onClick={onToggle}
       >
-        <span className="encyclopedia-recipe-group-arrow">{isExpanded ? "▾" : "▸"}</span>
-        <span className="encyclopedia-recipe-group-title">{title}</span>
-        <span className="encyclopedia-recipe-group-count">({sorted.length})</span>
+        <span className={cm(styles, "encyclopedia-recipe-group-arrow")}>{isExpanded ? "▾" : "▸"}</span>
+        <span className={cm(styles, "encyclopedia-recipe-group-title")}>{title}</span>
+        <span className={cm(styles, "encyclopedia-recipe-group-count")}>({sorted.length})</span>
       </button>
       {isExpanded && (
-        <div className="encyclopedia-recipe-list">
+        <div className={cm(styles, "encyclopedia-recipe-list")}>
           {sorted.map((recipe) => (
             <RecipeCard
               key={recipe.id}
@@ -177,66 +179,66 @@ function RecipeCard({
   const maxRows = Math.max(recipe.inputs.length, recipe.outputs.length);
 
   return (
-    <article className="encyclopedia-recipe-card definition-card">
-      <div className="encyclopedia-recipe-table">
+    <article className={cm(styles, "encyclopedia-recipe-card definition-card")}>
+      <div className={cm(styles, "encyclopedia-recipe-table")}>
         {/* Input column */}
-        <div className="encyclopedia-recipe-col is-input">
+        <div className={cm(styles, "encyclopedia-recipe-col is-input")}>
           {Array.from({ length: maxRows }).map((_, i) => {
             const input = recipe.inputs[i];
-            if (!input) return <div key={`in-empty-${i}`} className="encyclopedia-recipe-row is-empty" />;
+            if (!input) return <div key={`in-empty-${i}`} className={cm(styles, "encyclopedia-recipe-row is-empty")} />;
             return (
               <button
                 key={`in-${input.itemId}`}
                 type="button"
-                className="encyclopedia-recipe-row"
+                className={cm(styles, "encyclopedia-recipe-row")}
                 onClick={() => onItemClick(input.itemId)}
               >
-                <img alt="" className="encyclopedia-recipe-item-icon" src={resolveItemIcon(input.itemId, index)} />
-                <span className="encyclopedia-recipe-item-name">{resolveItemName(input.itemId, index, t)}</span>
-                <span className="encyclopedia-recipe-item-amount">×{input.amount}</span>
+                <img alt="" className={cm(styles, "encyclopedia-recipe-item-icon")} src={resolveItemIcon(input.itemId, index)} />
+                <span className={cm(styles, "encyclopedia-recipe-item-name")}>{resolveItemName(input.itemId, index, t)}</span>
+                <span className={cm(styles, "encyclopedia-recipe-item-amount")}>×{input.amount}</span>
               </button>
             );
           })}
         </div>
 
         {/* Arrow */}
-        <div className="encyclopedia-recipe-arrow-col">
-          <span className="encyclopedia-recipe-arrow">→</span>
+        <div className={cm(styles, "encyclopedia-recipe-arrow-col")}>
+          <span className={cm(styles, "encyclopedia-recipe-arrow")}>→</span>
         </div>
 
         {/* Output column */}
-        <div className="encyclopedia-recipe-col is-output">
+        <div className={cm(styles, "encyclopedia-recipe-col is-output")}>
           {Array.from({ length: maxRows }).map((_, i) => {
             const output = recipe.outputs[i];
-            if (!output) return <div key={`out-empty-${i}`} className="encyclopedia-recipe-row is-empty" />;
+            if (!output) return <div key={`out-empty-${i}`} className={cm(styles, "encyclopedia-recipe-row is-empty")} />;
             return (
               <button
                 key={`out-${output.itemId}`}
                 type="button"
-                className="encyclopedia-recipe-row"
+                className={cm(styles, "encyclopedia-recipe-row")}
                 onClick={() => onItemClick(output.itemId)}
               >
-                <img alt="" className="encyclopedia-recipe-item-icon" src={resolveItemIcon(output.itemId, index)} />
-                <span className="encyclopedia-recipe-item-name">{resolveItemName(output.itemId, index, t)}</span>
-                <span className="encyclopedia-recipe-item-amount">×{output.amount}</span>
+                <img alt="" className={cm(styles, "encyclopedia-recipe-item-icon")} src={resolveItemIcon(output.itemId, index)} />
+                <span className={cm(styles, "encyclopedia-recipe-item-name")}>{resolveItemName(output.itemId, index, t)}</span>
+                <span className={cm(styles, "encyclopedia-recipe-item-amount")}>×{output.amount}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="encyclopedia-recipe-footer">
+      <div className={cm(styles, "encyclopedia-recipe-footer")}>
         <button
           type="button"
-          className="encyclopedia-recipe-machine"
+          className={cm(styles, "encyclopedia-recipe-machine")}
           onClick={() => onEntityClick(recipe.machineId)}
         >
-          <img alt="" className="encyclopedia-recipe-machine-icon" src={resolveEntityIcon(recipe.machineId)} />
-          <span className="encyclopedia-recipe-machine-name">
+          <img alt="" className={cm(styles, "encyclopedia-recipe-machine-icon")} src={resolveEntityIcon(recipe.machineId)} />
+          <span className={cm(styles, "encyclopedia-recipe-machine-name")}>
             {t(index.entityById.get(recipe.machineId)?.nameKey ?? recipe.machineId)}
           </span>
         </button>
-        <span className="encyclopedia-recipe-duration">{recipe.durationSeconds}s</span>
+        <span className={cm(styles, "encyclopedia-recipe-duration")}>{recipe.durationSeconds}s</span>
       </div>
     </article>
   );
@@ -313,30 +315,30 @@ function DetailView({
   );
 
   return (
-    <div className="encyclopedia-detail">
-      <div className="encyclopedia-detail-header">
+    <div className={cm(styles, "encyclopedia-detail")}>
+      <div className={cm(styles, "encyclopedia-detail-header")}>
         {isTouch && (
           <button
             type="button"
-            className="encyclopedia-back-button"
+            className={cm(styles, "encyclopedia-back-button")}
             onClick={onBack}
           >
             ← {t("encyclopedia.back")}
           </button>
         )}
-        <img alt="" className="encyclopedia-detail-icon" src={iconSrc} />
-        <div className="encyclopedia-detail-info">
-          <h3 className="encyclopedia-detail-name">{name}</h3>
+        <img alt="" className={cm(styles, "encyclopedia-detail-icon")} src={iconSrc} />
+        <div className={cm(styles, "encyclopedia-detail-info")}>
+          <h3 className={cm(styles, "encyclopedia-detail-name")}>{name}</h3>
           {isItem && (
-            <span className="encyclopedia-detail-kind">{t("encyclopedia.itemLabel")}</span>
+            <span className={cm(styles, "encyclopedia-detail-kind")}>{t("encyclopedia.itemLabel")}</span>
           )}
           {!isItem && (
-            <span className="encyclopedia-detail-kind">{t("encyclopedia.entityLabel")}</span>
+            <span className={cm(styles, "encyclopedia-detail-kind")}>{t("encyclopedia.entityLabel")}</span>
           )}
           {tags.length > 0 && (
-            <div className="encyclopedia-detail-tags">
+            <div className={cm(styles, "encyclopedia-detail-tags")}>
               {tags.map((tag) => (
-                <span key={tag} className="encyclopedia-tag">{tag}</span>
+                <span key={tag} className={cm(styles, "encyclopedia-tag")}>{tag}</span>
               ))}
             </div>
           )}
@@ -399,7 +401,7 @@ function DetailView({
         && liquidFillingRecipes.length === 0
         && liquidDismantleRecipes.length === 0
         && asMachineRecipes.length === 0 && (
-        <p className="encyclopedia-empty">{t("encyclopedia.noRecipes")}</p>
+        <p className={cm(styles, "encyclopedia-empty")}>{t("encyclopedia.noRecipes")}</p>
       )}
     </div>
   );
@@ -502,7 +504,7 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
   // --- Render: Detail View ---
   if (currentEntry) {
     return (
-      <div className={`encyclopedia-panel${isTouch ? " is-touch" : ""}`}>
+      <div className={cm(styles, `encyclopedia-panel${isTouch ? " is-touch" : ""}`)}>
         <Breadcrumb
           stack={navStack}
           index={index}

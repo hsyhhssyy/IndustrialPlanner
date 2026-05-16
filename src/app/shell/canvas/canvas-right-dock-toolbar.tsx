@@ -11,6 +11,8 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 type CanvasRightDockToolbarIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
 type CanvasRightDockToolbarTone = "exit";
@@ -122,7 +124,7 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
   return (
     <div
       aria-label={t("toolbar.canvasRightDock")}
-      className="canvas-right-dock-toolbar"
+      className={cm(styles, "canvas-right-dock-toolbar")}
       onAuxClick={stopUiPropagationAndDefault}
       onClick={stopUiPropagation}
       onContextMenu={stopUiPropagationAndDefault}
@@ -139,10 +141,10 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
         return (
           <button
             aria-label={label}
-            className={joinClassNames([
+            className={cm(styles, joinClassNames([
               "canvas-right-dock-toolbar-button",
               definition.tone ? `is-${definition.tone}` : undefined,
-            ])}
+            ]))}
             data-ui-button-id={buttonId}
             key={buttonId}
             onClick={stopUiPropagation}
@@ -155,8 +157,8 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
             }}
             type="button"
           >
-            <WorkbenchIcon className="canvas-right-dock-toolbar-icon" kind={definition.icon} />
-            <span className="canvas-right-dock-toolbar-label">{label}</span>
+            <WorkbenchIcon className={cm(styles, "canvas-right-dock-toolbar-icon")} kind={definition.icon} />
+            <span className={cm(styles, "canvas-right-dock-toolbar-label")}>{label}</span>
           </button>
         );
       })}

@@ -9,6 +9,8 @@ import LucideEdit3 from "~icons/lucide/edit-3";
 import LucideFileText from "~icons/lucide/file-text";
 import LucideFolder from "~icons/lucide/folder";
 import LucideFolderPlus from "~icons/lucide/folder-plus";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 interface BlueprintDirectoryBrowserProps {
   readonly translate: (key: string) => string;
@@ -180,25 +182,25 @@ export function BlueprintDirectoryBrowser({
   };
 
   return (
-    <div className="blueprint-library-pane" role="tabpanel">
-      <div className="blueprint-browser-toolbar" style={toolbarStyle}>
-        <div className="blueprint-breadcrumb" style={breadcrumbStyle}>
+    <div className={cm(styles, "blueprint-library-pane")} role="tabpanel">
+      <div className={cm(styles, "blueprint-browser-toolbar")} style={toolbarStyle}>
+        <div className={cm(styles, "blueprint-breadcrumb")} style={breadcrumbStyle}>
           {currentFolder === null ? null : (
             <button
               aria-label={translate("workbench.blueprint.rootFolder")}
-              className="blueprint-utility-button blueprint-back-button"
+              className={cm(styles, "blueprint-utility-button blueprint-back-button")}
               data-ui-button-id="blueprint-folder-back"
               onClick={onBack}
               style={navigationButtonStyle}
               type="button"
             >
-              <LucideChevronLeft className="button-icon-image" />
+              <LucideChevronLeft className={cm(styles, "button-icon-image")} />
             </button>
           )}
           {}
           <span
             aria-label={breadcrumbPath.fullLabel}
-            className="blueprint-path-label"
+            className={cm(styles, "blueprint-path-label")}
             style={pathLabelStyle}
             title={breadcrumbPath.fullLabel}
           >
@@ -208,15 +210,15 @@ export function BlueprintDirectoryBrowser({
         {libraryDescriptor.canCreateFolders ? (
           <button
             aria-label={createFolderLabel}
-            className="blueprint-utility-button blueprint-create-button"
+            className={cm(styles, "blueprint-utility-button blueprint-create-button")}
             data-ui-button-id="blueprint-folder-create-toggle"
             onClick={onToggleCreateFolder}
             style={createButtonStyle}
             title={createFolderLabel}
             type="button"
           >
-            <LucideFolderPlus className="button-icon-image" />
-            {isTouchLayout ? null : <span className="blueprint-create-button-label">{createFolderButtonLabel}</span>}
+            <LucideFolderPlus className={cm(styles, "button-icon-image")} />
+            {isTouchLayout ? null : <span className={cm(styles, "blueprint-create-button-label")}>{createFolderButtonLabel}</span>}
           </button>
         ) : null}
       </div>
@@ -226,56 +228,56 @@ export function BlueprintDirectoryBrowser({
       {}
 
       {errorMessage === null ? null : (
-        <p className="blueprint-panel-error" role="alert">{errorMessage}</p>
+        <p className={cm(styles, "blueprint-panel-error")} role="alert">{errorMessage}</p>
       )}
 
-      {isLoading ? <p className="blueprint-panel-note">{translate("workbench.blueprint.loading")}</p> : null}
+      {isLoading ? <p className={cm(styles, "blueprint-panel-note")}>{translate("workbench.blueprint.loading")}</p> : null}
 
       {!hasEntries && !isLoading ? (
-        <section className="placeholder-section blueprint-empty-state">
-          <div className="placeholder-section-header">
+        <section className={cm(styles, "placeholder-section blueprint-empty-state")}>
+          <div className={cm(styles, "placeholder-section-header")}>
             <h3>{translate(libraryDescriptor.emptyStateTitleKey)}</h3>
-            <span className="pill">0</span>
+            <span className={cm(styles, "pill")}>0</span>
           </div>
           <p>{translate(libraryDescriptor.emptyStateDescriptionKey)}</p>
         </section>
       ) : null}
 
       {hasEntries ? (
-        <div className="blueprint-browser-list">
+        <div className={cm(styles, "blueprint-browser-list")}>
           {directoryListing.folders.map((folder) => {
             const folderEntryButton = (
               <button
-                className="blueprint-entry-button blueprint-folder-entry-button"
+                className={cm(styles, "blueprint-entry-button blueprint-folder-entry-button")}
                 data-blueprint-folder-id={folder.folderId}
                 onClick={() => {
                   onOpenFolder(folder);
                 }}
                 type="button"
               >
-                <span aria-hidden="true" className="button-icon blueprint-entry-icon">
-                  <LucideFolder className="button-icon-image" />
+                <span aria-hidden="true" className={cm(styles, "button-icon blueprint-entry-icon")}>
+                  <LucideFolder className={cm(styles, "button-icon-image")} />
                 </span>
-                <span className="blueprint-entry-copy">
-                  <span className="blueprint-entry-title">{folder.name}</span>
+                <span className={cm(styles, "blueprint-entry-copy")}>
+                  <span className={cm(styles, "blueprint-entry-title")}>{folder.name}</span>
                 </span>
               </button>
             );
 
             if (!libraryDescriptor.canCreateFolders) {
               return (
-                <div className="blueprint-entry-row blueprint-folder-entry-row" key={folder.folderId}>
+                <div className={cm(styles, "blueprint-entry-row blueprint-folder-entry-row")} key={folder.folderId}>
                   {folderEntryButton}
                 </div>
               );
             }
 
             return (
-              <div className="blueprint-entry-row blueprint-folder-entry-row" key={folder.folderId}>
+              <div className={cm(styles, "blueprint-entry-row blueprint-folder-entry-row")} key={folder.folderId}>
                 {folderEntryButton}
                 <button
                   aria-label={translate("workbench.blueprint.editFolderAction")}
-                  className="blueprint-utility-button is-secondary blueprint-folder-edit-button"
+                  className={cm(styles, "blueprint-utility-button is-secondary blueprint-folder-edit-button")}
                   data-blueprint-folder-edit-id={folder.folderId}
                   onClick={() => {
                     onEditFolder(folder);
@@ -283,7 +285,7 @@ export function BlueprintDirectoryBrowser({
                   title={translate("workbench.blueprint.editFolderAction")}
                   type="button"
                 >
-                  <LucideEdit3 className="button-icon-image" />
+                  <LucideEdit3 className={cm(styles, "button-icon-image")} />
                 </button>
               </div>
             );
@@ -295,9 +297,9 @@ export function BlueprintDirectoryBrowser({
             return (
               <button
                 aria-pressed={isSelected ? true : undefined}
-                className={isSelected
+                className={cm(styles, isSelected
                   ? "blueprint-entry-button blueprint-blueprint-entry-button is-selected"
-                  : "blueprint-entry-button blueprint-blueprint-entry-button"}
+                  : "blueprint-entry-button blueprint-blueprint-entry-button")}
                 data-blueprint-id={record.blueprintId}
                 key={record.blueprintId}
                 onClick={() => {
@@ -305,13 +307,13 @@ export function BlueprintDirectoryBrowser({
                 }}
                 type="button"
               >
-                <span aria-hidden="true" className="button-icon blueprint-entry-icon">
-                  <LucideFileText className="button-icon-image" />
+                <span aria-hidden="true" className={cm(styles, "button-icon blueprint-entry-icon")}>
+                  <LucideFileText className={cm(styles, "button-icon-image")} />
                 </span>
-                <span className="blueprint-entry-copy">
-                  <span className="blueprint-entry-title">{record.name}</span>
+                <span className={cm(styles, "blueprint-entry-copy")}>
+                  <span className={cm(styles, "blueprint-entry-title")}>{record.name}</span>
                   {record.description.length > 0 ? (
-                    <span className="blueprint-entry-description">{record.description}</span>
+                    <span className={cm(styles, "blueprint-entry-description")}>{record.description}</span>
                   ) : null}
                 </span>
               </button>

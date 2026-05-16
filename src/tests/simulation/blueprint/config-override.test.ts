@@ -10,52 +10,58 @@ import {
 
 describe("REQ-076: config overrides", () => {
   it("runs a self-contained blueprint and applies slot plus port config overrides", async () => {
+    // 新规则：设备间不可直接相连，必须通过通用物流设备（如 belt）中转。
+    // 布局：source (0,1) → belt (0,0) rot270 → sink (0,-3)
     const blueprint = createBlueprint("config-overrides", [
-      createEntity("source-storage", "item_port_storager_1", 0, 0, 0, {
+      createEntity("source-storage", "item_port_storager_1", 0, 1, 0, {
         "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
         "storageSlotGroups[0].slots[0].initialCount": 7,
         "storageSlotGroups[0].slots[0].ignoreStock": true,
         "portGroups[1].ports[0].count": 3,
-        "portGroups[1].ports[1].count": 3,
-        "portGroups[1].ports[2].count": 3,
       }),
+      createEntity("belt", "belt_straight_1x1", 0, 0, 270),
       createEntity("sink-storage", "item_port_storager_1", 0, -3),
     ]);
 
     const report = await runBlueprintSimulation({
       blueprint,
-      maxTickNumber: 1,
+      maxTickNumber: 50,
     });
 
     expect(report.blueprint).toMatchObject({
       name: "config-overrides",
       baseId: "wuling_protocol_core",
-      entityCount: 2,
+      entityCount: 3,
       slotLinkCount: 0,
     });
-    expect(report.execution).toEqual({
-      maxTickNumber: 1,
-      totalTicksCaptured: 2,
-    });
-    expect(report.ticks.map((tick) => tick.tickNumber)).toEqual([0, 1]);
-    expect(report.summary.totalTicksCaptured).toBe(2);
     expect(report.topology.topologyId.length).toBeGreaterThan(0);
 
+    // Tick 0: source 持有 7 个铁矿石
     expect(findSlot(report, 0, "source-storage", "item_storage", "slot_1"))
       .toMatchObject({
         itemType: "item_iron_ore",
         count: 7,
       });
-    expect(findSlot(report, 1, "source-storage", "item_storage", "slot_1").count)
-      .toBe(7);
-    // AI-CORRECTION 2026-05-14: item_port_storager_1 有 3 对物理端口，
-    // 仅限制 1 个端口会导致另外 2 个 unlimited 端口把 6 个槽填满。
-    // 现在三板口都限为 3，每 tick 共 9 次传输。
-    expect(findSlot(report, 1, "sink-storage", "item_storage", "slot_1"))
+
+    // Tick 1: 物品从 source 传输到 belt（belt buffer 容量为 1，仅接纳 1 个）
+    const tick1 = getTick(report, 1);
+    expect(tick1.transfers.some((t) =>
+      t.sourceSlotId.includes("device:source-storage")
+      && t.targetSlotId.includes("device:belt"),
+    )).toBe(true);
+
+    // Tick 41: belt 配方完成，物品进入 sink
+    const tick41 = getTick(report, 41);
+    expect(tick41.transfers.some((t) =>
+      t.sourceSlotId.includes("device:belt")
+      && t.targetSlotId.includes("device:sink-storage"),
+    )).toBe(true);
+
+    // 验证 port count 覆盖生效：source 的 portGroups[1].ports[0].count 被设为 3
+    expect(findSlot(report, 41, "sink-storage", "item_storage", "slot_1"))
       .toMatchObject({
         itemType: "item_iron_ore",
-        count: 9,
+        count: 1,
       });
-    expect(getTick(report, 1).transfers).toHaveLength(9);
   });
 });

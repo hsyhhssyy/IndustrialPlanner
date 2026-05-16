@@ -11,6 +11,8 @@ import {
   deleteBlueprintFolder,
   renameBlueprintFolder,
 } from "@/shared/storage/blueprint-storage";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -226,10 +228,10 @@ export const BlueprintFolderDialog = observer(function BlueprintFolderDialog({
       title={folderDialogTitle}
       titleId="blueprint-folder-dialog-title"
     >
-      <div className="save-blueprint-dialog-content">
+      <div className={cm(styles, "save-blueprint-dialog-content")}>
         {isEditMode ? (
           <form
-            className="save-blueprint-form"
+            className={cm(styles, "save-blueprint-form")}
             onSubmit={(event) => {
               event.preventDefault();
 
@@ -241,12 +243,12 @@ export const BlueprintFolderDialog = observer(function BlueprintFolderDialog({
               void handleRenameSubmit();
             }}
           >
-            <div className="save-blueprint-form-content">
-              <label className="save-blueprint-field">
-                <span className="save-blueprint-label">{t("workbench.blueprint.folderNameLabel")}</span>
+            <div className={cm(styles, "save-blueprint-form-content")}>
+              <label className={cm(styles, "save-blueprint-field")}>
+                <span className={cm(styles, "save-blueprint-label")}>{t("workbench.blueprint.folderNameLabel")}</span>
                 <input
                   autoFocus
-                  className="save-blueprint-input"
+                  className={cm(styles, "save-blueprint-input")}
                   data-blueprint-folder-input
                   disabled={isSubmitting || isDeleteConfirming}
                   onChange={(event) => {
@@ -261,20 +263,20 @@ export const BlueprintFolderDialog = observer(function BlueprintFolderDialog({
                 />
               </label>
               {isDeleteConfirming ? (
-                <p className="blueprint-folder-dialog-note">{t("workbench.blueprint.folderDeleteDescription")}</p>
+                <p className={cm(styles, "blueprint-folder-dialog-note")}>{t("workbench.blueprint.folderDeleteDescription")}</p>
               ) : null}
               {errorMessage === null ? null : (
-                <p className="save-blueprint-error" role="alert">{errorMessage}</p>
+                <p className={cm(styles, "save-blueprint-error")} role="alert">{errorMessage}</p>
               )}
             </div>
-            <div className={isDeleteConfirming
+            <div className={cm(styles, isDeleteConfirming
               ? "save-blueprint-actions"
-              : "save-blueprint-actions is-triple-action"}
+              : "save-blueprint-actions is-triple-action")}
             >
               {isDeleteConfirming ? (
                 <>
                   <button
-                    className="save-blueprint-secondary-button"
+                    className={cm(styles, "save-blueprint-secondary-button")}
                     data-ui-button-id="blueprint-folder-delete-cancel-confirm"
                     disabled={isSubmitting}
                     onClick={() => {
@@ -286,7 +288,7 @@ export const BlueprintFolderDialog = observer(function BlueprintFolderDialog({
                     {t("workbench.blueprint.deleteFolderCancel")}
                   </button>
                   <button
-                    className="save-blueprint-primary-button blueprint-folder-danger-button is-confirm"
+                    className={cm(styles, "save-blueprint-primary-button blueprint-folder-danger-button is-confirm")}
                     data-ui-button-id="blueprint-folder-delete-confirm"
                     disabled={isSubmitting}
                     type="submit"
@@ -297,7 +299,7 @@ export const BlueprintFolderDialog = observer(function BlueprintFolderDialog({
               ) : (
                 <>
                   <button
-                    className="save-blueprint-secondary-button"
+                    className={cm(styles, "save-blueprint-secondary-button")}
                     data-ui-button-id="blueprint-folder-edit-cancel"
                     disabled={isSubmitting}
                     onClick={handleClose}
@@ -306,7 +308,7 @@ export const BlueprintFolderDialog = observer(function BlueprintFolderDialog({
                     {t("workbench.blueprint.cancel")}
                   </button>
                   <button
-                    className="save-blueprint-secondary-button blueprint-folder-danger-button"
+                    className={cm(styles, "save-blueprint-secondary-button blueprint-folder-danger-button")}
                     data-ui-button-id="blueprint-folder-delete-trigger"
                     disabled={isSubmitting}
                     onClick={() => {
@@ -317,7 +319,7 @@ export const BlueprintFolderDialog = observer(function BlueprintFolderDialog({
                     {t("workbench.blueprint.deleteFolder")}
                   </button>
                   <button
-                    className="save-blueprint-primary-button"
+                    className={cm(styles, "save-blueprint-primary-button")}
                     data-ui-button-id="blueprint-folder-edit-submit"
                     disabled={isSubmitting}
                     type="submit"

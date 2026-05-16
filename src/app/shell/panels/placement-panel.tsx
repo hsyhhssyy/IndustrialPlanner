@@ -12,6 +12,8 @@ import {
   type PlacementOperationButtonDefinition,
 } from "@/app/shell/panels/placement-operation-buttons";
 import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
 
@@ -192,7 +194,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
       <button
         aria-label={buttonLabel}
         aria-pressed={button.activeWhen ? isActive : undefined}
-        className={className}
+        className={cm(styles, className)}
         data-ui-button-id={button.uiButtonId}
         key={button.uiButtonId}
         onPointerDown={handleButtonPointerDown}
@@ -202,42 +204,42 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
         title={buttonLabel}
         type="button"
       >
-        <span className="button-icon" aria-hidden="true">
-          {button.icon ? <WorkbenchIcon className="button-icon-image" kind={button.icon} /> : null}
-          {button.iconSrc ? <img alt="" className="button-icon-image" src={button.iconSrc} /> : null}
+        <span className={cm(styles, "button-icon")} aria-hidden="true">
+          {button.icon ? <WorkbenchIcon className={cm(styles, "button-icon-image")} kind={button.icon} /> : null}
+          {button.iconSrc ? <img alt="" className={cm(styles, "button-icon-image")} src={button.iconSrc} /> : null}
         </span>
-        {isTouchLayout ? null : <span className="placement-button-label">{buttonLabel}</span>}
+        {isTouchLayout ? null : <span className={cm(styles, "placement-button-label")}>{buttonLabel}</span>}
         {!isTouchLayout && showShortcutHints && hotkey ? (
-          <span className="placement-button-hotkey">{hotkey}</span>
+          <span className={cm(styles, "placement-button-hotkey")}>{hotkey}</span>
         ) : null}
       </button>
     );
   };
 
   return (
-    <div className="placement-panel">
+    <div className={cm(styles, "placement-panel")}>
       <section
         aria-label={isTouchLayout ? t("workbench.section.operation") : undefined}
         aria-labelledby={isTouchLayout ? undefined : "placement-operation-section"}
-        className={isTouchLayout
+        className={cm(styles, isTouchLayout
           ? "placement-panel-group placement-panel-group-operation is-mobile-layout"
-          : "placement-panel-group placement-panel-group-operation"}
+          : "placement-panel-group placement-panel-group-operation")}
       >
         {isTouchLayout ? null : (
-          <div className="placement-panel-group-header">
+          <div className={cm(styles, "placement-panel-group-header")}>
             <h3 id="placement-operation-section">{t("workbench.section.operation")}</h3>
           </div>
         )}
         <div
-          className={isTouchLayout
+          className={cm(styles, isTouchLayout
             ? "placement-operation-button-list is-mobile-icon-grid"
-            : "placement-button-list placement-operation-button-list"}
+            : "placement-button-list placement-operation-button-list")}
         >
           {visibleOperationButtons.map((button) => renderOperationButton(button))}
         </div>
       </section>
 
-      <div aria-hidden="true" className="placement-panel-divider" />
+      <div aria-hidden="true" className={cm(styles, "placement-panel-divider")} />
 
       {deviceSections.map((section, sectionIndex) => {
         const sectionTitleId = `placement-device-section-${sectionIndex}`;
@@ -251,20 +253,20 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
 
         return (
           <Fragment key={section.titleKey}>
-            {sectionIndex > 0 ? <div aria-hidden="true" className="placement-panel-divider" /> : null}
+            {sectionIndex > 0 ? <div aria-hidden="true" className={cm(styles, "placement-panel-divider")} /> : null}
             <section
               aria-labelledby={sectionTitleId}
-              className={isPlacementGroupActive
+              className={cm(styles, isPlacementGroupActive
                 ? "placement-panel-group is-placement-group-active"
-                : "placement-panel-group"}
+                : "placement-panel-group")}
             >
-              <div className="placement-panel-group-header">
+              <div className={cm(styles, "placement-panel-group-header")}>
                 <h3 id={sectionTitleId}>{t(section.titleKey)}</h3>
                 {showShortcutHints && section.shortcutKey ? (
-                  <span className="placement-panel-group-shortcut">{section.shortcutKey}</span>
+                  <span className={cm(styles, "placement-panel-group-shortcut")}>{section.shortcutKey}</span>
                 ) : null}
               </div>
-              <div className={isTouchLayout ? "placement-button-list is-single-column" : "placement-button-list"}>
+              <div className={cm(styles, isTouchLayout ? "placement-button-list is-single-column" : "placement-button-list")}>
                 {section.buttons.map((button, buttonIndex) => {
                   const hotkey = button.hotkey
                     ?? (button.hotkeyKeyId
@@ -281,7 +283,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                   return (
                     <button
                       aria-pressed={isActive ? isActive : undefined}
-                      className={className}
+                      className={cm(styles, className)}
                       data-ui-button-id={button.uiButtonId}
                       key={button.uiButtonId}
                       onPointerDown={handleButtonPointerDown}
@@ -290,11 +292,11 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                       }}
                       type="button"
                     >
-                      <span className="button-icon" aria-hidden="true">
-                        <img alt="" className="button-icon-image" src={resolveDeviceIconPath(deviceId)} />
+                      <span className={cm(styles, "button-icon")} aria-hidden="true">
+                        <img alt="" className={cm(styles, "button-icon-image")} src={resolveDeviceIconPath(deviceId)} />
                       </span>
-                      <span className="placement-button-label">{t(button.labelKey)}</span>
-                      {showDeviceHotkey ? <span className="placement-button-hotkey">{hotkey}</span> : null}
+                      <span className={cm(styles, "placement-button-label")}>{t(button.labelKey)}</span>
+                      {showDeviceHotkey ? <span className={cm(styles, "placement-button-hotkey")}>{hotkey}</span> : null}
                       
                     </button>
                   );

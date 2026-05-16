@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import { createAppHost } from "@/app/host/app-host";
-import "@/styles.css";
+import "@/styles/global.scss";
 import { createRegistryContract } from "./registry";
 import { WorkspaceContract } from "./domain/document/workspace-contract";
 import { createWorkspaceState } from "./domain/document/workspace-state";

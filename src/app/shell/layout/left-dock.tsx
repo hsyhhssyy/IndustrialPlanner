@@ -11,6 +11,8 @@ import {
   type ActivePanel,
 } from "@/app/state/state-impl";
 import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 // AI-REMOVED 2026-05-10:
 // Reason: 左侧删除面板已废弃，不再注册到左侧 dock。
@@ -103,17 +105,17 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
   };
 
   return (
-    <div className="dock-shell-left">
-      <aside className="dock dock-left panel-surface">
-        <section className="dock-section">
+    <div className={cm(styles, "dock-shell-left")}>
+      <aside className={cm(styles, "dock dock-left panel-surface")}>
+        <section className={cm(styles, "dock-section")}>
           {isTouchLayout ? null : (
-            <div className="section-header">
-              <div className="section-header-copy">
+            <div className={cm(styles, "section-header")}>
+              <div className={cm(styles, "section-header-copy")}>
                 <h2>{currentPanelLabel}</h2>
               </div>
             </div>
           )}
-          <div className="section-body">
+          <div className={cm(styles, "section-body")}>
               {PANEL_ORDER.map((panelId) => {
                 const PanelComponent = PANEL_COMPONENTS[panelId];
                 const isActive = panelId === activePanel;
@@ -121,7 +123,7 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
                 return (
                   <div
                     aria-hidden={!isActive}
-                    className={isActive ? "left-dock-panel is-active" : "left-dock-panel"}
+                    className={cm(styles, isActive ? "left-dock-panel is-active" : "left-dock-panel")}
                     data-panel-id={panelId}
                     hidden={!isActive}
                     key={panelId}
@@ -133,7 +135,7 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
           </div>
         </section>
       </aside>
-      {isTouchLayout ? null : <div className="dock-resize-handle" onMouseDown={handleResizeStart} />}
+      {isTouchLayout ? null : <div className={cm(styles, "dock-resize-handle")} onMouseDown={handleResizeStart} />}
     </div>
   );
 });

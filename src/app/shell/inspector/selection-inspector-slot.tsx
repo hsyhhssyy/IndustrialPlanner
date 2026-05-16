@@ -13,6 +13,8 @@ import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation
 import { SimulationRuntimeInspector } from "./simulation-runtime-inspector";
 import { SlotConfigInspector } from "./slot-config-inspector";
 import { WarehouseItemLinkInspector } from "./warehouse-item-link-inspector";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 const INSPECTOR_SLOT_INTERVAL_MS = 50;
 
@@ -53,7 +55,7 @@ function EmptyInspector({
   declaration: EntityInspectorDeclaration;
 }) {
   return (
-    <article className="definition-card" data-inspector-key={declaration.type}>
+    <article className={cm(styles, "definition-card")} data-inspector-key={declaration.type}>
       <h4>{INSPECTOR_LABELS[declaration.type] ?? declaration.type}</h4>
       <p>该配置当前不可用。</p>
     </article>
@@ -188,15 +190,15 @@ export function SelectionInspectorSlot({
 
   return (
     <div
-      className="cluster"
+      className={cm(styles, "cluster")}
       data-selected-definition-id={slotState.selectedDefinition.id}
       data-selected-entity-id={slotState.selectedEntity.id}
       data-selection-inspector-slot
     >
-      <div className="card-header card-subheader">
+      <div className={cm(styles, "card-header card-subheader")}>
         <h4>{translate("section.runtimeDetails")}</h4>
       </div>
-      <div className="definition-list">
+      <div className={cm(styles, "definition-list")}>
         {slotState.showSimulationRuntimeInspector ? (
           <SimulationRuntimeInspector
             runtimeStatus={slotState.simulationRuntimeStatus}
@@ -216,10 +218,10 @@ export function SelectionInspectorSlot({
           </div>
         ))}
         {slotState.debugEntityJson !== null ? (
-          <article className="definition-card" data-inspector-key="json-debug">
+          <article className={cm(styles, "definition-card")} data-inspector-key="json-debug">
             <h4>JSON Debug</h4>
             <textarea
-              className="json-debug-textarea"
+              className={cm(styles, "json-debug-textarea")}
               readOnly
               value={slotState.debugEntityJson}
               rows={20}

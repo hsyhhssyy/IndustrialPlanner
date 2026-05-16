@@ -22,6 +22,8 @@ import {
   readBlueprintFolder,
   saveBlueprintDocument,
 } from "@/shared/storage/blueprint-storage";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 const DEFAULT_SAVE_BLUEPRINT_PREVIEW_VIEWPORT: BlueprintPreviewViewport = {
   zoom: 1,
@@ -539,26 +541,26 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
       title={dialogTitle}
       titleId="save-blueprint-dialog-title"
     >
-      <div className="save-blueprint-dialog-content">
-        <div className="save-blueprint-layout">
-          <section className="save-blueprint-preview-pane" aria-label={copy.previewTitle}>
-            <div className="blueprint-preview-canvas-shell save-blueprint-preview-canvas-shell">
+      <div className={cm(styles, "save-blueprint-dialog-content")}>
+        <div className={cm(styles, "save-blueprint-layout")}>
+          <section className={cm(styles, "save-blueprint-preview-pane")} aria-label={copy.previewTitle}>
+            <div className={cm(styles, "blueprint-preview-canvas-shell save-blueprint-preview-canvas-shell")}>
               {previewBlueprint === null || renderHost === null ? (
-                <div className="save-blueprint-preview-empty">{copy.previewUnavailable}</div>
+                <div className={cm(styles, "save-blueprint-preview-empty")}>{copy.previewUnavailable}</div>
               ) : (
-                <div className="blueprint-preview-canvas save-blueprint-preview-canvas" ref={previewCanvasHostRef} />
+                <div className={cm(styles, "blueprint-preview-canvas save-blueprint-preview-canvas")} ref={previewCanvasHostRef} />
               )}
             </div>
           </section>
-          <form className="save-blueprint-form" onSubmit={(event) => {
+          <form className={cm(styles, "save-blueprint-form")} onSubmit={(event) => {
             void handleSubmit(event);
           }}>
-            <div className="save-blueprint-form-content">
-              <label className="save-blueprint-field">
-                <span className="save-blueprint-label">{copy.nameLabel}</span>
+            <div className={cm(styles, "save-blueprint-form-content")}>
+              <label className={cm(styles, "save-blueprint-field")}>
+                <span className={cm(styles, "save-blueprint-label")}>{copy.nameLabel}</span>
                 <input
                   autoFocus
-                  className="save-blueprint-input"
+                  className={cm(styles, "save-blueprint-input")}
                   disabled={isSaving}
                   maxLength={120}
                   onChange={(event) => {
@@ -572,10 +574,10 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
                   value={name}
                 />
               </label>
-              <label className="save-blueprint-field save-blueprint-field-description">
-                <span className="save-blueprint-label">{copy.descriptionLabel}</span>
+              <label className={cm(styles, "save-blueprint-field save-blueprint-field-description")}>
+                <span className={cm(styles, "save-blueprint-label")}>{copy.descriptionLabel}</span>
                 <textarea
-                  className="save-blueprint-textarea"
+                  className={cm(styles, "save-blueprint-textarea")}
                   disabled={isSaving}
                   maxLength={500}
                   onChange={(event) => {
@@ -586,14 +588,14 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
                   value={description}
                 />
               </label>
-              <section className="save-blueprint-field save-blueprint-folder-field" aria-label={copy.folderLabel}>
-                <span className="save-blueprint-label">{copy.folderLabel}</span>
-                <div className="save-blueprint-folder-picker-card">
-                  <div className="blueprint-preview-folder-picker-toolbar save-blueprint-folder-picker-toolbar">
+              <section className={cm(styles, "save-blueprint-field save-blueprint-folder-field")} aria-label={copy.folderLabel}>
+                <span className={cm(styles, "save-blueprint-label")}>{copy.folderLabel}</span>
+                <div className={cm(styles, "save-blueprint-folder-picker-card")}>
+                  <div className={cm(styles, "blueprint-preview-folder-picker-toolbar save-blueprint-folder-picker-toolbar")}>
                     {currentFolder === null ? null : (
                       <button
                         aria-label={copy.folderBack}
-                        className="blueprint-utility-button blueprint-preview-folder-picker-back-button"
+                        className={cm(styles, "blueprint-utility-button blueprint-preview-folder-picker-back-button")}
                         data-ui-button-id="save-blueprint-folder-back-button"
                         disabled={isFolderLoading || isSaving}
                         onClick={() => {
@@ -602,11 +604,11 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
                         }}
                         type="button"
                       >
-                        <LucideChevronLeft className="button-icon-image" />
+                        <LucideChevronLeft className={cm(styles, "button-icon-image")} />
                       </button>
                     )}
                     <span
-                      className="blueprint-preview-folder-picker-path"
+                      className={cm(styles, "blueprint-preview-folder-picker-path")}
                       data-save-blueprint-folder-breadcrumb
                       title={folderPath.fullLabel}
                     >
@@ -614,17 +616,17 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
                     </span>
                   </div>
                   {folderErrorMessage === null ? null : (
-                    <p className="save-blueprint-error" role="alert">{folderErrorMessage}</p>
+                    <p className={cm(styles, "save-blueprint-error")} role="alert">{folderErrorMessage}</p>
                   )}
                   {isFolderLoading ? (
-                    <p className="blueprint-preview-footnote">{copy.folderLoading}</p>
+                    <p className={cm(styles, "blueprint-preview-footnote")}>{copy.folderLoading}</p>
                   ) : directoryListing.folders.length === 0 ? (
-                    <p className="blueprint-preview-footnote">{copy.folderEmpty}</p>
+                    <p className={cm(styles, "blueprint-preview-footnote")}>{copy.folderEmpty}</p>
                   ) : (
-                    <div className="blueprint-preview-folder-picker-list save-blueprint-folder-picker-list">
+                    <div className={cm(styles, "blueprint-preview-folder-picker-list save-blueprint-folder-picker-list")}>
                       {directoryListing.folders.map((folder) => (
                         <button
-                          className="save-blueprint-secondary-button blueprint-preview-folder-picker-entry"
+                          className={cm(styles, "save-blueprint-secondary-button blueprint-preview-folder-picker-entry")}
                           data-save-blueprint-folder-id={folder.folderId}
                           key={folder.folderId}
                           onClick={() => {
@@ -634,10 +636,10 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
                           title={folder.name}
                           type="button"
                         >
-                          <span aria-hidden="true" className="button-icon blueprint-preview-folder-picker-entry-icon">
-                            <LucideFolder className="button-icon-image" />
+                          <span aria-hidden="true" className={cm(styles, "button-icon blueprint-preview-folder-picker-entry-icon")}>
+                            <LucideFolder className={cm(styles, "button-icon-image")} />
                           </span>
-                          <span className="blueprint-preview-folder-picker-entry-label">{folder.name}</span>
+                          <span className={cm(styles, "blueprint-preview-folder-picker-entry-label")}>{folder.name}</span>
                         </button>
                       ))}
                     </div>
@@ -645,12 +647,12 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
                 </div>
               </section>
               {errorMessage === null ? null : (
-                <p className="save-blueprint-error" role="alert">{errorMessage}</p>
+                <p className={cm(styles, "save-blueprint-error")} role="alert">{errorMessage}</p>
               )}
             </div>
-            <div className="save-blueprint-actions">
+            <div className={cm(styles, "save-blueprint-actions")}>
               <button
-                className="save-blueprint-secondary-button"
+                className={cm(styles, "save-blueprint-secondary-button")}
                 disabled={isSaving}
                 onClick={handleClose}
                 type="button"
@@ -658,7 +660,7 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
                 {copy.cancel}
               </button>
               <button
-                className="save-blueprint-primary-button"
+                className={cm(styles, "save-blueprint-primary-button")}
                 disabled={!canSubmit}
                 type="submit"
               >

@@ -53,6 +53,8 @@ import {
   isTouchLandscapeScreenProfile,
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 function isAppThemeId(value: unknown): value is AppThemeId {
   return value === "ayu-light" || value === "ayu-dark";
@@ -523,7 +525,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
 
   return (
     <div
-      className="workbench"
+      className={cm(styles, "workbench")}
       onAuxClick={preventNativeBrowserEvent}
       onContextMenu={preventNativeBrowserEvent}
       onDragStart={preventNativeBrowserEvent}
@@ -532,40 +534,40 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     >
       <TopBar appHost={appHost} />
       {showFloatingTopBarControls ? (
-        <div className="workbench-floating-top-bar-controls">
+        <div className={cm(styles, "workbench-floating-top-bar-controls")}>
           <SimulationControlButton
             appHost={appHost}
-            className="workbench-floating-top-bar-button"
+            className={cm(styles, "workbench-floating-top-bar-button")}
           />
           <FullscreenToggleButton
             appHost={appHost}
-            className="workbench-floating-top-bar-button workbench-floating-fullscreen-button"
+            className={cm(styles, "workbench-floating-top-bar-button workbench-floating-fullscreen-button")}
           />
           {useInspectorPanel && !rightDockOpen ? (
             <button
               aria-label={floatingOpenRightDockLabel}
-              className="workbench-floating-top-bar-button workbench-floating-right-dock-button"
+              className={cm(styles, "workbench-floating-top-bar-button workbench-floating-right-dock-button")}
               onClick={appHost.internalActions.toggleRightDock}
               title={floatingOpenRightDockLabel}
               type="button"
             >
-              <span className="top-bar-toggle-icon">
+              <span className={cm(styles, "top-bar-toggle-icon")}>
                 <WorkbenchIcon kind="panel-right-open" />
               </span>
-              <span className="sr-only">{floatingOpenRightDockLabel}</span>
+              <span className={cm(styles, "sr-only")}>{floatingOpenRightDockLabel}</span>
             </button>
           ) : null}
           <button
             aria-label={`${t("action.expand")} ${t("topBar.controls")}`}
-            className="workbench-floating-top-bar-button workbench-floating-top-bar-toggle"
+            className={cm(styles, "workbench-floating-top-bar-button workbench-floating-top-bar-toggle")}
             onClick={appHost.internalActions.toggleTopBarCollapsed}
             title={`${t("action.expand")} ${t("topBar.controls")}`}
             type="button"
           >
-            <span className="top-bar-toggle-icon">
+            <span className={cm(styles, "top-bar-toggle-icon")}>
               <WorkbenchIcon kind="panel-top-open" />
             </span>
-            <span className="sr-only">{`${t("action.expand")} ${t("topBar.controls")}`}</span>
+            <span className={cm(styles, "sr-only")}>{`${t("action.expand")} ${t("topBar.controls")}`}</span>
           </button>
         </div>
       ) : null}

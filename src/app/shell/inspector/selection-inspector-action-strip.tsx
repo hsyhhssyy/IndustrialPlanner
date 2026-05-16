@@ -3,6 +3,8 @@ import { observer } from "mobx-react-lite";
 import type { AppHost } from "@/app/host/app-host";
 import { CanvasFloatingToolbarButtonStrip } from "@/app/shell/shared/canvas-floating-toolbar-button-strip";
 import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 const SELECTION_ACTION_BUTTON_IDS = [
   "canvas-floating-toolbar-button-move",
@@ -51,21 +53,21 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
   return (
     <section
       aria-label={locale === "zh-CN" ? "选中操作" : "Selection Actions"}
-      className="selection-inspector-action-group"
+      className={cm(styles, "selection-inspector-action-group")}
       data-selection-action-strip
     >
       <div
-        className="selection-inspector-action-button-list"
+        className={cm(styles, "selection-inspector-action-button-list")}
         style={{
           gridTemplateColumns: `repeat(${buttonIds.length}, minmax(0, 1fr))`,
         }}
       >
         <CanvasFloatingToolbarButtonStrip
           appHost={appHost}
-          buttonClassName="selection-inspector-action-button"
+          buttonClassName={cm(styles, "selection-inspector-action-button")}
           buttonIds={buttonIds}
-          iconClassName="selection-inspector-action-icon"
-          labelClassName="selection-inspector-action-label"
+          iconClassName={cm(styles, "selection-inspector-action-icon")}
+          labelClassName={cm(styles, "selection-inspector-action-label")}
           showLabels
         />
       </div>

@@ -10,6 +10,8 @@ import { observer } from "mobx-react-lite";
 
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 export interface DialogShellTab {
   id: string;
@@ -294,7 +296,7 @@ export const DialogShell = observer(function DialogShell({
 
   return (
     <div
-      className={backdropClassName}
+      className={cm(styles, backdropClassName)}
       onMouseDown={(event) => {
         if (event.target !== event.currentTarget) {
           return;
@@ -306,15 +308,15 @@ export const DialogShell = observer(function DialogShell({
       <section
         aria-labelledby={titleId}
         aria-modal="true"
-        className={shellClassName}
+        className={cm(styles, shellClassName)}
         data-dialog-key={dialogKey}
         ref={shellRef}
         role="dialog"
         style={resolvedShellStyle}
       >
-        <header className={headerClassName} onPointerDown={handleHeaderPointerDown}>
-          <div className={headerMainClassName}>
-            <div className={["dialog-shell-header-copy", `${classPrefix}-header-copy`].join(" ")}>
+        <header className={cm(styles, headerClassName)} onPointerDown={handleHeaderPointerDown}>
+          <div className={cm(styles, headerMainClassName)}>
+            <div className={cm(styles, "dialog-shell-header-copy", `${classPrefix}-header-copy`)}>
               <h2 id={titleId}>{title}</h2>
             </div>
             {/* AI-CORRECTION 2026-05-09:
@@ -323,10 +325,10 @@ export const DialogShell = observer(function DialogShell({
             */}
             {tabs.length > 0 ? (
               <div
-                className={["dialog-shell-tab-strip", `${classPrefix}-tab-strip`].join(" ")}
+                className={cm(styles, "dialog-shell-tab-strip", `${classPrefix}-tab-strip`)}
                 data-dialog-shell-no-drag
               >
-                <div aria-label={title} className={["dialog-shell-tab-list", `${classPrefix}-tab-list`].join(" ")} role="tablist">
+                <div aria-label={title} className={cm(styles, "dialog-shell-tab-list", `${classPrefix}-tab-list`)} role="tablist">
                   {tabs.map((tab) => {
                     const isActive = activeTab?.id === tab.id;
 
@@ -334,9 +336,7 @@ export const DialogShell = observer(function DialogShell({
                       <button
                         aria-controls={`${dialogKey}-dialog-panel-${tab.id}`}
                         aria-selected={isActive}
-                        className={isActive
-                          ? `dialog-shell-tab ${classPrefix}-tab is-active`
-                          : `dialog-shell-tab ${classPrefix}-tab`}
+                        className={cm(styles, "dialog-shell-tab", `${classPrefix}-tab`, isActive ? "is-active" : undefined)}
                         id={`${dialogKey}-dialog-tab-${tab.id}`}
                         key={tab.id}
                         onClick={() => {
@@ -352,43 +352,43 @@ export const DialogShell = observer(function DialogShell({
                 </div>
               </div>
             ) : null}
-            <div className={["dialog-shell-header-actions", `${classPrefix}-header-actions`].join(" ")}>
+            <div className={cm(styles, "dialog-shell-header-actions", `${classPrefix}-header-actions`)}>
               {showMaximizeButton ? (
                 <button
                   aria-label={maximizeButtonTitle}
-                  className={`dialog-shell-header-button ${classPrefix}-header-button`}
+                  className={cm(styles, "dialog-shell-header-button", `${classPrefix}-header-button`)}
                   onClick={onToggleMaximized}
                   title={maximizeButtonTitle}
                   type="button"
                 >
-                  <span className="top-bar-toggle-icon">
+                  <span className={cm(styles, "top-bar-toggle-icon")}>
                     <WorkbenchIcon kind={dialogState.maximized ? "shrink" : "expand"} />
                   </span>
-                  <span className="sr-only">{maximizeButtonTitle}</span>
+                  <span className={cm(styles, "sr-only")}>{maximizeButtonTitle}</span>
                 </button>
               ) : null}
               <button
                 aria-label={closeTitle}
-                className={`dialog-shell-header-button ${classPrefix}-header-button ${classPrefix}-close`}
+                className={cm(styles, "dialog-shell-header-button", `${classPrefix}-header-button`, `${classPrefix}-close`)}
                 onClick={onClose}
                 title={closeTitle}
                 type="button"
               >
-                <span className="top-bar-toggle-icon">
+                <span className={cm(styles, "top-bar-toggle-icon")}>
                   <WorkbenchIcon kind="cancel" />
                 </span>
-                <span className="sr-only">{closeTitle}</span>
+                <span className={cm(styles, "sr-only")}>{closeTitle}</span>
               </button>
             </div>
           </div>
           {}
         </header>
         {}
-        <div className={bodyClassNames}>
+        <div className={cm(styles, bodyClassNames)}>
           {activeTab === null ? children : (
             <section
               aria-labelledby={`${dialogKey}-dialog-tab-${activeTab.id}`}
-              className="dialog-shell-tab-panel"
+              className={cm(styles, "dialog-shell-tab-panel")}
               id={`${dialogKey}-dialog-panel-${activeTab.id}`}
               role="tabpanel"
             >
@@ -398,7 +398,7 @@ export const DialogShell = observer(function DialogShell({
         </div>
         {isResizable ? (
           <div
-            className="dialog-shell-resize-grip"
+            className={cm(styles, "dialog-shell-resize-grip")}
             onPointerDown={handleResizePointerDown}
           />
         ) : null}

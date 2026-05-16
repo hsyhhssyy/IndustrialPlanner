@@ -1,0 +1,130 @@
+:root {
+  font-family:
+    "Segoe UI",
+    "PingFang SC",
+    "Microsoft YaHei",
+    "IBM Plex Sans",
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  background: var(--shell-bg);
+  color: var(--text-0);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  background: var(--shell-bg);
+  color: var(--text-0);
+}
+
+body,
+#root,
+.workbench,
+.section-body,
+.canvas-stage {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+body ::-webkit-scrollbar,
+#root ::-webkit-scrollbar,
+.workbench ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+body ::-webkit-scrollbar-track,
+#root ::-webkit-scrollbar-track,
+.workbench ::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+body ::-webkit-scrollbar-thumb,
+#root ::-webkit-scrollbar-thumb,
+.workbench ::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border: 2px solid var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+body ::-webkit-scrollbar-thumb:hover,
+#root ::-webkit-scrollbar-thumb:hover,
+.workbench ::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  border: 1px solid var(--line);
+  background: var(--surface-3);
+  color: var(--text-0);
+  border-radius: 6px;
+  padding: 0.34rem 0.6rem;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    transform 120ms ease;
+}
+
+button:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-4);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  background: var(--surface-3);
+  border-color: var(--line);
+}
+
+button.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent-strong);
+  color: var(--text-0);
+  box-shadow: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+

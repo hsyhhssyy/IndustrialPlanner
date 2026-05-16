@@ -8,19 +8,19 @@ import {
 
 const BLUEPRINT_PATH = "public/blueprints/premium-capsule-line.json";
 const STORAGER_ID = "legacy_429609a4_0158";
-const WARMUP_TICKS = 180;
-const WINDOW_SIZE = 120;
-const OBSERVATION_TICKS = 360; // 滑动窗口持续观察的 tick 数
+const WARMUP_TICKS = 1800;
+const WINDOW_SIZE = 1800; // 1 分钟 = 1800 tick，对应期望产出 6 个
+const OBSERVATION_TICKS = 5400; // 滑动窗口持续观察 3 分钟
 const TARGET_OUTPUT_PER_WINDOW = 6;
 
-// 该测试需从磁盘读取大型蓝图文件并运行 540 tick 仿真，耗时较长。
+// 该测试需从磁盘读取大型蓝图文件并运行 7200 tick 仿真，耗时较长。
 // 默认跳过，设置 HEAVY=1 环境变量后才会执行。
 const runHeavy = process.env.HEAVY === "1";
 
 describe.skipIf(!runHeavy)("REQ-076: premium capsule line production", () => {
-  it("经过 180 tick 预热后，滑动 120-tick 窗口内平均产出 >= 6 个精选胶囊，持续 360 tick 无误", async () => {
+  it("经过 1800 tick 预热后，滑动 1800-tick（1分钟）窗口内平均产出 >= 6 个精选胶囊，持续 5400 tick（3分钟）无误", { timeout: 120_000 }, async () => {
     const blueprint = loadBlueprintFromFile(BLUEPRINT_PATH);
-    const maxTick = WARMUP_TICKS + OBSERVATION_TICKS; // 540
+    const maxTick = WARMUP_TICKS + OBSERVATION_TICKS; // 7200
 
     const report = await runBlueprintSimulation({
       blueprint,
@@ -38,15 +38,15 @@ describe.skipIf(!runHeavy)("REQ-076: premium capsule line production", () => {
       storagerItemCounts.push(totalItems);
     }
 
-    // 滑动窗口验证：从 tick 180 开始，每个 120-tick 窗口产出 >= TARGET_OUTPUT_PER_WINDOW
+    // 滑动窗口验证：从 tick 1800 开始，每个 1800-tick（1分钟）窗口产出 >= TARGET_OUTPUT_PER_WINDOW
     const slidingWindowStartMin = WARMUP_TICKS;
-    const slidingWindowStartMax = maxTick - WINDOW_SIZE + 1; // 421
+    const slidingWindowStartMax = maxTick - WINDOW_SIZE + 1; // 5401
     const results: { windowStart: number; produced: number }[] = [];
 
     for (let windowStart = slidingWindowStartMin; windowStart <= slidingWindowStartMax; windowStart++) {
       const windowEnd = windowStart + WINDOW_SIZE - 1; // 窗口最后一个 tick
       const beforeWindow = windowStart - 1;
-      const produced = storagerItemCounts[windowEnd] - storagerItemCounts[beforeWindow];
+      const produced = storagerItemCounts[windowEnd]! - storagerItemCounts[beforeWindow]!;
 
       results.push({ windowStart, produced });
 
@@ -57,7 +57,7 @@ describe.skipIf(!runHeavy)("REQ-076: premium capsule line production", () => {
     }
 
     // 额外验证：总体产出趋势合理
-    const totalProduced = storagerItemCounts[maxTick] - storagerItemCounts[WARMUP_TICKS - 1];
+    const totalProduced = storagerItemCounts[maxTick]! - storagerItemCounts[WARMUP_TICKS - 1]!;
     const expectedMinTotal = (OBSERVATION_TICKS / WINDOW_SIZE) * TARGET_OUTPUT_PER_WINDOW;
     expect(totalProduced).toBeGreaterThanOrEqual(expectedMinTotal);
 

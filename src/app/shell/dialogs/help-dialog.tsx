@@ -3,6 +3,8 @@ import { observer } from "mobx-react-lite";
 import type { AppHost } from "@/app/host/app-host";
 import { DialogShell, type DialogShellTab } from "@/app/shell/shared/dialog-shell";
 import { HELP_DIALOG_TAB_IDS, type HelpDialogTabId } from "@/app/state/state-impl";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -40,8 +42,8 @@ export const HelpDialog = observer(function HelpDialog({ appHost }: { appHost: A
     id: tab.id,
     label: t(tab.labelKey),
     content: (
-      <div className="help-dialog-content">
-        <div className="help-dialog-placeholder">
+      <div className={cm(styles, "help-dialog-content")}>
+        <div className={cm(styles, "help-dialog-placeholder")}>
           <h3>{t(tab.labelKey)}</h3>
           <p>{t("helpDialog.empty")}</p>
         </div>

@@ -1,3 +1,5 @@
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 interface BlueprintFolderFormProps {
   readonly translate: (key: string) => string;
   readonly value: string;
@@ -19,18 +21,18 @@ export function BlueprintFolderForm({
 }: BlueprintFolderFormProps) {
   return (
     <form
-      className="save-blueprint-form"
+      className={cm(styles, "save-blueprint-form")}
       onSubmit={(event) => {
         event.preventDefault();
         void onSubmit();
       }}
     >
-      <div className="save-blueprint-form-content">
-        <label className="save-blueprint-field">
-          <span className="save-blueprint-label">{translate("workbench.blueprint.createFolder")}</span>
+      <div className={cm(styles, "save-blueprint-form-content")}>
+        <label className={cm(styles, "save-blueprint-field")}>
+          <span className={cm(styles, "save-blueprint-label")}>{translate("workbench.blueprint.createFolder")}</span>
           <input
             autoFocus
-            className="save-blueprint-input"
+            className={cm(styles, "save-blueprint-input")}
             data-blueprint-folder-input
             disabled={isCreatingFolder}
             onChange={(event) => {
@@ -42,12 +44,12 @@ export function BlueprintFolderForm({
           />
         </label>
         {errorMessage === null ? null : (
-          <p className="save-blueprint-error" role="alert">{errorMessage}</p>
+          <p className={cm(styles, "save-blueprint-error")} role="alert">{errorMessage}</p>
         )}
       </div>
-      <div className="save-blueprint-actions">
+      <div className={cm(styles, "save-blueprint-actions")}>
         <button
-          className="save-blueprint-secondary-button"
+          className={cm(styles, "save-blueprint-secondary-button")}
           data-ui-button-id="blueprint-folder-create-cancel"
           disabled={isCreatingFolder}
           onClick={onCancel}
@@ -56,7 +58,7 @@ export function BlueprintFolderForm({
           {translate("workbench.blueprint.cancel")}
         </button>
         <button
-          className="save-blueprint-primary-button"
+          className={cm(styles, "save-blueprint-primary-button")}
           data-ui-button-id="blueprint-folder-create-submit"
           disabled={isCreatingFolder}
           type="submit"

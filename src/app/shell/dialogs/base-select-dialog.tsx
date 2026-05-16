@@ -6,6 +6,8 @@ import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import type { EditorBaseDocumentSummary } from "@/domain/editor/editor-document";
 import type { BaseDefinition } from "@/domain/registry/types/base-definition";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -170,12 +172,12 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
       title={copy.title}
       titleId="base-select-dialog-title"
     >
-      <div className="base-select-dialog-content">
-        <div className="base-select-group-list">
+      <div className={cm(styles, "base-select-dialog-content")}>
+        <div className={cm(styles, "base-select-group-list")}>
           {groupedBases.map((group) => (
-            <section className="base-select-group" key={group.tag}>
+            <section className={cm(styles, "base-select-group")} key={group.tag}>
               <h3>{group.tag}</h3>
-              <div className="base-select-option-list">
+              <div className={cm(styles, "base-select-option-list")}>
                 {group.bases.map((baseDefinition) => {
                   const summary = summaryByBaseId.get(baseDefinition.id);
                   const selected = selectedBaseId === baseDefinition.id;
@@ -183,7 +185,7 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
                   return (
                     <button
                       aria-pressed={selected}
-                      className={selected ? "base-select-option is-selected" : "base-select-option"}
+                      className={cm(styles, selected ? "base-select-option is-selected" : "base-select-option")}
                       data-base-id={baseDefinition.id}
                       disabled={isSubmitting}
                       key={baseDefinition.id}
@@ -193,9 +195,9 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
                       }}
                       type="button"
                     >
-                      <span className="base-select-option-main">
-                        <span className="base-select-option-name">{baseDefinition.name}</span>
-                        <span className="base-select-option-meta">
+                      <span className={cm(styles, "base-select-option-main")}>
+                        <span className={cm(styles, "base-select-option-name")}>{baseDefinition.name}</span>
+                        <span className={cm(styles, "base-select-option-meta")}>
                           {formatBaseSummary(copy, locale, summary)}
                         </span>
                       </span>
@@ -206,12 +208,12 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
             </section>
           ))}
         </div>
-        <div className="base-select-actions">
-          <div className="base-select-status" role={errorMessage === null ? undefined : "alert"}>
+        <div className={cm(styles, "base-select-actions")}>
+          <div className={cm(styles, "base-select-status")} role={errorMessage === null ? undefined : "alert"}>
             {errorMessage ?? (isLoading ? copy.loading : "")}
           </div>
           <button
-            className="save-blueprint-secondary-button"
+            className={cm(styles, "save-blueprint-secondary-button")}
             disabled={isSubmitting}
             onClick={handleClose}
             type="button"
@@ -219,7 +221,7 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
             {copy.cancel}
           </button>
           <button
-            className="save-blueprint-primary-button"
+            className={cm(styles, "save-blueprint-primary-button")}
             disabled={isSubmitting || selectedBaseId === null}
             onClick={() => {
               void handleConfirm();

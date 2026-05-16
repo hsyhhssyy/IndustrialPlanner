@@ -7,6 +7,8 @@ import {
   getDebugLogSnapshot,
   subscribeDebugLogSnapshot,
 } from "@/shared/logging/debug-log-store";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -82,9 +84,9 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
       title={t("debugLogDialog.title")}
       titleId="debug-log-dialog-title"
     >
-      <div className="debug-log-dialog-toolbar">
+      <div className={cm(styles, "debug-log-dialog-toolbar")}>
         <button
-          className="global-dialog-btn"
+          className={cm(styles, "global-dialog-btn")}
           disabled={snapshot.text.length === 0}
           onClick={() => void handleCopy()}
           type="button"
@@ -94,7 +96,7 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
       </div>
       <textarea
         aria-label={t("debugLogDialog.title")}
-        className="json-debug-textarea debug-log-dialog-textarea"
+        className={cm(styles, "json-debug-textarea debug-log-dialog-textarea")}
         placeholder={t("debugLogDialog.empty")}
         readOnly
         ref={textareaRef}

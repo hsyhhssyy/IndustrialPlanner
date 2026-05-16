@@ -46,6 +46,8 @@ import {
   type ModuleBalancingItemBalance,
   type ModuleBalancingWarehouseForecast,
 } from "@/app/shell/module-balancing/module-balancing-model";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 const MODULE_DRAG_TYPE = "application/x-industrial-planner-module-balancing-module";
 const ENTRY_DRAG_TYPE = "application/x-industrial-planner-module-balancing-entry";
@@ -325,8 +327,8 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     }
 
     return (
-      <div className="module-balancing-toolbar">
-        <label className="module-balancing-field is-select">
+      <div className={cm(styles, "module-balancing-toolbar")}>
+        <label className={cm(styles, "module-balancing-field is-select")}>
           <span>{t("moduleBalancing.canvas")}</span>
           <select
             value={activeCanvas.id}
@@ -343,7 +345,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             ))}
           </select>
         </label>
-        <label className="module-balancing-field is-name">
+        <label className={cm(styles, "module-balancing-field is-name")}>
           <span>{t("moduleBalancing.canvasPlaceholder")}</span>
           <input
             value={activeCanvas.name}
@@ -356,7 +358,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           />
         </label>
         <button
-          className="module-balancing-icon-text-button"
+          className={cm(styles, "module-balancing-icon-text-button")}
           type="button"
           onClick={() => {
             const nextCanvas = createDefaultModuleBalancingCanvas();
@@ -379,7 +381,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
         </button>
         <button
           aria-label={t("moduleBalancing.deleteCanvas")}
-          className="module-balancing-icon-button"
+          className={cm(styles, "module-balancing-icon-button")}
           disabled={balancingState.canvases.length <= 1}
           title={t("moduleBalancing.deleteCanvas")}
           type="button"
@@ -397,7 +399,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
         >
           <LucideTrash2 aria-hidden="true" />
         </button>
-        <label className="module-balancing-field is-capacity">
+        <label className={cm(styles, "module-balancing-field is-capacity")}>
           <span>{t("moduleBalancing.warehouseCapacity")}</span>
           <input
             min="0"
@@ -419,8 +421,8 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
 
   if (activeCanvas === null || computation === null) {
     return (
-      <div className="toolbox-dialog-content module-balancing-panel">
-        <div className="toolbox-dialog-placeholder">
+      <div className={cm(styles, "toolbox-dialog-content module-balancing-panel")}>
+        <div className={cm(styles, "toolbox-dialog-placeholder")}>
           <h3>{t("toolboxDialog.tab.moduleBalancing")}</h3>
           <p>{t("toolboxDialog.empty")}</p>
         </div>
@@ -430,7 +432,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
 
   const stageBalanceByStageId = new Map(computation.stageBalances.map((balance) => [balance.stageId, balance]));
   const content = isTouch ? (
-    <div className="module-balancing-mobile-layout">
+    <div className={cm(styles, "module-balancing-mobile-layout")}>
       {renderTopToolbar()}
       <StageNavigation
         activeCanvas={activeCanvas}
@@ -443,7 +445,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
         selectedStageId={selectedStage?.id ?? null}
         t={t}
       />
-      <main className="module-balancing-mobile-main">
+      <main className={cm(styles, "module-balancing-mobile-main")}>
         {mobileTab === "module-library" ? (
           <ModuleLibrary
             activeCanvas={activeCanvas}
@@ -510,7 +512,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           />
         ) : null}
       </main>
-      <nav className="module-balancing-bottom-tabs" aria-label={t("toolboxDialog.tab.moduleBalancing")}> 
+      <nav className={cm(styles, "module-balancing-bottom-tabs")} aria-label={t("toolboxDialog.tab.moduleBalancing")}> 
         <MobileTabButton active={mobileTab === "module-library"} onClick={() => setMobileTab("module-library")}> 
           <LucideLayers3 aria-hidden="true" />
           <span>{t("moduleBalancing.moduleLibrary")}</span>
@@ -526,9 +528,9 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       </nav>
     </div>
   ) : (
-    <div className="module-balancing-desktop-layout">
+    <div className={cm(styles, "module-balancing-desktop-layout")}>
       {renderTopToolbar()}
-      <aside className="module-balancing-library-pane">
+      <aside className={cm(styles, "module-balancing-library-pane")}>
         <ModuleLibrary
           activeCanvas={activeCanvas}
           customModuleForm={customModuleForm}
@@ -564,7 +566,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           t={t}
         />
       </aside>
-      <main className="module-balancing-canvas-pane">
+      <main className={cm(styles, "module-balancing-canvas-pane")}>
         <CanvasInputPanel
           canvas={activeCanvas}
           index={index}
@@ -573,10 +575,10 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           }}
           t={t}
         />
-        <div className="module-balancing-stage-list">
+        <div className={cm(styles, "module-balancing-stage-list")}>
           {activeCanvas.stages.map((stage) => (
             <section
-              className="module-balancing-stage"
+              className={cm(styles, "module-balancing-stage")}
               key={stage.id}
               onDragOver={(event) => {
                 if (event.dataTransfer.types.includes(MODULE_DRAG_TYPE)) {
@@ -619,12 +621,12 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             </section>
           ))}
         </div>
-        <button className="module-balancing-add-stage" type="button" onClick={addStage}>
+        <button className={cm(styles, "module-balancing-add-stage")} type="button" onClick={addStage}>
           <LucidePlus aria-hidden="true" />
           <span>{t("moduleBalancing.newStage")}</span>
         </button>
       </main>
-      <aside className="module-balancing-summary-pane">
+      <aside className={cm(styles, "module-balancing-summary-pane")}>
         <SummaryPanel
           balances={computation.summaryBalances}
           index={index}
@@ -636,7 +638,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   );
 
   return (
-    <div className={`toolbox-dialog-content module-balancing-panel${isTouch ? " is-touch" : ""}`}>
+    <div className={cm(styles, `toolbox-dialog-content module-balancing-panel${isTouch ? " is-touch" : ""}`)}>
       {content}
       {quantityDraft !== null ? (
         <QuantityEditor
@@ -706,8 +708,8 @@ function ModuleLibrary({
     .filter((module) => matchesModuleQuery(module, normalizedQuery, index, t));
 
   return (
-    <div className="module-balancing-library">
-      <div className="module-balancing-search">
+    <div className={cm(styles, "module-balancing-library")}>
+      <div className={cm(styles, "module-balancing-search")}>
         <LucideSearch aria-hidden="true" />
         <input
           placeholder={t("moduleBalancing.searchModules")}
@@ -735,12 +737,12 @@ function ModuleLibrary({
         t={t}
         title={t("moduleBalancing.customModules")}
       />
-      <button className="module-balancing-new-module-button" type="button" onClick={onCreateCustomModule}>
+      <button className={cm(styles, "module-balancing-new-module-button")} type="button" onClick={onCreateCustomModule}>
         <LucidePlus aria-hidden="true" />
         <span>{t("moduleBalancing.newModule")}</span>
       </button>
       {activeCanvas.stages.length === 0 ? (
-        <p className="module-balancing-muted">{t("moduleBalancing.noStages")}</p>
+        <p className={cm(styles, "module-balancing-muted")}>{t("moduleBalancing.noStages")}</p>
       ) : null}
     </div>
   );
@@ -768,9 +770,9 @@ function ModuleSection({
   title: string;
 }) {
   return (
-    <section className="module-balancing-library-section">
+    <section className={cm(styles, "module-balancing-library-section")}>
       <h3>{title} <span>({count})</span></h3>
-      <div className="module-balancing-module-list">
+      <div className={cm(styles, "module-balancing-module-list")}>
         {modules.map((module) => (
           <ModuleCard
             index={index}
@@ -814,7 +816,7 @@ function ModuleCard({
 
   return (
     <button
-      className="module-balancing-module-card"
+      className={cm(styles, "module-balancing-module-card")}
       draggable={!isTouch}
       title={formatModuleTooltip(module, index, t)}
       type="button"
@@ -824,19 +826,19 @@ function ModuleCard({
         event.dataTransfer.effectAllowed = "copy";
       }}
     >
-      <img alt="" className="module-balancing-module-icon" src={resolveModuleIconSrc(module, index)} />
-      <span className="module-balancing-module-card-copy">
-        <span className="module-balancing-module-title">{title}</span>
-        <span className="module-balancing-module-subtitle">{subtitle}</span>
+      <img alt="" className={cm(styles, "module-balancing-module-icon")} src={resolveModuleIconSrc(module, index)} />
+      <span className={cm(styles, "module-balancing-module-card-copy")}>
+        <span className={cm(styles, "module-balancing-module-title")}>{title}</span>
+        <span className={cm(styles, "module-balancing-module-subtitle")}>{subtitle}</span>
       </span>
       {outputs[0] !== undefined ? (
-        <span className="module-balancing-module-rate">{formatFlow(outputs[0].perMinute)}/min</span>
+        <span className={cm(styles, "module-balancing-module-rate")}>{formatFlow(outputs[0].perMinute)}/min</span>
       ) : null}
       {module.sourceType === "custom" ? (
-        <span className="module-balancing-module-actions" onClick={(event) => event.stopPropagation()}>
+        <span className={cm(styles, "module-balancing-module-actions")} onClick={(event) => event.stopPropagation()}>
           <button
             aria-label={t("moduleBalancing.editModule")}
-            className="module-balancing-mini-icon-button"
+            className={cm(styles, "module-balancing-mini-icon-button")}
             title={t("moduleBalancing.editModule")}
             type="button"
             onClick={() => onEditCustomModule?.(module)}
@@ -845,7 +847,7 @@ function ModuleCard({
           </button>
           <button
             aria-label={t("moduleBalancing.deleteModule")}
-            className="module-balancing-mini-icon-button"
+            className={cm(styles, "module-balancing-mini-icon-button")}
             title={t("moduleBalancing.deleteModule")}
             type="button"
             onClick={() => onDeleteCustomModule?.(module.id)}
@@ -870,10 +872,10 @@ function CanvasInputPanel({
   t: (key: string) => string;
 }) {
   return (
-    <section className="module-balancing-input-panel">
-      <header className="module-balancing-section-header">
+    <section className={cm(styles, "module-balancing-input-panel")}>
+      <header className={cm(styles, "module-balancing-section-header")}>
         <h3>{t("moduleBalancing.systemInput")}</h3>
-        <button className="module-balancing-icon-text-button" type="button" onClick={onOpenPortPicker}>
+        <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={onOpenPortPicker}>
           <LucidePlus aria-hidden="true" />
           <span>{t("moduleBalancing.addInput")}</span>
         </button>
@@ -904,11 +906,11 @@ function StageNavigation({
   t: (key: string) => string;
 }) {
   return (
-    <div className="module-balancing-stage-nav">
-      <button className="module-balancing-stage-nav-button is-input" type="button" onClick={onSelectInput}>◆ {t("moduleBalancing.systemInput")}</button>
+    <div className={cm(styles, "module-balancing-stage-nav")}>
+      <button className={cm(styles, "module-balancing-stage-nav-button is-input")} type="button" onClick={onSelectInput}>◆ {t("moduleBalancing.systemInput")}</button>
       {activeCanvas.stages.map((stage) => (
         <button
-          className={`module-balancing-stage-nav-button${stage.id === selectedStageId ? " is-active" : ""}`}
+          className={cm(styles, `module-balancing-stage-nav-button${stage.id === selectedStageId ? " is-active" : ""}`)}
           key={stage.id}
           type="button"
           onClick={() => onSelectStage(stage.id)}
@@ -916,7 +918,7 @@ function StageNavigation({
           {stage.name}
         </button>
       ))}
-      <button className="module-balancing-stage-nav-button" type="button" onClick={onAddStage}>+ {t("moduleBalancing.stage")}</button>
+      <button className={cm(styles, "module-balancing-stage-nav-button")} type="button" onClick={onAddStage}>+ {t("moduleBalancing.stage")}</button>
     </div>
   );
 }
@@ -956,9 +958,9 @@ function StageDetailPanel({
 }) {
   if (selectedStage === null) {
     return (
-      <section className="module-balancing-stage-detail">
-        <p className="module-balancing-muted">{t("moduleBalancing.noStages")}</p>
-        <button className="module-balancing-add-stage" type="button" onClick={onAddStage}>
+      <section className={cm(styles, "module-balancing-stage-detail")}>
+        <p className={cm(styles, "module-balancing-muted")}>{t("moduleBalancing.noStages")}</p>
+        <button className={cm(styles, "module-balancing-add-stage")} type="button" onClick={onAddStage}>
           <LucidePlus aria-hidden="true" />
           <span>{t("moduleBalancing.newStage")}</span>
         </button>
@@ -967,7 +969,7 @@ function StageDetailPanel({
   }
 
   return (
-    <section className="module-balancing-stage-detail">
+    <section className={cm(styles, "module-balancing-stage-detail")}>
       <StageHeader
         onClear={() => onClearStage(selectedStage)}
         onSaveAsModule={() => onOpenStageAsModule(selectedStage)}
@@ -1017,17 +1019,17 @@ function StageHeader({
   t: (key: string) => string;
 }) {
   return (
-    <header className="module-balancing-stage-header">
-      <label className="module-balancing-stage-name">
+    <header className={cm(styles, "module-balancing-stage-header")}>
+      <label className={cm(styles, "module-balancing-stage-name")}>
         <span>{t("moduleBalancing.stage")}</span>
         <input value={stage.name} onChange={(event) => onUpdateName(event.currentTarget.value)} />
       </label>
-      <div className="module-balancing-stage-actions">
-        <button className="module-balancing-icon-text-button" type="button" onClick={onClear}>
+      <div className={cm(styles, "module-balancing-stage-actions")}>
+        <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={onClear}>
           <LucideX aria-hidden="true" />
           <span>{t("moduleBalancing.clearStage")}</span>
         </button>
-        <button className="module-balancing-icon-text-button" type="button" onClick={onSaveAsModule}>
+        <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={onSaveAsModule}>
           <LucideSave aria-hidden="true" />
           <span>{t("moduleBalancing.saveAsModule")}</span>
         </button>
@@ -1056,7 +1058,7 @@ function StageEntryGrid({
   t: (key: string) => string;
 }) {
   return (
-    <div className="module-balancing-stage-entry-grid">
+    <div className={cm(styles, "module-balancing-stage-entry-grid")}>
       {stage.entries.map((entry, entryIndex) => {
         const module = resolveModule(entry.moduleId, index);
         if (module === null) {
@@ -1065,7 +1067,7 @@ function StageEntryGrid({
 
         return (
           <button
-            className="module-balancing-stage-entry"
+            className={cm(styles, "module-balancing-stage-entry")}
             draggable={!isTouch}
             key={`${entry.moduleId}-${entryIndex}`}
             title={formatModuleTooltip(module, index, t)}
@@ -1096,7 +1098,7 @@ function StageEntryGrid({
           </button>
         );
       })}
-      <button className="module-balancing-stage-add-entry" type="button" onClick={isTouch ? onOpenLibrary : onAddModule}>
+      <button className={cm(styles, "module-balancing-stage-add-entry")} type="button" onClick={isTouch ? onOpenLibrary : onAddModule}>
         <LucidePlus aria-hidden="true" />
         <span>{t("moduleBalancing.addToStage")}</span>
       </button>
@@ -1122,33 +1124,33 @@ function BalanceStrip({
   const hiddenCount = Math.max(0, nonZeroBalances.length - visibleBalances.length);
 
   return (
-    <div className={`module-balancing-balance-strip${expanded ? " is-expanded" : ""}`}>
-      <div className="module-balancing-balance-strip-header">
+    <div className={cm(styles, `module-balancing-balance-strip${expanded ? " is-expanded" : ""}`)}>
+      <div className={cm(styles, "module-balancing-balance-strip-header")}>
         <span>{t("moduleBalancing.surplus")}/{t("moduleBalancing.deficit")}</span>
-        <button className="module-balancing-link-button" type="button" onClick={onToggle}>
+        <button className={cm(styles, "module-balancing-link-button")} type="button" onClick={onToggle}>
           {expanded ? t("moduleBalancing.collapseDetails") : t("moduleBalancing.expandDetails")}
         </button>
       </div>
       {visibleBalances.length === 0 ? (
-        <span className="module-balancing-muted">{t("moduleBalancing.balanced")}</span>
+        <span className={cm(styles, "module-balancing-muted")}>{t("moduleBalancing.balanced")}</span>
       ) : (
-        <div className={expanded ? "module-balancing-balance-detail-list" : "module-balancing-balance-chip-row"}>
+        <div className={cm(styles, expanded ? "module-balancing-balance-detail-list" : "module-balancing-balance-chip-row")}>
           {visibleBalances.map((balance) => expanded ? (
-            <div className="module-balancing-balance-detail" key={balance.itemId}>
+            <div className={cm(styles, "module-balancing-balance-detail")} key={balance.itemId}>
               <img alt="" src={resolveItemIconSrc(balance.itemId, index)} />
               <span>{resolveItemName(balance.itemId, index, t)}</span>
               <span>{t("moduleBalancing.outputItems")} {formatFlow(balance.totalOutput)}</span>
               <span>{t("moduleBalancing.inputItems")} {formatFlow(balance.totalInput)}</span>
-              <strong className={resolveBalanceClassName(balance.netDelta)}>{formatSignedFlow(balance.netDelta)}/min</strong>
+              <strong className={cm(styles, resolveBalanceClassName(balance.netDelta))}>{formatSignedFlow(balance.netDelta)}/min</strong>
             </div>
           ) : (
-            <span className={`module-balancing-balance-chip ${resolveBalanceClassName(balance.netDelta)}`} key={balance.itemId} title={resolveItemName(balance.itemId, index, t)}>
+            <span className={cm(styles, `module-balancing-balance-chip ${resolveBalanceClassName(balance.netDelta)}`)} key={balance.itemId} title={resolveItemName(balance.itemId, index, t)}>
               <img alt="" src={resolveItemIconSrc(balance.itemId, index)} />
               <span>{formatSignedFlow(balance.netDelta)}</span>
             </span>
           ))}
           {!expanded && hiddenCount > 0 ? (
-            <button className="module-balancing-link-button" type="button" onClick={onToggle}>
+            <button className={cm(styles, "module-balancing-link-button")} type="button" onClick={onToggle}>
               {t("moduleBalancing.nItemsMore").replace("{n}", String(hiddenCount))}
             </button>
           ) : null}
@@ -1174,38 +1176,38 @@ function SummaryPanel({
   const meaningfulForecasts = warehouseForecasts.filter((forecast) => Math.abs(forecast.netDeltaPerMin) >= 0.005);
 
   return (
-    <section className="module-balancing-summary">
-      <header className="module-balancing-section-header">
+    <section className={cm(styles, "module-balancing-summary")}>
+      <header className={cm(styles, "module-balancing-section-header")}>
         <h3>{t("moduleBalancing.summary")}</h3>
         {canvas !== undefined ? <span>{canvas.name}</span> : null}
       </header>
-      <div className="module-balancing-summary-list">
+      <div className={cm(styles, "module-balancing-summary-list")}>
         {balances.length === 0 ? (
-          <p className="module-balancing-muted">{t("moduleBalancing.noSummary")}</p>
+          <p className={cm(styles, "module-balancing-muted")}>{t("moduleBalancing.noSummary")}</p>
         ) : balances.map((balance) => (
-          <div className="module-balancing-summary-row" key={balance.itemId}>
+          <div className={cm(styles, "module-balancing-summary-row")} key={balance.itemId}>
             <img alt="" src={resolveItemIconSrc(balance.itemId, index)} />
             <span>{resolveItemName(balance.itemId, index, t)}</span>
             <span>{t("moduleBalancing.outputItems")} {formatFlow(balance.totalOutput)}</span>
             <span>{t("moduleBalancing.inputItems")} {formatFlow(balance.totalInput)}</span>
-            <strong className={resolveBalanceClassName(balance.netDelta)}>{formatSignedFlow(balance.netDelta)}</strong>
+            <strong className={cm(styles, resolveBalanceClassName(balance.netDelta))}>{formatSignedFlow(balance.netDelta)}</strong>
           </div>
         ))}
       </div>
       {warehouseForecasts.length > 0 ? (
-        <div className="module-balancing-warehouse-list">
+        <div className={cm(styles, "module-balancing-warehouse-list")}>
           <h4>{t("moduleBalancing.warehouseAnalysis")}</h4>
           {meaningfulForecasts.length === 0 ? (
-            <p className="module-balancing-muted">{t("moduleBalancing.balanced")}</p>
+            <p className={cm(styles, "module-balancing-muted")}>{t("moduleBalancing.balanced")}</p>
           ) : meaningfulForecasts.map((forecast) => (
-            <div className="module-balancing-warehouse-row" key={forecast.itemId}>
+            <div className={cm(styles, "module-balancing-warehouse-row")} key={forecast.itemId}>
               <img alt="" src={resolveItemIconSrc(forecast.itemId, index)} />
               <span>{resolveItemName(forecast.itemId, index, t)}</span>
               {forecast.timeToFillMinutes !== null ? (
-                <strong className="is-surplus">{formatDurationMinutes(forecast.timeToFillMinutes)} {t("moduleBalancing.after")} {t("moduleBalancing.overflowTime")}</strong>
+                <strong className={cm(styles, "is-surplus")}>{formatDurationMinutes(forecast.timeToFillMinutes)} {t("moduleBalancing.after")} {t("moduleBalancing.overflowTime")}</strong>
               ) : null}
               {forecast.timeToEmptyMinutes !== null ? (
-                <strong className="is-deficit">{formatDurationMinutes(forecast.timeToEmptyMinutes)} {t("moduleBalancing.after")} {t("moduleBalancing.exhaustTime")}</strong>
+                <strong className={cm(styles, "is-deficit")}>{formatDurationMinutes(forecast.timeToEmptyMinutes)} {t("moduleBalancing.after")} {t("moduleBalancing.exhaustTime")}</strong>
               ) : null}
             </div>
           ))}
@@ -1235,24 +1237,24 @@ function CustomModuleForm({
   const canSave = draft.name.trim().length > 0 && draft.outputs.some((port) => port.itemId.length > 0 && port.perMinute > 0);
 
   return (
-    <section className="module-balancing-custom-form">
-      <header className="module-balancing-form-header">
-        <button className="module-balancing-icon-button" type="button" onClick={onCancel} aria-label={t("action.close")}>
+    <section className={cm(styles, "module-balancing-custom-form")}>
+      <header className={cm(styles, "module-balancing-form-header")}>
+        <button className={cm(styles, "module-balancing-icon-button")} type="button" onClick={onCancel} aria-label={t("action.close")}>
           <LucideArrowLeft aria-hidden="true" />
         </button>
         <h3>{draft.id === null ? t("moduleBalancing.newModule") : t("moduleBalancing.editModule")}</h3>
       </header>
-      <label className="module-balancing-form-field">
+      <label className={cm(styles, "module-balancing-form-field")}>
         <span>{t("moduleBalancing.moduleName")}</span>
         <input value={draft.name} onChange={(event) => onUpdate({ ...draft, name: event.currentTarget.value })} />
       </label>
-      <div className="module-balancing-form-field">
+      <div className={cm(styles, "module-balancing-form-field")}>
         <span>{t("moduleBalancing.moduleColor")}</span>
-        <div className="module-balancing-color-row">
+        <div className={cm(styles, "module-balancing-color-row")}>
           {CUSTOM_MODULE_COLORS.map((color) => (
             <button
               aria-label={color}
-              className={`module-balancing-color-swatch${draft.color === color ? " is-active" : ""}`}
+              className={cm(styles, `module-balancing-color-swatch${draft.color === color ? " is-active" : ""}`)}
               key={color}
               style={{ backgroundColor: color }}
               type="button"
@@ -1261,7 +1263,7 @@ function CustomModuleForm({
           ))}
         </div>
       </div>
-      <label className="module-balancing-form-field">
+      <label className={cm(styles, "module-balancing-form-field")}>
         <span>{t("moduleBalancing.moduleIcon")}</span>
         <select value={draft.iconId} onChange={(event) => onUpdate({ ...draft, iconId: event.currentTarget.value })}>
           <optgroup label={t("encyclopedia.category.items")}>
@@ -1276,13 +1278,13 @@ function CustomModuleForm({
           </optgroup>
         </select>
       </label>
-      <div className="module-balancing-custom-icon-preview">
+      <div className={cm(styles, "module-balancing-custom-icon-preview")}>
         <img alt="" src={resolveAnyIconSrc(draft.iconId, index)} />
       </div>
-      <section className="module-balancing-form-ports">
-        <header className="module-balancing-section-header">
+      <section className={cm(styles, "module-balancing-form-ports")}>
+        <header className={cm(styles, "module-balancing-section-header")}>
           <h4>{t("moduleBalancing.inputItems")}</h4>
-          <button className="module-balancing-icon-text-button" type="button" onClick={() => onOpenPortPicker({ kind: "custom-input" })}>
+          <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={() => onOpenPortPicker({ kind: "custom-input" })}>
             <LucidePlus aria-hidden="true" />
             <span>{t("moduleBalancing.addInputItem")}</span>
           </button>
@@ -1294,10 +1296,10 @@ function CustomModuleForm({
           t={t}
         />
       </section>
-      <section className="module-balancing-form-ports">
-        <header className="module-balancing-section-header">
+      <section className={cm(styles, "module-balancing-form-ports")}>
+        <header className={cm(styles, "module-balancing-section-header")}>
           <h4>{t("moduleBalancing.outputItems")}</h4>
-          <button className="module-balancing-icon-text-button" type="button" onClick={() => onOpenPortPicker({ kind: "custom-output" })}>
+          <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={() => onOpenPortPicker({ kind: "custom-output" })}>
             <LucidePlus aria-hidden="true" />
             <span>{t("moduleBalancing.addOutputItem")}</span>
           </button>
@@ -1309,12 +1311,12 @@ function CustomModuleForm({
           t={t}
         />
       </section>
-      <footer className="module-balancing-form-actions">
-        <button className="module-balancing-icon-text-button" type="button" onClick={onCancel}>
+      <footer className={cm(styles, "module-balancing-form-actions")}>
+        <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={onCancel}>
           <LucideX aria-hidden="true" />
           <span>{t("action.close")}</span>
         </button>
-        <button className="module-balancing-primary-button" disabled={!canSave} type="button" onClick={onSave}>
+        <button className={cm(styles, "module-balancing-primary-button")} disabled={!canSave} type="button" onClick={onSave}>
           <LucideSave aria-hidden="true" />
           <span>{t("moduleBalancing.saveModule")}</span>
         </button>
@@ -1335,13 +1337,13 @@ function PortListEditor({
   t: (key: string) => string;
 }) {
   if (ports.length === 0) {
-    return <p className="module-balancing-muted">{t("moduleBalancing.emptyPorts")}</p>;
+    return <p className={cm(styles, "module-balancing-muted")}>{t("moduleBalancing.emptyPorts")}</p>;
   }
 
   return (
-    <div className="module-balancing-port-list">
+    <div className={cm(styles, "module-balancing-port-list")}>
       {ports.map((port, portIndex) => (
-        <div className="module-balancing-port-row" key={`${port.itemId}-${portIndex}`}>
+        <div className={cm(styles, "module-balancing-port-row")} key={`${port.itemId}-${portIndex}`}>
           <img alt="" src={resolveItemIconSrc(port.itemId, index)} />
           <select
             value={port.itemId}
@@ -1375,7 +1377,7 @@ function PortListEditor({
           <span>/min</span>
           <button
             aria-label={t("moduleBalancing.removeInput")}
-            className="module-balancing-mini-icon-button"
+            className={cm(styles, "module-balancing-mini-icon-button")}
             title={t("moduleBalancing.removeInput")}
             type="button"
             onClick={() => onChange(ports.filter((_, index) => index !== portIndex).map(clonePort))}
@@ -1418,46 +1420,46 @@ function QuantityEditor({
   };
 
   return (
-    <div className="module-balancing-editor-backdrop" onMouseDown={(event) => {
+    <div className={cm(styles, "module-balancing-editor-backdrop")} onMouseDown={(event) => {
       if (event.target === event.currentTarget) {
         onCancel();
       }
     }}>
-      <section className="module-balancing-quantity-editor" role="dialog" aria-modal="true">
-        <header className="module-balancing-form-header">
+      <section className={cm(styles, "module-balancing-quantity-editor")} role="dialog" aria-modal="true">
+        <header className={cm(styles, "module-balancing-form-header")}>
           <h3>{draft.mode === "add" ? t("moduleBalancing.addToStage") : t("moduleBalancing.editQuantity")}</h3>
-          <button className="module-balancing-icon-button" type="button" onClick={onCancel} aria-label={t("action.close")}>
+          <button className={cm(styles, "module-balancing-icon-button")} type="button" onClick={onCancel} aria-label={t("action.close")}>
             <LucideX aria-hidden="true" />
           </button>
         </header>
-        <div className="module-balancing-quantity-module">
+        <div className={cm(styles, "module-balancing-quantity-module")}>
           <img alt="" src={resolveModuleIconSrc(module, index)} />
           <div>
             <strong>{resolveModuleTitle(module, index, t)}</strong>
             <span>{formatModuleTooltip(module, index, t)}</span>
           </div>
         </div>
-        <label className="module-balancing-form-field">
+        <label className={cm(styles, "module-balancing-form-field")}>
           <span>{t("moduleBalancing.quantity")}</span>
           <input min="0.01" step="0.01" type="number" value={draft.quantity} onChange={(event) => onUpdate({ ...draft, quantity: event.currentTarget.value })} />
         </label>
-        <div className="module-balancing-step-row">
+        <div className={cm(styles, "module-balancing-step-row")}>
           {[-1, -0.1, 0.1, 1, 10].map((delta) => (
             <button key={delta} type="button" onClick={() => stepQuantity(delta)}>{delta > 0 ? `+${delta}` : delta}</button>
           ))}
         </div>
-        <footer className="module-balancing-form-actions">
+        <footer className={cm(styles, "module-balancing-form-actions")}>
           {draft.mode === "edit" ? (
-            <button className="module-balancing-danger-button" type="button" onClick={onDelete}>
+            <button className={cm(styles, "module-balancing-danger-button")} type="button" onClick={onDelete}>
               <LucideTrash2 aria-hidden="true" />
               <span>{t("moduleBalancing.deleteFromStage")}</span>
             </button>
           ) : null}
-          <button className="module-balancing-icon-text-button" type="button" onClick={onCancel}>
+          <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={onCancel}>
             <LucideX aria-hidden="true" />
             <span>{t("action.close")}</span>
           </button>
-          <button className="module-balancing-primary-button" disabled={normalizeQuantity(draft.quantity) === null} type="button" onClick={onConfirm}>
+          <button className={cm(styles, "module-balancing-primary-button")} disabled={normalizeQuantity(draft.quantity) === null} type="button" onClick={onConfirm}>
             <LucideSave aria-hidden="true" />
             <span>{draft.mode === "add" ? t("moduleBalancing.confirmAdd") : t("moduleBalancing.confirmEdit")}</span>
           </button>
@@ -1477,7 +1479,7 @@ function MobileTabButton({
   onClick: () => void;
 }) {
   return (
-    <button className={`module-balancing-bottom-tab${active ? " is-active" : ""}`} type="button" onClick={onClick}>
+    <button className={cm(styles, `module-balancing-bottom-tab${active ? " is-active" : ""}`)} type="button" onClick={onClick}>
       {children}
     </button>
   );

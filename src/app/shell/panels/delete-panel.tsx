@@ -2,6 +2,8 @@ import {
   handleUiEvent,
 } from "@/app/shell/shared/ui-shell-null-handlers";
 import type { AppHost } from "@/app/host/app-host";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 const DELETE_SECTIONS = [
   {
@@ -27,14 +29,14 @@ export function DeletePanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
 
   return (
-    <div className="stack">
+    <div className={cm(styles, "stack")}>
       {DELETE_SECTIONS.map((section) => (
-        <section className="placeholder-section" key={section.titleKey}>
-          <div className="placeholder-section-header">
+        <section className={cm(styles, "placeholder-section")} key={section.titleKey}>
+          <div className={cm(styles, "placeholder-section-header")}>
             <h3>{t(section.titleKey)}</h3>
-            <span className="pill">{t("toolbar.tools")}</span>
+            <span className={cm(styles, "pill")}>{t("toolbar.tools")}</span>
           </div>
-          <div className="placeholder-button-grid">
+          <div className={cm(styles, "placeholder-button-grid")}>
             {section.buttonKeys.map((buttonKey) => (
               <button key={buttonKey} onClick={handleUiEvent} type="button">
                 {t(buttonKey)}

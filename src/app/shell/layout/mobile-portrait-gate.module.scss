@@ -6,7 +6,11 @@
   place-items: center;
   padding: 20px;
   background:
-    linear-gradient(180deg, rgb(0 0 0 / 0.24), rgb(0 0 0 / 0.12)),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--shell-bg) 76%, transparent),
+      color-mix(in srgb, var(--shell-bg) 88%, transparent)
+    ),
     var(--shell-bg);
   color: var(--text-0);
   pointer-events: auto;
@@ -21,7 +25,7 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-1);
-  box-shadow: 0 24px 80px rgb(0 0 0 / 0.24);
+  box-shadow: 0 24px 80px var(--shadow-floating-control);
   text-align: center;
 }
 

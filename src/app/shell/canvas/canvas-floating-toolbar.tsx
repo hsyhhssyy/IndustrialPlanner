@@ -9,6 +9,8 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 interface CanvasFloatingToolbarProps {
   appHost: AppHost;
@@ -71,7 +73,7 @@ export function CanvasFloatingToolbar({
   return (
     <div
       aria-label="canvas floating toolbar"
-      className="canvas-floating-toolbar"
+      className={cm(styles, "canvas-floating-toolbar")}
       onAuxClick={stopUiPropagationAndDefault}
       onClick={stopUiPropagation}
       onContextMenu={stopUiPropagationAndDefault}
@@ -88,9 +90,9 @@ export function CanvasFloatingToolbar({
     >
       <CanvasFloatingToolbarButtonStrip
         appHost={appHost}
-        buttonClassName="canvas-floating-toolbar-button"
+        buttonClassName={cm(styles, "canvas-floating-toolbar-button")}
         buttonIds={buttonIds}
-        iconClassName="canvas-floating-toolbar-icon"
+        iconClassName={cm(styles, "canvas-floating-toolbar-icon")}
       />
     </div>
   );

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 
 import type { AppHost } from "@/app/host/app-host";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 const SIMULATION_PANEL_INTERVAL_MS = 250;
 
@@ -35,10 +37,10 @@ export function SimulationPanel({ appHost }: { appHost: AppHost }) {
   }, [appHost]);
 
   return (
-    <article className="definition-card" data-simulation-panel>
+    <article className={cm(styles, "definition-card")} data-simulation-panel>
       <h4>{t("label.currentTickSnapshot")}</h4>
       <textarea
-        className="json-debug-textarea"
+        className={cm(styles, "json-debug-textarea")}
         data-simulation-runtime-json
         readOnly
         rows={20}

@@ -1,6 +1,8 @@
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { AppHost } from "@/app/host/app-host";
 import { useEffect, useState } from "react";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 type FullscreenCapableDocument = Document & {
   readonly webkitFullscreenElement?: Element | null;
@@ -108,15 +110,15 @@ export function FullscreenToggleButton({
     <button
       aria-label={fullscreenLabel}
       aria-pressed={isFullscreen}
-      className={joinClassNames(className, isFullscreen && "is-active")}
+      className={cm(styles, joinClassNames(className, isFullscreen && "is-active"))}
       onClick={toggleFullscreen}
       title={fullscreenLabel}
       type="button"
     >
-      <span className="top-bar-toggle-icon">
+      <span className={cm(styles, "top-bar-toggle-icon")}>
         <WorkbenchIcon kind={isFullscreen ? "shrink" : "expand"} />
       </span>
-      <span className="sr-only">{fullscreenLabel}</span>
+      <span className={cm(styles, "sr-only")}>{fullscreenLabel}</span>
     </button>
   );
 }

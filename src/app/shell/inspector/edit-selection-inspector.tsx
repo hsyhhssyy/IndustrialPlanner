@@ -7,6 +7,8 @@ import { SelectionInspectorSlot } from "@/app/shell/inspector/selection-inspecto
 import {
   NoSelectionState,
 } from "@/app/shell/inspector/selection-inspector-shared";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 export const EditSelectionInspector = observer(function EditSelectionInspector({
   appHost,
@@ -32,9 +34,9 @@ export const EditSelectionInspector = observer(function EditSelectionInspector({
   if (selectionCount > 1) {
     return (
       <InspectorRenderModeContext.Provider value={mode}>
-        <div className="cluster">
+        <div className={cm(styles, "cluster")}>
           <SelectionInspectorActionStrip appHost={appHost} />
-          <article className="definition-card">
+          <article className={cm(styles, "definition-card")}>
             <p>{translate("label.multiSelectionSummary")}</p>
           </article>
         </div>
@@ -44,7 +46,7 @@ export const EditSelectionInspector = observer(function EditSelectionInspector({
 
   return (
     <InspectorRenderModeContext.Provider value={mode}>
-      <div className="cluster">
+      <div className={cm(styles, "cluster")}>
         <SelectionInspectorActionStrip appHost={appHost} />
         <SelectionInspectorSlot appHost={appHost} translate={translate} />
       </div>

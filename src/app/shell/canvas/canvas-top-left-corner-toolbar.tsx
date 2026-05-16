@@ -12,6 +12,8 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 type CanvasTopLeftCornerToolbarIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
 
@@ -152,7 +154,7 @@ export function CanvasTopLeftCornerToolbar({
   return (
     <div
       aria-label={t("toolbar.canvasTopLeftCorner")}
-      className="canvas-top-left-corner-toolbar"
+      className={cm(styles, "canvas-top-left-corner-toolbar")}
       onAuxClick={stopUiPropagationAndDefault}
       onClick={stopUiPropagation}
       onContextMenu={stopUiPropagationAndDefault}
@@ -178,10 +180,10 @@ export function CanvasTopLeftCornerToolbar({
           <button
             aria-label={label}
             aria-pressed={isShowingOffButton}
-            className={joinClassNames([
+            className={cm(styles, joinClassNames([
               "canvas-top-left-corner-toolbar-button",
               isShowingOffButton ? "is-active" : undefined,
-            ])}
+            ]))}
             data-ui-button-id={buttonId}
             key={buttonId}
             onClick={stopUiPropagation}
@@ -195,8 +197,8 @@ export function CanvasTopLeftCornerToolbar({
             title={label}
             type="button"
           >
-            <WorkbenchIcon className="canvas-top-left-corner-toolbar-icon" kind={icon} />
-            <span className="canvas-top-left-corner-toolbar-label">{label}</span>
+            <WorkbenchIcon className={cm(styles, "canvas-top-left-corner-toolbar-icon")} kind={icon} />
+            <span className={cm(styles, "canvas-top-left-corner-toolbar-label")}>{label}</span>
           </button>
         );
       })}

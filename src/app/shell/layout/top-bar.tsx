@@ -10,6 +10,8 @@ import type {
 import {
   isTouchLandscapeScreenProfile,
 } from "@/shared/browser/screen-profile";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 const SIMULATION_CONTROL_BUTTON_ID = "top-bar-simulation-control";
 const SIMULATION_SECONDARY_BUTTON_ID = "top-bar-simulation-secondary-control";
@@ -101,7 +103,7 @@ export const SimulationControlButton = observer(function SimulationControlButton
     <button
       aria-label={label}
       aria-pressed={isRunning}
-      className={className}
+      className={cm(styles, className)}
       data-ui-button-id={SIMULATION_CONTROL_BUTTON_ID}
       onClick={handleClick}
       onPointerDown={preventTouchPointerCompatibilityMouseEvents}
@@ -109,10 +111,10 @@ export const SimulationControlButton = observer(function SimulationControlButton
       title={label}
       type="button"
     >
-      <span className="top-bar-toggle-icon">
+      <span className={cm(styles, "top-bar-toggle-icon")}>
         <WorkbenchIcon kind={iconKind} />
       </span>
-      <span className="sr-only">{label}</span>
+      <span className={cm(styles, "sr-only")}>{label}</span>
     </button>
   );
 });
@@ -147,22 +149,22 @@ export const SimulationSecondaryButton = observer(function SimulationSecondaryBu
   return (
     <button
       aria-label={label}
-      className={isRunning
+      className={cm(styles, isRunning
         ? "top-bar-simulation-secondary-button top-bar-speed-button"
-        : "top-bar-simulation-secondary-button top-bar-icon-button"}
+        : "top-bar-simulation-secondary-button top-bar-icon-button")}
       data-ui-button-id={SIMULATION_SECONDARY_BUTTON_ID}
       onClick={handleClick}
       title={label}
       type="button"
     >
       {isRunning ? (
-        <span className="top-bar-speed-label">{speedLabel}</span>
+        <span className={cm(styles, "top-bar-speed-label")}>{speedLabel}</span>
       ) : (
         <>
-          <span className="top-bar-toggle-icon">
+          <span className={cm(styles, "top-bar-toggle-icon")}>
             <WorkbenchIcon kind="stop" />
           </span>
-          <span className="sr-only">{label}</span>
+          <span className={cm(styles, "sr-only")}>{label}</span>
         </>
       )}
     </button>
@@ -209,32 +211,32 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
   }
 
   return (
-    <header className="top-bar">
-      <div className="top-bar-title-block">
-        <div className="top-bar-title">{t("app.title")}</div>
+    <header className={cm(styles, "top-bar")}>
+      <div className={cm(styles, "top-bar-title-block")}>
+        <div className={cm(styles, "top-bar-title")}>{t("app.title")}</div>
       </div>
-      <div className="toolbar-group top-bar-controls">
+      <div className={cm(styles, "toolbar-group top-bar-controls")}>
         <SimulationControlButton
           appHost={appHost}
-          className="top-bar-icon-button"
+          className={cm(styles, "top-bar-icon-button")}
         />
         <SimulationSecondaryButton appHost={appHost} />
         <FullscreenToggleButton
           appHost={appHost}
-          className="top-bar-icon-button top-bar-fullscreen-button"
+          className={cm(styles, "top-bar-icon-button top-bar-fullscreen-button")}
         />
         {isTouchLandscape ? (
           <button
             aria-label={collapseButtonLabel}
-            className="top-bar-collapse-button top-bar-icon-button"
+            className={cm(styles, "top-bar-collapse-button top-bar-icon-button")}
             onClick={toggleTopBarCollapsed}
             title={collapseButtonLabel}
             type="button"
           >
-            <span className="top-bar-toggle-icon">
+            <span className={cm(styles, "top-bar-toggle-icon")}>
               <WorkbenchIcon kind="panel-top-close" />
             </span>
-            <span className="sr-only">{t("action.collapse")}</span>
+            <span className={cm(styles, "sr-only")}>{t("action.collapse")}</span>
           </button>
         ) : null}
       </div>

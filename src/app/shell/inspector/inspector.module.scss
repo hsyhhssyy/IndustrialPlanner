@@ -1,0 +1,234 @@
+.dock-collapsed-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 12px 8px;
+  color: var(--text-1);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0.08em;
+}
+
+.kv-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--transparent);
+}
+
+.kv:last-child {
+  border-bottom: 0;
+}
+
+.kv dt {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 0.82rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.kv dd {
+  margin: 0;
+  color: var(--text-0);
+  font-size: 0.82rem;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.definition-card,
+.log-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--surface-1);
+}
+
+.definition-card h4,
+.log-card h4 {
+  margin: 0 0 6px;
+  font-size: 0.82rem;
+}
+
+.definition-card p,
+.log-card p,
+.mono-line {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.json-debug-textarea {
+  width: 100%;
+  min-height: 300px;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    monospace;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  resize: vertical;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+.mono-line {
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    monospace;
+}
+
+.slot-config-inspector,
+.warehouse-item-link-inspector,
+.slot-config-list,
+.slot-config-row,
+.slot-config-row-main,
+.slot-config-row-actions,
+.slot-config-stepper,
+.warehouse-link-ignore-stock {
+  display: grid;
+  gap: 8px;
+}
+
+.slot-config-row-actions {
+  grid-auto-flow: column;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+/* 对话框模式下槽位列表单列排列，避免 stepper 固定宽度撑破半宽列 */
+.slot-config-list[data-render-mode="dialog"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 480px) {
+  .slot-config-list[data-render-mode="dialog"] {
+    grid-template-columns: 1fr;
+  }
+}
+
+.slot-config-group-header,
+.slot-config-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.slot-config-group-header p,
+.slot-config-row-header strong,
+.slot-config-meta {
+  margin: 0;
+}
+
+.slot-config-row {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.slot-config-row-main {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.slot-config-item-button,
+.slot-config-clear-button,
+.slot-config-step-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-0);
+  font: inherit;
+}
+
+.slot-config-item-button,
+.slot-config-clear-button {
+  padding: 0 10px;
+}
+
+.slot-config-item-button {
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+}
+
+.slot-config-item-button:disabled,
+.slot-config-clear-button:disabled,
+.slot-config-step-button:disabled,
+.slot-config-count-input:disabled {
+  opacity: 0.6;
+}
+
+.slot-config-lock-tag {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-1) 72%, transparent);
+  color: var(--text-1);
+  font-size: 0.72rem;
+}
+
+.slot-config-stepper {
+  grid-template-columns: 32px 72px 32px;
+  align-items: center;
+}
+
+.slot-config-step-button {
+  padding: 0;
+}
+
+.slot-config-step-button svg,
+.slot-config-clear-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.slot-config-count-input {
+  min-width: 0;
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-0);
+  font: inherit;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .slot-config-row-main {
+    grid-template-columns: 1fr;
+  }
+
+  .slot-config-row-actions {
+    grid-template-columns: 1fr;
+  }
+}

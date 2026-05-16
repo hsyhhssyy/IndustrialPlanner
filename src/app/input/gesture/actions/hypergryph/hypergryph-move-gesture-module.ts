@@ -695,6 +695,9 @@ function applyMoveOperation(
   } finally {
     clearMoveUi(appHost);
     appHost.internalActions.setActiveTool("select");
+    if (!shouldReturnToMarquee) {
+      clearSingleSelectionIfNotInspectorMode(appHost, editor);
+    }
     if (shouldReturnToMarquee) {
       triggerPlacementMarqueeToolTap(appHost, source);
     }
@@ -713,6 +716,9 @@ function cancelMoveOperation(
   } finally {
     clearMoveUi(appHost);
     appHost.internalActions.setActiveTool("select");
+    if (!shouldReturnToMarquee) {
+      clearSingleSelectionIfNotInspectorMode(appHost, editor);
+    }
     if (shouldReturnToMarquee) {
       triggerPlacementMarqueeToolTap(appHost, source);
     }
@@ -733,6 +739,25 @@ function clearMoveUi(appHost: AppHost): void {
   appHost.internalState.runtime.moveEnterFrom = null;
   appHost.internalState.runtime.movePointerMode = null;
   appHost.internalActions.hideCanvasFloatingToolbar();
+}
+
+/**
+ * 从 Move 返回 Select 时，如果是单选且未开启"再次点击打开设备属性"，则取消选择。
+ * 与 select gesture 中对已选中实体的二次点击行为保持一致。
+ */
+function clearSingleSelectionIfNotInspectorMode(
+  appHost: AppHost,
+  editor: EditorContract,
+): void {
+  if (appHost.state.settings.hypergryphInspectorOpenOnSecondClick) {
+    return;
+  }
+
+  const selection = editor.state.collections[EntityCollectionType.selection];
+
+  if (selection.length === 1) {
+    editor.actions.clearCollection(EntityCollectionType.selection);
+  }
 }
 
 function syncMoveEntryUi(appHost: AppHost): boolean {

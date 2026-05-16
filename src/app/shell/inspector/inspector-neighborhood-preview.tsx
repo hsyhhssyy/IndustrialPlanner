@@ -16,6 +16,8 @@ import {
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { BlueprintPreviewHandle } from "@/domain/renderer";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 const EMPTY_DOCUMENT_SUBSCRIPTION = () => undefined;
 
@@ -218,11 +220,11 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
   return (
     <aside
       aria-label={appHost.actions.translate("rightDock.selection")}
-      className="inspector-neighborhood-preview"
+      className={cm(styles, "inspector-neighborhood-preview")}
     >
-      <div className="inspector-neighborhood-preview-frame" ref={frameRef}>
+      <div className={cm(styles, "inspector-neighborhood-preview-frame")} ref={frameRef}>
         <div
-          className="inspector-neighborhood-preview-canvas"
+          className={cm(styles, "inspector-neighborhood-preview-canvas")}
           ref={canvasHostRef}
           style={hostStyle}
         />

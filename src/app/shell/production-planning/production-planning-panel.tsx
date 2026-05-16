@@ -39,6 +39,8 @@ import {
   type ProductionPlanningResult,
   type ProductionPlanningViewMode,
 } from "@/app/shell/production-planning/production-planning-model";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 type ProductionPlanningScreen = "input" | "result";
 
@@ -221,14 +223,14 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
 
   return (
     <div
-      className={panelClassName}
+      className={cm(styles, panelClassName)}
       onPointerDown={handleSwipePointerDown}
       onPointerUp={handleSwipePointerUp}
       onPointerCancel={handleSwipePointerCancel}
     >
-      <div className="production-planning-stage">
-        <section className="production-planning-screen production-planning-input-screen">
-          <div className="production-planning-config">
+      <div className={cm(styles, "production-planning-stage")}>
+        <section className={cm(styles, "production-planning-screen production-planning-input-screen")}>
+          <div className={cm(styles, "production-planning-config")}>
             <LineSection
               icon={<LucideTarget />}
               title={t("productionPlanning.targets")}
@@ -265,10 +267,10 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
               t={t}
             />
           </div>
-          <div className="production-planning-input-footer">
+          <div className={cm(styles, "production-planning-input-footer")}>
             <button
               type="button"
-              className="production-planning-primary-button"
+              className={cm(styles, "production-planning-primary-button")}
               disabled={targets.length === 0}
               onClick={calculate}
             >
@@ -278,17 +280,17 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
           </div>
         </section>
 
-        <section className="production-planning-screen production-planning-workspace">
-          <div className="production-planning-toolbar">
+        <section className={cm(styles, "production-planning-screen production-planning-workspace")}>
+          <div className={cm(styles, "production-planning-toolbar")}>
             <button
               type="button"
-              className="production-planning-back-button"
+              className={cm(styles, "production-planning-back-button")}
               onClick={() => setActiveScreen("input")}
             >
               <LucideArrowLeft />
               <span>{t("productionPlanning.modify")}</span>
             </button>
-            <div className="production-planning-toolbar-controls">
+            <div className={cm(styles, "production-planning-toolbar-controls")}>
               <SegmentedControl<ProductionPlanningDisplayMode>
                 label={t("productionPlanning.displayMode")}
                 value={displayMode}
@@ -310,10 +312,10 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
             </div>
           </div>
 
-          <div className="production-planning-main">
-            <div className="production-planning-graph">
+          <div className={cm(styles, "production-planning-main")}>
+            <div className={cm(styles, "production-planning-graph")}>
               {calculation === null ? (
-                <div className="production-planning-empty">{t("productionPlanning.noResult")}</div>
+                <div className={cm(styles, "production-planning-empty")}>{t("productionPlanning.noResult")}</div>
               ) : (
                 <PlanGraph
                   displayMode={displayMode}
@@ -357,17 +359,17 @@ function LineSection({
   t: (key: string) => string;
 }) {
   return (
-    <section className="production-planning-config-section">
-      <div className="production-planning-section-header">
+    <section className={cm(styles, "production-planning-config-section")}>
+      <div className={cm(styles, "production-planning-section-header")}>
         <h3>{icon}<span>{title}</span></h3>
-        <button type="button" className="production-planning-icon-text-button" onClick={onAdd}>
+        <button type="button" className={cm(styles, "production-planning-icon-text-button")} onClick={onAdd}>
           <LucidePlus />
           <span>{addLabel}</span>
         </button>
       </div>
-      <div className="production-planning-line-list">
+      <div className={cm(styles, "production-planning-line-list")}>
         {lines.length === 0 ? (
-          <p className="production-planning-muted">{t("productionPlanning.emptyLines")}</p>
+          <p className={cm(styles, "production-planning-muted")}>{t("productionPlanning.emptyLines")}</p>
         ) : lines.map((line) => (
           <PortEditorRow
             key={line.id}
@@ -400,16 +402,16 @@ function PortEditorRow({
   t: (key: string) => string;
 }) {
   return (
-    <div className="production-planning-line-row">
+    <div className={cm(styles, "production-planning-line-row")}>
       <button
         type="button"
-        className="production-planning-item-picker-button"
+        className={cm(styles, "production-planning-item-picker-button")}
         onClick={onPickItem}
       >
         <img alt="" src={resolveProductionPlanningItemIconSrc(line.itemId, index)} />
         <span>{resolveProductionPlanningItemName(line.itemId, index, t)}</span>
       </button>
-      <label className="production-planning-rate-input">
+      <label className={cm(styles, "production-planning-rate-input")}>
         <span>{t("productionPlanning.perMinute")}</span>
         <input
           type="number"
@@ -421,7 +423,7 @@ function PortEditorRow({
       </label>
       <button
         type="button"
-        className="production-planning-icon-button"
+        className={cm(styles, "production-planning-icon-button")}
         aria-label={t("productionPlanning.remove")}
         title={t("productionPlanning.remove")}
         onClick={onRemove}
@@ -446,33 +448,33 @@ function SourcePolicyPanel({
   t: (key: string) => string;
 }) {
   return (
-    <section className="production-planning-config-section">
-      <div className="production-planning-section-header">
+    <section className={cm(styles, "production-planning-config-section")}>
+      <div className={cm(styles, "production-planning-section-header")}>
         <h3><LucideInfinity /><span>{t("productionPlanning.sourcePolicy")}</span></h3>
       </div>
-      <div className="production-planning-source-policy">
-        <div className="production-planning-source-pill">
+      <div className={cm(styles, "production-planning-source-policy")}>
+        <div className={cm(styles, "production-planning-source-pill")}>
           <LucideBoxes />
           <span>{t("productionPlanning.mineralInfinite")}</span>
           <strong>{index.mineralItemIds.size}</strong>
         </div>
         {PRODUCTION_PLANNING_SPECIAL_INFINITE_ITEM_IDS.map((itemId) => (
-          <div key={itemId} className="production-planning-special-source">
-            <div className="production-planning-special-source-label">
+          <div key={itemId} className={cm(styles, "production-planning-special-source")}>
+            <div className={cm(styles, "production-planning-special-source-label")}>
               <img alt="" src={resolveProductionPlanningItemIconSrc(itemId, index)} />
               <span>{resolveProductionPlanningItemName(itemId, index, t)}</span>
             </div>
-            <div className="production-planning-two-option-toggle">
+            <div className={cm(styles, "production-planning-two-option-toggle")}>
               <button
                 type="button"
-                className={!specialInfiniteItemIds.has(itemId) ? "is-active" : ""}
+                className={cm(styles, !specialInfiniteItemIds.has(itemId) ? "is-active" : "")}
                 onClick={() => onToggleSpecialInfiniteItem(itemId, false)}
               >
                 {t("productionPlanning.fromLine")}
               </button>
               <button
                 type="button"
-                className={infiniteItemIds.has(itemId) ? "is-active" : ""}
+                className={cm(styles, infiniteItemIds.has(itemId) ? "is-active" : "")}
                 onClick={() => onToggleSpecialInfiniteItem(itemId, true)}
               >
                 {t("productionPlanning.infinite")}
@@ -497,12 +499,12 @@ function SegmentedControl<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div className="production-planning-segmented" aria-label={label}>
+    <div className={cm(styles, "production-planning-segmented")} aria-label={label}>
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
-          className={value === option.value ? "is-active" : ""}
+          className={cm(styles, value === option.value ? "is-active" : "")}
           onClick={() => onChange(option.value)}
         >
           {option.icon}
@@ -545,7 +547,7 @@ function PlanGraph({
 
   if (displayMode === "device") {
     return (
-      <div className="production-planning-tree">
+      <div className={cm(styles, "production-planning-tree")}>
         {plan.roots.map((root) => (
           <DeviceTreeRoot
             key={root.id}
@@ -559,7 +561,7 @@ function PlanGraph({
   }
 
   return (
-    <div className="production-planning-tree">
+    <div className={cm(styles, "production-planning-tree")}>
       {plan.roots.map((root) => (
         <ItemTreeNode
           key={root.id}
@@ -593,10 +595,10 @@ function ItemTreeNode({
   const recipes = index.recipesByOutputItem.get(node.itemId) ?? [];
 
   return (
-    <article className="production-planning-item-node" style={{ "--tree-depth": depth } as CSSProperties}>
-      <div className="production-planning-item-node-main">
+    <article className={cm(styles, "production-planning-item-node")} style={{ "--tree-depth": depth } as CSSProperties}>
+      <div className={cm(styles, "production-planning-item-node-main")}>
         <ItemIdentity itemId={node.itemId} index={index} t={t} />
-        <div className="production-planning-node-metrics">
+        <div className={cm(styles, "production-planning-node-metrics")}>
           <Metric label={t("productionPlanning.demand")} value={formatProductionFlow(node.demandPerMinute)} />
           <Metric label={t("productionPlanning.supply")} value={formatProductionFlow(node.suppliedPerMinute)} tone={node.suppliedPerMinute > 0 ? "good" : undefined} />
           <Metric label={t("productionPlanning.produced")} value={formatProductionFlow(node.producedPerMinute)} />
@@ -615,7 +617,7 @@ function ItemTreeNode({
         />
       )}
       {node.recipeNode !== null && (
-        <div className="production-planning-node-children">
+        <div className={cm(styles, "production-planning-node-children")}>
           <RecipeCard recipeNode={node.recipeNode} index={index} t={t} />
           {node.recipeNode.inputItems.map((child) => (
             <ItemTreeNode
@@ -644,8 +646,8 @@ function DeviceTreeRoot({
   t: (key: string) => string;
 }) {
   return (
-    <section className="production-planning-device-root">
-      <div className="production-planning-device-root-target">
+    <section className={cm(styles, "production-planning-device-root")}>
+      <div className={cm(styles, "production-planning-device-root-target")}>
         <LucideTarget />
         <ItemIdentity itemId={root.itemId} index={index} t={t} />
         <span>{formatProductionFlow(root.demandPerMinute)}/min</span>
@@ -671,9 +673,9 @@ function DeviceRecipeTree({
   t: (key: string) => string;
 }) {
   return (
-    <div className="production-planning-device-tree-node" style={{ "--tree-depth": depth } as CSSProperties}>
+    <div className={cm(styles, "production-planning-device-tree-node")} style={{ "--tree-depth": depth } as CSSProperties}>
       <RecipeCard recipeNode={recipeNode} index={index} t={t} />
-      <div className="production-planning-node-children">
+      <div className={cm(styles, "production-planning-node-children")}>
         {recipeNode.inputItems.map((child) => (
           child.recipeNode === null
             ? <LeafItem key={child.id} node={child} index={index} t={t} />
@@ -704,11 +706,11 @@ function FlowGraph({
   const entries = displayMode === "item" ? items : recipes;
 
   if (entries.length === 0) {
-    return <div className="production-planning-empty">{t("productionPlanning.noRecipes")}</div>;
+    return <div className={cm(styles, "production-planning-empty")}>{t("productionPlanning.noRecipes")}</div>;
   }
 
   return (
-    <div className="production-planning-flow">
+    <div className={cm(styles, "production-planning-flow")}>
       {displayMode === "item"
         ? items.map((node, indexInFlow) => (
           <FlowCard key={node.id} indexInFlow={indexInFlow}>
@@ -739,8 +741,8 @@ function FlowCard({
   children: ReactNode;
 }) {
   return (
-    <div className="production-planning-flow-step">
-      <div className="production-planning-flow-index">{indexInFlow + 1}</div>
+    <div className={cm(styles, "production-planning-flow-step")}>
+      <div className={cm(styles, "production-planning-flow-index")}>{indexInFlow + 1}</div>
       {children}
     </div>
   );
@@ -762,8 +764,8 @@ function RecipeCard({
     : resolveProductionPlanningRecipeName(recipe, index, t);
 
   return (
-    <article className="production-planning-recipe-node">
-      <div className="production-planning-recipe-header">
+    <article className={cm(styles, "production-planning-recipe-node")}>
+      <div className={cm(styles, "production-planning-recipe-header")}>
         <img
           alt=""
           src={recipe === undefined ? "/device-icons/item_port_grinder_1.webp" : resolveProductionPlanningEntityIconSrc(recipe.machineId)}
@@ -773,12 +775,12 @@ function RecipeCard({
           <span>{machine === null ? recipeNode.recipeId : t(machine.nameKey)}</span>
         </div>
       </div>
-      <div className="production-planning-recipe-meta">
+      <div className={cm(styles, "production-planning-recipe-meta")}>
         <Metric icon={<LucideClock3 />} label={t("productionPlanning.duration")} value={`${formatProductionFlow(recipeNode.durationSeconds)}s`} />
         <Metric icon={<LucideFactory />} label={t("productionPlanning.devices")} value={formatProductionDeviceCount(recipeNode.deviceCount)} />
         <Metric icon={<LucideGauge />} label={t("productionPlanning.cycles")} value={`${formatProductionFlow(recipeNode.cyclesPerMinute)}/min`} />
       </div>
-      <div className="production-planning-recipe-ports">
+      <div className={cm(styles, "production-planning-recipe-ports")}>
         <PortChipList title={t("productionPlanning.inputs")} ports={recipeNode.inputs} index={index} t={t} />
         <PortChipList title={t("productionPlanning.outputs")} ports={recipeNode.outputs} index={index} t={t} />
       </div>
@@ -796,7 +798,7 @@ function LeafItem({
   t: (key: string) => string;
 }) {
   return (
-    <div className="production-planning-leaf-item">
+    <div className={cm(styles, "production-planning-leaf-item")}>
       <ItemIdentity itemId={node.itemId} index={index} t={t} />
       <span>{formatProductionFlow(node.demandPerMinute)}/min</span>
       <NodeStatus node={node} t={t} />
@@ -813,22 +815,22 @@ function NodeStatus({
 }) {
   if (node.unresolvedPerMinute > 0) {
     return (
-      <span className="production-planning-status is-bad">
+      <span className={cm(styles, "production-planning-status is-bad")}>
         {node.blockedByCycle ? t("productionPlanning.blockedCycle") : t("productionPlanning.unresolved")}
       </span>
     );
   }
 
   if (node.isCycleSource) {
-    return <span className="production-planning-status is-cycle">{t("productionPlanning.cycleSource")}</span>;
+    return <span className={cm(styles, "production-planning-status is-cycle")}>{t("productionPlanning.cycleSource")}</span>;
   }
 
   if (node.isInfiniteSource) {
-    return <span className="production-planning-status is-good">{t("productionPlanning.infiniteSource")}</span>;
+    return <span className={cm(styles, "production-planning-status is-good")}>{t("productionPlanning.infiniteSource")}</span>;
   }
 
   if (node.suppliedPerMinute > 0 && node.producedPerMinute <= 0) {
-    return <span className="production-planning-status is-good">{t("productionPlanning.supplied")}</span>;
+    return <span className={cm(styles, "production-planning-status is-good")}>{t("productionPlanning.supplied")}</span>;
   }
 
   return null;
@@ -850,7 +852,7 @@ function RecipeSelect({
   t: (key: string) => string;
 }) {
   return (
-    <label className="production-planning-recipe-select">
+    <label className={cm(styles, "production-planning-recipe-select")}>
       <span>{t("productionPlanning.recipe")}</span>
       <select
         value={selectedRecipeId ?? ""}
@@ -878,7 +880,7 @@ function ItemIdentity({
   t: (key: string) => string;
 }) {
   return (
-    <div className="production-planning-item-identity">
+    <div className={cm(styles, "production-planning-item-identity")}>
       <img alt="" src={resolveProductionPlanningItemIconSrc(itemId, index)} />
       <strong>{resolveProductionPlanningItemName(itemId, index, t)}</strong>
     </div>
@@ -897,7 +899,7 @@ function Metric({
   tone?: "good" | "bad";
 }) {
   return (
-    <span className={["production-planning-metric", tone === "good" ? "is-good" : "", tone === "bad" ? "is-bad" : ""].filter(Boolean).join(" ")}>
+    <span className={cm(styles, ["production-planning-metric", tone === "good" ? "is-good" : "", tone === "bad" ? "is-bad" : ""].filter(Boolean).join(" "))}>
       {icon}
       <span>{label}</span>
       <strong>{value}</strong>
@@ -917,13 +919,13 @@ function PortChipList({
   t: (key: string) => string;
 }) {
   return (
-    <div className="production-planning-port-chip-list">
+    <div className={cm(styles, "production-planning-port-chip-list")}>
       <span>{title}</span>
       <div>
         {ports.length === 0 ? (
-          <span className="production-planning-muted">{t("productionPlanning.none")}</span>
+          <span className={cm(styles, "production-planning-muted")}>{t("productionPlanning.none")}</span>
         ) : ports.map((port) => (
-          <span key={`${port.id}-${port.itemId}`} className="production-planning-port-chip">
+          <span key={`${port.id}-${port.itemId}`} className={cm(styles, "production-planning-port-chip")}>
             <img alt="" src={resolveProductionPlanningItemIconSrc(port.itemId, index)} />
             <span>{resolveProductionPlanningItemName(port.itemId, index, t)}</span>
             <strong>{formatProductionFlow(port.perMinute)}/min</strong>

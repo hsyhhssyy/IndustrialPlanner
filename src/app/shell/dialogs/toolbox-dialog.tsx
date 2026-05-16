@@ -7,6 +7,8 @@ import { EncyclopediaPanel } from "@/app/shell/encyclopedia/encyclopedia-panel";
 import { ModuleBalancingPanel } from "@/app/shell/module-balancing/module-balancing-panel";
 import { ProductionPlanningPanel } from "@/app/shell/production-planning";
 import { TOOLBOX_DIALOG_TAB_IDS, type ToolboxDialogTabId } from "@/app/state/state-impl";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -56,8 +58,8 @@ export const ToolboxDialog = observer(function ToolboxDialog({ appHost }: { appH
       id: tab.id,
       label: t(tab.labelKey),
       content: customContent ?? (
-        <div className="toolbox-dialog-content">
-          <div className="toolbox-dialog-placeholder">
+        <div className={cm(styles, "toolbox-dialog-content")}>
+          <div className={cm(styles, "toolbox-dialog-placeholder")}>
             <h3>{t(tab.labelKey)}</h3>
             <p>{t("toolboxDialog.empty")}</p>
           </div>

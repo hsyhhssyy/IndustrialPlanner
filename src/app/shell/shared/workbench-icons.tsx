@@ -61,6 +61,8 @@ import MaterialSymbolsPlayArrowRounded from "~icons/material-symbols/play-arrow-
 import MaterialSymbolsResumeRounded from "~icons/material-symbols/resume-rounded";
 import MdiSelection from "~icons/mdi/selection";
 import GisArrowO from "~icons/gis/arrow-o";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 type WorkbenchIconKind =
   | "placement"
@@ -171,7 +173,7 @@ export function WorkbenchIcon({
   return (
     <IconComponent
       aria-hidden="true"
-      className={className}
+      className={cm(styles, className)}
       data-workbench-icon={kind}
       focusable="false"
     />

@@ -2,7 +2,8 @@ import type { AppHost } from "@/app/host/app-host";
 import { requestDocumentFullscreen } from "@/app/shell/layout/fullscreen-toggle-button";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { AppLocale } from "@/shared/i18n/messages";
-import "./mobile-portrait-gate.css";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 const MOBILE_PORTRAIT_GATE_COPY: Record<AppLocale, {
   readonly ariaLabel: string;
@@ -35,25 +36,25 @@ export function MobilePortraitGate({ appHost }: { appHost: AppHost }) {
     <section
       aria-label={copy.ariaLabel}
       aria-modal="true"
-      className="mobile-portrait-gate"
+      className={cm(styles, "mobile-portrait-gate")}
       role="dialog"
     >
-      <div className="mobile-portrait-gate-panel">
-        <div className="mobile-portrait-gate-motion" aria-hidden="true">
-          <span className="mobile-portrait-gate-phone">
+      <div className={cm(styles, "mobile-portrait-gate-panel")}>
+        <div className={cm(styles, "mobile-portrait-gate-motion")} aria-hidden="true">
+          <span className={cm(styles, "mobile-portrait-gate-phone")}>
             <WorkbenchIcon kind="device-mobile" />
           </span>
-          <span className="mobile-portrait-gate-landscape">
+          <span className={cm(styles, "mobile-portrait-gate-landscape")}>
             <WorkbenchIcon kind="screen-landscape" />
           </span>
         </div>
-        <div className="mobile-portrait-gate-copy">
+        <div className={cm(styles, "mobile-portrait-gate-copy")}>
           <h2>{copy.title}</h2>
           <p>{copy.description}</p>
           <p>{copy.fullscreenHint}</p>
         </div>
         <button
-          className="mobile-portrait-gate-fullscreen"
+          className={cm(styles, "mobile-portrait-gate-fullscreen")}
           onClick={handleFullscreenClick}
           type="button"
         >

@@ -179,7 +179,11 @@ export function compileSimulationTopology(
     links[link.id] = link;
   }
 
-  for (const connection of compilePhysicalConnections(portOrder.map((portId) => ports[portId]))) {
+  for (const connection of compilePhysicalConnections(
+    portOrder.map((portId) => ports[portId]),
+    devices,
+    (definitionId) => options.registry.queries.isGeneralLogisticsDevice(definitionId),
+  )) {
     physicalConnections[connection.id] = connection;
     physicalConnectionOrder.push(connection.id);
 
@@ -1126,6 +1130,8 @@ function compileRecipeChannels(
 
 function compilePhysicalConnections(
   maybePorts: readonly (CompiledSimulationPort | undefined)[],
+  devices: Record<string, CompiledSimulationDevice>,
+  isGeneralLogisticsDevice: (definitionId: string) => boolean,
 ): CompiledSimulationPhysicalConnection[] {
   const sourcePorts = maybePorts.filter((port): port is CompiledSimulationPort =>
     port !== undefined && port.direction === "output",
@@ -1144,6 +1150,19 @@ function compilePhysicalConnections(
         areGridPointsEqual(sourcePort.outsideGridPoint, targetPort.insideGridPoint)
         && areGridPointsEqual(sourcePort.insideGridPoint, targetPort.outsideGridPoint)
       ) {
+        // 设备间不可直接相连：两端均非通用物流设备时，跳过不建立连接。
+        // 允许设备紧贴摆放，但端口不生效。
+        const sourceDevice = devices[sourcePort.deviceId];
+        const targetDevice = devices[targetPort.deviceId];
+        if (
+          sourceDevice !== undefined
+          && targetDevice !== undefined
+          && !isGeneralLogisticsDevice(sourceDevice.definitionId)
+          && !isGeneralLogisticsDevice(targetDevice.definitionId)
+        ) {
+          continue;
+        }
+
         connections.push({
           id: `connection:${sourcePort.id}->${targetPort.id}`,
           sourcePortId: sourcePort.id,

@@ -5,6 +5,8 @@ import {
   type ScreenShape,
 } from "@/domain/app/types/screen-profile";
 import { observer } from "mobx-react-lite";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 function getDeviceLabelKey(deviceClass: DeviceClass): string {
   if (deviceClass === "mobile") {
@@ -65,30 +67,30 @@ export const BottomStatusBar = observer(function BottomStatusBar({ appHost }: { 
   );
 
   return (
-    <footer className="status-bar">
-      <div className="status-bar-group status-bar-group-left">
-        <span className="status-chip status-chip-primary">{`工具:${activeTool}`}</span>
+    <footer className={cm(styles, "status-bar")}>
+      <div className={cm(styles, "status-bar-group status-bar-group-left")}>
+        <span className={cm(styles, "status-chip status-chip-primary")}>{`工具:${activeTool}`}</span>
         {}
-        <span className="status-chip">{`${t("topBar.zoom")}: ${zoomPercent}%`}</span>
+        <span className={cm(styles, "status-chip")}>{`${t("topBar.zoom")}: ${zoomPercent}%`}</span>
       </div>
-      <div className="status-bar-group status-bar-group-right">
+      <div className={cm(styles, "status-bar-group status-bar-group-right")}>
         <span
           aria-label={deviceLabel}
-          className="status-bar-icon-chip"
+          className={cm(styles, "status-bar-icon-chip")}
           title={deviceLabel}
         >
           <WorkbenchIcon
-            className="status-bar-icon"
+            className={cm(styles, "status-bar-icon")}
             kind={getDeviceIconKind(screenProfile.deviceClass)}
           />
         </span>
         <span
           aria-label={screenShapeLabel}
-          className="status-bar-icon-chip"
+          className={cm(styles, "status-bar-icon-chip")}
           title={screenShapeLabel}
         >
           <WorkbenchIcon
-            className="status-bar-icon"
+            className={cm(styles, "status-bar-icon")}
             kind={getScreenShapeIconKind(screenProfile.screenShape)}
           />
         </span>

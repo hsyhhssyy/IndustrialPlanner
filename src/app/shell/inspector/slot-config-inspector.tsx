@@ -10,6 +10,8 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type { SlotConfigInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import { useInspectorRenderMode } from "@/app/shell/inspector/selection-inspector-model";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 type StorageSlotDefinition = StorageSlotGroupDefinition["slots"][number];
@@ -53,7 +55,7 @@ export function SlotConfigInspector({
 
   if (groupViews.length === 0) {
     return (
-      <article className="definition-card" data-inspector-key="slot-config">
+      <article className={cm(styles, "definition-card")} data-inspector-key="slot-config">
         <h4>槽位配置</h4>
         <p>未找到可编辑的槽位组。</p>
       </article>
@@ -116,23 +118,23 @@ export function SlotConfigInspector({
 
   return (
     <article
-      className="definition-card slot-config-inspector"
+      className={cm(styles, "definition-card slot-config-inspector")}
       data-inspector-key="slot-config"
       data-render-mode={mode}
     >
       {groupViews.map((groupView) => (
         <section
-          className="slot-config-group"
+          className={cm(styles, "slot-config-group")}
           data-slot-config-group={groupView.storageGroup.id}
           key={groupView.storageGroup.id}
         >
-          <div className="slot-config-group-header">
+          <div className={cm(styles, "slot-config-group-header")}>
             <div>
               <h4>槽位配置</h4>
               <p>{`${translate("inspector.slotConfig.group")} ${groupView.storageGroup.id}`}</p>
             </div>
           </div>
-          <div className="slot-config-list" data-render-mode={mode}>
+          <div className={cm(styles, "slot-config-list")} data-render-mode={mode}>
             {groupView.rows.map((row) => {
               const itemDefinition = row.displayItemId === null
                 ? null
@@ -144,19 +146,19 @@ export function SlotConfigInspector({
 
               return (
                 <div
-                  className="slot-config-row"
+                  className={cm(styles, "slot-config-row")}
                   data-slot-id={row.slotId}
                   key={row.slotId}
                 >
-                  <div className="slot-config-row-header">
+                  <div className={cm(styles, "slot-config-row-header")}>
                     <strong>{row.slotId}</strong>
-                    <span className="slot-config-meta">
+                    <span className={cm(styles, "slot-config-meta")}>
                       {`${translate("inspector.slotConfig.capacity")} ${row.count} / ${row.capacity}`}
                     </span>
                   </div>
-                  <div className="slot-config-row-main">
+                  <div className={cm(styles, "slot-config-row-main")}>
                     <button
-                      className="slot-config-item-button"
+                      className={cm(styles, "slot-config-item-button")}
                       data-slot-action="pick-item"
                       disabled={pendingSlotId === row.slotId || row.lockItemId !== null}
                       onClick={() => {
@@ -166,13 +168,13 @@ export function SlotConfigInspector({
                     >
                       <span>{itemLabel}</span>
                       {row.lockItemId !== null ? (
-                        <span className="slot-config-lock-tag">{translate("inspector.slotConfig.locked")}</span>
+                        <span className={cm(styles, "slot-config-lock-tag")}>{translate("inspector.slotConfig.locked")}</span>
                       ) : null}
                     </button>
-                    <div className="slot-config-row-actions">
-                      <div className="slot-config-stepper">
+                    <div className={cm(styles, "slot-config-row-actions")}>
+                      <div className={cm(styles, "slot-config-stepper")}>
                         <button
-                          className="slot-config-step-button"
+                          className={cm(styles, "slot-config-step-button")}
                           data-slot-action="decrement-count"
                           disabled={row.displayItemId === null || row.count <= 0}
                           onClick={() => {
@@ -183,7 +185,7 @@ export function SlotConfigInspector({
                           <LucideMinus aria-hidden="true" />
                         </button>
                         <input
-                          className="slot-config-count-input"
+                          className={cm(styles, "slot-config-count-input")}
                           data-slot-input="count"
                           disabled={row.displayItemId === null}
                           max={row.capacity}
@@ -202,7 +204,7 @@ export function SlotConfigInspector({
                           value={row.count}
                         />
                         <button
-                          className="slot-config-step-button"
+                          className={cm(styles, "slot-config-step-button")}
                           data-slot-action="increment-count"
                           disabled={row.displayItemId === null || row.count >= row.capacity}
                           onClick={() => {
@@ -214,7 +216,7 @@ export function SlotConfigInspector({
                         </button>
                       </div>
                       <button
-                        className="slot-config-clear-button"
+                        className={cm(styles, "slot-config-clear-button")}
                         data-slot-action="clear-item"
                         disabled={!canClear}
                         onClick={() => {

@@ -32,6 +32,8 @@ import {
   readBlueprintFolder,
   saveBlueprintDocument,
 } from "@/shared/storage/blueprint-storage";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 const DEFAULT_BLUEPRINT_PREVIEW_VIEWPORT: BlueprintPreviewViewport = {
   zoom: 1,
@@ -903,12 +905,12 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       title={copy.title}
       titleId="blueprint-preview-dialog-title"
     >
-      <div className="blueprint-preview-dialog-content">
-        <section className="blueprint-preview-layout" aria-label={copy.previewTitle}>
-          <div className="blueprint-preview-stage">
-            <div className="blueprint-preview-canvas-shell">
+      <div className={cm(styles, "blueprint-preview-dialog-content")}>
+        <section className={cm(styles, "blueprint-preview-layout")} aria-label={copy.previewTitle}>
+          <div className={cm(styles, "blueprint-preview-stage")}>
+            <div className={cm(styles, "blueprint-preview-canvas-shell")}>
               <div
-                className="blueprint-preview-canvas"
+                className={cm(styles, "blueprint-preview-canvas")}
                 onLostPointerCapture={handlePreviewPointerUp}
                 onPointerCancel={handlePreviewPointerUp}
                 onPointerDown={handlePreviewPointerDown}
@@ -921,23 +923,23 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
             </div>
             {}
           </div>
-          <div className={isMoveMode
+          <div className={cm(styles, isMoveMode
             ? "blueprint-preview-summary-card is-folder-picker-mode"
-            : "blueprint-preview-summary-card"}
+            : "blueprint-preview-summary-card")}
           >
             {isMoveMode ? (
               <section
                 aria-label={copy.moveTargetFolder}
-                className="blueprint-preview-folder-picker-card"
+                className={cm(styles, "blueprint-preview-folder-picker-card")}
               >
                 {activeErrorMessage === null ? null : (
-                  <p className="save-blueprint-error" role="alert">{activeErrorMessage}</p>
+                  <p className={cm(styles, "save-blueprint-error")} role="alert">{activeErrorMessage}</p>
                 )}
-                <div className="blueprint-preview-folder-picker-toolbar">
+                <div className={cm(styles, "blueprint-preview-folder-picker-toolbar")}>
                   {currentMoveFolder === null ? null : (
                     <button
                       aria-label={copy.moveBack}
-                      className="blueprint-utility-button blueprint-preview-folder-picker-back-button"
+                      className={cm(styles, "blueprint-utility-button blueprint-preview-folder-picker-back-button")}
                       data-ui-button-id="blueprint-preview-move-back-button"
                       disabled={isMoveLoading || isMoving}
                       onClick={() => {
@@ -946,11 +948,11 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                       }}
                       type="button"
                     >
-                      <LucideChevronLeft className="button-icon-image" />
+                      <LucideChevronLeft className={cm(styles, "button-icon-image")} />
                     </button>
                   )}
                   <span
-                    className="blueprint-preview-folder-picker-path"
+                    className={cm(styles, "blueprint-preview-folder-picker-path")}
                     data-blueprint-preview-move-breadcrumb
                     title={moveFolderPath.fullLabel}
                   >
@@ -958,14 +960,14 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                   </span>
                 </div>
                 {isMoveLoading ? (
-                  <p className="blueprint-preview-footnote">{copy.moveLoading}</p>
+                  <p className={cm(styles, "blueprint-preview-footnote")}>{copy.moveLoading}</p>
                 ) : moveDirectoryListing.folders.length === 0 ? (
-                  <p className="blueprint-preview-footnote">{copy.moveEmpty}</p>
+                  <p className={cm(styles, "blueprint-preview-footnote")}>{copy.moveEmpty}</p>
                 ) : (
-                  <div className="blueprint-preview-folder-picker-list">
+                  <div className={cm(styles, "blueprint-preview-folder-picker-list")}>
                     {moveDirectoryListing.folders.map((folder) => (
                       <button
-                        className="save-blueprint-secondary-button blueprint-preview-folder-picker-entry"
+                        className={cm(styles, "save-blueprint-secondary-button blueprint-preview-folder-picker-entry")}
                         data-blueprint-preview-folder-id={folder.folderId}
                         key={folder.folderId}
                         onClick={() => {
@@ -975,20 +977,20 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                         title={folder.name}
                         type="button"
                       >
-                        <span aria-hidden="true" className="button-icon blueprint-preview-folder-picker-entry-icon">
-                          <LucideFolder className="button-icon-image" />
+                        <span aria-hidden="true" className={cm(styles, "button-icon blueprint-preview-folder-picker-entry-icon")}>
+                          <LucideFolder className={cm(styles, "button-icon-image")} />
                         </span>
-                        <span className="blueprint-preview-folder-picker-entry-label">{folder.name}</span>
+                        <span className={cm(styles, "blueprint-preview-folder-picker-entry-label")}>{folder.name}</span>
                       </button>
                     ))}
                   </div>
                 )}
                 {isMoveTargetCurrent ? (
-                  <p className="blueprint-preview-footnote">{copy.moveCurrentFolderNote}</p>
+                  <p className={cm(styles, "blueprint-preview-footnote")}>{copy.moveCurrentFolderNote}</p>
                 ) : null}
-                <div className="blueprint-preview-actions is-dual-action blueprint-preview-folder-picker-actions">
+                <div className={cm(styles, "blueprint-preview-actions is-dual-action blueprint-preview-folder-picker-actions")}>
                   <button
-                    className="save-blueprint-secondary-button"
+                    className={cm(styles, "save-blueprint-secondary-button")}
                     data-ui-button-id="blueprint-preview-move-cancel-button"
                     disabled={isMoveLoading || isMoving}
                     onClick={() => {
@@ -1000,7 +1002,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                     {copy.moveCancel}
                   </button>
                   <button
-                    className="save-blueprint-primary-button"
+                    className={cm(styles, "save-blueprint-primary-button")}
                     data-ui-button-id="blueprint-preview-move-confirm-button"
                     disabled={isMoveLoading || isMoving || isMoveTargetCurrent}
                     onClick={() => {
@@ -1014,20 +1016,20 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
               </section>
             ) : (
               <>
-                <div className="blueprint-preview-header">
-                  <div className="blueprint-preview-header-copy">
+                <div className={cm(styles, "blueprint-preview-header")}>
+                  <div className={cm(styles, "blueprint-preview-header-copy")}>
                     <h3>{record.name}</h3>
                     <p>{record.description.length > 0 ? record.description : copy.noDescription}</p>
                   </div>
                 </div>
                 {activeErrorMessage === null ? null : (
-                  <p className="save-blueprint-error" role="alert">{activeErrorMessage}</p>
+                  <p className={cm(styles, "save-blueprint-error")} role="alert">{activeErrorMessage}</p>
                 )}
-                <div className={actionsClassName}>
+                <div className={cm(styles, actionsClassName)}>
                   {isDeleteConfirming ? (
                     <>
                       <button
-                        className="save-blueprint-secondary-button"
+                        className={cm(styles, "save-blueprint-secondary-button")}
                         data-ui-button-id="blueprint-preview-delete-cancel-button"
                         disabled={isDeleting}
                         onClick={() => {
@@ -1039,7 +1041,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                         {copy.deleteCancel}
                       </button>
                       <button
-                        className="save-blueprint-primary-button blueprint-preview-danger-button is-confirm"
+                        className={cm(styles, "save-blueprint-primary-button blueprint-preview-danger-button is-confirm")}
                         data-ui-button-id="blueprint-preview-delete-confirm-button"
                         disabled={isDeleting}
                         onClick={() => {
@@ -1053,7 +1055,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                   ) : (
                     <>
                       <button
-                        className="save-blueprint-primary-button"
+                        className={cm(styles, "save-blueprint-primary-button")}
                         data-ui-button-id="blueprint-preview-place-button"
                         onClick={handlePlaceButtonClick}
                         onPointerDown={preventTouchPointerCompatibilityMouseEvents}
@@ -1064,7 +1066,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                         {copy.place}
                       </button>
                       <button
-                        className="save-blueprint-secondary-button"
+                        className={cm(styles, "save-blueprint-secondary-button")}
                         data-ui-button-id="blueprint-preview-export-file-button"
                         onClick={handleExportButtonClick}
                         title={t("workbench.button.exportBlueprintToFile")}
@@ -1073,7 +1075,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                         {t("workbench.button.exportBlueprintToFile")}
                       </button>
                       <button
-                        className="save-blueprint-secondary-button"
+                        className={cm(styles, "save-blueprint-secondary-button")}
                         data-ui-button-id="blueprint-preview-copy-clipboard-button"
                         disabled={isCopying}
                         onClick={() => {
@@ -1086,7 +1088,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                       </button>
                       {showMoveAction ? (
                         <button
-                          className="save-blueprint-secondary-button"
+                          className={cm(styles, "save-blueprint-secondary-button")}
                           data-ui-button-id="blueprint-preview-move-button"
                           onClick={handleOpenMoveMode}
                           title={copy.editHint}
@@ -1097,7 +1099,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                       ) : null}
                       {showDeleteAction ? (
                         <button
-                          className="save-blueprint-secondary-button blueprint-preview-danger-button"
+                          className={cm(styles, "save-blueprint-secondary-button blueprint-preview-danger-button")}
                           data-ui-button-id="blueprint-preview-delete-button"
                           onClick={() => {
                             void handleDeleteButtonClick();
@@ -1111,7 +1113,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                     </>
                   )}
                 </div>
-                <dl className="blueprint-preview-metadata">
+                <dl className={cm(styles, "blueprint-preview-metadata")}>
                   <dt>{copy.entities}</dt>
                   <dd>{record.entityOrder.length}</dd>
                   <dt>{copy.version}</dt>

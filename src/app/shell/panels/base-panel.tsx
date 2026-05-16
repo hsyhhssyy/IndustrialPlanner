@@ -4,6 +4,8 @@ import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { AppHost } from "@/app/host/app-host";
 import { DEFAULT_WORLD_BASE_ID } from "@/domain/document/world-document";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 const POWER_ROWS = [
   {
@@ -35,13 +37,13 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
   const currentBaseName = currentBase?.name ?? currentBaseId;
 
   return (
-    <div className="stack">
-      <article className="inspector-card">
-        <div className="card-header">
+    <div className={cm(styles, "stack")}>
+      <article className={cm(styles, "inspector-card")}>
+        <div className={cm(styles, "card-header")}>
           <h3>{t("rightDock.base")}</h3>
         </div>
         <button
-          className="base-current-button"
+          className={cm(styles, "base-current-button")}
           data-ui-button-id="base-current-select"
           disabled={editor === null}
           onClick={() => {
@@ -49,19 +51,19 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
           }}
           type="button"
         >
-          <span className="base-current-button-label">{currentBaseName}</span>
-          <span className="base-current-button-icon">
+          <span className={cm(styles, "base-current-button-label")}>{currentBaseName}</span>
+          <span className={cm(styles, "base-current-button-icon")}>
             <WorkbenchIcon kind="edit" />
           </span>
         </button>
       </article>
-      <article className="inspector-card">
-        <div className="card-header">
+      <article className={cm(styles, "inspector-card")}>
+        <div className={cm(styles, "card-header")}>
           <h3>{t("rightDock.power")}</h3>
         </div>
-        <dl className="inspector-summary-list">
+        <dl className={cm(styles, "inspector-summary-list")}>
           {POWER_ROWS.map((entry, index) => (
-            <div className="inspector-summary-row" key={`left-dock-power-summary-${index}`}>
+            <div className={cm(styles, "inspector-summary-row")} key={`left-dock-power-summary-${index}`}>
               <dt>{t(entry.labelKey)}</dt>
               <dd>{t(entry.valueKey)}</dd>
             </div>

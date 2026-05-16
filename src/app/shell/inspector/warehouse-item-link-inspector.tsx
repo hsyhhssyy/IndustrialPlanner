@@ -7,6 +7,8 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { WarehouseItemLinkInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 
@@ -42,7 +44,7 @@ export function WarehouseItemLinkInspector({
 
   if (rows.length === 0) {
     return (
-      <article className="definition-card" data-inspector-key="warehouse-item-link">
+      <article className={cm(styles, "definition-card")} data-inspector-key="warehouse-item-link">
         <h4>仓库物品链接</h4>
         <p>未找到可链接的槽位。</p>
       </article>
@@ -108,16 +110,16 @@ export function WarehouseItemLinkInspector({
 
   return (
     <article
-      className="definition-card warehouse-item-link-inspector"
+      className={cm(styles, "definition-card warehouse-item-link-inspector")}
       data-inspector-key="warehouse-item-link"
     >
-      <div className="slot-config-group-header">
+      <div className={cm(styles, "slot-config-group-header")}>
         <div>
           <h4>仓库物品链接</h4>
           <p>{translate("inspector.warehouseItemLink.description")}</p>
         </div>
       </div>
-      <div className="slot-config-list">
+      <div className={cm(styles, "slot-config-list")}>
         {rows.map((row) => {
           const itemDefinition = row.currentItemId === null
             ? null
@@ -129,16 +131,16 @@ export function WarehouseItemLinkInspector({
 
           return (
             <div
-              className="slot-config-row"
+              className={cm(styles, "slot-config-row")}
               data-slot-id={row.slotId}
               key={row.slotId}
             >
-              <div className="slot-config-row-header">
+              <div className={cm(styles, "slot-config-row-header")}>
                 <strong>{row.slotId}</strong>
               </div>
-              <div className="slot-config-row-main">
+              <div className={cm(styles, "slot-config-row-main")}>
                 <button
-                  className="slot-config-item-button"
+                  className={cm(styles, "slot-config-item-button")}
                   data-slot-action="pick-item"
                   disabled={pendingLinkIndex === row.linkIndex}
                   onClick={() => {
@@ -148,8 +150,8 @@ export function WarehouseItemLinkInspector({
                 >
                   <span>{itemLabel}</span>
                 </button>
-                <div className="slot-config-row-actions">
-                  <label className="warehouse-link-ignore-stock">
+                <div className={cm(styles, "slot-config-row-actions")}>
+                  <label className={cm(styles, "warehouse-link-ignore-stock")}>
                     <input
                       checked={row.currentIgnoreStock}
                       disabled={row.currentItemId === null}
@@ -161,7 +163,7 @@ export function WarehouseItemLinkInspector({
                     <span>{translate("inspector.warehouseItemLink.ignoreStock")}</span>
                   </label>
                   <button
-                    className="slot-config-clear-button"
+                    className={cm(styles, "slot-config-clear-button")}
                     data-slot-action="clear-item"
                     disabled={!canClear}
                     onClick={() => {

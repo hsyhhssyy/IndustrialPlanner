@@ -2,6 +2,8 @@ import type {
   SimulationDeviceRuntimeStatusReadModel,
   SimulationDeviceRuntimeSlotItemReadModel,
 } from "@/domain/simulation/types/simulation-types";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 export const SIMULATION_RUNTIME_INSPECTOR_KEY = "simulation-runtime-inspecotr";
 
@@ -94,13 +96,13 @@ export function SimulationRuntimeInspector({
 
   return (
     <article
-      className="definition-card simulation-runtime-inspector"
+      className={cm(styles, "definition-card simulation-runtime-inspector")}
       data-inspector-key={SIMULATION_RUNTIME_INSPECTOR_KEY}
     >
       <h4>仿真运行态</h4>
-      <dl className="kv-grid">
+      <dl className={cm(styles, "kv-grid")}>
         {rows.map((row) => (
-          <div className="kv" data-runtime-field={row.field} key={row.field}>
+          <div className={cm(styles, "kv")} data-runtime-field={row.field} key={row.field}>
             <dt>{row.field}</dt>
             <dd>{row.value}</dd>
           </div>
@@ -112,11 +114,11 @@ export function SimulationRuntimeInspector({
       ) : slotItems.length === 0 ? (
         <p>[]</p>
       ) : (
-        <dl className="kv-grid">
+        <dl className={cm(styles, "kv-grid")}>
           {slotItems.map((slotItem) => {
             const label = formatSlotItemLabel(slotItem);
             return (
-              <div className="kv" data-runtime-slot={label} key={label}>
+              <div className={cm(styles, "kv")} data-runtime-slot={label} key={label}>
                 <dt>{label}</dt>
                 <dd>{formatSlotItemValue(slotItem)}</dd>
               </div>

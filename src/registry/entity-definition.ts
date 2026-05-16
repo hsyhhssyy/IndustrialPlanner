@@ -1531,8 +1531,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /**
-   * item_port_udpipe_unloader_1 — 地下管道卸载口（3×3）
-   * 流体输出方向。仅 1 个 output port(东)。
+   * item_port_udpipe_unloader_1 — 暗管出口（3×3）
+   *
+   * 缓存组：1 个 universal（单槽 × 1 容量）
+   * 求解图节点：1 个
+   * 端口：1 fluid output(东)
+   *
+   * 通过 warehouse-item-link 面板将槽位连接到仓库。
+   * 与取货口结构一致，区别在于 kind="fluid" 限制仅可选液体。
+   * ignoreStock 可设为 true 实现无限取货。
    */
   createEntityDefinition({
     id: "item_port_udpipe_unloader_1",
@@ -1551,8 +1558,22 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_e_1", 2, 1, "E")],
       ),
     ],
-    storageSlotGroups: [],
-    portStorageBindings: [],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "unloader_buffer",
+        "fluid",
+        createSlots("slot", [1], "liquid"),
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_fluid_output", "fluid_output", "unloader_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.warehouseItemLink,
+        slotGroupIds: ["unloader_buffer"],
+      },
+    ],
   }),
 
   // =========================================================================

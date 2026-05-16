@@ -10,6 +10,8 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 function joinClassNames(values: Array<string | undefined | false>): string {
   return values.filter(Boolean).join(" ");
@@ -17,11 +19,11 @@ function joinClassNames(values: Array<string | undefined | false>): string {
 
 function renderButtonIcon(button: PlacementOperationButtonDefinition) {
   if (button.icon) {
-    return <WorkbenchIcon className="canvas-left-bottom-toolbar-icon" kind={button.icon} />;
+    return <WorkbenchIcon className={cm(styles, "canvas-left-bottom-toolbar-icon")} kind={button.icon} />;
   }
 
   if (button.iconSrc) {
-    return <img alt="" className="canvas-left-bottom-toolbar-image" src={button.iconSrc} />;
+    return <img alt="" className={cm(styles, "canvas-left-bottom-toolbar-image")} src={button.iconSrc} />;
   }
 
   return null;
@@ -90,7 +92,7 @@ export function CanvasLeftBottomToolbar({ appHost }: { appHost: AppHost }) {
   return (
     <div
       aria-label={t("workbench.section.operation")}
-      className="canvas-left-bottom-toolbar"
+      className={cm(styles, "canvas-left-bottom-toolbar")}
       onAuxClick={stopUiPropagationAndDefault}
       onClick={stopUiPropagation}
       onContextMenu={stopUiPropagationAndDefault}
@@ -108,10 +110,10 @@ export function CanvasLeftBottomToolbar({ appHost }: { appHost: AppHost }) {
           <button
             aria-label={label}
             aria-pressed={button.activeWhen ? isActive : undefined}
-            className={joinClassNames([
+            className={cm(styles, joinClassNames([
               "canvas-left-bottom-toolbar-button",
               isActive ? "is-active" : undefined,
-            ])}
+            ]))}
             data-ui-button-id={button.uiButtonId}
             key={button.uiButtonId}
             onClick={stopUiPropagation}
@@ -125,7 +127,7 @@ export function CanvasLeftBottomToolbar({ appHost }: { appHost: AppHost }) {
             title={label}
             type="button"
           >
-            <span aria-hidden="true" className="canvas-left-bottom-toolbar-button-icon">
+            <span aria-hidden="true" className={cm(styles, "canvas-left-bottom-toolbar-button-icon")}>
               {renderButtonIcon(button)}
             </span>
           </button>

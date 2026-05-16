@@ -6,6 +6,8 @@ import { EditSelectionInspector } from "@/app/shell/inspector/edit-selection-ins
 import { InspectorNeighborhoodPreview } from "@/app/shell/inspector/inspector-neighborhood-preview";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -22,8 +24,8 @@ export const InspectorDialog = observer(function InspectorDialog({ appHost }: { 
   const shouldShowNeighborhoodPreview = selectionCount === 1;
   const initialShellStyle: CSSProperties | undefined = dialogState.width === null && dialogState.height === null
     ? {
-      width: isPhoneLayout ? "90%" : "72%",
-      height: isPhoneLayout ? "90%" : "80%",
+      width: isPhoneLayout ? "90%" : "min(920px, 72vw)",
+      height: isPhoneLayout ? "90%" : "min(720px, 80vh)",
     }
     : undefined;
 
@@ -62,14 +64,14 @@ export const InspectorDialog = observer(function InspectorDialog({ appHost }: { 
       title={t("rightDock.selection")}
       titleId="inspector-dialog-title"
     >
-      <div className={shouldShowNeighborhoodPreview
+      <div className={cm(styles, shouldShowNeighborhoodPreview
         ? "section-body inspector-dialog-body has-neighborhood-preview"
-        : "section-body inspector-dialog-body"}
+        : "section-body inspector-dialog-body")}
       >
         {shouldShowNeighborhoodPreview ? (
           <InspectorNeighborhoodPreview appHost={appHost} />
         ) : null}
-        <div className="inspector-dialog-inspector-pane">
+        <div className={cm(styles, "inspector-dialog-inspector-pane")}>
           <EditSelectionInspector
             appHost={appHost}
             context={null}

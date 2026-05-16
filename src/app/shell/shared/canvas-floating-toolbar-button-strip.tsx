@@ -7,6 +7,8 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 type CanvasFloatingToolbarIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
 type CanvasFloatingToolbarTone = "cancel" | "confirm" | "delete" | "rotate";
@@ -179,10 +181,10 @@ export function CanvasFloatingToolbarButtonStrip({
         return (
           <button
             aria-label={label}
-            className={joinClassNames([
+            className={cm(styles, joinClassNames([
               buttonClassName,
               definition.tone ? `is-${definition.tone}` : undefined,
-            ])}
+            ]))}
             data-ui-button-id={buttonId}
             key={buttonId}
             onAuxClick={stopUiPropagationAndDefault}
@@ -199,11 +201,11 @@ export function CanvasFloatingToolbarButtonStrip({
             title={label}
             type="button"
           >
-            <WorkbenchIcon className={iconClassName} kind={definition.icon} />
+            <WorkbenchIcon className={cm(styles, iconClassName)} kind={definition.icon} />
             {showLabels ? (
-              <span className={labelClassName}>{label}</span>
+              <span className={cm(styles, labelClassName)}>{label}</span>
             ) : (
-              <span className="sr-only">{label}</span>
+              <span className={cm(styles, "sr-only")}>{label}</span>
             )}
           </button>
         );

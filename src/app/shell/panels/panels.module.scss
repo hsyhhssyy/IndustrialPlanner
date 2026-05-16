@@ -1,0 +1,1026 @@
+.stack {
+  display: grid;
+  gap: 8px;
+}
+
+.placement-panel {
+  display: grid;
+  align-content: start;
+  gap: 0;
+}
+
+.blueprint-panel {
+  display: grid;
+  align-content: start;
+  gap: 0;
+}
+
+.placement-panel-divider {
+  height: 0;
+  margin: 10px 0 8px;
+  border-top: 1px solid var(--line);
+}
+
+.placement-panel-group {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.placement-panel-group-operation.is-mobile-layout {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin: -10px -10px 0;
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
+}
+
+.placement-panel-group.is-placement-group-active {
+  position: relative;
+}
+
+.placement-panel-group.is-placement-group-active::after {
+  content: "";
+  position: absolute;
+  inset: -6px -8px -8px;
+  border: 2px solid var(--highlight-ring);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.placement-panel-group-header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding-right: 4px;
+}
+
+.placement-panel-group-header h3 {
+  margin: 0;
+}
+
+.placement-panel-group-header h3 {
+  color: var(--text-0);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.placement-panel-group-shortcut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border: 1px solid var(--placement-shortcut-border);
+  border-radius: 999px;
+  background: var(--placement-shortcut-bg);
+  color: var(--placement-shortcut-text);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    monospace;
+}
+
+.placement-button-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  grid-auto-rows: auto;
+  gap: 6px;
+}
+
+.placement-button-list.is-single-column {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.placement-operation-button-list {
+  display: grid;
+  align-items: start;
+  grid-auto-rows: auto;
+  gap: 6px;
+}
+
+/* 2026-05-09: 窄左栏下只有指定操作按钮会收缩成无文字四宫格，并在面板收起后以悬浮工具条继续存在。 */
+.placement-operation-button-list.is-mobile-icon-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.blueprint-operation-button-list.is-compact-import-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.placement-button {
+  display: grid;
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 3px;
+  align-self: start;
+  min-height: fit-content;
+  height: auto;
+  width: 100%;
+  padding: 5px 6px;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  overflow: visible;
+  position: relative;
+}
+
+.placement-action-button {
+  grid-template-columns: 24px minmax(0, 1fr);
+}
+
+.placement-device-button {
+  grid-template-columns: 24px minmax(0, 1fr);
+}
+
+.placement-operation-button-list.is-mobile-icon-grid .placement-action-button {
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  padding: 0;
+  text-align: center;
+}
+
+.blueprint-operation-button-list.is-compact-import-actions .placement-action-button {
+  grid-template-columns: 18px minmax(0, 1fr);
+  column-gap: 3px;
+  padding: 3px 4px;
+}
+
+.placement-operation-button-list.is-mobile-icon-grid .button-icon,
+.placement-operation-button-list.is-mobile-icon-grid .button-icon-image {
+  width: 28px;
+  height: 28px;
+}
+
+.placement-button .button-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.placement-button .button-icon-image {
+  width: 24px;
+  height: 24px;
+}
+
+.blueprint-operation-button-list.is-compact-import-actions .button-icon,
+.blueprint-operation-button-list.is-compact-import-actions .button-icon-image {
+  width: 18px;
+  height: 18px;
+}
+
+.placement-button-label {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 24px;
+  font-size: 1.125rem;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.blueprint-operation-button-list.is-compact-import-actions .placement-button-label {
+  min-height: 18px;
+  font-size: 0.62rem;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  overflow-wrap: normal;
+}
+
+.placement-button-hotkey {
+  position: absolute;
+  top: 3px;
+  inset-inline-end: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-4);
+  color: var(--text-1);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    monospace;
+}
+
+.blueprint-action-button:disabled,
+.blueprint-entry-button:disabled,
+.blueprint-utility-button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.blueprint-panel-note {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.blueprint-library-group {
+  gap: 10px;
+}
+
+.blueprint-tab-shell {
+  min-width: 0;
+  --blueprint-tab-border: color-mix(in srgb, var(--line-strong) 74%, var(--line));
+  --blueprint-tab-divider: color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  --blueprint-tab-bg: var(--surface-3);
+  --blueprint-tab-bg-hover: color-mix(in srgb, var(--surface-3) 44%, var(--surface-2));
+  --blueprint-tab-bg-active: var(--surface-2);
+  --dialog-shell-tab-track-height: 36px;
+  --dialog-shell-tab-divider: var(--blueprint-tab-divider);
+}
+
+.blueprint-tab-shell.is-touch-compact {
+  --dialog-shell-tab-track-height: 28px;
+}
+
+.blueprint-tab-header {
+  position: relative;
+  display: grid;
+  gap: 0;
+  min-width: 0;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.blueprint-tab-header::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: var(--dialog-shell-tab-divider);
+  z-index: 0;
+}
+
+.blueprint-tab-strip {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  height: var(--dialog-shell-tab-track-height);
+  margin-bottom: 0;
+}
+
+.blueprint-tab-list {
+  position: relative;
+  display: flex;
+  isolation: isolate;
+  align-items: flex-end;
+  gap: 0;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow-y: hidden;
+  overflow-x: auto;
+  padding: 0;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+}
+
+.blueprint-tab-shell .dialog-shell-tab {
+  --dialog-shell-tab-border: var(--blueprint-tab-border);
+  --dialog-shell-tab-bg: var(--blueprint-tab-bg);
+  min-height: 0;
+  height: 36px;
+  padding: 0 18px;
+  margin: 0;
+  border-color: var(--dialog-shell-tab-border);
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: var(--dialog-shell-tab-divider);
+  border-radius: 12px 12px 0 0;
+  background: var(--dialog-shell-tab-bg);
+  box-shadow: none;
+  color: color-mix(in srgb, var(--text-0) 72%, var(--text-1));
+  transform: none;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.blueprint-tab-shell .dialog-shell-tab::before,
+.blueprint-tab-shell .dialog-shell-tab::after {
+  content: none;
+}
+
+.blueprint-tab-shell .blueprint-tab-button:hover {
+  --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 26%, var(--line-strong));
+  --dialog-shell-tab-bg: var(--blueprint-tab-bg-hover);
+  border-color: var(--dialog-shell-tab-border);
+  border-bottom-color: var(--dialog-shell-tab-divider);
+  background: var(--dialog-shell-tab-bg);
+  color: var(--text-0);
+  transform: none;
+}
+
+.blueprint-tab-shell .blueprint-tab-button.is-active {
+  --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 40%, var(--line-strong));
+  --dialog-shell-tab-bg: var(--blueprint-tab-bg-active);
+  border-color: var(--dialog-shell-tab-border);
+  border-bottom-color: transparent;
+  background: var(--dialog-shell-tab-bg);
+  color: var(--text-0);
+}
+
+.blueprint-tab-shell .blueprint-tab-button.is-active::after {
+  content: "";
+  position: absolute;
+  right: 1px;
+  bottom: -1px;
+  left: 1px;
+  z-index: 2;
+  width: auto;
+  height: 2px;
+  border: 0;
+  background: var(--blueprint-tab-bg-active);
+  pointer-events: none;
+}
+
+.blueprint-tab-shell.is-touch-compact .blueprint-tab-list {
+  height: 100%;
+}
+
+.blueprint-tab-shell.is-touch-compact .dialog-shell-tab {
+  height: 24px;
+  padding: 0 10px 1px;
+  font-size: 0.62rem;
+  line-height: 1.05;
+}
+
+.blueprint-tab-shell.is-touch-compact .blueprint-tab-button.is-active {
+  height: 28px;
+  padding-inline: 12px;
+}
+
+.blueprint-tab-button {
+  justify-content: center;
+  min-height: 24px;
+  padding: 0.18rem 0.62rem;
+  color: var(--text-1);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.blueprint-tab-button.is-active {
+  color: var(--text-0);
+}
+
+.blueprint-library-pane {
+  display: grid;
+  gap: 10px;
+}
+
+.blueprint-browser-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.blueprint-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.blueprint-path-label {
+  min-width: 0;
+  color: var(--text-1);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.blueprint-utility-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.blueprint-utility-button.is-secondary {
+  background: transparent;
+  color: var(--text-1);
+}
+
+.blueprint-back-button {
+  min-width: 32px;
+  padding: 0;
+}
+
+.blueprint-library-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.blueprint-folder-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px;
+}
+
+.blueprint-folder-input {
+  min-width: 0;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  padding: 0 10px;
+  font: inherit;
+}
+
+.blueprint-folder-input::placeholder {
+  color: var(--text-2);
+}
+
+.blueprint-panel-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.blueprint-browser-list {
+  display: grid;
+  gap: 6px;
+}
+
+.blueprint-entry-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.blueprint-entry-button {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  text-align: left;
+}
+
+.blueprint-entry-button:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-3);
+}
+
+.blueprint-entry-button.is-selected {
+  border-color: var(--highlight-ring);
+  box-shadow: inset 0 0 0 1px var(--highlight-ring);
+}
+
+.blueprint-folder-edit-button {
+  min-width: 32px;
+  padding: 0;
+}
+
+.blueprint-folder-edit-button .button-icon-image {
+  width: 16px;
+  height: 16px;
+}
+
+.blueprint-entry-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.blueprint-entry-title {
+  min-width: 0;
+  color: var(--text-0);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blueprint-entry-description,
+.blueprint-empty-state p {
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.blueprint-entry-description,
+.blueprint-empty-state p {
+  color: var(--text-2);
+}
+
+.blueprint-entry-description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  white-space: nowrap;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-folder-form {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.blueprint-panel.is-touch-layout .blueprint-browser-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.blueprint-panel.is-narrow-column .blueprint-breadcrumb {
+  flex: 1 0 100%;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-breadcrumb {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-path-label {
+  flex: 1 1 auto;
+  display: block;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  text-overflow: clip;
+  scrollbar-width: none;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-path-label::-webkit-scrollbar {
+  display: none;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-browser-toolbar > .blueprint-utility-button {
+  justify-self: auto;
+  width: auto;
+  justify-content: center;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-entry-button {
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 6px;
+  min-height: 34px;
+  padding: 5px 7px;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-entry-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-entry-title {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-entry-description {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.cluster,
+.definition-list {
+  display: grid;
+  gap: 6px;
+}
+
+.placeholder-section,
+.inspector-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--surface-2);
+}
+
+.placeholder-section-header,
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.placeholder-section-header h3,
+.card-header h3,
+.card-header h4,
+.inspector-group-title {
+  margin: 0;
+}
+
+.placeholder-section-header h3,
+.card-header h3,
+.card-header h4 {
+  font-size: 0.85rem;
+  color: var(--text-0);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.history-panel {
+  min-width: 0;
+}
+
+.history-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.history-action-grid button {
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 10px;
+  text-align: center;
+}
+
+.history-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.history-action-button .button-icon {
+  flex-shrink: 0;
+}
+
+.history-action-button .button-icon-image {
+  width: 18px;
+  height: 18px;
+}
+
+.history-action-label {
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.history-record-list {
+  display: grid;
+  gap: 6px;
+}
+
+.history-record-button {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 8px;
+  text-align: left;
+  overflow: hidden;
+}
+
+.history-record-button.is-current {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.history-record-main,
+.history-record-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.history-record-sequence {
+  flex: 0 0 auto;
+  color: var(--text-2);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.history-record-title,
+.history-record-detail {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-record-title {
+  color: var(--text-0);
+  font-weight: 600;
+}
+
+.history-record-status,
+.history-record-meta,
+.history-record-detail {
+  color: var(--text-2);
+  font-size: 0.78rem;
+}
+
+.history-record-status {
+  flex: 0 0 auto;
+}
+
+.history-empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 76px;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.history-empty-state h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.base-current-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-0);
+  text-align: left;
+}
+
+.base-current-button:not(:disabled):hover {
+  border-color: var(--line-strong);
+  background: var(--surface-3);
+}
+
+.base-current-button-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.base-current-button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: var(--text-1);
+}
+
+.base-current-button-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.base-select-dialog {
+  width: min(560px, 100%);
+  height: min(560px, 100%);
+}
+
+.base-select-dialog-body {
+  display: grid;
+  min-height: 0;
+  padding: 14px;
+}
+
+.base-select-dialog-content {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 0;
+  height: 100%;
+}
+
+.base-select-group-list {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.base-select-group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.base-select-group h3 {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.base-select-option-list {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.base-select-option {
+  display: grid;
+  min-width: 0;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-0);
+  text-align: left;
+}
+
+.base-select-option:not(:disabled):hover {
+  border-color: var(--line-strong);
+  background: var(--surface-2);
+}
+
+.base-select-option.is-selected {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.base-select-option-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.base-select-option-name,
+.base-select-option-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.base-select-option-name {
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.base-select-option-meta {
+  color: var(--text-2);
+  font-size: 0.78rem;
+}
+
+.base-select-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.base-select-status {
+  min-width: 0;
+  color: var(--text-2);
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.base-select-status[role="alert"] {
+  color: var(--danger);
+}
+
+.card-subheader {
+  padding: 0;
+  border: 0;
+  background: var(--transparent);
+}
+
+.selection-inspector-action-group {
+  position: sticky;
+  top: -10px;
+  z-index: 2;
+  margin: -10px 0 10px;
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
+}
+
+.selection-inspector-action-button-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.selection-inspector-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 8px;
+  border-color: var(--canvas-floating-toolbar-button-border);
+  border-radius: 10px;
+  background: var(--canvas-floating-toolbar-button-bg);
+  color: var(--canvas-floating-toolbar-button-text);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.selection-inspector-action-button:not(:disabled):hover {
+  border-color: var(--canvas-floating-toolbar-button-hover-border);
+  background: var(--canvas-floating-toolbar-button-hover-bg);
+}
+
+.selection-inspector-action-button.is-cancel,
+.selection-inspector-action-button.is-delete {
+  color: var(--canvas-floating-toolbar-cancel);
+}
+
+.selection-inspector-action-button.is-rotate {
+  color: var(--canvas-floating-toolbar-button-text);
+}
+
+.selection-inspector-action-button.is-confirm {
+  color: var(--canvas-floating-toolbar-confirm);
+}
+
+.selection-inspector-action-icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  fill: currentColor;
+}
+
+.selection-inspector-action-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

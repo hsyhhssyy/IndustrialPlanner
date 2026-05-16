@@ -5,6 +5,8 @@ import { useViewportResizeAdapter } from "@/app/shell/canvas/viewport-resize-ada
 import { observer } from "mobx-react-lite";
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent, PointerEvent, WheelEvent } from "react";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
@@ -36,7 +38,7 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
       return;
     }
 
-    renderCanvas.classList.add("renderer-canvas");
+    renderCanvas.classList.add(...cm(styles, "renderer-canvas").split(/\s+/));
     rendererHost.appendChild(renderCanvas);
 
     return () => {
@@ -108,7 +110,7 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
 
   return (
     <main
-      className="canvas-panel panel-surface"
+      className={cm(styles, "canvas-panel panel-surface")}
       onBlur={handleBlur}
       onLostPointerCapture={handleLostPointerCapture}
       onPointerCancel={handlePointerCancel}
@@ -118,10 +120,10 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
       onWheel={handleWheel}
       tabIndex={0}
     >
-      <div className="canvas-stage">
-        <div className="canvas-viewport-surface" ref={viewportSurfaceRef}>
-          {renderCanvas ? <div className="renderer-host" ref={rendererHostRef} /> : null}
-          {renderCanvas ? null : <div className="canvas-placeholder">{t("status.ready")}</div>}
+      <div className={cm(styles, "canvas-stage")}>
+        <div className={cm(styles, "canvas-viewport-surface")} ref={viewportSurfaceRef}>
+          {renderCanvas ? <div className={cm(styles, "renderer-host")} ref={rendererHostRef} /> : null}
+          {renderCanvas ? null : <div className={cm(styles, "canvas-placeholder")}>{t("status.ready")}</div>}
           <CanvasTouchHoldIndicator state={longPressState} />
           {showGestureDiagnosticsWindow ? (
             <CanvasGestureDiagnosticsOverlay snapshot={diagnosticsSnapshot} />
@@ -155,18 +157,18 @@ function CanvasGestureDiagnosticsOverlay({
 
   return (
     <section
-      className={`canvas-gesture-diagnostics${collapsed ? " is-collapsed" : ""}`}
+      className={cm(styles, `canvas-gesture-diagnostics${collapsed ? " is-collapsed" : ""}`)}
       aria-label="gesture diagnostics"
     >
-      <div className="canvas-gesture-diagnostics-header">
-        <div className="canvas-gesture-diagnostics-header-copy">
+      <div className={cm(styles, "canvas-gesture-diagnostics-header")}>
+        <div className={cm(styles, "canvas-gesture-diagnostics-header-copy")}>
           <span>Gesture</span>
           <strong>{latest?.type ?? "idle"}</strong>
         </div>
         <button
           aria-controls={bodyId}
           aria-expanded={!collapsed}
-          className="canvas-gesture-diagnostics-toggle"
+          className={cm(styles, "canvas-gesture-diagnostics-toggle")}
           onClick={handleToggleClick}
           onKeyDown={stopToggleInputPropagation}
           onKeyUp={stopToggleInputPropagation}
@@ -180,8 +182,8 @@ function CanvasGestureDiagnosticsOverlay({
         </button>
       </div>
       {collapsed ? null : (
-        <div className="canvas-gesture-diagnostics-body" id={bodyId}>
-          <dl className="canvas-gesture-diagnostics-grid">
+        <div className={cm(styles, "canvas-gesture-diagnostics-body")} id={bodyId}>
+          <dl className={cm(styles, "canvas-gesture-diagnostics-grid")}>
             <div>
               <dt>ID</dt>
               <dd>{latest?.gestureId ?? "-"}</dd>
@@ -203,7 +205,7 @@ function CanvasGestureDiagnosticsOverlay({
               <dd>{pressedKeys.length > 0 ? pressedKeys.join(" + ") : "-"}</dd>
             </div>
           </dl>
-          <ol className="canvas-gesture-diagnostics-events">
+          <ol className={cm(styles, "canvas-gesture-diagnostics-events")}>
             {snapshot.events.slice(0, 4).map((event) => (
               <li key={event.sequence}>
                 <span>{event.type}</span>
@@ -235,19 +237,19 @@ function CanvasTouchHoldIndicator({ state }: { state: LongPressState }) {
 
   return (
     <div
-      className="canvas-touch-hold-indicator"
+      className={cm(styles, "canvas-touch-hold-indicator")}
       key={state.startedAt ?? "ready"}
       style={{ left, top }}
     >
-      <svg className="canvas-touch-hold-indicator-ring" viewBox="0 0 40 40">
+      <svg className={cm(styles, "canvas-touch-hold-indicator-ring")} viewBox="0 0 40 40">
         <circle
-          className="canvas-touch-hold-indicator-track"
+          className={cm(styles, "canvas-touch-hold-indicator-track")}
           cx="20"
           cy="20"
           r="16"
         />
         <circle
-          className="canvas-touch-hold-indicator-progress"
+          className={cm(styles, "canvas-touch-hold-indicator-progress")}
           cx="20"
           cy="20"
           r="16"
@@ -259,7 +261,7 @@ function CanvasTouchHoldIndicator({ state }: { state: LongPressState }) {
           }}
         />
       </svg>
-      <div className="canvas-touch-hold-indicator-core" />
+      <div className={cm(styles, "canvas-touch-hold-indicator-core")} />
     </div>
   );
 }

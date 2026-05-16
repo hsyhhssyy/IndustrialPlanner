@@ -1,0 +1,546 @@
+.dialog-shell-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 13;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 2.6vw, 28px);
+  background: color-mix(in srgb, var(--shell-bg) 42%, transparent);
+}
+
+.dialog-shell-backdrop,
+.dialog-shell-backdrop * {
+  touch-action: auto;
+}
+
+.dialog-shell-backdrop.is-immersive-maximized {
+  padding: 0;
+}
+
+.dialog-shell {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(980px, 100%);
+  min-width: min(320px, 100%);
+  min-height: min(240px, 100%);
+  height: min(620px, 100%);
+  max-height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-1);
+  box-shadow: 0 24px 80px var(--shadow-floating-control);
+}
+
+.dialog-shell.is-maximized {
+  width: 100%;
+  height: 100%;
+}
+
+.dialog-shell-backdrop.is-immersive-maximized .dialog-shell {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.dialog-shell-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dialog-shell-header-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.dialog-shell-header.has-tabs {
+  gap: 0;
+  padding: 12px 16px 0;
+  border-bottom: 0;
+}
+
+.dialog-shell-header.has-tabs .dialog-shell-header-main {
+  padding-bottom: 0;
+}
+
+.dialog-shell-header.has-tabs + .dialog-shell-body {
+  border-top: 0;
+}
+
+.dialog-shell-header.is-draggable {
+  cursor: grab;
+  user-select: none;
+}
+
+.dialog-shell-header-copy {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dialog-shell-header-copy h2 {
+  margin: 0;
+}
+
+.dialog-shell-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.dialog-shell-header-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.dialog-shell-tab-list {
+  position: relative;
+  display: flex;
+  isolation: isolate;
+  align-items: flex-end;
+  flex: 1 1 auto;
+  width: 100%;
+  gap: 8px;
+  min-width: 0;
+  overflow-y: hidden;
+  overflow-x: auto;
+  padding: 0 8px;
+}
+
+.dialog-shell-tab-list::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: color-mix(in srgb, var(--accent-strong) 42%, var(--line));
+}
+
+.dialog-shell-tab {
+  --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 66%, var(--line));
+  --dialog-shell-tab-top: color-mix(in srgb, var(--accent) 24%, var(--surface-1));
+  --dialog-shell-tab-bottom: color-mix(in srgb, var(--accent) 14%, var(--surface-1));
+  position: relative;
+  z-index: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 24px 4px;
+  margin: 0 0 -1px;
+  border: 1px solid var(--dialog-shell-tab-border);
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(180deg, var(--dialog-shell-tab-top) 0%, var(--dialog-shell-tab-bottom) 100%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--surface-1) 82%, transparent),
+    0 4px 10px color-mix(in srgb, var(--shadow-floating-control) 32%, transparent);
+  color: color-mix(in srgb, var(--accent-strong) 78%, var(--text-0));
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    min-height 140ms ease;
+}
+
+.dialog-shell-tab::before,
+.dialog-shell-tab::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  z-index: -1;
+  width: 12px;
+  height: 14px;
+  background: linear-gradient(180deg, var(--dialog-shell-tab-top) 0%, var(--dialog-shell-tab-bottom) 100%);
+}
+
+.dialog-shell-tab::before {
+  left: -12px;
+  border-bottom: 1px solid var(--dialog-shell-tab-border);
+  border-left: 1px solid var(--dialog-shell-tab-border);
+  border-bottom-left-radius: 10px;
+}
+
+.dialog-shell-tab::after {
+  right: -12px;
+  border-right: 1px solid var(--dialog-shell-tab-border);
+  border-bottom: 1px solid var(--dialog-shell-tab-border);
+  border-bottom-right-radius: 10px;
+}
+
+.dialog-shell-tab:hover {
+  z-index: 2;
+  --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 82%, var(--line));
+  --dialog-shell-tab-top: color-mix(in srgb, var(--accent) 30%, var(--surface-1));
+  --dialog-shell-tab-bottom: color-mix(in srgb, var(--accent) 18%, var(--surface-1));
+  color: color-mix(in srgb, var(--accent-strong) 88%, var(--text-0));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--surface-1) 88%, transparent),
+    0 6px 12px color-mix(in srgb, var(--shadow-floating-control) 44%, transparent);
+}
+
+.dialog-shell-tab.is-active {
+  z-index: 3;
+  --dialog-shell-tab-border: var(--accent-strong);
+  --dialog-shell-tab-top: color-mix(in srgb, var(--accent) 38%, var(--surface-1));
+  --dialog-shell-tab-bottom: color-mix(in srgb, var(--accent) 24%, var(--surface-1));
+  min-height: 52px;
+  color: color-mix(in srgb, var(--accent-strong) 92%, var(--text-0));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--surface-1) 92%, transparent),
+    0 1px 0 var(--surface-1),
+    0 10px 20px color-mix(in srgb, var(--shadow-floating-control) 44%, transparent);
+}
+
+.dialog-shell.has-tabs {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.dialog-shell.has-tabs .dialog-shell-header {
+  --dialog-shell-tab-track-height: 36px;
+  --dialog-shell-tab-divider: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  position: relative;
+  gap: 0;
+  padding: 8px 18px 0;
+  border-bottom: 0;
+}
+
+.dialog-shell.has-tabs .dialog-shell-header::after {
+  content: "";
+  position: absolute;
+  right: 18px;
+  bottom: 0;
+  left: 18px;
+  height: 1px;
+  background: var(--dialog-shell-tab-divider);
+  z-index: 0;
+}
+
+.dialog-shell.has-tabs .dialog-shell-header-main {
+  align-items: flex-end;
+  gap: 14px;
+  width: 100%;
+  min-height: var(--dialog-shell-tab-track-height);
+}
+
+.dialog-shell.has-tabs .dialog-shell-header-copy {
+  flex: 0 1 auto;
+  padding-bottom: 3px;
+}
+
+.dialog-shell.has-tabs .dialog-shell-header-actions {
+  padding-bottom: 3px;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab-strip {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--dialog-shell-tab-track-height);
+  margin-bottom: 0;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab-strip::after {
+  content: none;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab-list {
+  gap: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  justify-content: flex-start;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab-list::after {
+  content: none;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab {
+  --dialog-shell-tab-border: color-mix(in srgb, var(--line-strong) 84%, var(--line));
+  --dialog-shell-tab-bg: color-mix(in srgb, var(--surface-2) 90%, var(--surface-1));
+  min-height: 0;
+  height: 36px;
+  padding: 0 18px;
+  margin: 0;
+  border-color: var(--dialog-shell-tab-border);
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: var(--dialog-shell-tab-divider);
+  border-radius: 12px 12px 0 0;
+  background: var(--dialog-shell-tab-bg);
+  box-shadow: none;
+  color: color-mix(in srgb, var(--text-0) 86%, var(--text-1));
+  transform: none;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab::before,
+.dialog-shell.has-tabs .dialog-shell-tab::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  z-index: -1;
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+  background: var(--dialog-shell-tab-bg);
+  transition:
+    opacity 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+  pointer-events: none;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab::before,
+.dialog-shell.has-tabs .dialog-shell-tab::after {
+  content: none;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab::before {
+  left: -8px;
+  border-bottom: 1px solid var(--dialog-shell-tab-border);
+  border-left: 1px solid var(--dialog-shell-tab-border);
+  border-bottom-left-radius: 0;
+  transform: translate(6px, 8px) scale(0.72);
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab::after {
+  right: -8px;
+  border-right: 1px solid var(--dialog-shell-tab-border);
+  border-bottom: 1px solid var(--dialog-shell-tab-border);
+  border-bottom-right-radius: 0;
+  transform: translate(-6px, 8px) scale(0.72);
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab:hover {
+  --dialog-shell-tab-border: var(--line-strong);
+  --dialog-shell-tab-bg: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+  border-color: var(--dialog-shell-tab-border);
+  border-bottom-color: var(--dialog-shell-tab-divider);
+  background: var(--dialog-shell-tab-bg);
+  box-shadow: none;
+  color: var(--text-0);
+  transform: none;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab.is-active {
+  --dialog-shell-tab-border: var(--line-strong);
+  --dialog-shell-tab-bg: var(--surface-1);
+  height: 36px;
+  padding-inline: 18px;
+  border-color: var(--dialog-shell-tab-border);
+  border-bottom-color: transparent;
+  background: var(--dialog-shell-tab-bg);
+  box-shadow: none;
+  color: var(--text-0);
+  transform: none;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab.is-active::before,
+.dialog-shell.has-tabs .dialog-shell-tab.is-active::after {
+  opacity: 1;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab.is-active::after {
+  content: "";
+  position: absolute;
+  right: 1px;
+  bottom: -1px;
+  left: 1px;
+  z-index: 2;
+  width: auto;
+  height: 2px;
+  opacity: 1;
+  border: 0;
+  background: var(--surface-1);
+  transform: none;
+  pointer-events: none;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab.is-active::before {
+  transform: translate(0, 0) scale(1);
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab.is-active::after {
+  transform: translate(0, 0) scale(1);
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  bottom: -2px;
+  left: -6px;
+  z-index: 1;
+  width: auto;
+  height: auto;
+  opacity: 1;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  transform: none;
+  pointer-events: auto;
+}
+
+.dialog-shell-body,
+.dialog-shell-tab-panel {
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dialog-shell button:focus-visible,
+.dialog-shell input:focus-visible,
+.dialog-shell select:focus-visible {
+  outline: 2px solid var(--highlight-ring);
+  outline-offset: 2px;
+}
+
+:global(body.is-dragging-dialog-shell),
+:global(body.is-dragging-dialog-shell *) {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+:global(body.is-resizing-dialog-shell),
+:global(body.is-resizing-dialog-shell *) {
+  cursor: nwse-resize !important;
+  user-select: none;
+}
+
+.dialog-shell-resize-grip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  z-index: 1;
+}
+
+.dialog-shell-resize-grip::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--text-2);
+  border-bottom: 2px solid var(--text-2);
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.dialog-shell-resize-grip:hover::after {
+  opacity: 1;
+}
+
+.dialog-shell.is-mobile-compact .dialog-shell-header {
+  --dialog-shell-tab-track-height: 28px;
+  padding: 6px 8px 0;
+}
+
+.dialog-shell.is-mobile-compact .dialog-shell-header-copy {
+  padding-bottom: 2px;
+}
+
+.dialog-shell.is-mobile-compact .dialog-shell-header-copy h2 {
+  font-size: 0.75rem;
+  line-height: 1.1;
+}
+
+.dialog-shell.is-mobile-compact .dialog-shell-header-actions {
+  gap: 4px;
+  padding-bottom: 2px;
+}
+
+.dialog-shell.is-mobile-compact .dialog-shell-header-button {
+  width: 24px;
+  height: 24px;
+}
+
+.dialog-shell.is-mobile-compact .dialog-shell-tab-strip {
+  height: var(--dialog-shell-tab-track-height);
+}
+
+.dialog-shell.is-mobile-compact .dialog-shell-tab-list {
+  height: 100%;
+  gap: 6px;
+}
+
+.dialog-shell.is-mobile-compact .dialog-shell-tab {
+  min-height: 0;
+  height: 18px;
+  padding: 0 6px 1px;
+  font-size: 0.5rem;
+  line-height: 1;
+  transform: translateY(3px);
+}
+
+.dialog-shell.is-mobile-compact .dialog-shell-tab:hover {
+  transform: translateY(2px);
+}
+
+.dialog-shell.is-mobile-compact .dialog-shell-tab.is-active {
+  height: 22px;
+  padding-inline: 8px;
+}
+
+/* AI-CORRECTION 2026-05-11:
+   上面的 compact mobile 规则保留用于审计，但当前有效实现不再让手机端 tab
+   使用高低差和额外间距。手机端沿用桌面/平板的平面轨道，只保留更小字号。 */
+.dialog-shell.has-tabs.is-mobile-compact .dialog-shell-header {
+  --dialog-shell-tab-track-height: 36px;
+}
+
+.dialog-shell.has-tabs.is-mobile-compact .dialog-shell-tab-list {
+  gap: 0;
+}
+
+.dialog-shell.has-tabs.is-mobile-compact .dialog-shell-tab {
+  height: var(--dialog-shell-tab-track-height);
+  padding: 0 18px;
+  font-size: 0.625rem;
+  line-height: 1;
+  transform: none;
+}
+
+.dialog-shell.has-tabs.is-mobile-compact .dialog-shell-tab:hover {
+  transform: none;
+}
+
+.dialog-shell.has-tabs.is-mobile-compact .dialog-shell-tab.is-active {
+  height: var(--dialog-shell-tab-track-height);
+  padding-inline: 18px;
+}

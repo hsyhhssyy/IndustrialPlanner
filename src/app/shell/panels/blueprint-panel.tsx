@@ -29,6 +29,8 @@ import LucideClipboard from "~icons/lucide/clipboard";
 import LucideCopy from "~icons/lucide/copy";
 import LucideDownload from "~icons/lucide/download";
 import LucideUpload from "~icons/lucide/upload";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 interface BlueprintOperationButtonDefinition {
   readonly uiButtonId: string;
@@ -404,7 +406,7 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
     return (
       <button
         aria-label={label}
-        className="placement-button placement-action-button blueprint-action-button"
+        className={cm(styles, "placement-button placement-action-button blueprint-action-button")}
         data-ui-button-id={button.uiButtonId}
         disabled={isDisabled}
         key={button.uiButtonId}
@@ -431,31 +433,31 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
         title={label}
         type="button"
       >
-        <span aria-hidden="true" className="button-icon">
-          <button.Icon className="button-icon-image" />
+        <span aria-hidden="true" className={cm(styles, "button-icon")}>
+          <button.Icon className={cm(styles, "button-icon-image")} />
         </span>
-        <span className="placement-button-label">{visibleLabel}</span>
+        <span className={cm(styles, "placement-button-label")}>{visibleLabel}</span>
       </button>
     );
   };
 
   
   return (
-    <div className={isTouchLayout
+    <div className={cm(styles, isTouchLayout
       ? "blueprint-panel placement-panel is-touch-layout"
       : isNarrowColumn
         ? "blueprint-panel placement-panel is-narrow-column"
-        : "blueprint-panel placement-panel"}
+        : "blueprint-panel placement-panel")}
     >
       <section
         aria-label={isTouchLayout ? t("workbench.section.blueprintActions") : undefined}
         aria-labelledby={isTouchLayout ? undefined : "blueprint-operation-section"}
-        className={isTouchLayout
+        className={cm(styles, isTouchLayout
           ? "placement-panel-group placement-panel-group-operation is-mobile-layout"
-          : "placement-panel-group placement-panel-group-operation"}
+          : "placement-panel-group placement-panel-group-operation")}
       >
         {isTouchLayout ? null : (
-          <div className="placement-panel-group-header">
+          <div className={cm(styles, "placement-panel-group-header")}>
             <h3 id="blueprint-operation-section">{t("workbench.section.blueprintActions")}</h3>
           </div>
         )}
@@ -471,29 +473,29 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
           ref={fileImportInputRef}
           type="file"
         />
-        <div className={isTouchLayout
+        <div className={cm(styles, isTouchLayout
           ? "placement-button-list placement-operation-button-list blueprint-operation-button-list is-compact-import-actions"
-          : "placement-button-list placement-operation-button-list"}
+          : "placement-button-list placement-operation-button-list")}
         >
           {visibleOperationButtons.map((button) => renderOperationButton(button))}
         </div>
       </section>
 
-      <div aria-hidden="true" className="placement-panel-divider" />
+      <div aria-hidden="true" className={cm(styles, "placement-panel-divider")} />
 
-      <section className="placement-panel-group blueprint-library-group">
+      <section className={cm(styles, "placement-panel-group blueprint-library-group")}>
         {isTouchLayout ? null : (
-          <div className="placement-panel-group-header">
+          <div className={cm(styles, "placement-panel-group-header")}>
             <h3>{t("workbench.section.blueprintLibrary")}</h3>
           </div>
         )}
 
-        <div className={isTouchLayout ? "blueprint-tab-shell is-touch-compact" : "blueprint-tab-shell"}>
-          <div className="blueprint-tab-header">
-            <div className="blueprint-tab-strip">
+        <div className={cm(styles, isTouchLayout ? "blueprint-tab-shell is-touch-compact" : "blueprint-tab-shell")}>
+          <div className={cm(styles, "blueprint-tab-header")}>
+            <div className={cm(styles, "blueprint-tab-strip")}>
               <div
                 aria-label={t("workbench.section.blueprintLibrary")}
-                className="blueprint-tab-list"
+                className={cm(styles, "blueprint-tab-list")}
                 role="tablist"
               >
                 {[
@@ -505,9 +507,9 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
                   return (
                     <button
                       aria-selected={isActive}
-                      className={isActive
+                      className={cm(styles, isActive
                         ? "blueprint-tab-button dialog-shell-tab is-active"
-                        : "blueprint-tab-button dialog-shell-tab"}
+                        : "blueprint-tab-button dialog-shell-tab")}
                       data-ui-button-id={tab.uiButtonId}
                       key={tab.id}
                       onClick={() => {

@@ -12,6 +12,8 @@ import {
 import {
   handleUiEvent,
 } from "@/app/shell/shared/ui-shell-null-handlers";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 type Translate = (key: string) => string;
 
@@ -65,9 +67,9 @@ export function SelectionInspectorSummary({
   ];
 
   return (
-    <dl className="kv-grid">
+    <dl className={cm(styles, "kv-grid")}>
       {rows.map((row) => (
-        <div className="kv" key={row.label}>
+        <div className={cm(styles, "kv")} key={row.label}>
           <dt>{row.label}</dt>
           <dd>{row.value}</dd>
         </div>
@@ -92,9 +94,9 @@ export function ConnectionList({
     : translate("action.removeLink");
 
   return (
-    <div className="definition-list">
+    <div className={cm(styles, "definition-list")}>
       {links.length === 0 ? (
-        <article className="definition-card">
+        <article className={cm(styles, "definition-card")}>
           <h4>{translate("label.links")}</h4>
           <p>{translate("label.noConnections")}</p>
           <button disabled onClick={handleUiEvent} type="button">
@@ -104,7 +106,7 @@ export function ConnectionList({
       ) : (
         <>
           {links.map((link, index) => (
-            <article className="definition-card" key={link.id}>
+            <article className={cm(styles, "definition-card")} key={link.id}>
               <h4>{`${translate("label.links")} #${index + 1}`}</h4>
               <p>{`${link.source.entityId}.${link.source.storageSlotGroupId}.${link.source.slotId} -> ${link.target.entityId}.${link.target.storageSlotGroupId}.${link.target.slotId}`}</p>
               <p>{link.linkType}</p>
@@ -131,8 +133,8 @@ export function RuntimeDetailList({
   translate: Translate;
 }) {
   return (
-    <div className="definition-list">
-      <article className="definition-card">
+    <div className={cm(styles, "definition-list")}>
+      <article className={cm(styles, "definition-card")}>
         <p>{translate("label.runtimeDetailPlaceholder")}</p>
       </article>
     </div>
@@ -147,7 +149,7 @@ export function NoSelectionState({
   translate: Translate;
 }) {
   return (
-    <article className="definition-card">
+    <article className={cm(styles, "definition-card")}>
       <h4>{translate("label.noSelection")}</h4>
       <p>{translate("status.edit")}</p>
     </article>
@@ -174,7 +176,7 @@ export function ConfigFieldMutationControl({
   onClear?: () => Promise<void> | void;
 }) {
   return (
-    <div className="cluster">
+    <div className={cm(styles, "cluster")}>
       <input
         defaultValue={serializeConfigValueForInput(currentValue)}
         disabled={disabled}

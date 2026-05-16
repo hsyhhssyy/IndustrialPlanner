@@ -9,6 +9,8 @@ import type {
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import styles from "@/app/shell/app-shell.module.scss";
+import { cm } from "@/app/shell/shared/css-module-class";
 
 export const ENTITY_UI_GROUP_ORDER: ToolboxWikiEntityGroupCategory[] = [
   "basicProduction",
@@ -210,11 +212,11 @@ function SearchBar({
   t: (key: string) => string;
 }) {
   return (
-    <div className="encyclopedia-search">
+    <div className={cm(styles, "encyclopedia-search")}>
       <input
         autoFocus={autoFocus}
         type="text"
-        className="encyclopedia-search-input"
+        className={cm(styles, "encyclopedia-search-input")}
         placeholder={t("encyclopedia.searchPlaceholder")}
         value={query}
         onChange={(event) => onChange(event.target.value)}
@@ -239,40 +241,40 @@ function CardGrid({
   t: (key: string) => string;
 }) {
   if (items.length === 0 && entities.length === 0) {
-    return <p className="encyclopedia-empty">{t("encyclopedia.noResults")}</p>;
+    return <p className={cm(styles, "encyclopedia-empty")}>{t("encyclopedia.noResults")}</p>;
   }
 
   return (
-    <div className="encyclopedia-card-grid">
+    <div className={cm(styles, "encyclopedia-card-grid")}>
       {entities.map((entity) => (
         <button
           key={`entity-${entity.id}`}
           type="button"
-          className="encyclopedia-card"
+          className={cm(styles, "encyclopedia-card")}
           onClick={() => onEntityClick(entity.id)}
         >
           <img
             alt=""
-            className="encyclopedia-card-icon"
+            className={cm(styles, "encyclopedia-card-icon")}
             src={resolveEntityIcon(entity.id)}
           />
-          <span className="encyclopedia-card-label">{t(entity.nameKey)}</span>
-          <span className="encyclopedia-card-kind">{t("encyclopedia.entityLabel")}</span>
+          <span className={cm(styles, "encyclopedia-card-label")}>{t(entity.nameKey)}</span>
+          <span className={cm(styles, "encyclopedia-card-kind")}>{t("encyclopedia.entityLabel")}</span>
         </button>
       ))}
       {items.map((item) => (
         <button
           key={`item-${item.id}`}
           type="button"
-          className="encyclopedia-card"
+          className={cm(styles, "encyclopedia-card")}
           onClick={() => onItemClick(item.id)}
         >
           <img
             alt=""
-            className="encyclopedia-card-icon"
+            className={cm(styles, "encyclopedia-card-icon")}
             src={resolveItemIcon(item.id, index)}
           />
-          <span className="encyclopedia-card-label">{t(item.nameKey)}</span>
+          <span className={cm(styles, "encyclopedia-card-label")}>{t(item.nameKey)}</span>
         </button>
       ))}
     </div>
@@ -308,7 +310,7 @@ function SidebarCategories({
     }));
 
   return (
-    <div className="encyclopedia-category-list">
+    <div className={cm(styles, "encyclopedia-category-list")}>
       {primaryGroups.map((group) => (
         <CategoryButton
           key={group.id}
@@ -318,7 +320,7 @@ function SidebarCategories({
           onChange={onChange}
         />
       ))}
-      {entitySubgroups.length > 0 ? <hr className="encyclopedia-sidebar-divider" /> : null}
+      {entitySubgroups.length > 0 ? <hr className={cm(styles, "encyclopedia-sidebar-divider")} /> : null}
       {entitySubgroups.map((group) => (
         <CategoryButton
           key={group.id}
@@ -384,38 +386,38 @@ function CategoryDropdown({
       : `${primarySelectedLabel} +${selectedOptions.length - 1}`;
 
   return (
-    <div className="encyclopedia-category-dropdown" ref={ref}>
+    <div className={cm(styles, "encyclopedia-category-dropdown")} ref={ref}>
       <button
         type="button"
-        className={`encyclopedia-category-dropdown-trigger${isFiltered ? " is-filtered" : ""}`}
+        className={cm(styles, `encyclopedia-category-dropdown-trigger${isFiltered ? " is-filtered" : ""}`)}
         onClick={onToggle}
       >
-        <span className="encyclopedia-category-dropdown-copy">
-          <span className="encyclopedia-category-dropdown-title">{t("encyclopedia.filter.label")}</span>
-          <span className="encyclopedia-category-dropdown-label">{summaryLabel}</span>
+        <span className={cm(styles, "encyclopedia-category-dropdown-copy")}>
+          <span className={cm(styles, "encyclopedia-category-dropdown-title")}>{t("encyclopedia.filter.label")}</span>
+          <span className={cm(styles, "encyclopedia-category-dropdown-label")}>{summaryLabel}</span>
         </span>
-        <span className="encyclopedia-category-dropdown-meta">
+        <span className={cm(styles, "encyclopedia-category-dropdown-meta")}>
           {isFiltered ? (
-            <span className="encyclopedia-category-dropdown-badge">{selectedCategories.length}</span>
+            <span className={cm(styles, "encyclopedia-category-dropdown-badge")}>{selectedCategories.length}</span>
           ) : null}
-          <span className={`encyclopedia-category-dropdown-arrow${isOpen ? " is-open" : ""}`}>▾</span>
+          <span className={cm(styles, `encyclopedia-category-dropdown-arrow${isOpen ? " is-open" : ""}`)}>▾</span>
         </span>
       </button>
       {isOpen ? (
-        <div className="encyclopedia-category-dropdown-menu">
+        <div className={cm(styles, "encyclopedia-category-dropdown-menu")}>
           <button
             type="button"
-            className={`encyclopedia-category-dropdown-item${!isFiltered ? " is-active" : ""}`}
+            className={cm(styles, `encyclopedia-category-dropdown-item${!isFiltered ? " is-active" : ""}`)}
             onClick={() => onChange([])}
           >
             <span>{t("encyclopedia.category.all")}</span>
-            <span className="encyclopedia-category-dropdown-check">{!isFiltered ? "✓" : ""}</span>
+            <span className={cm(styles, "encyclopedia-category-dropdown-check")}>{!isFiltered ? "✓" : ""}</span>
           </button>
           {options.map((option) => (
             <button
               key={option.id}
               type="button"
-              className={`encyclopedia-category-dropdown-item${selectedSet.has(option.id) ? " is-active" : ""}`}
+              className={cm(styles, `encyclopedia-category-dropdown-item${selectedSet.has(option.id) ? " is-active" : ""}`)}
               onClick={() => {
                 const nextSelected = new Set(selectedCategories);
                 if (nextSelected.has(option.id)) {
@@ -427,7 +429,7 @@ function CategoryDropdown({
               }}
             >
               <span>{option.label}</span>
-              <span className="encyclopedia-category-dropdown-check">
+              <span className={cm(styles, "encyclopedia-category-dropdown-check")}>
                 {selectedSet.has(option.id) ? "✓" : ""}
               </span>
             </button>
@@ -452,7 +454,7 @@ function CategoryButton({
   return (
     <button
       type="button"
-      className={`encyclopedia-category-button${isActive ? " is-active" : ""}`}
+      className={cm(styles, `encyclopedia-category-button${isActive ? " is-active" : ""}`)}
       onClick={() => onChange(id)}
     >
       {label}
@@ -655,15 +657,15 @@ export function EncyclopediaBrowser({
 
   if (!isTouch) {
     return (
-      <div className="encyclopedia-panel">
+      <div className={cm(styles, "encyclopedia-panel")}>
         <SearchBar
           autoFocus={autoFocusSearch}
           query={query}
           onChange={onQueryChange}
           t={t}
         />
-        <div className="encyclopedia-pc-layout">
-          <nav className="encyclopedia-sidebar">
+        <div className={cm(styles, "encyclopedia-pc-layout")}>
+          <nav className={cm(styles, "encyclopedia-sidebar")}>
             <SidebarCategories
               activeCategory={desktopCategory}
               availableCategories={availableDesktopCategories}
@@ -671,7 +673,7 @@ export function EncyclopediaBrowser({
               t={t}
             />
           </nav>
-          <main className="encyclopedia-main">
+          <main className={cm(styles, "encyclopedia-main")}>
             <CardGrid
               items={filteredItems}
               entities={filteredEntities}
@@ -687,8 +689,8 @@ export function EncyclopediaBrowser({
   }
 
   return (
-    <div className="encyclopedia-panel is-touch is-browser">
-      <div className="encyclopedia-mobile-controls">
+    <div className={cm(styles, "encyclopedia-panel is-touch is-browser")}>
+      <div className={cm(styles, "encyclopedia-mobile-controls")}>
         <SearchBar
           autoFocus={autoFocusSearch}
           query={query}
@@ -705,7 +707,7 @@ export function EncyclopediaBrowser({
           t={t}
         />
       </div>
-      <main className="encyclopedia-main">
+      <main className={cm(styles, "encyclopedia-main")}>
         <CardGrid
           items={filteredItems}
           entities={filteredEntities}
