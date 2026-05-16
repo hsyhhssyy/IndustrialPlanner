@@ -4,7 +4,6 @@ import type {
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import {
-  getReservedAmount,
   resolveStorageSlotId,
 } from "@/simulation/runtime/runtime-slot-access";
 
@@ -12,12 +11,15 @@ export function createTickSnapshot(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): RuntimeTickSnapshot {
+  // 预计算 reservedBySlot：一次扫描所有设备/配方/预留，避免 createSlotSnapshots 逐槽重复扫描。
+  const reservedBySlot = buildReservedBySlot(state);
+
   return {
     topologyId: topology.topologyId,
     documentHash: topology.documentHash,
     tickNumber: state.tickNumber,
     status: state.tickNumber === 0 ? "initial" : "running",
-    slots: createSlotSnapshots(topology, state),
+    slots: createSlotSnapshots(topology, state, reservedBySlot),
     devices: createDeviceSnapshots(topology, state),
     nodes: createNodeSnapshots(state),
     transfers: state.transient.transfers.map((transfer) => ({ ...transfer })),
@@ -26,9 +28,29 @@ export function createTickSnapshot(
   };
 }
 
+/**
+ * 一次扫描所有设备/配方/预留，构建 storageSlotId → reservedAmount 映射。
+ * 复杂度 O(Σ devices × Σ recipes × Σ reservations)，替代原逐槽 O(S × D × R)。
+ */
+function buildReservedBySlot(
+  state: SimulationMutableRuntimeState,
+): Record<string, number> {
+  const reserved: Record<string, number> = {};
+  for (const deviceState of Object.values(state.persistent.devices)) {
+    for (const recipe of Object.values(deviceState.channelRecipes)) {
+      if (recipe === null) continue;
+      for (const reservation of recipe.reservations) {
+        reserved[reservation.slotId] = (reserved[reservation.slotId] ?? 0) + reservation.amount;
+      }
+    }
+  }
+  return reserved;
+}
+
 function createSlotSnapshots(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
+  reservedBySlot: Record<string, number>,
 ): RuntimeTickSnapshot["slots"] {
   const slots: RuntimeTickSnapshot["slots"] = {};
   for (const slotId of topology.ordering.slotOrder) {
@@ -38,7 +60,7 @@ function createSlotSnapshots(
       slotId,
       itemType: slotState?.itemType ?? null,
       count: slotState?.count ?? 0,
-      reserved: getReservedAmount(state, storageSlotId),
+      reserved: reservedBySlot[storageSlotId] ?? 0,
     };
   }
   return slots;

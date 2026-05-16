@@ -5,6 +5,7 @@ import type {
   CompiledSimulationTopology,
   SimulationAcceptRule,
   SimulationCountLimit,
+  TickPerfStage3Details,
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import {
@@ -21,6 +22,16 @@ interface SourceSelection {
   readonly itemType: string;
 }
 
+/** Stage 3 内部分段计时累加器，perfEnabled 时由 createNextTickSnapshot 注入。 */
+export interface SolveTransferGraphPerf {
+  layerCount: number;
+  anchorCount: number;
+  outputNodeCount: number;
+  moveCount: number;
+  refreshBlockedMs: number;
+  refreshBlockedCalls: number;
+}
+
 /**
  * 对应《仿真运行原理》§5.3 Tick 阶段 3 与 §8 分层逆向求解。
  * 从可接收的 input-view Node 作为第 1 层锚点开始，先求解 input-view 产生
@@ -32,18 +43,23 @@ interface SourceSelection {
 export function solveTransferGraph(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
+  perf?: SolveTransferGraphPerf,
 ): void {
   let currentLayer = collectFirstLayerAnchors(topology, state);
 
   while (currentLayer.length > 0) {
+    if (perf !== undefined) perf.layerCount += 1;
+
     const nextAnchors = new Map<string, CompiledSimulationNode>();
 
     for (const node of currentLayer) {
+      if (perf !== undefined) perf.anchorCount += 1;
       processInputAnchor({
         topology,
         state,
         node,
         nextAnchors,
+        perf,
       });
     }
 
@@ -71,6 +87,7 @@ function processInputAnchor(options: {
   readonly state: SimulationMutableRuntimeState;
   readonly node: CompiledSimulationNode;
   readonly nextAnchors: Map<string, CompiledSimulationNode>;
+  readonly perf?: SolveTransferGraphPerf;
 }): void {
   if (isNodeVisited(options.state, options.node)) {
     return;
@@ -95,6 +112,7 @@ function processInputAnchor(options: {
       state: options.state,
       outputNode: sourceNode,
       nextAnchors: options.nextAnchors,
+      perf: options.perf,
     });
   }
 }
@@ -104,6 +122,7 @@ function searchUpstreamFromOutputNode(options: {
   readonly state: SimulationMutableRuntimeState;
   readonly outputNode: CompiledSimulationNode;
   readonly nextAnchors: Map<string, CompiledSimulationNode>;
+  readonly perf?: SolveTransferGraphPerf;
 }): void {
   if (options.outputNode.viewRole !== "output-view" || isNodeVisited(options.state, options.outputNode)) {
     return;
@@ -115,7 +134,7 @@ function searchUpstreamFromOutputNode(options: {
   }
 
   if (isStrictLogisticsDevice(device)) {
-    solveOutputNode(options.topology, options.state, options.outputNode, options.nextAnchors);
+    solveOutputNode(options.topology, options.state, options.outputNode, options.nextAnchors, options.perf);
     markNodeVisited(options.state, options.outputNode);
 
     const inputNode = getDeviceInputViewNodes(options.topology, device)[0];
@@ -137,6 +156,7 @@ function searchUpstreamFromOutputNode(options: {
           state: options.state,
           outputNode: sourceNode,
           nextAnchors: options.nextAnchors,
+          perf: options.perf,
         });
       }
     }
@@ -147,7 +167,7 @@ function searchUpstreamFromOutputNode(options: {
     return;
   }
 
-  solveOutputNode(options.topology, options.state, options.outputNode, options.nextAnchors);
+  solveOutputNode(options.topology, options.state, options.outputNode, options.nextAnchors, options.perf);
   markNodeVisited(options.state, options.outputNode);
 
   for (const inputNode of getDeviceInputViewNodes(options.topology, device)) {
@@ -162,7 +182,10 @@ function solveOutputNode(
   state: SimulationMutableRuntimeState,
   node: CompiledSimulationNode,
   nextAnchors: Map<string, CompiledSimulationNode>,
+  perf?: SolveTransferGraphPerf,
 ): void {
+  if (perf !== undefined) perf.outputNodeCount += 1;
+
   let moved = true;
   while (moved) {
     moved = false;
@@ -190,6 +213,8 @@ function solveOutputNode(
         continue;
       }
 
+      if (perf !== undefined) perf.moveCount += 1;
+
       edgeState.shadowPush = "accept";
       edgeState.amount += 1;
       edgeState.currentThroughCount += 1;
@@ -204,7 +229,12 @@ function solveOutputNode(
         amount: 1,
       });
 
+      const tRefresh = perf !== undefined ? performance.now() : 0;
       refreshBlockedInputNodesAfterMove(topology, state, nextAnchors);
+      if (perf !== undefined) {
+        perf.refreshBlockedMs += performance.now() - tRefresh;
+        perf.refreshBlockedCalls += 1;
+      }
 
       const targetNode = topology.nodes[edge.targetNodeId];
       if (targetNode !== undefined) {
@@ -389,6 +419,11 @@ function collectAvailableInputAnchors(
     if (node === undefined || node.viewRole !== "input-view") {
       continue;
     }
+    // 无入边端口的 input-view 永远无法通过传输接收物品，求解无意义。
+    // 跳过不计入 blockedInputNodeIds —— 它不可能被上游传输激活。
+    if (node.inputPortIds.length === 0) {
+      continue;
+    }
     if (prepareInputNodeForAnchor(topology, state, node)) {
       anchors.push(node);
     }
@@ -425,16 +460,25 @@ function refreshBlockedInputNodesAfterMove(
   state: SimulationMutableRuntimeState,
   nextAnchors: Map<string, CompiledSimulationNode>,
 ): void {
-  for (const nodeId of topology.ordering.nodeOrder) {
+  const blockedIds = state.transient.blockedInputNodeIds;
+  if (blockedIds.size === 0) return;
+
+  const reactivated: string[] = [];
+  for (const nodeId of blockedIds) {
     const node = topology.nodes[nodeId];
     const nodeState = node === undefined ? undefined : state.transient.nodes[node.id];
     if (node === undefined || node.viewRole !== "input-view" || nodeState?.resolveState !== "blocked-resolved") {
+      reactivated.push(nodeId);
       continue;
     }
     if (inputNodeHasAnyCapacity(topology, state, node)) {
       markInputNodeUnresolved(state, node);
       nextAnchors.set(node.id, node);
     }
+  }
+
+  for (const nodeId of reactivated) {
+    blockedIds.delete(nodeId);
   }
 }
 
@@ -462,6 +506,7 @@ function markInputNodeBlocked(
     return;
   }
   nodeState.resolveState = "blocked-resolved";
+  state.transient.blockedInputNodeIds.add(node.id);
   if (nodeState.result === "uncertain") {
     nodeState.result = "solved-block";
   }
@@ -478,6 +523,7 @@ function markInputNodeUnresolved(
   nodeState.resolveState = "unresolved";
   nodeState.result = "uncertain";
   nodeState.blockReason = undefined;
+  state.transient.blockedInputNodeIds.delete(node.id);
 }
 
 function markNodeVisited(
@@ -487,6 +533,7 @@ function markNodeVisited(
   const nodeState = state.transient.nodes[node.id];
   if (nodeState !== undefined) {
     nodeState.resolveState = "visited";
+    state.transient.blockedInputNodeIds.delete(node.id);
   }
 }
 

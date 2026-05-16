@@ -71,6 +71,11 @@ export function getReservedAmount(
   state: SimulationMutableRuntimeState,
   storageSlotId: string,
 ): number {
+  const perf = state.transient._perf;
+  if (perf !== undefined) {
+    perf.getReservedCalls += 1;
+  }
+
   let reservedAmount = 0;
   for (const deviceState of Object.values(state.persistent.devices)) {
     for (const recipe of Object.values(deviceState.channelRecipes)) {

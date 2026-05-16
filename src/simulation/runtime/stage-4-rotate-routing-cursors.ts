@@ -17,6 +17,9 @@ export function rotateRoutingCursors(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): void {
+  // 预建 port→moved 缓存：一次扫描 edgeOrder，避免 portHasMovedEdge 逐 port 重复全量扫描。
+  const movedByPort = buildMovedEdgeByPort(topology, state);
+
   for (const portGroup of collectRoutingPortGroups(topology)) {
     const currentCursor = state.persistent.routingCursors[portGroup.key] ?? 0;
     const normalizedCursor = ((currentCursor % portGroup.ports.length) + portGroup.ports.length) % portGroup.ports.length;
@@ -27,7 +30,7 @@ export function rotateRoutingCursors(
 
     let skipped = 0;
     for (const port of rotatedPorts) {
-      if (!portHasMovedEdge(topology, state, port.id)) {
+      if (!movedByPort.get(port.id)) {
         break;
       }
       skipped += 1;
@@ -35,6 +38,35 @@ export function rotateRoutingCursors(
 
     state.persistent.routingCursors[portGroup.key] = (normalizedCursor + skipped) % portGroup.ports.length;
   }
+}
+
+/**
+ * 一次扫描 edgeOrder，为每个 port 缓存其关联边上是否存在 moved 传输。
+ * O(E) 替代原 portHasMovedEdge 的 O(P×E)。
+ */
+function buildMovedEdgeByPort(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+): Map<string, boolean> {
+  const moved = new Map<string, boolean>();
+  for (const edgeId of topology.ordering.edgeOrder) {
+    const edge = topology.transferEdges[edgeId];
+    const edgeState = state.transient.edges[edgeId];
+    if (edge === undefined || edgeState === undefined) {
+      continue;
+    }
+    if (edgeState.shadowPull !== "moved" || edgeState.shadowPush !== "moved") {
+      continue;
+    }
+
+    if (moved.get(edge.sourcePortId) !== true) {
+      moved.set(edge.sourcePortId, true);
+    }
+    if (moved.get(edge.targetPortId) !== true) {
+      moved.set(edge.targetPortId, true);
+    }
+  }
+  return moved;
 }
 
 function collectRoutingPortGroups(topology: CompiledSimulationTopology): Array<{
@@ -58,24 +90,6 @@ function collectRoutingPortGroups(topology: CompiledSimulationTopology): Array<{
     key,
     ports: ports.sort(comparePortsForRouting),
   }));
-}
-
-function portHasMovedEdge(
-  topology: CompiledSimulationTopology,
-  state: SimulationMutableRuntimeState,
-  portId: string,
-): boolean {
-  return topology.ordering.edgeOrder.some((edgeId) => {
-    const edge = topology.transferEdges[edgeId];
-    const edgeState = state.transient.edges[edgeId];
-    if (edge === undefined || edgeState === undefined) {
-      return false;
-    }
-    if (edge.sourcePortId !== portId && edge.targetPortId !== portId) {
-      return false;
-    }
-    return edgeState.shadowPull === "moved" && edgeState.shadowPush === "moved";
-  });
 }
 
 function comparePortsForRouting(left: CompiledSimulationPort, right: CompiledSimulationPort): number {

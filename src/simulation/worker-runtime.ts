@@ -8,6 +8,7 @@ import type {
   SimulationStartResult,
   SimulationTopologyMigration,
   TickPerfEntry,
+  TickPerfStage3Details,
 } from "./types";
 import type {
   SimulationWorkerRequest,
@@ -17,7 +18,7 @@ import type {
 import { createTickSnapshot } from "./runtime/create-tick-snapshot";
 import { advanceDevices } from "./runtime/stage-1-advance-devices";
 import { buildSolveGraph } from "./runtime/stage-2-build-solve-graph";
-import { solveTransferGraph } from "./runtime/stage-3-layered-reverse-solve";
+import { solveTransferGraph, type SolveTransferGraphPerf } from "./runtime/stage-3-layered-reverse-solve";
 import { rotateRoutingCursors } from "./runtime/stage-4-rotate-routing-cursors";
 import { settleRecipes } from "./runtime/stage-5-settle-recipes";
 import { maintainTransportComponentDomains } from "./runtime/runtime-slot-access";
@@ -309,7 +310,7 @@ export class SimulationWorkerRuntime {
     const shouldAdvance = tickNumber > this.runtimeState.tickNumber;
     this.runtimeState.tickNumber = tickNumber;
 
-    const perfTiming = this.perfEnabled ? { tickNumber, start: performance.now(), stages: {} as Record<string, number> } : null;
+    const perfTiming = this.perfEnabled ? { tickNumber, start: performance.now(), stages: {} as Record<string, number>, stage3: undefined as TickPerfStage3Details | undefined } : null;
 
     if (shouldAdvance) {
       const t0 = this.perfEnabled ? performance.now() : 0;
@@ -321,8 +322,27 @@ export class SimulationWorkerRuntime {
       if (this.perfEnabled) { perfTiming!.stages["buildSolveGraph"] = performance.now() - t1; }
 
       const t2 = this.perfEnabled ? performance.now() : 0;
-      solveTransferGraph(this.topology, this.runtimeState);
-      if (this.perfEnabled) { perfTiming!.stages["solveTransferGraph"] = performance.now() - t2; }
+      const stage3Perf: SolveTransferGraphPerf | undefined = this.perfEnabled
+        ? { layerCount: 0, anchorCount: 0, outputNodeCount: 0, moveCount: 0, refreshBlockedMs: 0, refreshBlockedCalls: 0 }
+        : undefined;
+      if (this.perfEnabled) {
+        this.runtimeState!.transient._perf = { getReservedCalls: 0 };
+      }
+      solveTransferGraph(this.topology, this.runtimeState, stage3Perf);
+      if (this.perfEnabled) {
+        perfTiming!.stages["solveTransferGraph"] = performance.now() - t2;
+        const calls = this.runtimeState!.transient._perf?.getReservedCalls ?? 0;
+        delete this.runtimeState!.transient._perf;
+        perfTiming!.stage3 = {
+          layerCount: stage3Perf!.layerCount,
+          anchorCount: stage3Perf!.anchorCount,
+          outputNodeCount: stage3Perf!.outputNodeCount,
+          moveCount: stage3Perf!.moveCount,
+          refreshBlockedMs: Math.round(stage3Perf!.refreshBlockedMs * 100) / 100,
+          refreshBlockedCalls: stage3Perf!.refreshBlockedCalls,
+          getReservedCalls: calls,
+        };
+      }
 
       const t3 = this.perfEnabled ? performance.now() : 0;
       rotateRoutingCursors(this.topology, this.runtimeState);
@@ -353,6 +373,7 @@ export class SimulationWorkerRuntime {
             maintainDomains: perfTiming!.stages["maintainDomains"] ?? 0,
             createSnapshot: perfTiming!.stages["createSnapshot"] ?? 0,
           },
+          stage3: perfTiming!.stage3,
         });
       }
       return snapshot;

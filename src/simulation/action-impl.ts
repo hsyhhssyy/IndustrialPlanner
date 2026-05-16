@@ -26,6 +26,7 @@ import type {
   SimulationStartResult,
   SimulationTickPullStatus,
   SimulationTopologyMigration,
+  TickPerfStage3Details,
 } from "./types";
 import type { SimulationWorkerResponse } from "./worker-protocol";
 
@@ -357,6 +358,21 @@ implements SimulationAction, SimulationInternalAction {
           `solve=${st.solveTransferGraph}ms cursor=${st.rotateRoutingCursors}ms ` +
           `settle=${st.settleRecipes}ms domain=${st.maintainDomains}ms snap=${st.createSnapshot}ms`,
         );
+
+        // Stage 3 细分汇总
+        const s3s = response.report.entries
+          .filter((e) => e.stage3 !== undefined)
+          .map((e) => e.stage3!);
+        if (s3s.length > 0) {
+          const avg = <T extends keyof TickPerfStage3Details>(key: T) =>
+            Math.round(s3s.reduce((sum, s3) => sum + (s3[key] as number), 0) / s3s.length * 100) / 100;
+          console.log(
+            `[SimPerf]   stage3: layers=${avg("layerCount")} anchors=${avg("anchorCount")} ` +
+            `outNodes=${avg("outputNodeCount")} moves=${avg("moveCount")} ` +
+            `refreshBlocked=${avg("refreshBlockedMs")}ms (${Math.round(avg("refreshBlockedCalls"))}x) ` +
+            `getReserved=${Math.round(avg("getReservedCalls"))}x`,
+          );
+        }
       }
     } catch {
       // perf 失败不影响主流程

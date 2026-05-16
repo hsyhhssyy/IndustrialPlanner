@@ -66,6 +66,14 @@ export interface SimulationTickTransientState {
   edges: Record<string, RuntimeTickEdgeState>;
   transfers: RuntimeTransferRecord[];
   diagnostics: RuntimeTickDiagnosticRecord[];
+  /** Stage 3 增量优化：被阻塞的 input-view node ID 集合，避免 refreshBlockedInputNodesAfterMove 每次全量扫描 nodeOrder。 */
+  blockedInputNodeIds: Set<string>;
+  /** Perf 埋点：当前 tick 的热点函数调用计数累积器。仅在 perfEnabled 时非空。 */
+  _perf?: SimulationRuntimePerf;
+}
+
+export interface SimulationRuntimePerf {
+  getReservedCalls: number;
 }
 
 export type RuntimeNodeResolveState = "unresolved" | "visited" | "blocked-resolved";
@@ -245,6 +253,7 @@ export function createEmptyTransientState(): SimulationTickTransientState {
     edges: {},
     transfers: [],
     diagnostics: [],
+    blockedInputNodeIds: new Set(),
   };
 }
 

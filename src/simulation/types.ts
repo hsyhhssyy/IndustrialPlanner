@@ -344,6 +344,17 @@ export interface TickPerfEntry {
     readonly maintainDomains: number;
     readonly createSnapshot: number;
   };
+  readonly stage3?: TickPerfStage3Details;
+}
+
+export interface TickPerfStage3Details {
+  readonly layerCount: number;
+  readonly anchorCount: number;
+  readonly outputNodeCount: number;
+  readonly moveCount: number;
+  readonly refreshBlockedMs: number;
+  readonly refreshBlockedCalls: number;
+  readonly getReservedCalls: number;
 }
 
 export interface SimulationPerfReport {
