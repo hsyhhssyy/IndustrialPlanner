@@ -23,7 +23,6 @@ import {
 const TPS_WINDOW_MS = 1000;
 import type {
   CompiledSimulationTopology,
-  SimulationPerfReport,
   SimulationStartResult,
   SimulationTickPullStatus,
   SimulationTopologyMigration,

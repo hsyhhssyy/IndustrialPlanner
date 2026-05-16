@@ -790,20 +790,28 @@ describe("createEditorHost", () => {
 
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
     expect(editorHost.state.collections.preview).toEqual([]);
+
+    const sourceFinalId = sourceDraftId?.startsWith("placement-draft:")
+      ? sourceDraftId.slice("placement-draft:".length)
+      : sourceDraftId;
+    const targetFinalId = targetDraftId?.startsWith("placement-draft:")
+      ? targetDraftId.slice("placement-draft:".length)
+      : targetDraftId;
+
     expect(editorHost.document.getSnapshot().entityOrder.slice(-2)).toEqual([
-      sourceDraftId,
-      targetDraftId,
+      sourceFinalId,
+      targetFinalId,
     ]);
     expect(editorHost.document.getSnapshot().slotLinks).toEqual([{
       id: expect.any(String),
       linkType: "share-all",
       source: {
-        entityId: sourceDraftId,
+        entityId: sourceFinalId,
         storageSlotGroupId: "output",
         slotId: "output-slot",
       },
       target: {
-        entityId: targetDraftId,
+        entityId: targetFinalId,
         storageSlotGroupId: "input",
         slotId: "input-slot",
       },

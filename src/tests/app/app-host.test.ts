@@ -1439,7 +1439,10 @@ describe("createAppHost", () => {
     expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(
       initialEntityOrderLength + 1,
     );
-    expect(editorHost.document.getSnapshot().entities[draftId ?? ""]).toMatchObject({
+    const finalId = draftId?.startsWith("placement-draft:")
+      ? draftId.slice("placement-draft:".length)
+      : draftId;
+    expect(editorHost.document.getSnapshot().entities[finalId ?? ""]).toMatchObject({
       definitionId: "item_port_storager_1",
       position: { x: -1, y: -1 },
     });

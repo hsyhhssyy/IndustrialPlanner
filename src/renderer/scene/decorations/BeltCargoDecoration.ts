@@ -108,6 +108,10 @@ export function createBeltCargoDecoration(): DecorationLayer {
   }
 
   const ensureTexture = (ctx: DecorationSyncContext, textureKey: string): void => {
+    if (resolvedTextures.has(textureKey) || pendingTextures.has(textureKey)) {
+      return
+    }
+
     const promise = ctx.renderHost.textureManager.getTexture(textureKey)
     pendingTextures.set(textureKey, promise)
     void promise
