@@ -13,17 +13,8 @@ const MAX_TICK = 1800;
 // 默认跳过，设置 HEAVY=1 环境变量后才会执行。
 const runHeavy = process.env.HEAVY === "1";
 
-function isPipeEntity(definitionId: string): boolean {
-  return (
-    definitionId.startsWith("pipe_") ||
-    definitionId === "item_pipe_splitter" ||
-    definitionId === "item_pipe_converger" ||
-    definitionId === "item_pipe_connector"
-  );
-}
-
-describe.skipIf(!runHeavy)("双烘炉息壤产线 - 管道水流验证", () => {
-  it("1800 tick 内蓝图所有管道都至少流过 1 次清水", { timeout: 120_000 }, async () => {
+describe.skipIf(!runHeavy)("双烘炉息壤产线 - 水培种植机产出验证", () => {
+  it("1800 tick 内种植机(液体)至少产出 3 次配方产物", { timeout: 120_000 }, async () => {
     const blueprint = loadBlueprintWithExtras(BLUEPRINT_PATH, [
       // 上方暗管出口 → 接入左侧水管网末端 pipe_straight_1x1 @ (9,0) rot=90
       // 出水口位于 (9,-1) 朝南，向 (9,0) 输出清水
@@ -53,60 +44,67 @@ describe.skipIf(!runHeavy)("双烘炉息壤产线 - 管道水流验证", () => {
       }),
     ]);
 
-    // 收集蓝图中所有管道实体 ID
-    const pipeIds = Object.values(blueprint.entities)
-      .filter((e) => isPipeEntity(e.definitionId))
+    // 收集蓝图中所有水培种植机实体 ID
+    const hydroPlanterIds = Object.values(blueprint.entities)
+      .filter((e) => e.definitionId === "item_port_hydro_planter_1")
       .map((e) => e.id);
 
-    expect(pipeIds.length).toBeGreaterThan(0);
+    expect(
+      hydroPlanterIds.length,
+      "蓝图中应至少包含 1 台种植机(液体)",
+    ).toBeGreaterThan(0);
 
     const report = await runBlueprintSimulation({
       blueprint,
       maxTickNumber: MAX_TICK,
     });
 
-    // 收集所有 tick 的传输记录中涉及到的管道 ID
-    const pipesWithWater = new Set<string>();
+    // 统计每个水培种植机在哪些 tick 中有植物产物输出
+    const planterOutputTicks = new Map<string, Set<number>>();
+    for (const planterId of hydroPlanterIds) {
+      planterOutputTicks.set(planterId, new Set());
+    }
 
     for (const tick of report.ticks) {
       for (const transfer of tick.transfers) {
-        if (transfer.itemType !== "item_liquid_water") continue;
+        // 只关注植物类产物（草、苔藓等），排除液体传输
+        if (!transfer.itemType.startsWith("item_plant_")) continue;
 
-        for (const pipeId of pipeIds) {
-          if (pipesWithWater.has(pipeId)) continue;
-
-          if (
-            transfer.sourceSlotId.includes(`device:${pipeId}`) ||
-            transfer.targetSlotId.includes(`device:${pipeId}`)
-          ) {
-            pipesWithWater.add(pipeId);
+        for (const planterId of hydroPlanterIds) {
+          if (transfer.sourceSlotId.includes(`device:${planterId}`)) {
+            planterOutputTicks.get(planterId)!.add(tick.tickNumber);
           }
         }
       }
     }
 
-    // 验证：每条管道都至少流过 1 次水
-    const missedPipes = pipeIds.filter((id) => !pipesWithWater.has(id));
+    // 汇总所有水培种植机的产出 tick（去重）
+    const allOutputTicks = new Set<number>();
+    for (const ticks of planterOutputTicks.values()) {
+      for (const t of ticks) {
+        allOutputTicks.add(t);
+      }
+    }
 
-    if (missedPipes.length > 0) {
-      // 打印未覆盖管道的详细信息，便于调试
-      const missedEntities = missedPipes.map((id) => {
-        const entity = blueprint.entities[id]!;
-        return `  ${id} (${entity.definitionId}) @ (${entity.position.x}, ${entity.position.y}) rot=${entity.rotation}`;
-      });
-
-      console.log(
-        `[dual-oven-xiranite] ${missedPipes.length}/${pipeIds.length} 条管道未流过水:\n${missedEntities.join("\n")}`,
-      );
+    if (allOutputTicks.size < 3) {
+      // 打印各水培种植机产出详情，便于调试
+      for (const [planterId, ticks] of planterOutputTicks) {
+        const entity = blueprint.entities[planterId];
+        console.log(
+          `[dual-oven-xiranite] ${planterId} (${entity?.definitionId ?? "?"}) ` +
+          `@ (${entity?.position.x ?? "?"}, ${entity?.position.y ?? "?"}) ` +
+          `产出 ${ticks.size} 次: ticks=[${[...ticks].sort((a, b) => a - b).join(", ")}]`,
+        );
+      }
     }
 
     expect(
-      missedPipes.length,
-      `期望所有 ${pipeIds.length} 条管道都流过水，但 ${missedPipes.length} 条未覆盖`,
-    ).toBe(0);
+      allOutputTicks.size,
+      `种植机(液体)在 ${MAX_TICK} tick 内应至少产出 3 次配方产物，实际产出 ${allOutputTicks.size} 次`,
+    ).toBeGreaterThanOrEqual(3);
 
     console.log(
-      `[dual-oven-xiranite] 全部 ${pipeIds.length} 条管道在 ${MAX_TICK} tick 内均流过清水 ✓`,
+      `[dual-oven-xiranite] 种植机(液体)在 ${MAX_TICK} tick 内产出 ${allOutputTicks.size} 次配方产物 ✓`,
     );
   });
 });

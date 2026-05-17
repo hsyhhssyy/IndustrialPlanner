@@ -1384,6 +1384,25 @@ function minCountLimit(
   return Math.min(left, right);
 }
 
+/**
+ * 解析设备的运输类别。
+ *
+ * 判定逻辑：
+ * 1. 在 DEDICATED_LOGISTICS_DEVICE_KINDS 中注册的 → strict-belt 或 strict-pipe。
+ *    当前仅 belt_straight_1x1 / belt_turn_cw_1x1 / belt_turn_ccw_1x1 为 strict-belt，
+ *    pipe_straight_1x1 / pipe_turn_cw_1x1 / pipe_turn_ccw_1x1 为 strict-pipe。
+ *
+ * 2. 通用物流设备（item_pipe_splitter、item_pipe_converger、item_pipe_connector、
+ *    item_log_splitter、item_log_converger、item_log_connector、
+ *    item_pipe_admission、item_log_admission）不在专用物流注册表中，
+ *    因此 resolveDedicatedLogisticsKind 返回 null → 归为 anchor。
+ *    这是有意设计：这些设备有自己的 buffer 和搬运配方，不应受管道域锁约束，
+ *    且它们应分割 strict-pipe 的 TransportComponent。
+ *
+ * 3. 无端口且无存储槽的空壳设备 → non-graph（不进求解图）。
+ *
+ * 4. 其余有端口/有存储槽的设备（生产设备、仓库设备等） → anchor。
+ */
 function resolveTransportClass(
   registryQueries: RegistryContract["queries"],
   definition: EntityDefinition,
@@ -1406,7 +1425,16 @@ function resolveTransportClass(
 
 /**
  * 检测相连的同类型严格管道设备构成的无向连通分量。
+ *
  * 仅 strict-pipe 需要域锁（管道独占一种液体）；strict-belt 可混合运输，不建组件。
+ *
+ * 设计要点：
+ * - 仅 strict-pipe 设备参与 TransportComponent 构建。
+ * - anchor 设备（分流器/汇流器/桥接器/准入口、生产设备等）不参与，且会**分割**连通分量。
+ *   例如：pipe → splitter(anchor) → pipe 中，splitter 两侧的 pipe 属于不同的 TransportComponent。
+ *   这是有意设计——分流器等设备有自己的 buffer 和独立搬运配方，不应被管道域锁约束。
+ * - 邻接判定仅通过 physical connections：两个 strict-pipe 端口在网格上相邻且同 transportClass 才算连通。
+ * - BFS 遍历所有 strict-pipe 设备，每个连通分量分配一个唯一的 transportComponentId。
  */
 function compileTransportComponents(
   devices: Record<string, CompiledSimulationDevice>,

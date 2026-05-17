@@ -53,29 +53,61 @@ export class SimulationWorkerRuntime {
   private perfEntries: TickPerfEntry[] = [];
 
   public handleRequest(request: SimulationWorkerRequest): SimulationWorkerResponse {
-    switch (request.type) {
-      case "load-topology":
-        this.perfEnabled = request.perfEnabled ?? false;
-        return {
-          type: "topology-loaded",
-          requestId: request.requestId,
-          result: this.loadTopology(request.topology, request.migration),
-          status: this.getStatus(),
-        };
-      case "get-tick-snapshot":
-        return {
-          type: "tick-snapshot-result",
-          requestId: request.requestId,
-          result: this.getTickSnapshot(request.tickNumber),
-          status: this.getStatus(),
-        };
-      case "get-perf-report":
-        return {
-          type: "perf-report",
-          requestId: request.requestId,
-          report: this.flushPerfReport(),
-          status: this.getStatus(),
-        };
+    try {
+      switch (request.type) {
+        case "load-topology":
+          this.perfEnabled = request.perfEnabled ?? false;
+          return {
+            type: "topology-loaded",
+            requestId: request.requestId,
+            result: this.loadTopology(request.topology, request.migration),
+            status: this.getStatus(),
+          };
+        case "get-tick-snapshot":
+          return {
+            type: "tick-snapshot-result",
+            requestId: request.requestId,
+            result: this.getTickSnapshot(request.tickNumber),
+            status: this.getStatus(),
+          };
+        case "get-perf-report":
+          return {
+            type: "perf-report",
+            requestId: request.requestId,
+            report: this.flushPerfReport(),
+            status: this.getStatus(),
+          };
+      }
+    } catch (error) {
+      this.mode = "error";
+      this.error = error instanceof Error ? error.message : String(error);
+      const status = this.getStatus();
+      switch (request.type) {
+        case "load-topology":
+          return {
+            type: "topology-loaded",
+            requestId: request.requestId,
+            result: { status: "failed", topologyId: null, diagnostics: [] },
+            status,
+          };
+        case "get-tick-snapshot":
+          return {
+            type: "tick-snapshot-result",
+            requestId: request.requestId,
+            result: {
+              status: createNotFoundStatus(0, "missing-topology", null, null, 0),
+              currentTick: null,
+            },
+            status,
+          };
+        case "get-perf-report":
+          return {
+            type: "perf-report",
+            requestId: request.requestId,
+            report: null,
+            status,
+          };
+      }
     }
   }
 

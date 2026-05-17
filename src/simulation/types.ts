@@ -7,6 +7,27 @@ export type SimulationPortKind = "item" | "fluid";
 export type SimulationPortDirection = "input" | "output";
 export type SimulationNodeViewRole = "input-view" | "output-view";
 export type SimulationCountLimit = number | "unlimited";
+/**
+ * 仿真运输类别，决定设备在物流拓扑中的角色。
+ *
+ * - `strict-belt`：专用传送带（belt_straight_1x1 / belt_turn_cw_1x1 / belt_turn_ccw_1x1）。
+ *   可混合运输多种物品，不建 TransportComponent（无需域锁）。
+ *
+ * - `strict-pipe`：专用管道（pipe_straight_1x1 / pipe_turn_cw_1x1 / pipe_turn_ccw_1x1）。
+ *   独占一种液体，需要域锁。由 compileTransportComponents 构建连通分量，
+ *   同一分量内管道共享 transportComponentDomain，确保不会混入第二种液体。
+ *
+ * - `anchor`：非专用物流设备。包括：
+ *   - 生产设备（如 item_port_hydro_planter_1、item_port_furnance_1 等）
+ *   - 通用物流设备（item_pipe_splitter、item_pipe_converger、item_pipe_connector、
+ *     item_log_splitter、item_log_converger、item_log_connector、
+ *     item_pipe_admission、item_log_admission）
+ *   anchor 设备不参与 TransportComponent，且会**分割** strict-pipe 的连通分量：
+ *   两个 strict-pipe 之间如果隔了一个 anchor 设备（如分流器），它们属于不同的 TransportComponent。
+ *   这是有意设计——分流器/汇流器/桥接器自身有 buffer 和独立的搬运配方，不应被管道域锁约束。
+ *
+ * - `non-graph`：无端口且无存储槽的空壳设备，不进入求解图。
+ */
 export type SimulationTransportClass = "strict-belt" | "strict-pipe" | "anchor" | "non-graph";
 export type SimulationSubmitMode = "never" | "every-tick" | "every-n-seconds";
 export type SimulationWorkerStatusMode = "idle" | "starting" | "running" | "stopped" | "error";

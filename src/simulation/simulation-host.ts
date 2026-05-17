@@ -325,7 +325,10 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
   private nextRequestId = 1;
   private readonly pending = new Map<
     number,
-    (response: SimulationWorkerResponse) => void
+    {
+      resolve: (response: SimulationWorkerResponse) => void;
+      reject: (error: Error) => void;
+    }
   >();
 
   public constructor() {
@@ -333,13 +336,22 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
       type: "module",
     });
     this.worker.addEventListener("message", (event: MessageEvent<SimulationWorkerResponse>) => {
-      const resolve = this.pending.get(event.data.requestId);
-      if (resolve === undefined) {
+      const handlers = this.pending.get(event.data.requestId);
+      if (handlers === undefined) {
         return;
       }
 
       this.pending.delete(event.data.requestId);
-      resolve(event.data);
+      handlers.resolve(event.data);
+    });
+    this.worker.addEventListener("error", (event) => {
+      const message = event.message || "Unknown worker error";
+      console.error(`[SimWorker] ${message}`, event.filename, event.lineno);
+      const error = new Error(`Simulation worker crashed: ${message}`);
+      for (const handlers of this.pending.values()) {
+        handlers.reject(error);
+      }
+      this.pending.clear();
     });
   }
 
@@ -378,6 +390,10 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
   }
 
   public dispose(): void {
+    const error = new Error("Simulation worker disposed");
+    for (const handlers of this.pending.values()) {
+      handlers.reject(error);
+    }
     this.pending.clear();
     this.worker.terminate();
   }
@@ -386,12 +402,16 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     request: SimulationWorkerRequest,
     expectedType: TType,
   ): Promise<Extract<SimulationWorkerResponse, { readonly type: TType }>> {
-    return new Promise((resolve) => {
-      this.pending.set(request.requestId, (response) => {
-        if (response.type !== expectedType) {
-          throw new Error(`Unexpected simulation worker response "${response.type}".`);
-        }
-        resolve(response as Extract<SimulationWorkerResponse, { readonly type: TType }>);
+    return new Promise((resolve, reject) => {
+      this.pending.set(request.requestId, {
+        resolve: (response) => {
+          if (response.type !== expectedType) {
+            reject(new Error(`Unexpected simulation worker response "${response.type}".`));
+            return;
+          }
+          resolve(response as Extract<SimulationWorkerResponse, { readonly type: TType }>);
+        },
+        reject,
       });
       this.worker.postMessage(request);
     });

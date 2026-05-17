@@ -12,6 +12,10 @@ import type { SimulationMutableRuntimeState } from "./runtime-state";
  * 订正（2026-05-06）：引入 moved 状态后，moved 边也需推进游标，否则游标会卡在 moved 边上无法轮转。
  * 订正（2026-05-08）：第 8 章移动阶段会把 shadowPull 与 shadowPush 同时置为 moved；
  * 第 9 章游标轮转只按双 moved 边推进，不再使用 accept && accept 或单侧 moved。
+ * 订正（2026-05-17）：修复两个问题：
+ *   ① 未连接端口阻塞游标 → 跳过未连接端口（永久死端口不应参与轮转）；
+ *   ② 无传输的空 tick 中游标震荡导致与输出节奏同步锁死 → 仅当端口组内至少有一个端口发生了
+ *      moved 传输时才执行旋转；空 tick 时保留游标位置不变。
  */
 export function rotateRoutingCursors(
   topology: CompiledSimulationTopology,
@@ -19,6 +23,8 @@ export function rotateRoutingCursors(
 ): void {
   // 预建 port→moved 缓存：一次扫描 edgeOrder，避免 portHasMovedEdge 逐 port 重复全量扫描。
   const movedByPort = buildMovedEdgeByPort(topology, state);
+  // 预建已连接端口集合：有 transferEdge 的 port 视为"已连接"。
+  const connectedPortIds = buildConnectedPortIds(topology);
 
   for (const portGroup of collectRoutingPortGroups(topology)) {
     const currentCursor = state.persistent.routingCursors[portGroup.key] ?? 0;
@@ -28,16 +34,53 @@ export function rotateRoutingCursors(
       ...portGroup.ports.slice(0, normalizedCursor),
     ];
 
+    // 订正（2026-05-17）：仅当端口组内至少有一个端口发生了 moved 传输时才旋转游标。
+    // 空 tick（无传输）保留游标位置，避免游标震荡与设备输出节奏同步锁死。
+    const anyMoved = rotatedPorts.some((port) => movedByPort.get(port.id));
+    if (!anyMoved) {
+      continue;
+    }
+
     let skipped = 0;
     for (const port of rotatedPorts) {
-      if (!movedByPort.get(port.id)) {
-        break;
+      // ① 未连接端口 → 跳过（永久死端口，不应阻塞轮转）
+      if (!connectedPortIds.has(port.id)) {
+        skipped++;
+        continue;
       }
-      skipped += 1;
+
+      // ② 已连接且有传输 → 跳过
+      if (movedByPort.get(port.id)) {
+        skipped++;
+        continue;
+      }
+
+      // ③ 第一个已连接但无传输的端口 → 停在此处（保留下 tick 优先权）
+      break;
     }
 
     state.persistent.routingCursors[portGroup.key] = (normalizedCursor + skipped) % portGroup.ports.length;
   }
+}
+
+/**
+ * 扫描所有 transferEdge，收集出现在 source 或 target 上的 port ID。
+ * 这些 port 已通过物理连接与对端设备连通，视为"已连接"。
+ * 未出现在此集合中的 port 即使有端口定义，也没有任何可传输的边，视为"未连接"（死端口）。
+ */
+function buildConnectedPortIds(
+  topology: CompiledSimulationTopology,
+): Set<string> {
+  const connected = new Set<string>();
+  for (const edgeId of topology.ordering.edgeOrder) {
+    const edge = topology.transferEdges[edgeId];
+    if (edge === undefined) {
+      continue;
+    }
+    connected.add(edge.sourcePortId);
+    connected.add(edge.targetPortId);
+  }
+  return connected;
 }
 
 /**

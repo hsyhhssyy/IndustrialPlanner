@@ -14,6 +14,12 @@ const workerScope = globalThis as unknown as {
 };
 
 workerScope.addEventListener("message", (event: MessageEvent<SimulationWorkerRequest>) => {
-  const response: SimulationWorkerResponse = runtime.handleRequest(event.data);
-  workerScope.postMessage(response);
+  try {
+    const response: SimulationWorkerResponse = runtime.handleRequest(event.data);
+    workerScope.postMessage(response);
+  } catch (error) {
+    // 防御性安全网：handleRequest 已内置 try-catch，此处仅在极端异常（如 postMessage 序列化失败）时触发
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[SimWorker] Unhandled error in message handler: ${message}`);
+  }
 });

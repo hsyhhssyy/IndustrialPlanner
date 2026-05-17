@@ -8,6 +8,19 @@ const LIQUID_ITEM_IDS = new Set(
         .map((item) => item.id),
 )
 
+/**
+ * 专用物流设备 → 运输类别映射。
+ *
+ * 仅最基本的传送带/管道直段和转弯段在此注册，对应 strict-belt / strict-pipe。
+ *
+ * 以下通用物流设备**有意不在此注册**，resolveDedicatedLogisticsKind 对它们返回 null，
+ * 使其归为 anchor 运输类别：
+ *   - item_pipe_splitter / item_pipe_converger / item_pipe_connector / item_pipe_admission
+ *   - item_log_splitter / item_log_converger / item_log_connector / item_log_admission
+ *
+ * 原因：这些设备有自己的 buffer 和独立搬运配方，不应受管道/传送带域锁约束，
+ * 且应分割 TransportComponent 连通分量。这是仿真设计的明确规定。
+ */
 const DEDICATED_LOGISTICS_DEVICE_KINDS = new Map<string, LogisticsKind>([
     ["belt_straight_1x1", "belt"],
     ["belt_turn_cw_1x1", "belt"],

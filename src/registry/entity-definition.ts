@@ -500,9 +500,18 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("slot", [50, 50, 50, 50, 50, 50], "solid"),
       ),
     ],
-    recipeChannels: [
-      createRecipeChannel("default", ["item_storage"], ["item_storage"]),
-    ],
+    // AI-REMOVED 2026-05-17:
+    // Reason: recipeChannels 对纯储存设备是死代码。resolveRecipes() 查 recipeCatalog 中
+    //   machineId === "item_port_storager_1" 的静态配方，实际无匹配，channel 永不产生配方计划。
+    // Trigger: 储液罐改造分析中发现储存设备不应有 channel。
+    // Evidence: recipe-definition.ts 的 RECIPE_DEFINITIONS 中无任何 machineId 指向储存箱。
+    // Replacement: None（纯储存设备不需要 channel）。
+    // Risk: Low
+    //
+    // Original code:
+    // recipeChannels: [
+    //   createRecipeChannel("default", ["item_storage"], ["item_storage"]),
+    // ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_storage"),
       createBinding("bind_item_output", "item_output", "item_storage"),
@@ -2237,10 +2246,29 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_e_1", 2, 1, "E")],
       ),
     ],
-    ...createDirectionalBuffers([
-      { kind: "fluid", direction: "input", capacities: [50] },
-      { kind: "fluid", direction: "output", capacities: [50] },
-    ]),
+    // AI-CORRECTION 2026-05-17: 储液罐从 createDirectionalBuffers（管道/缓冲器模式）改为
+    //   单槽储存箱模式（与协议储存箱对齐），仅储存液体。
+    //   - 移除 createDirectionalBuffers（含自动生成的 input/output 分离缓冲组和 channel）。
+    //   - 改为单一 storageSlotGroup：1 槽，容量 500，液体过滤器。
+    //   - portStorageBindings：input 和 output 端口均绑定到同一储存组。
+    //   - 移除 recipeChannels：纯储存设备无需配方通道。
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "liquid_storage",
+        "fluid",
+        createSlots("slot", [500], "liquid"),
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_fluid_input", "fluid_input", "liquid_storage"),
+      createBinding("bind_fluid_output", "fluid_output", "liquid_storage"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.slotConfig,
+        slotGroupIds: ["liquid_storage"],
+      },
+    ],
   }),
   createEmptyEntityDefinition({
     id: "item_port_power_diffuser_1",
