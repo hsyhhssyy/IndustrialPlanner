@@ -135,3 +135,35 @@ export function loadBlueprintFromFile(filePath: string): BlueprintDocument {
 
   return blueprint;
 }
+
+/**
+ * 加载蓝图文件并注入额外设备，返回合并后的 BlueprintDocument。
+ *
+ * 用于测试场景：蓝图本身不完整（缺少供料/消耗设施），通过 extraEntities
+ * 在测试中补全所需设备，而不修改原始蓝图文件。
+ *
+ * extraEntities 会生成 test-extra-{index} 格式的 ID，不会与蓝图中已有的
+ * legacy_ 前缀实体冲突。
+ */
+export function loadBlueprintWithExtras(
+  filePath: string,
+  extraEntities: readonly WorldEntity[],
+): BlueprintDocument {
+  const blueprint = loadBlueprintFromFile(filePath);
+
+  const entities = { ...blueprint.entities };
+  const entityOrder = [...blueprint.entityOrder];
+
+  for (let i = 0; i < extraEntities.length; i++) {
+    const entityId = `test-extra-${i}`;
+    const entity: WorldEntity = { ...extraEntities[i]!, id: entityId };
+    entities[entityId] = entity;
+    entityOrder.push(entityId);
+  }
+
+  return {
+    ...blueprint,
+    entities,
+    entityOrder,
+  };
+}

@@ -1,5 +1,12 @@
 import type { RegistryQuery } from "@/domain/registry/registry-query"
 import type { LogisticsKind } from "@/domain/shared/logistics"
+import { ITEM_DEFINITIONS } from "./item-definition"
+
+const LIQUID_ITEM_IDS = new Set(
+    ITEM_DEFINITIONS
+        .filter((item) => item.tags.includes("liquid"))
+        .map((item) => item.id),
+)
 
 const DEDICATED_LOGISTICS_DEVICE_KINDS = new Map<string, LogisticsKind>([
     ["belt_straight_1x1", "belt"],
@@ -34,6 +41,9 @@ export const createRegistryQuery = (): RegistryQuery => {
         },
         isGeneralLogisticsDevice(definitionId) {
             return GENERAL_LOGISTICS_DEVICE_IDS.has(definitionId)
+        },
+        isItemLiquid(itemId) {
+            return LIQUID_ITEM_IDS.has(itemId)
         },
         buildWarehouseSlotLinkForEntity({
             entityId,

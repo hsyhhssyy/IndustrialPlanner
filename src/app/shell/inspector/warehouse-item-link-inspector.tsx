@@ -65,7 +65,7 @@ export function WarehouseItemLinkInspector({
     try {
       const itemId = await appHost.encyclopediaPicker.pickItem({
         title: translate("encyclopediaPicker.title.item"),
-        filterItem: (item) => matchesItemDomain(item, row.domain),
+        filterItem: (item) => matchesItemDomain(item, row.domain, appHost.workspace.registry.queries.isItemLiquid),
       });
 
       if (itemId === null) {
@@ -264,24 +264,17 @@ function resolveSlotGroupDomain(
   return "any";
 }
 
+// AI-CORRECTION 2026-05-16: domain 判定统一委托 RegistryQuery.isItemLiquid，不再本地推断。
 function matchesItemDomain(
   item: ItemDefinition,
   domain: "solid" | "liquid" | "any",
+  isItemLiquid: (itemId: string) => boolean,
 ): boolean {
   if (domain === "any") {
     return true;
   }
 
-  if (
-    item.id.includes("_liquid")
-    || item.id.startsWith("liquid_")
-    || item.tags.includes("liquid")
-    || item.tags.includes("fluid")
-  ) {
-    return domain === "liquid";
-  }
-
-  return domain === "solid";
+  return isItemLiquid(item.id) === (domain === "liquid");
 }
 
 function readSlotConfigString(

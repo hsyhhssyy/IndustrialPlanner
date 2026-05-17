@@ -83,7 +83,7 @@ export function SlotConfigInspector({
     try {
       const itemId = await appHost.encyclopediaPicker.pickItem({
         title: translate("encyclopediaPicker.title.item"),
-        filterItem: (item) => canSelectItemForRow(item, row, rows),
+        filterItem: (item) => canSelectItemForRow(item, row, rows, appHost.workspace.registry.queries.isItemLiquid),
       });
 
       if (itemId === null) {
@@ -368,8 +368,9 @@ function canSelectItemForRow(
   item: ItemDefinition,
   row: EffectiveSlotRow,
   rows: readonly EffectiveSlotRow[],
+  isItemLiquid: (itemId: string) => boolean,
 ): boolean {
-  if (!matchesItemDomain(item, row.domain)) {
+  if (!matchesItemDomain(item, row.domain, isItemLiquid)) {
     return false;
   }
 
@@ -382,28 +383,17 @@ function canSelectItemForRow(
   );
 }
 
+// AI-CORRECTION 2026-05-16: domain 判定统一委托 RegistryQuery.isItemLiquid，不再本地推断。
 function matchesItemDomain(
   item: ItemDefinition,
   domain: EffectiveSlotRow["domain"],
+  isItemLiquid: (itemId: string) => boolean,
 ): boolean {
   if (domain === "any") {
     return true;
   }
 
-  return inferItemDomain(item) === domain;
-}
-
-function inferItemDomain(item: ItemDefinition): "solid" | "liquid" {
-  if (
-    item.id.includes("_liquid")
-    || item.id.startsWith("liquid_")
-    || item.tags.includes("liquid")
-    || item.tags.includes("fluid")
-  ) {
-    return "liquid";
-  }
-
-  return "solid";
+  return isItemLiquid(item.id) === (domain === "liquid");
 }
 
 function clampCount(value: number, capacity: number): number {

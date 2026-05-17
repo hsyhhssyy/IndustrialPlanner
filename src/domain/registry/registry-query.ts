@@ -7,6 +7,13 @@ export interface RegistryQuery {
 	isGeneralLogisticsDevice(definitionId: string): boolean;
 
 	/**
+	 * 判定物品是否为液体域。
+	 * 依据 item-definition.ts 中的 tags: ["liquid", ...] 标记。
+	 * 未标记或不在注册表中的物品一律返回 false（固体）。
+	 */
+	isItemLiquid(itemId: string): boolean;
+
+	/**
 	 * 构建"实体槽位 → 仓库槽位"的 Slot Link 定义。
 	 *
 	 * source.entityId 由调用方填入实体 ID。

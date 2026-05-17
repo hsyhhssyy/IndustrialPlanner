@@ -347,7 +347,7 @@ function compileItemCatalog(
   )) {
     catalog[item.id] = {
       id: item.id,
-      domain: inferItemDomain(item.id, item.tags),
+      domain: registry.queries.isItemLiquid(item.id) ? "liquid" : "solid",
       tags: [...item.tags].sort(),
     };
   }
@@ -1302,7 +1302,7 @@ function intersectAcceptRules(
 
   const itemId = leftCandidates.itemId ?? rightCandidates.itemId;
   if (itemId !== null) {
-    const domain = itemCatalog[itemId]?.domain ?? inferItemDomain(itemId, []);
+    const domain = itemCatalog[itemId]?.domain ?? "solid";
     if (!sharedDomains.includes(domain) || exclude.includes(itemId)) {
       return null;
     }
@@ -1345,7 +1345,7 @@ function resolveAcceptRuleCandidateDomains(
       return { domains: ["liquid"], itemId: null };
     case "item":
       return {
-        domains: [itemCatalog[rule.base.itemId]?.domain ?? inferItemDomain(rule.base.itemId, [])],
+        domains: [itemCatalog[rule.base.itemId]?.domain ?? "solid"],
         itemId: rule.base.itemId,
       };
   }
@@ -1547,22 +1547,6 @@ function resolveEdgeDelta(edge: GridEdge): GridPoint {
 
 function areGridPointsEqual(left: GridPoint, right: GridPoint): boolean {
   return left.x === right.x && left.y === right.y;
-}
-
-function inferItemDomain(
-  itemId: string,
-  tags: readonly string[],
-): SimulationItemDomain {
-  if (
-    itemId.includes("_liquid")
-    || itemId.startsWith("liquid_")
-    || tags.includes("liquid")
-    || tags.includes("fluid")
-  ) {
-    return "liquid";
-  }
-
-  return "solid";
 }
 
 function convertSecondsToSimulationTicks(durationSeconds: number): number {
