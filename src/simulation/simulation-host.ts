@@ -117,6 +117,39 @@ export function createSimulationHost(
         deviceId,
         snapshot: internalState.currentSnapshot,
       }),
+      isPipeDeviceSlotOccupied: (deviceId: string) => {
+        const topology = topologyStore.getSnapshot();
+        const snapshot = internalState.currentSnapshot;
+        if (internalState.runningState === "stop" || topology === null || snapshot === null) {
+          return false;
+        }
+
+        const compiledId = resolveCompiledDeviceId(topology, deviceId);
+        if (compiledId === null) {
+          return false;
+        }
+
+        const device = topology.devices[compiledId];
+        if (device === undefined || device.transportClass !== "strict-pipe") {
+          return false;
+        }
+
+        // 遍历设备节点的 slot，有任意一个非空即视为占用。
+        for (const nodeId of device.nodeIds) {
+          const node = topology.nodes[nodeId];
+          if (node === undefined) {
+            continue;
+          }
+          for (const slotId of node.slotIds) {
+            const slotSnapshot = snapshot.slots[slotId];
+            if (slotSnapshot !== undefined && slotSnapshot.itemType !== null) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+      },
     },
     actions,
     dispose: () => {

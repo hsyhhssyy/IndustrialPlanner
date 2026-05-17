@@ -956,6 +956,7 @@ describe("WorkbenchApp", () => {
         }),
         getDeviceRuntimeStatus: () => null,
         getPipeFluidItemId: () => null,
+        isPipeDeviceSlotOccupied: () => false,
       },
       actions: {
         start: vi.fn(async () => {}),

@@ -771,6 +771,7 @@ describe("GenericDeviceSprite", () => {
       selectionIds: [],
       previewIds: [],
       getPipeFluidItemId,
+      isPipeDeviceSlotOccupied: () => true,
       itemDefinitions: [{
         id: "item_liquid_water",
         nameKey: "registry.item.item_liquid_water.name",
@@ -822,6 +823,7 @@ describe("GenericDeviceSprite", () => {
       selectionIds: [],
       previewIds: [],
       getPipeFluidItemId: () => "item_liquid_acid",
+      isPipeDeviceSlotOccupied: () => true,
       itemDefinitions: [{
         id: "item_liquid_acid",
         nameKey: "registry.item.item_liquid_acid.name",
@@ -1972,6 +1974,7 @@ function createRenderContextStub(options: {
   logisticsHeadIds?: readonly string[];
   theme?: typeof AYU_LIGHT_THEME;
   getPipeFluidItemId?: (deviceId: string) => string | null;
+  isPipeDeviceSlotOccupied?: (deviceId: string) => boolean;
   itemDefinitions?: Array<{
     id: string;
     nameKey: string;
@@ -2004,6 +2007,7 @@ function createRenderContextStub(options: {
       simulation: {
         queries: {
           getPipeFluidItemId: options.getPipeFluidItemId ?? (() => null),
+          isPipeDeviceSlotOccupied: options.isPipeDeviceSlotOccupied ?? (() => false),
         },
       },
     } as never,

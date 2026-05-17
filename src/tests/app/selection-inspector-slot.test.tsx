@@ -69,6 +69,7 @@ function attachSimulationStub(
       }),
       getDeviceRuntimeStatus,
       getPipeFluidItemId: () => null,
+      isPipeDeviceSlotOccupied: () => false,
     },
     actions: {
       start: vi.fn(async () => {}),

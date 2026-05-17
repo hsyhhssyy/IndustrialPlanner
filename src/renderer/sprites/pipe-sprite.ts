@@ -15,6 +15,13 @@ const LIQUID_COLOR_TAG_PREFIX = "liquid_color:"
 const DEFAULT_PIPE_BEAD_COLOR = 0xffffff
 const LIQUID_TEXTURE_KEY_PREFIX = "texture-"
 
+/**
+ * 首润模式开关：true 时管道只在液体第 1 次流过才开始显示填充贴图，
+ * 之后只要连通段未排空就保持显示；false 时退回到旧行为（连通段有液体即全量渲染）。
+ * 设置为 false 可消除每帧额外的 isPipeDeviceSlotOccupied 查询开销。
+ */
+const PIPE_FIRST_WET_ENABLED = true
+
 export class PipeSprite extends DedicatedLogisticSprite {
   private readonly bead: Sprite
   private readonly pipeSpriteId: string
@@ -24,6 +31,8 @@ export class PipeSprite extends DedicatedLogisticSprite {
   private liquidTexture: Texture | null = null
   private liquidTextureLoaded = false
   private disposed = false
+  /** 首润模式：记录已经在该连通段会话中被液体润湿过的设备 ID。连通段排空时清空。 */
+  private static wetDevices = new Set<string>()
 
   public constructor(
     entityId: string,
@@ -89,10 +98,28 @@ export class PipeSprite extends DedicatedLogisticSprite {
       return
     }
 
-    const fluidItemId = context.workspace.simulation?.queries.getPipeFluidItemId(this.entityId) ?? null
+    const queries = context.workspace.simulation?.queries
+    const fluidItemId = queries?.getPipeFluidItemId(this.entityId) ?? null
     if (fluidItemId === null) {
+      // 连通段完全排空 → 重置润湿状态
+      PipeSprite.wetDevices.delete(this.entityId)
       this.bead.visible = false
       return
+    }
+
+    if (PIPE_FIRST_WET_ENABLED) {
+      // 首润模式：只有该节管道曾被液体润湿过才显示
+      if (!PipeSprite.wetDevices.has(this.entityId)) {
+        // 检查当前 tick 该节管道 slot 是否有液体
+        if (queries?.isPipeDeviceSlotOccupied(this.entityId)) {
+          PipeSprite.wetDevices.add(this.entityId)
+        }
+      }
+
+      if (!PipeSprite.wetDevices.has(this.entityId)) {
+        this.bead.visible = false
+        return
+      }
     }
 
     if (fluidItemId !== this.lastFluidItemId) {
