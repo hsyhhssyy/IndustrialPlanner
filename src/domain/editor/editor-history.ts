@@ -10,6 +10,7 @@ export type EditorHistoryActionType =
   | "entity.move"
   | "entity.rotate"
   | "entity.config.patch"
+  | "entity.config.delete-keys"
   | "logistics.place"
   | "document.settings.patch"
   | "document.restore"

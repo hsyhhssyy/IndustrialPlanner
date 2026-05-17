@@ -38,6 +38,7 @@ function attachSimulationStub(
   const state = observable({
     runningState: options.state,
     simulationSpeed: 1,
+    statistics: { tickPerSecond: 0 },
   });
   const start = options.start ?? vi.fn(action(async () => {
     state.runningState = "start";
@@ -78,6 +79,7 @@ function attachSimulationStub(
         currentTick: null,
       }),
       getDeviceRuntimeStatus: () => null,
+      getPipeFluidItemId: () => null,
     },
     actions: {
       start,

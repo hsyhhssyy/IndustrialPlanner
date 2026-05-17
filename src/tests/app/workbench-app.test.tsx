@@ -930,6 +930,7 @@ describe("WorkbenchApp", () => {
       state: {
         runningState: "stop",
         simulationSpeed: 1,
+        statistics: { tickPerSecond: 0 },
       },
       topology: createSnapshotStore(null),
       queries: {
@@ -954,6 +955,7 @@ describe("WorkbenchApp", () => {
           },
         }),
         getDeviceRuntimeStatus: () => null,
+        getPipeFluidItemId: () => null,
       },
       actions: {
         start: vi.fn(async () => {}),

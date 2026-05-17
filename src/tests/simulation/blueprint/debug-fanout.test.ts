@@ -1,6 +1,17 @@
 import { describe, it } from "vitest";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
-import { createBlueprint, createEntity, getTick } from "../blueprint-test-helpers";
+import { createBlueprint, createEntity } from "../blueprint-test-helpers";
+
+// AI-REMOVED 2026-05-17:
+// Reason: getTick 未在本测试文件使用，保留 import 会阻断全仓 lint。
+// Trigger: REQ-078 验收运行 npm run lint 时暴露 no-unused-vars。
+// Evidence: rg 仅命中 import 行，无有效引用。
+// Replacement: 当前 import 仅保留 createBlueprint/createEntity。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { createBlueprint, createEntity, getTick } from "../blueprint-test-helpers";
 
 describe("debug-fanout", () => {
   it("debug", async () => {

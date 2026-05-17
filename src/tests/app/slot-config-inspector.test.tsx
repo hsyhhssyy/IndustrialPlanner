@@ -79,12 +79,45 @@ describe("SlotConfigInspector", () => {
         },
       };
     });
+    const deleteEntityConfigKeys = vi.fn((entityId: string, keys: string[]) => {
+      if (entityId !== currentEntity.id) {
+        return;
+      }
+
+      const keysToDelete = new Set<string>();
+      const configKeys = Object.keys(currentEntity.config);
+
+      for (const deleteKey of keys) {
+        for (const configKey of configKeys) {
+          if (configKey === deleteKey || configKey.startsWith(deleteKey + ".") || configKey.startsWith(deleteKey + "[")) {
+            keysToDelete.add(configKey);
+          }
+        }
+      }
+
+      if (keysToDelete.size === 0) {
+        return;
+      }
+
+      const nextConfig: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(currentEntity.config)) {
+        if (!keysToDelete.has(key)) {
+          nextConfig[key] = value;
+        }
+      }
+
+      currentEntity = {
+        ...currentEntity,
+        config: nextConfig,
+      };
+    });
     const currentAppHost = {
       workspace: {
         ...workspace,
         editor: {
           actions: {
             patchEntityConfig,
+            deleteEntityConfigKeys,
           },
         },
       },
@@ -98,7 +131,7 @@ describe("SlotConfigInspector", () => {
     const definition = requireDefinition(workspace, "item_port_storager_1");
     const ore = requireItem(workspace, "item_copper_ore");
     const powder = requireItem(workspace, "item_carbon_powder");
-    const liquid = requireItem(workspace, "item_copper_bottle_filled_liquid_xiranite");
+    const liquid = requireItem(workspace, "item_liquid_xiranite");
 
     const renderInspector = () => {
       act(() => {

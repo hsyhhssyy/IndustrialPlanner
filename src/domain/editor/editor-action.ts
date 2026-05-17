@@ -23,6 +23,12 @@ export interface EditorAction {
 	zoom(step: number): void;
 
 	patchEntityConfig(entityId: string, patch: Record<string, unknown>): void;
+	/**
+	 * 删除实体 config 中的指定键。
+	 * 父键被删时，以该键为前缀的子键一并删除（如删 `links[0]` 则 `links[0].id`、`links[0].source.entityId` 等均被移除）。
+	 * 只影响 config，不影响 entity 其他字段。
+	 */
+	deleteEntityConfigKeys(entityId: string, keys: string[]): void;
 
 	clearCollection(collectionType: EntityCollectionType): void;
 	deleteCollection(collectionType: EntityCollectionType): void;

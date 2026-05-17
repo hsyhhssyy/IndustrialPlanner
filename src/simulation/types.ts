@@ -264,6 +264,7 @@ export interface RuntimeTickSnapshot {
   readonly nodes: Record<string, RuntimeNodeSnapshot>;
   readonly transfers: readonly RuntimeTransferSnapshot[];
   readonly routingCursors: Record<string, number>;
+  readonly transportComponentDomain: Record<string, string | null>;
   readonly diagnostics: readonly RuntimeDiagnosticSnapshot[];
 }
 

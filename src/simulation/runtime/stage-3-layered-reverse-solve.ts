@@ -5,7 +5,6 @@ import type {
   CompiledSimulationTopology,
   SimulationAcceptRule,
   SimulationCountLimit,
-  TickPerfStage3Details,
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import {
@@ -15,6 +14,17 @@ import {
   moveOneItem,
   resolveStorageSlotId,
 } from "./runtime-slot-access";
+
+// AI-REMOVED 2026-05-17:
+// Reason: TickPerfStage3Details 未在本文件使用，保留 import 会阻断 lint。
+// Trigger: REQ-078 验收运行定向 eslint 时暴露 unused import。
+// Evidence: rg 仅命中本文件 import 行，无有效引用。
+// Replacement: SolveTransferGraphPerf 作为本文件内部 perf 输入类型。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// TickPerfStage3Details,
 
 interface SourceSelection {
   readonly sourceSlotId: string;
@@ -190,8 +200,8 @@ function solveOutputNode(
   while (moved) {
     moved = false;
     for (const edgeId of getOrderedOutputEdgeIds(topology, state, node)) {
-      const perf = state.transient._perf;
-      if (perf !== undefined) { perf.solveOutputEdgeChecks += 1; }
+      const slotPerf = state.transient._perf;
+      if (slotPerf !== undefined) { slotPerf.solveOutputEdgeChecks += 1; }
 
       const edge = topology.transferEdges[edgeId];
       const edgeState = state.transient.edges[edgeId];

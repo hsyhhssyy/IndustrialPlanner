@@ -102,10 +102,10 @@ export function WarehouseItemLinkInspector({
   };
 
   const clearLink = (row: WarehouseLinkRow) => {
-    patchEntityConfig({
-      [`links[${row.linkIndex}]`]: null,
-      [row.ignoreStockPath]: false,
-    });
+    appHost.workspace.editor?.actions.deleteEntityConfigKeys(entity.id, [
+      `links[${row.linkIndex}]`,
+      row.ignoreStockPath,
+    ]);
   };
 
   return (

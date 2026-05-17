@@ -1,6 +1,7 @@
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type {
   CacheLinkEndpointDefinition,
+  SlotLinkDefinition,
   WorldDocument,
   WorldEntity,
 } from "@/domain/document/world-document";
@@ -951,9 +952,10 @@ function compileDefinitionSlotLinks(options: {
     return [];
   }
 
+  const definitionLinks = Array.isArray(merged.links) ? merged.links as readonly unknown[] : [];
   const links: CompiledSimulationSlotLink[] = [];
-  for (const link of merged.links) {
-    if (link.source === undefined || link.target === undefined) {
+  for (const link of definitionLinks) {
+    if (!isMaterializedSlotLinkDefinition(link)) {
       continue;
     }
 
@@ -992,6 +994,24 @@ function compileDefinitionSlotLinks(options: {
   }
 
   return links;
+}
+
+function isMaterializedSlotLinkDefinition(value: unknown): value is SlotLinkDefinition {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return typeof value.id === "string"
+    && (value.linkType === "share-all" || value.linkType === "share-cap")
+    && isCacheLinkEndpointDefinition(value.source)
+    && isCacheLinkEndpointDefinition(value.target);
+}
+
+function isCacheLinkEndpointDefinition(value: unknown): value is CacheLinkEndpointDefinition {
+  return isPlainObject(value)
+    && typeof value.entityId === "string"
+    && typeof value.storageSlotGroupId === "string"
+    && typeof value.slotId === "string";
 }
 
 function findCompiledSlotId(options: {

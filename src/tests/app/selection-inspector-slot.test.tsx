@@ -45,6 +45,7 @@ function attachSimulationStub(
     state: {
       runningState: options.state,
       simulationSpeed: 1,
+      statistics: { tickPerSecond: 0 },
     },
     topology: createSnapshotStore(null),
     queries: {
@@ -67,6 +68,7 @@ function attachSimulationStub(
         currentTick: null,
       }),
       getDeviceRuntimeStatus,
+      getPipeFluidItemId: () => null,
     },
     actions: {
       start: vi.fn(async () => {}),

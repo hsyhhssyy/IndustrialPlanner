@@ -24,6 +24,7 @@ export function createTickSnapshot(
     nodes: createNodeSnapshots(state),
     transfers: state.transient.transfers.map((transfer) => ({ ...transfer })),
     routingCursors: { ...state.persistent.routingCursors },
+    transportComponentDomain: { ...state.persistent.transportComponentDomain },
     diagnostics: state.transient.diagnostics.map((diagnostic) => ({ ...diagnostic })),
   };
 }

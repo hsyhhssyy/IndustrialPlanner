@@ -8,7 +8,7 @@ const { applicationState, textureManagerState } = vi.hoisted(() => ({
   },
   textureManagerState: {
     destroy: vi.fn(),
-    getTexture: vi.fn(() => Promise.resolve({ id: "texture" })),
+    getTexture: vi.fn((_key?: string) => Promise.resolve({ id: "texture" })),
   },
 }))
 
@@ -254,7 +254,7 @@ describe("createBlueprintPreviewManager", () => {
   })
 
   it("keeps the highlight graphics renderable so the scanline mask can draw", async () => {
-    textureManagerState.getTexture.mockImplementation((key: string) => Promise.resolve(
+    textureManagerState.getTexture.mockImplementation((key?: string) => Promise.resolve(
       key === "texture-scanline-45deg-50opacity"
         ? { id: "scanline-texture", width: 64, height: 64 }
         : { id: "texture" },

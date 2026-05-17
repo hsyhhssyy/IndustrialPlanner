@@ -111,6 +111,12 @@ export function createSimulationHost(
           });
         };
       })(),
+      getPipeFluidItemId: (deviceId: string) => resolvePipeFluidItemId({
+        runningState: internalState.runningState,
+        topology: topologyStore.getSnapshot(),
+        deviceId,
+        snapshot: internalState.currentSnapshot,
+      }),
     },
     actions,
     dispose: () => {
@@ -134,6 +140,30 @@ export function createSimulationHost(
   }
 
   return host;
+}
+
+function resolvePipeFluidItemId(options: {
+  runningState: SimulationStateReadWrite["runningState"];
+  topology: CompiledSimulationTopology | null;
+  deviceId: string;
+  snapshot: RuntimeTickSnapshot | null;
+}): string | null {
+  if (options.runningState === "stop" || options.topology === null || options.snapshot === null) {
+    return null;
+  }
+
+  const device = options.topology.devices[options.deviceId]
+    ?? options.topology.devices[`device:${options.deviceId}`];
+  if (device === undefined || device.transportClass !== "strict-pipe") {
+    return null;
+  }
+
+  const componentId = device.transportComponentId;
+  if (componentId === null) {
+    return null;
+  }
+
+  return options.snapshot.transportComponentDomain[componentId] ?? null;
 }
 
 function resolveDeviceRuntimeStatus(options: {

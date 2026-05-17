@@ -100,6 +100,18 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     this.disposed = true
   }
 
+  protected isDeviceTextureReady(): boolean {
+    return this.isTextureReady
+  }
+
+  protected afterDeviceTextureReady(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    void layout
+    void context
+  }
+
   private applyLayout(layout: RenderSpriteLayout): void {
     const isQuarterTurn = layout.rotation === 90 || layout.rotation === 270
     const normalizedLayout = {
@@ -149,6 +161,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
               theme: this.currentSyncContext.theme,
               workspace: this.currentSyncContext.workspace,
             })
+            this.afterDeviceTextureReady(this.currentLayout, this.currentSyncContext)
           }
         }
       })

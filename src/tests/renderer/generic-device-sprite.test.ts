@@ -697,6 +697,7 @@ describe("GenericDeviceSprite", () => {
     const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       [PIPE_BODY_KEY]: resolvedTexture,
+      "texture-pipe_straight_1x1_liquid": resolvedTexture,
     })
     const sprite = new PipeSprite(
       "pipe-entity-1",
@@ -738,6 +739,108 @@ describe("GenericDeviceSprite", () => {
         AYU_LIGHT_THEME,
         "accent-strong",
       ),
+    })
+  })
+
+  it("draws a tinted liquid bead for filled straight pipes", async () => {
+    const resolvedTexture = createLoadedTextureMock("pipe-device-texture")
+    const entityLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [PIPE_BODY_KEY]: resolvedTexture,
+      "texture-pipe_straight_1x1_liquid": resolvedTexture,
+    })
+    const getPipeFluidItemId = vi.fn(() => "item_liquid_water")
+    const sprite = new PipeSprite(
+      "pipe-entity-2",
+      createPipeEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: {} as never,
+    })
+    sprite.syncLayout({
+      x: 10,
+      y: 20,
+      width: 40,
+      height: 40,
+      rotation: 0,
+    }, createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+      getPipeFluidItemId,
+      itemDefinitions: [{
+        id: "item_liquid_water",
+        nameKey: "registry.item.item_liquid_water.name",
+        iconId: "item_liquid_water",
+        tags: ["liquid", "liquid_color:#82d6ff"],
+      }],
+    }))
+
+    await flushMicrotasks(8)
+
+    expect(getPipeFluidItemId).toHaveBeenCalledWith("pipe-entity-2")
+    // 贴图方案：bead 填满整个格子，Alpha 通道约束内腔形状
+    expect(resolvePipeBeadSprite(entityLayer)).toMatchObject({
+      visible: true,
+      x: 30,
+      y: 40,
+      width: 40,
+      height: 40,
+      rotation: 0,
+      tint: 0x82d6ff,
+    })
+  })
+
+  it("uses a compact square liquid bead for turn pipes", async () => {
+    const resolvedTexture = createLoadedTextureMock("pipe-device-texture")
+    const entityLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      "device-sprite-pipe_turn_cw_1x1": resolvedTexture,
+      "texture-pipe_turn_cw_1x1_liquid": resolvedTexture,
+    })
+    const sprite = new PipeSprite(
+      "pipe-turn-entity-1",
+      createPipeTurnEntityDefinitionStub("pipe_turn_cw_1x1"),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: {} as never,
+    })
+    sprite.syncLayout({
+      x: 10,
+      y: 20,
+      width: 40,
+      height: 40,
+      rotation: 90,
+    }, createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+      getPipeFluidItemId: () => "item_liquid_acid",
+      itemDefinitions: [{
+        id: "item_liquid_acid",
+        nameKey: "registry.item.item_liquid_acid.name",
+        iconId: "item_liquid_acid",
+        tags: ["liquid", "liquid_color:#d97a1f"],
+      }],
+    }))
+
+    await flushMicrotasks(8)
+
+    // 贴图方案：bead 填满整个格子，弯管贴图自带 L 形内腔 Alpha
+    expect(resolvePipeBeadSprite(entityLayer)).toMatchObject({
+      visible: true,
+      x: 30,
+      y: 40,
+      width: 40,
+      height: 40,
+      rotation: Math.PI / 2,
+      tint: 0xd97a1f,
     })
   })
 
@@ -982,6 +1085,7 @@ describe("GenericDeviceSprite", () => {
     const entityLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-pipe_straight_1x1": resolvedTexture,
+      "texture-pipe_straight_1x1_liquid": resolvedTexture,
     })
     const sprite = new PipeSprite(
       "pipe-entity-3",
@@ -1721,7 +1825,16 @@ function createEntityDefinitionStub(): EntityDefinition {
       {
         id: "item_storage",
         kind: "item",
-        role: "bidirectional",
+        // AI-REMOVED 2026-05-17:
+        // Reason: StorageSlotGroupDefinition.role 已删除，继续保留会破坏类型检查。
+        // Trigger: REQ-078 验收运行全仓 typecheck 时暴露旧测试 helper 仍写 role。
+        // Evidence: src/domain/registry/types/entity-definition.ts 已用 AI-CORRECTION 标注 role 字段删除。
+        // Replacement: portStorageBindings 绑定输入/输出端口方向。
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        // role: "bidirectional",
         slots: [
           {
             id: "slot_1",
@@ -1733,6 +1846,7 @@ function createEntityDefinitionStub(): EntityDefinition {
         ],
       },
     ],
+    recipeChannels: [],
     portStorageBindings: [
       {
         id: "bind_item_input",
@@ -1745,6 +1859,7 @@ function createEntityDefinitionStub(): EntityDefinition {
         storageSlotGroupId: "item_storage",
       },
     ],
+    links: [],
   }
 }
 
@@ -1774,7 +1889,16 @@ function createLiquidInputEntityDefinitionStub(): EntityDefinition {
       {
         id: "fluid_input_buffer",
         kind: "fluid",
-        role: "input",
+        // AI-REMOVED 2026-05-17:
+        // Reason: StorageSlotGroupDefinition.role 已删除，继续保留会破坏类型检查。
+        // Trigger: REQ-078 验收运行全仓 typecheck 时暴露旧测试 helper 仍写 role。
+        // Evidence: src/domain/registry/types/entity-definition.ts 已用 AI-CORRECTION 标注 role 字段删除。
+        // Replacement: portStorageBindings 绑定输入端口方向。
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        // role: "input",
         slots: [
           {
             id: "input_fluid_slot",
@@ -1819,6 +1943,15 @@ function createPipeEntityDefinitionStub(): EntityDefinition {
   }
 }
 
+function createPipeTurnEntityDefinitionStub(spriteId: "pipe_turn_cw_1x1" | "pipe_turn_ccw_1x1"): EntityDefinition {
+  return {
+    ...createPipeEntityDefinitionStub(),
+    id: spriteId,
+    nameKey: `registry.entity.${spriteId}.name`,
+    spriteId,
+  }
+}
+
 function createBeltLogisticsEntityDefinitionStub(): EntityDefinition {
   return {
     ...createEntityDefinitionStub(),
@@ -1838,10 +1971,20 @@ function createRenderContextStub(options: {
   reverseMarqueeIds?: readonly string[];
   logisticsHeadIds?: readonly string[];
   theme?: typeof AYU_LIGHT_THEME;
+  getPipeFluidItemId?: (deviceId: string) => string | null;
+  itemDefinitions?: Array<{
+    id: string;
+    nameKey: string;
+    iconId: string;
+    tags: string[];
+  }>;
 }) {
   return {
     theme: options.theme ?? AYU_LIGHT_THEME,
     workspace: {
+      registry: {
+        itemDefinitions: options.itemDefinitions ?? [],
+      },
       editor: {
         state: {
           viewport: {
@@ -1856,6 +1999,11 @@ function createRenderContextStub(options: {
             [EntityCollectionType.ghost]: createCollectionStub([]),
             [EntityCollectionType.logisticsHead]: createCollectionStub(options.logisticsHeadIds ?? []),
           },
+        },
+      },
+      simulation: {
+        queries: {
+          getPipeFluidItemId: options.getPipeFluidItemId ?? (() => null),
         },
       },
     } as never,
@@ -1888,6 +2036,14 @@ function resolveEntitySprite(entityLayer: ReturnType<typeof createLayerStub>) {
   } | undefined
 
   return entityRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+}
+
+function resolvePipeBeadSprite(entityLayer: ReturnType<typeof createLayerStub>) {
+  const entityRoot = entityLayer.addChild.mock.calls[0]?.[0] as {
+    children?: unknown[];
+  } | undefined
+
+  return entityRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
 }
 
 function resolveDeviceLabelRoot(entityLayer: ReturnType<typeof createLayerStub>) {

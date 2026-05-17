@@ -374,6 +374,8 @@ function cloneTransientState(transient: SimulationTickTransientState): Simulatio
     ])),
     transfers: transient.transfers.map((transfer) => ({ ...transfer })),
     diagnostics: transient.diagnostics.map((diagnostic) => ({ ...diagnostic })),
+    blockedInputNodeIds: new Set(transient.blockedInputNodeIds),
+    _perf: transient._perf === undefined ? undefined : { ...transient._perf },
   };
 }
 
