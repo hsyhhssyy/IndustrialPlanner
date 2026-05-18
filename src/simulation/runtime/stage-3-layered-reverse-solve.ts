@@ -14,6 +14,7 @@ import {
   moveOneItem,
   resolveStorageSlotId,
 } from "./runtime-slot-access";
+import { canDeviceTransferAtCurrentPhase } from "./phase-gating";
 
 // AI-REMOVED 2026-05-17:
 // Reason: TickPerfStage3Details 未在本文件使用，保留 import 会阻断 lint。
@@ -144,6 +145,10 @@ function searchUpstreamFromOutputNode(options: {
   }
 
   if (isStrictLogisticsDevice(device)) {
+    if (!canDeviceTransferAtCurrentPhase(options.topology, options.state, device)) {
+      return;
+    }
+
     solveOutputNode(options.topology, options.state, options.outputNode, options.nextAnchors, options.perf);
     markNodeVisited(options.state, options.outputNode);
 
@@ -455,7 +460,7 @@ function prepareInputNodeForAnchor(
   if (node.viewRole !== "input-view" || isNodeVisited(state, node)) {
     return false;
   }
-  if (inputNodeHasAnyCapacity(topology, state, node)) {
+  if (inputNodeCanAcceptAtCurrentTick(topology, state, node)) {
     markInputNodeUnresolved(state, node);
     return true;
   }
@@ -487,7 +492,7 @@ function refreshBlockedInputNodesAfterMove(
       reactivated.push(nodeId);
       continue;
     }
-    if (inputNodeHasAnyCapacity(topology, state, node)) {
+    if (inputNodeCanAcceptAtCurrentTick(topology, state, node)) {
       markInputNodeUnresolved(state, node);
       nextAnchors.set(node.id, node);
     }
@@ -551,6 +556,19 @@ function markNodeVisited(
     nodeState.resolveState = "visited";
     state.transient.blockedInputNodeIds.delete(node.id);
   }
+}
+
+function inputNodeCanAcceptAtCurrentTick(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  node: CompiledSimulationNode,
+): boolean {
+  const device = topology.devices[node.deviceId];
+  if (device !== undefined && !canDeviceTransferAtCurrentPhase(topology, state, device)) {
+    return false;
+  }
+
+  return inputNodeHasAnyCapacity(topology, state, node);
 }
 
 function sortInputAnchors(

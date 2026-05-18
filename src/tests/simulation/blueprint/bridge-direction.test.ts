@@ -33,6 +33,8 @@ import {
 //   Tick 41: 物品入桥（belt Stage1 完成 → Stage3 传输）
 //   Tick 81: 物品入末段传送带（bridge Stage1 完成 → Stage3 传输）
 //   Tick 121: 物品达终点储存箱
+// AI-CORRECTION 2026-05-18: dedicated belt 以 20 标准 tick 相位接收/输出：
+//   Tick 20 入首段传送带 → Tick 60 入桥 → Tick 100 入末段传送带 → Tick 140 达终点。
 // =============================================================================
 
 function createBridgeDirectionBlueprint(): BlueprintDocument {
@@ -68,39 +70,52 @@ describe("bridge-direction", () => {
   it("NS 和 EW 通道独立运输，互不干扰", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBridgeDirectionBlueprint(),
-      maxTickNumber: 130,
+      maxTickNumber: 150,
     });
 
     // === Tick 1: 两路物品同时进入首段传送带 ===
+    // AI-CORRECTION 2026-05-18: dedicated belt 非相位 tick 不接收，tick 1 应无首段传送。
     const tick1 = getTick(report, 1);
     expect(tick1.transfers.some((t) =>
       t.sourceSlotId.includes("device:source-ns")
       && t.targetSlotId.includes("device:belt_ns_in"),
-    )).toBe(true);
+    )).toBe(false);
     expect(tick1.transfers.some((t) =>
+      t.sourceSlotId.includes("device:source-ew")
+      && t.targetSlotId.includes("device:belt_ew_in"),
+    )).toBe(false);
+
+    const tick20 = getTick(report, 20);
+    expect(tick20.transfers.some((t) =>
+      t.sourceSlotId.includes("device:source-ns")
+      && t.targetSlotId.includes("device:belt_ns_in"),
+    )).toBe(true);
+    expect(tick20.transfers.some((t) =>
       t.sourceSlotId.includes("device:source-ew")
       && t.targetSlotId.includes("device:belt_ew_in"),
     )).toBe(true);
 
     // === Tick 41: 物品进入桥接器，验证方向隔离 ===
-    const tick41 = getTick(report, 41);
-    expect(tick41.transfers.some((t) =>
+    // AI-CORRECTION 2026-05-18: 首段 belt 输出对齐到 tick 60。
+    const tick60 = getTick(report, 60);
+    expect(tick60.transfers.some((t) =>
       t.sourceSlotId.includes("belt_ns_in")
       && t.targetSlotId.includes("bridge")
       && t.itemType === "item_iron_ore",
     )).toBe(true);
-    expect(tick41.transfers.some((t) =>
+    expect(tick60.transfers.some((t) =>
       t.sourceSlotId.includes("belt_ew_in")
       && t.targetSlotId.includes("bridge")
       && t.itemType === "item_copper_ore",
     )).toBe(true);
 
     // Tick 42: 桥接器槽位状态应体现方向隔离
-    const nsInSlot = findSlot(report, 42, "bridge", "ns_buffer", "ns_slot_1", "input-view");
+    // AI-CORRECTION 2026-05-18: 桥接器在 tick 60 收货，tick 61 验证槽位状态。
+    const nsInSlot = findSlot(report, 61, "bridge", "ns_buffer", "ns_slot_1", "input-view");
     expect(nsInSlot.itemType).toBe("item_iron_ore");
     expect(nsInSlot.count).toBeGreaterThan(0);
 
-    const ewInSlot = findSlot(report, 42, "bridge", "ew_buffer", "ew_slot_1", "input-view");
+    const ewInSlot = findSlot(report, 61, "bridge", "ew_buffer", "ew_slot_1", "input-view");
     expect(ewInSlot.itemType).toBe("item_copper_ore");
     expect(ewInSlot.count).toBeGreaterThan(0);
 
@@ -109,32 +124,35 @@ describe("bridge-direction", () => {
     expect(ewInSlot.itemType).not.toBe("item_iron_ore");
 
     // === Tick 81: 物品离开桥接器进入末段传送带 ===
-    const tick81 = getTick(report, 81);
-    expect(tick81.transfers.some((t) =>
+    // AI-CORRECTION 2026-05-18: 桥接器仍是 anchor，输出被下游 dedicated belt 接收相位约束到 tick 100。
+    const tick100 = getTick(report, 100);
+    expect(tick100.transfers.some((t) =>
       t.sourceSlotId.includes("device:bridge")
       && t.targetSlotId.includes("device:belt_ns_out")
       && t.itemType === "item_iron_ore",
     )).toBe(true);
-    expect(tick81.transfers.some((t) =>
+    expect(tick100.transfers.some((t) =>
       t.sourceSlotId.includes("device:bridge")
       && t.targetSlotId.includes("device:belt_ew_out")
       && t.itemType === "item_copper_ore",
     )).toBe(true);
 
     // === Tick 121: 两路物品到达终点储存箱 ===
-    const tick121 = getTick(report, 121);
-    expect(tick121.transfers.some((t) =>
+    // AI-CORRECTION 2026-05-18: 末段 dedicated belt 输出对齐到 tick 140。
+    const tick140 = getTick(report, 140);
+    expect(tick140.transfers.some((t) =>
       t.targetSlotId.includes("device:sink-ns")
       && t.itemType === "item_iron_ore",
     )).toBe(true);
-    expect(tick121.transfers.some((t) =>
+    expect(tick140.transfers.some((t) =>
       t.targetSlotId.includes("device:sink-ew")
       && t.itemType === "item_copper_ore",
     )).toBe(true);
 
     // === Tick 130: 最终验证 sink 内容纯净 ===
-    const sinkNs = getDevice(report, 130, "sink-ns");
-    const sinkEw = getDevice(report, 130, "sink-ew");
+    // AI-CORRECTION 2026-05-18: 最终状态延后到 tick 150。
+    const sinkNs = getDevice(report, 150, "sink-ns");
+    const sinkEw = getDevice(report, 150, "sink-ew");
 
     for (const slot of sinkNs.slotItems) {
       if (slot.count > 0) {
@@ -151,11 +169,12 @@ describe("bridge-direction", () => {
   it("桥接器编译后应有独立的双通道槽位结构", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBridgeDirectionBlueprint(),
-      maxTickNumber: 43,
+      maxTickNumber: 61,
     });
 
     // Tick 43: bridge 的 slotItems 应包含 4 个条目：ns_buffer(input+output) + ew_buffer(input+output)
-    const bridge = getDevice(report, 43, "bridge");
+    // AI-CORRECTION 2026-05-18: dedicated belt 首次向 bridge 输出在 tick 60，tick 61 检查结构。
+    const bridge = getDevice(report, 61, "bridge");
     const slotKeys = bridge.slotItems.map((s) => `${s.storageGroupId}:${s.slotId}:${s.viewRole}`).sort();
     expect(slotKeys).toEqual(expect.arrayContaining([
       "ns_buffer:ns_slot_1:input-view",
@@ -179,6 +198,8 @@ describe("bridge-direction", () => {
 //
 // 时序（pipe 0.5s=10tick，bridge anchor 0.5s=10tick）：
 //   Tick 1: 入管 → Tick 11: 入桥 → Tick 21: 出桥 → Tick 31: 达宿
+// AI-CORRECTION 2026-05-18: dedicated pipe 以 10 标准 tick 相位接收/输出：
+//   Tick 10 入管 → Tick 20 入桥 → Tick 30 出桥 → Tick 40 达宿。
 // =============================================================================
 
 function createPipeBridgeDirectionBlueprint(): BlueprintDocument {
@@ -198,50 +219,61 @@ describe("pipe-bridge-direction", () => {
   it("管道桥接器 EW 通道运输且不泄漏到 NS 通道", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createPipeBridgeDirectionBlueprint(),
-      maxTickNumber: 40,
+      maxTickNumber: 45,
     });
 
     // === Tick 1: 水进入首段管道 ===
+    // AI-CORRECTION 2026-05-18: dedicated pipe 非相位 tick 不接收，tick 1 应无首段传送。
     const tick1 = getTick(report, 1);
     expect(tick1.transfers.some((t) =>
+      t.sourceSlotId.includes("device:liquid-source-ew")
+      && t.targetSlotId.includes("device:pipe_ew_in"),
+    )).toBe(false);
+
+    const tick10 = getTick(report, 10);
+    expect(tick10.transfers.some((t) =>
       t.sourceSlotId.includes("device:liquid-source-ew")
       && t.targetSlotId.includes("device:pipe_ew_in"),
     )).toBe(true);
 
     // === Tick 11: 水从管道进入桥接器 ===
-    const tick11 = getTick(report, 11);
-    expect(tick11.transfers.some((t) =>
+    // AI-CORRECTION 2026-05-18: pipe 输出对齐到 tick 20。
+    const tick20 = getTick(report, 20);
+    expect(tick20.transfers.some((t) =>
       t.sourceSlotId.includes("device:pipe_ew_in")
       && t.targetSlotId.includes("device:pipe-bridge"),
     )).toBe(true);
 
     // === Tick 12: 桥接器槽位隔离验证 ===
+    // AI-CORRECTION 2026-05-18: 桥接器在 tick 20 收货，tick 21 验证槽位状态。
     // 水应在 ew_buffer，ns_buffer 应为空
-    const ewInSlot = findSlot(report, 12, "pipe-bridge", "ew_buffer", "ew_slot_1", "input-view");
+    const ewInSlot = findSlot(report, 21, "pipe-bridge", "ew_buffer", "ew_slot_1", "input-view");
     expect(ewInSlot.itemType).toBe("item_liquid_water");
     expect(ewInSlot.count).toBeGreaterThan(0);
 
     // ns_buffer 应无物品（方向隔离）
-    const nsInSlot = findSlot(report, 12, "pipe-bridge", "ns_buffer", "ns_slot_1", "input-view");
+    const nsInSlot = findSlot(report, 21, "pipe-bridge", "ns_buffer", "ns_slot_1", "input-view");
     expect(nsInSlot.itemType).toBeNull();
     expect(nsInSlot.count).toBe(0);
 
     // === Tick 21: 水离开桥进入末段管道 ===
-    const tick21 = getTick(report, 21);
-    expect(tick21.transfers.some((t) =>
+    // AI-CORRECTION 2026-05-18: 桥接器输出被下游 dedicated pipe 接收相位约束到 tick 30。
+    const tick30 = getTick(report, 30);
+    expect(tick30.transfers.some((t) =>
       t.sourceSlotId.includes("device:pipe-bridge")
       && t.targetSlotId.includes("device:pipe_ew_out"),
     )).toBe(true);
 
     // === Tick 31: 水到达终点 ===
-    const tick31 = getTick(report, 31);
-    expect(tick31.transfers.some((t) =>
+    // AI-CORRECTION 2026-05-18: 末段 dedicated pipe 输出对齐到 tick 40。
+    const tick40 = getTick(report, 40);
+    expect(tick40.transfers.some((t) =>
       t.targetSlotId.includes("device:liquid-sink-ew")
       && t.itemType === "item_liquid_water",
     )).toBe(true);
 
     // === 最终：宿只有水，桥 ns_buffer 全程空 ===
-    const sinkEw = getDevice(report, 40, "liquid-sink-ew");
+    const sinkEw = getDevice(report, 45, "liquid-sink-ew");
     for (const slot of sinkEw.slotItems) {
       if (slot.count > 0) expect(slot.itemType).toBe("item_liquid_water");
     }

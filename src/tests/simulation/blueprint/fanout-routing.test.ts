@@ -44,6 +44,7 @@ describe("REQ-076: fanout routing", () => {
     // 物品经过 3 段物流 (belt→splitter→belt-open) 各 40 tick，在 tick 121 到达 open-storage。
     // open-storage 在 (0,-4), belt-open 在 (0,-2)，belt-open→open-storage 还需经过 (0,-3) 的空隙。
     // AI-CORRECTION 2026-05-18: 新端口排列下 belt-open 通过 S 端口优先连接，时序不变。
+    // AI-CORRECTION 2026-05-18: dedicated belt 接收/输出改为 20 tick 相位门控，终点到达为 tick 140。
     // 验证 blocked-storage 全程未收到物品。
     const allTransfers = report.ticks.flatMap((tick) => tick.transfers);
     const hasBlockedTransfer = allTransfers.some((transfer) =>
@@ -51,13 +52,13 @@ describe("REQ-076: fanout routing", () => {
     );
     expect(hasBlockedTransfer).toBe(false);
 
-    // 物品应最终在 open-storage 中（splitter→belt-open 在 tick 81，belt-open→open-storage 在 tick 121）
-    const tick121 = getTick(report, 121);
-    expect(tick121.transfers.some((transfer) =>
+    // 物品应最终在 open-storage 中（splitter→belt-open 在 tick 100，belt-open→open-storage 在 tick 140）
+    const tick140 = getTick(report, 140);
+    expect(tick140.transfers.some((transfer) =>
       transfer.targetSlotId.includes("device:open-storage"),
     )).toBe(true);
 
-    expect(findSlotWithItem(report, 121, "open-storage", "item_iron_ore"))
+    expect(findSlotWithItem(report, 140, "open-storage", "item_iron_ore"))
       .toMatchObject({
         storageGroupId: "item_storage",
         itemType: "item_iron_ore",

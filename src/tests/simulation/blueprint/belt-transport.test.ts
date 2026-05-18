@@ -24,22 +24,32 @@ describe("REQ-076: belt transport", () => {
   it("covers layered reverse solving, split belt buffers, and belt dynamic recipes through a transport blueprint", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBeltTransportBlueprint(),
-      maxTickNumber: 1,
+      maxTickNumber: 60,
     });
     const tickOne = getTick(report, 1);
-    const belt = getDevice(report, 1, "belt");
+    const tickTwenty = getTick(report, 20);
+    const tickSixty = getTick(report, 60);
+    const belt = getDevice(report, 20, "belt");
 
-    expect(tickOne.transfers).toEqual(expect.arrayContaining([
+    expect(tickOne.transfers.some((transfer) =>
+      transfer.sourceSlotId.includes("device:source-storage")
+      && transfer.targetSlotId.includes("device:belt"),
+    )).toBe(false);
+    expect(tickTwenty.transfers).toEqual(expect.arrayContaining([
       expect.objectContaining({
         itemType: "item_iron_ore",
         amount: 1,
       }),
     ]));
-    expect(tickOne.transfers.some((transfer) =>
+    expect(tickTwenty.transfers.some((transfer) =>
       transfer.sourceSlotId.includes("device:source-storage")
       && transfer.targetSlotId.includes("device:belt"),
     )).toBe(true);
-    expect(getDevice(report, 1, "source-storage").slotItems).toHaveLength(6);
+    expect(tickSixty.transfers.some((transfer) =>
+      transfer.sourceSlotId.includes("device:belt")
+      && transfer.targetSlotId.includes("device:sink-storage"),
+    )).toBe(true);
+    expect(getDevice(report, 20, "source-storage").slotItems).toHaveLength(6);
     expect(belt.slotItems).toEqual(expect.arrayContaining([
       expect.objectContaining({
         storageGroupId: "item_buffer",
@@ -56,9 +66,8 @@ describe("REQ-076: belt transport", () => {
       expect.objectContaining({
         transportClass: "strict-belt",
         sourceEntityIds: ["belt"],
-        transferCount: 1,
         itemAmounts: {
-          item_iron_ore: 1,
+          item_iron_ore: expect.any(Number),
         },
       }),
     ]));

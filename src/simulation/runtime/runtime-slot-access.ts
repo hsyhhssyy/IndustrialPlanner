@@ -17,6 +17,10 @@ import type {
   RuntimeSlotState,
   SimulationMutableRuntimeState,
 } from "./runtime-state";
+import {
+  canRecipeFinishAtCurrentPhase,
+  resolveTransportRecipeTiming,
+} from "./phase-gating";
 
 export interface IngredientSlotContent {
   readonly slotId: string;
@@ -375,6 +379,10 @@ export function finishRecipeIfPossible(
   state: SimulationMutableRuntimeState,
   recipe: RuntimeDeviceRecipeState,
 ): boolean {
+  if (!canRecipeFinishAtCurrentPhase(topology, state, recipe)) {
+    return false;
+  }
+
   const simulatedSlots = cloneSlotStates(state.persistent.slots);
   if (recipe.reservations.length > 0) {
     consumeSelections(simulatedSlots, recipe.reservations);
@@ -408,15 +416,15 @@ function resolveRecipes(options: {
       return [];
     }
 
-    const durationSeconds = options.device.transportClass === "strict-belt" ? 2 : 0.5;
-    const recipeIdSuffix = options.device.transportClass === "strict-belt"
-      ? "dynamic-belt-transfer"
-      : "dynamic-pipe-transfer";
+    const timing = resolveTransportRecipeTiming(options.topology, options.device);
+    if (timing === null) {
+      return [];
+    }
 
     return [{
-      recipeId: `${options.device.definitionId}:${recipeIdSuffix}`,
+      recipeId: `${options.device.definitionId}:${timing.recipeIdSuffix}`,
       recipeType: "reserved-item",
-      durationTicks: Math.max(1, Math.round(durationSeconds * options.topology.standardTickRate)),
+      durationTicks: timing.durationTicks,
       inputs: [{ itemId: "any", amount: 1 }],
       outputs: [{ itemId: "same-as-input", amount: 1 }],
       ingredientNodeIds: options.channel.ingredientNodeIds,
@@ -432,12 +440,15 @@ function resolveRecipes(options: {
   const isGeneralBelt = (options.device.tags ?? []).includes("BeltFamily");
   const isGeneralPipe = (options.device.tags ?? []).includes("PipeFamily");
   if ((isGeneralBelt || isGeneralPipe) && options.ingredientSlotContents.length > 0) {
-    const durationSeconds = isGeneralBelt ? 2 : 0.5;
-    const recipeIdSuffix = isGeneralBelt ? "dynamic-belt-transfer" : "dynamic-pipe-transfer";
+    const timing = resolveTransportRecipeTiming(options.topology, options.device);
+    if (timing === null) {
+      return [];
+    }
+
     return [{
-      recipeId: `${options.device.definitionId}:${recipeIdSuffix}`,
+      recipeId: `${options.device.definitionId}:${timing.recipeIdSuffix}`,
       recipeType: "reserved-item",
-      durationTicks: Math.max(1, Math.round(durationSeconds * options.topology.standardTickRate)),
+      durationTicks: timing.durationTicks,
       inputs: [{ itemId: "any", amount: 1 }],
       outputs: [{ itemId: "same-as-input", amount: 1 }],
       ingredientNodeIds: options.channel.ingredientNodeIds,

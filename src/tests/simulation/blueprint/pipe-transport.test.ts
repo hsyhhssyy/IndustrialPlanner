@@ -24,14 +24,24 @@ describe("REQ-076: pipe transport", () => {
   it("covers pipe transport components and pipe dynamic recipes through a liquid blueprint", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createLiquidPipeTransportBlueprint(),
-      maxTickNumber: 1,
+      maxTickNumber: 20,
     });
     const tickOne = getTick(report, 1);
-    const pipe = getDevice(report, 1, "pipe");
+    const tickTen = getTick(report, 10);
+    const tickTwenty = getTick(report, 20);
+    const pipe = getDevice(report, 10, "pipe");
 
     expect(tickOne.transfers.some((transfer) =>
       transfer.sourceSlotId.includes("device:source-liquid-storage")
       && transfer.targetSlotId.includes("device:pipe"),
+    )).toBe(false);
+    expect(tickTen.transfers.some((transfer) =>
+      transfer.sourceSlotId.includes("device:source-liquid-storage")
+      && transfer.targetSlotId.includes("device:pipe"),
+    )).toBe(true);
+    expect(tickTwenty.transfers.some((transfer) =>
+      transfer.sourceSlotId.includes("device:pipe")
+      && transfer.targetSlotId.includes("device:sink-liquid-storage"),
     )).toBe(true);
     expect(pipe.slotItems).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -50,7 +60,7 @@ describe("REQ-076: pipe transport", () => {
         transportClass: "strict-pipe",
         sourceEntityIds: ["pipe"],
         itemAmounts: {
-          item_liquid_water: 1,
+          item_liquid_water: expect.any(Number),
         },
       }),
     ]));

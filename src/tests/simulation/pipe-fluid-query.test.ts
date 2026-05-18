@@ -21,7 +21,8 @@ describe("Simulation pipe fluid query", () => {
 
     try {
       await host.actions.start()
-      const tickStatus = await host.internalActions.syncToTick(1)
+      // AI-CORRECTION 2026-05-18: dedicated pipe 只在 10 标准 tick 相位接收液体。
+      const tickStatus = await host.internalActions.syncToTick(10)
 
       expect(tickStatus.status).toBe("ready")
       expect(host.queries.getPipeFluidItemId("pipe")).toBe("item_liquid_water")

@@ -25,7 +25,7 @@ describe("REQ-076: config overrides", () => {
 
     const report = await runBlueprintSimulation({
       blueprint,
-      maxTickNumber: 50,
+      maxTickNumber: 60,
     });
 
     expect(report.blueprint).toMatchObject({
@@ -37,28 +37,35 @@ describe("REQ-076: config overrides", () => {
     expect(report.topology.topologyId.length).toBeGreaterThan(0);
 
     // Tick 0: source 持有 7 个铁矿石
-    expect(findSlot(report, 0, "source-storage", "storage_slot_1", "slot_1"))
+    expect(findSlot(report, 0, "source-storage", "item_storage", "slot_1"))
       .toMatchObject({
         itemType: "item_iron_ore",
         count: 7,
       });
 
     // Tick 1: 物品从 source 传输到 belt（belt buffer 容量为 1，仅接纳 1 个）
+    // AI-CORRECTION 2026-05-18: dedicated belt 相位按标准 tick 对齐，首次接收发生在 tick 20。
     const tick1 = getTick(report, 1);
     expect(tick1.transfers.some((t) =>
+      t.sourceSlotId.includes("device:source-storage")
+      && t.targetSlotId.includes("device:belt"),
+    )).toBe(false);
+    const tick20 = getTick(report, 20);
+    expect(tick20.transfers.some((t) =>
       t.sourceSlotId.includes("device:source-storage")
       && t.targetSlotId.includes("device:belt"),
     )).toBe(true);
 
     // Tick 41: belt 配方完成，物品进入 sink
-    const tick41 = getTick(report, 41);
-    expect(tick41.transfers.some((t) =>
+    // AI-CORRECTION 2026-05-18: dedicated belt 输出也按标准 tick 相位对齐，首件在 tick 60 进入 sink。
+    const tick60 = getTick(report, 60);
+    expect(tick60.transfers.some((t) =>
       t.sourceSlotId.includes("device:belt")
       && t.targetSlotId.includes("device:sink-storage"),
     )).toBe(true);
 
     // 验证 port count 覆盖生效：source 的 portGroups[1].ports[0].count 被设为 3
-    expect(findSlot(report, 41, "sink-storage", "storage_slot_1", "slot_1"))
+    expect(findSlot(report, 60, "sink-storage", "item_storage", "slot_1"))
       .toMatchObject({
         itemType: "item_iron_ore",
         count: 1,
