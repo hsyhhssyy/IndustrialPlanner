@@ -140,7 +140,7 @@ describe("SlotConfigInspector", () => {
             appHost={currentAppHost}
             declaration={{
               type: INSPECTOR_TYPE.slotConfig,
-              slotGroupIds: ["item_storage"],
+              slotGroupIds: ["storage_slot_1", "storage_slot_2", "storage_slot_3", "storage_slot_4", "storage_slot_5", "storage_slot_6"],
             }}
             definition={definition}
             entity={currentEntity}
@@ -186,7 +186,9 @@ describe("SlotConfigInspector", () => {
       secondPickButton.click();
     });
 
-    expect(currentAppHost.encyclopediaPicker.matchesItem(ore)).toBe(false);
+    // AI-CORRECTION 2026-05-18: 协议存储箱从 1 组 6 槽改为 6 组各 1 槽，
+    //   跨组不互斥，storage_slot_2 可再次选择 ore。
+    expect(currentAppHost.encyclopediaPicker.matchesItem(ore)).toBe(true);
     expect(currentAppHost.encyclopediaPicker.matchesItem(powder)).toBe(true);
 
     await act(async () => {

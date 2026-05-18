@@ -59,6 +59,25 @@ const LEGACY_DEVICE_REMAPPERS: Readonly<Record<string, {
     definitionId: "pipe_turn_cw_1x1",
     rotationOffset: 270,
   },
+  // AI-CORRECTION 2026-05-18: 分流器/汇流器默认方向变更。
+  //   - 分流器: 原 input=E → 现 input=N，需补 +90° 使旧 v2 蓝图的拓扑等价。
+  //   - 汇流器: 原 output=W → 现 output=S，需补 +90° 使旧 v2 蓝图的拓扑等价。
+  item_log_splitter: {
+    definitionId: "item_log_splitter",
+    rotationOffset: 90,
+  },
+  item_log_converger: {
+    definitionId: "item_log_converger",
+    rotationOffset: 90,
+  },
+  item_pipe_splitter: {
+    definitionId: "item_pipe_splitter",
+    rotationOffset: 90,
+  },
+  item_pipe_converger: {
+    definitionId: "item_pipe_converger",
+    rotationOffset: 90,
+  },
 };
 
 export interface LegacyBlueprintJson {

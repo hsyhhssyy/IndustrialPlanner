@@ -221,7 +221,7 @@
         "x": 20,
         "y": 21
       },
-      "rotation": 90,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -960,7 +960,7 @@
         "x": 9,
         "y": 3
       },
-      "rotation": 270,
+      "rotation": 0,
       "config": {},
       "tags": []
     },

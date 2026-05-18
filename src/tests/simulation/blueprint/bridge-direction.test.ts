@@ -184,8 +184,8 @@ describe("bridge-direction", () => {
 function createPipeBridgeDirectionBlueprint(): BlueprintDocument {
   return createBlueprint("pipe-bridge-direction-verify", [
     createEntity("liquid-source-ew", "item_port_liquid_storager_1", -4, 0, 0, {
-      "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_water",
-      "storageSlotGroups[1].slots[0].initialCount": 1,
+      "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+      "storageSlotGroups[0].slots[0].initialCount": 1,
     }),
     createEntity("pipe_ew_in", "pipe_straight_1x1", -1, 1, 0),
     createEntity("pipe-bridge", "item_pipe_connector", 0, 1, 0),

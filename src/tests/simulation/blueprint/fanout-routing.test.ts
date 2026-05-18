@@ -16,9 +16,11 @@ describe("REQ-076: fanout routing", () => {
     //     ├─ out_w(N→rot) → belt (0,-2) rot270 → blocked-storage (0,-5)
     //     └─ out_n(E→rot) → belt (1,-1) rot0   → open-storage (2,-1) rot90
     // 时序：每段 belt/splitter 各 40 tick，共 3 段 = 120 tick。
+    // AI-CORRECTION 2026-05-18: 分流器端口默认方向变更 (input E→N)，rot 90→180。
+    // 端口排列 E/W/S 使 belt-open 的 W 端口(index=1)优先于 belt-blocked 的 S 端口(index=2)。
     const blockedConfig = Object.fromEntries([0, 1, 2, 3, 4, 5].flatMap((index) => [
-      [`storageSlotGroups[0].slots[${index}].initialItemType`, "item_copper_ore"],
-      [`storageSlotGroups[0].slots[${index}].initialCount`, 50],
+      [`storageSlotGroups[${index}].slots[0].initialItemType`, "item_copper_ore"],
+      [`storageSlotGroups[${index}].slots[0].initialCount`, 50],
     ]));
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("blocked-fanout", [
@@ -27,7 +29,7 @@ describe("REQ-076: fanout routing", () => {
           "storageSlotGroups[0].slots[0].initialCount": 1,
         }),
         createEntity("belt-source", "belt_straight_1x1", 0, 0, 270),
-        createEntity("splitter", "item_log_splitter", 0, -1, 90),
+        createEntity("splitter", "item_log_splitter", 0, -1, 180),
         createEntity("belt-blocked", "belt_straight_1x1", 0, -2, 270),
         createEntity("blocked-storage", "item_port_storager_1", 0, -5, 0, blockedConfig),
         createEntity("belt-open", "belt_straight_1x1", 1, -1, 0),
@@ -39,7 +41,9 @@ describe("REQ-076: fanout routing", () => {
     // 验证 topology 编译成功
     expect(report.topology.topologyId.length).toBeGreaterThan(0);
 
-    // 物品经过 3 段物流 (belt→splitter→belt) 各 40 tick，在 tick 121 到达 open-storage。
+    // 物品经过 3 段物流 (belt→splitter→belt-open) 各 40 tick，在 tick 121 到达 open-storage。
+    // open-storage 在 (0,-4), belt-open 在 (0,-2)，belt-open→open-storage 还需经过 (0,-3) 的空隙。
+    // AI-CORRECTION 2026-05-18: 新端口排列下 belt-open 通过 S 端口优先连接，时序不变。
     // 验证 blocked-storage 全程未收到物品。
     const allTransfers = report.ticks.flatMap((tick) => tick.transfers);
     const hasBlockedTransfer = allTransfers.some((transfer) =>

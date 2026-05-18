@@ -1049,19 +1049,22 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         "item",
         "input",
-        [createPort("in_e", 0, 0, "E")],
+        [createPort("in_n", 0, 0, "N")],
       ),
       createPortGroup(
         "item_output",
         "item",
         "output",
         [
-          createPort("out_n", 0, 0, "N"),
-          createPort("out_s", 0, 0, "S"),
+          createPort("out_e", 0, 0, "E"),
           createPort("out_w", 0, 0, "W"),
+          createPort("out_s", 0, 0, "S"),
         ],
       ),
     ],
+    // AI-CORRECTION 2026-05-18: 原端口 input=E, outputs=N/S/W。
+    // 现改为 input=N, outputs=E/W/S，使得 rotation=0 时入口朝北。
+    // 旧 v2 蓝图通过 LEGACY_DEVICE_REMAPPERS rotationOffset=90 兼容。
     // AI-CORRECTION 2026-05-13: 原"无显式存储组 → 编译器自动合成"已失效。
     // 现改为显式 bidirectional+share-cap，与 belt_straight_1x1 结构一致，
     // 使编译器生成 input-view/output-view 节点 + share-cap link + reserved-item 搬运配方。
@@ -1105,16 +1108,19 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [
           createPort("in_n", 0, 0, "N"),
           createPort("in_e", 0, 0, "E"),
-          createPort("in_s", 0, 0, "S"),
+          createPort("in_w", 0, 0, "W"),
         ],
       ),
       createPortGroup(
         "item_output",
         "item",
         "output",
-        [createPort("out_w", 0, 0, "W")],
+        [createPort("out_s", 0, 0, "S")],
       ),
     ],
+    // AI-CORRECTION 2026-05-18: 原端口 inputs=N/E/S, output=W。
+    // 现改为 inputs=N/E/W, output=S，使得 rotation=0 时出口朝南。
+    // 旧 v2 蓝图通过 LEGACY_DEVICE_REMAPPERS rotationOffset=90 兼容。
     // AI-CORRECTION 2026-05-13: 原 storageSlotGroups: [] 已失效。
     // 现改为显式 bidirectional+share-cap，与 belt_straight_1x1 结构一致。
     storageSlotGroups: [
@@ -1349,19 +1355,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         "fluid",
         "input",
-        [createPort("in_e", 0, 0, "E")],
+        [createPort("in_n", 0, 0, "N")],
       ),
       createPortGroup(
         "fluid_output",
         "fluid",
         "output",
         [
-          createPort("out_n", 0, 0, "N"),
-          createPort("out_s", 0, 0, "S"),
+          createPort("out_e", 0, 0, "E"),
           createPort("out_w", 0, 0, "W"),
+          createPort("out_s", 0, 0, "S"),
         ],
       ),
     ],
+    // AI-CORRECTION 2026-05-18: 与 item_log_splitter 同步：原 input=E, outputs=N/S/W → input=N, outputs=E/W/S。
     // AI-CORRECTION 2026-05-13: 原 storageSlotGroups: [] 已失效。
     // 现改为显式 bidirectional+share-cap（fluid），与 pipe 直段结构一致。
     storageSlotGroups: [
@@ -1401,16 +1408,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [
           createPort("in_n", 0, 0, "N"),
           createPort("in_e", 0, 0, "E"),
-          createPort("in_s", 0, 0, "S"),
+          createPort("in_w", 0, 0, "W"),
         ],
       ),
       createPortGroup(
         "fluid_output",
         "fluid",
         "output",
-        [createPort("out_w", 0, 0, "W")],
+        [createPort("out_s", 0, 0, "S")],
       ),
     ],
+    // AI-CORRECTION 2026-05-18: 与 item_log_converger 同步：原 inputs=N/E/S, output=W → inputs=N/E/W, output=S。
     // AI-CORRECTION 2026-05-13: 原 storageSlotGroups: [] 已失效。
     // 现改为显式 bidirectional+share-cap（fluid），与 pipe 直段结构一致。
     storageSlotGroups: [

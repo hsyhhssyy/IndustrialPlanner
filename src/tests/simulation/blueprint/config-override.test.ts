@@ -37,7 +37,7 @@ describe("REQ-076: config overrides", () => {
     expect(report.topology.topologyId.length).toBeGreaterThan(0);
 
     // Tick 0: source 持有 7 个铁矿石
-    expect(findSlot(report, 0, "source-storage", "item_storage", "slot_1"))
+    expect(findSlot(report, 0, "source-storage", "storage_slot_1", "slot_1"))
       .toMatchObject({
         itemType: "item_iron_ore",
         count: 7,
@@ -58,7 +58,7 @@ describe("REQ-076: config overrides", () => {
     )).toBe(true);
 
     // 验证 port count 覆盖生效：source 的 portGroups[1].ports[0].count 被设为 3
-    expect(findSlot(report, 41, "sink-storage", "item_storage", "slot_1"))
+    expect(findSlot(report, 41, "sink-storage", "storage_slot_1", "slot_1"))
       .toMatchObject({
         itemType: "item_iron_ore",
         count: 1,

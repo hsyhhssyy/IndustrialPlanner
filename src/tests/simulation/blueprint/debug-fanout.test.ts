@@ -26,7 +26,8 @@ describe("debug-fanout", () => {
           "storageSlotGroups[0].slots[0].initialCount": 1,
         }),
         createEntity("belt-source", "belt_straight_1x1", 0, 0, 270),
-        createEntity("splitter", "item_log_splitter", 0, -1, 90),
+        // AI-CORRECTION 2026-05-18: 分流器端口默认方向变更，rot 90 → 180 保持等效朝向。
+        createEntity("splitter", "item_log_splitter", 0, -1, 180),
         createEntity("belt-blocked", "belt_straight_1x1", 0, -2, 270),
         createEntity("blocked-storage", "item_port_storager_1", 0, -5, 0, blockedConfig),
         createEntity("belt-open", "belt_straight_1x1", 1, -1, 0),
