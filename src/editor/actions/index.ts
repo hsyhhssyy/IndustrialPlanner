@@ -7,6 +7,7 @@ import { createEditorLogisticsActions } from "./logistics-action";
 import { createEditorMoveActions } from "./move-action";
 import { createEditorPlacementActions } from "./placement-action";
 import { createEditorSelectionActions } from "./selection-actions";
+import { createEditorTransportActions } from "./transport-action";
 import type { EditorActionsContext } from "./types";
 import { createEditorViewportActions } from "./viewport-actions";
 
@@ -22,6 +23,7 @@ export function createEditorActions(
     ...createEditorPlacementActions(context),
     ...createEditorViewportActions(context),
     ...createEditorSelectionActions(context),
+    ...createEditorTransportActions(context),
   };
 }
 

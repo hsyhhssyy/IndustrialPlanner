@@ -7,6 +7,7 @@ import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
 const FLOATING_DELETE_BUTTON_ID = "canvas-floating-toolbar-button-delete";
+const FLOATING_DELETE_MANY_BUTTON_ID = "canvas-floating-toolbar-button-delete-many";
 const RIGHT_DOCK_DELETE_BUTTON_ID = "canvas-right-dock-toolbar-button-delete";
 
 export function createHypergryphDeleteSelectionGestureModule(): GestureMappingModule<AppHost> {
@@ -35,12 +36,21 @@ export function createHypergryphDeleteSelectionGestureModule(): GestureMappingMo
           return deleteSelection(context.appHost, editor, activeTool);
 
         case "ui-button-touch-tap":
+          if (event.uiButtonId === FLOATING_DELETE_MANY_BUTTON_ID) {
+            return batchDeleteStrictLogistics(editor, activeTool, context.appHost);
+          }
           return isDeleteSelectionButton(event.uiButtonId)
             ? deleteSelection(context.appHost, editor, activeTool)
             : { status: "ignored" };
 
         case "ui-button-mouse-tap":
-          if (event.button !== 0 || !isDeleteSelectionButton(event.uiButtonId)) {
+          if (event.button !== 0) {
+            return { status: "ignored" };
+          }
+          if (event.uiButtonId === FLOATING_DELETE_MANY_BUTTON_ID) {
+            return batchDeleteStrictLogistics(editor, activeTool, context.appHost);
+          }
+          if (!isDeleteSelectionButton(event.uiButtonId)) {
             return { status: "ignored" };
           }
 
@@ -71,6 +81,29 @@ function deleteSelection(
   }
 
   editor.actions.deleteCollection(EntityCollectionType.selection);
+
+  if (activeTool === "select") {
+    appHost.internalActions.hideCanvasFloatingToolbar();
+    appHost.internalActions.hideCanvasRightDockToolbar();
+  }
+
+  return { status: "handled" };
+}
+
+function batchDeleteStrictLogistics(
+  editor: EditorContract,
+  activeTool: AppHost["internalState"]["activeTool"],
+  appHost: AppHost,
+): GestureHandleResult {
+  const selectionIds = [...editor.state.collections.selection];
+
+  if (selectionIds.length === 0) {
+    return { status: "ignored" };
+  }
+
+  for (const entityId of selectionIds) {
+    editor.actions.removeTransportComponent(entityId);
+  }
 
   if (activeTool === "select") {
     appHost.internalActions.hideCanvasFloatingToolbar();

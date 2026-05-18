@@ -62,5 +62,14 @@ export interface EditorAction {
 	redoDocumentHistory(): boolean;
 	restoreDocumentHistoryTo(sequence: number): boolean;
 	clearDocumentHistory(): void;
+	/**
+	 * 批量删除严格物流设备（传送带或管道）。
+	 * 从指定设备出发，沿同种类（belt/pipe）链路 BFS 删除所有连通的严格物流设备，
+	 * 遇到非严格物流设备（分流器、汇流器、连接器、生产设备等）时停止该方向遍历。
+	 * 若指定设备不是严格物流设备，则什么也不做。
+	 * 注意：belt 系与 pipe 系隔离，即使两设备占据同一格也不会跨种类传播删除。
+	 */
+	removeTransportComponent(entityId: string): void;
+
 	loadLatestBaseDocument(baseId: string): Promise<boolean>;
 }

@@ -87,10 +87,12 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
     expect(hideCanvasRightDockToolbar).not.toHaveBeenCalled();
   });
 
-  it("does not wire batch delete from the floating toolbar", () => {
+  it("handles batch delete from the floating toolbar via removeTransportComponent", () => {
     const {
       context,
-      deleteCollection,
+      removeTransportComponent,
+      hideCanvasFloatingToolbar,
+      hideCanvasRightDockToolbar,
     } = createContext();
     const module = createHypergryphDeleteSelectionGestureModule();
 
@@ -99,8 +101,46 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
       context,
     );
 
+    expect(result).toEqual({ status: "handled" });
+    expect(removeTransportComponent).toHaveBeenCalledTimes(1);
+    expect(removeTransportComponent).toHaveBeenCalledWith("entity-1");
+    expect(hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+    expect(hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles batch delete from the floating toolbar for multiple selections", () => {
+    const {
+      context,
+      removeTransportComponent,
+    } = createContext({ selectedEntityIds: ["entity-a", "entity-b", "entity-c"] });
+    const module = createHypergryphDeleteSelectionGestureModule();
+
+    const result = module.handle(
+      uiButtonTouchTapEvent("canvas-floating-toolbar-button-delete-many"),
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(removeTransportComponent).toHaveBeenCalledTimes(3);
+    expect(removeTransportComponent).toHaveBeenCalledWith("entity-a");
+    expect(removeTransportComponent).toHaveBeenCalledWith("entity-b");
+    expect(removeTransportComponent).toHaveBeenCalledWith("entity-c");
+  });
+
+  it("ignores batch delete when selection is empty", () => {
+    const {
+      context,
+      removeTransportComponent,
+    } = createContext({ selectedEntityIds: [] });
+    const module = createHypergryphDeleteSelectionGestureModule();
+
+    const result = module.handle(
+      uiButtonTouchTapEvent("canvas-floating-toolbar-button-delete-many"),
+      context,
+    );
+
     expect(result).toEqual({ status: "ignored" });
-    expect(deleteCollection).not.toHaveBeenCalled();
+    expect(removeTransportComponent).not.toHaveBeenCalled();
   });
 
   it("only responds while select or marquee mode, selection exists, and hypergryph mode is active", () => {
@@ -126,11 +166,13 @@ function createContext(options: {
 } = {}): {
   context: GestureActionContext<AppHost>;
   deleteCollection: ReturnType<typeof vi.fn>;
+  removeTransportComponent: ReturnType<typeof vi.fn>;
   hideCanvasFloatingToolbar: ReturnType<typeof vi.fn>;
   hideCanvasRightDockToolbar: ReturnType<typeof vi.fn>;
   isShortcutFor: ReturnType<typeof vi.fn>;
 } {
   const deleteCollection = vi.fn();
+  const removeTransportComponent = vi.fn();
   const hideCanvasFloatingToolbar = vi.fn();
   const hideCanvasRightDockToolbar = vi.fn();
   const isShortcutFor = vi.fn((shortcutKeyId: string, code: string | null, key: string | null) => (
@@ -151,6 +193,7 @@ function createContext(options: {
           },
           actions: {
             deleteCollection,
+            removeTransportComponent,
           },
         },
       } as unknown as WorkspaceContract,
@@ -172,6 +215,7 @@ function createContext(options: {
       keyboard: emptyKeyboardSnapshot(),
     },
     deleteCollection,
+    removeTransportComponent,
     hideCanvasFloatingToolbar,
     hideCanvasRightDockToolbar,
     isShortcutFor,
