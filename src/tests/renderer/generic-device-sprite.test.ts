@@ -1823,44 +1823,42 @@ function createEntityDefinitionStub(): EntityDefinition {
         })),
       },
     ],
-    storageSlotGroups: [
-      {
-        id: "item_storage",
-        kind: "item",
-        // AI-REMOVED 2026-05-17:
-        // Reason: StorageSlotGroupDefinition.role 已删除，继续保留会破坏类型检查。
-        // Trigger: REQ-078 验收运行全仓 typecheck 时暴露旧测试 helper 仍写 role。
-        // Evidence: src/domain/registry/types/entity-definition.ts 已用 AI-CORRECTION 标注 role 字段删除。
-        // Replacement: portStorageBindings 绑定输入/输出端口方向。
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
-        // role: "bidirectional",
-        slots: [
-          {
-            id: "slot_1",
-            capacity: 50,
-            itemFilter: "type",
-            itemFilterType: "solid",
-            ...createSlotDefaults(),
-          },
-        ],
-      },
-    ],
+    storageSlotGroups: Array.from({ length: 6 }, (_, index) => ({
+      id: `storage_slot_${index + 1}`,
+      kind: "item" as const,
+      // AI-REMOVED 2026-05-17:
+      // Reason: StorageSlotGroupDefinition.role 已删除，继续保留会破坏类型检查。
+      // Trigger: REQ-078 验收运行全仓 typecheck 时暴露旧测试 helper 仍写 role。
+      // Evidence: src/domain/registry/types/entity-definition.ts 已用 AI-CORRECTION 标注 role 字段删除。
+      // Replacement: portStorageBindings 绑定输入/输出端口方向。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // role: "bidirectional",
+      slots: [
+        {
+          id: "slot_1",
+          capacity: 50,
+          itemFilter: "type" as const,
+          itemFilterType: "solid" as const,
+          ...createSlotDefaults(),
+        },
+      ],
+    })),
     recipeChannels: [],
-    portStorageBindings: [
+    portStorageBindings: Array.from({ length: 6 }, (_, index) => [
       {
-        id: "bind_item_input",
+        id: `bind_item_input_${index + 1}`,
         portGroupId: "item_input",
-        storageSlotGroupId: "item_storage",
+        storageSlotGroupId: `storage_slot_${index + 1}`,
       },
       {
-        id: "bind_item_output",
+        id: `bind_item_output_${index + 1}`,
         portGroupId: "item_output",
-        storageSlotGroupId: "item_storage",
+        storageSlotGroupId: `storage_slot_${index + 1}`,
       },
-    ],
+    ]).flat(),
     links: [],
   }
 }

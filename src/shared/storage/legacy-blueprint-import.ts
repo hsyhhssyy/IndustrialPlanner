@@ -174,7 +174,7 @@ export function convertLegacyBlueprintJson(
  *
  * 存储箱（item_port_storager_1）：
  *   旧：submitToWarehouse = true
- *   新：storageSlotGroups[0].slots[N].submitMode = "every-tick"
+ *   新：storageSlotGroups[N].slots[0].submitMode = "every-tick"
  *
  * 通用预置物品（preloadInputs）：
  *   旧：preloadInputs: [{ slotIndex, itemId, amount }]
@@ -289,9 +289,9 @@ function convertLegacyStoragerConfig(
   const nextConfig: Record<string, unknown> = { ...config };
   delete nextConfig.submitToWarehouse;
 
-  // 存储箱有 6 个槽位，全部设为 every-tick 提交
-  for (let slotIndex = 0; slotIndex < 6; slotIndex += 1) {
-    nextConfig[`storageSlotGroups[0].slots[${slotIndex}].submitMode`] = "every-tick";
+  // 存储箱有 6 个单槽储存组，全部设为 every-tick 提交
+  for (let groupIndex = 0; groupIndex < 6; groupIndex += 1) {
+    nextConfig[`storageSlotGroups[${groupIndex}].slots[0].submitMode`] = "every-tick";
   }
 
   return nextConfig;

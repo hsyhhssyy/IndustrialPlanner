@@ -186,8 +186,8 @@ describe("SlotConfigInspector", () => {
       secondPickButton.click();
     });
 
-    // AI-CORRECTION 2026-05-18: 协议存储箱从 1 组 6 槽改为 6 组各 1 槽，
-    //   跨组不互斥，storage_slot_2 可再次选择 ore。
+    // AI-CORRECTION 2026-05-18: 协议存储箱使用 6 个单槽储存组，
+    //   跨组不互斥，第二组可再次选择 ore。
     expect(currentAppHost.encyclopediaPicker.matchesItem(ore)).toBe(true);
     expect(currentAppHost.encyclopediaPicker.matchesItem(powder)).toBe(true);
 

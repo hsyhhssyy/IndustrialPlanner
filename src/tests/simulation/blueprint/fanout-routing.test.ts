@@ -60,7 +60,7 @@ describe("REQ-076: fanout routing", () => {
 
     expect(findSlotWithItem(report, 140, "open-storage", "item_iron_ore"))
       .toMatchObject({
-        storageGroupId: "item_storage",
+        storageGroupId: "storage_slot_1",
         itemType: "item_iron_ore",
         count: 1,
       });

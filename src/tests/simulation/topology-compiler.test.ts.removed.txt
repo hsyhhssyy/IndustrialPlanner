@@ -38,10 +38,10 @@
 //     });
 // 
 //     const slot = topology.slots[
-//       "device:dummy-entity-2/node:item_storage.output-view/slot:slot_1.out-view"
+//       "device:dummy-entity-2/node:storage_slot_1.output-view/slot:slot_1.out-view"
 //     ];
 //     const storagerSlots = Object.values(topology.slots).filter((compiledSlot) =>
-//       compiledSlot.id.startsWith("device:dummy-entity-2/node:item_storage"),
+//       compiledSlot.id.startsWith("device:dummy-entity-2/node:storage_slot_1"),
 //     );
 //     const port = topology.ports[
 //       "device:dummy-entity-2/port:item_input.in_s_0.input"

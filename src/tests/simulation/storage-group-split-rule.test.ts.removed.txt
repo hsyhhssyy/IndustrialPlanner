@@ -103,7 +103,7 @@
 // const BELT_SPLIT_LINK_ID = `link:${BELT_DEVICE_ID}:${BELT_GROUP_ID}:input-view-to-output-view`;
 // 
 // const STORAGER_DEVICE_ID = "device:dummy-entity-2";
-// const STORAGER_GROUP_ID = "item_storage";
+// const STORAGER_GROUP_ID = "storage_slot_1";
 // const STORAGER_INPUT_VIEW_NODE_ID = `${STORAGER_DEVICE_ID}/node:${STORAGER_GROUP_ID}.input-view`;
 // const STORAGER_OUTPUT_VIEW_NODE_ID = `${STORAGER_DEVICE_ID}/node:${STORAGER_GROUP_ID}.output-view`;
 // const STORAGER_SPLIT_LINK_ID = `link:${STORAGER_DEVICE_ID}:${STORAGER_GROUP_ID}:input-view-to-output-view`;

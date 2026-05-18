@@ -532,11 +532,11 @@
       "rotation": 90,
       "config": {
         "storageSlotGroups[0].slots[0].submitMode": "every-tick",
-        "storageSlotGroups[0].slots[1].submitMode": "every-tick",
-        "storageSlotGroups[0].slots[2].submitMode": "every-tick",
-        "storageSlotGroups[0].slots[3].submitMode": "every-tick",
-        "storageSlotGroups[0].slots[4].submitMode": "every-tick",
-        "storageSlotGroups[0].slots[5].submitMode": "every-tick"
+        "storageSlotGroups[1].slots[0].submitMode": "every-tick",
+        "storageSlotGroups[2].slots[0].submitMode": "every-tick",
+        "storageSlotGroups[3].slots[0].submitMode": "every-tick",
+        "storageSlotGroups[4].slots[0].submitMode": "every-tick",
+        "storageSlotGroups[5].slots[0].submitMode": "every-tick"
       },
       "tags": []
     },
@@ -1271,11 +1271,11 @@
       "rotation": 270,
       "config": {
         "storageSlotGroups[0].slots[0].submitMode": "every-tick",
-        "storageSlotGroups[0].slots[1].submitMode": "every-tick",
-        "storageSlotGroups[0].slots[2].submitMode": "every-tick",
-        "storageSlotGroups[0].slots[3].submitMode": "every-tick",
-        "storageSlotGroups[0].slots[4].submitMode": "every-tick",
-        "storageSlotGroups[0].slots[5].submitMode": "every-tick"
+        "storageSlotGroups[1].slots[0].submitMode": "every-tick",
+        "storageSlotGroups[2].slots[0].submitMode": "every-tick",
+        "storageSlotGroups[3].slots[0].submitMode": "every-tick",
+        "storageSlotGroups[4].slots[0].submitMode": "every-tick",
+        "storageSlotGroups[5].slots[0].submitMode": "every-tick"
       },
       "tags": []
     },

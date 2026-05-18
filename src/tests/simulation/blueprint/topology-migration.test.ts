@@ -38,7 +38,7 @@ function createLinkedGrinderBlueprint(): BlueprintDocument {
       linkType: "share-cap",
       source: {
         entityId: "storage",
-        storageSlotGroupId: "item_storage",
+        storageSlotGroupId: "storage_slot_1",
         slotId: "slot_1",
       },
       target: {

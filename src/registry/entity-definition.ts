@@ -463,8 +463,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   /**
    * item_port_storager_1 — 协议存储箱（3×3）
    *
-   * 缓存组：1 个 universal（6 槽 × 50 容量）
-   * 求解图节点：1 个（所有槽位聚合到一个节点）
+   * 缓存组：6 个 universal（每组 1 槽 × 50 容量）
+   * 编译节点：12 个（6 个输入视图节点 + 6 个输出视图节点）
    * 端口：3 input(南) + 3 output(北)
    *
    * 对比《模拟器抽象方式》§2 的仓库取货口示例，
@@ -495,9 +495,34 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [
       createStorageSlotGroup(
-        "item_storage",
+        "storage_slot_1",
         "item",
-        createSlots("slot", [50, 50, 50, 50, 50, 50], "solid"),
+        createSlots("slot", [50], "solid"),
+      ),
+      createStorageSlotGroup(
+        "storage_slot_2",
+        "item",
+        createSlots("slot", [50], "solid"),
+      ),
+      createStorageSlotGroup(
+        "storage_slot_3",
+        "item",
+        createSlots("slot", [50], "solid"),
+      ),
+      createStorageSlotGroup(
+        "storage_slot_4",
+        "item",
+        createSlots("slot", [50], "solid"),
+      ),
+      createStorageSlotGroup(
+        "storage_slot_5",
+        "item",
+        createSlots("slot", [50], "solid"),
+      ),
+      createStorageSlotGroup(
+        "storage_slot_6",
+        "item",
+        createSlots("slot", [50], "solid"),
       ),
     ],
     // AI-REMOVED 2026-05-17:
@@ -510,46 +535,56 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     //
     // Original code:
     // recipeChannels: [
-    //   createRecipeChannel("default", ["item_storage"], ["item_storage"]),
+    //   createRecipeChannel("default", ["storage_slot_1"], ["storage_slot_1"]),
     // ],
     portStorageBindings: [
-      createBinding("bind_item_input", "item_input", "item_storage"),
-      createBinding("bind_item_output", "item_output", "item_storage"),
+      createBinding("bind_item_input_1", "item_input", "storage_slot_1"),
+      createBinding("bind_item_output_1", "item_output", "storage_slot_1"),
+      createBinding("bind_item_input_2", "item_input", "storage_slot_2"),
+      createBinding("bind_item_output_2", "item_output", "storage_slot_2"),
+      createBinding("bind_item_input_3", "item_input", "storage_slot_3"),
+      createBinding("bind_item_output_3", "item_output", "storage_slot_3"),
+      createBinding("bind_item_input_4", "item_input", "storage_slot_4"),
+      createBinding("bind_item_output_4", "item_output", "storage_slot_4"),
+      createBinding("bind_item_input_5", "item_input", "storage_slot_5"),
+      createBinding("bind_item_output_5", "item_output", "storage_slot_5"),
+      createBinding("bind_item_input_6", "item_input", "storage_slot_6"),
+      createBinding("bind_item_output_6", "item_output", "storage_slot_6"),
     ],
     inspectors: [
       {
         type: INSPECTOR_TYPE.slotConfig,
-        slotGroupIds: ["item_storage"],
+        slotGroupIds: ["storage_slot_1", "storage_slot_2", "storage_slot_3", "storage_slot_4", "storage_slot_5", "storage_slot_6"],
       },
       {
         type: INSPECTOR_TYPE.warehouseItemLink,
-        slotGroupIds: ["item_storage"],
+        slotGroupIds: ["storage_slot_1"],
         slotIds: ["slot_1"],
       },
       {
         type: INSPECTOR_TYPE.warehouseItemLink,
-        slotGroupIds: ["item_storage"],
-        slotIds: ["slot_2"],
+        slotGroupIds: ["storage_slot_2"],
+        slotIds: ["slot_1"],
       },
       {
         type: INSPECTOR_TYPE.warehouseItemLink,
-        slotGroupIds: ["item_storage"],
-        slotIds: ["slot_3"],
+        slotGroupIds: ["storage_slot_3"],
+        slotIds: ["slot_1"],
       },
       {
         type: INSPECTOR_TYPE.warehouseItemLink,
-        slotGroupIds: ["item_storage"],
-        slotIds: ["slot_4"],
+        slotGroupIds: ["storage_slot_4"],
+        slotIds: ["slot_1"],
       },
       {
         type: INSPECTOR_TYPE.warehouseItemLink,
-        slotGroupIds: ["item_storage"],
-        slotIds: ["slot_5"],
+        slotGroupIds: ["storage_slot_5"],
+        slotIds: ["slot_1"],
       },
       {
         type: INSPECTOR_TYPE.warehouseItemLink,
-        slotGroupIds: ["item_storage"],
-        slotIds: ["slot_6"],
+        slotGroupIds: ["storage_slot_6"],
+        slotIds: ["slot_1"],
       },
     ],
   }),
@@ -2255,9 +2290,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     // AI-CORRECTION 2026-05-17: 储液罐从 createDirectionalBuffers（管道/缓冲器模式）改为
-    //   单槽储存箱模式（与协议储存箱对齐），仅储存液体。
+    //   单槽储存组模式（与协议储存箱的单槽分组原则对齐），仅储存液体。
     //   - 移除 createDirectionalBuffers（含自动生成的 input/output 分离缓冲组和 channel）。
-    //   - 改为单一 storageSlotGroup：1 槽，容量 500，液体过滤器。
+    //   - 改为一个 liquid_storage 储存组：1 槽，容量 500，液体过滤器。
     //   - portStorageBindings：input 和 output 端口均绑定到同一储存组。
     //   - 移除 recipeChannels：纯储存设备无需配方通道。
     storageSlotGroups: [
