@@ -57,7 +57,7 @@ describe("production planning flow graph", () => {
     expect(layout.nodes.every((node) => Number.isFinite(node.y0) && Number.isFinite(node.y1))).toBe(true);
   });
 
-  it("keeps recipe outputs as separate byproduct nodes", () => {
+  it("keeps recipe outputs as separate byproduct nodes in device mode", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({
       targets: [port("item_liquid_xiranite_poly", 30)],
@@ -69,7 +69,7 @@ describe("production planning flow graph", () => {
       ]]),
     }, index);
 
-    const graph = buildProductionFlowGraph(result, index, t);
+    const graph = buildProductionFlowGraph(result, index, t, "device");
     const byproduct = graph.nodes.find((node) => node.itemId === "item_liquid_xiranite_lowpoly");
     const byproductLink = graph.links.find((link) => link.target === byproduct?.id);
 
@@ -78,7 +78,7 @@ describe("production planning flow graph", () => {
     expect(byproductLink?.value).toBeGreaterThan(0);
   });
 
-  it("turns productive cycles into real feedback links", () => {
+  it("turns productive cycles into real feedback links in device mode", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({
       targets: [port("item_plant_moss_seed_3", 60)],
@@ -87,7 +87,7 @@ describe("production planning flow graph", () => {
       recipeChoices: new Map(),
     }, index);
 
-    const graph = buildProductionFlowGraph(result, index, t);
+    const graph = buildProductionFlowGraph(result, index, t, "device");
     const layout = createSankeyLayout(graph, {
       width: 1080,
       height: 520,
@@ -98,5 +98,29 @@ describe("production planning flow graph", () => {
 
     expect(graph.nodes.some((node) => node.tone === "cycle")).toBe(true);
     expect(layout.links.some((link) => link.direction === "backward")).toBe(true);
+  });
+
+  it("collapses recipes in item mode to show item-to-item flow", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_iron_nugget", 60)],
+      supplies: [],
+      infiniteItemIds: createInfiniteItemIds(index),
+      recipeChoices: new Map(),
+    }, index);
+
+    const graph = buildProductionFlowGraph(result, index, t, "item");
+
+    // Item mode should have no recipe nodes
+    expect(graph.nodes.every((node) => node.kind === "item")).toBe(true);
+    // Should have at least iron-ore → iron-nugget flow
+    expect(graph.nodes.length).toBeGreaterThanOrEqual(2);
+    expect(graph.links.length).toBeGreaterThanOrEqual(1);
+    // Edge title should mention the recipe that was collapsed
+    const edge = graph.links[0];
+    expect(edge).toBeDefined();
+    if (edge !== undefined) {
+      expect(edge.title.length).toBeGreaterThan(0);
+    }
   });
 });

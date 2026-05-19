@@ -59,7 +59,7 @@ export function ProductionFlowGraph({
   index,
   t,
 }: ProductionFlowGraphProps) {
-  const graphInput = useMemo(() => buildProductionFlowGraph(plan, index, t), [index, plan, t]);
+  const graphInput = useMemo(() => buildProductionFlowGraph(plan, index, t, displayMode), [displayMode, index, plan, t]);
   const initialLayout = useMemo(() => {
     const width = resolveLayoutWidth(graphInput);
     return createSankeyLayout(graphInput, {

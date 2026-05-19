@@ -1,4 +1,5 @@
 import type {
+  ProductionPlanningDisplayMode,
   ProductionPlanningIndex,
   ProductionPlanningItemNode,
   ProductionPlanningRecipeNode,
@@ -51,6 +52,7 @@ export function buildProductionFlowGraph(
   plan: ProductionPlanningResult,
   index: ProductionPlanningIndex,
   translate: (key: string) => string,
+  displayMode: ProductionPlanningDisplayMode,
 ): ProductionFlowGraphInput {
   const context: BuildContext = {
     index,
@@ -63,10 +65,12 @@ export function buildProductionFlowGraph(
     visitItemNode(root, context, new Map());
   }
 
-  return {
+  const mixed: ProductionFlowGraphInput = {
     nodes: [...context.nodes.values()],
     links: [...context.links.values()],
   };
+
+  return displayMode === "item" ? collapseRecipeNodes(mixed) : collapseItemNodes(mixed);
 }
 
 function visitItemNode(
@@ -243,4 +247,181 @@ function findOutputFlow(node: ProductionPlanningRecipeNode, itemId: string): num
 
 function sumPorts(ports: readonly { readonly perMinute: number }[]): number {
   return ports.reduce((sum, port) => sum + port.perMinute, 0);
+}
+
+// --- Graph collapse for display modes ---
+
+/**
+ * Item mode: remove recipe nodes and connect items directly.
+ * For each recipe R with inputs {A,B} and outputs {X,Y}:
+ *   Create edges A→X, A→Y, B→X, B→Y.
+ * Flow rate on each new edge = input flow rate for that item.
+ * Edge label includes the recipe name.
+ */
+function collapseRecipeNodes(input: ProductionFlowGraphInput): ProductionFlowGraphInput {
+  const nodeById = new Map(input.nodes.map((node) => [node.id, node]));
+  const nodes = new Map(input.nodes.filter((node) => node.kind === "item").map((node) => [node.id, node]));
+  const links: ProductionFlowLink[] = [];
+
+  // group links by recipe node
+  const recipeInputs = new Map<string, ProductionFlowLink[]>();  // recipeId → incoming links
+  const recipeOutputs = new Map<string, ProductionFlowLink[]>(); // recipeId → outgoing links
+
+  for (const link of input.links) {
+    const target = nodeById.get(link.target);
+    if (target !== undefined && target.kind === "recipe") {
+      const list = recipeInputs.get(link.target) ?? [];
+      list.push(link);
+      recipeInputs.set(link.target, list);
+    } else {
+      // Non-recipe target — could be a source node directly connected to recipe
+      // In our graph, edges always go item→recipe or recipe→item, so this shouldn't happen
+    }
+
+    const source = nodeById.get(link.source);
+    if (source !== undefined && source.kind === "recipe") {
+      const list = recipeOutputs.get(link.source) ?? [];
+      list.push(link);
+      recipeOutputs.set(link.source, list);
+    }
+  }
+
+  let edgeIndex = 0;
+  for (const recipeId of new Set([...recipeInputs.keys(), ...recipeOutputs.keys()])) {
+    const srcLinks = recipeInputs.get(recipeId) ?? [];
+    const dstLinks = recipeOutputs.get(recipeId) ?? [];
+    const recipeNode = nodeById.get(recipeId);
+
+    for (const inLink of srcLinks) {
+      for (const outLink of dstLinks) {
+        const value = Math.min(inLink.value, outLink.value);
+        const label = recipeNode === undefined
+          ? `${formatProductionFlow(value)}/min`
+          : `${recipeNode.title} · ${formatProductionFlow(value)}/min`;
+        links.push({
+          id: `collapsed:${edgeIndex}`,
+          source: inLink.source,
+          target: outLink.target,
+          itemId: outLink.itemId,
+          value,
+          title: recipeNode?.title ?? outLink.title,
+          label,
+        });
+        edgeIndex += 1;
+      }
+    }
+  }
+
+  return {
+    nodes: [...nodes.values()],
+    links,
+  };
+}
+
+/**
+ * Device mode: remove intermediate item nodes and connect recipes directly.
+ * Intermediate items = items that both consume from and produce to recipes.
+ * Source items (no incoming recipe link) and sink items (no outgoing recipe link) are kept.
+ */
+function collapseItemNodes(input: ProductionFlowGraphInput): ProductionFlowGraphInput {
+  const nodeById = new Map(input.nodes.map((node) => [node.id, node]));
+
+  // classify item nodes
+  const itemIncomingRecipe = new Set<string>();   // itemId — has recipe→item edge
+  const itemOutgoingRecipe = new Set<string>();   // itemId — has item→recipe edge
+
+  for (const link of input.links) {
+    const sourceNode = nodeById.get(link.source);
+    const targetNode = nodeById.get(link.target);
+    if (sourceNode?.kind === "recipe" && targetNode?.kind === "item") {
+      itemIncomingRecipe.add(link.target);
+    }
+    if (sourceNode?.kind === "item" && targetNode?.kind === "recipe") {
+      itemOutgoingRecipe.add(link.source);
+    }
+  }
+
+  // intermediate items = items that sit BETWEEN recipes
+  // Exclude cycle items — they form feedback loops and should be preserved in all modes
+  const collapsedItemIds = new Set<string>();
+  for (const itemId of new Set([...itemIncomingRecipe, ...itemOutgoingRecipe])) {
+    const hasRecipeInput = itemIncomingRecipe.has(itemId);
+    const hasRecipeOutput = itemOutgoingRecipe.has(itemId);
+    const itemNode = nodeById.get(itemId);
+    if (hasRecipeInput && hasRecipeOutput && itemNode?.tone !== "cycle") {
+      collapsedItemIds.add(itemId);
+    }
+  }
+
+  // Build new links: recipe → recipe through collapsed items
+  // Group by intermediate item
+  const itemToRecipeOutputs = new Map<string, ProductionFlowLink[]>(); // itemId → R→item links
+  const itemToRecipeInputs = new Map<string, ProductionFlowLink[]>();  // itemId → item→R links
+
+  for (const link of input.links) {
+    const sourceNode = nodeById.get(link.source);
+    const targetNode = nodeById.get(link.target);
+
+    if (sourceNode?.kind === "recipe" && targetNode?.kind === "item" && collapsedItemIds.has(link.target)) {
+      const list = itemToRecipeOutputs.get(link.target) ?? [];
+      list.push(link);
+      itemToRecipeOutputs.set(link.target, list);
+    }
+    if (sourceNode?.kind === "item" && targetNode?.kind === "recipe" && collapsedItemIds.has(link.source)) {
+      const list = itemToRecipeInputs.get(link.source) ?? [];
+      list.push(link);
+      itemToRecipeInputs.set(link.source, list);
+    }
+  }
+
+  const newLinks: ProductionFlowLink[] = [];
+  let edgeIndex = 0;
+
+  for (const itemId of collapsedItemIds) {
+    const inLinks = itemToRecipeOutputs.get(itemId) ?? []; // recipe→item
+    const outLinks = itemToRecipeInputs.get(itemId) ?? []; // item→recipe
+    const itemNode = nodeById.get(itemId);
+
+    for (const inLink of inLinks) {
+      for (const outLink of outLinks) {
+        const value = Math.min(inLink.value, outLink.value);
+        const label = `${itemNode?.title ?? itemId} · ${formatProductionFlow(value)}/min`;
+        newLinks.push({
+          id: `collapsed:${edgeIndex}`,
+          source: inLink.source,
+          target: outLink.target,
+          itemId: itemId,
+          value,
+          title: itemNode?.title ?? itemId,
+          label,
+        });
+        edgeIndex += 1;
+      }
+    }
+  }
+
+  // Keep non-collapsed links (edges that don't involve intermediate items)
+  const keptLinks = input.links.filter((link) => {
+    const sourceNode = nodeById.get(link.source);
+    const targetNode = nodeById.get(link.target);
+    const involvesCollapsedItem = (
+      (sourceNode?.kind === "item" && collapsedItemIds.has(link.source)) ||
+      (targetNode?.kind === "item" && collapsedItemIds.has(link.target))
+    );
+    return !involvesCollapsedItem;
+  });
+
+  // Keep non-collapsed nodes (recipes + source/sink items)
+  const keptNodes = input.nodes.filter((node) => {
+    if (node.kind === "recipe") {
+      return true;
+    }
+
+    return !collapsedItemIds.has(node.id);
+  });
+
+  return {
+    nodes: keptNodes,
+    links: [...keptLinks, ...newLinks],
+  };
 }
