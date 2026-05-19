@@ -82,6 +82,10 @@ vi.mock("@/renderer/scene/decorations/PreviewRectDecoration", () => ({
   createPreviewRectDecoration: () => orchestratorTestState.createDecoration(),
 }))
 
+vi.mock("@/renderer/scene/decorations/InvalidPlacementDecoration", () => ({
+  createInvalidPlacementDecoration: () => orchestratorTestState.createDecoration(),
+}))
+
 vi.mock("@/renderer/scene/decorations/GrassBackgroundDecoration", () => ({
   createGrassBackgroundDecoration: () => orchestratorTestState.createDecoration(),
 }))
@@ -198,6 +202,7 @@ describe("createRenderSceneOrchestrator", () => {
 
     expect(ticker.add).toHaveBeenCalledTimes(1)
     expect(renderHost.app.stage.addChild).toHaveBeenCalledWith(
+      expect.anything(),
       expect.anything(),
       expect.anything(),
       expect.anything(),

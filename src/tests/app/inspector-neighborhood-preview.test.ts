@@ -23,6 +23,7 @@ function createEntityDefinition(options: {
     requiresPower: false,
     powerDemand: 0,
     inspectors: [],
+    placementBehaviors: [],
     portGroups: [],
     storageSlotGroups: [],
     recipeChannels: [],

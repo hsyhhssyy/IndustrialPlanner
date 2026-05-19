@@ -12,7 +12,10 @@ import type {
 	LogisticsDraftReadonlyState,
 	LogisticsKind,
 } from "../shared/logistics";
-import type { EntityCollectionType } from "./types/editor-types";
+import type {
+	EntityCollectionType,
+	EntityPlacementValidationResult,
+} from "./types/editor-types";
 import type { EditorBaseDocumentSummary } from "./editor-document";
 
 export interface EditorQuery {
@@ -24,6 +27,7 @@ export interface EditorQuery {
 	findEntityCollectionGridRect(
 		collectionType: EntityCollectionType,
 	): GridRect | null;
+	getEntityPlacementValidation(entityId: string): EntityPlacementValidationResult;
 	findGridCellForClientPixlePoint(
 		clientPixelPoint: ClientPixelPoint,
 	): GridPoint | null;

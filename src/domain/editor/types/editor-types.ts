@@ -17,6 +17,7 @@ export const EntityCollectionType = {
   ghost: "ghost",
   logisticsHead: "logistics-head",
   powered: "powered",
+  invalidPlacement: "invalid-placement",
 } as const;
 
 export type EntityCollectionType =
@@ -27,6 +28,21 @@ export type MarqueeCollectionType =
   | typeof EntityCollectionType.reverseMarquee;
 
 export type EntityCollections = Readonly<Record<EntityCollectionType, EntityCollection>>;
+
+export type EntityPlacementValidationReasonCode =
+  | "outside-base"
+  | "overlap"
+  | "warehouse-bus-disconnected";
+
+export interface EntityPlacementValidationReason {
+  readonly code: EntityPlacementValidationReasonCode;
+  readonly message: string;
+}
+
+export interface EntityPlacementValidationResult {
+  readonly canPlace: boolean;
+  readonly reasons: readonly EntityPlacementValidationReason[];
+}
 
 // ---------------------------------------------------------------------------
 // Editor Viewport

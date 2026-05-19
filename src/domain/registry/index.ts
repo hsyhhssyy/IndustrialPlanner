@@ -23,5 +23,10 @@ export type {
 	EntityInspectorType,
 } from "./types/entity-inspector";
 export { INSPECTOR_TYPE } from "./types/entity-inspector";
+export { PLACEMENT_BEHAVIOR_TYPE } from "./types/entity-placement-behavior";
+export type {
+	EntityPlacementBehaviorDeclaration,
+	PlacementBehaviorType,
+} from "./types/entity-placement-behavior";
 export type { ItemDefinition } from "./types/item-definition";
 export type { RecipeDefinition, RecipeType } from "./types/recipe-definition";

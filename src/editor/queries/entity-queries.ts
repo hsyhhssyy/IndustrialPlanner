@@ -16,6 +16,7 @@ import {
   resolveEntityById,
   resolveListedEntities,
 } from "../entity-resolvers";
+import { resolveCachedPlacementValidation } from "../placement-validation";
 import type { EditorQueriesContext } from "./types";
 import { resolveGridCellAtClientPixelPoint } from "./viewport-geometry";
 
@@ -24,6 +25,7 @@ type EditorEntityQueries = Pick<
   | "findEntityAtClientPixelPoint"
   | "findEntityCollectionGridRect"
   | "getEntityById"
+  | "getEntityPlacementValidation"
   | "listEntities"
 >;
 
@@ -62,6 +64,10 @@ export function createEditorEntityQueries({
         entityDefinitionMap,
       });
     },
+    getEntityPlacementValidation: (entityId) => resolveCachedPlacementValidation({
+      entityId,
+      state,
+    }),
     findEntityAtClientPixelPoint: (clientPixelPoint) => {
       const gridCell = resolveGridCellAtClientPixelPoint({
         clientPixelPoint,

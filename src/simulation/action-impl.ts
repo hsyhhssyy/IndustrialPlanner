@@ -3,6 +3,7 @@ import { action, runInAction } from "mobx";
 import type { SimulationAction } from "@/domain/simulation/simulation-action";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument } from "@/domain/document/world-document";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 
 import {
@@ -166,8 +167,8 @@ implements SimulationAction, SimulationInternalAction {
   };
 
   public readonly refreshFromCurrentDocument: SimulationInternalAction["refreshFromCurrentDocument"] = async () => {
-    const document = this.workspace.editor?.document.getSnapshot();
-    if (document === undefined) {
+    const sourceDocument = this.workspace.editor?.document.getSnapshot();
+    if (sourceDocument === undefined) {
       this.topology.setSnapshot(null);
       this.compiledDocument = null;
       runInAction(() => {
@@ -190,6 +191,10 @@ implements SimulationAction, SimulationInternalAction {
       };
     }
 
+    const document = resolveSimulationCompileDocument({
+      document: sourceDocument,
+      workspace: this.workspace,
+    });
     const previousTopology = this.topology.getSnapshot();
     const nextDocumentHash = createSimulationDocumentHash(document);
     if (
@@ -401,4 +406,41 @@ implements SimulationAction, SimulationInternalAction {
 
 function cloneWorldDocument(document: WorldDocument): WorldDocument {
   return JSON.parse(JSON.stringify(document)) as WorldDocument;
+}
+
+function resolveSimulationCompileDocument(options: {
+  document: WorldDocument;
+  workspace: WorkspaceContract;
+}): WorldDocument {
+  const invalidPlacementCollection =
+    options.workspace.editor?.state?.collections?.[EntityCollectionType.invalidPlacement];
+  if (invalidPlacementCollection === undefined || invalidPlacementCollection.length === 0) {
+    return options.document;
+  }
+
+  const invalidEntityIds = new Set(
+    invalidPlacementCollection.filter((entityId) =>
+      options.document.entities[entityId] !== undefined,
+    ),
+  );
+  if (invalidEntityIds.size === 0) {
+    return options.document;
+  }
+
+  const nextEntities = { ...options.document.entities };
+  for (const entityId of invalidEntityIds) {
+    delete nextEntities[entityId];
+  }
+
+  return {
+    ...options.document,
+    entities: nextEntities,
+    entityOrder: options.document.entityOrder.filter((entityId) =>
+      !invalidEntityIds.has(entityId),
+    ),
+    slotLinks: options.document.slotLinks.filter((slotLink) =>
+      !invalidEntityIds.has(slotLink.source.entityId)
+      && !invalidEntityIds.has(slotLink.target.entityId),
+    ),
+  };
 }

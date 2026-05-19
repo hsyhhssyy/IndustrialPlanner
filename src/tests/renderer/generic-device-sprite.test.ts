@@ -1805,6 +1805,7 @@ function createEntityDefinitionStub(): EntityDefinition {
     requiresPower: false,
     powerDemand: 5,
     inspectors: [],
+    placementBehaviors: [],
     portGroups: [
       {
         id: "item_input",

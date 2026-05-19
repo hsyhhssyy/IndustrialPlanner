@@ -35,6 +35,9 @@ import {
   resolveMarqueeGridRectStrokeStyle,
   resolveWorldAuxiliaryStrokeWidth,
 } from "@/renderer/scene/decorations/MarqueeRectDecoration"
+import {
+  resolveInvalidPlacementToastReasonText,
+} from "@/renderer/scene/decorations/InvalidPlacementDecoration"
 import { resolvePowerRangeOutlineLayouts } from "@/renderer/scene/decorations/PowerRangeDecoration"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import type { RenderHost } from "@/renderer/renderer-host"
@@ -130,6 +133,64 @@ describe("resolveWorldEntitySpriteLayout", () => {
       height: 16,
       rotation: 0,
     })
+  })
+})
+
+describe("resolveInvalidPlacementToastReasonText", () => {
+  it("hides the overlap toast for 1x1 invalid placements", () => {
+    expect(resolveInvalidPlacementToastReasonText({
+      gridRect: {
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+      },
+      validation: {
+        canPlace: false,
+        reasons: [{
+          code: "overlap",
+          message: "不能与其他设备重叠",
+        }],
+      },
+    })).toBeNull()
+
+    expect(resolveInvalidPlacementToastReasonText({
+      gridRect: {
+        x: 0,
+        y: 0,
+        width: 2,
+        height: 1,
+      },
+      validation: {
+        canPlace: false,
+        reasons: [{
+          code: "overlap",
+          message: "不能与其他设备重叠",
+        }],
+      },
+    })).toBe("不能与其他设备重叠")
+
+    expect(resolveInvalidPlacementToastReasonText({
+      gridRect: {
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+      },
+      validation: {
+        canPlace: false,
+        reasons: [
+          {
+            code: "outside-base",
+            message: "必须放置在基地内",
+          },
+          {
+            code: "overlap",
+            message: "不能与其他设备重叠",
+          },
+        ],
+      },
+    })).toBe("必须放置在基地内")
   })
 })
 

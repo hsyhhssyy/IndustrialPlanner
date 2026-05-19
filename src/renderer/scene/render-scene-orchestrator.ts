@@ -40,6 +40,7 @@ import { createLogisticsPlacementCanvasDecoration } from "./decorations/Logistic
 import { createMarqueeRectDecoration } from "./decorations/MarqueeRectDecoration"
 import { createMarqueeCanvasDecoration } from "./decorations/MarqueeCanvasDecoration"
 import { createPreviewRectDecoration } from "./decorations/PreviewRectDecoration"
+import { createInvalidPlacementDecoration } from "./decorations/InvalidPlacementDecoration"
 import { createGrassBackgroundDecoration } from "./decorations/GrassBackgroundDecoration"
 import { createBeltCargoDecoration } from "./decorations/BeltCargoDecoration"
 import { createBeltPortInsertionDecoration } from "./decorations/BeltPortInsertionDecoration"
@@ -67,6 +68,7 @@ export function createRenderSceneOrchestrator(
   const baseBoundaryDecoration = createBaseBoundaryDecoration()
   const powerRangeDecoration = createPowerRangeDecoration()
   const previewRectDecoration = createPreviewRectDecoration()
+  const invalidPlacementDecoration = createInvalidPlacementDecoration()
   const marqueeDecoration = createMarqueeRectDecoration()
   const diagnosticsDecoration = createDiagnosticsDecoration()
   const marqueeCanvasDecoration = createMarqueeCanvasDecoration()
@@ -77,6 +79,7 @@ export function createRenderSceneOrchestrator(
   const beltFlowLayer = new Container()
   const beltInsertionLayer = new Container()
   const beltCargoOverlayLayer = new Container()
+  const invalidPlacementOverlayLayer = new Container()
   const marqueeOverlayLayer = new Container()
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
   const entitySprites = new Map<string, RenderSprite>()
@@ -131,6 +134,8 @@ export function createRenderSceneOrchestrator(
       theme: effectiveCanvasTheme,
     })
 
+    invalidPlacementDecoration.sync(ctx)
+
     marqueeDecoration.sync(ctx)
 
     marqueeCanvasDecoration.sync(ctx)
@@ -155,6 +160,7 @@ export function createRenderSceneOrchestrator(
     beltInsertionLayer,
     beltCargoOverlayLayer,
     layers.overlay,
+    invalidPlacementOverlayLayer,
     marqueeOverlayLayer,
   )
   app.stage.addChildAt(grassBackgroundDecoration.container, 0)
@@ -162,6 +168,7 @@ export function createRenderSceneOrchestrator(
   layers.background.addChild(baseBoundaryDecoration.container)
   layers.background.addChild(powerRangeDecoration.container)
   layers.background.addChild(previewRectDecoration.container)
+  invalidPlacementOverlayLayer.addChild(invalidPlacementDecoration.container)
   beltFlowLayer.addChild(beltFlowDecoration.container)
   beltInsertionLayer.addChild(beltPortInsertionDecoration.container)
   beltCargoOverlayLayer.addChild(beltCargoDecoration.container)
@@ -184,6 +191,7 @@ export function createRenderSceneOrchestrator(
       baseBoundaryDecoration.destroy()
       powerRangeDecoration.destroy()
       previewRectDecoration.destroy()
+      invalidPlacementDecoration.destroy()
       marqueeDecoration.destroy()
       marqueeCanvasDecoration.destroy()
       logisticsPlacementCanvasDecoration.destroy()
@@ -196,6 +204,7 @@ export function createRenderSceneOrchestrator(
       beltFlowLayer.destroy({ children: true })
       beltInsertionLayer.destroy({ children: true })
       beltCargoOverlayLayer.destroy({ children: true })
+      invalidPlacementOverlayLayer.destroy({ children: true })
       layers.overlay.destroy({ children: true })
       marqueeOverlayLayer.destroy({ children: true })
       grassBackgroundDecoration.destroy()

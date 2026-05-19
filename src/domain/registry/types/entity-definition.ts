@@ -1,6 +1,7 @@
 import type { GridEdge, GridRectSize } from "../../shared/grid";
 import type { SlotLinkDefinition } from "../../shared/slot-link";
 import type { EntityInspectorDeclaration } from "./entity-inspector";
+import type { EntityPlacementBehaviorDeclaration } from "./entity-placement-behavior";
 
 // ---------------------------------------------------------------------------
 // UI 分组 — 决定设备在放置面板中属于哪个折叠组
@@ -63,6 +64,13 @@ export interface EntityDefinition {
    * 前端遍历此数组，按 type 挂载对应面板组件。
    */
   inspectors: EntityInspectorDeclaration[];
+
+  /**
+   * 放置行为声明。
+   * 与 Inspector 类似，definition 只声明"使用哪类放置规则"；
+   * editor 在运行态根据这些声明校验当前位置是否合法。
+   */
+  placementBehaviors: EntityPlacementBehaviorDeclaration[];
 
   // ---- 端口与存储槽组 ----
 
@@ -283,4 +291,3 @@ export interface EntityAcceptRuleDefinition {
     | { readonly kind: "item"; readonly itemId: string };
   readonly exclude: readonly string[];
 }
-

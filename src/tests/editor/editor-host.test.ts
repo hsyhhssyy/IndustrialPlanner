@@ -1722,6 +1722,7 @@ describe("createEditorHost", () => {
       "ghost",
       "logistics-head",
       "powered",
+      "invalid-placement",
     ]);
     expect(
       editorHost.queries.findEntityCollectionGridRect("selection"),
@@ -1732,6 +1733,7 @@ describe("createEditorHost", () => {
     expect(editorHost.queries.findEntityCollectionGridRect("ghost")).toBeNull();
     expect(editorHost.queries.findEntityCollectionGridRect("logistics-head")).toBeNull();
     expect(editorHost.queries.findEntityCollectionGridRect("powered")).toBeNull();
+    expect(editorHost.queries.findEntityCollectionGridRect("invalid-placement")).toBeNull();
   });
 
   it("computes the client rect for a world grid cell", () => {

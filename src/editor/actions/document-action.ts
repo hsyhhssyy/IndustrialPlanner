@@ -47,6 +47,7 @@ function resetDocumentRuntimeState(state: EditorStateReadWrite): void {
   state.internalTransientState.logisticsDraft = null;
   state.internalTransientState.placementDraftSlotLinks = null;
   state.internalTransientState.placementHistoryAction = null;
+  state.internalTransientState.placementValidationByEntityId = {};
 
   for (const collectionType of Object.values(EntityCollectionType)) {
     state.collections[collectionType].replace([]);

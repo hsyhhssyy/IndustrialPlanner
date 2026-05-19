@@ -33,6 +33,10 @@ import {
   INSPECTOR_TYPE,
   type EntityInspectorDeclaration,
 } from "@/domain/registry/types/entity-inspector";
+import {
+  PLACEMENT_BEHAVIOR_TYPE,
+  type EntityPlacementBehaviorDeclaration,
+} from "@/domain/registry/types/entity-placement-behavior";
 
 import { RECIPE_DEFINITIONS } from "./recipe-definition";
 
@@ -62,9 +66,10 @@ type PortDefinitionInput = Pick<
   "acceptRule" | "count" | "priorityGroup" | "roundRobinSeed"
 >>;
 
-/** createEntityDefinition() 的输入类型 — inspectors / recipeChannels / links 可选，由工厂补全默认值 */
-type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "recipeChannels" | "links"> & {
+/** createEntityDefinition() 的输入类型 — inspectors / placementBehaviors / recipeChannels / links 可选，由工厂补全默认值 */
+type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "placementBehaviors" | "recipeChannels" | "links"> & {
   readonly inspectors?: readonly EntityInspectorDeclaration[];
+  readonly placementBehaviors?: readonly EntityPlacementBehaviorDeclaration[];
   readonly recipeChannels?: readonly EntityDefinition["recipeChannels"][number][];
   readonly links?: readonly SlotLinkDefinition[];
 };
@@ -78,6 +83,28 @@ type EmptyEntityDefinitionInput = Pick<
 const RECIPE_MACHINE_IDS = new Set(
   RECIPE_DEFINITIONS.map((recipe) => recipe.machineId),
 );
+
+const ALLOW_PIPE_OVERLAP_PLACEMENT_BEHAVIORS = [
+  { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
+
+const DEDICATED_BELT_PLACEMENT_BEHAVIORS = [
+  { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+  { type: PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase },
+] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
+
+const WAREHOUSE_BUS_SEGMENT_PLACEMENT_BEHAVIORS = [
+  { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+  { type: PLACEMENT_BEHAVIOR_TYPE.mustConnectToHub },
+] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
+
+const WAREHOUSE_BUS_SOURCE_PLACEMENT_BEHAVIORS = [
+  { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
+
+const WAREHOUSE_PORT_PLACEMENT_BEHAVIORS = [
+  { type: PLACEMENT_BEHAVIOR_TYPE.mustConnectToHub },
+] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
 
 // =========================================================================
 // 工厂函数
@@ -98,8 +125,30 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
     ...definition,
     recipeChannels: [...(definition.recipeChannels ?? [])],
     links: [...(definition.links ?? [])],
+    placementBehaviors: normalizePlacementBehaviors(definition.placementBehaviors ?? []),
     inspectors: appendMissingInspectors(declaredInspectors, recipeMachineInspectors),
   };
+}
+
+function normalizePlacementBehaviors(
+  behaviors: readonly EntityPlacementBehaviorDeclaration[],
+): EntityPlacementBehaviorDeclaration[] {
+  const normalized: EntityPlacementBehaviorDeclaration[] = [];
+  const seenTypes = new Set<string>();
+
+  for (const behavior of [
+    { type: PLACEMENT_BEHAVIOR_TYPE.defaultPlacement } as const,
+    ...behaviors,
+  ]) {
+    if (seenTypes.has(behavior.type)) {
+      continue;
+    }
+
+    seenTypes.add(behavior.type);
+    normalized.push(behavior);
+  }
+
+  return normalized;
 }
 
 function createRecipeMachineIngredientSlotInspectors(
@@ -600,6 +649,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 8 },
     uiGroup: "warehouse",
     tags: ["武陵", "bus"],
+    placementBehaviors: WAREHOUSE_BUS_SEGMENT_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [],
@@ -618,6 +668,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 4, height: 4 },
     uiGroup: "warehouse",
     tags: ["武陵", "bus"],
+    placementBehaviors: WAREHOUSE_BUS_SOURCE_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [],
@@ -642,6 +693,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 1 },
     uiGroup: "warehouse",
     tags: ["AvatarHidden"],
+    placementBehaviors: WAREHOUSE_PORT_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -936,6 +988,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     tags: ["BeltFamily", "ChevronHidden"],
+    placementBehaviors: DEDICATED_BELT_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -981,6 +1034,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     tags: ["BeltFamily", "ChevronHidden"],
+    placementBehaviors: DEDICATED_BELT_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1026,6 +1080,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     tags: ["BeltFamily", "ChevronHidden"],
+    placementBehaviors: DEDICATED_BELT_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1077,6 +1132,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
     tags: ["BeltFamily", "OuterRingAllowed"],
+    placementBehaviors: ALLOW_PIPE_OVERLAP_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1133,6 +1189,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
     tags: ["BeltFamily", "OuterRingAllowed"],
+    placementBehaviors: ALLOW_PIPE_OVERLAP_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1193,6 +1250,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
     tags: ["BeltFamily", "ChevronHidden"],
+    placementBehaviors: ALLOW_PIPE_OVERLAP_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1651,6 +1709,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 1 },
     uiGroup: "warehouse",
     tags: ["AvatarHidden"],
+    placementBehaviors: WAREHOUSE_PORT_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -2329,6 +2388,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
     tags: ["BeltFamily"],
+    placementBehaviors: ALLOW_PIPE_OVERLAP_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [

@@ -15,6 +15,7 @@ import type {
 } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { DraftEntity } from "../draft-entity";
+import { syncPlacementValidationState } from "../placement-validation";
 import { syncPoweredEntityCollection } from "./powered-collection";
 import type { EditorActionsContext } from "./types";
 import {
@@ -549,6 +550,11 @@ function rebuildLogisticsDraft(options: {
     canApply,
     invalidReason,
   };
+  syncPlacementValidationState({
+    document: currentDocument,
+    state: options.context.state,
+    workspace: options.context.workspace,
+  });
 
   return {
     status: options.status,
@@ -788,6 +794,11 @@ function clearLogisticsDraftState(context: LogisticsActionContext | EditorAction
   logisticsHead.replace([]);
   ghost.replace([]);
   context.state.internalTransientState.logisticsDraft = null;
+  syncPlacementValidationState({
+    document: context.document.getSnapshot(),
+    state: context.state,
+    workspace: context.workspace,
+  });
 }
 
 function createIgnoredLogisticsActionResult(): LogisticsDraftActionResult {

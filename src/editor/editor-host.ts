@@ -15,6 +15,7 @@ import {
   EditorHistoryRuntime,
 } from "./history";
 import { createEditorQueries } from "./queries";
+import { syncPlacementValidationState } from "./placement-validation";
 import { hookLocalstorage } from "./storage-hook";
 import { createEditorStateReadWrite, EditorStateReadWrite } from "./state-impl";
 
@@ -81,10 +82,25 @@ export function createEditorHost(
   workspace.editor = host;
   disposers.push(hookDocumentHistory(host));
   disposers.push(hookDocumentViewport(host));
+  disposers.push(hookPlacementValidation(host));
   disposers.push(hookLocalstorage(host));
   disposers.push(hookDocumentStorage(host));
 
   return host;
+}
+
+function hookPlacementValidation(editorHost: EditorHost): () => void {
+  const syncPlacementValidation = (document: WorldDocument): void => {
+    syncPlacementValidationState({
+      document,
+      state: editorHost.internalState,
+      workspace: editorHost.workspace,
+    });
+  };
+
+  syncPlacementValidation(editorHost.internalDocument.getSnapshot());
+
+  return editorHost.internalDocument.subscribe(syncPlacementValidation);
 }
 
 function hookDocumentHistory(editorHost: EditorHost): () => void {

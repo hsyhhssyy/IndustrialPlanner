@@ -93,6 +93,7 @@ function createDefinition(options: {
     powerDemand: 0,
     powerRange: options.powerRange,
     inspectors: [],
+    placementBehaviors: [],
     portGroups: [],
     storageSlotGroups: [],
     recipeChannels: [],

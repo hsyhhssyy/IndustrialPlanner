@@ -6,6 +6,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRectSize } from "@/domain/shared/grid";
 import { createUuid } from "@/domain/shared/uuid";
 
+import { syncPlacementValidationState } from "../placement-validation";
 import { syncPoweredEntityCollection } from "./powered-collection";
 import type { EditorActionsContext } from "./types";
 
@@ -82,6 +83,11 @@ export function createEditorPlacementActions({
         definitionIds: [deviceDefinitionId],
         count: 1,
       };
+      syncPlacementValidationState({
+        document: currentDocument,
+        state,
+        workspace,
+      });
     },
 
     createBlueprintPlacementDraft: (
@@ -165,6 +171,11 @@ export function createEditorPlacementActions({
         blueprintName: blueprint.name,
         count: nextPreviewDrafts.length,
       };
+      syncPlacementValidationState({
+        document: currentDocument,
+        state,
+        workspace,
+      });
     },
 
     applyPlacementDraft: () => {
@@ -231,11 +242,21 @@ export function createEditorPlacementActions({
       }
 
       clearPlacementState(state);
+      syncPlacementValidationState({
+        document: committedDocument ?? document.getSnapshot(),
+        state,
+        workspace,
+      });
       return true;
     },
 
     cancelPlacementDraft: () => {
       clearPlacementState(state);
+      syncPlacementValidationState({
+        document: document.getSnapshot(),
+        state,
+        workspace,
+      });
     },
   };
 }

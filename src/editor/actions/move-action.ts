@@ -7,6 +7,7 @@ import {
   isDraftEntity,
 } from "../draft-entity";
 import { resolveEntityById } from "../entity-resolvers";
+import { syncPlacementValidationState } from "../placement-validation";
 import { syncPoweredEntityCollection } from "./powered-collection";
 import type { EditorActionsContext } from "./types";
 
@@ -73,6 +74,11 @@ export function createEditorMoveActions({
       });
       ghost.replace(nextGhostEntityIds);
       preview.replace(nextPreviewDrafts.map((entity) => entity.id));
+      syncPlacementValidationState({
+        document: currentDocument,
+        state,
+        workspace,
+      });
     },
     applyMoveOerationDraft: () => {
       const currentDocument = document.getSnapshot();
@@ -133,6 +139,11 @@ export function createEditorMoveActions({
       }
 
       clearMoveOperationState(state);
+      syncPlacementValidationState({
+        document: document.getSnapshot(),
+        state,
+        workspace,
+      });
 
       if (ghostEntityIds.size === 1) {
         selection.replace([]);
@@ -142,6 +153,11 @@ export function createEditorMoveActions({
     },
     cancelMoveOperationDraft: () => {
       clearMoveOperationState(state);
+      syncPlacementValidationState({
+        document: document.getSnapshot(),
+        state,
+        workspace,
+      });
     },
   };
 }

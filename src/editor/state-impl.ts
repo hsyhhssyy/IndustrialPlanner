@@ -7,6 +7,7 @@ import {
 import {
   EntityCollectionType,
   type EntityCollection,
+  type EntityPlacementValidationResult,
   type EntityCollectionType as EntityCollectionTypeValue,
 } from "@/domain/editor/types/editor-types";
 import type { EditorState } from "@/domain/editor/editor-state";
@@ -55,6 +56,7 @@ export interface EditorInternalTransientStateReadWrite {
   logisticsDraft: LogisticsDraftReadonlyState | null;
   placementDraftSlotLinks: SlotLinkDefinition[] | null;
   placementHistoryAction: EditorHistoryActionDescriptor | null;
+  placementValidationByEntityId: Record<string, EntityPlacementValidationResult>;
 }
 
 class EditorInternalPersistStateReadWriteImpl
@@ -75,6 +77,7 @@ class EditorInternalTransientStateReadWriteImpl
   logisticsDraft: LogisticsDraftReadonlyState | null = null;
   placementDraftSlotLinks: SlotLinkDefinition[] | null = null;
   placementHistoryAction: EditorHistoryActionDescriptor | null = null;
+  placementValidationByEntityId: Record<string, EntityPlacementValidationResult> = {};
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -184,6 +187,7 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
     [EntityCollectionType.ghost]: createEntityCollection(),
     [EntityCollectionType.logisticsHead]: createEntityCollection(),
     [EntityCollectionType.powered]: createEntityCollection(),
+    [EntityCollectionType.invalidPlacement]: createEntityCollection(),
   };
   internalPersistState: EditorInternalPersistStateReadWrite =
     new EditorInternalPersistStateReadWriteImpl();

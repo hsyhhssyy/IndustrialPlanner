@@ -422,6 +422,13 @@ function finalizePlacementEnter(options: {
   }
 
   try {
+    // 2026-05-19 订正：先切换 activeTool 再创建草稿。旧顺序是先创建草稿再切换工具，
+    // 切换工具会触发 logistics-placement 的 on-exit-active-tool → clearLogisticsDraftState 无差别清空
+    // preview 集合，导致刚创建的放置草稿被误清除。
+    if (options.shouldSetActiveTool) {
+      options.appHost.internalActions.setActiveTool("single-placement");
+    }
+
     options.appHost.internalState.runtime.placementAnchor = placementAnchor;
     options.appHost.internalState.runtime.singlePlacementPointerMode = options.source;
     options.editor.actions.createSinglePlacementDraft(options.deviceId, placementAnchor);
@@ -439,9 +446,7 @@ function finalizePlacementEnter(options: {
       options.appHost.internalState.runtime.singlePlacementDeviceId = options.deviceId;
     });
 
-    if (options.shouldSetActiveTool) {
-      options.appHost.internalActions.setActiveTool("single-placement");
-    } else if (!syncPlacementEntryUi(options.appHost)) {
+    if (!options.shouldSetActiveTool && !syncPlacementEntryUi(options.appHost)) {
         restoreFailedPlacementEnter(options.appHost, options.editor);
         return { status: "ignored" };
     }

@@ -14,6 +14,7 @@ import {
 
 import { type DraftEntity, isDraftEntity } from "../draft-entity";
 import { resolveEntityById, resolveListedEntities } from "../entity-resolvers";
+import { syncPlacementValidationState } from "../placement-validation";
 import { syncPoweredEntityCollection } from "./powered-collection";
 import type { EditorActionsContext } from "./types";
 
@@ -91,6 +92,18 @@ export function createEditorSelectionActions({
       if (collectionType === EntityCollectionType.marquee
         || collectionType === EntityCollectionType.reverseMarquee) {
         state.marqueeGridRect = null;
+      }
+
+      if (
+        collectionType === EntityCollectionType.preview
+        || collectionType === EntityCollectionType.ghost
+        || collectionType === EntityCollectionType.invalidPlacement
+      ) {
+        syncPlacementValidationState({
+          document: document.getSnapshot(),
+          state,
+          workspace,
+        });
       }
     },
     deleteCollection: (collectionType) => {
@@ -192,6 +205,12 @@ export function createEditorSelectionActions({
         || collectionType === EntityCollectionType.reverseMarquee) {
         state.marqueeGridRect = null;
       }
+
+      syncPlacementValidationState({
+        document: document.getSnapshot(),
+        state,
+        workspace,
+      });
     },
     addToCollection: ({ collectionType, entityId }) => {
       addEntityIdToCollection(collectionType, entityId);
@@ -333,6 +352,12 @@ export function createEditorSelectionActions({
       if (didUpdateDrafts) {
         state.drafts = nextDrafts;
       }
+
+      syncPlacementValidationState({
+        document: document.getSnapshot(),
+        state,
+        workspace,
+      });
     },
     rotateCollection: (collectionType) => {
       const collection = resolveCollection(collectionType);
@@ -428,6 +453,12 @@ export function createEditorSelectionActions({
       if (didUpdateDrafts) {
         state.drafts = nextDrafts;
       }
+
+      syncPlacementValidationState({
+        document: document.getSnapshot(),
+        state,
+        workspace,
+      });
     },
   };
 }
