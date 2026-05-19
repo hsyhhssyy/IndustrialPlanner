@@ -31,13 +31,17 @@ import type {
 import type { SimulationWorkerResponse } from "./worker-protocol";
 
 export interface SimulationWorkerBridge {
-  loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean): Promise<Extract<
+  loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >>;
-  getTickSnapshot(tickNumber: number): Promise<Extract<
+  getTickSnapshot(tickNumber: number, simulationSpeed?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "tick-snapshot-result" }
+  >>;
+  setSimulationSpeed(value: number): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "simulation-speed-set" }
   >>;
   getPerfReport(): Promise<Extract<
     SimulationWorkerResponse,
@@ -119,6 +123,7 @@ implements SimulationAction, SimulationInternalAction {
 
     const previousPlaybackTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
     // simulationSpeed 有且仅有这一处可以参与运算：它只影响 add time 的推进速度。
+    // AI-CORRECTION 2026-05-19: worker 也会接收 simulationSpeed，但只用于缓存余量的墙钟秒估算，不参与 runtime 物理时间推进。
     // 任何其他场合都不得使用该倍率做 tick/second 换算；换算只能依赖 standard tick rate。
     const tickDelta = deltaMs
       * STANDARD_TICK_RATE_PER_SECOND
@@ -223,7 +228,12 @@ implements SimulationAction, SimulationInternalAction {
       baseTickNumber,
     });
     const perfEnabled = this.getPerfEnabled?.() ?? false;
-    const response = await this.bridge.loadTopology(compiledTopology, migration ?? undefined, perfEnabled);
+    const response = await this.bridge.loadTopology(
+      compiledTopology,
+      migration ?? undefined,
+      perfEnabled,
+      this.stateReadWrite.simulationSpeed,
+    );
     this.topology.setSnapshot(compiledTopology);
     this.compiledDocument = cloneWorldDocument(document);
 
@@ -249,6 +259,7 @@ implements SimulationAction, SimulationInternalAction {
     }
 
     this.stateReadWrite.simulationSpeed = value;
+    void this.bridge.setSimulationSpeed(value).catch(() => undefined);
   });
 
   public readonly reset: SimulationInternalAction["reset"] = action(() => {
@@ -260,7 +271,7 @@ implements SimulationAction, SimulationInternalAction {
     tickNumber: number,
     playbackTickNumberOnReady?: number,
   ): Promise<SimulationTickPullStatus> => {
-    const response = await this.bridge.getTickSnapshot(tickNumber);
+    const response = await this.bridge.getTickSnapshot(tickNumber, this.stateReadWrite.simulationSpeed);
 
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = response.status;

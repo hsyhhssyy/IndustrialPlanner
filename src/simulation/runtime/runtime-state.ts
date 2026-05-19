@@ -10,6 +10,7 @@ export type RuntimeShadowState = "uncertain" | "accept" | "moved";
 
 export interface SimulationMutableRuntimeState {
   tickNumber: number;
+  lastAdvancedTickNumber: number;
   persistent: SimulationPersistentRuntimeState;
   transient: SimulationTickTransientState;
 }
@@ -156,6 +157,7 @@ export function createSimulationMutableRuntimeState(
 
   return {
     tickNumber: 0,
+    lastAdvancedTickNumber: 0,
     persistent: {
       slots,
       devices,
@@ -184,6 +186,7 @@ export function createMigratedSimulationMutableRuntimeState(
   const resetDeviceIds = new Set(options.resetDeviceIds);
 
   state.tickNumber = options.previousState.tickNumber;
+  state.lastAdvancedTickNumber = options.previousState.tickNumber;
   state.persistent.nextRecipeRunIndex = options.previousState.persistent.nextRecipeRunIndex;
 
   for (const deviceId of options.topology.ordering.deviceOrder) {
@@ -227,6 +230,7 @@ export function cloneSimulationMutableRuntimeState(
 ): SimulationMutableRuntimeState {
   return {
     tickNumber: state.tickNumber,
+    lastAdvancedTickNumber: state.lastAdvancedTickNumber,
     persistent: {
       slots: Object.fromEntries(Object.entries(state.persistent.slots).map(([slotId, slot]) => [
         slotId,

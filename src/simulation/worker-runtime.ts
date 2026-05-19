@@ -16,6 +16,10 @@ import type {
 } from "./worker-protocol";
 
 import { createTickSnapshot } from "./runtime/create-tick-snapshot";
+import {
+  canAdjustDynamicTickRateAtTick,
+  resolveLegalDynamicTickRates,
+} from "./runtime/phase-gating";
 import { advanceDevices } from "./runtime/stage-1-advance-devices";
 import { buildSolveGraph } from "./runtime/stage-2-build-solve-graph";
 import { solveTransferGraph, type SolveTransferGraphPerf } from "./runtime/stage-3-layered-reverse-solve";
@@ -24,10 +28,18 @@ import { settleRecipes } from "./runtime/stage-5-settle-recipes";
 import { maintainTransportComponentDomains } from "./runtime/runtime-slot-access";
 import {
   cloneSimulationMutableRuntimeState,
+  createEmptyTransientState,
   createMigratedSimulationMutableRuntimeState,
   createSimulationMutableRuntimeState,
   type SimulationMutableRuntimeState,
 } from "./runtime/runtime-state";
+import {
+  DEFAULT_SIMULATION_SPEED,
+  resolveNextHigherDynamicTickRate,
+  resolveNextLowerDynamicTickRate,
+  resolveStandardStepTicks,
+  STANDARD_TICK_RATE_PER_SECOND,
+} from "./tick-rate";
 
 const MAX_RETAINED_TICKS = 180;
 
@@ -41,6 +53,11 @@ export class SimulationWorkerRuntime {
   private latestTickNumber: number | null = null;
   private mode: SimulationRuntimeStatus["mode"] = "idle";
   private error: string | null = null;
+  private simulationSpeed = DEFAULT_SIMULATION_SPEED;
+  private dynamicTickRate = STANDARD_TICK_RATE_PER_SECOND;
+  private standardStepTicks = 1;
+  private lastRequestedTickNumber = 0;
+  private lastDynamicRateAdjustmentTick: number | null = null;
 
   // 停止线：Worker 自主推进到该 tick 后暂停，等待外部拉取更新停止线。
   // 初始值 = 0 + MAX_RETAINED_TICKS，外部每次请求 tick N 时更新为 N + MAX_RETAINED_TICKS。
@@ -57,6 +74,7 @@ export class SimulationWorkerRuntime {
       switch (request.type) {
         case "load-topology":
           this.perfEnabled = request.perfEnabled ?? false;
+          this.setSimulationSpeedValue(request.simulationSpeed);
           return {
             type: "topology-loaded",
             requestId: request.requestId,
@@ -64,10 +82,18 @@ export class SimulationWorkerRuntime {
             status: this.getStatus(),
           };
         case "get-tick-snapshot":
+          this.setSimulationSpeedValue(request.simulationSpeed);
           return {
             type: "tick-snapshot-result",
             requestId: request.requestId,
             result: this.getTickSnapshot(request.tickNumber),
+            status: this.getStatus(),
+          };
+        case "set-simulation-speed":
+          this.setSimulationSpeedValue(request.simulationSpeed);
+          return {
+            type: "simulation-speed-set",
+            requestId: request.requestId,
             status: this.getStatus(),
           };
         case "get-perf-report":
@@ -98,6 +124,12 @@ export class SimulationWorkerRuntime {
               status: createNotFoundStatus(0, "missing-topology", null, null, 0),
               currentTick: null,
             },
+            status,
+          };
+        case "set-simulation-speed":
+          return {
+            type: "simulation-speed-set",
+            requestId: request.requestId,
             status,
           };
         case "get-perf-report":
@@ -157,6 +189,11 @@ export class SimulationWorkerRuntime {
     this.nextTickNumber = this.runtimeState.tickNumber;
     this.retainedFromTick = null;
     this.latestTickNumber = null;
+    this.lastRequestedTickNumber = this.runtimeState.tickNumber;
+    this.dynamicTickRate = topology.standardTickRate;
+    this.standardStepTicks = 1;
+    this.lastDynamicRateAdjustmentTick = null;
+    this.adjustDynamicTickRateAtLegalPoint(this.runtimeState.tickNumber);
     this.mode = "running";
     this.error = null;
 
@@ -179,6 +216,8 @@ export class SimulationWorkerRuntime {
         currentTick: null,
       };
     }
+
+    this.lastRequestedTickNumber = Math.max(0, Math.trunc(tickNumber));
 
     // 始终更新停止线：外部请求 tick N → Worker 需要跑到 N + MAX_RETAINED_TICKS。
     // 即使当前 tick 未就绪也更新，确保 Worker 知道目标位置。
@@ -341,12 +380,38 @@ export class SimulationWorkerRuntime {
 
     const shouldAdvance = tickNumber > this.runtimeState.tickNumber;
     this.runtimeState.tickNumber = tickNumber;
+    const runtimeStepTicks = tickNumber - this.runtimeState.lastAdvancedTickNumber;
+    const shouldRunRuntime = shouldAdvance && runtimeStepTicks >= this.standardStepTicks;
 
     const perfTiming = this.perfEnabled ? { tickNumber, start: performance.now(), stages: {} as Record<string, number>, stage3: undefined as TickPerfStage3Details | undefined } : null;
 
-    if (shouldAdvance) {
+    if (shouldAdvance && !shouldRunRuntime) {
+      this.runtimeState.transient = createEmptyTransientState();
       const t0 = this.perfEnabled ? performance.now() : 0;
-      advanceDevices(this.topology, this.runtimeState);
+      const snapshot = createTickSnapshot(this.topology, this.runtimeState);
+      if (this.perfEnabled) {
+        perfTiming!.stages["createSnapshot"] = performance.now() - t0;
+        this.perfEntries.push({
+          tickNumber,
+          totalMs: performance.now() - perfTiming!.start,
+          stages: {
+            advanceDevices: 0,
+            buildSolveGraph: 0,
+            solveTransferGraph: 0,
+            rotateRoutingCursors: 0,
+            settleRecipes: 0,
+            maintainDomains: 0,
+            createSnapshot: perfTiming!.stages["createSnapshot"] ?? 0,
+          },
+        });
+      }
+      this.adjustDynamicTickRateAtLegalPoint(tickNumber);
+      return snapshot;
+    }
+
+    if (shouldRunRuntime) {
+      const t0 = this.perfEnabled ? performance.now() : 0;
+      advanceDevices(this.topology, this.runtimeState, runtimeStepTicks);
       if (this.perfEnabled) { perfTiming!.stages["advanceDevices"] = performance.now() - t0; }
 
       const t1 = this.perfEnabled ? performance.now() : 0;
@@ -392,6 +457,7 @@ export class SimulationWorkerRuntime {
       const t5 = this.perfEnabled ? performance.now() : 0;
       maintainTransportComponentDomains(this.topology, this.runtimeState);
       if (this.perfEnabled) { perfTiming!.stages["maintainDomains"] = performance.now() - t5; }
+      this.runtimeState.lastAdvancedTickNumber = tickNumber;
 
       const t6 = this.perfEnabled ? performance.now() : 0;
       const snapshot = createTickSnapshot(this.topology, this.runtimeState);
@@ -413,6 +479,7 @@ export class SimulationWorkerRuntime {
           stage3: perfTiming!.stage3,
         });
       }
+      this.adjustDynamicTickRateAtLegalPoint(tickNumber);
       return snapshot;
     }
 
@@ -440,7 +507,69 @@ export class SimulationWorkerRuntime {
         },
       });
     }
+    this.adjustDynamicTickRateAtLegalPoint(tickNumber);
     return snapshot;
+  }
+
+  private setSimulationSpeedValue(value: number | undefined): void {
+    if (value === undefined || !Number.isFinite(value) || value < 0) {
+      return;
+    }
+
+    this.simulationSpeed = value;
+    if (this.topology !== null && this.runtimeState !== null) {
+      this.adjustDynamicTickRateAtLegalPoint(this.runtimeState.tickNumber);
+    }
+  }
+
+  private adjustDynamicTickRateAtLegalPoint(standardTick: number): void {
+    if (this.topology === null || !canAdjustDynamicTickRateAtTick({ topology: this.topology, standardTick })) {
+      return;
+    }
+    if (this.lastDynamicRateAdjustmentTick === standardTick) {
+      return;
+    }
+
+    this.lastDynamicRateAdjustmentTick = standardTick;
+
+    const legalDynamicTickRates = resolveLegalDynamicTickRates(this.topology);
+    if (legalDynamicTickRates.length === 0) {
+      this.setDynamicTickRate(this.topology.standardTickRate);
+      return;
+    }
+
+    if (this.simulationSpeed < 2) {
+      this.setDynamicTickRate(legalDynamicTickRates[0] ?? this.topology.standardTickRate);
+      return;
+    }
+
+    const bufferedStandardTicks = Math.max(
+      0,
+      (this.latestTickNumber ?? standardTick) - this.lastRequestedTickNumber,
+    );
+    const bufferWallSeconds = bufferedStandardTicks / (this.topology.standardTickRate * this.simulationSpeed);
+    if (bufferWallSeconds < 1) {
+      this.setDynamicTickRate(resolveNextLowerDynamicTickRate(this.dynamicTickRate, legalDynamicTickRates));
+      return;
+    }
+
+    if (bufferWallSeconds > 2) {
+      this.setDynamicTickRate(resolveNextHigherDynamicTickRate(this.dynamicTickRate, legalDynamicTickRates));
+    }
+  }
+
+  private setDynamicTickRate(dynamicTickRate: number): void {
+    if (this.topology === null) {
+      return;
+    }
+
+    const standardStepTicks = resolveStandardStepTicks(dynamicTickRate, this.topology.standardTickRate);
+    if (standardStepTicks === null) {
+      return;
+    }
+
+    this.dynamicTickRate = dynamicTickRate;
+    this.standardStepTicks = standardStepTicks;
   }
 
   private flushPerfReport(): SimulationPerfReport | null {

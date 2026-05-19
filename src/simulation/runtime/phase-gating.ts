@@ -6,6 +6,10 @@ import type {
   RuntimeDeviceRecipeState,
   SimulationMutableRuntimeState,
 } from "./runtime-state";
+import {
+  DYNAMIC_SIMULATION_TICK_RATES,
+  isDynamicTickRateCompatibleWithTransferUnits,
+} from "../tick-rate";
 
 export interface TransportRecipeTiming {
   readonly durationTicks: number;
@@ -50,6 +54,59 @@ export function resolveDedicatedLogisticsTransferUnitTicks(
   }
 
   return Math.min(timing.durationTicks, topology.standardTickRate);
+}
+
+export function resolveActiveDedicatedLogisticsTransferUnitTicks(
+  topology: CompiledSimulationTopology,
+): readonly number[] {
+  const transferUnitTicks = new Set<number>();
+  for (const deviceId of topology.ordering.deviceOrder) {
+    const device = topology.devices[deviceId];
+    if (device === undefined) {
+      continue;
+    }
+
+    const unitTicks = resolveDedicatedLogisticsTransferUnitTicks(topology, device);
+    if (unitTicks !== null) {
+      transferUnitTicks.add(unitTicks);
+    }
+  }
+
+  return [...transferUnitTicks].sort((left, right) => left - right);
+}
+
+export function resolveDynamicTickRateSwitchIntervalTicks(
+  topology: CompiledSimulationTopology,
+): number {
+  const transferUnitTicks = resolveActiveDedicatedLogisticsTransferUnitTicks(topology);
+  if (transferUnitTicks.length === 0) {
+    return topology.standardTickRate;
+  }
+
+  return transferUnitTicks.reduce((currentLcm, transferUnitTicks) =>
+    lcm(currentLcm, transferUnitTicks),
+  );
+}
+
+export function canAdjustDynamicTickRateAtTick(options: {
+  readonly topology: CompiledSimulationTopology;
+  readonly standardTick: number;
+}): boolean {
+  const switchIntervalTicks = resolveDynamicTickRateSwitchIntervalTicks(options.topology);
+  return switchIntervalTicks > 0 && options.standardTick % switchIntervalTicks === 0;
+}
+
+export function resolveLegalDynamicTickRates(
+  topology: CompiledSimulationTopology,
+): readonly number[] {
+  const transferUnitTicks = resolveActiveDedicatedLogisticsTransferUnitTicks(topology);
+  return DYNAMIC_SIMULATION_TICK_RATES.filter((dynamicTickRate) =>
+    isDynamicTickRateCompatibleWithTransferUnits({
+      dynamicTickRate,
+      transferUnitTicks,
+      standardTickRate: topology.standardTickRate,
+    }),
+  );
 }
 
 export function canDedicatedLogisticsTransferAtTick(options: {
@@ -103,4 +160,22 @@ function resolveRecipeDevice(
   }
 
   return null;
+}
+
+function gcd(left: number, right: number): number {
+  let a = Math.abs(left);
+  let b = Math.abs(right);
+  while (b !== 0) {
+    const next = a % b;
+    a = b;
+    b = next;
+  }
+  return a;
+}
+
+function lcm(left: number, right: number): number {
+  if (left === 0 || right === 0) {
+    return 0;
+  }
+  return Math.abs(left * right) / gcd(left, right);
 }

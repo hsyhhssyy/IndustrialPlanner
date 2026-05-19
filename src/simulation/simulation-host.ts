@@ -355,7 +355,7 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     });
   }
 
-  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean): Promise<Extract<
+  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >> {
@@ -365,10 +365,11 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
       topology,
       migration,
       perfEnabled,
+      simulationSpeed,
     }, "topology-loaded");
   }
 
-  public getTickSnapshot(tickNumber: number): Promise<Extract<
+  public getTickSnapshot(tickNumber: number, simulationSpeed?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "tick-snapshot-result" }
   >> {
@@ -376,7 +377,19 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
       type: "get-tick-snapshot",
       requestId: this.createRequestId(),
       tickNumber,
+      simulationSpeed,
     }, "tick-snapshot-result");
+  }
+
+  public setSimulationSpeed(value: number): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "simulation-speed-set" }
+  >> {
+    return this.request({
+      type: "set-simulation-speed",
+      requestId: this.createRequestId(),
+      simulationSpeed: value,
+    }, "simulation-speed-set");
   }
 
   public getPerfReport(): Promise<Extract<
@@ -428,7 +441,7 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
   private readonly runtime = new SimulationWorkerRuntime();
   private nextRequestId = 1;
 
-  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean): Promise<Extract<
+  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >> {
@@ -438,6 +451,7 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       topology,
       migration,
       perfEnabled,
+      simulationSpeed,
     });
     if (response.type !== "topology-loaded") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
@@ -445,18 +459,47 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
     return Promise.resolve(response);
   }
 
-  public getTickSnapshot(tickNumber: number): Promise<Extract<
+  public getTickSnapshot(tickNumber: number, simulationSpeed?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "tick-snapshot-result" }
   >> {
     // Local 模式无事件循环，setTimeout 不触发，需同步推进到目标 tick。
+    const initialResponse = this.runtime.handleRequest({
+      type: "get-tick-snapshot",
+      requestId: this.createRequestId(),
+      tickNumber,
+      simulationSpeed,
+    });
+    if (initialResponse.type !== "tick-snapshot-result") {
+      throw new Error(`Unexpected simulation worker response "${initialResponse.type}".`);
+    }
+    if (initialResponse.result.status.status === "ready") {
+      return Promise.resolve(initialResponse);
+    }
+
     this.runtime.advanceToTick(tickNumber);
     const response = this.runtime.handleRequest({
       type: "get-tick-snapshot",
       requestId: this.createRequestId(),
       tickNumber,
+      simulationSpeed,
     });
     if (response.type !== "tick-snapshot-result") {
+      throw new Error(`Unexpected simulation worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public setSimulationSpeed(value: number): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "simulation-speed-set" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "set-simulation-speed",
+      requestId: this.createRequestId(),
+      simulationSpeed: value,
+    });
+    if (response.type !== "simulation-speed-set") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
     }
     return Promise.resolve(response);

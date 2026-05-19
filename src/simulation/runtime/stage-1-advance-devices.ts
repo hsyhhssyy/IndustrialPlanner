@@ -1,6 +1,18 @@
-import type { CompiledSimulationTopology } from "../types";
+import type {
+  CompiledSimulationDevice,
+  CompiledSimulationRecipeChannel,
+  CompiledSimulationTopology,
+} from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
-import { finishRecipeIfPossible } from "./runtime-slot-access";
+import type {
+  RuntimeDeviceRecipeState,
+  RuntimeDeviceState,
+} from "./runtime-state";
+import {
+  consumeSelections,
+  createStartableRecipeForChannel,
+  finishRecipeIfPossible,
+} from "./runtime-slot-access";
 
 /**
  * 对应《仿真运行原理》§5.1 Tick 阶段 1：推进设备内部状态。
@@ -11,10 +23,13 @@ import { finishRecipeIfPossible } from "./runtime-slot-access";
 export function advanceDevices(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
+  standardStepTicks = 1,
 ): void {
+  const progressTicks = Math.max(1, Math.trunc(standardStepTicks));
   for (const deviceId of topology.ordering.deviceOrder) {
+    const device = topology.devices[deviceId];
     const deviceState = state.persistent.devices[deviceId];
-    if (deviceState === undefined) {
+    if (device === undefined || deviceState === undefined) {
       continue;
     }
 
@@ -23,23 +38,77 @@ export function advanceDevices(
         continue;
       }
 
-      if (recipe.state === "running") {
-        recipe.progressTicks += 1;
-        if (recipe.progressTicks < recipe.durationTicks) {
-          continue;
-        }
-        recipe.state = "waiting-output";
-      }
-
-      if (recipe.state === "waiting-output") {
-        const finished = finishRecipeIfPossible(topology, state, recipe);
-        if (finished) {
-          deviceState.channelRecipes[chId] = null;
-          deviceState.block = false;
-        } else {
-          deviceState.block = true;
-        }
-      }
+      const channel = device.recipeChannels.find((candidate) => candidate.id === chId) ?? null;
+      deviceState.channelRecipes[chId] = advanceChannelRecipe({
+        topology,
+        state,
+        device,
+        deviceState,
+        channel,
+        recipe,
+        progressTicks,
+      });
     }
   }
+}
+
+function advanceChannelRecipe(options: {
+  readonly topology: CompiledSimulationTopology;
+  readonly state: SimulationMutableRuntimeState;
+  readonly device: CompiledSimulationDevice;
+  readonly deviceState: RuntimeDeviceState;
+  readonly channel: CompiledSimulationRecipeChannel | null;
+  readonly recipe: RuntimeDeviceRecipeState;
+  readonly progressTicks: number;
+}): RuntimeDeviceRecipeState | null {
+  let recipe = options.recipe;
+
+  if (recipe.state === "running") {
+    recipe.progressTicks += options.progressTicks;
+    if (recipe.progressTicks < recipe.durationTicks) {
+      return recipe;
+    }
+    recipe.state = "waiting-output";
+  }
+
+  while (recipe.progressTicks >= recipe.durationTicks) {
+    const finished = finishRecipeIfPossible(options.topology, options.state, recipe);
+    if (!finished) {
+      recipe.progressTicks = recipe.durationTicks;
+      recipe.state = "waiting-output";
+      options.deviceState.block = true;
+      return recipe;
+    }
+
+    const overflowTicks = recipe.progressTicks - recipe.durationTicks;
+    options.deviceState.block = false;
+
+    if (options.channel === null) {
+      return null;
+    }
+
+    const nextRecipe = createStartableRecipeForChannel({
+      topology: options.topology,
+      state: options.state,
+      device: options.device,
+      channel: options.channel,
+    });
+    if (nextRecipe === null) {
+      return null;
+    }
+
+    if (nextRecipe.recipeType === "immediate-consume") {
+      consumeSelections(options.state.persistent.slots, nextRecipe.reservations);
+      nextRecipe.reservations = [];
+    }
+
+    nextRecipe.progressTicks = overflowTicks;
+    recipe = nextRecipe;
+    if (recipe.progressTicks < recipe.durationTicks) {
+      return recipe;
+    }
+    recipe.state = "waiting-output";
+  }
+
+  return recipe;
 }

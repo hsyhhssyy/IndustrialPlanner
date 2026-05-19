@@ -14,11 +14,18 @@ export type SimulationWorkerRequest =
       readonly topology: CompiledSimulationTopology;
       readonly migration?: SimulationTopologyMigration;
       readonly perfEnabled?: boolean;
+      readonly simulationSpeed?: number;
     }
   | {
       readonly type: "get-tick-snapshot";
       readonly requestId: number;
       readonly tickNumber: number;
+      readonly simulationSpeed?: number;
+    }
+  | {
+      readonly type: "set-simulation-speed";
+      readonly requestId: number;
+      readonly simulationSpeed: number;
     }
   | {
       readonly type: "get-perf-report";
@@ -36,6 +43,11 @@ export type SimulationWorkerResponse =
       readonly type: "tick-snapshot-result";
       readonly requestId: number;
       readonly result: SimulationTickSnapshotResult;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "simulation-speed-set";
+      readonly requestId: number;
       readonly status: SimulationRuntimeStatus;
     }
   | {

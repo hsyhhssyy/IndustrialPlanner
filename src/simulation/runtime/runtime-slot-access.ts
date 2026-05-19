@@ -259,6 +259,45 @@ export function moveOneItem(options: {
   return true;
 }
 
+export function createStartableRecipeForChannel(options: {
+  topology: CompiledSimulationTopology;
+  state: SimulationMutableRuntimeState;
+  device: CompiledSimulationDevice;
+  channel: CompiledSimulationRecipeChannel;
+}): RuntimeDeviceRecipeState | null {
+  for (const plan of resolveDeviceRecipePlans({
+    topology: options.topology,
+    state: options.state,
+    device: options.device,
+    channel: options.channel,
+  })) {
+    const reservations = selectRecipeInputs({
+      topology: options.topology,
+      state: options.state,
+      plan,
+    });
+    if (reservations === null) {
+      continue;
+    }
+
+    const runId = `recipe-run:${options.state.persistent.nextRecipeRunIndex}`;
+    options.state.persistent.nextRecipeRunIndex += 1;
+    return {
+      runId,
+      recipeId: plan.recipeId,
+      recipeType: plan.recipeType,
+      progressTicks: 0,
+      durationTicks: plan.durationTicks,
+      state: "running",
+      plan,
+      reservations,
+      inputItems: aggregateInputItems(reservations),
+    };
+  }
+
+  return null;
+}
+
 // AI-CORRECTION 2026-05-13: resolveDeviceRecipePlans 现在接受 channel 级参数。
 // ingredientNodeIds / productNodeIds 从 channel 获取而非从 device 全局获取。
 // AI-CORRECTION 2026-05-14: 签名重构为 device + channel 对象，消除字段散落导致的传参遗漏 bug。
