@@ -102,6 +102,10 @@ vi.mock("@/renderer/scene/decorations/BeltFlowDecoration", () => ({
   createBeltFlowDecoration: () => orchestratorTestState.createDecoration(),
 }))
 
+vi.mock("@/renderer/scene/decorations/PipeFlowDecoration", () => ({
+  createPipeFlowDecoration: () => orchestratorTestState.createDecoration(),
+}))
+
 vi.mock("@/renderer/scene/decorations/PowerRangeDecoration", () => ({
   createPowerRangeDecoration: () => orchestratorTestState.createDecoration(),
 }))
@@ -202,6 +206,7 @@ describe("createRenderSceneOrchestrator", () => {
 
     expect(ticker.add).toHaveBeenCalledTimes(1)
     expect(renderHost.app.stage.addChild).toHaveBeenCalledWith(
+      expect.anything(),
       expect.anything(),
       expect.anything(),
       expect.anything(),

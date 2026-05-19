@@ -45,6 +45,7 @@ import { createGrassBackgroundDecoration } from "./decorations/GrassBackgroundDe
 import { createBeltCargoDecoration } from "./decorations/BeltCargoDecoration"
 import { createBeltPortInsertionDecoration } from "./decorations/BeltPortInsertionDecoration"
 import { createBeltFlowDecoration } from "./decorations/BeltFlowDecoration"
+import { createPipeFlowDecoration } from "./decorations/PipeFlowDecoration"
 import { createPowerRangeDecoration } from "./decorations/PowerRangeDecoration"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
@@ -74,9 +75,11 @@ export function createRenderSceneOrchestrator(
   const marqueeCanvasDecoration = createMarqueeCanvasDecoration()
   const logisticsPlacementCanvasDecoration = createLogisticsPlacementCanvasDecoration()
   const beltFlowDecoration = createBeltFlowDecoration()
+  const pipeFlowDecoration = createPipeFlowDecoration()
   const beltPortInsertionDecoration = createBeltPortInsertionDecoration()
   const beltCargoDecoration = createBeltCargoDecoration()
   const beltFlowLayer = new Container()
+  const pipeFlowLayer = new Container()
   const beltInsertionLayer = new Container()
   const beltCargoOverlayLayer = new Container()
   const invalidPlacementOverlayLayer = new Container()
@@ -146,6 +149,8 @@ export function createRenderSceneOrchestrator(
 
     beltFlowDecoration.sync(ctx)
 
+    pipeFlowDecoration.sync(ctx)
+
     beltPortInsertionDecoration.sync(ctx)
 
     beltCargoDecoration.sync(ctx)
@@ -157,6 +162,7 @@ export function createRenderSceneOrchestrator(
     layers.background,
     layers.entity,
     beltFlowLayer,
+    pipeFlowLayer,
     beltInsertionLayer,
     beltCargoOverlayLayer,
     layers.overlay,
@@ -170,6 +176,7 @@ export function createRenderSceneOrchestrator(
   layers.background.addChild(previewRectDecoration.container)
   invalidPlacementOverlayLayer.addChild(invalidPlacementDecoration.container)
   beltFlowLayer.addChild(beltFlowDecoration.container)
+  pipeFlowLayer.addChild(pipeFlowDecoration.container)
   beltInsertionLayer.addChild(beltPortInsertionDecoration.container)
   beltCargoOverlayLayer.addChild(beltCargoDecoration.container)
   marqueeOverlayLayer.addChild(marqueeCanvasDecoration.container)
@@ -197,11 +204,13 @@ export function createRenderSceneOrchestrator(
       logisticsPlacementCanvasDecoration.destroy()
       diagnosticsDecoration.destroy()
       beltFlowDecoration.destroy()
+      pipeFlowDecoration.destroy()
       beltPortInsertionDecoration.destroy()
       beltCargoDecoration.destroy()
       layers.background.destroy({ children: true })
       layers.entity.destroy({ children: true })
       beltFlowLayer.destroy({ children: true })
+      pipeFlowLayer.destroy({ children: true })
       beltInsertionLayer.destroy({ children: true })
       beltCargoOverlayLayer.destroy({ children: true })
       invalidPlacementOverlayLayer.destroy({ children: true })
