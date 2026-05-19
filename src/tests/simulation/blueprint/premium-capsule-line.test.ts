@@ -14,10 +14,9 @@ const OBSERVATION_TICKS = 5400; // 滑动窗口持续观察 3 分钟
 const TARGET_OUTPUT_PER_WINDOW = 6;
 
 // 该测试需从磁盘读取大型蓝图文件并运行 7200 tick 仿真，耗时较长。
-// 默认跳过，设置 HEAVY=1 环境变量后才会执行。
-const runHeavy = process.env.HEAVY === "1";
-
-describe.skipIf(!runHeavy)("REQ-076: premium capsule line production", () => {
+// 由 vitest blueprint project 承载，独立串行执行，不再依赖 HEAVY 环境变量。
+// AI-CORRECTION 2026-05-18: 移除 HEAVY=1 / describe.skipIf，改为 vitest projects 区分。
+describe("REQ-076: premium capsule line production", () => {
   it("经过 1800 tick 预热后，滑动 1800-tick（1分钟）窗口内平均产出 >= 6 个精选胶囊，持续 5400 tick（3分钟）无误", { timeout: 120_000 }, async () => {
     const blueprint = loadBlueprintFromFile(BLUEPRINT_PATH);
     const maxTick = WARMUP_TICKS + OBSERVATION_TICKS; // 7200
