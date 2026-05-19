@@ -150,7 +150,7 @@ export function createMarqueeRectDecoration(): DecorationLayer {
         return;
       }
 
-      const theme = ctx.renderHost.workspace.app!.state.theme;
+      const theme = ctx.theme;
       const strokeStyle = resolveMarqueeGridRectStrokeStyle(
         ctx.viewportState.gridCellPixelSize,
         theme,

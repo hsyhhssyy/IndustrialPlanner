@@ -491,6 +491,7 @@ function createFlowContext(options: {
       width: 400,
       height: 200,
     },
+    theme: AYU_LIGHT_THEME,
     renderHost: {
       workspace: {
         state: {} as never,

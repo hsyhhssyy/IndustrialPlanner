@@ -62,6 +62,7 @@ vi.mock("pixi.js", () => {
 })
 
 import { createDummyWorldDocument } from "@/editor/dummy-document"
+import { AYU_LIGHT_THEME } from "@/app/theme"
 import { createRegistryContract } from "@/registry"
 import {
   createBaseBoundaryDecoration,
@@ -204,6 +205,7 @@ function createDecorationContext(baseId: string): DecorationSyncContext {
       width: 200,
       height: 100,
     },
+    theme: AYU_LIGHT_THEME,
     renderHost: {
       workspace: {
         state: {} as never,

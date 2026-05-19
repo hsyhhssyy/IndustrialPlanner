@@ -179,15 +179,10 @@ function resolveBeltPortExtensionTint(
   ctx: DecorationSyncContext,
   beltEntityId: string,
 ): number {
-  const theme = ctx.renderHost.workspace.app?.state.theme
-  if (theme === undefined) {
-    return 0xf59e0b
-  }
-
   return resolveDedicatedLogisticTintColor({
     entityId: beltEntityId,
     spriteId: "belt_straight_1x1",
-    theme,
+    theme: ctx.theme,
     workspace: ctx.renderHost.workspace,
   })
 }

@@ -186,7 +186,7 @@ export function resolveDedicatedLogisticTintColor(options: {
   const ordinaryColor = spriteId.startsWith("pipe_")
     ? resolveAppThemeColorNumber(
       theme,
-      theme.colorScheme === "dark" ? "accent" : "accent-strong",
+      theme.renderer.pipeBodyTintColorKey,
     )
     : resolveAppThemeColorNumber(
       theme,
@@ -226,9 +226,10 @@ export function resolveDedicatedLogisticTintColor(options: {
     || isPlacementHead
     || (isSelected && (selectionCollection?.length ?? 0) === 1 && !isReverseMarquee)
   ) {
-    return theme.colorScheme === "dark"
-      ? 0xffffff
-      : resolveAppThemeColorNumber(theme, "text-2")
+    return resolveAppThemeColorNumber(
+      theme,
+      theme.renderer.dedicatedLogisticFocusTintColorKey,
+    )
   }
 
   return ordinaryColor

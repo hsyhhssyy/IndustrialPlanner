@@ -6,6 +6,7 @@ import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/host/app-host";
+import { AYU_DARK_THEME, AYU_LIGHT_THEME } from "@/app/theme";
 import type { GestureEvent } from "@/app/input/gesture/adapter";
 import {
   APP_SHORTCUTS_LOCAL_STORAGE_KEY,
@@ -2898,6 +2899,41 @@ describe("WorkbenchApp", () => {
         showGrassBackground: false,
       }),
     );
+  });
+
+  it("uses light in-canvas colors while keeping the app theme dark when simplified device icons are enabled", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      runInAction(() => {
+        appHost.internalState.settings.themeId = "ayu-dark";
+      });
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
+
+    expect(workbench).not.toBeNull();
+    expect(workbench?.style.getPropertyValue("--in-canvas-bg")).toBe(
+      AYU_DARK_THEME.colors["in-canvas-bg"],
+    );
+    expect(document.documentElement.style.colorScheme).toBe("dark");
+
+    act(() => {
+      runInAction(() => {
+        appHost.internalState.settings.gameUseSimplifiedDeviceIcons = true;
+      });
+    });
+
+    expect(workbench?.style.getPropertyValue("--in-canvas-bg")).toBe(
+      AYU_LIGHT_THEME.colors["in-canvas-bg"],
+    );
+    expect(workbench?.style.getPropertyValue("--in-canvas-toolbar-button-text")).toBe(
+      AYU_LIGHT_THEME.colors["in-canvas-toolbar-button-text"],
+    );
+    expect(workbench?.style.getPropertyValue("--surface-1")).toBe("");
+    expect(document.documentElement.style.colorScheme).toBe("dark");
   });
 
   it("shows device name and icon toggles and locks device icons on with simplified device icons", () => {

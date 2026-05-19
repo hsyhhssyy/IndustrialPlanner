@@ -100,6 +100,7 @@ vi.mock("@/renderer/scene/decorations/BeltFlowDecoration", () => ({
 
 import { createRenderSceneOrchestrator } from "@/renderer/scene/render-scene-orchestrator"
 import type { RenderHost } from "@/renderer/renderer-host"
+import { AYU_LIGHT_THEME } from "@/app/theme"
 
 describe("createRenderSceneOrchestrator", () => {
   it("passes raf delta ms to simulation playback advancement", () => {
@@ -137,7 +138,10 @@ describe("createRenderSceneOrchestrator", () => {
             screenProfile: {
               devicePixelRatio: 1,
             },
-            theme: {} as never,
+            settings: {
+              gameUseSimplifiedDeviceIcons: false,
+            },
+            theme: AYU_LIGHT_THEME,
           },
         },
         editor: {

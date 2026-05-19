@@ -1044,15 +1044,10 @@ function resolveBeltFlowTintColor(
   ctx: DecorationSyncContext,
   entry: ReturnType<typeof resolveBeltVisualPathEntries>[number],
 ): number {
-  const theme = ctx.renderHost.workspace.app?.state.theme
-  if (theme === undefined) {
-    return 0xf59e0b
-  }
-
   return resolveDedicatedLogisticTintColor({
     entityId: entry.entity.id,
     spriteId: entry.definition.spriteId,
-    theme,
+    theme: ctx.theme,
     workspace: ctx.renderHost.workspace,
   })
 }

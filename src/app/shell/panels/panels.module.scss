@@ -984,10 +984,10 @@
   min-width: 0;
   min-height: 34px;
   padding: 0 8px;
-  border-color: var(--canvas-floating-toolbar-button-border);
+  border-color: var(--line);
   border-radius: 10px;
-  background: var(--canvas-floating-toolbar-button-bg);
-  color: var(--canvas-floating-toolbar-button-text);
+  background: var(--surface-2);
+  color: var(--text-0);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -996,21 +996,21 @@
 }
 
 .selection-inspector-action-button:not(:disabled):hover {
-  border-color: var(--canvas-floating-toolbar-button-hover-border);
-  background: var(--canvas-floating-toolbar-button-hover-bg);
+  border-color: var(--line-strong);
+  background: var(--surface-3);
 }
 
 .selection-inspector-action-button.is-cancel,
 .selection-inspector-action-button.is-delete {
-  color: var(--canvas-floating-toolbar-cancel);
+  color: var(--danger);
 }
 
 .selection-inspector-action-button.is-rotate {
-  color: var(--canvas-floating-toolbar-button-text);
+  color: var(--text-0);
 }
 
 .selection-inspector-action-button.is-confirm {
-  color: var(--canvas-floating-toolbar-confirm);
+  color: var(--accent-strong);
 }
 
 .selection-inspector-action-icon {

@@ -672,7 +672,7 @@ export function createGridLineDecoration(): DecorationLayer {
         return;
       }
 
-      const theme = app.state.theme;
+      const theme = ctx.theme;
       const showGrass = app.state.settings.showGrassBackground;
       const forceColor = showGrass
         ? GRASS_BACKGROUND_GRID_LINE_COLOR

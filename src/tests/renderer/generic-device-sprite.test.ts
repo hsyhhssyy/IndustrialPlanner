@@ -737,7 +737,7 @@ describe("GenericDeviceSprite", () => {
       rotation: 0,
       tint: resolveAppThemeColorNumber(
         AYU_LIGHT_THEME,
-        "accent-strong",
+        AYU_LIGHT_THEME.renderer.pipeBodyTintColorKey,
       ),
     })
   })
@@ -1029,7 +1029,10 @@ describe("GenericDeviceSprite", () => {
 
     await flushMicrotasks(4)
 
-    const mutedLightTint = resolveAppThemeColorNumber(AYU_LIGHT_THEME, "text-2")
+    const mutedLightTint = resolveAppThemeColorNumber(
+      AYU_LIGHT_THEME,
+      AYU_LIGHT_THEME.renderer.dedicatedLogisticFocusTintColorKey,
+    )
 
     sprite.syncLayout(createBeltLayout(), createRenderContextStub({
       selectionIds: ["belt-entity-2"],
@@ -1178,7 +1181,7 @@ describe("GenericDeviceSprite", () => {
     ))
   })
 
-  it("uses white tint for preview and logistics head under the dark theme", async () => {
+  it("uses the renderer focus tint for preview and logistics head under the dark theme", async () => {
     const resolvedTexture = createLoadedTextureMock("belt-device-texture")
     const entityLayer = createLayerStub()
     const renderHost = createRenderHostStub({
@@ -1198,12 +1201,17 @@ describe("GenericDeviceSprite", () => {
 
     await flushMicrotasks(4)
 
+    const darkFocusTint = resolveAppThemeColorNumber(
+      AYU_DARK_THEME,
+      AYU_DARK_THEME.renderer.dedicatedLogisticFocusTintColorKey,
+    )
+
     sprite.syncLayout(createBeltLayout(), createRenderContextStub({
       selectionIds: [],
       previewIds: ["belt-entity-4"],
       theme: AYU_DARK_THEME,
     }))
-    expect(resolveEntitySprite(entityLayer)?.tint).toBe(0xffffff)
+    expect(resolveEntitySprite(entityLayer)?.tint).toBe(darkFocusTint)
 
     sprite.syncLayout(createBeltLayout(), createRenderContextStub({
       selectionIds: [],
@@ -1211,7 +1219,7 @@ describe("GenericDeviceSprite", () => {
       logisticsHeadIds: ["belt-entity-4"],
       theme: AYU_DARK_THEME,
     }))
-    expect(resolveEntitySprite(entityLayer)?.tint).toBe(0xffffff)
+    expect(resolveEntitySprite(entityLayer)?.tint).toBe(darkFocusTint)
   })
 
   it("shows a masked solid white overlay for preview devices", async () => {

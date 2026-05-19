@@ -1,3 +1,4 @@
+import type { AppTheme } from "@/domain/app/types/theme";
 import type { RenderHost } from "@/renderer/renderer-host";
 
 export interface RenderViewportState {
@@ -20,5 +21,6 @@ export interface DecorationSyncContext {
   viewportState: RenderViewportState;
   viewportBounds: DecorationViewportBounds;
   renderHost: RenderHost;
+  theme: AppTheme;
   nowMs: number;
 }

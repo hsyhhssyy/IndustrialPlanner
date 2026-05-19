@@ -9,6 +9,7 @@ import {
 } from "@/shared/geometry/grid"
 import type { GridRectSize } from "@/domain/shared/grid"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
+import { resolveEffectiveCanvasTheme } from "@/shared/theme/canvas-theme"
 import {
   Container,
   UPDATE_PRIORITY,
@@ -85,6 +86,11 @@ export function createRenderSceneOrchestrator(
       nowMs: renderHost.app.ticker.lastTime,
       deltaMs: renderHost.app.ticker.deltaMS,
     }
+    const workspaceApp = renderHost.workspace.app!
+    const effectiveCanvasTheme = resolveEffectiveCanvasTheme(
+      workspaceApp.state.theme,
+      workspaceApp.state.settings.gameUseSimplifiedDeviceIcons,
+    )
 
     applyViewportSize(app, viewportState)
     void renderHost.workspace.simulation?.actions.advancePlaybackByDeltaMs(frameTime.deltaMs)
@@ -98,6 +104,7 @@ export function createRenderSceneOrchestrator(
         height: app.renderer.height,
       },
       renderHost,
+      theme: effectiveCanvasTheme,
       nowMs: frameTime.nowMs,
     }
 
@@ -117,7 +124,7 @@ export function createRenderSceneOrchestrator(
       viewportState,
       frameTime,
       viewportBounds: ctx.viewportBounds,
-      theme: renderHost.workspace.app!.state.theme,
+      theme: effectiveCanvasTheme,
     })
 
     marqueeDecoration.sync(ctx)

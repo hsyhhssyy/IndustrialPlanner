@@ -53,6 +53,10 @@ import {
   isTouchLandscapeScreenProfile,
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
+import {
+  resolveEffectiveCanvasTheme,
+  resolveInCanvasThemeCssVariables,
+} from "@/shared/theme/canvas-theme";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -370,6 +374,10 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const previousScreenProfileRef = useRef(screenProfile);
   const prevUseInspectorPanelRef = useRef(useInspectorPanel);
   const hasVisibleDialogShell = isAnyDialogShellVisible(appHost);
+  const effectiveCanvasTheme = resolveEffectiveCanvasTheme(
+    appHost.state.theme,
+    appHost.state.settings.gameUseSimplifiedDeviceIcons,
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -515,6 +523,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
 
 
   const workbenchStyle = {
+    ...resolveInCanvasThemeCssVariables(effectiveCanvasTheme),
     "--left-toolbar-width": isCompactLeftToolbar ? "51px" : "68px",
     "--left-toolbar-button-scale": isCompactLeftToolbar ? "0.75" : "1",
     "--left-dock-width": leftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",

@@ -1076,7 +1076,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_log_splitter",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
-    tags: ["BeltFamily", "ChevronHidden"],
+    tags: ["BeltFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1132,7 +1132,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_log_converger",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
-    tags: ["BeltFamily", "ChevronHidden"],
+    tags: ["BeltFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1490,7 +1490,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_pipe_connector",
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
-    tags: ["武陵", "PipeFamily", "OuterRingAllowed", "ChevronHidden"],
+    tags: ["武陵", "PipeFamily", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [

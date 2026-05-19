@@ -114,7 +114,7 @@ export function createMarqueeCanvasDecoration(): DecorationLayer {
         .fill(0xffffff);
 
       const color = resolveAppThemeColorNumber(
-        ctx.renderHost.workspace.app!.state.theme,
+        ctx.theme,
         ctx.renderHost.workspace.app!.state.toolInfo.marqueeType === EntityCollectionType.marquee
           ? "accent"
           : "danger",

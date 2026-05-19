@@ -57,7 +57,7 @@ export function createPreviewRectDecoration(): DecorationLayer {
         return;
       }
 
-      const theme = app.state.theme;
+      const theme = ctx.theme;
       const fillColor = resolveAppThemeColorNumber(
         theme,
         theme.renderer.worldPreviewRectFillColorKey,
