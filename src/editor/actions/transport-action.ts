@@ -10,6 +10,7 @@ import {
   resolveEntityGridRect,
   isGridPointInsideRect,
 } from "../logistics/logistics-utils";
+import { syncPoweredEntityCollection } from "./powered-collection";
 import type { EditorActionsContext } from "./types";
 
 type EditorTransportActions = Pick<
@@ -194,7 +195,7 @@ export function createEditorTransportActions(
         }
       }
 
-      documentWriter.commit({
+      const committedDocument = documentWriter.commit({
         action: {
           type: "entity.delete",
           label: "批量删除物流设备",
@@ -207,6 +208,14 @@ export function createEditorTransportActions(
           entities: nextEntities,
         }),
       });
+
+      if (committedDocument !== null) {
+        syncPoweredEntityCollection({
+          document: committedDocument,
+          state,
+          workspace,
+        });
+      }
 
       // 从所有集合中移除已删除的实体
       removeEntityIdsFromCollections(toDelete);

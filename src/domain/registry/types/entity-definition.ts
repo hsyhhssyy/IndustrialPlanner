@@ -54,6 +54,8 @@ export interface EntityDefinition {
   requiresPower: boolean;
   /** 在电网中每 tick 消耗的电量 */
   powerDemand: number;
+  /** 供电范围边长，单位：格。仅供电源类设备声明。 */
+  powerRange?: number;
 
   /**
    * Inspector 面板声明（对应《模拟器抽象方式》§4 Inspector 层）。

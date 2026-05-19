@@ -73,7 +73,7 @@ type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "recipeChanne
 type EmptyEntityDefinitionInput = Pick<
   EntityDefinitionInput,
   "id" | "nameKey" | "spriteId" | "footprint" | "uiGroup" | "tags"
-> & Partial<Pick<EntityDefinitionInput, "requiresPower" | "powerDemand">>;
+> & Partial<Pick<EntityDefinitionInput, "requiresPower" | "powerDemand" | "powerRange">>;
 
 const RECIPE_MACHINE_IDS = new Set(
   RECIPE_DEFINITIONS.map((recipe) => recipe.machineId),
@@ -641,7 +641,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_unloader_1",
     footprint: { width: 3, height: 1 },
     uiGroup: "warehouse",
-    tags: [],
+    tags: ["AvatarHidden"],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1650,7 +1650,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_loader_1",
     footprint: { width: 3, height: 1 },
     uiGroup: "warehouse",
-    tags: [],
+    tags: ["AvatarHidden"],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -2319,6 +2319,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_power_diffuser_1",
     footprint: { width: 2, height: 2 },
     uiGroup: "resourcePower",
+    powerRange: 12,
     tags: [],
   }),
   createEntityDefinition({

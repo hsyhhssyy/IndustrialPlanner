@@ -520,6 +520,48 @@ describe("createEditorHost", () => {
     expect(editorHost.state.collections.preview.contains("preview-only")).toBe(false);
   });
 
+  it("syncs powered collection after placement and movement actions", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createSinglePlacementDraft(
+      "item_port_power_diffuser_1",
+      { x: 0, y: 0 },
+    );
+    expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+
+    editorHost.actions.createSinglePlacementDraft(
+      "item_port_grinder_1",
+      { x: 6, y: 6 },
+    );
+    expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+
+    editorHost.actions.createSinglePlacementDraft(
+      "item_port_storager_1",
+      { x: 30, y: 30 },
+    );
+    expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+
+    expect(editorHost.state.collections.powered).toEqual([
+      "item_port_power_diffuser_1:1",
+      "item_port_grinder_1:2",
+    ]);
+
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "item_port_grinder_1:2",
+    });
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.selection,
+      startGridPoint: { x: 0, y: 0 },
+      endGridPoint: { x: 30, y: 30 },
+    });
+
+    expect(editorHost.state.collections.powered).toEqual([
+      "item_port_power_diffuser_1:1",
+    ]);
+  });
+
   it("updates marquee collections from grid rect and clears both when cancelled", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -1679,6 +1721,7 @@ describe("createEditorHost", () => {
       "preview",
       "ghost",
       "logistics-head",
+      "powered",
     ]);
     expect(
       editorHost.queries.findEntityCollectionGridRect("selection"),
@@ -1688,6 +1731,7 @@ describe("createEditorHost", () => {
     expect(editorHost.queries.findEntityCollectionGridRect("preview")).toBeNull();
     expect(editorHost.queries.findEntityCollectionGridRect("ghost")).toBeNull();
     expect(editorHost.queries.findEntityCollectionGridRect("logistics-head")).toBeNull();
+    expect(editorHost.queries.findEntityCollectionGridRect("powered")).toBeNull();
   });
 
   it("computes the client rect for a world grid cell", () => {

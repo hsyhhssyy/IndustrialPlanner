@@ -6,6 +6,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRectSize } from "@/domain/shared/grid";
 import { createUuid } from "@/domain/shared/uuid";
 
+import { syncPoweredEntityCollection } from "./powered-collection";
 import type { EditorActionsContext } from "./types";
 
 type EditorPlacementActions = Pick<
@@ -210,7 +211,7 @@ export function createEditorPlacementActions({
         );
       }
 
-      documentWriter.commit({
+      const committedDocument = documentWriter.commit({
         action: state.internalTransientState.placementHistoryAction
           ?? createPlacementHistoryAction(previewDrafts),
         update: (documentSnapshot) => ({
@@ -220,6 +221,14 @@ export function createEditorPlacementActions({
           slotLinks: nextSlotLinks,
         }),
       });
+
+      if (committedDocument !== null) {
+        syncPoweredEntityCollection({
+          document: committedDocument,
+          state,
+          workspace,
+        });
+      }
 
       clearPlacementState(state);
       return true;

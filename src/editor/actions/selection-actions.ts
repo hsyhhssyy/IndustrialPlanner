@@ -14,6 +14,7 @@ import {
 
 import { type DraftEntity, isDraftEntity } from "../draft-entity";
 import { resolveEntityById, resolveListedEntities } from "../entity-resolvers";
+import { syncPoweredEntityCollection } from "./powered-collection";
 import type { EditorActionsContext } from "./types";
 
 type EditorCollectionActions = Pick<
@@ -137,7 +138,7 @@ export function createEditorSelectionActions({
             return entity === undefined ? [] : [entity];
           });
 
-        documentWriter.commit({
+        const committedDocument = documentWriter.commit({
           action: {
             type: "entity.delete",
             label: "删除设备",
@@ -152,6 +153,14 @@ export function createEditorSelectionActions({
             entities: nextEntities,
           }),
         });
+
+        if (committedDocument !== null) {
+          syncPoweredEntityCollection({
+            document: committedDocument,
+            state,
+            workspace,
+          });
+        }
       }
 
       const removedDraftIds = new Set<string>();
@@ -286,7 +295,7 @@ export function createEditorSelectionActions({
           .map((entityId) => currentDocument.entities[entityId])
           .filter((entity): entity is WorldEntity => entity !== undefined);
 
-        documentWriter.commit({
+        const committedDocument = documentWriter.commit({
           action: {
             type: "entity.move",
             label: "移动设备",
@@ -301,6 +310,14 @@ export function createEditorSelectionActions({
             entities: nextEntities,
           }),
         });
+
+        if (committedDocument !== null) {
+          syncPoweredEntityCollection({
+            document: committedDocument,
+            state,
+            workspace,
+          });
+        }
       }
 
       let didUpdateDrafts = false;
@@ -368,7 +385,7 @@ export function createEditorSelectionActions({
           .map((entityId) => currentDocument.entities[entityId])
           .filter((entity): entity is WorldEntity => entity !== undefined);
 
-        documentWriter.commit({
+        const committedDocument = documentWriter.commit({
           action: {
             type: "entity.rotate",
             label: "旋转设备",
@@ -383,6 +400,14 @@ export function createEditorSelectionActions({
             entities: nextEntities,
           }),
         });
+
+        if (committedDocument !== null) {
+          syncPoweredEntityCollection({
+            document: committedDocument,
+            state,
+            workspace,
+          });
+        }
       }
 
       let didUpdateDrafts = false;

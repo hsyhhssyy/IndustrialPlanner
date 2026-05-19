@@ -44,6 +44,7 @@ import { createGrassBackgroundDecoration } from "./decorations/GrassBackgroundDe
 import { createBeltCargoDecoration } from "./decorations/BeltCargoDecoration"
 import { createBeltPortInsertionDecoration } from "./decorations/BeltPortInsertionDecoration"
 import { createBeltFlowDecoration } from "./decorations/BeltFlowDecoration"
+import { createPowerRangeDecoration } from "./decorations/PowerRangeDecoration"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
@@ -64,6 +65,7 @@ export function createRenderSceneOrchestrator(
   const layers = createRenderLayers()
   const gridDecoration = createGridLineDecoration()
   const baseBoundaryDecoration = createBaseBoundaryDecoration()
+  const powerRangeDecoration = createPowerRangeDecoration()
   const previewRectDecoration = createPreviewRectDecoration()
   const marqueeDecoration = createMarqueeRectDecoration()
   const diagnosticsDecoration = createDiagnosticsDecoration()
@@ -112,6 +114,8 @@ export function createRenderSceneOrchestrator(
 
     baseBoundaryDecoration.sync(ctx)
 
+    powerRangeDecoration.sync(ctx)
+
     previewRectDecoration.sync(ctx)
 
     syncWorldEntitySprites({
@@ -156,6 +160,7 @@ export function createRenderSceneOrchestrator(
   app.stage.addChildAt(grassBackgroundDecoration.container, 0)
   layers.background.addChild(gridDecoration.container)
   layers.background.addChild(baseBoundaryDecoration.container)
+  layers.background.addChild(powerRangeDecoration.container)
   layers.background.addChild(previewRectDecoration.container)
   beltFlowLayer.addChild(beltFlowDecoration.container)
   beltInsertionLayer.addChild(beltPortInsertionDecoration.container)
@@ -177,6 +182,7 @@ export function createRenderSceneOrchestrator(
       entitySprites.clear()
       gridDecoration.destroy()
       baseBoundaryDecoration.destroy()
+      powerRangeDecoration.destroy()
       previewRectDecoration.destroy()
       marqueeDecoration.destroy()
       marqueeCanvasDecoration.destroy()

@@ -520,7 +520,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     const useBlueprintStyle = app?.state.settings.gameUseSimplifiedDeviceIcons ?? false;
     const showDeviceName = app?.state.settings.gameShowDeviceNames ?? true;
-    const showDeviceIcon = app?.state.settings.gameShowDeviceIcons ?? false;
+    const avatarHidden = this.definition.tags.includes("AvatarHidden");
+    const showDeviceIcon = avatarHidden ? false : (app?.state.settings.gameShowDeviceIcons ?? false);
 
     if (!this.isTextureReady || (!showDeviceName && !showDeviceIcon)) {
       this.deviceLabelRoot.visible = false;

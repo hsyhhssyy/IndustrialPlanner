@@ -197,8 +197,8 @@ export function CanvasTopLeftCornerToolbar({
             title={label}
             type="button"
           >
-            <WorkbenchIcon className={cm(styles, "canvas-top-left-corner-toolbar-icon")} kind={icon} />
             <span className={cm(styles, "canvas-top-left-corner-toolbar-label")}>{label}</span>
+            <WorkbenchIcon className={cm(styles, "canvas-top-left-corner-toolbar-icon")} kind={icon} />
           </button>
         );
       })}

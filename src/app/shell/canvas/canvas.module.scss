@@ -291,7 +291,7 @@
 
 .canvas-top-left-corner-toolbar {
   position: absolute;
-  top: calc(var(--top-bar-height, 48px) + 14px);
+  top: calc(var(--top-bar-height, 48px) + 14px + 40px);
   left: calc(68px + var(--left-dock-width, 0px) + 14px);
   z-index: 4;
   display: grid;

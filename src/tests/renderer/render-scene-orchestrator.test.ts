@@ -35,6 +35,7 @@ import {
   resolveMarqueeGridRectStrokeStyle,
   resolveWorldAuxiliaryStrokeWidth,
 } from "@/renderer/scene/decorations/MarqueeRectDecoration"
+import { resolvePowerRangeOutlineLayouts } from "@/renderer/scene/decorations/PowerRangeDecoration"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import type { RenderHost } from "@/renderer/renderer-host"
 
@@ -288,6 +289,86 @@ describe("resolveMarqueeGridRectStrokeStyle", () => {
       width: baseWidth * 1.5,
       color: 0x000000,
     })
+  })
+})
+
+describe("resolvePowerRangeOutlineLayouts", () => {
+  it("keeps rendering a power range when the power pole body is outside the viewport", () => {
+    const registry = createRegistryContract()
+    const entityDefinitionMap = new Map(
+      registry.entityDefinitions.map((definition) => [definition.id, definition]),
+    )
+
+    const layouts = resolvePowerRangeOutlineLayouts({
+      entities: [{
+        id: "pole",
+        definitionId: "item_port_power_diffuser_1",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      }],
+      entityDefinitionMap,
+      visibleWorldRect: {
+        left: 6.5,
+        top: 0,
+        right: 10,
+        bottom: 3,
+      },
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 100,
+        height: 100,
+      },
+      viewportCenter: {
+        x: 8,
+        y: 1.5,
+      },
+      gridCellPixelSize: 10,
+    })
+
+    expect(layouts).toHaveLength(1)
+    expect(layouts[0]).toMatchObject({
+      width: 120,
+      height: 120,
+    })
+  })
+
+  it("culls power range outlines only after the range itself leaves the viewport", () => {
+    const registry = createRegistryContract()
+    const entityDefinitionMap = new Map(
+      registry.entityDefinitions.map((definition) => [definition.id, definition]),
+    )
+
+    expect(resolvePowerRangeOutlineLayouts({
+      entities: [{
+        id: "pole",
+        definitionId: "item_port_power_diffuser_1",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      }],
+      entityDefinitionMap,
+      visibleWorldRect: {
+        left: 8,
+        top: 0,
+        right: 10,
+        bottom: 3,
+      },
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 100,
+        height: 100,
+      },
+      viewportCenter: {
+        x: 9,
+        y: 1.5,
+      },
+      gridCellPixelSize: 10,
+    })).toEqual([])
   })
 })
 

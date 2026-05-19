@@ -8,6 +8,7 @@ import type {
 import {
   applyWorldDocumentDelta,
 } from "../history";
+import { syncPoweredEntityCollection } from "./powered-collection";
 import type {
   EditorActionsContext,
 } from "./types";
@@ -25,6 +26,7 @@ export function createEditorHistoryActions({
   documentWriter,
   history,
   state,
+  workspace,
 }: EditorActionsContext): EditorHistoryActions {
   return {
     undoDocumentHistory: () => {
@@ -41,10 +43,17 @@ export function createEditorHistoryActions({
         "inverse",
       );
 
-      documentWriter.setSnapshot(nextDocument, {
+      const committedDocument = documentWriter.setSnapshot(nextDocument, {
         action: createRestoreAction("撤销", record),
         mode: "replay",
       });
+      if (committedDocument !== null) {
+        syncPoweredEntityCollection({
+          document: committedDocument,
+          state,
+          workspace,
+        });
+      }
       history.setCursorSequence(currentDocument.documentKey, record.sequence - 1);
 
       return true;
@@ -64,10 +73,17 @@ export function createEditorHistoryActions({
         "forward",
       );
 
-      documentWriter.setSnapshot(nextDocument, {
+      const committedDocument = documentWriter.setSnapshot(nextDocument, {
         action: createRestoreAction("重做", record),
         mode: "replay",
       });
+      if (committedDocument !== null) {
+        syncPoweredEntityCollection({
+          document: committedDocument,
+          state,
+          workspace,
+        });
+      }
       history.setCursorSequence(currentDocument.documentKey, record.sequence);
 
       return true;
@@ -110,10 +126,17 @@ export function createEditorHistoryActions({
         currentDocument,
       );
 
-      documentWriter.setSnapshot(nextDocument, {
+      const committedDocument = documentWriter.setSnapshot(nextDocument, {
         action: createRestoreAction("还原历史", restoreRecords.at(-1) ?? restoreRecords[0]),
         mode: "replay",
       });
+      if (committedDocument !== null) {
+        syncPoweredEntityCollection({
+          document: committedDocument,
+          state,
+          workspace,
+        });
+      }
       history.setCursorSequence(currentDocument.documentKey, targetSequence);
 
       return true;

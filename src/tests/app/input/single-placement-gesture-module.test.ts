@@ -479,6 +479,7 @@ function createContext(options: {
         [EntityCollectionType.preview]: preview,
         [EntityCollectionType.ghost]: ghost,
         [EntityCollectionType.logisticsHead]: createCollection([]),
+        [EntityCollectionType.powered]: createCollection([]),
       },
     },
     queries: {

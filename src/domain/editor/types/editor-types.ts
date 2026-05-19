@@ -16,6 +16,7 @@ export const EntityCollectionType = {
   preview: "preview",
   ghost: "ghost",
   logisticsHead: "logistics-head",
+  powered: "powered",
 } as const;
 
 export type EntityCollectionType =

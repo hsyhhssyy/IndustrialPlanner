@@ -7,6 +7,7 @@ import {
   isDraftEntity,
 } from "../draft-entity";
 import { resolveEntityById } from "../entity-resolvers";
+import { syncPoweredEntityCollection } from "./powered-collection";
 import type { EditorActionsContext } from "./types";
 
 type EditorMoveActions = Pick<
@@ -18,6 +19,7 @@ export function createEditorMoveActions({
   document,
   documentWriter,
   state,
+  workspace,
 }: EditorActionsContext): EditorMoveActions {
   const resolveCollection = (collectionType: EntityCollectionType) =>
     state.collections[collectionType];
@@ -105,7 +107,7 @@ export function createEditorMoveActions({
       }
 
       if (didUpdateDocument) {
-        documentWriter.commit({
+        const committedDocument = documentWriter.commit({
           action: {
             type: "entity.move",
             label: "移动设备",
@@ -120,6 +122,14 @@ export function createEditorMoveActions({
             entities: nextEntities,
           }),
         });
+
+        if (committedDocument !== null) {
+          syncPoweredEntityCollection({
+            document: committedDocument,
+            state,
+            workspace,
+          });
+        }
       }
 
       clearMoveOperationState(state);

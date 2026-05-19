@@ -6,6 +6,7 @@ import {
   resolveLatestWorldDocumentForBase,
 } from "../document-storage";
 import type { EditorStateReadWrite } from "../state-impl";
+import { syncPoweredEntityCollection } from "./powered-collection";
 import type { EditorActionsContext } from "./types";
 
 type EditorDocumentActions = Pick<EditorAction, "loadLatestBaseDocument">;
@@ -28,7 +29,12 @@ export function createEditorDocumentActions({
       const nextDocument = latestDocument ?? createWorldDocument({ baseId });
 
       resetDocumentRuntimeState(state);
-      document.setSnapshot(nextDocument);
+      const committedDocument = document.setSnapshot(nextDocument);
+      syncPoweredEntityCollection({
+        document: committedDocument,
+        state,
+        workspace,
+      });
 
       return true;
     },

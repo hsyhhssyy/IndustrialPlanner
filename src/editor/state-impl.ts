@@ -183,6 +183,7 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
     [EntityCollectionType.preview]: createEntityCollection(),
     [EntityCollectionType.ghost]: createEntityCollection(),
     [EntityCollectionType.logisticsHead]: createEntityCollection(),
+    [EntityCollectionType.powered]: createEntityCollection(),
   };
   internalPersistState: EditorInternalPersistStateReadWrite =
     new EditorInternalPersistStateReadWriteImpl();

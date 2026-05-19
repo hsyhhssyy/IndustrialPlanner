@@ -94,9 +94,11 @@ export function createLogisticsPlacementCanvasDecoration(): DecorationLayer {
 
     sync(ctx: DecorationSyncContext): void {
       const appState = ctx.renderHost.workspace.app!.state;
-      const kind = resolveLogisticsPlacementKind(ctx);
+      const logisticsKind = resolveLogisticsPlacementKind(ctx);
+      const isLogisticsPlacement = appState.activeTool === "logistics-placement" && logisticsKind !== null;
+      const isSinglePlacement = appState.activeTool === "single-placement";
 
-      if (appState.activeTool !== "logistics-placement" || kind === null) {
+      if (!isLogisticsPlacement && !isSinglePlacement) {
         graphics.visible = false;
         return;
       }
@@ -142,7 +144,11 @@ export function createLogisticsPlacementCanvasDecoration(): DecorationLayer {
           alpha,
         });
 
-      modeLabel.text = LOGISTICS_PLACEMENT_LABELS[kind];
+      modeLabel.text = isSinglePlacement
+        ? "放置设备"
+        : logisticsKind === null
+          ? ""
+          : LOGISTICS_PLACEMENT_LABELS[logisticsKind];
       modeLabel.x = 12;
       modeLabel.y = 12;
     },
