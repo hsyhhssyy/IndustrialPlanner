@@ -17,6 +17,23 @@ import { runInAction } from "mobx";
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
+// 桥接变量：触发点（UI 按钮 / 快捷键）写入，on-enter-active-tool("single-placement") 读取后立即置 null。
+// 用于在 setActiveTool 触发生命周期事件之前，将进入参数暂存在模块内部，
+// 避免受 mobx action reaction 时序影响。
+type PendingPlacementEnter = {
+  deviceId: string;
+  anchor: GridPoint;
+  pointerMode: "mouse" | "touch";
+};
+
+let pendingPlacementEnter: PendingPlacementEnter | null = null;
+
+// 2026-05-19 订正：将进入参数从 state.runtime 中收回，改为手势模块私有闭包变量。
+// 触发点只写此变量 + setActiveTool，on-enter 执行业务（创建 draft / 同步 UI）。
+export function setPendingSinglePlacementEnter(data: PendingPlacementEnter): void {
+  pendingPlacementEnter = data;
+}
+
 export const PLACEMENT_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-cancel",
   "canvas-floating-toolbar-button-rotate",
@@ -54,6 +71,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return { status: "ignored" };
         }
 
+        pendingPlacementEnter = null;
         cleanupPlacementDraft(context.appHost);
         return { status: "handled" };
       }
@@ -63,6 +81,41 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return { status: "ignored" };
         }
 
+        // 桥接变量路径：触发点已写入全部参数，在此创建 draft 并同步 UI
+        if (pendingPlacementEnter !== null) {
+          const { deviceId, anchor, pointerMode } = pendingPlacementEnter;
+          pendingPlacementEnter = null;
+
+          closeCompactLeftDockOnPlacementEnter(context.appHost);
+
+          context.appHost.internalState.runtime.placementAnchor = anchor;
+          context.appHost.internalState.runtime.singlePlacementPointerMode = pointerMode;
+
+          const editor = context.workspace.editor;
+          if (editor !== null) {
+            try {
+              editor.actions.createSinglePlacementDraft(deviceId, anchor);
+              const previewRect = editor.queries.findEntityCollectionGridRect(
+                EntityCollectionType.preview,
+              );
+              if (previewRect === null) {
+                restoreFailedPlacementEnter(context.appHost, editor);
+                return { status: "handled" };
+              }
+              runInAction(() => {
+                context.appHost.internalState.runtime.singlePlacementDeviceId = deviceId;
+              });
+            } catch {
+              restoreFailedPlacementEnter(context.appHost, editor);
+              return { status: "handled" };
+            }
+          }
+
+          syncPlacementEntryUi(context.appHost, pointerMode);
+          return { status: "handled" };
+        }
+
+        // 兜底：无桥接变量时保持原有逻辑
         closeCompactLeftDockOnPlacementEnter(context.appHost);
         syncPlacementEntryUi(context.appHost);
         return { status: "handled" };
@@ -421,14 +474,21 @@ function finalizePlacementEnter(options: {
     return { status: "ignored" };
   }
 
-  try {
-    // 2026-05-19 订正：先切换 activeTool 再创建草稿。旧顺序是先创建草稿再切换工具，
-    // 切换工具会触发 logistics-placement 的 on-exit-active-tool → clearLogisticsDraftState 无差别清空
-    // preview 集合，导致刚创建的放置草稿被误清除。
-    if (options.shouldSetActiveTool) {
-      options.appHost.internalActions.setActiveTool("single-placement");
-    }
+  // 2026-05-19 订正：shouldSetActiveTool 路径改为写桥接变量 + setActiveTool，
+  // draft 创建和 UI 同步交由 on-enter-active-tool 统一处理，
+  // 彻底消除"先切工具 vs 先创建 draft"的时序问题。
+  if (options.shouldSetActiveTool) {
+    setPendingSinglePlacementEnter({
+      deviceId: options.deviceId,
+      anchor: placementAnchor,
+      pointerMode: options.source,
+    });
+    options.appHost.internalActions.setActiveTool("single-placement");
+    return { status: "handled" };
+  }
 
+  // shouldSetActiveTool: false 路径：已在 single-placement 中，不走生命周期，保持原位创建
+  try {
     options.appHost.internalState.runtime.placementAnchor = placementAnchor;
     options.appHost.internalState.runtime.singlePlacementPointerMode = options.source;
     options.editor.actions.createSinglePlacementDraft(options.deviceId, placementAnchor);
@@ -446,7 +506,7 @@ function finalizePlacementEnter(options: {
       options.appHost.internalState.runtime.singlePlacementDeviceId = options.deviceId;
     });
 
-    if (!options.shouldSetActiveTool && !syncPlacementEntryUi(options.appHost)) {
+    if (!syncPlacementEntryUi(options.appHost)) {
         restoreFailedPlacementEnter(options.appHost, options.editor);
         return { status: "ignored" };
     }
@@ -640,6 +700,7 @@ export function closeCompactLeftDockOnPlacementEnter(appHost: AppHost): void {
 }
 
 function restoreFailedPlacementEnter(appHost: AppHost, editor: EditorContract): void {
+  pendingPlacementEnter = null;
   safelyCancelPlacementDraft(editor);
   clearPlacementUi(appHost);
   appHost.internalActions.setActiveTool("select");

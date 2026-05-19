@@ -25,19 +25,21 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     const result = module.handle(placementMouseTapEvent("device-a"), context);
 
     expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    // 2026-05-19 订正：draft 创建已移至 on-enter-active-tool 统一处理，
+    // 触发点只写桥接变量 + setActiveTool。
+    expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
+
+    expect(
+      module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
+    ).toEqual({ status: "handled" });
     expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-a", {
       x: 50,
       y: 40,
     });
     expect(editor.actions.moveCollectionTo).not.toHaveBeenCalled();
-    expect(appHost.internalState.activeTool).toBe("single-placement");
     expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 50, y: 40 });
     expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-a");
-    expect(appHost.internalActions.hideCanvasFloatingToolbar).not.toHaveBeenCalled();
-
-    expect(
-      module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
-    ).toEqual({ status: "handled" });
     expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
@@ -50,11 +52,17 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     const result = module.handle(placementMouseTapEvent("device-a"), context);
 
     expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    // 2026-05-19 订正：draft 创建已移至 on-enter-active-tool 统一处理。
+    expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
+
+    expect(
+      module.handle(onEnterActiveToolEvent("marquee", "single-placement"), context),
+    ).toEqual({ status: "handled" });
     expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-a", {
       x: 50,
       y: 40,
     });
-    expect(appHost.internalState.activeTool).toBe("single-placement");
   });
 
   it("still only enters from select when using a number shortcut", () => {
@@ -161,11 +169,17 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     const result = module.handle(keyDownEvent({ code: "Digit3", key: "3" }), context);
 
     expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    // 2026-05-19 订正：draft 创建已移至 on-enter-active-tool 统一处理。
+    expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
+
+    expect(
+      module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
+    ).toEqual({ status: "handled" });
     expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith(
       "item_port_log_hongs_bus",
       { x: 50, y: 40 },
     );
-    expect(appHost.internalState.activeTool).toBe("single-placement");
     expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("item_port_log_hongs_bus");
   });
 
@@ -182,6 +196,13 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     const result = module.handle(keyDownEvent({ code: "Digit3", key: "3" }), context);
 
     expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    // 2026-05-19 订正：draft 创建已移至 on-enter-active-tool 统一处理。
+    expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
+
+    expect(
+      module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
+    ).toEqual({ status: "handled" });
     expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith(
       "item_port_log_hongs_bus",
       { x: 7, y: 8 },

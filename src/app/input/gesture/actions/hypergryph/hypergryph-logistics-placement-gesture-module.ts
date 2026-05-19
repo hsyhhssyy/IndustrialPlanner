@@ -9,7 +9,6 @@ import type {
 } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
-import { runInAction } from "mobx";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
@@ -17,6 +16,7 @@ import {
   resolveDeviceIdForPlacementGroupShortcut,
   resolveDeviceShortcutIndex,
   resolvePlacementGroupByShortcut,
+  setPendingSinglePlacementEnter,
 } from "./hypergryph-single-placement-gesture-module";
 
 const LOGISTICS_TOOLBAR_BUTTON_IDS = [
@@ -791,26 +791,16 @@ function handleLogisticsDeviceShortcut(options: {
     return { status: "ignored" };
   }
 
-  options.editor.actions.cancelLogisticsDraft();
-  resetLogisticsRuntime(options.appHost);
-  options.appHost.internalState.runtime.singlePlacementPointerMode = "mouse";
-  options.appHost.internalActions.setActiveTool("single-placement");
+  // 2026-05-19 订正：不再手动创建 draft / 清理 logistics，改为写桥接变量 + setActiveTool。
+  // logistics-placement 的 on-exit 自动清理 logistics draft，
+  // single-placement 的 on-enter 读取桥接变量创建 placement draft。
+  setPendingSinglePlacementEnter({
+    deviceId,
+    anchor,
+    pointerMode: "mouse",
+  });
   options.appHost.internalState.runtime.selectingPlacementGroup = group;
-  options.appHost.internalState.runtime.placementAnchor = anchor;
-
-  try {
-    options.editor.actions.createSinglePlacementDraft(deviceId, anchor);
-    runInAction(() => {
-      options.appHost.internalState.runtime.singlePlacementDeviceId = deviceId;
-    });
-  } catch {
-    runInAction(() => {
-      options.appHost.internalState.runtime.placementAnchor = null;
-      options.appHost.internalState.runtime.singlePlacementDeviceId = null;
-    });
-    options.appHost.internalActions.setActiveTool("select");
-    return { status: "ignored" };
-  }
+  options.appHost.internalActions.setActiveTool("single-placement");
 
   return { status: "handled" };
 }

@@ -25,7 +25,7 @@ const VALID_PLACEMENT_RESULT: EntityPlacementValidationResult = {
 const PLACEMENT_REASON_MESSAGES: Record<EntityPlacementValidationReasonCode, string> = {
   "outside-base": "必须放置在基地内",
   overlap: "不能与其他设备重叠",
-  "warehouse-bus-disconnected": "必须连接到仓库存取线源桩或合法存取线基段",
+  "warehouse-bus-disconnected": "未有效连接到源桩",
 };
 
 interface PlacementValidationEntry {
