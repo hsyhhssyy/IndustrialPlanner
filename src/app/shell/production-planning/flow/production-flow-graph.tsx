@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ProductionPlanningDisplayMode, ProductionPlanningIndex, ProductionPlanningResult } from "../production-planning-model";
 import { buildProductionFlowGraph, type ProductionFlowLink, type ProductionFlowNode } from "./flow-graph-builder";
@@ -18,7 +18,7 @@ interface ViewportState {
   readonly scale: number;
 }
 
-interface DragState {
+interface NodeDragState {
   readonly pointerId: number;
   readonly nodeId: string;
   readonly startClientX: number;
@@ -29,10 +29,29 @@ interface DragState {
   readonly startY1: number;
 }
 
+interface PanDragState {
+  readonly pointerId: number;
+  readonly viewportX: number;
+  readonly viewportY: number;
+  readonly clientX: number;
+  readonly clientY: number;
+}
+
+interface PinchState {
+  readonly startDistance: number;
+  readonly startScale: number;
+  readonly startViewportX: number;
+  readonly startViewportY: number;
+  readonly midClientX: number;
+  readonly midClientY: number;
+}
+
 const NODE_WIDTH = 190;
 const NODE_CARD_HEIGHT = 64;
 const NODE_PADDING = 22;
 const LAYOUT_HEIGHT = 620;
+const MIN_SCALE = 0.15;
+const MAX_SCALE = 3.0;
 
 export function ProductionFlowGraph({
   displayMode,
@@ -53,63 +72,102 @@ export function ProductionFlowGraph({
   }, [graphInput]);
   const [graph, setGraph] = useState(initialLayout);
   const [viewport, setViewport] = useState<ViewportState>({ x: 22, y: 22, scale: 1 });
-  const dragRef = useRef<DragState | null>(null);
+  const viewportRef = useRef(viewport);
+
+  useEffect(() => {
+    viewportRef.current = viewport;
+  }, [viewport]);
+
+  const interactionRef = useRef<{
+    node: NodeDragState | null;
+    pan: PanDragState | null;
+    pinch: PinchState | null;
+  }>({
+    node: null,
+    pan: null,
+    pinch: null,
+  });
 
   useEffect(() => {
     setGraph(initialLayout);
   }, [initialLayout]);
 
-  if (graphInput.nodes.length === 0) {
-    return <div className={styles["production-planning-empty"]}>{t("productionPlanning.noRecipes")}</div>;
-  }
-
-  const bounds = getGraphBounds(graph);
-  const canvasWidth = Math.max(960, bounds.width + 44);
-  const canvasHeight = Math.max(520, bounds.height + 44);
-
-  const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
+  // --- wheel zoom (centered on cursor) ---
+  const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
-    const direction = event.deltaY > 0 ? -1 : 1;
-    const nextScale = clamp(viewport.scale + direction * 0.08, 0.55, 1.8);
-    setViewport((current) => ({ ...current, scale: nextScale }));
-  };
+    const rect = event.currentTarget.getBoundingClientRect();
+    const cursorX = event.clientX - rect.left;
+    const cursorY = event.clientY - rect.top;
 
-  const handleCanvasPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 1 && !(event.button === 0 && event.altKey)) {
+    setViewport((current) => {
+      const direction = event.deltaY > 0 ? -1 : 1;
+      const nextScale = clamp(current.scale + direction * 0.1, MIN_SCALE, MAX_SCALE);
+      const ratio = nextScale / current.scale;
+      return {
+        x: cursorX - ratio * (cursorX - current.x),
+        y: cursorY - ratio * (cursorY - current.y),
+        scale: nextScale,
+      };
+    });
+  }, []);
+
+  // --- unified pointer down on canvas (not on a node / toolbar) ---
+  const handleCanvasPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 && event.button !== 1) {
       return;
     }
 
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const base = viewport;
-    const pointerId = event.pointerId;
-    event.currentTarget.setPointerCapture(pointerId);
+    const target = event.target as HTMLElement | null;
+    if (target?.closest(`.${styles["production-flow-toolbar"]}`) !== null) {
+      return;
+    }
 
-    const move = (moveEvent: PointerEvent) => {
-      setViewport({
-        ...base,
-        x: base.x + moveEvent.clientX - startX,
-        y: base.y + moveEvent.clientY - startY,
-      });
-    };
-    const stop = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", stop);
-      window.removeEventListener("pointercancel", stop);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", stop, { once: true });
-    window.addEventListener("pointercancel", stop, { once: true });
-  };
+    event.currentTarget.setPointerCapture(event.pointerId);
 
-  const handleNodePointerDown = (event: ReactPointerEvent<HTMLDivElement>, node: SankeyNode<ProductionFlowNode>) => {
+    const interaction = interactionRef.current;
+
+    // If we already have a pan going and a second pointer arrives, switch to pinch
+    if (interaction.pan !== null && interaction.pan.pointerId !== event.pointerId) {
+      const p0 = interaction.pan;
+      const dx = event.clientX - p0.clientX;
+      const dy = event.clientY - p0.clientY;
+      interaction.pan = null;
+      interaction.pinch = {
+        startDistance: Math.sqrt(dx * dx + dy * dy),
+        startScale: viewportRef.current.scale,
+        startViewportX: viewportRef.current.x,
+        startViewportY: viewportRef.current.y,
+        midClientX: (event.clientX + p0.clientX) / 2,
+        midClientY: (event.clientY + p0.clientY) / 2,
+      };
+
+      return;
+    }
+
+    // Start pan drag (any button — left, middle, or Alt+left)
+    interaction.pan = {
+      pointerId: event.pointerId,
+      viewportX: viewportRef.current.x,
+      viewportY: viewportRef.current.y,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    };
+    interaction.pinch = null;
+  }, []);
+
+  // --- node drag start ---
+  const handleNodePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>, node: SankeyNode<ProductionFlowNode>) => {
     if (event.button !== 0) {
       return;
     }
 
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = {
+
+    const interaction = interactionRef.current;
+    interaction.pan = null;
+    interaction.pinch = null;
+    interaction.node = {
       pointerId: event.pointerId,
       nodeId: node.id,
       startClientX: event.clientX,
@@ -119,50 +177,115 @@ export function ProductionFlowGraph({
       startY0: node.y0,
       startY1: node.y1,
     };
-  };
+  }, []);
 
-  const handleNodePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const drag = dragRef.current;
-    if (drag === null || drag.pointerId !== event.pointerId) {
+  // --- unified pointer move ---
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const interaction = interactionRef.current;
+
+    // Pinch
+    if (interaction.pinch !== null && interaction.pan !== null) {
+      const p0 = interaction.pan;
+      const dx = event.clientX - p0.clientX;
+      const dy = event.clientY - p0.clientY;
+      const currentDistance = Math.sqrt(dx * dx + dy * dy);
+      if (interaction.pinch.startDistance < 1) {
+        return;
+      }
+      const scaleRatio = currentDistance / interaction.pinch.startDistance;
+      const nextScale = clamp(interaction.pinch.startScale * scaleRatio, MIN_SCALE, MAX_SCALE);
+      const midX = (event.clientX + p0.clientX) / 2;
+      const midY = (event.clientY + p0.clientY) / 2;
+      const ratio = nextScale / interaction.pinch.startScale;
+      setViewport({
+        x: midX - ratio * (midX - interaction.pinch.startViewportX),
+        y: midY - ratio * (midY - interaction.pinch.startViewportY),
+        scale: nextScale,
+      });
+
       return;
     }
 
-    const dx = (event.clientX - drag.startClientX) / viewport.scale;
-    const dy = (event.clientY - drag.startClientY) / viewport.scale;
-    setGraph((current) => {
-      const next: SankeyGraph<ProductionFlowNode, ProductionFlowLink> = {
-        nodes: current.nodes.map((node) => {
-          if (node.id !== drag.nodeId) {
-            return node;
-          }
-          node.x0 = drag.startX0 + dx;
-          node.x1 = drag.startX1 + dx;
-          node.y0 = Math.max(0, drag.startY0 + dy);
-          node.y1 = Math.max(node.y0 + 28, drag.startY1 + dy);
-          return node;
-        }),
-        links: current.links,
-      };
-      return updateSankeyLinkBreadths(next);
-    });
-  };
+    // Pan
+    if (interaction.pan !== null && interaction.pan.pointerId === event.pointerId) {
+      setViewport({
+        x: interaction.pan.viewportX + event.clientX - interaction.pan.clientX,
+        y: interaction.pan.viewportY + event.clientY - interaction.pan.clientY,
+        scale: viewportRef.current.scale,
+      });
 
-  const handleNodePointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (dragRef.current?.pointerId === event.pointerId) {
-      dragRef.current = null;
+      return;
     }
-  };
+
+    // Node drag
+    if (interaction.node !== null && interaction.node.pointerId === event.pointerId) {
+      const dx = (event.clientX - interaction.node.startClientX) / viewportRef.current.scale;
+      const dy = (event.clientY - interaction.node.startClientY) / viewportRef.current.scale;
+      setGraph((current) => {
+        const next: SankeyGraph<ProductionFlowNode, ProductionFlowLink> = {
+          nodes: current.nodes.map((node) => {
+            if (node.id !== interaction.node!.nodeId) {
+              return node;
+            }
+            node.x0 = interaction.node!.startX0 + dx;
+            node.x1 = interaction.node!.startX1 + dx;
+            node.y0 = Math.max(0, interaction.node!.startY0 + dy);
+            node.y1 = Math.max(node.y0 + 28, interaction.node!.startY1 + dy);
+            return node;
+          }),
+          links: current.links,
+        };
+
+        return updateSankeyLinkBreadths(next);
+      });
+
+      return;
+    }
+  }, []);
+
+  // --- unified pointer up ---
+  const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const interaction = interactionRef.current;
+    if (interaction.node?.pointerId === event.pointerId) {
+      interaction.node = null;
+    }
+
+    if (interaction.pan?.pointerId === event.pointerId) {
+      // If pinch was active (meaning we had two pointers), just clean the pan slot
+      if (interaction.pinch !== null) {
+        interaction.pan = null;
+        interaction.pinch = null;
+      } else {
+        interaction.pan = null;
+      }
+    }
+
+    if (interaction.pinch !== null) {
+      interaction.pinch = null;
+    }
+  }, []);
+
+  if (graphInput.nodes.length === 0) {
+    return <div className={styles["production-planning-empty"]}>{t("productionPlanning.noRecipes")}</div>;
+  }
+
+  const bounds = getGraphBounds(graph);
+  const canvasWidth = Math.max(960, bounds.width + 44);
+  const canvasHeight = Math.max(520, bounds.height + 44);
 
   return (
     <div
       className={styles["production-flow-canvas"]}
       onWheel={handleWheel}
       onPointerDown={handleCanvasPointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
       <div className={styles["production-flow-toolbar"]}>
         <button type="button" onClick={() => setViewport({ x: 22, y: 22, scale: 1 })}>1:1</button>
-        <button type="button" onClick={() => setViewport((current) => ({ ...current, scale: clamp(current.scale - 0.12, 0.55, 1.8) }))}>-</button>
-        <button type="button" onClick={() => setViewport((current) => ({ ...current, scale: clamp(current.scale + 0.12, 0.55, 1.8) }))}>+</button>
+        <button type="button" onClick={() => setViewport((current) => ({ ...current, scale: clamp(current.scale - 0.12, MIN_SCALE, MAX_SCALE) }))}>-</button>
+        <button type="button" onClick={() => setViewport((current) => ({ ...current, scale: clamp(current.scale + 0.12, MIN_SCALE, MAX_SCALE) }))}>+</button>
       </div>
       <div
         className={styles["production-flow-surface"]}
@@ -184,9 +307,6 @@ export function ProductionFlowGraph({
               node={node}
               displayMode={displayMode}
               onPointerDown={handleNodePointerDown}
-              onPointerMove={handleNodePointerMove}
-              onPointerUp={handleNodePointerEnd}
-              onPointerCancel={handleNodePointerEnd}
             />
           ))}
         </div>
@@ -199,16 +319,10 @@ function FlowNode({
   node,
   displayMode,
   onPointerDown,
-  onPointerMove,
-  onPointerUp,
-  onPointerCancel,
 }: {
   readonly node: SankeyNode<ProductionFlowNode>;
   readonly displayMode: ProductionPlanningDisplayMode;
-  readonly onPointerDown: (event: ReactPointerEvent<HTMLDivElement>, node: SankeyNode<ProductionFlowNode>) => void;
-  readonly onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  readonly onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  readonly onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  readonly onPointerDown: (event: React.PointerEvent<HTMLDivElement>, node: SankeyNode<ProductionFlowNode>) => void;
 }) {
   const className = [
     styles["production-flow-node"],
@@ -229,9 +343,6 @@ function FlowNode({
         height: NODE_CARD_HEIGHT,
       }}
       onPointerDown={(event) => onPointerDown(event, node)}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerCancel}
     >
       <img alt="" src={node.source.iconSrc} />
       <div>
