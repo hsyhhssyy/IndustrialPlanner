@@ -22,8 +22,6 @@ import {
   buildProductionPlanningIndex,
   computeProductionPlan,
   createProductionPlanningId,
-  flattenProductionPlanningItemNodes,
-  flattenProductionPlanningRecipeNodes,
   formatProductionDeviceCount,
   formatProductionFlow,
   isRecipeExcludedFromProductionPlanningAuto,
@@ -39,6 +37,7 @@ import {
   type ProductionPlanningResult,
   type ProductionPlanningViewMode,
 } from "@/app/shell/production-planning/production-planning-model";
+import { ProductionFlowGraph } from "@/app/shell/production-planning/flow";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -690,8 +689,8 @@ function FlowGraph({
   displayMode,
   plan,
   index,
-  recipeChoices,
-  onSelectRecipe,
+  recipeChoices: _recipeChoices,
+  onSelectRecipe: _onSelectRecipe,
   t,
 }: {
   displayMode: ProductionPlanningDisplayMode;
@@ -701,52 +700,43 @@ function FlowGraph({
   onSelectRecipe: (itemId: string, recipeId: string | null) => void;
   t: (key: string) => string;
 }) {
-  const items = flattenProductionPlanningItemNodes(plan.roots);
-  const recipes = flattenProductionPlanningRecipeNodes(plan.roots);
-  const entries = displayMode === "item" ? items : recipes;
-
-  if (entries.length === 0) {
+  if (plan.roots.length === 0) {
     return <div className={cm(styles, "production-planning-empty")}>{t("productionPlanning.noRecipes")}</div>;
   }
 
   return (
-    <div className={cm(styles, "production-planning-flow")}>
-      {displayMode === "item"
-        ? items.map((node, indexInFlow) => (
-          <FlowCard key={node.id} indexInFlow={indexInFlow}>
-            <ItemTreeNode
-              node={node}
-              depth={0}
-              index={index}
-              recipeChoices={recipeChoices}
-              onSelectRecipe={onSelectRecipe}
-              t={t}
-            />
-          </FlowCard>
-        ))
-        : recipes.map((node, indexInFlow) => (
-          <FlowCard key={node.id} indexInFlow={indexInFlow}>
-            <RecipeCard recipeNode={node} index={index} t={t} />
-          </FlowCard>
-        ))}
-    </div>
+    <ProductionFlowGraph
+      displayMode={displayMode}
+      plan={plan}
+      index={index}
+      t={t}
+    />
   );
 }
 
-function FlowCard({
-  indexInFlow,
-  children,
-}: {
-  indexInFlow: number;
-  children: ReactNode;
-}) {
-  return (
-    <div className={cm(styles, "production-planning-flow-step")}>
-      <div className={cm(styles, "production-planning-flow-index")}>{indexInFlow + 1}</div>
-      {children}
-    </div>
-  );
-}
+// AI-REMOVED 2026-05-19:
+// Reason: 产线规划的 flow 模式需要升级为真实画布流程图，旧实现只是顺序卡片列表，不满足“真正流程图”的需求。
+// Trigger: 用户要求参考 factoriolab 的 Sankey 布局，并用 DOM 实现节点/连线画布。
+// Evidence: 旧实现只渲染 production-planning-flow-step 网格卡片，没有节点坐标、边路径、回环或多输入多输出布局能力。
+// Replacement: src/app/shell/production-planning/flow/production-flow-graph.tsx
+// Risk: Low；tree 模式仍保留原 ItemTreeNode / RecipeCard，flow 模式由新组件接管。
+// Human Review: Required
+//
+// Original code:
+// function FlowCard({
+//   indexInFlow,
+//   children,
+// }: {
+//   indexInFlow: number;
+//   children: ReactNode;
+// }) {
+//   return (
+//     <div className={cm(styles, "production-planning-flow-step")}>
+//       <div className={cm(styles, "production-planning-flow-index")}>{indexInFlow + 1}</div>
+//       {children}
+//     </div>
+//   );
+// }
 
 function RecipeCard({
   recipeNode,

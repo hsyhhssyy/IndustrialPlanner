@@ -581,6 +581,171 @@
   display: none;
 }
 
+.production-flow-canvas {
+  position: relative;
+  min-width: 0;
+  min-height: 520px;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(var(--surface-2), var(--surface-2)) padding-box,
+    repeating-linear-gradient(0deg, transparent 0 27px, color-mix(in srgb, var(--line) 64%, transparent) 28px),
+    repeating-linear-gradient(90deg, transparent 0 27px, color-mix(in srgb, var(--line) 64%, transparent) 28px);
+}
+
+.production-flow-toolbar {
+  position: absolute;
+  z-index: 4;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  box-shadow: 0 10px 24px var(--shadow-floating-control);
+}
+
+.production-flow-toolbar button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.production-flow-toolbar button:hover {
+  background: var(--surface-3);
+}
+
+.production-flow-surface {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.production-flow-edges,
+.production-flow-nodes {
+  position: absolute;
+  inset: 0;
+}
+
+.production-flow-edges {
+  overflow: visible;
+  pointer-events: none;
+}
+
+.production-flow-edge > path:first-child {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent-strong) 72%, var(--line-strong));
+  stroke-linecap: round;
+  stroke-opacity: 0.5;
+}
+
+.production-flow-edge.is-backward > path:first-child,
+.production-flow-edge.is-self > path:first-child {
+  stroke: color-mix(in srgb, var(--warn) 76%, var(--line-strong));
+  stroke-dasharray: 7 6;
+  stroke-opacity: 0.62;
+}
+
+.production-flow-edge text {
+  fill: var(--text-2);
+  font-size: 0.62rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.production-flow-edge-label-path {
+  fill: none;
+  stroke: none;
+}
+
+.production-flow-node {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent-strong);
+  border-radius: 8px;
+  background: var(--surface-1);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 14%);
+  cursor: grab;
+  user-select: none;
+}
+
+.production-flow-node:active {
+  cursor: grabbing;
+}
+
+.production-flow-node img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.production-flow-node div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.production-flow-node strong,
+.production-flow-node span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.production-flow-node strong {
+  color: var(--text-0);
+  font-size: 0.76rem;
+}
+
+.production-flow-node span {
+  color: var(--text-2);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.production-flow-node.is-recipe {
+  border-left-color: var(--canvas-floating-toolbar-confirm);
+}
+
+.production-flow-node.is-source {
+  border-left-color: var(--canvas-floating-toolbar-confirm);
+  background: color-mix(in srgb, var(--surface-1) 78%, var(--accent-soft));
+}
+
+.production-flow-node.is-cycle {
+  border-left-color: var(--warn);
+}
+
+.production-flow-node.is-unresolved {
+  border-left-color: var(--danger);
+}
+
+.production-flow-node.is-byproduct {
+  border-left-color: var(--text-2);
+}
+
 .production-planning-muted {
   margin: 0;
   color: var(--text-2);
