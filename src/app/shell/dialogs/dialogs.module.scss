@@ -381,3 +381,95 @@
     padding-right: 12px;
   }
 }
+
+// ─── 操作说明表格 ───
+.operation-guide {
+  display: grid;
+  gap: 30px;
+  line-height: 1.5;
+}
+
+.operation-guide-group {
+  display: grid;
+  gap: 10px;
+}
+
+.operation-guide-group-title {
+  font-size: 1.02em;
+  font-weight: 700;
+  color: var(--text-0);
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--line);
+}
+
+.operation-guide-table {
+  display: grid;
+  // 三列：操作 | PC | 触控
+  grid-template-columns: minmax(100px, 1fr) minmax(0, 1.3fr) minmax(0, 1.3fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.operation-guide-row {
+  display: contents;
+}
+
+.operation-guide-header {
+  font-size: 0.82em;
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--surface-2);
+
+  > * {
+    padding: 7px 10px;
+  }
+}
+
+.operation-guide-label {
+  background: var(--surface-1);
+  padding: 7px 10px;
+  font-size: 0.92em;
+  color: var(--text-0);
+  font-weight: 500;
+}
+
+.operation-guide-pc,
+.operation-guide-touch {
+  background: var(--surface-1);
+  padding: 7px 10px;
+  font-size: 0.88em;
+  color: var(--text-1);
+}
+
+// 平板 / 手机横屏：缩小字号、减小间距
+.operation-guide.is-narrow {
+  gap: 22px;
+  font-size: 0.9em;
+
+  .operation-guide-group-title {
+    font-size: 0.95em;
+  }
+
+  .operation-guide-table {
+    grid-template-columns: minmax(80px, 1fr) minmax(0, 1.25fr) minmax(0, 1.25fr);
+  }
+
+  .operation-guide-label {
+    font-size: 0.85em;
+  }
+
+  .operation-guide-pc,
+  .operation-guide-touch {
+    font-size: 0.82em;
+  }
+
+  .operation-guide-header > *,
+  .operation-guide-label,
+  .operation-guide-pc,
+  .operation-guide-touch {
+    padding: 5px 7px;
+  }
+}

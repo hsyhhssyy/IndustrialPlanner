@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -5,6 +6,7 @@ import { DialogShell, type DialogShellTab } from "@/app/shell/shared/dialog-shel
 import { HELP_DIALOG_TAB_IDS, type HelpDialogTabId } from "@/app/state/state-impl";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { OperationGuideContent } from "@/app/shell/dialogs/help-dialog-operation-guide";
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -38,18 +40,30 @@ export const HelpDialog = observer(function HelpDialog({ appHost }: { appHost: A
   const t = appHost.actions.translate;
   const dialogState = appHost.internalState.workbench.dialogState.help;
   const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
-  const tabs: DialogShellTab[] = HELP_DIALOG_TABS.map((tab) => ({
-    id: tab.id,
-    label: t(tab.labelKey),
-    content: (
-      <div className={cm(styles, "help-dialog-content")}>
-        <div className={cm(styles, "help-dialog-placeholder")}>
-          <h3>{t(tab.labelKey)}</h3>
-          <p>{t("helpDialog.empty")}</p>
+  const tabs: DialogShellTab[] = HELP_DIALOG_TABS.map((tab) => {
+    let content: ReactNode;
+    if (tab.id === "shortcuts") {
+      content = (
+        <div className={cm(styles, "help-dialog-content")}>
+          <OperationGuideContent
+            deviceClass={appHost.state.screenProfile.deviceClass}
+            getShortcut={(key) => appHost.internalActions.getKeyboardShortcutFor(key)}
+            settings={appHost.state.settings}
+          />
         </div>
-      </div>
-    ),
-  }));
+      );
+    } else {
+      content = (
+        <div className={cm(styles, "help-dialog-content")}>
+          <div className={cm(styles, "help-dialog-placeholder")}>
+            <h3>{t(tab.labelKey)}</h3>
+            <p>{t("helpDialog.empty")}</p>
+          </div>
+        </div>
+      );
+    }
+    return { id: tab.id, label: t(tab.labelKey), content };
+  });
 
   return (
     <DialogShell
