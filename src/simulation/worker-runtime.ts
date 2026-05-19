@@ -152,6 +152,7 @@ export class SimulationWorkerRuntime {
       latestTickNumber: this.latestTickNumber,
       bufferSize: this.tickSnapshots.size,
       maxBufferSize: MAX_RETAINED_TICKS,
+      dynamicTickRate: this.topology === null ? null : this.dynamicTickRate,
       error: this.error,
     };
   }

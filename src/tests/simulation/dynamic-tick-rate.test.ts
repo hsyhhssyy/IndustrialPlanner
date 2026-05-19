@@ -31,7 +31,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       simulationSpeed: 4,
     });
 
-    expect(readDynamicTickRate(runtime)).toBe(10);
+    expect(runtime.getStatus().dynamicTickRate).toBe(10);
 
     runtime.handleRequest({
       type: "get-tick-snapshot",
@@ -41,7 +41,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     });
     runtime.advanceToTick(20);
 
-    expect(readDynamicTickRate(runtime)).toBe(4);
+    expect(runtime.getStatus().dynamicTickRate).toBe(4);
 
     runtime.handleRequest({
       type: "set-simulation-speed",
@@ -56,7 +56,21 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     });
     runtime.advanceToTick(40);
 
-    expect(readDynamicTickRate(runtime)).toBe(20);
+    expect(runtime.getStatus().dynamicTickRate).toBe(20);
+  });
+
+  it("exposes the current dynamic tick rate through runtime status", () => {
+    const runtime = new SimulationWorkerRuntime();
+    expect(runtime.getStatus().dynamicTickRate).toBeNull();
+
+    const loaded = runtime.handleRequest({
+      type: "load-topology",
+      requestId: 1,
+      topology: createEmptyTopology(),
+      simulationSpeed: 4,
+    });
+
+    expect(loaded.status.dynamicTickRate).toBe(10);
   });
 
   it("carries production overflow across successful output writes", () => {
@@ -95,10 +109,6 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     });
   });
 });
-
-function readDynamicTickRate(runtime: SimulationWorkerRuntime): number {
-  return (runtime as unknown as { readonly dynamicTickRate: number }).dynamicTickRate;
-}
 
 function createEmptyTopology(): CompiledSimulationTopology {
   return {

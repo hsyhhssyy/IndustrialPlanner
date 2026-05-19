@@ -21,7 +21,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   private readonly spriteId: string
   private currentLayout: RenderSpriteLayout | null = null
   private currentSyncContext: RenderSpriteSyncContext | null = null
-  private disposed = false
+  protected disposed = false
   private isTextureReady = false
   private currentBodyTextureKey: string | null = null
   private textureLoadVersion = 0
@@ -29,7 +29,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   public constructor(
     entityId: string,
     definition: EntityDefinition,
-    private readonly renderHost: RenderHost,
+    protected readonly renderHost: RenderHost,
   ) {
     super(entityId)
     this.spriteId = definition.spriteId

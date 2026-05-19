@@ -20,6 +20,7 @@ export function createInitialSimulationRuntimeStatus(): SimulationRuntimeStatus 
     latestTickNumber: null,
     bufferSize: 0,
     maxBufferSize: 180,
+    dynamicTickRate: null,
     error: null,
   };
 }

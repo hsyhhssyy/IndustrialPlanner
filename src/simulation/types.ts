@@ -255,6 +255,7 @@ export interface SimulationRuntimeStatus {
   readonly latestTickNumber: number | null;
   readonly bufferSize: number;
   readonly maxBufferSize: number;
+  readonly dynamicTickRate: number | null;
   readonly error: string | null;
 }
 

@@ -25,12 +25,10 @@ const PIPE_FIRST_WET_ENABLED = true
 export class PipeSprite extends DedicatedLogisticSprite {
   private readonly bead: Sprite
   private readonly pipeSpriteId: string
-  private readonly renderHost: RenderHost
   private lastFluidItemId: string | null = null
   private beadColor = DEFAULT_PIPE_BEAD_COLOR
   private liquidTexture: Texture | null = null
   private liquidTextureLoaded = false
-  private disposed = false
   /** 首润模式：记录已经在该连通段会话中被液体润湿过的设备 ID。连通段排空时清空。 */
   private static wetDevices = new Set<string>()
 
@@ -42,7 +40,6 @@ export class PipeSprite extends DedicatedLogisticSprite {
     super(entityId, definition, renderHost)
 
     this.pipeSpriteId = definition.spriteId
-    this.renderHost = renderHost
     this.bead = new Sprite(Texture.WHITE)
     this.bead.anchor.set(0.5)
     this.bead.roundPixels = true

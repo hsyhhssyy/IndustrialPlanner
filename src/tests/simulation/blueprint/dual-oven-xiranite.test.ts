@@ -79,7 +79,7 @@ describe("双烘炉息壤产线 - 息壤粉滑动窗口产量验证", () => {
       const tickNum = tick.tickNumber;
       // 继承上一 tick 的累计值
       if (tickNum > 0) {
-        cumulative[tickNum] = cumulative[tickNum - 1];
+        cumulative[tickNum] = cumulative[tickNum - 1]!;
       }
 
       for (const transfer of tick.transfers) {
@@ -87,8 +87,8 @@ describe("双烘炉息壤产线 - 息壤粉滑动窗口产量验证", () => {
 
         // 只统计从息壤烘炉产出的息壤粉
         for (const ovenId of ovenIds) {
-          if (transfer.sourceSlotId.includes(`device:${ovenId}`)) {
-            cumulative[tickNum] += transfer.amount;
+          if (transfer.sourceSlotId!.includes(`device:${ovenId}`)) {
+            cumulative[tickNum] = cumulative[tickNum]! + transfer.amount;
             break;
           }
         }
@@ -97,8 +97,8 @@ describe("双烘炉息壤产线 - 息壤粉滑动窗口产量验证", () => {
 
     // 填充未被 tick 覆盖的累计值（某些 tick 可能无 snapshot）
     for (let i = 1; i <= MAX_TICK; i++) {
-      if (cumulative[i] === 0 && cumulative[i - 1] > 0) {
-        cumulative[i] = cumulative[i - 1];
+        if (cumulative[i]! === 0 && cumulative[i - 1]! > 0) {
+          cumulative[i] = cumulative[i - 1]!;
       }
     }
 
@@ -114,7 +114,7 @@ describe("双烘炉息壤产线 - 息壤粉滑动窗口产量验证", () => {
     console.log(`\n  [按分钟拆分] 每分钟息壤粉产量:`);
     for (let minuteEnd = TICKS_PER_MINUTE; minuteEnd <= MAX_TICK; minuteEnd += TICKS_PER_MINUTE) {
       const minuteStart = minuteEnd - TICKS_PER_MINUTE;
-      const prod = cumulative[minuteEnd] - cumulative[minuteStart];
+        const prod = cumulative[minuteEnd]! - cumulative[minuteStart]!;
       const minuteIndex = minuteEnd / TICKS_PER_MINUTE;
       const marker = prod === EXPECTED_XIRANITE_PER_MINUTE ? "✓" : "✗";
       console.log(`    第 ${minuteIndex} 分钟 [${minuteStart}, ${minuteEnd}]: ${prod} ${marker}`);
@@ -124,7 +124,7 @@ describe("双烘炉息壤产线 - 息壤粉滑动窗口产量验证", () => {
     console.log(`\n  [滑动窗口] 所有 1 分钟窗口产量分布:`);
     const windowResults: Array<{ windowEnd: number; production: number }> = [];
     for (let windowEnd = TICKS_PER_MINUTE; windowEnd <= MAX_TICK; windowEnd++) {
-      const production = cumulative[windowEnd] - cumulative[windowEnd - TICKS_PER_MINUTE];
+        const production = cumulative[windowEnd]! - cumulative[windowEnd - TICKS_PER_MINUTE]!;
       windowResults.push({ windowEnd, production });
     }
 
@@ -161,22 +161,22 @@ describe("双烘炉息壤产线 - 息壤粉滑动窗口产量验证", () => {
 
     // 4. 产量变化时间线：按产量值分段输出区间
     console.log(`\n  [产量变化时间线]`);
-    let rangeStartSec = (windowResults[0].windowEnd - TICKS_PER_MINUTE) / STANDARD_TICK_RATE_PER_SECOND;
-    let rangeValue = windowResults[0].production;
+      let rangeStartSec = (windowResults[0]!.windowEnd - TICKS_PER_MINUTE) / STANDARD_TICK_RATE_PER_SECOND;
+      let rangeValue = windowResults[0]!.production;
     for (let i = 1; i < windowResults.length; i++) {
-      if (windowResults[i].production !== rangeValue) {
-        const rangeEndSec = windowResults[i - 1].windowEnd / STANDARD_TICK_RATE_PER_SECOND;
+        if (windowResults[i]!.production !== rangeValue) {
+          const rangeEndSec = windowResults[i - 1]!.windowEnd / STANDARD_TICK_RATE_PER_SECOND;
         console.log(`    ${rangeStartSec.toFixed(0)}s → ${rangeEndSec.toFixed(0)}s: ${rangeValue}/分钟`);
-        rangeStartSec = (windowResults[i].windowEnd - TICKS_PER_MINUTE) / STANDARD_TICK_RATE_PER_SECOND;
-        rangeValue = windowResults[i].production;
+          rangeStartSec = (windowResults[i]!.windowEnd - TICKS_PER_MINUTE) / STANDARD_TICK_RATE_PER_SECOND;
+          rangeValue = windowResults[i]!.production;
       }
     }
-    const lastEndSec = windowResults[windowResults.length - 1].windowEnd / STANDARD_TICK_RATE_PER_SECOND;
+      const lastEndSec = windowResults[windowResults.length - 1]!.windowEnd / STANDARD_TICK_RATE_PER_SECOND;
     console.log(`    ${rangeStartSec.toFixed(0)}s → ${lastEndSec.toFixed(0)}s: ${rangeValue}/分钟`);
 
     // 5. 诊断停产原因：导出所有设备在仿真结束时的完整库存
     console.log(`\n  [停产诊断] 仿真结束时 (tick ${MAX_TICK}) 全部设备库存:`);
-    const lastTick = report.ticks[report.ticks.length - 1];
+const lastTick = report.ticks[report.ticks.length - 1]!;
 
     // 定义设备类型到中文标签的映射
     const labelMap: Record<string, string> = {
@@ -194,7 +194,7 @@ describe("双烘炉息壤产线 - 息壤粉滑动窗口产量验证", () => {
     // 按实体 ID 排序以保证输出稳定
     const allEntityIds = Object.keys(blueprint.entities).sort();
     for (const entityId of allEntityIds) {
-      const entity = blueprint.entities[entityId];
+        const entity = blueprint.entities[entityId]!;
       const device = lastTick.devices[entityId];
       if (!device) continue;
 
