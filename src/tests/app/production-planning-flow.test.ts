@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  PRODUCTION_PLANNING_SPECIAL_INFINITE_ITEM_IDS,
   buildProductionPlanningIndex,
   computeProductionPlan,
   type ProductionPlanningPort,
+  type ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
 import { buildProductionFlowGraph, createSankeyLayout } from "@/app/shell/production-planning/flow";
 import { createRegistryContract } from "@/registry";
@@ -17,12 +17,21 @@ function port(itemId: string, perMinute: number): ProductionPlanningPort {
   };
 }
 
-function createInfiniteItemIds(index: ReturnType<typeof buildProductionPlanningIndex>, extra: string[] = []) {
-  return new Set([
-    ...index.naturalResourceItemIds,
-    ...PRODUCTION_PLANNING_SPECIAL_INFINITE_ITEM_IDS,
-    ...extra,
-  ]);
+const DEFAULT_SOURCE_CONFIG: ProductionPlanningSourceConfig = {
+  waterPolicy: "use-byproduct",
+  acidPolicy: "use-byproduct",
+  sewagePolicy: "external-supply",
+};
+
+function makeInfiniteItemIds(
+  index: ReturnType<typeof buildProductionPlanningIndex>,
+  config: ProductionPlanningSourceConfig,
+) {
+  const ids = new Set(index.naturalResourceItemIds);
+  if (config.sewagePolicy === "external-supply") {
+    ids.add("item_liquid_sewage");
+  }
+  return ids;
 }
 
 const t = (key: string) => key;
@@ -62,11 +71,12 @@ describe("production planning flow graph", () => {
     const result = computeProductionPlan({
       targets: [port("item_liquid_xiranite_poly", 30)],
       supplies: [port("item_liquid_xiranite", 30)],
-      infiniteItemIds: createInfiniteItemIds(index, ["item_liquid_sewage"]),
+      infiniteItemIds: makeInfiniteItemIds(index, DEFAULT_SOURCE_CONFIG),
       recipeChoices: new Map([[
         "item_liquid_xiranite_poly",
         "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic",
       ]]),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
 
     const graph = buildProductionFlowGraph(result, index, t, "device");
@@ -83,8 +93,9 @@ describe("production planning flow graph", () => {
     const result = computeProductionPlan({
       targets: [port("item_plant_moss_seed_3", 60)],
       supplies: [],
-      infiniteItemIds: createInfiniteItemIds(index),
+      infiniteItemIds: makeInfiniteItemIds(index, DEFAULT_SOURCE_CONFIG),
       recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
 
     const graph = buildProductionFlowGraph(result, index, t, "device");
@@ -105,8 +116,9 @@ describe("production planning flow graph", () => {
     const result = computeProductionPlan({
       targets: [port("item_iron_nugget", 60)],
       supplies: [],
-      infiniteItemIds: createInfiniteItemIds(index),
+      infiniteItemIds: makeInfiniteItemIds(index, DEFAULT_SOURCE_CONFIG),
       recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
 
     const graph = buildProductionFlowGraph(result, index, t, "item");

@@ -16,6 +16,7 @@ export const PwaSettingsSection = observer(function PwaSettingsSection({
   pwaController,
 }: PwaSettingsSectionProps) {
   const copy = PWA_SETTINGS_COPY[appHost.state.settings.locale];
+  const offlineAction = resolveOfflineAction(copy, pwaController);
   const progress = pwaController.progress;
 
   return (
@@ -40,39 +41,17 @@ export const PwaSettingsSection = observer(function PwaSettingsSection({
           ) : null}
         </div>
         <div className={cm(styles, "pwa-settings-actions")}>
-          {!pwaController.isOfflineModeAccepted ? (
-            <button
-              className={cm(styles, "pwa-settings-primary-button")}
-              disabled={pwaController.offlineStatus === "unsupported"}
-              onClick={() => {
-                void pwaController.enableOfflineMode();
-              }}
-              type="button"
-            >
-              {copy.enableOffline}
-            </button>
-          ) : (
-            <>
-              <button
-                className={cm(styles, "pwa-settings-secondary-button")}
-                onClick={() => {
-                  void pwaController.checkForUpdate();
-                }}
-                type="button"
-              >
-                {copy.checkUpdate}
-              </button>
-              {pwaController.offlineStatus === "update-available" ? (
-                <button
-                  className={cm(styles, "pwa-settings-primary-button")}
-                  onClick={pwaController.applyWaitingUpdate}
-                  type="button"
-                >
-                  {copy.applyUpdate}
-                </button>
-              ) : null}
-            </>
-          )}
+          <button
+            className={cm(
+              styles,
+              offlineAction.primary ? "pwa-settings-primary-button" : "pwa-settings-secondary-button",
+            )}
+            disabled={offlineAction.disabled}
+            onClick={offlineAction.onClick}
+            type="button"
+          >
+            {offlineAction.label}
+          </button>
         </div>
       </div>
       <div className={cm(styles, "pwa-settings-card")}>
@@ -123,6 +102,8 @@ interface PwaSettingsCopy {
   readonly enableOffline: string;
   readonly install: string;
   readonly offlineMode: string;
+  readonly offlineSavingAction: string;
+  readonly offlinePreparingAction: string;
   readonly progress: (
     completedFiles: number,
     totalFiles: number,
@@ -137,6 +118,9 @@ interface PwaSettingsCopy {
   readonly statusUnsupported: string;
   readonly statusUpdateAvailable: string;
   readonly statusUpdating: string;
+  readonly offlineRetry: string;
+  readonly offlineUnableAction: string;
+  readonly offlineUpdatingAction: string;
   readonly title: string;
   readonly desktopAlreadyInstalled: string;
   readonly desktopPromptAvailable: string;
@@ -147,16 +131,18 @@ interface PwaSettingsCopy {
 const PWA_SETTINGS_COPY: Record<AppHost["state"]["settings"]["locale"], PwaSettingsCopy> = {
   "zh-CN": {
     allowInstallPrompt: "重新提醒",
-    applyUpdate: "应用更新",
+    applyUpdate: "立即更新",
     checkUpdate: "检查更新",
-    description: "管理离线资源和桌面入口。",
+    description: "管理断网使用和桌面入口。",
     desktopAlreadyAddedAction: "已添加",
     desktopInstall: "添加到桌面",
     desktopRemindAgain: "重新提醒",
     desktopRemindLater: "稍后提醒",
-    enableOffline: "启用离线模式",
+    enableOffline: "开启断网使用",
     install: "添加",
-    offlineMode: "离线模式",
+    offlineMode: "断网使用",
+    offlineSavingAction: "正在保存",
+    offlinePreparingAction: "正在准备",
     progress: (completedFiles, totalFiles, completedBytes, totalBytes) => {
       if (totalBytes > 0) {
         return `进度 ${completedFiles}/${totalFiles} · ${formatPwaBytes(completedBytes)} / ${formatPwaBytes(totalBytes)}`;
@@ -164,14 +150,17 @@ const PWA_SETTINGS_COPY: Record<AppHost["state"]["settings"]["locale"], PwaSetti
 
       return `进度 ${completedFiles}/${totalFiles} · 已下载 ${formatPwaBytes(completedBytes)}`;
     },
-    statusEnabled: "离线资源已就绪。",
-    statusError: (message) => `处理失败：${message ?? "未知错误"}`,
-    statusInstalling: "正在下载离线资源。",
-    statusNotEnabled: "当前未启用。启用后会下载完整离线资源。",
-    statusRegistering: "正在准备离线模式。",
-    statusUnsupported: "当前浏览器不支持 Service Worker。",
-    statusUpdateAvailable: "新版本离线资源已准备好。",
-    statusUpdating: "正在更新离线资源。",
+    statusEnabled: "已准备好。断网时也可以打开这个应用。",
+    statusError: () => "没有保存成功，请重试。",
+    statusInstalling: "正在保存应用内容，完成后断网也能打开。",
+    statusNotEnabled: "开启后会先保存应用内容，完成后断网也能打开。",
+    statusRegistering: "正在准备断网使用。",
+    statusUnsupported: "当前浏览器不支持断网使用。",
+    statusUpdateAvailable: "新版本已准备好，更新后断网打开的也是最新版。",
+    statusUpdating: "正在更新保存的内容。",
+    offlineRetry: "重试",
+    offlineUnableAction: "无法开启",
+    offlineUpdatingAction: "正在更新",
     title: "离线与安装",
     desktopAlreadyInstalled: "已经添加到桌面。",
     desktopPromptAvailable: "现在可以添加到桌面。",
@@ -180,16 +169,18 @@ const PWA_SETTINGS_COPY: Record<AppHost["state"]["settings"]["locale"], PwaSetti
   },
   "en-US": {
     allowInstallPrompt: "Remind Again",
-    applyUpdate: "Apply Update",
+    applyUpdate: "Update Now",
     checkUpdate: "Check Update",
-    description: "Manage offline resources and desktop access.",
+    description: "Manage offline use and desktop access.",
     desktopAlreadyAddedAction: "Added",
     desktopInstall: "Add to Desktop",
     desktopRemindAgain: "Remind Again",
     desktopRemindLater: "Remind Later",
-    enableOffline: "Enable Offline Mode",
+    enableOffline: "Enable Offline Use",
     install: "Add",
-    offlineMode: "Offline Mode",
+    offlineMode: "Offline Use",
+    offlineSavingAction: "Saving",
+    offlinePreparingAction: "Preparing",
     progress: (completedFiles, totalFiles, completedBytes, totalBytes) => {
       if (totalBytes > 0) {
         return `Progress ${completedFiles}/${totalFiles} · ${formatPwaBytes(completedBytes)} / ${formatPwaBytes(totalBytes)}`;
@@ -197,14 +188,17 @@ const PWA_SETTINGS_COPY: Record<AppHost["state"]["settings"]["locale"], PwaSetti
 
       return `Progress ${completedFiles}/${totalFiles} · ${formatPwaBytes(completedBytes)} downloaded`;
     },
-    statusEnabled: "Offline resources are ready.",
-    statusError: (message) => `Failed: ${message ?? "Unknown error"}`,
-    statusInstalling: "Downloading offline resources.",
-    statusNotEnabled: "Offline mode is not enabled. Enabling it downloads all offline resources.",
-    statusRegistering: "Preparing offline mode.",
-    statusUnsupported: "This browser does not support Service Worker.",
-    statusUpdateAvailable: "New offline resources are ready.",
-    statusUpdating: "Updating offline resources.",
+    statusEnabled: "Ready. You can open this app without internet.",
+    statusError: () => "Saving failed. Please try again.",
+    statusInstalling: "Saving app content so it can open without internet.",
+    statusNotEnabled: "Enable this to save app content, then it can open without internet.",
+    statusRegistering: "Preparing offline use.",
+    statusUnsupported: "This browser does not support offline use.",
+    statusUpdateAvailable: "A new version is ready. Update so offline use opens the latest version.",
+    statusUpdating: "Updating saved content.",
+    offlineRetry: "Retry",
+    offlineUnableAction: "Unavailable",
+    offlineUpdatingAction: "Updating",
     title: "Offline & Install",
     desktopAlreadyInstalled: "Already added to desktop.",
     desktopPromptAvailable: "You can add it to desktop now.",
@@ -212,6 +206,79 @@ const PWA_SETTINGS_COPY: Record<AppHost["state"]["settings"]["locale"], PwaSetti
     desktopPromptUnavailable: "Not available yet. Use this page for a while and try again later.",
   },
 };
+
+interface PwaSettingsAction {
+  readonly disabled: boolean;
+  readonly label: string;
+  readonly onClick?: () => void;
+  readonly primary: boolean;
+}
+
+function resolveOfflineAction(copy: PwaSettingsCopy, pwaController: PwaController): PwaSettingsAction {
+  if (pwaController.offlineStatus === "unsupported") {
+    return createDisabledAction(copy.offlineUnableAction);
+  }
+
+  if (pwaController.offlineStatus === "registering") {
+    return createDisabledAction(copy.offlinePreparingAction);
+  }
+
+  if (pwaController.offlineStatus === "installing") {
+    return createDisabledAction(copy.offlineSavingAction);
+  }
+
+  if (pwaController.offlineStatus === "updating") {
+    return createDisabledAction(copy.offlineUpdatingAction);
+  }
+
+  if (pwaController.offlineStatus === "update-available") {
+    return {
+      disabled: false,
+      label: copy.applyUpdate,
+      onClick: pwaController.applyWaitingUpdate,
+      primary: true,
+    };
+  }
+
+  if (pwaController.offlineStatus === "error") {
+    return {
+      disabled: false,
+      label: copy.offlineRetry,
+      onClick: () => {
+        void pwaController.enableOfflineMode();
+      },
+      primary: true,
+    };
+  }
+
+  if (!pwaController.isOfflineModeAccepted) {
+    return {
+      disabled: false,
+      label: copy.enableOffline,
+      onClick: () => {
+        void pwaController.enableOfflineMode();
+      },
+      primary: true,
+    };
+  }
+
+  return {
+    disabled: false,
+    label: copy.checkUpdate,
+    onClick: () => {
+      void pwaController.checkForUpdate();
+    },
+    primary: false,
+  };
+}
+
+function createDisabledAction(label: string): PwaSettingsAction {
+  return {
+    disabled: true,
+    label,
+    primary: false,
+  };
+}
 
 function resolveOfflineStatusText(copy: PwaSettingsCopy, pwaController: PwaController): string {
   if (pwaController.offlineStatus === "unsupported") {

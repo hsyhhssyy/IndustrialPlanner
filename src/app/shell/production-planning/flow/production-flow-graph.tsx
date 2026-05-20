@@ -33,8 +33,8 @@ interface PanDragState {
   readonly pointerId: number;
   readonly viewportX: number;
   readonly viewportY: number;
-  readonly clientX: number;
-  readonly clientY: number;
+  clientX: number;
+  clientY: number;
 }
 
 interface PinchState {

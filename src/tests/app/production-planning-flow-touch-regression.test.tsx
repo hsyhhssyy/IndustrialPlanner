@@ -30,7 +30,6 @@ import type {
 
 // ---- mock graph builder ----
 vi.mock("@/app/shell/production-planning/flow/flow-graph-builder", async (importOriginal) => {
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   const actual = await importOriginal<typeof import("@/app/shell/production-planning/flow/flow-graph-builder")>();
   return {
     ...actual,
@@ -109,9 +108,9 @@ function createMockIndex(): ReturnType<typeof import("@/app/shell/production-pla
 function createMockPlan(): import("@/app/shell/production-planning/production-planning-model").ProductionPlanningResult {
   return {
     roots: [],
+    itemTotals: [],
+    recipeTotals: [],
     unresolvedPerMinute: 0,
-    totalRecipes: 0,
-    totalDevices: 0,
   };
 }
 

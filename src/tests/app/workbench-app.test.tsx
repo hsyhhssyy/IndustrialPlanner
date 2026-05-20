@@ -2154,7 +2154,7 @@ describe("WorkbenchApp", () => {
     const themeOptionLabels = Array.from(themeSelect?.options ?? []).map((option) => option.textContent);
 
     expect(dialog).not.toBeNull();
-    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他", "调试"]);
+    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他", "调试", "离线与安装"]);
     expect(groupDescriptions).toEqual([
       "语言、主题与全局界面偏好。",
       "图像输出与帧率表现相关设置。",
@@ -2163,6 +2163,7 @@ describe("WorkbenchApp", () => {
       "编辑当前可自定义的快捷键设置。",
       "调试和附加能力开关。",
       "FPS 与手势测试开关，可用于开发调试。",
+      "管理断网使用和桌面入口。",
     ]);
     expect(languageOptionLabels).toEqual(["中文(简体)", "English"]);
     expect(themeOptionLabels).toEqual(["Ayu Light", "Ayu Dark"]);
@@ -3199,7 +3200,7 @@ describe("WorkbenchApp", () => {
 
     expect(dialog).not.toBeNull();
     expect(container.querySelector(".settings-dialog-sidebar")).toBeNull();
-    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他", "调试"]);
+    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他", "调试", "离线与安装"]);
   });
 
   it("marks help and toolbox dialogs as compact shells on phones", () => {

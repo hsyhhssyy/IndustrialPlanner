@@ -18,7 +18,6 @@ import LucideWorkflow from "~icons/lucide/workflow";
 import type { AppHost } from "@/app/host/app-host";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import {
-  PRODUCTION_PLANNING_SPECIAL_INFINITE_ITEM_IDS,
   buildProductionPlanningIndex,
   computeProductionPlan,
   createProductionPlanningId,
@@ -29,12 +28,15 @@ import {
   resolveProductionPlanningItemIconSrc,
   resolveProductionPlanningItemName,
   resolveProductionPlanningRecipeName,
+  type ProductionPlanningByproductPolicy,
   type ProductionPlanningDisplayMode,
   type ProductionPlanningIndex,
   type ProductionPlanningItemNode,
   type ProductionPlanningPort,
   type ProductionPlanningRecipeNode,
   type ProductionPlanningResult,
+  type ProductionPlanningSewagePolicy,
+  type ProductionPlanningSourceConfig,
   type ProductionPlanningViewMode,
 } from "@/app/shell/production-planning/production-planning-model";
 import { ProductionFlowGraph } from "@/app/shell/production-planning/flow";
@@ -48,6 +50,7 @@ type ProductionPlanningCalculation = {
   readonly supplies: readonly ProductionPlanningPort[];
   readonly infiniteItemIds: ReadonlySet<string>;
   readonly recipeChoices: Readonly<Record<string, string>>;
+  readonly sourceConfig: ProductionPlanningSourceConfig;
   readonly plan: ProductionPlanningResult;
 };
 
@@ -73,18 +76,22 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   const [supplies, setSupplies] = useState<ProductionPlanningPort[]>([]);
   const [displayMode, setDisplayMode] = useState<ProductionPlanningDisplayMode>("item");
   const [viewMode, setViewMode] = useState<ProductionPlanningViewMode>("tree");
-  const [specialInfiniteItemIds, setSpecialInfiniteItemIds] = useState<Set<string>>(() => new Set());
+  const [sourceConfig, setSourceConfig] = useState<ProductionPlanningSourceConfig>(() => ({
+    waterPolicy: "use-byproduct",
+    acidPolicy: "use-byproduct",
+    sewagePolicy: "external-supply",
+  }));
   const [recipeChoices, setRecipeChoices] = useState<Record<string, string>>({});
   const [activeScreen, setActiveScreen] = useState<ProductionPlanningScreen>("input");
   const [calculation, setCalculation] = useState<ProductionPlanningCalculation | null>(null);
   const swipeStateRef = useRef<ProductionPlanningSwipeState | null>(null);
   const infiniteItemIds = useMemo(() => {
     const result = new Set(index.naturalResourceItemIds);
-    for (const itemId of specialInfiniteItemIds) {
-      result.add(itemId);
+    if (sourceConfig.sewagePolicy === "external-supply") {
+      result.add("item_liquid_sewage");
     }
     return result;
-  }, [index.naturalResourceItemIds, specialInfiniteItemIds]);
+  }, [index.naturalResourceItemIds, sourceConfig.sewagePolicy]);
   const resultRecipeChoiceMap = useMemo(
     () => new Map(Object.entries(calculation?.recipeChoices ?? recipeChoices)),
     [calculation?.recipeChoices, recipeChoices],
@@ -133,6 +140,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
         supplies: current.supplies,
         infiniteItemIds: current.infiniteItemIds,
         recipeChoices: new Map(Object.entries(nextRecipeChoices)),
+        sourceConfig: current.sourceConfig,
       }, index);
 
       return {
@@ -143,16 +151,8 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     });
   };
 
-  const toggleSpecialInfiniteItem = (itemId: string, infinite: boolean) => {
-    setSpecialInfiniteItemIds((current) => {
-      const next = new Set(current);
-      if (infinite) {
-        next.add(itemId);
-      } else {
-        next.delete(itemId);
-      }
-      return next;
-    });
+  const updateSourceConfig = (patch: Partial<ProductionPlanningSourceConfig>) => {
+    setSourceConfig((current) => ({ ...current, ...patch }));
   };
 
   const calculate = () => {
@@ -160,11 +160,17 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     const calculationSupplies = supplies.map(clonePort);
     const calculationInfiniteItemIds = new Set(infiniteItemIds);
     const calculationRecipeChoices = { ...recipeChoices };
+    const calculationSourceConfig: ProductionPlanningSourceConfig = {
+      waterPolicy: sourceConfig.waterPolicy,
+      acidPolicy: sourceConfig.acidPolicy,
+      sewagePolicy: sourceConfig.sewagePolicy,
+    };
     const plan = computeProductionPlan({
       targets: calculationTargets,
       supplies: calculationSupplies,
       infiniteItemIds: calculationInfiniteItemIds,
       recipeChoices: new Map(Object.entries(calculationRecipeChoices)),
+      sourceConfig: calculationSourceConfig,
     }, index);
 
     setCalculation({
@@ -172,6 +178,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       supplies: calculationSupplies,
       infiniteItemIds: calculationInfiniteItemIds,
       recipeChoices: calculationRecipeChoices,
+      sourceConfig: calculationSourceConfig,
       plan,
     });
     setActiveScreen("result");
@@ -260,9 +267,8 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
             />
             <SourcePolicyPanel
               index={index}
-              infiniteItemIds={infiniteItemIds}
-              specialInfiniteItemIds={specialInfiniteItemIds}
-              onToggleSpecialInfiniteItem={toggleSpecialInfiniteItem}
+              sourceConfig={sourceConfig}
+              onUpdate={updateSourceConfig}
               t={t}
             />
           </div>
@@ -435,15 +441,13 @@ function PortEditorRow({
 
 function SourcePolicyPanel({
   index,
-  infiniteItemIds,
-  specialInfiniteItemIds,
-  onToggleSpecialInfiniteItem,
+  sourceConfig,
+  onUpdate,
   t,
 }: {
   index: ProductionPlanningIndex;
-  infiniteItemIds: ReadonlySet<string>;
-  specialInfiniteItemIds: ReadonlySet<string>;
-  onToggleSpecialInfiniteItem: (itemId: string, infinite: boolean) => void;
+  sourceConfig: ProductionPlanningSourceConfig;
+  onUpdate: (patch: Partial<ProductionPlanningSourceConfig>) => void;
   t: (key: string) => string;
 }) {
   return (
@@ -466,32 +470,120 @@ function SourcePolicyPanel({
             />
           ))}
         </div>
-        {PRODUCTION_PLANNING_SPECIAL_INFINITE_ITEM_IDS.map((itemId) => (
-          <div key={itemId} className={cm(styles, "production-planning-special-source")}>
-            <div className={cm(styles, "production-planning-special-source-label")}>
-              <img alt="" src={resolveProductionPlanningItemIconSrc(itemId, index)} />
-              <span>{resolveProductionPlanningItemName(itemId, index, t)}</span>
-            </div>
-            <div className={cm(styles, "production-planning-two-option-toggle")}>
-              <button
-                type="button"
-                className={cm(styles, !specialInfiniteItemIds.has(itemId) ? "is-active" : "")}
-                onClick={() => onToggleSpecialInfiniteItem(itemId, false)}
-              >
-                {t("productionPlanning.fromLine")}
-              </button>
-              <button
-                type="button"
-                className={cm(styles, infiniteItemIds.has(itemId) ? "is-active" : "")}
-                onClick={() => onToggleSpecialInfiniteItem(itemId, true)}
-              >
-                {t("productionPlanning.infinite")}
-              </button>
-            </div>
-          </div>
-        ))}
+        <ByproductPolicyToggle
+          itemId="item_liquid_water"
+          index={index}
+          policy={sourceConfig.waterPolicy}
+          optionA="use-byproduct"
+          optionALabel={t("productionPlanning.byproductUse")}
+          optionB="dump-byproduct"
+          optionBLabel={t("productionPlanning.byproductDump")}
+          onChange={(policy) => onUpdate({ waterPolicy: policy })}
+          t={t}
+        />
+        <ByproductPolicyToggle
+          itemId="item_liquid_acid"
+          index={index}
+          policy={sourceConfig.acidPolicy}
+          optionA="use-byproduct"
+          optionALabel={t("productionPlanning.byproductUse")}
+          optionB="dump-byproduct"
+          optionBLabel={t("productionPlanning.byproductDump")}
+          onChange={(policy) => onUpdate({ acidPolicy: policy })}
+          t={t}
+        />
+        <SewagePolicyToggle
+          index={index}
+          policy={sourceConfig.sewagePolicy}
+          onChange={(policy) => onUpdate({ sewagePolicy: policy })}
+          t={t}
+        />
       </div>
     </section>
+  );
+}
+
+function ByproductPolicyToggle({
+  itemId,
+  index,
+  policy,
+  optionA,
+  optionALabel,
+  optionB,
+  optionBLabel,
+  onChange,
+  t: _t,
+}: {
+  itemId: string;
+  index: ProductionPlanningIndex;
+  policy: ProductionPlanningByproductPolicy;
+  optionA: ProductionPlanningByproductPolicy;
+  optionALabel: string;
+  optionB: ProductionPlanningByproductPolicy;
+  optionBLabel: string;
+  onChange: (policy: ProductionPlanningByproductPolicy) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <div className={cm(styles, "production-planning-special-source")}>
+      <div className={cm(styles, "production-planning-special-source-label")}>
+        <img alt="" src={resolveProductionPlanningItemIconSrc(itemId, index)} />
+        <span>{resolveProductionPlanningItemName(itemId, index, _t)}</span>
+      </div>
+      <div className={cm(styles, "production-planning-two-option-toggle")}>
+        <button
+          type="button"
+          className={cm(styles, policy === optionA ? "is-active" : "")}
+          onClick={() => onChange(optionA)}
+        >
+          {optionALabel}
+        </button>
+        <button
+          type="button"
+          className={cm(styles, policy === optionB ? "is-active" : "")}
+          onClick={() => onChange(optionB)}
+        >
+          {optionBLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SewagePolicyToggle({
+  index,
+  policy,
+  onChange,
+  t: _t,
+}: {
+  index: ProductionPlanningIndex;
+  policy: ProductionPlanningSewagePolicy;
+  onChange: (policy: ProductionPlanningSewagePolicy) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <div className={cm(styles, "production-planning-special-source")}>
+      <div className={cm(styles, "production-planning-special-source-label")}>
+        <img alt="" src={resolveProductionPlanningItemIconSrc("item_liquid_sewage", index)} />
+        <span>{resolveProductionPlanningItemName("item_liquid_sewage", index, _t)}</span>
+      </div>
+      <div className={cm(styles, "production-planning-two-option-toggle")}>
+        <button
+          type="button"
+          className={cm(styles, policy === "external-supply" ? "is-active" : "")}
+          onClick={() => onChange("external-supply")}
+        >
+          {_t("productionPlanning.externalSupply")}
+        </button>
+        <button
+          type="button"
+          className={cm(styles, policy === "self-produce" ? "is-active" : "")}
+          onClick={() => onChange("self-produce")}
+        >
+          {_t("productionPlanning.selfProduce")}
+        </button>
+      </div>
+    </div>
   );
 }
 

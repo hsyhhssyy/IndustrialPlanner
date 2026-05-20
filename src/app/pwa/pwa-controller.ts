@@ -138,6 +138,12 @@ export class PwaController {
     this.initialized = true;
     this.standalone = resolveStandaloneMode();
 
+    if (isPwaDevelopmentServer()) {
+      this.offlineStatus = "unsupported";
+      void cleanupDevelopmentPwaState();
+      return;
+    }
+
     if (!isServiceWorkerSupported()) {
       this.offlineStatus = "unsupported";
       return;
@@ -482,9 +488,38 @@ export function formatPwaBytes(bytes: number): string {
 }
 
 function isServiceWorkerSupported(): boolean {
+  return !isPwaDevelopmentServer()
+    && isServiceWorkerRuntimeSupported();
+}
+
+function isServiceWorkerRuntimeSupported(): boolean {
   return typeof window !== "undefined"
     && typeof navigator !== "undefined"
     && "serviceWorker" in navigator;
+}
+
+function isPwaDevelopmentServer(): boolean {
+  return import.meta.env.DEV;
+}
+
+async function cleanupDevelopmentPwaState(): Promise<void> {
+  if (!isServiceWorkerRuntimeSupported()) {
+    return;
+  }
+
+  const registrations = await navigator.serviceWorker.getRegistrations();
+  await Promise.all(registrations.map((registration) => registration.unregister()));
+
+  if (typeof caches === "undefined") {
+    return;
+  }
+
+  const cacheNames = await caches.keys();
+  await Promise.all(
+    cacheNames
+      .filter((cacheName) => cacheName.startsWith("industrial-planner-precache-"))
+      .map((cacheName) => caches.delete(cacheName)),
+  );
 }
 
 function resolveStandaloneMode(): boolean {

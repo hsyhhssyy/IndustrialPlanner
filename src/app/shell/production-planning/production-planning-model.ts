@@ -3,10 +3,26 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 
+// AI-CORRECTION 2026-05-20: SPECIAL_INFINITE_ITEM_IDS retained for backward compat in tests;
+// panel no longer uses it. New logic uses ProductionPlanningSourceConfig.
 export const PRODUCTION_PLANNING_SPECIAL_INFINITE_ITEM_IDS = [
   "item_liquid_sewage",
   "item_liquid_acid",
 ] as const;
+
+export const PRODUCTION_PLANNING_BYPRODUCT_ITEM_IDS = new Set([
+  "item_liquid_water",
+  "item_liquid_acid",
+]);
+
+export type ProductionPlanningByproductPolicy = "use-byproduct" | "dump-byproduct";
+export type ProductionPlanningSewagePolicy = "external-supply" | "self-produce";
+
+export interface ProductionPlanningSourceConfig {
+  waterPolicy: ProductionPlanningByproductPolicy;
+  acidPolicy: ProductionPlanningByproductPolicy;
+  sewagePolicy: ProductionPlanningSewagePolicy;
+}
 
 export type ProductionPlanningDisplayMode = "item" | "device";
 export type ProductionPlanningViewMode = "tree" | "flow";
@@ -90,6 +106,7 @@ interface ProductionPlanningRequest {
   supplies: readonly ProductionPlanningPort[];
   infiniteItemIds: ReadonlySet<string>;
   recipeChoices: ReadonlyMap<string, string>;
+  sourceConfig: ProductionPlanningSourceConfig;
 }
 
 interface SolverContext {
@@ -98,6 +115,8 @@ interface SolverContext {
   surplusSupplyRemaining: Map<string, number>;
   infiniteItemIds: ReadonlySet<string>;
   recipeChoices: ReadonlyMap<string, string>;
+  sourceConfig: ProductionPlanningSourceConfig;
+  dumperAmounts: Map<string, number>;
   nextNodeIndex: number;
 }
 
@@ -148,6 +167,8 @@ export function computeProductionPlan(
     surplusSupplyRemaining: new Map(),
     infiniteItemIds: request.infiniteItemIds,
     recipeChoices: request.recipeChoices,
+    sourceConfig: request.sourceConfig,
+    dumperAmounts: new Map(),
     nextNodeIndex: 0,
   };
 
@@ -155,8 +176,22 @@ export function computeProductionPlan(
     .filter((target) => target.itemId.length > 0 && target.perMinute > EPSILON)
     .map((target) => resolveDemand(target.itemId, target.perMinute, context, []));
   const recipeNodes = flattenProductionPlanningRecipeNodes(roots);
-  const itemTotals = aggregateItemTotals(roots, recipeNodes, index);
-  const recipeTotals = aggregateRecipeTotals(recipeNodes, index);
+
+  // "use byproduct" 模式: 未被消费的副产物剩余量 → 送去倾倒
+  for (const itemId of PRODUCTION_PLANNING_BYPRODUCT_ITEM_IDS) {
+    if (isByproductItemDumpMode(itemId, context.sourceConfig)) {
+      continue;
+    }
+    const remaining = context.surplusSupplyRemaining.get(itemId) ?? 0;
+    if (remaining > EPSILON) {
+      addSupply(context.dumperAmounts, itemId, remaining);
+    }
+  }
+
+  const dumperRecipeNodes = buildDumperRecipeNodes(context);
+  const allRecipeNodes = [...recipeNodes, ...dumperRecipeNodes];
+  const itemTotals = aggregateItemTotals(roots, allRecipeNodes, index);
+  const recipeTotals = aggregateRecipeTotals(allRecipeNodes, index);
 
   return {
     roots,
@@ -370,7 +405,11 @@ function resolveDemand(
 
   for (const outputPort of outputPorts) {
     if (outputPort.itemId !== itemId && outputPort.perMinute > EPSILON) {
-      addSupply(context.surplusSupplyRemaining, outputPort.itemId, outputPort.perMinute);
+      if (isByproductItemDumpMode(outputPort.itemId, context.sourceConfig)) {
+        addSupply(context.dumperAmounts, outputPort.itemId, outputPort.perMinute);
+      } else {
+        addSupply(context.surplusSupplyRemaining, outputPort.itemId, outputPort.perMinute);
+      }
     }
   }
 
@@ -609,6 +648,62 @@ function clonePort(port: ProductionPlanningPort): ProductionPlanningPort {
 
 function isNaturalResourceItem(item: ItemDefinition): boolean {
   return item.tags.includes("自然资源");
+}
+
+function isByproductItemDumpMode(
+  itemId: string,
+  config: ProductionPlanningSourceConfig,
+): boolean {
+  if (itemId === "item_liquid_water") {
+    return config.waterPolicy === "dump-byproduct";
+  }
+  if (itemId === "item_liquid_acid") {
+    return config.acidPolicy === "dump-byproduct";
+  }
+  return false;
+}
+
+const DUMPER_RECIPE_MAP: Record<string, { recipeId: string; durationSeconds: number; inputAmount: number }> = {
+  "item_liquid_water": { recipeId: "r_dumper_void_liquid_water_basic", durationSeconds: 0.5, inputAmount: 1 },
+  "item_liquid_acid": { recipeId: "r_dumper_void_liquid_acid_basic", durationSeconds: 0.5, inputAmount: 1 },
+};
+
+function buildDumperRecipeNodes(context: SolverContext): ProductionPlanningRecipeNode[] {
+  const nodes: ProductionPlanningRecipeNode[] = [];
+
+  for (const [itemId, perMinute] of context.dumperAmounts) {
+    if (perMinute <= EPSILON) {
+      continue;
+    }
+
+    const dumperDef = DUMPER_RECIPE_MAP[itemId];
+    if (dumperDef === undefined) {
+      continue;
+    }
+
+    const recipe = context.index.recipeById.get(dumperDef.recipeId);
+    if (recipe === undefined) {
+      continue;
+    }
+
+    const cyclesPerMinute = roundFlow(perMinute / dumperDef.inputAmount);
+    const deviceCount = roundFlow(cyclesPerMinute / (60 / dumperDef.durationSeconds));
+
+    nodes.push({
+      id: createNodeId("recipe", context),
+      kind: "recipe",
+      recipeId: dumperDef.recipeId,
+      targetItemId: itemId,
+      durationSeconds: dumperDef.durationSeconds,
+      cyclesPerMinute,
+      deviceCount,
+      inputs: [{ id: `${dumperDef.recipeId}-in-${itemId}`, itemId, perMinute }],
+      outputs: [],
+      inputItems: [],
+    });
+  }
+
+  return nodes;
 }
 
 function isAllowedProductivePlantCycle(itemId: string, stack: readonly string[]): boolean {

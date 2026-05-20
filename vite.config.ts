@@ -1,36 +1,10 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
-import type { Plugin } from "vite";
 import Icons from "unplugin-icons/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
-const PWA_DEV_SERVICE_WORKER_URL = "/dev-sw.js?dev-sw";
 const PWA_MAX_CACHE_FILE_BYTES = 50 * 1024 * 1024;
-const PWA_DEV_AUTO_REGISTER_SCRIPT_PATTERN =
-  /\s*<script id="vite-plugin-pwa:register-dev-sw" type="module">[\s\S]*?<\/script>/;
-
-function manualPwaDevServer(): Plugin {
-  return {
-    name: "industrial-planner-manual-pwa-dev-server",
-    apply: "serve",
-    configureServer(server) {
-      server.middlewares.use((request, _response, next) => {
-        if (request.url === "/sw.js" || request.url?.startsWith("/sw.js?") === true) {
-          request.url = PWA_DEV_SERVICE_WORKER_URL;
-        }
-
-        next();
-      });
-    },
-    transformIndexHtml: {
-      order: "post",
-      handler(html) {
-        return html.replace(PWA_DEV_AUTO_REGISTER_SCRIPT_PATTERN, "");
-      },
-    },
-  };
-}
 
 export default defineConfig({
   build: {
@@ -50,11 +24,6 @@ export default defineConfig({
       registerType: "prompt",
       scope: "/",
       manifestFilename: "manifest.webmanifest",
-      devOptions: {
-        enabled: true,
-        navigateFallback: "index.html",
-        type: "module",
-      },
       includeAssets: ["pwa-icon.svg", "pwa-icon-192.png", "pwa-icon-512.png"],
       manifest: {
         name: "集成工业仿真",
@@ -104,7 +73,6 @@ export default defineConfig({
         ],
       },
     }),
-    manualPwaDevServer(),
   ],
   server: {
     allowedHosts: ["industrialplanner-refactor-cf01ab.coder-page.hsyhhssyy.net"],
