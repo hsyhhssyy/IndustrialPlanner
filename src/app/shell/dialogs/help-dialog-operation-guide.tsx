@@ -142,15 +142,18 @@ interface OperationGuideContentProps {
 }
 
 export function OperationGuideContent({ deviceClass, getShortcut, settings }: OperationGuideContentProps) {
-  const settingsSnapshot: SettingsSnapshot = {
-    hg: settings.hypergryphOperationMode,
-    immediateMove: settings.hypergryphImmediateMove,
-    immediateMarquee: settings.hypergryphImmediateMarquee,
-  };
+  const settingsSnapshot = useMemo<SettingsSnapshot>(
+    () => ({
+      hg: settings.hypergryphOperationMode,
+      immediateMove: settings.hypergryphImmediateMove,
+      immediateMarquee: settings.hypergryphImmediateMarquee,
+    }),
+    [settings.hypergryphOperationMode, settings.hypergryphImmediateMove, settings.hypergryphImmediateMarquee],
+  );
 
   const groups = useMemo(
     () => buildGuideData(getShortcut, settingsSnapshot),
-    [getShortcut, settingsSnapshot.hg, settingsSnapshot.immediateMove, settingsSnapshot.immediateMarquee],
+    [getShortcut, settingsSnapshot],
   );
 
   // 本项目移动端只允许横屏，因此 tablet / mobile 共用同一布局策略

@@ -384,6 +384,9 @@ const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, strin
     "registry.entity.item_pipe_converger.name": "管道汇流器",
     "registry.entity.item_pipe_admission.name": "管道准入口",
     "registry.entity.item_pipe_connector.name": "管道桥接器",
+    "registry.entity.item_port_dumper_1.name": "给水器",
+    "registry.recipe.r_dumper_void_liquid_acid_basic.name": "倾倒沉积酸",
+    "registry.recipe.r_dumper_void_liquid_water_basic.name": "倾倒清水",
   },
   "en-US": {
     "workbench.leftRail.placement": "Placement",
@@ -593,6 +596,9 @@ const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, strin
     "registry.entity.item_pipe_converger.name": "Pipe Converger",
     "registry.entity.item_pipe_admission.name": "Pipe Admission",
     "registry.entity.item_pipe_connector.name": "Pipe Connector",
+    "registry.entity.item_port_dumper_1.name": "Water Dumper",
+    "registry.recipe.r_dumper_void_liquid_acid_basic.name": "Dump Sediment Acid",
+    "registry.recipe.r_dumper_void_liquid_water_basic.name": "Dump Water",
   },
 };
 

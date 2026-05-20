@@ -1,0 +1,181 @@
+.pwa-gateway-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 0.36);
+}
+
+.pwa-gateway-card,
+.pwa-gateway-toast {
+  border: 1px solid var(--line);
+  background: var(--surface-1);
+  color: var(--text-0);
+  box-shadow: 0 18px 42px var(--shadow-floating-control);
+}
+
+.pwa-gateway-card {
+  width: min(420px, 100%);
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.pwa-install-card {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 70;
+}
+
+.pwa-gateway-card h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.pwa-gateway-card p,
+.pwa-gateway-toast span,
+.pwa-settings-copy p {
+  margin: 0;
+  color: var(--text-1);
+  line-height: 1.5;
+}
+
+.pwa-gateway-actions,
+.pwa-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.pwa-gateway-primary-button,
+.pwa-gateway-secondary-button,
+.pwa-settings-primary-button,
+.pwa-settings-secondary-button {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  font: inherit;
+}
+
+.pwa-gateway-primary-button,
+.pwa-settings-primary-button {
+  background: var(--accent);
+  color: var(--surface-1);
+}
+
+.pwa-gateway-secondary-button,
+.pwa-settings-secondary-button {
+  background: var(--surface-2);
+  color: var(--text-0);
+}
+
+.pwa-gateway-primary-button:disabled,
+.pwa-gateway-secondary-button:disabled,
+.pwa-settings-primary-button:disabled,
+.pwa-settings-secondary-button:disabled {
+  opacity: 0.5;
+}
+
+.pwa-gateway-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 75;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  width: min(520px, calc(100vw - 40px));
+  padding: 14px;
+  border-radius: 8px;
+}
+
+.pwa-gateway-toast-error {
+  border-color: var(--danger);
+}
+
+.pwa-gateway-toast-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pwa-gateway-toast-copy strong {
+  font-size: 14px;
+}
+
+.pwa-progress {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+
+.pwa-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.pwa-settings-section {
+  scroll-margin-top: 12px;
+}
+
+.pwa-settings-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+}
+
+.pwa-settings-card + .pwa-settings-card {
+  margin-top: 10px;
+}
+
+.pwa-settings-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.pwa-settings-copy h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.pwa-settings-actions {
+  margin-top: 0;
+}
+
+@media (max-width: 760px) {
+  .pwa-gateway-toast,
+  .pwa-install-card {
+    right: 12px;
+    bottom: 12px;
+    width: calc(100vw - 24px);
+  }
+
+  .pwa-settings-card,
+  .pwa-gateway-toast {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pwa-settings-actions {
+    justify-content: flex-start;
+  }
+}

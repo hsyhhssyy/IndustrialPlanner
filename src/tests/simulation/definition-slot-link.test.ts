@@ -5,7 +5,7 @@ import { runBlueprintSimulation } from "@/simulation/blueprint-runner"
 import {
   createBlueprint,
   createEntity,
-} from "../blueprint-test-helpers"
+} from "./blueprint-test-helpers"
 
 describe("definition slot links", () => {
   it("ignores cleared definition links materialized as null config entries", async () => {

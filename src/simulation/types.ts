@@ -7,6 +7,7 @@ export type SimulationPortKind = "item" | "fluid";
 export type SimulationPortDirection = "input" | "output";
 export type SimulationNodeViewRole = "input-view" | "output-view";
 export type SimulationCountLimit = number | "unlimited";
+export type SimulationPowerStatus = "no-power-needed" | "in-power-range" | "out-of-power-range";
 /**
  * 仿真运输类别，决定设备在物流拓扑中的角色。
  *
@@ -52,12 +53,13 @@ export interface SimulationCompileDiagnostic {
 }
 
 export interface CompiledSimulationTopology {
-  readonly schemaVersion: 3;
+  readonly schemaVersion: 4;
   readonly topologyId: string;
   readonly documentKey: string;
   readonly documentHash: string;
   readonly registryHash: string;
   readonly standardTickRate: number;
+  readonly totalPowerDemand: number;
   readonly itemCatalog: Record<string, CompiledSimulationItem>;
   readonly recipeCatalog: Record<string, CompiledSimulationRecipeDefinition>;
   readonly devices: Record<string, CompiledSimulationDevice>;
@@ -104,6 +106,8 @@ export interface CompiledSimulationDevice {
   readonly position: GridPoint | null;
   readonly rotation: GridRotation | null;
   readonly tags: readonly string[];
+  readonly powerStatus: SimulationPowerStatus;
+  readonly powerDemand: number;
   readonly transportClass: SimulationTransportClass;
   /** 若属于 strict-belt/strict-pipe 运输组件，则为该组件的 ID；否则为 null。 */
   readonly transportComponentId: string | null;
@@ -281,6 +285,7 @@ export interface RuntimeTickSnapshot {
   readonly documentHash: string;
   readonly tickNumber: number;
   readonly status: "initial" | "running";
+  readonly totalPowerDemand: number;
   readonly slots: Record<string, RuntimeSlotSnapshot>;
   readonly devices: Record<string, RuntimeDeviceSnapshot>;
   readonly nodes: Record<string, RuntimeNodeSnapshot>;

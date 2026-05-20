@@ -2464,4 +2464,24 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_fluid_output", "fluid_output", "fluid_buffer"),
     ],
   }),
+  // =========================================================================
+  // 隐藏设备 (uiGroup: "hidden")
+  //
+  // 这些设备不在放置面板中显示，由特定工具或配方系统自动生成。
+  // =========================================================================
+
+  /**
+   * item_port_dumper_1 — 给水器（3×3）
+   *
+   * 隐藏设备，无精灵定义，无端口/槽位/配方。
+   * 仅作为倾倒配方的目标设备，产出的物品直接消失。
+   */
+  createEmptyEntityDefinition({
+    id: "item_port_dumper_1",
+    nameKey: "registry.entity.item_port_dumper_1.name",
+    spriteId: "item_port_dumper_1",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "hidden",
+    tags: [],
+  }),
 ];

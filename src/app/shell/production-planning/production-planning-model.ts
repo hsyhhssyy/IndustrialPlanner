@@ -23,7 +23,7 @@ export interface ProductionPlanningIndex {
   recipeById: Map<string, RecipeDefinition>;
   recipesByOutputItem: Map<string, RecipeDefinition[]>;
   allItems: ItemDefinition[];
-  mineralItemIds: Set<string>;
+  naturalResourceItemIds: Set<string>;
 }
 
 export interface ProductionPlanningSupplyBreakdown {
@@ -121,10 +121,10 @@ export function buildProductionPlanningIndex(registry: RegistryContract): Produc
     }
   }
 
-  const mineralItemIds = new Set<string>();
+  const naturalResourceItemIds = new Set<string>();
   for (const item of registry.itemDefinitions) {
-    if (isMineralItem(item)) {
-      mineralItemIds.add(item.id);
+    if (isNaturalResourceItem(item)) {
+      naturalResourceItemIds.add(item.id);
     }
   }
 
@@ -134,7 +134,7 @@ export function buildProductionPlanningIndex(registry: RegistryContract): Produc
     recipeById,
     recipesByOutputItem,
     allItems: [...registry.itemDefinitions].sort((left, right) => left.nameKey.localeCompare(right.nameKey)),
-    mineralItemIds,
+    naturalResourceItemIds,
   };
 }
 
@@ -607,8 +607,8 @@ function clonePort(port: ProductionPlanningPort): ProductionPlanningPort {
   };
 }
 
-function isMineralItem(item: ItemDefinition): boolean {
-  return item.tags.some((tag) => tag.includes("矿"));
+function isNaturalResourceItem(item: ItemDefinition): boolean {
+  return item.tags.includes("自然资源");
 }
 
 function isAllowedProductivePlantCycle(itemId: string, stack: readonly string[]): boolean {

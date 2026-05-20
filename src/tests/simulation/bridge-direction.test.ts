@@ -8,7 +8,7 @@ import {
   findSlot,
   getDevice,
   getTick,
-} from "../blueprint-test-helpers";
+} from "./blueprint-test-helpers";
 
 // =============================================================================
 // 桥接器方向隔离验证

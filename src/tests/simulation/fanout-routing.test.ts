@@ -6,7 +6,7 @@ import {
   createEntity,
   findSlotWithItem,
   getTick,
-} from "../blueprint-test-helpers";
+} from "./blueprint-test-helpers";
 
 describe("REQ-076: fanout routing", () => {
   it("routes around blocked fan-out inputs instead of starving open downstream capacity", async () => {

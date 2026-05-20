@@ -108,7 +108,7 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
     return () => {
       resizeObserver.disconnect();
     };
-  }, [previewModel?.bounds.height, previewModel?.bounds.width]);
+  }, [previewModel, previewModel?.bounds.height, previewModel?.bounds.width]);
 
   useEffect(() => {
     const canvasHost = canvasHostRef.current;
@@ -170,7 +170,7 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
         renderHost.actions.disposeBlueprintPreview(mountedHandle);
       }
     };
-  }, [hostSize !== null, previewModel, previewBlueprintDocument, renderHost]);
+  }, [hostSize, previewModel, previewBlueprintDocument, renderHost]);
 
   useEffect(() => {
     const frame = frameRef.current;

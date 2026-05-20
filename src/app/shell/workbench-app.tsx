@@ -24,6 +24,8 @@ import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
 import { EncyclopediaPickerDialog } from "@/app/shell/encyclopedia/encyclopedia-picker-dialog";
 import { ToolboxDialog } from "@/app/shell/dialogs/toolbox-dialog";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
+import { PwaController } from "@/app/pwa/pwa-controller";
+import { PwaGateway } from "@/app/pwa/pwa-gateway";
 import LeftDock from "@/app/shell/layout/left-dock";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
@@ -66,6 +68,7 @@ function isAppThemeId(value: unknown): value is AppThemeId {
 
 export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
+  const [pwaController] = useState(() => new PwaController());
   const [settingsDialog] = useState(() => new WorkbenchSettingsDialogController({
     externalBindings: {
       "system-language": {
@@ -616,7 +619,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       <ToolboxDialog appHost={appHost} />
       <EncyclopediaPickerDialog appHost={appHost} />
       <HelpDialog appHost={appHost} />
-      <SettingsDialog appHost={appHost} controller={settingsDialog} />
+      <SettingsDialog appHost={appHost} controller={settingsDialog} pwaController={pwaController} />
+      <PwaGateway appHost={appHost} pwaController={pwaController} />
       {showMobilePortraitGate ? <MobilePortraitGate appHost={appHost} /> : null}
     </div>
   );

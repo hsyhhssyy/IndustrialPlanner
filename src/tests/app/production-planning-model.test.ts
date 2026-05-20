@@ -16,7 +16,7 @@ function port(itemId: string, perMinute: number): ProductionPlanningPort {
 }
 
 function createInfiniteItemIds(index: ReturnType<typeof buildProductionPlanningIndex>, extra: string[] = []) {
-  return new Set([...index.mineralItemIds, ...extra]);
+  return new Set([...index.naturalResourceItemIds, ...extra]);
 }
 
 describe("production planning model", () => {

@@ -113,7 +113,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_copper_ore",
     nameKey: "registry.item.item_copper_ore.name",
     iconId: "item_copper_ore",
-    tags: ["矿石"],
+    tags: ["矿石", "自然资源"],
   },
   {
     id: "item_copper_bottle",
@@ -233,7 +233,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_liquid_acid",
     nameKey: "registry.item.item_liquid_acid.name",
     iconId: "item_liquid_acid",
-    tags: ["liquid", "liquid_color:#d97a1f", "new"],
+    tags: ["liquid", "liquid_color:#d97a1f", "new", "自然资源", "无限供应"],
   },
   {
     id: "item_liquid_copper",
@@ -755,7 +755,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_iron_ore",
     nameKey: "registry.item.item_iron_ore.name",
     iconId: "item_iron_ore",
-    tags: ["矿石"],
+    tags: ["矿石", "自然资源"],
   },
   {
     id: "item_iron_powder",
@@ -779,7 +779,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_liquid_water",
     nameKey: "registry.item.item_liquid_water.name",
     iconId: "item_liquid_water",
-    tags: ["liquid", "liquid_color:#82d6ff"],
+    tags: ["liquid", "liquid_color:#82d6ff", "自然资源", "无限供应"],
   },
   {
     id: "item_liquid_xiranite",
@@ -809,7 +809,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_originium_ore",
     nameKey: "registry.item.item_originium_ore.name",
     iconId: "item_originium_ore",
-    tags: ["矿石"],
+    tags: ["矿石", "自然资源"],
   },
   {
     id: "item_originium_powder",
@@ -1001,7 +1001,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_quartz_sand",
     nameKey: "registry.item.item_quartz_sand.name",
     iconId: "item_quartz_sand",
-    tags: ["矿石"],
+    tags: ["矿石", "自然资源"],
   },
   {
     id: "item_xiranite_enr_powder",

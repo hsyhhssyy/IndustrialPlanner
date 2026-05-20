@@ -313,6 +313,19 @@
   color: var(--accent-strong);
 }
 
+.production-planning-natural-resource-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 8px;
+}
+
+.production-planning-natural-resource-icons img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
 .production-planning-special-source-label {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);

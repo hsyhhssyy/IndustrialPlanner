@@ -19,7 +19,7 @@ function port(itemId: string, perMinute: number): ProductionPlanningPort {
 
 function createInfiniteItemIds(index: ReturnType<typeof buildProductionPlanningIndex>, extra: string[] = []) {
   return new Set([
-    ...index.mineralItemIds,
+    ...index.naturalResourceItemIds,
     ...PRODUCTION_PLANNING_SPECIAL_INFINITE_ITEM_IDS,
     ...extra,
   ]);

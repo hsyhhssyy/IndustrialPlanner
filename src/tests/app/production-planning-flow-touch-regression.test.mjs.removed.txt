@@ -1,0 +1,258 @@
+// AI-REMOVED 2026-05-20:
+// Reason: Playwright E2E 脚本迁移为 vitest jsdom 测试。
+//          jsdom 无法验证 computed-style (touch-action)，该部分需 Playwright E2E 补充；
+//          拖拽/缩放/pinch 状态机已覆盖于 vitest 测试。
+// Trigger: 用户要求"不要放 playwright 脚本，改成 vitest 形式的测试"
+// Evidence: src/tests/app/production-planning-flow-touch-regression.test.tsx 覆盖了
+//           touch-action className 校验、pointer drag、wheel zoom、pinch 状态机、toolbar 拦截。
+// Replacement: src/tests/app/production-planning-flow-touch-regression.test.tsx
+// Risk: computed-style touch-action: none 在 jsdom 中不可验证，
+//       需后续 Playwright E2E 回归验证样式实际生效。
+// Human Review: Not Required
+//
+// Original file:
+/**
+ * 回归测试：生产流程图触控交互
+ * 
+ * 测试目标：
+ * 1. CSS touch-action: none 已应用
+ * 2. 鼠标/触控拖拽正确平移画布
+ * 3. 双指 pinch zoom 正常工作
+ * 
+ * 运行方式：cd /home/coder/IndustrialPlanner && node .temp/playwright-test/production-flow-touch-regression.mjs
+ */
+
+import { chromium } from 'playwright';
+
+const APP_URL = 'http://localhost:5175';
+const TEST_RESULTS = [];
+
+function record(testName, passed, message = '') {
+  TEST_RESULTS.push({ testName, passed, message });
+  const icon = passed ? '✓' : '✗';
+  console.log(`  ${icon} ${testName}${message ? ': ' + message : ''}`);
+}
+
+async function navigateToFlowGraph(page) {
+  // 1. 点击"工具箱"按钮打开工具箱对话框
+  const toolboxBtn = page.getByRole('button', { name: '工具箱' });
+  await toolboxBtn.click();
+  await page.waitForTimeout(500);
+
+  // 2. 切换到"产线规划"标签
+  const ppTab = page.getByRole('tab', { name: '产线规划' });
+  await ppTab.click();
+  await page.waitForTimeout(500);
+
+  // 3. 点击"添加目标"
+  const addTargetBtn = page.locator('button:has-text("添加目标")');
+  await addTargetBtn.click();
+  await page.waitForTimeout(500);
+
+  // 4. 选择物品 "碳块" - 通过第一个按钮
+  const carbonBtn = page.getByRole('button', { name: '碳块', exact: true });
+  await carbonBtn.click();
+  await page.waitForTimeout(500);
+
+  // 5. 点击"计算"
+  const calcBtn = page.locator('button:has-text("计算")');
+  await calcBtn.waitFor({ state: 'visible', timeout: 5000 });
+  const isDisabled = await calcBtn.isDisabled();
+  if (!isDisabled) {
+    await calcBtn.click();
+    await page.waitForTimeout(500);
+  }
+
+  // 6. 切换到流程视图
+  const flowBtn = page.locator('button:has-text("流程图")');
+  await flowBtn.click();
+  await page.waitForTimeout(500);
+}
+
+async function run() {
+  console.log('开始生产流程图触控回归测试...\n');
+
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+  });
+  const page = await context.newPage();
+
+  try {
+    // ===================== Test 1: touch-action CSS =====================
+    console.log('--- Test 1: CSS touch-action ---');
+    
+    await page.goto(APP_URL, { waitUntil: 'networkidle' });
+    
+    // Navigate to flow graph
+    await navigateToFlowGraph(page);
+
+    // Verify touch-action: none on the canvas
+    const touchAction = await page.evaluate(() => {
+      const canvas = document.querySelector('[class*="production-flow-canvas"]');
+      if (!canvas) return null;
+      return getComputedStyle(canvas).touchAction;
+    });
+
+    if (touchAction === 'none') {
+      record('touch-action: none 已应用', true);
+    } else {
+      record('touch-action: none 已应用', false, `实际值: ${touchAction}`);
+    }
+
+    // ===================== Test 2: Mouse Drag Pan =====================
+    console.log('\n--- Test 2: 鼠标拖拽平移 ---');
+
+    // Get initial viewport transform
+    const getTransform = () => page.evaluate(() => {
+      const surface = document.querySelector('[class*="production-flow-surface"]');
+      return surface ? surface.style.transform : null;
+    });
+
+    const initialTransform = await getTransform();
+    console.log(`  初始状态: ${initialTransform}`);
+
+    // Find an empty area on the canvas (right side)
+    const canvasBounds = await page.evaluate(() => {
+      const canvas = document.querySelector('[class*="production-flow-canvas"]');
+      const rect = canvas.getBoundingClientRect();
+      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+    });
+
+    if (!canvasBounds) {
+      record('鼠标拖拽平移', false, '找不到 canvas 元素');
+    } else {
+      // Click on empty area (right-bottom corner)
+      const startX = canvasBounds.x + canvasBounds.width - 100;
+      const startY = canvasBounds.y + canvasBounds.height - 100;
+      const endX = startX - 200;
+      const endY = startY - 100;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(endX, endY, { steps: 10 });
+      await page.mouse.up();
+      await page.waitForTimeout(300);
+
+      const afterDragTransform = await getTransform();
+      console.log(`  拖拽后: ${afterDragTransform}`);
+
+      // Viewport should have changed from initial "translate(22px, 22px)"
+      if (afterDragTransform !== initialTransform && afterDragTransform !== null) {
+        record('鼠标拖拽平移', true, `变换: ${afterDragTransform}`);
+      } else {
+        record('鼠标拖拽平移', false, '视口未发生变化');
+      }
+    }
+
+    // ===================== Test 3: Wheel Zoom =====================
+    console.log('\n--- Test 3: 滚轮缩放 ---');
+
+    // Find canvas center for zoom target
+    const canvasCenter = await page.evaluate(() => {
+      const canvas = document.querySelector('[class*="production-flow-canvas"]');
+      const rect = canvas.getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    });
+
+    const beforeWheelTransform = await getTransform();
+    console.log(`  缩放前: ${beforeWheelTransform}`);
+
+    // Dispatch wheel event at canvas center
+    await page.mouse.move(canvasCenter.x, canvasCenter.y);
+    await page.mouse.wheel(0, 120); // scroll down = zoom out
+    await page.waitForTimeout(300);
+
+    const afterWheelTransform = await getTransform();
+    console.log(`  缩放后: ${afterWheelTransform}`);
+
+    if (afterWheelTransform !== beforeWheelTransform && afterWheelTransform !== null) {
+      record('滚轮缩放', true, `变换: ${afterWheelTransform}`);
+    } else {
+      record('滚轮缩放', false, '视口未发生变化');
+    }
+
+    // ===================== Test 4: Pinch Zoom (Simulated) =====================
+    console.log('\n--- Test 4: 双指缩放 (通过 CDP) ---');
+
+    const cdpSession = await page.context().newCDPSession(page);
+
+    // Find canvas for touch coordinates
+    const pinchCenter = await page.evaluate(() => {
+      const canvas = document.querySelector('[class*="production-flow-canvas"]');
+      const rect = canvas.getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    });
+
+    const beforePinchTransform = await getTransform();
+    console.log(`  缩放前: ${beforePinchTransform}`);
+
+    // Simulate two-finger touch: first finger down
+    await cdpSession.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ id: 0, x: pinchCenter.x - 50, y: pinchCenter.y }],
+    });
+    await page.waitForTimeout(50);
+
+    // Second finger down (pinch start)
+    await cdpSession.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [
+        { id: 0, x: pinchCenter.x - 50, y: pinchCenter.y },
+        { id: 1, x: pinchCenter.x + 50, y: pinchCenter.y },
+      ],
+    });
+    await page.waitForTimeout(50);
+
+    // Pinch out (fingers move apart)
+    for (let i = 0; i < 5; i++) {
+      const spread = 50 + (i + 1) * 20;
+      await cdpSession.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [
+          { id: 0, x: pinchCenter.x - spread, y: pinchCenter.y },
+          { id: 1, x: pinchCenter.x + spread, y: pinchCenter.y },
+        ],
+      });
+      await page.waitForTimeout(30);
+    }
+
+    // Both fingers up
+    await cdpSession.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: [],
+    });
+    await page.waitForTimeout(300);
+
+    const afterPinchTransform = await getTransform();
+    console.log(`  缩放后: ${afterPinchTransform}`);
+
+    if (afterPinchTransform !== beforePinchTransform && afterPinchTransform !== null) {
+      record('双指缩放 (pinch)', true, `变换: ${afterPinchTransform}`);
+    } else {
+      record('双指缩放 (pinch)', false, '视口未发生变化 (可能因为单指先触发了元素点击)');
+    }
+
+    // ===================== Summary =====================
+    console.log('\n========== 测试结果汇总 ==========');
+    const passed = TEST_RESULTS.filter(r => r.passed).length;
+    const total = TEST_RESULTS.length;
+    console.log(`通过: ${passed}/${total}`);
+    for (const r of TEST_RESULTS) {
+      console.log(`  ${r.passed ? '✓' : '✗'} ${r.testName}${r.message ? ': ' + r.message : ''}`);
+    }
+
+    if (passed === total) {
+      console.log('\n✅ 所有测试通过!');
+    } else {
+      console.log('\n❌ 存在失败测试');
+    }
+  } catch (error) {
+    console.error('测试执行出错:', error.message);
+    console.error(error.stack);
+  } finally {
+    await browser.close();
+  }
+}
+
+run();

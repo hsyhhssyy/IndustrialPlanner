@@ -60,6 +60,9 @@ function startIdleDevices(
     if (device === undefined || deviceState === undefined) {
       continue;
     }
+    if (device.powerStatus === "out-of-power-range") {
+      continue;
+    }
 
     for (const channel of (device.recipeChannels ?? [])) {
       // Skip channels already running a recipe

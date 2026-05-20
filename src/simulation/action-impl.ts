@@ -2,9 +2,14 @@ import { action, runInAction } from "mobx";
 
 import type { SimulationAction } from "@/domain/simulation/simulation-action";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
-import type { WorldDocument } from "@/domain/document/world-document";
+import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
+import {
+  areGridRectsIntersecting,
+  resolveEntityGridRect,
+  resolvePowerRangeGridRect,
+} from "@/shared/geometry/power-range";
 
 import {
   compileSimulationTopology,
@@ -221,6 +226,10 @@ implements SimulationAction, SimulationInternalAction {
     const compiledTopology = compileSimulationTopology({
       document,
       registry: this.workspace.registry,
+      poweredEntityIds: computePoweredEntityIds({
+        document,
+        registry: this.workspace.registry,
+      }),
     });
     const previousDocument = this.compiledDocument;
     const baseTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber ?? 0;
@@ -406,6 +415,59 @@ implements SimulationAction, SimulationInternalAction {
 
 function cloneWorldDocument(document: WorldDocument): WorldDocument {
   return JSON.parse(JSON.stringify(document)) as WorldDocument;
+}
+
+function computePoweredEntityIds(options: {
+  readonly document: WorldDocument;
+  readonly registry: WorkspaceContract["registry"];
+}): Set<string> {
+  const definitionMap = new Map(
+    options.registry.entityDefinitions.map((definition) => [
+      definition.id,
+      definition,
+    ]),
+  );
+  const entities = resolveOrderedDocumentEntities(options.document);
+  const powerRangeRects = entities.flatMap((entity) => {
+    const definition = definitionMap.get(entity.definitionId);
+    if (definition === undefined) {
+      return [];
+    }
+
+    const gridRect = resolvePowerRangeGridRect({
+      entity,
+      definition,
+    });
+
+    return gridRect === null ? [] : [gridRect];
+  });
+
+  if (powerRangeRects.length === 0) {
+    return new Set();
+  }
+
+  return new Set(entities.flatMap((entity) => {
+    const definition = definitionMap.get(entity.definitionId);
+    if (definition === undefined) {
+      return [];
+    }
+
+    const entityGridRect = resolveEntityGridRect({
+      entity,
+      definition,
+    });
+    return powerRangeRects.some((powerRangeRect) =>
+      areGridRectsIntersecting(entityGridRect, powerRangeRect),
+    ) ? [entity.id] : [];
+  }));
+}
+
+function resolveOrderedDocumentEntities(document: WorldDocument): WorldEntity[] {
+  return document.entityOrder.flatMap((entityId) => {
+    const entity = document.entities[entityId];
+
+    return entity === undefined ? [] : [entity];
+  });
 }
 
 function resolveSimulationCompileDocument(options: {

@@ -5,6 +5,7 @@ import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/host/app-host";
+import { PwaController } from "@/app/pwa/pwa-controller";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -148,7 +149,13 @@ describe("SettingsDialog", () => {
     });
 
     act(() => {
-      root.render(<SettingsDialog appHost={appHost} controller={controller} />);
+      root.render(
+        <SettingsDialog
+          appHost={appHost}
+          controller={controller}
+          pwaController={new PwaController()}
+        />,
+      );
     });
 
     act(() => {

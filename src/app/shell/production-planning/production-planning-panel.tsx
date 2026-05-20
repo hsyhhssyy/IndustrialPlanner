@@ -79,12 +79,12 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   const [calculation, setCalculation] = useState<ProductionPlanningCalculation | null>(null);
   const swipeStateRef = useRef<ProductionPlanningSwipeState | null>(null);
   const infiniteItemIds = useMemo(() => {
-    const result = new Set(index.mineralItemIds);
+    const result = new Set(index.naturalResourceItemIds);
     for (const itemId of specialInfiniteItemIds) {
       result.add(itemId);
     }
     return result;
-  }, [index.mineralItemIds, specialInfiniteItemIds]);
+  }, [index.naturalResourceItemIds, specialInfiniteItemIds]);
   const resultRecipeChoiceMap = useMemo(
     () => new Map(Object.entries(calculation?.recipeChoices ?? recipeChoices)),
     [calculation?.recipeChoices, recipeChoices],
@@ -454,8 +454,17 @@ function SourcePolicyPanel({
       <div className={cm(styles, "production-planning-source-policy")}>
         <div className={cm(styles, "production-planning-source-pill")}>
           <LucideBoxes />
-          <span>{t("productionPlanning.mineralInfinite")}</span>
-          <strong>{index.mineralItemIds.size}</strong>
+          <span>{t("productionPlanning.naturalResources")}</span>
+        </div>
+        <div className={cm(styles, "production-planning-natural-resource-icons")}>
+          {Array.from(index.naturalResourceItemIds).map((itemId) => (
+            <img
+              key={itemId}
+              alt=""
+              src={resolveProductionPlanningItemIconSrc(itemId, index)}
+              title={resolveProductionPlanningItemName(itemId, index, t)}
+            />
+          ))}
         </div>
         {PRODUCTION_PLANNING_SPECIAL_INFINITE_ITEM_IDS.map((itemId) => (
           <div key={itemId} className={cm(styles, "production-planning-special-source")}>

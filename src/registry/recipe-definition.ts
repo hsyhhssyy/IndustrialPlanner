@@ -3142,4 +3142,27 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     recipeType: "immediate-consume",
     tags: ["new"],
   },
+  // =========================================================================
+  // 给水器倾倒配方 — 物品直接消失
+  // =========================================================================
+  {
+    id: "r_dumper_void_liquid_acid_basic",
+    nameKey: "registry.recipe.r_dumper_void_liquid_acid_basic.name",
+    durationSeconds: 0.5,
+    inputs: [{ itemId: "item_liquid_acid", amount: 1 }],
+    outputs: [],
+    machineId: "item_port_dumper_1",
+    recipeType: "immediate-consume",
+    tags: [],
+  },
+  {
+    id: "r_dumper_void_liquid_water_basic",
+    nameKey: "registry.recipe.r_dumper_void_liquid_water_basic.name",
+    durationSeconds: 0.5,
+    inputs: [{ itemId: "item_liquid_water", amount: 1 }],
+    outputs: [],
+    machineId: "item_port_dumper_1",
+    recipeType: "immediate-consume",
+    tags: [],
+  },
 ];

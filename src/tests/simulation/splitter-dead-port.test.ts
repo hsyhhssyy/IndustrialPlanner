@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
-import { createBlueprint, createEntity } from "../blueprint-test-helpers";
+import { createBlueprint, createEntity } from "./blueprint-test-helpers";
 
 const MAX_TICK = 1800;
 

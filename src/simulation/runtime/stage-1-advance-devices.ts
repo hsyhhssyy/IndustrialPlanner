@@ -32,6 +32,9 @@ export function advanceDevices(
     if (device === undefined || deviceState === undefined) {
       continue;
     }
+    if (device.powerStatus === "out-of-power-range") {
+      continue;
+    }
 
     for (const [chId, recipe] of Object.entries(deviceState.channelRecipes)) {
       if (recipe === null) {

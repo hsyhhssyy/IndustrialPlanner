@@ -7,7 +7,7 @@ import {
   createEntity,
   getDevice,
   getTick,
-} from "../blueprint-test-helpers";
+} from "./blueprint-test-helpers";
 
 function createBeltTransportBlueprint(): BlueprintDocument {
   return createBlueprint("belt-transport", [

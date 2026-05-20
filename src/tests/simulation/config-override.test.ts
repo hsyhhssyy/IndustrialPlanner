@@ -6,7 +6,7 @@ import {
   createEntity,
   findSlot,
   getTick,
-} from "../blueprint-test-helpers";
+} from "./blueprint-test-helpers";
 
 describe("REQ-076: config overrides", () => {
   it("runs a self-contained blueprint and applies slot plus port config overrides", async () => {

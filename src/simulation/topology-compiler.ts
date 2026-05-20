@@ -29,6 +29,7 @@ import type {
   SimulationCountLimit,
   SimulationItemDomain,
   SimulationNodeViewRole,
+  SimulationPowerStatus,
   SimulationPortDirection,
   SimulationPortKind,
   SimulationTransportClass,
@@ -47,6 +48,7 @@ type RecipeChannelDefinition = EntityDefinition["recipeChannels"][number];
 interface CompileOptions {
   readonly document: WorldDocument;
   readonly registry: RegistryContract;
+  readonly poweredEntityIds: ReadonlySet<string>;
 }
 
 interface DeviceCompileResult {
@@ -144,6 +146,7 @@ export function compileSimulationTopology(
         registryQueries: options.registry.queries,
         itemCatalog,
         baseId: options.document.baseId,
+        poweredEntityIds: options.poweredEntityIds,
       }),
       devices,
       nodes,
@@ -250,10 +253,12 @@ export function compileSimulationTopology(
     recipes: options.registry.recipeDefinitions,
   });
   const documentHash = createSimulationDocumentHash(options.document);
+  const totalPowerDemand = computeTotalPowerDemand(devices);
   const topologyHashInput = {
     documentHash,
     registryHash,
     standardTickRate,
+    totalPowerDemand,
     itemCatalog,
     recipeCatalog,
     devices,
@@ -275,12 +280,13 @@ export function compileSimulationTopology(
   };
 
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     topologyId: hashStable(topologyHashInput),
     documentKey: options.document.documentKey,
     documentHash,
     registryHash,
     standardTickRate,
+    totalPowerDemand,
     itemCatalog,
     recipeCatalog,
     devices,
@@ -368,6 +374,14 @@ function compileRecipeCatalog(
   return catalog;
 }
 
+function computeTotalPowerDemand(
+  devices: Readonly<Record<string, CompiledSimulationDevice>>,
+): number {
+  return Object.values(devices).reduce((total, device) =>
+    device.powerStatus === "in-power-range" ? total + device.powerDemand : total,
+  0);
+}
+
 function compileWarehouseDevice(
   document: WorldDocument,
   itemCatalog: Record<string, CompiledSimulationItem>,
@@ -407,6 +421,8 @@ function compileWarehouseDevice(
       position: null,
       rotation: null,
       tags: ["warehouse"],
+      powerStatus: "no-power-needed",
+      powerDemand: 0,
       transportClass: "anchor",
       transportComponentId: null,
       nodeIds: [nodeId],
@@ -422,16 +438,43 @@ function compileWarehouseDevice(
   };
 }
 
+function resolvePowerDemand(definition: EntityDefinition): number {
+  return Number.isFinite(definition.powerDemand)
+    ? Math.max(0, definition.powerDemand)
+    : 0;
+}
+
+function resolvePowerStatus(options: {
+  readonly entityId: string;
+  readonly powerDemand: number;
+  readonly poweredEntityIds: ReadonlySet<string>;
+}): SimulationPowerStatus {
+  if (options.powerDemand === 0) {
+    return "no-power-needed";
+  }
+
+  return options.poweredEntityIds.has(options.entityId)
+    ? "in-power-range"
+    : "out-of-power-range";
+}
+
 function compileEntityDevice(options: {
   readonly entity: WorldEntity;
   readonly definition: EntityDefinition;
   readonly registryQueries: RegistryContract["queries"];
   readonly itemCatalog: Record<string, CompiledSimulationItem>;
   readonly baseId: string;
+  readonly poweredEntityIds: ReadonlySet<string>;
 }): DeviceCompileResult {
   const deviceId = `device:${options.entity.id}`;
   const definition = mergeEntityDefinitionConfig(options.definition, options.entity.config);
   const transportClass = resolveTransportClass(options.registryQueries, definition);
+  const powerDemand = resolvePowerDemand(definition);
+  const powerStatus = resolvePowerStatus({
+    entityId: options.entity.id,
+    powerDemand,
+    poweredEntityIds: options.poweredEntityIds,
+  });
   const nodes: CompiledSimulationNode[] = [];
   const slots: CompiledSimulationSlot[] = [];
   const ports: CompiledSimulationPort[] = [];
@@ -472,6 +515,8 @@ function compileEntityDevice(options: {
     position: { ...options.entity.position },
     rotation: options.entity.rotation,
     tags: [...definition.tags].sort(),
+    powerStatus,
+    powerDemand,
     transportClass,
     transportComponentId: null,
     nodeIds: nodes.map((node) => node.id),

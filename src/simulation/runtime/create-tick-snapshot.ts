@@ -19,6 +19,7 @@ export function createTickSnapshot(
     documentHash: topology.documentHash,
     tickNumber: state.tickNumber,
     status: state.tickNumber === 0 ? "initial" : "running",
+    totalPowerDemand: topology.totalPowerDemand,
     slots: createSlotSnapshots(topology, state, reservedBySlot),
     devices: createDeviceSnapshots(topology, state),
     nodes: createNodeSnapshots(state),

@@ -7,7 +7,7 @@ import {
   createBlueprint,
   createEntity,
   findSlot,
-} from "../blueprint-test-helpers";
+} from "./blueprint-test-helpers";
 
 function createGrinderBlueprint(
   name: string,

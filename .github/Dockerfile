@@ -4,6 +4,8 @@ RUN echo 'server { \
     listen 80; \
     root /usr/share/nginx/html; \
     index index.html; \
+    location = /sw.js { add_header Cache-Control "no-cache, must-revalidate"; try_files $uri =404; } \
+    location = /manifest.webmanifest { add_header Cache-Control "no-cache, must-revalidate"; try_files $uri =404; } \
     location / { try_files $uri $uri/ /index.html; } \
     location /assets { expires 1y; add_header Cache-Control "public, immutable"; } \
 }' > /etc/nginx/conf.d/default.conf

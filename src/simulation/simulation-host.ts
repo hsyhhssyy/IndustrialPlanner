@@ -84,6 +84,7 @@ export function createSimulationHost(
           : {
               tickNumber: internalState.currentSnapshot.tickNumber,
               status: internalState.currentSnapshot.status,
+              totalPowerDemand: internalState.currentSnapshot.totalPowerDemand,
               transferCount: internalState.currentSnapshot.transfers.length,
               diagnosticCount: internalState.currentSnapshot.diagnostics.length,
             },

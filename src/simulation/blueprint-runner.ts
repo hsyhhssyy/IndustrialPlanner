@@ -33,6 +33,7 @@ export interface BlueprintSimulationReport {
   readonly topology: {
     readonly topologyId: string;
     readonly documentHash: string;
+    readonly totalPowerDemand: number;
     readonly diagnosticCount: number;
     readonly diagnostics: readonly CompiledSimulationTopology["diagnostics"][number][];
   };
@@ -47,6 +48,7 @@ export interface BlueprintSimulationReport {
 export interface BlueprintSimulationTickReport {
   readonly tickNumber: number;
   readonly status: RuntimeTickSnapshot["status"];
+  readonly totalPowerDemand: number;
   readonly transferCount: number;
   readonly diagnosticCount: number;
   readonly transfers: readonly RuntimeTransferSnapshot[];
@@ -147,6 +149,7 @@ export async function runBlueprintSimulation(
       topology: {
         topologyId: topology.topologyId,
         documentHash: topology.documentHash,
+        totalPowerDemand: topology.totalPowerDemand,
         diagnosticCount: topology.diagnostics.length,
         diagnostics: [...topology.diagnostics],
       },
@@ -221,6 +224,7 @@ function createTickReport(options: {
   return {
     tickNumber: options.snapshot.tickNumber,
     status: options.snapshot.status,
+    totalPowerDemand: options.snapshot.totalPowerDemand,
     transferCount: options.snapshot.transfers.length,
     diagnosticCount: options.snapshot.diagnostics.length,
     transfers: options.snapshot.transfers.map((transfer) => ({ ...transfer })),

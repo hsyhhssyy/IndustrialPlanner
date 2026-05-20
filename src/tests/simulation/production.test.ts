@@ -7,7 +7,7 @@ import {
   createEntity,
   findSlot,
   getDevice,
-} from "../blueprint-test-helpers";
+} from "./blueprint-test-helpers";
 
 describe("REQ-076: production", () => {
   it("projects production runtime status and final inventory from recipe blueprints", async () => {
@@ -18,6 +18,7 @@ describe("REQ-076: production", () => {
           "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
           "storageSlotGroups[0].slots[0].initialCount": 1,
         }),
+        createEntity("power", "item_port_power_diffuser_1", 4, 0),
       ]),
       maxTickNumber: completionTick,
     });
@@ -27,6 +28,7 @@ describe("REQ-076: production", () => {
           "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
           "storageSlotGroups[0].slots[0].initialCount": 1,
         }),
+        createEntity("power", "item_port_power_diffuser_1", 4, 0),
       ]),
       maxTickNumber: completionTick,
     });

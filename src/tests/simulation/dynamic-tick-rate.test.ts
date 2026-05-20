@@ -112,12 +112,13 @@ describe("REQ-080: dynamic simulation tick rate", () => {
 
 function createEmptyTopology(): CompiledSimulationTopology {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     topologyId: "topology:empty",
     documentKey: "document:test",
     documentHash: "hash:test",
     registryHash: "registry:test",
     standardTickRate: 20,
+    totalPowerDemand: 0,
     itemCatalog: {},
     recipeCatalog: {},
     devices: {},
@@ -173,6 +174,8 @@ function createProductionOverflowTopology(
         position: null,
         rotation: null,
         tags: [],
+        powerStatus: "in-power-range",
+        powerDemand: 1,
         transportClass: "anchor",
         transportComponentId: null,
         nodeIds: ["node:out"],

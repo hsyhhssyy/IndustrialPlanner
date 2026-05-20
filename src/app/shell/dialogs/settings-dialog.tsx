@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
+import type { PwaController } from "@/app/pwa/pwa-controller";
+import { PwaSettingsSection } from "@/app/pwa/pwa-settings-section";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import {
   type SettingsGroupId,
@@ -17,6 +19,7 @@ const SETTINGS_DIALOG_SECTION_SCROLL_OFFSET = 10;
 interface SettingsDialogProps {
   appHost: AppHost;
   controller: WorkbenchSettingsDialogController;
+  pwaController: PwaController;
 }
 
 function shouldUseImmersiveMaximizedDialog(
@@ -28,6 +31,7 @@ function shouldUseImmersiveMaximizedDialog(
 export const SettingsDialog = observer(function SettingsDialog({
   appHost,
   controller,
+  pwaController,
 }: SettingsDialogProps) {
   const t = appHost.actions.translate;
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -218,6 +222,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                 </div>
               </section>
             ))}
+            <PwaSettingsSection appHost={appHost} pwaController={pwaController} />
           </div>
         </div>
     </DialogShell>
