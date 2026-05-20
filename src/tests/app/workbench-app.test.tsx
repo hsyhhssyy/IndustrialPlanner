@@ -1121,6 +1121,10 @@ describe("WorkbenchApp", () => {
 
     const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
     const canvasLeftBottomToolbar = container.querySelector(".canvas-left-bottom-toolbar") as HTMLDivElement | null;
+    const canvasBottomLeftToolbar = container.querySelector(".canvas-bottom-left-toolbar") as HTMLDivElement | null;
+    const rotateViewButton = container.querySelector(
+      '[data-ui-button-id="canvas-bottom-left-toolbar-button-rotate-view"]',
+    ) as HTMLButtonElement | null;
 
     expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
     expect(appHost.state.screenProfile.hasTouch).toBe(true);
@@ -1131,6 +1135,12 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".dock-resize-handle")).toBeNull();
     expect(canvasLeftBottomToolbar).not.toBeNull();
     expect(canvasLeftBottomToolbar?.querySelectorAll(".canvas-left-bottom-toolbar-button")).toHaveLength(4);
+    expect(canvasBottomLeftToolbar).not.toBeNull();
+    expect(canvasBottomLeftToolbar?.classList.contains("is-offset-for-floating-tools")).toBe(true);
+    expect(rotateViewButton?.getAttribute("aria-label")).toBe("旋转视角");
+    expect(
+      rotateViewButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("rotate");
 
     act(() => {
       appHost.internalActions.toggleLeftDock();
@@ -1138,6 +1148,9 @@ describe("WorkbenchApp", () => {
 
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe(`${MOBILE_LEFT_DOCK_WIDTH}px`);
     expect(container.querySelector(".canvas-left-bottom-toolbar")).toBeNull();
+    expect(
+      container.querySelector(".canvas-bottom-left-toolbar")?.classList.contains("is-offset-for-floating-tools"),
+    ).toBe(false);
   });
 
   it("keeps full desktop left toolbar sizing on touch-enabled desktop devices", () => {
@@ -1226,6 +1239,64 @@ describe("WorkbenchApp", () => {
 
     expect(middleMouseEvent.defaultPrevented).toBe(true);
     expect(leftMouseEvent.defaultPrevented).toBe(false);
+  });
+
+  it("renders the bottom-left rotate view toolbar without emitting gestures yet", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+    const gestures: GestureEvent[] = [];
+    appHost.gestureAdapter.subscribe((event) => gestures.push(event));
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const toolbar = container.querySelector(".canvas-bottom-left-toolbar") as HTMLDivElement | null;
+    const rotateViewButton = container.querySelector(
+      '[data-ui-button-id="canvas-bottom-left-toolbar-button-rotate-view"]',
+    ) as HTMLButtonElement | null;
+
+    expect(toolbar).not.toBeNull();
+    expect(toolbar?.classList.contains("is-offset-for-floating-tools")).toBe(false);
+    expect(rotateViewButton).not.toBeNull();
+
+    if (!toolbar || !rotateViewButton) {
+      throw new Error("Canvas bottom-left toolbar did not render expected button.");
+    }
+
+    act(() => {
+      dispatchPointerEvent(toolbar, "pointerdown", {
+        pointerId: 41,
+        pointerType: "mouse",
+        clientX: 90,
+        clientY: 720,
+        buttons: 1,
+      });
+      dispatchPointerEvent(toolbar, "pointerup", {
+        pointerId: 41,
+        pointerType: "mouse",
+        clientX: 90,
+        clientY: 720,
+        buttons: 0,
+      });
+      dispatchPointerEvent(rotateViewButton, "pointerdown", {
+        pointerId: 42,
+        pointerType: "touch",
+        clientX: 90,
+        clientY: 720,
+        buttons: 1,
+      });
+      dispatchPointerEvent(rotateViewButton, "pointerup", {
+        pointerId: 42,
+        pointerType: "touch",
+        clientX: 90,
+        clientY: 720,
+        buttons: 0,
+      });
+      dispatchClickEvent(rotateViewButton, { detail: 0 });
+    });
+
+    expect(gestures).toHaveLength(0);
   });
 
   it("keeps pointer activity inside the canvas floating toolbar out of canvas gestures and emits selection action buttons for pointer activation", () => {

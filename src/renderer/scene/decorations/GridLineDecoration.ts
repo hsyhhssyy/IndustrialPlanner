@@ -3,6 +3,7 @@ import type { AppTheme } from "@/domain/app/types/theme";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { GridRect } from "@/domain/shared/grid";
+import { resolveViewportAxisPixelPosition } from "@/shared/geometry/viewport-transform";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 import {
   BASE_OUTER_WARNING_PADDING_CELLS,
@@ -390,8 +391,13 @@ function resolveWorldGridAxisPositions(options: {
     return [];
   }
 
-  const axisCenter = options.viewportStart + options.viewportSpan / 2;
-  const worldOrigin = axisCenter - options.worldCenter * options.gridCellSize;
+  const worldOrigin = resolveViewportAxisPixelPosition({
+    viewportStart: options.viewportStart,
+    viewportSpan: options.viewportSpan,
+    viewportCenter: options.worldCenter,
+    gridCellPixelSize: options.gridCellSize,
+    worldCoordinate: 0,
+  });
   const firstLineIndex = Math.ceil(
     (options.viewportStart - worldOrigin) / options.gridCellSize,
   );
@@ -527,10 +533,13 @@ function resolveWorldGridLinePixelPosition(options: {
   gridCellSize: number;
   lineCoordinate: number;
 }): number {
-  const axisCenter = options.viewportStart + options.viewportSpan / 2;
-  const worldOrigin = axisCenter - options.worldCenter * options.gridCellSize;
-
-  return worldOrigin + options.lineCoordinate * options.gridCellSize;
+  return resolveViewportAxisPixelPosition({
+    viewportStart: options.viewportStart,
+    viewportSpan: options.viewportSpan,
+    viewportCenter: options.worldCenter,
+    gridCellPixelSize: options.gridCellSize,
+    worldCoordinate: options.lineCoordinate,
+  });
 }
 
 export function resolveWorldGridLocalViewportBounds(options: {

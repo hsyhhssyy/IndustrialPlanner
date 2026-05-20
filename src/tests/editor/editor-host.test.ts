@@ -210,6 +210,7 @@ describe("createEditorHost", () => {
         y: -2,
       },
       gridSize: editorHost.state.viewport.gridSize,
+      displayRotation: 0,
     });
     expect(editorHost.state.history.records).toHaveLength(0);
     expect(editorHost.state.history.undoDepth).toBe(0);
@@ -1861,6 +1862,7 @@ describe("createEditorHost", () => {
             y: -8.25,
           },
           gridSize: 4,
+          displayRotation: 0 as const,
         },
       },
     };
@@ -1910,6 +1912,7 @@ describe("createEditorHost", () => {
             y: -999,
           },
           gridSize: 1,
+          displayRotation: 0,
         },
       },
     });
@@ -2012,6 +2015,7 @@ describe("createEditorHost", () => {
             y: 9.25,
           },
           gridSize: 2,
+          displayRotation: 0 as const,
         },
       },
     };

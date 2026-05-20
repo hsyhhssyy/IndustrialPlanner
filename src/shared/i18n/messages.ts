@@ -31,6 +31,7 @@ export type MessageKey =
   | "action.removeLink"
   | "action.applyValue"
   | "action.rotatePlacement"
+  | "action.rotateView"
   | "action.continuousPlacement"
   | "action.cancelContinuousPlacement"
   | "action.rotateSelection"
@@ -51,6 +52,7 @@ export type MessageKey =
   | "toolbar.views"
   | "toolbar.canvasTopLeftCorner"
   | "toolbar.canvasRightDock"
+  | "toolbar.canvasBottomLeft"
   | "tool.select"
   | "tool.place"
   | "tool.belt"
@@ -312,6 +314,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "action.removeLink": "移除链接",
     "action.applyValue": "应用",
     "action.rotatePlacement": "旋转",
+    "action.rotateView": "旋转视角",
     "action.continuousPlacement": "连续放置",
     "action.cancelContinuousPlacement": "取消连续放置",
     "action.rotateSelection": "旋转",
@@ -332,6 +335,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "toolbar.views": "视图",
     "toolbar.canvasTopLeftCorner": "画布左上角工具栏",
     "toolbar.canvasRightDock": "画布右侧工具栏",
+    "toolbar.canvasBottomLeft": "画布左下角工具栏",
     "tool.select": "选择",
     "tool.place": "放置",
     "tool.belt": "传送带",
@@ -692,6 +696,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "action.removeLink": "Remove Link",
     "action.applyValue": "Apply",
     "action.rotatePlacement": "Rotate",
+    "action.rotateView": "Rotate View",
     "action.continuousPlacement": "Continuous placement",
     "action.cancelContinuousPlacement": "Cancel continuous placement",
     "action.rotateSelection": "Rotate",
@@ -712,6 +717,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "toolbar.views": "Views",
     "toolbar.canvasTopLeftCorner": "Canvas Top Left Corner Toolbar",
     "toolbar.canvasRightDock": "Canvas Right Dock Toolbar",
+    "toolbar.canvasBottomLeft": "Canvas Bottom Left Toolbar",
     "tool.select": "Select",
     "tool.place": "Place",
     "tool.belt": "Belt",

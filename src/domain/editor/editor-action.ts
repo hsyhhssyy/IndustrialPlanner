@@ -6,7 +6,7 @@ import type {
 	MoveCollectionToOptions,
 } from "./types/editor-types";
 import type { ClientPixelRect } from "../shared/client-pixel";
-import type { GridPoint, GridRect } from "../shared/grid";
+import type { GridPoint, GridRect, GridRotation } from "../shared/grid";
 import type {
 	CreateLogisticsDraftStartOptions,
 	LogisticsDraftActionResult,
@@ -21,6 +21,7 @@ export interface EditorAction {
 		options: MoveViewportByClientPixelVectorOptions,
 	): void;
 	zoom(step: number): void;
+	setViewportDisplayRotation(displayRotation: GridRotation): void;
 
 	patchEntityConfig(entityId: string, patch: Record<string, unknown>): void;
 	/**

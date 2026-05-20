@@ -24,6 +24,7 @@ export interface WorldEntity {
 export interface WorldDocumentViewportSettings {
   readonly center: GridFloatPoint;
   readonly gridSize: number;
+  readonly displayRotation: GridRotation;
 }
 
 export interface WorldDocumentSettings {
@@ -77,6 +78,7 @@ export const createWorldDocument = (options: {
           y: 0,
         },
         gridSize: 1,
+        displayRotation: 0,
       },
     },
   };

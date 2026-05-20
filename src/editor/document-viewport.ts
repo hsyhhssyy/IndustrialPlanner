@@ -3,6 +3,7 @@ import type {
   WorldDocumentViewportSettings,
 } from "@/domain/document/world-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { GridRotation } from "@/domain/shared/grid";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 
 import type {
@@ -26,6 +27,7 @@ export function createDefaultWorldDocumentViewportSettings(): WorldDocumentViewp
       y: 0,
     },
     gridSize: DEFAULT_VIEWPORT_GRID_SIZE,
+    displayRotation: 0,
   };
 }
 
@@ -56,6 +58,7 @@ export function applyWorldDocumentViewportSettings(options: {
   options.state.viewport.gridCellPixelSize = resolveViewportGridCellPixelSize(
     viewportSettings.gridSize,
   );
+  options.state.viewport.displayRotation = viewportSettings.displayRotation;
 }
 
 export function persistWorldDocumentViewportSettings(options: {
@@ -115,6 +118,7 @@ function createWorldDocumentViewportSettings(
       y: viewport.center.y,
     },
     gridSize: clampViewportGridSize(viewport.gridSize),
+    displayRotation: viewport.displayRotation,
   };
 }
 
@@ -128,6 +132,7 @@ function normalizeWorldDocumentViewportSettings(
   const centerX = value.center.x;
   const centerY = value.center.y;
   const gridSize = value.gridSize;
+  const displayRotation = normalizeGridRotation(value.displayRotation);
 
   if (
     typeof centerX !== "number"
@@ -146,6 +151,7 @@ function normalizeWorldDocumentViewportSettings(
     gridSize: typeof gridSize === "number"
       ? clampViewportGridSize(gridSize)
       : DEFAULT_VIEWPORT_GRID_SIZE,
+    displayRotation,
   };
 }
 
@@ -157,9 +163,14 @@ function areWorldDocumentViewportSettingsEqual(
     left.center.x === right.center.x
     && left.center.y === right.center.y
     && left.gridSize === right.gridSize
+    && left.displayRotation === right.displayRotation
   );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function normalizeGridRotation(value: unknown): GridRotation {
+  return value === 90 || value === 180 || value === 270 ? value : 0;
 }

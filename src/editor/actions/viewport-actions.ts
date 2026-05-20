@@ -16,7 +16,10 @@ import type { EditorActionsContext } from "./types";
 
 type EditorViewportActions = Pick<
   EditorAction,
-  "moveViewportByClientPixelVector" | "setViewportClientRect" | "zoom"
+  | "moveViewportByClientPixelVector"
+  | "setViewportClientRect"
+  | "setViewportDisplayRotation"
+  | "zoom"
 >;
 
 export function createEditorViewportActions({
@@ -141,6 +144,9 @@ export function createEditorViewportActions({
       );
 
       persistViewportSettings();
+    },
+    setViewportDisplayRotation: (displayRotation) => {
+      void displayRotation;
     },
   };
 }

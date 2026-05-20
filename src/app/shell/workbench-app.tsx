@@ -2,6 +2,7 @@ import { action } from "mobx";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
+import { CanvasBottomLeftToolbar } from "@/app/shell/canvas/canvas-bottom-left-toolbar";
 import { CanvasPanel } from "@/app/shell/canvas/canvas-panel";
 import { CanvasFloatingToolbar } from "@/app/shell/canvas/canvas-floating-toolbar";
 import { CanvasLeftBottomToolbar } from "@/app/shell/canvas/canvas-left-bottom-toolbar";
@@ -586,6 +587,10 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       <LeftToolbar appHost={appHost} />
       {leftDockOpen ? <LeftDock appHost={appHost} /> : null}
       <CanvasPanel appHost={appHost} />
+      <CanvasBottomLeftToolbar
+        appHost={appHost}
+        offsetForFloatingTools={showCanvasLeftBottomToolbar}
+      />
       {showCanvasLeftBottomToolbar ? <CanvasLeftBottomToolbar appHost={appHost} /> : null}
       {canvasTopLeftCornerToolbar.visible && canvasTopLeftCornerToolbar.buttonIds.length > 0 ? (
         <CanvasTopLeftCornerToolbar

@@ -213,7 +213,14 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
   return (
     <header className={cm(styles, "top-bar")}>
       <div className={cm(styles, "top-bar-title-block")}>
-        <div className={cm(styles, "top-bar-title")}>{t("app.title")}</div>
+        <div className={cm(styles, "top-bar-title")}>
+          {t("app.title")}
+          {window.__APP_VERSION__ ? (
+            <span className={cm(styles, "top-bar-version")}>{window.__APP_VERSION__}</span>
+          ) : (
+            <span className={cm(styles, "top-bar-version")}>(Dev)</span>
+          )}
+        </div>
       </div>
       <div className={cm(styles, "toolbar-group top-bar-controls")}>
         <SimulationControlButton

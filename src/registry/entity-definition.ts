@@ -66,12 +66,13 @@ type PortDefinitionInput = Pick<
   "acceptRule" | "count" | "priorityGroup" | "roundRobinSeed"
 >>;
 
-/** createEntityDefinition() 的输入类型 — inspectors / placementBehaviors / recipeChannels / links 可选，由工厂补全默认值 */
-type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "placementBehaviors" | "recipeChannels" | "links"> & {
+/** createEntityDefinition() 的输入类型 — inspectors / placementBehaviors / recipeChannels / links / displayOrder 可选，由工厂补全默认值 */
+type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "placementBehaviors" | "recipeChannels" | "links" | "displayOrder"> & {
   readonly inspectors?: readonly EntityInspectorDeclaration[];
   readonly placementBehaviors?: readonly EntityPlacementBehaviorDeclaration[];
   readonly recipeChannels?: readonly EntityDefinition["recipeChannels"][number][];
   readonly links?: readonly SlotLinkDefinition[];
+  readonly displayOrder?: number;
 };
 
 /** createEmptyEntityDefinition() 的输入类型 — 基础字段必填，电力字段可选 */
@@ -123,6 +124,7 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
 
   return {
     ...definition,
+    displayOrder: definition.displayOrder ?? 100,
     recipeChannels: [...(definition.recipeChannels ?? [])],
     links: [...(definition.links ?? [])],
     placementBehaviors: normalizePlacementBehaviors(definition.placementBehaviors ?? []),

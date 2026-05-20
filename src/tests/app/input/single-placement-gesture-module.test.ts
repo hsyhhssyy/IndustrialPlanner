@@ -492,6 +492,7 @@ function createContext(options: {
         clientRect: viewportClientRect,
         gridSize: 1,
         gridCellPixelSize: 1,
+        displayRotation: 0,
       },
       collections: {
         [EntityCollectionType.selection]: selection,

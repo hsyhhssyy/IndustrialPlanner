@@ -3,6 +3,7 @@ import type {
   GridPoint,
 } from "@/domain/shared/grid"
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types"
+import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform"
 import {
   Container,
   Graphics,
@@ -708,20 +709,18 @@ function resolveBeltCargoViewportCenter(options: {
     gridCellPixelSize: number;
   };
 }): GridFloatPoint {
-  const gridCellSize = options.viewportState.gridCellPixelSize
-  const cellLeft =
-    options.viewportBounds.left
-    + options.viewportBounds.width / 2
-    + (options.entry.position.x - options.viewportState.centerX) * gridCellSize
-  const cellTop =
-    options.viewportBounds.top
-    + options.viewportBounds.height / 2
-    + (options.entry.position.y - options.viewportState.centerY) * gridCellSize
-
-  return {
-    x: cellLeft + options.entry.localPoint.x * gridCellSize,
-    y: cellTop + options.entry.localPoint.y * gridCellSize,
-  }
+  return resolveViewportPointFromWorldPoint({
+    worldPoint: {
+      x: options.entry.position.x + options.entry.localPoint.x,
+      y: options.entry.position.y + options.entry.localPoint.y,
+    },
+    viewportBounds: options.viewportBounds,
+    viewportCenter: {
+      x: options.viewportState.centerX,
+      y: options.viewportState.centerY,
+    },
+    gridCellPixelSize: options.viewportState.gridCellPixelSize,
+  })
 }
 
 function isPointVisible(

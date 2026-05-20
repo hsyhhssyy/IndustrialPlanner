@@ -7,6 +7,7 @@ import {
   getGridFootprintCenterCells,
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid"
+import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform"
 import type { GridRectSize } from "@/domain/shared/grid"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import { resolveEffectiveCanvasTheme } from "@/shared/theme/canvas-theme"
@@ -528,18 +529,16 @@ export function resolveWorldEntitySpriteLayout(options: {
   const gridCellSize = options.gridCellPixelSize
   const width = rotatedFootprint.width * gridCellSize
   const height = rotatedFootprint.height * gridCellSize
+  const viewportEntityCenter = resolveViewportPointFromWorldPoint({
+    worldPoint: entityCenterCells,
+    viewportBounds: options.viewportBounds,
+    viewportCenter: options.viewportCenter,
+    gridCellPixelSize: gridCellSize,
+  })
 
   return {
-    x:
-      options.viewportBounds.left
-      + options.viewportBounds.width / 2
-      + (entityCenterCells.x - options.viewportCenter.x) * gridCellSize
-      - width / 2,
-    y:
-      options.viewportBounds.top
-      + options.viewportBounds.height / 2
-      + (entityCenterCells.y - options.viewportCenter.y) * gridCellSize
-      - height / 2,
+    x: viewportEntityCenter.x - width / 2,
+    y: viewportEntityCenter.y - height / 2,
     width,
     height,
     rotation: options.entity.rotation,

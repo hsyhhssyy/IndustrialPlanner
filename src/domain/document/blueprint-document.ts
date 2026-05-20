@@ -82,6 +82,7 @@ export function createWorldDocumentFromBlueprint(
 					y: 0,
 				},
 				gridSize: 1,
+				displayRotation: 0,
 			},
 		},
 	};

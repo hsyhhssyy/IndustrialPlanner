@@ -18,6 +18,7 @@ const TEST_REGISTRY: RegistryContract = {
       spriteId: "machine_smelter",
       footprint: { width: 1, height: 1 },
       uiGroup: "basicProduction",
+      displayOrder: 100,
       tags: [],
       requiresPower: true,
       powerDemand: 1,
@@ -35,6 +36,7 @@ const TEST_REGISTRY: RegistryContract = {
       spriteId: "machine_assembler",
       footprint: { width: 1, height: 1 },
       uiGroup: "advancedManufacturing",
+      displayOrder: 100,
       tags: [],
       requiresPower: true,
       powerDemand: 1,
@@ -48,9 +50,9 @@ const TEST_REGISTRY: RegistryContract = {
     },
   ],
   itemDefinitions: [
-    { id: "ore", nameKey: "item.ore", iconId: "ore", tags: [] },
-    { id: "plate", nameKey: "item.plate", iconId: "plate", tags: [] },
-    { id: "gear", nameKey: "item.gear", iconId: "gear", tags: [] },
+    { id: "ore", nameKey: "item.ore", iconId: "ore", displayOrder: 10000, tags: [] },
+    { id: "plate", nameKey: "item.plate", iconId: "plate", displayOrder: 10000, tags: [] },
+    { id: "gear", nameKey: "item.gear", iconId: "gear", displayOrder: 10000, tags: [] },
   ],
   recipeDefinitions: [
     {

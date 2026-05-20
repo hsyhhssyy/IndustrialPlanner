@@ -122,6 +122,7 @@ export function createDummyWorldDocument(): WorldDocument {
           y: 0,
         },
         gridSize: 1,
+        displayRotation: 0,
       },
       gridSize: 1,
       showDiagnostics: false,

@@ -1,4 +1,5 @@
 import { Container, Graphics, Texture, TilingSprite } from "pixi.js";
+import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform";
 import {
   BASE_OUTER_WARNING_PADDING_CELLS,
   resolveBaseOuterGridRect,
@@ -124,12 +125,18 @@ export function createGrassBackgroundDecoration(
 
       const gridCellSize = ctx.viewportState.gridCellPixelSize;
       const tilePixelSize = gridCellSize * GRASS_TILE_GRID_CELLS;
-      const viewportCenterX = ctx.viewportBounds.left + ctx.viewportBounds.width / 2;
-      const viewportCenterY = ctx.viewportBounds.top + ctx.viewportBounds.height / 2;
-
-      // Pixel position of grid origin (0, 0) on the viewport
-      const gridOriginPxX = viewportCenterX - ctx.viewportState.centerX * gridCellSize;
-      const gridOriginPxY = viewportCenterY - ctx.viewportState.centerY * gridCellSize;
+      const gridOriginPixelPoint = resolveViewportPointFromWorldPoint({
+        worldPoint: {
+          x: 0,
+          y: 0,
+        },
+        viewportBounds: ctx.viewportBounds,
+        viewportCenter: {
+          x: ctx.viewportState.centerX,
+          y: ctx.viewportState.centerY,
+        },
+        gridCellPixelSize: gridCellSize,
+      });
 
       grassMask
         .clear()
@@ -162,8 +169,8 @@ export function createGrassBackgroundDecoration(
         );
 
         // Align grass tile corners with grid origin, handling negative modulo
-        grassSprite.tilePosition.x = ((gridOriginPxX % tilePixelSize) + tilePixelSize) % tilePixelSize;
-        grassSprite.tilePosition.y = ((gridOriginPxY % tilePixelSize) + tilePixelSize) % tilePixelSize;
+        grassSprite.tilePosition.x = ((gridOriginPixelPoint.x % tilePixelSize) + tilePixelSize) % tilePixelSize;
+        grassSprite.tilePosition.y = ((gridOriginPixelPoint.y % tilePixelSize) + tilePixelSize) % tilePixelSize;
       }
 
       warningScanlineSprite.visible = isWarningTextureReady;
@@ -173,8 +180,8 @@ export function createGrassBackgroundDecoration(
         warningScanlineSprite.width = ctx.viewportBounds.width;
         warningScanlineSprite.height = ctx.viewportBounds.height;
         warningScanlineSprite.tileScale.set(1);
-        warningScanlineSprite.tilePosition.x = ((gridOriginPxX % warningTilePixelSize) + warningTilePixelSize) % warningTilePixelSize;
-        warningScanlineSprite.tilePosition.y = ((gridOriginPxY % warningTilePixelSize) + warningTilePixelSize) % warningTilePixelSize;
+        warningScanlineSprite.tilePosition.x = ((gridOriginPixelPoint.x % warningTilePixelSize) + warningTilePixelSize) % warningTilePixelSize;
+        warningScanlineSprite.tilePosition.y = ((gridOriginPixelPoint.y % warningTilePixelSize) + warningTilePixelSize) % warningTilePixelSize;
       }
     },
 

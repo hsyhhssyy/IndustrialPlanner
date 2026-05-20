@@ -12,7 +12,7 @@ import {
 } from "@/domain/editor/types/editor-types";
 import type { EditorState } from "@/domain/editor/editor-state";
 import type { ClientPixelRect } from "@/domain/shared/client-pixel";
-import type { GridRect } from "@/domain/shared/grid";
+import type { GridRect, GridRotation } from "@/domain/shared/grid";
 import type { LogisticsDraftReadonlyState } from "@/domain/shared/logistics";
 import type { SlotLinkDefinition } from "@/domain/document/world-document";
 import type {
@@ -44,6 +44,7 @@ export interface EditorViewportStateReadWrite {
   clientRect: ClientPixelRectReadWrite;
   gridSize: number;
   gridCellPixelSize: number;
+  displayRotation: GridRotation;
 }
 
 export interface EditorInternalPersistStateReadWrite {
@@ -174,6 +175,7 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
     gridCellPixelSize: resolveViewportGridCellPixelSize(
       DEFAULT_VIEWPORT_GRID_SIZE,
     ),
+    displayRotation: 0,
   };
   marqueeGridRect: GridRect | null = null;
   history: EditorHistoryStateReadWrite = new EditorHistoryStateReadWriteImpl();

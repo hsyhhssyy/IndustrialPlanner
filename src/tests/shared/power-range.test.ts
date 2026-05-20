@@ -88,6 +88,7 @@ function createDefinition(options: {
     spriteId: options.id,
     footprint: options.footprint,
     uiGroup: "resourcePower",
+    displayOrder: 100,
     tags: [],
     requiresPower: false,
     powerDemand: 0,

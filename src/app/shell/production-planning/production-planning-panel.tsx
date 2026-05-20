@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
-import { observer } from "mobx-react-lite";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
+import { observer, useLocalObservable } from "mobx-react-lite";
 import LucideBox from "~icons/lucide/box";
 import LucideBoxes from "~icons/lucide/boxes";
 import LucideClock3 from "~icons/lucide/clock-3";
@@ -40,6 +40,8 @@ import {
   type ProductionPlanningViewMode,
 } from "@/app/shell/production-planning/production-planning-model";
 import { ProductionFlowGraph } from "@/app/shell/production-planning/flow";
+import { ProductionPlanningInputStore } from "./production-planning-state";
+import { hookPlannerIndexedDbPersistence } from "./production-planning-persist";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -72,16 +74,16 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     () => buildProductionPlanningIndex(appHost.workspace.registry),
     [appHost.workspace.registry],
   );
-  const [targets, setTargets] = useState<ProductionPlanningPort[]>([]);
-  const [supplies, setSupplies] = useState<ProductionPlanningPort[]>([]);
-  const [displayMode, setDisplayMode] = useState<ProductionPlanningDisplayMode>("item");
-  const [viewMode, setViewMode] = useState<ProductionPlanningViewMode>("tree");
-  const [sourceConfig, setSourceConfig] = useState<ProductionPlanningSourceConfig>(() => ({
-    waterPolicy: "use-byproduct",
-    acidPolicy: "use-byproduct",
-    sewagePolicy: "external-supply",
-  }));
-  const [recipeChoices, setRecipeChoices] = useState<Record<string, string>>({});
+  const store = useLocalObservable(() => new ProductionPlanningInputStore());
+  useEffect(() => hookPlannerIndexedDbPersistence(store), [store]);
+  const {
+    targets,
+    supplies,
+    displayMode,
+    viewMode,
+    recipeChoices,
+    sourceConfig,
+  } = store;
   const [activeScreen, setActiveScreen] = useState<ProductionPlanningScreen>("input");
   const [calculation, setCalculation] = useState<ProductionPlanningCalculation | null>(null);
   const swipeStateRef = useRef<ProductionPlanningSwipeState | null>(null);
@@ -109,27 +111,27 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
 
   const addTarget = () => {
     void requestItemSelection((itemId) => {
-      setTargets((current) => [...current, createPort(itemId, 60)]);
+      store.targets = [...store.targets, createPort(itemId, 60)];
     });
   };
 
   const addSupply = () => {
     void requestItemSelection((itemId) => {
-      setSupplies((current) => [...current, createPort(itemId, 60)]);
+      store.supplies = [...store.supplies, createPort(itemId, 60)];
     });
   };
 
   const updateTarget = (id: string, patch: Partial<ProductionPlanningPort>) => {
-    setTargets((current) => updatePort(current, id, patch));
+    store.targets = updatePort(store.targets, id, patch);
   };
 
   const updateSupply = (id: string, patch: Partial<ProductionPlanningPort>) => {
-    setSupplies((current) => updatePort(current, id, patch));
+    store.supplies = updatePort(store.supplies, id, patch);
   };
 
   const selectRecipe = (itemId: string, recipeId: string | null) => {
-    const nextRecipeChoices = updateRecipeChoices(recipeChoices, itemId, recipeId);
-    setRecipeChoices(nextRecipeChoices);
+    const nextRecipeChoices = updateRecipeChoices(store.recipeChoices, itemId, recipeId);
+    store.recipeChoices = nextRecipeChoices;
     setCalculation((current) => {
       if (current === null) {
         return null;
@@ -152,7 +154,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   };
 
   const updateSourceConfig = (patch: Partial<ProductionPlanningSourceConfig>) => {
-    setSourceConfig((current) => ({ ...current, ...patch }));
+    store.sourceConfig = { ...store.sourceConfig, ...patch };
   };
 
   const calculate = () => {
@@ -210,7 +212,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       return;
     }
 
-    if (deltaX < 0 && activeScreen === "input" && targets.length > 0) {
+    if (deltaX < 0 && activeScreen === "input" && store.targets.length > 0) {
       calculate();
     } else if (deltaX > 0 && activeScreen === "result") {
       setActiveScreen("input");
@@ -247,7 +249,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
               onPickItem={(id) => {
                 void requestItemSelection((itemId) => updateTarget(id, { itemId }));
               }}
-              onRemove={(id) => setTargets((current) => current.filter((line) => line.id !== id))}
+              onRemove={(id) => { store.targets = store.targets.filter((line) => line.id !== id); }}
               onUpdateRate={(id, perMinute) => updateTarget(id, { perMinute })}
               t={t}
             />
@@ -261,7 +263,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
               onPickItem={(id) => {
                 void requestItemSelection((itemId) => updateSupply(id, { itemId }));
               }}
-              onRemove={(id) => setSupplies((current) => current.filter((line) => line.id !== id))}
+              onRemove={(id) => { store.supplies = store.supplies.filter((line) => line.id !== id); }}
               onUpdateRate={(id, perMinute) => updateSupply(id, { perMinute })}
               t={t}
             />
@@ -303,7 +305,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
                   { value: "item", label: t("productionPlanning.modeItem"), icon: <LucideBox /> },
                   { value: "device", label: t("productionPlanning.modeDevice"), icon: <LucideFactory /> },
                 ]}
-                onChange={setDisplayMode}
+                onChange={(v) => { store.displayMode = v; }}
               />
               <SegmentedControl<ProductionPlanningViewMode>
                 label={t("productionPlanning.viewMode")}
@@ -312,7 +314,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
                   { value: "tree", label: t("productionPlanning.viewTree"), icon: <LucideListTree /> },
                   { value: "flow", label: t("productionPlanning.viewFlow"), icon: <LucideWorkflow /> },
                 ]}
-                onChange={setViewMode}
+                onChange={(v) => { store.viewMode = v; }}
               />
             </div>
           </div>

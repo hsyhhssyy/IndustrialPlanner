@@ -19,6 +19,7 @@ function createEntityDefinition(options: {
       height: options.height,
     },
     uiGroup: "hidden",
+    displayOrder: 100,
     tags: [],
     requiresPower: false,
     powerDemand: 0,
@@ -73,6 +74,7 @@ function createWorldDocument(entities: WorldEntity[]): WorldDocument {
           y: 0,
         },
         gridSize: 1,
+        displayRotation: 0,
       },
     },
   };

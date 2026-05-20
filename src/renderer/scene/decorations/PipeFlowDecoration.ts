@@ -9,6 +9,7 @@ import type {
   GridPoint,
   GridRotation,
 } from "@/domain/shared/grid"
+import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
 import type { DecorationLayer } from "./DecorationLayer"
@@ -1054,18 +1055,15 @@ function resolveViewportPoint(options: {
   viewportBounds: DecorationViewportBounds;
   viewportState: Pick<RenderViewportState, "centerX" | "centerY" | "gridCellPixelSize">;
 }): GridFloatPoint {
-  const gridCellSize = options.viewportState.gridCellPixelSize
-
-  return {
-    x:
-      options.viewportBounds.left
-      + options.viewportBounds.width / 2
-      + (options.point.x - options.viewportState.centerX) * gridCellSize,
-    y:
-      options.viewportBounds.top
-      + options.viewportBounds.height / 2
-      + (options.point.y - options.viewportState.centerY) * gridCellSize,
-  }
+  return resolveViewportPointFromWorldPoint({
+    worldPoint: options.point,
+    viewportBounds: options.viewportBounds,
+    viewportCenter: {
+      x: options.viewportState.centerX,
+      y: options.viewportState.centerY,
+    },
+    gridCellPixelSize: options.viewportState.gridCellPixelSize,
+  })
 }
 
 function createEntityDefinitionMap(

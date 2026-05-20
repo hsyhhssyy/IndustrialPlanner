@@ -43,6 +43,8 @@ export interface EntityDefinition {
   footprint: GridRectSize;
   /** 放置面板分组 */
   uiGroup: UiGroup;
+  /** 展示排序权重，数字越小越靠前 */
+  displayOrder: number;
   /** 语义标签，如 "BeltFamily"（传送带族）、"武陵"（场景限定） */
   tags: string[];
 

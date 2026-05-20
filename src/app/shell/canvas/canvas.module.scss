@@ -472,6 +472,48 @@
   object-fit: contain;
 }
 
+.canvas-bottom-left-toolbar {
+  position: absolute;
+  left: calc(var(--left-toolbar-width, 68px) + var(--left-dock-width, 0px) + 12px);
+  bottom: calc(var(--bottom-bar-height, 28px) + env(safe-area-inset-bottom, 0px) + 12px);
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  pointer-events: auto;
+}
+
+.canvas-bottom-left-toolbar.is-offset-for-floating-tools {
+  bottom: calc(var(--bottom-bar-height, 28px) + env(safe-area-inset-bottom, 0px) + 55px);
+}
+
+.canvas-bottom-left-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 35px;
+  min-width: 35px;
+  height: 35px;
+  padding: 0;
+  border-color: var(--in-canvas-toolbar-button-border);
+  border-radius: 11px;
+  background: var(--in-canvas-toolbar-button-bg);
+  box-shadow: 0 10px 24px var(--in-canvas-toolbar-shadow);
+  color: var(--in-canvas-toolbar-button-text);
+  backdrop-filter: blur(10px);
+  touch-action: manipulation;
+}
+
+.canvas-bottom-left-toolbar-button:not(:disabled):hover {
+  border-color: var(--in-canvas-toolbar-button-hover-border);
+  background: var(--in-canvas-toolbar-button-hover-bg);
+}
+
+.canvas-bottom-left-toolbar-icon {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
 .renderer-canvas {
   border: none;
   box-shadow: none;

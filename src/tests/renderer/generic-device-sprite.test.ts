@@ -776,6 +776,7 @@ describe("GenericDeviceSprite", () => {
         id: "item_liquid_water",
         nameKey: "registry.item.item_liquid_water.name",
         iconId: "item_liquid_water",
+        displayOrder: 10000,
         tags: ["liquid", "liquid_color:#82d6ff"],
       }],
     }))
@@ -828,6 +829,7 @@ describe("GenericDeviceSprite", () => {
         id: "item_liquid_acid",
         nameKey: "registry.item.item_liquid_acid.name",
         iconId: "item_liquid_acid",
+        displayOrder: 10000,
         tags: ["liquid", "liquid_color:#d97a1f"],
       }],
     }))
@@ -1801,6 +1803,7 @@ function createEntityDefinitionStub(): EntityDefinition {
     spriteId: "item_port_storager_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
+    displayOrder: 100,
     tags: [],
     requiresPower: false,
     powerDemand: 5,
@@ -1986,6 +1989,7 @@ function createRenderContextStub(options: {
     id: string;
     nameKey: string;
     iconId: string;
+    displayOrder: number;
     tags: string[];
   }>;
 }) {

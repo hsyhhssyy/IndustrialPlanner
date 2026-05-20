@@ -1,6 +1,7 @@
 import { BlurFilter, Graphics } from "pixi.js";
 import type { GridRect } from "@/domain/shared/grid";
 import type { AppTheme } from "@/domain/app/types/theme";
+import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
@@ -52,21 +53,22 @@ export function resolveMarqueeGridRectLayout(options: {
     return null;
   }
 
-  const gridCellSize = options.gridCellPixelSize;
-  const worldOriginX =
-    options.viewportBounds.left
-    + options.viewportBounds.width / 2
-    - options.viewportCenter.x * gridCellSize;
-  const worldOriginY =
-    options.viewportBounds.top
-    + options.viewportBounds.height / 2
-    - options.viewportCenter.y * gridCellSize;
+  const viewportRect = resolveViewportRectFromWorldGridRect({
+    gridRect: options.gridRect,
+    viewportBounds: options.viewportBounds,
+    viewportCenter: options.viewportCenter,
+    gridCellPixelSize: options.gridCellPixelSize,
+  });
+
+  if (viewportRect === null) {
+    return null;
+  }
 
   return {
-    x: worldOriginX + options.gridRect.x * gridCellSize,
-    y: worldOriginY + options.gridRect.y * gridCellSize,
-    width: options.gridRect.width * gridCellSize,
-    height: options.gridRect.height * gridCellSize,
+    x: viewportRect.left,
+    y: viewportRect.top,
+    width: viewportRect.width,
+    height: viewportRect.height,
   };
 }
 

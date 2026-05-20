@@ -55,3 +55,12 @@ export {
 export type {
   StorageMigration,
 } from "@/shared/storage/migration";
+
+export type {
+  PlannerPersistedState,
+} from "@/shared/storage/planner-storage";
+
+export {
+  loadPlannerState,
+  savePlannerState,
+} from "@/shared/storage/planner-storage";
