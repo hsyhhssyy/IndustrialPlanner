@@ -248,18 +248,19 @@ export function ProductionFlowGraph({
 
     // Node drag
     if (interaction.node !== null && interaction.node.pointerId === event.pointerId) {
-      const dx = (event.clientX - interaction.node.startClientX) / viewportRef.current.scale;
-      const dy = (event.clientY - interaction.node.startClientY) / viewportRef.current.scale;
+      const nodeDrag = interaction.node;
+      const dx = (event.clientX - nodeDrag.startClientX) / viewportRef.current.scale;
+      const dy = (event.clientY - nodeDrag.startClientY) / viewportRef.current.scale;
       setGraph((current) => {
         const next: SankeyGraph<ProductionFlowNode, ProductionFlowLink> = {
           nodes: current.nodes.map((node) => {
-            if (node.id !== interaction.node!.nodeId) {
+            if (node.id !== nodeDrag.nodeId) {
               return node;
             }
-            node.x0 = interaction.node!.startX0 + dx;
-            node.x1 = interaction.node!.startX1 + dx;
-            node.y0 = Math.max(0, interaction.node!.startY0 + dy);
-            node.y1 = Math.max(node.y0 + 28, interaction.node!.startY1 + dy);
+            node.x0 = nodeDrag.startX0 + dx;
+            node.x1 = nodeDrag.startX1 + dx;
+            node.y0 = Math.max(0, nodeDrag.startY0 + dy);
+            node.y1 = Math.max(node.y0 + 28, nodeDrag.startY1 + dy);
             return node;
           }),
           links: current.links,
