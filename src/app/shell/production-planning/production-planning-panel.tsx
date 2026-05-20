@@ -974,5 +974,10 @@ function shouldIgnoreProductionPlanningSwipeStart(target: EventTarget | null): b
     return true;
   }
 
+  // 2026-05-20 订正：流程图画布内触控拖拽用于平移/缩放，不应被误判为切屏滑动手势
+  if (target.closest("[class*='production-flow-canvas']") !== null) {
+    return true;
+  }
+
   return target.closest("button, input, select, textarea, [role='button'], [role='tab']") !== null;
 }
