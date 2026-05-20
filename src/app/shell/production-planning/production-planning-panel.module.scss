@@ -587,6 +587,7 @@
   min-height: 520px;
   height: 100%;
   overflow: hidden;
+  touch-action: none;
   border: 1px solid var(--line);
   border-radius: 8px;
   background:

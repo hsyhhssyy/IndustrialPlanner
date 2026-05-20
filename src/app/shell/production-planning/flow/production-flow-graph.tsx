@@ -44,6 +44,9 @@ interface PinchState {
   readonly startViewportY: number;
   readonly midClientX: number;
   readonly midClientY: number;
+  secondPointerId: number;
+  secondClientX: number;
+  secondClientY: number;
 }
 
 const NODE_WIDTH = 190;
@@ -122,16 +125,19 @@ export function ProductionFlowGraph({
       return;
     }
 
-    event.currentTarget.setPointerCapture(event.pointerId);
-
     const interaction = interactionRef.current;
+
+    // 2026-05-19 订正：仅对首指设置 pointer capture，避免第二指抢夺 capture 导致第一指丢失事件
+    if (interaction.pan === null && interaction.pinch === null) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
 
     // If we already have a pan going and a second pointer arrives, switch to pinch
     if (interaction.pan !== null && interaction.pan.pointerId !== event.pointerId) {
       const p0 = interaction.pan;
       const dx = event.clientX - p0.clientX;
       const dy = event.clientY - p0.clientY;
-      interaction.pan = null;
+      // 2026-05-19 订正：不设置为 null，保留 pan 以追踪第一指位置，在 move 中通过 pinch 状态抑制 pan
       interaction.pinch = {
         startDistance: Math.sqrt(dx * dx + dy * dy),
         startScale: viewportRef.current.scale,
@@ -139,6 +145,9 @@ export function ProductionFlowGraph({
         startViewportY: viewportRef.current.y,
         midClientX: (event.clientX + p0.clientX) / 2,
         midClientY: (event.clientY + p0.clientY) / 2,
+        secondPointerId: event.pointerId,
+        secondClientX: event.clientX,
+        secondClientY: event.clientY,
       };
 
       return;
@@ -183,25 +192,45 @@ export function ProductionFlowGraph({
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const interaction = interactionRef.current;
 
-    // Pinch
+    // Pinch — must check before pan to suppress pan when two fingers are down
     if (interaction.pinch !== null && interaction.pan !== null) {
       const p0 = interaction.pan;
-      const dx = event.clientX - p0.clientX;
-      const dy = event.clientY - p0.clientY;
-      const currentDistance = Math.sqrt(dx * dx + dy * dy);
-      if (interaction.pinch.startDistance < 1) {
-        return;
+      const pinch = interaction.pinch;
+
+      // Update the moving finger's position
+      let finger1X = p0.clientX;
+      let finger1Y = p0.clientY;
+      let finger2X = pinch.secondClientX;
+      let finger2Y = pinch.secondClientY;
+
+      if (event.pointerId === p0.pointerId) {
+        finger1X = event.clientX;
+        finger1Y = event.clientY;
+        p0.clientX = event.clientX;
+        p0.clientY = event.clientY;
+      } else if (event.pointerId === pinch.secondPointerId) {
+        finger2X = event.clientX;
+        finger2Y = event.clientY;
+        pinch.secondClientX = event.clientX;
+        pinch.secondClientY = event.clientY;
       }
-      const scaleRatio = currentDistance / interaction.pinch.startDistance;
-      const nextScale = clamp(interaction.pinch.startScale * scaleRatio, MIN_SCALE, MAX_SCALE);
-      const midX = (event.clientX + p0.clientX) / 2;
-      const midY = (event.clientY + p0.clientY) / 2;
-      const ratio = nextScale / interaction.pinch.startScale;
-      setViewport({
-        x: midX - ratio * (midX - interaction.pinch.startViewportX),
-        y: midY - ratio * (midY - interaction.pinch.startViewportY),
-        scale: nextScale,
-      });
+
+      const dx = finger2X - finger1X;
+      const dy = finger2Y - finger1Y;
+      const currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+      if (pinch.startDistance >= 1) {
+        const scaleRatio = currentDistance / pinch.startDistance;
+        const nextScale = clamp(pinch.startScale * scaleRatio, MIN_SCALE, MAX_SCALE);
+        const midX = (finger2X + finger1X) / 2;
+        const midY = (finger2Y + finger1Y) / 2;
+        const ratio = nextScale / pinch.startScale;
+        setViewport({
+          x: midX - ratio * (midX - pinch.startViewportX),
+          y: midY - ratio * (midY - pinch.startViewportY),
+          scale: nextScale,
+        });
+      }
 
       return;
     }
@@ -246,22 +275,26 @@ export function ProductionFlowGraph({
   // --- unified pointer up ---
   const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const interaction = interactionRef.current;
-    if (interaction.node?.pointerId === event.pointerId) {
-      interaction.node = null;
-    }
 
     if (interaction.pan?.pointerId === event.pointerId) {
-      // If pinch was active (meaning we had two pointers), just clean the pan slot
       if (interaction.pinch !== null) {
+        // 2026-05-19 订正：第一指抬起但 pinch 仍在进行，结束 pinch，清空 pan
         interaction.pan = null;
         interaction.pinch = null;
       } else {
         interaction.pan = null;
       }
+      return;
     }
 
-    if (interaction.pinch !== null) {
+    if (interaction.pinch?.secondPointerId === event.pointerId) {
+      // 2026-05-19 订正：第二指抬起，结束 pinch，保留 pan 继续单指拖动
       interaction.pinch = null;
+      return;
+    }
+
+    if (interaction.node?.pointerId === event.pointerId) {
+      interaction.node = null;
     }
   }, []);
 
