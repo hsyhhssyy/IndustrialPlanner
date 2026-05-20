@@ -47,6 +47,7 @@ export interface EncyclopediaBrowserProps {
   query: string;
   desktopCategory: CategoryType;
   mobileSelectedCategories: ToolboxWikiMobileFilterOption[];
+  recentItemIds?: string[];
   onQueryChange: (query: string) => void;
   onDesktopCategoryChange: (category: CategoryType) => void;
   onMobileSelectedCategoriesChange: (categories: ToolboxWikiMobileFilterOption[]) => void;
@@ -281,6 +282,48 @@ function CardGrid({
   );
 }
 
+function RecentItemsRow({
+  items,
+  index,
+  onItemClick,
+  t,
+}: {
+  items: ItemDefinition[];
+  index: EncyclopediaIndex;
+  onItemClick: (id: string) => void;
+  t: (key: string) => string;
+}) {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className={cm(styles, "encyclopedia-recent-section")}>
+      <h3 className={cm(styles, "encyclopedia-recent-heading")}>
+        {t("encyclopedia.recentItems")}
+        <span className={cm(styles, "encyclopedia-recent-count")}>{items.length}</span>
+      </h3>
+      <div className={cm(styles, "encyclopedia-recent-row")}>
+        {items.map((item) => (
+          <button
+            key={`recent-${item.id}`}
+            type="button"
+            className={cm(styles, "encyclopedia-recent-card")}
+            onClick={() => onItemClick(item.id)}
+          >
+            <img
+              alt=""
+              className={cm(styles, "encyclopedia-card-icon")}
+              src={resolveItemIcon(item.id, index)}
+            />
+            <span className={cm(styles, "encyclopedia-card-label")}>{t(item.nameKey)}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SidebarCategories({
   activeCategory,
   availableCategories,
@@ -470,6 +513,7 @@ export function EncyclopediaBrowser({
   isTouch,
   itemFilter,
   mobileSelectedCategories,
+  recentItemIds,
   onDesktopCategoryChange,
   onEntityClick,
   onItemClick,
@@ -599,6 +643,18 @@ export function EncyclopediaBrowser({
     onMobileSelectedCategoriesChange,
   ]);
 
+  const recentFilteredItems = useMemo(() => {
+    if (!recentItemIds || recentItemIds.length === 0) {
+      return [];
+    }
+
+    const searchItemSet = new Set(searchMatchedItems.map((item) => item.id));
+    return recentItemIds
+      .filter((id) => searchItemSet.has(id))
+      .map((id) => index.itemById.get(id))
+      .filter((v): v is ItemDefinition => v !== undefined);
+  }, [index, recentItemIds, searchMatchedItems]);
+
   const filteredItems = useMemo(() => {
     let items = searchMatchedItems;
 
@@ -674,6 +730,12 @@ export function EncyclopediaBrowser({
             />
           </nav>
           <main className={cm(styles, "encyclopedia-main")}>
+            <RecentItemsRow
+              items={recentFilteredItems}
+              index={index}
+              onItemClick={onItemClick}
+              t={t}
+            />
             <CardGrid
               items={filteredItems}
               entities={filteredEntities}
@@ -708,6 +770,12 @@ export function EncyclopediaBrowser({
         />
       </div>
       <main className={cm(styles, "encyclopedia-main")}>
+        <RecentItemsRow
+          items={recentFilteredItems}
+          index={index}
+          onItemClick={onItemClick}
+          t={t}
+        />
         <CardGrid
           items={filteredItems}
           entities={filteredEntities}

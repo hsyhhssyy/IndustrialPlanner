@@ -280,7 +280,8 @@ export type MessageKey =
   | "encyclopedia.viewDetails"
   | "encyclopedia.entityLabel"
   | "encyclopedia.itemLabel"
-  | "encyclopedia.filter.label";
+  | "encyclopedia.filter.label"
+  | "encyclopedia.recentItems";
 
 const MESSAGES: Record<AppLocale, Record<string, string>> = {
   "zh-CN": {
@@ -664,6 +665,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "encyclopedia.entityLabel": "设备",
     "encyclopedia.itemLabel": "物品",
     "encyclopedia.filter.label": "筛选",
+    "encyclopedia.recentItems": "最近搜索",
   },
   "en-US": {
     "app.title": "Industrial Planner Stage1",
@@ -1046,6 +1048,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "encyclopedia.entityLabel": "Device",
     "encyclopedia.itemLabel": "Item",
     "encyclopedia.filter.label": "Filter",
+    "encyclopedia.recentItems": "Recent",
   },
 };
 

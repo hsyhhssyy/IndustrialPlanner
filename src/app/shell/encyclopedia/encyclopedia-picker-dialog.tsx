@@ -75,6 +75,7 @@ export const EncyclopediaPickerDialog = observer(function EncyclopediaPickerDial
         isTouch={isTouch}
         itemFilter={controller.matchesItem}
         mobileSelectedCategories={controller.mobileSelectedCategories}
+        recentItemIds={controller.recentItemIds}
         onDesktopCategoryChange={controller.setDesktopCategory}
         onEntityClick={controller.selectEntity}
         onItemClick={controller.selectItem}

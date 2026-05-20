@@ -235,6 +235,77 @@
   background: var(--surface-3);
 }
 
+/* --- Recent Items Row --- */
+
+.encyclopedia-recent-section {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.encyclopedia-recent-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-0);
+}
+
+.encyclopedia-recent-count {
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.encyclopedia-recent-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.encyclopedia-recent-card {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  width: 100px;
+  padding: 8px 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.encyclopedia-recent-card:hover {
+  border-color: var(--accent-strong);
+  box-shadow: 0 2px 8px var(--accent-soft);
+}
+
+.encyclopedia-recent-card .encyclopedia-card-icon {
+  width: 34px;
+  height: 34px;
+}
+
+.encyclopedia-recent-card .encyclopedia-card-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.encyclopedia-panel.is-touch .encyclopedia-recent-card {
+  width: 90px;
+  padding: 6px 4px;
+}
+
+.encyclopedia-panel.is-touch .encyclopedia-recent-card .encyclopedia-card-icon {
+  width: 30px;
+  height: 30px;
+}
+
 /* --- Category Dropdown (Mobile) --- */
 
 .encyclopedia-category-dropdown {

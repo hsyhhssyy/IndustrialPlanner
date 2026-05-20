@@ -66,6 +66,7 @@ export class WorkbenchEncyclopediaPickerController {
   title: string | null = null;
   query = "";
   allowedKinds: EncyclopediaPickerSelectionKind[] = [...DEFAULT_PICKER_KINDS];
+  recentItemIds: string[] = [];
 
   _resolveSharedFilterState: () => EncyclopediaPickerSharedFilterState;
   _itemFilter: ((item: ItemDefinition) => boolean) | undefined;
@@ -81,6 +82,20 @@ export class WorkbenchEncyclopediaPickerController {
       _itemFilter: false,
       _resolver: false,
     }, { autoBind: true });
+
+    try {
+      const raw = localStorage.getItem("planner.recent-picker-items");
+      if (raw !== null) {
+        const parsed: unknown = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          this.recentItemIds = parsed
+            .filter((v): v is string => typeof v === "string")
+            .slice(0, 20);
+        }
+      }
+    } catch {
+      // Storage 不可用或数据损坏时，保持空列表
+    }
   }
 
   public get desktopCategory(): ToolboxWikiDesktopCategory {
@@ -180,6 +195,7 @@ export class WorkbenchEncyclopediaPickerController {
   }
 
   public selectItem(id: string) {
+    this.recordRecentItem(id);
     this.finish({ kind: "item", id });
   }
 
@@ -193,6 +209,18 @@ export class WorkbenchEncyclopediaPickerController {
 
   public dispose() {
     this.finish(null);
+  }
+
+  private recordRecentItem(id: string) {
+    const next = this.recentItemIds.filter((rid) => rid !== id);
+    next.unshift(id);
+    this.recentItemIds = next.slice(0, 20);
+
+    try {
+      localStorage.setItem("planner.recent-picker-items", JSON.stringify(this.recentItemIds));
+    } catch {
+      // Storage 不可用时静默失败
+    }
   }
 
   private finish(selection: EncyclopediaPickerSelection | null) {
