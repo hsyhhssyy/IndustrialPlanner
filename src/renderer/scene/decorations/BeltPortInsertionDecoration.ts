@@ -6,6 +6,7 @@ import {
 } from "pixi.js"
 
 import { resolveDedicatedLogisticTintColor } from "@/renderer/sprites/dedicated-logistic-sprite"
+import { resolveDisplayRotationRadians } from "@/shared/geometry/viewport-transform"
 
 import type { DecorationLayer } from "./DecorationLayer"
 import type { DecorationSyncContext } from "./DecorationSyncContext"
@@ -132,6 +133,7 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
         view.root.x = boundary.x
         view.root.y = boundary.y
         view.root.rotation = entry.angleRadians
+          + resolveDisplayRotationRadians(ctx.viewportState.displayRotation)
 
         const localStartX = entry.localStartCells * gridCellSize
         const localEndX = entry.localEndCells * gridCellSize

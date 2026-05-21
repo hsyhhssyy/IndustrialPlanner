@@ -1,6 +1,8 @@
 import type { EditorAction } from "@/domain/editor/editor-action";
+import type { GridRotation } from "@/domain/shared/grid";
 import {
   resolveCompensatedViewportCenter,
+  resolveWorldVectorFromViewportVector,
 } from "@/shared/geometry/viewport-transform";
 
 import {
@@ -79,6 +81,7 @@ export function createEditorViewportActions({
           nextClientRect,
           previousViewportCenter: state.viewport.center,
           gridCellPixelSize: state.viewport.gridCellPixelSize,
+          displayRotation: state.viewport.displayRotation,
         });
 
         state.viewport.center.x = nextViewportCenter.x;
@@ -121,8 +124,13 @@ export function createEditorViewportActions({
         return;
       }
 
-      state.viewport.center.x -= viewportPixelVector.x / gridCellSize;
-      state.viewport.center.y -= viewportPixelVector.y / gridCellSize;
+      const worldVector = resolveWorldVectorFromViewportVector({
+        viewportVector: viewportPixelVector,
+        displayRotation: state.viewport.displayRotation,
+      });
+
+      state.viewport.center.x -= worldVector.x / gridCellSize;
+      state.viewport.center.y -= worldVector.y / gridCellSize;
 
       clampViewportCenter();
 
@@ -146,9 +154,27 @@ export function createEditorViewportActions({
       persistViewportSettings();
     },
     setViewportDisplayRotation: (displayRotation) => {
-      void displayRotation;
+      const nextDisplayRotation = normalizeViewportDisplayRotation(displayRotation);
+      if (
+        nextDisplayRotation === null
+        || nextDisplayRotation === state.viewport.displayRotation
+      ) {
+        return;
+      }
+
+      state.viewport.displayRotation = nextDisplayRotation;
+
+      persistViewportSettings();
     },
   };
+}
+
+function normalizeViewportDisplayRotation(value: unknown): GridRotation | null {
+  if (value === 0 || value === 90 || value === 180 || value === 270) {
+    return value;
+  }
+
+  return null;
 }
 
 function resolveViewportClientOffset(

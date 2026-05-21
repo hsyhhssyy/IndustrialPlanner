@@ -38,7 +38,7 @@ function attachSimulationStub(
   const state = observable({
     runningState: options.state,
     simulationSpeed: 1,
-    statistics: { tickPerSecond: 0 },
+    statistics: { tickPerSecond: 0, targetTickPerSecond: 0 },
   });
   const start = options.start ?? vi.fn(action(async () => {
     state.runningState = "start";

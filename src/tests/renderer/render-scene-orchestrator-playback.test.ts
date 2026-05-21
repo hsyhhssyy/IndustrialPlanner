@@ -126,6 +126,10 @@ describe("createRenderSceneOrchestrator", () => {
       remove: vi.fn(),
     }
     const renderHost = {
+      dom: {
+        placementGlowOverlay: document.createElement("div"),
+        marqueeGlowOverlay: document.createElement("div"),
+      },
       app: {
         stage: {
           addChild: vi.fn(),
@@ -152,6 +156,10 @@ describe("createRenderSceneOrchestrator", () => {
             },
             settings: {
               gameUseSimplifiedDeviceIcons: false,
+            },
+            activeTool: "select",
+            toolInfo: {
+              marqueeType: "marquee",
             },
             theme: AYU_LIGHT_THEME,
           },

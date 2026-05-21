@@ -38,7 +38,7 @@ export interface SimulationStateReadWrite extends SimulationState {
 class SimulationStateReadWriteImpl implements SimulationStateReadWrite {
   public runningState: SimulationState["runningState"] = "stop";
   public simulationSpeed = DEFAULT_SIMULATION_SPEED;
-  public statistics: SimulationRuntimeStatistics = { tickPerSecond: 0 };
+  public statistics: SimulationRuntimeStatistics = { tickPerSecond: 0, targetTickPerSecond: 0 };
   public hasStarted = false;
   public runtimeStatus: SimulationRuntimeStatus = createInitialSimulationRuntimeStatus();
   public currentSnapshot: RuntimeTickSnapshot | null = null;

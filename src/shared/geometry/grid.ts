@@ -34,6 +34,13 @@ export function rotateGridRotationClockwise(
   }
 }
 
+export function rotateGridRotation(
+  rotation: GridRotation,
+  offset: GridRotation,
+): GridRotation {
+  return ((rotation + offset) % 360) as GridRotation;
+}
+
 export function getRotatedGridFootprint(
   footprint: GridRectSize,
   rotation: GridRotation,

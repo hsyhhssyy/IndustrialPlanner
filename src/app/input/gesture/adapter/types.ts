@@ -51,6 +51,8 @@ export type GestureEventType =
   | "tap-long-press-ready"
   | "pinch in"
   | "pinch out"
+  | "rotate clockwise"
+  | "rotate counterclockwise"
   | "two finger move"
   | "wheel up"
   | "wheel down"
@@ -64,6 +66,7 @@ interface GestureEventBase {
   readonly gestureId: string;
   readonly modifiers: GestureModifiers;
   readonly sourceEvent: unknown;
+  readonly mergedCount?: number;
 }
 
 interface ActiveToolGestureEventBase extends GestureEventBase {
@@ -189,6 +192,13 @@ export interface PinchGestureEvent extends GestureEventBase {
   readonly activeTouchCount: number;
 }
 
+export interface RotateGestureEvent extends GestureEventBase {
+  readonly type: "rotate clockwise" | "rotate counterclockwise";
+  readonly center: GesturePosition;
+  readonly rotationDeltaDegrees: number;
+  readonly activeTouchCount: number;
+}
+
 export interface TwoFingerMoveGestureEvent extends GestureEventBase {
   readonly type: "two finger move";
   readonly center: GesturePosition;
@@ -243,6 +253,7 @@ export type GestureEvent =
   | TouchTapGestureEvent
   | TapLongPressReadyGestureEvent
   | PinchGestureEvent
+  | RotateGestureEvent
   | TwoFingerMoveGestureEvent
   | WheelGestureEvent
   | KeyDownGestureEvent

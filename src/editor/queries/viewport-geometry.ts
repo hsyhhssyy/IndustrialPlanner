@@ -1,4 +1,5 @@
 import {
+  resolveWorldPointFromViewportPoint,
   resolveViewportRectFromWorldGridRect,
 } from "@/shared/geometry/viewport-transform";
 
@@ -27,24 +28,21 @@ export function resolveGridCellAtClientPixelPoint(options: {
     return null;
   }
 
-  const worldX =
-    options.viewportState.center.x
-    + (
-      options.clientPixelPoint.x
-      - options.viewportState.clientRect.left
-      - options.viewportState.clientRect.width / 2
-    ) / gridCellSize;
-  const worldY =
-    options.viewportState.center.y
-    + (
-      options.clientPixelPoint.y
-      - options.viewportState.clientRect.top
-      - options.viewportState.clientRect.height / 2
-    ) / gridCellSize;
+  const worldPoint = resolveWorldPointFromViewportPoint({
+    viewportPoint: options.clientPixelPoint,
+    viewportBounds: options.viewportState.clientRect,
+    viewportCenter: options.viewportState.center,
+    gridCellPixelSize: gridCellSize,
+    displayRotation: options.viewportState.displayRotation,
+  });
+
+  if (worldPoint === null) {
+    return null;
+  }
 
   return {
-    x: Math.floor(worldX),
-    y: Math.floor(worldY),
+    x: Math.floor(worldPoint.x),
+    y: Math.floor(worldPoint.y),
   };
 }
 
@@ -83,5 +81,6 @@ export function resolveClientRectForGridCell(options: {
     viewportBounds: options.viewportState.clientRect,
     viewportCenter: options.viewportState.center,
     gridCellPixelSize: gridCellSize,
+    displayRotation: options.viewportState.displayRotation,
   });
 }

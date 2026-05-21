@@ -1,5 +1,5 @@
 import { BlurFilter, Graphics } from "pixi.js";
-import type { GridRect } from "@/domain/shared/grid";
+import type { GridRect, GridRotation } from "@/domain/shared/grid";
 import type { AppTheme } from "@/domain/app/types/theme";
 import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
@@ -43,6 +43,7 @@ export function resolveMarqueeGridRectLayout(options: {
     y: number;
   };
   gridCellPixelSize: number;
+  displayRotation?: GridRotation;
 }): {
   x: number;
   y: number;
@@ -58,6 +59,7 @@ export function resolveMarqueeGridRectLayout(options: {
     viewportBounds: options.viewportBounds,
     viewportCenter: options.viewportCenter,
     gridCellPixelSize: options.gridCellPixelSize,
+    displayRotation: options.displayRotation,
   });
 
   if (viewportRect === null) {
@@ -146,6 +148,7 @@ export function createMarqueeRectDecoration(): DecorationLayer {
           y: ctx.viewportState.centerY,
         },
         gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+        displayRotation: ctx.viewportState.displayRotation,
       });
 
       if (layout === null) {

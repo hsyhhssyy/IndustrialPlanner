@@ -78,6 +78,7 @@ const DEFAULT_APP_SHORTCUTS_STORAGE = {
   [SHORTCUT_KEY.SAVE_BLUEPRINT]: "Ctrl+S",
   [SHORTCUT_KEY.RETURN_SELECT]: "Esc",
   [SHORTCUT_KEY.ROTATE]: "R",
+  [SHORTCUT_KEY.ROTATE_VIEWPORT]: "Ctrl+R",
   [SHORTCUT_KEY.DELETE_DEVICE]: "F",
 } as const;
 
@@ -931,7 +932,7 @@ describe("WorkbenchApp", () => {
       state: {
         runningState: "stop",
         simulationSpeed: 1,
-        statistics: { tickPerSecond: 0 },
+        statistics: { tickPerSecond: 0, targetTickPerSecond: 0 },
       },
       topology: createSnapshotStore(null),
       queries: {
@@ -1241,7 +1242,7 @@ describe("WorkbenchApp", () => {
     expect(leftMouseEvent.defaultPrevented).toBe(false);
   });
 
-  it("renders the bottom-left rotate view toolbar without emitting gestures yet", () => {
+  it("renders the bottom-left rotate view toolbar and emits rotate view button gestures", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
     const gestures: GestureEvent[] = [];
@@ -1296,7 +1297,11 @@ describe("WorkbenchApp", () => {
       dispatchClickEvent(rotateViewButton, { detail: 0 });
     });
 
-    expect(gestures).toHaveLength(0);
+    expect(gestures).toHaveLength(1);
+    expect(gestures[0]).toMatchObject({
+      type: "ui-button-touch-tap",
+      uiButtonId: "canvas-bottom-left-toolbar-button-rotate-view",
+    });
   });
 
   it("keeps pointer activity inside the canvas floating toolbar out of canvas gestures and emits selection action buttons for pointer activation", () => {
@@ -2283,6 +2288,9 @@ describe("WorkbenchApp", () => {
     });
 
     const dialog = container.querySelector(".help-dialog") as HTMLDivElement | null;
+    const shortcutsTab = container.querySelector(
+      '#help-dialog-tab-shortcuts',
+    ) as HTMLButtonElement | null;
     const faqTab = container.querySelector(
       '#help-dialog-tab-faq',
     ) as HTMLButtonElement | null;
@@ -2296,6 +2304,14 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".help-dialog-placeholder p")?.textContent).toBe(
       "当前没有可显示的帮助内容。",
     );
+
+    act(() => {
+      shortcutsTab?.click();
+    });
+
+    expect(shortcutsTab?.getAttribute("aria-selected")).toBe("true");
+    expect(container.querySelector(".help-dialog")?.textContent).toContain("旋转画布");
+    expect(container.querySelector(".help-dialog")?.textContent).toContain("Ctrl+R");
 
     act(() => {
       faqTab?.click();
@@ -3104,6 +3120,9 @@ describe("WorkbenchApp", () => {
     const rotateShortcutButton = container.querySelector(
       'button[data-setting-id="shortcut-rotate"]',
     ) as HTMLButtonElement | null;
+    const rotateViewportShortcutButton = container.querySelector(
+      'button[data-setting-id="shortcut-rotate-viewport"]',
+    ) as HTMLButtonElement | null;
 
     expect(operationModeToggle).not.toBeNull();
     expect(immediateMoveToggle).not.toBeNull();
@@ -3111,6 +3130,7 @@ describe("WorkbenchApp", () => {
     expect(confirmShortcutButton).not.toBeNull();
     expect(cancelShortcutButton).not.toBeNull();
     expect(rotateShortcutButton).not.toBeNull();
+    expect(rotateViewportShortcutButton).not.toBeNull();
     expect(operationModeToggle?.checked).toBe(false);
     expect(operationModeToggle?.disabled).toBe(true);
     expect(immediateMoveToggle?.checked).toBe(true);
@@ -3121,6 +3141,9 @@ describe("WorkbenchApp", () => {
     expect(confirmShortcutButton?.textContent).toBe("E");
     expect(rotateShortcutButton?.disabled).toBe(false);
     expect(rotateShortcutButton?.textContent).toBe("R");
+    expect(rotateViewportShortcutButton?.disabled).toBe(false);
+    expect(rotateViewportShortcutButton?.textContent).toBe("Ctrl+R");
+    expect(container.querySelector(".settings-dialog")?.textContent).toContain("旋转画布");
 
     act(() => {
       confirmShortcutButton?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));

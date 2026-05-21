@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 const { applicationState, createRenderSceneOrchestrator } = vi.hoisted(() => ({
   applicationState: {
     init: vi.fn(async () => undefined),
-    canvas: { tagName: "CANVAS" } as HTMLCanvasElement,
+    canvas: document.createElement("canvas"),
     stage: {
       roundPixels: false,
     },
@@ -74,6 +74,8 @@ describe("createRenderHost", () => {
       preference: "webgl",
     })
     expect(applicationState.stage.roundPixels).toBe(true)
+    expect(renderHost.container).toBeInstanceOf(HTMLDivElement)
+    expect(renderHost.container.contains(applicationState.canvas)).toBe(true)
     expect(renderHost.internalState.textureConfig).toEqual({
       renderResolution: 3,
       bitmap: {

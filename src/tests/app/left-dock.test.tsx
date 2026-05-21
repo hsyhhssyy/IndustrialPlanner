@@ -54,7 +54,7 @@ function createBlueprintPreviewRenderStub() {
     resizeBlueprintPreview,
     disposeBlueprintPreview,
     render: {
-      canvas: document.createElement("canvas"),
+      container: document.createElement("div"),
       queries: {
         getBlueprintPreviewCanvas: vi.fn(() => previewCanvas),
       },

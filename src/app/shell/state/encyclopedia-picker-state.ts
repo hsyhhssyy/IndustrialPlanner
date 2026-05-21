@@ -96,6 +96,15 @@ export class WorkbenchEncyclopediaPickerController {
     } catch {
       // Storage 不可用或数据损坏时，保持空列表
     }
+
+    try {
+      const raw = localStorage.getItem("planner.last-picker-query");
+      if (raw !== null) {
+        this.query = raw;
+      }
+    } catch {
+      // Storage 不可用时保持空字符串
+    }
   }
 
   public get desktopCategory(): ToolboxWikiDesktopCategory {
@@ -178,7 +187,7 @@ export class WorkbenchEncyclopediaPickerController {
     const nextKinds = normalizeKinds(request.kinds);
     this.allowedKinds = nextKinds;
     this.title = request.title ?? null;
-    this.query = request.initialQuery ?? "";
+    this.query = request.initialQuery ?? this.query;
     if (request.initialDesktopCategory !== undefined) {
       this.setDesktopCategory(request.initialDesktopCategory);
     }
@@ -229,6 +238,13 @@ export class WorkbenchEncyclopediaPickerController {
     this.dialogState.visible = false;
     this._itemFilter = undefined;
     this._entityFilter = undefined;
+
+    try {
+      localStorage.setItem("planner.last-picker-query", this.query);
+    } catch {
+      // Storage 不可用时静默失败
+    }
+
     resolver?.(selection);
   }
 }

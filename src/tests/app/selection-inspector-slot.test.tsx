@@ -45,7 +45,7 @@ function attachSimulationStub(
     state: {
       runningState: options.state,
       simulationSpeed: 1,
-      statistics: { tickPerSecond: 0 },
+      statistics: { tickPerSecond: 0, targetTickPerSecond: 0 },
     },
     topology: createSnapshotStore(null),
     queries: {

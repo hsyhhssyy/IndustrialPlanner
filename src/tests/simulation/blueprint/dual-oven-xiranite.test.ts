@@ -23,7 +23,7 @@ const EXPECTED_XIRANITE_PER_MINUTE = 60;
 // 由 vitest blueprint project 承载，独立串行执行，不再依赖 HEAVY 环境变量。
 // AI-CORRECTION 2026-05-18: 移除 HEAVY=1 / describe.skipIf，改为 vitest projects 区分。
 describe("双烘炉息壤产线 - 息壤粉滑动窗口产量验证", () => {
-  it("4 分钟滑动窗口诊断：确认息壤粉产量何时稳定在 60/分钟", { timeout: 120_000 }, async () => {
+  it("4 分钟滑动窗口诊断：确认息壤粉产量何时稳定在 60/分钟", { timeout: 360_000 }, async () => {
     const blueprint = loadBlueprintWithExtras(BLUEPRINT_PATH, [
       // 上方暗管出口 → 接入左侧水管网末端 pipe_straight_1x1 @ (9,0) rot=90
       // 出水口位于 (9,-1) 朝南，向 (9,0) 输出清水

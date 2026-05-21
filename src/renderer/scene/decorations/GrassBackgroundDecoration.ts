@@ -105,6 +105,7 @@ export function createGrassBackgroundDecoration(
           y: ctx.viewportState.centerY,
         },
         gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+        displayRotation: ctx.viewportState.displayRotation,
       });
       const warningLayout = resolveMarqueeGridRectLayout({
         gridRect: warningGridRect,
@@ -114,6 +115,7 @@ export function createGrassBackgroundDecoration(
           y: ctx.viewportState.centerY,
         },
         gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+        displayRotation: ctx.viewportState.displayRotation,
       });
 
       if (outerLayout === null || warningLayout === null) {
@@ -136,6 +138,7 @@ export function createGrassBackgroundDecoration(
           y: ctx.viewportState.centerY,
         },
         gridCellPixelSize: gridCellSize,
+        displayRotation: ctx.viewportState.displayRotation,
       });
 
       grassMask

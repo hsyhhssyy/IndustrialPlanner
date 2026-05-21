@@ -62,6 +62,113 @@ const PLACEMENT_GROUP_SHORTCUTS: Readonly<Record<PlacementGroup, ShortcutKeyId>>
 export function createHypergryphSinglePlacementGestureModule(): GestureMappingModule<AppHost> {
   let lastMousePosition: GesturePosition | null = null;
 
+  // AI-DIAG 2026-05-21: placement preview 性能统计
+  let perfCallCount = 0
+  let perfTotalMs = 0
+  let perfFindGridMs = 0
+  let perfBeforeRectMs = 0
+  let perfMoveCollectionMs = 0
+  let perfAfterRectMs = 0
+  let perfAlignToolbarMs = 0
+  let perfSkippedCount = 0
+  const PERF_WINDOW_CALLS = 100
+
+  const flushPlacementPreviewPerf = (activeToolName: string) => {
+    if (perfCallCount >= PERF_WINDOW_CALLS) {
+      console.debug("[placement-preview-perf] " + JSON.stringify({
+        calls: perfCallCount,
+        skipped: perfSkippedCount,
+        activeTool: activeToolName,
+        avgTotalMs: Math.round((perfTotalMs / perfCallCount) * 100) / 100,
+        avgFindGridMs: Math.round((perfFindGridMs / perfCallCount) * 100) / 100,
+        avgBeforeRectMs: Math.round((perfBeforeRectMs / perfCallCount) * 100) / 100,
+        avgMoveCollectionMs: Math.round((perfMoveCollectionMs / perfCallCount) * 100) / 100,
+        avgAfterRectMs: Math.round((perfAfterRectMs / perfCallCount) * 100) / 100,
+        avgAlignToolbarMs: Math.round((perfAlignToolbarMs / perfCallCount) * 100) / 100,
+      }))
+      perfCallCount = 0
+      perfTotalMs = 0
+      perfFindGridMs = 0
+      perfBeforeRectMs = 0
+      perfMoveCollectionMs = 0
+      perfAfterRectMs = 0
+      perfAlignToolbarMs = 0
+      perfSkippedCount = 0
+    }
+  }
+
+  const drivePlacementPreviewWithPerf = (options: {
+    appHost: AppHost;
+    editor: EditorContract;
+    position: GesturePosition;
+  }): GestureHandleResult => {
+    const placementAnchor = options.appHost.internalState.runtime.placementAnchor;
+    if (placementAnchor === null) {
+      return { status: "ignored" };
+    }
+
+    const startedAtMs = performance.now()
+    const t0 = performance.now()
+    const nextGridPoint = options.editor.queries.findGridCellForClientPixlePoint(options.position);
+    perfFindGridMs += performance.now() - t0
+
+    if (nextGridPoint === null) {
+      perfTotalMs += performance.now() - startedAtMs
+      perfCallCount += 1
+      perfSkippedCount += 1
+      return { status: "ignored" };
+    }
+
+    if (areGridPointsEqual(placementAnchor, nextGridPoint)) {
+      perfTotalMs += performance.now() - startedAtMs
+      perfCallCount += 1
+      perfSkippedCount += 1
+      return { status: "handled" };
+    }
+
+    const t1 = performance.now()
+    const beforeRect = options.editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
+    perfBeforeRectMs += performance.now() - t1
+
+    if (beforeRect === null) {
+      perfTotalMs += performance.now() - startedAtMs
+      perfCallCount += 1
+      return { status: "ignored" };
+    }
+
+    // 非跳过路径: drivePlacementPreview 核心逻辑
+    const t2 = performance.now()
+    options.editor.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: placementAnchor,
+      endGridPoint: nextGridPoint,
+    });
+    perfMoveCollectionMs += performance.now() - t2
+
+    const t3 = performance.now()
+    const afterRect = options.editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
+    perfAfterRectMs += performance.now() - t3
+
+    if (
+      afterRect !== null
+      && didRectMoveByGridVector({
+        beforeRect,
+        afterRect,
+        startGridPoint: placementAnchor,
+        endGridPoint: nextGridPoint,
+      })
+    ) {
+      options.appHost.internalState.runtime.placementAnchor = nextGridPoint;
+      const t4 = performance.now()
+      options.appHost.internalActions.alignCanvasFloatingToolbar();
+      perfAlignToolbarMs += performance.now() - t4
+    }
+
+    perfTotalMs += performance.now() - startedAtMs
+    perfCallCount += 1
+    return { status: "handled" };
+  }
+
   return {
     id: "hypergryph-single-placement-gesture",
     when: isHypergryphGestureEnabled,
@@ -73,6 +180,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
 
         pendingPlacementEnter = null;
         cleanupPlacementDraft(context.appHost);
+        flushPlacementPreviewPerf("on-exit-single-placement")
         return { status: "handled" };
       }
 
@@ -210,6 +318,10 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return { status: "handled" };
 
         case "mouse dragstart":
+          if (event.modifiers.alt) {
+            return { status: "ignored" };
+          }
+
           return handlePlacementMouseDragStart({
             appHost: context.appHost,
             editor,
@@ -225,29 +337,46 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           });
 
         case "mouse move":
-          return drivePlacementPreview({
+          if (event.modifiers.alt) {
+            return { status: "ignored" };
+          }
+
+          return drivePlacementPreviewWithPerf({
             appHost: context.appHost,
             editor,
             position: event.position,
           });
 
         case "mouse dragmove":
-          if (event.originButton !== 0) {
+          if (event.originButton !== 0 || event.modifiers.alt) {
             return { status: "ignored" };
           }
 
-          return drivePlacementPreview({
+          return drivePlacementPreviewWithPerf({
             appHost: context.appHost,
             editor,
             position: event.position,
           });
 
         case "touch dragmove":
-          return drivePlacementPreview({
+          return drivePlacementPreviewWithPerf({
             appHost: context.appHost,
             editor,
             position: event.position,
           });
+
+        case "key up":
+          if (
+            (event.code === "AltLeft" || event.code === "AltRight")
+            && lastMousePosition !== null
+          ) {
+            return drivePlacementPreviewWithPerf({
+              appHost: context.appHost,
+              editor,
+              position: lastMousePosition,
+            });
+          }
+          return { status: "ignored" };
 
         case "mouse dragend":
           return (
@@ -268,7 +397,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             return { status: "handled" };
           }
 
-          if (event.button === 0 && !event.longPress) {
+          if (event.button === 0 && !event.longPress && !event.modifiers.alt) {
             applyPlacementOperation(context.appHost, editor, {
               keepPlacement: event.modifiers.ctrl || event.modifiers.shift,
             });
@@ -342,6 +471,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return { status: "ignored" };
 
         default:
+          flushPlacementPreviewPerf(context.appHost.internalState.activeTool)
           return { status: "ignored" };
       }
     },

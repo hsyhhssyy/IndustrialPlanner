@@ -263,6 +263,8 @@
 
 .production-planning-item-picker-button span,
 .production-planning-item-identity strong,
+.production-planning-recipe-identity strong,
+.production-planning-recipe-identity span,
 .production-planning-recipe-header h4,
 .production-planning-recipe-header span,
 .production-planning-port-chip span {
@@ -375,6 +377,232 @@
   font-size: 0.86rem;
 }
 
+.production-planning-tree-table-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(248px, 0.42fr);
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.production-planning-tree-table-pane,
+.production-planning-tree-detail {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+}
+
+.production-planning-tree-table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.production-planning-tree-table-node-col {
+  width: auto;
+}
+
+.production-planning-tree-table-rate-col {
+  width: 210px;
+}
+
+.production-planning-tree-table th,
+.production-planning-tree-table td {
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-1);
+  font-size: 0.72rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.production-planning-tree-table th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  height: 34px;
+  padding: 0 9px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-weight: 800;
+}
+
+.production-planning-tree-table td {
+  height: 42px;
+  padding: 5px 9px;
+}
+
+.production-planning-tree-table td:first-child {
+  padding: 0;
+}
+
+.production-planning-tree-table-row.is-active td {
+  background: var(--accent-soft);
+}
+
+.production-planning-tree-table-row.is-recipe td {
+  background-color: color-mix(in srgb, var(--surface-1) 88%, var(--canvas-floating-toolbar-confirm));
+}
+
+.production-planning-tree-table-row.is-recipe.is-active td {
+  background: color-mix(in srgb, var(--accent-soft) 84%, var(--canvas-floating-toolbar-confirm));
+}
+
+.production-planning-tree-table-node-button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 42px;
+  min-width: 0;
+  padding: 0 8px 0 calc(8px + min(var(--tree-depth, 0) * 16px, 144px));
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.production-planning-tree-table-node-button:hover {
+  background: color-mix(in srgb, var(--surface-3) 72%, transparent);
+}
+
+.production-planning-tree-table-branch {
+  width: 10px;
+  height: 1px;
+  background: var(--line-strong);
+}
+
+.production-planning-tree-table-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 3px 6px;
+  border: 1px solid color-mix(in srgb, var(--warn) 60%, var(--line));
+  border-radius: 7px;
+  color: var(--warn);
+  font-size: 0.64rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.production-planning-tree-table-rate,
+.production-planning-tree-rate-piece {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.production-planning-tree-table-rate {
+  gap: 5px;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.production-planning-tree-rate-piece {
+  gap: 3px;
+}
+
+.production-planning-tree-rate-piece strong {
+  color: var(--text-0);
+  font-weight: 800;
+}
+
+.production-planning-tree-rate-piece img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.production-planning-tree-rate-separator {
+  flex: 0 0 auto;
+  color: var(--text-2);
+}
+
+.production-planning-tree-detail {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 10px;
+}
+
+.production-planning-tree-detail-stack,
+.production-planning-item-detail {
+  display: grid;
+  gap: 10px;
+}
+
+.production-planning-item-detail-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.production-planning-tree-relations {
+  display: grid;
+  gap: 8px;
+}
+
+.production-planning-tree-relation-group {
+  display: grid;
+  gap: 5px;
+}
+
+.production-planning-tree-relation-group > span {
+  color: var(--text-2);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.production-planning-tree-relation-group > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.production-planning-tree-relation-button {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 30px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-size: 0.68rem;
+}
+
+.production-planning-tree-relation-button:hover {
+  background: var(--surface-3);
+}
+
+.production-planning-tree-relation-button img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.production-planning-tree-relation-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .production-planning-item-node,
 .production-planning-device-root,
 .production-planning-device-tree-node {
@@ -393,7 +621,8 @@
   flex-wrap: wrap;
 }
 
-.production-planning-item-identity {
+.production-planning-item-identity,
+.production-planning-recipe-identity {
   display: grid;
   grid-template-columns: 26px minmax(0, 1fr);
   align-items: center;
@@ -401,9 +630,31 @@
   min-width: 120px;
 }
 
-.production-planning-item-identity strong {
+.production-planning-recipe-identity {
+  grid-template-columns: 28px minmax(0, 1fr);
+}
+
+.production-planning-recipe-identity img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
+.production-planning-recipe-identity div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.production-planning-item-identity strong,
+.production-planning-recipe-identity strong {
   color: var(--text-0);
   font-size: 0.78rem;
+}
+
+.production-planning-recipe-identity span {
+  color: var(--text-2);
+  font-size: 0.66rem;
 }
 
 .production-planning-node-metrics,

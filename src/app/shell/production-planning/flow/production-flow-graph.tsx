@@ -7,8 +7,10 @@ import styles from "../production-planning-panel.module.scss";
 
 interface ProductionFlowGraphProps {
   readonly displayMode: ProductionPlanningDisplayMode;
+  readonly initialViewport?: ViewportState;
   readonly plan: ProductionPlanningResult;
   readonly index: ProductionPlanningIndex;
+  readonly onViewportChange?: (viewport: ViewportState) => void;
   readonly t: (key: string) => string;
 }
 
@@ -17,6 +19,8 @@ interface ViewportState {
   readonly y: number;
   readonly scale: number;
 }
+
+type ViewportUpdate = ViewportState | ((current: ViewportState) => ViewportState);
 
 interface NodeDragState {
   readonly pointerId: number;
@@ -58,8 +62,10 @@ const MAX_SCALE = 3.0;
 
 export function ProductionFlowGraph({
   displayMode,
+  initialViewport,
   plan,
   index,
+  onViewportChange,
   t,
 }: ProductionFlowGraphProps) {
   const graphInput = useMemo(() => buildProductionFlowGraph(plan, index, t, displayMode), [displayMode, index, plan, t]);
@@ -74,8 +80,18 @@ export function ProductionFlowGraph({
     });
   }, [graphInput]);
   const [graph, setGraph] = useState(initialLayout);
-  const [viewport, setViewport] = useState<ViewportState>({ x: 22, y: 22, scale: 1 });
+  const [viewport, setRawViewport] = useState<ViewportState>(() => normalizeViewportState(initialViewport));
   const viewportRef = useRef(viewport);
+
+  const setViewport = useCallback((update: ViewportUpdate) => {
+    setRawViewport((current) => {
+      const nextViewport = normalizeViewportState(
+        typeof update === "function" ? update(current) : update,
+      );
+      onViewportChange?.(nextViewport);
+      return nextViewport;
+    });
+  }, [onViewportChange]);
 
   useEffect(() => {
     viewportRef.current = viewport;
@@ -112,7 +128,7 @@ export function ProductionFlowGraph({
         scale: nextScale,
       };
     });
-  }, []);
+  }, [setViewport]);
 
   // --- unified pointer down on canvas (not on a node / toolbar) ---
   const handleCanvasPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
@@ -271,7 +287,7 @@ export function ProductionFlowGraph({
 
       return;
     }
-  }, []);
+  }, [setViewport]);
 
   // --- unified pointer up ---
   const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
@@ -450,6 +466,18 @@ function getGraphBounds(graph: SankeyGraph<ProductionFlowNode, ProductionFlowLin
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function normalizeViewportState(value: ViewportState | undefined): ViewportState {
+  return {
+    x: normalizeFiniteNumber(value?.x, 22),
+    y: normalizeFiniteNumber(value?.y, 22),
+    scale: clamp(normalizeFiniteNumber(value?.scale, 1), MIN_SCALE, MAX_SCALE),
+  };
+}
+
+function normalizeFiniteNumber(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function resolveLayoutWidth(graphInput: ReturnType<typeof buildProductionFlowGraph>): number {

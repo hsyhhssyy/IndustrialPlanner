@@ -470,6 +470,7 @@ describe("GestureAdapter", () => {
       "touch dragstart",
       "touch dragend",
       "pinch out",
+      "rotate counterclockwise",
       "two finger move",
     ]);
     expect(events[1]).toMatchObject({
@@ -495,6 +496,22 @@ describe("GestureAdapter", () => {
       "pinch out",
       "two finger move",
     ]);
+  });
+
+  it("emits rotate gestures for two-finger rotation", () => {
+    const { adapter } = createAdapterHarness();
+    const events: GestureEvent[] = [];
+    adapter.subscribe((event) => events.push(event));
+
+    adapter.handlePointerDown(touchEvent(1, 0, 0));
+    adapter.handlePointerDown(touchEvent(2, 10, 0));
+    adapter.handlePointerMove(touchEvent(2, 0, 10));
+
+    expect(events).toContainEqual(expect.objectContaining({
+      type: "rotate clockwise",
+      rotationDeltaDegrees: 90,
+      activeTouchCount: 2,
+    }));
   });
 
   it("does not show the long press indicator for a quick tap", () => {

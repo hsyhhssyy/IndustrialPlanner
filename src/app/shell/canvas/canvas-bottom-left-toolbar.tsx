@@ -46,6 +46,34 @@ export function CanvasBottomLeftToolbar({
     event.stopPropagation();
   };
 
+  const handleRotateButtonPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+
+    if (event.pointerType === "mouse") {
+      appHost.gestureAdapter.handleUiButtonMouseTap({
+        uiButtonId: "canvas-bottom-left-toolbar-button-rotate-view",
+        button: event.button,
+        altKey: event.altKey,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        shiftKey: event.shiftKey,
+        sourceEvent: event.nativeEvent,
+      });
+      return;
+    }
+
+    if (event.pointerType === "touch" || event.pointerType === "pen") {
+      appHost.gestureAdapter.handleUiButtonTouchTap({
+        uiButtonId: "canvas-bottom-left-toolbar-button-rotate-view",
+        altKey: event.altKey,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        shiftKey: event.shiftKey,
+        sourceEvent: event.nativeEvent,
+      });
+    }
+  };
+
   return (
     <div
       aria-label={t("toolbar.canvasBottomLeft")}
@@ -71,7 +99,7 @@ export function CanvasBottomLeftToolbar({
         onPointerCancel={stopUiPropagation}
         onPointerDown={stopTouchPointerDownPropagation}
         onPointerMove={stopUiPropagation}
-        onPointerUp={stopUiPropagation}
+        onPointerUp={handleRotateButtonPointerUp}
         title={label}
         type="button"
       >

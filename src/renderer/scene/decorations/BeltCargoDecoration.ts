@@ -3,7 +3,11 @@ import type {
   GridPoint,
 } from "@/domain/shared/grid"
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types"
-import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform"
+import {
+  resolveDisplayRotationRadians,
+  resolveViewportPointFromWorldPoint,
+  resolveViewportRectFromWorldGridRect,
+} from "@/shared/geometry/viewport-transform"
 import {
   Container,
   Graphics,
@@ -198,7 +202,8 @@ export function createBeltCargoDecoration(): DecorationLayer {
         entries.push({
           centerX: center.x,
           centerY: center.y,
-          angleRadians: beltCargoEntry.angleRadians,
+          angleRadians: beltCargoEntry.angleRadians
+            + resolveDisplayRotationRadians(ctx.viewportState.displayRotation),
           itemId: beltCargoEntry.itemId,
           clipMask: resolveBeltCargoClipMask({
             ctx,
@@ -461,19 +466,33 @@ function resolveBeltCargoClipBeltRects(
       const definition = definitionMap.get(entity.definitionId)
       return definition !== undefined && isWorldEntityVisible(entity, definition.footprint, visibleRect)
     })
-    .map((entity) => {
-      const cellTopLeft = resolveViewportPoint({
-        point: entity.position,
+    .flatMap((entity) => {
+      const viewportRect = resolveViewportRectFromWorldGridRect({
+        gridRect: {
+          x: entity.position.x,
+          y: entity.position.y,
+          width: 1,
+          height: 1,
+        },
         viewportBounds: ctx.viewportBounds,
-        viewportState: ctx.viewportState,
+        viewportCenter: {
+          x: ctx.viewportState.centerX,
+          y: ctx.viewportState.centerY,
+        },
+        gridCellPixelSize: gridCellSize,
+        displayRotation: ctx.viewportState.displayRotation,
       })
 
-      return {
-        x: cellTopLeft.x,
-        y: cellTopLeft.y,
-        width: gridCellSize,
-        height: gridCellSize,
+      if (viewportRect === null) {
+        return []
       }
+
+      return [{
+        x: viewportRect.left,
+        y: viewportRect.top,
+        width: viewportRect.width,
+        height: viewportRect.height,
+      }]
     })
 }
 
@@ -488,9 +507,11 @@ function resolveBeltCargoClipExtensionRect(options: {
     viewportState: options.ctx.viewportState,
   })
   const midpointCells = (options.extension.localStartCells + options.extension.localEndCells) / 2
+  const angleRadians = options.extension.angleRadians
+    + resolveDisplayRotationRadians(options.ctx.viewportState.displayRotation)
   const direction = {
-    x: Math.cos(options.extension.angleRadians),
-    y: Math.sin(options.extension.angleRadians),
+    x: Math.cos(angleRadians),
+    y: Math.sin(angleRadians),
   }
 
   return {
@@ -498,7 +519,7 @@ function resolveBeltCargoClipExtensionRect(options: {
       x: boundary.x + direction.x * midpointCells * gridCellSize,
       y: boundary.y + direction.y * midpointCells * gridCellSize,
     },
-    angleRadians: options.extension.angleRadians,
+    angleRadians,
     length: (options.extension.localEndCells - options.extension.localStartCells) * gridCellSize,
     width: gridCellSize,
   }
@@ -707,6 +728,7 @@ function resolveBeltCargoViewportCenter(options: {
     centerX: number;
     centerY: number;
     gridCellPixelSize: number;
+    displayRotation: DecorationSyncContext["viewportState"]["displayRotation"];
   };
 }): GridFloatPoint {
   return resolveViewportPointFromWorldPoint({
@@ -720,6 +742,7 @@ function resolveBeltCargoViewportCenter(options: {
       y: options.viewportState.centerY,
     },
     gridCellPixelSize: options.viewportState.gridCellPixelSize,
+    displayRotation: options.viewportState.displayRotation,
   })
 }
 

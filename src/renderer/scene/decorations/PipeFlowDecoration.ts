@@ -9,7 +9,12 @@ import type {
   GridPoint,
   GridRotation,
 } from "@/domain/shared/grid"
-import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform"
+import {
+  resolveDisplayRotationRadians,
+  resolveViewportPointFromWorldPoint,
+  resolveViewportRectFromWorldGridRect,
+  resolveWorldPointFromViewportPoint,
+} from "@/shared/geometry/viewport-transform"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
 import type { DecorationLayer } from "./DecorationLayer"
@@ -205,14 +210,28 @@ function drawPipeFlowMask(
       continue
     }
 
-    const cellTopLeft = resolveViewportPoint({
-      point: entity.position,
+    const cellRect = resolveViewportRectFromWorldGridRect({
+      gridRect: {
+        x: entity.position.x,
+        y: entity.position.y,
+        width: 1,
+        height: 1,
+      },
       viewportBounds: ctx.viewportBounds,
-      viewportState: ctx.viewportState,
+      viewportCenter: {
+        x: ctx.viewportState.centerX,
+        y: ctx.viewportState.centerY,
+      },
+      gridCellPixelSize: gridCellSize,
+      displayRotation: ctx.viewportState.displayRotation,
     })
 
+    if (cellRect === null) {
+      continue
+    }
+
     graphics
-      .rect(cellTopLeft.x, cellTopLeft.y, gridCellSize, gridCellSize)
+      .rect(cellRect.left, cellRect.top, cellRect.width, cellRect.height)
       .fill(0xffffff)
   }
 }
@@ -474,7 +493,8 @@ function resolvePipeFlowMark(options: {
   return {
     centerX: center.x,
     centerY: center.y,
-    angleRadians: sample.angleRadians,
+    angleRadians: sample.angleRadians
+      + resolveDisplayRotationRadians(options.ctx.viewportState.displayRotation),
     tint: resolvePipeFlowTintColor(options.ctx, options.entry),
   }
 }
@@ -1004,18 +1024,48 @@ function isStrictPipeDefinitionId(definitionId: string): boolean {
 }
 
 function resolveVisibleWorldRect(
-  viewportState: Pick<RenderViewportState, "centerX" | "centerY" | "gridCellPixelSize">,
+  viewportState: Pick<RenderViewportState, "centerX" | "centerY" | "gridCellPixelSize" | "displayRotation">,
   viewportBounds: DecorationViewportBounds,
   marginCells = VIEWPORT_CULL_MARGIN_CELLS,
 ): VisibleWorldRect {
-  const halfW = viewportBounds.width / 2 / viewportState.gridCellPixelSize
-  const halfH = viewportBounds.height / 2 / viewportState.gridCellPixelSize
+  const viewportCorners = [
+    { x: viewportBounds.left, y: viewportBounds.top },
+    { x: viewportBounds.left + viewportBounds.width, y: viewportBounds.top },
+    { x: viewportBounds.left, y: viewportBounds.top + viewportBounds.height },
+    {
+      x: viewportBounds.left + viewportBounds.width,
+      y: viewportBounds.top + viewportBounds.height,
+    },
+  ]
+  const worldCorners = viewportCorners.flatMap((viewportPoint) => {
+    const worldPoint = resolveWorldPointFromViewportPoint({
+      viewportPoint,
+      viewportBounds,
+      viewportCenter: {
+        x: viewportState.centerX,
+        y: viewportState.centerY,
+      },
+      gridCellPixelSize: viewportState.gridCellPixelSize,
+      displayRotation: viewportState.displayRotation,
+    })
+
+    return worldPoint === null ? [] : [worldPoint]
+  })
+
+  if (worldCorners.length === 0) {
+    return {
+      left: viewportState.centerX - marginCells,
+      right: viewportState.centerX + marginCells,
+      top: viewportState.centerY - marginCells,
+      bottom: viewportState.centerY + marginCells,
+    }
+  }
 
   return {
-    left: viewportState.centerX - halfW - marginCells,
-    right: viewportState.centerX + halfW + marginCells,
-    top: viewportState.centerY - halfH - marginCells,
-    bottom: viewportState.centerY + halfH + marginCells,
+    left: Math.min(...worldCorners.map((corner) => corner.x)) - marginCells,
+    right: Math.max(...worldCorners.map((corner) => corner.x)) + marginCells,
+    top: Math.min(...worldCorners.map((corner) => corner.y)) - marginCells,
+    bottom: Math.max(...worldCorners.map((corner) => corner.y)) + marginCells,
   }
 }
 
@@ -1053,7 +1103,7 @@ function getRotatedGridFootprint(
 function resolveViewportPoint(options: {
   point: GridFloatPoint;
   viewportBounds: DecorationViewportBounds;
-  viewportState: Pick<RenderViewportState, "centerX" | "centerY" | "gridCellPixelSize">;
+  viewportState: Pick<RenderViewportState, "centerX" | "centerY" | "gridCellPixelSize" | "displayRotation">;
 }): GridFloatPoint {
   return resolveViewportPointFromWorldPoint({
     worldPoint: options.point,
@@ -1063,6 +1113,7 @@ function resolveViewportPoint(options: {
       y: options.viewportState.centerY,
     },
     gridCellPixelSize: options.viewportState.gridCellPixelSize,
+    displayRotation: options.viewportState.displayRotation,
   })
 }
 

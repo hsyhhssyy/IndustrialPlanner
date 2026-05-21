@@ -1305,6 +1305,8 @@ describe("createAppHost", () => {
       clientY: entityPoint.y,
       buttons: 1,
     }));
+    // 触发 pending mouse dragmove flush
+    appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
 
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 5, y: 4 });
     expect(
@@ -1503,6 +1505,199 @@ describe("createAppHost", () => {
     );
     expect(editorHost.state.collections.preview).toHaveLength(2);
     expect(editorHost.internalState.internalTransientState.placementDraftSlotLinks).toHaveLength(1);
+  });
+
+  it("copies the current selection as a temporary blueprint from Ctrl+C", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "dummy-entity-2",
+    });
+
+    const consumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyC",
+      key: "c",
+      keyCode: 67,
+      ctrlKey: true,
+    }));
+
+    expect(consumed).toBe(true);
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.internalState.runtime.blueprintPlacementRecord).toMatchObject({
+      parentFolderId: null,
+      entityOrder: ["dummy-entity-2"],
+    });
+    expect(appHost.blueprintPreview.record).toBeNull();
+    expect(editorHost.state.collections.preview).toHaveLength(1);
+
+    const previewEntity = editorHost.queries.getEntityById(
+      editorHost.state.collections.preview[0] ?? "",
+    );
+    expect(previewEntity?.definitionId).toBe("item_port_storager_1");
+  });
+
+  it("pastes the last temporary blueprint from Ctrl+V without persistent storage", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "dummy-entity-2",
+    });
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyC",
+      key: "c",
+      keyCode: 67,
+      ctrlKey: true,
+    }));
+
+    const copiedBlueprintId =
+      appHost.internalState.runtime.blueprintPlacementRecord?.blueprintId;
+
+    appHost.internalActions.setActiveTool("select");
+    editorHost.actions.clearCollection(EntityCollectionType.selection);
+
+    const consumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyV",
+      key: "v",
+      keyCode: 86,
+      ctrlKey: true,
+    }));
+
+    expect(consumed).toBe(true);
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.internalState.runtime.blueprintPlacementRecord?.blueprintId).toBe(
+      copiedBlueprintId,
+    );
+    expect(appHost.internalState.runtime.blueprintPlacementRecord?.entityOrder).toEqual([
+      "dummy-entity-2",
+    ]);
+    expect(editorHost.state.collections.preview).toHaveLength(1);
+  });
+
+  it("ignores temporary blueprint shortcuts when there is no source data", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+
+    const copyConsumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyC",
+      key: "c",
+      keyCode: 67,
+      ctrlKey: true,
+    }));
+    const pasteConsumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyV",
+      key: "v",
+      keyCode: 86,
+      ctrlKey: true,
+    }));
+
+    expect(copyConsumed).toBe(false);
+    expect(pasteConsumed).toBe(false);
+    expect(appHost.internalState.activeTool).toBe("select");
+    expect(editorHost.state.collections.preview).toEqual([]);
+  });
+
+  it("does not intercept browser copy or paste inside editable targets", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+    const input = document.createElement("input");
+
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "dummy-entity-2",
+    });
+
+    const consumed = appHost.gestureAdapter.handleKeyDown({
+      ...keyEvent({
+        code: "KeyC",
+        key: "c",
+        keyCode: 67,
+        ctrlKey: true,
+      }),
+      target: input,
+    } as GestureKeyboardEventLike);
+
+    expect(consumed).toBe(false);
+    expect(appHost.internalState.activeTool).toBe("select");
+    expect(editorHost.state.collections.preview).toEqual([]);
+  });
+
+  it("keeps temporary blueprint shortcuts disabled outside Hypergryph mode", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphOperationMode = false;
+    });
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "dummy-entity-2",
+    });
+
+    const consumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyC",
+      key: "c",
+      keyCode: 67,
+      ctrlKey: true,
+    }));
+
+    expect(consumed).toBe(false);
+    expect(appHost.internalState.activeTool).toBe("select");
+    expect(editorHost.state.collections.preview).toEqual([]);
+  });
+
+  it("re-arms blueprint-placement with a new temporary blueprint while already placing", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "dummy-entity-2",
+    });
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyC",
+      key: "c",
+      keyCode: 67,
+      ctrlKey: true,
+    }));
+
+    editorHost.actions.clearCollection(EntityCollectionType.selection);
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "dummy-entity-3",
+    });
+
+    const consumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyC",
+      key: "c",
+      keyCode: 67,
+      ctrlKey: true,
+    }));
+
+    expect(consumed).toBe(true);
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.internalState.runtime.blueprintPlacementRecord?.entityOrder).toEqual([
+      "dummy-entity-3",
+    ]);
+    expect(editorHost.state.collections.preview).toHaveLength(1);
+    expect(editorHost.queries.getEntityById(
+      editorHost.state.collections.preview[0] ?? "",
+    )?.definitionId).toBe("item_port_grinder_1");
   });
 
   it("re-arms blueprint-placement after apply and exits cleanly on cancel", () => {
@@ -1791,6 +1986,8 @@ describe("createAppHost", () => {
       clientY: endPoint.y,
       buttons: 0,
     }));
+    // 触发 pending mouse move flush
+    appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
 
     let logisticsDraft = editorHost.queries.resolveLogisticsDraftState();
     expect(logisticsDraft).toMatchObject({
@@ -1940,6 +2137,8 @@ describe("createAppHost", () => {
       clientY: insideDevicePoint.y,
       buttons: 0,
     }));
+    // 触发 pending mouse move flush
+    appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
 
     // The draft should be snapped to a device input port
     const draft = editorHost.queries.resolveLogisticsDraftState();
@@ -2062,6 +2261,8 @@ describe("createAppHost", () => {
       otherContinuePoint.x,
       otherContinuePoint.y,
     ));
+    // 插入 mouse move 触发 pending touch dragmove flush（mouse move 与 touch dragmove merge key 不同）
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({ clientX: 0, clientY: 0 }));
 
     const afterDraft = editorHost.queries.resolveLogisticsDraftState();
     expect(panSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
@@ -2109,6 +2310,8 @@ describe("createAppHost", () => {
       secondNextHeadPoint.x,
       secondNextHeadPoint.y,
     ));
+    // 插入 mouse move 触发 pending touch dragmove flush
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({ clientX: 0, clientY: 0 }));
 
     const logisticsDraft = editorHost.queries.resolveLogisticsDraftState();
     expect(panSpy).not.toHaveBeenCalled();
@@ -2208,6 +2411,59 @@ describe("createAppHost", () => {
     expect(zoomSpy).toHaveBeenCalledTimes(2);
     expect(zoomSpy.mock.calls[1]?.[0]).toBeLessThan(0);
     expect(editorHost.state.viewport.gridSize).toBeLessThan(zoomedOutGridSize);
+  });
+
+  it("requests viewport rotation from Ctrl+R, touch rotation and the rotate view button", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+    const setViewportDisplayRotationSpy = vi.spyOn(editorHost.actions, "setViewportDisplayRotation");
+
+    const keyboardConsumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyR",
+      key: "r",
+      ctrlKey: true,
+    }));
+
+    expect(keyboardConsumed).toBe(true);
+    expect(setViewportDisplayRotationSpy).toHaveBeenCalledWith(90);
+    expect(editorHost.state.viewport.displayRotation).toBe(90);
+    setViewportDisplayRotationSpy.mockClear();
+
+    appHost.gestureAdapter.handlePointerDown(touchEvent(1, 0, 0));
+    appHost.gestureAdapter.handlePointerDown(touchEvent(2, 10, 0));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(2, 0, 10));
+    appHost.gestureAdapter.handlePointerUp(touchEvent(2, 0, 10));
+    appHost.gestureAdapter.handlePointerUp(touchEvent(1, 0, 0));
+
+    expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
+    expect(setViewportDisplayRotationSpy).toHaveBeenLastCalledWith(180);
+    expect(editorHost.state.viewport.displayRotation).toBe(180);
+    setViewportDisplayRotationSpy.mockClear();
+
+    appHost.gestureAdapter.handlePointerDown(touchEvent(1, 0, 0));
+    appHost.gestureAdapter.handlePointerDown(touchEvent(2, 10, 0));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(2, 0, -10));
+    appHost.gestureAdapter.handlePointerUp(touchEvent(2, 0, -10));
+    appHost.gestureAdapter.handlePointerUp(touchEvent(1, 0, 0));
+
+    expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
+    expect(setViewportDisplayRotationSpy).toHaveBeenLastCalledWith(90);
+    expect(editorHost.state.viewport.displayRotation).toBe(90);
+    setViewportDisplayRotationSpy.mockClear();
+
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: "canvas-bottom-left-toolbar-button-rotate-view",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
+    expect(setViewportDisplayRotationSpy).toHaveBeenLastCalledWith(180);
+    expect(editorHost.state.viewport.displayRotation).toBe(180);
   });
 
   it("does not pan the editor viewport when a pinch ends with one touch still down", () => {

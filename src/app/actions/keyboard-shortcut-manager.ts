@@ -14,6 +14,7 @@ export const SHORTCUT_KEY = {
   SAVE_BLUEPRINT:      "shortcut-save-blueprint",
   RETURN_SELECT:       "shortcut-return-select",
   ROTATE:              "shortcut-rotate",
+  ROTATE_VIEWPORT:     "shortcut-rotate-viewport",
   DELETE_DEVICE:       "shortcut-delete-device",
 } as const;
 
@@ -42,6 +43,7 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.SAVE_BLUEPRINT]:   "Ctrl+S",
   [SHORTCUT_KEY.RETURN_SELECT]:    "Esc",
   [SHORTCUT_KEY.ROTATE]:           "R",
+  [SHORTCUT_KEY.ROTATE_VIEWPORT]:  "Ctrl+R",
   [SHORTCUT_KEY.DELETE_DEVICE]:    "F",
 };
 

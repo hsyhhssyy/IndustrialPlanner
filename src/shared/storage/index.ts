@@ -57,10 +57,15 @@ export type {
 } from "@/shared/storage/migration";
 
 export type {
+  PlannerFlowViewportState,
   PlannerPersistedState,
+  PlannerSessionState,
 } from "@/shared/storage/planner-storage";
 
 export {
+  createDefaultPlannerSessionState,
   loadPlannerState,
+  normalizePlannerPersistedState,
+  normalizePlannerSessionState,
   savePlannerState,
 } from "@/shared/storage/planner-storage";

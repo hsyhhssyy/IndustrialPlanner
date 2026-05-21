@@ -7,6 +7,10 @@ import {
 } from "pixi.js"
 
 import { resolveDedicatedLogisticTintColor } from "@/renderer/sprites/dedicated-logistic-sprite"
+import {
+  resolveDisplayRotationRadians,
+  resolveViewportRectFromWorldGridRect,
+} from "@/shared/geometry/viewport-transform"
 
 import type { DecorationLayer } from "./DecorationLayer"
 import type { DecorationSyncContext } from "./DecorationSyncContext"
@@ -225,14 +229,28 @@ function drawHighlightMask(ctx: DecorationSyncContext, graphics: Graphics): void
       continue
     }
 
-    const cellTopLeft = resolveViewportPoint({
-      point: entity.position,
+    const cellRect = resolveViewportRectFromWorldGridRect({
+      gridRect: {
+        x: entity.position.x,
+        y: entity.position.y,
+        width: 1,
+        height: 1,
+      },
       viewportBounds: ctx.viewportBounds,
-      viewportState: ctx.viewportState,
+      viewportCenter: {
+        x: ctx.viewportState.centerX,
+        y: ctx.viewportState.centerY,
+      },
+      gridCellPixelSize: gridCellSize,
+      displayRotation: ctx.viewportState.displayRotation,
     })
 
+    if (cellRect === null) {
+      continue
+    }
+
     graphics
-      .rect(cellTopLeft.x, cellTopLeft.y, gridCellSize, gridCellSize)
+      .rect(cellRect.left, cellRect.top, cellRect.width, cellRect.height)
       .fill(0xffffff)
   }
 }
@@ -258,14 +276,28 @@ function drawArrowMask(ctx: DecorationSyncContext, graphics: Graphics): void {
       continue
     }
 
-    const cellTopLeft = resolveViewportPoint({
-      point: entity.position,
+    const cellRect = resolveViewportRectFromWorldGridRect({
+      gridRect: {
+        x: entity.position.x,
+        y: entity.position.y,
+        width: 1,
+        height: 1,
+      },
       viewportBounds: ctx.viewportBounds,
-      viewportState: ctx.viewportState,
+      viewportCenter: {
+        x: ctx.viewportState.centerX,
+        y: ctx.viewportState.centerY,
+      },
+      gridCellPixelSize: gridCellSize,
+      displayRotation: ctx.viewportState.displayRotation,
     })
 
+    if (cellRect === null) {
+      continue
+    }
+
     graphics
-      .rect(cellTopLeft.x, cellTopLeft.y, gridCellSize, gridCellSize)
+      .rect(cellRect.left, cellRect.top, cellRect.width, cellRect.height)
       .fill(0xffffff)
   }
 
@@ -278,10 +310,11 @@ function drawArrowMask(ctx: DecorationSyncContext, graphics: Graphics): void {
 
     graphics
       .poly(resolveRotatedExtensionMaskPoints({
-        centerX: boundary.x,
-        centerY: boundary.y,
-        angleRadians: entry.angleRadians,
-        startX: entry.localStartCells * gridCellSize,
+          centerX: boundary.x,
+          centerY: boundary.y,
+          angleRadians: entry.angleRadians
+            + resolveDisplayRotationRadians(ctx.viewportState.displayRotation),
+          startX: entry.localStartCells * gridCellSize,
         endX: entry.localEndCells * gridCellSize,
         halfWidth: gridCellSize / 2,
       }), true)
@@ -769,7 +802,8 @@ function resolveBeltFlowMark(options: {
     kind: options.kind,
     centerX: center.x,
     centerY: center.y,
-    angleRadians: sample.angleRadians,
+    angleRadians: sample.angleRadians
+      + resolveDisplayRotationRadians(options.ctx.viewportState.displayRotation),
     lengthCells: options.lengthCells,
     tint: resolveBeltFlowTintColor(options.ctx, options.entry),
   }

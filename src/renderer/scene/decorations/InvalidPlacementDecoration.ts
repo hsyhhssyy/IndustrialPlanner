@@ -40,7 +40,9 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
     container,
 
     sync(ctx: DecorationSyncContext): void {
-      graphics.clear();
+      measureDecorationStep(ctx, "invalidPlacement.clear", () => {
+        graphics.clear();
+      });
 
       const editor = ctx.renderHost.workspace.editor;
       if (editor === null) {
@@ -49,73 +51,86 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
       }
 
       const invalidEntityIds = editor.state.collections[EntityCollectionType.invalidPlacement];
+      ctx.profiler?.count("invalidPlacement.entityIds", invalidEntityIds.length);
       const activeTextEntityIds = new Set<string>();
-      const entityDefinitionMap = new Map(
-        ctx.renderHost.workspace.registry.entityDefinitions.map((definition) => [
-          definition.id,
-          definition,
-        ]),
+      const entityDefinitionMap = measureDecorationStep(
+        ctx,
+        "invalidPlacement.buildDefinitionMap",
+        () => new Map(
+          ctx.renderHost.workspace.registry.entityDefinitions.map((definition) => [
+            definition.id,
+            definition,
+          ]),
+        ),
       );
 
-      for (const entityId of invalidEntityIds) {
-        const entity = editor.queries.getEntityById(entityId);
-        if (entity === null) {
-          continue;
+      measureDecorationStep(ctx, "invalidPlacement.syncEntities", () => {
+        for (const entityId of invalidEntityIds) {
+          const entity = editor.queries.getEntityById(entityId);
+          if (entity === null) {
+            continue;
+          }
+
+          const definition = entityDefinitionMap.get(entity.definitionId);
+          if (definition === undefined) {
+            continue;
+          }
+
+          const gridRect = resolveEntityGridRect({
+            entity,
+            definition,
+          });
+          const layout = resolveMarqueeGridRectLayout({
+            gridRect,
+            viewportBounds: ctx.viewportBounds,
+            viewportCenter: {
+              x: ctx.viewportState.centerX,
+              y: ctx.viewportState.centerY,
+            },
+            gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+            displayRotation: ctx.viewportState.displayRotation,
+          });
+
+          if (layout === null) {
+            continue;
+          }
+
+          drawInvalidPlacementStroke({
+            graphics,
+            layout,
+            gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+          });
+
+          const reasonText = resolveInvalidPlacementToastReasonText({
+            gridRect,
+            validation: editor.queries.getEntityPlacementValidation(entityId),
+          });
+          if (reasonText === null || reasonText.length === 0) {
+            continue;
+          }
+
+          const text = resolveReasonText({
+            entityId,
+            reasonTexts,
+            container,
+          });
+          activeTextEntityIds.add(entityId);
+          syncReasonToast({
+            graphics,
+            text,
+            reasonText,
+            layout,
+            gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+          });
         }
+      });
 
-        const definition = entityDefinitionMap.get(entity.definitionId);
-        if (definition === undefined) {
-          continue;
-        }
+      ctx.profiler?.count("invalidPlacement.activeTexts", activeTextEntityIds.size);
+      ctx.profiler?.count("invalidPlacement.cachedTexts", reasonTexts.size);
 
-        const gridRect = resolveEntityGridRect({
-          entity,
-          definition,
-        });
-        const layout = resolveMarqueeGridRectLayout({
-          gridRect,
-          viewportBounds: ctx.viewportBounds,
-          viewportCenter: {
-            x: ctx.viewportState.centerX,
-            y: ctx.viewportState.centerY,
-          },
-          gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-        });
-
-        if (layout === null) {
-          continue;
-        }
-
-        drawInvalidPlacementStroke({
-          graphics,
-          layout,
-          gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-        });
-
-        const reasonText = resolveInvalidPlacementToastReasonText({
-          gridRect,
-          validation: editor.queries.getEntityPlacementValidation(entityId),
-        });
-        if (reasonText === null || reasonText.length === 0) {
-          continue;
-        }
-
-        const text = resolveReasonText({
-          entityId,
-          reasonTexts,
-          container,
-        });
-        activeTextEntityIds.add(entityId);
-        syncReasonToast({
-          graphics,
-          text,
-          reasonText,
-          layout,
-          gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-        });
-      }
-
-      hideUnusedReasonTexts(reasonTexts, activeTextEntityIds);
+      measureDecorationStep(ctx, "invalidPlacement.hideUnusedTexts", () => {
+        hideUnusedReasonTexts(reasonTexts, activeTextEntityIds);
+      });
     },
 
     destroy(): void {
@@ -288,4 +303,16 @@ function resolveEntityGridRect(options: {
 
 function isUnitGridRect(gridRect: GridRect): boolean {
   return gridRect.width === 1 && gridRect.height === 1;
+}
+
+function measureDecorationStep<T>(
+  ctx: DecorationSyncContext,
+  stage: string,
+  callback: () => T,
+): T {
+  if (ctx.profiler === undefined) {
+    return callback();
+  }
+
+  return ctx.profiler.measure(stage, callback);
 }

@@ -11,10 +11,17 @@ import {
 import {
   createTextureActions,
 } from "./texture/texture-manager";
+import "./renderer-host.css";
+
+interface RenderHostDomElements {
+  placementGlowOverlay: HTMLDivElement;
+  marqueeGlowOverlay: HTMLDivElement;
+}
 
 export interface RenderHost extends RenderContract {
   workspace: WorkspaceContract;
   app: Application;
+  dom: RenderHostDomElements;
   textureManager: ReturnType<typeof createTextureActions>;
   internalState: {
     textureConfig: unknown | null;
@@ -37,6 +44,38 @@ function resolveViewportAxisSize(
   }
 
   return Math.floor(value);
+}
+
+function createRendererContainer(app: Application): {
+  container: HTMLDivElement;
+  dom: RenderHostDomElements;
+} {
+  const container = document.createElement("div");
+  container.className = "industrial-planner-renderer";
+
+  app.canvas.classList.add("industrial-planner-renderer__canvas");
+
+  const placementGlowOverlay = document.createElement("div");
+  placementGlowOverlay.className = [
+    "industrial-planner-renderer__glow-overlay",
+    "industrial-planner-renderer__placement-glow",
+  ].join(" ");
+
+  const marqueeGlowOverlay = document.createElement("div");
+  marqueeGlowOverlay.className = [
+    "industrial-planner-renderer__glow-overlay",
+    "industrial-planner-renderer__marquee-glow",
+  ].join(" ");
+
+  container.append(app.canvas, placementGlowOverlay, marqueeGlowOverlay);
+
+  return {
+    container,
+    dom: {
+      placementGlowOverlay,
+      marqueeGlowOverlay,
+    },
+  };
 }
 
 
@@ -66,6 +105,7 @@ export async function createRenderHost(
   const internalState: RenderHost["internalState"] = {
     textureConfig: null,
   };
+  const rendererDom = createRendererContainer(app);
   const blueprintPreviewManager = createBlueprintPreviewManager({
     workspace,
   });
@@ -81,9 +121,10 @@ export async function createRenderHost(
   const host: RenderHost = {
     workspace,
     app,
+    container: rendererDom.container,
+    dom: rendererDom.dom,
     textureManager,
     internalState,
-    canvas: app.canvas,
     queries: blueprintPreviewManager.queries,
     actions: blueprintPreviewManager.actions,
     destroy: () => {
@@ -92,6 +133,7 @@ export async function createRenderHost(
       orchestrator = null;
       textureManager.destroy();
       app.destroy();
+      rendererDom.container.remove();
     },
   };
 

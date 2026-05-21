@@ -1,31 +1,23 @@
-import { BlurFilter, Graphics, Text, TextStyle } from "pixi.js";
+import type { TextStyleOptions } from "pixi.js";
+import { Text } from "pixi.js";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 
-const CANVAS_GLOW_ANIMATION_PERIOD_MS = 2000;
-const CANVAS_GLOW_ALPHA_MIN = 0.5;
-const CANVAS_GLOW_ALPHA_MAX = 1;
-
-const CORE_STROKE_WIDTH = 0;
-const NEAR_STROKE_WIDTH = 10;
-const NEAR_BLUR_STRENGTH = 10;
-const FAR_STROKE_WIDTH = 8;
-const FAR_BLUR_STRENGTH = 30;
-
 const LOGISTICS_PLACEMENT_GLOW_COLOR = 0xFFD54A;
 
-const MODE_LABEL_TEXT_STYLE = new TextStyle({
+const MODE_LABEL_TEXT_STYLE = {
   fontSize: 14,
   fontFamily: "sans-serif",
   fontWeight: "bold",
   fill: LOGISTICS_PLACEMENT_GLOW_COLOR,
   dropShadow: {
+    angle: Math.PI / 4,
     color: 0x000000,
     alpha: 0.6,
     blur: 4,
     distance: 1,
   },
-});
+} satisfies TextStyleOptions;
 
 const LOGISTICS_PLACEMENT_LABELS = {
   belt: "布设传送带",
@@ -42,16 +34,6 @@ interface AppWithLogisticsPlacementRuntime {
   };
 }
 
-function resolveGlowAlpha(nowMs: number): number {
-  const phase =
-    ((nowMs % CANVAS_GLOW_ANIMATION_PERIOD_MS)
-      / CANVAS_GLOW_ANIMATION_PERIOD_MS)
-    * Math.PI * 2;
-  const t = (Math.sin(phase) + 1) / 2;
-  return CANVAS_GLOW_ALPHA_MIN
-    + t * (CANVAS_GLOW_ALPHA_MAX - CANVAS_GLOW_ALPHA_MIN);
-}
-
 function resolveLogisticsPlacementKind(
   ctx: DecorationSyncContext,
 ): keyof typeof LOGISTICS_PLACEMENT_LABELS | null {
@@ -65,32 +47,15 @@ function resolveLogisticsPlacementKind(
     .internalState.runtime.logisticsPlacement.kind;
 }
 
+// AI-MODIFIED 2026-05-21:
+// 移除所有 BlurFilter 和 glow 绘制代码（nearGlow/farGlow/coreEdge/glowMask），
+// 改为仅保留 modeLabel。发光效果迁移至 DOM overlay（CSS box-shadow + animation），
+// 以消除 BlurFilter 引起的全视口离屏渲染开销。
 export function createLogisticsPlacementCanvasDecoration(): DecorationLayer {
-  const graphics = new Graphics({ roundPixels: true });
-  const coreEdge = new Graphics({ roundPixels: true });
-  const nearGlow = new Graphics({ roundPixels: true });
-  const nearBlur = new BlurFilter({ quality: 4 });
-  nearGlow.filters = [nearBlur];
-
-  const farGlow = new Graphics({ roundPixels: true });
-  const farBlur = new BlurFilter({ quality: 4 });
-  farGlow.filters = [farBlur];
-
-  const glowMask = new Graphics({ roundPixels: true });
-  coreEdge.mask = glowMask;
-  nearGlow.mask = glowMask;
-  farGlow.mask = glowMask;
-
-  const modeLabel = new Text({ text: "", style: MODE_LABEL_TEXT_STYLE });
-
-  graphics.addChild(glowMask);
-  graphics.addChild(farGlow);
-  graphics.addChild(nearGlow);
-  graphics.addChild(coreEdge);
-  graphics.addChild(modeLabel);
+  const modeLabel = new Text({ text: "", style: MODE_LABEL_TEXT_STYLE as TextStyleOptions });
 
   return {
-    container: graphics,
+    container: modeLabel,
 
     sync(ctx: DecorationSyncContext): void {
       const appState = ctx.renderHost.workspace.app!.state;
@@ -99,50 +64,15 @@ export function createLogisticsPlacementCanvasDecoration(): DecorationLayer {
       const isSinglePlacement = appState.activeTool === "single-placement";
 
       if (!isLogisticsPlacement && !isSinglePlacement) {
-        graphics.visible = false;
+        modeLabel.visible = false;
         return;
       }
 
-      graphics.visible = true;
-
-      const { width, height } = ctx.viewportBounds;
-      const alpha = resolveGlowAlpha(ctx.nowMs);
-
-      graphics.clear();
-      coreEdge.clear();
-      nearGlow.clear();
-      farGlow.clear();
-      glowMask.clear();
-
-      glowMask
-        .rect(0, 0, width, height)
-        .fill(0xffffff);
-
-      farBlur.strength = FAR_BLUR_STRENGTH;
-      farGlow
-        .rect(0, 0, width, height)
-        .stroke({
-          width: FAR_STROKE_WIDTH,
-          color: LOGISTICS_PLACEMENT_GLOW_COLOR,
-          alpha: alpha * 0.35,
-        });
-
-      nearBlur.strength = NEAR_BLUR_STRENGTH;
-      nearGlow
-        .rect(0, 0, width, height)
-        .stroke({
-          width: NEAR_STROKE_WIDTH,
-          color: LOGISTICS_PLACEMENT_GLOW_COLOR,
-          alpha: alpha * 0.7,
-        });
-
-      coreEdge
-        .rect(0, 0, width, height)
-        .stroke({
-          width: CORE_STROKE_WIDTH,
-          color: LOGISTICS_PLACEMENT_GLOW_COLOR,
-          alpha,
-        });
+      modeLabel.visible = true;
+      ctx.profiler?.count("logisticsPlacement.activeFrames");
+      ctx.profiler?.count(isSinglePlacement
+        ? "logisticsPlacement.singlePlacementFrames"
+        : "logisticsPlacement.logisticsPlacementFrames");
 
       modeLabel.text = isSinglePlacement
         ? "放置设备"
@@ -154,14 +84,7 @@ export function createLogisticsPlacementCanvasDecoration(): DecorationLayer {
     },
 
     destroy(): void {
-      nearBlur.destroy();
-      farBlur.destroy();
       modeLabel.destroy({ children: true });
-      glowMask.destroy({ children: true });
-      coreEdge.destroy({ children: true });
-      nearGlow.destroy({ children: true });
-      farGlow.destroy({ children: true });
-      graphics.destroy({ children: true });
     },
   };
 }

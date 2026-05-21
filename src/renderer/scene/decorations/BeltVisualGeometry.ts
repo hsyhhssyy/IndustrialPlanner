@@ -13,7 +13,10 @@ import type {
 } from "@/domain/registry/types/entity-definition"
 
 import { getRotatedGridFootprint } from "@/shared/geometry/grid"
-import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform"
+import {
+  resolveViewportPointFromWorldPoint,
+  resolveWorldPointFromViewportPoint,
+} from "@/shared/geometry/viewport-transform"
 
 import type {
   DecorationSyncContext,
@@ -36,18 +39,48 @@ export interface VisibleWorldRect {
  * 根据当前视口状态计算世界坐标系下的可见矩形（含 margin）
  */
 export function resolveVisibleWorldRect(
-  viewportState: Pick<RenderViewportState, "centerX" | "centerY" | "gridCellPixelSize">,
+  viewportState: Pick<RenderViewportState, "centerX" | "centerY" | "gridCellPixelSize" | "displayRotation">,
   viewportBounds: DecorationViewportBounds,
   marginCells = VIEWPORT_CULL_MARGIN_CELLS,
 ): VisibleWorldRect {
-  const halfW = viewportBounds.width / 2 / viewportState.gridCellPixelSize
-  const halfH = viewportBounds.height / 2 / viewportState.gridCellPixelSize
+  const viewportCorners = [
+    { x: viewportBounds.left, y: viewportBounds.top },
+    { x: viewportBounds.left + viewportBounds.width, y: viewportBounds.top },
+    { x: viewportBounds.left, y: viewportBounds.top + viewportBounds.height },
+    {
+      x: viewportBounds.left + viewportBounds.width,
+      y: viewportBounds.top + viewportBounds.height,
+    },
+  ]
+  const worldCorners = viewportCorners.flatMap((viewportPoint) => {
+    const worldPoint = resolveWorldPointFromViewportPoint({
+      viewportPoint,
+      viewportBounds,
+      viewportCenter: {
+        x: viewportState.centerX,
+        y: viewportState.centerY,
+      },
+      gridCellPixelSize: viewportState.gridCellPixelSize,
+      displayRotation: viewportState.displayRotation,
+    })
+
+    return worldPoint === null ? [] : [worldPoint]
+  })
+
+  if (worldCorners.length === 0) {
+    return {
+      left: viewportState.centerX - marginCells,
+      right: viewportState.centerX + marginCells,
+      top: viewportState.centerY - marginCells,
+      bottom: viewportState.centerY + marginCells,
+    }
+  }
 
   return {
-    left: viewportState.centerX - halfW - marginCells,
-    right: viewportState.centerX + halfW + marginCells,
-    top: viewportState.centerY - halfH - marginCells,
-    bottom: viewportState.centerY + halfH + marginCells,
+    left: Math.min(...worldCorners.map((corner) => corner.x)) - marginCells,
+    right: Math.max(...worldCorners.map((corner) => corner.x)) + marginCells,
+    top: Math.min(...worldCorners.map((corner) => corner.y)) - marginCells,
+    bottom: Math.max(...worldCorners.map((corner) => corner.y)) + marginCells,
   }
 }
 
@@ -398,7 +431,7 @@ export function resolveBeltPathLengthCells(definition: EntityDefinition): number
 export function resolveViewportPoint(options: {
   point: GridFloatPoint;
   viewportBounds: DecorationViewportBounds;
-  viewportState: Pick<RenderViewportState, "centerX" | "centerY" | "gridCellPixelSize">;
+  viewportState: Pick<RenderViewportState, "centerX" | "centerY" | "gridCellPixelSize" | "displayRotation">;
 }): GridFloatPoint {
   return resolveViewportPointFromWorldPoint({
     worldPoint: options.point,
@@ -408,6 +441,7 @@ export function resolveViewportPoint(options: {
       y: options.viewportState.centerY,
     },
     gridCellPixelSize: options.viewportState.gridCellPixelSize,
+    displayRotation: options.viewportState.displayRotation,
   })
 }
 

@@ -336,7 +336,7 @@ implements SimulationAction, SimulationInternalAction {
     this.stateReadWrite.runtimeStatus = createInitialSimulationRuntimeStatus();
     this.stateReadWrite.currentSnapshot = null;
     this.stateReadWrite.currentPlaybackTickNumber = 0;
-    this.stateReadWrite.statistics = { tickPerSecond: 0 };
+    this.stateReadWrite.statistics = { tickPerSecond: 0, targetTickPerSecond: 0 };
     this.tpsAccumulatedTicks = 0;
     this.tpsAccumulatedMs = 0;
     this.nextPerfReportTick = 180;
@@ -352,9 +352,13 @@ implements SimulationAction, SimulationInternalAction {
         ? this.tpsAccumulatedTicks / (this.tpsAccumulatedMs / 1000)
         : 0;
 
+      const dynamicTickRate = this.stateReadWrite.runtimeStatus.dynamicTickRate ?? STANDARD_TICK_RATE_PER_SECOND;
+      const targetTps = this.stateReadWrite.simulationSpeed * dynamicTickRate;
+
       runInAction(() => {
         this.stateReadWrite.statistics = {
           tickPerSecond: Math.round(tps * 10) / 10,
+          targetTickPerSecond: targetTps,
         };
       });
 

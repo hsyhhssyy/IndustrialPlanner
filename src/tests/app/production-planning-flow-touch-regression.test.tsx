@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act } from "react";
+import { act, type ComponentProps } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -227,7 +227,7 @@ describe("ProductionFlowGraph touch regression", () => {
     vi.clearAllMocks();
   });
 
-  function render() {
+  function render(props: Partial<ComponentProps<typeof ProductionFlowGraph>> = {}) {
     act(() => {
       root.render(
         <ProductionFlowGraph
@@ -235,6 +235,7 @@ describe("ProductionFlowGraph touch regression", () => {
           plan={createMockPlan()}
           index={createMockIndex()}
           t={(key: string) => key}
+          {...props}
         />,
       );
     });
@@ -345,6 +346,45 @@ describe("ProductionFlowGraph touch regression", () => {
     expect(afterWheelTransform).not.toBe(initialTransform);
     // 初始 scale 1.0，缩小后应 < 1
     expect(afterWheelTransform).toContain("scale(0.");
+  });
+
+  it("restores the initial viewport from persisted state", () => {
+    render({ initialViewport: { x: 128, y: -42, scale: 1.5 } });
+
+    const canvas = container.querySelector("[class*='production-flow-canvas']") as HTMLDivElement | null;
+    expect(canvas).not.toBeNull();
+
+    const surface = canvas!.querySelector("[class*='production-flow-surface']") as HTMLDivElement | null;
+    expect(surface).not.toBeNull();
+    expect(surface!.style.transform).toBe("translate(128px, -42px) scale(1.5)");
+  });
+
+  it("notifies the parent when the viewport changes", () => {
+    const onViewportChange = vi.fn();
+    render({ onViewportChange });
+
+    const canvas = container.querySelector("[class*='production-flow-canvas']") as HTMLDivElement | null;
+    expect(canvas).not.toBeNull();
+
+    vi.spyOn(canvas!, "getBoundingClientRect").mockReturnValue({
+      x: 0, y: 0, width: 800, height: 600,
+      left: 0, top: 0, right: 800, bottom: 600,
+    } as DOMRect);
+
+    act(() => {
+      dispatchWheelEvent(canvas!, {
+        deltaX: 0,
+        deltaY: 120,
+        clientX: 400,
+        clientY: 300,
+      });
+    });
+
+    const reportedViewport = onViewportChange.mock.calls.at(-1)?.[0];
+    expect(reportedViewport).toBeDefined();
+    expect(reportedViewport.x).toBeCloseTo(59.8);
+    expect(reportedViewport.y).toBeCloseTo(49.8);
+    expect(reportedViewport.scale).toBeCloseTo(0.9);
   });
 
   // ==================== Test 4: 双指 pinch 进入 pinch 状态 ====================

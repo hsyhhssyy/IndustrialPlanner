@@ -162,6 +162,9 @@ function getEventDetail(event: GestureEvent): string {
     case "pinch in":
     case "pinch out":
       return `distance ${formatNumber(event.distanceDelta)}, scale ${formatNumber(event.scaleDelta)}`;
+    case "rotate clockwise":
+    case "rotate counterclockwise":
+      return `rotation ${formatNumber(event.rotationDeltaDegrees)}deg, touches ${event.activeTouchCount}`;
     case "two finger move":
       return `touches ${event.activeTouchCount}`;
     case "wheel up":

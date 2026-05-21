@@ -1,7 +1,10 @@
 export type SimulationRunState = "stop" | "start" | "pause";
 
 export interface SimulationRuntimeStatistics {
+  /** 实测 TPS（滑动窗口均值） */
   readonly tickPerSecond: number;
+  /** 目标确定性 TPS = simulationSpeed × dynamicTickRate */
+  readonly targetTickPerSecond: number;
 }
 
 export interface SimulationState{

@@ -15,7 +15,7 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
   const showGestureDiagnosticsWindow = appHost.state.settings.debugShowGestureDiagnosticsWindow;
   const rendererHostRef = useRef<HTMLDivElement | null>(null);
   const viewportSurfaceRef = useRef<HTMLDivElement | null>(null);
-  const renderCanvas = appHost.workspace.render?.canvas ?? null;
+  const renderContainer = appHost.workspace.render?.container ?? null;
   const [longPressState, setLongPressState] = useState<LongPressState>(() =>
     gestureAdapter.getLongPressState(),
   );
@@ -29,7 +29,7 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
   });
 
   useEffect(() => {
-    if (!renderCanvas) {
+    if (!renderContainer) {
       return;
     }
 
@@ -38,15 +38,14 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
       return;
     }
 
-    renderCanvas.classList.add(...cm(styles, "renderer-canvas").split(/\s+/));
-    rendererHost.appendChild(renderCanvas);
+    rendererHost.appendChild(renderContainer);
 
     return () => {
-      if (renderCanvas.parentElement === rendererHost) {
-        rendererHost.removeChild(renderCanvas);
+      if (renderContainer.parentElement === rendererHost) {
+        rendererHost.removeChild(renderContainer);
       }
     };
-  }, [renderCanvas]);
+  }, [renderContainer]);
 
   useEffect(() => {
     return gestureAdapter.subscribeLongPressState((state) => {
@@ -122,8 +121,8 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
     >
       <div className={cm(styles, "canvas-stage")}>
         <div className={cm(styles, "canvas-viewport-surface")} ref={viewportSurfaceRef}>
-          {renderCanvas ? <div className={cm(styles, "renderer-host")} ref={rendererHostRef} /> : null}
-          {renderCanvas ? null : <div className={cm(styles, "canvas-placeholder")}>{t("status.ready")}</div>}
+          {renderContainer ? <div className={cm(styles, "renderer-host")} ref={rendererHostRef} /> : null}
+          {renderContainer ? null : <div className={cm(styles, "canvas-placeholder")}>{t("status.ready")}</div>}
           <CanvasTouchHoldIndicator state={longPressState} />
           {showGestureDiagnosticsWindow ? (
             <CanvasGestureDiagnosticsOverlay snapshot={diagnosticsSnapshot} />
@@ -133,6 +132,38 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
     </main>
   );
 });
+
+// AI-REMOVED 2026-05-21:
+// Reason: 视口发光已改由 renderer 暴露的 container 内部 DOM overlay 承担，app shell 不再负责 renderer 视觉细节。
+// Trigger: 用户要求 renderer 对外从 canvas 改成 div，并让 CSS 属于 renderer。
+// Evidence: RenderContract.container 与 renderer-host.css 已接管 placement/marquee 全视口 glow。
+// Replacement: src/renderer/renderer-host.tsx, src/renderer/renderer-host.css, src/renderer/scene/render-scene-orchestrator.ts
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const CanvasPlacementGlowOverlay = observer(function CanvasPlacementGlowOverlay({
+//   appHost,
+//   show,
+// }: {
+//   appHost: AppHost;
+//   show: boolean;
+// }) {
+//   if (!show) {
+//     return null;
+//   }
+//
+//   const activeTool = appHost.state.activeTool;
+//   const logisticsKind = appHost.internalState.runtime.logisticsPlacement.kind;
+//   const isSinglePlacement = activeTool === "single-placement";
+//   const isLogisticsPlacement = activeTool === "logistics-placement" && logisticsKind !== null;
+//
+//   if (!isSinglePlacement && !isLogisticsPlacement) {
+//     return null;
+//   }
+//
+//   return <div className={cm(styles, "canvas-placement-glow-overlay")} />;
+// });
 
 function CanvasGestureDiagnosticsOverlay({
   snapshot,

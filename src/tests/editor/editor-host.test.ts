@@ -16,6 +16,7 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { resolveWorldEntitySpriteLayout } from "@/renderer/scene/render-scene-orchestrator";
 import { EDITOR_GRID_CELL_PIXEL_SIZE } from "@/editor/viewport-constants";
+import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform";
 import {
   readFromIndexedDb,
   saveToIndexedDb,
@@ -211,6 +212,47 @@ describe("createEditorHost", () => {
       },
       gridSize: editorHost.state.viewport.gridSize,
       displayRotation: 0,
+    });
+    expect(editorHost.state.history.records).toHaveLength(0);
+    expect(editorHost.state.history.undoDepth).toBe(0);
+  });
+
+  it("sets and persists viewport display rotation without recording history", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    await flushMicrotasks();
+
+    const documentKey = editorHost.document.getSnapshot().documentKey;
+    const initialViewportCenter = {
+      ...editorHost.state.viewport.center,
+    };
+
+    editorHost.actions.setViewportDisplayRotation(90);
+
+    expect(editorHost.internalState.viewport.displayRotation).toBe(90);
+    expect(editorHost.state.viewport.displayRotation).toBe(90);
+    expect(editorHost.state.viewport.center).toEqual(initialViewportCenter);
+    expect(workspace.editor?.state.viewport.displayRotation).toBe(90);
+
+    editorHost.actions.setViewportDisplayRotation(123 as never);
+
+    expect(editorHost.state.viewport.displayRotation).toBe(90);
+
+    editorHost.actions.setViewportDisplayRotation(270);
+
+    await flushMicrotasks();
+
+    const storedDocument = await readStoredWorldDocument(documentKey);
+
+    expect(storedDocument?.documentSettings.viewport).toEqual({
+      center: {
+        x: 0,
+        y: 0,
+      },
+      gridSize: 1,
+      displayRotation: 270,
     });
     expect(editorHost.state.history.records).toHaveLength(0);
     expect(editorHost.state.history.undoDepth).toBe(0);
@@ -1776,6 +1818,62 @@ describe("createEditorHost", () => {
     expect(gridCell).toEqual({ x: 4, y: 4 });
   });
 
+  it("round-trips grid cell queries through display rotation", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    editorHost.actions.setViewportDisplayRotation(90);
+
+    const rect = editorHost.queries.findClientRectForGridCell({ x: 1, y: 0 });
+    const gridCell = rect === null
+      ? null
+      : editorHost.queries.findGridCellForClientPixlePoint({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      });
+
+    expect(rect).toEqual({
+      left: 304,
+      top: 296,
+      width: 16,
+      height: 16,
+    });
+    expect(gridCell).toEqual({ x: 1, y: 0 });
+  });
+
+  it("pans the viewport through the inverse display rotation", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.setViewportClientRect({
+      left: 0,
+      top: 0,
+      width: 400,
+      height: 400,
+    });
+    editorHost.actions.setViewportDisplayRotation(90);
+
+    editorHost.actions.moveViewportByClientPixelVector({
+      startClientPixel: {
+        x: 200,
+        y: 200,
+      },
+      endClientPixel: {
+        x: 216,
+        y: 200,
+      },
+    });
+
+    expect(editorHost.state.viewport.center.x).toBeCloseTo(0);
+    expect(editorHost.state.viewport.center.y).toBeCloseTo(1);
+  });
+
   it("uses rotated footprint when resolving entity hits from client pixel points", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -2122,16 +2220,14 @@ function resolveClientPixelPointForGridCell(
 } {
   const gridCellSize = editorHost.state.viewport.gridCellPixelSize;
 
-  return {
-    x:
-      editorHost.state.viewport.clientRect.left
-      +
-      editorHost.state.viewport.clientRect.width / 2
-      + (cell.x + 0.5 - editorHost.state.viewport.center.x) * gridCellSize,
-    y:
-      editorHost.state.viewport.clientRect.top
-      +
-      editorHost.state.viewport.clientRect.height / 2
-      + (cell.y + 0.5 - editorHost.state.viewport.center.y) * gridCellSize,
-  };
+  return resolveViewportPointFromWorldPoint({
+    worldPoint: {
+      x: cell.x + 0.5,
+      y: cell.y + 0.5,
+    },
+    viewportBounds: editorHost.state.viewport.clientRect,
+    viewportCenter: editorHost.state.viewport.center,
+    gridCellPixelSize: gridCellSize,
+    displayRotation: editorHost.state.viewport.displayRotation,
+  });
 }

@@ -1,6 +1,6 @@
 import { Graphics } from "pixi.js";
 import type { WorldEntity } from "@/domain/document/world-document";
-import type { GridRect } from "@/domain/shared/grid";
+import type { GridRect, GridRotation } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import {
   areGridRectsIntersecting,
@@ -46,6 +46,7 @@ export function resolvePowerRangeOutlineLayouts(options: {
     y: number;
   };
   gridCellPixelSize: number;
+  displayRotation?: GridRotation;
 }): PowerRangeOutlineLayout[] {
   const visibleGridRect = visibleWorldRectToGridRect(options.visibleWorldRect);
   const layouts: PowerRangeOutlineLayout[] = [];
@@ -71,6 +72,7 @@ export function resolvePowerRangeOutlineLayouts(options: {
       viewportBounds: options.viewportBounds,
       viewportCenter: options.viewportCenter,
       gridCellPixelSize: options.gridCellPixelSize,
+      displayRotation: options.displayRotation,
     });
 
     if (layout === null) {
@@ -117,6 +119,7 @@ export function createPowerRangeDecoration(): DecorationLayer {
           y: ctx.viewportState.centerY,
         },
         gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+        displayRotation: ctx.viewportState.displayRotation,
       });
 
       for (const layout of layouts) {

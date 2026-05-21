@@ -28,6 +28,7 @@ import {
   createHypergryphSelectGestureModule,
 } from "./hypergryph/hypergryph-select-gesture-module";
 import { createHypergryphViewportZoomModule } from "./hypergryph/hypergryph-viewport-zoom-module";
+import { createHypergryphViewportRotationModule } from "./hypergryph/hypergryph-viewport-rotation-module";
 import { createSimulationControlGestureModule } from "./simulation-control-gesture-module";
 
 export interface AppGestureModuleRegistrarOptions {
@@ -52,6 +53,7 @@ export class AppGestureModuleRegistrar {
       options.router.registerModule(createHypergryphDeleteSelectionGestureModule()),
       options.router.registerModule(createHypergryphMouseViewportPanModule()),
       options.router.registerModule(createHypergryphViewportZoomModule()),
+      options.router.registerModule(createHypergryphViewportRotationModule()),
       options.router.registerModule(createSimulationControlGestureModule()),
       options.router.registerModule(
         createGestureDiagnosticsModule(options.gestureDiagnostics),

@@ -134,6 +134,46 @@ describe("resolveWorldEntitySpriteLayout", () => {
       rotation: 0,
     })
   })
+
+  it("projects entity layout through display rotation without moving world data", () => {
+    const layout = resolveWorldEntitySpriteLayout({
+      entity: {
+        id: "display-rotated",
+        definitionId: "custom_2x1",
+        position: {
+          x: 1,
+          y: 0,
+        },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      footprint: {
+        width: 2,
+        height: 1,
+      },
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 200,
+        height: 200,
+      },
+      viewportCenter: {
+        x: 0,
+        y: 0,
+      },
+      gridCellPixelSize: 10,
+      displayRotation: 90,
+    })
+
+    expect(layout).toEqual({
+      x: 90,
+      y: 110,
+      width: 10,
+      height: 20,
+      rotation: 90,
+    })
+  })
 })
 
 describe("resolveInvalidPlacementToastReasonText", () => {
@@ -311,6 +351,36 @@ describe("resolveMarqueeGridRectLayout", () => {
       y: 232,
       width: 48,
       height: 32,
+    })
+  })
+
+  it("projects marquee grid rects through display rotation", () => {
+    expect(
+      resolveMarqueeGridRectLayout({
+        gridRect: {
+          x: 1,
+          y: 2,
+          width: 3,
+          height: 2,
+        },
+        viewportBounds: {
+          left: 0,
+          top: 0,
+          width: 400,
+          height: 400,
+        },
+        viewportCenter: {
+          x: 0,
+          y: 0,
+        },
+        gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
+        displayRotation: 90,
+      }),
+    ).toEqual({
+      x: 136,
+      y: 216,
+      width: 32,
+      height: 48,
     })
   })
 

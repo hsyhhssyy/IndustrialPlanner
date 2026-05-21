@@ -1,0 +1,110 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  createDefaultPlannerSessionState,
+  loadPlannerState,
+  normalizePlannerPersistedState,
+  normalizePlannerSessionState,
+  savePlannerState,
+  type PlannerPersistedState,
+} from "@/shared/storage/planner-storage";
+import { saveToIndexedDbWithVersion } from "@/shared/storage/migration";
+import type { IndexedDbStorageLocation } from "@/shared/storage/browser-storage";
+import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
+
+const PLANNER_STORE_LOCATION: IndexedDbStorageLocation = {
+  databaseName: "industrial-planner",
+  storeName: "planner-state",
+  key: "v2",
+};
+
+function createPlannerState(patch: Partial<PlannerPersistedState> = {}): PlannerPersistedState {
+  return {
+    targets: [{ id: "target-1", itemId: "item_iron_plate", perMinute: 60 }],
+    supplies: [],
+    displayMode: "item",
+    viewMode: "tree",
+    recipeChoices: {},
+    sourceConfig: {
+      waterPolicy: "use-byproduct",
+      acidPolicy: "use-byproduct",
+      sewagePolicy: "external-supply",
+    },
+    session: createDefaultPlannerSessionState(),
+    ...patch,
+  };
+}
+
+describe("production planning persistence", () => {
+  beforeEach(() => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("persists and reloads planner session state", async () => {
+    const state = createPlannerState({
+      viewMode: "flow",
+      session: {
+        activeScreen: "result",
+        flowViewport: { x: 120, y: -64, scale: 1.75 },
+        treeScrollTop: 360,
+      },
+    });
+
+    await savePlannerState(state);
+
+    await expect(loadPlannerState()).resolves.toEqual(state);
+  });
+
+  it("adds default session state when migrating legacy planner data", async () => {
+    const legacyState = {
+      targets: [{ id: "target-1", itemId: "item_iron_plate", perMinute: 60 }],
+      supplies: [],
+      displayMode: "device",
+      viewMode: "flow",
+      recipeChoices: { item_iron_plate: "recipe-1" },
+      sourceConfig: {
+        waterPolicy: "dump-byproduct",
+        acidPolicy: "use-byproduct",
+        sewagePolicy: "self-produce",
+      },
+    };
+
+    await saveToIndexedDbWithVersion(PLANNER_STORE_LOCATION, 1, legacyState);
+
+    const loaded = await loadPlannerState();
+
+    expect(loaded).toEqual({
+      ...legacyState,
+      session: createDefaultPlannerSessionState(),
+    });
+  });
+
+  it("normalizes invalid session values", () => {
+    expect(normalizePlannerSessionState({
+      activeScreen: "unknown",
+      flowViewport: { x: Number.NaN, y: "bad", scale: -1 },
+      treeScrollTop: -20,
+    })).toEqual(createDefaultPlannerSessionState());
+  });
+
+  it("normalizes legacy persisted state without a session field", () => {
+    const normalized = normalizePlannerPersistedState({
+      targets: [{ id: "target-1", itemId: "item_iron_plate", perMinute: 60 }],
+      supplies: [],
+      displayMode: "item",
+      viewMode: "tree",
+      recipeChoices: {},
+      sourceConfig: {
+        waterPolicy: "use-byproduct",
+        acidPolicy: "use-byproduct",
+        sewagePolicy: "external-supply",
+      },
+    });
+
+    expect(normalized?.session).toEqual(createDefaultPlannerSessionState());
+  });
+});

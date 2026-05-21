@@ -2,13 +2,14 @@ import type {
   WorldEntity,
 } from "@/domain/document/world-document"
 import type { AppTheme } from "@/domain/app/types/theme"
+import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import {
-  getGridFootprintCenterCells,
   getRotatedGridFootprint,
+  rotateGridRotation,
 } from "@/shared/geometry/grid"
-import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform"
-import type { GridRectSize } from "@/domain/shared/grid"
+import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform"
+import type { GridRectSize, GridRotation } from "@/domain/shared/grid"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import { resolveEffectiveCanvasTheme } from "@/shared/theme/canvas-theme"
 import {
@@ -27,7 +28,8 @@ import {
   type RenderSpriteLayout,
 } from "../sprites/render-sprite"
 import {
-  DecorationSyncContext,
+  type DecorationProfiler,
+  type DecorationSyncContext,
   type RenderViewportState,
 } from "./decorations/DecorationSyncContext"
 import {
@@ -51,10 +53,44 @@ import { createPowerRangeDecoration } from "./decorations/PowerRangeDecoration"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
+const RENDER_PERF_LOG_WINDOW_MS = 2000
+const RENDER_PERF_LONG_FRAME_MS = 50
+const RENDER_PERF_TOP_STAGE_COUNT = 12
+
+interface PerfAggregate {
+  total: number;
+  max: number;
+  count: number;
+}
+
+interface RenderFrameProfiler extends DecorationProfiler {
+  finishFrame(options: {
+    activeTool: string;
+  }): void;
+}
+
+interface EntitySpriteSyncStats {
+  missingDefinitions: number;
+  visibleEntities: number;
+  hiddenEntities: number;
+  createdSprites: number;
+  destroyedSprites: number;
+  syncLayoutCalls: number;
+}
 
 interface RenderFrameTimeState {
   nowMs: number;
   deltaMs: number;
+}
+
+interface AppWithLogisticsPlacementRuntime {
+  internalState: {
+    runtime: {
+      logisticsPlacement: {
+        kind: "belt" | "pipe" | null;
+      };
+    };
+  };
 }
 
 export interface RenderSceneOrchestrator {
@@ -88,21 +124,43 @@ export function createRenderSceneOrchestrator(
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
   const entitySprites = new Map<string, RenderSprite>()
   const grassBackgroundDecoration = createGrassBackgroundDecoration(renderHost)
+  const renderPerfDiagnostics = createRenderPerfDiagnostics(renderHost)
 
   const flushViewport = (): void => {
-    const viewportState = readViewportState(renderHost)
+    const frameStartedAtMs = performance.now()
+    const frameProfiler = renderPerfDiagnostics.startFrame({
+      startedAtMs: frameStartedAtMs,
+      tickerDeltaMs: renderHost.app.ticker.deltaMS,
+    })
+    const viewportState = measureRenderStage(
+      frameProfiler,
+      "viewport.readState",
+      () => readViewportState(renderHost),
+    )
     const frameTime: RenderFrameTimeState = {
       nowMs: renderHost.app.ticker.lastTime,
       deltaMs: renderHost.app.ticker.deltaMS,
     }
     const workspaceApp = renderHost.workspace.app!
-    const effectiveCanvasTheme = resolveEffectiveCanvasTheme(
-      workspaceApp.state.theme,
-      workspaceApp.state.settings.gameUseSimplifiedDeviceIcons,
+    const effectiveCanvasTheme = measureRenderStage(
+      frameProfiler,
+      "theme.resolveEffectiveCanvasTheme",
+      () => resolveEffectiveCanvasTheme(
+        workspaceApp.state.theme,
+        workspaceApp.state.settings.gameUseSimplifiedDeviceIcons,
+      ),
     )
 
-    applyViewportSize(app, viewportState)
-    void renderHost.workspace.simulation?.actions.advancePlaybackByDeltaMs(frameTime.deltaMs)
+    measureRenderStage(frameProfiler, "renderer.domOverlays", () => {
+      syncRendererDomOverlays(renderHost, effectiveCanvasTheme)
+    })
+
+    measureRenderStage(frameProfiler, "viewport.applySize", () => {
+      applyViewportSize(app, viewportState)
+    })
+    measureRenderStage(frameProfiler, "simulation.advancePlayback", () => {
+      void renderHost.workspace.simulation?.actions.advancePlaybackByDeltaMs(frameTime.deltaMs)
+    })
 
     const ctx: DecorationSyncContext = {
       viewportState,
@@ -115,48 +173,92 @@ export function createRenderSceneOrchestrator(
       renderHost,
       theme: effectiveCanvasTheme,
       nowMs: frameTime.nowMs,
+      profiler: frameProfiler ?? undefined,
     }
 
-    gridDecoration.sync(ctx)
-
-    baseBoundaryDecoration.sync(ctx)
-
-    powerRangeDecoration.sync(ctx)
-
-    previewRectDecoration.sync(ctx)
-
-    syncWorldEntitySprites({
-      renderHost,
-      workspace: renderHost.workspace,
-      entities: renderHost.workspace.editor!.queries.listEntities(),
-      entityDefinitionMap,
-      entitySprites,
-      layers,
-      viewportState,
-      frameTime,
-      viewportBounds: ctx.viewportBounds,
-      theme: effectiveCanvasTheme,
+    measureRenderStage(frameProfiler, "decoration.grid", () => {
+      gridDecoration.sync(ctx)
     })
 
-    invalidPlacementDecoration.sync(ctx)
+    measureRenderStage(frameProfiler, "decoration.baseBoundary", () => {
+      baseBoundaryDecoration.sync(ctx)
+    })
 
-    marqueeDecoration.sync(ctx)
+    measureRenderStage(frameProfiler, "decoration.powerRange", () => {
+      powerRangeDecoration.sync(ctx)
+    })
 
-    marqueeCanvasDecoration.sync(ctx)
+    measureRenderStage(frameProfiler, "decoration.previewRect", () => {
+      previewRectDecoration.sync(ctx)
+    })
 
-    logisticsPlacementCanvasDecoration.sync(ctx)
+    const entities = measureRenderStage(
+      frameProfiler,
+      "editor.listEntities",
+      () => renderHost.workspace.editor!.queries.listEntities(),
+    )
+    recordRenderFrameCounters(frameProfiler, renderHost, entities.length, entitySprites.size)
 
-    diagnosticsDecoration.sync(ctx)
+    const entitySpriteStats = measureRenderStage(frameProfiler, "entitySprites.sync", () =>
+      syncWorldEntitySprites({
+        renderHost,
+        workspace: renderHost.workspace,
+        entities,
+        entityDefinitionMap,
+        entitySprites,
+        layers,
+        viewportState,
+        frameTime,
+        viewportBounds: ctx.viewportBounds,
+        theme: effectiveCanvasTheme,
+        profiler: frameProfiler,
+      }),
+    )
+    recordEntitySpriteSyncStats(frameProfiler, entitySpriteStats)
 
-    beltFlowDecoration.sync(ctx)
+    measureRenderStage(frameProfiler, "decoration.invalidPlacement", () => {
+      invalidPlacementDecoration.sync(ctx)
+    })
 
-    pipeFlowDecoration.sync(ctx)
+    measureRenderStage(frameProfiler, "decoration.marqueeRect", () => {
+      marqueeDecoration.sync(ctx)
+    })
 
-    beltPortInsertionDecoration.sync(ctx)
+    measureRenderStage(frameProfiler, "decoration.marqueeCanvas", () => {
+      marqueeCanvasDecoration.sync(ctx)
+    })
 
-    beltCargoDecoration.sync(ctx)
+    measureRenderStage(frameProfiler, "decoration.logisticsPlacementCanvas", () => {
+      logisticsPlacementCanvasDecoration.sync(ctx)
+    })
 
-    grassBackgroundDecoration.sync(ctx)
+    measureRenderStage(frameProfiler, "decoration.diagnostics", () => {
+      diagnosticsDecoration.sync(ctx)
+    })
+
+    measureRenderStage(frameProfiler, "decoration.beltFlow", () => {
+      beltFlowDecoration.sync(ctx)
+    })
+
+    measureRenderStage(frameProfiler, "decoration.pipeFlow", () => {
+      pipeFlowDecoration.sync(ctx)
+    })
+
+    measureRenderStage(frameProfiler, "decoration.beltPortInsertion", () => {
+      beltPortInsertionDecoration.sync(ctx)
+    })
+
+    measureRenderStage(frameProfiler, "decoration.beltCargo", () => {
+      beltCargoDecoration.sync(ctx)
+    })
+
+    measureRenderStage(frameProfiler, "decoration.grassBackground", () => {
+      grassBackgroundDecoration.sync(ctx)
+    })
+
+    frameProfiler?.finishFrame({
+      activeTool: readRenderActiveTool(renderHost),
+    })
   }
 
   app.stage.addChild(
@@ -232,6 +334,65 @@ function createRenderLayers(): RenderLayerMap {
   }
 }
 
+function syncRendererDomOverlays(
+  renderHost: RenderHost,
+  theme: AppTheme,
+): void {
+  const app = renderHost.workspace.app
+
+  if (app === null) {
+    renderHost.dom.placementGlowOverlay.classList.remove("is-active")
+    renderHost.dom.marqueeGlowOverlay.classList.remove("is-active")
+    return
+  }
+
+  const activeTool = app.state.activeTool
+  const logisticsKind = resolveRendererLogisticsPlacementKind(renderHost)
+  const isPlacementGlowActive = activeTool === "single-placement"
+    || (activeTool === "logistics-placement" && logisticsKind !== null)
+  const isMarqueeGlowActive = activeTool === "marquee"
+
+  renderHost.dom.placementGlowOverlay.classList.toggle("is-active", isPlacementGlowActive)
+  renderHost.dom.marqueeGlowOverlay.classList.toggle("is-active", isMarqueeGlowActive)
+
+  if (!isMarqueeGlowActive) {
+    return
+  }
+
+  const marqueeGlowColor = resolveAppThemeColorNumber(
+    theme,
+    app.state.toolInfo.marqueeType === EntityCollectionType.marquee
+      ? "accent"
+      : "danger",
+  )
+
+  renderHost.dom.marqueeGlowOverlay.style.setProperty(
+    "--industrial-planner-renderer-marquee-glow-rgb",
+    formatCssRgbColor(marqueeGlowColor),
+  )
+}
+
+function resolveRendererLogisticsPlacementKind(
+  renderHost: RenderHost,
+): "belt" | "pipe" | null {
+  const app = renderHost.workspace.app
+
+  if (app === null || !("internalState" in app)) {
+    return null
+  }
+
+  return (app as AppWithLogisticsPlacementRuntime)
+    .internalState.runtime.logisticsPlacement.kind
+}
+
+function formatCssRgbColor(color: number): string {
+  const red = (color >> 16) & 0xff
+  const green = (color >> 8) & 0xff
+  const blue = color & 0xff
+
+  return `${red}, ${green}, ${blue}`
+}
+
 function createSpriteForDefinition(
   renderHost: RenderHost,
   entityId: string,
@@ -294,6 +455,7 @@ function readViewportState(renderHost: RenderHost): RenderViewportState {
     gridCellPixelSize: requireViewportGridCellPixelSize(
       editor.state.viewport.gridCellPixelSize,
     ),
+    displayRotation: editor.state.viewport.displayRotation,
   }
 }
 
@@ -351,19 +513,40 @@ function syncWorldEntitySprites(options: {
     height: number;
   };
   theme: AppTheme;
-}): void {
+  profiler: DecorationProfiler | null;
+}): EntitySpriteSyncStats | null {
+  const stats: EntitySpriteSyncStats | null = options.profiler === null
+    ? null
+    : {
+        missingDefinitions: 0,
+        visibleEntities: 0,
+        hiddenEntities: 0,
+        createdSprites: 0,
+        destroyedSprites: 0,
+        syncLayoutCalls: 0,
+      }
   const nextEntityIds = new Set<string>()
-  const visibleRect = resolveVisibleWorldRect(options.viewportState, options.viewportBounds)
+  const visibleRect = measureRenderStage(
+    options.profiler,
+    "entitySprites.resolveVisibleWorldRect",
+    () => resolveVisibleWorldRect(options.viewportState, options.viewportBounds),
+  )
 
   for (const entity of options.entities) {
     const definition = options.entityDefinitionMap.get(entity.definitionId)
     if (!definition) {
+      if (stats !== null) {
+        stats.missingDefinitions += 1
+      }
       continue
     }
 
     const isVisible = isWorldEntityVisible(entity, definition.footprint, visibleRect)
 
     if (!isVisible) {
+      if (stats !== null) {
+        stats.hiddenEntities += 1
+      }
       // 离屏实体的 sprite 保留但隐藏，避免反复创建/销毁
       const existingSprite = options.entitySprites.get(entity.id) ?? null
       if (existingSprite !== null) {
@@ -371,6 +554,10 @@ function syncWorldEntitySprites(options: {
       }
       nextEntityIds.add(entity.id)
       continue
+    }
+
+    if (stats !== null) {
+      stats.visibleEntities += 1
     }
 
     let sprite: RenderSprite | null = options.entitySprites.get(entity.id) ?? null
@@ -382,9 +569,15 @@ function syncWorldEntitySprites(options: {
 
       sprite.attach(options.layers)
       options.entitySprites.set(entity.id, sprite)
+      if (stats !== null) {
+        stats.createdSprites += 1
+      }
     }
 
     sprite.setVisible(true)
+    if (stats !== null) {
+      stats.syncLayoutCalls += 1
+    }
     sprite.syncLayout(
       resolveWorldEntitySpriteLayout({
         entity,
@@ -395,6 +588,7 @@ function syncWorldEntitySprites(options: {
           y: options.viewportState.centerY,
         },
         gridCellPixelSize: options.viewportState.gridCellPixelSize,
+        displayRotation: options.viewportState.displayRotation,
       }),
       {
         theme: options.theme,
@@ -412,7 +606,281 @@ function syncWorldEntitySprites(options: {
 
     sprite.destroy()
     options.entitySprites.delete(entityId)
+    if (stats !== null) {
+      stats.destroyedSprites += 1
+    }
   }
+
+  return stats
+}
+
+function measureRenderStage<T>(
+  profiler: DecorationProfiler | null,
+  stage: string,
+  callback: () => T,
+): T {
+  if (profiler === null) {
+    return callback()
+  }
+
+  return profiler.measure(stage, callback)
+}
+
+function recordRenderFrameCounters(
+  profiler: DecorationProfiler | null,
+  renderHost: RenderHost,
+  totalEntities: number,
+  liveSpriteCount: number,
+): void {
+  if (profiler === null) {
+    return
+  }
+
+  profiler.count("entities.total", totalEntities)
+  profiler.count("sprites.liveBeforeSync", liveSpriteCount)
+
+  const editor = renderHost.workspace.editor
+  if (editor === null) {
+    return
+  }
+
+  const collections = editor.state.collections
+  profiler.count("collection.selection", collections[EntityCollectionType.selection]?.length ?? 0)
+  profiler.count("collection.preview", collections[EntityCollectionType.preview]?.length ?? 0)
+  profiler.count("collection.ghost", collections[EntityCollectionType.ghost]?.length ?? 0)
+  profiler.count("collection.invalidPlacement", collections[EntityCollectionType.invalidPlacement]?.length ?? 0)
+  profiler.count("collection.logisticsHead", collections[EntityCollectionType.logisticsHead]?.length ?? 0)
+}
+
+function recordEntitySpriteSyncStats(
+  profiler: DecorationProfiler | null,
+  stats: EntitySpriteSyncStats | null,
+): void {
+  if (profiler === null || stats === null) {
+    return
+  }
+
+  profiler.count("entitySprites.missingDefinitions", stats.missingDefinitions)
+  profiler.count("entitySprites.visibleEntities", stats.visibleEntities)
+  profiler.count("entitySprites.hiddenEntities", stats.hiddenEntities)
+  profiler.count("entitySprites.createdSprites", stats.createdSprites)
+  profiler.count("entitySprites.destroyedSprites", stats.destroyedSprites)
+  profiler.count("entitySprites.syncLayoutCalls", stats.syncLayoutCalls)
+}
+
+function createRenderPerfDiagnostics(renderHost: RenderHost): {
+  startFrame(options: {
+    startedAtMs: number;
+    tickerDeltaMs: number;
+  }): RenderFrameProfiler | null;
+} {
+  const stageAggregates = new Map<string, PerfAggregate>()
+  const countAggregates = new Map<string, PerfAggregate>()
+  const activeToolFrameCounts = new Map<string, number>()
+  let windowStartedAtMs = 0
+  let previousFrameStartedAtMs: number | null = null
+  let frameCount = 0
+  let frameIntervalCount = 0
+  let totalFrameIntervalMs = 0
+  let maxFrameIntervalMs = 0
+  let totalTickerDeltaMs = 0
+  let maxTickerDeltaMs = 0
+  let totalRenderSelfMs = 0
+  let maxRenderSelfMs = 0
+  let longFrameCount = 0
+
+  const resetWindow = (): void => {
+    stageAggregates.clear()
+    countAggregates.clear()
+    activeToolFrameCounts.clear()
+    windowStartedAtMs = 0
+    previousFrameStartedAtMs = null
+    frameCount = 0
+    frameIntervalCount = 0
+    totalFrameIntervalMs = 0
+    maxFrameIntervalMs = 0
+    totalTickerDeltaMs = 0
+    maxTickerDeltaMs = 0
+    totalRenderSelfMs = 0
+    maxRenderSelfMs = 0
+    longFrameCount = 0
+  }
+
+  return {
+    startFrame(options): RenderFrameProfiler | null {
+      if (!isRenderPerfDiagnosticsEnabled(renderHost)) {
+        if (frameCount > 0) {
+          resetWindow()
+        }
+        return null
+      }
+
+      if (windowStartedAtMs === 0) {
+        windowStartedAtMs = options.startedAtMs
+      }
+
+      const profiler: RenderFrameProfiler = {
+        count(name, value = 1): void {
+          addPerfSample(countAggregates, name, value)
+        },
+        measure(stage, callback) {
+          const stageStartedAtMs = performance.now()
+          try {
+            return callback()
+          } finally {
+            addPerfSample(stageAggregates, stage, performance.now() - stageStartedAtMs)
+          }
+        },
+        finishFrame({ activeTool }): void {
+          const finishedAtMs = performance.now()
+          const renderSelfMs = finishedAtMs - options.startedAtMs
+          const frameIntervalMs = previousFrameStartedAtMs === null
+            ? null
+            : options.startedAtMs - previousFrameStartedAtMs
+
+          previousFrameStartedAtMs = options.startedAtMs
+          frameCount += 1
+          totalTickerDeltaMs += options.tickerDeltaMs
+          maxTickerDeltaMs = Math.max(maxTickerDeltaMs, options.tickerDeltaMs)
+          totalRenderSelfMs += renderSelfMs
+          maxRenderSelfMs = Math.max(maxRenderSelfMs, renderSelfMs)
+          activeToolFrameCounts.set(
+            activeTool,
+            (activeToolFrameCounts.get(activeTool) ?? 0) + 1,
+          )
+
+          if (frameIntervalMs !== null) {
+            frameIntervalCount += 1
+            totalFrameIntervalMs += frameIntervalMs
+            maxFrameIntervalMs = Math.max(maxFrameIntervalMs, frameIntervalMs)
+            if (frameIntervalMs >= RENDER_PERF_LONG_FRAME_MS) {
+              longFrameCount += 1
+            }
+          }
+
+          const windowMs = finishedAtMs - windowStartedAtMs
+          if (windowMs < RENDER_PERF_LOG_WINDOW_MS) {
+            return
+          }
+
+          console.debug("[render-perf] " + JSON.stringify({
+            windowMs: roundPerfValue(windowMs),
+            fps: roundPerfValue((frameCount * 1000) / windowMs),
+            activeTool: resolveDominantActiveTool(activeToolFrameCounts),
+            activeToolFrames: summarizeFrameCounts(activeToolFrameCounts),
+            frame: {
+              frames: frameCount,
+              longFrames: longFrameCount,
+              avgIntervalMs: roundPerfValue(safeAverage(totalFrameIntervalMs, frameIntervalCount)),
+              maxIntervalMs: roundPerfValue(maxFrameIntervalMs),
+              avgTickerDeltaMs: roundPerfValue(safeAverage(totalTickerDeltaMs, frameCount)),
+              maxTickerDeltaMs: roundPerfValue(maxTickerDeltaMs),
+              avgRenderSelfMs: roundPerfValue(safeAverage(totalRenderSelfMs, frameCount)),
+              maxRenderSelfMs: roundPerfValue(maxRenderSelfMs),
+              avgIntervalMinusRenderSelfMs: roundPerfValue(
+                Math.max(
+                  0,
+                  safeAverage(totalFrameIntervalMs, frameIntervalCount)
+                    - safeAverage(totalRenderSelfMs, frameCount),
+                ),
+              ),
+            },
+            counts: summarizePerfAggregates(countAggregates, countAggregates.size),
+            stages: summarizePerfAggregates(stageAggregates, RENDER_PERF_TOP_STAGE_COUNT),
+          }))
+          resetWindow()
+        },
+      }
+
+      return profiler
+    },
+  }
+}
+
+function isRenderPerfDiagnosticsEnabled(renderHost: RenderHost): boolean {
+  return renderHost.workspace.app?.state.settings.debugMode === true
+}
+
+function readRenderActiveTool(renderHost: RenderHost): string {
+  return renderHost.workspace.app?.state.activeTool ?? "unknown"
+}
+
+function addPerfSample(
+  aggregates: Map<string, PerfAggregate>,
+  name: string,
+  value: number,
+): void {
+  const aggregate = aggregates.get(name)
+  if (aggregate === undefined) {
+    aggregates.set(name, {
+      total: value,
+      max: value,
+      count: 1,
+    })
+    return
+  }
+
+  aggregate.total += value
+  aggregate.max = Math.max(aggregate.max, value)
+  aggregate.count += 1
+}
+
+function summarizePerfAggregates(
+  aggregates: Map<string, PerfAggregate>,
+  limit: number,
+): Array<{
+  name: string;
+  avg: number;
+  max: number;
+  total: number;
+  samples: number;
+}> {
+  return Array.from(aggregates.entries())
+    .map(([name, aggregate]) => ({
+      name,
+      avg: roundPerfValue(safeAverage(aggregate.total, aggregate.count)),
+      max: roundPerfValue(aggregate.max),
+      total: roundPerfValue(aggregate.total),
+      samples: aggregate.count,
+    }))
+    .sort((left, right) => right.total - left.total)
+    .slice(0, limit)
+}
+
+function summarizeFrameCounts(
+  counts: Map<string, number>,
+): Record<string, number> {
+  return Object.fromEntries(
+    Array.from(counts.entries()).sort((left, right) => right[1] - left[1]),
+  )
+}
+
+function resolveDominantActiveTool(counts: Map<string, number>): string {
+  let dominantTool = "unknown"
+  let dominantCount = 0
+
+  for (const [tool, count] of counts) {
+    if (count <= dominantCount) {
+      continue
+    }
+
+    dominantTool = tool
+    dominantCount = count
+  }
+
+  return dominantTool
+}
+
+function safeAverage(total: number, count: number): number {
+  if (count <= 0) {
+    return 0
+  }
+
+  return total / count
+}
+
+function roundPerfValue(value: number): number {
+  return Math.round(value * 100) / 100
 }
 
 export function resolveWorldEntitySelectionStrokeWidth(
@@ -457,6 +925,7 @@ export function resolveWorldEntitySelectionOverlayLayouts(options: {
     y: number;
   };
   gridCellPixelSize: number;
+  displayRotation?: GridRotation;
 }): {
   x: number;
   y: number;
@@ -489,6 +958,7 @@ export function resolveWorldEntitySelectionOverlayLayouts(options: {
       viewportBounds: options.viewportBounds,
       viewportCenter: options.viewportCenter,
       gridCellPixelSize: options.gridCellPixelSize,
+      displayRotation: options.displayRotation,
     })
 
     layouts.push({
@@ -517,30 +987,41 @@ export function resolveWorldEntitySpriteLayout(options: {
     y: number;
   };
   gridCellPixelSize: number;
+  displayRotation?: GridRotation;
 }): RenderSpriteLayout {
   const rotatedFootprint = getRotatedGridFootprint(
     options.footprint,
     options.entity.rotation,
   )
-  const entityCenterCells = getGridFootprintCenterCells(
-    options.entity.position,
-    rotatedFootprint,
-  )
   const gridCellSize = options.gridCellPixelSize
-  const width = rotatedFootprint.width * gridCellSize
-  const height = rotatedFootprint.height * gridCellSize
-  const viewportEntityCenter = resolveViewportPointFromWorldPoint({
-    worldPoint: entityCenterCells,
+  const viewportRect = resolveViewportRectFromWorldGridRect({
+    gridRect: {
+      x: options.entity.position.x,
+      y: options.entity.position.y,
+      width: rotatedFootprint.width,
+      height: rotatedFootprint.height,
+    },
     viewportBounds: options.viewportBounds,
     viewportCenter: options.viewportCenter,
     gridCellPixelSize: gridCellSize,
+    displayRotation: options.displayRotation,
   })
 
+  if (viewportRect === null) {
+    return {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      rotation: rotateGridRotation(options.entity.rotation, options.displayRotation ?? 0),
+    }
+  }
+
   return {
-    x: viewportEntityCenter.x - width / 2,
-    y: viewportEntityCenter.y - height / 2,
-    width,
-    height,
-    rotation: options.entity.rotation,
+    x: viewportRect.left,
+    y: viewportRect.top,
+    width: viewportRect.width,
+    height: viewportRect.height,
+    rotation: rotateGridRotation(options.entity.rotation, options.displayRotation ?? 0),
   }
 }

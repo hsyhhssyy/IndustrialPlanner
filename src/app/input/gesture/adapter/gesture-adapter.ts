@@ -2,6 +2,7 @@ import type {
   GestureDelta,
   GestureEndReason,
   GestureEvent,
+  GestureEventType,
   GestureKeyboardEventLike,
   GestureListener,
   GestureModifiers,
@@ -24,10 +25,102 @@ const TOUCH_LONG_PRESS_INDICATOR_DELAY_MS = 200;
 const TOUCH_MOVE_SLOP_PX = 8;
 const MOUSE_DRAG_SLOP_PX = 3;
 const PINCH_DISTANCE_THRESHOLD_PX = 2;
+const ROTATE_ANGLE_THRESHOLD_DEGREES = 15;
 const TWO_FINGER_MOVE_THRESHOLD_PX = 2;
 const WHEEL_ACCUMULATE_THRESHOLD = 1;
 const WHEEL_LINE_HEIGHT_PX = 16;
 const WHEEL_PAGE_HEIGHT_PX = 800;
+
+const MOVE_EVENT_TYPES: ReadonlySet<GestureEventType> = new Set([
+  "mouse dragmove",
+  "mouse move",
+  "touch dragmove",
+]);
+
+const GESTURE_PERF_LOG_WINDOW_MS = 2000
+
+interface GestureRafPerfWindow {
+  startedAtMs: number
+  tickCount: number
+  flushCount: number
+  dispatchCount: number
+  totalTickSelfMs: number
+  totalFlushSelfMs: number
+  totalDispatchSelfMs: number
+  maxTickMs: number
+  maxFlushMs: number
+  maxDispatchMs: number
+  eventTypeCounts: Map<string, number>
+  moduleTimingsMs: Map<string, number>
+}
+
+function getDebugMode(appHost: GestureAdapterAppHost): boolean {
+  return (appHost.internalState as unknown as { settings?: { debugMode?: boolean } })?.settings?.debugMode === true
+}
+
+function resetGestureRafPerfWindow(window: GestureRafPerfWindow, nowMs: number): void {
+  window.startedAtMs = nowMs
+  window.tickCount = 0
+  window.flushCount = 0
+  window.dispatchCount = 0
+  window.totalTickSelfMs = 0
+  window.totalFlushSelfMs = 0
+  window.totalDispatchSelfMs = 0
+  window.maxTickMs = 0
+  window.maxFlushMs = 0
+  window.maxDispatchMs = 0
+  window.eventTypeCounts.clear()
+  window.moduleTimingsMs.clear()
+}
+
+function flushGestureRafPerfLogIfReady(
+  appHost: GestureAdapterAppHost,
+  window: GestureRafPerfWindow,
+  nowMs: number,
+  activeTool: string,
+): void {
+  const windowMs = nowMs - window.startedAtMs
+  if (windowMs < GESTURE_PERF_LOG_WINDOW_MS) {
+    return
+  }
+
+  console.debug("[gesture-raf-perf] " + JSON.stringify({
+    windowMs: roundPerfValue(windowMs),
+    activeTool,
+    ticks: window.tickCount,
+    flushes: window.flushCount,
+    dispatches: window.dispatchCount,
+    eventTypes: Object.fromEntries(
+      Array.from(window.eventTypeCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8),
+    ),
+    modules: Object.fromEntries(
+      Array.from(window.moduleTimingsMs.entries())
+        .sort((a, b) => b[1] - a[1]),
+    ),
+    avgTickMs: safeAveragePerf(window.totalTickSelfMs, window.tickCount),
+    avgFlushMs: safeAveragePerf(window.totalFlushSelfMs, window.flushCount),
+    avgDispatchMs: safeAveragePerf(window.totalDispatchSelfMs, window.dispatchCount),
+    maxTickMs: roundPerfValue(window.maxTickMs),
+    maxFlushMs: roundPerfValue(window.maxFlushMs),
+    maxDispatchMs: roundPerfValue(window.maxDispatchMs),
+    totalTickMs: roundPerfValue(window.totalTickSelfMs),
+  }))
+  resetGestureRafPerfWindow(window, nowMs)
+}
+
+function roundPerfValue(value: number): number {
+  return Math.round(value * 100) / 100
+}
+
+function safeAveragePerf(total: number, count: number): number {
+  if (count <= 0) {
+    return 0
+  }
+
+  return roundPerfValue(total / count)
+}
 
 type TimerHandle = ReturnType<typeof setTimeout>;
 
@@ -36,6 +129,7 @@ interface GestureAdapterThresholds {
   readonly touchMoveSlopPx: number;
   readonly mouseDragSlopPx: number;
   readonly pinchDistanceThresholdPx: number;
+  readonly rotateAngleThresholdDegrees: number;
   readonly twoFingerMoveThresholdPx: number;
   readonly wheelAccumulateThreshold: number;
 }
@@ -104,6 +198,7 @@ interface TouchSession {
 
 interface MultiTouchSnapshot {
   readonly distance: number;
+  readonly angleDegrees: number;
   readonly center: GesturePosition;
 }
 
@@ -127,6 +222,15 @@ export class GestureAdapter {
   private readonly activeTouches = new Map<number, TouchPoint>();
   private multiTouchSnapshot: MultiTouchSnapshot | null = null;
   private lastGestureIndex = 0;
+  private pendingMergedMove: {
+    event: GestureEvent;
+    key: string;
+    mergedCount: number;
+    initialPosition: GesturePosition;
+  } | null = null;
+  private rafId: number | null = null;
+  private gestureRafPerfWindow!: GestureRafPerfWindow;
+  private gestureRafPreviousTickEndedAtMs: number | null = null;
   private wheelAccumulator = 0;
   private wheelDirection: 1 | -1 | 0 = 0;
   private keyboardSnapshot: KeyboardSnapshot = {
@@ -157,6 +261,8 @@ export class GestureAdapter {
       mouseDragSlopPx: options.thresholds?.mouseDragSlopPx ?? MOUSE_DRAG_SLOP_PX,
       pinchDistanceThresholdPx:
         options.thresholds?.pinchDistanceThresholdPx ?? PINCH_DISTANCE_THRESHOLD_PX,
+      rotateAngleThresholdDegrees:
+        options.thresholds?.rotateAngleThresholdDegrees ?? ROTATE_ANGLE_THRESHOLD_DEGREES,
       twoFingerMoveThresholdPx:
         options.thresholds?.twoFingerMoveThresholdPx ?? TWO_FINGER_MOVE_THRESHOLD_PX,
       wheelAccumulateThreshold:
@@ -176,6 +282,21 @@ export class GestureAdapter {
         this.dispatchActiveToolEvents(previousActiveTool, activeTool);
       },
     );
+    this.gestureRafPerfWindow = {
+      startedAtMs: 0,
+      tickCount: 0,
+      flushCount: 0,
+      dispatchCount: 0,
+      totalTickSelfMs: 0,
+      totalFlushSelfMs: 0,
+      totalDispatchSelfMs: 0,
+      maxTickMs: 0,
+      maxFlushMs: 0,
+      maxDispatchMs: 0,
+      eventTypeCounts: new Map(),
+      moduleTimingsMs: new Map(),
+    }
+    this.startRafLoop();
   }
 
   public subscribe(listener: GestureListener): () => void {
@@ -360,6 +481,7 @@ export class GestureAdapter {
   }
 
   public handleBlur(): void {
+    this.flushPendingMergedMove();
     this.cancelAllPointerSessions();
     this.clearPressedKeys();
   }
@@ -371,6 +493,8 @@ export class GestureAdapter {
   }
 
   public dispose(): void {
+    this.stopRafLoop();
+    this.flushPendingMergedMove();
     this.unsubscribeActiveToolReaction();
     this.cancelAllPointerSessions();
     this.clearPressedKeys();
@@ -485,6 +609,7 @@ export class GestureAdapter {
     if (session === null || session.pointerId !== event.pointerId) {
       return;
     }
+    this.flushPendingMergedMove();
 
     this.clearLongPressTimers(session);
     this.hideLongPressState();
@@ -672,6 +797,7 @@ export class GestureAdapter {
       this.resetMultiTouchSnapshot();
       return;
     }
+    this.flushPendingMergedMove();
 
     if (this.activeTouches.size > 0) {
       if (session.state !== "multi-touch" && session.primaryId === event.pointerId) {
@@ -782,6 +908,21 @@ export class GestureAdapter {
       });
     }
 
+    const rotationDeltaDegrees = normalizeRotationDeltaDegrees(
+      snapshot.angleDegrees - previousSnapshot.angleDegrees,
+    );
+    if (Math.abs(rotationDeltaDegrees) >= this.thresholds.rotateAngleThresholdDegrees) {
+      this.dispatchGesture({
+        type: rotationDeltaDegrees > 0 ? "rotate clockwise" : "rotate counterclockwise",
+        gestureId: this.nextGestureId("rotate"),
+        center: snapshot.center,
+        rotationDeltaDegrees,
+        activeTouchCount: this.activeTouches.size,
+        modifiers: getModifiers(event),
+        sourceEvent: event,
+      });
+    }
+
     const centerDelta = getDelta(previousSnapshot.center, snapshot.center);
     if (vectorLength(centerDelta) >= this.thresholds.twoFingerMoveThresholdPx) {
       this.dispatchGesture({
@@ -801,6 +942,7 @@ export class GestureAdapter {
   }
 
   private cancelAllPointerSessions(): void {
+    this.flushPendingMergedMove();
     const mouseSession = this.mouseSession;
     if (mouseSession !== null) {
       this.clearLongPressTimers(mouseSession);
@@ -971,7 +1113,49 @@ export class GestureAdapter {
     });
   }
 
-  private dispatchGesture(event: GestureEvent): boolean {
+  private startRafLoop(): void {
+    const appHost = this.appHost
+    const perfWindow = this.gestureRafPerfWindow!
+    const tick = () => {
+      this.rafId = requestAnimationFrame(tick);
+      const tickStartedAtMs = performance.now()
+      if (this.gestureRafPreviousTickEndedAtMs === null) {
+        this.gestureRafPreviousTickEndedAtMs = tickStartedAtMs
+      }
+      if (perfWindow.startedAtMs === 0) {
+        perfWindow.startedAtMs = tickStartedAtMs
+      }
+      const hadPendingMove = this.pendingMergedMove !== null
+      this.flushPendingMergedMove();
+      const tickSelfMs = performance.now() - tickStartedAtMs
+      perfWindow.tickCount += 1
+      perfWindow.totalTickSelfMs += tickSelfMs
+      perfWindow.maxTickMs = Math.max(perfWindow.maxTickMs, tickSelfMs)
+      if (hadPendingMove) {
+        perfWindow.flushCount += 1
+      }
+      if (getDebugMode(appHost)) {
+        flushGestureRafPerfLogIfReady(
+          appHost,
+          perfWindow,
+          performance.now(),
+          appHost.internalState?.activeTool ?? "unknown",
+        )
+      }
+    };
+    this.rafId = requestAnimationFrame(tick);
+  }
+
+  private stopRafLoop(): void {
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+  }
+
+  private doDispatchGesture(event: GestureEvent): boolean {
+    const perfWindow = this.gestureRafPerfWindow!
+    const dispatchStartedAtMs = performance.now()
     let consumed = false;
 
     for (const listener of this.gestureListeners) {
@@ -982,7 +1166,66 @@ export class GestureAdapter {
     }
 
     this.persistDragPayload(event);
+    perfWindow.dispatchCount += 1
+    const dispatchMs = performance.now() - dispatchStartedAtMs
+    perfWindow.totalDispatchSelfMs += dispatchMs
+    perfWindow.maxDispatchMs = Math.max(perfWindow.maxDispatchMs, dispatchMs)
+    perfWindow.eventTypeCounts.set(
+      event.type,
+      (perfWindow.eventTypeCounts.get(event.type) ?? 0) + 1,
+    )
     return consumed;
+  }
+
+  private getEventPosition(event: GestureEvent): GesturePosition | undefined {
+    return (event as unknown as { position?: GesturePosition }).position;
+  }
+
+  private flushPendingMergedMove(): void {
+    if (this.pendingMergedMove === null) {
+      return;
+    }
+
+    const perfWindow = this.gestureRafPerfWindow!
+    const flushStartedAtMs = performance.now()
+    const merged = this.pendingMergedMove;
+    this.pendingMergedMove = null;
+    const event: GestureEvent = { ...merged.event, mergedCount: merged.mergedCount };
+    this.doDispatchGesture(event);
+    const flushMs = performance.now() - flushStartedAtMs
+    perfWindow.totalFlushSelfMs += flushMs
+    perfWindow.maxFlushMs = Math.max(perfWindow.maxFlushMs, flushMs)
+  }
+
+  private dispatchGesture(event: GestureEvent): boolean {
+    if (MOVE_EVENT_TYPES.has(event.type)) {
+      const key = getEventMergeKey(event);
+      if (this.pendingMergedMove !== null && this.pendingMergedMove.key !== key) {
+        this.flushPendingMergedMove();
+      }
+
+      if (this.pendingMergedMove === null) {
+        const initialPosition = this.getEventPosition(event) ?? { x: 0, y: 0 };
+        this.pendingMergedMove = {
+          event,
+          key,
+          mergedCount: 0,
+          initialPosition,
+        };
+      } else {
+        const initialPos = this.pendingMergedMove.initialPosition;
+        const nextPos = this.getEventPosition(event);
+        const newDelta: GestureDelta =
+          nextPos ? getDelta(initialPos, nextPos) : { x: 0, y: 0 };
+        this.pendingMergedMove.event = { ...event, delta: newDelta } as GestureEvent;
+        this.pendingMergedMove.mergedCount += 1;
+      }
+
+      return false;
+    }
+
+    this.flushPendingMergedMove();
+    return this.doDispatchGesture(event);
   }
 
   private dispatchActiveToolEvents(from: ActiveTool, to: ActiveTool): void {
@@ -1038,6 +1281,11 @@ function isConsumedGestureDispatchResult(value: unknown): value is { consumedBy:
 
   const consumedBy = value.consumedBy;
   return consumedBy === null || typeof consumedBy === "string";
+}
+
+function getEventMergeKey(event: GestureEvent): string {
+  const m = event.modifiers;
+  return `${event.type}|alt:${m.alt}|ctrl:${m.ctrl}|meta:${m.meta}|shift:${m.shift}`;
 }
 
 function getPointerKind(pointerType: string): "mouse" | "touch" | "unknown" {
@@ -1185,5 +1433,30 @@ function getMultiTouchSnapshot(touches: ReadonlyMap<number, TouchPoint>): MultiT
   return {
     center,
     distance: distance(first.position, second.position),
+    angleDegrees: resolveTouchPairAngleDegrees(first.position, second.position),
   };
+}
+
+function resolveTouchPairAngleDegrees(
+  first: GesturePosition,
+  second: GesturePosition,
+): number {
+  return Math.atan2(second.y - first.y, second.x - first.x) * 180 / Math.PI;
+}
+
+function normalizeRotationDeltaDegrees(deltaDegrees: number): number {
+  if (!Number.isFinite(deltaDegrees) || deltaDegrees === 0) {
+    return 0;
+  }
+
+  let normalized = deltaDegrees;
+  while (normalized > 180) {
+    normalized -= 360;
+  }
+
+  while (normalized < -180) {
+    normalized += 360;
+  }
+
+  return normalized;
 }

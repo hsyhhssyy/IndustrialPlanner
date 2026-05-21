@@ -2,8 +2,13 @@ import { Graphics } from "pixi.js";
 import type { AppTheme } from "@/domain/app/types/theme";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { ActiveTool } from "@/domain/app/types/app-types";
-import type { GridRect } from "@/domain/shared/grid";
-import { resolveViewportAxisPixelPosition } from "@/shared/geometry/viewport-transform";
+import type { GridRect, GridRotation } from "@/domain/shared/grid";
+import {
+  resolveViewportAxisPixelPosition,
+  resolveViewportPointFromWorldPoint,
+  resolveViewportRectFromWorldGridRect,
+  resolveWorldPointFromViewportPoint,
+} from "@/shared/geometry/viewport-transform";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 import {
   BASE_OUTER_WARNING_PADDING_CELLS,
@@ -271,10 +276,15 @@ export function resolveWorldGridLineAxes(options: {
     y: number;
   };
   gridCellPixelSize: number;
+  displayRotation?: GridRotation;
 }): {
   vertical: WorldGridLineAxisGroup;
   horizontal: WorldGridLineAxisGroup;
 } {
+  if ((options.displayRotation ?? 0) !== 0) {
+    return resolveRotatedWorldGridLineAxes(options);
+  }
+
   const gridCellSize = options.gridCellPixelSize;
 
   return {
@@ -290,6 +300,168 @@ export function resolveWorldGridLineAxes(options: {
       worldCenter: options.viewportCenter.y,
       gridCellSize,
     }),
+  };
+}
+
+function resolveRotatedWorldGridLineAxes(options: {
+  viewportBounds: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  viewportCenter: {
+    x: number;
+    y: number;
+  };
+  gridCellPixelSize: number;
+  displayRotation?: GridRotation;
+}): {
+  vertical: WorldGridLineAxisGroup;
+  horizontal: WorldGridLineAxisGroup;
+} {
+  const group: {
+    vertical: WorldGridLineAxisGroup;
+    horizontal: WorldGridLineAxisGroup;
+  } = {
+    vertical: { fine: [], major: [] },
+    horizontal: { fine: [], major: [] },
+  };
+  const renderState = resolveWorldGridRenderState(options.gridCellPixelSize);
+
+  if (
+    (!renderState.fineVisible && !renderState.majorVisible)
+    || options.viewportBounds.width <= 0
+    || options.viewportBounds.height <= 0
+    || options.gridCellPixelSize <= 0
+  ) {
+    return group;
+  }
+
+  const visibleWorldBounds = resolveVisibleWorldGridLineBounds(options);
+  if (visibleWorldBounds === null) {
+    return group;
+  }
+
+  const pushPosition = (
+    axisGroup: WorldGridLineAxisGroup,
+    lineIndex: number,
+    position: number,
+  ): void => {
+    if (!Number.isFinite(position)) {
+      return;
+    }
+
+    if (lineIndex % WORLD_GRID_MAJOR_LINE_INTERVAL === 0) {
+      if (renderState.majorVisible) {
+        axisGroup.major.push(position);
+      }
+      return;
+    }
+
+    if (renderState.fineVisible) {
+      axisGroup.fine.push(position);
+    }
+  };
+
+  for (
+    let lineIndex = Math.floor(visibleWorldBounds.left);
+    lineIndex <= Math.ceil(visibleWorldBounds.right);
+    lineIndex += 1
+  ) {
+    const point = resolveViewportPointFromWorldPoint({
+      worldPoint: {
+        x: lineIndex,
+        y: options.viewportCenter.y,
+      },
+      viewportBounds: options.viewportBounds,
+      viewportCenter: options.viewportCenter,
+      gridCellPixelSize: options.gridCellPixelSize,
+      displayRotation: options.displayRotation,
+    });
+
+    if (options.displayRotation === 90 || options.displayRotation === 270) {
+      pushPosition(group.horizontal, lineIndex, point.y);
+    } else {
+      pushPosition(group.vertical, lineIndex, point.x);
+    }
+  }
+
+  for (
+    let lineIndex = Math.floor(visibleWorldBounds.top);
+    lineIndex <= Math.ceil(visibleWorldBounds.bottom);
+    lineIndex += 1
+  ) {
+    const point = resolveViewportPointFromWorldPoint({
+      worldPoint: {
+        x: options.viewportCenter.x,
+        y: lineIndex,
+      },
+      viewportBounds: options.viewportBounds,
+      viewportCenter: options.viewportCenter,
+      gridCellPixelSize: options.gridCellPixelSize,
+      displayRotation: options.displayRotation,
+    });
+
+    if (options.displayRotation === 90 || options.displayRotation === 270) {
+      pushPosition(group.vertical, lineIndex, point.x);
+    } else {
+      pushPosition(group.horizontal, lineIndex, point.y);
+    }
+  }
+
+  group.vertical.fine.sort((left, right) => left - right);
+  group.vertical.major.sort((left, right) => left - right);
+  group.horizontal.fine.sort((left, right) => left - right);
+  group.horizontal.major.sort((left, right) => left - right);
+
+  return group;
+}
+
+function resolveVisibleWorldGridLineBounds(options: {
+  viewportBounds: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  viewportCenter: {
+    x: number;
+    y: number;
+  };
+  gridCellPixelSize: number;
+  displayRotation?: GridRotation;
+}): WorldGridLineBounds | null {
+  const viewportCorners = [
+    { x: options.viewportBounds.left, y: options.viewportBounds.top },
+    { x: options.viewportBounds.left + options.viewportBounds.width, y: options.viewportBounds.top },
+    { x: options.viewportBounds.left, y: options.viewportBounds.top + options.viewportBounds.height },
+    {
+      x: options.viewportBounds.left + options.viewportBounds.width,
+      y: options.viewportBounds.top + options.viewportBounds.height,
+    },
+  ];
+  const worldCorners = viewportCorners.flatMap((viewportPoint) => {
+    const worldPoint = resolveWorldPointFromViewportPoint({
+      viewportPoint,
+      viewportBounds: options.viewportBounds,
+      viewportCenter: options.viewportCenter,
+      gridCellPixelSize: options.gridCellPixelSize,
+      displayRotation: options.displayRotation,
+    });
+
+    return worldPoint === null ? [] : [worldPoint];
+  });
+
+  if (worldCorners.length === 0) {
+    return null;
+  }
+
+  return {
+    left: Math.min(...worldCorners.map((corner) => corner.x)),
+    right: Math.max(...worldCorners.map((corner) => corner.x)),
+    top: Math.min(...worldCorners.map((corner) => corner.y)),
+    bottom: Math.max(...worldCorners.map((corner) => corner.y)),
   };
 }
 
@@ -550,7 +722,45 @@ export function resolveWorldGridLocalViewportBounds(options: {
   };
   gridCellPixelSize: number;
   lineBounds: WorldGridLineBounds;
+  displayRotation?: GridRotation;
 }): DecorationSyncContext["viewportBounds"] | null {
+  const rotatedViewportRect = resolveViewportRectFromWorldGridRect({
+    gridRect: {
+      x: options.lineBounds.left,
+      y: options.lineBounds.top,
+      width: options.lineBounds.right - options.lineBounds.left,
+      height: options.lineBounds.bottom - options.lineBounds.top,
+    },
+    viewportBounds: options.viewportBounds,
+    viewportCenter: options.viewportCenter,
+    gridCellPixelSize: options.gridCellPixelSize,
+    displayRotation: options.displayRotation,
+  });
+
+  if (rotatedViewportRect === null) {
+    return null;
+  }
+
+  if ((options.displayRotation ?? 0) !== 0) {
+    const viewportRight = options.viewportBounds.left + options.viewportBounds.width;
+    const viewportBottom = options.viewportBounds.top + options.viewportBounds.height;
+    const left = Math.max(options.viewportBounds.left, rotatedViewportRect.left);
+    const right = Math.min(viewportRight, rotatedViewportRect.left + rotatedViewportRect.width);
+    const top = Math.max(options.viewportBounds.top, rotatedViewportRect.top);
+    const bottom = Math.min(viewportBottom, rotatedViewportRect.top + rotatedViewportRect.height);
+
+    if (right <= left || bottom <= top) {
+      return null;
+    }
+
+    return {
+      left,
+      top,
+      width: right - left,
+      height: bottom - top,
+    };
+  }
+
   const rawLeft = resolveWorldGridLinePixelPosition({
     viewportStart: options.viewportBounds.left,
     viewportSpan: options.viewportBounds.width,
@@ -736,6 +946,7 @@ export function createGridLineDecoration(): DecorationLayer {
             y: ctx.viewportState.centerY,
           },
           gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+          displayRotation: ctx.viewportState.displayRotation,
           lineBounds,
         })
 
@@ -758,6 +969,7 @@ export function createGridLineDecoration(): DecorationLayer {
           y: ctx.viewportState.centerY,
         },
         gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+        displayRotation: ctx.viewportState.displayRotation,
       });
       const lineAxes = lineBounds !== null
         ? clipWorldGridLineAxesToViewportBounds({

@@ -18,6 +18,33 @@ export interface GestureActionRouterOptions<THost = unknown> {
   readonly modules?: readonly GestureMappingModule<THost>[];
 }
 
+const MODULE_PERF_LOG_WINDOW_MS = 2000
+// AI-REMOVED 2026-05-21:
+// Reason: MODULE_PERF_TOP_COUNT 声明后未被任何代码引用，ESLint 报 no-unused-vars
+// Trigger: lint error @typescript-eslint/no-unused-vars
+// Evidence: grep 搜索仅命中声明行，无任何使用点
+// Replacement: None（该常量从未被使用，仅声明）
+// Risk: Low
+// Human Review: Not Required
+//
+// Original code:
+// const MODULE_PERF_TOP_COUNT = 10
+
+interface ModulePerfWindow {
+  startedAtMs: number
+  eventCount: number
+  timingsMs: Map<string, number>
+}
+
+function getRouterDebugMode(getAppHost: () => unknown): boolean {
+  try {
+    const host = getAppHost() as { internalState?: { settings?: { debugMode?: boolean } } }
+    return host?.internalState?.settings?.debugMode === true
+  } catch {
+    return false
+  }
+}
+
 export class GestureActionRouter<THost = unknown> {
   private readonly gestureAdapter: GestureAdapter;
   private readonly workspace: WorkspaceContract;
@@ -27,6 +54,7 @@ export class GestureActionRouter<THost = unknown> {
   private readonly dragClaims = new Map<string, string>();
   private nextModuleOrder = 0;
   private disposed = false;
+  private modulePerfWindow: ModulePerfWindow | null = null;
 
   public constructor(options: GestureActionRouterOptions<THost>) {
     this.gestureAdapter = options.gestureAdapter;
@@ -40,6 +68,12 @@ export class GestureActionRouter<THost = unknown> {
     this.unsubscribeAdapter = this.gestureAdapter.subscribe((event) => {
       return this.handleGesture(event);
     });
+
+    this.modulePerfWindow = {
+      startedAtMs: 0,
+      eventCount: 0,
+      timingsMs: new Map(),
+    }
   }
 
   public registerModule(module: GestureMappingModule<THost>): () => void {
@@ -90,9 +124,22 @@ export class GestureActionRouter<THost = unknown> {
     this.dragClaims.clear();
   }
 
+  private tryFlushModulePerf(perfWindow: ModulePerfWindow, nowMs: number): void {
+    flushModulePerfLog(perfWindow, nowMs, getRouterDebugMode(this.getAppHost))
+  }
+
   public handleGesture(event: GestureEvent): GestureActionRouterDispatchResult {
     if (this.disposed) {
       return emptyDispatchResult();
+    }
+
+    const perfWindow = this.modulePerfWindow
+    const handleStartedAtMs = perfWindow !== null ? performance.now() : 0
+    if (perfWindow !== null) {
+      if (perfWindow.startedAtMs === 0) {
+        perfWindow.startedAtMs = handleStartedAtMs
+      }
+      perfWindow.eventCount += 1
     }
 
     const existingClaimOwner = this.dragClaims.get(event.gestureId);
@@ -109,7 +156,13 @@ export class GestureActionRouter<THost = unknown> {
         continue;
       }
 
+      const moduleStartedAtMs = perfWindow !== null ? performance.now() : 0
       const result = entry.module.handle(event, context);
+      if (perfWindow !== null) {
+        const moduleMs = performance.now() - moduleStartedAtMs
+        const existing = perfWindow.timingsMs.get(entry.module.id) ?? 0
+        perfWindow.timingsMs.set(entry.module.id, existing + moduleMs)
+      }
       if (result.status === "ignored") {
         continue;
       }
@@ -123,6 +176,9 @@ export class GestureActionRouter<THost = unknown> {
       }
 
       if (result.consume !== false || isActiveToolLifecycleEvent(event)) {
+        if (perfWindow !== null) {
+          this.tryFlushModulePerf(perfWindow, performance.now())
+        }
         return {
           handledBy,
           consumedBy: entry.module.id,
@@ -131,6 +187,9 @@ export class GestureActionRouter<THost = unknown> {
       }
     }
 
+    if (perfWindow !== null) {
+      this.tryFlushModulePerf(perfWindow, performance.now())
+    }
     return {
       handledBy,
       consumedBy: null,
@@ -153,6 +212,7 @@ export class GestureActionRouter<THost = unknown> {
     event: GestureEvent,
     ownerId: string,
   ): GestureActionRouterDispatchResult {
+    const perfWindow = this.modulePerfWindow
     const owner = this.modules.get(ownerId)?.module;
     if (owner === undefined) {
       if (isDragEndEvent(event)) {
@@ -161,12 +221,21 @@ export class GestureActionRouter<THost = unknown> {
       return emptyDispatchResult();
     }
 
+    const moduleStartedAtMs = perfWindow !== null ? performance.now() : 0
     const result = owner.handle(event, this.createContext());
+    if (perfWindow !== null) {
+      const moduleMs = performance.now() - moduleStartedAtMs
+      const existing = perfWindow.timingsMs.get(ownerId) ?? 0
+      perfWindow.timingsMs.set(ownerId, existing + moduleMs)
+    }
     if (isDragEndEvent(event)) {
       this.dragClaims.delete(event.gestureId);
     }
 
     if (result.status === "ignored") {
+      if (perfWindow !== null) {
+        this.tryFlushModulePerf(perfWindow, performance.now())
+      }
       return {
         handledBy: [],
         consumedBy: null,
@@ -174,6 +243,9 @@ export class GestureActionRouter<THost = unknown> {
       };
     }
 
+    if (perfWindow !== null) {
+      this.tryFlushModulePerf(perfWindow, performance.now())
+    }
     return {
       handledBy: [ownerId],
       consumedBy: result.consume === false ? null : ownerId,
@@ -214,6 +286,30 @@ export function createGestureActionRouter<THost = unknown>(
   options: GestureActionRouterOptions<THost>,
 ): GestureActionRouter<THost> {
   return new GestureActionRouter(options);
+}
+
+function flushModulePerfLog(window: ModulePerfWindow, nowMs: number, debugMode: boolean): void {
+  const windowMs = nowMs - window.startedAtMs
+  if (windowMs < MODULE_PERF_LOG_WINDOW_MS) {
+    return
+  }
+
+  const modules: Record<string, number> = {}
+  for (const [id, totalMs] of window.timingsMs) {
+    modules[id] = Math.round(totalMs * 100) / 100
+  }
+
+  if (debugMode) {
+    console.debug("[gesture-module-perf] " + JSON.stringify({
+      windowMs: Math.round(windowMs * 100) / 100,
+      eventCount: window.eventCount,
+      modules,
+    }))
+  }
+
+  window.startedAtMs = nowMs
+  window.eventCount = 0
+  window.timingsMs.clear()
 }
 
 function isDragStartEvent(event: GestureEvent): boolean {

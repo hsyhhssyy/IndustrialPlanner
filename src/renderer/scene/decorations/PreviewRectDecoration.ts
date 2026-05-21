@@ -14,7 +14,9 @@ export function createPreviewRectDecoration(): DecorationLayer {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
-      graphics.clear();
+      measureDecorationStep(ctx, "previewRect.clear", () => {
+        graphics.clear();
+      });
 
       const app = ctx.renderHost.workspace.app;
       if (!app) {
@@ -37,21 +39,27 @@ export function createPreviewRectDecoration(): DecorationLayer {
       if (!previewCollection || previewCollection.length <= 1) {
         return;
       }
+      ctx.profiler?.count("previewRect.collectionSize", previewCollection.length);
 
-      const gridRect = editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
+      const gridRect = measureDecorationStep(ctx, "previewRect.findCollectionGridRect", () =>
+        editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview),
+      );
       if (gridRect === null) {
         return;
       }
 
-      const layout = resolveMarqueeGridRectLayout({
-        gridRect,
-        viewportBounds: ctx.viewportBounds,
-        viewportCenter: {
-          x: ctx.viewportState.centerX,
-          y: ctx.viewportState.centerY,
-        },
-        gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-      });
+      const layout = measureDecorationStep(ctx, "previewRect.resolveLayout", () =>
+        resolveMarqueeGridRectLayout({
+          gridRect,
+          viewportBounds: ctx.viewportBounds,
+          viewportCenter: {
+            x: ctx.viewportState.centerX,
+            y: ctx.viewportState.centerY,
+          },
+          gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+          displayRotation: ctx.viewportState.displayRotation,
+        }),
+      );
 
       if (layout === null) {
         return;
@@ -63,16 +71,30 @@ export function createPreviewRectDecoration(): DecorationLayer {
         theme.renderer.worldPreviewRectFillColorKey,
       );
 
-      graphics
-        .rect(layout.x, layout.y, layout.width, layout.height)
-        .fill({
-          color: fillColor,
-          alpha: PREVIEW_RECT_FILL_ALPHA,
-        });
+      measureDecorationStep(ctx, "previewRect.draw", () => {
+        graphics
+          .rect(layout.x, layout.y, layout.width, layout.height)
+          .fill({
+            color: fillColor,
+            alpha: PREVIEW_RECT_FILL_ALPHA,
+          });
+      });
     },
 
     destroy(): void {
       graphics.destroy();
     },
   };
+}
+
+function measureDecorationStep<T>(
+  ctx: DecorationSyncContext,
+  stage: string,
+  callback: () => T,
+): T {
+  if (ctx.profiler === undefined) {
+    return callback();
+  }
+
+  return ctx.profiler.measure(stage, callback);
 }

@@ -369,6 +369,17 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         },
       },
       {
+        id: "shortcut-rotate-viewport",
+        kind: "keybinding",
+        labelText: "旋转画布",
+        descriptionText: "设置旋转画布视角的快捷键。",
+        defaultValue: "Ctrl+R",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
+      },
+      {
         id: "shortcut-delete-device",
         kind: "keybinding",
         labelKey: shortcutKeybindingLabelKey("shortcut-delete-device"),

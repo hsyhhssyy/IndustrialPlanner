@@ -119,6 +119,7 @@ export function createBaseBoundaryDecoration(): DecorationLayer {
           y: ctx.viewportState.centerY,
         },
         gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+        displayRotation: ctx.viewportState.displayRotation,
       });
 
       if (layout === null) {

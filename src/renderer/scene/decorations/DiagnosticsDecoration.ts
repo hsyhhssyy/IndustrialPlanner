@@ -47,9 +47,10 @@ export function createDiagnosticsDecoration(): DecorationLayer {
         lastFpsUpdateTime = ctx.nowMs;
       }
 
-      const currentTps =
-        ctx.renderHost.workspace.simulation?.state.statistics.tickPerSecond ?? 0;
-      text.text = `FPS:${currentFps} TPS:${currentTps.toFixed(1)}`;
+      const stats = ctx.renderHost.workspace.simulation?.state.statistics;
+      const currentTps = stats?.tickPerSecond ?? 0;
+      const currentTargetTps = stats?.targetTickPerSecond ?? 0;
+      text.text = `FPS:${currentFps} TPS:${currentTps.toFixed(1)} dTPS:${currentTargetTps}`;
 
       // Position at the top-right corner of the viewport
       text.x = ctx.viewportBounds.left + ctx.viewportBounds.width - text.width - 4;

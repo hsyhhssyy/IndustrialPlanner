@@ -198,6 +198,7 @@ function createDecorationContext(baseId: string): DecorationSyncContext {
       centerX: 0,
       centerY: 0,
       gridCellPixelSize: 10,
+      displayRotation: 0,
     },
     viewportBounds: {
       left: 0,

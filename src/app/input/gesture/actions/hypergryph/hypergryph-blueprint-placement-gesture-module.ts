@@ -1,12 +1,14 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
+import { createSelectionBlueprintDocument } from "@/app/blueprint/save-blueprint";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import {
   EntityCollectionType,
 } from "@/domain/editor/types/editor-types";
+import type { BlueprintLibraryRecord } from "@/shared/blueprints/blueprint-library";
 
-import type { GestureHandleResult, GestureMappingModule } from "../types";
+import type { GestureActionContext, GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import {
   closeCompactLeftDockOnPlacementEnter,
@@ -18,12 +20,63 @@ import {
 } from "./hypergryph-single-placement-gesture-module";
 
 const BLUEPRINT_PREVIEW_PLACE_BUTTON_ID = "blueprint-preview-place-button";
+const TEMP_BLUEPRINT_NAME = "Temp Blueprint";
+
+type TempBlueprintShortcut = "copy" | "paste";
 
 export function createHypergryphBlueprintPlacementGestureModule(): GestureMappingModule<AppHost> {
+  let lastTempBlueprint: BlueprintLibraryRecord | null = null;
+  let lastMousePosition: GesturePosition | null = null;
+
   return {
     id: "hypergryph-blueprint-placement-gesture",
     when: isHypergryphGestureEnabled,
     handle(event, context) {
+      if (event.type === "key down") {
+        const shortcut = resolveTempBlueprintShortcut({
+          code: event.code,
+          key: event.key,
+          modifiers: event.modifiers,
+        });
+
+        if (shortcut !== null) {
+          if (isEditableKeyboardTarget(event.sourceEvent)) {
+            return { status: "ignored" };
+          }
+
+          const editor = context.workspace.editor;
+          if (editor === null) {
+            return { status: "ignored" };
+          }
+
+          if (shortcut === "copy") {
+            const record = createTempBlueprintRecord(context);
+            if (record === null) {
+              return { status: "ignored" };
+            }
+
+            lastTempBlueprint = record;
+            return enterBlueprintPlacement({
+              appHost: context.appHost,
+              editor,
+              record,
+              source: "mouse",
+            });
+          }
+
+          if (lastTempBlueprint === null) {
+            return { status: "ignored" };
+          }
+
+          return enterBlueprintPlacement({
+            appHost: context.appHost,
+            editor,
+            record: lastTempBlueprint,
+            source: "mouse",
+          });
+        }
+      }
+
       if (event.type === "on-exit-active-tool") {
         if (event.from !== "blueprint-placement" || event.to === "blueprint-placement") {
           return { status: "ignored" };
@@ -44,6 +97,10 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           context.appHost.internalState.runtime.blueprintPlacementPointerMode,
         );
         return { status: "handled" };
+      }
+
+      if (event.type === "mouse move") {
+        lastMousePosition = event.position;
       }
 
       const editor = context.workspace.editor;
@@ -98,6 +155,10 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           return { status: "handled" };
 
         case "mouse dragstart":
+          if (event.modifiers.alt) {
+            return { status: "ignored" };
+          }
+
           return handlePlacementMouseDragStart({
             appHost: context.appHost,
             editor,
@@ -113,6 +174,10 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           });
 
         case "mouse move":
+          if (event.modifiers.alt) {
+            return { status: "ignored" };
+          }
+
           return drivePlacementPreview({
             appHost: context.appHost,
             editor,
@@ -120,7 +185,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           });
 
         case "mouse dragmove":
-          if (event.originButton !== 0) {
+          if (event.originButton !== 0 || event.modifiers.alt) {
             return { status: "ignored" };
           }
 
@@ -136,6 +201,19 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             editor,
             position: event.position,
           });
+
+        case "key up":
+          if (
+            (event.code === "AltLeft" || event.code === "AltRight")
+            && lastMousePosition !== null
+          ) {
+            return drivePlacementPreview({
+              appHost: context.appHost,
+              editor,
+              position: lastMousePosition,
+            });
+          }
+          return { status: "ignored" };
 
         case "mouse dragend":
           return (
@@ -156,7 +234,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             return { status: "handled" };
           }
 
-          if (event.button === 0 && !event.longPress) {
+          if (event.button === 0 && !event.longPress && !event.modifiers.alt) {
             applyBlueprintPlacement(context.appHost, editor);
             return { status: "handled" };
           }
@@ -213,9 +291,10 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
 function enterBlueprintPlacement(options: {
   appHost: AppHost;
   editor: EditorContract;
+  record?: BlueprintLibraryRecord;
   source: "mouse" | "touch";
 }): GestureHandleResult {
-  const record = options.appHost.blueprintPreview.record;
+  const record = options.record ?? options.appHost.blueprintPreview.record;
 
   if (record === null || options.editor.actions.createBlueprintPlacementDraft === undefined) {
     return { status: "ignored" };
@@ -403,4 +482,98 @@ function isRotatePlacementShortcut(options: {
     options.code,
     options.key,
   );
+}
+
+function createTempBlueprintRecord(
+  context: GestureActionContext<AppHost>,
+): BlueprintLibraryRecord | null {
+  const blueprintDocument = createSelectionBlueprintDocument({
+    workspace: context.workspace,
+    name: TEMP_BLUEPRINT_NAME,
+  });
+
+  if (blueprintDocument === null) {
+    return null;
+  }
+
+  return {
+    ...blueprintDocument,
+    parentFolderId: null,
+  };
+}
+
+function resolveTempBlueprintShortcut(options: {
+  code: string | null;
+  key: string | null;
+  modifiers: {
+    alt: boolean;
+    ctrl: boolean;
+    meta: boolean;
+    shift: boolean;
+  };
+}): TempBlueprintShortcut | null {
+  if (
+    options.modifiers.alt
+    || options.modifiers.shift
+    || (!options.modifiers.ctrl && !options.modifiers.meta)
+  ) {
+    return null;
+  }
+
+  if (matchesKeyboardKey(options, "KeyC", "c")) {
+    return "copy";
+  }
+
+  if (matchesKeyboardKey(options, "KeyV", "v")) {
+    return "paste";
+  }
+
+  return null;
+}
+
+function matchesKeyboardKey(
+  options: {
+    code: string | null;
+    key: string | null;
+  },
+  code: string,
+  key: string,
+): boolean {
+  return options.code === code || options.key?.toLowerCase() === key;
+}
+
+function isEditableKeyboardTarget(sourceEvent: unknown): boolean {
+  const target = (sourceEvent as { target?: unknown } | null)?.target;
+
+  if (!isElementLikeTarget(target)) {
+    return false;
+  }
+
+  const tagName = typeof target.tagName === "string"
+    ? target.tagName.toLowerCase()
+    : "";
+
+  if (tagName === "input" || tagName === "textarea") {
+    return true;
+  }
+
+  if (target.isContentEditable === true) {
+    return true;
+  }
+
+  if (typeof target.closest === "function") {
+    return target.closest(
+      "input, textarea, [contenteditable=''], [contenteditable='true'], [contenteditable='plaintext-only']",
+    ) !== null;
+  }
+
+  return false;
+}
+
+function isElementLikeTarget(target: unknown): target is {
+  readonly tagName?: string;
+  readonly isContentEditable?: boolean;
+  readonly closest?: (selector: string) => unknown;
+} {
+  return typeof target === "object" && target !== null;
 }

@@ -1,4 +1,5 @@
 import { makeAutoObservable } from "mobx";
+import { createDefaultPlannerSessionState, type PlannerSessionState } from "@/shared/storage/planner-storage";
 import { createProductionPlanningId } from "./production-planning-model";
 import type {
   ProductionPlanningDisplayMode,
@@ -22,6 +23,7 @@ export class ProductionPlanningInputStore {
     acidPolicy: "use-byproduct",
     sewagePolicy: "external-supply",
   };
+  session: PlannerSessionState = createDefaultPlannerSessionState();
 
   /** 已从 IndexedDB 完成 hydration，在此之前 reaction 不写入 */
   hydrated = false;

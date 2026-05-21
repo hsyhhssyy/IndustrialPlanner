@@ -24,6 +24,8 @@ const MOVE_ENTRY_BUTTON_IDS = {
 const PLACEMENT_MARQUEE_TOOL_BUTTON_ID = "placement-tool-marquee";
 
 export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHost> {
+  let lastMousePosition: GesturePosition | null = null;
+
   return {
     id: "hypergryph-move-gesture",
     when: isHypergryphGestureEnabled,
@@ -44,6 +46,10 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
 
         syncMoveEntryUi(context.appHost);
         return { status: "handled" };
+      }
+
+      if (event.type === "mouse move") {
+        lastMousePosition = event.position;
       }
 
       const editor = context.workspace.editor;
@@ -71,6 +77,10 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             return { status: "handled" };
 
           case "mouse dragstart":
+            if (event.modifiers.alt) {
+              return { status: "ignored" };
+            }
+
             return handleMoveMouseDragStart({
               appHost: context.appHost,
               editor,
@@ -88,6 +98,10 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             });
 
           case "mouse move":
+            if (event.modifiers.alt) {
+              return { status: "ignored" };
+            }
+
             return driveMovePreview({
               appHost: context.appHost,
               editor,
@@ -96,7 +110,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             });
 
           case "mouse dragmove":
-            if (event.originButton !== 0) {
+            if (event.originButton !== 0 || event.modifiers.alt) {
               return { status: "ignored" };
             }
 
@@ -114,6 +128,20 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
               position: event.position,
               allowMouseEntryAnchorInit: false,
             });
+
+          case "key up":
+            if (
+              (event.code === "AltLeft" || event.code === "AltRight")
+              && lastMousePosition !== null
+            ) {
+              return driveMovePreview({
+                appHost: context.appHost,
+                editor,
+                position: lastMousePosition,
+                allowMouseEntryAnchorInit: false,
+              });
+            }
+            return { status: "ignored" };
 
           case "mouse dragend":
             return (
@@ -134,7 +162,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
               return { status: "handled" };
             }
 
-            if (event.button === 0 && !event.longPress) {
+            if (event.button === 0 && !event.longPress && !event.modifiers.alt) {
               applyMoveOperation(context.appHost, editor, "mouse");
               return { status: "handled" };
             }

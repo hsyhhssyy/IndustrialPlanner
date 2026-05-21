@@ -1,6 +1,7 @@
 import { reaction } from "mobx";
 import {
   loadPlannerState,
+  normalizePlannerSessionState,
   savePlannerState,
   type PlannerPersistedState,
 } from "@/shared/storage/planner-storage";
@@ -33,6 +34,7 @@ export function hookPlannerIndexedDbPersistence(
         acidPolicy: normalizeByproductPolicy(persisted.sourceConfig?.acidPolicy),
         sewagePolicy: normalizeSewagePolicy(persisted.sourceConfig?.sewagePolicy),
       };
+      store.session = normalizePlannerSessionState(persisted.session);
     }
     store.hydrated = true;
   });
@@ -64,6 +66,7 @@ function toPersistedState(
     viewMode: store.viewMode,
     recipeChoices: { ...store.recipeChoices },
     sourceConfig: { ...store.sourceConfig },
+    session: normalizePlannerSessionState(store.session),
   };
 }
 

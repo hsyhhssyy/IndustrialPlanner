@@ -16,8 +16,7 @@
 }
 
 .canvas-viewport-surface,
-.renderer-host,
-.renderer-canvas {
+.renderer-host {
   display: block;
 }
 
@@ -474,7 +473,8 @@
 
 .canvas-bottom-left-toolbar {
   position: absolute;
-  left: calc(var(--left-toolbar-width, 68px) + var(--left-dock-width, 0px) + 12px);
+  grid-area: canvas;
+  left: 12px;
   bottom: calc(var(--bottom-bar-height, 28px) + env(safe-area-inset-bottom, 0px) + 12px);
   z-index: 4;
   display: inline-flex;
@@ -514,7 +514,38 @@
   fill: currentColor;
 }
 
-.renderer-canvas {
-  border: none;
-  box-shadow: none;
-}
+// AI-REMOVED 2026-05-21:
+// Reason: renderer canvas 与视口发光样式已迁移到 renderer 模块，app shell 只保留宿主槽位。
+// Trigger: 用户要求 renderer 对外暴露 div container，并让 renderer 内部实现 CSS glow。
+// Evidence: RenderContract.container 与 src/renderer/renderer-host.css 接管 active renderer DOM 样式。
+// Replacement: src/renderer/renderer-host.css
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// .renderer-canvas {
+//   border: none;
+//   box-shadow: none;
+// }
+//
+// .canvas-placement-glow-overlay {
+//   position: absolute;
+//   inset: 0;
+//   pointer-events: none;
+//   z-index: 2;
+//   box-shadow:
+//     inset 0 0 10px 5px rgba(255, 213, 74, 0.24),
+//     inset 0 0 30px 15px rgba(255, 213, 74, 0.12);
+//   animation: canvas-placement-glow-pulse 2s ease-in-out infinite;
+// }
+//
+// @keyframes canvas-placement-glow-pulse {
+//   0%,
+//   100% {
+//     opacity: 0.6;
+//   }
+//
+//   50% {
+//     opacity: 1;
+//   }
+// }
