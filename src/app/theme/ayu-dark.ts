@@ -100,6 +100,7 @@ export const AYU_DARK_THEME: AppTheme = {
     "renderer-grid-line": "#ffffff",
     "renderer-selection-stroke": "#ffa500",
     "renderer-marquee-stroke": "#ffffff",
+    "renderer-mode-label-shadow": "#000000",
     "sprite-preview-border-box": "#ffffff",
     "renderer-belt-tile-fill": "#1f2937",
     "renderer-belt-tile-stroke": "#f59e0b",

@@ -28,5 +28,9 @@ export type {
 	EntityPlacementBehaviorDeclaration,
 	PlacementBehaviorType,
 } from "./types/entity-placement-behavior";
+export {
+	BELT_TRANSPORT_DURATION_SECONDS,
+	PIPE_TRANSPORT_DURATION_SECONDS,
+} from "./types/logistics-constants";
 export type { ItemDefinition } from "./types/item-definition";
 export type { RecipeDefinition, RecipeType } from "./types/recipe-definition";

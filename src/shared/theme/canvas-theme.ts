@@ -70,6 +70,7 @@ export const BLUEPRINT_CANVAS_THEME_COLOR_PATCH = {
   "in-canvas-gesture-events-border": "rgb(31 127 179 / 0.12)",
   "renderer-grid-line": "#5c6773",
   "renderer-marquee-stroke": "#000000",
+  "renderer-mode-label-shadow": "#000000",
   "renderer-belt-tile-fill": "#e6ecf3",
   "renderer-belt-tile-stroke": "#d9822b",
   "renderer-belt-track": "#94a3b8",

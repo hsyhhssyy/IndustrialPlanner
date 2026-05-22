@@ -5,6 +5,7 @@
   min-height: 0;
   height: 100%;
   overflow: hidden;
+  overflow: clip;
   background: var(--surface-1);
 }
 
@@ -27,6 +28,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  overflow: clip;
 }
 
 .production-planning-input-screen {
@@ -103,6 +105,10 @@
 
 .production-planning-graph {
   padding: 12px;
+}
+
+.production-planning-graph.is-tree-view {
+  overflow: hidden;
 }
 
 .production-planning-config-section,
@@ -381,6 +387,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(248px, 0.42fr);
   gap: 10px;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   min-height: 0;
   height: 100%;
@@ -446,23 +454,29 @@
   background: var(--accent-soft);
 }
 
-.production-planning-tree-table-row.is-recipe td {
-  background-color: color-mix(in srgb, var(--surface-1) 88%, var(--canvas-floating-toolbar-confirm));
-}
-
-.production-planning-tree-table-row.is-recipe.is-active td {
-  background: color-mix(in srgb, var(--accent-soft) 84%, var(--canvas-floating-toolbar-confirm));
+.production-planning-tree-table-node-cell {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 42px;
+  min-width: 0;
+  padding-left: calc(8px + min(var(--tree-depth, 0) * 16px, 144px));
 }
 
 .production-planning-tree-table-node-button {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "identity chip"
+    "folded folded";
   align-items: center;
   gap: 6px;
   width: 100%;
-  height: 42px;
+  min-height: 42px;
   min-width: 0;
-  padding: 0 8px 0 calc(8px + min(var(--tree-depth, 0) * 16px, 144px));
+  padding: 5px 8px 5px 0;
   border: 0;
   background: transparent;
   color: inherit;
@@ -473,13 +487,53 @@
   background: color-mix(in srgb, var(--surface-3) 72%, transparent);
 }
 
+.production-planning-tree-table-branch-button,
+.production-planning-tree-table-branch-spacer {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 30px;
+  min-width: 20px;
+}
+
+.production-planning-tree-table-branch-button {
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-2);
+}
+
+.production-planning-tree-table-branch-button:hover {
+  background: color-mix(in srgb, var(--surface-3) 72%, transparent);
+  color: var(--text-0);
+}
+
 .production-planning-tree-table-branch {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  color: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.production-planning-tree-table-branch.is-leaf::before {
+  content: "";
   width: 10px;
   height: 1px;
   background: var(--line-strong);
 }
 
+.production-planning-tree-table-node-button > .production-planning-item-identity,
+.production-planning-tree-table-node-button > .production-planning-recipe-identity {
+  grid-area: identity;
+}
+
 .production-planning-tree-table-chip {
+  grid-area: chip;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -662,6 +716,82 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.production-planning-recipe-formula {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.production-planning-recipe-formula-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.production-planning-recipe-formula-plus {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-2);
+  margin: 0 2px;
+}
+
+.production-planning-recipe-formula-icon {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 36px;
+  height: 36px;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+
+  > span {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.65);
+    border-radius: 3px;
+    padding: 0 3px;
+    line-height: 1.2;
+  }
+}
+
+.production-planning-recipe-formula-arrow {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 0 8px;
+  color: var(--text-2);
+  font-size: 0.78rem;
+  line-height: 1;
+
+  > span:first-child {
+    font-size: 0.6rem;
+    letter-spacing: -1px;
+    scale: 0.65;
+  }
+
+  > span:last-child {
+    font-size: 0.6rem;
+    font-weight: 600;
+  }
 }
 
 .production-planning-metric,
@@ -1053,3 +1183,127 @@
 .production-planning-panel.is-touch .production-planning-line-row {
   grid-template-columns: minmax(0, 1fr) 84px 32px;
 }
+
+/*
+AI-REMOVED 2026-05-22:
+Reason: 设备/物品模式现在共享同一套 pair 树，用户明确要求设备模式保持和物品模式一致的左右详情布局。
+Trigger: 用户指出设备模式不应改成上下分栏。
+Evidence: production-planning-tree-table-layout.is-device-mode 不再覆盖 grid-template-columns / rows。
+Replacement: base production-planning-tree-table-layout left/right grid
+Risk: Low；仅撤销设备模式触屏下的额外分栏方向。
+Human Review: Required
+
+Original code:
+.production-planning-panel.is-touch .production-planning-tree-table-layout.is-device-mode {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(180px, 52vh) auto;
+  height: auto;
+  min-height: 100%;
+}
+*/
+
+.production-planning-panel.is-touch .production-planning-tree-table-layout.is-device-mode .production-planning-tree-table {
+  min-width: 0;
+}
+
+.production-planning-panel.is-touch .production-planning-tree-table-layout.is-device-mode .production-planning-tree-table-rate-col {
+  width: 152px;
+}
+
+.production-planning-panel.is-touch .production-planning-tree-table-layout.is-device-mode .production-planning-tree-table-rate {
+  flex-wrap: wrap;
+  row-gap: 2px;
+  white-space: normal;
+}
+
+/*
+AI-REMOVED 2026-05-22:
+Reason: 撤销设备模式上下分栏后，详情面板需要和物品模式一样保持自身滚动。
+Trigger: 用户指出设备模式不应改成上下分栏。
+Evidence: production-planning-tree-detail 回到基础 overflow: auto。
+Replacement: base production-planning-tree-detail overflow
+Risk: Low；只影响设备模式触屏布局滚动容器。
+Human Review: Required
+
+Original code:
+.production-planning-panel.is-touch .production-planning-tree-table-layout.is-device-mode .production-planning-tree-detail {
+  overflow: visible;
+}
+*/
+
+// 树状图折叠信息：物品模式下的 recipe 摘要（嵌在 node 列内）
+.production-planning-tree-table-folded-recipe {
+  grid-area: folded;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding-left: 4px;
+  color: var(--text-2);
+  font-size: 0.66rem;
+
+  img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+  }
+
+  strong {
+    color: var(--text-1);
+    font-weight: 700;
+  }
+}
+
+/*
+AI-REMOVED 2026-05-22:
+Reason: 设备模式的树节点已收敛为“设备 + 目标产物”pair，输出物品 chip 会重复产物文本并削弱设备模式语义。
+Trigger: 用户指出设备模式不应继续出现物品 node。
+Evidence: production-planning-tree-table-folded-items / folded-item-chip 不再由 ProductionPlanningTreeTableRow 渲染。
+Replacement: production-planning-recipe-identity subtitle + production-planning-tree-table-rate
+Risk: Low；仅删除未使用的重复样式。
+Human Review: Required
+
+Original code:
+// 树状图折叠信息：设备模式下的输出物品芯片（嵌在 node 列内）
+.production-planning-tree-table-folded-items {
+  grid-area: folded;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-left: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.production-planning-tree-table-folded-item-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 0.62rem;
+
+  img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+  }
+
+  span:last-child {
+    flex: 0 0 auto;
+    color: var(--text-0);
+    font-weight: 700;
+  }
+
+  span:not(:last-child) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+*/

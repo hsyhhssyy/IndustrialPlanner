@@ -18,6 +18,7 @@ import { hookThemeApplicator } from "../theme/theme-applicator";
 import { WorkbenchBlueprintFolderDialogController } from "../shell/state/blueprint-folder-dialog-state";
 import { WorkbenchBlueprintPreviewController } from "../shell/state/blueprint-preview-dialog-state";
 import { WorkbenchEncyclopediaPickerController } from "../shell/state/encyclopedia-picker-state";
+import { WorkbenchRecipePickerController } from "../shell/state/recipe-picker-state";
 import { WorkbenchSaveBlueprintDialogController } from "../shell/state/save-blueprint-dialog-state";
 
 export interface AppHost extends AppContract {
@@ -31,6 +32,7 @@ export interface AppHost extends AppContract {
   blueprintPreview: WorkbenchBlueprintPreviewController;
   saveBlueprintDialog: WorkbenchSaveBlueprintDialogController;
   encyclopediaPicker: WorkbenchEncyclopediaPickerController;
+  recipePicker: WorkbenchRecipePickerController;
   dispose: () => void;
 }
 
@@ -74,6 +76,7 @@ export function createAppHost(
   const encyclopediaPicker = new WorkbenchEncyclopediaPickerController(
     () => internalState.workbench.toolbox.wiki,
   );
+  const recipePicker = new WorkbenchRecipePickerController();
   const gestureActionRouter = createGestureActionRouter<AppHost>({
     gestureAdapter,
     workspace,
@@ -92,6 +95,7 @@ export function createAppHost(
     blueprintPreview,
     saveBlueprintDialog,
     encyclopediaPicker,
+    recipePicker,
   });
 
   const shortcutManager = new KeyboardShortcutManager(host);
@@ -141,6 +145,7 @@ export function createAppHost(
       blueprintPreview.close();
       saveBlueprintDialog.close();
       encyclopediaPicker.dispose();
+      recipePicker.dispose();
       gestureActionRouter.dispose();
       gestureAdapter.dispose();
       while (disposers.length > 0) {

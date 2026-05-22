@@ -20,6 +20,7 @@ import { BlueprintPreviewDialog } from "@/app/shell/dialogs/blueprint-preview-di
 import { HelpDialog } from "@/app/shell/dialogs/help-dialog";
 import { InspectorDialog } from "@/app/shell/dialogs/inspector-dialog";
 import { MobilePortraitGate } from "@/app/shell/layout/mobile-portrait-gate";
+import { RecipePickerDialog } from "@/app/shell/dialogs/recipe-picker-dialog";
 import { SaveBlueprintDialog } from "@/app/shell/dialogs/save-blueprint-dialog";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
 import { EncyclopediaPickerDialog } from "@/app/shell/encyclopedia/encyclopedia-picker-dialog";
@@ -623,6 +624,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       <SaveBlueprintDialog appHost={appHost} />
       <ToolboxDialog appHost={appHost} />
       <EncyclopediaPickerDialog appHost={appHost} />
+      <RecipePickerDialog appHost={appHost} />
       <HelpDialog appHost={appHost} />
       <SettingsDialog appHost={appHost} controller={settingsDialog} pwaController={pwaController} />
       <PwaGateway appHost={appHost} pwaController={pwaController} />
@@ -642,6 +644,7 @@ function isAnyDialogShellVisible(appHost: AppHost): boolean {
     },
   )
     || appHost.encyclopediaPicker.dialogState.visible
+    || appHost.recipePicker.dialogState.visible
     || appHost.blueprintFolderDialog.dialogState.visible
     || appHost.blueprintPreview.dialogState.visible;
 }

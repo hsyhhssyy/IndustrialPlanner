@@ -10,8 +10,6 @@ import LucideGrid2x2 from "~icons/lucide/grid-2x2";
 import LucideHelpCircle from "~icons/lucide/help-circle";
 import LucideHistory from "~icons/lucide/history";
 import LucideBuilding2 from "~icons/lucide/building-2";
-import LucideMaximize from "~icons/lucide/maximize";
-import LucideMinimize from "~icons/lucide/minimize";
 import LucideMonitor from "~icons/lucide/monitor";
 import LucideMove from "~icons/lucide/move";
 import LucideMousePointer2 from "~icons/lucide/mouse-pointer-2";
@@ -143,8 +141,8 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   pause: MaterialSymbolsPauseRounded,
   resume: MaterialSymbolsResumeRounded,
   stop: LucideSquare,
-  expand: LucideMaximize,
-  shrink: LucideMinimize,
+  expand: LucideSquare,
+  shrink: LucideCopy,
   pointer: LucideMousePointer2,
   move: LucideMove,
   eye: LucideEye,

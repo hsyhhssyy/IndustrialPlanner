@@ -23,8 +23,11 @@ const DEFAULT_SOURCE_CONFIG: ProductionPlanningSourceConfig = {
   sewagePolicy: "external-supply",
 };
 
-function baseInfiniteItemIds(index: ReturnType<typeof buildProductionPlanningIndex>) {
-  return new Set(index.naturalResourceItemIds);
+// AI-CORRECTION 2026-05-22:
+// 自然资源不再通过 infiniteItemIds 补齐；缺失时走 null 配方生产。
+// baseInfiniteItemIds 返回空集，与 panel 的新 infiniteItemIds 构建逻辑一致。
+function baseInfiniteItemIds(_index: ReturnType<typeof buildProductionPlanningIndex>) {
+  return new Set<string>();
 }
 
 function makeInfiniteItemIds(
@@ -59,7 +62,11 @@ describe("production planning model", () => {
     expect(root.recipeNode?.inputs).toEqual([
       expect.objectContaining({ itemId: "item_iron_ore", perMinute: 30 }),
     ]);
-    expect(root.recipeNode?.inputItems[0]?.isInfiniteSource).toBe(true);
+    // AI-CORRECTION 2026-05-22:
+    // 自然资源不再从 infiniteItemIds 补齐；铁矿石走矿机配方生产。
+    expect(root.recipeNode?.inputItems[0]?.isInfiniteSource).toBe(false);
+    expect(root.recipeNode?.inputItems[0]?.recipeNode).not.toBeNull();
+    expect(root.recipeNode?.inputItems[0]?.recipeNode?.recipeId).toBe("r_miner_iron_ore_basic");
   });
 
   it("does not auto-select manual-only iron enriched powder block recipe", () => {

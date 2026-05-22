@@ -466,7 +466,19 @@ function resolveRecipeForItem(itemId: string, context: SolverContext): RecipeDef
     }
   }
 
-  return recipes.find((recipe) => !isRecipeExcludedFromProductionPlanningAuto(recipe));
+  const candidates = recipes.filter((recipe) => !isRecipeExcludedFromProductionPlanningAuto(recipe));
+
+  // AI-CORRECTION 2026-05-22:
+  // 自然资源（矿石、清水、沉积酸）在 auto 模式下优先选择 null 配方（inputs 为空），
+  // 避免命中净化器等其他生产同一物品的非 null 配方。
+  if (context.index.naturalResourceItemIds.has(itemId)) {
+    const nullRecipe = candidates.find((recipe) => recipe.inputs.length === 0);
+    if (nullRecipe !== undefined) {
+      return nullRecipe;
+    }
+  }
+
+  return candidates[0];
 }
 
 function consumeAvailableSupply(

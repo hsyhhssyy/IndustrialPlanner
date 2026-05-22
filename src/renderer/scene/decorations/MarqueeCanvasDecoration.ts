@@ -3,15 +3,18 @@ import { Text } from "pixi.js";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 
-/** 左上角模式标签样式 */
+/** 框选模式标签固定蓝色 */
+const MARQUEE_LABEL_COLOR = 0x3B82F6;
+
+/** 左上角模式标签样式（不含 dropShadow.color，由 sync 动态设置） */
 const MODE_LABEL_TEXT_STYLE = {
   fontSize: 14,
   fontFamily: "sans-serif",
   fontWeight: "bold",
   dropShadow: {
     angle: Math.PI / 4,
-    color: 0x000000,
     alpha: 0.6,
     blur: 4,
     distance: 1,
@@ -44,12 +47,19 @@ export function createMarqueeCanvasDecoration(): DecorationLayer {
 
       modeLabel.visible = true;
 
-      // 左上角模式标签（仅阴影，不跟随发光颜色）
       const isReverse =
         ctx.renderHost.workspace.app!.state.toolInfo.marqueeType === EntityCollectionType.reverseMarquee;
       modeLabel.text = isReverse ? "批量反选模式" : "批量选择模式";
       modeLabel.x = 12;
       modeLabel.y = 12;
+
+      modeLabel.style.fill = MARQUEE_LABEL_COLOR;
+      if (modeLabel.style.dropShadow) {
+        modeLabel.style.dropShadow.color = resolveAppThemeColorNumber(
+          ctx.theme,
+          "renderer-mode-label-shadow",
+        );
+      }
     },
 
     destroy(): void {

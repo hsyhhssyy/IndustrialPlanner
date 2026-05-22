@@ -1118,7 +1118,11 @@ export function resolveDeviceIdForPlacementGroupShortcut(options: {
   shortcutIndex: number;
 }): string | null {
   const entities = options.registry.entityDefinitions
-    .filter((definition) => definition.uiGroup === options.group)
+    .filter(
+      (definition) =>
+        definition.uiGroup === options.group
+        && !definition.tags.includes("不可摆放"),
+    )
     .sort((left, right) => left.id.localeCompare(right.id));
 
   return entities[options.shortcutIndex]?.id ?? null;

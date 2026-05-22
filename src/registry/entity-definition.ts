@@ -2467,15 +2467,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   // =========================================================================
-  // 隐藏设备 (uiGroup: "hidden")
+  // 不可摆放设备（tag: "不可摆放"）
   //
-  // 这些设备不在放置面板中显示，由特定工具或配方系统自动生成。
+  // uiGroup 归属正常分组以在百科中按分类检索，
+  // placement-panel 通过 tag 筛掉，不在放置面板中显示。
   // =========================================================================
 
   /**
    * item_port_dumper_1 — 给水器（3×3）
    *
-   * 隐藏设备，无精灵定义，无端口/槽位/配方。
+   * 不可摆放设备，无精灵定义，无端口/槽位/配方。
    * 仅作为倾倒配方的目标设备，产出的物品直接消失。
    */
   createEmptyEntityDefinition({
@@ -2483,7 +2484,49 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     nameKey: "registry.entity.item_port_dumper_1.name",
     spriteId: "item_port_dumper_1",
     footprint: { width: 3, height: 3 },
-    uiGroup: "hidden",
-    tags: [],
+    uiGroup: "resourcePower",
+    tags: ["不可摆放"],
+  }),
+
+  /**
+   * item_port_miner_2 — 电驱矿机（3×3）
+   *
+   * 不可摆放设备，无精灵定义，无端口/槽位/配方。
+   */
+  createEmptyEntityDefinition({
+    id: "item_port_miner_2",
+    nameKey: "registry.entity.item_port_miner_2.name",
+    spriteId: "item_port_miner_2",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "resourcePower",
+    tags: ["不可摆放"],
+  }),
+
+  /**
+   * item_port_miner_3 — 二型电驱矿机（3×3）
+   *
+   * 不可摆放设备，无精灵定义，无端口/槽位/配方。
+   */
+  createEmptyEntityDefinition({
+    id: "item_port_miner_3",
+    nameKey: "registry.entity.item_port_miner_3.name",
+    spriteId: "item_port_miner_3",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "resourcePower",
+    tags: ["不可摆放"],
+  }),
+
+  /**
+   * item_port_miner_4 — 水驱矿机（3×3）
+   *
+   * 不可摆放设备，无精灵定义，无端口/槽位/配方。
+   */
+  createEmptyEntityDefinition({
+    id: "item_port_miner_4",
+    nameKey: "registry.entity.item_port_miner_4.name",
+    spriteId: "item_port_miner_4",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "resourcePower",
+    tags: ["不可摆放"],
   }),
 ];

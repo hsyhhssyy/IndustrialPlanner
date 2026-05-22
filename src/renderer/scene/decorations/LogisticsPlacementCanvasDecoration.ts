@@ -2,9 +2,11 @@ import type { TextStyleOptions } from "pixi.js";
 import { Text } from "pixi.js";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 
 const LOGISTICS_PLACEMENT_GLOW_COLOR = 0xFFD54A;
 
+/** 左上角模式标签样式（不含 dropShadow.color，由 sync 动态设置） */
 const MODE_LABEL_TEXT_STYLE = {
   fontSize: 14,
   fontFamily: "sans-serif",
@@ -12,7 +14,6 @@ const MODE_LABEL_TEXT_STYLE = {
   fill: LOGISTICS_PLACEMENT_GLOW_COLOR,
   dropShadow: {
     angle: Math.PI / 4,
-    color: 0x000000,
     alpha: 0.6,
     blur: 4,
     distance: 1,
@@ -81,6 +82,13 @@ export function createLogisticsPlacementCanvasDecoration(): DecorationLayer {
           : LOGISTICS_PLACEMENT_LABELS[logisticsKind];
       modeLabel.x = 12;
       modeLabel.y = 12;
+
+      if (modeLabel.style.dropShadow) {
+        modeLabel.style.dropShadow.color = resolveAppThemeColorNumber(
+          ctx.theme,
+          "renderer-mode-label-shadow",
+        );
+      }
     },
 
     destroy(): void {

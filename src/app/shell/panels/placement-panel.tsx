@@ -99,6 +99,7 @@ function buildPlacementDeviceSections(appHost: AppHost): readonly PlacementSecti
 
   for (const entity of appHost.workspace.registry.entityDefinitions) {
     if (entity.uiGroup === "hidden") continue;
+    if (entity.tags.includes("不可摆放")) continue;
     const group = groupedByUiGroup.get(entity.uiGroup);
     if (group) {
       group.push(entity);
