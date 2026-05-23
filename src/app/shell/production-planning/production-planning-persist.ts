@@ -81,8 +81,9 @@ function normalizePorts(ports: unknown): ProductionPlanningPort[] {
       typeof record.perMinute === "number" && Number.isFinite(record.perMinute)
         ? record.perMinute
         : 0;
+    const isInfinite = record.isInfinite === true;
     if (!id || !itemId || perMinute <= 0) return [];
-    return [{ id, itemId, perMinute }];
+    return [{ id, itemId, perMinute, ...(isInfinite ? { isInfinite } : {}) }];
   });
 }
 
@@ -107,5 +108,5 @@ function normalizeSewagePolicy(
 }
 
 function clonePort(p: ProductionPlanningPort): ProductionPlanningPort {
-  return { id: p.id, itemId: p.itemId, perMinute: p.perMinute };
+  return { id: p.id, itemId: p.itemId, perMinute: p.perMinute, ...(p.isInfinite === true ? { isInfinite: true } : {}) };
 }

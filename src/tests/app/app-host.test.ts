@@ -22,6 +22,7 @@ import {
   DEFAULT_MODULE_BALANCING_CANVAS_ID,
   DEFAULT_MODULE_BALANCING_STAGE_ID,
   DEFAULT_RIGHT_DOCK_TAB_ID,
+  DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TOOLBOX_DIALOG_TAB_ID,
   MOBILE_LEFT_DOCK_WIDTH,
 } from "@/app/state/state-impl";
@@ -135,6 +136,9 @@ function createWorkbenchStorageSnapshot(options: {
   inspectorDialog?: ReturnType<typeof createDialogStateSnapshot>;
   saveBlueprintDialog?: ReturnType<typeof createDialogStateSnapshot>;
   baseSelectDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  toolboxDockPreference?: "floating" | "bottom";
+  toolboxBottomDockCollapsed?: boolean;
+  toolboxBottomDockHeight?: number;
   toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
   moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
 } = {}) {
@@ -153,6 +157,9 @@ function createWorkbenchStorageSnapshot(options: {
       "base-select": options.baseSelectDialog ?? createDialogStateSnapshot(),
     },
     toolbox: {
+      dockPreference: options.toolboxDockPreference ?? "floating",
+      bottomDockCollapsed: options.toolboxBottomDockCollapsed ?? false,
+      bottomDockHeight: options.toolboxBottomDockHeight ?? DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT,
       wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),
       moduleBalancing: options.moduleBalancing ?? createModuleBalancingStorageSnapshot(),
     },

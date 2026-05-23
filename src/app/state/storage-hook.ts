@@ -19,11 +19,13 @@ import type {
 } from "./state-impl";
 import {
   clampLeftDockWidth,
+  clampToolboxBottomDockHeight,
   createDefaultDialogStateForKey,
   createDefaultModuleBalancingState,
   createDefaultToolboxWikiOpenedPage,
   DIALOG_KEYS,
   isRightDockTabId,
+  isToolboxDockPreference,
   isToolboxWikiDesktopCategory,
   isToolboxWikiMobileFilterOption,
   TOOLBOX_WIKI_MOBILE_FILTER_OPTION_IDS,
@@ -196,6 +198,17 @@ function normalizePersistedToolboxState(
     : {};
 
   return {
+    dockPreference: isToolboxDockPreference(persistedToolboxState.dockPreference)
+      ? persistedToolboxState.dockPreference
+      : fallback.dockPreference,
+    bottomDockCollapsed: typeof persistedToolboxState.bottomDockCollapsed === "boolean"
+      ? persistedToolboxState.bottomDockCollapsed
+      : fallback.bottomDockCollapsed,
+    bottomDockHeight:
+      typeof persistedToolboxState.bottomDockHeight === "number"
+      && Number.isFinite(persistedToolboxState.bottomDockHeight)
+        ? clampToolboxBottomDockHeight(persistedToolboxState.bottomDockHeight)
+        : fallback.bottomDockHeight,
     wiki: normalizePersistedToolboxWikiState(persistedToolboxState.wiki, fallback.wiki),
     moduleBalancing: normalizePersistedModuleBalancingState(
       persistedToolboxState.moduleBalancing,

@@ -346,7 +346,7 @@
   position: absolute;
   top: calc(
     var(--top-bar-height, 48px)
-    + (100% - var(--top-bar-height, 48px) - var(--bottom-bar-height, 28px)) / 2
+    + (100% - var(--top-bar-height, 48px) - var(--canvas-bottom-obstruction-height, var(--bottom-bar-height, 28px))) / 2
   );
   right: calc(var(--right-dock-width, 0px) + 12px);
   z-index: 4;
@@ -413,7 +413,7 @@
 .canvas-left-bottom-toolbar {
   position: absolute;
   left: calc(var(--left-toolbar-width, 68px) + 12px);
-  bottom: calc(var(--bottom-bar-height, 28px) + env(safe-area-inset-bottom, 0px) + 12px);
+  bottom: calc(var(--canvas-bottom-obstruction-height, var(--bottom-bar-height, 28px)) + env(safe-area-inset-bottom, 0px) + 12px);
   z-index: 4;
   display: inline-flex;
   align-items: center;
@@ -475,7 +475,7 @@
   position: absolute;
   grid-area: canvas;
   left: 12px;
-  bottom: calc(var(--bottom-bar-height, 28px) + env(safe-area-inset-bottom, 0px) + 12px);
+  bottom: calc(var(--canvas-bottom-obstruction-height, var(--bottom-bar-height, 28px)) + env(safe-area-inset-bottom, 0px) + 12px);
   z-index: 4;
   display: inline-flex;
   align-items: center;
@@ -483,7 +483,7 @@
 }
 
 .canvas-bottom-left-toolbar.is-offset-for-floating-tools {
-  bottom: calc(var(--bottom-bar-height, 28px) + env(safe-area-inset-bottom, 0px) + 55px);
+  bottom: calc(var(--canvas-bottom-obstruction-height, var(--bottom-bar-height, 28px)) + env(safe-area-inset-bottom, 0px) + 55px);
 }
 
 .canvas-bottom-left-toolbar-button {

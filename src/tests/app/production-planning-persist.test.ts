@@ -59,6 +59,16 @@ describe("production planning persistence", () => {
     await expect(loadPlannerState()).resolves.toEqual(state);
   });
 
+  it("persists infinite external supply rows", async () => {
+    const state = createPlannerState({
+      supplies: [{ id: "supply-1", itemId: "item_iron_nugget", perMinute: 60, isInfinite: true }],
+    });
+
+    await savePlannerState(state);
+
+    await expect(loadPlannerState()).resolves.toEqual(state);
+  });
+
   it("adds default session state when migrating legacy planner data", async () => {
     const legacyState = {
       targets: [{ id: "target-1", itemId: "item_iron_plate", perMinute: 60 }],

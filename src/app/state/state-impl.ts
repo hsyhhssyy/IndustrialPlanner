@@ -95,6 +95,9 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
 }
 
 export interface ToolboxStateReadWrite extends ToolboxState {
+  dockPreference: ToolboxDockPreference;
+  bottomDockCollapsed: boolean;
+  bottomDockHeight: number;
   wiki: ToolboxWikiStateReadWrite;
   moduleBalancing: ModuleBalancingStateReadWrite;
 }
@@ -190,6 +193,25 @@ export const TOOLBOX_DIALOG_TAB_IDS = [
 
 export type ToolboxDialogTabId = typeof TOOLBOX_DIALOG_TAB_IDS[number];
 export const DEFAULT_TOOLBOX_DIALOG_TAB_ID: ToolboxDialogTabId = TOOLBOX_DIALOG_TAB_IDS[0];
+export const TOOLBOX_DOCK_PREFERENCES = ["floating", "bottom"] as const;
+export type ToolboxDockPreference = typeof TOOLBOX_DOCK_PREFERENCES[number];
+export const DEFAULT_TOOLBOX_DOCK_PREFERENCE: ToolboxDockPreference = "floating";
+export const MIN_TOOLBOX_BOTTOM_DOCK_HEIGHT = 220;
+export const DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT = 320;
+export const MAX_TOOLBOX_BOTTOM_DOCK_HEIGHT = 720;
+export const COLLAPSED_TOOLBOX_BOTTOM_DOCK_HEIGHT = 44;
+
+export function isToolboxDockPreference(value: unknown): value is ToolboxDockPreference {
+  return typeof value === "string"
+    && TOOLBOX_DOCK_PREFERENCES.includes(value as ToolboxDockPreference);
+}
+
+export function clampToolboxBottomDockHeight(height: number): number {
+  return Math.min(
+    MAX_TOOLBOX_BOTTOM_DOCK_HEIGHT,
+    Math.max(MIN_TOOLBOX_BOTTOM_DOCK_HEIGHT, Math.round(height)),
+  );
+}
 
 export const TOOLBOX_WIKI_ENTITY_GROUP_CATEGORY_IDS = [
   "basicProduction",
@@ -446,6 +468,9 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
 }
 
 class ToolboxStateReadWriteImpl implements ToolboxStateReadWrite {
+  dockPreference: ToolboxDockPreference = DEFAULT_TOOLBOX_DOCK_PREFERENCE;
+  bottomDockCollapsed = false;
+  bottomDockHeight = DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT;
   wiki: ToolboxWikiStateReadWrite = new ToolboxWikiStateReadWriteImpl();
   moduleBalancing: ModuleBalancingStateReadWrite = createDefaultModuleBalancingState();
 

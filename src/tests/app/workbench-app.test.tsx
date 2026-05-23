@@ -25,6 +25,8 @@ import {
   DEFAULT_MODULE_BALANCING_STAGE_ID,
   DEFAULT_RIGHT_DOCK_TAB_ID,
   DEFAULT_RIGHT_DOCK_WIDTH,
+  COLLAPSED_TOOLBOX_BOTTOM_DOCK_HEIGHT,
+  DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TOOLBOX_DIALOG_TAB_ID,
   MOBILE_LEFT_DOCK_WIDTH,
 } from "@/app/state/state-impl";
@@ -174,6 +176,9 @@ function createWorkbenchStorageSnapshot(options: {
   inspectorDialog?: ReturnType<typeof createDialogStateSnapshot>;
   saveBlueprintDialog?: ReturnType<typeof createDialogStateSnapshot>;
   baseSelectDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  toolboxDockPreference?: "floating" | "bottom";
+  toolboxBottomDockCollapsed?: boolean;
+  toolboxBottomDockHeight?: number;
   toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
   moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
 } = {}) {
@@ -192,6 +197,9 @@ function createWorkbenchStorageSnapshot(options: {
       "base-select": options.baseSelectDialog ?? createDialogStateSnapshot(),
     },
     toolbox: {
+      dockPreference: options.toolboxDockPreference ?? "floating",
+      bottomDockCollapsed: options.toolboxBottomDockCollapsed ?? false,
+      bottomDockHeight: options.toolboxBottomDockHeight ?? DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT,
       wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),
       moduleBalancing: options.moduleBalancing ?? createModuleBalancingStorageSnapshot(),
     },
@@ -404,6 +412,7 @@ describe("WorkbenchApp", () => {
     document.documentElement.removeAttribute("style");
     vi.unstubAllGlobals();
     document.body.classList.remove("is-resizing-left-dock");
+    document.body.classList.remove("is-resizing-toolbox-bottom-dock");
   });
 
   it("applies persisted left dock width to the shell style", () => {
@@ -2336,7 +2345,7 @@ describe("WorkbenchApp", () => {
     );
     expect(
       container.querySelector('button[title="还原帮助"] svg')?.getAttribute("data-workbench-icon"),
-    ).toBe("shrink");
+    ).toBe("dialog-collapse");
 
     const closeButton = container.querySelector(
       '.help-dialog-header button[title="关闭"]',
@@ -2610,6 +2619,203 @@ describe("WorkbenchApp", () => {
         expect(container.querySelector(".toolbox-dialog-placeholder h3")?.textContent).toBe("产线规划");
       });
     */
+
+  it("docks the toolbox to the canvas bottom area, resizes, collapses, reopens, and undocks", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const toolboxButton = container.querySelector(
+      'button[title="工具箱"]',
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      toolboxButton?.click();
+    });
+
+    const dockButton = container.querySelector(
+      '.toolbox-dialog-header button[title="停靠到底部"]',
+    ) as HTMLButtonElement | null;
+
+    expect(container.querySelector(".toolbox-dialog")).not.toBeNull();
+    expect(dockButton).not.toBeNull();
+
+    act(() => {
+      dockButton?.click();
+    });
+
+    const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
+    let bottomDock = container.querySelector(".toolbox-bottom-dock") as HTMLElement | null;
+    const resizeHandle = container.querySelector(".toolbox-bottom-dock-resize-handle") as HTMLDivElement | null;
+
+    expect(container.querySelector(".toolbox-dialog")).toBeNull();
+    expect(bottomDock).not.toBeNull();
+    expect(appHost.internalState.workbench.toolbox.dockPreference).toBe("bottom");
+    expect(workbench?.style.getPropertyValue("--toolbox-bottom-dock-height")).toBe(`${DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT}px`);
+    expect(workbench?.style.getPropertyValue("--canvas-bottom-obstruction-height")).toBe(
+      "calc(var(--bottom-bar-height, 28px) + var(--toolbox-bottom-dock-height, 0px))",
+    );
+    expect(container.querySelector("#toolbox-bottom-dock-tab-item-encyclopedia")?.getAttribute("aria-selected")).toBe("true");
+    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        toolboxDialog: createDialogStateSnapshot({
+          visible: true,
+          activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID,
+        }),
+        toolboxDockPreference: "bottom",
+      })),
+    );
+
+    act(() => {
+      dispatchPointerEvent(resizeHandle!, "pointerdown", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 0,
+        clientY: 600,
+        button: 0,
+        buttons: 1,
+      });
+      dispatchWindowPointerEvent("pointermove", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 0,
+        clientY: 540,
+        button: 0,
+        buttons: 1,
+      });
+      dispatchWindowPointerEvent("pointerup", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 0,
+        clientY: 540,
+        button: 0,
+      });
+    });
+
+    expect(appHost.internalState.workbench.toolbox.bottomDockHeight).toBe(380);
+    expect(workbench?.style.getPropertyValue("--toolbox-bottom-dock-height")).toBe("380px");
+
+    const collapseButton = container.querySelector(
+      '.toolbox-bottom-dock-actions button[title="折叠工具箱"]',
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      collapseButton?.click();
+    });
+
+    bottomDock = container.querySelector(".toolbox-bottom-dock") as HTMLElement | null;
+
+    expect(appHost.internalState.workbench.toolbox.bottomDockCollapsed).toBe(true);
+    expect(bottomDock?.classList.contains("is-collapsed")).toBe(true);
+    expect(workbench?.style.getPropertyValue("--toolbox-bottom-dock-height")).toBe(`${COLLAPSED_TOOLBOX_BOTTOM_DOCK_HEIGHT}px`);
+    expect(container.querySelector(".toolbox-bottom-dock-body")).toBeNull();
+
+    // dock 状态下不再有独立的关闭按钮
+    expect(
+      container.querySelector('.toolbox-bottom-dock-actions button[title="关闭"]'),
+    ).toBeNull();
+
+    act(() => {
+      appHost.internalActions.closeDialog("toolbox");
+    });
+
+    expect(appHost.internalState.workbench.dialogState.toolbox.visible).toBe(false);
+    expect(appHost.internalState.workbench.toolbox.dockPreference).toBe("bottom");
+    expect(container.querySelector(".toolbox-bottom-dock")).toBeNull();
+    expect(workbench?.style.getPropertyValue("--toolbox-bottom-dock-height")).toBe("0px");
+
+    act(() => {
+      toolboxButton?.click();
+    });
+
+    expect(container.querySelector(".toolbox-bottom-dock")).not.toBeNull();
+    expect(appHost.internalState.workbench.toolbox.bottomDockCollapsed).toBe(false);
+    expect(workbench?.style.getPropertyValue("--toolbox-bottom-dock-height")).toBe("380px");
+
+    const undockButton = container.querySelector(
+      '.toolbox-bottom-dock-actions button[title="取消停靠"]',
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      undockButton?.click();
+    });
+
+    expect(appHost.internalState.workbench.toolbox.dockPreference).toBe("floating");
+    expect(container.querySelector(".toolbox-bottom-dock")).toBeNull();
+    expect(container.querySelector(".toolbox-dialog")).not.toBeNull();
+  });
+
+  it("temporarily falls back to the floating toolbox on phones and restores bottom dock on tablets", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 1024,
+      height: 768,
+      userAgent:
+        "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        toolboxDialog: createDialogStateSnapshot({
+          visible: true,
+          activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID,
+        }),
+        toolboxDockPreference: "bottom",
+      })),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
+    expect(container.querySelector(".toolbox-bottom-dock")).not.toBeNull();
+    expect(container.querySelector(".toolbox-dialog")).toBeNull();
+
+    setViewport({
+      width: 844,
+      height: 390,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    act(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
+    expect(appHost.internalState.workbench.toolbox.dockPreference).toBe("bottom");
+    expect(container.querySelector(".toolbox-bottom-dock")).toBeNull();
+    expect(container.querySelector(".toolbox-dialog")).not.toBeNull();
+    expect(container.querySelector('.toolbox-dialog-header button[title="停靠到底部"]')).toBeNull();
+
+    setViewport({
+      width: 1024,
+      height: 768,
+      userAgent:
+        "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    act(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
+    expect(appHost.internalState.workbench.toolbox.dockPreference).toBe("bottom");
+    expect(container.querySelector(".toolbox-bottom-dock")).not.toBeNull();
+    expect(container.querySelector(".toolbox-dialog")).toBeNull();
+  });
 
   it("opens the global encyclopedia picker and resolves the selected item", async () => {
     const workspace = createWorkspace();

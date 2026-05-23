@@ -242,6 +242,10 @@
   gap: 6px;
 }
 
+.production-planning-line-row.has-infinite-toggle {
+  grid-template-columns: minmax(0, 1fr) 94px 32px 32px;
+}
+
 .production-planning-item-picker-button {
   display: grid;
   grid-template-columns: 26px minmax(0, 1fr);
@@ -298,6 +302,19 @@
   border-radius: 8px;
   background: var(--surface-1);
   color: var(--text-0);
+}
+
+.production-planning-rate-input input:disabled,
+.production-planning-icon-button:disabled {
+  color: var(--text-2);
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.production-planning-infinite-toggle.is-active {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
 }
 
 .production-planning-source-pill,

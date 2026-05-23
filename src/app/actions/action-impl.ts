@@ -25,6 +25,7 @@ import {
   type CanvasTopLeftCornerToolbarButtonId,
   type CanvasTopLeftCornerToolbarShowButtonId,
   clampLeftDockWidth,
+  clampToolboxBottomDockHeight,
   createDefaultDialogStateForKey,
   DEFAULT_RIGHT_DOCK_WIDTH,
   DIALOG_KEYS,
@@ -34,6 +35,7 @@ import {
   resolveLeftDockWidthForScreenProfile,
   TOOLBOX_DIALOG_TAB_IDS,
   type ActivePanel,
+  type ToolboxDockPreference,
   type UiStateReadWrite,
 } from "../state/state-impl";
 
@@ -51,6 +53,9 @@ export interface AppInternalAction {
   setDialogTab: (dialogKey: string, tabId: string) => void;
   setDialogOffset: (dialogKey: string, offsetX: number, offsetY: number) => void;
   setDialogSize: (dialogKey: string, width: number | null, height: number | null) => void;
+  setToolboxDockPreference: (preference: ToolboxDockPreference) => void;
+  setToolboxBottomDockCollapsed: (collapsed: boolean) => void;
+  setToolboxBottomDockHeight: (height: number) => void;
   setActivePanel: (panel: ActivePanel) => void;
   setActiveTool: (activeTool: ActiveTool) => void;
   showCanvasFloatingToolbar: (
@@ -180,6 +185,10 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
     dialogState.visible = true;
 
+    if (target.dialogKey === "toolbox") {
+      this.internalState.workbench.toolbox.bottomDockCollapsed = false;
+    }
+
     if (target.tabId !== null) {
       const nextTab = normalizeDialogTab(target.dialogKey, target.tabId);
 
@@ -274,6 +283,35 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
     dialogState.width = width === null ? null : Math.round(width);
     dialogState.height = height === null ? null : Math.round(height);
+  });
+
+  public readonly setToolboxDockPreference: AppInternalAction["setToolboxDockPreference"] = action((preference) => {
+    if (this.internalState.workbench.toolbox.dockPreference === preference) {
+      return;
+    }
+
+    this.internalState.workbench.toolbox.dockPreference = preference;
+    this.internalState.workbench.toolbox.bottomDockCollapsed = false;
+
+    if (preference === "bottom") {
+      this.internalState.workbench.dialogState.toolbox.maximized = false;
+    }
+  });
+
+  public readonly setToolboxBottomDockCollapsed: AppInternalAction["setToolboxBottomDockCollapsed"] = action((collapsed) => {
+    if (this.internalState.workbench.toolbox.bottomDockCollapsed === collapsed) {
+      return;
+    }
+
+    this.internalState.workbench.toolbox.bottomDockCollapsed = collapsed;
+  });
+
+  public readonly setToolboxBottomDockHeight: AppInternalAction["setToolboxBottomDockHeight"] = action((height) => {
+    if (!Number.isFinite(height)) {
+      return;
+    }
+
+    this.internalState.workbench.toolbox.bottomDockHeight = clampToolboxBottomDockHeight(height);
   });
 
   public readonly setActivePanel: AppInternalAction["setActivePanel"] = action((panel) => {

@@ -10,6 +10,10 @@ import {
   DYNAMIC_SIMULATION_TICK_RATES,
   isDynamicTickRateCompatibleWithTransferUnits,
 } from "../tick-rate";
+import {
+  BELT_TRANSPORT_DURATION_SECONDS,
+  PIPE_TRANSPORT_DURATION_SECONDS,
+} from "@/domain/registry";
 
 export interface TransportRecipeTiming {
   readonly durationTicks: number;
@@ -33,7 +37,7 @@ export function resolveTransportRecipeTiming(
     return null;
   }
 
-  const durationSeconds = isBelt ? 2 : 0.5;
+  const durationSeconds = isBelt ? BELT_TRANSPORT_DURATION_SECONDS : PIPE_TRANSPORT_DURATION_SECONDS;
   return {
     durationTicks: Math.max(1, Math.round(durationSeconds * topology.standardTickRate)),
     recipeIdSuffix: isBelt ? "dynamic-belt-transfer" : "dynamic-pipe-transfer",

@@ -843,26 +843,26 @@
 
 .base-select-dialog {
   width: min(560px, 100%);
-  height: min(560px, 100%);
+  height: min(520px, 100%);
 }
 
 .base-select-dialog-body {
   display: grid;
   min-height: 0;
-  padding: 14px;
+  padding: 12px;
 }
 
 .base-select-dialog-content {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 8px;
   min-height: 0;
   height: 100%;
 }
 
 .base-select-group-list {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   align-content: start;
   min-height: 0;
   overflow: auto;
@@ -871,33 +871,34 @@
 
 .base-select-group {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
 .base-select-group h3 {
   margin: 0;
   color: var(--text-1);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
 }
 
 .base-select-option-list {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   min-width: 0;
 }
 
 .base-select-option {
   display: grid;
-  min-width: 0;
-  width: 100%;
-  padding: 10px 12px;
+  min-width: 120px;
+  padding: 7px 10px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--surface-1);
   color: var(--text-0);
   text-align: left;
+  flex: 1 1 0;
 }
 
 .base-select-option:not(:disabled):hover {
@@ -916,30 +917,37 @@
   min-width: 0;
 }
 
-.base-select-option-name,
+.base-select-option-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
 .base-select-option-meta {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  color: var(--text-2);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.base-select-option-meta-line {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.base-select-option-name {
-  font-size: 0.9rem;
-  font-weight: 650;
-}
-
-.base-select-option-meta {
-  color: var(--text-2);
-  font-size: 0.78rem;
-}
-
 .base-select-actions {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 10px;
-  padding-top: 12px;
+  gap: 8px;
+  padding-top: 8px;
   border-top: 1px solid var(--line);
 }
 

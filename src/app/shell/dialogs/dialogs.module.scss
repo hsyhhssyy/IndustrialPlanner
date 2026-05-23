@@ -245,6 +245,127 @@
   padding: 14px;
 }
 
+.toolbox-bottom-dock {
+  position: relative;
+  grid-area: toolbox-bottom;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+}
+
+.toolbox-bottom-dock.is-collapsed {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.toolbox-bottom-dock-resize-handle {
+  position: absolute;
+  inset: -4px 0 auto;
+  z-index: 2;
+  height: 8px;
+  cursor: row-resize;
+}
+
+.toolbox-bottom-dock-resize-handle::before {
+  content: "";
+  position: absolute;
+  inset: 3px 0 auto;
+  height: 1px;
+  background: var(--transparent);
+  transition: background-color 120ms ease;
+}
+
+.toolbox-bottom-dock-resize-handle:hover::before {
+  background: var(--dock-resize-hover);
+}
+
+:global(body.is-resizing-toolbox-bottom-dock),
+:global(body.is-resizing-toolbox-bottom-dock *) {
+  cursor: row-resize !important;
+  user-select: none;
+}
+
+.toolbox-bottom-dock-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
+}
+
+.toolbox-bottom-dock-title {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.toolbox-bottom-dock-title h2 {
+  margin: 0;
+  color: var(--text-0);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.toolbox-bottom-dock-tab-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.toolbox-bottom-dock-tab {
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-1);
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.toolbox-bottom-dock-tab:hover,
+.toolbox-bottom-dock-tab.is-active {
+  background: var(--surface-3);
+  color: var(--text-0);
+}
+
+.toolbox-bottom-dock-tab.is-active {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.toolbox-bottom-dock-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.toolbox-bottom-dock-body {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.toolbox-bottom-dock-tab-panel {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .help-dialog-placeholder,
 .toolbox-dialog-placeholder {
   display: grid;

@@ -1,6 +1,7 @@
 import type { EditorAction } from "@/domain/editor/editor-action";
 import type { WorldDocument } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { resolveBaseBuiltinEntities } from "@/domain/registry/types/base-definition";
 import type { GridPoint } from "@/domain/shared/grid";
 import type {
   CreateLogisticsDraftStartOptions,
@@ -117,8 +118,13 @@ export function createEditorLogisticsActions(
       const currentDocument = logisticsContext.document.getSnapshot();
 
       if (draft.target?.type === "device-port") {
-        const targetEntity = currentDocument.entities[draft.target.entityId];
-        if (targetEntity !== undefined) {
+        const targetEntity = findEntityById({
+          entityId: draft.target.entityId,
+          document: currentDocument,
+          drafts: [],
+          baseDefinitions: logisticsContext.workspace.registry.baseDefinitions,
+        });
+        if (targetEntity !== null) {
           const targetDefinition = logisticsContext.entityDefinitionMap.get(
             targetEntity.definitionId,
           );
@@ -143,6 +149,7 @@ export function createEditorLogisticsActions(
         document: currentDocument,
         drafts: [],
         entityDefinitionMap: logisticsContext.entityDefinitionMap,
+        baseDefinitions: logisticsContext.workspace.registry.baseDefinitions,
       });
 
       if (options.routeMode.type === "freehand") {
@@ -158,6 +165,7 @@ export function createEditorLogisticsActions(
           kind: draft.kind,
           document: currentDocument,
           entityDefinitionMap: logisticsContext.entityDefinitionMap,
+          baseDefinitions: logisticsContext.workspace.registry.baseDefinitions,
         });
 
         const target: DevicePortEndpoint | null = onPathPort
@@ -222,6 +230,7 @@ export function createEditorLogisticsActions(
         kind: draft.kind,
         document: currentDocument,
         entityDefinitionMap: logisticsContext.entityDefinitionMap,
+        baseDefinitions: logisticsContext.workspace.registry.baseDefinitions,
       });
 
       const target = onPathPort ?? cursorTarget;
@@ -350,8 +359,13 @@ function resolveCreateSourceEndpoint(
 
   switch (options.source.type) {
     case "device": {
-      const entity = currentDocument.entities[options.source.entityId];
-      if (entity === undefined) {
+      const entity = findEntityById({
+        entityId: options.source.entityId,
+        document: currentDocument,
+        drafts: [],
+        baseDefinitions: context.workspace.registry.baseDefinitions,
+      });
+      if (entity === null) {
         return null;
       }
 
@@ -404,8 +418,13 @@ function resolveMoveSourceEndpoint(options: {
   }
 
   const currentDocument = options.context.document.getSnapshot();
-  const entity = currentDocument.entities[source.entityId];
-  if (entity === undefined) {
+  const entity = findEntityById({
+    entityId: source.entityId,
+    document: currentDocument,
+    drafts: [],
+    baseDefinitions: options.context.workspace.registry.baseDefinitions,
+  });
+  if (entity === null) {
     return null;
   }
 
@@ -495,6 +514,7 @@ function rebuildLogisticsDraft(options: {
         entityId: options.replacingEntityId,
         document: currentDocument,
         drafts: [],
+        baseDefinitions: options.context.workspace.registry.baseDefinitions,
       });
   const replacingDefinition = replacingEntity === null
     ? null
@@ -580,6 +600,7 @@ function shouldKeepDraftWhenFirstStepMovesTowardFixedSourceInput(options: {
         entityId: options.draft.replacingEntityId,
         document: currentDocument,
         drafts: [],
+        baseDefinitions: options.context.workspace.registry.baseDefinitions,
       });
   const replacingDefinition = replacingEntity === null
     ? null
@@ -622,6 +643,10 @@ function createDraftEntities(options: {
 }): DraftEntity[] {
   const reservedIds = new Set<string>([
     ...Object.keys(options.currentDocument.entities),
+    ...resolveBaseBuiltinEntities({
+      baseDefinitions: options.context.workspace.registry.baseDefinitions,
+      baseId: options.currentDocument.baseId,
+    }).map((entity) => entity.id),
     ...options.context.state.drafts
       .filter((entity) => !options.previousPreviewDraftIds.has(entity.id))
       .map((entity) => entity.id),
@@ -722,8 +747,13 @@ function doesRouteCrossTargetDevice(options: {
   cells: readonly LogisticsPathCell[];
 }): boolean {
   const currentDocument = options.context.document.getSnapshot();
-  const targetEntity = currentDocument.entities[options.target.entityId];
-  if (targetEntity === undefined) {
+  const targetEntity = findEntityById({
+    entityId: options.target.entityId,
+    document: currentDocument,
+    drafts: [],
+    baseDefinitions: options.context.workspace.registry.baseDefinitions,
+  });
+  if (targetEntity === null) {
     return false;
   }
 

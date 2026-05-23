@@ -9,6 +9,10 @@ import {
 import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { BaseDefinition } from "@/domain/registry/types/base-definition";
+import {
+  isBaseBuiltinEntityId,
+  resolveBaseBuiltinEntities,
+} from "@/domain/registry/types/base-definition";
 import type { GridRect } from "@/domain/shared/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
@@ -71,6 +75,7 @@ export function resolvePlacementValidations(options: {
     document: options.document,
     state: options.state,
     definitionMap,
+    registry: options.workspace.registry,
   });
   const mutableReasonsByEntityId = new Map<string, EntityPlacementValidationReason[]>(
     entries.map((entry) => [entry.entity.id, []]),
@@ -111,10 +116,15 @@ function resolveValidationEntries(options: {
   document: WorldDocument;
   state: EditorStateReadWrite;
   definitionMap: ReadonlyMap<string, EntityDefinition>;
+  registry: WorkspaceContract["registry"];
 }): PlacementValidationEntry[] {
   const ghostEntityIds = new Set(options.state.collections[EntityCollectionType.ghost]);
   const entities = [
     ...resolveOrderedDocumentEntities(options.document),
+    ...resolveBaseBuiltinEntities({
+      baseDefinitions: options.registry.baseDefinitions,
+      baseId: options.document.baseId,
+    }),
     ...options.state.drafts,
   ];
   const seenEntityIds = new Set<string>();
@@ -183,6 +193,10 @@ function applyOutsideBaseReasons(options: {
   };
 
   for (const entry of options.entries) {
+    if (isBaseBuiltinEntityId(entry.entity.id)) {
+      continue;
+    }
+
     if (!hasPlacementBehavior(
       entry.definition,
       PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase,
@@ -210,6 +224,18 @@ function applyOverlapReasons(options: {
     for (let rightIndex = leftIndex + 1; rightIndex < options.entries.length; rightIndex += 1) {
       const right = options.entries[rightIndex];
       if (right === undefined || !areGridRectsIntersecting(left.gridRect, right.gridRect)) {
+        continue;
+      }
+
+      const leftIsBaseBuiltin = isBaseBuiltinEntityId(left.entity.id);
+      const rightIsBaseBuiltin = isBaseBuiltinEntityId(right.entity.id);
+      if (leftIsBaseBuiltin || rightIsBaseBuiltin) {
+        if (!leftIsBaseBuiltin) {
+          appendReason(options.reasonsByEntityId, left.entity.id, "overlap");
+        }
+        if (!rightIsBaseBuiltin) {
+          appendReason(options.reasonsByEntityId, right.entity.id, "overlap");
+        }
         continue;
       }
 
@@ -245,6 +271,10 @@ function applyWarehouseConnectionReasons(options: {
   });
 
   for (const entry of options.entries) {
+    if (isBaseBuiltinEntityId(entry.entity.id)) {
+      continue;
+    }
+
     if (!hasPlacementBehavior(entry.definition, PLACEMENT_BEHAVIOR_TYPE.mustConnectToHub)) {
       continue;
     }

@@ -6,6 +6,7 @@ import {
   flattenProductionPlanningItemNodes as flattenNodes,
   type ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
+import { buildProductionPlanningTreeRows } from "@/app/shell/production-planning/production-planning-panel";
 import type { ProductionPlanningPort } from "@/app/shell/production-planning/production-planning-model";
 import { createRegistryContract } from "@/registry";
 
@@ -14,6 +15,15 @@ function port(itemId: string, perMinute: number): ProductionPlanningPort {
     id: itemId,
     itemId,
     perMinute,
+  };
+}
+
+function infinitePort(itemId: string): ProductionPlanningPort {
+  return {
+    id: `${itemId}-infinite`,
+    itemId,
+    perMinute: 60,
+    isInfinite: true,
   };
 }
 
@@ -67,6 +77,62 @@ describe("production planning model", () => {
     expect(root.recipeNode?.inputItems[0]?.isInfiniteSource).toBe(false);
     expect(root.recipeNode?.inputItems[0]?.recipeNode).not.toBeNull();
     expect(root.recipeNode?.inputItems[0]?.recipeNode?.recipeId).toBe("r_miner_iron_ore_basic");
+  });
+
+  it("uses recipe surplus before finite external supply", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [
+        port("item_liquid_xiranite_poly", 30),
+        port("item_liquid_xiranite_lowpoly", 60),
+      ],
+      supplies: [
+        port("item_liquid_xiranite", 30),
+        port("item_liquid_xiranite_lowpoly", 60),
+      ],
+      infiniteItemIds: makeInfiniteItemIds(index, DEFAULT_SOURCE_CONFIG),
+      recipeChoices: new Map([[
+        "item_liquid_xiranite_poly",
+        "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic",
+      ]]),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    const lowpolyRoot = result.roots.find((root) => root.itemId === "item_liquid_xiranite_lowpoly");
+    expect(lowpolyRoot?.supply.surplus).toBe(30);
+    expect(lowpolyRoot?.supply.manual).toBe(30);
+    expect(lowpolyRoot?.producedPerMinute).toBe(0);
+  });
+
+  it("uses infinite external supply for non-natural resources", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_iron_nugget", 120)],
+      supplies: [infinitePort("item_iron_nugget")],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    const root = result.roots[0];
+    expect(root?.isInfiniteSource).toBe(true);
+    expect(root?.suppliedPerMinute).toBe(120);
+    expect(root?.recipeNode).toBeNull();
+  });
+
+  it("ignores infinite external supply flags for natural resources", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_iron_ore", 60)],
+      supplies: [infinitePort("item_iron_ore")],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    const root = result.roots[0];
+    expect(root?.isInfiniteSource).toBe(false);
+    expect(root?.recipeNode?.recipeId).toBe("r_miner_iron_ore_basic");
   });
 
   it("does not auto-select manual-only iron enriched powder block recipe", () => {
@@ -144,5 +210,81 @@ describe("production planning model", () => {
     const extItems = flattenNodes(externalResult.roots);
     const extSewageNode = extItems.find((node) => node.itemId === "item_liquid_sewage");
     expect(extSewageNode?.isInfiniteSource).toBe(true);
+  });
+
+  it("marks only the leftover output as byproduct and nests it under waste treatment", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_equip_script_4_2", 1)],
+      supplies: [],
+      infiniteItemIds: new Set(["item_liquid_sewage"]),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    expect(result.byproductItemIds.has("item_liquid_xiranite_poly")).toBe(false);
+    expect(result.byproductItemIds.has("item_liquid_xiranite_lowpoly")).toBe(true);
+
+    const rows = buildProductionPlanningTreeRows(result, "item");
+    const usedWasteLiquidRow = rows.find((row) => (
+      row.kind === "recipe"
+      && row.recipeId === "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
+      && row.targetItemId === "item_liquid_xiranite_poly"
+    ));
+    const leftoverWasteLiquidRow = rows.find((row) => (
+      row.kind === "recipe"
+      && row.recipeId === "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
+      && row.targetItemId === "item_liquid_xiranite_lowpoly"
+    ));
+    const treatmentRow = rows.find((row) => (
+      row.kind === "recipe"
+      && row.recipeId === "r_chrono_wastewater_treatment_void_inert_xiranite_waste_liquid_basic"
+      && row.targetItemId === "item_liquid_xiranite_lowpoly"
+    ));
+
+    expect(usedWasteLiquidRow?.isByproduct).toBe(false);
+    expect(leftoverWasteLiquidRow?.isByproduct).toBe(true);
+    expect(treatmentRow?.isByproduct).toBe(true);
+    expect(treatmentRow?.depth).toBe(0);
+    expect(treatmentRow?.childIds).toContain(leftoverWasteLiquidRow?.id);
+    expect(leftoverWasteLiquidRow?.parentIds).toEqual([treatmentRow?.id]);
+  });
+
+  it("does not mark productive pumped acid as byproduct when acid byproducts are dumped", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_equip_script_4_2", 1)],
+      supplies: [],
+      infiniteItemIds: new Set(["item_liquid_sewage"]),
+      recipeChoices: new Map(),
+      sourceConfig: { ...DEFAULT_SOURCE_CONFIG, acidPolicy: "dump-byproduct" },
+    }, index);
+
+    expect(result.byproductItemIds.has("item_liquid_acid")).toBe(true);
+
+    const rows = buildProductionPlanningTreeRows(result, "item");
+    const pumpedAcidRow = rows.find((row) => (
+      row.kind === "recipe"
+      && row.recipeId === "r_pump_acid_basic"
+      && row.targetItemId === "item_liquid_acid"
+    ));
+    const purifierByproductAcidRow = rows.find((row) => (
+      row.kind === "recipe"
+      && row.recipeId === "r_liquid_purifier_acid_and_copper_enr_from_copper_basic"
+      && row.targetItemId === "item_liquid_acid"
+    ));
+    const dumperRow = rows.find((row) => (
+      row.kind === "recipe"
+      && row.recipeId === "r_dumper_void_liquid_acid_basic"
+      && row.targetItemId === "item_liquid_acid"
+    ));
+
+    expect(pumpedAcidRow).toBeDefined();
+    expect(pumpedAcidRow?.isByproduct).toBe(false);
+    expect(pumpedAcidRow?.parentIds.length).toBeGreaterThan(0);
+    expect(purifierByproductAcidRow?.isByproduct).toBe(true);
+    expect(dumperRow?.isByproduct).toBe(true);
+    expect(dumperRow?.depth).toBe(0);
+    expect(dumperRow?.childIds).toContain(purifierByproductAcidRow?.id);
   });
 });

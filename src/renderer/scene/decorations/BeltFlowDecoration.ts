@@ -12,6 +12,8 @@ import {
   resolveViewportRectFromWorldGridRect,
 } from "@/shared/geometry/viewport-transform"
 
+import { BELT_TRANSPORT_DURATION_SECONDS } from "@/domain/registry";
+
 import type { DecorationLayer } from "./DecorationLayer"
 import type { DecorationSyncContext } from "./DecorationSyncContext"
 import {
@@ -26,7 +28,7 @@ import {
   type BeltVisualPathEntry,
 } from "./BeltVisualGeometry"
 
-const BELT_VISUAL_SPEED_CELLS_PER_SECOND = 0.5
+const BELT_VISUAL_SPEED_CELLS_PER_SECOND = 1 / BELT_TRANSPORT_DURATION_SECONDS
 const BELT_HIGHLIGHT_ENABLED = false
 const HIGHLIGHT_TEXTURE_KEY = "texture-belt-highlight-strip-texture"
 const HIGHLIGHT_SPEED_MULTIPLIER = 2

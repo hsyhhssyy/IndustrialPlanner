@@ -152,6 +152,11 @@ export type MessageKey =
   | "toolboxDialog.empty"
   | "toolboxDialog.maximize"
   | "toolboxDialog.restore"
+  | "toolboxDialog.dockToBottom"
+  | "toolboxDialog.undock"
+  | "toolboxDialog.collapseBottomDock"
+  | "toolboxDialog.expandBottomDock"
+  | "toolboxDialog.resizeBottomDock"
   | "debugLogDialog.title"
   | "debugLogDialog.empty"
   | "debugLogDialog.copy"
@@ -436,6 +441,11 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "toolboxDialog.empty": "当前没有可显示的工具箱内容。",
     "toolboxDialog.maximize": "最大化工具箱",
     "toolboxDialog.restore": "还原工具箱",
+    "toolboxDialog.dockToBottom": "停靠到底部",
+    "toolboxDialog.undock": "取消停靠",
+    "toolboxDialog.collapseBottomDock": "折叠工具箱",
+    "toolboxDialog.expandBottomDock": "展开工具箱",
+    "toolboxDialog.resizeBottomDock": "调整工具箱高度",
     "debugLogDialog.title": "调试日志",
     "debugLogDialog.empty": "当前还没有捕获到调试日志。",
     "debugLogDialog.copy": "复制日志",
@@ -502,6 +512,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "productionPlanning.modify": "返回修改",
     "productionPlanning.emptyLines": "暂无条目",
     "productionPlanning.perMinute": "每分钟",
+    "productionPlanning.infinite": "无穷",
+    "productionPlanning.infiniteNaturalDisabled": "自然资源不可设置无穷",
     "productionPlanning.remove": "移除",
     "productionPlanning.sourcePolicy": "来源策略",
     "productionPlanning.naturalResources": "基础资源",
@@ -552,6 +564,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "productionPlanning.rate": "速率",
     "productionPlanning.status": "状态",
     "productionPlanning.shared": "共享",
+    "productionPlanning.byproduct": "副产物",
     "productionPlanning.producedBy": "生产自",
     "productionPlanning.usedBy": "消耗于",
     "helpDialog.title": "帮助",
@@ -831,6 +844,11 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "toolboxDialog.empty": "There is no toolbox content to show right now.",
     "toolboxDialog.maximize": "Maximize Toolbox",
     "toolboxDialog.restore": "Restore Toolbox",
+    "toolboxDialog.dockToBottom": "Dock to Bottom",
+    "toolboxDialog.undock": "Undock",
+    "toolboxDialog.collapseBottomDock": "Collapse Toolbox",
+    "toolboxDialog.expandBottomDock": "Expand Toolbox",
+    "toolboxDialog.resizeBottomDock": "Resize Toolbox",
     "debugLogDialog.title": "Debug Logs",
     "debugLogDialog.empty": "No debug logs have been captured yet.",
     "debugLogDialog.copy": "Copy Logs",
@@ -897,6 +915,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "productionPlanning.modify": "Back",
     "productionPlanning.emptyLines": "No entries",
     "productionPlanning.perMinute": "Per Minute",
+    "productionPlanning.infinite": "Infinite",
+    "productionPlanning.infiniteNaturalDisabled": "Basic resources cannot be infinite supply",
     "productionPlanning.remove": "Remove",
     "productionPlanning.sourcePolicy": "Source Policy",
     "productionPlanning.naturalResources": "Basic Resources",
@@ -947,6 +967,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "productionPlanning.rate": "Rate",
     "productionPlanning.status": "Status",
     "productionPlanning.shared": "Shared",
+    "productionPlanning.byproduct": "Byproduct",
     "productionPlanning.producedBy": "Produced By",
     "productionPlanning.usedBy": "Used By",
     "helpDialog.title": "Help",

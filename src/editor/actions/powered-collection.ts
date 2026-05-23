@@ -8,6 +8,7 @@ import {
   resolvePowerRangeGridRect,
 } from "@/shared/geometry/power-range";
 
+import { resolveListedEntities } from "../entity-resolvers";
 import type { EditorStateReadWrite } from "../state-impl";
 
 export function syncPoweredEntityCollection(options: {
@@ -21,7 +22,10 @@ export function syncPoweredEntityCollection(options: {
       definition,
     ]),
   );
-  const entities = resolveOrderedDocumentEntities(options.document);
+  const entities = resolveOrderedDocumentEntities({
+    document: options.document,
+    workspace: options.workspace,
+  });
   const powerRangeRects = entities.flatMap((entity) => {
     const definition = definitionMap.get(entity.definitionId);
     if (definition === undefined) {
@@ -57,11 +61,14 @@ export function syncPoweredEntityCollection(options: {
   options.state.collections[EntityCollectionType.powered].replace(poweredEntityIds);
 }
 
-function resolveOrderedDocumentEntities(document: WorldDocument): WorldEntity[] {
-  return document.entityOrder.flatMap((entityId) => {
-    const entity = document.entities[entityId];
-
-    return entity === undefined ? [] : [entity];
+function resolveOrderedDocumentEntities(options: {
+  document: WorldDocument;
+  workspace: WorkspaceContract;
+}): readonly WorldEntity[] {
+  return resolveListedEntities({
+    document: options.document,
+    drafts: [],
+    baseDefinitions: options.workspace.registry.baseDefinitions,
   });
 }
 

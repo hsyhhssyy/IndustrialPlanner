@@ -30,6 +30,7 @@ export function createEditorLogisticsQueries(
         document: context.document.getSnapshot(),
         drafts: [],
         entityDefinitionMap,
+        baseDefinitions: context.workspace.registry.baseDefinitions,
       });
     },
     canCreateLogisticsDraftStartHere: (gridPoint, kind) => {
@@ -39,6 +40,7 @@ export function createEditorLogisticsQueries(
         document: context.document.getSnapshot(),
         drafts: [],
         entityDefinitionMap,
+        baseDefinitions: context.workspace.registry.baseDefinitions,
       }) !== null;
     },
   };

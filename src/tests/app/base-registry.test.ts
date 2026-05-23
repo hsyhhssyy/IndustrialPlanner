@@ -1,6 +1,10 @@
 import { BASE_DEFINITIONS } from "@/registry/base-definition";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import { createRegistryContract } from "@/registry";
+import {
+  buildBaseBuiltinEntityId,
+  type BaseDefinition,
+} from "@/domain/registry/types/base-definition";
 import { describe, expect, it } from "vitest";
 
 describe("createRegistryContract", () => {
@@ -136,5 +140,83 @@ describe("createRegistryContract", () => {
       const slotGroupIds = (inspector as { slotGroupIds: readonly string[] }).slotGroupIds;
       expect([...slotGroupIds].sort()).toEqual([...boundStorageSlotGroupIds].sort());
     }
+  });
+
+  it("assigns bus source + segments to valley4 protocol core and 5 x-segments to the other three bases", () => {
+    const VALLEY4_BASE_IDS = [
+      "valley4_protocol_core",
+      "valley4_refugee_shelter",
+      "valley4_infra_outpost",
+      "valley4_rebuilt_command",
+    ] as const;
+
+    const valley4Definitions = BASE_DEFINITIONS.filter((definition) =>
+      VALLEY4_BASE_IDS.includes(definition.id as (typeof VALLEY4_BASE_IDS)[number]),
+    );
+
+    expect(valley4Definitions).toHaveLength(4);
+
+    // 其他三个基地有 5 个 X 方向基段，无源桩
+    const nonCoreDefinitions = valley4Definitions.filter(
+      (definition) => definition.id !== "valley4_protocol_core",
+    );
+    for (const definition of nonCoreDefinitions) {
+      expect(definition.builtinEntities).toBeDefined();
+      expect(definition.builtinEntities).toHaveLength(5);
+
+      for (let index = 0; index < 5; index += 1) {
+        const builtin = definition.builtinEntities![index]!;
+        expect(builtin.definitionId).toBe("item_port_log_hongs_bus");
+        expect(builtin.position).toEqual({ x: index * 8, y: -4 });
+        expect(builtin.rotation).toBe(90);
+      }
+    }
+
+    // 协议核心区有源桩 + X 方向 9 个基段 + Y 方向 9 个基段
+    const protocolCore = valley4Definitions.find(
+      (definition) => definition.id === "valley4_protocol_core",
+    )!;
+    expect(protocolCore.builtinEntities).toHaveLength(19);
+
+    const source = protocolCore.builtinEntities![0]!;
+    expect(source.definitionId).toBe("item_port_log_hongs_bus_source");
+    expect(source.position).toEqual({ x: -4, y: -4 });
+
+    const xSegments = protocolCore.builtinEntities!.slice(1, 10);
+    for (let index = 0; index < xSegments.length; index += 1) {
+      const segment = xSegments[index]!;
+      expect(segment.definitionId).toBe("item_port_log_hongs_bus");
+      expect(segment.position).toEqual({ x: index * 8, y: -4 });
+      expect(segment.rotation).toBe(90);
+    }
+
+    const ySegments = protocolCore.builtinEntities!.slice(10, 19);
+    for (let index = 0; index < ySegments.length; index += 1) {
+      const segment = ySegments[index]!;
+      expect(segment.definitionId).toBe("item_port_log_hongs_bus");
+      expect(segment.position).toEqual({ x: -4, y: index * 8 });
+      expect(segment.rotation).toBe(0);
+    }
+
+    const wulingDefinitions = BASE_DEFINITIONS.filter((definition) =>
+      definition.tag === "武陵",
+    );
+
+    for (const definition of wulingDefinitions) {
+      expect(definition.builtinEntities ?? []).toHaveLength(0);
+    }
+
+    // 验证 ID 协议：同一 builtin ID 在不同基地下生成不同全局 ID
+    const coreId = buildBaseBuiltinEntityId({
+      baseId: "valley4_protocol_core",
+      builtinEntityId: "valley4_bus_seg_x_0",
+    });
+    const shelterId = buildBaseBuiltinEntityId({
+      baseId: "valley4_refugee_shelter",
+      builtinEntityId: "valley4_bus_seg_x_0",
+    });
+
+    expect(coreId).not.toBe(shelterId);
+    expect(coreId).toMatch(/^base-builtin:/);
   });
 });

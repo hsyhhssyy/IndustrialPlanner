@@ -19,6 +19,10 @@ import type { AppHost } from "@/app/host/app-host";
 import type { PlannerFlowViewportState } from "@/shared/storage/planner-storage";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import {
+  BELT_TRANSPORT_DURATION_SECONDS,
+  PIPE_TRANSPORT_DURATION_SECONDS,
+} from "@/domain/registry";
+import {
   buildProductionPlanningIndex,
   computeProductionPlan,
   createProductionPlanningId,
@@ -80,6 +84,7 @@ type ProductionPlanningTreeItemRow = ProductionPlanningTreeRowBase & {
   readonly total: ProductionPlanningResult["itemTotals"][number] | null;
   readonly producerIds: readonly string[];
   readonly consumerIds: readonly string[];
+  readonly isByproduct: boolean;
 };
 
 type ProductionPlanningTreeRecipeRow = ProductionPlanningTreeRowBase & {
@@ -91,7 +96,12 @@ type ProductionPlanningTreeRecipeRow = ProductionPlanningTreeRowBase & {
   readonly total: ProductionPlanningResult["recipeTotals"][number] | null;
   readonly inputItemIds: readonly string[];
   readonly outputItemIds: readonly string[];
+  readonly isByproduct: boolean;
 };
+
+const PRODUCTION_PLANNING_EPSILON = 0.0001;
+const EXTERNAL_SUPPLY_RECIPE_ID_PREFIX = "external-supply:";
+const EXTERNAL_SUPPLY_ENTITY_ID = "item_port_sp_hub_1";
 
 export const ProductionPlanningPanel = observer(function ProductionPlanningPanel({
   appHost,
@@ -246,6 +256,15 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     store.supplies = updatePort(store.supplies, id, patch);
   };
 
+  const toggleSupplyInfinite = (id: string, isInfinite: boolean) => {
+    const supply = store.supplies.find((line) => line.id === id);
+    if (supply === undefined || index.naturalResourceItemIds.has(supply.itemId)) {
+      return;
+    }
+
+    updateSupply(id, { isInfinite });
+  };
+
   const selectRecipe = (itemId: string, recipeId: string | null) => {
     const nextRecipeChoices = updateRecipeChoices(store.recipeChoices, itemId, recipeId);
     store.recipeChoices = nextRecipeChoices;
@@ -378,10 +397,15 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
               index={index}
               onAdd={addSupply}
               onPickItem={(id) => {
-                void requestItemSelection((itemId) => updateSupply(id, { itemId }));
+                void requestItemSelection((itemId) => updateSupply(id, {
+                  itemId,
+                  ...(index.naturalResourceItemIds.has(itemId) ? { isInfinite: false } : {}),
+                }));
               }}
               onRemove={(id) => { store.supplies = store.supplies.filter((line) => line.id !== id); }}
               onUpdateRate={(id, perMinute) => updateSupply(id, { perMinute })}
+              onToggleInfinite={toggleSupplyInfinite}
+              canToggleInfinite
               t={t}
             />
             <SourcePolicyPanel
@@ -473,6 +497,8 @@ function LineSection({
   onPickItem,
   onRemove,
   onUpdateRate,
+  onToggleInfinite,
+  canToggleInfinite = false,
   t,
 }: {
   icon: ReactNode;
@@ -484,6 +510,8 @@ function LineSection({
   onPickItem: (id: string) => void;
   onRemove: (id: string) => void;
   onUpdateRate: (id: string, perMinute: number) => void;
+  onToggleInfinite?: (id: string, isInfinite: boolean) => void;
+  canToggleInfinite?: boolean;
   t: (key: string) => string;
 }) {
   return (
@@ -506,6 +534,8 @@ function LineSection({
             onPickItem={() => onPickItem(line.id)}
             onRemove={() => onRemove(line.id)}
             onUpdateRate={(perMinute) => onUpdateRate(line.id, perMinute)}
+            onToggleInfinite={onToggleInfinite === undefined ? undefined : (isInfinite) => onToggleInfinite(line.id, isInfinite)}
+            canToggleInfinite={canToggleInfinite}
             t={t}
           />
         ))}
@@ -520,6 +550,8 @@ function PortEditorRow({
   onPickItem,
   onRemove,
   onUpdateRate,
+  onToggleInfinite,
+  canToggleInfinite = false,
   t,
 }: {
   line: ProductionPlanningPort;
@@ -527,10 +559,19 @@ function PortEditorRow({
   onPickItem: () => void;
   onRemove: () => void;
   onUpdateRate: (perMinute: number) => void;
+  onToggleInfinite?: (isInfinite: boolean) => void;
+  canToggleInfinite?: boolean;
   t: (key: string) => string;
 }) {
+  const isNaturalResource = index.naturalResourceItemIds.has(line.itemId);
+  const isInfinite = canToggleInfinite && !isNaturalResource && line.isInfinite === true;
+  const rowClassName = [
+    "production-planning-line-row",
+    canToggleInfinite ? "has-infinite-toggle" : "",
+  ].filter(Boolean).join(" ");
+
   return (
-    <div className={cm(styles, "production-planning-line-row")}>
+    <div className={cm(styles, rowClassName)}>
       <button
         type="button"
         className={cm(styles, "production-planning-item-picker-button")}
@@ -542,13 +583,30 @@ function PortEditorRow({
       <label className={cm(styles, "production-planning-rate-input")}>
         <span>{t("productionPlanning.perMinute")}</span>
         <input
-          type="number"
-          min="0"
-          step="0.01"
-          value={line.perMinute}
+          type={isInfinite ? "text" : "number"}
+          min={isInfinite ? undefined : "0"}
+          step={isInfinite ? undefined : "0.01"}
+          value={isInfinite ? "∞" : line.perMinute}
+          disabled={isInfinite}
           onChange={(event) => onUpdateRate(normalizeFlowInput(event.currentTarget.value))}
         />
       </label>
+      {canToggleInfinite && (
+        <button
+          type="button"
+          className={cm(styles, [
+            "production-planning-icon-button production-planning-infinite-toggle",
+            isInfinite ? "is-active" : "",
+          ].filter(Boolean).join(" "))}
+          aria-label={t("productionPlanning.infinite")}
+          aria-pressed={isInfinite}
+          title={isNaturalResource ? t("productionPlanning.infiniteNaturalDisabled") : t("productionPlanning.infinite")}
+          disabled={isNaturalResource || onToggleInfinite === undefined}
+          onClick={() => onToggleInfinite?.(!isInfinite)}
+        >
+          <LucideInfinity />
+        </button>
+      )}
       <button
         type="button"
         className={cm(styles, "production-planning-icon-button")}
@@ -973,6 +1031,30 @@ function ProductionPlanningTreeTable({
   );
 }
 
+function ProductionPlanningTreeRowChip({
+  row,
+  index: _index,
+  t,
+}: {
+  row: ProductionPlanningTreeRow;
+  index: ProductionPlanningIndex;
+  t: (key: string) => string;
+}): ReactNode {
+  const isByproduct = (
+    (row.kind === "recipe" && row.isByproduct)
+    || (row.kind === "item" && row.isByproduct)
+  );
+  if (!isByproduct) {
+    return null;
+  }
+
+  return (
+    <span className={cm(styles, "production-planning-tree-table-chip")}>
+      {t("productionPlanning.byproduct")}
+    </span>
+  );
+}
+
 function ProductionPlanningTreeTableRow({
   row,
   index,
@@ -1050,6 +1132,7 @@ function ProductionPlanningTreeTableRow({
                 {t("productionPlanning.shared")}
               </span>
             )}
+            {ProductionPlanningTreeRowChip({ row, index, t })}
           </button>
         </div>
       </td>
@@ -1194,6 +1277,25 @@ function ProductionPlanningTreeRowRate({
     );
   }
 
+  if (isProductionPlanningExternalSupplyRecipeId(row.recipeId)) {
+    const outputFlow = resolveProductionPlanningRecipeDisplayFlow(row);
+    const logisticsItemId = resolveProductionPlanningRecipeDisplayItemId(row);
+
+    return (
+      <div className={cm(styles, "production-planning-tree-table-rate")}>
+        <span className={cm(styles, "production-planning-tree-rate-piece")}>
+          <strong>{formatProductionFlow(outputFlow)}/min</strong>
+        </span>
+        {logisticsItemId !== null && (
+          <>
+            <span className={cm(styles, "production-planning-tree-rate-separator")}>·</span>
+            <ProductionPlanningLogisticsRate flowPerMinute={outputFlow} itemId={logisticsItemId} index={index} t={t} />
+          </>
+        )}
+      </div>
+    );
+  }
+
   const recipe = index.recipeById.get(row.recipeId);
   const machineId = recipe?.machineId ?? row.recipeNode.recipeId;
   const outputFlow = resolveProductionPlanningRecipeDisplayFlow(row);
@@ -1275,19 +1377,26 @@ function ProductionPlanningTreeDetail({
   if (row.kind === "recipe") {
     const recipe = index.recipeById.get(row.recipeNode.recipeId);
     const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
+    const isExternal = isProductionPlanningExternalSupplyRecipeId(row.recipeId);
     const productName = row.targetItemId.length > 0
       ? resolveProductionPlanningItemName(row.targetItemId, index, t)
-      : resolveProductionPlanningRecipeName(recipe!, index, t);
-    const machineName = machine === null ? row.recipeNode.recipeId : t(machine.nameKey);
+      : isExternal
+        ? ""
+        : resolveProductionPlanningRecipeName(recipe!, index, t);
+    const machineName = isExternal
+      ? t("productionPlanning.externalSupply")
+      : machine === null ? row.recipeNode.recipeId : t(machine.nameKey);
     const title = displayMode === "item" ? productName : machineName;
     const subtitle = displayMode === "item"
-      ? `由 ${machineName} 产出`
-      : `产出 ${productName}`;
+      ? (isExternal ? t("productionPlanning.externalSupply") : `由 ${machineName} 产出`)
+      : (isExternal ? `${t("productionPlanning.produced")} ${productName}` : `产出 ${productName}`);
     const iconSrc = displayMode === "item" && row.targetItemId.length > 0
       ? resolveProductionPlanningItemIconSrc(row.targetItemId, index)
-      : machine === null
-        ? "/device-icons/item_port_grinder_1.webp"
-        : resolveProductionPlanningEntityIconSrc(machine.id);
+      : isExternal
+        ? resolveProductionPlanningExternalSupplyIconSrc()
+        : machine === null
+          ? "/device-icons/item_port_grinder_1.webp"
+          : resolveProductionPlanningEntityIconSrc(machine.id);
 
     return (
       <article className={cm(styles, "production-planning-tree-detail-stack")}>
@@ -1464,14 +1573,22 @@ function ProductionPlanningTreeRelationIdentity({
 
   const recipe = index.recipeById.get(row.recipeId);
   const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
+  const isExternal = isProductionPlanningExternalSupplyRecipeId(row.recipeId);
+  const machineId = isExternal ? EXTERNAL_SUPPLY_ENTITY_ID : (recipe?.machineId ?? "");
+  const machineName = isExternal
+    ? t("productionPlanning.externalSupply")
+    : machine === null ? row.recipeId : t(machine.nameKey);
+  const iconSrc = isExternal
+    ? resolveProductionPlanningExternalSupplyIconSrc()
+    : machineId.length > 0
+      ? resolveProductionPlanningEntityIconSrc(machineId)
+      : "/device-icons/item_port_grinder_1.webp";
+
   return (
     <>
-      <img
-        alt=""
-        src={recipe === undefined ? "/device-icons/item_port_grinder_1.webp" : resolveProductionPlanningEntityIconSrc(recipe.machineId)}
-      />
+      <img alt="" src={iconSrc} />
       <span>
-        {machine === null ? row.recipeId : t(machine.nameKey)}
+        {machineName}
         {row.targetItemId.length > 0 ? ` · ${resolveProductionPlanningItemName(row.targetItemId, index, t)}` : ""}
       </span>
     </>
@@ -1494,19 +1611,29 @@ function RecipeIdentity({
   const recipe = index.recipeById.get(recipeNode.recipeId);
   const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
   const productItemId = targetItemId ?? recipeNode.targetItemId;
+  const isExternal = isProductionPlanningExternalSupplyRecipeId(recipeNode.recipeId);
+
   const productName = productItemId.length > 0
     ? resolveProductionPlanningItemName(productItemId, index, t)
     : recipe === undefined
       ? recipeNode.recipeId
       : resolveProductionPlanningRecipeName(recipe, index, t);
-  const machineName = machine === null ? recipeNode.recipeId : t(machine.nameKey);
+  const machineName = isExternal
+    ? t("productionPlanning.externalSupply")
+    : machine === null ? recipeNode.recipeId : t(machine.nameKey);
   const title = displayMode === "item" ? productName : machineName;
   const subtitle = displayMode === "item" ? machineName : productName;
-  const iconSrc = displayMode === "item" && productItemId.length > 0
-    ? resolveProductionPlanningItemIconSrc(productItemId, index)
-    : recipe === undefined
+  const iconSrc = (() => {
+    if (displayMode === "item" && productItemId.length > 0) {
+      return resolveProductionPlanningItemIconSrc(productItemId, index);
+    }
+    if (isExternal) {
+      return resolveProductionPlanningExternalSupplyIconSrc();
+    }
+    return recipe === undefined
       ? "/device-icons/item_port_grinder_1.webp"
       : resolveProductionPlanningEntityIconSrc(recipe.machineId);
+  })();
 
   return (
     <div className={cm(styles, "production-planning-recipe-identity")}>
@@ -1537,6 +1664,7 @@ type MutableProductionPlanningTreeItemRow = MutableProductionPlanningTreeRowBase
   total: ProductionPlanningResult["itemTotals"][number] | null;
   producerIds: Set<string>;
   consumerIds: Set<string>;
+  isByproduct: boolean;
 };
 
 type MutableProductionPlanningTreeRecipeRow = MutableProductionPlanningTreeRowBase & {
@@ -1548,24 +1676,349 @@ type MutableProductionPlanningTreeRecipeRow = MutableProductionPlanningTreeRowBa
   total: ProductionPlanningResult["recipeTotals"][number] | null;
   inputItemIds: Set<string>;
   outputItemIds: Set<string>;
+  isByproduct: boolean;
 };
 
 // AI-CORRECTION 2026-05-21: buildProductionPlanningTreeRows 现在按 displayMode 分发到两套独立逻辑；
 // 物品模式折叠 recipe 行（只保留 item 行），设备模式折叠中间 item 行（只保留 recipe + raw item 行）。
 // AI-CORRECTION 2026-05-22: 设备模式也折叠 item 行；树节点定义为“配方设备 + 目标产物”的 unique pair。
 // AI-CORRECTION 2026-05-22: 物品/设备模式现在共享同一套 unique pair 树；displayMode 只影响树表外显身份。
-function buildProductionPlanningTreeRows(
+export function buildProductionPlanningTreeRows(
   plan: ProductionPlanningResult,
   _displayMode: ProductionPlanningDisplayMode,
 ): ProductionPlanningTreeRow[] {
-  return buildDeviceProductPairTreeRows(plan);
+  // AI-CORRECTION 2026-05-22:
+  // 树表改为先建立物品流 ledger 视图，再生成 pair 行；多输出、共享来源和处置配方不再复用递归 recipe 行的整包 outputs。
+  // AI-REMOVED 2026-05-22:
+  // Reason: 旧构建器把同一 recipe 的全部 outputs 塞入当前 target pair，导致多输出配方副产物标记污染目标行。
+  // Trigger: 用户指出“一个配方出两个物品应该生成两个设备×物品 pair，标记不应打错”。
+  // Evidence: 赫铜装备原件链路中“混合池×壤晶废液”被“惰性壤晶废液”的副产物状态污染。
+  // Replacement: buildLedgerProductionPlanningTreeRows
+  // Risk: Medium；树表结构来源从递归 recipeNode 改为 ledger 关系，流程图仍保留旧路径。
+  // Human Review: Required
+  //
+  // Original code:
+  // return buildDeviceProductPairTreeRows(plan);
+  return buildLedgerProductionPlanningTreeRows(plan);
+}
+
+function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): ProductionPlanningTreeRow[] {
+  const recipeTotals = new Map(plan.recipeTotals.map((total) => [total.recipeId, total]));
+  const rowById = new Map<string, MutableProductionPlanningTreeRow>();
+  const producerRowIdsByItem = new Map<string, Set<string>>();
+  const surplusProducerRowIdsByItem = new Map<string, Set<string>>();
+  const byproductRowIds = new Set<string>();
+  let nextOrder = 0;
+
+  const addRowIdByItem = (target: Map<string, Set<string>>, itemId: string, rowId: string) => {
+    const existing = target.get(itemId);
+    if (existing === undefined) {
+      target.set(itemId, new Set([rowId]));
+      return;
+    }
+    existing.add(rowId);
+  };
+
+  const ensureRecipeRow = (
+    recipeId: string,
+    targetItemId: string,
+    recipeNode: ProductionPlanningRecipeNode | null,
+    rowIdOverride?: string,
+  ): MutableProductionPlanningTreeRecipeRow => {
+    const rowId = rowIdOverride ?? buildProductionPlanningTreeDeviceProductRowId(recipeId, targetItemId);
+    const existing = rowById.get(rowId);
+    const total = recipeTotals.get(recipeId) ?? null;
+    const targetRecipeNode = recipeNode === null
+      ? createProductionPlanningTreeSyntheticRecipeNode(recipeId, total, null, targetItemId)
+      : createProductionPlanningTreeTargetedRecipeNode(recipeNode, targetItemId);
+
+    if (existing !== undefined) {
+      if (existing.kind !== "recipe") {
+        throw new Error(`Production planning tree row id collision: ${rowId}`);
+      }
+      existing.total = total;
+      if (recipeNode === null && existing.recipeNodes.length > 0) {
+        if (targetItemId.length > 0) {
+          existing.outputItemIds.add(targetItemId);
+        }
+        return existing;
+      }
+      if (!existing.recipeNodes.some((candidate) => candidate.id === targetRecipeNode.id)) {
+        existing.recipeNodes.push(targetRecipeNode);
+        existing.recipeNode = mergeProductionPlanningTreeRecipeNodes(existing.recipeNode, targetRecipeNode);
+      }
+      if (targetItemId.length > 0) {
+        existing.outputItemIds.add(targetItemId);
+      }
+      return existing;
+    }
+
+    const recipeRow: MutableProductionPlanningTreeRecipeRow = {
+      id: rowId,
+      kind: "recipe",
+      depth: 0,
+      order: nextOrder,
+      parentIds: new Set(),
+      childIds: new Set(),
+      recipeId,
+      targetItemId,
+      recipeNode: targetRecipeNode,
+      recipeNodes: [targetRecipeNode],
+      total,
+      inputItemIds: new Set(targetRecipeNode.inputs.map((input) => input.itemId)),
+      outputItemIds: targetItemId.length > 0 ? new Set([targetItemId]) : new Set(),
+      isByproduct: false,
+    };
+    nextOrder += 1;
+    rowById.set(rowId, recipeRow);
+    return recipeRow;
+  };
+
+  const ensureExternalSupplyRow = (node: ProductionPlanningItemNode): MutableProductionPlanningTreeRecipeRow | null => {
+    const perMinute = resolveProductionPlanningExternalSupplyPerMinute(node);
+    if (perMinute <= PRODUCTION_PLANNING_EPSILON) {
+      return null;
+    }
+
+    const recipeNode = createProductionPlanningExternalSupplyRecipeNode(node, perMinute);
+    return ensureRecipeRow(recipeNode.recipeId, recipeNode.targetItemId, recipeNode);
+  };
+
+  const registerRecipeOutputs = (recipeNode: ProductionPlanningRecipeNode) => {
+    for (const output of recipeNode.outputs) {
+      if (output.perMinute <= PRODUCTION_PLANNING_EPSILON) {
+        continue;
+      }
+      const row = ensureRecipeRow(recipeNode.recipeId, output.itemId, recipeNode);
+      if (!isProductionPlanningDisposalRecipeId(row.recipeId) && !isProductionPlanningExternalSupplyRecipeId(row.recipeId)) {
+        addRowIdByItem(producerRowIdsByItem, output.itemId, row.id);
+        if (output.itemId !== recipeNode.targetItemId) {
+          addRowIdByItem(surplusProducerRowIdsByItem, output.itemId, row.id);
+          if (plan.byproductItemIds.has(output.itemId)) {
+            byproductRowIds.add(row.id);
+          }
+        }
+      }
+    }
+  };
+
+  const collectRowsFromItemNode = (node: ProductionPlanningItemNode): void => {
+    // AI-REMOVED 2026-05-22:
+    // Reason: 外部供给不是联产 surplus 来源，不能进入 producerRowIdsByItem，否则后续 supply.surplus 边会误连外部源。
+    // Trigger: ledger 树需要区分 finite/infinite external supply 与 reusable byproduct output。
+    // Evidence: connectItemSources 已对 node.supply.manual / node.supply.infinite 直接创建外部供给边；surplus 来源只应来自生产配方输出。
+    // Replacement: ensureExternalSupplyRow(node)
+    // Risk: Low；外部供给仍会在直接供给关系中显示，只是不再作为副产物来源。
+    // Human Review: Required
+    //
+    // Original code:
+    // const externalRow = ensureExternalSupplyRow(node);
+    // if (externalRow !== null) {
+    //   addProducerRowId(node.itemId, externalRow.id);
+    // }
+    ensureExternalSupplyRow(node);
+
+    if (node.recipeNode === null) {
+      return;
+    }
+
+    registerRecipeOutputs(node.recipeNode);
+    for (const child of node.recipeNode.inputItems) {
+      collectRowsFromItemNode(child);
+    }
+  };
+
+  for (const root of plan.roots) {
+    collectRowsFromItemNode(root);
+  }
+
+  for (const total of plan.recipeTotals) {
+    const targetItemIds = total.outputs.length > 0
+      ? total.outputs.map((output) => output.itemId)
+      : total.inputs.slice(0, 1).map((input) => input.itemId);
+
+    for (const targetItemId of targetItemIds) {
+      const row = ensureRecipeRow(total.recipeId, targetItemId, null);
+      for (const input of total.inputs) {
+        row.inputItemIds.add(input.itemId);
+      }
+      row.outputItemIds.add(targetItemId);
+      if (total.outputs.some((output) => output.itemId === targetItemId) && !isProductionPlanningDisposalRecipeId(total.recipeId)) {
+        addRowIdByItem(producerRowIdsByItem, targetItemId, row.id);
+      }
+    }
+  }
+
+  const addProducerEdges = (
+    parentRow: MutableProductionPlanningTreeRecipeRow,
+    itemId: string,
+    producerRowIdsByItemMap: ReadonlyMap<string, ReadonlySet<string>>,
+  ) => {
+    const producerRowIds = producerRowIdsByItemMap.get(itemId);
+    if (producerRowIds === undefined) {
+      return;
+    }
+
+    for (const producerRowId of producerRowIds) {
+      addProductionPlanningTreeEdge(rowById, parentRow.id, producerRowId);
+    }
+  };
+
+  const connectItemSources = (
+    node: ProductionPlanningItemNode,
+    parentRow: MutableProductionPlanningTreeRecipeRow,
+  ): void => {
+    parentRow.inputItemIds.add(node.itemId);
+
+    const externalRow = ensureExternalSupplyRow(node);
+    if (externalRow !== null) {
+      addProductionPlanningTreeEdge(rowById, parentRow.id, externalRow.id);
+    }
+
+    if (node.supply.surplus > PRODUCTION_PLANNING_EPSILON) {
+      addProducerEdges(parentRow, node.itemId, surplusProducerRowIdsByItem);
+    }
+
+    if (node.recipeNode !== null) {
+      const childRow = ensureRecipeRow(node.recipeNode.recipeId, node.recipeNode.targetItemId, node.recipeNode);
+      addProductionPlanningTreeEdge(rowById, parentRow.id, childRow.id);
+      connectRecipeInputs(node.recipeNode);
+    }
+  };
+
+  function connectRecipeInputs(recipeNode: ProductionPlanningRecipeNode): void {
+    const parentRow = ensureRecipeRow(recipeNode.recipeId, recipeNode.targetItemId, recipeNode);
+    for (const child of recipeNode.inputItems) {
+      connectItemSources(child, parentRow);
+    }
+  }
+
+  for (const root of plan.roots) {
+    if (root.recipeNode !== null) {
+      connectRecipeInputs(root.recipeNode);
+    } else {
+      ensureExternalSupplyRow(root);
+    }
+  }
+
+  markLedgerByproductRows(rowById, byproductRowIds);
+  connectDisposalRowsToByproductSources(rowById, surplusProducerRowIdsByItem, plan, nextOrder);
+
+  const rootRowIds = new Set(
+    Array.from(rowById.values())
+      .filter((row) => row.parentIds.size !== 1)
+      .map((row) => row.id),
+  );
+
+  return finalizeProductionPlanningTreeRows(rowById, rootRowIds);
+}
+
+function createProductionPlanningTreeTargetedRecipeNode(
+  recipeNode: ProductionPlanningRecipeNode,
+  targetItemId: string,
+): ProductionPlanningRecipeNode {
+  if (recipeNode.targetItemId === targetItemId) {
+    return recipeNode;
+  }
+
+  return {
+    ...recipeNode,
+    id: `${recipeNode.id}:target:${targetItemId}`,
+    targetItemId,
+  };
+}
+
+function markLedgerByproductRows(
+  rowById: ReadonlyMap<string, MutableProductionPlanningTreeRow>,
+  byproductRowIds: ReadonlySet<string>,
+): void {
+  for (const row of rowById.values()) {
+    if (row.kind !== "recipe") {
+      continue;
+    }
+
+    row.isByproduct = byproductRowIds.has(row.id) || isProductionPlanningDisposalRecipeId(row.recipeId);
+  }
+}
+
+function connectDisposalRowsToByproductSources(
+  rowById: Map<string, MutableProductionPlanningTreeRow>,
+  producerRowIdsByItem: ReadonlyMap<string, ReadonlySet<string>>,
+  plan: ProductionPlanningResult,
+  nextOrderStart: number,
+): void {
+  let nextOrder = nextOrderStart;
+
+  for (const row of Array.from(rowById.values())) {
+    if (row.kind !== "recipe" || !isProductionPlanningDisposalRecipeId(row.recipeId)) {
+      continue;
+    }
+
+    const itemId = row.targetItemId || row.recipeNode.inputs[0]?.itemId || row.total?.inputs[0]?.itemId || "";
+    if (itemId.length === 0 || !plan.byproductItemIds.has(itemId)) {
+      continue;
+    }
+
+    const producerRowIds = producerRowIdsByItem.get(itemId);
+    if (producerRowIds === undefined) {
+      continue;
+    }
+
+    for (const producerRowId of producerRowIds) {
+      const producerRow = rowById.get(producerRowId);
+      if (producerRow === undefined || producerRow.kind !== "recipe" || producerRow.id === row.id) {
+        continue;
+      }
+
+      if (producerRow.parentIds.size === 0) {
+        addProductionPlanningTreeEdge(rowById, row.id, producerRow.id);
+        producerRow.isByproduct = true;
+        continue;
+      }
+
+      const cloneRowId = buildProductionPlanningTreeDisposalSourceRowId(row.id, producerRow.id);
+      if (rowById.has(cloneRowId)) {
+        addProductionPlanningTreeEdge(rowById, row.id, cloneRowId);
+        continue;
+      }
+
+      const cloneRow: MutableProductionPlanningTreeRecipeRow = {
+        id: cloneRowId,
+        kind: "recipe",
+        depth: 0,
+        order: nextOrder,
+        parentIds: new Set(),
+        childIds: new Set(),
+        recipeId: producerRow.recipeId,
+        targetItemId: producerRow.targetItemId,
+        recipeNode: producerRow.recipeNode,
+        recipeNodes: [...producerRow.recipeNodes],
+        total: producerRow.total,
+        inputItemIds: new Set(producerRow.inputItemIds),
+        outputItemIds: new Set([producerRow.targetItemId]),
+        isByproduct: true,
+      };
+      nextOrder += 1;
+      rowById.set(cloneRowId, cloneRow);
+      addProductionPlanningTreeEdge(rowById, row.id, cloneRow.id);
+    }
+  }
+}
+
+function isProductionPlanningDisposalRecipeId(recipeId: string): boolean {
+  return recipeId.startsWith("r_dumper_void_") || recipeId.startsWith("r_chrono_wastewater_treatment");
+}
+
+function buildProductionPlanningTreeDisposalSourceRowId(disposalRowId: string, producerRowId: string): string {
+  return `disposal-source:${disposalRowId}:${producerRowId}`;
 }
 
 /**
  * 物品模式：仅保留 item 行，recipe 信息折叠进产物 item 行。
  * 树结构：target item → input item → ...（跳过 recipe 层，depth 直接 +1）。
  */
-function buildItemOnlyTreeRows(plan: ProductionPlanningResult): ProductionPlanningTreeRow[] {
+// AI-CORRECTION 2026-05-22: ledger 树已接管入口；该旧构建器仅作为归档备用实现保留，不参与当前渲染。
+function _buildItemOnlyTreeRows(plan: ProductionPlanningResult): ProductionPlanningTreeRow[] {
   const itemTotals = new Map(plan.itemTotals.map((total) => [total.itemId, total]));
   const rowById = new Map<string, MutableProductionPlanningTreeItemRow>();
   const rootRowIds = new Set<string>();
@@ -1605,6 +2058,7 @@ function buildItemOnlyTreeRows(plan: ProductionPlanningResult): ProductionPlanni
       total,
       producerIds: new Set(),
       consumerIds: new Set(),
+      isByproduct: false,
     };
     nextOrder += 1;
     rowById.set(rowId, itemRow);
@@ -1674,7 +2128,8 @@ function buildItemOnlyTreeRows(plan: ProductionPlanningResult): ProductionPlanni
  */
 // AI-CORRECTION 2026-05-22: 上述旧说明不再准确；pair 树现在只保留“配方设备 + 目标产物”行，
 // raw item 不再作为树节点外显，只保留在 pair 行的输入信息里。
-function buildDeviceProductPairTreeRows(plan: ProductionPlanningResult): ProductionPlanningTreeRow[] {
+// AI-CORRECTION 2026-05-22: ledger 树已接管入口；该旧构建器仅作为归档备用实现保留，不参与当前渲染。
+function _buildDeviceProductPairTreeRows(plan: ProductionPlanningResult): ProductionPlanningTreeRow[] {
   const rowById = new Map<string, MutableProductionPlanningTreeRow>();
   const rootRowIds = new Set<string>();
   const expandedRecipeIds = new Set<string>();
@@ -1718,6 +2173,7 @@ function buildDeviceProductPairTreeRows(plan: ProductionPlanningResult): Product
       total,
       inputItemIds: new Set(),
       outputItemIds: new Set(),
+      isByproduct: false,
     };
     nextOrder += 1;
     rowById.set(rowId, recipeRow);
@@ -1772,10 +2228,32 @@ function buildDeviceProductPairTreeRows(plan: ProductionPlanningResult): Product
   };
   */
 
-  const visitRecipeNode = (
+  function ensureExternalSupplyRow(
+    node: ProductionPlanningItemNode,
+    parentRowId: string | null,
+  ): MutableProductionPlanningTreeRecipeRow | null {
+    const perMinute = resolveProductionPlanningExternalSupplyPerMinute(node);
+    if (perMinute <= PRODUCTION_PLANNING_EPSILON) {
+      return null;
+    }
+
+    const recipeNode = createProductionPlanningExternalSupplyRecipeNode(node, perMinute);
+    const recipeRow = ensureRecipeRow(recipeNode.recipeId, recipeNode.targetItemId, recipeNode);
+    recipeRow.outputItemIds.add(node.itemId);
+
+    if (parentRowId === null) {
+      rootRowIds.add(recipeRow.id);
+    } else {
+      addProductionPlanningTreeEdge(rowById, parentRowId, recipeRow.id);
+    }
+
+    return recipeRow;
+  }
+
+  function visitRecipeNode(
     recipeNode: ProductionPlanningRecipeNode,
     parentRowId: string | null,
-  ): MutableProductionPlanningTreeRecipeRow => {
+  ): MutableProductionPlanningTreeRecipeRow {
     const recipeRow = ensureRecipeRow(recipeNode.recipeId, recipeNode.targetItemId, recipeNode);
 
     if (parentRowId !== null) {
@@ -1801,20 +2279,25 @@ function buildDeviceProductPairTreeRows(plan: ProductionPlanningResult): Product
 
     for (const child of inputItems) {
       recipeRow.inputItemIds.add(child.itemId);
-      if (child.recipeNode !== null) {
-        visitRecipeNode(child.recipeNode, recipeRow.id);
-      }
+      visitItemProducers(child, recipeRow.id);
     }
 
     return recipeRow;
-  };
+  }
+
+  function visitItemProducers(
+    node: ProductionPlanningItemNode,
+    parentRowId: string | null,
+  ): void {
+    ensureExternalSupplyRow(node, parentRowId);
+    if (node.recipeNode !== null) {
+      const recipeRow = visitRecipeNode(node.recipeNode, parentRowId);
+      recipeRow.outputItemIds.add(node.itemId);
+    }
+  }
 
   for (const root of plan.roots) {
-    if (root.recipeNode !== null) {
-      const recipeRow = visitRecipeNode(root.recipeNode, null);
-      rootRowIds.add(recipeRow.id);
-      recipeRow.outputItemIds.add(root.itemId);
-    }
+    visitItemProducers(root, null);
   }
 
   // 从 totals 补充没有出现在目标递归链里的设备产物 pair，例如副产物倾倒节点。
@@ -1841,7 +2324,92 @@ function buildDeviceProductPairTreeRows(plan: ProductionPlanningResult): Product
     }
   }
 
+  // 标记副产物行
+  markByproductRows(rowById, plan);
+
+  // 废水处理配方节点
+  buildWasteTreatmentTreeRows(rowById, rootRowIds, plan, nextOrder);
+
   return finalizeProductionPlanningTreeRows(rowById, rootRowIds);
+}
+
+function markByproductRows(
+  rowById: ReadonlyMap<string, MutableProductionPlanningTreeRow>,
+  plan: ProductionPlanningResult,
+): void {
+  const byproductItemIds = plan.byproductItemIds;
+  if (byproductItemIds.size === 0) {
+    return;
+  }
+
+  for (const row of rowById.values()) {
+    if (row.kind !== "recipe") {
+      continue;
+    }
+
+    for (const outputId of row.outputItemIds) {
+      if (byproductItemIds.has(outputId)) {
+        row.isByproduct = true;
+        break;
+      }
+    }
+  }
+}
+
+function buildWasteTreatmentTreeRows(
+  rowById: Map<string, MutableProductionPlanningTreeRow>,
+  rootRowIds: Set<string>,
+  plan: ProductionPlanningResult,
+  nextOrder: number,
+): void {
+  for (const total of plan.recipeTotals) {
+    if (!total.recipeId.startsWith("r_chrono_wastewater_treatment")) {
+      continue;
+    }
+
+    const inputItemId = total.inputs[0]?.itemId ?? "";
+    if (!inputItemId) {
+      continue;
+    }
+    const rowId = buildProductionPlanningTreeDeviceProductRowId(total.recipeId, inputItemId);
+
+    if (rowById.has(rowId)) {
+      continue;
+    }
+
+    const recipeNode: ProductionPlanningRecipeNode = {
+      id: `total:${total.recipeId}`,
+      kind: "recipe",
+      recipeId: total.recipeId,
+      targetItemId: inputItemId,
+      durationSeconds: total.durationSeconds,
+      cyclesPerMinute: total.cyclesPerMinute,
+      deviceCount: total.deviceCount,
+      inputs: total.inputs.map(clonePort),
+      outputs: [],
+      inputItems: [],
+    };
+
+    const row: MutableProductionPlanningTreeRecipeRow = {
+      id: rowId,
+      kind: "recipe",
+      depth: 0,
+      order: nextOrder,
+      parentIds: new Set(),
+      childIds: new Set(),
+      recipeId: total.recipeId,
+      targetItemId: inputItemId,
+      recipeNode,
+      recipeNodes: [recipeNode],
+      total,
+      inputItemIds: new Set([inputItemId]),
+      outputItemIds: new Set(),
+      isByproduct: false,
+    };
+
+    rowById.set(rowId, row);
+    rootRowIds.add(rowId);
+  }
 }
 
 /** 折叠跳转映射：被折叠节点的原始 ID → 包含它的实际树行 ID */
@@ -1853,6 +2421,16 @@ function buildProductionPlanningTreeJumpMap(
 ): ProductionPlanningTreeJumpMap {
   const map = new Map<string, string>();
   // AI-CORRECTION 2026-05-22: 物品/设备模式共享 unique pair 树，跳转目标统一为“设备/配方 + 产物”行。
+  const mapExternalSupply = (node: ProductionPlanningItemNode): void => {
+    if (resolveProductionPlanningExternalSupplyPerMinute(node) <= PRODUCTION_PLANNING_EPSILON || node.recipeNode !== null) {
+      return;
+    }
+
+    map.set(
+      buildProductionPlanningTreeItemRowId(node.itemId),
+      buildProductionPlanningTreeDeviceProductRowId(buildProductionPlanningExternalSupplyRecipeId(node.itemId), node.itemId),
+    );
+  };
   const walkRecipes = (recipeNode: ProductionPlanningRecipeNode): void => {
     for (const output of recipeNode.outputs) {
       map.set(
@@ -1867,12 +2445,16 @@ function buildProductionPlanningTreeJumpMap(
           buildProductionPlanningTreeDeviceProductRowId(child.recipeNode.recipeId, child.recipeNode.targetItemId),
         );
         walkRecipes(child.recipeNode);
+      } else {
+        mapExternalSupply(child);
       }
     }
   };
   for (const root of plan.roots) {
     if (root.recipeNode !== null) {
       walkRecipes(root.recipeNode);
+    } else {
+      mapExternalSupply(root);
     }
   }
 
@@ -1961,7 +2543,8 @@ function resolveProductionPlanningLogisticsKind(
 }
 
 function resolveProductionPlanningLogisticsThroughput(kind: "belt" | "pipe"): number {
-  return kind === "pipe" ? 120 : 30;
+  const secondsPerCell = kind === "pipe" ? PIPE_TRANSPORT_DURATION_SECONDS : BELT_TRANSPORT_DURATION_SECONDS;
+  return 60 / secondsPerCell;
 }
 
 /*
@@ -2004,6 +2587,7 @@ function finalizeProductionPlanningTreeRow(
       total: row.total,
       producerIds: sortProductionPlanningTreeRowIds(row.producerIds, rowById),
       consumerIds: sortProductionPlanningTreeRowIds(row.consumerIds, rowById),
+      isByproduct: row.isByproduct,
     };
   }
 
@@ -2020,6 +2604,7 @@ function finalizeProductionPlanningTreeRow(
     total: row.total,
     inputItemIds: sortProductionPlanningTreeItemIds(row.inputItemIds, rowById),
     outputItemIds: sortProductionPlanningTreeItemIds(row.outputItemIds, rowById),
+    isByproduct: row.isByproduct,
   };
 }
 
@@ -2194,9 +2779,12 @@ function resolveProductionPlanningTreeRowTitle(
     return resolveProductionPlanningItemName(row.itemId, index, t);
   }
 
+  const isExternal = isProductionPlanningExternalSupplyRecipeId(row.recipeId);
   const recipe = index.recipeById.get(row.recipeId);
   const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
-  const title = machine === null ? row.recipeId : t(machine.nameKey);
+  const title = isExternal
+    ? t("productionPlanning.externalSupply")
+    : machine === null ? row.recipeId : t(machine.nameKey);
   const productName = row.targetItemId.length > 0 ? resolveProductionPlanningItemName(row.targetItemId, index, t) : null;
   return productName === null ? title : `${title} · ${productName}`;
 }
@@ -2489,20 +3077,29 @@ function RecipeCard({
 }) {
   const recipe = index.recipeById.get(recipeNode.recipeId);
   const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
-  const title = recipe === undefined
-    ? recipeNode.recipeId
-    : resolveProductionPlanningRecipeName(recipe, index, t);
+  const isExternal = isProductionPlanningExternalSupplyRecipeId(recipeNode.recipeId);
+
+  const title = isExternal
+    ? t("productionPlanning.externalSupply")
+    : recipe === undefined
+      ? recipeNode.recipeId
+      : resolveProductionPlanningRecipeName(recipe, index, t);
+  const subtitle = isExternal && recipeNode.targetItemId.length > 0
+    ? `${t("productionPlanning.produced")} ${resolveProductionPlanningItemName(recipeNode.targetItemId, index, t)}`
+    : machine === null ? recipeNode.recipeId : t(machine.nameKey);
+  const iconSrc = isExternal
+    ? resolveProductionPlanningExternalSupplyIconSrc()
+    : recipe === undefined
+      ? "/device-icons/item_port_grinder_1.webp"
+      : resolveProductionPlanningEntityIconSrc(recipe.machineId);
 
   return (
     <article className={cm(styles, "production-planning-recipe-node")}>
       <div className={cm(styles, "production-planning-recipe-header")}>
-        <img
-          alt=""
-          src={recipe === undefined ? "/device-icons/item_port_grinder_1.webp" : resolveProductionPlanningEntityIconSrc(recipe.machineId)}
-        />
+        <img alt="" src={iconSrc} />
         <div>
           <h4>{title}</h4>
-          <span>{machine === null ? recipeNode.recipeId : t(machine.nameKey)}</span>
+          <span>{subtitle}</span>
         </div>
       </div>
       <div className={cm(styles, "production-planning-recipe-meta")}>
@@ -2510,12 +3107,73 @@ function RecipeCard({
         <Metric icon={<LucideFactory />} label={t("productionPlanning.devices")} value={formatProductionDeviceCount(recipeNode.deviceCount)} />
         <Metric icon={<LucideGauge />} label={t("productionPlanning.cycles")} value={`${formatProductionFlow(recipeNode.cyclesPerMinute)}/min`} />
       </div>
+      {recipe !== undefined && (
+        <div className={cm(styles, "production-planning-recipe-formula")}>
+          {recipe.inputs.map((input, i) => (
+            <span key={`in-${input.itemId}`} className={cm(styles, "production-planning-recipe-formula-item")}>
+              {i > 0 && <span className={cm(styles, "production-planning-recipe-formula-plus")}>+</span>}
+              <span className={cm(styles, "production-planning-recipe-formula-icon")}>
+                <img alt="" src={resolveProductionPlanningItemIconSrc(input.itemId, index)} />
+                <span>{input.amount}</span>
+              </span>
+            </span>
+          ))}
+          <span className={cm(styles, "production-planning-recipe-formula-arrow")}>
+            <span>▶▶</span>
+            <span>{recipeNode.durationSeconds}{t("productionPlanning.second_short")}</span>
+          </span>
+          {recipe.outputs.map((output) => (
+            <span key={`out-${output.itemId}`} className={cm(styles, "production-planning-recipe-formula-item")}>
+              <span className={cm(styles, "production-planning-recipe-formula-icon")}>
+                <img alt="" src={resolveProductionPlanningItemIconSrc(output.itemId, index)} />
+                <span>{output.amount}</span>
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
       <div className={cm(styles, "production-planning-recipe-ports")}>
         <PortChipList title={t("productionPlanning.inputs")} ports={recipeNode.inputs} index={index} t={t} />
         <PortChipList title={t("productionPlanning.outputs")} ports={recipeNode.outputs} index={index} t={t} />
       </div>
     </article>
   );
+}
+
+function resolveProductionPlanningExternalSupplyPerMinute(node: ProductionPlanningItemNode): number {
+  return node.supply.manual + node.supply.infinite;
+}
+
+function buildProductionPlanningExternalSupplyRecipeId(itemId: string): string {
+  return `${EXTERNAL_SUPPLY_RECIPE_ID_PREFIX}${itemId}`;
+}
+
+function isProductionPlanningExternalSupplyRecipeId(recipeId: string): boolean {
+  return recipeId.startsWith(EXTERNAL_SUPPLY_RECIPE_ID_PREFIX);
+}
+
+function createProductionPlanningExternalSupplyRecipeNode(
+  node: ProductionPlanningItemNode,
+  perMinute: number,
+): ProductionPlanningRecipeNode {
+  return {
+    id: `${EXTERNAL_SUPPLY_RECIPE_ID_PREFIX}${node.id}`,
+    kind: "recipe",
+    recipeId: buildProductionPlanningExternalSupplyRecipeId(node.itemId),
+    targetItemId: node.itemId,
+    durationSeconds: 0,
+    cyclesPerMinute: 0,
+    deviceCount: 0,
+    inputs: [],
+    outputs: [{ id: `${node.id}-external-supply-out-${node.itemId}`, itemId: node.itemId, perMinute }],
+    inputItems: [],
+  };
+}
+
+
+
+function resolveProductionPlanningExternalSupplyIconSrc(): string {
+  return `/3d-top-view/sprites/${EXTERNAL_SUPPLY_ENTITY_ID}.webp`;
 }
 
 /*
@@ -2690,6 +3348,7 @@ function clonePort(port: ProductionPlanningPort): ProductionPlanningPort {
     id: port.id,
     itemId: port.itemId,
     perMinute: port.perMinute,
+    ...(port.isInfinite === true ? { isInfinite: true } : {}),
   };
 }
 

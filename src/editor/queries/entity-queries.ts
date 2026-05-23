@@ -46,10 +46,12 @@ export function createEditorEntityQueries({
       entityId,
       document: document.getSnapshot(),
       drafts: state.drafts,
+      baseDefinitions: workspace.registry.baseDefinitions,
     }),
     listEntities: () => resolveListedEntities({
       document: document.getSnapshot(),
       drafts: state.drafts,
+      baseDefinitions: workspace.registry.baseDefinitions,
     }),
     findEntityCollectionGridRect: (collectionType) => {
       const currentDocument = document.getSnapshot();
@@ -82,6 +84,7 @@ export function createEditorEntityQueries({
       const listedEntities = resolveListedEntities({
         document: currentDocument,
         drafts: state.drafts,
+        baseDefinitions: workspace.registry.baseDefinitions,
       });
 
       for (let index = listedEntities.length - 1; index >= 0; index -= 1) {

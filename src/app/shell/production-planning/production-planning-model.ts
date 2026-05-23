@@ -31,6 +31,7 @@ export interface ProductionPlanningPort {
   id: string;
   itemId: string;
   perMinute: number;
+  isInfinite?: boolean;
 }
 
 export interface ProductionPlanningIndex {
@@ -83,6 +84,7 @@ export interface ProductionPlanningItemTotal {
   suppliedPerMinute: number;
   producedPerMinute: number;
   unresolvedPerMinute: number;
+  isByproduct: boolean;
 }
 
 export interface ProductionPlanningRecipeTotal {
@@ -99,6 +101,7 @@ export interface ProductionPlanningResult {
   itemTotals: ProductionPlanningItemTotal[];
   recipeTotals: ProductionPlanningRecipeTotal[];
   unresolvedPerMinute: number;
+  byproductItemIds: ReadonlySet<string>;
 }
 
 interface ProductionPlanningRequest {
@@ -117,6 +120,7 @@ interface SolverContext {
   recipeChoices: ReadonlyMap<string, string>;
   sourceConfig: ProductionPlanningSourceConfig;
   dumperAmounts: Map<string, number>;
+  wasteTreatmentAmounts: Map<string, number>;
   nextNodeIndex: number;
 }
 
@@ -165,10 +169,11 @@ export function computeProductionPlan(
     index,
     manualSupplyRemaining: buildSupplyMap(request.supplies),
     surplusSupplyRemaining: new Map(),
-    infiniteItemIds: request.infiniteItemIds,
+    infiniteItemIds: buildInfiniteItemIds(request.infiniteItemIds, request.supplies, index),
     recipeChoices: request.recipeChoices,
     sourceConfig: request.sourceConfig,
     dumperAmounts: new Map(),
+    wasteTreatmentAmounts: new Map(),
     nextNodeIndex: 0,
   };
 
@@ -189,15 +194,40 @@ export function computeProductionPlan(
   }
 
   const dumperRecipeNodes = buildDumperRecipeNodes(context);
-  const allRecipeNodes = [...recipeNodes, ...dumperRecipeNodes];
+  const wasteTreatmentRecipeNodes = buildWasteTreatmentRecipeNodes(context);
+  const allRecipeNodes = [...recipeNodes, ...dumperRecipeNodes, ...wasteTreatmentRecipeNodes];
+
   const itemTotals = aggregateItemTotals(roots, allRecipeNodes, index);
   const recipeTotals = aggregateRecipeTotals(allRecipeNodes, index);
+
+  // AI-REMOVED 2026-05-22:
+  // Reason: 副产物身份不能用 demandPerMinute <= 0 判断；同一物品部分被生产性使用、部分剩余处置时也应保留副产物身份。
+  // Trigger: 用户指出树表副产物标记和“部分使用/部分剩余”逻辑错误，并补充给水器/废水处理机是处置性使用。
+  // Evidence: 赫铜装备原件链路中壤晶废液被生产性使用，而同配方另一个输出惰性壤晶废液剩余；旧判定还会漏掉有需求但仍有剩余的物品。
+  // Replacement: collectProductionPlanningByproductItemIds
+  // Risk: Low；只改变 byproductItemIds 与 itemTotals.isByproduct，求解数量不变。
+  // Human Review: Required
+  //
+  // Original code:
+  // // 副产物：求解结束后仍有剩余 surplus 且无下游需求（demandPerMinute <= 0）的物品
+  // const byproductItemIds: Set<string> = new Set();
+  // for (const [itemId] of context.surplusSupplyRemaining) {
+  //   const total = itemTotals.find((t) => t.itemId === itemId);
+  //   if (total !== undefined && total.demandPerMinute <= EPSILON) {
+  //     byproductItemIds.add(itemId);
+  //   }
+  // }
+  const byproductItemIds = collectProductionPlanningByproductItemIds(context);
+  for (const total of itemTotals) {
+    total.isByproduct = byproductItemIds.has(total.itemId);
+  }
 
   return {
     roots,
     itemTotals,
     recipeTotals,
     unresolvedPerMinute: roundFlow(itemTotals.reduce((sum, item) => sum + item.unresolvedPerMinute, 0)),
+    byproductItemIds,
   };
 }
 
@@ -486,8 +516,8 @@ function consumeAvailableSupply(
   demand: number,
   context: SolverContext,
 ): ProductionPlanningSupplyBreakdown {
-  const manual = consumeSupply(context.manualSupplyRemaining, itemId, demand);
-  const surplus = consumeSupply(context.surplusSupplyRemaining, itemId, roundFlow(demand - manual));
+  const surplus = consumeSupply(context.surplusSupplyRemaining, itemId, demand);
+  const manual = consumeSupply(context.manualSupplyRemaining, itemId, roundFlow(demand - surplus));
 
   return {
     manual,
@@ -522,8 +552,24 @@ function buildSupplyMap(supplies: readonly ProductionPlanningPort[]): Map<string
   const result = new Map<string, number>();
 
   for (const supply of supplies) {
-    if (supply.itemId.length > 0 && supply.perMinute > EPSILON) {
+    if (supply.itemId.length > 0 && supply.perMinute > EPSILON && supply.isInfinite !== true) {
       addSupply(result, supply.itemId, supply.perMinute);
+    }
+  }
+
+  return result;
+}
+
+function buildInfiniteItemIds(
+  baseItemIds: ReadonlySet<string>,
+  supplies: readonly ProductionPlanningPort[],
+  index: ProductionPlanningIndex,
+): ReadonlySet<string> {
+  const result = new Set(baseItemIds);
+
+  for (const supply of supplies) {
+    if (supply.itemId.length > 0 && supply.isInfinite === true && !index.naturalResourceItemIds.has(supply.itemId)) {
+      result.add(supply.itemId);
     }
   }
 
@@ -607,6 +653,7 @@ function ensureItemTotal(
     suppliedPerMinute: 0,
     producedPerMinute: 0,
     unresolvedPerMinute: 0,
+    isByproduct: false,
   };
   totals.set(itemId, total);
   return total;
@@ -655,7 +702,26 @@ function clonePort(port: ProductionPlanningPort): ProductionPlanningPort {
     id: port.id,
     itemId: port.itemId,
     perMinute: port.perMinute,
+    ...(port.isInfinite === true ? { isInfinite: true } : {}),
   };
+}
+
+function collectProductionPlanningByproductItemIds(context: SolverContext): Set<string> {
+  const result = new Set<string>();
+
+  for (const [itemId, perMinute] of context.surplusSupplyRemaining) {
+    if (perMinute > EPSILON) {
+      result.add(itemId);
+    }
+  }
+
+  for (const [itemId, perMinute] of context.dumperAmounts) {
+    if (perMinute > EPSILON) {
+      result.add(itemId);
+    }
+  }
+
+  return result;
 }
 
 function isNaturalResourceItem(item: ItemDefinition): boolean {
@@ -678,6 +744,12 @@ function isByproductItemDumpMode(
 const DUMPER_RECIPE_MAP: Record<string, { recipeId: string; durationSeconds: number; inputAmount: number }> = {
   "item_liquid_water": { recipeId: "r_dumper_void_liquid_water_basic", durationSeconds: 0.5, inputAmount: 1 },
   "item_liquid_acid": { recipeId: "r_dumper_void_liquid_acid_basic", durationSeconds: 0.5, inputAmount: 1 },
+};
+
+const WASTE_TREATMENT_RECIPE_MAP: Record<string, { recipeId: string; durationSeconds: number; inputAmount: number }> = {
+  "item_liquid_sewage": { recipeId: "r_chrono_wastewater_treatment_void_wastewater_basic", durationSeconds: 2, inputAmount: 1 },
+  "item_liquid_xiranite_poly": { recipeId: "r_chrono_wastewater_treatment_void_xiranite_waste_liquid_basic", durationSeconds: 2, inputAmount: 1 },
+  "item_liquid_xiranite_lowpoly": { recipeId: "r_chrono_wastewater_treatment_void_inert_xiranite_waste_liquid_basic", durationSeconds: 2, inputAmount: 1 },
 };
 
 function buildDumperRecipeNodes(context: SolverContext): ProductionPlanningRecipeNode[] {
@@ -710,6 +782,44 @@ function buildDumperRecipeNodes(context: SolverContext): ProductionPlanningRecip
       cyclesPerMinute,
       deviceCount,
       inputs: [{ id: `${dumperDef.recipeId}-in-${itemId}`, itemId, perMinute }],
+      outputs: [],
+      inputItems: [],
+    });
+  }
+
+  return nodes;
+}
+
+function buildWasteTreatmentRecipeNodes(context: SolverContext): ProductionPlanningRecipeNode[] {
+  const nodes: ProductionPlanningRecipeNode[] = [];
+
+  for (const [itemId, perMinute] of context.surplusSupplyRemaining) {
+    if (perMinute <= EPSILON) {
+      continue;
+    }
+
+    const treatmentDef = WASTE_TREATMENT_RECIPE_MAP[itemId];
+    if (treatmentDef === undefined) {
+      continue;
+    }
+
+    const recipe = context.index.recipeById.get(treatmentDef.recipeId);
+    if (recipe === undefined) {
+      continue;
+    }
+
+    const cyclesPerMinute = roundFlow(perMinute / treatmentDef.inputAmount);
+    const deviceCount = roundFlow(cyclesPerMinute / (60 / treatmentDef.durationSeconds));
+
+    nodes.push({
+      id: createNodeId("waste-treatment", context),
+      kind: "recipe",
+      recipeId: treatmentDef.recipeId,
+      targetItemId: itemId,
+      durationSeconds: treatmentDef.durationSeconds,
+      cyclesPerMinute,
+      deviceCount,
+      inputs: [{ id: `${treatmentDef.recipeId}-in-${itemId}`, itemId, perMinute }],
       outputs: [],
       inputItems: [],
     });

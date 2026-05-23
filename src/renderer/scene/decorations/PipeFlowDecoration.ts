@@ -17,6 +17,8 @@ import {
 } from "@/shared/geometry/viewport-transform"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
+import { PIPE_TRANSPORT_DURATION_SECONDS } from "@/domain/registry";
+
 import type { DecorationLayer } from "./DecorationLayer"
 import type {
   DecorationSyncContext,
@@ -24,7 +26,7 @@ import type {
   RenderViewportState,
 } from "./DecorationSyncContext"
 
-const PIPE_VISUAL_SPEED_CELLS_PER_SECOND = 2
+const PIPE_VISUAL_SPEED_CELLS_PER_SECOND = 1 / PIPE_TRANSPORT_DURATION_SECONDS
 const PIPE_CHEVRON_GROUP_SPACING_CELLS = 4
 const PIPE_CHEVRON_PAIR_CENTER_SPACING_CELLS = 0.22
 const PIPE_CHEVRON_LENGTH_CELLS = 0.22

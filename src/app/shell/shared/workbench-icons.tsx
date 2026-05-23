@@ -10,6 +10,8 @@ import LucideGrid2x2 from "~icons/lucide/grid-2x2";
 import LucideHelpCircle from "~icons/lucide/help-circle";
 import LucideHistory from "~icons/lucide/history";
 import LucideBuilding2 from "~icons/lucide/building-2";
+import LucideMaximize from "~icons/lucide/maximize";
+import LucideMinimize from "~icons/lucide/minimize";
 import LucideMonitor from "~icons/lucide/monitor";
 import LucideMove from "~icons/lucide/move";
 import LucideMousePointer2 from "~icons/lucide/mouse-pointer-2";
@@ -25,6 +27,8 @@ import LucidePackage2 from "~icons/lucide/package-2";
 // import LucidePause from "~icons/lucide/pause";
 import LucidePanelLeftClose from "~icons/lucide/panel-left-close";
 import LucidePanelLeftOpen from "~icons/lucide/panel-left-open";
+import LucidePanelBottomClose from "~icons/lucide/panel-bottom-close";
+import LucidePanelBottomOpen from "~icons/lucide/panel-bottom-open";
 import LucidePanelRightClose from "~icons/lucide/panel-right-close";
 import LucidePanelTopClose from "~icons/lucide/panel-top-close";
 import LucidePanelTopOpen from "~icons/lucide/panel-top-open";
@@ -81,6 +85,8 @@ type WorkbenchIconKind =
   | "theme-light"
   | "panel-left-close"
   | "panel-left-open"
+  | "panel-bottom-close"
+  | "panel-bottom-open"
   | "panel-right-close"
   | "panel-right-open"
   | "panel-top-close"
@@ -106,6 +112,8 @@ type WorkbenchIconKind =
   | "screen-square"
   | "screen-landscape"
   | "screen-portrait"
+  | "dialog-expand"
+  | "dialog-collapse"
   | "batch-select"
   | "select-arrow";
 
@@ -133,6 +141,8 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   "theme-light": LucideSun,
   "panel-left-close": LucidePanelLeftClose,
   "panel-left-open": LucidePanelLeftOpen,
+  "panel-bottom-close": LucidePanelBottomClose,
+  "panel-bottom-open": LucidePanelBottomOpen,
   "panel-right-close": LucidePanelRightClose,
   "panel-right-open": LucidePanelRightOpen,
   "panel-top-close": LucidePanelTopClose,
@@ -141,8 +151,8 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   pause: MaterialSymbolsPauseRounded,
   resume: MaterialSymbolsResumeRounded,
   stop: LucideSquare,
-  expand: LucideSquare,
-  shrink: LucideCopy,
+  expand: LucideMaximize,
+  shrink: LucideMinimize,
   pointer: LucideMousePointer2,
   move: LucideMove,
   eye: LucideEye,
@@ -158,6 +168,8 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   "screen-square": LucideSquare,
   "screen-landscape": LucideRectangleHorizontal,
   "screen-portrait": LucideRectangleVertical,
+  "dialog-expand": LucideSquare,
+  "dialog-collapse": LucideCopy,
   "batch-select": MdiSelection,
   "select-arrow": GisArrowO,
 };

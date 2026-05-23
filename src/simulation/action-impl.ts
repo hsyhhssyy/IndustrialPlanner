@@ -4,6 +4,7 @@ import type { SimulationAction } from "@/domain/simulation/simulation-action";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { resolveBaseBuiltinEntities } from "@/domain/registry/types/base-definition";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 import {
   areGridRectsIntersecting,
@@ -481,7 +482,10 @@ function resolveSimulationCompileDocument(options: {
   const invalidPlacementCollection =
     options.workspace.editor?.state?.collections?.[EntityCollectionType.invalidPlacement];
   if (invalidPlacementCollection === undefined || invalidPlacementCollection.length === 0) {
-    return options.document;
+    return appendBaseBuiltinEntitiesToDocument({
+      document: options.document,
+      workspace: options.workspace,
+    });
   }
 
   const invalidEntityIds = new Set(
@@ -490,7 +494,10 @@ function resolveSimulationCompileDocument(options: {
     ),
   );
   if (invalidEntityIds.size === 0) {
-    return options.document;
+    return appendBaseBuiltinEntitiesToDocument({
+      document: options.document,
+      workspace: options.workspace,
+    });
   }
 
   const nextEntities = { ...options.document.entities };
@@ -498,15 +505,46 @@ function resolveSimulationCompileDocument(options: {
     delete nextEntities[entityId];
   }
 
+  return appendBaseBuiltinEntitiesToDocument({
+    workspace: options.workspace,
+    document: {
+      ...options.document,
+      entities: nextEntities,
+      entityOrder: options.document.entityOrder.filter((entityId) =>
+        !invalidEntityIds.has(entityId),
+      ),
+      slotLinks: options.document.slotLinks.filter((slotLink) =>
+        !invalidEntityIds.has(slotLink.source.entityId)
+        && !invalidEntityIds.has(slotLink.target.entityId),
+      ),
+    },
+  });
+}
+
+function appendBaseBuiltinEntitiesToDocument(options: {
+  document: WorldDocument;
+  workspace: WorkspaceContract;
+}): WorldDocument {
+  const builtinEntities = resolveBaseBuiltinEntities({
+    baseDefinitions: options.workspace.registry.baseDefinitions,
+    baseId: options.document.baseId,
+  });
+  if (builtinEntities.length === 0) {
+    return options.document;
+  }
+
+  const builtinEntityIds = new Set(builtinEntities.map((entity) => entity.id));
+  const nextEntities = { ...options.document.entities };
+  for (const entity of builtinEntities) {
+    nextEntities[entity.id] = entity;
+  }
+
   return {
     ...options.document,
     entities: nextEntities,
-    entityOrder: options.document.entityOrder.filter((entityId) =>
-      !invalidEntityIds.has(entityId),
-    ),
-    slotLinks: options.document.slotLinks.filter((slotLink) =>
-      !invalidEntityIds.has(slotLink.source.entityId)
-      && !invalidEntityIds.has(slotLink.target.entityId),
-    ),
+    entityOrder: [
+      ...builtinEntities.map((entity) => entity.id),
+      ...options.document.entityOrder.filter((entityId) => !builtinEntityIds.has(entityId)),
+    ],
   };
 }

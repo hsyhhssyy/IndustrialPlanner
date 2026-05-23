@@ -20,8 +20,8 @@ export interface PlannerSessionState {
 }
 
 export interface PlannerPersistedState {
-  targets: Array<{ id: string; itemId: string; perMinute: number }>;
-  supplies: Array<{ id: string; itemId: string; perMinute: number }>;
+  targets: Array<{ id: string; itemId: string; perMinute: number; isInfinite?: boolean }>;
+  supplies: Array<{ id: string; itemId: string; perMinute: number; isInfinite?: boolean }>;
   displayMode: "item" | "device";
   viewMode: "tree" | "flow";
   recipeChoices: Record<string, string>;
@@ -150,12 +150,13 @@ function normalizePorts(value: unknown): PlannerPersistedState["targets"] {
     const id = typeof port.id === "string" ? port.id : "";
     const itemId = typeof port.itemId === "string" ? port.itemId : "";
     const perMinute = normalizeFiniteNumber(port.perMinute, 0);
+    const isInfinite = port.isInfinite === true;
 
     if (!id || !itemId || perMinute <= 0) {
       return [];
     }
 
-    return [{ id, itemId, perMinute }];
+    return [{ id, itemId, perMinute, ...(isInfinite ? { isInfinite } : {}) }];
   });
 }
 

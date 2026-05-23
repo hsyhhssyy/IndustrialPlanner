@@ -9,10 +9,12 @@
   grid-template-rows:
     var(--top-bar-height, 48px)
     minmax(0, 1fr)
+    var(--toolbox-bottom-dock-height, 0px)
     var(--bottom-bar-height, 28px);
   grid-template-areas:
     "toolbar toolbar toolbar toolbar"
     "tools left canvas right"
+    "tools left toolbox-bottom right"
     "bottom bottom bottom bottom";
   height: 100%;
   row-gap: 0;
@@ -53,4 +55,3 @@
 .workbench-floating-top-bar-button:hover {
   background: var(--floating-control-bg-hover);
 }
-

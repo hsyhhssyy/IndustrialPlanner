@@ -32,6 +32,7 @@ interface DialogShellProps {
   maximizeTitle: string;
   restoreTitle: string;
   closeTitle: string;
+  headerActions?: ReactNode;
   immersiveMaximized?: boolean;
   showMaximizeButton?: boolean;
   onClose: () => void;
@@ -56,6 +57,7 @@ export const DialogShell = observer(function DialogShell({
   maximizeTitle,
   restoreTitle,
   closeTitle,
+  headerActions,
   immersiveMaximized = false,
   showMaximizeButton = true,
   onClose,
@@ -353,6 +355,7 @@ export const DialogShell = observer(function DialogShell({
               </div>
             ) : null}
             <div className={cm(styles, "dialog-shell-header-actions", `${classPrefix}-header-actions`)}>
+              {headerActions}
               {showMaximizeButton ? (
                 <button
                   aria-label={maximizeButtonTitle}
@@ -362,7 +365,7 @@ export const DialogShell = observer(function DialogShell({
                   type="button"
                 >
                   <span className={cm(styles, "top-bar-toggle-icon")}>
-                    <WorkbenchIcon kind={dialogState.maximized ? "shrink" : "expand"} />
+                    <WorkbenchIcon kind={dialogState.maximized ? "dialog-collapse" : "dialog-expand"} />
                   </span>
                   <span className={cm(styles, "sr-only")}>{maximizeButtonTitle}</span>
                 </button>

@@ -182,6 +182,8 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
                   const summary = summaryByBaseId.get(baseDefinition.id);
                   const selected = selectedBaseId === baseDefinition.id;
 
+                  const meta = formatBaseSummary(copy, locale, summary);
+
                   return (
                     <button
                       aria-pressed={selected}
@@ -198,7 +200,8 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
                       <span className={cm(styles, "base-select-option-main")}>
                         <span className={cm(styles, "base-select-option-name")}>{baseDefinition.name}</span>
                         <span className={cm(styles, "base-select-option-meta")}>
-                          {formatBaseSummary(copy, locale, summary)}
+                          <span className={cm(styles, "base-select-option-meta-line")}>{meta.entityLine}</span>
+                          <span className={cm(styles, "base-select-option-meta-line")}>{meta.timeLine}</span>
                         </span>
                       </span>
                     </button>
@@ -239,6 +242,7 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
 function groupBaseDefinitionsByTag(
   baseDefinitions: readonly BaseDefinition[],
 ): Array<{ tag: string; bases: BaseDefinition[] }> {
+  const TAG_ORDER: Record<string, number> = { "四号谷地": 0, "武陵": 1 };
   const groups: Array<{ tag: string; bases: BaseDefinition[] }> = [];
   const groupByTag = new Map<string, BaseDefinition[]>();
 
@@ -254,6 +258,12 @@ function groupBaseDefinitionsByTag(
     group.push(baseDefinition);
   }
 
+  groups.sort((a, b) => {
+    const orderA = TAG_ORDER[a.tag] ?? 99;
+    const orderB = TAG_ORDER[b.tag] ?? 99;
+    return orderA - orderB;
+  });
+
   return groups;
 }
 
@@ -265,12 +275,13 @@ function formatBaseSummary(
   },
   locale: AppHost["state"]["settings"]["locale"],
   summary: EditorBaseDocumentSummary | undefined,
-): string {
+): { entityLine: string; timeLine: string } {
   const entityCount = summary?.entityCount ?? 0;
-  const entitySummary = `${entityCount} ${copy.entityUnit}`;
+  const entityLine = `${entityCount} ${copy.entityUnit}`;
   const updatedAt = formatTimestamp(locale, summary?.updatedAt ?? null);
+  const timeLine = `${updatedAt ?? copy.noEdit}`;
 
-  return `${entitySummary} · ${copy.updatedAt} ${updatedAt ?? copy.noEdit}`;
+  return { entityLine, timeLine };
 }
 
 function formatTimestamp(

@@ -1,4 +1,9 @@
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
+import type { BaseDefinition } from "@/domain/registry/types/base-definition";
+import {
+  isBaseBuiltinEntityId,
+  resolveBaseBuiltinEntities,
+} from "@/domain/registry/types/base-definition";
 import type {
   GridEdge,
   GridPoint,
@@ -89,6 +94,7 @@ export function resolveLogisticsEndpointAtGridPoint(options: {
   document: WorldDocument;
   drafts: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  baseDefinitions?: readonly BaseDefinition[];
 }): LogisticsDraftEndpoint | null {
   const entity = findTopEntityAtGridPoint(options);
 
@@ -99,7 +105,10 @@ export function resolveLogisticsEndpointAtGridPoint(options: {
     };
   }
 
-  if (isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)) {
+  if (
+    isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+    && !isBaseBuiltinEntityId(entity.id)
+  ) {
     return {
       type: "logistics-entity",
       entityId: entity.id,
@@ -152,14 +161,22 @@ export function resolveInputEndpointAtPointer(options: {
   document: WorldDocument;
   drafts: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  baseDefinitions?: readonly BaseDefinition[];
 }): DevicePortEndpoint | null {
   const entity = findTopEntityAtGridPoint({
     gridPoint: options.pointerGridPoint,
     document: options.document,
     drafts: options.drafts,
     entityDefinitionMap: options.entityDefinitionMap,
+    baseDefinitions: options.baseDefinitions,
   });
-  if (entity === null || isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)) {
+  if (
+    entity === null
+    || (
+      isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+      && !isBaseBuiltinEntityId(entity.id)
+    )
+  ) {
     return null;
   }
 
@@ -201,6 +218,7 @@ export function resolveInputEndpointOnPath(options: {
   kind: LogisticsKind;
   document: WorldDocument;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  baseDefinitions?: readonly BaseDefinition[];
 }): DevicePortEndpoint | null {
   for (let i = 0; i < options.pathPoints.length - 1; i += 1) {
     const current = options.pathPoints[i];
@@ -215,8 +233,15 @@ export function resolveInputEndpointOnPath(options: {
       document: options.document,
       drafts: [],
       entityDefinitionMap: options.entityDefinitionMap,
+      baseDefinitions: options.baseDefinitions,
     });
-    if (entity === null || isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)) {
+    if (
+      entity === null
+      || (
+        isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+        && !isBaseBuiltinEntityId(entity.id)
+      )
+    ) {
       continue;
     }
 
@@ -443,6 +468,7 @@ export function findTopEntityAtGridPoint(options: {
   document: WorldDocument;
   drafts: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  baseDefinitions?: readonly BaseDefinition[];
 }): WorldEntity | null {
   const draft = findTopEntityInListAtGridPoint({
     gridPoint: options.gridPoint,
@@ -457,9 +483,18 @@ export function findTopEntityAtGridPoint(options: {
     .map((entityId) => options.document.entities[entityId])
     .filter((entity): entity is WorldEntity => entity !== undefined);
 
-  return findTopEntityInListAtGridPoint({
+  const entity = findTopEntityInListAtGridPoint({
     gridPoint: options.gridPoint,
     entities: orderedEntities,
+    entityDefinitionMap: options.entityDefinitionMap,
+  });
+  if (entity !== null) {
+    return entity;
+  }
+
+  return findTopEntityInListAtGridPoint({
+    gridPoint: options.gridPoint,
+    entities: resolveOptionalBaseBuiltinEntities(options),
     entityDefinitionMap: options.entityDefinitionMap,
   });
 }
@@ -468,10 +503,29 @@ export function findEntityById(options: {
   entityId: string;
   document: WorldDocument;
   drafts: readonly WorldEntity[];
+  baseDefinitions?: readonly BaseDefinition[];
 }): WorldEntity | null {
-  return options.document.entities[options.entityId]
-    ?? options.drafts.find((entity) => entity.id === options.entityId)
-    ?? null;
+  const entity = options.document.entities[options.entityId]
+    ?? options.drafts.find((candidate) => candidate.id === options.entityId)
+    ?? resolveOptionalBaseBuiltinEntities(options).find((candidate) =>
+      candidate.id === options.entityId,
+    );
+
+  return entity ?? null;
+}
+
+function resolveOptionalBaseBuiltinEntities(options: {
+  document: WorldDocument;
+  baseDefinitions?: readonly BaseDefinition[];
+}): readonly WorldEntity[] {
+  if (options.baseDefinitions === undefined) {
+    return [];
+  }
+
+  return resolveBaseBuiltinEntities({
+    baseDefinitions: options.baseDefinitions,
+    baseId: options.document.baseId,
+  });
 }
 
 export function resolveEntityGridRect(options: {

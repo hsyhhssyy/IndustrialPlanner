@@ -24,7 +24,11 @@ import { RecipePickerDialog } from "@/app/shell/dialogs/recipe-picker-dialog";
 import { SaveBlueprintDialog } from "@/app/shell/dialogs/save-blueprint-dialog";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
 import { EncyclopediaPickerDialog } from "@/app/shell/encyclopedia/encyclopedia-picker-dialog";
-import { ToolboxDialog } from "@/app/shell/dialogs/toolbox-dialog";
+import {
+  ToolboxBottomDock,
+  ToolboxDialog,
+  resolveToolboxBottomDockGridHeight,
+} from "@/app/shell/dialogs/toolbox-dialog";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import { PwaController } from "@/app/pwa/pwa-controller";
 import { PwaGateway } from "@/app/pwa/pwa-gateway";
@@ -362,6 +366,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const canvasTopLeftCornerToolbar = appHost.internalState.runtime.canvasTopLeftCornerToolbar;
   const canvasTopLeftCornerToolbarKey = `${canvasTopLeftCornerToolbar.buttonIds.join("|")}::${canvasTopLeftCornerToolbar.initialOffButtonIds.join("|")}`;
   const inspectorDialogState = appHost.internalState.workbench.dialogState.inspector;
+  const toolboxBottomDockGridHeight = resolveToolboxBottomDockGridHeight(appHost);
+  const showToolboxBottomDock = toolboxBottomDockGridHeight > 0;
   const selectionCount = appHost.workspace.editor?.state.collections.selection.length ?? 0;
   const openInspectorOnSecondClick = appHost.state.settings.hypergryphInspectorOpenOnSecondClick;
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
@@ -378,7 +384,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
   const previousScreenProfileRef = useRef(screenProfile);
   const prevUseInspectorPanelRef = useRef(useInspectorPanel);
-  const hasVisibleDialogShell = isAnyDialogShellVisible(appHost);
+  const hasVisibleDialogShell = isAnyDialogShellVisible(appHost, { showToolboxBottomDock });
   const effectiveCanvasTheme = resolveEffectiveCanvasTheme(
     appHost.state.theme,
     appHost.state.settings.gameUseSimplifiedDeviceIcons,
@@ -535,6 +541,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     "--right-dock-width": showRightDock ? `${DEFAULT_RIGHT_DOCK_WIDTH}px` : "0px",
     "--top-bar-height": showFloatingTopBarControls ? "0px" : "48px",
     "--bottom-bar-height": showBottomStatusBar ? "28px" : "0px",
+    "--toolbox-bottom-dock-height": `${toolboxBottomDockGridHeight}px`,
+    "--canvas-bottom-obstruction-height": "calc(var(--bottom-bar-height, 28px) + var(--toolbox-bottom-dock-height, 0px))",
   } as CSSProperties;
 
   return (
@@ -615,6 +623,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         />
       ) : null}
       {showRightDock ? <RightDock appHost={appHost} /> : null}
+      {showToolboxBottomDock ? <ToolboxBottomDock appHost={appHost} /> : null}
       {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}
       {appHost.state.settings.debugMode ? <DebugLogDialog appHost={appHost} /> : null}
       <BaseSelectDialog appHost={appHost} />
@@ -633,10 +642,17 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   );
 });
 
-function isAnyDialogShellVisible(appHost: AppHost): boolean {
+function isAnyDialogShellVisible(
+  appHost: AppHost,
+  options: { showToolboxBottomDock: boolean },
+): boolean {
   return Object.entries(appHost.internalState.workbench.dialogState).some(
     ([dialogKey, dialogState]) => {
       if (dialogKey === "debug-log" && !appHost.state.settings.debugMode) {
+        return false;
+      }
+
+      if (dialogKey === "toolbox" && options.showToolboxBottomDock) {
         return false;
       }
 
