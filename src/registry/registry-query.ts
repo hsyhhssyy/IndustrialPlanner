@@ -39,9 +39,11 @@ const GENERAL_LOGISTICS_DEVICE_IDS = new Set<string>([
     "item_log_splitter",
     "item_log_converger",
     "item_log_connector",
+    "item_log_admission",
     "item_pipe_splitter",
     "item_pipe_converger",
     "item_pipe_connector",
+    "item_pipe_admission",
 ])
 
 export const createRegistryQuery = (): RegistryQuery => {

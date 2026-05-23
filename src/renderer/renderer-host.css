@@ -27,9 +27,11 @@
 
 .industrial-planner-renderer__placement-glow {
   z-index: 2;
+  --glow-depth: 10px;
+  --glow-spread: 5px;
   box-shadow:
-    inset 0 0 10px 5px rgba(255, 213, 74, 0.24),
-    inset 0 0 30px 15px rgba(255, 213, 74, 0.12);
+    inset 0 0 var(--glow-depth) var(--glow-spread) rgba(255, 213, 74, 0.24),
+    inset 0 0 calc(var(--glow-depth) * 3) calc(var(--glow-spread) * 3) rgba(255, 213, 74, 0.12);
 }
 
 .industrial-planner-renderer__placement-glow.is-active {
@@ -38,10 +40,12 @@
 
 .industrial-planner-renderer__marquee-glow {
   z-index: 2;
+  --glow-depth: 10px;
+  --glow-spread: 5px;
   --industrial-planner-renderer-marquee-glow-rgb: 255, 255, 255;
   box-shadow:
-    inset 0 0 10px 5px rgba(var(--industrial-planner-renderer-marquee-glow-rgb), 0.24),
-    inset 0 0 30px 15px rgba(var(--industrial-planner-renderer-marquee-glow-rgb), 0.12);
+    inset 0 0 var(--glow-depth) var(--glow-spread) rgba(var(--industrial-planner-renderer-marquee-glow-rgb), 0.24),
+    inset 0 0 calc(var(--glow-depth) * 3) calc(var(--glow-spread) * 3) rgba(var(--industrial-planner-renderer-marquee-glow-rgb), 0.12);
 }
 
 .industrial-planner-renderer__marquee-glow.is-active {

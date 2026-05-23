@@ -53,6 +53,7 @@ export type MessageKey =
   | "toolbar.canvasTopLeftCorner"
   | "toolbar.canvasRightDock"
   | "toolbar.canvasBottomLeft"
+  | "toolbar.canvasBottomLeftSecondary"
   | "tool.select"
   | "tool.place"
   | "tool.belt"
@@ -222,6 +223,12 @@ export type MessageKey =
   | "settingsField.shortcut-rotateDescription"
   | "settingsField.shortcut-delete-device"
   | "settingsField.shortcut-delete-deviceDescription"
+  | "settingsField.shortcut-move-selection"
+  | "settingsField.shortcut-move-selectionDescription"
+  | "settingsField.shortcut-copy-selection"
+  | "settingsField.shortcut-copy-selectionDescription"
+  | "settingsField.shortcut-paste-selection"
+  | "settingsField.shortcut-paste-selectionDescription"
   | "settingsField.useSimplifiedDeviceIcons"
   | "settingsField.useSimplifiedDeviceIconsDescription"
   | "settingsField.useInspectorPanel"
@@ -342,6 +349,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "toolbar.canvasTopLeftCorner": "画布左上角工具栏",
     "toolbar.canvasRightDock": "画布右侧工具栏",
     "toolbar.canvasBottomLeft": "画布左下角工具栏",
+    "toolbar.canvasBottomLeftSecondary": "画布左下角辅助工具栏",
     "tool.select": "选择",
     "tool.place": "放置",
     "tool.belt": "传送带",
@@ -628,6 +636,12 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-rotateDescription": "设置旋转预览设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-delete-device": "删除设备",
     "settingsField.shortcut-delete-deviceDescription": "设置删除选中设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-move-selection": "移动选区",
+    "settingsField.shortcut-move-selectionDescription": "设置移动选中设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-copy-selection": "复制选区",
+    "settingsField.shortcut-copy-selectionDescription": "设置复制选中设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-paste-selection": "粘贴选区",
+    "settingsField.shortcut-paste-selectionDescription": "设置粘贴已复制设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.useSimplifiedDeviceIcons": "使用蓝图样式的设备图片",
     "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图样式显示设备图片，不会提高性能。",
     "settingsField.useInspectorPanel": "使用右侧面板显示设备属性",
@@ -747,6 +761,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "toolbar.canvasTopLeftCorner": "Canvas Top Left Corner Toolbar",
     "toolbar.canvasRightDock": "Canvas Right Dock Toolbar",
     "toolbar.canvasBottomLeft": "Canvas Bottom Left Toolbar",
+    "toolbar.canvasBottomLeftSecondary": "Canvas Bottom Left Secondary Toolbar",
     "tool.select": "Select",
     "tool.place": "Place",
     "tool.belt": "Belt",
@@ -1033,6 +1048,12 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-rotateDescription": "Set the shortcut key for rotating preview devices; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-delete-device": "Delete Device",
     "settingsField.shortcut-delete-deviceDescription": "Set the shortcut key for deleting selected devices; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-move-selection": "Move Selection",
+    "settingsField.shortcut-move-selectionDescription": "Set the shortcut key for moving selected devices; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-copy-selection": "Copy Selection",
+    "settingsField.shortcut-copy-selectionDescription": "Set the shortcut key for copying selected devices; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-paste-selection": "Paste Selection",
+    "settingsField.shortcut-paste-selectionDescription": "Set the shortcut key for pasting copied devices; editable only when Arknights Operation Mode is off.",
     "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",
     "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
     "settingsField.useInspectorPanel": "Use Right Panel For Device Properties",

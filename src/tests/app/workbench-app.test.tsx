@@ -82,6 +82,9 @@ const DEFAULT_APP_SHORTCUTS_STORAGE = {
   [SHORTCUT_KEY.ROTATE]: "R",
   [SHORTCUT_KEY.ROTATE_VIEWPORT]: "Ctrl+R",
   [SHORTCUT_KEY.DELETE_DEVICE]: "F",
+  [SHORTCUT_KEY.MOVE_SELECTION]: "M",
+  [SHORTCUT_KEY.COPY_SELECTION]: "Ctrl+C",
+  [SHORTCUT_KEY.PASTE_SELECTION]: "Ctrl+V",
 } as const;
 
 function createDialogStateSnapshot(options: {
@@ -1130,10 +1133,10 @@ describe("WorkbenchApp", () => {
     });
 
     const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
-    const canvasLeftBottomToolbar = container.querySelector(".canvas-left-bottom-toolbar") as HTMLDivElement | null;
     const canvasBottomLeftToolbar = container.querySelector(".canvas-bottom-left-toolbar") as HTMLDivElement | null;
+    const canvasBottomLeftSecondaryToolbar = container.querySelector(".canvas-bottom-left-secondary-toolbar") as HTMLDivElement | null;
     const rotateViewButton = container.querySelector(
-      '[data-ui-button-id="canvas-bottom-left-toolbar-button-rotate-view"]',
+      '[data-ui-button-id="canvas-bottom-left-secondary-toolbar-button-rotate-view"]',
     ) as HTMLButtonElement | null;
 
     expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
@@ -1143,10 +1146,10 @@ describe("WorkbenchApp", () => {
     expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("51px");
     expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("0.75");
     expect(container.querySelector(".dock-resize-handle")).toBeNull();
-    expect(canvasLeftBottomToolbar).not.toBeNull();
-    expect(canvasLeftBottomToolbar?.querySelectorAll(".canvas-left-bottom-toolbar-button")).toHaveLength(4);
     expect(canvasBottomLeftToolbar).not.toBeNull();
-    expect(canvasBottomLeftToolbar?.classList.contains("is-offset-for-floating-tools")).toBe(true);
+    expect(canvasBottomLeftToolbar?.querySelectorAll(".canvas-bottom-left-toolbar-button")).toHaveLength(4);
+    expect(canvasBottomLeftSecondaryToolbar).not.toBeNull();
+    expect(canvasBottomLeftSecondaryToolbar?.classList.contains("is-offset-for-floating-tools")).toBe(true);
     expect(rotateViewButton?.getAttribute("aria-label")).toBe("旋转视角");
     expect(
       rotateViewButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
@@ -1157,9 +1160,9 @@ describe("WorkbenchApp", () => {
     });
 
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe(`${MOBILE_LEFT_DOCK_WIDTH}px`);
-    expect(container.querySelector(".canvas-left-bottom-toolbar")).toBeNull();
+    expect(container.querySelector(".canvas-bottom-left-toolbar")).toBeNull();
     expect(
-      container.querySelector(".canvas-bottom-left-toolbar")?.classList.contains("is-offset-for-floating-tools"),
+      container.querySelector(".canvas-bottom-left-secondary-toolbar")?.classList.contains("is-offset-for-floating-tools"),
     ).toBe(false);
   });
 
@@ -1199,7 +1202,7 @@ describe("WorkbenchApp", () => {
     expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("68px");
     expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("1");
     expect(container.querySelector(".dock-resize-handle")).not.toBeNull();
-    expect(container.querySelector(".canvas-left-bottom-toolbar")).toBeNull();
+    expect(container.querySelector(".canvas-bottom-left-toolbar")).toBeNull();
     expect(container.querySelector(".placement-panel-group-operation.is-mobile-layout")).toBeNull();
     expect(container.querySelector(".placement-button-list.is-single-column")).toBeNull();
 
@@ -1207,11 +1210,11 @@ describe("WorkbenchApp", () => {
       appHost.internalActions.toggleLeftDock();
     });
 
-    const canvasLeftBottomToolbar = container.querySelector(".canvas-left-bottom-toolbar") as HTMLDivElement | null;
+    const canvasBottomLeftToolbar = container.querySelector(".canvas-bottom-left-toolbar") as HTMLDivElement | null;
 
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("0px");
-    expect(canvasLeftBottomToolbar).not.toBeNull();
-    expect(canvasLeftBottomToolbar?.querySelectorAll(".canvas-left-bottom-toolbar-button")).toHaveLength(4);
+    expect(canvasBottomLeftToolbar).not.toBeNull();
+    expect(canvasBottomLeftToolbar?.querySelectorAll(".canvas-bottom-left-toolbar-button")).toHaveLength(4);
   });
 
   it("prevents middle mouse native pointerdown behavior at the outer shell", () => {
@@ -1261,9 +1264,9 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const toolbar = container.querySelector(".canvas-bottom-left-toolbar") as HTMLDivElement | null;
+    const toolbar = container.querySelector(".canvas-bottom-left-secondary-toolbar") as HTMLDivElement | null;
     const rotateViewButton = container.querySelector(
-      '[data-ui-button-id="canvas-bottom-left-toolbar-button-rotate-view"]',
+      '[data-ui-button-id="canvas-bottom-left-secondary-toolbar-button-rotate-view"]',
     ) as HTMLButtonElement | null;
 
     expect(toolbar).not.toBeNull();
@@ -1271,7 +1274,7 @@ describe("WorkbenchApp", () => {
     expect(rotateViewButton).not.toBeNull();
 
     if (!toolbar || !rotateViewButton) {
-      throw new Error("Canvas bottom-left toolbar did not render expected button.");
+      throw new Error("Canvas bottom-left secondary toolbar did not render expected button.");
     }
 
     act(() => {
@@ -1309,7 +1312,7 @@ describe("WorkbenchApp", () => {
     expect(gestures).toHaveLength(1);
     expect(gestures[0]).toMatchObject({
       type: "ui-button-touch-tap",
-      uiButtonId: "canvas-bottom-left-toolbar-button-rotate-view",
+      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
     });
   });
 
@@ -1529,6 +1532,82 @@ describe("WorkbenchApp", () => {
     });
 
     expect(container.querySelector(".canvas-right-dock-toolbar")).toBeNull();
+  });
+
+  it("renders canvas right dock toolbar in shortcut mode with key badges instead of icons", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.settings.gameUseInspectorPanel = true;
+    });
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      appHost.internalActions.showCanvasRightDockToolbar(
+        [
+          "canvas-right-dock-toolbar-button-exit",
+          "canvas-right-dock-toolbar-button-move",
+          "canvas-right-dock-toolbar-button-delete",
+        ],
+        "shortcut",
+      );
+    });
+
+    const toolbar = container.querySelector(".canvas-right-dock-toolbar") as HTMLDivElement | null;
+    expect(toolbar).not.toBeNull();
+    expect(toolbar?.classList.contains("canvas-right-dock-toolbar--shortcut")).toBe(true);
+
+    // 快捷键模式应渲染 kbd 徽章，而非 WorkbenchIcon SVG
+    const iconElements = toolbar?.querySelectorAll("svg[data-workbench-icon]");
+    expect(iconElements?.length).toBe(0);
+
+    const keyBadges = toolbar?.querySelectorAll(".canvas-right-dock-toolbar-shortcut-key");
+    expect(keyBadges).not.toBeNull();
+    expect(keyBadges!.length).toBeGreaterThan(0);
+
+    // 标签应有外发光样式
+    const labels = toolbar?.querySelectorAll(".canvas-right-dock-toolbar-label--glow");
+    expect(labels?.length).toBe(3);
+
+    act(() => {
+      appHost.internalActions.hideCanvasRightDockToolbar();
+    });
+
+    expect(container.querySelector(".canvas-right-dock-toolbar")).toBeNull();
+  });
+
+  it("renders canvas right dock toolbar in icon mode with workbench icons by default", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.settings.gameUseInspectorPanel = true;
+    });
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      appHost.internalActions.showCanvasRightDockToolbar([
+        "canvas-right-dock-toolbar-button-exit",
+        "canvas-right-dock-toolbar-button-move",
+      ]);
+    });
+
+    const toolbar = container.querySelector(".canvas-right-dock-toolbar") as HTMLDivElement | null;
+    expect(toolbar).not.toBeNull();
+    expect(toolbar?.classList.contains("canvas-right-dock-toolbar--shortcut")).toBe(false);
+
+    // 图标模式应渲染 WorkbenchIcon SVG，而非 kbd 徽章
+    const iconElements = toolbar?.querySelectorAll("svg[data-workbench-icon]");
+    expect(iconElements?.length).toBe(2);
+
+    const keyBadges = toolbar?.querySelectorAll(".canvas-right-dock-toolbar-shortcut-key");
+    expect(keyBadges?.length).toBe(0);
+
+    const labels = toolbar?.querySelectorAll(".canvas-right-dock-toolbar-label");
+    expect(labels?.length).toBe(2);
+    const glowLabels = toolbar?.querySelectorAll(".canvas-right-dock-toolbar-label--glow");
+    expect(glowLabels?.length).toBe(0);
   });
 
   it("switches from right dock to inspector dialog without clearing the current selection", () => {

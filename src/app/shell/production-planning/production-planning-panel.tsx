@@ -1423,6 +1423,8 @@ function ProductionPlanningTreeDetail({
   jumpMap,
   onSelectRow,
   onSelectRecipe,
+  onCoverDemand,
+  onRemoveExternalSupply,
   t,
 }: {
   row: ProductionPlanningTreeRow;
@@ -1433,6 +1435,8 @@ function ProductionPlanningTreeDetail({
   jumpMap: ProductionPlanningTreeJumpMap;
   onSelectRow: (rowId: string) => void;
   onSelectRecipe: (itemId: string, recipeId: string | null) => void;
+  onCoverDemand: (itemId: string) => void;
+  onRemoveExternalSupply: (itemId: string) => void;
   t: (key: string) => string;
 }) {
   const resolveRowId = (rawId: string) => jumpMap.get(rawId) ?? rawId;
@@ -1472,6 +1476,15 @@ function ProductionPlanningTreeDetail({
             <h4>{title}</h4>
             <span>{subtitle}</span>
           </div>
+          <button
+            type="button"
+            className={cm(styles, "production-planning-icon-button")}
+            aria-label={isExternal ? t("productionPlanning.removeExternalSupply") : t("productionPlanning.coverDemand")}
+            title={isExternal ? t("productionPlanning.removeExternalSupply") : t("productionPlanning.coverDemand")}
+            onClick={() => isExternal ? onRemoveExternalSupply(row.targetItemId) : onCoverDemand(row.targetItemId)}
+          >
+            <LucideRepeat />
+          </button>
         </div>
         {recipe !== undefined && (
           <div className={cm(styles, "production-planning-recipe-formula")}>
@@ -2079,404 +2092,13 @@ function buildProductionPlanningTreeDisposalSourceRowId(disposalRowId: string, p
   return `disposal-source:${disposalRowId}:${producerRowId}`;
 }
 
-/**
- * 物品模式：仅保留 item 行，recipe 信息折叠进产物 item 行。
- * 树结构：target item → input item → ...（跳过 recipe 层，depth 直接 +1）。
- */
-// AI-CORRECTION 2026-05-22: ledger 树已接管入口；该旧构建器仅作为归档备用实现保留，不参与当前渲染。
-function _buildItemOnlyTreeRows(plan: ProductionPlanningResult): ProductionPlanningTreeRow[] {
-  const itemTotals = new Map(plan.itemTotals.map((total) => [total.itemId, total]));
-  const rowById = new Map<string, MutableProductionPlanningTreeItemRow>();
-  const rootRowIds = new Set<string>();
-  const expandedItemIds = new Set<string>();
-  let nextOrder = 0;
+// AI-REMOVED 2026-05-23:
+// Reason: ledger 树构建器(buildLedgerProductionPlanningTreeRows)已接管全部树表行生成
+// Trigger: 清理死代码（kind=item 遗留来源）
+// Replacement: buildLedgerProductionPlanningTreeRows
+// Risk: Low
+// Human Review: Not Required
 
-  const ensureItemRow = (
-    itemId: string,
-    node: ProductionPlanningItemNode | null,
-  ): MutableProductionPlanningTreeItemRow => {
-    const rowId = buildProductionPlanningTreeItemRowId(itemId);
-    const existing = rowById.get(rowId);
-    const total = itemTotals.get(itemId) ?? null;
-    if (existing !== undefined) {
-      existing.total = total;
-      if (node !== null) {
-        if (!existing.nodes.some((candidate) => candidate.id === node.id)) {
-          existing.nodes.push(node);
-        }
-        if (existing.node.id.startsWith("total:") || (existing.node.recipeNode === null && node.recipeNode !== null)) {
-          existing.node = node;
-        }
-      }
-      return existing;
-    }
-
-    const itemRow: MutableProductionPlanningTreeItemRow = {
-      id: rowId,
-      kind: "item",
-      depth: 0,
-      order: nextOrder,
-      parentIds: new Set(),
-      childIds: new Set(),
-      itemId,
-      node: node ?? createProductionPlanningTreeSyntheticItemNode(itemId, total),
-      nodes: node === null ? [] : [node],
-      total,
-      producerIds: new Set(),
-      consumerIds: new Set(),
-      isByproduct: false,
-    };
-    nextOrder += 1;
-    rowById.set(rowId, itemRow);
-    return itemRow;
-  };
-
-  const visitItemNode = (
-    node: ProductionPlanningItemNode,
-    parentItemRowId: string | null,
-  ): MutableProductionPlanningTreeItemRow => {
-    const itemRow = ensureItemRow(node.itemId, node);
-
-    if (parentItemRowId !== null) {
-      addProductionPlanningTreeEdge(rowById, parentItemRowId, itemRow.id);
-      // 记录消费关系：父物品行的 recipe 消费当前物品
-      const parentRow = rowById.get(parentItemRowId);
-      if (parentRow !== undefined && parentRow.node.recipeNode !== null) {
-        const recipeRowId = buildProductionPlanningTreeRecipeRowId(parentRow.node.recipeNode.recipeId);
-        itemRow.consumerIds.add(recipeRowId);
-      }
-    }
-
-    if (node.recipeNode === null) {
-      return itemRow;
-    }
-
-    // 记录生产该物品的配方
-    const recipeRowId = buildProductionPlanningTreeRecipeRowId(node.recipeNode.recipeId);
-    itemRow.producerIds.add(recipeRowId);
-
-    if (expandedItemIds.has(node.itemId)) {
-      return itemRow;
-    }
-    expandedItemIds.add(node.itemId);
-
-    for (const child of node.recipeNode.inputItems) {
-      visitItemNode(child, itemRow.id);
-    }
-
-    return itemRow;
-  };
-
-  for (const root of plan.roots) {
-    const rootRow = visitItemNode(root, null);
-    rootRowIds.add(rootRow.id);
-  }
-
-  for (const total of plan.itemTotals) {
-    ensureItemRow(total.itemId, null);
-  }
-
-  // 多亲节点提升为根
-  const orderedRows = Array.from(rowById.values()).sort(compareMutableProductionPlanningTreeRows);
-  for (const row of orderedRows) {
-    if (row.parentIds.size !== 1) {
-      rootRowIds.add(row.id);
-    }
-  }
-
-  // 仅保留 item 行做 finalize（recipe 行不在 rowById 中）
-  return finalizeProductionPlanningTreeRows(rowById, rootRowIds);
-}
-
-/**
- * 设备模式：保留 recipe 行和 raw item 叶子行，中间 item 折叠进父级 recipe。
- * 树结构：recipe（生产 target）→ recipe（生产 input）→ ... → raw item 叶子。
- */
-// AI-CORRECTION 2026-05-22: 上述旧说明不再准确；pair 树现在只保留“配方设备 + 目标产物”行，
-// raw item 不再作为树节点外显，只保留在 pair 行的输入信息里。
-// AI-CORRECTION 2026-05-22: ledger 树已接管入口；该旧构建器仅作为归档备用实现保留，不参与当前渲染。
-function _buildDeviceProductPairTreeRows(plan: ProductionPlanningResult): ProductionPlanningTreeRow[] {
-  const rowById = new Map<string, MutableProductionPlanningTreeRow>();
-  const rootRowIds = new Set<string>();
-  const expandedRecipeIds = new Set<string>();
-  let nextOrder = 0;
-
-  const ensureRecipeRow = (
-    recipeId: string,
-    targetItemId: string,
-    recipeNode: ProductionPlanningRecipeNode | null,
-    total: ProductionPlanningResult["recipeTotals"][number] | null = null,
-  ): MutableProductionPlanningTreeRecipeRow => {
-    const rowId = buildProductionPlanningTreeDeviceProductRowId(recipeId, targetItemId);
-    const existing = rowById.get(rowId);
-    if (existing !== undefined) {
-      if (existing.kind !== "recipe") {
-        throw new Error(`Production planning tree row id collision: ${rowId}`);
-      }
-      if (recipeNode !== null && !existing.recipeNodes.some((candidate) => candidate.id === recipeNode.id)) {
-        existing.recipeNodes.push(recipeNode);
-        existing.recipeNode = mergeProductionPlanningTreeRecipeNodes(existing.recipeNode, recipeNode);
-      } else if (recipeNode === null && existing.recipeNodes.length === 0 && total !== null) {
-        existing.total = total;
-        existing.recipeNode = createProductionPlanningTreeSyntheticRecipeNode(recipeId, total, existing.recipeNode, targetItemId);
-      }
-      return existing;
-    }
-
-    const recipeRow: MutableProductionPlanningTreeRecipeRow = {
-      id: rowId,
-      kind: "recipe",
-      depth: 0,
-      order: nextOrder,
-      parentIds: new Set(),
-      childIds: new Set(),
-      recipeId,
-      targetItemId,
-      recipeNode: recipeNode !== null
-        ? recipeNode
-        : createProductionPlanningTreeSyntheticRecipeNode(recipeId, total, null, targetItemId),
-      recipeNodes: recipeNode === null ? [] : [recipeNode],
-      total,
-      inputItemIds: new Set(),
-      outputItemIds: new Set(),
-      isByproduct: false,
-    };
-    nextOrder += 1;
-    rowById.set(rowId, recipeRow);
-    return recipeRow;
-  };
-
-  /*
-  AI-REMOVED 2026-05-22:
-  Reason: 设备模式节点定义收敛为“设备/配方 + 目标产物”的 unique pair；raw item 叶子不再外显为树节点。
-  Trigger: 用户指出设备模式不应继续出现物品 node。
-  Evidence: buildDeviceProductPairTreeRows 现在只调用 ensureRecipeRow，并通过 inputItemIds/outputItemIds 在详情里保留物品关系。
-  Replacement: ensureRecipeRow / visitRecipeNode in buildDeviceProductPairTreeRows
-  Risk: Medium；设备模式行数减少，原料只能在详情和输入芯片中查看。
-  Human Review: Required
-
-  Original code:
-  const ensureItemRow = (
-    itemId: string,
-    node: ProductionPlanningItemNode | null,
-  ): MutableProductionPlanningTreeItemRow => {
-    const rowId = buildProductionPlanningTreeItemRowId(itemId);
-    const existing = rowById.get(rowId);
-    const total = itemTotals.get(itemId) ?? null;
-    if (existing !== undefined) {
-      if (existing.kind !== "item") {
-        throw new Error(`Production planning tree row id collision: ${rowId}`);
-      }
-      existing.total = total;
-      if (node !== null && !existing.nodes.some((candidate) => candidate.id === node.id)) {
-        existing.nodes.push(node);
-      }
-      return existing;
-    }
-
-    const itemRow: MutableProductionPlanningTreeItemRow = {
-      id: rowId,
-      kind: "item",
-      depth: 0,
-      order: nextOrder,
-      parentIds: new Set(),
-      childIds: new Set(),
-      itemId,
-      node: node ?? createProductionPlanningTreeSyntheticItemNode(itemId, total),
-      nodes: node === null ? [] : [node],
-      total,
-      producerIds: new Set(),
-      consumerIds: new Set(),
-    };
-    nextOrder += 1;
-    rowById.set(rowId, itemRow);
-    return itemRow;
-  };
-  */
-
-  function ensureExternalSupplyRow(
-    node: ProductionPlanningItemNode,
-    parentRowId: string | null,
-  ): MutableProductionPlanningTreeRecipeRow | null {
-    const perMinute = resolveProductionPlanningExternalSupplyPerMinute(node);
-    if (perMinute <= PRODUCTION_PLANNING_EPSILON) {
-      return null;
-    }
-
-    const recipeNode = createProductionPlanningExternalSupplyRecipeNode(node, perMinute);
-    const recipeRow = ensureRecipeRow(recipeNode.recipeId, recipeNode.targetItemId, recipeNode);
-    recipeRow.outputItemIds.add(node.itemId);
-
-    if (parentRowId === null) {
-      rootRowIds.add(recipeRow.id);
-    } else {
-      addProductionPlanningTreeEdge(rowById, parentRowId, recipeRow.id);
-    }
-
-    return recipeRow;
-  }
-
-  function visitRecipeNode(
-    recipeNode: ProductionPlanningRecipeNode,
-    parentRowId: string | null,
-  ): MutableProductionPlanningTreeRecipeRow {
-    const recipeRow = ensureRecipeRow(recipeNode.recipeId, recipeNode.targetItemId, recipeNode);
-
-    if (parentRowId !== null) {
-      addProductionPlanningTreeEdge(rowById, parentRowId, recipeRow.id);
-    }
-
-    // 记录输出物品关联
-    for (const output of recipeNode.outputs) {
-      recipeRow.outputItemIds.add(output.itemId);
-    }
-
-    if (expandedRecipeIds.has(recipeRow.id)) {
-      return recipeRow;
-    }
-    expandedRecipeIds.add(recipeRow.id);
-
-    // 输入项：有 recipe 的 → 递归为设备产物节点；无 recipe 的 → 只保留在输入信息里
-    const inputItems = [...recipeNode.inputItems].sort((left, right) => {
-      const leftHasRecipe = left.recipeNode === null ? 1 : 0;
-      const rightHasRecipe = right.recipeNode === null ? 1 : 0;
-      return leftHasRecipe - rightHasRecipe;
-    });
-
-    for (const child of inputItems) {
-      recipeRow.inputItemIds.add(child.itemId);
-      visitItemProducers(child, recipeRow.id);
-    }
-
-    return recipeRow;
-  }
-
-  function visitItemProducers(
-    node: ProductionPlanningItemNode,
-    parentRowId: string | null,
-  ): void {
-    ensureExternalSupplyRow(node, parentRowId);
-    if (node.recipeNode !== null) {
-      const recipeRow = visitRecipeNode(node.recipeNode, parentRowId);
-      recipeRow.outputItemIds.add(node.itemId);
-    }
-  }
-
-  for (const root of plan.roots) {
-    visitItemProducers(root, null);
-  }
-
-  // 从 totals 补充没有出现在目标递归链里的设备产物 pair，例如副产物倾倒节点。
-  for (const total of plan.recipeTotals) {
-    const targetItemIds = total.outputs.length > 0
-      ? total.outputs.map((output) => output.itemId)
-      : total.inputs.slice(0, 1).map((input) => input.itemId);
-    for (const targetItemId of targetItemIds) {
-      const recipeRow = ensureRecipeRow(total.recipeId, targetItemId, null, total);
-      for (const input of total.inputs) {
-        recipeRow.inputItemIds.add(input.itemId);
-      }
-      recipeRow.outputItemIds.add(targetItemId);
-      if (recipeRow.parentIds.size === 0) {
-        rootRowIds.add(recipeRow.id);
-      }
-    }
-  }
-
-  const orderedRows = Array.from(rowById.values()).sort(compareMutableProductionPlanningTreeRows);
-  for (const row of orderedRows) {
-    if (row.parentIds.size !== 1) {
-      rootRowIds.add(row.id);
-    }
-  }
-
-  // 标记副产物行
-  markByproductRows(rowById, plan);
-
-  // 废水处理配方节点
-  buildWasteTreatmentTreeRows(rowById, rootRowIds, plan, nextOrder);
-
-  return finalizeProductionPlanningTreeRows(rowById, rootRowIds);
-}
-
-function markByproductRows(
-  rowById: ReadonlyMap<string, MutableProductionPlanningTreeRow>,
-  plan: ProductionPlanningResult,
-): void {
-  const byproductItemIds = plan.byproductItemIds;
-  if (byproductItemIds.size === 0) {
-    return;
-  }
-
-  for (const row of rowById.values()) {
-    if (row.kind !== "recipe") {
-      continue;
-    }
-
-    for (const outputId of row.outputItemIds) {
-      if (byproductItemIds.has(outputId)) {
-        row.isByproduct = true;
-        break;
-      }
-    }
-  }
-}
-
-function buildWasteTreatmentTreeRows(
-  rowById: Map<string, MutableProductionPlanningTreeRow>,
-  rootRowIds: Set<string>,
-  plan: ProductionPlanningResult,
-  nextOrder: number,
-): void {
-  for (const total of plan.recipeTotals) {
-    if (!total.recipeId.startsWith("r_chrono_wastewater_treatment")) {
-      continue;
-    }
-
-    const inputItemId = total.inputs[0]?.itemId ?? "";
-    if (!inputItemId) {
-      continue;
-    }
-    const rowId = buildProductionPlanningTreeDeviceProductRowId(total.recipeId, inputItemId);
-
-    if (rowById.has(rowId)) {
-      continue;
-    }
-
-    const recipeNode: ProductionPlanningRecipeNode = {
-      id: `total:${total.recipeId}`,
-      kind: "recipe",
-      recipeId: total.recipeId,
-      targetItemId: inputItemId,
-      durationSeconds: total.durationSeconds,
-      cyclesPerMinute: total.cyclesPerMinute,
-      deviceCount: total.deviceCount,
-      inputs: total.inputs.map(clonePort),
-      outputs: [],
-      inputItems: [],
-    };
-
-    const row: MutableProductionPlanningTreeRecipeRow = {
-      id: rowId,
-      kind: "recipe",
-      depth: 0,
-      order: nextOrder,
-      parentIds: new Set(),
-      childIds: new Set(),
-      recipeId: total.recipeId,
-      targetItemId: inputItemId,
-      recipeNode,
-      recipeNodes: [recipeNode],
-      total,
-      inputItemIds: new Set([inputItemId]),
-      outputItemIds: new Set(),
-      isByproduct: false,
-    };
-
-    rowById.set(rowId, row);
-    rootRowIds.add(rowId);
-  }
-}
 
 /** 折叠跳转映射：被折叠节点的原始 ID → 包含它的实际树行 ID */
 type ProductionPlanningTreeJumpMap = ReadonlyMap<string, string>;
@@ -2697,38 +2319,28 @@ function buildProductionPlanningTreeItemRowId(itemId: string): string {
   return `item:${itemId}`;
 }
 
-function buildProductionPlanningTreeRecipeRowId(recipeId: string): string {
-  return `recipe:${recipeId}`;
-}
+// AI-REMOVED 2026-05-23:
+// Reason: 函数定义后从未被调用
+// Trigger: ESLint @typescript-eslint/no-unused-vars
+// Evidence: grep 全仓库无调用点
+// Replacement: None
+// Risk: Low — 仅用于构建 rowId，无副作用
+// Human Review: Not Required
+//
+// function buildProductionPlanningTreeRecipeRowId(recipeId: string): string {
+//   return `recipe:${recipeId}`;
+// }
 
 function buildProductionPlanningTreeDeviceProductRowId(recipeId: string, targetItemId: string): string {
   return `recipe:${recipeId}:target:${targetItemId}`;
 }
 
-function createProductionPlanningTreeSyntheticItemNode(
-  itemId: string,
-  total: ProductionPlanningResult["itemTotals"][number] | null,
-): ProductionPlanningItemNode {
-  return {
-    id: `total:${itemId}`,
-    kind: "item",
-    itemId,
-    demandPerMinute: total?.demandPerMinute ?? 0,
-    suppliedPerMinute: total?.suppliedPerMinute ?? 0,
-    producedPerMinute: total?.producedPerMinute ?? 0,
-    unresolvedPerMinute: total?.unresolvedPerMinute ?? 0,
-    supply: {
-      manual: 0,
-      surplus: 0,
-      infinite: 0,
-      cycle: 0,
-    },
-    recipeNode: null,
-    isInfiniteSource: false,
-    isCycleSource: false,
-    blockedByCycle: false,
-  };
-}
+// AI-REMOVED 2026-05-23:
+// Reason: ledger 树构建器(buildLedgerProductionPlanningTreeRows)已接管全部树表行生成
+// Trigger: 清理死代码（kind=item 遗留来源）
+// Replacement: buildLedgerProductionPlanningTreeRows
+// Risk: Low
+// Human Review: Not Required
 
 function createProductionPlanningTreeSyntheticRecipeNode(
   recipeId: string,
@@ -2854,224 +2466,6 @@ function resolveProductionPlanningTreeRowTitle(
   const productName = row.targetItemId.length > 0 ? resolveProductionPlanningItemName(row.targetItemId, index, t) : null;
   return productName === null ? title : `${title} · ${productName}`;
 }
-
-/*
-AI-REMOVED 2026-05-21:
-Reason: 树表需要吸收 EndfieldLab 的共享产物逻辑；旧实现直接按递归实例追加行，相同物品/配方会在多父级场景重复出现，无法表达共享节点和跳转。
-Trigger: 用户要求“先改一版，吸取 endfieldlab 的共享产物逻辑”。
-Evidence: EndfieldLab 对多 parents 的 step 不继续作为单一子节点缩进，而是在详情/流程中保留多关联；当前替代实现使用 buildProductionPlanningTreeRows 内的规范化 rowById、parentIds、producerIds、consumerIds。
-Replacement: buildProductionPlanningTreeRows / finalizeProductionPlanningTreeRows
-Risk: Medium；这是展示层归并，求解核心仍保持原有按需求递归计算。
-Human Review: Required
-
-Original code:
-function buildProductionPlanningTreeRows(
-  plan: ProductionPlanningResult,
-  displayMode: ProductionPlanningDisplayMode,
-): ProductionPlanningTreeRow[] {
-  const rows: ProductionPlanningTreeRow[] = [];
-
-  for (const root of plan.roots) {
-    if (displayMode === "device") {
-      pushDeviceTreeRows(root, rows);
-    } else {
-      pushItemTreeRows(root, 0, rows);
-    }
-  }
-
-  return rows;
-}
-
-function pushItemTreeRows(
-  node: ProductionPlanningItemNode,
-  depth: number,
-  rows: ProductionPlanningTreeRow[],
-): void {
-  rows.push({
-    id: `item:${node.id}`,
-    kind: "item",
-    depth,
-    node,
-  });
-
-  if (node.recipeNode === null) {
-    return;
-  }
-
-  rows.push({
-    id: `recipe:${node.recipeNode.id}`,
-    kind: "recipe",
-    depth: depth + 1,
-    recipeNode: node.recipeNode,
-  });
-
-  for (const child of node.recipeNode.inputItems) {
-    pushItemTreeRows(child, depth + 2, rows);
-  }
-}
-
-function pushDeviceTreeRows(
-  root: ProductionPlanningItemNode,
-  rows: ProductionPlanningTreeRow[],
-): void {
-  rows.push({
-    id: `target:${root.id}`,
-    kind: "item",
-    depth: 0,
-    node: root,
-  });
-
-  if (root.recipeNode !== null) {
-    pushDeviceRecipeTreeRows(root.recipeNode, 1, rows);
-  }
-}
-
-function pushDeviceRecipeTreeRows(
-  recipeNode: ProductionPlanningRecipeNode,
-  depth: number,
-  rows: ProductionPlanningTreeRow[],
-): void {
-  rows.push({
-    id: `recipe:${recipeNode.id}`,
-    kind: "recipe",
-    depth,
-    recipeNode,
-  });
-
-  for (const child of recipeNode.inputItems) {
-    if (child.recipeNode === null) {
-      rows.push({
-        id: `item:${child.id}`,
-        kind: "item",
-        depth: depth + 1,
-        node: child,
-      });
-    } else {
-      pushDeviceRecipeTreeRows(child.recipeNode, depth + 1, rows);
-    }
-  }
-}
-*/
-
-/*
-AI-REMOVED 2026-05-21:
-Reason: 树状图已改为树表 + 详情面板，旧递归卡片树会重新制造深层缩进挤占内容的问题。
-Trigger: 用户要求先改成树表 + 详情面板。
-Evidence: ProductionPlanningTreeTable 现在统一承载 item/device 树状视图，Playwright 验证复杂目标“精选荞愈胶囊”在物品/设备模式下均正常显示。
-Replacement: ProductionPlanningTreeTable / buildProductionPlanningTreeRows
-Risk: Low；流程图路径不受影响，旧卡片细节由右侧详情面板复用 RecipeCard / ItemIdentity / NodeStatus。
-Human Review: Required
-
-Original code:
-function ItemTreeNode({
-  node,
-  depth,
-  index,
-  recipeChoices,
-  onSelectRecipe,
-  t,
-}: {
-  node: ProductionPlanningItemNode;
-  depth: number;
-  index: ProductionPlanningIndex;
-  recipeChoices: ReadonlyMap<string, string>;
-  onSelectRecipe: (itemId: string, recipeId: string | null) => void;
-  t: (key: string) => string;
-}) {
-  const recipes = index.recipesByOutputItem.get(node.itemId) ?? [];
-
-  return (
-    <article className={cm(styles, "production-planning-item-node")} style={{ "--tree-depth": depth } as CSSProperties}>
-      <div className={cm(styles, "production-planning-item-node-main")}>
-        <ItemIdentity itemId={node.itemId} index={index} t={t} />
-        <div className={cm(styles, "production-planning-node-metrics")}>
-          <Metric label={t("productionPlanning.demand")} value={formatProductionFlow(node.demandPerMinute)} />
-          <Metric label={t("productionPlanning.supply")} value={formatProductionFlow(node.suppliedPerMinute)} tone={node.suppliedPerMinute > 0 ? "good" : undefined} />
-          <Metric label={t("productionPlanning.produced")} value={formatProductionFlow(node.producedPerMinute)} />
-          <Metric label={t("productionPlanning.missing")} value={formatProductionFlow(node.unresolvedPerMinute)} tone={node.unresolvedPerMinute > 0 ? "bad" : undefined} />
-        </div>
-        <NodeStatus node={node} t={t} />
-      </div>
-      {recipes.length > 0 && (
-        <RecipeSelect
-          itemId={node.itemId}
-          recipes={recipes}
-          index={index}
-          selectedRecipeId={recipeChoices.get(node.itemId) ?? null}
-          onSelectRecipe={onSelectRecipe}
-          t={t}
-        />
-      )}
-      {node.recipeNode !== null && (
-        <div className={cm(styles, "production-planning-node-children")}>
-          <RecipeCard recipeNode={node.recipeNode} index={index} t={t} />
-          {node.recipeNode.inputItems.map((child) => (
-            <ItemTreeNode
-              key={child.id}
-              node={child}
-              depth={depth + 1}
-              index={index}
-              recipeChoices={recipeChoices}
-              onSelectRecipe={onSelectRecipe}
-              t={t}
-            />
-          ))}
-        </div>
-      )}
-    </article>
-  );
-}
-
-function DeviceTreeRoot({
-  root,
-  index,
-  t,
-}: {
-  root: ProductionPlanningItemNode;
-  index: ProductionPlanningIndex;
-  t: (key: string) => string;
-}) {
-  return (
-    <section className={cm(styles, "production-planning-device-root")}>
-      <div className={cm(styles, "production-planning-device-root-target")}>
-        <LucideTarget />
-        <ItemIdentity itemId={root.itemId} index={index} t={t} />
-        <span>{formatProductionFlow(root.demandPerMinute)}/min</span>
-      </div>
-      {root.recipeNode === null ? (
-        <LeafItem node={root} index={index} t={t} />
-      ) : (
-        <DeviceRecipeTree recipeNode={root.recipeNode} depth={0} index={index} t={t} />
-      )}
-    </section>
-  );
-}
-
-function DeviceRecipeTree({
-  recipeNode,
-  depth,
-  index,
-  t,
-}: {
-  recipeNode: ProductionPlanningRecipeNode;
-  depth: number;
-  index: ProductionPlanningIndex;
-  t: (key: string) => string;
-}) {
-  return (
-    <div className={cm(styles, "production-planning-device-tree-node")} style={{ "--tree-depth": depth } as CSSProperties}>
-      <RecipeCard recipeNode={recipeNode} index={index} t={t} />
-      <div className={cm(styles, "production-planning-node-children")}>
-        {recipeNode.inputItems.map((child) => (
-          child.recipeNode === null
-            ? <LeafItem key={child.id} node={child} index={index} t={t} />
-            : <DeviceRecipeTree key={child.recipeNode.id} recipeNode={child.recipeNode} depth={depth + 1} index={index} t={t} />
-        ))}
-      </div>
-    </div>
-  );
-}
-*/
 
 function FlowGraph({
   displayMode,
@@ -3241,35 +2635,6 @@ function createProductionPlanningExternalSupplyRecipeNode(
 function resolveProductionPlanningExternalSupplyIconSrc(): string {
   return `/3d-top-view/sprites/${EXTERNAL_SUPPLY_ENTITY_ID}.webp`;
 }
-
-/*
-AI-REMOVED 2026-05-21:
-Reason: 旧 DeviceRecipeTree 已归档，LeafItem 仅服务旧递归设备树，当前树表行直接使用 item row 表达叶子物品。
-Trigger: 用户要求先改成树表 + 详情面板。
-Evidence: pushDeviceRecipeTreeRows 直接生成 leaf item 的 ProductionPlanningTreeItemRow；Playwright 设备模式验证已覆盖叶子物品显示。
-Replacement: pushDeviceRecipeTreeRows / ProductionPlanningTreeTableRow
-Risk: Low
-Human Review: Required
-
-Original code:
-function LeafItem({
-  node,
-  index,
-  t,
-}: {
-  node: ProductionPlanningItemNode;
-  index: ProductionPlanningIndex;
-  t: (key: string) => string;
-}) {
-  return (
-    <div className={cm(styles, "production-planning-leaf-item")}>
-      <ItemIdentity itemId={node.itemId} index={index} t={t} />
-      <span>{formatProductionFlow(node.demandPerMinute)}/min</span>
-      <NodeStatus node={node} t={t} />
-    </div>
-  );
-}
-*/
 
 function NodeStatus({
   node,

@@ -45,6 +45,9 @@ function resetDocumentRuntimeState(state: EditorStateReadWrite): void {
   state.drafts = [];
   state.marqueeGridRect = null;
   state.internalTransientState.logisticsDraft = null;
+  state.internalTransientState.logisticsDeviceRouteCycleSignature = null;
+  state.internalTransientState.logisticsDeviceRouteCycleIndex = 0;
+  state.internalTransientState.convergerEntityGridKey = null;
   state.internalTransientState.placementDraftSlotLinks = null;
   state.internalTransientState.placementHistoryAction = null;
   state.internalTransientState.placementValidationByEntityId = {};

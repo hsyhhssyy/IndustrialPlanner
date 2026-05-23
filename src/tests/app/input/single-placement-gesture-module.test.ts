@@ -177,10 +177,10 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
     ).toEqual({ status: "handled" });
     expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith(
-      "item_port_log_hongs_bus",
+      "item_port_unloader_1",
       { x: 50, y: 40 },
     );
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("item_port_log_hongs_bus");
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("item_port_unloader_1");
   });
 
   it("uses the last mouse position when entering placement from a number shortcut", () => {
@@ -204,7 +204,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
     ).toEqual({ status: "handled" });
     expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith(
-      "item_port_log_hongs_bus",
+      "item_port_unloader_1",
       { x: 7, y: 8 },
     );
     expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 7, y: 8 });

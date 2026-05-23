@@ -12,9 +12,10 @@ const SELECTION_ACTION_BUTTON_IDS = [
   "canvas-floating-toolbar-button-delete",
 ] as const satisfies readonly CanvasFloatingToolbarButtonId[];
 
-const SELECTION_LOGISTICS_ACTION_BUTTON_IDS = [
-  ...SELECTION_ACTION_BUTTON_IDS,
+const SELECTION_LOGISTICS_SEGMENT_BUTTON_IDS = [
+  "canvas-floating-toolbar-button-delete-upstream-segment",
   "canvas-floating-toolbar-button-delete-many",
+  "canvas-floating-toolbar-button-delete-downstream-segment",
 ] as const satisfies readonly CanvasFloatingToolbarButtonId[];
 
 export const SelectionInspectorActionStrip = observer(function SelectionInspectorActionStrip({
@@ -35,7 +36,7 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
     return null;
   }
 
-  const showDeleteMany = selectionIds.every((entityId) => {
+  const isLogisticsSelection = selectionIds.every((entityId) => {
     const entity = editor.queries.getEntityById(entityId);
 
     return (
@@ -43,10 +44,9 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
       && appHost.workspace.registry.queries.isDedicatedLogisticsDevice(entity.definitionId)
     );
   });
-  const buttonIds = (showDeleteMany
-    ? SELECTION_LOGISTICS_ACTION_BUTTON_IDS
-    : SELECTION_ACTION_BUTTON_IDS
-  ).filter((buttonId) => canSaveBlueprint || buttonId !== "canvas-floating-toolbar-button-save-blueprint");
+  const generalButtonIds = SELECTION_ACTION_BUTTON_IDS.filter(
+    (buttonId) => canSaveBlueprint || buttonId !== "canvas-floating-toolbar-button-save-blueprint",
+  );
 
   const locale = appHost.state.settings.locale;
 
@@ -59,18 +59,35 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
       <div
         className={cm(styles, "selection-inspector-action-button-list")}
         style={{
-          gridTemplateColumns: `repeat(${buttonIds.length}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(${generalButtonIds.length}, minmax(0, 1fr))`,
         }}
       >
         <CanvasFloatingToolbarButtonStrip
           appHost={appHost}
           buttonClassName={cm(styles, "selection-inspector-action-button")}
-          buttonIds={buttonIds}
+          buttonIds={generalButtonIds}
           iconClassName={cm(styles, "selection-inspector-action-icon")}
           labelClassName={cm(styles, "selection-inspector-action-label")}
           showLabels
         />
       </div>
+      {isLogisticsSelection ? (
+        <div
+          className={cm(styles, "selection-inspector-action-button-list")}
+          style={{
+            gridTemplateColumns: `repeat(3, minmax(0, 1fr))`,
+          }}
+        >
+          <CanvasFloatingToolbarButtonStrip
+            appHost={appHost}
+            buttonClassName={cm(styles, "selection-inspector-action-button")}
+            buttonIds={SELECTION_LOGISTICS_SEGMENT_BUTTON_IDS}
+            iconClassName={cm(styles, "selection-inspector-action-icon")}
+            labelClassName={cm(styles, "selection-inspector-action-label")}
+            showLabels
+          />
+        </div>
+      ) : null}
     </section>
   );
 });

@@ -138,11 +138,18 @@ describe("EditSelectionInspector", () => {
     });
 
     const actionStrip = container.querySelector("[data-selection-action-strip]") as HTMLElement | null;
-    const actionButtonList = container.querySelector(".selection-inspector-action-button-list") as HTMLElement | null;
+    const actionButtonLists = container.querySelectorAll(".selection-inspector-action-button-list");
+    const generalRow = actionButtonLists[0] as HTMLElement | null;
+    const logisticsRow = actionButtonLists[1] as HTMLElement | null;
 
     expect(actionStrip).not.toBeNull();
-    expect(actionButtonList?.style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
+    // 通用操作行：移动 + 删除，共 2 个按钮
+    expect(generalRow?.style.gridTemplateColumns).toBe("repeat(2, minmax(0, 1fr))");
+    // 物流段操作行：删除前段 + 删除整段 + 删除后段，共 3 个按钮
+    expect(logisticsRow?.style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
     expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-save-blueprint"]')).toBeNull();
     expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-delete-many"]')).not.toBeNull();
+    expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-delete-upstream-segment"]')).not.toBeNull();
+    expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-delete-downstream-segment"]')).not.toBeNull();
   });
 });

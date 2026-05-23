@@ -24,10 +24,10 @@ describe("BeltVisualGeometry", () => {
           tags: [],
         },
         {
-          id: "target-admission",
-          definitionId: "item_log_admission",
-          position: { x: 1, y: 0 },
-          rotation: 0,
+          id: "target-storager",
+          definitionId: "item_port_storager_1",
+          position: { x: 1, y: -1 },
+          rotation: 90,
           config: {},
           tags: [],
         },
@@ -39,7 +39,7 @@ describe("BeltVisualGeometry", () => {
     expect(BELT_INSERTION_DEPTH_CELLS).toBe(0.2)
     expect(entries).toEqual([{
       sourceEntityId: "source-belt",
-      targetEntityId: "target-admission",
+      targetEntityId: "target-storager",
       boundary: {
         x: 1,
         y: 0.5,
@@ -82,10 +82,10 @@ describe("BeltVisualGeometry", () => {
           tags: [],
         },
         {
-          id: "target-admission",
-          definitionId: "item_log_admission",
-          position: { x: 1, y: 0 },
-          rotation: 0,
+          id: "target-storager",
+          definitionId: "item_port_storager_1",
+          position: { x: 1, y: -1 },
+          rotation: 90,
           config: {},
           tags: [],
         },
@@ -132,10 +132,10 @@ describe("BeltVisualGeometry", () => {
     const ctx = createGeometryContext({
       entities: [
         {
-          id: "source-admission",
-          definitionId: "item_log_admission",
-          position: { x: -1, y: 0 },
-          rotation: 0,
+          id: "source-storager",
+          definitionId: "item_port_storager_1",
+          position: { x: -3, y: 0 },
+          rotation: 90,
           config: {},
           tags: [],
         },
@@ -153,7 +153,7 @@ describe("BeltVisualGeometry", () => {
     expect(resolveBeltPortExtensionEntries(ctx as never)).toEqual([{
       kind: "device-output-to-belt",
       beltEntityId: "target-belt",
-      deviceEntityId: "source-admission",
+      deviceEntityId: "source-storager",
       boundary: {
         x: 0,
         y: 0.5,

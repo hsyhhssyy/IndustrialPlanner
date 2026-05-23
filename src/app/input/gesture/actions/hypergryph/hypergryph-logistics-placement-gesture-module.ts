@@ -13,6 +13,7 @@ import type {
 } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import { createLogger } from "@/shared/logging/logger";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
@@ -34,6 +35,8 @@ const LOGISTICS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS = [
 
 const BELT_DRAW_BUTTON_ID = "placement-action-belt-draw";
 const PIPE_DRAW_BUTTON_ID = "placement-action-pipe-draw";
+
+const logisticsLogger = createLogger("logistics-placement");
 
 export function createHypergryphLogisticsPlacementGestureModule(): GestureMappingModule<AppHost> {
   let activeTouchLogisticsDragGestureId: string | null = null;
@@ -354,6 +357,14 @@ function handleTouchTap(options: {
     result,
   });
   showTouchToolbar(options.appHost);
+
+  // 2026-05-23: 设备源创建 draft 后立即生成首个 freehand cell，
+  // 保证 logisticsHead collection 非空，后续拖拽可正常继续。
+  moveTouchLogisticsEnd({
+    appHost: options.appHost,
+    editor: options.editor,
+    gridPoint,
+  });
   return { status: "handled" };
 }
 
@@ -533,8 +544,18 @@ function driveMouseLogisticsPreview(options: {
   const runtime = options.appHost.internalState.runtime.logisticsPlacement;
   const kind = runtime.kind;
   const gridPoint = resolveGridPointFromGesturePosition(options.editor, options.position);
-  if (kind === null || gridPoint === null || options.editor.queries.resolveLogisticsDraftState() === null) {
+  if (kind === null || gridPoint === null) {
     return { status: "ignored" };
+  }
+
+  const draftState = options.editor.queries.resolveLogisticsDraftState();
+  if (draftState === null || runtime.isHoverPreview) {
+    return driveMouseLogisticsStartPreview({
+      appHost: options.appHost,
+      editor: options.editor,
+      kind,
+      gridPoint,
+    });
   }
 
   if (
@@ -562,6 +583,56 @@ function driveMouseLogisticsPreview(options: {
   return { status: "handled" };
 }
 
+function driveMouseLogisticsStartPreview(options: {
+  appHost: AppHost;
+  editor: NonNullable<AppHost["workspace"]["editor"]>;
+  kind: LogisticsKind;
+  gridPoint: GridPoint;
+}): GestureHandleResult {
+  const runtime = options.appHost.internalState.runtime.logisticsPlacement;
+  const endpoint = options.editor.queries.findLogisticsDraftEndpointAtGridPoint(
+    options.gridPoint,
+    options.kind,
+  );
+
+  if (endpoint?.type !== "device-port" || endpoint.portDirection !== "output") {
+    if (runtime.isHoverPreview) {
+      options.editor.actions.cancelLogisticsDraft();
+      softResetLogisticsRuntime(options.appHost);
+    }
+    runtime.lastPreviewGridPoint = options.gridPoint;
+    return { status: "ignored" };
+  }
+
+  if (
+    runtime.isHoverPreview
+    && runtime.lastPreviewGridPoint !== null
+    && areGridPointsEqual(runtime.lastPreviewGridPoint, options.gridPoint)
+  ) {
+    return { status: "handled" };
+  }
+
+  const result = options.editor.actions.createLogisticsDraftStart({
+    kind: options.kind,
+    source: {
+      type: "device",
+      entityId: endpoint.entityId,
+      pointerGridPoint: options.gridPoint,
+    },
+    routeOrder: runtime.routeOrder,
+  });
+  updateRuntimeFromResult({
+    appHost: options.appHost,
+    pointerMode: "mouse",
+    phase: "drawing",
+    result,
+  });
+  runtime.phase = "idle";
+  runtime.isHoverPreview = true;
+  runtime.lastPreviewGridPoint = options.gridPoint;
+  return { status: "handled" };
+}
+
 function handleMouseLeftTap(options: {
   appHost: AppHost;
   editor: NonNullable<AppHost["workspace"]["editor"]>;
@@ -572,10 +643,16 @@ function handleMouseLeftTap(options: {
   const kind = runtime.kind;
   const gridPoint = resolveGridPointFromGesturePosition(options.editor, options.position);
   if (kind === null || gridPoint === null) {
+    logisticsLogger.debug("mouse-left-tap IGNORED: kind or gridPoint null", {
+      kind,
+      gridPoint,
+    });
     return { status: "ignored" };
   }
 
-  if (options.editor.queries.resolveLogisticsDraftState() === null) {
+  const draftState = options.editor.queries.resolveLogisticsDraftState();
+  if (draftState === null) {
+    runtime.isHoverPreview = false;
     return createMouseLogisticsStart({
       ...options,
       kind,
@@ -583,10 +660,31 @@ function handleMouseLeftTap(options: {
     });
   }
 
+  if (runtime.isHoverPreview) {
+    runtime.isHoverPreview = false;
+    runtime.phase = "drawing";
+    runtime.pointerMode = "mouse";
+    runtime.lastPreviewGridPoint = gridPoint;
+    return { status: "handled" };
+  }
+
   const headGridPoint = runtime.headGridPoint;
   const targetEntityId = runtime.targetEntityId;
+  const headDraftId = draftState?.headDraftEntityId ?? null;
+  const headEntity = headDraftId !== null
+    ? options.editor.queries.getEntityById(headDraftId)
+    : null;
+  const isHeadConverger = headEntity !== null
+    && (headEntity.definitionId === 'item_log_converger' || headEntity.definitionId === 'item_pipe_converger');
+
   if (!options.editor.actions.applyLogisticDraft()) {
     runtime.statusMessageKey = options.editor.queries.resolveLogisticsDraftState()?.invalidReason ?? "unknown";
+    return { status: "handled" };
+  }
+
+  // 自动创建汇流器后终止本次绘制，用户需重新选起点
+  if (isHeadConverger) {
+    softResetLogisticsRuntime(options.appHost);
     return { status: "handled" };
   }
 
@@ -650,9 +748,22 @@ function createMouseLogisticsStart(options: {
   }
 
   if (result === null) {
+    logisticsLogger.debug("mouse-logistics-start IGNORED: no matching endpoint and pointerEntityId not null", {
+      kind: options.kind,
+      gridPoint: options.gridPoint,
+      pointerEntityId: options.pointerEntityId,
+      endpointType: endpoint?.type ?? null,
+      endpointPortDirection: endpoint?.type === "device-port" ? endpoint.portDirection : null,
+    });
     return { status: "ignored" };
   }
 
+  logisticsLogger.debug("mouse-logistics-start OK", {
+    kind: options.kind,
+    gridPoint: options.gridPoint,
+    endpointType: endpoint?.type ?? null,
+    pointerEntityId: options.pointerEntityId,
+  });
   updateRuntimeFromResult({
     appHost: options.appHost,
     pointerMode: "mouse",
@@ -706,24 +817,33 @@ function createContinuedMouseLogisticsStart(options: {
     options.gridPoint,
     options.kind,
   );
-  const result = endpoint?.type === "logistics-entity"
-    ? options.editor.actions.createLogisticsDraftStart({
-        kind: options.kind,
-        source: {
-          type: "logistics-entity",
-          entityId: endpoint.entityId,
-          gridPoint: endpoint.gridPoint,
-        },
-        routeOrder: options.appHost.internalState.runtime.logisticsPlacement.routeOrder,
-      })
-    : options.editor.actions.createLogisticsDraftStart({
-        kind: options.kind,
-        source: {
-          type: "empty-cell",
-          gridPoint: options.gridPoint,
-        },
-        routeOrder: options.appHost.internalState.runtime.logisticsPlacement.routeOrder,
-      });
+  let result: LogisticsDraftActionResult;
+  if (endpoint?.type === "logistics-entity") {
+    result = options.editor.actions.createLogisticsDraftStart({
+      kind: options.kind,
+      source: {
+        type: "logistics-entity",
+        entityId: endpoint.entityId,
+        gridPoint: endpoint.gridPoint,
+      },
+      routeOrder: options.appHost.internalState.runtime.logisticsPlacement.routeOrder,
+    });
+  } else if (endpoint?.type === "device-port" && endpoint.portDirection === "output") {
+    result = options.editor.actions.createLogisticsDraftStart({
+      kind: options.kind,
+      source: {
+        type: "device",
+        entityId: endpoint.entityId,
+        pointerGridPoint: options.gridPoint,
+      },
+      routeOrder: options.appHost.internalState.runtime.logisticsPlacement.routeOrder,
+    });
+  } else {
+    // 2026-05-23: endpoint 非 logistics-entity 也非有效输出 device-port（如分流器/汇流器/桥接器
+    // 已替代原普通物流段），不应从该格以 empty-cell 继续，否则会产生重叠管道。
+    softResetLogisticsRuntime(options.appHost);
+    return;
+  }
 
   updateRuntimeFromResult({
     appHost: options.appHost,
@@ -777,7 +897,11 @@ function handleRouteOrderShortcut(options: {
   runtime.routeOrder = flipRouteOrder(runtime.routeOrder);
 
   const gridPoint = resolveGridPointFromGesturePosition(options.editor, runtime.lastMousePosition);
-  if (gridPoint !== null && options.editor.queries.resolveLogisticsDraftState() !== null) {
+  if (
+    gridPoint !== null
+    && options.editor.queries.resolveLogisticsDraftState() !== null
+    && !runtime.isHoverPreview
+  ) {
     const result = options.editor.actions.moveLogisticEnd({
       pointerGridPoint: gridPoint,
       routeMode: {
@@ -901,6 +1025,7 @@ function resetLogisticsRuntime(appHost: AppHost): void {
   runtime.shortcutPlacementGroup = null;
   runtime.pointerMode = null;
   runtime.phase = "idle";
+  runtime.isHoverPreview = false;
   runtime.routeOrder = "vertical-first";
   runtime.sourceEntityId = null;
   runtime.targetEntityId = null;
@@ -913,6 +1038,7 @@ function resetLogisticsRuntime(appHost: AppHost): void {
 function softResetLogisticsRuntime(appHost: AppHost): void {
   const runtime = appHost.internalState.runtime.logisticsPlacement;
   runtime.phase = "idle";
+  runtime.isHoverPreview = false;
   runtime.sourceEntityId = null;
   runtime.targetEntityId = null;
   runtime.anchorGridPoint = null;

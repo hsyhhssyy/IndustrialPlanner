@@ -1144,7 +1144,7 @@ export function resolveDeviceIdForPlacementGroupShortcut(options: {
         && !definition.tags.includes("不可摆放"),
     )
     .filter((definition) => options.canUseDefinition?.(definition) ?? true)
-    .sort((left, right) => left.id.localeCompare(right.id));
+    .sort((left, right) => left.displayOrder - right.displayOrder || left.id.localeCompare(right.id));
 
   return entities[options.shortcutIndex]?.id ?? null;
 }

@@ -3,9 +3,9 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
 import { CanvasBottomLeftToolbar } from "@/app/shell/canvas/canvas-bottom-left-toolbar";
+import { CanvasBottomLeftSecondaryToolbar } from "@/app/shell/canvas/canvas-bottom-left-secondary-toolbar";
 import { CanvasPanel } from "@/app/shell/canvas/canvas-panel";
 import { CanvasFloatingToolbar } from "@/app/shell/canvas/canvas-floating-toolbar";
-import { CanvasLeftBottomToolbar } from "@/app/shell/canvas/canvas-left-bottom-toolbar";
 import { CanvasTopLeftCornerToolbar } from "@/app/shell/canvas/canvas-top-left-corner-toolbar";
 import { CanvasRightDockToolbar } from "@/app/shell/canvas/canvas-right-dock-toolbar";
 import {
@@ -376,7 +376,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
-  const showCanvasLeftBottomToolbar = !leftDockOpen;
+  const showCanvasBottomLeftToolbar = !leftDockOpen;
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
   const showRightDock = useInspectorPanel && rightDockOpen;
   const canKeepInspectorDialogOpen = !useInspectorPanel && activeTool === "select" && selectionCount === 1;
@@ -467,6 +467,10 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         return;
       }
 
+      if (isEditableKeyboardTarget(event)) {
+        return;
+      }
+
       if (appHost.gestureAdapter.handleKeyDown(event) && event.cancelable) {
         event.preventDefault();
       }
@@ -474,6 +478,10 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
 
     const handleWindowKeyUp = (event: KeyboardEvent) => {
       if (hasVisibleDialogShell) {
+        return;
+      }
+
+      if (isEditableKeyboardTarget(event)) {
         return;
       }
 
@@ -598,11 +606,11 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       <LeftToolbar appHost={appHost} />
       {leftDockOpen ? <LeftDock appHost={appHost} /> : null}
       <CanvasPanel appHost={appHost} />
-      <CanvasBottomLeftToolbar
+      <CanvasBottomLeftSecondaryToolbar
         appHost={appHost}
-        offsetForFloatingTools={showCanvasLeftBottomToolbar}
+        offsetForFloatingTools={showCanvasBottomLeftToolbar}
       />
-      {showCanvasLeftBottomToolbar ? <CanvasLeftBottomToolbar appHost={appHost} /> : null}
+      {showCanvasBottomLeftToolbar ? <CanvasBottomLeftToolbar appHost={appHost} /> : null}
       {canvasTopLeftCornerToolbar.visible && canvasTopLeftCornerToolbar.buttonIds.length > 0 ? (
         <CanvasTopLeftCornerToolbar
           appHost={appHost}
@@ -622,6 +630,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         <CanvasRightDockToolbar
           appHost={appHost}
           buttonIds={canvasRightDockToolbar.buttonIds}
+          mode={canvasRightDockToolbar.mode}
         />
       ) : null}
       {showRightDock ? <RightDock appHost={appHost} /> : null}
@@ -665,4 +674,29 @@ function isAnyDialogShellVisible(
     || appHost.recipePicker.dialogState.visible
     || appHost.blueprintFolderDialog.dialogState.visible
     || appHost.blueprintPreview.dialogState.visible;
+}
+
+function isEditableKeyboardTarget(event: KeyboardEvent): boolean {
+  const target = event.target as HTMLElement | null;
+  if (!target) {
+    return false;
+  }
+
+  const tagName = target.tagName?.toLowerCase() ?? '';
+
+  if (tagName === 'input' || tagName === 'textarea') {
+    return true;
+  }
+
+  if ((target as HTMLElement).isContentEditable === true) {
+    return true;
+  }
+
+  if (typeof (target as HTMLElement).closest === 'function') {
+    return (target as HTMLElement).closest(
+      "input, textarea, [contenteditable=''], [contenteditable='true'], [contenteditable='plaintext-only']",
+    ) !== null;
+  }
+
+  return false;
 }

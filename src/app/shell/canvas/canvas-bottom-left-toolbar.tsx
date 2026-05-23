@@ -1,29 +1,45 @@
 import type { AppHost } from "@/app/host/app-host";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
+import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
+import {
+  getVisiblePlacementOperationButtons,
+  type PlacementOperationButtonDefinition,
+} from "@/app/shell/panels/placement-operation-buttons";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
-import type {
-  MouseEvent as ReactMouseEvent,
-  PointerEvent as ReactPointerEvent,
-  WheelEvent as ReactWheelEvent,
+import {
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent as ReactWheelEvent,
 } from "react";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
-
-interface CanvasBottomLeftToolbarProps {
-  appHost: AppHost;
-  offsetForFloatingTools: boolean;
-}
 
 function joinClassNames(values: Array<string | undefined | false>): string {
   return values.filter(Boolean).join(" ");
 }
 
-export function CanvasBottomLeftToolbar({
-  appHost,
-  offsetForFloatingTools,
-}: CanvasBottomLeftToolbarProps) {
+function renderButtonIcon(button: PlacementOperationButtonDefinition) {
+  if (button.icon) {
+    return <WorkbenchIcon className={cm(styles, "canvas-bottom-left-toolbar-icon")} kind={button.icon} />;
+  }
+
+  if (button.iconSrc) {
+    return <img alt="" className={cm(styles, "canvas-bottom-left-toolbar-image")} src={button.iconSrc} />;
+  }
+
+  return null;
+}
+
+export function CanvasBottomLeftToolbar({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
-  const label = t("action.rotateView");
+  const editor = appHost.workspace.editor;
+  // 订阅 document 变化使管道按钮在切换基地后正确显示/隐藏
+  useEditorDocumentSnapshot(editor);
+  const buttonDefinitions = getVisiblePlacementOperationButtons(appHost);
+
+  if (buttonDefinitions.length === 0) {
+    return null;
+  }
 
   const stopUiPropagation = (
     event:
@@ -46,12 +62,15 @@ export function CanvasBottomLeftToolbar({
     event.stopPropagation();
   };
 
-  const handleRotateButtonPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const handleButtonPointerUp = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    button: PlacementOperationButtonDefinition,
+  ) => {
     event.stopPropagation();
 
     if (event.pointerType === "mouse") {
       appHost.gestureAdapter.handleUiButtonMouseTap({
-        uiButtonId: "canvas-bottom-left-toolbar-button-rotate-view",
+        uiButtonId: button.uiButtonId,
         button: event.button,
         altKey: event.altKey,
         ctrlKey: event.ctrlKey,
@@ -64,7 +83,7 @@ export function CanvasBottomLeftToolbar({
 
     if (event.pointerType === "touch" || event.pointerType === "pen") {
       appHost.gestureAdapter.handleUiButtonTouchTap({
-        uiButtonId: "canvas-bottom-left-toolbar-button-rotate-view",
+        uiButtonId: button.uiButtonId,
         altKey: event.altKey,
         ctrlKey: event.ctrlKey,
         metaKey: event.metaKey,
@@ -77,10 +96,7 @@ export function CanvasBottomLeftToolbar({
   return (
     <div
       aria-label={t("toolbar.canvasBottomLeft")}
-      className={cm(styles, joinClassNames([
-        "canvas-bottom-left-toolbar",
-        offsetForFloatingTools ? "is-offset-for-floating-tools" : undefined,
-      ]))}
+      className={cm(styles, "canvas-bottom-left-toolbar")}
       onAuxClick={stopUiPropagationAndDefault}
       onClick={stopUiPropagation}
       onContextMenu={stopUiPropagationAndDefault}
@@ -90,22 +106,37 @@ export function CanvasBottomLeftToolbar({
       onPointerUp={stopUiPropagation}
       onWheel={stopUiPropagationAndDefault}
     >
-      <button
-        aria-label={label}
-        className={cm(styles, "canvas-bottom-left-toolbar-button")}
-        data-ui-button-id="canvas-bottom-left-toolbar-button-rotate-view"
-        onClick={stopUiPropagation}
-        onContextMenu={stopUiPropagationAndDefault}
-        onPointerCancel={stopUiPropagation}
-        onPointerDown={stopTouchPointerDownPropagation}
-        onPointerMove={stopUiPropagation}
-        onPointerUp={handleRotateButtonPointerUp}
-        title={label}
-        type="button"
-      >
-        <WorkbenchIcon className={cm(styles, "canvas-bottom-left-toolbar-icon")} kind="rotate" />
-        <span className={cm(styles, "sr-only")}>{label}</span>
-      </button>
+      {buttonDefinitions.map((button) => {
+        const label = t(button.labelKey);
+        const isActive = button.activeWhen?.(appHost) ?? false;
+
+        return (
+          <button
+            aria-label={label}
+            aria-pressed={button.activeWhen ? isActive : undefined}
+            className={cm(styles, joinClassNames([
+              "canvas-bottom-left-toolbar-button",
+              isActive ? "is-active" : undefined,
+            ]))}
+            data-ui-button-id={button.uiButtonId}
+            key={button.uiButtonId}
+            onClick={stopUiPropagation}
+            onContextMenu={stopUiPropagationAndDefault}
+            onPointerCancel={stopUiPropagation}
+            onPointerDown={stopTouchPointerDownPropagation}
+            onPointerMove={stopUiPropagation}
+            onPointerUp={(event) => {
+              handleButtonPointerUp(event, button);
+            }}
+            title={label}
+            type="button"
+          >
+            <span aria-hidden="true" className={cm(styles, "canvas-bottom-left-toolbar-button-icon")}>
+              {renderButtonIcon(button)}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

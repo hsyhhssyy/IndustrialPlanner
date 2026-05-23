@@ -79,8 +79,8 @@ describe("createRegistryContract", () => {
     expect(registry.queries.isGeneralLogisticsDevice("item_pipe_converger")).toBe(true);
     expect(registry.queries.isGeneralLogisticsDevice("item_pipe_connector")).toBe(true);
 
-    expect(registry.queries.isGeneralLogisticsDevice("item_log_admission")).toBe(false);
-    expect(registry.queries.isGeneralLogisticsDevice("item_pipe_admission")).toBe(false);
+    expect(registry.queries.isGeneralLogisticsDevice("item_log_admission")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("item_pipe_admission")).toBe(true);
     expect(registry.queries.isGeneralLogisticsDevice("ore_miner")).toBe(false);
 
     expect(registry.queries.resolveDedicatedLogisticsKind("belt_straight_1x1")).toBe("belt");

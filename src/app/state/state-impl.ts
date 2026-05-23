@@ -158,6 +158,8 @@ export const CANVAS_FLOATING_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-save-blueprint",
   "canvas-floating-toolbar-button-delete",
   "canvas-floating-toolbar-button-delete-many",
+  "canvas-floating-toolbar-button-delete-upstream-segment",
+  "canvas-floating-toolbar-button-delete-downstream-segment",
 ] as const;
 
 export type CanvasFloatingToolbarButtonId = typeof CANVAS_FLOATING_TOOLBAR_BUTTON_IDS[number];
@@ -361,6 +363,7 @@ export interface CanvasFloatingToolbarStateReadWrite {
 export interface CanvasRightDockToolbarStateReadWrite {
   visible: boolean;
   buttonIds: CanvasRightDockToolbarButtonId[];
+  mode: "icon" | "shortcut";
 }
 
 export interface CanvasTopLeftCornerToolbarStateReadWrite {
@@ -394,6 +397,7 @@ export interface LogisticsPlacementRuntimeStateReadWrite {
   shortcutPlacementGroup: "beltLogistics" | "pipeLogistics" | null;
   pointerMode: "mouse" | "touch" | null;
   phase: "idle" | "waiting-touch-device-exit" | "drawing" | "snapped-target";
+  isHoverPreview: boolean;
   routeOrder: LogisticsRouteOrder;
   sourceEntityId: string | null;
   targetEntityId: string | null;
@@ -521,6 +525,7 @@ class CanvasFloatingToolbarStateReadWriteImpl implements CanvasFloatingToolbarSt
 class CanvasRightDockToolbarStateReadWriteImpl implements CanvasRightDockToolbarStateReadWrite {
   visible = false;
   buttonIds: CanvasRightDockToolbarButtonId[] = [];
+  mode: "icon" | "shortcut" = "icon";
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -542,6 +547,7 @@ class LogisticsPlacementRuntimeStateReadWriteImpl implements LogisticsPlacementR
   shortcutPlacementGroup: "beltLogistics" | "pipeLogistics" | null = null;
   pointerMode: "mouse" | "touch" | null = null;
   phase: "idle" | "waiting-touch-device-exit" | "drawing" | "snapped-target" = "idle";
+  isHoverPreview = false;
   routeOrder: LogisticsRouteOrder = "vertical-first";
   sourceEntityId: string | null = null;
   targetEntityId: string | null = null;

@@ -250,6 +250,8 @@ describe("GenericDeviceSprite", () => {
   const PIPE_TOP_VIEW_AVATAR_KEY = "top-view-avatar-pipe_straight_1x1"
   const LOGISTICS_BODY_KEY = "device-sprite-item_log_splitter"
   const LOGISTICS_MASK_KEY = "device-masks-item_log_splitter"
+  const LOGISTICS_BLUEPRINT_BODY_KEY = "blueprint-sprite-item_log_splitter"
+  const LOGISTICS_BLUEPRINT_MASK_KEY = "blueprint-masks-item_log_splitter"
   const LOGISTICS_TOP_VIEW_AVATAR_KEY = "top-view-avatar-item_log_splitter"
   const SOLID_INPUT_KEY = "texture-solid-port-chevron-input"
   const SOLID_OUTPUT_KEY = "texture-solid-port-chevron-output"
@@ -622,6 +624,61 @@ describe("GenericDeviceSprite", () => {
     const labelRoot = resolveDeviceLabelRoot(entityLayer)
     expect(labelRoot?.visible).toBe(false)
     expect(renderHost.textureManager.getTexture).not.toHaveBeenCalledWith(LOGISTICS_TOP_VIEW_AVATAR_KEY)
+  })
+
+  it("forces blueprint textures and scanline preview for logistics preview devices", async () => {
+    const defaultTexture = createLoadedTextureMock("logistics-default-texture")
+    const defaultMaskTexture = createLoadedTextureMock("logistics-default-mask-texture")
+    const blueprintTexture = createLoadedTextureMock("logistics-blueprint-texture")
+    const blueprintMaskTexture = createLoadedTextureMock("logistics-blueprint-mask-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [LOGISTICS_BODY_KEY]: defaultTexture,
+      [LOGISTICS_MASK_KEY]: defaultMaskTexture,
+      [LOGISTICS_BLUEPRINT_BODY_KEY]: blueprintTexture,
+      [LOGISTICS_BLUEPRINT_MASK_KEY]: blueprintMaskTexture,
+    })
+    const sprite = new GenericDeviceSprite(
+      "logistics-preview-device",
+      createBeltLogisticsEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: [],
+      previewIds: ["logistics-preview-device", "other-preview-device"],
+    })
+
+    sprite.syncLayout(createBeltLayout(), context)
+    await flushMicrotasks(8)
+    sprite.syncLayout(createBeltLayout(), context)
+
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(LOGISTICS_BLUEPRINT_BODY_KEY)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(LOGISTICS_BLUEPRINT_MASK_KEY)
+    expect(resolveEntitySprite(entityLayer)?.texture).toBe(blueprintTexture)
+
+    const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
+      children?: unknown[];
+    } | undefined
+    const previewEffectRoot = overlayRoot?.children?.[0] as {
+      visible?: boolean;
+      children?: unknown[];
+    } | undefined
+    const scanlineTiling = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+    const previewMask = previewEffectRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
+
+    expect(previewEffectRoot?.visible).toBe(true)
+    expect(previewEffectRoot?.children).toHaveLength(3)
+    expect(previewMask?.texture).toBe(blueprintMaskTexture)
+    expect(scanlineTiling?.mask).toBe(previewMask)
   })
 
   it("loads only the generated belt sprite texture through BeltSprite", async () => {

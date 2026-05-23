@@ -410,80 +410,76 @@
   text-shadow: 0 1px 2px var(--in-canvas-toolbar-label-shadow);
 }
 
-.canvas-left-bottom-toolbar {
-  position: absolute;
-  left: calc(var(--left-toolbar-width, 68px) + 12px);
-  bottom: calc(var(--canvas-bottom-obstruction-height, var(--bottom-bar-height, 28px)) + env(safe-area-inset-bottom, 0px) + 12px);
-  z-index: 4;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+// ── 快捷键模式 ──
+
+// 快捷键模式下默认穿透点击
+.canvas-right-dock-toolbar--shortcut {
+  pointer-events: none;
+}
+
+// Alt 按下时恢复可交互
+.canvas-right-dock-toolbar--shortcut-alt-active {
   pointer-events: auto;
 }
 
-.canvas-left-bottom-toolbar-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 35px;
-  min-width: 35px;
-  height: 35px;
-  padding: 0;
-  border-color: var(--in-canvas-toolbar-button-border);
-  border-radius: 11px;
-  background: var(--in-canvas-toolbar-button-bg);
-  box-shadow: 0 10px 24px var(--in-canvas-toolbar-shadow);
-  color: var(--in-canvas-toolbar-button-text);
-  backdrop-filter: blur(10px);
-  touch-action: manipulation;
-}
-
-.canvas-left-bottom-toolbar-button:not(:disabled):hover {
+// 快捷键模式下的按钮 hover：高亮 key badge
+.canvas-right-dock-toolbar-button--shortcut:not(:disabled):hover .canvas-right-dock-toolbar-shortcut-key {
   border-color: var(--in-canvas-toolbar-button-hover-border);
   background: var(--in-canvas-toolbar-button-hover-bg);
 }
 
-.canvas-left-bottom-toolbar-button.is-active {
-  border-color: var(--in-canvas-toolbar-active-border);
-  background: var(--in-canvas-toolbar-active-bg);
-  color: var(--in-canvas-toolbar-active-text);
-}
-
-.canvas-left-bottom-toolbar-button-icon {
+// 快捷键按键徽章
+.canvas-right-dock-toolbar-shortcut-key {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
+  min-width: 22px;
   height: 22px;
+  padding: 0 5px;
+  flex: 0 0 auto;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--in-canvas-toolbar-button-text);
+  border-radius: 6px;
+  border: 1px solid var(--in-canvas-toolbar-button-border);
+  background: var(--in-canvas-toolbar-button-bg);
+  box-shadow: 0 4px 12px var(--in-canvas-toolbar-shadow);
+  box-sizing: content-box;
+  line-height: 1;
 }
 
-.canvas-left-bottom-toolbar-icon,
-.canvas-left-bottom-toolbar-image {
-  width: 22px;
-  height: 22px;
+// 快捷键分隔符
+.canvas-right-dock-toolbar-shortcut-plus {
+  margin: 0 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--in-canvas-toolbar-button-text);
 }
 
-.canvas-left-bottom-toolbar-icon {
-  fill: currentColor;
-}
-
-.canvas-left-bottom-toolbar-image {
-  object-fit: contain;
+// 快捷键模式下的标签外发光
+.canvas-right-dock-toolbar-label--glow {
+  min-width: 0;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--in-canvas-toolbar-label-text);
+  text-shadow:
+    0 1px 2px var(--in-canvas-toolbar-label-shadow),
+    0 0 8px var(--in-canvas-toolbar-label-text);
 }
 
 .canvas-bottom-left-toolbar {
   position: absolute;
   grid-area: canvas;
   left: 12px;
-  bottom: calc(var(--canvas-bottom-obstruction-height, var(--bottom-bar-height, 28px)) + env(safe-area-inset-bottom, 0px) + 12px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
   z-index: 4;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   pointer-events: auto;
-}
-
-.canvas-bottom-left-toolbar.is-offset-for-floating-tools {
-  bottom: calc(var(--canvas-bottom-obstruction-height, var(--bottom-bar-height, 28px)) + env(safe-area-inset-bottom, 0px) + 55px);
 }
 
 .canvas-bottom-left-toolbar-button {
@@ -508,7 +504,72 @@
   background: var(--in-canvas-toolbar-button-hover-bg);
 }
 
+.canvas-bottom-left-toolbar-button.is-active {
+  border-color: var(--in-canvas-toolbar-active-border);
+  background: var(--in-canvas-toolbar-active-bg);
+  color: var(--in-canvas-toolbar-active-text);
+}
+
+.canvas-bottom-left-toolbar-button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+}
+
+.canvas-bottom-left-toolbar-icon,
+.canvas-bottom-left-toolbar-image {
+  width: 22px;
+  height: 22px;
+}
+
 .canvas-bottom-left-toolbar-icon {
+  fill: currentColor;
+}
+
+.canvas-bottom-left-toolbar-image {
+  object-fit: contain;
+}
+
+.canvas-bottom-left-secondary-toolbar {
+  position: absolute;
+  grid-area: canvas;
+  left: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  pointer-events: auto;
+}
+
+.canvas-bottom-left-secondary-toolbar.is-offset-for-floating-tools {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 52px);
+}
+
+.canvas-bottom-left-secondary-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 35px;
+  min-width: 35px;
+  height: 35px;
+  padding: 0;
+  border-color: var(--in-canvas-toolbar-button-border);
+  border-radius: 11px;
+  background: var(--in-canvas-toolbar-button-bg);
+  box-shadow: 0 10px 24px var(--in-canvas-toolbar-shadow);
+  color: var(--in-canvas-toolbar-button-text);
+  backdrop-filter: blur(10px);
+  touch-action: manipulation;
+}
+
+.canvas-bottom-left-secondary-toolbar-button:not(:disabled):hover {
+  border-color: var(--in-canvas-toolbar-button-hover-border);
+  background: var(--in-canvas-toolbar-button-hover-bg);
+}
+
+.canvas-bottom-left-secondary-toolbar-icon {
   width: 22px;
   height: 22px;
   fill: currentColor;

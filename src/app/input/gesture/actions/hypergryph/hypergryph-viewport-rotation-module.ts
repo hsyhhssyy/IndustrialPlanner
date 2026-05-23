@@ -5,7 +5,7 @@ import type { GridRotation } from "@/domain/shared/grid";
 import type { GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
-const ROTATE_VIEW_BUTTON_ID = "canvas-bottom-left-toolbar-button-rotate-view";
+const ROTATE_VIEW_BUTTON_ID = "canvas-bottom-left-secondary-toolbar-button-rotate-view";
 
 export function createHypergryphViewportRotationModule(): GestureMappingModule<AppHost> {
   return {

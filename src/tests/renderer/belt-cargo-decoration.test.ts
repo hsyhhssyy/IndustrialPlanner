@@ -701,20 +701,20 @@ function createContext(options: {
   }))
   if (options.includeInsertionTarget === true) {
     entities.push({
-      id: "target-admission",
-      definitionId: "item_log_admission",
-      position: { x: 1, y: 0 },
-      rotation: 0,
+      id: "target-storager",
+      definitionId: "item_port_storager_1",
+      position: { x: 1, y: -1 },
+      rotation: 90,
       config: {},
       tags: [],
     })
   }
   if (options.includeOutputSource === true) {
     entities.push({
-      id: "source-admission",
-      definitionId: "item_log_admission",
-      position: { x: -1, y: 0 },
-      rotation: 0,
+      id: "source-storager",
+      definitionId: "item_port_storager_1",
+      position: { x: -3, y: 0 },
+      rotation: 90,
       config: {},
       tags: [],
     })

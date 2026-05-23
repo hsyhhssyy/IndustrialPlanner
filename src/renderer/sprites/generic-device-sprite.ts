@@ -29,6 +29,17 @@ import { BaseRenderSprite } from "./base-render-sprite"
 
 const DEGREE_TO_RADIAN = Math.PI / 180
 
+const BLUEPRINT_SPRITE_TEXTURE_PREFIX = "blueprint-sprite-"
+const BLUEPRINT_MASK_TEXTURE_PREFIX = "blueprint-masks-"
+const FORCE_BLUEPRINT_PREVIEW_DEFINITION_IDS = new Set([
+  "item_log_splitter",
+  "item_log_converger",
+  "item_log_connector",
+  "item_pipe_splitter",
+  "item_pipe_converger",
+  "item_pipe_connector",
+])
+
 const DEFAULT_GHOST_ROOT_ALPHA = 0.2;
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1;
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4;
@@ -249,7 +260,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   ): void {
     this.currentLayout = layout
     this.currentGridCellPixelSize = this.resolveWorkspaceGridCellPixelSize(context)
-    this.syncDeviceTextures()
+    this.syncDeviceTextures(context)
 
     if (!this.isTextureReady) {
       return
@@ -305,12 +316,27 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     // 当 preview 包含多个元素时，使用蓝色 selection 特效
     const previewCollection = context.workspace.editor?.state.collections[EntityCollectionType.preview];
-    if (previewCollection && previewCollection.length > 1) {
+    if (
+      previewCollection
+      && previewCollection.length > 1
+      && !this.shouldForceBlueprintPreviewTexture(context)
+    ) {
       this.drawSelectionOverlay(layout, context);
       return;
     }
 
     // 单元素 preview：使用白色系动画遮罩
+    this.drawScanlineOverlay(layout, context);
+  }
+
+  private drawScanlineOverlay(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    if (!this.isTextureReady) {
+      return;
+    }
+
     this.loadScanlineTexture();
 
     // 以纹理原始像素尺寸平铺，不做 zoom 缩放
@@ -375,7 +401,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.syncDeviceLabel(layout);
 
     if (this.shouldDrawLogisticsEndpointOverlay(context)) {
-      this.drawPreviewOverlay(layout, context);
+      this.drawScanlineOverlay(layout, context);
     }
 
     this.syncPortOverlay(layout, context);
@@ -448,15 +474,21 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     });
   }
 
-  private syncDeviceTextures(): void {
-    const bodyTextureKey = resolveDeviceBodyTextureKey(
-      this.spriteId,
-      this.renderHost.workspace.app,
-    )
-    const maskTextureKey = resolveDeviceMaskTextureKey(
-      this.spriteId,
-      this.renderHost.workspace.app,
-    )
+  private syncDeviceTextures(context?: RenderSpriteSyncContext): void {
+    const forceBlueprintPreview = context !== undefined
+      && this.shouldForceBlueprintPreviewTexture(context)
+    const bodyTextureKey = forceBlueprintPreview
+      ? `${BLUEPRINT_SPRITE_TEXTURE_PREFIX}${this.spriteId}`
+      : resolveDeviceBodyTextureKey(
+          this.spriteId,
+          this.renderHost.workspace.app,
+        )
+    const maskTextureKey = forceBlueprintPreview
+      ? `${BLUEPRINT_MASK_TEXTURE_PREFIX}${this.spriteId}`
+      : resolveDeviceMaskTextureKey(
+          this.spriteId,
+          this.renderHost.workspace.app,
+        )
 
     if (
       this.currentBodyTextureKey === bodyTextureKey
@@ -906,6 +938,16 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       : null;
 
     return this.entityId === sourceEntityId || this.entityId === targetEntityId;
+  }
+
+  private shouldForceBlueprintPreviewTexture(context: RenderSpriteSyncContext): boolean {
+    if (!FORCE_BLUEPRINT_PREVIEW_DEFINITION_IDS.has(this.definition.id)) {
+      return false
+    }
+
+    const collections = context.workspace.editor?.state.collections
+    const isPreview = collections?.[EntityCollectionType.preview]?.contains(this.entityId) ?? false
+    return isPreview || this.shouldDrawLogisticsEndpointOverlay(context)
   }
 
   private getPortChevronSprite(index: number): Sprite {

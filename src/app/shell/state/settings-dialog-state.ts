@@ -390,6 +390,39 @@ export const WORKBENCH_SETTINGS_GROUPS = [
           equals: false,
         },
       },
+      {
+        id: "shortcut-move-selection",
+        kind: "keybinding",
+        labelKey: shortcutKeybindingLabelKey("shortcut-move-selection"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-move-selection"),
+        defaultValue: "M",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
+      },
+      {
+        id: "shortcut-copy-selection",
+        kind: "keybinding",
+        labelKey: shortcutKeybindingLabelKey("shortcut-copy-selection"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-copy-selection"),
+        defaultValue: "Ctrl+C",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
+      },
+      {
+        id: "shortcut-paste-selection",
+        kind: "keybinding",
+        labelKey: shortcutKeybindingLabelKey("shortcut-paste-selection"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-paste-selection"),
+        defaultValue: "Ctrl+V",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
+      },
     ],
   },
   {

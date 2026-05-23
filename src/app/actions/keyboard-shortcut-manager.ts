@@ -16,6 +16,9 @@ export const SHORTCUT_KEY = {
   ROTATE:              "shortcut-rotate",
   ROTATE_VIEWPORT:     "shortcut-rotate-viewport",
   DELETE_DEVICE:       "shortcut-delete-device",
+  MOVE_SELECTION:      "shortcut-move-selection",
+  COPY_SELECTION:      "shortcut-copy-selection",
+  PASTE_SELECTION:     "shortcut-paste-selection",
 } as const;
 
 /** 从 SHORTCUT_KEY 推导出的联合类型 */
@@ -45,6 +48,9 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.ROTATE]:           "R",
   [SHORTCUT_KEY.ROTATE_VIEWPORT]:  "Ctrl+R",
   [SHORTCUT_KEY.DELETE_DEVICE]:    "F",
+  [SHORTCUT_KEY.MOVE_SELECTION]:   "M",
+  [SHORTCUT_KEY.COPY_SELECTION]:   "Ctrl+C",
+  [SHORTCUT_KEY.PASTE_SELECTION]:  "Ctrl+V",
 };
 
 const LEGACY_SHORTCUT_MIGRATIONS: Partial<Record<ShortcutKeyId, string>> = {

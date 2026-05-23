@@ -19,7 +19,16 @@ describe("createHypergryphMarqueeGestureModule", () => {
 
     expect(module.handle(keyDownEvent("KeyX"), context)).toEqual({ status: "handled" });
     expect(appHost.internalState.activeTool).toBe("marquee");
-    expect(appHost.internalActions.showCanvasRightDockToolbar).not.toHaveBeenCalled();
+    expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
+      [
+        "canvas-right-dock-toolbar-button-exit",
+        "canvas-right-dock-toolbar-button-move",
+        "canvas-right-dock-toolbar-button-save-blueprint",
+        "canvas-right-dock-toolbar-button-delete",
+      ],
+      "shortcut",
+    );
+    expect(appHost.internalState.runtime.canvasRightDockToolbar.mode).toBe("shortcut");
 
     expect(module.handle(keyDownEvent("KeyX"), context)).toEqual({ status: "handled" });
     expect(editor.actions.cancelMarquee).toHaveBeenCalledTimes(1);
@@ -46,11 +55,35 @@ describe("createHypergryphMarqueeGestureModule", () => {
       "canvas-right-dock-toolbar-button-save-blueprint",
       "canvas-right-dock-toolbar-button-delete",
     ]);
+    expect(appHost.internalState.runtime.canvasRightDockToolbar.mode).toBe("icon");
     expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       "canvas-top-left-corner-toolbar-button-toggle-pipe",
       "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
     ]);
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
+  });
+
+  it("enters mouse marquee with shortcut mode toolbar from the placement button", () => {
+    const { context, appHost } = createContext();
+    const module = createHypergryphMarqueeGestureModule();
+
+    const result = module.handle(
+      uiButtonMouseTapEvent("placement-tool-marquee"),
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.activeTool).toBe("marquee");
+    expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
+      [
+        "canvas-right-dock-toolbar-button-exit",
+        "canvas-right-dock-toolbar-button-move",
+        "canvas-right-dock-toolbar-button-save-blueprint",
+        "canvas-right-dock-toolbar-button-delete",
+      ],
+      "shortcut",
+    );
+    expect(appHost.internalState.runtime.canvasRightDockToolbar.mode).toBe("shortcut");
   });
 
   it("closes the left dock on marquee enter for mobile and tablet", () => {
@@ -350,7 +383,8 @@ function createContext(options: {
         marqueeAnchor: options.marqueeAnchor ?? null,
         canvasRightDockToolbar: {
           visible: false,
-          buttonIds: [],
+          buttonIds: [] as string[],
+          mode: "icon" as "icon" | "shortcut",
         },
         canvasTopLeftCornerToolbar: {
           visible: false,
@@ -369,9 +403,10 @@ function createContext(options: {
         appHost.internalState.workbench.rightDockOpen =
           !appHost.internalState.workbench.rightDockOpen;
       }),
-      showCanvasRightDockToolbar: vi.fn((buttonIds) => {
+      showCanvasRightDockToolbar: vi.fn((buttonIds, mode: "icon" | "shortcut" = "icon") => {
         appHost.internalState.runtime.canvasRightDockToolbar.visible = true;
         appHost.internalState.runtime.canvasRightDockToolbar.buttonIds = [...buttonIds];
+        appHost.internalState.runtime.canvasRightDockToolbar.mode = mode;
       }),
       hideCanvasRightDockToolbar: vi.fn(() => {
         appHost.internalState.runtime.canvasRightDockToolbar.visible = false;

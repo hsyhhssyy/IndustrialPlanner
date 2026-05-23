@@ -275,6 +275,11 @@ function enterMarqueeMode(options: {
     options.appHost.internalActions.showCanvasTopLeftCornerToolbar(
       resolveMarqueeTopLeftButtonIds(options.appHost),
     );
+  } else {
+    options.appHost.internalActions.showCanvasRightDockToolbar(
+      MARQUEE_RIGHT_DOCK_BUTTON_IDS,
+      "shortcut",
+    );
   }
 }
 

@@ -109,9 +109,9 @@ function buildPlacementDeviceSections(appHost: AppHost): readonly PlacementSecti
     }
   }
 
-  // 组内按 id 排序
+  // 组内按 displayOrder 排序（order 越小越靠前），同 order 按 id 兜底
   for (const [, entities] of groupedByUiGroup) {
-    entities.sort((a, b) => a.id.localeCompare(b.id));
+    entities.sort((a, b) => a.displayOrder - b.displayOrder || a.id.localeCompare(b.id));
   }
 
   // 2. 构建设备分组 section

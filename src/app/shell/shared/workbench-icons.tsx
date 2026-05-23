@@ -63,6 +63,7 @@ import MaterialSymbolsPlayArrowRounded from "~icons/material-symbols/play-arrow-
 import MaterialSymbolsResumeRounded from "~icons/material-symbols/resume-rounded";
 import MdiSelection from "~icons/mdi/selection";
 import GisArrowO from "~icons/gis/arrow-o";
+import AntDesignStopOutlined from "~icons/ant-design/stop-outlined";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -115,7 +116,10 @@ type WorkbenchIconKind =
   | "dialog-expand"
   | "dialog-collapse"
   | "batch-select"
-  | "select-arrow";
+  | "select-arrow"
+  | "stop-outlined"
+  | "remove-backward"
+  | "remove-forward";
 
 interface WorkbenchIconProps {
   kind: WorkbenchIconKind;
@@ -172,7 +176,28 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   "dialog-collapse": LucideCopy,
   "batch-select": MdiSelection,
   "select-arrow": GisArrowO,
+  "stop-outlined": AntDesignStopOutlined,
+  "remove-backward": RemoveBackwardIcon,
+  "remove-forward": RemoveForwardIcon,
 };
+
+function RemoveBackwardIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 1024 1024" {...props}>
+      <path fill="currentColor" d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448s448-200.6 448-448S759.4 64 512 64m0 820c-205.4 0-372-166.6-372-372c0-89 31.3-170.8 83.5-234.8l523.3 523.3C682.8 852.7 601 884 512 884m288.5-137.2L277.2 223.5C341.2 171.3 423 140 512 140c205.4 0 372 166.6 372 372c0 89-31.3 170.8-83.5 234.8" />
+      <path fill="currentColor" d="M485.6 249.9L198.2 498c-8.3 7.1-8.3 20.8 0 27.9l287.4 248.2c10.7 9.2 26.4.9 26.4-14V263.8c0-14.8-15.7-23.2-26.4-13.9m320 0L518.2 498a18.6 18.6 0 0 0-6.2 14c0 5.2 2.1 10.4 6.2 14l287.4 248.2c10.7 9.2 26.4.9 26.4-14V263.8c0-14.8-15.7-23.2-26.4-13.9" />
+    </svg>
+  );
+}
+
+function RemoveForwardIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 1024 1024" {...props}>
+      <path fill="currentColor" d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448s448-200.6 448-448S759.4 64 512 64m0 820c-205.4 0-372-166.6-372-372c0-89 31.3-170.8 83.5-234.8l523.3 523.3C682.8 852.7 601 884 512 884m288.5-137.2L277.2 223.5C341.2 171.3 423 140 512 140c205.4 0 372 166.6 372 372c0 89-31.3 170.8-83.5 234.8" />
+      <path fill="currentColor" d="M825.8 498L538.4 249.9c-10.7-9.2-26.4-.9-26.4 14v496.3c0 14.9 15.7 23.2 26.4 14L825.8 526c8.3-7.2 8.3-20.8 0-28m-320 0L218.4 249.9c-10.7-9.2-26.4-.9-26.4 14v496.3c0 14.9 15.7 23.2 26.4 14L505.8 526c4.1-3.6 6.2-8.8 6.2-14s-2.1-10.4-6.2-14" />
+    </svg>
+  );
+}
 
 export function WorkbenchIcon({
   kind,

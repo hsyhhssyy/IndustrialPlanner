@@ -39,6 +39,67 @@ function createWorkspace(): WorkspaceContract {
   };
 }
 
+function createTestEntity(
+  id: string,
+  definitionId: string,
+  x: number,
+  y: number,
+  rotation: 0 | 90 | 180 | 270 = 0,
+): WorldDocument["entities"][string] {
+  return {
+    id,
+    definitionId,
+    position: { x, y },
+    rotation,
+    config: {},
+    tags: [],
+  };
+}
+
+function createDocumentWithTestEntities(
+  entities: readonly WorldDocument["entities"][string][],
+): WorldDocument {
+  const document = createDummyWorldDocument();
+  document.entities = Object.fromEntries(entities.map((entity) => [entity.id, entity]));
+  document.entityOrder = entities.map((entity) => entity.id);
+  return document;
+}
+
+function findPreviewDraftAt(
+  editorHost: ReturnType<typeof createEditorHost>,
+  x: number,
+  y: number,
+): DraftEntity | null {
+  const previewIds = new Set(editorHost.state.collections.preview);
+  return editorHost.internalState.drafts.find((entity) =>
+    previewIds.has(entity.id)
+    && entity.position.x === x
+    && entity.position.y === y,
+  ) ?? null;
+}
+
+function listPreviewAutoDeviceDefinitionIds(
+  editorHost: ReturnType<typeof createEditorHost>,
+): string[] {
+  const previewIds = new Set(editorHost.state.collections.preview);
+  return editorHost.internalState.drafts
+    .filter((entity) => previewIds.has(entity.id))
+    .map((entity) => entity.definitionId)
+    .filter((definitionId) =>
+      definitionId.startsWith("item_log_") || definitionId.startsWith("item_pipe_"),
+    );
+}
+
+function findDocumentEntityAt(
+  document: WorldDocument,
+  x: number,
+  y: number,
+): WorldDocument["entities"][string] | null {
+  return Object.values(document.entities).find((entity) =>
+    entity.position.x === x && entity.position.y === y,
+  ) ?? null;
+}
+
 afterEach(() => {
   localStorage.clear();
   vi.unstubAllGlobals();
@@ -1295,6 +1356,973 @@ describe("createEditorHost", () => {
       shape: "straight",
       rotation: 0,
     });
+  });
+
+  it("creates a splitter when extending a fully connected straight logistics tile", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
+      createTestEntity("source", "belt_straight_1x1", 12, 8),
+      createTestEntity("successor", "belt_straight_1x1", 13, 8),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "logistics-entity",
+        entityId: "source",
+        gridPoint: { x: 12, y: 8 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 12, y: 7 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+    });
+    expect(editorHost.state.collections.ghost).toEqual(["source"]);
+    expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
+      definitionId: "item_log_splitter",
+      rotation: 270,
+    });
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
+
+    const snapshot = editorHost.internalDocument.getSnapshot();
+    expect(snapshot.entities.source).toBeUndefined();
+    expect(findDocumentEntityAt(snapshot, 12, 8)).toMatchObject({
+      definitionId: "item_log_splitter",
+    });
+    expect(snapshot.entities.predecessor).toBeDefined();
+    expect(snapshot.entities.successor).toBeDefined();
+  });
+
+  it("creates a splitter when extending a vertically stacked logistics tile with a new branch", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // predecessor(6,5) ↓ source(6,6) ↓ successor(6,7)
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "belt_straight_1x1", 6, 5, 90),
+      createTestEntity("source", "belt_straight_1x1", 6, 6, 90),
+      createTestEntity("successor", "belt_straight_1x1", 6, 7, 90),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "logistics-entity",
+        entityId: "source",
+        gridPoint: { x: 6, y: 6 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 5, y: 6 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+    });
+    expect(editorHost.state.collections.ghost).toEqual(["source"]);
+    expect(findPreviewDraftAt(editorHost, 6, 6)).toMatchObject({
+      definitionId: "item_log_splitter",
+      rotation: 0,
+    });
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
+
+    const snapshot = editorHost.internalDocument.getSnapshot();
+    expect(snapshot.entities.source).toBeUndefined();
+    expect(findDocumentEntityAt(snapshot, 6, 6)).toMatchObject({
+      definitionId: "item_log_splitter",
+    });
+    expect(snapshot.entities.predecessor).toBeDefined();
+    expect(snapshot.entities.successor).toBeDefined();
+  });
+
+  it("creates a splitter when extending a fully connected logistics tile through a turn", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
+      createTestEntity("source", "belt_straight_1x1", 12, 8),
+      createTestEntity("successor", "belt_straight_1x1", 13, 8),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "logistics-entity",
+        entityId: "source",
+        gridPoint: { x: 12, y: 8 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 11, y: 7 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult.canApply).toBe(true);
+    expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
+      definitionId: "item_log_splitter",
+      rotation: 270,
+    });
+  });
+
+  it("creates a splitter when extending a vertically stacked logistics tile through a turn", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // predecessor(6,5) ↓ source(6,6) ↓ successor(6,7)
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "belt_straight_1x1", 6, 5, 90),
+      createTestEntity("source", "belt_straight_1x1", 6, 6, 90),
+      createTestEntity("successor", "belt_straight_1x1", 6, 7, 90),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "logistics-entity",
+        entityId: "source",
+        gridPoint: { x: 6, y: 6 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 5, y: 5 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult.canApply).toBe(true);
+    expect(findPreviewDraftAt(editorHost, 6, 6)).toMatchObject({
+      definitionId: "item_log_splitter",
+      rotation: 0,
+    });
+  });
+
+  it("rejects extending a fully connected source tile toward its original output", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
+      createTestEntity("source", "belt_straight_1x1", 12, 8),
+      createTestEntity("successor", "belt_straight_1x1", 13, 8),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "logistics-entity",
+        entityId: "source",
+        gridPoint: { x: 12, y: 8 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 13, y: 8 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult.canApply).toBe(false);
+    expect(editorHost.actions.applyLogisticDraft()).toBe(false);
+  });
+
+  it("rejects extending a vertically stacked source tile toward its original downward output", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // predecessor(6,5) ↓ source(6,6) ↓ successor(6,7)
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "belt_straight_1x1", 6, 5, 90),
+      createTestEntity("source", "belt_straight_1x1", 6, 6, 90),
+      createTestEntity("successor", "belt_straight_1x1", 6, 7, 90),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "logistics-entity",
+        entityId: "source",
+        gridPoint: { x: 6, y: 6 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 6, y: 7 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult.canApply).toBe(false);
+    expect(editorHost.actions.applyLogisticDraft()).toBe(false);
+  });
+
+  it("creates a converger when ending on a logistics tile with a downstream connection", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("target", "belt_straight_1x1", 12, 8),
+      createTestEntity("successor", "belt_straight_1x1", 13, 8),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 10, y: 8 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 12, y: 8 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult.canApply).toBe(true);
+    expect(editorHost.state.collections.ghost).toEqual(["target"]);
+    expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
+      definitionId: "item_log_converger",
+      rotation: 270,
+    });
+  });
+
+  it("creates a converger when ending on a vertically stacked logistics tile with a downstream connection", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // target(6,6) ↓ successor(6,7)
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("target", "belt_straight_1x1", 6, 6, 90),
+      createTestEntity("successor", "belt_straight_1x1", 6, 7, 90),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 4, y: 6 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 6, y: 6 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult.canApply).toBe(true);
+    expect(editorHost.state.collections.ghost).toEqual(["target"]);
+    expect(findPreviewDraftAt(editorHost, 6, 6)).toMatchObject({
+      definitionId: "item_log_converger",
+      rotation: 0,
+    });
+  });
+
+  it("creates a connector when a new path crosses a connected logistics tile", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
+      createTestEntity("crossing", "belt_straight_1x1", 12, 8),
+      createTestEntity("successor", "belt_straight_1x1", 13, 8),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 12, y: 6 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 12, y: 10 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult.canApply).toBe(true);
+    expect(editorHost.state.collections.ghost).toEqual(["crossing"]);
+    expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
+      definitionId: "item_log_connector",
+    });
+  });
+
+  it("creates a connector when a new horizontal path crosses a vertically stacked logistics tile", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // predecessor(6,5) ↓ crossing(6,6) ↓ successor(6,7)
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "belt_straight_1x1", 6, 5, 90),
+      createTestEntity("crossing", "belt_straight_1x1", 6, 6, 90),
+      createTestEntity("successor", "belt_straight_1x1", 6, 7, 90),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 4, y: 6 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 8, y: 6 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult.canApply).toBe(true);
+    expect(editorHost.state.collections.ghost).toEqual(["crossing"]);
+    expect(findPreviewDraftAt(editorHost, 6, 6)).toMatchObject({
+      definitionId: "item_log_connector",
+    });
+  });
+
+  it("creates virtual converger and connector drafts for freehand self-overlap", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 0, y: 0 },
+      },
+    });
+    for (const pointerGridPoint of [
+      { x: 2, y: 0 },
+      { x: 2, y: 2 },
+      { x: 0, y: 2 },
+      { x: 0, y: 1 },
+      { x: 2, y: 1 },
+    ]) {
+      editorHost.actions.moveLogisticEnd({
+        pointerGridPoint,
+        routeMode: { type: "freehand" },
+      });
+    }
+
+    expect(editorHost.queries.resolveLogisticsDraftState()?.invalidReason).toBeNull();
+    expect(findPreviewDraftAt(editorHost, 2, 1)).toMatchObject({
+      definitionId: "item_log_converger",
+    });
+
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 3, y: 1 },
+      routeMode: { type: "freehand" },
+    });
+
+    expect(editorHost.queries.resolveLogisticsDraftState()?.invalidReason).toBeNull();
+    expect(findPreviewDraftAt(editorHost, 2, 1)).toMatchObject({
+      definitionId: "item_log_connector",
+    });
+  });
+
+  it("keeps freehand self-overlap converger head when retracing a horizontal draft segment", () => {
+    for (const direction of ["right", "left"] as const) {
+      const workspace = createWorkspace();
+      const editorHost = createEditorHost(workspace);
+      const basePoints = [
+        { x: -3, y: 0 },
+        { x: -2, y: 0 },
+        { x: -1, y: 0 },
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 2, y: 0 },
+        { x: 3, y: 0 },
+        { x: 4, y: 0 },
+        { x: 4, y: -1 },
+        { x: 3, y: -1 },
+        { x: 2, y: -1 },
+        { x: 1, y: -1 },
+        { x: 0, y: -1 },
+        { x: 0, y: 0 },
+      ];
+      const tailPoints = direction === "right"
+        ? [{ x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }]
+        : [{ x: -1, y: 0 }, { x: -2, y: 0 }, { x: -3, y: 0 }];
+
+      editorHost.actions.createLogisticsDraftStart({
+        kind: "belt",
+        source: {
+          type: "empty-cell",
+          gridPoint: { x: -4, y: 0 },
+        },
+      });
+
+      for (const pointerGridPoint of basePoints) {
+        editorHost.actions.moveLogisticEnd({
+          pointerGridPoint,
+          routeMode: { type: "freehand" },
+        });
+      }
+
+      const beforeDraft = editorHost.queries.resolveLogisticsDraftState();
+      const beforeCells = beforeDraft?.cells.map((cell) => cell.gridPoint) ?? [];
+      const beforeHeadDraftEntityId = beforeDraft?.headDraftEntityId ?? null;
+
+      for (const pointerGridPoint of tailPoints) {
+        editorHost.actions.moveLogisticEnd({
+          pointerGridPoint,
+          routeMode: { type: "freehand" },
+        });
+      }
+
+      expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
+        canApply: true,
+        invalidReason: null,
+        headDraftEntityId: beforeHeadDraftEntityId,
+      });
+      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => cell.gridPoint)).toEqual(
+        beforeCells,
+      );
+      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.at(-1)?.gridPoint).toEqual({ x: 0, y: 0 });
+      expect(findPreviewDraftAt(editorHost, 0, 0)).toMatchObject({
+        definitionId: "item_log_converger",
+      });
+      expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["item_log_converger"]);
+    }
+  });
+
+  it("keeps the freehand self-overlap converger head when dragging along the overlapped segment", () => {
+    for (const pointerGridPoint of [{ x: 2, y: 0 }, { x: 0, y: 0 }, { x: 3, y: 0 }]) {
+      const workspace = createWorkspace();
+      const editorHost = createEditorHost(workspace);
+
+      editorHost.actions.createLogisticsDraftStart({
+        kind: "belt",
+        source: {
+          type: "empty-cell",
+          gridPoint: { x: 0, y: 0 },
+        },
+      });
+
+      for (const stepGridPoint of [
+        { x: 3, y: 0 },
+        { x: 3, y: -1 },
+        { x: 1, y: -1 },
+        { x: 1, y: 0 },
+      ]) {
+        editorHost.actions.moveLogisticEnd({
+          pointerGridPoint: stepGridPoint,
+          routeMode: { type: "freehand" },
+        });
+      }
+
+      const beforeDraft = editorHost.queries.resolveLogisticsDraftState();
+      const beforeCells = beforeDraft?.cells.map((cell) => cell.gridPoint) ?? [];
+      const beforeHeadDraftEntityId = beforeDraft?.headDraftEntityId ?? null;
+
+      expect(beforeDraft).toMatchObject({
+        canApply: true,
+        invalidReason: null,
+        headDraftEntityId: beforeHeadDraftEntityId,
+      });
+      expect(beforeDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 1, y: 0 });
+      expect(findPreviewDraftAt(editorHost, 1, 0)).toMatchObject({
+        definitionId: "item_log_converger",
+      });
+
+      const moveResult = editorHost.actions.moveLogisticEnd({
+        pointerGridPoint,
+        routeMode: { type: "freehand" },
+      });
+
+      expect(moveResult).toMatchObject({
+        canApply: true,
+        invalidReason: null,
+        headGridPoint: { x: 1, y: 0 },
+        headDraftEntityId: beforeHeadDraftEntityId,
+      });
+      expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
+        canApply: true,
+        invalidReason: null,
+        headDraftEntityId: beforeHeadDraftEntityId,
+      });
+      expect(
+        editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => cell.gridPoint),
+      ).toEqual(beforeCells);
+      expect(findPreviewDraftAt(editorHost, 1, 0)).toMatchObject({
+        definitionId: "item_log_converger",
+      });
+      expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["item_log_converger"]);
+    }
+  });
+
+  it("keeps freehand self-overlap converger head when retracing a vertical draft segment", () => {
+    for (const direction of ["down", "up"] as const) {
+      const workspace = createWorkspace();
+      const editorHost = createEditorHost(workspace);
+      const basePoints = [
+        { x: 0, y: -3 },
+        { x: 0, y: -2 },
+        { x: 0, y: -1 },
+        { x: 0, y: 0 },
+        { x: 0, y: 1 },
+        { x: 0, y: 2 },
+        { x: 0, y: 3 },
+        { x: 0, y: 4 },
+        { x: -1, y: 4 },
+        { x: -1, y: 3 },
+        { x: -1, y: 2 },
+        { x: -1, y: 1 },
+        { x: -1, y: 0 },
+        { x: 0, y: 0 },
+      ];
+      const tailPoints = direction === "down"
+        ? [{ x: 0, y: 1 }, { x: 0, y: 2 }, { x: 0, y: 3 }]
+        : [{ x: 0, y: -1 }, { x: 0, y: -2 }, { x: 0, y: -3 }];
+
+      editorHost.actions.createLogisticsDraftStart({
+        kind: "belt",
+        source: {
+          type: "empty-cell",
+          gridPoint: { x: 0, y: -4 },
+        },
+      });
+
+      for (const pointerGridPoint of basePoints) {
+        editorHost.actions.moveLogisticEnd({
+          pointerGridPoint,
+          routeMode: { type: "freehand" },
+        });
+      }
+
+      const beforeDraft = editorHost.queries.resolveLogisticsDraftState();
+      const beforeCells = beforeDraft?.cells.map((cell) => cell.gridPoint) ?? [];
+      const beforeHeadDraftEntityId = beforeDraft?.headDraftEntityId ?? null;
+
+      for (const pointerGridPoint of tailPoints) {
+        editorHost.actions.moveLogisticEnd({
+          pointerGridPoint,
+          routeMode: { type: "freehand" },
+        });
+      }
+
+      expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
+        canApply: true,
+        invalidReason: null,
+        headDraftEntityId: beforeHeadDraftEntityId,
+      });
+      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => cell.gridPoint)).toEqual(
+        beforeCells,
+      );
+      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.at(-1)?.gridPoint).toEqual({ x: 0, y: 0 });
+      expect(findPreviewDraftAt(editorHost, 0, 0)).toMatchObject({
+        definitionId: "item_log_converger",
+      });
+      expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["item_log_converger"]);
+    }
+  });
+
+  it("cycles equal-cost device routes across different port pairs", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("source-device", "item_port_storager_1", 0, 8),
+      createTestEntity("target-device", "item_port_grinder_1", 0, 0),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "device",
+        entityId: "source-device",
+        pointerGridPoint: { x: 1, y: 8 },
+      },
+      routeOrder: "vertical-first",
+    });
+
+    const seenPortPairs = new Set<string>();
+    for (const routeOrder of [
+      "vertical-first",
+      "horizontal-first",
+      "vertical-first",
+      "horizontal-first",
+      "vertical-first",
+    ] as const) {
+      const moveResult = editorHost.actions.moveLogisticEnd({
+        pointerGridPoint: { x: 1, y: 2 },
+        routeMode: {
+          type: "single-bend",
+          routeOrder,
+          allowTemporaryOrderFlip: true,
+        },
+      });
+      const draft = editorHost.queries.resolveLogisticsDraftState();
+
+      expect(moveResult.canApply).toBe(true);
+      if (draft?.source?.type === "device-port" && draft.target?.type === "device-port") {
+        seenPortPairs.add(`${draft.source.portId}->${draft.target.portId}`);
+      }
+    }
+
+    expect(seenPortPairs.size).toBeGreaterThan(1);
+  });
+
+  it("applies a converger auto-draft and exposes the head entity as converger so gestures can stop", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("target", "belt_straight_1x1", 12, 8),
+      createTestEntity("successor", "belt_straight_1x1", 13, 8),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 10, y: 8 } },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 12, y: 8 },
+      routeMode: { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true },
+    });
+
+    const draft = editorHost.queries.resolveLogisticsDraftState();
+    expect(draft?.headDraftEntityId).toBeTruthy();
+    const headEntity = editorHost.queries.getEntityById(draft!.headDraftEntityId!);
+    expect(headEntity?.definitionId).toBe("item_log_converger");
+
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
+    const committed = editorHost.internalDocument.getSnapshot();
+    expect(committed.entities[draft!.headDraftEntityId!]).toMatchObject({
+      definitionId: "item_log_converger",
+    });
+  });
+
+  it("applies a vertical converger auto-draft and exposes the head entity as converger so gestures can stop", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // target(6,6) ↓ successor(6,7)
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("target", "belt_straight_1x1", 6, 6, 90),
+      createTestEntity("successor", "belt_straight_1x1", 6, 7, 90),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 4, y: 6 } },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 6, y: 6 },
+      routeMode: { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true },
+    });
+
+    const draft = editorHost.queries.resolveLogisticsDraftState();
+    expect(draft?.headDraftEntityId).toBeTruthy();
+    const headEntity = editorHost.queries.getEntityById(draft!.headDraftEntityId!);
+    expect(headEntity?.definitionId).toBe("item_log_converger");
+
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
+    const committed = editorHost.internalDocument.getSnapshot();
+    expect(committed.entities[draft!.headDraftEntityId!]).toMatchObject({
+      definitionId: "item_log_converger",
+    });
+  });
+
+  it("applies a splitter auto-draft and does not expose the head as converger", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
+      createTestEntity("source", "belt_straight_1x1", 12, 8),
+      createTestEntity("successor", "belt_straight_1x1", 13, 8),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "logistics-entity", entityId: "source", gridPoint: { x: 12, y: 8 } },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 12, y: 7 },
+      routeMode: { type: "single-bend", routeOrder: "vertical-first", allowTemporaryOrderFlip: true },
+    });
+
+    const draft = editorHost.queries.resolveLogisticsDraftState();
+    expect(draft?.headDraftEntityId).toBeTruthy();
+    const headEntity = editorHost.queries.getEntityById(draft!.headDraftEntityId!);
+    // 分流器起点时 head 不是分流器所在格，而是路径末端
+    expect(headEntity?.definitionId).not.toBe("item_log_converger");
+    expect(headEntity?.definitionId).not.toBe("item_log_splitter");
+  });
+
+  it("applies a vertical splitter auto-draft and does not expose the head as converger", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // predecessor(6,5) ↓ source(6,6) ↓ C(6,7)
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "belt_straight_1x1", 6, 5, 90),
+      createTestEntity("source", "belt_straight_1x1", 6, 6, 90),
+      createTestEntity("successor", "belt_straight_1x1", 6, 7, 90),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "logistics-entity", entityId: "source", gridPoint: { x: 6, y: 6 } },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 5, y: 6 },
+      routeMode: { type: "single-bend", routeOrder: "vertical-first", allowTemporaryOrderFlip: true },
+    });
+
+    const draft = editorHost.queries.resolveLogisticsDraftState();
+    expect(draft?.headDraftEntityId).toBeTruthy();
+    const headEntity = editorHost.queries.getEntityById(draft!.headDraftEntityId!);
+    expect(headEntity?.definitionId).not.toBe("item_log_converger");
+    expect(headEntity?.definitionId).not.toBe("item_log_splitter");
+  });
+
+  it("blocks drawing into B from above then toward A or C on a fully connected A→B→C straight belt", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // A(11,8) → B(12,8) → C(13,8)
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("A", "belt_straight_1x1", 11, 8),
+      createTestEntity("B", "belt_straight_1x1", 12, 8),
+      createTestEntity("C", "belt_straight_1x1", 13, 8),
+    ]));
+
+    // 从 B 上方起笔，向下画到 B
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 12, y: 7 } },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 12, y: 8 },
+      routeMode: { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true },
+    });
+
+    // 终点是 B，auto-draft 应创建汇流器
+    expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
+      definitionId: "item_log_converger",
+    });
+
+    // 左移朝向 A → 禁止
+    const moveToA = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 11, y: 8 },
+      routeMode: { type: "single-bend", routeOrder: "vertical-first", allowTemporaryOrderFlip: true },
+    });
+    expect(moveToA.canApply).toBe(false);
+    expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual([]);
+    expect(editorHost.actions.applyLogisticDraft()).toBe(false);
+
+    // 撤销，重试右移朝向 C → 禁止
+    editorHost.actions.cancelLogisticsDraft();
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 12, y: 7 } },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 12, y: 8 },
+      routeMode: { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true },
+    });
+
+    const moveToC = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 13, y: 8 },
+      routeMode: { type: "single-bend", routeOrder: "vertical-first", allowTemporaryOrderFlip: true },
+    });
+    expect(moveToC.canApply).toBe(false);
+    expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual([]);
+    expect(editorHost.actions.applyLogisticDraft()).toBe(false);
+  });
+
+  it("blocks drawing into B from the left then toward A or C on a vertically stacked A→B→C straight belt", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // A(6,5) ↓ B(6,6) ↓ C(6,7)
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("A", "belt_straight_1x1", 6, 5, 90),
+      createTestEntity("B", "belt_straight_1x1", 6, 6, 90),
+      createTestEntity("C", "belt_straight_1x1", 6, 7, 90),
+    ]));
+
+    // 从 B 左侧起笔，向右画到 B
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 5, y: 6 } },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 6, y: 6 },
+      routeMode: { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true },
+    });
+
+    // 终点是 B，auto-draft 应创建汇流器
+    expect(findPreviewDraftAt(editorHost, 6, 6)).toMatchObject({
+      definitionId: "item_log_converger",
+    });
+
+    // 上移朝向 A → 禁止
+    const moveToA = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 6, y: 5 },
+      routeMode: { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true },
+    });
+    expect(moveToA.canApply).toBe(false);
+    expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual([]);
+    expect(editorHost.actions.applyLogisticDraft()).toBe(false);
+
+    // 撤销，重试下移朝向 C → 禁止
+    editorHost.actions.cancelLogisticsDraft();
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 5, y: 6 } },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 6, y: 6 },
+      routeMode: { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true },
+    });
+
+    const moveToC = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 6, y: 7 },
+      routeMode: { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true },
+    });
+    expect(moveToC.canApply).toBe(false);
+    expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual([]);
+    expect(editorHost.actions.applyLogisticDraft()).toBe(false);
+  });
+
+  it("does not create an auto-device chain when moving along a horizontal nine-tile belt after entering from above", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(
+      Array.from({ length: 9 }, (_, index) =>
+        createTestEntity(`belt-${index}`, "belt_straight_1x1", index - 4, -5),
+      ),
+    ));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 0, y: -6 } },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 0, y: -5 },
+      routeMode: { type: "single-bend", routeOrder: "vertical-first", allowTemporaryOrderFlip: true },
+    });
+    expect(findPreviewDraftAt(editorHost, 0, -5)).toMatchObject({
+      definitionId: "item_log_converger",
+    });
+
+    const moveForward = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 3, y: -5 },
+      routeMode: { type: "single-bend", routeOrder: "vertical-first", allowTemporaryOrderFlip: true },
+    });
+
+    expect(moveForward.canApply).toBe(false);
+    expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual([]);
+
+    editorHost.actions.cancelLogisticsDraft();
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 0, y: -6 } },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 0, y: -5 },
+      routeMode: { type: "single-bend", routeOrder: "vertical-first", allowTemporaryOrderFlip: true },
+    });
+
+    const moveBackward = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: -3, y: -5 },
+      routeMode: { type: "single-bend", routeOrder: "vertical-first", allowTemporaryOrderFlip: true },
+    });
+
+    expect(moveBackward.canApply).toBe(false);
+    expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual([]);
+  });
+
+  it("does not create an auto-device chain when moving along a vertical nine-tile belt after entering from the side", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(
+      Array.from({ length: 9 }, (_, index) =>
+        createTestEntity(`belt-${index}`, "belt_straight_1x1", 10, index - 4, 90),
+      ),
+    ));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 9, y: 0 } },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 10, y: 0 },
+      routeMode: { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true },
+    });
+    expect(findPreviewDraftAt(editorHost, 10, 0)).toMatchObject({
+      definitionId: "item_log_converger",
+    });
+
+    const moveForward = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 10, y: 3 },
+      routeMode: { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true },
+    });
+
+    expect(moveForward.canApply).toBe(false);
+    expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual([]);
+
+    editorHost.actions.cancelLogisticsDraft();
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 9, y: 0 } },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 10, y: 0 },
+      routeMode: { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true },
+    });
+
+    const moveBackward = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 10, y: -3 },
+      routeMode: { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true },
+    });
+
+    expect(moveBackward.canApply).toBe(false);
+    expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual([]);
   });
 
   it("resolves logistics endpoints without treating splitter devices as replaceable path tiles", () => {

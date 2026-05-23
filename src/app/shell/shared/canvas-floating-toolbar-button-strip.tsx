@@ -81,10 +81,24 @@ const CANVAS_FLOATING_TOOLBAR_DEFINITIONS: Record<CanvasFloatingToolbarButtonId,
   "canvas-floating-toolbar-button-delete-many": {
     label: {
       "zh-CN": "删除整段",
-      "en-US": "Delete Many",
+      "en-US": "Delete Segment",
     },
-    icon: "delete-sweep",
+    icon: "stop-outlined",
     tone: "delete",
+  },
+  "canvas-floating-toolbar-button-delete-upstream-segment": {
+    label: {
+      "zh-CN": "删除前段",
+      "en-US": "Delete Upstream",
+    },
+    icon: "remove-backward",
+  },
+  "canvas-floating-toolbar-button-delete-downstream-segment": {
+    label: {
+      "zh-CN": "删除后段",
+      "en-US": "Delete Downstream",
+    },
+    icon: "remove-forward",
   },
 };
 

@@ -110,7 +110,9 @@ export function buildEncyclopediaIndex(
     recipesByOutputItem,
     recipesByMachine,
     allItems: items,
-    allEntities: entities.filter((entity) => entity.uiGroup !== "hidden"),
+    allEntities: entities
+      .filter((entity) => entity.uiGroup !== "hidden")
+      .sort((a, b) => a.displayOrder - b.displayOrder || a.id.localeCompare(b.id)),
   };
 }
 

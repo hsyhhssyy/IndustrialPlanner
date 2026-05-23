@@ -1067,7 +1067,7 @@ describe("createAppHost", () => {
     }));
     appHost.gestureAdapter.handlePointerMove(pointerEvent({
       pointerId: 22,
-      clientX: entityPoint.x + 4,
+      clientX: entityPoint.x + 8,
       clientY: entityPoint.y,
       buttons: 1,
     }));
@@ -1277,7 +1277,7 @@ describe("createAppHost", () => {
     vi.advanceTimersByTime(500);
     appHost.gestureAdapter.handlePointerMove(pointerEvent({
       pointerId: 34,
-      clientX: emptyPoint.x + 4,
+      clientX: emptyPoint.x + 8,
       clientY: emptyPoint.y,
       buttons: 1,
     }));
@@ -1295,7 +1295,7 @@ describe("createAppHost", () => {
     vi.advanceTimersByTime(500);
     appHost.gestureAdapter.handlePointerMove(pointerEvent({
       pointerId: 35,
-      clientX: entityPoint.x + 4,
+      clientX: entityPoint.x + 8,
       clientY: entityPoint.y,
       buttons: 1,
     }));
@@ -1956,6 +1956,89 @@ describe("createAppHost", () => {
     expect(appHost.internalState.activeTool).toBe("select");
   });
 
+  it("previews mouse logistics start on hovered output device and confirms it on click", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 1000,
+      height: 800,
+    });
+    const appHost = createAppHost(workspace);
+    const devicePoint = resolveClientPixelPointForGridCell(editorHost, { x: 14, y: 10 });
+    const emptyPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyE",
+      key: "e",
+      keyCode: 69,
+    }));
+    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 41,
+      clientX: devicePoint.x,
+      clientY: devicePoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
+
+    let logisticsDraft = editorHost.queries.resolveLogisticsDraftState();
+    expect(logisticsDraft?.source).toMatchObject({
+      type: "device-port",
+      portDirection: "output",
+    });
+    expect(logisticsDraft?.cells).toEqual([]);
+    expect(editorHost.state.collections.preview).toEqual([]);
+    expect(editorHost.state.collections[EntityCollectionType.logisticsHead]).toEqual([]);
+    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
+    expect(appHost.internalState.runtime.logisticsPlacement.isHoverPreview).toBe(true);
+
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 42,
+      clientX: emptyPoint.x,
+      clientY: emptyPoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
+
+    expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
+    expect(editorHost.state.collections.preview).toEqual([]);
+    expect(editorHost.state.collections[EntityCollectionType.logisticsHead]).toEqual([]);
+    expect(appHost.internalState.runtime.logisticsPlacement.isHoverPreview).toBe(false);
+
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 43,
+      clientX: devicePoint.x,
+      clientY: devicePoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 44,
+      clientX: devicePoint.x,
+      clientY: devicePoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 44,
+      clientX: devicePoint.x,
+      clientY: devicePoint.y,
+      buttons: 0,
+    }));
+
+    logisticsDraft = editorHost.queries.resolveLogisticsDraftState();
+    expect(logisticsDraft?.source).toMatchObject({
+      type: "device-port",
+      portDirection: "output",
+    });
+    expect(logisticsDraft?.cells).toEqual([]);
+    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("drawing");
+    expect(appHost.internalState.runtime.logisticsPlacement.isHoverPreview).toBe(false);
+  });
+
   it("draws, applies, and continues mouse logistics placement from the previous head", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -2346,7 +2429,7 @@ describe("createAppHost", () => {
     const appHost = createAppHost(workspace);
     const expectedDeviceId = workspace.registry.entityDefinitions
       .filter((definition) => definition.uiGroup === "beltLogistics")
-      .sort((left, right) => left.id.localeCompare(right.id))[0]?.id;
+      .sort((left, right) => left.displayOrder - right.displayOrder || left.id.localeCompare(right.id))[0]?.id;
     const anchorPoint = resolveClientPixelPointForGridCell(editorHost, { x: 3, y: 2 });
 
     appHost.gestureAdapter.handlePointerMove(pointerEvent({
@@ -2460,7 +2543,7 @@ describe("createAppHost", () => {
     setViewportDisplayRotationSpy.mockClear();
 
     appHost.gestureAdapter.handleUiButtonMouseTap({
-      uiButtonId: "canvas-bottom-left-toolbar-button-rotate-view",
+      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
       button: 0,
       altKey: false,
       ctrlKey: false,

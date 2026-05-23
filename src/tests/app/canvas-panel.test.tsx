@@ -225,14 +225,14 @@ describe("CanvasPanel", () => {
       dispatchPointerEvent(viewportSurface, "pointermove", {
         pointerId: 1,
         pointerType: "mouse",
-        clientX: 14,
+        clientX: 18,
         clientY: 10,
         buttons: 1,
       });
       dispatchPointerEvent(viewportSurface, "pointerup", {
         pointerId: 1,
         pointerType: "mouse",
-        clientX: 14,
+        clientX: 18,
         clientY: 10,
         buttons: 0,
       });

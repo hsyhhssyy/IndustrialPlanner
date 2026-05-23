@@ -23,7 +23,7 @@ import type { ActiveTool } from "@/domain/app/types/app-types";
 const TOUCH_LONG_PRESS_MS = 500;
 const TOUCH_LONG_PRESS_INDICATOR_DELAY_MS = 200;
 const TOUCH_MOVE_SLOP_PX = 8;
-const MOUSE_DRAG_SLOP_PX = 3;
+const MOUSE_DRAG_SLOP_PX = 8;
 const PINCH_DISTANCE_THRESHOLD_PX = 2;
 const ROTATE_ANGLE_THRESHOLD_DEGREES = 15;
 const TWO_FINGER_MOVE_THRESHOLD_PX = 2;

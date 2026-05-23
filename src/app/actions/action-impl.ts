@@ -72,6 +72,7 @@ export interface AppInternalAction {
   hideCanvasFloatingToolbar: () => void;
   showCanvasRightDockToolbar: (
     buttonIds: readonly CanvasRightDockToolbarButtonId[],
+    mode?: "icon" | "shortcut",
   ) => void;
   hideCanvasRightDockToolbar: () => void;
   showCanvasTopLeftCornerToolbar: (
@@ -521,6 +522,7 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
   public readonly showCanvasRightDockToolbar: AppInternalAction["showCanvasRightDockToolbar"] = action((
     buttonIds,
+    mode = "icon",
   ) => {
     const nextButtonIds = normalizeCanvasRightDockToolbarButtonIds(buttonIds);
 
@@ -531,6 +533,7 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
     this.internalState.runtime.canvasRightDockToolbar.visible = true;
     this.internalState.runtime.canvasRightDockToolbar.buttonIds = nextButtonIds;
+    this.internalState.runtime.canvasRightDockToolbar.mode = mode;
   });
 
   public readonly hideCanvasRightDockToolbar: AppInternalAction["hideCanvasRightDockToolbar"] = action(() => {

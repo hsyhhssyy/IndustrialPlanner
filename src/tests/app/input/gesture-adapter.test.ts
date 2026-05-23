@@ -124,12 +124,12 @@ describe("GestureAdapter", () => {
 
     adapter.handlePointerDown(pointerEvent({ pointerId: 8, clientX: 20, clientY: 20, buttons: 1 }));
     adapter.handlePointerMove(
-      pointerEvent({ pointerId: 8, clientX: 24, clientY: 20, buttons: 1 }),
+      pointerEvent({ pointerId: 8, clientX: 28, clientY: 20, buttons: 1 }),
     );
     adapter.handlePointerMove(
-      pointerEvent({ pointerId: 8, clientX: 27, clientY: 25, buttons: 1 }),
+      pointerEvent({ pointerId: 8, clientX: 31, clientY: 25, buttons: 1 }),
     );
-    adapter.handlePointerUp(pointerEvent({ pointerId: 8, clientX: 27, clientY: 25, buttons: 0 }));
+    adapter.handlePointerUp(pointerEvent({ pointerId: 8, clientX: 31, clientY: 25, buttons: 0 }));
 
     expect(events.map((event) => event.type)).toEqual([
       "mouse move",
@@ -165,7 +165,7 @@ describe("GestureAdapter", () => {
     adapter.handlePointerUp(pointerEvent({ pointerId: 11, clientX: 6, clientY: 7, buttons: 0 }));
 
     adapter.handlePointerDown(pointerEvent({ pointerId: 12, clientX: 20, clientY: 20, buttons: 1 }));
-    adapter.handlePointerMove(pointerEvent({ pointerId: 12, clientX: 24, clientY: 20, buttons: 1 }));
+    adapter.handlePointerMove(pointerEvent({ pointerId: 12, clientX: 28, clientY: 20, buttons: 1 }));
 
     adapter.handlePointerDown(touchEvent(21, 30, 30));
     adapter.handlePointerUp(touchEvent(21, 30, 30));
@@ -180,7 +180,7 @@ describe("GestureAdapter", () => {
       },
       {
         type: "mouse dragstart",
-        pointerEntity: { id: "entity-24-20" },
+        pointerEntity: { id: "entity-28-20" },
       },
       {
         type: "touch tap",
@@ -221,12 +221,12 @@ describe("GestureAdapter", () => {
     });
 
     adapter.handlePointerDown(pointerEvent({ pointerId: 31, clientX: 10, clientY: 10, buttons: 1 }));
-    adapter.handlePointerMove(pointerEvent({ pointerId: 31, clientX: 14, clientY: 10, buttons: 1 }));
     adapter.handlePointerMove(pointerEvent({ pointerId: 31, clientX: 18, clientY: 10, buttons: 1 }));
-    adapter.handlePointerUp(pointerEvent({ pointerId: 31, clientX: 18, clientY: 10, buttons: 0 }));
+    adapter.handlePointerMove(pointerEvent({ pointerId: 31, clientX: 22, clientY: 10, buttons: 1 }));
+    adapter.handlePointerUp(pointerEvent({ pointerId: 31, clientX: 22, clientY: 10, buttons: 0 }));
 
     adapter.handlePointerDown(pointerEvent({ pointerId: 32, clientX: 30, clientY: 30, buttons: 1 }));
-    adapter.handlePointerMove(pointerEvent({ pointerId: 32, clientX: 34, clientY: 30, buttons: 1 }));
+    adapter.handlePointerMove(pointerEvent({ pointerId: 32, clientX: 38, clientY: 30, buttons: 1 }));
 
     expect(startPayloads).toEqual([null, null]);
     expect(movePayloads).toEqual([{ tag: "mouse-payload" }]);
@@ -318,9 +318,9 @@ describe("GestureAdapter", () => {
 
     adapter.handlePointerDown(pointerEvent({ pointerId: 8, clientX: 20, clientY: 20, buttons: 1 }));
     vi.advanceTimersByTime(500);
-    adapter.handlePointerMove(pointerEvent({ pointerId: 8, clientX: 24, clientY: 20, buttons: 1 }));
-    adapter.handlePointerMove(pointerEvent({ pointerId: 8, clientX: 27, clientY: 25, buttons: 1 }));
-    adapter.handlePointerUp(pointerEvent({ pointerId: 8, clientX: 27, clientY: 25, buttons: 0 }));
+    adapter.handlePointerMove(pointerEvent({ pointerId: 8, clientX: 28, clientY: 20, buttons: 1 }));
+    adapter.handlePointerMove(pointerEvent({ pointerId: 8, clientX: 31, clientY: 25, buttons: 1 }));
+    adapter.handlePointerUp(pointerEvent({ pointerId: 8, clientX: 31, clientY: 25, buttons: 0 }));
 
     expect(events.slice(2).map((event) => event.type)).toEqual([
       "mouse-long-press-ready",

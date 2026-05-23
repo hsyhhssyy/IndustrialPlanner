@@ -1,8 +1,8 @@
 import type { EditorAction } from "@/domain/editor/editor-action";
-import type { WorldDocument } from "@/domain/document/world-document";
+import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { resolveBaseBuiltinEntities } from "@/domain/registry/types/base-definition";
-import type { GridPoint } from "@/domain/shared/grid";
+import type { GridEdge, GridPoint, GridRotation } from "@/domain/shared/grid";
 import type {
   CreateLogisticsDraftStartOptions,
   LogisticsDraftActionResult,
@@ -25,11 +25,15 @@ import {
   createEntityDefinitionMap,
   doesFirstStepMoveTowardFixedSourceInput,
   findEntityById,
+  findTopEntityAtGridPoint,
   generateSingleBendPathPoints,
   gridPointKey,
   isGridPointInsideRect,
   isOrdinaryLogisticsDefinitionId,
+  oppositeEdge,
   resolveEntityGridRect,
+  resolveDevicePortEndpoints,
+  resolveDirectionEdge,
   resolveInputEndpointAtPointer,
   resolveInputEndpointOnPath,
   resolveLogisticsDefinitionId,
@@ -47,6 +51,45 @@ type EditorLogisticsActions = Pick<
 >;
 
 type DevicePortEndpoint = Extract<LogisticsDraftEndpoint, { readonly type: "device-port" }>;
+
+type AutoDeviceKind = "splitter" | "converger" | "connector";
+type LogisticsPathAxis = "horizontal" | "vertical";
+
+interface AutoDraftCellOverride {
+  readonly definitionId: string;
+  readonly rotation: GridRotation;
+}
+
+interface AutoDraftPlan {
+  readonly cellOverridesByGridKey: ReadonlyMap<string, AutoDraftCellOverride>;
+  readonly replacingEntityIds: readonly string[];
+  readonly invalidReason: LogisticsDraftInvalidReason | null;
+}
+
+interface DraftEntityBuildResult {
+  readonly draftEntities: readonly DraftEntity[];
+  readonly draftIds: readonly string[];
+  readonly draftIdByGridKey: ReadonlyMap<string, string>;
+}
+
+interface OrdinaryLogisticsConnectionInfo {
+  readonly entity: WorldEntity;
+  readonly definition: EntityDefinition;
+  readonly inputEdge: GridEdge;
+  readonly outputEdge: GridEdge;
+  readonly inputConnected: boolean;
+  readonly outputConnected: boolean;
+}
+
+interface DeviceRouteCandidate {
+  readonly source: DevicePortEndpoint;
+  readonly target: DevicePortEndpoint;
+  readonly routeOrder: LogisticsRouteOrder;
+  readonly points: readonly GridPoint[];
+  readonly lengthScore: number;
+  readonly bendScore: number;
+  readonly signature: string;
+}
 
 interface LogisticsActionContext extends EditorActionsContext {
   readonly entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
@@ -79,11 +122,43 @@ export function createEditorLogisticsActions(
         return createIgnoredLogisticsActionResult();
       }
 
+      const routeOrder = options.routeOrder ?? "vertical-first";
+
+      // 2026-05-23: 设备源起笔时不生成路径 cell，
+      // 避免在鼠标悬浮阶段暴露多余的 1 格传送带/管道草稿。
+      // moveLogisticEnd 首次调用时从 source 和 pointer 重新生成实际路径。
+      if (source.type === "device-port") {
+        logisticsContext.state.internalTransientState.logisticsDraft = {
+          kind: options.kind,
+          source,
+          target: null,
+          routeOrder,
+          cells: [],
+          headDraftEntityId: null,
+          replacingEntityId: null,
+          canApply: false,
+          invalidReason: null,
+        };
+        syncPlacementValidationState({
+          document: logisticsContext.document.getSnapshot(),
+          state: logisticsContext.state,
+          workspace: logisticsContext.workspace,
+        });
+        return {
+          status: "created",
+          canApply: false,
+          invalidReason: null,
+          headGridPoint: null,
+          headDraftEntityId: null,
+          sourceEntityId: source.entityId,
+          targetEntityId: null,
+        };
+      }
+
       const replacingEntityId = source.type === "logistics-entity"
         ? source.entityId
         : null;
       const start = resolveSourceStartGridPoint(source);
-      const routeOrder = options.routeOrder ?? "vertical-first";
 
       return rebuildLogisticsDraft({
         context: logisticsContext,
@@ -106,18 +181,9 @@ export function createEditorLogisticsActions(
         return createIgnoredLogisticsActionResult();
       }
 
-      const source = resolveMoveSourceEndpoint({
-        context: logisticsContext,
-        draft,
-        options,
-      });
-      if (source === null) {
-        return createIgnoredLogisticsActionResult();
-      }
-
       const currentDocument = logisticsContext.document.getSnapshot();
 
-      if (draft.target?.type === "device-port") {
+      if (draft.target?.type === "device-port" && options.routeMode.type === "freehand") {
         const targetEntity = findEntityById({
           entityId: draft.target.entityId,
           document: currentDocument,
@@ -152,7 +218,53 @@ export function createEditorLogisticsActions(
         baseDefinitions: logisticsContext.workspace.registry.baseDefinitions,
       });
 
+      if (
+        options.routeMode.type === "single-bend"
+        && draft.source.type === "device-port"
+        && cursorTarget !== null
+      ) {
+        const deviceRoute = resolveDeviceToDeviceRoute({
+          context: logisticsContext,
+          draft,
+          sourceEntityId: draft.source.entityId,
+          targetEntityId: cursorTarget.entityId,
+          preferredRouteOrder: options.routeMode.routeOrder,
+        });
+
+        if (deviceRoute !== null) {
+          return rebuildLogisticsDraft({
+            context: logisticsContext,
+            kind: draft.kind,
+            source: deviceRoute.source,
+            target: deviceRoute.target,
+            routeOrder: options.routeMode.routeOrder,
+            points: deviceRoute.points,
+            replacingEntityId: draft.replacingEntityId,
+            status: "updated",
+          });
+        }
+      }
+
+      const source = resolveMoveSourceEndpoint({
+        context: logisticsContext,
+        draft,
+        options,
+      });
+      if (source === null) {
+        return createIgnoredLogisticsActionResult();
+      }
+
+      logisticsContext.state.internalTransientState.logisticsDeviceRouteCycleSignature = null;
+      logisticsContext.state.internalTransientState.logisticsDeviceRouteCycleIndex = 0;
+
       if (options.routeMode.type === "freehand") {
+        if (shouldKeepSelfOverlapConvergerHeadWhenRetracingOwnSegment({
+          draft,
+          pointerGridPoint: options.pointerGridPoint,
+        })) {
+          return createLogisticsActionResultFromDraft(draft);
+        }
+
         const currentPoints = draft.cells.map((cell) => cell.gridPoint);
 
         const tentativePoints = appendFreehandPathPoints({
@@ -291,10 +403,18 @@ export function createEditorLogisticsActions(
       const nextEntities = { ...currentDocument.entities };
       let nextEntityOrder = [...currentDocument.entityOrder];
 
-      if (draft.replacingEntityId !== null) {
-        delete nextEntities[draft.replacingEntityId];
+      const replacingEntityIds = new Set([
+        ...logisticsContext.state.collections[EntityCollectionType.ghost],
+        ...(draft.replacingEntityId === null ? [] : [draft.replacingEntityId]),
+      ]);
+
+      for (const replacingEntityId of replacingEntityIds) {
+        delete nextEntities[replacingEntityId];
+      }
+
+      if (replacingEntityIds.size > 0) {
         nextEntityOrder = nextEntityOrder.filter((entityId) =>
-          entityId !== draft.replacingEntityId,
+          !replacingEntityIds.has(entityId),
         );
       }
 
@@ -529,36 +649,78 @@ function rebuildLogisticsDraft(options: {
     replacingEntity,
     replacingDefinition,
   });
-  const invalidReason = resolveInvalidReason({
+  const autoDraftPlan = resolveAutoDraftPlan({
     context: options.context,
     kind: options.kind,
+    source: options.source,
+    target: options.target,
     cells,
     replacingEntityId: options.replacingEntityId,
-    target: options.target,
   });
-  const canApply = invalidReason === null;
-  const draftEntities = createDraftEntities({
+
+  const prevConvergerGridKey = options.context.state.internalTransientState.convergerEntityGridKey;
+  let effectiveInvalidReason = resolveInvalidReason({
     context: options.context,
     kind: options.kind,
     cells,
+    replacingEntityIds: autoDraftPlan.replacingEntityIds,
+    autoDraftCellKeys: new Set(autoDraftPlan.cellOverridesByGridKey.keys()),
+    target: options.target,
+  }) ?? autoDraftPlan.invalidReason;
+
+  // 2026-05-23: 之前 rebuild 在终点处已形成汇流器虚影（替换了原物流段），
+  // 本次延伸使得该 cell 不再是终点 → 禁止，防止汇流器被悄悄改写为桥接器。
+  if (
+    prevConvergerGridKey !== null
+    && effectiveInvalidReason === null
+  ) {
+    const prevConvergerCellIndex = cells.findIndex(
+      (cell) => gridPointKey(cell.gridPoint) === prevConvergerGridKey,
+    );
+    if (prevConvergerCellIndex >= 0 && prevConvergerCellIndex < cells.length - 1) {
+      effectiveInvalidReason = "unknown";
+    }
+  }
+
+  const canApply = effectiveInvalidReason === null;
+
+  // 记录本次自动创建的汇流器（含实体替换）所在 cell，供下一帧检测延伸。
+  let nextConvergerGridKey: string | null = null;
+  for (const [key, override] of autoDraftPlan.cellOverridesByGridKey) {
+    if (
+      override.definitionId.endsWith("_converger")
+      && autoDraftPlan.replacingEntityIds.length > 0
+    ) {
+      nextConvergerGridKey = key;
+      break;
+    }
+  }
+  options.context.state.internalTransientState.convergerEntityGridKey = nextConvergerGridKey;
+  const draftBuildResult = createDraftEntities({
+    context: options.context,
+    kind: options.kind,
+    cells,
+    cellOverridesByGridKey: autoDraftPlan.cellOverridesByGridKey,
     currentDocument,
     previousPreviewDrafts,
     previousPreviewDraftIds,
   });
-  const draftIds = draftEntities.map((entity) => entity.id);
+  const draftIds = draftBuildResult.draftIds;
 
   options.context.state.drafts = [
     ...options.context.state.drafts.filter((entity) =>
       !previousPreviewDraftIds.has(entity.id),
     ),
-    ...draftEntities,
+    ...draftBuildResult.draftEntities,
   ];
-  preview.replace(draftIds);
-  logisticsHead.replace(draftIds.length === 0 ? [] : [draftIds[draftIds.length - 1] as string]);
-  ghost.replace(options.replacingEntityId === null ? [] : [options.replacingEntityId]);
-
+  preview.replace([...draftIds]);
   const headCell = cells[cells.length - 1] ?? null;
-  const headDraftEntityId = draftIds[draftIds.length - 1] ?? null;
+  const headDraftEntityId = headCell === null
+    ? null
+    : draftBuildResult.draftIdByGridKey.get(gridPointKey(headCell.gridPoint)) ?? null;
+  logisticsHead.replace(headDraftEntityId === null ? [] : [headDraftEntityId]);
+  ghost.replace([...autoDraftPlan.replacingEntityIds]);
+
   options.context.state.internalTransientState.logisticsDraft = {
     kind: options.kind,
     source: options.source,
@@ -568,7 +730,7 @@ function rebuildLogisticsDraft(options: {
     headDraftEntityId,
     replacingEntityId: options.replacingEntityId,
     canApply,
-    invalidReason,
+    invalidReason: effectiveInvalidReason,
   };
   syncPlacementValidationState({
     document: currentDocument,
@@ -579,7 +741,7 @@ function rebuildLogisticsDraft(options: {
   return {
     status: options.status,
     canApply,
-    invalidReason,
+    invalidReason: effectiveInvalidReason,
     headGridPoint: headCell?.gridPoint ?? null,
     headDraftEntityId,
     sourceEntityId: options.source.type === "device-port" ? options.source.entityId : null,
@@ -637,10 +799,11 @@ function createDraftEntities(options: {
   context: LogisticsActionContext;
   kind: LogisticsKind;
   cells: readonly LogisticsPathCell[];
+  cellOverridesByGridKey: ReadonlyMap<string, AutoDraftCellOverride>;
   currentDocument: WorldDocument;
   previousPreviewDrafts: readonly DraftEntity[];
   previousPreviewDraftIds: ReadonlySet<string>;
-}): DraftEntity[] {
+}): DraftEntityBuildResult {
   const reservedIds = new Set<string>([
     ...Object.keys(options.currentDocument.entities),
     ...resolveBaseBuiltinEntities({
@@ -652,41 +815,57 @@ function createDraftEntities(options: {
       .map((entity) => entity.id),
   ]);
   const batchCounter = options.context.nextDraftCounter();
+  const draftEntities: DraftEntity[] = [];
+  const draftIdByGridKey = new Map<string, string>();
 
-  return options.cells.map((cell, index) => {
-    const definitionId = resolveLogisticsDefinitionId({
+  for (const cell of options.cells) {
+    const key = gridPointKey(cell.gridPoint);
+    if (draftIdByGridKey.has(key)) {
+      continue;
+    }
+
+    const override = options.cellOverridesByGridKey.get(key) ?? null;
+    const definitionId = override?.definitionId ?? resolveLogisticsDefinitionId({
       kind: options.kind,
       shape: cell.shape,
     });
-    const reusableDraft = options.previousPreviewDrafts[index];
+    const reusableDraft = options.previousPreviewDrafts[draftEntities.length];
     const id = reusableDraft?.definitionId === definitionId
       ? reusableDraft.id
       : generateLogisticsDraftId({
           kind: options.kind,
           batchCounter,
-          index,
+          index: draftEntities.length,
           reservedIds,
         });
 
     reservedIds.add(id);
+    draftIdByGridKey.set(key, id);
 
-    return {
+    draftEntities.push({
       id,
       originalEntityId: id,
       definitionId,
       position: { ...cell.gridPoint },
-      rotation: cell.rotation,
+      rotation: override?.rotation ?? cell.rotation,
       config: {},
       tags: [],
-    };
-  });
+    });
+  }
+
+  return {
+    draftEntities,
+    draftIds: draftEntities.map((entity) => entity.id),
+    draftIdByGridKey,
+  };
 }
 
 function resolveInvalidReason(options: {
   context: LogisticsActionContext;
   kind: LogisticsKind;
   cells: readonly LogisticsPathCell[];
-  replacingEntityId: string | null;
+  replacingEntityIds: readonly string[];
+  autoDraftCellKeys: ReadonlySet<string>;
   target: LogisticsDraftEndpoint | null;
 }): LogisticsDraftInvalidReason | null {
   if (options.cells.length === 0) {
@@ -697,7 +876,10 @@ function resolveInvalidReason(options: {
   for (const cell of options.cells) {
     const key = gridPointKey(cell.gridPoint);
     if (seen.has(key)) {
-      return "overlap-own-preview";
+      if (!options.autoDraftCellKeys.has(key)) {
+        return "overlap-own-preview";
+      }
+      continue;
     }
     seen.add(key);
   }
@@ -714,6 +896,7 @@ function resolveInvalidReason(options: {
   }
 
   const currentDocument = options.context.document.getSnapshot();
+  const replacingEntityIds = new Set(options.replacingEntityIds);
   for (const cell of options.cells) {
     for (const entityId of currentDocument.entityOrder) {
       const entity = currentDocument.entities[entityId];
@@ -726,7 +909,7 @@ function resolveInvalidReason(options: {
       }
 
       if (
-        options.replacingEntityId === entity.id
+        replacingEntityIds.has(entity.id)
         && areGridPointsEqual(entity.position, cell.gridPoint)
       ) {
         continue;
@@ -824,6 +1007,9 @@ function clearLogisticsDraftState(context: LogisticsActionContext | EditorAction
   logisticsHead.replace([]);
   ghost.replace([]);
   context.state.internalTransientState.logisticsDraft = null;
+  context.state.internalTransientState.logisticsDeviceRouteCycleSignature = null;
+  context.state.internalTransientState.logisticsDeviceRouteCycleIndex = 0;
+  context.state.internalTransientState.convergerEntityGridKey = null;
   syncPlacementValidationState({
     document: context.document.getSnapshot(),
     state: context.state,
@@ -864,4 +1050,615 @@ function generateLogisticsDraftId(options: {
 
 function flipRouteOrder(routeOrder: LogisticsRouteOrder): LogisticsRouteOrder {
   return routeOrder === "vertical-first" ? "horizontal-first" : "vertical-first";
+}
+
+function resolveDeviceToDeviceRoute(options: {
+  context: LogisticsActionContext;
+  draft: LogisticsDraftReadonlyState;
+  sourceEntityId: string;
+  targetEntityId: string;
+  preferredRouteOrder: LogisticsRouteOrder;
+}): DeviceRouteCandidate | null {
+  const currentDocument = options.context.document.getSnapshot();
+  const sourceEntity = findEntityById({
+    entityId: options.sourceEntityId,
+    document: currentDocument,
+    drafts: [],
+    baseDefinitions: options.context.workspace.registry.baseDefinitions,
+  });
+  const targetEntity = findEntityById({
+    entityId: options.targetEntityId,
+    document: currentDocument,
+    drafts: [],
+    baseDefinitions: options.context.workspace.registry.baseDefinitions,
+  });
+  if (sourceEntity === null || targetEntity === null) {
+    return null;
+  }
+
+  const sourceDefinition = options.context.entityDefinitionMap.get(sourceEntity.definitionId);
+  const targetDefinition = options.context.entityDefinitionMap.get(targetEntity.definitionId);
+  if (sourceDefinition === undefined || targetDefinition === undefined) {
+    return null;
+  }
+
+  const sourceEndpoints = resolveDevicePortEndpoints({
+    entity: sourceEntity,
+    definition: sourceDefinition,
+    kind: options.draft.kind,
+    direction: "output",
+    pointerGridPoint: targetEntity.position,
+  });
+  const targetEndpoints = resolveDevicePortEndpoints({
+    entity: targetEntity,
+    definition: targetDefinition,
+    kind: options.draft.kind,
+    direction: "input",
+    pointerGridPoint: sourceEntity.position,
+  });
+  const routeOrders = [
+    options.preferredRouteOrder,
+    flipRouteOrder(options.preferredRouteOrder),
+  ] as const;
+  const candidates: DeviceRouteCandidate[] = [];
+
+  for (const sourceEndpoint of sourceEndpoints) {
+    for (const targetEndpoint of targetEndpoints) {
+      for (const routeOrder of routeOrders) {
+        const points = generateSingleBendPathPoints({
+          start: sourceEndpoint.outsideGridPoint,
+          target: targetEndpoint.outsideGridPoint,
+          routeOrder,
+        });
+        const cells = resolveLogisticsPathCells({
+          kind: options.draft.kind,
+          points,
+          source: sourceEndpoint,
+          target: targetEndpoint,
+          document: currentDocument,
+          entityDefinitionMap: options.context.entityDefinitionMap,
+          replacingEntity: null,
+          replacingDefinition: null,
+        });
+        if (resolveInvalidReason({
+          context: options.context,
+          kind: options.draft.kind,
+          cells,
+          replacingEntityIds: [],
+          autoDraftCellKeys: new Set(),
+          target: targetEndpoint,
+        }) !== null) {
+          continue;
+        }
+
+        candidates.push({
+          source: sourceEndpoint,
+          target: targetEndpoint,
+          routeOrder,
+          points,
+          lengthScore: points.length,
+          bendScore: countPathBends(points),
+          signature: [
+            sourceEndpoint.entityId,
+            sourceEndpoint.portGroupId,
+            sourceEndpoint.portId,
+            targetEndpoint.entityId,
+            targetEndpoint.portGroupId,
+            targetEndpoint.portId,
+            routeOrder,
+          ].join("|"),
+        });
+      }
+    }
+  }
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  candidates.sort(compareDeviceRouteCandidates);
+  const best = candidates[0];
+  if (best === undefined) {
+    return null;
+  }
+
+  const bestCandidates = candidates.filter((candidate) =>
+    candidate.lengthScore === best.lengthScore
+    && candidate.bendScore === best.bendScore
+  );
+  const signature = [
+    options.sourceEntityId,
+    options.targetEntityId,
+    best.lengthScore,
+    best.bendScore,
+    ...bestCandidates.map((candidate) => candidate.signature),
+  ].join(";");
+  const state = options.context.state.internalTransientState;
+
+  if (state.logisticsDeviceRouteCycleSignature === signature) {
+    if (options.preferredRouteOrder !== options.draft.routeOrder) {
+      state.logisticsDeviceRouteCycleIndex = (state.logisticsDeviceRouteCycleIndex + 1)
+        % bestCandidates.length;
+    }
+  } else {
+    state.logisticsDeviceRouteCycleSignature = signature;
+    state.logisticsDeviceRouteCycleIndex = 0;
+  }
+
+  return bestCandidates[state.logisticsDeviceRouteCycleIndex % bestCandidates.length] ?? best;
+}
+
+function compareDeviceRouteCandidates(left: DeviceRouteCandidate, right: DeviceRouteCandidate): number {
+  return left.lengthScore - right.lengthScore
+    || left.bendScore - right.bendScore
+    || left.signature.localeCompare(right.signature);
+}
+
+function countPathBends(points: readonly GridPoint[]): number {
+  let bends = 0;
+  for (let index = 1; index < points.length - 1; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    const next = points[index + 1];
+    if (previous === undefined || current === undefined || next === undefined) {
+      continue;
+    }
+
+    const inEdge = resolveDirectionEdge(previous, current);
+    const outEdge = resolveDirectionEdge(current, next);
+    if (inEdge !== null && outEdge !== null && inEdge !== outEdge) {
+      bends += 1;
+    }
+  }
+
+  return bends;
+}
+
+function resolveAutoDraftPlan(options: {
+  context: LogisticsActionContext;
+  kind: LogisticsKind;
+  source: LogisticsDraftEndpoint;
+  target: LogisticsDraftEndpoint | null;
+  cells: readonly LogisticsPathCell[];
+  replacingEntityId: string | null;
+}): AutoDraftPlan {
+  const currentDocument = options.context.document.getSnapshot();
+  const cellOverridesByGridKey = new Map<string, AutoDraftCellOverride>();
+  const replacingEntityIds = new Set<string>(
+    options.replacingEntityId === null ? [] : [options.replacingEntityId],
+  );
+  let invalidReason: LogisticsDraftInvalidReason | null = null;
+
+  const firstCell = options.cells[0] ?? null;
+  const secondCell = options.cells[1] ?? null;
+  if (
+    firstCell !== null
+    && secondCell !== null
+    && options.source.type === "logistics-entity"
+  ) {
+    const sourceInfo = resolveOrdinaryLogisticsConnectionInfo({
+      context: options.context,
+      kind: options.kind,
+      document: currentDocument,
+      entityId: options.source.entityId,
+    });
+    const firstStepEdge = resolveDirectionEdge(firstCell.gridPoint, secondCell.gridPoint);
+    if (sourceInfo !== null && sourceInfo.inputConnected && sourceInfo.outputConnected) {
+      if (firstStepEdge === sourceInfo.outputEdge) {
+        invalidReason = "unknown";
+      } else if (firstStepEdge !== null) {
+        cellOverridesByGridKey.set(
+          gridPointKey(firstCell.gridPoint),
+          createAutoDeviceOverride(options.kind, "splitter", sourceInfo.inputEdge),
+        );
+        replacingEntityIds.add(sourceInfo.entity.id);
+      }
+    }
+  }
+
+  const lastCell = options.cells[options.cells.length - 1] ?? null;
+  if (lastCell !== null && options.cells.length > 1) {
+    const targetEntity = findTopEntityAtGridPoint({
+      gridPoint: lastCell.gridPoint,
+      document: currentDocument,
+      drafts: [],
+      entityDefinitionMap: options.context.entityDefinitionMap,
+      baseDefinitions: options.context.workspace.registry.baseDefinitions,
+    });
+    const targetInfo = targetEntity === null
+      ? null
+      : resolveOrdinaryLogisticsConnectionInfo({
+          context: options.context,
+          kind: options.kind,
+          document: currentDocument,
+          entityId: targetEntity.id,
+        });
+
+    if (
+      targetInfo !== null
+      && targetInfo.outputConnected
+      && targetInfo.entity.id !== options.replacingEntityId
+      && options.target === null
+    ) {
+      cellOverridesByGridKey.set(
+        gridPointKey(lastCell.gridPoint),
+        createAutoDeviceOverride(options.kind, "converger", targetInfo.outputEdge),
+      );
+      replacingEntityIds.add(targetInfo.entity.id);
+    }
+  }
+
+  for (let index = 1; index < options.cells.length - 1; index += 1) {
+    const cell = options.cells[index];
+    if (cell === undefined) {
+      continue;
+    }
+
+    const entity = findTopEntityAtGridPoint({
+      gridPoint: cell.gridPoint,
+      document: currentDocument,
+      drafts: [],
+      entityDefinitionMap: options.context.entityDefinitionMap,
+      baseDefinitions: options.context.workspace.registry.baseDefinitions,
+    });
+    const info = entity === null
+      ? null
+      : resolveOrdinaryLogisticsConnectionInfo({
+          context: options.context,
+          kind: options.kind,
+          document: currentDocument,
+          entityId: entity.id,
+        });
+    if (info !== null && info.inputConnected && info.outputConnected) {
+      if (!isPerpendicularConnectorPass({ cell, info })) {
+        invalidReason = "unknown";
+        continue;
+      }
+
+      cellOverridesByGridKey.set(
+        gridPointKey(cell.gridPoint),
+        createAutoDeviceOverride(options.kind, "connector", null),
+      );
+      replacingEntityIds.add(info.entity.id);
+    }
+  }
+
+  const firstIndexByGridKey = new Map<string, number>();
+  for (let index = 0; index < options.cells.length; index += 1) {
+    const cell = options.cells[index];
+    if (cell === undefined) {
+      continue;
+    }
+
+    const key = gridPointKey(cell.gridPoint);
+    const firstIndex = firstIndexByGridKey.get(key);
+    if (firstIndex === undefined) {
+      firstIndexByGridKey.set(key, index);
+      continue;
+    }
+
+    if (firstIndex === 0) {
+      invalidReason = "overlap-own-preview";
+      continue;
+    }
+
+    const firstCell = options.cells[firstIndex];
+    const isLastCell = index === options.cells.length - 1;
+    if (
+      firstCell === undefined
+      || !canCreateAutoDeviceForSelfOverlap({
+        firstCell,
+        repeatedCell: cell,
+        isLastCell,
+      })
+    ) {
+      invalidReason = "overlap-own-preview";
+      continue;
+    }
+
+    const overrideKind: AutoDeviceKind = isLastCell ? "converger" : "connector";
+    const edge = isLastCell ? cell.toEdge : null;
+    cellOverridesByGridKey.set(
+      key,
+      createAutoDeviceOverride(options.kind, overrideKind, edge),
+    );
+  }
+
+  if (invalidReason !== null) {
+    return {
+      cellOverridesByGridKey: new Map(),
+      replacingEntityIds: options.replacingEntityId === null ? [] : [options.replacingEntityId],
+      invalidReason,
+    };
+  }
+
+  return {
+    cellOverridesByGridKey,
+    replacingEntityIds: Array.from(replacingEntityIds),
+    invalidReason,
+  };
+}
+
+function canCreateAutoDeviceForSelfOverlap(options: {
+  readonly firstCell: LogisticsPathCell;
+  readonly repeatedCell: LogisticsPathCell;
+  readonly isLastCell: boolean;
+}): boolean {
+  const firstAxis = resolveStraightCellAxis(options.firstCell);
+  if (firstAxis === null) {
+    return false;
+  }
+
+  if (options.isLastCell) {
+    const edges = [
+      options.repeatedCell.fromEdge,
+      options.repeatedCell.toEdge,
+    ].filter((edge): edge is GridEdge => edge !== null);
+
+    return edges.length > 0 && edges.every((edge) => resolveEdgeAxis(edge) !== firstAxis);
+  }
+
+  const repeatedAxis = resolveStraightCellAxis(options.repeatedCell);
+
+  return repeatedAxis !== null && repeatedAxis !== firstAxis;
+}
+
+function shouldKeepSelfOverlapConvergerHeadWhenRetracingOwnSegment(options: {
+  readonly draft: LogisticsDraftReadonlyState;
+  readonly pointerGridPoint: GridPoint;
+}): boolean {
+  if (!options.draft.canApply || options.draft.invalidReason !== null) {
+    return false;
+  }
+
+  const lastIndex = options.draft.cells.length - 1;
+  const headCell = options.draft.cells[lastIndex];
+  if (headCell === undefined) {
+    return false;
+  }
+
+  const repeatedGridKey = gridPointKey(headCell.gridPoint);
+  const firstCell = options.draft.cells.find((cell, index) =>
+    index < lastIndex && gridPointKey(cell.gridPoint) === repeatedGridKey
+  ) ?? null;
+  if (firstCell === null) {
+    return false;
+  }
+
+  const firstAxis = resolveStraightCellAxis(firstCell);
+  return (
+    firstAxis !== null
+    && isGridPointOnAxisFromPoint({
+      axis: firstAxis,
+      origin: headCell.gridPoint,
+      target: options.pointerGridPoint,
+    })
+    && canCreateAutoDeviceForSelfOverlap({
+      firstCell,
+      repeatedCell: headCell,
+      isLastCell: true,
+    })
+  );
+}
+
+function isGridPointOnAxisFromPoint(options: {
+  readonly axis: LogisticsPathAxis;
+  readonly origin: GridPoint;
+  readonly target: GridPoint;
+}): boolean {
+  if (areGridPointsEqual(options.origin, options.target)) {
+    return false;
+  }
+
+  return options.axis === "horizontal"
+    ? options.target.y === options.origin.y
+    : options.target.x === options.origin.x;
+}
+
+function resolveStraightCellAxis(cell: LogisticsPathCell): LogisticsPathAxis | null {
+  if (cell.fromEdge === null || cell.toEdge === null) {
+    return null;
+  }
+
+  if (oppositeEdge(cell.fromEdge) !== cell.toEdge) {
+    return null;
+  }
+
+  return resolveEdgeAxis(cell.fromEdge);
+}
+
+function resolveEdgeAxis(edge: GridEdge): LogisticsPathAxis {
+  return edge === "EAST" || edge === "WEST" ? "horizontal" : "vertical";
+}
+
+function isPerpendicularConnectorPass(options: {
+  readonly cell: LogisticsPathCell;
+  readonly info: OrdinaryLogisticsConnectionInfo;
+}): boolean {
+  if (options.cell.fromEdge === null || options.cell.toEdge === null) {
+    return false;
+  }
+
+  if (oppositeEdge(options.cell.fromEdge) !== options.cell.toEdge) {
+    return false;
+  }
+
+  return options.cell.fromEdge !== options.info.inputEdge
+    && options.cell.fromEdge !== options.info.outputEdge
+    && options.cell.toEdge !== options.info.inputEdge
+    && options.cell.toEdge !== options.info.outputEdge;
+}
+
+function resolveOrdinaryLogisticsConnectionInfo(options: {
+  context: LogisticsActionContext;
+  kind: LogisticsKind;
+  document: WorldDocument;
+  entityId: string;
+}): OrdinaryLogisticsConnectionInfo | null {
+  const entity = findEntityById({
+    entityId: options.entityId,
+    document: options.document,
+    drafts: [],
+    baseDefinitions: options.context.workspace.registry.baseDefinitions,
+  });
+  if (entity === null || !isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)) {
+    return null;
+  }
+
+  const definition = options.context.entityDefinitionMap.get(entity.definitionId);
+  if (definition === undefined) {
+    return null;
+  }
+
+  const inputEndpoint = resolveDevicePortEndpoints({
+    entity,
+    definition,
+    kind: options.kind,
+    direction: "input",
+    pointerGridPoint: entity.position,
+  })[0];
+  const outputEndpoint = resolveDevicePortEndpoints({
+    entity,
+    definition,
+    kind: options.kind,
+    direction: "output",
+    pointerGridPoint: entity.position,
+  })[0];
+  if (inputEndpoint === undefined || outputEndpoint === undefined) {
+    return null;
+  }
+
+  return {
+    entity,
+    definition,
+    inputEdge: inputEndpoint.edge,
+    outputEdge: outputEndpoint.edge,
+    inputConnected: doesNeighborOutputConnectToPoint({
+      context: options.context,
+      kind: options.kind,
+      document: options.document,
+      neighborGridPoint: inputEndpoint.outsideGridPoint,
+      targetGridPoint: entity.position,
+      ignoredEntityId: entity.id,
+    }),
+    outputConnected: doesPointOutputConnectToNeighborInput({
+      context: options.context,
+      kind: options.kind,
+      document: options.document,
+      sourceGridPoint: entity.position,
+      neighborGridPoint: outputEndpoint.outsideGridPoint,
+      ignoredEntityId: entity.id,
+    }),
+  };
+}
+
+function doesNeighborOutputConnectToPoint(options: {
+  context: LogisticsActionContext;
+  kind: LogisticsKind;
+  document: WorldDocument;
+  neighborGridPoint: GridPoint;
+  targetGridPoint: GridPoint;
+  ignoredEntityId: string;
+}): boolean {
+  const neighbor = findTopEntityAtGridPoint({
+    gridPoint: options.neighborGridPoint,
+    document: options.document,
+    drafts: [],
+    entityDefinitionMap: options.context.entityDefinitionMap,
+    baseDefinitions: options.context.workspace.registry.baseDefinitions,
+  });
+  if (neighbor === null || neighbor.id === options.ignoredEntityId) {
+    return false;
+  }
+
+  const definition = options.context.entityDefinitionMap.get(neighbor.definitionId);
+  if (definition === undefined) {
+    return false;
+  }
+
+  return resolveDevicePortEndpoints({
+    entity: neighbor,
+    definition,
+    kind: options.kind,
+    direction: "output",
+    pointerGridPoint: options.targetGridPoint,
+  }).some((endpoint) => areGridPointsEqual(endpoint.outsideGridPoint, options.targetGridPoint));
+}
+
+function doesPointOutputConnectToNeighborInput(options: {
+  context: LogisticsActionContext;
+  kind: LogisticsKind;
+  document: WorldDocument;
+  sourceGridPoint: GridPoint;
+  neighborGridPoint: GridPoint;
+  ignoredEntityId: string;
+}): boolean {
+  const neighbor = findTopEntityAtGridPoint({
+    gridPoint: options.neighborGridPoint,
+    document: options.document,
+    drafts: [],
+    entityDefinitionMap: options.context.entityDefinitionMap,
+    baseDefinitions: options.context.workspace.registry.baseDefinitions,
+  });
+  if (neighbor === null || neighbor.id === options.ignoredEntityId) {
+    return false;
+  }
+
+  const definition = options.context.entityDefinitionMap.get(neighbor.definitionId);
+  if (definition === undefined) {
+    return false;
+  }
+
+  return resolveDevicePortEndpoints({
+    entity: neighbor,
+    definition,
+    kind: options.kind,
+    direction: "input",
+    pointerGridPoint: options.sourceGridPoint,
+  }).some((endpoint) => areGridPointsEqual(endpoint.outsideGridPoint, options.sourceGridPoint));
+}
+
+function createAutoDeviceOverride(
+  kind: LogisticsKind,
+  deviceKind: AutoDeviceKind,
+  edge: GridEdge | null,
+): AutoDraftCellOverride {
+  return {
+    definitionId: resolveAutoDeviceDefinitionId(kind, deviceKind),
+    rotation: resolveAutoDeviceRotation(deviceKind, edge),
+  };
+}
+
+function resolveAutoDeviceDefinitionId(kind: LogisticsKind, deviceKind: AutoDeviceKind): string {
+  const prefix = kind === "belt" ? "item_log" : "item_pipe";
+  switch (deviceKind) {
+    case "splitter":
+      return `${prefix}_splitter`;
+    case "converger":
+      return `${prefix}_converger`;
+    case "connector":
+      return `${prefix}_connector`;
+  }
+}
+
+function resolveAutoDeviceRotation(deviceKind: AutoDeviceKind, edge: GridEdge | null): GridRotation {
+  if (deviceKind === "connector" || edge === null) {
+    return 0;
+  }
+
+  const baseEdge: GridEdge = deviceKind === "splitter" ? "NORTH" : "SOUTH";
+  for (const rotation of [0, 90, 180, 270] as const) {
+    if (rotateGridEdge(baseEdge, rotation) === edge) {
+      return rotation;
+    }
+  }
+
+  return 0;
+}
+
+function rotateGridEdge(edge: GridEdge, rotation: GridRotation): GridEdge {
+  const edgeOrder: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
+  const currentIndex = edgeOrder.indexOf(edge);
+  const steps = rotation / 90;
+  return edgeOrder[(currentIndex + steps) % edgeOrder.length] ?? edge;
 }

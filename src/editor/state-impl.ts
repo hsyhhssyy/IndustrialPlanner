@@ -55,6 +55,9 @@ export interface EditorInternalPersistStateReadWrite {
 export interface EditorInternalTransientStateReadWrite {
   hasMeasuredViewportClientRect: boolean;
   logisticsDraft: LogisticsDraftReadonlyState | null;
+  logisticsDeviceRouteCycleSignature: string | null;
+  logisticsDeviceRouteCycleIndex: number;
+  convergerEntityGridKey: string | null;
   placementDraftSlotLinks: SlotLinkDefinition[] | null;
   placementHistoryAction: EditorHistoryActionDescriptor | null;
   placementValidationByEntityId: Record<string, EntityPlacementValidationResult>;
@@ -76,6 +79,9 @@ class EditorInternalTransientStateReadWriteImpl
 {
   hasMeasuredViewportClientRect = false;
   logisticsDraft: LogisticsDraftReadonlyState | null = null;
+  logisticsDeviceRouteCycleSignature: string | null = null;
+  logisticsDeviceRouteCycleIndex = 0;
+  convergerEntityGridKey: string | null = null;
   placementDraftSlotLinks: SlotLinkDefinition[] | null = null;
   placementHistoryAction: EditorHistoryActionDescriptor | null = null;
   placementValidationByEntityId: Record<string, EntityPlacementValidationResult> = {};

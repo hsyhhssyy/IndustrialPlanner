@@ -198,7 +198,7 @@ export function createEditorTransportActions(
       const committedDocument = documentWriter.commit({
         action: {
           type: "entity.delete",
-          label: "批量删除物流设备",
+          label: "删除整段",
           entityIds: Array.from(toDelete),
           definitionIds: [],
           count: toDelete.size,

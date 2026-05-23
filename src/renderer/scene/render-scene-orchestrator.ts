@@ -355,6 +355,18 @@ function syncRendererDomOverlays(
   renderHost.dom.placementGlowOverlay.classList.toggle("is-active", isPlacementGlowActive)
   renderHost.dom.marqueeGlowOverlay.classList.toggle("is-active", isMarqueeGlowActive)
 
+  const canvasLongerSide = Math.max(
+    renderHost.app.renderer.width,
+    renderHost.app.renderer.height,
+  )
+  const glowDepth = canvasLongerSide / 20
+  const glowSpread = glowDepth / 2
+
+  renderHost.dom.placementGlowOverlay.style.setProperty("--glow-depth", `${glowDepth}px`)
+  renderHost.dom.placementGlowOverlay.style.setProperty("--glow-spread", `${glowSpread}px`)
+  renderHost.dom.marqueeGlowOverlay.style.setProperty("--glow-depth", `${glowDepth}px`)
+  renderHost.dom.marqueeGlowOverlay.style.setProperty("--glow-spread", `${glowSpread}px`)
+
   if (!isMarqueeGlowActive) {
     return
   }
