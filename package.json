@@ -22,7 +22,8 @@
     "generate-textures": "node src/scripts/texture-gen/generate-all-textures.mjs",
     "generate-liquid-port-chevron": "node src/scripts/texture-gen/generate-liquid-port-chevron.mjs",
     "generate-solid-port-chevron": "node src/scripts/texture-gen/generate-solid-port-chevron.mjs",
-    "generate-flow-texture": "node src/scripts/texture-gen/generate-flow-texture.mjs"
+    "generate-flow-texture": "node src/scripts/texture-gen/generate-flow-texture.mjs",
+    "generate-logistics-delete-icon": "node src/scripts/icon-gen/generate-logistics-delete-icon.mjs"
   },
   "dependencies": {
     "mobx": "^6.15.0",
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@iconify-json/ant-design": "^1.2.5",
     "@iconify-json/gis": "^1.2.5",
     "@iconify-json/lucide": "^1.2.102",
     "@iconify-json/material-symbols": "^1.2.69",

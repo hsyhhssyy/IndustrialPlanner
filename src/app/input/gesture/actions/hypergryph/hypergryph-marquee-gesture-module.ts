@@ -1,5 +1,6 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
+import { canCurrentBaseAcceptWulingOnlyEntities } from "@/app/placement-zone-availability";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import {
   EntityCollectionType,
@@ -271,8 +272,18 @@ function enterMarqueeMode(options: {
     if (options.appHost.internalState.workbench.rightDockOpen) {
       options.appHost.internalActions.toggleRightDock();
     }
-    options.appHost.internalActions.showCanvasTopLeftCornerToolbar(MARQUEE_TOP_LEFT_BUTTON_IDS);
+    options.appHost.internalActions.showCanvasTopLeftCornerToolbar(
+      resolveMarqueeTopLeftButtonIds(options.appHost),
+    );
   }
+}
+
+function resolveMarqueeTopLeftButtonIds(appHost: AppHost) {
+  return canCurrentBaseAcceptWulingOnlyEntities(appHost)
+    ? MARQUEE_TOP_LEFT_BUTTON_IDS
+    : MARQUEE_TOP_LEFT_BUTTON_IDS.filter((buttonId) =>
+      buttonId !== "canvas-top-left-corner-toolbar-button-toggle-pipe",
+    );
 }
 
 function closeCompactLeftDockOnMarqueeEnter(appHost: AppHost): void {

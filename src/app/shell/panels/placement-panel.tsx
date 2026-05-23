@@ -3,7 +3,9 @@ import { observer } from "mobx-react-lite";
 import { Fragment, type ComponentProps } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
 import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
+import { canPlaceEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import type { PlacementGroup } from "@/app/state/state-impl";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
@@ -100,6 +102,7 @@ function buildPlacementDeviceSections(appHost: AppHost): readonly PlacementSecti
   for (const entity of appHost.workspace.registry.entityDefinitions) {
     if (entity.uiGroup === "hidden") continue;
     if (entity.tags.includes("不可摆放")) continue;
+    if (!canPlaceEntityDefinitionInCurrentBase(appHost, entity)) continue;
     const group = groupedByUiGroup.get(entity.uiGroup);
     if (group) {
       group.push(entity);
@@ -129,13 +132,17 @@ function buildPlacementDeviceSections(appHost: AppHost): readonly PlacementSecti
         shortcutKey: shortcutKey || null,
         buttons,
       };
-    });
+    })
+    .filter((section) => section.buttons.length > 0);
 
   return deviceSections;
 }
 
 export const PlacementPanel = observer(function PlacementPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
+  const editor = appHost.workspace.editor;
+  // 订阅 document 变化以在切换基地后重新过滤设备列表
+  useEditorDocumentSnapshot(editor);
   const screenProfile = appHost.state.screenProfile;
   const isTouchLayout = isMobileOrTabletScreenProfile(screenProfile);
   const showShortcutHints = !isTouchLayout && appHost.state.settings.gameShowHotkeys;

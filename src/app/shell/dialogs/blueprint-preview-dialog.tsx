@@ -16,6 +16,8 @@ import {
   serializeBlueprintDocumentForTransfer,
 } from "@/app/blueprint/blueprint-transfer";
 import type { AppHost } from "@/app/host/app-host";
+import { canPlaceBlueprintDocumentInCurrentBase } from "@/app/placement-zone-availability";
+import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
 import type { WorkbenchBlueprintPreviewController } from "@/app/shell/state/blueprint-preview-dialog-state";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
@@ -238,6 +240,9 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   //
   // Original code:
   // const locale = appHost.state.settings.locale;
+  const editor = appHost.workspace.editor;
+  // 订阅 document 变化使蓝图放置按钮在切换基地后正确更新
+  useEditorDocumentSnapshot(editor);
   const renderHost = appHost.workspace.render;
   const previewCanvasHostRef = useRef<HTMLDivElement | null>(null);
   const previewHandleRef = useRef<BlueprintPreviewHandle | null>(null);
@@ -280,6 +285,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       previewTitle: "蓝图预览",
       previewHint: "布局总览",
       place: "放置",
+      placeBlockedByBase: "包含不可放置设备",
       placeHint: "将当前蓝图放置到场景",
       version: "版本",
       base: "地图",
@@ -316,6 +322,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       previewTitle: "Blueprint Preview",
       previewHint: "Layout Overview",
       place: "Place",
+      placeBlockedByBase: "Contains unplaceable devices",
       placeHint: "Place this blueprint into the scene",
       version: "Version",
       base: "Base",
@@ -626,7 +633,12 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   // const previewSummary = `${copy.entities} ${record.entityOrder.length} · ${copy.links} ${record.slotLinks.length} · ${copy.footprint} ${footprint.width} x ${footprint.height}`;
   // const previewContextSummary = `${copy.anchor} (${record.initialGridPoint.x}, ${record.initialGridPoint.y}) · ${copy.base} ${record.baseId}`;
   // const previewTimeSummary = `${copy.updatedAt} ${formattedUpdatedAt}`;
+  const canPlaceBlueprint = canPlaceBlueprintDocumentInCurrentBase(appHost, record);
   const handlePlaceButtonPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!canPlaceBlueprint) {
+      return;
+    }
+
     if (event.pointerType === "mouse") {
       appHost.gestureAdapter.handleUiButtonMouseTap({
         uiButtonId: "blueprint-preview-place-button",
@@ -652,6 +664,10 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
     }
   };
   const handlePlaceButtonClick = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (!canPlaceBlueprint) {
+      return;
+    }
+
     if (event.detail !== 0) {
       return;
     }
@@ -1057,13 +1073,14 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                       <button
                         className={cm(styles, "save-blueprint-primary-button")}
                         data-ui-button-id="blueprint-preview-place-button"
+                        disabled={!canPlaceBlueprint}
                         onClick={handlePlaceButtonClick}
                         onPointerDown={preventTouchPointerCompatibilityMouseEvents}
                         onPointerUp={handlePlaceButtonPointerUp}
                         title={copy.placeHint}
                         type="button"
                       >
-                        {copy.place}
+                        {canPlaceBlueprint ? copy.place : copy.placeBlockedByBase}
                       </button>
                       <button
                         className={cm(styles, "save-blueprint-secondary-button")}

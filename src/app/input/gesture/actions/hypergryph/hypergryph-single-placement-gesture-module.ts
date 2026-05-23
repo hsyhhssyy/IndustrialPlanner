@@ -1,6 +1,10 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import {
+  canPlaceEntityDefinitionInCurrentBase,
+  hasPlaceableEntityDefinitionInCurrentBase,
+} from "@/app/placement-zone-availability";
+import {
   SHORTCUT_KEY,
   type ShortcutKeyId,
 } from "@/app/actions/keyboard-shortcut-manager";
@@ -10,6 +14,7 @@ import type {
 } from "@/app/state/state-impl";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRect, GridRotation } from "@/domain/shared/grid";
 import { runInAction } from "mobx";
@@ -538,6 +543,10 @@ function handleSelectPlacementGroupShortcut(options: {
     return { status: "ignored" };
   }
 
+  if (!hasPlaceableEntityDefinitionInCurrentBase(options.appHost, group)) {
+    return { status: "ignored" };
+  }
+
   options.appHost.internalState.runtime.selectingPlacementGroup = group;
   return { status: "handled" };
 }
@@ -570,6 +579,10 @@ function handleSelectPlacementDeviceShortcut(options: {
     registry: options.registry,
     group: selectingGroup,
     shortcutIndex,
+    canUseDefinition: (definition) => canPlaceEntityDefinitionInCurrentBase(
+      options.appHost,
+      definition,
+    ),
   });
   if (deviceId === null) {
     return { status: "ignored" };
@@ -1116,6 +1129,7 @@ export function resolveDeviceIdForPlacementGroupShortcut(options: {
   registry: RegistryContract;
   group: PlacementGroup;
   shortcutIndex: number;
+  canUseDefinition?: (definition: EntityDefinition) => boolean;
 }): string | null {
   const entities = options.registry.entityDefinitions
     .filter(
@@ -1123,6 +1137,7 @@ export function resolveDeviceIdForPlacementGroupShortcut(options: {
         definition.uiGroup === options.group
         && !definition.tags.includes("不可摆放"),
     )
+    .filter((definition) => options.canUseDefinition?.(definition) ?? true)
     .sort((left, right) => left.id.localeCompare(right.id));
 
   return entities[options.shortcutIndex]?.id ?? null;

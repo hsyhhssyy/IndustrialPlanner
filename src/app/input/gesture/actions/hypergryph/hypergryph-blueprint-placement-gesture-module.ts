@@ -2,6 +2,7 @@ import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import { createSelectionBlueprintDocument } from "@/app/blueprint/save-blueprint";
+import { canPlaceBlueprintDocumentInCurrentBase } from "@/app/placement-zone-availability";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import {
   EntityCollectionType,
@@ -297,6 +298,10 @@ function enterBlueprintPlacement(options: {
   const record = options.record ?? options.appHost.blueprintPreview.record;
 
   if (record === null || options.editor.actions.createBlueprintPlacementDraft === undefined) {
+    return { status: "ignored" };
+  }
+
+  if (!canPlaceBlueprintDocumentInCurrentBase(options.appHost, record)) {
     return { status: "ignored" };
   }
 

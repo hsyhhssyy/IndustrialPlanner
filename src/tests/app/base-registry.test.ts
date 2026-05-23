@@ -3,7 +3,6 @@ import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import { createRegistryContract } from "@/registry";
 import {
   buildBaseBuiltinEntityId,
-  type BaseDefinition,
 } from "@/domain/registry/types/base-definition";
 import { describe, expect, it } from "vitest";
 

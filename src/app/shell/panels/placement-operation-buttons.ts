@@ -1,5 +1,6 @@
 import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
+import { canCurrentBaseAcceptWulingOnlyEntities } from "@/app/placement-zone-availability";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { MessageKey } from "@/shared/i18n/messages";
 import type { ComponentProps } from "react";
@@ -49,6 +50,7 @@ const PIPE_DRAW_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
   labelKey: "workbench.button.pipeDraw",
   iconSrc: "/device-icons/item_log_pipe_01.webp",
   hotkeyKeyId: SHORTCUT_KEY.PLACE_PIPE,
+  visibleWhen: canCurrentBaseAcceptWulingOnlyEntities,
   activeWhen: (appHost) =>
     appHost.state.activeTool === "logistics-placement"
     && appHost.internalState.runtime.logisticsPlacement.kind === "pipe",

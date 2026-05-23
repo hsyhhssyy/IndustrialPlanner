@@ -1,5 +1,6 @@
 import type { AppHost } from "@/app/host/app-host";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
+import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
 import {
   getVisiblePlacementOperationButtons,
   type PlacementOperationButtonDefinition,
@@ -31,6 +32,9 @@ function renderButtonIcon(button: PlacementOperationButtonDefinition) {
 
 export function CanvasLeftBottomToolbar({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
+  const editor = appHost.workspace.editor;
+  // 订阅 document 变化使管道按钮在切换基地后正确显示/隐藏
+  useEditorDocumentSnapshot(editor);
   const buttonDefinitions = getVisiblePlacementOperationButtons(appHost);
 
   if (buttonDefinitions.length === 0) {

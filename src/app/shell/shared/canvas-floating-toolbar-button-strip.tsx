@@ -80,7 +80,7 @@ const CANVAS_FLOATING_TOOLBAR_DEFINITIONS: Record<CanvasFloatingToolbarButtonId,
   },
   "canvas-floating-toolbar-button-delete-many": {
     label: {
-      "zh-CN": "批量删除",
+      "zh-CN": "删除整段",
       "en-US": "Delete Many",
     },
     icon: "delete-sweep",

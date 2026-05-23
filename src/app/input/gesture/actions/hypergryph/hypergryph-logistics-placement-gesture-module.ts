@@ -1,5 +1,9 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
+import {
+  canCurrentBaseAcceptWulingOnlyEntities,
+  canPlaceEntityDefinitionInCurrentBase,
+} from "@/app/placement-zone-availability";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint } from "@/domain/shared/grid";
 import type {
@@ -72,6 +76,10 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
         });
 
         if (group === "beltLogistics" || group === "pipeLogistics") {
+          if (group === "pipeLogistics" && !canCurrentBaseAcceptWulingOnlyEntities(context.appHost)) {
+            return { status: "ignored" };
+          }
+
           if (editor === null) {
             return { status: "ignored" };
           }
@@ -93,6 +101,10 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       if (event.type === "ui-button-mouse-tap" && event.button === 0) {
         const kind = resolveKindFromOperationButton(event.uiButtonId);
         if (kind !== null) {
+          if (kind === "pipe" && !canCurrentBaseAcceptWulingOnlyEntities(context.appHost)) {
+            return { status: "ignored" };
+          }
+
           enterLogisticsPlacementMode({
             appHost: context.appHost,
             editor,
@@ -106,6 +118,10 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       if (event.type === "ui-button-touch-tap") {
         const kind = resolveKindFromOperationButton(event.uiButtonId);
         if (kind !== null) {
+          if (kind === "pipe" && !canCurrentBaseAcceptWulingOnlyEntities(context.appHost)) {
+            return { status: "ignored" };
+          }
+
           enterLogisticsPlacementMode({
             appHost: context.appHost,
             editor,
@@ -794,10 +810,18 @@ function handleLogisticsDeviceShortcut(options: {
     return { status: "ignored" };
   }
 
+  if (group === "pipeLogistics" && !canCurrentBaseAcceptWulingOnlyEntities(options.appHost)) {
+    return { status: "ignored" };
+  }
+
   const deviceId = resolveDeviceIdForPlacementGroupShortcut({
     registry: options.appHost.workspace.registry,
     group,
     shortcutIndex,
+    canUseDefinition: (definition) => canPlaceEntityDefinitionInCurrentBase(
+      options.appHost,
+      definition,
+    ),
   });
   if (deviceId === null) {
     return { status: "ignored" };
