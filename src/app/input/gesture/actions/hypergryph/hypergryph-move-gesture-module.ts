@@ -64,6 +64,10 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             return { status: "handled" };
 
           case "key down":
+            if (event.code === "AltLeft" || event.code === "AltRight") {
+              return { status: "handled" };
+            }
+
             if (!isRotateMoveShortcut({
               appHost: context.appHost,
               code: event.code,
@@ -110,6 +114,8 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             });
 
           case "mouse dragmove":
+            lastMousePosition = event.position;
+
             if (event.originButton !== 0 || event.modifiers.alt) {
               return { status: "ignored" };
             }
@@ -130,16 +136,16 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             });
 
           case "key up":
-            if (
-              (event.code === "AltLeft" || event.code === "AltRight")
-              && lastMousePosition !== null
-            ) {
-              return driveMovePreview({
-                appHost: context.appHost,
-                editor,
-                position: lastMousePosition,
-                allowMouseEntryAnchorInit: false,
-              });
+            if (event.code === "AltLeft" || event.code === "AltRight") {
+              if (lastMousePosition !== null) {
+                return driveMovePreview({
+                  appHost: context.appHost,
+                  editor,
+                  position: lastMousePosition,
+                  allowMouseEntryAnchorInit: false,
+                });
+              }
+              return { status: "handled" };
             }
             return { status: "ignored" };
 

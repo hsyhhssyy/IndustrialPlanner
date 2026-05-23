@@ -477,7 +477,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         return;
       }
 
-      appHost.gestureAdapter.handleKeyUp(event);
+      if (appHost.gestureAdapter.handleKeyUp(event) && event.cancelable) {
+        event.preventDefault();
+      }
     };
 
     window.addEventListener("keydown", handleWindowKeyDown);

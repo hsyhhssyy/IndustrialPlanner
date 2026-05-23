@@ -12,6 +12,7 @@ import LucideListTree from "~icons/lucide/list-tree";
 import LucidePackagePlus from "~icons/lucide/package-plus";
 import LucidePlus from "~icons/lucide/plus";
 import LucideTarget from "~icons/lucide/target";
+import LucideRepeat from "~icons/lucide/repeat";
 import LucideTrash2 from "~icons/lucide/trash-2";
 import LucideWorkflow from "~icons/lucide/workflow";
 
@@ -289,6 +290,57 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     });
   };
 
+  const handleCoverDemand = (itemId: string) => {
+    const demandPerMinute = calculation?.plan.itemTotals.find((t) => t.itemId === itemId)?.demandPerMinute ?? 0;
+    if (demandPerMinute <= 0) {
+      return;
+    }
+
+    store.supplies = [...store.supplies, createPort(itemId, demandPerMinute)];
+    setCalculation((current) => {
+      if (current === null) {
+        return null;
+      }
+
+      const nextPlan = computeProductionPlan({
+        targets: current.targets,
+        supplies: store.supplies,
+        infiniteItemIds: current.infiniteItemIds,
+        recipeChoices: new Map(Object.entries(current.recipeChoices)),
+        sourceConfig: current.sourceConfig,
+      }, index);
+
+      return {
+        ...current,
+        supplies: store.supplies,
+        plan: nextPlan,
+      };
+    });
+  };
+
+  const handleRemoveExternalSupply = (itemId: string) => {
+    store.supplies = store.supplies.filter((s) => s.itemId !== itemId);
+    setCalculation((current) => {
+      if (current === null) {
+        return null;
+      }
+
+      const nextPlan = computeProductionPlan({
+        targets: current.targets,
+        supplies: store.supplies,
+        infiniteItemIds: current.infiniteItemIds,
+        recipeChoices: new Map(Object.entries(current.recipeChoices)),
+        sourceConfig: current.sourceConfig,
+      }, index);
+
+      return {
+        ...current,
+        supplies: store.supplies,
+        plan: nextPlan,
+      };
+    });
+  };
+
   const updateSourceConfig = (patch: Partial<ProductionPlanningSourceConfig>) => {
     store.sourceConfig = { ...store.sourceConfig, ...patch };
   };
@@ -475,6 +527,8 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
                   treeScrollTop={session.treeScrollTop}
                   onFlowViewportChange={setFlowViewport}
                   onSelectRecipe={selectRecipe}
+                  onCoverDemand={handleCoverDemand}
+                  onRemoveExternalSupply={handleRemoveExternalSupply}
                   onTreeScrollTopChange={setTreeScrollTop}
                   t={t}
                 />
@@ -806,6 +860,8 @@ function PlanGraph({
   treeScrollTop,
   onFlowViewportChange,
   onSelectRecipe,
+  onCoverDemand,
+  onRemoveExternalSupply,
   onTreeScrollTopChange,
   t,
 }: {
@@ -818,6 +874,8 @@ function PlanGraph({
   treeScrollTop: number;
   onFlowViewportChange: (viewport: PlannerFlowViewportState) => void;
   onSelectRecipe: (itemId: string, recipeId: string | null) => void;
+  onCoverDemand: (itemId: string) => void;
+  onRemoveExternalSupply: (itemId: string) => void;
   onTreeScrollTopChange: (scrollTop: number) => void;
   t: (key: string) => string;
 }) {
@@ -844,6 +902,8 @@ function PlanGraph({
       recipeChoices={recipeChoices}
       treeScrollTop={treeScrollTop}
       onSelectRecipe={onSelectRecipe}
+      onCoverDemand={onCoverDemand}
+      onRemoveExternalSupply={onRemoveExternalSupply}
       onTreeScrollTopChange={onTreeScrollTopChange}
       t={t}
     />
@@ -857,6 +917,8 @@ function ProductionPlanningTreeTable({
   recipeChoices,
   treeScrollTop,
   onSelectRecipe,
+  onCoverDemand,
+  onRemoveExternalSupply,
   onTreeScrollTopChange,
   t,
 }: {
@@ -866,6 +928,8 @@ function ProductionPlanningTreeTable({
   recipeChoices: ReadonlyMap<string, string>;
   treeScrollTop: number;
   onSelectRecipe: (itemId: string, recipeId: string | null) => void;
+  onCoverDemand: (itemId: string) => void;
+  onRemoveExternalSupply: (itemId: string) => void;
   onTreeScrollTopChange: (scrollTop: number) => void;
   t: (key: string) => string;
 }) {
@@ -1023,6 +1087,8 @@ function ProductionPlanningTreeTable({
             jumpMap={jumpMap}
             onSelectRow={selectRow}
             onSelectRecipe={onSelectRecipe}
+            onCoverDemand={onCoverDemand}
+            onRemoveExternalSupply={onRemoveExternalSupply}
             t={t}
           />
         )}
