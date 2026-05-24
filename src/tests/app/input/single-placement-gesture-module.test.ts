@@ -405,6 +405,55 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(appHost.internalState.runtime.singlePlacementContinuous).toBe(true);
   });
 
+  it("keeps touch placement preview when the editor rejects apply", () => {
+    const { context, editor, appHost, preview } = createContext({
+      activeTool: "single-placement",
+      applyPlacementDraftResult: false,
+      initialPreview: true,
+      placementAnchor: { x: -6, y: 5 },
+      singlePlacementDeviceId: "device-a",
+      singlePlacementPointerMode: "touch",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    expect(
+      module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-ok"), context),
+    ).toEqual({ status: "handled" });
+
+    expect(editor.actions.applyPlacementDraft).toHaveBeenCalledTimes(1);
+    expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
+    expect(editor.actions.cancelPlacementDraft).not.toHaveBeenCalled();
+    expect([...preview]).toEqual(["preview-entity"]);
+    expect(appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: -6, y: 5 });
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-a");
+  });
+
+  it("does not continue touch placement when the editor rejects apply", () => {
+    const { context, editor, appHost, preview } = createContext({
+      activeTool: "single-placement",
+      applyPlacementDraftResult: false,
+      initialPreview: true,
+      placementAnchor: { x: -6, y: 5 },
+      singlePlacementContinuous: true,
+      singlePlacementDeviceId: "device-a",
+      singlePlacementPointerMode: "touch",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    expect(
+      module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-ok"), context),
+    ).toEqual({ status: "handled" });
+
+    expect(editor.actions.applyPlacementDraft).toHaveBeenCalledTimes(1);
+    expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
+    expect([...preview]).toEqual(["preview-entity"]);
+    expect(appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(appHost.internalState.runtime.singlePlacementContinuous).toBe(true);
+  });
+
   it("applies with mouse left tap and cancels from the toolbar", () => {
     const apply = createContext({
       activeTool: "single-placement",
@@ -455,6 +504,7 @@ function createContext(options: {
   previewRect?: GridRect;
   deviceClass?: "desktop" | "tablet" | "mobile";
   leftDockOpen?: boolean;
+  applyPlacementDraftResult?: boolean;
 } = {}): {
   context: GestureActionContext<AppHost>;
   editor: MockEditor;
@@ -560,8 +610,12 @@ function createContext(options: {
         preview.replace([]);
       }),
       applyPlacementDraft: vi.fn(() => {
-        preview.replace([]);
-        return true;
+        const applied = options.applyPlacementDraftResult ?? true;
+        if (applied) {
+          preview.replace([]);
+        }
+
+        return applied;
       }),
       moveCollectionTo: vi.fn(({
         startGridPoint,

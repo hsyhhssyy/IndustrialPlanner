@@ -10,6 +10,7 @@ import {
 } from "@/shared/storage/planner-storage";
 import { saveToIndexedDbWithVersion } from "@/shared/storage/migration";
 import type { IndexedDbStorageLocation } from "@/shared/storage/browser-storage";
+import { createProductionPlanningDemandSignature } from "@/app/shell/production-planning/production-planning-persist";
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 
 const PLANNER_STORE_LOCATION: IndexedDbStorageLocation = {
@@ -25,6 +26,7 @@ function createPlannerState(patch: Partial<PlannerPersistedState> = {}): Planner
     displayMode: "item",
     viewMode: "tree",
     recipeChoices: {},
+    recipeChoicesDemandSignature: null,
     sourceConfig: {
       waterPolicy: "use-byproduct",
       acidPolicy: "use-byproduct",
@@ -89,6 +91,7 @@ describe("production planning persistence", () => {
 
     expect(loaded).toEqual({
       ...legacyState,
+      recipeChoicesDemandSignature: null,
       session: createDefaultPlannerSessionState(),
     });
   });
@@ -116,5 +119,32 @@ describe("production planning persistence", () => {
     });
 
     expect(normalized?.session).toEqual(createDefaultPlannerSessionState());
+    expect(normalized?.recipeChoicesDemandSignature).toBeNull();
+  });
+
+  it("creates stable demand signatures without row ids", () => {
+    const sourceConfig = {
+      waterPolicy: "use-byproduct" as const,
+      acidPolicy: "use-byproduct" as const,
+      sewagePolicy: "external-supply" as const,
+    };
+
+    expect(createProductionPlanningDemandSignature({
+      targets: [
+        { id: "target-a", itemId: "item_carbon_mtl", perMinute: 60 },
+      ],
+      supplies: [
+        { id: "supply-a", itemId: "item_iron_nugget", perMinute: 30, isInfinite: true },
+      ],
+      sourceConfig,
+    })).toBe(createProductionPlanningDemandSignature({
+      targets: [
+        { id: "target-b", itemId: "item_carbon_mtl", perMinute: 60 },
+      ],
+      supplies: [
+        { id: "supply-b", itemId: "item_iron_nugget", perMinute: 30, isInfinite: true },
+      ],
+      sourceConfig,
+    }));
   });
 });

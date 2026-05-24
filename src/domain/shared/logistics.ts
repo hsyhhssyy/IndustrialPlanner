@@ -28,6 +28,7 @@ export type LogisticsDraftInvalidReason =
   | "target-route-crosses-target-device"
   | "empty-path"
   | "missing-port"
+  | "outside-base"
   | "unknown";
 
 export type LogisticsDraftEndpoint =

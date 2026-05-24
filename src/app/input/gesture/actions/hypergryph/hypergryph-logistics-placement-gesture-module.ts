@@ -38,6 +38,10 @@ const PIPE_DRAW_BUTTON_ID = "placement-action-pipe-draw";
 
 const logisticsLogger = createLogger("logistics-placement");
 
+function resolveSuppressedLogisticsKind(kind: LogisticsKind): LogisticsKind {
+  return kind === "belt" ? "pipe" : "belt";
+}
+
 export function createHypergryphLogisticsPlacementGestureModule(): GestureMappingModule<AppHost> {
   let activeTouchLogisticsDragGestureId: string | null = null;
 
@@ -315,6 +319,9 @@ function enterLogisticsPlacementMode(options: {
   runtime.phase = "idle";
   runtime.routeOrder = "vertical-first";
   options.appHost.internalState.runtime.selectingPlacementGroup = runtime.shortcutPlacementGroup;
+  options.appHost.workspace.render?.actions.setLogisticsSuppression?.(
+    resolveSuppressedLogisticsKind(options.kind),
+  );
   options.appHost.internalActions.setActiveTool("logistics-placement");
   options.editor.actions.clearCollection(EntityCollectionType.selection);
 
@@ -1021,6 +1028,7 @@ function syncLogisticsPlacementEntryUi(appHost: AppHost): void {
 
 function resetLogisticsRuntime(appHost: AppHost): void {
   const runtime = appHost.internalState.runtime.logisticsPlacement;
+  appHost.workspace.render?.actions.setLogisticsSuppression?.(null);
   runtime.kind = null;
   runtime.shortcutPlacementGroup = null;
   runtime.pointerMode = null;

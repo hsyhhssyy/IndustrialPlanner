@@ -5,8 +5,8 @@ import type { AppTheme } from "@/domain/app/types/theme"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import {
-  getRotatedGridFootprint,
   rotateGridRotation,
+  resolveSpriteGridRect,
 } from "@/shared/geometry/grid"
 import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform"
 import type { GridRectSize, GridRotation } from "@/domain/shared/grid"
@@ -34,7 +34,7 @@ import {
 } from "./decorations/DecorationSyncContext"
 import {
   resolveVisibleWorldRect,
-  isWorldEntityVisible,
+  type VisibleWorldRect,
 } from "./decorations/BeltVisualGeometry"
 import { createGridLineDecoration } from "./decorations/GridLineDecoration"
 import { createBaseBoundaryDecoration } from "./decorations/BaseBoundaryDecoration"
@@ -553,7 +553,16 @@ function syncWorldEntitySprites(options: {
       continue
     }
 
-    const isVisible = isWorldEntityVisible(entity, definition.footprint, visibleRect)
+    const effectiveOffset = resolveEffectiveSpriteOffset(
+      definition.spriteOffset,
+      options.renderHost.workspace.app,
+    )
+    const isVisible = isWorldEntityVisibleWithOffset(
+      entity,
+      definition.footprint,
+      effectiveOffset,
+      visibleRect,
+    )
 
     if (!isVisible) {
       if (stats !== null) {
@@ -594,6 +603,7 @@ function syncWorldEntitySprites(options: {
       resolveWorldEntitySpriteLayout({
         entity,
         footprint: definition.footprint,
+        spriteOffset: effectiveOffset,
         viewportBounds: options.viewportBounds,
         viewportCenter: {
           x: options.viewportState.centerX,
@@ -606,6 +616,7 @@ function syncWorldEntitySprites(options: {
         theme: options.theme,
         workspace: options.workspace,
         time: options.frameTime,
+        logisticsSuppression: options.renderHost.internalState.logisticsSuppression,
       },
     )
     nextEntityIds.add(entity.id)
@@ -988,6 +999,7 @@ export function resolveWorldEntitySelectionOverlayLayouts(options: {
 export function resolveWorldEntitySpriteLayout(options: {
   entity: WorldEntity;
   footprint: GridRectSize;
+  spriteOffset?: { x: number; y: number; width: number; height: number };
   viewportBounds: {
     left: number;
     top: number;
@@ -1001,18 +1013,17 @@ export function resolveWorldEntitySpriteLayout(options: {
   gridCellPixelSize: number;
   displayRotation?: GridRotation;
 }): RenderSpriteLayout {
-  const rotatedFootprint = getRotatedGridFootprint(
+  const gridCellSize = options.gridCellPixelSize
+
+  const gridRect = resolveSpriteGridRect(
+    options.entity.position,
     options.footprint,
+    options.spriteOffset ?? null,
     options.entity.rotation,
   )
-  const gridCellSize = options.gridCellPixelSize
+
   const viewportRect = resolveViewportRectFromWorldGridRect({
-    gridRect: {
-      x: options.entity.position.x,
-      y: options.entity.position.y,
-      width: rotatedFootprint.width,
-      height: rotatedFootprint.height,
-    },
+    gridRect,
     viewportBounds: options.viewportBounds,
     viewportCenter: options.viewportCenter,
     gridCellPixelSize: gridCellSize,
@@ -1036,4 +1047,38 @@ export function resolveWorldEntitySpriteLayout(options: {
     height: viewportRect.height,
     rotation: rotateGridRotation(options.entity.rotation, options.displayRotation ?? 0),
   }
+}
+
+/**
+ * 根据当前渲染模式（蓝图 / 3D-top）解析有效的 spriteOffset。
+ * gameUseSimplifiedDeviceIcons=true 时使用 blueprint 偏移，否则使用 topView 偏移。
+ */
+function resolveEffectiveSpriteOffset(
+  spriteOffset: EntityDefinition["spriteOffset"] | undefined,
+  app: RenderHost["workspace"]["app"],
+): { x: number; y: number; width: number; height: number } | undefined {
+  if (!spriteOffset) {
+    return undefined
+  }
+
+  const isBlueprint = app?.state.settings.gameUseSimplifiedDeviceIcons ?? false
+  return isBlueprint ? spriteOffset.blueprint : spriteOffset.topView
+}
+
+/**
+ * 与 isWorldEntityVisible 逻辑相同，但支持可选的 spriteOffset。
+ * 当 spriteOffset 不为 null 时，可见性以偏移扩展后的精灵矩形为准；
+ * 否则以 footprint 为准（保持现有行为不变）。
+ */
+function isWorldEntityVisibleWithOffset(
+  entity: WorldEntity,
+  footprint: GridRectSize,
+  spriteOffset: { x: number; y: number; width: number; height: number } | undefined,
+  visibleRect: VisibleWorldRect,
+): boolean {
+  const rect = resolveSpriteGridRect(entity.position, footprint, spriteOffset ?? null, entity.rotation)
+  return rect.x + rect.width > visibleRect.left
+    && rect.x < visibleRect.right
+    && rect.y + rect.height > visibleRect.top
+    && rect.y < visibleRect.bottom
 }

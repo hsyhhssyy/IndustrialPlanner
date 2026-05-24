@@ -20,10 +20,10 @@ import {
 } from "./MarqueeRectDecoration";
 
 const INVALID_PLACEMENT_COLOR = 0xff3b30;
-const INVALID_PLACEMENT_STROKE_ALPHA = 0.95;
+const _INVALID_PLACEMENT_STROKE_ALPHA = 0.95;
 const INVALID_PLACEMENT_TOAST_ALPHA = 0.88;
 const INVALID_PLACEMENT_TOAST_TEXT_COLOR = 0xffffff;
-const INVALID_PLACEMENT_STROKE_WIDTH_SCALE = 1.35;
+const _INVALID_PLACEMENT_STROKE_WIDTH_SCALE = 1.35;
 const INVALID_PLACEMENT_TOAST_HORIZONTAL_PADDING = 5;
 const INVALID_PLACEMENT_TOAST_VERTICAL_PADDING = 3;
 const INVALID_PLACEMENT_TOAST_TOP_OFFSET = 3;
@@ -95,6 +95,9 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
             continue;
           }
 
+          // AI-RESTORED 2026-05-24:
+          // Reason: 用户要求已提交实体的 invalid placement 也显示红色边框，
+          // sprite preview overlay 仅覆盖拿起阶段，放下后由 Decoration 补充。
           drawInvalidPlacementStroke({
             graphics,
             layout,
@@ -156,6 +159,8 @@ export function resolveInvalidPlacementToastReasonText(options: {
   return primaryReason.message;
 }
 
+// AI-RESTORED 2026-05-24:
+// Reason: 用户要求已提交实体的 invalid placement 也显示红色边框。
 function drawInvalidPlacementStroke(options: {
   graphics: Graphics;
   layout: { x: number; y: number; width: number; height: number };
@@ -163,7 +168,7 @@ function drawInvalidPlacementStroke(options: {
 }): void {
   const strokeWidth =
     resolveWorldAuxiliaryStrokeWidth(options.gridCellPixelSize)
-    * INVALID_PLACEMENT_STROKE_WIDTH_SCALE;
+    * _INVALID_PLACEMENT_STROKE_WIDTH_SCALE;
   const halfStrokeWidth = strokeWidth / 2;
 
   options.graphics
@@ -176,7 +181,7 @@ function drawInvalidPlacementStroke(options: {
     .stroke({
       width: strokeWidth,
       color: INVALID_PLACEMENT_COLOR,
-      alpha: INVALID_PLACEMENT_STROKE_ALPHA,
+      alpha: _INVALID_PLACEMENT_STROKE_ALPHA,
     });
 }
 

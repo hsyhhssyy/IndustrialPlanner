@@ -723,18 +723,21 @@ function applyMoveOperation(
   const shouldReturnToMarquee = appHost.internalState.runtime.moveEnterFrom === "marquee";
 
   try {
-    editor.actions.applyMoveOerationDraft();
+    const applied = editor.actions.applyMoveOerationDraft();
+    if (!applied) {
+      return;
+    }
   } catch {
     safelyCancelMoveDraft(editor);
-  } finally {
-    clearMoveUi(appHost);
-    appHost.internalActions.setActiveTool("select");
-    if (!shouldReturnToMarquee) {
-      clearSingleSelectionIfNotInspectorMode(appHost, editor);
-    }
-    if (shouldReturnToMarquee) {
-      triggerPlacementMarqueeToolTap(appHost, source);
-    }
+  }
+
+  clearMoveUi(appHost);
+  appHost.internalActions.setActiveTool("select");
+  if (!shouldReturnToMarquee) {
+    clearSingleSelectionIfNotInspectorMode(appHost, editor);
+  }
+  if (shouldReturnToMarquee) {
+    triggerPlacementMarqueeToolTap(appHost, source);
   }
 }
 

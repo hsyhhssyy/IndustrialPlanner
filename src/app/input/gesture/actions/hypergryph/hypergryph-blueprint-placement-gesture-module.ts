@@ -404,7 +404,11 @@ function applyBlueprintPlacement(appHost: AppHost, editor: EditorContract): void
   }
 
   try {
-    editor.actions.applyPlacementDraft();
+    const applied = editor.actions.applyPlacementDraft();
+    if (!applied) {
+      return;
+    }
+
     appHost.internalState.runtime.placementAnchor = placementAnchor;
     editor.actions.createBlueprintPlacementDraft(record, placementAnchor);
 

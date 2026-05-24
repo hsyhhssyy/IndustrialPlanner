@@ -1764,30 +1764,30 @@ describe("createEditorHost", () => {
       const workspace = createWorkspace();
       const editorHost = createEditorHost(workspace);
       const basePoints = [
-        { x: -3, y: 0 },
-        { x: -2, y: 0 },
-        { x: -1, y: 0 },
-        { x: 0, y: 0 },
-        { x: 1, y: 0 },
-        { x: 2, y: 0 },
-        { x: 3, y: 0 },
-        { x: 4, y: 0 },
-        { x: 4, y: -1 },
-        { x: 3, y: -1 },
-        { x: 2, y: -1 },
-        { x: 1, y: -1 },
-        { x: 0, y: -1 },
-        { x: 0, y: 0 },
+        { x: 2, y: 5 },
+        { x: 3, y: 5 },
+        { x: 4, y: 5 },
+        { x: 5, y: 5 },
+        { x: 6, y: 5 },
+        { x: 7, y: 5 },
+        { x: 8, y: 5 },
+        { x: 9, y: 5 },
+        { x: 9, y: 4 },
+        { x: 8, y: 4 },
+        { x: 7, y: 4 },
+        { x: 6, y: 4 },
+        { x: 5, y: 4 },
+        { x: 5, y: 5 },
       ];
       const tailPoints = direction === "right"
-        ? [{ x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }]
-        : [{ x: -1, y: 0 }, { x: -2, y: 0 }, { x: -3, y: 0 }];
+        ? [{ x: 6, y: 5 }, { x: 7, y: 5 }, { x: 8, y: 5 }]
+        : [{ x: 4, y: 5 }, { x: 3, y: 5 }, { x: 2, y: 5 }];
 
       editorHost.actions.createLogisticsDraftStart({
         kind: "belt",
         source: {
           type: "empty-cell",
-          gridPoint: { x: -4, y: 0 },
+          gridPoint: { x: 1, y: 5 },
         },
       });
 
@@ -1817,8 +1817,8 @@ describe("createEditorHost", () => {
       expect(editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => cell.gridPoint)).toEqual(
         beforeCells,
       );
-      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.at(-1)?.gridPoint).toEqual({ x: 0, y: 0 });
-      expect(findPreviewDraftAt(editorHost, 0, 0)).toMatchObject({
+      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.at(-1)?.gridPoint).toEqual({ x: 5, y: 5 });
+      expect(findPreviewDraftAt(editorHost, 5, 5)).toMatchObject({
         definitionId: "item_log_converger",
       });
       expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["item_log_converger"]);
@@ -1826,7 +1826,7 @@ describe("createEditorHost", () => {
   });
 
   it("keeps the freehand self-overlap converger head when dragging along the overlapped segment", () => {
-    for (const pointerGridPoint of [{ x: 2, y: 0 }, { x: 0, y: 0 }, { x: 3, y: 0 }]) {
+    for (const pointerGridPoint of [{ x: 7, y: 5 }, { x: 5, y: 5 }, { x: 8, y: 5 }]) {
       const workspace = createWorkspace();
       const editorHost = createEditorHost(workspace);
 
@@ -1834,15 +1834,15 @@ describe("createEditorHost", () => {
         kind: "belt",
         source: {
           type: "empty-cell",
-          gridPoint: { x: 0, y: 0 },
+          gridPoint: { x: 5, y: 5 },
         },
       });
 
       for (const stepGridPoint of [
-        { x: 3, y: 0 },
-        { x: 3, y: -1 },
-        { x: 1, y: -1 },
-        { x: 1, y: 0 },
+        { x: 8, y: 5 },
+        { x: 8, y: 4 },
+        { x: 6, y: 4 },
+        { x: 6, y: 5 },
       ]) {
         editorHost.actions.moveLogisticEnd({
           pointerGridPoint: stepGridPoint,
@@ -1859,8 +1859,8 @@ describe("createEditorHost", () => {
         invalidReason: null,
         headDraftEntityId: beforeHeadDraftEntityId,
       });
-      expect(beforeDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 1, y: 0 });
-      expect(findPreviewDraftAt(editorHost, 1, 0)).toMatchObject({
+      expect(beforeDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 6, y: 5 });
+      expect(findPreviewDraftAt(editorHost, 6, 5)).toMatchObject({
         definitionId: "item_log_converger",
       });
 
@@ -1872,7 +1872,7 @@ describe("createEditorHost", () => {
       expect(moveResult).toMatchObject({
         canApply: true,
         invalidReason: null,
-        headGridPoint: { x: 1, y: 0 },
+        headGridPoint: { x: 6, y: 5 },
         headDraftEntityId: beforeHeadDraftEntityId,
       });
       expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
@@ -1883,7 +1883,7 @@ describe("createEditorHost", () => {
       expect(
         editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => cell.gridPoint),
       ).toEqual(beforeCells);
-      expect(findPreviewDraftAt(editorHost, 1, 0)).toMatchObject({
+      expect(findPreviewDraftAt(editorHost, 6, 5)).toMatchObject({
         definitionId: "item_log_converger",
       });
       expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["item_log_converger"]);
@@ -1895,30 +1895,30 @@ describe("createEditorHost", () => {
       const workspace = createWorkspace();
       const editorHost = createEditorHost(workspace);
       const basePoints = [
-        { x: 0, y: -3 },
-        { x: 0, y: -2 },
-        { x: 0, y: -1 },
-        { x: 0, y: 0 },
-        { x: 0, y: 1 },
-        { x: 0, y: 2 },
-        { x: 0, y: 3 },
-        { x: 0, y: 4 },
-        { x: -1, y: 4 },
-        { x: -1, y: 3 },
-        { x: -1, y: 2 },
-        { x: -1, y: 1 },
-        { x: -1, y: 0 },
-        { x: 0, y: 0 },
+        { x: 5, y: 2 },
+        { x: 5, y: 3 },
+        { x: 5, y: 4 },
+        { x: 5, y: 5 },
+        { x: 5, y: 6 },
+        { x: 5, y: 7 },
+        { x: 5, y: 8 },
+        { x: 5, y: 9 },
+        { x: 4, y: 9 },
+        { x: 4, y: 8 },
+        { x: 4, y: 7 },
+        { x: 4, y: 6 },
+        { x: 4, y: 5 },
+        { x: 5, y: 5 },
       ];
       const tailPoints = direction === "down"
-        ? [{ x: 0, y: 1 }, { x: 0, y: 2 }, { x: 0, y: 3 }]
-        : [{ x: 0, y: -1 }, { x: 0, y: -2 }, { x: 0, y: -3 }];
+        ? [{ x: 5, y: 6 }, { x: 5, y: 7 }, { x: 5, y: 8 }]
+        : [{ x: 5, y: 4 }, { x: 5, y: 3 }, { x: 5, y: 2 }];
 
       editorHost.actions.createLogisticsDraftStart({
         kind: "belt",
         source: {
           type: "empty-cell",
-          gridPoint: { x: 0, y: -4 },
+          gridPoint: { x: 5, y: 1 },
         },
       });
 
@@ -1948,8 +1948,8 @@ describe("createEditorHost", () => {
       expect(editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => cell.gridPoint)).toEqual(
         beforeCells,
       );
-      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.at(-1)?.gridPoint).toEqual({ x: 0, y: 0 });
-      expect(findPreviewDraftAt(editorHost, 0, 0)).toMatchObject({
+      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.at(-1)?.gridPoint).toEqual({ x: 5, y: 5 });
+      expect(findPreviewDraftAt(editorHost, 5, 5)).toMatchObject({
         definitionId: "item_log_converger",
       });
       expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["item_log_converger"]);
@@ -2454,6 +2454,37 @@ describe("createEditorHost", () => {
     expect(editorHost.internalState.drafts[0]?.id).toBe("persisted-draft");
   });
 
+  it("blocks applying move operation drafts outside the base outer ring", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+
+    editorHost.actions.createMoveOperationDraft();
+
+    const previewDraftId = editorHost.state.collections.preview[0];
+    const previewDraft = editorHost.internalState.drafts.find((entity) => entity.id === previewDraftId);
+
+    if (!previewDraft || previewDraftId === undefined) {
+      throw new Error("Expected move operation preview draft to exist.");
+    }
+
+    runInAction(() => {
+      previewDraft.position = { x: -6, y: 4 };
+    });
+
+    expect(editorHost.actions.applyMoveOerationDraft()).toBe(false);
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]).toEqual(
+      document.entities["dummy-entity-2"],
+    );
+    expect(editorHost.state.collections.selection).toEqual(["dummy-entity-2"]);
+    expect(editorHost.state.collections.ghost).toEqual(["dummy-entity-2"]);
+    expect(editorHost.state.collections.preview).toEqual([previewDraftId]);
+    expect(editorHost.internalState.drafts.find((entity) => entity.id === previewDraftId)).toBeDefined();
+  });
+
   it("keeps multi-selection after applying move operation drafts for multiple entities", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -2557,6 +2588,25 @@ describe("createEditorHost", () => {
       x: 30,
       y: 30,
     });
+  });
+
+  it("blocks direct collection moves outside the base outer ring", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithTestEntities([
+      createTestEntity("pipe", "pipe_straight_1x1", -4, 5),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.collections.selection.replace(["pipe"]);
+
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.selection,
+      startGridPoint: { x: 0, y: 0 },
+      endGridPoint: { x: -2, y: 0 },
+    });
+
+    expect(editorHost.document.getSnapshot().entities.pipe).toEqual(document.entities.pipe);
   });
 
   it("deletes entity collections from document, drafts, and stale collection references", () => {
@@ -2669,6 +2719,27 @@ describe("createEditorHost", () => {
       width: 5,
       height: 9,
     });
+  });
+
+  it("blocks direct collection rotations outside the base outer ring", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithTestEntities([
+      createTestEntity("pipe-top", "pipe_straight_1x1", -4, 0),
+      createTestEntity("pipe-bottom", "pipe_straight_1x1", -4, 8),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.collections.selection.replace(["pipe-top", "pipe-bottom"]);
+
+    editorHost.actions.rotateCollection(EntityCollectionType.selection);
+
+    expect(editorHost.document.getSnapshot().entities["pipe-top"]).toEqual(
+      document.entities["pipe-top"],
+    );
+    expect(editorHost.document.getSnapshot().entities["pipe-bottom"]).toEqual(
+      document.entities["pipe-bottom"],
+    );
   });
 
   it("rotates preview draft collections without clamping negative grid positions", () => {
@@ -3208,6 +3279,110 @@ describe("createEditorHost", () => {
       document.documentKey,
     );
     await expect(readStoredWorldDocument(document.documentKey)).resolves.toEqual(document);
+  });
+
+  // ---- 2026-05-24: 物流边界检测测试 ----
+
+  it("blocks belt placement when drawn outside placeableArea", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // 传送带从界内向界外绘制，应阻止提交。
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 0, y: 10 } },
+    });
+
+    // 绘制到界外 (x < 0)
+    const result = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: -1, y: 10 },
+      routeMode: { type: "freehand" },
+    });
+
+    expect(result.canApply).toBe(false);
+    expect(result.invalidReason).toBe("outside-base");
+  });
+
+  it("blocks belt placement when drawn outside outerRing", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // 传送带从界内向非常远的界外绘制
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 10, y: 10 } },
+    });
+
+    const result = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: -10, y: 10 },
+      routeMode: { type: "freehand" },
+    });
+
+    expect(result.canApply).toBe(false);
+    expect(result.invalidReason).toBe("outside-base");
+  });
+
+  it("allows pipe placement outside placeableArea but blocks outside outerRing", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // 管道可以出 placeableArea 但不能出 outerRing。
+    // placeableArea: 0-80, outerRing: left=5 → -5 to 85
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "pipe",
+      source: { type: "empty-cell", gridPoint: { x: 5, y: 10 } },
+    });
+
+    // 管道绘制到 placeableArea 外、outerRing 内 (x=-4 在 outerRing left=-5 内)
+    const resultInsideOuterRing = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: -4, y: 10 },
+      routeMode: { type: "freehand" },
+    });
+
+    expect(resultInsideOuterRing.canApply).toBe(true);
+    expect(resultInsideOuterRing.invalidReason).toBeNull();
+
+    // 管道绘制到 outerRing 外 (x=-6 < outerRing left=-5)
+    editorHost.actions.cancelLogisticsDraft();
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "pipe",
+      source: { type: "empty-cell", gridPoint: { x: 5, y: 10 } },
+    });
+
+    const resultOutsideOuterRing = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: -6, y: 10 },
+      routeMode: { type: "freehand" },
+    });
+
+    expect(resultOutsideOuterRing.canApply).toBe(false);
+    expect(resultOutsideOuterRing.invalidReason).toBe("outside-base");
+  });
+
+  it("blocks belt multi-cell path when any cell is outside placeableArea", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // 整条传送带路径中任一点出界即整条不可提交。
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 5, y: 10 } },
+    });
+
+    // 保持不走回头路，避免触发 overlap-own-preview。
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 5, y: 5 },
+      routeMode: { type: "freehand" },
+    });
+
+    // 出界 → 整条不可提交
+    const result = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: -1, y: 5 },
+      routeMode: { type: "freehand" },
+    });
+
+    expect(result.canApply).toBe(false);
+    expect(result.invalidReason).toBe("outside-base");
   });
 });
 

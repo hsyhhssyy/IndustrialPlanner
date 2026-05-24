@@ -60,6 +60,24 @@ export function resolveCachedPlacementValidation(options: {
     ?? VALID_PLACEMENT_RESULT;
 }
 
+export function hasOutsideBasePlacementReason(options: {
+  document: WorldDocument;
+  entityIds: readonly string[];
+  state: EditorStateReadWrite;
+  workspace: WorkspaceContract;
+}): boolean {
+  const validationByEntityId = resolvePlacementValidations({
+    document: options.document,
+    state: options.state,
+    workspace: options.workspace,
+  });
+
+  return options.entityIds.some((entityId) =>
+    validationByEntityId[entityId]?.reasons.some((reason) => reason.code === "outside-base")
+    ?? false,
+  );
+}
+
 export function resolvePlacementValidations(options: {
   document: WorldDocument;
   state: EditorStateReadWrite;
@@ -82,6 +100,12 @@ export function resolvePlacementValidations(options: {
   );
 
   applyOutsideBaseReasons({
+    entries,
+    document: options.document,
+    registry: options.workspace.registry,
+    reasonsByEntityId: mutableReasonsByEntityId,
+  });
+  applyOutsideOuterRingReasons({
     entries,
     document: options.document,
     registry: options.workspace.registry,
@@ -210,6 +234,39 @@ function applyOutsideBaseReasons(options: {
   }
 }
 
+function applyOutsideOuterRingReasons(options: {
+  entries: readonly PlacementValidationEntry[];
+  document: WorldDocument;
+  registry: WorkspaceContract["registry"];
+  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+}): void {
+  const baseDefinition = resolveCurrentBaseDefinition({
+    baseId: options.document.baseId,
+    registry: options.registry,
+  });
+  if (baseDefinition === null) {
+    return;
+  }
+
+  const outerRing = baseDefinition.outerRing;
+  const outerRingGridRect: GridRect = {
+    x: -outerRing.left,
+    y: -outerRing.top,
+    width: baseDefinition.placeableArea.width + outerRing.left + outerRing.right,
+    height: baseDefinition.placeableArea.height + outerRing.top + outerRing.bottom,
+  };
+
+  for (const entry of options.entries) {
+    if (isBaseBuiltinEntityId(entry.entity.id)) {
+      continue;
+    }
+
+    if (!isGridRectContainedBy(outerRingGridRect, entry.gridRect)) {
+      appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
+    }
+  }
+}
+
 function applyOverlapReasons(options: {
   entries: readonly PlacementValidationEntry[];
   registry: WorkspaceContract["registry"];
@@ -243,6 +300,13 @@ function applyOverlapReasons(options: {
         left,
         right,
         registry: options.registry,
+      })) {
+        continue;
+      }
+
+      if (isAllowedLogisticsPlacementReplacement({
+        left,
+        right,
       })) {
         continue;
       }
@@ -469,4 +533,64 @@ function areGridRectsEdgeAdjacent(left: GridRect, right: GridRect): boolean {
     left.y + left.height === right.y || right.y + right.height === left.y;
   const overlapsX = left.x < right.x + right.width && left.x + left.width > right.x;
   return touchesHorizontalEdge && overlapsX;
+}
+
+/**
+ * 返回设备定义所属的物流族标签，不存在则返回 null。
+ * 用于判定两个设备是否为同一物流族（BeltFamily / PipeFamily），决定是否允许放置替换。
+ */
+function resolveLogisticsFamilyTag(
+  definition: EntityDefinition,
+): "belt" | "pipe" | null {
+  if (definition.tags.includes("BeltFamily")) {
+    return "belt";
+  }
+
+  if (definition.tags.includes("PipeFamily")) {
+    return "pipe";
+  }
+
+  return null;
+}
+
+/**
+ * 判定一对重叠实体是否为合法的物流放置替换。
+ * 条件：
+ *   1. 一方是 placement-draft 预览实体，另一方是 document 正式实体
+ *   2. 双方属于同一物流族（BeltFamily / PipeFamily）
+ *   3. 双方占据的 grid rect 完全相同
+ * 满足以上条件时不报重叠错误，放置提交时由 applyPlacementDraft 执行实际替换。
+ * 移动草稿（move-draft:）不满足条件 1，因此移动时仍然会报重叠。
+ */
+function isAllowedLogisticsPlacementReplacement(options: {
+  left: PlacementValidationEntry;
+  right: PlacementValidationEntry;
+}): boolean {
+  const leftIsPlacementDraft = options.left.entity.id.startsWith("placement-draft:");
+  const rightIsPlacementDraft = options.right.entity.id.startsWith("placement-draft:");
+
+  // 必须恰好一方是 placement draft
+  if (leftIsPlacementDraft === rightIsPlacementDraft) {
+    return false;
+  }
+
+  const leftFamily = resolveLogisticsFamilyTag(options.left.definition);
+  const rightFamily = resolveLogisticsFamilyTag(options.right.definition);
+
+  // 双方必须同族
+  if (leftFamily === null || leftFamily !== rightFamily) {
+    return false;
+  }
+
+  // grid rect 必须完全相同
+  return areGridRectsEqual(options.left.gridRect, options.right.gridRect);
+}
+
+function areGridRectsEqual(left: GridRect, right: GridRect): boolean {
+  return (
+    left.x === right.x
+    && left.y === right.y
+    && left.width === right.width
+    && left.height === right.height
+  );
 }

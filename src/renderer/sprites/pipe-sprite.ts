@@ -90,6 +90,11 @@ export class PipeSprite extends DedicatedLogisticSprite {
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
+    if (this.isLogisticsSuppressed(context)) {
+      this.bead.visible = false
+      return
+    }
+
     if (!this.isDeviceTextureReady()) {
       this.bead.visible = false
       return

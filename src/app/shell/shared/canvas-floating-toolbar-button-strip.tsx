@@ -92,6 +92,7 @@ const CANVAS_FLOATING_TOOLBAR_DEFINITIONS: Record<CanvasFloatingToolbarButtonId,
       "en-US": "Delete Upstream",
     },
     icon: "remove-backward",
+    tone: "delete",
   },
   "canvas-floating-toolbar-button-delete-downstream-segment": {
     label: {
@@ -99,6 +100,7 @@ const CANVAS_FLOATING_TOOLBAR_DEFINITIONS: Record<CanvasFloatingToolbarButtonId,
       "en-US": "Delete Downstream",
     },
     icon: "remove-forward",
+    tone: "delete",
   },
 };
 

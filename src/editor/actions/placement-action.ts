@@ -5,6 +5,7 @@ import type { DraftEntity } from "../draft-entity";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRectSize } from "@/domain/shared/grid";
 import { createUuid } from "@/domain/shared/uuid";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 
 import { syncPlacementValidationState } from "../placement-validation";
 import { syncPoweredEntityCollection } from "./powered-collection";
@@ -184,9 +185,45 @@ export function createEditorPlacementActions({
         previewDraftIds: resolveCollection(EntityCollectionType.preview),
         drafts: state.drafts,
       });
+
+      // 2026-05-24: 禁止确认放置 outside-base 的设备。
+      const validationByEntityId = state.internalTransientState.placementValidationByEntityId;
+      if (previewDrafts.some((draft) => {
+        const validation = validationByEntityId[draft.id];
+
+        return validation?.reasons.some((reason) => reason.code === "outside-base") ?? false;
+      })) {
+        return false;
+      }
+
+      // 构建 definition 查找表，用于物流族判定。
+      const definitionMap = new Map(
+        workspace.registry.entityDefinitions.map((def) => [def.id, def]),
+      );
+
+      // 找出被同一物流族设备放置替换的文档实体（仅单设备放置参与替换）。
+      const replacementTargets = resolvePlacementReplacementTargets({
+        previewDrafts,
+        currentEntities: currentDocument.entities,
+        definitionMap,
+      });
+      const replacedEntityIds = new Set(Object.keys(replacementTargets));
+
       const nextEntities = { ...currentDocument.entities };
-      const nextEntityOrder = [...currentDocument.entityOrder];
-      const nextSlotLinks = [...currentDocument.slotLinks];
+      // 从 entities 中删除被替换的旧实体。
+      for (const targetId of replacedEntityIds) {
+        delete nextEntities[targetId];
+      }
+      // 从 entityOrder 中移除被替换的旧实体。
+      const nextEntityOrder = currentDocument.entityOrder.filter(
+        (id) => !replacedEntityIds.has(id),
+      );
+      // 移除指向被替换实体的 slotLinks。
+      const nextSlotLinks = currentDocument.slotLinks.filter(
+        (link) =>
+          !replacedEntityIds.has(link.source.entityId)
+          && !replacedEntityIds.has(link.target.entityId),
+      );
 
       // 替换 entity ID：去掉 "placement-draft:" 前缀后成为正式实体 ID。
       const oldIdToNewId = new Map<string, string>();
@@ -222,9 +259,18 @@ export function createEditorPlacementActions({
         );
       }
 
+      // AI-CORRECTION 2026-05-24: 必须在 documentWriter.commit 之前清除 placement state，
+      // 因为 commit → setSnapshot → notify 会同步触发 hookPlacementValidation，
+      // 而 syncPlacementValidationState 的 resolveValidationEntries 会包含 state.drafts。
+      // 如果 drafts 未清除，预览 draft 会与刚放置的正式实体位置重叠，导致两者都被打入
+      // invalidPlacement collection，进而被 resolveSimulationCompileDocument 过滤掉，
+      // 最终导致仿真拓扑缺失该实体（如供电桩），触发 "运行中放置供电桩不生效" 的 bug。
+      const historyAction = state.internalTransientState.placementHistoryAction
+        ?? createPlacementHistoryAction(previewDrafts);
+      clearPlacementState(state);
+
       const committedDocument = documentWriter.commit({
-        action: state.internalTransientState.placementHistoryAction
-          ?? createPlacementHistoryAction(previewDrafts),
+        action: historyAction,
         update: (documentSnapshot) => ({
           ...documentSnapshot,
           entities: nextEntities,
@@ -241,7 +287,6 @@ export function createEditorPlacementActions({
         });
       }
 
-      clearPlacementState(state);
       syncPlacementValidationState({
         document: committedDocument ?? document.getSnapshot(),
         state,
@@ -424,4 +469,83 @@ function cloneSlotLinkDefinition(slotLink: SlotLinkDefinition): SlotLinkDefiniti
       ...slotLink.target,
     },
   };
+}
+
+/**
+ * 解析物流族标签，返回 "belt" | "pipe" | null。
+ * 与 placement-validation.ts 中的同名函数保持语义一致。
+ */
+function resolveLogisticsFamilyTag(
+  definition: EntityDefinition,
+): "belt" | "pipe" | null {
+  if (definition.tags.includes("BeltFamily")) {
+    return "belt";
+  }
+
+  if (definition.tags.includes("PipeFamily")) {
+    return "pipe";
+  }
+
+  return null;
+}
+
+/**
+ * 找出应被放置替换的现有文档实体。
+ *
+ * 仅单设备 placement draft 参与替换：
+ *   - previewDrafts 必须恰好有 1 个，且其 id 以 "placement-draft:" 开头
+ *   - 该 draft 覆盖的文档实体与之属于同一物流族（BeltFamily / PipeFamily）
+ *   - 两者占据的 grid rect 完全相同
+ *
+ * 蓝图放置（多个 previewDrafts）不会被此函数处理，避免批量误删。
+ */
+function resolvePlacementReplacementTargets(options: {
+  previewDrafts: readonly DraftEntity[];
+  currentEntities: Record<string, WorldEntity>;
+  definitionMap: ReadonlyMap<string, EntityDefinition>;
+}): Record<string, WorldEntity> {
+  // 仅单设备放置参与替换。
+  if (options.previewDrafts.length !== 1) {
+    return {};
+  }
+
+  const draft = options.previewDrafts[0];
+  if (draft === undefined || !draft.id.startsWith("placement-draft:")) {
+    return {};
+  }
+
+  const draftDef = options.definitionMap.get(draft.definitionId);
+  if (draftDef === undefined) {
+    return {};
+  }
+
+  const draftFamily = resolveLogisticsFamilyTag(draftDef);
+  if (draftFamily === null) {
+    return {};
+  }
+
+  const result: Record<string, WorldEntity> = {};
+
+  for (const [entityId, entity] of Object.entries(options.currentEntities)) {
+    // 与 draft 位置不同，跳过。
+    if (
+      entity.position.x !== draft.position.x
+      || entity.position.y !== draft.position.y
+    ) {
+      continue;
+    }
+
+    const entityDef = options.definitionMap.get(entity.definitionId);
+    if (entityDef === undefined) {
+      continue;
+    }
+
+    if (resolveLogisticsFamilyTag(entityDef) !== draftFamily) {
+      continue;
+    }
+
+    result[entityId] = entity;
+  }
+
+  return result;
 }

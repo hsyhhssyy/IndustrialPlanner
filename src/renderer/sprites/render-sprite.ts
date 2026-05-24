@@ -11,6 +11,8 @@ export type PipeRenderSpriteId = "pipe_straight_1x1" | "pipe_turn_cw_1x1" | "pip
 
 export type RenderSpriteId = BeltRenderSpriteId | PipeRenderSpriteId;
 
+export type LogisticsSuppressionFamily = "belt" | "pipe";
+
 export interface RenderLayerMap {
   background: Container;
   entity: Container;
@@ -34,6 +36,7 @@ export interface RenderSpriteSyncContext {
   theme: AppTheme;
   workspace: WorkspaceContract;
   time: RenderSpriteTimeContext;
+  logisticsSuppression?: LogisticsSuppressionFamily | null;
 }
 
 export interface RenderSprite {

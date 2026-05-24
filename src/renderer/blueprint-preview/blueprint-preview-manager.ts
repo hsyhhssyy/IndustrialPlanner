@@ -13,6 +13,7 @@ import {
   getGridBoundsCenterCells,
   getGridFootprintCenterCells,
   getRotatedGridFootprint,
+  resolveSpriteGridRect,
   type GridBounds,
 } from "@/shared/geometry/grid"
 
@@ -66,10 +67,12 @@ interface PreviewState {
 }
 
 interface BlueprintPreviewManager {
-  readonly actions: RenderAction
+  readonly actions: BlueprintPreviewRenderAction
   readonly queries: RenderQuery
   destroy(): void
 }
+
+type BlueprintPreviewRenderAction = Omit<RenderAction, "setLogisticsSuppression">
 
 interface RoundPixelsStageLike {
   roundPixels: boolean
@@ -81,7 +84,7 @@ export function createBlueprintPreviewManager(options: {
   const previewStates = new Map<BlueprintPreviewHandle, PreviewState>()
   let previewHandleSequence = 0
 
-  const actions: RenderAction = {
+  const actions: BlueprintPreviewRenderAction = {
     mountBlueprintPreview: async (mountOptions) => {
       const handle = createBlueprintPreviewHandle(++previewHandleSequence)
       const width = normalizeBlueprintPreviewAxisSize(
@@ -365,20 +368,27 @@ function applyBlueprintPreviewSpriteLayout(
   entity: WorldEntity,
   definition: EntityDefinition,
 ): void {
-  const rotatedFootprint = getRotatedGridFootprint(definition.footprint, entity.rotation)
+  const bpOffset = definition.spriteOffset?.blueprint ?? null
+  const spriteRect = resolveSpriteGridRect(
+    entity.position,
+    definition.footprint,
+    bpOffset,
+    entity.rotation,
+  )
+
   const boundsCenterCells = state.bounds === null
     ? { x: 0, y: 0 }
     : getGridBoundsCenterCells(state.bounds)
-  const entityCenterCells = getGridFootprintCenterCells(
+  const spriteCenterCells = getGridFootprintCenterCells(
     entity.position,
-    rotatedFootprint,
+    { width: spriteRect.width, height: spriteRect.height },
   )
   const isQuarterTurn = entity.rotation === 90 || entity.rotation === 270
 
-  sprite.x = entityCenterCells.x - boundsCenterCells.x
-  sprite.y = entityCenterCells.y - boundsCenterCells.y
-  sprite.width = isQuarterTurn ? rotatedFootprint.height : rotatedFootprint.width
-  sprite.height = isQuarterTurn ? rotatedFootprint.width : rotatedFootprint.height
+  sprite.x = spriteCenterCells.x - boundsCenterCells.x
+  sprite.y = spriteCenterCells.y - boundsCenterCells.y
+  sprite.width = isQuarterTurn ? spriteRect.height : spriteRect.width
+  sprite.height = isQuarterTurn ? spriteRect.width : spriteRect.height
   sprite.rotation = entity.rotation * DEGREE_TO_RADIAN
 }
 
@@ -577,26 +587,32 @@ function mountBlueprintPreviewHighlight(state: PreviewState): void {
       return
     }
 
-    const rotatedFootprint = getRotatedGridFootprint(definition.footprint, highlightedEntity.rotation)
-    const entityCenterCells = getGridFootprintCenterCells(
+    const bpOffset = definition.spriteOffset?.blueprint ?? null
+    const spriteRect = resolveSpriteGridRect(
       highlightedEntity.position,
-      rotatedFootprint,
+      definition.footprint,
+      bpOffset,
+      highlightedEntity.rotation,
+    )
+    const spriteCenterCells = getGridFootprintCenterCells(
+      highlightedEntity.position,
+      { width: spriteRect.width, height: spriteRect.height },
     )
     const boundsCenterCells = state.bounds === null
       ? { x: 0, y: 0 }
       : getGridBoundsCenterCells(state.bounds)
     const isQuarterTurn = highlightedEntity.rotation === 90 || highlightedEntity.rotation === 270
 
-    const layoutWidth = rotatedFootprint.width
-    const layoutHeight = rotatedFootprint.height
+    const layoutWidth = spriteRect.width
+    const layoutHeight = spriteRect.height
     const spriteWidth = isQuarterTurn ? layoutHeight : layoutWidth
     const spriteHeight = isQuarterTurn ? layoutWidth : layoutHeight
 
     const tilePixelWidth = scanlineTexture.width || 64
     const tilePixelHeight = scanlineTexture.height || tilePixelWidth
 
-    const maskLeft = entityCenterCells.x - boundsCenterCells.x - layoutWidth / 2
-    const maskTop = entityCenterCells.y - boundsCenterCells.y - layoutHeight / 2
+    const maskLeft = spriteCenterCells.x - boundsCenterCells.x - layoutWidth / 2
+    const maskTop = spriteCenterCells.y - boundsCenterCells.y - layoutHeight / 2
 
     maskGraphics
       .rect(maskLeft, maskTop, layoutWidth, layoutHeight)
@@ -608,8 +624,8 @@ function mountBlueprintPreviewHighlight(state: PreviewState): void {
       1 / tilePixelWidth,
       1 / tilePixelHeight,
     )
-    scanlineTiling.x = entityCenterCells.x - boundsCenterCells.x
-    scanlineTiling.y = entityCenterCells.y - boundsCenterCells.y
+    scanlineTiling.x = spriteCenterCells.x - boundsCenterCells.x
+    scanlineTiling.y = spriteCenterCells.y - boundsCenterCells.y
     scanlineTiling.rotation = 0
     scanlineTiling.width = spriteWidth + BLUEPRINT_PREVIEW_SCANLINE_PADDING_TILES * 2
     scanlineTiling.height = spriteHeight + BLUEPRINT_PREVIEW_SCANLINE_PADDING_TILES * 2

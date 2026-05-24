@@ -1404,6 +1404,91 @@ describe("createAppHost", () => {
     expect(editorHost.state.collections.ghost).toEqual([]);
   });
 
+  it("keeps mouse move active and does not commit outside the base outer ring", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    editorHost.internalDocument.setSnapshot(document);
+    const appHost = createAppHost(workspace);
+
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+    editorHost.actions.createMoveOperationDraft();
+    appHost.internalState.runtime.moveAnchor = { x: 4, y: 4 };
+    appHost.internalState.runtime.movePointerMode = "mouse";
+    appHost.internalActions.setActiveTool("move");
+
+    const previewDraftId = editorHost.state.collections.preview[0];
+    expect(previewDraftId).toBeDefined();
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 0, y: 0 },
+      endGridPoint: { x: -100, y: 0 },
+    });
+
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: "canvas-floating-toolbar-button-ok",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]).toEqual(
+      document.entities["dummy-entity-2"],
+    );
+    expect(appHost.internalState.activeTool).toBe("move");
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
+    expect(editorHost.state.collections.preview).toEqual([previewDraftId]);
+    expect(
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(
+        previewDraftId ?? "",
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps touch move active and does not commit outside the base outer ring", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    editorHost.internalDocument.setSnapshot(document);
+    const appHost = createAppHost(workspace);
+
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+    editorHost.actions.createMoveOperationDraft();
+    appHost.internalState.runtime.moveAnchor = { x: 4, y: 4 };
+    appHost.internalState.runtime.movePointerMode = "touch";
+    appHost.internalActions.setActiveTool("move");
+
+    const previewDraftId = editorHost.state.collections.preview[0];
+    expect(previewDraftId).toBeDefined();
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 0, y: 0 },
+      endGridPoint: { x: -100, y: 0 },
+    });
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "canvas-floating-toolbar-button-ok",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]).toEqual(
+      document.entities["dummy-entity-2"],
+    );
+    expect(appHost.internalState.activeTool).toBe("move");
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
+    expect(editorHost.state.collections.preview).toEqual([previewDraftId]);
+    expect(
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(
+        previewDraftId ?? "",
+      ),
+    ).toBe(true);
+  });
+
   it("creates and applies single-placement drafts from placement device buttons", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -1455,6 +1540,48 @@ describe("createAppHost", () => {
       definitionId: "item_port_storager_1",
       position: { x: -1, y: -1 },
     });
+  });
+
+  it("keeps mobile single-placement active when confirming a draft outside the base outer ring", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+    const initialEntityOrder = [...editorHost.document.getSnapshot().entityOrder];
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "ui-left-dock-placement-mode-item_port_storager_1-touch-tap",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    editorHost.actions.createSinglePlacementDraft("item_port_storager_1", { x: -10, y: 5 });
+    appHost.internalState.runtime.placementAnchor = { x: -10, y: 5 };
+
+    const draftId = editorHost.state.collections.preview[0];
+    expect(draftId).toBeDefined();
+    expect(
+      editorHost.queries.getEntityPlacementValidation(draftId ?? "").reasons.map((reason) =>
+        reason.code,
+      ),
+    ).toContain("outside-base");
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "canvas-floating-toolbar-button-ok",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: -10, y: 5 });
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("item_port_storager_1");
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(editorHost.state.collections.preview).toEqual([draftId]);
+    expect(editorHost.document.getSnapshot().entityOrder).toEqual(initialEntityOrder);
   });
 
   it("cancels single-placement drafts when activeTool leaves by another path", () => {
@@ -1801,6 +1928,98 @@ describe("createAppHost", () => {
     expect(appHost.internalState.runtime.blueprintPlacementRecord).toBeNull();
     expect(appHost.internalState.runtime.blueprintPlacementPointerMode).toBeNull();
     expect(editorHost.state.collections.preview).toEqual([]);
+  });
+
+  it("keeps blueprint-placement active and does not commit outside the base outer ring", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+    const blueprintRecord = createTestBlueprintRecord();
+    const initialEntityOrder = [...editorHost.document.getSnapshot().entityOrder];
+
+    appHost.blueprintPreview.open(blueprintRecord);
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "blueprint-preview-place-button",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    const previewIds = [...editorHost.state.collections.preview];
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 0, y: 0 },
+      endGridPoint: { x: -100, y: 0 },
+    });
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "canvas-floating-toolbar-button-ok",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(editorHost.document.getSnapshot().entityOrder).toEqual(initialEntityOrder);
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(editorHost.state.collections.preview).toEqual(previewIds);
+    expect(previewIds.every((entityId) =>
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(entityId),
+    )).toBe(true);
+  });
+
+  it("keeps temporary pasted blueprint placement active and does not commit outside the base outer ring", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+    const initialEntityOrder = [...editorHost.document.getSnapshot().entityOrder];
+
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "dummy-entity-2",
+    });
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyC",
+      key: "c",
+      keyCode: 67,
+      ctrlKey: true,
+    }));
+    appHost.internalActions.setActiveTool("select");
+    editorHost.actions.clearCollection(EntityCollectionType.selection);
+
+    const consumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyV",
+      key: "v",
+      keyCode: 86,
+      ctrlKey: true,
+    }));
+
+    expect(consumed).toBe(true);
+    const previewIds = [...editorHost.state.collections.preview];
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 0, y: 0 },
+      endGridPoint: { x: -100, y: 0 },
+    });
+
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: "canvas-floating-toolbar-button-ok",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(editorHost.document.getSnapshot().entityOrder).toEqual(initialEntityOrder);
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(editorHost.state.collections.preview).toEqual(previewIds);
+    expect(previewIds.every((entityId) =>
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(entityId),
+    )).toBe(true);
   });
 
   it("enters logistics-placement from E/Q and arms logistics device shortcuts", () => {

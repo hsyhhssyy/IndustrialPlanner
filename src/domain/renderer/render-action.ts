@@ -5,6 +5,7 @@ import type {
 } from "./types/blueprint-preview-types";
 
 export interface RenderAction {
+	setLogisticsSuppression?(family: "belt" | "pipe" | null): void;
 	mountBlueprintPreview(
 		options: MountBlueprintPreviewOptions,
 	): Promise<BlueprintPreviewHandle>;

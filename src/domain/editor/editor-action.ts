@@ -71,6 +71,14 @@ export interface EditorAction {
 	 * 注意：belt 系与 pipe 系隔离，即使两设备占据同一格也不会跨种类传播删除。
 	 */
 	removeTransportComponent(entityId: string): void;
+	/**
+	 * 删除上游物流段：从指定设备出发，沿 input 方向 BFS 删除当前设备及所有上游严格物流设备。
+	 */
+	removeTransportComponentUpstream(entityId: string): void;
+	/**
+	 * 删除下游物流段：从指定设备出发，沿 output 方向 BFS 删除当前设备及所有下游严格物流设备。
+	 */
+	removeTransportComponentDownstream(entityId: string): void;
 
 	loadLatestBaseDocument(baseId: string): Promise<boolean>;
 }

@@ -160,6 +160,20 @@ describe("production planning model", () => {
     expect(manualResult.unresolvedPerMinute).toBe(0);
   });
 
+  it("uses explicit recipe choices for multi-recipe target items", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const selectedRecipeId = "r_furnace_carbon_mtl_from_grass_1_basic";
+    const result = computeProductionPlan({
+      targets: [port("item_carbon_mtl", 60)],
+      supplies: [],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map([["item_carbon_mtl", selectedRecipeId]]),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    expect(result.roots[0]?.recipeNode?.recipeId).toBe(selectedRecipeId);
+  });
+
   it("treats seed and plant growth loops as productive cycles", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({
@@ -226,19 +240,17 @@ describe("production planning model", () => {
     expect(result.byproductItemIds.has("item_liquid_xiranite_lowpoly")).toBe(true);
 
     const rows = buildProductionPlanningTreeRows(result, "item");
+    expect(rows.every((row) => !("kind" in row))).toBe(true);
     const usedWasteLiquidRow = rows.find((row) => (
-      row.kind === "recipe"
-      && row.recipeId === "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
+      row.recipeId === "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
       && row.targetItemId === "item_liquid_xiranite_poly"
     ));
     const leftoverWasteLiquidRow = rows.find((row) => (
-      row.kind === "recipe"
-      && row.recipeId === "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
+      row.recipeId === "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
       && row.targetItemId === "item_liquid_xiranite_lowpoly"
     ));
     const treatmentRow = rows.find((row) => (
-      row.kind === "recipe"
-      && row.recipeId === "r_chrono_wastewater_treatment_void_inert_xiranite_waste_liquid_basic"
+      row.recipeId === "r_chrono_wastewater_treatment_void_inert_xiranite_waste_liquid_basic"
       && row.targetItemId === "item_liquid_xiranite_lowpoly"
     ));
 
@@ -264,18 +276,15 @@ describe("production planning model", () => {
 
     const rows = buildProductionPlanningTreeRows(result, "item");
     const pumpedAcidRow = rows.find((row) => (
-      row.kind === "recipe"
-      && row.recipeId === "r_pump_acid_basic"
+      row.recipeId === "r_pump_acid_basic"
       && row.targetItemId === "item_liquid_acid"
     ));
     const purifierByproductAcidRow = rows.find((row) => (
-      row.kind === "recipe"
-      && row.recipeId === "r_liquid_purifier_acid_and_copper_enr_from_copper_basic"
+      row.recipeId === "r_liquid_purifier_acid_and_copper_enr_from_copper_basic"
       && row.targetItemId === "item_liquid_acid"
     ));
     const dumperRow = rows.find((row) => (
-      row.kind === "recipe"
-      && row.recipeId === "r_dumper_void_liquid_acid_basic"
+      row.recipeId === "r_dumper_void_liquid_acid_basic"
       && row.targetItemId === "item_liquid_acid"
     ));
 

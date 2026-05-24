@@ -41,6 +41,24 @@ export interface EntityDefinition {
   spriteId: string;
   /** 设备占地尺寸（宽度 × 高度，单位：格子），基于 rotation=0 */
   footprint: GridRectSize;
+
+  /**
+   * 精灵相对于 footprint 的绘制偏移（可选）。
+   *
+   * 当精灵图片尺寸大于 footprint 时，footprint 可能只对应精灵图中
+   * 的一个子区域。spriteOffset 描述精灵在 rotation=0 坐标系下
+   * 相对于 footprint 左上角的位移及精灵总尺寸（单位：格子）。
+   *
+   * 例如：抽水泵 footprint 3×3，3D-top 精灵 5×3，footprint 位于精灵
+   * 右侧 3×3 区域，则 topView = { x: -2, y: 0, width: 5, height: 3 }。
+   *
+   * topView 用于 3D-top 渲染模式，blueprint 用于蓝图渲染模式。
+   * 未指定时，精灵尺寸 = footprint 尺寸，偏移 = (0, 0)。
+   */
+  spriteOffset?: {
+    topView?: { x: number; y: number; width: number; height: number };
+    blueprint?: { x: number; y: number; width: number; height: number };
+  };
   /** 放置面板分组 */
   uiGroup: UiGroup;
   /** 展示排序权重，数字越小越靠前 */

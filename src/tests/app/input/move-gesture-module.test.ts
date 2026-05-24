@@ -456,6 +456,44 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(cancelContext.appHost.internalState.runtime.moveAnchor).toBeNull();
   });
 
+  it("keeps mouse move active when applying is rejected", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 5, y: 5 },
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    vi.mocked(editor.actions.applyMoveOerationDraft).mockReturnValue(false);
+
+    expect(
+      module.handle(mouseTapEvent({ button: 0, longPress: false }), context),
+    ).toEqual({ status: "handled" });
+
+    expect(editor.actions.applyMoveOerationDraft).toHaveBeenCalledTimes(1);
+    expect(appHost.internalState.activeTool).toBe("move");
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 5, y: 5 });
+    expect(appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
+  });
+
+  it("keeps touch move active when applying is rejected", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 5, y: 5 },
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    vi.mocked(editor.actions.applyMoveOerationDraft).mockReturnValue(false);
+
+    expect(
+      module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-ok"), context),
+    ).toEqual({ status: "handled" });
+
+    expect(editor.actions.applyMoveOerationDraft).toHaveBeenCalledTimes(1);
+    expect(appHost.internalState.activeTool).toBe("move");
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 5, y: 5 });
+    expect(appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
+  });
+
   it("returns to marquee through a mouse tool tap when mouse applying a marquee-entered move", () => {
     const { context, editor, appHost } = createContext({
       activeTool: "move",

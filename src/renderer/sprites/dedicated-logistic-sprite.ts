@@ -1,4 +1,11 @@
-import { Sprite, Texture } from "pixi.js"
+import {
+  Assets,
+  Container,
+  Graphics,
+  Sprite,
+  Texture,
+  TilingSprite,
+} from "pixi.js"
 
 import type { AppTheme } from "@/domain/app/types/theme"
 import type { WorkspaceContract } from "@/domain/document/workspace-contract"
@@ -10,15 +17,47 @@ import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
 import { BaseRenderSprite } from "./base-render-sprite"
 import type {
+  LogisticsSuppressionFamily,
   RenderSpriteLayout,
   RenderSpriteSyncContext,
 } from "./render-sprite"
 
 const DEGREE_TO_RADIAN = Math.PI / 180
+const SUPPRESSED_BELT_COLOR = 0xFFD54A
+const SUPPRESSED_PIPE_COLOR = 0x448AFF
+const SUPPRESSED_LINE_WIDTH_RATIO = 1 / 6
+const SUPPRESSED_ARROW_LENGTH_RATIO = 1 / 5
+const SUPPRESSED_ARROW_WIDTH_RATIO = 1 / 6
+const SCANLINE_TEXTURE_PATH = "/textures/scanline-45deg-50opacity.png"
+const SCANLINE_PADDING_TILES = 2
+const SCANLINE_SCROLL_INTERVAL_MS = 2000
+const PREVIEW_BORDER_WIDTH = 1
+const PREVIEW_BORDER_ALPHA = 0.5
+const PREVIEW_NORMAL_COLOR = 0xffffff
+const PREVIEW_INVALID_SCANLINE_TINT = 0xff0000
+const PREVIEW_INVALID_BORDER_COLOR = 0xff3b30
+
+interface LocalPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+interface SuppressedLogisticsPath {
+  readonly points: readonly LocalPoint[];
+  readonly arrowCenter: LocalPoint;
+  readonly arrowAngleRadians: number;
+}
 
 export class DedicatedLogisticSprite extends BaseRenderSprite {
   private readonly body: Sprite
+  private suppressionGraphics: Graphics | null = null
   private readonly spriteId: string
+  private readonly previewEffectRoot: Container
+  private readonly scanlineTiling: TilingSprite
+  private readonly scanlineRectMask: Graphics
+  private readonly previewBorderGraphics: Graphics
+  private scanlineTexture: Texture | null = null
+  private scanlineLoadStarted = false
   private currentLayout: RenderSpriteLayout | null = null
   private currentSyncContext: RenderSpriteSyncContext | null = null
   protected disposed = false
@@ -40,6 +79,26 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     this.body.visible = false
     this.getRootOfLayer("entity").addChild(this.body)
 
+    this.previewEffectRoot = new Container()
+    this.previewEffectRoot.visible = false
+
+    this.scanlineTiling = new TilingSprite({ texture: Texture.EMPTY, width: 0, height: 0 })
+    this.scanlineTiling.anchor.set(0.5)
+    this.scanlineTiling.roundPixels = true
+    this.scanlineTiling.visible = false
+
+    this.scanlineRectMask = new Graphics({ roundPixels: true })
+    this.scanlineRectMask.renderable = false
+    this.scanlineTiling.mask = this.scanlineRectMask
+
+    this.previewBorderGraphics = new Graphics({ roundPixels: true })
+    this.previewBorderGraphics.visible = false
+
+    this.previewEffectRoot.addChild(this.scanlineTiling)
+    this.previewEffectRoot.addChild(this.scanlineRectMask)
+    this.previewEffectRoot.addChild(this.previewBorderGraphics)
+    this.getRootOfLayer("overlay").addChild(this.previewEffectRoot)
+
     this.syncDeviceTexture()
   }
 
@@ -49,12 +108,24 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   ): void {
     this.currentLayout = layout
     this.currentSyncContext = context
+
+    const logisticsSuppression = context.logisticsSuppression
+    if (logisticsSuppression != null && this.isLogisticsSuppressed(context)) {
+      this.body.visible = false
+      this.syncSuppressionGraphics(layout, logisticsSuppression)
+      return
+    }
+
+    if (this.suppressionGraphics !== null) {
+      this.suppressionGraphics.visible = false
+    }
     this.syncDeviceTexture()
 
     if (!this.isTextureReady) {
       return
     }
 
+    this.body.visible = true
     this.applyLayout(layout)
     this.body.tint = resolveDedicatedLogisticTintColor({
       entityId: this.entityId,
@@ -70,6 +141,11 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   ): void {
     void layout
     void context
+
+    this.scanlineTiling.visible = false
+    this.previewBorderGraphics.clear()
+    this.previewBorderGraphics.visible = false
+    this.previewEffectRoot.visible = false
   }
 
   protected drawGhostOverlay(
@@ -84,8 +160,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
-    void layout
-    void context
+    this.drawScanlineOverlay(layout, context)
   }
 
   protected drawSelectionOverlay(
@@ -104,6 +179,10 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     return this.isTextureReady
   }
 
+  protected isLogisticsSuppressed(context: RenderSpriteSyncContext): boolean {
+    return context.logisticsSuppression === resolveSpriteLogisticsFamily(this.spriteId)
+  }
+
   protected afterDeviceTextureReady(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
@@ -112,17 +191,132 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     void context
   }
 
+  private drawScanlineOverlay(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    this.loadScanlineTexture()
+
+    const isInvalid = this.shouldDrawInvalidPreview(context)
+    const scanlineTint = isInvalid ? PREVIEW_INVALID_SCANLINE_TINT : PREVIEW_NORMAL_COLOR
+    const borderColor = isInvalid ? PREVIEW_INVALID_BORDER_COLOR : PREVIEW_NORMAL_COLOR
+    const tilePixelSize = this.scanlineTexture?.width ?? 64
+
+    this.scanlineTiling.visible = true
+    this.scanlineTiling.x = layout.x + layout.width / 2
+    this.scanlineTiling.y = layout.y + layout.height / 2
+    this.scanlineTiling.rotation = 0
+    this.scanlineTiling.width = layout.width
+    this.scanlineTiling.height = layout.height
+    this.scanlineTiling.tint = scanlineTint
+
+    const phase = (context.time.nowMs % SCANLINE_SCROLL_INTERVAL_MS) / SCANLINE_SCROLL_INTERVAL_MS
+    this.scanlineTiling.tilePosition.x = phase * tilePixelSize
+
+    this.scanlineRectMask.clear()
+    this.scanlineTiling.mask = null
+
+    this.previewBorderGraphics.visible = true
+    this.previewBorderGraphics
+      .rect(layout.x, layout.y, layout.width, layout.height)
+      .stroke({
+        width: PREVIEW_BORDER_WIDTH,
+        color: borderColor,
+        alpha: PREVIEW_BORDER_ALPHA,
+      })
+
+    this.previewEffectRoot.visible = true
+  }
+
+  private shouldDrawInvalidPreview(context: RenderSpriteSyncContext): boolean {
+    const editor = context.workspace.editor
+    const collections = editor?.state.collections
+    if (collections === undefined) {
+      return false
+    }
+
+    if (collections[EntityCollectionType.invalidPlacement]?.contains(this.entityId)) {
+      return true
+    }
+
+    const isPreview = collections[EntityCollectionType.preview]?.contains(this.entityId) ?? false
+    if (!isPreview) {
+      return false
+    }
+
+    return editor?.queries.resolveLogisticsDraftState()?.invalidReason === "outside-base"
+  }
+
+  private loadScanlineTexture(): void {
+    if (this.scanlineLoadStarted) {
+      return
+    }
+
+    this.scanlineLoadStarted = true
+
+    void Assets.load<Texture>(SCANLINE_TEXTURE_PATH).then((texture) => {
+      if (this.disposed) {
+        return
+      }
+
+      this.scanlineTexture = texture
+      this.scanlineTiling.texture = texture
+    }).catch(() => {
+      // 扫描线纹理加载失败时保留空纹理，仍显示边框。
+    })
+  }
+
   private applyLayout(layout: RenderSpriteLayout): void {
+    applyCenteredSpriteLayout(this.body, this.resolveCenteredSpriteLayout(layout))
+  }
+
+  private resolveCenteredSpriteLayout(layout: RenderSpriteLayout): {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+    readonly rotation: number;
+  } {
     const isQuarterTurn = layout.rotation === 90 || layout.rotation === 270
-    const normalizedLayout = {
+    return {
       x: layout.x + layout.width / 2,
       y: layout.y + layout.height / 2,
       width: isQuarterTurn ? layout.height : layout.width,
       height: isQuarterTurn ? layout.width : layout.height,
       rotation: layout.rotation * DEGREE_TO_RADIAN,
     }
+  }
 
-    applyCenteredSpriteLayout(this.body, normalizedLayout)
+  private syncSuppressionGraphics(
+    layout: RenderSpriteLayout,
+    family: LogisticsSuppressionFamily,
+  ): void {
+    const centeredLayout = this.resolveCenteredSpriteLayout(layout)
+    const suppressionGraphics = this.resolveSuppressionGraphics()
+    suppressionGraphics.clear()
+    suppressionGraphics.x = centeredLayout.x
+    suppressionGraphics.y = centeredLayout.y
+    suppressionGraphics.rotation = centeredLayout.rotation
+    drawSuppressedLogisticsSprite({
+      graphics: suppressionGraphics,
+      spriteId: this.spriteId,
+      width: centeredLayout.width,
+      height: centeredLayout.height,
+      color: family === "belt" ? SUPPRESSED_BELT_COLOR : SUPPRESSED_PIPE_COLOR,
+    })
+    suppressionGraphics.visible = true
+  }
+
+  private resolveSuppressionGraphics(): Graphics {
+    if (this.suppressionGraphics !== null) {
+      return this.suppressionGraphics
+    }
+
+    const suppressionGraphics = new Graphics({ roundPixels: true })
+    suppressionGraphics.visible = false
+    this.getRootOfLayer("entity").addChild(suppressionGraphics)
+    this.suppressionGraphics = suppressionGraphics
+    return suppressionGraphics
   }
 
   private syncDeviceTexture(): void {
@@ -149,21 +343,32 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
 
         this.body.texture = bodyTexture
         this.isTextureReady = true
-        this.body.visible = true
 
-        if (this.currentLayout !== null) {
-          this.applyLayout(this.currentLayout)
-
-          if (this.currentSyncContext !== null) {
-            this.body.tint = resolveDedicatedLogisticTintColor({
-              entityId: this.entityId,
-              spriteId: this.spriteId,
-              theme: this.currentSyncContext.theme,
-              workspace: this.currentSyncContext.workspace,
-            })
+        if (this.currentLayout !== null && this.currentSyncContext !== null) {
+          const logisticsSuppression = this.currentSyncContext.logisticsSuppression
+          if (logisticsSuppression != null && this.isLogisticsSuppressed(this.currentSyncContext)) {
+            this.body.visible = false
+            this.syncSuppressionGraphics(
+              this.currentLayout,
+              logisticsSuppression,
+            )
             this.afterDeviceTextureReady(this.currentLayout, this.currentSyncContext)
+            return
           }
+
+          this.body.visible = true
+          this.applyLayout(this.currentLayout)
+          this.body.tint = resolveDedicatedLogisticTintColor({
+            entityId: this.entityId,
+            spriteId: this.spriteId,
+            theme: this.currentSyncContext.theme,
+            workspace: this.currentSyncContext.workspace,
+          })
+          this.afterDeviceTextureReady(this.currentLayout, this.currentSyncContext)
+          return
         }
+
+        this.body.visible = true
       })
       .catch(() => {
         if (this.disposed || activeLoadVersion !== this.textureLoadVersion) {
@@ -173,6 +378,130 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
         this.body.visible = false
       })
   }
+}
+
+function resolveSpriteLogisticsFamily(spriteId: string): LogisticsSuppressionFamily | null {
+  if (spriteId.startsWith("belt_")) return "belt"
+  if (spriteId.startsWith("pipe_")) return "pipe"
+  return null
+}
+
+function drawSuppressedLogisticsSprite(options: {
+  readonly graphics: Graphics;
+  readonly spriteId: string;
+  readonly width: number;
+  readonly height: number;
+  readonly color: number;
+}): void {
+  const unitSize = Math.min(options.width, options.height)
+  if (unitSize <= 0) {
+    return
+  }
+
+  const lineWidth = Math.max(1, unitSize * SUPPRESSED_LINE_WIDTH_RATIO)
+  const horizontalExtent = Math.max(0, options.width / 2 - lineWidth / 2)
+  const verticalExtent = Math.max(0, options.height / 2 - lineWidth / 2)
+  const path = resolveSuppressedLogisticsPath(options.spriteId, horizontalExtent, verticalExtent)
+  if (path === null) {
+    return
+  }
+
+  const firstPoint = path.points[0]
+  if (firstPoint === undefined) {
+    return
+  }
+
+  options.graphics.moveTo(firstPoint.x, firstPoint.y)
+  for (let i = 1; i < path.points.length; i += 1) {
+    const point = path.points[i]
+    if (point !== undefined) {
+      options.graphics.lineTo(point.x, point.y)
+    }
+  }
+  options.graphics.stroke({
+    width: lineWidth,
+    color: options.color,
+    alpha: 0.95,
+  })
+
+  const arrowLength = Math.max(lineWidth * 1.3, unitSize * SUPPRESSED_ARROW_LENGTH_RATIO)
+  const arrowWidth = Math.max(lineWidth * 1.4, unitSize * SUPPRESSED_ARROW_WIDTH_RATIO)
+  options.graphics
+    .poly(resolveArrowTrianglePoints(path.arrowCenter, path.arrowAngleRadians, arrowLength, arrowWidth), true)
+    .fill({ color: options.color, alpha: 0.95 })
+}
+
+function resolveSuppressedLogisticsPath(
+  spriteId: string,
+  horizontalExtent: number,
+  verticalExtent: number,
+): SuppressedLogisticsPath | null {
+  const northPoint = { x: 0, y: -verticalExtent }
+  const eastPoint = { x: horizontalExtent, y: 0 }
+  const westPoint = { x: -horizontalExtent, y: 0 }
+  const centerPoint = { x: 0, y: 0 }
+
+  if (spriteId.endsWith("straight_1x1")) {
+    return {
+      points: [westPoint, eastPoint],
+      arrowCenter: interpolateLocalPoint(westPoint, eastPoint, 0.62),
+      arrowAngleRadians: 0,
+    }
+  }
+
+  if (spriteId.endsWith("turn_cw_1x1")) {
+    return {
+      points: [eastPoint, centerPoint, northPoint],
+      arrowCenter: interpolateLocalPoint(centerPoint, northPoint, 0.55),
+      arrowAngleRadians: -Math.PI / 2,
+    }
+  }
+
+  if (spriteId.endsWith("turn_ccw_1x1")) {
+    return {
+      points: [northPoint, centerPoint, eastPoint],
+      arrowCenter: interpolateLocalPoint(centerPoint, eastPoint, 0.55),
+      arrowAngleRadians: 0,
+    }
+  }
+
+  return null
+}
+
+function interpolateLocalPoint(startPoint: LocalPoint, endPoint: LocalPoint, ratio: number): LocalPoint {
+  return {
+    x: startPoint.x + (endPoint.x - startPoint.x) * ratio,
+    y: startPoint.y + (endPoint.y - startPoint.y) * ratio,
+  }
+}
+
+function resolveArrowTrianglePoints(
+  centerPoint: LocalPoint,
+  angleRadians: number,
+  length: number,
+  width: number,
+): number[] {
+  const directionX = Math.cos(angleRadians)
+  const directionY = Math.sin(angleRadians)
+  const normalX = -directionY
+  const normalY = directionX
+  const tipPoint = {
+    x: centerPoint.x + directionX * length / 2,
+    y: centerPoint.y + directionY * length / 2,
+  }
+  const tailCenterPoint = {
+    x: centerPoint.x - directionX * length / 2,
+    y: centerPoint.y - directionY * length / 2,
+  }
+
+  return [
+    tipPoint.x,
+    tipPoint.y,
+    tailCenterPoint.x + normalX * width / 2,
+    tailCenterPoint.y + normalY * width / 2,
+    tailCenterPoint.x - normalX * width / 2,
+    tailCenterPoint.y - normalY * width / 2,
+  ]
 }
 
 export function resolveDedicatedLogisticTintColor(options: {

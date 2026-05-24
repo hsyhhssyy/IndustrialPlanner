@@ -14,7 +14,10 @@ import {
 
 import { type DraftEntity, isDraftEntity } from "../draft-entity";
 import { resolveEntityById, resolveListedEntities } from "../entity-resolvers";
-import { syncPlacementValidationState } from "../placement-validation";
+import {
+  hasOutsideBasePlacementReason,
+  syncPlacementValidationState,
+} from "../placement-validation";
 import { syncPoweredEntityCollection } from "./powered-collection";
 import type { EditorActionsContext } from "./types";
 
@@ -314,6 +317,25 @@ export function createEditorSelectionActions({
           .map((entityId) => currentDocument.entities[entityId])
           .filter((entity): entity is WorldEntity => entity !== undefined);
 
+        const nextDocumentSnapshot = {
+          ...currentDocument,
+          entities: nextEntities,
+        };
+
+        if (hasOutsideBasePlacementReason({
+          document: nextDocumentSnapshot,
+          entityIds: movedEntities.map((entity) => entity.id),
+          state,
+          workspace,
+        })) {
+          syncPlacementValidationState({
+            document: currentDocument,
+            state,
+            workspace,
+          });
+          return;
+        }
+
         const committedDocument = documentWriter.commit({
           action: {
             type: "entity.move",
@@ -409,6 +431,25 @@ export function createEditorSelectionActions({
         const rotatedEntities = collection
           .map((entityId) => currentDocument.entities[entityId])
           .filter((entity): entity is WorldEntity => entity !== undefined);
+
+        const nextDocumentSnapshot = {
+          ...currentDocument,
+          entities: nextEntities,
+        };
+
+        if (hasOutsideBasePlacementReason({
+          document: nextDocumentSnapshot,
+          entityIds: rotatedEntities.map((entity) => entity.id),
+          state,
+          workspace,
+        })) {
+          syncPlacementValidationState({
+            document: currentDocument,
+            state,
+            workspace,
+          });
+          return;
+        }
 
         const committedDocument = documentWriter.commit({
           action: {

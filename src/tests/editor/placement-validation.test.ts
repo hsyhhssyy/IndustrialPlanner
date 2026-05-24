@@ -17,6 +17,7 @@ import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placemen
 import { createRegistryContract } from "@/registry";
 
 const TEST_BUILTIN_BASE_ID = "test_builtin_base";
+const TEST_OUTER_RING_BASE_ID = "test_outer_ring_base";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -70,6 +71,19 @@ function registerBuiltinBase(
       outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
       tag: "测试",
       builtinEntities,
+    },
+  ];
+}
+
+function registerOuterRingBase(workspace: WorkspaceContract): void {
+  workspace.registry.baseDefinitions = [
+    ...workspace.registry.baseDefinitions,
+    {
+      id: TEST_OUTER_RING_BASE_ID,
+      name: "测试扩展范围基地",
+      placeableArea: { width: 10, height: 10 },
+      outerRing: { top: 5, right: 5, bottom: 5, left: 5 },
+      tag: "测试",
     },
   ];
 }
@@ -147,6 +161,40 @@ describe("placement validation", () => {
     expect(editorHost.state.collections[EntityCollectionType.invalidPlacement]).toEqual([]);
     expect(editorHost.queries.getEntityPlacementValidation("belt").canPlace).toBe(true);
     expect(editorHost.queries.getEntityPlacementValidation("pipe").canPlace).toBe(true);
+  });
+
+  it("blocks single device drafts outside the base outer ring", () => {
+    const workspace = createWorkspace();
+    registerOuterRingBase(workspace);
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithEntities([], TEST_OUTER_RING_BASE_ID));
+    editorHost.actions.createSinglePlacementDraft("item_port_grinder_1", { x: -5, y: 5 });
+
+    const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
+    expect(draftId).toBeDefined();
+    expect(
+      editorHost.queries.getEntityPlacementValidation(draftId ?? "").reasons.map((reason) =>
+        reason.code,
+      ),
+    ).toEqual(["outside-base"]);
+    expect(editorHost.actions.applyPlacementDraft()).toBe(false);
+    expect(editorHost.document.getSnapshot().entityOrder).toEqual([]);
+  });
+
+  it("allows dedicated pipes outside placeableArea but inside the base outer ring", () => {
+    const workspace = createWorkspace();
+    registerOuterRingBase(workspace);
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithEntities([], TEST_OUTER_RING_BASE_ID));
+    editorHost.actions.createSinglePlacementDraft("pipe_straight_1x1", { x: -4, y: 5 });
+
+    const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
+    expect(draftId).toBeDefined();
+    expect(editorHost.queries.getEntityPlacementValidation(draftId ?? "").canPlace).toBe(true);
+    expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+    expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(1);
   });
 
   it("keeps 1x1 overlap invalid so the renderer can show only the red frame", () => {
@@ -293,5 +341,204 @@ describe("placement validation", () => {
     expect(
       editorHost.state.collections[EntityCollectionType.invalidPlacement],
     ).toEqual(["isolated-unloader"]);
+  });
+
+  // ---- 物流设备放置替换 (同族替换) ----
+
+  it("allows placement-draft over same-family belt logistics device without overlap error", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithEntities([
+      createEntity("existing-belt", "belt_straight_1x1", 5, 5),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    // 在相同位置放置 item_log_connector（同族 BeltFamily）
+    editorHost.actions.createSinglePlacementDraft("item_log_connector", { x: 5, y: 5 });
+    const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
+
+    expect(draftId).toBeDefined();
+    // 预览 draft 不应在 invalidPlacement 中
+    expect(
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(draftId ?? ""),
+    ).toBe(false);
+    // 原有 belt 也不应在 invalidPlacement 中（被替换放行）
+    expect(
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains("existing-belt"),
+    ).toBe(false);
+  });
+
+  it("allows placement-draft over same-family pipe logistics device without overlap error", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithEntities([
+      createEntity("existing-pipe", "pipe_straight_1x1", 3, 3),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    // 在相同位置放置 item_pipe_connector（同族 PipeFamily）
+    editorHost.actions.createSinglePlacementDraft("item_pipe_connector", { x: 3, y: 3 });
+    const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
+
+    expect(draftId).toBeDefined();
+    expect(
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(draftId ?? ""),
+    ).toBe(false);
+    expect(
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains("existing-pipe"),
+    ).toBe(false);
+  });
+
+  it("replaces existing same-family belt entity on applyPlacementDraft", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithEntities([
+      createEntity("belt-to-replace", "belt_straight_1x1", 5, 5),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    editorHost.actions.createSinglePlacementDraft("item_log_connector", { x: 5, y: 5 });
+    expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+
+    const finalDoc = editorHost.document.getSnapshot();
+
+    // 旧 belt 被删除
+    expect(finalDoc.entities["belt-to-replace"]).toBeUndefined();
+    // 新 connector 存在
+    const connectorEntity = Object.values(finalDoc.entities).find(
+      (entity) => entity.definitionId === "item_log_connector",
+    );
+    expect(connectorEntity).toBeDefined();
+    expect(connectorEntity?.position).toEqual({ x: 5, y: 5 });
+  });
+
+  it("replaces existing same-family pipe entity on applyPlacementDraft", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithEntities([
+      createEntity("pipe-to-replace", "pipe_straight_1x1", 3, 3),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    editorHost.actions.createSinglePlacementDraft("item_pipe_connector", { x: 3, y: 3 });
+    expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+
+    const finalDoc = editorHost.document.getSnapshot();
+
+    expect(finalDoc.entities["pipe-to-replace"]).toBeUndefined();
+    const connectorEntity = Object.values(finalDoc.entities).find(
+      (entity) => entity.definitionId === "item_pipe_connector",
+    );
+    expect(connectorEntity).toBeDefined();
+    expect(connectorEntity?.position).toEqual({ x: 3, y: 3 });
+  });
+
+  it("allows same-family logistics-to-logistics replacement (connector over splitter)", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithEntities([
+      createEntity("my-splitter", "item_log_splitter", 5, 5),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    editorHost.actions.createSinglePlacementDraft("item_log_connector", { x: 5, y: 5 });
+    const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
+
+    expect(draftId).toBeDefined();
+    expect(
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(draftId ?? ""),
+    ).toBe(false);
+    expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+
+    const finalDoc = editorHost.document.getSnapshot();
+    expect(finalDoc.entities["my-splitter"]).toBeUndefined();
+    expect(
+      Object.values(finalDoc.entities).some((e) => e.definitionId === "item_log_connector"),
+    ).toBe(true);
+  });
+
+  it("does NOT allow cross-family replacement: PipeFamily over BeltFamily", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithEntities([
+      createEntity("belt", "belt_straight_1x1", 5, 5),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    // PipeFamily 的 connector 放到 BeltFamily 的 belt 上（管道设备没有 allowPipeOverlap）
+    editorHost.actions.createSinglePlacementDraft("item_pipe_connector", { x: 5, y: 5 });
+    const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
+
+    expect(draftId).toBeDefined();
+    // 跨族应仍然报 overlap
+    expect(
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(draftId ?? ""),
+    ).toBe(true);
+    expect(
+      editorHost.queries.getEntityPlacementValidation(draftId ?? "").reasons.map((r) => r.code),
+    ).toEqual(["overlap"]);
+
+    // 即使强行 apply，也不应删除旧实体
+    editorHost.actions.applyPlacementDraft();
+    const finalDoc = editorHost.document.getSnapshot();
+    expect(finalDoc.entities["belt"]).toBeDefined();
+  });
+
+  it("does NOT allow replacement when draft is placed on non-family entity", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithEntities([
+      createEntity("machine", "item_port_grinder_1", 5, 5),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    editorHost.actions.createSinglePlacementDraft("item_log_connector", { x: 5, y: 5 });
+    const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
+
+    expect(draftId).toBeDefined();
+    // grinder 没有 BeltFamily / PipeFamily，仍报 overlap
+    expect(
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(draftId ?? ""),
+    ).toBe(true);
+    expect(
+      editorHost.queries.getEntityPlacementValidation(draftId ?? "").reasons.map((r) => r.code),
+    ).toEqual(["overlap"]);
+  });
+
+  it("removes slotLinks pointing to replaced entity on applyPlacementDraft", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithEntities([
+      createEntity("belt-to-replace", "belt_straight_1x1", 5, 5),
+    ]);
+
+    // 手动写入指向该 belt 的 slotLink
+    editorHost.internalDocument.setSnapshot({
+      ...document,
+      slotLinks: [
+        {
+          id: "link-1",
+          linkType: "share-all",
+          source: { entityId: "belt-to-replace", storageSlotGroupId: "g", slotId: "s" },
+          target: { entityId: "other-entity", storageSlotGroupId: "g2", slotId: "s2" },
+        },
+      ],
+    });
+
+    editorHost.actions.createSinglePlacementDraft("item_log_connector", { x: 5, y: 5 });
+    expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+
+    const finalDoc = editorHost.document.getSnapshot();
+
+    expect(finalDoc.entities["belt-to-replace"]).toBeUndefined();
+    // slotLink 指向被替换实体，应被移除
+    expect(finalDoc.slotLinks).toHaveLength(0);
   });
 });

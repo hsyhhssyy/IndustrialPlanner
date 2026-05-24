@@ -294,7 +294,7 @@ export function resolveProductionPlanningEntityIconSrc(entityId: string): string
 
 export function formatProductionFlow(value: number): string {
   if (Math.abs(value) < 0.005) {
-    return "0";
+    return value > 0 ? "<0.01" : "0";
   }
 
   const rounded = roundFlow(value);
@@ -303,7 +303,7 @@ export function formatProductionFlow(value: number): string {
 
 export function formatProductionDeviceCount(value: number): string {
   if (Math.abs(value) < 0.005) {
-    return "0";
+    return value > 0 ? "<0.01" : "0";
   }
 
   if (value < 0.1) {

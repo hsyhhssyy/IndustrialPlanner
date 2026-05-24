@@ -17,6 +17,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { RenderHost } from "@/renderer/renderer-host"
 import {
+  readSimplifiedDeviceIconPreference,
   resolveDeviceBodyTextureKey,
   resolveDeviceLabelIconTextureKey,
   resolveDeviceMaskTextureKey,
@@ -111,6 +112,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private scanlineTexture: Texture | null = null;
   private scanlineLoadStarted = false;
 
+  /** 蓝图模式下扫描线的矩形遮罩，替代 previewMask 纹理遮罩 */
+  private readonly scanlineRectMask: Graphics;
+
   /** preview 白色固定宽度边框线 */
   private readonly previewBorderGraphics: Graphics;
 
@@ -121,6 +125,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   protected readonly selectionTiling: TilingSprite;
   private selectionTexture: Texture | null = null;
   private selectionTextureLoadStarted = false;
+
+  /** 蓝图模式下框选特效的矩形遮罩，替代 selectionMask 纹理遮罩 */
+  private readonly selectionRectMask: Graphics;
 
   /** 边缘流光特效 */
   private readonly flowGlowEffectRoot: Container;
@@ -198,12 +205,17 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.scanlineTiling.visible = false;
     this.scanlineTiling.mask = this.previewMask
 
+    // 蓝图模式下扫描线的矩形遮罩，不参与可见渲染
+    this.scanlineRectMask = new Graphics({ roundPixels: true });
+    this.scanlineRectMask.renderable = false;
+
     // preview 白色固定边框线，位于扫描线之上
     this.previewBorderGraphics = new Graphics({ roundPixels: true });
     this.previewBorderGraphics.visible = false;
 
     this.previewEffectRoot.addChild(this.scanlineTiling)
     this.previewEffectRoot.addChild(this.previewMask)
+    this.previewEffectRoot.addChild(this.scanlineRectMask)
     this.previewEffectRoot.addChild(this.previewBorderGraphics)
     this.getRootOfLayer("overlay").addChild(this.previewEffectRoot)
 
@@ -224,8 +236,13 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.selectionTiling.visible = false;
     this.selectionTiling.mask = this.selectionMask;
 
+    // 蓝图模式下框选特效的矩形遮罩，不参与可见渲染
+    this.selectionRectMask = new Graphics({ roundPixels: true });
+    this.selectionRectMask.renderable = false;
+
     this.selectionEffectRoot.addChild(this.selectionTiling)
     this.selectionEffectRoot.addChild(this.selectionMask)
+    this.selectionEffectRoot.addChild(this.selectionRectMask)
     this.getRootOfLayer("overlay").addChild(this.selectionEffectRoot)
 
     // 边缘流光特效：内边框底色 + 扇形光束从中心旋转，矩形遮罩裁剪
@@ -339,6 +356,13 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     this.loadScanlineTexture();
 
+    // 2026-05-24: 根据 invalidPlacement 状态切换颜色。
+    // 白线逻辑 → 红线逻辑，仅颜色不同，代码路径完全一致。
+    const invalidCollection = context.workspace.editor?.state.collections[EntityCollectionType.invalidPlacement];
+    const isInvalid = invalidCollection?.contains(this.entityId) ?? false;
+    const borderColor = isInvalid ? 0xff3b30 : 0xffffff;
+    const scanlineTint = isInvalid ? 0xff0000 : 0xffffff;
+
     // 以纹理原始像素尺寸平铺，不做 zoom 缩放
     const tilePixelSize = this.scanlineTexture?.width ?? 64;
     const paddingPixels = SCANLINE_PADDING_TILES * tilePixelSize;
@@ -349,17 +373,30 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.scanlineTiling.rotation = 0;
     this.scanlineTiling.width = layout.width + paddingPixels * 2;
     this.scanlineTiling.height = layout.height + paddingPixels * 2;
+    this.scanlineTiling.tint = scanlineTint;
 
     const phase = (context.time.nowMs % SCANLINE_SCROLL_INTERVAL_MS) / SCANLINE_SCROLL_INTERVAL_MS;
     this.scanlineTiling.tilePosition.x = phase * tilePixelSize;
 
-    // 白色固定宽度边框线，50% 不透明度
+    // 蓝图模式下使用 footprint 矩形遮罩，替代 blueprint-masks 纹理遮罩
+    // 因为蓝图精灵是大块透明线框图，对应 mask 同样大面积透明，会错误裁剪扫描线
+    if (readSimplifiedDeviceIconPreference(context.workspace.app)) {
+      this.scanlineRectMask.clear();
+      this.scanlineRectMask
+        .rect(layout.x, layout.y, layout.width, layout.height)
+        .fill({ color: 0xffffff });
+      this.scanlineTiling.mask = this.scanlineRectMask;
+    } else {
+      this.scanlineTiling.mask = this.previewMask;
+    }
+
+    // 固定宽度边框线，50% 不透明度。正常 = 白色，禁止 = 红色。
     this.previewBorderGraphics.visible = true;
     this.previewBorderGraphics
       .rect(layout.x, layout.y, layout.width, layout.height)
       .stroke({
         width: PREVIEW_BORDER_WIDTH,
-        color: 0xffffff,
+        color: borderColor,
         alpha: PREVIEW_BORDER_ALPHA,
       });
 
@@ -389,7 +426,17 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.selectionTiling.width = layout.width;
     this.selectionTiling.height = layout.height;
 
-    void context;
+    // 蓝图模式下使用 footprint 矩形遮罩，替代 blueprint-masks 纹理遮罩
+    // 因为蓝图精灵是大块透明线框图，对应 mask 同样大面积透明，会错误裁剪框选特效
+    if (readSimplifiedDeviceIconPreference(context.workspace.app)) {
+      this.selectionRectMask.clear();
+      this.selectionRectMask
+        .rect(layout.x, layout.y, layout.width, layout.height)
+        .fill({ color: 0xffffff });
+      this.selectionTiling.mask = this.selectionRectMask;
+    } else {
+      this.selectionTiling.mask = this.selectionMask;
+    }
 
     this.selectionEffectRoot.visible = true;
   }

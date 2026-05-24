@@ -619,6 +619,39 @@
   min-width: 0;
 }
 
+.production-planning-recipe-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.production-planning-recipe-choice > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.production-planning-recipe-choice > div > span {
+  color: var(--text-2);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.production-planning-recipe-choice > div > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-0);
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .production-planning-tree-relations {
   display: grid;
   gap: 8px;

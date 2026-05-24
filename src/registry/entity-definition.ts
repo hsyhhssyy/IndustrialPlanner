@@ -2274,6 +2274,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     nameKey: "registry.entity.item_port_water_pump_1.name",
     spriteId: "item_port_water_pump_1",
     footprint: { width: 3, height: 3 },
+    spriteOffset: {
+      topView: { x: -2, y: 0, width: 5, height: 3 },
+    },
     uiGroup: "resourcePower",
     displayOrder: 301,
     tags: ["武陵", "OuterRingAllowed", "InnerRingNotAllowed"],

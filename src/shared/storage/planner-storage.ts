@@ -25,6 +25,7 @@ export interface PlannerPersistedState {
   displayMode: "item" | "device";
   viewMode: "tree" | "flow";
   recipeChoices: Record<string, string>;
+  recipeChoicesDemandSignature: string | null;
   sourceConfig: {
     waterPolicy: "use-byproduct" | "dump-byproduct";
     acidPolicy: "use-byproduct" | "dump-byproduct";
@@ -89,6 +90,9 @@ export function normalizePlannerPersistedState(value: unknown): PlannerPersisted
     displayMode: value.displayMode === "device" ? "device" : "item",
     viewMode: value.viewMode === "flow" ? "flow" : "tree",
     recipeChoices: normalizeRecipeChoices(value.recipeChoices),
+    recipeChoicesDemandSignature: typeof value.recipeChoicesDemandSignature === "string"
+      ? value.recipeChoicesDemandSignature
+      : null,
     sourceConfig: {
       waterPolicy: sourceConfig.waterPolicy === "dump-byproduct" ? "dump-byproduct" : DEFAULT_PLANNER_SOURCE_CONFIG.waterPolicy,
       acidPolicy: sourceConfig.acidPolicy === "dump-byproduct" ? "dump-byproduct" : DEFAULT_PLANNER_SOURCE_CONFIG.acidPolicy,
@@ -106,10 +110,14 @@ const PLANNER_STORE_LOCATION: IndexedDbStorageLocation = {
   key: "v2",
 };
 
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
 const MIGRATIONS: StorageMigration<PlannerPersistedState>[] = [
   {
     version: 2,
+    migrate: (raw) => normalizePlannerPersistedState(raw),
+  },
+  {
+    version: 3,
     migrate: (raw) => normalizePlannerPersistedState(raw),
   },
 ];

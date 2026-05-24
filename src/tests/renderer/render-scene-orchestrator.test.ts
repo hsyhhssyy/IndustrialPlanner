@@ -174,6 +174,120 @@ describe("resolveWorldEntitySpriteLayout", () => {
       rotation: 90,
     })
   })
+
+  it("offsets sprite layout when sprite is larger than footprint (water pump at rotation=0)", () => {
+    const layout = resolveWorldEntitySpriteLayout({
+      entity: {
+        id: "water-pump",
+        definitionId: "item_port_water_pump_1",
+        position: { x: 10, y: 5 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      footprint: { width: 3, height: 3 },
+      spriteOffset: { x: -2, y: 0, width: 5, height: 3 },
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 400,
+      },
+      viewportCenter: { x: 0, y: 0 },
+      gridCellPixelSize: 10,
+    })
+
+    // rotation=0, offset (-2,0) → sprite at (10-2, 5) = (8, 5), size 5×3
+    // viewport: center(200,200), gridCellPixelSize=10
+    // corner (8,5) → (200 + 80, 200 + 50) = (280, 250)
+    expect(layout).toMatchObject({
+      x: 280,
+      y: 250,
+      width: 50,
+      height: 30,
+      rotation: 0,
+    })
+  })
+
+  it("offsets sprite layout when sprite is larger than footprint (water pump at rotation=90)", () => {
+    const layout = resolveWorldEntitySpriteLayout({
+      entity: {
+        id: "water-pump-90",
+        definitionId: "item_port_water_pump_1",
+        position: { x: 10, y: 5 },
+        rotation: 90,
+        config: {},
+        tags: [],
+      },
+      footprint: { width: 3, height: 3 },
+      spriteOffset: { x: -2, y: 0, width: 5, height: 3 },
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 400,
+      },
+      viewportCenter: { x: 0, y: 0 },
+      gridCellPixelSize: 10,
+    })
+
+    // rotation=90, offset rotates: (-2,0,5,3) → (0,-2,3,5)
+    // sprite at (10+0, 5-2) = (10, 3), size 3×5
+    // viewport: center(200,200), gridCellPixelSize=10
+    // corner (10,3) → (200 + 100, 200 + 30) = (300, 230)
+    expect(layout).toMatchObject({
+      x: 300,
+      y: 230,
+      width: 30,
+      height: 50,
+      rotation: 90,
+    })
+  })
+
+  it("behaves identically to null offset when spriteOffset is not provided", () => {
+    const withNull = resolveWorldEntitySpriteLayout({
+      entity: {
+        id: "test",
+        definitionId: "belt_straight_1x1",
+        position: { x: 2, y: 3 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      footprint: { width: 2, height: 1 },
+      spriteOffset: undefined,
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 200,
+        height: 200,
+      },
+      viewportCenter: { x: 0, y: 0 },
+      gridCellPixelSize: 10,
+    })
+
+    const withoutKey = resolveWorldEntitySpriteLayout({
+      entity: {
+        id: "test",
+        definitionId: "belt_straight_1x1",
+        position: { x: 2, y: 3 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      footprint: { width: 2, height: 1 },
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 200,
+        height: 200,
+      },
+      viewportCenter: { x: 0, y: 0 },
+      gridCellPixelSize: 10,
+    })
+
+    expect(withNull).toEqual(withoutKey)
+  })
 })
 
 describe("resolveInvalidPlacementToastReasonText", () => {

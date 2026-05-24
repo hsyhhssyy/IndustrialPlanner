@@ -155,3 +155,76 @@ export function resolveCenteredRotatedGridPoint(options: {
     options.nextFootprint,
   );
 }
+
+/**
+ * 将 rotation=0 坐标系下的 spriteOffset 旋转到指定 rotation 坐标系。
+ * 旋转公式：90° CW = (x,y) → (-y,x)，尺寸宽高互换。
+ *
+ * @param offset rotation=0 下的精灵偏移 { x, y, width, height }
+ * @param rotation 目标旋转角度
+ * @returns 旋转后的偏移
+ */
+export function rotateSpriteOffset(
+  offset: { x: number; y: number; width: number; height: number },
+  rotation: GridRotation,
+): { x: number; y: number; width: number; height: number } {
+  switch (rotation) {
+    case 0:
+      return offset
+    case 90:
+      return {
+        x: -offset.y || 0,
+        y: offset.x || 0,
+        width: offset.height,
+        height: offset.width,
+      }
+    case 180:
+      return {
+        x: -offset.x || 0,
+        y: -offset.y || 0,
+        width: offset.width,
+        height: offset.height,
+      }
+    case 270:
+      return {
+        x: offset.y || 0,
+        y: -offset.x || 0,
+        width: offset.height,
+        height: offset.width,
+      }
+    default:
+      return offset
+  }
+}
+
+/**
+ * 根据 footprint / spriteOffset / rotation 计算精灵在世界坐标中的实际
+ * 网格矩形（单位：格子）。
+ *
+ * 当 spriteOffset 为 null 时，精灵矩形 = footprint 旋转后的矩形。
+ * 当 spriteOffset 存在时，精灵矩形 = position + rotatedOffset。
+ */
+export function resolveSpriteGridRect(
+  position: GridPoint,
+  footprint: GridRectSize,
+  spriteOffset: { x: number; y: number; width: number; height: number } | null,
+  rotation: GridRotation,
+): { x: number; y: number; width: number; height: number } {
+  if (spriteOffset === null) {
+    const rotated = getRotatedGridFootprint(footprint, rotation)
+    return {
+      x: position.x,
+      y: position.y,
+      width: rotated.width,
+      height: rotated.height,
+    }
+  }
+
+  const rotatedOffset = rotateSpriteOffset(spriteOffset, rotation)
+  return {
+    x: position.x + rotatedOffset.x,
+    y: position.y + rotatedOffset.y,
+    width: rotatedOffset.width,
+    height: rotatedOffset.height,
+  }
+}

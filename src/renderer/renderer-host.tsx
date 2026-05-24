@@ -1,5 +1,5 @@
-import { RenderContract } from "@/domain/renderer/render-contract";
-import { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { RenderAction, RenderContract } from "@/domain/renderer";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 
 import { Application } from "pixi.js";
 import { createBlueprintPreviewManager } from "./blueprint-preview/blueprint-preview-manager";
@@ -11,6 +11,7 @@ import {
 import {
   createTextureActions,
 } from "./texture/texture-manager";
+import type { LogisticsSuppressionFamily } from "./sprites/render-sprite";
 import "./renderer-host.css";
 
 interface RenderHostDomElements {
@@ -24,6 +25,7 @@ export interface RenderHost extends RenderContract {
   dom: RenderHostDomElements;
   textureManager: ReturnType<typeof createTextureActions>;
   internalState: {
+    logisticsSuppression: LogisticsSuppressionFamily | null;
     textureConfig: unknown | null;
   };
 }
@@ -103,6 +105,7 @@ export async function createRenderHost(
 
   (app.stage as unknown as RoundPixelsStageLike).roundPixels = true;
   const internalState: RenderHost["internalState"] = {
+    logisticsSuppression: null,
     textureConfig: null,
   };
   const rendererDom = createRendererContainer(app);
@@ -117,6 +120,12 @@ export async function createRenderHost(
     },
   });
   let orchestrator: RenderSceneOrchestrator | null = null;
+  const actions: RenderAction = {
+    ...blueprintPreviewManager.actions,
+    setLogisticsSuppression: (family) => {
+      internalState.logisticsSuppression = family;
+    },
+  };
 
   const host: RenderHost = {
     workspace,
@@ -126,7 +135,7 @@ export async function createRenderHost(
     textureManager,
     internalState,
     queries: blueprintPreviewManager.queries,
-    actions: blueprintPreviewManager.actions,
+    actions,
     destroy: () => {
       blueprintPreviewManager.destroy();
       orchestrator?.destroy();

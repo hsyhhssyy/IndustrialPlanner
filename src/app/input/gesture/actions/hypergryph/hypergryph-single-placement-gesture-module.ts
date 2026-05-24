@@ -789,7 +789,10 @@ function applyPlacementOperation(
     : null;
 
   try {
-    editor.actions.applyPlacementDraft();
+    const applied = editor.actions.applyPlacementDraft();
+    if (!applied) {
+      return;
+    }
 
     if (continuation !== null && continuePlacementOperation(appHost, editor, continuation)) {
       return;

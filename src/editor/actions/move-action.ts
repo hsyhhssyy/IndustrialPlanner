@@ -7,7 +7,10 @@ import {
   isDraftEntity,
 } from "../draft-entity";
 import { resolveEntityById } from "../entity-resolvers";
-import { syncPlacementValidationState } from "../placement-validation";
+import {
+  hasOutsideBasePlacementReason,
+  syncPlacementValidationState,
+} from "../placement-validation";
 import { syncPoweredEntityCollection } from "./powered-collection";
 import type { EditorActionsContext } from "./types";
 
@@ -88,6 +91,16 @@ export function createEditorMoveActions({
         previewDraftIds: resolveCollection(EntityCollectionType.preview),
         drafts: state.drafts,
       });
+
+      if (hasOutsideBasePlacementReason({
+        document: currentDocument,
+        entityIds: previewDrafts.map((draft) => draft.id),
+        state,
+        workspace,
+      })) {
+        return false;
+      }
+
       const nextEntities = { ...currentDocument.entities };
       let didUpdateDocument = false;
 

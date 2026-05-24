@@ -1,7 +1,7 @@
 import type { EditorAction } from "@/domain/editor/editor-action";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import { resolveBaseBuiltinEntities } from "@/domain/registry/types/base-definition";
+import { resolveBaseBuiltinEntities, type BaseDefinition } from "@/domain/registry/types/base-definition";
 import type { GridEdge, GridPoint, GridRotation } from "@/domain/shared/grid";
 import type {
   CreateLogisticsDraftStartOptions,
@@ -921,7 +921,63 @@ function resolveInvalidReason(options: {
     }
   }
 
+  // 2026-05-24: 基地边界检测。
+  // 传送带不可出 placeableArea，管道可出 placeableArea。
+  // 任何物流类型都不可出 outerRing。
+  const baseDefinition = resolveCurrentBaseDefinition({
+    context: options.context,
+  });
+  if (baseDefinition !== null) {
+    const placeableRect = {
+      x: 0,
+      y: 0,
+      width: baseDefinition.placeableArea.width,
+      height: baseDefinition.placeableArea.height,
+    };
+    const outerRing = baseDefinition.outerRing;
+    const outerRingRect = {
+      x: -outerRing.left,
+      y: -outerRing.top,
+      width: baseDefinition.placeableArea.width + outerRing.left + outerRing.right,
+      height: baseDefinition.placeableArea.height + outerRing.top + outerRing.bottom,
+    };
+
+    for (const cell of options.cells) {
+      const p = cell.gridPoint;
+
+      // 传送带：检查 placeableArea 边界
+      if (
+        options.kind === "belt"
+        && (p.x < placeableRect.x
+          || p.y < placeableRect.y
+          || p.x >= placeableRect.x + placeableRect.width
+          || p.y >= placeableRect.y + placeableRect.height)
+      ) {
+        return "outside-base";
+      }
+
+      // 任何类型：检查 outerRing 边界
+      if (
+        p.x < outerRingRect.x
+        || p.y < outerRingRect.y
+        || p.x >= outerRingRect.x + outerRingRect.width
+        || p.y >= outerRingRect.y + outerRingRect.height
+      ) {
+        return "outside-base";
+      }
+    }
+  }
+
   return null;
+}
+
+function resolveCurrentBaseDefinition(options: {
+  context: LogisticsActionContext;
+}): BaseDefinition | null {
+  const baseId = options.context.document.getSnapshot().baseId;
+  return options.context.workspace.registry.baseDefinitions.find(
+    (def) => def.id === baseId,
+  ) ?? null;
 }
 
 function doesRouteCrossTargetDevice(options: {

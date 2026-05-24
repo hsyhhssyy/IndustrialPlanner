@@ -676,7 +676,7 @@ describe("GenericDeviceSprite", () => {
     const previewMask = previewEffectRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
 
     expect(previewEffectRoot?.visible).toBe(true)
-    expect(previewEffectRoot?.children).toHaveLength(3)
+    expect(previewEffectRoot?.children).toHaveLength(4)
     expect(previewMask?.texture).toBe(blueprintMaskTexture)
     expect(scanlineTiling?.mask).toBe(previewMask)
   })
@@ -1377,7 +1377,7 @@ describe("GenericDeviceSprite", () => {
     const scanlineTiling = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
     const previewMask = previewEffectRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
 
-    expect(previewEffectRoot?.children).toHaveLength(3)
+    expect(previewEffectRoot?.children).toHaveLength(4)
     expect(previewMask).toMatchObject({
       x: 40,
       y: 40,
