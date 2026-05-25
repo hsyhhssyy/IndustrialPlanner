@@ -12,6 +12,7 @@ import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import { useInspectorRenderMode } from "@/app/shell/inspector/selection-inspector-model";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { NumberInput } from "@/app/shell/shared/number-input";
 
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 type StorageSlotDefinition = StorageSlotGroupDefinition["slots"][number];
@@ -184,24 +185,16 @@ export function SlotConfigInspector({
                         >
                           <LucideMinus aria-hidden="true" />
                         </button>
-                        <input
+                        <NumberInput
                           className={cm(styles, "slot-config-count-input")}
                           data-slot-input="count"
                           disabled={row.displayItemId === null}
                           max={row.capacity}
                           min={0}
-                          onChange={(event) => {
-                            const rawValue = event.currentTarget.value.trim();
-                            const parsedValue = rawValue === "" ? 0 : Number(rawValue);
-
-                            if (!Number.isFinite(parsedValue)) {
-                              return;
-                            }
-
-                            updateCount(row, parsedValue);
-                          }}
-                          type="number"
                           value={row.count}
+                          onCommit={(next) => {
+                            updateCount(row, next);
+                          }}
                         />
                         <button
                           className={cm(styles, "slot-config-step-button")}

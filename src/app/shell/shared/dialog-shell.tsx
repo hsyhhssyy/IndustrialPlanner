@@ -178,7 +178,7 @@ export const DialogShell = observer(function DialogShell({
     const target = event.target;
     if (
       !(target instanceof HTMLElement)
-      || target.closest("button, input, select, textarea, [data-dialog-shell-no-drag]") !== null
+      || target.closest("button, input, select, textarea") !== null
     ) {
       return;
     }
@@ -328,7 +328,6 @@ export const DialogShell = observer(function DialogShell({
             {tabs.length > 0 ? (
               <div
                 className={cm(styles, "dialog-shell-tab-strip", `${classPrefix}-tab-strip`)}
-                data-dialog-shell-no-drag
               >
                 <div aria-label={title} className={cm(styles, "dialog-shell-tab-list", `${classPrefix}-tab-list`)} role="tablist">
                   {tabs.map((tab) => {

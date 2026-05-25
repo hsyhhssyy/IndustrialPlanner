@@ -49,6 +49,7 @@ import { ProductionPlanningInputStore } from "./production-planning-state";
 import { hookPlannerIndexedDbPersistence } from "./production-planning-persist";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { NumberInput } from "@/app/shell/shared/number-input";
 
 type ProductionPlanningScreen = "input" | "result";
 
@@ -728,14 +729,21 @@ function PortEditorRow({
       </button>
       <label className={cm(styles, "production-planning-rate-input")}>
         <span>{t("productionPlanning.perMinute")}</span>
-        <input
-          type={isInfinite ? "text" : "number"}
-          min={isInfinite ? undefined : "0"}
-          step={isInfinite ? undefined : "0.01"}
-          value={isInfinite ? "∞" : line.perMinute}
-          disabled={isInfinite}
-          onChange={(event) => onUpdateRate(normalizeFlowInput(event.currentTarget.value))}
-        />
+        {isInfinite ? (
+          <input
+            type="text"
+            value="∞"
+            disabled
+            readOnly
+          />
+        ) : (
+          <NumberInput
+            min={0}
+            emptyFallback={0}
+            value={line.perMinute}
+            onCommit={(next) => onUpdateRate(next)}
+          />
+        )}
       </label>
       {canToggleInfinite && (
         <button

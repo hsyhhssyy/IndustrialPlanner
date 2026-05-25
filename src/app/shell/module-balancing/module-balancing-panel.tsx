@@ -48,6 +48,7 @@ import {
 } from "@/app/shell/module-balancing/module-balancing-model";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { NumberInput } from "@/app/shell/shared/number-input";
 
 const MODULE_DRAG_TYPE = "application/x-industrial-planner-module-balancing-module";
 const ENTRY_DRAG_TYPE = "application/x-industrial-planner-module-balancing-entry";
@@ -1360,16 +1361,14 @@ function PortListEditor({
               <option key={item.id} value={item.id}>{t(item.nameKey)}</option>
             ))}
           </select>
-          <input
-            min="0"
-            step="0.01"
-            type="number"
+          <NumberInput
+            min={0}
             value={port.perMinute}
-            onChange={(event) => {
+            onCommit={(next) => {
               const nextPorts = ports.map(clonePort);
               const target = nextPorts[portIndex];
               if (target !== undefined) {
-                target.perMinute = Math.max(0, Number(event.currentTarget.value));
+                target.perMinute = Math.max(0, next);
               }
               onChange(nextPorts);
             }}
@@ -1441,7 +1440,7 @@ function QuantityEditor({
         </div>
         <label className={cm(styles, "module-balancing-form-field")}>
           <span>{t("moduleBalancing.quantity")}</span>
-          <input min="0.01" step="0.01" type="number" value={draft.quantity} onChange={(event) => onUpdate({ ...draft, quantity: event.currentTarget.value })} />
+          <NumberInput min={0.01} value={draft.quantity} onRawChange={(raw) => onUpdate({ ...draft, quantity: raw })} />
         </label>
         <div className={cm(styles, "module-balancing-step-row")}>
           {[-1, -0.1, 0.1, 1, 10].map((delta) => (
