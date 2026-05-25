@@ -287,6 +287,43 @@ describe("production planning flow graph", () => {
     expect(layoutFeedback?.direction).toBe("backward");
   });
 
+  it("keeps carbon block plant seed cycles as side-port feedback links in device mode", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_carbon_mtl", 60)],
+      supplies: [],
+      infiniteItemIds: makeInfiniteItemIds(index, DEFAULT_SOURCE_CONFIG),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    const graph = buildProductionFlowGraph(result, index, t, "device");
+    const layout = createSankeyLayout(graph, {
+      width: 1080,
+      height: 520,
+      nodeWidth: 160,
+      nodePadding: 18,
+      iterations: 6,
+    });
+
+    const seedCollectorFeedback = graph.links.find((link) => (
+      link.source.includes("r_planter_moss_1_from_moss_seed_1_basic")
+      && link.target.includes("r_seedcol_moss_seed_1_from_moss_1_basic")
+      && link.itemId === "item_plant_moss_1"
+    ));
+    const seedCollectorSeedOutput = graph.links.find((link) => (
+      link.source.includes("r_seedcol_moss_seed_1_from_moss_1_basic")
+      && link.target.includes("r_planter_moss_1_from_moss_seed_1_basic")
+      && link.itemId === "item_plant_moss_seed_1"
+    ));
+    const layoutFeedback = layout.links.find((link) => link.id === seedCollectorFeedback?.id);
+
+    expect(seedCollectorFeedback?.preferredFeedback).toBe(true);
+    expect(seedCollectorFeedback?.targetSide).toBe("right");
+    expect(seedCollectorSeedOutput?.sourceSide).toBe("left");
+    expect(layoutFeedback?.direction).toBe("backward");
+  });
+
   it("collapses recipes in item mode to show item-to-item flow", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({

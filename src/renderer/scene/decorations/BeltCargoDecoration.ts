@@ -21,11 +21,12 @@ import type { DecorationSyncContext } from "./DecorationSyncContext"
 import {
   createEntityDefinitionMap,
   isStrictBeltDefinitionId,
-  resolveBeltPortExtensionEntries,
+  resolveBeltPortConnectivityEntries,
   resolveBeltPathSample,
   resolveViewportPoint,
   resolveVisibleWorldRect,
   isWorldEntityVisible,
+  type BeltDisconnectedPortEntry,
   type BeltPortExtensionEntry,
 } from "./BeltVisualGeometry"
 
@@ -35,6 +36,8 @@ const ITEM_ICON_TEXTURE_INSET_PX = 2
 const BOX_CORNER_RADIUS_RATIO = 0.1
 const BOX_STROKE_WIDTH_PX = 1
 const BOX_TURN_CLEARANCE_PX = 2
+const EMPTY_BELT_PORT_EXTENSION_ENTRIES: readonly BeltPortExtensionEntry[] = []
+const EMPTY_BELT_DISCONNECTED_PORT_ENTRIES: readonly BeltDisconnectedPortEntry[] = []
 
 interface BeltCargoRenderEntry {
   readonly centerX: number;
@@ -185,7 +188,9 @@ export function createBeltCargoDecoration(): DecorationLayer {
       const itemIconMap = ensureItemIconMap(ctx)
       const boxSize = resolveBeltCargoBoxSize(ctx.viewportState.gridCellPixelSize)
       const boxHalfSize = boxSize / 2
-      const portExtensionEntries = resolveBeltPortExtensionEntries(ctx)
+      const portConnectivityEntries = resolveBeltPortConnectivityEntries(ctx)
+      const portExtensionEntriesByBeltId = groupBeltPortEntriesByBeltId(portConnectivityEntries.extensions)
+      const disconnectedPortEntriesByBeltId = groupBeltPortEntriesByBeltId(portConnectivityEntries.disconnectedPorts)
       const entries: BeltCargoRenderEntry[] = []
 
       for (const beltCargoEntry of beltCargoEntries) {
@@ -207,8 +212,11 @@ export function createBeltCargoDecoration(): DecorationLayer {
           itemId: beltCargoEntry.itemId,
           clipMask: resolveBeltCargoClipMask({
             ctx,
-            entry: beltCargoEntry,
-            portExtensionEntries,
+            boxHalfSize,
+            disconnectedPortEntries: disconnectedPortEntriesByBeltId.get(beltCargoEntry.entityId)
+              ?? EMPTY_BELT_DISCONNECTED_PORT_ENTRIES,
+            portExtensionEntries: portExtensionEntriesByBeltId.get(beltCargoEntry.entityId)
+              ?? EMPTY_BELT_PORT_EXTENSION_ENTRIES,
           }),
         })
       }
@@ -425,12 +433,11 @@ export function resolveBeltCargoBoxSize(gridCellSize: number): number {
 
 function resolveBeltCargoClipMask(options: {
   ctx: DecorationSyncContext;
-  entry: BeltCargoEntry;
+  boxHalfSize: number;
+  disconnectedPortEntries: readonly BeltDisconnectedPortEntry[];
   portExtensionEntries: readonly BeltPortExtensionEntry[];
 }): BeltCargoClipMask | null {
-  const extensions = options.portExtensionEntries.filter((extension) =>
-    extension.beltEntityId === options.entry.entityId,
-  )
+  const extensions = options.portExtensionEntries
   if (extensions.length === 0) {
     return null
   }
@@ -438,12 +445,68 @@ function resolveBeltCargoClipMask(options: {
   const gridCellSize = options.ctx.viewportState.gridCellPixelSize
   return {
     beltRects: resolveBeltCargoClipBeltRects(options.ctx, gridCellSize),
-    extensions: extensions.map((extension) =>
-      resolveBeltCargoClipExtensionRect({
-        ctx: options.ctx,
-        extension,
-      }),
-    ),
+    extensions: [
+      ...extensions.map((extension) =>
+        resolveBeltCargoClipExtensionRect({
+          ctx: options.ctx,
+          extension,
+        }),
+      ),
+      ...options.disconnectedPortEntries
+        .map((port) => resolveBeltCargoClipDisconnectedPortRect({
+          ctx: options.ctx,
+          port,
+          capLength: options.boxHalfSize + BOX_STROKE_WIDTH_PX,
+        })),
+    ],
+  }
+}
+
+function groupBeltPortEntriesByBeltId<T extends { readonly beltEntityId: string }>(
+  entries: readonly T[],
+): Map<string, T[]> {
+  const entriesByBeltId = new Map<string, T[]>()
+  for (const entry of entries) {
+    const existing = entriesByBeltId.get(entry.beltEntityId)
+    if (existing === undefined) {
+      entriesByBeltId.set(entry.beltEntityId, [entry])
+    } else {
+      existing.push(entry)
+    }
+  }
+
+  return entriesByBeltId
+}
+
+function resolveBeltCargoClipDisconnectedPortRect(options: {
+  ctx: DecorationSyncContext;
+  port: BeltDisconnectedPortEntry;
+  capLength: number;
+}): BeltCargoClipExtensionRect {
+  const gridCellSize = options.ctx.viewportState.gridCellPixelSize
+  const boundary = resolveViewportPoint({
+    point: options.port.boundary,
+    viewportBounds: options.ctx.viewportBounds,
+    viewportState: options.ctx.viewportState,
+  })
+  const angleRadians = options.port.angleRadians
+    + resolveDisplayRotationRadians(options.ctx.viewportState.displayRotation)
+  const direction = {
+    x: Math.cos(angleRadians),
+    y: Math.sin(angleRadians),
+  }
+  const midpoint = options.port.kind === "input"
+    ? -options.capLength / 2
+    : options.capLength / 2
+
+  return {
+    center: {
+      x: boundary.x + direction.x * midpoint,
+      y: boundary.y + direction.y * midpoint,
+    },
+    angleRadians,
+    length: options.capLength,
+    width: gridCellSize,
   }
 }
 

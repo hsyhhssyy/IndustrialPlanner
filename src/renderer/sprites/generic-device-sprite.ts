@@ -380,12 +380,25 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     // 蓝图模式下使用 footprint 矩形遮罩，替代 blueprint-masks 纹理遮罩
     // 因为蓝图精灵是大块透明线框图，对应 mask 同样大面积透明，会错误裁剪扫描线
+    // AI-CORRECTION 2026-05-25: Pixi v8 WebGL 下 Graphics 矩形 mask 会把蓝图样式的 TilingSprite 裁成不可见；现在直接用 TilingSprite 自身尺寸作为 footprint 矩形裁剪。
     if (readSimplifiedDeviceIconPreference(context.workspace.app)) {
+      this.scanlineTiling.width = layout.width;
+      this.scanlineTiling.height = layout.height;
       this.scanlineRectMask.clear();
-      this.scanlineRectMask
-        .rect(layout.x, layout.y, layout.width, layout.height)
-        .fill({ color: 0xffffff });
-      this.scanlineTiling.mask = this.scanlineRectMask;
+      // AI-REMOVED 2026-05-25:
+      // Reason: Pixi v8 WebGL 中该 Graphics mask 会导致蓝图样式扫描线完全不可见。
+      // Trigger: 用户反馈采种机、种植机等蓝图样式设备在框选/预览时没有蓝图特效；Playwright 截图复现。
+      // Evidence: 蓝图样式下 TilingSprite 本身已经按 footprint 矩形布局，移除 mask 后矩形特效不再依赖透明 sprite mask。
+      // Replacement: 当前分支的 scanlineTiling.mask = null 与 width/height = layout 尺寸。
+      // Risk: Low；蓝图样式扫描线不再带额外 padding，但可见区域符合 footprint 矩形。
+      // Human Review: Required
+      //
+      // Original code:
+      // this.scanlineRectMask
+      //   .rect(layout.x, layout.y, layout.width, layout.height)
+      //   .fill({ color: 0xffffff });
+      // this.scanlineTiling.mask = this.scanlineRectMask;
+      this.scanlineTiling.mask = null;
     } else {
       this.scanlineTiling.mask = this.previewMask;
     }
@@ -428,12 +441,23 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     // 蓝图模式下使用 footprint 矩形遮罩，替代 blueprint-masks 纹理遮罩
     // 因为蓝图精灵是大块透明线框图，对应 mask 同样大面积透明，会错误裁剪框选特效
+    // AI-CORRECTION 2026-05-25: Pixi v8 WebGL 下 Graphics 矩形 mask 会让多选蓝图特效完全不可见；现在直接让 TilingSprite 按 footprint 矩形显示。
     if (readSimplifiedDeviceIconPreference(context.workspace.app)) {
       this.selectionRectMask.clear();
-      this.selectionRectMask
-        .rect(layout.x, layout.y, layout.width, layout.height)
-        .fill({ color: 0xffffff });
-      this.selectionTiling.mask = this.selectionRectMask;
+      // AI-REMOVED 2026-05-25:
+      // Reason: Pixi v8 WebGL 中该 Graphics mask 会导致蓝图样式多选特效完全不可见。
+      // Trigger: 用户反馈批量选择框中采种机、种植机等蓝图样式设备没有蓝图遮罩特效。
+      // Evidence: Playwright 截图显示 marquee 覆盖多个设备但设备内部无 selectionTiling 效果；selectionTiling 本身已是 footprint 矩形。
+      // Replacement: 当前分支的 selectionTiling.mask = null，依靠 TilingSprite 的 width/height 裁剪到 footprint。
+      // Risk: Low；蓝图样式多选特效变为完整 footprint 矩形，不再受 sprite 透明区域影响。
+      // Human Review: Required
+      //
+      // Original code:
+      // this.selectionRectMask
+      //   .rect(layout.x, layout.y, layout.width, layout.height)
+      //   .fill({ color: 0xffffff });
+      // this.selectionTiling.mask = this.selectionRectMask;
+      this.selectionTiling.mask = null;
     } else {
       this.selectionTiling.mask = this.selectionMask;
     }

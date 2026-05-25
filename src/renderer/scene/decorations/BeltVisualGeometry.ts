@@ -136,6 +136,21 @@ export interface BeltPortExtensionEntry {
   readonly spriteCenterXCells: number;
 }
 
+export type BeltDisconnectedPortKind = "input" | "output"
+
+export interface BeltDisconnectedPortEntry {
+  readonly kind: BeltDisconnectedPortKind;
+  readonly beltEntityId: string;
+  readonly boundary: GridFloatPoint;
+  readonly edge: GridEdge;
+  readonly angleRadians: number;
+}
+
+export interface BeltPortConnectivityEntries {
+  readonly extensions: readonly BeltPortExtensionEntry[];
+  readonly disconnectedPorts: readonly BeltDisconnectedPortEntry[];
+}
+
 export interface BeltPathSample {
   readonly point: GridFloatPoint;
   readonly angleRadians: number;
@@ -170,6 +185,22 @@ interface BeltPathEndpoints {
   };
 }
 
+interface BeltPortReferenceCollections {
+  readonly inputPorts: readonly WorldPortReference[];
+  readonly outputPorts: readonly WorldPortReference[];
+  readonly inputPortsByConnectionKey: ReadonlyMap<string, readonly WorldPortReference[]>;
+  readonly outputPortsByConnectionKey: ReadonlyMap<string, readonly WorldPortReference[]>;
+}
+
+interface ResolveBeltPortConnectivityOptions {
+  readonly includeDisconnectedPorts?: boolean;
+}
+
+interface BeltConnectedPortState {
+  readonly hasConnectedPort: boolean;
+  readonly extensionPort: WorldPortReference | null;
+}
+
 export function isStrictBeltDefinitionId(definitionId: string): boolean {
   return STRICT_BELT_DEFINITION_IDS.has(definitionId)
 }
@@ -194,14 +225,146 @@ export function resolveBeltInsertionEntries(ctx: DecorationSyncContext): BeltIns
 }
 
 export function resolveBeltPortExtensionEntries(ctx: DecorationSyncContext): BeltPortExtensionEntry[] {
+  return [...resolveBeltPortConnectivityEntries(ctx, {
+    includeDisconnectedPorts: false,
+  }).extensions]
+}
+
+export function resolveBeltPortConnectivityEntries(
+  ctx: DecorationSyncContext,
+  options: ResolveBeltPortConnectivityOptions = {},
+): BeltPortConnectivityEntries {
   const app = ctx.renderHost.workspace.app
   if (app?.state?.settings?.gameUseSimplifiedDeviceIcons === true) {
-    return []
+    return {
+      extensions: [],
+      disconnectedPorts: [],
+    }
   }
 
+  const collections = resolveBeltPortReferenceCollections(ctx)
+  if (collections === null) {
+    return {
+      extensions: [],
+      disconnectedPorts: [],
+    }
+  }
+
+  const extensions: BeltPortExtensionEntry[] = []
+  const disconnectedPorts: BeltDisconnectedPortEntry[] = []
+  const includeDisconnectedPorts = options.includeDisconnectedPorts ?? true
+
+  for (const outputPort of collections.outputPorts) {
+    if (!isStrictBeltDefinitionId(outputPort.entity.definitionId)) {
+      continue
+    }
+
+    const targetCell = addGridPoints(outputPort.cell, resolveEdgeDelta(outputPort.edge))
+    const targetKey = createConnectionKey(targetCell, oppositeEdge(outputPort.edge))
+    const targetPorts = collections.inputPortsByConnectionKey.get(targetKey) ?? []
+    const targetState = resolveBeltConnectedPortState(ctx, targetPorts, outputPort.entity.id)
+
+    if (includeDisconnectedPorts && !targetState.hasConnectedPort) {
+      disconnectedPorts.push({
+        kind: "output",
+        beltEntityId: outputPort.entity.id,
+        boundary: resolvePortBoundaryPoint(outputPort.cell, outputPort.edge),
+        edge: outputPort.edge,
+        angleRadians: resolveEdgeAngleRadians(outputPort.edge),
+      })
+    }
+
+    if (targetState.extensionPort === null) {
+      continue
+    }
+
+    extensions.push({
+      kind: "belt-output-to-device",
+      beltEntityId: outputPort.entity.id,
+      deviceEntityId: targetState.extensionPort.entity.id,
+      boundary: resolvePortBoundaryPoint(outputPort.cell, outputPort.edge),
+      edge: outputPort.edge,
+      angleRadians: resolveEdgeAngleRadians(outputPort.edge),
+      localStartCells: 0,
+      localEndCells: BELT_INSERTION_DEPTH_CELLS,
+      spriteCenterXCells: BELT_INSERTION_DEPTH_CELLS - 0.5,
+    })
+  }
+
+  for (const inputPort of collections.inputPorts) {
+    if (!isStrictBeltDefinitionId(inputPort.entity.definitionId)) {
+      continue
+    }
+
+    const sourceCell = addGridPoints(inputPort.cell, resolveEdgeDelta(inputPort.edge))
+    const sourceKey = createConnectionKey(sourceCell, oppositeEdge(inputPort.edge))
+    const sourcePorts = collections.outputPortsByConnectionKey.get(sourceKey) ?? []
+    const sourceState = resolveBeltConnectedPortState(ctx, sourcePorts, inputPort.entity.id)
+    const flowEdge = oppositeEdge(inputPort.edge)
+
+    if (includeDisconnectedPorts && !sourceState.hasConnectedPort) {
+      disconnectedPorts.push({
+        kind: "input",
+        beltEntityId: inputPort.entity.id,
+        boundary: resolvePortBoundaryPoint(inputPort.cell, inputPort.edge),
+        edge: flowEdge,
+        angleRadians: resolveEdgeAngleRadians(flowEdge),
+      })
+    }
+
+    if (sourceState.extensionPort === null) {
+      continue
+    }
+
+    extensions.push({
+      kind: "device-output-to-belt",
+      beltEntityId: inputPort.entity.id,
+      deviceEntityId: sourceState.extensionPort.entity.id,
+      boundary: resolvePortBoundaryPoint(inputPort.cell, inputPort.edge),
+      edge: flowEdge,
+      angleRadians: resolveEdgeAngleRadians(flowEdge),
+      localStartCells: -BELT_INSERTION_DEPTH_CELLS,
+      localEndCells: 0,
+      spriteCenterXCells: 0.5 - BELT_INSERTION_DEPTH_CELLS,
+    })
+  }
+
+  return {
+    extensions,
+    disconnectedPorts,
+  }
+}
+
+function resolveBeltConnectedPortState(
+  ctx: DecorationSyncContext,
+  ports: readonly WorldPortReference[],
+  sourceEntityId: string,
+): BeltConnectedPortState {
+  let hasConnectedPort = false
+  let extensionPort: WorldPortReference | null = null
+
+  for (const port of ports) {
+    if (port.entity.id === sourceEntityId) {
+      continue
+    }
+
+    hasConnectedPort = true
+    if (isBeltPortExtensionEndpointDevice(ctx, port.entity.definitionId)) {
+      extensionPort = port
+      break
+    }
+  }
+
+  return {
+    hasConnectedPort,
+    extensionPort,
+  }
+}
+
+function resolveBeltPortReferenceCollections(ctx: DecorationSyncContext): BeltPortReferenceCollections | null {
   const editor = ctx.renderHost.workspace.editor
   if (editor === null) {
-    return []
+    return null
   }
 
   const definitionMap = createEntityDefinitionMap(ctx)
@@ -224,92 +387,35 @@ export function resolveBeltPortExtensionEntries(ctx: DecorationSyncContext): Bel
 
       if (portReference.group.direction === "input" || portReference.group.direction === "bidirectional") {
         inputPorts.push(portReference)
-        const key = createConnectionKey(portReference.cell, portReference.edge)
-        const existing = inputPortsByConnectionKey.get(key)
-        if (existing === undefined) {
-          inputPortsByConnectionKey.set(key, [portReference])
-        } else {
-          existing.push(portReference)
-        }
+        addPortReference(inputPortsByConnectionKey, portReference)
       }
 
       if (portReference.group.direction === "output" || portReference.group.direction === "bidirectional") {
         outputPorts.push(portReference)
-        const key = createConnectionKey(portReference.cell, portReference.edge)
-        const existing = outputPortsByConnectionKey.get(key)
-        if (existing === undefined) {
-          outputPortsByConnectionKey.set(key, [portReference])
-        } else {
-          existing.push(portReference)
-        }
+        addPortReference(outputPortsByConnectionKey, portReference)
       }
     }
   }
 
-  const entries: BeltPortExtensionEntry[] = []
-
-  for (const outputPort of outputPorts) {
-    if (!isStrictBeltDefinitionId(outputPort.entity.definitionId)) {
-      continue
-    }
-
-    const targetCell = addGridPoints(outputPort.cell, resolveEdgeDelta(outputPort.edge))
-    const targetKey = createConnectionKey(targetCell, oppositeEdge(outputPort.edge))
-    const targetPorts = inputPortsByConnectionKey.get(targetKey) ?? []
-    const targetPort = targetPorts.find((candidate) =>
-      candidate.entity.id !== outputPort.entity.id
-      && isBeltPortExtensionEndpointDevice(ctx, candidate.entity.definitionId),
-    )
-
-    if (targetPort === undefined) {
-      continue
-    }
-
-    entries.push({
-      kind: "belt-output-to-device",
-      beltEntityId: outputPort.entity.id,
-      deviceEntityId: targetPort.entity.id,
-      boundary: resolvePortBoundaryPoint(outputPort.cell, outputPort.edge),
-      edge: outputPort.edge,
-      angleRadians: resolveEdgeAngleRadians(outputPort.edge),
-      localStartCells: 0,
-      localEndCells: BELT_INSERTION_DEPTH_CELLS,
-      spriteCenterXCells: BELT_INSERTION_DEPTH_CELLS - 0.5,
-    })
+  return {
+    inputPorts,
+    outputPorts,
+    inputPortsByConnectionKey,
+    outputPortsByConnectionKey,
   }
+}
 
-  for (const inputPort of inputPorts) {
-    if (!isStrictBeltDefinitionId(inputPort.entity.definitionId)) {
-      continue
-    }
-
-    const sourceCell = addGridPoints(inputPort.cell, resolveEdgeDelta(inputPort.edge))
-    const sourceKey = createConnectionKey(sourceCell, oppositeEdge(inputPort.edge))
-    const sourcePorts = outputPortsByConnectionKey.get(sourceKey) ?? []
-    const sourcePort = sourcePorts.find((candidate) =>
-      candidate.entity.id !== inputPort.entity.id
-      && isBeltPortExtensionEndpointDevice(ctx, candidate.entity.definitionId),
-    )
-
-    if (sourcePort === undefined) {
-      continue
-    }
-
-    const flowEdge = oppositeEdge(inputPort.edge)
-    entries.push({
-      kind: "device-output-to-belt",
-      beltEntityId: inputPort.entity.id,
-      deviceEntityId: sourcePort.entity.id,
-      boundary: resolvePortBoundaryPoint(inputPort.cell, inputPort.edge),
-      edge: flowEdge,
-      angleRadians: resolveEdgeAngleRadians(flowEdge),
-      localStartCells: -BELT_INSERTION_DEPTH_CELLS,
-      localEndCells: 0,
-      spriteCenterXCells: 0.5 - BELT_INSERTION_DEPTH_CELLS,
-    })
+function addPortReference(
+  map: Map<string, WorldPortReference[]>,
+  portReference: WorldPortReference,
+): void {
+  const key = createConnectionKey(portReference.cell, portReference.edge)
+  const existing = map.get(key)
+  if (existing === undefined) {
+    map.set(key, [portReference])
+  } else {
+    existing.push(portReference)
   }
-
-  return entries
 }
 
 export function resolveBeltVisualPathEntries(ctx: DecorationSyncContext): BeltVisualPathEntry[] {

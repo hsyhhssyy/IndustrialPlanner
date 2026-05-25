@@ -24,6 +24,7 @@ import {
 } from "@/domain/registry";
 import {
   buildProductionPlanningIndex,
+  computeItemDefaultPerMinute,
   computeProductionPlan,
   createProductionPlanningId,
   formatProductionDeviceCount,
@@ -283,7 +284,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   const addTarget = () => {
     void requestItemSelection((itemId) => {
       updateDemandInput(() => {
-        store.targets = [...store.targets, createPort(itemId, 60)];
+        store.targets = [...store.targets, createPort(itemId, computeItemDefaultPerMinute(itemId, index))];
       });
     });
   };
@@ -291,7 +292,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   const addSupply = () => {
     void requestItemSelection((itemId) => {
       updateDemandInput(() => {
-        store.supplies = [...store.supplies, createPort(itemId, 60)];
+        store.supplies = [...store.supplies, createPort(itemId, computeItemDefaultPerMinute(itemId, index))];
       });
     });
   };

@@ -27,7 +27,6 @@ type TempBlueprintShortcut = "copy" | "paste";
 
 export function createHypergryphBlueprintPlacementGestureModule(): GestureMappingModule<AppHost> {
   let lastTempBlueprint: BlueprintLibraryRecord | null = null;
-  let lastMousePosition: GesturePosition | null = null;
 
   return {
     id: "hypergryph-blueprint-placement-gesture",
@@ -100,10 +99,6 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
         return { status: "handled" };
       }
 
-      if (event.type === "mouse move") {
-        lastMousePosition = event.position;
-      }
-
       const editor = context.workspace.editor;
 
       if (
@@ -143,10 +138,6 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           return { status: "handled" };
 
         case "key down":
-          if (event.code === "AltLeft" || event.code === "AltRight") {
-            return { status: "handled" };
-          }
-
           if (!isRotatePlacementShortcut({
             appHost: context.appHost,
             code: event.code,
@@ -160,10 +151,6 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           return { status: "handled" };
 
         case "mouse dragstart":
-          if (event.modifiers.alt) {
-            return { status: "ignored" };
-          }
-
           return handlePlacementMouseDragStart({
             appHost: context.appHost,
             editor,
@@ -179,10 +166,6 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           });
 
         case "mouse move":
-          if (event.modifiers.alt) {
-            return { status: "ignored" };
-          }
-
           return drivePlacementPreview({
             appHost: context.appHost,
             editor,
@@ -190,9 +173,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           });
 
         case "mouse dragmove":
-          lastMousePosition = event.position;
-
-          if (event.originButton !== 0 || event.modifiers.alt) {
+          if (event.originButton !== 0) {
             return { status: "ignored" };
           }
 
@@ -208,19 +189,6 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             editor,
             position: event.position,
           });
-
-        case "key up":
-          if (event.code === "AltLeft" || event.code === "AltRight") {
-            if (lastMousePosition !== null) {
-              return drivePlacementPreview({
-                appHost: context.appHost,
-                editor,
-                position: lastMousePosition,
-              });
-            }
-            return { status: "handled" };
-          }
-          return { status: "ignored" };
 
         case "mouse dragend":
           return (
@@ -241,7 +209,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             return { status: "handled" };
           }
 
-          if (event.button === 0 && !event.longPress && !event.modifiers.alt) {
+          if (event.button === 0 && !event.longPress) {
             applyBlueprintPlacement(context.appHost, editor);
             return { status: "handled" };
           }

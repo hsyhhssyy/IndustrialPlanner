@@ -97,6 +97,59 @@ function createMockGraphInput(): {
   };
 }
 
+function createMockPlantSeedCycleGraphInput(): {
+  nodes: ProductionFlowNode[];
+  links: ProductionFlowLink[];
+} {
+  return {
+    nodes: [
+      {
+        id: "recipe:r_seedcol_bbflower_seed_from_bbflower_basic:target:item_plant_bbflower_seed_1",
+        kind: "recipe",
+        tone: "cycle",
+        title: "采种机",
+        subtitle: "1台",
+        iconSrc: PLACEHOLDER_ICON,
+        recipeId: "r_seedcol_bbflower_seed_from_bbflower_basic",
+        itemId: "item_plant_bbflower_seed_1",
+      },
+      {
+        id: "recipe:r_planter_bbflower_from_bbflower_seed_basic:target:item_plant_bbflower_1",
+        kind: "recipe",
+        tone: "normal",
+        title: "种植机",
+        subtitle: "1台",
+        iconSrc: PLACEHOLDER_ICON,
+        recipeId: "r_planter_bbflower_from_bbflower_seed_basic",
+        itemId: "item_plant_bbflower_1",
+      },
+    ],
+    links: [
+      {
+        id: "plant-feedback",
+        source: "recipe:r_planter_bbflower_from_bbflower_seed_basic:target:item_plant_bbflower_1",
+        target: "recipe:r_seedcol_bbflower_seed_from_bbflower_basic:target:item_plant_bbflower_seed_1",
+        value: 30,
+        itemId: "item_plant_bbflower_1",
+        title: "酮化灌木",
+        label: "30/min",
+        preferredFeedback: true,
+        targetSide: "right",
+      },
+      {
+        id: "seed-output",
+        source: "recipe:r_seedcol_bbflower_seed_from_bbflower_basic:target:item_plant_bbflower_seed_1",
+        target: "recipe:r_planter_bbflower_from_bbflower_seed_basic:target:item_plant_bbflower_1",
+        value: 60,
+        itemId: "item_plant_bbflower_seed_1",
+        title: "酮化树种",
+        label: "60/min",
+        sourceSide: "left",
+      },
+    ],
+  };
+}
+
 function createMockIndex(): ReturnType<typeof import("@/app/shell/production-planning/production-planning-model").buildProductionPlanningIndex> {
   return {
     itemMap: new Map(),
@@ -179,6 +232,38 @@ function dispatchWheelEvent(
     clientY: init.clientY,
   });
   target.dispatchEvent(event);
+}
+
+function getFlowCanvas(rootElement: ParentNode): HTMLDivElement {
+  const canvas = rootElement.querySelector("[class*='production-flow-canvas']") as HTMLDivElement | null;
+  expect(canvas).not.toBeNull();
+  return canvas!;
+}
+
+function getFlowNode(canvas: ParentNode, title: string): HTMLDivElement {
+  const node = Array.from(canvas.querySelectorAll("div[class*='production-flow-node']"))
+    .find((element) => !element.className.includes("production-flow-nodes") && element.textContent?.includes(title)) as HTMLDivElement | undefined;
+  expect(node).not.toBeUndefined();
+  return node!;
+}
+
+function getEdgePathByLabel(canvas: ParentNode, label: string): SVGPathElement {
+  const edge = Array.from(canvas.querySelectorAll("g"))
+    .find((element) => element.textContent?.includes(label));
+  expect(edge).not.toBeUndefined();
+
+  const path = edge!.querySelector("path[class*='production-flow-edge-path']") as SVGPathElement | null;
+  expect(path).not.toBeNull();
+  return path!;
+}
+
+function parsePathNumbers(path: string): number[] {
+  return Array.from(path.matchAll(/-?\d+(?:\.\d+)?/g), (match) => Number.parseFloat(match[0]));
+}
+
+function expectCubicPathNumbers(numbers: number[]): [number, number, number, number, number, number, number, number] {
+  expect(numbers).toHaveLength(8);
+  return numbers as [number, number, number, number, number, number, number, number];
 }
 
 // ---- tests ----
@@ -423,6 +508,72 @@ describe("ProductionFlowGraph touch regression", () => {
 
     expect(node!.style.top).toBe(initialTop);
     expect(node!.style.left).toBe(initialLeft);
+  });
+
+  it("keeps same-column plant seed cycle side loops local", () => {
+    vi.mocked(buildProductionFlowGraph).mockReturnValue(createMockPlantSeedCycleGraphInput());
+    render();
+
+    const canvas = getFlowCanvas(container);
+    const seedCollectorNode = getFlowNode(canvas, "采种机");
+    const planterNode = getFlowNode(canvas, "种植机");
+    const seedCollectorLeft = Number.parseFloat(seedCollectorNode.style.left);
+    const planterLeft = Number.parseFloat(planterNode.style.left);
+
+    act(() => {
+      dispatchPointerEvent(seedCollectorNode, "pointerdown", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 200,
+        clientY: 200,
+        button: 0,
+        buttons: 1,
+      });
+    });
+
+    act(() => {
+      dispatchPointerEvent(canvas, "pointermove", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 200 + planterLeft - seedCollectorLeft,
+        clientY: 200,
+        button: 0,
+        buttons: 1,
+      });
+    });
+
+    act(() => {
+      dispatchPointerEvent(canvas, "pointerup", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 200 + planterLeft - seedCollectorLeft,
+        clientY: 200,
+        button: 0,
+        buttons: 0,
+      });
+    });
+
+    expect(Number.parseFloat(seedCollectorNode.style.left)).toBeCloseTo(planterLeft);
+
+    const plantBodyPath = getEdgePathByLabel(canvas, "酮化灌木").getAttribute("d") ?? "";
+    const seedPath = getEdgePathByLabel(canvas, "酮化树种").getAttribute("d") ?? "";
+    const plantBodyNumbers = parsePathNumbers(plantBodyPath);
+    const seedNumbers = parsePathNumbers(seedPath);
+
+    expect(plantBodyPath).not.toContain(" L ");
+    expect(seedPath).not.toContain(" L ");
+
+    const [plantBodySourceX, , plantBodyControlX, , plantBodyControlX2, , plantBodyTargetX] = expectCubicPathNumbers(plantBodyNumbers);
+    const [seedSourceX, , seedControlX, , seedControlX2, , seedTargetX] = expectCubicPathNumbers(seedNumbers);
+    const plantBodyControlOffset = plantBodyControlX - Math.max(plantBodySourceX, plantBodyTargetX);
+    const seedControlOffset = Math.min(seedSourceX, seedTargetX) - seedControlX;
+
+    expect(plantBodyControlX).toBeCloseTo(plantBodyControlX2);
+    expect(seedControlX).toBeCloseTo(seedControlX2);
+    expect(plantBodyControlOffset).toBeGreaterThan(40);
+    expect(plantBodyControlOffset).toBeLessThanOrEqual(90);
+    expect(seedControlOffset).toBeGreaterThan(40);
+    expect(seedControlOffset).toBeLessThanOrEqual(90);
   });
 
   // ==================== Test 3: 滚轮缩放 ====================

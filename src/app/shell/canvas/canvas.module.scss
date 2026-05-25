@@ -417,17 +417,6 @@
   pointer-events: none;
 }
 
-// Alt 按下时恢复可交互
-.canvas-right-dock-toolbar--shortcut-alt-active {
-  pointer-events: auto;
-}
-
-// 快捷键模式下的按钮 hover：高亮 key badge
-.canvas-right-dock-toolbar-button--shortcut:not(:disabled):hover .canvas-right-dock-toolbar-shortcut-key {
-  border-color: var(--in-canvas-toolbar-button-hover-border);
-  background: var(--in-canvas-toolbar-button-hover-bg);
-}
-
 // 快捷键按键徽章
 .canvas-right-dock-toolbar-shortcut-key {
   display: inline-flex;

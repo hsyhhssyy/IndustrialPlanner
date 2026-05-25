@@ -1,6 +1,5 @@
 import { makeAutoObservable } from "mobx";
 import { createDefaultPlannerSessionState, type PlannerSessionState } from "@/shared/storage/planner-storage";
-import { createProductionPlanningId } from "./production-planning-model";
 import type {
   ProductionPlanningDisplayMode,
   ProductionPlanningViewMode,
@@ -30,18 +29,5 @@ export class ProductionPlanningInputStore {
 
   constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
-  }
-
-  /** 首次使用或无目标时补充默认目标 */
-  addDefaultTarget(): void {
-    if (this.targets.length === 0) {
-      this.targets = [
-        {
-          id: createProductionPlanningId("port"),
-          itemId: "item_iron_plate",
-          perMinute: 60,
-        },
-      ];
-    }
   }
 }

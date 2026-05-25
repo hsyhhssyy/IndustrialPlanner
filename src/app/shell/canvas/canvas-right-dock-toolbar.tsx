@@ -12,8 +12,6 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
-  useEffect,
-  useState,
 } from "react";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -84,31 +82,6 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
 
   const isShortcutMode = mode === "shortcut";
 
-  // Alt 键按下状态，用于快捷键模式下的点击穿透控制
-  const [altHeld, setAltHeld] = useState(false);
-
-  useEffect(() => {
-    if (!isShortcutMode) return;
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Alt") setAltHeld(true);
-    };
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "Alt") setAltHeld(false);
-    };
-    const onBlur = () => setAltHeld(false);
-
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    window.addEventListener("blur", onBlur);
-
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-      window.removeEventListener("blur", onBlur);
-    };
-  }, [isShortcutMode]);
-
   const stopUiPropagation = (
     event:
       | ReactMouseEvent<HTMLElement>
@@ -136,8 +109,8 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
   ) => {
     event.stopPropagation();
 
-    // 快捷键模式下没有按 Alt 时不触发，让事件穿透
-    if (isShortcutMode && !event.altKey) return;
+    // 快捷键模式下不触发，让事件穿透
+    if (isShortcutMode) return;
 
     if (event.pointerType === "mouse") {
       appHost.gestureAdapter.handleUiButtonMouseTap({
@@ -177,7 +150,6 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
       className={cm(styles, joinClassNames([
         "canvas-right-dock-toolbar",
         isShortcutMode ? "canvas-right-dock-toolbar--shortcut" : undefined,
-        isShortcutMode && altHeld ? "canvas-right-dock-toolbar--shortcut-alt-active" : undefined,
       ]))}
       onAuxClick={stopUiPropagationAndDefault}
       onClick={stopUiPropagation}
@@ -210,7 +182,6 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
             className={cm(styles, joinClassNames([
               "canvas-right-dock-toolbar-button",
               definition.tone ? `is-${definition.tone}` : undefined,
-              isShortcutMode ? "canvas-right-dock-toolbar-button--shortcut" : undefined,
             ]))}
             data-ui-button-id={buttonId}
             key={buttonId}

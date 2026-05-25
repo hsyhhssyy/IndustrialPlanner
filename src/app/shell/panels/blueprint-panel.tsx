@@ -3,9 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { AppHost } from "@/app/host/app-host";
 import {
   createImportedBlueprintDocument,
-  downloadBlueprintDocumentForTransfer,
   parseBlueprintTransferText,
-  serializeBlueprintDocumentForTransfer,
 } from "@/app/blueprint/blueprint-transfer";
 import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
 import {
@@ -26,8 +24,6 @@ import {
   readBlueprintFolder,
 } from "@/shared/storage/blueprint-storage";
 import LucideClipboard from "~icons/lucide/clipboard";
-import LucideCopy from "~icons/lucide/copy";
-import LucideDownload from "~icons/lucide/download";
 import LucideUpload from "~icons/lucide/upload";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -128,7 +124,6 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
   );
   const [isLoading, setIsLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [isCopying, setIsCopying] = useState(false);
   const [importCompletedCount, setImportCompletedCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedBlueprintId, setSelectedBlueprintId] = useState<string | null>(null);
@@ -272,16 +267,7 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
       compactLabelKey: "workbench.button.importBlueprintFromClipboardCompact",
       Icon: LucideClipboard,
     },
-    {
-      uiButtonId: "blueprint-action-export-file",
-      labelKey: "workbench.button.exportBlueprintToFile",
-      Icon: LucideDownload,
-    },
-    {
-      uiButtonId: "blueprint-action-copy-clipboard",
-      labelKey: "workbench.button.copyBlueprintToClipboard",
-      Icon: LucideCopy,
-    },
+
   ];
   const visibleOperationButtons = isTouchLayout
     ? operationButtons.filter((button) => button.compactLabelKey !== undefined)
@@ -354,61 +340,18 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
     await handleImportBlueprintText(fileText);
   };
 
-  const handleExportFileClick = () => {
-    if (selectedBlueprintRecord === null) {
-      return;
-    }
-
-    setErrorMessage(null);
-
-    try {
-      downloadBlueprintDocumentForTransfer(selectedBlueprintRecord);
-    } catch {
-      setErrorMessage(t("workbench.blueprint.exportFileFailed"));
-    }
-  };
-
-  const handleCopyClipboardClick = async () => {
-    if (selectedBlueprintRecord === null || isCopying) {
-      return;
-    }
-
-    if (typeof navigator === "undefined" || typeof navigator.clipboard?.writeText !== "function") {
-      setErrorMessage(t("workbench.blueprint.copyClipboardUnavailable"));
-      return;
-    }
-
-    setIsCopying(true);
-    setErrorMessage(null);
-
-    try {
-      await navigator.clipboard.writeText(
-        serializeBlueprintDocumentForTransfer(selectedBlueprintRecord),
-      );
-    } catch {
-      setErrorMessage(t("workbench.blueprint.copyClipboardFailed"));
-    } finally {
-      setIsCopying(false);
-    }
-  };
-
   const renderOperationButton = (button: BlueprintOperationButtonDefinition) => {
     const label = t(button.labelKey);
     const visibleLabel = isTouchLayout && button.compactLabelKey !== undefined
       ? t(button.compactLabelKey)
       : label;
-    const isExportAction = button.uiButtonId === "blueprint-action-export-file"
-      || button.uiButtonId === "blueprint-action-copy-clipboard";
-    const isDisabled = isExportAction
-      ? selectedBlueprintRecord === null || isCopying
-      : isImporting;
 
     return (
       <button
         aria-label={label}
         className={cm(styles, "placement-button placement-action-button blueprint-action-button")}
         data-ui-button-id={button.uiButtonId}
-        disabled={isDisabled}
+        disabled={isImporting}
         key={button.uiButtonId}
         onClick={() => {
           if (button.uiButtonId === "blueprint-action-import-file") {
@@ -418,16 +361,6 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
 
           if (button.uiButtonId === "blueprint-action-import-clipboard") {
             void handleImportClipboardClick();
-            return;
-          }
-
-          if (button.uiButtonId === "blueprint-action-export-file") {
-            handleExportFileClick();
-            return;
-          }
-
-          if (button.uiButtonId === "blueprint-action-copy-clipboard") {
-            void handleCopyClipboardClick();
           }
         }}
         title={label}

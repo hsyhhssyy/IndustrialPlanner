@@ -29,7 +29,16 @@ const SUPPRESSED_LINE_WIDTH_RATIO = 1 / 6
 const SUPPRESSED_ARROW_LENGTH_RATIO = 1 / 5
 const SUPPRESSED_ARROW_WIDTH_RATIO = 1 / 6
 const SCANLINE_TEXTURE_PATH = "/textures/scanline-45deg-50opacity.png"
-const SCANLINE_PADDING_TILES = 2
+// AI-REMOVED 2026-05-25:
+// Reason: 常量从 generic-device-sprite.ts 复制后从未在本文件中被引用
+// Trigger: ESLint @typescript-eslint/no-unused-vars
+// Evidence: grep 全文件未找到 SCANLINE_PADDING_TILES 的引用
+// Replacement: None
+// Risk: Low
+// Human Review: Not Required
+//
+// Original code:
+// const SCANLINE_PADDING_TILES = 2
 const SCANLINE_SCROLL_INTERVAL_MS = 2000
 const PREVIEW_BORDER_WIDTH = 1
 const PREVIEW_BORDER_ALPHA = 0.5

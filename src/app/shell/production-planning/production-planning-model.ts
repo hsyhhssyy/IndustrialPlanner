@@ -325,6 +325,27 @@ export function createProductionPlanningId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * 计算物品的默认吞吐率：单个设备满速运行一分钟的产出。
+ * 若无可用配方则回退到 60。
+ */
+export function computeItemDefaultPerMinute(
+  itemId: string,
+  index: ProductionPlanningIndex,
+): number {
+  const recipes = index.recipesByOutputItem.get(itemId);
+  if (!recipes || recipes.length === 0) return 60;
+
+  const candidate = recipes.find((r) => !isRecipeExcludedFromProductionPlanningAuto(r))
+    ?? recipes[0];
+  if (!candidate) return 60;
+
+  const output = candidate.outputs.find((o) => o.itemId === itemId);
+  if (!output || candidate.durationSeconds <= 0) return 60;
+
+  return (output.amount / candidate.durationSeconds) * 60;
+}
+
 function resolveDemand(
   itemId: string,
   demandPerMinute: number,

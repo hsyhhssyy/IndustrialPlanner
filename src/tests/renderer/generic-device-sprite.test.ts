@@ -718,7 +718,7 @@ describe("GenericDeviceSprite", () => {
 
     await flushMicrotasks(8)
 
-    expect(overlayLayer.addChild).not.toHaveBeenCalled()
+    expect(overlayLayer.addChild).toHaveBeenCalledTimes(1)
 
     const entityRoot = entityLayer.addChild.mock.calls[0]?.[0] as {
       children?: unknown[];
@@ -783,7 +783,7 @@ describe("GenericDeviceSprite", () => {
 
     await flushMicrotasks(8)
 
-    expect(overlayLayer.addChild).not.toHaveBeenCalled()
+    expect(overlayLayer.addChild).toHaveBeenCalledTimes(1)
     expect(resolveEntitySprite(entityLayer)).toMatchObject({
       texture: resolvedTexture,
       visible: true,
@@ -802,6 +802,7 @@ describe("GenericDeviceSprite", () => {
   it("draws a tinted liquid bead for filled straight pipes", async () => {
     const resolvedTexture = createLoadedTextureMock("pipe-device-texture")
     const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       [PIPE_BODY_KEY]: resolvedTexture,
       "texture-pipe_straight_1x1_liquid": resolvedTexture,
@@ -816,7 +817,7 @@ describe("GenericDeviceSprite", () => {
     sprite.attach({
       background: {} as never,
       entity: entityLayer as never,
-      overlay: {} as never,
+      overlay: overlayLayer as never,
     })
     sprite.syncLayout({
       x: 10,
@@ -856,6 +857,7 @@ describe("GenericDeviceSprite", () => {
   it("uses a compact square liquid bead for turn pipes", async () => {
     const resolvedTexture = createLoadedTextureMock("pipe-device-texture")
     const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-pipe_turn_cw_1x1": resolvedTexture,
       "texture-pipe_turn_cw_1x1_liquid": resolvedTexture,
@@ -869,7 +871,7 @@ describe("GenericDeviceSprite", () => {
     sprite.attach({
       background: {} as never,
       entity: entityLayer as never,
-      overlay: {} as never,
+      overlay: overlayLayer as never,
     })
     sprite.syncLayout({
       x: 10,
@@ -956,6 +958,145 @@ describe("GenericDeviceSprite", () => {
     expect(previewMask?.texture).toBe(resolvedMaskTexture)
   })
 
+  it("uses the blueprint footprint rectangle itself for simplified preview scanlines", async () => {
+    const resolvedTexture = createLoadedTextureMock("blueprint-device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("blueprint-device-mask-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BLUEPRINT_BODY_KEY]: resolvedTexture,
+      [BLUEPRINT_MASK_KEY]: resolvedMaskTexture,
+    }, {
+      gameUseSimplifiedDeviceIcons: true,
+    })
+    const sprite = new GenericDeviceSprite(
+      "dummy-blueprint-preview",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: [],
+      previewIds: ["dummy-blueprint-preview"],
+    })
+    Object.assign(context.workspace, {
+      app: createRenderContextAppStub(renderHost),
+    })
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 32,
+      rotation: 0,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 32,
+      rotation: 0,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    const previewEffectRoot = resolvePreviewEffectRoot(overlayLayer)
+    const scanlineTiling = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+
+    expect(previewEffectRoot?.visible).toBe(true)
+    expect(scanlineTiling).toMatchObject({
+      visible: true,
+      x: 40,
+      y: 40,
+      width: 48,
+      height: 32,
+      mask: null,
+      texture: {
+        id: "/textures/scanline-45deg-50opacity.png",
+      },
+    })
+  })
+
+  it("uses the blueprint footprint rectangle itself for simplified marquee selection", async () => {
+    const resolvedTexture = createLoadedTextureMock("blueprint-device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("blueprint-device-mask-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BLUEPRINT_BODY_KEY]: resolvedTexture,
+      [BLUEPRINT_MASK_KEY]: resolvedMaskTexture,
+    }, {
+      gameUseSimplifiedDeviceIcons: true,
+    })
+    const sprite = new GenericDeviceSprite(
+      "dummy-blueprint-marquee",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: [],
+      marqueeIds: ["dummy-blueprint-marquee"],
+      previewIds: [],
+    })
+    Object.assign(context.workspace, {
+      app: createRenderContextAppStub(renderHost),
+    })
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 32,
+      rotation: 0,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 32,
+      rotation: 0,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    const selectionEffectRoot = resolveSelectionEffectRoot(overlayLayer)
+    const selectionTiling = selectionEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+
+    expect(selectionEffectRoot?.visible).toBe(true)
+    expect(selectionTiling).toMatchObject({
+      visible: true,
+      x: 40,
+      y: 40,
+      width: 48,
+      height: 32,
+      mask: null,
+      texture: {
+        id: "/textures/blueprint-mask-50opacity.png",
+      },
+    })
+  })
+
   it("reloads the generic device textures after the simplified icon setting changes", async () => {
     const defaultTexture = createLoadedTextureMock("device-texture")
     const defaultMaskTexture = createLoadedTextureMock("device-mask-texture")
@@ -1031,6 +1172,7 @@ describe("GenericDeviceSprite", () => {
     const blueprintTexture = createLoadedTextureMock("belt-blueprint-texture")
 
     const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-belt_straight_1x1": defaultTexture,
       "blueprint-sprite-belt_straight_1x1": blueprintTexture,
@@ -1044,7 +1186,7 @@ describe("GenericDeviceSprite", () => {
     sprite.attach({
       background: {} as never,
       entity: entityLayer as never,
-      overlay: {} as never,
+      overlay: overlayLayer as never,
     })
 
     const context = createRenderContextStub({
@@ -1071,6 +1213,7 @@ describe("GenericDeviceSprite", () => {
   it("uses the muted light-theme tint for single selection, preview, and logistics head", async () => {
     const resolvedTexture = createLoadedTextureMock("belt-device-texture")
     const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-belt_straight_1x1": resolvedTexture,
     })
@@ -1083,7 +1226,7 @@ describe("GenericDeviceSprite", () => {
     sprite.attach({
       background: {} as never,
       entity: entityLayer as never,
-      overlay: {} as never,
+      overlay: overlayLayer as never,
     })
 
     await flushMicrotasks(4)
@@ -1116,6 +1259,7 @@ describe("GenericDeviceSprite", () => {
   it("uses the preview blue tint for multi selection", async () => {
     const resolvedTexture = createLoadedTextureMock("belt-device-texture")
     const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-belt_straight_1x1": resolvedTexture,
     })
@@ -1128,7 +1272,7 @@ describe("GenericDeviceSprite", () => {
     sprite.attach({
       background: {} as never,
       entity: entityLayer as never,
-      overlay: {} as never,
+      overlay: overlayLayer as never,
     })
 
     await flushMicrotasks(4)
@@ -1147,6 +1291,7 @@ describe("GenericDeviceSprite", () => {
   it("keeps the pipe multi-selection tint aligned with belt states", async () => {
     const resolvedTexture = createLoadedTextureMock("pipe-device-texture")
     const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-pipe_straight_1x1": resolvedTexture,
       "texture-pipe_straight_1x1_liquid": resolvedTexture,
@@ -1160,7 +1305,7 @@ describe("GenericDeviceSprite", () => {
     sprite.attach({
       background: {} as never,
       entity: entityLayer as never,
-      overlay: {} as never,
+      overlay: overlayLayer as never,
     })
 
     await flushMicrotasks(4)
@@ -1179,6 +1324,7 @@ describe("GenericDeviceSprite", () => {
   it("uses the preview blue tint for marquee candidates before apply", async () => {
     const resolvedTexture = createLoadedTextureMock("belt-device-texture")
     const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-belt_straight_1x1": resolvedTexture,
     })
@@ -1191,7 +1337,7 @@ describe("GenericDeviceSprite", () => {
     sprite.attach({
       background: {} as never,
       entity: entityLayer as never,
-      overlay: {} as never,
+      overlay: overlayLayer as never,
     })
 
     await flushMicrotasks(4)
@@ -1211,6 +1357,7 @@ describe("GenericDeviceSprite", () => {
   it("falls back to the ordinary tint when reverse marquee suppresses selection", async () => {
     const resolvedTexture = createLoadedTextureMock("belt-device-texture")
     const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-belt_straight_1x1": resolvedTexture,
     })
@@ -1223,7 +1370,7 @@ describe("GenericDeviceSprite", () => {
     sprite.attach({
       background: {} as never,
       entity: entityLayer as never,
-      overlay: {} as never,
+      overlay: overlayLayer as never,
     })
 
     await flushMicrotasks(4)
@@ -1243,6 +1390,7 @@ describe("GenericDeviceSprite", () => {
   it("uses the renderer focus tint for preview and logistics head under the dark theme", async () => {
     const resolvedTexture = createLoadedTextureMock("belt-device-texture")
     const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-belt_straight_1x1": resolvedTexture,
     })
@@ -1255,7 +1403,7 @@ describe("GenericDeviceSprite", () => {
     sprite.attach({
       background: {} as never,
       entity: entityLayer as never,
-      overlay: {} as never,
+      overlay: overlayLayer as never,
     })
 
     await flushMicrotasks(4)
@@ -2071,6 +2219,7 @@ function createRenderContextStub(options: {
             [EntityCollectionType.logisticsHead]: createCollectionStub(options.logisticsHeadIds ?? []),
           },
         },
+        queries: { resolveLogisticsDraftState: () => undefined },
       },
       simulation: {
         queries: {
@@ -2124,6 +2273,28 @@ function resolveDeviceLabelRoot(entityLayer: ReturnType<typeof createLayerStub>)
   } | undefined
 
   return entityRoot?.children?.[1] as {
+    visible?: boolean;
+    children?: unknown[];
+  } | undefined
+}
+
+function resolvePreviewEffectRoot(overlayLayer: ReturnType<typeof createLayerStub>) {
+  const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
+    children?: unknown[];
+  } | undefined
+
+  return overlayRoot?.children?.[0] as {
+    visible?: boolean;
+    children?: unknown[];
+  } | undefined
+}
+
+function resolveSelectionEffectRoot(overlayLayer: ReturnType<typeof createLayerStub>) {
+  const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
+    children?: unknown[];
+  } | undefined
+
+  return overlayRoot?.children?.[1] as {
     visible?: boolean;
     children?: unknown[];
   } | undefined
@@ -2215,6 +2386,18 @@ function createRenderHostStub(
     },
     textureManager: {
       getTexture,
+    },
+  }
+}
+
+function createRenderContextAppStub(renderHost: ReturnType<typeof createRenderHostStub>) {
+  return {
+    ...renderHost.workspace.app,
+    state: {
+      ...renderHost.workspace.app.state,
+      screenProfile: {
+        deviceClass: "desktop",
+      },
     },
   }
 }

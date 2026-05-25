@@ -310,10 +310,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return { status: "handled" };
 
         case "key down":
-          if (event.code === "AltLeft" || event.code === "AltRight") {
-            return { status: "handled" };
-          }
-
           if (!isRotatePlacementShortcut({
             appHost: context.appHost,
             code: event.code,
@@ -327,10 +323,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return { status: "handled" };
 
         case "mouse dragstart":
-          if (event.modifiers.alt) {
-            return { status: "ignored" };
-          }
-
           return handlePlacementMouseDragStart({
             appHost: context.appHost,
             editor,
@@ -346,10 +338,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           });
 
         case "mouse move":
-          if (event.modifiers.alt) {
-            return { status: "ignored" };
-          }
-
           return drivePlacementPreviewWithPerf({
             appHost: context.appHost,
             editor,
@@ -357,9 +345,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           });
 
         case "mouse dragmove":
-          lastMousePosition = event.position;
-
-          if (event.originButton !== 0 || event.modifiers.alt) {
+          if (event.originButton !== 0) {
             return { status: "ignored" };
           }
 
@@ -375,19 +361,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             editor,
             position: event.position,
           });
-
-        case "key up":
-          if (event.code === "AltLeft" || event.code === "AltRight") {
-            if (lastMousePosition !== null) {
-              return drivePlacementPreviewWithPerf({
-                appHost: context.appHost,
-                editor,
-                position: lastMousePosition,
-              });
-            }
-            return { status: "handled" };
-          }
-          return { status: "ignored" };
 
         case "mouse dragend":
           return (
@@ -408,7 +381,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             return { status: "handled" };
           }
 
-          if (event.button === 0 && !event.longPress && !event.modifiers.alt) {
+          if (event.button === 0 && !event.longPress) {
             applyPlacementOperation(context.appHost, editor, {
               keepPlacement: event.modifiers.ctrl || event.modifiers.shift,
             });

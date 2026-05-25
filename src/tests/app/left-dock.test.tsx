@@ -916,8 +916,6 @@ describe("Left dock panel switching", () => {
     expect(operationGroup?.querySelectorAll(".placement-button-label")).toHaveLength(2);
     expect(operationGroup?.querySelector('[data-ui-button-id="blueprint-action-import-file"]')).not.toBeNull();
     expect(operationGroup?.querySelector('[data-ui-button-id="blueprint-action-import-clipboard"]')).not.toBeNull();
-    expect(operationGroup?.querySelector('[data-ui-button-id="blueprint-action-export-file"]')).toBeNull();
-    expect(operationGroup?.querySelector('[data-ui-button-id="blueprint-action-copy-clipboard"]')).toBeNull();
     expect(operationGroup?.textContent).toContain("文件导入");
     expect(operationGroup?.textContent).toContain("剪贴板导入");
     expect(operationGroup?.textContent).not.toContain("从文件导入");

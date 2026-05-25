@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildProductionPlanningIndex,
+  computeItemDefaultPerMinute,
   computeProductionPlan,
   flattenProductionPlanningItemNodes as flattenNodes,
   type ProductionPlanningSourceConfig,
@@ -295,5 +296,30 @@ describe("production planning model", () => {
     expect(dumperRow?.isByproduct).toBe(true);
     expect(dumperRow?.depth).toBe(0);
     expect(dumperRow?.childIds).toContain(purifierByproductAcidRow?.id);
+  });
+});
+
+describe("computeItemDefaultPerMinute", () => {
+  const index = buildProductionPlanningIndex(createRegistryContract());
+
+  it("returns 60 for item without any recipe", () => {
+    expect(computeItemDefaultPerMinute("nonexistent_item", index)).toBe(60);
+  });
+
+  it("computes output from single-recipe item", () => {
+    // 源石粉末 r_crusher_originium_powder_basic: durationSeconds=2, amount=1 → 30
+    expect(computeItemDefaultPerMinute("item_originium_powder", index)).toBe(30);
+  });
+
+  it("prefers non-excluded recipe for items with multiple recipes", () => {
+    // 铁粒有多个冶炼配方，任一均为 (1/2)*60=30
+    const value = computeItemDefaultPerMinute("item_iron_nugget", index);
+    expect(value).toBe(30);
+  });
+
+  it("returns finite positive for crafted item", () => {
+    const value = computeItemDefaultPerMinute("item_copper_nugget", index);
+    expect(value).toBeGreaterThan(0);
+    expect(Number.isFinite(value)).toBe(true);
   });
 });

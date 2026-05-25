@@ -146,10 +146,6 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
 
       switch (event.type) {
         case "key down":
-          if (event.code === "AltLeft" || event.code === "AltRight") {
-            return { status: "handled" };
-          }
-
           if (handleRouteOrderShortcut({
             appHost: context.appHost,
             editor,
@@ -209,27 +205,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
             : { status: "handled" };
         }
 
-        case "key up":
-          {
-            const runtime = context.appHost.internalState.runtime.logisticsPlacement;
-            if (event.code === "AltLeft" || event.code === "AltRight") {
-              if (runtime.lastMousePosition !== null) {
-                return driveMouseLogisticsPreview({
-                  appHost: context.appHost,
-                  editor,
-                  position: runtime.lastMousePosition,
-                });
-              }
-              return { status: "handled" };
-            }
-          }
-          return { status: "ignored" };
-
         case "mouse move":
-          if (event.modifiers.alt) {
-            return { status: "ignored" };
-          }
-
           return driveMouseLogisticsPreview({
             appHost: context.appHost,
             editor,
@@ -248,7 +224,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
             return { status: "handled" };
           }
 
-          if (event.button !== 0 || event.longPress || event.modifiers.alt) {
+          if (event.button !== 0 || event.longPress) {
             return { status: "ignored" };
           }
 

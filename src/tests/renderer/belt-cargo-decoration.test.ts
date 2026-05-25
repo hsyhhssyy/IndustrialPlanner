@@ -471,7 +471,7 @@ describe("createBeltCargoDecoration", () => {
         points?: number[];
       }>;
     }
-    expect(mask.drawCommands).toHaveLength(2)
+    expect(mask.drawCommands).toHaveLength(3)
     expect(mask.drawCommands[0]).toMatchObject({
       type: "rect",
       x: 50,
@@ -482,6 +482,10 @@ describe("createBeltCargoDecoration", () => {
     expect(mask.drawCommands[1]).toMatchObject({
       type: "poly",
       points: [150, 50, 170, 50, 170, 150, 150, 150],
+    })
+    expect(mask.drawCommands[2]).toMatchObject({
+      type: "poly",
+      points: [25, 50, 50, 50, 50, 150, 25, 150],
     })
 
     const emptyFrame = createContext({
@@ -536,7 +540,7 @@ describe("createBeltCargoDecoration", () => {
         points?: number[];
       }>;
     }
-    expect(mask.drawCommands).toHaveLength(2)
+    expect(mask.drawCommands).toHaveLength(3)
     expect(mask.drawCommands[0]).toMatchObject({
       type: "rect",
       x: 50,
@@ -547,6 +551,104 @@ describe("createBeltCargoDecoration", () => {
     expect(mask.drawCommands[1]).toMatchObject({
       type: "poly",
       points: [30, 50, 50, 50, 50, 150, 30, 150],
+    })
+    expect(mask.drawCommands[2]).toMatchObject({
+      type: "poly",
+      points: [150, 50, 175, 50, 175, 150, 150, 150],
+    })
+
+    decoration.destroy()
+  })
+
+  it("reopens a disconnected belt end after the target device is removed", () => {
+    const decoration = createBeltCargoDecoration()
+    const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    const connectedFrame = createContext({
+      getTexture,
+      includeOutputSource: true,
+      includeInsertionTarget: true,
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 1,
+      }],
+    })
+
+    decoration.sync(connectedFrame as never)
+    const connectedMask = resolveCargoViewRoot(decoration, 0).children[0] as {
+      drawCommands: Array<{ points?: number[] }>;
+    }
+    expect(connectedMask.drawCommands[1]).toMatchObject({
+      points: [150, 50, 170, 50, 170, 150, 150, 150],
+    })
+
+    const disconnectedFrame = createContext({
+      getTexture,
+      includeOutputSource: true,
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 1,
+      }],
+    })
+
+    decoration.sync(disconnectedFrame as never)
+    const disconnectedMask = resolveCargoViewRoot(decoration, 0).children[0] as {
+      drawCommands: Array<{ points?: number[] }>;
+    }
+    expect(disconnectedMask.drawCommands[2]).toMatchObject({
+      points: [150, 50, 175, 50, 175, 150, 150, 150],
+    })
+
+    decoration.destroy()
+  })
+
+  it("reopens a disconnected belt start after the source device is removed", () => {
+    const decoration = createBeltCargoDecoration()
+    const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    const connectedFrame = createContext({
+      getTexture,
+      includeOutputSource: true,
+      includeInsertionTarget: true,
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 0,
+      }],
+    })
+
+    decoration.sync(connectedFrame as never)
+    const connectedMask = resolveCargoViewRoot(decoration, 0).children[0] as {
+      drawCommands: Array<{ points?: number[] }>;
+    }
+    expect(connectedMask.drawCommands[2]).toMatchObject({
+      points: [30, 50, 50, 50, 50, 150, 30, 150],
+    })
+
+    const disconnectedFrame = createContext({
+      getTexture,
+      includeInsertionTarget: true,
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 0,
+      }],
+    })
+
+    decoration.sync(disconnectedFrame as never)
+    const disconnectedMask = resolveCargoViewRoot(decoration, 0).children[0] as {
+      drawCommands: Array<{ points?: number[] }>;
+    }
+    expect(disconnectedMask.drawCommands[2]).toMatchObject({
+      points: [25, 50, 50, 50, 50, 150, 25, 150],
     })
 
     decoration.destroy()
