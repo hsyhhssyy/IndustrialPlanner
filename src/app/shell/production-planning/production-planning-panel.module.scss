@@ -1072,6 +1072,11 @@
   background: var(--surface-3);
 }
 
+.production-flow-toolbar button svg {
+  width: 15px;
+  height: 15px;
+}
+
 .production-flow-surface {
   position: absolute;
   top: 0;
@@ -1090,15 +1095,17 @@
   pointer-events: none;
 }
 
-.production-flow-edge > path:first-child {
+.production-flow-edge-path {
   fill: none;
   stroke: color-mix(in srgb, var(--accent-strong) 72%, var(--line-strong));
   stroke-linecap: round;
   stroke-opacity: 0.5;
 }
 
-.production-flow-edge.is-backward > path:first-child,
-.production-flow-edge.is-self > path:first-child {
+.production-flow-edge.is-backward .production-flow-edge-path,
+.production-flow-edge.is-self .production-flow-edge-path,
+.production-flow-edge.is-left-exit .production-flow-edge-path,
+.production-flow-edge.is-right-entry .production-flow-edge-path {
   stroke: color-mix(in srgb, var(--warn) 76%, var(--line-strong));
   stroke-dasharray: 7 6;
   stroke-opacity: 0.62;
@@ -1108,7 +1115,11 @@
   fill: var(--text-2);
   font-size: 0.62rem;
   font-weight: 700;
+  paint-order: stroke;
   pointer-events: none;
+  stroke: var(--surface-0);
+  stroke-linejoin: round;
+  stroke-width: 3px;
 }
 
 .production-flow-edge-label-path {
@@ -1189,6 +1200,11 @@
 
 .production-flow-node.is-byproduct {
   border-left-color: var(--text-2);
+}
+
+.production-flow-node.is-transient {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--surface-1) 88%, var(--surface-3));
 }
 
 .production-planning-muted {

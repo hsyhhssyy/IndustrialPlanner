@@ -6,17 +6,17 @@
  * 将一张包含多个设备的 PNG 大图，自动切分为独立的设备精灵图。
  *
  * 工作原理：
- *   1. 像素级 8-邻域 BFS 连通域检测 — 每个"设备"是一块连续的非透明像素
- *   2. 设备之间由透明像素隔开，且包围盒互不重叠
+ *   1. 像素级 8-邻域 BFS 连通域检测 — 每个"设备"是一块连续的非白色（非透明）像素
+ *   2. 设备之间由白色或透明像素隔开，且包围盒互不重叠
  *   3. 过滤掉过小的连通域（噪点）
  *   4. 对每个设备求最小包围盒（像素坐标）
  *   5. 用 sharp.extract 裁出包围盒区域
- *   6. 用 sharp.trim 移除四周透明边缘
+ *   6. 用 sharp.trim 移除四周白色/透明边缘
  *   7. 将设备实体及其内部镂空区域与白底合成，烘焙为最终颜色
  *   8. 输出为独立 PNG：<原文件名>-1.png、<原文件名>-2.png …
  *
  * 用法：
- *   node src/scripts/split-device-sprites.mjs <输入PNG路径> [最小像素数]
+ *   node src/scripts/split-device-sprites.mjs <输入PNG路径> [最小像素数] [白色阈值]
  */
 
 import { mkdir } from 'node:fs/promises';
@@ -33,8 +33,37 @@ const projectRoot = path.resolve(scriptDirectory, '..', '..');
 const outputDir = path.join(projectRoot, 'resources', 'device-sprite-original');
 
 /** 连通域的最小像素数，少于此值的视为噪点予以过滤 */
-const DEFAULT_MIN_PIXELS = 50;
+const DEFAULT_MIN_PIXELS = 10;
+
+/** 连通域的最小宽/高（像素），宽度或高度小于此值的视为碎片予以过滤 */
+const MIN_COMPONENT_DIMENSION = 10;
+
+/** 白色判定阈值：RGB 各通道与 255 的差值 ≤ 此值则视为白色背景 */
+const DEFAULT_WHITE_THRESHOLD = 10;
+
 const WHITE_OVERLAY_EDGE_ALPHA_THRESHOLD = 10;
+
+// ---------------------------------------------------------------------------
+// 辅助：背景像素判定
+// ---------------------------------------------------------------------------
+
+/**
+ * 判断像素是否为背景（透明 或 白色）。
+ * @param {Uint8Array} rawData - RGBA 原始像素
+ * @param {number} pixelIndex - 像素索引
+ * @param {number} [threshold] - 白色阈值，默认 DEFAULT_WHITE_THRESHOLD
+ * @returns {boolean}
+ */
+function isBackgroundPixel(rawData, pixelIndex, threshold = DEFAULT_WHITE_THRESHOLD) {
+  const offset = pixelIndex * 4;
+  const a = rawData[offset + 3];
+  // 透明像素视为背景
+  if (a === 0) return true;
+  const r = rawData[offset];
+  const g = rawData[offset + 1];
+  const b = rawData[offset + 2];
+  return r >= 255 - threshold && g >= 255 - threshold && b >= 255 - threshold;
+}
 
 // ---------------------------------------------------------------------------
 // 步骤 1：像素级 8-邻域 BFS 连通域检测
@@ -46,7 +75,7 @@ const WHITE_OVERLAY_EDGE_ALPHA_THRESHOLD = 10;
  * @param {number} height
  * @returns {Array<{pixelCount: number, bbox: [number,number,number,number]}>}
  */
-function findConnectedComponents(rawData, width, height) {
+function findConnectedComponents(rawData, width, height, whiteThreshold = DEFAULT_WHITE_THRESHOLD) {
   const totalPixels = width * height;
   const visited = new Uint8Array(totalPixels);
 
@@ -63,8 +92,8 @@ function findConnectedComponents(rawData, width, height) {
     for (let startX = 0; startX < width; startX++) {
       const startIdx = startY * width + startX;
       if (visited[startIdx]) continue;
-      // 透明像素跳过
-      if (rawData[startIdx * 4 + 3] === 0) continue;
+      // 背景像素（透明/白色）跳过
+      if (isBackgroundPixel(rawData, startIdx, whiteThreshold)) continue;
 
       // BFS
       let minX = startX, maxX = startX;
@@ -92,7 +121,7 @@ function findConnectedComponents(rawData, width, height) {
 
           const nIdx = ny * width + nx;
           if (visited[nIdx]) continue;
-          if (rawData[nIdx * 4 + 3] === 0) continue;
+          if (isBackgroundPixel(rawData, nIdx, whiteThreshold)) continue;
 
           visited[nIdx] = 1;
           queueX.push(nx);
@@ -125,10 +154,19 @@ function sortComponents(components) {
 }
 
 // ---------------------------------------------------------------------------
-// 步骤 3：填充不与边缘连通的透明孔洞
+// 步骤 3：裁切四周白色/透明边缘
 // ---------------------------------------------------------------------------
 
-function trimTransparentEdges(rawData, width, height, channels) {
+/**
+ * 从 rawData 四周裁掉白色或透明边缘，返回紧凑区域。
+ * 同时支持透明图和白底图。
+ * @param {Uint8Array} rawData
+ * @param {number} width
+ * @param {number} height
+ * @param {number} channels
+ * @param {number} [whiteThreshold]
+ */
+function trimBackgroundEdges(rawData, width, height, channels, whiteThreshold = DEFAULT_WHITE_THRESHOLD) {
   let minX = width;
   let minY = height;
   let maxX = -1;
@@ -136,8 +174,15 @@ function trimTransparentEdges(rawData, width, height, channels) {
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const alpha = rawData[(y * width + x) * channels + 3];
-      if (alpha === 0) {
+      const offset = (y * width + x) * channels;
+      const a = rawData[offset + 3];
+      // 透明像素视为背景
+      if (a === 0) continue;
+      // 白色像素视为背景
+      const r = rawData[offset];
+      const g = rawData[offset + 1];
+      const b = rawData[offset + 2];
+      if (r >= 255 - whiteThreshold && g >= 255 - whiteThreshold && b >= 255 - whiteThreshold) {
         continue;
       }
 
@@ -268,12 +313,101 @@ function compositeSpriteInteriorOverWhite(rawData, width, height) {
   }
 }
 
-async function buildProcessedSprite(extractedBuffer, shouldTrimTransparentEdges) {
+/**
+ * 从四边 BFS 扩散，将连通到边缘的近白色像素设为透明。
+ * 遇到非近白色像素时停止扩散，避免侵蚀设备内部。
+ */
+function removeEdgeWhiteFringe(rawData, width, height, whiteThreshold = DEFAULT_WHITE_THRESHOLD) {
+  const totalPixels = width * height;
+  const visited = new Uint8Array(totalPixels);
+  const queueX = [];
+  const queueY = [];
+
+  const NEIGHBORS = [
+    -1, -1,  -1, 0,  -1, 1,
+     0, -1,          0, 1,
+     1, -1,   1, 0,   1, 1,
+  ];
+
+  function isNearWhite(offset) {
+    const r = rawData[offset];
+    const g = rawData[offset + 1];
+    const b = rawData[offset + 2];
+    return r >= 255 - whiteThreshold && g >= 255 - whiteThreshold && b >= 255 - whiteThreshold;
+  }
+
+  // 从四边入队
+  for (let x = 0; x < width; x++) {
+    pushIfEdgeWhite(x, 0);
+    pushIfEdgeWhite(x, height - 1);
+  }
+  for (let y = 1; y < height - 1; y++) {
+    pushIfEdgeWhite(0, y);
+    pushIfEdgeWhite(width - 1, y);
+  }
+
+  function pushIfEdgeWhite(x, y) {
+    const idx = y * width + x;
+    if (visited[idx]) return;
+    visited[idx] = 1;
+    const offset = idx * 4;
+    if (rawData[offset + 3] === 0) {
+      // 透明像素也入队，以便穿透透明区域继续发现白边
+      queueX.push(x);
+      queueY.push(y);
+      return;
+    }
+    if (!isNearWhite(offset)) return;
+    queueX.push(x);
+    queueY.push(y);
+  }
+
+  // BFS 扩散
+  let transparentCount = 0;
+  while (queueX.length > 0) {
+    const cx = queueX.pop();
+    const cy = queueY.pop();
+
+    for (let d = 0; d < 16; d += 2) {
+      const nx = cx + NEIGHBORS[d];
+      const ny = cy + NEIGHBORS[d + 1];
+      if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+      const nIdx = ny * width + nx;
+      if (visited[nIdx]) continue;
+      const offset = nIdx * 4;
+      if (rawData[offset + 3] === 0) {
+        // 透明像素：入队以穿透透明区域，但不标记为白边移除目标
+        visited[nIdx] = 1;
+        transparentCount++;
+        queueX.push(nx);
+        queueY.push(ny);
+        continue;
+      }
+      if (!isNearWhite(offset)) continue;
+      visited[nIdx] = 1;
+      queueX.push(nx);
+      queueY.push(ny);
+    }
+  }
+
+  // 将 BFS 标记到的近白像素设为透明（已是透明的像素无需处理）
+  for (let i = 0; i < totalPixels; i++) {
+    if (visited[i] && rawData[i * 4 + 3] !== 0) {
+      const offset = i * 4;
+      rawData[offset] = 0;
+      rawData[offset + 1] = 0;
+      rawData[offset + 2] = 0;
+      rawData[offset + 3] = 0;
+    }
+  }
+}
+
+async function buildProcessedSprite(extractedBuffer, shouldTrimTransparentEdges, whiteThreshold = DEFAULT_WHITE_THRESHOLD) {
   const image = sharp(extractedBuffer);
   const { data, info } = await image.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
 
   const processedSprite = shouldTrimTransparentEdges
-    ? trimTransparentEdges(data, info.width, info.height, info.channels) ?? {
+    ? trimBackgroundEdges(data, info.width, info.height, info.channels, whiteThreshold) ?? {
       data,
       width: info.width,
       height: info.height,
@@ -290,6 +424,14 @@ async function buildProcessedSprite(extractedBuffer, shouldTrimTransparentEdges)
     processedSprite.data,
     processedSprite.width,
     processedSprite.height,
+  );
+
+  // 移除边缘白边：从四边 BFS 扩散，将连通的近白色像素变为透明
+  removeEdgeWhiteFringe(
+    processedSprite.data,
+    processedSprite.width,
+    processedSprite.height,
+    whiteThreshold,
   );
 
   return {
@@ -310,9 +452,9 @@ async function buildProcessedSprite(extractedBuffer, shouldTrimTransparentEdges)
 // ---------------------------------------------------------------------------
 
 /**
- * 从原图中裁出 bbox 区域，然后按 alpha 裁掉四周透明像素
+ * 从原图中裁出 bbox 区域，然后裁掉四周白色/透明边缘
  */
-async function extractAndTrim(sourceImage, bbox) {
+async function extractAndTrim(sourceImage, bbox, whiteThreshold = DEFAULT_WHITE_THRESHOLD) {
   const [minX, minY, maxX, maxY] = bbox;
   const extractWidth = maxX - minX + 1;
   const extractHeight = maxY - minY + 1;
@@ -329,9 +471,9 @@ async function extractAndTrim(sourceImage, bbox) {
   }
 
   try {
-    return await buildProcessedSprite(extracted, true);
+    return await buildProcessedSprite(extracted, true, whiteThreshold);
   } catch {
-    return buildProcessedSprite(extracted, false);
+    return buildProcessedSprite(extracted, false, whiteThreshold);
   }
 }
 
@@ -342,17 +484,21 @@ async function extractAndTrim(sourceImage, bbox) {
 async function main() {
   const inputPath = process.argv[2];
   if (!inputPath) {
-    console.error('用法: node src/scripts/split-device-sprites.mjs <输入PNG路径> [最小像素数]');
+    console.error('用法: node src/scripts/split-device-sprites.mjs <输入PNG路径> [最小像素数] [白色阈值]');
     process.exit(1);
   }
 
   const minPixels = parseInt(process.argv[3], 10) || DEFAULT_MIN_PIXELS;
+  const whiteThreshold = parseInt(process.argv[4], 10);
+  // 若指定了白色阈值则覆盖默认值（isNaN 表示未指定，使用默认）
+  const effectiveWhiteThreshold = Number.isNaN(whiteThreshold) ? DEFAULT_WHITE_THRESHOLD : whiteThreshold;
 
   const inputAbsPath = path.resolve(inputPath);
   const inputBasename = path.basename(inputAbsPath, path.extname(inputAbsPath));
 
   console.log(`📥 输入: ${inputAbsPath}`);
   console.log(`📐 最小设备像素数: ${minPixels}`);
+  console.log(`🎨 白色阈值: ${effectiveWhiteThreshold}`);
 
   const { data, info } = await sharp(inputAbsPath)
     .ensureAlpha()
@@ -362,14 +508,26 @@ async function main() {
   console.log(`🖼️  图像尺寸: ${info.width}×${info.height}`);
 
   // 像素级连通域检测
-  const allComponents = findConnectedComponents(data, info.width, info.height);
+  const allComponents = findConnectedComponents(data, info.width, info.height, effectiveWhiteThreshold);
   console.log(`📦 检测到 ${allComponents.length} 个连通域`);
 
   // 过滤噪点
-  const components = allComponents.filter((c) => c.pixelCount >= minPixels);
-  const filtered = allComponents.length - components.length;
-  if (filtered > 0) {
-    console.log(`🧹 过滤 ${filtered} 个噪点（< ${minPixels} px）`);
+  const pixelFiltered = allComponents.filter((c) => c.pixelCount >= minPixels);
+  const pixelFilteredCount = allComponents.length - pixelFiltered.length;
+  if (pixelFilteredCount > 0) {
+    console.log(`🧹 过滤 ${pixelFilteredCount} 个噪点（< ${minPixels} px）`);
+  }
+
+  // 过滤分隔线（宽度或高度过小的细线）
+  const components = pixelFiltered.filter((c) => {
+    const [minX, minY, maxX, maxY] = c.bbox;
+    const w = maxX - minX + 1;
+    const h = maxY - minY + 1;
+    return w >= MIN_COMPONENT_DIMENSION && h >= MIN_COMPONENT_DIMENSION;
+  });
+  const dimFiltered = pixelFiltered.length - components.length;
+  if (dimFiltered > 0) {
+    console.log(`🧹 过滤 ${dimFiltered} 个碎片（宽或高 < ${MIN_COMPONENT_DIMENSION} px）`);
   }
 
   // 排序
@@ -396,7 +554,7 @@ async function main() {
       `包围盒[${minX},${minY} ${rawW}×${rawH}]`,
     );
 
-    const result = await extractAndTrim(sourceImage, bbox);
+    const result = await extractAndTrim(sourceImage, bbox, effectiveWhiteThreshold);
 
     if (!result) {
       console.log(`    ⏭️  裁切失败，跳过`);

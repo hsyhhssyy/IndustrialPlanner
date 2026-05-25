@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 
 import type { ProductionPlanningDisplayMode, ProductionPlanningIndex, ProductionPlanningResult } from "../production-planning-model";
 import { buildProductionFlowGraph, type ProductionFlowLink, type ProductionFlowNode } from "./flow-graph-builder";
@@ -79,7 +80,7 @@ export function ProductionFlowGraph({
       iterations: 8,
     });
   }, [graphInput]);
-  const [graph, setGraph] = useState(initialLayout);
+  const [graph, setGraph] = useState(() => cloneSankeyGraph(initialLayout));
   const [viewport, setRawViewport] = useState<ViewportState>(() => normalizeViewportState(initialViewport));
   const viewportRef = useRef(viewport);
 
@@ -108,7 +109,11 @@ export function ProductionFlowGraph({
   });
 
   useEffect(() => {
-    setGraph(initialLayout);
+    setGraph(cloneSankeyGraph(initialLayout));
+  }, [initialLayout]);
+
+  const resetNodeLayout = useCallback(() => {
+    setGraph(cloneSankeyGraph(initialLayout));
   }, [initialLayout]);
 
   // --- wheel zoom (centered on cursor) ---
@@ -275,7 +280,7 @@ export function ProductionFlowGraph({
             }
             node.x0 = nodeDrag.startX0 + dx;
             node.x1 = nodeDrag.startX1 + dx;
-            node.y0 = Math.max(0, nodeDrag.startY0 + dy);
+            node.y0 = nodeDrag.startY0 + dy;
             node.y1 = Math.max(node.y0 + 28, nodeDrag.startY1 + dy);
             return node;
           }),
@@ -334,6 +339,14 @@ export function ProductionFlowGraph({
     >
       <div className={styles["production-flow-toolbar"]}>
         <button type="button" onClick={() => setViewport({ x: 22, y: 22, scale: 1 })}>1:1</button>
+        <button
+          type="button"
+          aria-label={t("productionPlanning.resetLayout")}
+          title={t("productionPlanning.resetLayout")}
+          onClick={resetNodeLayout}
+        >
+          <LucideRotateCcw aria-hidden="true" />
+        </button>
         <button type="button" onClick={() => setViewport((current) => ({ ...current, scale: clamp(current.scale - 0.12, MIN_SCALE, MAX_SCALE) }))}>-</button>
         <button type="button" onClick={() => setViewport((current) => ({ ...current, scale: clamp(current.scale + 0.12, MIN_SCALE, MAX_SCALE) }))}>+</button>
       </div>
@@ -378,6 +391,7 @@ function FlowNode({
     styles["production-flow-node"],
     styles[`is-${node.source.kind}`],
     styles[`is-${node.source.tone}`],
+    node.source.isTransient === true ? styles["is-transient"] : null,
   ].filter(Boolean).join(" ");
   const metric = node.source.kind === "recipe" && displayMode === "device"
     ? node.source.subtitle
@@ -408,28 +422,44 @@ function FlowEdge({ link }: { readonly link: SankeyLink<ProductionFlowNode, Prod
   const className = [
     styles["production-flow-edge"],
     styles[`is-${link.direction}`],
+    link.original.sourceSide === "left" ? styles["is-left-exit"] : null,
+    link.original.targetSide === "right" ? styles["is-right-entry"] : null,
   ].filter(Boolean).join(" ");
 
   return (
     <g className={className}>
-      <path d={path} strokeWidth={Math.max(2, Math.min(18, link.width))} />
+      <path id={edgePathId(link.id)} d={path} className={styles["production-flow-edge-label-path"]} />
+      <path className={styles["production-flow-edge-path"]} d={path} strokeWidth={resolveVisibleLinkWidth(link)} />
       <text>
         <textPath href={`#${edgePathId(link.id)}`} startOffset="50%">
           {link.original.title} {link.original.label}
         </textPath>
       </text>
-      <path id={edgePathId(link.id)} d={path} className={styles["production-flow-edge-label-path"]} />
     </g>
   );
 }
 
 function createLinkPath(link: SankeyLink<ProductionFlowNode, ProductionFlowLink>): string {
-  const sourceX = link.source.x1 + 22;
+  const sourceSide = link.original.sourceSide ?? "right";
+  const sourceX = (sourceSide === "left" ? link.source.x0 : link.source.x1) + 22;
   const sourceY = mapLinkYToNodeCard(link.source, link.y0) + 22;
-  const targetX = link.target.x0 + 22;
+  const targetSide = link.original.targetSide ?? "left";
+  const targetX = (targetSide === "right" ? link.target.x1 : link.target.x0) + 22;
   const targetY = mapLinkYToNodeCard(link.target, link.y1) + 22;
+  const visibleWidth = resolveVisibleLinkWidth(link);
+  const sideOffset = 48 + Math.max(8, visibleWidth);
 
-  if (link.direction === "forward") {
+  if (sourceSide === "left" && targetSide === "left") {
+    const controlX = Math.min(sourceX, targetX) - sideOffset;
+    return `M ${sourceX} ${sourceY} C ${controlX} ${sourceY}, ${controlX} ${targetY}, ${targetX} ${targetY}`;
+  }
+
+  if (sourceSide === "right" && targetSide === "right") {
+    const controlX = Math.max(sourceX, targetX) + sideOffset;
+    return `M ${sourceX} ${sourceY} C ${controlX} ${sourceY}, ${controlX} ${targetY}, ${targetX} ${targetY}`;
+  }
+
+  if (link.direction === "forward" && sourceSide === "right" && targetSide !== "right") {
     const midX = (sourceX + targetX) / 2;
     return `M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${targetY}, ${targetX} ${targetY}`;
   }
@@ -437,10 +467,14 @@ function createLinkPath(link: SankeyLink<ProductionFlowNode, ProductionFlowLink>
   const bottom = Math.max(
     getNodeCardTop(link.source) + NODE_CARD_HEIGHT,
     getNodeCardTop(link.target) + NODE_CARD_HEIGHT,
-  ) + 52 + Math.max(8, link.width) + 22;
-  const sourceControl = sourceX + 44;
-  const targetControl = targetX - 44;
+  ) + 52 + Math.max(8, visibleWidth) + 22;
+  const sourceControl = sourceSide === "left" ? sourceX - 44 : sourceX + 44;
+  const targetControl = targetSide === "right" ? targetX + 44 : targetX - 44;
   return `M ${sourceX} ${sourceY} C ${sourceControl} ${sourceY}, ${sourceControl} ${bottom}, ${sourceX} ${bottom} L ${targetX} ${bottom} C ${targetControl} ${bottom}, ${targetControl} ${targetY}, ${targetX} ${targetY}`;
+}
+
+function resolveVisibleLinkWidth(link: SankeyLink<ProductionFlowNode, ProductionFlowLink>): number {
+  return Math.max(2, Math.min(18, link.width));
 }
 
 function getNodeCardTop(node: SankeyNode<ProductionFlowNode>): number {
@@ -478,6 +512,39 @@ function normalizeViewportState(value: ViewportState | undefined): ViewportState
 
 function normalizeFiniteNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function cloneSankeyGraph(
+  graph: SankeyGraph<ProductionFlowNode, ProductionFlowLink>,
+): SankeyGraph<ProductionFlowNode, ProductionFlowLink> {
+  const nodeById = new Map<string, SankeyNode<ProductionFlowNode>>();
+  const nodes = graph.nodes.map((node) => {
+    const clone: SankeyNode<ProductionFlowNode> = {
+      ...node,
+      sourceLinks: [],
+      targetLinks: [],
+    };
+    nodeById.set(clone.id, clone);
+    return clone;
+  });
+  const links = graph.links.map((link) => {
+    const source = nodeById.get(link.source.id);
+    const target = nodeById.get(link.target.id);
+    if (source === undefined || target === undefined) {
+      throw new Error("Unable to clone Sankey graph link endpoint");
+    }
+
+    const clone: SankeyLink<ProductionFlowNode, ProductionFlowLink> = {
+      ...link,
+      source,
+      target,
+    };
+    source.sourceLinks.push(clone);
+    target.targetLinks.push(clone);
+    return clone;
+  });
+
+  return { nodes, links };
 }
 
 function resolveLayoutWidth(graphInput: ReturnType<typeof buildProductionFlowGraph>): number {

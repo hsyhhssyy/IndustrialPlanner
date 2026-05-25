@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   buildProductionPlanningIndex,
   computeProductionPlan,
+  type ProductionPlanningIndex,
+  type ProductionPlanningItemNode,
   type ProductionPlanningPort,
+  type ProductionPlanningRecipeNode,
+  type ProductionPlanningResult,
   type ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
 import { buildProductionFlowGraph, createSankeyLayout } from "@/app/shell/production-planning/flow";
@@ -14,6 +18,77 @@ function port(itemId: string, perMinute: number): ProductionPlanningPort {
     id: itemId,
     itemId,
     perMinute,
+  };
+}
+
+function recipeNode(
+  id: string,
+  recipeId: string,
+  targetItemId: string,
+  inputs: readonly ProductionPlanningPort[],
+  outputs: readonly ProductionPlanningPort[],
+  inputItems: readonly ProductionPlanningItemNode[] = [],
+): ProductionPlanningRecipeNode {
+  return {
+    id,
+    kind: "recipe",
+    recipeId,
+    targetItemId,
+    durationSeconds: 60,
+    cyclesPerMinute: Math.max(...outputs.map((output) => output.perMinute), 1),
+    deviceCount: 1,
+    inputs: inputs.map((input) => ({ ...input })),
+    outputs: outputs.map((output) => ({ ...output })),
+    inputItems: [...inputItems],
+  };
+}
+
+function itemNode(
+  id: string,
+  itemId: string,
+  demandPerMinute: number,
+  producedPerMinute: number,
+  nodeRecipe: ProductionPlanningRecipeNode | null,
+): ProductionPlanningItemNode {
+  return {
+    id,
+    kind: "item",
+    itemId,
+    demandPerMinute,
+    suppliedPerMinute: 0,
+    producedPerMinute,
+    unresolvedPerMinute: 0,
+    supply: {
+      manual: 0,
+      surplus: 0,
+      infinite: 0,
+      cycle: 0,
+    },
+    recipeNode: nodeRecipe,
+    isInfiniteSource: false,
+    isCycleSource: false,
+    blockedByCycle: false,
+  };
+}
+
+function emptyPlanningIndex(): ProductionPlanningIndex {
+  return {
+    itemById: new Map(),
+    entityById: new Map(),
+    recipeById: new Map(),
+    recipesByOutputItem: new Map(),
+    allItems: [],
+    naturalResourceItemIds: new Set(),
+  };
+}
+
+function planningResult(roots: readonly ProductionPlanningItemNode[]): ProductionPlanningResult {
+  return {
+    roots: [...roots],
+    itemTotals: [],
+    recipeTotals: [],
+    unresolvedPerMinute: 0,
+    byproductItemIds: new Set(),
   };
 }
 
@@ -81,11 +156,95 @@ describe("production planning flow graph", () => {
 
     const graph = buildProductionFlowGraph(result, index, t, "device");
     const byproduct = graph.nodes.find((node) => node.itemId === "item_liquid_xiranite_lowpoly");
-    const byproductLink = graph.links.find((link) => link.target === byproduct?.id);
+    const byproductLink = graph.links.find((link) => link.source === byproduct?.id);
 
     expect(byproduct?.tone).toBe("byproduct");
-    expect(byproductLink?.source.startsWith("recipe:")).toBe(true);
+    expect(byproduct?.id).toContain(":target:item_liquid_xiranite_lowpoly");
+    expect(byproductLink?.target.startsWith("recipe:")).toBe(true);
     expect(byproductLink?.value).toBeGreaterThan(0);
+  });
+
+  it("adds a transient item junction only for many-to-many material flow", () => {
+    const index = emptyPlanningIndex();
+    const producerB = itemNode(
+      "item-a-from-b",
+      "item_a",
+      30,
+      30,
+      recipeNode("recipe-node-b", "recipe-b", "item_a", [], [port("item_a", 30)]),
+    );
+    const producerC = itemNode(
+      "item-a-from-c",
+      "item_a",
+      20,
+      20,
+      recipeNode("recipe-node-c", "recipe-c", "item_a", [], [port("item_a", 20)]),
+    );
+    const targetX = itemNode(
+      "item-x",
+      "item_x",
+      25,
+      25,
+      recipeNode("recipe-node-x", "recipe-x", "item_x", [port("item_a", 25)], [port("item_x", 25)], [producerB]),
+    );
+    const targetY = itemNode(
+      "item-y",
+      "item_y",
+      25,
+      25,
+      recipeNode("recipe-node-y", "recipe-y", "item_y", [port("item_a", 25)], [port("item_y", 25)], [producerC]),
+    );
+
+    const graph = buildProductionFlowGraph(planningResult([targetX, targetY]), index, t, "device");
+    const junction = graph.nodes.find((node) => node.id === "item:item_a");
+
+    expect(junction?.isTransient).toBe(true);
+    expect(graph.nodes.some((node) => node.id === "recipe:recipe-b:target:item_a")).toBe(true);
+    expect(graph.nodes.some((node) => node.id === "recipe:recipe-c:target:item_a")).toBe(true);
+    expect(graph.nodes.some((node) => node.id === "recipe:recipe-x:target:item_x")).toBe(true);
+    expect(graph.nodes.some((node) => node.id === "recipe:recipe-y:target:item_y")).toBe(true);
+    expect(graph.links.some((link) => link.source === "recipe:recipe-b:target:item_a" && link.target === "item:item_a")).toBe(true);
+    expect(graph.links.some((link) => link.source === "recipe:recipe-c:target:item_a" && link.target === "item:item_a")).toBe(true);
+    expect(graph.links.some((link) => link.source === "item:item_a" && link.target === "recipe:recipe-x:target:item_x")).toBe(true);
+    expect(graph.links.some((link) => link.source === "item:item_a" && link.target === "recipe:recipe-y:target:item_y")).toBe(true);
+  });
+
+  it("connects one producer directly to multiple consumers without a transient item", () => {
+    const index = emptyPlanningIndex();
+    const producerForX = itemNode(
+      "item-a-for-x",
+      "item_a",
+      25,
+      25,
+      recipeNode("recipe-node-b-x", "recipe-b", "item_a", [], [port("item_a", 25)]),
+    );
+    const producerForY = itemNode(
+      "item-a-for-y",
+      "item_a",
+      25,
+      25,
+      recipeNode("recipe-node-b-y", "recipe-b", "item_a", [], [port("item_a", 25)]),
+    );
+    const targetX = itemNode(
+      "item-x",
+      "item_x",
+      25,
+      25,
+      recipeNode("recipe-node-x", "recipe-x", "item_x", [port("item_a", 25)], [port("item_x", 25)], [producerForX]),
+    );
+    const targetY = itemNode(
+      "item-y",
+      "item_y",
+      25,
+      25,
+      recipeNode("recipe-node-y", "recipe-y", "item_y", [port("item_a", 25)], [port("item_y", 25)], [producerForY]),
+    );
+
+    const graph = buildProductionFlowGraph(planningResult([targetX, targetY]), index, t, "device");
+
+    expect(graph.nodes.some((node) => node.id === "item:item_a")).toBe(false);
+    expect(graph.links.some((link) => link.source === "recipe:recipe-b:target:item_a" && link.target === "recipe:recipe-x:target:item_x")).toBe(true);
+    expect(graph.links.some((link) => link.source === "recipe:recipe-b:target:item_a" && link.target === "recipe:recipe-y:target:item_y")).toBe(true);
   });
 
   it("turns productive cycles into real feedback links in device mode", () => {
@@ -109,6 +268,23 @@ describe("production planning flow graph", () => {
 
     expect(graph.nodes.some((node) => node.tone === "cycle")).toBe(true);
     expect(layout.links.some((link) => link.direction === "backward")).toBe(true);
+
+    const seedCollectorFeedback = graph.links.find((link) => (
+      link.source.includes("r_planter_moss_from_moss_seed_basic")
+      && link.target.includes("r_seedcol_moss_seed_from_moss_basic")
+      && link.itemId === "item_plant_moss_3"
+    ));
+    const seedCollectorSeedOutput = graph.links.find((link) => (
+      link.source.includes("r_seedcol_moss_seed_from_moss_basic")
+      && link.target.includes("r_planter_moss_from_moss_seed_basic")
+      && link.itemId === "item_plant_moss_seed_3"
+    ));
+    const layoutFeedback = layout.links.find((link) => link.id === seedCollectorFeedback?.id);
+
+    expect(seedCollectorFeedback?.preferredFeedback).toBe(true);
+    expect(seedCollectorFeedback?.targetSide).toBe("right");
+    expect(seedCollectorSeedOutput?.sourceSide).toBe("left");
+    expect(layoutFeedback?.direction).toBe("backward");
   });
 
   it("collapses recipes in item mode to show item-to-item flow", () => {

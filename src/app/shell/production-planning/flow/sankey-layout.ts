@@ -10,6 +10,7 @@ export interface SankeyInputLink {
   readonly source: string;
   readonly target: string;
   readonly value: number;
+  readonly preferredFeedback?: boolean;
 }
 
 export interface SankeyNode<N extends SankeyInputNode> extends SankeyInputNode {
@@ -548,5 +549,28 @@ function markFeedbackArcDirections<N extends SankeyInputNode, L extends SankeyIn
     const sourceOrder = orderByNode.get(link.source) ?? 0;
     const targetOrder = orderByNode.get(link.target) ?? 0;
     link.direction = sourceOrder === targetOrder ? "self" : sourceOrder < targetOrder ? "forward" : "backward";
+  }
+
+  applyPreferredFeedbackArcDirections(graph);
+}
+
+function applyPreferredFeedbackArcDirections<N extends SankeyInputNode, L extends SankeyInputLink>(
+  graph: SankeyGraph<N, L>,
+): void {
+  for (const link of graph.links) {
+    if (link.original.preferredFeedback !== true || link.source === link.target) {
+      continue;
+    }
+
+    link.direction = "backward";
+    const opposite = graph.links.find((candidate) => (
+      candidate !== link
+      && candidate.source === link.target
+      && candidate.target === link.source
+      && candidate.original.preferredFeedback !== true
+    ));
+    if (opposite !== undefined) {
+      opposite.direction = "forward";
+    }
   }
 }

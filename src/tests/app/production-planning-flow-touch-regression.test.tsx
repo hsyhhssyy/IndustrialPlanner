@@ -314,6 +314,117 @@ describe("ProductionFlowGraph touch regression", () => {
     expect(afterDragTransform).toContain("translate(");
   });
 
+  it("allows dragging a node above the layout origin", () => {
+    render();
+
+    const canvas = container.querySelector("[class*='production-flow-canvas']") as HTMLDivElement | null;
+    expect(canvas).not.toBeNull();
+
+    const node = Array.from(canvas!.querySelectorAll("[class*='production-flow-node']"))
+      .find((element) => !element.className.includes("production-flow-nodes")) as HTMLDivElement | undefined;
+    expect(node).not.toBeNull();
+
+    const initialTop = Number.parseFloat(node!.style.top);
+    expect(Number.isFinite(initialTop)).toBe(true);
+
+    act(() => {
+      dispatchPointerEvent(node!, "pointerdown", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 200,
+        clientY: 200,
+        button: 0,
+        buttons: 1,
+      });
+    });
+
+    act(() => {
+      dispatchPointerEvent(canvas!, "pointermove", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 200,
+        clientY: -120,
+        button: 0,
+        buttons: 1,
+      });
+    });
+
+    act(() => {
+      dispatchPointerEvent(canvas!, "pointerup", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 200,
+        clientY: -120,
+        button: 0,
+        buttons: 0,
+      });
+    });
+
+    const afterTop = Number.parseFloat(node!.style.top);
+    expect(afterTop).toBeLessThan(initialTop);
+    expect(afterTop).toBeLessThan(0);
+  });
+
+  it("resets dragged nodes to the initial flow layout", () => {
+    render();
+
+    const canvas = container.querySelector("[class*='production-flow-canvas']") as HTMLDivElement | null;
+    expect(canvas).not.toBeNull();
+
+    const node = Array.from(canvas!.querySelectorAll("[class*='production-flow-node']"))
+      .find((element) => !element.className.includes("production-flow-nodes")) as HTMLDivElement | undefined;
+    expect(node).not.toBeNull();
+
+    const initialTop = node!.style.top;
+    const initialLeft = node!.style.left;
+
+    act(() => {
+      dispatchPointerEvent(node!, "pointerdown", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 200,
+        clientY: 200,
+        button: 0,
+        buttons: 1,
+      });
+    });
+
+    act(() => {
+      dispatchPointerEvent(canvas!, "pointermove", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 320,
+        clientY: 80,
+        button: 0,
+        buttons: 1,
+      });
+    });
+
+    act(() => {
+      dispatchPointerEvent(canvas!, "pointerup", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 320,
+        clientY: 80,
+        button: 0,
+        buttons: 0,
+      });
+    });
+
+    expect(node!.style.top).not.toBe(initialTop);
+    expect(node!.style.left).not.toBe(initialLeft);
+
+    const resetLayoutButton = canvas!.querySelector("[title='productionPlanning.resetLayout']") as HTMLButtonElement | null;
+    expect(resetLayoutButton).not.toBeNull();
+
+    act(() => {
+      resetLayoutButton!.click();
+    });
+
+    expect(node!.style.top).toBe(initialTop);
+    expect(node!.style.left).toBe(initialLeft);
+  });
+
   // ==================== Test 3: 滚轮缩放 ====================
   it("zooms the viewport on wheel event", () => {
     render();
