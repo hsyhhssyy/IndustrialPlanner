@@ -137,7 +137,7 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
   const userFolderStack = folderStacksByLibrary.user;
   const importTargetFolderId = userFolderStack.at(-1)?.folderId ?? null;
   const activeLibrary = getBlueprintLibraryDescriptor(activeTab);
-  const selectedBlueprintRecord = directoryListing.blueprints.find((record) => {
+  const _selectedBlueprintRecord = directoryListing.blueprints.find((record) => {
     return record.blueprintId === selectedBlueprintId;
   }) ?? null;
 

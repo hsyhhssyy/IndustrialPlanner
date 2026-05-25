@@ -2926,7 +2926,7 @@ function updatePort(
   return ports.map((port) => port.id === id ? { ...port, ...patch } : port);
 }
 
-function normalizeFlowInput(value: string): number {
+function _normalizeFlowInput(value: string): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }

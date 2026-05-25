@@ -51,7 +51,7 @@ function fireEnter(input: HTMLInputElement) {
   });
 }
 
-function fireEscape(input: HTMLInputElement) {
+function _fireEscape(input: HTMLInputElement) {
   act(() => {
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   });
@@ -59,26 +59,23 @@ function fireEscape(input: HTMLInputElement) {
 
 describe("NumberInput", () => {
   let container: HTMLDivElement;
-  let root: Root | null;
+  let root: Root;
 
   beforeEach(() => {
     container = document.createElement("div");
     document.body.appendChild(container);
-    root = null;
+    root = createRoot(container);
   });
 
   afterEach(() => {
-    if (root !== null) {
-      act(() => {
-        root.unmount();
-      });
-    }
+    act(() => {
+      root.unmount();
+    });
     container.remove();
   });
 
   describe("rendering", () => {
     it("renders as type=text with inputMode=decimal", () => {
-      root = createRoot(container);
       act(() => {
         root.render(<NumberInput value={5} />);
       });
@@ -88,7 +85,6 @@ describe("NumberInput", () => {
     });
 
     it("renders initial number value as string in the input", () => {
-      root = createRoot(container);
       act(() => {
         root.render(<NumberInput value={42} />);
       });
@@ -97,7 +93,6 @@ describe("NumberInput", () => {
     });
 
     it("accepts string value", () => {
-      root = createRoot(container);
       act(() => {
         root.render(<NumberInput value="3.14" />);
       });
@@ -106,7 +101,6 @@ describe("NumberInput", () => {
     });
 
     it("applies className", () => {
-      root = createRoot(container);
       act(() => {
         root.render(<NumberInput value={0} className="my-input" />);
       });
@@ -115,7 +109,6 @@ describe("NumberInput", () => {
     });
 
     it("forwards data-* attributes", () => {
-      root = createRoot(container);
       act(() => {
         root.render(<NumberInput value={0} data-test-id="num-foo" />);
       });
@@ -124,7 +117,6 @@ describe("NumberInput", () => {
     });
 
     it("respects disabled prop", () => {
-      root = createRoot(container);
       act(() => {
         root.render(<NumberInput value={0} disabled />);
       });
@@ -133,7 +125,6 @@ describe("NumberInput", () => {
     });
 
     it("respects placeholder", () => {
-      root = createRoot(container);
       act(() => {
         root.render(<NumberInput value={0} placeholder="请输入" />);
       });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 interface NumberInputProps {
   value: number | string;
@@ -61,15 +61,18 @@ export function NumberInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const focusedRef = useRef(false);
   const originalValueRef = useRef(draft);
+  const prevValueRef = useRef(value);
 
   // 外部 value 变化时同步到草稿（仅在未聚焦时）
-  useEffect(() => {
+  // 使用 render-phase state update 而非 useEffect，避免 react-hooks/set-state-in-effect 告警
+  if (prevValueRef.current !== value) {
+    prevValueRef.current = value;
     if (!focusedRef.current) {
       const next = toString(value);
       setDraft(next);
       originalValueRef.current = next;
     }
-  }, [value]);
+  }
 
   const commit = useCallback(() => {
     const parsed = parseNumber(draft, min, max, emptyFallback);
@@ -110,7 +113,6 @@ export function NumberInput({
         event.preventDefault();
         const reverted = originalValueRef.current;
         setDraft(reverted);
-        // eslint-disable-next-line react-compiler/react-compiler -- intentional revert before blur
         onRawChange?.(reverted);
         inputRef.current?.blur();
       }
