@@ -209,6 +209,19 @@ export function createEditorPlacementActions({
       });
       const replacedEntityIds = new Set(Object.keys(replacementTargets));
 
+      // 蓝图包含协议核心时，标记当前文档中的协议核心为被替换实体，
+      // 使其在同一 commit 内被移除，避免出现两个协议核心。
+      const previewHasProtocolCore = previewDrafts.some(
+        (draft) => workspace.registry.queries.isProtocolCore(draft.definitionId),
+      );
+      if (previewHasProtocolCore) {
+        for (const [entityId, entity] of Object.entries(currentDocument.entities)) {
+          if (workspace.registry.queries.isProtocolCore(entity.definitionId)) {
+            replacedEntityIds.add(entityId);
+          }
+        }
+      }
+
       const nextEntities = { ...currentDocument.entities };
       // 从 entities 中删除被替换的旧实体。
       for (const targetId of replacedEntityIds) {

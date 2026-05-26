@@ -1,0 +1,103 @@
+.recipe-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recipe-display-device {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.65rem;
+  color: var(--text-2);
+  min-width: 36px;
+
+  img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+}
+
+.recipe-display-device-colon {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+
+.recipe-display-formula {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.recipe-display-formula-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.recipe-display-formula-plus {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-2);
+  margin: 0 2px;
+}
+
+.recipe-display-formula-icon {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 36px;
+  height: 36px;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+
+  > span {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.65);
+    border-radius: 3px;
+    padding: 0 3px;
+    line-height: 1.2;
+  }
+}
+
+.recipe-display-formula-arrow {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 0 8px;
+  color: var(--text-2);
+  font-size: 0.78rem;
+  line-height: 1;
+
+  > span:first-child {
+    font-size: 0.6rem;
+    letter-spacing: -1px;
+    scale: 0.65;
+  }
+
+  > span:last-child {
+    font-size: 0.6rem;
+    font-weight: 600;
+  }
+}

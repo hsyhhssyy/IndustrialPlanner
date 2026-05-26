@@ -231,7 +231,8 @@ function isExcludedFromBlueprintBatch(definition) {
     || definition.id.startsWith('pipe_')
     || definition.id.startsWith('item_log_')
     || definition.id.startsWith('item_pipe_')
-    || definition.id.includes('udpipe');
+    || definition.id.includes('udpipe')
+    || definition.id.includes('water_pump');
 }
 
 async function loadBlueprintAsset(fileName, rotationDegrees = 0) {

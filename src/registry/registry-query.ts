@@ -46,6 +46,10 @@ const GENERAL_LOGISTICS_DEVICE_IDS = new Set<string>([
     "item_pipe_admission",
 ])
 
+const PROTOCOL_CORE_DEVICE_IDS = new Set<string>([
+    "item_port_sp_hub_1",
+])
+
 export const createRegistryQuery = (): RegistryQuery => {
     return {
         isDedicatedLogisticsDevice(definitionId) {
@@ -56,6 +60,9 @@ export const createRegistryQuery = (): RegistryQuery => {
         },
         isGeneralLogisticsDevice(definitionId) {
             return GENERAL_LOGISTICS_DEVICE_IDS.has(definitionId)
+        },
+        isProtocolCore(definitionId) {
+            return PROTOCOL_CORE_DEVICE_IDS.has(definitionId)
         },
         isItemLiquid(itemId) {
             return LIQUID_ITEM_IDS.has(itemId)

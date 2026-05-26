@@ -3349,7 +3349,21 @@ describe("createEditorHost", () => {
 
     await expect(editorHost.actions.loadLatestBaseDocument("valley4_protocol_core")).resolves.toBe(true);
 
-    expect(editorHost.document.getSnapshot()).toEqual(valleyDocument);
+    expect(editorHost.document.getSnapshot()).toEqual({
+      ...valleyDocument,
+      entities: {
+        ...valleyDocument.entities,
+        "protocol-core:valley4_protocol_core": {
+          id: "protocol-core:valley4_protocol_core",
+          definitionId: "item_port_sp_hub_1",
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+      },
+      entityOrder: ["protocol-core:valley4_protocol_core", ...valleyDocument.entityOrder],
+    });
     expect(editorHost.internalState.internalPersistState.lastDocumentId).toBe(valleyDocument.documentKey);
     expect(editorHost.internalState.internalPersistState.latestDocumentIdByBaseId).toMatchObject({
       valley4_protocol_core: valleyDocument.documentKey,
@@ -3376,7 +3390,15 @@ describe("createEditorHost", () => {
     const document = editorHost.document.getSnapshot();
 
     expect(document.baseId).toBe("valley4_infra_outpost");
-    expect(document.entityOrder).toEqual([]);
+    expect(document.entityOrder).toEqual(["protocol-core:valley4_infra_outpost"]);
+    expect(document.entities["protocol-core:valley4_infra_outpost"]).toEqual({
+      id: "protocol-core:valley4_infra_outpost",
+      definitionId: "item_port_sp_hub_1",
+      position: { x: 0, y: 0 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    });
     expect(editorHost.internalState.internalPersistState.latestDocumentIdByBaseId.valley4_infra_outpost).toBe(
       document.documentKey,
     );

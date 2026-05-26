@@ -131,6 +131,11 @@ export function createEditorSelectionActions({
           continue;
         }
 
+        // 协议核心不可删除
+        if (workspace.registry.queries.isProtocolCore(entity.definitionId)) {
+          continue;
+        }
+
         deletedEntityIds.add(isDraftEntity(entity) ? entity.originalEntityId : entity.id);
       }
 

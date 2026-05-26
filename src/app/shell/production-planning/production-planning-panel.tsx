@@ -50,6 +50,7 @@ import { hookPlannerIndexedDbPersistence } from "./production-planning-persist";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { NumberInput } from "@/app/shell/shared/number-input";
+import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 
 type ProductionPlanningScreen = "input" | "result";
 
@@ -1536,31 +1537,7 @@ function ProductionPlanningTreeDetail({
         onSelectRecipe={onSelectRecipe}
         t={t}
       />
-      {recipe !== undefined && (
-        <div className={cm(styles, "production-planning-recipe-formula")}>
-          {recipe.inputs.map((input, i) => (
-            <span key={`in-${input.itemId}`} className={cm(styles, "production-planning-recipe-formula-item")}>
-              {i > 0 && <span className={cm(styles, "production-planning-recipe-formula-plus")}>+</span>}
-              <span className={cm(styles, "production-planning-recipe-formula-icon")}>
-                <img alt="" src={resolveProductionPlanningItemIconSrc(input.itemId, index)} />
-                <span>{input.amount}</span>
-              </span>
-            </span>
-          ))}
-          <span className={cm(styles, "production-planning-recipe-formula-arrow")}>
-            <span>▶▶</span>
-            <span>{row.recipeNode.durationSeconds}{t("productionPlanning.second_short")}</span>
-          </span>
-          {recipe.outputs.map((output) => (
-            <span key={`out-${output.itemId}`} className={cm(styles, "production-planning-recipe-formula-item")}>
-              <span className={cm(styles, "production-planning-recipe-formula-icon")}>
-                <img alt="" src={resolveProductionPlanningItemIconSrc(output.itemId, index)} />
-                <span>{output.amount}</span>
-              </span>
-            </span>
-          ))}
-        </div>
-      )}
+      <RecipeDisplay recipeId={row.recipeNode.recipeId} index={index} t={t} />
       <div className={cm(styles, "production-planning-recipe-ports")}>
         <PortChipList title={t("productionPlanning.requiredInputs")} ports={row.recipeNode.inputs} index={index} t={t} />
         <PortChipList title={t("productionPlanning.totalOutputs")} ports={row.recipeNode.outputs} index={index} t={t} />

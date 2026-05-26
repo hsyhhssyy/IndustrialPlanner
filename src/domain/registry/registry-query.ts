@@ -7,6 +7,12 @@ export interface RegistryQuery {
 	isGeneralLogisticsDevice(definitionId: string): boolean;
 
 	/**
+	 * 判定 definitionId 是否为协议核心设备。
+	 * 协议核心不可删除，基地初始化时自动创建，蓝图放置含协议核心时移动而非新增。
+	 */
+	isProtocolCore(definitionId: string): boolean;
+
+	/**
 	 * 判定物品是否为液体域。
 	 * 依据 item-definition.ts 中的 tags: ["liquid", ...] 标记。
 	 * 未标记或不在注册表中的物品一律返回 false（固体）。

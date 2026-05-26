@@ -1,6 +1,8 @@
 import { createWorldDocument } from "@/domain/document/world-document";
+import type { WorldDocument } from "@/domain/document/world-document";
 import type { EditorAction } from "@/domain/editor/editor-action";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import type { RegistryQuery } from "@/domain/registry/registry-query";
 
 import {
   resolveLatestWorldDocumentForBase,
@@ -26,7 +28,10 @@ export function createEditorDocumentActions({
         baseId,
         latestDocumentIdByBaseId: state.internalPersistState.latestDocumentIdByBaseId,
       });
-      const nextDocument = latestDocument ?? createWorldDocument({ baseId });
+      const nextDocument = ensureProtocolCoreEntity({
+        document: latestDocument ?? createWorldDocument({ baseId }),
+        queries: workspace.registry.queries,
+      });
 
       resetDocumentRuntimeState(state);
       const committedDocument = document.setSnapshot(nextDocument);
@@ -38,6 +43,36 @@ export function createEditorDocumentActions({
 
       return true;
     },
+  };
+}
+
+function ensureProtocolCoreEntity(options: {
+  document: WorldDocument;
+  queries: RegistryQuery;
+}): WorldDocument {
+  const hasProtocolCore = Object.values(options.document.entities)
+    .some((entity) => options.queries.isProtocolCore(entity.definitionId));
+
+  if (hasProtocolCore) {
+    return options.document;
+  }
+
+  const entityId = `protocol-core:${options.document.baseId}`;
+
+  return {
+    ...options.document,
+    entities: {
+      ...options.document.entities,
+      [entityId]: {
+        id: entityId,
+        definitionId: "item_port_sp_hub_1",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    },
+    entityOrder: [entityId, ...options.document.entityOrder],
   };
 }
 
