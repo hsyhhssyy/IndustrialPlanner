@@ -149,8 +149,10 @@ function searchUpstreamFromOutputNode(options: {
       return;
     }
 
-    solveOutputNode(options.topology, options.state, options.outputNode, options.nextAnchors, options.perf);
-    markNodeVisited(options.state, options.outputNode);
+    const outputMoved = solveOutputNode(options.topology, options.state, options.outputNode, options.nextAnchors, options.perf);
+    if (outputMoved) {
+      markNodeVisited(options.state, options.outputNode);
+    }
 
     const inputNode = getDeviceInputViewNodes(options.topology, device)[0];
     if (inputNode === undefined || isNodeVisited(options.state, inputNode)) {
@@ -198,9 +200,10 @@ function solveOutputNode(
   node: CompiledSimulationNode,
   nextAnchors: Map<string, CompiledSimulationNode>,
   perf?: SolveTransferGraphPerf,
-): void {
+): boolean {
   if (perf !== undefined) perf.outputNodeCount += 1;
 
+  let movedAny = false;
   let moved = true;
   while (moved) {
     moved = false;
@@ -233,6 +236,7 @@ function solveOutputNode(
 
       if (perf !== undefined) perf.moveCount += 1;
 
+      movedAny = true;
       edgeState.shadowPush = "accept";
       edgeState.amount += 1;
       edgeState.currentThroughCount += 1;
@@ -261,6 +265,7 @@ function solveOutputNode(
       moved = true;
     }
   }
+  return movedAny;
 }
 
 function solveInputNode(
@@ -599,7 +604,7 @@ function getOrderedInputEdgeIds(
     state,
     portIds: node.inputPortIds,
     edgeSelector: getPortInputEdgeIds,
-  });
+  }).filter((edgeId) => topology.transferEdges[edgeId]?.targetNodeId === node.id);
 }
 
 function getOrderedOutputEdgeIds(
@@ -612,7 +617,7 @@ function getOrderedOutputEdgeIds(
     state,
     portIds: node.outputPortIds,
     edgeSelector: getPortOutputEdgeIds,
-  });
+  }).filter((edgeId) => topology.transferEdges[edgeId]?.sourceNodeId === node.id);
 }
 
 function getOrderedEdgeIdsForPorts(options: {
@@ -660,7 +665,9 @@ function getRoutingCursorGroupKey(port: CompiledSimulationPort | undefined): str
 }
 
 function getRawOutputEdgeIds(topology: CompiledSimulationTopology, node: CompiledSimulationNode): readonly string[] {
-  return node.outputPortIds.flatMap((portId) => getPortOutputEdgeIds(topology, portId));
+  return node.outputPortIds
+    .flatMap((portId) => getPortOutputEdgeIds(topology, portId))
+    .filter((edgeId) => topology.transferEdges[edgeId]?.sourceNodeId === node.id);
 }
 
 function getPortInputEdgeIds(topology: CompiledSimulationTopology, portId: string): readonly string[] {
