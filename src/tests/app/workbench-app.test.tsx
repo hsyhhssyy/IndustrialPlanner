@@ -80,6 +80,7 @@ const DEFAULT_APP_SHORTCUTS_STORAGE = {
   [SHORTCUT_KEY.SAVE_BLUEPRINT]: "Ctrl+S",
   [SHORTCUT_KEY.RETURN_SELECT]: "Esc",
   [SHORTCUT_KEY.ROTATE]: "R",
+  [SHORTCUT_KEY.SWITCH_DEVICE_MODE]: "Tab",
   [SHORTCUT_KEY.ROTATE_VIEWPORT]: "Ctrl+R",
   [SHORTCUT_KEY.DELETE_DEVICE]: "F",
   [SHORTCUT_KEY.MOVE_SELECTION]: "M",
@@ -967,6 +968,10 @@ describe("WorkbenchApp", () => {
           currentTick: {
             source: "query-read-model",
           },
+        }),
+        getDocumentRuntimeStatus: () => ({
+          tickNumber: 3,
+          totalPowerDemand: null,
         }),
         getDeviceRuntimeStatus: () => null,
         getPipeFluidItemId: () => null,

@@ -1931,6 +1931,82 @@ describe("GenericDeviceSprite", () => {
     })
   })
 
+  it("anchors water pump port chevrons to the footprint when the sprite is larger than the footprint", async () => {
+    const resolvedTexture = createLoadedTextureMock("water-pump-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("water-pump-mask-texture")
+    const liquidOutputTexture = createLoadedTextureMock("liquid-output-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      "device-sprite-item_port_water_pump_1": resolvedTexture,
+      "device-masks-item_port_water_pump_1": resolvedMaskTexture,
+      [SOLID_INPUT_KEY]: createLoadedTextureMock("solid-input-texture"),
+      [SOLID_OUTPUT_KEY]: createLoadedTextureMock("solid-output-texture"),
+      [LIQUID_INPUT_KEY]: createLoadedTextureMock("liquid-input-texture"),
+      [LIQUID_OUTPUT_KEY]: liquidOutputTexture,
+    })
+    const sprite = new GenericDeviceSprite(
+      "water-pump",
+      createWaterPumpEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: [],
+      previewIds: ["water-pump"],
+    })
+
+    const cases = [
+      {
+        layout: { x: 80, y: 50, width: 160, height: 96, rotation: 0 as const },
+        expected: { x: 256, y: 98, rotation: Math.PI / 2 },
+      },
+      {
+        layout: { x: 80, y: 50, width: 96, height: 160, rotation: 90 as const },
+        expected: { x: 128, y: 226, rotation: Math.PI },
+      },
+      {
+        layout: { x: 80, y: 50, width: 160, height: 96, rotation: 180 as const },
+        expected: { x: 64, y: 98, rotation: (Math.PI * 3) / 2 },
+      },
+      {
+        layout: { x: 80, y: 50, width: 96, height: 160, rotation: 270 as const },
+        expected: { x: 128, y: 34, rotation: 0 },
+      },
+    ]
+
+    for (let index = 0; index < cases.length; index += 1) {
+      const item = cases[index]!
+
+      sprite.syncLayout(item.layout, context)
+      await flushMicrotasks(8)
+      sprite.syncLayout(item.layout, context)
+      await flushMicrotasks(8)
+      sprite.syncLayout(item.layout, context)
+
+      const portOverlayRoot = resolvePortOverlayRoot(overlayLayer)
+      const liquidChevron = portOverlayRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+
+      expect(liquidChevron, `rotation=${item.layout.rotation}`).toMatchObject({
+        x: item.expected.x,
+        y: item.expected.y,
+        width: 32,
+        height: 32,
+        rotation: item.expected.rotation,
+        roundPixels: true,
+        visible: true,
+        texture: liquidOutputTexture,
+      })
+    }
+  })
+
   it("does not draw port chevrons when selection contains multiple devices", async () => {
     const resolvedTexture = createLoadedTextureMock("device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
@@ -2132,6 +2208,57 @@ function createLiquidInputEntityDefinitionStub(): EntityDefinition {
         id: "bind_fluid_input",
         portGroupId: "fluid_input",
         storageSlotGroupId: "fluid_input_buffer",
+      },
+    ],
+  }
+}
+
+function createWaterPumpEntityDefinitionStub(): EntityDefinition {
+  return {
+    ...createEntityDefinitionStub(),
+    id: "item_port_water_pump_1",
+    nameKey: "registry.entity.item_port_water_pump_1.name",
+    spriteId: "item_port_water_pump_1",
+    footprint: { width: 3, height: 3 },
+    spriteOffset: {
+      topView: { x: -2, y: 0, width: 5, height: 3 },
+    },
+    portGroups: [
+      {
+        id: "fluid_output",
+        kind: "fluid",
+        direction: "output",
+        ports: [
+          {
+            id: "out_e_1",
+            localCellX: 2,
+            localCellY: 1,
+            edge: "EAST",
+            ...createPortDefaults("fluid"),
+          },
+        ],
+      },
+    ],
+    storageSlotGroups: [
+      {
+        id: "fluid_output_buffer",
+        kind: "fluid",
+        slots: [
+          {
+            id: "output_fluid_slot",
+            capacity: 50,
+            itemFilter: "type",
+            itemFilterType: "liquid",
+            ...createSlotDefaults(),
+          },
+        ],
+      },
+    ],
+    portStorageBindings: [
+      {
+        id: "bind_fluid_output",
+        portGroupId: "fluid_output",
+        storageSlotGroupId: "fluid_output_buffer",
       },
     ],
   }

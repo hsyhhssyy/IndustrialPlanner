@@ -46,6 +46,7 @@ import LucideActivity from "~icons/lucide/activity";
 import LucideRectangleHorizontal from "~icons/lucide/rectangle-horizontal";
 import LucideRectangleVertical from "~icons/lucide/rectangle-vertical";
 import LucideRedo2 from "~icons/lucide/redo-2";
+import LucideRepeat2 from "~icons/lucide/repeat-2";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 import LucideSave from "~icons/lucide/save";
 import LucideSettings from "~icons/lucide/settings";
@@ -107,6 +108,7 @@ type WorkbenchIconKind =
   | "undo"
   | "redo"
   | "rotate"
+  | "switch-mode"
   | "device-mobile"
   | "device-tablet"
   | "device-desktop"
@@ -166,6 +168,7 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   undo: LucideUndo2,
   redo: LucideRedo2,
   rotate: LucideRotateCcw,
+  "switch-mode": LucideRepeat2,
   "device-mobile": LucideSmartphone,
   "device-tablet": LucideTablet,
   "device-desktop": LucideMonitor,

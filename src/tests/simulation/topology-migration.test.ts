@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
-import type { WorldEntity } from "@/domain/document/world-document";
+import {
+  createWorldDocument,
+  type WorldDocument,
+  type WorldEntity,
+} from "@/domain/document/world-document";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
+import { compileSimulationTopology } from "@/simulation/topology-compiler";
+import { createSimulationTopologyMigration } from "@/simulation/topology-migration";
+import { createRegistryContract } from "@/registry";
 import {
   createBlueprint,
   createEntity,
@@ -83,4 +90,85 @@ describe("REQ-076: topology migration", () => {
     expect(linked.blueprint.slotLinkCount).toBe(1);
     expect(linked.topology.diagnosticCount).toBe(0);
   });
+
+  it("resets only the switched device when definition and links change", () => {
+    const registry = createRegistryContract();
+    const previousDocument = createVariantSwitchDocument("item_port_filling_pd_mc_1", [
+      createStorageToFactorySlotLink(),
+    ]);
+    const nextDocument = createVariantSwitchDocument(
+      "item_port_liquid_filling_pd_mc_1",
+      [],
+    );
+    const previousTopology = compileSimulationTopology({
+      document: previousDocument,
+      registry,
+      poweredEntityIds: new Set(previousDocument.entityOrder),
+    });
+    const nextTopology = compileSimulationTopology({
+      document: nextDocument,
+      registry,
+      poweredEntityIds: new Set(nextDocument.entityOrder),
+    });
+
+    const migration = createSimulationTopologyMigration({
+      previousDocument,
+      nextDocument,
+      previousTopology,
+      nextTopology,
+      baseTickNumber: 42,
+    });
+
+    expect(migration).toEqual({
+      baseTickNumber: 42,
+      resetDeviceIds: ["device:factory"],
+    });
+  });
 });
+
+function createVariantSwitchDocument(
+  factoryDefinitionId: string,
+  slotLinks: WorldDocument["slotLinks"],
+): WorldDocument {
+  const document = createWorldDocument();
+  document.entities = {
+    storage: createDocumentEntity("storage", "item_port_storager_1", 4, 10),
+    factory: createDocumentEntity("factory", factoryDefinitionId, 10, 10),
+  };
+  document.entityOrder = ["storage", "factory"];
+  document.slotLinks = [...slotLinks];
+  return document;
+}
+
+function createDocumentEntity(
+  id: string,
+  definitionId: string,
+  x: number,
+  y: number,
+): WorldEntity {
+  return {
+    id,
+    definitionId,
+    position: { x, y },
+    rotation: 0,
+    config: {},
+    tags: [],
+  };
+}
+
+function createStorageToFactorySlotLink(): WorldDocument["slotLinks"][number] {
+  return {
+    id: "storage-to-factory",
+    linkType: "share-cap",
+    source: {
+      entityId: "storage",
+      storageSlotGroupId: "storage_slot_1",
+      slotId: "slot_1",
+    },
+    target: {
+      entityId: "factory",
+      storageSlotGroupId: "item_input_buffer",
+      slotId: "input_slot_1",
+    },
+  };
+}

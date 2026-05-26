@@ -58,19 +58,18 @@ export function NumberInput({
   ...rest
 }: NumberInputProps) {
   const [draft, setDraft] = useState(() => toString(value));
+  const [focused, setFocused] = useState(false);
+  const [originalValue, setOriginalValue] = useState(draft);
+  const [prevValue, setPrevValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
-  const focusedRef = useRef(false);
-  const originalValueRef = useRef(draft);
-  const prevValueRef = useRef(value);
 
-  // 外部 value 变化时同步到草稿（仅在未聚焦时）
-  // 使用 render-phase state update 而非 useEffect，避免 react-hooks/set-state-in-effect 告警
-  if (prevValueRef.current !== value) {
-    prevValueRef.current = value;
-    if (!focusedRef.current) {
+  // 外部 value 变化时同步到草稿（仅在未聚焦时）。
+  if (prevValue !== value) {
+    setPrevValue(value);
+    if (!focused) {
       const next = toString(value);
       setDraft(next);
-      originalValueRef.current = next;
+      setOriginalValue(next);
     }
   }
 
@@ -78,17 +77,17 @@ export function NumberInput({
     const parsed = parseNumber(draft, min, max, emptyFallback);
     const display = String(parsed);
     setDraft(display);
-    originalValueRef.current = display;
+    setOriginalValue(display);
     onCommit?.(parsed);
   }, [draft, min, max, emptyFallback, onCommit]);
 
   const handleFocus = useCallback(() => {
-    focusedRef.current = true;
-    originalValueRef.current = draft;
+    setFocused(true);
+    setOriginalValue(draft);
   }, [draft]);
 
   const handleBlur = useCallback(() => {
-    focusedRef.current = false;
+    setFocused(false);
     commit();
   }, [commit]);
 
@@ -111,13 +110,12 @@ export function NumberInput({
 
       if (event.key === "Escape") {
         event.preventDefault();
-        const reverted = originalValueRef.current;
-        setDraft(reverted);
-        onRawChange?.(reverted);
+        setDraft(originalValue);
+        onRawChange?.(originalValue);
         inputRef.current?.blur();
       }
     },
-    [commit, onRawChange],
+    [commit, onRawChange, originalValue],
   );
 
   return (

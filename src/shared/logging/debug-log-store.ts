@@ -25,6 +25,7 @@ let captureEnabled = false;
 let disposeGlobalExceptionCapture = () => {};
 let installCount = 0;
 let snapshotVersion = 0;
+let sessionStartTime = 0;
 let snapshot: DebugLogSnapshot = {
   version: 0,
   entryCount: 0,
@@ -255,6 +256,7 @@ export function installDebugLogCapture(): () => void {
   installCount += 1;
 
   if (installCount === 1) {
+    sessionStartTime = Date.now();
     patchConsole();
     disposeGlobalExceptionCapture = installGlobalExceptionCapture();
     clearLogLines();
@@ -291,4 +293,51 @@ export function subscribeDebugLogSnapshot(listener: DebugLogListener): () => voi
 
 export function getDebugLogSnapshot(): DebugLogSnapshot {
   return snapshot;
+}
+
+function formatSessionDuration(): string {
+  if (sessionStartTime === 0) {
+    return "(unknown)";
+  }
+
+  const elapsed = Math.max(0, Date.now() - sessionStartTime);
+  const seconds = Math.floor(elapsed / 1000) % 60;
+  const minutes = Math.floor(elapsed / (1000 * 60));
+
+  if (minutes > 0) {
+    return `${minutes} 分钟 ${seconds} 秒`;
+  }
+
+  return `${seconds} 秒`;
+}
+
+function safeNavigatorField(getter: () => string | undefined, fallback: string): string {
+  try {
+    return getter() ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/** 构建诊断报告头，附加在导出日志文件的开头 */
+export function buildDiagnosticHeader(logLevel: string): string {
+  const lines: string[] = [];
+  const version =
+    (typeof window !== "undefined" && (window as unknown as Record<string, unknown>).__APP_VERSION__ as string | undefined)
+    ?? "(Dev)";
+
+  lines.push("=== IndustrialPlanner 诊断报告 ===");
+  lines.push(`版本: ${version}`);
+  lines.push(`用户代理: ${safeNavigatorField(() => navigator.userAgent, "(unknown)")}`);
+  lines.push(`屏幕: ${screen.width}×${screen.height} @ ${Math.round(window.devicePixelRatio * 100) / 100}x`);
+  lines.push(`平台: ${safeNavigatorField(() => (navigator as unknown as Record<string, unknown>).platform as string | undefined, "(unknown)")}`);
+  lines.push(`语言: ${safeNavigatorField(() => navigator.language, "(unknown)")}`);
+  lines.push(`日志级别: ${logLevel}`);
+  lines.push(`日志条数: ${snapshot.entryCount}`);
+  lines.push(`会话时长: ${formatSessionDuration()}`);
+  lines.push(`导出时间: ${new Date().toISOString()}`);
+  lines.push("================================");
+  lines.push("");
+
+  return lines.join("\n");
 }

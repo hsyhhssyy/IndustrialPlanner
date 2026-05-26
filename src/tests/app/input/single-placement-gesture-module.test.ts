@@ -343,6 +343,44 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(toolbar.appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
+  it("switches the placement preview variant from Tab and updates the touch toolbar", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "single-placement",
+      initialPreview: true,
+      placementAnchor: { x: 12, y: 11 },
+      previewDefinitionId: "item_port_filling_pd_mc_1",
+      previewRect: { x: 10, y: 10, width: 6, height: 4 },
+      singlePlacementDeviceId: "item_port_filling_pd_mc_1",
+      singlePlacementPointerMode: "touch",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    const result = module.handle(keyDownEvent({ code: "Tab", key: "Tab" }), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalActions.isShortcutFor).toHaveBeenCalledWith(
+      SHORTCUT_KEY.SWITCH_DEVICE_MODE,
+      "Tab",
+      "Tab",
+    );
+    expect(editor.actions.replaceEntityDefinition).toHaveBeenCalledWith(
+      "preview-entity",
+      "item_port_liquid_filling_pd_mc_1",
+    );
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe(
+      "item_port_liquid_filling_pd_mc_1",
+    );
+    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenLastCalledWith(
+      [
+        "canvas-floating-toolbar-button-cancel",
+        "canvas-floating-toolbar-button-switch-mode",
+        "canvas-floating-toolbar-button-rotate",
+        "canvas-floating-toolbar-button-ok",
+      ],
+      EntityCollectionType.preview,
+    );
+  });
+
   it("keeps mouse placement active when apply uses ctrl", () => {
     const { context, editor, appHost } = createContext({
       activeTool: "single-placement",
@@ -505,6 +543,7 @@ function createContext(options: {
   deviceClass?: "desktop" | "tablet" | "mobile";
   leftDockOpen?: boolean;
   applyPlacementDraftResult?: boolean;
+  previewDefinitionId?: string;
 } = {}): {
   context: GestureActionContext<AppHost>;
   editor: MockEditor;
@@ -525,10 +564,15 @@ function createContext(options: {
       height: 1,
     },
   };
-  const previewEntity = entity("preview-entity", {
-    x: previewRectRef.current.x,
-    y: previewRectRef.current.y,
-  }, options.previewRotation ?? 0);
+  const previewEntity = entity(
+    "preview-entity",
+    {
+      x: previewRectRef.current.x,
+      y: previewRectRef.current.y,
+    },
+    options.previewRotation ?? 0,
+    options.previewDefinitionId,
+  );
   const viewportClientRect: ClientPixelRect = {
     left: 0,
     top: 0,
@@ -638,6 +682,15 @@ function createContext(options: {
       rotateCollection: vi.fn(() => {
         previewEntity.rotation = rotateClockwise(previewEntity.rotation);
       }),
+      replaceEntityDefinition: vi.fn((entityId: string, nextDefinitionId: string) => {
+        if (entityId !== previewEntity.id) {
+          return false;
+        }
+
+        previewEntity.definitionId = nextDefinitionId;
+        previewEntity.config = {};
+        return true;
+      }),
     },
   };
   const shortcuts: Record<string, string> = {
@@ -648,6 +701,7 @@ function createContext(options: {
     "shortcut-basic-production": "V",
     "shortcut-synthesis": "B",
     "shortcut-rotate": "R",
+    "shortcut-switch-device-mode": "Tab",
   };
   const workbenchState = {
     leftDockOpen: options.leftDockOpen ?? true,
@@ -785,6 +839,7 @@ type MockEditor = {
     | "cancelPlacementDraft"
     | "createSinglePlacementDraft"
     | "moveCollectionTo"
+    | "replaceEntityDefinition"
     | "rotateCollection"
   >;
   queries: Pick<
@@ -806,10 +861,15 @@ function createCollection(entityIds: readonly string[]): MockCollection {
   return collection;
 }
 
-function entity(id: string, position: GridPoint, rotation: 0 | 90 | 180 | 270): WorldEntity {
+function entity(
+  id: string,
+  position: GridPoint,
+  rotation: 0 | 90 | 180 | 270,
+  definitionId = "device-a",
+): WorldEntity {
   return {
     id,
-    definitionId: "device-a",
+    definitionId,
     position,
     rotation,
     config: {},

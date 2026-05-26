@@ -9,6 +9,7 @@ export type EditorHistoryActionType =
   | "entity.delete"
   | "entity.move"
   | "entity.rotate"
+  | "entity.definition.replace"
   | "entity.config.patch"
   | "entity.config.delete-keys"
   | "logistics.place"

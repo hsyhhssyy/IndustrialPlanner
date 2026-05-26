@@ -1,6 +1,12 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
+import {
+  SWITCH_DEVICE_MODE_BUTTON_ID,
+  canSwitchEntityVariantDefinition,
+  resolveNextSwitchableEntityVariantDefinitionId,
+} from "@/app/entity-variant-availability";
+import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -15,7 +21,7 @@ const MOVE_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-cancel",
   "canvas-floating-toolbar-button-rotate",
   "canvas-floating-toolbar-button-ok",
-] as const;
+] as const satisfies readonly CanvasFloatingToolbarButtonId[];
 
 const MOVE_ENTRY_BUTTON_IDS = {
   marquee: "canvas-right-dock-toolbar-button-move",
@@ -58,6 +64,15 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             return { status: "handled" };
 
           case "key down":
+            if (isSwitchDeviceModeShortcut({
+              appHost: context.appHost,
+              code: event.code,
+              key: event.key,
+              modifiers: event.modifiers,
+            })) {
+              return switchMovePreviewVariant(context.appHost, editor);
+            }
+
             if (!isRotateMoveShortcut({
               appHost: context.appHost,
               code: event.code,
@@ -142,6 +157,10 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             return { status: "handled" };
 
           case "ui-button-touch-tap":
+            if (event.uiButtonId === SWITCH_DEVICE_MODE_BUTTON_ID) {
+              return switchMovePreviewVariant(context.appHost, editor);
+            }
+
             if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
               applyMoveOperation(context.appHost, editor, "touch");
               return { status: "handled" };
@@ -162,6 +181,10 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
           case "ui-button-mouse-tap":
             if (event.button !== 0) {
               return { status: "ignored" };
+            }
+
+            if (event.uiButtonId === SWITCH_DEVICE_MODE_BUTTON_ID) {
+              return switchMovePreviewVariant(context.appHost, editor);
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
@@ -681,6 +704,105 @@ function rotateMovePreview(appHost: AppHost, editor: EditorContract): void {
   appHost.internalActions.alignCanvasFloatingToolbar();
 }
 
+function switchMovePreviewVariant(
+  appHost: AppHost,
+  editor: EditorContract,
+): GestureHandleResult {
+  const previewEntity = resolveSinglePreviewEntity(editor);
+  if (previewEntity === null) {
+    return { status: "ignored" };
+  }
+
+  const beforeRect = editor.queries.findEntityCollectionGridRect(
+    EntityCollectionType.preview,
+  );
+  if (beforeRect === null) {
+    return { status: "ignored" };
+  }
+
+  const nextDefinitionId = resolveNextSwitchableEntityVariantDefinitionId({
+    appHost,
+    definitionId: previewEntity.definitionId,
+  });
+  if (nextDefinitionId === null) {
+    return { status: "ignored" };
+  }
+
+  const moveAnchor = appHost.internalState.runtime.moveAnchor;
+  if (!editor.actions.replaceEntityDefinition(previewEntity.id, nextDefinitionId)) {
+    return { status: "ignored" };
+  }
+
+  if (moveAnchor !== null) {
+    preserveMoveAnchorAfterVariantSwitch({
+      editor,
+      moveAnchor,
+      beforeRect,
+    });
+  }
+
+  appHost.internalActions.alignCanvasFloatingToolbar();
+  syncMoveEntryUi(appHost);
+  return { status: "handled" };
+}
+
+function preserveMoveAnchorAfterVariantSwitch(options: {
+  editor: EditorContract;
+  moveAnchor: GridPoint;
+  beforeRect: GridRect;
+}): void {
+  const afterRect = options.editor.queries.findEntityCollectionGridRect(
+    EntityCollectionType.preview,
+  );
+  if (afterRect === null) {
+    return;
+  }
+
+  if (usesGridCellCenterTracking(options.moveAnchor)) {
+    const afterCenter = resolveGridCellCenterPoint(resolveGridRectCenterCell(afterRect));
+    if (areGridPointsEqual(afterCenter, options.moveAnchor)) {
+      return;
+    }
+
+    options.editor.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: afterCenter,
+      endGridPoint: options.moveAnchor,
+    });
+    return;
+  }
+
+  const anchorOffset = {
+    x: clamp(
+      options.moveAnchor.x - options.beforeRect.x,
+      0,
+      Math.max(0, afterRect.width - 1),
+    ),
+    y: clamp(
+      options.moveAnchor.y - options.beforeRect.y,
+      0,
+      Math.max(0, afterRect.height - 1),
+    ),
+  };
+  const nextTopLeft = {
+    x: options.moveAnchor.x - anchorOffset.x,
+    y: options.moveAnchor.y - anchorOffset.y,
+  };
+
+  if (afterRect.x === nextTopLeft.x && afterRect.y === nextTopLeft.y) {
+    return;
+  }
+
+  options.editor.actions.moveCollectionTo({
+    collectionType: EntityCollectionType.preview,
+    startGridPoint: {
+      x: afterRect.x,
+      y: afterRect.y,
+    },
+    endGridPoint: nextTopLeft,
+  });
+}
+
 function applyMoveOperation(
   appHost: AppHost,
   editor: EditorContract,
@@ -775,9 +897,36 @@ function syncMoveEntryUi(appHost: AppHost): boolean {
   }
 
   return appHost.internalActions.showCanvasFloatingToolbarForCollection(
-    MOVE_TOOLBAR_BUTTON_IDS,
+    resolveMoveToolbarButtonIds(appHost),
     EntityCollectionType.preview,
   );
+}
+
+function resolveMoveToolbarButtonIds(
+  appHost: AppHost,
+): readonly CanvasFloatingToolbarButtonId[] {
+  const editor = appHost.workspace.editor;
+  if (editor === null || editor === undefined) {
+    return MOVE_TOOLBAR_BUTTON_IDS;
+  }
+
+  const previewEntity = resolveSinglePreviewEntity(editor);
+  if (
+    previewEntity === null
+    || !canSwitchEntityVariantDefinition({
+      appHost,
+      definitionId: previewEntity.definitionId,
+    })
+  ) {
+    return MOVE_TOOLBAR_BUTTON_IDS;
+  }
+
+  return [
+    "canvas-floating-toolbar-button-cancel",
+    SWITCH_DEVICE_MODE_BUTTON_ID,
+    "canvas-floating-toolbar-button-rotate",
+    "canvas-floating-toolbar-button-ok",
+  ];
 }
 
 function triggerPlacementMarqueeToolTap(
@@ -833,6 +982,45 @@ function isRotateMoveShortcut(options: {
     options.code,
     options.key,
   );
+}
+
+function isSwitchDeviceModeShortcut(options: {
+  appHost: AppHost;
+  code: string | null;
+  key: string | null;
+  modifiers: {
+    alt: boolean;
+    ctrl: boolean;
+    meta: boolean;
+  };
+}): boolean {
+  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
+    return false;
+  }
+
+  return options.appHost.internalActions.isShortcutFor(
+    SHORTCUT_KEY.SWITCH_DEVICE_MODE,
+    options.code,
+    options.key,
+  );
+}
+
+function resolveSinglePreviewEntity(editor: EditorContract): WorldEntity | null {
+  const preview = editor.state.collections[EntityCollectionType.preview];
+  if (preview.length !== 1) {
+    return null;
+  }
+
+  const entityId = preview[0];
+  if (entityId === undefined) {
+    return null;
+  }
+
+  return editor.queries.getEntityById(entityId);
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
 function isPreviewEntityAtClientPoint(options: {

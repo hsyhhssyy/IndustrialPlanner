@@ -244,6 +244,68 @@ describe("resolveWorldEntitySpriteLayout", () => {
     })
   })
 
+  it("offsets sprite layout when sprite is larger than footprint (water pump at rotation=180)", () => {
+    const layout = resolveWorldEntitySpriteLayout({
+      entity: {
+        id: "water-pump-180",
+        definitionId: "item_port_water_pump_1",
+        position: { x: 10, y: 5 },
+        rotation: 180,
+        config: {},
+        tags: [],
+      },
+      footprint: { width: 3, height: 3 },
+      spriteOffset: { x: -2, y: 0, width: 5, height: 3 },
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 400,
+      },
+      viewportCenter: { x: 0, y: 0 },
+      gridCellPixelSize: 10,
+    })
+
+    expect(layout).toMatchObject({
+      x: 300,
+      y: 250,
+      width: 50,
+      height: 30,
+      rotation: 180,
+    })
+  })
+
+  it("offsets sprite layout when sprite is larger than footprint (water pump at rotation=270)", () => {
+    const layout = resolveWorldEntitySpriteLayout({
+      entity: {
+        id: "water-pump-270",
+        definitionId: "item_port_water_pump_1",
+        position: { x: 10, y: 5 },
+        rotation: 270,
+        config: {},
+        tags: [],
+      },
+      footprint: { width: 3, height: 3 },
+      spriteOffset: { x: -2, y: 0, width: 5, height: 3 },
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 400,
+      },
+      viewportCenter: { x: 0, y: 0 },
+      gridCellPixelSize: 10,
+    })
+
+    expect(layout).toMatchObject({
+      x: 300,
+      y: 250,
+      width: 30,
+      height: 50,
+      rotation: 270,
+    })
+  })
+
   it("behaves identically to null offset when spriteOffset is not provided", () => {
     const withNull = resolveWorldEntitySpriteLayout({
       entity: {

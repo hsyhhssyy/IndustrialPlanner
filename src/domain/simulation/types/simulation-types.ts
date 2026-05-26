@@ -34,3 +34,11 @@ export interface SimulationDeviceRuntimeSlotItemReadModel {
   readonly count: number;
   readonly reserved: number;
 }
+
+/** 文档级仿真运行时只读视图 */
+export interface SimulationDocumentRuntimeReadModel {
+  /** 当前 tick 编号，仿真未启动时为 null */
+  readonly tickNumber: number | null;
+  /** 总电力需求（kW），拓扑未编译时为 null */
+  readonly totalPowerDemand: number | null;
+}

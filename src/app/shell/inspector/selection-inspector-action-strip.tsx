@@ -1,16 +1,14 @@
 import { observer } from "mobx-react-lite";
 
+import {
+  SWITCH_DEVICE_MODE_BUTTON_ID,
+  canSwitchEntityVariantDefinition,
+} from "@/app/entity-variant-availability";
 import type { AppHost } from "@/app/host/app-host";
 import { CanvasFloatingToolbarButtonStrip } from "@/app/shell/shared/canvas-floating-toolbar-button-strip";
 import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
-
-const SELECTION_ACTION_BUTTON_IDS = [
-  "canvas-floating-toolbar-button-move",
-  "canvas-floating-toolbar-button-save-blueprint",
-  "canvas-floating-toolbar-button-delete",
-] as const satisfies readonly CanvasFloatingToolbarButtonId[];
 
 const SELECTION_LOGISTICS_SEGMENT_BUTTON_IDS = [
   "canvas-floating-toolbar-button-delete-upstream-segment",
@@ -31,6 +29,7 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
 
   const selectionIds = [...editor.state.collections.selection];
   const canSaveBlueprint = selectionIds.length > 1;
+  const canSwitchVariant = canSwitchSelectedEntityVariant(appHost, selectionIds);
 
   if (selectionIds.length === 0) {
     return null;
@@ -44,9 +43,10 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
       && appHost.workspace.registry.queries.isDedicatedLogisticsDevice(entity.definitionId)
     );
   });
-  const generalButtonIds = SELECTION_ACTION_BUTTON_IDS.filter(
-    (buttonId) => canSaveBlueprint || buttonId !== "canvas-floating-toolbar-button-save-blueprint",
-  );
+  const generalButtonIds = resolveSelectionActionButtonIds({
+    canSaveBlueprint,
+    canSwitchVariant,
+  });
 
   const locale = appHost.state.settings.locale;
 
@@ -91,3 +91,43 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
     </section>
   );
 });
+
+function resolveSelectionActionButtonIds(options: {
+  canSaveBlueprint: boolean;
+  canSwitchVariant: boolean;
+}): readonly CanvasFloatingToolbarButtonId[] {
+  const buttonIds: CanvasFloatingToolbarButtonId[] = [
+    "canvas-floating-toolbar-button-move",
+  ];
+
+  if (options.canSwitchVariant) {
+    buttonIds.push(SWITCH_DEVICE_MODE_BUTTON_ID);
+  }
+
+  if (options.canSaveBlueprint) {
+    buttonIds.push("canvas-floating-toolbar-button-save-blueprint");
+  }
+
+  buttonIds.push("canvas-floating-toolbar-button-delete");
+  return buttonIds;
+}
+
+function canSwitchSelectedEntityVariant(
+  appHost: AppHost,
+  selectionIds: readonly string[],
+): boolean {
+  if (selectionIds.length !== 1) {
+    return false;
+  }
+
+  const entityId = selectionIds[0];
+  if (entityId === undefined) {
+    return false;
+  }
+
+  const entity = appHost.workspace.editor?.queries.getEntityById(entityId) ?? null;
+  return entity !== null && canSwitchEntityVariantDefinition({
+    appHost,
+    definitionId: entity.definitionId,
+  });
+}

@@ -369,6 +369,17 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         },
       },
       {
+        id: "shortcut-switch-device-mode",
+        kind: "keybinding",
+        labelKey: shortcutKeybindingLabelKey("shortcut-switch-device-mode"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-switch-device-mode"),
+        defaultValue: "Tab",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
+      },
+      {
         id: "shortcut-rotate-viewport",
         kind: "keybinding",
         labelText: "旋转画布",

@@ -16,6 +16,7 @@ import {
 } from "@/domain/editor/types/editor-types";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { GridPoint, GridRect } from "@/domain/shared/grid";
+import { createRegistryContract } from "@/registry";
 
 describe("createHypergryphMoveGestureModule", () => {
   it("enters mouse move from select by selecting the pointer entity first", () => {
@@ -430,6 +431,76 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
+  it("switches the move preview variant, keeps the anchor, then continues moving and applies", () => {
+    const { context, editor, appHost, previewRectRef } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 12, y: 11 },
+      previewDefinitionId: "item_port_filling_pd_mc_1",
+      previewRect: { x: 10, y: 10, width: 6, height: 4 },
+      toolbarVisible: true,
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    vi.mocked(editor.actions.moveCollectionTo).mockImplementation(({
+      startGridPoint,
+      endGridPoint,
+    }) => {
+      previewRectRef.current = {
+        ...previewRectRef.current,
+        x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
+        y: previewRectRef.current.y + endGridPoint.y - startGridPoint.y,
+      };
+    });
+
+    expect(module.handle(keyDownEvent({ code: "Tab", key: "Tab" }), context)).toEqual({
+      status: "handled",
+    });
+    expect(editor.actions.replaceEntityDefinition).toHaveBeenCalledWith(
+      "preview-entity",
+      "item_port_liquid_filling_pd_mc_1",
+    );
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 12, y: 11 });
+
+    expect(module.handle(touchDragMoveEvent({ position: { x: 13, y: 12 } }), context)).toEqual({
+      status: "handled",
+    });
+    expect(editor.actions.moveCollectionTo).toHaveBeenLastCalledWith({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 12, y: 11 },
+      endGridPoint: { x: 13, y: 12 },
+    });
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 13, y: 12 });
+
+    expect(module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-ok"), context)).toEqual({
+      status: "handled",
+    });
+    expect(editor.actions.applyMoveOerationDraft).toHaveBeenCalledTimes(1);
+    expect(appHost.internalState.activeTool).toBe("select");
+  });
+
+  it("cancels a switched move preview without applying it", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 12, y: 11 },
+      previewDefinitionId: "item_port_filling_pd_mc_1",
+      previewRect: { x: 10, y: 10, width: 6, height: 4 },
+      toolbarVisible: true,
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    expect(
+      module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-switch-mode"), context),
+    ).toEqual({ status: "handled" });
+    expect(editor.actions.replaceEntityDefinition).toHaveBeenCalledTimes(1);
+
+    expect(module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-cancel"), context)).toEqual({
+      status: "handled",
+    });
+    expect(editor.actions.cancelMoveOperationDraft).toHaveBeenCalledTimes(1);
+    expect(editor.actions.applyMoveOerationDraft).not.toHaveBeenCalled();
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+  });
+
   it("applies with a non-long-press left mouse tap and cancels with a right mouse tap", () => {
     const applyContext = createContext({
       activeTool: "move",
@@ -623,6 +694,7 @@ function createContext(options: {
   moveEnterFrom?: ActiveTool | null;
   toolbarVisible?: boolean;
   previewRect?: GridRect;
+  previewDefinitionId?: string;
 } = {}): {
   context: GestureActionContext<AppHost>;
   editor: MockEditor;
@@ -644,11 +716,16 @@ function createContext(options: {
       height: 1,
     },
   };
-  const previewEntity = entity("preview-entity", { x: 5, y: 5 });
+  const previewEntity = entity(
+    "preview-entity",
+    { x: previewRectRef.current.x, y: previewRectRef.current.y },
+    options.previewDefinitionId,
+  );
   const selectedEntity = entity("selected-entity", { x: 2, y: 2 });
   const unselectedEntity = entity("unselected-entity", { x: 4, y: 4 });
   const shortcuts: Record<string, string> = {
     [SHORTCUT_KEY.ROTATE]: "R",
+    [SHORTCUT_KEY.SWITCH_DEVICE_MODE]: "Tab",
   };
   const editor: MockEditor = {
     state: {
@@ -709,6 +786,15 @@ function createContext(options: {
       applyMoveOerationDraft: vi.fn(() => true),
       moveCollectionTo: vi.fn(),
       rotateCollection: vi.fn(),
+      replaceEntityDefinition: vi.fn((entityId: string, nextDefinitionId: string) => {
+        if (entityId !== previewEntity.id) {
+          return false;
+        }
+
+        previewEntity.definitionId = nextDefinitionId;
+        previewEntity.config = {};
+        return true;
+      }),
       clearCollection: vi.fn((collectionType: EntityCollectionTypeValue) => {
         (editor.state.collections[collectionType] as MockCollection).replace([]);
       }),
@@ -797,19 +883,8 @@ function createContext(options: {
       }),
     },
     workspace: {
-      registry: {
-        entityDefinitions: [
-          {
-            id: "belt_straight_1x1",
-            name: "Belt",
-            spriteId: "belt_straight_1x1",
-            footprint: {
-              width: 1,
-              height: 1,
-            },
-          },
-        ],
-      },
+      editor,
+      registry: createRegistryContract(),
     },
   } as unknown as AppHost;
 
@@ -845,6 +920,7 @@ type MockEditor = {
     | "clearCollection"
     | "createMoveOperationDraft"
     | "moveCollectionTo"
+    | "replaceEntityDefinition"
     | "rotateCollection"
   >;
   queries: Pick<
@@ -865,10 +941,14 @@ function createCollection(entityIds: readonly string[]): MockCollection {
   return collection;
 }
 
-function entity(id: string, position: GridPoint): WorldEntity {
+function entity(
+  id: string,
+  position: GridPoint,
+  definitionId = "belt_straight_1x1",
+): WorldEntity {
   return {
     id,
-    definitionId: "belt_straight_1x1",
+    definitionId,
     position,
     rotation: 0,
     config: {},

@@ -65,6 +65,23 @@ function createDocumentWithTestEntities(
   return document;
 }
 
+function createStorageToFactorySlotLink(): WorldDocument["slotLinks"][number] {
+  return {
+    id: "storage-to-factory",
+    linkType: "share-cap",
+    source: {
+      entityId: "storage",
+      storageSlotGroupId: "storage_slot_1",
+      slotId: "slot_1",
+    },
+    target: {
+      entityId: "factory",
+      storageSlotGroupId: "item_input_buffer",
+      slotId: "input_slot_1",
+    },
+  };
+}
+
 function findPreviewDraftAt(
   editorHost: ReturnType<typeof createEditorHost>,
   x: number,
@@ -2452,6 +2469,91 @@ describe("createEditorHost", () => {
     expect(editorHost.state.collections.preview).toEqual([]);
     expect(editorHost.internalState.drafts).toHaveLength(1);
     expect(editorHost.internalState.drafts[0]?.id).toBe("persisted-draft");
+  });
+
+  it("switches a document entity definition, clears config, and removes stale slot links", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithTestEntities([
+      {
+        ...createTestEntity("factory", "item_port_filling_pd_mc_1", 10, 10),
+        config: { recipe: "old" },
+      },
+      createTestEntity("storage", "item_port_storager_1", 4, 10),
+    ]);
+    document.slotLinks = [createStorageToFactorySlotLink()];
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    expect(
+      editorHost.actions.replaceEntityDefinition(
+        "factory",
+        "item_port_liquid_filling_pd_mc_1",
+      ),
+    ).toBe(true);
+
+    const snapshot = editorHost.document.getSnapshot();
+    expect(snapshot.entities.factory).toMatchObject({
+      definitionId: "item_port_liquid_filling_pd_mc_1",
+      config: {},
+    });
+    expect(snapshot.entities.storage).toEqual(document.entities.storage);
+    expect(snapshot.slotLinks).toEqual([]);
+  });
+
+  it("applies a switched move draft, while cancel restores the original entity", () => {
+    const applyWorkspace = createWorkspace();
+    const applyEditorHost = createEditorHost(applyWorkspace);
+    const applyDocument = createDocumentWithTestEntities([
+      {
+        ...createTestEntity("factory", "item_port_filling_pd_mc_1", 10, 10),
+        config: { recipe: "old" },
+      },
+      createTestEntity("storage", "item_port_storager_1", 4, 10),
+    ]);
+    applyDocument.slotLinks = [createStorageToFactorySlotLink()];
+    applyEditorHost.internalDocument.setSnapshot(applyDocument);
+    applyEditorHost.internalState.collections.selection.replace(["factory"]);
+    applyEditorHost.actions.createMoveOperationDraft();
+
+    const applyDraftId = applyEditorHost.state.collections.preview[0];
+    expect(applyDraftId).toBeDefined();
+    expect(
+      applyEditorHost.actions.replaceEntityDefinition(
+        applyDraftId ?? "",
+        "item_port_liquid_filling_pd_mc_1",
+      ),
+    ).toBe(true);
+    expect(applyEditorHost.actions.applyMoveOerationDraft()).toBe(true);
+    expect(applyEditorHost.document.getSnapshot().entities.factory).toMatchObject({
+      definitionId: "item_port_liquid_filling_pd_mc_1",
+      config: {},
+    });
+    expect(applyEditorHost.document.getSnapshot().slotLinks).toEqual([]);
+
+    const cancelWorkspace = createWorkspace();
+    const cancelEditorHost = createEditorHost(cancelWorkspace);
+    const cancelDocument = createDocumentWithTestEntities([
+      {
+        ...createTestEntity("factory", "item_port_filling_pd_mc_1", 10, 10),
+        config: { recipe: "old" },
+      },
+    ]);
+    cancelEditorHost.internalDocument.setSnapshot(cancelDocument);
+    cancelEditorHost.internalState.collections.selection.replace(["factory"]);
+    cancelEditorHost.actions.createMoveOperationDraft();
+
+    const cancelDraftId = cancelEditorHost.state.collections.preview[0];
+    expect(
+      cancelEditorHost.actions.replaceEntityDefinition(
+        cancelDraftId ?? "",
+        "item_port_liquid_filling_pd_mc_1",
+      ),
+    ).toBe(true);
+    cancelEditorHost.actions.cancelMoveOperationDraft();
+    expect(cancelEditorHost.document.getSnapshot().entities.factory).toEqual(
+      cancelDocument.entities.factory,
+    );
   });
 
   it("blocks applying move operation drafts outside the base outer ring", () => {

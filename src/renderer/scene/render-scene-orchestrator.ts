@@ -75,6 +75,7 @@ interface EntitySpriteSyncStats {
   hiddenEntities: number;
   createdSprites: number;
   destroyedSprites: number;
+  recreatedSprites: number;
   syncLayoutCalls: number;
 }
 
@@ -123,6 +124,7 @@ export function createRenderSceneOrchestrator(
   const marqueeOverlayLayer = new Container()
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
   const entitySprites = new Map<string, RenderSprite>()
+  const entitySpriteDefinitionIds = new Map<string, string>()
   const grassBackgroundDecoration = createGrassBackgroundDecoration(renderHost)
   const renderPerfDiagnostics = createRenderPerfDiagnostics(renderHost)
 
@@ -206,6 +208,7 @@ export function createRenderSceneOrchestrator(
         entities,
         entityDefinitionMap,
         entitySprites,
+        entitySpriteDefinitionIds,
         layers,
         viewportState,
         frameTime,
@@ -297,6 +300,7 @@ export function createRenderSceneOrchestrator(
       }
 
       entitySprites.clear()
+      entitySpriteDefinitionIds.clear()
       gridDecoration.destroy()
       baseBoundaryDecoration.destroy()
       powerRangeDecoration.destroy()
@@ -515,6 +519,7 @@ function syncWorldEntitySprites(options: {
   entities: readonly WorldEntity[];
   entityDefinitionMap: Map<string, EntityDefinition>;
   entitySprites: Map<string, RenderSprite>;
+  entitySpriteDefinitionIds: Map<string, string>;
   layers: RenderLayerMap;
   viewportState: RenderViewportState;
   frameTime: RenderFrameTimeState;
@@ -535,6 +540,7 @@ function syncWorldEntitySprites(options: {
         hiddenEntities: 0,
         createdSprites: 0,
         destroyedSprites: 0,
+        recreatedSprites: 0,
         syncLayoutCalls: 0,
       }
   const nextEntityIds = new Set<string>()
@@ -553,6 +559,21 @@ function syncWorldEntitySprites(options: {
       continue
     }
 
+    let sprite: RenderSprite | null = options.entitySprites.get(entity.id) ?? null
+    if (
+      sprite !== null
+      && options.entitySpriteDefinitionIds.get(entity.id) !== entity.definitionId
+    ) {
+      sprite.destroy()
+      options.entitySprites.delete(entity.id)
+      options.entitySpriteDefinitionIds.delete(entity.id)
+      sprite = null
+      if (stats !== null) {
+        stats.destroyedSprites += 1
+        stats.recreatedSprites += 1
+      }
+    }
+
     const effectiveOffset = resolveEffectiveSpriteOffset(
       definition.spriteOffset,
       options.renderHost.workspace.app,
@@ -569,9 +590,8 @@ function syncWorldEntitySprites(options: {
         stats.hiddenEntities += 1
       }
       // 离屏实体的 sprite 保留但隐藏，避免反复创建/销毁
-      const existingSprite = options.entitySprites.get(entity.id) ?? null
-      if (existingSprite !== null) {
-        existingSprite.setVisible(false)
+      if (sprite !== null) {
+        sprite.setVisible(false)
       }
       nextEntityIds.add(entity.id)
       continue
@@ -581,7 +601,6 @@ function syncWorldEntitySprites(options: {
       stats.visibleEntities += 1
     }
 
-    let sprite: RenderSprite | null = options.entitySprites.get(entity.id) ?? null
     if (!sprite) {
       sprite = createSpriteForDefinition(options.renderHost, entity.id, definition)
       if (sprite === null) {
@@ -590,6 +609,7 @@ function syncWorldEntitySprites(options: {
 
       sprite.attach(options.layers)
       options.entitySprites.set(entity.id, sprite)
+      options.entitySpriteDefinitionIds.set(entity.id, entity.definitionId)
       if (stats !== null) {
         stats.createdSprites += 1
       }
@@ -629,6 +649,7 @@ function syncWorldEntitySprites(options: {
 
     sprite.destroy()
     options.entitySprites.delete(entityId)
+    options.entitySpriteDefinitionIds.delete(entityId)
     if (stats !== null) {
       stats.destroyedSprites += 1
     }
@@ -688,6 +709,7 @@ function recordEntitySpriteSyncStats(
   profiler.count("entitySprites.hiddenEntities", stats.hiddenEntities)
   profiler.count("entitySprites.createdSprites", stats.createdSprites)
   profiler.count("entitySprites.destroyedSprites", stats.destroyedSprites)
+  profiler.count("entitySprites.recreatedSprites", stats.recreatedSprites)
   profiler.count("entitySprites.syncLayoutCalls", stats.syncLayoutCalls)
 }
 

@@ -10,7 +10,10 @@ import {
 } from "pixi.js"
 
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
-import { getRotatedGridFootprint } from "@/shared/geometry/grid"
+import {
+  getRotatedGridFootprint,
+  rotateSpriteOffset,
+} from "@/shared/geometry/grid"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import type { GridRectSize, GridRotation } from "@/domain/shared/grid"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
@@ -895,9 +898,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     // 物流模式下根据是否已起笔决定显示出口还是入口箭头
     const directionFilter = this.resolveLogisticsPortDirectionFilter(context);
 
-    const portChevronSpecs = resolvePortChevronSpecs({
+    const portLayout = resolvePortOverlayLayout({
       definition: this.definition,
       layout,
+      app: context.workspace.app,
+    });
+    const portChevronSpecs = resolvePortChevronSpecs({
+      definition: this.definition,
+      layout: portLayout,
       directionFilter,
     });
 
@@ -1257,6 +1265,61 @@ function resolvePortChevronSpecs(options: {
   }
 
   return specs;
+}
+
+function resolvePortOverlayLayout(options: {
+  definition: EntityDefinition;
+  layout: RenderSpriteLayout;
+  app: RenderSpriteSyncContext["workspace"]["app"];
+}): RenderSpriteLayout {
+  const spriteOffset = resolveEffectiveSpriteOffsetForPortOverlay(
+    options.definition,
+    options.app,
+  );
+
+  if (spriteOffset === undefined) {
+    return options.layout;
+  }
+
+  const rotatedOffset = rotateSpriteOffset(
+    spriteOffset,
+    options.definition.footprint,
+    options.layout.rotation,
+  );
+  const gridCellPixelSize = resolveLayoutGridCellPixelSize(options.layout, {
+    width: rotatedOffset.width,
+    height: rotatedOffset.height,
+  });
+
+  if (gridCellPixelSize === null) {
+    return options.layout;
+  }
+
+  const rotatedFootprint = getRotatedGridFootprint(
+    options.definition.footprint,
+    options.layout.rotation,
+  );
+
+  return {
+    x: options.layout.x - rotatedOffset.x * gridCellPixelSize,
+    y: options.layout.y - rotatedOffset.y * gridCellPixelSize,
+    width: rotatedFootprint.width * gridCellPixelSize,
+    height: rotatedFootprint.height * gridCellPixelSize,
+    rotation: options.layout.rotation,
+  };
+}
+
+function resolveEffectiveSpriteOffsetForPortOverlay(
+  definition: EntityDefinition,
+  app: RenderSpriteSyncContext["workspace"]["app"],
+): { x: number; y: number; width: number; height: number } | undefined {
+  if (definition.spriteOffset === undefined) {
+    return undefined;
+  }
+
+  return readSimplifiedDeviceIconPreference(app)
+    ? definition.spriteOffset.blueprint
+    : definition.spriteOffset.topView;
 }
 
 function resolvePortChevronMaterial(

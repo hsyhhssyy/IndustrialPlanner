@@ -56,6 +56,13 @@ const CANVAS_FLOATING_TOOLBAR_DEFINITIONS: Record<CanvasFloatingToolbarButtonId,
     icon: "rotate",
     tone: "rotate",
   },
+  "canvas-floating-toolbar-button-switch-mode": {
+    label: {
+      "zh-CN": "切换模式",
+      "en-US": "Switch Mode",
+    },
+    icon: "switch-mode",
+  },
   "canvas-floating-toolbar-button-move": {
     label: {
       "zh-CN": "移动",

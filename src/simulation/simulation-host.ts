@@ -89,6 +89,14 @@ export function createSimulationHost(
               diagnosticCount: internalState.currentSnapshot.diagnostics.length,
             },
       }),
+      getDocumentRuntimeStatus: () => {
+        const topology = topologyStore.getSnapshot();
+        if (topology === null) return null;
+        return {
+          tickNumber: internalState.currentSnapshot?.tickNumber ?? null,
+          totalPowerDemand: topology.totalPowerDemand,
+        };
+      },
       getDeviceRuntimeStatus: (() => {
         // 帧级缓存：topology 在同一帧内引用不变，shareCapSlotIds 只需计算一次。
         // BeltCargoDecoration 等 decoration 每帧对多个 entity 调用此方法时命中缓存。

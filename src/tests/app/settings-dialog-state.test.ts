@@ -44,6 +44,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "shortcut-save-blueprint": "Ctrl+S",
         "shortcut-return-select": "Esc",
         "shortcut-rotate": "R",
+        "shortcut-switch-device-mode": "Tab",
         "shortcut-rotate-viewport": "Ctrl+R",
         "shortcut-delete-device": "F",
         "shortcut-move-selection": "M",
@@ -82,6 +83,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["shortcut-save-blueprint"]).toBe("Ctrl+S");
     expect(hydratedController.values["shortcut-return-select"]).toBe("Esc");
     expect(hydratedController.values["shortcut-rotate"]).toBe("R");
+    expect(hydratedController.values["shortcut-switch-device-mode"]).toBe("Tab");
     expect(hydratedController.values["shortcut-rotate-viewport"]).toBe("Ctrl+R");
     expect(hydratedController.values["shortcut-delete-device"]).toBe("F");
     expect(hydratedController.values["game-show-device-names"]).toBe(true);
@@ -231,6 +233,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "shortcut-save-blueprint": "Ctrl+S",
         "shortcut-return-select": "Esc",
         "shortcut-rotate": "R",
+        "shortcut-switch-device-mode": "Tab",
         "shortcut-rotate-viewport": "Ctrl+R",
         "shortcut-delete-device": "F",
         "shortcut-move-selection": "M",

@@ -11,6 +11,9 @@ import {
   createHypergryphDeleteSelectionGestureModule,
 } from "./hypergryph/hypergryph-delete-selection-gesture-module";
 import {
+  createHypergryphEntityVariantSwitchGestureModule,
+} from "./hypergryph/hypergryph-entity-variant-switch-gesture-module";
+import {
   createHypergryphLogisticsPlacementGestureModule,
 } from "./hypergryph/hypergryph-logistics-placement-gesture-module";
 import {
@@ -50,6 +53,7 @@ export class AppGestureModuleRegistrar {
       options.router.registerModule(createHypergryphMarqueeGestureModule()),
       options.router.registerModule(createHypergryphSelectGestureModule()),
       options.router.registerModule(createHypergryphSaveBlueprintGestureModule()),
+      options.router.registerModule(createHypergryphEntityVariantSwitchGestureModule()),
       options.router.registerModule(createHypergryphDeleteSelectionGestureModule()),
       options.router.registerModule(createHypergryphMouseViewportPanModule()),
       options.router.registerModule(createHypergryphViewportZoomModule()),

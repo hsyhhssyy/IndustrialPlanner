@@ -1,6 +1,11 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import {
+  SWITCH_DEVICE_MODE_BUTTON_ID,
+  canSwitchEntityVariantDefinition,
+  resolveNextSwitchableEntityVariantDefinitionId,
+} from "@/app/entity-variant-availability";
+import {
   canPlaceEntityDefinitionInCurrentBase,
   hasPlaceableEntityDefinitionInCurrentBase,
 } from "@/app/placement-zone-availability";
@@ -9,6 +14,7 @@ import {
   type ShortcutKeyId,
 } from "@/app/actions/keyboard-shortcut-manager";
 import type {
+  CanvasFloatingToolbarButtonId,
   CanvasTopLeftCornerToolbarShowButtonId,
   PlacementGroup,
 } from "@/app/state/state-impl";
@@ -310,6 +316,15 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return { status: "handled" };
 
         case "key down":
+          if (isSwitchDeviceModeShortcut({
+            appHost: context.appHost,
+            code: event.code,
+            key: event.key,
+            modifiers: event.modifiers,
+          })) {
+            return switchPlacementPreviewVariant(context.appHost, editor);
+          }
+
           if (!isRotatePlacementShortcut({
             appHost: context.appHost,
             code: event.code,
@@ -401,6 +416,10 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             }
           }
 
+          if (event.uiButtonId === SWITCH_DEVICE_MODE_BUTTON_ID) {
+            return switchPlacementPreviewVariant(context.appHost, editor);
+          }
+
           if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
             applyPlacementOperation(context.appHost, editor, {
               keepPlacement: context.appHost.internalState.runtime.singlePlacementContinuous,
@@ -433,6 +452,10 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             if (toggleResult !== null) {
               return toggleResult;
             }
+          }
+
+          if (event.uiButtonId === SWITCH_DEVICE_MODE_BUTTON_ID) {
+            return switchPlacementPreviewVariant(context.appHost, editor);
           }
 
           if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
@@ -858,7 +881,7 @@ export function syncPlacementEntryUi(
   );
 
   return appHost.internalActions.showCanvasFloatingToolbarForCollection(
-    PLACEMENT_TOOLBAR_BUTTON_IDS,
+    resolvePlacementToolbarButtonIds(appHost),
     EntityCollectionType.preview,
   );
 }
@@ -891,6 +914,93 @@ function resolveSinglePlacementTopLeftToolbarButtonIds(
   return appHost.internalState.runtime.singlePlacementContinuous
     ? [TOGGLE_CONTINUOUS_PLACEMENT_OFF]
     : [CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID];
+}
+
+function resolvePlacementToolbarButtonIds(
+  appHost: AppHost,
+): readonly CanvasFloatingToolbarButtonId[] {
+  const deviceId = appHost.internalState.runtime.singlePlacementDeviceId;
+  if (
+    deviceId === null
+    || !canSwitchEntityVariantDefinition({ appHost, definitionId: deviceId })
+  ) {
+    return PLACEMENT_TOOLBAR_BUTTON_IDS;
+  }
+
+  return [
+    "canvas-floating-toolbar-button-cancel",
+    SWITCH_DEVICE_MODE_BUTTON_ID,
+    "canvas-floating-toolbar-button-rotate",
+    "canvas-floating-toolbar-button-ok",
+  ];
+}
+
+function switchPlacementPreviewVariant(
+  appHost: AppHost,
+  editor: EditorContract,
+): GestureHandleResult {
+  const previewEntityId = editor.state.collections.preview[0] ?? null;
+  if (previewEntityId === null) {
+    return { status: "ignored" };
+  }
+
+  const previewEntity = editor.queries.getEntityById(previewEntityId);
+  if (previewEntity === null) {
+    return { status: "ignored" };
+  }
+
+  const nextDefinitionId = resolveNextSwitchableEntityVariantDefinitionId({
+    appHost,
+    definitionId: previewEntity.definitionId,
+  });
+  if (nextDefinitionId === null) {
+    return { status: "ignored" };
+  }
+
+  if (!editor.actions.replaceEntityDefinition(previewEntity.id, nextDefinitionId)) {
+    return { status: "ignored" };
+  }
+
+  runInAction(() => {
+    appHost.internalState.runtime.singlePlacementDeviceId = nextDefinitionId;
+  });
+  recenterPlacementPreviewAtAnchor(appHost, editor);
+  syncPlacementEntryUi(appHost);
+  return { status: "handled" };
+}
+
+function recenterPlacementPreviewAtAnchor(
+  appHost: AppHost,
+  editor: EditorContract,
+): void {
+  const placementAnchor = appHost.internalState.runtime.placementAnchor;
+  if (placementAnchor === null) {
+    return;
+  }
+
+  const previewRect = editor.queries.findEntityCollectionGridRect(
+    EntityCollectionType.preview,
+  );
+  if (previewRect === null) {
+    return;
+  }
+
+  const nextTopLeft = {
+    x: placementAnchor.x - Math.floor((previewRect.width - 1) / 2),
+    y: placementAnchor.y - Math.floor((previewRect.height - 1) / 2),
+  };
+  if (previewRect.x !== nextTopLeft.x || previewRect.y !== nextTopLeft.y) {
+    editor.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: {
+        x: previewRect.x,
+        y: previewRect.y,
+      },
+      endGridPoint: nextTopLeft,
+    });
+  }
+
+  appHost.internalActions.alignCanvasFloatingToolbar();
 }
 
 function capturePlacementContinuationSnapshot(
@@ -1038,6 +1148,27 @@ function isRotatePlacementShortcut(options: {
 
   return options.appHost.internalActions.isShortcutFor(
     SHORTCUT_KEY.ROTATE,
+    options.code,
+    options.key,
+  );
+}
+
+function isSwitchDeviceModeShortcut(options: {
+  appHost: AppHost;
+  code: string | null;
+  key: string | null;
+  modifiers: {
+    alt: boolean;
+    ctrl: boolean;
+    meta: boolean;
+  };
+}): boolean {
+  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
+    return false;
+  }
+
+  return options.appHost.internalActions.isShortcutFor(
+    SHORTCUT_KEY.SWITCH_DEVICE_MODE,
     options.code,
     options.key,
   );

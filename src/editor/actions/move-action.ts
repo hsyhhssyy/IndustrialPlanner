@@ -102,6 +102,7 @@ export function createEditorMoveActions({
       }
 
       const nextEntities = { ...currentDocument.entities };
+      const definitionChangedEntityIds = new Set<string>();
       let didUpdateDocument = false;
 
       for (const draft of previewDrafts) {
@@ -117,11 +118,16 @@ export function createEditorMoveActions({
 
         nextEntities[draft.originalEntityId] = {
           ...currentEntity,
+          definitionId: draft.definitionId,
           position: {
             ...draft.position,
           },
           rotation: draft.rotation,
+          config: { ...draft.config },
         };
+        if (currentEntity.definitionId !== draft.definitionId) {
+          definitionChangedEntityIds.add(draft.originalEntityId);
+        }
         didUpdateDocument = true;
       }
 
@@ -139,6 +145,12 @@ export function createEditorMoveActions({
           update: (documentSnapshot) => ({
             ...documentSnapshot,
             entities: nextEntities,
+            slotLinks: definitionChangedEntityIds.size === 0
+              ? documentSnapshot.slotLinks
+              : documentSnapshot.slotLinks.filter((slotLink) =>
+                !definitionChangedEntityIds.has(slotLink.source.entityId)
+                && !definitionChangedEntityIds.has(slotLink.target.entityId),
+              ),
           }),
         });
 

@@ -12,6 +12,7 @@ export {
   createHypergryphLogisticsPlacementGestureModule,
 } from "./hypergryph/hypergryph-logistics-placement-gesture-module";
 export { createHypergryphDeleteSelectionGestureModule } from "./hypergryph/hypergryph-delete-selection-gesture-module";
+export { createHypergryphEntityVariantSwitchGestureModule } from "./hypergryph/hypergryph-entity-variant-switch-gesture-module";
 export {
   cleanupMarquee,
   createHypergryphMarqueeGestureModule,

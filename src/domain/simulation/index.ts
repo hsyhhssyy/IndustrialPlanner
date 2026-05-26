@@ -7,4 +7,5 @@ export type {
 	SimulationRuntimeStatistics,
 	SimulationDeviceRuntimeStatusReadModel,
 	SimulationDeviceRuntimeSlotItemReadModel,
+	SimulationDocumentRuntimeReadModel,
 } from "./types/simulation-types";

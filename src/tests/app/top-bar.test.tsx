@@ -78,6 +78,10 @@ function attachSimulationStub(
         },
         currentTick: null,
       }),
+      getDocumentRuntimeStatus: () => ({
+        tickNumber: state.runningState === "stop" ? null : 0,
+        totalPowerDemand: null,
+      }),
       getDeviceRuntimeStatus: () => null,
       getPipeFluidItemId: () => null,
       isPipeDeviceSlotOccupied: () => false,

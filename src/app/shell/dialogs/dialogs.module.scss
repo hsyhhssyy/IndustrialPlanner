@@ -390,17 +390,13 @@
 
 .debug-log-dialog-body {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   padding: 14px;
+  gap: 10px;
 }
 
-.debug-log-dialog-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
-}
-
-.debug-log-dialog-toolbar button {
+.debug-log-dialog-header-action {
   padding: 4px 12px;
   font: 12px/1.4 inherit;
   border: 1px solid var(--line);
@@ -408,20 +404,46 @@
   background: var(--surface-1);
   color: var(--text-0);
   cursor: pointer;
+  white-space: nowrap;
 }
 
-.debug-log-dialog-toolbar button:hover:not(:disabled) {
+.debug-log-dialog-header-action:hover:not(:disabled) {
   background: var(--surface-2);
+  border-color: var(--line-strong);
 }
 
-.debug-log-dialog-toolbar button:disabled {
+.debug-log-dialog-header-action:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
+.debug-log-dialog-guidance {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-1);
+}
+
+.debug-log-dialog-guidance p {
+  margin: 0;
+  flex: 1 1 auto;
+}
+
+.debug-log-dialog-count {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-0);
+  white-space: nowrap;
+}
+
 .debug-log-dialog-textarea {
-  height: 100%;
-  min-height: 100%;
+  min-height: 0;
   margin-top: 0;
   resize: none;
 }

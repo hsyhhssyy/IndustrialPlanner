@@ -1,11 +1,9 @@
 import type {
-  SlotLinkDefinition,
   WorldDocument,
   WorldEntity,
 } from "@/domain/document/world-document";
 
 import { createLogger } from "@/shared/logging/logger";
-import { hashStable } from "./deterministic";
 import type {
   CompiledSimulationDevice,
   CompiledSimulationSlot,
@@ -45,9 +43,6 @@ export function createSimulationTopologyMigration(
       previousTopology: options.previousTopology,
       nextTopology: options.nextTopology,
       deviceId,
-      entityId,
-      previousDocument: options.previousDocument,
-      nextDocument: options.nextDocument,
     });
 
     if (reasons.length > 0) {
@@ -70,9 +65,6 @@ function collectEntityResetReasons(options: {
   readonly previousTopology: CompiledSimulationTopology;
   readonly nextTopology: CompiledSimulationTopology;
   readonly deviceId: string;
-  readonly entityId: string;
-  readonly previousDocument: WorldDocument;
-  readonly nextDocument: WorldDocument;
 }): string[] {
   const reasons: string[] = [];
 
@@ -146,121 +138,7 @@ function collectEntityResetReasons(options: {
     reasons.push(...compareSlotRuntimeShape(prevSlot, nextSlot, slotId));
   }
 
-  const prevLinkSigs = getDeviceLinkSignatures(options.previousTopology, prevSlotIdSet);
-  const nextLinkSigs = getDeviceLinkSignatures(options.nextTopology, nextSlotIdSet);
-  const prevLinkIdSet = new Set(prevLinkSigs.map((l) => l.id));
-  const nextLinkIdSet = new Set(nextLinkSigs.map((l) => l.id));
-
-  for (const linkId of nextLinkIdSet) {
-    if (!prevLinkIdSet.has(linkId)) {
-      reasons.push(`device link '${linkId}' added`);
-    }
-  }
-  for (const linkId of prevLinkIdSet) {
-    if (!nextLinkIdSet.has(linkId)) {
-      reasons.push(`device link '${linkId}' removed`);
-    }
-  }
-  for (const prevLink of prevLinkSigs) {
-    const nextLink = nextLinkSigs.find((l) => l.id === prevLink.id);
-    if (nextLink === undefined) continue;
-    if (prevLink.linkType !== nextLink.linkType) {
-      reasons.push(
-        `device link '${prevLink.id}' linkType changed: '${prevLink.linkType}' → '${nextLink.linkType}'`,
-      );
-    }
-    const prevSrc = [...prevLink.sourceSlotIds].sort().join(',');
-    const nextSrc = [...nextLink.sourceSlotIds].sort().join(',');
-    if (prevSrc !== nextSrc) {
-      reasons.push(`device link '${prevLink.id}' sourceSlotIds changed`);
-    }
-    const prevTgt = [...prevLink.targetSlotIds].sort().join(',');
-    const nextTgt = [...nextLink.targetSlotIds].sort().join(',');
-    if (prevTgt !== nextTgt) {
-      reasons.push(`device link '${prevLink.id}' targetSlotIds changed`);
-    }
-  }
-
-  const prevDocLinks = options.previousDocument.slotLinks.filter((l) =>
-    isLinkRelatedToEntity(l, options.entityId),
-  );
-  const nextDocLinks = options.nextDocument.slotLinks.filter((l) =>
-    isLinkRelatedToEntity(l, options.entityId),
-  );
-  const prevDocLinkSig = createDocumentSlotLinkSignature(
-    options.previousDocument,
-    options.entityId,
-  );
-  const nextDocLinkSig = createDocumentSlotLinkSignature(
-    options.nextDocument,
-    options.entityId,
-  );
-
-  if (prevDocLinkSig !== nextDocLinkSig) {
-    const prevDocLinkIdSet = new Set(prevDocLinks.map((l) => l.id));
-    const nextDocLinkIdSet = new Set(nextDocLinks.map((l) => l.id));
-    for (const linkId of nextDocLinkIdSet) {
-      if (!prevDocLinkIdSet.has(linkId)) {
-        reasons.push(`document slotLink '${linkId}' added`);
-      }
-    }
-    for (const linkId of prevDocLinkIdSet) {
-      if (!nextDocLinkIdSet.has(linkId)) {
-        reasons.push(`document slotLink '${linkId}' removed`);
-      }
-    }
-    for (const prevLink of prevDocLinks) {
-      const nextLink = nextDocLinks.find((l) => l.id === prevLink.id);
-      if (nextLink === undefined) continue;
-      if (prevLink.linkType !== nextLink.linkType) {
-        reasons.push(
-          `document slotLink '${prevLink.id}' linkType changed: '${prevLink.linkType}' → '${nextLink.linkType}'`,
-        );
-      }
-      const prevSrcStr = `${prevLink.source.entityId}:${prevLink.source.slotId}`;
-      const nextSrcStr = `${nextLink.source.entityId}:${nextLink.source.slotId}`;
-      if (prevSrcStr !== nextSrcStr) {
-        reasons.push(
-          `document slotLink '${prevLink.id}' source changed: '${prevSrcStr}' → '${nextSrcStr}'`,
-        );
-      }
-      const prevTgtStr = `${prevLink.target.entityId}:${prevLink.target.slotId}`;
-      const nextTgtStr = `${nextLink.target.entityId}:${nextLink.target.slotId}`;
-      if (prevTgtStr !== nextTgtStr) {
-        reasons.push(
-          `document slotLink '${prevLink.id}' target changed: '${prevTgtStr}' → '${nextTgtStr}'`,
-        );
-      }
-    }
-  }
-
   return reasons;
-}
-
-interface DeviceLinkSignature {
-  readonly id: string;
-  readonly linkType: string;
-  readonly sourceSlotIds: readonly string[];
-  readonly targetSlotIds: readonly string[];
-}
-
-function getDeviceLinkSignatures(
-  topology: CompiledSimulationTopology,
-  slotIdSet: ReadonlySet<string>,
-): DeviceLinkSignature[] {
-  return Object.values(topology.links)
-    .filter(
-      (link) =>
-        link.sourceSlotIds.some((slotId) => slotIdSet.has(slotId))
-        || link.targetSlotIds.some((slotId) => slotIdSet.has(slotId)),
-    )
-    .map((link) => ({
-      id: link.id,
-      linkType: link.linkType,
-      sourceSlotIds: [...link.sourceSlotIds].sort(),
-      targetSlotIds: [...link.targetSlotIds].sort(),
-    }))
-    .sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function compareSlotRuntimeShape(
@@ -294,28 +172,6 @@ function compareSlotRuntimeShape(
   }
 
   return reasons;
-}
-
-function createDocumentSlotLinkSignature(
-  document: WorldDocument,
-  entityId: string,
-): string {
-  return hashStable(document.slotLinks
-    .filter((link) => isLinkRelatedToEntity(link, entityId))
-    .map((link) => ({
-      id: link.id,
-      linkType: link.linkType,
-      source: link.source,
-      target: link.target,
-    }))
-    .sort((left, right) => left.id.localeCompare(right.id)));
-}
-
-function isLinkRelatedToEntity(
-  link: SlotLinkDefinition,
-  entityId: string,
-): boolean {
-  return link.source.entityId === entityId || link.target.entityId === entityId;
 }
 
 function listDeviceSlotIds(

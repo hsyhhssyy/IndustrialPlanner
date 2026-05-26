@@ -154,6 +154,7 @@ export const CANVAS_FLOATING_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-ok",
   "canvas-floating-toolbar-button-cancel",
   "canvas-floating-toolbar-button-rotate",
+  "canvas-floating-toolbar-button-switch-mode",
   "canvas-floating-toolbar-button-move",
   "canvas-floating-toolbar-button-save-blueprint",
   "canvas-floating-toolbar-button-delete",

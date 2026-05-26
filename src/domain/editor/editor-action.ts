@@ -25,6 +25,11 @@ export interface EditorAction {
 
 	patchEntityConfig(entityId: string, patch: Record<string, unknown>): void;
 	/**
+	 * 将实体或运行时 draft 切换为另一个 definition。
+	 * 切换会清空该实体 config；若目标是正式文档实体，还会移除涉及该实体的 document slotLinks。
+	 */
+	replaceEntityDefinition(entityId: string, nextDefinitionId: string): boolean;
+	/**
 	 * 删除实体 config 中的指定键。
 	 * 父键被删时，以该键为前缀的子键一并删除（如删 `links[0]` 则 `links[0].id`、`links[0].source.entityId` 等均被移除）。
 	 * 只影响 config，不影响 entity 其他字段。

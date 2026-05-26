@@ -1156,6 +1156,7 @@ describe("createAppHost", () => {
     );
     expect(appHost.internalState.runtime.canvasFloatingToolbar.buttonIds).toEqual([
       "canvas-floating-toolbar-button-cancel",
+      "canvas-floating-toolbar-button-switch-mode",
       "canvas-floating-toolbar-button-rotate",
       "canvas-floating-toolbar-button-ok",
     ]);

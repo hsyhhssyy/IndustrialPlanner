@@ -164,6 +164,10 @@ export type MessageKey =
   | "debugLogDialog.copied"
   | "debugLogDialog.maximize"
   | "debugLogDialog.restore"
+  | "debugLogDialog.export"
+  | "debugLogDialog.exporting"
+  | "debugLogDialog.clear"
+  | "debugLogDialog.guidance"
   | "helpDialog.title"
   | "helpDialog.description"
   | "helpDialog.tab.overview"
@@ -221,6 +225,8 @@ export type MessageKey =
   | "settingsField.shortcut-return-selectDescription"
   | "settingsField.shortcut-rotate"
   | "settingsField.shortcut-rotateDescription"
+  | "settingsField.shortcut-switch-device-mode"
+  | "settingsField.shortcut-switch-device-modeDescription"
   | "settingsField.shortcut-delete-device"
   | "settingsField.shortcut-delete-deviceDescription"
   | "settingsField.shortcut-move-selection"
@@ -460,6 +466,10 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "debugLogDialog.copied": "已复制",
     "debugLogDialog.maximize": "最大化调试日志",
     "debugLogDialog.restore": "还原调试日志",
+    "debugLogDialog.export": "导出日志文件",
+    "debugLogDialog.exporting": "正在导出…",
+    "debugLogDialog.clear": "清空日志",
+    "debugLogDialog.guidance": "如果你在使用中遇到了问题，请点击上方「导出日志文件」按钮，将下载的文件发送给技术支持。",
     "moduleBalancing.canvas": "画布",
     "moduleBalancing.newCanvas": "新建画布",
     "moduleBalancing.deleteCanvas": "删除画布",
@@ -636,6 +646,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-return-selectDescription": "设置返回选择模式的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-rotate": "旋转",
     "settingsField.shortcut-rotateDescription": "设置旋转预览设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-switch-device-mode": "切换设备模式",
+    "settingsField.shortcut-switch-device-modeDescription": "设置切换当前设备变体的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-delete-device": "删除设备",
     "settingsField.shortcut-delete-deviceDescription": "设置删除选中设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-move-selection": "移动选区",
@@ -874,6 +886,10 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "debugLogDialog.copied": "Copied",
     "debugLogDialog.maximize": "Maximize Debug Logs",
     "debugLogDialog.restore": "Restore Debug Logs",
+    "debugLogDialog.export": "Export Log File",
+    "debugLogDialog.exporting": "Exporting…",
+    "debugLogDialog.clear": "Clear Logs",
+    "debugLogDialog.guidance": "If you are experiencing issues, click \"Export Log File\" above and send the downloaded file to technical support.",
     "moduleBalancing.canvas": "Canvas",
     "moduleBalancing.newCanvas": "New Canvas",
     "moduleBalancing.deleteCanvas": "Delete Canvas",
@@ -1050,6 +1066,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-return-selectDescription": "Set the shortcut key for returning to select mode; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-rotate": "Rotate",
     "settingsField.shortcut-rotateDescription": "Set the shortcut key for rotating preview devices; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-switch-device-mode": "Switch Device Mode",
+    "settingsField.shortcut-switch-device-modeDescription": "Set the shortcut key for switching the current device variant; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-delete-device": "Delete Device",
     "settingsField.shortcut-delete-deviceDescription": "Set the shortcut key for deleting selected devices; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-move-selection": "Move Selection",
