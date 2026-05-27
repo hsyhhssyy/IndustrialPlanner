@@ -30,7 +30,7 @@ describe("system-blueprint public assets", () => {
       rootDirectory.folders[0]?.folderId ?? null,
     );
 
-    expect(sampleFolderDirectory.blueprints).toHaveLength(2);
+    expect(sampleFolderDirectory.blueprints).toHaveLength(3);
     expect(sampleFolderDirectory.blueprints[0]).toMatchObject({
       blueprintId: "429609a4-61cb-4083-98fa-b8de1268bec4",
       name: "精选荞愈胶囊产线",
@@ -72,6 +72,15 @@ describe("system-blueprint public assets", () => {
       definitionId: "pipe_turn_ccw_1x1",
       rotation: 180,
     });
+
+    expect(sampleFolderDirectory.blueprints[2]).toMatchObject({
+      blueprintId: "2dec8da2-1c38-47f3-a574-a586bd4efad5",
+      name: "中容武陵电池产线",
+      baseId: "wuling_tianwangping_aid",
+      sourcePath: "wuling-battery-line.json",
+    });
+    expect(sampleFolderDirectory.blueprints[2]?.entityOrder).toHaveLength(338);
+    expect(sampleFolderDirectory.blueprints[2]?.slotLinks).toEqual([]);
   });
 });
 

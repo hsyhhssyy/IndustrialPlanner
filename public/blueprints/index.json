@@ -5,7 +5,8 @@
       "name": "产线样例",
       "blueprints": [
         "premium-capsule-line",
-        "dual-oven-xiranite"
+        "dual-oven-xiranite",
+        "wuling-battery-line"
       ]
     }
   ]

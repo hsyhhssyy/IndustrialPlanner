@@ -172,6 +172,11 @@ export function convertLegacyBlueprintJson(
  *   旧：pickupItemId + pickupIgnoreInventory + protocolHubOutputs[0].ignoreInventory
  *   新：links[0]（完整 SlotLinkDefinition）+ storageSlotGroups[0].slots[0].ignoreStock
  *
+ * 暗管出口（item_port_udpipe_unloader_1）：
+ *   旧：pumpOutputItemId + darkPipeOutletMode
+ *   新：links[0]（完整 SlotLinkDefinition）+ storageSlotGroups[0].slots[0].ignoreStock
+ *   darkPipeOutletMode === "generate" → ignoreStock: true
+ *
  * 存储箱（item_port_storager_1）：
  *   旧：submitToWarehouse = true
  *   新：storageSlotGroups[N].slots[0].submitMode = "every-tick"
@@ -186,6 +191,10 @@ function convertLegacyDeviceConfig(options: {
 }): Record<string, unknown> {
   if (options.definitionId === "item_port_unloader_1") {
     return convertLegacyUnloaderConfig(options.config);
+  }
+
+  if (options.definitionId === "item_port_udpipe_unloader_1") {
+    return convertLegacyDarkPipeUnloaderConfig(options.config);
   }
 
   if (options.definitionId === "item_port_storager_1") {
@@ -268,6 +277,38 @@ function convertLegacyUnloaderConfig(
   nextConfig["links[0].id"] = "";
   nextConfig["links[0].linkType"] = "share-all";
   // source.entityId 留空，applyPlacementDraft 时由 rewriteEntityIdInConfig 处理
+  nextConfig["links[0].source.entityId"] = "";
+  nextConfig["links[0].source.storageSlotGroupId"] = "unloader_buffer";
+  nextConfig["links[0].source.slotId"] = "slot_1";
+  nextConfig["links[0].target.entityId"] = "warehouse";
+  nextConfig["links[0].target.storageSlotGroupId"] = "warehouse";
+  nextConfig["links[0].target.slotId"] = itemId;
+  nextConfig["storageSlotGroups[0].slots[0].ignoreStock"] = ignoreStock;
+
+  return nextConfig;
+}
+
+function convertLegacyDarkPipeUnloaderConfig(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const itemId = config.pumpOutputItemId;
+  if (typeof itemId !== "string" || itemId === "") {
+    return config;
+  }
+
+  // darkPipeOutletMode === "generate" → 无限供应 → ignoreStock: true
+  const ignoreStock = config.darkPipeOutletMode === "generate";
+
+  const nextConfig: Record<string, unknown> = { ...config };
+
+  // 移除旧 key
+  delete nextConfig.pumpOutputItemId;
+  delete nextConfig.darkPipeOutletMode;
+
+  // 写入新格式 links[0]（完整 SlotLinkDefinition）
+  // 结构与取货口完全一致，差异仅在于仓库侧的 slotId 是液体类型
+  nextConfig["links[0].id"] = "";
+  nextConfig["links[0].linkType"] = "share-all";
   nextConfig["links[0].source.entityId"] = "";
   nextConfig["links[0].source.storageSlotGroupId"] = "unloader_buffer";
   nextConfig["links[0].source.slotId"] = "slot_1";
