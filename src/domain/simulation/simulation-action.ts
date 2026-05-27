@@ -1,3 +1,5 @@
+import type { SimulationRuntimeSlotPatch } from "./types/simulation-types";
+
 export interface SimulationAction {
   start(): Promise<void>;
   pause(): void;
@@ -5,4 +7,5 @@ export interface SimulationAction {
   stop(): void;
   setSimulationSpeed(value: number): void;
   advancePlaybackByDeltaMs(deltaMs: number): Promise<void>;
+  patchRuntimeSlot(patch: SimulationRuntimeSlotPatch): Promise<void>;
 }

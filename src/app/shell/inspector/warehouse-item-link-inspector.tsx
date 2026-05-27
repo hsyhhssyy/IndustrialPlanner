@@ -45,7 +45,18 @@ export function WarehouseItemLinkInspector({
   if (rows.length === 0) {
     return (
       <article className={cm(styles, "definition-card")} data-inspector-key="warehouse-item-link">
-        <h4>仓库物品链接</h4>
+        {/*
+          AI-REMOVED 2026-05-26:
+          Reason: inspector 卡片不再显示标题。
+          Trigger: 槽位配置 inspector 需求要求所有 inspector 无标题和副标题。
+          Evidence: 用户明确要求“所有inspector都没有标题和副标题”。
+          Replacement: 空状态文本直接作为主体内容。
+          Risk: Low
+          Human Review: Required
+
+          Original code:
+          <h4>仓库物品链接</h4>
+        */}
         <p>未找到可链接的槽位。</p>
       </article>
     );
@@ -113,12 +124,23 @@ export function WarehouseItemLinkInspector({
       className={cm(styles, "definition-card warehouse-item-link-inspector")}
       data-inspector-key="warehouse-item-link"
     >
-      <div className={cm(styles, "slot-config-group-header")}>
-        <div>
-          <h4>仓库物品链接</h4>
-          <p>{translate("inspector.warehouseItemLink.description")}</p>
+      {/*
+        AI-REMOVED 2026-05-26:
+        Reason: inspector 卡片不再显示标题和副标题。
+        Trigger: 槽位配置 inspector 需求要求所有 inspector 无标题和副标题。
+        Evidence: 用户明确要求“所有inspector都没有标题和副标题”。
+        Replacement: 链接行列表直接作为主体内容。
+        Risk: Low
+        Human Review: Required
+
+        Original code:
+        <div className={cm(styles, "slot-config-group-header")}>
+          <div>
+            <h4>仓库物品链接</h4>
+            <p>{translate("inspector.warehouseItemLink.description")}</p>
+          </div>
         </div>
-      </div>
+      */}
       <div className={cm(styles, "slot-config-list")}>
         {rows.map((row) => {
           const itemDefinition = row.currentItemId === null

@@ -33,6 +33,16 @@ export interface SimulationDeviceRuntimeSlotItemReadModel {
   readonly itemType: string | null;
   readonly count: number;
   readonly reserved: number;
+  readonly ignoreStock: boolean;
+}
+
+export interface SimulationRuntimeSlotPatch {
+  readonly entityId: string;
+  readonly storageGroupId: string;
+  readonly slotId: string;
+  readonly itemType: string | null;
+  readonly count: number;
+  readonly ignoreStock: boolean;
 }
 
 /** 文档级仿真运行时只读视图 */

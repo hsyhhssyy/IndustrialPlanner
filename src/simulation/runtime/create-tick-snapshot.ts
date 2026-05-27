@@ -4,6 +4,7 @@ import type {
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import {
+  resolveEffectiveIgnoreStock,
   resolveStorageSlotId,
 } from "@/simulation/runtime/runtime-slot-access";
 
@@ -63,6 +64,7 @@ function createSlotSnapshots(
       itemType: slotState?.itemType ?? null,
       count: slotState?.count ?? 0,
       reserved: reservedBySlot[storageSlotId] ?? 0,
+      ignoreStock: resolveEffectiveIgnoreStock(topology, state, slotId),
     };
   }
   return slots;

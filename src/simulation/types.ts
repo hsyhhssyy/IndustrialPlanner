@@ -300,6 +300,7 @@ export interface RuntimeSlotSnapshot {
   readonly itemType: string | null;
   readonly count: number;
   readonly reserved: number;
+  readonly ignoreStock: boolean;
 }
 
 export interface RuntimeDeviceSnapshot {

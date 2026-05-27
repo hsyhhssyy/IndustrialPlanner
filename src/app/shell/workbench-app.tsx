@@ -99,20 +99,27 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.themeId = value;
         }),
       },
-      "game-arknights-operation-mode": {
-        readValue: () => appHost.state.settings.hypergryphOperationMode,
-        writeValue: action((value) => {
-          if (typeof value !== "boolean") {
-            return;
-          }
-
-          if (appHost.internalState.settings.hypergryphOperationMode === value) {
-            return;
-          }
-
-          appHost.internalState.settings.hypergryphOperationMode = value;
-        }),
-      },
+      // AI-REMOVED 2026-05-26:
+      // Reason: 鹰角网络操作模式开关已从设置面板移除，对应的 readValue/writeValue 绑定不再需要。
+      // Trigger: 用户需求 — 取消该设置的图像化入口。
+      // Evidence: 设置项 game-arknights-operation-mode 已从 settings-dialog-state.ts 移除。
+      // Replacement: None（字段 hypergryphOperationMode 仍保留于 state，但不再通过设置面板读写）。
+      // Risk: Low
+      // Human Review: Not Required
+      //
+      // Original code:
+      // "game-arknights-operation-mode": {
+      //   readValue: () => appHost.state.settings.hypergryphOperationMode,
+      //   writeValue: action((value) => {
+      //     if (typeof value !== "boolean") {
+      //       return;
+      //     }
+      //     if (appHost.internalState.settings.hypergryphOperationMode === value) {
+      //       return;
+      //     }
+      //     appHost.internalState.settings.hypergryphOperationMode = value;
+      //   }),
+      // },
       "game-arknights-immediate-move": {
         readValue: () => appHost.state.settings.hypergryphImmediateMove,
         writeValue: action((value) => {

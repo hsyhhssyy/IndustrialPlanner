@@ -111,7 +111,6 @@ describe("EditSelectionInspector", () => {
       vi.advanceTimersByTime(50);
     });
 
-    expect(container.textContent).toContain("运行态细节");
     expect(container.textContent).not.toContain("未选中对象");
     expect(container.textContent).not.toContain("快捷操作");
     expect(container.textContent).not.toContain("连接");

@@ -20,6 +20,28 @@ export function useInspectorRenderMode(): InspectorRenderMode {
   return useContext(InspectorRenderModeContext);
 }
 
+export type InspectorDataScope = "initial-config" | "runtime-state";
+
+export interface InspectorDataScopeContextValue {
+  scope: InspectorDataScope;
+  simulationRunning: boolean;
+  canUseRuntimeState: boolean;
+  setScope: (scope: InspectorDataScope) => void;
+}
+
+/** 当前 inspector 子树读取和写入的目标数据源 */
+export const InspectorDataScopeContext = createContext<InspectorDataScopeContextValue>({
+  scope: "initial-config",
+  simulationRunning: false,
+  canUseRuntimeState: false,
+  setScope: () => undefined,
+});
+
+/** 在任何深度的子 inspector 中读取当前数据源选择 */
+export function useInspectorDataScope(): InspectorDataScopeContextValue {
+  return useContext(InspectorDataScopeContext);
+}
+
 export interface SelectionInspectorContext {
   selectedEntityId: string;
   selectedEntity: WorldEntity;

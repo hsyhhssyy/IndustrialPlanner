@@ -314,6 +314,7 @@ function resolveDeviceRuntimeSlotItems(options: {
         itemType: existing?.itemType ?? slotSnapshot.itemType,
         count: Math.max(existing?.count ?? 0, slotSnapshot.count),
         reserved: Math.max(existing?.reserved ?? 0, slotSnapshot.reserved),
+        ignoreStock: (existing?.ignoreStock ?? false) || slotSnapshot.ignoreStock,
       });
     }
   }
@@ -399,6 +400,17 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
       requestId: this.createRequestId(),
       simulationSpeed: value,
     }, "simulation-speed-set");
+  }
+
+  public patchRuntimeSlot(patch: Parameters<SimulationWorkerBridge["patchRuntimeSlot"]>[0]): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "runtime-slot-patched" }
+  >> {
+    return this.request({
+      type: "patch-runtime-slot",
+      requestId: this.createRequestId(),
+      patch,
+    }, "runtime-slot-patched");
   }
 
   public getPerfReport(): Promise<Extract<
@@ -509,6 +521,21 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       simulationSpeed: value,
     });
     if (response.type !== "simulation-speed-set") {
+      throw new Error(`Unexpected simulation worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public patchRuntimeSlot(patch: Parameters<SimulationWorkerBridge["patchRuntimeSlot"]>[0]): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "runtime-slot-patched" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "patch-runtime-slot",
+      requestId: this.createRequestId(),
+      patch,
+    });
+    if (response.type !== "runtime-slot-patched") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
     }
     return Promise.resolve(response);

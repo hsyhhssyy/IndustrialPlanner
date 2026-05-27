@@ -152,10 +152,20 @@ describe("SlotConfigInspector", () => {
 
     renderInspector();
 
-    const firstPickButton = container.querySelectorAll<HTMLButtonElement>("[data-slot-action='pick-item']")[0] ?? null;
+    const firstTileButton = container.querySelectorAll<HTMLButtonElement>("[data-slot-action='open-slot-editor']")[0] ?? null;
+
+    if (firstTileButton === null) {
+      throw new Error("Expected the first slot tile button to be rendered.");
+    }
+
+    act(() => {
+      firstTileButton.click();
+    });
+
+    const firstPickButton = container.querySelector<HTMLButtonElement>("[data-slot-dialog-action='pick-item']");
 
     if (firstPickButton === null) {
-      throw new Error("Expected the first slot pick button to be rendered.");
+      throw new Error("Expected the first slot dialog pick button to be rendered.");
     }
 
     act(() => {
@@ -170,16 +180,30 @@ describe("SlotConfigInspector", () => {
       await Promise.resolve();
     });
 
+    act(() => {
+      container.querySelector<HTMLButtonElement>("[data-slot-dialog-action='cancel']")?.click();
+    });
+
     patchEntityConfig("dummy-entity-2", {
       "storageSlotGroups[0].slots[0].initialItemType": ore.id,
       "storageSlotGroups[0].slots[0].initialCount": 1,
     });
     renderInspector();
 
-    const secondPickButton = container.querySelectorAll<HTMLButtonElement>("[data-slot-action='pick-item']")[1] ?? null;
+    const secondTileButton = container.querySelectorAll<HTMLButtonElement>("[data-slot-action='open-slot-editor']")[1] ?? null;
+
+    if (secondTileButton === null) {
+      throw new Error("Expected the second slot tile button to be rendered.");
+    }
+
+    act(() => {
+      secondTileButton.click();
+    });
+
+    const secondPickButton = container.querySelector<HTMLButtonElement>("[data-slot-dialog-action='pick-item']");
 
     if (secondPickButton === null) {
-      throw new Error("Expected the second slot pick button to be rendered.");
+      throw new Error("Expected the second slot dialog pick button to be rendered.");
     }
 
     act(() => {
@@ -196,18 +220,37 @@ describe("SlotConfigInspector", () => {
       await Promise.resolve();
     });
 
-    for (let index = 0; index < 60; index += 1) {
-      const incrementButton = container.querySelectorAll<HTMLButtonElement>("[data-slot-action='increment-count']")[0] ?? null;
+    act(() => {
+      container.querySelector<HTMLButtonElement>("[data-slot-dialog-action='cancel']")?.click();
+    });
 
-      if (incrementButton === null) {
-        throw new Error("Expected the first slot increment button to be rendered.");
-      }
+    const patchedFirstTileButton = container.querySelectorAll<HTMLButtonElement>("[data-slot-action='open-slot-editor']")[0] ?? null;
 
-      act(() => {
-        incrementButton.click();
-      });
-      renderInspector();
+    if (patchedFirstTileButton === null) {
+      throw new Error("Expected the patched first slot tile button to be rendered.");
     }
+
+    act(() => {
+      patchedFirstTileButton.click();
+    });
+
+    const countInput = container.querySelector<HTMLInputElement>("[data-slot-dialog-input='count']");
+
+    if (countInput === null) {
+      throw new Error("Expected the slot count input to be rendered.");
+    }
+
+    act(() => {
+      countInput.focus();
+      setInputValue(countInput, "999");
+      countInput.dispatchEvent(new Event("input", { bubbles: true }));
+      countInput.blur();
+    });
+
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>("[data-slot-dialog-action='confirm']")?.click();
+      await Promise.resolve();
+    });
 
     expect(currentEntity.config).toMatchObject({
       "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
@@ -227,6 +270,16 @@ function requireDefinition(workspace: WorkspaceContract, definitionId: string): 
   }
 
   return definition;
+}
+
+function setInputValue(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  if (setter === undefined) {
+    input.value = value;
+    return;
+  }
+
+  setter.call(input, value);
 }
 
 function requireItem(workspace: WorkspaceContract, itemId: string): ItemDefinition {

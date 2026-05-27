@@ -763,7 +763,7 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
     expect(editorHost.state.viewport.clientRect.left).toBe(85);
     expect(editorHost.state.viewport.clientRect.top).toBe(64);
-    expect(editorHost.state.viewport.clientRect.width).toBe(1675);
+    expect(editorHost.state.viewport.clientRect.width).toBe(1715);
     expect(editorHost.state.viewport.clientRect.height).toBe(720);
   });
 

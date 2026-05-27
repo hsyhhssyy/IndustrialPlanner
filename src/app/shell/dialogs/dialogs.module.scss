@@ -4,6 +4,8 @@
 }
 
 .inspector-dialog-body {
+  --inspector-pane-min-width: min(360px, 45vw);
+
   display: grid;
   min-height: 0;
   overflow: hidden;
@@ -11,11 +13,12 @@
 }
 
 .inspector-dialog-body.has-neighborhood-preview {
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(0, 1.25fr) minmax(var(--inspector-pane-min-width), 0.9fr);
   gap: 10px;
 }
 
 .inspector-dialog-inspector-pane {
+  min-width: var(--inspector-pane-min-width);
   min-height: 0;
   overflow: auto;
 }

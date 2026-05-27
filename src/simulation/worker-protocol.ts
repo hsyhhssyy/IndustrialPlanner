@@ -6,6 +6,7 @@ import type {
   SimulationTopologyMigration,
   SimulationTickSnapshotResult,
 } from "./types";
+import type { SimulationRuntimeSlotPatch } from "@/domain/simulation/types/simulation-types";
 
 export type SimulationWorkerRequest =
   | {
@@ -28,6 +29,11 @@ export type SimulationWorkerRequest =
       readonly simulationSpeed: number;
     }
   | {
+      readonly type: "patch-runtime-slot";
+      readonly requestId: number;
+      readonly patch: SimulationRuntimeSlotPatch;
+    }
+  | {
       readonly type: "get-perf-report";
       readonly requestId: number;
     };
@@ -47,6 +53,11 @@ export type SimulationWorkerResponse =
     }
   | {
       readonly type: "simulation-speed-set";
+      readonly requestId: number;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "runtime-slot-patched";
       readonly requestId: number;
       readonly status: SimulationRuntimeStatus;
     }

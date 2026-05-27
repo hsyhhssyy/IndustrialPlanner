@@ -1,4 +1,5 @@
 import type {
+  CompiledSimulationSlot,
   CompiledSimulationTopology,
   RuntimeTickSnapshot,
   SimulationPerfReport,
@@ -10,6 +11,7 @@ import type {
   TickPerfEntry,
   TickPerfStage3Details,
 } from "./types";
+import type { SimulationRuntimeSlotPatch } from "@/domain/simulation/types/simulation-types";
 import type {
   SimulationWorkerRequest,
   SimulationWorkerResponse,
@@ -25,7 +27,11 @@ import { buildSolveGraph } from "./runtime/stage-2-build-solve-graph";
 import { solveTransferGraph, type SolveTransferGraphPerf } from "./runtime/stage-3-layered-reverse-solve";
 import { rotateRoutingCursors } from "./runtime/stage-4-rotate-routing-cursors";
 import { settleRecipes } from "./runtime/stage-5-settle-recipes";
-import { maintainTransportComponentDomains } from "./runtime/runtime-slot-access";
+import {
+  getItemDomain,
+  maintainTransportComponentDomains,
+  resolveStorageSlotId,
+} from "./runtime/runtime-slot-access";
 import {
   cloneSimulationMutableRuntimeState,
   createEmptyTransientState,
@@ -96,6 +102,13 @@ export class SimulationWorkerRuntime {
             requestId: request.requestId,
             status: this.getStatus(),
           };
+        case "patch-runtime-slot":
+          this.patchRuntimeSlot(request.patch);
+          return {
+            type: "runtime-slot-patched",
+            requestId: request.requestId,
+            status: this.getStatus(),
+          };
         case "get-perf-report":
           return {
             type: "perf-report",
@@ -132,6 +145,12 @@ export class SimulationWorkerRuntime {
             requestId: request.requestId,
             status,
           };
+        case "patch-runtime-slot":
+          return {
+            type: "runtime-slot-patched",
+            requestId: request.requestId,
+            status,
+          };
         case "get-perf-report":
           return {
             type: "perf-report",
@@ -155,6 +174,97 @@ export class SimulationWorkerRuntime {
       dynamicTickRate: this.topology === null ? null : this.dynamicTickRate,
       error: this.error,
     };
+  }
+
+  private patchRuntimeSlot(patch: SimulationRuntimeSlotPatch): void {
+    if (this.topology === null || this.runtimeState === null) {
+      return;
+    }
+
+    const compiledDeviceId = resolveCompiledDeviceId(this.topology, patch.entityId);
+    if (compiledDeviceId === null) {
+      return;
+    }
+
+    const slotIds = resolvePatchTargetSlotIds({
+      topology: this.topology,
+      compiledDeviceId,
+      storageGroupId: patch.storageGroupId,
+      slotId: patch.slotId,
+    });
+    if (slotIds.length === 0) {
+      return;
+    }
+
+    if (this.fillTimerId !== null) {
+      clearTimeout(this.fillTimerId);
+      this.fillTimerId = null;
+    }
+
+    const nextTopology = patchSlotIgnoreStock(this.topology, slotIds, patch.ignoreStock);
+    const patchTickNumber = this.resolvePatchBaseTickNumber();
+    const baseState = this.tickRuntimeStates.get(patchTickNumber) ?? this.runtimeState;
+    const nextState = cloneSimulationMutableRuntimeState(baseState);
+    const normalizedItemType = normalizePatchItemType(nextTopology, slotIds, patch.itemType);
+    const normalizedCount = normalizedItemType === null
+      ? 0
+      : clampRuntimePatchCount(patch.count, resolvePatchCapacity(nextTopology, slotIds));
+    const normalizedIgnoreStock = normalizedItemType === null ? false : patch.ignoreStock;
+    const effectiveTopology = normalizedIgnoreStock === patch.ignoreStock
+      ? nextTopology
+      : patchSlotIgnoreStock(nextTopology, slotIds, normalizedIgnoreStock);
+
+    if (!canPatchSlotsHoldItem(effectiveTopology, slotIds, normalizedItemType)) {
+      return;
+    }
+
+    const patchedStorageSlotIds = new Set<string>();
+    for (const slotId of slotIds) {
+      const storageSlotId = resolveStorageSlotId(nextState, slotId);
+      patchedStorageSlotIds.add(storageSlotId);
+      nextState.persistent.slots[storageSlotId] = {
+        itemType: normalizedItemType,
+        count: normalizedCount,
+      };
+    }
+
+    resetRuntimeRecipesAffectedByPatch(nextState, compiledDeviceId, patchedStorageSlotIds);
+    nextState.tickNumber = patchTickNumber;
+    nextState.lastAdvancedTickNumber = patchTickNumber;
+    nextState.transient = createEmptyTransientState();
+    maintainTransportComponentDomains(effectiveTopology, nextState);
+
+    this.topology = effectiveTopology;
+    this.runtimeState = nextState;
+    this.clearTickCachesFrom(patchTickNumber);
+    this.lastRequestedTickNumber = patchTickNumber;
+    this.stopLineTick = Math.max(this.stopLineTick, patchTickNumber + MAX_RETAINED_TICKS);
+    this.scheduleBackgroundFill();
+  }
+
+  private resolvePatchBaseTickNumber(): number {
+    const requestedTickNumber = Math.max(0, Math.trunc(this.lastRequestedTickNumber));
+    if (this.tickRuntimeStates.has(requestedTickNumber)) {
+      return requestedTickNumber;
+    }
+    if (this.runtimeState !== null) {
+      return Math.max(0, Math.trunc(this.runtimeState.tickNumber));
+    }
+    return requestedTickNumber;
+  }
+
+  private clearTickCachesFrom(tickNumber: number): void {
+    for (const cachedTickNumber of [...this.tickSnapshots.keys()]) {
+      if (cachedTickNumber >= tickNumber) {
+        this.tickSnapshots.delete(cachedTickNumber);
+        this.tickRuntimeStates.delete(cachedTickNumber);
+      }
+    }
+
+    const retainedTickNumbers = [...this.tickSnapshots.keys()].sort((left, right) => left - right);
+    this.latestTickNumber = retainedTickNumbers[retainedTickNumbers.length - 1] ?? null;
+    this.retainedFromTick = retainedTickNumbers[0] ?? null;
+    this.nextTickNumber = tickNumber;
   }
 
   private loadTopology(
@@ -616,6 +726,150 @@ export class SimulationWorkerRuntime {
       },
     };
   }
+}
+
+function resolveCompiledDeviceId(
+  topology: CompiledSimulationTopology,
+  entityId: string,
+): string | null {
+  if (topology.devices[entityId] !== undefined) {
+    return entityId;
+  }
+
+  const directCompiledId = `device:${entityId}`;
+  if (topology.devices[directCompiledId] !== undefined) {
+    return directCompiledId;
+  }
+
+  return topology.ordering.deviceOrder.find((deviceId) =>
+    topology.devices[deviceId]?.sourceEntityId === entityId,
+  ) ?? null;
+}
+
+function resolvePatchTargetSlotIds(options: {
+  readonly topology: CompiledSimulationTopology;
+  readonly compiledDeviceId: string;
+  readonly storageGroupId: string;
+  readonly slotId: string;
+}): string[] {
+  const device = options.topology.devices[options.compiledDeviceId];
+  if (device === undefined) {
+    return [];
+  }
+
+  const slotIds: string[] = [];
+  for (const nodeId of device.nodeIds) {
+    const node = options.topology.nodes[nodeId];
+    if (node?.sourceStorageSlotGroupId !== options.storageGroupId) {
+      continue;
+    }
+
+    for (const compiledSlotId of node.slotIds) {
+      const slot = options.topology.slots[compiledSlotId];
+      if (slot?.sourceSlotId === options.slotId) {
+        slotIds.push(compiledSlotId);
+      }
+    }
+  }
+
+  return [...new Set(slotIds)];
+}
+
+function patchSlotIgnoreStock(
+  topology: CompiledSimulationTopology,
+  slotIds: readonly string[],
+  ignoreStock: boolean,
+): CompiledSimulationTopology {
+  let changed = false;
+  const slots = { ...topology.slots };
+  for (const slotId of slotIds) {
+    const slot = slots[slotId];
+    if (slot === undefined || slot.ignoreStock === ignoreStock) {
+      continue;
+    }
+
+    changed = true;
+    slots[slotId] = {
+      ...slot,
+      ignoreStock,
+    };
+  }
+
+  return changed ? { ...topology, slots } : topology;
+}
+
+function normalizePatchItemType(
+  topology: CompiledSimulationTopology,
+  slotIds: readonly string[],
+  itemType: string | null,
+): string | null {
+  const lockedItemType = slotIds
+    .map((slotId) => topology.slots[slotId]?.lock ?? null)
+    .find((lock): lock is string => lock !== null) ?? null;
+
+  return lockedItemType ?? itemType;
+}
+
+function resolvePatchCapacity(
+  topology: CompiledSimulationTopology,
+  slotIds: readonly string[],
+): number {
+  return Math.max(
+    0,
+    ...slotIds.map((slotId) => topology.slots[slotId]?.capacity ?? 0),
+  );
+}
+
+function canPatchSlotsHoldItem(
+  topology: CompiledSimulationTopology,
+  slotIds: readonly string[],
+  itemType: string | null,
+): boolean {
+  if (itemType === null) {
+    return true;
+  }
+
+  return slotIds.every((slotId) => {
+    const slot = topology.slots[slotId];
+    return slot !== undefined && canPatchSlotHoldItem(topology, slot, itemType);
+  });
+}
+
+function canPatchSlotHoldItem(
+  topology: CompiledSimulationTopology,
+  slot: CompiledSimulationSlot,
+  itemType: string,
+): boolean {
+  if (slot.lock !== null && slot.lock !== itemType) {
+    return false;
+  }
+
+  return slot.domain === "any" || getItemDomain(topology, itemType) === slot.domain;
+}
+
+function resetRuntimeRecipesAffectedByPatch(
+  state: SimulationMutableRuntimeState,
+  compiledDeviceId: string,
+  patchedStorageSlotIds: ReadonlySet<string>,
+): void {
+  for (const [deviceId, deviceState] of Object.entries(state.persistent.devices)) {
+    const hasAffectedReservation = Object.values(deviceState.channelRecipes).some((recipe) =>
+      recipe?.reservations.some((reservation) => patchedStorageSlotIds.has(reservation.slotId)) ?? false,
+    );
+
+    if (deviceId !== compiledDeviceId && !hasAffectedReservation) {
+      continue;
+    }
+
+    deviceState.block = false;
+    deviceState.channelRecipes = {};
+  }
+}
+
+function clampRuntimePatchCount(value: number, capacity: number): number {
+  const safeCapacity = Number.isFinite(capacity) ? Math.max(0, Math.trunc(capacity)) : 0;
+  const safeValue = Number.isFinite(value) ? Math.trunc(value) : 0;
+  return Math.min(Math.max(safeValue, 0), safeCapacity);
 }
 
 function createNotFoundStatus(

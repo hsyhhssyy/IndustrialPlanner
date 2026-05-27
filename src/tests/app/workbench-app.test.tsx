@@ -9,7 +9,6 @@ import { createAppHost } from "@/app/host/app-host";
 import { AYU_DARK_THEME, AYU_LIGHT_THEME } from "@/app/theme";
 import type { GestureEvent } from "@/app/input/gesture/adapter";
 import {
-  APP_SHORTCUTS_LOCAL_STORAGE_KEY,
   SHORTCUT_KEY,
 } from "@/app/actions/keyboard-shortcut-manager";
 import { USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY } from "@/app/shell/state/settings-dialog-state";
@@ -70,7 +69,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   debugMode: false,
 } as const;
 
-const DEFAULT_APP_SHORTCUTS_STORAGE = {
+const _DEFAULT_APP_SHORTCUTS_STORAGE = {
   [SHORTCUT_KEY.PLACE_CONVEYOR]: "E",
   [SHORTCUT_KEY.PLACE_PIPE]: "Q",
   [SHORTCUT_KEY.RESOURCES_POWER]: "G",
@@ -984,6 +983,7 @@ describe("WorkbenchApp", () => {
         stop: vi.fn(),
         setSimulationSpeed: vi.fn(),
         advancePlaybackByDeltaMs: vi.fn(async () => {}),
+        patchRuntimeSlot: vi.fn(async () => {}),
       },
     } as NonNullable<WorkspaceContract["simulation"]>;
 
@@ -2292,7 +2292,7 @@ describe("WorkbenchApp", () => {
     const themeSelect = container.querySelector(
       'select[name="system-theme"]',
     ) as HTMLSelectElement | null;
-    const operationModeToggle = container.querySelector(
+    const _operationModeToggle = container.querySelector(
       'input[name="game-arknights-operation-mode"]',
     ) as HTMLInputElement | null;
     const immediateMoveToggle = container.querySelector(
@@ -2323,6 +2323,8 @@ describe("WorkbenchApp", () => {
     const themeOptionLabels = Array.from(themeSelect?.options ?? []).map((option) => option.textContent);
 
     expect(dialog).not.toBeNull();
+    // 2026-05-26: game-arknights-operation-mode 开关已从「游戏」分组移除，
+    // 但「鹰角操作模式」分组及其子设置仍保留。
     expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他", "调试", "离线与安装"]);
     expect(groupDescriptions).toEqual([
       "语言、主题与全局界面偏好。",
@@ -2338,12 +2340,12 @@ describe("WorkbenchApp", () => {
     expect(themeOptionLabels).toEqual(["Ayu Light", "Ayu Dark"]);
     expect(languageSelect?.value).toBe("zh-CN");
     expect(themeSelect?.value).toBe("ayu-light");
-    expect(operationModeToggle?.checked).toBe(false);
-    expect(operationModeToggle?.disabled).toBe(true);
+    // 2026-05-26: game-arknights-operation-mode 已移除，不再校验 operationModeToggle。
+    // immediateMove / immediateMarquee 不再受 editableWhen 锁定。
     expect(immediateMoveToggle?.checked).toBe(true);
-    expect(immediateMoveToggle?.disabled).toBe(true);
+    expect(immediateMoveToggle?.disabled).toBe(false);
     expect(immediateMarqueeToggle?.checked).toBe(false);
-    expect(immediateMarqueeToggle?.disabled).toBe(true);
+    expect(immediateMarqueeToggle?.disabled).toBe(false);
     expect(debugToggle?.checked).toBe(true);
     expect(alwaysShowGridLinesToggle?.checked).toBe(true);
     expect(showFpsToggle?.checked).toBe(true);
@@ -3367,100 +3369,66 @@ describe("WorkbenchApp", () => {
     expect(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY)).toBeNull();
   });
 
-  it("captures keybinding settings when operation mode is externally off and keeps the mode toggle disabled", () => {
-    localStorage.setItem(
-      APP_SETTINGS_LOCAL_STORAGE_KEY,
-      JSON.stringify({
-        locale: "zh-CN",
-        themeId: "ayu-light",
-        hypergryphOperationMode: false,
-      }),
-    );
-
-    const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
-
-    act(() => {
-      root.render(<WorkbenchApp appHost={appHost} />);
-    });
-
-    const settingsButton = container.querySelector(
-      ".toolbar-rail-utility .rail-button:last-child",
-    ) as HTMLButtonElement | null;
-
-    act(() => {
-      settingsButton?.click();
-    });
-
-    const operationModeToggle = container.querySelector(
-      'input[name="game-arknights-operation-mode"]',
-    ) as HTMLInputElement | null;
-    const immediateMoveToggle = container.querySelector(
-      'input[name="game-arknights-immediate-move"]',
-    ) as HTMLInputElement | null;
-    const immediateMarqueeToggle = container.querySelector(
-      'input[name="game-arknights-immediate-marquee"]',
-    ) as HTMLInputElement | null;
-    const confirmShortcutButton = container.querySelector(
-      'button[data-setting-id="shortcut-place-conveyor"]',
-    ) as HTMLButtonElement | null;
-    const cancelShortcutButton = container.querySelector(
-      'button[data-setting-id="shortcut-place-pipe"]',
-    ) as HTMLButtonElement | null;
-    const rotateShortcutButton = container.querySelector(
-      'button[data-setting-id="shortcut-rotate"]',
-    ) as HTMLButtonElement | null;
-    const rotateViewportShortcutButton = container.querySelector(
-      'button[data-setting-id="shortcut-rotate-viewport"]',
-    ) as HTMLButtonElement | null;
-
-    expect(operationModeToggle).not.toBeNull();
-    expect(immediateMoveToggle).not.toBeNull();
-    expect(immediateMarqueeToggle).not.toBeNull();
-    expect(confirmShortcutButton).not.toBeNull();
-    expect(cancelShortcutButton).not.toBeNull();
-    expect(rotateShortcutButton).not.toBeNull();
-    expect(rotateViewportShortcutButton).not.toBeNull();
-    expect(operationModeToggle?.checked).toBe(false);
-    expect(operationModeToggle?.disabled).toBe(true);
-    expect(immediateMoveToggle?.checked).toBe(true);
-    expect(immediateMoveToggle?.disabled).toBe(true);
-    expect(immediateMarqueeToggle?.checked).toBe(false);
-    expect(immediateMarqueeToggle?.disabled).toBe(true);
-    expect(confirmShortcutButton?.disabled).toBe(false);
-    expect(confirmShortcutButton?.textContent).toBe("E");
-    expect(rotateShortcutButton?.disabled).toBe(false);
-    expect(rotateShortcutButton?.textContent).toBe("R");
-    expect(rotateViewportShortcutButton?.disabled).toBe(false);
-    expect(rotateViewportShortcutButton?.textContent).toBe("Ctrl+R");
-    expect(container.querySelector(".settings-dialog")?.textContent).toContain("旋转画布");
-
-    act(() => {
-      confirmShortcutButton?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-    });
-
-    expect(confirmShortcutButton?.textContent).toBe("按任意键...");
-
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "p", bubbles: true }));
-    });
-
-    expect(confirmShortcutButton?.textContent).toBe("P");
-    expect(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
-      JSON.stringify({
-        locale: "zh-CN",
-        themeId: "ayu-light",
-        hypergryphOperationMode: false,
-      }),
-    );
-    expect(localStorage.getItem(APP_SHORTCUTS_LOCAL_STORAGE_KEY)).toBe(
-      JSON.stringify({
-        ...DEFAULT_APP_SHORTCUTS_STORAGE,
-        [SHORTCUT_KEY.PLACE_CONVEYOR]: "P",
-      }),
-    );
-  });
+  // AI-REMOVED 2026-05-26:
+  // Reason: game-arknights-operation-mode 开关已从设置面板移除，
+  //         此测试验证鹰角模式关闭状态下操作模式开关的行为，不再适用。
+  // Trigger: 用户需求 — 取消该设置的图像化入口。
+  // Evidence: settings-dialog-state.ts 中 game-arknights-operation-mode 项已删除，
+  //           workbench-app.tsx 中对应的 readValue/writeValue 绑定已移除。
+  // Replacement: None（鹰角模式的键盘行为仍通过其他测试覆盖）。
+  // Risk: Low
+  // Human Review: Not Required
+  //
+  // Original code:
+  // it("captures keybinding settings when operation mode is externally off and keeps the mode toggle disabled", () => {
+  //   localStorage.setItem(
+  //     APP_SETTINGS_LOCAL_STORAGE_KEY,
+  //     JSON.stringify({
+  //       locale: "zh-CN",
+  //       themeId: "ayu-light",
+  //       hypergryphOperationMode: false,
+  //     }),
+  //   );
+  //   const workspace = createWorkspace();
+  //   const appHost = createAppHost(workspace);
+  //   act(() => { root.render(<WorkbenchApp appHost={appHost} />); });
+  //   const settingsButton = container.querySelector(".toolbar-rail-utility .rail-button:last-child") as HTMLButtonElement | null;
+  //   act(() => { settingsButton?.click(); });
+  //   const operationModeToggle = container.querySelector('input[name="game-arknights-operation-mode"]') as HTMLInputElement | null;
+  //   const immediateMoveToggle = container.querySelector('input[name="game-arknights-immediate-move"]') as HTMLInputElement | null;
+  //   const immediateMarqueeToggle = container.querySelector('input[name="game-arknights-immediate-marquee"]') as HTMLInputElement | null;
+  //   const confirmShortcutButton = container.querySelector('button[data-setting-id="shortcut-place-conveyor"]') as HTMLButtonElement | null;
+  //   const cancelShortcutButton = container.querySelector('button[data-setting-id="shortcut-place-pipe"]') as HTMLButtonElement | null;
+  //   const rotateShortcutButton = container.querySelector('button[data-setting-id="shortcut-rotate"]') as HTMLButtonElement | null;
+  //   const rotateViewportShortcutButton = container.querySelector('button[data-setting-id="shortcut-rotate-viewport"]') as HTMLButtonElement | null;
+  //   expect(operationModeToggle).not.toBeNull();
+  //   expect(immediateMoveToggle).not.toBeNull();
+  //   expect(immediateMarqueeToggle).not.toBeNull();
+  //   expect(confirmShortcutButton).not.toBeNull();
+  //   expect(cancelShortcutButton).not.toBeNull();
+  //   expect(rotateShortcutButton).not.toBeNull();
+  //   expect(rotateViewportShortcutButton).not.toBeNull();
+  //   expect(operationModeToggle?.checked).toBe(false);
+  //   expect(operationModeToggle?.disabled).toBe(true);
+  //   expect(immediateMoveToggle?.checked).toBe(true);
+  //   expect(immediateMoveToggle?.disabled).toBe(true);
+  //   expect(immediateMarqueeToggle?.checked).toBe(false);
+  //   expect(immediateMarqueeToggle?.disabled).toBe(true);
+  //   expect(confirmShortcutButton?.disabled).toBe(false);
+  //   expect(confirmShortcutButton?.textContent).toBe("E");
+  //   expect(rotateShortcutButton?.disabled).toBe(false);
+  //   expect(rotateShortcutButton?.textContent).toBe("R");
+  //   expect(rotateViewportShortcutButton?.disabled).toBe(false);
+  //   expect(rotateViewportShortcutButton?.textContent).toBe("Ctrl+R");
+  //   expect(container.querySelector(".settings-dialog")?.textContent).toContain("旋转画布");
+  //   act(() => { confirmShortcutButton?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })); });
+  //   expect(confirmShortcutButton?.textContent).toBe("按任意键...");
+  //   act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "p", bubbles: true })); });
+  //   expect(confirmShortcutButton?.textContent).toBe("P");
+  //   expect(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY)).toBeNull();
+  //   expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(JSON.stringify({ locale: "zh-CN", themeId: "ayu-light", hypergryphOperationMode: false }));
+  //   expect(localStorage.getItem(APP_SHORTCUTS_LOCAL_STORAGE_KEY)).toBe(JSON.stringify({ ...DEFAULT_APP_SHORTCUTS_STORAGE, [SHORTCUT_KEY.PLACE_CONVEYOR]: "P" }));
+  // });
 
   it("routes global keyboard events only while no dialog shell is visible", () => {
     const workspace = createWorkspace();
@@ -3584,7 +3552,7 @@ describe("WorkbenchApp", () => {
 
     expect(dialog).not.toBeNull();
     expect(container.querySelector(".settings-dialog-sidebar")).toBeNull();
-    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他", "调试", "离线与安装"]);
+    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "其他", "调试", "离线与安装"]);
   });
 
   it("marks help and toolbox dialogs as compact shells on phones", () => {

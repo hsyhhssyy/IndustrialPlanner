@@ -10,11 +10,12 @@ import type { SimulationRunState } from "@/domain/simulation/types/simulation-ty
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/editor/dummy-document";
+import type { WorldDocument } from "@/domain/document/world-document";
 import { createEditorHost, type EditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 
-import { SIMULATION_RUNTIME_INSPECTOR_KEY } from "@/app/shell/inspector/simulation-runtime-inspector";
+import { SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY } from "@/app/shell/inspector/simulation-recipe-status-runtime-inspector";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -30,6 +31,25 @@ function createWorkspace(): WorkspaceContract {
 function queryInspectorKeys(container: HTMLElement): string[] {
   return Array.from(container.querySelectorAll<HTMLElement>("[data-inspector-key]"))
     .map((element) => element.dataset.inspectorKey ?? "");
+}
+
+/** 创建一个包含有 recipeChannels 定义设备的 WorldDocument */
+function createDummyWorldWithRecipeDevice(): WorldDocument {
+  const doc = createDummyWorldDocument();
+  return {
+    ...doc,
+    entities: {
+      ...doc.entities,
+      "dummy-recipe-device": {
+        id: "dummy-recipe-device",
+        definitionId: "item_port_mix_pool_1",
+        position: { x: 1, y: 1 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    },
+  };
 }
 
 function attachSimulationStub(
@@ -82,6 +102,7 @@ function attachSimulationStub(
       stop: vi.fn(),
       setSimulationSpeed: vi.fn(),
       advancePlaybackByDeltaMs: vi.fn(async () => {}),
+      patchRuntimeSlot: vi.fn(async () => {}),
     },
   } as NonNullable<WorkspaceContract["simulation"]>;
 
@@ -141,6 +162,7 @@ describe("SelectionInspectorSlot", () => {
     });
 
     expect(queryInspectorKeys(container)).toEqual([
+      "data-scope",
       "slot-config",
       "warehouse-item-link",
       "warehouse-item-link",
@@ -150,8 +172,9 @@ describe("SelectionInspectorSlot", () => {
       "warehouse-item-link",
     ]);
     expect(container.querySelector("[data-slot-config-group='storage_slot_1']")).not.toBeNull();
-    expect(container.querySelector("[data-slot-id='slot_1']")?.textContent).toContain("slot_1");
-    expect(container.querySelector("[data-slot-id='slot_1']")?.textContent).toBeTruthy();
+    const firstSlotTile = container.querySelector<HTMLElement>("[data-slot-action='open-slot-editor']");
+    expect(firstSlotTile?.dataset.slotNumber).toBe("1");
+    expect(firstSlotTile?.textContent).not.toContain("slot_1");
   });
 
   it("hides on multi selection and remounts after narrowing back to one entity", () => {
@@ -197,11 +220,11 @@ describe("SelectionInspectorSlot", () => {
     expect(container.querySelector("[data-slot-config-group='storage_slot_1']")).not.toBeNull();
   });
 
-  it("mounts the simulation runtime inspector for any device while simulation is running", () => {
+  it("mounts the simulation recipe status inspector per channel for a device with recipeChannels while simulation is running", () => {
     const workspace = createWorkspace();
     editorHost = createEditorHost(workspace);
-    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
+    editorHost.internalDocument.setSnapshot(createDummyWorldWithRecipeDevice());
+    editorHost.internalState.collections.selection.replace(["dummy-recipe-device"]);
     const { getDeviceRuntimeStatus } = attachSimulationStub(workspace, {
       state: "start",
       runtimeStatus: {
@@ -227,19 +250,19 @@ describe("SelectionInspectorSlot", () => {
       vi.advanceTimersByTime(50);
     });
 
-    expect(queryInspectorKeys(container)).toEqual([SIMULATION_RUNTIME_INSPECTOR_KEY]);
-    expect(getDeviceRuntimeStatus).toHaveBeenCalledWith("dummy-entity-1");
-    expect(container.querySelector("[data-runtime-field='recipeId']")?.textContent).toContain("transport-recipe");
-    expect(container.querySelector("[data-runtime-field='progressSeconds']")?.textContent).toContain("0.5");
-    expect(container.querySelector("[data-runtime-field='desiredSeconds']")?.textContent).toContain("2");
-    expect(container.querySelector("[data-runtime-field='progressPercent']")?.textContent).toContain("25%");
+    expect(getDeviceRuntimeStatus).toHaveBeenCalledWith("dummy-recipe-device");
+    // item_port_mix_pool_1 有 1 个 recipeChannel: "default"
+    expect(queryInspectorKeys(container)).toContain(
+      SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY,
+    );
+    expect(container.querySelector("[data-channel-id='default']")).not.toBeNull();
   });
 
-  it("keeps the simulation runtime inspector mounted outside stop state", () => {
+  it("mounts the simulation recipe status inspector outside stop state", () => {
     const workspace = createWorkspace();
     editorHost = createEditorHost(workspace);
-    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
+    editorHost.internalDocument.setSnapshot(createDummyWorldWithRecipeDevice());
+    editorHost.internalState.collections.selection.replace(["dummy-recipe-device"]);
     const { getDeviceRuntimeStatus } = attachSimulationStub(workspace, {
       state: "pause",
       runtimeStatus: {
@@ -265,7 +288,9 @@ describe("SelectionInspectorSlot", () => {
       vi.advanceTimersByTime(50);
     });
 
-    expect(queryInspectorKeys(container)).toEqual([SIMULATION_RUNTIME_INSPECTOR_KEY]);
-    expect(getDeviceRuntimeStatus).toHaveBeenCalledWith("dummy-entity-1");
+    expect(queryInspectorKeys(container)).toContain(
+      SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY,
+    );
+    expect(getDeviceRuntimeStatus).toHaveBeenCalledWith("dummy-recipe-device");
   });
 });

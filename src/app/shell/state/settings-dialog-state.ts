@@ -22,6 +22,8 @@ interface WorkbenchSettingBaseDefinition {
   readonly descriptionText?: string;
   readonly disabled?: boolean;
   readonly editableWhen?: WorkbenchSettingEditableWhenDefinition;
+  /** 非桌面端（移动端/平板）隐藏该设置项 */
+  readonly mobileHidden?: boolean;
 }
 
 interface WorkbenchSelectOptionDefinition {
@@ -64,6 +66,8 @@ export interface WorkbenchSettingsGroupDefinition {
   readonly labelKey: MessageKey;
   readonly descriptionKey: MessageKey;
   readonly items: readonly WorkbenchSettingDefinition[];
+  /** 非桌面端（移动端/平板）隐藏该整个设置分组 */
+  readonly mobileHidden?: boolean;
 }
 
 interface WorkbenchSettingExternalBinding {
@@ -88,7 +92,7 @@ const SHOW_GRASS_BACKGROUND_SETTING_ID = "game-show-grass-background";
 const SHOW_DEVICE_NAMES_SETTING_ID = "game-show-device-names";
 const SHOW_DEVICE_ICONS_SETTING_ID = "game-show-device-icons";
 
-export const WORKBENCH_SETTINGS_GROUPS = [
+export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinition[] = [
   {
     id: "system",
     labelKey: "settingsGroup.system",
@@ -141,15 +145,25 @@ export const WORKBENCH_SETTINGS_GROUPS = [
     id: "game",
     labelKey: "settingsGroup.game",
     descriptionKey: "settingsGroup.gameDescription",
+    // AI-REMOVED 2026-05-26:
+    // Reason: 鹰角网络操作模式开关不再为用户可见设置，取消图形化入口。
+    //        该字段仍保留且为 true，但不再与其他设置项关联。
+    // Trigger: 用户需求 — 取消该设置的图像化入口，解耦关联。
+    // Evidence: 用户明确指令。
+    // Replacement: None（仅移除 UI 入口，字段本身保留于 state-impl.ts）。
+    // Risk: Low
+    // Human Review: Not Required
+    //
+    // Original code:
+    // {
+    //   id: "game-arknights-operation-mode",
+    //   kind: "switch",
+    //   labelKey: "settingsField.arknightsOperationMode",
+    //   descriptionKey: "settingsField.arknightsOperationModeDescription",
+    //   defaultValue: true,
+    //   disabled: true,
+    // },
     items: [
-      {
-        id: "game-arknights-operation-mode",
-        kind: "switch",
-        labelKey: "settingsField.arknightsOperationMode",
-        descriptionKey: "settingsField.arknightsOperationModeDescription",
-        defaultValue: true,
-        disabled: true,
-      },
       {
         id: "game-use-simplified-device-icons",
         kind: "switch",
@@ -188,6 +202,7 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: "settingsField.showHotkeys",
         descriptionKey: "settingsField.showHotkeysDescription",
         defaultValue: true,
+        mobileHidden: true,
       },
       {
         id: "game-always-show-grid-lines",
@@ -224,10 +239,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: "settingsField.arknightsImmediateMove",
         descriptionKey: "settingsField.arknightsImmediateMoveDescription",
         defaultValue: true,
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: true,
-        },
       },
       {
         id: "game-arknights-immediate-marquee",
@@ -235,10 +246,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: "settingsField.arknightsImmediateMarquee",
         descriptionKey: "settingsField.arknightsImmediateMarqueeDescription",
         defaultValue: false,
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: true,
-        },
       },
       {
         id: "game-arknights-selection-right-dock-sync",
@@ -246,10 +253,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: "settingsField.arknightsSelectionRightDockSync",
         descriptionKey: "settingsField.arknightsSelectionRightDockSyncDescription",
         defaultValue: true,
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: true,
-        },
       },
       {
         id: "game-arknights-inspector-open-on-second-click",
@@ -257,10 +260,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: "settingsField.arknightsInspectorOpenOnSecondClick",
         descriptionKey: "settingsField.arknightsInspectorOpenOnSecondClickDescription",
         defaultValue: false,
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: true,
-        },
       },
     ],
   },
@@ -268,6 +267,7 @@ export const WORKBENCH_SETTINGS_GROUPS = [
     id: "shortcuts",
     labelKey: "settingsGroup.shortcuts",
     descriptionKey: "settingsGroup.shortcutsDescription",
+    mobileHidden: true,
     items: [
       {
         id: "shortcut-place-conveyor",
@@ -275,10 +275,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-place-conveyor"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-place-conveyor"),
         defaultValue: "E",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-place-pipe",
@@ -286,10 +282,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-place-pipe"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-place-pipe"),
         defaultValue: "Q",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-resources-power",
@@ -297,10 +289,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-resources-power"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-resources-power"),
         defaultValue: "G",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-warehouse",
@@ -308,10 +296,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-warehouse"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-warehouse"),
         defaultValue: "C",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-basic-production",
@@ -319,10 +303,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-basic-production"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-basic-production"),
         defaultValue: "V",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-synthesis",
@@ -330,10 +310,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-synthesis"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-synthesis"),
         defaultValue: "B",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-save-blueprint",
@@ -341,10 +317,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-save-blueprint"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-save-blueprint"),
         defaultValue: "Ctrl+S",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-return-select",
@@ -352,10 +324,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-return-select"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-return-select"),
         defaultValue: "Esc",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-rotate",
@@ -363,10 +331,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-rotate"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-rotate"),
         defaultValue: "R",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-switch-device-mode",
@@ -374,10 +338,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-switch-device-mode"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-switch-device-mode"),
         defaultValue: "Tab",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-rotate-viewport",
@@ -385,10 +345,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelText: "旋转画布",
         descriptionText: "设置旋转画布视角的快捷键。",
         defaultValue: "Ctrl+R",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-delete-device",
@@ -396,10 +352,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-delete-device"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-delete-device"),
         defaultValue: "F",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-move-selection",
@@ -407,10 +359,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-move-selection"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-move-selection"),
         defaultValue: "M",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-copy-selection",
@@ -418,10 +366,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-copy-selection"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-copy-selection"),
         defaultValue: "Ctrl+C",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-paste-selection",
@@ -429,10 +373,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: shortcutKeybindingLabelKey("shortcut-paste-selection"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-paste-selection"),
         defaultValue: "Ctrl+V",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
     ],
   },
@@ -476,7 +416,7 @@ export const WORKBENCH_SETTINGS_GROUPS = [
   ...WorkbenchSettingsGroupDefinition[],
 ];
 
-const DEFAULT_SETTINGS_GROUP = WORKBENCH_SETTINGS_GROUPS[0];
+const DEFAULT_SETTINGS_GROUP = WORKBENCH_SETTINGS_GROUPS[0]!;
 
 const SETTING_DEFINITION_BY_ID = new Map<string, WorkbenchSettingDefinition>(
   WORKBENCH_SETTINGS_GROUPS.flatMap((group) =>

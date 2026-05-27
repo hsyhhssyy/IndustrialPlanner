@@ -1,6 +1,7 @@
 import { action, runInAction } from "mobx";
 
 import type { SimulationAction } from "@/domain/simulation/simulation-action";
+import type { SimulationRuntimeSlotPatch } from "@/domain/simulation/types/simulation-types";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -49,6 +50,10 @@ export interface SimulationWorkerBridge {
   setSimulationSpeed(value: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "simulation-speed-set" }
+  >>;
+  patchRuntimeSlot(patch: SimulationRuntimeSlotPatch): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "runtime-slot-patched" }
   >>;
   getPerfReport(): Promise<Extract<
     SimulationWorkerResponse,
@@ -276,6 +281,23 @@ implements SimulationAction, SimulationInternalAction {
     this.stateReadWrite.simulationSpeed = value;
     void this.bridge.setSimulationSpeed(value).catch(() => undefined);
   });
+
+  public readonly patchRuntimeSlot: SimulationAction["patchRuntimeSlot"] = async (patch) => {
+    if (this.stateReadWrite.runningState === "stop") {
+      return;
+    }
+
+    const response = await this.bridge.patchRuntimeSlot(patch);
+    runInAction(() => {
+      this.stateReadWrite.runtimeStatus = response.status;
+    });
+
+    const targetTickNumber = Math.trunc(this.stateReadWrite.currentPlaybackTickNumber);
+    const status = await this.syncToTick(targetTickNumber);
+    if (status.status === "not-found") {
+      await this.recoverPlaybackFromUnavailableTick(status, targetTickNumber);
+    }
+  };
 
   public readonly reset: SimulationInternalAction["reset"] = action(() => {
     this.clearPlaybackProgress();

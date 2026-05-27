@@ -41,6 +41,7 @@ export const SettingsDialog = observer(function SettingsDialog({
   const isOpen = dialogState.visible;
   const hideGroupSidebar = appHost.state.screenProfile.deviceClass !== "desktop";
   const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
+  const isNonDesktop = appHost.state.screenProfile.deviceClass !== "desktop";
 
   const handleClose = useCallback(() => {
     setCapturingKeybindingId(null);
@@ -142,7 +143,7 @@ export const SettingsDialog = observer(function SettingsDialog({
             <aside className={cm(styles, "settings-dialog-sidebar")}>
               <div className={cm(styles, "settings-dialog-sidebar-title")}>{t("settingsDialog.groups")}</div>
               <div aria-label={t("settingsDialog.groups")} className={cm(styles, "settings-dialog-tree")} role="tree">
-                {WORKBENCH_SETTINGS_GROUPS.map((group) => {
+                {WORKBENCH_SETTINGS_GROUPS.filter((group) => !isNonDesktop || !group.mobileHidden).map((group) => {
                   const isActive = group.id === selectedGroup.id;
 
                   return (
@@ -167,7 +168,7 @@ export const SettingsDialog = observer(function SettingsDialog({
             </aside>
           )}
           <div className={cm(styles, "settings-dialog-content")} ref={contentRef}>
-            {WORKBENCH_SETTINGS_GROUPS.map((group) => (
+            {WORKBENCH_SETTINGS_GROUPS.filter((group) => !isNonDesktop || !group.mobileHidden).map((group) => (
               <section
                 className={cm(styles, "settings-dialog-group-section")}
                 id={`settings-dialog-group-${group.id}`}
@@ -187,7 +188,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                   <p>{t(group.descriptionKey)}</p>
                 </div>
                 <div className={cm(styles, "settings-dialog-settings-list")}>
-                  {group.items.map((setting) => {
+                  {group.items.filter((setting) => !isNonDesktop || !setting.mobileHidden).map((setting) => {
                     const isEditable = controller.isSettingEditable(setting.id);
 
                     const isKeybinding = setting.kind === "keybinding";

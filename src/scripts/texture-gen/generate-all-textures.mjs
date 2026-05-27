@@ -9,6 +9,7 @@ const generators = [
   'generate-scanline-texture.mjs',
   'generate-liquid-port-chevron.mjs',
   'generate-solid-port-chevron.mjs',
+  'generate-port-cross.mjs',
   'generate-flow-texture.mjs',
   'generate-belt-highlight-strip-texture.mjs',
   'generate-belt-sprites.mjs',

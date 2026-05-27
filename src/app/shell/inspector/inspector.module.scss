@@ -92,6 +92,72 @@
   overflow-x: auto;
 }
 
+.progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.15s ease;
+}
+
+.progress-percent {
+  font-size: 0.65rem;
+  color: var(--text-2);
+  min-width: 36px;
+  text-align: right;
+}
+
+.inspector-scope-card {
+  padding: 6px;
+}
+
+.inspector-scope-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.inspector-scope-toggle button {
+  min-width: 0;
+  min-height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.inspector-scope-toggle button.is-selected,
+.inspector-scope-toggle button:hover:not(:disabled) {
+  background: var(--surface-0);
+  color: var(--text-0);
+}
+
+.inspector-scope-toggle button:disabled {
+  color: var(--text-2);
+  cursor: default;
+  opacity: 0.55;
+}
+
 .mono-line {
   font-family:
     "IBM Plex Mono",
@@ -109,6 +175,25 @@
 .warehouse-link-ignore-stock {
   display: grid;
   gap: 8px;
+}
+
+.slot-config-inspector {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.slot-config-group,
+.slot-config-dialog-backdrop {
+  min-width: 0;
+  grid-column: auto;
+}
+
+.slot-config-group[data-slot-config-group-size="multi"],
+.slot-config-dialog-backdrop {
+  grid-column: 1 / -1;
+}
+
+.slot-config-group[data-slot-config-group-size="single"] .slot-config-tile-grid {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .slot-config-row-actions {
@@ -221,6 +306,238 @@
   color: var(--text-0);
   font: inherit;
   text-align: center;
+}
+
+.slot-config-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.slot-config-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  overflow: hidden;
+}
+
+.slot-config-tile:hover {
+  border-color: var(--accent);
+  background: var(--surface-1);
+}
+
+.slot-config-tile-index {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+  z-index: 1;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface-0) 88%, transparent);
+  color: var(--text-1);
+  font-size: 0.68rem;
+  line-height: 18px;
+  text-align: center;
+}
+
+.slot-config-tile-icon,
+.slot-config-dialog-item-icon {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  image-rendering: auto;
+}
+
+.slot-config-tile-badge {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-0) 90%, transparent);
+  color: var(--text-0);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
+.slot-config-empty-frame {
+  display: grid;
+  place-items: center;
+  width: 64%;
+  height: 64%;
+  border: 1px dashed var(--text-2);
+  border-radius: 8px;
+  color: var(--text-2);
+}
+
+.slot-config-empty-frame svg {
+  width: 18px;
+  height: 18px;
+}
+
+.slot-config-empty {
+  color: var(--text-1);
+  font-size: 0.78rem;
+}
+
+.slot-config-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 38%);
+}
+
+.slot-config-dialog {
+  display: grid;
+  gap: 12px;
+  width: min(320px, 100%);
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 24%);
+}
+
+.slot-config-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.slot-config-dialog-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.slot-config-dialog-icon-button,
+.slot-config-dialog-item-button,
+.slot-config-dialog-clear,
+.slot-config-dialog-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  font: inherit;
+}
+
+.slot-config-dialog-icon-button {
+  width: 34px;
+  padding: 0;
+}
+
+.slot-config-dialog-icon-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.slot-config-dialog-item-button {
+  justify-self: center;
+  width: 96px;
+  height: 96px;
+  padding: 0;
+}
+
+.slot-config-dialog-item-button:disabled {
+  opacity: 0.75;
+}
+
+.slot-config-dialog-item-name {
+  min-height: 20px;
+  color: var(--text-0);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.slot-config-dialog-field,
+.slot-config-dialog-switch {
+  display: grid;
+  gap: 6px;
+  color: var(--text-1);
+  font-size: 0.78rem;
+}
+
+.slot-config-dialog-switch {
+  position: relative;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.slot-config-dialog-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.slot-config-dialog-switch-track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.slot-config-dialog-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-2);
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.slot-config-dialog-switch input:checked + .slot-config-dialog-switch-track {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.slot-config-dialog-switch input:checked + .slot-config-dialog-switch-track::after {
+  transform: translateX(16px);
+  background: var(--accent-strong);
+}
+
+.slot-config-dialog-switch input:disabled + .slot-config-dialog-switch-track {
+  opacity: 0.55;
+}
+
+.slot-config-dialog-clear {
+  width: 100%;
+}
+
+.slot-config-dialog-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.slot-config-dialog-actions button[data-slot-dialog-action="confirm"] {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+  color: var(--text-0);
 }
 
 @media (max-width: 720px) {

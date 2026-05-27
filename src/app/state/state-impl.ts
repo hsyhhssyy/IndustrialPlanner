@@ -45,7 +45,7 @@ import { DEFAULT_APP_THEME_ID, resolveAppTheme } from "../theme";
 export const MIN_LEFT_DOCK_WIDTH = 375;
 export const MAX_LEFT_DOCK_WIDTH = 600;
 export const DEFAULT_LEFT_DOCK_WIDTH = 375;
-export const DEFAULT_RIGHT_DOCK_WIDTH = 340;
+export const DEFAULT_RIGHT_DOCK_WIDTH = 380;
 export const MOBILE_LEFT_DOCK_WIDTH = 180;
 
 export function clampLeftDockWidth(width: number): number {
@@ -67,6 +67,7 @@ export function resolveLeftDockWidthForScreenProfile(
 export interface AppSettingsReadWrite extends AppSettings {
   locale: AppLocale;
   themeId: AppThemeId;
+  // 2026-05-26: 该字段当前无特殊作用，始终为 true；未来会修改其语义或移除。
   hypergryphOperationMode: boolean;
   hypergryphImmediateMove: boolean;
   hypergryphImmediateMarquee: boolean;
@@ -599,6 +600,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
   settings: AppSettingsReadWrite = {
     locale: DEFAULT_APP_LOCALE,
     themeId: DEFAULT_APP_THEME_ID,
+    // 2026-05-26: 该字段当前无特殊作用，始终为 true；未来会修改其语义或移除。
     hypergryphOperationMode: true,
     hypergryphImmediateMove: true,
     hypergryphImmediateMarquee: false,
