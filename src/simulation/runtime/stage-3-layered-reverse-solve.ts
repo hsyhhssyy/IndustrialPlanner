@@ -82,6 +82,42 @@ export function solveTransferGraph(
   }
 }
 
+/**
+ * 撤销给定 input-view 上游所有非严格设备 output-view 的 visited 状态。
+ * 当下游 blocked input-view 被重新激活时调用，确保上游 output-view
+ * 在后续锚点处理中不会被 isNodeVisited 跳过。
+ */
+function unvisitUpstreamNonStrictOutputViews(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  inputNode: CompiledSimulationNode,
+  nextAnchors: Map<string, CompiledSimulationNode>,
+): void {
+  for (const edgeId of getOrderedInputEdgeIds(topology, state, inputNode)) {
+    const edge = topology.transferEdges[edgeId];
+    const sourceNode = edge === undefined ? undefined : topology.nodes[edge.sourceNodeId];
+    if (sourceNode === undefined || sourceNode.viewRole !== "output-view") {
+      continue;
+    }
+    const device = topology.devices[sourceNode.deviceId];
+    if (device === undefined || isStrictLogisticsDevice(device)) {
+      continue;
+    }
+    const nodeState = state.transient.nodes[sourceNode.id];
+    if (nodeState !== undefined && nodeState.resolveState === "visited") {
+      nodeState.resolveState = "unresolved";
+      // 撤销 visited 后，将非严格设备的 input-view 加入下一层锚点，
+      // 确保本层遍历即可通过 processInputAnchor → searchUpstreamFromOutputNode
+      // 重新进入该设备处理。
+      for (const inputNode of getDeviceInputViewNodes(topology, device)) {
+        if (prepareInputNodeForAnchor(topology, state, inputNode)) {
+          nextAnchors.set(inputNode.id, inputNode);
+        }
+      }
+    }
+  }
+}
+
 function collectFirstLayerAnchors(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
@@ -500,6 +536,9 @@ function refreshBlockedInputNodesAfterMove(
     if (inputNodeCanAcceptAtCurrentTick(topology, state, node)) {
       markInputNodeUnresolved(state, node);
       nextAnchors.set(node.id, node);
+      // AI-CORRECTION 2026-05-27: 解除 blocked 时，撤销上游非严格 output-view 的 visited，
+      // 并立即将该设备的 input-view 加入下一层锚点，确保本层即可重新处理上传。
+      unvisitUpstreamNonStrictOutputViews(topology, state, node, nextAnchors);
     }
   }
 
