@@ -6,6 +6,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRectSize } from "@/domain/shared/grid";
 import { createUuid } from "@/domain/shared/uuid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { isBaseBuiltinEntityId } from "@/domain/registry/types/base-definition";
 
 import { syncPlacementValidationState } from "../placement-validation";
 import { syncPoweredEntityCollection } from "./powered-collection";
@@ -139,6 +140,7 @@ export function createEditorPlacementActions({
         nextPreviewDrafts,
       });
       preview.replace(nextPreviewDrafts.map((draft) => draft.id));
+      state.internalTransientState.placementDraftEntityIdMap = entityIdMap;
       state.internalTransientState.placementDraftSlotLinks = blueprint.slotLinks.flatMap((slotLink) => {
         const sourceEntityId = entityIdMap.get(slotLink.source.entityId);
         const targetEntityId = entityIdMap.get(slotLink.target.entityId);
@@ -247,11 +249,28 @@ export function createEditorPlacementActions({
         oldIdToNewId.set(draft.id, newId);
       }
 
+      // 构建完整 ID 映射：原始蓝图 entity ID → 最终正式 ID
+      // entityIdMap 来自 createBlueprintPlacementDraft 中存储的 原始ID → draftID 映射
+      const entityIdMap = state.internalTransientState.placementDraftEntityIdMap;
+      const originalIdToFinalId = new Map<string, string>();
+      if (entityIdMap !== null) {
+        for (const [originalId, draftId] of entityIdMap) {
+          const finalId = oldIdToNewId.get(draftId);
+          if (finalId !== undefined) {
+            originalIdToFinalId.set(originalId, finalId);
+          }
+        }
+      }
+
       for (const draft of previewDrafts) {
         const newId = oldIdToNewId.get(draft.id) ?? draft.id;
 
         // 重写 entity.config 中的 entity ID 引用（如 links[N].source.entityId）。
-        const nextConfig = rewriteEntityIdInConfig(draft.config, oldIdToNewId);
+        const nextConfig = rewriteEntityIdInConfig({
+          config: draft.config,
+          originalIdToFinalId,
+          documentEntityIds: new Set(Object.keys(currentDocument.entities)),
+        });
 
         nextEntities[newId] = {
           id: newId,
@@ -345,6 +364,7 @@ function clearPlacementState(state: EditorActionsContext["state"]): void {
   state.drafts = state.drafts.filter((entity) => !previewDraftIds.includes(entity.id));
   preview.replace([]);
   state.internalTransientState.placementDraftSlotLinks = null;
+  state.internalTransientState.placementDraftEntityIdMap = null;
   state.internalTransientState.placementHistoryAction = null;
 }
 
@@ -398,21 +418,52 @@ function generatePlacementDraftId(
 }
 
 /**
- * 将 entity.config 中所有引用旧 entity ID 的字符串值替换为新 ID。
- * 处理场景：
- *   - links[N].source.entityId（取货口/出货口通过 inspector 写入的自身 ID）
- *   - links[N].target.entityId（若引用同一批 draft 中的其他设备）
+ * 在蓝图放置时重写 entity.config 中的 entity ID 引用。
+ *
+ * 规则（按优先级）：
+ *   1. 值在 originalIdToFinalId 映射中 → 替换为新的最终 ID（蓝图内实体间的引用）
+ *   2. 值为 "warehouse" 或以 "warehouse:" 开头 → 保留（全球仓库哨兵）
+ *   3. 值为 base-builtin 格式（"base-builtin:*"） → 保留（每个基地都有的形式化实体）
+ *   4. 值在 document.entityIds 中但不在映射中 → 断连为 ""（指向蓝图外的普通实体）
+ *   5. 其他 → 保持原值（如 storageSlotGroupId、slotId 等非 entity ID 配置值）
+ *
+ * @param config 原始设备 config
+ * @param originalIdToFinalId 原始蓝图实体 ID → 最终正式实体 ID 的映射
+ * @param documentEntityIds 当前文档中所有实体 ID 的集合
  */
-function rewriteEntityIdInConfig(
-  config: Record<string, unknown>,
-  oldIdToNewId: ReadonlyMap<string, string>,
-): Record<string, unknown> {
+function rewriteEntityIdInConfig(options: {
+  config: Record<string, unknown>;
+  originalIdToFinalId: ReadonlyMap<string, string>;
+  documentEntityIds: ReadonlySet<string>;
+}): Record<string, unknown> {
+  const { config, originalIdToFinalId, documentEntityIds } = options;
   let didChange = false;
   const nextConfig: Record<string, unknown> = { ...config };
 
   for (const [key, value] of Object.entries(nextConfig)) {
-    if (typeof value === "string" && oldIdToNewId.has(value)) {
-      nextConfig[key] = oldIdToNewId.get(value);
+    if (typeof value !== "string") {
+      continue;
+    }
+
+    let nextValue: string | undefined;
+
+    if (originalIdToFinalId.has(value)) {
+      // 规则 1：蓝图内引用 → 替换为最终 ID
+      nextValue = originalIdToFinalId.get(value);
+    } else if (value === "warehouse" || value.startsWith("warehouse:")) {
+      // 规则 2：仓库哨兵 → 保留
+      continue;
+    } else if (isBaseBuiltinEntityId(value)) {
+      // 规则 3：base-builtin → 保留
+      continue;
+    } else if (documentEntityIds.has(value)) {
+      // 规则 4：文档中存在但不属于蓝图 → 断连
+      nextValue = "";
+    }
+    // 规则 5：不在任何规则命中 → 保持原值
+
+    if (nextValue !== undefined && nextValue !== value) {
+      nextConfig[key] = nextValue;
       didChange = true;
     }
   }

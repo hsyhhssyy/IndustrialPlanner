@@ -59,6 +59,7 @@ export interface EditorInternalTransientStateReadWrite {
   logisticsDeviceRouteCycleIndex: number;
   convergerEntityGridKey: string | null;
   placementDraftSlotLinks: SlotLinkDefinition[] | null;
+  placementDraftEntityIdMap: ReadonlyMap<string, string> | null;
   placementHistoryAction: EditorHistoryActionDescriptor | null;
   placementValidationByEntityId: Record<string, EntityPlacementValidationResult>;
 }
@@ -83,6 +84,7 @@ class EditorInternalTransientStateReadWriteImpl
   logisticsDeviceRouteCycleIndex = 0;
   convergerEntityGridKey: string | null = null;
   placementDraftSlotLinks: SlotLinkDefinition[] | null = null;
+  placementDraftEntityIdMap: ReadonlyMap<string, string> | null = null;
   placementHistoryAction: EditorHistoryActionDescriptor | null = null;
   placementValidationByEntityId: Record<string, EntityPlacementValidationResult> = {};
 

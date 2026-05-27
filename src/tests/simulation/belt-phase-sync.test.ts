@@ -101,7 +101,7 @@ describe("传送带同步相位", () => {
     for (const tick of report.ticks) {
       const beltStatuses = BELT_IDS
         .map((id) => tick.devices[id])
-        .filter(Boolean);
+        .filter((s): s is NonNullable<typeof s> => s != null);
 
       // 所有传送带都应该在设备列表中
       if (beltStatuses.length !== BELT_IDS.length) {
@@ -110,7 +110,10 @@ describe("传送带同步相位", () => {
 
       // 判断每条传送带是否有物品（任一 slot count > 0）
       const hasItemsMap = new Map(
-        beltStatuses.map((s) => [s.entityId, s.slotItems.some((slot) => slot.count > 0)]),
+        beltStatuses.map((s, i) => {
+          const beltId = BELT_IDS[i]!;
+          return [beltId, s.slotItems.some((slot) => slot.count > 0)] as const;
+        }),
       );
 
       // 规则1：同组内三条横向相连的传送带要么同时有货，要么同时无货
@@ -131,7 +134,7 @@ describe("传送带同步相位", () => {
       // 规则2：所有有货的传送带（含起点 belt:3:0）必须处于相同相位
       const allPhaseStatuses = ALL_BELT_IDS_FOR_PHASE
         .map((id) => tick.devices[id])
-        .filter(Boolean);
+        .filter((s): s is NonNullable<typeof s> => s != null);
 
       if (allPhaseStatuses.length === ALL_BELT_IDS_FOR_PHASE.length) {
         const beltsWithItems = allPhaseStatuses.filter((s) =>
@@ -231,7 +234,7 @@ describe("传送带同步相位", () => {
 
     // 从第二次收货开始，相邻两次收货间隔应为 40 tick（允许 ±2 tick 误差）
     for (let i = 2; i < receiptTicks.length; i++) {
-      const interval = receiptTicks[i] - receiptTicks[i - 1];
+      const interval = receiptTicks[i]! - receiptTicks[i - 1]!;
       expect(
         interval,
         `收货间隔 ${interval} 应接近 40 tick（第 ${i} 次收货 @ tick ${receiptTicks[i]})`,

@@ -84,6 +84,7 @@ function resetDocumentRuntimeState(state: EditorStateReadWrite): void {
   state.internalTransientState.logisticsDeviceRouteCycleIndex = 0;
   state.internalTransientState.convergerEntityGridKey = null;
   state.internalTransientState.placementDraftSlotLinks = null;
+  state.internalTransientState.placementDraftEntityIdMap = null;
   state.internalTransientState.placementHistoryAction = null;
   state.internalTransientState.placementValidationByEntityId = {};
 
