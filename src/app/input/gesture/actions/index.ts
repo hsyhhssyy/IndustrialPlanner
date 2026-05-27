@@ -34,6 +34,7 @@ export {
 } from "./hypergryph/hypergryph-select-gesture-module";
 export { createHypergryphViewportZoomModule } from "./hypergryph/hypergryph-viewport-zoom-module";
 export { createHypergryphViewportRotationModule } from "./hypergryph/hypergryph-viewport-rotation-module";
+export { createHypergryphHistoryGestureModule } from "./hypergryph/hypergryph-history-gesture-module";
 export type {
   GestureActionContext,
   GestureActionRouterDispatchResult,

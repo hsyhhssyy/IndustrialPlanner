@@ -1,4 +1,4 @@
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
@@ -12,18 +12,22 @@ const BLUEPRINT_PATH = "public/blueprints/dual-oven-xiranite.json";
 // 息壤粉 item 标识
 const XIRANITE_POWDER_ITEM = "item_xiranite_powder";
 
-// 总仿真 tick 数（4 分钟 = 4800 ticks，足够看到稳态）
-const MAX_TICK = 4 * 60 * STANDARD_TICK_RATE_PER_SECOND;
+// 总仿真 tick 数（10 分钟 = 12000 ticks：5 分钟达标 + 5 分钟稳态维持）
+const MAX_TICK = 10 * 60 * STANDARD_TICK_RATE_PER_SECOND;
 // 每分钟 tick 数
 const TICKS_PER_MINUTE = 60 * STANDARD_TICK_RATE_PER_SECOND;
 // 期望每分钟息壤粉产量
 const EXPECTED_XIRANITE_PER_MINUTE = 60;
+// 稳态达标时限：必须在第 5 分钟结束前达到 60/分钟
+const STEADY_DEADLINE_MINUTE = 5;
+// 稳态维持要求：达标后至少连续稳定 5 分钟
+const MIN_STEADY_DURATION_MINUTES = 5;
 
-// 该测试需从磁盘读取大型蓝图文件并运行 4800 tick 仿真。
+// 该测试需从磁盘读取大型蓝图文件并运行 12000 tick 仿真。
 // 由 vitest blueprint project 承载，独立串行执行，不再依赖 HEAVY 环境变量。
 // AI-CORRECTION 2026-05-18: 移除 HEAVY=1 / describe.skipIf，改为 vitest projects 区分。
-describe("双烘炉息壤产线 - 息壤粉滑动窗口产量验证", () => {
-  it("4 分钟滑动窗口诊断：确认息壤粉产量何时稳定在 60/分钟", { timeout: 360_000 }, async () => {
+describe("双烘炉息壤产线 - 息壤粉稳态产量验证", () => {
+  it("5 分钟内达到 60/分钟稳态，并持续稳定至少 5 分钟", { timeout: 600_000 }, async () => {
     const blueprint = loadBlueprintWithExtras(BLUEPRINT_PATH, [
       // 上方暗管出口 → 接入左侧水管网末端 pipe_straight_1x1 @ (9,0) rot=90
       // 出水口位于 (9,-1) 朝南，向 (9,0) 输出清水
@@ -102,13 +106,15 @@ describe("双烘炉息壤产线 - 息壤粉滑动窗口产量验证", () => {
       }
     }
 
+    const totalMinutes = MAX_TICK / TICKS_PER_MINUTE;
+
     // ═══════════════════════════════════════════════
     // 诊断输出：分析产量变化趋势，找到稳态起始点
     // ═══════════════════════════════════════════════
 
-    console.log(`\n[dual-oven-xiranite] ═══ 息壤粉产量诊断（总仿真 4 分钟）═══`);
+    console.log(`\n[dual-oven-xiranite] ═══ 息壤粉产量诊断（总仿真 ${totalMinutes} 分钟）═══`);
     console.log(`  总 tick: ${MAX_TICK}`);
-    console.log(`  累计产出: ${cumulative[MAX_TICK]} (理论最大: ${4 * EXPECTED_XIRANITE_PER_MINUTE})`);
+    console.log(`  累计产出: ${cumulative[MAX_TICK]} (理论最大: ${totalMinutes * EXPECTED_XIRANITE_PER_MINUTE})`);
 
     // 1. 按分钟拆分，观察每分钟增量
     console.log(`\n  [按分钟拆分] 每分钟息壤粉产量:`);
@@ -214,6 +220,56 @@ const lastTick = report.ticks[report.ticks.length - 1]!;
       }
     }
 
-    console.log(`\n[dual-oven-xiranite] 诊断完成 ✓\n`);
+    // ═══════════════════════════════════════════════
+    // 断言：稳态达标 & 维持
+    // ═══════════════════════════════════════════════
+
+    // 按非重叠分钟窗口提取产量
+    const minuteProductions: number[] = [];
+    for (let minuteEnd = TICKS_PER_MINUTE; minuteEnd <= MAX_TICK; minuteEnd += TICKS_PER_MINUTE) {
+      const minuteStart = minuteEnd - TICKS_PER_MINUTE;
+      minuteProductions.push(cumulative[minuteEnd]! - cumulative[minuteStart]!);
+    }
+    // minuteProductions[i] 对应第 i+1 分钟的产量
+
+    // 找到首个达到稳态的分钟索引（从 1 开始计数：第 1,2,3... 分钟）
+    let firstSteadyMinute = -1;
+    for (let i = 0; i < minuteProductions.length; i++) {
+      if (minuteProductions[i] === EXPECTED_XIRANITE_PER_MINUTE) {
+        firstSteadyMinute = i + 1;
+        break;
+      }
+    }
+
+    expect(
+      firstSteadyMinute,
+      `未能在 ${STEADY_DEADLINE_MINUTE} 分钟内达到 ${EXPECTED_XIRANITE_PER_MINUTE}/分钟稳态`,
+    ).toBeGreaterThan(0);
+    expect(
+      firstSteadyMinute,
+      `稳态到达于第 ${firstSteadyMinute} 分钟，超过 ${STEADY_DEADLINE_MINUTE} 分钟时限`,
+    ).toBeLessThanOrEqual(STEADY_DEADLINE_MINUTE);
+
+    // 稳态后持续验证：从首个稳态分钟起，至少连续 MIN_STEADY_DURATION_MINUTES 分钟保持 60/分钟
+    const steadyIndex = firstSteadyMinute - 1;
+    const availableMinutes = minuteProductions.length - steadyIndex;
+    const requiredMinutes = Math.min(MIN_STEADY_DURATION_MINUTES, availableMinutes);
+
+    expect(
+      availableMinutes,
+      `稳态从第 ${firstSteadyMinute} 分钟开始，但剩余仅 ${availableMinutes} 分钟，不足 ${MIN_STEADY_DURATION_MINUTES} 分钟`,
+    ).toBeGreaterThanOrEqual(MIN_STEADY_DURATION_MINUTES);
+
+    for (let offset = 0; offset < requiredMinutes; offset++) {
+      expect(
+        minuteProductions[steadyIndex + offset],
+        `稳态第 ${firstSteadyMinute + offset} 分钟产量 ${minuteProductions[steadyIndex + offset]} ≠ ${EXPECTED_XIRANITE_PER_MINUTE}，稳态中断`,
+      ).toBe(EXPECTED_XIRANITE_PER_MINUTE);
+    }
+
+    console.log(
+      `\n[dual-oven-xiranite] 断言通过：第 ${firstSteadyMinute} 分钟进入稳态，` +
+      `持续 ${requiredMinutes} 分钟稳定在 ${EXPECTED_XIRANITE_PER_MINUTE}/分钟 ✓\n`,
+    );
   });
 });

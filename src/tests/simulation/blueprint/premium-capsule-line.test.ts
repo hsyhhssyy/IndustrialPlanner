@@ -9,17 +9,17 @@ import {
 const BLUEPRINT_PATH = "public/blueprints/premium-capsule-line.json";
 const STORAGER_ID = "legacy_429609a4_0158";
 const WARMUP_TICKS = 1800;
-const WINDOW_SIZE = 1800; // 1 分钟 = 1800 tick，对应期望产出 6 个
-const OBSERVATION_TICKS = 5400; // 滑动窗口持续观察 3 分钟
+const WINDOW_SIZE = 1200; // 1 分钟 = 1200 tick (20 ticks/s × 60s)，对应期望产出 6 个
+const OBSERVATION_TICKS = 3600; // 滑动窗口持续观察 3 分钟
 const TARGET_OUTPUT_PER_WINDOW = 6;
 
 // 该测试需从磁盘读取大型蓝图文件并运行 7200 tick 仿真，耗时较长。
 // 由 vitest blueprint project 承载，独立串行执行，不再依赖 HEAVY 环境变量。
 // AI-CORRECTION 2026-05-18: 移除 HEAVY=1 / describe.skipIf，改为 vitest projects 区分。
 describe("REQ-076: premium capsule line production", () => {
-  it("经过 1800 tick 预热后，滑动 1800-tick（1分钟）窗口内平均产出 >= 6 个精选胶囊，持续 5400 tick（3分钟）无误", { timeout: 360_000 }, async () => {
+  it("经过 1800 tick 预热后，滑动 1200-tick（1分钟）窗口内平均产出 >= 6 个精选胶囊，持续 3600 tick（3分钟）无误", { timeout: 360_000 }, async () => {
     const blueprint = loadBlueprintFromFile(BLUEPRINT_PATH);
-    const maxTick = WARMUP_TICKS + OBSERVATION_TICKS; // 7200
+    const maxTick = WARMUP_TICKS + OBSERVATION_TICKS; // 5400
 
     const report = await runBlueprintSimulation({
       blueprint,
@@ -37,9 +37,9 @@ describe("REQ-076: premium capsule line production", () => {
       storagerItemCounts.push(totalItems);
     }
 
-    // 滑动窗口验证：从 tick 1800 开始，每个 1800-tick（1分钟）窗口产出 >= TARGET_OUTPUT_PER_WINDOW
+    // 滑动窗口验证：从 tick 1800 开始，每个 1200-tick（1分钟）窗口产出 >= TARGET_OUTPUT_PER_WINDOW
     const slidingWindowStartMin = WARMUP_TICKS;
-    const slidingWindowStartMax = maxTick - WINDOW_SIZE + 1; // 5401
+    const slidingWindowStartMax = maxTick - WINDOW_SIZE + 1; // 4201
     const results: { windowStart: number; produced: number }[] = [];
 
     for (let windowStart = slidingWindowStartMin; windowStart <= slidingWindowStartMax; windowStart++) {

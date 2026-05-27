@@ -2047,6 +2047,200 @@ describe("GenericDeviceSprite", () => {
     expect(portOverlayRoot?.children).toHaveLength(0)
     expect(renderHost.textureManager.getTexture).not.toHaveBeenCalledWith(SOLID_INPUT_KEY)
   })
+
+  it("reloads port chevron textures when screen profile switches from desktop to mobile", async () => {
+    const resolvedTexture = createLoadedTextureMock("device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
+    const desktopSolidInput = createLoadedTextureMock("desktop-solid-input")
+    const desktopSolidOutput = createLoadedTextureMock("desktop-solid-output")
+    const mobileSolidInput = createLoadedTextureMock("mobile-solid-input")
+    const mobileSolidOutput = createLoadedTextureMock("mobile-solid-output")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedMaskTexture,
+      [SOLID_INPUT_KEY]: desktopSolidInput,
+      [SOLID_OUTPUT_KEY]: desktopSolidOutput,
+      "texture-solid-port-chevron-input-mobile": mobileSolidInput,
+      "texture-solid-port-chevron-output-mobile": mobileSolidOutput,
+      [LIQUID_INPUT_KEY]: createLoadedTextureMock("liquid-input-texture"),
+      [LIQUID_OUTPUT_KEY]: createLoadedTextureMock("liquid-output-texture"),
+      "texture-liquid-port-chevron-input-mobile": createLoadedTextureMock("liq-input-mobile"),
+      "texture-liquid-port-chevron-output-mobile": createLoadedTextureMock("liq-output-mobile"),
+    })
+
+    const sprite = new GenericDeviceSprite(
+      "switching-device",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    // 第一轮：desktop
+    const desktopContext = createRenderContextStub({
+      selectionIds: ["switching-device"],
+      previewIds: [],
+      deviceClass: "desktop",
+    })
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, desktopContext)
+    await flushMicrotasks(8)
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, desktopContext)
+    await flushMicrotasks(8)
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, desktopContext)
+
+    // 验证请求了 desktop 版纹理
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(SOLID_INPUT_KEY)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(SOLID_OUTPUT_KEY)
+
+    const getTexture = renderHost.textureManager.getTexture as ReturnType<typeof vi.fn>
+    getTexture.mockClear()
+
+    // 第二轮：mobile — 需触发重载
+    const mobileContext = createRenderContextStub({
+      selectionIds: ["switching-device"],
+      previewIds: [],
+      deviceClass: "mobile",
+    })
+
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, mobileContext)
+    await flushMicrotasks(8)
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, mobileContext)
+    await flushMicrotasks(8)
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, mobileContext)
+
+    // 验证重新请求了 -mobile 后缀的纹理
+    expect(getTexture).toHaveBeenCalledWith("texture-solid-port-chevron-input-mobile")
+    expect(getTexture).toHaveBeenCalledWith("texture-solid-port-chevron-output-mobile")
+
+    // 验证端口 overlay 仍然可见、子节点数量正确
+    const portOverlayRoot = resolvePortOverlayRoot(overlayLayer)
+    expect(portOverlayRoot?.visible).toBe(true)
+    expect(portOverlayRoot?.children).toHaveLength(6)
+  })
+
+  it("reloads port cross texture when screen profile switches from desktop to mobile", async () => {
+    const resolvedTexture = createLoadedTextureMock("device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
+    const desktopCross = createLoadedTextureMock("desktop-cross-texture")
+    const mobileCross = createLoadedTextureMock("mobile-cross-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedMaskTexture,
+      [SOLID_INPUT_KEY]: createLoadedTextureMock("solid-input-texture"),
+      [SOLID_OUTPUT_KEY]: createLoadedTextureMock("solid-output-texture"),
+      [LIQUID_INPUT_KEY]: createLoadedTextureMock("liquid-input-texture"),
+      [LIQUID_OUTPUT_KEY]: createLoadedTextureMock("liquid-output-texture"),
+      "texture-port-cross": desktopCross,
+      "texture-port-cross-mobile": mobileCross,
+    })
+
+    const sprite = new GenericDeviceSprite(
+      "cross-switching-device",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    // desktop 轮：logistics-placement 模式下对不匹配端口绘制红叉
+    const desktopContext = createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+      deviceClass: "desktop",
+      activeTool: "logistics-placement",
+    })
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, desktopContext)
+    await flushMicrotasks(8)
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, desktopContext)
+    await flushMicrotasks(8)
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, desktopContext)
+
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith("texture-port-cross")
+
+    const getTexture = renderHost.textureManager.getTexture as ReturnType<typeof vi.fn>
+    getTexture.mockClear()
+
+    // mobile 轮
+    const mobileContext = createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+      deviceClass: "mobile",
+      activeTool: "logistics-placement",
+    })
+
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, mobileContext)
+    await flushMicrotasks(8)
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, mobileContext)
+    await flushMicrotasks(8)
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, mobileContext)
+
+    expect(getTexture).toHaveBeenCalledWith("texture-port-cross-mobile")
+  })
+
+  it("skips port chevron texture reload when deviceClass does not change", async () => {
+    const resolvedTexture = createLoadedTextureMock("device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
+    const desktopSolidInput = createLoadedTextureMock("desktop-solid-input")
+    const desktopSolidOutput = createLoadedTextureMock("desktop-solid-output")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedMaskTexture,
+      [SOLID_INPUT_KEY]: desktopSolidInput,
+      [SOLID_OUTPUT_KEY]: desktopSolidOutput,
+      [LIQUID_INPUT_KEY]: createLoadedTextureMock("liquid-input-texture"),
+      [LIQUID_OUTPUT_KEY]: createLoadedTextureMock("liquid-output-texture"),
+    })
+
+    const sprite = new GenericDeviceSprite(
+      "same-variant-device",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: ["same-variant-device"],
+      previewIds: [],
+      deviceClass: "desktop",
+    })
+
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, context)
+    await flushMicrotasks(8)
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, context)
+    await flushMicrotasks(8)
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, context)
+
+    const firstCallCount = (renderHost.textureManager.getTexture as ReturnType<typeof vi.fn>).mock.calls.length
+
+    // 第二轮：不切换 context，再次 sync 不应触发新的纹理请求
+    sprite.syncLayout({ x: 16, y: 24, width: 48, height: 48, rotation: 0 }, context)
+    await flushMicrotasks(8)
+
+    const secondCallCount = (renderHost.textureManager.getTexture as ReturnType<typeof vi.fn>).mock.calls.length
+    expect(secondCallCount).toBe(firstCallCount)
+  })
 })
 
 function createPortDefaults(
@@ -2324,37 +2518,53 @@ function createRenderContextStub(options: {
     displayOrder: number;
     tags: string[];
   }>;
+  deviceClass?: "desktop" | "tablet" | "mobile";
+  activeTool?: string;
 }) {
+  const workspace: Record<string, unknown> = {
+    registry: {
+      itemDefinitions: options.itemDefinitions ?? [],
+    },
+    editor: {
+      state: {
+        viewport: {
+          gridSize: 1,
+          gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
+        },
+        collections: {
+          [EntityCollectionType.selection]: createCollectionStub(options.selectionIds),
+          [EntityCollectionType.marquee]: createCollectionStub(options.marqueeIds ?? []),
+          [EntityCollectionType.reverseMarquee]: createCollectionStub(options.reverseMarqueeIds ?? []),
+          [EntityCollectionType.preview]: createCollectionStub(options.previewIds),
+          [EntityCollectionType.ghost]: createCollectionStub([]),
+          [EntityCollectionType.logisticsHead]: createCollectionStub(options.logisticsHeadIds ?? []),
+        },
+      },
+      queries: { resolveLogisticsDraftState: () => undefined },
+    },
+    simulation: {
+      queries: {
+        getPipeFluidItemId: options.getPipeFluidItemId ?? (() => null),
+        isPipeDeviceSlotOccupied: options.isPipeDeviceSlotOccupied ?? (() => false),
+      },
+    },
+  }
+
+  if (options.deviceClass !== undefined || options.activeTool !== undefined) {
+    workspace.app = {
+      state: {
+        settings: {},
+        screenProfile: {
+          deviceClass: options.deviceClass ?? "desktop",
+        },
+        activeTool: options.activeTool ?? null,
+      },
+    }
+  }
+
   return {
     theme: options.theme ?? AYU_LIGHT_THEME,
-    workspace: {
-      registry: {
-        itemDefinitions: options.itemDefinitions ?? [],
-      },
-      editor: {
-        state: {
-          viewport: {
-            gridSize: 1,
-            gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
-          },
-          collections: {
-            [EntityCollectionType.selection]: createCollectionStub(options.selectionIds),
-            [EntityCollectionType.marquee]: createCollectionStub(options.marqueeIds ?? []),
-            [EntityCollectionType.reverseMarquee]: createCollectionStub(options.reverseMarqueeIds ?? []),
-            [EntityCollectionType.preview]: createCollectionStub(options.previewIds),
-            [EntityCollectionType.ghost]: createCollectionStub([]),
-            [EntityCollectionType.logisticsHead]: createCollectionStub(options.logisticsHeadIds ?? []),
-          },
-        },
-        queries: { resolveLogisticsDraftState: () => undefined },
-      },
-      simulation: {
-        queries: {
-          getPipeFluidItemId: options.getPipeFluidItemId ?? (() => null),
-          isPipeDeviceSlotOccupied: options.isPipeDeviceSlotOccupied ?? (() => false),
-        },
-      },
-    } as never,
+    workspace: workspace as never,
     time: {
       nowMs: 1000,
       deltaMs: 16.67,

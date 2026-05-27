@@ -20,6 +20,8 @@ export const SHORTCUT_KEY = {
   MOVE_SELECTION:      "shortcut-move-selection",
   COPY_SELECTION:      "shortcut-copy-selection",
   PASTE_SELECTION:     "shortcut-paste-selection",
+  UNDO:                "shortcut-undo",
+  REDO:                "shortcut-redo",
 } as const;
 
 /** 从 SHORTCUT_KEY 推导出的联合类型 */
@@ -53,6 +55,8 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.MOVE_SELECTION]:   "M",
   [SHORTCUT_KEY.COPY_SELECTION]:   "Ctrl+C",
   [SHORTCUT_KEY.PASTE_SELECTION]:  "Ctrl+V",
+  [SHORTCUT_KEY.UNDO]:             "Ctrl+Z",
+  [SHORTCUT_KEY.REDO]:             "Ctrl+Y",
 };
 
 const LEGACY_SHORTCUT_MIGRATIONS: Partial<Record<ShortcutKeyId, string>> = {

@@ -17,6 +17,9 @@ import {
   writeEditorHistoryState,
 } from "./history-storage";
 
+/** 每张地图最多保留的历史记录条数 */
+const MAX_HISTORY_PER_DOCUMENT = 100;
+
 export class EditorHistoryRuntime {
   private loadSerial = 0;
   private writeQueue = Promise.resolve();
@@ -85,9 +88,14 @@ export class EditorHistoryRuntime {
       record,
     ];
 
+    // 限制每张地图最多保留 MAX_HISTORY_PER_DOCUMENT 条记录
+    const trimmedRecords = nextRecords.length > MAX_HISTORY_PER_DOCUMENT
+      ? nextRecords.slice(nextRecords.length - MAX_HISTORY_PER_DOCUMENT)
+      : nextRecords;
+
     runInAction(() => {
       this.state.documentKey = options.documentKey;
-      this.state.records.replace(nextRecords);
+      this.state.records.replace(trimmedRecords);
       this.state.cursorSequence = nextSequence;
       this.state.headSequence = nextSequence;
       this.state.lastRecordId = record.id;

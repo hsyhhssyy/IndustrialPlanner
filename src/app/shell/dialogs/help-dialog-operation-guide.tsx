@@ -119,8 +119,8 @@ function buildGuideData(resolveShortcut: ShortcutResolver, ss: SettingsSnapshot)
     {
       title: "通用快捷键",
       rows: [
-        { label: "撤销", pc: "按 Ctrl+Z", touch: null },
-        { label: "重做", pc: "按 Ctrl+Shift+Z / Ctrl+Y", touch: null },
+        { label: "撤销", pc: `按 ${s(SHORTCUT_KEY.UNDO)}`, touch: null, shortcutKey: SHORTCUT_KEY.UNDO },
+        { label: "重做", pc: `按 ${s(SHORTCUT_KEY.REDO)}`, touch: null, shortcutKey: SHORTCUT_KEY.REDO },
         { label: "返回选择", pc: `按 ${s(SHORTCUT_KEY.RETURN_SELECT)}`, touch: null, shortcutKey: SHORTCUT_KEY.RETURN_SELECT },
       ],
     },

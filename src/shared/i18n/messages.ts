@@ -235,6 +235,10 @@ export type MessageKey =
   | "settingsField.shortcut-copy-selectionDescription"
   | "settingsField.shortcut-paste-selection"
   | "settingsField.shortcut-paste-selectionDescription"
+  | "settingsField.shortcut-undo"
+  | "settingsField.shortcut-undoDescription"
+  | "settingsField.shortcut-redo"
+  | "settingsField.shortcut-redoDescription"
   | "settingsField.useSimplifiedDeviceIcons"
   | "settingsField.useSimplifiedDeviceIconsDescription"
   | "settingsField.useInspectorPanel"
@@ -656,6 +660,10 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-copy-selectionDescription": "设置复制选中设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-paste-selection": "粘贴选区",
     "settingsField.shortcut-paste-selectionDescription": "设置粘贴已复制设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-undo": "撤销",
+    "settingsField.shortcut-undoDescription": "设置撤销操作的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-redo": "重做",
+    "settingsField.shortcut-redoDescription": "设置重做操作的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.useSimplifiedDeviceIcons": "使用蓝图样式的设备图片",
     "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图样式显示设备图片，不会提高性能。",
     "settingsField.useInspectorPanel": "使用右侧面板显示设备属性",
@@ -1076,6 +1084,10 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-copy-selectionDescription": "Set the shortcut key for copying selected devices; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-paste-selection": "Paste Selection",
     "settingsField.shortcut-paste-selectionDescription": "Set the shortcut key for pasting copied devices; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-undo": "Undo",
+    "settingsField.shortcut-undoDescription": "Set the shortcut key for undo; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-redo": "Redo",
+    "settingsField.shortcut-redoDescription": "Set the shortcut key for redo; editable only when Arknights Operation Mode is off.",
     "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",
     "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
     "settingsField.useInspectorPanel": "Use Right Panel For Device Properties",

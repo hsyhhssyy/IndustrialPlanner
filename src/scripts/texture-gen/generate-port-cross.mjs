@@ -6,78 +6,42 @@ import sharp from 'sharp';
 const TILE_SIZE = 64;
 
 // =============================================================================
-// 样式 1：细 X（PC）— 对角线交叉，线宽 ≈ 3px
+// PC 版 — 两杆中心均为 (32,54)，长度一致（y:49-59），线宽 ≈ 2px
 // =============================================================================
-const THIN_CROSS_PC_POLYGONS = [
+const CROSS_PC_POLYGONS = [
   // NW-SE 斜杠
   [
-    [27, 25],
-    [39, 37],
-    [37, 39],
-    [25, 27],
+    [23, 49],
+    [39, 59],
+    [41, 58],
+    [25, 50],
   ],
   // NE-SW 斜杠
   [
-    [37, 25],
-    [25, 37],
-    [27, 39],
-    [39, 27],
+    [39, 49],
+    [23, 59],
+    [25, 58],
+    [41, 50],
   ],
 ];
 
 // =============================================================================
-// 样式 2：粗 X（PC）— 对角线交叉，线宽 ≈ 5px
+// Mobile 版 — 两杆中心均为 (32,32)，长度一致
 // =============================================================================
-const THICK_CROSS_PC_POLYGONS = [
+const CROSS_MOBILE_POLYGONS = [
   // NW-SE 斜杠
   [
-    [25, 24],
-    [41, 38],
-    [38, 41],
-    [22, 27],
+    [17, 19],
+    [45, 47],
+    [47, 45],
+    [19, 17],
   ],
   // NE-SW 斜杠
   [
-    [39, 24],
-    [23, 38],
-    [26, 41],
-    [42, 27],
-  ],
-];
-
-// =============================================================================
-// 样式 1：细 X（Mobile）— 放大至与 solid mobile chevron 协调，线宽 ≈ 5px
-// =============================================================================
-const THIN_CROSS_MOBILE_POLYGONS = [
-  [
-    [21, 18],
-    [47, 43],
-    [43, 47],
-    [18, 21],
-  ],
-  [
-    [43, 18],
-    [18, 43],
-    [21, 47],
-    [47, 21],
-  ],
-];
-
-// =============================================================================
-// 样式 2：粗 X（Mobile）— 放大，线宽 ≈ 7px
-// =============================================================================
-const THICK_CROSS_MOBILE_POLYGONS = [
-  [
-    [22, 17],
-    [47, 42],
-    [42, 47],
-    [17, 22],
-  ],
-  [
-    [42, 17],
-    [17, 42],
-    [22, 47],
-    [47, 22],
+    [47, 19],
+    [19, 47],
+    [17, 45],
+    [45, 17],
   ],
 ];
 
@@ -94,7 +58,7 @@ function createSvgMarkup(polygons) {
     .join('');
 
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${TILE_SIZE}" height="${TILE_SIZE}" viewBox="0 0 ${TILE_SIZE} ${TILE_SIZE}">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${TILE_SIZE}" height="${TILE_SIZE}" viewBox="0 0 ${TILE_SIZE} ${TILE_SIZE}" shape-rendering="crispEdges">`,
     polygonMarkup,
     '</svg>',
   ].join('');
@@ -115,14 +79,8 @@ async function renderTexture(outputFilePath, polygons) {
 // 主流程
 // =============================================================================
 const TEXTURES = [
-  // 细 X — PC
-  { fileName: 'port-cross-thin.png', polygons: THIN_CROSS_PC_POLYGONS },
-  // 粗 X — PC
-  { fileName: 'port-cross-thick.png', polygons: THICK_CROSS_PC_POLYGONS },
-  // 细 X — Mobile
-  { fileName: 'port-cross-thin-mobile.png', polygons: THIN_CROSS_MOBILE_POLYGONS },
-  // 粗 X — Mobile
-  { fileName: 'port-cross-thick-mobile.png', polygons: THICK_CROSS_MOBILE_POLYGONS },
+  { fileName: 'port-cross.png', polygons: CROSS_PC_POLYGONS },
+  { fileName: 'port-cross-mobile.png', polygons: CROSS_MOBILE_POLYGONS },
 ];
 
 async function main() {

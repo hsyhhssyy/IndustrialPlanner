@@ -374,6 +374,28 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-paste-selection"),
         defaultValue: "Ctrl+V",
       },
+      {
+        id: "shortcut-undo",
+        kind: "keybinding",
+        labelKey: shortcutKeybindingLabelKey("shortcut-undo"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-undo"),
+        defaultValue: "Ctrl+Z",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
+      },
+      {
+        id: "shortcut-redo",
+        kind: "keybinding",
+        labelKey: shortcutKeybindingLabelKey("shortcut-redo"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-redo"),
+        defaultValue: "Ctrl+Y",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
+      },
     ],
   },
   {

@@ -89,6 +89,18 @@ const PORT_CHEVRON_TEXTURE_KEYS = [
   "liquid-output",
 ] as const satisfies readonly PortChevronTextureKey[];
 
+type PortKind = "item" | "fluid";
+
+interface AppWithLogisticsPlacementRuntime {
+  internalState: {
+    runtime: {
+      logisticsPlacement: {
+        kind: "belt" | "pipe" | null;
+      };
+    };
+  };
+}
+
 export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly spriteId: string
   private readonly body: Sprite
@@ -149,7 +161,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly portChevronSprites: Sprite[] = [];
   private readonly portChevronTextures = new Map<PortChevronTextureKey, Texture>();
   private portChevronTextureLoadStarted = false;
+  private portChevronTexturesUseMobile: boolean | null = null;
   private arePortChevronTexturesReady = false;
+
+  private readonly portCrossSprites: Sprite[] = [];
+  private portCrossTexture: Texture | null = null;
+  private portCrossTextureLoadStarted = false;
+  private portCrossTextureUseMobile: boolean | null = null;
+  private isPortCrossTextureReady = false;
 
   public constructor(
     entityId: string,
@@ -310,6 +329,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.flowGlowEffectRoot.visible = false;
     this.portOverlayRoot.visible = false;
     this.hidePortChevronSprites();
+    this.hidePortCrossSprites();
   }
 
   // ---- 三个 abstract overlay 方法实现 ----
@@ -855,11 +875,20 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   private loadPortChevronTextures(useMobile: boolean): void {
-    if (this.portChevronTextureLoadStarted) {
+    // 同变体已加载，跳过
+    if (this.portChevronTextureLoadStarted && this.portChevronTexturesUseMobile === useMobile) {
       return;
     }
 
+    // 变体切换：清空旧纹理缓存，重置状态
+    if (this.portChevronTextureLoadStarted) {
+      this.portChevronTextures.clear();
+      this.arePortChevronTexturesReady = false;
+      this.hidePortChevronSprites();
+    }
+
     this.portChevronTextureLoadStarted = true;
+    this.portChevronTexturesUseMobile = useMobile;
 
     void Promise.all(
       PORT_CHEVRON_TEXTURE_KEYS.map(async (key) => {
@@ -897,62 +926,126 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     // 物流模式下根据是否已起笔决定显示出口还是入口箭头
     const directionFilter = this.resolveLogisticsPortDirectionFilter(context);
+    // 物流模式下获取当前物流类型对应的端口 kind（belt→item, pipe→fluid）
+    const kindFilter = directionFilter !== null
+      ? this.resolveLogisticsPortKindFilter(context)
+      : null;
 
     const portLayout = resolvePortOverlayLayout({
       definition: this.definition,
       layout,
       app: context.workspace.app,
     });
-    const portChevronSpecs = resolvePortChevronSpecs({
+
+    // 可用端口（方向 + kind 均匹配）→ 箭头
+    // 不可用端口（方向或 kind 不匹配）→ 红叉
+    const { chevrons: portChevronSpecs, crosses: portCrossSpecs } = resolvePortOverlaySpecs({
       definition: this.definition,
       layout: portLayout,
       directionFilter,
+      kindFilter,
     });
 
-    if (portChevronSpecs.length === 0) {
+    if (portChevronSpecs.length === 0 && portCrossSpecs.length === 0) {
       return;
     }
 
-    if (!this.arePortChevronTexturesReady) {
-      const deviceClass = context.workspace.app?.state.screenProfile.deviceClass;
-      const useMobile = deviceClass === "mobile" || deviceClass === "tablet";
+    const deviceClass = context.workspace.app?.state.screenProfile.deviceClass;
+    const useMobile = deviceClass === "mobile" || deviceClass === "tablet";
+
+    // 变体切换：已缓存的纹理与当前 useMobile 不一致时，触发重载
+    if (portChevronSpecs.length > 0 && this.arePortChevronTexturesReady && this.portChevronTexturesUseMobile !== useMobile) {
+      this.loadPortChevronTextures(useMobile);
+      return;
+    }
+    if (portCrossSpecs.length > 0 && this.isPortCrossTextureReady && this.portCrossTextureUseMobile !== useMobile) {
+      this.loadPortCrossTexture(useMobile);
+      return;
+    }
+
+    // 加载箭头纹理
+    if (portChevronSpecs.length > 0 && !this.arePortChevronTexturesReady) {
       this.loadPortChevronTextures(useMobile);
       return;
     }
 
-    for (let index = 0; index < portChevronSpecs.length; index += 1) {
-      const spec = portChevronSpecs[index];
-
-      if (spec === undefined) {
-        continue;
-      }
-
-      const texture = this.portChevronTextures.get(spec.textureKey);
-
-      if (texture === undefined) {
-        continue;
-      }
-
-      const sprite = this.getPortChevronSprite(index);
-      sprite.texture = texture;
-      sprite.tint = resolveAppThemeColorNumber(
-        context.theme,
-        context.theme.renderer.portChevronColorKey,
-      );
-      sprite.visible = true;
-      sprite.x = spec.x;
-      sprite.y = spec.y;
-      sprite.width = spec.width;
-      sprite.height = spec.height;
-      sprite.rotation = spec.rotation;
+    // 加载红叉纹理
+    if (portCrossSpecs.length > 0 && !this.isPortCrossTextureReady) {
+      this.loadPortCrossTexture(useMobile);
+      return;
     }
 
-    for (let index = portChevronSpecs.length; index < this.portChevronSprites.length; index += 1) {
-      const sprite = this.portChevronSprites[index];
+    // 绘制箭头
+    if (portChevronSpecs.length > 0 && this.arePortChevronTexturesReady) {
+      for (let index = 0; index < portChevronSpecs.length; index += 1) {
+        const spec = portChevronSpecs[index];
 
-      if (sprite !== undefined) {
-        sprite.visible = false;
+        if (spec === undefined) {
+          continue;
+        }
+
+        const texture = this.portChevronTextures.get(spec.textureKey);
+
+        if (texture === undefined) {
+          continue;
+        }
+
+        const sprite = this.getPortChevronSprite(index);
+        sprite.texture = texture;
+        sprite.tint = resolveAppThemeColorNumber(
+          context.theme,
+          context.theme.renderer.portChevronColorKey,
+        );
+        sprite.visible = true;
+        sprite.x = spec.x;
+        sprite.y = spec.y;
+        sprite.width = spec.width;
+        sprite.height = spec.height;
+        sprite.rotation = spec.rotation;
       }
+
+      for (let index = portChevronSpecs.length; index < this.portChevronSprites.length; index += 1) {
+        const sprite = this.portChevronSprites[index];
+
+        if (sprite !== undefined) {
+          sprite.visible = false;
+        }
+      }
+    } else {
+      this.hidePortChevronSprites();
+    }
+
+    // 绘制红叉
+    if (portCrossSpecs.length > 0 && this.isPortCrossTextureReady && this.portCrossTexture !== null) {
+      const crossTint = 0xff0000;
+
+      for (let index = 0; index < portCrossSpecs.length; index += 1) {
+        const spec = portCrossSpecs[index];
+
+        if (spec === undefined) {
+          continue;
+        }
+
+        const sprite = this.getPortCrossSprite(index);
+        sprite.texture = this.portCrossTexture;
+        sprite.tint = crossTint;
+        sprite.visible = true;
+        sprite.x = spec.x;
+        sprite.y = spec.y;
+        sprite.width = spec.width;
+        sprite.height = spec.height;
+        sprite.rotation = 0;
+      }
+
+      for (let index = portCrossSpecs.length; index < this.portCrossSprites.length; index += 1) {
+        const sprite = this.portCrossSprites[index];
+
+        if (sprite !== undefined) {
+          sprite.visible = false;
+        }
+      }
+    } else {
+      this.hidePortCrossSprites();
     }
 
     this.portOverlayRoot.visible = true;
@@ -981,6 +1074,36 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     return false;
+  }
+
+  /**
+   * 物流模式下，获取当前物流类型对应的端口 kind：
+   * - belt → "item"
+   * - pipe → "fluid"
+   * - 非物流模式返回 null
+   */
+  private resolveLogisticsPortKindFilter(
+    context: RenderSpriteSyncContext,
+  ): PortKind | null {
+    // 优先从 draft 获取（已起笔时最准确）
+    const draft = context.workspace.editor?.queries?.resolveLogisticsDraftState?.();
+
+    if (draft !== undefined && draft !== null) {
+      return draft.kind === "belt" ? "item" : "fluid";
+    }
+
+    // 未起笔时从 app 运行时状态获取 logisticsPlacement.kind
+    const app = context.workspace.app;
+
+    if (app !== null && "internalState" in app) {
+      const kind = (app as AppWithLogisticsPlacementRuntime)
+        .internalState.runtime.logisticsPlacement.kind;
+
+      if (kind === "belt") return "item";
+      if (kind === "pipe") return "fluid";
+    }
+
+    return null;
   }
 
   /**
@@ -1049,6 +1172,58 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     for (const sprite of this.portChevronSprites) {
       sprite.visible = false;
     }
+  }
+
+  private getPortCrossSprite(index: number): Sprite {
+    const existingSprite = this.portCrossSprites[index];
+
+    if (existingSprite !== undefined) {
+      return existingSprite;
+    }
+
+    const sprite = new Sprite(Texture.EMPTY);
+    sprite.anchor.set(0.5);
+    sprite.roundPixels = true;
+    sprite.visible = false;
+    this.portOverlayRoot.addChild(sprite);
+    this.portCrossSprites[index] = sprite;
+    return sprite;
+  }
+
+  private hidePortCrossSprites(): void {
+    for (const sprite of this.portCrossSprites) {
+      sprite.visible = false;
+    }
+  }
+
+  private loadPortCrossTexture(useMobile: boolean): void {
+    // 同变体已加载，跳过
+    if (this.portCrossTextureLoadStarted && this.portCrossTextureUseMobile === useMobile) {
+      return;
+    }
+
+    // 变体切换：清空旧纹理，重置状态
+    if (this.portCrossTextureLoadStarted) {
+      this.portCrossTexture = null;
+      this.isPortCrossTextureReady = false;
+      this.hidePortCrossSprites();
+    }
+
+    this.portCrossTextureLoadStarted = true;
+    this.portCrossTextureUseMobile = useMobile;
+
+    void this.renderHost.textureManager.getTexture(
+      resolvePortCrossTextureResourceKey(useMobile),
+    ).then((texture) => {
+      if (this.disposed) {
+        return;
+      }
+
+      this.portCrossTexture = texture;
+      this.isPortCrossTextureReady = true;
+    }).catch(() => {
+      // 红叉纹理加载失败，无伤大雅
+    });
   }
 
   private ensureNotDisposed(): void {
@@ -1211,19 +1386,28 @@ function isOnlyEntityInCollection(
   return collection.length === 1 && collection.contains(entityId);
 }
 
-function resolvePortChevronSpecs(options: {
+function resolvePortOverlaySpecs(options: {
   definition: EntityDefinition;
   layout: RenderSpriteLayout;
   directionFilter?: "input" | "output" | null;
+  kindFilter?: PortKind | null;
 }): {
-  textureKey: PortChevronTextureKey;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  rotation: number;
-}[] {
-  const specs: {
+  chevrons: {
+    textureKey: PortChevronTextureKey;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    rotation: number;
+  }[];
+  crosses: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }[];
+} {
+  const chevrons: {
     textureKey: PortChevronTextureKey;
     x: number;
     y: number;
@@ -1231,20 +1415,31 @@ function resolvePortChevronSpecs(options: {
     height: number;
     rotation: number;
   }[] = [];
+  const crosses: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }[] = [];
+
+  const hasDirectionFilter = options.directionFilter !== null
+    && options.directionFilter !== undefined;
+  const hasKindFilter = options.kindFilter !== null
+    && options.kindFilter !== undefined;
+
   for (const portGroup of options.definition.portGroups) {
-    // 按方向过滤：bidirectional 端口在两个方向都显示
-    if (options.directionFilter) {
-      if (
-        portGroup.direction !== options.directionFilter
-        && portGroup.direction !== "bidirectional"
-      ) {
-        continue;
-      }
-    }
+    const directionMatch = !hasDirectionFilter
+      || portGroup.direction === options.directionFilter
+      || portGroup.direction === "bidirectional";
+    const kindMatch = !hasKindFilter
+      || portGroup.kind === options.kindFilter;
+    const available = directionMatch && kindMatch;
 
     const material = resolvePortChevronMaterial(options.definition, portGroup);
     const direction = resolvePortChevronDirection(portGroup.direction);
-    const textureKey = `${material}-${direction}` as PortChevronTextureKey;
+    const textureKey = available
+      ? `${material}-${direction}` as PortChevronTextureKey
+      : null;
 
     for (const port of portGroup.ports) {
       const chevronLayout = resolvePortChevronLayout({
@@ -1257,14 +1452,23 @@ function resolvePortChevronSpecs(options: {
         continue;
       }
 
-      specs.push({
-        textureKey,
-        ...chevronLayout,
-      });
+      if (available && textureKey !== null) {
+        chevrons.push({
+          textureKey,
+          ...chevronLayout,
+        });
+      } else {
+        crosses.push({
+          x: chevronLayout.x,
+          y: chevronLayout.y,
+          width: chevronLayout.width,
+          height: chevronLayout.height,
+        });
+      }
     }
   }
 
-  return specs;
+  return { chevrons, crosses };
 }
 
 function resolvePortOverlayLayout(options: {
@@ -1377,6 +1581,11 @@ function resolvePortChevronTextureResourceKey(
 
   const suffix = useMobile ? "-mobile" : "";
   return `texture-${material}-port-chevron-${direction}${suffix}`;
+}
+
+function resolvePortCrossTextureResourceKey(useMobile: boolean): string {
+  const suffix = useMobile ? "-mobile" : "";
+  return `texture-port-cross${suffix}`;
 }
 
 function resolvePortChevronLayout(options: {
