@@ -9,6 +9,7 @@ import {
   applyWorldDocumentDelta,
 } from "../history";
 import { syncPoweredEntityCollection } from "./powered-collection";
+import { action } from "mobx";
 import type {
   EditorActionsContext,
 } from "./types";
@@ -29,7 +30,7 @@ export function createEditorHistoryActions({
   workspace,
 }: EditorActionsContext): EditorHistoryActions {
   return {
-    undoDocumentHistory: () => {
+    undoDocumentHistory: action(() => {
       const currentDocument = document.getSnapshot();
       const record = history.getUndoRecord();
 
@@ -57,9 +58,9 @@ export function createEditorHistoryActions({
       history.setCursorSequence(currentDocument.documentKey, record.sequence - 1);
 
       return true;
-    },
+    }),
 
-    redoDocumentHistory: () => {
+    redoDocumentHistory: action(() => {
       const currentDocument = document.getSnapshot();
       const record = history.getRedoRecord();
 
@@ -87,9 +88,9 @@ export function createEditorHistoryActions({
       history.setCursorSequence(currentDocument.documentKey, record.sequence);
 
       return true;
-    },
+    }),
 
-    restoreDocumentHistoryTo: (sequence) => {
+    restoreDocumentHistoryTo: action((sequence) => {
       const targetSequence = normalizeTargetSequence(sequence);
 
       if (targetSequence === null) {
@@ -140,11 +141,11 @@ export function createEditorHistoryActions({
       history.setCursorSequence(currentDocument.documentKey, targetSequence);
 
       return true;
-    },
+    }),
 
-    clearDocumentHistory: () => {
+    clearDocumentHistory: action(() => {
       history.clear(document.getSnapshot().documentKey);
-    },
+    }),
   };
 }
 

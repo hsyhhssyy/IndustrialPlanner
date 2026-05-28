@@ -18,6 +18,7 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type { DraftEntity } from "../draft-entity";
 import { syncPlacementValidationState } from "../placement-validation";
 import { syncPoweredEntityCollection } from "./powered-collection";
+import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 import {
   appendFreehandPathPoints,
@@ -112,7 +113,7 @@ export function createEditorLogisticsActions(
   };
 
   return {
-    createLogisticsDraftStart: (options) => {
+    createLogisticsDraftStart: action((options) => {
       // TODO: 实现物流草稿起点创建逻辑
       // 2026-04-30 订正：ST1-RQ-047 已实现 source 解析、初始 preview 和 collection 接线。
       clearLogisticsDraftState(logisticsContext);
@@ -170,9 +171,9 @@ export function createEditorLogisticsActions(
         replacingEntityId,
         status: "created",
       });
-    },
+    }),
 
-    moveLogisticEnd: (options) => {
+    moveLogisticEnd: action((options) => {
       // TODO: 实现物流终点移动逻辑
       // 2026-04-30 订正：ST1-RQ-047 已实现 touch freehand 与 mouse single-bend 路径更新。
       // 2026-04-30 修正：已吸附设备端口时，指针在设备内保持吸附，不深入设备内部。
@@ -376,9 +377,9 @@ export function createEditorLogisticsActions(
         replacingEntityId: draft.replacingEntityId,
         status: "updated",
       });
-    },
+    }),
 
-    applyLogisticDraft: () => {
+    applyLogisticDraft: action(() => {
       // TODO: 实现物流草稿应用逻辑
       // 2026-04-30 订正：ST1-RQ-047 已实现 canApply 校验、起点替换和 preview 写入 document。
       const draft = logisticsContext.state.internalTransientState.logisticsDraft;
@@ -457,13 +458,13 @@ export function createEditorLogisticsActions(
 
       clearLogisticsDraftState(logisticsContext);
       return true;
-    },
+    }),
 
-    cancelLogisticsDraft: () => {
+    cancelLogisticsDraft: action(() => {
       // TODO: 实现物流草稿取消逻辑
       // 2026-04-30 订正：ST1-RQ-047 已实现 logistics draft / collection 的清理。
       clearLogisticsDraftState(logisticsContext);
-    },
+    }),
   };
 }
 

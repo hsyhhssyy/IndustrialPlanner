@@ -15,6 +15,7 @@ import {
 } from "@/domain/registry/types/base-definition";
 import type { GridRect } from "@/domain/shared/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import { runInAction } from "mobx";
 
 import type { EditorStateReadWrite } from "./state-impl";
 
@@ -43,13 +44,15 @@ export function syncPlacementValidationState(options: {
   state: EditorStateReadWrite;
   workspace: WorkspaceContract;
 }): void {
-  const validationByEntityId = resolvePlacementValidations(options);
-  const invalidEntityIds = Object.entries(validationByEntityId)
-    .filter(([, validation]) => !validation.canPlace)
-    .map(([entityId]) => entityId);
+  runInAction(() => {
+    const validationByEntityId = resolvePlacementValidations(options);
+    const invalidEntityIds = Object.entries(validationByEntityId)
+      .filter(([, validation]) => !validation.canPlace)
+      .map(([entityId]) => entityId);
 
-  options.state.internalTransientState.placementValidationByEntityId = validationByEntityId;
-  options.state.collections[EntityCollectionType.invalidPlacement].replace(invalidEntityIds);
+    options.state.internalTransientState.placementValidationByEntityId = validationByEntityId;
+    options.state.collections[EntityCollectionType.invalidPlacement].replace(invalidEntityIds);
+  });
 }
 
 export function resolveCachedPlacementValidation(options: {

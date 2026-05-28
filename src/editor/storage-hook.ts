@@ -1,4 +1,4 @@
-import { reaction } from "mobx";
+import { reaction, runInAction } from "mobx";
 
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
@@ -14,13 +14,15 @@ export function hookLocalstorage(editorHost: EditorHost): () => void {
     );
 
   if (persistedInternalPersistState !== null) {
-    Object.assign(
-      editorHost.internalState.internalPersistState,
-      normalizePersistedEditorState(
-        persistedInternalPersistState,
+    runInAction(() => {
+      Object.assign(
         editorHost.internalState.internalPersistState,
-      ),
-    );
+        normalizePersistedEditorState(
+          persistedInternalPersistState,
+          editorHost.internalState.internalPersistState,
+        ),
+      );
+    });
   }
 
   return reaction(

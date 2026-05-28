@@ -9,6 +9,7 @@ import {
 } from "../document-storage";
 import type { EditorStateReadWrite } from "../state-impl";
 import { syncPoweredEntityCollection } from "./powered-collection";
+import { action, runInAction } from "mobx";
 import type { EditorActionsContext } from "./types";
 
 type EditorDocumentActions = Pick<EditorAction, "loadLatestBaseDocument">;
@@ -19,7 +20,7 @@ export function createEditorDocumentActions({
   workspace,
 }: EditorActionsContext): EditorDocumentActions {
   return {
-    loadLatestBaseDocument: async (baseId) => {
+    loadLatestBaseDocument: action(async (baseId) => {
       if (!workspace.registry.baseDefinitions.some((definition) => definition.id === baseId)) {
         return false;
       }
@@ -33,16 +34,18 @@ export function createEditorDocumentActions({
         queries: workspace.registry.queries,
       });
 
-      resetDocumentRuntimeState(state);
-      const committedDocument = document.setSnapshot(nextDocument);
-      syncPoweredEntityCollection({
-        document: committedDocument,
-        state,
-        workspace,
+      runInAction(() => {
+        resetDocumentRuntimeState(state);
+        const committedDocument = document.setSnapshot(nextDocument);
+        syncPoweredEntityCollection({
+          document: committedDocument,
+          state,
+          workspace,
+        });
       });
 
       return true;
-    },
+    }),
   };
 }
 

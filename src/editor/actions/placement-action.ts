@@ -10,6 +10,7 @@ import { isBaseBuiltinEntityId } from "@/domain/registry/types/base-definition";
 
 import { syncPlacementValidationState } from "../placement-validation";
 import { syncPoweredEntityCollection } from "./powered-collection";
+import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 
 type EditorPlacementActions = Pick<
@@ -32,7 +33,7 @@ export function createEditorPlacementActions({
   let placementDraftCounter = 0;
 
   return {
-    createSinglePlacementDraft: (
+    createSinglePlacementDraft: action((
       deviceDefinitionId: string,
       centerGridPoint: GridPoint,
     ) => {
@@ -90,9 +91,9 @@ export function createEditorPlacementActions({
         state,
         workspace,
       });
-    },
+    }),
 
-    createBlueprintPlacementDraft: (
+    createBlueprintPlacementDraft: action((
       blueprint: BlueprintDocument,
       centerGridPoint: GridPoint,
     ) => {
@@ -179,9 +180,9 @@ export function createEditorPlacementActions({
         state,
         workspace,
       });
-    },
+    }),
 
-    applyPlacementDraft: () => {
+    applyPlacementDraft: action(() => {
       const currentDocument = document.getSnapshot();
       const previewDrafts = resolvePreviewDrafts({
         previewDraftIds: resolveCollection(EntityCollectionType.preview),
@@ -325,16 +326,16 @@ export function createEditorPlacementActions({
         workspace,
       });
       return true;
-    },
+    }),
 
-    cancelPlacementDraft: () => {
+    cancelPlacementDraft: action(() => {
       clearPlacementState(state);
       syncPlacementValidationState({
         document: document.getSnapshot(),
         state,
         workspace,
       });
-    },
+    }),
   };
 }
 

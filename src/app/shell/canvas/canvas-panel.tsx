@@ -2,6 +2,7 @@ import type { AppHost } from "@/app/host/app-host";
 import type { LongPressState } from "@/app/input/gesture/adapter";
 import type { GestureDiagnosticsSnapshot } from "@/app/input/gesture/diagnostics";
 import { useViewportResizeAdapter } from "@/app/shell/canvas/viewport-resize-adapter";
+import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { observer } from "mobx-react-lite";
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent, PointerEvent, WheelEvent } from "react";
@@ -86,6 +87,7 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
   }, [gestureAdapter]);
 
   const handlePointerDown = (event: PointerEvent<HTMLElement>) => {
+    preventTouchPointerCompatibilityMouseEvents(event);
     gestureAdapter.handlePointerDown(event);
   };
   const handlePointerMove = (event: PointerEvent<HTMLElement>) => {

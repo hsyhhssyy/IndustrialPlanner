@@ -1,6 +1,7 @@
 import type { WorldDocument } from "@/domain/document/world-document";
 import { EditorContract } from "@/domain/editor/editor-contract";
 import { WorkspaceContract } from "@/domain/document/workspace-contract";
+import { runInAction } from "mobx";
 import { createWorldDocument } from "@/domain/document/world-document";
 import {
   createSnapshotStore,
@@ -91,10 +92,12 @@ export function createEditorHost(
 
 function hookPlacementValidation(editorHost: EditorHost): () => void {
   const syncPlacementValidation = (document: WorldDocument): void => {
-    syncPlacementValidationState({
-      document,
-      state: editorHost.internalState,
-      workspace: editorHost.workspace,
+    runInAction(() => {
+      syncPlacementValidationState({
+        document,
+        state: editorHost.internalState,
+        workspace: editorHost.workspace,
+      });
     });
   };
 
@@ -129,10 +132,12 @@ function hookDocumentViewport(editorHost: EditorHost): () => void {
     }
 
     documentKey = document.documentKey;
-    applyWorldDocumentViewportSettings({
-      document,
-      state: editorHost.internalState,
-      workspace: editorHost.workspace,
+    runInAction(() => {
+      applyWorldDocumentViewportSettings({
+        document,
+        state: editorHost.internalState,
+        workspace: editorHost.workspace,
+      });
     });
   };
 

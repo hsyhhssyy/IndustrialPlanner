@@ -76,13 +76,6 @@ export class WorkbenchEncyclopediaPickerController {
   public constructor(resolveSharedFilterState: () => EncyclopediaPickerSharedFilterState) {
     this._resolveSharedFilterState = resolveSharedFilterState;
 
-    makeAutoObservable(this, {
-      _resolveSharedFilterState: false,
-      _entityFilter: false,
-      _itemFilter: false,
-      _resolver: false,
-    }, { autoBind: true });
-
     try {
       const raw = localStorage.getItem("planner.recent-picker-items");
       if (raw !== null) {
@@ -105,6 +98,13 @@ export class WorkbenchEncyclopediaPickerController {
     } catch {
       // Storage 不可用时保持空字符串
     }
+
+    makeAutoObservable(this, {
+      _resolveSharedFilterState: false,
+      _entityFilter: false,
+      _itemFilter: false,
+      _resolver: false,
+    }, { autoBind: true });
   }
 
   public get desktopCategory(): ToolboxWikiDesktopCategory {

@@ -3,6 +3,7 @@ import type { WorldEntity } from "@/domain/document/world-document";
 
 import { syncPlacementValidationState } from "../placement-validation";
 import { syncPoweredEntityCollection } from "./powered-collection";
+import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 
 type EditorDefinitionActions = Pick<EditorAction, "replaceEntityDefinition">;
@@ -14,7 +15,7 @@ export function createEditorDefinitionActions({
   workspace,
 }: EditorActionsContext): EditorDefinitionActions {
   return {
-    replaceEntityDefinition: (entityId, nextDefinitionId) => {
+    replaceEntityDefinition: action((entityId, nextDefinitionId) => {
       if (!hasEntityDefinition(workspace.registry.entityDefinitions, nextDefinitionId)) {
         return false;
       }
@@ -92,7 +93,7 @@ export function createEditorDefinitionActions({
         workspace,
       });
       return true;
-    },
+    }),
   };
 }
 

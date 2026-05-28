@@ -1,4 +1,5 @@
 import type { EditorAction } from "@/domain/editor/editor-action";
+import { action } from "mobx";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRect, GridRectSize } from "@/domain/shared/grid";
@@ -89,7 +90,7 @@ export function createEditorSelectionActions({
   );
 
   return {
-    clearCollection: (collectionType) => {
+    clearCollection: action((collectionType) => {
       resolveCollection(collectionType).replace([]);
 
       if (collectionType === EntityCollectionType.marquee
@@ -108,8 +109,8 @@ export function createEditorSelectionActions({
           workspace,
         });
       }
-    },
-    deleteCollection: (collectionType) => {
+    }),
+    deleteCollection: action((collectionType) => {
       const collection = resolveCollection(collectionType);
 
       if (collection.length === 0) {
@@ -219,11 +220,11 @@ export function createEditorSelectionActions({
         state,
         workspace,
       });
-    },
-    addToCollection: ({ collectionType, entityId }) => {
+    }),
+    addToCollection: action(({ collectionType, entityId }) => {
       addEntityIdToCollection(collectionType, entityId);
-    },
-    removeFromCollection: ({ collectionType, entityId }) => {
+    }),
+    removeFromCollection: action(({ collectionType, entityId }) => {
       const collection = resolveCollection(collectionType);
       const entityIndex = collection.indexOf(entityId);
 
@@ -232,8 +233,8 @@ export function createEditorSelectionActions({
       }
 
       collection.splice(entityIndex, 1);
-    },
-    setMarqueeRange: (collectionType, gridRect) => {
+    }),
+    setMarqueeRange: action((collectionType, gridRect) => {
       const marquee = resolveCollection(collectionType);
 
       if (!isValidGridRect(gridRect)) {
@@ -256,8 +257,8 @@ export function createEditorSelectionActions({
 
       marquee.replace(nextEntityIds);
       state.marqueeGridRect = { ...gridRect };
-    },
-    applyMarquee: () => {
+    }),
+    applyMarquee: action(() => {
       const marquee = resolveCollection(EntityCollectionType.marquee);
       const reverseMarquee = resolveCollection(EntityCollectionType.reverseMarquee);
 
@@ -279,13 +280,13 @@ export function createEditorSelectionActions({
 
       reverseMarquee.replace([]);
       state.marqueeGridRect = null;
-    },
-    cancelMarquee: () => {
+    }),
+    cancelMarquee: action(() => {
       resolveCollection(EntityCollectionType.marquee).replace([]);
       resolveCollection(EntityCollectionType.reverseMarquee).replace([]);
       state.marqueeGridRect = null;
-    },
-    moveCollectionTo: ({ collectionType, startGridPoint, endGridPoint }) => {
+    }),
+    moveCollectionTo: action(({ collectionType, startGridPoint, endGridPoint }) => {
       const gridVector = resolveGridVector({
         startGridPoint,
         endGridPoint,
@@ -385,7 +386,7 @@ export function createEditorSelectionActions({
         state,
         workspace,
       });
-    },
+    }),
     rotateCollection: (collectionType) => {
       const collection = resolveCollection(collectionType);
 

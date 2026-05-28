@@ -1,4 +1,5 @@
 import type { EditorAction } from "@/domain/editor/editor-action";
+import { action } from "mobx";
 import type { GridRotation } from "@/domain/shared/grid";
 import {
   resolveCompensatedViewportCenter,
@@ -52,7 +53,7 @@ export function createEditorViewportActions({
   };
 
   return {
-    setViewportClientRect: ({ left, top, width, height }) => {
+    setViewportClientRect: action(({ left, top, width, height }) => {
       const previousClientRect = {
         ...state.viewport.clientRect,
       };
@@ -98,8 +99,8 @@ export function createEditorViewportActions({
       state.viewport.clientRect.height = nextClientRect.height;
 
       persistViewportSettings();
-    },
-    moveViewportByClientPixelVector: ({
+    }),
+    moveViewportByClientPixelVector: action(({
       startClientPixel,
       endClientPixel,
     }) => {
@@ -135,8 +136,8 @@ export function createEditorViewportActions({
       clampViewportCenter();
 
       persistViewportSettings();
-    },
-    zoom: (step) => {
+    }),
+    zoom: action((step) => {
       const nextGridSize = resolveViewportGridSizeAfterZoom({
         currentGridSize: state.viewport.gridSize,
         step,
@@ -152,8 +153,8 @@ export function createEditorViewportActions({
       );
 
       persistViewportSettings();
-    },
-    setViewportDisplayRotation: (displayRotation) => {
+    }),
+    setViewportDisplayRotation: action((displayRotation) => {
       const nextDisplayRotation = normalizeViewportDisplayRotation(displayRotation);
       if (
         nextDisplayRotation === null
@@ -165,7 +166,7 @@ export function createEditorViewportActions({
       state.viewport.displayRotation = nextDisplayRotation;
 
       persistViewportSettings();
-    },
+    }),
   };
 }
 

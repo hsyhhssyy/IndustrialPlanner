@@ -11,6 +11,7 @@ import {
   isGridPointInsideRect,
 } from "../logistics/logistics-utils";
 import { syncPoweredEntityCollection } from "./powered-collection";
+import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 
 type EditorTransportActions = Pick<
@@ -228,14 +229,14 @@ export function createEditorTransportActions(
   };
 
   return {
-    removeTransportComponent: (entityId) => {
+    removeTransportComponent: action((entityId) => {
       removeDirectedTransportComponent(entityId, ["input", "output"], "删除整段");
-    },
-    removeTransportComponentUpstream: (entityId) => {
+    }),
+    removeTransportComponentUpstream: action((entityId) => {
       removeDirectedTransportComponent(entityId, ["input"], "删除前段");
-    },
-    removeTransportComponentDownstream: (entityId) => {
+    }),
+    removeTransportComponentDownstream: action((entityId) => {
       removeDirectedTransportComponent(entityId, ["output"], "删除后段");
-    },
+    }),
   };
 }

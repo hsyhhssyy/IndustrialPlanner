@@ -5,6 +5,7 @@ import type {
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { GridRotation } from "@/domain/shared/grid";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
+import { runInAction } from "mobx";
 
 import type {
   EditorDocumentWriter,
@@ -52,13 +53,15 @@ export function applyWorldDocumentViewportSettings(options: {
     baseDefinition,
   });
 
-  options.state.viewport.center.x = nextViewportCenter.x;
-  options.state.viewport.center.y = nextViewportCenter.y;
-  options.state.viewport.gridSize = viewportSettings.gridSize;
-  options.state.viewport.gridCellPixelSize = resolveViewportGridCellPixelSize(
-    viewportSettings.gridSize,
-  );
-  options.state.viewport.displayRotation = viewportSettings.displayRotation;
+  runInAction(() => {
+    options.state.viewport.center.x = nextViewportCenter.x;
+    options.state.viewport.center.y = nextViewportCenter.y;
+    options.state.viewport.gridSize = viewportSettings.gridSize;
+    options.state.viewport.gridCellPixelSize = resolveViewportGridCellPixelSize(
+      viewportSettings.gridSize,
+    );
+    options.state.viewport.displayRotation = viewportSettings.displayRotation;
+  });
 }
 
 export function persistWorldDocumentViewportSettings(options: {

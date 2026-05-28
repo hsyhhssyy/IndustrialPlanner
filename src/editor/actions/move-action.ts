@@ -1,4 +1,5 @@
 import type { EditorAction } from "@/domain/editor/editor-action";
+import { action } from "mobx";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
@@ -29,7 +30,7 @@ export function createEditorMoveActions({
     state.collections[collectionType];
 
   return {
-    createMoveOperationDraft: () => {
+    createMoveOperationDraft: action(() => {
       const currentDocument = document.getSnapshot();
       const selection = resolveCollection(EntityCollectionType.selection);
       const preview = resolveCollection(EntityCollectionType.preview);
@@ -82,8 +83,8 @@ export function createEditorMoveActions({
         state,
         workspace,
       });
-    },
-    applyMoveOerationDraft: () => {
+    }),
+    applyMoveOerationDraft: action(() => {
       const currentDocument = document.getSnapshot();
       const selection = resolveCollection(EntityCollectionType.selection);
       const ghostEntityIds = new Set(resolveCollection(EntityCollectionType.ghost));
@@ -175,15 +176,15 @@ export function createEditorMoveActions({
       }
 
       return true;
-    },
-    cancelMoveOperationDraft: () => {
+    }),
+    cancelMoveOperationDraft: action(() => {
       clearMoveOperationState(state);
       syncPlacementValidationState({
         document: document.getSnapshot(),
         state,
         workspace,
       });
-    },
+    }),
   };
 }
 

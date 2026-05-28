@@ -1,4 +1,4 @@
-import { reaction } from "mobx";
+import { reaction, runInAction } from "mobx";
 
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
@@ -43,20 +43,24 @@ export function hookLocalstorage(appHost: AppHost): () => void {
   );
 
   if (persistedAppSettings !== null) {
-    Object.assign(
-      appHost.internalState.settings,
-      normalizePersistedAppSettings(persistedAppSettings, appHost.internalState.settings),
-    );
+    runInAction(() => {
+      Object.assign(
+        appHost.internalState.settings,
+        normalizePersistedAppSettings(persistedAppSettings, appHost.internalState.settings),
+      );
+    });
   }
 
   if (persistedWorkbenchState !== null) {
-    Object.assign(
-      appHost.internalState.workbench,
-      normalizePersistedWorkbenchState(
-        persistedWorkbenchState,
+    runInAction(() => {
+      Object.assign(
         appHost.internalState.workbench,
-      ),
-    );
+        normalizePersistedWorkbenchState(
+          persistedWorkbenchState,
+          appHost.internalState.workbench,
+        ),
+      );
+    });
   }
 
   const disposeWorkbenchReaction = reaction(
