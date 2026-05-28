@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { createRegistryContract } from "@/registry";
-import { runBlueprintSimulation } from "@/simulation/blueprint-runner"
+import { runBlueprintSimulation } from "./blueprint-runner"
 
 import {
   createBlueprint,

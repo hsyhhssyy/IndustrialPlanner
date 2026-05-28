@@ -14,7 +14,6 @@
     "test:normal": "vitest run --project normal",
     "test:blueprint": "vitest run --project blueprint",
     "test:watch": "vitest",
-    "blueprint:run": "tsx --tsconfig tsconfig.app.json src/scripts/run-blueprint-simulation.ts",
     "blueprint:convert": "tsx --tsconfig tsconfig.app.json src/scripts/convert-legacy-blueprint.ts",
     "draw-device-blueprint-svg": "tsx --tsconfig tsconfig.app.json src/scripts/draw-device-blueprint-svg.mjs",
     "format-device-sprites": "node src/scripts/format-device-sprites.mjs",

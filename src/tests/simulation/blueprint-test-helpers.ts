@@ -7,13 +7,14 @@ import {
 } from "@/domain/document/blueprint-document";
 import type {
   SlotLinkDefinition,
+  WorldDocument,
   WorldEntity,
 } from "@/domain/document/world-document";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 import type {
   BlueprintSimulationReport,
   BlueprintSimulationTickReport,
-} from "@/simulation/blueprint-runner";
+} from "./blueprint-runner";
 
 export type DeviceStatus = BlueprintSimulationTickReport["devices"][string];
 export type DeviceSlotItem = DeviceStatus["slotItems"][number];
@@ -166,4 +167,73 @@ export function loadBlueprintWithExtras(
     entities,
     entityOrder,
   };
+}
+
+// ===============================
+// Blueprint → WorldDocument 转换
+// ===============================
+
+/**
+ * 将 BlueprintDocument 转换为 WorldDocument，用于仿真测试。
+ */
+export function createWorldDocumentFromBlueprint(
+	blueprint: BlueprintDocument,
+): WorldDocument {
+	return {
+		schemaVersion: 1,
+		documentKey: blueprint.blueprintId,
+		baseId: blueprint.baseId,
+		meta: {
+			id: `blueprint-${blueprint.blueprintId}`,
+			name: blueprint.name,
+			createdAt: blueprint.createdAt,
+			updatedAt: blueprint.updatedAt,
+		},
+		entities: cloneBlueprintEntities(blueprint.entities),
+		entityOrder: [...blueprint.entityOrder],
+		slotLinks: blueprint.slotLinks.map(cloneSlotLinkDefinition),
+		documentSettings: {
+			viewport: {
+				center: {
+					x: 0,
+					y: 0,
+				},
+				gridSize: 1,
+				displayRotation: 0,
+			},
+			powerMode: "infinite",
+		},
+	};
+}
+
+function cloneBlueprintEntities(
+	entities: BlueprintDocument["entities"],
+): Record<string, WorldEntity> {
+	const nextEntities: Record<string, WorldEntity> = {};
+
+	for (const [entityId, entity] of Object.entries(entities)) {
+		nextEntities[entityId] = {
+			...entity,
+			position: {
+				x: entity.position.x,
+				y: entity.position.y,
+			},
+			config: { ...entity.config },
+			tags: [...entity.tags],
+		};
+	}
+
+	return nextEntities;
+}
+
+function cloneSlotLinkDefinition(slotLink: SlotLinkDefinition): SlotLinkDefinition {
+	return {
+		...slotLink,
+		source: {
+			...slotLink.source,
+		},
+		target: {
+			...slotLink.target,
+		},
+	};
 }

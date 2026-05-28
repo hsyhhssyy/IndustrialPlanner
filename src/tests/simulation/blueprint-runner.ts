@@ -1,4 +1,5 @@
-import { createWorldDocumentFromBlueprint, type BlueprintDocument } from "@/domain/document/blueprint-document";
+import { createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
+import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import type { WorldDocument } from "@/domain/document/world-document";
@@ -6,12 +7,12 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 
-import { createSimulationHost } from "./simulation-host";
+import { createSimulationHost } from "@/simulation/simulation-host";
 import type {
   CompiledSimulationTopology,
   RuntimeTickSnapshot,
   RuntimeTransferSnapshot,
-} from "./types";
+} from "@/simulation/types";
 
 type TransportClassSummary = "strict-belt" | "strict-pipe";
 

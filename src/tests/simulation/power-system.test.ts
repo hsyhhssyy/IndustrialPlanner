@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  createWorldDocumentFromBlueprint,
-  type BlueprintDocument,
-} from "@/domain/document/blueprint-document";
+import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import {
@@ -14,7 +11,7 @@ import {
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
-import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
+import { runBlueprintSimulation } from "./blueprint-runner";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
 import type { CompiledSimulationTopology } from "@/simulation/types";
@@ -26,6 +23,7 @@ import {
 import {
   createBlueprint,
   createEntity,
+  createWorldDocumentFromBlueprint,
   findSlot,
   getDevice,
   getTick,

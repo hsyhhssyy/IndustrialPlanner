@@ -6,7 +6,7 @@ import {
   type WorldDocument,
   type WorldEntity,
 } from "@/domain/document/world-document";
-import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
+import { runBlueprintSimulation } from "./blueprint-runner";
 import { compileSimulationTopology } from "@/simulation/topology-compiler";
 import { createSimulationTopologyMigration } from "@/simulation/topology-migration";
 import { createRegistryContract } from "@/registry";

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { createRegistryContract } from "@/registry";
-import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
+import { runBlueprintSimulation } from "./blueprint-runner";
 import {
   createBlueprint,
   createEntity,

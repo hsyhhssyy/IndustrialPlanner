@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createWorldDocumentFromBlueprint } from "@/domain/document/blueprint-document";
+import { createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
 import type { WorldDocument } from "@/domain/document/world-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";

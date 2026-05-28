@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
 import { createRegistryContract } from "@/registry";
-import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
+import { runBlueprintSimulation } from "./blueprint-runner";
 import { createBlueprint, createEntity } from "./blueprint-test-helpers";
 
 // AI-REMOVED 2026-05-17:
