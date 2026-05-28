@@ -21,9 +21,11 @@ import {
 export function settleRecipes(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
+  powerMode: "real" | "infinite" = "infinite",
+  currentPowerGeneration = Infinity,
 ): void {
   settleWaitingOutputs(topology, state);
-  startIdleDevices(topology, state);
+  startIdleDevices(topology, state, powerMode, currentPowerGeneration);
 }
 
 function settleWaitingOutputs(
@@ -53,7 +55,12 @@ function settleWaitingOutputs(
 function startIdleDevices(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
+  powerMode: "real" | "infinite" = "infinite",
+  currentPowerGeneration = Infinity,
 ): void {
+  const powerInsufficient = powerMode === "real"
+    && currentPowerGeneration < topology.totalPowerDemand;
+
   for (const deviceId of topology.ordering.deviceOrder) {
     const device = topology.devices[deviceId];
     const deviceState = state.persistent.devices[deviceId];
@@ -61,6 +68,10 @@ function startIdleDevices(
       continue;
     }
     if (device.powerStatus === "out-of-power-range") {
+      continue;
+    }
+    // 真实电力模式下发电不足 → 所有 requiresPower 设备不启动新配方
+    if (powerInsufficient && device.requiresPower) {
       continue;
     }
 

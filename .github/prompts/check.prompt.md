@@ -6,7 +6,7 @@ agent: "agent"
 请按照如下顺序检查当前工作区代码，注意不要根据测试结果进行任何修改：
 
 1. 执行 `npx eslint . --ext .ts,.tsx` 并输出有问题的结果。
-2. 执行 `npx tsc --noEmit`
+2. 执行 `npx tsc -b --noEmit`
 3. 执行 `npm run test`（该测试耗时较长，等待输出时不设置超时）
 4. 执行 `npm run build`
 5. 执行 `npm run test:blueprint`

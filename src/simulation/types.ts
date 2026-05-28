@@ -97,6 +97,8 @@ export interface CompiledSimulationRecipeDefinition {
   readonly machineId: string;
   readonly recipeType: SimulationRecipeType;
   readonly tags: readonly string[];
+  /** 配方运行时发电量（kW），默认 0。 */
+  readonly powerOutput: number;
 }
 
 export interface CompiledSimulationDevice {
@@ -108,6 +110,8 @@ export interface CompiledSimulationDevice {
   readonly tags: readonly string[];
   readonly powerStatus: SimulationPowerStatus;
   readonly powerDemand: number;
+  /** 是否需要电力才能运行。对应 EntityDefinition.requiresPower。 */
+  readonly requiresPower: boolean;
   readonly transportClass: SimulationTransportClass;
   /** 若属于 strict-belt/strict-pipe 运输组件，则为该组件的 ID；否则为 null。 */
   readonly transportComponentId: string | null;
@@ -286,6 +290,7 @@ export interface RuntimeTickSnapshot {
   readonly tickNumber: number;
   readonly status: "initial" | "running";
   readonly totalPowerDemand: number;
+  readonly currentPowerGeneration: number;
   readonly slots: Record<string, RuntimeSlotSnapshot>;
   readonly devices: Record<string, RuntimeDeviceSnapshot>;
   readonly nodes: Record<string, RuntimeNodeSnapshot>;
@@ -354,6 +359,7 @@ export function compileRecipeDefinition(
     machineId: recipe.machineId,
     recipeType: recipe.recipeType,
     tags: [...recipe.tags].sort(),
+    powerOutput: recipe.powerOutput ?? 0,
   };
 }
 

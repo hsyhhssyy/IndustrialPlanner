@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import {
@@ -73,6 +74,7 @@ describe("双烘炉息壤产线 - 息壤粉稳态产量验证", () => {
     const report = await runBlueprintSimulation({
       blueprint,
       maxTickNumber: MAX_TICK,
+      registry: createRegistryContract(),
     });
 
     // 按 tick 累计息壤粉产出量

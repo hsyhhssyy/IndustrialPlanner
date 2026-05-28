@@ -5,7 +5,7 @@ import type {
   ToolboxWikiEntityGroupCategory,
   ToolboxWikiMobileCategory as FilterableCategory,
   ToolboxWikiMobileFilterOption,
-} from "@/domain/app/types/app-types";
+} from "@/app/toolbox-types";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";

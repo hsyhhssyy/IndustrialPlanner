@@ -1,4 +1,5 @@
 import { describe, it } from "vitest";
+import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 import { createBlueprint, createEntity } from "./blueprint-test-helpers";
 
@@ -33,6 +34,7 @@ describe("debug-fanout", () => {
         createEntity("belt-open", "belt_straight_1x1", 1, -1, 0),
         createEntity("open-storage", "item_port_storager_1", 2, -1, 90),
       ]),
+      registry: createRegistryContract(),
       maxTickNumber: 150,
     });
 

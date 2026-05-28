@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner"
 
 import {
@@ -15,6 +16,7 @@ describe("definition slot links", () => {
           "links[0]": null,
         }),
       ]),
+      registry: createRegistryContract(),
       maxTickNumber: 0,
     })
 

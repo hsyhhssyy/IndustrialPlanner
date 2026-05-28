@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 import {
   getDevice,
@@ -24,6 +25,7 @@ describe("REQ-076: premium capsule line production", () => {
     const report = await runBlueprintSimulation({
       blueprint,
       maxTickNumber: maxTick,
+      registry: createRegistryContract(),
     });
 
     // 计算每个 tick 上 storager 中的物品总量

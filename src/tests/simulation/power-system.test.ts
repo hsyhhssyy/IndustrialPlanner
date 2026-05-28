@@ -5,6 +5,7 @@ import {
   type BlueprintDocument,
 } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
 import {
   createWorldDocument,
   type WorldDocument,
@@ -15,6 +16,8 @@ import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 import { createSimulationHost } from "@/simulation/simulation-host";
+import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
+import type { CompiledSimulationTopology } from "@/simulation/types";
 import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import {
   createSnapshotStore,
@@ -33,6 +36,7 @@ describe("REQ-084: simulation power system", () => {
     const completionTick = 2 * STANDARD_TICK_RATE_PER_SECOND + 1;
     const report = await runBlueprintSimulation({
       blueprint: createGrinderBlueprint("powered-grinder", 4),
+      registry: createRegistryContract(),
       maxTickNumber: completionTick,
     });
 
@@ -54,6 +58,7 @@ describe("REQ-084: simulation power system", () => {
     const completionTick = 2 * STANDARD_TICK_RATE_PER_SECOND + 1;
     const report = await runBlueprintSimulation({
       blueprint: createGrinderBlueprint("unpowered-grinder", 40),
+      registry: createRegistryContract(),
       maxTickNumber: completionTick,
     });
 
@@ -77,7 +82,8 @@ describe("REQ-084: simulation power system", () => {
     const documentStore = createSnapshotStore(createWorldDocumentFromBlueprint(
       createGrinderOnlyBlueprint("add-pole-late"),
     ));
-    const workspace = createHeadlessWorkspace(documentStore);
+    const registry = createRegistryContract();
+    const workspace = createHeadlessWorkspace(documentStore, registry);
     const host = createSimulationHost(workspace, { workerMode: "runtime" });
 
     try {
@@ -122,7 +128,7 @@ describe("REQ-084: simulation power system", () => {
     const documentStore = createSnapshotStore(createWorldDocumentFromBlueprint(
       createGrinderBlueprint("migration-power-on", 4),
     ));
-    const workspace = createHeadlessWorkspace(documentStore);
+    const workspace = createHeadlessWorkspace(documentStore, createRegistryContract());
     const host = createSimulationHost(workspace, {
       workerMode: "runtime",
     });
@@ -226,6 +232,161 @@ describe("REQ-084: simulation power system", () => {
   });
 });
 
+describe("REQ-089: power generation mode caching bug", () => {
+  it("setPowerMode clears cached ticks so new mode takes effect immediately", () => {
+    // 构建一个简单拓扑：一个 grinder（requiresPower: true, powerDemand: 5）在供电范围内。
+    // 无发电设备 → totalPowerGeneration = 0。
+    const topology: CompiledSimulationTopology = {
+      schemaVersion: 4,
+      topologyId: "topology:power-mode-cache-test",
+      documentKey: "document:test",
+      documentHash: "hash:test",
+      registryHash: "registry:test",
+      standardTickRate: STANDARD_TICK_RATE_PER_SECOND,
+      totalPowerDemand: 5,
+      itemCatalog: {
+        item_iron_nugget: { id: "item_iron_nugget", domain: "solid", tags: [] },
+        item_iron_powder: { id: "item_iron_powder", domain: "solid", tags: [] },
+      },
+      recipeCatalog: {
+        "r_test": {
+          id: "r_test",
+          nameKey: "recipe.test",
+          durationTicks: 10,
+          inputs: [{ itemId: "item_iron_nugget", amount: 1 }],
+          outputs: [{ itemId: "item_iron_powder", amount: 1 }],
+          machineId: "test_machine",
+          recipeType: "immediate-consume",
+          tags: [],
+          powerOutput: 0,
+        },
+      },
+      devices: {
+        "device:grinder": {
+          id: "device:grinder",
+          sourceEntityId: "grinder",
+          definitionId: "test_machine",
+          position: null,
+          rotation: null,
+          tags: [],
+          powerStatus: "in-power-range",
+          powerDemand: 5,
+          requiresPower: true,
+          transportClass: "anchor",
+          transportComponentId: null,
+          nodeIds: ["node:input", "node:output"],
+          recipeChannels: [{
+            id: "main",
+            ingredientNodeIds: ["node:input"],
+            productNodeIds: ["node:output"],
+          }],
+          portIds: [],
+          routing: {},
+          configHash: "config:test",
+        },
+      },
+      nodes: {
+        "node:input": {
+          id: "node:input", deviceId: "device:grinder",
+          sourceStorageSlotGroupId: null, viewRole: "input-view",
+          slotIds: ["slot:input"], inputPortIds: [], outputPortIds: [],
+          groupOrder: 0,
+        },
+        "node:output": {
+          id: "node:output", deviceId: "device:grinder",
+          sourceStorageSlotGroupId: null, viewRole: "output-view",
+          slotIds: ["slot:output"], inputPortIds: [], outputPortIds: [],
+          groupOrder: 1,
+        },
+      },
+      slots: {
+        "slot:input": {
+          id: "slot:input", nodeId: "node:input",
+          sourceStorageSlotGroupId: null, sourceSlotId: null,
+          capacity: 10, domain: "solid", lock: null,
+          initialItemType: "item_iron_nugget", initialCount: 1,
+          ignoreStock: false, submitMode: "never", submitIntervalTicks: null,
+        },
+        "slot:output": {
+          id: "slot:output", nodeId: "node:output",
+          sourceStorageSlotGroupId: null, sourceSlotId: null,
+          capacity: 10, domain: "solid", lock: null,
+          initialItemType: null, initialCount: 0,
+          ignoreStock: false, submitMode: "never", submitIntervalTicks: null,
+        },
+      },
+      ports: {},
+      links: {},
+      physicalConnections: {},
+      transferEdges: {},
+      ordering: {
+        deviceOrder: ["device:grinder"],
+        nodeOrder: ["node:input", "node:output"],
+        slotOrder: ["slot:input", "slot:output"],
+        portOrder: [],
+        physicalConnectionOrder: [],
+        edgeOrder: [],
+      },
+      transportComponents: {},
+      diagnostics: [],
+    };
+
+    const runtime = new SimulationWorkerRuntime();
+
+    // 1. 以真实电力模式启动。gen=0 < demand=5 → grinder 冻结。
+    runtime.setPowerMode("real");
+    runtime.handleRequest({
+      type: "load-topology",
+      requestId: 1,
+      topology,
+    });
+    runtime.advanceToTick(80);
+
+    // 验证 tick 80：真实电力 + 无发电 → grinder 冻结
+    const frozenResp = runtime.handleRequest({
+      type: "get-tick-snapshot",
+      requestId: 100,
+      tickNumber: 80,
+    });
+    const frozenSnap = (frozenResp as Extract<typeof frozenResp, { type: "tick-snapshot-result" }>).result.currentTick!;
+    expect(frozenSnap.currentPowerGeneration).toBe(0);
+    expect(frozenSnap.devices["device:grinder"]?.recipe).toBeNull();
+
+    // 2. 切换到无限电力
+    runtime.setPowerMode("infinite");
+
+    // 3. 推进一个 tick → 此时 advanceToTick 从 runtimeState(tick 80) 开始计算 tick 81
+    //    由于 setPowerMode 切换后，新 tick 应使用无限电力模式。
+    runtime.advanceToTick(85);
+
+    const freshResp = runtime.handleRequest({
+      type: "get-tick-snapshot",
+      requestId: 101,
+      tickNumber: 85,
+    });
+    const freshSnap = (freshResp as Extract<typeof freshResp, { type: "tick-snapshot-result" }>).result.currentTick!;
+    // 无限电力模式下 grinder 应正常启动
+    const freshRecipe = freshSnap.devices["device:grinder"]?.recipe;
+    // 修复前 setPowerMode 不清缓存就会出问题——这里我们验证 powerMode 切换后新 tick 正常工作
+    expect(freshRecipe?.state, "无限电力模式切换后新 tick 应正常启动").toBe("running");
+
+    // 4. 再切回真实电力 → 后续 tick 应再次冻结
+    runtime.setPowerMode("real");
+    runtime.advanceToTick(90);
+
+    const realResp = runtime.handleRequest({
+      type: "get-tick-snapshot",
+      requestId: 102,
+      tickNumber: 90,
+    });
+    const realSnap = (realResp as Extract<typeof realResp, { type: "tick-snapshot-result" }>).result.currentTick!;
+    expect(realSnap.currentPowerGeneration).toBe(0);
+    // 真实电力模式下 grinder 配方进度应冻结（保留但不推进）
+    expect(realSnap.devices["device:grinder"]?.recipe?.state, "切回真实电力后已有配方应冻结").toBe("running");
+    expect(realSnap.devices["device:grinder"]?.recipe?.progressTicks, "切回真实电力后配方进度不再增长").toBe(4);
+  });
+});
+
 function createEditorTestWorkspace(): WorkspaceContract {
   return {
     state: createWorkspaceState(),
@@ -279,10 +440,11 @@ function createGrinderOnlyBlueprint(name: string): BlueprintDocument {
 
 function createHeadlessWorkspace(
   documentSnapshot: SnapshotStoreReadWrite<WorldDocument>,
+  registry: RegistryContract,
 ): WorkspaceContract {
   return {
     state: createWorkspaceState(),
-    registry: createRegistryContract(),
+    registry,
     app: null,
     editor: {
       document: documentSnapshot,

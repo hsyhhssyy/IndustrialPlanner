@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
+import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 import {
   createBlueprint,
@@ -70,6 +71,7 @@ describe("bridge-direction", () => {
   it("NS 和 EW 通道独立运输，互不干扰", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBridgeDirectionBlueprint(),
+      registry: createRegistryContract(),
       maxTickNumber: 150,
     });
 
@@ -169,6 +171,7 @@ describe("bridge-direction", () => {
   it("桥接器编译后应有独立的双通道槽位结构", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBridgeDirectionBlueprint(),
+      registry: createRegistryContract(),
       maxTickNumber: 61,
     });
 
@@ -219,6 +222,7 @@ describe("pipe-bridge-direction", () => {
   it("管道桥接器 EW 通道运输且不泄漏到 NS 通道", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createPipeBridgeDirectionBlueprint(),
+      registry: createRegistryContract(),
       maxTickNumber: 45,
     });
 

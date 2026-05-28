@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import {
@@ -12,6 +13,7 @@ import {
 describe("REQ-076: production", () => {
   it("projects production runtime status and final inventory from recipe blueprints", async () => {
     const completionTick = 2 * STANDARD_TICK_RATE_PER_SECOND + 1;
+    const registry = createRegistryContract();
     const grinderReport = await runBlueprintSimulation({
       blueprint: createBlueprint("grinder-production", [
         createEntity("grinder", "item_port_grinder_1", 0, 0, 0, {
@@ -21,6 +23,7 @@ describe("REQ-076: production", () => {
         createEntity("power", "item_port_power_diffuser_1", 4, 0),
       ]),
       maxTickNumber: completionTick,
+      registry,
     });
     const furnaceReport = await runBlueprintSimulation({
       blueprint: createBlueprint("furnace-production", [
@@ -31,6 +34,7 @@ describe("REQ-076: production", () => {
         createEntity("power", "item_port_power_diffuser_1", 4, 0),
       ]),
       maxTickNumber: completionTick,
+      registry,
     });
 
     expect(getDevice(grinderReport, 1, "grinder")).toMatchObject({

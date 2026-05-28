@@ -61,18 +61,22 @@ describe("REQ-076: topology migration", () => {
   it("covers topology-migration scenarios as blueprint pairs instead of private runtime state mutation", async () => {
     const original = await runBlueprintSimulation({
       blueprint: createGrinderBlueprint("migration-original", { x: 0, y: 0 }, "item_iron_nugget", 1),
+      registry: createRegistryContract(),
       maxTickNumber: 0,
     });
     const moved = await runBlueprintSimulation({
       blueprint: createGrinderBlueprint("migration-moved", { x: 1, y: 0 }, "item_iron_nugget", 1),
+      registry: createRegistryContract(),
       maxTickNumber: 0,
     });
     const configChanged = await runBlueprintSimulation({
       blueprint: createGrinderBlueprint("migration-config-changed", { x: 0, y: 0 }, "item_copper_ore", 2),
+      registry: createRegistryContract(),
       maxTickNumber: 0,
     });
     const linked = await runBlueprintSimulation({
       blueprint: createLinkedGrinderBlueprint(),
+      registry: createRegistryContract(),
       maxTickNumber: 0,
     });
 

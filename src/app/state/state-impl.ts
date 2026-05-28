@@ -11,13 +11,18 @@ import type {
 import type {
   ActiveTool,
   AppSettings,
+  RightDockTabId,
+  ToolInfo,
+  UiState,
+  WorkbenchState,
+} from "@/domain/app/types/app-types";
+import type {
   ModuleBalancingCanvas,
   ModuleBalancingCustomModule,
   ModuleBalancingIOPort,
   ModuleBalancingStage,
   ModuleBalancingStageModuleEntry,
   ModuleBalancingState,
-  RightDockTabId,
   ToolboxState,
   ToolboxWikiDesktopCategory,
   ToolboxWikiEntityGroupCategory,
@@ -26,10 +31,7 @@ import type {
   ToolboxWikiNavigationEntry,
   ToolboxWikiOpenedPage,
   ToolboxWikiState,
-  ToolInfo,
-  UiState,
-  WorkbenchState,
-} from "@/domain/app/types/app-types";
+} from "@/app/toolbox-types";
 import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
 import type { GridPoint } from "@/domain/shared/grid";
 import type { LogisticsKind, LogisticsRouteOrder } from "@/domain/shared/logistics";

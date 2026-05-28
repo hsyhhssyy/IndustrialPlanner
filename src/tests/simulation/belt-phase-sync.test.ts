@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 import {
   createBlueprint,
@@ -91,6 +92,7 @@ describe("传送带同步相位", () => {
 
     const report = await runBlueprintSimulation({
       blueprint,
+      registry: createRegistryContract(),
       maxTickNumber: 400,
     });
 
@@ -194,6 +196,7 @@ describe("传送带同步相位", () => {
 
     const report = await runBlueprintSimulation({
       blueprint,
+      registry: createRegistryContract(),
       maxTickNumber: 400,
     });
 

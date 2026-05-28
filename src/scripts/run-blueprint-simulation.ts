@@ -4,6 +4,7 @@ import process from "node:process";
 import { parseArgs } from "node:util";
 
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
+import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 
 interface CliOptions {
@@ -26,6 +27,7 @@ async function main(): Promise<void> {
     const blueprint = await readBlueprintDocument(cliOptions.inputPath);
     const report = await runBlueprintSimulation({
       blueprint,
+      registry: createRegistryContract(),
       maxTickNumber: cliOptions.maxTickNumber,
     });
 

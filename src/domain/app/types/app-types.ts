@@ -1,6 +1,5 @@
 import type { ScreenProfile } from "./screen-profile";
 import type { AppTheme, AppThemeId } from "./theme";
-import type { UiGroup } from "../../registry/types/entity-definition";
 
 export type AppLocale = "zh-CN" | "en-US";
 
@@ -34,90 +33,9 @@ export interface DialogState {
   readonly activeTab: string | null;
 }
 
-export type ToolboxWikiNavigationEntryType = "item" | "entity";
-export type ToolboxWikiEntityGroupCategory = Exclude<UiGroup, "hidden">;
-export type ToolboxWikiDesktopCategory =
-  | "all"
-  | "item"
-  | "entity"
-  | ToolboxWikiEntityGroupCategory;
-export type ToolboxWikiMobileCategory = Exclude<ToolboxWikiDesktopCategory, "all">;
-export type ToolboxWikiMobileFilterOption =
-  | ToolboxWikiMobileCategory
-  | "excludeBottledLiquid";
-
-export interface ToolboxWikiNavigationEntry {
-  readonly type: ToolboxWikiNavigationEntryType;
-  readonly id: string;
-}
-
-export type ToolboxWikiOpenedPage =
-  | { readonly kind: "browser" }
-  | { readonly kind: "item"; readonly id: string }
-  | { readonly kind: "entity"; readonly id: string };
-
-export interface ToolboxWikiState {
-  readonly searchQuery: string;
-  readonly desktopCategory: ToolboxWikiDesktopCategory;
-  readonly mobileSelectedCategories: readonly ToolboxWikiMobileFilterOption[];
-  readonly navigationStack: readonly ToolboxWikiNavigationEntry[];
-  readonly openedPage: ToolboxWikiOpenedPage;
-}
-
-export interface ModuleBalancingIOPort {
-  readonly itemId: string;
-  readonly perMinute: number;
-}
-
-export interface ModuleBalancingCustomModule {
-  readonly id: string;
-  readonly name: string;
-  readonly color: string;
-  readonly iconId: string;
-  readonly inputs: readonly ModuleBalancingIOPort[];
-  readonly outputs: readonly ModuleBalancingIOPort[];
-  readonly sourceType: "custom";
-}
-
-export interface ModuleBalancingSystemRecipeModule {
-  readonly id: string;
-  readonly sourceType: "system-recipe";
-  readonly recipeId: string;
-}
-
-export type ModuleBalancingModule =
-  | ModuleBalancingCustomModule
-  | ModuleBalancingSystemRecipeModule;
-
-export interface ModuleBalancingStageModuleEntry {
-  readonly moduleId: string;
-  readonly quantity: number;
-}
-
-export interface ModuleBalancingStage {
-  readonly id: string;
-  readonly name: string;
-  readonly entries: readonly ModuleBalancingStageModuleEntry[];
-}
-
-export interface ModuleBalancingCanvas {
-  readonly id: string;
-  readonly name: string;
-  readonly globalInputs: readonly ModuleBalancingIOPort[];
-  readonly stages: readonly ModuleBalancingStage[];
-  readonly warehouseCapacity: number | null;
-}
-
-export interface ModuleBalancingState {
-  readonly canvases: readonly ModuleBalancingCanvas[];
-  readonly customModules: readonly ModuleBalancingCustomModule[];
-  readonly activeCanvasId: string | null;
-}
-
-export interface ToolboxState {
-  readonly wiki: ToolboxWikiState;
-  readonly moduleBalancing: ModuleBalancingState;
-}
+// ToolboxWiki* / ModuleBalancing* / ToolboxState 类型已搬迁至 src/app/toolbox-types.ts
+// AI-CORRECTION 2026-05-28: 搬迁原因 — 这些是 App UI 层类型，不应在 domain 层定义；
+//   同时消除 domain/app → domain/registry 跨子模块引用违规。
 
 export type RightDockTabId = "selection";
 
@@ -128,7 +46,6 @@ export interface WorkbenchState {
   readonly topBarCollapsed: boolean;
   readonly rightDockActiveTab: RightDockTabId;
   readonly dialogState: Readonly<Record<string, DialogState | undefined>>;
-  readonly toolbox: ToolboxState;
 }
 
 export type ActiveTool =

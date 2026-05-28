@@ -9,4 +9,6 @@ export interface RecipeDefinition {
   machineId: string;
   recipeType: RecipeType;
   tags: string[];
+  /** 配方运行时发电量（kW），默认 0。仅供发电设备配方使用。 */
+  powerOutput?: number;
 }

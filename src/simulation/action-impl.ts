@@ -51,6 +51,10 @@ export interface SimulationWorkerBridge {
     SimulationWorkerResponse,
     { readonly type: "simulation-speed-set" }
   >>;
+  setPowerMode(powerMode: "real" | "infinite"): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "power-mode-set" }
+  >>;
   patchRuntimeSlot(patch: SimulationRuntimeSlotPatch): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "runtime-slot-patched" }

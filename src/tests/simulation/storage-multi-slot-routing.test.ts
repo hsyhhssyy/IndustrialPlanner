@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorldEntity } from "@/domain/document/world-document";
+import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 import {
   createBlueprint,
@@ -22,6 +23,7 @@ describe("协议存储箱多槽入库路由", () => {
         finalHopDefinitionId: "belt_straight_1x1",
         finalHopRotation: 270,
       }),
+      registry: createRegistryContract(),
       maxTickNumber: FINAL_TICK,
     });
 
@@ -34,6 +36,7 @@ describe("协议存储箱多槽入库路由", () => {
         finalHopDefinitionId: "item_log_splitter",
         finalHopRotation: 180,
       }),
+      registry: createRegistryContract(),
       maxTickNumber: FINAL_TICK,
     });
 
@@ -46,6 +49,7 @@ describe("存储箱满槽观察测试", () => {
     const blueprint = createStorageFillObserveBlueprint();
     const report = await runBlueprintSimulation({
       blueprint,
+      registry: createRegistryContract(),
       maxTickNumber: STORAGE_FILL_OBSERVE_TICK,
     });
 

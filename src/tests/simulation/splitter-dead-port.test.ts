@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 import { createBlueprint, createEntity } from "./blueprint-test-helpers";
 
@@ -53,6 +54,7 @@ describe("分流器游标轮转 - 死端口不卡游标", () => {
 
     const report = await runBlueprintSimulation({
       blueprint,
+      registry: createRegistryContract(),
       maxTickNumber: MAX_TICK,
     });
 

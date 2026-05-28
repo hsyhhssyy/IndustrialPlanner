@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 import {
   createBlueprint,
@@ -25,6 +26,7 @@ describe("REQ-076: config overrides", () => {
 
     const report = await runBlueprintSimulation({
       blueprint,
+      registry: createRegistryContract(),
       maxTickNumber: 60,
     });
 

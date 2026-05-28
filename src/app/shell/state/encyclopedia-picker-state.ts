@@ -4,7 +4,7 @@ import type { DialogStateReadWrite } from "@/app/state/state-impl";
 import type {
   ToolboxWikiDesktopCategory,
   ToolboxWikiMobileFilterOption,
-} from "@/domain/app/types/app-types";
+} from "@/app/toolbox-types";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 

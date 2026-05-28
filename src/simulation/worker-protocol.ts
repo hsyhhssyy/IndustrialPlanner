@@ -36,6 +36,11 @@ export type SimulationWorkerRequest =
   | {
       readonly type: "get-perf-report";
       readonly requestId: number;
+    }
+  | {
+      readonly type: "set-power-mode";
+      readonly requestId: number;
+      readonly powerMode: "real" | "infinite";
     };
 
 export type SimulationWorkerResponse =
@@ -65,5 +70,10 @@ export type SimulationWorkerResponse =
       readonly type: "perf-report";
       readonly requestId: number;
       readonly report: SimulationPerfReport | null;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "power-mode-set";
+      readonly requestId: number;
       readonly status: SimulationRuntimeStatus;
     };

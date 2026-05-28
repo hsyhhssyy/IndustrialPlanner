@@ -1,5 +1,5 @@
 import { createWorldDocument } from "@/domain/document/world-document";
-import type { WorldDocument } from "@/domain/document/world-document";
+import type { WorldDocument, WorldDocumentSettings } from "@/domain/document/world-document";
 import type { EditorAction } from "@/domain/editor/editor-action";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { RegistryQuery } from "@/domain/registry/registry-query";
@@ -12,10 +12,11 @@ import { syncPoweredEntityCollection } from "./powered-collection";
 import { action, runInAction } from "mobx";
 import type { EditorActionsContext } from "./types";
 
-type EditorDocumentActions = Pick<EditorAction, "loadLatestBaseDocument">;
+type EditorDocumentActions = Pick<EditorAction, "loadLatestBaseDocument" | "writeDocumentSettings">;
 
 export function createEditorDocumentActions({
   document,
+  documentWriter,
   state,
   workspace,
 }: EditorActionsContext): EditorDocumentActions {
@@ -46,6 +47,23 @@ export function createEditorDocumentActions({
 
       return true;
     }),
+
+    writeDocumentSettings: (patch) => {
+      const currentDocument = document.getSnapshot();
+      const nextDocument: WorldDocument = {
+        ...currentDocument,
+        documentSettings: {
+          ...currentDocument.documentSettings,
+          ...patch,
+        },
+      };
+
+      if (nextDocument.documentSettings === currentDocument.documentSettings) {
+        return;
+      }
+
+      documentWriter.setSnapshot(nextDocument, { mode: "silent" });
+    },
   };
 }
 

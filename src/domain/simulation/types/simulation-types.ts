@@ -51,4 +51,6 @@ export interface SimulationDocumentRuntimeReadModel {
   readonly tickNumber: number | null;
   /** 总电力需求（kW），拓扑未编译时为 null */
   readonly totalPowerDemand: number | null;
+  /** 当前动态发电量（kW），拓扑未编译或无限电力模式下为 null */
+  readonly currentPowerGeneration: number | null;
 }

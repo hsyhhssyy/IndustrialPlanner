@@ -21,6 +21,7 @@ export function createTickSnapshot(
     tickNumber: state.tickNumber,
     status: state.tickNumber === 0 ? "initial" : "running",
     totalPowerDemand: topology.totalPowerDemand,
+    currentPowerGeneration: state.transient.currentPowerGeneration ?? 0,
     slots: createSlotSnapshots(topology, state, reservedBySlot),
     devices: createDeviceSnapshots(topology, state),
     nodes: createNodeSnapshots(state),

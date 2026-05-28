@@ -64,6 +64,7 @@ export class SimulationWorkerRuntime {
   private standardStepTicks = 1;
   private lastRequestedTickNumber = 0;
   private lastDynamicRateAdjustmentTick: number | null = null;
+  private powerMode: "real" | "infinite" = "infinite";
 
   // 停止线：Worker 自主推进到该 tick 后暂停，等待外部拉取更新停止线。
   // 初始值 = 0 + MAX_RETAINED_TICKS，外部每次请求 tick N 时更新为 N + MAX_RETAINED_TICKS。
@@ -116,6 +117,13 @@ export class SimulationWorkerRuntime {
             report: this.flushPerfReport(),
             status: this.getStatus(),
           };
+        case "set-power-mode":
+          this.powerMode = request.powerMode;
+          return {
+            type: "power-mode-set",
+            requestId: request.requestId,
+            status: this.getStatus(),
+          };
       }
     } catch (error) {
       this.mode = "error";
@@ -156,6 +164,12 @@ export class SimulationWorkerRuntime {
             type: "perf-report",
             requestId: request.requestId,
             report: null,
+            status,
+          };
+        case "set-power-mode":
+          return {
+            type: "power-mode-set",
+            requestId: request.requestId,
             status,
           };
       }
@@ -414,6 +428,21 @@ export class SimulationWorkerRuntime {
   }
 
   /**
+   * 设置电力模式。不触发拓扑重编译，仅影响后续 tick 的门控行为。
+   */
+  public setPowerMode(powerMode: "real" | "infinite"): void {
+    if (this.powerMode === powerMode) return;
+    this.powerMode = powerMode;
+    // 清空所有预计算的 tick 缓存，确保后续 tick 使用新模式重新计算。
+    // 不清缓存会导致用户切换模式后等待 ~9 秒（MAX_RETAINED_TICKS / tick rate）
+    // 才能看到新模式生效。
+    this.tickSnapshots.clear();
+    this.tickRuntimeStates.clear();
+    this.retainedFromTick = null;
+    this.latestTickNumber = null;
+  }
+
+  /**
    * 同步推进到目标 tick（Local 模式专用）。
    * 在没有事件循环的环境（测试/CLI）中，setTimeout 无法触发后台填充，
    * 需要调用方在 getTickSnapshot 前显式推进。
@@ -521,8 +550,21 @@ export class SimulationWorkerRuntime {
     }
 
     if (shouldRunRuntime) {
+      // 在 Stage 1 之前计算动态发电量
+      const currentPowerGeneration = computeCurrentPowerGeneration(
+        this.topology,
+        this.runtimeState,
+      );
+      this.runtimeState.transient.currentPowerGeneration = currentPowerGeneration;
+
       const t0 = this.perfEnabled ? performance.now() : 0;
-      advanceDevices(this.topology, this.runtimeState, runtimeStepTicks);
+      advanceDevices(
+        this.topology,
+        this.runtimeState,
+        runtimeStepTicks,
+        this.powerMode,
+        currentPowerGeneration,
+      );
       if (this.perfEnabled) { perfTiming!.stages["advanceDevices"] = performance.now() - t0; }
 
       const t1 = this.perfEnabled ? performance.now() : 0;
@@ -562,7 +604,12 @@ export class SimulationWorkerRuntime {
       if (this.perfEnabled) { perfTiming!.stages["rotateRoutingCursors"] = performance.now() - t3; }
 
       const t4 = this.perfEnabled ? performance.now() : 0;
-      settleRecipes(this.topology, this.runtimeState);
+      settleRecipes(
+        this.topology,
+        this.runtimeState,
+        this.powerMode,
+        currentPowerGeneration,
+      );
       if (this.perfEnabled) { perfTiming!.stages["settleRecipes"] = performance.now() - t4; }
 
       const t5 = this.perfEnabled ? performance.now() : 0;
@@ -887,4 +934,23 @@ function createNotFoundStatus(
     latestTickNumber,
     bufferSize,
   };
+}
+
+function computeCurrentPowerGeneration(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+): number {
+  let total = 0;
+  for (const deviceState of Object.values(state.persistent.devices)) {
+    for (const recipe of Object.values(deviceState.channelRecipes)) {
+      if (recipe === null || recipe.state !== "running") {
+        continue;
+      }
+      const compiledRecipe = topology.recipeCatalog[recipe.recipeId];
+      if (compiledRecipe !== undefined) {
+        total += compiledRecipe.powerOutput;
+      }
+    }
+  }
+  return total;
 }

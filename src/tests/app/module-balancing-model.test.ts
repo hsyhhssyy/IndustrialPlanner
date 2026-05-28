@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { RegistryContract } from "@/domain/registry/registry-contract";
-import type { ModuleBalancingCanvas, ModuleBalancingState } from "@/domain/app/types/app-types";
+import type { ModuleBalancingCanvas, ModuleBalancingState } from "@/app/toolbox-types";
 import {
   buildModuleBalancingIndex,
   computeModuleBalancing,

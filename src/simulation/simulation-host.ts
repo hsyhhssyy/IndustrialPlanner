@@ -63,6 +63,21 @@ export function createSimulationHost(
   const actions: SimulationContract["actions"] = actionImpl;
   const internalActions: SimulationInternalAction = actionImpl;
 
+  // 监听 documentSettings.powerMode 变化，自动同步到 worker。
+  // editor.document 在 createSimulationHost 调用时已可用（main.tsx 中先创建 editor 再创建 simulation）。
+  const editorDocument = workspace.editor?.document;
+  if (editorDocument !== undefined) {
+    let previousPowerMode = editorDocument.getSnapshot().documentSettings.powerMode ?? "infinite";
+    const unsubscribe = editorDocument.subscribe((doc) => {
+      const currentPowerMode = doc.documentSettings.powerMode ?? "infinite";
+      if (currentPowerMode !== previousPowerMode) {
+        previousPowerMode = currentPowerMode;
+        void bridge.setPowerMode(currentPowerMode).catch(() => undefined);
+      }
+    });
+    disposers.push(unsubscribe);
+  }
+
   const host: SimulationHost = {
     workspace,
     internalState,
@@ -95,6 +110,7 @@ export function createSimulationHost(
         return {
           tickNumber: internalState.currentSnapshot?.tickNumber ?? null,
           totalPowerDemand: topology.totalPowerDemand,
+          currentPowerGeneration: internalState.currentSnapshot?.currentPowerGeneration ?? null,
         };
       },
       getDeviceRuntimeStatus: (() => {
@@ -423,6 +439,17 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     }, "perf-report");
   }
 
+  public setPowerMode(powerMode: "real" | "infinite"): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "power-mode-set" }
+  >> {
+    return this.request({
+      type: "set-power-mode",
+      requestId: this.createRequestId(),
+      powerMode,
+    }, "power-mode-set");
+  }
+
   public dispose(): void {
     const error = new Error("Simulation worker disposed");
     for (const handlers of this.pending.values()) {
@@ -550,6 +577,21 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       requestId: this.createRequestId(),
     });
     if (response.type !== "perf-report") {
+      throw new Error(`Unexpected simulation worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public setPowerMode(powerMode: "real" | "infinite"): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "power-mode-set" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "set-power-mode",
+      requestId: this.createRequestId(),
+      powerMode,
+    });
+    if (response.type !== "power-mode-set") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
     }
     return Promise.resolve(response);

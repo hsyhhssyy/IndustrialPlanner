@@ -24,7 +24,7 @@ const POWER_ROWS = [
   },
   {
     labelKey: "workbench.power.mode",
-    valueKey: "workbench.powerValue.mode",
+    valueKey: null, // 动态渲染切换按钮
   },
 ] as const;
 
@@ -57,6 +57,16 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
 
   const totalPowerValue = totalPowerDemand !== null ? `${totalPowerDemand} kW` : "0 kW";
 
+  const powerMode: "real" | "infinite" =
+    currentDocument?.documentSettings?.powerMode === "real" ? "real" : "infinite";
+
+  const handleTogglePowerMode = () => {
+    if (editor === null) return;
+    const nextMode: "real" | "infinite" = powerMode === "real" ? "infinite" : "real";
+    // 写入 documentSettings（silent）→ simulation 自动监听到并同步到 worker
+    editor.actions.writeDocumentSettings({ powerMode: nextMode });
+  };
+
   return (
     <div className={cm(styles, "stack")}>
       <article className={cm(styles, "inspector-card")}>
@@ -84,13 +94,31 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
         </div>
         <dl className={cm(styles, "inspector-summary-list")}>
           {POWER_ROWS.map((entry, index) => {
-            const isFirstRow = index === 0;
-            const value = isFirstRow ? totalPowerValue : t(entry.valueKey);
+            if (entry.valueKey === null) {
+              // 电力模式：可点击切换按钮
+              const modeI18nKey = powerMode === "real"
+                ? "workbench.powerValue.mode.real"
+                : "workbench.powerValue.mode.infinite";
 
+              return (
+                <div className={cm(styles, "inspector-summary-row")} key={`left-dock-power-summary-${index}`}>
+                  <dt>{t(entry.labelKey)}</dt>
+                  <dd>
+                    <button
+                      className={cm(styles, "power-mode-toggle")}
+                      type="button"
+                      onClick={handleTogglePowerMode}
+                    >
+                      {t(modeI18nKey)}
+                    </button>
+                  </dd>
+                </div>
+              );
+            }
             return (
               <div className={cm(styles, "inspector-summary-row")} key={`left-dock-power-summary-${index}`}>
                 <dt>{t(entry.labelKey)}</dt>
-                <dd>{value}</dd>
+                <dd>{index === 0 ? totalPowerValue : t(entry.valueKey)}</dd>
               </div>
             );
           })}

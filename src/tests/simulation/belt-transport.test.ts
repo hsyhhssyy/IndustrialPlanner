@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
+import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 import {
   createBlueprint,
@@ -24,6 +25,7 @@ describe("REQ-076: belt transport", () => {
   it("covers layered reverse solving, split belt buffers, and belt dynamic recipes through a transport blueprint", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBeltTransportBlueprint(),
+      registry: createRegistryContract(),
       maxTickNumber: 60,
     });
     const tickOne = getTick(report, 1);

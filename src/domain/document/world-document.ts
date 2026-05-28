@@ -33,6 +33,8 @@ export interface WorldDocumentSettings {
   // 需要添加viewportRect
   // 订正（2026-05-10）：本轮只持久化 viewport center 与 gridSize；clientRect 仍归属 DOM runtime。
   readonly viewport: WorldDocumentViewportSettings;
+  /** 电力模式：real（真实电力）或 infinite（无限电力），默认 infinite。 */
+  readonly powerMode: "real" | "infinite";
   readonly [key: string]: unknown;
 }
 
@@ -80,6 +82,7 @@ export const createWorldDocument = (options: {
         gridSize: 1,
         displayRotation: 0,
       },
+      powerMode: "infinite",
     },
   };
 };

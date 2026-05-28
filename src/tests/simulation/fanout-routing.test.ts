@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
 import {
   createBlueprint,
@@ -35,6 +36,7 @@ describe("REQ-076: fanout routing", () => {
         createEntity("belt-open", "belt_straight_1x1", 1, -1, 0),
         createEntity("open-storage", "item_port_storager_1", 2, -1, 90),
       ]),
+      registry: createRegistryContract(),
       maxTickNumber: 150,
     });
 

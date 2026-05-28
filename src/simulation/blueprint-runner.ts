@@ -2,8 +2,8 @@ import { createWorldDocumentFromBlueprint, type BlueprintDocument } from "@/doma
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import type { WorldDocument } from "@/domain/document/world-document";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
-import { createRegistryContract } from "@/registry";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 
 import { createSimulationHost } from "./simulation-host";
@@ -18,6 +18,7 @@ type TransportClassSummary = "strict-belt" | "strict-pipe";
 export interface RunBlueprintSimulationOptions {
   readonly blueprint: BlueprintDocument;
   readonly maxTickNumber: number;
+  readonly registry: RegistryContract;
 }
 
 export interface BlueprintSimulationReport {
@@ -101,7 +102,7 @@ export async function runBlueprintSimulation(
   }
 
   const document = createWorldDocumentFromBlueprint(options.blueprint);
-  const workspace = createHeadlessWorkspace(document);
+  const workspace = createHeadlessWorkspace(document, options.registry);
   const host = createSimulationHost(workspace, {
     workerMode: "runtime",
   });
@@ -169,12 +170,12 @@ export async function runBlueprintSimulation(
   }
 }
 
-function createHeadlessWorkspace(documentSnapshot: WorldDocument): WorkspaceContract {
+function createHeadlessWorkspace(documentSnapshot: WorldDocument, registry: RegistryContract): WorkspaceContract {
   const document = createSnapshotStore(documentSnapshot);
 
   return {
     state: createWorkspaceState(),
-    registry: createRegistryContract(),
+    registry,
     app: null,
     editor: {
       document,

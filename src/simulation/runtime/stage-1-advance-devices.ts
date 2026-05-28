@@ -24,8 +24,13 @@ export function advanceDevices(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   standardStepTicks = 1,
+  powerMode: "real" | "infinite" = "infinite",
+  currentPowerGeneration = Infinity,
 ): void {
   const progressTicks = Math.max(1, Math.trunc(standardStepTicks));
+  const powerInsufficient = powerMode === "real"
+    && currentPowerGeneration < topology.totalPowerDemand;
+
   for (const deviceId of topology.ordering.deviceOrder) {
     const device = topology.devices[deviceId];
     const deviceState = state.persistent.devices[deviceId];
@@ -33,6 +38,10 @@ export function advanceDevices(
       continue;
     }
     if (device.powerStatus === "out-of-power-range") {
+      continue;
+    }
+    // 真实电力模式下发电不足 → 所有 requiresPower 设备冻结
+    if (powerInsufficient && device.requiresPower) {
       continue;
     }
 

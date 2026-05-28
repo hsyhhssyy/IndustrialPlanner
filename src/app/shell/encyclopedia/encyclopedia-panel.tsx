@@ -9,7 +9,7 @@ import { observer } from "mobx-react-lite";
 import type { AppHost } from "@/app/host/app-host";
 import type {
   ToolboxWikiNavigationEntry as NavEntry,
-} from "@/domain/app/types/app-types";
+} from "@/app/toolbox-types";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import {
   EncyclopediaBrowser,

@@ -13,6 +13,7 @@ import type {
 	MoveLogisticsDraftEndOptions,
 } from "../shared/logistics";
 import type { BlueprintDocument } from "../document/blueprint-document";
+import type { WorldDocumentSettings } from "../document/world-document";
 
 export interface EditorAction {
 	setViewportClientRect(clientRect: ClientPixelRect): void;
@@ -86,4 +87,9 @@ export interface EditorAction {
 	removeTransportComponentDownstream(entityId: string): void;
 
 	loadLatestBaseDocument(baseId: string): Promise<boolean>;
+	/**
+	 * 静默写入 documentSettings 的部分字段（silent 模式，不进入 undo/redo）。
+	 * 适用于 powerMode、viewport 等不需要触发全量重编译的文档设置变更。
+	 */
+	writeDocumentSettings(patch: Partial<WorldDocumentSettings>): void;
 }
