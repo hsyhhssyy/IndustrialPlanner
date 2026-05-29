@@ -476,18 +476,18 @@ function acceptRuleFromPortKind(kind: PortGroupDefinition["kind"]): PortDefiniti
  * 订正（2026-05-05）：推进阶段若输出缓存可接收，则立即写入产物、消耗原料并结束当前 run；仅在推进阶段无法完整输出时，才留待二次结算阶段处理。
  */
 // 订正（2026-05-06）：domain EntityDefinition 已移除 recipe 字段，createTransportRecipe 已删除。
-
-/**
- * 创建空配方壳（生产设备初始配方占位）。
- *
- * 对应《仿真运行原理》§3.2 配方类型中的 "immediate-consume"：
- *   - 进度=0% 时立即扣除原料，不占用存储
- *   - inputs/outputs 初始为空，由用户在 Inspector 中选择外部配方后填充
- *
- * recipeId=null 时表示使用内联配方；
- * 用户在 recipeConfig 面板中选择外部配方后 recipeId 被设置为实际配方 ID。
- */
-// 订正（2026-05-06）：domain EntityDefinition 已移除 recipe 字段，createRecipeShell 已删除。
+// AI-REMOVED 2026-05-29:
+// Reason: createRecipeShell JSDoc 块描述的代码已删除，其引用的 inspector 概念已另行重构为 submitToWarehouse。
+// Replacement: 无（被删除代码无替代者）。
+// Risk: Low
+// Human Review: Not Required
+//
+// Original JSDoc:
+// /**
+//  * 创建空配方壳（生产设备初始配方占位）。
+//  * ... recipeId=null 时表示使用内联配方；
+//  * 用户在 submitToWarehouse 面板中选择外部配方后 recipeId 被设置为实际配方 ID。
+//  */
 
 /** 创建有向缓存代理链接定义。 */
 // 订正（2026-05-06）：domain EntityDefinition 已移除 cacheLinks 字段，createCacheLink 已删除。
@@ -616,7 +616,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         slotGroupIds: ["storage_slot_1", "storage_slot_2", "storage_slot_3", "storage_slot_4", "storage_slot_5", "storage_slot_6"],
       },
       {
-        type: INSPECTOR_TYPE.recipeConfig,
+        type: INSPECTOR_TYPE.submitToWarehouse,
       },
     ],
   }),
@@ -794,7 +794,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   // 生产设备的特点（对应《仿真运行原理》§3.2）：
   //   - immediate-consume 配方：进度 0% 时立即扣除原料
   //   - 独立的 ingredient 缓存组（输入缓冲）+ product 缓存组（输出缓冲）
-  //   - recipe 通过 recipeConfig 面板选择外部配方
   // 订正（2026-05-06）：domain EntityDefinition 已移除 recipe 字段，本注册表仅保留静态端口与缓存结构。
   // =========================================================================
 

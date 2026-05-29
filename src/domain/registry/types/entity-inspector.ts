@@ -153,17 +153,19 @@ export const INSPECTOR_TYPE = {
   // ========================================================================
 
   /**
-   * ## 配方配置面板
+   * ## 定时提交到仓库面板
    *
-   * **编辑目标**：设备的 recipe 配置。
+   * **协议储存箱专用 Inspector**。
+   *
+   * **编辑目标**：为 manualRecipeOnly channel 选择定时提交配方，驱动槽位物品定时提交到仓库。
    *
    * 编辑功能：
-   * - 选择外部配方（从 recipeDefinitions 中选择）
-   * - 或配置内联配方：输入输出物品及数量、配方类型（immediate-consume/reserved-item）、durationSeconds
+   * - 选择一个外部配方（只显示 machineId 匹配当前设备的配方）
+   * - 运行时显示提交倒计时
    *
-   * 对应 EntityDefinition 中的 recipe 字段。
+   * 写入路径：entity.config.channelRecipes[channelId] = recipeId
    */
-  recipeConfig: "recipe-config",
+  submitToWarehouse: "submit-to-warehouse",
 
   /**
    * ## 配方状态面板
@@ -350,7 +352,7 @@ export type EntityInspectorDeclaration =
   | { readonly type: typeof INSPECTOR_TYPE.runtimeStatistics }
   | { readonly type: typeof INSPECTOR_TYPE.storageManagement }
   | { readonly type: typeof INSPECTOR_TYPE.storageTypeFilter }
-  | { readonly type: typeof INSPECTOR_TYPE.recipeConfig }
+  | { readonly type: typeof INSPECTOR_TYPE.submitToWarehouse }
   | RecipeStatusInspectorDeclaration
   | { readonly type: typeof INSPECTOR_TYPE.structure }
   | { readonly type: typeof INSPECTOR_TYPE.behaviorToggle };

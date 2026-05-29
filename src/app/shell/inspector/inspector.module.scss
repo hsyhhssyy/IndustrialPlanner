@@ -604,3 +604,31 @@
   color: var(--text-2);
   font-size: 0.76rem;
 }
+
+.recipe-select-button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-1);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.recipe-select-button:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-1));
+}
+
+.recipe-select-placeholder {
+  color: var(--text-2);
+  font-size: 0.82rem;
+}
+
+.recipe-status-placeholder {
+  min-height: 36px;
+}

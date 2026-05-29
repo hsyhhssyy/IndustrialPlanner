@@ -6,6 +6,7 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type {
   EntityInspectorDeclaration,
   EntityInspectorType,
+  RecipeStatusInspectorDeclaration,
 } from "@/domain/registry/types/entity-inspector";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
@@ -21,7 +22,7 @@ import {
 import { SimulationRecipeStatusRuntimeInspector } from "./simulation-recipe-status-runtime-inspector";
 import { SlotConfigInspector } from "./slot-config-inspector";
 import { WarehouseItemLinkInspector } from "./warehouse-item-link-inspector";
-import { RecipeConfigInspector } from "./recipe-config-inspector";
+import { SubmitToWarehouseInspector } from "./submit-to-warehouse-inspector";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -51,7 +52,7 @@ const INSPECTOR_LABELS: Partial<Record<EntityInspectorType, string>> = {
   [INSPECTOR_TYPE.storageManagement]: "缓存管理",
   [INSPECTOR_TYPE.storageTypeFilter]: "缓存类型过滤",
   [INSPECTOR_TYPE.portFilter]: "端口过滤器",
-  [INSPECTOR_TYPE.recipeConfig]: "配方配置",
+  [INSPECTOR_TYPE.submitToWarehouse]: "定时提交到仓库",
   [INSPECTOR_TYPE.slotConfig]: "槽位配置",
   [INSPECTOR_TYPE.linkConfig]: "链接配置",
   [INSPECTOR_TYPE.routing]: "分流/优先级",
@@ -88,6 +89,39 @@ function EmptyInspector({
   );
 }
 
+function renderRecipeStatusInspector(options: {
+  appHost: AppHost;
+  declaration: RecipeStatusInspectorDeclaration;
+  entity: WorldEntity;
+  definition: EntityDefinition;
+  runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
+  translate: Translate;
+}) {
+  const registry = options.appHost.workspace.registry;
+  const index = buildProductionPlanningIndex(registry);
+
+  return (
+    <>
+      {options.declaration.channelIds.map((chId) => {
+        const channelDef = options.definition.recipeChannels.find((c) => c.id === chId);
+        return (
+          <SimulationRecipeStatusRuntimeInspector
+            key={chId}
+            channelId={chId}
+            runtimeStatus={options.runtimeStatus}
+            index={index}
+            t={options.translate}
+            manualRecipeOnly={channelDef?.manualRecipeOnly ?? false}
+            appHost={options.appHost}
+            entity={options.entity}
+            definition={options.definition}
+          />
+        );
+      })}
+    </>
+  );
+}
+
 function renderInspector(options: {
   appHost: AppHost;
   declaration: EntityInspectorDeclaration;
@@ -118,9 +152,9 @@ function renderInspector(options: {
           translate={options.translate}
         />
       );
-    case INSPECTOR_TYPE.recipeConfig:
+    case INSPECTOR_TYPE.submitToWarehouse:
       return (
-        <RecipeConfigInspector
+        <SubmitToWarehouseInspector
           appHost={options.appHost}
           entity={options.entity}
           definition={options.definition}
@@ -128,6 +162,11 @@ function renderInspector(options: {
           translate={options.translate}
         />
       );
+    case INSPECTOR_TYPE.recipeStatus:
+      return renderRecipeStatusInspector({
+        ...options,
+        declaration: options.declaration as RecipeStatusInspectorDeclaration,
+      });
     default:
       return <EmptyInspector declaration={options.declaration} />;
   }
@@ -324,15 +363,22 @@ export function SelectionInspectorSlot({
             simulationRunning={slotState.showSimulationRuntimeInspector}
             onScopeChange={scopeContext.setScope}
           />
-          {slotState.recipeChannelIds.map((channelId) => (
-            <SimulationRecipeStatusRuntimeInspector
-              key={channelId}
-              channelId={channelId}
-              runtimeStatus={slotState.simulationRuntimeStatus}
-              index={slotState.productionPlanningIndex!}
-              t={translate}
-            />
-          ))}
+          {slotState.recipeChannelIds.map((channelId) => {
+            const channelDef = slotState.selectedDefinition.recipeChannels.find((c) => c.id === channelId);
+            return (
+              <SimulationRecipeStatusRuntimeInspector
+                key={channelId}
+                channelId={channelId}
+                runtimeStatus={slotState.simulationRuntimeStatus}
+                index={slotState.productionPlanningIndex!}
+                t={translate}
+                manualRecipeOnly={channelDef?.manualRecipeOnly ?? false}
+                appHost={appHost}
+                entity={slotState.selectedEntity}
+                definition={slotState.selectedDefinition}
+              />
+            );
+          })}
           {slotState.inspectors.map((inspector) => (
             <div
               key={inspector.id}

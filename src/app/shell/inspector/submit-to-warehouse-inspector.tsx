@@ -7,9 +7,9 @@ import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
-export const RECIPE_CONFIG_INSPECTOR_KEY = "recipe-config";
+export const SUBMIT_TO_WAREHOUSE_INSPECTOR_KEY = "submit-to-warehouse";
 
-export interface RecipeConfigInspectorProps {
+export interface SubmitToWarehouseInspectorProps {
   appHost: AppHost;
   entity: WorldEntity;
   definition: EntityDefinition;
@@ -17,13 +17,13 @@ export interface RecipeConfigInspectorProps {
   translate: (key: string) => string;
 }
 
-export function RecipeConfigInspector({
+export function SubmitToWarehouseInspector({
   appHost,
   entity,
   definition,
   runtimeStatus,
   translate,
-}: RecipeConfigInspectorProps) {
+}: SubmitToWarehouseInspectorProps) {
   const registry = appHost.workspace.registry;
   const storedRecipes = (entity.config?.channelRecipes as Record<string, string> | undefined) ?? {};
 
@@ -49,7 +49,7 @@ export function RecipeConfigInspector({
   return (
     <article
       className={cm(styles, "definition-card")}
-      data-inspector-key={RECIPE_CONFIG_INSPECTOR_KEY}
+      data-inspector-key={SUBMIT_TO_WAREHOUSE_INSPECTOR_KEY}
     >
       {manualChannels.map((ch) => {
         const recipes = [...registry.recipeDefinitions].filter(
@@ -70,27 +70,27 @@ export function RecipeConfigInspector({
           return (
             <React.Fragment key={ch.id}>
               <label
-                className={cm(styles, "recipe-config-row")}
+                className={cm(styles, "submit-to-warehouse-row")}
                 data-channel-id={ch.id}
               >
-                <span className={cm(styles, "recipe-config-label")}>
-                  {translate("inspector.recipeConfig.submitToWarehouse")}
+                <span className={cm(styles, "submit-to-warehouse-label")}>
+                  {translate("inspector.submitToWarehouse.label")}
                 </span>
                 <input
                   type="checkbox"
                   role="switch"
                   checked={isSelected}
-                  className={cm(styles, "recipe-config-switch")}
+                  className={cm(styles, "submit-to-warehouse-switch")}
                   data-recipe-select={ch.id}
                   onChange={() => handleRecipeSelect(ch.id, isSelected ? null : recipe.id)}
                 />
               </label>
               {isSelected && remainingSeconds !== null && (
                 <div
-                  className={cm(styles, "recipe-config-countdown")}
+                  className={cm(styles, "submit-to-warehouse-countdown")}
                   data-countdown={ch.id}
                 >
-                  {translate("inspector.recipeConfig.countdown")}
+                  {translate("inspector.submitToWarehouse.countdown")}
                   {" "}
                   {remainingSeconds}s
                 </div>
@@ -100,11 +100,11 @@ export function RecipeConfigInspector({
         }
 
         return (
-          <div key={ch.id} className={cm(styles, "recipe-config-row")} data-channel-id={ch.id}>
+          <div key={ch.id} className={cm(styles, "submit-to-warehouse-row")} data-channel-id={ch.id}>
             <select
               value={selectedRecipeId ?? ""}
               onChange={(e) => handleRecipeSelect(ch.id, e.target.value || null)}
-              className={cm(styles, "recipe-config-select")}
+              className={cm(styles, "submit-to-warehouse-select")}
             >
               <option value="">—</option>
               {recipes.map((r) => (
