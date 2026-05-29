@@ -166,6 +166,21 @@ export const INSPECTOR_TYPE = {
   recipeConfig: "recipe-config",
 
   /**
+   * ## 配方状态面板
+   *
+   * **显示目标**：运行时配方进度条，展示当前 channel 中配方的名称、进度百分比。
+   *
+   * 绑定方式：`channelIds`。
+   *
+   * 显示功能：
+   * - 仅仿真运行时可见
+   * - 每个声明的 channel 渲染一个 RecipeDisplay + 进度条
+   *
+   * 注意：内部合成配方（如 warehouse_submit）不应在此声明，否则会在 inspector 中暴露无意义的进度条。
+   */
+  recipeStatus: "recipe-status",
+
+  /**
    * ## 链接配置面板
    *
    * **编辑目标**：cacheLinks[*] 的属性。
@@ -295,6 +310,13 @@ export interface LinkConfigInspectorDeclaration {
   readonly cacheLinkIndex: number;
 }
 
+/** recipeStatus 声明：显示指定 channel 的配方进度 */
+export interface RecipeStatusInspectorDeclaration {
+  readonly type: typeof INSPECTOR_TYPE.recipeStatus;
+  /** 要显示配方进度的 channel ID 列表 */
+  readonly channelIds: readonly string[];
+}
+
 /**
  * EntityInspectorDeclaration — 可辨识联合。
  *
@@ -329,5 +351,6 @@ export type EntityInspectorDeclaration =
   | { readonly type: typeof INSPECTOR_TYPE.storageManagement }
   | { readonly type: typeof INSPECTOR_TYPE.storageTypeFilter }
   | { readonly type: typeof INSPECTOR_TYPE.recipeConfig }
+  | RecipeStatusInspectorDeclaration
   | { readonly type: typeof INSPECTOR_TYPE.structure }
   | { readonly type: typeof INSPECTOR_TYPE.behaviorToggle };

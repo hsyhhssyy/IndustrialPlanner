@@ -112,7 +112,8 @@ export type MessageKey =
   | "inspector.slotConfig.locked"
   | "inspector.warehouseItemLink.description"
   | "inspector.warehouseItemLink.selectItem"
-  | "inspector.warehouseItemLink.ignoreStock"
+  | "inspector.recipeConfig.submitToWarehouse"
+  | "inspector.recipeConfig.countdown"
   | "status.ready"
   | "status.edit"
   | "statusBar.mode"
@@ -419,6 +420,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "inspector.warehouseItemLink.description": "为每个槽位选择从仓库取出的物品。",
     "inspector.warehouseItemLink.selectItem": "选择仓库物品",
     "inspector.warehouseItemLink.ignoreStock": "无限物品",
+    "inspector.recipeConfig.submitToWarehouse": "无线提交到仓库",
+    "inspector.recipeConfig.countdown": "下次提交倒计时",
     "status.ready": "Stage1 工作台脚手架已就绪。",
     "status.edit": "编辑态聚焦文档事实与编译产物。",
     "statusBar.mode": "当前模式",
@@ -843,6 +846,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "inspector.warehouseItemLink.description": "Choose a warehouse item for each slot.",
     "inspector.warehouseItemLink.selectItem": "Select Warehouse Item",
     "inspector.warehouseItemLink.ignoreStock": "Unlimited",
+    "inspector.recipeConfig.submitToWarehouse": "Wireless Submit to Warehouse",
+    "inspector.recipeConfig.countdown": "Next Submit Countdown",
     "status.ready": "Stage1 workbench scaffold is ready.",
     "status.edit": "Edit mode focuses on document facts and compiled topology.",
     "statusBar.mode": "Mode",

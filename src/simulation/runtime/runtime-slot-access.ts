@@ -473,8 +473,24 @@ function resolveRecipes(options: {
 
   // 手选配方设备：不自动根据原料匹配配方，必须由用户手动指定配方后设备才运行
   if (options.channel.manualRecipeOnly) {
-    return [];
+    if (options.channel.defaultRecipeId === null) {
+      return [];
+    }
+    const selectedRecipe = options.topology.recipeCatalog[options.channel.defaultRecipeId];
+    if (selectedRecipe === undefined) {
+      return [];
+    }
+    return [{
+      recipeId: selectedRecipe.id,
+      recipeType: selectedRecipe.recipeType,
+      durationTicks: selectedRecipe.durationTicks,
+      inputs: selectedRecipe.inputs,
+      outputs: selectedRecipe.outputs,
+      ingredientNodeIds: options.channel.ingredientNodeIds,
+      productNodeIds: options.channel.productNodeIds,
+    }];
   }
+
 
   // AI-CORRECTION 2026-05-13:
   // General logistics devices (splitter, converger, admission — anchor transportClass)

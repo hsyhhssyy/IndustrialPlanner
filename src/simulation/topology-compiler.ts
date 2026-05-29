@@ -522,7 +522,7 @@ function compileEntityDevice(options: {
     transportClass,
     transportComponentId: null,
     nodeIds: nodes.map((node) => node.id),
-    recipeChannels: compileRecipeChannels(definition.recipeChannels, nodeBindingsByStorageGroupId),
+    recipeChannels: compileRecipeChannels(definition.recipeChannels, nodeBindingsByStorageGroupId, options.entity),
     portIds: ports.map((port) => port.id),
     routing: compileRouting(definition),
     configHash: hashStable({
@@ -1182,6 +1182,7 @@ function pairSourceSlotsToTargetSlots(
 function compileRecipeChannels(
   channelDefs: readonly RecipeChannelDefinition[],
   bindings: ReadonlyMap<string, StorageGroupNodeBinding>,
+  entity: WorldEntity,
 ): readonly CompiledSimulationRecipeChannel[] {
   if (!channelDefs || channelDefs.length === 0) { return []; }
   return channelDefs.map((ch) => ({
@@ -1193,6 +1194,7 @@ function compileRecipeChannels(
       (gid: string) => bindings.get(gid)?.productNodeIds ?? [],
     ))],
     manualRecipeOnly: ch.manualRecipeOnly ?? false,
+    defaultRecipeId: (entity.config?.channelRecipes as Record<string, string> | undefined)?.[ch.id] ?? null,
   }));
 }
 

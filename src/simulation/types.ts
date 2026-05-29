@@ -127,6 +127,8 @@ export interface CompiledSimulationRecipeChannel {
   readonly ingredientNodeIds: readonly string[];
   readonly productNodeIds: readonly string[];
   readonly manualRecipeOnly: boolean;
+  /** manualRecipeOnly channel 的用户预选配方 ID，null 表示未选择 */
+  readonly defaultRecipeId: string | null;
 }
 
 export interface CompiledSimulationNode {

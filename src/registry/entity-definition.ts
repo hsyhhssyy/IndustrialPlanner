@@ -409,14 +409,29 @@ function resolveSlotFilterType(kind: DirectionalBufferLayoutInput["kind"]): Filt
   return kind === "fluid" ? "liquid" : "solid";
 }
 
-function createDirectionalBuffers(
+/**
+ * 简易生产设备工厂：批量生成 storageSlotGroups、portStorageBindings、recipeChannels 和 inspectors。
+ *
+ * 每个 layout 声明一个方向性缓冲（input/output, item/fluid, 多容量），
+ * 函数自动生成对应的定义片段，减少样板代码。
+ */
+function createSimpleProductionDevice(
   layouts: readonly DirectionalBufferLayoutInput[],
-): Pick<EntityDefinition, "storageSlotGroups" | "portStorageBindings" | "recipeChannels"> {
+): Pick<EntityDefinition, "storageSlotGroups" | "portStorageBindings" | "recipeChannels" | "inspectors"> {
   const ingGroupIds = layouts.filter(l => l.direction === "input").map(l => `${l.kind}_${l.direction}_buffer`);
   const prodGroupIds = layouts.filter(l => l.direction === "output").map(l => `${l.kind}_${l.direction}_buffer`);
+  const hasChannel = ingGroupIds.length > 0 || prodGroupIds.length > 0;
   return {
-    recipeChannels: (ingGroupIds.length > 0 || prodGroupIds.length > 0)
+    recipeChannels: hasChannel
       ? [createRecipeChannel("default", ingGroupIds, prodGroupIds)]
+      : [],
+    inspectors: hasChannel
+      ? [
+          {
+            type: INSPECTOR_TYPE.recipeStatus,
+            channelIds: ["default"],
+          },
+        ]
       : [],
     storageSlotGroups: layouts.map((layout) => createStorageSlotGroup(
       `${layout.kind}_${layout.direction}_buffer`,
@@ -530,7 +545,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "warehouse",
     displayOrder: 401,
     tags: [],
-    requiresPower: false,
+    requiresPower: true,
     powerDemand: 5,
     portGroups: [
       createPortGroup(
@@ -578,18 +593,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("slot", [50], "solid"),
       ),
     ],
-    // AI-REMOVED 2026-05-17:
-    // Reason: recipeChannels 对纯储存设备是死代码。resolveRecipes() 查 recipeCatalog 中
-    //   machineId === "item_port_storager_1" 的静态配方，实际无匹配，channel 永不产生配方计划。
-    // Trigger: 储液罐改造分析中发现储存设备不应有 channel。
-    // Evidence: recipe-definition.ts 的 RECIPE_DEFINITIONS 中无任何 machineId 指向储存箱。
-    // Replacement: None（纯储存设备不需要 channel）。
-    // Risk: Low
-    //
-    // Original code:
-    // recipeChannels: [
-    //   createRecipeChannel("default", ["storage_slot_1"], ["storage_slot_1"]),
-    // ],
+    recipeChannels: [
+      createRecipeChannel("warehouse_submit", [], [], true),
+    ],
     portStorageBindings: [
       createBinding("bind_item_input_1", "item_input", "storage_slot_1"),
       createBinding("bind_item_output_1", "item_output", "storage_slot_1"),
@@ -610,34 +616,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         slotGroupIds: ["storage_slot_1", "storage_slot_2", "storage_slot_3", "storage_slot_4", "storage_slot_5", "storage_slot_6"],
       },
       {
-        type: INSPECTOR_TYPE.warehouseItemLink,
-        slotGroupIds: ["storage_slot_1"],
-        slotIds: ["slot_1"],
-      },
-      {
-        type: INSPECTOR_TYPE.warehouseItemLink,
-        slotGroupIds: ["storage_slot_2"],
-        slotIds: ["slot_1"],
-      },
-      {
-        type: INSPECTOR_TYPE.warehouseItemLink,
-        slotGroupIds: ["storage_slot_3"],
-        slotIds: ["slot_1"],
-      },
-      {
-        type: INSPECTOR_TYPE.warehouseItemLink,
-        slotGroupIds: ["storage_slot_4"],
-        slotIds: ["slot_1"],
-      },
-      {
-        type: INSPECTOR_TYPE.warehouseItemLink,
-        slotGroupIds: ["storage_slot_5"],
-        slotIds: ["slot_1"],
-      },
-      {
-        type: INSPECTOR_TYPE.warehouseItemLink,
-        slotGroupIds: ["storage_slot_6"],
-        slotIds: ["slot_1"],
+        type: INSPECTOR_TYPE.recipeConfig,
       },
     ],
   }),
@@ -802,6 +781,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_output", "item_output", "shared_output_buffer"),
       createBinding("bind_fluid_output", "fluid_output", "shared_output_buffer"),
     ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
+    ],
   }),
   // =========================================================================
   // 基础生产设备 (uiGroup: "basicProduction")
@@ -862,6 +847,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
     ],
   }),
   /**
@@ -927,6 +918,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_fluid_input", "fluid_input", "fluid_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
     ],
   }),
   createEntityDefinition({
@@ -1030,6 +1027,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_buffer"),
       createBinding("bind_item_output", "item_output", "item_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
     ],
   }),
 
@@ -1740,7 +1743,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("p_in_mid", 1, 0, "N")],
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [1] },
     ]),
   }),
@@ -1768,7 +1771,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50] },
       { kind: "item", direction: "output", capacities: [50] },
     ]),
@@ -1809,7 +1812,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50] },
       { kind: "fluid", direction: "input", capacities: [50] },
       { kind: "fluid", direction: "output", capacities: [50] },
@@ -1840,7 +1843,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50] },
       { kind: "item", direction: "output", capacities: [50] },
     ]),
@@ -1869,7 +1872,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50] },
       { kind: "item", direction: "output", capacities: [50] },
     ]),
@@ -1898,7 +1901,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50] },
       { kind: "item", direction: "output", capacities: [50] },
     ]),
@@ -1927,7 +1930,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50] },
       { kind: "item", direction: "output", capacities: [50] },
     ]),
@@ -1962,7 +1965,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50] },
       { kind: "fluid", direction: "input", capacities: [50] },
       { kind: "item", direction: "output", capacities: [50] },
@@ -1992,7 +1995,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50, 50] },
       { kind: "item", direction: "output", capacities: [50] },
     ]),
@@ -2021,7 +2024,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50, 50] },
       { kind: "item", direction: "output", capacities: [50] },
     ]),
@@ -2050,7 +2053,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50, 50] },
       { kind: "item", direction: "output", capacities: [50] },
     ]),
@@ -2073,7 +2076,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1].map((x) => createPort(`in_s_${x}`, x, 1, "S")),
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50] },
     ]),
   }),
@@ -2134,6 +2137,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_output", "item_output", "shared_output_buffer"),
       createBinding("bind_fluid_output", "fluid_output", "shared_output_buffer"),
     ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
+    ],
   }),
   createEntityDefinition({
     id: "item_port_liquid_purifier_1",
@@ -2159,7 +2168,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [1, 3].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "fluid", direction: "input", capacities: [50] },
       { kind: "fluid", direction: "output", capacities: [50, 50] },
     ]),
@@ -2194,7 +2203,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50] },
       { kind: "fluid", direction: "input", capacities: [50] },
       { kind: "item", direction: "output", capacities: [50] },
@@ -2230,7 +2239,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_w_2", 0, 2, "W")],
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50] },
       { kind: "item", direction: "output", capacities: [50] },
       { kind: "fluid", direction: "output", capacities: [50] },
@@ -2265,7 +2274,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "item", direction: "input", capacities: [50] },
       { kind: "item", direction: "output", capacities: [50] },
     ]),
@@ -2291,7 +2300,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_e_1", 2, 1, "E")],
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "fluid", direction: "output", capacities: [50] },
     ]),
   }),
@@ -2316,7 +2325,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "fluid", direction: "input", capacities: [1] },
     ]),
   }),
@@ -2341,7 +2350,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "fluid", direction: "output", capacities: [1] },
     ]),
   }),
@@ -2363,7 +2372,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("in_w_1", 0, 1, "W")],
       ),
     ],
-    ...createDirectionalBuffers([
+    ...createSimpleProductionDevice([
       { kind: "fluid", direction: "input", capacities: [50] },
     ]),
   }),
@@ -2391,9 +2400,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_e_1", 2, 1, "E")],
       ),
     ],
-    // AI-CORRECTION 2026-05-17: 储液罐从 createDirectionalBuffers（管道/缓冲器模式）改为
+    // AI-CORRECTION 2026-05-17: 储液罐从 createSimpleProductionDevice（管道/缓冲器模式）改为
     //   单槽储存组模式（与协议储存箱的单槽分组原则对齐），仅储存液体。
-    //   - 移除 createDirectionalBuffers（含自动生成的 input/output 分离缓冲组和 channel）。
+    //   - 移除 createSimpleProductionDevice（含自动生成的 input/output 分离缓冲组和 channel）。
     //   - 改为一个 liquid_storage 储存组：1 槽，容量 500，液体过滤器。
     //   - portStorageBindings：input 和 output 端口均绑定到同一储存组。
     //   - 移除 recipeChannels：纯储存设备无需配方通道。
@@ -2450,7 +2459,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_e", 0, 0, "E")],
       ),
     ],
-    // AI-CORRECTION 2026-05-13: 原 createDirectionalBuffers（分离 input+output 组）已失效。
+    // AI-CORRECTION 2026-05-13: 原 createSimpleProductionDevice（分离 input+output 组）已失效。
     // 现改为 bidirectional+share-cap，与 belt_straight_1x1 结构一致。
     storageSlotGroups: [
       createStorageSlotGroup(
@@ -2492,7 +2501,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_e", 0, 0, "E")],
       ),
     ],
-    // AI-CORRECTION 2026-05-13: 原 createDirectionalBuffers（分离 input+output 组）已失效。
+    // AI-CORRECTION 2026-05-13: 原 createSimpleProductionDevice（分离 input+output 组）已失效。
     // 现改为 bidirectional+share-cap，与 pipe 直段结构一致。
     storageSlotGroups: [
       createStorageSlotGroup(

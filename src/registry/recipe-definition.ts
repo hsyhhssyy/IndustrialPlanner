@@ -3295,4 +3295,14 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: [],
     powerOutput: 3200,
   },
+  {
+    id: "r_warehouse_submit",
+    nameKey: "registry.recipe.r_warehouse_submit.name",
+    durationSeconds: 10,
+    inputs: [],
+    outputs: [],
+    machineId: "item_port_storager_1",
+    recipeType: "reserved-item",
+    tags: [],
+  },
 ];

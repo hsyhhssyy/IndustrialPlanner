@@ -165,12 +165,7 @@ describe("SelectionInspectorSlot", () => {
     expect(queryInspectorKeys(container)).toEqual([
       "data-scope",
       "slot-config",
-      "warehouse-item-link",
-      "warehouse-item-link",
-      "warehouse-item-link",
-      "warehouse-item-link",
-      "warehouse-item-link",
-      "warehouse-item-link",
+      "recipe-config",
     ]);
     expect(container.querySelector("[data-slot-config-group='storage_slot_1']")).not.toBeNull();
     const firstSlotTile = container.querySelector<HTMLElement>("[data-slot-action='open-slot-editor']");

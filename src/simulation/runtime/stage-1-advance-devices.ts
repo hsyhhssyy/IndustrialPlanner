@@ -13,7 +13,7 @@ import {
   createStartableRecipeForChannel,
   finishRecipeIfPossible,
 } from "./runtime-slot-access";
-
+import { submitSlotsToWarehouse } from "./warehouse-submit";
 /**
  * 对应《仿真运行原理》§5.1 Tick 阶段 1：推进设备内部状态。
  * 该阶段只处理已经启动的配方：累计进度，完成后尝试把产物写入输出缓存；
@@ -90,6 +90,11 @@ function advanceChannelRecipe(options: {
       recipe.state = "waiting-output";
       options.deviceState.block = true;
       return recipe;
+    }
+
+    // 仓库提交配方完成 → 将本地物品提交到仓库
+    if (recipe.plan.recipeId === "r_warehouse_submit") {
+      submitSlotsToWarehouse(options.topology, options.state, options.device.id);
     }
 
     const overflowTicks = recipe.progressTicks - recipe.durationTicks;

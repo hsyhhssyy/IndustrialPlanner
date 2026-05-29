@@ -186,6 +186,7 @@ function createProductionOverflowTopology(
           ingredientNodeIds: [],
           productNodeIds: ["node:out"],
           manualRecipeOnly: false,
+          defaultRecipeId: null,
         }],
         portIds: [],
         routing: {},

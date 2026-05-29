@@ -21,6 +21,7 @@ import {
 import { SimulationRecipeStatusRuntimeInspector } from "./simulation-recipe-status-runtime-inspector";
 import { SlotConfigInspector } from "./slot-config-inspector";
 import { WarehouseItemLinkInspector } from "./warehouse-item-link-inspector";
+import { RecipeConfigInspector } from "./recipe-config-inspector";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -114,6 +115,16 @@ function renderInspector(options: {
           declaration={options.declaration}
           definition={options.definition}
           entity={options.entity}
+          translate={options.translate}
+        />
+      );
+    case INSPECTOR_TYPE.recipeConfig:
+      return (
+        <RecipeConfigInspector
+          appHost={options.appHost}
+          entity={options.entity}
+          definition={options.definition}
+          runtimeStatus={options.runtimeStatus}
           translate={options.translate}
         />
       );
@@ -232,7 +243,7 @@ export function SelectionInspectorSlot({
       }
 
       const recipeChannelIds = showSimulationRuntimeInspector
-        ? selectedDefinition.recipeChannels.map((ch) => ch.id)
+        ? collectRecipeStatusChannelIds(inspectorDeclarations)
         : [];
 
       const productionPlanningIndex = showSimulationRuntimeInspector
@@ -384,4 +395,18 @@ function resolveInspectorDiscriminator(
     default:
       return String(fallbackIndex);
   }
+}
+
+function collectRecipeStatusChannelIds(
+  declarations: readonly EntityInspectorDeclaration[],
+): readonly string[] {
+  const ids = new Set<string>();
+  for (const d of declarations) {
+    if (d.type === INSPECTOR_TYPE.recipeStatus) {
+      for (const chId of d.channelIds) {
+        ids.add(chId);
+      }
+    }
+  }
+  return [...ids];
 }
