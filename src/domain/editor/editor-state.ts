@@ -17,4 +17,9 @@ export interface EditorState {
   readonly history: EditorHistoryState;
 
   readonly collections: EntityCollections;
+
+  /** 抑制传送带渲染与命中检测 */
+  readonly suppressBelts: boolean;
+  /** 抑制管道渲染与命中检测 */
+  readonly suppressPipes: boolean;
 }

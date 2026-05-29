@@ -636,7 +636,8 @@ function syncWorldEntitySprites(options: {
         theme: options.theme,
         workspace: options.workspace,
         time: options.frameTime,
-        logisticsSuppression: options.renderHost.internalState.logisticsSuppression,
+        suppressBelts: options.workspace.editor?.state.suppressBelts ?? false,
+        suppressPipes: options.workspace.editor?.state.suppressPipes ?? false,
       },
     )
     nextEntityIds.add(entity.id)

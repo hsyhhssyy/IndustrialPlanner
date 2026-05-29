@@ -67,12 +67,10 @@ interface PreviewState {
 }
 
 interface BlueprintPreviewManager {
-  readonly actions: BlueprintPreviewRenderAction
+  readonly actions: RenderAction
   readonly queries: RenderQuery
   destroy(): void
 }
-
-type BlueprintPreviewRenderAction = Omit<RenderAction, "setLogisticsSuppression">
 
 interface RoundPixelsStageLike {
   roundPixels: boolean
@@ -84,7 +82,7 @@ export function createBlueprintPreviewManager(options: {
   const previewStates = new Map<BlueprintPreviewHandle, PreviewState>()
   let previewHandleSequence = 0
 
-  const actions: BlueprintPreviewRenderAction = {
+  const actions: RenderAction = {
     mountBlueprintPreview: async (mountOptions) => {
       const handle = createBlueprintPreviewHandle(++previewHandleSequence)
       const width = normalizeBlueprintPreviewAxisSize(

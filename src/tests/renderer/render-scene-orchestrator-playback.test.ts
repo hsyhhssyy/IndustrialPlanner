@@ -215,10 +215,6 @@ describe("createRenderSceneOrchestrator", () => {
         ticker,
       },
       internalState: {
-        logisticsSuppression: {
-          revision: 0,
-          suppressedEntityIds: new Set(),
-        },
       },
       workspace: {
         state: {} as never,
@@ -349,10 +345,6 @@ describe("createRenderSceneOrchestrator", () => {
         ticker,
       },
       internalState: {
-        logisticsSuppression: {
-          revision: 0,
-          suppressedEntityIds: new Set(),
-        },
       },
       workspace: {
         state: {} as never,

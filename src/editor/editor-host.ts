@@ -61,6 +61,12 @@ export function createEditorHost(
     },
     history: editorState.history,
     collections: editorState.collections,
+    get suppressBelts() {
+      return editorState.suppressBelts;
+    },
+    get suppressPipes() {
+      return editorState.suppressPipes;
+    },
   };
 
   const host: EditorHost = {

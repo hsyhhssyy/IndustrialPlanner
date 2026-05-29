@@ -107,6 +107,17 @@ export function createEditorEntityQueries({
             footprint: definition.footprint,
           })
         ) {
+          // 被抑制的物流设备不参与命中检测
+          if (workspace.registry.queries.isDedicatedLogisticsDevice(entity.definitionId)) {
+            const kind = workspace.registry.queries.resolveDedicatedLogisticsKind(entity.definitionId);
+            if (
+              (kind === "belt" && state.suppressBelts)
+              || (kind === "pipe" && state.suppressPipes)
+            ) {
+              continue;
+            }
+          }
+
           return entity;
         }
       }

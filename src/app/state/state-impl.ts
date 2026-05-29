@@ -180,6 +180,7 @@ export type CanvasRightDockToolbarButtonId = typeof CANVAS_RIGHT_DOCK_TOOLBAR_BU
 
 export const CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS = [
   "canvas-top-left-corner-toolbar-button-toggle-pipe",
+  "canvas-top-left-corner-toolbar-button-toggle-belt",
   "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
   "canvas-top-left-corner-toolbar-button-toggle-continuous-placement",
 ] as const;

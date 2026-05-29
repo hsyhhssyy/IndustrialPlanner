@@ -40,6 +40,12 @@ const CANVAS_TOP_LEFT_CORNER_TOOLBAR_DEFINITIONS: Record<
     labelKeyForOnButton: "action.deemphasizePipe",
     labelKeyForOffButton: "action.showPipe",
   },
+  "canvas-top-left-corner-toolbar-button-toggle-belt": {
+    iconForOnButton: "eye-off",
+    iconForOffButton: "eye",
+    labelKeyForOnButton: "action.deemphasizeBelt",
+    labelKeyForOffButton: "action.showBelt",
+  },
   "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee": {
     iconForOnButton: "batch-select",
     iconForOffButton: "batch-select",

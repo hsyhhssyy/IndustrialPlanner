@@ -20,6 +20,7 @@ const MARQUEE_RIGHT_DOCK_BUTTON_IDS = [
 
 const MARQUEE_TOP_LEFT_BUTTON_IDS = [
   "canvas-top-left-corner-toolbar-button-toggle-pipe",
+  "canvas-top-left-corner-toolbar-button-toggle-belt",
   "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
 ] as const;
 
@@ -27,6 +28,10 @@ const TOGGLE_REVERSE_MARQUEE_ON =
   "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee-on";
 const TOGGLE_REVERSE_MARQUEE_OFF =
   "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee-off";
+const TOGGLE_PIPE_ON = "canvas-top-left-corner-toolbar-button-toggle-pipe-on";
+const TOGGLE_PIPE_OFF = "canvas-top-left-corner-toolbar-button-toggle-pipe-off";
+const TOGGLE_BELT_ON = "canvas-top-left-corner-toolbar-button-toggle-belt-on";
+const TOGGLE_BELT_OFF = "canvas-top-left-corner-toolbar-button-toggle-belt-off";
 
 export function createHypergryphMarqueeGestureModule(): GestureMappingModule<AppHost> {
   return {
@@ -255,6 +260,22 @@ function handleUiButtonTap(options: {
       options.appHost.internalState.toolInfo.marqueeType = EntityCollectionType.marquee;
       return { status: "handled" };
 
+    case TOGGLE_PIPE_ON:
+      options.appHost.workspace.editor?.actions.setLogisticsSuppression("pipe", true);
+      return { status: "handled" };
+
+    case TOGGLE_PIPE_OFF:
+      options.appHost.workspace.editor?.actions.setLogisticsSuppression("pipe", false);
+      return { status: "handled" };
+
+    case TOGGLE_BELT_ON:
+      options.appHost.workspace.editor?.actions.setLogisticsSuppression("belt", true);
+      return { status: "handled" };
+
+    case TOGGLE_BELT_OFF:
+      options.appHost.workspace.editor?.actions.setLogisticsSuppression("belt", false);
+      return { status: "handled" };
+
     default:
       return { status: "ignored" };
   }
@@ -272,23 +293,24 @@ function enterMarqueeMode(options: {
     if (options.appHost.internalState.workbench.rightDockOpen) {
       options.appHost.internalActions.toggleRightDock();
     }
-    options.appHost.internalActions.showCanvasTopLeftCornerToolbar(
-      resolveMarqueeTopLeftButtonIds(options.appHost),
-    );
   } else {
     options.appHost.internalActions.showCanvasRightDockToolbar(
       MARQUEE_RIGHT_DOCK_BUTTON_IDS,
       "shortcut",
     );
   }
+  options.appHost.internalActions.showCanvasTopLeftCornerToolbar(
+    resolveMarqueeTopLeftButtonIds(options.appHost),
+  );
 }
 
 function resolveMarqueeTopLeftButtonIds(appHost: AppHost) {
-  return canCurrentBaseAcceptWulingOnlyEntities(appHost)
-    ? MARQUEE_TOP_LEFT_BUTTON_IDS
-    : MARQUEE_TOP_LEFT_BUTTON_IDS.filter((buttonId) =>
-      buttonId !== "canvas-top-left-corner-toolbar-button-toggle-pipe",
-    );
+  return MARQUEE_TOP_LEFT_BUTTON_IDS.filter((buttonId) => {
+    if (buttonId === "canvas-top-left-corner-toolbar-button-toggle-pipe") {
+      return canCurrentBaseAcceptWulingOnlyEntities(appHost);
+    }
+    return true;
+  });
 }
 
 function closeCompactLeftDockOnMarqueeEnter(appHost: AppHost): void {
@@ -379,6 +401,8 @@ export function cleanupMarquee(appHost: AppHost, editor: EditorContract | null, 
   appHost.internalState.toolInfo.marqueeType = EntityCollectionType.marquee;
   appHost.internalActions.hideCanvasRightDockToolbar();
   appHost.internalActions.hideCanvasTopLeftCornerToolbar();
+  editor?.actions.setLogisticsSuppression("belt", false);
+  editor?.actions.setLogisticsSuppression("pipe", false);
 }
 
 function toggleEntityInSelection(editor: EditorContract, entityId: string): void {

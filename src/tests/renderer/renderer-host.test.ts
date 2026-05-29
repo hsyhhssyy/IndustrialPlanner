@@ -88,11 +88,6 @@ describe("createRenderHost", () => {
         },
       },
     })
-    expect(renderHost.internalState.logisticsSuppression).toBeNull()
-    renderHost.actions.setLogisticsSuppression?.("pipe")
-    expect(renderHost.internalState.logisticsSuppression).toBe("pipe")
-    renderHost.actions.setLogisticsSuppression?.(null)
-    expect(renderHost.internalState.logisticsSuppression).toBeNull()
     expect(createRenderSceneOrchestrator).toHaveBeenCalledWith(renderHost)
     expect(workspace.render).toBe(renderHost)
   })

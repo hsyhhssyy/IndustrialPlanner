@@ -119,6 +119,8 @@ export interface EditorStateReadWrite extends EditorState {
   history: EditorHistoryStateReadWrite;
   drafts: DraftEntity[];
   collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite>;
+  suppressBelts: boolean;
+  suppressPipes: boolean;
 
   // 私有State, 不属于Contract, 但是自己用
   internalPersistState: EditorInternalPersistStateReadWrite;
@@ -187,6 +189,8 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
   };
   marqueeGridRect: GridRect | null = null;
   history: EditorHistoryStateReadWrite = new EditorHistoryStateReadWriteImpl();
+  suppressBelts = false;
+  suppressPipes = false;
 
   drafts: DraftEntity[] = [];
   collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite> = {

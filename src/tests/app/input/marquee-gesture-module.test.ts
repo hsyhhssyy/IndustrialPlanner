@@ -58,6 +58,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(appHost.internalState.runtime.canvasRightDockToolbar.mode).toBe("icon");
     expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       "canvas-top-left-corner-toolbar-button-toggle-pipe",
+      "canvas-top-left-corner-toolbar-button-toggle-belt",
       "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
     ]);
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
@@ -155,6 +156,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     ]);
     expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       "canvas-top-left-corner-toolbar-button-toggle-pipe",
+      "canvas-top-left-corner-toolbar-button-toggle-belt",
       "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
     ]);
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
@@ -347,6 +349,7 @@ function createContext(options: {
       applyMarquee: vi.fn(),
       cancelMarquee: vi.fn(),
       clearCollection: vi.fn(),
+      setLogisticsSuppression: vi.fn(),
     },
     queries: {
       findGridCellForClientPixlePoint: vi.fn((point) => ({
@@ -444,6 +447,7 @@ type MockEditor = {
     | "cancelMarquee"
     | "clearCollection"
     | "setMarqueeRange"
+    | "setLogisticsSuppression"
   >;
   queries: Pick<
     EditorContract["queries"],

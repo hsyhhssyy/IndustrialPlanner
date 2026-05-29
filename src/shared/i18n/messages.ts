@@ -21,6 +21,8 @@ export type MessageKey =
   | "action.exit"
   | "action.deemphasizePipe"
   | "action.showPipe"
+  | "action.deemphasizeBelt"
+  | "action.showBelt"
   | "action.switchToNormalMarquee"
   | "action.switchToReverseMarquee"
   | "action.switchTheme"
@@ -328,6 +330,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "action.exit": "退出",
     "action.deemphasizePipe": "弱化管道",
     "action.showPipe": "显示管道",
+    "action.deemphasizeBelt": "弱化传送带",
+    "action.showBelt": "显示传送带",
     "action.switchToNormalMarquee": "切换到正选",
     "action.switchToReverseMarquee": "切换到反选",
     "action.switchTheme": "切换主题",
@@ -754,6 +758,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "action.exit": "Exit",
     "action.deemphasizePipe": "De-emphasize Pipes",
     "action.showPipe": "Show Pipes",
+    "action.deemphasizeBelt": "De-emphasize Belts",
+    "action.showBelt": "Show Belts",
     "action.switchToNormalMarquee": "Switch to Normal Marquee",
     "action.switchToReverseMarquee": "Switch to Reverse Marquee",
     "action.switchTheme": "Switch Theme",

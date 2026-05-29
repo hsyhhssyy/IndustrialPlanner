@@ -313,6 +313,8 @@ describe("GenericDeviceSprite", () => {
           },
         },
       } as never,
+      suppressBelts: false,
+      suppressPipes: false,
       time: {
         nowMs: 1000,
         deltaMs: 16.67,
@@ -1480,6 +1482,8 @@ describe("GenericDeviceSprite", () => {
           },
         },
       } as never,
+      suppressBelts: false,
+      suppressPipes: false,
       time: {
         nowMs: 1000,
         deltaMs: 16.67,
@@ -1590,6 +1594,8 @@ describe("GenericDeviceSprite", () => {
           },
         },
       } as never,
+      suppressBelts: false,
+      suppressPipes: false,
       time: {
         nowMs: 1000,
         deltaMs: 16.67,
@@ -2565,6 +2571,8 @@ function createRenderContextStub(options: {
   return {
     theme: options.theme ?? AYU_LIGHT_THEME,
     workspace: workspace as never,
+    suppressBelts: false,
+    suppressPipes: false,
     time: {
       nowMs: 1000,
       deltaMs: 16.67,

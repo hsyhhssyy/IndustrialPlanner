@@ -38,10 +38,6 @@ const PIPE_DRAW_BUTTON_ID = "placement-action-pipe-draw";
 
 const logisticsLogger = createLogger("logistics-placement");
 
-function resolveSuppressedLogisticsKind(kind: LogisticsKind): LogisticsKind {
-  return kind === "belt" ? "pipe" : "belt";
-}
-
 export function createHypergryphLogisticsPlacementGestureModule(): GestureMappingModule<AppHost> {
   let activeTouchLogisticsDragGestureId: string | null = null;
 
@@ -295,8 +291,14 @@ function enterLogisticsPlacementMode(options: {
   runtime.phase = "idle";
   runtime.routeOrder = "vertical-first";
   options.appHost.internalState.runtime.selectingPlacementGroup = runtime.shortcutPlacementGroup;
-  options.appHost.workspace.render?.actions.setLogisticsSuppression?.(
-    resolveSuppressedLogisticsKind(options.kind),
+  options.appHost.workspace.editor?.actions.setLogisticsSuppression(
+    options.kind === "belt" ? "pipe" : "belt",
+    true,
+  );
+  options.appHost.internalActions.showCanvasTopLeftCornerToolbar(
+    options.kind === "belt"
+      ? ["canvas-top-left-corner-toolbar-button-toggle-pipe"]
+      : ["canvas-top-left-corner-toolbar-button-toggle-belt"],
   );
   options.appHost.internalActions.setActiveTool("logistics-placement");
   options.editor.actions.clearCollection(EntityCollectionType.selection);
@@ -844,6 +846,7 @@ function cancelLogisticsPlacement(
   editor.actions.cancelLogisticsDraft();
   softResetLogisticsRuntime(appHost);
   appHost.internalActions.hideCanvasFloatingToolbar();
+  appHost.internalActions.hideCanvasTopLeftCornerToolbar();
 }
 
 function exitLogisticsPlacementToSelect(
@@ -856,6 +859,7 @@ function exitLogisticsPlacementToSelect(
 
   resetLogisticsRuntime(appHost);
   appHost.internalActions.hideCanvasFloatingToolbar();
+  appHost.internalActions.hideCanvasTopLeftCornerToolbar();
   appHost.internalActions.hideCanvasRightDockToolbar();
   appHost.internalActions.setActiveTool("select");
 }
@@ -1004,7 +1008,8 @@ function syncLogisticsPlacementEntryUi(appHost: AppHost): void {
 
 function resetLogisticsRuntime(appHost: AppHost): void {
   const runtime = appHost.internalState.runtime.logisticsPlacement;
-  appHost.workspace.render?.actions.setLogisticsSuppression?.(null);
+  appHost.workspace.editor?.actions.setLogisticsSuppression("belt", false);
+  appHost.workspace.editor?.actions.setLogisticsSuppression("pipe", false);
   runtime.kind = null;
   runtime.shortcutPlacementGroup = null;
   runtime.pointerMode = null;

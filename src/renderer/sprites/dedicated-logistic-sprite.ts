@@ -17,7 +17,6 @@ import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
 import { BaseRenderSprite } from "./base-render-sprite"
 import type {
-  LogisticsSuppressionFamily,
   RenderSpriteLayout,
   RenderSpriteSyncContext,
 } from "./render-sprite"
@@ -118,10 +117,9 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     this.currentLayout = layout
     this.currentSyncContext = context
 
-    const logisticsSuppression = context.logisticsSuppression
-    if (logisticsSuppression != null && this.isLogisticsSuppressed(context)) {
+    if (this.isLogisticsSuppressed(context)) {
       this.body.visible = false
-      this.syncSuppressionGraphics(layout, logisticsSuppression)
+      this.syncSuppressionGraphics(layout)
       return
     }
 
@@ -189,7 +187,10 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   }
 
   protected isLogisticsSuppressed(context: RenderSpriteSyncContext): boolean {
-    return context.logisticsSuppression === resolveSpriteLogisticsFamily(this.spriteId)
+    const family = resolveSpriteLogisticsFamily(this.spriteId);
+    if (family === "belt") return context.suppressBelts;
+    if (family === "pipe") return context.suppressPipes;
+    return false;
   }
 
   protected afterDeviceTextureReady(
@@ -298,8 +299,8 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
 
   private syncSuppressionGraphics(
     layout: RenderSpriteLayout,
-    family: LogisticsSuppressionFamily,
   ): void {
+    const family = resolveSpriteLogisticsFamily(this.spriteId);
     const centeredLayout = this.resolveCenteredSpriteLayout(layout)
     const suppressionGraphics = this.resolveSuppressionGraphics()
     suppressionGraphics.clear()
@@ -354,12 +355,10 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
         this.isTextureReady = true
 
         if (this.currentLayout !== null && this.currentSyncContext !== null) {
-          const logisticsSuppression = this.currentSyncContext.logisticsSuppression
-          if (logisticsSuppression != null && this.isLogisticsSuppressed(this.currentSyncContext)) {
+          if (this.isLogisticsSuppressed(this.currentSyncContext)) {
             this.body.visible = false
             this.syncSuppressionGraphics(
               this.currentLayout,
-              logisticsSuppression,
             )
             this.afterDeviceTextureReady(this.currentLayout, this.currentSyncContext)
             return
@@ -389,7 +388,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   }
 }
 
-function resolveSpriteLogisticsFamily(spriteId: string): LogisticsSuppressionFamily | null {
+function resolveSpriteLogisticsFamily(spriteId: string): "belt" | "pipe" | null {
   if (spriteId.startsWith("belt_")) return "belt"
   if (spriteId.startsWith("pipe_")) return "pipe"
   return null

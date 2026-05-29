@@ -50,6 +50,7 @@ type EditorLogisticsActions = Pick<
   | "cancelLogisticsDraft"
   | "createLogisticsDraftStart"
   | "moveLogisticEnd"
+  | "setLogisticsSuppression"
 >;
 
 type DevicePortEndpoint = Extract<LogisticsDraftEndpoint, { readonly type: "device-port" }>;
@@ -465,6 +466,14 @@ export function createEditorLogisticsActions(
       // TODO: 实现物流草稿取消逻辑
       // 2026-04-30 订正：ST1-RQ-047 已实现 logistics draft / collection 的清理。
       clearLogisticsDraftState(logisticsContext);
+    }),
+
+    setLogisticsSuppression: action((family, value) => {
+      if (family === "belt") {
+        logisticsContext.state.suppressBelts = value;
+      } else {
+        logisticsContext.state.suppressPipes = value;
+      }
     }),
   };
 }

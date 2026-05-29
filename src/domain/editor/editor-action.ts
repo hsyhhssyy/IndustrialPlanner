@@ -92,4 +92,11 @@ export interface EditorAction {
 	 * 适用于 powerMode、viewport 等不需要触发全量重编译的文档设置变更。
 	 */
 	writeDocumentSettings(patch: Partial<WorldDocumentSettings>): void;
+
+        /**
+         * 设置物流抑制状态。
+         * 抑制后，对应种类的物流设备在渲染时显示为简化线框，
+         * 且在点击命中检测中被跳过。
+         */
+        setLogisticsSuppression(family: "belt" | "pipe", value: boolean): void;
 }
