@@ -37,6 +37,7 @@ import {
   resolveDirectionEdge,
   resolveInputEndpointAtPointer,
   resolveInputEndpointOnPath,
+  resolveCellFromEdges,
   resolveLogisticsDefinitionId,
   resolveLogisticsPathCells,
   resolveNearestDevicePortEndpoint,
@@ -1333,15 +1334,33 @@ function resolveAutoDraftPlan(options: {
 
     if (
       targetInfo !== null
-      && targetInfo.outputConnected
       && targetInfo.entity.id !== options.replacingEntityId
       && options.target === null
     ) {
-      cellOverridesByGridKey.set(
-        gridPointKey(lastCell.gridPoint),
-        createAutoDeviceOverride(options.kind, "converger", targetInfo.outputEdge),
-      );
-      replacingEntityIds.add(targetInfo.entity.id);
+      if (targetInfo.inputConnected) {
+        // 有合法上游 → 创建汇流器
+        cellOverridesByGridKey.set(
+          gridPointKey(lastCell.gridPoint),
+          createAutoDeviceOverride(options.kind, "converger", targetInfo.outputEdge),
+        );
+        replacingEntityIds.add(targetInfo.entity.id);
+      } else {
+        // AI-CORRECTION 2026-05-29:
+        // 无合法上游 → 替换目标物流格为普通物流段（弯道/直道），
+        // 使其入口方向与新拉入方向一致，出口方向保持原物流段出口方向。
+        // 原行为：仅在 outputConnected 时创建汇流器，否则路径重叠变红。
+        if (lastCell.fromEdge !== null) {
+          const { shape, rotation } = resolveCellFromEdges(lastCell.fromEdge, targetInfo.outputEdge);
+          cellOverridesByGridKey.set(
+            gridPointKey(lastCell.gridPoint),
+            {
+              definitionId: resolveLogisticsDefinitionId({ kind: options.kind, shape }),
+              rotation,
+            },
+          );
+          replacingEntityIds.add(targetInfo.entity.id);
+        }
+      }
     }
   }
 

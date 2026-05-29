@@ -652,6 +652,24 @@ function resolveCellFromEdge(options: {
     return replacingInputEdge;
   }
 
+  // AI-CORRECTION 2026-05-29:
+  // 无合法上游连接时，从被替换实体自身的 input port edge 推断 fromEdge，
+  // 而非从绘制方向反推。
+  // 原行为：直接回退到 opposite(next direction) 或 "WEST"。
+  if (options.replacingEntity !== null && options.replacingDefinition !== null) {
+    const ownInputEndpoints = resolveDevicePortEndpoints({
+      entity: options.replacingEntity,
+      definition: options.replacingDefinition,
+      kind: options.kind,
+      direction: "input",
+      pointerGridPoint: options.point,
+    });
+    const firstOwnEndpoint = ownInputEndpoints[0];
+    if (firstOwnEndpoint !== undefined) {
+      return firstOwnEndpoint.edge;
+    }
+  }
+
   if (options.next !== null) {
     const direction = resolveDirectionEdge(options.point, options.next);
     return direction === null ? null : oppositeEdge(direction);
@@ -808,6 +826,15 @@ function doesLogisticsEntityOutputConnectToGridPoint(options: {
     endpoint.outsideGridPoint,
     options.targetGridPoint,
   ));
+}
+
+export function resolveCellFromEdges(
+  fromEdge: GridEdge,
+  toEdge: GridEdge,
+): { shape: LogisticsPathShape; rotation: GridRotation } {
+  const shape = resolveShapeFromEdges(fromEdge, toEdge);
+  const rotation = resolveRotationForShape({ shape, fromEdge, toEdge });
+  return { shape, rotation };
 }
 
 function resolveShapeFromEdges(fromEdge: GridEdge, toEdge: GridEdge): LogisticsPathShape {
