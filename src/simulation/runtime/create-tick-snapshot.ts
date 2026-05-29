@@ -84,6 +84,22 @@ function createDeviceSnapshots(
 
     // AI-CORRECTION 2026-05-13: snapshot 投影遍历所有 channel，取第一个运行中的 recipe。
     const firstRecipe = Object.values(runtimeDevice.channelRecipes).find(r => r !== null) ?? null;
+
+    // AI-CORRECTION 2026-05-29: 新增 channelRecipes 投影所有 channel 的运行时状态。
+    const channelRecipes: Record<string, RuntimeTickSnapshot["devices"][string]["recipe"]> = {};
+    for (const [chId, chRecipe] of Object.entries(runtimeDevice.channelRecipes)) {
+      channelRecipes[chId] = chRecipe === null
+        ? null
+        : {
+            runId: chRecipe.runId,
+            recipeId: chRecipe.recipeId,
+            recipeType: chRecipe.recipeType,
+            progressTicks: chRecipe.progressTicks,
+            durationTicks: chRecipe.durationTicks,
+            state: chRecipe.state,
+          };
+    }
+
     devices[deviceId] = {
       deviceId,
       block: runtimeDevice.block,
@@ -97,6 +113,7 @@ function createDeviceSnapshots(
             durationTicks: firstRecipe.durationTicks,
             state: firstRecipe.state,
           },
+      channelRecipes,
     };
   }
   return devices;

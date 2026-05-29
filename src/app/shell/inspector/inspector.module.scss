@@ -632,3 +632,48 @@
 .recipe-status-placeholder {
   min-height: 36px;
 }
+
+// AI-CORRECTION 2026-05-29: 多 channel 分区展示相关样式。
+.recipe-auto-section,
+.recipe-manual-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.recipe-section-divider {
+  height: 1px;
+  margin: 6px 0;
+  background: var(--line);
+}
+
+.recipe-channel-row {
+  & + & {
+    margin-top: 4px;
+  }
+}
+
+.recipe-add-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 2px dashed var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}
+
+.recipe-add-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}

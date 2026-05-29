@@ -314,7 +314,11 @@ export interface RuntimeSlotSnapshot {
 export interface RuntimeDeviceSnapshot {
   readonly deviceId: string;
   readonly block: boolean;
+  // AI-CORRECTION 2026-05-29: recipe 保留兼容，channelRecipes 为新的多 channel 数据源。
+  // 原 recipe 仍为第一个运行中 recipe 的快照投影。
   readonly recipe: RuntimeDeviceRecipeSnapshot | null;
+  /** 每个 channel 的当前运行时配方状态，key 为 channel id，null 表示该 channel 空闲 */
+  readonly channelRecipes: Record<string, RuntimeDeviceRecipeSnapshot | null>;
 }
 
 export interface RuntimeDeviceRecipeSnapshot {

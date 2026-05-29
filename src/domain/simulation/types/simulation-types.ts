@@ -17,10 +17,21 @@ export interface SimulationState{
   readonly statistics: SimulationRuntimeStatistics;
 }
 
-export interface SimulationDeviceRuntimeStatusReadModel {
+export interface SimulationDeviceRuntimeChannelRecipeStatus {
+  readonly channelId: string;
   readonly recipeId: string | null;
   readonly progressSeconds: number | null;
   readonly desiredSeconds: number | null;
+}
+
+export interface SimulationDeviceRuntimeStatusReadModel {
+  // AI-CORRECTION 2026-05-29: 保留 recipeId/progressSeconds/desiredSeconds 兼容旧调用方。
+  // 新代码应使用 channelRecipes 获取每个 channel 的运行状态。
+  readonly recipeId: string | null;
+  readonly progressSeconds: number | null;
+  readonly desiredSeconds: number | null;
+  /** 每个 channel 的运行时配方状态，key 为 channel id */
+  readonly channelRecipes: Record<string, SimulationDeviceRuntimeChannelRecipeStatus | null>;
   readonly slotItems: readonly SimulationDeviceRuntimeSlotItemReadModel[];
 }
 

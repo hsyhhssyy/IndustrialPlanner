@@ -773,7 +773,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     recipeChannels: [
-      createRecipeChannel("default", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch1", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch2", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch3", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch4", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
     ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "shared_input_buffer"),
@@ -784,7 +787,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     inspectors: [
       {
         type: INSPECTOR_TYPE.recipeStatus,
-        channelIds: ["default"],
+        channelIds: ["ch1", "ch2", "ch3", "ch4"],
       },
     ],
   }),
@@ -2128,7 +2131,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     recipeChannels: [
-      createRecipeChannel("default", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch1", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch2", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch3", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch4", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch5", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch6", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch7", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch8", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
     ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "shared_input_buffer"),
@@ -2139,7 +2149,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     inspectors: [
       {
         type: INSPECTOR_TYPE.recipeStatus,
-        channelIds: ["default"],
+        channelIds: ["ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8"],
       },
     ],
   }),

@@ -220,6 +220,7 @@ function createTickReport(options: {
       progressSeconds: status.progressSeconds,
       desiredSeconds: status.desiredSeconds,
       slotItems: status.slotItems.map((slotItem) => ({ ...slotItem })),
+      channelRecipes: { ...status.channelRecipes },
     };
   }
 

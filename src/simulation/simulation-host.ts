@@ -1,6 +1,7 @@
 import type { SimulationContract } from "@/domain/simulation/simulation-contract";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type {
+  SimulationDeviceRuntimeChannelRecipeStatus,
   SimulationDeviceRuntimeSlotItemReadModel,
   SimulationDeviceRuntimeStatusReadModel,
 } from "@/domain/simulation/types/simulation-types";
@@ -244,6 +245,21 @@ function resolveDeviceRuntimeStatus(options: {
     return null;
   }
 
+  // AI-CORRECTION 2026-05-29: 新增 channelRecipes 映射所有 channel 运行时状态。
+  const channelRecipes: Record<string, SimulationDeviceRuntimeChannelRecipeStatus | null> = {};
+  if (deviceSnapshot.channelRecipes) {
+    for (const [chId, chRecipe] of Object.entries(deviceSnapshot.channelRecipes)) {
+      channelRecipes[chId] = chRecipe === null
+        ? null
+        : {
+            channelId: chId,
+            recipeId: chRecipe.recipeId,
+            progressSeconds: convertSimulationTicksToSeconds(chRecipe.progressTicks),
+            desiredSeconds: convertSimulationTicksToSeconds(chRecipe.durationTicks),
+          };
+    }
+  }
+
   return {
     recipeId: deviceSnapshot.recipe?.recipeId ?? null,
     progressSeconds: deviceSnapshot.recipe === null
@@ -252,6 +268,7 @@ function resolveDeviceRuntimeStatus(options: {
     desiredSeconds: deviceSnapshot.recipe === null
       ? null
       : convertSimulationTicksToSeconds(deviceSnapshot.recipe.durationTicks),
+    channelRecipes,
     slotItems: resolveDeviceRuntimeSlotItems({
       topology: options.topology,
       compiledDeviceId,

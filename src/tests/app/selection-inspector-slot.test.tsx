@@ -228,6 +228,7 @@ describe("SelectionInspectorSlot", () => {
         progressSeconds: 0.5,
         desiredSeconds: 2,
         slotItems: [],
+        channelRecipes: {},
       },
     });
     const currentAppHost = createAppHost(workspace);
@@ -247,11 +248,12 @@ describe("SelectionInspectorSlot", () => {
     });
 
     expect(getDeviceRuntimeStatus).toHaveBeenCalledWith("dummy-recipe-device");
-    // item_port_mix_pool_1 有 1 个 recipeChannel: "default"
+    // item_port_mix_pool_1 有 4 个 recipeChannel: ch1-ch4
+    // AI-CORRECTION 2026-05-29: 新组件不再按 channel 生成独立 article，
+    // 改为单个 article 内部分区展示。
     expect(queryInspectorKeys(container)).toContain(
       SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY,
     );
-    expect(container.querySelector("[data-channel-id='default']")).not.toBeNull();
   });
 
   it("mounts the simulation recipe status inspector outside stop state", () => {
@@ -266,6 +268,7 @@ describe("SelectionInspectorSlot", () => {
         progressSeconds: 0.1,
         desiredSeconds: 2,
         slotItems: [],
+        channelRecipes: {},
       },
     });
     const currentAppHost = createAppHost(workspace);

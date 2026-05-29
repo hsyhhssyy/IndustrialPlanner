@@ -101,24 +101,16 @@ function renderRecipeStatusInspector(options: {
   const index = buildProductionPlanningIndex(registry);
 
   return (
-    <>
-      {options.declaration.channelIds.map((chId) => {
-        const channelDef = options.definition.recipeChannels.find((c) => c.id === chId);
-        return (
-          <SimulationRecipeStatusRuntimeInspector
-            key={chId}
-            channelId={chId}
-            runtimeStatus={options.runtimeStatus}
-            index={index}
-            t={options.translate}
-            manualRecipeOnly={channelDef?.manualRecipeOnly ?? false}
-            appHost={options.appHost}
-            entity={options.entity}
-            definition={options.definition}
-          />
-        );
-      })}
-    </>
+    <SimulationRecipeStatusRuntimeInspector
+      channelIds={options.declaration.channelIds}
+      channels={options.definition.recipeChannels}
+      runtimeStatus={options.runtimeStatus}
+      index={index}
+      t={options.translate}
+      appHost={options.appHost}
+      entity={options.entity}
+      definition={options.definition}
+    />
   );
 }
 
@@ -363,22 +355,18 @@ export function SelectionInspectorSlot({
             simulationRunning={slotState.showSimulationRuntimeInspector}
             onScopeChange={scopeContext.setScope}
           />
-          {slotState.recipeChannelIds.map((channelId) => {
-            const channelDef = slotState.selectedDefinition.recipeChannels.find((c) => c.id === channelId);
-            return (
-              <SimulationRecipeStatusRuntimeInspector
-                key={channelId}
-                channelId={channelId}
-                runtimeStatus={slotState.simulationRuntimeStatus}
-                index={slotState.productionPlanningIndex!}
-                t={translate}
-                manualRecipeOnly={channelDef?.manualRecipeOnly ?? false}
-                appHost={appHost}
-                entity={slotState.selectedEntity}
-                definition={slotState.selectedDefinition}
-              />
-            );
-          })}
+          {slotState.recipeChannelIds.length > 0 && (
+            <SimulationRecipeStatusRuntimeInspector
+              channelIds={slotState.recipeChannelIds}
+              channels={slotState.selectedDefinition.recipeChannels}
+              runtimeStatus={slotState.simulationRuntimeStatus}
+              index={slotState.productionPlanningIndex!}
+              t={translate}
+              appHost={appHost}
+              entity={slotState.selectedEntity}
+              definition={slotState.selectedDefinition}
+            />
+          )}
           {slotState.inspectors.map((inspector) => (
             <div
               key={inspector.id}
