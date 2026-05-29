@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import { createDummyWorldDocument } from "@/editor/dummy-document";
+import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { readEditorHistoryState } from "@/editor/history/history-storage";
 import { createRegistryContract } from "@/registry";

@@ -9,7 +9,7 @@ import type {
   ClientPixelPoint,
   ClientPixelRect,
 } from "@/domain/shared/client-pixel";
-import type { AppLocale } from "@/shared/i18n/messages";
+import type { AppLocale } from "@/domain/app";
 import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 import type { KeyboardShortcutManager, ShortcutEventModifiers } from "./keyboard-shortcut-manager";

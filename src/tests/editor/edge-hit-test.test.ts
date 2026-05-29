@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { runInAction } from "mobx";
-import { createDummyWorldDocument } from "@/editor/dummy-document";
+import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform";
-import type { WorldDocument } from "@/domain/document/world-document";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -47,8 +46,7 @@ describe("findEntityAtClientPixelPoint - 边界场景（仅漏一角）", () => 
     });
     // 视口中心在世界坐标 (10, 10)，grid size 默认
     runInAction(() => {
-      editorHost.state.viewport.center.x = 10;
-      editorHost.state.viewport.center.y = 10;
+      (editorHost.state as unknown as { viewport: { center: { x: number; y: number } } }).viewport.center = { x: 10, y: 10 };
     });
 
     // 创建一个 3x3 设备，放在 (0, 0)
@@ -102,8 +100,7 @@ describe("findEntityAtClientPixelPoint - 边界场景（仅漏一角）", () => 
       height: 400,
     });
     runInAction(() => {
-      editorHost.state.viewport.center.x = 10;
-      editorHost.state.viewport.center.y = 10;
+      (editorHost.state as unknown as { viewport: { center: { x: number; y: number } } }).viewport.center = { x: 10, y: 10 };
     });
 
     const document = createDummyWorldDocument();
@@ -149,8 +146,7 @@ describe("findEntityAtClientPixelPoint - 边界场景（仅漏一角）", () => 
       height: 400,
     });
     runInAction(() => {
-      editorHost.state.viewport.center.x = 50;
-      editorHost.state.viewport.center.y = 50;
+      (editorHost.state as unknown as { viewport: { center: { x: number; y: number } } }).viewport.center = { x: 50, y: 50 };
     });
 
     const document = createDummyWorldDocument();

@@ -143,6 +143,8 @@ export interface RecipeChannelDefinition {
   ingredientStorageGroupIds: string[];
   /** 配方产物写入哪些存储组 */
   productStorageGroupIds: string[];
+  /** 若为 true，仿真器不自动根据原料匹配配方，必须由用户手动指定配方后设备才运行 */
+  manualRecipeOnly?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -253,6 +255,8 @@ export interface RecipeChannelDefinition {
   ingredientStorageGroupIds: string[];
   /** 配方产物写入哪些存储组 */
   productStorageGroupIds: string[];
+  /** 若为 true，仿真器不自动根据原料匹配配方，必须由用户手动指定配方后设备才运行 */
+  manualRecipeOnly?: boolean;
 }
 
 export interface PortStorageBindingDefinition {

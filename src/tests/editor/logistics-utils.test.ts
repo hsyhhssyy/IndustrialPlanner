@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createDummyWorldDocument } from "@/editor/dummy-document";
+import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import {
   createEntityDefinitionMap,
   resolveLogisticsDefinitionId,

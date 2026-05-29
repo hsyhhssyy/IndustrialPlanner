@@ -68,6 +68,7 @@ function createWorldDocument(entities: WorldEntity[]): WorldDocument {
     entityOrder: entities.map((entity) => entity.id),
     slotLinks: [],
     documentSettings: {
+      powerMode: "real" as const,
       viewport: {
         center: {
           x: 0,

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { runInAction } from "mobx";
 
 import type { DraftEntity } from "@/editor/draft-entity";
-import { createDummyWorldDocument } from "@/editor/dummy-document";
+import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY } from "@/editor/storage-hook";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";

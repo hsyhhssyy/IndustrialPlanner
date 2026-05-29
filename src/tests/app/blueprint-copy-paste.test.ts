@@ -64,6 +64,7 @@ function createTestDocument(options: {
     entityOrder: options.entityOrder ?? Object.keys(options.entities),
     slotLinks: options.slotLinks ?? [],
     documentSettings: {
+      powerMode: "real" as const,
       viewport: {
         center: { x: 0, y: 0 },
         gridSize: 1,

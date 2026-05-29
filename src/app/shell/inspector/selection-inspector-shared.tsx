@@ -1,7 +1,7 @@
 import type {
   SlotLinkDefinition,
 } from "@/domain/document/world-document";
-import type { AppLocale } from "@/shared/i18n/messages";
+import type { AppLocale } from "@/domain/app";
 import type {
   SelectionInspectorContext,
   SelectionInspectorState,

@@ -16,7 +16,7 @@ import { WorkbenchApp } from "@/app/shell/workbench-app";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
-import { createDummyWorldDocument } from "@/editor/dummy-document";
+import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
 import {

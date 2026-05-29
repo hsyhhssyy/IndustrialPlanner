@@ -13,7 +13,7 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
-import { createDummyWorldDocument } from "@/editor/dummy-document";
+import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createRegistryContract } from "@/registry";
 
 function createWorkspace(): WorkspaceContract {

@@ -126,6 +126,7 @@ export interface CompiledSimulationRecipeChannel {
   readonly id: string;
   readonly ingredientNodeIds: readonly string[];
   readonly productNodeIds: readonly string[];
+  readonly manualRecipeOnly: boolean;
 }
 
 export interface CompiledSimulationNode {

@@ -1,4 +1,4 @@
-export type AppLocale = "zh-CN" | "en-US";
+import type { AppLocale } from "@/domain/app/types/app-types";
 
 export type MessageKey =
   | "app.title"

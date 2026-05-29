@@ -23,16 +23,6 @@ export interface AppSettings {
   readonly debugMode: boolean;
 }
 
-export interface DialogState {
-  readonly visible: boolean;
-  readonly maximized: boolean;
-  readonly offsetX: number;
-  readonly offsetY: number;
-  readonly width: number | null;
-  readonly height: number | null;
-  readonly activeTab: string | null;
-}
-
 // ToolboxWiki* / ModuleBalancing* / ToolboxState 类型已搬迁至 src/app/toolbox-types.ts
 // AI-CORRECTION 2026-05-28: 搬迁原因 — 这些是 App UI 层类型，不应在 domain 层定义；
 //   同时消除 domain/app → domain/registry 跨子模块引用违规。
@@ -45,7 +35,6 @@ export interface WorkbenchState {
   readonly leftDockWidth: number;
   readonly topBarCollapsed: boolean;
   readonly rightDockActiveTab: RightDockTabId;
-  readonly dialogState: Readonly<Record<string, DialogState | undefined>>;
 }
 
 export type ActiveTool =

@@ -61,7 +61,7 @@ vi.mock("pixi.js", () => {
   }
 })
 
-import { createDummyWorldDocument } from "@/editor/dummy-document"
+import { createDummyWorldDocument } from "@/tests/helpers/dummy-document"
 import { AYU_LIGHT_THEME } from "@/app/theme"
 import { createRegistryContract } from "@/registry"
 import {

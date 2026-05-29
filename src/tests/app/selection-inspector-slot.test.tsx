@@ -9,7 +9,7 @@ import { SelectionInspectorSlot } from "@/app/shell/inspector/selection-inspecto
 import type { SimulationRunState } from "@/domain/simulation/types/simulation-types";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
-import { createDummyWorldDocument } from "@/editor/dummy-document";
+import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import type { WorldDocument } from "@/domain/document/world-document";
 import { createEditorHost, type EditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
@@ -90,6 +90,7 @@ function attachSimulationStub(
       getDocumentRuntimeStatus: () => ({
         tickNumber: null,
         totalPowerDemand: null,
+        currentPowerGeneration: null,
       }),
       getDeviceRuntimeStatus,
       getPipeFluidItemId: () => null,

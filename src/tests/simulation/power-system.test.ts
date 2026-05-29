@@ -277,6 +277,7 @@ describe("REQ-089: power generation mode caching bug", () => {
             id: "main",
             ingredientNodeIds: ["node:input"],
             productNodeIds: ["node:output"],
+            manualRecipeOnly: false,
           }],
           portIds: [],
           routing: {},

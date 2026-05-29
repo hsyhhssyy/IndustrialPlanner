@@ -1192,6 +1192,7 @@ function compileRecipeChannels(
     productNodeIds: [...new Set(ch.productStorageGroupIds.flatMap(
       (gid: string) => bindings.get(gid)?.productNodeIds ?? [],
     ))],
+    manualRecipeOnly: ch.manualRecipeOnly ?? false,
   }));
 }
 

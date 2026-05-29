@@ -34,7 +34,7 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { listBlueprintDirectory } from "@/shared/storage";
-import { createDummyWorldDocument } from "@/editor/dummy-document";
+import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 
@@ -971,6 +971,7 @@ describe("WorkbenchApp", () => {
         getDocumentRuntimeStatus: () => ({
           tickNumber: 3,
           totalPowerDemand: null,
+          currentPowerGeneration: null,
         }),
         getDeviceRuntimeStatus: () => null,
         getPipeFluidItemId: () => null,

@@ -1,7 +1,7 @@
 import type { AppHost } from "@/app/host/app-host";
 import { requestDocumentFullscreen } from "@/app/shell/layout/fullscreen-toggle-button";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
-import type { AppLocale } from "@/shared/i18n/messages";
+import type { AppLocale } from "@/domain/app";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 

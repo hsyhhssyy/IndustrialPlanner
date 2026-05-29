@@ -1,5 +1,5 @@
 import { DEFAULT_LOCALE } from "@/shared/i18n/messages";
-import type { AppLocale } from "@/shared/i18n/messages";
+import type { AppLocale } from "@/domain/app";
 
 const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, string>> = {
   "zh-CN": {

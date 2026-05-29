@@ -394,8 +394,9 @@ function createRecipeChannel(
   id: string,
   ingredientStorageGroupIds: string[],
   productStorageGroupIds: string[],
+  manualRecipeOnly?: boolean,
 ): RecipeChannelDefinition {
-  return { id, ingredientStorageGroupIds, productStorageGroupIds };
+  return { id, ingredientStorageGroupIds, productStorageGroupIds, manualRecipeOnly };
 }
 
 type DirectionalBufferLayoutInput = {
@@ -793,7 +794,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     recipeChannels: [
-      createRecipeChannel("default", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"]),
+      createRecipeChannel("default", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
     ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "shared_input_buffer"),
@@ -2125,7 +2126,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     recipeChannels: [
-      createRecipeChannel("default", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"]),
+      createRecipeChannel("default", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
     ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "shared_input_buffer"),

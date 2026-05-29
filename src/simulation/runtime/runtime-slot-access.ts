@@ -471,6 +471,11 @@ function resolveRecipes(options: {
     }];
   }
 
+  // 手选配方设备：不自动根据原料匹配配方，必须由用户手动指定配方后设备才运行
+  if (options.channel.manualRecipeOnly) {
+    return [];
+  }
+
   // AI-CORRECTION 2026-05-13:
   // General logistics devices (splitter, converger, admission — anchor transportClass)
   // also use reserved-item transport recipes, matching §6.1.2–§6.1.5 of 仿真运行原理.

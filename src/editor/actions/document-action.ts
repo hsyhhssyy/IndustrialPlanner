@@ -1,5 +1,5 @@
 import { createWorldDocument } from "@/domain/document/world-document";
-import type { WorldDocument, WorldDocumentSettings } from "@/domain/document/world-document";
+import type { WorldDocument } from "@/domain/document/world-document";
 import type { EditorAction } from "@/domain/editor/editor-action";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { RegistryQuery } from "@/domain/registry/registry-query";

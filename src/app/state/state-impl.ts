@@ -36,7 +36,7 @@ import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
 import type { GridPoint } from "@/domain/shared/grid";
 import type { LogisticsKind, LogisticsRouteOrder } from "@/domain/shared/logistics";
 import type { UiGroup } from "@/domain/registry/types/entity-definition";
-import type { AppLocale } from "@/shared/i18n/messages";
+import type { AppLocale } from "@/domain/app";
 import type { BlueprintLibraryRecord } from "@/shared/blueprints/blueprint-library";
 import {
   isMobileOrTabletScreenProfile,

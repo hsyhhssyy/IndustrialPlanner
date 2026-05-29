@@ -215,3 +215,11 @@ AI 在分析代码时必须区分：
 - `git diff`
 - `git log`
 - `git show`
+
+## vitest执行方式
+
+由于本项目测试执行时间极长，因此各项测试的执行方式较为特别。
+
+你不能直接执行 tsc -b 或者 npm run test
+
+请阅读 `.github/prompts/check.prompt.md` 了解如何执行各项测试
