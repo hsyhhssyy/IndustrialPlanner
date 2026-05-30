@@ -50,6 +50,10 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           }
 
           if (shortcut === "copy") {
+            if (context.appHost.internalState.activeTool !== "marquee") {
+              return { status: "ignored" };
+            }
+
             const record = createTempBlueprintRecord(context);
             if (record === null) {
               return { status: "ignored" };

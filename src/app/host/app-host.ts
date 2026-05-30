@@ -135,6 +135,7 @@ export function createAppHost(
     setLocale: actionImpl.setLocale,
     getKeyboardShortcutFor: actionImpl.getKeyboardShortcutFor,
     isShortcutFor: actionImpl.isShortcutFor,
+    matchesAnyShortcut: actionImpl.matchesAnyShortcut,
     setShortcutFor: actionImpl.setShortcutFor,
   };
   const actions: AppContract["actions"] = {

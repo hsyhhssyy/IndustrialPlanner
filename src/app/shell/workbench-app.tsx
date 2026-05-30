@@ -493,6 +493,17 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
 
       if (appHost.gestureAdapter.handleKeyDown(event) && event.cancelable) {
         event.preventDefault();
+        return;
+      }
+
+      // 即使 gesture module 未消费，只要匹配任意已配置快捷键就拦截浏览器默认行为
+      // （例如 Ctrl+S 在非多选状态下仍应阻止浏览器保存网页对话框）
+      if (event.cancelable && appHost.internalActions.matchesAnyShortcut?.(
+        event.code,
+        event.key,
+        { ctrl: event.ctrlKey, shift: event.shiftKey, alt: event.altKey, meta: event.metaKey },
+      )) {
+        event.preventDefault();
       }
     };
 

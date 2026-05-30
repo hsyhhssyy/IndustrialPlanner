@@ -166,6 +166,23 @@ export class KeyboardShortcutManager {
     });
   }
 
+  /**
+   * 判断当前按键组合是否匹配任意已配置快捷键。
+   * 用于 DOM 层拦截浏览器默认行为（如 Ctrl+S 保存网页）。
+   */
+  public matchesAnyShortcut(
+    code: string | null,
+    eventKey: string | null = null,
+    modifiers: ShortcutEventModifiers = {},
+  ): boolean {
+    for (const key of Object.values(SHORTCUT_KEY)) {
+      if (this.isShortcutFor(key, code, eventKey, modifiers)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** 释放资源 */
   public dispose(): void {
     this.disposeReaction?.();

@@ -89,6 +89,11 @@ export interface AppInternalAction {
     eventKey?: string | null,
     modifiers?: ShortcutEventModifiers,
   ) => boolean;
+  matchesAnyShortcut: (
+    code: string | null,
+    eventKey?: string | null,
+    modifiers?: ShortcutEventModifiers,
+  ) => boolean;
   setShortcutFor: (key: string, value: string) => void;
 }
 
@@ -609,6 +614,14 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     modifiers,
   ) => {
     return this.shortcutManager.isShortcutFor(key, code, eventKey, modifiers);
+  };
+
+  public readonly matchesAnyShortcut: AppInternalAction["matchesAnyShortcut"] = (
+    code,
+    eventKey,
+    modifiers,
+  ) => {
+    return this.shortcutManager.matchesAnyShortcut(code, eventKey, modifiers);
   };
 
   public readonly setShortcutFor: AppInternalAction["setShortcutFor"] = (key, value) => {
