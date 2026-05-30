@@ -73,6 +73,16 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
               return switchMovePreviewVariant(context.appHost, editor);
             }
 
+            if (isDeleteDeviceShortcut({
+              appHost: context.appHost,
+              code: event.code,
+              key: event.key,
+              modifiers: event.modifiers,
+            })) {
+              deleteMoveOperation(context.appHost, editor);
+              return { status: "handled" };
+            }
+
             if (!isRotateMoveShortcut({
               appHost: context.appHost,
               code: event.code,
@@ -850,6 +860,25 @@ function cancelMoveOperation(
   }
 }
 
+/**
+ * 在移动模式下按 F 键删除当前设备。
+ * 先取消移动草稿，再删除 selection 中的实体，最后清理 UI 并恢复工具状态。
+ */
+function deleteMoveOperation(
+  appHost: AppHost,
+  editor: EditorContract,
+): void {
+  const shouldReturnToMarquee = appHost.internalState.runtime.moveEnterFrom === "marquee";
+
+  try {
+    editor.actions.cancelMoveOperationDraft();
+    editor.actions.deleteCollection(EntityCollectionType.selection);
+  } finally {
+    clearMoveUi(appHost);
+    appHost.internalActions.setActiveTool(shouldReturnToMarquee ? "marquee" : "select");
+  }
+}
+
 export function cleanupMoveOperationDraft(appHost: AppHost): void {
   const editor = appHost.workspace.editor;
   if (editor !== null) {
@@ -979,6 +1008,27 @@ function isRotateMoveShortcut(options: {
 
   return options.appHost.internalActions.isShortcutFor(
     SHORTCUT_KEY.ROTATE,
+    options.code,
+    options.key,
+  );
+}
+
+function isDeleteDeviceShortcut(options: {
+  appHost: AppHost;
+  code: string | null;
+  key: string | null;
+  modifiers: {
+    alt: boolean;
+    ctrl: boolean;
+    meta: boolean;
+  };
+}): boolean {
+  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
+    return false;
+  }
+
+  return options.appHost.internalActions.isShortcutFor(
+    SHORTCUT_KEY.DELETE_DEVICE,
     options.code,
     options.key,
   );
