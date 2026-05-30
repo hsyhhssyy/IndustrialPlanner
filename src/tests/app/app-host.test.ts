@@ -1653,6 +1653,8 @@ describe("createAppHost", () => {
       entityId: "dummy-entity-2",
     });
 
+    appHost.internalActions.setActiveTool("marquee");
+
     const consumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "KeyC",
       key: "c",
@@ -1685,6 +1687,9 @@ describe("createAppHost", () => {
       collectionType: EntityCollectionType.selection,
       entityId: "dummy-entity-2",
     });
+
+    appHost.internalActions.setActiveTool("marquee");
+
     appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "KeyC",
       key: "c",
@@ -1804,6 +1809,9 @@ describe("createAppHost", () => {
       collectionType: EntityCollectionType.selection,
       entityId: "dummy-entity-2",
     });
+
+    appHost.internalActions.setActiveTool("marquee");
+
     appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "KeyC",
       key: "c",
@@ -1816,6 +1824,8 @@ describe("createAppHost", () => {
       collectionType: EntityCollectionType.selection,
       entityId: "dummy-entity-3",
     });
+
+    appHost.internalActions.setActiveTool("marquee");
 
     const consumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "KeyC",
@@ -1982,6 +1992,9 @@ describe("createAppHost", () => {
       collectionType: EntityCollectionType.selection,
       entityId: "dummy-entity-2",
     });
+
+    appHost.internalActions.setActiveTool("marquee");
+
     appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "KeyC",
       key: "c",

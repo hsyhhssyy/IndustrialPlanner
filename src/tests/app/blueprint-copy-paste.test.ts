@@ -339,6 +339,8 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
       entityId: "storager-1",
     });
 
+    appHost.internalActions.setActiveTool("marquee");
+
     const consumed = appHost.gestureAdapter.handleKeyDown(
       keyEvent({ code: "KeyC", key: "c", keyCode: 67, ctrlKey: true }),
     );
@@ -379,6 +381,8 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
       entityId: "storager-1",
     });
 
+    appHost.internalActions.setActiveTool("marquee");
+
     // Ctrl+C
     appHost.gestureAdapter.handleKeyDown(
       keyEvent({ code: "KeyC", key: "c", keyCode: 67, ctrlKey: true }),
@@ -418,6 +422,8 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
       collectionType: EntityCollectionType.selection,
       entityId: "storager-1",
     });
+
+    appHost.internalActions.setActiveTool("marquee");
 
     // Ctrl+C
     appHost.gestureAdapter.handleKeyDown(
@@ -485,6 +491,8 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
       entityId: "unloader-1",
     });
 
+    appHost.internalActions.setActiveTool("marquee");
+
     // Ctrl+C
     appHost.gestureAdapter.handleKeyDown(
       keyEvent({ code: "KeyC", key: "c", keyCode: 67, ctrlKey: true }),
@@ -527,6 +535,8 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
     const initialCount = Object.keys(originalDoc.entities).length;
 
     for (let cycle = 0; cycle < 3; cycle++) {
+      appHost.internalActions.setActiveTool("marquee");
+
       // Ctrl+C
       const copyConsumed = appHost.gestureAdapter.handleKeyDown(
         keyEvent({ code: "KeyC", key: "c", keyCode: 67, ctrlKey: true }),
@@ -540,6 +550,13 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
 
       const doc = editorHost.internalDocument.getSnapshot();
       expect(Object.keys(doc.entities)).toHaveLength(initialCount + cycle + 1);
+
+      // enterBlueprintPlacement 内部 setActiveTool("select") 触发
+      // cleanupMarquee 清空了 selection，需要在下一轮 Ctrl+C 前补回。
+      editorHost.actions.addToCollection({
+        collectionType: EntityCollectionType.selection,
+        entityId: "storager-1",
+      });
     }
   });
 
@@ -576,6 +593,8 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
       collectionType: EntityCollectionType.selection,
       entityId: "unloader-1",
     });
+
+    appHost.internalActions.setActiveTool("marquee");
 
     // Ctrl+C
     appHost.gestureAdapter.handleKeyDown(
@@ -642,6 +661,8 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
       entityId: "storager-1",
     });
 
+    appHost.internalActions.setActiveTool("marquee");
+
     appHost.gestureAdapter.handleKeyDown(
       keyEvent({ code: "KeyC", key: "c", keyCode: 67, ctrlKey: true }),
     );
@@ -679,6 +700,14 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
 
     // 连续 3 次 Ctrl+C，每次退出后重新 copy
     for (let i = 0; i < 3; i++) {
+      // cleanupMarquee 会清空 selection，每轮重新添加
+      editorHost.actions.addToCollection({
+        collectionType: EntityCollectionType.selection,
+        entityId: "belt-1",
+      });
+
+      appHost.internalActions.setActiveTool("marquee");
+
       const consumed = appHost.gestureAdapter.handleKeyDown(
         keyEvent({ code: "KeyC", key: "c", keyCode: 67, ctrlKey: true }),
       );
@@ -1329,6 +1358,8 @@ describe("ID rewriting in blueprint placement", () => {
       entityId: "unloader-1",
     });
 
+    appHost.internalActions.setActiveTool("marquee");
+
     // Ctrl+C
     appHost.gestureAdapter.handleKeyDown(
       keyEvent({ code: "KeyC", key: "c", keyCode: 67, ctrlKey: true }),
@@ -1389,6 +1420,8 @@ describe("ID rewriting in blueprint placement", () => {
       collectionType: EntityCollectionType.selection,
       entityId: "storager-A",
     });
+
+    appHost.internalActions.setActiveTool("marquee");
 
     // Ctrl+C
     appHost.gestureAdapter.handleKeyDown(
