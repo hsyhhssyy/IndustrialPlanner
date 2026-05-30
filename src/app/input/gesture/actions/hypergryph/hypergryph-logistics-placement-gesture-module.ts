@@ -297,8 +297,8 @@ function enterLogisticsPlacementMode(options: {
   );
   options.appHost.internalActions.showCanvasTopLeftCornerToolbar(
     options.kind === "belt"
-      ? ["canvas-top-left-corner-toolbar-button-toggle-pipe"]
-      : ["canvas-top-left-corner-toolbar-button-toggle-belt"],
+      ? ["canvas-top-left-corner-toolbar-button-toggle-pipe-off"]
+      : ["canvas-top-left-corner-toolbar-button-toggle-belt-off"],
   );
   options.appHost.internalActions.setActiveTool("logistics-placement");
   options.editor.actions.clearCollection(EntityCollectionType.selection);
