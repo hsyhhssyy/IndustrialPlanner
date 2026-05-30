@@ -1213,10 +1213,12 @@ export class GestureAdapter {
           initialPosition,
         };
       } else {
-        const initialPos = this.pendingMergedMove.initialPosition;
-        const nextPos = this.getEventPosition(event);
-        const newDelta: GestureDelta =
-          nextPos ? getDelta(initialPos, nextPos) : { x: 0, y: 0 };
+        const prevDelta = (this.pendingMergedMove.event as { delta?: GestureDelta }).delta ?? { x: 0, y: 0 };
+        const nextDelta = (event as { delta?: GestureDelta }).delta ?? { x: 0, y: 0 };
+        const newDelta: GestureDelta = {
+          x: prevDelta.x + nextDelta.x,
+          y: prevDelta.y + nextDelta.y,
+        };
         this.pendingMergedMove.event = { ...event, delta: newDelta } as GestureEvent;
         this.pendingMergedMove.mergedCount += 1;
       }
