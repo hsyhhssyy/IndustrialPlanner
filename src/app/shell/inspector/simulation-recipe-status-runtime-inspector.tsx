@@ -227,6 +227,15 @@ function ManualRecipeSection({
     }
   };
 
+  const handleRemoveRecipe = (channelId: string) => {
+    if (!appHost || !entity) return;
+    const editor = appHost.workspace.editor;
+    if (!editor) return;
+    const next = { ...storedRecipes };
+    delete next[channelId];
+    editor.actions.patchEntityConfig(entity.id, { channelRecipes: next });
+  };
+
   return (
     <div className={cm(styles, "recipe-manual-section")}>
       {filledChannels.map((ch) => {
@@ -242,6 +251,14 @@ function ManualRecipeSection({
               t={t}
             />
             {pct !== null && <ProgressBar percent={pct} />}
+            <button
+              className={cm(styles, "recipe-remove-button")}
+              onClick={() => handleRemoveRecipe(ch.id)}
+              type="button"
+              title={t("productionPlanning.remove")}
+            >
+              ×
+            </button>
           </div>
         );
       })}

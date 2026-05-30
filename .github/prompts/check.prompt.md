@@ -30,7 +30,7 @@ bash scripts/check/full-check.sh tsc    "$RUN_DIR"
 
 # 3. 长时间步骤：后台启动 + poll 轮询
 bash scripts/check/full-check.sh test "$RUN_DIR" &
-# 反复调用 poll 直到显示"已完成"，每次间隔 60 秒
+# 反复调用 poll 直到显示"已完成"，每次间隔 60 秒 注意,你最多只能间隔60秒，不可使用更长的等待时间
 sleep 60 && bash scripts/check/full-check.sh poll test "$RUN_DIR"
 
 # 4. 快速步骤
@@ -38,6 +38,7 @@ bash scripts/check/full-check.sh build "$RUN_DIR"
 
 # 5. 长时间步骤：后台启动 + poll 轮询
 bash scripts/check/full-check.sh blueprint "$RUN_DIR" &
+# 注意,你最多只能间隔60秒，不可使用更长的等待时间
 sleep 60 && bash scripts/check/full-check.sh poll blueprint "$RUN_DIR"
 
 # 6. 汇总

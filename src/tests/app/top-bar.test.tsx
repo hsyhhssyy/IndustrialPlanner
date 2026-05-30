@@ -82,6 +82,7 @@ function attachSimulationStub(
         tickNumber: state.runningState === "stop" ? null : 0,
         totalPowerDemand: null,
         currentPowerGeneration: null,
+        isPowerOutage: false,
       }),
       getDeviceRuntimeStatus: () => null,
       getPipeFluidItemId: () => null,

@@ -972,6 +972,7 @@ describe("WorkbenchApp", () => {
           tickNumber: 3,
           totalPowerDemand: null,
           currentPowerGeneration: null,
+          isPowerOutage: false,
         }),
         getDeviceRuntimeStatus: () => null,
         getPipeFluidItemId: () => null,

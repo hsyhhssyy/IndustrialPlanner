@@ -75,7 +75,7 @@ function collectRecipeProblems(
     ) {
       problems.push({
         message: "产物堵塞",
-        severity: "warning",
+        severity: "error",
       });
     }
   }
