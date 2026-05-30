@@ -888,11 +888,14 @@ function compilePorts(options: {
           options.deviceId,
           `port:${portGroup.id}.${port.id}.${direction}`,
         ].join("/");
-        const acceptRule = intersectAcceptRules(
-          acceptRuleFromPortKind(portGroup.kind),
-          readPortAcceptRule(port),
-          options.itemCatalog,
-        ) ?? acceptRuleFromPortKind(portGroup.kind);
+        const portAcceptRule = readPortAcceptRule(port);
+        const acceptRule = portAcceptRule.base.kind === "none"
+          ? portAcceptRule
+          : (intersectAcceptRules(
+              acceptRuleFromPortKind(portGroup.kind),
+              portAcceptRule,
+              options.itemCatalog,
+            ) ?? acceptRuleFromPortKind(portGroup.kind));
 
         options.ports.push({
           id: portId,
@@ -1425,6 +1428,8 @@ function resolveAcceptRuleCandidateDomains(
         domains: [itemCatalog[rule.base.itemId]?.domain ?? "solid"],
         itemId: rule.base.itemId,
       };
+    case "none":
+      return { domains: [], itemId: null };
   }
 }
 

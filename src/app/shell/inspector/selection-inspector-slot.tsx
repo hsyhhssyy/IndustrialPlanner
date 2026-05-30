@@ -23,6 +23,7 @@ import { SlotConfigInspector } from "./slot-config-inspector";
 import { WarehouseItemLinkInspector } from "./warehouse-item-link-inspector";
 import { SubmitToWarehouseInspector } from "./submit-to-warehouse-inspector";
 import { ProblemInspector } from "./problem-inspector";
+import { PortOutputConfigInspector } from "./port-output-config-inspector";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -57,6 +58,7 @@ const INSPECTOR_LABELS: Partial<Record<EntityInspectorType, string>> = {
   [INSPECTOR_TYPE.structure]: "结构配置",
   [INSPECTOR_TYPE.behaviorToggle]: "行为开关",
   [INSPECTOR_TYPE.warehouseItemLink]: "仓库物品链接",
+  [INSPECTOR_TYPE.portOutputConfig]: "输出端口配置",
 };
 
 function EmptyInspector({
@@ -164,6 +166,16 @@ function renderInspector(options: {
           entity={options.entity}
           definition={options.definition}
           runtimeStatus={options.runtimeStatus}
+        />
+      );
+    case INSPECTOR_TYPE.portOutputConfig:
+      return (
+        <PortOutputConfigInspector
+          appHost={options.appHost}
+          declaration={options.declaration}
+          entity={options.entity}
+          definition={options.definition}
+          translate={options.translate}
         />
       );
     default:
@@ -411,6 +423,8 @@ function resolveInspectorDiscriminator(
       return declaration.portRef;
     case INSPECTOR_TYPE.linkConfig:
       return String(declaration.cacheLinkIndex);
+    case INSPECTOR_TYPE.portOutputConfig:
+      return declaration.portGroupIds.join(",");
     default:
       return String(fallbackIndex);
   }

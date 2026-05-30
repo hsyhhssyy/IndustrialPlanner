@@ -341,7 +341,6 @@ function handleTouchTap(options: {
     phase: "drawing",
     result,
   });
-  showTouchToolbar(options.appHost);
 
   // 2026-05-23: 设备源创建 draft 后立即生成首个 freehand cell，
   // 保证 logisticsHead collection 非空，后续拖拽可正常继续。
@@ -352,6 +351,11 @@ function handleTouchTap(options: {
     editor: options.editor,
     gridPoint: endpoint.outsideGridPoint,
   });
+
+  // 2026-05-30: showTouchToolbar 必须在 moveTouchLogisticsEnd 填充 logisticsHead 之后调用，
+  // 否则 alignCanvasFloatingToolbar 因 collection 为空而失败，导致工具条被隐藏。
+  showTouchToolbar(options.appHost);
+
   return { status: "handled" };
 }
 
@@ -412,12 +416,12 @@ function handleTouchDragStart(options: {
       phase: "drawing",
       result,
     });
-    showTouchToolbar(options.appHost);
     moveTouchLogisticsEnd({
       appHost: options.appHost,
       editor: options.editor,
       gridPoint: pointerGridPoint,
     });
+    showTouchToolbar(options.appHost);
     return { status: "claimed" };
   }
 
@@ -437,12 +441,12 @@ function handleTouchDragStart(options: {
       phase: "drawing",
       result,
     });
-    showTouchToolbar(options.appHost);
     moveTouchLogisticsEnd({
       appHost: options.appHost,
       editor: options.editor,
       gridPoint: pointerGridPoint,
     });
+    showTouchToolbar(options.appHost);
     return { status: "claimed" };
   }
 
@@ -462,12 +466,12 @@ function handleTouchDragStart(options: {
       phase: "drawing",
       result,
     });
-    showTouchToolbar(options.appHost);
     moveTouchLogisticsEnd({
       appHost: options.appHost,
       editor: options.editor,
       gridPoint: pointerGridPoint,
     });
+    showTouchToolbar(options.appHost);
     return { status: "claimed" };
   }
 
@@ -485,6 +489,10 @@ function handleTouchDragMove(options: {
   if (kind === null || gridPoint === null) {
     return { status: "ignored" };
   }
+
+  // 2026-05-30: 记录是否在本帧从 waiting-touch-device-exit 转为 drawing，
+  // 确保 showTouchToolbar 在 moveLogisticEnd 填充 logisticsHead 之后才调用。
+  let didExitWaitingForDevice = false;
 
   if (runtime.phase === "waiting-touch-device-exit") {
     if (runtime.sourceEntityId === null || isGridPointInsideEntity(options, runtime.sourceEntityId, gridPoint)) {
@@ -506,7 +514,7 @@ function handleTouchDragMove(options: {
       phase: "drawing",
       result: startResult,
     });
-    showTouchToolbar(options.appHost);
+    didExitWaitingForDevice = true;
   }
 
   const result = options.editor.actions.moveLogisticEnd({
@@ -520,6 +528,11 @@ function handleTouchDragMove(options: {
     result,
   });
   options.appHost.internalActions.alignCanvasFloatingToolbar();
+
+  if (didExitWaitingForDevice) {
+    showTouchToolbar(options.appHost);
+  }
+
   return { status: "handled" };
 }
 

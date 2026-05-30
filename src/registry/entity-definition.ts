@@ -744,7 +744,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_output",
         "item",
         "output",
-        [1, 3].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [1, 3].map((x) => createPort(`out_n_${x}`, x, 0, "N", { acceptRule: { base: { kind: "none" }, exclude: [] } })),
       ),
       createPortGroup(
         "item_input",
@@ -753,10 +753,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
       ),
       createPortGroup(
-        "fluid_output",
+        "fluid_output_a",
         "fluid",
         "output",
-        [1, 3].map((y) => createPort(`out_w_${y}`, 0, y, "W")),
+        [createPort(`out_w_1`, 0, 1, "W", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
+      ),
+      createPortGroup(
+        "fluid_output_b",
+        "fluid",
+        "output",
+        [createPort(`out_w_3`, 0, 3, "W", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
       ),
       createPortGroup(
         "fluid_input",
@@ -782,12 +788,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "shared_input_buffer"),
       createBinding("bind_fluid_input", "fluid_input", "shared_input_buffer"),
       createBinding("bind_item_output", "item_output", "shared_input_buffer"),
-      createBinding("bind_fluid_output", "fluid_output", "shared_input_buffer"),
+      createBinding("bind_fluid_output_a", "fluid_output_a", "shared_input_buffer"),
+      createBinding("bind_fluid_output_b", "fluid_output_b", "shared_input_buffer"),
     ],
     inspectors: [
       {
         type: INSPECTOR_TYPE.recipeStatus,
         channelIds: ["ch1", "ch2", "ch3", "ch4"],
+      },
+      {
+        type: INSPECTOR_TYPE.portOutputConfig,
+        portGroupIds: ["item_output", "fluid_output_a", "fluid_output_b"],
       },
     ],
   }),
@@ -2097,7 +2108,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_output",
         "item",
         "output",
-        [1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N", { acceptRule: { base: { kind: "none" }, exclude: [] } })),
       ),
       createPortGroup(
         "item_input",
@@ -2106,10 +2117,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
       ),
       createPortGroup(
-        "fluid_output",
+        "fluid_output_a",
         "fluid",
         "output",
-        [1, 3].map((y) => createPort(`out_w_${y}`, 0, y, "W")),
+        [createPort(`out_w_1`, 0, 1, "W", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
+      ),
+      createPortGroup(
+        "fluid_output_b",
+        "fluid",
+        "output",
+        [createPort(`out_w_3`, 0, 3, "W", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
       ),
       createPortGroup(
         "fluid_input",
@@ -2139,12 +2156,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "shared_input_buffer"),
       createBinding("bind_fluid_input", "fluid_input", "shared_input_buffer"),
       createBinding("bind_item_output", "item_output", "shared_input_buffer"),
-      createBinding("bind_fluid_output", "fluid_output", "shared_input_buffer"),
+      createBinding("bind_fluid_output_a", "fluid_output_a", "shared_input_buffer"),
+      createBinding("bind_fluid_output_b", "fluid_output_b", "shared_input_buffer"),
     ],
     inspectors: [
       {
         type: INSPECTOR_TYPE.recipeStatus,
         channelIds: ["ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8"],
+      },
+      {
+        type: INSPECTOR_TYPE.portOutputConfig,
+        portGroupIds: ["item_output", "fluid_output_a", "fluid_output_b"],
       },
     ],
   }),

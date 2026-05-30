@@ -232,6 +232,25 @@ export const INSPECTOR_TYPE = {
   behaviorToggle: "behavior-toggle",
 
   /**
+   * ## 输出端口配置面板
+   *
+   * **编辑目标**：portGroups[*].ports[*] 的 acceptRule。
+   *
+   * 绑定方式：`portGroupIds` 直接引用 EntityDefinition.portGroups 的 id。
+   *
+   * 编辑功能：
+   * - **物品选择**：为端口组内所有输出端口选择一个输出物品
+   * - **清除**：删除 config 中的 acceptRule 覆盖，恢复 Definition 默认值
+   *
+   * 写入路径：config["portGroups[${groupIndex}].ports[${portIndex}].acceptRule"]
+   *
+   * 过滤规则：item 型端口组只显示固体物品，fluid 型端口组只显示液体物品。
+   *
+   * 这是反应池（扩容反应池）专用的输出端口面板。
+   */
+  portOutputConfig: "port-output-config",
+
+  /**
    * ## 仓库物品链接面板
    *
    * **编辑目标**：entity.config.links[N]（完整 SlotLinkDefinition 结构）+ slot ignoreStock。
@@ -336,6 +355,17 @@ export interface RecipeStatusInspectorDeclaration {
   readonly channelIds: readonly string[];
 }
 
+/** portOutputConfig 声明：为指定端口组配置输出物品 */
+export interface PortOutputConfigInspectorDeclaration {
+  readonly type: typeof INSPECTOR_TYPE.portOutputConfig;
+  /**
+   * 要进行输出配置的端口组 ID 列表。
+   * 每个 ID 对应 EntityDefinition.portGroups 中的一项。
+   * 组内所有 direction="output" 的端口共享一个物品筛选器。
+   */
+  readonly portGroupIds: readonly string[];
+}
+
 /**
  * EntityInspectorDeclaration — 可辨识联合。
  *
@@ -372,5 +402,6 @@ export type EntityInspectorDeclaration =
   | { readonly type: typeof INSPECTOR_TYPE.storageTypeFilter }
   | { readonly type: typeof INSPECTOR_TYPE.submitToWarehouse }
   | RecipeStatusInspectorDeclaration
+  | PortOutputConfigInspectorDeclaration
   | { readonly type: typeof INSPECTOR_TYPE.structure }
   | { readonly type: typeof INSPECTOR_TYPE.behaviorToggle };

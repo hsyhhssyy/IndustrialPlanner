@@ -2538,6 +2538,108 @@ describe("createAppHost", () => {
     expect(logisticsDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 0, y: 2 });
   });
 
+  it("shows the floating toolbar when touch-tapping a device output port to start logistics", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+
+    // 放置一个带输出端口的设备 (3x3 storager, 北边输出端口在 x=6,7,8, y=6)
+    editorHost.actions.createSinglePlacementDraft("item_port_storager_1", { x: 6, y: 6 });
+    editorHost.actions.applyPlacementDraft();
+
+    // 进入传送带物流模式（touch 按钮）
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "placement-action-belt-draw",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+
+    // 触摸点击设备输出端口 (7, 6)，即设备北边中间端口
+    const outputPortPoint = resolveClientPixelPointForGridCell(editorHost, { x: 7, y: 6 });
+    appHost.gestureAdapter.handlePointerDown(touchEvent(61, outputPortPoint.x, outputPortPoint.y));
+    appHost.gestureAdapter.handlePointerUp(touchEvent(61, outputPortPoint.x, outputPortPoint.y));
+
+    // 验证浮动工具条已显示
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection).toBe(
+      EntityCollectionType.logisticsHead,
+    );
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.buttonIds).toEqual([
+      "canvas-floating-toolbar-button-cancel",
+      "canvas-floating-toolbar-button-ok",
+    ]);
+
+    // 验证 draft 已创建，且从设备端口源起笔
+    const logisticsDraft = editorHost.queries.resolveLogisticsDraftState();
+    expect(logisticsDraft).toMatchObject({
+      source: {
+        type: "device-port",
+      },
+    });
+    // logisticsHead collection 非空（moveTouchLogisticsEnd 已填充首个 cell）
+    expect(editorHost.state.collections[EntityCollectionType.logisticsHead].length).toBeGreaterThan(0);
+  });
+
+  it("shows the floating toolbar when touch-dragging from a device output port to start logistics", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+
+    // 放置一个带输出端口的设备 (3x3 storager, 北边输出端口在 x=6,7,8, y=6)
+    editorHost.actions.createSinglePlacementDraft("item_port_storager_1", { x: 6, y: 6 });
+    editorHost.actions.applyPlacementDraft();
+
+    // 进入传送带物流模式（touch 按钮）
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "placement-action-belt-draw",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+
+    // 从设备输出端口 (7, 6) 触摸按下并拖拽到外部空单元格 (7, 4)
+    const outputPortPoint = resolveClientPixelPointForGridCell(editorHost, { x: 7, y: 6 });
+    const outsidePoint = resolveClientPixelPointForGridCell(editorHost, { x: 7, y: 4 });
+    appHost.gestureAdapter.handlePointerDown(touchEvent(62, outputPortPoint.x, outputPortPoint.y));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(62, outsidePoint.x, outsidePoint.y));
+
+    // 验证浮动工具条已显示
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection).toBe(
+      EntityCollectionType.logisticsHead,
+    );
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.buttonIds).toEqual([
+      "canvas-floating-toolbar-button-cancel",
+      "canvas-floating-toolbar-button-ok",
+    ]);
+
+    // 验证 draft 已创建，从设备端口源起笔
+    const logisticsDraft = editorHost.queries.resolveLogisticsDraftState();
+    expect(logisticsDraft).toMatchObject({
+      source: {
+        type: "device-port",
+      },
+    });
+    expect(logisticsDraft?.cells.length).toBeGreaterThan(0);
+  });
+
   it("lets touch drags away from an unfinished logistics head fall through to viewport pan", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

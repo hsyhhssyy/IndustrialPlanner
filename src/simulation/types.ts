@@ -40,7 +40,8 @@ export interface SimulationAcceptRule {
     | { readonly kind: "any" }
     | { readonly kind: "solid" }
     | { readonly kind: "liquid" }
-    | { readonly kind: "item"; readonly itemId: string };
+    | { readonly kind: "item"; readonly itemId: string }
+    | { readonly kind: "none" };
   readonly exclude: readonly string[];
 }
 
