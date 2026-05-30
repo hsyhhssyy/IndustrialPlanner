@@ -469,9 +469,22 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   }, [appHost, hasVisibleDialogShell]);
 
   useEffect(() => {
+
     const handleWindowKeyDown = (event: KeyboardEvent) => {
+
+      // inspector dialog 特判：允许 M/Del 绑定的快捷键穿透
+      const inspectorDialogState = appHost.internalState.workbench.dialogState.inspector;
+      const isInspectorDialogVisible = inspectorDialogState?.visible === true;
+      const isMoveKey = appHost.internalActions.isShortcutFor?.("shortcut-move-selection", event.code, event.key) || false;
+      const isDeleteKey = appHost.internalActions.isShortcutFor?.("shortcut-delete-device", event.code, event.key) || false;
+
       if (hasVisibleDialogShell) {
-        return;
+        // inspector dialog 且是主操作快捷键，允许穿透
+        if (isInspectorDialogVisible && (isMoveKey || isDeleteKey)) {
+          // 允许事件继续
+        } else {
+          return;
+        }
       }
 
       if (isEditableKeyboardTarget(event)) {

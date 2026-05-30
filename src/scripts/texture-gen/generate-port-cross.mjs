@@ -6,81 +6,118 @@ import sharp from 'sharp';
 const TILE_SIZE = 64;
 
 // =============================================================================
-// PC 版 — 两杆中心均为 (32,54)，长度一致（y:49-59），线宽 ≈ 2px
+// PC 版 — 两线中点 (32, 54)，正方形等宽红色叉号
 // =============================================================================
-const CROSS_PC_POLYGONS = [
-  // NW-SE 斜杠
-  [
-    [23, 49],
-    [39, 59],
-    [41, 58],
-    [25, 50],
-  ],
-  // NE-SW 斜杠
-  [
-    [39, 49],
-    [23, 59],
-    [25, 58],
-    [41, 50],
-  ],
+const CROSS_PC_LINES = [
+  // NW-SE
+  { x1: 26, y1: 48, x2: 38, y2: 60 },
+  // NE-SW
+  { x1: 38, y1: 48, x2: 26, y2: 60 },
 ];
 
 // =============================================================================
-// Mobile 版 — 两杆中心均为 (32,32)，长度一致
+// Mobile 版 — 两线中点 (32, 32)，正方形等宽红色叉号
 // =============================================================================
-const CROSS_MOBILE_POLYGONS = [
-  // NW-SE 斜杠
-  [
-    [17, 19],
-    [45, 47],
-    [47, 45],
-    [19, 17],
-  ],
-  // NE-SW 斜杠
-  [
-    [47, 19],
-    [19, 47],
-    [17, 45],
-    [45, 17],
-  ],
+const CROSS_MOBILE_LINES = [
+  // NW-SE
+  { x1: 17, y1: 17, x2: 47, y2: 47 },
+  // NE-SW
+  { x1: 47, y1: 17, x2: 17, y2: 47 },
 ];
 
+const STROKE_WIDTH = 2;
+const STROKE_COLOR = { r: 255, g: 0, b: 0 };
+
 // =============================================================================
-// 内联渲染工具
+// Bresenham 直线光栅化 — 保证纯色像素、无抗锯齿
 // =============================================================================
-function formatPoint([x, y]) {
-  return `${x},${y}`;
+function drawLine(buffer, w, h, x0, y0, x1, y1, r, g, b) {
+  const dx = Math.abs(x1 - x0);
+  const dy = -Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+  let err = dx + dy;
+
+  while (true) {
+    if (x0 >= 0 && x0 < w && y0 >= 0 && y0 < h) {
+      const idx = (y0 * w + x0) * 4;
+      buffer[idx] = r;
+      buffer[idx + 1] = g;
+      buffer[idx + 2] = b;
+      buffer[idx + 3] = 255;
+    }
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) {
+      err += dy;
+      x0 += sx;
+    }
+    if (e2 <= dx) {
+      err += dx;
+      y0 += sy;
+    }
+  }
 }
 
-function createSvgMarkup(polygons) {
-  const polygonMarkup = polygons
-    .map((polygon) => `<polygon points="${polygon.map(formatPoint).join(' ')}" fill="#ffffff" />`)
-    .join('');
+/** 通过偏移复制实现指定线宽的加粗直线 */
+function drawThickLine(buffer, w, h, x0, y0, x1, y1, strokeWidth, r, g, b) {
+  const half = Math.floor(strokeWidth / 2);
+  const isSteep = Math.abs(y1 - y0) > Math.abs(x1 - x0);
 
-  return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${TILE_SIZE}" height="${TILE_SIZE}" viewBox="0 0 ${TILE_SIZE} ${TILE_SIZE}" shape-rendering="crispEdges">`,
-    polygonMarkup,
-    '</svg>',
-  ].join('');
+  if (isSteep) {
+    for (let off = -half; off < strokeWidth - half; off++) {
+      drawLine(buffer, w, h, x0 + off, y0, x1 + off, y1, r, g, b);
+    }
+  } else {
+    for (let off = -half; off < strokeWidth - half; off++) {
+      drawLine(buffer, w, h, x0, y0 + off, x1, y1 + off, r, g, b);
+    }
+  }
 }
 
+function renderCrossToBuffer(lines) {
+  const buffer = Buffer.alloc(TILE_SIZE * TILE_SIZE * 4, 0);
+  for (const l of lines) {
+    drawThickLine(
+      buffer,
+      TILE_SIZE,
+      TILE_SIZE,
+      Math.round(l.x1),
+      Math.round(l.y1),
+      Math.round(l.x2),
+      Math.round(l.y2),
+      STROKE_WIDTH,
+      STROKE_COLOR.r,
+      STROKE_COLOR.g,
+      STROKE_COLOR.b,
+    );
+  }
+  return buffer;
+}
+
+// =============================================================================
+// 工具函数
+// =============================================================================
 function resolveOutputDirectory() {
   const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
   const projectRoot = path.resolve(scriptDirectory, '..', '..', '..');
   return path.resolve(process.argv[2] ?? path.join(projectRoot, 'public', 'textures'));
 }
 
-async function renderTexture(outputFilePath, polygons) {
+async function renderTexture(outputFilePath, lines) {
   await mkdir(path.dirname(outputFilePath), { recursive: true });
-  await sharp(Buffer.from(createSvgMarkup(polygons))).png().toFile(outputFilePath);
+  const raw = renderCrossToBuffer(lines);
+  await sharp(raw, { raw: { width: TILE_SIZE, height: TILE_SIZE, channels: 4 } })
+    .png()
+    .toFile(outputFilePath);
 }
 
 // =============================================================================
 // 主流程
 // =============================================================================
 const TEXTURES = [
-  { fileName: 'port-cross.png', polygons: CROSS_PC_POLYGONS },
-  { fileName: 'port-cross-mobile.png', polygons: CROSS_MOBILE_POLYGONS },
+  { fileName: 'port-cross.png', lines: CROSS_PC_LINES },
+  { fileName: 'port-cross-mobile.png', lines: CROSS_MOBILE_LINES },
 ];
 
 async function main() {
@@ -89,7 +126,7 @@ async function main() {
 
   for (const texture of TEXTURES) {
     const outputFilePath = path.join(outputDirectory, texture.fileName);
-    await renderTexture(outputFilePath, texture.polygons);
+    await renderTexture(outputFilePath, texture.lines);
     outputFilePaths.push(outputFilePath);
   }
 

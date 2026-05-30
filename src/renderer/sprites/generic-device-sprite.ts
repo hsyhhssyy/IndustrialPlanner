@@ -1034,7 +1034,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         sprite.y = spec.y;
         sprite.width = spec.width;
         sprite.height = spec.height;
-        sprite.rotation = 0;
+        sprite.rotation = spec.rotation;
       }
 
       for (let index = portCrossSpecs.length; index < this.portCrossSprites.length; index += 1) {
@@ -1405,6 +1405,7 @@ function resolvePortOverlaySpecs(options: {
     y: number;
     width: number;
     height: number;
+    rotation: number;
   }[];
 } {
   const chevrons: {
@@ -1420,6 +1421,7 @@ function resolvePortOverlaySpecs(options: {
     y: number;
     width: number;
     height: number;
+    rotation: number;
   }[] = [];
 
   const hasDirectionFilter = options.directionFilter !== null
@@ -1463,6 +1465,7 @@ function resolvePortOverlaySpecs(options: {
           y: chevronLayout.y,
           width: chevronLayout.width,
           height: chevronLayout.height,
+          rotation: chevronLayout.rotation,
         });
       }
     }

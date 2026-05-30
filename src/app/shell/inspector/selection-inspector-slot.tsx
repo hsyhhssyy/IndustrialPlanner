@@ -12,7 +12,6 @@ import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
 import {
   buildProductionPlanningIndex,
-  type ProductionPlanningIndex,
 } from "@/app/shell/production-planning/production-planning-model";
 import {
   InspectorDataScopeContext,
@@ -41,8 +40,6 @@ interface InspectorSlotState {
   inspectors: InspectorDescriptor[];
   simulationRuntimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
   showSimulationRuntimeInspector: boolean;
-  recipeChannelIds: readonly string[];
-  productionPlanningIndex: ProductionPlanningIndex | null;
   debugEntityJson: string | null;
 }
 
@@ -273,14 +270,6 @@ export function SelectionInspectorSlot({
         setScopeByEntityId((current) => Object.keys(current).length === 0 ? current : {});
       }
 
-      const recipeChannelIds = showSimulationRuntimeInspector
-        ? collectRecipeStatusChannelIds(inspectorDeclarations)
-        : [];
-
-      const productionPlanningIndex = showSimulationRuntimeInspector
-        ? buildProductionPlanningIndex(appHost.workspace.registry)
-        : null;
-
       setSlotState({
         selectedEntity,
         selectedDefinition,
@@ -289,8 +278,6 @@ export function SelectionInspectorSlot({
           ? simulation?.queries.getDeviceRuntimeStatus(selectedEntity.id) ?? null
           : null,
         showSimulationRuntimeInspector,
-        recipeChannelIds,
-        productionPlanningIndex,
         debugEntityJson: appHost.state.settings.debugMode
           ? JSON.stringify(selectedEntity, null, 2)
           : null,
@@ -355,18 +342,6 @@ export function SelectionInspectorSlot({
             simulationRunning={slotState.showSimulationRuntimeInspector}
             onScopeChange={scopeContext.setScope}
           />
-          {slotState.recipeChannelIds.length > 0 && (
-            <SimulationRecipeStatusRuntimeInspector
-              channelIds={slotState.recipeChannelIds}
-              channels={slotState.selectedDefinition.recipeChannels}
-              runtimeStatus={slotState.simulationRuntimeStatus}
-              index={slotState.productionPlanningIndex!}
-              t={translate}
-              appHost={appHost}
-              entity={slotState.selectedEntity}
-              definition={slotState.selectedDefinition}
-            />
-          )}
           {slotState.inspectors.map((inspector) => (
             <div
               key={inspector.id}
@@ -431,16 +406,27 @@ function resolveInspectorDiscriminator(
   }
 }
 
-function collectRecipeStatusChannelIds(
-  declarations: readonly EntityInspectorDeclaration[],
-): readonly string[] {
-  const ids = new Set<string>();
-  for (const d of declarations) {
-    if (d.type === INSPECTOR_TYPE.recipeStatus) {
-      for (const chId of d.channelIds) {
-        ids.add(chId);
+/*
+  AI-REMOVED 2026-05-30:
+  Reason: 显式 SimulationRecipeStatusRuntimeInspector 渲染块已删除，recipeStatus 统一由 inspector 声明循环渲染。
+  Trigger: 反应池在仿真运行时显示两个配方选择器（显式块 + 声明循环各渲染一次）。
+  Evidence: 显式块仅在 showSimulationRuntimeInspector 时渲染，声明循环始终渲染，导致仿真时 double。
+  Replacement: inspector 声明循环（renderInspector → renderRecipeStatusInspector）已覆盖全部场景。
+  Risk: Low
+  Human Review: Required
+
+  Original code:
+  function collectRecipeStatusChannelIds(
+    declarations: readonly EntityInspectorDeclaration[],
+  ): readonly string[] {
+    const ids = new Set<string>();
+    for (const d of declarations) {
+      if (d.type === INSPECTOR_TYPE.recipeStatus) {
+        for (const chId of d.channelIds) {
+          ids.add(chId);
+        }
       }
     }
+    return [...ids];
   }
-  return [...ids];
-}
+*/

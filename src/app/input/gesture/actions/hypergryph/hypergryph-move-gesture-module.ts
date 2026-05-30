@@ -278,6 +278,18 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             source: "touch",
           });
 
+        case "key down":
+          if (!context.appHost.internalActions.isShortcutFor(
+            SHORTCUT_KEY.MOVE_SELECTION,
+            event.code,
+            event.key,
+            event.modifiers,
+          )) {
+            return { status: "ignored" };
+          }
+
+          return tryEnterMoveModeFromKeyboard(context.appHost, editor);
+
         default:
           return { status: "ignored" };
       }
@@ -383,6 +395,32 @@ function tryEnterMoveModeFromSelection(options: {
     selectedEntityIds: [...selection],
     previousTool,
     source: options.source,
+    anchor: null,
+    requireAnchor: false,
+  });
+}
+
+function tryEnterMoveModeFromKeyboard(
+  appHost: AppHost,
+  editor: EditorContract,
+): GestureHandleResult {
+  const previousTool = appHost.internalState.activeTool;
+
+  if (previousTool !== "select" && previousTool !== "marquee") {
+    return { status: "ignored" };
+  }
+
+  const selection = editor.state.collections[EntityCollectionType.selection];
+  if (selection.length === 0) {
+    return { status: "ignored" };
+  }
+
+  return finalizeMoveEnter({
+    appHost,
+    editor,
+    selectedEntityIds: [...selection],
+    previousTool,
+    source: "mouse",
     anchor: null,
     requireAnchor: false,
   });

@@ -98,5 +98,5 @@ function isMousePanButtonAllowed(activeTool: ActiveTool, originButton: number): 
     return true;
   }
 
-  return activeTool === "select" && originButton === 0;
+  return (activeTool === "select" || activeTool === "logistics-placement") && originButton === 0;
 }

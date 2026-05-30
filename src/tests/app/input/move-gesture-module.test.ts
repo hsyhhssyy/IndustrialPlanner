@@ -157,12 +157,30 @@ describe("createHypergryphMoveGestureModule", () => {
     );
   });
 
-  it("enters move from the select floating button with mouse and reuses the mouse move ui", () => {
+  it("enters move from marquee via M key shortcut when selection is non-empty", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "marquee",
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    const result = module.handle(
+      keyDownEvent({ code: "KeyM", key: "m" }),
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
+    expect(appHost.internalState.activeTool).toBe("move");
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.internalState.runtime.moveEnterFrom).toBe("marquee");
+  });
+
+  it("enters move from select via M key shortcut when selection is non-empty", () => {
     const { context, editor, appHost } = createContext();
     const module = createHypergryphMoveGestureModule();
 
     const result = module.handle(
-      uiButtonMouseTapEvent("canvas-floating-toolbar-button-move"),
+      keyDownEvent({ code: "KeyM", key: "m" }),
       context,
     );
 
@@ -171,13 +189,22 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(appHost.internalState.activeTool).toBe("move");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
     expect(appHost.internalState.runtime.moveEnterFrom).toBe("select");
-    expect(appHost.internalActions.hideCanvasFloatingToolbar).not.toHaveBeenCalled();
+  });
 
-    expect(module.handle(onEnterActiveToolEvent("select", "move"), context)).toEqual({
-      status: "handled",
-    });
-    expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
-    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).not.toHaveBeenCalled();
+  it("ignores M key shortcut when selection is empty", () => {
+    const { context, editor, selection } = createContext();
+    const module = createHypergryphMoveGestureModule();
+
+    // Clear selection
+    selection.replace([]);
+
+    const result = module.handle(
+      keyDownEvent({ code: "KeyM", key: "m" }),
+      context,
+    );
+
+    expect(result).toEqual({ status: "ignored" });
+    expect(editor.actions.createMoveOperationDraft).not.toHaveBeenCalled();
   });
 
   it("snaps mouse-entered move from the preview center cell and keeps tracking by cell centers", () => {
@@ -726,6 +753,7 @@ function createContext(options: {
   const shortcuts: Record<string, string> = {
     [SHORTCUT_KEY.ROTATE]: "R",
     [SHORTCUT_KEY.SWITCH_DEVICE_MODE]: "Tab",
+    [SHORTCUT_KEY.MOVE_SELECTION]: "M",
   };
   const editor: MockEditor = {
     state: {

@@ -14,6 +14,7 @@ agent: "agent"
 * 不得使用 `rm`、`rmdir`、`find -delete`、`find -exec`、`ps`、`kill`、`taskkill`。
 * 不要粘贴完整长日志，只输出关键失败信息和最后日志摘要。
 * 最终报告必须使用中文。
+* 执行时必须按顺序执行要执行的脚本，除非本文档给出的指令中包含`&&`，否则不可以使用`&&`拼接多个指令
 
 ## 执行方式
 
@@ -21,7 +22,7 @@ agent: "agent"
 
 ```bash
 # 0. 初始化
-RUN_DIR=$(bash scripts/check/full-check.sh init)
+RUN_DIR=$(bash scripts/check/full-check.sh init) && echo "$RUN_DIR"
 
 # 1-2. 快速步骤（同步执行）
 bash scripts/check/full-check.sh eslint "$RUN_DIR"
