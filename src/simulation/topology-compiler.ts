@@ -1301,6 +1301,13 @@ function resolveSlotDomain(
   if (slot.itemFilterType === "solid" || slot.itemFilterType === "liquid") {
     return slot.itemFilterType;
   }
+  // AI-CORRECTION 2026-05-30: itemFilterType="any" 必须直接返回 "any"，
+  // 不能 fallthrough 到 storageGroup.kind 分支。
+  // 原逻辑对 "any" 无匹配，落入 kind==="item"→返回 "solid"，
+  // 导致反应池共享输入缓存（kind="item", filterType="any"）拒绝液体。
+  if (slot.itemFilterType === "any") {
+    return "any";
+  }
   if (storageGroup.kind === "fluid") {
     return "liquid";
   }

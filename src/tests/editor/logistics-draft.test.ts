@@ -1802,4 +1802,170 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
       expect(cells[2]).toMatchObject({ shape: "turn-ccw" });
     });
   });
+
+  // ---- 空地起笔邻接设备入口（Bug 复现用例） --------------------------
+
+  describe("空地起笔紧邻设备入口：应生成直道而非从WEST开始", () => {
+    // converger rotation=0: in_n(N), in_e(E), in_s(S), out_w(W)
+    // 放 converger 在 (3,3)，空地在 (4,3)（EAST 邻接，对应 in_e 口）
+    const convergerDoc = createTestDocument([
+      makeEntity("test-converger", "item_log_converger", 3, 3, 0),
+    ]);
+
+    // 从空地(4,3)起笔，连入 converger 的 EAST 输入口。
+    // 此时路径仅有起点一个格子，目标为 in_e 端口。
+    const emptySource = {
+      type: "empty-cell" as const,
+      gridPoint: { x: 4, y: 3 },
+    };
+
+    const eastTarget = {
+      type: "device-port" as const,
+      entityId: "test-converger",
+      portGroupId: "default_input",
+      portId: "in_e",
+      portKind: "item" as const,
+      portDirection: "input" as const,
+      insideGridPoint: { x: 3, y: 3 },
+      outsideGridPoint: { x: 4, y: 3 },
+      edge: "EAST" as const,
+    };
+
+    it("从 EAST 侧空地连入 in_e 口：产出直道 EAST→WEST（流向设备）", () => {
+      const points = [{ x: 4, y: 3 }];
+
+      const cells = resolveLogisticsPathCells({
+        kind: "belt",
+        points,
+        source: emptySource,
+        target: eastTarget,
+        document: convergerDoc,
+        entityDefinitionMap,
+        replacingEntity: null,
+        replacingDefinition: null,
+      });
+
+      expect(cells).toHaveLength(1);
+      // 期望：fromEdge=EAST（从东侧进入直道），toEdge=WEST（直道向西流出进设备）
+      // 当前 bug 行为：fromEdge 会回退到 "WEST"，toEdge 被 normalize 为 "EAST"
+      expect(cells[0]).toMatchObject({
+        fromEdge: "EAST",
+        toEdge: "WEST",
+        shape: "straight",
+      });
+    });
+
+    it("从 NORTH 侧空地连入 in_n 口：产出直道 NORTH→SOUTH", () => {
+      const northSource = {
+        type: "empty-cell" as const,
+        gridPoint: { x: 3, y: 2 },
+      };
+      const northTarget = {
+        type: "device-port" as const,
+        entityId: "test-converger",
+        portGroupId: "default_input",
+        portId: "in_n",
+        portKind: "item" as const,
+        portDirection: "input" as const,
+        insideGridPoint: { x: 3, y: 3 },
+        outsideGridPoint: { x: 3, y: 2 },
+        edge: "NORTH" as const,
+      };
+      const points = [{ x: 3, y: 2 }];
+
+      const cells = resolveLogisticsPathCells({
+        kind: "belt",
+        points,
+        source: northSource,
+        target: northTarget,
+        document: convergerDoc,
+        entityDefinitionMap,
+        replacingEntity: null,
+        replacingDefinition: null,
+      });
+
+      expect(cells).toHaveLength(1);
+      // 传送带在设备上方(3,2)，物品应向下流入设备 → fromEdge=NORTH, toEdge=SOUTH
+      expect(cells[0]).toMatchObject({
+        fromEdge: "NORTH",
+        toEdge: "SOUTH",
+        shape: "straight",
+      });
+    });
+
+    it("从 SOUTH 侧空地连入 in_s 口：产出直道 SOUTH→NORTH", () => {
+      const southSource = {
+        type: "empty-cell" as const,
+        gridPoint: { x: 3, y: 4 },
+      };
+      const southTarget = {
+        type: "device-port" as const,
+        entityId: "test-converger",
+        portGroupId: "default_input",
+        portId: "in_s",
+        portKind: "item" as const,
+        portDirection: "input" as const,
+        insideGridPoint: { x: 3, y: 3 },
+        outsideGridPoint: { x: 3, y: 4 },
+        edge: "SOUTH" as const,
+      };
+      const points = [{ x: 3, y: 4 }];
+
+      const cells = resolveLogisticsPathCells({
+        kind: "belt",
+        points,
+        source: southSource,
+        target: southTarget,
+        document: convergerDoc,
+        entityDefinitionMap,
+        replacingEntity: null,
+        replacingDefinition: null,
+      });
+
+      expect(cells).toHaveLength(1);
+      // 传送带在设备下方(3,4)，物品应向上流入设备 → fromEdge=SOUTH, toEdge=NORTH
+      expect(cells[0]).toMatchObject({
+        fromEdge: "SOUTH",
+        toEdge: "NORTH",
+        shape: "straight",
+      });
+    });
+
+    it("对比：画两格路径时第一格正确为直道", () => {
+      // 从 (5,3) 起笔，经过 (4,3) 连入 converger 的 EAST 输入口
+      const points = [{ x: 5, y: 3 }, { x: 4, y: 3 }];
+
+      const cells = resolveLogisticsPathCells({
+        kind: "belt",
+        points,
+        source: { type: "empty-cell" as const, gridPoint: { x: 5, y: 3 } },
+        target: eastTarget,
+        document: convergerDoc,
+        entityDefinitionMap,
+        replacingEntity: null,
+        replacingDefinition: null,
+      });
+
+      expect(cells).toHaveLength(2);
+      // 第一节 (5,3)：fromEdge=EAST(to the west... wait, no)
+      // 实际上一节直道 fromEdge 靠上一个点推算。这里只有一个 previous，即 null。
+      // Cell 0 (5,3): previous=null, next=(4,3), source=empty-cell
+      //   fromEdge: resolveDirectionEdge((5,3),(4,3))=WEST → oppositeEdge="EAST"
+      //   toEdge: resolveDirectionEdge((5,3),(4,3))=WEST → normalize → {EAST, WEST}
+      // Cell 1 (4,3): previous=(5,3), next=null, target=eastTarget  
+      //   fromEdge: resolveDirectionEdge((5,3),(4,3))=WEST → oppositeEdge="EAST"
+      //   toEdge: target=device-port(EAST) → oppositeEdge("EAST")="WEST"
+      expect(cells[0]).toMatchObject({
+        fromEdge: "EAST",
+        toEdge: "WEST",
+        shape: "straight",
+      });
+      // 第二节 (4,3) 连设备，fromEdge=EAST, toEdge=WEST → 直道流向设备（正确）
+      expect(cells[1]).toMatchObject({
+        fromEdge: "EAST",
+        toEdge: "WEST",
+        shape: "straight",
+      });
+    });
+  });
 });

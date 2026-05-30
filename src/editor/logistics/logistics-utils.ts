@@ -408,6 +408,7 @@ export function resolveLogisticsPathCells(options: {
       previous,
       next,
       source: index === 0 ? options.source : null,
+      target: index === options.points.length - 1 ? options.target : null,
       kind: options.kind,
       document: options.document,
       entityDefinitionMap: options.entityDefinitionMap,
@@ -626,6 +627,7 @@ function resolveCellFromEdge(options: {
   previous: GridPoint | null;
   next: GridPoint | null;
   source: LogisticsDraftEndpoint | null;
+  target: LogisticsDraftEndpoint | null;
   kind: LogisticsKind;
   document: WorldDocument;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
@@ -673,6 +675,14 @@ function resolveCellFromEdge(options: {
   if (options.next !== null) {
     const direction = resolveDirectionEdge(options.point, options.next);
     return direction === null ? null : oppositeEdge(direction);
+  }
+
+  // AI-CORRECTION 2026-05-30:
+  // 当仅有单格路径且 source 为空地、无其他推导来源时，
+  // 若 target 为 device-port，用 target 的 port edge 反推 fromEdge。
+  // 否则回退到 "WEST"（原行为）。
+  if (options.target?.type === "device-port") {
+    return options.target.edge;
   }
 
   return "WEST";

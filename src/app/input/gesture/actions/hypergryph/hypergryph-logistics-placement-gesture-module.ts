@@ -345,10 +345,12 @@ function handleTouchTap(options: {
 
   // 2026-05-23: 设备源创建 draft 后立即生成首个 freehand cell，
   // 保证 logisticsHead collection 非空，后续拖拽可正常继续。
+  // AI-CORRECTION 2026-05-30: 首个 cell 应在端口外侧相邻格 (outsideGridPoint)，
+  // 而非触摸点所在设备内部格，否则第一节管道出现在设备身上而非向外伸出。
   moveTouchLogisticsEnd({
     appHost: options.appHost,
     editor: options.editor,
-    gridPoint,
+    gridPoint: endpoint.outsideGridPoint,
   });
   return { status: "handled" };
 }
