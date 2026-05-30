@@ -846,7 +846,6 @@ function cancelLogisticsPlacement(
   editor.actions.cancelLogisticsDraft();
   softResetLogisticsRuntime(appHost);
   appHost.internalActions.hideCanvasFloatingToolbar();
-  appHost.internalActions.hideCanvasTopLeftCornerToolbar();
 }
 
 function exitLogisticsPlacementToSelect(
@@ -858,9 +857,6 @@ function exitLogisticsPlacementToSelect(
   }
 
   resetLogisticsRuntime(appHost);
-  appHost.internalActions.hideCanvasFloatingToolbar();
-  appHost.internalActions.hideCanvasTopLeftCornerToolbar();
-  appHost.internalActions.hideCanvasRightDockToolbar();
   appHost.internalActions.setActiveTool("select");
 }
 

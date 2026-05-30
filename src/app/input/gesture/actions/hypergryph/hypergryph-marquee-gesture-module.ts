@@ -55,6 +55,9 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           }
 
           cleanupMarquee(context.appHost, editor, event.to === "move");
+          if (event.to !== "logistics-placement") {
+            context.appHost.internalActions.hideCanvasTopLeftCornerToolbar();
+          }
           return { status: "handled" };
 
         case "key down":
@@ -389,6 +392,7 @@ function updateMarqueeRange(options: {
 
 function exitMarqueeToSelect(appHost: AppHost, editor: EditorContract | null): void {
   cleanupMarquee(appHost, editor);
+  appHost.internalActions.hideCanvasTopLeftCornerToolbar();
   appHost.internalActions.setActiveTool("select");
 }
 
@@ -400,9 +404,6 @@ export function cleanupMarquee(appHost: AppHost, editor: EditorContract | null, 
   appHost.internalState.runtime.marqueeAnchor = null;
   appHost.internalState.toolInfo.marqueeType = EntityCollectionType.marquee;
   appHost.internalActions.hideCanvasRightDockToolbar();
-  appHost.internalActions.hideCanvasTopLeftCornerToolbar();
-  editor?.actions.setLogisticsSuppression("belt", false);
-  editor?.actions.setLogisticsSuppression("pipe", false);
 }
 
 function toggleEntityInSelection(editor: EditorContract, entityId: string): void {
