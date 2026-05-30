@@ -216,11 +216,11 @@ function createTickReport(options: {
     }
 
     devices[deviceId] = {
-      recipeId: status.recipeId,
-      progressSeconds: status.progressSeconds,
-      desiredSeconds: status.desiredSeconds,
       slotItems: status.slotItems.map((slotItem) => ({ ...slotItem })),
       channelRecipes: { ...status.channelRecipes },
+      // AI-CORRECTION 2026-05-30: recipeId/progressSeconds/desiredSeconds 已从 readmodel 删除，
+      //   改为从 channelRecipes 获取。此处仅做浅拷贝传递给测试断言。
+      powerStatus: status.powerStatus,
     };
   }
 

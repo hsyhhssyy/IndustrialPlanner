@@ -37,7 +37,7 @@ describe("REQ-076: production", () => {
       registry,
     });
 
-    expect(getDevice(grinderReport, 1, "grinder")).toMatchObject({
+    expect(getDevice(grinderReport, 1, "grinder").channelRecipes["default"]).toMatchObject({
       recipeId: "r_crusher_iron_powder_from_iron_nugget_basic",
       progressSeconds: 0,
       desiredSeconds: 2,
@@ -47,7 +47,7 @@ describe("REQ-076: production", () => {
         itemType: "item_iron_powder",
         count: 1,
       });
-    expect(getDevice(furnaceReport, 1, "furnace")).toMatchObject({
+    expect(getDevice(furnaceReport, 1, "furnace").channelRecipes["default"]).toMatchObject({
       recipeId: "r_furnace_iron_nugget_from_iron_ore_basic",
       progressSeconds: 0,
       desiredSeconds: 2,

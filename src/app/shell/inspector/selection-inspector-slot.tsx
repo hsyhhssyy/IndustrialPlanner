@@ -22,6 +22,7 @@ import { SimulationRecipeStatusRuntimeInspector } from "./simulation-recipe-stat
 import { SlotConfigInspector } from "./slot-config-inspector";
 import { WarehouseItemLinkInspector } from "./warehouse-item-link-inspector";
 import { SubmitToWarehouseInspector } from "./submit-to-warehouse-inspector";
+import { ProblemInspector } from "./problem-inspector";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -156,6 +157,15 @@ function renderInspector(options: {
         ...options,
         declaration: options.declaration as RecipeStatusInspectorDeclaration,
       });
+    case INSPECTOR_TYPE.problem:
+      return (
+        <ProblemInspector
+          appHost={options.appHost}
+          entity={options.entity}
+          definition={options.definition}
+          runtimeStatus={options.runtimeStatus}
+        />
+      );
     default:
       return <EmptyInspector declaration={options.declaration} />;
   }

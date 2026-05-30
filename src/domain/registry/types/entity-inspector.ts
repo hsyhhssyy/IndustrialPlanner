@@ -40,6 +40,23 @@ export const INSPECTOR_TYPE = {
   genericDevice: "generic-device",
 
   /**
+   * ## 设备问题面板
+   *
+   * **只读展示。** 不编辑任何 config 字段。
+   *
+   * 显示当前设备遭遇的所有问题，包括：
+   * - 设备放置问题（来自 EntityPlacementValidationResult）
+   * - 设备不在供电范围（powerStatus === "out-of-power-range"）
+   * - 地图电力不足（基地级大停电）
+   * - 产物堵塞（channel recipe state === "waiting-output"）
+   *
+   * 数据来源：EditorQuery.getEntityPlacementValidation +
+   * SimulationQuery.getDeviceRuntimeStatus +
+   * SimulationQuery.getDocumentRuntimeStatus。
+   */
+  problem: "problem",
+
+  /**
    * ## 运行时统计面板
    *
    * **只读展示，仅在 Sim 模式下出现。**
@@ -349,6 +366,7 @@ export type EntityInspectorDeclaration =
   | RoutingInspectorDeclaration
   | LinkConfigInspectorDeclaration
   | { readonly type: typeof INSPECTOR_TYPE.genericDevice }
+  | { readonly type: typeof INSPECTOR_TYPE.problem }
   | { readonly type: typeof INSPECTOR_TYPE.runtimeStatistics }
   | { readonly type: typeof INSPECTOR_TYPE.storageManagement }
   | { readonly type: typeof INSPECTOR_TYPE.storageTypeFilter }

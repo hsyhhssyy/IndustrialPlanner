@@ -523,12 +523,15 @@ export class SimulationWorkerRuntime {
     const runtimeStepTicks = tickNumber - this.runtimeState.lastAdvancedTickNumber;
     const shouldRunRuntime = shouldAdvance && runtimeStepTicks >= this.standardStepTicks;
 
+    const isPowerOutage = this.powerMode === "real"
+      && (this.runtimeState.transient.currentPowerGeneration ?? 0) < this.topology.totalPowerDemand;
+
     const perfTiming = this.perfEnabled ? { tickNumber, start: performance.now(), stages: {} as Record<string, number>, stage3: undefined as TickPerfStage3Details | undefined } : null;
 
     if (shouldAdvance && !shouldRunRuntime) {
       this.runtimeState.transient = createEmptyTransientState();
       const t0 = this.perfEnabled ? performance.now() : 0;
-      const snapshot = createTickSnapshot(this.topology, this.runtimeState);
+      const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutage);
       if (this.perfEnabled) {
         perfTiming!.stages["createSnapshot"] = performance.now() - t0;
         this.perfEntries.push({
@@ -618,7 +621,9 @@ export class SimulationWorkerRuntime {
       this.runtimeState.lastAdvancedTickNumber = tickNumber;
 
       const t6 = this.perfEnabled ? performance.now() : 0;
-      const snapshot = createTickSnapshot(this.topology, this.runtimeState);
+      const isPowerOutageRun = this.powerMode === "real"
+        && currentPowerGeneration < this.topology.totalPowerDemand;
+      const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutageRun);
       if (this.perfEnabled) {
         perfTiming!.stages["createSnapshot"] = performance.now() - t6;
         const total = performance.now() - perfTiming!.start;
@@ -647,7 +652,7 @@ export class SimulationWorkerRuntime {
     if (this.perfEnabled) { perfTiming!.stages["buildSolveGraph"] = performance.now() - t0; }
 
     const t1 = this.perfEnabled ? performance.now() : 0;
-    const snapshot = createTickSnapshot(this.topology, this.runtimeState);
+    const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutage);
     if (this.perfEnabled) {
       perfTiming!.stages["createSnapshot"] = performance.now() - t1;
       const total = performance.now() - perfTiming!.start;

@@ -11,6 +11,7 @@ import {
 export function createTickSnapshot(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
+  isPowerOutage: boolean,
 ): RuntimeTickSnapshot {
   // 预计算 reservedBySlot：一次扫描所有设备/配方/预留，避免 createSlotSnapshots 逐槽重复扫描。
   const reservedBySlot = buildReservedBySlot(state);
@@ -22,6 +23,7 @@ export function createTickSnapshot(
     status: state.tickNumber === 0 ? "initial" : "running",
     totalPowerDemand: topology.totalPowerDemand,
     currentPowerGeneration: state.transient.currentPowerGeneration ?? 0,
+    isPowerOutage,
     slots: createSlotSnapshots(topology, state, reservedBySlot),
     devices: createDeviceSnapshots(topology, state),
     nodes: createNodeSnapshots(state),

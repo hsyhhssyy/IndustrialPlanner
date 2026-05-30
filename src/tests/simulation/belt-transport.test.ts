@@ -73,6 +73,7 @@ describe("REQ-076: belt transport", () => {
         },
       }),
     ]));
-    expect(belt.recipeId).toBe("belt_straight_1x1:dynamic-belt-transfer");
+    // AI-CORRECTION 2026-05-30: recipeId 已迁移到 channelRecipes["default"]。
+    expect(belt.channelRecipes["default"]?.recipeId).toBe("belt_straight_1x1:dynamic-belt-transfer");
   });
 });

@@ -40,7 +40,7 @@ describe("REQ-084: simulation power system", () => {
 
     expect(report.topology.totalPowerDemand).toBe(5);
     expect(getTick(report, 0).totalPowerDemand).toBe(5);
-    expect(getDevice(report, 1, "grinder")).toMatchObject({
+    expect(getDevice(report, 1, "grinder").channelRecipes["default"]).toMatchObject({
       recipeId: "r_crusher_iron_powder_from_iron_nugget_basic",
       progressSeconds: 0,
       desiredSeconds: 2,
@@ -62,11 +62,9 @@ describe("REQ-084: simulation power system", () => {
 
     expect(report.topology.totalPowerDemand).toBe(0);
     expect(getTick(report, completionTick).totalPowerDemand).toBe(0);
-    expect(getDevice(report, completionTick, "grinder")).toMatchObject({
-      recipeId: null,
-      progressSeconds: null,
-      desiredSeconds: null,
-    });
+    // AI-CORRECTION 2026-05-30: 无供电时 deviceSnapshot.channelRecipes 无 "default" key，
+    //   channelRecipes["default"] 返回 undefined（旧代码 flat recipeId 返回 null）。
+    expect(getDevice(report, completionTick, "grinder").channelRecipes["default"]).toBeUndefined();
     expect(findSlot(report, completionTick, "grinder", "item_input_buffer", "input_slot_1"))
       .toMatchObject({
         itemType: "item_iron_nugget",
@@ -478,18 +476,24 @@ async function expectReady(
 function readGrinderProgressSeconds(
   host: ReturnType<typeof createSimulationHost>,
 ): number {
-  const progressSeconds = host.queries.getDeviceRuntimeStatus("grinder")?.progressSeconds;
-  if (progressSeconds === null || progressSeconds === undefined) {
+  const status = host.queries.getDeviceRuntimeStatus("grinder");
+  if (status === null) {
+    throw new Error("Expected grinder device runtime status.");
+  }
+  // AI-CORRECTION 2026-05-30: channel id 为 "default"，非 "grind"。
+  const grindStatus = status.channelRecipes["default"];
+  if (grindStatus?.progressSeconds === null || grindStatus?.progressSeconds === undefined) {
     throw new Error("Expected grinder recipe to be running.");
   }
-
-  return progressSeconds;
+  return grindStatus.progressSeconds;
 }
 
 function readGrinderRecipeId(
   host: ReturnType<typeof createSimulationHost>,
-): string | null | undefined {
-  return host.queries.getDeviceRuntimeStatus("grinder")?.recipeId;
+): string | null {
+  // AI-CORRECTION 2026-05-30: channel id 为 "default"，非 "grind"。
+  //   null ?? null 确保 channelRecipes 为空时返回 null 而非 undefined。
+  return host.queries.getDeviceRuntimeStatus("grinder")?.channelRecipes["default"]?.recipeId ?? null;
 }
 
 function readGrinderSlot(

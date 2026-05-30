@@ -25,17 +25,27 @@ function resolveChannelProgressPercent(
   return Math.max(0, Math.min(100, pct));
 }
 
-// AI-CORRECTION 2026-05-29: 保留旧函数兼容现有调用方。
-export function resolveSimulationRuntimeProgressPercent(
-  runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
-): number | null {
-  if (runtimeStatus === null) return null;
-  const { desiredSeconds, progressSeconds } = runtimeStatus;
-  if (progressSeconds === null || desiredSeconds === null || desiredSeconds <= 0) return null;
-  const progressPercent = progressSeconds / desiredSeconds * 100;
-  if (!Number.isFinite(progressPercent)) return null;
-  return Math.max(0, Math.min(100, progressPercent));
-}
+// AI-REMOVED 2026-05-30:
+// Reason: SimulationDeviceRuntimeStatusReadModel 的 recipeId/progressSeconds/desiredSeconds 字段已删除，
+//   该函数的输入类型不再拥有所需字段，且无外部调用方。
+// Trigger: 接口字段迁移到 channelRecipes。
+// Evidence: grep_search 确认无外部 import 该函数。
+// Replacement: resolveChannelProgressPercent（已存在，使用 channelRecipes）
+// Risk: Low
+// Human Review: Not Required
+//
+// Original code:
+// // AI-CORRECTION 2026-05-29: 保留旧函数兼容现有调用方。
+// export function resolveSimulationRuntimeProgressPercent(
+//   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
+// ): number | null {
+//   if (runtimeStatus === null) return null;
+//   const { desiredSeconds, progressSeconds } = runtimeStatus;
+//   if (progressSeconds === null || desiredSeconds === null || desiredSeconds <= 0) return null;
+//   const progressPercent = progressSeconds / desiredSeconds * 100;
+//   if (!Number.isFinite(progressPercent)) return null;
+//   return Math.max(0, Math.min(100, progressPercent));
+// }
 
 export interface SimulationRecipeStatusRuntimeInspectorProps {
   /** 所有 recipe channel ID 列表 */

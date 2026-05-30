@@ -2,7 +2,7 @@ import type {
   GridFloatPoint,
   GridPoint,
 } from "@/domain/shared/grid"
-import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types"
+import type { SimulationDeviceRuntimeChannelRecipeStatus, SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types"
 import {
   resolveDisplayRotationRadians,
   resolveViewportPointFromWorldPoint,
@@ -329,10 +329,26 @@ function resolveRuntimeCargoState(
   return resolveStationaryCargoState(runtimeStatus)
 }
 
+// AI-CORRECTION 2026-05-30: recipeId/progressSeconds/desiredSeconds 已从 readmodel 删除，
+//   改为读取第一个 channel 的状态。没有 channel 时返回 null。
+function getFirstChannelStatus(
+  runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
+): SimulationDeviceRuntimeChannelRecipeStatus | null {
+  if (runtimeStatus === null) return null;
+  const channelRecipes = runtimeStatus.channelRecipes;
+  if (channelRecipes === undefined || channelRecipes === null) return null;
+  const keys = Object.keys(channelRecipes);
+  if (keys.length === 0) return null;
+  return channelRecipes[keys[0]!] ?? null;
+}
+
 function resolveRunningCargoItemId(
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
 ): string | null {
-  if (runtimeStatus === null || runtimeStatus.recipeId === null) {
+  // AI-CORRECTION 2026-05-30: recipeId 已从 readmodel 删除，改为读取第一个 channel。
+  if (runtimeStatus === null) return null;
+  const firstChannelStatus = getFirstChannelStatus(runtimeStatus);
+  if (firstChannelStatus === null || firstChannelStatus.recipeId === null) {
     return null
   }
 
@@ -398,19 +414,22 @@ function resolveStationaryCargoState(
 function resolveRuntimeProgress(
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
 ): number | null {
+  // AI-CORRECTION 2026-05-30: progressSeconds/desiredSeconds 已从 readmodel 删除，
+  //   改为读取第一个 channel。
+  const firstChannelStatus = getFirstChannelStatus(runtimeStatus);
   if (
-    runtimeStatus === null
-    || runtimeStatus.progressSeconds === null
-    || runtimeStatus.desiredSeconds === null
+    firstChannelStatus === null
+    || firstChannelStatus.progressSeconds === null
+    || firstChannelStatus.desiredSeconds === null
   ) {
     return null
   }
 
-  if (runtimeStatus.desiredSeconds <= 0) {
+  if (firstChannelStatus.desiredSeconds <= 0) {
     return null
   }
 
-  const progress = runtimeStatus.progressSeconds / runtimeStatus.desiredSeconds
+  const progress = firstChannelStatus.progressSeconds / firstChannelStatus.desiredSeconds
   if (!Number.isFinite(progress)) {
     return null
   }

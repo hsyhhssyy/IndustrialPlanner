@@ -60,10 +60,21 @@ export function SubmitToWarehouseInspector({
         if (recipes.length === 1) {
           const recipe = recipes[0]!;
           const isSelected = selectedRecipeId === recipe.id;
-          const progressSeconds = runtimeStatus?.progressSeconds ?? null;
-          const desiredSeconds = runtimeStatus?.desiredSeconds ?? null;
-          const isRunning = runtimeStatus?.recipeId === recipe.id;
-          const remainingSeconds = isRunning && progressSeconds !== null && desiredSeconds !== null
+
+          // AI-CORRECTION 2026-05-30: recipeId/progressSeconds/desiredSeconds 已从
+          //   SimulationDeviceRuntimeStatusReadModel 删除，改为从 channelRecipes 中
+          //   查找正在运行 r_warehouse_submit 的 channel 并读取其进度。
+          //   若没有任何 channel 运行该配方，视为进度为 0。
+          const submitChannelEntry = runtimeStatus?.channelRecipes
+            ? Object.entries(runtimeStatus.channelRecipes).find(
+                ([, chStatus]) => chStatus?.recipeId === "r_warehouse_submit",
+              )
+            : undefined;
+          const submitChannelStatus = submitChannelEntry?.[1] ?? null;
+          const isRunning = submitChannelStatus !== null;
+          const progressSeconds = submitChannelStatus?.progressSeconds ?? 0;
+          const desiredSeconds = submitChannelStatus?.desiredSeconds ?? 0;
+          const remainingSeconds = isRunning && desiredSeconds > 0
             ? Math.max(0, Math.ceil(desiredSeconds - progressSeconds))
             : null;
 

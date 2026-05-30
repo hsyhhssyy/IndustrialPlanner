@@ -112,6 +112,7 @@ export function createSimulationHost(
           tickNumber: internalState.currentSnapshot?.tickNumber ?? null,
           totalPowerDemand: topology.totalPowerDemand,
           currentPowerGeneration: internalState.currentSnapshot?.currentPowerGeneration ?? null,
+          isPowerOutage: internalState.currentSnapshot?.isPowerOutage ?? false,
         };
       },
       getDeviceRuntimeStatus: (() => {
@@ -256,19 +257,30 @@ function resolveDeviceRuntimeStatus(options: {
             recipeId: chRecipe.recipeId,
             progressSeconds: convertSimulationTicksToSeconds(chRecipe.progressTicks),
             desiredSeconds: convertSimulationTicksToSeconds(chRecipe.durationTicks),
+            state: chRecipe.state,
           };
     }
   }
 
+  // AI-REMOVED 2026-05-30:
+  // Reason: recipeId/progressSeconds/desiredSeconds 已从 SimulationDeviceRuntimeStatusReadModel 中移除。
+  // Trigger: 接口字段迁移到 channelRecipes。
+  // Evidence: 接口中已删除，所有调用方已迁移到 channelRecipes。
+  // Replacement: channelRecipes
+  // Risk: Low
+  // Human Review: Not Required
+  //
+  // Original code:
+  //   recipeId: deviceSnapshot.recipe?.recipeId ?? null,
+  //   progressSeconds: deviceSnapshot.recipe === null
+  //     ? null
+  //     : convertSimulationTicksToSeconds(deviceSnapshot.recipe.progressTicks),
+  //   desiredSeconds: deviceSnapshot.recipe === null
+  //     ? null
+  //     : convertSimulationTicksToSeconds(deviceSnapshot.recipe.durationTicks),
   return {
-    recipeId: deviceSnapshot.recipe?.recipeId ?? null,
-    progressSeconds: deviceSnapshot.recipe === null
-      ? null
-      : convertSimulationTicksToSeconds(deviceSnapshot.recipe.progressTicks),
-    desiredSeconds: deviceSnapshot.recipe === null
-      ? null
-      : convertSimulationTicksToSeconds(deviceSnapshot.recipe.durationTicks),
     channelRecipes,
+    powerStatus: options.topology.devices[compiledDeviceId]?.powerStatus ?? null,
     slotItems: resolveDeviceRuntimeSlotItems({
       topology: options.topology,
       compiledDeviceId,

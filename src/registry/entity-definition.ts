@@ -122,6 +122,9 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
   const declaredInspectors = [...(definition.inspectors ?? [])];
   const recipeMachineInspectors = createRecipeMachineIngredientSlotInspectors(definition);
 
+  // 所有设备默认追加问题面板，用于展示放置/电力/堵塞等问题
+  declaredInspectors.push({ type: INSPECTOR_TYPE.problem });
+
   return {
     ...definition,
     displayOrder: definition.displayOrder ?? 100,
@@ -711,17 +714,19 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   /**
    * item_port_mix_pool_1 — 反应池（5×5）
    *
-   * 缓存组：2 个 — 1 ingredient（5 槽 × 50 容量）+ 1 product（1 槽 × 1 容量）
-   * 求解图节点：2 个
+   * 缓存组：1 个（shared_input_buffer，5 槽 × 50 容量），共享承担输入与输出。
+   *   - 输入/输出端口全部绑定到该组，compiler 检测双向绑定后自动展开为
+   *     input-view / output-view 双 Node + share-all Slot Link。
+   * 求解图节点：2 个（输入视图 + 输出视图，共享同一组真实槽位）
    * 端口：2 item-input(南) + 2 item-output(北) + 2 fluid-input(东) + 2 fluid-output(西)
-   *      注意：item 和 fluid 端口都绑定到同一组存储槽组（shared_input_buffer / shared_output_buffer）
    *      因为 itemFilterType="any"，该缓存组可接收固体和液体。
    *
-   * 对应《仿真运行原理》§3.4 缓存组示例：
-   *   - 1 个缓存组，5 个槽位（反应池普通版）
+   * 对应《仿真运行原理》§3.3 缓存组示例：
+   *   - 1 个槽位组，5 个槽位（反应池普通版）
    *   - 组内互斥：同物品只能出现在一个槽
-   *   - 输入缓存组同时接收 item 和 fluid 端口
    *
+   * AI-CORRECTION 2026-05-30: 移除 shared_output_buffer；输入输出端口全部绑定 shared_input_buffer；
+   * recipeChannel 的 ingredient/product 都只引用 shared_input_buffer。
    * 配方：immediate-consume（进度 0% 时立即扣除原料）
    */
   createEntityDefinition({
@@ -766,23 +771,18 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item",
         createSlots("input_slot", [50, 50, 50, 50, 50], "any"),
       ),
-      createStorageSlotGroup(
-        "shared_output_buffer",
-        "item",
-        createSlots("output_slot", [1], "any"),
-      ),
     ],
     recipeChannels: [
-      createRecipeChannel("ch1", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
-      createRecipeChannel("ch2", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
-      createRecipeChannel("ch3", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
-      createRecipeChannel("ch4", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch1", ["shared_input_buffer"], ["shared_input_buffer"], true),
+      createRecipeChannel("ch2", ["shared_input_buffer"], ["shared_input_buffer"], true),
+      createRecipeChannel("ch3", ["shared_input_buffer"], ["shared_input_buffer"], true),
+      createRecipeChannel("ch4", ["shared_input_buffer"], ["shared_input_buffer"], true),
     ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "shared_input_buffer"),
       createBinding("bind_fluid_input", "fluid_input", "shared_input_buffer"),
-      createBinding("bind_item_output", "item_output", "shared_output_buffer"),
-      createBinding("bind_fluid_output", "fluid_output", "shared_output_buffer"),
+      createBinding("bind_item_output", "item_output", "shared_input_buffer"),
+      createBinding("bind_fluid_output", "fluid_output", "shared_input_buffer"),
     ],
     inspectors: [
       {
@@ -2122,29 +2122,24 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "shared_input_buffer",
         "item",
-        createSlots("input_slot", [50, 50, 50, 50, 50], "any"),
-      ),
-      createStorageSlotGroup(
-        "shared_output_buffer",
-        "item",
-        createSlots("output_slot", [1], "any"),
+        createSlots("input_slot", [50, 50, 50, 50, 50, 50, 50, 50], "any"),
       ),
     ],
     recipeChannels: [
-      createRecipeChannel("ch1", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
-      createRecipeChannel("ch2", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
-      createRecipeChannel("ch3", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
-      createRecipeChannel("ch4", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
-      createRecipeChannel("ch5", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
-      createRecipeChannel("ch6", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
-      createRecipeChannel("ch7", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
-      createRecipeChannel("ch8", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"], true),
+      createRecipeChannel("ch1", ["shared_input_buffer"], ["shared_input_buffer"], true),
+      createRecipeChannel("ch2", ["shared_input_buffer"], ["shared_input_buffer"], true),
+      createRecipeChannel("ch3", ["shared_input_buffer"], ["shared_input_buffer"], true),
+      createRecipeChannel("ch4", ["shared_input_buffer"], ["shared_input_buffer"], true),
+      createRecipeChannel("ch5", ["shared_input_buffer"], ["shared_input_buffer"], true),
+      createRecipeChannel("ch6", ["shared_input_buffer"], ["shared_input_buffer"], true),
+      createRecipeChannel("ch7", ["shared_input_buffer"], ["shared_input_buffer"], true),
+      createRecipeChannel("ch8", ["shared_input_buffer"], ["shared_input_buffer"], true),
     ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "shared_input_buffer"),
       createBinding("bind_fluid_input", "fluid_input", "shared_input_buffer"),
-      createBinding("bind_item_output", "item_output", "shared_output_buffer"),
-      createBinding("bind_fluid_output", "fluid_output", "shared_output_buffer"),
+      createBinding("bind_item_output", "item_output", "shared_input_buffer"),
+      createBinding("bind_fluid_output", "fluid_output", "shared_input_buffer"),
     ],
     inspectors: [
       {

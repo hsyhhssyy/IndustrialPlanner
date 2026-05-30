@@ -354,9 +354,7 @@ describe("createBeltCargoDecoration", () => {
         itemId: "item_iron_ore",
         progress: 0.5,
         runtimeStatus: {
-          recipeId: null,
-          progressSeconds: null,
-          desiredSeconds: null,
+          channelRecipes: {},
           slotItems: [{
             slotType: "ingredient",
             storageGroupId: "item_buffer",
@@ -391,9 +389,7 @@ describe("createBeltCargoDecoration", () => {
         itemId: "item_iron_ore",
         progress: 0.5,
         runtimeStatus: {
-          recipeId: null,
-          progressSeconds: null,
-          desiredSeconds: null,
+          channelRecipes: {},
           slotItems: [{
             slotType: "product",
             storageGroupId: "item_buffer",
@@ -742,9 +738,7 @@ function createContext(options: {
     itemId: string;
     progress: number;
     runtimeStatus?: {
-      recipeId: string | null;
-      progressSeconds: number | null;
-      desiredSeconds: number | null;
+      channelRecipes?: Record<string, { recipeId: string | null; progressSeconds: number | null; desiredSeconds: number | null } | null>;
       slotItems: Array<{
         slotType: "ingredient" | "product" | "universal";
         storageGroupId: string;
@@ -864,9 +858,13 @@ function createContext(options: {
               }
 
                 return entry.runtimeStatus ?? {
-                recipeId: `${entry.definitionId}:dynamic-belt-transfer`,
-                progressSeconds: entry.progress,
-                desiredSeconds: 1,
+                channelRecipes: {
+                  default: {
+                    recipeId: `${entry.definitionId}:dynamic-belt-transfer`,
+                    progressSeconds: entry.progress,
+                    desiredSeconds: 1,
+                  },
+                },
                 slotItems: [{
                     slotType: "ingredient",
                     storageGroupId: "item_buffer",
@@ -923,9 +921,7 @@ function resolveBeltDefinitionId(beltShape: "straight" | "turn-cw" | "turn-ccw")
 
 function createEmptyBeltRuntimeStatus() {
   return {
-    recipeId: null,
-    progressSeconds: null,
-    desiredSeconds: null,
+    channelRecipes: {},
     slotItems: [],
   }
 }

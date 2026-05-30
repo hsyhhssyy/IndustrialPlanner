@@ -91,6 +91,7 @@ function attachSimulationStub(
         tickNumber: null,
         totalPowerDemand: null,
         currentPowerGeneration: null,
+        isPowerOutage: false,
       }),
       getDeviceRuntimeStatus,
       getPipeFluidItemId: () => null,
@@ -224,11 +225,9 @@ describe("SelectionInspectorSlot", () => {
     const { getDeviceRuntimeStatus } = attachSimulationStub(workspace, {
       state: "start",
       runtimeStatus: {
-        recipeId: "transport-recipe",
-        progressSeconds: 0.5,
-        desiredSeconds: 2,
         slotItems: [],
         channelRecipes: {},
+        powerStatus: "in-power-range",
       },
     });
     const currentAppHost = createAppHost(workspace);
@@ -264,11 +263,9 @@ describe("SelectionInspectorSlot", () => {
     const { getDeviceRuntimeStatus } = attachSimulationStub(workspace, {
       state: "pause",
       runtimeStatus: {
-        recipeId: "paused-recipe",
-        progressSeconds: 0.1,
-        desiredSeconds: 2,
         slotItems: [],
         channelRecipes: {},
+        powerStatus: "in-power-range",
       },
     });
     const currentAppHost = createAppHost(workspace);

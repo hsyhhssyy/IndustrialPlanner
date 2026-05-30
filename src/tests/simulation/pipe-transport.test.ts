@@ -66,6 +66,7 @@ describe("REQ-076: pipe transport", () => {
         },
       }),
     ]));
-    expect(pipe.recipeId).toBe("pipe_straight_1x1:dynamic-pipe-transfer");
+    // AI-CORRECTION 2026-05-30: recipeId 已迁移到 channelRecipes["default"]。
+    expect(pipe.channelRecipes["default"]?.recipeId).toBe("pipe_straight_1x1:dynamic-pipe-transfer");
   });
 });

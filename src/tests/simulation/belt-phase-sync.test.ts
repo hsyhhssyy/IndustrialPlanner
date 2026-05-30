@@ -144,7 +144,8 @@ describe("传送带同步相位", () => {
         );
 
         if (beltsWithItems.length >= 2) {
-          const phases = beltsWithItems.map((s) => s.progressSeconds);
+          // AI-CORRECTION 2026-05-30: progressSeconds 已迁移到 channelRecipes["default"]。
+          const phases = beltsWithItems.map((s) => s.channelRecipes["default"]?.progressSeconds);
           const allSamePhase = phases.every((p) => p === phases[0]);
           expect(
             allSamePhase,
