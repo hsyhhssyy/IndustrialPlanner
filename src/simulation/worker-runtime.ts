@@ -37,6 +37,7 @@ import {
   createEmptyTransientState,
   createMigratedSimulationMutableRuntimeState,
   createSimulationMutableRuntimeState,
+  BASE_BATTERY_CAPACITY_J,
   type SimulationMutableRuntimeState,
 } from "./runtime/runtime-state";
 import {
@@ -560,13 +561,35 @@ export class SimulationWorkerRuntime {
       );
       this.runtimeState.transient.currentPowerGeneration = currentPowerGeneration;
 
+      // 真实电力模式下更新基地电池，并计算计入电池补足后的有效发电量
+      let effectiveGeneration = currentPowerGeneration;
+      if (this.powerMode === "real") {
+        const netPowerKW = currentPowerGeneration - this.topology.totalPowerDemand;
+        const joulesPerStandardTick = 1000 / this.topology.standardTickRate;
+        const netJoules = netPowerKW * joulesPerStandardTick * runtimeStepTicks;
+        if (netJoules > 0) {
+          this.runtimeState.persistent.baseBatteryJoules = Math.min(
+            BASE_BATTERY_CAPACITY_J,
+            this.runtimeState.persistent.baseBatteryJoules + netJoules,
+          );
+        } else if (netJoules < 0) {
+          const deficit = -netJoules;
+          if (this.runtimeState.persistent.baseBatteryJoules >= deficit) {
+            this.runtimeState.persistent.baseBatteryJoules -= deficit;
+            effectiveGeneration = this.topology.totalPowerDemand; // 电池补足差额，视为电力充足
+          } else {
+            this.runtimeState.persistent.baseBatteryJoules = 0;
+          }
+        }
+      }
+
       const t0 = this.perfEnabled ? performance.now() : 0;
       advanceDevices(
         this.topology,
         this.runtimeState,
         runtimeStepTicks,
         this.powerMode,
-        currentPowerGeneration,
+        effectiveGeneration,
       );
       if (this.perfEnabled) { perfTiming!.stages["advanceDevices"] = performance.now() - t0; }
 
@@ -611,7 +634,7 @@ export class SimulationWorkerRuntime {
         this.topology,
         this.runtimeState,
         this.powerMode,
-        currentPowerGeneration,
+        effectiveGeneration,
       );
       if (this.perfEnabled) { perfTiming!.stages["settleRecipes"] = performance.now() - t4; }
 
@@ -622,7 +645,7 @@ export class SimulationWorkerRuntime {
 
       const t6 = this.perfEnabled ? performance.now() : 0;
       const isPowerOutageRun = this.powerMode === "real"
-        && currentPowerGeneration < this.topology.totalPowerDemand;
+        && effectiveGeneration < this.topology.totalPowerDemand;
       const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutageRun);
       if (this.perfEnabled) {
         perfTiming!.stages["createSnapshot"] = performance.now() - t6;

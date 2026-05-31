@@ -5,6 +5,10 @@ export interface SimulationRuntimeStatistics {
   readonly tickPerSecond: number;
   /** 目标确定性 TPS = simulationSpeed × dynamicTickRate */
   readonly targetTickPerSecond: number;
+  /** 基地电池当前电量（焦耳） */
+  readonly baseBatteryJoules: number;
+  /** 基地电池满容量（焦耳） */
+  readonly baseBatteryCapacity: number;
 }
 
 export interface SimulationState{

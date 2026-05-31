@@ -7,6 +7,7 @@ import {
   resolveEffectiveIgnoreStock,
   resolveStorageSlotId,
 } from "@/simulation/runtime/runtime-slot-access";
+import { BASE_BATTERY_CAPACITY_J } from "./runtime-state";
 
 export function createTickSnapshot(
   topology: CompiledSimulationTopology,
@@ -24,6 +25,8 @@ export function createTickSnapshot(
     totalPowerDemand: topology.totalPowerDemand,
     currentPowerGeneration: state.transient.currentPowerGeneration ?? 0,
     isPowerOutage,
+    baseBatteryJoules: state.persistent.baseBatteryJoules,
+    baseBatteryCapacity: BASE_BATTERY_CAPACITY_J,
     slots: createSlotSnapshots(topology, state, reservedBySlot),
     devices: createDeviceSnapshots(topology, state),
     nodes: createNodeSnapshots(state),

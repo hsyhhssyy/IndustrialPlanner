@@ -841,6 +841,94 @@
   fill: currentColor;
 }
 
+// 电力横条（仅文字，无填充进度条）
+.power-bar-shell {
+  display: grid;
+  gap: 6px;
+}
+
+.power-bar-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+}
+
+.power-bar-label.power-bar-outage {
+  color: var(--danger);
+}
+
+.power-bar-values {
+  color: inherit;
+}
+
+.power-bar-separator {
+  margin: 0 4px;
+  color: var(--text-2);
+}
+
+.power-bar-percent {
+  color: inherit;
+  font-weight: 600;
+}
+
+// 无限电力开关
+.power-infinite-switch {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  padding-top: 2px;
+}
+
+.power-infinite-switch-label {
+  color: var(--text-1);
+  font-size: 0.82rem;
+}
+
+.power-switch-on,
+.power-switch-off {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 42px;
+  height: 24px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.power-switch-off {
+  background: var(--surface-4);
+}
+
+.power-switch-on {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.power-switch-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--surface-1);
+  box-shadow: 0 2px 6px var(--shadow-floating-control);
+  transition: transform 120ms ease;
+}
+
+.power-switch-off .power-switch-thumb {
+  transform: translateX(0);
+}
+
+.power-switch-on .power-switch-thumb {
+  transform: translateX(18px);
+}
+
 .base-select-dialog {
   width: min(560px, 100%);
   height: min(520px, 100%);

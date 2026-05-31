@@ -297,6 +297,10 @@ export interface RuntimeTickSnapshot {
   readonly currentPowerGeneration: number;
   /** 真实电力模式下发电量不足总需求时为 true；无限电力模式下始终为 false */
   readonly isPowerOutage: boolean;
+  /** 基地电池当前电量（焦耳） */
+  readonly baseBatteryJoules: number;
+  /** 基地电池满容量（焦耳） */
+  readonly baseBatteryCapacity: number;
   readonly slots: Record<string, RuntimeSlotSnapshot>;
   readonly devices: Record<string, RuntimeDeviceSnapshot>;
   readonly nodes: Record<string, RuntimeNodeSnapshot>;

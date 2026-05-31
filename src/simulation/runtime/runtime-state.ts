@@ -6,6 +6,9 @@ import type {
   SimulationRecipeType,
 } from "../types";
 
+/** 基地电池满容量（焦耳） */
+export const BASE_BATTERY_CAPACITY_J = 100_000;
+
 export type RuntimeShadowState = "uncertain" | "accept" | "moved";
 
 export interface SimulationMutableRuntimeState {
@@ -25,6 +28,8 @@ export interface SimulationPersistentRuntimeState {
   nextRecipeRunIndex: number;
   /** 运输组件的当前域锁：组件内所有槽位只能存在该物品类型。null 表示组件为空，无限制。 */
   transportComponentDomain: Record<string, string | null>;
+  /** 基地电池当前电量（焦耳），进入仿真时满电。 */
+  baseBatteryJoules: number;
 }
 
 export interface RuntimeSlotState {
@@ -169,6 +174,7 @@ export function createSimulationMutableRuntimeState(
       transportComponentDomain: Object.fromEntries(
         Object.keys(topology.transportComponents).map((id) => [id, null]),
       ),
+      baseBatteryJoules: BASE_BATTERY_CAPACITY_J,
     },
     transient: createEmptyTransientState(),
   };
@@ -190,6 +196,7 @@ export function createMigratedSimulationMutableRuntimeState(
   state.tickNumber = options.previousState.tickNumber;
   state.lastAdvancedTickNumber = options.previousState.tickNumber;
   state.persistent.nextRecipeRunIndex = options.previousState.persistent.nextRecipeRunIndex;
+  state.persistent.baseBatteryJoules = options.previousState.persistent.baseBatteryJoules;
 
   for (const deviceId of options.topology.ordering.deviceOrder) {
     if (resetDeviceIds.has(deviceId)) {
@@ -253,6 +260,7 @@ export function cloneSimulationMutableRuntimeState(
       sharedCapacityLimitBySlotId: { ...state.persistent.sharedCapacityLimitBySlotId },
       nextRecipeRunIndex: state.persistent.nextRecipeRunIndex,
       transportComponentDomain: { ...state.persistent.transportComponentDomain },
+      baseBatteryJoules: state.persistent.baseBatteryJoules,
     },
     transient: cloneTransientState(state.transient),
   };

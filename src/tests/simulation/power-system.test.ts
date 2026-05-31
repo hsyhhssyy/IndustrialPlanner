@@ -239,7 +239,7 @@ describe("REQ-089: power generation mode caching bug", () => {
       documentHash: "hash:test",
       registryHash: "registry:test",
       standardTickRate: STANDARD_TICK_RATE_PER_SECOND,
-      totalPowerDemand: 5,
+      totalPowerDemand: 10000,
       itemCatalog: {
         item_iron_nugget: { id: "item_iron_nugget", domain: "solid", tags: [] },
         item_iron_powder: { id: "item_iron_powder", domain: "solid", tags: [] },
@@ -266,7 +266,7 @@ describe("REQ-089: power generation mode caching bug", () => {
           rotation: null,
           tags: [],
           powerStatus: "in-power-range",
-          powerDemand: 5,
+          powerDemand: 10000,
           requiresPower: true,
           transportClass: "anchor",
           transportComponentId: null,

@@ -319,6 +319,14 @@ implements SimulationAction, SimulationInternalAction {
 
       if (response.result.status.status === "ready") {
         this.stateReadWrite.currentSnapshot = response.result.currentTick;
+        const snap = response.result.currentTick;
+        if (snap !== null) {
+          this.stateReadWrite.statistics = {
+            ...this.stateReadWrite.statistics,
+            baseBatteryJoules: snap.baseBatteryJoules,
+            baseBatteryCapacity: snap.baseBatteryCapacity,
+          };
+        }
         if (playbackTickNumberOnReady !== undefined) {
           this.stateReadWrite.currentPlaybackTickNumber = playbackTickNumberOnReady;
         }
@@ -363,7 +371,7 @@ implements SimulationAction, SimulationInternalAction {
     this.stateReadWrite.runtimeStatus = createInitialSimulationRuntimeStatus();
     this.stateReadWrite.currentSnapshot = null;
     this.stateReadWrite.currentPlaybackTickNumber = 0;
-    this.stateReadWrite.statistics = { tickPerSecond: 0, targetTickPerSecond: 0 };
+    this.stateReadWrite.statistics = { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 };
     this.tpsAccumulatedTicks = 0;
     this.tpsAccumulatedMs = 0;
     this.nextPerfReportTick = 180;
@@ -384,6 +392,7 @@ implements SimulationAction, SimulationInternalAction {
 
       runInAction(() => {
         this.stateReadWrite.statistics = {
+          ...this.stateReadWrite.statistics,
           tickPerSecond: Math.round(tps * 10) / 10,
           targetTickPerSecond: targetTps,
         };

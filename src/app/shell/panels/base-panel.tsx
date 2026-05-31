@@ -9,25 +9,6 @@ import { cm } from "@/app/shell/shared/css-module-class";
 
 const BASE_PANEL_POWER_INTERVAL_MS = 250;
 
-const POWER_ROWS = [
-  {
-    labelKey: "workbench.power.total",
-    valueKey: "workbench.powerValue.total",
-  },
-  {
-    labelKey: "workbench.power.covered",
-    valueKey: "workbench.powerValue.covered",
-  },
-  {
-    labelKey: "workbench.power.current",
-    valueKey: "workbench.powerValue.current",
-  },
-  {
-    labelKey: "workbench.power.mode",
-    valueKey: null, // 动态渲染切换按钮
-  },
-] as const;
-
 export function BasePanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const editor = appHost.workspace.editor;
@@ -40,11 +21,20 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
 
   // 主动轮询仿真文档级运行时数据（非 MobX 被动响应）
   const [totalPowerDemand, setTotalPowerDemand] = useState<number | null>(null);
+  const [currentPowerGeneration, setCurrentPowerGeneration] = useState<number | null>(null);
+  const [isPowerOutage, setIsPowerOutage] = useState<boolean>(false);
+  const [baseBatteryJoules, setBaseBatteryJoules] = useState<number | null>(null);
+  const [baseBatteryCapacity, setBaseBatteryCapacity] = useState<number | null>(null);
 
   useEffect(() => {
     const tick = () => {
       const docStatus = appHost.workspace.simulation?.queries.getDocumentRuntimeStatus() ?? null;
       setTotalPowerDemand(docStatus?.totalPowerDemand ?? null);
+      setCurrentPowerGeneration(docStatus?.currentPowerGeneration ?? null);
+      setIsPowerOutage(docStatus?.isPowerOutage ?? false);
+      const stats = appHost.workspace.simulation?.state.statistics;
+      setBaseBatteryJoules(stats?.baseBatteryJoules ?? null);
+      setBaseBatteryCapacity(stats?.baseBatteryCapacity ?? null);
     };
 
     tick();
@@ -55,8 +45,6 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
     };
   }, [appHost]);
 
-  const totalPowerValue = totalPowerDemand !== null ? `${totalPowerDemand} kW` : "0 kW";
-
   const powerMode: "real" | "infinite" =
     currentDocument?.documentSettings?.powerMode === "real" ? "real" : "infinite";
 
@@ -66,6 +54,27 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
     // 写入 documentSettings（silent）→ simulation 自动监听到并同步到 worker
     editor.actions.writeDocumentSettings({ powerMode: nextMode });
   };
+
+  // 电力横条数据
+  const demandDisplay = totalPowerDemand !== null ? `${totalPowerDemand} kW` : "-- kW";
+  const isInfinite = powerMode === "infinite";
+  const generationDisplay = isInfinite
+    ? "∞"
+    : currentPowerGeneration !== null
+      ? `${currentPowerGeneration} kW`
+      : "-- kW";
+
+  // 电池剩余百分比
+  let percentageText = "--%";
+  if (baseBatteryJoules !== null && baseBatteryCapacity !== null && baseBatteryCapacity > 0) {
+    const pct = Math.min(100, Math.round((baseBatteryJoules / baseBatteryCapacity) * 100));
+    percentageText = `${pct}%`;
+  }
+
+  // 停电时文字变红
+  const powerRowClassName = isPowerOutage && !isInfinite
+    ? cm(styles, "power-bar-label", "power-bar-outage")
+    : cm(styles, "power-bar-label");
 
   return (
     <div className={cm(styles, "stack")}>
@@ -92,37 +101,30 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
         <div className={cm(styles, "card-header")}>
           <h3>{t("rightDock.power")}</h3>
         </div>
-        <dl className={cm(styles, "inspector-summary-list")}>
-          {POWER_ROWS.map((entry, index) => {
-            if (entry.valueKey === null) {
-              // 电力模式：可点击切换按钮
-              const modeI18nKey = powerMode === "real"
-                ? "workbench.powerValue.mode.real"
-                : "workbench.powerValue.mode.infinite";
-
-              return (
-                <div className={cm(styles, "inspector-summary-row")} key={`left-dock-power-summary-${index}`}>
-                  <dt>{t(entry.labelKey)}</dt>
-                  <dd>
-                    <button
-                      className={cm(styles, "power-mode-toggle")}
-                      type="button"
-                      onClick={handleTogglePowerMode}
-                    >
-                      {t(modeI18nKey)}
-                    </button>
-                  </dd>
-                </div>
-              );
-            }
-            return (
-              <div className={cm(styles, "inspector-summary-row")} key={`left-dock-power-summary-${index}`}>
-                <dt>{t(entry.labelKey)}</dt>
-                <dd>{index === 0 ? totalPowerValue : t(entry.valueKey)}</dd>
-              </div>
-            );
-          })}
-        </dl>
+        <div className={cm(styles, "power-bar-shell")}>
+          <div className={powerRowClassName}>
+            <span className={cm(styles, "power-bar-values")}>
+              {demandDisplay}
+              <span className={cm(styles, "power-bar-separator")}>/</span>
+              {generationDisplay}
+            </span>
+            <span className={cm(styles, "power-bar-percent")}>{percentageText}</span>
+          </div>
+        </div>
+        <label className={cm(styles, "power-infinite-switch")}>
+          <span className={cm(styles, "power-infinite-switch-label")}>
+            {t("workbench.power.infiniteSwitch")}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isInfinite}
+            className={cm(styles, isInfinite ? "power-switch-on" : "power-switch-off")}
+            onClick={handleTogglePowerMode}
+          >
+            <span className={cm(styles, "power-switch-thumb")} />
+          </button>
+        </label>
       </article>
     </div>
   );

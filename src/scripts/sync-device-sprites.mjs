@@ -32,6 +32,9 @@ const defaultSpriteDirectory = path.join(projectRoot, 'public', '3d-top-view', '
 const defaultMaskDirectory = path.join(projectRoot, 'public', '3d-top-view', 'sprite-masks');
 
 // 资源目录使用中文设备名，运行时资源使用 registry spriteId。
+// 三元组：[中文名, spriteId, rotation?]
+// rotation 为顺时针旋转角度（度），默认 0。
+// 图片输入端口在 N 方向，设备定义 0° 输入端口在 S 方向时需要 rotation: 180。
 const DEVICE_SPRITE_MAPPINGS = [
   ['塑形机', 'item_port_shaper_1'],
   ['种植机', 'item_port_planter_1'],
@@ -41,6 +44,13 @@ const DEVICE_SPRITE_MAPPINGS = [
   ['采种机', 'item_port_seedcol_1'],
   ['存取线基段', 'item_port_log_hongs_bus'],
   ['存取线源桩', 'item_port_log_hongs_bus_source'],
+  ['反应池', 'item_port_mix_pool_1', 180],
+  ['天有洪炉', 'item_port_xiranite_oven_1', 180],
+  ['拆解机', 'item_port_dismantler_1', 180],
+  ['装备原件机', 'item_port_winder_1', 180],
+  ['封装机', 'item_port_tools_asm_mc_1', 180],
+  ['灌装机', 'item_port_filling_pd_mc_1', 180],
+  ['研磨机', 'item_port_thickener_1', 180],
 ];
 
 function createMaskBuffer(sourceBuffer, width, height, channels) {
@@ -60,16 +70,31 @@ function createMaskBuffer(sourceBuffer, width, height, channels) {
   return maskBuffer;
 }
 
-async function publishDeviceSprite(sourceFilePath, spriteOutputFilePath, maskOutputFilePath) {
+async function publishDeviceSprite(sourceFilePath, spriteOutputFilePath, maskOutputFilePath, rotation = 0) {
   await mkdir(path.dirname(spriteOutputFilePath), { recursive: true });
   await mkdir(path.dirname(maskOutputFilePath), { recursive: true });
 
-  const { data, info } = await sharp(sourceFilePath)
-    .ensureAlpha()
+  // 先构建旋转后的像素数据用于遮罩生成
+  const rotatedPipeline = sharp(sourceFilePath)
+    .ensureAlpha();
+
+  if (rotation !== 0) {
+    rotatedPipeline.rotate(rotation, { background: { r: 0, g: 0, b: 0, alpha: 0 } });
+  }
+
+  const { data, info } = await rotatedPipeline
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  await sharp(sourceFilePath)
+  // 输出旋转后的 WebP sprite
+  const webpPipeline = sharp(sourceFilePath)
+    .ensureAlpha();
+
+  if (rotation !== 0) {
+    webpPipeline.rotate(rotation, { background: { r: 0, g: 0, b: 0, alpha: 0 } });
+  }
+
+  await webpPipeline
     .webp({ lossless: true, effort: 6 })
     .toFile(spriteOutputFilePath);
 
@@ -157,7 +182,7 @@ async function main() {
   const spriteDirectory = path.resolve(process.argv[3] ?? defaultSpriteDirectory);
   const maskDirectory = path.resolve(process.argv[4] ?? defaultMaskDirectory);
 
-  for (const [sourceName, spriteId] of DEVICE_SPRITE_MAPPINGS) {
+  for (const [sourceName, spriteId, rotation = 0] of DEVICE_SPRITE_MAPPINGS) {
     const sourceFilePath = path.join(sourceDirectory, `${sourceName}.png`);
     const spriteOutputFilePath = path.join(spriteDirectory, `${spriteId}.webp`);
     const maskOutputFilePath = path.join(maskDirectory, `${spriteId}.webp`);
@@ -165,9 +190,10 @@ async function main() {
       sourceFilePath,
       spriteOutputFilePath,
       maskOutputFilePath,
+      rotation,
     );
 
-    console.log(`${spriteId}: ${width}x${height}`);
+    console.log(`${spriteId}: ${width}x${height}${rotation ? ` (rotated ${rotation}°)` : ''}`);
   }
 }
 

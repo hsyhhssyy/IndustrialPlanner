@@ -629,7 +629,7 @@ describe("Left dock panel switching", () => {
     expect(basePanel?.querySelector('[data-ui-button-id="base-current-select"]')).not.toBeNull();
     expect(basePanel?.querySelector(".inspector-option-grid")).toBeNull();
     expect(basePanel?.textContent).toContain("协议核心区");
-    expect(basePanel?.textContent).toContain("总耗电");
+    expect(basePanel?.textContent).toContain("无限电力");
 
     const simulationButton = clickTab("仿真");
     const simulationPanel = queryVisibleLeftDockPanel(container);
@@ -2350,6 +2350,280 @@ describe("Left dock panel switching", () => {
     });
 
     expect(visiblePanel?.querySelector(`[data-blueprint-id="${blueprint.blueprintId}"]`)).not.toBeNull();
+  });
+});
+
+describe("Base panel power bar", () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    Object.defineProperty(window, "devicePixelRatio", {
+      configurable: true,
+      writable: true,
+      value: 1,
+    });
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 1280,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: 800,
+    });
+    Object.defineProperty(window.navigator, "userAgent", {
+      configurable: true,
+      value:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    });
+    Object.defineProperty(window.navigator, "maxTouchPoints", {
+      configurable: true,
+      value: 0,
+    });
+    Object.defineProperty(window.navigator, "userAgentData", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
+  afterEach(() => {
+    act(() => {
+      root.unmount();
+    });
+    container.remove();
+    localStorage.clear();
+    vi.unstubAllGlobals();
+  });
+
+  function switchToBasePanel() {
+    const baseButton = container.querySelector(
+      'button[title="基地"]',
+    ) as HTMLButtonElement | null;
+
+    expect(baseButton).not.toBeNull();
+    act(() => {
+      baseButton?.click();
+    });
+    return queryVisibleLeftDockPanel(container);
+  }
+
+  function setupWithSimulation(simulationStatus: {
+    totalPowerDemand: number | null;
+    currentPowerGeneration: number | null;
+    isPowerOutage?: boolean;
+    batteryJoules?: number;
+    batteryCapacity?: number;
+  } | null,
+  powerMode: "real" | "infinite" = "infinite",
+  ) {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+
+    // 写入文档设置
+    editorHost.internalDocument.setSnapshot({
+      ...createDummyWorldDocument(),
+      documentSettings: {
+        viewport: { center: { x: 0, y: 0 }, gridSize: 1, displayRotation: 0 },
+        gridSize: 1,
+        showDiagnostics: false,
+        powerMode,
+      },
+    });
+
+    // 注入 mock simulation
+    if (simulationStatus !== null) {
+      const getDocumentRuntimeStatus = vi.fn(() => ({
+        tickNumber: 0,
+        totalPowerDemand: simulationStatus.totalPowerDemand,
+        currentPowerGeneration: simulationStatus.currentPowerGeneration,
+        isPowerOutage: simulationStatus.isPowerOutage ?? false,
+      }));
+
+      workspace.simulation = {
+        state: {
+          statistics: {
+            baseBatteryJoules: simulationStatus.batteryJoules ?? 0,
+            baseBatteryCapacity: simulationStatus.batteryCapacity ?? 0,
+          },
+        },
+        queries: {
+          getStatusRuntimeJson: vi.fn(() => "{}"),
+          getDocumentRuntimeStatus,
+          getDeviceRuntimeStatus: vi.fn(() => null),
+          getPipeFluidItemId: vi.fn(() => null),
+          isPipeDeviceSlotOccupied: vi.fn(() => false),
+        },
+      } as unknown as NonNullable<WorkspaceContract["simulation"]>;
+    }
+
+    act(() => {
+      root.render(
+        <>
+          <LeftToolbar appHost={appHost} />
+          <LeftDock appHost={appHost} />
+        </>,
+      );
+    });
+
+    return { workspace, editorHost, appHost };
+  }
+
+  it("shows dash values and battery percentage in infinite power mode without simulation", () => {
+    setupWithSimulation(null, "infinite");
+    const basePanel = switchToBasePanel();
+
+    expect(basePanel?.getAttribute("data-panel-id")).toBe("base");
+    // 无限电力 + 无仿真 → 耗电 -- kW，发电 ∞
+    expect(basePanel?.textContent).toContain("-- kW");
+    expect(basePanel?.textContent).toContain("∞");
+    // 无仿真数据 → 电池百分比 --%
+    expect(basePanel?.querySelector(".power-bar-percent")?.textContent).toBe("--%");
+    // switch 应为开启状态
+    const switchButton = basePanel?.querySelector('[role="switch"]');
+    expect(switchButton?.getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("shows demand / generation and battery percentage in real power mode with simulation data", () => {
+    setupWithSimulation(
+      { totalPowerDemand: 100, currentPowerGeneration: 200, batteryJoules: 750, batteryCapacity: 1000 },
+      "real",
+    );
+    const basePanel = switchToBasePanel();
+
+    // 真实电力 + 仿真数据 → 100 kW / 200 kW  75%
+    expect(basePanel?.textContent).toContain("100 kW");
+    expect(basePanel?.textContent).toContain("200 kW");
+    expect(basePanel?.querySelector(".power-bar-percent")?.textContent).toBe("75%");
+    // switch 应为关闭状态
+    const switchButton = basePanel?.querySelector('[role="switch"]');
+    expect(switchButton?.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("shows --% when battery capacity is zero", () => {
+    setupWithSimulation(
+      { totalPowerDemand: 50, currentPowerGeneration: 100, batteryJoules: 0, batteryCapacity: 0 },
+      "real",
+    );
+    const basePanel = switchToBasePanel();
+
+    expect(basePanel?.querySelector(".power-bar-percent")?.textContent).toBe("--%");
+  });
+
+  it("shows -- kW for both when simulation returns null status", () => {
+    // simulation 有查询但返回 null
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+
+    editorHost.internalDocument.setSnapshot({
+      ...createDummyWorldDocument(),
+      documentSettings: {
+        viewport: { center: { x: 0, y: 0 }, gridSize: 1, displayRotation: 0 },
+        gridSize: 1,
+        showDiagnostics: false,
+        powerMode: "real",
+      },
+    });
+
+    workspace.simulation = {
+      state: {
+        statistics: {
+          baseBatteryJoules: 0,
+          baseBatteryCapacity: 0,
+        },
+      },
+      queries: {
+        getStatusRuntimeJson: vi.fn(() => "{}"),
+        getDocumentRuntimeStatus: vi.fn(() => null),
+        getDeviceRuntimeStatus: vi.fn(() => null),
+        getPipeFluidItemId: vi.fn(() => null),
+        isPipeDeviceSlotOccupied: vi.fn(() => false),
+      },
+    } as unknown as NonNullable<WorkspaceContract["simulation"]>;
+
+    act(() => {
+      root.render(
+        <>
+          <LeftToolbar appHost={appHost} />
+          <LeftDock appHost={appHost} />
+        </>,
+      );
+    });
+
+    const basePanel = switchToBasePanel();
+
+    // 真实电力但仿真返回 null → 两边都是 -- kW
+    expect(basePanel?.textContent).toContain("-- kW");
+    // 百分比也应该是 --
+    expect(basePanel?.querySelector(".power-bar-percent")?.textContent).toBe("--%");
+  });
+
+  it("applies outage style when isPowerOutage is true in real mode", () => {
+    setupWithSimulation(
+      { totalPowerDemand: 150, currentPowerGeneration: 100, isPowerOutage: true },
+      "real",
+    );
+    const basePanel = switchToBasePanel();
+
+    // 停电状态下 .power-bar-label 应有 outage 类
+    const powerLabel = basePanel?.querySelector(".power-bar-label");
+    expect(powerLabel?.classList.contains("power-bar-outage")).toBe(true);
+  });
+
+  it("does not apply outage style in infinite power mode even if outage is true", () => {
+    setupWithSimulation(
+      { totalPowerDemand: 150, currentPowerGeneration: null, isPowerOutage: true },
+      "infinite",
+    );
+    const basePanel = switchToBasePanel();
+
+    const powerLabel = basePanel?.querySelector(".power-bar-label");
+    expect(powerLabel?.classList.contains("power-bar-outage")).toBe(false);
+  });
+
+  it("toggles power mode from infinite to real when switch is clicked", () => {
+    const { editorHost } = setupWithSimulation(
+      { totalPowerDemand: 80, currentPowerGeneration: 120 },
+      "infinite",
+    );
+    const basePanel = switchToBasePanel();
+
+    const switchButton = basePanel?.querySelector('[role="switch"]') as HTMLButtonElement | null;
+
+    expect(switchButton).not.toBeNull();
+    expect(switchButton?.getAttribute("aria-checked")).toBe("true");
+
+    // 点击切换
+    act(() => {
+      switchButton?.click();
+    });
+
+    // 现在应变为真实电力
+    expect(switchButton?.getAttribute("aria-checked")).toBe("false");
+    // 确认文档设置已变更
+    const doc = editorHost.document.getSnapshot();
+    expect(doc.documentSettings.powerMode).toBe("real");
   });
 });
 

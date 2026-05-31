@@ -71,11 +71,11 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
     item_port_planter_1: 507,
     item_port_hydro_planter_1: 508,
     item_liquid_cleaner_1: 509,
-    item_port_filling_pd_mc_1: 602,
-    item_port_liquid_filling_pd_mc_1: 603,
 
     // 600 — advancedManufacturing
     item_port_winder_1: 601,
+    item_port_filling_pd_mc_1: 602,
+    item_port_liquid_filling_pd_mc_1: 603,
     item_port_tools_asm_mc_1: 604,
     item_port_thickener_1: 605,
     item_port_mix_pool_1: 606,
