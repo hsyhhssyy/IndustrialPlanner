@@ -119,7 +119,7 @@ export class SimulationWorkerRuntime {
             status: this.getStatus(),
           };
         case "set-power-mode":
-          this.powerMode = request.powerMode;
+          this.setPowerMode(request.powerMode);
           return {
             type: "power-mode-set",
             requestId: request.requestId,
@@ -268,7 +268,11 @@ export class SimulationWorkerRuntime {
     return requestedTickNumber;
   }
 
-  private clearTickCachesFrom(tickNumber: number): void {
+  /**
+   * 统一缓存作废入口：丢弃 tickNumber 及之后的所有预计算快照。
+   * 调用方负责在适当时候调度后台填充。
+   */
+  private invalidateFrom(tickNumber: number): void {
     for (const cachedTickNumber of [...this.tickSnapshots.keys()]) {
       if (cachedTickNumber >= tickNumber) {
         this.tickSnapshots.delete(cachedTickNumber);
@@ -280,6 +284,10 @@ export class SimulationWorkerRuntime {
     this.latestTickNumber = retainedTickNumbers[retainedTickNumbers.length - 1] ?? null;
     this.retainedFromTick = retainedTickNumbers[0] ?? null;
     this.nextTickNumber = tickNumber;
+  }
+
+  private clearTickCachesFrom(tickNumber: number): void {
+    this.invalidateFrom(tickNumber);
   }
 
   private loadTopology(
@@ -430,17 +438,13 @@ export class SimulationWorkerRuntime {
 
   /**
    * 设置电力模式。不触发拓扑重编译，仅影响后续 tick 的门控行为。
+   * 拓扑不变、持久运行时状态不变（设备/配方/电池均保留）。
+   * 已缓存但尚未计算的未来 tick 作废，从下一个 tick 起按新模式重新推进。
    */
   public setPowerMode(powerMode: "real" | "infinite"): void {
     if (this.powerMode === powerMode) return;
     this.powerMode = powerMode;
-    // 清空所有预计算的 tick 缓存，确保后续 tick 使用新模式重新计算。
-    // 不清缓存会导致用户切换模式后等待 ~9 秒（MAX_RETAINED_TICKS / tick rate）
-    // 才能看到新模式生效。
-    this.tickSnapshots.clear();
-    this.tickRuntimeStates.clear();
-    this.retainedFromTick = null;
-    this.latestTickNumber = null;
+    this.invalidateFrom(this.nextTickNumber);
   }
 
   /**
@@ -510,6 +514,19 @@ export class SimulationWorkerRuntime {
     }
   }
 
+  /**
+   * 根据发电量和电池缓冲计算当前 tick 是否停电。
+   * 非运行时 tick 中不消耗电池，仅用于正确展示。
+   */
+  private resolveTickPowerOutage(currentPowerGeneration: number): boolean {
+    return computeEffectivePowerState(
+      this.powerMode,
+      currentPowerGeneration,
+      this.topology?.totalPowerDemand ?? 0,
+      this.runtimeState?.persistent.baseBatteryJoules ?? 0,
+    );
+  }
+
   private createNextTickSnapshot(tickNumber: number): RuntimeTickSnapshot {
     if (this.topology === null || this.runtimeState === null) {
       throw new Error("Simulation runtime is not initialized.");
@@ -524,15 +541,15 @@ export class SimulationWorkerRuntime {
     const runtimeStepTicks = tickNumber - this.runtimeState.lastAdvancedTickNumber;
     const shouldRunRuntime = shouldAdvance && runtimeStepTicks >= this.standardStepTicks;
 
-    const isPowerOutage = this.powerMode === "real"
-      && (this.runtimeState.transient.currentPowerGeneration ?? 0) < this.topology.totalPowerDemand;
-
     const perfTiming = this.perfEnabled ? { tickNumber, start: performance.now(), stages: {} as Record<string, number>, stage3: undefined as TickPerfStage3Details | undefined } : null;
 
     if (shouldAdvance && !shouldRunRuntime) {
+      // 非运行时 tick：仿真未推进，但需正确反映当前电力状态（含电池缓冲）
+      const currentPowerGeneration = computeCurrentPowerGeneration(this.topology, this.runtimeState);
+      const isPowerOutage = this.resolveTickPowerOutage(currentPowerGeneration);
       this.runtimeState.transient = createEmptyTransientState();
       const t0 = this.perfEnabled ? performance.now() : 0;
-      const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutage);
+      const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutage, currentPowerGeneration);
       if (this.perfEnabled) {
         perfTiming!.stages["createSnapshot"] = performance.now() - t0;
         this.perfEntries.push({
@@ -559,7 +576,6 @@ export class SimulationWorkerRuntime {
         this.topology,
         this.runtimeState,
       );
-      this.runtimeState.transient.currentPowerGeneration = currentPowerGeneration;
 
       // 真实电力模式下更新基地电池，并计算计入电池补足后的有效发电量
       let effectiveGeneration = currentPowerGeneration;
@@ -646,7 +662,7 @@ export class SimulationWorkerRuntime {
       const t6 = this.perfEnabled ? performance.now() : 0;
       const isPowerOutageRun = this.powerMode === "real"
         && effectiveGeneration < this.topology.totalPowerDemand;
-      const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutageRun);
+      const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutageRun, currentPowerGeneration);
       if (this.perfEnabled) {
         perfTiming!.stages["createSnapshot"] = performance.now() - t6;
         const total = performance.now() - perfTiming!.start;
@@ -669,13 +685,16 @@ export class SimulationWorkerRuntime {
       return snapshot;
     }
 
-    // tick-0: 只走 buildSolveGraph + createSnapshot
+    // tick-0 或未推进 tick：只走 buildSolveGraph + createSnapshot
     const t0 = this.perfEnabled ? performance.now() : 0;
     buildSolveGraph(this.topology, this.runtimeState);
     if (this.perfEnabled) { perfTiming!.stages["buildSolveGraph"] = performance.now() - t0; }
 
+    const currentPowerGenForSnapshot = computeCurrentPowerGeneration(this.topology, this.runtimeState);
+    const isPowerOutageForSnapshot = this.resolveTickPowerOutage(currentPowerGenForSnapshot);
+
     const t1 = this.perfEnabled ? performance.now() : 0;
-    const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutage);
+    const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutageForSnapshot, currentPowerGenForSnapshot);
     if (this.perfEnabled) {
       perfTiming!.stages["createSnapshot"] = performance.now() - t1;
       const total = performance.now() - perfTiming!.start;
@@ -981,4 +1000,24 @@ function computeCurrentPowerGeneration(
     }
   }
   return total;
+}
+
+/**
+ * 根据发电量和电池缓冲计算是否停电。
+ * 真实电力模式下：若发电不足但电池有剩余，视为非停电（电池可补足）。
+ * 无限电力模式下始终返回 false。
+ * 
+ * 在非运行时 tick 中调用时，不会实际消耗电池，仅用于快照展示。
+ */
+function computeEffectivePowerState(
+  mode: "real" | "infinite",
+  currentPowerGeneration: number,
+  totalPowerDemand: number,
+  baseBatteryJoules: number,
+): boolean {
+  if (mode !== "real") return false;
+
+  if (currentPowerGeneration >= totalPowerDemand) return false;
+
+  return baseBatteryJoules <= 0;
 }

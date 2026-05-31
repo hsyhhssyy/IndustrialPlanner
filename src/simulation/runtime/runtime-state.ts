@@ -6,8 +6,8 @@ import type {
   SimulationRecipeType,
 } from "../types";
 
-/** 基地电池满容量（焦耳） */
-export const BASE_BATTERY_CAPACITY_J = 100_000;
+/** 基地电池满容量（焦耳）= 100MJ。940kW 负载约 106 秒耗尽。 */
+export const BASE_BATTERY_CAPACITY_J = 100_000_000;
 
 export type RuntimeShadowState = "uncertain" | "accept" | "moved";
 
@@ -74,8 +74,6 @@ export interface SimulationTickTransientState {
   diagnostics: RuntimeTickDiagnosticRecord[];
   /** Stage 3 增量优化：被阻塞的 input-view node ID 集合，避免 refreshBlockedInputNodesAfterMove 每次全量扫描 nodeOrder。 */
   blockedInputNodeIds: Set<string>;
-  /** 当前 tick 的动态发电量（kW），真实电力模式下的运行中配方 powerOutput 之和。 */
-  currentPowerGeneration?: number;
   /** Perf 埋点：当前 tick 的热点函数调用计数累积器。仅在 perfEnabled 时非空。 */
   _perf?: SimulationRuntimePerf;
 }
@@ -389,7 +387,6 @@ function cloneTransientState(transient: SimulationTickTransientState): Simulatio
     transfers: transient.transfers.map((transfer) => ({ ...transfer })),
     diagnostics: transient.diagnostics.map((diagnostic) => ({ ...diagnostic })),
     blockedInputNodeIds: new Set(transient.blockedInputNodeIds),
-    currentPowerGeneration: transient.currentPowerGeneration,
     _perf: transient._perf === undefined ? undefined : { ...transient._perf },
   };
 }

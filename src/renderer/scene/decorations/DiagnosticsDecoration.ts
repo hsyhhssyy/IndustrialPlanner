@@ -1,11 +1,21 @@
 import { Text, TextStyle } from "pixi.js";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 
 const FPS_TEXT_STYLE = new TextStyle({
-  fontSize: 10,
+  fontSize: 20,
   fill: 0x006600,
   fontFamily: "monospace",
+  fontWeight: "bold",
+  stroke: { color: 0x000000, width: 2, alpha: 0.42 },
+  dropShadow: {
+    color: 0x000000,
+    alpha: 0.16,
+    blur: 2,
+    distance: 1,
+    angle: Math.PI / 2,
+  },
 });
 
 const FPS_UPDATE_INTERVAL_MS = 1000;
@@ -30,6 +40,19 @@ export function createDiagnosticsDecoration(): DecorationLayer {
       }
 
       text.visible = true;
+
+      const strokeColor = resolveAppThemeColorNumber(
+        ctx.theme,
+        "text-0",
+      );
+      text.style.stroke = {
+        color: strokeColor,
+        width: 2,
+        alpha: 0.42,
+      };
+      if (text.style.dropShadow) {
+        text.style.dropShadow.color = strokeColor;
+      }
 
       frameCount += 1;
 

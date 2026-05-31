@@ -181,6 +181,10 @@ export function convertLegacyBlueprintJson(
  *   旧：submitToWarehouse = true
  *   新：storageSlotGroups[N].slots[0].submitMode = "every-tick"
  *
+ * 反应池 / 扩容反应池（item_port_mix_pool_1 / item_port_mix_pool_large_1）：
+ *   旧：reactorPool.selectedRecipeIds / solidOutputItemId / liquidOutputItemIdA / liquidOutputItemIdB
+ *   新：channelRecipes + portGroups[N].ports[M].acceptRule
+ *
  * 通用预置物品（preloadInputs）：
  *   旧：preloadInputs: [{ slotIndex, itemId, amount }]
  *   新：storageSlotGroups[0].slots[slotIndex].initialItemType / initialCount
@@ -201,7 +205,112 @@ function convertLegacyDeviceConfig(options: {
     return convertLegacyStoragerConfig(options.config);
   }
 
+  if (options.definitionId === "item_port_mix_pool_1" || options.definitionId === "item_port_mix_pool_large_1") {
+    return convertLegacyReactorPoolConfig(options.definitionId, options.config);
+  }
+
   return convertLegacyPreloadInputs(options.config);
+}
+
+/**
+ * 扩容反应池旧配方 ID → 新版 _large 配方 ID 映射。
+ * 仅当迁移定义目标是 item_port_mix_pool_large_1 时应用。
+ */
+const LARGE_REACTOR_RECIPE_ID_BY_LEGACY_ID: Record<string, string> = {
+  "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic":
+    "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic_large",
+  "r_chrono_mix_pool_inert_waste_liquid_water_slag_from_waste_liquid_and_iron_powder_basic":
+    "r_chrono_mix_pool_inert_waste_liquid_water_slag_from_waste_liquid_and_iron_powder_basic_large",
+  "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic":
+    "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large",
+};
+
+/**
+ * 将旧版反应池 config.reactorPool 转换为新版 channelRecipes + acceptRule。
+ *
+ * 反应池 / 扩容反应池（item_port_mix_pool_1 / item_port_mix_pool_large_1）：
+ *   旧格式 config.reactorPool：
+ *     selectedRecipeIds: string[]  → channelRecipes: { ch1, ch2, ... }
+ *     solidOutputItemId: string    → portGroups[0].ports[*].acceptRule（item_output）
+ *     liquidOutputItemIdA: string  → portGroups[2].ports[0].acceptRule（fluid_output_a）
+ *     liquidOutputItemIdB: string  → portGroups[3].ports[0].acceptRule（fluid_output_b）
+ *
+ * 扩容反应池的旧配方 ID 不带 _large 后缀，迁移时通过 LARGE_REACTOR_RECIPE_ID_BY_LEGACY_ID 映射。
+ */
+function convertLegacyReactorPoolConfig(
+  definitionId: string,
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const reactorPool = config.reactorPool;
+
+  if (!isRecord(reactorPool)) {
+    const nextConfig = { ...config };
+    delete nextConfig.reactorPool;
+    return convertLegacyPreloadInputs(nextConfig);
+  }
+
+  const nextConfig: Record<string, unknown> = { ...config };
+  delete nextConfig.reactorPool;
+
+  const isLarge = definitionId === "item_port_mix_pool_large_1";
+
+  // 1. 配方：selectedRecipeIds → channelRecipes
+  const rawRecipeIds = reactorPool.selectedRecipeIds;
+  if (Array.isArray(rawRecipeIds) && rawRecipeIds.length > 0) {
+    const channelRecipes: Record<string, string> = {};
+
+    for (let i = 0; i < rawRecipeIds.length; i += 1) {
+      const rawId = rawRecipeIds[i];
+      if (typeof rawId !== "string" || rawId.trim().length === 0) {
+        continue;
+      }
+
+      const mappedId = isLarge
+        ? (LARGE_REACTOR_RECIPE_ID_BY_LEGACY_ID[rawId] ?? rawId)
+        : rawId;
+      channelRecipes[`ch${i + 1}`] = mappedId;
+    }
+
+    if (Object.keys(channelRecipes).length > 0) {
+      nextConfig.channelRecipes = channelRecipes;
+    }
+  }
+
+  // 2. 固体输出：solidOutputItemId → portGroups[0] = item_output
+  //    item_port_mix_pool_1: 2 ports（out_n_1, out_n_3）
+  //    item_port_mix_pool_large_1: 4 ports（out_n_1..out_n_4）
+  const solidOutputItemId = reactorPool.solidOutputItemId;
+  if (typeof solidOutputItemId === "string" && solidOutputItemId.trim().length > 0) {
+    const portCount = isLarge ? 4 : 2;
+
+    for (let i = 0; i < portCount; i += 1) {
+      nextConfig[`portGroups[0].ports[${i}].acceptRule`] = {
+        base: { kind: "item", itemId: solidOutputItemId },
+        exclude: [],
+      };
+    }
+  }
+
+  // 3. 液体输出 A：liquidOutputItemIdA → portGroups[2] = fluid_output_a（out_w_1）
+  const liquidOutputItemIdA = reactorPool.liquidOutputItemIdA;
+  if (typeof liquidOutputItemIdA === "string" && liquidOutputItemIdA.trim().length > 0) {
+    nextConfig["portGroups[2].ports[0].acceptRule"] = {
+      base: { kind: "item", itemId: liquidOutputItemIdA },
+      exclude: [],
+    };
+  }
+
+  // 4. 液体输出 B：liquidOutputItemIdB → portGroups[3] = fluid_output_b（out_w_3）
+  const liquidOutputItemIdB = reactorPool.liquidOutputItemIdB;
+  if (typeof liquidOutputItemIdB === "string" && liquidOutputItemIdB.trim().length > 0) {
+    nextConfig["portGroups[3].ports[0].acceptRule"] = {
+      base: { kind: "item", itemId: liquidOutputItemIdB },
+      exclude: [],
+    };
+  }
+
+  // 5. 传递 preloadInputs 处理（反应池可能有预置输入）
+  return convertLegacyPreloadInputs(nextConfig);
 }
 
 /**

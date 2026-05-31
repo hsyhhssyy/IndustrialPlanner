@@ -230,8 +230,9 @@ describe("REQ-084: simulation power system", () => {
 
 describe("REQ-089: power generation mode caching bug", () => {
   it("setPowerMode clears cached ticks so new mode takes effect immediately", () => {
-    // 构建一个简单拓扑：一个 grinder（requiresPower: true, powerDemand: 5）在供电范围内。
-    // 无发电设备 → totalPowerGeneration = 0。
+    // 拓扑：一个 grinder（requiresPower: true）在供电范围内，无发电设备。
+    // demand=40_000kW → 每 tick 消耗 2MJ，100MJ 电池约 50 ticks 耗尽。
+    // 输入 20 个 nugget + 每 10 tick 消耗 1 个 → 可跑 200 ticks 不断料。
     const topology: CompiledSimulationTopology = {
       schemaVersion: 4,
       topologyId: "topology:power-mode-cache-test",
@@ -239,7 +240,7 @@ describe("REQ-089: power generation mode caching bug", () => {
       documentHash: "hash:test",
       registryHash: "registry:test",
       standardTickRate: STANDARD_TICK_RATE_PER_SECOND,
-      totalPowerDemand: 10000,
+      totalPowerDemand: 40_000,
       itemCatalog: {
         item_iron_nugget: { id: "item_iron_nugget", domain: "solid", tags: [] },
         item_iron_powder: { id: "item_iron_powder", domain: "solid", tags: [] },
@@ -266,7 +267,7 @@ describe("REQ-089: power generation mode caching bug", () => {
           rotation: null,
           tags: [],
           powerStatus: "in-power-range",
-          powerDemand: 10000,
+          powerDemand: 40_000,
           requiresPower: true,
           transportClass: "anchor",
           transportComponentId: null,
@@ -301,14 +302,14 @@ describe("REQ-089: power generation mode caching bug", () => {
         "slot:input": {
           id: "slot:input", nodeId: "node:input",
           sourceStorageSlotGroupId: null, sourceSlotId: null,
-          capacity: 10, domain: "solid", lock: null,
-          initialItemType: "item_iron_nugget", initialCount: 1,
+          capacity: 50, domain: "solid", lock: null,
+          initialItemType: "item_iron_nugget", initialCount: 20,
           ignoreStock: false, submitMode: "never", submitIntervalTicks: null,
         },
         "slot:output": {
           id: "slot:output", nodeId: "node:output",
           sourceStorageSlotGroupId: null, sourceSlotId: null,
-          capacity: 10, domain: "solid", lock: null,
+          capacity: 50, domain: "solid", lock: null,
           initialItemType: null, initialCount: 0,
           ignoreStock: false, submitMode: "never", submitIntervalTicks: null,
         },

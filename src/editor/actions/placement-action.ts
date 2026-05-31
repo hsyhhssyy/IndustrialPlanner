@@ -142,6 +142,7 @@ export function createEditorPlacementActions({
       });
       preview.replace(nextPreviewDrafts.map((draft) => draft.id));
       state.internalTransientState.placementDraftEntityIdMap = entityIdMap;
+      state.internalTransientState.placementOriginEntityIds = Object.keys(blueprint.entities);
       state.internalTransientState.placementDraftSlotLinks = blueprint.slotLinks.flatMap((slotLink) => {
         const sourceEntityId = entityIdMap.get(slotLink.source.entityId);
         const targetEntityId = entityIdMap.get(slotLink.target.entityId);
@@ -366,6 +367,7 @@ function clearPlacementState(state: EditorActionsContext["state"]): void {
   preview.replace([]);
   state.internalTransientState.placementDraftSlotLinks = null;
   state.internalTransientState.placementDraftEntityIdMap = null;
+  state.internalTransientState.placementOriginEntityIds = null;
   state.internalTransientState.placementHistoryAction = null;
 }
 

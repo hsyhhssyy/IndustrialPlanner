@@ -618,12 +618,29 @@
       },
       "rotation": 270,
       "config": {
-        "reactorPool": {
-          "selectedRecipeIds": [
-            "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic"
-          ],
-          "solidOutputItemId": "item_plant_moss_3",
-          "liquidOutputItemIdA": "item_liquid_xiranite"
+        "channelRecipes": {
+          "ch1": "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic"
+        },
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[2].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_xiranite"
+          },
+          "exclude": []
         }
       },
       "tags": []
@@ -835,12 +852,22 @@
       },
       "rotation": 270,
       "config": {
-        "reactorPool": {
-          "selectedRecipeIds": [
-            "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
-          ],
-          "liquidOutputItemIdA": "item_liquid_xiranite_poly",
-          "liquidOutputItemIdB": "item_liquid_xiranite_lowpoly"
+        "channelRecipes": {
+          "ch1": "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
+        },
+        "portGroups[2].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_xiranite_poly"
+          },
+          "exclude": []
+        },
+        "portGroups[3].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_xiranite_lowpoly"
+          },
+          "exclude": []
         }
       },
       "tags": []
@@ -1579,12 +1606,29 @@
       },
       "rotation": 0,
       "config": {
-        "reactorPool": {
-          "selectedRecipeIds": [
-            "r_chrono_mix_pool_inert_waste_liquid_water_slag_from_waste_liquid_and_iron_powder_basic"
-          ],
-          "solidOutputItemId": "item_xiranite_poly",
-          "liquidOutputItemIdB": "item_liquid_sewage"
+        "channelRecipes": {
+          "ch1": "r_chrono_mix_pool_inert_waste_liquid_water_slag_from_waste_liquid_and_iron_powder_basic"
+        },
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_xiranite_poly"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_xiranite_poly"
+          },
+          "exclude": []
+        },
+        "portGroups[3].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_sewage"
+          },
+          "exclude": []
         }
       },
       "tags": []
@@ -2329,12 +2373,29 @@
       },
       "rotation": 90,
       "config": {
-        "reactorPool": {
-          "selectedRecipeIds": [
-            "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic"
-          ],
-          "solidOutputItemId": "item_plant_moss_3",
-          "liquidOutputItemIdA": "item_liquid_xiranite"
+        "channelRecipes": {
+          "ch1": "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic"
+        },
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[2].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_xiranite"
+          },
+          "exclude": []
         }
       },
       "tags": []
@@ -2834,12 +2895,22 @@
       },
       "rotation": 90,
       "config": {
-        "reactorPool": {
-          "selectedRecipeIds": [
-            "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
-          ],
-          "liquidOutputItemIdA": "item_liquid_xiranite_poly",
-          "liquidOutputItemIdB": "item_liquid_xiranite_lowpoly"
+        "channelRecipes": {
+          "ch1": "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
+        },
+        "portGroups[2].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_xiranite_poly"
+          },
+          "exclude": []
+        },
+        "portGroups[3].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_xiranite_lowpoly"
+          },
+          "exclude": []
         }
       },
       "tags": []

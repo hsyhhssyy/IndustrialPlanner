@@ -62,6 +62,7 @@ export interface EditorInternalTransientStateReadWrite {
   placementDraftEntityIdMap: ReadonlyMap<string, string> | null;
   placementHistoryAction: EditorHistoryActionDescriptor | null;
   placementValidationByEntityId: Record<string, EntityPlacementValidationResult>;
+  placementOriginEntityIds: string[] | null;
 }
 
 class EditorInternalPersistStateReadWriteImpl
@@ -87,6 +88,7 @@ class EditorInternalTransientStateReadWriteImpl
   placementDraftEntityIdMap: ReadonlyMap<string, string> | null = null;
   placementHistoryAction: EditorHistoryActionDescriptor | null = null;
   placementValidationByEntityId: Record<string, EntityPlacementValidationResult> = {};
+  placementOriginEntityIds: string[] | null = null;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
