@@ -232,7 +232,7 @@ describe("REQ-089: power generation mode caching bug", () => {
   it("setPowerMode clears cached ticks so new mode takes effect immediately", () => {
     // 拓扑：一个 grinder（requiresPower: true）在供电范围内，无发电设备。
     // demand=40_000kW → 每 tick 消耗 2MJ，100MJ 电池约 50 ticks 耗尽。
-    // 输入 20 个 nugget + 每 10 tick 消耗 1 个 → 可跑 200 ticks 不断料。
+    // 配方 durationTicks=100，原料充足，避免电池耗尽前后配方做完导致不可比较。
     const topology: CompiledSimulationTopology = {
       schemaVersion: 4,
       topologyId: "topology:power-mode-cache-test",
@@ -249,7 +249,7 @@ describe("REQ-089: power generation mode caching bug", () => {
         "r_test": {
           id: "r_test",
           nameKey: "recipe.test",
-          durationTicks: 10,
+          durationTicks: 100,
           inputs: [{ itemId: "item_iron_nugget", amount: 1 }],
           outputs: [{ itemId: "item_iron_powder", amount: 1 }],
           machineId: "test_machine",
@@ -332,57 +332,60 @@ describe("REQ-089: power generation mode caching bug", () => {
 
     const runtime = new SimulationWorkerRuntime();
 
-    // 1. 以真实电力模式启动。gen=0 < demand=5 → grinder 冻结。
+    // 1. 真实电力模式启动。电池 100MJ，demand=40_000kW → ~50 ticks 耗尽。
+    //    先跑到 tick 10：电池还没耗尽，grinder 应正在运行配方。
     runtime.setPowerMode("real");
-    runtime.handleRequest({
-      type: "load-topology",
-      requestId: 1,
-      topology,
-    });
-    runtime.advanceToTick(80);
+    runtime.handleRequest({ type: "load-topology", requestId: 1, topology });
+    runtime.advanceToTick(10);
 
-    // 验证 tick 80：真实电力 + 无发电 → grinder 冻结
-    const frozenResp = runtime.handleRequest({
-      type: "get-tick-snapshot",
-      requestId: 100,
-      tickNumber: 80,
+    const earlyResp = runtime.handleRequest({
+      type: "get-tick-snapshot", requestId: 99, tickNumber: 10,
     });
-    const frozenSnap = (frozenResp as Extract<typeof frozenResp, { type: "tick-snapshot-result" }>).result.currentTick!;
-    expect(frozenSnap.currentPowerGeneration).toBe(0);
-    expect(frozenSnap.devices["device:grinder"]?.recipe).toBeNull();
+    const earlySnap = (earlyResp as Extract<typeof earlyResp, { type: "tick-snapshot-result" }>).result.currentTick!;
+    expect(earlySnap.currentPowerGeneration).toBe(0);
+    // 电池有电 → grinder 正常运行
+    expect(earlySnap.isPowerOutage).toBe(false);
+    expect(earlySnap.devices["device:grinder"]?.recipe?.state, "电池有电时 grinder 正常运行").toBe("running");
 
-    // 2. 切换到无限电力
+    // 2. 跑到 tick 100，电池已耗尽（~tick 50 耗尽，之后冻结了 50 tick）
+    runtime.advanceToTick(100);
+    const outagedResp = runtime.handleRequest({
+      type: "get-tick-snapshot", requestId: 100, tickNumber: 100,
+    });
+    const outagedSnap = (outagedResp as Extract<typeof outagedResp, { type: "tick-snapshot-result" }>).result.currentTick!;
+    expect(outagedSnap.currentPowerGeneration).toBe(0);
+    expect(outagedSnap.isPowerOutage).toBe(true);
+    // 配方已冻结，进度停留在电池耗尽那一刻
+    const frozenProgress = outagedSnap.devices["device:grinder"]?.recipe?.progressTicks ?? 0;
+    expect(outagedSnap.devices["device:grinder"]?.recipe?.state, "电池耗尽后配方冻结").toBe("running");
+
+    // 3. 切换到无限电力 → grinder 应立即恢复运行
     runtime.setPowerMode("infinite");
+    runtime.advanceToTick(105);
 
-    // 3. 推进一个 tick → 此时 advanceToTick 从 runtimeState(tick 80) 开始计算 tick 81
-    //    由于 setPowerMode 切换后，新 tick 应使用无限电力模式。
-    runtime.advanceToTick(85);
-
-    const freshResp = runtime.handleRequest({
-      type: "get-tick-snapshot",
-      requestId: 101,
-      tickNumber: 85,
+    const infiniteResp = runtime.handleRequest({
+      type: "get-tick-snapshot", requestId: 101, tickNumber: 105,
     });
-    const freshSnap = (freshResp as Extract<typeof freshResp, { type: "tick-snapshot-result" }>).result.currentTick!;
-    // 无限电力模式下 grinder 应正常启动
-    const freshRecipe = freshSnap.devices["device:grinder"]?.recipe;
-    // 修复前 setPowerMode 不清缓存就会出问题——这里我们验证 powerMode 切换后新 tick 正常工作
-    expect(freshRecipe?.state, "无限电力模式切换后新 tick 应正常启动").toBe("running");
+    const infiniteSnap = (infiniteResp as Extract<typeof infiniteResp, { type: "tick-snapshot-result" }>).result.currentTick!;
+    expect(infiniteSnap.isPowerOutage).toBe(false);
+    expect(infiniteSnap.devices["device:grinder"]?.recipe?.state, "无限电力模式切换后 grinder 恢复运行").toBe("running");
+    expect(infiniteSnap.devices["device:grinder"]?.recipe?.progressTicks ?? 0,
+      "无限电力模式切换后配方进度应增长").toBeGreaterThan(frozenProgress);
 
-    // 4. 再切回真实电力 → 后续 tick 应再次冻结
+    // 4. 再切回真实电力 → grinder 再次冻结
     runtime.setPowerMode("real");
-    runtime.advanceToTick(90);
+    runtime.advanceToTick(110);
 
     const realResp = runtime.handleRequest({
-      type: "get-tick-snapshot",
-      requestId: 102,
-      tickNumber: 90,
+      type: "get-tick-snapshot", requestId: 102, tickNumber: 110,
     });
     const realSnap = (realResp as Extract<typeof realResp, { type: "tick-snapshot-result" }>).result.currentTick!;
     expect(realSnap.currentPowerGeneration).toBe(0);
-    // 真实电力模式下 grinder 配方进度应冻结（保留但不推进）
+    expect(realSnap.isPowerOutage).toBe(true);
     expect(realSnap.devices["device:grinder"]?.recipe?.state, "切回真实电力后已有配方应冻结").toBe("running");
-    expect(realSnap.devices["device:grinder"]?.recipe?.progressTicks, "切回真实电力后配方进度不再增长").toBe(4);
+    // 高速模式下切换回真实电力后，非运行时 tick 的判定应和运行时 tick 一致
+    expect(realSnap.devices["device:grinder"]?.recipe?.progressTicks,
+      "切回真实电力后配方进度不再增长").toBe(infiniteSnap.devices["device:grinder"]?.recipe?.progressTicks ?? 0);
   });
 });
 
