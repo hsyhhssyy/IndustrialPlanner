@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 
+import LucideChevronDown from "~icons/lucide/chevron-down";
+import LucideChevronsRight from "~icons/lucide/chevrons-right";
+import LucideDownload from "~icons/lucide/download";
 import LucidePlus from "~icons/lucide/plus";
+import LucideUpload from "~icons/lucide/upload";
 import LucideX from "~icons/lucide/x";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -46,6 +50,13 @@ interface SlotConfigGroupView {
   rows: EffectiveSlotRow[];
 }
 
+type SlotConfigColumnRole = "input" | "output";
+type SlotConfigResolvedRole = SlotConfigColumnRole | "shared";
+
+interface SlotConfigRoleGroupView extends SlotConfigGroupView {
+  role: SlotConfigResolvedRole;
+}
+
 export function SlotConfigInspector({
   appHost,
   declaration,
@@ -88,7 +99,14 @@ export function SlotConfigInspector({
 
   if (groupViews.length === 0) {
     return (
-      <article className={cm(styles, "definition-card")} data-inspector-key="slot-config">
+      <article
+        className={cm(styles, "definition-card inspector-expanded-panel slot-config-inspector")}
+        data-inspector-key="slot-config"
+      >
+        <div className={cm(styles, "inspector-expanded-header")}>
+          <span>槽位配置</span>
+          <LucideChevronDown aria-hidden="true" />
+        </div>
         {/*
           AI-REMOVED 2026-05-26:
           Reason: inspector 卡片不再显示标题。
@@ -101,7 +119,9 @@ export function SlotConfigInspector({
           Original code:
           <h4>槽位配置</h4>
         */}
-        <div className={cm(styles, "slot-config-empty")}>未找到可编辑的槽位组。</div>
+        <div className={cm(styles, "inspector-expanded-body")}>
+          <div className={cm(styles, "slot-config-empty")}>未找到可编辑的槽位组。</div>
+        </div>
       </article>
     );
   }
@@ -201,83 +221,186 @@ export function SlotConfigInspector({
   const editingItemLabel = editingItemDefinition === null
     ? "未选择物品"
     : translate(editingItemDefinition.nameKey);
+  const roleGroupViews = resolveSlotConfigRoleGroupViews(definition, groupViews);
+  const inputGroupViews = roleGroupViews.filter((groupView) => groupView.role !== "output");
+  const outputGroupViews = roleGroupViews.filter((groupView) => groupView.role === "output");
+
+  const renderSlotColumn = (
+    role: SlotConfigColumnRole,
+    roleGroupViews: readonly SlotConfigRoleGroupView[],
+  ) => {
+    const rows = roleGroupViews.flatMap((groupView) => groupView.rows);
+    const filledCount = rows.filter((row) => row.displayItemId !== null).length;
+    const roleIndexBySlotKey = new Map(
+      rows.map((row, rowIndex) => [createRuntimeSlotKey(row.storageGroupId, row.slotId), rowIndex + 1]),
+    );
+    const roleLabel = role === "input" ? "输入" : "输出";
+    const roleTitle = role === "input" ? "原料输入" : "产物输出";
+    const RoleIcon = role === "input" ? LucideDownload : LucideUpload;
+
+    return (
+      <section
+        className={cm(styles, `slot-config-flow-column is-${role}`)}
+        data-slot-config-role={role}
+      >
+        <div className={cm(styles, "slot-config-flow-column-header")}>
+          <RoleIcon aria-hidden="true" />
+          <div>
+            <strong>{roleTitle}</strong>
+            <span>{`${roleLabel}槽位 (${filledCount}/${rows.length})`}</span>
+          </div>
+        </div>
+        <div className={cm(styles, "slot-config-flow-slot-list")}>
+          {roleGroupViews.length === 0 ? (
+            <div className={cm(styles, "slot-config-flow-empty")}>{`暂无${roleLabel}槽位`}</div>
+          ) : roleGroupViews.map((groupView) => (
+            <section
+              className={cm(styles, "slot-config-group")}
+              data-slot-config-group={groupView.storageGroup.id}
+              data-slot-config-group-role={groupView.role}
+              data-slot-config-group-size={groupView.rows.length > 1 ? "multi" : "single"}
+              key={groupView.storageGroup.id}
+            >
+              {groupView.rows.map((row) => {
+                const roleIndex = roleIndexBySlotKey.get(createRuntimeSlotKey(row.storageGroupId, row.slotId)) ?? row.displayIndex;
+                const itemDefinition = row.displayItemId === null
+                  ? null
+                  : itemById.get(row.displayItemId) ?? null;
+                const itemLabel = itemDefinition === null ? "空槽位" : translate(itemDefinition.nameKey);
+                const iconSrc = itemDefinition === null ? null : resolveItemIconSrc(itemDefinition);
+
+                return (
+                  <button
+                    aria-label={`${roleLabel}槽位 ${roleIndex}. ${itemLabel}`}
+                    className={cm(styles, "slot-config-flow-slot")}
+                    data-slot-action="open-slot-editor"
+                    data-slot-number={row.displayIndex}
+                    key={row.slotId}
+                    onClick={() => {
+                      openSlotEditor(row);
+                    }}
+                    title={itemLabel}
+                    type="button"
+                  >
+                    <span className={cm(styles, "slot-config-flow-slot-label")}>
+                      {`${roleLabel}槽位 ${roleIndex}`}
+                    </span>
+                    <span className={cm(styles, "slot-config-flow-slot-value")}>
+                      {iconSrc === null ? (
+                        <span className={cm(styles, "slot-config-flow-empty-button")}>
+                          <LucidePlus aria-hidden="true" />
+                        </span>
+                      ) : (
+                        <>
+                          <img
+                            alt=""
+                            className={cm(styles, "slot-config-flow-item-icon")}
+                            draggable={false}
+                            src={iconSrc}
+                          />
+                          <span className={cm(styles, "slot-config-flow-item-count")}>
+                            {row.ignoreStock ? "∞" : row.count}
+                          </span>
+                        </>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </section>
+          ))}
+        </div>
+      </section>
+    );
+  };
 
   return (
     <article
-      className={cm(styles, "definition-card slot-config-inspector")}
+      className={cm(styles, "definition-card inspector-expanded-panel slot-config-inspector")}
       data-inspector-key="slot-config"
       data-inspector-scope={activeScope}
       data-render-mode={mode}
     >
-      {groupViews.map((groupView) => (
-        <section
-          className={cm(styles, "slot-config-group")}
-          data-slot-config-group={groupView.storageGroup.id}
-          data-slot-config-group-size={groupView.rows.length > 1 ? "multi" : "single"}
-          key={groupView.storageGroup.id}
-        >
-          {/*
-            AI-REMOVED 2026-05-26:
-            Reason: 槽位组不再显示标题和副标题，改为直接网格化展示槽位。
-            Trigger: 槽位配置 inspector 需求要求所有 inspector 无标题和副标题，并隐藏槽位 id。
-            Evidence: 用户明确要求“每行两列”“不显示槽位的id”“左上角显示槽位编号”。
-            Replacement: slot-config-tile-grid / slot-config-tile。
-            Risk: Low
-            Human Review: Required
+      <div className={cm(styles, "inspector-expanded-header slot-config-panel-header")}>
+        <span>槽位配置</span>
+        <LucideChevronDown aria-hidden="true" />
+      </div>
+      <div className={cm(styles, "inspector-expanded-body slot-config-panel-body")}>
+        {/*
+          AI-REMOVED 2026-05-31:
+          Reason: 槽位配置 UI 从正方形 tile 网格改为设计稿中的左右输入/输出流程布局。
+          Trigger: 用户要求按 inspector dialog 设计稿 1:1 调整槽位配置 UI。
+          Evidence: 设计稿使用蓝色输入栏、橙色输出栏和中间加工流向箭头。
+          Replacement: slot-config-flow-layout / slot-config-flow-column / slot-config-flow-slot。
+          Risk: Low
+          Human Review: Required
 
-            Original code:
-            <div className={cm(styles, "slot-config-group-header")}>
-              <div>
-                <h4>槽位配置</h4>
-                <p>{`${translate("inspector.slotConfig.group")} ${groupView.storageGroup.id}`}</p>
+          Original code:
+          {groupViews.map((groupView) => (
+            <section
+              className={cm(styles, "slot-config-group")}
+              data-slot-config-group={groupView.storageGroup.id}
+              data-slot-config-group-size={groupView.rows.length > 1 ? "multi" : "single"}
+              key={groupView.storageGroup.id}
+            >
+              <div className={cm(styles, "slot-config-tile-grid")} data-render-mode={mode}>
+                {groupView.rows.map((row) => {
+                  const itemDefinition = row.displayItemId === null
+                    ? null
+                    : itemById.get(row.displayItemId) ?? null;
+                  const itemLabel = itemDefinition === null ? "空槽位" : translate(itemDefinition.nameKey);
+                  const iconSrc = itemDefinition === null ? null : resolveItemIconSrc(itemDefinition);
+
+                  return (
+                    <button
+                      aria-label={`${row.displayIndex}. ${itemLabel}`}
+                      className={cm(styles, "slot-config-tile")}
+                      data-slot-action="open-slot-editor"
+                      data-slot-number={row.displayIndex}
+                      key={row.slotId}
+                      onClick={() => {
+                        openSlotEditor(row);
+                      }}
+                      title={itemLabel}
+                      type="button"
+                    >
+                      <span className={cm(styles, "slot-config-tile-index")}>{row.displayIndex}</span>
+                      {iconSrc === null ? (
+                        <span className={cm(styles, "slot-config-empty-frame")}>
+                          <LucidePlus aria-hidden="true" />
+                        </span>
+                      ) : (
+                        <>
+                          <img
+                            alt=""
+                            className={cm(styles, "slot-config-tile-icon")}
+                            draggable={false}
+                            src={iconSrc}
+                          />
+                          <span className={cm(styles, "slot-config-tile-badge")}>
+                            {row.ignoreStock ? "∞" : row.count}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-            </div>
-          */}
-          <div className={cm(styles, "slot-config-tile-grid")} data-render-mode={mode}>
-            {groupView.rows.map((row) => {
-              const itemDefinition = row.displayItemId === null
-                ? null
-                : itemById.get(row.displayItemId) ?? null;
-              const itemLabel = itemDefinition === null ? "空槽位" : translate(itemDefinition.nameKey);
-              const iconSrc = itemDefinition === null ? null : resolveItemIconSrc(itemDefinition);
-
-              return (
-                <button
-                  aria-label={`${row.displayIndex}. ${itemLabel}`}
-                  className={cm(styles, "slot-config-tile")}
-                  data-slot-action="open-slot-editor"
-                  data-slot-number={row.displayIndex}
-                  key={row.slotId}
-                  onClick={() => {
-                    openSlotEditor(row);
-                  }}
-                  title={itemLabel}
-                  type="button"
-                >
-                  <span className={cm(styles, "slot-config-tile-index")}>{row.displayIndex}</span>
-                  {iconSrc === null ? (
-                    <span className={cm(styles, "slot-config-empty-frame")}>
-                      <LucidePlus aria-hidden="true" />
-                    </span>
-                  ) : (
-                    <>
-                      <img
-                        alt=""
-                        className={cm(styles, "slot-config-tile-icon")}
-                        draggable={false}
-                        src={iconSrc}
-                      />
-                      <span className={cm(styles, "slot-config-tile-badge")}>
-                        {row.ignoreStock ? "∞" : row.count}
-                      </span>
-                    </>
-                  )}
-                </button>
-              );
-            })}
+            </section>
+          ))}
+        */}
+        <div className={cm(styles, "slot-config-flow-layout")}>
+          {renderSlotColumn("input", inputGroupViews)}
+          <div className={cm(styles, "slot-config-flow-direction")} aria-label="加工流向">
+            <span>加工流向</span>
+            <LucideChevronsRight aria-hidden="true" />
           </div>
-        </section>
-      ))}
+          {renderSlotColumn("output", outputGroupViews)}
+        </div>
+        <div className={cm(styles, "slot-config-flow-note")}>
+          加工流向：原料从左侧输入，经过设备处理后，从右侧输出产物。
+        </div>
+      </div>
       {editingSlot !== null ? (
         <div
           className={cm(styles, "slot-config-dialog-backdrop")}
@@ -417,6 +540,52 @@ function buildRuntimeSlotMap(
   }
 
   return runtimeSlotByKey;
+}
+
+function resolveSlotConfigRoleGroupViews(
+  definition: EntityDefinition,
+  groupViews: readonly SlotConfigGroupView[],
+): SlotConfigRoleGroupView[] {
+  return groupViews.map((groupView) => ({
+    ...groupView,
+    role: resolveStorageGroupFlowRole(definition, groupView.storageGroup.id),
+  }));
+}
+
+function resolveStorageGroupFlowRole(
+  definition: EntityDefinition,
+  storageGroupId: string,
+): SlotConfigResolvedRole {
+  const directions = new Set<"input" | "output">();
+
+  for (const binding of definition.portStorageBindings) {
+    if (binding.storageSlotGroupId !== storageGroupId) {
+      continue;
+    }
+
+    const portGroup = definition.portGroups.find((candidate) => candidate.id === binding.portGroupId);
+    if (portGroup === undefined) {
+      continue;
+    }
+
+    if (portGroup.direction === "bidirectional") {
+      directions.add("input");
+      directions.add("output");
+      continue;
+    }
+
+    directions.add(portGroup.direction);
+  }
+
+  if (directions.has("input") && directions.has("output")) {
+    return "shared";
+  }
+
+  if (directions.has("output")) {
+    return "output";
+  }
+
+  return "input";
 }
 
 function resolveSlotConfigGroupViews(options: {

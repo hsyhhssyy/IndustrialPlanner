@@ -18,6 +18,7 @@ import {
   type InspectorDataScope,
 } from "./selection-inspector-model";
 
+import { SelectionInspectorActionStrip } from "./selection-inspector-action-strip";
 import { SimulationRecipeStatusRuntimeInspector } from "./simulation-recipe-status-runtime-inspector";
 import { SlotConfigInspector } from "./slot-config-inspector";
 import { WarehouseItemLinkInspector } from "./warehouse-item-link-inspector";
@@ -68,7 +69,7 @@ function EmptyInspector({
 }) {
   return (
     <article
-      className={cm(styles, "definition-card")}
+      className={cm(styles, "definition-card inspector-expanded-panel")}
       data-inspector-key={declaration.type}
       data-inspector-label={INSPECTOR_LABELS[declaration.type] ?? declaration.type}
     >
@@ -84,7 +85,12 @@ function EmptyInspector({
         Original code:
         <h4>{INSPECTOR_LABELS[declaration.type] ?? declaration.type}</h4>
       */}
-      <p>该配置当前不可用。</p>
+      <div className={cm(styles, "inspector-expanded-header")}>
+        <span>{INSPECTOR_LABELS[declaration.type] ?? declaration.type}</span>
+      </div>
+      <div className={cm(styles, "inspector-expanded-body")}>
+        <p>该配置当前不可用。</p>
+      </div>
     </article>
   );
 }
@@ -194,9 +200,12 @@ function InspectorScopeCard({
 }) {
   return (
     <article
-      className={cm(styles, "definition-card inspector-scope-card")}
+      className={cm(styles, "definition-card inspector-expanded-panel inspector-scope-card")}
       data-inspector-key="data-scope"
     >
+      <div className={cm(styles, "inspector-expanded-header")}>
+        <span>编辑模式</span>
+      </div>
       <div className={cm(styles, "inspector-scope-toggle")} role="group">
         <button
           className={cm(styles, scope === "initial-config" ? "is-selected" : "")}
@@ -217,6 +226,39 @@ function InspectorScopeCard({
         </button>
       </div>
     </article>
+  );
+}
+
+function resolveSelectedDeviceLabel(
+  definition: EntityDefinition,
+  translate: Translate,
+): string {
+  const translated = translate(definition.nameKey);
+
+  return translated === definition.nameKey ? definition.id : translated;
+}
+
+function SelectionInspectorDeviceHeader({
+  appHost,
+  selectedDefinition,
+  selectedEntity,
+  translate,
+}: {
+  appHost: AppHost;
+  selectedDefinition: EntityDefinition;
+  selectedEntity: WorldEntity;
+  translate: Translate;
+}) {
+  return (
+    <section className={cm(styles, "selection-inspector-device-header")}>
+      <div className={cm(styles, "selection-inspector-device-copy")}>
+        <div className={cm(styles, "selection-inspector-device-title-row")}>
+          <h3>{resolveSelectedDeviceLabel(selectedDefinition, translate)}</h3>
+        </div>
+        <p>{`ID: ${selectedEntity.id}`}</p>
+      </div>
+      <SelectionInspectorActionStrip appHost={appHost} variant="inline" />
+    </section>
   );
 }
 
@@ -306,6 +348,7 @@ export function SelectionInspectorSlot({
       });
     };
 
+    tick();
     const intervalId = window.setInterval(tick, INSPECTOR_SLOT_INTERVAL_MS);
 
     return () => {
@@ -343,6 +386,12 @@ export function SelectionInspectorSlot({
       data-selected-entity-id={slotState.selectedEntity.id}
       data-selection-inspector-slot
     >
+      <SelectionInspectorDeviceHeader
+        appHost={appHost}
+        selectedDefinition={slotState.selectedDefinition}
+        selectedEntity={slotState.selectedEntity}
+        translate={translate}
+      />
       {/*
         AI-REMOVED 2026-05-26:
         Reason: inspector 容器不再显示统一标题。

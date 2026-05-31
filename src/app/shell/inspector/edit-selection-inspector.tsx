@@ -47,7 +47,18 @@ export const EditSelectionInspector = observer(function EditSelectionInspector({
   return (
     <InspectorRenderModeContext.Provider value={mode}>
       <div className={cm(styles, "cluster")}>
-        <SelectionInspectorActionStrip appHost={appHost} />
+        {/*
+          AI-REMOVED 2026-05-31:
+          Reason: 单选 inspector 的操作按钮移动到设备信息顶部栏，与新版 inspector dialog 设计保持一致。
+          Trigger: 用户要求按设计稿调整“顶部设备信息与按钮区域”的 UI。
+          Evidence: 设计稿中设备名/ID 与“移动/删除”等操作位于同一顶部区域。
+          Replacement: SelectionInspectorSlot 内的 selection-inspector-device-header。
+          Risk: Low
+          Human Review: Required
+
+          Original code:
+          <SelectionInspectorActionStrip appHost={appHost} />
+        */}
         <SelectionInspectorSlot appHost={appHost} translate={translate} />
       </div>
     </InspectorRenderModeContext.Provider>

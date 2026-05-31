@@ -231,10 +231,12 @@ export function createEditorPlacementActions({
       for (const targetId of replacedEntityIds) {
         delete nextEntities[targetId];
       }
-      // 从 entityOrder 中移除被替换的旧实体。
-      const nextEntityOrder = currentDocument.entityOrder.filter(
-        (id) => !replacedEntityIds.has(id),
-      );
+      // 从 entityOrder 中移除被替换的旧实体，并对历史累积的重复条目做去重。
+      const nextEntityOrder = Array.from(new Set(
+        currentDocument.entityOrder.filter(
+          (id) => !replacedEntityIds.has(id),
+        ),
+      ));
       // 移除指向被替换实体的 slotLinks。
       const nextSlotLinks = currentDocument.slotLinks.filter(
         (link) =>
@@ -282,7 +284,10 @@ export function createEditorPlacementActions({
           config: nextConfig,
           tags: [...draft.tags],
         };
-        nextEntityOrder.push(newId);
+        // 2026-05-31: 防御 entityOrder 重复——若已存在则跳过。
+        if (!nextEntityOrder.includes(newId)) {
+          nextEntityOrder.push(newId);
+        }
       }
 
       if (state.internalTransientState.placementDraftSlotLinks !== null) {

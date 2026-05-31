@@ -24,8 +24,8 @@ export const InspectorDialog = observer(function InspectorDialog({ appHost }: { 
   const shouldShowNeighborhoodPreview = selectionCount === 1;
   const initialShellStyle: CSSProperties | undefined = dialogState.width === null && dialogState.height === null
     ? {
-      width: isPhoneLayout ? "90%" : "min(920px, 72vw)",
-      height: isPhoneLayout ? "90%" : "min(720px, 80vh)",
+      width: isPhoneLayout ? "90%" : "min(1180px, 82vw)",
+      height: isPhoneLayout ? "90%" : "min(760px, 84vh)",
     }
     : undefined;
 

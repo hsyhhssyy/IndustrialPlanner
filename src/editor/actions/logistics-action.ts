@@ -421,6 +421,9 @@ export function createEditorLogisticsActions(
         );
       }
 
+      // 2026-05-31: 对历史累积的 entityOrder 重复条目做去重。
+      nextEntityOrder = Array.from(new Set(nextEntityOrder));
+
       for (const previewDraft of previewDrafts) {
         nextEntities[previewDraft.id] = {
           id: previewDraft.id,
@@ -430,7 +433,10 @@ export function createEditorLogisticsActions(
           config: { ...previewDraft.config },
           tags: [...previewDraft.tags],
         };
-        nextEntityOrder.push(previewDraft.id);
+        // 2026-05-31: 防御 entityOrder 重复——若已存在则跳过。
+        if (!nextEntityOrder.includes(previewDraft.id)) {
+          nextEntityOrder.push(previewDraft.id);
+        }
       }
 
       const committedDocument = logisticsContext.documentWriter.commit({

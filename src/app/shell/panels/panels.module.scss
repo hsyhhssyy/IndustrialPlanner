@@ -1066,10 +1066,26 @@
   background: var(--surface-1);
 }
 
+.selection-inspector-action-group.is-inline {
+  position: static;
+  z-index: auto;
+  margin: 0;
+  padding: 0;
+  border-bottom: 0;
+  background: transparent;
+}
+
 .selection-inspector-action-button-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
+}
+
+.selection-inspector-action-group.is-inline .selection-inspector-action-button-list {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(82px, max-content);
+  grid-template-columns: none !important;
+  justify-content: end;
 }
 
 .selection-inspector-action-button {
@@ -1089,6 +1105,15 @@
   letter-spacing: 0.01em;
   line-height: 1;
   white-space: nowrap;
+}
+
+.selection-inspector-action-group.is-inline .selection-inspector-action-button {
+  min-height: 36px;
+  padding: 0 14px;
+  border-color: color-mix(in srgb, var(--line-strong) 74%, var(--line));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  font-size: 0.76rem;
 }
 
 .selection-inspector-action-button:not(:disabled):hover {

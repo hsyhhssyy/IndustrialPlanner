@@ -93,7 +93,9 @@ function ensureProtocolCoreEntity(options: {
         tags: [],
       },
     },
-    entityOrder: [entityId, ...options.document.entityOrder],
+    entityOrder: options.document.entityOrder.includes(entityId)
+      ? options.document.entityOrder
+      : [entityId, ...options.document.entityOrder],
   };
 }
 

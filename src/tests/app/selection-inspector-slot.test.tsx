@@ -157,7 +157,7 @@ describe("SelectionInspectorSlot", () => {
       );
     });
 
-    expect(container.querySelector("[data-selection-inspector-slot]")).toBeNull();
+    expect(container.querySelector("[data-selection-inspector-slot]")).not.toBeNull();
 
     act(() => {
       vi.advanceTimersByTime(50);

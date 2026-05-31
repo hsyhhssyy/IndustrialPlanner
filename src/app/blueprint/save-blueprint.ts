@@ -46,6 +46,11 @@ export function createSelectionBlueprintDocument(options: {
       continue;
     }
 
+    // 2026-05-31: 防御 entityOrder 重复条目——若当前 entityId 已被前序循环处理过则跳过。
+    if (entities[entityId] !== undefined) {
+      continue;
+    }
+
     const entity = currentDocument.entities[entityId];
     if (entity === undefined) {
       continue;

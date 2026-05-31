@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideX from "~icons/lucide/x";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -44,7 +45,14 @@ export function WarehouseItemLinkInspector({
 
   if (rows.length === 0) {
     return (
-      <article className={cm(styles, "definition-card")} data-inspector-key="warehouse-item-link">
+      <article
+        className={cm(styles, "definition-card inspector-expanded-panel warehouse-item-link-inspector")}
+        data-inspector-key="warehouse-item-link"
+      >
+        <div className={cm(styles, "inspector-expanded-header")}>
+          <span>仓库物品链接</span>
+          <LucideChevronDown aria-hidden="true" />
+        </div>
         {/*
           AI-REMOVED 2026-05-26:
           Reason: inspector 卡片不再显示标题。
@@ -57,7 +65,9 @@ export function WarehouseItemLinkInspector({
           Original code:
           <h4>仓库物品链接</h4>
         */}
-        <p>未找到可链接的槽位。</p>
+        <div className={cm(styles, "inspector-expanded-body")}>
+          <p>未找到可链接的槽位。</p>
+        </div>
       </article>
     );
   }
@@ -121,9 +131,13 @@ export function WarehouseItemLinkInspector({
 
   return (
     <article
-      className={cm(styles, "definition-card warehouse-item-link-inspector")}
+      className={cm(styles, "definition-card inspector-expanded-panel warehouse-item-link-inspector")}
       data-inspector-key="warehouse-item-link"
     >
+      <div className={cm(styles, "inspector-expanded-header")}>
+        <span>仓库物品链接</span>
+        <LucideChevronDown aria-hidden="true" />
+      </div>
       {/*
         AI-REMOVED 2026-05-26:
         Reason: inspector 卡片不再显示标题和副标题。
@@ -141,7 +155,7 @@ export function WarehouseItemLinkInspector({
           </div>
         </div>
       */}
-      <div className={cm(styles, "slot-config-list")}>
+      <div className={cm(styles, "inspector-expanded-body slot-config-list")}>
         {rows.map((row) => {
           const itemDefinition = row.currentItemId === null
             ? null

@@ -234,7 +234,11 @@ function normalizeWorldDocument(
     return null;
   }
 
-  return value;
+  // 2026-05-31: 反序列化时对 entityOrder 做去重，作为历史数据修复的最后防线。
+  return {
+    ...value,
+    entityOrder: Array.from(new Set(value.entityOrder)),
+  };
 }
 
 function isWorldDocumentLike(

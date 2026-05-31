@@ -1,4 +1,5 @@
 import { observer } from "mobx-react-lite";
+import LucideChevronDown from "~icons/lucide/chevron-down";
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
@@ -105,19 +106,25 @@ export const ProblemInspector = observer(function ProblemInspector({
   }
 
   return (
-    <div
-      className={cm(styles, "definition-list")}
+    <article
+      className={cm(styles, "definition-card inspector-expanded-panel problem-inspector")}
       data-inspector-key={PROBLEM_INSPECTOR_KEY}
     >
-      {allProblems.map((problem, index) => (
-        <article
-          className={cm(styles, "definition-card")}
-          key={`${problem.severity}-${index}`}
-          data-problem-severity={problem.severity}
-        >
-          <p>{problem.message}</p>
-        </article>
-      ))}
-    </div>
+      <div className={cm(styles, "inspector-expanded-header")}>
+        <span>设备问题</span>
+        <LucideChevronDown aria-hidden="true" />
+      </div>
+      <div className={cm(styles, "inspector-expanded-body definition-list")}>
+        {allProblems.map((problem, index) => (
+          <article
+            className={cm(styles, "definition-card")}
+            key={`${problem.severity}-${index}`}
+            data-problem-severity={problem.severity}
+          >
+            <p>{problem.message}</p>
+          </article>
+        ))}
+      </div>
+    </article>
   );
 });

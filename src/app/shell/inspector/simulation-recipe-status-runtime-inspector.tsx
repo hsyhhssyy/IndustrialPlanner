@@ -2,6 +2,7 @@ import type {
   SimulationDeviceRuntimeChannelRecipeStatus,
   SimulationDeviceRuntimeStatusReadModel,
 } from "@/domain/simulation/types/simulation-types";
+import LucideChevronDown from "~icons/lucide/chevron-down";
 import type { ProductionPlanningIndex } from "@/app/shell/production-planning/production-planning-model";
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -84,6 +85,10 @@ export function SimulationRecipeStatusRuntimeInspector({
   const hasAuto = autoChannels.length > 0;
   const hasManual = manualChannels.length > 0;
 
+  if (runtimeStatus === null && !hasManual) {
+    return null;
+  }
+
   // 实体配置中已选配方
   const storedRecipes = (entity?.config?.channelRecipes as Record<string, string> | undefined) ?? {};
 
@@ -92,32 +97,38 @@ export function SimulationRecipeStatusRuntimeInspector({
 
   return (
     <article
-      className={cm(styles, "definition-card simulation-recipe-status-runtime-inspector")}
+      className={cm(styles, "definition-card inspector-expanded-panel simulation-recipe-status-runtime-inspector")}
       data-inspector-key={SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY}
     >
-      {hasAuto && (
-        <AutoRecipeSection
-          autoChannels={autoChannels}
-          channelRecipeStatus={channelRecipeStatus}
-          index={index}
-          t={t}
-        />
-      )}
-      {hasAuto && hasManual && (
-        <div className={cm(styles, "recipe-section-divider")} />
-      )}
-      {hasManual && (
-        <ManualRecipeSection
-          manualChannels={manualChannels}
-          storedRecipes={storedRecipes}
-          channelRecipeStatus={channelRecipeStatus}
-          index={index}
-          t={t}
-          appHost={appHost}
-          entity={entity}
-          definition={definition}
-        />
-      )}
+      <div className={cm(styles, "inspector-expanded-header")}>
+        <span>配方状态</span>
+        <LucideChevronDown aria-hidden="true" />
+      </div>
+      <div className={cm(styles, "inspector-expanded-body")}>
+        {hasAuto && (
+          <AutoRecipeSection
+            autoChannels={autoChannels}
+            channelRecipeStatus={channelRecipeStatus}
+            index={index}
+            t={t}
+          />
+        )}
+        {hasAuto && hasManual && (
+          <div className={cm(styles, "recipe-section-divider")} />
+        )}
+        {hasManual && (
+          <ManualRecipeSection
+            manualChannels={manualChannels}
+            storedRecipes={storedRecipes}
+            channelRecipeStatus={channelRecipeStatus}
+            index={index}
+            t={t}
+            appHost={appHost}
+            entity={entity}
+            definition={definition}
+          />
+        )}
+      </div>
     </article>
   );
 }

@@ -56,6 +56,91 @@
   background: var(--surface-1);
 }
 
+.inspector-expanded-panel {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  background: color-mix(in srgb, var(--surface-1) 86%, transparent);
+}
+
+.inspector-expanded-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
+  gap: 10px;
+  padding: 0 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  color: var(--text-0);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.inspector-expanded-header svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: var(--text-1);
+}
+
+.inspector-expanded-body {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.selection-inspector-device-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 12px 0 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+}
+
+.selection-inspector-device-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.selection-inspector-device-title-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+}
+
+.selection-inspector-device-title-row h3 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-0);
+  font-size: 0.92rem;
+  font-weight: 650;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selection-inspector-device-copy p {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-2);
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    monospace;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .definition-card h4,
 .log-card h4 {
   margin: 0 0 6px;
@@ -122,24 +207,25 @@
 }
 
 .inspector-scope-card {
-  padding: 6px;
+  padding: 0;
 }
 
 .inspector-scope-toggle {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
+  margin: 10px;
   padding: 3px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-2);
+  border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
 }
 
 .inspector-scope-toggle button {
   min-width: 0;
-  min-height: 30px;
+  min-height: 28px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 999px;
   background: transparent;
   color: var(--text-1);
   font: inherit;
@@ -178,7 +264,7 @@
 }
 
 .slot-config-inspector {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .slot-config-group,
@@ -392,6 +478,203 @@
   font-size: 0.78rem;
 }
 
+.slot-config-panel-header {
+  min-height: 40px;
+}
+
+.slot-config-panel-body {
+  gap: 10px;
+}
+
+.slot-config-flow-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(72px, 0.36fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 10px;
+  min-width: 0;
+}
+
+.slot-config-flow-column {
+  --slot-config-flow-accent: var(--accent-strong);
+  --slot-config-flow-soft: var(--accent-soft);
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--slot-config-flow-accent) 68%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--slot-config-flow-soft) 28%, var(--surface-2));
+}
+
+.slot-config-flow-column.is-output {
+  --slot-config-flow-accent: #d9822b;
+  --slot-config-flow-soft: rgb(217 130 43 / 18%);
+}
+
+.slot-config-flow-column-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  color: var(--slot-config-flow-accent);
+}
+
+.slot-config-flow-column-header svg {
+  width: 18px;
+  height: 18px;
+}
+
+.slot-config-flow-column-header div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.slot-config-flow-column-header strong {
+  overflow: hidden;
+  color: var(--slot-config-flow-accent);
+  font-size: 0.86rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-config-flow-column-header span {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--slot-config-flow-accent) 82%, var(--text-1));
+  font-size: 0.72rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-config-flow-slot-list,
+.slot-config-group {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.slot-config-flow-slot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 54px;
+  padding: 8px 8px 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--slot-config-flow-accent) 36%, var(--line));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface-1) 72%, transparent);
+  color: var(--text-0);
+  font: inherit;
+  text-align: left;
+}
+
+.slot-config-flow-slot:hover {
+  border-color: var(--slot-config-flow-accent);
+  background: color-mix(in srgb, var(--surface-1) 86%, var(--slot-config-flow-soft));
+}
+
+.slot-config-flow-slot-label {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--text-0) 84%, var(--text-1));
+  font-size: 0.78rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-config-flow-slot-value {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+}
+
+.slot-config-flow-empty-button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px dashed color-mix(in srgb, var(--text-1) 78%, transparent);
+  border-radius: 7px;
+  color: var(--text-1);
+}
+
+.slot-config-flow-empty-button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.slot-config-flow-item-icon {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.slot-config-flow-item-count {
+  position: absolute;
+  right: -4px;
+  bottom: -2px;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-0) 88%, black 12%);
+  color: var(--text-0);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.slot-config-flow-direction {
+  display: grid;
+  align-self: center;
+  place-items: center;
+  min-width: 0;
+  gap: 8px;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.slot-config-flow-direction span {
+  color: var(--text-1);
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.slot-config-flow-direction svg {
+  width: min(64px, 100%);
+  height: 32px;
+  color: color-mix(in srgb, var(--text-1) 64%, var(--line-strong));
+  stroke-width: 2.2;
+}
+
+.slot-config-flow-empty {
+  display: grid;
+  place-items: center;
+  min-height: 54px;
+  border: 1px dashed color-mix(in srgb, var(--line-strong) 66%, var(--line));
+  border-radius: 7px;
+  color: var(--text-2);
+  font-size: 0.76rem;
+}
+
+.slot-config-flow-note {
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface-2) 68%, transparent);
+  color: var(--text-1);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
 .slot-config-dialog-backdrop {
   position: fixed;
   inset: 0;
@@ -540,6 +823,72 @@
   color: var(--text-0);
 }
 
+.submit-to-warehouse-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  color: var(--text-1);
+  font-size: 0.8rem;
+}
+
+.submit-to-warehouse-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.submit-to-warehouse-switch {
+  appearance: none;
+  position: relative;
+  width: 42px;
+  height: 24px;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  border-radius: 999px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.submit-to-warehouse-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-2);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.submit-to-warehouse-switch:checked {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.submit-to-warehouse-switch:checked::after {
+  transform: translateX(18px);
+  background: var(--accent-strong);
+}
+
+.submit-to-warehouse-countdown {
+  color: var(--text-2);
+  font-size: 0.76rem;
+}
+
+.submit-to-warehouse-select {
+  min-width: 0;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  font: inherit;
+}
+
 @media (max-width: 720px) {
   .slot-config-row-main {
     grid-template-columns: 1fr;
@@ -547,6 +896,19 @@
 
   .slot-config-row-actions {
     grid-template-columns: 1fr;
+  }
+
+  .selection-inspector-device-header,
+  .slot-config-flow-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .slot-config-flow-direction {
+    min-height: 44px;
+  }
+
+  .slot-config-flow-direction svg {
+    transform: rotate(90deg);
   }
 }
 

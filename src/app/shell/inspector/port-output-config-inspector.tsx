@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideX from "~icons/lucide/x";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -144,70 +145,82 @@ export function PortOutputConfigInspector({
   if (rows.length === 0) {
     return (
       <article
-        className={cm(styles, "definition-card")}
+        className={cm(styles, "definition-card inspector-expanded-panel")}
         data-inspector-key="port-output-config"
       >
-        <p>该设备无可用输出端口配置。</p>
+        <div className={cm(styles, "inspector-expanded-header")}>
+          <span>输出端口配置</span>
+          <LucideChevronDown aria-hidden="true" />
+        </div>
+        <div className={cm(styles, "inspector-expanded-body")}>
+          <p>该设备无可用输出端口配置。</p>
+        </div>
       </article>
     );
   }
 
   return (
     <article
-      className={cm(styles, "definition-card port-output-config-inspector")}
+      className={cm(styles, "definition-card inspector-expanded-panel port-output-config-inspector")}
       data-inspector-key="port-output-config"
       data-render-mode={mode}
     >
-      <div className={cm(styles, "slot-config-list")}>
-        {rows.map((row) => {
-          const itemDefinition =
-            row.currentItemId === null
-              ? null
-              : itemById.get(row.currentItemId) ?? null;
-          const itemLabel =
-            itemDefinition === null
-              ? "未选择"
-              : translate(itemDefinition.nameKey);
+      <div className={cm(styles, "inspector-expanded-header")}>
+        <span>输出端口配置</span>
+        <LucideChevronDown aria-hidden="true" />
+      </div>
+      <div className={cm(styles, "inspector-expanded-body")}>
+        <div className={cm(styles, "slot-config-list")}>
+          {rows.map((row) => {
+            const itemDefinition =
+              row.currentItemId === null
+                ? null
+                : itemById.get(row.currentItemId) ?? null;
+            const itemLabel =
+              itemDefinition === null
+                ? "未选择"
+                : translate(itemDefinition.nameKey);
 
-          return (
-            <div
-              className={cm(styles, "slot-config-row")}
-              data-port-group-id={row.portGroup.id}
-              key={row.portGroup.id}
-            >
-              <div className={cm(styles, "slot-config-row-header")}>
-                <strong>{row.label}</strong>
-              </div>
-              <div className={cm(styles, "slot-config-row-main")}>
-                <button
-                  className={cm(styles, "slot-config-item-button")}
-                  data-slot-action="pick-item"
-                  disabled={pendingGroupId === row.portGroup.id}
-                  onClick={() => {
-                    void requestItemSelection(row);
-                  }}
-                  type="button"
-                >
-                  <span>{itemLabel}</span>
-                </button>
-                <div className={cm(styles, "slot-config-row-actions")}>
+            return (
+              <div
+                className={cm(styles, "slot-config-row")}
+                data-port-group-id={row.portGroup.id}
+                key={row.portGroup.id}
+              >
+                <div className={cm(styles, "slot-config-row-header")}>
+                  <strong>{row.label}</strong>
+                </div>
+                <div className={cm(styles, "slot-config-row-main")}>
                   <button
-                    className={cm(styles, "slot-config-clear-button")}
-                    data-slot-action="clear-item"
-                    disabled={row.currentItemId === null}
+                    className={cm(styles, "slot-config-item-button")}
+                    data-slot-action="pick-item"
+                    disabled={pendingGroupId === row.portGroup.id}
                     onClick={() => {
-                      clearSelection(row);
+                      void requestItemSelection(row);
                     }}
                     type="button"
                   >
-                    <LucideX aria-hidden="true" />
-                    <span>清除</span>
+                    <span>{itemLabel}</span>
                   </button>
+                  <div className={cm(styles, "slot-config-row-actions")}>
+                    <button
+                      className={cm(styles, "slot-config-clear-button")}
+                      data-slot-action="clear-item"
+                      disabled={row.currentItemId === null}
+                      onClick={() => {
+                        clearSelection(row);
+                      }}
+                      type="button"
+                    >
+                      <LucideX aria-hidden="true" />
+                      <span>清除</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </article>
   );

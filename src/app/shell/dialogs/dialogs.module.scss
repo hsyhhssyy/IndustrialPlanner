@@ -1,26 +1,52 @@
 .inspector-dialog {
-  max-width: min(920px, 100%);
-  max-height: min(720px, 100%);
+  max-width: min(1180px, 100%);
+  max-height: min(760px, 100%);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+}
+
+.inspector-dialog-header {
+  min-height: 60px;
+  padding: 0 18px;
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+}
+
+.inspector-dialog-header-copy h2 {
+  color: var(--text-0);
+  font-size: 1.18rem;
+  font-weight: 700;
+}
+
+.inspector-dialog-header-button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 54%, var(--line));
+  background: color-mix(in srgb, var(--surface-2) 76%, transparent);
 }
 
 .inspector-dialog-body {
-  --inspector-pane-min-width: min(360px, 45vw);
+  --inspector-pane-min-width: min(500px, 46vw);
 
   display: grid;
   min-height: 0;
   overflow: hidden;
-  padding: 10px;
+  padding: 12px;
 }
 
 .inspector-dialog-body.has-neighborhood-preview {
-  grid-template-columns: minmax(0, 1.25fr) minmax(var(--inspector-pane-min-width), 0.9fr);
+  grid-template-columns: minmax(0, 1.12fr) minmax(var(--inspector-pane-min-width), 0.9fr);
   gap: 10px;
 }
 
 .inspector-dialog-inspector-pane {
+  box-sizing: border-box;
   min-width: var(--inspector-pane-min-width);
   min-height: 0;
   overflow: auto;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-1) 94%, black 2%);
 }
 
 .inspector-neighborhood-preview {
@@ -30,7 +56,7 @@
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
 }
 
 .inspector-neighborhood-preview-frame {

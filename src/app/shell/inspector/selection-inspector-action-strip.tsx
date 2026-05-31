@@ -18,8 +18,10 @@ const SELECTION_LOGISTICS_SEGMENT_BUTTON_IDS = [
 
 export const SelectionInspectorActionStrip = observer(function SelectionInspectorActionStrip({
   appHost,
+  variant = "sticky",
 }: {
   appHost: AppHost;
+  variant?: "sticky" | "inline";
 }) {
   const editor = appHost.workspace.editor;
 
@@ -53,7 +55,9 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
   return (
     <section
       aria-label={locale === "zh-CN" ? "选中操作" : "Selection Actions"}
-      className={cm(styles, "selection-inspector-action-group")}
+      className={cm(styles, variant === "inline"
+        ? "selection-inspector-action-group is-inline"
+        : "selection-inspector-action-group")}
       data-selection-action-strip
     >
       <div
