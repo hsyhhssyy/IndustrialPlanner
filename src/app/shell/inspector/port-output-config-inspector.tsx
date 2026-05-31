@@ -26,12 +26,8 @@ function resolveOutputGroupRows(
   definition: EntityDefinition,
   portGroupIds: readonly string[],
   entity: WorldEntity,
-  appHost: AppHost,
 ): OutputGroupRow[] {
   const rows: OutputGroupRow[] = [];
-  const itemById = new Map(
-    appHost.workspace.registry.itemDefinitions.map((item) => [item.id, item]),
-  );
 
   for (const portGroupId of portGroupIds) {
     const groupIndex = definition.portGroups.findIndex((g) => g.id === portGroupId);
@@ -98,15 +94,10 @@ export function PortOutputConfigInspector({
     definition,
     declaration.portGroupIds,
     entity,
-    appHost,
   );
 
   const patchEntityConfig = (patch: Record<string, unknown>) => {
     appHost.workspace.editor?.actions.patchEntityConfig(entity.id, patch);
-  };
-
-  const deleteConfigKey = (key: string) => {
-    appHost.workspace.editor?.actions.deleteEntityConfigKeys(entity.id, [key]);
   };
 
   const requestItemSelection = async (row: OutputGroupRow) => {
@@ -124,13 +115,16 @@ export function PortOutputConfigInspector({
         return;
       }
 
-      const configPath = `portGroups[${row.groupIndex}].ports[0].acceptRule`;
-      patchEntityConfig({
-        [configPath]: {
+      // 为端口组内所有端口写入 acceptRule
+      const patch: Record<string, unknown> = {};
+      for (let portIndex = 0; portIndex < row.portGroup.ports.length; portIndex += 1) {
+        const configPath = `portGroups[${row.groupIndex}].ports[${portIndex}].acceptRule`;
+        patch[configPath] = {
           base: { kind: "item", itemId },
           exclude: [],
-        },
-      });
+        };
+      }
+      patchEntityConfig(patch);
     } finally {
       setPendingGroupId((current) =>
         current === row.portGroup.id ? null : current,
@@ -139,8 +133,12 @@ export function PortOutputConfigInspector({
   };
 
   const clearSelection = (row: OutputGroupRow) => {
-    const configPath = `portGroups[${row.groupIndex}].ports[0].acceptRule`;
-    deleteConfigKey(configPath);
+    // 清除端口组内所有端口的 acceptRule 覆盖
+    const keys: string[] = [];
+    for (let portIndex = 0; portIndex < row.portGroup.ports.length; portIndex += 1) {
+      keys.push(`portGroups[${row.groupIndex}].ports[${portIndex}].acceptRule`);
+    }
+    appHost.workspace.editor?.actions.deleteEntityConfigKeys(entity.id, keys);
   };
 
   if (rows.length === 0) {

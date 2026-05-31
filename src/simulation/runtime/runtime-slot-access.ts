@@ -113,6 +113,8 @@ export function acceptsItem(
       return getItemDomain(topology, itemType) === rule.base.kind;
     case "item":
       return rule.base.itemId === itemType;
+    case "none":
+      return false;
   }
 }
 
