@@ -164,7 +164,6 @@ describe("SelectionInspectorSlot", () => {
     });
 
     expect(queryInspectorKeys(container)).toEqual([
-      "data-scope",
       "slot-config",
       "submit-to-warehouse",
     ]);

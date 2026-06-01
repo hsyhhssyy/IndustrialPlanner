@@ -189,45 +189,54 @@ function renderInspector(options: {
   }
 }
 
-function InspectorScopeCard({
-  scope,
-  simulationRunning,
-  onScopeChange,
-}: {
-  scope: InspectorDataScope;
-  simulationRunning: boolean;
-  onScopeChange: (scope: InspectorDataScope) => void;
-}) {
-  return (
-    <article
-      className={cm(styles, "definition-card inspector-expanded-panel inspector-scope-card")}
-      data-inspector-key="data-scope"
-    >
-      <div className={cm(styles, "inspector-expanded-header")}>
-        <span>编辑模式</span>
-      </div>
-      <div className={cm(styles, "inspector-scope-toggle")} role="group">
-        <button
-          className={cm(styles, scope === "initial-config" ? "is-selected" : "")}
-          data-inspector-scope="initial-config"
-          onClick={() => onScopeChange("initial-config")}
-          type="button"
-        >
-          初始配置
-        </button>
-        <button
-          className={cm(styles, scope === "runtime-state" ? "is-selected" : "")}
-          data-inspector-scope="runtime-state"
-          disabled={!simulationRunning}
-          onClick={() => onScopeChange("runtime-state")}
-          type="button"
-        >
-          当前状态
-        </button>
-      </div>
-    </article>
-  );
-}
+// AI-REMOVED 2026-05-31:
+// Reason: InspectorScopeCard（编辑模式切换 UI）被删除，scope 改为 inspector 级别管理。
+// Trigger: 设计需求将 scope 从设备级别改为 inspector 级别，每个子 inspector 独立持有自己的 scope。
+// Evidence: 当前无 UI 暴露 scope 切换入口，后续由用户自行添加 per-inspector 的 toggle UI。
+// Replacement: 每个 inspector 的 scope 由 SelectionInspectorSlot 内 scopeByInspectorId 管理，通过 per-inspector Provider 注入。
+// Risk: Low
+// Human Review: Not required — UI 暂缺是预期行为。
+//
+// Original code:
+// function InspectorScopeCard({
+//   scope,
+//   simulationRunning,
+//   onScopeChange,
+// }: {
+//   scope: InspectorDataScope;
+//   simulationRunning: boolean;
+//   onScopeChange: (scope: InspectorDataScope) => void;
+// }) {
+//   return (
+//     <article
+//       className={cm(styles, "definition-card inspector-expanded-panel inspector-scope-card")}
+//       data-inspector-key="data-scope"
+//     >
+//       <div className={cm(styles, "inspector-expanded-header")}>
+//         <span>编辑模式</span>
+//       </div>
+//       <div className={cm(styles, "inspector-scope-toggle")} role="group">
+//         <button
+//           className={cm(styles, scope === "initial-config" ? "is-selected" : "")}
+//           data-inspector-scope="initial-config"
+//           onClick={() => onScopeChange("initial-config")}
+//           type="button"
+//         >
+//           初始配置
+//         </button>
+//         <button
+//           className={cm(styles, scope === "runtime-state" ? "is-selected" : "")}
+//           data-inspector-scope="runtime-state"
+//           disabled={!simulationRunning}
+//           onClick={() => onScopeChange("runtime-state")}
+//           type="button"
+//         >
+//           当前状态
+//         </button>
+//       </div>
+//     </article>
+//   );
+// }
 
 function resolveSelectedDeviceLabel(
   definition: EntityDefinition,
@@ -270,7 +279,7 @@ export function SelectionInspectorSlot({
   translate: Translate;
 }) {
   const [slotState, setSlotState] = useState<InspectorSlotState | null>(null);
-  const [scopeByEntityId, setScopeByEntityId] = useState<Record<string, InspectorDataScope>>({});
+  const [scopeByInspectorId, setScopeByInspectorId] = useState<Record<string, InspectorDataScope>>({});
 
   useEffect(() => {
     const hideSlot = () => {
@@ -331,7 +340,7 @@ export function SelectionInspectorSlot({
       const simulation = appHost.workspace.simulation;
       const showSimulationRuntimeInspector = simulation !== null && simulation.state.runningState !== "stop";
       if (!showSimulationRuntimeInspector) {
-        setScopeByEntityId((current) => Object.keys(current).length === 0 ? current : {});
+        setScopeByInspectorId((current) => Object.keys(current).length === 0 ? current : {});
       }
 
       setSlotState({
@@ -360,24 +369,7 @@ export function SelectionInspectorSlot({
     return null;
   }
 
-  const selectedScope = slotState.showSimulationRuntimeInspector
-    ? scopeByEntityId[slotState.selectedEntity.id] ?? "runtime-state"
-    : "initial-config";
-  const scopeContext = {
-    scope: selectedScope,
-    simulationRunning: slotState.showSimulationRuntimeInspector,
-    canUseRuntimeState: slotState.showSimulationRuntimeInspector,
-    setScope: (nextScope: InspectorDataScope) => {
-      if (!slotState.showSimulationRuntimeInspector && nextScope === "runtime-state") {
-        return;
-      }
 
-      setScopeByEntityId((current) => ({
-        ...current,
-        [slotState.selectedEntity.id]: nextScope,
-      }));
-    },
-  };
 
   return (
     <div
@@ -396,7 +388,7 @@ export function SelectionInspectorSlot({
         AI-REMOVED 2026-05-26:
         Reason: inspector 容器不再显示统一标题。
         Trigger: 槽位配置 inspector 需求要求所有 inspector 无标题和副标题。
-        Evidence: 用户明确要求“注意所有inspector都没有标题和副标题！现有的需要修改。”
+        Evidence: 用户明确要求"注意所有inspector都没有标题和副标题！现有的需要修改。"
         Replacement: InspectorScopeCard 提供模式切换，具体 inspector 直接显示主体内容。
         Risk: Low
         Human Review: Required
@@ -406,51 +398,72 @@ export function SelectionInspectorSlot({
           <h4>{translate("section.runtimeDetails")}</h4>
         </div>
       */}
-      <InspectorDataScopeContext.Provider value={scopeContext}>
-        <div className={cm(styles, "definition-list")}>
-          <InspectorScopeCard
-            scope={selectedScope}
-            simulationRunning={slotState.showSimulationRuntimeInspector}
-            onScopeChange={scopeContext.setScope}
-          />
-          {slotState.inspectors.map((inspector) => (
-            <div
-              key={inspector.id}
-            >
-              {renderInspector({
-                appHost,
-                declaration: inspector.declaration,
-                entity: slotState.selectedEntity,
-                definition: slotState.selectedDefinition,
-                runtimeStatus: slotState.simulationRuntimeStatus,
-                translate,
-              })}
-            </div>
-          ))}
-          {slotState.debugEntityJson !== null ? (
-            <article className={cm(styles, "definition-card")} data-inspector-key="json-debug">
-              {/*
-                AI-REMOVED 2026-05-26:
-                Reason: debug inspector 也遵循无标题规则。
-                Trigger: 槽位配置 inspector 需求要求所有 inspector 无标题和副标题。
-                Evidence: 用户明确要求“所有inspector都没有标题和副标题”。
-                Replacement: textarea 本身提供调试内容。
-                Risk: Low
-                Human Review: Required
+      {/*
+        AI-CORRECTION 2026-05-31:
+        Reason: InspectorScopeCard（上述 Replacement）已被删除，scope 改为 inspector 级别管理，不再使用全局 scope toggle。
+        Trigger: 设计需求将 scope 从设备级别改为 inspector 级别。
+      */}
+      <div className={cm(styles, "definition-list")}>
+        {slotState.inspectors.map((inspector) => {
+          const inspectorScope = slotState.showSimulationRuntimeInspector
+            ? scopeByInspectorId[inspector.id] ?? "runtime-state"
+            : "initial-config";
 
-                Original code:
-                <h4>JSON Debug</h4>
-              */}
-              <textarea
-                className={cm(styles, "json-debug-textarea")}
-                readOnly
-                value={slotState.debugEntityJson}
-                rows={20}
-              />
-            </article>
-          ) : null}
-        </div>
-      </InspectorDataScopeContext.Provider>
+          return (
+            <InspectorDataScopeContext.Provider
+              key={inspector.id}
+              value={{
+                scope: inspectorScope,
+                simulationRunning: slotState.showSimulationRuntimeInspector,
+                canUseRuntimeState: slotState.showSimulationRuntimeInspector,
+                setScope: (nextScope: InspectorDataScope) => {
+                  if (!slotState.showSimulationRuntimeInspector && nextScope === "runtime-state") {
+                    return;
+                  }
+
+                  setScopeByInspectorId((current) => ({
+                    ...current,
+                    [inspector.id]: nextScope,
+                  }));
+                },
+              }}
+            >
+              <div>
+                {renderInspector({
+                  appHost,
+                  declaration: inspector.declaration,
+                  entity: slotState.selectedEntity,
+                  definition: slotState.selectedDefinition,
+                  runtimeStatus: slotState.simulationRuntimeStatus,
+                  translate,
+                })}
+              </div>
+            </InspectorDataScopeContext.Provider>
+          );
+        })}
+        {slotState.debugEntityJson !== null ? (
+          <article className={cm(styles, "definition-card")} data-inspector-key="json-debug">
+            {/*
+              AI-REMOVED 2026-05-26:
+              Reason: debug inspector 也遵循无标题规则。
+              Trigger: 槽位配置 inspector 需求要求所有 inspector 无标题和副标题。
+              Evidence: 用户明确要求"所有inspector都没有标题和副标题"。
+              Replacement: textarea 本身提供调试内容。
+              Risk: Low
+              Human Review: Required
+
+              Original code:
+              <h4>JSON Debug</h4>
+            */}
+            <textarea
+              className={cm(styles, "json-debug-textarea")}
+              readOnly
+              value={slotState.debugEntityJson}
+              rows={20}
+            />
+          </article>
+        ) : null}
+      </div>
     </div>
   );
 }

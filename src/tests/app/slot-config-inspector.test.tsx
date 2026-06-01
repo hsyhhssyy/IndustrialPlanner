@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppHost } from "@/app/host/app-host";
+import { InspectorDataScopeContext } from "@/app/shell/inspector/selection-inspector-model";
 import { SlotConfigInspector } from "@/app/shell/inspector/slot-config-inspector";
 import { WorkbenchEncyclopediaPickerController } from "@/app/shell/state/encyclopedia-picker-state";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -257,6 +258,93 @@ describe("SlotConfigInspector", () => {
       "storageSlotGroups[0].slots[0].initialCount": 50,
     });
     expect(patchEntityConfig).toHaveBeenCalled();
+  });
+
+  it("renders the data scope switch in the panel header", () => {
+    const workspace = createWorkspace();
+    const document = createDummyWorldDocument();
+    const entity = document.entities["dummy-entity-2"];
+
+    if (entity === undefined) {
+      throw new Error("Expected dummy storager entity to exist.");
+    }
+
+    const picker = new WorkbenchEncyclopediaPickerController(() => ({
+      desktopCategory: "all",
+      mobileSelectedCategories: [],
+    }));
+    const currentAppHost = {
+      workspace,
+      encyclopediaPicker: picker,
+      actions: {
+        translate: (key: string) => key,
+      },
+    } as unknown as AppHost;
+    appHost = currentAppHost;
+
+    const definition = requireDefinition(workspace, "item_port_storager_1");
+    const setScope = vi.fn();
+    const renderInspector = (scope: "initial-config" | "runtime-state") => {
+      act(() => {
+        root.render(
+          <InspectorDataScopeContext.Provider
+            value={{
+              scope,
+              simulationRunning: true,
+              canUseRuntimeState: true,
+              setScope,
+            }}
+          >
+            <SlotConfigInspector
+              appHost={currentAppHost}
+              declaration={{
+                type: INSPECTOR_TYPE.slotConfig,
+                slotGroupIds: ["storage_slot_1"],
+              }}
+              definition={definition}
+              entity={entity}
+              translate={currentAppHost.actions.translate}
+            />
+          </InspectorDataScopeContext.Provider>,
+        );
+      });
+    };
+
+    renderInspector("initial-config");
+
+    const enabledSwitch = container.querySelector<HTMLInputElement>("[data-inspector-scope-switch]");
+
+    if (enabledSwitch === null) {
+      throw new Error("Expected the inspector scope switch to be rendered.");
+    }
+
+    expect(enabledSwitch.checked).toBe(true);
+    expect(enabledSwitch.disabled).toBe(false);
+    expect(container.textContent).toContain("编辑模式");
+    expect(container.textContent).toContain("开启");
+
+    act(() => {
+      enabledSwitch.click();
+    });
+
+    expect(setScope).toHaveBeenLastCalledWith("runtime-state");
+
+    renderInspector("runtime-state");
+
+    const runtimeStateSwitch = container.querySelector<HTMLInputElement>("[data-inspector-scope-switch]");
+
+    if (runtimeStateSwitch === null) {
+      throw new Error("Expected the inspector scope switch to be rendered after scope changes.");
+    }
+
+    expect(runtimeStateSwitch.checked).toBe(false);
+    expect(container.textContent).toContain("关闭");
+
+    act(() => {
+      runtimeStateSwitch.click();
+    });
+
+    expect(setScope).toHaveBeenLastCalledWith("initial-config");
   });
 });
 

@@ -478,12 +478,107 @@
   font-size: 0.78rem;
 }
 
-.slot-config-panel-header {
-  min-height: 40px;
-}
-
 .slot-config-panel-body {
   gap: 10px;
+}
+
+.slot-config-panel-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.slot-config-panel-title {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+}
+
+.slot-config-panel-title span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.82rem;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-config-scope-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  min-width: 0;
+  gap: 8px;
+  color: var(--text-1);
+  cursor: pointer;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.slot-config-scope-switch-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 0.72rem;
+}
+
+.slot-config-scope-switch-copy strong {
+  color: var(--accent-strong);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.slot-config-scope-switch-input {
+  appearance: none;
+  position: relative;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 20px;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  border-radius: 999px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.slot-config-scope-switch-input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-2);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.slot-config-scope-switch-input:checked {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.slot-config-scope-switch-input:checked::after {
+  transform: translateX(16px);
+  background: var(--accent-strong);
+}
+
+.slot-config-scope-switch-input:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+.slot-config-scope-switch-input:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.slot-config-scope-switch.is-disabled {
+  cursor: default;
 }
 
 .slot-config-flow-layout {

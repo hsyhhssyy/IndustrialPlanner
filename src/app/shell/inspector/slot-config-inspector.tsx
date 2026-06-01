@@ -73,14 +73,15 @@ export function SlotConfigInspector({
   translate: (key: string) => string;
 }) {
   const mode = useInspectorRenderMode();
-  const { scope } = useInspectorDataScope();
+  const { scope, canUseRuntimeState, setScope } = useInspectorDataScope();
   const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<EffectiveSlotRow | null>(null);
   const [draftItemId, setDraftItemId] = useState<string | null>(null);
   const [draftCount, setDraftCount] = useState(0);
   const [draftIgnoreStock, setDraftIgnoreStock] = useState(false);
 
-  const activeScope = scope;
+  const activeScope = canUseRuntimeState ? scope : "initial-config";
+  const editModeEnabled = activeScope === "initial-config";
   const itemById = new Map(
     appHost.workspace.registry.itemDefinitions.map((item) => [item.id, item]),
   );
@@ -97,16 +98,42 @@ export function SlotConfigInspector({
     setEditingSlot(null);
   }, [activeScope, entity.id]);
 
+  const panelHeader = (
+    <div className={cm(styles, "inspector-expanded-header slot-config-panel-header")}>
+      <div className={cm(styles, "slot-config-panel-title")}>
+        <LucideChevronDown aria-hidden="true" />
+        <span>槽位配置</span>
+      </div>
+      <label
+        className={cm(styles, "slot-config-scope-switch", canUseRuntimeState ? "" : "is-disabled")}
+        title={canUseRuntimeState ? undefined : "当前状态仅在仿真运行时可用"}
+      >
+        <span className={cm(styles, "slot-config-scope-switch-copy")}>
+          <span>编辑模式:</span>
+          <strong>{editModeEnabled ? "开启" : "关闭"}</strong>
+        </span>
+        <input
+          aria-label="编辑模式"
+          checked={editModeEnabled}
+          className={cm(styles, "slot-config-scope-switch-input")}
+          data-inspector-scope-switch
+          disabled={!canUseRuntimeState}
+          onChange={(event) => {
+            setScope(event.currentTarget.checked ? "initial-config" : "runtime-state");
+          }}
+          type="checkbox"
+        />
+      </label>
+    </div>
+  );
+
   if (groupViews.length === 0) {
     return (
       <article
         className={cm(styles, "definition-card inspector-expanded-panel slot-config-inspector")}
         data-inspector-key="slot-config"
       >
-        <div className={cm(styles, "inspector-expanded-header")}>
-          <span>槽位配置</span>
-          <LucideChevronDown aria-hidden="true" />
-        </div>
+        {panelHeader}
         {/*
           AI-REMOVED 2026-05-26:
           Reason: inspector 卡片不再显示标题。
@@ -321,10 +348,7 @@ export function SlotConfigInspector({
       data-inspector-scope={activeScope}
       data-render-mode={mode}
     >
-      <div className={cm(styles, "inspector-expanded-header slot-config-panel-header")}>
-        <span>槽位配置</span>
-        <LucideChevronDown aria-hidden="true" />
-      </div>
+      {panelHeader}
       <div className={cm(styles, "inspector-expanded-body slot-config-panel-body")}>
         {/*
           AI-REMOVED 2026-05-31:
