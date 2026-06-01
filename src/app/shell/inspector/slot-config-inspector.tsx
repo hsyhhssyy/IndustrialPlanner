@@ -290,15 +290,16 @@ export function SlotConfigInspector({
             >
               {groupView.rows.map((row) => {
                 const roleIndex = roleIndexBySlotKey.get(createRuntimeSlotKey(row.storageGroupId, row.slotId)) ?? row.displayIndex;
+                const emptySlotLabel = `${roleLabel}槽位 ${roleIndex}`;
                 const itemDefinition = row.displayItemId === null
                   ? null
                   : itemById.get(row.displayItemId) ?? null;
-                const itemLabel = itemDefinition === null ? "空槽位" : translate(itemDefinition.nameKey);
+                const itemLabel = itemDefinition === null ? emptySlotLabel : translate(itemDefinition.nameKey);
                 const iconSrc = itemDefinition === null ? null : resolveItemIconSrc(itemDefinition);
 
                 return (
                   <button
-                    aria-label={`${roleLabel}槽位 ${roleIndex}. ${itemLabel}`}
+                    aria-label={itemLabel}
                     className={cm(styles, "slot-config-flow-slot")}
                     data-slot-action="open-slot-editor"
                     data-slot-number={row.displayIndex}
@@ -309,28 +310,33 @@ export function SlotConfigInspector({
                     title={itemLabel}
                     type="button"
                   >
-                    <span className={cm(styles, "slot-config-flow-slot-label")}>
-                      {`${roleLabel}槽位 ${roleIndex}`}
-                    </span>
-                    <span className={cm(styles, "slot-config-flow-slot-value")}>
-                      {iconSrc === null ? (
-                        <span className={cm(styles, "slot-config-flow-empty-button")}>
-                          <LucidePlus aria-hidden="true" />
+                    {iconSrc === null ? (
+                      <>
+                        <span className={cm(styles, "slot-config-flow-slot-label")}>
+                          {emptySlotLabel}
                         </span>
-                      ) : (
-                        <>
-                          <img
-                            alt=""
-                            className={cm(styles, "slot-config-flow-item-icon")}
-                            draggable={false}
-                            src={iconSrc}
-                          />
-                          <span className={cm(styles, "slot-config-flow-item-count")}>
-                            {row.ignoreStock ? "∞" : row.count}
+                        <span className={cm(styles, "slot-config-flow-slot-value")}>
+                          <span className={cm(styles, "slot-config-flow-empty-button")}>
+                            <LucidePlus aria-hidden="true" />
                           </span>
-                        </>
-                      )}
-                    </span>
+                        </span>
+                      </>
+                    ) : (
+                      <span className={cm(styles, "slot-config-flow-slot-item")}>
+                        <img
+                          alt=""
+                          className={cm(styles, "slot-config-flow-item-icon")}
+                          draggable={false}
+                          src={iconSrc}
+                        />
+                        <span className={cm(styles, "slot-config-flow-slot-label")}>
+                          {itemLabel}
+                        </span>
+                        <span className={cm(styles, "slot-config-flow-item-count-inline")}>
+                          {row.ignoreStock ? "∞" : row.count}
+                        </span>
+                      </span>
+                    )}
                   </button>
                 );
               })}

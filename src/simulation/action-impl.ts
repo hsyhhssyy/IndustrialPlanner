@@ -317,6 +317,10 @@ implements SimulationAction, SimulationInternalAction {
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = response.status;
 
+      if (response.status.mode === "error") {
+        console.error(`[SimHost] Worker in error mode: ${response.status.error ?? "unknown"}`);
+      }
+
       if (response.result.status.status === "ready") {
         this.stateReadWrite.currentSnapshot = response.result.currentTick;
         const snap = response.result.currentTick;

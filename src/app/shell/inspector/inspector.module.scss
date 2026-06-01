@@ -711,6 +711,27 @@
   object-fit: contain;
 }
 
+.slot-config-flow-slot-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.slot-config-flow-item-count-inline {
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-0) 88%, black 12%);
+  color: var(--text-0);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
 .slot-config-flow-item-count {
   position: absolute;
   right: -4px;

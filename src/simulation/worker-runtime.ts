@@ -505,6 +505,7 @@ export class SimulationWorkerRuntime {
     } catch (error) {
       this.mode = "error";
       this.error = error instanceof Error ? error.message : String(error);
+      console.error(`[SimWorker] fillOneTick failed at tick ${this.nextTickNumber}:`, this.error);
       return; // 出错后停止填充
     }
 
