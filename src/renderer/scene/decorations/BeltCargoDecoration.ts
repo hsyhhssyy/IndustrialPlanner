@@ -18,6 +18,7 @@ import {
 
 import type { DecorationLayer } from "./DecorationLayer"
 import type { DecorationSyncContext } from "./DecorationSyncContext"
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import {
   createEntityDefinitionMap,
   isStrictBeltDefinitionId,
@@ -95,6 +96,16 @@ export function createBeltCargoDecoration(): DecorationLayer {
 
   let destroyed = false
   let itemIconIdByItemId: Map<string, string> | null = null
+
+  // 缓存：文档稳定数据
+  let cachedDocumentSnapshot: unknown = null
+  let cachedDefinitionMap: Map<string, EntityDefinition> | null = null
+  // 端口连通性 — 文档变更或 gameUseSimplifiedDeviceIcons 变更时失效
+  let cachedPortConnectivity: ReturnType<typeof resolveBeltPortConnectivityEntries> | null = null
+  let cachedSimplifiedDeviceIcons: boolean | null = null
+  // beltRects — 文档变更或视口变更时失效
+  let cachedBeltRects: BeltCargoClipRect[] | null = null
+  let cachedBeltRectsViewportKey: string | null = null
 
   const hideAll = (): void => {
     container.visible = false
@@ -179,7 +190,45 @@ export function createBeltCargoDecoration(): DecorationLayer {
         return
       }
 
-      const beltCargoEntries = resolveBeltCargoEntries(ctx)
+      // --- 缓存管理 ---
+      const editor = ctx.renderHost.workspace.editor
+      const documentSnapshot = editor?.document?.getSnapshot() ?? null
+      // 文档版本不变时缓存命中；snapshot 不可用时始终失效（如测试 mock 缺少 document）
+      const documentStable = documentSnapshot !== null && cachedDocumentSnapshot === documentSnapshot
+      const simplifiedDeviceIcons = ctx.renderHost.workspace.app?.state?.settings?.gameUseSimplifiedDeviceIcons === true
+
+      // 定义映射（会话级稳定，只算一次）
+      if (cachedDefinitionMap === null) {
+        cachedDefinitionMap = createEntityDefinitionMap(ctx)
+      }
+      const definitionMap = cachedDefinitionMap
+
+      // 视口签名：用于判断 beltRects 是否需要重算
+      const vs = ctx.viewportState
+      const vb = ctx.viewportBounds
+      const viewportKey = `${vs.centerX},${vs.centerY},${vs.gridCellPixelSize},${vs.displayRotation},${vb.left},${vb.top},${vb.width},${vb.height}`
+
+      // beltRects 缓存：文档或视口变更时重算
+      if (cachedBeltRects === null || !documentStable || cachedBeltRectsViewportKey !== viewportKey) {
+        cachedBeltRects = resolveBeltCargoClipBeltRects(ctx, vs.gridCellPixelSize, definitionMap)
+        cachedBeltRectsViewportKey = viewportKey
+      }
+      const beltRects = cachedBeltRects
+
+      // 端口连通性缓存：文档或 gameUseSimplifiedDeviceIcons 变更时重算
+      if (cachedPortConnectivity === null || !documentStable || cachedSimplifiedDeviceIcons !== simplifiedDeviceIcons) {
+        cachedPortConnectivity = resolveBeltPortConnectivityEntries(ctx)
+        cachedSimplifiedDeviceIcons = simplifiedDeviceIcons
+      }
+      const portConnectivityEntries = cachedPortConnectivity
+
+      // 更新文档版本标记（仅当 snapshot 可用时）
+      if (documentSnapshot !== null) {
+        cachedDocumentSnapshot = documentSnapshot
+      }
+
+      // --- 货物条目收集 ---
+      const beltCargoEntries = resolveBeltCargoEntries(ctx, definitionMap)
       if (beltCargoEntries.length === 0) {
         hideAll()
         return
@@ -188,7 +237,6 @@ export function createBeltCargoDecoration(): DecorationLayer {
       const itemIconMap = ensureItemIconMap(ctx)
       const boxSize = resolveBeltCargoBoxSize(ctx.viewportState.gridCellPixelSize)
       const boxHalfSize = boxSize / 2
-      const portConnectivityEntries = resolveBeltPortConnectivityEntries(ctx)
       const portExtensionEntriesByBeltId = groupBeltPortEntriesByBeltId(portConnectivityEntries.extensions)
       const disconnectedPortEntriesByBeltId = groupBeltPortEntriesByBeltId(portConnectivityEntries.disconnectedPorts)
       const entries: BeltCargoRenderEntry[] = []
@@ -217,6 +265,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
               ?? EMPTY_BELT_DISCONNECTED_PORT_ENTRIES,
             portExtensionEntries: portExtensionEntriesByBeltId.get(beltCargoEntry.entityId)
               ?? EMPTY_BELT_PORT_EXTENSION_ENTRIES,
+            beltRects,
           }),
         })
       }
@@ -258,14 +307,16 @@ export function createBeltCargoDecoration(): DecorationLayer {
   }
 }
 
-function resolveBeltCargoEntries(ctx: DecorationSyncContext): BeltCargoEntry[] {
+function resolveBeltCargoEntries(
+  ctx: DecorationSyncContext,
+  definitionMap: ReadonlyMap<string, EntityDefinition>,
+): BeltCargoEntry[] {
   const simulation = ctx.renderHost.workspace.simulation
   const editor = ctx.renderHost.workspace.editor
   if (simulation === null || editor === null || simulation.state.runningState === "stop") {
     return []
   }
 
-  const definitionMap = createEntityDefinitionMap(ctx)
   const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
   const entries: BeltCargoEntry[] = []
   for (const entity of editor.queries.listEntities()) {
@@ -455,15 +506,16 @@ function resolveBeltCargoClipMask(options: {
   boxHalfSize: number;
   disconnectedPortEntries: readonly BeltDisconnectedPortEntry[];
   portExtensionEntries: readonly BeltPortExtensionEntry[];
+  beltRects: readonly BeltCargoClipRect[];
 }): BeltCargoClipMask | null {
   const extensions = options.portExtensionEntries
   if (extensions.length === 0) {
     return null
   }
 
-  const gridCellSize = options.ctx.viewportState.gridCellPixelSize
+  const _gridCellSize = options.ctx.viewportState.gridCellPixelSize
   return {
-    beltRects: resolveBeltCargoClipBeltRects(options.ctx, gridCellSize),
+    beltRects: options.beltRects,
     extensions: [
       ...extensions.map((extension) =>
         resolveBeltCargoClipExtensionRect({
@@ -532,6 +584,7 @@ function resolveBeltCargoClipDisconnectedPortRect(options: {
 function resolveBeltCargoClipBeltRects(
   ctx: DecorationSyncContext,
   gridCellSize: number,
+  definitionMap: ReadonlyMap<string, EntityDefinition>,
 ): BeltCargoClipRect[] {
   const editor = ctx.renderHost.workspace.editor
   if (editor === null) {
@@ -539,7 +592,6 @@ function resolveBeltCargoClipBeltRects(
   }
 
   const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
-  const definitionMap = createEntityDefinitionMap(ctx)
   return editor.queries.listEntities()
     .filter((entity) => {
       if (!isStrictBeltDefinitionId(entity.definitionId)) {
