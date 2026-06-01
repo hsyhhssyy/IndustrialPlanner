@@ -52,6 +52,25 @@ function createDummyWorldWithRecipeDevice(): WorldDocument {
   };
 }
 
+/** 创建一个包含自动 recipe channel 定义设备的 WorldDocument */
+function createDummyWorldWithAutoRecipeDevice(): WorldDocument {
+  const doc = createDummyWorldDocument();
+  return {
+    ...doc,
+    entities: {
+      ...doc.entities,
+      "dummy-auto-recipe-device": {
+        id: "dummy-auto-recipe-device",
+        definitionId: "item_port_grinder_1",
+        position: { x: 1, y: 1 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    },
+  };
+}
+
 function attachSimulationStub(
   workspace: WorkspaceContract,
   options: {
@@ -252,6 +271,61 @@ describe("SelectionInspectorSlot", () => {
     expect(queryInspectorKeys(container)).toContain(
       SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY,
     );
+    expect(container.textContent).toContain("productionPlanning.addRecipe");
+    // AI-REMOVED 2026-06-01:
+    // Reason: 添加配方按钮已按 UI 要求移除说明文案。
+    // Trigger: 用户要求“把添加配方按钮下面的说明去掉”。
+    // Evidence: SimulationRecipeStatusRuntimeInspector 不再渲染 productionPlanning.recipeStatusEmptyHint。
+    // Replacement: 上一行只断言 productionPlanning.addRecipe 入口存在。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(container.textContent).toContain("productionPlanning.recipeStatusEmptyHint");
+  });
+
+  it("renders auto recipe channels as read-only in the recipe status inspector", () => {
+    const workspace = createWorkspace();
+    editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldWithAutoRecipeDevice());
+    editorHost.internalState.collections.selection.replace(["dummy-auto-recipe-device"]);
+    attachSimulationStub(workspace, {
+      state: "start",
+      runtimeStatus: {
+        slotItems: [],
+        channelRecipes: {
+          default: {
+            channelId: "default",
+            recipeId: "r_crusher_originium_powder_basic",
+            progressSeconds: 1,
+            desiredSeconds: 2,
+            state: "running",
+          },
+        },
+        powerStatus: "in-power-range",
+      },
+    });
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    act(() => {
+      root.render(
+        <SelectionInspectorSlot
+          appHost={currentAppHost}
+          translate={(key) => key}
+        />,
+      );
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(queryInspectorKeys(container)).toContain(
+      SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY,
+    );
+    expect(container.querySelector("[title='productionPlanning.autoRecipeReadonly']")).not.toBeNull();
+    expect(container.querySelector("button[aria-label='productionPlanning.remove']")).toBeNull();
   });
 
   it("mounts the simulation recipe status inspector outside stop state", () => {

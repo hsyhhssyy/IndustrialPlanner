@@ -1,9 +1,10 @@
-import { type ReactNode } from "react";
+import { type CSSProperties, type ReactNode } from "react";
 import {
   resolveProductionPlanningEntityIconSrc,
   resolveProductionPlanningItemIconSrc,
   type ProductionPlanningIndex,
 } from "@/app/shell/production-planning/production-planning-model";
+import LucideChevronsRight from "~icons/lucide/chevrons-right";
 import styles from "./recipe-display.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -12,6 +13,9 @@ export interface RecipeDisplayProps {
   index: ProductionPlanningIndex;
   /** 是否显示设备图标和名称，默认 false */
   showDevice?: boolean;
+  variant?: "default" | "inspectorStatus";
+  progressPercent?: number | null;
+  progressKind?: "ring" | "bar";
   t: (key: string) => string;
 }
 
@@ -19,12 +23,59 @@ export function RecipeDisplay({
   recipeId,
   index,
   showDevice = false,
+  variant = "default",
+  progressPercent = null,
+  progressKind = "ring",
   t,
 }: RecipeDisplayProps): ReactNode {
   const recipe = index.recipeById.get(recipeId);
   if (recipe === undefined) return null;
 
   const machine = index.entityById.get(recipe.machineId) ?? null;
+
+  if (variant === "inspectorStatus") {
+    const progressStyle = progressPercent === null
+      ? undefined
+      : ({
+        "--recipe-progress-deg": `${Math.max(0, Math.min(100, progressPercent)) * 3.6}deg`,
+        "--recipe-progress-percent": `${Math.max(0, Math.min(100, progressPercent))}%`,
+      } as CSSProperties);
+
+    return (
+      <div className={cm(styles, "recipe-display-formula recipe-display-formula-inspector")}>
+        <span className={cm(styles, "recipe-display-formula-group")}>
+          {recipe.inputs.map((input, i) => (
+            <span key={`in-${input.itemId}`} className={cm(styles, "recipe-display-formula-item")}>
+              {i > 0 && <span className={cm(styles, "recipe-display-formula-plus")}>+</span>}
+              <span className={cm(styles, "recipe-display-formula-icon")}>
+                <img alt="" src={resolveProductionPlanningItemIconSrc(input.itemId, index)} />
+                <span>{input.amount}</span>
+              </span>
+            </span>
+          ))}
+        </span>
+        <span
+          className={cm(styles, "recipe-display-formula-progress")}
+          data-progress-kind={progressKind}
+          data-progress-empty={progressPercent === null ? "true" : "false"}
+          style={progressStyle}
+        >
+          <LucideChevronsRight aria-hidden="true" />
+        </span>
+        <span className={cm(styles, "recipe-display-formula-group")}>
+          {recipe.outputs.map((output, i) => (
+            <span key={`out-${output.itemId}`} className={cm(styles, "recipe-display-formula-item")}>
+              {i > 0 && <span className={cm(styles, "recipe-display-formula-plus")}>+</span>}
+              <span className={cm(styles, "recipe-display-formula-icon")}>
+                <img alt="" src={resolveProductionPlanningItemIconSrc(output.itemId, index)} />
+                <span>{output.amount}</span>
+              </span>
+            </span>
+          ))}
+        </span>
+      </div>
+    );
+  }
 
   const formula = (
     <div className={cm(styles, "recipe-display-formula")}>

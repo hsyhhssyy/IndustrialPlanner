@@ -59,6 +59,7 @@ import {
   isMobileLandscapeScreenProfile,
   isMobilePortraitScreenProfile,
   isTouchLandscapeScreenProfile,
+  resetScreenProfileConsoleDiagnosticsForTest,
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
 import {
@@ -439,6 +440,11 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
 
     setDebugLogCaptureEnabled(true);
     setLogLevel("debug", { announce: true });
+
+    // 初始 screen profile 日志在 debug log capture 安装前就已输出，
+    // 此处 capture 已启用，重置去重状态后重新触发，确保初始 profile 出现在捕获日志中。
+    resetScreenProfileConsoleDiagnosticsForTest();
+    resolveScreenProfileFromWindow();
   }, [appHost, appHost.state.settings.debugMode]);
 
   useEffect(() => {

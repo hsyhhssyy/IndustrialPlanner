@@ -34,6 +34,30 @@
   gap: 4px;
 }
 
+.recipe-display-formula-inspector {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.recipe-display-formula-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.recipe-display-formula-inspector .recipe-display-formula-group:first-child {
+  justify-content: flex-start;
+}
+
+.recipe-display-formula-inspector .recipe-display-formula-group:last-child {
+  justify-content: flex-end;
+}
+
 .recipe-display-formula-item {
   display: inline-flex;
   align-items: center;
@@ -78,6 +102,120 @@
     padding: 0 3px;
     line-height: 1.2;
   }
+}
+
+.recipe-display-formula-inspector .recipe-display-formula-plus {
+  margin: 0 1px;
+  color: color-mix(in srgb, var(--text-1) 70%, var(--line-strong));
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.recipe-display-formula-inspector .recipe-display-formula-icon {
+  width: 34px;
+  height: 34px;
+
+  img {
+    border-color: color-mix(in srgb, var(--line-strong) 70%, var(--line));
+    border-radius: 6px;
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 94%, white 3%) 0%, var(--surface-2) 100%);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--surface-1) 88%, transparent),
+      0 1px 2px color-mix(in srgb, var(--text-0) 8%, transparent);
+  }
+
+  > span {
+    right: 2px;
+    bottom: 2px;
+    left: auto;
+    min-width: 16px;
+    height: 15px;
+    padding: 0 4px;
+    transform: none;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--text-0) 72%, transparent);
+    box-shadow: 0 1px 2px color-mix(in srgb, black 30%, transparent);
+    font-size: 0.68rem;
+    line-height: 15px;
+    text-align: center;
+  }
+}
+
+.recipe-display-formula-progress {
+  --recipe-progress-deg: 0deg;
+  --recipe-progress-percent: 0%;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--text-1) 78%, var(--line-strong));
+
+  svg {
+    position: relative;
+    z-index: 1;
+    width: 20px;
+    height: 20px;
+    stroke-width: 2.4;
+  }
+}
+
+.recipe-display-formula-progress[data-progress-kind="ring"] {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background:
+    conic-gradient(
+      var(--accent-strong) 0deg,
+      var(--accent-strong) var(--recipe-progress-deg),
+      color-mix(in srgb, var(--line) 70%, transparent) var(--recipe-progress-deg),
+      color-mix(in srgb, var(--line) 70%, transparent) 360deg
+    );
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border-radius: inherit;
+    background: var(--surface-1);
+  }
+}
+
+.recipe-display-formula-progress[data-progress-kind="ring"][data-progress-empty="true"] {
+  background: color-mix(in srgb, var(--line) 68%, transparent);
+}
+
+.recipe-display-formula-progress[data-progress-kind="bar"] {
+  width: 96px;
+  height: 44px;
+  padding-top: 1px;
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    right: 8px;
+    bottom: 6px;
+    left: 8px;
+    height: 4px;
+    border-radius: 999px;
+  }
+
+  &::before {
+    background: color-mix(in srgb, var(--line) 78%, transparent);
+  }
+
+  &::after {
+    right: auto;
+    width: var(--recipe-progress-percent);
+    max-width: calc(100% - 16px);
+    background: var(--accent-strong);
+  }
+}
+
+.recipe-display-formula-progress[data-progress-kind="bar"][data-progress-empty="true"]::after {
+  width: 0;
 }
 
 .recipe-display-formula-arrow {

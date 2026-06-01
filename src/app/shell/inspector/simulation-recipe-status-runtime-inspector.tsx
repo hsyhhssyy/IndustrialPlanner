@@ -3,6 +3,9 @@ import type {
   SimulationDeviceRuntimeStatusReadModel,
 } from "@/domain/simulation/types/simulation-types";
 import LucideChevronDown from "~icons/lucide/chevron-down";
+import LucideLock from "~icons/lucide/lock";
+import LucidePlus from "~icons/lucide/plus";
+import LucideTrash2 from "~icons/lucide/trash-2";
 import type { ProductionPlanningIndex } from "@/app/shell/production-planning/production-planning-model";
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -100,9 +103,11 @@ export function SimulationRecipeStatusRuntimeInspector({
       className={cm(styles, "definition-card inspector-expanded-panel simulation-recipe-status-runtime-inspector")}
       data-inspector-key={SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY}
     >
-      <div className={cm(styles, "inspector-expanded-header")}>
-        <span>配方状态</span>
-        <LucideChevronDown aria-hidden="true" />
+      <div className={cm(styles, "inspector-expanded-header recipe-status-panel-header")}>
+        <div className={cm(styles, "recipe-status-panel-title")}>
+          <LucideChevronDown aria-hidden="true" />
+          <span>配方状态</span>
+        </div>
       </div>
       <div className={cm(styles, "inspector-expanded-body")}>
         {hasAuto && (
@@ -169,14 +174,23 @@ function AutoRecipeSection({
         if (running !== null) {
           const pct = resolveChannelProgressPercent(running.status);
           return (
-            <div key={running.ch.id} className={cm(styles, "recipe-channel-row")}>
+            <div key={running.ch.id} className={cm(styles, "recipe-channel-row")} data-recipe-row-mode="locked">
               <RecipeDisplay
                 recipeId={running.status.recipeId!}
                 index={index}
                 showDevice={false}
+                variant="inspectorStatus"
+                progressPercent={pct}
+                progressKind="ring"
                 t={t}
               />
-              {pct !== null && <ProgressBar percent={pct} />}
+              <span
+                className={cm(styles, "recipe-locked-control")}
+                title={t("productionPlanning.autoRecipeReadonly")}
+                aria-label={t("productionPlanning.autoRecipeReadonly")}
+              >
+                <LucideLock aria-hidden="true" />
+              </span>
             </div>
           );
         }
@@ -254,21 +268,24 @@ function ManualRecipeSection({
         const status = channelRecipeStatus[ch.id] ?? null;
         const pct = resolveChannelProgressPercent(status);
         return (
-          <div key={ch.id} className={cm(styles, "recipe-channel-row")}>
+          <div key={ch.id} className={cm(styles, "recipe-channel-row")} data-recipe-row-mode="removable">
             <RecipeDisplay
               recipeId={recipeId!}
               index={index}
               showDevice={false}
+              variant="inspectorStatus"
+              progressPercent={pct}
+              progressKind="ring"
               t={t}
             />
-            {pct !== null && <ProgressBar percent={pct} />}
             <button
               className={cm(styles, "recipe-remove-button")}
               onClick={() => handleRemoveRecipe(ch.id)}
               type="button"
               title={t("productionPlanning.remove")}
+              aria-label={t("productionPlanning.remove")}
             >
-              ×
+              <LucideTrash2 aria-hidden="true" />
             </button>
           </div>
         );
@@ -282,7 +299,23 @@ function ManualRecipeSection({
             onClick={() => handleAddRecipe(nextChannel.id)}
             type="button"
           >
-            <span className={cm(styles, "recipe-add-icon")}>+</span>
+            <span className={cm(styles, "recipe-add-button-primary")}>
+              <LucidePlus className={cm(styles, "recipe-add-icon")} aria-hidden="true" />
+              <span>{t("productionPlanning.addRecipe")}</span>
+            </span>
+            {/* AI-REMOVED 2026-06-01:
+                Reason: 添加配方按钮按用户要求去掉说明文案，并让入口高度接近配方行。
+                Trigger: 用户要求“把添加配方按钮下面的说明去掉，让添加按钮的行高和配方行一致或稍矮”。
+                Evidence: 设计稿收敛为低矮操作入口；说明文本会增加真实 tablet inspector 高度。
+                Replacement: recipe-add-button-primary 单行按钮内容
+                Risk: Low
+                Human Review: Required
+
+                Original code:
+                <span className={cm(styles, "recipe-add-button-hint")}>
+                  {t("productionPlanning.recipeStatusEmptyHint")}
+                </span>
+            */}
           </button>
         );
       })()}
@@ -293,20 +326,29 @@ function ManualRecipeSection({
 // ---------------------------------------------------------------------------
 // 进度条
 // ---------------------------------------------------------------------------
-
-function ProgressBar({ percent }: { percent: number }) {
-  return (
-    <div className={cm(styles, "progress-bar")}>
-      <div className={cm(styles, "progress-track")}>
-        <div
-          className={cm(styles, "progress-fill")}
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-      <span className={cm(styles, "progress-percent")}>
-        {Number.isInteger(percent) ? String(percent) : percent.toFixed(1)}
-        %
-      </span>
-    </div>
-  );
-}
+// AI-REMOVED 2026-06-01:
+// Reason: 配方状态面板按 inspector-panel3 设计稿改为内嵌在 RecipeDisplay 中的环形/横向进度视觉，
+//   不再使用独立百分比文字进度条。
+// Trigger: 用户要求 1:1 更新 recipeStatus 配方展示 UI。
+// Evidence: SimulationRecipeStatusRuntimeInspector 已将 progressPercent / progressKind 传入 RecipeDisplay。
+// Replacement: RecipeDisplay variant="inspectorStatus"
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function ProgressBar({ percent }: { percent: number }) {
+//   return (
+//     <div className={cm(styles, "progress-bar")}>
+//       <div className={cm(styles, "progress-track")}>
+//         <div
+//           className={cm(styles, "progress-fill")}
+//           style={{ width: `${percent}%` }}
+//         />
+//       </div>
+//       <span className={cm(styles, "progress-percent")}>
+//         {Number.isInteger(percent) ? String(percent) : percent.toFixed(1)}
+//         %
+//       </span>
+//     </div>
+//   );
+// }
