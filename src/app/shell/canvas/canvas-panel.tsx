@@ -2,7 +2,6 @@ import type { AppHost } from "@/app/host/app-host";
 import type { LongPressState } from "@/app/input/gesture/adapter";
 import type { GestureDiagnosticsSnapshot } from "@/app/input/gesture/diagnostics";
 import { useViewportResizeAdapter } from "@/app/shell/canvas/viewport-resize-adapter";
-import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { observer } from "mobx-react-lite";
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent, PointerEvent, WheelEvent } from "react";
@@ -87,7 +86,6 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
   }, [gestureAdapter]);
 
   const handlePointerDown = (event: PointerEvent<HTMLElement>) => {
-    preventTouchPointerCompatibilityMouseEvents(event);
     gestureAdapter.handlePointerDown(event);
   };
   const handlePointerMove = (event: PointerEvent<HTMLElement>) => {
@@ -96,6 +94,41 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
   const handlePointerUp = (event: PointerEvent<HTMLElement>) => {
     gestureAdapter.handlePointerUp(event);
   };
+
+  // 通过原生 DOM document capture 阶段阻止来自 canvas-panel 内部的 touch/pen 事件
+  // 合成 compat mouse/click 事件，避免 ghost click 穿透到后续渲染的 dialog。
+  // React 合成事件系统的 preventDefault 无法可靠阻断浏览器原生 click 合成链。
+  const canvasPanelRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const onNativePointer = (e: globalThis.PointerEvent) => {
+      const el = canvasPanelRef.current;
+      if (!el) return;
+      if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
+      if (!(e.target instanceof Node) || !el.contains(e.target)) return;
+      e.preventDefault();
+    };
+
+    // 同时监听 touch 事件：Chromium 中 click 合成由 preventDefault on touchstart 控制，
+    // 仅阻止 pointer 事件可能不足（尤其 page.tap() 先派发 touch 后合成 pointer）
+    const onNativeTouch = (e: TouchEvent) => {
+      const el = canvasPanelRef.current;
+      if (!el) return;
+      if (!(e.target instanceof Node) || !el.contains(e.target)) return;
+      e.preventDefault();
+    };
+
+    document.addEventListener('pointerdown', onNativePointer, true);
+    document.addEventListener('pointerup', onNativePointer, true);
+    document.addEventListener('touchstart', onNativeTouch, true);
+    document.addEventListener('touchend', onNativeTouch, true);
+    return () => {
+      document.removeEventListener('pointerdown', onNativePointer, true);
+      document.removeEventListener('pointerup', onNativePointer, true);
+      document.removeEventListener('touchstart', onNativeTouch, true);
+      document.removeEventListener('touchend', onNativeTouch, true);
+    };
+  }, []);
   const handlePointerCancel = (event: PointerEvent<HTMLElement>) => {
     gestureAdapter.handlePointerCancel(event);
   };
@@ -111,6 +144,7 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
 
   return (
     <main
+      ref={canvasPanelRef}
       className={cm(styles, "canvas-panel panel-surface")}
       onBlur={handleBlur}
       onLostPointerCapture={handleLostPointerCapture}
