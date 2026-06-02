@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import LucideArrowLeftRight from "~icons/lucide/arrow-left-right";
 import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideChevronsRight from "~icons/lucide/chevrons-right";
 import LucideDownload from "~icons/lucide/download";
@@ -249,8 +250,9 @@ export function SlotConfigInspector({
     ? "未选择物品"
     : translate(editingItemDefinition.nameKey);
   const roleGroupViews = resolveSlotConfigRoleGroupViews(definition, groupViews);
-  const inputGroupViews = roleGroupViews.filter((groupView) => groupView.role !== "output");
+  const inputGroupViews = roleGroupViews.filter((groupView) => groupView.role === "input");
   const outputGroupViews = roleGroupViews.filter((groupView) => groupView.role === "output");
+  const sharedGroupViews = roleGroupViews.filter((groupView) => groupView.role === "shared");
 
   const renderSlotColumn = (
     role: SlotConfigColumnRole,
@@ -291,6 +293,97 @@ export function SlotConfigInspector({
               {groupView.rows.map((row) => {
                 const roleIndex = roleIndexBySlotKey.get(createRuntimeSlotKey(row.storageGroupId, row.slotId)) ?? row.displayIndex;
                 const emptySlotLabel = `${roleLabel}槽位 ${roleIndex}`;
+                const itemDefinition = row.displayItemId === null
+                  ? null
+                  : itemById.get(row.displayItemId) ?? null;
+                const itemLabel = itemDefinition === null ? emptySlotLabel : translate(itemDefinition.nameKey);
+                const iconSrc = itemDefinition === null ? null : resolveItemIconSrc(itemDefinition);
+
+                return (
+                  <button
+                    aria-label={itemLabel}
+                    className={cm(styles, "slot-config-flow-slot")}
+                    data-slot-action="open-slot-editor"
+                    data-slot-number={row.displayIndex}
+                    key={row.slotId}
+                    onClick={() => {
+                      openSlotEditor(row);
+                    }}
+                    title={itemLabel}
+                    type="button"
+                  >
+                    {iconSrc === null ? (
+                      <>
+                        <span className={cm(styles, "slot-config-flow-slot-label")}>
+                          {emptySlotLabel}
+                        </span>
+                        <span className={cm(styles, "slot-config-flow-slot-value")}>
+                          <span className={cm(styles, "slot-config-flow-empty-button")}>
+                            <LucidePlus aria-hidden="true" />
+                          </span>
+                        </span>
+                      </>
+                    ) : (
+                      <span className={cm(styles, "slot-config-flow-slot-item")}>
+                        <img
+                          alt=""
+                          className={cm(styles, "slot-config-flow-item-icon")}
+                          draggable={false}
+                          src={iconSrc}
+                        />
+                        <span className={cm(styles, "slot-config-flow-slot-label")}>
+                          {itemLabel}
+                        </span>
+                        <span className={cm(styles, "slot-config-flow-item-count-inline")}>
+                          {row.ignoreStock ? "∞" : row.count}
+                        </span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </section>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
+  const renderSharedColumn = (
+    roleGroupViews: readonly SlotConfigRoleGroupView[],
+  ) => {
+    const rows = roleGroupViews.flatMap((groupView) => groupView.rows);
+    const filledCount = rows.filter((row) => row.displayItemId !== null).length;
+    const roleIndexBySlotKey = new Map(
+      rows.map((row, rowIndex) => [createRuntimeSlotKey(row.storageGroupId, row.slotId), rowIndex + 1]),
+    );
+
+    return (
+      <section
+        className={cm(styles, `slot-config-flow-column is-shared`)}
+        data-slot-config-role="shared"
+      >
+        <div className={cm(styles, "slot-config-flow-column-header")}>
+          <LucideArrowLeftRight aria-hidden="true" />
+          <div>
+            <strong>混合缓冲</strong>
+            <span>{`输入/输出共享槽位 (${filledCount}/${rows.length})`}</span>
+          </div>
+        </div>
+        <div className={cm(styles, "slot-config-flow-slot-list")}>
+          {roleGroupViews.length === 0 ? (
+            <div className={cm(styles, "slot-config-flow-empty")}>暂无共享槽位</div>
+          ) : roleGroupViews.map((groupView) => (
+            <section
+              className={cm(styles, "slot-config-group")}
+              data-slot-config-group={groupView.storageGroup.id}
+              data-slot-config-group-role={groupView.role}
+              data-slot-config-group-size={groupView.rows.length > 1 ? "multi" : "single"}
+              key={groupView.storageGroup.id}
+            >
+              {groupView.rows.map((row) => {
+                const roleIndex = roleIndexBySlotKey.get(createRuntimeSlotKey(row.storageGroupId, row.slotId)) ?? row.displayIndex;
+                const emptySlotLabel = `槽位 ${roleIndex}`;
                 const itemDefinition = row.displayItemId === null
                   ? null
                   : itemById.get(row.displayItemId) ?? null;
@@ -419,17 +512,23 @@ export function SlotConfigInspector({
             </section>
           ))}
         */}
-        <div className={cm(styles, "slot-config-flow-layout")}>
-          {renderSlotColumn("input", inputGroupViews)}
-          <div className={cm(styles, "slot-config-flow-direction")} aria-label="加工流向">
-            <span>加工流向</span>
-            <LucideChevronsRight aria-hidden="true" />
+        {(inputGroupViews.length > 0 || outputGroupViews.length > 0) && (
+          <>
+            <div className={cm(styles, "slot-config-flow-layout")}>
+              {renderSlotColumn("input", inputGroupViews)}
+              <div className={cm(styles, "slot-config-flow-direction")} aria-label="加工流向">
+                <span>加工流向</span>
+                <LucideChevronsRight aria-hidden="true" />
+              </div>
+              {renderSlotColumn("output", outputGroupViews)}
+            </div>
+          </>
+        )}
+        {sharedGroupViews.length > 0 && (
+          <div className={cm(styles, "slot-config-shared-section")}>
+            {renderSharedColumn(sharedGroupViews)}
           </div>
-          {renderSlotColumn("output", outputGroupViews)}
-        </div>
-        <div className={cm(styles, "slot-config-flow-note")}>
-          加工流向：原料从左侧输入，经过设备处理后，从右侧输出产物。
-        </div>
+        )}
       </div>
       {editingSlot !== null ? (
         <div

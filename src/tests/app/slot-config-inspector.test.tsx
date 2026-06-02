@@ -346,6 +346,119 @@ describe("SlotConfigInspector", () => {
 
     expect(setScope).toHaveBeenLastCalledWith("initial-config");
   });
+
+  it("renders shared slot column for mix_pool with bidirectional port bindings", () => {
+    const workspace = createWorkspace();
+    const document = createDummyWorldDocument();
+    const entity = document.entities["dummy-entity-4"];
+
+    if (entity === undefined) {
+      throw new Error("Expected dummy mix_pool entity to exist.");
+    }
+
+    const definition = requireDefinition(workspace, entity.definitionId);
+    // MixPool 的 slot-config inspector 引用 shared_input_buffer
+    const slotConfigDecl = definition.inspectors.find(
+      (d) => d.type === "slot-config",
+    );
+    // auto-generated via recipe machine: expect slotGroupIds to include shared_input_buffer
+    expect(slotConfigDecl).toBeDefined();
+
+    const slotGroupIds = slotConfigDecl !== undefined && "slotGroupIds" in slotConfigDecl
+      ? (slotConfigDecl as { slotGroupIds: readonly string[] }).slotGroupIds
+      : [];
+    expect(slotGroupIds).toContain("shared_input_buffer");
+
+    const picker = new WorkbenchEncyclopediaPickerController(() => ({
+      desktopCategory: "all",
+      mobileSelectedCategories: [],
+    }));
+    const currentAppHost = {
+      workspace,
+      encyclopediaPicker: picker,
+      actions: {
+        translate: (key: string) => key,
+      },
+    } as unknown as AppHost;
+    appHost = currentAppHost;
+
+    act(() => {
+      root.render(
+        <SlotConfigInspector
+          appHost={currentAppHost}
+          declaration={{
+            type: INSPECTOR_TYPE.slotConfig,
+            slotGroupIds: ["shared_input_buffer"],
+          }}
+          definition={definition}
+          entity={entity}
+          translate={currentAppHost.actions.translate}
+        />,
+      );
+    });
+
+    // 验证共享槽位列存在，输入/输出列不存在
+    const sharedColumn = container.querySelector("[data-slot-config-role='shared']");
+    const inputColumn = container.querySelector("[data-slot-config-role='input']");
+    const outputColumn = container.querySelector("[data-slot-config-role='output']");
+
+    expect(sharedColumn).not.toBeNull();
+    expect(inputColumn).toBeNull();
+    expect(outputColumn).toBeNull();
+
+    // 共享槽位应该显示 5 个槽位
+    const sharedSlots = sharedColumn!.querySelectorAll("[data-slot-action='open-slot-editor']");
+    expect(sharedSlots.length).toBe(5);
+  });
+
+  it("renders input/output columns only for definition with unidirectional port bindings", () => {
+    // 使用粉碎机（grinder）：item_input -> item_input_buffer, item_output -> item_output_buffer
+    // 两个槽位组都是单向绑定，不应出现共享列
+    const workspace = createWorkspace();
+    const document = createDummyWorldDocument();
+    const entity = document.entities["dummy-entity-3"];
+
+    if (entity === undefined) {
+      throw new Error("Expected dummy grinder entity to exist.");
+    }
+
+    const definition = requireDefinition(workspace, entity.definitionId);
+    const picker = new WorkbenchEncyclopediaPickerController(() => ({
+      desktopCategory: "all",
+      mobileSelectedCategories: [],
+    }));
+    const currentAppHost = {
+      workspace,
+      encyclopediaPicker: picker,
+      actions: {
+        translate: (key: string) => key,
+      },
+    } as unknown as AppHost;
+    appHost = currentAppHost;
+
+    act(() => {
+      root.render(
+        <SlotConfigInspector
+          appHost={currentAppHost}
+          declaration={{
+            type: INSPECTOR_TYPE.slotConfig,
+            slotGroupIds: ["item_input_buffer", "item_output_buffer"],
+          }}
+          definition={definition}
+          entity={entity}
+          translate={currentAppHost.actions.translate}
+        />,
+      );
+    });
+
+    // 共享列不应出现
+    expect(container.querySelector("[data-slot-config-role='shared']")).toBeNull();
+    // 输入和输出列各至少有一个
+    const inputColumn = container.querySelector("[data-slot-config-role='input']");
+    const outputColumn = container.querySelector("[data-slot-config-role='output']");
+    expect(inputColumn).not.toBeNull();
+    expect(outputColumn).not.toBeNull();
+  });
 });
 
 function requireDefinition(workspace: WorkspaceContract, definitionId: string): EntityDefinition {

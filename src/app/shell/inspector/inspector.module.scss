@@ -116,8 +116,10 @@
   align-items: center;
   gap: 14px;
   min-width: 0;
-  padding: 12px 0 14px;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 54%, var(--line));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-2) 76%, transparent);
 }
 
 .selection-inspector-device-copy {
@@ -624,6 +626,11 @@
   --slot-config-flow-soft: rgb(217 130 43 / 18%);
 }
 
+.slot-config-flow-column.is-shared {
+  --slot-config-flow-accent: var(--text-2);
+  --slot-config-flow-soft: rgb(128 128 128 / 10%);
+}
+
 .slot-config-flow-column-header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -799,14 +806,10 @@
   font-size: 0.76rem;
 }
 
-.slot-config-flow-note {
-  padding: 9px 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--surface-2) 68%, transparent);
-  color: var(--text-1);
-  font-size: 0.74rem;
-  line-height: 1.45;
+.slot-config-shared-section {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
 }
 
 .slot-config-dialog-backdrop {
