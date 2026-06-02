@@ -468,26 +468,30 @@
 
 .dialog-shell.is-mobile-compact .dialog-shell-header {
   --dialog-shell-tab-track-height: 28px;
-  padding: 6px 8px 0;
+  padding: 2px 8px 0;
+}
+
+.dialog-shell.is-mobile-compact .dialog-shell-header-main {
+  gap: 6px;
 }
 
 .dialog-shell.is-mobile-compact .dialog-shell-header-copy {
-  padding-bottom: 2px;
+  padding-bottom: 1px;
 }
 
 .dialog-shell.is-mobile-compact .dialog-shell-header-copy h2 {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   line-height: 1.1;
 }
 
 .dialog-shell.is-mobile-compact .dialog-shell-header-actions {
   gap: 4px;
-  padding-bottom: 2px;
+  padding-bottom: 1px;
 }
 
 .dialog-shell.is-mobile-compact .dialog-shell-header-button {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 .dialog-shell.is-mobile-compact .dialog-shell-tab-strip {
@@ -521,7 +525,8 @@
    上面的 compact mobile 规则保留用于审计，但当前有效实现不再让手机端 tab
    使用高低差和额外间距。手机端沿用桌面/平板的平面轨道，只保留更小字号。 */
 .dialog-shell.has-tabs.is-mobile-compact .dialog-shell-header {
-  --dialog-shell-tab-track-height: 36px;
+  --dialog-shell-tab-track-height: 28px;
+  padding: 1px 10px 0;
 }
 
 .dialog-shell.has-tabs.is-mobile-compact .dialog-shell-tab-list {
@@ -530,7 +535,7 @@
 
 .dialog-shell.has-tabs.is-mobile-compact .dialog-shell-tab {
   height: var(--dialog-shell-tab-track-height);
-  padding: 0 18px;
+  padding: 0 10px;
   font-size: 0.625rem;
   line-height: 1;
   transform: none;
