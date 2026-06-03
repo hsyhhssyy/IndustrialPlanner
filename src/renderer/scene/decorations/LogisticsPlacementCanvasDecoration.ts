@@ -8,10 +8,15 @@ const LOGISTICS_PLACEMENT_GLOW_COLOR = 0xFFD54A;
 
 /** 左上角模式标签样式（不含 dropShadow.color，由 sync 动态设置） */
 const MODE_LABEL_TEXT_STYLE = {
-  fontSize: 14,
+  fontSize: 28,
   fontFamily: "sans-serif",
   fontWeight: "bold",
   fill: LOGISTICS_PLACEMENT_GLOW_COLOR,
+  stroke: {
+    color: 0x20242a,
+    width: 4,
+    alpha: 0.42,
+  },
   dropShadow: {
     angle: Math.PI / 4,
     alpha: 0.6,

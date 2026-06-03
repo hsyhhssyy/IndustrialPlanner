@@ -4,10 +4,12 @@ import {
   canCurrentBaseAcceptWulingOnlyEntities,
   canPlaceEntityDefinitionInCurrentBase,
 } from "@/app/placement-zone-availability";
+import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import type { GridPoint } from "@/domain/shared/grid";
+import type { GridEdge, GridPoint, GridRotation } from "@/domain/shared/grid";
 import type {
   LogisticsDraftActionResult,
+  LogisticsDraftReadonlyState,
   LogisticsKind,
   LogisticsRouteOrder,
 } from "@/domain/shared/logistics";
@@ -37,6 +39,12 @@ const BELT_DRAW_BUTTON_ID = "placement-action-belt-draw";
 const PIPE_DRAW_BUTTON_ID = "placement-action-pipe-draw";
 
 const logisticsLogger = createLogger("logistics-placement");
+const ORDINARY_BELT_DEFINITION_IDS = new Set([
+  "belt_straight_1x1",
+  "belt_turn_cw_1x1",
+  "belt_turn_ccw_1x1",
+]);
+const GRID_EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
 
 export function createHypergryphLogisticsPlacementGestureModule(): GestureMappingModule<AppHost> {
   let activeTouchLogisticsDragGestureId: string | null = null;
@@ -676,6 +684,14 @@ function handleMouseLeftTap(options: {
     : null;
   const isHeadConverger = headEntity !== null
     && (headEntity.definitionId === 'item_log_converger' || headEntity.definitionId === 'item_pipe_converger');
+  const shouldStopAtExistingBeltStart = shouldStopAfterApplyingToExistingBeltStart({
+    appHost: options.appHost,
+    editor: options.editor,
+    draftState,
+    headGridPoint,
+    targetEntityId,
+    kind,
+  });
 
   if (!options.editor.actions.applyLogisticDraft()) {
     runtime.statusMessageKey = options.editor.queries.resolveLogisticsDraftState()?.invalidReason ?? "unknown";
@@ -683,7 +699,8 @@ function handleMouseLeftTap(options: {
   }
 
   // 自动创建汇流器后终止本次绘制，用户需重新选起点
-  if (isHeadConverger) {
+  // AI-CORRECTION 2026-06-03: 连入无合法上游且有合法下游的已有传送带起点时也终止本段绘制。
+  if (isHeadConverger || shouldStopAtExistingBeltStart) {
     softResetLogisticsRuntime(options.appHost);
     return { status: "handled" };
   }
@@ -1101,6 +1118,271 @@ function resolveViewportCenterGridPoint(
     x: clientRect.left + clientRect.width / 2,
     y: clientRect.top + clientRect.height / 2,
   });
+}
+
+function shouldStopAfterApplyingToExistingBeltStart(options: {
+  appHost: AppHost;
+  editor: NonNullable<AppHost["workspace"]["editor"]>;
+  draftState: LogisticsDraftReadonlyState;
+  headGridPoint: GridPoint | null;
+  targetEntityId: string | null;
+  kind: LogisticsKind;
+}): boolean {
+  if (
+    options.kind !== "belt"
+    || options.headGridPoint === null
+    || options.targetEntityId !== null
+    || options.draftState.target !== null
+    || !options.draftState.canApply
+  ) {
+    return false;
+  }
+
+  const document = options.editor.document.getSnapshot();
+  const originalHeadEntity = findTopDocumentEntityAtGridPoint({
+    appHost: options.appHost,
+    document,
+    gridPoint: options.headGridPoint,
+  });
+  if (
+    originalHeadEntity === null
+    || !ORDINARY_BELT_DEFINITION_IDS.has(originalHeadEntity.definitionId)
+    || !options.editor.state.collections[EntityCollectionType.ghost].includes(originalHeadEntity.id)
+  ) {
+    return false;
+  }
+
+  const connectionInfo = resolveOrdinaryBeltConnectionInfo({
+    appHost: options.appHost,
+    document,
+    entity: originalHeadEntity,
+  });
+
+  return connectionInfo !== null
+    && !connectionInfo.inputConnected
+    && connectionInfo.outputConnected;
+}
+
+function resolveOrdinaryBeltConnectionInfo(options: {
+  appHost: AppHost;
+  document: WorldDocument;
+  entity: WorldEntity;
+}): {
+  inputConnected: boolean;
+  outputConnected: boolean;
+} | null {
+  const definition = resolveEntityDefinition(options.appHost, options.entity.definitionId);
+  if (definition === null) {
+    return null;
+  }
+
+  const inputEndpoint = resolveEntityPortEndpoints({
+    entity: options.entity,
+    definition,
+    kind: "belt",
+    direction: "input",
+  })[0];
+  const outputEndpoint = resolveEntityPortEndpoints({
+    entity: options.entity,
+    definition,
+    kind: "belt",
+    direction: "output",
+  })[0];
+  if (inputEndpoint === undefined || outputEndpoint === undefined) {
+    return null;
+  }
+
+  return {
+    inputConnected: doesNeighborOutputConnectToGridPoint({
+      appHost: options.appHost,
+      document: options.document,
+      neighborGridPoint: inputEndpoint.outsideGridPoint,
+      targetGridPoint: options.entity.position,
+      ignoredEntityId: options.entity.id,
+    }),
+    outputConnected: doesGridPointOutputConnectToNeighborInput({
+      appHost: options.appHost,
+      document: options.document,
+      sourceGridPoint: options.entity.position,
+      neighborGridPoint: outputEndpoint.outsideGridPoint,
+      ignoredEntityId: options.entity.id,
+    }),
+  };
+}
+
+function doesNeighborOutputConnectToGridPoint(options: {
+  appHost: AppHost;
+  document: WorldDocument;
+  neighborGridPoint: GridPoint;
+  targetGridPoint: GridPoint;
+  ignoredEntityId: string;
+}): boolean {
+  const neighbor = findTopDocumentEntityAtGridPoint({
+    appHost: options.appHost,
+    document: options.document,
+    gridPoint: options.neighborGridPoint,
+  });
+  if (neighbor === null || neighbor.id === options.ignoredEntityId) {
+    return false;
+  }
+
+  const definition = resolveEntityDefinition(options.appHost, neighbor.definitionId);
+  if (definition === null) {
+    return false;
+  }
+
+  return resolveEntityPortEndpoints({
+    entity: neighbor,
+    definition,
+    kind: "belt",
+    direction: "output",
+  }).some((endpoint) => areGridPointsEqual(endpoint.outsideGridPoint, options.targetGridPoint));
+}
+
+function doesGridPointOutputConnectToNeighborInput(options: {
+  appHost: AppHost;
+  document: WorldDocument;
+  sourceGridPoint: GridPoint;
+  neighborGridPoint: GridPoint;
+  ignoredEntityId: string;
+}): boolean {
+  const neighbor = findTopDocumentEntityAtGridPoint({
+    appHost: options.appHost,
+    document: options.document,
+    gridPoint: options.neighborGridPoint,
+  });
+  if (neighbor === null || neighbor.id === options.ignoredEntityId) {
+    return false;
+  }
+
+  const definition = resolveEntityDefinition(options.appHost, neighbor.definitionId);
+  if (definition === null) {
+    return false;
+  }
+
+  return resolveEntityPortEndpoints({
+    entity: neighbor,
+    definition,
+    kind: "belt",
+    direction: "input",
+  }).some((endpoint) => areGridPointsEqual(endpoint.outsideGridPoint, options.sourceGridPoint));
+}
+
+function findTopDocumentEntityAtGridPoint(options: {
+  appHost: AppHost;
+  document: WorldDocument;
+  gridPoint: GridPoint;
+}): WorldEntity | null {
+  for (let index = options.document.entityOrder.length - 1; index >= 0; index -= 1) {
+    const entityId = options.document.entityOrder[index];
+    const entity = entityId === undefined ? undefined : options.document.entities[entityId];
+    if (entity === undefined) {
+      continue;
+    }
+
+    const definition = resolveEntityDefinition(options.appHost, entity.definitionId);
+    if (definition === null) {
+      continue;
+    }
+
+    if (
+      isPointInsideEntityFootprint({
+        gridPoint: options.gridPoint,
+        entityPosition: entity.position,
+        definition,
+        rotation: entity.rotation,
+      })
+    ) {
+      return entity;
+    }
+  }
+
+  return null;
+}
+
+function resolveEntityPortEndpoints(options: {
+  entity: WorldEntity;
+  definition: EntityDefinition;
+  kind: LogisticsKind;
+  direction: "input" | "output";
+}): Array<{
+  outsideGridPoint: GridPoint;
+}> {
+  const portKind = options.kind === "belt" ? "item" : "fluid";
+  const endpoints: Array<{ outsideGridPoint: GridPoint }> = [];
+
+  for (const portGroup of options.definition.portGroups) {
+    if (portGroup.kind !== portKind || portGroup.direction !== options.direction) {
+      continue;
+    }
+
+    for (const port of portGroup.ports) {
+      const localCell = rotateLocalPortCell({
+        footprint: options.definition.footprint,
+        port,
+        rotation: options.entity.rotation,
+      });
+      const edge = rotateGridEdge(port.edge, options.entity.rotation);
+      const insideGridPoint = {
+        x: options.entity.position.x + localCell.x,
+        y: options.entity.position.y + localCell.y,
+      };
+      const delta = resolveEdgeDelta(edge);
+      endpoints.push({
+        outsideGridPoint: {
+          x: insideGridPoint.x + delta.x,
+          y: insideGridPoint.y + delta.y,
+        },
+      });
+    }
+  }
+
+  return endpoints;
+}
+
+function rotateLocalPortCell(options: {
+  footprint: EntityDefinition["footprint"];
+  port: EntityDefinition["portGroups"][number]["ports"][number];
+  rotation: GridRotation;
+}): GridPoint {
+  const { width, height } = options.footprint;
+  const { localCellX: x, localCellY: y } = options.port;
+
+  switch (options.rotation) {
+    case 0:
+      return { x, y };
+    case 90:
+      return { x: height - 1 - y, y: x };
+    case 180:
+      return { x: width - 1 - x, y: height - 1 - y };
+    case 270:
+      return { x: y, y: width - 1 - x };
+  }
+}
+
+function rotateGridEdge(edge: GridEdge, rotation: GridRotation): GridEdge {
+  const currentIndex = GRID_EDGE_ORDER.indexOf(edge);
+  const steps = rotation / 90;
+  return GRID_EDGE_ORDER[(currentIndex + steps) % GRID_EDGE_ORDER.length] ?? edge;
+}
+
+function resolveEdgeDelta(edge: GridEdge): GridPoint {
+  switch (edge) {
+    case "NORTH":
+      return { x: 0, y: -1 };
+    case "EAST":
+      return { x: 1, y: 0 };
+    case "SOUTH":
+      return { x: 0, y: 1 };
+    case "WEST":
+      return { x: -1, y: 0 };
+  }
+}
+
+function resolveEntityDefinition(appHost: AppHost, definitionId: string): EntityDefinition | null {
+  return appHost.workspace.registry.entityDefinitions.find((definition) =>
+    definition.id === definitionId,
+  ) ?? null;
 }
 
 function isGridPointInsideEntity(options: {

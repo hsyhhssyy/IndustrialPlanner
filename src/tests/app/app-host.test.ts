@@ -2356,6 +2356,101 @@ describe("createAppHost", () => {
     expect(editorHost.state.collections.ghost).toEqual([headEntity?.id]);
   });
 
+  it("returns to idle after applying mouse logistics into an existing belt start", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    document.entities = {
+      target: {
+        id: "target",
+        definitionId: "belt_straight_1x1",
+        position: { x: 12, y: 8 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      successor: {
+        id: "successor",
+        definitionId: "belt_straight_1x1",
+        position: { x: 13, y: 8 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    };
+    document.entityOrder = ["target", "successor"];
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 1000,
+      height: 800,
+    });
+    const appHost = createAppHost(workspace);
+    const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 7 });
+    const targetPoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 8 });
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyE",
+      key: "e",
+      keyCode: 69,
+    }));
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 41,
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 41,
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 42,
+      clientX: targetPoint.x,
+      clientY: targetPoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
+
+    const draft = editorHost.queries.resolveLogisticsDraftState();
+    expect(draft).toMatchObject({
+      canApply: true,
+      target: null,
+    });
+    expect(draft?.cells.at(-1)?.gridPoint).toEqual({ x: 12, y: 8 });
+    expect(editorHost.state.collections.ghost).toEqual(["target"]);
+
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 43,
+      clientX: targetPoint.x,
+      clientY: targetPoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 43,
+      clientX: targetPoint.x,
+      clientY: targetPoint.y,
+      buttons: 0,
+    }));
+
+    const snapshot = editorHost.document.getSnapshot();
+    const committedHead = Object.values(snapshot.entities).find((entity) =>
+      entity.position.x === 12 && entity.position.y === 8,
+    );
+
+    expect(committedHead).toMatchObject({
+      definitionId: "belt_turn_ccw_1x1",
+      rotation: 0,
+    });
+    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
+    expect(appHost.internalState.runtime.logisticsPlacement.headGridPoint).toBeNull();
+    expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
+  });
+
   it("keeps mouse logistics preview stable while the pointer stays in the same grid cell", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

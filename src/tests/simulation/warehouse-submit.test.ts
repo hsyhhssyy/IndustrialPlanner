@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createRegistryContract } from "@/registry";
-import { runBlueprintSimulation } from "../blueprint-runner";
+import { runBlueprintSimulation } from "./blueprint-runner";
 import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
-import { createBlueprint, createEntity, getDevice, type DeviceSlotItem } from "../blueprint-test-helpers";
+import { createBlueprint, createEntity, getDevice, type DeviceSlotItem } from "./blueprint-test-helpers";
 
 const MAX_TICK = 120 * STANDARD_TICK_RATE_PER_SECOND;
 

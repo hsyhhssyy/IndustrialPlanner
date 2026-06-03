@@ -10,9 +10,14 @@ const MARQUEE_LABEL_COLOR = 0x3B82F6;
 
 /** 左上角模式标签样式（不含 dropShadow.color，由 sync 动态设置） */
 const MODE_LABEL_TEXT_STYLE = {
-  fontSize: 14,
+  fontSize: 28,
   fontFamily: "sans-serif",
   fontWeight: "bold",
+  stroke: {
+    color: 0x20242a,
+    width: 4,
+    alpha: 0.42,
+  },
   dropShadow: {
     angle: Math.PI / 4,
     alpha: 0.6,
