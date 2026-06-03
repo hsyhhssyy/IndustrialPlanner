@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
+import { makeAutoObservable } from "mobx";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { PwaController } from "@/app/pwa/pwa-controller";
 import { PwaSettingsSection } from "@/app/pwa/pwa-settings-section";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
+import type { DialogStateReadWrite } from "@/app/state/state-impl";
 import {
   type SettingsGroupId,
   type WorkbenchSettingDefinition,
@@ -47,6 +49,29 @@ export const SettingsDialog = observer(function SettingsDialog({
     setCapturingKeybindingId(null);
     appHost.internalActions.closeDialog("settings");
   }, [appHost]);
+
+  const confirmDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 420,
+    height: null,
+    activeTab: null,
+  }), []);
+
+  const handleResetOperationAndShortcuts = useCallback(() => {
+    confirmDialogState.visible = true;
+  }, [confirmDialogState]);
+
+  const handleResetConfirm = useCallback(() => {
+    controller.resetArknightsOperationAndShortcuts();
+    confirmDialogState.visible = false;
+  }, [controller, confirmDialogState]);
+
+  const handleResetCancel = useCallback(() => {
+    confirmDialogState.visible = false;
+  }, [confirmDialogState]);
 
   const handleWindowKeyDown = useCallback((event: KeyboardEvent) => {
     if (capturingKeybindingId === null) {
@@ -111,6 +136,7 @@ export const SettingsDialog = observer(function SettingsDialog({
   const selectedGroup = controller.selectedGroup;
 
   return (
+    <>
     <DialogShell
       className="settings-dialog"
       closeTitle={t("action.close")}
@@ -221,12 +247,32 @@ export const SettingsDialog = observer(function SettingsDialog({
                     );
                   })}
                 </div>
+                {group.id === "arknights-operation" && (
+                  <div className={cm(styles, "settings-dialog-reset-row")}>
+                    <button
+                      className={cm(styles, "settings-dialog-reset-button")}
+                      onClick={handleResetOperationAndShortcuts}
+                      type="button"
+                    >
+                      {t("settingsAction.resetOperationAndShortcuts")}
+                    </button>
+                  </div>
+                )}
               </section>
             ))}
             <PwaSettingsSection appHost={appHost} pwaController={pwaController} />
           </div>
         </div>
     </DialogShell>
+    {confirmDialogState.visible && (
+      <ConfirmResetDialog
+        confirmDialogState={confirmDialogState}
+        onCancel={handleResetCancel}
+        onConfirm={handleResetConfirm}
+        t={t}
+      />
+    )}
+    </>
   );
 });
 
@@ -472,4 +518,53 @@ function normalizeCapturedKeyLabel(key: string): string | null {
 
 function isModifierOnlyKey(key: string): boolean {
   return key === "Shift" || key === "Control" || key === "Alt" || key === "Meta";
+}
+
+// ─── 重置确认对话框 ───
+
+interface ConfirmResetDialogProps {
+  confirmDialogState: DialogStateReadWrite;
+  onCancel: () => void;
+  onConfirm: () => void;
+  t: AppHost["actions"]["translate"];
+}
+
+function ConfirmResetDialog({ confirmDialogState, onCancel, onConfirm, t }: ConfirmResetDialogProps) {
+  return (
+    <DialogShell
+      className="confirm-reset-dialog"
+      bodyClassName={cm(styles, "confirm-reset-dialog-body")}
+      closeTitle={t("action.close")}
+      compactMobileLayout={false}
+      dialogKey="confirm-reset"
+      dialogState={confirmDialogState}
+      maximizeTitle=""
+      onClose={onCancel}
+      onToggleMaximized={() => {}}
+      restoreTitle=""
+      showMaximizeButton={false}
+      title={t("settingsAction.resetOperationAndShortcuts")}
+      titleId="confirm-reset-dialog-title"
+    >
+      <div className={cm(styles, "confirm-reset-content")}>
+        <p>{t("settingsAction.resetOperationAndShortcutsConfirm")}</p>
+        <div className={cm(styles, "confirm-reset-actions")}>
+          <button
+            className={cm(styles, "confirm-reset-cancel-btn")}
+            onClick={onCancel}
+            type="button"
+          >
+            {t("action.cancel")}
+          </button>
+          <button
+            className={cm(styles, "confirm-reset-confirm-btn")}
+            onClick={onConfirm}
+            type="button"
+          >
+            {t("action.confirm")}
+          </button>
+        </div>
+      </div>
+    </DialogShell>
+  );
 }

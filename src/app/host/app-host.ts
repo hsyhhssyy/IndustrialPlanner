@@ -137,6 +137,7 @@ export function createAppHost(
     isShortcutFor: actionImpl.isShortcutFor,
     matchesAnyShortcut: actionImpl.matchesAnyShortcut,
     setShortcutFor: actionImpl.setShortcutFor,
+    resetAllShortcutsToDefaults: actionImpl.resetAllShortcutsToDefaults,
   };
   const actions: AppContract["actions"] = {
     translate: actionImpl.translate,

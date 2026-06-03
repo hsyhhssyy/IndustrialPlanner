@@ -95,6 +95,7 @@ export interface AppInternalAction {
     modifiers?: ShortcutEventModifiers,
   ) => boolean;
   setShortcutFor: (key: string, value: string) => void;
+  resetAllShortcutsToDefaults: () => void;
 }
 
 export class AppActionImpl implements AppAction, AppInternalAction {
@@ -626,6 +627,10 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
   public readonly setShortcutFor: AppInternalAction["setShortcutFor"] = (key, value) => {
     this.shortcutManager.setShortcutFor(key, value);
+  };
+
+  public readonly resetAllShortcutsToDefaults: AppInternalAction["resetAllShortcutsToDefaults"] = () => {
+    this.shortcutManager.resetAllShortcutsToDefaults();
   };
 
   private setLeftDockOpen(nextOpen: boolean): void {

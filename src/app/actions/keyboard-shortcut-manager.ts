@@ -191,6 +191,16 @@ export class KeyboardShortcutManager {
     return false;
   }
 
+  /**
+   * 将所有快捷键重置为默认值。
+   * 不受鹰角网络模式限制，直接写入 shortcuts 并触发持久化。
+   */
+  public readonly resetAllShortcutsToDefaults = (): void => {
+    for (const key of Object.values(SHORTCUT_KEY)) {
+      this.shortcuts[key] = SHORTCUT_DEFAULTS[key];
+    }
+  };
+
   /** 释放资源 */
   public dispose(): void {
     this.disposeReaction?.();

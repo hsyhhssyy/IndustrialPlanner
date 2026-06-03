@@ -361,6 +361,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     shortcutWriter: (key, value) => {
       appHost.internalActions.setShortcutFor(key, value);
     },
+    shortcutResetAll: () => {
+      appHost.internalActions.resetAllShortcutsToDefaults();
+    },
   }));
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const rightDockOpen = appHost.state.workbench.rightDockOpen;

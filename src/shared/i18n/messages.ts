@@ -14,6 +14,8 @@ export type MessageKey =
   | "action.zoomOut"
   | "action.open"
   | "action.close"
+  | "action.cancel"
+  | "action.confirm"
   | "action.expand"
   | "action.collapse"
   | "dialog.maximize"
@@ -146,6 +148,8 @@ export type MessageKey =
   | "topBar.settings"
   | "settingsDialog.title"
   | "settingsDialog.groups"
+  | "settingsAction.resetOperationAndShortcuts"
+  | "settingsAction.resetOperationAndShortcutsConfirm"
   | "encyclopediaPicker.title.item"
   | "encyclopediaPicker.title.entity"
   | "encyclopediaPicker.title.entry"
@@ -331,6 +335,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "action.zoomOut": "缩小",
     "action.open": "打开",
     "action.close": "关闭",
+    "action.cancel": "取消",
+    "action.confirm": "确认",
     "action.expand": "展开",
     "action.collapse": "折叠",
     "dialog.maximize": "最大化",
@@ -464,6 +470,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "topBar.settings": "设置",
     "settingsDialog.title": "设置",
     "settingsDialog.groups": "设置分组",
+    "settingsAction.resetOperationAndShortcuts": "重置操作方式与快捷键",
+    "settingsAction.resetOperationAndShortcutsConfirm": "确定要将操作方式与快捷键恢复为默认设置吗？",
     "encyclopediaPicker.title.item": "选择物品",
     "encyclopediaPicker.title.entity": "选择设备",
     "encyclopediaPicker.title.entry": "选择物品或设备",
@@ -770,6 +778,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "action.zoomOut": "Zoom Out",
     "action.open": "Open",
     "action.close": "Close",
+    "action.cancel": "Cancel",
+    "action.confirm": "Confirm",
     "action.expand": "Expand",
     "action.collapse": "Collapse",
     "dialog.maximize": "Maximize",
@@ -903,6 +913,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "topBar.settings": "Settings",
     "settingsDialog.title": "Settings",
     "settingsDialog.groups": "Setting Groups",
+    "settingsAction.resetOperationAndShortcuts": "Reset Operation Mode & Shortcuts",
+    "settingsAction.resetOperationAndShortcutsConfirm": "Are you sure you want to reset operation mode and shortcuts to defaults?",
     "encyclopediaPicker.title.item": "Select Item",
     "encyclopediaPicker.title.entity": "Select Device",
     "encyclopediaPicker.title.entry": "Select Item or Device",

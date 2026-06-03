@@ -79,6 +79,7 @@ interface WorkbenchSettingsDialogControllerOptions {
   readonly externalBindings?: Readonly<Record<string, WorkbenchSettingExternalBinding>>;
   readonly shortcutReader?: (key: string) => string;
   readonly shortcutWriter?: (key: string, value: string) => void;
+  readonly shortcutResetAll?: () => void;
 }
 
 interface PersistedUserSettingsDialogState {
@@ -508,8 +509,40 @@ export class WorkbenchSettingsDialogController {
   public selectedGroupId: SettingsGroupId = DEFAULT_SETTINGS_GROUP.id;
   public values: Record<string, WorkbenchSettingControlValue> = {};
 
+  // Hardcoded：重置「鹰角操作模式」和「快捷键」时需要恢复为默认值的 setting id。
+  private static readonly RESET_OPERATION_AND_SHORTCUT_KEYS: readonly string[] = [
+    // 鹰角操作模式
+    "game-arknights-immediate-move",
+    "game-arknights-immediate-marquee",
+    "game-arknights-selection-right-dock-sync",
+    "game-arknights-inspector-open-on-second-click",
+    // 快捷键
+    "shortcut-place-conveyor",
+    "shortcut-place-pipe",
+    "shortcut-resources-power",
+    "shortcut-warehouse",
+    "shortcut-basic-production",
+    "shortcut-synthesis",
+    "shortcut-save-blueprint",
+    "shortcut-return-select",
+    "shortcut-rotate",
+    "shortcut-switch-device-mode",
+    "shortcut-rotate-viewport",
+    "shortcut-delete-device",
+    "shortcut-move-selection",
+    "shortcut-copy-selection",
+    "shortcut-paste-selection",
+    "shortcut-undo",
+    "shortcut-redo",
+    "shortcut-toggle-placement-panel",
+    "shortcut-toggle-blueprint-panel",
+    "shortcut-toggle-history-panel",
+    "shortcut-toggle-base-panel",
+  ];
+
   private readonly externalBindings: ReadonlyMap<string, WorkbenchSettingExternalBinding>;
   private readonly externalBindingIds: ReadonlySet<string>;
+  private readonly shortcutResetAll?: () => void;
 
   public constructor(options: WorkbenchSettingsDialogControllerOptions = {}) {
     const explicitBindings = new Map(Object.entries(options.externalBindings ?? {}));
@@ -530,6 +563,7 @@ export class WorkbenchSettingsDialogController {
       }
     }
 
+    this.shortcutResetAll = options.shortcutResetAll;
     this.externalBindings = explicitBindings;
     this.externalBindingIds = new Set(this.externalBindings.keys());
     this.values = createDefaultValues(this.externalBindingIds);
@@ -671,6 +705,30 @@ export class WorkbenchSettingsDialogController {
     }
 
     this.values[settingId] = normalizedValue;
+    this.persist();
+  }
+
+  /**
+   * 将鹰角操作模式（4 个 switch）和所有快捷键恢复为默认值。
+   * 快捷键通过 shortcutResetAll 直接批量重置，绕过鹰角模式写入限制。
+   */
+  public resetArknightsOperationAndShortcuts(): void {
+    // 先批量重置快捷键默认值
+    this.shortcutResetAll?.();
+
+    for (const settingId of WorkbenchSettingsDialogController.RESET_OPERATION_AND_SHORTCUT_KEYS) {
+      const setting = SETTING_DEFINITION_BY_ID.get(settingId);
+      if (!setting) continue;
+
+      const externalBinding = this.externalBindings.get(settingId);
+      if (externalBinding) {
+        externalBinding.writeValue(setting.defaultValue);
+      } else {
+        this.values[settingId] = setting.defaultValue;
+      }
+    }
+
+    this.normalizeLocalValues();
     this.persist();
   }
 

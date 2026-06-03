@@ -335,3 +335,99 @@
   outline: 2px solid var(--highlight-ring);
   outline-offset: 2px;
 }
+
+// ─── 重置按钮 ───
+
+.settings-dialog-reset-row {
+  padding-top: 4px;
+}
+
+.settings-dialog-reset-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--text-0);
+  font-size: 0.86rem;
+  font-weight: 600;
+  transition: background 120ms ease;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-4);
+  }
+
+  &:active {
+    background: var(--surface-5);
+  }
+}
+
+// ─── 确认对话框 ───
+
+.confirm-reset-dialog {
+  width: 420px;
+  height: auto;
+  max-height: min(240px, 60vh);
+}
+
+.confirm-reset-dialog-body {
+  display: flex;
+  align-items: center;
+}
+
+.confirm-reset-content {
+  display: grid;
+  gap: 20px;
+  padding: 16px 18px;
+
+  p {
+    margin: 0;
+    color: var(--text-0);
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+}
+
+.confirm-reset-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.confirm-reset-cancel-btn,
+.confirm-reset-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.confirm-reset-cancel-btn {
+  background: var(--surface-2);
+  color: var(--text-0);
+
+  &:hover {
+    background: var(--surface-3);
+  }
+}
+
+.confirm-reset-confirm-btn {
+  background: var(--accent-soft);
+  border-color: var(--accent-strong);
+  color: var(--accent-strong);
+
+  &:hover {
+    background: var(--accent-strong);
+    color: var(--text-accent);
+  }
+}
