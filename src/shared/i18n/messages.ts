@@ -242,6 +242,14 @@ export type MessageKey =
   | "settingsField.shortcut-undoDescription"
   | "settingsField.shortcut-redo"
   | "settingsField.shortcut-redoDescription"
+  | "settingsField.shortcut-toggle-placement-panel"
+  | "settingsField.shortcut-toggle-placement-panelDescription"
+  | "settingsField.shortcut-toggle-blueprint-panel"
+  | "settingsField.shortcut-toggle-blueprint-panelDescription"
+  | "settingsField.shortcut-toggle-history-panel"
+  | "settingsField.shortcut-toggle-history-panelDescription"
+  | "settingsField.shortcut-toggle-base-panel"
+  | "settingsField.shortcut-toggle-base-panelDescription"
   | "settingsField.useSimplifiedDeviceIcons"
   | "settingsField.useSimplifiedDeviceIconsDescription"
   | "settingsField.useInspectorPanel"
@@ -674,6 +682,14 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-undoDescription": "设置撤销操作的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-redo": "重做",
     "settingsField.shortcut-redoDescription": "设置重做操作的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-toggle-placement-panel": "放置模式面板",
+    "settingsField.shortcut-toggle-placement-panelDescription": "设置打开/关闭放置模式面板的快捷键。",
+    "settingsField.shortcut-toggle-blueprint-panel": "蓝图模式面板",
+    "settingsField.shortcut-toggle-blueprint-panelDescription": "设置打开/关闭蓝图模式面板的快捷键。",
+    "settingsField.shortcut-toggle-history-panel": "操作历史面板",
+    "settingsField.shortcut-toggle-history-panelDescription": "设置打开/关闭操作历史面板的快捷键。",
+    "settingsField.shortcut-toggle-base-panel": "基地面板",
+    "settingsField.shortcut-toggle-base-panelDescription": "设置打开/关闭基地面板的快捷键。",
     "settingsField.useSimplifiedDeviceIcons": "使用蓝图样式的设备图片",
     "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图样式显示设备图片，不会提高性能。",
     "settingsField.useInspectorPanel": "使用右侧面板显示设备属性",
@@ -1105,6 +1121,14 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-undoDescription": "Set the shortcut key for undo; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-redo": "Redo",
     "settingsField.shortcut-redoDescription": "Set the shortcut key for redo; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-toggle-placement-panel": "Placement Panel",
+    "settingsField.shortcut-toggle-placement-panelDescription": "Set the shortcut key for toggling the placement panel.",
+    "settingsField.shortcut-toggle-blueprint-panel": "Blueprint Panel",
+    "settingsField.shortcut-toggle-blueprint-panelDescription": "Set the shortcut key for toggling the blueprint panel.",
+    "settingsField.shortcut-toggle-history-panel": "History Panel",
+    "settingsField.shortcut-toggle-history-panelDescription": "Set the shortcut key for toggling the history panel.",
+    "settingsField.shortcut-toggle-base-panel": "Base Panel",
+    "settingsField.shortcut-toggle-base-panelDescription": "Set the shortcut key for toggling the base panel.",
     "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",
     "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
     "settingsField.useInspectorPanel": "Use Right Panel For Device Properties",

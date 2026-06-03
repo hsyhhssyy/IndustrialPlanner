@@ -22,6 +22,10 @@ export const SHORTCUT_KEY = {
   PASTE_SELECTION:     "shortcut-paste-selection",
   UNDO:                "shortcut-undo",
   REDO:                "shortcut-redo",
+  TOGGLE_PLACEMENT_PANEL: "shortcut-toggle-placement-panel",
+  TOGGLE_BLUEPRINT_PANEL: "shortcut-toggle-blueprint-panel",
+  TOGGLE_HISTORY_PANEL:   "shortcut-toggle-history-panel",
+  TOGGLE_BASE_PANEL:      "shortcut-toggle-base-panel",
 } as const;
 
 /** 从 SHORTCUT_KEY 推导出的联合类型 */
@@ -57,6 +61,10 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.PASTE_SELECTION]:  "Ctrl+V",
   [SHORTCUT_KEY.UNDO]:             "Ctrl+Z",
   [SHORTCUT_KEY.REDO]:             "Ctrl+Y",
+  [SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL]: "Z",
+  [SHORTCUT_KEY.TOGGLE_BLUEPRINT_PANEL]: "L",
+  [SHORTCUT_KEY.TOGGLE_HISTORY_PANEL]:   "H",
+  [SHORTCUT_KEY.TOGGLE_BASE_PANEL]:      "K",
 };
 
 const LEGACY_SHORTCUT_MIGRATIONS: Partial<Record<ShortcutKeyId, string>> = {
