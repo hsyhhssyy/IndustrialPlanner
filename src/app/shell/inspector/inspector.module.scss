@@ -414,6 +414,276 @@
   text-align: center;
 }
 
+.port-output-config-inspector {
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+}
+
+.port-output-panel-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.port-output-panel-header > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.port-output-summary {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 4px;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--accent-strong) 24%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 52%, var(--surface-2));
+  color: color-mix(in srgb, var(--accent-strong) 86%, var(--text-1));
+  font-size: 0.72rem;
+  font-weight: 520;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.port-output-summary strong {
+  color: var(--accent-strong);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.port-output-panel-body {
+  padding: 8px;
+  gap: 8px;
+}
+
+.port-output-list {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.port-output-row {
+  --port-output-accent: var(--accent-strong);
+  --port-output-accent-soft: var(--accent-soft);
+
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  min-width: 0;
+  min-height: 52px;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+}
+
+.port-output-row[data-port-tone="blue"] {
+  --port-output-accent: #2563eb;
+  --port-output-accent-soft: rgb(37 99 235 / 12%);
+}
+
+.port-output-row[data-port-tone="green"] {
+  --port-output-accent: #5e9f4b;
+  --port-output-accent-soft: rgb(94 159 75 / 13%);
+}
+
+.port-output-row[data-port-tone="orange"] {
+  --port-output-accent: #f97316;
+  --port-output-accent-soft: rgb(249 115 22 / 14%);
+}
+
+.port-output-row.is-configured {
+  border-color: color-mix(in srgb, var(--port-output-accent) 48%, var(--line));
+  background: color-mix(in srgb, var(--surface-1) 82%, var(--port-output-accent-soft));
+}
+
+.port-output-row.is-unconfigured {
+  color: var(--text-1);
+}
+
+.port-output-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 32px;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--port-output-accent) 70%, var(--line));
+  border-radius: 5px;
+  background: var(--port-output-accent);
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 10%);
+}
+
+.port-output-type-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 23px;
+  height: 23px;
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--text-0) 88%, var(--port-output-accent));
+}
+
+.port-output-type-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.port-output-item-button {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  justify-content: start;
+  min-width: 0;
+  min-height: 32px;
+  gap: 8px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-0);
+  font: inherit;
+  text-align: left;
+}
+
+.port-output-item-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--port-output-accent-soft) 88%, var(--surface-2));
+}
+
+.port-output-item-button:disabled,
+.port-output-action-button:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.port-output-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  color: var(--text-1);
+}
+
+.port-output-item-icon img {
+  display: block;
+  width: 23px;
+  height: 23px;
+  object-fit: contain;
+}
+
+.port-output-item-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.port-output-item-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-0);
+  font-size: 0.84rem;
+  font-weight: 560;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.port-output-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, #79b36b 46%, var(--line));
+  border-radius: 5px;
+  background: rgb(119 183 107 / 15%);
+  color: #477d38;
+  font-size: 0.76rem;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.port-output-row.is-unconfigured .port-output-status {
+  border-color: color-mix(in srgb, var(--line-strong) 54%, var(--line));
+  background: color-mix(in srgb, var(--surface-3) 68%, transparent);
+  color: var(--text-1);
+}
+
+.port-output-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 32px;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  color: var(--text-1);
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.port-output-action-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--port-output-accent) 54%, var(--line));
+  background: color-mix(in srgb, var(--port-output-accent-soft) 72%, var(--surface-1));
+  color: var(--text-0);
+}
+
+.port-output-action-button svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.port-output-clear-button {
+  border-color: color-mix(in srgb, #ff4d36 34%, var(--line));
+  color: #ff4d36;
+}
+
+.port-output-clear-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, #ff4d36 70%, var(--line));
+  background: rgb(255 77 54 / 8%);
+  color: #f0442f;
+}
+
+.port-output-config-inspector[data-render-mode="dock"] .port-output-action-button {
+  width: 32px;
+  padding: 0;
+}
+
+.port-output-config-inspector[data-render-mode="dock"] .port-output-action-label {
+  display: none;
+}
+
+.port-output-config-inspector[data-device-class="mobile"] .port-output-row {
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
+  padding-right: 8px;
+}
+
+.port-output-config-inspector[data-device-class="mobile"] .port-output-action-button {
+  width: 32px;
+  padding: 0;
+}
+
+.port-output-config-inspector[data-device-class="mobile"] .port-output-action-label {
+  display: none;
+}
+
 .slot-config-tile-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

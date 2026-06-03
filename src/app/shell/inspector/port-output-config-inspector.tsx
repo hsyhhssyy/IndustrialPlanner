@@ -1,7 +1,11 @@
 import { useState } from "react";
 
 import LucideChevronDown from "~icons/lucide/chevron-down";
-import LucideX from "~icons/lucide/x";
+import LucideChevronRight from "~icons/lucide/chevron-right";
+import LucideCircleDashed from "~icons/lucide/circle-dashed";
+import LucideTrash2 from "~icons/lucide/trash-2";
+import MaterialSymbolsConveyorBelt from "~icons/material-symbols/conveyor-belt";
+import MdiPipe from "~icons/mdi/pipe";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -21,6 +25,7 @@ interface OutputGroupRow {
   groupIndex: number;
   currentItemId: string | null;
   label: string;
+  portLabel: string;
 }
 
 function resolveOutputGroupRows(
@@ -66,10 +71,27 @@ function resolveOutputGroupRows(
       groupIndex,
       currentItemId,
       label: kindLabel,
+      portLabel: `P${rows.length + 1}`,
     });
   }
 
   return rows;
+}
+
+function resolvePortTone(index: number): "blue" | "green" | "orange" {
+  if (index === 0) {
+    return "blue";
+  }
+
+  if (index === 1) {
+    return "green";
+  }
+
+  return "orange";
+}
+
+function resolveItemIconSrc(item: ItemDefinition | null): string | null {
+  return item === null ? null : `/item-icons/${item.iconId}.webp`;
 }
 
 export function PortOutputConfigInspector({
@@ -96,6 +118,9 @@ export function PortOutputConfigInspector({
     declaration.portGroupIds,
     entity,
   );
+  const configuredCount = rows.filter((row) => row.currentItemId !== null).length;
+  const unconfiguredCount = rows.length - configuredCount;
+  const deviceClass = appHost.state?.screenProfile?.deviceClass ?? "desktop";
 
   const patchEntityConfig = (patch: Record<string, unknown>) => {
     appHost.workspace.editor?.actions.patchEntityConfig(entity.id, patch);
@@ -149,7 +174,7 @@ export function PortOutputConfigInspector({
         data-inspector-key="port-output-config"
       >
         <div className={cm(styles, "inspector-expanded-header")}>
-          <span>输出端口配置</span>
+          <span>输出端口</span>
           <LucideChevronDown aria-hidden="true" />
         </div>
         <div className={cm(styles, "inspector-expanded-body")}>
@@ -163,25 +188,45 @@ export function PortOutputConfigInspector({
     <article
       className={cm(styles, "definition-card inspector-expanded-panel port-output-config-inspector")}
       data-inspector-key="port-output-config"
+      data-device-class={deviceClass}
       data-render-mode={mode}
     >
-      <div className={cm(styles, "inspector-expanded-header")}>
-        <span>输出端口配置</span>
+      <div className={cm(styles, "inspector-expanded-header port-output-panel-header")}>
+        <span>输出端口</span>
+        <span className={cm(styles, "port-output-summary")}>
+          <strong>{configuredCount}</strong>
+          <span>已配置</span>
+          <span>·</span>
+          <strong>{unconfiguredCount}</strong>
+          <span>未配置</span>
+        </span>
         <LucideChevronDown aria-hidden="true" />
       </div>
-      <div className={cm(styles, "inspector-expanded-body")}>
-        <div className={cm(styles, "slot-config-list")}>
-          {rows.map((row) => {
+      <div className={cm(styles, "inspector-expanded-body port-output-panel-body")}>
+        <div className={cm(styles, "port-output-list")}>
+          {rows.map((row, rowIndex) => {
             const itemDefinition =
               row.currentItemId === null
                 ? null
                 : itemById.get(row.currentItemId) ?? null;
+            const itemIconSrc = resolveItemIconSrc(itemDefinition);
             const itemLabel =
               itemDefinition === null
                 ? "未选择"
                 : translate(itemDefinition.nameKey);
+            const configured = row.currentItemId !== null;
+            const typeIconLabel = `${row.portLabel} ${row.label}`;
 
-            return (
+            /*
+              AI-REMOVED 2026-06-02:
+              Reason: 输出端口配置从“类型标题 + 大选择按钮”改为设计稿中的单行端口卡片。
+              Trigger: 用户要求按 inspector-panel5 设计稿 1:1 更新，并删除“固体输出 / 液体输出”可见文字。
+              Evidence: 新行结构在同一 map 分支中渲染 portLabel、端口类型图标、物品、状态、更换、清除。
+              Replacement: port-output-row JSX below in this map callback.
+              Risk: Low
+              Human Review: Required
+
+              Original code:
               <div
                 className={cm(styles, "slot-config-row")}
                 data-port-group-id={row.portGroup.id}
@@ -217,6 +262,81 @@ export function PortOutputConfigInspector({
                     </button>
                   </div>
                 </div>
+              </div>
+            */
+
+            return (
+              <div
+                className={cm(
+                  styles,
+                  "port-output-row",
+                  configured ? "is-configured" : "is-unconfigured",
+                )}
+                data-port-group-id={row.portGroup.id}
+                data-port-configured={configured ? "true" : "false"}
+                data-port-kind={row.portGroup.kind}
+                data-port-tone={resolvePortTone(rowIndex)}
+                key={row.portGroup.id}
+              >
+                <span className={cm(styles, "port-output-index")}>{row.portLabel}</span>
+                <span
+                  aria-label={typeIconLabel}
+                  className={cm(styles, "port-output-type-icon")}
+                  role="img"
+                  title={typeIconLabel}
+                >
+                  {row.portGroup.kind === "fluid" ? (
+                    <MdiPipe aria-hidden="true" />
+                  ) : (
+                    <MaterialSymbolsConveyorBelt aria-hidden="true" />
+                  )}
+                </span>
+                <button
+                  className={cm(styles, "port-output-item-button")}
+                  data-slot-action="pick-item"
+                  disabled={pendingGroupId === row.portGroup.id}
+                  onClick={() => {
+                    void requestItemSelection(row);
+                  }}
+                  title={itemLabel}
+                  type="button"
+                >
+                  <span className={cm(styles, "port-output-item-icon")}>
+                    {itemIconSrc === null ? (
+                      <LucideCircleDashed aria-hidden="true" />
+                    ) : (
+                      <img alt="" src={itemIconSrc} />
+                    )}
+                  </span>
+                  <span className={cm(styles, "port-output-item-name")}>{itemLabel}</span>
+                </button>
+                <span className={cm(styles, "port-output-status")}>
+                  {configured ? "运行中" : "未配置"}
+                </span>
+                <button
+                  className={cm(styles, "port-output-action-button port-output-change-button")}
+                  data-slot-action="pick-item"
+                  disabled={pendingGroupId === row.portGroup.id}
+                  onClick={() => {
+                    void requestItemSelection(row);
+                  }}
+                  type="button"
+                >
+                  <span className={cm(styles, "port-output-action-label")}>点击更换</span>
+                  <LucideChevronRight aria-hidden="true" />
+                </button>
+                <button
+                  className={cm(styles, "port-output-action-button port-output-clear-button")}
+                  data-slot-action="clear-item"
+                  disabled={!configured}
+                  onClick={() => {
+                    clearSelection(row);
+                  }}
+                  type="button"
+                >
+                  <LucideTrash2 aria-hidden="true" />
+                  <span className={cm(styles, "port-output-action-label")}>清除</span>
+                </button>
               </div>
             );
           })}
