@@ -313,6 +313,7 @@ describe("GenericDeviceSprite", () => {
           },
         },
       } as never,
+      logisticsPortOccupancy: null,
       suppressBelts: false,
       suppressPipes: false,
       time: {
@@ -1482,6 +1483,7 @@ describe("GenericDeviceSprite", () => {
           },
         },
       } as never,
+      logisticsPortOccupancy: null,
       suppressBelts: false,
       suppressPipes: false,
       time: {
@@ -1594,6 +1596,7 @@ describe("GenericDeviceSprite", () => {
           },
         },
       } as never,
+      logisticsPortOccupancy: null,
       suppressBelts: false,
       suppressPipes: false,
       time: {
@@ -2571,6 +2574,7 @@ function createRenderContextStub(options: {
   return {
     theme: options.theme ?? AYU_LIGHT_THEME,
     workspace: workspace as never,
+    logisticsPortOccupancy: null,
     suppressBelts: false,
     suppressPipes: false,
     time: {

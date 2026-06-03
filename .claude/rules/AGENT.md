@@ -158,7 +158,35 @@ AI 在分析代码时必须区分：
 
 如果当前模型不支持vision，你可以启动一个 GPT-5.4 的Subagent来描述截图并询问他截图是否满足你要测试的条件。注意不可用此Subagent进行其他操作。
 
-注意VSCode为你提供的浏览器工具无法连接到开发环境，不要尝试使用该浏览器工具。请直接使用bash验证服务状态，然后直接运行playwright测试。
+图形化测试时，你至少需要测试下面三个Screen Profile
+{
+  "viewportWidth": 764,
+  "viewportHeight": 345,
+  "devicePixelRatio": 3.125,
+  "deviceClass": "mobile",
+  "screenShape": "landscape",
+  "aspectRatio": 2.214492753623188,
+  "hasTouch": true
+},
+{
+  "viewportWidth": 711,
+  "viewportHeight": 665,
+  "devicePixelRatio": 3.125,
+  "deviceClass": "tablet",
+  "screenShape": "square",
+  "aspectRatio": 1.069172932330827,
+  "hasTouch": true
+},
+{
+  "viewportWidth": 2552,
+  "viewportHeight": 1315,
+  "devicePixelRatio": 1,
+  "deviceClass": "desktop",
+  "screenShape": "landscape",
+  "aspectRatio": 1.9406844106463879,
+  "hasTouch": true
+}
+
 
 开发时进行的playwright自动化测试不应当直接成为正式测试用例，应该仅作为验证你的开发是否正确的验证方式。
 你应当在确认开发已经完成，一切无误时，再另行编写基于playwright-cli的测试作为回归测试用例。

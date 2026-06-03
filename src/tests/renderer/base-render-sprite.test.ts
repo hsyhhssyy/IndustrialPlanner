@@ -140,6 +140,7 @@ function createContext(collections: Partial<Record<string, readonly string[]>>):
         },
       },
     } as never,
+    logisticsPortOccupancy: null,
     suppressBelts: false,
     suppressPipes: false,
     time: {

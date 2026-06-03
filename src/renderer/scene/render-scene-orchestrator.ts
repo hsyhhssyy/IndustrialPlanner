@@ -9,7 +9,8 @@ import {
   resolveSpriteGridRect,
 } from "@/shared/geometry/grid"
 import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform"
-import type { GridRectSize, GridRotation } from "@/domain/shared/grid"
+import type { GridEdge, GridPoint, GridRectSize, GridRotation } from "@/domain/shared/grid"
+import type { LogisticsDraftReadonlyState } from "@/domain/shared/logistics"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import { resolveEffectiveCanvasTheme } from "@/shared/theme/canvas-theme"
 import {
@@ -128,6 +129,77 @@ export function createRenderSceneOrchestrator(
   const grassBackgroundDecoration = createGrassBackgroundDecoration(renderHost)
   const renderPerfDiagnostics = createRenderPerfDiagnostics(renderHost)
 
+  // 物流端口占用缓存：entityId → 已连接端口键集合("portGroupId:portId")
+  // 仅当 entityOrder 长度或 draft 指纹变化时重新计算
+  let portOccupancyCacheEntityCount = -1;
+  let portOccupancyCacheDraftFingerprint = "";
+  let portOccupancyCache: ReadonlyMap<string, ReadonlySet<string>> | null = null;
+
+  function resolveLogisticsPortOccupancy(
+    entities: readonly WorldEntity[],
+    definitionMap: Map<string, EntityDefinition>,
+  ): ReadonlyMap<string, ReadonlySet<string>> | null {
+    const app = renderHost.workspace.app;
+    if (!app || app.state.activeTool !== "logistics-placement") {
+      return null;
+    }
+
+    const draft = renderHost.workspace.editor?.queries?.resolveLogisticsDraftState?.() ?? null;
+    const draftFp = draftFingerprintOf(draft);
+
+    if (
+      entities.length === portOccupancyCacheEntityCount
+      && draftFp === portOccupancyCacheDraftFingerprint
+      && portOccupancyCache !== null
+    ) {
+      return portOccupancyCache;
+    }
+
+    // 构建格点 → 实体映射
+    const gridEntityMap = new Map<string, WorldEntity>();
+    for (const entity of entities) {
+      gridEntityMap.set(gridPointKey(entity.position), entity);
+    }
+
+    const occupancy = new Map<string, Set<string>>();
+
+    for (const entity of entities) {
+      const definition = definitionMap.get(entity.definitionId);
+      if (!definition || isLogisticsEntity(definition)) {
+        continue;
+      }
+
+      const connectedKeys = new Set<string>();
+      for (const portGroup of definition.portGroups) {
+        for (const port of portGroup.ports) {
+          const outsideCell = resolvePortOutsideGridPoint(entity, port, definition.footprint);
+          const neighbor = gridEntityMap.get(gridPointKey(outsideCell));
+          if (neighbor !== undefined) {
+            const neighborDef = definitionMap.get(neighbor.definitionId);
+            if (neighborDef !== undefined && isLogisticsEntity(neighborDef)) {
+              connectedKeys.add(`${portGroup.id}:${port.id}`);
+            }
+          }
+        }
+      }
+
+      if (connectedKeys.size > 0) {
+        occupancy.set(entity.id, connectedKeys);
+      }
+    }
+
+    // 虚影端点：仅 head 已拉出时纳入占用，idle 悬浮不隐藏端口箭头
+    if (draft && draft.headDraftEntityId !== null) {
+      addDraftPortToOccupancy(occupancy, draft.source);
+      addDraftPortToOccupancy(occupancy, draft.target);
+    }
+
+    portOccupancyCacheEntityCount = entities.length;
+    portOccupancyCacheDraftFingerprint = draftFp;
+    portOccupancyCache = occupancy;
+    return occupancy;
+  }
+
   const flushViewport = (): void => {
     const frameStartedAtMs = performance.now()
     const frameProfiler = renderPerfDiagnostics.startFrame({
@@ -215,6 +287,10 @@ export function createRenderSceneOrchestrator(
         viewportBounds: ctx.viewportBounds,
         theme: effectiveCanvasTheme,
         profiler: frameProfiler,
+        logisticsPortOccupancy: resolveLogisticsPortOccupancy(
+          entities,
+          entityDefinitionMap,
+        ),
       }),
     )
     recordEntitySpriteSyncStats(frameProfiler, entitySpriteStats)
@@ -513,6 +589,94 @@ function createEntityDefinitionMap(
   )
 }
 
+// ---- 物流端口占用：纯工具函数（无闭包依赖）----
+
+type PortGroupDefFromEntity = EntityDefinition["portGroups"][number];
+type PortDefFromEntity = PortGroupDefFromEntity["ports"][number];
+
+function gridPointKey(point: GridPoint): string {
+  return `${point.x},${point.y}`;
+}
+
+function isLogisticsEntity(definition: EntityDefinition): boolean {
+  return definition.tags.includes("BeltFamily") || definition.tags.includes("PipeFamily");
+}
+
+function resolvePortOutsideGridPoint(
+  entity: WorldEntity,
+  port: PortDefFromEntity,
+  footprint: GridRectSize,
+): GridPoint {
+  const localCell = rotateLocalCell({
+    footprint,
+    localCellX: port.localCellX,
+    localCellY: port.localCellY,
+    rotation: entity.rotation,
+  });
+  const edge = rotateEdge(port.edge, entity.rotation);
+  const delta = resolveEdgeDelta(edge);
+  return {
+    x: entity.position.x + localCell.x + delta.x,
+    y: entity.position.y + localCell.y + delta.y,
+  };
+}
+
+function rotateLocalCell(options: {
+  footprint: GridRectSize;
+  localCellX: number;
+  localCellY: number;
+  rotation: GridRotation;
+}): GridPoint {
+  const { footprint, localCellX, localCellY, rotation } = options;
+  switch (rotation) {
+    case 0: return { x: localCellX, y: localCellY };
+    case 90: return { x: footprint.height - 1 - localCellY, y: localCellX };
+    case 180: return { x: footprint.width - 1 - localCellX, y: footprint.height - 1 - localCellY };
+    case 270: return { x: localCellY, y: footprint.width - 1 - localCellX };
+  }
+}
+
+const EDGE_ROTATION_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
+
+function rotateEdge(edge: GridEdge, rotation: GridRotation): GridEdge {
+  const steps = rotation / 90;
+  const idx = EDGE_ROTATION_ORDER.indexOf(edge);
+  return EDGE_ROTATION_ORDER[(idx + steps) % EDGE_ROTATION_ORDER.length] ?? edge;
+}
+
+function resolveEdgeDelta(edge: GridEdge): GridPoint {
+  switch (edge) {
+    case "NORTH": return { x: 0, y: -1 };
+    case "EAST": return { x: 1, y: 0 };
+    case "SOUTH": return { x: 0, y: 1 };
+    case "WEST": return { x: -1, y: 0 };
+  }
+}
+
+function draftFingerprintOf(draft: LogisticsDraftReadonlyState | null | undefined): string {
+  if (!draft) return "";
+  const src = draft.source?.type === "device-port"
+    ? `${draft.source.entityId}/${draft.source.portGroupId}/${draft.source.portId}`
+    : "none";
+  const tgt = draft.target?.type === "device-port"
+    ? `${draft.target.entityId}/${draft.target.portGroupId}/${draft.target.portId}`
+    : "none";
+  return `${draft.kind}|${src}|${tgt}`;
+}
+
+function addDraftPortToOccupancy(
+  occupancy: Map<string, Set<string>>,
+  endpoint: LogisticsDraftReadonlyState["source"],
+): void {
+  if (!endpoint || endpoint.type !== "device-port") return;
+  const keys = occupancy.get(endpoint.entityId);
+  if (keys) {
+    keys.add(`${endpoint.portGroupId}:${endpoint.portId}`);
+  } else {
+    occupancy.set(endpoint.entityId, new Set([`${endpoint.portGroupId}:${endpoint.portId}`]));
+  }
+}
+
 function syncWorldEntitySprites(options: {
   renderHost: RenderHost;
   workspace: RenderHost["workspace"];
@@ -530,6 +694,7 @@ function syncWorldEntitySprites(options: {
     height: number;
   };
   theme: AppTheme;
+  logisticsPortOccupancy: ReadonlyMap<string, ReadonlySet<string>> | null;
   profiler: DecorationProfiler | null;
 }): EntitySpriteSyncStats | null {
   const stats: EntitySpriteSyncStats | null = options.profiler === null
@@ -638,6 +803,7 @@ function syncWorldEntitySprites(options: {
         time: options.frameTime,
         suppressBelts: options.workspace.editor?.state.suppressBelts ?? false,
         suppressPipes: options.workspace.editor?.state.suppressPipes ?? false,
+        logisticsPortOccupancy: options.logisticsPortOccupancy,
       },
     )
     nextEntityIds.add(entity.id)

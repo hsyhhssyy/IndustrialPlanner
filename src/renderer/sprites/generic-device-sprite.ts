@@ -939,11 +939,17 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     // 可用端口（方向 + kind 均匹配）→ 箭头
     // 不可用端口（方向或 kind 不匹配）→ 红叉
+    // 物流模式下，已连接端口（物理连接或虚影占用）→ 不显示任何符号
+    const isLogisticsMode = context.workspace.app?.state.activeTool === "logistics-placement";
+    const excludedPortKeys: ReadonlySet<string> | undefined = isLogisticsMode
+      ? context.logisticsPortOccupancy?.get(this.entityId)
+      : undefined;
     const { chevrons: portChevronSpecs, crosses: portCrossSpecs } = resolvePortOverlaySpecs({
       definition: this.definition,
       layout: portLayout,
       directionFilter,
       kindFilter,
+      excludedPortKeys,
     });
 
     if (portChevronSpecs.length === 0 && portCrossSpecs.length === 0) {
@@ -1391,6 +1397,7 @@ function resolvePortOverlaySpecs(options: {
   layout: RenderSpriteLayout;
   directionFilter?: "input" | "output" | null;
   kindFilter?: PortKind | null;
+  excludedPortKeys?: ReadonlySet<string>;
 }): {
   chevrons: {
     textureKey: PortChevronTextureKey;
@@ -1428,6 +1435,7 @@ function resolvePortOverlaySpecs(options: {
     && options.directionFilter !== undefined;
   const hasKindFilter = options.kindFilter !== null
     && options.kindFilter !== undefined;
+  const excludedPortKeys = options.excludedPortKeys;
 
   for (const portGroup of options.definition.portGroups) {
     const directionMatch = !hasDirectionFilter
@@ -1444,6 +1452,11 @@ function resolvePortOverlaySpecs(options: {
       : null;
 
     for (const port of portGroup.ports) {
+      // 物流模式下已连接端口 → 不显示任何符号
+      if (excludedPortKeys !== undefined && excludedPortKeys.has(`${portGroup.id}:${port.id}`)) {
+        continue;
+      }
+
       const chevronLayout = resolvePortChevronLayout({
         footprint: options.definition.footprint,
         layout: options.layout,
