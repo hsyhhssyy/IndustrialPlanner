@@ -244,7 +244,7 @@ describe("Left dock panel switching", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders five primary tabs and defaults to the placement panel", () => {
+  it("renders four primary tabs when debug mode is off and defaults to the placement panel", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -266,7 +266,7 @@ describe("Left dock panel switching", () => {
     const utilityButtons = toolbarGroups[1]?.querySelectorAll(".rail-button");
     const visiblePanel = queryVisibleLeftDockPanel(container);
 
-    expect(primaryButtons).toHaveLength(5);
+    expect(primaryButtons).toHaveLength(4);
     expect(utilityButtons).toHaveLength(3);
     expect(container.textContent).toContain("放置模式");
     expect(visiblePanel).not.toBeNull();
@@ -630,6 +630,13 @@ describe("Left dock panel switching", () => {
     expect(basePanel?.querySelector(".inspector-option-grid")).toBeNull();
     expect(basePanel?.textContent).toContain("协议核心区");
     expect(basePanel?.textContent).toContain("无限电力");
+
+    // 仿真面板仅在调试模式下可见，先开启 debugMode
+    act(() => {
+      runInAction(() => {
+        appHost.internalState.settings.debugMode = true;
+      });
+    });
 
     const simulationButton = clickTab("仿真");
     const simulationPanel = queryVisibleLeftDockPanel(container);

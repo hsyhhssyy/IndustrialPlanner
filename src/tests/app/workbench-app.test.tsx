@@ -991,6 +991,11 @@ describe("WorkbenchApp", () => {
 
     const appHost = createAppHost(workspace);
 
+    // 仿真面板按钮仅在调试模式下可见
+    runInAction(() => {
+      appHost.internalState.settings.debugMode = true;
+    });
+
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
