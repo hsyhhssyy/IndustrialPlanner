@@ -56,6 +56,7 @@ const PRIMARY_TOOLBAR_ITEMS = [
     icon: "simulation" as const,
     labelKey: "workbench.leftRail.simulation",
     panel: "simulation" as LeftToolbarPanel,
+    debugOnly: true,
   },
 ];
 
@@ -99,6 +100,9 @@ export const LeftToolbar = observer(function LeftToolbar({
   const helpDialogVisible = appHost.internalState.workbench.dialogState.help.visible;
   const settingsDialogVisible = appHost.internalState.workbench.dialogState.settings.visible;
   const debugLogDialogVisible = appHost.internalState.workbench.dialogState["debug-log"]?.visible ?? false;
+  const primaryToolbarItems = PRIMARY_TOOLBAR_ITEMS.filter((item) => {
+    return item.debugOnly !== true || appHost.state.settings.debugMode;
+  });
   const utilityToolbarItems = UTILITY_TOOLBAR_ITEMS.filter((item) => {
     return item.debugOnly !== true || appHost.state.settings.debugMode;
   });
@@ -106,7 +110,7 @@ export const LeftToolbar = observer(function LeftToolbar({
   return (
     <aside className={cm(styles, "left-toolbar panel-surface")}>
       <div className={cm(styles, "toolbar-rail-group")}>
-        {PRIMARY_TOOLBAR_ITEMS.map((item) => {
+        {primaryToolbarItems.map((item) => {
           const label = t(item.labelKey);
           const isActive = leftDockOpen && activePanel === item.panel;
 
