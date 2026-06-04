@@ -204,6 +204,20 @@ describe("PortOutputConfigInspector", () => {
     expect(container.querySelector("[data-port-output-locator='item_output']")?.textContent).toContain("P1");
   });
 
+  it("renders compact output row actions without row status chips", () => {
+    const workspace = createWorkspace();
+    const definition = requireDefinition(workspace, "item_port_mix_pool_large_1");
+    const entity = createEmptyEntity("large-reactor-compact", "item_port_mix_pool_large_1");
+    const currentAppHost = buildAppHost(workspace, entity, { deviceClass: "tablet" });
+    appHost = currentAppHost;
+    renderInspector(currentAppHost, definition, entity, root);
+
+    expect(container.querySelector(".port-output-status")).toBeNull();
+    expect(container.textContent).toContain("更换");
+    expect(container.textContent).not.toContain("点击更换");
+    expect(container.textContent).not.toContain("运行中");
+  });
+
   it("shows selected item label from existing config", () => {
     const workspace = createWorkspace();
     const definition = requireDefinition(workspace, "item_port_mix_pool_1");

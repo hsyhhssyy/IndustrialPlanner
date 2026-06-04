@@ -1,8 +1,8 @@
 import { useState } from "react";
 
 import LucideChevronDown from "~icons/lucide/chevron-down";
-import LucideChevronRight from "~icons/lucide/chevron-right";
 import LucideCircleDashed from "~icons/lucide/circle-dashed";
+import LucidePencil from "~icons/lucide/pencil";
 import LucideTrash2 from "~icons/lucide/trash-2";
 import MaterialSymbolsConveyorBelt from "~icons/material-symbols/conveyor-belt";
 import MdiPipe from "~icons/mdi/pipe";
@@ -242,6 +242,7 @@ export function PortOutputConfigInspector({
               Reason: 输出端口配置从“类型标题 + 大选择按钮”改为设计稿中的单行端口卡片。
               Trigger: 用户要求按 inspector-panel5 设计稿 1:1 更新，并删除“固体输出 / 液体输出”可见文字。
               Evidence: 新行结构在同一 map 分支中渲染 portLabel、端口类型图标、物品、状态、更换、清除。
+              AI-CORRECTION 2026-06-04: 当前行结构已移除独立状态 chip，并将更换按钮收敛为“铅笔图标 + 更换”。
               Replacement: port-output-row JSX below in this map callback.
               Risk: Low
               Human Review: Required
@@ -337,28 +338,43 @@ export function PortOutputConfigInspector({
                   </span>
                   <span className={cm(styles, "port-output-item-name")}>{itemLabel}</span>
                 </button>
-                <span className={cm(styles, "port-output-status")}>
-                  {configured ? "运行中" : "未配置"}
-                </span>
+                {/*
+                  AI-REMOVED 2026-06-04:
+                  Reason: 行内“运行中 / 未配置”状态 chip 与当前物品状态重复，占用窄屏和 dialog 右栏水平空间。
+                  Trigger: 用户确认输出端口行需要删除低价值状态文本以缓解挤压。
+                  Evidence: 六张 Playwright 截图中 mobile landscape panel 与 tablet dialog 的输出端口行出现水平空间紧张。
+                  Replacement: 当前行仅保留 port-output-item-button 中的“未选择 / 目标名”作为主状态。
+                  Risk: Low
+                  Human Review: Required
+
+                  Original code:
+                  <span className={cm(styles, "port-output-status")}>
+                    {configured ? "运行中" : "未配置"}
+                  </span>
+                */}
                 <button
                   className={cm(styles, "port-output-action-button port-output-change-button")}
+                  aria-label="更换"
                   data-slot-action="pick-item"
                   disabled={pendingGroupId === row.portGroup.id}
                   onClick={() => {
                     void requestItemSelection(row);
                   }}
+                  title="更换"
                   type="button"
                 >
-                  <span className={cm(styles, "port-output-action-label")}>点击更换</span>
-                  <LucideChevronRight aria-hidden="true" />
+                  <LucidePencil aria-hidden="true" />
+                  <span className={cm(styles, "port-output-action-label")}>更换</span>
                 </button>
                 <button
                   className={cm(styles, "port-output-action-button port-output-clear-button")}
+                  aria-label="清除"
                   data-slot-action="clear-item"
                   disabled={!configured}
                   onClick={() => {
                     clearSelection(row);
                   }}
+                  title="清除"
                   type="button"
                 >
                   <LucideTrash2 aria-hidden="true" />

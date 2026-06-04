@@ -469,7 +469,7 @@
   --port-output-accent-soft: var(--accent-soft);
 
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
   align-items: center;
   min-width: 0;
   min-height: 52px;
@@ -653,28 +653,39 @@
   white-space: nowrap;
 }
 
-.port-output-status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 52px;
-  height: 26px;
-  padding: 0 8px;
-  border: 1px solid color-mix(in srgb, #79b36b 46%, var(--line));
-  border-radius: 5px;
-  background: rgb(119 183 107 / 15%);
-  color: #477d38;
-  font-size: 0.76rem;
-  font-weight: 650;
-  line-height: 1;
-  white-space: nowrap;
-}
+/*
+  AI-REMOVED 2026-06-04:
+  Reason: 行内“运行中 / 未配置”状态 chip 已从输出端口行移除，相关样式不再参与当前 UI。
+  Trigger: 用户确认该状态文本低价值且挤占 mobile/tablet dialog 的水平空间。
+  Evidence: 对应 JSX 已归档删除 port-output-status 节点，当前状态由 port-output-item-button 展示。
+  Replacement: .port-output-item-button / .port-output-item-name
+  Risk: Low
+  Human Review: Required
 
-.port-output-row.is-unconfigured .port-output-status {
-  border-color: color-mix(in srgb, var(--line-strong) 54%, var(--line));
-  background: color-mix(in srgb, var(--surface-3) 68%, transparent);
-  color: var(--text-1);
-}
+  Original code:
+  .port-output-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    height: 26px;
+    padding: 0 8px;
+    border: 1px solid color-mix(in srgb, #79b36b 46%, var(--line));
+    border-radius: 5px;
+    background: rgb(119 183 107 / 15%);
+    color: #477d38;
+    font-size: 0.76rem;
+    font-weight: 650;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .port-output-row.is-unconfigured .port-output-status {
+    border-color: color-mix(in srgb, var(--line-strong) 54%, var(--line));
+    background: color-mix(in srgb, var(--surface-3) 68%, transparent);
+    color: var(--text-1);
+  }
+*/
 
 .port-output-action-button {
   display: inline-flex;
@@ -727,7 +738,7 @@
 }
 
 .port-output-config-inspector[data-device-class="mobile"] .port-output-row {
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
   padding-right: 8px;
 }
 
