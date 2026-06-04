@@ -208,7 +208,19 @@ export function WarehouseItemLinkInspector({
                     type="button"
                   >
                     <LucideX aria-hidden="true" />
-                    <span>清除链接</span>
+                    {/*
+                      AI-REMOVED 2026-06-04:
+                      Reason: “链接”已经由当前 Inspector 标题和行上下文表达，按钮只需要保留动作动词。
+                      Trigger: 用户要求文字不能重复表达已由区域或上下文表达的信息。
+                      Evidence: InspectorPanel设计风格规范 2.5。
+                      Replacement: <span>清除</span>
+                      Risk: Low
+                      Human Review: Required
+
+                      Original code:
+                      <span>清除链接</span>
+                    */}
+                    <span>清除</span>
                   </button>
                 </div>
               </div>

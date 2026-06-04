@@ -202,9 +202,12 @@ describe("PortOutputConfigInspector", () => {
     expect(container.querySelectorAll("[data-port-output-locator='item_output'] [data-selected-port-id]").length).toBe(4);
     expect(container.querySelectorAll("[data-port-output-locator='fluid_output_a'] [data-selected-port-id]").length).toBe(1);
     expect(container.querySelector("[data-port-output-locator='item_output']")?.textContent).toContain("P1");
+    expect(container.querySelector("[data-port-group-id='item_output']")?.getAttribute("data-port-kind")).toBe("item");
+    expect(container.querySelector("[data-port-group-id='fluid_output_a']")?.getAttribute("data-port-kind")).toBe("fluid");
+    expect(container.querySelector("[data-port-group-id='item_output']")?.hasAttribute("data-port-tone")).toBe(false);
   });
 
-  it("renders compact output row actions without row status chips", () => {
+  it("renders compact output row actions without duplicate status or type indicators", () => {
     const workspace = createWorkspace();
     const definition = requireDefinition(workspace, "item_port_mix_pool_large_1");
     const entity = createEmptyEntity("large-reactor-compact", "item_port_mix_pool_large_1");
@@ -212,8 +215,14 @@ describe("PortOutputConfigInspector", () => {
     appHost = currentAppHost;
     renderInspector(currentAppHost, definition, entity, root);
 
+    expect(container.querySelector(".port-output-summary")).toBeNull();
     expect(container.querySelector(".port-output-status")).toBeNull();
+    expect(container.querySelector(".port-output-type-icon")).toBeNull();
+    expect(container.querySelector(".is-configured")).toBeNull();
+    expect(container.querySelector(".is-unconfigured")).toBeNull();
     expect(container.textContent).toContain("更换");
+    expect(container.textContent).not.toContain("已配置");
+    expect(container.textContent).not.toContain("未配置");
     expect(container.textContent).not.toContain("点击更换");
     expect(container.textContent).not.toContain("运行中");
   });

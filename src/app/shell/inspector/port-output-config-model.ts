@@ -61,14 +61,28 @@ export function resolveOutputGroupRows(
   return rows;
 }
 
-export function resolvePortTone(index: number): "blue" | "green" | "orange" {
-  if (index === 0) {
-    return "blue";
-  }
+/*
+  AI-REMOVED 2026-06-04:
+  Reason: 端口颜色不能按 P1/P2/P3 编号分色；编号已经由文字表达，颜色必须传递新增信息。
+  Trigger: 用户要求颜色按传送带/管道类型传递信息，并禁止颜色与文字重复表达同一语义。
+  Evidence: InspectorPanel设计风格规范已明确“端口色只表达类型，而不是端口编号”。
+  Replacement: resolvePortTone(portGroup) 按 portGroup.kind 返回 item/fluid。
+  Risk: Low
+  Human Review: Required
 
-  if (index === 1) {
-    return "green";
-  }
+  Original code:
+  export function resolvePortTone(index: number): "blue" | "green" | "orange" {
+    if (index === 0) {
+      return "blue";
+    }
 
-  return "orange";
+    if (index === 1) {
+      return "green";
+    }
+
+    return "orange";
+  }
+*/
+export function resolvePortTone(portGroup: PortGroupDefinition): "item" | "fluid" {
+  return portGroup.kind === "fluid" ? "fluid" : "item";
 }

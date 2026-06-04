@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
 
-import LucideArrowLeftRight from "~icons/lucide/arrow-left-right";
 import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideChevronsRight from "~icons/lucide/chevrons-right";
-import LucideDownload from "~icons/lucide/download";
 import LucidePlus from "~icons/lucide/plus";
-import LucideUpload from "~icons/lucide/upload";
 import LucideX from "~icons/lucide/x";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -110,8 +107,19 @@ export function SlotConfigInspector({
         title={canUseRuntimeState ? undefined : "当前状态仅在仿真运行时可用"}
       >
         <span className={cm(styles, "slot-config-scope-switch-copy")}>
-          <span>编辑模式:</span>
-          <strong>{editModeEnabled ? "开启" : "关闭"}</strong>
+          <span>编辑模式</span>
+          {/*
+            AI-REMOVED 2026-06-04:
+            Reason: 开关控件已经表达开启/关闭状态，旁边文字重复表达同一信息。
+            Trigger: 用户要求文字、颜色、图标、边框等元素不能传递重复信息。
+            Evidence: InspectorPanel设计风格规范 2.5 明确“开关控件已经表达开/关时，不再显示开启/关闭文案”。
+            Replacement: checkbox visual state + aria-label
+            Risk: Low
+            Human Review: Required
+
+            Original code:
+            <strong>{editModeEnabled ? "开启" : "关闭"}</strong>
+          */}
         </span>
         <input
           aria-label="编辑模式"
@@ -259,13 +267,35 @@ export function SlotConfigInspector({
     roleGroupViews: readonly SlotConfigRoleGroupView[],
   ) => {
     const rows = roleGroupViews.flatMap((groupView) => groupView.rows);
-    const filledCount = rows.filter((row) => row.displayItemId !== null).length;
+    /*
+      AI-REMOVED 2026-06-04:
+      Reason: filled/total 计数重复下方槽位列表可直接读取或数出的信息。
+      Trigger: 用户要求用户能从主区域直接数出的结果不再额外显示 summary。
+      Evidence: InspectorPanel设计风格规范 2.5 / 3.5。
+      Replacement: None
+      Risk: Low
+      Human Review: Required
+
+      Original code:
+      const filledCount = rows.filter((row) => row.displayItemId !== null).length;
+    */
     const roleIndexBySlotKey = new Map(
       rows.map((row, rowIndex) => [createRuntimeSlotKey(row.storageGroupId, row.slotId), rowIndex + 1]),
     );
     const roleLabel = role === "input" ? "输入" : "输出";
     const roleTitle = role === "input" ? "原料输入" : "产物输出";
-    const RoleIcon = role === "input" ? LucideDownload : LucideUpload;
+    /*
+      AI-REMOVED 2026-06-04:
+      Reason: 输入/输出角色图标与标题“原料输入 / 产物输出”重复表达角色。
+      Trigger: 用户要求图标与文字不能传递重复信息。
+      Evidence: 标题已直接表达列角色。
+      Replacement: slot-config-flow-column-header strong
+      Risk: Low
+      Human Review: Required
+
+      Original code:
+      const RoleIcon = role === "input" ? LucideDownload : LucideUpload;
+    */
 
     return (
       <section
@@ -273,10 +303,32 @@ export function SlotConfigInspector({
         data-slot-config-role={role}
       >
         <div className={cm(styles, "slot-config-flow-column-header")}>
-          <RoleIcon aria-hidden="true" />
+          {/*
+            AI-REMOVED 2026-06-04:
+            Reason: 输入/输出角色图标与标题“原料输入 / 产物输出”重复表达角色。
+            Trigger: 用户要求图标与文字不能传递重复信息。
+            Evidence: 标题已经直接表达列角色。
+            Replacement: slot-config-flow-column-header strong
+            Risk: Low
+            Human Review: Required
+
+            Original code:
+            <RoleIcon aria-hidden="true" />
+          */}
           <div>
             <strong>{roleTitle}</strong>
-            <span>{`${roleLabel}槽位 (${filledCount}/${rows.length})`}</span>
+            {/*
+              AI-REMOVED 2026-06-04:
+              Reason: “输入/输出槽位 (filled/total)”重复标题与下方槽位列表。
+              Trigger: 用户要求主区域可直接读出或数出的信息不重复显示。
+              Evidence: 下方列表已展示每个槽位及是否有物品。
+              Replacement: None
+              Risk: Low
+              Human Review: Required
+
+              Original code:
+              <span>{`${roleLabel}槽位 (${filledCount}/${rows.length})`}</span>
+            */}
           </div>
         </div>
         <div className={cm(styles, "slot-config-flow-slot-list")}>
@@ -353,7 +405,18 @@ export function SlotConfigInspector({
     roleGroupViews: readonly SlotConfigRoleGroupView[],
   ) => {
     const rows = roleGroupViews.flatMap((groupView) => groupView.rows);
-    const filledCount = rows.filter((row) => row.displayItemId !== null).length;
+    /*
+      AI-REMOVED 2026-06-04:
+      Reason: shared 槽位 filled/total 计数重复下方槽位列表。
+      Trigger: 用户要求可从主区域直接数出的信息不重复显示。
+      Evidence: InspectorPanel设计风格规范 2.5 / 3.5。
+      Replacement: None
+      Risk: Low
+      Human Review: Required
+
+      Original code:
+      const filledCount = rows.filter((row) => row.displayItemId !== null).length;
+    */
     const roleIndexBySlotKey = new Map(
       rows.map((row, rowIndex) => [createRuntimeSlotKey(row.storageGroupId, row.slotId), rowIndex + 1]),
     );
@@ -364,10 +427,32 @@ export function SlotConfigInspector({
         data-slot-config-role="shared"
       >
         <div className={cm(styles, "slot-config-flow-column-header")}>
-          <LucideArrowLeftRight aria-hidden="true" />
+          {/*
+            AI-REMOVED 2026-06-04:
+            Reason: 共享角色图标与标题“混合缓冲”重复表达共享/混合语义。
+            Trigger: 用户要求图标与文字不能传递重复信息。
+            Evidence: 标题已直接表达该列角色。
+            Replacement: slot-config-flow-column-header strong
+            Risk: Low
+            Human Review: Required
+
+            Original code:
+            <LucideArrowLeftRight aria-hidden="true" />
+          */}
           <div>
             <strong>混合缓冲</strong>
-            <span>{`输入/输出共享槽位 (${filledCount}/${rows.length})`}</span>
+            {/*
+              AI-REMOVED 2026-06-04:
+              Reason: “输入/输出共享槽位 (filled/total)”重复标题与下方槽位列表。
+              Trigger: 用户要求 summary 不重复主区域可直接读出或数出的信息。
+              Evidence: 下方列表已展示共享槽位内容。
+              Replacement: None
+              Risk: Low
+              Human Review: Required
+
+              Original code:
+              <span>{`输入/输出共享槽位 (${filledCount}/${rows.length})`}</span>
+            */}
           </div>
         </div>
         <div className={cm(styles, "slot-config-flow-slot-list")}>
@@ -517,7 +602,18 @@ export function SlotConfigInspector({
             <div className={cm(styles, "slot-config-flow-layout")}>
               {renderSlotColumn("input", inputGroupViews)}
               <div className={cm(styles, "slot-config-flow-direction")} aria-label="加工流向">
-                <span>加工流向</span>
+                {/*
+                  AI-REMOVED 2026-06-04:
+                  Reason: 流向文字与箭头图标重复表达加工流向。
+                  Trigger: 用户要求文字与图标不能传递重复信息。
+                  Evidence: 该容器保留 aria-label，视觉上由箭头和左右列位置表达流向。
+                  Replacement: LucideChevronsRight + aria-label
+                  Risk: Low
+                  Human Review: Required
+
+                  Original code:
+                  <span>加工流向</span>
+                */}
                 <LucideChevronsRight aria-hidden="true" />
               </div>
               {renderSlotColumn("output", outputGroupViews)}

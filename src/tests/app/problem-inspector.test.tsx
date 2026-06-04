@@ -76,21 +76,21 @@ function renderInspector(component: React.ReactElement) {
   return { container, root };
 }
 
-function countProblemArticles(container: HTMLElement): number {
+function countProblemRows(container: HTMLElement): number {
   return container.querySelectorAll(
-    `[data-inspector-key="${PROBLEM_INSPECTOR_KEY}"] article`,
+    `[data-inspector-key="${PROBLEM_INSPECTOR_KEY}"] [data-problem-row]`,
   ).length;
 }
 
 function getProblemMessages(container: HTMLElement): string[] {
   return Array.from(
-    container.querySelectorAll(`[data-inspector-key="${PROBLEM_INSPECTOR_KEY}"] article p`),
+    container.querySelectorAll(`[data-inspector-key="${PROBLEM_INSPECTOR_KEY}"] [data-problem-row] p`),
   ).map((el) => el.textContent ?? "");
 }
 
 function getProblemSeverities(container: HTMLElement): string[] {
   return Array.from(
-    container.querySelectorAll(`[data-inspector-key="${PROBLEM_INSPECTOR_KEY}"] article`),
+    container.querySelectorAll(`[data-inspector-key="${PROBLEM_INSPECTOR_KEY}"] [data-problem-row]`),
   ).map((el) => el.getAttribute("data-problem-severity") ?? "");
 }
 
@@ -116,7 +116,7 @@ describe("ProblemInspector", () => {
       />,
     );
 
-    expect(countProblemArticles(container)).toBe(1);
+    expect(countProblemRows(container)).toBe(1);
     expect(getProblemMessages(container)).toContain("必须放置在基地内");
     expect(getProblemSeverities(container)).toEqual(["error"]);
 
@@ -144,7 +144,7 @@ describe("ProblemInspector", () => {
       />,
     );
 
-    expect(countProblemArticles(container)).toBe(2);
+    expect(countProblemRows(container)).toBe(2);
     const messages = getProblemMessages(container);
     expect(messages).toContain("必须放置在基地内");
     expect(messages).toContain("不能与其他设备重叠");
@@ -167,7 +167,7 @@ describe("ProblemInspector", () => {
       />,
     );
 
-    expect(countProblemArticles(container)).toBe(0);
+    expect(countProblemRows(container)).toBe(0);
 
     root.unmount();
     container.remove();
@@ -193,7 +193,7 @@ describe("ProblemInspector", () => {
       />,
     );
 
-    expect(countProblemArticles(container)).toBe(1);
+    expect(countProblemRows(container)).toBe(1);
     expect(getProblemMessages(container)).toContain("该设备不在供电范围");
 
     root.unmount();
@@ -218,7 +218,7 @@ describe("ProblemInspector", () => {
       />,
     );
 
-    expect(countProblemArticles(container)).toBe(0);
+    expect(countProblemRows(container)).toBe(0);
 
     root.unmount();
     container.remove();
@@ -242,7 +242,7 @@ describe("ProblemInspector", () => {
       />,
     );
 
-    expect(countProblemArticles(container)).toBe(0);
+    expect(countProblemRows(container)).toBe(0);
 
     root.unmount();
     container.remove();
@@ -275,7 +275,7 @@ describe("ProblemInspector", () => {
       />,
     );
 
-    expect(countProblemArticles(container)).toBe(1);
+    expect(countProblemRows(container)).toBe(1);
     expect(getProblemMessages(container)).toContain("电力不足");
 
     root.unmount();
@@ -307,7 +307,7 @@ describe("ProblemInspector", () => {
       />,
     );
 
-    expect(countProblemArticles(container)).toBe(0);
+    expect(countProblemRows(container)).toBe(0);
 
     root.unmount();
     container.remove();
@@ -338,7 +338,7 @@ describe("ProblemInspector", () => {
       />,
     );
 
-    expect(countProblemArticles(container)).toBe(0);
+    expect(countProblemRows(container)).toBe(0);
 
     root.unmount();
     container.remove();
@@ -372,7 +372,7 @@ describe("ProblemInspector", () => {
       />,
     );
 
-    expect(countProblemArticles(container)).toBe(1);
+    expect(countProblemRows(container)).toBe(1);
     expect(getProblemMessages(container)).toContain("产物堵塞");
     expect(getProblemSeverities(container)).toEqual(["error"]);
 
@@ -406,7 +406,7 @@ describe("ProblemInspector", () => {
       />,
     );
 
-    expect(countProblemArticles(container)).toBe(0);
+    expect(countProblemRows(container)).toBe(0);
 
     root.unmount();
     container.remove();
@@ -430,7 +430,7 @@ describe("ProblemInspector", () => {
       />,
     );
 
-    expect(countProblemArticles(container)).toBe(0);
+    expect(countProblemRows(container)).toBe(0);
 
     root.unmount();
     container.remove();
@@ -479,7 +479,7 @@ describe("ProblemInspector", () => {
     );
 
     // 放置问题 2 + 供电范围 1 + 电力不足 1 + 产物堵塞 1 = 5
-    expect(countProblemArticles(container)).toBe(5);
+    expect(countProblemRows(container)).toBe(5);
     const messages = getProblemMessages(container);
     expect(messages).toContain("必须放置在基地内");
     expect(messages).toContain("不能与其他设备重叠");

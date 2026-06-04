@@ -4,8 +4,6 @@ import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideCircleDashed from "~icons/lucide/circle-dashed";
 import LucidePencil from "~icons/lucide/pencil";
 import LucideTrash2 from "~icons/lucide/trash-2";
-import MaterialSymbolsConveyorBelt from "~icons/material-symbols/conveyor-belt";
-import MdiPipe from "~icons/mdi/pipe";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -15,7 +13,6 @@ import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import { rotateGridRotation } from "@/shared/geometry/grid";
 import {
   resolveOutputGroupRows,
-  resolvePortTone,
   type OutputGroupRow,
 } from "@/app/shell/inspector/port-output-config-model";
 import { PortOutputLocatorBadge } from "@/app/shell/inspector/port-output-locator-badge";
@@ -136,8 +133,19 @@ export function PortOutputConfigInspector({
     declaration.portGroupIds,
     entity,
   );
-  const configuredCount = rows.filter((row) => row.currentItemId !== null).length;
-  const unconfiguredCount = rows.length - configuredCount;
+  /*
+    AI-REMOVED 2026-06-04:
+    Reason: 输出端口 header 的“已配置 / 未配置”summary 重复下方行主内容，用户可以直接从行列表读取或数出。
+    Trigger: 用户要求任何元素都不能重复表达信息，能从主区域直接数出的内容不再额外显示。
+    Evidence: InspectorPanel设计风格规范 2.5 / 3.5 明确禁止重复 summary。
+    Replacement: None
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    const configuredCount = rows.filter((row) => row.currentItemId !== null).length;
+    const unconfiguredCount = rows.length - configuredCount;
+  */
   const deviceClass = appHost.state?.screenProfile?.deviceClass ?? "desktop";
   const displayRotation = appHost.workspace.editor?.state?.viewport?.displayRotation ?? 0;
   const locatorRotation = rotateGridRotation(entity.rotation, displayRotation);
@@ -213,18 +221,29 @@ export function PortOutputConfigInspector({
     >
       <div className={cm(styles, "inspector-expanded-header port-output-panel-header")}>
         <span>输出端口</span>
-        <span className={cm(styles, "port-output-summary")}>
-          <strong>{configuredCount}</strong>
-          <span>已配置</span>
-          <span>·</span>
-          <strong>{unconfiguredCount}</strong>
-          <span>未配置</span>
-        </span>
+        {/*
+          AI-REMOVED 2026-06-04:
+          Reason: header summary 重复行列表中“未选择 / 目标名”的配置状态信息。
+          Trigger: 用户要求用户能从主区域直接数出的信息不再重复显示。
+          Evidence: 输出端口行已经逐行展示是否选择目标。
+          Replacement: None
+          Risk: Low
+          Human Review: Required
+
+          Original code:
+          <span className={cm(styles, "port-output-summary")}>
+            <strong>{configuredCount}</strong>
+            <span>已配置</span>
+            <span>·</span>
+            <strong>{unconfiguredCount}</strong>
+            <span>未配置</span>
+          </span>
+        */}
         <LucideChevronDown aria-hidden="true" />
       </div>
       <div className={cm(styles, "inspector-expanded-body port-output-panel-body")}>
         <div className={cm(styles, "port-output-list")}>
-          {rows.map((row, rowIndex) => {
+          {rows.map((row) => {
             const itemDefinition =
               row.currentItemId === null
                 ? null
@@ -235,7 +254,6 @@ export function PortOutputConfigInspector({
                 ? "未选择"
                 : translate(itemDefinition.nameKey);
             const configured = row.currentItemId !== null;
-            const typeIconLabel = `${row.portLabel} ${row.label}`;
 
             /*
               AI-REMOVED 2026-06-02:
@@ -288,15 +306,9 @@ export function PortOutputConfigInspector({
 
             return (
               <div
-                className={cm(
-                  styles,
-                  "port-output-row",
-                  configured ? "is-configured" : "is-unconfigured",
-                )}
+                className={cm(styles, "port-output-row")}
                 data-port-group-id={row.portGroup.id}
-                data-port-configured={configured ? "true" : "false"}
                 data-port-kind={row.portGroup.kind}
-                data-port-tone={resolvePortTone(rowIndex)}
                 key={row.portGroup.id}
               >
                 <PortOutputLocatorBadge
@@ -307,18 +319,29 @@ export function PortOutputConfigInspector({
                   targetPortGroupId={row.portGroup.id}
                   title={`${row.portLabel} ${row.label} 位置`}
                 />
-                <span
-                  aria-label={typeIconLabel}
-                  className={cm(styles, "port-output-type-icon")}
-                  role="img"
-                  title={typeIconLabel}
-                >
-                  {row.portGroup.kind === "fluid" ? (
-                    <MdiPipe aria-hidden="true" />
-                  ) : (
-                    <MaterialSymbolsConveyorBelt aria-hidden="true" />
-                  )}
-                </span>
+                {/*
+                  AI-REMOVED 2026-06-04:
+                  Reason: 端口类型已经由定位标识的类型色表达，额外类型图标会重复表达同一信息。
+                  Trigger: 用户要求颜色、文字、图标、边框等元素都不能传递重复信息。
+                  Evidence: data-port-kind 已按 portGroup.kind 输出 item/fluid，locator title 保留类型文本用于可访问性。
+                  Replacement: PortOutputLocatorBadge 类型色
+                  Risk: Medium - 若用户不熟悉类型色，首次识别会依赖 title/上下文。
+                  Human Review: Required
+
+                  Original code:
+                  <span
+                    aria-label={typeIconLabel}
+                    className={cm(styles, "port-output-type-icon")}
+                    role="img"
+                    title={typeIconLabel}
+                  >
+                    {row.portGroup.kind === "fluid" ? (
+                      <MdiPipe aria-hidden="true" />
+                    ) : (
+                      <MaterialSymbolsConveyorBelt aria-hidden="true" />
+                    )}
+                  </span>
+                */}
                 <button
                   className={cm(styles, "port-output-item-button")}
                   data-slot-action="pick-item"

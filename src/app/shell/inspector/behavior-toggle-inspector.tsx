@@ -44,8 +44,20 @@ export function BehaviorToggleInspector({
           className={cm(styles, warehouseSubmitEnabled ? "toggle-on" : "toggle-off")}
           data-toggle-key="warehouse-submit-enabled"
           onClick={handleToggle}
+          title="无线提交"
         >
-          {warehouseSubmitEnabled ? "ON" : "OFF"}
+          {/*
+            AI-REMOVED 2026-06-04:
+            Reason: switch 的视觉状态与 aria-checked 已表达开关状态，ON/OFF 文本重复表达。
+            Trigger: 用户要求任何元素都不能重复传递同一信息。
+            Evidence: InspectorPanel设计风格规范 2.5。
+            Replacement: role="switch" + aria-checked + title
+            Risk: Low
+            Human Review: Required
+
+            Original code:
+            {warehouseSubmitEnabled ? "ON" : "OFF"}
+          */}
         </button>
       </label>
     </article>

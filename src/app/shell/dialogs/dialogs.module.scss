@@ -98,48 +98,83 @@
 }
 
 .inspector-port-callout {
-  --inspector-port-callout-accent: var(--accent-strong);
+  --inspector-port-callout-accent: var(--text-2);
 }
 
-.inspector-port-callout[data-port-tone="blue"] {
-  --inspector-port-callout-accent: #2563eb;
+.inspector-port-callout[data-port-kind="item"] {
+  --inspector-port-callout-accent: #b88a2f;
 }
 
-.inspector-port-callout[data-port-tone="green"] {
-  --inspector-port-callout-accent: #5e9f4b;
-}
-
-.inspector-port-callout[data-port-tone="orange"] {
-  --inspector-port-callout-accent: #f97316;
+.inspector-port-callout[data-port-kind="fluid"] {
+  --inspector-port-callout-accent: #4f8fa8;
 }
 
 .inspector-port-callout-leader {
   stroke: var(--inspector-port-callout-accent);
   stroke-linecap: round;
   stroke-width: 2;
-  filter: drop-shadow(0 1px 1px rgb(15 23 42 / 30%));
 }
 
 .inspector-port-callout-marker {
-  fill: #ffffff;
+  fill: color-mix(in srgb, var(--surface-1) 92%, #ffffff);
   stroke: var(--inspector-port-callout-accent);
   stroke-width: 2;
-  filter: drop-shadow(0 1px 1px rgb(15 23 42 / 24%));
 }
 
 .inspector-port-callout-label rect {
-  fill: var(--inspector-port-callout-accent);
-  stroke: rgb(255 255 255 / 68%);
+  fill: color-mix(in srgb, var(--surface-1) 94%, #ffffff);
+  stroke: var(--inspector-port-callout-accent);
   stroke-width: 1;
-  filter: drop-shadow(0 2px 4px rgb(15 23 42 / 28%));
 }
 
 .inspector-port-callout-label text {
-  fill: #ffffff;
+  fill: var(--text-0);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0;
 }
+
+/*
+  AI-REMOVED 2026-06-04:
+  Reason: 旧 callout 按 P 编号使用蓝绿橙实心标签，并用阴影强化；这重复编号文字且制造无必要层级。
+  Trigger: 用户要求颜色只传递新增信息，不能和 P1/P2/P3 编号重复；同时偏好扁平化。
+  Evidence: 当前 active CSS 已改为 data-port-kind 类型色和中性气泡底。
+  Replacement: .inspector-port-callout[data-port-kind]
+  Risk: Low
+  Human Review: Required
+
+  Original code:
+  .inspector-port-callout[data-port-tone="blue"] {
+    --inspector-port-callout-accent: #2563eb;
+  }
+
+  .inspector-port-callout[data-port-tone="green"] {
+    --inspector-port-callout-accent: #5e9f4b;
+  }
+
+  .inspector-port-callout[data-port-tone="orange"] {
+    --inspector-port-callout-accent: #f97316;
+  }
+
+  .inspector-port-callout-leader {
+    filter: drop-shadow(0 1px 1px rgb(15 23 42 / 30%));
+  }
+
+  .inspector-port-callout-marker {
+    fill: #ffffff;
+    filter: drop-shadow(0 1px 1px rgb(15 23 42 / 24%));
+  }
+
+  .inspector-port-callout-label rect {
+    fill: var(--inspector-port-callout-accent);
+    stroke: rgb(255 255 255 / 68%);
+    filter: drop-shadow(0 2px 4px rgb(15 23 42 / 28%));
+  }
+
+  .inspector-port-callout-label text {
+    fill: #ffffff;
+  }
+*/
 
 .help-dialog-backdrop,
 .toolbox-dialog-backdrop,

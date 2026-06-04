@@ -201,6 +201,7 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
     });
 
     expect(callouts.map((callout) => callout.label)).toEqual(["P1", "P2", "P3"]);
+    expect(callouts.map((callout) => callout.portKind)).toEqual(["item", "fluid", "fluid"]);
     expect(callouts.find((callout) => callout.id === "item_output")?.markerPoints.length).toBe(4);
     const itemOutput = callouts.find((callout) => callout.id === "item_output");
     expect(itemOutput?.labelY).toBeLessThan(itemOutput?.targetY ?? 0);

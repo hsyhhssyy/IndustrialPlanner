@@ -176,6 +176,47 @@
   line-height: 1.45;
 }
 
+.problem-list {
+  gap: 0;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.problem-row {
+  --problem-warning-color: #9a6a18;
+
+  display: grid;
+  min-width: 0;
+  padding: 9px 0 9px 10px;
+  border: 0;
+  border-left: 2px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  background: transparent;
+}
+
+.problem-row:last-child {
+  border-bottom: 0;
+}
+
+.problem-row p {
+  margin: 0;
+  color: var(--text-0);
+  font-size: 0.8rem;
+  line-height: 1.42;
+}
+
+.problem-row[data-problem-severity="error"] {
+  border-left-color: var(--danger);
+}
+
+.problem-row[data-problem-severity="error"] p {
+  color: var(--danger);
+}
+
+.problem-row[data-problem-severity="warning"] {
+  border-left-color: var(--problem-warning-color);
+}
+
 .json-debug-textarea {
   width: 100%;
   min-height: 300px;
@@ -335,9 +376,9 @@
 
 .slot-config-row {
   padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-2);
+  border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-2) 62%, var(--surface-1));
 }
 
 .slot-config-row-main {
@@ -354,10 +395,27 @@
   gap: 6px;
   min-height: 32px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-1);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
   color: var(--text-0);
   font: inherit;
+}
+
+.slot-config-item-button:hover:not(:disabled),
+.slot-config-step-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+}
+
+.slot-config-clear-button {
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  color: var(--danger);
+}
+
+.slot-config-clear-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--danger) 70%, var(--line));
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface-1));
+  color: var(--danger);
 }
 
 .slot-config-item-button,
@@ -420,7 +478,7 @@
 
 .port-output-panel-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .port-output-panel-header > span:first-child {
@@ -430,28 +488,39 @@
   white-space: nowrap;
 }
 
-.port-output-summary {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  gap: 4px;
-  height: 24px;
-  padding: 0 10px;
-  border: 1px solid color-mix(in srgb, var(--accent-strong) 24%, var(--line));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-soft) 52%, var(--surface-2));
-  color: color-mix(in srgb, var(--accent-strong) 86%, var(--text-1));
-  font-size: 0.72rem;
-  font-weight: 520;
-  line-height: 1;
-  white-space: nowrap;
-}
+/*
+  AI-REMOVED 2026-06-04:
+  Reason: 输出端口 summary 重复下方列表可直接读出或数出的配置状态。
+  Trigger: 用户要求 summary 不重复主区域信息。
+  Evidence: JSX 中 port-output-summary 已归档删除。
+  Replacement: None
+  Risk: Low
+  Human Review: Required
 
-.port-output-summary strong {
-  color: var(--accent-strong);
-  font-size: 0.76rem;
-  font-weight: 750;
-}
+  Original code:
+  .port-output-summary {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    gap: 4px;
+    height: 24px;
+    padding: 0 10px;
+    border: 1px solid color-mix(in srgb, var(--accent-strong) 24%, var(--line));
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent-soft) 52%, var(--surface-2));
+    color: color-mix(in srgb, var(--accent-strong) 86%, var(--text-1));
+    font-size: 0.72rem;
+    font-weight: 520;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .port-output-summary strong {
+    color: var(--accent-strong);
+    font-size: 0.76rem;
+    font-weight: 750;
+  }
+*/
 
 .port-output-panel-body {
   padding: 8px;
@@ -465,11 +534,11 @@
 }
 
 .port-output-row {
-  --port-output-accent: var(--accent-strong);
-  --port-output-accent-soft: var(--accent-soft);
+  --port-output-accent: var(--text-2);
+  --port-output-accent-soft: color-mix(in srgb, var(--surface-2) 82%, transparent);
 
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   min-width: 0;
   min-height: 52px;
@@ -480,46 +549,67 @@
   background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
 }
 
-.port-output-row[data-port-tone="blue"] {
-  --port-output-accent: #2563eb;
-  --port-output-accent-soft: rgb(37 99 235 / 12%);
+.port-output-row[data-port-kind="item"] {
+  --port-output-accent: #b88a2f;
+  --port-output-accent-soft: rgb(184 138 47 / 10%);
 }
 
-.port-output-row[data-port-tone="green"] {
-  --port-output-accent: #5e9f4b;
-  --port-output-accent-soft: rgb(94 159 75 / 13%);
+.port-output-row[data-port-kind="fluid"] {
+  --port-output-accent: #4f8fa8;
+  --port-output-accent-soft: rgb(79 143 168 / 10%);
 }
 
-.port-output-row[data-port-tone="orange"] {
-  --port-output-accent: #f97316;
-  --port-output-accent-soft: rgb(249 115 22 / 14%);
-}
+/*
+  AI-REMOVED 2026-06-04:
+  Reason: 编号色、配置态行背景和旧 P index 色块都重复表达已有文字/主内容信息。
+  Trigger: 用户要求颜色、边框、背景不能重复表达编号、区域或配置状态。
+  Evidence: 端口行现在只通过主内容显示“未选择 / 目标名”，端口颜色只按类型小面积使用。
+  Replacement: .port-output-row[data-port-kind] + .port-output-locator
+  Risk: Low
+  Human Review: Required
 
-.port-output-row.is-configured {
-  border-color: color-mix(in srgb, var(--port-output-accent) 48%, var(--line));
-  background: color-mix(in srgb, var(--surface-1) 82%, var(--port-output-accent-soft));
-}
+  Original code:
+  .port-output-row[data-port-tone="blue"] {
+    --port-output-accent: #2563eb;
+    --port-output-accent-soft: rgb(37 99 235 / 12%);
+  }
 
-.port-output-row.is-unconfigured {
-  color: var(--text-1);
-}
+  .port-output-row[data-port-tone="green"] {
+    --port-output-accent: #5e9f4b;
+    --port-output-accent-soft: rgb(94 159 75 / 13%);
+  }
 
-.port-output-index {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 32px;
-  flex: 0 0 auto;
-  border: 1px solid color-mix(in srgb, var(--port-output-accent) 70%, var(--line));
-  border-radius: 5px;
-  background: var(--port-output-accent);
-  color: #ffffff;
-  font-size: 0.86rem;
-  font-weight: 800;
-  line-height: 1;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 10%);
-}
+  .port-output-row[data-port-tone="orange"] {
+    --port-output-accent: #f97316;
+    --port-output-accent-soft: rgb(249 115 22 / 14%);
+  }
+
+  .port-output-row.is-configured {
+    border-color: color-mix(in srgb, var(--port-output-accent) 48%, var(--line));
+    background: color-mix(in srgb, var(--surface-1) 82%, var(--port-output-accent-soft));
+  }
+
+  .port-output-row.is-unconfigured {
+    color: var(--text-1);
+  }
+
+  .port-output-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 32px;
+    flex: 0 0 auto;
+    border: 1px solid color-mix(in srgb, var(--port-output-accent) 70%, var(--line));
+    border-radius: 5px;
+    background: var(--port-output-accent);
+    color: #ffffff;
+    font-size: 0.86rem;
+    font-weight: 800;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 10%);
+  }
+*/
 
 .port-output-locator {
   display: inline-grid;
@@ -531,11 +621,10 @@
   min-width: 56px;
   gap: 2px;
   padding: 2px 5px 2px 4px;
-  border: 1px solid color-mix(in srgb, var(--port-output-accent) 70%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--port-output-accent) 42%, var(--line));
   border-radius: 5px;
-  background: color-mix(in srgb, var(--port-output-accent) 92%, #ffffff);
-  color: #ffffff;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 10%);
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  color: var(--text-0);
 }
 
 .port-output-locator-svg {
@@ -546,26 +635,26 @@
 }
 
 .port-output-locator-body {
-  fill: rgb(255 255 255 / 13%);
-  stroke: rgb(255 255 255 / 54%);
+  fill: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  stroke: color-mix(in srgb, var(--line-strong) 56%, var(--line));
   stroke-width: 0.08;
 }
 
 .port-output-locator-marker {
-  fill: rgb(255 255 255 / 34%);
+  fill: color-mix(in srgb, var(--line-strong) 62%, var(--line));
 }
 
 .port-output-locator-selected-line {
   fill: none;
-  stroke: #ffffff;
+  stroke: var(--port-output-accent);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 0.16;
 }
 
 .port-output-locator-selected-marker {
-  fill: #ffffff;
-  stroke: color-mix(in srgb, var(--port-output-accent) 78%, #111827);
+  fill: var(--port-output-accent);
+  stroke: color-mix(in srgb, var(--surface-1) 92%, #ffffff);
   stroke-width: 0.08;
 }
 
@@ -577,21 +666,32 @@
   white-space: nowrap;
 }
 
-.port-output-type-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 23px;
-  height: 23px;
-  flex: 0 0 auto;
-  color: color-mix(in srgb, var(--text-0) 88%, var(--port-output-accent));
-}
+/*
+  AI-REMOVED 2026-06-04:
+  Reason: 端口类型图标已从行内移除，避免和端口类型色重复表达固体/液体类型。
+  Trigger: 用户要求任何元素都不能重复传递同一信息。
+  Evidence: JSX 中 port-output-type-icon 节点已归档删除。
+  Replacement: .port-output-locator 中的小面积类型色
+  Risk: Medium - 新用户需要通过颜色体系或 title 理解类型色。
+  Human Review: Required
 
-.port-output-type-icon svg {
-  width: 22px;
-  height: 22px;
-  fill: currentColor;
-}
+  Original code:
+  .port-output-type-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 23px;
+    height: 23px;
+    flex: 0 0 auto;
+    color: color-mix(in srgb, var(--text-0) 88%, var(--port-output-accent));
+  }
+
+  .port-output-type-icon svg {
+    width: 22px;
+    height: 22px;
+    fill: currentColor;
+  }
+*/
 
 .port-output-item-button {
   display: inline-grid;
@@ -611,7 +711,7 @@
 }
 
 .port-output-item-button:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--port-output-accent-soft) 88%, var(--surface-2));
+  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
 }
 
 .port-output-item-button:disabled,
@@ -706,8 +806,8 @@
 }
 
 .port-output-action-button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--port-output-accent) 54%, var(--line));
-  background: color-mix(in srgb, var(--port-output-accent-soft) 72%, var(--surface-1));
+  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
   color: var(--text-0);
 }
 
@@ -718,14 +818,14 @@
 }
 
 .port-output-clear-button {
-  border-color: color-mix(in srgb, #ff4d36 34%, var(--line));
-  color: #ff4d36;
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  color: var(--danger);
 }
 
 .port-output-clear-button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, #ff4d36 70%, var(--line));
-  background: rgb(255 77 54 / 8%);
-  color: #f0442f;
+  border-color: color-mix(in srgb, var(--danger) 70%, var(--line));
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface-1));
+  color: var(--danger);
 }
 
 .port-output-config-inspector[data-render-mode="dock"] .port-output-action-button {
@@ -738,7 +838,7 @@
 }
 
 .port-output-config-inspector[data-device-class="mobile"] .port-output-row {
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   padding-right: 8px;
 }
 
@@ -749,6 +849,17 @@
 
 .port-output-config-inspector[data-device-class="mobile"] .port-output-action-label {
   display: none;
+}
+
+@media (max-width: 900px) {
+  .port-output-config-inspector[data-render-mode="dialog"] .port-output-action-button {
+    width: 32px;
+    padding: 0;
+  }
+
+  .port-output-config-inspector[data-render-mode="dialog"] .port-output-action-label {
+    display: none;
+  }
 }
 
 .slot-config-tile-grid {
@@ -947,63 +1058,102 @@
 }
 
 .slot-config-flow-column {
-  --slot-config-flow-accent: var(--accent-strong);
-  --slot-config-flow-soft: var(--accent-soft);
   display: grid;
   min-width: 0;
   gap: 10px;
   padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--slot-config-flow-accent) 68%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
   border-radius: 8px;
-  background: color-mix(in srgb, var(--slot-config-flow-soft) 28%, var(--surface-2));
+  background: color-mix(in srgb, var(--surface-2) 62%, var(--surface-1));
 }
 
-.slot-config-flow-column.is-output {
-  --slot-config-flow-accent: #d9822b;
-  --slot-config-flow-soft: rgb(217 130 43 / 18%);
-}
+/*
+  AI-REMOVED 2026-06-04:
+  Reason: 输入/输出/共享列已经由标题和布局表达，列容器彩色边框/背景重复表达区域和角色。
+  Trigger: 用户要求颜色和边框不能传递重复信息。
+  Evidence: active slot-config-flow-column 已改为中性边框和背景。
+  Replacement: .slot-config-flow-column neutral style
+  Risk: Low
+  Human Review: Required
 
-.slot-config-flow-column.is-shared {
-  --slot-config-flow-accent: var(--text-2);
-  --slot-config-flow-soft: rgb(128 128 128 / 10%);
-}
+  Original code:
+  .slot-config-flow-column {
+    --slot-config-flow-accent: var(--accent-strong);
+    --slot-config-flow-soft: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--slot-config-flow-accent) 68%, var(--line));
+    background: color-mix(in srgb, var(--slot-config-flow-soft) 28%, var(--surface-2));
+  }
+
+  .slot-config-flow-column.is-output {
+    --slot-config-flow-accent: #d9822b;
+    --slot-config-flow-soft: rgb(217 130 43 / 18%);
+  }
+
+  .slot-config-flow-column.is-shared {
+    --slot-config-flow-accent: var(--text-2);
+    --slot-config-flow-soft: rgb(128 128 128 / 10%);
+  }
+*/
 
 .slot-config-flow-column-header {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
-  color: var(--slot-config-flow-accent);
-}
-
-.slot-config-flow-column-header svg {
-  width: 18px;
-  height: 18px;
+  color: var(--text-0);
 }
 
 .slot-config-flow-column-header div {
   display: grid;
   min-width: 0;
-  gap: 2px;
 }
 
 .slot-config-flow-column-header strong {
   overflow: hidden;
-  color: var(--slot-config-flow-accent);
+  color: var(--text-0);
   font-size: 0.86rem;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.slot-config-flow-column-header span {
-  overflow: hidden;
-  color: color-mix(in srgb, var(--slot-config-flow-accent) 82%, var(--text-1));
-  font-size: 0.72rem;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/*
+  AI-REMOVED 2026-06-04:
+  Reason: 列 header 图标与辅助计数字段已从 JSX 删除，相关样式不再参与当前 UI。
+  Trigger: 用户要求图标/文字/summary 不重复表达标题和列表内容。
+  Evidence: slot-config-flow-column-header 只保留 strong 标题。
+  Replacement: .slot-config-flow-column-header strong
+  Risk: Low
+  Human Review: Required
+
+  Original code:
+  .slot-config-flow-column-header {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+    color: var(--slot-config-flow-accent);
+  }
+
+  .slot-config-flow-column-header svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .slot-config-flow-column-header div {
+    gap: 2px;
+  }
+
+  .slot-config-flow-column-header strong {
+    color: var(--slot-config-flow-accent);
+  }
+
+  .slot-config-flow-column-header span {
+    overflow: hidden;
+    color: color-mix(in srgb, var(--slot-config-flow-accent) 82%, var(--text-1));
+    font-size: 0.72rem;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+*/
 
 .slot-config-flow-slot-list,
 .slot-config-group {
@@ -1021,7 +1171,7 @@
   min-width: 0;
   min-height: 54px;
   padding: 8px 8px 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--slot-config-flow-accent) 36%, var(--line));
+  border: 1px solid var(--line);
   border-radius: 7px;
   background: color-mix(in srgb, var(--surface-1) 72%, transparent);
   color: var(--text-0);
@@ -1030,8 +1180,8 @@
 }
 
 .slot-config-flow-slot:hover {
-  border-color: var(--slot-config-flow-accent);
-  background: color-mix(in srgb, var(--surface-1) 86%, var(--slot-config-flow-soft));
+  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  background: color-mix(in srgb, var(--surface-2) 70%, var(--surface-1));
 }
 
 .slot-config-flow-slot-label {
@@ -1115,16 +1265,30 @@
   align-self: center;
   place-items: center;
   min-width: 0;
-  gap: 8px;
   color: var(--text-2);
   text-align: center;
 }
 
-.slot-config-flow-direction span {
-  color: var(--text-1);
-  font-size: 0.72rem;
-  line-height: 1.2;
-}
+/*
+  AI-REMOVED 2026-06-04:
+  Reason: “加工流向”文字已从 JSX 删除，流向由箭头和布局表达。
+  Trigger: 用户要求文字与图标不能重复传递同一信息。
+  Evidence: slot-config-flow-direction 保留 aria-label。
+  Replacement: .slot-config-flow-direction svg
+  Risk: Low
+  Human Review: Required
+
+  Original code:
+  .slot-config-flow-direction {
+    gap: 8px;
+  }
+
+  .slot-config-flow-direction span {
+    color: var(--text-1);
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+*/
 
 .slot-config-flow-direction svg {
   width: min(64px, 100%);
@@ -1386,6 +1550,55 @@
   }
 }
 
+.behavior-toggle-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.behavior-toggle-label {
+  min-width: 0;
+  color: var(--text-1);
+  font-size: 0.82rem;
+}
+
+.toggle-on,
+.toggle-off {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: transparent;
+  font-size: 0;
+}
+
+.toggle-on::after,
+.toggle-off::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-2);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.toggle-on {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.toggle-on::after {
+  transform: translateX(18px);
+  background: var(--accent-strong);
+}
+
 /* Recipe Config Inspector */
 .recipe-config-row {
   display: flex;
@@ -1496,10 +1709,22 @@
   gap: 4px;
   padding: 5px;
   border: 1px solid color-mix(in srgb, var(--line-strong) 66%, var(--line));
-  border-radius: 7px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 94%, white 2%) 0%, var(--surface-2) 100%);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface-1) 84%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-2) 62%, var(--surface-1));
+  /*
+    AI-REMOVED 2026-06-04:
+    Reason: 配方状态行是 Inspector 内列表行，不应通过渐变和内阴影制造卡片立体感。
+    Trigger: 用户要求将扁平、少彩色、少卡片嵌套的 Inspector 设计语言应用到其他 Inspector。
+    Evidence: InspectorPanel设计风格规范 2.2。
+    Replacement: neutral flat background above.
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 94%, white 2%) 0%, var(--surface-2) 100%);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface-1) 84%, transparent);
+  */
 
   > :first-child {
     flex: 1 1 auto;

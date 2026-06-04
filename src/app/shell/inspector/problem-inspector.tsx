@@ -114,15 +114,38 @@ export const ProblemInspector = observer(function ProblemInspector({
         <span>设备问题</span>
         <LucideChevronDown aria-hidden="true" />
       </div>
-      <div className={cm(styles, "inspector-expanded-body definition-list")}>
+      <div className={cm(styles, "inspector-expanded-body problem-list")} role="list">
+        {/*
+          AI-REMOVED 2026-06-04:
+          Reason: problem-inspector 在 expanded panel 内再次嵌套 definition-card，造成右侧 Inspector 层级过重。
+          Trigger: 用户要求将端口配置的扁平、低彩色、少卡片设计语言应用到其他 Inspector。
+          Evidence: InspectorPanel设计风格规范 2.1/2.3/2.5 要求普通 section 使用 list row，不使用 card 嵌套。
+          Replacement: problem-row list item below.
+          Risk: Low
+          Human Review: Required
+
+          Original code:
+          {allProblems.map((problem, index) => (
+            <article
+              className={cm(styles, "definition-card")}
+              key={`${problem.severity}-${index}`}
+              data-problem-severity={problem.severity}
+            >
+              <p>{problem.message}</p>
+            </article>
+          ))}
+        */}
         {allProblems.map((problem, index) => (
-          <article
-            className={cm(styles, "definition-card")}
-            key={`${problem.severity}-${index}`}
+          <div
+            aria-label={`${problem.severity === "error" ? "错误" : "警告"}：${problem.message}`}
+            className={cm(styles, "problem-row")}
+            data-problem-row
             data-problem-severity={problem.severity}
+            key={`${problem.severity}-${index}`}
+            role="listitem"
           >
             <p>{problem.message}</p>
-          </article>
+          </div>
         ))}
       </div>
     </article>

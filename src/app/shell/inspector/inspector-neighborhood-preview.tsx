@@ -41,7 +41,7 @@ interface InspectorNeighborhoodPreviewHostSize {
 interface InspectorPortOutputCallout {
   readonly id: string;
   readonly label: string;
-  readonly tone: "blue" | "green" | "orange";
+  readonly portKind: "item" | "fluid";
   readonly targetX: number;
   readonly targetY: number;
   readonly labelX: number;
@@ -282,7 +282,7 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
                 <g
                   className={cm(styles, "inspector-port-callout")}
                   data-port-callout-id={callout.id}
-                  data-port-tone={callout.tone}
+                  data-port-kind={callout.portKind}
                   key={callout.id}
                 >
                   <line
@@ -380,7 +380,7 @@ export function resolveInspectorPortOutputCallouts(options: {
   const cellWidth = options.width / options.bounds.width;
   const cellHeight = options.height / options.bounds.height;
 
-  return rows.flatMap((row, index) => {
+  return rows.flatMap((row) => {
     const rowModel = resolveCalloutRowModel({
       definition,
       entity,
@@ -413,7 +413,7 @@ export function resolveInspectorPortOutputCallouts(options: {
     return [{
       id: row.portGroup.id,
       label: row.portLabel,
-      tone: resolvePortTone(index),
+      portKind: resolvePortTone(row.portGroup),
       targetX: target.x,
       targetY: target.y,
       labelX: label.x,
