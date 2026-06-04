@@ -12,83 +12,101 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { PortOutputConfigInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import { rotateGridRotation } from "@/shared/geometry/grid";
+import {
+  resolveOutputGroupRows,
+  resolvePortTone,
+  type OutputGroupRow,
+} from "@/app/shell/inspector/port-output-config-model";
+import { PortOutputLocatorBadge } from "@/app/shell/inspector/port-output-locator-badge";
 import {
   useInspectorRenderMode,
 } from "@/app/shell/inspector/selection-inspector-model";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
-type PortGroupDefinition = EntityDefinition["portGroups"][number];
+/*
+  AI-REMOVED 2026-06-03:
+  Reason: 输出端口行模型需要被 Inspector panel 和 dialog 预览 callout 共用，避免 P1/P2 编号在两个视图中分叉。
+  Trigger: 输出端口定位标注需求要求 dialog 与 panel 使用同一组端口标签。
+  Evidence: 新共享实现位于 port-output-config-model.ts，当前文件与 inspector-neighborhood-preview.tsx 均引用该模型。
+  Replacement: src/app/shell/inspector/port-output-config-model.ts
+  Risk: Low
+  Human Review: Required
 
-interface OutputGroupRow {
-  portGroup: PortGroupDefinition;
-  groupIndex: number;
-  currentItemId: string | null;
-  label: string;
-  portLabel: string;
-}
+  Original code:
+  type PortGroupDefinition = EntityDefinition["portGroups"][number];
 
-function resolveOutputGroupRows(
-  definition: EntityDefinition,
-  portGroupIds: readonly string[],
-  entity: WorldEntity,
-): OutputGroupRow[] {
-  const rows: OutputGroupRow[] = [];
+  interface OutputGroupRow {
+    portGroup: PortGroupDefinition;
+    groupIndex: number;
+    currentItemId: string | null;
+    label: string;
+    portLabel: string;
+  }
 
-  for (const portGroupId of portGroupIds) {
-    const groupIndex = definition.portGroups.findIndex((g) => g.id === portGroupId);
-    if (groupIndex < 0) continue;
-    const portGroup = definition.portGroups[groupIndex];
-    if (portGroup === undefined) continue;
-    if (portGroup.direction !== "output") continue;
+  function resolveOutputGroupRows(
+    definition: EntityDefinition,
+    portGroupIds: readonly string[],
+    entity: WorldEntity,
+  ): OutputGroupRow[] {
+    const rows: OutputGroupRow[] = [];
 
-    const firstPortIndex = 0;
-    const configPath = `portGroups[${groupIndex}].ports[${firstPortIndex}].acceptRule`;
-    const configOverride = entity.config[configPath];
+    for (const portGroupId of portGroupIds) {
+      const groupIndex = definition.portGroups.findIndex((g) => g.id === portGroupId);
+      if (groupIndex < 0) continue;
+      const portGroup = definition.portGroups[groupIndex];
+      if (portGroup === undefined) continue;
+      if (portGroup.direction !== "output") continue;
 
-    let currentItemId: string | null = null;
-    if (
-      configOverride !== undefined &&
-      configOverride !== null &&
-      typeof configOverride === "object"
-    ) {
-      const base = (configOverride as Record<string, unknown>).base;
+      const firstPortIndex = 0;
+      const configPath = `portGroups[${groupIndex}].ports[${firstPortIndex}].acceptRule`;
+      const configOverride = entity.config[configPath];
+
+      let currentItemId: string | null = null;
       if (
-        base !== undefined &&
-        base !== null &&
-        typeof base === "object" &&
-        (base as Record<string, unknown>).kind === "item" &&
-        typeof (base as Record<string, unknown>).itemId === "string"
+        configOverride !== undefined &&
+        configOverride !== null &&
+        typeof configOverride === "object"
       ) {
-        currentItemId = (base as Record<string, unknown>).itemId as string;
+        const base = (configOverride as Record<string, unknown>).base;
+        if (
+          base !== undefined &&
+          base !== null &&
+          typeof base === "object" &&
+          (base as Record<string, unknown>).kind === "item" &&
+          typeof (base as Record<string, unknown>).itemId === "string"
+        ) {
+          currentItemId = (base as Record<string, unknown>).itemId as string;
+        }
       }
+
+      const kindLabel = portGroup.kind === "fluid" ? "液体输出" : "固体输出";
+
+      rows.push({
+        portGroup,
+        groupIndex,
+        currentItemId,
+        label: kindLabel,
+        portLabel: `P${rows.length + 1}`,
+      });
     }
 
-    const kindLabel = portGroup.kind === "fluid" ? "液体输出" : "固体输出";
-
-    rows.push({
-      portGroup,
-      groupIndex,
-      currentItemId,
-      label: kindLabel,
-      portLabel: `P${rows.length + 1}`,
-    });
+    return rows;
   }
 
-  return rows;
-}
+  function resolvePortTone(index: number): "blue" | "green" | "orange" {
+    if (index === 0) {
+      return "blue";
+    }
 
-function resolvePortTone(index: number): "blue" | "green" | "orange" {
-  if (index === 0) {
-    return "blue";
+    if (index === 1) {
+      return "green";
+    }
+
+    return "orange";
   }
-
-  if (index === 1) {
-    return "green";
-  }
-
-  return "orange";
-}
+*/
 
 function resolveItemIconSrc(item: ItemDefinition | null): string | null {
   return item === null ? null : `/item-icons/${item.iconId}.webp`;
@@ -121,6 +139,8 @@ export function PortOutputConfigInspector({
   const configuredCount = rows.filter((row) => row.currentItemId !== null).length;
   const unconfiguredCount = rows.length - configuredCount;
   const deviceClass = appHost.state?.screenProfile?.deviceClass ?? "desktop";
+  const displayRotation = appHost.workspace.editor?.state?.viewport?.displayRotation ?? 0;
+  const locatorRotation = rotateGridRotation(entity.rotation, displayRotation);
 
   const patchEntityConfig = (patch: Record<string, unknown>) => {
     appHost.workspace.editor?.actions.patchEntityConfig(entity.id, patch);
@@ -278,7 +298,14 @@ export function PortOutputConfigInspector({
                 data-port-tone={resolvePortTone(rowIndex)}
                 key={row.portGroup.id}
               >
-                <span className={cm(styles, "port-output-index")}>{row.portLabel}</span>
+                <PortOutputLocatorBadge
+                  definition={definition}
+                  portLabel={row.portLabel}
+                  rows={rows}
+                  rotation={locatorRotation}
+                  targetPortGroupId={row.portGroup.id}
+                  title={`${row.portLabel} ${row.label} 位置`}
+                />
                 <span
                   aria-label={typeIconLabel}
                   className={cm(styles, "port-output-type-icon")}

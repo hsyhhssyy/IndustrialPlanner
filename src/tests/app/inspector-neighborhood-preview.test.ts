@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import { resolveInspectorPortOutputCallouts } from "@/app/shell/inspector/inspector-neighborhood-preview";
 import { resolveInspectorNeighborhoodPreviewModel } from "@/app/shell/inspector/inspector-neighborhood-preview-model";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { DEFAULT_WORLD_BASE_ID } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { createRegistryContract } from "@/registry";
 
 function createEntityDefinition(options: {
   id: string;
@@ -159,5 +161,50 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
       "partial-left",
       "inside-bottom-right",
     ]);
+  });
+
+  it("resolves output port callouts for expanded reaction pool", () => {
+    const registry = createRegistryContract();
+    const selectedDefinition = registry.entityDefinitions.find((definition) =>
+      definition.id === "item_port_mix_pool_large_1",
+    );
+    if (selectedDefinition === undefined) {
+      throw new Error("Expected expanded reaction pool definition.");
+    }
+
+    const selectedEntity = createEntity({
+      id: "selected",
+      definitionId: selectedDefinition.id,
+      x: 10,
+      y: 20,
+    });
+    const document = createWorldDocument([selectedEntity]);
+    const entityDefinitionMap = new Map([
+      [selectedDefinition.id, selectedDefinition],
+    ]);
+    const previewModel = resolveInspectorNeighborhoodPreviewModel({
+      document,
+      entityDefinitionMap,
+      selectedEntityId: selectedEntity.id,
+    });
+    if (previewModel === null) {
+      throw new Error("Expected preview model.");
+    }
+
+    const callouts = resolveInspectorPortOutputCallouts({
+      bounds: previewModel.bounds,
+      document,
+      entityDefinitionMap,
+      height: 260,
+      selectedEntityId: selectedEntity.id,
+      width: 280,
+    });
+
+    expect(callouts.map((callout) => callout.label)).toEqual(["P1", "P2", "P3"]);
+    expect(callouts.find((callout) => callout.id === "item_output")?.markerPoints.length).toBe(4);
+    const itemOutput = callouts.find((callout) => callout.id === "item_output");
+    expect(itemOutput?.labelY).toBeLessThan(itemOutput?.targetY ?? 0);
+    const fluidOutputA = callouts.find((callout) => callout.id === "fluid_output_a");
+    expect(fluidOutputA?.labelX).toBeLessThan(fluidOutputA?.targetX ?? 0);
   });
 });

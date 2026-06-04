@@ -521,6 +521,62 @@
   box-shadow: 0 1px 2px rgb(15 23 42 / 10%);
 }
 
+.port-output-locator {
+  display: inline-grid;
+  grid-template-columns: 30px auto;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 32px;
+  min-width: 56px;
+  gap: 2px;
+  padding: 2px 5px 2px 4px;
+  border: 1px solid color-mix(in srgb, var(--port-output-accent) 70%, var(--line));
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--port-output-accent) 92%, #ffffff);
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 10%);
+}
+
+.port-output-locator-svg {
+  display: block;
+  width: 30px;
+  height: 24px;
+  overflow: visible;
+}
+
+.port-output-locator-body {
+  fill: rgb(255 255 255 / 13%);
+  stroke: rgb(255 255 255 / 54%);
+  stroke-width: 0.08;
+}
+
+.port-output-locator-marker {
+  fill: rgb(255 255 255 / 34%);
+}
+
+.port-output-locator-selected-line {
+  fill: none;
+  stroke: #ffffff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 0.16;
+}
+
+.port-output-locator-selected-marker {
+  fill: #ffffff;
+  stroke: color-mix(in srgb, var(--port-output-accent) 78%, #111827);
+  stroke-width: 0.08;
+}
+
+.port-output-locator-label {
+  min-width: 0;
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .port-output-type-icon {
   display: inline-flex;
   align-items: center;

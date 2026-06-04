@@ -13,9 +13,21 @@ import type { AppHost } from "@/app/host/app-host";
 import {
   resolveInspectorNeighborhoodPreviewModel,
 } from "@/app/shell/inspector/inspector-neighborhood-preview-model";
+import {
+  resolveOutputGroupRows,
+  resolvePortTone,
+  type OutputGroupRow,
+} from "@/app/shell/inspector/port-output-config-model";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
+import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import {
+  INSPECTOR_TYPE,
+  type PortOutputConfigInspectorDeclaration,
+} from "@/domain/registry/types/entity-inspector";
 import type { BlueprintPreviewHandle } from "@/domain/renderer";
+import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -24,6 +36,21 @@ const EMPTY_DOCUMENT_SUBSCRIPTION = () => undefined;
 interface InspectorNeighborhoodPreviewHostSize {
   width: number;
   height: number;
+}
+
+interface InspectorPortOutputCallout {
+  readonly id: string;
+  readonly label: string;
+  readonly tone: "blue" | "green" | "orange";
+  readonly targetX: number;
+  readonly targetY: number;
+  readonly labelX: number;
+  readonly labelY: number;
+  readonly markerPoints: readonly {
+    readonly x: number;
+    readonly y: number;
+    readonly portId: string;
+  }[];
 }
 
 export const InspectorNeighborhoodPreview = observer(function InspectorNeighborhoodPreview({
@@ -64,6 +91,19 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
       ? null
       : createInspectorNeighborhoodBlueprintDocument(previewModel, documentSnapshot?.baseId ?? "wuling_protocol_core"),
     [previewModel, documentSnapshot?.baseId],
+  );
+  const portOutputCallouts = useMemo(
+    () => previewModel === null || hostSize === null
+      ? []
+      : resolveInspectorPortOutputCallouts({
+        bounds: previewModel.bounds,
+        document: documentSnapshot,
+        entityDefinitionMap,
+        height: hostSize.height,
+        selectedEntityId,
+        width: hostSize.width,
+      }),
+    [documentSnapshot, entityDefinitionMap, hostSize, previewModel, selectedEntityId],
   );
 
   useLayoutEffect(() => {
@@ -225,9 +265,57 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
       <div className={cm(styles, "inspector-neighborhood-preview-frame")} ref={frameRef}>
         <div
           className={cm(styles, "inspector-neighborhood-preview-canvas")}
-          ref={canvasHostRef}
           style={hostStyle}
-        />
+        >
+          <div
+            className={cm(styles, "inspector-neighborhood-preview-canvas-stage")}
+            ref={canvasHostRef}
+          />
+          {hostSize === null || portOutputCallouts.length === 0 ? null : (
+            <svg
+              aria-hidden="true"
+              className={cm(styles, "inspector-port-callout-overlay")}
+              focusable="false"
+              viewBox={`0 0 ${hostSize.width} ${hostSize.height}`}
+            >
+              {portOutputCallouts.map((callout) => (
+                <g
+                  className={cm(styles, "inspector-port-callout")}
+                  data-port-callout-id={callout.id}
+                  data-port-tone={callout.tone}
+                  key={callout.id}
+                >
+                  <line
+                    className={cm(styles, "inspector-port-callout-leader")}
+                    x1={callout.targetX}
+                    x2={callout.labelX}
+                    y1={callout.targetY}
+                    y2={callout.labelY}
+                  />
+                  {callout.markerPoints.map((marker) => (
+                    <circle
+                      className={cm(styles, "inspector-port-callout-marker")}
+                      cx={marker.x}
+                      cy={marker.y}
+                      data-port-id={marker.portId}
+                      key={marker.portId}
+                      r="4"
+                    />
+                  ))}
+                  <g
+                    className={cm(styles, "inspector-port-callout-label")}
+                    transform={`translate(${callout.labelX - 18} ${callout.labelY - 11})`}
+                  >
+                    <rect height="22" rx="6" width="36" x="0" y="0" />
+                    <text dominantBaseline="central" textAnchor="middle" x="18" y="11">
+                      {callout.label}
+                    </text>
+                  </g>
+                </g>
+              ))}
+            </svg>
+          )}
+        </div>
       </div>
     </aside>
   );
@@ -251,6 +339,180 @@ function createInspectorNeighborhoodBlueprintDocument(
     entityOrder: model.entities.map((entry) => entry.entity.id),
     slotLinks: [],
   });
+}
+
+export function resolveInspectorPortOutputCallouts(options: {
+  readonly bounds: {
+    readonly left: number;
+    readonly top: number;
+    readonly width: number;
+    readonly height: number;
+  };
+  readonly document: WorldDocument | null;
+  readonly entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  readonly height: number;
+  readonly selectedEntityId: string | null;
+  readonly width: number;
+}): InspectorPortOutputCallout[] {
+  if (options.document === null || options.selectedEntityId === null) {
+    return [];
+  }
+
+  const entity = options.document.entities[options.selectedEntityId];
+  if (entity === undefined) {
+    return [];
+  }
+
+  const definition = options.entityDefinitionMap.get(entity.definitionId);
+  if (definition === undefined) {
+    return [];
+  }
+
+  const declaration = definition.inspectors.find((inspector): inspector is PortOutputConfigInspectorDeclaration =>
+    inspector.type === INSPECTOR_TYPE.portOutputConfig,
+  );
+
+  if (declaration === undefined) {
+    return [];
+  }
+
+  const rows = resolveOutputGroupRows(definition, declaration.portGroupIds, entity);
+  const cellWidth = options.width / options.bounds.width;
+  const cellHeight = options.height / options.bounds.height;
+
+  return rows.flatMap((row, index) => {
+    const rowModel = resolveCalloutRowModel({
+      definition,
+      entity,
+      row,
+    });
+
+    if (rowModel === null) {
+      return [];
+    }
+
+    const target = resolvePreviewPixelPoint({
+      bounds: options.bounds,
+      cellHeight,
+      cellWidth,
+      worldX: rowModel.target.x,
+      worldY: rowModel.target.y,
+    });
+    const label = clampCalloutLabelPoint(
+      resolvePreviewPixelPoint({
+        bounds: options.bounds,
+        cellHeight,
+        cellWidth,
+        worldX: rowModel.label.x,
+        worldY: rowModel.label.y,
+      }),
+      options.width,
+      options.height,
+    );
+
+    return [{
+      id: row.portGroup.id,
+      label: row.portLabel,
+      tone: resolvePortTone(index),
+      targetX: target.x,
+      targetY: target.y,
+      labelX: label.x,
+      labelY: label.y,
+      markerPoints: rowModel.markerPoints.map((marker) => ({
+        portId: marker.portId,
+        ...resolvePreviewPixelPoint({
+          bounds: options.bounds,
+          cellHeight,
+          cellWidth,
+          worldX: marker.x,
+          worldY: marker.y,
+        }),
+      })),
+    }];
+  });
+}
+
+function resolveCalloutRowModel(options: {
+  readonly definition: EntityDefinition;
+  readonly entity: WorldEntity;
+  readonly row: OutputGroupRow;
+}): {
+  readonly target: { readonly x: number; readonly y: number };
+  readonly label: { readonly x: number; readonly y: number };
+  readonly markerPoints: readonly { readonly portId: string; readonly x: number; readonly y: number }[];
+} | null {
+  const geometries = options.row.portGroup.ports.map((port) => {
+    const geometry = resolveRotatedPortGeometry({
+      footprint: options.definition.footprint,
+      port,
+      rotation: options.entity.rotation,
+    });
+
+    return {
+      portId: port.id,
+      delta: geometry.delta,
+      x: options.entity.position.x + geometry.anchor.x,
+      y: options.entity.position.y + geometry.anchor.y,
+    };
+  });
+
+  if (geometries.length === 0) {
+    return null;
+  }
+
+  const target = {
+    x: average(geometries.map((geometry) => geometry.x)),
+    y: average(geometries.map((geometry) => geometry.y)),
+  };
+  const firstDelta = geometries[0]?.delta ?? { x: 0, y: -1 };
+
+  return {
+    target,
+    label: {
+      x: target.x + firstDelta.x * 1.35,
+      y: target.y + firstDelta.y * 1.35,
+    },
+    markerPoints: geometries.map((geometry) => ({
+      portId: geometry.portId,
+      x: geometry.x,
+      y: geometry.y,
+    })),
+  };
+}
+
+function resolvePreviewPixelPoint(options: {
+  readonly bounds: {
+    readonly left: number;
+    readonly top: number;
+  };
+  readonly cellHeight: number;
+  readonly cellWidth: number;
+  readonly worldX: number;
+  readonly worldY: number;
+}): { readonly x: number; readonly y: number } {
+  return {
+    x: (options.worldX - options.bounds.left) * options.cellWidth,
+    y: (options.worldY - options.bounds.top) * options.cellHeight,
+  };
+}
+
+function clampCalloutLabelPoint(
+  point: { readonly x: number; readonly y: number },
+  width: number,
+  height: number,
+): { readonly x: number; readonly y: number } {
+  return {
+    x: clamp(point.x, 22, width - 22),
+    y: clamp(point.y, 15, height - 15),
+  };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function average(values: readonly number[]): number {
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
 function resolveInspectorNeighborhoodPreviewHostSize(options: {

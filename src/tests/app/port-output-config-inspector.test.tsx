@@ -185,6 +185,25 @@ describe("PortOutputConfigInspector", () => {
     expect(container.querySelectorAll("[data-port-group-id]").length).toBe(3);
   });
 
+  it("renders row-level locator badges for expanded reactor output port groups", () => {
+    const workspace = createWorkspace();
+    const definition = requireDefinition(workspace, "item_port_mix_pool_large_1");
+    const entity: WorldEntity = {
+      ...createEmptyEntity("large-reactor-2", "item_port_mix_pool_large_1"),
+      rotation: 90,
+    };
+    const currentAppHost = buildAppHost(workspace, entity, { displayRotation: 90, deviceClass: "tablet" });
+    appHost = currentAppHost;
+    renderInspector(currentAppHost, definition, entity, root);
+
+    const locators = container.querySelectorAll("[data-port-output-locator]");
+    expect(locators.length).toBe(3);
+    expect(container.querySelector("[data-port-output-locator='item_output']")?.getAttribute("data-locator-rotation")).toBe("180");
+    expect(container.querySelectorAll("[data-port-output-locator='item_output'] [data-selected-port-id]").length).toBe(4);
+    expect(container.querySelectorAll("[data-port-output-locator='fluid_output_a'] [data-selected-port-id]").length).toBe(1);
+    expect(container.querySelector("[data-port-output-locator='item_output']")?.textContent).toContain("P1");
+  });
+
   it("shows selected item label from existing config", () => {
     const workspace = createWorkspace();
     const definition = requireDefinition(workspace, "item_port_mix_pool_1");
@@ -217,10 +236,32 @@ function createEmptyEntity(id: string, definitionId: string): WorldEntity {
   return { id, definitionId, position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] };
 }
 
-function buildAppHost(workspace: WorkspaceContract, _entity: WorldEntity): AppHost {
+function buildAppHost(
+  workspace: WorkspaceContract,
+  _entity: WorldEntity,
+  options: {
+    displayRotation?: 0 | 90 | 180 | 270;
+    deviceClass?: "desktop" | "tablet" | "mobile";
+  } = {},
+): AppHost {
   const picker = new WorkbenchEncyclopediaPickerController(() => ({ desktopCategory: "all", mobileSelectedCategories: [] }));
   return {
-    workspace: { ...workspace, editor: { actions: { patchEntityConfig: vi.fn(), deleteEntityConfigKeys: vi.fn() } } },
+    state: {
+      screenProfile: {
+        deviceClass: options.deviceClass ?? "desktop",
+      },
+    },
+    workspace: {
+      ...workspace,
+      editor: {
+        state: {
+          viewport: {
+            displayRotation: options.displayRotation ?? 0,
+          },
+        },
+        actions: { patchEntityConfig: vi.fn(), deleteEntityConfigKeys: vi.fn() },
+      },
+    },
     encyclopediaPicker: picker,
     actions: { translate: (key: string) => key },
   } as unknown as AppHost;
@@ -232,7 +273,22 @@ function buildAppHostWithEditor(
 ): AppHost {
   const picker = new WorkbenchEncyclopediaPickerController(() => ({ desktopCategory: "all", mobileSelectedCategories: [] }));
   return {
-    workspace: { ...workspace, editor: { actions: { patchEntityConfig: patch, deleteEntityConfigKeys: del } } },
+    state: {
+      screenProfile: {
+        deviceClass: "desktop",
+      },
+    },
+    workspace: {
+      ...workspace,
+      editor: {
+        state: {
+          viewport: {
+            displayRotation: 0,
+          },
+        },
+        actions: { patchEntityConfig: patch, deleteEntityConfigKeys: del },
+      },
+    },
     encyclopediaPicker: picker,
     actions: { translate: (key: string) => key },
   } as unknown as AppHost;
