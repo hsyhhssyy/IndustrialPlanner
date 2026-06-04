@@ -36,11 +36,11 @@
 
 .recipe-display-formula-inspector {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr);
   width: 100%;
   min-width: 0;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .recipe-display-formula-group {
@@ -51,11 +51,13 @@
 }
 
 .recipe-display-formula-inspector .recipe-display-formula-group:first-child {
-  justify-content: flex-start;
+  width: 100%;
+  justify-content: flex-end;
 }
 
 .recipe-display-formula-inspector .recipe-display-formula-group:last-child {
-  justify-content: flex-end;
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .recipe-display-formula-item {
@@ -178,15 +180,15 @@
   svg {
     position: relative;
     z-index: 1;
-    width: 20px;
-    height: 20px;
-    stroke-width: 2.4;
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
   }
 }
 
 .recipe-display-formula-progress[data-progress-kind="ring"] {
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
   background:
     conic-gradient(
@@ -199,7 +201,7 @@
   &::before {
     content: "";
     position: absolute;
-    inset: 4px;
+    inset: 3px;
     border-radius: inherit;
     background: var(--surface-1);
   }
