@@ -85,6 +85,64 @@
   color: var(--text-1);
 }
 
+.inspector-collapsible-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0;
+  padding: 0;
+}
+
+.inspector-expanded-header-toggle {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 38px;
+  gap: 6px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  text-align: left;
+}
+
+.inspector-expanded-header-toggle:hover {
+  background: color-mix(in srgb, var(--surface-2) 66%, transparent);
+}
+
+.inspector-expanded-header-toggle:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
+
+.inspector-expanded-header-toggle svg {
+  transform: rotate(-90deg);
+  transition: transform 0.16s ease;
+}
+
+.inspector-expanded-header-toggle svg.is-expanded {
+  transform: rotate(0deg);
+}
+
+.inspector-expanded-header-toggle span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspector-expanded-header-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 8px;
+  padding-right: 10px;
+}
+
 .inspector-expanded-body {
   display: grid;
   gap: 8px;

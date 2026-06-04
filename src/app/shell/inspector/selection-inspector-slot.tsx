@@ -25,6 +25,7 @@ import { WarehouseItemLinkInspector } from "./warehouse-item-link-inspector";
 import { SubmitToWarehouseInspector } from "./submit-to-warehouse-inspector";
 import { ProblemInspector } from "./problem-inspector";
 import { PortOutputConfigInspector } from "./port-output-config-inspector";
+import { InspectorCollapsiblePanel } from "./inspector-collapsible-panel";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -68,10 +69,10 @@ function EmptyInspector({
   declaration: EntityInspectorDeclaration;
 }) {
   return (
-    <article
-      className={cm(styles, "definition-card inspector-expanded-panel")}
-      data-inspector-key={declaration.type}
+    <InspectorCollapsiblePanel
       data-inspector-label={INSPECTOR_LABELS[declaration.type] ?? declaration.type}
+      dataInspectorKey={declaration.type}
+      title={INSPECTOR_LABELS[declaration.type] ?? declaration.type}
     >
       {/*
         AI-REMOVED 2026-05-26:
@@ -85,13 +86,8 @@ function EmptyInspector({
         Original code:
         <h4>{INSPECTOR_LABELS[declaration.type] ?? declaration.type}</h4>
       */}
-      <div className={cm(styles, "inspector-expanded-header")}>
-        <span>{INSPECTOR_LABELS[declaration.type] ?? declaration.type}</span>
-      </div>
-      <div className={cm(styles, "inspector-expanded-body")}>
-        <p>该配置当前不可用。</p>
-      </div>
-    </article>
+      <p>该配置当前不可用。</p>
+    </InspectorCollapsiblePanel>
   );
 }
 

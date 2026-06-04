@@ -1,9 +1,9 @@
 import { observer } from "mobx-react-lite";
-import LucideChevronDown from "~icons/lucide/chevron-down";
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
+import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-collapsible-panel";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -106,48 +106,45 @@ export const ProblemInspector = observer(function ProblemInspector({
   }
 
   return (
-    <article
-      className={cm(styles, "definition-card inspector-expanded-panel problem-inspector")}
-      data-inspector-key={PROBLEM_INSPECTOR_KEY}
+    <InspectorCollapsiblePanel
+      bodyClassName="problem-list"
+      bodyRole="list"
+      className="problem-inspector"
+      dataInspectorKey={PROBLEM_INSPECTOR_KEY}
+      title="设备问题"
     >
-      <div className={cm(styles, "inspector-expanded-header")}>
-        <span>设备问题</span>
-        <LucideChevronDown aria-hidden="true" />
-      </div>
-      <div className={cm(styles, "inspector-expanded-body problem-list")} role="list">
-        {/*
-          AI-REMOVED 2026-06-04:
-          Reason: problem-inspector 在 expanded panel 内再次嵌套 definition-card，造成右侧 Inspector 层级过重。
-          Trigger: 用户要求将端口配置的扁平、低彩色、少卡片设计语言应用到其他 Inspector。
-          Evidence: InspectorPanel设计风格规范 2.1/2.3/2.5 要求普通 section 使用 list row，不使用 card 嵌套。
-          Replacement: problem-row list item below.
-          Risk: Low
-          Human Review: Required
+      {/*
+        AI-REMOVED 2026-06-04:
+        Reason: problem-inspector 在 expanded panel 内再次嵌套 definition-card，造成右侧 Inspector 层级过重。
+        Trigger: 用户要求将端口配置的扁平、低彩色、少卡片设计语言应用到其他 Inspector。
+        Evidence: InspectorPanel设计风格规范 2.1/2.3/2.5 要求普通 section 使用 list row，不使用 card 嵌套。
+        Replacement: problem-row list item below.
+        Risk: Low
+        Human Review: Required
 
-          Original code:
-          {allProblems.map((problem, index) => (
-            <article
-              className={cm(styles, "definition-card")}
-              key={`${problem.severity}-${index}`}
-              data-problem-severity={problem.severity}
-            >
-              <p>{problem.message}</p>
-            </article>
-          ))}
-        */}
+        Original code:
         {allProblems.map((problem, index) => (
-          <div
-            aria-label={`${problem.severity === "error" ? "错误" : "警告"}：${problem.message}`}
-            className={cm(styles, "problem-row")}
-            data-problem-row
-            data-problem-severity={problem.severity}
+          <article
+            className={cm(styles, "definition-card")}
             key={`${problem.severity}-${index}`}
-            role="listitem"
+            data-problem-severity={problem.severity}
           >
             <p>{problem.message}</p>
-          </div>
+          </article>
         ))}
-      </div>
-    </article>
+      */}
+      {allProblems.map((problem, index) => (
+        <div
+          aria-label={`${problem.severity === "error" ? "错误" : "警告"}：${problem.message}`}
+          className={cm(styles, "problem-row")}
+          data-problem-row
+          data-problem-severity={problem.severity}
+          key={`${problem.severity}-${index}`}
+          role="listitem"
+        >
+          <p>{problem.message}</p>
+        </div>
+      ))}
+    </InspectorCollapsiblePanel>
   );
 });

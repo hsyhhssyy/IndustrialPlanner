@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideX from "~icons/lucide/x";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -8,6 +7,7 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { WarehouseItemLinkInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-collapsible-panel";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -45,14 +45,11 @@ export function WarehouseItemLinkInspector({
 
   if (rows.length === 0) {
     return (
-      <article
-        className={cm(styles, "definition-card inspector-expanded-panel warehouse-item-link-inspector")}
-        data-inspector-key="warehouse-item-link"
+      <InspectorCollapsiblePanel
+        className="warehouse-item-link-inspector"
+        dataInspectorKey="warehouse-item-link"
+        title="仓库物品链接"
       >
-        <div className={cm(styles, "inspector-expanded-header")}>
-          <span>仓库物品链接</span>
-          <LucideChevronDown aria-hidden="true" />
-        </div>
         {/*
           AI-REMOVED 2026-05-26:
           Reason: inspector 卡片不再显示标题。
@@ -65,10 +62,8 @@ export function WarehouseItemLinkInspector({
           Original code:
           <h4>仓库物品链接</h4>
         */}
-        <div className={cm(styles, "inspector-expanded-body")}>
-          <p>未找到可链接的槽位。</p>
-        </div>
-      </article>
+        <p>未找到可链接的槽位。</p>
+      </InspectorCollapsiblePanel>
     );
   }
 
@@ -130,14 +125,12 @@ export function WarehouseItemLinkInspector({
   };
 
   return (
-    <article
-      className={cm(styles, "definition-card inspector-expanded-panel warehouse-item-link-inspector")}
-      data-inspector-key="warehouse-item-link"
+    <InspectorCollapsiblePanel
+      bodyClassName="slot-config-list"
+      className="warehouse-item-link-inspector"
+      dataInspectorKey="warehouse-item-link"
+      title="仓库物品链接"
     >
-      <div className={cm(styles, "inspector-expanded-header")}>
-        <span>仓库物品链接</span>
-        <LucideChevronDown aria-hidden="true" />
-      </div>
       {/*
         AI-REMOVED 2026-05-26:
         Reason: inspector 卡片不再显示标题和副标题。
@@ -155,80 +148,78 @@ export function WarehouseItemLinkInspector({
           </div>
         </div>
       */}
-      <div className={cm(styles, "inspector-expanded-body slot-config-list")}>
-        {rows.map((row) => {
-          const itemDefinition = row.currentItemId === null
-            ? null
-            : itemById.get(row.currentItemId) ?? null;
-          const itemLabel = itemDefinition === null
-            ? translate("inspector.warehouseItemLink.selectItem")
-            : translate(itemDefinition.nameKey);
-          const canClear = row.currentItemId !== null;
+      {rows.map((row) => {
+        const itemDefinition = row.currentItemId === null
+          ? null
+          : itemById.get(row.currentItemId) ?? null;
+        const itemLabel = itemDefinition === null
+          ? translate("inspector.warehouseItemLink.selectItem")
+          : translate(itemDefinition.nameKey);
+        const canClear = row.currentItemId !== null;
 
-          return (
-            <div
-              className={cm(styles, "slot-config-row")}
-              data-slot-id={row.slotId}
-              key={row.slotId}
-            >
-              <div className={cm(styles, "slot-config-row-header")}>
-                <strong>{row.slotId}</strong>
-              </div>
-              <div className={cm(styles, "slot-config-row-main")}>
+        return (
+          <div
+            className={cm(styles, "slot-config-row")}
+            data-slot-id={row.slotId}
+            key={row.slotId}
+          >
+            <div className={cm(styles, "slot-config-row-header")}>
+              <strong>{row.slotId}</strong>
+            </div>
+            <div className={cm(styles, "slot-config-row-main")}>
+              <button
+                className={cm(styles, "slot-config-item-button")}
+                data-slot-action="pick-item"
+                disabled={pendingLinkIndex === row.linkIndex}
+                onClick={() => {
+                  void requestItemSelection(row);
+                }}
+                type="button"
+              >
+                <span>{itemLabel}</span>
+              </button>
+              <div className={cm(styles, "slot-config-row-actions")}>
+                <label className={cm(styles, "warehouse-link-ignore-stock")}>
+                  <input
+                    checked={row.currentIgnoreStock}
+                    disabled={row.currentItemId === null}
+                    onChange={() => {
+                      toggleIgnoreStock(row);
+                    }}
+                    type="checkbox"
+                  />
+                  <span>{translate("inspector.warehouseItemLink.ignoreStock")}</span>
+                </label>
                 <button
-                  className={cm(styles, "slot-config-item-button")}
-                  data-slot-action="pick-item"
-                  disabled={pendingLinkIndex === row.linkIndex}
+                  className={cm(styles, "slot-config-clear-button")}
+                  data-slot-action="clear-item"
+                  disabled={!canClear}
                   onClick={() => {
-                    void requestItemSelection(row);
+                    clearLink(row);
                   }}
                   type="button"
                 >
-                  <span>{itemLabel}</span>
-                </button>
-                <div className={cm(styles, "slot-config-row-actions")}>
-                  <label className={cm(styles, "warehouse-link-ignore-stock")}>
-                    <input
-                      checked={row.currentIgnoreStock}
-                      disabled={row.currentItemId === null}
-                      onChange={() => {
-                        toggleIgnoreStock(row);
-                      }}
-                      type="checkbox"
-                    />
-                    <span>{translate("inspector.warehouseItemLink.ignoreStock")}</span>
-                  </label>
-                  <button
-                    className={cm(styles, "slot-config-clear-button")}
-                    data-slot-action="clear-item"
-                    disabled={!canClear}
-                    onClick={() => {
-                      clearLink(row);
-                    }}
-                    type="button"
-                  >
-                    <LucideX aria-hidden="true" />
-                    {/*
-                      AI-REMOVED 2026-06-04:
-                      Reason: “链接”已经由当前 Inspector 标题和行上下文表达，按钮只需要保留动作动词。
-                      Trigger: 用户要求文字不能重复表达已由区域或上下文表达的信息。
-                      Evidence: InspectorPanel设计风格规范 2.5。
-                      Replacement: <span>清除</span>
-                      Risk: Low
-                      Human Review: Required
+                  <LucideX aria-hidden="true" />
+                  {/*
+                    AI-REMOVED 2026-06-04:
+                    Reason: “链接”已经由当前 Inspector 标题和行上下文表达，按钮只需要保留动作动词。
+                    Trigger: 用户要求文字不能重复表达已由区域或上下文表达的信息。
+                    Evidence: InspectorPanel设计风格规范 2.5。
+                    Replacement: <span>清除</span>
+                    Risk: Low
+                    Human Review: Required
 
-                      Original code:
-                      <span>清除链接</span>
-                    */}
-                    <span>清除</span>
-                  </button>
-                </div>
+                    Original code:
+                    <span>清除链接</span>
+                  */}
+                  <span>清除</span>
+                </button>
               </div>
             </div>
-          );
-        })}
-      </div>
-    </article>
+          </div>
+        );
+      })}
+    </InspectorCollapsiblePanel>
   );
 }
 

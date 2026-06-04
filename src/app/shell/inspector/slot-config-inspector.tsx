@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideChevronsRight from "~icons/lucide/chevrons-right";
 import LucidePlus from "~icons/lucide/plus";
 import LucideX from "~icons/lucide/x";
@@ -16,6 +15,7 @@ import {
   useInspectorRenderMode,
   type InspectorDataScope,
 } from "@/app/shell/inspector/selection-inspector-model";
+import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-collapsible-panel";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { NumberInput } from "@/app/shell/shared/number-input";
@@ -96,53 +96,49 @@ export function SlotConfigInspector({
     setEditingSlot(null);
   }, [activeScope, entity.id]);
 
-  const panelHeader = (
-    <div className={cm(styles, "inspector-expanded-header slot-config-panel-header")}>
-      <div className={cm(styles, "slot-config-panel-title")}>
-        <LucideChevronDown aria-hidden="true" />
-        <span>槽位配置</span>
-      </div>
-      <label
-        className={cm(styles, "slot-config-scope-switch", canUseRuntimeState ? "" : "is-disabled")}
-        title={canUseRuntimeState ? undefined : "当前状态仅在仿真运行时可用"}
-      >
-        <span className={cm(styles, "slot-config-scope-switch-copy")}>
-          <span>编辑模式</span>
-          {/*
-            AI-REMOVED 2026-06-04:
-            Reason: 开关控件已经表达开启/关闭状态，旁边文字重复表达同一信息。
-            Trigger: 用户要求文字、颜色、图标、边框等元素不能传递重复信息。
-            Evidence: InspectorPanel设计风格规范 2.5 明确“开关控件已经表达开/关时，不再显示开启/关闭文案”。
-            Replacement: checkbox visual state + aria-label
-            Risk: Low
-            Human Review: Required
+  const scopeSwitch = (
+    <label
+      className={cm(styles, "slot-config-scope-switch", canUseRuntimeState ? "" : "is-disabled")}
+      title={canUseRuntimeState ? undefined : "当前状态仅在仿真运行时可用"}
+    >
+      <span className={cm(styles, "slot-config-scope-switch-copy")}>
+        <span>编辑模式</span>
+        {/*
+          AI-REMOVED 2026-06-04:
+          Reason: 开关控件已经表达开启/关闭状态，旁边文字重复表达同一信息。
+          Trigger: 用户要求文字、颜色、图标、边框等元素不能传递重复信息。
+          Evidence: InspectorPanel设计风格规范 2.5 明确“开关控件已经表达开/关时，不再显示开启/关闭文案”。
+          Replacement: checkbox visual state + aria-label
+          Risk: Low
+          Human Review: Required
 
-            Original code:
-            <strong>{editModeEnabled ? "开启" : "关闭"}</strong>
-          */}
-        </span>
-        <input
-          aria-label="编辑模式"
-          checked={editModeEnabled}
-          className={cm(styles, "slot-config-scope-switch-input")}
-          data-inspector-scope-switch
-          disabled={!canUseRuntimeState}
-          onChange={(event) => {
-            setScope(event.currentTarget.checked ? "initial-config" : "runtime-state");
-          }}
-          type="checkbox"
-        />
-      </label>
-    </div>
+          Original code:
+          <strong>{editModeEnabled ? "开启" : "关闭"}</strong>
+        */}
+      </span>
+      <input
+        aria-label="编辑模式"
+        checked={editModeEnabled}
+        className={cm(styles, "slot-config-scope-switch-input")}
+        data-inspector-scope-switch
+        disabled={!canUseRuntimeState}
+        onChange={(event) => {
+          setScope(event.currentTarget.checked ? "initial-config" : "runtime-state");
+        }}
+        type="checkbox"
+      />
+    </label>
   );
 
   if (groupViews.length === 0) {
     return (
-      <article
-        className={cm(styles, "definition-card inspector-expanded-panel slot-config-inspector")}
-        data-inspector-key="slot-config"
+      <InspectorCollapsiblePanel
+        className="slot-config-inspector"
+        dataInspectorKey="slot-config"
+        headerActions={scopeSwitch}
+        title="槽位配置"
+        titleClassName="slot-config-panel-title"
       >
-        {panelHeader}
         {/*
           AI-REMOVED 2026-05-26:
           Reason: inspector 卡片不再显示标题。
@@ -155,10 +151,8 @@ export function SlotConfigInspector({
           Original code:
           <h4>槽位配置</h4>
         */}
-        <div className={cm(styles, "inspector-expanded-body")}>
-          <div className={cm(styles, "slot-config-empty")}>未找到可编辑的槽位组。</div>
-        </div>
-      </article>
+        <div className={cm(styles, "slot-config-empty")}>未找到可编辑的槽位组。</div>
+      </InspectorCollapsiblePanel>
     );
   }
 
@@ -526,106 +520,107 @@ export function SlotConfigInspector({
   };
 
   return (
-    <article
-      className={cm(styles, "definition-card inspector-expanded-panel slot-config-inspector")}
-      data-inspector-key="slot-config"
+    <InspectorCollapsiblePanel
+      bodyClassName="slot-config-panel-body"
+      className="slot-config-inspector"
       data-inspector-scope={activeScope}
+      dataInspectorKey="slot-config"
       data-render-mode={mode}
+      headerActions={scopeSwitch}
+      title="槽位配置"
+      titleClassName="slot-config-panel-title"
     >
-      {panelHeader}
-      <div className={cm(styles, "inspector-expanded-body slot-config-panel-body")}>
-        {/*
-          AI-REMOVED 2026-05-31:
-          Reason: 槽位配置 UI 从正方形 tile 网格改为设计稿中的左右输入/输出流程布局。
-          Trigger: 用户要求按 inspector dialog 设计稿 1:1 调整槽位配置 UI。
-          Evidence: 设计稿使用蓝色输入栏、橙色输出栏和中间加工流向箭头。
-          Replacement: slot-config-flow-layout / slot-config-flow-column / slot-config-flow-slot。
-          Risk: Low
-          Human Review: Required
+      {/*
+        AI-REMOVED 2026-05-31:
+        Reason: 槽位配置 UI 从正方形 tile 网格改为设计稿中的左右输入/输出流程布局。
+        Trigger: 用户要求按 inspector dialog 设计稿 1:1 调整槽位配置 UI。
+        Evidence: 设计稿使用蓝色输入栏、橙色输出栏和中间加工流向箭头。
+        Replacement: slot-config-flow-layout / slot-config-flow-column / slot-config-flow-slot。
+        Risk: Low
+        Human Review: Required
 
-          Original code:
-          {groupViews.map((groupView) => (
-            <section
-              className={cm(styles, "slot-config-group")}
-              data-slot-config-group={groupView.storageGroup.id}
-              data-slot-config-group-size={groupView.rows.length > 1 ? "multi" : "single"}
-              key={groupView.storageGroup.id}
-            >
-              <div className={cm(styles, "slot-config-tile-grid")} data-render-mode={mode}>
-                {groupView.rows.map((row) => {
-                  const itemDefinition = row.displayItemId === null
-                    ? null
-                    : itemById.get(row.displayItemId) ?? null;
-                  const itemLabel = itemDefinition === null ? "空槽位" : translate(itemDefinition.nameKey);
-                  const iconSrc = itemDefinition === null ? null : resolveItemIconSrc(itemDefinition);
+        Original code:
+        {groupViews.map((groupView) => (
+          <section
+            className={cm(styles, "slot-config-group")}
+            data-slot-config-group={groupView.storageGroup.id}
+            data-slot-config-group-size={groupView.rows.length > 1 ? "multi" : "single"}
+            key={groupView.storageGroup.id}
+          >
+            <div className={cm(styles, "slot-config-tile-grid")} data-render-mode={mode}>
+              {groupView.rows.map((row) => {
+                const itemDefinition = row.displayItemId === null
+                  ? null
+                  : itemById.get(row.displayItemId) ?? null;
+                const itemLabel = itemDefinition === null ? "空槽位" : translate(itemDefinition.nameKey);
+                const iconSrc = itemDefinition === null ? null : resolveItemIconSrc(itemDefinition);
 
-                  return (
-                    <button
-                      aria-label={`${row.displayIndex}. ${itemLabel}`}
-                      className={cm(styles, "slot-config-tile")}
-                      data-slot-action="open-slot-editor"
-                      data-slot-number={row.displayIndex}
-                      key={row.slotId}
-                      onClick={() => {
-                        openSlotEditor(row);
-                      }}
-                      title={itemLabel}
-                      type="button"
-                    >
-                      <span className={cm(styles, "slot-config-tile-index")}>{row.displayIndex}</span>
-                      {iconSrc === null ? (
-                        <span className={cm(styles, "slot-config-empty-frame")}>
-                          <LucidePlus aria-hidden="true" />
+                return (
+                  <button
+                    aria-label={`${row.displayIndex}. ${itemLabel}`}
+                    className={cm(styles, "slot-config-tile")}
+                    data-slot-action="open-slot-editor"
+                    data-slot-number={row.displayIndex}
+                    key={row.slotId}
+                    onClick={() => {
+                      openSlotEditor(row);
+                    }}
+                    title={itemLabel}
+                    type="button"
+                  >
+                    <span className={cm(styles, "slot-config-tile-index")}>{row.displayIndex}</span>
+                    {iconSrc === null ? (
+                      <span className={cm(styles, "slot-config-empty-frame")}>
+                        <LucidePlus aria-hidden="true" />
+                      </span>
+                    ) : (
+                      <>
+                        <img
+                          alt=""
+                          className={cm(styles, "slot-config-tile-icon")}
+                          draggable={false}
+                          src={iconSrc}
+                        />
+                        <span className={cm(styles, "slot-config-tile-badge")}>
+                          {row.ignoreStock ? "∞" : row.count}
                         </span>
-                      ) : (
-                        <>
-                          <img
-                            alt=""
-                            className={cm(styles, "slot-config-tile-icon")}
-                            draggable={false}
-                            src={iconSrc}
-                          />
-                          <span className={cm(styles, "slot-config-tile-badge")}>
-                            {row.ignoreStock ? "∞" : row.count}
-                          </span>
-                        </>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        */}
-        {(inputGroupViews.length > 0 || outputGroupViews.length > 0) && (
-          <>
-            <div className={cm(styles, "slot-config-flow-layout")}>
-              {renderSlotColumn("input", inputGroupViews)}
-              <div className={cm(styles, "slot-config-flow-direction")} aria-label="加工流向">
-                {/*
-                  AI-REMOVED 2026-06-04:
-                  Reason: 流向文字与箭头图标重复表达加工流向。
-                  Trigger: 用户要求文字与图标不能传递重复信息。
-                  Evidence: 该容器保留 aria-label，视觉上由箭头和左右列位置表达流向。
-                  Replacement: LucideChevronsRight + aria-label
-                  Risk: Low
-                  Human Review: Required
-
-                  Original code:
-                  <span>加工流向</span>
-                */}
-                <LucideChevronsRight aria-hidden="true" />
-              </div>
-              {renderSlotColumn("output", outputGroupViews)}
+                      </>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-          </>
-        )}
-        {sharedGroupViews.length > 0 && (
-          <div className={cm(styles, "slot-config-shared-section")}>
-            {renderSharedColumn(sharedGroupViews)}
+          </section>
+        ))}
+      */}
+      {(inputGroupViews.length > 0 || outputGroupViews.length > 0) && (
+        <>
+          <div className={cm(styles, "slot-config-flow-layout")}>
+            {renderSlotColumn("input", inputGroupViews)}
+            <div className={cm(styles, "slot-config-flow-direction")} aria-label="加工流向">
+              {/*
+                AI-REMOVED 2026-06-04:
+                Reason: 流向文字与箭头图标重复表达加工流向。
+                Trigger: 用户要求文字与图标不能传递重复信息。
+                Evidence: 该容器保留 aria-label，视觉上由箭头和左右列位置表达流向。
+                Replacement: LucideChevronsRight + aria-label
+                Risk: Low
+                Human Review: Required
+
+                Original code:
+                <span>加工流向</span>
+              */}
+              <LucideChevronsRight aria-hidden="true" />
+            </div>
+            {renderSlotColumn("output", outputGroupViews)}
           </div>
-        )}
-      </div>
+        </>
+      )}
+      {sharedGroupViews.length > 0 && (
+        <div className={cm(styles, "slot-config-shared-section")}>
+          {renderSharedColumn(sharedGroupViews)}
+        </div>
+      )}
       {editingSlot !== null ? (
         <div
           className={cm(styles, "slot-config-dialog-backdrop")}
@@ -736,7 +731,7 @@ export function SlotConfigInspector({
           </div>
         </div>
       ) : null}
-    </article>
+    </InspectorCollapsiblePanel>
   );
 }
 

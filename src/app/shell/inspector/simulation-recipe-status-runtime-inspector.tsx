@@ -2,7 +2,6 @@ import type {
   SimulationDeviceRuntimeChannelRecipeStatus,
   SimulationDeviceRuntimeStatusReadModel,
 } from "@/domain/simulation/types/simulation-types";
-import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideLock from "~icons/lucide/lock";
 import LucidePlus from "~icons/lucide/plus";
 import LucideTrash2 from "~icons/lucide/trash-2";
@@ -10,6 +9,7 @@ import type { ProductionPlanningIndex } from "@/app/shell/production-planning/pr
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition, RecipeChannelDefinition } from "@/domain/registry/types/entity-definition";
+import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-collapsible-panel";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 import styles from "@/app/shell/inspector/inspector.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -99,42 +99,36 @@ export function SimulationRecipeStatusRuntimeInspector({
   const channelRecipeStatus = runtimeStatus?.channelRecipes ?? {};
 
   return (
-    <article
-      className={cm(styles, "definition-card inspector-expanded-panel simulation-recipe-status-runtime-inspector")}
-      data-inspector-key={SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY}
+    <InspectorCollapsiblePanel
+      className={cm(styles, "simulation-recipe-status-runtime-inspector")}
+      dataInspectorKey={SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY}
+      title="配方状态"
+      titleClassName={cm(styles, "recipe-status-panel-title")}
     >
-      <div className={cm(styles, "inspector-expanded-header recipe-status-panel-header")}>
-        <div className={cm(styles, "recipe-status-panel-title")}>
-          <LucideChevronDown aria-hidden="true" />
-          <span>配方状态</span>
-        </div>
-      </div>
-      <div className={cm(styles, "inspector-expanded-body")}>
-        {hasAuto && (
-          <AutoRecipeSection
-            autoChannels={autoChannels}
-            channelRecipeStatus={channelRecipeStatus}
-            index={index}
-            t={t}
-          />
-        )}
-        {hasAuto && hasManual && (
-          <div className={cm(styles, "recipe-section-divider")} />
-        )}
-        {hasManual && (
-          <ManualRecipeSection
-            manualChannels={manualChannels}
-            storedRecipes={storedRecipes}
-            channelRecipeStatus={channelRecipeStatus}
-            index={index}
-            t={t}
-            appHost={appHost}
-            entity={entity}
-            definition={definition}
-          />
-        )}
-      </div>
-    </article>
+      {hasAuto && (
+        <AutoRecipeSection
+          autoChannels={autoChannels}
+          channelRecipeStatus={channelRecipeStatus}
+          index={index}
+          t={t}
+        />
+      )}
+      {hasAuto && hasManual && (
+        <div className={cm(styles, "recipe-section-divider")} />
+      )}
+      {hasManual && (
+        <ManualRecipeSection
+          manualChannels={manualChannels}
+          storedRecipes={storedRecipes}
+          channelRecipeStatus={channelRecipeStatus}
+          index={index}
+          t={t}
+          appHost={appHost}
+          entity={entity}
+          definition={definition}
+        />
+      )}
+    </InspectorCollapsiblePanel>
   );
 }
 
