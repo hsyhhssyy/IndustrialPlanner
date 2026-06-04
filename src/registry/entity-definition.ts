@@ -123,7 +123,7 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
   const recipeMachineInspectors = createRecipeMachineIngredientSlotInspectors(definition);
 
   // 所有设备默认追加问题面板，用于展示放置/电力/堵塞等问题
-  declaredInspectors.push({ type: INSPECTOR_TYPE.problem });
+  declaredInspectors.unshift({ type: INSPECTOR_TYPE.problem });
 
   return {
     ...definition,
