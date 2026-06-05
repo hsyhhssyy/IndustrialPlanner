@@ -6,10 +6,7 @@ import type { GridPoint, GridRect, GridRectSize } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import {
   getGridBoundingBox,
-  getGridBoundsCenterCells,
-  getGridFootprintCenterCells,
   getRotatedGridFootprint,
-  rotateGridCenterCellsClockwise,
   rotateGridRotationClockwise,
 } from "@/shared/geometry/grid";
 
@@ -401,11 +398,11 @@ export function createEditorSelectionActions({
         drafts: state.drafts,
         entityDefinitionMap,
       });
-      const rotationCenterCells = resolveCollectionRotationCenterCells(
+      const rotationAnchorCell = resolveCollectionRotationAnchorCell(
         rotatableEntities,
       );
 
-      if (rotationCenterCells === null) {
+      if (rotationAnchorCell === null) {
         return;
       }
 
@@ -415,7 +412,7 @@ export function createEditorSelectionActions({
           rotateEntityClockwise({
             entity,
             footprint: definition.footprint,
-            rotationCenterCells,
+            rotationAnchorCell,
           }),
         ]),
       );
@@ -582,7 +579,7 @@ function resolveRotatableCollectionEntities(options: {
   return entries;
 }
 
-function resolveCollectionRotationCenterCells(
+function resolveCollectionRotationAnchorCell(
   entries: readonly RotatableCollectionEntity[],
 ): {
   x: number;
@@ -599,13 +596,18 @@ function resolveCollectionRotationCenterCells(
     return null;
   }
 
-  return getGridBoundsCenterCells(bounds);
+  return resolveGridRectRotationAnchorCell({
+    x: bounds.left,
+    y: bounds.top,
+    width: bounds.width,
+    height: bounds.height,
+  });
 }
 
 function rotateEntityClockwise<EntityT extends WorldEntity>(options: {
   entity: EntityT;
   footprint: EntityDefinition["footprint"];
-  rotationCenterCells: {
+  rotationAnchorCell: {
     x: number;
     y: number;
   };
@@ -616,36 +618,88 @@ function rotateEntityClockwise<EntityT extends WorldEntity>(options: {
     options.entity.rotation,
   );
   const nextFootprint = getRotatedGridFootprint(options.footprint, nextRotation);
-  const rotatedCenterCells = rotateGridCenterCellsClockwise({
-    centerCells: getGridFootprintCenterCells(
-      options.entity.position,
-      currentFootprint,
-    ),
-    rotationCenterCells: options.rotationCenterCells,
+  const rotatedAnchorCell = rotateGridAnchorCellClockwise({
+    anchorCell: resolveGridRectRotationAnchorCell({
+      x: options.entity.position.x,
+      y: options.entity.position.y,
+      width: currentFootprint.width,
+      height: currentFootprint.height,
+    }),
+    rotationAnchorCell: options.rotationAnchorCell,
   });
 
   return {
     ...options.entity,
-    position: resolveCenteredGridPointWithoutClamp(
-      rotatedCenterCells,
+    position: resolveAnchoredGridPointWithoutClamp(
+      rotatedAnchorCell,
       nextFootprint,
     ),
     rotation: nextRotation,
   } as EntityT;
 }
 
-function resolveCenteredGridPointWithoutClamp(
-  centerCells: {
+function resolveGridRectRotationAnchorCell(
+  gridRect: GridRect,
+): GridPoint {
+  return {
+    x: gridRect.x + Math.floor((gridRect.width - 1) / 2),
+    y: gridRect.y + Math.floor((gridRect.height - 1) / 2),
+  };
+}
+
+function rotateGridAnchorCellClockwise(options: {
+  anchorCell: {
+    x: number;
+    y: number;
+  };
+  rotationAnchorCell: {
+    x: number;
+    y: number;
+  };
+}): GridPoint {
+  const relativeX = options.anchorCell.x - options.rotationAnchorCell.x;
+  const relativeY = options.anchorCell.y - options.rotationAnchorCell.y;
+
+  return {
+    x: options.rotationAnchorCell.x - relativeY,
+    y: options.rotationAnchorCell.y + relativeX,
+  };
+}
+
+function resolveAnchoredGridPointWithoutClamp(
+  anchorCell: {
     x: number;
     y: number;
   },
   footprint: GridRectSize,
 ): GridPoint {
   return {
-    x: Math.round(centerCells.x - footprint.width / 2),
-    y: Math.round(centerCells.y - footprint.height / 2),
+    x: anchorCell.x - Math.floor((footprint.width - 1) / 2),
+    y: anchorCell.y - Math.floor((footprint.height - 1) / 2),
   };
 }
+
+// AI-REMOVED 2026-06-05:
+// Reason: 连续几何中心 + Math.round 不能让 6×5 这类奇偶混合 footprint 四次旋转闭合，会导致扩容反应池按 R 越转越靠下。
+// Trigger: 用户反馈“扩容反应池按 R 旋转不幂等，越转越靠下”。
+// Evidence: item_port_mix_pool_large_1 footprint 为 6×5；旧算法从 (10,10) 连续四次旋转会漂移到 (12,12)。
+// Replacement: resolveGridRectRotationAnchorCell / rotateGridAnchorCellClockwise / resolveAnchoredGridPointWithoutClamp
+// Risk: Low，旋转锚点改用项目已有的偏左 / 偏上中心格规则；仍需回归覆盖集合旋转。
+// Human Review: Required
+//
+// Original code:
+// function resolveCenteredGridPointWithoutClamp(
+//   centerCells: {
+//     x: number;
+//     y: number;
+//   },
+//   footprint: GridRectSize,
+// ): GridPoint {
+//   return {
+//     x: Math.round(centerCells.x - footprint.width / 2),
+//     y: Math.round(centerCells.y - footprint.height / 2),
+//   };
+// }
 
 function resolveUniqueStrings(values: readonly string[]): string[] {
   return Array.from(new Set(values));

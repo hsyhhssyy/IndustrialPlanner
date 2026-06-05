@@ -1460,6 +1460,74 @@ describe("createEditorHost", () => {
     });
   });
 
+  it("keeps expanded reaction pool preview rotation idempotent after four turns", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const initialDraft: DraftEntity = {
+      id: "preview-large-reaction-pool",
+      originalEntityId: "preview-large-reaction-pool",
+      definitionId: "item_port_mix_pool_large_1",
+      position: {
+        x: 10,
+        y: 10,
+      },
+      rotation: 0,
+      config: {},
+      tags: [],
+    };
+
+    editorHost.internalState.drafts = [initialDraft];
+    editorHost.internalState.collections.preview.replace([initialDraft.id]);
+
+    for (let step = 0; step < 4; step += 1) {
+      editorHost.actions.rotateCollection(EntityCollectionType.preview);
+    }
+
+    expect(editorHost.internalState.drafts[0]).toMatchObject({
+      id: initialDraft.id,
+      definitionId: initialDraft.definitionId,
+      position: initialDraft.position,
+      rotation: 0,
+    });
+  });
+
+  it("keeps single preview draft rotation idempotent for every registry footprint", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    for (const definition of workspace.registry.entityDefinitions) {
+      const initialDraft: DraftEntity = {
+        id: `preview-${definition.id}`,
+        originalEntityId: `preview-${definition.id}`,
+        definitionId: definition.id,
+        position: {
+          x: 10,
+          y: 10,
+        },
+        rotation: 0,
+        config: {},
+        tags: [],
+      };
+
+      editorHost.internalState.drafts = [initialDraft];
+      editorHost.internalState.collections.preview.replace([initialDraft.id]);
+
+      for (let step = 0; step < 4; step += 1) {
+        editorHost.actions.rotateCollection(EntityCollectionType.preview);
+      }
+
+      expect({
+        definitionId: definition.id,
+        position: editorHost.internalState.drafts[0]?.position,
+        rotation: editorHost.internalState.drafts[0]?.rotation,
+      }).toEqual({
+        definitionId: definition.id,
+        position: initialDraft.position,
+        rotation: 0,
+      });
+    }
+  });
+
   it("computes grid rects for selected and preview entity collections", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
