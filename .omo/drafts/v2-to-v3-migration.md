@@ -1,71 +1,116 @@
 # Draft: v2 → v3 迁移模块设计
 
-## 需求确认
+## 核心目标（一句话）
 
-### 核心目标
-当用户访问 v3 时，自动显示迁移对话框，允许将 v2 数据迁移到 v3。
-
-### 迁移内容
-1. **地图设备迁移**：v2 所有地图中布置的设备和配置项 → v3 对应地图
-2. **蓝图迁移**：v2 所有用户保存的蓝图 → v3 "迁移的蓝图" 文件夹
-3. **模块配平迁移**：v2 模块配平工具箱的画布和模块配置 → v3 对应工具
-
-### UI 需求
-- 首次访问 v3 自动弹出迁移对话框
-- 后续可从设置中重新打开
-- 迁移说明 + 迁移按钮
-- 二次确认（迁移会清空当前 v3 数据）
-- 不可删除 v2 的任何数据
-
-### 边界问题
-1. **localStorage 空间**：v2 不使用 IndexedDB，localStorage 可能很大（最大键 `stage6-layout-history-by-base` ~1.5MB），需在迁移前清理 v2 历史数据腾空间
-2. **幂等性**：重复迁移不能重复创建数据
-3. **数据安全**：迁移可能失败，v2 数据必须保留以便回退
-
-### 测试需求
-- Playwright 端到端测试
-- 具体测试：v2 摆放所有设备，修改每个配置，v3 触发迁移，验证正确性，跑仿真验证功能
+在同源部署环境下，将 v2 localStorage 中的用户地图设备、蓝图、模块配平数据迁移到 v3 IndexedDB + localStorage 存储体系，通过可复用的 `legacy-blueprint-import.ts` 作为唯一转换入口。
 
 ---
 
-## 技术发现
+## Scope IN / Scope OUT
 
-### v3 存储架构（IndexedDB + localStorage）
-- **IndexedDB** 数据库 `industrial-planner`，4 个 object store：
-  - `worddocument`：WorldDocument（键=documentKey UUID），包含 entities、slotLinks、documentSettings
-  - `editorhistory`：撤销/重做记录
-  - `blueprints`：BlueprintRecord + BlueprintFolderRecord（键前缀 `blueprint:<id>` / `folder:<id>`），支持软删除
-  - `planner-state`：产线规划器状态（键="v2"）
-- **localStorage** 3 个活跃键：
-  - `v1-editor-persist-state`：编辑器最后文档ID
-  - `v3-app-settings`：用户设置（18个字段）
-  - `v4-workbench-state`：工作台布局 + 模块配平状态
+### Scope IN（本次迁移覆盖）
+- **地图设备迁移**：v2 所有基地的已放置设备（DeviceInstance[]）及其完整配置 → v3 对应基地 WorldDocument
+- **蓝图迁移**：v2 所有用户保存蓝图 → v3 "迁移的蓝图" 文件夹
+- **模块配平迁移**：v2 的 BalanceCanvas[] 和 BalanceModule[] → v3 workbench.moduleBalancing
+- **迁移对话框 UI**：首次访问自动弹出 + 设置中可重新打开 + 二次确认
+- **Config 缺口补充**：在 `legacy-blueprint-import.ts` 中补全以下字段转换：admissionItemId, admissionAmount, portPriorityGroups, darkPipeInletMode, storageSlots, storagePreloadInputs
+- **Vitest 单元测试**（独立 project，不与 normal/blueprint 混合）
+- **Playwright E2E 测试**
 
-### v2 存储架构（纯 localStorage）
-- **44 个 localStorage 键**，全部 JSON 序列化
-- **核心数据键**：
-  - `stage1-layouts-by-base`：每个基地一个 LayoutState（DeviceInstance[] + DeviceLink[]），48 种设备类型
-  - `stage6-layout-history-by-base`：撤销/重做历史，**最大 ~1.5MB**
-  - `stage3-blueprints-user`：用户蓝图 BlueprintSnapshot[]
-  - `modular-balance-modules`：BalanceModule[]（自定义模块定义）
-  - `modular-balance-canvases`：BalanceCanvas[]（配平画布与阶段）
-  - `stage2-planner-state`：产线规划器状态
-  - `settings`：应用设置 UI 偏好
-- **DeviceConfig 完整字段**：pickupItemId, admissionItemId, portPriorityGroups, pumpOutputItemId, preloadInputs, storageSlots, darkPipeInletMode, darkPipeOutletMode, reactorPool 等
+### Scope OUT（明确排除）
+- **产线规划器**：`stage2-planner-state` 不迁移 ✓（用户确认）
+- **暗管连接迁移**：v2 DeviceLink[] → v3 SlotLinkDefinition[] 暂不实现（v3 功能未就绪，待完成后再分析）
+- **v2 历史记录**：`stage6-layout-history-by-base` 不迁移内容，仅迁移当前地图状态 ✓（用户确认）
+- **系统蓝图**：`stage3-blueprints-system` 不迁移
+- **公共蓝图索引缓存**：不迁移
 
-### v3 UI 系统
-- **自定义 DialogShell** 组件（非第三方UI库），纯 React+MobX+SCSS
-- **对话框注册**：在 `DIALOG_KEYS` 数组中添加 key → openDialog/closeDialog 控制
-- **i18n**：自定义系统，翻译键在 `messages.ts` 的 MessageKey 类型中定义
-- **无首次访问检测**：需新建 localStorage 标志
-- **无 Toast 系统**：通知直接内联在对话框中
-
-### 现有迁移相关代码
-- v3 已有 `shared/storage/legacy-blueprint-import.ts`：v2→v3 蓝图导入器，含设备重映射和配置键映射逻辑
-- v3 已有 `shared/storage/migration.ts`：版本化存储迁移框架
-- v2 有 `migrations/versioning.ts`：normalize 函数处理旧数据清洗
+### v2 数据删除策略（精确边界）
+- **可清除**：`stage6-layout-history-by-base`（撤销/重做历史，~1.5MB，用户明确允许在空间不足时清除以腾空间）
+- **绝不删除**：`stage1-layouts-by-base`（当前地图）、`stage3-blueprints-user`（用户蓝图）、`modular-balance-*`（模块配平）、`settings`（用户设置）— 确保迁移失败时用户可回退 v2 继续使用
 
 ---
 
-## 待澄清问题
-（由访谈回答填充）
+## 已确认决策
+
+### 用户反馈
+| # | 决策点 | 决定 |
+|---|--------|------|
+| 1 | 跨源数据访问 | 同源部署，v3 直接读取 v2 的 localStorage |
+| 2 | 测试策略 | TDD + E2E，迁移测试独立放置（新增 vitest project `migration`），不与 normal/blueprint 混合 |
+| 3 | 产线规划器 | 不需要迁移 |
+| 4 | 幂等性 | 数据比对检测 — 检查 v3 中是否已有迁移数据来决定是否允许再次迁移 |
+| 5 | 迁移逻辑复用 | **不另起一套迁移逻辑**，地图迁移复用 `legacy-blueprint-import.ts`。等效流程：提取 v2 设备 → 包装为 LegacyBlueprintJson → 调用 convertLegacyBlueprintJson() → 清空 v3 地图 → 摆放实体。如需修改迁移逻辑也修改在这个 .ts 文件里 |
+| 6 | Config 缺口处理 | 全部需要补，用户会在执行前审核修改清单 |
+| 7 | 暗管链接 | 需要实现链接迁移，但 v3 暗管功能未就绪，等完成后再分析 |
+
+### 探索发现
+| # | 发现 | 结论 |
+|---|------|------|
+| 1 | 基地 ID | 7/7 完全一致（valley4_protocol_core, wuling_protocol_core, wuling_tianwangping_aid, wuling_heart_repair_station, valley4_rebuilt_command, valley4_infra_outpost, valley4_refugee_shelter） |
+| 2 | 设备类型 ID | 47/47 完全一致，LEGACY_DEVICE_REMAPPERS 仅做旋转修正（CW↔CCW交换、splitter/converger +90°、unloader +180°）。v3 新增 4 个设备（dumper, miner_2/3/4）不在 v2 中出现 |
+| 3 | Config 映射（已覆盖） | 5 类设备：取货口、暗管出口、存储箱、反应池、预置物品 |
+| 4 | Config 映射（缺口） | 7 项待补：admissionItemId, admissionAmount, portPriorityGroups, darkPipeInletMode, storageSlots, storagePreloadInputs, protocolHubOutputs 全量 |
+| 5 | v3 存储 | IndexedDB `industrial-planner`（4 stores: worddocument, editorhistory, blueprints, planner-state）+ localStorage 3 keys |
+| 6 | v2 存储 | 44 个 localStorage keys，全 JSON。最大键 `stage6-layout-history-by-base` ~1.5MB |
+| 7 | v3 UI | DialogShell + DIALOG_KEYS，无首次访问检测，无 toast 系统 |
+
+---
+
+## 技术架构决策
+
+### 地图迁移转换路径（关键设计）
+
+v2 LayoutState 不是 LegacyBlueprintJson 格式。需要构建适配层：
+
+```
+v2 LayoutState (per base)
+  │
+  ├─ devices: DeviceInstance[]
+  │     ├─ instanceId     → blueprintInstanceId (或新生成)
+  │     ├─ typeId         → typeId (直接透传)
+  │     ├─ origin         → origin (直接透传)
+  │     ├─ rotation       → rotation (LEGACY_DEVICE_REMAPPERS 修正)
+  │     └─ config         → config (convertLegacyDeviceConfig 转换)
+  │
+  ├─ links: DeviceLink[]  → 跳过（暗管暂不迁移）
+  │
+  └─ 包装为 LegacyBlueprintJson:
+        schema: "industrial-planner-blueprint"
+        name: `迁移-${baseId}`
+        baseId: baseId
+        devices: [...转换后的设备]
+        links: [] (为空，避免被拒绝)
+        createdAt: now
+  │
+  └─ convertLegacyBlueprintJson() → BlueprintDocument
+       │
+       └─ 提取 entities → 写入 v3 WorldDocument (worddocument store)
+```
+
+**为什么可工作**：
+- v2 的地图设备 (DeviceInstance) 包含 typeId、origin、rotation、config — 与 LegacyBlueprintDeviceJson 字段语义一致
+- 传送带/管道在 v2 中就是设备（belt_straight_1x1 等），会自然出现在 devices 数组中
+- `links` 设为空数组（v2 的 DeviceLink 是暗管连接，暂不迁移，而腰带/管道是通过设备本身的 adjacent 关系表示的）
+- `schema` 设置正确后可通过 normalizeLegacyBlueprintJson 验证
+
+### UI 架构（迁移对话框）
+- 新增 dialog key `"migration"` 到 DIALOG_KEYS（或利用 `Record<string, ...>` 索引签名）
+- 创建 `src/app/shell/dialogs/migration-dialog.tsx`
+- 在 `workbench-app.tsx` 挂载组件
+- 首次访问检测：在 `storage-hook.ts` 初始化时检查 `v3-migration-completed` localStorage flag
+- 设置中重新打开：在 settings 或 help 区域增加入口
+
+### 模块隔离（遵循项目规范）
+| 模块 | 修改内容 | 决策 |
+|------|---------|------|
+| `src/shared/storage/` | 迁移核心逻辑 + config 转换补充 | ✅ 实现 |
+| `src/app/shell/dialogs/` | 迁移对话框 UI | ✅ 实现 |
+| `src/app/state/` | DIALOG_KEYS + DialogState | ✅ 实现 |
+| `src/editor/` | 清空地图 + 摆放实体 | ✅ **IndexedDB 直写**（迁移是批量替换操作，不走 editor contract 的增量快照管道。迁移后触发 editor 重新加载 WorldDocument 即可） |
+| `src/domain/` | 新增类型定义 | ✅ **不需要**（迁移状态用 localStorage flag 管理，不引入新 domain 类型） |
+
+### 边界问题应对
+1. **localStorage 空间不足** → 迁移前清除 `stage6-layout-history-by-base`（最大 ~1.5MB）
+2. **幂等性** → 检查每个基地的 WorldDocument 是否已有 entities，有则提示"已存在数据"
+3. **v3 已被使用过** → 二次确认对话框明确警告"迁移会清空当前 v3 所有地图数据"
+4. **大数据量性能** → 分批写入 IndexedDB，使用 async/await 避免阻塞 UI
