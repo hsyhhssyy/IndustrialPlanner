@@ -1,7 +1,17 @@
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import {
+  INSPECTOR_TYPE,
+  type PortOutputConfigInspectorDeclaration,
+} from "@/domain/registry/types/entity-inspector";
 
 export type PortGroupDefinition = EntityDefinition["portGroups"][number];
+
+export interface OutputPortGroupNumbering {
+  readonly portGroup: PortGroupDefinition;
+  readonly groupIndex: number;
+  readonly portLabel: string;
+}
 
 export interface OutputGroupRow {
   readonly portGroup: PortGroupDefinition;
@@ -11,12 +21,39 @@ export interface OutputGroupRow {
   readonly portLabel: string;
 }
 
-export function resolveOutputGroupRows(
+export function resolveSharedOutputGroupRows(
   definition: EntityDefinition,
-  portGroupIds: readonly string[],
   entity: WorldEntity,
 ): OutputGroupRow[] {
-  const rows: OutputGroupRow[] = [];
+  return resolveOutputGroupRows(
+    definition,
+    resolveSharedOutputPortGroupIds(definition),
+    entity,
+  );
+}
+
+export function resolveSharedOutputPortGroupIds(
+  definition: EntityDefinition,
+): readonly string[] {
+  const outputConfigDeclaration = definition.inspectors.find(
+    (inspector): inspector is PortOutputConfigInspectorDeclaration =>
+      inspector.type === INSPECTOR_TYPE.portOutputConfig,
+  );
+
+  if (outputConfigDeclaration !== undefined) {
+    return outputConfigDeclaration.portGroupIds;
+  }
+
+  return definition.portGroups
+    .filter((portGroup) => portGroup.direction === "output")
+    .map((portGroup) => portGroup.id);
+}
+
+export function resolveOutputPortGroupNumbering(
+  definition: EntityDefinition,
+  portGroupIds: readonly string[],
+): OutputPortGroupNumbering[] {
+  const numberedPortGroups: OutputPortGroupNumbering[] = [];
 
   for (const portGroupId of portGroupIds) {
     const groupIndex = definition.portGroups.findIndex((g) => g.id === portGroupId);
@@ -25,6 +62,25 @@ export function resolveOutputGroupRows(
     if (portGroup === undefined) continue;
     if (portGroup.direction !== "output") continue;
 
+    numberedPortGroups.push({
+      portGroup,
+      groupIndex,
+      portLabel: `P${numberedPortGroups.length + 1}`,
+    });
+  }
+
+  return numberedPortGroups;
+}
+
+export function resolveOutputGroupRows(
+  definition: EntityDefinition,
+  portGroupIds: readonly string[],
+  entity: WorldEntity,
+): OutputGroupRow[] {
+  const rows: OutputGroupRow[] = [];
+
+  for (const numberedPortGroup of resolveOutputPortGroupNumbering(definition, portGroupIds)) {
+    const { groupIndex, portGroup, portLabel } = numberedPortGroup;
     const firstPortIndex = 0;
     const configPath = `portGroups[${groupIndex}].ports[${firstPortIndex}].acceptRule`;
     const configOverride = entity.config[configPath];
@@ -54,7 +110,7 @@ export function resolveOutputGroupRows(
       groupIndex,
       currentItemId,
       label: kindLabel,
-      portLabel: `P${rows.length + 1}`,
+      portLabel,
     });
   }
 

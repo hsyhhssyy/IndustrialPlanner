@@ -530,6 +530,320 @@
   text-align: center;
 }
 
+.warehouse-item-link-inspector {
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+}
+
+.warehouse-link-panel-body {
+  gap: 8px;
+  padding: 8px;
+}
+
+.warehouse-link-list {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.warehouse-link-row {
+  --port-output-accent: var(--text-2);
+  --port-output-accent-soft: color-mix(in srgb, var(--surface-2) 82%, transparent);
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  min-width: 0;
+  min-height: 52px;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+}
+
+.warehouse-link-row[data-port-kind="item"] {
+  --port-output-accent: #b88a2f;
+  --port-output-accent-soft: rgb(184 138 47 / 10%);
+}
+
+.warehouse-link-row[data-port-kind="fluid"] {
+  --port-output-accent: #4f8fa8;
+  --port-output-accent-soft: rgb(79 143 168 / 10%);
+}
+
+.warehouse-link-slot {
+  display: grid;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 32px;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 42%, var(--line));
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  color: var(--text-1);
+}
+
+.warehouse-link-slot-label {
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.warehouse-link-item-button {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  justify-content: start;
+  min-width: 0;
+  min-height: 32px;
+  gap: 8px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-0);
+  font: inherit;
+  text-align: left;
+}
+
+.warehouse-link-item-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+}
+
+.warehouse-link-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  color: var(--text-1);
+}
+
+.warehouse-link-item-icon img {
+  display: block;
+  width: 23px;
+  height: 23px;
+  object-fit: contain;
+}
+
+.warehouse-link-item-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.warehouse-link-item-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-0);
+  font-size: 0.84rem;
+  font-weight: 560;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+  AI-REMOVED 2026-06-05:
+  Reason: 仓库链接行的无限物品控制已改为 ∞ 图标切换按钮，旧文字开关不再参与当前 UI。
+  Trigger: 用户要求“无限物品 switch 改成一个无限符号的切换形按钮”，并节省横向空间。
+  Evidence: JSX 中 warehouse-link-ignore-stock label/input 已归档删除，当前控件为 warehouse-link-infinity-button。
+  Replacement: .warehouse-link-infinity-button
+  Risk: Low
+  Human Review: Required
+
+  Original code:
+  .warehouse-link-ignore-stock {
+    position: relative;
+    display: inline-grid;
+    grid-template-columns: auto 36px;
+    align-items: center;
+    min-width: 0;
+    gap: 6px;
+    color: var(--text-1);
+    cursor: pointer;
+    font-size: 0.75rem;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .warehouse-link-ignore-stock input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  .warehouse-link-ignore-stock-copy {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .warehouse-link-ignore-stock-track {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+    border-radius: 999px;
+    background: var(--surface-2);
+  }
+
+  .warehouse-link-ignore-stock-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--text-2);
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+
+  .warehouse-link-ignore-stock input:checked + .warehouse-link-ignore-stock-track {
+    border-color: var(--accent-strong);
+    background: var(--accent-soft);
+  }
+
+  .warehouse-link-ignore-stock input:checked + .warehouse-link-ignore-stock-track::after {
+    transform: translateX(16px);
+    background: var(--accent-strong);
+  }
+
+  .warehouse-link-ignore-stock input:focus-visible + .warehouse-link-ignore-stock-track {
+    outline: 2px solid var(--accent-strong);
+    outline-offset: 2px;
+  }
+
+  .warehouse-link-ignore-stock input:disabled + .warehouse-link-ignore-stock-track {
+    opacity: 0.55;
+  }
+
+  .warehouse-link-ignore-stock.is-disabled {
+    cursor: default;
+    opacity: 0.72;
+  }
+*/
+
+.warehouse-link-infinity-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 56%, var(--line));
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  color: var(--text-1);
+  font: inherit;
+  font-size: 1.04rem;
+  font-weight: 780;
+  line-height: 1;
+}
+
+.warehouse-link-infinity-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  color: var(--text-0);
+}
+
+.warehouse-link-infinity-button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--accent-strong) 76%, var(--line));
+  background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface-1));
+  color: var(--accent-strong);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-strong) 24%, transparent);
+}
+
+.warehouse-link-infinity-button[aria-pressed="true"] span {
+  transform: translateY(-0.5px);
+}
+
+.warehouse-link-infinity-button:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+.warehouse-link-infinity-button:disabled {
+  cursor: default;
+  opacity: 0.48;
+}
+
+.warehouse-link-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 32px;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  color: var(--text-1);
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.warehouse-link-action-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  color: var(--text-0);
+}
+
+.warehouse-link-action-button:disabled,
+.warehouse-link-item-button:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.warehouse-link-action-button svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.warehouse-link-clear-button {
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  color: var(--danger);
+}
+
+.warehouse-link-clear-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--danger) 70%, var(--line));
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface-1));
+  color: var(--danger);
+}
+
+.warehouse-item-link-inspector[data-render-mode="dock"] .warehouse-link-action-button {
+  width: 32px;
+  padding: 0;
+}
+
+.warehouse-item-link-inspector[data-render-mode="dock"] .warehouse-link-action-label {
+  display: none;
+}
+
+.warehouse-item-link-inspector[data-device-class="mobile"] .warehouse-link-row {
+  padding-right: 8px;
+}
+
+.warehouse-item-link-inspector[data-device-class="mobile"] .warehouse-link-action-button {
+  width: 32px;
+  padding: 0;
+}
+
+.warehouse-item-link-inspector[data-device-class="mobile"] .warehouse-link-action-label {
+  display: none;
+}
+
 .port-output-config-inspector {
   background: color-mix(in srgb, var(--surface-1) 92%, transparent);
 }

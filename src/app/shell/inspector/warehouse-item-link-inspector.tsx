@@ -1,12 +1,22 @@
 import { useState } from "react";
 
-import LucideX from "~icons/lucide/x";
+import LucideCircleDashed from "~icons/lucide/circle-dashed";
+import LucideTrash2 from "~icons/lucide/trash-2";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { WarehouseItemLinkInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import { rotateGridRotation } from "@/shared/geometry/grid";
+import {
+  resolveSharedOutputGroupRows,
+  type OutputGroupRow,
+} from "@/app/shell/inspector/port-output-config-model";
+import { PortOutputLocatorBadge } from "@/app/shell/inspector/port-output-locator-badge";
+import {
+  useInspectorRenderMode,
+} from "@/app/shell/inspector/selection-inspector-model";
 import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-collapsible-panel";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -16,6 +26,7 @@ type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 interface WarehouseLinkRow {
   /** slot 在 config 中的 link 索引 */
   linkIndex: number;
+  boundOutputRow: OutputGroupRow | null;
   storageGroupId: string;
   slotId: string;
   /** config key: storageSlotGroups[storageGroupIndex].slots[slotIndex].ignoreStock */
@@ -39,9 +50,14 @@ export function WarehouseItemLinkInspector({
   definition: EntityDefinition;
   translate: (key: string) => string;
 }) {
+  const mode = useInspectorRenderMode();
   const [pendingLinkIndex, setPendingLinkIndex] = useState<number | null>(null);
 
-  const rows = resolveWarehouseLinkRows(declaration, definition, entity);
+  const outputRows = resolveSharedOutputGroupRows(definition, entity);
+  const rows = resolveWarehouseLinkRows(declaration, definition, entity, outputRows);
+  const deviceClass = appHost.state?.screenProfile?.deviceClass ?? "desktop";
+  const displayRotation = appHost.workspace.editor?.state?.viewport?.displayRotation ?? 0;
+  const locatorRotation = rotateGridRotation(entity.rotation, displayRotation);
 
   if (rows.length === 0) {
     return (
@@ -124,11 +140,94 @@ export function WarehouseItemLinkInspector({
     ]);
   };
 
+  // AI-REMOVED 2026-06-05:
+  // Reason: 旧实现复用 slot-config-row 卡片行和原生 checkbox，视觉上与已美化 Inspector 的列表行、图标按钮和开关控件不一致。
+  // Trigger: 用户要求按 InspectorPanel 设计风格规范美化“仓库物品链接” Inspector，并保持功能不变。
+  // Evidence: Search-First 定位到 port-output-config-inspector / slot-config-inspector 已采用专用列表行、物品图标、低装饰边框和图标化危险按钮。
+  // Replacement: 下方 warehouse-link-list / warehouse-link-row JSX。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // {rows.map((row) => {
+  //   const itemDefinition = row.currentItemId === null
+  //     ? null
+  //     : itemById.get(row.currentItemId) ?? null;
+  //   const itemLabel = itemDefinition === null
+  //     ? translate("inspector.warehouseItemLink.selectItem")
+  //     : translate(itemDefinition.nameKey);
+  //   const canClear = row.currentItemId !== null;
+  //
+  //   return (
+  //     <div
+  //       className={cm(styles, "slot-config-row")}
+  //       data-slot-id={row.slotId}
+  //       key={row.slotId}
+  //     >
+  //       <div className={cm(styles, "slot-config-row-header")}>
+  //         <strong>{row.slotId}</strong>
+  //       </div>
+  //       <div className={cm(styles, "slot-config-row-main")}>
+  //         <button
+  //           className={cm(styles, "slot-config-item-button")}
+  //           data-slot-action="pick-item"
+  //           disabled={pendingLinkIndex === row.linkIndex}
+  //           onClick={() => {
+  //             void requestItemSelection(row);
+  //           }}
+  //           type="button"
+  //         >
+  //           <span>{itemLabel}</span>
+  //         </button>
+  //         <div className={cm(styles, "slot-config-row-actions")}>
+  //           <label className={cm(styles, "warehouse-link-ignore-stock")}>
+  //             <input
+  //               checked={row.currentIgnoreStock}
+  //               disabled={row.currentItemId === null}
+  //               onChange={() => {
+  //                 toggleIgnoreStock(row);
+  //               }}
+  //               type="checkbox"
+  //             />
+  //             <span>{translate("inspector.warehouseItemLink.ignoreStock")}</span>
+  //           </label>
+  //           <button
+  //             className={cm(styles, "slot-config-clear-button")}
+  //             data-slot-action="clear-item"
+  //             disabled={!canClear}
+  //             onClick={() => {
+  //               clearLink(row);
+  //             }}
+  //             type="button"
+  //           >
+  //             <LucideX aria-hidden="true" />
+  //             {/*
+  //               AI-REMOVED 2026-06-04:
+  //               Reason: “链接”已经由当前 Inspector 标题和行上下文表达，按钮只需要保留动作动词。
+  //               Trigger: 用户要求文字不能重复表达已由区域或上下文表达的信息。
+  //               Evidence: InspectorPanel设计风格规范 2.5。
+  //               Replacement: <span>清除</span>
+  //               Risk: Low
+  //               Human Review: Required
+  //
+  //               Original code:
+  //               <span>清除链接</span>
+  //             */}
+  //             <span>清除</span>
+  //           </button>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // })}
+
   return (
     <InspectorCollapsiblePanel
-      bodyClassName="slot-config-list"
+      bodyClassName="warehouse-link-panel-body"
       className="warehouse-item-link-inspector"
+      data-device-class={deviceClass}
       dataInspectorKey="warehouse-item-link"
+      data-render-mode={mode}
       title="仓库物品链接"
     >
       {/*
@@ -148,39 +247,81 @@ export function WarehouseItemLinkInspector({
           </div>
         </div>
       */}
-      {rows.map((row) => {
-        const itemDefinition = row.currentItemId === null
-          ? null
-          : itemById.get(row.currentItemId) ?? null;
-        const itemLabel = itemDefinition === null
-          ? translate("inspector.warehouseItemLink.selectItem")
-          : translate(itemDefinition.nameKey);
-        const canClear = row.currentItemId !== null;
+      <div className={cm(styles, "warehouse-link-list")}>
+        {rows.map((row) => {
+          const itemDefinition = row.currentItemId === null
+            ? null
+            : itemById.get(row.currentItemId) ?? null;
+          const itemIconSrc = resolveItemIconSrc(itemDefinition);
+          const itemLabel = itemDefinition === null
+            ? translate("inspector.warehouseItemLink.selectItem")
+            : translate(itemDefinition.nameKey);
+          const canClear = row.currentItemId !== null;
+          const slotLabel = row.boundOutputRow?.portLabel ?? `槽位 ${row.linkIndex + 1}`;
+          const slotTitle = `${row.storageGroupId} / ${row.slotId}`;
+          const ignoreStockLabel = translate("inspector.warehouseItemLink.ignoreStock");
 
-        return (
-          <div
-            className={cm(styles, "slot-config-row")}
-            data-slot-id={row.slotId}
-            key={row.slotId}
-          >
-            <div className={cm(styles, "slot-config-row-header")}>
-              <strong>{row.slotId}</strong>
-            </div>
-            <div className={cm(styles, "slot-config-row-main")}>
+          return (
+            <div
+              className={cm(styles, "warehouse-link-row")}
+              data-link-domain={row.domain}
+              data-port-kind={row.boundOutputRow?.portGroup.kind}
+              data-slot-id={row.slotId}
+              data-storage-group-id={row.storageGroupId}
+              key={`${row.storageGroupId}:${row.slotId}`}
+            >
+              {row.boundOutputRow === null ? (
+                <div className={cm(styles, "warehouse-link-slot")} title={slotTitle}>
+                  <span className={cm(styles, "warehouse-link-slot-label")}>{slotLabel}</span>
+                </div>
+              ) : (
+                <PortOutputLocatorBadge
+                  definition={definition}
+                  portLabel={row.boundOutputRow.portLabel}
+                  rows={outputRows}
+                  rotation={locatorRotation}
+                  targetPortGroupId={row.boundOutputRow.portGroup.id}
+                  title={`${row.boundOutputRow.portLabel} ${row.boundOutputRow.label} 位置`}
+                />
+              )}
               <button
-                className={cm(styles, "slot-config-item-button")}
+                className={cm(styles, "warehouse-link-item-button")}
                 data-slot-action="pick-item"
                 disabled={pendingLinkIndex === row.linkIndex}
                 onClick={() => {
                   void requestItemSelection(row);
                 }}
+                title={itemLabel}
                 type="button"
               >
-                <span>{itemLabel}</span>
+                <span className={cm(styles, "warehouse-link-item-icon")}>
+                  {itemIconSrc === null ? (
+                    <LucideCircleDashed aria-hidden="true" />
+                  ) : (
+                    <img alt="" src={itemIconSrc} />
+                  )}
+                </span>
+                <span className={cm(styles, "warehouse-link-item-name")}>{itemLabel}</span>
               </button>
-              <div className={cm(styles, "slot-config-row-actions")}>
-                <label className={cm(styles, "warehouse-link-ignore-stock")}>
+              {/*
+                AI-REMOVED 2026-06-05:
+                Reason: 原“无限物品”文字开关占用横向空间，且文字与开关状态重复表达同一功能。
+                Trigger: 用户要求改成无限符号的切换形按钮，并且需要通过视觉元素明显区分是否切换到无限。
+                Evidence: InspectorPanel设计风格规范 2.6 要求开关控件已表达开/关时不再重复显示文案；当前仓库行需要腾出端口定位徽标空间。
+                Replacement: 下方 warehouse-link-infinity-button。
+                Risk: Low
+                Human Review: Required
+
+                Original code:
+                <label
+                  className={cm(styles, "warehouse-link-ignore-stock", row.currentItemId === null ? "is-disabled" : "")}
+                  title={ignoreStockLabel}
+                >
+                  <span className={cm(styles, "warehouse-link-ignore-stock-copy")}>
+                    {ignoreStockLabel}
+                  </span>
                   <input
+                    aria-label={`${slotLabel} ${ignoreStockLabel}`}
                     checked={row.currentIgnoreStock}
                     disabled={row.currentItemId === null}
                     onChange={() => {
@@ -188,37 +329,52 @@ export function WarehouseItemLinkInspector({
                     }}
                     type="checkbox"
                   />
-                  <span>{translate("inspector.warehouseItemLink.ignoreStock")}</span>
+                  <span className={cm(styles, "warehouse-link-ignore-stock-track")} aria-hidden="true" />
                 </label>
-                <button
-                  className={cm(styles, "slot-config-clear-button")}
-                  data-slot-action="clear-item"
-                  disabled={!canClear}
-                  onClick={() => {
-                    clearLink(row);
-                  }}
-                  type="button"
-                >
-                  <LucideX aria-hidden="true" />
-                  {/*
-                    AI-REMOVED 2026-06-04:
-                    Reason: “链接”已经由当前 Inspector 标题和行上下文表达，按钮只需要保留动作动词。
-                    Trigger: 用户要求文字不能重复表达已由区域或上下文表达的信息。
-                    Evidence: InspectorPanel设计风格规范 2.5。
-                    Replacement: <span>清除</span>
-                    Risk: Low
-                    Human Review: Required
+              */}
+              <button
+                aria-label={`${slotLabel} ${ignoreStockLabel}`}
+                aria-pressed={row.currentIgnoreStock}
+                className={cm(styles, "warehouse-link-infinity-button")}
+                disabled={row.currentItemId === null}
+                onClick={() => {
+                  toggleIgnoreStock(row);
+                }}
+                title={ignoreStockLabel}
+                type="button"
+              >
+                <span aria-hidden="true">∞</span>
+              </button>
+              <button
+                aria-label="清除"
+                className={cm(styles, "warehouse-link-action-button warehouse-link-clear-button")}
+                data-slot-action="clear-item"
+                disabled={!canClear}
+                onClick={() => {
+                  clearLink(row);
+                }}
+                title="清除"
+                type="button"
+              >
+                <LucideTrash2 aria-hidden="true" />
+                {/*
+                  AI-REMOVED 2026-06-04:
+                  Reason: “链接”已经由当前 Inspector 标题和行上下文表达，按钮只需要保留动作动词。
+                  Trigger: 用户要求文字不能重复表达已由区域或上下文表达的信息。
+                  Evidence: InspectorPanel设计风格规范 2.5。
+                  Replacement: <span className={cm(styles, "warehouse-link-action-label")}>清除</span>
+                  Risk: Low
+                  Human Review: Required
 
-                    Original code:
-                    <span>清除链接</span>
-                  */}
-                  <span>清除</span>
-                </button>
-              </div>
+                  Original code:
+                  <span>清除链接</span>
+                */}
+                <span className={cm(styles, "warehouse-link-action-label")}>清除</span>
+              </button>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </InspectorCollapsiblePanel>
   );
 }
@@ -231,11 +387,16 @@ function resolveWarehouseLinkRows(
   declaration: WarehouseItemLinkInspectorDeclaration,
   definition: EntityDefinition,
   entity: WorldEntity,
+  outputRows: readonly OutputGroupRow[],
 ): WarehouseLinkRow[] {
   const slotDefinitions = expandSlotDefinitions(declaration, definition);
+  const outputRowsByPortGroupId = new Map(
+    outputRows.map((row) => [row.portGroup.id, row]),
+  );
 
   return slotDefinitions.map((slotDef, index) => ({
     linkIndex: index,
+    boundOutputRow: resolveFirstBoundOutputRow(definition, outputRowsByPortGroupId, slotDef.storageGroupId),
     storageGroupId: slotDef.storageGroupId,
     slotId: slotDef.slotId,
     ignoreStockPath: `storageSlotGroups[${slotDef.storageGroupIndex}].slots[${slotDef.slotIndex}].ignoreStock`,
@@ -243,6 +404,25 @@ function resolveWarehouseLinkRows(
     currentIgnoreStock: readSlotConfigBoolean(entity.config, `storageSlotGroups[${slotDef.storageGroupIndex}].slots[${slotDef.slotIndex}].ignoreStock`),
     domain: slotDef.domain,
   }));
+}
+
+function resolveFirstBoundOutputRow(
+  definition: EntityDefinition,
+  outputRowsByPortGroupId: ReadonlyMap<string, OutputGroupRow>,
+  storageGroupId: string,
+): OutputGroupRow | null {
+  for (const binding of definition.portStorageBindings) {
+    if (binding.storageSlotGroupId !== storageGroupId) {
+      continue;
+    }
+
+    const outputRow = outputRowsByPortGroupId.get(binding.portGroupId);
+    if (outputRow !== undefined) {
+      return outputRow;
+    }
+  }
+
+  return null;
 }
 
 interface ExpandedSlotDef {
@@ -314,6 +494,10 @@ function matchesItemDomain(
   }
 
   return isItemLiquid(item.id) === (domain === "liquid");
+}
+
+function resolveItemIconSrc(item: ItemDefinition | null): string | null {
+  return item === null ? null : `/item-icons/${item.iconId}.webp`;
 }
 
 function readSlotConfigString(
