@@ -1,0 +1,33 @@
+import type { AppHost } from "@/app/host/app-host";
+import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
+import type { GestureMappingModule } from "./types";
+
+/**
+ * T 键打开工具箱（单向，不关闭）。
+ * 工具箱打开后，dialog shell 会拦截所有键盘事件，因此 T 键不会触发二次打开或关闭。
+ */
+export function createToolboxOpenGestureModule(): GestureMappingModule<AppHost> {
+  return {
+    id: "toolbox-open-shortcut",
+    handle(event, context) {
+      if (event.type !== "key down") {
+        return { status: "ignored" };
+      }
+
+      const internalActions = context.appHost.internalActions;
+      const matches = internalActions.isShortcutFor(
+        SHORTCUT_KEY.OPEN_TOOLBOX,
+        event.code,
+        event.key?.trim() ?? null,
+        event.modifiers,
+      );
+
+      if (!matches) {
+        return { status: "ignored" };
+      }
+
+      context.appHost.internalActions.openDialog("toolbox");
+      return { status: "handled", consume: true };
+    },
+  };
+}

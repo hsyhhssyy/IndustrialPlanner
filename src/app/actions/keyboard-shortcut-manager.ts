@@ -26,6 +26,7 @@ export const SHORTCUT_KEY = {
   TOGGLE_BLUEPRINT_PANEL: "shortcut-toggle-blueprint-panel",
   TOGGLE_HISTORY_PANEL:   "shortcut-toggle-history-panel",
   TOGGLE_BASE_PANEL:      "shortcut-toggle-base-panel",
+  OPEN_TOOLBOX:           "shortcut-open-toolbox",
 } as const;
 
 /** 从 SHORTCUT_KEY 推导出的联合类型 */
@@ -65,6 +66,7 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.TOGGLE_BLUEPRINT_PANEL]: "L",
   [SHORTCUT_KEY.TOGGLE_HISTORY_PANEL]:   "H",
   [SHORTCUT_KEY.TOGGLE_BASE_PANEL]:      "K",
+  [SHORTCUT_KEY.OPEN_TOOLBOX]:           "T",
 };
 
 const LEGACY_SHORTCUT_MIGRATIONS: Partial<Record<ShortcutKeyId, string>> = {
