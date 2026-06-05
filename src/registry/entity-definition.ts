@@ -2271,6 +2271,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       { kind: "fluid", direction: "output", capacities: [50] },
     ]),
   }),
+  /**
+   * item_port_sp_hub_1 — 协议核心（9×9）
+   *
+   * 14 个独立输入端口（7N + 7S），各挂独立接收缓存。
+   * 6 个独立输出端口（3W + 3E），各挂独立取货缓存 + warehouseItemLink inspector。
+   * 每个输出端口等价于一个独立仓库取货口。
+   *
+   * 输入缓存组：14 个（各 1 槽 × 1 容量）
+   * 输出缓存组：6 个（各 1 槽 × 1 容量）
+   * 编译节点：20 个（14 input-view + 6 output-view）
+   */
   createEntityDefinition({
     id: "item_port_sp_hub_1",
     nameKey: "registry.entity.item_port_sp_hub_1.name",
@@ -2281,29 +2292,187 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
+      // ---- 输出端口：W 侧 3 个 ----
       createPortGroup(
-        "item_input",
-        "item",
-        "input",
-        [
-          ...[1, 2, 3, 4, 5, 6, 7].map((x) => createPort(`in_n_${x + 1}`, x, 0, "N")),
-          ...[1, 2, 3, 4, 5, 6, 7].map((x) => createPort(`in_s_${x + 1}`, x, 8, "S")),
-        ],
-      ),
-      createPortGroup(
-        "item_output",
+        "item_output_w2",
         "item",
         "output",
-        [
-          ...[1, 4, 7].map((y) => createPort(`out_w_${y + 1}`, 0, y, "W")),
-          ...[1, 4, 7].map((y) => createPort(`out_e_${y + 1}`, 8, y, "E")),
-        ],
+        [createPort("out_w_2", 0, 1, "W")],
+      ),
+      createPortGroup(
+        "item_output_w5",
+        "item",
+        "output",
+        [createPort("out_w_5", 0, 4, "W")],
+      ),
+      createPortGroup(
+        "item_output_w8",
+        "item",
+        "output",
+        [createPort("out_w_8", 0, 7, "W")],
+      ),
+      // ---- 输出端口：E 侧 3 个 ----
+      createPortGroup(
+        "item_output_e2",
+        "item",
+        "output",
+        [createPort("out_e_2", 8, 1, "E")],
+      ),
+      createPortGroup(
+        "item_output_e5",
+        "item",
+        "output",
+        [createPort("out_e_5", 8, 4, "E")],
+      ),
+      createPortGroup(
+        "item_output_e8",
+        "item",
+        "output",
+        [createPort("out_e_8", 8, 7, "E")],
+      ),
+      // ---- 输入端口：N 侧 7 个 ----
+      createPortGroup(
+        "item_input_n2",
+        "item",
+        "input",
+        [createPort("in_n_2", 1, 0, "N")],
+      ),
+      createPortGroup(
+        "item_input_n3",
+        "item",
+        "input",
+        [createPort("in_n_3", 2, 0, "N")],
+      ),
+      createPortGroup(
+        "item_input_n4",
+        "item",
+        "input",
+        [createPort("in_n_4", 3, 0, "N")],
+      ),
+      createPortGroup(
+        "item_input_n5",
+        "item",
+        "input",
+        [createPort("in_n_5", 4, 0, "N")],
+      ),
+      createPortGroup(
+        "item_input_n6",
+        "item",
+        "input",
+        [createPort("in_n_6", 5, 0, "N")],
+      ),
+      createPortGroup(
+        "item_input_n7",
+        "item",
+        "input",
+        [createPort("in_n_7", 6, 0, "N")],
+      ),
+      createPortGroup(
+        "item_input_n8",
+        "item",
+        "input",
+        [createPort("in_n_8", 7, 0, "N")],
+      ),
+      // ---- 输入端口：S 侧 7 个 ----
+      createPortGroup(
+        "item_input_s2",
+        "item",
+        "input",
+        [createPort("in_s_2", 1, 8, "S")],
+      ),
+      createPortGroup(
+        "item_input_s3",
+        "item",
+        "input",
+        [createPort("in_s_3", 2, 8, "S")],
+      ),
+      createPortGroup(
+        "item_input_s4",
+        "item",
+        "input",
+        [createPort("in_s_4", 3, 8, "S")],
+      ),
+      createPortGroup(
+        "item_input_s5",
+        "item",
+        "input",
+        [createPort("in_s_5", 4, 8, "S")],
+      ),
+      createPortGroup(
+        "item_input_s6",
+        "item",
+        "input",
+        [createPort("in_s_6", 5, 8, "S")],
+      ),
+      createPortGroup(
+        "item_input_s7",
+        "item",
+        "input",
+        [createPort("in_s_7", 6, 8, "S")],
+      ),
+      createPortGroup(
+        "item_input_s8",
+        "item",
+        "input",
+        [createPort("in_s_8", 7, 8, "S")],
       ),
     ],
-    ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50] },
-      { kind: "item", direction: "output", capacities: [50] },
-    ]),
+    storageSlotGroups: [
+      // ---- 输出缓存 ----
+      createStorageSlotGroup("unbuffer_w2", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("unbuffer_w5", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("unbuffer_w8", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("unbuffer_e2", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("unbuffer_e5", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("unbuffer_e8", "item", createSlots("slot", [1], "solid")),
+      // ---- 输入缓存 ----
+      createStorageSlotGroup("inbuffer_n2", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_n3", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_n4", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_n5", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_n6", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_n7", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_n8", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_s2", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_s3", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_s4", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_s5", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_s6", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_s7", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_s8", "item", createSlots("slot", [1], "solid")),
+    ],
+    portStorageBindings: [
+      // ---- 输出绑定 ----
+      createBinding("bind_output_w2", "item_output_w2", "unbuffer_w2"),
+      createBinding("bind_output_w5", "item_output_w5", "unbuffer_w5"),
+      createBinding("bind_output_w8", "item_output_w8", "unbuffer_w8"),
+      createBinding("bind_output_e2", "item_output_e2", "unbuffer_e2"),
+      createBinding("bind_output_e5", "item_output_e5", "unbuffer_e5"),
+      createBinding("bind_output_e8", "item_output_e8", "unbuffer_e8"),
+      // ---- 输入绑定 ----
+      createBinding("bind_input_n2", "item_input_n2", "inbuffer_n2"),
+      createBinding("bind_input_n3", "item_input_n3", "inbuffer_n3"),
+      createBinding("bind_input_n4", "item_input_n4", "inbuffer_n4"),
+      createBinding("bind_input_n5", "item_input_n5", "inbuffer_n5"),
+      createBinding("bind_input_n6", "item_input_n6", "inbuffer_n6"),
+      createBinding("bind_input_n7", "item_input_n7", "inbuffer_n7"),
+      createBinding("bind_input_n8", "item_input_n8", "inbuffer_n8"),
+      createBinding("bind_input_s2", "item_input_s2", "inbuffer_s2"),
+      createBinding("bind_input_s3", "item_input_s3", "inbuffer_s3"),
+      createBinding("bind_input_s4", "item_input_s4", "inbuffer_s4"),
+      createBinding("bind_input_s5", "item_input_s5", "inbuffer_s5"),
+      createBinding("bind_input_s6", "item_input_s6", "inbuffer_s6"),
+      createBinding("bind_input_s7", "item_input_s7", "inbuffer_s7"),
+      createBinding("bind_input_s8", "item_input_s8", "inbuffer_s8"),
+    ],
+    inspectors: [
+      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_w2"] },
+      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_w5"] },
+      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_w8"] },
+      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_e2"] },
+      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_e5"] },
+      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_e8"] },
+    ],
   }),
   createEntityDefinition({
     id: "item_port_water_pump_1",

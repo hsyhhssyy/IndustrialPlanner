@@ -1833,70 +1833,199 @@
   color: var(--text-0);
 }
 
+/*
+  AI-REMOVED 2026-06-05:
+  Reason: submitToWarehouse 已收敛为固定隐形配方的单开关 UI；旧表单 switch/select 样式会保留错误的“可选配方”表达。
+  Trigger: 用户明确要求“外表看起来就是一个开关”，不展示配方名。
+  Evidence: submit-to-warehouse-inspector.tsx 已删除 select 分支，当前 JSX 使用 submit-to-warehouse-toggle 按钮。
+  Replacement: 下方 submit-to-warehouse-panel-body / row / toggle 样式。
+  Risk: Low
+  Human Review: Required
+
+  Original code:
+  .submit-to-warehouse-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 38px;
+    color: var(--text-1);
+    font-size: 0.8rem;
+  }
+
+  .submit-to-warehouse-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .submit-to-warehouse-switch {
+    appearance: none;
+    position: relative;
+    width: 42px;
+    height: 24px;
+    margin: 0;
+    border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+    border-radius: 999px;
+    background: var(--surface-2);
+    cursor: pointer;
+  }
+
+  .submit-to-warehouse-switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--text-2);
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+
+  .submit-to-warehouse-switch:checked {
+    border-color: var(--accent-strong);
+    background: var(--accent-soft);
+  }
+
+  .submit-to-warehouse-switch:checked::after {
+    transform: translateX(18px);
+    background: var(--accent-strong);
+  }
+
+  .submit-to-warehouse-countdown {
+    color: var(--text-2);
+    font-size: 0.76rem;
+  }
+
+  .submit-to-warehouse-select {
+    min-width: 0;
+    min-height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface-2);
+    color: var(--text-0);
+    font: inherit;
+  }
+*/
+
+.submit-to-warehouse-inspector {
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+}
+
+.submit-to-warehouse-panel-body {
+  gap: 8px;
+  padding: 8px;
+}
+
 .submit-to-warehouse-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 10px;
-  min-height: 38px;
+  min-width: 0;
+  min-height: 52px;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+}
+
+.submit-to-warehouse-row[data-submit-enabled="true"] {
+  border-color: color-mix(in srgb, var(--accent-strong) 42%, var(--line));
+  background: color-mix(in srgb, var(--surface-1) 86%, var(--accent-soft));
+}
+
+.submit-to-warehouse-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 42%, var(--line));
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
   color: var(--text-1);
-  font-size: 0.8rem;
+}
+
+.submit-to-warehouse-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.submit-to-warehouse-row[data-submit-enabled="true"] .submit-to-warehouse-icon {
+  border-color: color-mix(in srgb, var(--accent-strong) 44%, var(--line));
+  color: var(--accent-strong);
 }
 
 .submit-to-warehouse-label {
   min-width: 0;
   overflow: hidden;
+  color: var(--text-0);
+  font-size: 0.84rem;
+  font-weight: 560;
+  line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.submit-to-warehouse-switch {
-  appearance: none;
+.submit-to-warehouse-countdown {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--accent-strong) 30%, var(--line));
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent-soft) 56%, var(--surface-1));
+  color: color-mix(in srgb, var(--accent-strong) 86%, var(--text-1));
+  font-size: 0.76rem;
+  font-weight: 720;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.submit-to-warehouse-toggle {
   position: relative;
-  width: 42px;
-  height: 24px;
-  margin: 0;
+  width: 44px;
+  height: 26px;
+  padding: 0;
   border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
   border-radius: 999px;
   background: var(--surface-2);
-  cursor: pointer;
 }
 
-.submit-to-warehouse-switch::after {
-  content: "";
+.submit-to-warehouse-toggle:hover {
+  border-color: color-mix(in srgb, var(--line-strong) 78%, var(--line));
+  background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+}
+
+.submit-to-warehouse-toggle[aria-checked="true"] {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.submit-to-warehouse-toggle:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+.submit-to-warehouse-toggle-knob {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: var(--text-2);
   transition: transform 0.15s ease, background 0.15s ease;
 }
 
-.submit-to-warehouse-switch:checked {
-  border-color: var(--accent-strong);
-  background: var(--accent-soft);
-}
-
-.submit-to-warehouse-switch:checked::after {
+.submit-to-warehouse-toggle[aria-checked="true"] .submit-to-warehouse-toggle-knob {
   transform: translateX(18px);
   background: var(--accent-strong);
-}
-
-.submit-to-warehouse-countdown {
-  color: var(--text-2);
-  font-size: 0.76rem;
-}
-
-.submit-to-warehouse-select {
-  min-width: 0;
-  min-height: 34px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--surface-2);
-  color: var(--text-0);
-  font: inherit;
 }
 
 @media (max-width: 720px) {
