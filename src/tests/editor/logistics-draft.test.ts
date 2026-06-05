@@ -96,7 +96,7 @@ afterEach(() => {
 });
 
 describe("物流绘制模式", () => {
-  it("rejects empty-cell logistics starts when empty endpoints are disabled", () => {
+  it("rejects empty-cell logistics starts when empty starts are disabled", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
@@ -586,6 +586,55 @@ describe("物流绘制模式", () => {
     expect(snapshot.entities.source).toBeUndefined();
     expect(findDocumentEntityAt(snapshot, 12, 8)).toMatchObject({
       definitionId: "item_log_splitter",
+    });
+    expect(snapshot.entities.predecessor).toBeDefined();
+    expect(snapshot.entities.successor).toBeDefined();
+  });
+
+  it("keeps internal source turns valid when auto devices are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
+      createTestEntity("source", "belt_straight_1x1", 12, 8),
+      createTestEntity("successor", "belt_straight_1x1", 13, 8),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "logistics-entity",
+        entityId: "source",
+        gridPoint: { x: 12, y: 8 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      autoCreateLogisticsDevices: false,
+      pointerGridPoint: { x: 12, y: 7 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+    });
+    expect(editorHost.state.collections.ghost).toEqual(["source"]);
+    expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
+      definitionId: "belt_turn_ccw_1x1",
+      rotation: 270,
+    });
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
+
+    const snapshot = editorHost.internalDocument.getSnapshot();
+    expect(snapshot.entities.source).toBeUndefined();
+    expect(findDocumentEntityAt(snapshot, 12, 8)).toMatchObject({
+      definitionId: "belt_turn_ccw_1x1",
+      rotation: 270,
     });
     expect(snapshot.entities.predecessor).toBeDefined();
     expect(snapshot.entities.successor).toBeDefined();

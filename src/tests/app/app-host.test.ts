@@ -2463,7 +2463,7 @@ describe("createAppHost", () => {
     expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
   });
 
-  it("does not create touch logistics drafts from empty cells when empty endpoints are disabled", () => {
+  it("does not create touch logistics drafts from empty cells when empty starts are disabled", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.actions.setViewportClientRect({
@@ -2493,6 +2493,76 @@ describe("createAppHost", () => {
     expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
     expect(editorHost.state.collections.preview).toEqual([]);
     expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
+  });
+
+  it("allows mouse logistics drafts to end on empty cells when empty starts are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    document.entities = {
+      source: {
+        id: "source",
+        definitionId: "belt_straight_1x1",
+        position: { x: 12, y: 8 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      successor: {
+        id: "successor",
+        definitionId: "belt_straight_1x1",
+        position: { x: 13, y: 8 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    };
+    document.entityOrder = ["source", "successor"];
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 1000,
+      height: 800,
+    });
+    const appHost = createAppHost(workspace);
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = false;
+    });
+    const sourcePoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 8 });
+    const emptyTargetPoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 7 });
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyE",
+      key: "e",
+      keyCode: 69,
+    }));
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 46,
+      clientX: sourcePoint.x,
+      clientY: sourcePoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 46,
+      clientX: sourcePoint.x,
+      clientY: sourcePoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 47,
+      clientX: emptyTargetPoint.x,
+      clientY: emptyTargetPoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
+
+    expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+      target: null,
+    });
+    expect(editorHost.state.collections.ghost).toEqual(["source"]);
   });
 
   it("passes disabled auto logistics devices setting into mouse logistics previews", () => {
@@ -2570,6 +2640,133 @@ describe("createAppHost", () => {
       invalidReason: "overlap-existing-logistics",
     });
     expect(editorHost.state.collections.ghost).toEqual([]);
+  });
+
+  it("applies mouse logistics turns from existing internal belts when auto devices are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    document.entities = {
+      predecessor: {
+        id: "predecessor",
+        definitionId: "belt_straight_1x1",
+        position: { x: 11, y: 8 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      source: {
+        id: "source",
+        definitionId: "belt_straight_1x1",
+        position: { x: 12, y: 8 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      successor: {
+        id: "successor",
+        definitionId: "belt_straight_1x1",
+        position: { x: 13, y: 8 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    };
+    document.entityOrder = ["predecessor", "source", "successor"];
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 1000,
+      height: 800,
+    });
+    const appHost = createAppHost(workspace);
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices = false;
+    });
+    const sourcePoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 8 });
+    const branchPoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 7 });
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyE",
+      key: "e",
+      keyCode: 69,
+    }));
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 48,
+      clientX: sourcePoint.x,
+      clientY: sourcePoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 48,
+      clientX: sourcePoint.x,
+      clientY: sourcePoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 49,
+      clientX: branchPoint.x,
+      clientY: branchPoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
+
+    const sourcePreviewId = editorHost.state.collections.preview.find((entityId) => {
+      const entity = editorHost.internalState.drafts.find((draft) => draft.id === entityId);
+
+      return entity?.position.x === 12 && entity.position.y === 8;
+    });
+    const sourcePreview = editorHost.internalState.drafts.find((entity) =>
+      entity.id === sourcePreviewId,
+    );
+
+    expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+      source: {
+        type: "logistics-entity",
+        entityId: "source",
+      },
+    });
+    expect(editorHost.state.collections.ghost).toEqual(["source"]);
+    expect(sourcePreview).toMatchObject({
+      definitionId: "belt_turn_ccw_1x1",
+      rotation: 270,
+    });
+
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 50,
+      clientX: branchPoint.x,
+      clientY: branchPoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 50,
+      clientX: branchPoint.x,
+      clientY: branchPoint.y,
+      buttons: 0,
+    }));
+
+    const snapshot = editorHost.document.getSnapshot();
+    const sourceReplacement = Object.values(snapshot.entities).find((entity) =>
+      entity.position.x === 12 && entity.position.y === 8,
+    );
+    const branchEntity = Object.values(snapshot.entities).find((entity) =>
+      entity.position.x === 12 && entity.position.y === 7,
+    );
+
+    expect(snapshot.entities.source).toBeUndefined();
+    expect(sourceReplacement).toMatchObject({
+      definitionId: "belt_turn_ccw_1x1",
+      rotation: 270,
+    });
+    expect(branchEntity).toMatchObject({
+      definitionId: "belt_straight_1x1",
+      rotation: 270,
+    });
+    expect(snapshot.entities.predecessor).toBeDefined();
+    expect(snapshot.entities.successor).toBeDefined();
   });
 
   it("keeps mouse logistics preview stable while the pointer stays in the same grid cell", () => {

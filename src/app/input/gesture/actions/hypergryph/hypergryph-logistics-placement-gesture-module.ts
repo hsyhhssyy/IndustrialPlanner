@@ -47,7 +47,7 @@ const ORDINARY_BELT_DEFINITION_IDS = new Set([
 const GRID_EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
 
 interface LogisticsPlacementBehaviorOptions {
-  readonly allowEmptyEndpoints: boolean;
+  readonly allowEmptySource: boolean;
   readonly autoCreateLogisticsDevices: boolean;
 }
 
@@ -340,7 +340,7 @@ function handleTouchTap(options: {
 
   const result = options.editor.actions.createLogisticsDraftStart({
     kind,
-    allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
+    allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
     source: {
       type: "device",
       entityId: endpoint.entityId,
@@ -417,7 +417,7 @@ function handleTouchDragStart(options: {
 
     const result = options.editor.actions.createLogisticsDraftStart({
       kind,
-      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
       source: {
         type: "device",
         entityId: endpoint.entityId,
@@ -443,7 +443,7 @@ function handleTouchDragStart(options: {
   if (endpoint?.type === "logistics-entity") {
     const result = options.editor.actions.createLogisticsDraftStart({
       kind,
-      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
       source: {
         type: "logistics-entity",
         entityId: endpoint.entityId,
@@ -468,13 +468,13 @@ function handleTouchDragStart(options: {
 
   const startEntity = options.editor.queries.findEntityAtClientPixelPoint(options.startPosition);
   if (startEntity === null) {
-    if (!resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints) {
+    if (!resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource) {
       return { status: "ignored" };
     }
 
     const result = options.editor.actions.createLogisticsDraftStart({
       kind,
-      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
       source: {
         type: "empty-cell",
         gridPoint: startGridPoint,
@@ -522,7 +522,7 @@ function handleTouchDragMove(options: {
 
     const startResult = options.editor.actions.createLogisticsDraftStart({
       kind,
-      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
       source: {
         type: "device",
         entityId: runtime.sourceEntityId,
@@ -638,7 +638,7 @@ function driveMouseLogisticsStartPreview(options: {
 
   const result = options.editor.actions.createLogisticsDraftStart({
     kind: options.kind,
-    allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
+    allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
     source: {
       type: "device",
       entityId: endpoint.entityId,
@@ -753,7 +753,7 @@ function createMouseLogisticsStart(options: {
   if (endpoint?.type === "device-port" && endpoint.portDirection === "output") {
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
-      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
       source: {
         type: "device",
         entityId: endpoint.entityId,
@@ -764,7 +764,7 @@ function createMouseLogisticsStart(options: {
   } else if (endpoint?.type === "logistics-entity") {
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
-      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
       source: {
         type: "logistics-entity",
         entityId: endpoint.entityId,
@@ -773,13 +773,13 @@ function createMouseLogisticsStart(options: {
       routeOrder: options.appHost.internalState.runtime.logisticsPlacement.routeOrder,
     });
   } else if (options.pointerEntityId === null) {
-    if (!resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints) {
+    if (!resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource) {
       return { status: "ignored" };
     }
 
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
-      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
       source: {
         type: "empty-cell",
         gridPoint: options.gridPoint,
@@ -863,7 +863,7 @@ function createContinuedMouseLogisticsStart(options: {
   if (endpoint?.type === "logistics-entity") {
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
-      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
       source: {
         type: "logistics-entity",
         entityId: endpoint.entityId,
@@ -874,7 +874,7 @@ function createContinuedMouseLogisticsStart(options: {
   } else if (endpoint?.type === "device-port" && endpoint.portDirection === "output") {
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
-      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
       source: {
         type: "device",
         entityId: endpoint.entityId,
@@ -1043,7 +1043,7 @@ function updateRuntimeFromResult(options: {
 
 function resolveLogisticsPlacementBehaviorOptions(appHost: AppHost): LogisticsPlacementBehaviorOptions {
   return {
-    allowEmptyEndpoints: appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints,
+    allowEmptySource: appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints,
     autoCreateLogisticsDevices: appHost.state.settings.hypergryphAutoCreateLogisticsDevices,
   };
 }
@@ -1054,7 +1054,7 @@ function resolveMoveLogisticsDraftBehaviorOptions(appHost: AppHost): {
 } {
   const behavior = resolveLogisticsPlacementBehaviorOptions(appHost);
   return {
-    allowEmptyTarget: behavior.allowEmptyEndpoints,
+    allowEmptyTarget: true,
     autoCreateLogisticsDevices: behavior.autoCreateLogisticsDevices,
   };
 }

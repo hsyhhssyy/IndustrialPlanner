@@ -1361,8 +1361,6 @@ function resolveAutoDraftPlan(options: {
             createAutoDeviceOverride(options.kind, "splitter", sourceInfo.inputEdge),
           );
           replacingEntityIds.add(sourceInfo.entity.id);
-        } else {
-          invalidReason = "overlap-existing-logistics";
         }
       }
     }
