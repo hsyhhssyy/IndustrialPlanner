@@ -249,6 +249,20 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         defaultValue: false,
       },
       {
+        id: "game-arknights-allow-empty-logistics-endpoints",
+        kind: "switch",
+        labelKey: "settingsField.arknightsAllowEmptyLogisticsEndpoints",
+        descriptionKey: "settingsField.arknightsAllowEmptyLogisticsEndpointsDescription",
+        defaultValue: true,
+      },
+      {
+        id: "game-arknights-auto-create-logistics-devices",
+        kind: "switch",
+        labelKey: "settingsField.arknightsAutoCreateLogisticsDevices",
+        descriptionKey: "settingsField.arknightsAutoCreateLogisticsDevicesDescription",
+        defaultValue: true,
+      },
+      {
         id: "game-arknights-selection-right-dock-sync",
         kind: "switch",
         labelKey: "settingsField.arknightsSelectionRightDockSync",
@@ -514,6 +528,8 @@ export class WorkbenchSettingsDialogController {
     // 鹰角操作模式
     "game-arknights-immediate-move",
     "game-arknights-immediate-marquee",
+    "game-arknights-allow-empty-logistics-endpoints",
+    "game-arknights-auto-create-logistics-devices",
     "game-arknights-selection-right-dock-sync",
     "game-arknights-inspector-open-on-second-click",
     // 快捷键

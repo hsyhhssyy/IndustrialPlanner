@@ -26,6 +26,7 @@ export type LogisticsDraftInvalidReason =
   | "overlap-existing-logistics"
   | "overlap-own-preview"
   | "target-route-crosses-target-device"
+  | "empty-endpoint-disallowed"
   | "empty-path"
   | "missing-port"
   | "outside-base"
@@ -67,6 +68,7 @@ export interface LogisticsDraftReadonlyState {
 
 export interface CreateLogisticsDraftStartOptions {
   readonly kind: LogisticsKind;
+  readonly allowEmptySource?: boolean;
   readonly source:
     | {
         readonly type: "device";
@@ -87,6 +89,8 @@ export interface CreateLogisticsDraftStartOptions {
 
 export interface MoveLogisticsDraftEndOptions {
   readonly pointerGridPoint: GridPoint;
+  readonly allowEmptyTarget?: boolean;
+  readonly autoCreateLogisticsDevices?: boolean;
   readonly routeMode:
     | {
         readonly type: "freehand";

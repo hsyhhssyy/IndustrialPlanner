@@ -210,6 +210,10 @@ export type MessageKey =
   | "settingsField.arknightsImmediateMoveDescription"
   | "settingsField.arknightsImmediateMarquee"
   | "settingsField.arknightsImmediateMarqueeDescription"
+  | "settingsField.arknightsAllowEmptyLogisticsEndpoints"
+  | "settingsField.arknightsAllowEmptyLogisticsEndpointsDescription"
+  | "settingsField.arknightsAutoCreateLogisticsDevices"
+  | "settingsField.arknightsAutoCreateLogisticsDevicesDescription"
   | "settingsField.arknightsSelectionRightDockSync"
   | "settingsField.arknightsSelectionRightDockSyncDescription"
   | "settingsField.arknightsInspectorOpenOnSecondClick"
@@ -654,6 +658,10 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.arknightsImmediateMoveDescription": "从一个已选择的设备拖动时，立即触发移动。",
     "settingsField.arknightsImmediateMarquee": "立即框选",
     "settingsField.arknightsImmediateMarqueeDescription": "鼠标模式：从画布空白处开始拖动时，立即开始框选。\n触控模式：从画布空白处长按并拖动时，立即开始框选。\n开启该选项会强制打开立即移动。",
+    "settingsField.arknightsAllowEmptyLogisticsEndpoints": "物流允许以空地为起点/终点",
+    "settingsField.arknightsAllowEmptyLogisticsEndpointsDescription": "开启后，布设传送带和管道时可以从空地起笔，也可以停在空地。",
+    "settingsField.arknightsAutoCreateLogisticsDevices": "自动创建物流设备",
+    "settingsField.arknightsAutoCreateLogisticsDevicesDescription": "开启后，传送带和管道与自身或已有物流交叉时自动创建分流器、汇流器或连接器；关闭后交叉位置禁止放置。",
     "settingsField.arknightsSelectionRightDockSync": "右侧面板与选择联动",
     "settingsField.arknightsSelectionRightDockSyncDescription": "选择模式下，单选设备时自动打开右侧面板；关闭右侧面板时同步取消单选，取消单选时同步关闭右侧面板。",
     "settingsField.arknightsInspectorOpenOnSecondClick": "再次点击打开设备属性",
@@ -1097,6 +1105,10 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.arknightsImmediateMoveDescription": "Immediately trigger move when dragging from a selected device.",
     "settingsField.arknightsImmediateMarquee": "Immediate Marquee",
     "settingsField.arknightsImmediateMarqueeDescription": "Mouse mode: Immediately start marquee selection when dragging from empty canvas space.\nTouch mode: Immediately start marquee selection when long-pressing and dragging from empty canvas space.\nEnabling this option forces Immediate Move on.",
+    "settingsField.arknightsAllowEmptyLogisticsEndpoints": "Allow Empty Logistics Endpoints",
+    "settingsField.arknightsAllowEmptyLogisticsEndpointsDescription": "Allow conveyors and pipes to start from an empty cell and end on an empty cell.",
+    "settingsField.arknightsAutoCreateLogisticsDevices": "Auto Create Logistics Devices",
+    "settingsField.arknightsAutoCreateLogisticsDevicesDescription": "Automatically create splitters, convergers, or connectors when conveyor and pipe routes cross themselves or existing logistics. When disabled, those crossings become invalid placements.",
     "settingsField.arknightsSelectionRightDockSync": "Sync Right Dock With Selection",
     "settingsField.arknightsSelectionRightDockSyncDescription": "In select mode, automatically open the right dock for a single selected device, and keep dock closing and deselection in sync.",
     "settingsField.arknightsInspectorOpenOnSecondClick": "Open Inspector On Second Click",

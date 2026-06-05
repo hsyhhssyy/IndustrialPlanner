@@ -96,6 +96,60 @@ afterEach(() => {
 });
 
 describe("物流绘制模式", () => {
+  it("rejects empty-cell logistics starts when empty endpoints are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    const startResult = editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      allowEmptySource: false,
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 0, y: 0 },
+      },
+    });
+
+    expect(startResult.status).toBe("ignored");
+    expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
+    expect(editorHost.state.collections.preview).toEqual([]);
+  });
+
+  it("marks logistics drafts invalid when empty targets are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("source-device", "item_port_storager_1", 0, 8),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "device",
+        entityId: "source-device",
+        pointerGridPoint: { x: 1, y: 8 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 4, y: 8 },
+      allowEmptyTarget: false,
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: false,
+      invalidReason: "empty-endpoint-disallowed",
+    });
+    expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
+      canApply: false,
+      invalidReason: "empty-endpoint-disallowed",
+    });
+  });
+
   it("creates and applies a single-bend belt logistics draft from an empty cell", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -924,6 +978,41 @@ describe("物流绘制模式", () => {
     });
   });
 
+  it("marks existing logistics crossings invalid when auto logistics devices are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
+      createTestEntity("crossing", "belt_straight_1x1", 12, 8),
+      createTestEntity("successor", "belt_straight_1x1", 13, 8),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 12, y: 6 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 12, y: 10 },
+      autoCreateLogisticsDevices: false,
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: false,
+      invalidReason: "overlap-existing-logistics",
+    });
+    expect(editorHost.state.collections.ghost).toEqual([]);
+    expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual([]);
+  });
+
   it("creates a connector when a new horizontal path crosses a vertically stacked logistics tile", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -996,6 +1085,41 @@ describe("物流绘制模式", () => {
     expect(findPreviewDraftAt(editorHost, 2, 1)).toMatchObject({
       definitionId: "item_log_connector",
     });
+  });
+
+  it("marks freehand self-overlap invalid when auto logistics devices are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 0, y: 0 },
+      },
+    });
+    for (const pointerGridPoint of [
+      { x: 2, y: 0 },
+      { x: 2, y: 2 },
+      { x: 0, y: 2 },
+    ]) {
+      editorHost.actions.moveLogisticEnd({
+        pointerGridPoint,
+        routeMode: { type: "freehand" },
+      });
+    }
+
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 2, y: 1 },
+      autoCreateLogisticsDevices: false,
+      routeMode: { type: "freehand" },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: false,
+      invalidReason: "overlap-own-preview",
+    });
+    expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual([]);
   });
 
   it("keeps freehand self-overlap converger head when retracing a horizontal draft segment", () => {

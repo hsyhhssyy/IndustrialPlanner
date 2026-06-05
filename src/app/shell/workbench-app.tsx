@@ -149,6 +149,34 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.hypergryphImmediateMarquee = value;
         }),
       },
+      "game-arknights-allow-empty-logistics-endpoints": {
+        readValue: () => appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints === value) {
+            return;
+          }
+
+          appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = value;
+        }),
+      },
+      "game-arknights-auto-create-logistics-devices": {
+        readValue: () => appHost.state.settings.hypergryphAutoCreateLogisticsDevices,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices === value) {
+            return;
+          }
+
+          appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices = value;
+        }),
+      },
       "game-arknights-selection-right-dock-sync": {
         readValue: () => appHost.state.settings.hypergryphSelectionRightDockSync,
         writeValue: action((value) => {

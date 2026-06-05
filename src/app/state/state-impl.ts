@@ -73,6 +73,8 @@ export interface AppSettingsReadWrite extends AppSettings {
   hypergryphOperationMode: boolean;
   hypergryphImmediateMove: boolean;
   hypergryphImmediateMarquee: boolean;
+  hypergryphAllowEmptyLogisticsEndpoints: boolean;
+  hypergryphAutoCreateLogisticsDevices: boolean;
   hypergryphSelectionRightDockSync: boolean;
   hypergryphInspectorOpenOnSecondClick: boolean;
   gameUseSimplifiedDeviceIcons: boolean;
@@ -607,6 +609,8 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphOperationMode: true,
     hypergryphImmediateMove: true,
     hypergryphImmediateMarquee: false,
+    hypergryphAllowEmptyLogisticsEndpoints: true,
+    hypergryphAutoCreateLogisticsDevices: true,
     hypergryphSelectionRightDockSync: true,
     hypergryphInspectorOpenOnSecondClick: false,
     gameUseSimplifiedDeviceIcons: false,

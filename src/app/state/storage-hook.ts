@@ -121,6 +121,14 @@ function normalizePersistedAppSettings(
     hypergryphImmediateMarquee: typeof persistedAppSettings.hypergryphImmediateMarquee === "boolean"
       ? persistedAppSettings.hypergryphImmediateMarquee
       : fallback.hypergryphImmediateMarquee,
+    hypergryphAllowEmptyLogisticsEndpoints:
+      typeof persistedAppSettings.hypergryphAllowEmptyLogisticsEndpoints === "boolean"
+        ? persistedAppSettings.hypergryphAllowEmptyLogisticsEndpoints
+        : fallback.hypergryphAllowEmptyLogisticsEndpoints,
+    hypergryphAutoCreateLogisticsDevices:
+      typeof persistedAppSettings.hypergryphAutoCreateLogisticsDevices === "boolean"
+        ? persistedAppSettings.hypergryphAutoCreateLogisticsDevices
+        : fallback.hypergryphAutoCreateLogisticsDevices,
     hypergryphSelectionRightDockSync:
       typeof persistedAppSettings.hypergryphSelectionRightDockSync === "boolean"
         ? persistedAppSettings.hypergryphSelectionRightDockSync

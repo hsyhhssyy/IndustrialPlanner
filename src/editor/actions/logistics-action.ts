@@ -171,6 +171,8 @@ export function createEditorLogisticsActions(
         routeOrder,
         points: [start],
         replacingEntityId,
+        allowEmptyTarget: options.allowEmptySource !== false,
+        autoCreateLogisticsDevices: true,
         status: "created",
       });
     }),
@@ -243,6 +245,8 @@ export function createEditorLogisticsActions(
             routeOrder: options.routeMode.routeOrder,
             points: deviceRoute.points,
             replacingEntityId: draft.replacingEntityId,
+            allowEmptyTarget: options.allowEmptyTarget ?? true,
+            autoCreateLogisticsDevices: options.autoCreateLogisticsDevices ?? true,
             status: "updated",
           });
         }
@@ -320,6 +324,8 @@ export function createEditorLogisticsActions(
           routeOrder: draft.routeOrder,
           points,
           replacingEntityId: draft.replacingEntityId,
+          allowEmptyTarget: options.allowEmptyTarget ?? true,
+          autoCreateLogisticsDevices: options.autoCreateLogisticsDevices ?? true,
           status: "updated",
         });
       }
@@ -377,6 +383,8 @@ export function createEditorLogisticsActions(
         routeOrder,
         points,
         replacingEntityId: draft.replacingEntityId,
+        allowEmptyTarget: options.allowEmptyTarget ?? true,
+        autoCreateLogisticsDevices: options.autoCreateLogisticsDevices ?? true,
         status: "updated",
       });
     }),
@@ -537,6 +545,10 @@ function resolveCreateSourceEndpoint(
     }
 
     case "empty-cell":
+      if (options.allowEmptySource === false) {
+        return null;
+      }
+
       return {
         type: "empty-cell",
         gridPoint: { ...options.source.gridPoint },
@@ -634,6 +646,8 @@ function rebuildLogisticsDraft(options: {
   routeOrder: LogisticsRouteOrder;
   points: readonly GridPoint[];
   replacingEntityId: string | null;
+  allowEmptyTarget: boolean;
+  autoCreateLogisticsDevices: boolean;
   status: "created" | "updated";
 }): LogisticsDraftActionResult {
   const currentDocument = options.context.document.getSnapshot();
@@ -673,6 +687,7 @@ function rebuildLogisticsDraft(options: {
     target: options.target,
     cells,
     replacingEntityId: options.replacingEntityId,
+    autoCreateLogisticsDevices: options.autoCreateLogisticsDevices,
   });
 
   const prevConvergerGridKey = options.context.state.internalTransientState.convergerEntityGridKey;
@@ -683,6 +698,7 @@ function rebuildLogisticsDraft(options: {
     replacingEntityIds: autoDraftPlan.replacingEntityIds,
     autoDraftCellKeys: new Set(autoDraftPlan.cellOverridesByGridKey.keys()),
     target: options.target,
+    allowEmptyTarget: options.allowEmptyTarget,
   }) ?? autoDraftPlan.invalidReason;
 
   // 2026-05-23: 之前 rebuild 在终点处已形成汇流器虚影（替换了原物流段），
@@ -884,6 +900,7 @@ function resolveInvalidReason(options: {
   replacingEntityIds: readonly string[];
   autoDraftCellKeys: ReadonlySet<string>;
   target: LogisticsDraftEndpoint | null;
+  allowEmptyTarget: boolean;
 }): LogisticsDraftInvalidReason | null {
   if (options.cells.length === 0) {
     return "empty-path";
@@ -935,6 +952,22 @@ function resolveInvalidReason(options: {
       if (areGridPointsEqual(entity.position, cell.gridPoint)) {
         return "overlap-existing-logistics";
       }
+    }
+  }
+
+  if (!options.allowEmptyTarget && options.target === null) {
+    const lastCell = options.cells[options.cells.length - 1] ?? null;
+    const targetEntity = lastCell === null
+      ? null
+      : findTopEntityAtGridPoint({
+          gridPoint: lastCell.gridPoint,
+          document: currentDocument,
+          drafts: [],
+          entityDefinitionMap: options.context.entityDefinitionMap,
+          baseDefinitions: options.context.workspace.registry.baseDefinitions,
+        });
+    if (targetEntity === null) {
+      return "empty-endpoint-disallowed";
     }
   }
 
@@ -1200,6 +1233,7 @@ function resolveDeviceToDeviceRoute(options: {
           replacingEntityIds: [],
           autoDraftCellKeys: new Set(),
           target: targetEndpoint,
+          allowEmptyTarget: true,
         }) !== null) {
           continue;
         }
@@ -1294,6 +1328,7 @@ function resolveAutoDraftPlan(options: {
   target: LogisticsDraftEndpoint | null;
   cells: readonly LogisticsPathCell[];
   replacingEntityId: string | null;
+  autoCreateLogisticsDevices: boolean;
 }): AutoDraftPlan {
   const currentDocument = options.context.document.getSnapshot();
   const cellOverridesByGridKey = new Map<string, AutoDraftCellOverride>();
@@ -1320,11 +1355,15 @@ function resolveAutoDraftPlan(options: {
       if (firstStepEdge === sourceInfo.outputEdge) {
         invalidReason = "unknown";
       } else if (firstStepEdge !== null) {
-        cellOverridesByGridKey.set(
-          gridPointKey(firstCell.gridPoint),
-          createAutoDeviceOverride(options.kind, "splitter", sourceInfo.inputEdge),
-        );
-        replacingEntityIds.add(sourceInfo.entity.id);
+        if (options.autoCreateLogisticsDevices) {
+          cellOverridesByGridKey.set(
+            gridPointKey(firstCell.gridPoint),
+            createAutoDeviceOverride(options.kind, "splitter", sourceInfo.inputEdge),
+          );
+          replacingEntityIds.add(sourceInfo.entity.id);
+        } else {
+          invalidReason = "overlap-existing-logistics";
+        }
       }
     }
   }
@@ -1352,7 +1391,9 @@ function resolveAutoDraftPlan(options: {
       && targetInfo.entity.id !== options.replacingEntityId
       && options.target === null
     ) {
-      if (targetInfo.inputConnected) {
+      if (!options.autoCreateLogisticsDevices) {
+        invalidReason = "overlap-existing-logistics";
+      } else if (targetInfo.inputConnected) {
         // 有合法上游 → 创建汇流器
         cellOverridesByGridKey.set(
           gridPointKey(lastCell.gridPoint),
@@ -1406,6 +1447,11 @@ function resolveAutoDraftPlan(options: {
         continue;
       }
 
+      if (!options.autoCreateLogisticsDevices) {
+        invalidReason = "overlap-existing-logistics";
+        continue;
+      }
+
       cellOverridesByGridKey.set(
         gridPointKey(cell.gridPoint),
         createAutoDeviceOverride(options.kind, "connector", null),
@@ -1443,6 +1489,11 @@ function resolveAutoDraftPlan(options: {
         isLastCell,
       })
     ) {
+      invalidReason = "overlap-own-preview";
+      continue;
+    }
+
+    if (!options.autoCreateLogisticsDevices) {
       invalidReason = "overlap-own-preview";
       continue;
     }

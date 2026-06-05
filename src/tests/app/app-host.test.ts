@@ -272,6 +272,8 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(true);
+    expect(appHost.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
     expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(appHost.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.state.settings.debugShowFps).toBe(false);
@@ -283,6 +285,8 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(true);
+    expect(appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
     expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.internalState.settings.debugShowFps).toBe(false);
@@ -291,6 +295,8 @@ describe("createAppHost", () => {
     expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(true);
+    expect(workspace.app?.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
     expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(workspace.app?.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(workspace.app?.state.settings.debugShowFps).toBe(false);
@@ -336,6 +342,8 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(true);
+    expect(appHost.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
     expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(appHost.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.state.settings.debugShowFps).toBe(false);
@@ -346,6 +354,8 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(true);
+    expect(appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
     expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.internalState.settings.debugShowFps).toBe(false);
@@ -354,6 +364,8 @@ describe("createAppHost", () => {
     expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(true);
+    expect(workspace.app?.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
     expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(workspace.app?.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(workspace.app?.state.settings.debugShowFps).toBe(false);
@@ -2449,6 +2461,115 @@ describe("createAppHost", () => {
     expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
     expect(appHost.internalState.runtime.logisticsPlacement.headGridPoint).toBeNull();
     expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
+  });
+
+  it("does not create touch logistics drafts from empty cells when empty endpoints are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = false;
+    });
+    const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
+    const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "placement-action-belt-draw",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+    appHost.gestureAdapter.handlePointerDown(touchEvent(45, startPoint.x, startPoint.y));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(45, endPoint.x, endPoint.y));
+
+    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+    expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
+    expect(editorHost.state.collections.preview).toEqual([]);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
+  });
+
+  it("passes disabled auto logistics devices setting into mouse logistics previews", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    document.entities = {
+      predecessor: {
+        id: "predecessor",
+        definitionId: "belt_straight_1x1",
+        position: { x: 11, y: 8 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      crossing: {
+        id: "crossing",
+        definitionId: "belt_straight_1x1",
+        position: { x: 12, y: 8 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      successor: {
+        id: "successor",
+        definitionId: "belt_straight_1x1",
+        position: { x: 13, y: 8 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    };
+    document.entityOrder = ["predecessor", "crossing", "successor"];
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 1000,
+      height: 800,
+    });
+    const appHost = createAppHost(workspace);
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices = false;
+    });
+    const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 6 });
+    const targetPoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 10 });
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyE",
+      key: "e",
+      keyCode: 69,
+    }));
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 46,
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 46,
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 47,
+      clientX: targetPoint.x,
+      clientY: targetPoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
+
+    expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
+      canApply: false,
+      invalidReason: "overlap-existing-logistics",
+    });
+    expect(editorHost.state.collections.ghost).toEqual([]);
   });
 
   it("keeps mouse logistics preview stable while the pointer stays in the same grid cell", () => {

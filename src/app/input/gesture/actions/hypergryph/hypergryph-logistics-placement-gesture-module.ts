@@ -46,6 +46,11 @@ const ORDINARY_BELT_DEFINITION_IDS = new Set([
 ]);
 const GRID_EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
 
+interface LogisticsPlacementBehaviorOptions {
+  readonly allowEmptyEndpoints: boolean;
+  readonly autoCreateLogisticsDevices: boolean;
+}
+
 export function createHypergryphLogisticsPlacementGestureModule(): GestureMappingModule<AppHost> {
   let activeTouchLogisticsDragGestureId: string | null = null;
 
@@ -335,6 +340,7 @@ function handleTouchTap(options: {
 
   const result = options.editor.actions.createLogisticsDraftStart({
     kind,
+    allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
     source: {
       type: "device",
       entityId: endpoint.entityId,
@@ -411,6 +417,7 @@ function handleTouchDragStart(options: {
 
     const result = options.editor.actions.createLogisticsDraftStart({
       kind,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
       source: {
         type: "device",
         entityId: endpoint.entityId,
@@ -436,6 +443,7 @@ function handleTouchDragStart(options: {
   if (endpoint?.type === "logistics-entity") {
     const result = options.editor.actions.createLogisticsDraftStart({
       kind,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
       source: {
         type: "logistics-entity",
         entityId: endpoint.entityId,
@@ -460,8 +468,13 @@ function handleTouchDragStart(options: {
 
   const startEntity = options.editor.queries.findEntityAtClientPixelPoint(options.startPosition);
   if (startEntity === null) {
+    if (!resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints) {
+      return { status: "ignored" };
+    }
+
     const result = options.editor.actions.createLogisticsDraftStart({
       kind,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
       source: {
         type: "empty-cell",
         gridPoint: startGridPoint,
@@ -509,6 +522,7 @@ function handleTouchDragMove(options: {
 
     const startResult = options.editor.actions.createLogisticsDraftStart({
       kind,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
       source: {
         type: "device",
         entityId: runtime.sourceEntityId,
@@ -527,6 +541,7 @@ function handleTouchDragMove(options: {
 
   const result = options.editor.actions.moveLogisticEnd({
     pointerGridPoint: gridPoint,
+    ...resolveMoveLogisticsDraftBehaviorOptions(options.appHost),
     routeMode: { type: "freehand" },
   });
   updateRuntimeFromResult({
@@ -575,6 +590,7 @@ function driveMouseLogisticsPreview(options: {
 
   const result = options.editor.actions.moveLogisticEnd({
     pointerGridPoint: gridPoint,
+    ...resolveMoveLogisticsDraftBehaviorOptions(options.appHost),
     routeMode: {
       type: "single-bend",
       routeOrder: runtime.routeOrder,
@@ -622,6 +638,7 @@ function driveMouseLogisticsStartPreview(options: {
 
   const result = options.editor.actions.createLogisticsDraftStart({
     kind: options.kind,
+    allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
     source: {
       type: "device",
       entityId: endpoint.entityId,
@@ -736,6 +753,7 @@ function createMouseLogisticsStart(options: {
   if (endpoint?.type === "device-port" && endpoint.portDirection === "output") {
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
       source: {
         type: "device",
         entityId: endpoint.entityId,
@@ -746,6 +764,7 @@ function createMouseLogisticsStart(options: {
   } else if (endpoint?.type === "logistics-entity") {
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
       source: {
         type: "logistics-entity",
         entityId: endpoint.entityId,
@@ -754,8 +773,13 @@ function createMouseLogisticsStart(options: {
       routeOrder: options.appHost.internalState.runtime.logisticsPlacement.routeOrder,
     });
   } else if (options.pointerEntityId === null) {
+    if (!resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints) {
+      return { status: "ignored" };
+    }
+
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
       source: {
         type: "empty-cell",
         gridPoint: options.gridPoint,
@@ -813,6 +837,7 @@ function moveTouchLogisticsEnd(options: {
 }): void {
   const result = options.editor.actions.moveLogisticEnd({
     pointerGridPoint: options.gridPoint,
+    ...resolveMoveLogisticsDraftBehaviorOptions(options.appHost),
     routeMode: { type: "freehand" },
   });
   updateRuntimeFromResult({
@@ -838,6 +863,7 @@ function createContinuedMouseLogisticsStart(options: {
   if (endpoint?.type === "logistics-entity") {
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
       source: {
         type: "logistics-entity",
         entityId: endpoint.entityId,
@@ -848,6 +874,7 @@ function createContinuedMouseLogisticsStart(options: {
   } else if (endpoint?.type === "device-port" && endpoint.portDirection === "output") {
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
+      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptyEndpoints,
       source: {
         type: "device",
         entityId: endpoint.entityId,
@@ -919,6 +946,7 @@ function handleRouteOrderShortcut(options: {
   ) {
     const result = options.editor.actions.moveLogisticEnd({
       pointerGridPoint: gridPoint,
+      ...resolveMoveLogisticsDraftBehaviorOptions(options.appHost),
       routeMode: {
         type: "single-bend",
         routeOrder: runtime.routeOrder,
@@ -1011,6 +1039,24 @@ function updateRuntimeFromResult(options: {
   } else if (runtime.anchorGridPoint === null && options.result.headGridPoint !== null) {
     runtime.anchorGridPoint = options.result.headGridPoint;
   }
+}
+
+function resolveLogisticsPlacementBehaviorOptions(appHost: AppHost): LogisticsPlacementBehaviorOptions {
+  return {
+    allowEmptyEndpoints: appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints,
+    autoCreateLogisticsDevices: appHost.state.settings.hypergryphAutoCreateLogisticsDevices,
+  };
+}
+
+function resolveMoveLogisticsDraftBehaviorOptions(appHost: AppHost): {
+  readonly allowEmptyTarget: boolean;
+  readonly autoCreateLogisticsDevices: boolean;
+} {
+  const behavior = resolveLogisticsPlacementBehaviorOptions(appHost);
+  return {
+    allowEmptyTarget: behavior.allowEmptyEndpoints,
+    autoCreateLogisticsDevices: behavior.autoCreateLogisticsDevices,
+  };
 }
 
 function showTouchToolbar(appHost: AppHost): void {
