@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { ModuleBalancingCanvas, ModuleBalancingState } from "@/app/toolbox-types";
+import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
 import {
   buildModuleBalancingIndex,
   computeModuleBalancing,
@@ -75,6 +76,16 @@ const TEST_REGISTRY: RegistryContract = {
       recipeType: "reserved-item",
       tags: [],
     },
+    {
+      id: "hidden_void_plate",
+      nameKey: "recipe.hidden_void_plate",
+      durationSeconds: 0.5,
+      inputs: [{ itemId: "plate", amount: 1 }],
+      outputs: [],
+      machineId: "machine_smelter",
+      recipeType: "reserved-item",
+      tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+    },
   ],
 };
 
@@ -97,6 +108,14 @@ function createState(): ModuleBalancingState {
 }
 
 describe("module-balancing-model", () => {
+  it("filters toolbox-hidden recipes from system modules", () => {
+    const state = createState();
+    const index = buildModuleBalancingIndex(TEST_REGISTRY, state);
+
+    expect(index.recipeById.has("hidden_void_plate")).toBe(false);
+    expect(index.systemModules.map((module) => module.recipeId)).not.toContain("hidden_void_plate");
+  });
+
   it("computes global inputs, recipe quantities, stage balances, and warehouse forecasts", () => {
     const state = createState();
     const index = buildModuleBalancingIndex(TEST_REGISTRY, state);

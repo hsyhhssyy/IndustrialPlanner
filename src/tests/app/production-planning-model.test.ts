@@ -9,7 +9,9 @@ import {
 } from "@/app/shell/production-planning/production-planning-model";
 import { buildProductionPlanningTreeRows } from "@/app/shell/production-planning/production-planning-panel";
 import type { ProductionPlanningPort } from "@/app/shell/production-planning/production-planning-model";
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { createRegistryContract } from "@/registry";
+import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
 
 function port(itemId: string, perMinute: number): ProductionPlanningPort {
   return {
@@ -53,6 +55,37 @@ function makeInfiniteItemIds(
 }
 
 describe("production planning model", () => {
+  it("filters toolbox-hidden recipes from planning indexes and recipe choices", () => {
+    const registry = createRegistryContract();
+    const hiddenRecipe: RecipeDefinition = {
+      id: "test_hidden_iron_nugget",
+      nameKey: "recipe.test_hidden_iron_nugget",
+      durationSeconds: 1,
+      inputs: [],
+      outputs: [{ itemId: "item_iron_nugget", amount: 999 }],
+      machineId: "item_port_furnance_1",
+      recipeType: "immediate-consume",
+      tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+    };
+    registry.recipeDefinitions = [hiddenRecipe, ...registry.recipeDefinitions];
+
+    const index = buildProductionPlanningIndex(registry);
+
+    expect(index.recipeById.has(hiddenRecipe.id)).toBe(false);
+    expect(index.recipesByOutputItem.get("item_iron_nugget")?.map((recipe) => recipe.id))
+      .not.toContain(hiddenRecipe.id);
+
+    const result = computeProductionPlan({
+      targets: [port("item_iron_nugget", 60)],
+      supplies: [],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map([["item_iron_nugget", hiddenRecipe.id]]),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    expect(result.recipeTotals.map((recipe) => recipe.recipeId)).not.toContain(hiddenRecipe.id);
+  });
+
   it("uses provided supply before recipe production", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({

@@ -99,6 +99,21 @@ describe("EncyclopediaBrowser", () => {
     vi.unstubAllGlobals();
   });
 
+  it("filters toolbox-hidden recipes from recipe indexes", () => {
+    const registry = createRegistryContract();
+    const index = buildEncyclopediaIndex(
+      registry.itemDefinitions,
+      registry.entityDefinitions,
+      registry.recipeDefinitions,
+    );
+
+    expect(index.recipesByInputItem.get("any")).toBeUndefined();
+    expect(index.recipesByMachine.get("item_port_udpipe_loader_1")?.map((recipe) => recipe.id) ?? [])
+      .not.toContain("r_udpipe_loader_void_liquid_any_internal");
+    expect(index.recipesByMachine.get("item_port_udpipe_loader_2")?.map((recipe) => recipe.id) ?? [])
+      .not.toContain("r_udpipe_loader_multi_void_liquid_any_internal");
+  });
+
   it("hides empty mobile categories after external item filtering", () => {
     const workspace = createWorkspace();
     const currentAppHost = createAppHost(workspace);

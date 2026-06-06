@@ -157,4 +157,26 @@ describe("RecipePickerDialog", () => {
 
     return expect(selectionPromise).resolves.toBeNull();
   });
+
+  it("hides toolbox-hidden recipes from explicit recipe sources", () => {
+    const hiddenRecipe = findRecipe(appHost, "r_udpipe_loader_void_liquid_any_internal");
+    const visibleRecipe = findRecipe(appHost, "r_furnace_iron_nugget_from_iron_ore_basic");
+    let selectionPromise!: Promise<string | null>;
+
+    act(() => {
+      selectionPromise = appHost.recipePicker.pickRecipe({
+        recipes: [hiddenRecipe, visibleRecipe],
+      });
+    });
+
+    expect(queryRecipeButtons(container).map((button) => button.dataset.recipeId)).toEqual([
+      visibleRecipe.id,
+    ]);
+
+    act(() => {
+      appHost.recipePicker.cancel();
+    });
+
+    return expect(selectionPromise).resolves.toBeNull();
+  });
 });

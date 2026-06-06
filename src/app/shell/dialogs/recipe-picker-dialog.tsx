@@ -5,6 +5,7 @@ import LucideSearch from "~icons/lucide/search";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import {
   buildEncyclopediaIndex,
@@ -253,12 +254,14 @@ function resolveScopedRecipes(
   registryRecipes: readonly RecipeDefinition[],
   source: AppHost["recipePicker"]["source"],
 ): RecipeDefinition[] {
+  const visibleRegistryRecipes = registryRecipes.filter(isRecipeVisibleInToolbox);
+
   if (source === null) {
-    return [...registryRecipes];
+    return visibleRegistryRecipes;
   }
 
   if (source.kind === "recipes") {
-    return [...source.recipes];
+    return source.recipes.filter(isRecipeVisibleInToolbox);
   }
 
   const entityIds = new Set(source.entityIds);
@@ -267,7 +270,7 @@ function resolveScopedRecipes(
     return [];
   }
 
-  return registryRecipes.filter((recipe) => entityIds.has(recipe.machineId));
+  return visibleRegistryRecipes.filter((recipe) => entityIds.has(recipe.machineId));
 }
 
 function matchesRecipeSearch(

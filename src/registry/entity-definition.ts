@@ -1680,6 +1680,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   /**
    * item_port_udpipe_loader_1 — 地下管道装载口（3×3）
    * 流体输入方向。仅 1 个 input port(西)。
+   * AI-CORRECTION 2026-06-06: 默认行为改为销毁模式；进入 loader_buffer 的液体由隐藏配方消耗。
    */
   createEntityDefinition({
     id: "item_port_udpipe_loader_1",
@@ -1688,7 +1689,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
     displayOrder: 407,
-    tags: ["武陵", "OuterRingAllowed", WAREHOUSE_SINK_TAG],
+    // AI-REMOVED 2026-06-06:
+    // Reason: 暗管入口默认销毁进入液体，不能再由 WarehouseSink 直接写入仓库槽。
+    // Trigger: 用户要求未链接暗管入口销毁所有进入液体，并明确默认摆放为销毁模式。
+    // Evidence: runtime-slot-access.findInputSlotForItem 会优先将 WarehouseSink 输入写入仓库槽，导致本地隐藏销毁配方拿不到输入。
+    // Replacement: 本定义的 loader_buffer + r_udpipe_loader_void_liquid_any_internal。
+    // Risk: Medium - 已保存蓝图若依赖暗管入口入仓行为，运行结果会改为销毁液体。
+    // Human Review: Required
+    //
+    // Original code:
+    // tags: ["武陵", "OuterRingAllowed", WAREHOUSE_SINK_TAG],
+    tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1699,14 +1710,52 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("in_w_1", 0, 1, "W")],
       ),
     ],
-    storageSlotGroups: [],
-    portStorageBindings: [],
+    // AI-REMOVED 2026-06-06:
+    // Reason: 暗管入口需要本地液体槽位供隐藏销毁配方消费。
+    // Trigger: 用户要求默认销毁模式使用 0.5 秒销毁 1 液体的隐藏配方实现。
+    // Evidence: 无本地 storageSlotGroups/portStorageBindings 时，入口只能依赖 synthetic 输入节点或 WarehouseSink，无法稳定挂载槽位配置面板与销毁配方通道。
+    // Replacement: 下方 loader_buffer、void_liquid recipeChannel 和 bind_fluid_input。
+    // Risk: Medium - 编译拓扑节点从无显式缓存变为显式缓存。
+    // Human Review: Required
+    //
+    // Original code:
+    // storageSlotGroups: [],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "loader_buffer",
+        "fluid",
+        createSlots("slot", [500], "liquid"),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("void_liquid", ["loader_buffer"], []),
+    ],
+    // AI-REMOVED 2026-06-06:
+    // Reason: 暗管入口端口必须绑定到本地销毁槽位。
+    // Trigger: 用户要求未链接暗管入口销毁进入液体，并要求槽位挂载 Slot 配置 behavior。
+    // Evidence: 空绑定会让编译器创建 synthetic 输入槽，隐藏销毁配方无法绑定该自动槽组。
+    // Replacement: 下方 bind_fluid_input 绑定 fluid_input -> loader_buffer。
+    // Risk: Medium - 显式绑定改变拓扑节点 id。
+    // Human Review: Required
+    //
+    // Original code:
+    // portStorageBindings: [],
+    portStorageBindings: [
+      createBinding("bind_fluid_input", "fluid_input", "loader_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.slotConfig,
+        slotGroupIds: ["loader_buffer"],
+      },
+    ],
   }),
 
   /**
    * item_port_udpipe_unloader_1 — 暗管出口（3×3）
    *
    * 缓存组：1 个 universal（单槽 × 1 容量）
+   * AI-CORRECTION 2026-06-06: 暗管系列槽位容量统一改为 500。
    * 求解图节点：1 个
    * 端口：1 fluid output(东)
    *
@@ -1721,7 +1770,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
     displayOrder: 408,
-    tags: ["武陵", "OuterRingAllowed", WAREHOUSE_SINK_TAG],
+    // AI-REMOVED 2026-06-06:
+    // Reason: 暗管出口是生成/取货语义，WarehouseSink 只应表达输入入仓语义。
+    // Trigger: 用户明确默认暗管出口是生成模式，但没有选择任何物品。
+    // Evidence: runtime-slot-access 只在 input-view 节点识别 WarehouseSink；出口保留该 tag 无运行收益且会误导语义。
+    // Replacement: warehouseItemLink inspector + unloader_buffer。
+    // Risk: Low - 当前出口只有 output port，移除该 tag 不改变实际输送路径。
+    // Human Review: Required
+    //
+    // Original code:
+    // tags: ["武陵", "OuterRingAllowed", WAREHOUSE_SINK_TAG],
+    tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1736,7 +1795,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "unloader_buffer",
         "fluid",
-        createSlots("slot", [1], "liquid"),
+        createSlots("slot", [500], "liquid"),
       ),
     ],
     portStorageBindings: [
@@ -1745,6 +1804,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     inspectors: [
       {
         type: INSPECTOR_TYPE.warehouseItemLink,
+        slotGroupIds: ["unloader_buffer"],
+      },
+      {
+        type: INSPECTOR_TYPE.slotConfig,
         slotGroupIds: ["unloader_buffer"],
       },
     ],
@@ -2576,9 +2639,38 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    ...createSimpleProductionDevice([
-      { kind: "fluid", direction: "input", capacities: [1] },
-    ]),
+    // AI-REMOVED 2026-06-06:
+    // Reason: 多口暗管入口需要两个端口共享一个槽位，且两个销毁 channel 绑定同一个槽位以满足最大销毁速度。
+    // Trigger: 用户明确“多口暗管入口只需要一个存储槽位，两个端口都对接这一个槽位，两个 channel 绑定一个槽位”。
+    // Evidence: createSimpleProductionDevice 只能生成单个默认 channel 和默认 recipeStatus inspector，不适合隐藏销毁配方。
+    // Replacement: 下方 loader_buffer、void_liquid_1/2 recipeChannels 和 bind_fluid_input。
+    // Risk: Medium - 旧 synthetic 风格槽组 id 改为 loader_buffer。
+    // Human Review: Required
+    //
+    // Original code:
+    // ...createSimpleProductionDevice([
+    //   { kind: "fluid", direction: "input", capacities: [1] },
+    // ]),
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "loader_buffer",
+        "fluid",
+        createSlots("slot", [500], "liquid"),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("void_liquid_1", ["loader_buffer"], []),
+      createRecipeChannel("void_liquid_2", ["loader_buffer"], []),
+    ],
+    portStorageBindings: [
+      createBinding("bind_fluid_input", "fluid_input", "loader_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.slotConfig,
+        slotGroupIds: ["loader_buffer"],
+      },
+    ],
   }),
   createEntityDefinition({
     id: "item_port_udpipe_unloader_2",
@@ -2601,9 +2693,38 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    ...createSimpleProductionDevice([
-      { kind: "fluid", direction: "output", capacities: [1] },
-    ]),
+    // AI-REMOVED 2026-06-06:
+    // Reason: 多口暗管出口需要两个端口共享一个槽位，并保持默认生成/取货配置为空。
+    // Trigger: 用户明确“出口也一样，一个存储槽位，两个端口都对接这一个槽位”。
+    // Evidence: createSimpleProductionDevice 会生成生产配方通道和 recipeStatus inspector，不能表达仓库取货式生成语义。
+    // Replacement: 下方 unloader_buffer、bind_fluid_output 和 warehouseItemLink/slotConfig inspectors。
+    // Risk: Medium - 旧 fluid_output_buffer 槽组 id 改为 unloader_buffer。
+    // Human Review: Required
+    //
+    // Original code:
+    // ...createSimpleProductionDevice([
+    //   { kind: "fluid", direction: "output", capacities: [1] },
+    // ]),
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "unloader_buffer",
+        "fluid",
+        createSlots("slot", [500], "liquid"),
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_fluid_output", "fluid_output", "unloader_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.warehouseItemLink,
+        slotGroupIds: ["unloader_buffer"],
+      },
+      {
+        type: INSPECTOR_TYPE.slotConfig,
+        slotGroupIds: ["unloader_buffer"],
+      },
+    ],
   }),
   createEntityDefinition({
     id: "item_liquid_cleaner_1",
@@ -2634,7 +2755,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
     displayOrder: 404,
-    tags: ["武陵", "OuterRingAllowed", "alter:item_port_storager_1", "alter-variant:liquid"],
+    tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [

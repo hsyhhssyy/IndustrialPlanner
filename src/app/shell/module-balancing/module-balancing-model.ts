@@ -11,6 +11,7 @@ import type {
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
 
 export interface ModuleBalancingItemBalance {
   itemId: string;
@@ -59,9 +60,10 @@ export function buildModuleBalancingIndex(
 ): ModuleBalancingIndex {
   const itemById = new Map(registry.itemDefinitions.map((item) => [item.id, item]));
   const entityById = new Map(registry.entityDefinitions.map((entity) => [entity.id, entity]));
-  const recipeById = new Map(registry.recipeDefinitions.map((recipe) => [recipe.id, recipe]));
+  const visibleRecipes = registry.recipeDefinitions.filter(isRecipeVisibleInToolbox);
+  const recipeById = new Map(visibleRecipes.map((recipe) => [recipe.id, recipe]));
   const customModuleById = new Map(state.customModules.map((module) => [module.id, module]));
-  const systemModules = registry.recipeDefinitions.map((recipe) => ({
+  const systemModules = visibleRecipes.map((recipe) => ({
     id: recipe.id,
     recipeId: recipe.id,
     sourceType: "system-recipe" as const,

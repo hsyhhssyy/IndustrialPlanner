@@ -9,6 +9,7 @@ import type {
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -77,8 +78,9 @@ export function buildEncyclopediaIndex(
   const recipesByInputItem = new Map<string, RecipeDefinition[]>();
   const recipesByOutputItem = new Map<string, RecipeDefinition[]>();
   const recipesByMachine = new Map<string, RecipeDefinition[]>();
+  const visibleRecipes = recipes.filter(isRecipeVisibleInToolbox);
 
-  for (const recipe of recipes) {
+  for (const recipe of visibleRecipes) {
     for (const input of recipe.inputs) {
       const arr = recipesByInputItem.get(input.itemId);
       if (arr) {

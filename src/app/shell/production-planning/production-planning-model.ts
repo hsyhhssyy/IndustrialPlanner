@@ -2,6 +2,7 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
 
 // AI-CORRECTION 2026-05-20: SPECIAL_INFINITE_ITEM_IDS retained for backward compat in tests;
 // panel no longer uses it. New logic uses ProductionPlanningSourceConfig.
@@ -130,10 +131,11 @@ const MAX_RECURSION_DEPTH = 48;
 export function buildProductionPlanningIndex(registry: RegistryContract): ProductionPlanningIndex {
   const itemById = new Map(registry.itemDefinitions.map((item) => [item.id, item]));
   const entityById = new Map(registry.entityDefinitions.map((entity) => [entity.id, entity]));
-  const recipeById = new Map(registry.recipeDefinitions.map((recipe) => [recipe.id, recipe]));
+  const visibleRecipes = registry.recipeDefinitions.filter(isRecipeVisibleInToolbox);
+  const recipeById = new Map(visibleRecipes.map((recipe) => [recipe.id, recipe]));
   const recipesByOutputItem = new Map<string, RecipeDefinition[]>();
 
-  for (const recipe of registry.recipeDefinitions) {
+  for (const recipe of visibleRecipes) {
     for (const output of recipe.outputs) {
       const recipes = recipesByOutputItem.get(output.itemId);
       if (recipes === undefined) {
@@ -314,7 +316,8 @@ export function formatProductionDeviceCount(value: number): string {
 }
 
 export function isRecipeExcludedFromProductionPlanningAuto(recipe: RecipeDefinition): boolean {
-  return recipe.tags.includes("liquid_bottle_dismantle")
+  return !isRecipeVisibleInToolbox(recipe)
+    || recipe.tags.includes("liquid_bottle_dismantle")
     || (
       recipe.inputs.some((input) => input.itemId === "item_iron_enr_powder")
       && recipe.outputs.some((output) => output.itemId === "item_iron_enr")

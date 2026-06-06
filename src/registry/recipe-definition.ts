@@ -1,4 +1,5 @@
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
 
 export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   {
@@ -3164,6 +3165,29 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "item_port_dumper_1",
     recipeType: "immediate-consume",
     tags: [],
+  },
+  // =========================================================================
+  // 暗管入口销毁配方 — 默认销毁进入槽位的任意液体
+  // =========================================================================
+  {
+    id: "r_udpipe_loader_void_liquid_any_internal",
+    nameKey: "registry.recipe.r_udpipe_loader_void_liquid_any_internal.name",
+    durationSeconds: 0.5,
+    inputs: [{ itemId: "any", amount: 1 }],
+    outputs: [],
+    machineId: "item_port_udpipe_loader_1",
+    recipeType: "immediate-consume",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+  },
+  {
+    id: "r_udpipe_loader_multi_void_liquid_any_internal",
+    nameKey: "registry.recipe.r_udpipe_loader_multi_void_liquid_any_internal.name",
+    durationSeconds: 0.5,
+    inputs: [{ itemId: "any", amount: 1 }],
+    outputs: [],
+    machineId: "item_port_udpipe_loader_2",
+    recipeType: "immediate-consume",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
   },
 
   // =========================================================================
