@@ -32,6 +32,16 @@ import {
   maintainTransportComponentDomains,
   resolveStorageSlotId,
 } from "./runtime/runtime-slot-access";
+// AI-REMOVED 2026-06-06:
+// Reason: submitMode 全局扫描机制已删除；入仓必须走 WarehouseSink 或 r_warehouse_submit 配方。
+// Trigger: 用户要求 submit mode 机制彻底删除，避免旧蓝图 submitMode 配置影响所有 slot。
+// Evidence: RUN_ID 20260606-041337-509040 中全局扫描清空产线目标存储箱导致 blueprint 失败。
+// Replacement: runtime-slot-access 动态 warehouse sink；stage-1 r_warehouse_submit 配方完成时调用 submitSlotsToWarehouse。
+// Risk: Medium
+// Human Review: Required
+//
+// Original code:
+// import { submitSlotsBySubmitMode } from "./runtime/warehouse-submit";
 import {
   cloneSimulationMutableRuntimeState,
   createEmptyTransientState,
@@ -641,6 +651,17 @@ export class SimulationWorkerRuntime {
           solveOutputEdgeChecks: p.solveOutputEdgeChecks,
         };
       }
+
+      // AI-REMOVED 2026-06-06:
+      // Reason: tick 末尾全局 submitMode 扫描会误消费所有旧 every-tick slot 配置。
+      // Trigger: 用户要求 submit mode 机制彻底删除，未来都用 warehouse sink 或配方交货。
+      // Evidence: RUN_ID 20260606-041337-509040 的 premium-capsule-line / wuling-battery-line 目标箱同 tick 被提交到仓库。
+      // Replacement: WarehouseSink 动态入仓在 Stage 3 moveOneItem 路径内完成；协议存储箱提交由 r_warehouse_submit 驱动。
+      // Risk: Medium - 依赖旧 submitMode 的蓝图需要通过迁移器转为 channelRecipes。
+      // Human Review: Required
+      //
+      // Original code:
+      // submitSlotsBySubmitMode(this.topology, this.runtimeState);
 
       const t3 = this.perfEnabled ? performance.now() : 0;
       rotateRoutingCursors(this.topology, this.runtimeState);

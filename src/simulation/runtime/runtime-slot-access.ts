@@ -22,6 +22,8 @@ import {
   resolveTransportRecipeTiming,
 } from "./phase-gating";
 
+const WAREHOUSE_SINK_TAG = "WarehouseSink";
+
 export interface IngredientSlotContent {
   readonly slotId: string;
   readonly itemType: string;
@@ -137,6 +139,16 @@ export function findInputSlotForItem(options: {
     }
   }
 
+  const warehouseSinkSlotId = findWarehouseSinkTargetSlotForItem({
+    topology: options.topology,
+    state: options.state,
+    node: options.node,
+    itemType: options.itemType,
+  });
+  if (warehouseSinkSlotId !== null) {
+    return warehouseSinkSlotId;
+  }
+
   const nodeState = options.state.transient.nodes[options.node.id];
   const excluded = new Set(nodeState?.excludedItemTypes ?? []);
 
@@ -161,6 +173,56 @@ export function findInputSlotForItem(options: {
   }
 
   return null;
+}
+
+function findWarehouseSinkTargetSlotForItem(options: {
+  topology: CompiledSimulationTopology;
+  state: SimulationMutableRuntimeState;
+  node: CompiledSimulationNode;
+  itemType: string;
+}): string | null {
+  if (!isWarehouseSinkInputNode(options.topology, options.node)) {
+    return null;
+  }
+
+  const warehouseSlotId = findWarehouseSlotId(options.topology, options.itemType);
+  if (warehouseSlotId === null) {
+    return null;
+  }
+
+  const slot = options.topology.slots[warehouseSlotId];
+  if (slot === undefined || !slotCanHold(options.topology, slot, options.itemType)) {
+    return null;
+  }
+
+  return getRemainingCapacity(options.topology, options.state, warehouseSlotId) > 0
+    ? warehouseSlotId
+    : null;
+}
+
+function isWarehouseSinkInputNode(
+  topology: CompiledSimulationTopology,
+  node: CompiledSimulationNode,
+): boolean {
+  if (node.viewRole !== "input-view") {
+    return false;
+  }
+
+  const device = topology.devices[node.deviceId];
+  return device?.tags.includes(WAREHOUSE_SINK_TAG) === true;
+}
+
+function findWarehouseSlotId(
+  topology: CompiledSimulationTopology,
+  itemType: string,
+): string | null {
+  const warehouseDevice = Object.values(topology.devices).find((device) => device.definitionId === "warehouse");
+  if (warehouseDevice === undefined) {
+    return null;
+  }
+
+  const warehouseSlotId = `${warehouseDevice.id}/node:warehouse/slot:${itemType}`;
+  return topology.slots[warehouseSlotId] === undefined ? null : warehouseSlotId;
 }
 
 export function findOutputSlotForItem(options: {

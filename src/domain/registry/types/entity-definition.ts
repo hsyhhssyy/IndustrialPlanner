@@ -213,7 +213,16 @@ export interface StorageSlotGroupDefinition {
 
 
 export type CountLimit = number | "unlimited";
-export type SubmitMode = "never" | "every-tick" | "every-n-seconds";
+// AI-REMOVED 2026-06-06:
+// Reason: submitMode 机制已删除，domain API 不应继续导出旧提交模式类型。
+// Trigger: 用户要求 submit mode 机制彻底删除，未来统一用 WarehouseSink 或 r_warehouse_submit 配方交货。
+// Evidence: simulation/types.ts 已删除 SimulationSubmitMode；运行时不再编译或消费 submitMode。
+// Replacement: WarehouseSink tag / r_warehouse_submit recipe.
+// Risk: Medium - 外部代码若仍引用 SubmitMode 会编译失败，需要迁移到新交货语义。
+// Human Review: Required
+//
+// Original code:
+// export type SubmitMode = "never" | "every-tick" | "every-n-seconds";
 export type StorageGroupSplitLinkType = "share-all" | "share-cap";
 
 /**
@@ -238,10 +247,19 @@ export interface StorageSlotDefinition extends ItemFilterDefinition {
    * 对应 entity.config 中的 "slots[N].ignoreStock"
    */
   ignoreStock: boolean;
-  /** 提交模式：never（不自动提交）/ every-tick（每 tick）/ every-n-seconds（定时） */
-  submitMode: SubmitMode;
-  /** 当 submitMode="every-n-seconds" 时的间隔秒数 */
-  submitIntervalSeconds: number | null;
+  // AI-REMOVED 2026-06-06:
+  // Reason: 槽位定义不再携带 submitMode；提交语义改为设备级 WarehouseSink 或配方通道。
+  // Trigger: 用户要求 submit mode 机制彻底删除。
+  // Evidence: RUN_ID 20260606-041337-509040 中 slot 级 submitMode 被全局扫描误消费。
+  // Replacement: src/simulation/runtime/runtime-slot-access.ts + r_warehouse_submit recipe.
+  // Risk: Medium - 旧蓝图中的同名 config 键将被忽略，legacy importer 会迁移 submitToWarehouse。
+  // Human Review: Required
+  //
+  // Original code:
+  // /** 提交模式：never（不自动提交）/ every-tick（每 tick）/ every-n-seconds（定时） */
+  // submitMode: SubmitMode;
+  // /** 当 submitMode="every-n-seconds" 时的间隔秒数 */
+  // submitIntervalSeconds: number | null;
 }
 
 // ---------------------------------------------------------------------------

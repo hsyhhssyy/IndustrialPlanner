@@ -399,8 +399,17 @@ function compileWarehouseDevice(
     initialItemType: itemId,
     initialCount: 0,
     ignoreStock: false,
-    submitMode: "never" as const,
-    submitIntervalTicks: null,
+    // AI-REMOVED 2026-06-06:
+    // Reason: CompiledSimulationSlot 不再持有 submitMode；隐藏仓库槽不参与全局提交机制。
+    // Trigger: 用户要求 submit mode 机制彻底删除，避免旧蓝图配置被运行时误消费。
+    // Evidence: RUN_ID 20260606-041337-509040 中 submitMode 全局扫描清空目标存储箱。
+    // Replacement: WarehouseSink 动态写入仓库槽。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // submitMode: "never" as const,
+    // submitIntervalTicks: null,
   }));
   const node: CompiledSimulationNode = {
     id: nodeId,
@@ -804,8 +813,17 @@ function addSyntheticNode(options: {
     initialItemType: null,
     initialCount: 0,
     ignoreStock: false,
-    submitMode: "never",
-    submitIntervalTicks: null,
+    // AI-REMOVED 2026-06-06:
+    // Reason: Synthetic slot 不再编译 submitMode；入仓语义由设备标签和目标节点决定。
+    // Trigger: submit mode 机制彻底删除。
+    // Evidence: REQ-087 方案要求仓库存货口使用动态 warehouse sink，不使用 tick 末尾 submit。
+    // Replacement: runtime-slot-access.findInputSlotForItem 动态返回仓库目标槽。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // submitMode: "never",
+    // submitIntervalTicks: null,
   });
   options.nodeBindingsByStorageGroupId.set(options.sourceStorageSlotGroupId, {
     inputNodeIds: options.bindDirection === "input" ? [nodeId] : [],
@@ -824,10 +842,19 @@ function compileSlot(options: {
   readonly initialItemType?: string | null;
   readonly initialCount?: number;
 }): CompiledSimulationSlot {
-  const submitMode = options.slot.submitMode;
-  const submitInterval = submitMode === "every-n-seconds"
-    ? convertSecondsToSimulationTicks(options.slot.submitIntervalSeconds ?? 10)
-    : null;
+  // AI-REMOVED 2026-06-06:
+  // Reason: slot.submitMode / submitIntervalSeconds 不再进入 CompiledSimulationSlot。
+  // Trigger: 用户要求 submit mode 机制彻底删除；全局 submit 阶段已移除。
+  // Evidence: RUN_ID 20260606-041337-509040 证明该机制会误消费旧蓝图中的 every-tick 配置。
+  // Replacement: WarehouseSink 动态入仓；协议存储箱 r_warehouse_submit 配方提交。
+  // Risk: Medium - domain 层旧配置仍存在但 simulation 忽略。
+  // Human Review: Required
+  //
+  // Original code:
+  // const submitMode = options.slot.submitMode;
+  // const submitInterval = submitMode === "every-n-seconds"
+  //   ? convertSecondsToSimulationTicks(options.slot.submitIntervalSeconds ?? 10)
+  //   : null;
   const lock = options.slot.lock;
   const hasInitialItemTypeOverride = Object.prototype.hasOwnProperty.call(options, "initialItemType");
   const itemType = hasInitialItemTypeOverride
@@ -845,8 +872,17 @@ function compileSlot(options: {
     initialItemType: itemType,
     initialCount: options.initialCount ?? options.slot.initialCount,
     ignoreStock: options.slot.ignoreStock,
-    submitMode,
-    submitIntervalTicks: submitInterval,
+    // AI-REMOVED 2026-06-06:
+    // Reason: submitMode 字段从 active compiled slot shape 删除。
+    // Trigger: 用户要求 submit mode 机制彻底删除。
+    // Evidence: REQ-087 已指定入仓由动态 sink 或配方交货承担。
+    // Replacement: WarehouseSink tag + r_warehouse_submit recipe.
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // submitMode,
+    // submitIntervalTicks: submitInterval,
   };
 }
 

@@ -156,8 +156,17 @@ function compareSlotRuntimeShape(
     { key: 'initialItemType', label: 'initialItemType' },
     { key: 'initialCount', label: 'initialCount' },
     { key: 'ignoreStock', label: 'ignoreStock' },
-    { key: 'submitMode', label: 'submitMode' },
-    { key: 'submitIntervalTicks', label: 'submitIntervalTicks' },
+    // AI-REMOVED 2026-06-06:
+    // Reason: CompiledSimulationSlot 已删除 submitMode / submitIntervalTicks，拓扑迁移不再比较该运行时形状。
+    // Trigger: 用户要求 submit mode 机制彻底删除。
+    // Evidence: RUN_ID 20260606-041337-509040 中 submitMode 误触发全局提交导致产线测试失败。
+    // Replacement: WarehouseSink tag / r_warehouse_submit recipe.
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // { key: 'submitMode', label: 'submitMode' },
+    // { key: 'submitIntervalTicks', label: 'submitIntervalTicks' },
     { key: 'nodeId', label: 'nodeId' },
     { key: 'sourceStorageSlotGroupId', label: 'sourceStorageSlotGroupId' },
     { key: 'sourceSlotId', label: 'sourceSlotId' },

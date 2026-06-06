@@ -2275,8 +2275,17 @@ function createSlotDefaults() {
     initialItemType: null,
     initialCount: 0,
     ignoreStock: false,
-    submitMode: "never" as const,
-    submitIntervalSeconds: null,
+    // AI-REMOVED 2026-06-06:
+    // Reason: StorageSlotDefinition 不再包含 submitMode / submitIntervalSeconds。
+    // Trigger: 用户要求 submit mode 机制彻底删除。
+    // Evidence: src/domain/registry/types/entity-definition.ts 已删除槽位提交字段。
+    // Replacement: None in this domain slot stub.
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // submitMode: "never" as const,
+    // submitIntervalSeconds: null,
   }
 }
 

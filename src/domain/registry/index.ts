@@ -15,7 +15,16 @@ export type {
 	PortStorageBindingDefinition,
 	EntityAcceptRuleDefinition,
 	CountLimit,
-	SubmitMode,
+	// AI-REMOVED 2026-06-06:
+	// Reason: SubmitMode 类型已从 StorageSlotDefinition 删除，domain API 不再导出旧机制。
+	// Trigger: 用户要求 submit mode 机制彻底删除。
+	// Evidence: src/domain/registry/types/entity-definition.ts 已注释化删除 SubmitMode。
+	// Replacement: WarehouseSink tag / r_warehouse_submit recipe.
+	// Risk: Medium - 外部引用需迁移。
+	// Human Review: Required
+	//
+	// Original code:
+	// SubmitMode,
 	StorageGroupSplitLinkType,
 } from "./types/entity-definition";
 export type {

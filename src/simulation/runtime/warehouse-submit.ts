@@ -1,6 +1,4 @@
-import type {
-  CompiledSimulationTopology,
-} from "../types";
+import type { CompiledSimulationTopology } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import { resolveStorageSlotId } from "./runtime-slot-access";
 
@@ -58,6 +56,84 @@ export function submitSlotsToWarehouse(
     }
   }
 }
+
+// AI-REMOVED 2026-06-06:
+// Reason: submitMode 全局扫描机制已删除；自动入仓统一改为 WarehouseSink，协议存储箱提交走 r_warehouse_submit 配方。
+// Trigger: 用户要求 submit mode 机制彻底删除，未来都用 warehouse sink 或配方交货。
+// Evidence: RUN_ID 20260606-041337-509040 中旧蓝图 every-tick slot 被全局扫描消费，导致产线目标箱库存增量为 0。
+// Replacement: runtime-slot-access.findInputSlotForItem 动态返回仓库槽；submitSlotsToWarehouse 仅由 r_warehouse_submit 配方完成时调用。
+// Risk: Medium - 旧 submitMode 配置不再有运行时效果，需由迁移器转换为 channelRecipes。
+// Human Review: Required
+//
+// Original code:
+// export function submitSlotsBySubmitMode(
+//   topology: CompiledSimulationTopology,
+//   state: SimulationMutableRuntimeState,
+// ): void {
+//   const warehouseDeviceId = findWarehouseDeviceId(topology);
+//   if (warehouseDeviceId === null) return;
+//
+//   for (const slotId of topology.ordering.slotOrder) {
+//     const slot = topology.slots[slotId];
+//     if (slot === undefined || !shouldSubmitSlotAtTick(slot, state.tickNumber)) {
+//       continue;
+//     }
+//
+//     submitSingleSlotToWarehouse(topology, state, warehouseDeviceId, slotId);
+//   }
+// }
+//
+// function shouldSubmitSlotAtTick(
+//   slot: CompiledSimulationSlot,
+//   tickNumber: number,
+// ): boolean {
+//   switch (slot.submitMode) {
+//     case "never":
+//       return false;
+//     case "every-tick":
+//       return true;
+//     case "every-n-seconds":
+//       return slot.submitIntervalTicks !== null
+//         && slot.submitIntervalTicks > 0
+//         && tickNumber % slot.submitIntervalTicks === 0;
+//   }
+// }
+//
+// function submitSingleSlotToWarehouse(
+//   topology: CompiledSimulationTopology,
+//   state: SimulationMutableRuntimeState,
+//   warehouseDeviceId: string,
+//   slotId: string,
+// ): void {
+//   const storageSlotId = resolveStorageSlotId(state, slotId);
+//   const localSlot = state.persistent.slots[storageSlotId];
+//   if (localSlot === undefined || localSlot.itemType === null || localSlot.count <= 0) {
+//     return;
+//   }
+//
+//   const warehouseNodeId = `${warehouseDeviceId}/node:warehouse`;
+//   const warehouseSlotId = `${warehouseNodeId}/slot:${localSlot.itemType}`;
+//   const warehouseStorageSlotId = resolveStorageSlotId(state, warehouseSlotId);
+//   if (warehouseStorageSlotId === storageSlotId) {
+//     return;
+//   }
+//
+//   const warehouseSlot = state.persistent.slots[warehouseStorageSlotId];
+//   if (warehouseSlot === undefined) return;
+//
+//   const warehouseCap = topology.slots[warehouseSlotId]?.capacity ?? Number.MAX_SAFE_INTEGER;
+//   const remainingCap = Math.max(0, warehouseCap - (warehouseSlot.count ?? 0));
+//   if (remainingCap <= 0) return;
+//
+//   const submitCount = Math.min(localSlot.count, remainingCap);
+//   warehouseSlot.itemType = localSlot.itemType;
+//   warehouseSlot.count = (warehouseSlot.count ?? 0) + submitCount;
+//   localSlot.count -= submitCount;
+//   if (localSlot.count <= 0) {
+//     localSlot.itemType = null;
+//     localSlot.count = 0;
+//   }
+// }
 
 function findWarehouseDeviceId(
   topology: CompiledSimulationTopology,

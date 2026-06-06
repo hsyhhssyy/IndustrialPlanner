@@ -94,6 +94,56 @@ describe("WarehouseItemLinkInspector", () => {
     expect(container.querySelector(".warehouse-link-slot")).toBeNull();
   });
 
+  it("expands protocol core outputs into one inspector with independent link indices", async () => {
+    const workspace = createWorkspace();
+    const definition = requireDefinition(workspace, "item_port_sp_hub_1");
+    const declarations = definition.inspectors.filter(
+      (inspector): inspector is WarehouseItemLinkInspectorDeclaration =>
+        inspector.type === INSPECTOR_TYPE.warehouseItemLink,
+    );
+    const declaration = declarations[0];
+    if (declaration === undefined) {
+      throw new Error("Expected protocol core warehouse link declaration.");
+    }
+
+    const entity = createEntity("protocol-core-link", definition.id);
+    const patchEntityConfig = vi.fn();
+    const deleteEntityConfigKeys = vi.fn();
+    const currentAppHost = buildAppHost(workspace, patchEntityConfig, deleteEntityConfigKeys);
+    appHost = currentAppHost;
+    const ore = requireItem(workspace, "item_copper_ore");
+
+    renderInspector(currentAppHost, definition, entity, root, declaration);
+
+    const labels = Array.from(container.querySelectorAll(".warehouse-link-row .port-output-locator-label"))
+      .map((element) => element.textContent);
+    expect(declarations).toHaveLength(1);
+    expect(container.querySelectorAll(".warehouse-link-row").length).toBe(6);
+    expect(labels).toEqual(["P1", "P2", "P3", "P4", "P5", "P6"]);
+
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>("[data-storage-group-id='unbuffer_e2'] [data-slot-action='pick-item']")
+        ?.click();
+    });
+    act(() => {
+      currentAppHost.encyclopediaPicker.selectItem(ore.id);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(patchEntityConfig).toHaveBeenCalledWith("protocol-core-link", expect.objectContaining({
+      "links[3].linkType": "share-all",
+      "links[3].source.entityId": "protocol-core-link",
+      "links[3].source.storageSlotGroupId": "unbuffer_e2",
+      "links[3].source.slotId": "slot_1",
+      "links[3].target.entityId": "warehouse",
+      "links[3].target.storageSlotGroupId": "warehouse",
+      "links[3].target.slotId": ore.id,
+    }));
+  });
+
   it("filters selectable warehouse items by slot domain and writes the same link config", async () => {
     const workspace = createWorkspace();
     const definition = requireDefinition(workspace, "item_port_unloader_1");
@@ -317,8 +367,17 @@ function createTestSlot(
     initialItemType: null,
     initialCount: 0,
     ignoreStock: false,
-    submitMode: "never",
-    submitIntervalSeconds: null,
+    // AI-REMOVED 2026-06-06:
+    // Reason: StorageSlotDefinition 不再包含 submitMode / submitIntervalSeconds。
+    // Trigger: 用户要求 submit mode 机制彻底删除。
+    // Evidence: src/domain/registry/types/entity-definition.ts 已删除槽位提交字段。
+    // Replacement: None in this domain slot stub.
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // submitMode: "never",
+    // submitIntervalSeconds: null,
     itemFilter: "type",
     itemFilterType: "solid",
   };

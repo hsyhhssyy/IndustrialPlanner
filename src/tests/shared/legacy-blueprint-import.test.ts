@@ -213,6 +213,31 @@ describe("legacy-blueprint-import", () => {
     });
   });
 
+  it("migrates legacy storage submit flag to warehouse submit recipe", () => {
+    const converted = convertLegacyBlueprintJson({
+      schema: "industrial-planner-blueprint",
+      name: "协议存储箱提交迁移测试",
+      createdAt: "2026-03-04T15:00:38.701Z",
+      baseId: "wuling_tianwangping_aid",
+      devices: [{
+        typeId: "item_port_storager_1",
+        rotation: 0,
+        origin: { x: 0, y: 0 },
+        config: {
+          submitToWarehouse: true,
+        },
+      }],
+    }, {
+      entityIdPrefix: "storager_submit",
+    });
+
+    expect(converted?.entities.storager_submit_0001?.config).toEqual({
+      channelRecipes: {
+        warehouse_submit: "r_warehouse_submit",
+      },
+    });
+  });
+
   it("rejects legacy blueprints that contain unsupported dark-pipe links", () => {
     expect(convertLegacyBlueprintJson({
       schema: "industrial-planner-blueprint",

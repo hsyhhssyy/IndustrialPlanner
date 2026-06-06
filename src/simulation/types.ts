@@ -30,7 +30,17 @@ export type SimulationPowerStatus = "no-power-needed" | "in-power-range" | "out-
  * - `non-graph`：无端口且无存储槽的空壳设备，不进入求解图。
  */
 export type SimulationTransportClass = "strict-belt" | "strict-pipe" | "anchor" | "non-graph";
-export type SimulationSubmitMode = "never" | "every-tick" | "every-n-seconds";
+// AI-REMOVED 2026-06-06:
+// Reason: submitMode 运行时机制已按用户要求彻底移除；自动入仓改由动态 warehouse sink 或 r_warehouse_submit 配方处理。
+// Trigger: RUN_ID 20260606-041337-509040 中旧蓝图 submitMode 被全局 tick 扫描消费，导致产线目标存储箱同 tick 被清空。
+// Evidence: .docs/stages/stage1/requirements/REQ-087-warehouse-loader-and-storager-submit-semantics.md 明确不再使用 submitMode / submitIntervalSeconds。
+// Replacement: WarehouseSink 设备标签 + runtime-slot-access 动态仓库槽写入；协议存储箱使用 r_warehouse_submit。
+// Risk: Medium - domain 层字段仍作为旧配置数据残留，但 simulation 不再编译或消费。
+// AI-CORRECTION 2026-06-06: domain 层 StorageSlotDefinition 字段也已注释化删除；旧蓝图同名 config 键仅作为外部遗留输入存在。
+// Human Review: Required
+//
+// Original code:
+// export type SimulationSubmitMode = "never" | "every-tick" | "every-n-seconds";
 export type SimulationWorkerStatusMode = "idle" | "starting" | "running" | "stopped" | "error";
 export type SimulationRecipeType = RecipeType;
 export type SimulationLinkType = LinkType;
@@ -154,8 +164,17 @@ export interface CompiledSimulationSlot {
   readonly initialItemType: string | null;
   readonly initialCount: number;
   readonly ignoreStock: boolean;
-  readonly submitMode: SimulationSubmitMode;
-  readonly submitIntervalTicks: number | null;
+  // AI-REMOVED 2026-06-06:
+  // Reason: submitMode 编译字段会诱导 runtime 继续按全局 slot 行为入仓；当前语义改为 sink/配方两条明确路径。
+  // Trigger: 用户要求 submit mode 机制彻底删除，未来都用 warehouse sink 或配方交货。
+  // Evidence: RUN_ID 20260606-041337-509040 的 premium-capsule-line / wuling-battery-line 因该字段被消费而失败。
+  // Replacement: WarehouseSink tag + r_warehouse_submit recipe.
+  // Risk: Medium - 旧配置仍可能存在于蓝图 JSON，但不再影响仿真。
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly submitMode: SimulationSubmitMode;
+  // readonly submitIntervalTicks: number | null;
 }
 
 export interface CompiledSimulationPort {

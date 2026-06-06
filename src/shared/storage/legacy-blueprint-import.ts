@@ -179,7 +179,7 @@ export function convertLegacyBlueprintJson(
  *
  * 存储箱（item_port_storager_1）：
  *   旧：submitToWarehouse = true
- *   新：storageSlotGroups[N].slots[0].submitMode = "every-tick"
+ *   新：channelRecipes.warehouse_submit = "r_warehouse_submit"
  *
  * 反应池 / 扩容反应池（item_port_mix_pool_1 / item_port_mix_pool_large_1）：
  *   旧：reactorPool.selectedRecipeIds / solidOutputItemId / liquidOutputItemIdA / liquidOutputItemIdB
@@ -439,12 +439,35 @@ function convertLegacyStoragerConfig(
   const nextConfig: Record<string, unknown> = { ...config };
   delete nextConfig.submitToWarehouse;
 
-  // 存储箱有 6 个单槽储存组，全部设为 every-tick 提交
-  for (let groupIndex = 0; groupIndex < 6; groupIndex += 1) {
-    nextConfig[`storageSlotGroups[${groupIndex}].slots[0].submitMode`] = "every-tick";
-  }
+  // AI-REMOVED 2026-06-06:
+  // Reason: submitMode 机制已删除，旧存储箱自动提交应迁移为配方驱动提交。
+  // Trigger: 用户要求 submit mode 机制彻底删除，未来都用 warehouse sink 或配方交货。
+  // Evidence: RUN_ID 20260606-041337-509040 中旧 every-tick 配置被全局 submit 扫描误消费。
+  // Replacement: channelRecipes.warehouse_submit = "r_warehouse_submit"。
+  // Risk: Medium - 旧蓝图会从每 tick 提交语义变为当前产品定义的 10 秒配方提交语义。
+  // Human Review: Required
+  //
+  // Original code:
+  // // 存储箱有 6 个单槽储存组，全部设为 every-tick 提交
+  // for (let groupIndex = 0; groupIndex < 6; groupIndex += 1) {
+  //   nextConfig[`storageSlotGroups[${groupIndex}].slots[0].submitMode`] = "every-tick";
+  // }
+  nextConfig.channelRecipes = {
+    ...asStringRecord(nextConfig.channelRecipes),
+    warehouse_submit: "r_warehouse_submit",
+  };
 
   return nextConfig;
+}
+
+function asStringRecord(value: unknown): Record<string, string> {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
 }
 
 export function normalizeLegacyBlueprintJson(value: unknown): LegacyBlueprintJson | null {

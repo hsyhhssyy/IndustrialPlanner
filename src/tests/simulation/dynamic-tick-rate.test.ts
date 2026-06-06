@@ -217,8 +217,6 @@ function createProductionOverflowTopology(
         initialItemType: null,
         initialCount: 0,
         ignoreStock: false,
-        submitMode: "never",
-        submitIntervalTicks: null,
       },
     },
     ordering: {

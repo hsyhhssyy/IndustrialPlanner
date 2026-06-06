@@ -14,7 +14,7 @@ import {
   resolveInspectorNeighborhoodPreviewModel,
 } from "@/app/shell/inspector/inspector-neighborhood-preview-model";
 import {
-  resolveOutputGroupRows,
+  resolveSharedOutputGroupRows,
   resolvePortTone,
   type OutputGroupRow,
 } from "@/app/shell/inspector/port-output-config-model";
@@ -22,10 +22,7 @@ import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import {
-  INSPECTOR_TYPE,
-  type PortOutputConfigInspectorDeclaration,
-} from "@/domain/registry/types/entity-inspector";
+import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import type { BlueprintPreviewHandle } from "@/domain/renderer";
 import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import styles from "@/app/shell/app-shell.module.scss";
@@ -368,15 +365,31 @@ export function resolveInspectorPortOutputCallouts(options: {
     return [];
   }
 
-  const declaration = definition.inspectors.find((inspector): inspector is PortOutputConfigInspectorDeclaration =>
-    inspector.type === INSPECTOR_TYPE.portOutputConfig,
-  );
-
-  if (declaration === undefined) {
+  if (!shouldRenderOutputPortCallouts(definition)) {
     return [];
   }
 
-  const rows = resolveOutputGroupRows(definition, declaration.portGroupIds, entity);
+  /*
+    AI-REMOVED 2026-06-05:
+    Reason: 蓝图预览端口标签不能只由 portOutputConfig inspector 触发；协议核心通过 warehouseItemLink 独立配置每个输出端口，同样需要端口标签。
+    Trigger: 用户指出协议核心是该功能目标场景，仓库链接面板有端口编号但蓝图预览没有端口标签。
+    Evidence: Search-First 定位到 resolveSharedOutputGroupRows 已提供 portOutputConfig 优先、无则按输出端口组回退的共享编号模型。
+    Replacement: shouldRenderOutputPortCallouts + resolveSharedOutputGroupRows。
+    Risk: Medium - 拥有 warehouseItemLink 且存在输出端口的设备现在会在预览中显示 P 标签。
+    Human Review: Required
+
+    Original code:
+    const declaration = definition.inspectors.find((inspector): inspector is PortOutputConfigInspectorDeclaration =>
+      inspector.type === INSPECTOR_TYPE.portOutputConfig,
+    );
+
+    if (declaration === undefined) {
+      return [];
+    }
+
+    const rows = resolveOutputGroupRows(definition, declaration.portGroupIds, entity);
+  */
+  const rows = resolveSharedOutputGroupRows(definition, entity);
   const cellWidth = options.width / options.bounds.width;
   const cellHeight = options.height / options.bounds.height;
 
@@ -430,6 +443,14 @@ export function resolveInspectorPortOutputCallouts(options: {
       })),
     }];
   });
+}
+
+function shouldRenderOutputPortCallouts(definition: EntityDefinition): boolean {
+  return definition.inspectors.some(
+    (inspector) =>
+      inspector.type === INSPECTOR_TYPE.portOutputConfig
+      || inspector.type === INSPECTOR_TYPE.warehouseItemLink,
+  );
 }
 
 function resolveCalloutRowModel(options: {

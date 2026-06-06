@@ -50,6 +50,10 @@ type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 type StorageSlotDefinition = StorageSlotGroupDefinition["slots"][number];
 type PortStorageBindingDefinition = EntityDefinition["portStorageBindings"][number];
 type RecipeChannelDefinition = EntityDefinition["recipeChannels"][number];
+type StorageSlotOptionsInput = Partial<Pick<
+  StorageSlotDefinition,
+  "lock" | "initialItemType" | "initialCount" | "ignoreStock"
+>>;
 
 /** 端口朝向简写：N=北 S=南 W=西 E=东（相对于设备 rotation=0） */
 type PortEdgeInput = "N" | "S" | "W" | "E";
@@ -106,6 +110,21 @@ const WAREHOUSE_BUS_SOURCE_PLACEMENT_BEHAVIORS = [
 const WAREHOUSE_PORT_PLACEMENT_BEHAVIORS = [
   { type: PLACEMENT_BEHAVIOR_TYPE.mustConnectToHub },
 ] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
+
+const WAREHOUSE_SINK_TAG = "WarehouseSink";
+
+// AI-REMOVED 2026-06-06:
+// Reason: 协议核心输入缓存不再通过 submitMode 每 tick 入仓；统一走 WarehouseSink 动态入仓。
+// Trigger: 用户要求 submit mode 机制彻底删除，未来都用 warehouse sink 或配方交货。
+// Evidence: RUN_ID 20260606-041337-509040 中 every-tick 全局提交导致产线目标箱库存被清空。
+// Replacement: WAREHOUSE_SINK_TAG + simulation/runtime/runtime-slot-access.ts 动态仓库槽写入。
+// Risk: Medium
+// Human Review: Required
+//
+// Original code:
+// const AUTO_SUBMIT_EVERY_TICK_SLOT_OPTIONS = {
+//   submitMode: "every-tick",
+// } as const satisfies StorageSlotOptionsInput;
 
 // =========================================================================
 // 工厂函数
@@ -306,16 +325,14 @@ function createPortGroup(
  * - itemFilterType：solid/liquid/any — 决定可存放的物品域
  * - lock：锁定物品 ID，null=不锁定。用户可通过 entity.config["slots[N].lock"] 覆盖
  * - ignoreStock：忽略仓库库存检查，取货口/出货口常用
- * - submitMode：never（不自动提交）/ every-tick（每 tick）/ every-n-seconds（定时提交）
+ * AI-CORRECTION 2026-06-06: submitMode 不再作为可配置运行时语义；槽位仅保留 domain 默认字段，入仓改用 WarehouseSink 或配方。
+ * AI-CORRECTION 2026-06-06: domain 默认 submitMode 字段也已删除；createSlot 不再生成旧提交字段。
  */
 function createSlot(
   id: string,
   capacity: number,
   itemFilterType: FilterType,
-  options: Partial<Pick<
-  StorageSlotDefinition,
-  "lock" | "initialItemType" | "initialCount" | "ignoreStock" | "submitMode" | "submitIntervalSeconds"
-  >> = {},
+  options: StorageSlotOptionsInput = {},
 ): StorageSlotDefinition {
   return {
     id,
@@ -326,22 +343,34 @@ function createSlot(
     initialItemType: options.initialItemType ?? null,
     initialCount: options.initialCount ?? 0,
     ignoreStock: options.ignoreStock ?? false,
-    submitMode: options.submitMode ?? "never",
-    submitIntervalSeconds: options.submitIntervalSeconds ?? null,
+    // AI-REMOVED 2026-06-06:
+    // Reason: StorageSlotDefinition 已删除 submitMode / submitIntervalSeconds，registry 不再生成默认提交字段。
+    // Trigger: 用户要求 submit mode 机制彻底删除。
+    // Evidence: simulation 编译槽位和 runtime 全局提交扫描已删除对应字段。
+    // Replacement: WarehouseSink tag / r_warehouse_submit recipe.
+    // Risk: Medium - 旧 config 同名键仅作为蓝图遗留数据存在，不进入实体定义默认值。
+    // Human Review: Required
+    //
+    // Original code:
+    // submitMode: "never",
+    // submitIntervalSeconds: null,
   };
 }
 
 /**
  * 批量创建同质槽位（相同 itemFilterType，不同 capacity）。
+ * AI-CORRECTION 2026-06-06: 支持传入同质槽位共享 options，用于批量设置 submitMode 等槽位行为。
+ * AI-CORRECTION 2026-06-06: submitMode 已删除，options 仅用于 lock / initial / ignoreStock 等静态槽位属性。
  * 槽位 ID 格式为 "${prefix}_1", "${prefix}_2", ...
  */
 function createSlots(
   prefix: string,
   capacities: number[],
   itemFilterType: FilterType,
+  options: StorageSlotOptionsInput = {},
 ): StorageSlotDefinition[] {
   return capacities.map((capacity, index) =>
-    createSlot(`${prefix}_${index + 1}`, capacity, itemFilterType),
+    createSlot(`${prefix}_${index + 1}`, capacity, itemFilterType, options),
   );
 }
 
@@ -1659,7 +1688,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
     displayOrder: 407,
-    tags: ["武陵", "OuterRingAllowed"],
+    tags: ["武陵", "OuterRingAllowed", WAREHOUSE_SINK_TAG],
     requiresPower: false,
     powerDemand: 10,
     portGroups: [
@@ -1692,7 +1721,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
     displayOrder: 408,
-    tags: ["武陵", "OuterRingAllowed"],
+    tags: ["武陵", "OuterRingAllowed", WAREHOUSE_SINK_TAG],
     requiresPower: false,
     powerDemand: 10,
     portGroups: [
@@ -1744,7 +1773,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 1 },
     uiGroup: "warehouse",
     displayOrder: 402,
-    tags: ["AvatarHidden"],
+    tags: ["AvatarHidden", WAREHOUSE_SINK_TAG],
     placementBehaviors: WAREHOUSE_PORT_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
@@ -2276,6 +2305,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *
    * 14 个独立输入端口（7N + 7S），各挂独立接收缓存。
    * 6 个独立输出端口（3W + 3E），各挂独立取货缓存 + warehouseItemLink inspector。
+   * AI-CORRECTION 2026-06-05: 输出端口仍独立配置，但 warehouseItemLink 声明合并为一个 inspector，在面板内展开为 P1-P6 六行。
+   * AI-CORRECTION 2026-06-06: 输入端走 WarehouseSink 动态入仓，支持输出绕回任一入口后继续出货。
    * 每个输出端口等价于一个独立仓库取货口。
    *
    * 输入缓存组：14 个（各 1 槽 × 1 容量）
@@ -2288,7 +2319,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_sp_hub_1",
     footprint: { width: 9, height: 9 },
     uiGroup: "hidden",
-    tags: ["AvatarHidden"],
+    tags: ["AvatarHidden", WAREHOUSE_SINK_TAG],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -2466,12 +2497,34 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_input_s8", "item_input_s8", "inbuffer_s8"),
     ],
     inspectors: [
-      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_w2"] },
-      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_w5"] },
-      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_w8"] },
-      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_e2"] },
-      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_e5"] },
-      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_e8"] },
+      {
+        type: INSPECTOR_TYPE.warehouseItemLink,
+        slotGroupIds: [
+          "unbuffer_w2",
+          "unbuffer_w5",
+          "unbuffer_w8",
+          "unbuffer_e2",
+          "unbuffer_e5",
+          "unbuffer_e8",
+        ],
+      },
+      /*
+        AI-REMOVED 2026-06-05:
+        Reason: 六个独立 warehouseItemLink inspector 会让每个面板都从 links[0] 开始写入，无法独立配置六个输出。
+        Trigger: 用户明确协议核心是该功能目标场景，要求每个输出可独立配置。
+        Evidence: WarehouseItemLinkInspector 按单个 declaration 展开 slotGroupIds 并分配 linkIndex；拆成六个 declaration 时 linkIndex 全部为 0。
+        Replacement: 上方单个 warehouseItemLink declaration，slotGroupIds 按输出端口顺序展开为 links[0..5]。
+        Risk: Medium - 已保存旧蓝图若依赖重复 inspector 写入同一 links[0]，打开后面板行为会变为按六个槽位分别展示。
+        Human Review: Required
+
+        Original code:
+        { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_w2"] },
+        { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_w5"] },
+        { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_w8"] },
+        { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_e2"] },
+        { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_e5"] },
+        { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_e8"] },
+      */
     ],
   }),
   createEntityDefinition({
