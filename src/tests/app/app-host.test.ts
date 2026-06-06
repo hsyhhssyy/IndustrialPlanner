@@ -1107,7 +1107,9 @@ describe("createAppHost", () => {
 
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
-    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const snapshot = createDummyWorldDocument();
+    snapshot.entities["dummy-entity-2"]!.definitionId = "item_port_furnance_1";
+    editorHost.internalDocument.setSnapshot(snapshot);
     editorHost.actions.setViewportClientRect({
       left: 120,
       top: 80,

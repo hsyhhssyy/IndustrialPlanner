@@ -79,7 +79,9 @@ describe("EditSelectionInspector", () => {
   it("shows the mounted inspector and action strip for a non-logistics single selection", () => {
     const workspace = createWorkspace();
     editorHost = createEditorHost(workspace);
-    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const snapshot = createDummyWorldDocument();
+    snapshot.entities["dummy-entity-2"]!.definitionId = "item_port_furnance_1";
+    editorHost.internalDocument.setSnapshot(snapshot);
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
     const currentAppHost = createAppHost(workspace);
     appHost = currentAppHost;
