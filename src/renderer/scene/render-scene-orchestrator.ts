@@ -41,6 +41,7 @@ import { createGridLineDecoration } from "./decorations/GridLineDecoration"
 import { createBaseBoundaryDecoration } from "./decorations/BaseBoundaryDecoration"
 import { createDiagnosticsDecoration } from "./decorations/DiagnosticsDecoration"
 import { createLogisticsPlacementCanvasDecoration } from "./decorations/LogisticsPlacementCanvasDecoration"
+import { createLogisticsPlacementIdleCursorDecoration } from "./decorations/LogisticsPlacementIdleCursorDecoration"
 import { createMarqueeRectDecoration } from "./decorations/MarqueeRectDecoration"
 import { createMarqueeCanvasDecoration } from "./decorations/MarqueeCanvasDecoration"
 import { createPreviewRectDecoration } from "./decorations/PreviewRectDecoration"
@@ -113,6 +114,7 @@ export function createRenderSceneOrchestrator(
   const diagnosticsDecoration = createDiagnosticsDecoration()
   const marqueeCanvasDecoration = createMarqueeCanvasDecoration()
   const logisticsPlacementCanvasDecoration = createLogisticsPlacementCanvasDecoration()
+  const logisticsPlacementIdleCursorDecoration = createLogisticsPlacementIdleCursorDecoration()
   const beltFlowDecoration = createBeltFlowDecoration()
   const pipeFlowDecoration = createPipeFlowDecoration()
   const beltPortInsertionDecoration = createBeltPortInsertionDecoration()
@@ -311,6 +313,10 @@ export function createRenderSceneOrchestrator(
       logisticsPlacementCanvasDecoration.sync(ctx)
     })
 
+    measureRenderStage(frameProfiler, "decoration.logisticsPlacementIdleCursor", () => {
+      logisticsPlacementIdleCursorDecoration.sync(ctx)
+    })
+
     measureRenderStage(frameProfiler, "decoration.diagnostics", () => {
       diagnosticsDecoration.sync(ctx)
     })
@@ -363,6 +369,7 @@ export function createRenderSceneOrchestrator(
   beltCargoOverlayLayer.addChild(beltCargoDecoration.container)
   marqueeOverlayLayer.addChild(marqueeCanvasDecoration.container)
   marqueeOverlayLayer.addChild(logisticsPlacementCanvasDecoration.container)
+  marqueeOverlayLayer.addChild(logisticsPlacementIdleCursorDecoration.container)
   marqueeOverlayLayer.addChild(marqueeDecoration.container)
   layers.overlay.addChild(diagnosticsDecoration.container)
   app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
@@ -385,6 +392,7 @@ export function createRenderSceneOrchestrator(
       marqueeDecoration.destroy()
       marqueeCanvasDecoration.destroy()
       logisticsPlacementCanvasDecoration.destroy()
+      logisticsPlacementIdleCursorDecoration.destroy()
       diagnosticsDecoration.destroy()
       beltFlowDecoration.destroy()
       pipeFlowDecoration.destroy()

@@ -50,6 +50,13 @@ vi.mock("pixi.js", () => {
 
   return {
     Container: MockContainer,
+    Graphics: class {
+      public rect = vi.fn().mockReturnThis()
+      public fill = vi.fn().mockReturnThis()
+      public stroke = vi.fn().mockReturnThis()
+      public clear = vi.fn()
+      public destroy = vi.fn()
+    },
     UPDATE_PRIORITY: {
       HIGH: 50,
     },
