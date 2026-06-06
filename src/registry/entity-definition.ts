@@ -884,7 +884,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     recipeChannels: [
-      createRecipeChannel("default", ["item_input_buffer", "item_output_buffer"], ["item_input_buffer", "item_output_buffer"]),
+      // AI-REMOVED 2026-06-06:
+      // Reason: 粉碎机产物不应写回原料槽；配方输入/产出槽位应由 Recipe Channel 精确声明。
+      // Trigger: 用户指出 Recipe Channel 本应决定产物槽位，并要求先修正错误设备定义。
+      // Evidence: 《仿真运行原理》§3.5 明确 productStorageGroupIds 表示配方产物写入哪些存储组；旧写法依赖 compiler 用端口方向过滤多余角色。
+      // Replacement: 下方 default channel：ingredient=item_input_buffer，product=item_output_buffer。
+      // Risk: Low - 当前 compiler 仍做端口方向过滤，修正后现有运行行为应保持不变；后续改为 channel-based 时避免产物回填输入槽。
+      // Human Review: Required
+      //
+      // Original code:
+      // createRecipeChannel("default", ["item_input_buffer", "item_output_buffer"], ["item_input_buffer", "item_output_buffer"]),
+      createRecipeChannel("default", ["item_input_buffer"], ["item_output_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
@@ -954,7 +964,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     recipeChannels: [
-      createRecipeChannel("default", ["item_input_buffer", "fluid_input_buffer", "item_output_buffer"], ["item_input_buffer", "fluid_input_buffer", "item_output_buffer"]),
+      // AI-REMOVED 2026-06-06:
+      // Reason: 液体填充器产物不应写回物品/液体原料槽，原料槽也不应参与产物落槽。
+      // Trigger: 用户指出 Recipe Channel 本应决定产物槽位，并要求先修正错误设备定义。
+      // Evidence: 《仿真运行原理》§3.5 明确 ingredientStorageGroupIds / productStorageGroupIds 分别声明配方原料与产物存储组。
+      // Replacement: 下方 default channel：ingredient=item_input_buffer+fluid_input_buffer，product=item_output_buffer。
+      // Risk: Low - 当前 compiler 仍做端口方向过滤，修正后现有运行行为应保持不变；后续改为 channel-based 时避免产物回填输入槽。
+      // Human Review: Required
+      //
+      // Original code:
+      // createRecipeChannel("default", ["item_input_buffer", "fluid_input_buffer", "item_output_buffer"], ["item_input_buffer", "fluid_input_buffer", "item_output_buffer"]),
+      createRecipeChannel("default", ["item_input_buffer", "fluid_input_buffer"], ["item_output_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
@@ -1005,7 +1025,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     recipeChannels: [
-      createRecipeChannel("default", ["item_input_buffer", "item_output_buffer"], ["item_input_buffer", "item_output_buffer"]),
+      // AI-REMOVED 2026-06-06:
+      // Reason: 填充器产物不应写回原料槽；配方输入/产出槽位应由 Recipe Channel 精确声明。
+      // Trigger: 用户指出 Recipe Channel 本应决定产物槽位，并要求先修正错误设备定义。
+      // Evidence: 《仿真运行原理》§3.5 明确 productStorageGroupIds 表示配方产物写入哪些存储组；旧写法依赖 compiler 用端口方向过滤多余角色。
+      // Replacement: 下方 default channel：ingredient=item_input_buffer，product=item_output_buffer。
+      // Risk: Low - 当前 compiler 仍做端口方向过滤，修正后现有运行行为应保持不变；后续改为 channel-based 时避免产物回填输入槽。
+      // Human Review: Required
+      //
+      // Original code:
+      // createRecipeChannel("default", ["item_input_buffer", "item_output_buffer"], ["item_input_buffer", "item_output_buffer"]),
+      createRecipeChannel("default", ["item_input_buffer"], ["item_output_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),

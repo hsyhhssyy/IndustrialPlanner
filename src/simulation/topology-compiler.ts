@@ -679,8 +679,19 @@ function compileStorageNodeSet(options: {
   return {
     inputNodeIds: options.hasInputBinding ? [nodeId] : [],
     outputNodeIds: options.hasOutputBinding ? [nodeId] : [],
-    ingredientNodeIds: options.hasInputBinding ? [nodeId] : [],
-    productNodeIds: options.hasOutputBinding ? [nodeId] : [],
+    // AI-REMOVED 2026-06-06:
+    // Reason: Recipe Channel 的 ingredient/product 角色不应被端口方向过滤；单节点存储组应按 channel 声明角色参与配方。
+    // Trigger: 用户要求按《仿真运行原理》恢复“配方原料/产物由 Recipe Channel 决定”的原始设计。
+    // Evidence: .docs/common/模拟器/仿真运行原理.md §3.5 明确 channel 的 ingredient/product 与端口 input/output 正交，互不约束。
+    // Replacement: 下方 ingredientNodeIds/productNodeIds 均指向该单节点；端口物流能力仍由 inputNodeIds/outputNodeIds 保持。
+    // Risk: Medium - 依赖旧端口过滤兜底的错误 channel 定义必须先修正；当前已修正粉碎机/填充器/液体填充器。
+    // Human Review: Required
+    //
+    // Original code:
+    // ingredientNodeIds: options.hasInputBinding ? [nodeId] : [],
+    // productNodeIds: options.hasOutputBinding ? [nodeId] : [],
+    ingredientNodeIds: [nodeId],
+    productNodeIds: [nodeId],
   };
 }
 
@@ -828,8 +839,19 @@ function addSyntheticNode(options: {
   options.nodeBindingsByStorageGroupId.set(options.sourceStorageSlotGroupId, {
     inputNodeIds: options.bindDirection === "input" ? [nodeId] : [],
     outputNodeIds: options.bindDirection === "output" ? [nodeId] : [],
-    ingredientNodeIds: options.bindDirection === "input" ? [nodeId] : [],
-    productNodeIds: options.bindDirection === "output" ? [nodeId] : [],
+    // AI-REMOVED 2026-06-06:
+    // Reason: synthetic 缓存组的配方角色也应由 Recipe Channel 引用决定，而不是由未绑定端口方向过滤。
+    // Trigger: 用户要求按《仿真运行原理》恢复“配方原料/产物由 Recipe Channel 决定”的原始设计。
+    // Evidence: .docs/common/模拟器/仿真运行原理.md §3.5：若某存储组只绑定单侧端口、未展开，则该 Node 按 channel 声明角色参与。
+    // Replacement: 下方 ingredientNodeIds/productNodeIds 均指向 synthetic 单节点；端口物流能力仍由 inputNodeIds/outputNodeIds 保持。
+    // Risk: Medium - 若 registry 中 synthetic channel 声明错误，将不再被端口方向兜底隐藏。
+    // Human Review: Required
+    //
+    // Original code:
+    // ingredientNodeIds: options.bindDirection === "input" ? [nodeId] : [],
+    // productNodeIds: options.bindDirection === "output" ? [nodeId] : [],
+    ingredientNodeIds: [nodeId],
+    productNodeIds: [nodeId],
   });
 }
 
