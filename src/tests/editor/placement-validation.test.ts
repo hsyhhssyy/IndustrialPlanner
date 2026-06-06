@@ -266,8 +266,8 @@ describe("placement validation", () => {
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("segment", "item_port_log_hongs_bus", 4, 0),
-      // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°，旧 rot=0 → 新 rot=180 保持等效朝向。
-      createEntity("loader", "item_port_loader_1", 8, 0, 180),
+      // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°（已撤销），rot 恢复为 0。
+      createEntity("loader", "item_port_loader_1", 8, 0),
       createEntity("isolated-unloader", "item_port_unloader_1", 20, 20),
     ], TEST_BUILTIN_BASE_ID);
 
@@ -326,8 +326,8 @@ describe("placement validation", () => {
     const document = createDocumentWithEntities([
       createEntity("source", "item_port_log_hongs_bus_source", 0, 0),
       createEntity("segment", "item_port_log_hongs_bus", 4, 0),
-      // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°，旧 rot=0 → 新 rot=180 保持等效朝向。
-      createEntity("loader", "item_port_loader_1", 8, 0, 180),
+      // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°（已撤销），rot 恢复为 0。
+      createEntity("loader", "item_port_loader_1", 8, 0),
       createEntity("isolated-unloader", "item_port_unloader_1", 20, 20),
     ]);
 

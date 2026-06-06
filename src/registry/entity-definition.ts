@@ -1779,12 +1779,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     powerDemand: 0,
     // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°。
     // 原端口朝北(N)，现改为朝南(S)，使 rotation=0 方向与显示 sprite 对齐。
+    // AI-CORRECTION 2026-06-06: 撤销上述旋转，恢复端口朝北(N)。
     portGroups: [
       createPortGroup(
         "item_input",
         "item",
         "input",
-        [createPort("p_in_mid", 1, 0, "S")],
+        [createPort("p_in_mid", 1, 0, "N")],
       ),
     ],
     ...createSimpleProductionDevice([

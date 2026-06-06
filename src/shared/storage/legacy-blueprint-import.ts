@@ -78,13 +78,22 @@ const LEGACY_DEVICE_REMAPPERS: Readonly<Record<string, {
     definitionId: "item_pipe_converger",
     rotationOffset: 90,
   },
-  // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°。
-  //   原端口朝北(N) → 现朝南(S)，需补 +180° 使旧 v2 蓝图的拓扑等价。
-  item_port_loader_1: {
-    definitionId: "item_port_loader_1",
-    rotationOffset: 180,
-  },
 };
+const WAREHOUSE_SUBMIT_CHANNEL_ID = "warehouse_submit";
+const WAREHOUSE_SUBMIT_RECIPE_ID = "r_warehouse_submit";
+const PROTOCOL_CORE_OUTPUTS_BY_PORT_ID: Readonly<Record<string, {
+  readonly linkIndex: number;
+  readonly storageGroupId: string;
+  readonly storageGroupIndex: number;
+}>> = {
+  out_w_2: { linkIndex: 0, storageGroupId: "unbuffer_w2", storageGroupIndex: 0 },
+  out_w_5: { linkIndex: 1, storageGroupId: "unbuffer_w5", storageGroupIndex: 1 },
+  out_w_8: { linkIndex: 2, storageGroupId: "unbuffer_w8", storageGroupIndex: 2 },
+  out_e_2: { linkIndex: 3, storageGroupId: "unbuffer_e2", storageGroupIndex: 3 },
+  out_e_5: { linkIndex: 4, storageGroupId: "unbuffer_e5", storageGroupIndex: 4 },
+  out_e_8: { linkIndex: 5, storageGroupId: "unbuffer_e8", storageGroupIndex: 5 },
+};
+const STORAGER_STORAGE_GROUP_COUNT = 6;
 
 export interface LegacyBlueprintJson {
   readonly schema: string;
@@ -186,6 +195,16 @@ export function convertLegacyBlueprintJson(
  * 存储箱（item_port_storager_1）：
  *   旧：submitToWarehouse = true
  *   新：channelRecipes.warehouse_submit = "r_warehouse_submit"
+ *   AI-CORRECTION 2026-06-06: v2 旧 UI / 初始 config 将 submitToWarehouse 缺省视为 true；
+ *     迁移时仅 submitToWarehouse === false 表示关闭配方交货。
+ *
+ * 协议核心（item_port_sp_hub_1）：
+ *   旧：protocolHubOutputs[{ portId, itemId, ignoreInventory }]
+ *   新：各输出口对应 links[N] + storageSlotGroups[N].slots[0].ignoreStock
+ *
+ * 仓库存货口（item_port_loader_1）：
+ *   旧：可能残留 submitMode / submitToWarehouse / links 等交货字段
+ *   新：无交货 config，运行时由 WarehouseSink 动态入仓
  *
  * 反应池 / 扩容反应池（item_port_mix_pool_1 / item_port_mix_pool_large_1）：
  *   旧：reactorPool.selectedRecipeIds / solidOutputItemId / liquidOutputItemIdA / liquidOutputItemIdB
@@ -199,23 +218,33 @@ function convertLegacyDeviceConfig(options: {
   definitionId: string;
   config: Record<string, unknown>;
 }): Record<string, unknown> {
+  const config = removeLegacySubmitModeFields(options.config);
+
   if (options.definitionId === "item_port_unloader_1") {
-    return convertLegacyUnloaderConfig(options.config);
+    return convertLegacyUnloaderConfig(config);
   }
 
   if (options.definitionId === "item_port_udpipe_unloader_1") {
-    return convertLegacyDarkPipeUnloaderConfig(options.config);
+    return convertLegacyDarkPipeUnloaderConfig(config);
   }
 
   if (options.definitionId === "item_port_storager_1") {
-    return convertLegacyStoragerConfig(options.config);
+    return convertLegacyStoragerConfig(config);
+  }
+
+  if (options.definitionId === "item_port_sp_hub_1") {
+    return convertLegacyProtocolCoreConfig(config);
+  }
+
+  if (options.definitionId === "item_port_loader_1") {
+    return convertLegacyWarehouseLoaderConfig(config);
   }
 
   if (options.definitionId === "item_port_mix_pool_1" || options.definitionId === "item_port_mix_pool_large_1") {
-    return convertLegacyReactorPoolConfig(options.definitionId, options.config);
+    return convertLegacyReactorPoolConfig(options.definitionId, config);
   }
 
-  return convertLegacyPreloadInputs(options.config);
+  return convertLegacyPreloadInputs(config);
 }
 
 /**
@@ -438,12 +467,33 @@ function convertLegacyDarkPipeUnloaderConfig(
 function convertLegacyStoragerConfig(
   config: Record<string, unknown>,
 ): Record<string, unknown> {
-  if (config.submitToWarehouse !== true) {
-    return config;
-  }
-
   const nextConfig: Record<string, unknown> = { ...config };
+  const shouldSubmitToWarehouse = config.submitToWarehouse !== false;
+  const hasStorageSlotConfig = Array.isArray(config.storageSlots) && config.storageSlots.length > 0;
   delete nextConfig.submitToWarehouse;
+
+  if (!hasStorageSlotConfig) {
+    convertLegacyStoragePreloadInputsIntoGroups(nextConfig, config.storagePreloadInputs);
+  }
+  convertLegacyStorageSlotsIntoGroups(nextConfig, config.storageSlots);
+  delete nextConfig.storagePreloadInputs;
+  delete nextConfig.storageSlots;
+
+  // AI-REMOVED 2026-06-06:
+  // Reason: v2 协议存储箱的 submitToWarehouse 缺省语义为 true，旧判断会让缺省配置迁移后不交货。
+  // Trigger: 用户要求 submit mode 删除后，协议存储箱统一改为配方交货。
+  // Evidence: v2 initialDeviceConfigForType("item_port_storager_1") 写入 true，RightPanel 读取时使用 ?? true。
+  // Replacement: 仅 submitToWarehouse === false 关闭 r_warehouse_submit。
+  // Risk: Medium - 极少数手写旧蓝图若省略 submitToWarehouse 且期望不交货，会按 v2 运行时缺省改为交货。
+  // Human Review: Required
+  //
+  // Original code:
+  // if (config.submitToWarehouse !== true) {
+  //   return config;
+  // }
+  if (!shouldSubmitToWarehouse) {
+    return nextConfig;
+  }
 
   // AI-REMOVED 2026-06-06:
   // Reason: submitMode 机制已删除，旧存储箱自动提交应迁移为配方驱动提交。
@@ -460,8 +510,208 @@ function convertLegacyStoragerConfig(
   // }
   nextConfig.channelRecipes = {
     ...asStringRecord(nextConfig.channelRecipes),
-    warehouse_submit: "r_warehouse_submit",
+    [WAREHOUSE_SUBMIT_CHANNEL_ID]: WAREHOUSE_SUBMIT_RECIPE_ID,
   };
+
+  return nextConfig;
+}
+
+function convertLegacyProtocolCoreConfig(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const nextConfig: Record<string, unknown> = { ...config };
+  const outputs = Array.isArray(config.protocolHubOutputs) ? config.protocolHubOutputs : [];
+  delete nextConfig.protocolHubOutputs;
+
+  for (const output of outputs) {
+    if (!isRecord(output)) {
+      continue;
+    }
+
+    const portId = output.portId;
+    const itemId = output.itemId;
+    if (typeof portId !== "string" || typeof itemId !== "string" || itemId === "") {
+      continue;
+    }
+
+    const mappedOutput = PROTOCOL_CORE_OUTPUTS_BY_PORT_ID[portId];
+    if (mappedOutput === undefined) {
+      continue;
+    }
+
+    writeWarehouseLinkConfig({
+      config: nextConfig,
+      linkIndex: mappedOutput.linkIndex,
+      sourceStorageSlotGroupId: mappedOutput.storageGroupId,
+      targetItemId: itemId,
+    });
+    nextConfig[`storageSlotGroups[${mappedOutput.storageGroupIndex}].slots[0].ignoreStock`] = output.ignoreInventory === true;
+  }
+
+  return nextConfig;
+}
+
+function convertLegacyWarehouseLoaderConfig(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const nextConfig = removeConfigKeysByPrefix(
+    removeWarehouseSubmitChannel({ ...config }),
+    ["links[", "links."],
+  );
+
+  delete nextConfig.links;
+  delete nextConfig.submitToWarehouse;
+  delete nextConfig.protocolHubOutputs;
+  delete nextConfig.pickupItemId;
+  delete nextConfig.pickupIgnoreInventory;
+  delete nextConfig.pumpOutputItemId;
+  delete nextConfig.darkPipeInletMode;
+  delete nextConfig.darkPipeOutletMode;
+
+  return nextConfig;
+}
+
+function convertLegacyStoragePreloadInputsIntoGroups(
+  config: Record<string, unknown>,
+  storagePreloadInputs: unknown,
+): void {
+  if (!Array.isArray(storagePreloadInputs)) {
+    return;
+  }
+
+  for (const entry of storagePreloadInputs) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+
+    writeStoragerInitialSlotConfig({
+      config,
+      slotIndex: entry.slotIndex,
+      itemId: entry.itemId,
+      amount: entry.amount,
+    });
+  }
+}
+
+function convertLegacyStorageSlotsIntoGroups(
+  config: Record<string, unknown>,
+  storageSlots: unknown,
+): void {
+  if (!Array.isArray(storageSlots)) {
+    return;
+  }
+
+  for (const entry of storageSlots) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+
+    const slotIndex = normalizeStoragerSlotIndex(entry.slotIndex);
+    if (slotIndex === null) {
+      continue;
+    }
+
+    if (entry.mode === "pinned" && typeof entry.pinnedItemId === "string" && entry.pinnedItemId !== "") {
+      config[`storageSlotGroups[${slotIndex}].slots[0].lock`] = entry.pinnedItemId;
+    }
+
+    writeStoragerInitialSlotConfig({
+      config,
+      slotIndex,
+      itemId: entry.preloadItemId,
+      amount: entry.preloadAmount,
+    });
+  }
+}
+
+function writeStoragerInitialSlotConfig(options: {
+  config: Record<string, unknown>;
+  slotIndex: unknown;
+  itemId: unknown;
+  amount: unknown;
+}): void {
+  const slotIndex = normalizeStoragerSlotIndex(options.slotIndex);
+  if (slotIndex === null || typeof options.itemId !== "string" || options.itemId === "") {
+    return;
+  }
+
+  const count = typeof options.amount === "number" && Number.isFinite(options.amount) ? Math.max(0, Math.floor(options.amount)) : 0;
+  options.config[`storageSlotGroups[${slotIndex}].slots[0].initialItemType`] = options.itemId;
+  options.config[`storageSlotGroups[${slotIndex}].slots[0].initialCount`] = count;
+}
+
+function normalizeStoragerSlotIndex(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value >= STORAGER_STORAGE_GROUP_COUNT) {
+    return null;
+  }
+
+  return value;
+}
+
+function writeWarehouseLinkConfig(options: {
+  config: Record<string, unknown>;
+  linkIndex: number;
+  sourceStorageSlotGroupId: string;
+  targetItemId: string;
+}): void {
+  options.config[`links[${options.linkIndex}].id`] = "";
+  options.config[`links[${options.linkIndex}].linkType`] = "share-all";
+  options.config[`links[${options.linkIndex}].source.entityId`] = "";
+  options.config[`links[${options.linkIndex}].source.storageSlotGroupId`] = options.sourceStorageSlotGroupId;
+  options.config[`links[${options.linkIndex}].source.slotId`] = "slot_1";
+  options.config[`links[${options.linkIndex}].target.entityId`] = "warehouse";
+  options.config[`links[${options.linkIndex}].target.storageSlotGroupId`] = "warehouse";
+  options.config[`links[${options.linkIndex}].target.slotId`] = options.targetItemId;
+}
+
+function removeLegacySubmitModeFields(config: Record<string, unknown>): Record<string, unknown> {
+  const nextConfig: Record<string, unknown> = { ...config };
+
+  for (const key of Object.keys(nextConfig)) {
+    if (
+      key === "submitMode"
+      || key === "submitIntervalSeconds"
+      || key.endsWith(".submitMode")
+      || key.endsWith(".submitIntervalSeconds")
+    ) {
+      delete nextConfig[key];
+    }
+  }
+
+  return nextConfig;
+}
+
+function removeWarehouseSubmitChannel(config: Record<string, unknown>): Record<string, unknown> {
+  if (!isRecord(config.channelRecipes)) {
+    return config;
+  }
+
+  const channelRecipes = { ...config.channelRecipes };
+  delete channelRecipes[WAREHOUSE_SUBMIT_CHANNEL_ID];
+
+  if (Object.keys(channelRecipes).length > 0) {
+    return {
+      ...config,
+      channelRecipes,
+    };
+  }
+
+  const nextConfig = { ...config };
+  delete nextConfig.channelRecipes;
+  return nextConfig;
+}
+
+function removeConfigKeysByPrefix(
+  config: Record<string, unknown>,
+  prefixes: readonly string[],
+): Record<string, unknown> {
+  const nextConfig: Record<string, unknown> = { ...config };
+
+  for (const key of Object.keys(nextConfig)) {
+    if (prefixes.some((prefix) => key.startsWith(prefix))) {
+      delete nextConfig[key];
+    }
+  }
 
   return nextConfig;
 }
