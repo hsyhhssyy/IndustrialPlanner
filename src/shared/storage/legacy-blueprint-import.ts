@@ -78,6 +78,12 @@ const LEGACY_DEVICE_REMAPPERS: Readonly<Record<string, {
     definitionId: "item_pipe_converger",
     rotationOffset: 90,
   },
+  // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°。
+  //   原端口朝北(N) → 现朝南(S)，需补 +180° 使旧 v2 蓝图的拓扑等价。
+  item_port_loader_1: {
+    definitionId: "item_port_loader_1",
+    rotationOffset: 180,
+  },
 };
 
 export interface LegacyBlueprintJson {

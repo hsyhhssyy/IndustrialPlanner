@@ -1690,7 +1690,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     displayOrder: 407,
     tags: ["武陵", "OuterRingAllowed", WAREHOUSE_SINK_TAG],
     requiresPower: false,
-    powerDemand: 10,
+    powerDemand: 0,
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -1723,7 +1723,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     displayOrder: 408,
     tags: ["武陵", "OuterRingAllowed", WAREHOUSE_SINK_TAG],
     requiresPower: false,
-    powerDemand: 10,
+    powerDemand: 0,
     portGroups: [
       createPortGroup(
         "fluid_output",
@@ -1777,12 +1777,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     placementBehaviors: WAREHOUSE_PORT_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
+    // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°。
+    // 原端口朝北(N)，现改为朝南(S)，使 rotation=0 方向与显示 sprite 对齐。
     portGroups: [
       createPortGroup(
         "item_input",
         "item",
         "input",
-        [createPort("p_in_mid", 1, 0, "N")],
+        [createPort("p_in_mid", 1, 0, "S")],
       ),
     ],
     ...createSimpleProductionDevice([
@@ -2561,7 +2563,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     displayOrder: 409,
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
-    powerDemand: 10,
+    powerDemand: 0,
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -2586,7 +2588,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     displayOrder: 410,
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
-    powerDemand: 10,
+    powerDemand: 0,
     portGroups: [
       createPortGroup(
         "fluid_output",

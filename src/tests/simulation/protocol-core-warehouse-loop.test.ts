@@ -174,7 +174,8 @@ describe("protocol core warehouse links", () => {
           "storageSlotGroups[0].slots[0].ignoreStock": true,
         }),
         createEntity("belt_0", "belt_straight_1x1", 52, 35, 0),
-        createEntity("loader", "item_port_loader_1", 53, 34, 270),
+        // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°，旧 rot=270 → 新 rot=90 保持等效朝向。
+        createEntity("loader", "item_port_loader_1", 53, 34, 90),
       ]),
       registry: createRegistryContract(),
       maxTickNumber: 80,
