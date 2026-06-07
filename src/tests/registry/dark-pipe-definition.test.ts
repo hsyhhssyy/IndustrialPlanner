@@ -39,7 +39,7 @@ describe("dark pipe definitions", () => {
       {
         id: "void_liquid",
         ingredientStorageGroupIds: ["loader_buffer"],
-        productStorageGroupIds: [],
+        productStorageGroupIds: ["loader_buffer"],
         manualRecipeOnly: undefined,
       },
     ]);
@@ -62,12 +62,12 @@ describe("dark pipe definitions", () => {
       expect.objectContaining({
         id: "void_liquid_1",
         ingredientStorageGroupIds: ["loader_buffer"],
-        productStorageGroupIds: [],
+        productStorageGroupIds: ["loader_buffer"],
       }),
       expect.objectContaining({
         id: "void_liquid_2",
         ingredientStorageGroupIds: ["loader_buffer"],
-        productStorageGroupIds: [],
+        productStorageGroupIds: ["loader_buffer"],
       }),
     ]);
   });
@@ -91,6 +91,14 @@ describe("dark pipe definitions", () => {
           }),
         ],
       });
+      expect(outlet.recipeChannels).toEqual([
+        {
+          id: "default",
+          ingredientStorageGroupIds: ["unloader_buffer"],
+          productStorageGroupIds: ["unloader_buffer"],
+          manualRecipeOnly: undefined,
+        },
+      ]);
       expect(outlet.inspectors).toEqual(expect.arrayContaining([
         { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unloader_buffer"] },
         { type: INSPECTOR_TYPE.slotConfig, slotGroupIds: ["unloader_buffer"] },

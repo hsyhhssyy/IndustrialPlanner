@@ -35,4 +35,11 @@ describe("recipe channel definitions", () => {
       productStorageGroupIds: ["item_output_buffer"],
     });
   });
+
+  it("declares water pump fluid buffer as both ingredient and product", () => {
+    expect(getDefaultChannel("item_port_water_pump_1")).toMatchObject({
+      ingredientStorageGroupIds: ["fluid_output_buffer"],
+      productStorageGroupIds: ["fluid_output_buffer"],
+    });
+  });
 });

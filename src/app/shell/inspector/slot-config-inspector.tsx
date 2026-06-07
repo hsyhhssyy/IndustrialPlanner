@@ -776,36 +776,72 @@ function resolveStorageGroupFlowRole(
   definition: EntityDefinition,
   storageGroupId: string,
 ): SlotConfigResolvedRole {
-  const directions = new Set<"input" | "output">();
-
-  for (const binding of definition.portStorageBindings) {
-    if (binding.storageSlotGroupId !== storageGroupId) {
-      continue;
-    }
-
-    const portGroup = definition.portGroups.find((candidate) => candidate.id === binding.portGroupId);
-    if (portGroup === undefined) {
-      continue;
-    }
-
-    if (portGroup.direction === "bidirectional") {
-      directions.add("input");
-      directions.add("output");
-      continue;
-    }
-
-    directions.add(portGroup.direction);
-  }
-
-  if (directions.has("input") && directions.has("output")) {
+  if (definition.recipeChannels.length === 0) {
     return "shared";
   }
 
-  if (directions.has("output")) {
+  let hasIngredientRole = false;
+  let hasProductRole = false;
+
+  for (const channel of definition.recipeChannels) {
+    hasIngredientRole ||= channel.ingredientStorageGroupIds.includes(storageGroupId);
+    hasProductRole ||= channel.productStorageGroupIds.includes(storageGroupId);
+  }
+
+  if (hasIngredientRole && hasProductRole) {
+    return "shared";
+  }
+
+  if (hasProductRole) {
     return "output";
   }
 
-  return "input";
+  if (hasIngredientRole) {
+    return "input";
+  }
+
+  /*
+    AI-REMOVED 2026-06-06:
+    Reason: 槽位配置的原料/产物归属应由 Recipe Channel 决定，端口方向只表达物流方向。
+    Trigger: 用户确认无 channel、不在任何 channel、或同时出现在多类 channel 集合内的槽位一律显示为混合。
+    Evidence: EntityDefinition 注释已明确“配方原料/产物角色由 Recipe Channel 声明”；旧实现会把无 channel 的纯物流槽位误显示为输入/输出。
+    Replacement: 上方 recipeChannels ingredientStorageGroupIds / productStorageGroupIds 判定。
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    const directions = new Set<"input" | "output">();
+
+    for (const binding of definition.portStorageBindings) {
+      if (binding.storageSlotGroupId !== storageGroupId) {
+        continue;
+      }
+
+      const portGroup = definition.portGroups.find((candidate) => candidate.id === binding.portGroupId);
+      if (portGroup === undefined) {
+        continue;
+      }
+
+      if (portGroup.direction === "bidirectional") {
+        directions.add("input");
+        directions.add("output");
+        continue;
+      }
+
+      directions.add(portGroup.direction);
+    }
+
+    if (directions.has("input") && directions.has("output")) {
+      return "shared";
+    }
+
+    if (directions.has("output")) {
+      return "output";
+    }
+
+    return "input";
+  */
+  return "shared";
 }
 
 function resolveSlotConfigGroupViews(options: {

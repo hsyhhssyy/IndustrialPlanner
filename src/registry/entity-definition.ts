@@ -1758,7 +1758,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     recipeChannels: [
-      createRecipeChannel("void_liquid", ["loader_buffer"], []),
+      // AI-CORRECTION 2026-06-07: loader_buffer 同时声明为产物槽，仅用于表达槽位配置的混合归属；销毁配方本身仍没有 outputs。
+      createRecipeChannel("void_liquid", ["loader_buffer"], ["loader_buffer"]),
     ],
     // AI-REMOVED 2026-06-06:
     // Reason: 暗管入口端口必须绑定到本地销毁槽位。
@@ -1827,6 +1828,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid",
         createSlots("slot", [500], "liquid"),
       ),
+    ],
+    // AI-CORRECTION 2026-06-07: 暗管出口保留仓库取货式生成语义，但槽位在 channel 中同时作为原料/产物以显示为混合槽位。
+    recipeChannels: [
+      createRecipeChannel("default", ["unloader_buffer"], ["unloader_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_fluid_output", "fluid_output", "unloader_buffer"),
@@ -2647,6 +2652,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ...createSimpleProductionDevice([
       { kind: "fluid", direction: "output", capacities: [50] },
     ]),
+    // AI-CORRECTION 2026-06-07: 抽水泵的 fluid_output_buffer 在 channel 中同时作为原料/产物，用于统一混合槽位显示。
+    recipeChannels: [
+      createRecipeChannel("default", ["fluid_output_buffer"], ["fluid_output_buffer"]),
+    ],
   }),
   createEntityDefinition({
     id: "item_port_udpipe_loader_2",
@@ -2689,8 +2698,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     recipeChannels: [
-      createRecipeChannel("void_liquid_1", ["loader_buffer"], []),
-      createRecipeChannel("void_liquid_2", ["loader_buffer"], []),
+      // AI-CORRECTION 2026-06-07: loader_buffer 同时声明为产物槽，仅用于表达槽位配置的混合归属；销毁配方本身仍没有 outputs。
+      createRecipeChannel("void_liquid_1", ["loader_buffer"], ["loader_buffer"]),
+      createRecipeChannel("void_liquid_2", ["loader_buffer"], ["loader_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_fluid_input", "fluid_input", "loader_buffer"),
@@ -2741,6 +2751,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid",
         createSlots("slot", [500], "liquid"),
       ),
+    ],
+    // AI-CORRECTION 2026-06-07: 暗管出口保留仓库取货式生成语义，但槽位在 channel 中同时作为原料/产物以显示为混合槽位。
+    recipeChannels: [
+      createRecipeChannel("default", ["unloader_buffer"], ["unloader_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_fluid_output", "fluid_output", "unloader_buffer"),

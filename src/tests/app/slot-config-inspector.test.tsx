@@ -412,6 +412,154 @@ describe("SlotConfigInspector", () => {
     expect(sharedSlots.length).toBe(5);
   });
 
+  it("resolves slot flow roles from recipe channels instead of port bindings", () => {
+    const workspace = createWorkspace();
+    const document = createDummyWorldDocument();
+    const entity = document.entities["dummy-entity-3"];
+
+    if (entity === undefined) {
+      throw new Error("Expected dummy grinder entity to exist.");
+    }
+
+    const baseDefinition = requireDefinition(workspace, entity.definitionId);
+    const picker = new WorkbenchEncyclopediaPickerController(() => ({
+      desktopCategory: "all",
+      mobileSelectedCategories: [],
+    }));
+    const currentAppHost = {
+      workspace,
+      encyclopediaPicker: picker,
+      actions: {
+        translate: (key: string) => key,
+      },
+    } as unknown as AppHost;
+    appHost = currentAppHost;
+
+    const renderInspector = (definition: EntityDefinition) => {
+      act(() => {
+        root.render(
+          <SlotConfigInspector
+            appHost={currentAppHost}
+            declaration={{
+              type: INSPECTOR_TYPE.slotConfig,
+              slotGroupIds: ["item_input_buffer", "item_output_buffer"],
+            }}
+            definition={definition}
+            entity={entity}
+            translate={currentAppHost.actions.translate}
+          />,
+        );
+      });
+    };
+
+    renderInspector({
+      ...baseDefinition,
+      recipeChannels: [
+        {
+          id: "default",
+          ingredientStorageGroupIds: ["item_output_buffer"],
+          productStorageGroupIds: ["item_input_buffer"],
+        },
+      ],
+    });
+
+    expectSlotGroupRole(container, "item_input_buffer", "output");
+    expectSlotGroupRole(container, "item_output_buffer", "input");
+
+    renderInspector({
+      ...baseDefinition,
+      recipeChannels: [],
+    });
+
+    expectSlotGroupRole(container, "item_input_buffer", "shared");
+    expectSlotGroupRole(container, "item_output_buffer", "shared");
+    expect(container.querySelector("[data-slot-config-role='input']")).toBeNull();
+    expect(container.querySelector("[data-slot-config-role='output']")).toBeNull();
+
+    renderInspector({
+      ...baseDefinition,
+      recipeChannels: [
+        {
+          id: "default",
+          ingredientStorageGroupIds: ["item_input_buffer"],
+          productStorageGroupIds: [],
+        },
+      ],
+    });
+
+    expectSlotGroupRole(container, "item_input_buffer", "input");
+    expectSlotGroupRole(container, "item_output_buffer", "shared");
+
+    renderInspector({
+      ...baseDefinition,
+      recipeChannels: [
+        {
+          id: "default",
+          ingredientStorageGroupIds: ["item_input_buffer"],
+          productStorageGroupIds: ["item_input_buffer"],
+        },
+      ],
+    });
+
+    expectSlotGroupRole(container, "item_input_buffer", "shared");
+    expectSlotGroupRole(container, "item_output_buffer", "shared");
+  });
+
+  it("renders water pump and dark pipe storage groups as shared recipe-channel slots", () => {
+    const workspace = createWorkspace();
+    const picker = new WorkbenchEncyclopediaPickerController(() => ({
+      desktopCategory: "all",
+      mobileSelectedCategories: [],
+    }));
+    const currentAppHost = {
+      workspace,
+      encyclopediaPicker: picker,
+      actions: {
+        translate: (key: string) => key,
+      },
+    } as unknown as AppHost;
+    appHost = currentAppHost;
+
+    const cases = [
+      { definitionId: "item_port_water_pump_1", slotGroupId: "fluid_output_buffer" },
+      { definitionId: "item_port_udpipe_loader_1", slotGroupId: "loader_buffer" },
+      { definitionId: "item_port_udpipe_unloader_1", slotGroupId: "unloader_buffer" },
+      { definitionId: "item_port_udpipe_loader_2", slotGroupId: "loader_buffer" },
+      { definitionId: "item_port_udpipe_unloader_2", slotGroupId: "unloader_buffer" },
+    ];
+
+    for (const testCase of cases) {
+      const definition = requireDefinition(workspace, testCase.definitionId);
+      const entity: WorldEntity = {
+        id: `entity:${testCase.definitionId}`,
+        definitionId: testCase.definitionId,
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      };
+
+      act(() => {
+        root.render(
+          <SlotConfigInspector
+            appHost={currentAppHost}
+            declaration={{
+              type: INSPECTOR_TYPE.slotConfig,
+              slotGroupIds: [testCase.slotGroupId],
+            }}
+            definition={definition}
+            entity={entity}
+            translate={currentAppHost.actions.translate}
+          />,
+        );
+      });
+
+      expectSlotGroupRole(container, testCase.slotGroupId, "shared");
+      expect(container.querySelector("[data-slot-config-role='input']")).toBeNull();
+      expect(container.querySelector("[data-slot-config-role='output']")).toBeNull();
+    }
+  });
+
   it("renders input/output columns only for definition with unidirectional port bindings", () => {
     // 使用粉碎机（grinder）：item_input -> item_input_buffer, item_output -> item_output_buffer
     // 两个槽位组都是单向绑定，不应出现共享列
@@ -482,6 +630,17 @@ function setInputValue(input: HTMLInputElement, value: string): void {
   }
 
   setter.call(input, value);
+}
+
+function expectSlotGroupRole(
+  container: HTMLElement,
+  storageGroupId: string,
+  role: "input" | "output" | "shared",
+): void {
+  const group = container.querySelector(`[data-slot-config-group='${storageGroupId}']`);
+  expect(group).not.toBeNull();
+  expect(group?.getAttribute("data-slot-config-group-role")).toBe(role);
+  expect(group?.closest("[data-slot-config-role]")?.getAttribute("data-slot-config-role")).toBe(role);
 }
 
 function requireItem(workspace: WorkspaceContract, itemId: string): ItemDefinition {
