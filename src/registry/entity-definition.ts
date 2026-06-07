@@ -1776,6 +1776,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     inspectors: [
       {
+        type: INSPECTOR_TYPE.darkPipeLink,
+      },
+      {
         type: INSPECTOR_TYPE.slotConfig,
         slotGroupIds: ["loader_buffer"],
       },
@@ -1837,6 +1840,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_fluid_output", "fluid_output", "unloader_buffer"),
     ],
     inspectors: [
+      {
+        type: INSPECTOR_TYPE.darkPipeLink,
+      },
       {
         type: INSPECTOR_TYPE.warehouseItemLink,
         slotGroupIds: ["unloader_buffer"],
@@ -2707,6 +2713,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     inspectors: [
       {
+        type: INSPECTOR_TYPE.darkPipeLink,
+      },
+      {
         type: INSPECTOR_TYPE.slotConfig,
         slotGroupIds: ["loader_buffer"],
       },
@@ -2760,6 +2769,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_fluid_output", "fluid_output", "unloader_buffer"),
     ],
     inspectors: [
+      {
+        type: INSPECTOR_TYPE.darkPipeLink,
+      },
       {
         type: INSPECTOR_TYPE.warehouseItemLink,
         slotGroupIds: ["unloader_buffer"],

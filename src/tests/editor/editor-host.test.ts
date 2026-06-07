@@ -140,6 +140,71 @@ describe("createEditorHost", () => {
     expect(workspace.editor?.state.viewport.center.y).toBeCloseTo(2);
   });
 
+  it("creates and removes one-to-one dark pipe slot links", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithTestEntities([
+      {
+        ...createTestEntity("inlet", "item_port_udpipe_loader_2", 0, 0),
+        config: {
+          "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+          "storageSlotGroups[0].slots[0].initialCount": 8,
+        },
+      },
+      {
+        ...createTestEntity("outlet", "item_port_udpipe_unloader_1", 8, 0),
+        config: {
+          "links[0].id": "",
+          "links[0].linkType": "share-all",
+          "links[0].source.entityId": "outlet",
+          "links[0].source.storageSlotGroupId": "unloader_buffer",
+          "links[0].source.slotId": "slot_1",
+          "links[0].target.entityId": "warehouse",
+          "links[0].target.storageSlotGroupId": "warehouse",
+          "links[0].target.slotId": "item_liquid_water",
+          "storageSlotGroups[0].slots[0].ignoreStock": true,
+        },
+      },
+    ]);
+    editorHost.internalDocument.setSnapshot(document);
+
+    expect(editorHost.actions.createDarkPipeLink({
+      sourceEntityId: "inlet",
+      targetEntityId: "outlet",
+    })).toBe(true);
+
+    const linked = editorHost.document.getSnapshot();
+    expect(linked.slotLinks).toEqual([{
+      id: "dark-pipe-link:outlet:inlet",
+      linkType: "share-all",
+      source: {
+        entityId: "outlet",
+        storageSlotGroupId: "unloader_buffer",
+        slotId: "slot_1",
+      },
+      target: {
+        entityId: "inlet",
+        storageSlotGroupId: "loader_buffer",
+        slotId: "slot_1",
+      },
+    }]);
+    expect(linked.entities.outlet?.config).toEqual({});
+    expect(linked.entities.inlet?.config).toEqual({
+      "recipeChannels[0].manualRecipeOnly": true,
+      "recipeChannels[1].manualRecipeOnly": true,
+    });
+    expect(editorHost.actions.createDarkPipeLink({
+      sourceEntityId: "inlet",
+      targetEntityId: "outlet",
+    })).toBe(false);
+
+    expect(editorHost.actions.removeDarkPipeLink("outlet")).toBe(true);
+    const unlinked = editorHost.document.getSnapshot();
+    expect(unlinked.slotLinks).toEqual([]);
+    expect(unlinked.entities.inlet?.config).toEqual({});
+    expect(unlinked.entities.outlet?.config).toEqual({});
+  });
+
   it("clamps viewport center to the current base warning bounds while panning", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

@@ -45,10 +45,19 @@ export type ActiveTool =
   | "marquee"
   | "blueprint-placement"
   | "single-placement"
-  | "logistics-placement";
+  | "logistics-placement"
+  | "dark-pipe-link";
+
+export interface DarkPipeLinkToolState {
+  readonly sourceEntityId: string;
+  readonly sourceRole: "inlet" | "outlet";
+  readonly candidateEntityIds: readonly string[];
+  readonly returnTool: ActiveTool;
+}
 
 export interface ToolInfo {
   readonly marqueeType: "marquee" | "reverse-marquee";
+  readonly darkPipeLink: DarkPipeLinkToolState | null;
 }
 
 export interface UiState {

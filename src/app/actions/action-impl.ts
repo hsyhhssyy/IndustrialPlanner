@@ -339,6 +339,10 @@ export class AppActionImpl implements AppAction, AppInternalAction {
       this.internalState.runtime.selectingPlacementGroup = null;
     }
 
+    if (activeTool !== "dark-pipe-link") {
+      this.internalState.toolInfo.darkPipeLink = null;
+    }
+
     this.internalState.activeTool = activeTool;
   });
 

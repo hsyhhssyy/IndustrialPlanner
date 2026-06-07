@@ -418,7 +418,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const showCanvasBottomLeftToolbar = !leftDockOpen;
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
   const showRightDock = useInspectorPanel && rightDockOpen;
-  const canKeepInspectorDialogOpen = !useInspectorPanel && activeTool === "select" && selectionCount === 1;
+  const canKeepInspectorDialogOpen = !useInspectorPanel
+    && (activeTool === "select" || activeTool === "dark-pipe-link")
+    && selectionCount === 1;
   const shouldAutoOpenInspectorDialog = canKeepInspectorDialogOpen && !openInspectorOnSecondClick;
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
   const previousScreenProfileRef = useRef(screenProfile);

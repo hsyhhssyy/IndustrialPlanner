@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
+import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
 import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import { runBlueprintSimulation } from "./blueprint-runner";
 import {
@@ -63,5 +64,33 @@ describe("dark pipe liquid void", () => {
       .toMatchObject({ itemType: null, count: 0 });
     expect(findSlot(report, STANDARD_TICK_RATE_PER_SECOND, "multi-outlet", "unloader_buffer", "slot_1"))
       .toMatchObject({ itemType: null, count: 0 });
+  });
+
+  it("does not void liquid from a linked dark pipe inlet with manual recipe channels", async () => {
+    const finalTick = (2 * STANDARD_TICK_RATE_PER_SECOND) + 5;
+    const report = await runBlueprintSimulation({
+      blueprint: createBlueprint(
+        "linked-dark-pipe-inlet-manual-void",
+        [
+          createEntity("inlet", "item_port_udpipe_loader_1", 0, 0, 0, {
+            "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+            "storageSlotGroups[0].slots[0].initialCount": 4,
+            "recipeChannels[0].manualRecipeOnly": true,
+          }),
+          createEntity("outlet", "item_port_udpipe_unloader_1", 6, 0),
+        ],
+        [
+          createDarkPipeSlotLink({
+            inletEntityId: "inlet",
+            outletEntityId: "outlet",
+          }),
+        ],
+      ),
+      maxTickNumber: finalTick,
+      registry: createRegistryContract(),
+    });
+
+    expect(getDevice(report, 1, "inlet").channelRecipes["void_liquid"]).toBeUndefined();
+    expect(findSlot(report, finalTick, "inlet", "loader_buffer", "slot_1").count).toBe(4);
   });
 });

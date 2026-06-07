@@ -11,6 +11,7 @@ import type {
 import type {
   ActiveTool,
   AppSettings,
+  DarkPipeLinkToolState,
   RightDockTabId,
   ToolInfo,
   UiState,
@@ -417,6 +418,7 @@ export interface LogisticsPlacementRuntimeStateReadWrite {
 
 export interface ToolInfoReadWrite extends ToolInfo {
   marqueeType: MarqueeCollectionType;
+  darkPipeLink: DarkPipeLinkToolState | null;
 }
 
 const DEFAULT_APP_LOCALE: AppLocale = "zh-CN";
@@ -595,6 +597,7 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
 
 class ToolInfoReadWriteImpl implements ToolInfoReadWrite {
   marqueeType: MarqueeCollectionType = EntityCollectionType.marquee;
+  darkPipeLink: DarkPipeLinkToolState | null = null;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

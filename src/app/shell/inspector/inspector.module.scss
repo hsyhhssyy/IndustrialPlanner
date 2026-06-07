@@ -2132,6 +2132,57 @@
   font-size: 0.82rem;
 }
 
+.dark-pipe-link-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.dark-pipe-link-status {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dark-pipe-link-button {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  min-width: 104px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-size: 0.78rem;
+  gap: 6px;
+}
+
+.dark-pipe-link-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.dark-pipe-link-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dark-pipe-link-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.dark-pipe-link-button.is-danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .toggle-on,
 .toggle-off {
   position: relative;

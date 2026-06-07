@@ -17,6 +17,7 @@ export {
   cleanupMarquee,
   createHypergryphMarqueeGestureModule,
 } from "./hypergryph/hypergryph-marquee-gesture-module";
+export { createHypergryphDarkPipeLinkGestureModule } from "./hypergryph/hypergryph-dark-pipe-link-gesture-module";
 export {
   cleanupMoveOperationDraft,
   createHypergryphMoveGestureModule,

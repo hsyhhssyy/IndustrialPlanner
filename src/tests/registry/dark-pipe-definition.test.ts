@@ -44,6 +44,7 @@ describe("dark pipe definitions", () => {
       },
     ]);
     expect(inlet.inspectors).toEqual(expect.arrayContaining([
+      { type: INSPECTOR_TYPE.darkPipeLink },
       { type: INSPECTOR_TYPE.slotConfig, slotGroupIds: ["loader_buffer"] },
     ]));
   });
@@ -70,6 +71,10 @@ describe("dark pipe definitions", () => {
         productStorageGroupIds: ["loader_buffer"],
       }),
     ]);
+    expect(inlet.inspectors).toEqual(expect.arrayContaining([
+      { type: INSPECTOR_TYPE.darkPipeLink },
+      { type: INSPECTOR_TYPE.slotConfig, slotGroupIds: ["loader_buffer"] },
+    ]));
   });
 
   it("configures dark pipe outlets as warehouse-linked generators with one 500-capacity liquid slot", () => {
@@ -100,6 +105,7 @@ describe("dark pipe definitions", () => {
         },
       ]);
       expect(outlet.inspectors).toEqual(expect.arrayContaining([
+        { type: INSPECTOR_TYPE.darkPipeLink },
         { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unloader_buffer"] },
         { type: INSPECTOR_TYPE.slotConfig, slotGroupIds: ["unloader_buffer"] },
       ]));

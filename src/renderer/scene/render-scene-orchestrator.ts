@@ -52,6 +52,8 @@ import { createBeltPortInsertionDecoration } from "./decorations/BeltPortInserti
 import { createBeltFlowDecoration } from "./decorations/BeltFlowDecoration"
 import { createPipeFlowDecoration } from "./decorations/PipeFlowDecoration"
 import { createPowerRangeDecoration } from "./decorations/PowerRangeDecoration"
+import { createDarkPipeLinkLineDecoration } from "./decorations/DarkPipeLinkLineDecoration"
+import { createDarkPipeLinkSelectionDecoration } from "./decorations/DarkPipeLinkSelectionDecoration"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
@@ -117,10 +119,13 @@ export function createRenderSceneOrchestrator(
   const logisticsPlacementIdleCursorDecoration = createLogisticsPlacementIdleCursorDecoration()
   const beltFlowDecoration = createBeltFlowDecoration()
   const pipeFlowDecoration = createPipeFlowDecoration()
+  const darkPipeLinkLineDecoration = createDarkPipeLinkLineDecoration()
+  const darkPipeLinkSelectionDecoration = createDarkPipeLinkSelectionDecoration()
   const beltPortInsertionDecoration = createBeltPortInsertionDecoration()
   const beltCargoDecoration = createBeltCargoDecoration()
   const beltFlowLayer = new Container()
   const pipeFlowLayer = new Container()
+  const darkPipeLinkLineLayer = new Container()
   const beltInsertionLayer = new Container()
   const beltCargoOverlayLayer = new Container()
   const invalidPlacementOverlayLayer = new Container()
@@ -329,6 +334,10 @@ export function createRenderSceneOrchestrator(
       pipeFlowDecoration.sync(ctx)
     })
 
+    measureRenderStage(frameProfiler, "decoration.darkPipeLinkLine", () => {
+      darkPipeLinkLineDecoration.sync(ctx)
+    })
+
     measureRenderStage(frameProfiler, "decoration.beltPortInsertion", () => {
       beltPortInsertionDecoration.sync(ctx)
     })
@@ -341,6 +350,10 @@ export function createRenderSceneOrchestrator(
       grassBackgroundDecoration.sync(ctx)
     })
 
+    measureRenderStage(frameProfiler, "decoration.darkPipeLinkSelection", () => {
+      darkPipeLinkSelectionDecoration.sync(ctx)
+    })
+
     frameProfiler?.finishFrame({
       activeTool: readRenderActiveTool(renderHost),
     })
@@ -351,6 +364,7 @@ export function createRenderSceneOrchestrator(
     layers.entity,
     beltFlowLayer,
     pipeFlowLayer,
+    darkPipeLinkLineLayer,
     beltInsertionLayer,
     beltCargoOverlayLayer,
     layers.overlay,
@@ -365,12 +379,14 @@ export function createRenderSceneOrchestrator(
   invalidPlacementOverlayLayer.addChild(invalidPlacementDecoration.container)
   beltFlowLayer.addChild(beltFlowDecoration.container)
   pipeFlowLayer.addChild(pipeFlowDecoration.container)
+  darkPipeLinkLineLayer.addChild(darkPipeLinkLineDecoration.container)
   beltInsertionLayer.addChild(beltPortInsertionDecoration.container)
   beltCargoOverlayLayer.addChild(beltCargoDecoration.container)
   marqueeOverlayLayer.addChild(marqueeCanvasDecoration.container)
   marqueeOverlayLayer.addChild(logisticsPlacementCanvasDecoration.container)
   marqueeOverlayLayer.addChild(logisticsPlacementIdleCursorDecoration.container)
   marqueeOverlayLayer.addChild(marqueeDecoration.container)
+  marqueeOverlayLayer.addChild(darkPipeLinkSelectionDecoration.container)
   layers.overlay.addChild(diagnosticsDecoration.container)
   app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
 
@@ -396,12 +412,15 @@ export function createRenderSceneOrchestrator(
       diagnosticsDecoration.destroy()
       beltFlowDecoration.destroy()
       pipeFlowDecoration.destroy()
+      darkPipeLinkLineDecoration.destroy()
+      darkPipeLinkSelectionDecoration.destroy()
       beltPortInsertionDecoration.destroy()
       beltCargoDecoration.destroy()
       layers.background.destroy({ children: true })
       layers.entity.destroy({ children: true })
       beltFlowLayer.destroy({ children: true })
       pipeFlowLayer.destroy({ children: true })
+      darkPipeLinkLineLayer.destroy({ children: true })
       beltInsertionLayer.destroy({ children: true })
       beltCargoOverlayLayer.destroy({ children: true })
       invalidPlacementOverlayLayer.destroy({ children: true })

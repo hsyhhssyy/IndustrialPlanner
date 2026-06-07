@@ -23,11 +23,16 @@ import { SELECTION_LOGISTICS_SEGMENT_BUTTON_IDS } from "./selection-inspector-ac
 import { SimulationRecipeStatusRuntimeInspector } from "./simulation-recipe-status-runtime-inspector";
 import { SlotConfigInspector } from "./slot-config-inspector";
 import { WarehouseItemLinkInspector } from "./warehouse-item-link-inspector";
+import { DarkPipeLinkInspector } from "./dark-pipe-link-inspector";
 import { SubmitToWarehouseInspector } from "./submit-to-warehouse-inspector";
 import { ProblemInspector } from "./problem-inspector";
 import { PortOutputConfigInspector } from "./port-output-config-inspector";
 import { InspectorCollapsiblePanel } from "./inspector-collapsible-panel";
 import { CanvasFloatingToolbarButtonStrip } from "@/app/shell/shared/canvas-floating-toolbar-button-strip";
+import {
+  findDarkPipeSlotLinkForEntity,
+  resolveDarkPipeRole,
+} from "@/shared/dark-pipe-link";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -63,6 +68,7 @@ const INSPECTOR_LABELS: Partial<Record<EntityInspectorType, string>> = {
   [INSPECTOR_TYPE.behaviorToggle]: "行为开关",
   [INSPECTOR_TYPE.warehouseItemLink]: "仓库物品链接",
   [INSPECTOR_TYPE.portOutputConfig]: "输出端口配置",
+  [INSPECTOR_TYPE.darkPipeLink]: "暗管链接",
 };
 
 function EmptyInspector({
@@ -139,6 +145,10 @@ function renderInspector(options: {
         />
       );
     case INSPECTOR_TYPE.warehouseItemLink:
+      if (isWarehouseItemLinkSuppressedByDarkPipeLink(options)) {
+        return null;
+      }
+
       return (
         <WarehouseItemLinkInspector
           appHost={options.appHost}
@@ -146,6 +156,14 @@ function renderInspector(options: {
           definition={options.definition}
           entity={options.entity}
           translate={options.translate}
+        />
+      );
+    case INSPECTOR_TYPE.darkPipeLink:
+      return (
+        <DarkPipeLinkInspector
+          appHost={options.appHost}
+          definition={options.definition}
+          entity={options.entity}
         />
       );
     case INSPECTOR_TYPE.submitToWarehouse:
@@ -185,6 +203,23 @@ function renderInspector(options: {
     default:
       return <EmptyInspector declaration={options.declaration} />;
   }
+}
+
+function isWarehouseItemLinkSuppressedByDarkPipeLink(options: {
+  appHost: AppHost;
+  entity: WorldEntity;
+  definition: EntityDefinition;
+}): boolean {
+  if (resolveDarkPipeRole(options.definition.id) !== "outlet") {
+    return false;
+  }
+
+  const documentSnapshot = options.appHost.workspace.editor?.document.getSnapshot() ?? null;
+  if (documentSnapshot === null) {
+    return false;
+  }
+
+  return findDarkPipeSlotLinkForEntity(documentSnapshot, options.entity.id) !== null;
 }
 
 // AI-REMOVED 2026-05-31:
@@ -403,12 +438,24 @@ export function SelectionInspectorSlot({
       */}
       <div className={cm(styles, "definition-list")}>
         {(() => {
-          const renderedInspectors = slotState.inspectors.map((inspector) => {
+          const renderedInspectors = slotState.inspectors.flatMap((inspector) => {
             const inspectorScope = slotState.showSimulationRuntimeInspector
               ? scopeByInspectorId[inspector.id] ?? "runtime-state"
               : "initial-config";
+            const renderedInspector = renderInspector({
+              appHost,
+              declaration: inspector.declaration,
+              entity: slotState.selectedEntity,
+              definition: slotState.selectedDefinition,
+              runtimeStatus: slotState.simulationRuntimeStatus,
+              translate,
+            });
 
-            return (
+            if (renderedInspector === null) {
+              return [];
+            }
+
+            return [(
               <InspectorDataScopeContext.Provider
                 key={inspector.id}
                 value={{
@@ -428,17 +475,10 @@ export function SelectionInspectorSlot({
                 }}
               >
                 <div>
-                  {renderInspector({
-                    appHost,
-                    declaration: inspector.declaration,
-                    entity: slotState.selectedEntity,
-                    definition: slotState.selectedDefinition,
-                    runtimeStatus: slotState.simulationRuntimeStatus,
-                    translate,
-                  })}
+                  {renderedInspector}
                 </div>
               </InspectorDataScopeContext.Provider>
-            );
+            )];
           });
 
           const isDedicatedLogistics = appHost.workspace.registry.queries.isDedicatedLogisticsDevice(
@@ -507,6 +547,8 @@ function resolveInspectorDiscriminator(
         ...declaration.slotGroupIds,
         ...(declaration.slotIds ?? []),
       ].join(",");
+    case INSPECTOR_TYPE.darkPipeLink:
+      return "dark-pipe-link";
     case INSPECTOR_TYPE.portFilter:
     case INSPECTOR_TYPE.routing:
       return declaration.portRef;

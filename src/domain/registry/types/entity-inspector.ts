@@ -284,6 +284,19 @@ export const INSPECTOR_TYPE = {
    * 与设计文档《仿真运行原理》§3.3 中的 share-all Link 对应。
    */
   warehouseItemLink: "warehouse-item-link",
+
+  /**
+   * ## 暗管链接面板
+   *
+   * **编辑目标**：暗管入口与暗管出口之间的一对一 share-all 槽位链接。
+   *
+   * 编辑功能：
+   * - 未链接时进入暗管链接选择工具；
+   * - 已链接时断开当前暗管链接；
+   * - 暗管入口只能选择暗管出口，暗管出口只能选择暗管入口；
+   * - 单口和多口暗管可混合链接，但每个暗管设备最多参与一条链接。
+   */
+  darkPipeLink: "dark-pipe-link",
 } as const;
 
 export type EntityInspectorType =
@@ -366,6 +379,11 @@ export interface PortOutputConfigInspectorDeclaration {
   readonly portGroupIds: readonly string[];
 }
 
+/** darkPipeLink 声明：创建或断开暗管入口/出口链接 */
+export interface DarkPipeLinkInspectorDeclaration {
+  readonly type: typeof INSPECTOR_TYPE.darkPipeLink;
+}
+
 /**
  * EntityInspectorDeclaration — 可辨识联合。
  *
@@ -403,5 +421,6 @@ export type EntityInspectorDeclaration =
   | { readonly type: typeof INSPECTOR_TYPE.submitToWarehouse }
   | RecipeStatusInspectorDeclaration
   | PortOutputConfigInspectorDeclaration
+  | DarkPipeLinkInspectorDeclaration
   | { readonly type: typeof INSPECTOR_TYPE.structure }
   | { readonly type: typeof INSPECTOR_TYPE.behaviorToggle };

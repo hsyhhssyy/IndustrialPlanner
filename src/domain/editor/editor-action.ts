@@ -25,6 +25,11 @@ export interface EditorAction {
 	setViewportDisplayRotation(displayRotation: GridRotation): void;
 
 	patchEntityConfig(entityId: string, patch: Record<string, unknown>): void;
+	createDarkPipeLink(options: {
+		sourceEntityId: string;
+		targetEntityId: string;
+	}): boolean;
+	removeDarkPipeLink(entityId: string): boolean;
 	/**
 	 * 将实体或运行时 draft 切换为另一个 definition。
 	 * 切换会清空该实体 config；若目标是正式文档实体，还会移除涉及该实体的 document slotLinks。

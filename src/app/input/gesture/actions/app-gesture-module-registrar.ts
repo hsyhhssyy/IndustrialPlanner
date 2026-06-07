@@ -11,6 +11,9 @@ import {
   createHypergryphDeleteSelectionGestureModule,
 } from "./hypergryph/hypergryph-delete-selection-gesture-module";
 import {
+  createHypergryphDarkPipeLinkGestureModule,
+} from "./hypergryph/hypergryph-dark-pipe-link-gesture-module";
+import {
   createHypergryphEntityVariantSwitchGestureModule,
 } from "./hypergryph/hypergryph-entity-variant-switch-gesture-module";
 import {
@@ -54,6 +57,7 @@ export class AppGestureModuleRegistrar {
       options.router.registerModule(createHypergryphSinglePlacementGestureModule()),
       options.router.registerModule(createHypergryphMoveGestureModule()),
       options.router.registerModule(createHypergryphMarqueeGestureModule()),
+      options.router.registerModule(createHypergryphDarkPipeLinkGestureModule()),
       options.router.registerModule(createHypergryphSelectGestureModule()),
       options.router.registerModule(createHypergryphSaveBlueprintGestureModule()),
       options.router.registerModule(createHypergryphEntityVariantSwitchGestureModule()),
