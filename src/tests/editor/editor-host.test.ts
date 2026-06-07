@@ -695,12 +695,12 @@ describe("createEditorHost", () => {
 
     expect(editorHost.state.collections.powered).toEqual([
       "item_port_power_diffuser_1:1",
-      "item_port_grinder_1:2",
+      "item_port_grinder_1:1",
     ]);
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
-      entityId: "item_port_grinder_1:2",
+      entityId: "item_port_grinder_1:1",
     });
     editorHost.actions.moveCollectionTo({
       collectionType: EntityCollectionType.selection,
@@ -984,14 +984,14 @@ describe("createEditorHost", () => {
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
     expect(editorHost.state.collections.preview).toEqual([]);
 
-    const sourceFinalId = sourceDraftId?.startsWith("placement-draft:")
-      ? sourceDraftId.slice("placement-draft:".length)
-      : sourceDraftId;
-    const targetFinalId = targetDraftId?.startsWith("placement-draft:")
-      ? targetDraftId.slice("placement-draft:".length)
-      : targetDraftId;
+    // 最终 ID 由 commit 时基于文档状态重新分配，不再从 draft ID 剥前缀推导。
+    const finalDoc = editorHost.document.getSnapshot();
+    const finalEntityOrder = finalDoc.entityOrder.slice(-2);
 
-    expect(editorHost.document.getSnapshot().entityOrder.slice(-2)).toEqual([
+    expect(finalEntityOrder).toHaveLength(2);
+    const [sourceFinalId, targetFinalId] = finalEntityOrder;
+
+    expect(finalDoc.entityOrder.slice(-2)).toEqual([
       sourceFinalId,
       targetFinalId,
     ]);

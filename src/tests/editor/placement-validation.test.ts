@@ -135,9 +135,11 @@ describe("placement validation", () => {
     ).toBe(true);
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
 
-    const finalId = draftId?.startsWith("placement-draft:")
-      ? draftId.slice("placement-draft:".length)
-      : draftId;
+    // 最终 ID 由 commit 时基于文档状态重新分配，不再从 draft ID 剥前缀推导。
+    const finalDoc = editorHost.document.getSnapshot();
+    const finalId = finalDoc.entityOrder.find(
+      (id) => finalDoc.entities[id]?.definitionId === "item_port_grinder_1",
+    );
 
     expect(finalId).toBeDefined();
     expect(

@@ -47,10 +47,10 @@ export function createEditorPlacementActions({
 
       const currentDocument = document.getSnapshot();
       const preview = resolveCollection(EntityCollectionType.preview);
-      const reservedIds = new Set<string>([
-        ...Object.keys(currentDocument.entities),
-        ...state.drafts.map((entity) => entity.id),
-      ]);
+      // draft ID 仅需与已有 draft 去重；最终 ID 在 commit 时基于文档状态重新分配。
+      const reservedIds = new Set<string>(
+        state.drafts.map((entity) => entity.id),
+      );
 
       const nextDraftId = generatePlacementDraftId(
         deviceDefinitionId,
@@ -99,10 +99,10 @@ export function createEditorPlacementActions({
     ) => {
       const currentDocument = document.getSnapshot();
       const preview = resolveCollection(EntityCollectionType.preview);
-      const reservedIds = new Set<string>([
-        ...Object.keys(currentDocument.entities),
-        ...state.drafts.map((entity) => entity.id),
-      ]);
+      // draft ID 仅需与已有 draft 去重；最终 ID 在 commit 时基于文档状态重新分配。
+      const reservedIds = new Set<string>(
+        state.drafts.map((entity) => entity.id),
+      );
       const placementVector = {
         x: centerGridPoint.x - blueprint.initialGridPoint.x,
         y: centerGridPoint.y - blueprint.initialGridPoint.y,
@@ -244,12 +244,17 @@ export function createEditorPlacementActions({
           && !replacedEntityIds.has(link.target.entityId),
       );
 
-      // 替换 entity ID：去掉 "placement-draft:" 前缀后成为正式实体 ID。
+      // 替换 entity ID：基于文档现有实体 + 本次已分配 ID，按 definitionId 重新分配最终 ID。
       const oldIdToNewId = new Map<string, string>();
+      const newlyAllocatedIds = new Set<string>();
+      const existingDocumentIds = new Set(Object.keys(currentDocument.entities));
+
       for (const draft of previewDrafts) {
-        const newId = draft.id.startsWith("placement-draft:")
-          ? draft.id.slice("placement-draft:".length)
-          : draft.id;
+        const newId = generateFinalEntityId(
+          draft.definitionId,
+          existingDocumentIds,
+          newlyAllocatedIds,
+        );
         oldIdToNewId.set(draft.id, newId);
       }
 
@@ -423,6 +428,49 @@ function generatePlacementDraftId(
 
   reservedIds.add(nextId);
   return nextId;
+}
+
+/**
+ * 基于文档现有实体 ID 和本次已分配 ID，为指定 definitionId 生成不冲突的最终实体 ID。
+ *
+ * 格式：`definitionId:N`，N 为当前最大值 +1（从 1 开始）。
+ *
+ * @param definitionId 设备定义 ID，如 "item_port_storager_1"
+ * @param existingDocumentIds 提交前文档快照中所有实体 ID 的集合
+ * @param newlyAllocatedIds 本次 commit 中已分配的最终 ID 集合（防止同一批 draft 内冲突）
+ */
+function generateFinalEntityId(
+  definitionId: string,
+  existingDocumentIds: ReadonlySet<string>,
+  newlyAllocatedIds: Set<string>,
+): string {
+  const prefix = `${definitionId}:`;
+  let maxCounter = 0;
+
+  for (const id of existingDocumentIds) {
+    if (id.startsWith(prefix)) {
+      const num = parseInt(id.slice(prefix.length), 10);
+
+      if (!isNaN(num) && num > maxCounter) {
+        maxCounter = num;
+      }
+    }
+  }
+
+  for (const id of newlyAllocatedIds) {
+    if (id.startsWith(prefix)) {
+      const num = parseInt(id.slice(prefix.length), 10);
+
+      if (!isNaN(num) && num > maxCounter) {
+        maxCounter = num;
+      }
+    }
+  }
+
+  const newId = `${prefix}${maxCounter + 1}`;
+
+  newlyAllocatedIds.add(newId);
+  return newId;
 }
 
 /**

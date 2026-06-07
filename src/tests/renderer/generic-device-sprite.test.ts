@@ -276,6 +276,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -378,6 +380,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -431,6 +435,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -492,11 +498,15 @@ describe("GenericDeviceSprite", () => {
 
     smallSprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: smallEntityLayer as never,
       overlay: smallOverlayLayer as never,
     })
     largeSprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: largeEntityLayer as never,
       overlay: largeOverlayLayer as never,
     })
@@ -565,6 +575,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -608,6 +620,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -651,6 +665,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -702,6 +718,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -767,6 +785,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -819,6 +839,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -873,6 +895,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -930,6 +954,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -981,6 +1007,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1050,6 +1078,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1122,6 +1152,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1188,6 +1220,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1228,6 +1262,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1274,6 +1310,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1307,6 +1345,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1339,6 +1379,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1372,6 +1414,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1405,6 +1449,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1450,6 +1496,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1563,6 +1611,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1661,6 +1711,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1744,6 +1796,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1836,6 +1890,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1885,6 +1941,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1963,6 +2021,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -2034,6 +2094,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -2088,6 +2150,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -2161,6 +2225,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -2225,6 +2291,8 @@ describe("GenericDeviceSprite", () => {
 
     sprite.attach({
       background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })

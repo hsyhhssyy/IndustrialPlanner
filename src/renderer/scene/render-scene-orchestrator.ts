@@ -61,6 +61,30 @@ const RENDER_PERF_LOG_WINDOW_MS = 2000
 const RENDER_PERF_LONG_FRAME_MS = 50
 const RENDER_PERF_TOP_STAGE_COUNT = 12
 
+/** 渲染低层设备定义 ID —— 先渲染，被其他设备覆盖 */
+const ENTITY_LOW_DEFINITION_IDS = new Set([
+  "item_port_log_hongs_bus",         // 仓库存取线基段
+  "item_port_log_hongs_bus_source",  // 源桩
+])
+
+/** 渲染高层设备定义 ID —— 最后渲染，覆盖其他设备 */
+const ENTITY_HIGH_DEFINITION_IDS = new Set([
+  "item_port_water_pump_1",          // 抽水泵
+])
+
+function selectRenderLayerMap(
+  definitionId: string,
+  layers: RenderLayerMap,
+): RenderLayerMap {
+  if (ENTITY_LOW_DEFINITION_IDS.has(definitionId)) {
+    return { ...layers, entity: layers.entityLow }
+  }
+  if (ENTITY_HIGH_DEFINITION_IDS.has(definitionId)) {
+    return { ...layers, entity: layers.entityHigh }
+  }
+  return layers
+}
+
 interface PerfAggregate {
   total: number;
   max: number;
@@ -361,7 +385,9 @@ export function createRenderSceneOrchestrator(
 
   app.stage.addChild(
     layers.background,
+    layers.entityLow,
     layers.entity,
+    layers.entityHigh,
     beltFlowLayer,
     pipeFlowLayer,
     darkPipeLinkLineLayer,
@@ -417,7 +443,9 @@ export function createRenderSceneOrchestrator(
       beltPortInsertionDecoration.destroy()
       beltCargoDecoration.destroy()
       layers.background.destroy({ children: true })
+      layers.entityLow.destroy({ children: true })
       layers.entity.destroy({ children: true })
+      layers.entityHigh.destroy({ children: true })
       beltFlowLayer.destroy({ children: true })
       pipeFlowLayer.destroy({ children: true })
       darkPipeLinkLineLayer.destroy({ children: true })
@@ -436,7 +464,9 @@ export function createRenderSceneOrchestrator(
 function createRenderLayers(): RenderLayerMap {
   return {
     background: new Container(),
+    entityLow: new Container(),
     entity: new Container(),
+    entityHigh: new Container(),
     overlay: new Container(),
   }
 }
@@ -799,7 +829,7 @@ function syncWorldEntitySprites(options: {
         continue
       }
 
-      sprite.attach(options.layers)
+      sprite.attach(selectRenderLayerMap(entity.definitionId, options.layers))
       options.entitySprites.set(entity.id, sprite)
       options.entitySpriteDefinitionIds.set(entity.id, entity.definitionId)
       if (stats !== null) {

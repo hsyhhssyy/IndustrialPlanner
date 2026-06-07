@@ -13,6 +13,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
+import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
 
 // ─── Helpers ───
 
@@ -1439,5 +1440,124 @@ describe("ID rewriting in blueprint placement", () => {
     expect(newStorager).toBeDefined();
 
     expect(newLoader!.config["links[0].target.entityId"]).toBe(newStorager!.id);
+  });
+
+  it("R4: 暗管连接蓝图放置 — 文档已有 inlet/outlet 暗管对，蓝图完全复制后放置，四设备 ID 无冲突且暗管链路正确", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // 原始文档：一对暗管设备，用 createDarkPipeSlotLink 连接。
+    const originalDoc = createTestDocument({
+      entities: {
+        "dp-inlet": {
+          id: "dp-inlet",
+          definitionId: "item_port_udpipe_loader_1",
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+        "dp-outlet": {
+          id: "dp-outlet",
+          definitionId: "item_port_udpipe_unloader_1",
+          position: { x: 6, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+      },
+      entityOrder: ["dp-inlet", "dp-outlet"],
+      slotLinks: [
+        createDarkPipeSlotLink({
+          inletEntityId: "dp-inlet",
+          outletEntityId: "dp-outlet",
+        }),
+      ],
+    });
+    editorHost.internalDocument.setSnapshot(originalDoc);
+
+    // 创建蓝图，ID 与文档完全重复。
+    const blueprint = createBlueprintDocument({
+      name: "暗管对蓝图",
+      baseId: originalDoc.baseId,
+      initialGridPoint: { x: 0, y: 0 },
+      entities: {
+        "dp-inlet": { ...originalDoc.entities["dp-inlet"]! },
+        "dp-outlet": { ...originalDoc.entities["dp-outlet"]! },
+      },
+      entityOrder: ["dp-inlet", "dp-outlet"],
+      slotLinks: [
+        createDarkPipeSlotLink({
+          inletEntityId: "dp-inlet",
+          outletEntityId: "dp-outlet",
+        }),
+      ],
+    });
+
+    // 放置蓝图到偏移位置，避免与原设备重叠。
+    editorHost.actions.createBlueprintPlacementDraft!(blueprint, { x: 20, y: 0 });
+    const applied = editorHost.actions.applyPlacementDraft();
+    expect(applied).toBe(true);
+
+    const finalDoc = editorHost.document.getSnapshot();
+
+    // ── 验证实体数量 ──
+    expect(Object.keys(finalDoc.entities)).toHaveLength(4);
+
+    // ── 验证原始设备仍存在 ──
+    expect(finalDoc.entities["dp-inlet"]).toBeDefined();
+    expect(finalDoc.entities["dp-outlet"]).toBeDefined();
+
+    // ── 验证新增设备有独立 ID ──
+    const inlets = Object.values(finalDoc.entities).filter(
+      (e) => e.definitionId === "item_port_udpipe_loader_1",
+    );
+    const outlets = Object.values(finalDoc.entities).filter(
+      (e) => e.definitionId === "item_port_udpipe_unloader_1",
+    );
+    expect(inlets).toHaveLength(2);
+    expect(outlets).toHaveLength(2);
+
+    const newInlet = inlets.find((e) => e.id !== "dp-inlet");
+    const newOutlet = outlets.find((e) => e.id !== "dp-outlet");
+    expect(newInlet).toBeDefined();
+    expect(newOutlet).toBeDefined();
+    // 新 ID 不应是蓝图原始 ID。
+    expect(newInlet!.id).not.toBe("dp-inlet");
+    expect(newOutlet!.id).not.toBe("dp-outlet");
+
+    // ── 验证新增设备位置偏移 ──
+    // 原 inlet 在 (0, 0)，蓝图 initialGridPoint 也是 (0, 0)，放置中心 (20, 0)
+    // 新 inlet 应在 (20, 0)
+    expect(newInlet!.position).toEqual({ x: 20, y: 0 });
+    expect(newOutlet!.position).toEqual({ x: 26, y: 0 });
+
+    // ── 验证暗管链路 ──
+    // 应有 2 条暗管 slotLink：原始一对 + 新一对
+    const darkPipeLinks = finalDoc.slotLinks.filter(
+      (link) => link.linkType === "share-all"
+        && link.source.storageSlotGroupId === "unloader_buffer"
+        && link.target.storageSlotGroupId === "loader_buffer",
+    );
+    expect(darkPipeLinks).toHaveLength(2);
+
+    // 原始暗管链路应保持不变
+    const originalLink = darkPipeLinks.find(
+      (link) => link.source.entityId === "dp-outlet" && link.target.entityId === "dp-inlet",
+    );
+    expect(originalLink).toBeDefined();
+
+    // 新暗管链路应指向新的 entity ID
+    const newLink = darkPipeLinks.find(
+      (link) => link.source.entityId === newOutlet!.id && link.target.entityId === newInlet!.id,
+    );
+    expect(newLink).toBeDefined();
+
+    // ── 验证 entityOrder ──
+    // 原始 2 个 + 新增 2 个，共 4 个，且无重复。
+    expect(finalDoc.entityOrder).toHaveLength(4);
+    expect(new Set(finalDoc.entityOrder).size).toBe(4);
+    // 新增的两个应排在末尾。
+    expect(finalDoc.entityOrder.slice(-2)).toEqual([newInlet!.id, newOutlet!.id]);
   });
 });
