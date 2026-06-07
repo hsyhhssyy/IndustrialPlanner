@@ -57,8 +57,15 @@ export interface EditorViewportState {
 }
 
 // ---------------------------------------------------------------------------
-// Editor Action 参数类型
+// Hover Target — 鼠标悬浮在画布上的目标（设备或空单元格）
 // ---------------------------------------------------------------------------
+
+export interface HoverTarget {
+  /** 命中的实体（设备）；若为空单元格则为 null */
+  readonly entity: { readonly id: string; readonly definitionId: string } | null;
+  /** 吸附后的格子坐标 */
+  readonly gridPoint: GridPoint;
+}
 
 export interface MoveViewportByClientPixelVectorOptions {
   readonly startClientPixel: ClientPixelPoint;

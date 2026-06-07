@@ -5,6 +5,7 @@ import { createEditorDarkPipeLinkActions } from "./dark-pipe-link-action";
 import { createEditorDefinitionActions } from "./definition-action";
 import { createEditorDocumentActions } from "./document-action";
 import { createEditorHistoryActions } from "./history-action";
+import { createEditorHoverActions } from "./hover-action";
 import { createEditorLogisticsActions } from "./logistics-action";
 import { createEditorMoveActions } from "./move-action";
 import { createEditorPlacementActions } from "./placement-action";
@@ -22,6 +23,7 @@ export function createEditorActions(
     ...createEditorDefinitionActions(context),
     ...createEditorDocumentActions(context),
     ...createEditorHistoryActions(context),
+    ...createEditorHoverActions(context),
     ...createEditorLogisticsActions(context),
     ...createEditorMoveActions(context),
     ...createEditorPlacementActions(context),

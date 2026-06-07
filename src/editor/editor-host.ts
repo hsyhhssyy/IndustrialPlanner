@@ -61,6 +61,9 @@ export function createEditorHost(
     },
     history: editorState.history,
     collections: editorState.collections,
+    get hoverTarget() {
+      return editorState.hoverTarget;
+    },
     get suppressBelts() {
       return editorState.suppressBelts;
     },

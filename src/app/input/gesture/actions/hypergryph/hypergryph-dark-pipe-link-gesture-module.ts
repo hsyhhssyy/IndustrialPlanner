@@ -1,5 +1,5 @@
 import type { AppHost } from "@/app/host/app-host";
-import { DARK_PIPE_LINK_TOOL } from "@/shared/dark-pipe-link";
+import { DARK_PIPE_LINK_TOOL, isDarkPipeDefinitionId } from "@/shared/dark-pipe-link";
 
 import type { GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
@@ -38,6 +38,19 @@ export function createHypergryphDarkPipeLinkGestureModule(): GestureMappingModul
       if (state === null) {
         context.appHost.internalActions.setActiveTool("select");
         return { status: "handled" };
+      }
+
+      if (event.type === "mouse move") {
+        const editor = context.workspace.editor;
+        if (editor === null) return { status: "ignored" };
+
+        const entity = editor.queries.findEntityAtClientPixelPoint(event.position);
+        if (entity !== null && isDarkPipeDefinitionId(entity.definitionId)) {
+          editor.actions.setHoverPoint(event.position);
+        } else {
+          editor.actions.clearHoverPoint();
+        }
+        return { status: "handled", consume: false };
       }
 
       if (event.type === "key down" && event.code === "Escape") {

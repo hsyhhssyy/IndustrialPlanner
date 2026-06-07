@@ -144,6 +144,9 @@ export interface GestureAdapterAppHost {
       readonly queries: {
         findEntityAtClientPixelPoint: (position: GesturePosition) => WorldEntity | null;
       };
+      readonly actions: {
+        clearHoverPoint(): void;
+      };
     } | null;
   };
   readonly internalState: {
@@ -1244,6 +1247,8 @@ export class GestureAdapter {
       type: "on-exit-active-tool",
       ...baseEvent,
     });
+    // 兜底：tool 切换之间清除 hover 状态
+    this.appHost.workspace.editor?.actions?.clearHoverPoint?.();
     this.dispatchGesture({
       type: "on-enter-active-tool",
       ...baseEvent,

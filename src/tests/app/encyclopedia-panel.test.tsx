@@ -266,8 +266,8 @@ describe("EncyclopediaPanel", () => {
       root.render(<EncyclopediaPanel appHost={currentAppHost} isTouch={false} />);
     });
 
+    // 当前拆瓶器全部 67 条配方均带 liquid_bottle_dismantle 标签，asMachine 分组为空不渲染
     expect(getRecipeGroupTitles(container)).toEqual([
-      currentAppHost.actions.translate("encyclopedia.group.asMachine"),
       currentAppHost.actions.translate("encyclopedia.group.liquidDismantle"),
     ]);
   });

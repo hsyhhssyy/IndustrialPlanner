@@ -15,6 +15,7 @@ export type {
 	EntityCollection,
 	EntityCollections,
 	EditorViewportState,
+	HoverTarget,
 	MoveViewportByClientPixelVectorOptions,
 	EntityCollectionMemberOptions,
 	MoveCollectionToOptions,

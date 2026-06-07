@@ -101,6 +101,12 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
             source: "mouse",
           });
 
+        case "mouse move":
+          if (editor !== null) {
+            editor.actions.setHoverPoint(event.position);
+          }
+          return { status: "handled", consume: false };
+
         case "mouse tap":
           if (context.appHost.internalState.activeTool !== "marquee") {
             return { status: "ignored" };
@@ -151,6 +157,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
             return { status: "ignored" };
           }
 
+          editor.actions.clearHoverPoint();
           return startMouseMarqueeDrag({
             appHost: context.appHost,
             editor,
@@ -216,6 +223,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
 
           editor.actions.applyMarquee();
           context.appHost.internalState.runtime.marqueeAnchor = null;
+          editor.actions.setHoverPoint(event.position);
           return { status: "handled" };
 
         default:

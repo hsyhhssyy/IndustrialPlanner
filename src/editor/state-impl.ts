@@ -9,6 +9,7 @@ import {
   type EntityCollection,
   type EntityPlacementValidationResult,
   type EntityCollectionType as EntityCollectionTypeValue,
+  type HoverTarget,
 } from "@/domain/editor/types/editor-types";
 import type { EditorState } from "@/domain/editor/editor-state";
 import type { ClientPixelRect } from "@/domain/shared/client-pixel";
@@ -119,6 +120,7 @@ export interface EditorStateReadWrite extends EditorState {
   viewport: EditorViewportStateReadWrite;
   marqueeGridRect: GridRect | null;
   history: EditorHistoryStateReadWrite;
+  hoverTarget: HoverTarget | null;
   drafts: DraftEntity[];
   collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite>;
   suppressBelts: boolean;
@@ -193,6 +195,7 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
   history: EditorHistoryStateReadWrite = new EditorHistoryStateReadWriteImpl();
   suppressBelts = false;
   suppressPipes = false;
+  hoverTarget: HoverTarget | null = null;
 
   drafts: DraftEntity[] = [];
   collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite> = {

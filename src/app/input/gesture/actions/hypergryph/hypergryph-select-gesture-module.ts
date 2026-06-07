@@ -125,6 +125,15 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
       };
 
       switch (event.type) {
+        case "mouse move": {
+          if (editor.state.collections.selection.length === 0) {
+            editor.actions.setHoverPoint(event.position);
+          } else {
+            editor.actions.clearHoverPoint();
+          }
+          return { status: "handled", consume: false };
+        }
+
         case "mouse tap":
           if (event.button === 2) {
             clearSelection();

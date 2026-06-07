@@ -350,6 +350,8 @@ function createContext(options: {
       cancelMarquee: vi.fn(),
       clearCollection: vi.fn(),
       setLogisticsSuppression: vi.fn(),
+      setHoverPoint: vi.fn(),
+      clearHoverPoint: vi.fn(),
     },
     queries: {
       findGridCellForClientPixlePoint: vi.fn((point) => ({
@@ -448,6 +450,8 @@ type MockEditor = {
     | "clearCollection"
     | "setMarqueeRange"
     | "setLogisticsSuppression"
+    | "setHoverPoint"
+    | "clearHoverPoint"
   >;
   queries: Pick<
     EditorContract["queries"],

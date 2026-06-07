@@ -5,7 +5,7 @@ import type {
 	EntityCollectionMemberOptions,
 	MoveCollectionToOptions,
 } from "./types/editor-types";
-import type { ClientPixelRect } from "../shared/client-pixel";
+import type { ClientPixelPoint, ClientPixelRect } from "../shared/client-pixel";
 import type { GridPoint, GridRect, GridRotation } from "../shared/grid";
 import type {
 	CreateLogisticsDraftStartOptions,
@@ -23,6 +23,11 @@ export interface EditorAction {
 	): void;
 	zoom(step: number): void;
 	setViewportDisplayRotation(displayRotation: GridRotation): void;
+
+	/** 更新鼠标 hover 位置，自动做 pixel→grid 转换和 entity 命中检测 */
+	setHoverPoint(clientPixel: ClientPixelPoint): void;
+	/** 清除 hover 状态 */
+	clearHoverPoint(): void;
 
 	patchEntityConfig(entityId: string, patch: Record<string, unknown>): void;
 	createDarkPipeLink(options: {

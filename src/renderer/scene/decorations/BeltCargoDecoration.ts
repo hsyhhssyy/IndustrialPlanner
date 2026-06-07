@@ -509,8 +509,12 @@ function resolveBeltCargoClipMask(options: {
   beltRects: readonly BeltCargoClipRect[];
 }): BeltCargoClipMask | null {
   const extensions = options.portExtensionEntries
-  if (extensions.length === 0) {
-    return null
+  const hasAnyPortShape = extensions.length > 0 || options.disconnectedPortEntries.length > 0
+
+  // 无伸出段也无断开端口 → 只有 beltRects 裁剪（传送带→junction 场景）
+  if (!hasAnyPortShape) {
+    if (options.beltRects.length === 0) return null
+    return { beltRects: options.beltRects, extensions: [] }
   }
 
   const _gridCellSize = options.ctx.viewportState.gridCellPixelSize

@@ -214,12 +214,19 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
             : { status: "handled" };
         }
 
-        case "mouse move":
+        case "mouse move": {
+          const runtime = context.appHost.internalState.runtime.logisticsPlacement;
+          if (runtime.phase === "idle") {
+            editor.actions.setHoverPoint(event.position);
+          } else {
+            editor.actions.clearHoverPoint();
+          }
           return driveMouseLogisticsPreview({
             appHost: context.appHost,
             editor,
             position: event.position,
           });
+        }
 
         case "mouse tap":
           if (event.button === 2) {

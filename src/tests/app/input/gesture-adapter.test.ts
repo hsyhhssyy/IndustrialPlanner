@@ -27,8 +27,9 @@ function createAdapterHarness(options: {
         : {
             queries: {
               findEntityAtClientPixelPoint: options.resolvePointerEntity,
-            },
-          },
+            },            actions: {
+              clearHoverPoint: () => {},
+            },          },
     },
     internalState: observable({
       activeTool: options.activeTool ?? "select",

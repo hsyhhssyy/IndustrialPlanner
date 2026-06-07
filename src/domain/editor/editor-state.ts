@@ -5,6 +5,7 @@ import type {
 import type {
 	EditorViewportState,
 	EntityCollections,
+	HoverTarget,
 } from "./types/editor-types";
 
 /// Editor State 定义上是Document的包裹层，他为Document提供一层运行时tag
@@ -17,6 +18,9 @@ export interface EditorState {
   readonly history: EditorHistoryState;
 
   readonly collections: EntityCollections;
+
+  /** 当前鼠标悬浮目标（设备或空单元格） */
+  readonly hoverTarget: HoverTarget | null;
 
   /** 抑制传送带渲染与命中检测 */
   readonly suppressBelts: boolean;
