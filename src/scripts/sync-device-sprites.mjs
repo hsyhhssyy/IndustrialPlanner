@@ -51,6 +51,8 @@ const DEVICE_SPRITE_MAPPINGS = [
   ['封装机', 'item_port_tools_asm_mc_1', 180],
   ['灌装机', 'item_port_filling_pd_mc_1', 180],
   ['研磨机', 'item_port_thickener_1', 180],
+  ['仓库存货口-紧凑-3x2', 'item_port_loader_1', 180],
+  ['仓库取货口-紧凑-3x2', 'item_port_unloader_1'],
 ];
 
 function createMaskBuffer(sourceBuffer, width, height, channels) {

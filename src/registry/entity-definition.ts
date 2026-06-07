@@ -708,6 +708,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     nameKey: "registry.entity.item_port_unloader_1.name",
     spriteId: "item_port_unloader_1",
     footprint: { width: 3, height: 1 },
+    spriteOffset: {
+      topView: { x: 0, y: -1, width: 3, height: 2 },
+    },
     uiGroup: "warehouse",
     displayOrder: 403,
     tags: ["AvatarHidden"],
@@ -1875,6 +1878,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     nameKey: "registry.entity.item_port_loader_1.name",
     spriteId: "item_port_loader_1",
     footprint: { width: 3, height: 1 },
+    spriteOffset: {
+      topView: { x: 0, y: 0, width: 3, height: 2 },
+    },
     uiGroup: "warehouse",
     displayOrder: 402,
     tags: ["AvatarHidden", WAREHOUSE_SINK_TAG],
