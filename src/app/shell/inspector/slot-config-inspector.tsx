@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import LucideChevronsRight from "~icons/lucide/chevrons-right";
+import LucideMinus from "~icons/lucide/minus";
 import LucidePlus from "~icons/lucide/plus";
 import LucideX from "~icons/lucide/x";
 
@@ -642,6 +643,7 @@ export function SlotConfigInspector({
                 aria-label="关闭"
                 className={cm(styles, "slot-config-dialog-icon-button")}
                 onClick={() => setEditingSlot(null)}
+                title="关闭"
                 type="button"
               >
                 <LucideX aria-hidden="true" />
@@ -671,24 +673,121 @@ export function SlotConfigInspector({
             </button>
             <div className={cm(styles, "slot-config-dialog-item-name")}>{editingItemLabel}</div>
             <label className={cm(styles, "slot-config-dialog-field")}>
-              <span>数量</span>
-              <NumberInput
-                className={cm(styles, "slot-config-count-input")}
-                data-slot-dialog-input="count"
-                disabled={draftItemId === null}
-                max={editingSlot.capacity}
-                min={0}
-                value={draftCount}
-                onCommit={(next) => {
-                  setDraftCount(clampCount(next, editingSlot.capacity));
-                }}
-                onRawChange={(raw) => {
-                  const next = Number(raw);
-                  if (Number.isFinite(next)) {
+              {/*
+                AI-REMOVED 2026-06-07:
+                Reason: 数量输入、滑条和两个步进按钮挤在同一行，触发 CSS Grid 最小内容宽度，导致槽位弹窗在 tablet / mobile landscape 中横向溢出。
+                Trigger: 用户反馈槽位管理弹窗添加滑条后界面乱套，并要求按 InspectorPanel 设计规范整理。
+                Evidence: Playwright 三组 Screen Profile 基线截图显示 count row 将 dialog grid track 撑到 344px，超出 320px 弹窗；短屏下弹窗高度也超出视口。
+                Replacement: 下方 slot-config-dialog-count-row + slot-config-dialog-slider-row 两行布局。
+                Risk: Low
+                Human Review: Required
+
+                Original code:
+                <span>数量</span>
+                <div className={cm(styles, "slot-config-dialog-count-row")}>
+                  <button
+                    aria-label="减少数量"
+                    className={cm(styles, "slot-config-step-button")}
+                    disabled={draftItemId === null || draftCount <= 0}
+                    onClick={() => setDraftCount(clampCount(draftCount - 1, editingSlot.capacity))}
+                    type="button"
+                  >
+                    −
+                  </button>
+                  <input
+                    aria-label="数量滑条"
+                    className={cm(styles, "slot-config-dialog-range")}
+                    disabled={draftItemId === null}
+                    max={editingSlot.capacity}
+                    min={0}
+                    onChange={(event) => {
+                      setDraftCount(clampCount(Number(event.currentTarget.value), editingSlot.capacity));
+                    }}
+                    type="range"
+                    value={draftCount}
+                  />
+                  <button
+                    aria-label="增加数量"
+                    className={cm(styles, "slot-config-step-button")}
+                    disabled={draftItemId === null || draftCount >= editingSlot.capacity}
+                    onClick={() => setDraftCount(clampCount(draftCount + 1, editingSlot.capacity))}
+                    type="button"
+                  >
+                    +
+                  </button>
+                  <NumberInput
+                    className={cm(styles, "slot-config-count-input")}
+                    data-slot-dialog-input="count"
+                    disabled={draftItemId === null}
+                    max={editingSlot.capacity}
+                    min={0}
+                    value={draftCount}
+                    onCommit={(next) => {
+                      setDraftCount(clampCount(next, editingSlot.capacity));
+                    }}
+                    onRawChange={(raw) => {
+                      const next = Number(raw);
+                      if (Number.isFinite(next)) {
+                        setDraftCount(clampCount(next, editingSlot.capacity));
+                      }
+                    }}
+                  />
+                </div>
+              */}
+              <div className={cm(styles, "slot-config-dialog-count-row")}>
+                <span>数量</span>
+                <NumberInput
+                  className={cm(styles, "slot-config-count-input")}
+                  data-slot-dialog-input="count"
+                  disabled={draftItemId === null}
+                  max={editingSlot.capacity}
+                  min={0}
+                  value={draftCount}
+                  onCommit={(next) => {
                     setDraftCount(clampCount(next, editingSlot.capacity));
-                  }
-                }}
-              />
+                  }}
+                  onRawChange={(raw) => {
+                    const next = Number(raw);
+                    if (Number.isFinite(next)) {
+                      setDraftCount(clampCount(next, editingSlot.capacity));
+                    }
+                  }}
+                />
+              </div>
+              <div className={cm(styles, "slot-config-dialog-slider-row")}>
+                <button
+                  aria-label="减少数量"
+                  className={cm(styles, "slot-config-step-button")}
+                  disabled={draftItemId === null || draftCount <= 0}
+                  onClick={() => setDraftCount(clampCount(draftCount - 1, editingSlot.capacity))}
+                  title="减少数量"
+                  type="button"
+                >
+                  <LucideMinus aria-hidden="true" />
+                </button>
+                <input
+                  aria-label="数量滑条"
+                  className={cm(styles, "slot-config-dialog-range")}
+                  disabled={draftItemId === null}
+                  max={editingSlot.capacity}
+                  min={0}
+                  onChange={(event) => {
+                    setDraftCount(clampCount(Number(event.currentTarget.value), editingSlot.capacity));
+                  }}
+                  type="range"
+                  value={draftCount}
+                />
+                <button
+                  aria-label="增加数量"
+                  className={cm(styles, "slot-config-step-button")}
+                  disabled={draftItemId === null || draftCount >= editingSlot.capacity}
+                  onClick={() => setDraftCount(clampCount(draftCount + 1, editingSlot.capacity))}
+                  title="增加数量"
+                  type="button"
+                >
+                  <LucidePlus aria-hidden="true" />
+                </button>
+              </div>
             </label>
             <label className={cm(styles, "slot-config-dialog-switch")}>
               <input

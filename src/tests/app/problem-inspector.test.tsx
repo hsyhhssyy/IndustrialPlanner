@@ -48,17 +48,24 @@ function createMockDefinition(overrides: Partial<EntityDefinition> = {}): Entity
 function createMockAppHost(options: {
   placementValidation?: { canPlace: boolean; reasons: Array<{ code: string; message: string }> };
   documentRuntimeStatus?: SimulationDocumentRuntimeReadModel | null;
+  poweredEntityIds?: readonly string[];
 }): AppHost {
   const getEntityPlacementValidation = vi.fn(() =>
     options.placementValidation ?? { canPlace: true, reasons: [] },
   );
   const getDocumentRuntimeStatus = vi.fn(() => options.documentRuntimeStatus ?? null);
+  const poweredEntityIds = options.poweredEntityIds ?? ["test-entity-1"];
 
   return {
     workspace: {
       editor: {
         queries: {
           getEntityPlacementValidation,
+        },
+        state: {
+          collections: {
+            powered: poweredEntityIds,
+          },
         },
       },
       simulation: options.documentRuntimeStatus !== undefined

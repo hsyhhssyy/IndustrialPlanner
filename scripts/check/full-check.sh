@@ -201,6 +201,8 @@ case "$CMD" in
         fi
       fi
       echo "==== [$POLL_STEP] 运行中${ALIVE_MSG}，日志大小: ${LOG_SIZE} 字节 ===="
+      echo "--- 已完成测试 ---"
+      grep -E '✓|×|FAIL|Test Files|Tests |Duration' "$LOG_FILE" 2>/dev/null | tail -n 30 || true
       echo "--- 最后 20 行 ---"
       tail -n 20 "$LOG_FILE" 2>/dev/null || true
     else

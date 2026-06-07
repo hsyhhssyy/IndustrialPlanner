@@ -10,7 +10,7 @@ import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
-const SELECTION_LOGISTICS_SEGMENT_BUTTON_IDS = [
+export const SELECTION_LOGISTICS_SEGMENT_BUTTON_IDS = [
   "canvas-floating-toolbar-button-delete-upstream-segment",
   "canvas-floating-toolbar-button-delete-many",
   "canvas-floating-toolbar-button-delete-downstream-segment",
@@ -48,6 +48,7 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
   const generalButtonIds = resolveSelectionActionButtonIds({
     canSaveBlueprint,
     canSwitchVariant,
+    isDedicatedLogistics: isLogisticsSelection,
   });
 
   const locale = appHost.state.settings.locale;
@@ -75,23 +76,6 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
           showLabels
         />
       </div>
-      {isLogisticsSelection ? (
-        <div
-          className={cm(styles, "selection-inspector-action-button-list")}
-          style={{
-            gridTemplateColumns: `repeat(3, minmax(0, 1fr))`,
-          }}
-        >
-          <CanvasFloatingToolbarButtonStrip
-            appHost={appHost}
-            buttonClassName={cm(styles, "selection-inspector-action-button")}
-            buttonIds={SELECTION_LOGISTICS_SEGMENT_BUTTON_IDS}
-            iconClassName={cm(styles, "selection-inspector-action-icon")}
-            labelClassName={cm(styles, "selection-inspector-action-label")}
-            showLabels
-          />
-        </div>
-      ) : null}
     </section>
   );
 });
@@ -99,10 +83,13 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
 function resolveSelectionActionButtonIds(options: {
   canSaveBlueprint: boolean;
   canSwitchVariant: boolean;
+  isDedicatedLogistics: boolean;
 }): readonly CanvasFloatingToolbarButtonId[] {
-  const buttonIds: CanvasFloatingToolbarButtonId[] = [
-    "canvas-floating-toolbar-button-move",
-  ];
+  const buttonIds: CanvasFloatingToolbarButtonId[] = [];
+
+  if (!options.isDedicatedLogistics) {
+    buttonIds.push("canvas-floating-toolbar-button-move");
+  }
 
   if (options.canSwitchVariant) {
     buttonIds.push(SWITCH_DEVICE_MODE_BUTTON_ID);

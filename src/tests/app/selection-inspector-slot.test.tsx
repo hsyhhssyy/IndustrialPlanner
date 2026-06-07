@@ -183,6 +183,7 @@ describe("SelectionInspectorSlot", () => {
     });
 
     expect(queryInspectorKeys(container)).toEqual([
+      "problem-inspector",
       "slot-config",
       "submit-to-warehouse",
     ]);

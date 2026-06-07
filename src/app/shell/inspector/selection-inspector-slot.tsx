@@ -19,6 +19,7 @@ import {
 } from "./selection-inspector-model";
 
 import { SelectionInspectorActionStrip } from "./selection-inspector-action-strip";
+import { SELECTION_LOGISTICS_SEGMENT_BUTTON_IDS } from "./selection-inspector-action-strip";
 import { SimulationRecipeStatusRuntimeInspector } from "./simulation-recipe-status-runtime-inspector";
 import { SlotConfigInspector } from "./slot-config-inspector";
 import { WarehouseItemLinkInspector } from "./warehouse-item-link-inspector";
@@ -26,6 +27,7 @@ import { SubmitToWarehouseInspector } from "./submit-to-warehouse-inspector";
 import { ProblemInspector } from "./problem-inspector";
 import { PortOutputConfigInspector } from "./port-output-config-inspector";
 import { InspectorCollapsiblePanel } from "./inspector-collapsible-panel";
+import { CanvasFloatingToolbarButtonStrip } from "@/app/shell/shared/canvas-floating-toolbar-button-strip";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -260,7 +262,7 @@ function SelectionInspectorDeviceHeader({
         <div className={cm(styles, "selection-inspector-device-title-row")}>
           <h3>{resolveSelectedDeviceLabel(selectedDefinition, translate)}</h3>
         </div>
-        <p>{`ID: ${selectedEntity.id}`}</p>
+        <p>{selectedEntity.id}</p>
       </div>
       <SelectionInspectorActionStrip appHost={appHost} variant="inline" />
     </section>
@@ -400,43 +402,72 @@ export function SelectionInspectorSlot({
         Trigger: 设计需求将 scope 从设备级别改为 inspector 级别。
       */}
       <div className={cm(styles, "definition-list")}>
-        {slotState.inspectors.map((inspector) => {
-          const inspectorScope = slotState.showSimulationRuntimeInspector
-            ? scopeByInspectorId[inspector.id] ?? "runtime-state"
-            : "initial-config";
+        {(() => {
+          const renderedInspectors = slotState.inspectors.map((inspector) => {
+            const inspectorScope = slotState.showSimulationRuntimeInspector
+              ? scopeByInspectorId[inspector.id] ?? "runtime-state"
+              : "initial-config";
 
-          return (
-            <InspectorDataScopeContext.Provider
-              key={inspector.id}
-              value={{
-                scope: inspectorScope,
-                simulationRunning: slotState.showSimulationRuntimeInspector,
-                canUseRuntimeState: slotState.showSimulationRuntimeInspector,
-                setScope: (nextScope: InspectorDataScope) => {
-                  if (!slotState.showSimulationRuntimeInspector && nextScope === "runtime-state") {
-                    return;
-                  }
+            return (
+              <InspectorDataScopeContext.Provider
+                key={inspector.id}
+                value={{
+                  scope: inspectorScope,
+                  simulationRunning: slotState.showSimulationRuntimeInspector,
+                  canUseRuntimeState: slotState.showSimulationRuntimeInspector,
+                  setScope: (nextScope: InspectorDataScope) => {
+                    if (!slotState.showSimulationRuntimeInspector && nextScope === "runtime-state") {
+                      return;
+                    }
 
-                  setScopeByInspectorId((current) => ({
-                    ...current,
-                    [inspector.id]: nextScope,
-                  }));
-                },
-              }}
-            >
-              <div>
-                {renderInspector({
-                  appHost,
-                  declaration: inspector.declaration,
-                  entity: slotState.selectedEntity,
-                  definition: slotState.selectedDefinition,
-                  runtimeStatus: slotState.simulationRuntimeStatus,
-                  translate,
-                })}
-              </div>
-            </InspectorDataScopeContext.Provider>
+                    setScopeByInspectorId((current) => ({
+                      ...current,
+                      [inspector.id]: nextScope,
+                    }));
+                  },
+                }}
+              >
+                <div>
+                  {renderInspector({
+                    appHost,
+                    declaration: inspector.declaration,
+                    entity: slotState.selectedEntity,
+                    definition: slotState.selectedDefinition,
+                    runtimeStatus: slotState.simulationRuntimeStatus,
+                    translate,
+                  })}
+                </div>
+              </InspectorDataScopeContext.Provider>
+            );
+          });
+
+          const isDedicatedLogistics = appHost.workspace.registry.queries.isDedicatedLogisticsDevice(
+            slotState.selectedDefinition.id,
           );
-        })}
+
+          if (isDedicatedLogistics && renderedInspectors.length > 0) {
+            return [
+              renderedInspectors[0],
+              <div
+                key="logistics-segment-delete"
+                className={cm(styles, "selection-inspector-action-button-list")}
+                style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}
+              >
+                <CanvasFloatingToolbarButtonStrip
+                  appHost={appHost}
+                  buttonClassName={cm(styles, "selection-inspector-action-button")}
+                  buttonIds={SELECTION_LOGISTICS_SEGMENT_BUTTON_IDS}
+                  iconClassName={cm(styles, "selection-inspector-action-icon")}
+                  labelClassName={cm(styles, "selection-inspector-action-label")}
+                  showLabels
+                />
+              </div>,
+              ...renderedInspectors.slice(1),
+            ];
+          }
+
+          return renderedInspectors;
+        })()}
         {slotState.debugEntityJson !== null ? (
           <article className={cm(styles, "definition-card")} data-inspector-key="json-debug">
             {/*

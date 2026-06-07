@@ -783,33 +783,17 @@ describe("WorkbenchApp", () => {
 
     expect(actionStrip).not.toBeNull();
     expect(container.querySelector(".canvas-floating-toolbar")).toBeNull();
-    expect(moveButton).not.toBeNull();
+    // dedicated 物流设备不显示移动按钮
+    expect(moveButton).toBeNull();
     expect(saveBlueprintButton).toBeNull();
     expect(deleteButton).not.toBeNull();
     expect(deleteManyButton).not.toBeNull();
-    expect(
-      moveButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
-    ).toBe("move");
 
-    if (!moveButton || !deleteManyButton) {
+    if (!deleteManyButton) {
       throw new Error("Right dock selection action strip did not render expected buttons.");
     }
 
     act(() => {
-      dispatchPointerEvent(moveButton, "pointerdown", {
-        pointerId: 61,
-        pointerType: "mouse",
-        clientX: 980,
-        clientY: 120,
-        buttons: 1,
-      });
-      dispatchPointerEvent(moveButton, "pointerup", {
-        pointerId: 61,
-        pointerType: "mouse",
-        clientX: 980,
-        clientY: 120,
-        buttons: 0,
-      });
       dispatchPointerEvent(deleteManyButton, "pointerdown", {
         pointerId: 62,
         pointerType: "touch",
@@ -827,10 +811,6 @@ describe("WorkbenchApp", () => {
     });
 
     expect(gestures).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        type: "ui-button-mouse-tap",
-        uiButtonId: "canvas-floating-toolbar-button-move",
-      }),
       expect.objectContaining({
         type: "ui-button-touch-tap",
         uiButtonId: "canvas-floating-toolbar-button-delete-many",

@@ -348,6 +348,79 @@ describe("SlotConfigInspector", () => {
     expect(setScope).toHaveBeenLastCalledWith("initial-config");
   });
 
+  it("keeps the count input on a separate row from the range slider", () => {
+    const workspace = createWorkspace();
+    const document = createDummyWorldDocument();
+    const entity = document.entities["dummy-entity-2"];
+
+    if (entity === undefined) {
+      throw new Error("Expected dummy storager entity to exist.");
+    }
+
+    const picker = new WorkbenchEncyclopediaPickerController(() => ({
+      desktopCategory: "all",
+      mobileSelectedCategories: [],
+    }));
+    const currentAppHost = {
+      workspace,
+      encyclopediaPicker: picker,
+      actions: {
+        translate: (key: string) => key,
+      },
+    } as unknown as AppHost;
+    appHost = currentAppHost;
+
+    const definition = requireDefinition(workspace, "item_port_storager_1");
+    const configuredEntity: WorldEntity = {
+      ...entity,
+      config: {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 18,
+      },
+    };
+
+    act(() => {
+      root.render(
+        <SlotConfigInspector
+          appHost={currentAppHost}
+          declaration={{
+            type: INSPECTOR_TYPE.slotConfig,
+            slotGroupIds: ["storage_slot_1"],
+          }}
+          definition={definition}
+          entity={configuredEntity}
+          translate={currentAppHost.actions.translate}
+        />,
+      );
+    });
+
+    const slotButton = container.querySelector<HTMLButtonElement>("[data-slot-action='open-slot-editor']");
+
+    if (slotButton === null) {
+      throw new Error("Expected slot editor button to be rendered.");
+    }
+
+    act(() => {
+      slotButton.click();
+    });
+
+    const countInput = container.querySelector<HTMLInputElement>("[data-slot-dialog-input='count']");
+    const rangeInput = container.querySelector<HTMLInputElement>("input[aria-label='数量滑条']");
+    const countRow = container.querySelector(".slot-config-dialog-count-row");
+    const sliderRow = container.querySelector(".slot-config-dialog-slider-row");
+
+    expect(countInput).not.toBeNull();
+    expect(rangeInput).not.toBeNull();
+    expect(countRow).not.toBeNull();
+    expect(sliderRow).not.toBeNull();
+    expect(countRow?.contains(countInput)).toBe(true);
+    expect(countRow?.textContent).toContain("数量");
+    expect(countRow?.contains(rangeInput)).toBe(false);
+    expect(sliderRow?.contains(rangeInput)).toBe(true);
+    expect(sliderRow?.contains(countInput)).toBe(false);
+    expect(sliderRow?.querySelectorAll(".slot-config-step-button")).toHaveLength(2);
+  });
+
   it("renders shared slot column for mix_pool with bidirectional port bindings", () => {
     const workspace = createWorkspace();
     const document = createDummyWorldDocument();

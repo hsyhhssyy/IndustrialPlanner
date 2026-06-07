@@ -32,27 +32,43 @@ function collectPlacementProblems(
 
 function collectPowerProblems(
   appHost: AppHost,
+  entity: WorldEntity,
+  definition: EntityDefinition,
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
 ): DeviceProblem[] {
   const problems: DeviceProblem[] = [];
+  const editor = appHost.workspace.editor;
 
-  if (runtimeStatus === null) return problems;
+  // 仿真运行时，以 Worker 编译期 powerStatus 为准
+  if (runtimeStatus !== null) {
+    // 设备不在供电范围
+    if (runtimeStatus.powerStatus === "out-of-power-range") {
+      problems.push({
+        message: "该设备不在供电范围",
+        severity: "error",
+      });
+    }
 
-  // 设备不在供电范围
-  if (runtimeStatus.powerStatus === "out-of-power-range") {
-    problems.push({
-      message: "该设备不在供电范围",
-      severity: "error",
-    });
+    // 地图电力不足（基地级大停电）
+    const docStatus = appHost.workspace.simulation?.queries.getDocumentRuntimeStatus();
+    if (docStatus?.isPowerOutage && runtimeStatus.powerStatus !== "no-power-needed") {
+      problems.push({
+        message: "电力不足",
+        severity: "error",
+      });
+    }
+
+    return problems;
   }
 
-  // 地图电力不足（基地级大停电）
-  const docStatus = appHost.workspace.simulation?.queries.getDocumentRuntimeStatus();
-  if (docStatus?.isPowerOutage && runtimeStatus.powerStatus !== "no-power-needed") {
-    problems.push({
-      message: "电力不足",
-      severity: "error",
-    });
+  // 仿真未运行时，通过 Editor 的 powered collection 判断供电范围
+  if (editor !== null && definition.powerDemand > 0) {
+    if (!editor.state.collections.powered.includes(entity.id)) {
+      problems.push({
+        message: "该设备不在供电范围",
+        severity: "error",
+      });
+    }
   }
 
   return problems;
@@ -87,7 +103,7 @@ function collectRecipeProblems(
 export const ProblemInspector = observer(function ProblemInspector({
   appHost,
   entity,
-  definition: _definition,
+  definition,
   runtimeStatus,
 }: {
   appHost: AppHost;
@@ -96,7 +112,7 @@ export const ProblemInspector = observer(function ProblemInspector({
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
 }) {
   const placementProblems = collectPlacementProblems(appHost, entity);
-  const powerProblems = collectPowerProblems(appHost, runtimeStatus);
+  const powerProblems = collectPowerProblems(appHost, entity, definition, runtimeStatus);
   const recipeProblems = collectRecipeProblems(runtimeStatus);
 
   const allProblems = [...placementProblems, ...powerProblems, ...recipeProblems];

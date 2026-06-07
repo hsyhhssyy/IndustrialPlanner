@@ -213,7 +213,7 @@
     "IBM Plex Mono",
     "SFMono-Regular",
     monospace;
-  font-size: 0.72rem;
+  font-size: 0.60rem;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -508,6 +508,9 @@
 }
 
 .slot-config-step-button {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
   padding: 0;
 }
 
@@ -518,6 +521,7 @@
 }
 
 .slot-config-count-input {
+  width: 100%;
   min-width: 0;
   height: 32px;
   box-sizing: border-box;
@@ -1691,15 +1695,19 @@
   z-index: 80;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: 8px;
   background: rgb(0 0 0 / 38%);
 }
 
 .slot-config-dialog {
   display: grid;
-  gap: 12px;
-  width: min(320px, 100%);
-  padding: 14px;
+  align-content: start;
+  gap: clamp(6px, 1.5dvh, 10px);
+  width: min(340px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  padding: clamp(10px, 2dvh, 14px);
+  overflow-y: auto;
+  overflow-x: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-1);
@@ -1710,12 +1718,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
   gap: 8px;
 }
 
 .slot-config-dialog-header h3 {
+  min-width: 0;
   margin: 0;
   font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .slot-config-dialog-icon-button,
@@ -1725,16 +1738,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 34px;
+  min-height: clamp(32px, 6dvh, 34px);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 7px;
   background: var(--surface-2);
   color: var(--text-0);
   font: inherit;
 }
 
 .slot-config-dialog-icon-button {
-  width: 34px;
+  flex: 0 0 auto;
+  width: clamp(32px, 6dvh, 34px);
   padding: 0;
 }
 
@@ -1745,8 +1759,8 @@
 
 .slot-config-dialog-item-button {
   justify-self: center;
-  width: 96px;
-  height: 96px;
+  width: clamp(56px, 18dvh, 96px);
+  height: clamp(56px, 18dvh, 96px);
   padding: 0;
 }
 
@@ -1755,15 +1769,54 @@
 }
 
 .slot-config-dialog-item-name {
-  min-height: 20px;
+  min-height: 18px;
   color: var(--text-0);
   font-size: 0.82rem;
   text-align: center;
 }
 
+.slot-config-dialog-count-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 86px;
+  align-items: center;
+  min-width: 0;
+  gap: 10px;
+}
+
+.slot-config-dialog-count-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-config-dialog-slider-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+}
+
+.slot-config-dialog-range {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.slot-config-dialog-range:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .slot-config-dialog-field,
 .slot-config-dialog-switch {
   display: grid;
+  min-width: 0;
   gap: 6px;
   color: var(--text-1);
   font-size: 0.78rem;
@@ -1819,6 +1872,8 @@
 
 .slot-config-dialog-clear {
   width: 100%;
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  color: var(--danger);
 }
 
 .slot-config-dialog-actions {
@@ -1831,6 +1886,19 @@
   border-color: var(--accent-strong);
   background: var(--accent-soft);
   color: var(--text-0);
+}
+
+.slot-config-dialog-icon-button:hover:not(:disabled),
+.slot-config-dialog-item-button:hover:not(:disabled),
+.slot-config-dialog-actions button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+}
+
+.slot-config-dialog-clear:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--danger) 70%, var(--line));
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface-1));
+  color: var(--danger);
 }
 
 /*
