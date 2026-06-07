@@ -72,15 +72,45 @@ const ENTITY_HIGH_DEFINITION_IDS = new Set([
   "item_port_water_pump_1",          // 抽水泵
 ])
 
+/** 传送带物流设备定义 ID —— 渲染到 logisticsBelt 层 */
+const BELT_DEFINITION_IDS = new Set([
+  "belt_straight_1x1",
+  "belt_turn_cw_1x1",
+  "belt_turn_ccw_1x1",
+  "item_log_splitter",
+  "item_log_converger",
+  "item_log_connector",
+  "item_log_admission",
+])
+
+/** 管道物流设备定义 ID —— 渲染到 logisticsPipe 层 */
+const PIPE_DEFINITION_IDS = new Set([
+  "pipe_straight_1x1",
+  "pipe_turn_cw_1x1",
+  "pipe_turn_ccw_1x1",
+  "item_pipe_splitter",
+  "item_pipe_converger",
+  "item_pipe_connector",
+  "item_pipe_admission",
+])
+
 function selectRenderLayerMap(
   definitionId: string,
   layers: RenderLayerMap,
+  beltSubEntity: Container,
+  pipeSubEntity: Container,
 ): RenderLayerMap {
   if (ENTITY_LOW_DEFINITION_IDS.has(definitionId)) {
     return { ...layers, entity: layers.entityLow }
   }
   if (ENTITY_HIGH_DEFINITION_IDS.has(definitionId)) {
     return { ...layers, entity: layers.entityHigh }
+  }
+  if (BELT_DEFINITION_IDS.has(definitionId)) {
+    return { ...layers, entity: beltSubEntity }
+  }
+  if (PIPE_DEFINITION_IDS.has(definitionId)) {
+    return { ...layers, entity: pipeSubEntity }
   }
   return layers
 }
@@ -131,6 +161,9 @@ export function createRenderSceneOrchestrator(
 ): RenderSceneOrchestrator {
   const app = renderHost.app
   const layers = createRenderLayers()
+  // 物流子容器 — sprite 本体挂载点，在各自物流层的最底层
+  const beltSubEntity = new Container()
+  const pipeSubEntity = new Container()
   const gridDecoration = createGridLineDecoration()
   const baseBoundaryDecoration = createBaseBoundaryDecoration()
   const powerRangeDecoration = createPowerRangeDecoration()
@@ -313,6 +346,8 @@ export function createRenderSceneOrchestrator(
         entitySprites,
         entitySpriteDefinitionIds,
         layers,
+        beltSubEntity,
+        pipeSubEntity,
         viewportState,
         frameTime,
         viewportBounds: ctx.viewportBounds,
@@ -383,16 +418,24 @@ export function createRenderSceneOrchestrator(
     })
   }
 
+  // 物流传送带层级（从底到顶）
+  layers.logisticsBelt.addChild(beltSubEntity)
+  layers.logisticsBelt.addChild(beltFlowLayer)
+  layers.logisticsBelt.addChild(beltInsertionLayer)
+  layers.logisticsBelt.addChild(beltCargoOverlayLayer)
+
+  // 物流管道层级（从底到顶）
+  layers.logisticsPipe.addChild(pipeSubEntity)
+  layers.logisticsPipe.addChild(pipeFlowLayer)
+  layers.logisticsPipe.addChild(darkPipeLinkLineLayer)
+
   app.stage.addChild(
     layers.background,
     layers.entityLow,
     layers.entity,
     layers.entityHigh,
-    beltFlowLayer,
-    pipeFlowLayer,
-    darkPipeLinkLineLayer,
-    beltInsertionLayer,
-    beltCargoOverlayLayer,
+    layers.logisticsBelt,
+    layers.logisticsPipe,
     layers.overlay,
     invalidPlacementOverlayLayer,
     marqueeOverlayLayer,
@@ -446,11 +489,8 @@ export function createRenderSceneOrchestrator(
       layers.entityLow.destroy({ children: true })
       layers.entity.destroy({ children: true })
       layers.entityHigh.destroy({ children: true })
-      beltFlowLayer.destroy({ children: true })
-      pipeFlowLayer.destroy({ children: true })
-      darkPipeLinkLineLayer.destroy({ children: true })
-      beltInsertionLayer.destroy({ children: true })
-      beltCargoOverlayLayer.destroy({ children: true })
+      layers.logisticsBelt.destroy({ children: true })
+      layers.logisticsPipe.destroy({ children: true })
       invalidPlacementOverlayLayer.destroy({ children: true })
       layers.overlay.destroy({ children: true })
       marqueeOverlayLayer.destroy({ children: true })
@@ -467,6 +507,8 @@ function createRenderLayers(): RenderLayerMap {
     entityLow: new Container(),
     entity: new Container(),
     entityHigh: new Container(),
+    logisticsBelt: new Container(),
+    logisticsPipe: new Container(),
     overlay: new Container(),
   }
 }
@@ -742,6 +784,8 @@ function syncWorldEntitySprites(options: {
   entitySprites: Map<string, RenderSprite>;
   entitySpriteDefinitionIds: Map<string, string>;
   layers: RenderLayerMap;
+  beltSubEntity: Container;
+  pipeSubEntity: Container;
   viewportState: RenderViewportState;
   frameTime: RenderFrameTimeState;
   viewportBounds: {
@@ -829,7 +873,7 @@ function syncWorldEntitySprites(options: {
         continue
       }
 
-      sprite.attach(selectRenderLayerMap(entity.definitionId, options.layers))
+      sprite.attach(selectRenderLayerMap(entity.definitionId, options.layers, options.beltSubEntity, options.pipeSubEntity))
       options.entitySprites.set(entity.id, sprite)
       options.entitySpriteDefinitionIds.set(entity.id, entity.definitionId)
       if (stats !== null) {

@@ -303,9 +303,6 @@ describe("createRenderSceneOrchestrator", () => {
       expect.anything(),
       expect.anything(),
       expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
     )
     expect(tickHandler).not.toBeNull()
 

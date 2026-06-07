@@ -3,7 +3,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { AppTheme } from "@/domain/app/types/theme";
 import type { GridRotation } from "@/shared/geometry/grid"
 
-export type RenderLayerId = "background" | "entityLow" | "entity" | "entityHigh" | "overlay";
+export type RenderLayerId = "background" | "entityLow" | "entity" | "entityHigh" | "logisticsBelt" | "logisticsPipe" | "overlay";
 
 export type BeltRenderSpriteId = "belt_straight_1x1" | "belt_turn_cw_1x1" | "belt_turn_ccw_1x1";
 
@@ -16,6 +16,8 @@ export interface RenderLayerMap {
   entityLow: Container;
   entity: Container;
   entityHigh: Container;
+  logisticsBelt: Container;
+  logisticsPipe: Container;
   overlay: Container;
 }
 
