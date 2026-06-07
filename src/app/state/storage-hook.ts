@@ -53,12 +53,16 @@ export function hookLocalstorage(appHost: AppHost): () => void {
 
   if (persistedWorkbenchState !== null) {
     runInAction(() => {
+      const restored = normalizePersistedWorkbenchState(
+        persistedWorkbenchState,
+        appHost.internalState.workbench,
+      );
+      console.debug(
+        `[DialogOffset] restore workbench ← localStorage → toolbox: visible=${restored.dialogState.toolbox.visible} maximized=${restored.dialogState.toolbox.maximized} offset=(${restored.dialogState.toolbox.offsetX}, ${restored.dialogState.toolbox.offsetY}) size=(${restored.dialogState.toolbox.width}, ${restored.dialogState.toolbox.height})`,
+      );
       Object.assign(
         appHost.internalState.workbench,
-        normalizePersistedWorkbenchState(
-          persistedWorkbenchState,
-          appHost.internalState.workbench,
-        ),
+        restored,
       );
     });
   }
@@ -66,6 +70,10 @@ export function hookLocalstorage(appHost: AppHost): () => void {
   const disposeWorkbenchReaction = reaction(
     () => JSON.stringify(appHost.internalState.workbench),
     () => {
+      const toolboxState = appHost.internalState.workbench.dialogState.toolbox;
+      console.debug(
+        `[DialogOffset] persist workbench → toolbox: visible=${toolboxState.visible} maximized=${toolboxState.maximized} offset=(${toolboxState.offsetX}, ${toolboxState.offsetY}) size=(${toolboxState.width}, ${toolboxState.height})`,
+      );
       saveToLocalStorage<WorkbenchStateReadWrite>(
         WORKBENCH_STATE_LOCAL_STORAGE_KEY,
         appHost.internalState.workbench,

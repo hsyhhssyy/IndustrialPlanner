@@ -64,6 +64,7 @@ export function DarkPipeLinkInspector({
       };
     });
     appHost.internalActions.setActiveTool(DARK_PIPE_LINK_TOOL);
+    appHost.internalActions.closeDialog("inspector");
   };
 
   const cancelSelection = () => {

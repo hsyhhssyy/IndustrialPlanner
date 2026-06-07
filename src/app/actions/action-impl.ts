@@ -180,6 +180,9 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     }
 
     const dialogState = this.ensureDialogState(target.dialogKey);
+    console.debug(
+      `[DialogOffset] open ${target.dialogKey}: offset=(${dialogState.offsetX}, ${dialogState.offsetY}) size=(${dialogState.width}, ${dialogState.height}) maximized=${dialogState.maximized}`,
+    );
     const shouldResetDialogShellState =
       (dialogState.width !== null && dialogState.width > window.innerWidth)
       || (dialogState.height !== null && dialogState.height > window.innerHeight)
@@ -187,6 +190,9 @@ export class AppActionImpl implements AppAction, AppInternalAction {
       || dialogState.offsetY < 0;
 
     if (shouldResetDialogShellState) {
+      console.debug(
+        `[DialogOffset] reset ${target.dialogKey}: window=(${window.innerWidth}, ${window.innerHeight})`,
+      );
       Object.assign(dialogState, createDefaultDialogStateForKey(target.dialogKey));
     }
 
@@ -267,8 +273,13 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     }
 
     const dialogState = this.ensureDialogState(normalizedDialogKey);
+    const prevOffsetX = dialogState.offsetX;
+    const prevOffsetY = dialogState.offsetY;
     dialogState.offsetX = Math.round(offsetX);
     dialogState.offsetY = Math.round(offsetY);
+    console.debug(
+      `[DialogOffset] set ${normalizedDialogKey} offset: (${prevOffsetX}, ${prevOffsetY}) → (${dialogState.offsetX}, ${dialogState.offsetY})`,
+    );
   });
 
   public readonly setDialogSize: AppInternalAction["setDialogSize"] = action((dialogKey, width, height) => {

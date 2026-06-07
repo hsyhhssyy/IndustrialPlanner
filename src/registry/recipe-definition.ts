@@ -1950,7 +1950,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: ["new", "liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_iron_bottle_water_default",
