@@ -261,6 +261,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
           clipMask: resolveBeltCargoClipMask({
             ctx,
             boxHalfSize,
+            simplifiedDeviceIcons,
             disconnectedPortEntries: disconnectedPortEntriesByBeltId.get(beltCargoEntry.entityId)
               ?? EMPTY_BELT_DISCONNECTED_PORT_ENTRIES,
             portExtensionEntries: portExtensionEntriesByBeltId.get(beltCargoEntry.entityId)
@@ -504,24 +505,43 @@ export function resolveBeltCargoBoxSize(gridCellSize: number): number {
 function resolveBeltCargoClipMask(options: {
   ctx: DecorationSyncContext;
   boxHalfSize: number;
+  simplifiedDeviceIcons: boolean;
   disconnectedPortEntries: readonly BeltDisconnectedPortEntry[];
   portExtensionEntries: readonly BeltPortExtensionEntry[];
   beltRects: readonly BeltCargoClipRect[];
 }): BeltCargoClipMask | null {
-  const extensions = options.portExtensionEntries
-  const hasAnyPortShape = extensions.length > 0 || options.disconnectedPortEntries.length > 0
-
-  // 无伸出段也无断开端口 → 只有 beltRects 裁剪（传送带→junction 场景）
-  if (!hasAnyPortShape) {
-    if (options.beltRects.length === 0) return null
-    return { beltRects: options.beltRects, extensions: [] }
+  // 简化/蓝图渲染模式下完全不裁切
+  if (options.simplifiedDeviceIcons) {
+    return null
   }
 
-  const _gridCellSize = options.ctx.viewportState.gridCellPixelSize
+  // 无传送带格子 → 无需遮罩
+  if (options.beltRects.length === 0) {
+    return null
+  }
+
+  // mask = beltRects（所有可见传送带格子矩形）+ 各端口独立产生的条目。
+  // 各端口按对面匹配情况决定自身条目：
+  //
+  //   ┌────────────────────────────┬──────────────────┬──────────────────┬────────────────────┐
+  //   │ 对面格情况                  │ extension 条目    │ disconnected 条目 │ 该端口货物是否可见  │
+  //   ├────────────────────────────┼──────────────────┼──────────────────┼────────────────────┤
+  //   │ 生产设备（端口匹配）         │ ✅ extension      │ —                │ 按 extension 裁剪    │
+  //   │ 分流器/汇流器/桥接器         │ —                │ —                │ ❌ 裁切（beltRects） │
+  //   │ 空地                       │ —                │ ✅ cap            │ ✅ 可见（不裁切）    │
+  //   │ 设备墙面（无端口）           │ —                │ ✅ cap            │ ✅ 可见（不裁切）    │
+  //   │ 端口未对齐（旋转/侧边不匹配） │ —                │ ✅ cap            │ ✅ 可见（不裁切）    │
+  //   │ 液体端口（kind!="item"）    │ —                │ ✅ cap            │ ✅ 可见（不裁切）    │
+  //   │ 输出端口（方向不匹配）       │ —                │ ✅ cap            │ ✅ 可见（不裁切）    │
+  //   │ 输入端口（方向不匹配）       │ —                │ ✅ cap            │ ✅ 可见（不裁切）    │
+  //   └────────────────────────────┴──────────────────┴──────────────────┴────────────────────┘
+  //
+  // 各端口独立判断，互不干扰。例如传送带一端连生产设备一端连桥接器：
+  // 生产设备端 extension ✅ 货物可见，桥接器端无条目被 beltRects 裁切。
   return {
     beltRects: options.beltRects,
     extensions: [
-      ...extensions.map((extension) =>
+      ...options.portExtensionEntries.map((extension) =>
         resolveBeltCargoClipExtensionRect({
           ctx: options.ctx,
           extension,
