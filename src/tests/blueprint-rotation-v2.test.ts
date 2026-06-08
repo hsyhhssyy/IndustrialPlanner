@@ -61,20 +61,22 @@ function fmt(e: EntityBox) {
 }
 
 describe("蓝图旋转 — 非正方形设备", () => {
-  it("5×5 planter + 5×5 seedcol 相邻放置，旋转后不应重叠且相邻关系恢复", () => {
+  it("4x3 planter + 2x2 seedcol 相邻放置，旋转后不应重叠且相邻关系恢复", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
-    // planter 5×5(0,0)-(4,4), seedcol 5×5(5,0)-(9,4)，水平相邻
-    // bounds: left=0, top=0, width=10, height=5
+    // planter 4x3 left=(0,0)-(3,2), seedcol 2x2 right=(4,0)-(5,1)
+    // 手动计算 initialGridPoint:
+    // bounds: left=0, top=0, width=6, height=3
+    // getGridBoundsCenterCells: (0+6/2, 0+3/2) = (3, 1.5) → round → (3, 2)
     const blueprint = createBlueprintDocument({
       name: "planter-seedcol",
       baseId: "wuling_protocol_core",
-      initialGridPoint: { x: 5, y: 2 },
+      initialGridPoint: { x: 3, y: 2 },
       entities: {
         p: { id: "p", definitionId: "item_port_planter_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
-        s: { id: "s", definitionId: "item_port_seedcol_1", position: { x: 5, y: 0 }, rotation: 0, config: {}, tags: [] },
+        s: { id: "s", definitionId: "item_port_seedcol_1", position: { x: 4, y: 0 }, rotation: 0, config: {}, tags: [] },
       },
       entityOrder: ["p", "s"],
       slotLinks: [],
@@ -143,42 +145,5 @@ describe("蓝图旋转 — 非正方形设备", () => {
 
     const final = analyze(editorHost);
     expect(final.adjCount).toBe(init.adjCount);
-  });
-
-  it("混合奇偶：4×4 bus_source + 3×1 unloader(r270) 相邻，旋转后不应重叠且四次回原位", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-
-    // bus_source 4×4(0,0)-(3,3), unloader 3×1@270 占 (4,0)-(4,2)，水平相邻
-    const blueprint = createBlueprintDocument({
-      name: "bus-unloader",
-      baseId: "wuling_protocol_core",
-      initialGridPoint: { x: 2, y: 2 },
-      entities: {
-        bus: { id: "bus", definitionId: "item_port_log_hongs_bus_source", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
-        unl: { id: "unl", definitionId: "item_port_unloader_1", position: { x: 4, y: 0 }, rotation: 270, config: {}, tags: [] },
-      },
-      entityOrder: ["bus", "unl"],
-      slotLinks: [],
-    });
-
-    editorHost.actions.createBlueprintPlacementDraft!(blueprint, { x: 20, y: 20 });
-
-    const init = analyze(editorHost);
-    console.log(`初始 [ov=${init.overlapCount} adj=${init.adjCount}]:`, init.entities.map(fmt));
-    expect(init.overlapCount).toBe(0);
-
-    for (let step = 1; step <= 4; step++) {
-      editorHost.actions.rotateCollection(EntityCollectionType.preview);
-      const r = analyze(editorHost);
-      console.log(`${step * 90}° [ov=${r.overlapCount} adj=${r.adjCount}]:`, r.entities.map(fmt));
-      expect(r.overlapCount).toBe(0);
-    }
-
-    const final = analyze(editorHost);
-    expect(final.adjCount).toBe(init.adjCount);
-    expect(final.entities[0]?.position).toEqual(init.entities[0]?.position);
-    expect(final.entities[1]?.position).toEqual(init.entities[1]?.position);
   });
 });

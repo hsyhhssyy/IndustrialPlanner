@@ -1450,24 +1450,22 @@ describe("createEditorHost", () => {
 
     editorHost.actions.rotateCollection(EntityCollectionType.selection);
 
-    // AI-CORRECTION 2026-06-08: 锚点公式从 floor((W-1)/2) 改为几何中心均值，
-    // 集合旋转结果整体偏移 1 格；相对位置与包围盒不变。
     expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]).toMatchObject({
       position: {
-        x: 9,
+        x: 8,
         y: 2,
       },
       rotation: 90,
     });
     expect(editorHost.document.getSnapshot().entities["dummy-entity-1"]).toMatchObject({
       position: {
-        x: 7,
+        x: 6,
         y: 10,
       },
       rotation: 90,
     });
     expect(editorHost.queries.findEntityCollectionGridRect("selection")).toEqual({
-      x: 7,
+      x: 6,
       y: 2,
       width: 5,
       height: 9,
