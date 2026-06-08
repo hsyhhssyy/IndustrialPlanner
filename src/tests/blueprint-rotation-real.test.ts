@@ -16,6 +16,9 @@ function createWorkspace(): WorkspaceContract {
     state: createWorkspaceState(),
     registry: createRegistryContract(),
     app: null,
+    editor: null,
+    render: null,
+    simulation: null,
   };
 }
 
@@ -72,14 +75,12 @@ describe("蓝图旋转 — 真实尺寸设备旋转验证", () => {
       const entities = ids.map((id) => {
         const e = editorHost.queries.getEntityById(id);
         return e ? { ...e, fp: getFootprint(editorHost, e.definitionId) } : null;
-      }).filter(Boolean) as Array<{
-        position: { x: number; y: number }; rotation: number; definitionId: string; fp: { w: number; h: number }
-      }>;
+      }).filter((x): x is NonNullable<typeof x> => x !== null);
       let overlapCount = 0, adj = 0;
       for (let i = 0; i < entities.length; i++) {
         for (let j = i + 1; j < entities.length; j++) {
-          const a = entityBounds(entities[i], entities[i].fp.w, entities[i].fp.h);
-          const b = entityBounds(entities[j], entities[j].fp.w, entities[j].fp.h);
+          const a = entityBounds(entities[i]!, entities[i]!.fp.w, entities[i]!.fp.h);
+          const b = entityBounds(entities[j]!, entities[j]!.fp.w, entities[j]!.fp.h);
           if (overlaps(a, b)) overlapCount++;
           else if (areAdjacent(a, b)) adj++;
         }
@@ -139,14 +140,12 @@ describe("蓝图旋转 — 真实尺寸设备旋转验证", () => {
       const entities = ids.map((id) => {
         const e = editorHost.queries.getEntityById(id);
         return e ? { ...e, fp: getFootprint(editorHost, e.definitionId) } : null;
-      }).filter(Boolean) as Array<{
-        position: { x: number; y: number }; rotation: number; definitionId: string; fp: { w: number; h: number }
-      }>;
+      }).filter((x): x is NonNullable<typeof x> => x !== null);
       let overlapCount = 0, adj = 0;
       for (let i = 0; i < entities.length; i++) {
         for (let j = i + 1; j < entities.length; j++) {
-          const a = entityBounds(entities[i], entities[i].fp.w, entities[i].fp.h);
-          const b = entityBounds(entities[j], entities[j].fp.w, entities[j].fp.h);
+          const a = entityBounds(entities[i]!, entities[i]!.fp.w, entities[i]!.fp.h);
+          const b = entityBounds(entities[j]!, entities[j]!.fp.w, entities[j]!.fp.h);
           if (overlaps(a, b)) overlapCount++;
           else if (areAdjacent(a, b)) adj++;
         }

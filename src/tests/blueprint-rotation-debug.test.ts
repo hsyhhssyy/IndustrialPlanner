@@ -15,7 +15,7 @@ function createWorkspace(): WorkspaceContract {
   return {
     state: createWorkspaceState(),
     registry: createRegistryContract(),
-    app: null,
+    app: null, editor: null, render: null, simulation: null,
   };
 }
 

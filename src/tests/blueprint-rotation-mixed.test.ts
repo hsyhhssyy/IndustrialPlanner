@@ -15,7 +15,7 @@ function createWorkspace(): WorkspaceContract {
   return {
     state: createWorkspaceState(),
     registry: createRegistryContract(),
-    app: null,
+    app: null, editor: null, render: null, simulation: null,
   };
 }
 
@@ -79,7 +79,7 @@ function collectAdjacencyData(
   const entities = previewIds.map((id) => {
     const e = editorHost.queries.getEntityById(id);
     return e ? { ...e, fp: getFootprint(e.definitionId) } : null;
-  }).filter(Boolean) as Array<{ position: { x: number; y: number }; rotation: number; definitionId: string; fp: { w: number; h: number } }>;
+  }).filter((x): x is NonNullable<typeof x> => x !== null);
 
   let overlapCount = 0;
   let adjacentPairs = 0;
@@ -88,14 +88,14 @@ function collectAdjacencyData(
   for (let i = 0; i < entities.length; i++) {
     for (let j = i + 1; j < entities.length; j++) {
       const a = entityBounds(
-        { position: entities[i].position, rotation: entities[i].rotation },
-        entities[i].fp.w,
-        entities[i].fp.h,
+        { position: entities[i]!.position, rotation: entities[i]!.rotation },
+        entities[i]!.fp.w,
+        entities[i]!.fp.h,
       );
       const b = entityBounds(
-        { position: entities[j].position, rotation: entities[j].rotation },
-        entities[j].fp.w,
-        entities[j].fp.h,
+        { position: entities[j]!.position, rotation: entities[j]!.rotation },
+        entities[j]!.fp.w,
+        entities[j]!.fp.h,
       );
       if (overlaps(a, b)) overlapCount++;
       // 只统计相邻（非重叠）
