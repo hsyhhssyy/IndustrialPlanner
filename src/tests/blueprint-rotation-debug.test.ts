@@ -81,17 +81,17 @@ describe("蓝图多实体旋转 - 相对位置保持", () => {
 
     // Rotate once (clockwise 90°)
     editorHost.actions.rotateCollection(EntityCollectionType.preview);
-    const after1 = getPositions();
+    const _after1 = getPositions();
     logDraft(editorHost, "旋转1次");
 
     // Rotate twice (180°)
     editorHost.actions.rotateCollection(EntityCollectionType.preview);
-    const after2 = getPositions();
+    const _after2 = getPositions();
     logDraft(editorHost, "旋转2次");
 
     // Rotate three times (270°)
     editorHost.actions.rotateCollection(EntityCollectionType.preview);
-    const after3 = getPositions();
+    const _after3 = getPositions();
     logDraft(editorHost, "旋转3次");
 
     // Rotate four times (360° - should be back to original relative positions)

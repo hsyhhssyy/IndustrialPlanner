@@ -67,7 +67,9 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
   // 电池剩余百分比
   let percentageText = "--%";
   if (baseBatteryJoules !== null && baseBatteryCapacity !== null && baseBatteryCapacity > 0) {
-    const pct = Math.min(100, Math.round((baseBatteryJoules / baseBatteryCapacity) * 100));
+    const rawPct = (baseBatteryJoules / baseBatteryCapacity) * 100;
+    // 99.5~99.9 强制显示 99%，防止四舍五入虚标 100%
+    const pct = (rawPct >= 99.5 && rawPct < 100) ? 99 : Math.min(100, Math.round(rawPct));
     percentageText = `${pct}%`;
   }
 

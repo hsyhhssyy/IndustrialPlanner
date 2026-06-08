@@ -8,7 +8,7 @@ import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 
 function createWorkspace(): WorkspaceContract {
-  return { state: createWorkspaceState(), registry: createRegistryContract(), app: null };
+  return { state: createWorkspaceState(), registry: createRegistryContract(), app: null, editor: null, render: null, simulation: null };
 }
 
 function fp(editorHost: ReturnType<typeof createEditorHost>, defId: string): { w: number; h: number } {
@@ -48,8 +48,8 @@ function analyze(editorHost: Host): { ov: number; adj: number; es: EBox[] } {
   let ovc = 0, adjc = 0;
   for (let i = 0; i < es.length; i++) {
     for (let j = i + 1; j < es.length; j++) {
-      if (ov(bbox(es[i]), bbox(es[j]))) ovc++;
-      else if (adj(bbox(es[i]), bbox(es[j]))) adjc++;
+      if (ov(bbox(es[i]!), bbox(es[j]!))) ovc++;
+      else if (adj(bbox(es[i]!), bbox(es[j]!))) adjc++;
     }
   }
   return { ov: ovc, adj: adjc, es };

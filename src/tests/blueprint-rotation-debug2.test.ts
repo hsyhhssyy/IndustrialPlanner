@@ -3,7 +3,6 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
-import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 
@@ -11,18 +10,18 @@ function createWorkspace(): WorkspaceContract {
   return { state: createWorkspaceState(), registry: createRegistryContract(), app: null };
 }
 
-function fp(editorHost: ReturnType<typeof createEditorHost>, defId: string): { w: number; h: number } {
+function _fp(editorHost: ReturnType<typeof createEditorHost>, defId: string): { w: number; h: number } {
   const d = editorHost.workspace.registry.entityDefinitions.find(x => x.id === defId);
   return d ? { w: d.footprint.width, h: d.footprint.height } : { w: 1, h: 1 };
 }
 
-function bounds(e: { position: { x: number; y: number }; rotation: number }, w: number, h: number) {
+function _bounds(e: { position: { x: number; y: number }; rotation: number }, w: number, h: number) {
   const rw = (e.rotation === 90 || e.rotation === 270) ? h : w;
   const rh = (e.rotation === 90 || e.rotation === 270) ? w : h;
   return { left: e.position.x, top: e.position.y, right: e.position.x + rw, bottom: e.position.y + rh };
 }
 
-function adj(a: ReturnType<typeof bounds>, b: ReturnType<typeof bounds>) {
+function _adj(a: ReturnType<typeof _bounds>, b: ReturnType<typeof _bounds>) {
   if (a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top) {
     return (a.right === b.left || b.right === a.left) && a.bottom > b.top && b.bottom > a.top
         || (a.bottom === b.top || b.bottom === a.top) && a.right > b.left && b.right > a.left;
@@ -30,7 +29,7 @@ function adj(a: ReturnType<typeof bounds>, b: ReturnType<typeof bounds>) {
   return false;
 }
 
-function ov(a: ReturnType<typeof bounds>, b: ReturnType<typeof bounds>) {
+function _ov(a: ReturnType<typeof _bounds>, b: ReturnType<typeof _bounds>) {
   return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 }
 
