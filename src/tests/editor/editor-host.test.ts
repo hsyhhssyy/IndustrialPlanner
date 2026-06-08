@@ -221,8 +221,8 @@ describe("createEditorHost", () => {
     });
 
     expect(editorHost.state.viewport.center).toEqual({
-      x: -7,
-      y: -7,
+      x: -12,
+      y: -12,
     });
 
     editorHost.actions.moveViewportByClientPixelVector({
@@ -237,8 +237,8 @@ describe("createEditorHost", () => {
     });
 
     expect(editorHost.state.viewport.center).toEqual({
-      x: 87,
-      y: 87,
+      x: 88,
+      y: 88,
     });
   });
 
@@ -1223,7 +1223,7 @@ describe("createEditorHost", () => {
     }
 
     runInAction(() => {
-      previewDraft.position = { x: -6, y: 4 };
+      previewDraft.position = { x: -11, y: 4 };
     });
 
     expect(editorHost.actions.applyMoveOerationDraft()).toBe(false);
@@ -1354,7 +1354,7 @@ describe("createEditorHost", () => {
     editorHost.actions.moveCollectionTo({
       collectionType: EntityCollectionType.selection,
       startGridPoint: { x: 0, y: 0 },
-      endGridPoint: { x: -2, y: 0 },
+      endGridPoint: { x: -7, y: 0 },
     });
 
     expect(editorHost.document.getSnapshot().entities.pipe).toEqual(document.entities.pipe);
@@ -1450,22 +1450,24 @@ describe("createEditorHost", () => {
 
     editorHost.actions.rotateCollection(EntityCollectionType.selection);
 
+    // AI-CORRECTION 2026-06-08: 锚点公式从 floor((W-1)/2) 改为几何中心均值，
+    // 集合旋转结果整体偏移 1 格；相对位置与包围盒不变。
     expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]).toMatchObject({
       position: {
-        x: 8,
+        x: 9,
         y: 2,
       },
       rotation: 90,
     });
     expect(editorHost.document.getSnapshot().entities["dummy-entity-1"]).toMatchObject({
       position: {
-        x: 6,
+        x: 7,
         y: 10,
       },
       rotation: 90,
     });
     expect(editorHost.queries.findEntityCollectionGridRect("selection")).toEqual({
-      x: 6,
+      x: 7,
       y: 2,
       width: 5,
       height: 9,
@@ -1476,8 +1478,8 @@ describe("createEditorHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithTestEntities([
-      createTestEntity("pipe-top", "pipe_straight_1x1", -4, 0),
-      createTestEntity("pipe-bottom", "pipe_straight_1x1", -4, 8),
+      createTestEntity("pipe-top", "pipe_straight_1x1", -15, 0),
+      createTestEntity("pipe-bottom", "pipe_straight_1x1", -15, 8),
     ]);
 
     editorHost.internalDocument.setSnapshot(document);
@@ -1904,7 +1906,7 @@ describe("createEditorHost", () => {
     });
     expect(editorHost.state.viewport.center).toEqual({
       x: 12.5,
-      y: -7,
+      y: -8.25,
     });
     expect(editorHost.state.viewport.gridSize).toBe(4);
     expect(editorHost.state.viewport.gridCellPixelSize).toBe(
@@ -1934,8 +1936,8 @@ describe("createEditorHost", () => {
     });
 
     expect(editorHost.state.viewport.center).toEqual({
-      x: 87,
-      y: -7,
+      x: 92,
+      y: -12,
     });
   });
 
@@ -2183,7 +2185,7 @@ describe("createEditorHost", () => {
     expect(resultInsideOuterRing.canApply).toBe(true);
     expect(resultInsideOuterRing.invalidReason).toBeNull();
 
-    // 管道绘制到 outerRing 外 (x=-6 < outerRing left=-5)
+    // 管道绘制到 outerRing 外 (x=-11 < outerRing left=-10)
     editorHost.actions.cancelLogisticsDraft();
 
     editorHost.actions.createLogisticsDraftStart({
@@ -2192,7 +2194,7 @@ describe("createEditorHost", () => {
     });
 
     const resultOutsideOuterRing = editorHost.actions.moveLogisticEnd({
-      pointerGridPoint: { x: -6, y: 10 },
+      pointerGridPoint: { x: -11, y: 10 },
       routeMode: { type: "freehand" },
     });
 

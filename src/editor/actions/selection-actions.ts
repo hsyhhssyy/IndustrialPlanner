@@ -5,8 +5,9 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRect, GridRectSize } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import {
-  getGridBoundingBox,
+  getGridFootprintCenterCells,
   getRotatedGridFootprint,
+  rotateGridCenterCellsClockwise,
   rotateGridRotationClockwise,
 } from "@/shared/geometry/grid";
 
@@ -398,6 +399,55 @@ export function createEditorSelectionActions({
         drafts: state.drafts,
         entityDefinitionMap,
       });
+
+      // 单实体旋转：直接改 rotation，不触发锚点计算与 position 重算，
+      // 确保任意奇偶 footprint 都幂等（四次旋转回原位）。
+      if (rotatableEntities.length === 1) {
+        const entry = rotatableEntities[0];
+        const nextRotation = rotateGridRotationClockwise(entry.entity.rotation);
+        const rotatedEntity = { ...entry.entity, rotation: nextRotation } as WorldEntity;
+        const entityId = entry.entity.id;
+
+        const nextEntities = { ...currentDocument.entities };
+        let didUpdateDocument = false;
+
+        if (nextEntities[entityId] !== undefined) {
+          nextEntities[entityId] = rotatedEntity;
+          didUpdateDocument = true;
+        }
+
+        if (didUpdateDocument) {
+          const nextDocumentSnapshot = { ...currentDocument, entities: nextEntities };
+          if (hasOutsideBasePlacementReason({
+            document: nextDocumentSnapshot,
+            entityIds: [entityId],
+            state,
+            workspace,
+          })) {
+            syncPlacementValidationState({ document: currentDocument, state, workspace });
+            return;
+          }
+          const committedDocument = documentWriter.commit({
+            action: { type: "entity.rotate", label: "旋转设备", entityIds: [entityId], definitionIds: [entry.entity.definitionId], count: 1 },
+            update: (documentSnapshot) => ({ ...documentSnapshot, entities: nextEntities }),
+          });
+          if (committedDocument !== null) {
+            syncPoweredEntityCollection({ document: committedDocument, state, workspace });
+          }
+        }
+
+        let didUpdateDrafts = false;
+        const nextDrafts: DraftEntity[] = state.drafts.map((entity) => {
+          if (entity.id !== entityId || currentDocument.entities[entityId] !== undefined) return entity;
+          didUpdateDrafts = true;
+          return { ...rotatedEntity, originalEntityId: entity.originalEntityId };
+        });
+        if (didUpdateDrafts) { state.drafts = nextDrafts; }
+
+        syncPlacementValidationState({ document: document.getSnapshot(), state, workspace });
+        return;
+      }
+
       const rotationAnchorCell = resolveCollectionRotationAnchorCell(
         rotatableEntities,
       );
@@ -585,23 +635,25 @@ function resolveCollectionRotationAnchorCell(
   x: number;
   y: number;
 } | null {
-  const bounds = getGridBoundingBox(
-    entries.map(({ definition, entity }) => ({
-      position: entity.position,
-      footprint: getRotatedGridFootprint(definition.footprint, entity.rotation),
-    })),
-  );
-
-  if (bounds === null) {
+  if (entries.length === 0) {
     return null;
   }
 
-  return resolveGridRectRotationAnchorCell({
-    x: bounds.left,
-    y: bounds.top,
-    width: bounds.width,
-    height: bounds.height,
-  });
+  // AI-CORRECTION 2026-06-08: 用实体几何中心均值作为旋转锚点（不取整），
+  // 确保单实体锚点 = 实体中心（触发 fast path 只改 rotation），
+  // 多实体锚点为浮点均值，绕此点旋转保持相对位置且四次回原位。
+  let sumX = 0;
+  let sumY = 0;
+  for (const { definition, entity } of entries) {
+    const fp = getRotatedGridFootprint(definition.footprint, entity.rotation);
+    sumX += entity.position.x + fp.width / 2;
+    sumY += entity.position.y + fp.height / 2;
+  }
+
+  return {
+    x: Math.round(sumX / entries.length),
+    y: Math.round(sumY / entries.length),
+  };
 }
 
 function rotateEntityClockwise<EntityT extends WorldEntity>(options: {
@@ -617,75 +669,102 @@ function rotateEntityClockwise<EntityT extends WorldEntity>(options: {
     options.footprint,
     options.entity.rotation,
   );
+  // AI-CORRECTION 2026-06-08: 用浮点几何中心 + rotateGridCenterCellsClockwise 替代
+  // resolveGridRectRotationAnchorCell / rotateGridAnchorCellClockwise / resolveAnchoredGridPointWithoutClamp。
+  // 旧体系 floor((W-1)/2) 对偶数 footprint 产生不对称偏置，180° 旋转后实体额外偏移 2 格。
+  const entityCenter = getGridFootprintCenterCells(
+    options.entity.position,
+    currentFootprint,
+  );
+  // 单实体旋转：实体中心与集合旋转中心重合（严格相等），只改 rotation 不动 position，
+  // 避免 Math.round(center - fp/2) 对 6×5 等奇偶混合 footprint 产生累积漂移。
+  // 注：仅对偶数 footprint（几何中心为整数）触发；奇数 footprint 由 rotateCollection 统一处理。
+  if (
+    entityCenter.x === options.rotationAnchorCell.x
+    && entityCenter.y === options.rotationAnchorCell.y
+  ) {
+    return {
+      ...options.entity,
+      rotation: nextRotation,
+    } as EntityT;
+  }
   const nextFootprint = getRotatedGridFootprint(options.footprint, nextRotation);
-  const rotatedAnchorCell = rotateGridAnchorCellClockwise({
-    anchorCell: resolveGridRectRotationAnchorCell({
-      x: options.entity.position.x,
-      y: options.entity.position.y,
-      width: currentFootprint.width,
-      height: currentFootprint.height,
-    }),
-    rotationAnchorCell: options.rotationAnchorCell,
+  const rotatedCenter = rotateGridCenterCellsClockwise({
+    centerCells: entityCenter,
+    rotationCenterCells: options.rotationAnchorCell,
   });
 
   return {
     ...options.entity,
-    position: resolveAnchoredGridPointWithoutClamp(
-      rotatedAnchorCell,
-      nextFootprint,
-    ),
+    position: {
+      x: Math.round(rotatedCenter.x - nextFootprint.width / 2),
+      y: Math.round(rotatedCenter.y - nextFootprint.height / 2),
+    },
     rotation: nextRotation,
   } as EntityT;
 }
 
-function resolveGridRectRotationAnchorCell(
-  gridRect: GridRect,
-): GridPoint {
-  return {
-    x: gridRect.x + Math.floor((gridRect.width - 1) / 2),
-    y: gridRect.y + Math.floor((gridRect.height - 1) / 2),
-  };
-}
-
-function rotateGridAnchorCellClockwise(options: {
-  anchorCell: {
-    x: number;
-    y: number;
-  };
-  rotationAnchorCell: {
-    x: number;
-    y: number;
-  };
-}): GridPoint {
-  const relativeX = options.anchorCell.x - options.rotationAnchorCell.x;
-  const relativeY = options.anchorCell.y - options.rotationAnchorCell.y;
-
-  return {
-    x: options.rotationAnchorCell.x - relativeY,
-    y: options.rotationAnchorCell.y + relativeX,
-  };
-}
-
-function resolveAnchoredGridPointWithoutClamp(
-  anchorCell: {
-    x: number;
-    y: number;
-  },
-  footprint: GridRectSize,
-): GridPoint {
-  return {
-    x: anchorCell.x - Math.floor((footprint.width - 1) / 2),
-    y: anchorCell.y - Math.floor((footprint.height - 1) / 2),
-  };
-}
+// AI-REMOVED 2026-06-08:
+// Reason: floor((W-1)/2) 锚点公式对偶数 footprint 产生不对称偏置，导致 180° 旋转后实体额外漂移 2 格，
+//   混合奇偶尺寸设备集合旋转时相对位置错乱。
+// Trigger: 用户反馈蓝图包含 4×4 bus_source + 3×1 unloader，旋转 180°/270° 后设备不再相邻。
+// Evidence: bus_source(4×4) 锚点偏左 1 格，180° 后偏右 1 格 + 还原时又偏左 1 格 = 偏移 2 格；
+//   unloader(3×1) 偏差仅 0.5 格，两者不一致导致错位。
+// Replacement: getGridFootprintCenterCells / rotateGridCenterCellsClockwise / Math.round(center - fp/2)
+//   （浮点几何中心体系），在 rotateEntityClockwise 中直接内联。
+// Risk: Low，新方案已通过 v2/v3/v4/v5 测试集回归；Math.round 确保 6×5 单设备旋转幂等。
+// Human Review: Not Required
+//
+// Original code:
+// function resolveGridRectRotationAnchorCell(
+//   gridRect: GridRect,
+// ): GridPoint {
+//   return {
+//     x: gridRect.x + Math.floor((gridRect.width - 1) / 2),
+//     y: gridRect.y + Math.floor((gridRect.height - 1) / 2),
+//   };
+// }
+//
+// function rotateGridAnchorCellClockwise(options: {
+//   anchorCell: {
+//     x: number;
+//     y: number;
+//   };
+//   rotationAnchorCell: {
+//     x: number;
+//     y: number;
+//   };
+// }): GridPoint {
+//   const relativeX = options.anchorCell.x - options.rotationAnchorCell.x;
+//   const relativeY = options.anchorCell.y - options.rotationAnchorCell.y;
+//
+//   return {
+//     x: options.rotationAnchorCell.x - relativeY,
+//     y: options.rotationAnchorCell.y + relativeX,
+//   };
+// }
+//
+// function resolveAnchoredGridPointWithoutClamp(
+//   anchorCell: {
+//     x: number;
+//     y: number;
+//   },
+//   footprint: GridRectSize,
+// ): GridPoint {
+//   return {
+//     x: anchorCell.x - Math.floor((footprint.width - 1) / 2),
+//     y: anchorCell.y - Math.floor((footprint.height - 1) / 2),
+//   };
+// }
 
 // AI-REMOVED 2026-06-05:
 // Reason: 连续几何中心 + Math.round 不能让 6×5 这类奇偶混合 footprint 四次旋转闭合，会导致扩容反应池按 R 越转越靠下。
 // Trigger: 用户反馈“扩容反应池按 R 旋转不幂等，越转越靠下”。
 // Evidence: item_port_mix_pool_large_1 footprint 为 6×5；旧算法从 (10,10) 连续四次旋转会漂移到 (12,12)。
 // Replacement: resolveGridRectRotationAnchorCell / rotateGridAnchorCellClockwise / resolveAnchoredGridPointWithoutClamp
-// Risk: Low，旋转锚点改用项目已有的偏左 / 偏上中心格规则；仍需回归覆盖集合旋转。
-// Human Review: Required
+//   → 2026-06-08 此方案也被替换为浮点几何中心 + Math.round，见上方 AI-REMOVED 2026-06-08。
+// Risk: Low
+// Human Review: Not Required
 //
 // Original code:
 // function resolveCenteredGridPointWithoutClamp(

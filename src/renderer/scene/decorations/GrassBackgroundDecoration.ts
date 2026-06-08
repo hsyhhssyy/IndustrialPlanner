@@ -14,10 +14,13 @@ import type { RenderHost } from "../../renderer-host";
 const GRASS_TEXTURE_KEY = "texture-Grass005_1K-PNG_Color";
 const SCANLINE_TEXTURE_KEY = "texture-scanline-45deg-50opacity";
 const GRASS_TILE_GRID_CELLS = 5;
-const WARNING_FILL_COLOR = 0xff4d4f;
+const WARNING_FILL_COLOR_RED = 0xff4d4f;
+const WARNING_FILL_COLOR_BLUE = 0x4d7fff;
 const WARNING_FILL_ALPHA = 0.18;
-const WARNING_SCANLINE_TINT = 0xff4d4f;
+const WARNING_SCANLINE_TINT_RED = 0xff4d4f;
+const WARNING_SCANLINE_TINT_BLUE = 0x4d7fff;
 const WARNING_SCANLINE_ALPHA = 0.92;
+const WARNING_BLUE_TAG = "武陵";
 
 export function createGrassBackgroundDecoration(
   renderHost: RenderHost,
@@ -44,7 +47,6 @@ export function createGrassBackgroundDecoration(
 
   warningMask.renderable = false;
   warningScanlineSprite.mask = warningMask;
-  warningScanlineSprite.tint = WARNING_SCANLINE_TINT;
   warningScanlineSprite.alpha = WARNING_SCANLINE_ALPHA;
 
   container.addChild(grassSprite);
@@ -97,6 +99,10 @@ export function createGrassBackgroundDecoration(
         return;
       }
 
+      const isBlueWarning = baseDefinition?.tag === WARNING_BLUE_TAG;
+      const warningFillColor = isBlueWarning ? WARNING_FILL_COLOR_BLUE : WARNING_FILL_COLOR_RED;
+      const warningScanlineTint = isBlueWarning ? WARNING_SCANLINE_TINT_BLUE : WARNING_SCANLINE_TINT_RED;
+
       const outerLayout = resolveMarqueeGridRectLayout({
         gridRect: outerGridRect,
         viewportBounds: ctx.viewportBounds,
@@ -146,11 +152,13 @@ export function createGrassBackgroundDecoration(
         .rect(outerLayout.x, outerLayout.y, outerLayout.width, outerLayout.height)
         .fill({ color: 0xffffff });
 
+      warningScanlineSprite.tint = warningScanlineTint;
+
       warningFill
         .clear()
         .rect(warningLayout.x, warningLayout.y, warningLayout.width, warningLayout.height)
         .fill({
-          color: WARNING_FILL_COLOR,
+          color: warningFillColor,
           alpha: WARNING_FILL_ALPHA,
         })
         .rect(outerLayout.x, outerLayout.y, outerLayout.width, outerLayout.height)

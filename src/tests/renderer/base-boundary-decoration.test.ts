@@ -121,10 +121,10 @@ describe("BaseBoundaryDecoration", () => {
     }
 
     expect(resolveBaseOuterGridRect(wuling)).toEqual({
-      x: -5,
-      y: -5,
-      width: 90,
-      height: 90,
+      x: -10,
+      y: -10,
+      width: 100,
+      height: 100,
     })
     expect(resolveBaseOuterGridRect(valleyShelter)).toEqual({
       x: -5,
