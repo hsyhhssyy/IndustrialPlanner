@@ -186,8 +186,8 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     const shouldResetDialogShellState =
       (dialogState.width !== null && dialogState.width > window.innerWidth)
       || (dialogState.height !== null && dialogState.height > window.innerHeight)
-      || dialogState.offsetX < 0
-      || dialogState.offsetY < 0;
+      || dialogState.offsetX < -400
+      || dialogState.offsetY < -200;
 
     if (shouldResetDialogShellState) {
       console.debug(
