@@ -64,8 +64,16 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
         ),
       );
 
+      const previewCollection = editor.state.collections[EntityCollectionType.preview];
+
       measureDecorationStep(ctx, "invalidPlacement.syncEntities", () => {
         for (const entityId of invalidEntityIds) {
+          // 预览阶段（拿起/拖拽放置中）不显示红色 invalid 边框和 toast，
+          // 此时精灵层的白色扫描线 preview 特效已足够了。
+          if (previewCollection?.contains(entityId)) {
+            continue;
+          }
+
           const entity = editor.queries.getEntityById(entityId);
           if (entity === null) {
             continue;
@@ -95,9 +103,10 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
             continue;
           }
 
-          // AI-RESTORED 2026-05-24:
-          // Reason: 用户要求已提交实体的 invalid placement 也显示红色边框，
-          // sprite preview overlay 仅覆盖拿起阶段，放下后由 Decoration 补充。
+          // AI-CORRECTION 2026-06-09:
+          // Reason: 预览阶段（preview collection）的实体已由上述 continue 跳过，
+          // 此处仅绘制已放下/已提交实体的 invalid 红色边框。
+          // 原始注释（2026-05-24）未区分 preview 阶段，现已精简。
           drawInvalidPlacementStroke({
             graphics,
             layout,

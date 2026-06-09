@@ -41,6 +41,46 @@ import {
 
 const DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT = 44;
 
+// DialogShell 默认最大尺寸（对应 dialog-shell.module.scss 中 .dialog-shell 的 width/height）
+const DIALOG_DEFAULT_MAX_WIDTH = 980;
+const DIALOG_DEFAULT_MAX_HEIGHT = 620;
+// dialog-shell-header padding: 12px top + ~20px content + 12px bottom + 1px border ≈ 44px
+const DIALOG_HEADER_HEIGHT = 44;
+// 标题栏水平至少露出 1/3
+const DIALOG_TITLE_BAR_MIN_VISIBLE_RATIO = 1 / 3;
+
+/**
+ * 根据对话框在视口中的实际屏幕坐标 clamp offset。
+ * backdrop 使用 flex 居中，dialog 在此基础上叠加 transform: translate(offsetX, offsetY)。
+ * 限制：
+ * 1. 标题栏上下始终在屏幕内
+ * 2. 标题栏宽度至少 1/3 可见
+ */
+function clampDialogOffset(
+  offsetX: number,
+  offsetY: number,
+  effectiveWidth: number,
+  effectiveHeight: number,
+  viewportWidth: number,
+  viewportHeight: number,
+): { x: number; y: number } {
+  const centerLeft = (viewportWidth - effectiveWidth) / 2;
+  const centerTop = (viewportHeight - effectiveHeight) / 2;
+
+  let actualLeft = centerLeft + offsetX;
+  let actualTop = centerTop + offsetY;
+
+  // 约束 1：标题栏高度始终在屏幕内
+  actualTop = Math.max(0, Math.min(actualTop, viewportHeight - DIALOG_HEADER_HEIGHT));
+
+  // 约束 2：标题栏至少 1/3 宽度可见
+  const minLeft = (-1 + DIALOG_TITLE_BAR_MIN_VISIBLE_RATIO) * effectiveWidth;
+  const maxLeft = viewportWidth - DIALOG_TITLE_BAR_MIN_VISIBLE_RATIO * effectiveWidth;
+  actualLeft = Math.max(minLeft, Math.min(actualLeft, maxLeft));
+
+  return { x: Math.round(actualLeft - centerLeft), y: Math.round(actualTop - centerTop) };
+}
+
 export interface AppInternalAction {
   toggleLeftDock: () => void;
   toggleRightDock: () => void;
@@ -180,20 +220,32 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     }
 
     const dialogState = this.ensureDialogState(target.dialogKey);
-    console.debug(
-      `[DialogOffset] open ${target.dialogKey}: offset=(${dialogState.offsetX}, ${dialogState.offsetY}) size=(${dialogState.width}, ${dialogState.height}) maximized=${dialogState.maximized}`,
-    );
-    const shouldResetDialogShellState =
-      (dialogState.width !== null && dialogState.width > window.innerWidth)
-      || (dialogState.height !== null && dialogState.height > window.innerHeight)
-      || dialogState.offsetX < -400
-      || dialogState.offsetY < -200;
 
-    if (shouldResetDialogShellState) {
-      console.debug(
-        `[DialogOffset] reset ${target.dialogKey}: window=(${window.innerWidth}, ${window.innerHeight})`,
+    // 兜底：窗口尺寸变化后 clamp
+    if (!dialogState.maximized) {
+      const effectiveWidth = Math.min(
+        dialogState.width ?? Math.min(DIALOG_DEFAULT_MAX_WIDTH, window.innerWidth),
+        window.innerWidth,
       );
-      Object.assign(dialogState, createDefaultDialogStateForKey(target.dialogKey));
+      const effectiveHeight = Math.min(
+        dialogState.height ?? Math.min(DIALOG_DEFAULT_MAX_HEIGHT, window.innerHeight),
+        window.innerHeight,
+      );
+      const clamped = clampDialogOffset(
+        dialogState.offsetX,
+        dialogState.offsetY,
+        effectiveWidth,
+        effectiveHeight,
+        window.innerWidth,
+        window.innerHeight,
+      );
+      if (clamped.x !== dialogState.offsetX || clamped.y !== dialogState.offsetY) {
+        console.debug(
+          `[DialogOffset] open clamp ${target.dialogKey}: (${dialogState.offsetX}, ${dialogState.offsetY}) → (${clamped.x}, ${clamped.y})`,
+        );
+        dialogState.offsetX = clamped.x;
+        dialogState.offsetY = clamped.y;
+      }
     }
 
     dialogState.visible = true;
@@ -273,13 +325,32 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     }
 
     const dialogState = this.ensureDialogState(normalizedDialogKey);
+
+    const effectiveWidth = Math.min(
+      dialogState.width ?? Math.min(DIALOG_DEFAULT_MAX_WIDTH, window.innerWidth),
+      window.innerWidth,
+    );
+    const effectiveHeight = Math.min(
+      dialogState.height ?? Math.min(DIALOG_DEFAULT_MAX_HEIGHT, window.innerHeight),
+      window.innerHeight,
+    );
+    const clamped = clampDialogOffset(
+      Math.round(offsetX),
+      Math.round(offsetY),
+      effectiveWidth,
+      effectiveHeight,
+      window.innerWidth,
+      window.innerHeight,
+    );
     const prevOffsetX = dialogState.offsetX;
     const prevOffsetY = dialogState.offsetY;
-    dialogState.offsetX = Math.round(offsetX);
-    dialogState.offsetY = Math.round(offsetY);
-    console.debug(
-      `[DialogOffset] set ${normalizedDialogKey} offset: (${prevOffsetX}, ${prevOffsetY}) → (${dialogState.offsetX}, ${dialogState.offsetY})`,
-    );
+    dialogState.offsetX = clamped.x;
+    dialogState.offsetY = clamped.y;
+    if (prevOffsetX !== clamped.x || prevOffsetY !== clamped.y) {
+      console.debug(
+        `[DialogOffset] set ${normalizedDialogKey} offset: (${prevOffsetX}, ${prevOffsetY}) → (${clamped.x}, ${clamped.y})`,
+      );
+    }
   });
 
   public readonly setDialogSize: AppInternalAction["setDialogSize"] = action((dialogKey, width, height) => {

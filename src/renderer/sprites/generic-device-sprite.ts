@@ -379,12 +379,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     this.loadScanlineTexture();
 
-    // 2026-05-24: 根据 invalidPlacement 状态切换颜色。
-    // 白线逻辑 → 红线逻辑，仅颜色不同，代码路径完全一致。
-    const invalidCollection = context.workspace.editor?.state.collections[EntityCollectionType.invalidPlacement];
-    const isInvalid = invalidCollection?.contains(this.entityId) ?? false;
-    const borderColor = isInvalid ? 0xff3b30 : 0xffffff;
-    const scanlineTint = isInvalid ? 0xff0000 : 0xffffff;
+    // AI-CORRECTION 2026-06-09:
+    // Reason: invalid 红色边框已统一迁移至 InvalidPlacementDecoration（基于 footprint 布局），
+    // 精灵层 scanline overlay 不再根据 invalidPlacement 切换颜色，始终为白色预览特效。
+    // 原始逻辑（2026-05-24 版）根据 invalidPlacement 切换白/红色，已被当前装饰层替代。
+    const borderColor = 0xffffff;
+    const scanlineTint = 0xffffff;
 
     // 以纹理原始像素尺寸平铺，不做 zoom 缩放
     const tilePixelSize = this.scanlineTexture?.width ?? 64;
@@ -426,7 +426,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.scanlineTiling.mask = this.previewMask;
     }
 
-    // 固定宽度边框线，50% 不透明度。正常 = 白色，禁止 = 红色。
+    // 固定宽度边框线，50% 不透明度。始终为白色预览边框，红色 invalid 边框由 InvalidPlacementDecoration 统一绘制。
     this.previewBorderGraphics.visible = true;
     this.previewBorderGraphics
       .rect(layout.x, layout.y, layout.width, layout.height)

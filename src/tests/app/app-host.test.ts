@@ -488,7 +488,7 @@ describe("createAppHost", () => {
         height: 520,
       }),
     ],
-  ])("resets invalid settings dialog shell state to defaults when reopening (%s)", (_, settingsDialog) => {
+  ])("preserves settings dialog shell state when reopening via openDialog (%s)", (_, settingsDialog) => {
     Object.defineProperty(window, "innerWidth", {
       configurable: true,
       writable: true,
@@ -514,17 +514,14 @@ describe("createAppHost", () => {
 
     appHost.internalActions.openDialog("settings");
 
-    expect(appHost.internalState.workbench.dialogState.settings).toEqual(
-      createDialogStateSnapshot({
-        visible: true,
-      }),
-    );
+    // 新行为：maximized 状态下跳过 clamp，保留持久化值
+    const expectedDialogState = { ...settingsDialog, visible: true };
+
+    expect(appHost.internalState.workbench.dialogState.settings).toEqual(expectedDialogState);
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify(
         createWorkbenchStorageSnapshot({
-          settingsDialog: createDialogStateSnapshot({
-            visible: true,
-          }),
+          settingsDialog: expectedDialogState,
         }),
       ),
     );
