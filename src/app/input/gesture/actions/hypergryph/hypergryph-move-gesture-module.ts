@@ -30,10 +30,20 @@ const MOVE_ENTRY_BUTTON_IDS = {
 const PLACEMENT_MARQUEE_TOOL_BUTTON_ID = "placement-tool-marquee";
 
 export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHost> {
+  let lastMousePosition: GesturePosition | null = null;
+
   return {
     id: "hypergryph-move-gesture",
     when: isHypergryphGestureEnabled,
     handle(event, context) {
+      if (
+        event.type === "mouse move"
+        || event.type === "mouse dragstart"
+        || event.type === "mouse dragmove"
+      ) {
+        lastMousePosition = event.position;
+      }
+
       if (event.type === "on-exit-active-tool") {
         if (event.from !== "move" || event.to === "move") {
           return { status: "ignored" };
@@ -70,7 +80,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
               key: event.key,
               modifiers: event.modifiers,
             })) {
-              return switchMovePreviewVariant(context.appHost, editor);
+              return switchMovePreviewVariant(context.appHost, editor, lastMousePosition);
             }
 
             if (isDeleteDeviceShortcut({
@@ -92,7 +102,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
               return { status: "ignored" };
             }
 
-            rotateMovePreview(context.appHost, editor);
+            rotateMovePreview(context.appHost, editor, lastMousePosition);
             return { status: "handled" };
 
           case "mouse dragstart":
@@ -168,7 +178,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
 
           case "ui-button-touch-tap":
             if (event.uiButtonId === SWITCH_DEVICE_MODE_BUTTON_ID) {
-              return switchMovePreviewVariant(context.appHost, editor);
+              return switchMovePreviewVariant(context.appHost, editor, null);
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
@@ -177,7 +187,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
-              rotateMovePreview(context.appHost, editor);
+              rotateMovePreview(context.appHost, editor, null);
               return { status: "handled" };
             }
 
@@ -194,7 +204,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             }
 
             if (event.uiButtonId === SWITCH_DEVICE_MODE_BUTTON_ID) {
-              return switchMovePreviewVariant(context.appHost, editor);
+              return switchMovePreviewVariant(context.appHost, editor, lastMousePosition);
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
@@ -203,7 +213,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
-              rotateMovePreview(context.appHost, editor);
+              rotateMovePreview(context.appHost, editor, lastMousePosition);
               return { status: "handled" };
             }
 
@@ -226,6 +236,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             editor,
             uiButtonId: event.uiButtonId,
             source: "touch",
+            initialMousePosition: null,
           });
 
         case "ui-button-mouse-tap":
@@ -238,6 +249,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             editor,
             uiButtonId: event.uiButtonId,
             source: "mouse",
+            initialMousePosition: lastMousePosition,
           });
 
         case "mouse dragstart":
@@ -254,6 +266,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             pointerEntity: event.pointerEntity,
             position: event.position,
             source: "mouse",
+            initialMousePosition: event.position,
           });
 
         case "mouse-long-press-ready":
@@ -267,6 +280,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             pointerEntity: event.pointerEntity,
             position: event.position,
             source: "mouse",
+            initialMousePosition: event.position,
           });
 
         case "tap-long-press-ready":
@@ -276,6 +290,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             pointerEntity: event.pointerEntity,
             position: event.position,
             source: "touch",
+            initialMousePosition: null,
           });
 
         case "key down":
@@ -288,7 +303,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             return { status: "ignored" };
           }
 
-          return tryEnterMoveModeFromKeyboard(context.appHost, editor);
+          return tryEnterMoveModeFromKeyboard(context.appHost, editor, lastMousePosition);
 
         default:
           return { status: "ignored" };
@@ -302,6 +317,7 @@ function handleMoveEntryButtonTap(options: {
   editor: EditorContract;
   uiButtonId: string;
   source: "mouse" | "touch";
+  initialMousePosition: GesturePosition | null;
 }): GestureHandleResult {
   return tryEnterMoveModeFromSelection(options);
 }
@@ -312,6 +328,7 @@ function tryEnterMoveMode(options: {
   pointerEntity: WorldEntity | null;
   position: GesturePosition;
   source: "mouse" | "touch";
+  initialMousePosition: GesturePosition | null;
 }): GestureHandleResult {
   const previousTool = options.appHost.internalState.activeTool;
 
@@ -324,7 +341,7 @@ function tryEnterMoveMode(options: {
 
   const selection = options.editor.state.collections[EntityCollectionType.selection];
   const selectedEntityIds = [...selection];
-  const anchor = options.editor.queries.findGridCellForClientPixlePoint(
+  const anchor = options.editor.queries.findGridCellForClientPixelPoint(
     options.position,
   );
 
@@ -360,6 +377,7 @@ function tryEnterMoveMode(options: {
       source: options.source,
       anchor,
       requireAnchor: true,
+      initialMousePosition: options.initialMousePosition,
     });
   } catch {
     restoreFailedEnterMove({
@@ -377,6 +395,7 @@ function tryEnterMoveModeFromSelection(options: {
   editor: EditorContract;
   uiButtonId: string;
   source: "mouse" | "touch";
+  initialMousePosition: GesturePosition | null;
 }): GestureHandleResult {
   const previousTool = options.appHost.internalState.activeTool;
   const entryButtonId = resolveMoveEntryButtonId(previousTool);
@@ -397,12 +416,14 @@ function tryEnterMoveModeFromSelection(options: {
     source: options.source,
     anchor: null,
     requireAnchor: false,
+    initialMousePosition: options.initialMousePosition,
   });
 }
 
 function tryEnterMoveModeFromKeyboard(
   appHost: AppHost,
   editor: EditorContract,
+  initialMousePosition: GesturePosition | null,
 ): GestureHandleResult {
   const previousTool = appHost.internalState.activeTool;
 
@@ -423,6 +444,7 @@ function tryEnterMoveModeFromKeyboard(
     source: "mouse",
     anchor: null,
     requireAnchor: false,
+    initialMousePosition,
   });
 }
 
@@ -448,6 +470,7 @@ function finalizeMoveEnter(options: {
   source: "mouse" | "touch";
   anchor: GridPoint | null;
   requireAnchor: boolean;
+  initialMousePosition: GesturePosition | null;
 }): GestureHandleResult {
   try {
     options.editor.actions.createMoveOperationDraft();
@@ -467,8 +490,22 @@ function finalizeMoveEnter(options: {
     }
 
     options.appHost.internalState.runtime.movePointerMode = options.source;
-    options.appHost.internalState.runtime.moveAnchor = options.anchor;
+    options.appHost.internalState.runtime.moveAnchor = options.source === "touch"
+      ? options.anchor
+      : null;
     options.appHost.internalState.runtime.moveEnterFrom = options.previousTool;
+
+    if (
+      options.source === "mouse"
+      && options.initialMousePosition !== null
+      && isClientPointInsideViewport(options.editor, options.initialMousePosition)
+    ) {
+      options.editor.actions.moveCollectionCenterPointTo(
+        EntityCollectionType.preview,
+        options.initialMousePosition,
+      );
+    }
+
     options.appHost.internalActions.setActiveTool("move");
     return { status: "handled" };
   } catch {
@@ -572,6 +609,14 @@ function handleMoveMouseDragStart(options: {
     return { status: "ignored" };
   }
 
+  if (options.appHost.internalState.runtime.movePointerMode === "mouse") {
+    options.editor.actions.moveCollectionCenterPointTo(
+      EntityCollectionType.preview,
+      options.position,
+    );
+    return { status: "handled" };
+  }
+
   if (options.appHost.internalState.runtime.moveAnchor !== null) {
     return { status: "handled" };
   }
@@ -600,7 +645,7 @@ function primeMoveAnchorFromPreview(options: {
       return { status: "ignored" };
     }
 
-    const anchor = options.editor.queries.findGridCellForClientPixlePoint(
+    const anchor = options.editor.queries.findGridCellForClientPixelPoint(
       options.position,
     );
 
@@ -624,6 +669,10 @@ function driveMovePreview(options: {
   allowMouseEntryAnchorInit: boolean;
 }): GestureHandleResult {
   try {
+    if (options.appHost.internalState.runtime.movePointerMode === "mouse") {
+      return driveMouseMovePreview(options);
+    }
+
     const beforeRect = options.editor.queries.findEntityCollectionGridRect(
       EntityCollectionType.preview,
     );
@@ -690,6 +739,34 @@ function driveMovePreview(options: {
   }
 }
 
+function driveMouseMovePreview(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+  position: GesturePosition;
+}): GestureHandleResult {
+  const beforeRect = options.editor.queries.findEntityCollectionGridRect(
+    EntityCollectionType.preview,
+  );
+
+  if (beforeRect === null) {
+    return { status: "ignored" };
+  }
+
+  options.editor.actions.moveCollectionCenterPointTo(
+    EntityCollectionType.preview,
+    options.position,
+  );
+  const afterRect = options.editor.queries.findEntityCollectionGridRect(
+    EntityCollectionType.preview,
+  );
+
+  if (afterRect !== null && !areGridRectsEqual(beforeRect, afterRect)) {
+    options.appHost.internalActions.alignCanvasFloatingToolbar();
+  }
+
+  return { status: "handled" };
+}
+
 function resolveMovePreviewAnchor(options: {
   appHost: AppHost;
   beforeRect: GridRect;
@@ -716,7 +793,7 @@ function resolveMovePreviewTargetGridPoint(options: {
   position: GesturePosition;
   moveAnchor: GridPoint;
 }): GridPoint | null {
-  const gridCell = options.editor.queries.findGridCellForClientPixlePoint(
+  const gridCell = options.editor.queries.findGridCellForClientPixelPoint(
     options.position,
   );
 
@@ -747,14 +824,34 @@ function usesGridCellCenterTracking(gridPoint: GridPoint): boolean {
   return !Number.isInteger(gridPoint.x) || !Number.isInteger(gridPoint.y);
 }
 
-function rotateMovePreview(appHost: AppHost, editor: EditorContract): void {
-  editor.actions.rotateCollection(EntityCollectionType.preview);
+function rotateMovePreview(
+  appHost: AppHost,
+  editor: EditorContract,
+  currentMousePosition: GesturePosition | null,
+): void {
+  if (appHost.internalState.runtime.movePointerMode === "mouse") {
+    editor.actions.rotateCollectionAroundCenterPoint(EntityCollectionType.preview, 90);
+    if (
+      currentMousePosition !== null
+      && isClientPointInsideViewport(editor, currentMousePosition)
+    ) {
+      editor.actions.moveCollectionCenterPointTo(
+        EntityCollectionType.preview,
+        currentMousePosition,
+      );
+    }
+    appHost.internalActions.alignCanvasFloatingToolbar();
+    return;
+  }
+
+  editor.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
   appHost.internalActions.alignCanvasFloatingToolbar();
 }
 
 function switchMovePreviewVariant(
   appHost: AppHost,
   editor: EditorContract,
+  currentMousePosition: GesturePosition | null,
 ): GestureHandleResult {
   const previewEntity = resolveSinglePreviewEntity(editor);
   if (previewEntity === null) {
@@ -781,7 +878,17 @@ function switchMovePreviewVariant(
     return { status: "ignored" };
   }
 
-  if (moveAnchor !== null) {
+  if (appHost.internalState.runtime.movePointerMode === "mouse") {
+    if (
+      currentMousePosition !== null
+      && isClientPointInsideViewport(editor, currentMousePosition)
+    ) {
+      editor.actions.moveCollectionCenterPointTo(
+        EntityCollectionType.preview,
+        currentMousePosition,
+      );
+    }
+  } else if (moveAnchor !== null) {
     preserveMoveAnchorAfterVariantSwitch({
       editor,
       moveAnchor,
@@ -1111,12 +1218,31 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+function isClientPointInsideViewport(
+  editor: EditorContract,
+  position: GesturePosition,
+): boolean {
+  const clientRect = editor.state.viewport.clientRect;
+
+  return position.x >= clientRect.left
+    && position.x <= clientRect.left + clientRect.width
+    && position.y >= clientRect.top
+    && position.y <= clientRect.top + clientRect.height;
+}
+
+function areGridRectsEqual(left: GridRect, right: GridRect): boolean {
+  return left.x === right.x
+    && left.y === right.y
+    && left.width === right.width
+    && left.height === right.height;
+}
+
 function isPreviewEntityAtClientPoint(options: {
   editor: EditorContract;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   position: GesturePosition;
 }): boolean {
-  const gridCell = options.editor.queries.findGridCellForClientPixlePoint(
+  const gridCell = options.editor.queries.findGridCellForClientPixelPoint(
     options.position,
   );
 

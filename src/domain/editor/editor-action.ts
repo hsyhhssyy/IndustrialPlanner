@@ -58,6 +58,18 @@ export interface EditorAction {
 	
 	moveCollectionTo(options: MoveCollectionToOptions): void;
 	rotateCollection(collectionType: EntityCollectionType): void;
+	moveCollectionCenterPointTo(
+		collectionType: EntityCollectionType,
+		clientPixelPoint: ClientPixelPoint,
+	): void;
+	rotateCollectionAroundCenterPoint(
+		collectionType: EntityCollectionType,
+		angle: number,
+	): void;
+	rotateCollectionAroundPivotCell(
+		collectionType: EntityCollectionType,
+		angle: number,
+	): void;
 
 	createMoveOperationDraft(): void;
 	applyMoveOerationDraft(): boolean;

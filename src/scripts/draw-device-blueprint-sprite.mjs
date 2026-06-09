@@ -31,7 +31,7 @@ const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, '..', '..');
 const defaultOutputDirectory = path.resolve(projectRoot, '.temp', 'device-blueprint-sprites');
 const defaultBatchOutputDirectory = path.resolve(projectRoot, 'public', 'blueprint-view', 'sprites');
-const blueprintAssetDirectory = path.resolve(projectRoot, '.temp', '解包素材库', '设备蓝图资源');
+const blueprintAssetDirectory = path.resolve(projectRoot, '.temp', '素材库', '解包素材库', '设备蓝图资源');
 const blueprintAssetExistenceCache = new Map();
 
 void main();

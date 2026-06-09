@@ -10,7 +10,7 @@ import {
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, '..', '..');
-const blueprintAssetDirectory = path.resolve(projectRoot, '.temp', '解包素材库', '设备蓝图资源');
+const blueprintAssetDirectory = path.resolve(projectRoot, '.temp', '素材库', '解包素材库', '设备蓝图资源');
 const defaultOutputDirectory = path.resolve(projectRoot, 'public', 'blueprint-view', 'sprites');
 
 void main();

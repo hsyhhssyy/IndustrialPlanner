@@ -354,7 +354,7 @@ function createContext(options: {
       clearHoverPoint: vi.fn(),
     },
     queries: {
-      findGridCellForClientPixlePoint: vi.fn((point) => ({
+      findGridCellForClientPixelPoint: vi.fn((point) => ({
         x: Math.floor(point.x),
         y: Math.floor(point.y),
       })),
@@ -455,7 +455,7 @@ type MockEditor = {
   >;
   queries: Pick<
     EditorContract["queries"],
-    "findGridCellForClientPixlePoint"
+    "findGridCellForClientPixelPoint"
   >;
 };
 

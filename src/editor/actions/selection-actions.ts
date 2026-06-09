@@ -2,16 +2,20 @@ import type { EditorAction } from "@/domain/editor/editor-action";
 import { action } from "mobx";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import type { GridPoint, GridRect, GridRectSize } from "@/domain/shared/grid";
+import type { GridPoint, GridRect, GridRotation } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import {
-  getGridBoundingBox,
   getRotatedGridFootprint,
-  rotateGridRotationClockwise,
+  rotateGridRotation,
 } from "@/shared/geometry/grid";
+import { resolveWorldPointFromViewportPoint } from "@/shared/geometry/viewport-transform";
 
 import { type DraftEntity, isDraftEntity } from "../draft-entity";
 import { resolveEntityById, resolveListedEntities } from "../entity-resolvers";
+import {
+  type EntityCollectionGeometryEntry,
+  resolveEntityCollectionGeometry,
+} from "../entity-collection-geometry";
 import {
   hasOutsideBasePlacementReason,
   syncPlacementValidationState,
@@ -26,9 +30,12 @@ type EditorCollectionActions = Pick<
   | "cancelMarquee"
   | "clearCollection"
   | "deleteCollection"
+  | "moveCollectionCenterPointTo"
   | "moveCollectionTo"
   | "removeFromCollection"
   | "rotateCollection"
+  | "rotateCollectionAroundCenterPoint"
+  | "rotateCollectionAroundPivotCell"
   | "setMarqueeRange"
 >;
 
@@ -85,6 +92,354 @@ export function createEditorSelectionActions({
       definition,
     ]),
   );
+
+  const moveCollectionByGridVector = (
+    collectionType: EntityCollectionType,
+    gridVector: GridPoint,
+  ): void => {
+    const collection = resolveCollection(collectionType);
+
+    if (collection.length === 0) {
+      return;
+    }
+
+    const currentDocument = document.getSnapshot();
+    const targetEntityIds = new Set(collection);
+    const nextEntities = { ...currentDocument.entities };
+    let didUpdateDocument = false;
+
+    for (const entityId of collection) {
+      const entity = currentDocument.entities[entityId];
+
+      if (entity === undefined) {
+        continue;
+      }
+
+      nextEntities[entityId] = moveEntityByGridVector(entity, gridVector);
+      didUpdateDocument = true;
+    }
+
+    if (didUpdateDocument) {
+      const movedEntities = collection
+        .map((entityId) => currentDocument.entities[entityId])
+        .filter((entity): entity is WorldEntity => entity !== undefined);
+
+      const nextDocumentSnapshot = {
+        ...currentDocument,
+        entities: nextEntities,
+      };
+
+      if (hasOutsideBasePlacementReason({
+        document: nextDocumentSnapshot,
+        entityIds: movedEntities.map((entity) => entity.id),
+        state,
+        workspace,
+      })) {
+        syncPlacementValidationState({
+          document: currentDocument,
+          state,
+          workspace,
+        });
+        return;
+      }
+
+      const committedDocument = documentWriter.commit({
+        action: {
+          type: "entity.move",
+          label: "移动设备",
+          entityIds: movedEntities.map((entity) => entity.id),
+          definitionIds: resolveUniqueStrings(
+            movedEntities.map((entity) => entity.definitionId),
+          ),
+          count: movedEntities.length,
+        },
+        update: (documentSnapshot) => ({
+          ...documentSnapshot,
+          entities: nextEntities,
+        }),
+      });
+
+      if (committedDocument !== null) {
+        syncPoweredEntityCollection({
+          document: committedDocument,
+          state,
+          workspace,
+        });
+      }
+    }
+
+    let didUpdateDrafts = false;
+    const nextDrafts = state.drafts.map((entity) => {
+      if (!targetEntityIds.has(entity.id) || currentDocument.entities[entity.id] !== undefined) {
+        return entity;
+      }
+
+      didUpdateDrafts = true;
+      return moveEntityByGridVector(entity, gridVector);
+    });
+
+    if (didUpdateDrafts) {
+      state.drafts = nextDrafts;
+    }
+
+    syncPlacementValidationState({
+      document: document.getSnapshot(),
+      state,
+      workspace,
+    });
+  };
+
+  const moveCollectionTo: EditorCollectionActions["moveCollectionTo"] = action(({
+    collectionType,
+    startGridPoint,
+    endGridPoint,
+  }) => {
+    const gridVector = resolveGridVector({
+      startGridPoint,
+      endGridPoint,
+    });
+
+    if (gridVector === null) {
+      return;
+    }
+
+    moveCollectionByGridVector(collectionType, gridVector);
+  });
+
+  const moveCollectionCenterPointTo: EditorCollectionActions["moveCollectionCenterPointTo"] = action((
+    collectionType,
+    clientPixelPoint,
+  ) => {
+    const collection = resolveCollection(collectionType);
+
+    if (collection.length === 0) {
+      return;
+    }
+
+    const currentDocument = document.getSnapshot();
+    const geometry = resolveEntityCollectionGeometry({
+      collection,
+      document: currentDocument,
+      drafts: state.drafts,
+      entityDefinitionMap,
+    });
+
+    if (geometry === null) {
+      return;
+    }
+
+    const worldPoint = resolveWorldPointFromViewportPoint({
+      viewportPoint: clientPixelPoint,
+      viewportBounds: state.viewport.clientRect,
+      viewportCenter: state.viewport.center,
+      gridCellPixelSize: state.viewport.gridCellPixelSize,
+      displayRotation: state.viewport.displayRotation,
+    });
+
+    if (worldPoint === null) {
+      return;
+    }
+
+    const nextTopLeft = {
+      x: snapTopLeftToNearestInteger(
+        worldPoint.x - geometry.boundingBox.width / 2,
+      ),
+      y: snapTopLeftToNearestInteger(
+        worldPoint.y - geometry.boundingBox.height / 2,
+      ),
+    };
+    const gridVector = resolveGridVector({
+      startGridPoint: {
+        x: geometry.boundingBox.x,
+        y: geometry.boundingBox.y,
+      },
+      endGridPoint: nextTopLeft,
+    });
+
+    if (gridVector === null) {
+      return;
+    }
+
+    moveCollectionByGridVector(collectionType, gridVector);
+  });
+
+  const applyRotatedEntityMap = (options: {
+    collectionType: EntityCollectionType;
+    currentDocument: ReturnType<EditorActionsContext["document"]["getSnapshot"]>;
+    rotatedEntityMap: ReadonlyMap<string, WorldEntity>;
+  }): void => {
+    const collection = resolveCollection(options.collectionType);
+    const nextEntities = { ...options.currentDocument.entities };
+    let didUpdateDocument = false;
+
+    for (const entityId of collection) {
+      const rotatedEntity = options.rotatedEntityMap.get(entityId);
+
+      if (
+        rotatedEntity === undefined
+        || options.currentDocument.entities[entityId] === undefined
+      ) {
+        continue;
+      }
+
+      nextEntities[entityId] = rotatedEntity;
+      didUpdateDocument = true;
+    }
+
+    if (didUpdateDocument) {
+      const rotatedEntities = collection
+        .map((entityId) => options.currentDocument.entities[entityId])
+        .filter((entity): entity is WorldEntity => entity !== undefined);
+
+      const nextDocumentSnapshot = {
+        ...options.currentDocument,
+        entities: nextEntities,
+      };
+
+      if (hasOutsideBasePlacementReason({
+        document: nextDocumentSnapshot,
+        entityIds: rotatedEntities.map((entity) => entity.id),
+        state,
+        workspace,
+      })) {
+        syncPlacementValidationState({
+          document: options.currentDocument,
+          state,
+          workspace,
+        });
+        return;
+      }
+
+      const committedDocument = documentWriter.commit({
+        action: {
+          type: "entity.rotate",
+          label: "旋转设备",
+          entityIds: rotatedEntities.map((entity) => entity.id),
+          definitionIds: resolveUniqueStrings(
+            rotatedEntities.map((entity) => entity.definitionId),
+          ),
+          count: rotatedEntities.length,
+        },
+        update: (documentSnapshot) => ({
+          ...documentSnapshot,
+          entities: nextEntities,
+        }),
+      });
+
+      if (committedDocument !== null) {
+        syncPoweredEntityCollection({
+          document: committedDocument,
+          state,
+          workspace,
+        });
+      }
+    }
+
+    let didUpdateDrafts = false;
+    const nextDrafts: DraftEntity[] = state.drafts.map((entity) => {
+      const rotatedEntity = options.rotatedEntityMap.get(entity.id);
+
+      if (
+        rotatedEntity === undefined
+        || options.currentDocument.entities[entity.id] !== undefined
+      ) {
+        return entity;
+      }
+
+      didUpdateDrafts = true;
+      return {
+        ...rotatedEntity,
+        originalEntityId: entity.originalEntityId,
+      };
+    });
+
+    if (didUpdateDrafts) {
+      state.drafts = nextDrafts;
+    }
+
+    syncPlacementValidationState({
+      document: document.getSnapshot(),
+      state,
+      workspace,
+    });
+  };
+
+  const rotateCollectionByAngle = (
+    collectionType: EntityCollectionType,
+    angle: number,
+    pivotMode: "center" | "pivot-cell",
+  ): void => {
+    const rotationAngle = normalizeRotationAngle(angle);
+
+    if (rotationAngle === null || rotationAngle === 0) {
+      return;
+    }
+    const collection = resolveCollection(collectionType);
+
+    if (collection.length === 0) {
+      return;
+    }
+    const currentDocument = document.getSnapshot();
+    const geometry = resolveEntityCollectionGeometry({
+      collection,
+      document: currentDocument,
+      drafts: state.drafts,
+      entityDefinitionMap,
+    });
+
+    if (geometry === null) {
+      return;
+    }
+    const rotationCenter = pivotMode === "center"
+      ? geometry.centerPoint
+      : geometry.pivotCell;
+    const rotatedBoundingBox = pivotMode === "center"
+      ? alignRotatedBoundingBoxToGrid(
+        rotateGridRectAroundPoint({
+          gridRect: geometry.boundingBox,
+          point: rotationCenter,
+          angle: rotationAngle,
+        }),
+      )
+      : normalizeGridRect(
+        rotateGridRectAroundPoint({
+          gridRect: geometry.boundingBox,
+          point: rotationCenter,
+          angle: rotationAngle,
+        }),
+      );
+    const rotatedEntityMap = new Map(
+      geometry.entries.map((entry) => [
+        entry.entity.id,
+        rotateEntityAroundCollectionBoundingBox({
+          entry,
+          sourceBoundingBox: geometry.boundingBox,
+          targetBoundingBox: rotatedBoundingBox,
+          angle: rotationAngle,
+        }),
+      ]),
+    );
+
+    applyRotatedEntityMap({
+      collectionType,
+      currentDocument,
+      rotatedEntityMap,
+    });
+  };
+
+  const rotateCollectionAroundCenterPoint: EditorCollectionActions["rotateCollectionAroundCenterPoint"] = action((
+    collectionType,
+    angle,
+  ) => {
+    rotateCollectionByAngle(collectionType, angle, "center");
+  });
+
+  const rotateCollectionAroundPivotCell: EditorCollectionActions["rotateCollectionAroundPivotCell"] = action((
+    collectionType,
+    angle,
+  ) => {
+    rotateCollectionByAngle(collectionType, angle, "pivot-cell");
+  });
 
   return {
     clearCollection: action((collectionType) => {
@@ -283,234 +638,17 @@ export function createEditorSelectionActions({
       resolveCollection(EntityCollectionType.reverseMarquee).replace([]);
       state.marqueeGridRect = null;
     }),
-    moveCollectionTo: action(({ collectionType, startGridPoint, endGridPoint }) => {
-      const gridVector = resolveGridVector({
-        startGridPoint,
-        endGridPoint,
-      });
-
-      if (gridVector === null) {
-        return;
-      }
-
-      const collection = resolveCollection(collectionType);
-
-      if (collection.length === 0) {
-        return;
-      }
-
-      const currentDocument = document.getSnapshot();
-      const targetEntityIds = new Set(collection);
-      const nextEntities = { ...currentDocument.entities };
-      let didUpdateDocument = false;
-
-      for (const entityId of collection) {
-        const entity = currentDocument.entities[entityId];
-
-        if (entity === undefined) {
-          continue;
-        }
-
-        nextEntities[entityId] = moveEntityByGridVector(entity, gridVector);
-        didUpdateDocument = true;
-      }
-
-      if (didUpdateDocument) {
-        const movedEntities = collection
-          .map((entityId) => currentDocument.entities[entityId])
-          .filter((entity): entity is WorldEntity => entity !== undefined);
-
-        const nextDocumentSnapshot = {
-          ...currentDocument,
-          entities: nextEntities,
-        };
-
-        if (hasOutsideBasePlacementReason({
-          document: nextDocumentSnapshot,
-          entityIds: movedEntities.map((entity) => entity.id),
-          state,
-          workspace,
-        })) {
-          syncPlacementValidationState({
-            document: currentDocument,
-            state,
-            workspace,
-          });
-          return;
-        }
-
-        const committedDocument = documentWriter.commit({
-          action: {
-            type: "entity.move",
-            label: "移动设备",
-            entityIds: movedEntities.map((entity) => entity.id),
-            definitionIds: resolveUniqueStrings(
-              movedEntities.map((entity) => entity.definitionId),
-            ),
-            count: movedEntities.length,
-          },
-          update: (documentSnapshot) => ({
-            ...documentSnapshot,
-            entities: nextEntities,
-          }),
-        });
-
-        if (committedDocument !== null) {
-          syncPoweredEntityCollection({
-            document: committedDocument,
-            state,
-            workspace,
-          });
-        }
-      }
-
-      let didUpdateDrafts = false;
-      const nextDrafts = state.drafts.map((entity) => {
-        if (!targetEntityIds.has(entity.id) || currentDocument.entities[entity.id] !== undefined) {
-          return entity;
-        }
-
-        didUpdateDrafts = true;
-        return moveEntityByGridVector(entity, gridVector);
-      });
-
-      if (didUpdateDrafts) {
-        state.drafts = nextDrafts;
-      }
-
-      syncPlacementValidationState({
-        document: document.getSnapshot(),
-        state,
-        workspace,
-      });
-    }),
+    moveCollectionTo,
+    moveCollectionCenterPointTo,
     rotateCollection: (collectionType) => {
-      const collection = resolveCollection(collectionType);
-
-      if (collection.length === 0) {
-        return;
-      }
-
-      const currentDocument = document.getSnapshot();
-      const rotatableEntities = resolveRotatableCollectionEntities({
-        collection,
-        document: currentDocument,
-        drafts: state.drafts,
-        entityDefinitionMap,
-      });
-      const rotationAnchorCell = resolveCollectionRotationAnchorCell(
-        rotatableEntities,
-      );
-
-      if (rotationAnchorCell === null) {
-        return;
-      }
-
-      const rotatedEntityMap = new Map(
-        rotatableEntities.map(({ definition, entity }) => [
-          entity.id,
-          rotateEntityClockwise({
-            entity,
-            footprint: definition.footprint,
-            rotationAnchorCell,
-          }),
-        ]),
-      );
-      const nextEntities = { ...currentDocument.entities };
-      let didUpdateDocument = false;
-
-      for (const entityId of collection) {
-        const rotatedEntity = rotatedEntityMap.get(entityId);
-
-        if (rotatedEntity === undefined || currentDocument.entities[entityId] === undefined) {
-          continue;
-        }
-
-        nextEntities[entityId] = rotatedEntity;
-        didUpdateDocument = true;
-      }
-
-      if (didUpdateDocument) {
-        const rotatedEntities = collection
-          .map((entityId) => currentDocument.entities[entityId])
-          .filter((entity): entity is WorldEntity => entity !== undefined);
-
-        const nextDocumentSnapshot = {
-          ...currentDocument,
-          entities: nextEntities,
-        };
-
-        if (hasOutsideBasePlacementReason({
-          document: nextDocumentSnapshot,
-          entityIds: rotatedEntities.map((entity) => entity.id),
-          state,
-          workspace,
-        })) {
-          syncPlacementValidationState({
-            document: currentDocument,
-            state,
-            workspace,
-          });
-          return;
-        }
-
-        const committedDocument = documentWriter.commit({
-          action: {
-            type: "entity.rotate",
-            label: "旋转设备",
-            entityIds: rotatedEntities.map((entity) => entity.id),
-            definitionIds: resolveUniqueStrings(
-              rotatedEntities.map((entity) => entity.definitionId),
-            ),
-            count: rotatedEntities.length,
-          },
-          update: (documentSnapshot) => ({
-            ...documentSnapshot,
-            entities: nextEntities,
-          }),
-        });
-
-        if (committedDocument !== null) {
-          syncPoweredEntityCollection({
-            document: committedDocument,
-            state,
-            workspace,
-          });
-        }
-      }
-
-      let didUpdateDrafts = false;
-      const nextDrafts: DraftEntity[] = state.drafts.map((entity) => {
-        const rotatedEntity = rotatedEntityMap.get(entity.id);
-
-        if (rotatedEntity === undefined || currentDocument.entities[entity.id] !== undefined) {
-          return entity;
-        }
-
-        didUpdateDrafts = true;
-        return {
-          ...rotatedEntity,
-          originalEntityId: entity.originalEntityId,
-        };
-      });
-
-      if (didUpdateDrafts) {
-        state.drafts = nextDrafts;
-      }
-
-      syncPlacementValidationState({
-        document: document.getSnapshot(),
-        state,
-        workspace,
-      });
+      rotateCollectionAroundPivotCell(collectionType, 90);
     },
+    rotateCollectionAroundCenterPoint,
+    rotateCollectionAroundPivotCell,
   };
 }
 
-interface RotatableCollectionEntity<EntityT extends WorldEntity = WorldEntity> {
-  entity: EntityT;
-  definition: EntityDefinition;
-}
+const EPSILON = 1e-9;
 
 function resolveGridVector(options: {
   startGridPoint: GridPoint;
@@ -543,141 +681,350 @@ function moveEntityByGridVector<EntityT extends WorldEntity>(
   } as EntityT;
 }
 
-function resolveRotatableCollectionEntities(options: {
-  collection: readonly string[];
-  document: EditorActionsContext["document"] extends { getSnapshot(): infer Snapshot }
-    ? Snapshot
-    : never;
-  drafts: readonly WorldEntity[];
-  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
-}): RotatableCollectionEntity[] {
-  const entries: RotatableCollectionEntity[] = [];
-
-  for (const entityId of options.collection) {
-    const entity = resolveEntityById({
-      entityId,
-      document: options.document,
-      drafts: options.drafts,
-    });
-
-    if (entity === null) {
-      continue;
-    }
-
-    const definition = options.entityDefinitionMap.get(entity.definitionId);
-
-    if (definition === undefined) {
-      continue;
-    }
-
-    entries.push({
-      entity,
-      definition,
-    });
+function normalizeRotationAngle(angle: number): GridRotation | null {
+  if (!Number.isFinite(angle)) {
+    return null;
   }
+  const truncated = Math.trunc(angle);
 
-  return entries;
-}
-
-function resolveCollectionRotationAnchorCell(
-  entries: readonly RotatableCollectionEntity[],
-): {
-  x: number;
-  y: number;
-} | null {
-  const bounds = getGridBoundingBox(
-    entries.map(({ definition, entity }) => ({
-      position: entity.position,
-      footprint: getRotatedGridFootprint(definition.footprint, entity.rotation),
-    })),
-  );
-
-  if (bounds === null) {
+  if (Math.abs(angle - truncated) > EPSILON || truncated % 90 !== 0) {
     return null;
   }
 
-  return resolveGridRectRotationAnchorCell({
-    x: bounds.left,
-    y: bounds.top,
-    width: bounds.width,
-    height: bounds.height,
-  });
+  return (((truncated % 360) + 360) % 360) as GridRotation;
 }
 
-function rotateEntityClockwise<EntityT extends WorldEntity>(options: {
-  entity: EntityT;
-  footprint: EntityDefinition["footprint"];
-  rotationAnchorCell: {
-    x: number;
-    y: number;
+function snapTopLeftToNearestInteger(value: number): number {
+  const floorValue = Math.floor(value);
+  const ceilValue = Math.ceil(value);
+  const floorDistance = Math.abs(value - floorValue);
+  const ceilDistance = Math.abs(value - ceilValue);
+
+  if (floorDistance <= ceilDistance + EPSILON) {
+    return normalizeZero(floorValue);
+  }
+
+  return normalizeZero(ceilValue);
+}
+
+function rotateEntityAroundCollectionBoundingBox(options: {
+  entry: EntityCollectionGeometryEntry;
+  sourceBoundingBox: GridRect;
+  targetBoundingBox: GridRect;
+  angle: GridRotation;
+}): WorldEntity {
+  const relativeGridRect = {
+    x: options.entry.gridRect.x - options.sourceBoundingBox.x,
+    y: options.entry.gridRect.y - options.sourceBoundingBox.y,
+    width: options.entry.gridRect.width,
+    height: options.entry.gridRect.height,
   };
-}): EntityT {
-  const nextRotation = rotateGridRotationClockwise(options.entity.rotation);
-  const currentFootprint = getRotatedGridFootprint(
-    options.footprint,
-    options.entity.rotation,
-  );
-  const nextFootprint = getRotatedGridFootprint(options.footprint, nextRotation);
-  const rotatedAnchorCell = rotateGridAnchorCellClockwise({
-    anchorCell: resolveGridRectRotationAnchorCell({
-      x: options.entity.position.x,
-      y: options.entity.position.y,
-      width: currentFootprint.width,
-      height: currentFootprint.height,
-    }),
-    rotationAnchorCell: options.rotationAnchorCell,
+  const rotatedRelativeGridRect = rotateRelativeGridRect({
+    gridRect: relativeGridRect,
+    boundingBox: options.sourceBoundingBox,
+    angle: options.angle,
   });
 
   return {
-    ...options.entity,
-    position: resolveAnchoredGridPointWithoutClamp(
-      rotatedAnchorCell,
-      nextFootprint,
-    ),
-    rotation: nextRotation,
-  } as EntityT;
+    ...options.entry.entity,
+    position: {
+      x: normalizeNumber(options.targetBoundingBox.x + rotatedRelativeGridRect.x),
+      y: normalizeNumber(options.targetBoundingBox.y + rotatedRelativeGridRect.y),
+    },
+    rotation: rotateGridRotation(options.entry.entity.rotation, options.angle),
+  };
 }
 
-function resolveGridRectRotationAnchorCell(
-  gridRect: GridRect,
-): GridPoint {
+function rotateRelativeGridRect(options: {
+  gridRect: GridRect;
+  boundingBox: Pick<GridRect, "width" | "height">;
+  angle: GridRotation;
+}): GridRect {
+  const { gridRect, boundingBox } = options;
+
+  switch (options.angle) {
+    case 90:
+      return {
+        x: normalizeNumber(boundingBox.height - gridRect.y - gridRect.height),
+        y: normalizeNumber(gridRect.x),
+        width: gridRect.height,
+        height: gridRect.width,
+      };
+    case 180:
+      return {
+        x: normalizeNumber(boundingBox.width - gridRect.x - gridRect.width),
+        y: normalizeNumber(boundingBox.height - gridRect.y - gridRect.height),
+        width: gridRect.width,
+        height: gridRect.height,
+      };
+    case 270:
+      return {
+        x: normalizeNumber(gridRect.y),
+        y: normalizeNumber(boundingBox.width - gridRect.x - gridRect.width),
+        width: gridRect.height,
+        height: gridRect.width,
+      };
+    case 0:
+    default:
+      return { ...gridRect };
+  }
+}
+
+function rotateGridRectAroundPoint(options: {
+  gridRect: GridRect;
+  point: { readonly x: number; readonly y: number };
+  angle: GridRotation;
+}): GridRect {
+  const corners = [
+    { x: options.gridRect.x, y: options.gridRect.y },
+    { x: options.gridRect.x + options.gridRect.width, y: options.gridRect.y },
+    { x: options.gridRect.x, y: options.gridRect.y + options.gridRect.height },
+    {
+      x: options.gridRect.x + options.gridRect.width,
+      y: options.gridRect.y + options.gridRect.height,
+    },
+  ].map((corner) => rotateGridPointAroundPoint({
+    point: corner,
+    rotationPoint: options.point,
+    angle: options.angle,
+  }));
+  const left = Math.min(...corners.map((corner) => corner.x));
+  const right = Math.max(...corners.map((corner) => corner.x));
+  const top = Math.min(...corners.map((corner) => corner.y));
+  const bottom = Math.max(...corners.map((corner) => corner.y));
+
   return {
-    x: gridRect.x + Math.floor((gridRect.width - 1) / 2),
-    y: gridRect.y + Math.floor((gridRect.height - 1) / 2),
+    x: normalizeNumber(left),
+    y: normalizeNumber(top),
+    width: normalizeNumber(right - left),
+    height: normalizeNumber(bottom - top),
   };
 }
 
-function rotateGridAnchorCellClockwise(options: {
-  anchorCell: {
-    x: number;
-    y: number;
-  };
-  rotationAnchorCell: {
-    x: number;
-    y: number;
-  };
+function rotateGridPointAroundPoint(options: {
+  point: { readonly x: number; readonly y: number };
+  rotationPoint: { readonly x: number; readonly y: number };
+  angle: GridRotation;
 }): GridPoint {
-  const relativeX = options.anchorCell.x - options.rotationAnchorCell.x;
-  const relativeY = options.anchorCell.y - options.rotationAnchorCell.y;
+  const relativeX = options.point.x - options.rotationPoint.x;
+  const relativeY = options.point.y - options.rotationPoint.y;
 
+  switch (options.angle) {
+    case 90:
+      return {
+        x: normalizeNumber(options.rotationPoint.x - relativeY),
+        y: normalizeNumber(options.rotationPoint.y + relativeX),
+      };
+    case 180:
+      return {
+        x: normalizeNumber(options.rotationPoint.x - relativeX),
+        y: normalizeNumber(options.rotationPoint.y - relativeY),
+      };
+    case 270:
+      return {
+        x: normalizeNumber(options.rotationPoint.x + relativeY),
+        y: normalizeNumber(options.rotationPoint.y - relativeX),
+      };
+    case 0:
+    default:
+      return {
+        x: normalizeNumber(options.point.x),
+        y: normalizeNumber(options.point.y),
+      };
+  }
+}
+
+function alignRotatedBoundingBoxToGrid(gridRect: GridRect): GridRect {
   return {
-    x: options.rotationAnchorCell.x - relativeY,
-    y: options.rotationAnchorCell.y + relativeX,
+    x: alignRotatedTopLeftAxisToGrid(gridRect.x),
+    y: alignRotatedTopLeftAxisToGrid(gridRect.y),
+    width: normalizeNumber(gridRect.width),
+    height: normalizeNumber(gridRect.height),
   };
 }
 
-function resolveAnchoredGridPointWithoutClamp(
-  anchorCell: {
-    x: number;
-    y: number;
-  },
-  footprint: GridRectSize,
-): GridPoint {
+function alignRotatedTopLeftAxisToGrid(value: number): number {
+  if (isIntegerLike(value)) {
+    return normalizeZero(Math.round(value));
+  }
+
+  return normalizeNumber(value + 0.5);
+}
+
+function normalizeGridRect(gridRect: GridRect): GridRect {
   return {
-    x: anchorCell.x - Math.floor((footprint.width - 1) / 2),
-    y: anchorCell.y - Math.floor((footprint.height - 1) / 2),
+    x: normalizeNumber(gridRect.x),
+    y: normalizeNumber(gridRect.y),
+    width: normalizeNumber(gridRect.width),
+    height: normalizeNumber(gridRect.height),
   };
 }
+
+function normalizeNumber(value: number): number {
+  if (isIntegerLike(value)) {
+    return normalizeZero(Math.round(value));
+  }
+
+  return normalizeZero(value);
+}
+
+function isIntegerLike(value: number): boolean {
+  return Math.abs(value - Math.round(value)) < EPSILON;
+}
+
+function normalizeZero(value: number): number {
+  return Object.is(value, -0) ? 0 : value;
+}
+
+// AI-REMOVED 2026-06-09:
+// Reason: 旧旋转实现围绕偏左/偏上的 rotationAnchorCell 逐实体重算，无法表达“bbox 绕 center point / pivot cell 旋转，并保持 entity 在 bbox 相对坐标系中的位置关系”的新需求。
+// Trigger: 用户要求完全重构移动和旋转，新增 rotateCollectionAroundCenterPoint / rotateCollectionAroundPivotCell，并区分鼠标中心旋转与触控 pivot 旋转。
+// Evidence: 新需求明确要求先记录 collection 内 entity 相对 bbox 的 offset，再旋转 bbox，最后按旋转后的 bbox 重算所有 entity；旧 resolveGridRectRotationAnchorCell / rotateGridAnchorCellClockwise 只处理 anchor cell。
+// Replacement: normalizeRotationAngle / rotateGridRectAroundPoint / rotateRelativeGridRect / rotateEntityAroundCollectionBoundingBox
+// Risk: Medium，集合旋转语义改变会影响既有绝对坐标断言；已通过新增回归测试覆盖边界。
+// Human Review: Required
+//
+// Original code:
+// interface RotatableCollectionEntity<EntityT extends WorldEntity = WorldEntity> {
+//   entity: EntityT;
+//   definition: EntityDefinition;
+// }
+//
+// function resolveRotatableCollectionEntities(options: {
+//   collection: readonly string[];
+//   document: EditorActionsContext["document"] extends { getSnapshot(): infer Snapshot }
+//     ? Snapshot
+//     : never;
+//   drafts: readonly WorldEntity[];
+//   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+// }): RotatableCollectionEntity[] {
+//   const entries: RotatableCollectionEntity[] = [];
+//
+//   for (const entityId of options.collection) {
+//     const entity = resolveEntityById({
+//       entityId,
+//       document: options.document,
+//       drafts: options.drafts,
+//     });
+//
+//     if (entity === null) {
+//       continue;
+//     }
+//
+//     const definition = options.entityDefinitionMap.get(entity.definitionId);
+//
+//     if (definition === undefined) {
+//       continue;
+//     }
+//
+//     entries.push({
+//       entity,
+//       definition,
+//     });
+//   }
+//
+//   return entries;
+// }
+//
+// function resolveCollectionRotationAnchorCell(
+//   entries: readonly RotatableCollectionEntity[],
+// ): {
+//   x: number;
+//   y: number;
+// } | null {
+//   const bounds = getGridBoundingBox(
+//     entries.map(({ definition, entity }) => ({
+//       position: entity.position,
+//       footprint: getRotatedGridFootprint(definition.footprint, entity.rotation),
+//     })),
+//   );
+//
+//   if (bounds === null) {
+//     return null;
+//   }
+//
+//   return resolveGridRectRotationAnchorCell({
+//     x: bounds.left,
+//     y: bounds.top,
+//     width: bounds.width,
+//     height: bounds.height,
+//   });
+// }
+//
+// function rotateEntityClockwise<EntityT extends WorldEntity>(options: {
+//   entity: EntityT;
+//   footprint: EntityDefinition["footprint"];
+//   rotationAnchorCell: {
+//     x: number;
+//     y: number;
+//   };
+// }): EntityT {
+//   const nextRotation = rotateGridRotationClockwise(options.entity.rotation);
+//   const currentFootprint = getRotatedGridFootprint(
+//     options.footprint,
+//     options.entity.rotation,
+//   );
+//   const nextFootprint = getRotatedGridFootprint(options.footprint, nextRotation);
+//   const rotatedAnchorCell = rotateGridAnchorCellClockwise({
+//     anchorCell: resolveGridRectRotationAnchorCell({
+//       x: options.entity.position.x,
+//       y: options.entity.position.y,
+//       width: currentFootprint.width,
+//       height: currentFootprint.height,
+//     }),
+//     rotationAnchorCell: options.rotationAnchorCell,
+//   });
+//
+//   return {
+//     ...options.entity,
+//     position: resolveAnchoredGridPointWithoutClamp(
+//       rotatedAnchorCell,
+//       nextFootprint,
+//     ),
+//     rotation: nextRotation,
+//   } as EntityT;
+// }
+//
+// function resolveGridRectRotationAnchorCell(
+//   gridRect: GridRect,
+// ): GridPoint {
+//   return {
+//     x: gridRect.x + Math.floor((gridRect.width - 1) / 2),
+//     y: gridRect.y + Math.floor((gridRect.height - 1) / 2),
+//   };
+// }
+//
+// function rotateGridAnchorCellClockwise(options: {
+//   anchorCell: {
+//     x: number;
+//     y: number;
+//   };
+//   rotationAnchorCell: {
+//     x: number;
+//     y: number;
+//   };
+// }): GridPoint {
+//   const relativeX = options.anchorCell.x - options.rotationAnchorCell.x;
+//   const relativeY = options.anchorCell.y - options.rotationAnchorCell.y;
+//
+//   return {
+//     x: options.rotationAnchorCell.x - relativeY,
+//     y: options.rotationAnchorCell.y + relativeX,
+//   };
+// }
+//
+// function resolveAnchoredGridPointWithoutClamp(
+//   anchorCell: {
+//     x: number;
+//     y: number;
+//   },
+//   footprint: GridRectSize,
+// ): GridPoint {
+//   return {
+//     x: anchorCell.x - Math.floor((footprint.width - 1) / 2),
+//     y: anchorCell.y - Math.floor((footprint.height - 1) / 2),
+//   };
+// }
 
 // AI-REMOVED 2026-06-05:
 // Reason: 连续几何中心 + Math.round 不能让 6×5 这类奇偶混合 footprint 四次旋转闭合，会导致扩容反应池按 R 越转越靠下。

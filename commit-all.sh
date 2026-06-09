@@ -99,6 +99,21 @@ commit_submodules_recursively() {
 repo_root="$(git rev-parse --show-toplevel)"
 
 commit_submodules_recursively "$repo_root"
+
+# .temp 为独立仓库（非 submodule），用于开发调试用途。
+# 总结仓库变更时不应考虑 .temp 下的改动。
+if [[ -d "$repo_root/.temp" ]] && git -C "$repo_root/.temp" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  temp_msg="AutoPush-$(date +%Y%m%d-%H%M%S)"
+  if [[ -n "$(git -C "$repo_root/.temp" status --porcelain)" ]]; then
+    git -C "$repo_root/.temp" add .
+    git -C "$repo_root/.temp" commit -m "$temp_msg" || true
+    echo "已提交: .temp（$temp_msg）"
+  fi
+  if git -C "$repo_root/.temp" rev-parse --abbrev-ref @{u} >/dev/null 2>&1; then
+    git -C "$repo_root/.temp" push || echo "推送 .temp 失败（提交已保存，请稍后手动推送）" >&2
+  fi
+fi
+
 commit_repo_if_needed "$repo_root" "根仓库"
 
 if [[ $did_commit -eq 0 ]]; then

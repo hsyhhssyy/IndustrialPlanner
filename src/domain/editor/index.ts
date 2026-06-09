@@ -13,6 +13,7 @@ export type { EditorState } from "./editor-state";
 export type { EditorContract, EditorSnapshotStore } from "./editor-contract";
 export type {
 	EntityCollection,
+	EntityCollectionGeometry,
 	EntityCollections,
 	EditorViewportState,
 	HoverTarget,

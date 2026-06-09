@@ -29,6 +29,12 @@ export type MarqueeCollectionType =
 
 export type EntityCollections = Readonly<Record<EntityCollectionType, EntityCollection>>;
 
+export interface EntityCollectionGeometry {
+  readonly boundingBox: GridRect;
+  readonly centerPoint: GridFloatPoint;
+  readonly pivotCell: GridPoint;
+}
+
 export type EntityPlacementValidationReasonCode =
   | "outside-base"
   | "overlap"

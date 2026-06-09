@@ -35,6 +35,7 @@ type PendingPlacementEnter = {
   deviceId: string;
   anchor: GridPoint;
   pointerMode: "mouse" | "touch";
+  initialMousePosition: GesturePosition | null;
 };
 
 let pendingPlacementEnter: PendingPlacementEnter | null = null;
@@ -120,7 +121,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
 
     const startedAtMs = performance.now()
     const t0 = performance.now()
-    const nextGridPoint = options.editor.queries.findGridCellForClientPixlePoint(options.position);
+    const nextGridPoint = options.editor.queries.findGridCellForClientPixelPoint(options.position);
     perfFindGridMs += performance.now() - t0
 
     if (nextGridPoint === null) {
@@ -202,7 +203,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
 
         // 桥接变量路径：触发点已写入全部参数，在此创建 draft 并同步 UI
         if (pendingPlacementEnter !== null) {
-          const { deviceId, anchor, pointerMode } = pendingPlacementEnter;
+          const { deviceId, anchor, pointerMode, initialMousePosition } = pendingPlacementEnter;
           pendingPlacementEnter = null;
 
           closeCompactLeftDockOnPlacementEnter(context.appHost);
@@ -220,6 +221,16 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
               if (previewRect === null) {
                 restoreFailedPlacementEnter(context.appHost, editor);
                 return { status: "handled" };
+              }
+              if (
+                pointerMode === "mouse"
+                && initialMousePosition !== null
+                && isClientPointInsideViewport(editor, initialMousePosition)
+              ) {
+                editor.actions.moveCollectionCenterPointTo(
+                  EntityCollectionType.preview,
+                  initialMousePosition,
+                );
               }
               runInAction(() => {
                 context.appHost.internalState.runtime.singlePlacementDeviceId = deviceId;
@@ -240,7 +251,11 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
         return { status: "handled" };
       }
 
-      if (event.type === "mouse move") {
+      if (
+        event.type === "mouse move"
+        || event.type === "mouse dragstart"
+        || event.type === "mouse dragmove"
+      ) {
         lastMousePosition = event.position;
       }
 
@@ -302,6 +317,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             deviceId,
             source: "mouse",
             allowFromAnyTool: true,
+            initialMousePosition: lastMousePosition,
           });
         }
       }
@@ -322,7 +338,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             key: event.key,
             modifiers: event.modifiers,
           })) {
-            return switchPlacementPreviewVariant(context.appHost, editor);
+            return switchPlacementPreviewVariant(context.appHost, editor, lastMousePosition);
           }
 
           if (!isRotatePlacementShortcut({
@@ -334,7 +350,10 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             return { status: "ignored" };
           }
 
-          rotatePlacementPreview(context.appHost, editor);
+          rotatePlacementPreview(context.appHost, editor, {
+            pointerMode: context.appHost.internalState.runtime.singlePlacementPointerMode,
+            currentMousePosition: lastMousePosition,
+          });
           return { status: "handled" };
 
         case "mouse dragstart":
@@ -353,7 +372,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           });
 
         case "mouse move":
-          return drivePlacementPreviewWithPerf({
+          return driveMousePlacementPreview({
             appHost: context.appHost,
             editor,
             position: event.position,
@@ -364,7 +383,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             return { status: "ignored" };
           }
 
-          return drivePlacementPreviewWithPerf({
+          return driveMousePlacementPreview({
             appHost: context.appHost,
             editor,
             position: event.position,
@@ -417,7 +436,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           }
 
           if (event.uiButtonId === SWITCH_DEVICE_MODE_BUTTON_ID) {
-            return switchPlacementPreviewVariant(context.appHost, editor);
+            return switchPlacementPreviewVariant(context.appHost, editor, null);
           }
 
           if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
@@ -428,7 +447,10 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           }
 
           if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
-            rotatePlacementPreview(context.appHost, editor);
+            rotatePlacementPreview(context.appHost, editor, {
+              pointerMode: "touch",
+              currentMousePosition: null,
+            });
             return { status: "handled" };
           }
 
@@ -455,7 +477,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           }
 
           if (event.uiButtonId === SWITCH_DEVICE_MODE_BUTTON_ID) {
-            return switchPlacementPreviewVariant(context.appHost, editor);
+            return switchPlacementPreviewVariant(context.appHost, editor, lastMousePosition);
           }
 
           if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
@@ -466,7 +488,10 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           }
 
           if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
-            rotatePlacementPreview(context.appHost, editor);
+            rotatePlacementPreview(context.appHost, editor, {
+              pointerMode: "mouse",
+              currentMousePosition: lastMousePosition,
+            });
             return { status: "handled" };
           }
 
@@ -491,6 +516,7 @@ function handlePlacementEntryButtonTap(options: {
   deviceId: string;
   source: "mouse" | "touch";
   initialPlacementAnchor?: GridPoint | null;
+  initialMousePosition?: GesturePosition | null;
   allowFromAnyTool?: boolean;
 }): GestureHandleResult {
   const previousTool = options.appHost.internalState.activeTool;
@@ -512,6 +538,7 @@ function handlePlacementEntryButtonTap(options: {
       deviceId: options.deviceId,
       source: options.source,
       initialPlacementAnchor: options.initialPlacementAnchor,
+      initialMousePosition: options.initialMousePosition ?? null,
       shouldSetActiveTool: false,
     });
   }
@@ -526,6 +553,7 @@ function handlePlacementEntryButtonTap(options: {
     deviceId: options.deviceId,
     source: options.source,
     initialPlacementAnchor: options.initialPlacementAnchor,
+    initialMousePosition: options.initialMousePosition ?? null,
     shouldSetActiveTool: true,
   });
 }
@@ -601,6 +629,7 @@ function handleSelectPlacementDeviceShortcut(options: {
     deviceId,
     source: "mouse",
     initialPlacementAnchor,
+    initialMousePosition: options.lastMousePosition,
   });
 }
 
@@ -610,6 +639,7 @@ function finalizePlacementEnter(options: {
   deviceId: string;
   source: "mouse" | "touch";
   initialPlacementAnchor?: GridPoint | null;
+  initialMousePosition: GesturePosition | null;
   shouldSetActiveTool: boolean;
 }): GestureHandleResult {
   const placementAnchor = options.initialPlacementAnchor
@@ -627,6 +657,7 @@ function finalizePlacementEnter(options: {
       deviceId: options.deviceId,
       anchor: placementAnchor,
       pointerMode: options.source,
+      initialMousePosition: options.initialMousePosition,
     });
     options.appHost.internalActions.setActiveTool("single-placement");
     return { status: "handled" };
@@ -645,6 +676,17 @@ function finalizePlacementEnter(options: {
     if (previewRect === null) {
       restoreFailedPlacementEnter(options.appHost, options.editor);
       return { status: "ignored" };
+    }
+
+    if (
+      options.source === "mouse"
+      && options.initialMousePosition !== null
+      && isClientPointInsideViewport(options.editor, options.initialMousePosition)
+    ) {
+      options.editor.actions.moveCollectionCenterPointTo(
+        EntityCollectionType.preview,
+        options.initialMousePosition,
+      );
     }
 
     runInAction(() => {
@@ -695,7 +737,7 @@ export function primePlacementAnchorFromPreview(options: {
       return { status: "ignored" };
     }
 
-    const anchor = options.editor.queries.findGridCellForClientPixlePoint(
+    const anchor = options.editor.queries.findGridCellForClientPixelPoint(
       options.position,
     );
 
@@ -723,7 +765,7 @@ export function drivePlacementPreview(options: {
       return { status: "ignored" };
     }
 
-    const nextGridPoint = options.editor.queries.findGridCellForClientPixlePoint(
+    const nextGridPoint = options.editor.queries.findGridCellForClientPixelPoint(
       options.position,
     );
 
@@ -773,6 +815,38 @@ export function drivePlacementPreview(options: {
   }
 }
 
+export function driveMousePlacementPreview(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+  position: GesturePosition;
+}): GestureHandleResult {
+  try {
+    const beforeRect = options.editor.queries.findEntityCollectionGridRect(
+      EntityCollectionType.preview,
+    );
+
+    if (beforeRect === null) {
+      return { status: "ignored" };
+    }
+
+    options.editor.actions.moveCollectionCenterPointTo(
+      EntityCollectionType.preview,
+      options.position,
+    );
+    const afterRect = options.editor.queries.findEntityCollectionGridRect(
+      EntityCollectionType.preview,
+    );
+
+    if (afterRect !== null && !areGridRectsEqual(beforeRect, afterRect)) {
+      options.appHost.internalActions.alignCanvasFloatingToolbar();
+    }
+
+    return { status: "handled" };
+  } catch {
+    return { status: "ignored" };
+  }
+}
+
 function applyPlacementOperation(
   appHost: AppHost,
   editor: EditorContract,
@@ -810,8 +884,33 @@ function cancelPlacementOperation(appHost: AppHost, editor: EditorContract): voi
   }
 }
 
-export function rotatePlacementPreview(appHost: AppHost, editor: EditorContract): void {
-  editor.actions.rotateCollection(EntityCollectionType.preview);
+export function rotatePlacementPreview(
+  appHost: AppHost,
+  editor: EditorContract,
+  options: {
+    pointerMode: "mouse" | "touch" | null;
+    currentMousePosition: GesturePosition | null;
+  } = {
+    pointerMode: appHost.internalState.runtime.singlePlacementPointerMode,
+    currentMousePosition: null,
+  },
+): void {
+  if (options.pointerMode === "mouse") {
+    editor.actions.rotateCollectionAroundCenterPoint(EntityCollectionType.preview, 90);
+    if (
+      options.currentMousePosition !== null
+      && isClientPointInsideViewport(editor, options.currentMousePosition)
+    ) {
+      editor.actions.moveCollectionCenterPointTo(
+        EntityCollectionType.preview,
+        options.currentMousePosition,
+      );
+    }
+    appHost.internalActions.alignCanvasFloatingToolbar();
+    return;
+  }
+
+  editor.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
   appHost.internalActions.alignCanvasFloatingToolbar();
 }
 
@@ -938,6 +1037,7 @@ function resolvePlacementToolbarButtonIds(
 function switchPlacementPreviewVariant(
   appHost: AppHost,
   editor: EditorContract,
+  currentMousePosition: GesturePosition | null,
 ): GestureHandleResult {
   const previewEntityId = editor.state.collections.preview[0] ?? null;
   if (previewEntityId === null) {
@@ -964,7 +1064,20 @@ function switchPlacementPreviewVariant(
   runInAction(() => {
     appHost.internalState.runtime.singlePlacementDeviceId = nextDefinitionId;
   });
-  recenterPlacementPreviewAtAnchor(appHost, editor);
+  if (appHost.internalState.runtime.singlePlacementPointerMode === "mouse") {
+    if (
+      currentMousePosition !== null
+      && isClientPointInsideViewport(editor, currentMousePosition)
+    ) {
+      editor.actions.moveCollectionCenterPointTo(
+        EntityCollectionType.preview,
+        currentMousePosition,
+      );
+    }
+    appHost.internalActions.alignCanvasFloatingToolbar();
+  } else {
+    recenterPlacementPreviewAtAnchor(appHost, editor);
+  }
   syncPlacementEntryUi(appHost);
   return { status: "handled" };
 }
@@ -1044,6 +1157,7 @@ function continuePlacementOperation(
     deviceId: continuation.deviceId,
     source: continuation.pointerMode,
     initialPlacementAnchor: continuation.anchor,
+    initialMousePosition: null,
     shouldSetActiveTool: false,
   });
 
@@ -1071,7 +1185,7 @@ function restorePlacementPreviewRotation(
 ): void {
   const rotateCount = rotation / 90;
   for (let step = 0; step < rotateCount; step += 1) {
-    editor.actions.rotateCollection(EntityCollectionType.preview);
+    editor.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
   }
 
   if (rotateCount > 0 && appHost.internalState.runtime.singlePlacementPointerMode === "touch") {
@@ -1103,7 +1217,7 @@ function parsePlacementModeDeviceId(
 export function resolveViewportCenterGridPoint(editor: EditorContract): GridPoint | null {
   const clientRect = editor.state.viewport.clientRect;
 
-  return editor.queries.findGridCellForClientPixlePoint({
+  return editor.queries.findGridCellForClientPixelPoint({
     x: clientRect.left + clientRect.width / 2,
     y: clientRect.top + clientRect.height / 2,
   });
@@ -1117,7 +1231,7 @@ function resolveGridPointFromGesturePosition(
     return null;
   }
 
-  return editor.queries.findGridCellForClientPixlePoint(position);
+  return editor.queries.findGridCellForClientPixelPoint(position);
 }
 
 function isPreviewEntityAtClientPoint(
@@ -1130,6 +1244,25 @@ function isPreviewEntityAtClientPoint(
     entity !== null
     && editor.state.collections[EntityCollectionType.preview].contains(entity.id)
   );
+}
+
+function isClientPointInsideViewport(
+  editor: EditorContract,
+  position: GesturePosition,
+): boolean {
+  const clientRect = editor.state.viewport.clientRect;
+
+  return position.x >= clientRect.left
+    && position.x <= clientRect.left + clientRect.width
+    && position.y >= clientRect.top
+    && position.y <= clientRect.top + clientRect.height;
+}
+
+function areGridRectsEqual(left: GridRect, right: GridRect): boolean {
+  return left.x === right.x
+    && left.y === right.y
+    && left.width === right.width
+    && left.height === right.height;
 }
 
 function isRotatePlacementShortcut(options: {

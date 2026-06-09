@@ -16,6 +16,7 @@ import {
   resolveEntityById,
   resolveListedEntities,
 } from "../entity-resolvers";
+import { resolveEntityCollectionGeometry } from "../entity-collection-geometry";
 import { resolveCachedPlacementValidation } from "../placement-validation";
 import type { EditorQueriesContext } from "./types";
 import { resolveGridCellAtClientPixelPoint } from "./viewport-geometry";
@@ -23,6 +24,7 @@ import { resolveGridCellAtClientPixelPoint } from "./viewport-geometry";
 type EditorEntityQueries = Pick<
   EditorQuery,
   | "findEntityAtClientPixelPoint"
+  | "findEntityCollectionGeometry"
   | "findEntityCollectionGridRect"
   | "getEntityById"
   | "getEntityPlacementValidation"
@@ -65,6 +67,28 @@ export function createEditorEntityQueries({
         drafts: state.drafts,
         entityDefinitionMap,
       });
+    },
+    findEntityCollectionGeometry: (collectionType) => {
+      const currentDocument = document.getSnapshot();
+      const geometry = resolveEntityCollectionGeometry({
+        collection: resolveEntityCollection({
+          collectionType,
+          state,
+        }),
+        document: currentDocument,
+        drafts: state.drafts,
+        entityDefinitionMap,
+      });
+
+      if (geometry === null) {
+        return null;
+      }
+
+      return {
+        boundingBox: geometry.boundingBox,
+        centerPoint: geometry.centerPoint,
+        pivotCell: geometry.pivotCell,
+      };
     },
     getEntityPlacementValidation: (entityId) => resolveCachedPlacementValidation({
       entityId,

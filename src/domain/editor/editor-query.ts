@@ -14,6 +14,7 @@ import type {
 } from "../shared/logistics";
 import type {
 	EntityCollectionType,
+	EntityCollectionGeometry,
 	EntityPlacementValidationResult,
 } from "./types/editor-types";
 import type { EditorBaseDocumentSummary } from "./editor-document";
@@ -27,8 +28,11 @@ export interface EditorQuery {
 	findEntityCollectionGridRect(
 		collectionType: EntityCollectionType,
 	): GridRect | null;
+	findEntityCollectionGeometry(
+		collectionType: EntityCollectionType,
+	): EntityCollectionGeometry | null;
 	getEntityPlacementValidation(entityId: string): EntityPlacementValidationResult;
-	findGridCellForClientPixlePoint(
+	findGridCellForClientPixelPoint(
 		clientPixelPoint: ClientPixelPoint,
 	): GridPoint | null;
 	findClientRectForGridCell(gridCell: {

@@ -38,6 +38,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       y: 40,
     });
     expect(editor.actions.moveCollectionTo).not.toHaveBeenCalled();
+    expect(editor.actions.moveCollectionCenterPointTo).not.toHaveBeenCalled();
     expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 50, y: 40 });
     expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-a");
     expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
@@ -290,6 +291,28 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
+  it("moves the mouse placement preview by collection center point", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "single-placement",
+      placementAnchor: { x: 5, y: 5 },
+      singlePlacementDeviceId: "device-a",
+      singlePlacementPointerMode: "mouse",
+      initialPreview: true,
+      previewRect: { x: 5, y: 5, width: 1, height: 1 },
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    const result = module.handle(mouseMoveEvent({ position: { x: 18, y: 23 } }), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.moveCollectionCenterPointTo).toHaveBeenCalledWith(
+      EntityCollectionType.preview,
+      { x: 18, y: 23 },
+    );
+    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 5, y: 5 });
+    expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+  });
+
   it("lets touch drag fall through when it does not start from the preview", () => {
     const { context, appHost } = createContext({
       activeTool: "single-placement",
@@ -311,6 +334,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       activeTool: "single-placement",
       placementAnchor: { x: 5, y: 5 },
       singlePlacementDeviceId: "device-a",
+      singlePlacementPointerMode: "mouse",
       initialPreview: true,
     });
     const toolbar = createContext({
@@ -329,16 +353,18 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       "KeyR",
       "r",
     );
-    expect(keyboard.editor.actions.rotateCollection).toHaveBeenCalledWith(
+    expect(keyboard.editor.actions.rotateCollectionAroundCenterPoint).toHaveBeenCalledWith(
       EntityCollectionType.preview,
+      90,
     );
     expect(keyboard.appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
 
     expect(
       module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-rotate"), toolbar.context),
     ).toEqual({ status: "handled" });
-    expect(toolbar.editor.actions.rotateCollection).toHaveBeenCalledWith(
+    expect(toolbar.editor.actions.rotateCollectionAroundPivotCell).toHaveBeenCalledWith(
       EntityCollectionType.preview,
+      90,
     );
     expect(toolbar.appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
@@ -434,7 +460,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       x: 5,
       y: 5,
     });
-    expect(editor.actions.rotateCollection).toHaveBeenCalledTimes(2);
+    expect(editor.actions.rotateCollectionAroundPivotCell).toHaveBeenCalledTimes(2);
     expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       `${CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST}-off`,
     ]);
@@ -624,7 +650,7 @@ function createContext(options: {
           ? previewRectRef.current
           : null,
       ),
-      findGridCellForClientPixlePoint: vi.fn((point) => ({
+      findGridCellForClientPixelPoint: vi.fn((point) => ({
         x: Math.floor(point.x),
         y: Math.floor(point.y),
       })),
@@ -679,7 +705,24 @@ function createContext(options: {
           y: previewEntity.position.y + vector.y,
         };
       }),
+      moveCollectionCenterPointTo: vi.fn((_, point) => {
+        previewRectRef.current = {
+          ...previewRectRef.current,
+          x: point.x,
+          y: point.y,
+        };
+        previewEntity.position = {
+          x: point.x,
+          y: point.y,
+        };
+      }),
       rotateCollection: vi.fn(() => {
+        previewEntity.rotation = rotateClockwise(previewEntity.rotation);
+      }),
+      rotateCollectionAroundCenterPoint: vi.fn(() => {
+        previewEntity.rotation = rotateClockwise(previewEntity.rotation);
+      }),
+      rotateCollectionAroundPivotCell: vi.fn(() => {
         previewEntity.rotation = rotateClockwise(previewEntity.rotation);
       }),
       replaceEntityDefinition: vi.fn((entityId: string, nextDefinitionId: string) => {
@@ -838,9 +881,12 @@ type MockEditor = {
     | "applyPlacementDraft"
     | "cancelPlacementDraft"
     | "createSinglePlacementDraft"
+    | "moveCollectionCenterPointTo"
     | "moveCollectionTo"
     | "replaceEntityDefinition"
     | "rotateCollection"
+    | "rotateCollectionAroundCenterPoint"
+    | "rotateCollectionAroundPivotCell"
   >;
   queries: Pick<
     EditorContract["queries"],
@@ -848,7 +894,7 @@ type MockEditor = {
     | "findClientRectForGridCell"
     | "findEntityAtClientPixelPoint"
     | "findEntityCollectionGridRect"
-    | "findGridCellForClientPixlePoint"
+    | "findGridCellForClientPixelPoint"
   >;
 };
 

@@ -8,14 +8,14 @@ import {
 
 type EditorViewportQueries = Pick<
   EditorQuery,
-  "findClientRectForGridCell" | "findGridCellForClientPixlePoint"
+  "findClientRectForGridCell" | "findGridCellForClientPixelPoint"
 >;
 
 export function createEditorViewportQueries({
   state,
 }: EditorQueriesContext): EditorViewportQueries {
   return {
-    findGridCellForClientPixlePoint: (clientPixelPoint) => resolveGridCellAtClientPixelPoint({
+    findGridCellForClientPixelPoint: (clientPixelPoint) => resolveGridCellAtClientPixelPoint({
       clientPixelPoint,
       viewportState: state.viewport,
     }),

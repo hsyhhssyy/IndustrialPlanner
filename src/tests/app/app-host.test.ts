@@ -1151,7 +1151,7 @@ describe("createAppHost", () => {
     }));
 
     expect(appHost.internalState.activeTool).toBe("move");
-    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
     expect(editorHost.state.collections.selection).toEqual(["dummy-entity-2"]);
     expect(editorHost.state.collections.ghost).toEqual(["dummy-entity-2"]);
     expect(editorHost.state.collections.preview).toHaveLength(1);
@@ -1316,7 +1316,7 @@ describe("createAppHost", () => {
     }));
 
     expect(appHost.internalState.activeTool).toBe("move");
-    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
+  expect(appHost.internalState.runtime.moveAnchor).toBeNull();
 
     const previewDraftId = editorHost.state.collections.preview[0];
     expect(previewDraftId).toBeDefined();
@@ -1330,10 +1330,10 @@ describe("createAppHost", () => {
     // 触发 pending mouse dragmove flush
     appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
 
-    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 5, y: 4 });
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
     expect(
       editorHost.internalState.drafts.find((entity) => entity.id === previewDraftId)?.position,
-    ).toEqual({ x: 5, y: 4 });
+    ).toEqual({ x: 4, y: 3 });
 
     appHost.gestureAdapter.handlePointerUp(pointerEvent({
       pointerId: 35,

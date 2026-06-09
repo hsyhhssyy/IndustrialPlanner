@@ -366,7 +366,7 @@ function startMarqueeDrag(options: {
   position: GesturePosition;
   marqueeType: MarqueeCollectionType;
 }): GestureHandleResult {
-  const anchor = options.editor.queries.findGridCellForClientPixlePoint(options.position);
+  const anchor = options.editor.queries.findGridCellForClientPixelPoint(options.position);
   if (anchor === null) {
     return { status: "ignored" };
   }
@@ -386,7 +386,7 @@ function updateMarqueeRange(options: {
   position: GesturePosition;
 }): GestureHandleResult {
   const anchor = options.appHost.internalState.runtime.marqueeAnchor;
-  const currentPoint = options.editor.queries.findGridCellForClientPixlePoint(options.position);
+  const currentPoint = options.editor.queries.findGridCellForClientPixelPoint(options.position);
   if (anchor === null || currentPoint === null) {
     return { status: "ignored" };
   }

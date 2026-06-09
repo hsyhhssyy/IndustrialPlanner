@@ -9,9 +9,14 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import {
   DEFAULT_WORLD_BASE_ID,
+  type WorldEntity,
   type WorldDocument,
 } from "@/domain/document/world-document";
-import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import {
+  EntityCollectionType,
+  type EntityCollectionType as EntityCollectionTypeValue,
+} from "@/domain/editor/types/editor-types";
+import type { GridRect, GridRotation } from "@/domain/shared/grid";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { resolveWorldEntitySpriteLayout } from "@/renderer/scene/render-scene-orchestrator";
@@ -63,6 +68,230 @@ function createDocumentWithTestEntities(
   document.entities = Object.fromEntries(entities.map((entity) => [entity.id, entity]));
   document.entityOrder = entities.map((entity) => entity.id);
   return document;
+}
+
+type EditorHostForTest = ReturnType<typeof createEditorHost>;
+
+interface CollectionRelativeLayoutEntry {
+  readonly id: string;
+  readonly definitionId: string;
+  readonly position: WorldEntity["position"];
+  readonly rotation: GridRotation;
+  readonly relativeRect: GridRect;
+}
+
+interface CollectionRelativeLayout {
+  readonly boundingBox: GridRect;
+  readonly entries: readonly CollectionRelativeLayoutEntry[];
+}
+
+function createComplexRotationDrafts(): DraftEntity[] {
+  return [
+    createRotationDraft("preview-mix-pool", "item_port_mix_pool_1", 20, 20, 0),
+    createRotationDraft("preview-furnace", "item_port_furnance_1", 30, 21, 180),
+    createRotationDraft("preview-belt", "belt_straight_1x1", 27, 27, 270),
+    createRotationDraft("preview-hydro", "item_port_hydro_planter_1", 36, 25, 90),
+    createRotationDraft("preview-large-pool", "item_port_mix_pool_large_1", 42, 18, 270),
+    createRotationDraft("preview-planter", "item_port_planter_1", 20, 30, 0),
+  ];
+}
+
+function createRotationDraft(
+  id: string,
+  definitionId: string,
+  x: number,
+  y: number,
+  rotation: GridRotation,
+): DraftEntity {
+  return {
+    id,
+    originalEntityId: id,
+    definitionId,
+    position: { x, y },
+    rotation,
+    config: {},
+    tags: [],
+  };
+}
+
+function collectRelativeLayout(
+  editorHost: EditorHostForTest,
+  collectionType: EntityCollectionTypeValue,
+): CollectionRelativeLayout {
+  const geometry = editorHost.queries.findEntityCollectionGeometry(collectionType);
+  if (geometry === null) {
+    throw new Error(`Expected ${collectionType} geometry to exist.`);
+  }
+
+  return {
+    boundingBox: geometry.boundingBox,
+    entries: editorHost.state.collections[collectionType].map((entityId) => {
+      const entity = editorHost.queries.getEntityById(entityId);
+      if (entity === null) {
+        throw new Error(`Expected entity ${entityId} to exist.`);
+      }
+
+      const footprint = resolveRotatedFootprintForTest(
+        editorHost,
+        entity.definitionId,
+        entity.rotation,
+      );
+
+      return {
+        id: entity.id,
+        definitionId: entity.definitionId,
+        position: { ...entity.position },
+        rotation: entity.rotation,
+        relativeRect: {
+          x: entity.position.x - geometry.boundingBox.x,
+          y: entity.position.y - geometry.boundingBox.y,
+          width: footprint.width,
+          height: footprint.height,
+        },
+      };
+    }),
+  };
+}
+
+function resolveRotatedFootprintForTest(
+  editorHost: EditorHostForTest,
+  definitionId: string,
+  rotation: GridRotation,
+): { readonly width: number; readonly height: number } {
+  const definition = editorHost.workspace.registry.entityDefinitions.find(
+    (entityDefinition) => entityDefinition.id === definitionId,
+  );
+  if (definition === undefined) {
+    throw new Error(`Unknown entity definition: ${definitionId}`);
+  }
+
+  return rotation === 90 || rotation === 270
+    ? {
+      width: definition.footprint.height,
+      height: definition.footprint.width,
+    }
+    : {
+      width: definition.footprint.width,
+      height: definition.footprint.height,
+    };
+}
+
+function expectLayoutMatchesRotation(
+  initialLayout: CollectionRelativeLayout,
+  currentLayout: CollectionRelativeLayout,
+  turnCount: number,
+): void {
+  const angle = ((turnCount * 90) % 360) as GridRotation;
+  const expectedBoundingBoxSize = angle === 90 || angle === 270
+    ? {
+      width: initialLayout.boundingBox.height,
+      height: initialLayout.boundingBox.width,
+    }
+    : {
+      width: initialLayout.boundingBox.width,
+      height: initialLayout.boundingBox.height,
+    };
+  const currentById = new Map(
+    currentLayout.entries.map((entry) => [entry.id, entry]),
+  );
+
+  expect(currentLayout.boundingBox).toMatchObject(expectedBoundingBoxSize);
+  expect(currentLayout.entries).toHaveLength(initialLayout.entries.length);
+
+  for (const initialEntry of initialLayout.entries) {
+    const currentEntry = currentById.get(initialEntry.id);
+    expect(currentEntry, `Missing rotated entry ${initialEntry.id}`).toBeDefined();
+    expect(currentEntry?.definitionId).toBe(initialEntry.definitionId);
+    expect(currentEntry?.relativeRect).toEqual(
+      rotateRelativeRectForTest(
+        initialEntry.relativeRect,
+        initialLayout.boundingBox,
+        angle,
+      ),
+    );
+    expect(currentEntry?.rotation).toBe(rotateGridRotationForTest(
+      initialEntry.rotation,
+      angle,
+    ));
+  }
+
+  expectNoOverlappingRelativeRects(currentLayout);
+}
+
+function rotateRelativeRectForTest(
+  rect: GridRect,
+  boundingBox: Pick<GridRect, "width" | "height">,
+  angle: GridRotation,
+): GridRect {
+  switch (angle) {
+    case 90:
+      return {
+        x: boundingBox.height - rect.y - rect.height,
+        y: rect.x,
+        width: rect.height,
+        height: rect.width,
+      };
+    case 180:
+      return {
+        x: boundingBox.width - rect.x - rect.width,
+        y: boundingBox.height - rect.y - rect.height,
+        width: rect.width,
+        height: rect.height,
+      };
+    case 270:
+      return {
+        x: rect.y,
+        y: boundingBox.width - rect.x - rect.width,
+        width: rect.height,
+        height: rect.width,
+      };
+    case 0:
+    default:
+      return { ...rect };
+  }
+}
+
+function rotateGridRotationForTest(
+  rotation: GridRotation,
+  angle: GridRotation,
+): GridRotation {
+  return ((rotation + angle) % 360) as GridRotation;
+}
+
+function expectNoOverlappingRelativeRects(layout: CollectionRelativeLayout): void {
+  for (let leftIndex = 0; leftIndex < layout.entries.length; leftIndex += 1) {
+    const leftEntry = layout.entries[leftIndex];
+    if (leftEntry === undefined) {
+      continue;
+    }
+    for (let rightIndex = leftIndex + 1; rightIndex < layout.entries.length; rightIndex += 1) {
+      const rightEntry = layout.entries[rightIndex];
+      if (rightEntry === undefined) {
+        continue;
+      }
+
+      expect(
+        areGridRectsOverlapping(leftEntry.relativeRect, rightEntry.relativeRect),
+        `${leftEntry.id} should not overlap ${rightEntry.id}`,
+      ).toBe(false);
+    }
+  }
+}
+
+function areGridRectsOverlapping(left: GridRect, right: GridRect): boolean {
+  return left.x < right.x + right.width
+    && left.x + left.width > right.x
+    && left.y < right.y + right.height
+    && left.y + left.height > right.y;
+}
+
+function toAbsoluteRotationState(layout: CollectionRelativeLayout): readonly unknown[] {
+  return layout.entries.map((entry) => ({
+    id: entry.id,
+    definitionId: entry.definitionId,
+    position: entry.position,
+    rotation: entry.rotation,
+  }));
 }
 
 function createStorageToFactorySlotLink(): WorldDocument["slotLinks"][number] {
@@ -1437,39 +1666,216 @@ describe("createEditorHost", () => {
     });
   });
 
-  it("rotates entity collections around the collection bounding center through editor actions", () => {
+  it("computes collection geometry center and pivot from document order", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
-    const document = createDummyWorldDocument();
+    const document = createDocumentWithTestEntities([
+      createTestEntity("ordered-first", "belt_straight_1x1", 0, 0, 90),
+      createTestEntity("ordered-second", "belt_straight_1x1", 2, 0, 270),
+    ]);
 
     editorHost.internalDocument.setSnapshot(document);
     editorHost.internalState.collections.selection.replace([
-      "dummy-entity-2",
-      "dummy-entity-1",
+      "ordered-second",
+      "ordered-first",
     ]);
 
-    editorHost.actions.rotateCollection(EntityCollectionType.selection);
-
-    expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]).toMatchObject({
-      position: {
-        x: 8,
-        y: 2,
+    expect(editorHost.queries.findEntityCollectionGeometry(EntityCollectionType.selection)).toEqual({
+      boundingBox: {
+        x: 0,
+        y: 0,
+        width: 3,
+        height: 1,
       },
+      centerPoint: {
+        x: 1.5,
+        y: 0.5,
+      },
+      pivotCell: {
+        x: 2,
+        y: 0,
+      },
+    });
+  });
+
+  it("falls back to collection order for pivot phase when any entity is outside document order", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithTestEntities([
+      createTestEntity("ordered-first", "belt_straight_1x1", 0, 0, 90),
+      createTestEntity("fallback-first", "belt_straight_1x1", 2, 0, 270),
+    ]);
+
+    document.entityOrder = ["ordered-first"];
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.collections.selection.replace([
+      "fallback-first",
+      "ordered-first",
+    ]);
+
+    expect(editorHost.queries.findEntityCollectionGeometry(EntityCollectionType.selection)?.pivotCell).toEqual({
+      x: 1,
+      y: 1,
+    });
+  });
+
+  it("moves a collection center point to a client pixel and breaks ties left/up", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const firstDraft: DraftEntity = {
+      id: "preview-left",
+      originalEntityId: "preview-left",
+      definitionId: "belt_straight_1x1",
+      position: { x: 0, y: 0 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    };
+    const secondDraft: DraftEntity = {
+      id: "preview-right",
+      originalEntityId: "preview-right",
+      definitionId: "belt_straight_1x1",
+      position: { x: 1, y: 0 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    };
+
+    editorHost.actions.setViewportClientRect({
+      left: 0,
+      top: 0,
+      width: 400,
+      height: 400,
+    });
+    editorHost.internalState.drafts = [firstDraft, secondDraft];
+    editorHost.internalState.collections.preview.replace([
+      firstDraft.id,
+      secondDraft.id,
+    ]);
+
+    editorHost.actions.moveCollectionCenterPointTo(
+      EntityCollectionType.preview,
+      resolveViewportPointFromWorldPoint({
+        viewportBounds: editorHost.state.viewport.clientRect,
+        viewportCenter: editorHost.state.viewport.center,
+        gridCellPixelSize: editorHost.state.viewport.gridCellPixelSize,
+        displayRotation: editorHost.state.viewport.displayRotation,
+        worldPoint: {
+          x: 10.5,
+          y: 20.5,
+        },
+      }),
+    );
+
+    expect(editorHost.internalState.drafts.map((draft) => draft.position)).toEqual([
+      { x: 9, y: 20 },
+      { x: 10, y: 20 },
+    ]);
+  });
+
+  it("rotates entity collections around the collection center point through editor actions", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithTestEntities([
+      createTestEntity("left", "belt_straight_1x1", 10, 10),
+      createTestEntity("right", "belt_straight_1x1", 11, 10),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.collections.selection.replace(["left", "right"]);
+
+    editorHost.actions.rotateCollectionAroundCenterPoint(EntityCollectionType.selection, 90);
+
+    expect(editorHost.document.getSnapshot().entities.left).toMatchObject({
+      position: { x: 11, y: 10 },
       rotation: 90,
     });
-    expect(editorHost.document.getSnapshot().entities["dummy-entity-1"]).toMatchObject({
-      position: {
-        x: 6,
-        y: 10,
-      },
+    expect(editorHost.document.getSnapshot().entities.right).toMatchObject({
+      position: { x: 11, y: 11 },
       rotation: 90,
     });
     expect(editorHost.queries.findEntityCollectionGridRect("selection")).toEqual({
-      x: 6,
-      y: 2,
-      width: 5,
-      height: 9,
+      x: 11,
+      y: 10,
+      width: 1,
+      height: 2,
     });
+  });
+
+  it("keeps a complex mouse-centered collection layout exact through four fixed-pointer rotations", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const drafts = createComplexRotationDrafts();
+    const fixedMousePoint = resolveViewportPointFromWorldPoint({
+      viewportBounds: editorHost.state.viewport.clientRect,
+      viewportCenter: editorHost.state.viewport.center,
+      gridCellPixelSize: editorHost.state.viewport.gridCellPixelSize,
+      displayRotation: editorHost.state.viewport.displayRotation,
+      worldPoint: {
+        x: 34.25,
+        y: 27.75,
+      },
+    });
+
+    editorHost.internalState.drafts = drafts;
+    editorHost.internalState.collections.preview.replace(drafts.map((draft) => draft.id));
+    editorHost.actions.moveCollectionCenterPointTo(
+      EntityCollectionType.preview,
+      fixedMousePoint,
+    );
+
+    const initialLayout = collectRelativeLayout(editorHost, EntityCollectionType.preview);
+    const initialAbsoluteState = toAbsoluteRotationState(initialLayout);
+
+    expect(initialLayout.entries).toHaveLength(6);
+    expect(initialLayout.boundingBox.width).toBeGreaterThan(20);
+    expect(initialLayout.boundingBox.height).toBeGreaterThan(10);
+
+    for (let turnCount = 1; turnCount <= 4; turnCount += 1) {
+      editorHost.actions.rotateCollectionAroundCenterPoint(EntityCollectionType.preview, 90);
+      editorHost.actions.moveCollectionCenterPointTo(
+        EntityCollectionType.preview,
+        fixedMousePoint,
+      );
+      const currentLayout = collectRelativeLayout(editorHost, EntityCollectionType.preview);
+
+      expectLayoutMatchesRotation(initialLayout, currentLayout, turnCount);
+      if (turnCount === 1) {
+        expect(toAbsoluteRotationState(currentLayout)).not.toEqual(initialAbsoluteState);
+      }
+      if (turnCount === 4) {
+        expect(toAbsoluteRotationState(currentLayout)).toEqual(initialAbsoluteState);
+      }
+    }
+  });
+
+  it("keeps a complex touch pivot collection layout exact through four rotations", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const drafts = createComplexRotationDrafts();
+
+    editorHost.internalState.drafts = drafts;
+    editorHost.internalState.collections.preview.replace(drafts.map((draft) => draft.id));
+
+    const initialLayout = collectRelativeLayout(editorHost, EntityCollectionType.preview);
+    const initialAbsoluteState = toAbsoluteRotationState(initialLayout);
+
+    expect(initialLayout.entries).toHaveLength(6);
+    expect(initialLayout.boundingBox.width).toBeGreaterThan(20);
+    expect(initialLayout.boundingBox.height).toBeGreaterThan(10);
+
+    for (let turnCount = 1; turnCount <= 4; turnCount += 1) {
+      editorHost.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
+      const currentLayout = collectRelativeLayout(editorHost, EntityCollectionType.preview);
+
+      expectLayoutMatchesRotation(initialLayout, currentLayout, turnCount);
+      if (turnCount === 1) {
+        expect(toAbsoluteRotationState(currentLayout)).not.toEqual(initialAbsoluteState);
+      }
+      if (turnCount === 4) {
+        expect(toAbsoluteRotationState(currentLayout)).toEqual(initialAbsoluteState);
+      }
+    }
   });
 
   it("blocks direct collection rotations outside the base outer ring", () => {
@@ -1483,7 +1889,7 @@ describe("createEditorHost", () => {
     editorHost.internalDocument.setSnapshot(document);
     editorHost.internalState.collections.selection.replace(["pipe-top", "pipe-bottom"]);
 
-    editorHost.actions.rotateCollection(EntityCollectionType.selection);
+    editorHost.actions.rotateCollectionAroundPivotCell(EntityCollectionType.selection, 90);
 
     expect(editorHost.document.getSnapshot().entities["pipe-top"]).toEqual(
       document.entities["pipe-top"],
@@ -1493,7 +1899,7 @@ describe("createEditorHost", () => {
     );
   });
 
-  it("rotates preview draft collections without clamping negative grid positions", () => {
+  it("rotates preview draft collections around pivot without clamping negative grid positions", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
@@ -1513,16 +1919,56 @@ describe("createEditorHost", () => {
     ];
     editorHost.internalState.collections.preview.replace(["preview-belt"]);
 
-    editorHost.actions.rotateCollection(EntityCollectionType.preview);
+    editorHost.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
 
     expect(editorHost.internalState.drafts[0]).toMatchObject({
       id: "preview-belt",
       position: {
-        x: -2,
+        x: -3,
         y: 3,
       },
       rotation: 90,
     });
+  });
+
+  it("keeps pivot-cell collection rotation closed after four turns", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const drafts: DraftEntity[] = [
+      {
+        id: "preview-left",
+        originalEntityId: "preview-left",
+        definitionId: "belt_straight_1x1",
+        position: { x: -2, y: 3 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      {
+        id: "preview-right",
+        originalEntityId: "preview-right",
+        definitionId: "belt_straight_1x1",
+        position: { x: -1, y: 3 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    ];
+
+    editorHost.internalState.drafts = drafts;
+    editorHost.internalState.collections.preview.replace(drafts.map((draft) => draft.id));
+
+    for (let step = 0; step < 4; step += 1) {
+      editorHost.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
+    }
+
+    expect(editorHost.internalState.drafts.map((draft) => ({
+      position: draft.position,
+      rotation: draft.rotation,
+    }))).toEqual([
+      { position: { x: -2, y: 3 }, rotation: 0 },
+      { position: { x: -1, y: 3 }, rotation: 0 },
+    ]);
   });
 
   it("keeps expanded reaction pool preview rotation idempotent after four turns", () => {
@@ -1718,7 +2164,7 @@ describe("createEditorHost", () => {
     });
   });
 
-  it("finds the world grid cell for a client pixle point", () => {
+  it("finds the world grid cell for a client pixel point", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
@@ -1729,7 +2175,7 @@ describe("createEditorHost", () => {
       height: 400,
     });
 
-    const gridCell = editorHost.queries.findGridCellForClientPixlePoint(
+    const gridCell = editorHost.queries.findGridCellForClientPixelPoint(
       resolveClientPixelPointForGridCell(editorHost, { x: 4, y: 4 }),
     );
 
@@ -1751,7 +2197,7 @@ describe("createEditorHost", () => {
     const rect = editorHost.queries.findClientRectForGridCell({ x: 1, y: 0 });
     const gridCell = rect === null
       ? null
-      : editorHost.queries.findGridCellForClientPixlePoint({
+      : editorHost.queries.findGridCellForClientPixelPoint({
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
       });

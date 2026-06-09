@@ -13,7 +13,7 @@ export function createEditorHoverActions(
       if (editor === null) return;
 
       // pixel → grid 转换
-      const gridPoint = editor.queries.findGridCellForClientPixlePoint(clientPixel);
+      const gridPoint = editor.queries.findGridCellForClientPixelPoint(clientPixel);
       if (gridPoint === null) {
         context.state.hoverTarget = null;
         return;

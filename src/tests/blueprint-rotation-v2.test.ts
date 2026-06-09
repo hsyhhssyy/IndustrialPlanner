@@ -61,11 +61,12 @@ function fmt(e: EntityBox) {
 }
 
 describe("蓝图旋转 — 非正方形设备", () => {
-  it.skip("4x3 planter + 2x2 seedcol 相邻放置，旋转后不应重叠且相邻关系恢复", () => {
+  it("planter + seedcol 相邻放置，旋转后不应重叠且相邻关系恢复", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
+    // 2026-06-09 订正：设备 footprint 以当前 registry 为准，本用例不再依赖下方旧手算尺寸备注。
     // planter 4x3 left=(0,0)-(3,2), seedcol 2x2 right=(4,0)-(5,1)
     // 手动计算 initialGridPoint:
     // bounds: left=0, top=0, width=6, height=3
@@ -76,7 +77,7 @@ describe("蓝图旋转 — 非正方形设备", () => {
       initialGridPoint: { x: 3, y: 2 },
       entities: {
         p: { id: "p", definitionId: "item_port_planter_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
-        s: { id: "s", definitionId: "item_port_seedcol_1", position: { x: 4, y: 0 }, rotation: 0, config: {}, tags: [] },
+        s: { id: "s", definitionId: "item_port_seedcol_1", position: { x: 5, y: 0 }, rotation: 0, config: {}, tags: [] },
       },
       entityOrder: ["p", "s"],
       slotLinks: [],

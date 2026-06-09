@@ -1020,6 +1020,7 @@ function handleLogisticsDeviceShortcut(options: {
     deviceId,
     anchor,
     pointerMode: "mouse",
+    initialMousePosition: null,
   });
   options.appHost.internalState.runtime.selectingPlacementGroup = group;
   options.appHost.internalActions.setActiveTool("single-placement");
@@ -1144,7 +1145,7 @@ function resolveGridPointFromGesturePosition(
     return null;
   }
 
-  return editor.queries.findGridCellForClientPixlePoint(position);
+  return editor.queries.findGridCellForClientPixelPoint(position);
 }
 
 function areGridPointsEqual(left: GridPoint, right: GridPoint): boolean {
@@ -1167,7 +1168,7 @@ function resolveViewportCenterGridPoint(
 ): GridPoint | null {
   const clientRect = editor.state.viewport.clientRect;
 
-  return editor.queries.findGridCellForClientPixlePoint({
+  return editor.queries.findGridCellForClientPixelPoint({
     x: clientRect.left + clientRect.width / 2,
     y: clientRect.top + clientRect.height / 2,
   });

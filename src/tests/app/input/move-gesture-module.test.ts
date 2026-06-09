@@ -41,7 +41,11 @@ describe("createHypergryphMoveGestureModule", () => {
     });
     expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
     expect(appHost.internalState.activeTool).toBe("move");
-    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(editor.actions.moveCollectionCenterPointTo).toHaveBeenCalledWith(
+      EntityCollectionType.preview,
+      { x: 4, y: 4 },
+    );
     expect(appHost.internalState.runtime.moveEnterFrom).toBe("select");
     expect(appHost.internalActions.hideCanvasFloatingToolbar).not.toHaveBeenCalled();
 
@@ -81,7 +85,11 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(result).toEqual({ status: "handled" });
     expect(handled.editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
     expect(handled.appHost.internalState.activeTool).toBe("move");
-    expect(handled.appHost.internalState.runtime.moveAnchor).toEqual({ x: 2, y: 2 });
+    expect(handled.appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(handled.editor.actions.moveCollectionCenterPointTo).toHaveBeenCalledWith(
+      EntityCollectionType.preview,
+      { x: 2, y: 2 },
+    );
     expect(handled.appHost.internalState.runtime.moveEnterFrom).toBe("marquee");
   });
 
@@ -207,7 +215,7 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(editor.actions.createMoveOperationDraft).not.toHaveBeenCalled();
   });
 
-  it("snaps mouse-entered move from the preview center cell and keeps tracking by cell centers", () => {
+  it("moves mouse-entered preview by collection center point", () => {
     const { context, editor, appHost, previewRectRef } = createContext({
       previewRect: {
         x: 9,
@@ -218,14 +226,11 @@ describe("createHypergryphMoveGestureModule", () => {
     });
     const module = createHypergryphMoveGestureModule();
 
-    vi.mocked(editor.actions.moveCollectionTo).mockImplementation(({
-      startGridPoint,
-      endGridPoint,
-    }) => {
+    vi.mocked(editor.actions.moveCollectionCenterPointTo).mockImplementation((_, point) => {
       previewRectRef.current = {
         ...previewRectRef.current,
-        x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
-        y: previewRectRef.current.y + endGridPoint.y - startGridPoint.y,
+        x: point.x,
+        y: point.y,
       };
     });
 
@@ -237,22 +242,22 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(
       module.handle(mouseMoveEvent({ position: { x: 20, y: 30 } }), context),
     ).toEqual({ status: "handled" });
-    expect(editor.actions.moveCollectionTo).toHaveBeenNthCalledWith(1, {
-      collectionType: EntityCollectionType.preview,
-      startGridPoint: { x: 10.5, y: 20.5 },
-      endGridPoint: { x: 20.5, y: 30.5 },
-    });
-    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 20.5, y: 30.5 });
+    expect(editor.actions.moveCollectionCenterPointTo).toHaveBeenNthCalledWith(
+      1,
+      EntityCollectionType.preview,
+      { x: 20, y: 30 },
+    );
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
 
     expect(
       module.handle(mouseMoveEvent({ position: { x: 21, y: 31 } }), context),
     ).toEqual({ status: "handled" });
-    expect(editor.actions.moveCollectionTo).toHaveBeenNthCalledWith(2, {
-      collectionType: EntityCollectionType.preview,
-      startGridPoint: { x: 20.5, y: 30.5 },
-      endGridPoint: { x: 21.5, y: 31.5 },
-    });
-    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 21.5, y: 31.5 });
+    expect(editor.actions.moveCollectionCenterPointTo).toHaveBeenNthCalledWith(
+      2,
+      EntityCollectionType.preview,
+      { x: 21, y: 31 },
+    );
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
   });
 
   it("enters move from the select floating button with touch and initializes the touch move ui", () => {
@@ -280,8 +285,8 @@ describe("createHypergryphMoveGestureModule", () => {
     );
   });
 
-  it("primes the mouse anchor from the preview after entering move from the right dock button", () => {
-    const { context, appHost } = createContext({
+  it("moves the mouse preview center from drag start after entering move from the right dock button", () => {
+    const { context, editor, appHost } = createContext({
       activeTool: "marquee",
     });
     const module = createHypergryphMoveGestureModule();
@@ -304,7 +309,11 @@ describe("createHypergryphMoveGestureModule", () => {
     );
 
     expect(dragStartResult).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 5, y: 5 });
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(editor.actions.moveCollectionCenterPointTo).toHaveBeenCalledWith(
+      EntityCollectionType.preview,
+      { x: 5, y: 5 },
+    );
   });
 
   it("rolls back draft state and restores selection when entering move cannot create a preview", () => {
@@ -435,8 +444,36 @@ describe("createHypergryphMoveGestureModule", () => {
       "KeyR",
       "r",
     );
-    expect(editor.actions.rotateCollection).toHaveBeenCalledWith(
+    expect(editor.actions.rotateCollectionAroundPivotCell).toHaveBeenCalledWith(
       EntityCollectionType.preview,
+      90,
+    );
+    expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+  });
+
+  it("rotates the mouse move preview around center and snaps it back to the current mouse", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "move",
+      movePointerMode: "mouse",
+      toolbarVisible: true,
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    expect(module.handle(mouseMoveEvent({ position: { x: 24, y: 32 } }), context)).toEqual({
+      status: "handled",
+    });
+    vi.mocked(editor.actions.moveCollectionCenterPointTo).mockClear();
+
+    const result = module.handle(keyDownEvent({ code: "KeyR", key: "r" }), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.rotateCollectionAroundCenterPoint).toHaveBeenCalledWith(
+      EntityCollectionType.preview,
+      90,
+    );
+    expect(editor.actions.moveCollectionCenterPointTo).toHaveBeenCalledWith(
+      EntityCollectionType.preview,
+      { x: 24, y: 32 },
     );
     expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
@@ -452,8 +489,9 @@ describe("createHypergryphMoveGestureModule", () => {
     const result = module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-rotate"), context);
 
     expect(result).toEqual({ status: "handled" });
-    expect(editor.actions.rotateCollection).toHaveBeenCalledWith(
+    expect(editor.actions.rotateCollectionAroundPivotCell).toHaveBeenCalledWith(
       EntityCollectionType.preview,
+      90,
     );
     expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
@@ -719,6 +757,7 @@ function createContext(options: {
   activeTool?: ActiveTool;
   moveAnchor?: GridPoint | null;
   moveEnterFrom?: ActiveTool | null;
+  movePointerMode?: "mouse" | "touch" | null;
   toolbarVisible?: boolean;
   previewRect?: GridRect;
   previewDefinitionId?: string;
@@ -757,6 +796,13 @@ function createContext(options: {
   };
   const editor: MockEditor = {
     state: {
+      viewport: {
+        center: { x: 0, y: 0 },
+        clientRect: { left: 0, top: 0, width: 100, height: 100 },
+        gridSize: 1,
+        gridCellPixelSize: 1,
+        displayRotation: 0,
+      },
       collections: {
         [EntityCollectionType.selection]: selection,
         [EntityCollectionType.marquee]: marquee,
@@ -789,7 +835,7 @@ function createContext(options: {
           ? previewRectRef.current
           : null,
       ),
-      findGridCellForClientPixlePoint: vi.fn((point) => ({
+      findGridCellForClientPixelPoint: vi.fn((point) => ({
         x: Math.floor(point.x),
         y: Math.floor(point.y),
       })),
@@ -813,7 +859,10 @@ function createContext(options: {
       }),
       applyMoveOerationDraft: vi.fn(() => true),
       moveCollectionTo: vi.fn(),
+      moveCollectionCenterPointTo: vi.fn(),
       rotateCollection: vi.fn(),
+      rotateCollectionAroundCenterPoint: vi.fn(),
+      rotateCollectionAroundPivotCell: vi.fn(),
       replaceEntityDefinition: vi.fn((entityId: string, nextDefinitionId: string) => {
         if (entityId !== previewEntity.id) {
           return false;
@@ -852,6 +901,7 @@ function createContext(options: {
       runtime: {
         moveAnchor: options.moveAnchor ?? null,
         moveEnterFrom: options.moveEnterFrom ?? null,
+        movePointerMode: options.movePointerMode ?? null,
         canvasFloatingToolbar: {
           visible: options.toolbarVisible ?? false,
           buttonIds: [],
@@ -939,7 +989,7 @@ type MockCollection = string[] & {
 };
 
 type MockEditor = {
-  state: Pick<EditorContract["state"], "collections">;
+  state: Pick<EditorContract["state"], "collections" | "viewport">;
   actions: Pick<
     EditorContract["actions"],
     | "addToCollection"
@@ -947,15 +997,18 @@ type MockEditor = {
     | "cancelMoveOperationDraft"
     | "clearCollection"
     | "createMoveOperationDraft"
+    | "moveCollectionCenterPointTo"
     | "moveCollectionTo"
     | "replaceEntityDefinition"
     | "rotateCollection"
+    | "rotateCollectionAroundCenterPoint"
+    | "rotateCollectionAroundPivotCell"
   >;
   queries: Pick<
     EditorContract["queries"],
     | "findClientRectForGridCell"
     | "findEntityCollectionGridRect"
-    | "findGridCellForClientPixlePoint"
+    | "findGridCellForClientPixelPoint"
     | "getEntityById"
   >;
 };

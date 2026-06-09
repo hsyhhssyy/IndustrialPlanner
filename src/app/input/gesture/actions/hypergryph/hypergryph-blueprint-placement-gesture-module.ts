@@ -13,6 +13,7 @@ import type { GestureActionContext, GestureHandleResult, GestureMappingModule } 
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import {
   closeCompactLeftDockOnPlacementEnter,
+  driveMousePlacementPreview,
   drivePlacementPreview,
   primePlacementAnchorFromPreview,
   resolveViewportCenterGridPoint,
@@ -27,11 +28,20 @@ type TempBlueprintShortcut = "copy" | "paste";
 
 export function createHypergryphBlueprintPlacementGestureModule(): GestureMappingModule<AppHost> {
   let lastTempBlueprint: BlueprintLibraryRecord | null = null;
+  let lastMousePosition: GesturePosition | null = null;
 
   return {
     id: "hypergryph-blueprint-placement-gesture",
     when: isHypergryphGestureEnabled,
     handle(event, context) {
+      if (
+        event.type === "mouse move"
+        || event.type === "mouse dragstart"
+        || event.type === "mouse dragmove"
+      ) {
+        lastMousePosition = event.position;
+      }
+
       if (event.type === "key down") {
         const shortcut = resolveTempBlueprintShortcut({
           code: event.code,
@@ -65,6 +75,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
               editor,
               record,
               source: "mouse",
+              initialMousePosition: lastMousePosition,
             });
           }
 
@@ -77,6 +88,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             editor,
             record: lastTempBlueprint,
             source: "mouse",
+            initialMousePosition: lastMousePosition,
           });
         }
       }
@@ -115,6 +127,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             appHost: context.appHost,
             editor,
             source: "touch",
+            initialMousePosition: null,
           });
       }
 
@@ -129,6 +142,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             appHost: context.appHost,
             editor,
             source: "mouse",
+            initialMousePosition: lastMousePosition,
           });
       }
 
@@ -151,7 +165,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             return { status: "ignored" };
           }
 
-          rotateBlueprintPlacementPreview(context.appHost, editor);
+          rotateBlueprintPlacementPreview(context.appHost, editor, lastMousePosition);
           return { status: "handled" };
 
         case "mouse dragstart":
@@ -170,7 +184,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           });
 
         case "mouse move":
-          return drivePlacementPreview({
+          return driveMousePlacementPreview({
             appHost: context.appHost,
             editor,
             position: event.position,
@@ -181,7 +195,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             return { status: "ignored" };
           }
 
-          return drivePlacementPreview({
+          return driveMousePlacementPreview({
             appHost: context.appHost,
             editor,
             position: event.position,
@@ -214,7 +228,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           }
 
           if (event.button === 0 && !event.longPress) {
-            applyBlueprintPlacement(context.appHost, editor);
+            applyBlueprintPlacement(context.appHost, editor, lastMousePosition);
             return { status: "handled" };
           }
 
@@ -222,12 +236,12 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
 
         case "ui-button-touch-tap":
           if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
-            applyBlueprintPlacement(context.appHost, editor);
+            applyBlueprintPlacement(context.appHost, editor, null);
             return { status: "handled" };
           }
 
           if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
-            rotateBlueprintPlacementPreview(context.appHost, editor);
+            rotateBlueprintPlacementPreview(context.appHost, editor, null);
             return { status: "handled" };
           }
 
@@ -244,12 +258,12 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           }
 
           if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
-            applyBlueprintPlacement(context.appHost, editor);
+            applyBlueprintPlacement(context.appHost, editor, lastMousePosition);
             return { status: "handled" };
           }
 
           if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
-            rotateBlueprintPlacementPreview(context.appHost, editor);
+            rotateBlueprintPlacementPreview(context.appHost, editor, lastMousePosition);
             return { status: "handled" };
           }
 
@@ -272,6 +286,7 @@ function enterBlueprintPlacement(options: {
   editor: EditorContract;
   record?: BlueprintLibraryRecord;
   source: "mouse" | "touch";
+  initialMousePosition: GesturePosition | null;
 }): GestureHandleResult {
   const record = options.record ?? options.appHost.blueprintPreview.record;
 
@@ -317,6 +332,17 @@ function enterBlueprintPlacement(options: {
       return { status: "ignored" };
     }
 
+    if (
+      options.source === "mouse"
+      && options.initialMousePosition !== null
+      && isClientPointInsideViewport(options.editor, options.initialMousePosition)
+    ) {
+      options.editor.actions.moveCollectionCenterPointTo(
+        EntityCollectionType.preview,
+        options.initialMousePosition,
+      );
+    }
+
     options.appHost.blueprintPreview.close();
 
     if (reenteringBlueprintPlacement) {
@@ -357,7 +383,11 @@ function handlePlacementMouseDragStart(options: {
   });
 }
 
-function applyBlueprintPlacement(appHost: AppHost, editor: EditorContract): void {
+function applyBlueprintPlacement(
+  appHost: AppHost,
+  editor: EditorContract,
+  currentMousePosition: GesturePosition | null,
+): void {
   const record = appHost.internalState.runtime.blueprintPlacementRecord;
   const placementAnchor = appHost.internalState.runtime.placementAnchor;
   const pointerMode = appHost.internalState.runtime.blueprintPlacementPointerMode;
@@ -385,7 +415,18 @@ function applyBlueprintPlacement(appHost: AppHost, editor: EditorContract): void
     editor.actions.createBlueprintPlacementDraft(record, placementAnchor);
 
     for (let index = 0; index < rotationSteps; index += 1) {
-      rotatePlacementPreview(appHost, editor);
+      editor.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
+    }
+
+    if (
+      pointerMode === "mouse"
+      && currentMousePosition !== null
+      && isClientPointInsideViewport(editor, currentMousePosition)
+    ) {
+      editor.actions.moveCollectionCenterPointTo(
+        EntityCollectionType.preview,
+        currentMousePosition,
+      );
     }
 
     const previewRect = editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
@@ -409,11 +450,30 @@ function cancelBlueprintPlacement(appHost: AppHost, editor: EditorContract): voi
   }
 }
 
-function rotateBlueprintPlacementPreview(appHost: AppHost, editor: EditorContract): void {
-  rotatePlacementPreview(appHost, editor);
+function rotateBlueprintPlacementPreview(
+  appHost: AppHost,
+  editor: EditorContract,
+  currentMousePosition: GesturePosition | null,
+): void {
+  rotatePlacementPreview(appHost, editor, {
+    pointerMode: appHost.internalState.runtime.blueprintPlacementPointerMode,
+    currentMousePosition,
+  });
   appHost.internalState.runtime.blueprintPlacementRotationSteps = normalizeRotationSteps(
     appHost.internalState.runtime.blueprintPlacementRotationSteps + 1,
   );
+}
+
+function isClientPointInsideViewport(
+  editor: EditorContract,
+  position: GesturePosition,
+): boolean {
+  const clientRect = editor.state.viewport.clientRect;
+
+  return position.x >= clientRect.left
+    && position.x <= clientRect.left + clientRect.width
+    && position.y >= clientRect.top
+    && position.y <= clientRect.top + clientRect.height;
 }
 
 function cleanupBlueprintPlacement(appHost: AppHost, editor: EditorContract | null): void {
