@@ -1,4 +1,5 @@
 import { Graphics } from "pixi.js";
+import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
@@ -36,19 +37,14 @@ export function createHoverCornersDecoration(): DecorationLayer {
 
       const { gridPoint, entity } = hoverTarget;
 
-      // 计算 footprint 尺寸（实体取定义尺寸，空单元格取 1×1）
-      const footprint = entity !== null
-        ? getEntityFootprint(ctx, entity.definitionId)
-        : { width: 1, height: 1 };
+      // 计算足印旋转后的网格矩形（仅旋转 footprint，不含 spriteOffset）
+      const footprintGridRect = entity !== null
+        ? getEntityFootprintGridRect(ctx, entity, gridPoint)
+        : { x: gridPoint.x, y: gridPoint.y, width: 1, height: 1 };
 
       // 网格坐标 → viewport 像素坐标
       const viewportRect = resolveViewportRectFromWorldGridRect({
-        gridRect: {
-          x: gridPoint.x,
-          y: gridPoint.y,
-          width: footprint.width,
-          height: footprint.height,
-        },
+        gridRect: footprintGridRect,
         viewportBounds: ctx.viewportBounds,
         viewportCenter: {
           x: ctx.viewportState.centerX,
@@ -115,12 +111,26 @@ function drawCorner(
   g.stroke();
 }
 
-function getEntityFootprint(
+/**
+ * 获取实体足印旋转后的网格矩形。
+ * 仅根据 rotation 旋转 definition.footprint，不考虑 spriteOffset。
+ */
+function getEntityFootprintGridRect(
   ctx: DecorationSyncContext,
-  definitionId: string,
-): { width: number; height: number } {
+  entity: { readonly id: string; readonly definitionId: string; readonly rotation: 0 | 90 | 180 | 270 },
+  gridPoint: { x: number; y: number },
+): { x: number; y: number; width: number; height: number } {
   const def = ctx.renderHost.workspace.registry.entityDefinitions
-    .find((d) => d.id === definitionId);
-  if (!def?.footprint) return { width: 1, height: 1 };
-  return { width: def.footprint.width, height: def.footprint.height };
+    .find((d) => d.id === entity.definitionId);
+  if (!def?.footprint) {
+    return { x: gridPoint.x, y: gridPoint.y, width: 1, height: 1 };
+  }
+
+  const rotated = getRotatedGridFootprint(def.footprint, entity.rotation);
+  return {
+    x: gridPoint.x,
+    y: gridPoint.y,
+    width: rotated.width,
+    height: rotated.height,
+  };
 }

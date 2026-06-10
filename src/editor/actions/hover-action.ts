@@ -23,7 +23,7 @@ export function createEditorHoverActions(
       const entity = editor.queries.findEntityAtClientPixelPoint(clientPixel);
       // 设备 hover 时，四角特效应固定在设备 footprint 上，而非跟随鼠标移动
       const hoverTarget = entity !== null
-        ? { entity: { id: entity.id, definitionId: entity.definitionId }, gridPoint: entity.position }
+        ? { entity: { id: entity.id, definitionId: entity.definitionId, rotation: entity.rotation }, gridPoint: entity.position }
         : { entity: null, gridPoint };
 
       context.state.hoverTarget = hoverTarget;

@@ -68,7 +68,7 @@ export interface EditorViewportState {
 
 export interface HoverTarget {
   /** 命中的实体（设备）；若为空单元格则为 null */
-  readonly entity: { readonly id: string; readonly definitionId: string } | null;
+  readonly entity: { readonly id: string; readonly definitionId: string; readonly rotation: GridRotation } | null;
   /** 吸附后的格子坐标 */
   readonly gridPoint: GridPoint;
 }
