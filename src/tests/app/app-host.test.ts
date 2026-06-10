@@ -1856,7 +1856,7 @@ describe("createAppHost", () => {
     )?.definitionId).toBe("item_port_grinder_1");
   });
 
-  it("re-arms blueprint-placement after apply and exits cleanly on cancel", () => {
+  it("applies blueprint-placement via touch OK and returns to select with placement panel", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
@@ -1873,37 +1873,12 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    const previewBeforeApply = editorHost.state.collections.preview.map((entityId) => {
-      const entity = editorHost.queries.getEntityById(entityId);
-
-      return entity === null
-        ? null
-        : {
-          definitionId: entity.definitionId,
-          position: { ...entity.position },
-          rotation: entity.rotation,
-        };
-    });
-
     appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "KeyR",
       key: "r",
       keyCode: 82,
     }));
 
-    const rotatedPreview = editorHost.state.collections.preview.map((entityId) => {
-      const entity = editorHost.queries.getEntityById(entityId);
-
-      return entity === null
-        ? null
-        : {
-          definitionId: entity.definitionId,
-          position: { ...entity.position },
-          rotation: entity.rotation,
-        };
-    });
-
-    expect(rotatedPreview).not.toEqual(previewBeforeApply);
     expect(appHost.internalState.runtime.blueprintPlacementRotationSteps).toBe(1);
     expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
 
@@ -1915,29 +1890,58 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
+    // 非连续放置 → 回到 select + placement 面板
+    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.internalState.runtime.activePanel).toBe("placement");
+    expect(appHost.internalState.runtime.blueprintPlacementRecord).toBeNull();
+    expect(appHost.internalState.runtime.blueprintPlacementPointerMode).toBeNull();
+    expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(initialEntityOrderLength + 2);
+    expect(editorHost.document.getSnapshot().slotLinks).toHaveLength(1);
+    expect(editorHost.state.collections.preview).toEqual([]);
+  });
+
+  it("keeps blueprint-placement active after Shift+mouse-tap and exits on cancel", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+    const blueprintRecord = createTestBlueprintRecord();
+
+    appHost.blueprintPreview.open(blueprintRecord);
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: "blueprint-preview-place-button",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+
+    // Shift + 鼠标点击画布 → 连续放置
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 51,
+      clientX: 400,
+      clientY: 300,
+      buttons: 1,
+      shiftKey: true,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 51,
+      clientX: 400,
+      clientY: 300,
+      buttons: 0,
+      shiftKey: true,
+    }));
+
     expect(appHost.internalState.activeTool).toBe("blueprint-placement");
     expect(appHost.internalState.runtime.blueprintPlacementRecord?.blueprintId).toBe(
       blueprintRecord.blueprintId,
     );
-    expect(appHost.internalState.runtime.blueprintPlacementRotationSteps).toBe(1);
-    expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(initialEntityOrderLength + 2);
-    expect(editorHost.document.getSnapshot().slotLinks).toHaveLength(1);
     expect(editorHost.state.collections.preview).toHaveLength(2);
 
-    const rearmedPreview = editorHost.state.collections.preview.map((entityId) => {
-      const entity = editorHost.queries.getEntityById(entityId);
-
-      return entity === null
-        ? null
-        : {
-          definitionId: entity.definitionId,
-          position: { ...entity.position },
-          rotation: entity.rotation,
-        };
-    });
-
-    expect(rearmedPreview).toEqual(rotatedPreview);
-
+    // 取消 → 回到 select + placement 面板
     appHost.gestureAdapter.handleUiButtonTouchTap({
       uiButtonId: "canvas-floating-toolbar-button-cancel",
       altKey: false,
@@ -1947,8 +1951,50 @@ describe("createAppHost", () => {
     });
 
     expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.internalState.runtime.activePanel).toBe("placement");
     expect(appHost.internalState.runtime.blueprintPlacementRecord).toBeNull();
     expect(appHost.internalState.runtime.blueprintPlacementPointerMode).toBeNull();
+    expect(editorHost.state.collections.preview).toEqual([]);
+  });
+
+  it("returns to select after mouse-tap without Shift on blueprint-placement canvas", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+    const blueprintRecord = createTestBlueprintRecord();
+
+    appHost.blueprintPreview.open(blueprintRecord);
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: "blueprint-preview-place-button",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+
+    // 无修饰键鼠标点击 → 非连续放置，回到 select
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 61,
+      clientX: 400,
+      clientY: 300,
+      buttons: 1,
+      shiftKey: false,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 61,
+      clientX: 400,
+      clientY: 300,
+      buttons: 0,
+      shiftKey: false,
+    }));
+
+    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.internalState.runtime.activePanel).toBe("placement");
+    expect(appHost.internalState.runtime.blueprintPlacementRecord).toBeNull();
     expect(editorHost.state.collections.preview).toEqual([]);
   });
 

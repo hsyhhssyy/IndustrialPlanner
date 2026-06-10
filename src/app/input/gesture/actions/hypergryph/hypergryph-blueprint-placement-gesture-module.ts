@@ -228,7 +228,9 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           }
 
           if (event.button === 0 && !event.longPress) {
-            applyBlueprintPlacement(context.appHost, editor, lastMousePosition);
+            applyBlueprintPlacement(context.appHost, editor, lastMousePosition, {
+              continuous: event.modifiers.shift || event.modifiers.ctrl,
+            });
             return { status: "handled" };
           }
 
@@ -236,7 +238,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
 
         case "ui-button-touch-tap":
           if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
-            applyBlueprintPlacement(context.appHost, editor, null);
+            applyBlueprintPlacement(context.appHost, editor, null, { continuous: false });
             return { status: "handled" };
           }
 
@@ -258,7 +260,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           }
 
           if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
-            applyBlueprintPlacement(context.appHost, editor, lastMousePosition);
+            applyBlueprintPlacement(context.appHost, editor, lastMousePosition, { continuous: false });
             return { status: "handled" };
           }
 
@@ -387,6 +389,7 @@ function applyBlueprintPlacement(
   appHost: AppHost,
   editor: EditorContract,
   currentMousePosition: GesturePosition | null,
+  options: { continuous: boolean },
 ): void {
   const record = appHost.internalState.runtime.blueprintPlacementRecord;
   const placementAnchor = appHost.internalState.runtime.placementAnchor;
@@ -411,34 +414,41 @@ function applyBlueprintPlacement(
       return;
     }
 
-    appHost.internalState.runtime.placementAnchor = placementAnchor;
-    editor.actions.createBlueprintPlacementDraft(record, placementAnchor);
+    if (options.continuous) {
+      appHost.internalState.runtime.placementAnchor = placementAnchor;
+      editor.actions.createBlueprintPlacementDraft(record, placementAnchor);
 
-    for (let index = 0; index < rotationSteps; index += 1) {
-      editor.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
-    }
+      for (let index = 0; index < rotationSteps; index += 1) {
+        editor.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
+      }
 
-    if (
-      pointerMode === "mouse"
-      && currentMousePosition !== null
-      && isClientPointInsideViewport(editor, currentMousePosition)
-    ) {
-      editor.actions.moveCollectionCenterPointTo(
-        EntityCollectionType.preview,
-        currentMousePosition,
-      );
-    }
+      if (
+        pointerMode === "mouse"
+        && currentMousePosition !== null
+        && isClientPointInsideViewport(editor, currentMousePosition)
+      ) {
+        editor.actions.moveCollectionCenterPointTo(
+          EntityCollectionType.preview,
+          currentMousePosition,
+        );
+      }
 
-    const previewRect = editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
+      const previewRect = editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
 
-    if (previewRect === null || !syncPlacementEntryUi(appHost, pointerMode)) {
-      throw new Error("failed to re-arm blueprint placement preview");
+      if (previewRect === null || !syncPlacementEntryUi(appHost, pointerMode)) {
+        throw new Error("failed to re-arm blueprint placement preview");
+      }
+
+      return;
     }
   } catch {
     safelyCancelPlacementDraft(editor);
-    clearBlueprintPlacementUi(appHost);
-    appHost.internalActions.setActiveTool("select");
   }
+
+  // 非连续放置 或 异常 → 回到 select
+  clearBlueprintPlacementUi(appHost);
+  appHost.internalActions.setActiveTool("select");
+  appHost.internalActions.setActivePanel("placement");
 }
 
 function cancelBlueprintPlacement(appHost: AppHost, editor: EditorContract): void {
@@ -447,6 +457,7 @@ function cancelBlueprintPlacement(appHost: AppHost, editor: EditorContract): voi
   } finally {
     clearBlueprintPlacementUi(appHost);
     appHost.internalActions.setActiveTool("select");
+    appHost.internalActions.setActivePanel("placement");
   }
 }
 
@@ -496,6 +507,7 @@ function restoreFailedBlueprintPlacementEnter(appHost: AppHost, editor: EditorCo
   safelyCancelPlacementDraft(editor);
   clearBlueprintPlacementUi(appHost);
   appHost.internalActions.setActiveTool("select");
+  appHost.internalActions.setActivePanel("placement");
 }
 
 function safelyCancelPlacementDraft(editor: EditorContract): void {
