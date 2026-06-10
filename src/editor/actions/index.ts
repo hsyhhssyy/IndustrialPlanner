@@ -2,6 +2,7 @@ import type { EditorAction } from "@/domain/editor/editor-action";
 
 import { createEditorConfigActions } from "./config-action";
 import { createEditorDarkPipeLinkActions } from "./dark-pipe-link-action";
+import { createEditorWarehouseSlotLinkActions } from "./warehouse-slot-link-action";
 import { createEditorDefinitionActions } from "./definition-action";
 import { createEditorDocumentActions } from "./document-action";
 import { createEditorHistoryActions } from "./history-action";
@@ -20,6 +21,7 @@ export function createEditorActions(
   return {
     ...createEditorConfigActions(context),
     ...createEditorDarkPipeLinkActions(context),
+    ...createEditorWarehouseSlotLinkActions(context),
     ...createEditorDefinitionActions(context),
     ...createEditorDocumentActions(context),
     ...createEditorHistoryActions(context),

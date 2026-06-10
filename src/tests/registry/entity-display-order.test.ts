@@ -345,6 +345,5 @@ function createEntityStub(
     storageSlotGroups: [],
     recipeChannels: [],
     portStorageBindings: [],
-    links: [],
   };
 }

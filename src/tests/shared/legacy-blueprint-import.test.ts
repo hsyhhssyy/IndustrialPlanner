@@ -261,24 +261,38 @@ describe("legacy-blueprint-import", () => {
     });
 
     expect(converted?.entities.protocol_core_0001?.config).toEqual({
-      "links[0].id": "",
-      "links[0].linkType": "share-all",
-      "links[0].source.entityId": "",
-      "links[0].source.storageSlotGroupId": "unbuffer_w2",
-      "links[0].source.slotId": "slot_1",
-      "links[0].target.entityId": "warehouse",
-      "links[0].target.storageSlotGroupId": "warehouse",
-      "links[0].target.slotId": "item_copper_ore",
       "storageSlotGroups[0].slots[0].ignoreStock": true,
-      "links[5].id": "",
-      "links[5].linkType": "share-all",
-      "links[5].source.entityId": "",
-      "links[5].source.storageSlotGroupId": "unbuffer_e8",
-      "links[5].source.slotId": "slot_1",
-      "links[5].target.entityId": "warehouse",
-      "links[5].target.storageSlotGroupId": "warehouse",
-      "links[5].target.slotId": "item_iron_ore",
       "storageSlotGroups[5].slots[0].ignoreStock": false,
+    });
+    // AI-CORRECTION 2026-06-09: links 已迁移至 document.slotLinks，不再出现在 entity.config 中。
+    expect(converted?.slotLinks).toHaveLength(2);
+    expect(converted?.slotLinks).toContainEqual({
+      id: "warehouse-link:protocol_core_0001:unbuffer_w2:slot_1",
+      linkType: "share-all",
+      source: {
+        entityId: "protocol_core_0001",
+        storageSlotGroupId: "unbuffer_w2",
+        slotId: "slot_1",
+      },
+      target: {
+        entityId: "warehouse",
+        storageSlotGroupId: "warehouse",
+        slotId: "item_copper_ore",
+      },
+    });
+    expect(converted?.slotLinks).toContainEqual({
+      id: "warehouse-link:protocol_core_0001:unbuffer_e8:slot_1",
+      linkType: "share-all",
+      source: {
+        entityId: "protocol_core_0001",
+        storageSlotGroupId: "unbuffer_e8",
+        slotId: "slot_1",
+      },
+      target: {
+        entityId: "warehouse",
+        storageSlotGroupId: "warehouse",
+        slotId: "item_iron_ore",
+      },
     });
   });
 

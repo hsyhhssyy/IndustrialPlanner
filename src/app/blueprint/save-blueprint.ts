@@ -97,8 +97,8 @@ export function createSelectionBlueprintDocument(options: {
     entityOrder,
     slotLinks: currentDocument.slotLinks
       .filter((slotLink) => (
-        selectedIdSet.has(slotLink.source.entityId)
-        && selectedIdSet.has(slotLink.target.entityId)
+        isValidSlotLinkEndpointForBlueprint(slotLink.source.entityId, selectedIdSet)
+        && isValidSlotLinkEndpointForBlueprint(slotLink.target.entityId, selectedIdSet)
       ))
       .map(cloneSlotLinkDefinition),
   });
@@ -146,4 +146,25 @@ function cloneSlotLinkDefinition(slotLink: SlotLinkDefinition): SlotLinkDefiniti
       ...slotLink.target,
     },
   };
+}
+
+/**
+ * 判断 slotLink 端点是否应该包含在蓝图中。
+ * - 在选中实体中 → 包含
+ * - 是蛇兵（warehouse / base-builtin:*）→ 包含（这些不是普通实体，是全局概念）
+ * - 其他 → 不包含（外部引用，断开）
+ */
+function isValidSlotLinkEndpointForBlueprint(
+  entityId: string,
+  selectedIdSet: ReadonlySet<string>,
+): boolean {
+  if (selectedIdSet.has(entityId)) {
+    return true;
+  }
+  // AI-CORRECTION 2026-06-10: warehouse 和 base-builtin 蛇兵不在选中的实体中，
+  // 但必须保留——否则 Ctrl+C 取货口再粘贴会丢失仓库链接。
+  if (entityId === "warehouse" || entityId.startsWith("warehouse:") || entityId.startsWith("base-builtin:")) {
+    return true;
+  }
+  return false;
 }

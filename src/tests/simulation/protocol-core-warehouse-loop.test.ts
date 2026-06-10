@@ -7,10 +7,12 @@ import { runBlueprintSimulation } from "./blueprint-runner";
 import {
   createBlueprint,
   createEntity,
+  createWarehouseSlotLink,
   findSlot,
   getDevice,
   getTick,
 } from "./blueprint-test-helpers";
+import type { SlotLinkDefinition } from "@/domain/document/world-document";
 
 const CORE_ID = "core";
 
@@ -80,6 +82,13 @@ type ProtocolCoreWarehouseOutputConfig = {
 
 describe("protocol core warehouse links", () => {
   it("ships independently from every configured output", async () => {
+    const { slotLinks, config } = createProtocolCoreWarehouseSlotLinks(
+      CORE_ID,
+      PROTOCOL_CORE_OUTPUTS.map((output, linkIndex) => ({
+        ...output,
+        linkIndex,
+      })),
+    );
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("protocol-core-all-outputs", [
         createEntity(
@@ -88,10 +97,7 @@ describe("protocol core warehouse links", () => {
           0,
           0,
           0,
-          createProtocolCoreWarehouseLinkConfig(CORE_ID, PROTOCOL_CORE_OUTPUTS.map((output, linkIndex) => ({
-            ...output,
-            linkIndex,
-          }))),
+          config,
         ),
         ...PROTOCOL_CORE_OUTPUTS.map((output) =>
           createEntity(
@@ -102,7 +108,9 @@ describe("protocol core warehouse links", () => {
             output.receiverRotation,
           ),
         ),
-      ]),
+      ],
+      slotLinks,
+      ),
       registry: createRegistryContract(),
       maxTickNumber: 20,
     });
@@ -114,13 +122,19 @@ describe("protocol core warehouse links", () => {
           itemType: output.itemId,
           amount: 1,
           sourceSlotId: expect.stringContaining(`device:${CORE_ID}/node:${output.storageGroupId}/slot:slot_1`),
-          targetSlotId: expect.stringContaining(`device:${output.receiverId}`),
+          targetSlotId: expect.stringContaining(`device:${output.receiverId}`)
         }),
       ]));
     }
   });
 
   it("submits looped input cargo so the output keeps flowing", async () => {
+    const { slotLinks, config } = createProtocolCoreWarehouseSlotLinks(CORE_ID, [{
+      linkIndex: 5,
+      storageGroupId: "unbuffer_e8",
+      storageGroupIndex: 5,
+      itemId: "item_copper_ore",
+    }]);
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("protocol-core-e8-loop-to-s8", [
         createEntity(
@@ -129,19 +143,16 @@ describe("protocol core warehouse links", () => {
           0,
           0,
           0,
-          createProtocolCoreWarehouseLinkConfig(CORE_ID, [{
-            linkIndex: 5,
-            storageGroupId: "unbuffer_e8",
-            storageGroupIndex: 5,
-            itemId: "item_copper_ore",
-          }]),
+          config,
         ),
         createEntity("loop_0", "belt_turn_cw_1x1", 9, 7, 180),
         createEntity("loop_1", "belt_straight_1x1", 9, 8, 90),
         createEntity("loop_2", "belt_turn_cw_1x1", 9, 9, 270),
         createEntity("loop_3", "belt_straight_1x1", 8, 9, 180),
         createEntity("loop_4", "belt_turn_cw_1x1", 7, 9, 0),
-      ]),
+      ],
+      slotLinks,
+      ),
       registry: createRegistryContract(),
       maxTickNumber: 320,
     });
@@ -163,19 +174,13 @@ describe("protocol core warehouse links", () => {
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("warehouse-loader-sink", [
         createEntity("unloader", "item_port_unloader_1", 51, 34, 270, {
-          "links[0].id": "",
-          "links[0].linkType": "share-all",
-          "links[0].source.entityId": "unloader",
-          "links[0].source.storageSlotGroupId": "unloader_buffer",
-          "links[0].source.slotId": "slot_1",
-          "links[0].target.entityId": "warehouse",
-          "links[0].target.storageSlotGroupId": "warehouse",
-          "links[0].target.slotId": "item_plant_moss_3",
-          "storageSlotGroups[0].slots[0].ignoreStock": true,
+          "storageSlotGroups[0].slots[0].ignoreStock": true
         }),
         createEntity("belt_0", "belt_straight_1x1", 52, 35, 0),
         // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°（已撤销），rot 恢复为 270。
         createEntity("loader", "item_port_loader_1", 53, 34, 270),
+      ], [
+        createWarehouseSlotLink("unloader", "item_plant_moss_3"),
       ]),
       registry: createRegistryContract(),
       maxTickNumber: 80,
@@ -192,27 +197,19 @@ describe("protocol core warehouse links", () => {
   });
 });
 
-function createProtocolCoreWarehouseLinkConfig(
+function createProtocolCoreWarehouseSlotLinks(
   entityId: string,
   outputs: readonly ProtocolCoreWarehouseOutputConfig[],
-): WorldEntity["config"] {
-  const entries: [string, unknown][] = [];
+): { slotLinks: SlotLinkDefinition[]; config: WorldEntity["config"] } {
+  const slotLinks: SlotLinkDefinition[] = [];
+  const config: Record<string, unknown> = {};
 
   for (const output of outputs) {
-    entries.push(
-      [`links[${output.linkIndex}].id`, ""],
-      [`links[${output.linkIndex}].linkType`, "share-all"],
-      [`links[${output.linkIndex}].source.entityId`, entityId],
-      [`links[${output.linkIndex}].source.storageSlotGroupId`, output.storageGroupId],
-      [`links[${output.linkIndex}].source.slotId`, "slot_1"],
-      [`links[${output.linkIndex}].target.entityId`, "warehouse"],
-      [`links[${output.linkIndex}].target.storageSlotGroupId`, "warehouse"],
-      [`links[${output.linkIndex}].target.slotId`, output.itemId],
-      [`storageSlotGroups[${output.storageGroupIndex}].slots[0].ignoreStock`, true],
-    );
+    slotLinks.push(createWarehouseSlotLink(entityId, output.itemId, output.storageGroupId, "slot_1"));
+    config[`storageSlotGroups[${output.storageGroupIndex}].slots[0].ignoreStock`] = true;
   }
 
-  return Object.fromEntries(entries);
+  return { slotLinks, config };
 }
 
 function allTransfers(

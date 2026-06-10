@@ -7,6 +7,7 @@ import { runBlueprintSimulation } from "./blueprint-runner";
 import {
   createBlueprint,
   createEntity,
+  createWarehouseSlotLink,
   findSlot,
 } from "./blueprint-test-helpers";
 
@@ -21,7 +22,7 @@ describe("协议存储箱多槽入库路由", () => {
     const report = await runBlueprintSimulation({
       blueprint: createTwoItemSinkBlueprint({
         finalHopDefinitionId: "belt_straight_1x1",
-        finalHopRotation: 270,
+        finalHopRotation: 270
       }),
       registry: createRegistryContract(),
       maxTickNumber: FINAL_TICK,
@@ -34,7 +35,7 @@ describe("协议存储箱多槽入库路由", () => {
     const report = await runBlueprintSimulation({
       blueprint: createTwoItemSinkBlueprint({
         finalHopDefinitionId: "item_log_splitter",
-        finalHopRotation: 180,
+        finalHopRotation: 180
       }),
       registry: createRegistryContract(),
       maxTickNumber: FINAL_TICK,
@@ -90,7 +91,7 @@ function createTwoItemSinkBlueprint(options: {
       41,
       25,
       180,
-      createUnloaderWarehouseLinkConfig("originium-source", "item_originium_ore"),
+      createUnloaderWarehouseLinkConfig(),
     ),
     createEntity(
       "iron-source",
@@ -98,7 +99,7 @@ function createTwoItemSinkBlueprint(options: {
       45,
       25,
       180,
-      createUnloaderWarehouseLinkConfig("iron-source", "item_iron_ore"),
+      createUnloaderWarehouseLinkConfig(),
     ),
     createEntity("converger", "item_log_converger", 44, 23, 180),
     createEntity("right-entry", "belt_straight_1x1", 46, 24, 270),
@@ -109,6 +110,9 @@ function createTwoItemSinkBlueprint(options: {
     createEntity("left-feed", "belt_straight_1x1", 43, 23, 0),
     createEntity("final-hop", options.finalHopDefinitionId, 44, 22, options.finalHopRotation),
     createEntity(SINK_STORAGE_ID, "item_port_storager_1", 43, 19, 0),
+  ], [
+    createWarehouseSlotLink("originium-source", "item_originium_ore"),
+    createWarehouseSlotLink("iron-source", "item_iron_ore"),
   ]);
 }
 
@@ -120,7 +124,7 @@ function createStorageFillObserveBlueprint(): BlueprintDocument {
       32,
       26,
       180,
-      createUnloaderWarehouseLinkConfig("originium-source", "item_originium_ore"),
+      createUnloaderWarehouseLinkConfig(),
     ),
     createEntity(
       "iron-source",
@@ -128,7 +132,7 @@ function createStorageFillObserveBlueprint(): BlueprintDocument {
       35,
       26,
       180,
-      createUnloaderWarehouseLinkConfig("iron-source", "item_iron_ore"),
+      createUnloaderWarehouseLinkConfig(),
     ),
     createEntity(OBSERVE_STORAGE_ID, "item_port_storager_1", 33, 18, 0, createObserveStorageInitialConfig()),
     createEntity("converger", "item_log_converger", 34, 24, 180),
@@ -142,22 +146,14 @@ function createStorageFillObserveBlueprint(): BlueprintDocument {
     createEntity("splitter-input-2", "belt_straight_1x1", 34, 22, 270),
     createEntity("splitter-output", "belt_straight_1x1", 35, 21, 0),
     createEntity(OTHER_STORAGE_ID, "item_port_storager_1", 36, 19, 90),
+  ], [
+    createWarehouseSlotLink("originium-source", "item_originium_ore"),
+    createWarehouseSlotLink("iron-source", "item_iron_ore"),
   ]);
 }
 
-function createUnloaderWarehouseLinkConfig(
-  entityId: string,
-  itemId: string,
-): WorldEntity["config"] {
+function createUnloaderWarehouseLinkConfig(): WorldEntity["config"] {
   return {
-    "links[0].id": "",
-    "links[0].linkType": "share-all",
-    "links[0].source.entityId": entityId,
-    "links[0].source.storageSlotGroupId": "unloader_buffer",
-    "links[0].source.slotId": "slot_1",
-    "links[0].target.entityId": "warehouse",
-    "links[0].target.storageSlotGroupId": "warehouse",
-    "links[0].target.slotId": itemId,
     "storageSlotGroups[0].slots[0].ignoreStock": true,
   };
 }

@@ -19,6 +19,19 @@ import type {
 export type DeviceStatus = BlueprintSimulationTickReport["devices"][string];
 export type DeviceSlotItem = DeviceStatus["slotItems"][number];
 
+/**
+ * 创建仓库物品 slot link（设备槽位 → 仓库物品槽位）。
+ * 用于替代旧 config["links[N].*"] 方式。
+ */
+export function createWarehouseSlotLink(entityId: string, itemId: string, storageSlotGroupId = "unloader_buffer", slotId = "slot_1"): SlotLinkDefinition {
+  return {
+    id: `warehouse-link:${entityId}:${storageSlotGroupId}:${slotId}`,
+    linkType: "share-all",
+    source: { entityId, storageSlotGroupId, slotId },
+    target: { entityId: "warehouse", storageSlotGroupId: "warehouse", slotId: itemId },
+  };
+}
+
 export const BASE_ID = "wuling_protocol_core";
 export const TIMESTAMP = new Date(0).toISOString();
 
@@ -149,23 +162,40 @@ export function loadBlueprintFromFile(filePath: string): BlueprintDocument {
 export function loadBlueprintWithExtras(
   filePath: string,
   extraEntities: readonly WorldEntity[],
+  extraSlotLinks: readonly SlotLinkDefinition[] = [],
 ): BlueprintDocument {
   const blueprint = loadBlueprintFromFile(filePath);
 
   const entities = { ...blueprint.entities };
   const entityOrder = [...blueprint.entityOrder];
+  const slotLinks = [...blueprint.slotLinks];
 
+  // 构建 extra entity 的原始 ID → 重命名后 ID 映射
+  const extraIdMap = new Map<string, string>();
   for (let i = 0; i < extraEntities.length; i++) {
     const entityId = `test-extra-${i}`;
     const entity: WorldEntity = { ...extraEntities[i]!, id: entityId };
     entities[entityId] = entity;
     entityOrder.push(entityId);
+    extraIdMap.set(extraEntities[i]!.id, entityId);
+  }
+
+  // 重写 extraSlotLinks 中的 entity ID
+  for (const link of extraSlotLinks) {
+    const newSourceId = extraIdMap.get(link.source.entityId) ?? link.source.entityId;
+    const newTargetId = extraIdMap.get(link.target.entityId) ?? link.target.entityId;
+    slotLinks.push({
+      ...link,
+      source: { ...link.source, entityId: newSourceId },
+      target: { ...link.target, entityId: newTargetId },
+    });
   }
 
   return {
     ...blueprint,
     entities,
     entityOrder,
+    slotLinks,
   };
 }
 

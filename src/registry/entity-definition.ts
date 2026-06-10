@@ -28,7 +28,6 @@ import type {
   EntityDefinition,
   ItemFilterDefinition,
 } from "@/domain/registry/types/entity-definition";
-import type { SlotLinkDefinition } from "@/domain/shared/slot-link";
 import {
   INSPECTOR_TYPE,
   type EntityInspectorDeclaration,
@@ -70,12 +69,11 @@ type PortDefinitionInput = Pick<
   "acceptRule" | "count" | "priorityGroup" | "roundRobinSeed"
 >>;
 
-/** createEntityDefinition() 的输入类型 — inspectors / placementBehaviors / recipeChannels / links / displayOrder 可选，由工厂补全默认值 */
-type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "placementBehaviors" | "recipeChannels" | "links" | "displayOrder"> & {
+/** createEntityDefinition() 的输入类型 — inspectors / placementBehaviors / recipeChannels / displayOrder 可选，由工厂补全默认值 */
+type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "placementBehaviors" | "recipeChannels" | "displayOrder"> & {
   readonly inspectors?: readonly EntityInspectorDeclaration[];
   readonly placementBehaviors?: readonly EntityPlacementBehaviorDeclaration[];
   readonly recipeChannels?: readonly EntityDefinition["recipeChannels"][number][];
-  readonly links?: readonly SlotLinkDefinition[];
   readonly displayOrder?: number;
 };
 
@@ -132,10 +130,10 @@ const WAREHOUSE_SINK_TAG = "WarehouseSink";
 
 /**
  * 创建完整实体定义。
- * 确保 recipeChannels/inspectors/links 始终为非 null/undefined 的规范化值。
+ * 确保 recipeChannels/inspectors 始终为非 null/undefined 的规范化值。
  * 对应《模拟器抽象方式》§2 — Entity 定义层的完整属性默认值。
- * 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks，当前仅在此规范化 inspectors 与 links。
- * 订正（2026-05-15）：新增 links 归一化为 []，支持设备级 SlotLink 预配置。
+ * 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks。
+ * AI-CORRECTION 2026-06-09: links 字段已从 EntityDefinition 移除，所有槽位链接统一存于 document.slotLinks。
  */
 function createEntityDefinition(definition: EntityDefinitionInput): EntityDefinition {
   const declaredInspectors = [...(definition.inspectors ?? [])];
@@ -148,7 +146,6 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
     ...definition,
     displayOrder: definition.displayOrder ?? 100,
     recipeChannels: [...(definition.recipeChannels ?? [])],
-    links: [...(definition.links ?? [])],
     placementBehaviors: normalizePlacementBehaviors(definition.placementBehaviors ?? []),
     inspectors: appendMissingInspectors(declaredInspectors, recipeMachineInspectors),
   };
@@ -220,9 +217,9 @@ function appendMissingInspectors(
 /**
  * 创建空壳实体定义。
  * 只声明 id/nameKey/spriteId/footprint/uiGroup/tags + 电力字段。
- * inspectors/portGroups/storageSlotGroups/recipeChannels/portStorageBindings/links 均为空数组。
- * 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks，空壳定义仅补齐仍存在的静态字段。
- * 订正（2026-05-15）：新增 links: []。
+ * inspectors/portGroups/storageSlotGroups/recipeChannels/portStorageBindings 均为空数组。
+ * 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks。
+ * AI-CORRECTION 2026-06-09: EntityDefinition.links 已移除，空壳定义不再设置 links: []。
  *
  * 空壳设备的实际端口/槽位/配方由外部配方注册表（recipe-definition.ts）中
  * machineId 对应关系在 Topology Compiler 编译时注入。
@@ -240,7 +237,6 @@ function createEmptyEntityDefinition(
     storageSlotGroups: [],
     recipeChannels: [],
     portStorageBindings: [],
-    links: [],
   });
 }
 

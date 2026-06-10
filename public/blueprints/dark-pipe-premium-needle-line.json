@@ -19,14 +19,6 @@
       },
       "rotation": 270,
       "config": {
-        "links[0].id": "",
-        "links[0].linkType": "share-all",
-        "links[0].source.entityId": "",
-        "links[0].source.storageSlotGroupId": "unloader_buffer",
-        "links[0].source.slotId": "slot_1",
-        "links[0].target.entityId": "warehouse",
-        "links[0].target.storageSlotGroupId": "warehouse",
-        "links[0].target.slotId": "item_copper_ore",
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
@@ -40,14 +32,6 @@
       },
       "rotation": 270,
       "config": {
-        "links[0].id": "",
-        "links[0].linkType": "share-all",
-        "links[0].source.entityId": "",
-        "links[0].source.storageSlotGroupId": "unloader_buffer",
-        "links[0].source.slotId": "slot_1",
-        "links[0].target.entityId": "warehouse",
-        "links[0].target.storageSlotGroupId": "warehouse",
-        "links[0].target.slotId": "item_copper_ore",
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
@@ -61,14 +45,6 @@
       },
       "rotation": 270,
       "config": {
-        "links[0].id": "",
-        "links[0].linkType": "share-all",
-        "links[0].source.entityId": "",
-        "links[0].source.storageSlotGroupId": "unloader_buffer",
-        "links[0].source.slotId": "slot_1",
-        "links[0].target.entityId": "warehouse",
-        "links[0].target.storageSlotGroupId": "warehouse",
-        "links[0].target.slotId": "item_copper_ore",
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
@@ -82,14 +58,6 @@
       },
       "rotation": 270,
       "config": {
-        "links[0].id": "",
-        "links[0].linkType": "share-all",
-        "links[0].source.entityId": "",
-        "links[0].source.storageSlotGroupId": "unloader_buffer",
-        "links[0].source.slotId": "slot_1",
-        "links[0].target.entityId": "warehouse",
-        "links[0].target.storageSlotGroupId": "warehouse",
-        "links[0].target.slotId": "item_copper_ore",
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
@@ -147,14 +115,6 @@
       },
       "rotation": 180,
       "config": {
-        "links[0].id": "",
-        "links[0].linkType": "share-all",
-        "links[0].source.entityId": "",
-        "links[0].source.storageSlotGroupId": "unloader_buffer",
-        "links[0].source.slotId": "slot_1",
-        "links[0].target.entityId": "warehouse",
-        "links[0].target.storageSlotGroupId": "warehouse",
-        "links[0].target.slotId": "item_liquid_water",
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
@@ -1204,14 +1164,6 @@
       },
       "rotation": 90,
       "config": {
-        "links[0].id": "",
-        "links[0].linkType": "share-all",
-        "links[0].source.entityId": "",
-        "links[0].source.storageSlotGroupId": "unloader_buffer",
-        "links[0].source.slotId": "slot_1",
-        "links[0].target.entityId": "warehouse",
-        "links[0].target.storageSlotGroupId": "warehouse",
-        "links[0].target.slotId": "item_liquid_water",
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
@@ -1737,7 +1689,92 @@
     "legacy_d8591492_0136",
     "legacy_d8591492_0137"
   ],
-  "slotLinks": [],
+  "slotLinks": [
+    {
+      "id": "warehouse-link:legacy_d8591492_0001:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "legacy_d8591492_0001",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_copper_ore"
+      }
+    },
+    {
+      "id": "warehouse-link:legacy_d8591492_0002:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "legacy_d8591492_0002",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_copper_ore"
+      }
+    },
+    {
+      "id": "warehouse-link:legacy_d8591492_0003:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "legacy_d8591492_0003",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_copper_ore"
+      }
+    },
+    {
+      "id": "warehouse-link:legacy_d8591492_0004:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "legacy_d8591492_0004",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_copper_ore"
+      }
+    },
+    {
+      "id": "warehouse-link:legacy_d8591492_0009:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "legacy_d8591492_0009",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_liquid_water"
+      }
+    },
+    {
+      "id": "warehouse-link:legacy_d8591492_0103:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "legacy_d8591492_0103",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_liquid_water"
+      }
+    }
+  ],
   "createdAt": "2026-04-19T08:10:16.195Z",
   "updatedAt": "2026-04-19T08:10:16.195Z"
 }

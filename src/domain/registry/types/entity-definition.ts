@@ -1,5 +1,4 @@
 import type { GridEdge, GridRectSize } from "../../shared/grid";
-import type { SlotLinkDefinition } from "../../shared/slot-link";
 import type { EntityInspectorDeclaration } from "./entity-inspector";
 import type { EntityPlacementBehaviorDeclaration } from "./entity-placement-behavior";
 
@@ -26,7 +25,7 @@ export type UiGroup =
 // 字段按设计文档的三大原语组织：
 //   1. 缓存 (storageSlotGroups + portStorageBindings) → 对应 §3.1 缓存类型
 //   2. 配方 (recipe)                                → 对应 §3.2 配方类型
-//   3. 链接 (cacheLinks)                             → 对应 §3.3 缓存链接
+// AI-CORRECTION 2026-06-09: EntityDefinition.links 已移除。所有槽位链接（仓库物品链接、暗管链接）统一存放于 document.slotLinks。
 //
 // 求解图节点来源：每个存储槽组 (storageSlotGroup) 在编译时生成一个
 // CacheGroup，每个 CacheGroup = 一个求解图节点（见《仿真运行原理》§5.1）。
@@ -124,12 +123,6 @@ export interface EntityDefinition {
    */
   portStorageBindings: PortStorageBindingDefinition[];
 
-  /**
-   * 设备级缓存链接（对应《仿真运行原理》§3.3 与《模拟器抽象方式》§2）。
-   * 复用 SlotLinkDefinition 结构，source.entityId 为当前设备（编译时填充）。
-   * 与 document.slotLinks 合并后生成最终的 CompiledSimulationSlotLink。
-   */
-  links: SlotLinkDefinition[];
 }
 
 // ---------------------------------------------------------------------------

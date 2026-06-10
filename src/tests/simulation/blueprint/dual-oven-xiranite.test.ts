@@ -5,6 +5,7 @@ import { runBlueprintSimulation } from "../blueprint-runner";
 import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import {
   createEntity,
+  createWarehouseSlotLink,
   loadBlueprintWithExtras,
 } from "../blueprint-test-helpers";
 
@@ -33,29 +34,16 @@ describe("双烘炉息壤产线 - 息壤粉稳态产量验证", () => {
       // 上方暗管出口 → 接入左侧水管网末端 pipe_straight_1x1 @ (9,0) rot=90
       // 出水口位于 (9,-1) 朝南，向 (9,0) 输出清水
       createEntity("extra-top", "item_port_udpipe_unloader_1", 8, -3, 90, {
-        "links[0].id": "",
-        "links[0].linkType": "share-all",
-        "links[0].source.entityId": "",
-        "links[0].source.storageSlotGroupId": "unloader_buffer",
-        "links[0].source.slotId": "slot_1",
-        "links[0].target.entityId": "warehouse",
-        "links[0].target.storageSlotGroupId": "warehouse",
-        "links[0].target.slotId": "item_liquid_water",
-        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "storageSlotGroups[0].slots[0].ignoreStock": true
       }),
       // 下方暗管出口 → 接入右侧水管网末端 pipe_straight_1x1 @ (20,24) rot=270
       // rot=270: 出水口位于 (x+1, y+0) = (20, 25) 朝北，向 (20, 24) 输出清水
       createEntity("extra-bottom", "item_port_udpipe_unloader_1", 19, 25, 270, {
-        "links[0].id": "",
-        "links[0].linkType": "share-all",
-        "links[0].source.entityId": "",
-        "links[0].source.storageSlotGroupId": "unloader_buffer",
-        "links[0].source.slotId": "slot_1",
-        "links[0].target.entityId": "warehouse",
-        "links[0].target.storageSlotGroupId": "warehouse",
-        "links[0].target.slotId": "item_liquid_water",
-        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "storageSlotGroups[0].slots[0].ignoreStock": true
       }),
+    ], [
+      createWarehouseSlotLink("extra-top", "item_liquid_water"),
+      createWarehouseSlotLink("extra-bottom", "item_liquid_water"),
     ]);
 
     // 收集蓝图中所有息壤烘炉实体 ID

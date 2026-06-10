@@ -35,7 +35,6 @@ function createMockDefinition(overrides: Partial<EntityDefinition> = {}): Entity
     storageSlotGroups: [],
     recipeChannels: [],
     portStorageBindings: [],
-    links: [],
     placementBehaviors: [],
     inspectors: [],
     requiresPower: true,

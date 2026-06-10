@@ -525,6 +525,13 @@ export function createEditorSelectionActions({
           update: (documentSnapshot) => ({
             ...documentSnapshot,
             entities: nextEntities,
+            // AI-CORRECTION 2026-06-10: 删除实体时同步清理关联的 slotLinks，
+            // 否则同名新设备会被旧链接自动连上。
+            slotLinks: documentSnapshot.slotLinks.filter(
+              (slotLink) =>
+                !deletedEntityIds.has(slotLink.source.entityId)
+                && !deletedEntityIds.has(slotLink.target.entityId),
+            ),
           }),
         });
 

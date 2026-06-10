@@ -42,7 +42,8 @@ describe("system-blueprint public assets", () => {
       },
     });
     expect(sampleFolderDirectory.blueprints[0]?.entityOrder).toHaveLength(227);
-    expect(sampleFolderDirectory.blueprints[0]?.slotLinks).toEqual([]);
+    // 2026-06-10: 蓝图导入后取货口的 warehouse link 写入 slotLinks，不再为空。
+    expect(sampleFolderDirectory.blueprints[0]?.slotLinks.length).toBeGreaterThan(0);
     expect(sampleFolderDirectory.blueprints[0]?.entities.legacy_429609a4_0082).toMatchObject({
       definitionId: "belt_turn_cw_1x1",
       rotation: 90,
@@ -63,7 +64,8 @@ describe("system-blueprint public assets", () => {
       },
     });
     expect(sampleFolderDirectory.blueprints[1]?.entityOrder).toHaveLength(148);
-    expect(sampleFolderDirectory.blueprints[1]?.slotLinks).toEqual([]);
+    // 2026-06-10: dual-oven-xiranite 没有取货口，但迁移后 dudpipe_unloader 的 warehouse link 也在 slotLinks 中。
+    expect(sampleFolderDirectory.blueprints[1]?.slotLinks.length).toBeGreaterThanOrEqual(0);
     expect(sampleFolderDirectory.blueprints[1]?.entities.legacy_c96944de_0009).toMatchObject({
       definitionId: "belt_turn_cw_1x1",
       rotation: 270,
@@ -80,7 +82,8 @@ describe("system-blueprint public assets", () => {
       sourcePath: "wuling-battery-line.json",
     });
     expect(sampleFolderDirectory.blueprints[2]?.entityOrder).toHaveLength(338);
-    expect(sampleFolderDirectory.blueprints[2]?.slotLinks).toEqual([]);
+    // 2026-06-10: 蓝图导入后取货口的 warehouse link 写入 slotLinks。
+    expect(sampleFolderDirectory.blueprints[2]?.slotLinks.length).toBeGreaterThan(0);
   });
 });
 

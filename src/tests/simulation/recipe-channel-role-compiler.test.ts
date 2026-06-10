@@ -75,7 +75,6 @@ function createTestEntityDefinition(options: {
         storageSlotGroupId: "buffer",
       },
     ],
-    links: [],
   };
 }
 

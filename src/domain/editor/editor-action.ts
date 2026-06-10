@@ -36,6 +36,20 @@ export interface EditorAction {
 	}): boolean;
 	removeDarkPipeLink(entityId: string): boolean;
 	/**
+	 * 为指定设备槽位创建仓库物品链接（写入 document.slotLinks）。
+	 * target.entityId 固定为 "warehouse"，编译器在运行时解析 baseId。
+	 */
+	createWarehouseSlotLink(options: {
+		entityId: string;
+		storageSlotGroupId: string;
+		slotId: string;
+		itemId: string;
+	}): boolean;
+	/**
+	 * 移除指定设备槽位的仓库物品链接（从 document.slotLinks 中删除）。
+	 */
+	removeWarehouseSlotLink(entityId: string, storageSlotGroupId: string, slotId: string): boolean;
+	/**
 	 * 将实体或运行时 draft 切换为另一个 definition。
 	 * 切换会清空该实体 config；若目标是正式文档实体，还会移除涉及该实体的 document slotLinks。
 	 */

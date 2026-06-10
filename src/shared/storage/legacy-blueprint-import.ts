@@ -4,6 +4,7 @@ import {
   type BlueprintDocument,
 } from "@/domain/document/blueprint-document";
 import type { GridPoint, GridRotation } from "@/domain/shared/grid";
+import type { SlotLinkDefinition } from "@/domain/document/world-document";
 
 const LEGACY_BLUEPRINT_SCHEMA = "industrial-planner-blueprint";
 const LEGACY_BLUEPRINT_ID_PATTERN = /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i;
@@ -143,10 +144,17 @@ export function convertLegacyBlueprintJson(
   const entityIdPrefix = resolveEntityIdPrefix(blueprintId, options.entityIdPrefix);
   const entities: BlueprintDocument["entities"] = {};
   const entityOrder: string[] = [];
+  const slotLinks: SlotLinkDefinition[] = [];
 
   for (const [deviceIndex, device] of legacyBlueprint.devices.entries()) {
     const entityId = `${entityIdPrefix}_${String(deviceIndex + 1).padStart(4, "0")}`;
     const normalizedDevice = remapLegacyDevice(device);
+
+    const converted = convertLegacyDeviceConfig({
+      definitionId: normalizedDevice.typeId,
+      config: cloneJsonRecord(normalizedDevice.config ?? {}),
+      entityId,
+    });
 
     entities[entityId] = {
       id: entityId,
@@ -156,13 +164,14 @@ export function convertLegacyBlueprintJson(
         y: normalizedDevice.origin.y,
       },
       rotation: normalizedDevice.rotation,
-      config: convertLegacyDeviceConfig({
-        definitionId: normalizedDevice.typeId,
-        config: cloneJsonRecord(normalizedDevice.config ?? {}),
-      }),
+      config: converted.config,
       tags: [],
     };
     entityOrder.push(entityId);
+
+    for (const link of converted.slotLinks) {
+      slotLinks.push(link);
+    }
   }
 
   return createBlueprintDocument({
@@ -174,7 +183,7 @@ export function convertLegacyBlueprintJson(
     initialGridPoint: options.initialGridPoint ?? resolveLegacyInitialGridPoint(legacyBlueprint.devices),
     entities,
     entityOrder,
-    slotLinks: [],
+    slotLinks,
     createdAt: legacyBlueprint.createdAt,
     updatedAt: legacyBlueprint.updatedAt ?? legacyBlueprint.createdAt,
   });
@@ -185,12 +194,14 @@ export function convertLegacyBlueprintJson(
  *
  * 取货口（item_port_unloader_1）：
  *   旧：pickupItemId + pickupIgnoreInventory + protocolHubOutputs[0].ignoreInventory
- *   新：links[0]（完整 SlotLinkDefinition）+ storageSlotGroups[0].slots[0].ignoreStock
+ *   新：slotLinks 中的 warehouse-link + storageSlotGroups[0].slots[0].ignoreStock
  *
  * 暗管出口（item_port_udpipe_unloader_1）：
  *   旧：pumpOutputItemId + darkPipeOutletMode
- *   新：links[0]（完整 SlotLinkDefinition）+ storageSlotGroups[0].slots[0].ignoreStock
+ *   新：slotLinks 中的 warehouse-link + storageSlotGroups[0].slots[0].ignoreStock
  *   darkPipeOutletMode === "generate" → ignoreStock: true
+ *
+ * AI-CORRECTION 2026-06-09: EntityDefinition.links 已移除，旧蓝图导入改为产出 document.slotLinks。
  *
  * 存储箱（item_port_storager_1）：
  *   旧：submitToWarehouse = true
@@ -200,7 +211,7 @@ export function convertLegacyBlueprintJson(
  *
  * 协议核心（item_port_sp_hub_1）：
  *   旧：protocolHubOutputs[{ portId, itemId, ignoreInventory }]
- *   新：各输出口对应 links[N] + storageSlotGroups[N].slots[0].ignoreStock
+ *   新：slotLinks 中的 warehouse-link + storageSlotGroups[N].slots[0].ignoreStock
  *
  * 仓库存货口（item_port_loader_1）：
  *   旧：可能残留 submitMode / submitToWarehouse / links 等交货字段
@@ -217,34 +228,36 @@ export function convertLegacyBlueprintJson(
 function convertLegacyDeviceConfig(options: {
   definitionId: string;
   config: Record<string, unknown>;
-}): Record<string, unknown> {
+  entityId: string;
+}): { config: Record<string, unknown>; slotLinks: SlotLinkDefinition[] } {
   const config = removeLegacySubmitModeFields(options.config);
+  const empty = { config, slotLinks: [] as SlotLinkDefinition[] };
 
   if (options.definitionId === "item_port_unloader_1") {
-    return convertLegacyUnloaderConfig(config);
+    return convertLegacyUnloaderConfig(config, options.entityId);
   }
 
   if (options.definitionId === "item_port_udpipe_unloader_1") {
-    return convertLegacyDarkPipeUnloaderConfig(config);
+    return convertLegacyDarkPipeUnloaderConfig(config, options.entityId);
   }
 
   if (options.definitionId === "item_port_storager_1") {
-    return convertLegacyStoragerConfig(config);
+    return { ...empty, config: convertLegacyStoragerConfig(config) };
   }
 
   if (options.definitionId === "item_port_sp_hub_1") {
-    return convertLegacyProtocolCoreConfig(config);
+    return convertLegacyProtocolCoreConfig(config, options.entityId);
   }
 
   if (options.definitionId === "item_port_loader_1") {
-    return convertLegacyWarehouseLoaderConfig(config);
+    return { ...empty, config: convertLegacyWarehouseLoaderConfig(config) };
   }
 
   if (options.definitionId === "item_port_mix_pool_1" || options.definitionId === "item_port_mix_pool_large_1") {
-    return convertLegacyReactorPoolConfig(options.definitionId, config);
+    return { ...empty, config: convertLegacyReactorPoolConfig(options.definitionId, config) };
   }
 
-  return convertLegacyPreloadInputs(config);
+  return { ...empty, config: convertLegacyPreloadInputs(config) };
 }
 
 /**
@@ -394,10 +407,11 @@ function convertLegacyPreloadInputs(
 
 function convertLegacyUnloaderConfig(
   config: Record<string, unknown>,
-): Record<string, unknown> {
+  entityId: string,
+): { config: Record<string, unknown>; slotLinks: SlotLinkDefinition[] } {
   const itemId = config.pickupItemId;
   if (typeof itemId !== "string" || itemId === "") {
-    return config;
+    return { config, slotLinks: [] };
   }
 
   // 取 ignoreStock：pickupIgnoreInventory 或 protocolHubOutputs[0].ignoreInventory
@@ -416,28 +430,36 @@ function convertLegacyUnloaderConfig(
   delete nextConfig.pickupItemId;
   delete nextConfig.pickupIgnoreInventory;
   delete nextConfig.protocolHubOutputs;
+  // AI-CORRECTION 2026-06-09: 旧 links[N] config key 已废弃，改为产出 slotLinks。
+  delete nextConfig.links;
 
-  // 写入新格式 links[0]（完整 SlotLinkDefinition）
-  nextConfig["links[0].id"] = "";
-  nextConfig["links[0].linkType"] = "share-all";
-  // source.entityId 留空，applyPlacementDraft 时由 rewriteEntityIdInConfig 处理
-  nextConfig["links[0].source.entityId"] = "";
-  nextConfig["links[0].source.storageSlotGroupId"] = "unloader_buffer";
-  nextConfig["links[0].source.slotId"] = "slot_1";
-  nextConfig["links[0].target.entityId"] = "warehouse";
-  nextConfig["links[0].target.storageSlotGroupId"] = "warehouse";
-  nextConfig["links[0].target.slotId"] = itemId;
   nextConfig["storageSlotGroups[0].slots[0].ignoreStock"] = ignoreStock;
 
-  return nextConfig;
+  const slotLinks: SlotLinkDefinition[] = [{
+    id: `warehouse-link:${entityId}:unloader_buffer:slot_1`,
+    linkType: "share-all",
+    source: {
+      entityId,
+      storageSlotGroupId: "unloader_buffer",
+      slotId: "slot_1",
+    },
+    target: {
+      entityId: "warehouse",
+      storageSlotGroupId: "warehouse",
+      slotId: itemId,
+    },
+  }];
+
+  return { config: nextConfig, slotLinks };
 }
 
 function convertLegacyDarkPipeUnloaderConfig(
   config: Record<string, unknown>,
-): Record<string, unknown> {
+  entityId: string,
+): { config: Record<string, unknown>; slotLinks: SlotLinkDefinition[] } {
   const itemId = config.pumpOutputItemId;
   if (typeof itemId !== "string" || itemId === "") {
-    return config;
+    return { config, slotLinks: [] };
   }
 
   // darkPipeOutletMode === "generate" → 无限供应 → ignoreStock: true
@@ -448,20 +470,27 @@ function convertLegacyDarkPipeUnloaderConfig(
   // 移除旧 key
   delete nextConfig.pumpOutputItemId;
   delete nextConfig.darkPipeOutletMode;
+  // AI-CORRECTION 2026-06-09: 旧 links[N] config key 已废弃，改为产出 slotLinks。
+  delete nextConfig.links;
 
-  // 写入新格式 links[0]（完整 SlotLinkDefinition）
-  // 结构与取货口完全一致，差异仅在于仓库侧的 slotId 是液体类型
-  nextConfig["links[0].id"] = "";
-  nextConfig["links[0].linkType"] = "share-all";
-  nextConfig["links[0].source.entityId"] = "";
-  nextConfig["links[0].source.storageSlotGroupId"] = "unloader_buffer";
-  nextConfig["links[0].source.slotId"] = "slot_1";
-  nextConfig["links[0].target.entityId"] = "warehouse";
-  nextConfig["links[0].target.storageSlotGroupId"] = "warehouse";
-  nextConfig["links[0].target.slotId"] = itemId;
   nextConfig["storageSlotGroups[0].slots[0].ignoreStock"] = ignoreStock;
 
-  return nextConfig;
+  const slotLinks: SlotLinkDefinition[] = [{
+    id: `warehouse-link:${entityId}:unloader_buffer:slot_1`,
+    linkType: "share-all",
+    source: {
+      entityId,
+      storageSlotGroupId: "unloader_buffer",
+      slotId: "slot_1",
+    },
+    target: {
+      entityId: "warehouse",
+      storageSlotGroupId: "warehouse",
+      slotId: itemId,
+    },
+  }];
+
+  return { config: nextConfig, slotLinks };
 }
 
 function convertLegacyStoragerConfig(
@@ -518,10 +547,14 @@ function convertLegacyStoragerConfig(
 
 function convertLegacyProtocolCoreConfig(
   config: Record<string, unknown>,
-): Record<string, unknown> {
+  entityId: string,
+): { config: Record<string, unknown>; slotLinks: SlotLinkDefinition[] } {
   const nextConfig: Record<string, unknown> = { ...config };
+  // AI-CORRECTION 2026-06-09: 旧 links[N] config key 已废弃，改为产出 slotLinks。
+  delete nextConfig.links;
   const outputs = Array.isArray(config.protocolHubOutputs) ? config.protocolHubOutputs : [];
   delete nextConfig.protocolHubOutputs;
+  const slotLinks: SlotLinkDefinition[] = [];
 
   for (const output of outputs) {
     if (!isRecord(output)) {
@@ -539,16 +572,16 @@ function convertLegacyProtocolCoreConfig(
       continue;
     }
 
-    writeWarehouseLinkConfig({
-      config: nextConfig,
+    slotLinks.push(buildWarehouseSlotLink({
+      entityId,
       linkIndex: mappedOutput.linkIndex,
       sourceStorageSlotGroupId: mappedOutput.storageGroupId,
       targetItemId: itemId,
-    });
+    }));
     nextConfig[`storageSlotGroups[${mappedOutput.storageGroupIndex}].slots[0].ignoreStock`] = output.ignoreInventory === true;
   }
 
-  return nextConfig;
+  return { config: nextConfig, slotLinks };
 }
 
 function convertLegacyWarehouseLoaderConfig(
@@ -648,20 +681,26 @@ function normalizeStoragerSlotIndex(value: unknown): number | null {
   return value;
 }
 
-function writeWarehouseLinkConfig(options: {
-  config: Record<string, unknown>;
+function buildWarehouseSlotLink(options: {
+  entityId: string;
   linkIndex: number;
   sourceStorageSlotGroupId: string;
   targetItemId: string;
-}): void {
-  options.config[`links[${options.linkIndex}].id`] = "";
-  options.config[`links[${options.linkIndex}].linkType`] = "share-all";
-  options.config[`links[${options.linkIndex}].source.entityId`] = "";
-  options.config[`links[${options.linkIndex}].source.storageSlotGroupId`] = options.sourceStorageSlotGroupId;
-  options.config[`links[${options.linkIndex}].source.slotId`] = "slot_1";
-  options.config[`links[${options.linkIndex}].target.entityId`] = "warehouse";
-  options.config[`links[${options.linkIndex}].target.storageSlotGroupId`] = "warehouse";
-  options.config[`links[${options.linkIndex}].target.slotId`] = options.targetItemId;
+}): SlotLinkDefinition {
+  return {
+    id: `warehouse-link:${options.entityId}:${options.sourceStorageSlotGroupId}:slot_1`,
+    linkType: "share-all",
+    source: {
+      entityId: options.entityId,
+      storageSlotGroupId: options.sourceStorageSlotGroupId,
+      slotId: "slot_1",
+    },
+    target: {
+      entityId: "warehouse",
+      storageSlotGroupId: "warehouse",
+      slotId: options.targetItemId,
+    },
+  };
 }
 
 function removeLegacySubmitModeFields(config: Record<string, unknown>): Record<string, unknown> {

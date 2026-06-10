@@ -63,15 +63,7 @@ describe("传送带同步相位", () => {
       createEntity("item_port_unloader_1:5", "item_port_unloader_1", 51, 25, 180, {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
         "storageSlotGroups[0].slots[0].initialCount": 100,
-        "storageSlotGroups[0].slots[0].ignoreStock": true,
-        "links[0].id": "",
-        "links[0].linkType": "share-all",
-        "links[0].source.entityId": "item_port_unloader_1:5",
-        "links[0].source.storageSlotGroupId": "unloader_buffer",
-        "links[0].source.slotId": "slot_1",
-        "links[0].target.entityId": "warehouse",
-        "links[0].target.storageSlotGroupId": "warehouse",
-        "links[0].target.slotId": "item_plant_moss_3",
+        "storageSlotGroups[0].slots[0].ignoreStock": true
       }),
       // 存取线源桩（空壳，仅保持拓扑完整）
       createEntity("item_port_log_hongs_bus_source:2", "item_port_log_hongs_bus_source", 51, 26, 0),
@@ -172,15 +164,7 @@ describe("传送带同步相位", () => {
       createEntity("item_port_unloader_1:5", "item_port_unloader_1", 51, 25, 180, {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
         "storageSlotGroups[0].slots[0].initialCount": 100,
-        "storageSlotGroups[0].slots[0].ignoreStock": true,
-        "links[0].id": "",
-        "links[0].linkType": "share-all",
-        "links[0].source.entityId": "item_port_unloader_1:5",
-        "links[0].source.storageSlotGroupId": "unloader_buffer",
-        "links[0].source.slotId": "slot_1",
-        "links[0].target.entityId": "warehouse",
-        "links[0].target.storageSlotGroupId": "warehouse",
-        "links[0].target.slotId": "item_plant_moss_3",
+        "storageSlotGroups[0].slots[0].ignoreStock": true
       }),
       createEntity("item_port_log_hongs_bus_source:2", "item_port_log_hongs_bus_source", 51, 26, 0),
       createEntity("item_port_grinder_1:6", "item_port_grinder_1", 51, 21, 0),

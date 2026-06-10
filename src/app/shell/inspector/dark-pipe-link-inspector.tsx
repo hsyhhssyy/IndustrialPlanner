@@ -26,7 +26,7 @@ export function DarkPipeLinkInspector({
   definition: EntityDefinition;
 }) {
   const editor = appHost.workspace.editor;
-  const documentSnapshot = editor?.document.getSnapshot() ?? null;
+  const documentSnapshot = editor?.document?.getSnapshot() ?? null;
   const darkPipeToolState = appHost.internalState.toolInfo;
   const role = resolveDarkPipeRole(definition.id);
   const currentLink = documentSnapshot === null ? null : findDarkPipeSlotLinkForEntity(documentSnapshot, entity.id);

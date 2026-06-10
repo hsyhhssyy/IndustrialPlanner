@@ -99,6 +99,5 @@ function createDefinition(options: {
     storageSlotGroups: [],
     recipeChannels: [],
     portStorageBindings: [],
-    links: [],
   };
 }

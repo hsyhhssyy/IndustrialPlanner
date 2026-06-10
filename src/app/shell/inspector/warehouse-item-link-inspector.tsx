@@ -4,7 +4,7 @@ import LucideCircleDashed from "~icons/lucide/circle-dashed";
 import LucideTrash2 from "~icons/lucide/trash-2";
 
 import type { AppHost } from "@/app/host/app-host";
-import type { WorldEntity } from "@/domain/document/world-document";
+import type { WorldEntity, SlotLinkDefinition } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { WarehouseItemLinkInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
@@ -53,8 +53,12 @@ export function WarehouseItemLinkInspector({
   const mode = useInspectorRenderMode();
   const [pendingLinkIndex, setPendingLinkIndex] = useState<number | null>(null);
 
+  const editor = appHost.workspace.editor;
+  const documentSnapshot = editor?.document?.getSnapshot() ?? null;
+  const slotLinks = documentSnapshot?.slotLinks ?? [];
+
   const outputRows = resolveSharedOutputGroupRows(definition, entity);
-  const rows = resolveWarehouseLinkRows(declaration, definition, entity, outputRows);
+  const rows = resolveWarehouseLinkRows(declaration, definition, entity, slotLinks, outputRows);
   const deviceClass = appHost.state?.screenProfile?.deviceClass ?? "desktop";
   const displayRotation = appHost.workspace.editor?.state?.viewport?.displayRotation ?? 0;
   const locatorRotation = rotateGridRotation(entity.rotation, displayRotation);
@@ -104,23 +108,11 @@ export function WarehouseItemLinkInspector({
         return;
       }
 
-      const fullLink = appHost.workspace.registry.queries.buildWarehouseSlotLinkForEntity({
+      editor?.actions.createWarehouseSlotLink({
         entityId: entity.id,
         storageSlotGroupId: row.storageGroupId,
         slotId: row.slotId,
         itemId,
-      });
-
-      const prefix = `links[${row.linkIndex}]`;
-      patchEntityConfig({
-        [`${prefix}.id`]: fullLink.id,
-        [`${prefix}.linkType`]: fullLink.linkType,
-        [`${prefix}.source.entityId`]: fullLink.source.entityId,
-        [`${prefix}.source.storageSlotGroupId`]: fullLink.source.storageSlotGroupId,
-        [`${prefix}.source.slotId`]: fullLink.source.slotId,
-        [`${prefix}.target.entityId`]: fullLink.target.entityId,
-        [`${prefix}.target.storageSlotGroupId`]: fullLink.target.storageSlotGroupId,
-        [`${prefix}.target.slotId`]: fullLink.target.slotId,
       });
     } finally {
       setPendingLinkIndex((current) => current === row.linkIndex ? null : current);
@@ -134,10 +126,11 @@ export function WarehouseItemLinkInspector({
   };
 
   const clearLink = (row: WarehouseLinkRow) => {
-    appHost.workspace.editor?.actions.deleteEntityConfigKeys(entity.id, [
-      `links[${row.linkIndex}]`,
-      row.ignoreStockPath,
-    ]);
+    editor?.actions.removeWarehouseSlotLink(entity.id, row.storageGroupId, row.slotId);
+    // 同时重置 ignoreStock
+    patchEntityConfig({
+      [row.ignoreStockPath]: false,
+    });
   };
 
   // AI-REMOVED 2026-06-05:
@@ -387,6 +380,7 @@ function resolveWarehouseLinkRows(
   declaration: WarehouseItemLinkInspectorDeclaration,
   definition: EntityDefinition,
   entity: WorldEntity,
+  slotLinks: readonly SlotLinkDefinition[],
   outputRows: readonly OutputGroupRow[],
 ): WarehouseLinkRow[] {
   const slotDefinitions = expandSlotDefinitions(declaration, definition);
@@ -394,16 +388,28 @@ function resolveWarehouseLinkRows(
     outputRows.map((row) => [row.portGroup.id, row]),
   );
 
-  return slotDefinitions.map((slotDef, index) => ({
-    linkIndex: index,
-    boundOutputRow: resolveFirstBoundOutputRow(definition, outputRowsByPortGroupId, slotDef.storageGroupId),
-    storageGroupId: slotDef.storageGroupId,
-    slotId: slotDef.slotId,
-    ignoreStockPath: `storageSlotGroups[${slotDef.storageGroupIndex}].slots[${slotDef.slotIndex}].ignoreStock`,
-    currentItemId: readSlotConfigString(entity.config, `links[${index}].target.slotId`),
-    currentIgnoreStock: readSlotConfigBoolean(entity.config, `storageSlotGroups[${slotDef.storageGroupIndex}].slots[${slotDef.slotIndex}].ignoreStock`),
-    domain: slotDef.domain,
-  }));
+  // 构建 warehouse slot link 查找表：key = storageSlotGroupId:slotId
+  const warehouseLinkBySlotKey = new Map<string, SlotLinkDefinition>();
+  for (const link of slotLinks) {
+    if (link.target.entityId === "warehouse" && link.source.entityId === entity.id) {
+      warehouseLinkBySlotKey.set(`${link.source.storageSlotGroupId}:${link.source.slotId}`, link);
+    }
+  }
+
+  return slotDefinitions.map((slotDef, index) => {
+    const slotKey = `${slotDef.storageGroupId}:${slotDef.slotId}`;
+    const slotLink = warehouseLinkBySlotKey.get(slotKey);
+    return {
+      linkIndex: index,
+      boundOutputRow: resolveFirstBoundOutputRow(definition, outputRowsByPortGroupId, slotDef.storageGroupId),
+      storageGroupId: slotDef.storageGroupId,
+      slotId: slotDef.slotId,
+      ignoreStockPath: `storageSlotGroups[${slotDef.storageGroupIndex}].slots[${slotDef.slotIndex}].ignoreStock`,
+      currentItemId: slotLink?.target.slotId ?? null,
+      currentIgnoreStock: readSlotConfigBoolean(entity.config, `storageSlotGroups[${slotDef.storageGroupIndex}].slots[${slotDef.slotIndex}].ignoreStock`),
+      domain: slotDef.domain,
+    };
+  });
 }
 
 function resolveFirstBoundOutputRow(
@@ -498,19 +504,6 @@ function matchesItemDomain(
 
 function resolveItemIconSrc(item: ItemDefinition | null): string | null {
   return item === null ? null : `/item-icons/${item.iconId}.webp`;
-}
-
-function readSlotConfigString(
-  config: WorldEntity["config"],
-  path: string,
-): string | null {
-  const value = config[path];
-
-  if (value === null) {
-    return null;
-  }
-
-  return typeof value === "string" ? value : null;
 }
 
 function readSlotConfigBoolean(

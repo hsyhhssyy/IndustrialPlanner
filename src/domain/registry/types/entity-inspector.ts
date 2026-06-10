@@ -253,35 +253,42 @@ export const INSPECTOR_TYPE = {
   /**
    * ## 仓库物品链接面板
    *
-   * **编辑目标**：entity.config.links[N]（完整 SlotLinkDefinition 结构）+ slot ignoreStock。
+   * **编辑目标**：document.slotLinks 中的仓库物品链接 + entity.config 中的 slot ignoreStock。
    *
-   * 绑定方式：`slotGroupIds` + `slotIds`，按声明顺序展开为索引 N（0-based）。
+   * 绑定方式：`slotGroupIds` + `slotIds`，按声明顺序展开槽位。
    *
    * 编辑功能：
    * - 从百科全书选择物品
-   * - 调用 RegistryQuery.buildWarehouseSlotLinkForEntity() 构造完整 SlotLinkDefinition
-   * - 将完整 Link 写入 config，通过 share-all Link 将设备槽位连接到 warehouse 对应物品槽位
+   * - 调用 EditorAction.createWarehouseSlotLink() 在 document.slotLinks 中创建 share-all Link
+   * - 调用 EditorAction.removeWarehouseSlotLink() 从 document.slotLinks 中移除链接
    *
-   * ### Config Contract（编译器直接消费，不得修改路径）
+   * ### 数据契约
    *
-   * 选择物品时写入：
+   * 链接数据存放在 document.slotLinks 中：
+   *
+   * | 字段 | 值 | 说明 |
+   * |------|-----|------|
+   * | Link ID | `warehouse-link:${entityId}:${storageSlotGroupId}:${slotId}` | 唯一标识 |
+   * | Link 类型 | `"share-all"` | |
+   * | source 实体 | entityId | 当前设备实体 ID |
+   * | source 存储组 | storageSlotGroupId | 如 `"unloader_buffer"` |
+   * | source 槽位 | slotId | 如 `"slot_1"` |
+   * | target 实体 | `"warehouse"` | 编译器运行时解析 baseId |
+   * | target 存储组 | `"warehouse"` | |
+   * | target 物品 | 选中的物品 ID | |
+   *
+   * ignoreStock 仍存放在 entity.config 中：
    *
    * | 字段 | config key | 说明 |
    * |------|-----------|------|
-   * | Link ID | `links[N].id` | 空字符串 |
-   * | Link 类型 | `links[N].linkType` | `"share-all"` |
-   * | source 实体 | `links[N].source.entityId` | 当前设备实体 ID（placement 时由 apply 重写） |
-   * | source 存储组 | `links[N].source.storageSlotGroupId` | 如 `"unloader_buffer"` |
-   * | source 槽位 | `links[N].source.slotId` | 如 `"slot_1"` |
-   * | target 实体 | `links[N].target.entityId` | `"warehouse"`（编译器运行时解析 baseId） |
-   * | target 存储组 | `links[N].target.storageSlotGroupId` | `"warehouse"` |
-   * | target 物品 | `links[N].target.slotId` | 选中的物品 ID |
-   * | 无限取货 | `storageSlotGroups[G].slots[S].ignoreStock` | `true` / `false`（slot 属性） |
+   * | 无限取货 | `storageSlotGroups[G].slots[S].ignoreStock` | `true` / `false` |
    *
-   * 清除链接时：`links[N]` 整体置 null，`ignoreStock` 置 false。
+   * 清除链接时：removeWarehouseSlotLink + ignoreStock 置 false。
    *
    * 这是仓储设备（取货口/出货口）专用的面板。
    * 与设计文档《仿真运行原理》§3.3 中的 share-all Link 对应。
+   *
+   * AI-CORRECTION 2026-06-09: EntityDefinition.links 已移除，仓库物品链接改为写入 document.slotLinks。
    */
   warehouseItemLink: "warehouse-item-link",
 

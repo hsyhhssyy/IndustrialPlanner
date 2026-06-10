@@ -1,7 +1,6 @@
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type {
   CacheLinkEndpointDefinition,
-  SlotLinkDefinition,
   WorldDocument,
   WorldEntity,
 } from "@/domain/document/world-document";
@@ -159,19 +158,26 @@ export function compileSimulationTopology(
       portOrder,
     });
 
-    // 编译设备级 links（来自 EntityDefinition.links，经 entity.config 合并）。
-    // Inspector 保证写入完整的 SlotLinkDefinition，编译器直接消费。
-    for (const link of compileDefinitionSlotLinks({
-      definition,
-      entityConfig: entity.config,
-      compiledEntityId: `device:${entity.id}`,
-      compiledDevice: devices[`device:${entity.id}`],
-      compiledSlots: slots,
-      compiledNodes: nodes,
-      baseId: options.document.baseId,
-    })) {
-      links[link.id] = link;
-    }
+    // AI-REMOVED 2026-06-09:
+    // Reason: EntityDefinition.links 字段已从领域模型中移除，所有槽位链接统一存放于 document.slotLinks。
+    // Trigger: 用户要求将设备级链接与文档级链接合并为单一数据源。
+    // Evidence: compileDefinitionSlotLinks 仅消费 EntityDefinition.links（已删除），无其他数据来源。
+    // Replacement: compileDocumentSlotLinks 统一处理所有 slotLinks。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // for (const link of compileDefinitionSlotLinks({
+    //   definition,
+    //   entityConfig: entity.config,
+    //   compiledEntityId: `device:${entity.id}`,
+    //   compiledDevice: devices[`device:${entity.id}`],
+    //   compiledSlots: slots,
+    //   compiledNodes: nodes,
+    //   baseId: options.document.baseId,
+    // })) {
+    //   links[link.id] = link;
+    // }
   }
 
   for (const link of compileDocumentSlotLinks({
@@ -1046,104 +1052,6 @@ function compileRouting(
   return routing;
 }
 
-function compileDefinitionSlotLinks(options: {
-  readonly definition: EntityDefinition;
-  readonly entityConfig: WorldEntity["config"];
-  readonly compiledEntityId: string;
-  readonly compiledDevice: CompiledSimulationDevice | undefined;
-  readonly compiledSlots: Readonly<Record<string, CompiledSimulationSlot>>;
-  readonly compiledNodes: Readonly<Record<string, CompiledSimulationNode>>;
-  readonly baseId: string;
-}): CompiledSimulationSlotLink[] {
-  const merged = mergeEntityDefinitionConfig(options.definition, options.entityConfig);
-  if (merged.links.length === 0 || options.compiledDevice === undefined) {
-    return [];
-  }
-
-  const definitionLinks = Array.isArray(merged.links) ? merged.links as readonly unknown[] : [];
-  const links: CompiledSimulationSlotLink[] = [];
-  for (const link of definitionLinks) {
-    if (!isMaterializedSlotLinkDefinition(link)) {
-      continue;
-    }
-
-    // Resolve source slot: find compiled slot by storageSlotGroupId + slotId
-    const sourceSlotId = findCompiledSlotId({
-      compiledDevice: options.compiledDevice,
-      compiledSlots: options.compiledSlots,
-      compiledNodes: options.compiledNodes,
-      storageSlotGroupId: link.source.storageSlotGroupId,
-      slotId: link.source.slotId,
-    });
-    if (sourceSlotId === null) {
-      continue;
-    }
-
-    // Resolve target entityId
-    let targetEntityId = link.target.entityId;
-    if (targetEntityId === "warehouse" || targetEntityId.startsWith("warehouse:")) {
-      targetEntityId = `device:warehouse:${options.baseId}`;
-    }
-
-    // Target compiled slot: warehouse slot for the item
-    const targetSlotId = `${targetEntityId}/node:warehouse/slot:${link.target.slotId}`;
-    if (options.compiledSlots[targetSlotId] === undefined) {
-      continue;
-    }
-
-    const linkId = `definition-link:${options.compiledEntityId}:${sourceSlotId}`;
-    links.push({
-      id: linkId,
-      linkType: link.linkType,
-      sourceSlotIds: [sourceSlotId],
-      targetSlotIds: [targetSlotId],
-      targetSlotIdBySourceSlotId: { [sourceSlotId]: targetSlotId },
-    });
-  }
-
-  return links;
-}
-
-function isMaterializedSlotLinkDefinition(value: unknown): value is SlotLinkDefinition {
-  if (!isPlainObject(value)) {
-    return false;
-  }
-
-  return typeof value.id === "string"
-    && (value.linkType === "share-all" || value.linkType === "share-cap")
-    && isCacheLinkEndpointDefinition(value.source)
-    && isCacheLinkEndpointDefinition(value.target);
-}
-
-function isCacheLinkEndpointDefinition(value: unknown): value is CacheLinkEndpointDefinition {
-  return isPlainObject(value)
-    && typeof value.entityId === "string"
-    && typeof value.storageSlotGroupId === "string"
-    && typeof value.slotId === "string";
-}
-
-function findCompiledSlotId(options: {
-  readonly compiledDevice: CompiledSimulationDevice;
-  readonly compiledSlots: Readonly<Record<string, CompiledSimulationSlot>>;
-  readonly compiledNodes: Readonly<Record<string, CompiledSimulationNode>>;
-  readonly storageSlotGroupId: string;
-  readonly slotId: string;
-}): string | null {
-  for (const nodeId of options.compiledDevice.nodeIds) {
-    const node = options.compiledNodes[nodeId];
-    if (node === undefined || node.sourceStorageSlotGroupId !== options.storageSlotGroupId) {
-      continue;
-    }
-    for (const compiledSlotId of node.slotIds) {
-      const slot = options.compiledSlots[compiledSlotId];
-      if (slot?.sourceSlotId === options.slotId) {
-        return compiledSlotId;
-      }
-    }
-  }
-  return null;
-}
-
 function compileDocumentSlotLinks(options: {
   readonly document: WorldDocument;
   readonly devices: Readonly<Record<string, CompiledSimulationDevice>>;
@@ -1151,6 +1059,7 @@ function compileDocumentSlotLinks(options: {
   readonly slots: Readonly<Record<string, CompiledSimulationSlot>>;
 }): CompiledSimulationSlotLink[] {
   const links: CompiledSimulationSlotLink[] = [];
+  const baseId = options.document.baseId;
 
   for (const link of [...options.document.slotLinks].sort((left, right) => left.id.localeCompare(right.id))) {
     const sourceSlotIds = resolveDocumentLinkEndpointSlotIds({
@@ -1159,6 +1068,7 @@ function compileDocumentSlotLinks(options: {
       devices: options.devices,
       nodes: options.nodes,
       slots: options.slots,
+      baseId,
     });
     const targetSlotIds = resolveDocumentLinkEndpointSlotIds({
       endpoint: link.target,
@@ -1166,6 +1076,7 @@ function compileDocumentSlotLinks(options: {
       devices: options.devices,
       nodes: options.nodes,
       slots: options.slots,
+      baseId,
     });
     const targetSlotIdBySourceSlotId = pairSourceSlotsToTargetSlots(sourceSlotIds, targetSlotIds);
     const linkedSourceSlotIds = Object.keys(targetSlotIdBySourceSlotId).sort();
@@ -1192,8 +1103,16 @@ function resolveDocumentLinkEndpointSlotIds(options: {
   readonly devices: Readonly<Record<string, CompiledSimulationDevice>>;
   readonly nodes: Readonly<Record<string, CompiledSimulationNode>>;
   readonly slots: Readonly<Record<string, CompiledSimulationSlot>>;
+  readonly baseId: string;
 }): readonly string[] {
-  const device = options.devices[`device:${options.endpoint.entityId}`];
+  let entityId = options.endpoint.entityId;
+  // AI-CORRECTION 2026-06-09: warehouse 实体 ID 在编译时需解析为 device:warehouse:${baseId}。
+  // 此前该逻辑在 compileDefinitionSlotLinks 中，EntityDefinition.links 移除后迁移至此。
+  if (entityId === "warehouse" || entityId.startsWith("warehouse:")) {
+    entityId = `device:warehouse:${options.baseId}`;
+  }
+  const deviceEntityId = (entityId.startsWith("device:") ? entityId : `device:${entityId}`);
+  const device = options.devices[deviceEntityId];
   if (device === undefined) {
     return [];
   }

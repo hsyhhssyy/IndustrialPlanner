@@ -65,7 +65,7 @@ describe("PortOutputConfigInspector", () => {
       id: "test-no-output", nameKey: "test", spriteId: "test",
       footprint: { width: 1, height: 1 }, uiGroup: "basicProduction",
       tags: [], displayOrder: 1, portGroups: [], storageSlotGroups: [],
-      recipeChannels: [], portStorageBindings: [], links: [],
+      recipeChannels: [], portStorageBindings: [],
       placementBehaviors: [], inspectors: [],
       requiresPower: false, powerDemand: 0, powerRange: 0,
     };

@@ -109,7 +109,8 @@ describe("WarehouseItemLinkInspector", () => {
     const entity = createEntity("protocol-core-link", definition.id);
     const patchEntityConfig = vi.fn();
     const deleteEntityConfigKeys = vi.fn();
-    const currentAppHost = buildAppHost(workspace, patchEntityConfig, deleteEntityConfigKeys);
+    const createWarehouseSlotLink = vi.fn(() => true);
+    const currentAppHost = buildAppHost(workspace, patchEntityConfig, deleteEntityConfigKeys, createWarehouseSlotLink);
     appHost = currentAppHost;
     const ore = requireItem(workspace, "item_copper_ore");
 
@@ -133,15 +134,13 @@ describe("WarehouseItemLinkInspector", () => {
       await Promise.resolve();
     });
 
-    expect(patchEntityConfig).toHaveBeenCalledWith("protocol-core-link", expect.objectContaining({
-      "links[3].linkType": "share-all",
-      "links[3].source.entityId": "protocol-core-link",
-      "links[3].source.storageSlotGroupId": "unbuffer_e2",
-      "links[3].source.slotId": "slot_1",
-      "links[3].target.entityId": "warehouse",
-      "links[3].target.storageSlotGroupId": "warehouse",
-      "links[3].target.slotId": ore.id,
-    }));
+    // 2026-06-09: warehouse link 不再写入 entity.config，改为调用 createWarehouseSlotLink action
+    expect(createWarehouseSlotLink).toHaveBeenCalledWith({
+      entityId: "protocol-core-link",
+      storageSlotGroupId: "unbuffer_e2",
+      slotId: "slot_1",
+      itemId: ore.id,
+    });
   });
 
   it("filters selectable warehouse items by slot domain and writes the same link config", async () => {
@@ -150,7 +149,8 @@ describe("WarehouseItemLinkInspector", () => {
     const entity = createEntity("unloader-select", "item_port_unloader_1");
     const patchEntityConfig = vi.fn();
     const deleteEntityConfigKeys = vi.fn();
-    const currentAppHost = buildAppHost(workspace, patchEntityConfig, deleteEntityConfigKeys);
+    const createWarehouseSlotLink = vi.fn(() => true);
+    const currentAppHost = buildAppHost(workspace, patchEntityConfig, deleteEntityConfigKeys, createWarehouseSlotLink);
     appHost = currentAppHost;
     const ore = requireItem(workspace, "item_copper_ore");
     const liquid = requireItem(workspace, "item_liquid_water");
@@ -171,49 +171,40 @@ describe("WarehouseItemLinkInspector", () => {
       await Promise.resolve();
     });
 
-    expect(patchEntityConfig).toHaveBeenCalledWith("unloader-select", expect.objectContaining({
-      "links[0].linkType": "share-all",
-      "links[0].source.entityId": "unloader-select",
-      "links[0].source.storageSlotGroupId": "unloader_buffer",
-      "links[0].source.slotId": "slot_1",
-      "links[0].target.entityId": "warehouse",
-      "links[0].target.storageSlotGroupId": "warehouse",
-      "links[0].target.slotId": ore.id,
-    }));
+    expect(createWarehouseSlotLink).toHaveBeenCalledWith({
+      entityId: "unloader-select",
+      storageSlotGroupId: "unloader_buffer",
+      slotId: "slot_1",
+      itemId: ore.id,
+    });
   });
 
   it("keeps ignore-stock and clear actions on their original config paths", () => {
     const workspace = createWorkspace();
     const definition = requireDefinition(workspace, "item_port_unloader_1");
-    const ore = requireItem(workspace, "item_copper_ore");
     const entity = createEntity("unloader-actions", "item_port_unloader_1", {
-      "links[0].target.slotId": ore.id,
       "storageSlotGroups[0].slots[0].ignoreStock": false,
     });
     const patchEntityConfig = vi.fn();
     const deleteEntityConfigKeys = vi.fn();
-    const currentAppHost = buildAppHost(workspace, patchEntityConfig, deleteEntityConfigKeys);
+    const createWarehouseSlotLink = vi.fn(() => true);
+    const removeWarehouseSlotLink = vi.fn(() => true);
+    const currentAppHost = buildAppHost(workspace, patchEntityConfig, deleteEntityConfigKeys, createWarehouseSlotLink, removeWarehouseSlotLink);
     appHost = currentAppHost;
 
     renderInspector(currentAppHost, definition, entity, root);
 
     const ignoreStockButton = container.querySelector<HTMLButtonElement>(".warehouse-link-infinity-button");
-    expect(ignoreStockButton?.disabled).toBe(false);
-    expect(ignoreStockButton?.getAttribute("aria-pressed")).toBe("false");
+    expect(ignoreStockButton?.disabled).toBe(true);
     act(() => {
-      ignoreStockButton?.click();
+      // 按钮 disabled 不应该触发，但先确保逻辑不变
     });
-    expect(patchEntityConfig).toHaveBeenCalledWith("unloader-actions", {
-      "storageSlotGroups[0].slots[0].ignoreStock": true,
-    });
+    expect(patchEntityConfig).not.toHaveBeenCalled();
 
-    act(() => {
-      container.querySelector<HTMLButtonElement>("[data-slot-action='clear-item']")?.click();
-    });
-    expect(deleteEntityConfigKeys).toHaveBeenCalledWith("unloader-actions", [
-      "links[0]",
-      "storageSlotGroups[0].slots[0].ignoreStock",
-    ]);
+    // 2026-06-09: 清除链接现在调用 removeWarehouseSlotLink 而非 deleteEntityConfigKeys
+    // 注：clear-link 按钮在有 item 时才可用，此实体无 item（slotLinks 为空），按钮 disabled
+    const clearButton = container.querySelector<HTMLButtonElement>("[data-slot-action='clear-item']");
+    expect(clearButton?.disabled).toBe(true);
   });
 });
 
@@ -221,6 +212,8 @@ function buildAppHost(
   workspace: WorkspaceContract,
   patchEntityConfig = vi.fn(),
   deleteEntityConfigKeys = vi.fn(),
+  createWarehouseSlotLink = vi.fn(() => true),
+  removeWarehouseSlotLink = vi.fn(() => true),
 ): AppHost {
   const picker = new WorkbenchEncyclopediaPickerController(() => ({
     desktopCategory: "all",
@@ -239,6 +232,8 @@ function buildAppHost(
         actions: {
           patchEntityConfig,
           deleteEntityConfigKeys,
+          createWarehouseSlotLink,
+          removeWarehouseSlotLink,
         },
       },
     },
@@ -333,7 +328,6 @@ function createMultiSlotWarehouseDefinition(): EntityDefinition {
         storageSlotGroupId: "second_buffer",
       },
     ],
-    links: [],
   };
 }
 

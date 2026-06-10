@@ -2500,7 +2500,6 @@ function createEntityDefinitionStub(): EntityDefinition {
         storageSlotGroupId: `storage_slot_${index + 1}`,
       },
     ]).flat(),
-    links: [],
   }
 }
 

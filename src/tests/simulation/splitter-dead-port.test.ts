@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-import { createBlueprint, createEntity } from "./blueprint-test-helpers";
+import { createBlueprint, createEntity, createWarehouseSlotLink } from "./blueprint-test-helpers";
 
 const MAX_TICK = 1800;
 
@@ -24,15 +24,7 @@ describe("分流器游标轮转 - 死端口不卡游标", () => {
       [
         // 水源 — 暗管出口 (8,2) rot=90 → 向东输出清水
         createEntity("water-source", "item_port_udpipe_unloader_1", 8, 2, 90, {
-          "links[0].id": "",
-          "links[0].linkType": "share-all",
-          "links[0].source.entityId": "water-source",
-          "links[0].source.storageSlotGroupId": "unloader_buffer",
-          "links[0].source.slotId": "slot_1",
-          "links[0].target.entityId": "warehouse",
-          "links[0].target.storageSlotGroupId": "warehouse",
-          "links[0].target.slotId": "item_liquid_water",
-          "storageSlotGroups[0].slots[0].ignoreStock": true,
+          "storageSlotGroups[0].slots[0].ignoreStock": true
         }),
         // 管道链: (9,5)→(9,6) → 分流器
         createEntity("pipe-1", "pipe_straight_1x1", 9, 5, 90),
@@ -50,6 +42,7 @@ describe("分流器游标轮转 - 死端口不卡游标", () => {
         // 消费者 B — 液体储存箱 (8,13) rot=90
         createEntity(storagerB, "item_port_liquid_storager_1", 8, 13, 90),
       ],
+      [createWarehouseSlotLink("water-source", "item_liquid_water")],
     );
 
     const report = await runBlueprintSimulation({

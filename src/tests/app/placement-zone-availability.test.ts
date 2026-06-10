@@ -102,7 +102,6 @@ function createEntityDefinition(
     storageSlotGroups: [],
     recipeChannels: [],
     portStorageBindings: [],
-    links: [],
   };
 }
 
