@@ -65,6 +65,8 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   gameUseInspectorPanel: false,
   gameShowHotkeys: false,
   gameAlwaysShowGridLines: true,
+  selectedActivityIds: [],
+  toolboxShowAllActivityContent: true,
   showGrassBackground: false,
   debugShowFps: false,
   debugShowGestureDiagnosticsWindow: false,

@@ -1,4 +1,5 @@
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { ACTIVITY_LIMITED_FORMULA_1_TAG } from "@/shared/registry/activity-availability";
 import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
 
 export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
@@ -672,7 +673,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_cmpt", amount: 1 }],
     machineId: "item_port_cmpt_mc_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_component_activity_xiranite_enr_cmpt_from_xiranite_enr_powder_basic",
@@ -682,7 +683,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_enr_cmpt", amount: 2 }],
     machineId: "item_port_cmpt_mc_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_component_glass_cmpt_from_quartz_glass_basic",
@@ -897,7 +898,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_enr_tool", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_packaging_activity_xiranite_hulu_from_activity_xiranite_bottle_and_activity_xiranite_cmpt_basic",
@@ -910,7 +911,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_hulu", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_packaging_activity_xiranite_enr_hulu_from_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2_and_activity_xiranite_enr_tool_basic",
@@ -923,7 +924,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_enr_hulu", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_winder_equip_script_1_from_crystal_shell_and_quartz_glass_basic",
@@ -1937,7 +1938,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_dismantling_activity_xiranite_enr_bottle_grass_2_basic",
@@ -1950,7 +1951,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["new", "liquid_bottle_dismantle"],
+    tags: ["new", "liquid_bottle_dismantle", ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_liquid_dismantling_iron_bottle_water_default",
@@ -2878,7 +2879,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_bottle", amount: 1 }],
     machineId: "item_port_shaper_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_shaper_activity_xiranite_enr_bottle_from_xiranite_enr_powder_basic",
@@ -2888,7 +2889,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_enr_bottle", amount: 2 }],
     machineId: "item_port_shaper_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_xiranite_oven_xiranite_powder_from_carbon_enr_and_water_basic",

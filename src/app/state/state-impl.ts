@@ -84,6 +84,8 @@ export interface AppSettingsReadWrite extends AppSettings {
   gameUseInspectorPanel: boolean;
   gameShowHotkeys: boolean;
   gameAlwaysShowGridLines: boolean;
+  selectedActivityIds: string[];
+  toolboxShowAllActivityContent: boolean;
   showGrassBackground: boolean;
   debugShowFps: boolean;
   debugShowGestureDiagnosticsWindow: boolean;
@@ -624,6 +626,8 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     gameUseInspectorPanel: false,
     gameShowHotkeys: false,
     gameAlwaysShowGridLines: true,
+    selectedActivityIds: [],
+    toolboxShowAllActivityContent: true,
     showGrassBackground: false,
     debugShowFps: false,
     debugShowGestureDiagnosticsWindow: false,

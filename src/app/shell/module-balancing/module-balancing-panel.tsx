@@ -13,6 +13,8 @@ import LucideTrash2 from "~icons/lucide/trash-2";
 import LucideX from "~icons/lucide/x";
 
 import type { AppHost } from "@/app/host/app-host";
+import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
+import { ActivityIconStrip } from "@/app/shell/shared/activity-icon-strip";
 import type {
   ModuleBalancingCanvasReadWrite,
   ModuleBalancingCustomModuleReadWrite,
@@ -29,16 +31,20 @@ import type {
 } from "@/app/toolbox-types";
 import {
   buildModuleBalancingIndex,
+  canvasContainsInactiveActivityContent,
   computeModuleBalancing,
   computeStageModuleTotals,
   createModuleBalancingId,
   formatDurationMinutes,
   formatFlow,
   formatSignedFlow,
+  moduleContainsInactiveActivityContent,
+  resolveCanvasActivityIds,
   resolveAnyIconSrc,
   resolveItemIconSrc,
   resolveItemName,
   resolveModule,
+  resolveModuleActivityIds,
   resolveModuleIconSrc,
   resolveModuleInputs,
   resolveModuleOutputs,
@@ -96,9 +102,10 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
 }) {
   const t = appHost.actions.translate;
   const balancingState = appHost.internalState.workbench.toolbox.moduleBalancing;
-  const activeCanvas = balancingState.canvases.find((canvas) => canvas.id === balancingState.activeCanvasId)
-    ?? balancingState.canvases[0]
-    ?? null;
+  const showAllActivityContent = appHost.internalState.settings.toolboxShowAllActivityContent;
+  const activeActivityIds = resolveEffectiveActivityIds({
+    selectedActivityIds: appHost.internalState.settings.selectedActivityIds,
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<MobilePanelTab>("stage-detail");
@@ -106,7 +113,18 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   const [quantityDraft, setQuantityDraft] = useState<QuantityDraft | null>(null);
   const [customModuleForm, setCustomModuleForm] = useState<CustomModuleFormState | null>(null);
 
-  const index = buildModuleBalancingIndex(appHost.workspace.registry, balancingState);
+  const index = buildModuleBalancingIndex(appHost.workspace.registry, balancingState, {
+    includeInactiveActivityContent: showAllActivityContent,
+    activeActivityIds,
+  });
+  const visibleCanvases = showAllActivityContent
+    ? balancingState.canvases
+    : balancingState.canvases.filter((canvas) =>
+      !canvasContainsInactiveActivityContent(canvas, index, activeActivityIds),
+    );
+  const activeCanvas = visibleCanvases.find((canvas) => canvas.id === balancingState.activeCanvasId)
+    ?? visibleCanvases[0]
+    ?? null;
   const computation = activeCanvas === null ? null : computeModuleBalancing(activeCanvas, index);
   const selectedStage = activeCanvas?.stages.find((stage) => stage.id === selectedStageId)
     ?? activeCanvas?.stages[0]
@@ -312,6 +330,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
 
   const requestPortSelection = async (target: PendingPortTarget) => {
     const itemId = await appHost.encyclopediaPicker.pickItem({
+      includeInactiveActivityItems: showAllActivityContent,
       title: t("encyclopediaPicker.title.item"),
     });
 
@@ -326,6 +345,9 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     if (activeCanvas === null) {
       return null;
     }
+    const activeCanvasActivityIds = showAllActivityContent
+      ? resolveCanvasActivityIds(activeCanvas, index)
+      : [];
 
     return (
       <div className={cm(styles, "module-balancing-toolbar")}>
@@ -341,10 +363,11 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
               setSelectedStageId(null);
             }}
           >
-            {balancingState.canvases.map((canvas) => (
+            {visibleCanvases.map((canvas) => (
               <option key={canvas.id} value={canvas.id}>{canvas.name}</option>
             ))}
           </select>
+          <ActivityIconStrip activityIds={activeCanvasActivityIds} />
         </label>
         <label className={cm(styles, "module-balancing-field is-name")}>
           <span>{t("moduleBalancing.canvasPlaceholder")}</span>
@@ -357,6 +380,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
               });
             }}
           />
+          <ActivityIconStrip activityIds={activeCanvasActivityIds} />
         </label>
         <button
           className={cm(styles, "module-balancing-icon-text-button")}
@@ -383,7 +407,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
         <button
           aria-label={t("moduleBalancing.deleteCanvas")}
           className={cm(styles, "module-balancing-icon-button")}
-          disabled={balancingState.canvases.length <= 1}
+          disabled={visibleCanvases.length <= 1}
           title={t("moduleBalancing.deleteCanvas")}
           type="button"
           onClick={() => {
@@ -451,6 +475,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           <ModuleLibrary
             activeCanvas={activeCanvas}
             customModuleForm={customModuleForm}
+            activeActivityIds={activeActivityIds}
             index={index}
             isTouch={isTouch}
             onAddModule={(moduleId) => {
@@ -480,6 +505,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             onUpdateCustomModuleForm={setCustomModuleForm}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
+            showActivityIcons={showAllActivityContent}
             t={t}
           />
         ) : null}
@@ -507,6 +533,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             onRenameStage={(stage, name) => runInAction(() => { stage.name = name; })}
             onToggleBalance={(stageId) => setExpandedBalanceIds(toggleSetValue(expandedBalanceIds, stageId))}
             selectedStage={selectedStage}
+            showActivityIcons={showAllActivityContent}
             stageBalance={selectedStage === null ? null : stageBalanceByStageId.get(selectedStage.id)?.balances ?? []}
             t={t}
             warehouseForecasts={computation.warehouseForecasts}
@@ -535,6 +562,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
         <ModuleLibrary
           activeCanvas={activeCanvas}
           customModuleForm={customModuleForm}
+          activeActivityIds={activeActivityIds}
           index={index}
           isTouch={isTouch}
           onAddModule={(moduleId) => {
@@ -564,6 +592,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           onUpdateCustomModuleForm={setCustomModuleForm}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
+          showActivityIcons={showAllActivityContent}
           t={t}
         />
       </aside>
@@ -609,6 +638,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
                 onEditEntry={(moduleId, entryIndex, quantity) => openEditEntryDraft(stage.id, moduleId, entryIndex, quantity)}
                 onMoveEntry={(fromIndex, toIndex) => moveStageEntry(stage, fromIndex, toIndex)}
                 onOpenLibrary={() => setMobileTab("module-library")}
+                showActivityIcons={showAllActivityContent}
                 stage={stage}
                 t={t}
               />
@@ -658,6 +688,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
 
 function ModuleLibrary({
   activeCanvas,
+  activeActivityIds,
   customModuleForm,
   index,
   isTouch,
@@ -671,9 +702,11 @@ function ModuleLibrary({
   onUpdateCustomModuleForm,
   searchQuery,
   setSearchQuery,
+  showActivityIcons,
   t,
 }: {
   activeCanvas: ModuleBalancingCanvasReadWrite;
+  activeActivityIds: readonly string[];
   customModuleForm: CustomModuleFormState | null;
   index: ModuleBalancingIndex;
   isTouch: boolean;
@@ -687,6 +720,7 @@ function ModuleLibrary({
   onUpdateCustomModuleForm: (draft: CustomModuleFormState | null) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  showActivityIcons: boolean;
   t: (key: string) => string;
 }) {
   if (customModuleForm !== null) {
@@ -706,6 +740,10 @@ function ModuleLibrary({
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const systemModules = index.systemModules.filter((module) => matchesModuleQuery(module, normalizedQuery, index, t));
   const customModules = Array.from(index.customModuleById.values())
+    .filter((module) =>
+      showActivityIcons
+      || !moduleContainsInactiveActivityContent(module, index, activeActivityIds),
+    )
     .filter((module) => matchesModuleQuery(module, normalizedQuery, index, t));
 
   return (
@@ -724,6 +762,7 @@ function ModuleLibrary({
         isTouch={isTouch}
         modules={systemModules}
         onAddModule={onAddModule}
+        showActivityIcons={showActivityIcons}
         t={t}
         title={t("moduleBalancing.systemModules")}
       />
@@ -735,6 +774,7 @@ function ModuleLibrary({
         onAddModule={onAddModule}
         onDeleteCustomModule={onDeleteCustomModule}
         onEditCustomModule={onEditCustomModule}
+        showActivityIcons={showActivityIcons}
         t={t}
         title={t("moduleBalancing.customModules")}
       />
@@ -757,6 +797,7 @@ function ModuleSection({
   onAddModule,
   onDeleteCustomModule,
   onEditCustomModule,
+  showActivityIcons,
   t,
   title,
 }: {
@@ -767,6 +808,7 @@ function ModuleSection({
   onAddModule: (moduleId: string) => void;
   onDeleteCustomModule?: (moduleId: string) => void;
   onEditCustomModule?: (module: ModuleBalancingCustomModule) => void;
+  showActivityIcons: boolean;
   t: (key: string) => string;
   title: string;
 }) {
@@ -783,6 +825,7 @@ function ModuleSection({
             onAdd={() => onAddModule(module.id)}
             onDeleteCustomModule={onDeleteCustomModule}
             onEditCustomModule={onEditCustomModule}
+            showActivityIcons={showActivityIcons}
             t={t}
           />
         ))}
@@ -798,6 +841,7 @@ function ModuleCard({
   onAdd,
   onDeleteCustomModule,
   onEditCustomModule,
+  showActivityIcons,
   t,
 }: {
   index: ModuleBalancingIndex;
@@ -806,11 +850,13 @@ function ModuleCard({
   onAdd: () => void;
   onDeleteCustomModule?: (moduleId: string) => void;
   onEditCustomModule?: (module: ModuleBalancingCustomModule) => void;
+  showActivityIcons: boolean;
   t: (key: string) => string;
 }) {
   const inputs = resolveModuleInputs(module, index);
   const outputs = resolveModuleOutputs(module, index);
   const title = resolveModuleTitle(module, index, t);
+  const activityIds = showActivityIcons ? resolveModuleActivityIds(module, index) : [];
   const subtitle = module.sourceType === "custom"
     ? formatPortList(outputs, index, t)
     : `${formatPortList(inputs, index, t)} -> ${formatPortList(outputs, index, t)}`;
@@ -829,7 +875,10 @@ function ModuleCard({
     >
       <img alt="" className={cm(styles, "module-balancing-module-icon")} src={resolveModuleIconSrc(module, index)} />
       <span className={cm(styles, "module-balancing-module-card-copy")}>
-        <span className={cm(styles, "module-balancing-module-title")}>{title}</span>
+        <span className={cm(styles, "module-balancing-module-title-row")}>
+          <span className={cm(styles, "module-balancing-module-title")}>{title}</span>
+          <ActivityIconStrip activityIds={activityIds} />
+        </span>
         <span className={cm(styles, "module-balancing-module-subtitle")}>{subtitle}</span>
       </span>
       {outputs[0] !== undefined ? (
@@ -937,6 +986,7 @@ function StageDetailPanel({
   onRenameStage,
   onToggleBalance,
   selectedStage,
+  showActivityIcons,
   stageBalance,
   t,
   warehouseForecasts,
@@ -953,6 +1003,7 @@ function StageDetailPanel({
   onRenameStage: (stage: ModuleBalancingStageReadWrite, name: string) => void;
   onToggleBalance: (stageId: string) => void;
   selectedStage: ModuleBalancingStageReadWrite | null;
+  showActivityIcons: boolean;
   stageBalance: ModuleBalancingItemBalance[] | null;
   t: (key: string) => string;
   warehouseForecasts: ModuleBalancingWarehouseForecast[];
@@ -985,6 +1036,7 @@ function StageDetailPanel({
         onEditEntry={(moduleId, entryIndex, quantity) => onEditEntry(selectedStage.id, moduleId, entryIndex, quantity)}
         onMoveEntry={(fromIndex, toIndex) => moveStageEntry(selectedStage, fromIndex, toIndex)}
         onOpenLibrary={onAddModule}
+        showActivityIcons={showActivityIcons}
         stage={selectedStage}
         t={t}
       />
@@ -1046,6 +1098,7 @@ function StageEntryGrid({
   onEditEntry,
   onMoveEntry,
   onOpenLibrary,
+  showActivityIcons,
   stage,
   t,
 }: {
@@ -1055,6 +1108,7 @@ function StageEntryGrid({
   onEditEntry: (moduleId: string, entryIndex: number, quantity: number) => void;
   onMoveEntry: (fromIndex: number, toIndex: number) => void;
   onOpenLibrary: () => void;
+  showActivityIcons: boolean;
   stage: ModuleBalancingStageReadWrite;
   t: (key: string) => string;
 }) {
@@ -1065,6 +1119,7 @@ function StageEntryGrid({
         if (module === null) {
           return null;
         }
+        const activityIds = showActivityIcons ? resolveModuleActivityIds(module, index) : [];
 
         return (
           <button
@@ -1094,7 +1149,10 @@ function StageEntryGrid({
             }}
           >
             <img alt="" src={resolveModuleIconSrc(module, index)} />
-            <span>{resolveModuleTitle(module, index, t)}</span>
+            <span className={cm(styles, "module-balancing-stage-entry-title")}>
+              <span>{resolveModuleTitle(module, index, t)}</span>
+              <ActivityIconStrip activityIds={activityIds} />
+            </span>
             <strong>x{formatFlow(entry.quantity)}</strong>
           </button>
         );

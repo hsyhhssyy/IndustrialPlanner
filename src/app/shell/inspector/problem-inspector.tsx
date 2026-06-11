@@ -3,6 +3,11 @@ import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
+import {
+  hasActivityTags,
+  isRecipeAvailableByActivity,
+  resolveEffectiveActivityIds,
+} from "@/shared/registry/activity-availability";
 import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-collapsible-panel";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -100,6 +105,43 @@ function collectRecipeProblems(
   return problems;
 }
 
+function collectManualActivityRecipeProblems(
+  appHost: AppHost,
+  entity: WorldEntity,
+  definition: EntityDefinition,
+): DeviceProblem[] {
+  const selectedRecipeIds = entity.config?.channelRecipes as Record<string, string> | undefined;
+  if (selectedRecipeIds === undefined) {
+    return [];
+  }
+
+  const effectiveActivityIds = resolveEffectiveActivityIds({
+    selectedActivityIds: appHost.internalState.settings.selectedActivityIds,
+  });
+  const recipeDefinitions = appHost.workspace.registry.recipeDefinitions;
+
+  for (const channel of definition.recipeChannels) {
+    const selectedRecipeId = selectedRecipeIds[channel.id];
+    if (selectedRecipeId === undefined) {
+      continue;
+    }
+
+    const recipe = recipeDefinitions.find((candidate) => candidate.id === selectedRecipeId);
+    if (
+      recipe !== undefined
+      && hasActivityTags(recipe.tags)
+      && !isRecipeAvailableByActivity(recipe, effectiveActivityIds)
+    ) {
+      return [{
+        message: "所选配方所属的活动不生效",
+        severity: "warning",
+      }];
+    }
+  }
+
+  return [];
+}
+
 export const ProblemInspector = observer(function ProblemInspector({
   appHost,
   entity,
@@ -114,8 +156,14 @@ export const ProblemInspector = observer(function ProblemInspector({
   const placementProblems = collectPlacementProblems(appHost, entity);
   const powerProblems = collectPowerProblems(appHost, entity, definition, runtimeStatus);
   const recipeProblems = collectRecipeProblems(runtimeStatus);
+  const manualActivityRecipeProblems = collectManualActivityRecipeProblems(appHost, entity, definition);
 
-  const allProblems = [...placementProblems, ...powerProblems, ...recipeProblems];
+  const allProblems = [
+    ...placementProblems,
+    ...powerProblems,
+    ...recipeProblems,
+    ...manualActivityRecipeProblems,
+  ];
 
   if (allProblems.length === 0) {
     return null;

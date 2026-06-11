@@ -45,6 +45,7 @@ export type SimulationHostWorkerMode = "auto" | "runtime";
 export interface CreateSimulationHostOptions {
   readonly workerMode?: SimulationHostWorkerMode;
   readonly getPerfEnabled?: () => boolean;
+  readonly getActiveActivityIds?: () => readonly string[];
 }
 
 export function createSimulationHost(
@@ -61,6 +62,7 @@ export function createSimulationHost(
     topology: topologyStore,
     bridge,
     getPerfEnabled: options.getPerfEnabled,
+    getActiveActivityIds: options.getActiveActivityIds,
   });
   const actions: SimulationContract["actions"] = actionImpl;
   const internalActions: SimulationInternalAction = actionImpl;

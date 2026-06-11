@@ -447,6 +447,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     descriptionKey: "settingsGroup.otherDescription",
     items: [
       {
+        id: "other-toolbox-show-all-activity-content",
+        kind: "switch",
+        labelText: "在工具箱内显示所有活动物品和配方",
+        descriptionText: "关闭后，工具箱只显示当前生效活动的物品和配方。",
+        defaultValue: true,
+      },
+      {
         id: "other-debug-mode",
         kind: "switch",
         labelKey: "settingsField.debugMode",

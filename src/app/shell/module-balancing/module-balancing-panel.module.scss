@@ -83,6 +83,10 @@
   width: 170px;
 }
 
+.module-balancing-field .activity-icon-strip {
+  min-height: 18px;
+}
+
 .module-balancing-icon-button,
 .module-balancing-mini-icon-button,
 .module-balancing-icon-text-button,
@@ -301,6 +305,13 @@
   white-space: nowrap;
 }
 
+.module-balancing-module-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
 .module-balancing-module-title {
   font-size: 0.78rem;
   font-weight: 700;
@@ -451,6 +462,18 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.72rem;
+}
+
+.module-balancing-stage-entry-title {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.module-balancing-stage-entry-title .activity-icon-strip {
+  flex: 0 0 auto;
 }
 
 .module-balancing-stage-entry strong {

@@ -384,6 +384,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.debugMode = value;
         }),
       },
+      "other-toolbox-show-all-activity-content": {
+        readValue: () => appHost.internalState.settings.toolboxShowAllActivityContent,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.toolboxShowAllActivityContent === value) {
+            return;
+          }
+
+          appHost.internalState.settings.toolboxShowAllActivityContent = value;
+        }),
+      },
     },
     // 所有 keybinding 类型设置统一走 shortcutReader/shortcutWriter
     shortcutReader: (key) => appHost.internalActions.getKeyboardShortcutFor(key),

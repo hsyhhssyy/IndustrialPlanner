@@ -79,6 +79,7 @@ interface SimulationActionImplOptions {
   topology: SnapshotStoreReadWrite<CompiledSimulationTopology | null>;
   bridge: SimulationWorkerBridge;
   getPerfEnabled?: () => boolean;
+  getActiveActivityIds?: () => readonly string[];
 }
 
 export class SimulationActionImpl
@@ -88,7 +89,9 @@ implements SimulationAction, SimulationInternalAction {
   private readonly topology: SnapshotStoreReadWrite<CompiledSimulationTopology | null>;
   private readonly bridge: SimulationWorkerBridge;
   private readonly getPerfEnabled: (() => boolean) | undefined;
+  private readonly getActiveActivityIds: (() => readonly string[]) | undefined;
   private compiledDocument: WorldDocument | null = null;
+  private compiledActivitySignature: string | null = null;
   private tpsAccumulatedTicks = 0;
   private tpsAccumulatedMs = 0;
   private nextPerfReportTick = 180;
@@ -99,6 +102,7 @@ implements SimulationAction, SimulationInternalAction {
     this.topology = options.topology;
     this.bridge = options.bridge;
     this.getPerfEnabled = options.getPerfEnabled;
+    this.getActiveActivityIds = options.getActiveActivityIds;
   }
 
   public readonly start: SimulationAction["start"] = async () => {
@@ -186,6 +190,7 @@ implements SimulationAction, SimulationInternalAction {
     if (sourceDocument === undefined) {
       this.topology.setSnapshot(null);
       this.compiledDocument = null;
+      this.compiledActivitySignature = null;
       runInAction(() => {
         this.stateReadWrite.currentSnapshot = null;
         this.stateReadWrite.currentPlaybackTickNumber = 0;
@@ -212,11 +217,14 @@ implements SimulationAction, SimulationInternalAction {
     });
     const previousTopology = this.topology.getSnapshot();
     const nextDocumentHash = createSimulationDocumentHash(document);
+    const activeActivityIds = normalizeActiveActivityIds(this.getActiveActivityIds?.() ?? []);
+    const nextActivitySignature = JSON.stringify(activeActivityIds);
     if (
       this.compiledDocument !== null
       && previousTopology !== null
       && this.stateReadWrite.runtimeStatus.mode !== "error"
       && previousTopology.documentHash === nextDocumentHash
+      && this.compiledActivitySignature === nextActivitySignature
     ) {
       return {
         status: "started",
@@ -240,6 +248,7 @@ implements SimulationAction, SimulationInternalAction {
         document,
         registry: this.workspace.registry,
       }),
+      activeActivityIds,
     });
     const previousDocument = this.compiledDocument;
     const baseTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber ?? 0;
@@ -260,6 +269,7 @@ implements SimulationAction, SimulationInternalAction {
     );
     this.topology.setSnapshot(compiledTopology);
     this.compiledDocument = cloneWorldDocument(document);
+    this.compiledActivitySignature = nextActivitySignature;
 
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = response.status;
@@ -512,6 +522,12 @@ function resolveOrderedDocumentEntities(document: WorldDocument): WorldEntity[] 
 
     return entity === undefined ? [] : [entity];
   });
+}
+
+function normalizeActiveActivityIds(activityIds: readonly string[]): string[] {
+  return [...new Set(activityIds)]
+    .filter((activityId) => activityId.length > 0)
+    .sort();
 }
 
 function resolveSimulationCompileDocument(options: {

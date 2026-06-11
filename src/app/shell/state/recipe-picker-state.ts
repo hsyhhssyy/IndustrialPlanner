@@ -8,18 +8,21 @@ export type RecipePickerRequest =
   | {
     title?: string;
     initialQuery?: string;
+    includeInactiveActivityRecipes?: boolean;
     recipes: readonly RecipeDefinition[];
     entities?: never;
   }
   | {
     title?: string;
     initialQuery?: string;
+    includeInactiveActivityRecipes?: boolean;
     entities: readonly EntityDefinition[];
     recipes?: never;
   }
   | {
     title?: string;
     initialQuery?: string;
+    includeInactiveActivityRecipes?: boolean;
     recipes?: undefined;
     entities?: undefined;
   };
@@ -77,6 +80,7 @@ export class WorkbenchRecipePickerController {
   title: string | null = null;
   query = "";
   source: RecipePickerSource | null = null;
+  includeInactiveActivityRecipes = false;
 
   _resolver: ((recipeId: string | null) => void) | null = null;
 
@@ -122,6 +126,7 @@ export class WorkbenchRecipePickerController {
     this.title = request.title ?? null;
     this.query = request.initialQuery ?? "";
     this.source = normalizeRecipePickerSource(request);
+    this.includeInactiveActivityRecipes = request.includeInactiveActivityRecipes === true;
     this.dialogState.visible = true;
 
     return new Promise((resolve) => {
@@ -147,6 +152,7 @@ export class WorkbenchRecipePickerController {
     this.dialogState.visible = false;
     this.title = null;
     this.source = null;
+    this.includeInactiveActivityRecipes = false;
 
     resolver?.(recipeId);
   }

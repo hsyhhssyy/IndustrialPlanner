@@ -1,4 +1,5 @@
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import { ACTIVITY_LIMITED_FORMULA_1_TAG } from "@/shared/registry/activity-availability";
 
 export const ITEM_DEFINITIONS: ItemDefinition[] = [
   {
@@ -327,28 +328,28 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_activity_xiranite_cmpt",
     nameKey: "registry.item.item_activity_xiranite_cmpt.name",
     iconId: "item_activity_xiranite_cmpt",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
     displayOrder: 10000,
   },
   {
     id: "item_activity_xiranite_enr_cmpt",
     nameKey: "registry.item.item_activity_xiranite_enr_cmpt.name",
     iconId: "item_activity_xiranite_enr_cmpt",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
     displayOrder: 10000,
   },
   {
     id: "item_activity_xiranite_bottle",
     nameKey: "registry.item.item_activity_xiranite_bottle.name",
     iconId: "item_activity_xiranite_bottle",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
     displayOrder: 10000,
   },
   {
     id: "item_activity_xiranite_enr_bottle",
     nameKey: "registry.item.item_activity_xiranite_enr_bottle.name",
     iconId: "item_activity_xiranite_enr_bottle",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
     displayOrder: 10000,
   },
   {
@@ -523,28 +524,28 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2",
     nameKey: "registry.item.item_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2.name",
     iconId: "item_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
     displayOrder: 10000,
   },
   {
     id: "item_activity_xiranite_enr_tool",
     nameKey: "registry.item.item_activity_xiranite_enr_tool.name",
     iconId: "item_activity_xiranite_enr_tool",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
     displayOrder: 10000,
   },
   {
     id: "item_activity_xiranite_hulu",
     nameKey: "registry.item.item_activity_xiranite_hulu.name",
     iconId: "item_activity_xiranite_hulu",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
     displayOrder: 10000,
   },
   {
     id: "item_activity_xiranite_enr_hulu",
     nameKey: "registry.item.item_activity_xiranite_enr_hulu.name",
     iconId: "item_activity_xiranite_enr_hulu",
-    tags: ["new"],
+    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
     displayOrder: 10000,
   },
   {

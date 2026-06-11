@@ -1,8 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { reaction } from "mobx";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import { createAppHost } from "@/app/host/app-host";
 import "@/styles/global.scss";
+import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
 import { createRegistryContract } from "./registry";
 import { WorkspaceContract } from "./domain/document/workspace-contract";
 import { createWorkspaceState } from "./domain/document/workspace-state";
@@ -24,9 +26,21 @@ const workspace : WorkspaceContract = {
 const appHost = createAppHost(workspace);
 createEditorHost(workspace);
 await createRenderHost(workspace);
-createSimulationHost(workspace, {
+const simulationHost = createSimulationHost(workspace, {
   getPerfEnabled: () => appHost.internalState.settings.debugMode,
+  getActiveActivityIds: () => resolveEffectiveActivityIds({
+    selectedActivityIds: appHost.internalState.settings.selectedActivityIds,
+  }),
 });
+
+reaction(
+  () => JSON.stringify(appHost.internalState.settings.selectedActivityIds),
+  () => {
+    if (simulationHost.internalState.hasStarted) {
+      void simulationHost.internalActions.refreshFromCurrentDocument();
+    }
+  },
+);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

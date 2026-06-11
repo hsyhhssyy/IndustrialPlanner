@@ -5,6 +5,10 @@ import LucideSearch from "~icons/lucide/search";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import {
+  isRecipeAvailableByActivity,
+  resolveEffectiveActivityIds,
+} from "@/shared/registry/activity-availability";
 import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import {
@@ -69,6 +73,9 @@ export const RecipePickerDialog = observer(function RecipePickerDialog({
   const isPhoneLayout = screenProfile.deviceClass === "mobile";
   const isTabletLayout = screenProfile.deviceClass === "tablet";
   const isTouch = shouldUseImmersiveMaximizedDialog(screenProfile);
+  const effectiveActivityIds = resolveEffectiveActivityIds({
+    selectedActivityIds: appHost.internalState.settings.selectedActivityIds,
+  });
   const index = useMemo(
     () => buildEncyclopediaIndex(
       registry.itemDefinitions,
@@ -78,8 +85,18 @@ export const RecipePickerDialog = observer(function RecipePickerDialog({
     [registry],
   );
   const scopedRecipes = useMemo(
-    () => resolveScopedRecipes(registry.recipeDefinitions, controller.source),
-    [controller.source, registry.recipeDefinitions],
+    () => resolveScopedRecipes({
+      registryRecipes: registry.recipeDefinitions,
+      source: controller.source,
+      includeInactiveActivityRecipes: controller.includeInactiveActivityRecipes,
+      effectiveActivityIds,
+    }),
+    [
+      controller.includeInactiveActivityRecipes,
+      controller.source,
+      effectiveActivityIds,
+      registry.recipeDefinitions,
+    ],
   );
   const normalizedQuery = controller.query.trim().toLowerCase();
   const visibleRecipes = useMemo(
@@ -250,21 +267,33 @@ function RecipePickerItemList({
   );
 }
 
-function resolveScopedRecipes(
-  registryRecipes: readonly RecipeDefinition[],
-  source: AppHost["recipePicker"]["source"],
-): RecipeDefinition[] {
-  const visibleRegistryRecipes = registryRecipes.filter(isRecipeVisibleInToolbox);
+function resolveScopedRecipes(options: {
+  readonly registryRecipes: readonly RecipeDefinition[];
+  readonly source: AppHost["recipePicker"]["source"];
+  readonly includeInactiveActivityRecipes: boolean;
+  readonly effectiveActivityIds: readonly string[];
+}): RecipeDefinition[] {
+  const visibleRegistryRecipes = options.registryRecipes
+    .filter(isRecipeVisibleInToolbox)
+    .filter((recipe) =>
+      options.includeInactiveActivityRecipes
+      || isRecipeAvailableByActivity(recipe, options.effectiveActivityIds),
+    );
 
-  if (source === null) {
+  if (options.source === null) {
     return visibleRegistryRecipes;
   }
 
-  if (source.kind === "recipes") {
-    return source.recipes.filter(isRecipeVisibleInToolbox);
+  if (options.source.kind === "recipes") {
+    return options.source.recipes
+      .filter(isRecipeVisibleInToolbox)
+      .filter((recipe) =>
+        options.includeInactiveActivityRecipes
+        || isRecipeAvailableByActivity(recipe, options.effectiveActivityIds),
+      );
   }
 
-  const entityIds = new Set(source.entityIds);
+  const entityIds = new Set(options.source.entityIds);
 
   if (entityIds.size === 0) {
     return [];

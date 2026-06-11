@@ -1,0 +1,17 @@
+.activity-icon-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  vertical-align: middle;
+}
+
+.activity-icon-strip-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border-radius: 4px;
+  object-fit: contain;
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line);
+}

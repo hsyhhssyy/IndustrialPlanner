@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -11,6 +12,13 @@ import type {
   ToolboxWikiNavigationEntry as NavEntry,
 } from "@/app/toolbox-types";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import {
+  isItemAvailableByActivity,
+  isRecipeAvailableByActivity,
+  resolveActivityIdsFromTags,
+  resolveEffectiveActivityIds,
+} from "@/shared/registry/activity-availability";
+import { ActivityIconStrip } from "@/app/shell/shared/activity-icon-strip";
 import {
   EncyclopediaBrowser,
   type EncyclopediaIndex,
@@ -119,6 +127,7 @@ function RecipeGroup({
   isExpanded,
   onToggle,
   onEntityClick,
+  showActivityIcons,
   t,
 }: {
   title: string;
@@ -128,6 +137,7 @@ function RecipeGroup({
   onEntityClick: (id: string) => void;
   isExpanded: boolean;
   onToggle: () => void;
+  showActivityIcons: boolean;
   t: (key: string) => string;
 }) {
   if (recipes.length === 0) return null;
@@ -154,6 +164,7 @@ function RecipeGroup({
               index={index}
               onItemClick={onItemClick}
               onEntityClick={onEntityClick}
+              showActivityIcons={showActivityIcons}
               t={t}
             />
           ))}
@@ -168,15 +179,18 @@ function RecipeCard({
   index,
   onItemClick,
   onEntityClick,
+  showActivityIcons,
   t,
 }: {
   recipe: RecipeDefinition;
   index: EncyclopediaIndex;
   onItemClick: (id: string) => void;
   onEntityClick: (id: string) => void;
+  showActivityIcons: boolean;
   t: (key: string) => string;
 }) {
   const maxRows = Math.max(recipe.inputs.length, recipe.outputs.length);
+  const activityIds = showActivityIcons ? resolveActivityIdsFromTags(recipe.tags) : [];
 
   return (
     <article className={cm(styles, "encyclopedia-recipe-card definition-card")}>
@@ -238,6 +252,7 @@ function RecipeCard({
             {t(index.entityById.get(recipe.machineId)?.nameKey ?? recipe.machineId)}
           </span>
         </button>
+        <ActivityIconStrip activityIds={activityIds} />
         <span className={cm(styles, "encyclopedia-recipe-duration")}>{recipe.durationSeconds}s</span>
       </div>
     </article>
@@ -253,6 +268,7 @@ function DetailView({
   expandedGroups,
   onToggleGroup,
   isTouch,
+  showActivityIcons,
   t,
 }: {
   entry: NavEntry;
@@ -263,6 +279,7 @@ function DetailView({
   expandedGroups: Set<string>;
   onToggleGroup: (group: string) => void;
   isTouch: boolean;
+  showActivityIcons: boolean;
   t: (key: string) => string;
 }) {
   const isItem = entry.type === "item";
@@ -278,6 +295,10 @@ function DetailView({
     : resolveEntityIcon(entry.id);
 
   const tags = isItem ? itemDef?.tags ?? [] : entityDef?.tags ?? [];
+  const activityIds = showActivityIcons ? resolveActivityIdsFromTags(tags) : [];
+  const visibleTags = showActivityIcons
+    ? tags.filter((tag) => resolveActivityIdsFromTags([tag]).length === 0)
+    : tags;
 
   const inputRecipes = isItem
     ? index.recipesByInputItem.get(entry.id) ?? []
@@ -335,11 +356,12 @@ function DetailView({
           {!isItem && (
             <span className={cm(styles, "encyclopedia-detail-kind")}>{t("encyclopedia.entityLabel")}</span>
           )}
-          {tags.length > 0 && (
+          {(visibleTags.length > 0 || activityIds.length > 0) && (
             <div className={cm(styles, "encyclopedia-detail-tags")}>
-              {tags.map((tag) => (
+              {visibleTags.map((tag) => (
                 <span key={tag} className={cm(styles, "encyclopedia-tag")}>{tag}</span>
               ))}
+              <ActivityIconStrip activityIds={activityIds} />
             </div>
           )}
         </div>
@@ -353,6 +375,7 @@ function DetailView({
         onEntityClick={onEntityClick}
         isExpanded={expandedGroups.has("asOutput")}
         onToggle={() => onToggleGroup("asOutput")}
+        showActivityIcons={showActivityIcons}
         t={t}
       />
       <RecipeGroup
@@ -363,6 +386,7 @@ function DetailView({
         onEntityClick={onEntityClick}
         isExpanded={expandedGroups.has("asInput")}
         onToggle={() => onToggleGroup("asInput")}
+        showActivityIcons={showActivityIcons}
         t={t}
       />
       <RecipeGroup
@@ -373,6 +397,7 @@ function DetailView({
         onEntityClick={onEntityClick}
         isExpanded={expandedGroups.has("asMachine")}
         onToggle={() => onToggleGroup("asMachine")}
+        showActivityIcons={showActivityIcons}
         t={t}
       />
       <RecipeGroup
@@ -383,6 +408,7 @@ function DetailView({
         onEntityClick={onEntityClick}
         isExpanded={expandedGroups.has("liquidFilling")}
         onToggle={() => onToggleGroup("liquidFilling")}
+        showActivityIcons={showActivityIcons}
         t={t}
       />
       <RecipeGroup
@@ -393,6 +419,7 @@ function DetailView({
         onEntityClick={onEntityClick}
         isExpanded={expandedGroups.has("liquidDismantle")}
         onToggle={() => onToggleGroup("liquidDismantle")}
+        showActivityIcons={showActivityIcons}
         t={t}
       />
 
@@ -420,14 +447,28 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
 }) {
   const registry = appHost.workspace.registry;
   const t = appHost.actions.translate;
+  const showAllActivityContent = appHost.internalState.settings.toolboxShowAllActivityContent;
+  const selectedActivityIds = appHost.internalState.settings.selectedActivityIds;
+  const effectiveActivityIds = resolveEffectiveActivityIds({
+    selectedActivityIds,
+  });
 
   const index = useMemo(
-    () => buildEncyclopediaIndex(
-      registry.itemDefinitions,
-      registry.entityDefinitions,
-      registry.recipeDefinitions,
-    ),
-    [registry],
+    () => {
+      const items = showAllActivityContent
+        ? registry.itemDefinitions
+        : registry.itemDefinitions.filter((item) => isItemAvailableByActivity(item, effectiveActivityIds));
+      const recipes = showAllActivityContent
+        ? registry.recipeDefinitions
+        : registry.recipeDefinitions.filter((recipe) => isRecipeAvailableByActivity(recipe, effectiveActivityIds));
+
+      return buildEncyclopediaIndex(
+        items,
+        registry.entityDefinitions,
+        recipes,
+      );
+    },
+    [effectiveActivityIds, registry, showAllActivityContent],
   );
 
   const wikiState = appHost.internalState.workbench.toolbox.wiki;
@@ -489,6 +530,19 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
     navigateTo({ type: "entity", id: entityId });
   }, [navigateTo]);
 
+  useEffect(() => {
+    if (currentEntry === null) {
+      return;
+    }
+
+    if (
+      (currentEntry.type === "item" && !index.itemById.has(currentEntry.id))
+      || (currentEntry.type === "entity" && !index.entityById.has(currentEntry.id))
+    ) {
+      persistNavigation([]);
+    }
+  }, [currentEntry, index, persistNavigation]);
+
   const toggleGroup = useCallback((group: string) => {
     setExpandedGroups((prev) => {
       const next = new Set(prev);
@@ -521,6 +575,7 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
           expandedGroups={expandedGroups}
           onToggleGroup={toggleGroup}
           isTouch={isTouch}
+          showActivityIcons={showAllActivityContent}
           t={t}
         />
       </div>

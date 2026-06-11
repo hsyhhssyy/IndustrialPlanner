@@ -64,6 +64,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-grass-background": false,
         "game-use-inspector-panel": false,
         "game-use-simplified-device-icons": true,
+        "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "debug-show-fps": true,
         "debug-show-gesture-diagnostics-window": true,
@@ -99,6 +100,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["game-always-show-grid-lines"]).toBe(true);
     expect(hydratedController.values["game-show-grass-background"]).toBe(false);
     expect(hydratedController.values["game-use-simplified-device-icons"]).toBe(true);
+    expect(hydratedController.values["other-toolbox-show-all-activity-content"]).toBe(true);
     expect(hydratedController.values["other-debug-mode"]).toBe(true);
     expect(hydratedController.values["debug-show-fps"]).toBe(true);
     expect(hydratedController.values["debug-show-gesture-diagnostics-window"]).toBe(true);
@@ -260,6 +262,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-grass-background": false,
         "game-use-inspector-panel": false,
         "game-use-simplified-device-icons": false,
+        "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "debug-show-fps": false,
         "debug-show-gesture-diagnostics-window": false,

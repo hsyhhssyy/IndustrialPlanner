@@ -1,5 +1,6 @@
 import { reaction, runInAction } from "mobx";
 
+import { normalizeSelectedActivityIds } from "@/shared/registry/activity-availability";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
 import type { AppHost } from "../host/app-host";
@@ -159,6 +160,11 @@ function normalizePersistedAppSettings(
       : typeof persistedAppSettings.gameAlwaysShowGridLines === "boolean"
         ? persistedAppSettings.gameAlwaysShowGridLines
         : fallback.gameAlwaysShowGridLines,
+    selectedActivityIds: normalizeSelectedActivityIds(persistedAppSettings.selectedActivityIds),
+    toolboxShowAllActivityContent:
+      typeof persistedAppSettings.toolboxShowAllActivityContent === "boolean"
+        ? persistedAppSettings.toolboxShowAllActivityContent
+        : fallback.toolboxShowAllActivityContent,
     showGrassBackground: gameUseSimplifiedDeviceIcons
       ? false
       : typeof persistedAppSettings.showGrassBackground === "boolean"

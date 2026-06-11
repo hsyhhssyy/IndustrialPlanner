@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
-import { makeAutoObservable } from "mobx";
+import { makeAutoObservable, runInAction } from "mobx";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { PwaController } from "@/app/pwa/pwa-controller";
 import { PwaSettingsSection } from "@/app/pwa/pwa-settings-section";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
+import { ActivityIconStrip } from "@/app/shell/shared/activity-icon-strip";
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
 import {
   type SettingsGroupId,
@@ -13,6 +14,12 @@ import {
   WORKBENCH_SETTINGS_GROUPS,
   WorkbenchSettingsDialogController,
 } from "@/app/shell/state/settings-dialog-state";
+import {
+  ACTIVITY_DEFINITIONS,
+  isActivityOngoing,
+  normalizeSelectedActivityIds,
+  resolveEffectiveActivityIds,
+} from "@/shared/registry/activity-availability";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -40,6 +47,8 @@ export const SettingsDialog = observer(function SettingsDialog({
   const sectionRefs = useRef(new Map<SettingsGroupId, HTMLElement>());
   const [capturingKeybindingId, setCapturingKeybindingId] = useState<string | null>(null);
   const dialogState = appHost.internalState.workbench.dialogState.settings;
+  const selectedActivityIds = appHost.internalState.settings.selectedActivityIds;
+  const effectiveActivityIds = resolveEffectiveActivityIds({ selectedActivityIds });
   const isOpen = dialogState.visible;
   const hideGroupSidebar = appHost.state.screenProfile.deviceClass !== "desktop";
   const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
@@ -60,18 +69,59 @@ export const SettingsDialog = observer(function SettingsDialog({
     activeTab: null,
   }), []);
 
+  const activityDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 520,
+    height: null,
+    activeTab: null,
+  }), []);
+
   const handleResetOperationAndShortcuts = useCallback(() => {
-    confirmDialogState.visible = true;
+    runInAction(() => {
+      confirmDialogState.visible = true;
+    });
   }, [confirmDialogState]);
 
   const handleResetConfirm = useCallback(() => {
     controller.resetArknightsOperationAndShortcuts();
-    confirmDialogState.visible = false;
+    runInAction(() => {
+      confirmDialogState.visible = false;
+    });
   }, [controller, confirmDialogState]);
 
   const handleResetCancel = useCallback(() => {
-    confirmDialogState.visible = false;
+    runInAction(() => {
+      confirmDialogState.visible = false;
+    });
   }, [confirmDialogState]);
+
+  const handleOpenActivityDialog = useCallback(() => {
+    runInAction(() => {
+      activityDialogState.visible = true;
+    });
+  }, [activityDialogState]);
+
+  const handleCloseActivityDialog = useCallback(() => {
+    runInAction(() => {
+      activityDialogState.visible = false;
+    });
+  }, [activityDialogState]);
+
+  const handleToggleActivity = useCallback((activityId: string, selected: boolean) => {
+    runInAction(() => {
+      const selectedIds = new Set(normalizeSelectedActivityIds(appHost.internalState.settings.selectedActivityIds));
+      if (selected) {
+        selectedIds.add(activityId);
+      } else {
+        selectedIds.delete(activityId);
+      }
+
+      appHost.internalState.settings.selectedActivityIds = normalizeSelectedActivityIds([...selectedIds]);
+    });
+  }, [appHost]);
 
   const handleWindowKeyDown = useCallback((event: KeyboardEvent) => {
     if (capturingKeybindingId === null) {
@@ -258,6 +308,12 @@ export const SettingsDialog = observer(function SettingsDialog({
                     </button>
                   </div>
                 )}
+                {group.id === "other" && (
+                  <ActivitySettingsCard
+                    effectiveActivityIds={effectiveActivityIds}
+                    onOpen={handleOpenActivityDialog}
+                  />
+                )}
               </section>
             ))}
             <PwaSettingsSection appHost={appHost} pwaController={pwaController} />
@@ -272,9 +328,111 @@ export const SettingsDialog = observer(function SettingsDialog({
         t={t}
       />
     )}
+    {activityDialogState.visible && (
+      <ActivitySelectionDialog
+        activityDialogState={activityDialogState}
+        effectiveActivityIds={effectiveActivityIds}
+        onClose={handleCloseActivityDialog}
+        onToggleActivity={handleToggleActivity}
+        selectedActivityIds={selectedActivityIds}
+        t={t}
+      />
+    )}
     </>
   );
 });
+
+function ActivitySettingsCard({
+  effectiveActivityIds,
+  onOpen,
+}: {
+  effectiveActivityIds: readonly string[];
+  onOpen: () => void;
+}) {
+  return (
+    <article className={cm(styles, "settings-dialog-setting-card settings-dialog-activity-card")}>
+      <div className={cm(styles, "settings-dialog-setting-copy")}>
+        <h4>活动数据</h4>
+        <p>当前生效活动</p>
+      </div>
+      <div className={cm(styles, "settings-dialog-activity-control")}>
+        <ActivityIconStrip activityIds={effectiveActivityIds} />
+        {effectiveActivityIds.length === 0 ? (
+          <span className={cm(styles, "settings-dialog-activity-empty")}>无</span>
+        ) : null}
+        <button
+          className={cm(styles, "settings-dialog-reset-button")}
+          onClick={onOpen}
+          type="button"
+        >
+          加载活动数据
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function ActivitySelectionDialog({
+  activityDialogState,
+  effectiveActivityIds,
+  onClose,
+  onToggleActivity,
+  selectedActivityIds,
+  t,
+}: {
+  activityDialogState: DialogStateReadWrite;
+  effectiveActivityIds: readonly string[];
+  onClose: () => void;
+  onToggleActivity: (activityId: string, selected: boolean) => void;
+  selectedActivityIds: readonly string[];
+  t: AppHost["actions"]["translate"];
+}) {
+  const selectedActivityIdSet = new Set(selectedActivityIds);
+  const effectiveActivityIdSet = new Set(effectiveActivityIds);
+
+  return (
+    <DialogShell
+      className="activity-selection-dialog"
+      bodyClassName={cm(styles, "activity-selection-dialog-body")}
+      closeTitle={t("action.close")}
+      compactMobileLayout={false}
+      dialogKey="activity-selection"
+      dialogState={activityDialogState}
+      maximizeTitle=""
+      onClose={onClose}
+      onToggleMaximized={() => {}}
+      restoreTitle=""
+      showMaximizeButton={false}
+      title="加载活动数据"
+      titleId="activity-selection-dialog-title"
+    >
+      <div className={cm(styles, "activity-selection-list")}>
+        {ACTIVITY_DEFINITIONS.map((activity) => {
+          const isSelected = selectedActivityIdSet.has(activity.id);
+          const isEffective = effectiveActivityIdSet.has(activity.id);
+          const isOngoing = isActivityOngoing(activity);
+
+          return (
+            <label className={cm(styles, "activity-selection-row")} key={activity.id}>
+              <input
+                checked={isSelected}
+                onChange={(event) => onToggleActivity(activity.id, event.currentTarget.checked)}
+                type="checkbox"
+              />
+              <img alt="" src={activity.icon} />
+              <span className={cm(styles, "activity-selection-row-copy")}>
+                <strong>{activity.name}</strong>
+                <span>{formatActivityTimeRange(activity.startTime, activity.endTime)}</span>
+              </span>
+              {isOngoing ? <span className={cm(styles, "activity-selection-badge")}>进行中</span> : null}
+              {isEffective ? <span className={cm(styles, "activity-selection-badge")}>生效</span> : null}
+            </label>
+          );
+        })}
+      </div>
+    </DialogShell>
+  );
+}
 
 function scrollSettingsDialogContentToSection(options: {
   contentElement: HTMLDivElement;
@@ -518,6 +676,30 @@ function normalizeCapturedKeyLabel(key: string): string | null {
 
 function isModifierOnlyKey(key: string): boolean {
   return key === "Shift" || key === "Control" || key === "Alt" || key === "Meta";
+}
+
+function formatActivityTimeRange(startTime: number | undefined, endTime: number | undefined): string {
+  const formatTime = (timestamp: number) => new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Shanghai",
+  }).format(timestamp);
+
+  if (startTime !== undefined && endTime !== undefined) {
+    return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+  }
+
+  if (startTime !== undefined) {
+    return `${formatTime(startTime)} 起`;
+  }
+
+  if (endTime !== undefined) {
+    return `${formatTime(endTime)} 止`;
+  }
+
+  return "长期";
 }
 
 // ─── 重置确认对话框 ───

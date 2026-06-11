@@ -30,4 +30,18 @@ export class ProductionPlanningInputStore {
   constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
   }
+
+  reset(): void {
+    this.targets = [];
+    this.supplies = [];
+    this.displayMode = "item";
+    this.viewMode = "tree";
+    this.recipeChoices = {};
+    this.sourceConfig = {
+      waterPolicy: "use-byproduct",
+      acidPolicy: "use-byproduct",
+      sewagePolicy: "external-supply",
+    };
+    this.session = createDefaultPlannerSessionState();
+  }
 }

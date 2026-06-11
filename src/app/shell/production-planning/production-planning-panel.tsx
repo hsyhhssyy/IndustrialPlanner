@@ -19,6 +19,11 @@ import type { AppHost } from "@/app/host/app-host";
 import type { PlannerFlowViewportState } from "@/shared/storage/planner-storage";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import {
+  isItemAvailableByActivity,
+  isRecipeAvailableByActivity,
+  resolveEffectiveActivityIds,
+} from "@/shared/registry/activity-availability";
+import {
   BELT_TRANSPORT_DURATION_SECONDS,
   PIPE_TRANSPORT_DURATION_SECONDS,
 } from "@/domain/registry";
@@ -137,9 +142,18 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   isTouch: boolean;
 }) {
   const t = appHost.actions.translate;
+  const showAllActivityContent = appHost.internalState.settings.toolboxShowAllActivityContent;
+  const selectedActivityIds = appHost.internalState.settings.selectedActivityIds;
   const index = useMemo(
-    () => buildProductionPlanningIndex(appHost.workspace.registry),
-    [appHost.workspace.registry],
+    () => buildProductionPlanningIndex(appHost.workspace.registry, {
+      includeInactiveActivityContent: showAllActivityContent,
+      activeActivityIds: resolveEffectiveActivityIds({ selectedActivityIds }),
+    }),
+    [
+      appHost.workspace.registry,
+      selectedActivityIds,
+      showAllActivityContent,
+    ],
   );
   const store = useLocalObservable(() => new ProductionPlanningInputStore());
   useEffect(() => hookPlannerIndexedDbPersistence(store), [store]);
@@ -180,6 +194,28 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     () => new Map(Object.entries(calculation?.recipeChoices ?? recipeChoices)),
     [calculation?.recipeChoices, recipeChoices],
   );
+
+  useEffect(() => {
+    if (!hydrated || showAllActivityContent) {
+      return;
+    }
+
+    const activeActivityIds = resolveEffectiveActivityIds({ selectedActivityIds });
+    if (!hasInactiveProductionPlanningContent(store, appHost.workspace.registry, activeActivityIds)) {
+      return;
+    }
+
+    runInAction(() => {
+      store.reset();
+    });
+    setCalculation(null);
+  }, [
+    appHost.workspace.registry,
+    hydrated,
+    selectedActivityIds,
+    showAllActivityContent,
+    store,
+  ]);
 
   const setActiveScreen = (nextScreen: ProductionPlanningScreen) => {
     if (store.session.activeScreen === nextScreen) {
@@ -275,6 +311,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
 
   const requestItemSelection = async (onSelect: (itemId: string) => void) => {
     const itemId = await appHost.encyclopediaPicker.pickItem({
+      includeInactiveActivityItems: showAllActivityContent,
       title: t("encyclopediaPicker.title.item"),
     });
 
@@ -348,6 +385,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
 
   const requestRecipeSelection = async (itemId: string, recipes: readonly RecipeDefinition[]) => {
     const selectedRecipeId = await appHost.recipePicker.pickRecipe({
+      includeInactiveActivityRecipes: showAllActivityContent,
       title: `${t("productionPlanning.chooseRecipe")} · ${resolveProductionPlanningItemName(itemId, index, t)}`,
       recipes,
     });
@@ -2862,6 +2900,28 @@ function PortChipList({
       </div>
     </div>
   );
+}
+
+function hasInactiveProductionPlanningContent(
+  store: ProductionPlanningInputStore,
+  registry: AppHost["workspace"]["registry"],
+  activeActivityIds: readonly string[],
+): boolean {
+  const itemById = new Map(registry.itemDefinitions.map((item) => [item.id, item]));
+  const recipeById = new Map(registry.recipeDefinitions.map((recipe) => [recipe.id, recipe]));
+  const hasInactivePortItem = [...store.targets, ...store.supplies].some((port) => {
+    const item = itemById.get(port.itemId);
+    return item !== undefined && !isItemAvailableByActivity(item, activeActivityIds);
+  });
+
+  if (hasInactivePortItem) {
+    return true;
+  }
+
+  return Object.values(store.recipeChoices).some((recipeId) => {
+    const recipe = recipeById.get(recipeId);
+    return recipe !== undefined && !isRecipeAvailableByActivity(recipe, activeActivityIds);
+  });
 }
 
 function createPort(itemId: string, perMinute: number): ProductionPlanningPort {

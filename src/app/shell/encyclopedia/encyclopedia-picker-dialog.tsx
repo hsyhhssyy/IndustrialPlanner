@@ -7,6 +7,10 @@ import {
   EncyclopediaBrowser,
   buildEncyclopediaIndex,
 } from "@/app/shell/encyclopedia/encyclopedia-browser";
+import {
+  isItemAvailableByActivity,
+  resolveEffectiveActivityIds,
+} from "@/shared/registry/activity-availability";
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -43,6 +47,9 @@ export const EncyclopediaPickerDialog = observer(function EncyclopediaPickerDial
     ? "encyclopedia-picker-dialog-touch"
     : "encyclopedia-picker-dialog";
   const registry = appHost.workspace.registry;
+  const effectiveActivityIds = resolveEffectiveActivityIds({
+    selectedActivityIds: appHost.internalState.settings.selectedActivityIds,
+  });
   const index = useMemo(
     () => buildEncyclopediaIndex(
       registry.itemDefinitions,
@@ -73,7 +80,10 @@ export const EncyclopediaPickerDialog = observer(function EncyclopediaPickerDial
         entityFilter={controller.matchesEntity}
         index={index}
         isTouch={isTouch}
-        itemFilter={controller.matchesItem}
+        itemFilter={(item) => (
+          (controller.includeInactiveActivityItems || isItemAvailableByActivity(item, effectiveActivityIds))
+          && controller.matchesItem(item)
+        )}
         mobileSelectedCategories={controller.mobileSelectedCategories}
         recentItemIds={controller.recentItemIds}
         onDesktopCategoryChange={controller.setDesktopCategory}

@@ -11,6 +11,11 @@ import type {
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import {
+  isItemAvailableByActivity,
+  isRecipeAvailableByActivity,
+  resolveActivityIdsFromTags,
+} from "@/shared/registry/activity-availability";
 import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
 
 export interface ModuleBalancingItemBalance {
@@ -42,10 +47,16 @@ export interface ModuleBalancingIndex {
   itemById: Map<string, ItemDefinition>;
   entityById: Map<string, EntityDefinition>;
   recipeById: Map<string, RecipeDefinition>;
+  allRecipeById: Map<string, RecipeDefinition>;
   customModuleById: Map<string, ModuleBalancingCustomModule>;
   systemModules: ModuleBalancingSystemRecipeModule[];
   allItems: ItemDefinition[];
   allEntities: EntityDefinition[];
+}
+
+interface ModuleBalancingIndexOptions {
+  includeInactiveActivityContent?: boolean;
+  activeActivityIds?: readonly string[];
 }
 
 interface MutableItemBalance {
@@ -57,13 +68,24 @@ interface MutableItemBalance {
 export function buildModuleBalancingIndex(
   registry: RegistryContract,
   state: ModuleBalancingState,
+  options: ModuleBalancingIndexOptions = {},
 ): ModuleBalancingIndex {
+  const includeInactiveActivityContent = options.includeInactiveActivityContent ?? true;
+  const activeActivityIds = options.activeActivityIds ?? [];
   const itemById = new Map(registry.itemDefinitions.map((item) => [item.id, item]));
   const entityById = new Map(registry.entityDefinitions.map((entity) => [entity.id, entity]));
+  const itemDefinitions = includeInactiveActivityContent
+    ? registry.itemDefinitions
+    : registry.itemDefinitions.filter((item) => isItemAvailableByActivity(item, activeActivityIds));
   const visibleRecipes = registry.recipeDefinitions.filter(isRecipeVisibleInToolbox);
-  const recipeById = new Map(visibleRecipes.map((recipe) => [recipe.id, recipe]));
+  const availableRecipes = visibleRecipes.filter((recipe) =>
+    includeInactiveActivityContent
+    || isRecipeAvailableByActivity(recipe, activeActivityIds),
+  );
+  const allRecipeById = new Map(visibleRecipes.map((recipe) => [recipe.id, recipe]));
+  const recipeById = new Map(availableRecipes.map((recipe) => [recipe.id, recipe]));
   const customModuleById = new Map(state.customModules.map((module) => [module.id, module]));
-  const systemModules = visibleRecipes.map((recipe) => ({
+  const systemModules = availableRecipes.map((recipe) => ({
     id: recipe.id,
     recipeId: recipe.id,
     sourceType: "system-recipe" as const,
@@ -73,9 +95,10 @@ export function buildModuleBalancingIndex(
     itemById,
     entityById,
     recipeById,
+    allRecipeById,
     customModuleById,
     systemModules,
-    allItems: [...registry.itemDefinitions].sort((left, right) => left.nameKey.localeCompare(right.nameKey)),
+    allItems: [...itemDefinitions].sort((left, right) => left.nameKey.localeCompare(right.nameKey)),
     allEntities: registry.entityDefinitions
       .filter((entity) => entity.uiGroup !== "hidden")
       .sort((left, right) => left.nameKey.localeCompare(right.nameKey)),
@@ -209,6 +232,69 @@ export function resolveModuleOutputs(
   return resolveModulePorts(module.recipeId, index)?.outputs ?? [];
 }
 
+export function resolveModuleActivityIds(
+  module: ModuleBalancingModule,
+  index: ModuleBalancingIndex,
+): string[] {
+  if (module.sourceType === "custom") {
+    return resolveActivityIdsFromItemIds(
+      [...module.inputs, ...module.outputs].map((port) => port.itemId),
+      index,
+    );
+  }
+
+  const recipe = index.allRecipeById.get(module.recipeId) ?? index.recipeById.get(module.recipeId);
+  if (recipe === undefined) {
+    return [];
+  }
+
+  return dedupeActivityIds([
+    ...resolveActivityIdsFromTags(recipe.tags),
+    ...resolveActivityIdsFromItemIds(
+      [...recipe.inputs, ...recipe.outputs].map((port) => port.itemId),
+      index,
+    ),
+  ]);
+}
+
+export function moduleContainsInactiveActivityContent(
+  module: ModuleBalancingModule,
+  index: ModuleBalancingIndex,
+  activeActivityIds: readonly string[],
+): boolean {
+  const activeActivityIdSet = new Set(activeActivityIds);
+  return resolveModuleActivityIds(module, index).some((activityId) => !activeActivityIdSet.has(activityId));
+}
+
+export function resolveCanvasActivityIds(
+  canvas: ModuleBalancingCanvas,
+  index: ModuleBalancingIndex,
+): string[] {
+  const activityIds: string[] = [
+    ...resolveActivityIdsFromItemIds(canvas.globalInputs.map((port) => port.itemId), index),
+  ];
+
+  for (const stage of canvas.stages) {
+    for (const entry of stage.entries) {
+      const module = resolveModuleForActivityLookup(entry.moduleId, index);
+      if (module !== null) {
+        activityIds.push(...resolveModuleActivityIds(module, index));
+      }
+    }
+  }
+
+  return dedupeActivityIds(activityIds);
+}
+
+export function canvasContainsInactiveActivityContent(
+  canvas: ModuleBalancingCanvas,
+  index: ModuleBalancingIndex,
+  activeActivityIds: readonly string[],
+): boolean {
+  const activeActivityIdSet = new Set(activeActivityIds);
+  return resolveCanvasActivityIds(canvas, index).some((activityId) => !activeActivityIdSet.has(activityId));
+}
+
 export function resolveModuleInputs(
   module: ModuleBalancingModule,
   index: ModuleBalancingIndex,
@@ -301,6 +387,45 @@ export function formatDurationMinutes(minutes: number): string {
 
 export function createModuleBalancingId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function resolveModuleForActivityLookup(
+  moduleId: string,
+  index: ModuleBalancingIndex,
+): ModuleBalancingModule | null {
+  const customModule = index.customModuleById.get(moduleId);
+  if (customModule !== undefined) {
+    return customModule;
+  }
+
+  if (!index.allRecipeById.has(moduleId) && !index.recipeById.has(moduleId)) {
+    return null;
+  }
+
+  return {
+    id: moduleId,
+    recipeId: moduleId,
+    sourceType: "system-recipe",
+  };
+}
+
+function resolveActivityIdsFromItemIds(
+  itemIds: readonly string[],
+  index: ModuleBalancingIndex,
+): string[] {
+  return dedupeActivityIds(itemIds.flatMap((itemId) =>
+    resolveActivityIdsFromTags(index.itemById.get(itemId)?.tags ?? []),
+  ));
+}
+
+function dedupeActivityIds(activityIds: readonly string[]): string[] {
+  const deduped: string[] = [];
+  for (const activityId of activityIds) {
+    if (!deduped.includes(activityId)) {
+      deduped.push(activityId);
+    }
+  }
+  return deduped;
 }
 
 function mergeBalances(

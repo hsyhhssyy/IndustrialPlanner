@@ -21,6 +21,7 @@ export interface EncyclopediaPickerRequest {
   kinds?: readonly EncyclopediaPickerSelectionKind[];
   filterItem?: (item: ItemDefinition) => boolean;
   filterEntity?: (entity: EntityDefinition) => boolean;
+  includeInactiveActivityItems?: boolean;
   initialDesktopCategory?: ToolboxWikiDesktopCategory;
   initialMobileSelectedCategories?: readonly ToolboxWikiMobileFilterOption[];
 }
@@ -66,6 +67,7 @@ export class WorkbenchEncyclopediaPickerController {
   title: string | null = null;
   query = "";
   allowedKinds: EncyclopediaPickerSelectionKind[] = [...DEFAULT_PICKER_KINDS];
+  includeInactiveActivityItems = false;
   recentItemIds: string[] = [];
 
   _resolveSharedFilterState: () => EncyclopediaPickerSharedFilterState;
@@ -196,6 +198,7 @@ export class WorkbenchEncyclopediaPickerController {
     }
     this._itemFilter = request.filterItem;
     this._entityFilter = request.filterEntity;
+    this.includeInactiveActivityItems = request.includeInactiveActivityItems === true;
     this.dialogState.visible = true;
 
     return new Promise((resolve) => {
@@ -238,6 +241,7 @@ export class WorkbenchEncyclopediaPickerController {
     this.dialogState.visible = false;
     this._itemFilter = undefined;
     this._entityFilter = undefined;
+    this.includeInactiveActivityItems = false;
 
     try {
       localStorage.setItem("planner.last-picker-query", this.query);

@@ -1,0 +1,160 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  createWorldDocument,
+  type WorldDocument,
+} from "@/domain/document/world-document";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { createRegistryContract } from "@/registry";
+import {
+  ACTIVITY_LIMITED_FORMULA_1_ID,
+} from "@/shared/registry/activity-availability";
+import { compileSimulationTopology } from "@/simulation/topology-compiler";
+
+const ACTIVITY_ITEM_ID = "item_activity_xiranite_cmpt";
+const ACTIVITY_RECIPE_ID = "r_component_activity_xiranite_cmpt_from_xiranite_powder_basic";
+
+function createActivityTestEntityDefinition(): EntityDefinition {
+  return {
+    id: "test_activity_machine",
+    nameKey: "test.activityMachine",
+    spriteId: "test_activity_machine",
+    footprint: { width: 1, height: 1 },
+    uiGroup: "hidden",
+    displayOrder: 10000,
+    tags: [],
+    requiresPower: false,
+    powerDemand: 0,
+    inspectors: [],
+    placementBehaviors: [],
+    portGroups: [
+      {
+        id: "item_port",
+        kind: "item",
+        direction: "input",
+        ports: [
+          {
+            id: "port_1",
+            localCellX: 0,
+            localCellY: 0,
+            edge: "NORTH",
+            acceptRule: { base: { kind: "item", itemId: ACTIVITY_ITEM_ID }, exclude: [] },
+            count: "unlimited",
+            priorityGroup: 0,
+            roundRobinSeed: 0,
+          },
+        ],
+      },
+    ],
+    storageSlotGroups: [
+      {
+        id: "buffer",
+        kind: "item",
+        slots: [
+          {
+            id: "slot_1",
+            capacity: 10,
+            itemFilter: "type",
+            itemFilterType: "solid",
+            lock: ACTIVITY_ITEM_ID,
+            initialItemType: ACTIVITY_ITEM_ID,
+            initialCount: 5,
+            ignoreStock: true,
+          },
+        ],
+      },
+    ],
+    recipeChannels: [
+      {
+        id: "default",
+        ingredientStorageGroupIds: ["buffer"],
+        productStorageGroupIds: ["buffer"],
+        manualRecipeOnly: true,
+      },
+    ],
+    portStorageBindings: [
+      {
+        id: "bind_item_port",
+        portGroupId: "item_port",
+        storageSlotGroupId: "buffer",
+      },
+    ],
+  };
+}
+
+function createActivityTestDocument(): WorldDocument {
+  return {
+    ...createWorldDocument(),
+    entities: {
+      machine: {
+        id: "machine",
+        definitionId: "test_activity_machine",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        config: {
+          channelRecipes: {
+            default: ACTIVITY_RECIPE_ID,
+          },
+        },
+        tags: [],
+      },
+    },
+    entityOrder: ["machine"],
+  };
+}
+
+function compileWithActivities(activeActivityIds: readonly string[]) {
+  const registry = createRegistryContract();
+  registry.entityDefinitions = [...registry.entityDefinitions, createActivityTestEntityDefinition()];
+
+  return compileSimulationTopology({
+    document: createActivityTestDocument(),
+    registry,
+    poweredEntityIds: new Set(["machine"]),
+    activeActivityIds,
+  });
+}
+
+describe("simulation activity filtering", () => {
+  it("excludes inactive activity items and recipes from compiled catalogs", () => {
+    const inactiveTopology = compileWithActivities([]);
+    const activeTopology = compileWithActivities([ACTIVITY_LIMITED_FORMULA_1_ID]);
+
+    expect(inactiveTopology.itemCatalog[ACTIVITY_ITEM_ID]).toBeUndefined();
+    expect(inactiveTopology.recipeCatalog[ACTIVITY_RECIPE_ID]).toBeUndefined();
+    expect(activeTopology.itemCatalog[ACTIVITY_ITEM_ID]).toBeDefined();
+    expect(activeTopology.recipeCatalog[ACTIVITY_RECIPE_ID]).toBeDefined();
+  });
+
+  it("treats inactive activity slot configuration and links as empty", () => {
+    const inactiveTopology = compileWithActivities([]);
+    const slot = inactiveTopology.slots["device:machine/node:buffer/slot:slot_1"];
+    const port = inactiveTopology.ports["device:machine/port:item_port.port_1.input"];
+    const channel = inactiveTopology.devices["device:machine"]?.recipeChannels[0];
+
+    expect(slot).toMatchObject({
+      lock: null,
+      initialItemType: null,
+      initialCount: 0,
+      ignoreStock: false,
+    });
+    expect(port?.acceptRule.base).toEqual({ kind: "none" });
+    expect(channel?.defaultRecipeId).toBeNull();
+  });
+
+  it("keeps activity slot configuration and manual recipe when the activity is active", () => {
+    const activeTopology = compileWithActivities([ACTIVITY_LIMITED_FORMULA_1_ID]);
+    const slot = activeTopology.slots["device:machine/node:buffer/slot:slot_1"];
+    const port = activeTopology.ports["device:machine/port:item_port.port_1.input"];
+    const channel = activeTopology.devices["device:machine"]?.recipeChannels[0];
+
+    expect(slot).toMatchObject({
+      lock: ACTIVITY_ITEM_ID,
+      initialItemType: ACTIVITY_ITEM_ID,
+      initialCount: 5,
+      ignoreStock: true,
+    });
+    expect(port?.acceptRule.base).toEqual({ kind: "item", itemId: ACTIVITY_ITEM_ID });
+    expect(channel?.defaultRecipeId).toBe(ACTIVITY_RECIPE_ID);
+  });
+});

@@ -2,6 +2,10 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import {
+  isItemAvailableByActivity,
+  isRecipeAvailableByActivity,
+} from "@/shared/registry/activity-availability";
 import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
 
 // AI-CORRECTION 2026-05-20: SPECIAL_INFINITE_ITEM_IDS retained for backward compat in tests;
@@ -42,6 +46,11 @@ export interface ProductionPlanningIndex {
   recipesByOutputItem: Map<string, RecipeDefinition[]>;
   allItems: ItemDefinition[];
   naturalResourceItemIds: Set<string>;
+}
+
+interface ProductionPlanningIndexOptions {
+  includeInactiveActivityContent?: boolean;
+  activeActivityIds?: readonly string[];
 }
 
 export interface ProductionPlanningSupplyBreakdown {
@@ -128,10 +137,23 @@ interface SolverContext {
 const EPSILON = 0.0001;
 const MAX_RECURSION_DEPTH = 48;
 
-export function buildProductionPlanningIndex(registry: RegistryContract): ProductionPlanningIndex {
-  const itemById = new Map(registry.itemDefinitions.map((item) => [item.id, item]));
+export function buildProductionPlanningIndex(
+  registry: RegistryContract,
+  options: ProductionPlanningIndexOptions = {},
+): ProductionPlanningIndex {
+  const includeInactiveActivityContent = options.includeInactiveActivityContent ?? true;
+  const activeActivityIds = options.activeActivityIds ?? [];
+  const itemDefinitions = includeInactiveActivityContent
+    ? registry.itemDefinitions
+    : registry.itemDefinitions.filter((item) => isItemAvailableByActivity(item, activeActivityIds));
+  const itemById = new Map(itemDefinitions.map((item) => [item.id, item]));
   const entityById = new Map(registry.entityDefinitions.map((entity) => [entity.id, entity]));
-  const visibleRecipes = registry.recipeDefinitions.filter(isRecipeVisibleInToolbox);
+  const visibleRecipes = registry.recipeDefinitions
+    .filter(isRecipeVisibleInToolbox)
+    .filter((recipe) =>
+      includeInactiveActivityContent
+      || isRecipeAvailableByActivity(recipe, activeActivityIds),
+    );
   const recipeById = new Map(visibleRecipes.map((recipe) => [recipe.id, recipe]));
   const recipesByOutputItem = new Map<string, RecipeDefinition[]>();
 
@@ -147,7 +169,7 @@ export function buildProductionPlanningIndex(registry: RegistryContract): Produc
   }
 
   const naturalResourceItemIds = new Set<string>();
-  for (const item of registry.itemDefinitions) {
+  for (const item of itemDefinitions) {
     if (isNaturalResourceItem(item)) {
       naturalResourceItemIds.add(item.id);
     }
@@ -158,7 +180,7 @@ export function buildProductionPlanningIndex(registry: RegistryContract): Produc
     entityById,
     recipeById,
     recipesByOutputItem,
-    allItems: [...registry.itemDefinitions].sort((left, right) => left.nameKey.localeCompare(right.nameKey)),
+    allItems: [...itemDefinitions].sort((left, right) => left.nameKey.localeCompare(right.nameKey)),
     naturalResourceItemIds,
   };
 }

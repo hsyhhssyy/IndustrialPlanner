@@ -208,6 +208,23 @@
   justify-content: flex-end;
 }
 
+.settings-dialog-activity-card {
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
+}
+
+.settings-dialog-activity-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.settings-dialog-activity-empty {
+  color: var(--text-1);
+  font-size: 0.84rem;
+}
+
 .settings-dialog-field-shell,
 .settings-dialog-slider-shell,
 .settings-dialog-switch-shell {
@@ -363,6 +380,81 @@
   &:active {
     background: var(--surface-5);
   }
+}
+
+// ─── 活动选择对话框 ───
+
+.activity-selection-dialog {
+  width: min(520px, 100%);
+  height: auto;
+  max-height: min(420px, 80vh);
+}
+
+.activity-selection-dialog-body {
+  overflow: auto;
+}
+
+.activity-selection-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.activity-selection-row {
+  display: grid;
+  grid-template-columns: auto 36px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.activity-selection-row input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.activity-selection-row img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.activity-selection-row-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.activity-selection-row-copy strong,
+.activity-selection-row-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-selection-row-copy strong {
+  color: var(--text-0);
+  font-size: 0.92rem;
+}
+
+.activity-selection-row-copy span {
+  color: var(--text-1);
+  font-size: 0.78rem;
+}
+
+.activity-selection-badge {
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text-0);
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 // ─── 确认对话框 ───
