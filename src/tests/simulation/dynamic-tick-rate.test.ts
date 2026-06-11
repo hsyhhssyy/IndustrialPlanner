@@ -190,8 +190,7 @@ function createProductionOverflowTopology(
         }],
         portIds: [],
         routing: {},
-        configHash: "config:test",
-      },
+        configHash: "config:test",        isProducer: true,      },
     },
     nodes: {
       "node:out": {

@@ -88,6 +88,13 @@ function startIdleDevices(
 
       if (recipe.recipeType === "immediate-consume") {
         consumeSelections(state.persistent.slots, recipe.reservations);
+        // 记录 immediate-consume 配方的消耗统计（仅生产设备）
+        if (device.isProducer) {
+          const delta = state.transient.recipeStatsDelta;
+          for (const input of recipe.inputItems) {
+            delta.consumed[input.itemType] = (delta.consumed[input.itemType] ?? 0) + input.amount;
+          }
+        }
         recipe.reservations = [];
       }
 

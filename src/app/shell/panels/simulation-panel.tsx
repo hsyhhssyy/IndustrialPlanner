@@ -19,13 +19,24 @@ function formatSimulationRuntimeJson(appHost: AppHost): string {
   }
 }
 
+function formatWarehouseStatsJson(appHost: AppHost): string {
+  const stats = appHost.workspace.simulation?.queries.getWarehouseStats() ?? null;
+  if (stats === null) {
+    return "null";
+  }
+
+  return JSON.stringify(stats, null, 2);
+}
+
 export function SimulationPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const [runtimeJson, setRuntimeJson] = useState(() => formatSimulationRuntimeJson(appHost));
+  const [warehouseJson, setWarehouseJson] = useState(() => formatWarehouseStatsJson(appHost));
 
   useEffect(() => {
     const tick = () => {
       setRuntimeJson(formatSimulationRuntimeJson(appHost));
+      setWarehouseJson(formatWarehouseStatsJson(appHost));
     };
 
     tick();
@@ -45,6 +56,14 @@ export function SimulationPanel({ appHost }: { appHost: AppHost }) {
         readOnly
         rows={20}
         value={runtimeJson}
+      />
+      <h4>仓库统计</h4>
+      <textarea
+        className={cm(styles, "json-debug-textarea")}
+        data-simulation-warehouse-json
+        readOnly
+        rows={20}
+        value={warehouseJson}
       />
     </article>
   );

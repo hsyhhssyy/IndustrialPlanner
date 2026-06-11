@@ -12,7 +12,10 @@ export function buildSolveGraph(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): void {
+  // 保留前一阶段的 recipeStatsDelta，避免被 createEmptyTransientState 清空
+  const preservedDelta = state.transient.recipeStatsDelta;
   state.transient = createEmptyTransientState();
+  state.transient.recipeStatsDelta = preservedDelta;
 
   for (const nodeId of topology.ordering.nodeOrder) {
     const node = topology.nodes[nodeId];

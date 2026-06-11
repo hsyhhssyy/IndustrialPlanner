@@ -131,6 +131,8 @@ export interface CompiledSimulationDevice {
   readonly portIds: readonly string[];
   readonly routing: Record<string, CompiledSimulationRoutingEntry>;
   readonly configHash: string;
+  /** 编译期缓存：该设备是否有实质生产配方（非运输、非仓库提交）。运行时零开销判断。 */
+  readonly isProducer: boolean;
 }
 
 export interface CompiledSimulationRecipeChannel {
@@ -327,6 +329,26 @@ export interface RuntimeTickSnapshot {
   readonly routingCursors: Record<string, number>;
   readonly transportComponentDomain: Record<string, string | null>;
   readonly diagnostics: readonly RuntimeDiagnosticSnapshot[];
+  /** 仓库统计快照：配方产出/消耗 per-min 与当前库存。仿真未启动时为 null。 */
+  readonly warehouseStats: WarehouseStats | null;
+}
+
+/** 单种物品的仓库统计数据 */
+export interface WarehouseItemStats {
+  /** 1 分钟滑动窗口内产出速率（/min 仿真时间） */
+  readonly producedPerMinute: number;
+  /** 1 分钟滑动窗口内消耗速率（/min 仿真时间） */
+  readonly consumedPerMinute: number;
+  /** 当前仓库中该物品的数量 */
+  readonly warehouseCount: number;
+  /** 最后一次发生变化（产出或消耗）的 tick 号 */
+  readonly lastChangedTick: number;
+}
+
+/** 仓库统计快照 */
+export interface WarehouseStats {
+  /** key 为 itemType */
+  readonly items: Record<string, WarehouseItemStats>;
 }
 
 export interface RuntimeSlotSnapshot {

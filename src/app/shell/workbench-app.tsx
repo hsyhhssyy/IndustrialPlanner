@@ -23,6 +23,7 @@ import { MobilePortraitGate } from "@/app/shell/layout/mobile-portrait-gate";
 import { RecipePickerDialog } from "@/app/shell/dialogs/recipe-picker-dialog";
 import { SaveBlueprintDialog } from "@/app/shell/dialogs/save-blueprint-dialog";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
+import { WarehouseStatsDialog } from "@/app/shell/dialogs/warehouse-stats-dialog";
 import { EncyclopediaPickerDialog } from "@/app/shell/encyclopedia/encyclopedia-picker-dialog";
 import {
   ToolboxBottomDock,
@@ -714,6 +715,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       <InspectorDialog appHost={appHost} />
       <SaveBlueprintDialog appHost={appHost} />
       <ToolboxDialog appHost={appHost} />
+      <WarehouseStatsDialog appHost={appHost} />
       <EncyclopediaPickerDialog appHost={appHost} />
       <RecipePickerDialog appHost={appHost} />
       <HelpDialog appHost={appHost} />

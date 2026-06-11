@@ -2480,6 +2480,7 @@ describe("Base panel power bar", () => {
           getDeviceRuntimeStatus: vi.fn(() => null),
           getPipeFluidItemId: vi.fn(() => null),
           isPipeDeviceSlotOccupied: vi.fn(() => false),
+          getWarehouseStats: vi.fn(() => null),
         },
       } as unknown as NonNullable<WorkspaceContract["simulation"]>;
     }
@@ -2566,6 +2567,7 @@ describe("Base panel power bar", () => {
         getDeviceRuntimeStatus: vi.fn(() => null),
         getPipeFluidItemId: vi.fn(() => null),
         isPipeDeviceSlotOccupied: vi.fn(() => false),
+        getWarehouseStats: vi.fn(() => null),
       },
     } as unknown as NonNullable<WorkspaceContract["simulation"]>;
 

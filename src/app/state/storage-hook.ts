@@ -665,6 +665,11 @@ function normalizePersistedDialogStateMap(
       persistedDialogStateMap["base-select"],
       fallback["base-select"],
     ),
+    "warehouse-stats": normalizePersistedDialogState(
+      "warehouse-stats",
+      persistedDialogStateMap["warehouse-stats"],
+      fallback["warehouse-stats"],
+    ),
   };
 
   for (const [dialogKey, persistedDialogState] of Object.entries(persistedDialogStateMap)) {

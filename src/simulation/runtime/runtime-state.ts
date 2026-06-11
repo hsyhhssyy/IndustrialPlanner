@@ -30,6 +30,32 @@ export interface SimulationPersistentRuntimeState {
   transportComponentDomain: Record<string, string | null>;
   /** 基地电池当前电量（焦耳），进入仿真时满电。 */
   baseBatteryJoules: number;
+  /** 配方产出/消耗统计状态（1 分钟滑动窗口） */
+  recipeStats: RecipeStatsState;
+}
+
+/** 单 tick 配方统计增量 */
+export interface RecipeStatsDelta {
+  /** 该 tick 内各物品产出数量 */
+  produced: Record<string, number>;
+  /** 该 tick 内各物品消耗数量 */
+  consumed: Record<string, number>;
+}
+
+/** 配方统计滑动窗口状态 */
+export interface RecipeStatsState {
+  /** 环形缓冲：最近 N 个 tick 的 delta */
+  windowDeltas: RecipeStatsDelta[];
+  /** 当前写入游标 */
+  windowCursor: number;
+  /** 窗口中有效条目数 */
+  windowCount: number;
+  /** 窗口容量（= standardTickRate × 60） */
+  windowCapacity: number;
+  /** 当前聚合值：key 为 itemType */
+  aggregated: Record<string, { producedPerMinute: number; consumedPerMinute: number }>;
+  /** 各物品最后一次发生变化的 tick */
+  lastChangedTick: Record<string, number>;
 }
 
 export interface RuntimeSlotState {
@@ -76,6 +102,8 @@ export interface SimulationTickTransientState {
   blockedInputNodeIds: Set<string>;
   /** Perf 埋点：当前 tick 的热点函数调用计数累积器。仅在 perfEnabled 时非空。 */
   _perf?: SimulationRuntimePerf;
+  /** 当前 tick 的配方统计增量（产出/消耗），由各阶段累积，tick 结束时滚入滑动窗口后清空。 */
+  recipeStatsDelta: RecipeStatsDelta;
 }
 
 export interface SimulationRuntimePerf {
@@ -173,6 +201,7 @@ export function createSimulationMutableRuntimeState(
         Object.keys(topology.transportComponents).map((id) => [id, null]),
       ),
       baseBatteryJoules: BASE_BATTERY_CAPACITY_J,
+      recipeStats: createRecipeStatsState(topology.standardTickRate),
     },
     transient: createEmptyTransientState(),
   };
@@ -259,6 +288,7 @@ export function cloneSimulationMutableRuntimeState(
       nextRecipeRunIndex: state.persistent.nextRecipeRunIndex,
       transportComponentDomain: { ...state.persistent.transportComponentDomain },
       baseBatteryJoules: state.persistent.baseBatteryJoules,
+      recipeStats: cloneRecipeStatsState(state.persistent.recipeStats),
     },
     transient: cloneTransientState(state.transient),
   };
@@ -271,6 +301,7 @@ export function createEmptyTransientState(): SimulationTickTransientState {
     transfers: [],
     diagnostics: [],
     blockedInputNodeIds: new Set(),
+    recipeStatsDelta: createRecipeStatsDelta(),
   };
 }
 
@@ -388,6 +419,10 @@ function cloneTransientState(transient: SimulationTickTransientState): Simulatio
     diagnostics: transient.diagnostics.map((diagnostic) => ({ ...diagnostic })),
     blockedInputNodeIds: new Set(transient.blockedInputNodeIds),
     _perf: transient._perf === undefined ? undefined : { ...transient._perf },
+    recipeStatsDelta: {
+      produced: { ...transient.recipeStatsDelta.produced },
+      consumed: { ...transient.recipeStatsDelta.consumed },
+    },
   };
 }
 
@@ -430,5 +465,116 @@ function resetConflictingTransportComponents(
       }
     }
     state.persistent.transportComponentDomain[componentId] = null;
+  }
+}
+
+// ============================================================
+// Recipe stats (1-minute sliding window)
+// ============================================================
+
+export function createRecipeStatsDelta(): RecipeStatsDelta {
+  return { produced: {}, consumed: {} };
+}
+
+export function createRecipeStatsState(standardTickRate: number): RecipeStatsState {
+  const windowCapacity = Math.max(1, standardTickRate * 60); // 1 min simulation time
+  return {
+    windowDeltas: Array.from({ length: windowCapacity }, () => createRecipeStatsDelta()),
+    windowCursor: 0,
+    windowCount: 0,
+    windowCapacity,
+    aggregated: {},
+    lastChangedTick: {},
+  };
+}
+
+export function cloneRecipeStatsState(state: RecipeStatsState): RecipeStatsState {
+  return {
+    windowDeltas: state.windowDeltas.map((delta) => ({
+      produced: { ...delta.produced },
+      consumed: { ...delta.consumed },
+    })),
+    windowCursor: state.windowCursor,
+    windowCount: state.windowCount,
+    windowCapacity: state.windowCapacity,
+    aggregated: Object.fromEntries(
+      Object.entries(state.aggregated).map(([itemType, stats]) => [
+        itemType,
+        { ...stats },
+      ]),
+    ),
+    lastChangedTick: { ...state.lastChangedTick },
+  };
+}
+
+/**
+ * 将 tick 的配方统计增量累加到 delta 中。
+ */
+export function accumulateRecipeStatsDelta(accum: RecipeStatsDelta, inc: RecipeStatsDelta): void {
+  for (const [itemType, amount] of Object.entries(inc.produced)) {
+    accum.produced[itemType] = (accum.produced[itemType] ?? 0) + amount;
+  }
+  for (const [itemType, amount] of Object.entries(inc.consumed)) {
+    accum.consumed[itemType] = (accum.consumed[itemType] ?? 0) + amount;
+  }
+}
+
+/**
+ * 将当前 tick 的 delta 写入环形缓冲，并重新计算聚合值。
+ * 返回聚合后的 per-min 值。
+ */
+export function rollRecipeStatsWindow(
+  stats: RecipeStatsState,
+  tickDelta: RecipeStatsDelta,
+  tickNumber: number,
+): void {
+  const capacity = stats.windowCapacity;
+  // 淘汰旧条目
+  if (stats.windowCount >= capacity) {
+    const oldDelta = stats.windowDeltas[stats.windowCursor];
+    if (oldDelta !== undefined) {
+      for (const itemType of Object.keys(oldDelta.produced)) {
+        const entry = stats.aggregated[itemType];
+        if (entry !== undefined) {
+          entry.producedPerMinute -= oldDelta.produced[itemType] ?? 0;
+          if (entry.producedPerMinute < 0) entry.producedPerMinute = 0;
+        }
+      }
+      for (const itemType of Object.keys(oldDelta.consumed)) {
+        const entry = stats.aggregated[itemType];
+        if (entry !== undefined) {
+          entry.consumedPerMinute -= oldDelta.consumed[itemType] ?? 0;
+          if (entry.consumedPerMinute < 0) entry.consumedPerMinute = 0;
+        }
+      }
+    }
+  }
+
+  // 写入新条目
+  stats.windowDeltas[stats.windowCursor] = {
+    produced: { ...tickDelta.produced },
+    consumed: { ...tickDelta.consumed },
+  };
+  stats.windowCursor = (stats.windowCursor + 1) % capacity;
+  stats.windowCount = Math.min(stats.windowCount + 1, capacity);
+
+  // 聚合新条目
+  for (const itemType of Object.keys(tickDelta.produced)) {
+    const entry = stats.aggregated[itemType] ??= { producedPerMinute: 0, consumedPerMinute: 0 };
+    entry.producedPerMinute += tickDelta.produced[itemType] ?? 0;
+    stats.lastChangedTick[itemType] = tickNumber;
+  }
+  for (const itemType of Object.keys(tickDelta.consumed)) {
+    const entry = stats.aggregated[itemType] ??= { producedPerMinute: 0, consumedPerMinute: 0 };
+    entry.consumedPerMinute += tickDelta.consumed[itemType] ?? 0;
+    stats.lastChangedTick[itemType] = tickNumber;
+  }
+
+  // 清理归零的条目
+  for (const itemType of Object.keys(stats.aggregated)) {
+    const entry = stats.aggregated[itemType]!;
+    if (entry.producedPerMinute <= 0 && entry.consumedPerMinute <= 0) {
+      delete stats.aggregated[itemType];
+    }
   }
 }

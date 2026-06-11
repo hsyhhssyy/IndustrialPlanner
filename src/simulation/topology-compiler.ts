@@ -446,6 +446,7 @@ function compileWarehouseDevice(
       portIds: [],
       routing: {},
       configHash: hashStable({ baseId: document.baseId, itemIds: Object.keys(itemCatalog).sort() }),
+      isProducer: false,
     },
     nodes: [node],
     slots,
@@ -544,6 +545,7 @@ function compileEntityDevice(options: {
       entity: options.entity,
       definition,
     }),
+    isProducer: definition.tags.includes("Producer"),
   };
 
   return {

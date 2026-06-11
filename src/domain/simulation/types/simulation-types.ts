@@ -66,6 +66,24 @@ export interface SimulationDeviceRuntimeSlotItemReadModel {
   readonly ignoreStock: boolean;
 }
 
+/** 单种物品的仓库统计只读视图 */
+export interface WarehouseItemStatsReadModel {
+  /** 1 分钟滑动窗口内产出速率（/min 仿真时间） */
+  readonly producedPerMinute: number;
+  /** 1 分钟滑动窗口内消耗速率（/min 仿真时间） */
+  readonly consumedPerMinute: number;
+  /** 当前仓库中该物品的数量 */
+  readonly warehouseCount: number;
+  /** 最后一次发生变化（产出或消耗）的 tick 号 */
+  readonly lastChangedTick: number;
+}
+
+/** 仓库统计快照只读视图 */
+export interface WarehouseStatsReadModel {
+  /** key 为 itemType */
+  readonly items: Record<string, WarehouseItemStatsReadModel>;
+}
+
 export interface SimulationRuntimeSlotPatch {
   readonly entityId: string;
   readonly storageGroupId: string;

@@ -79,6 +79,20 @@ export type MessageKey =
   | "rightDock.power"
   | "rightDock.selection"
   | "rightDock.simulation"
+  | "warehouseStats.title"
+  | "warehouseStats.dialogTitle"
+  | "warehouseStats.runToView"
+  | "warehouseStats.empty"
+  | "warehouseStats.noResults"
+  | "warehouseStats.item"
+  | "warehouseStats.produced"
+  | "warehouseStats.consumed"
+  | "warehouseStats.stock"
+  | "warehouseStats.more"
+  | "warehouseStats.search"
+  | "warehouseStats.pin"
+  | "warehouseStats.unpin"
+  | "warehouseStats.pinnedCount"
   | "section.configFields"
   | "section.runtimeDetails"
   | "section.runtimePatch"
@@ -404,21 +418,21 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "rightDock.power": "电力",
     "rightDock.selection": "设备属性",
     "rightDock.simulation": "仿真",
+    "warehouseStats.title": "仓库统计",
+    "warehouseStats.dialogTitle": "仓库统计详情",
+    "warehouseStats.runToView": "请运行仿真",
+    "warehouseStats.empty": "暂无仓库变化",
+    "warehouseStats.noResults": "没有匹配的物品",
+    "warehouseStats.item": "物品",
+    "warehouseStats.produced": "产出/分",
+    "warehouseStats.consumed": "消耗/分",
+    "warehouseStats.stock": "库存",
+    "warehouseStats.more": "更多",
+    "warehouseStats.search": "搜索物品",
+    "warehouseStats.pin": "置顶",
+    "warehouseStats.unpin": "取消置顶",
+    "warehouseStats.pinnedCount": "已置顶",
     "section.configFields": "配置字段",
-    "section.runtimeDetails": "运行态细节",
-    "section.runtimePatch": "运行态覆盖",
-    "section.diagnostics": "诊断",
-    "section.quickActions": "快捷操作",
-    "section.connections": "连接",
-    "label.definition": "定义",
-    "label.entityId": "实体 ID",
-    "label.mode": "模式",
-    "label.currentTickSnapshot": "当前 Tick 读模型",
-    "label.runtime": "运行态",
-    "label.position": "位置",
-    "label.rotation": "朝向",
-    "label.links": "链接",
-    "label.items": "物品",
     "label.recipes": "配方",
     "label.definitions": "定义",
     "label.noSelection": "未选中对象",
@@ -851,6 +865,20 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "rightDock.power": "Power",
     "rightDock.selection": "Device Properties",
     "rightDock.simulation": "Simulation",
+    "warehouseStats.title": "Warehouse Stats",
+    "warehouseStats.dialogTitle": "Warehouse Stats",
+    "warehouseStats.runToView": "Start simulation to view",
+    "warehouseStats.empty": "No warehouse changes",
+    "warehouseStats.noResults": "No matching items",
+    "warehouseStats.item": "Item",
+    "warehouseStats.produced": "Produced/min",
+    "warehouseStats.consumed": "Consumed/min",
+    "warehouseStats.stock": "Stock",
+    "warehouseStats.more": "More",
+    "warehouseStats.search": "Search items",
+    "warehouseStats.pin": "Pin",
+    "warehouseStats.unpin": "Unpin",
+    "warehouseStats.pinnedCount": "Pinned",
     "section.configFields": "Config Fields",
     "section.runtimeDetails": "Runtime Details",
     "section.runtimePatch": "Runtime Patch",

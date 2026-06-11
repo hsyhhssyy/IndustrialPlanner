@@ -4,6 +4,13 @@ import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { AppHost } from "@/app/host/app-host";
 import { DEFAULT_WORLD_BASE_ID } from "@/domain/document/world-document";
+import {
+  buildWarehouseStatsEntries,
+  resolveCompactWarehouseEntries,
+  useWarehousePinnedItems,
+  useWarehouseStats,
+  WarehouseStatsView,
+} from "@/app/shell/shared/warehouse-stats-view";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -18,6 +25,14 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
     (definition) => definition.id === currentBaseId,
   ) ?? appHost.workspace.registry.baseDefinitions[0] ?? null;
   const currentBaseName = currentBase?.name ?? currentBaseId;
+  const warehouseStats = useWarehouseStats(appHost);
+  const pinnedItems = useWarehousePinnedItems(appHost);
+  const warehouseEntries = buildWarehouseStatsEntries({
+    appHost,
+    stats: warehouseStats,
+    pinnedItemIds: pinnedItems.pinnedItemIds,
+  });
+  const compactWarehouseEntries = resolveCompactWarehouseEntries(warehouseEntries);
 
   // 主动轮询仿真文档级运行时数据（非 MobX 被动响应）
   const [totalPowerDemand, setTotalPowerDemand] = useState<number | null>(null);
@@ -127,6 +142,30 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
             <span className={cm(styles, "power-switch-thumb")} />
           </button>
         </label>
+      </article>
+      <article className={cm(styles, "inspector-card")}> 
+        <div className={cm(styles, "card-header warehouse-stats-card-header")}> 
+          <h3>{t("warehouseStats.title")}</h3>
+          <button
+            className={cm(styles, "warehouse-stats-more-button")}
+            disabled={warehouseStats === null}
+            onClick={() => appHost.internalActions.openDialog("warehouse-stats")}
+            type="button"
+          >
+            {t("warehouseStats.more")}
+          </button>
+        </div>
+        {warehouseStats === null ? (
+          <div className={cm(styles, "warehouse-stats-placeholder")}>{t("warehouseStats.runToView")}</div>
+        ) : (
+          <WarehouseStatsView
+            appHost={appHost}
+            entries={compactWarehouseEntries}
+            mode="compact"
+            onTogglePinned={pinnedItems.togglePinned}
+            pinnedItemIds={pinnedItems.pinnedItemIds}
+          />
+        )}
       </article>
     </div>
   );

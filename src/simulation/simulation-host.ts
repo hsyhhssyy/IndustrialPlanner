@@ -4,6 +4,7 @@ import type {
   SimulationDeviceRuntimeChannelRecipeStatus,
   SimulationDeviceRuntimeSlotItemReadModel,
   SimulationDeviceRuntimeStatusReadModel,
+  WarehouseStatsReadModel,
 } from "@/domain/simulation/types/simulation-types";
 import {
   createSnapshotStore,
@@ -176,6 +177,25 @@ export function createSimulationHost(
         }
 
         return false;
+      },
+      getWarehouseStats: (): WarehouseStatsReadModel | null => {
+        const snapshot = internalState.currentSnapshot;
+        if (snapshot === null || snapshot.warehouseStats === null) {
+          return null;
+        }
+        return {
+          items: Object.fromEntries(
+            Object.entries(snapshot.warehouseStats.items).map(([itemType, stats]) => [
+              itemType,
+              {
+                producedPerMinute: stats.producedPerMinute,
+                consumedPerMinute: stats.consumedPerMinute,
+                warehouseCount: stats.warehouseCount,
+                lastChangedTick: stats.lastChangedTick,
+              },
+            ]),
+          ),
+        };
       },
     },
     actions,

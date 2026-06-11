@@ -47,6 +47,7 @@ import {
   createEmptyTransientState,
   createMigratedSimulationMutableRuntimeState,
   createSimulationMutableRuntimeState,
+  rollRecipeStatsWindow,
   BASE_BATTERY_CAPACITY_J,
   type SimulationMutableRuntimeState,
 } from "./runtime/runtime-state";
@@ -680,6 +681,14 @@ export class SimulationWorkerRuntime {
       maintainTransportComponentDomains(this.topology, this.runtimeState);
       if (this.perfEnabled) { perfTiming!.stages["maintainDomains"] = performance.now() - t5; }
       this.runtimeState.lastAdvancedTickNumber = tickNumber;
+
+      // 将当前 tick 的配方统计增量滚入 1 分钟滑动窗口
+      rollRecipeStatsWindow(
+        this.runtimeState.persistent.recipeStats,
+        this.runtimeState.transient.recipeStatsDelta,
+        tickNumber,
+      );
+      this.runtimeState.transient.recipeStatsDelta = createEmptyTransientState().recipeStatsDelta;
 
       const t6 = this.perfEnabled ? performance.now() : 0;
       const isPowerOutageRun = this.powerMode === "real"

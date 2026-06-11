@@ -1,6 +1,8 @@
 import type {
   CompiledSimulationTopology,
   RuntimeTickSnapshot,
+  WarehouseItemStats,
+  WarehouseStats,
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import {
@@ -35,6 +37,7 @@ export function createTickSnapshot(
     routingCursors: { ...state.persistent.routingCursors },
     transportComponentDomain: { ...state.persistent.transportComponentDomain },
     diagnostics: state.transient.diagnostics.map((diagnostic) => ({ ...diagnostic })),
+    warehouseStats: buildWarehouseStats(topology, state),
   };
 }
 
@@ -139,4 +142,70 @@ function createNodeSnapshots(
       blockReason: node.blockReason,
     },
   ]));
+}
+
+/**
+ * 构建仓库统计快照：合并配方统计的 per-min 值与仓库槽位当前库存。
+ */
+function buildWarehouseStats(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+): WarehouseStats | null {
+  const recipeStats = state.persistent.recipeStats;
+  const items: Record<string, WarehouseItemStats> = {};
+
+  // 收集所有在配方统计中或仓库中有数据的物品
+  const allItemTypes = new Set<string>();
+
+  for (const itemType of Object.keys(recipeStats.aggregated)) {
+    allItemTypes.add(itemType);
+  }
+  for (const itemType of Object.keys(recipeStats.lastChangedTick)) {
+    allItemTypes.add(itemType);
+  }
+
+  // 遍历仓库槽位，汇总各类物品库存
+  const warehouseDevice = Object.values(topology.devices).find(
+    (device) => device.definitionId === "warehouse",
+  );
+
+  if (warehouseDevice !== undefined) {
+    for (const nodeId of warehouseDevice.nodeIds) {
+      const node = topology.nodes[nodeId];
+      if (node === undefined) continue;
+      for (const slotId of node.slotIds) {
+        const storageSlotId = resolveStorageSlotId(state, slotId);
+        const slotState = state.persistent.slots[storageSlotId];
+        if (slotState === undefined || slotState.itemType === null || slotState.count <= 0) continue;
+        allItemTypes.add(slotState.itemType);
+      }
+    }
+  }
+
+  for (const itemType of allItemTypes) {
+    const aggregated = recipeStats.aggregated[itemType];
+    let warehouseCount = 0;
+
+    if (warehouseDevice !== undefined) {
+      for (const nodeId of warehouseDevice.nodeIds) {
+        const node = topology.nodes[nodeId];
+        if (node === undefined) continue;
+        const itemSlotId = `${nodeId}/slot:${itemType}`;
+        const storageSlotId = resolveStorageSlotId(state, itemSlotId);
+        const slotState = state.persistent.slots[storageSlotId];
+        if (slotState !== undefined && slotState.itemType === itemType) {
+          warehouseCount += slotState.count;
+        }
+      }
+    }
+
+    items[itemType] = {
+      producedPerMinute: aggregated?.producedPerMinute ?? 0,
+      consumedPerMinute: aggregated?.consumedPerMinute ?? 0,
+      warehouseCount,
+      lastChangedTick: recipeStats.lastChangedTick[itemType] ?? 0,
+    };
+  }
+
+  return { items };
 }

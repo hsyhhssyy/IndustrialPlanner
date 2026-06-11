@@ -155,6 +155,7 @@ function createWorkbenchStorageSnapshot(options: {
       inspector: options.inspectorDialog ?? createDialogStateSnapshot(),
       "save-blueprint": options.saveBlueprintDialog ?? createDialogStateSnapshot(),
       "base-select": options.baseSelectDialog ?? createDialogStateSnapshot(),
+      "warehouse-stats": createDialogStateSnapshot(),
     },
     toolbox: {
       dockPreference: options.toolboxDockPreference ?? "floating",

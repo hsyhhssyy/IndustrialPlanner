@@ -487,7 +487,8 @@ export function finishRecipeIfPossible(
   }
 
   const simulatedSlots = cloneSlotStates(state.persistent.slots);
-  if (recipe.reservations.length > 0) {
+  const hadReservations = recipe.reservations.length > 0;
+  if (hadReservations) {
     consumeSelections(simulatedSlots, recipe.reservations);
   }
 
@@ -503,7 +504,37 @@ export function finishRecipeIfPossible(
   }
 
   state.persistent.slots = simulatedState.persistent.slots;
+
+  // 只统计生产设备的配方（编译期 isProducer 缓存，零开销判断）
+  const producerDevice = resolveRecipeProducerDevice(topology, recipe.plan);
+  if (producerDevice?.isProducer) {
+    const delta = state.transient.recipeStatsDelta;
+    if (hadReservations) {
+      for (const input of recipe.inputItems) {
+        delta.consumed[input.itemType] = (delta.consumed[input.itemType] ?? 0) + input.amount;
+      }
+    }
+    for (const output of resolveRecipeOutputItems(recipe.plan.outputs, recipe.inputItems)) {
+      delta.produced[output.itemType] = (delta.produced[output.itemType] ?? 0) + output.amount;
+    }
+  }
+
   return true;
+}
+
+/**
+ * 从配方计划中反查所属设备。
+ * 通过 productNodeIds 或 ingredientNodeIds 找到 node，再找到 device。
+ */
+function resolveRecipeProducerDevice(
+  topology: CompiledSimulationTopology,
+  plan: CompiledSimulationRecipePlan,
+): CompiledSimulationDevice | undefined {
+  const nodeId = plan.productNodeIds[0] ?? plan.ingredientNodeIds[0];
+  if (nodeId === undefined) return undefined;
+  const node = topology.nodes[nodeId];
+  if (node === undefined) return undefined;
+  return topology.devices[node.deviceId];
 }
 
 // AI-CORRECTION 2026-05-14: definitionId/tags 已从签名中移除。

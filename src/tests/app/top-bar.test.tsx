@@ -87,6 +87,7 @@ function attachSimulationStub(
       getDeviceRuntimeStatus: () => null,
       getPipeFluidItemId: () => null,
       isPipeDeviceSlotOccupied: () => false,
+      getWarehouseStats: () => null,
     },
     actions: {
       start,

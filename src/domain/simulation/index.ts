@@ -9,4 +9,6 @@ export type {
 	SimulationDeviceRuntimeChannelRecipeStatus,
 	SimulationDeviceRuntimeSlotItemReadModel,
 	SimulationDocumentRuntimeReadModel,
+	WarehouseStatsReadModel,
+	WarehouseItemStatsReadModel,
 } from "./types/simulation-types";

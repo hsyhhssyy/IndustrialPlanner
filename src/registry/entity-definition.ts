@@ -110,6 +110,7 @@ const WAREHOUSE_PORT_PLACEMENT_BEHAVIORS = [
 ] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
 
 const WAREHOUSE_SINK_TAG = "WarehouseSink";
+const PRODUCER_TAG = "Producer";
 
 // AI-REMOVED 2026-06-06:
 // Reason: 协议核心输入缓存不再通过 submitMode 每 tick 入仓；统一走 WarehouseSink 动态入仓。
@@ -764,7 +765,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 606,
-    tags: ["武陵"],
+    tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 50,
     portGroups: [
@@ -853,7 +854,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     displayOrder: 503,
-    tags: [],
+    tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 5,
     portGroups: [
@@ -922,7 +923,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
     displayOrder: 603,
-    tags: ["alter:item_port_filling_pd_mc_1", "alter-variant:liquid"],
+    tags: [PRODUCER_TAG, "alter:item_port_filling_pd_mc_1", "alter-variant:liquid"],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [
@@ -994,7 +995,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
     displayOrder: 602,
-    tags: [],
+    tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [
@@ -1905,7 +1906,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     displayOrder: 501,
-    tags: [],
+    tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 5,
     portGroups: [
@@ -1934,7 +1935,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     displayOrder: 502,
-    tags: ["武陵", "alter:item_port_furnance_1", "alter-variant:liquid"],
+    tags: [PRODUCER_TAG, "武陵", "alter:item_port_furnance_1", "alter-variant:liquid"],
     requiresPower: true,
     powerDemand: 5,
     portGroups: [
@@ -1977,7 +1978,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     displayOrder: 504,
-    tags: [],
+    tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [
@@ -2006,7 +2007,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     displayOrder: 505,
-    tags: [],
+    tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 10,
     portGroups: [
@@ -2035,7 +2036,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
     displayOrder: 506,
-    tags: [],
+    tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 10,
     portGroups: [
@@ -2064,7 +2065,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
     displayOrder: 507,
-    tags: [],
+    tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [
@@ -2093,7 +2094,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
     displayOrder: 508,
-    tags: ["武陵", "alter:item_port_planter_1", "alter-variant:liquid"],
+    tags: [PRODUCER_TAG, "武陵", "alter:item_port_planter_1", "alter-variant:liquid"],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [
@@ -2129,7 +2130,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
     displayOrder: 601,
-    tags: [],
+    tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 10,
     portGroups: [
@@ -2158,7 +2159,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
     displayOrder: 604,
-    tags: [],
+    tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [
@@ -2187,7 +2188,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
     displayOrder: 605,
-    tags: [],
+    tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 50,
     portGroups: [
@@ -2238,7 +2239,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 6, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 607,
-    tags: ["武陵"],
+    tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 50,
     portGroups: [
@@ -2315,7 +2316,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 609,
-    tags: ["武陵"],
+    tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 50,
     portGroups: [
@@ -2344,7 +2345,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 608,
-    tags: ["武陵"],
+    tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 50,
     portGroups: [
@@ -2380,7 +2381,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
     displayOrder: 610,
-    tags: ["武陵"],
+    tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [
@@ -2791,7 +2792,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     displayOrder: 509,
-    tags: ["武陵", "OuterRingAllowed"],
+    tags: [PRODUCER_TAG, "武陵", "OuterRingAllowed"],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [

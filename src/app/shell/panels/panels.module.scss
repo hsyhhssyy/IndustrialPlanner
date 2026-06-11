@@ -929,6 +929,226 @@
   transform: translateX(18px);
 }
 
+.warehouse-stats-card-header {
+  align-items: center;
+}
+
+.warehouse-stats-more-button {
+  min-height: 26px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-0);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.warehouse-stats-more-button:not(:disabled):hover {
+  border-color: var(--line-strong);
+  background: var(--surface-3);
+}
+
+.warehouse-stats-more-button:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+}
+
+.warehouse-stats-placeholder,
+.warehouse-stats-empty,
+.warehouse-stats-dialog-empty {
+  display: grid;
+  place-items: center;
+  min-height: 74px;
+  padding: 12px;
+  border: 1px dashed color-mix(in srgb, var(--line-strong) 55%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-1) 70%, transparent);
+  color: var(--text-2);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.warehouse-stats-dialog-empty {
+  align-self: start;
+  min-height: 120px;
+}
+
+.warehouse-stats-table {
+  display: grid;
+  align-content: start;
+  grid-auto-rows: max-content;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+}
+
+.warehouse-stats-table-dialog {
+  min-height: 0;
+  overflow: auto;
+}
+
+.warehouse-stats-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(52px, 0.42fr) minmax(52px, 0.42fr) minmax(48px, 0.36fr);
+  align-items: center;
+  min-width: 0;
+  min-height: 34px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.warehouse-stats-table-dialog .warehouse-stats-row {
+  grid-template-columns: minmax(180px, 1.5fr) minmax(86px, 0.6fr) minmax(86px, 0.6fr) minmax(72px, 0.46fr) 44px;
+}
+
+.warehouse-stats-row:first-child {
+  border-top: 0;
+}
+
+.warehouse-stats-row > span {
+  min-width: 0;
+  padding: 6px 8px;
+}
+
+.warehouse-stats-row-head {
+  min-height: 30px;
+  background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-4));
+  color: var(--text-2);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.warehouse-stats-row.is-pinned {
+  background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface-1));
+}
+
+.warehouse-stats-item-cell {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-0);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.warehouse-stats-item-cell img {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.warehouse-stats-item-cell span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.warehouse-stats-number {
+  color: var(--text-1);
+  font-size: 0.74rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.warehouse-stats-pin-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.warehouse-stats-pin-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.warehouse-stats-pin-button:not(:disabled):hover,
+.warehouse-stats-pin-button.is-active {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+  color: var(--text-0);
+}
+
+.warehouse-stats-pin-button:disabled {
+  opacity: 0.36;
+  cursor: not-allowed;
+}
+
+.warehouse-stats-dialog {
+  max-width: min(940px, 100%);
+  max-height: min(720px, 100%);
+}
+
+.warehouse-stats-dialog-body {
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px;
+}
+
+.warehouse-stats-dialog-content {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.warehouse-stats-dialog-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.warehouse-stats-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-2);
+}
+
+.warehouse-stats-search svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+}
+
+.warehouse-stats-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-0);
+  font: inherit;
+}
+
+.warehouse-stats-pin-counter {
+  flex: 0 0 auto;
+  color: var(--text-2);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .base-select-dialog {
   width: min(560px, 100%);
   height: min(520px, 100%);
