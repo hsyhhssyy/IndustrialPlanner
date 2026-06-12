@@ -188,6 +188,7 @@ describe("SelectionInspectorSlot", () => {
       "problem-inspector",
       "slot-config",
       "submit-to-warehouse",
+      "port-priority-group",
     ]);
     expect(container.querySelector("[data-slot-config-group='storage_slot_1']")).not.toBeNull();
     const firstSlotTile = container.querySelector<HTMLElement>("[data-slot-action='open-slot-editor']");

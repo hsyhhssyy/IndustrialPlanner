@@ -18,6 +18,10 @@ import {
   resolvePortTone,
   type OutputGroupRow,
 } from "@/app/shell/inspector/port-output-config-model";
+import {
+  resolvePortPriorityCalloutRows,
+  type PortPriorityGroupPortRow,
+} from "@/app/shell/inspector/port-priority-group-model";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
@@ -43,6 +47,7 @@ interface InspectorPortOutputCallout {
   readonly targetY: number;
   readonly labelX: number;
   readonly labelY: number;
+  readonly labelWidth: number;
   readonly markerPoints: readonly {
     readonly x: number;
     readonly y: number;
@@ -301,10 +306,10 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
                   ))}
                   <g
                     className={cm(styles, "inspector-port-callout-label")}
-                    transform={`translate(${callout.labelX - 18} ${callout.labelY - 11})`}
+                    transform={`translate(${callout.labelX - callout.labelWidth / 2} ${callout.labelY - 11})`}
                   >
-                    <rect height="22" rx="6" width="36" x="0" y="0" />
-                    <text dominantBaseline="central" textAnchor="middle" x="18" y="11">
+                    <rect height="22" rx="6" width={callout.labelWidth} x="0" y="0" />
+                    <text dominantBaseline="central" textAnchor="middle" x={callout.labelWidth / 2} y="11">
                       {callout.label}
                     </text>
                   </g>
@@ -365,10 +370,6 @@ export function resolveInspectorPortOutputCallouts(options: {
     return [];
   }
 
-  if (!shouldRenderOutputPortCallouts(definition)) {
-    return [];
-  }
-
   /*
     AI-REMOVED 2026-06-05:
     Reason: 蓝图预览端口标签不能只由 portOutputConfig inspector 触发；协议核心通过 warehouseItemLink 独立配置每个输出端口，同样需要端口标签。
@@ -389,9 +390,67 @@ export function resolveInspectorPortOutputCallouts(options: {
 
     const rows = resolveOutputGroupRows(definition, declaration.portGroupIds, entity);
   */
-  const rows = resolveSharedOutputGroupRows(definition, entity);
   const cellWidth = options.width / options.bounds.width;
   const cellHeight = options.height / options.bounds.height;
+  const priorityRows = resolvePortPriorityCalloutRows(definition, entity);
+
+  if (priorityRows.length > 0) {
+    return priorityRows.flatMap((row) => {
+      const rowModel = resolveCalloutPortModel({
+        definition,
+        entity,
+        row,
+      });
+
+      const target = resolvePreviewPixelPoint({
+        bounds: options.bounds,
+        cellHeight,
+        cellWidth,
+        worldX: rowModel.target.x,
+        worldY: rowModel.target.y,
+      });
+      const labelWidth = resolveCalloutLabelWidth(row.portLabel);
+      const label = clampCalloutLabelPoint(
+        resolvePreviewPixelPoint({
+          bounds: options.bounds,
+          cellHeight,
+          cellWidth,
+          worldX: rowModel.label.x,
+          worldY: rowModel.label.y,
+        }),
+        options.width,
+        options.height,
+        labelWidth,
+      );
+
+      return [{
+        id: row.portKey,
+        label: row.portLabel,
+        portKind: row.portKind,
+        targetX: target.x,
+        targetY: target.y,
+        labelX: label.x,
+        labelY: label.y,
+        labelWidth,
+        markerPoints: [{
+          portId: row.port.id,
+          ...resolvePreviewPixelPoint({
+            bounds: options.bounds,
+            cellHeight,
+            cellWidth,
+            worldX: rowModel.markerPoint.x,
+            worldY: rowModel.markerPoint.y,
+          }),
+        }],
+      }];
+    });
+  }
+
+  if (!shouldRenderOutputPortCallouts(definition)) {
+    return [];
+  }
+
+  const rows = resolveSharedOutputGroupRows(definition, entity);
 
   return rows.flatMap((row) => {
     const rowModel = resolveCalloutRowModel({
@@ -411,6 +470,7 @@ export function resolveInspectorPortOutputCallouts(options: {
       worldX: rowModel.target.x,
       worldY: rowModel.target.y,
     });
+    const labelWidth = resolveCalloutLabelWidth(row.portLabel);
     const label = clampCalloutLabelPoint(
       resolvePreviewPixelPoint({
         bounds: options.bounds,
@@ -421,6 +481,7 @@ export function resolveInspectorPortOutputCallouts(options: {
       }),
       options.width,
       options.height,
+      labelWidth,
     );
 
     return [{
@@ -431,6 +492,7 @@ export function resolveInspectorPortOutputCallouts(options: {
       targetY: target.y,
       labelX: label.x,
       labelY: label.y,
+      labelWidth,
       markerPoints: rowModel.markerPoints.map((marker) => ({
         portId: marker.portId,
         ...resolvePreviewPixelPoint({
@@ -443,6 +505,35 @@ export function resolveInspectorPortOutputCallouts(options: {
       })),
     }];
   });
+}
+
+function resolveCalloutPortModel(options: {
+  readonly definition: EntityDefinition;
+  readonly entity: WorldEntity;
+  readonly row: PortPriorityGroupPortRow;
+}): {
+  readonly target: { readonly x: number; readonly y: number };
+  readonly label: { readonly x: number; readonly y: number };
+  readonly markerPoint: { readonly x: number; readonly y: number };
+} {
+  const geometry = resolveRotatedPortGeometry({
+    footprint: options.definition.footprint,
+    port: options.row.port,
+    rotation: options.entity.rotation,
+  });
+  const markerPoint = {
+    x: options.entity.position.x + geometry.anchor.x,
+    y: options.entity.position.y + geometry.anchor.y,
+  };
+
+  return {
+    target: markerPoint,
+    label: {
+      x: markerPoint.x + geometry.delta.x * 1.35,
+      y: markerPoint.y + geometry.delta.y * 1.35,
+    },
+    markerPoint,
+  };
 }
 
 function shouldRenderOutputPortCallouts(definition: EntityDefinition): boolean {
@@ -521,11 +612,18 @@ function clampCalloutLabelPoint(
   point: { readonly x: number; readonly y: number },
   width: number,
   height: number,
+  labelWidth: number,
 ): { readonly x: number; readonly y: number } {
+  const halfLabelWidth = labelWidth / 2;
+
   return {
-    x: clamp(point.x, 22, width - 22),
+    x: clamp(point.x, halfLabelWidth + 4, width - halfLabelWidth - 4),
     y: clamp(point.y, 15, height - 15),
   };
+}
+
+function resolveCalloutLabelWidth(label: string): number {
+  return Math.max(36, label.length * 7 + 14);
 }
 
 function clamp(value: number, min: number, max: number): number {

@@ -36,6 +36,7 @@ import {
   PLACEMENT_BEHAVIOR_TYPE,
   type EntityPlacementBehaviorDeclaration,
 } from "@/domain/registry/types/entity-placement-behavior";
+import { DEFAULT_PORT_PRIORITY_GROUP } from "@/shared/port-priority-groups";
 
 import { RECIPE_DEFINITIONS } from "./recipe-definition";
 
@@ -263,7 +264,7 @@ function resolveEdge(edge: PortEdgeInput): PortDefinition["edge"] {
  * acceptRule 默认按 portGroup.kind 推导（item→solid, fluid→liquid），
  * 可通过 options 覆盖。
  * admissionRule 仅由准入口 input port 显式声明。
- * priorityGroup 默认 0。
+ * priorityGroup 默认 5。
  * roundRobinSeed 默认等于端口在组内的 index。
  */
 function createPort(
@@ -290,7 +291,7 @@ function createPort(
  * kind：item（固体物品端口）/ fluid（液体端口）——决定默认 acceptRule。
  * direction：input（物品流入）/ output（物品流出）/ bidirectional（编译时分解为 input+output）。
  * 每个端口的 acceptRule 默认按 kind 推导，
- * priorityGroup 默认 0，roundRobinSeed 默认按 index 递增。
+ * priorityGroup 默认 5，roundRobinSeed 默认按 index 递增。
  *
  * 对应《仿真运行原理》§3.1 中 Port 的 accept-rule 配置。
  */
@@ -317,7 +318,7 @@ function createPortGroup(
       //
       // Original code:
       // count: port.count ?? "unlimited",
-      priorityGroup: port.priorityGroup ?? 0,
+      priorityGroup: port.priorityGroup ?? DEFAULT_PORT_PRIORITY_GROUP,
       roundRobinSeed: port.roundRobinSeed ?? index,
     })),
   };

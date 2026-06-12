@@ -272,4 +272,104 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
     ]);
     expect(callouts.every((callout) => callout.markerPoints.length === 1)).toBe(true);
   });
+
+  it("resolves per-port priority callouts when custom priority groups are enabled", () => {
+    const registry = createRegistryContract();
+    const selectedDefinition = registry.entityDefinitions.find((definition) =>
+      definition.id === "item_log_splitter",
+    );
+    if (selectedDefinition === undefined) {
+      throw new Error("Expected splitter definition.");
+    }
+
+    const selectedEntity: WorldEntity = {
+      ...createEntity({
+        id: "selected",
+        definitionId: selectedDefinition.id,
+        x: 10,
+        y: 20,
+      }),
+      config: {
+        customPortPriorityGroups: true,
+        portPriorityGroups: {
+          "item_output:out_w": 1,
+        },
+      },
+    };
+    const document = createWorldDocument([selectedEntity]);
+    const entityDefinitionMap = new Map([
+      [selectedDefinition.id, selectedDefinition],
+    ]);
+    const previewModel = resolveInspectorNeighborhoodPreviewModel({
+      document,
+      entityDefinitionMap,
+      selectedEntityId: selectedEntity.id,
+    });
+    if (previewModel === null) {
+      throw new Error("Expected preview model.");
+    }
+
+    const callouts = resolveInspectorPortOutputCallouts({
+      bounds: previewModel.bounds,
+      document,
+      entityDefinitionMap,
+      height: 260,
+      selectedEntityId: selectedEntity.id,
+      width: 280,
+    });
+
+    expect(callouts.map((callout) => callout.id)).toEqual([
+      "item_output:out_e",
+      "item_output:out_w",
+      "item_output:out_s",
+      "item_input:in_n",
+    ]);
+    expect(callouts.map((callout) => callout.label)).toEqual([
+      "P1.1-G5",
+      "P1.2-G1",
+      "P1.3-G5",
+      "P2.1-G5",
+    ]);
+    expect(callouts.every((callout) => callout.markerPoints.length === 1)).toBe(true);
+  });
+
+  it("does not render splitter port callouts when custom priority groups are off", () => {
+    const registry = createRegistryContract();
+    const selectedDefinition = registry.entityDefinitions.find((definition) =>
+      definition.id === "item_log_splitter",
+    );
+    if (selectedDefinition === undefined) {
+      throw new Error("Expected splitter definition.");
+    }
+
+    const selectedEntity = createEntity({
+      id: "selected",
+      definitionId: selectedDefinition.id,
+      x: 10,
+      y: 20,
+    });
+    const document = createWorldDocument([selectedEntity]);
+    const entityDefinitionMap = new Map([
+      [selectedDefinition.id, selectedDefinition],
+    ]);
+    const previewModel = resolveInspectorNeighborhoodPreviewModel({
+      document,
+      entityDefinitionMap,
+      selectedEntityId: selectedEntity.id,
+    });
+    if (previewModel === null) {
+      throw new Error("Expected preview model.");
+    }
+
+    const callouts = resolveInspectorPortOutputCallouts({
+      bounds: previewModel.bounds,
+      document,
+      entityDefinitionMap,
+      height: 260,
+      selectedEntityId: selectedEntity.id,
+      width: 280,
+    });
+
+    expect(callouts).toEqual([]);
+  });
 });

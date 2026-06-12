@@ -2409,7 +2409,7 @@ function createPortDefaults(
     //
     // Original code:
     // count: "unlimited" as const,
-    priorityGroup: 0,
+    priorityGroup: 5,
     roundRobinSeed,
   }
 }

@@ -27,6 +27,10 @@ import { DarkPipeLinkInspector } from "./dark-pipe-link-inspector";
 import { SubmitToWarehouseInspector } from "./submit-to-warehouse-inspector";
 import { ProblemInspector } from "./problem-inspector";
 import { PortOutputConfigInspector } from "./port-output-config-inspector";
+import { PortPriorityGroupInspector } from "./port-priority-group-inspector";
+import {
+  canConfigurePortPriorityGroups,
+} from "./port-priority-group-model";
 import { AdmissionRuleInspector } from "./admission-rule-inspector";
 import { InspectorCollapsiblePanel } from "./inspector-collapsible-panel";
 import { CanvasFloatingToolbarButtonStrip } from "@/app/shell/shared/canvas-floating-toolbar-button-strip";
@@ -493,14 +497,27 @@ export function SelectionInspectorSlot({
               </InspectorDataScopeContext.Provider>
             )];
           });
+          const portPriorityInspector = canConfigurePortPriorityGroups(slotState.selectedDefinition)
+            ? (
+                <PortPriorityGroupInspector
+                  appHost={appHost}
+                  definition={slotState.selectedDefinition}
+                  entity={slotState.selectedEntity}
+                  key="port-priority-group"
+                />
+              )
+            : null;
+          const renderedInspectorsWithBehaviors = portPriorityInspector === null
+            ? renderedInspectors
+            : [...renderedInspectors, portPriorityInspector];
 
           const isDedicatedLogistics = appHost.workspace.registry.queries.isDedicatedLogisticsDevice(
             slotState.selectedDefinition.id,
           );
 
-          if (isDedicatedLogistics && renderedInspectors.length > 0) {
+          if (isDedicatedLogistics && renderedInspectorsWithBehaviors.length > 0) {
             return [
-              renderedInspectors[0],
+              renderedInspectorsWithBehaviors[0],
               <div
                 key="logistics-segment-delete"
                 className={cm(styles, "selection-inspector-action-button-list")}
@@ -515,11 +532,11 @@ export function SelectionInspectorSlot({
                   showLabels
                 />
               </div>,
-              ...renderedInspectors.slice(1),
+              ...renderedInspectorsWithBehaviors.slice(1),
             ];
           }
 
-          return renderedInspectors;
+          return renderedInspectorsWithBehaviors;
         })()}
         {slotState.debugEntityJson !== null ? (
           <article className={cm(styles, "definition-card")} data-inspector-key="json-debug">

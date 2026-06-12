@@ -49,7 +49,7 @@ function createActivityTestEntityDefinition(): EntityDefinition {
             //
             // Original code:
             // count: "unlimited",
-            priorityGroup: 0,
+            priorityGroup: 5,
             roundRobinSeed: 0,
           },
         ],

@@ -10,6 +10,12 @@ import {
   isItemAvailableByActivity,
   isRecipeAvailableByActivity,
 } from "@/shared/registry/activity-availability";
+import {
+  isCustomPortPriorityGroupsEnabled,
+  normalizePortPriorityGroup,
+  readPortPriorityGroupOverrides,
+  resolvePortPriorityGroupOverrideKey,
+} from "@/shared/port-priority-groups";
 
 import { hashStable } from "./deterministic";
 import { STANDARD_TICK_RATE_PER_SECOND } from "./tick-rate";
@@ -506,7 +512,10 @@ function compileEntityDevice(options: {
   readonly poweredEntityIds: ReadonlySet<string>;
 }): DeviceCompileResult {
   const deviceId = `device:${options.entity.id}`;
-  const definition = mergeEntityDefinitionConfig(options.definition, options.entity.config);
+  const definition = applyPortPriorityGroupConfig(
+    mergeEntityDefinitionConfig(options.definition, options.entity.config),
+    options.entity.config,
+  );
   const transportClass = resolveTransportClass(options.registryQueries, definition);
   const powerDemand = resolvePowerDemand(definition);
   const powerStatus = resolvePowerStatus({
@@ -1032,7 +1041,7 @@ function compilePorts(options: {
           }),
           acceptRule,
           admissionRule: direction === "input" ? readPortAdmissionRule(port) : null,
-          priorityGroup: port.priorityGroup,
+          priorityGroup: normalizePortPriorityGroup(port.priorityGroup),
           roundRobinSeed: port.roundRobinSeed,
           order,
         });
@@ -1096,7 +1105,7 @@ function compileRouting(
     for (const port of portGroup.ports) {
       const portRef = `${portGroup.id}.${port.id}`;
       routing[portRef] = {
-        priorityGroup: port.priorityGroup,
+        priorityGroup: normalizePortPriorityGroup(port.priorityGroup),
         roundRobinSeed: port.roundRobinSeed,
       };
     }
@@ -1757,6 +1766,31 @@ function mergeEntityDefinitionConfig(
     cloneJson(definition),
     materializeConfigOverrides(config),
   ) as EntityDefinition;
+}
+
+function applyPortPriorityGroupConfig(
+  definition: EntityDefinition,
+  config: WorldEntity["config"],
+): EntityDefinition {
+  const customEnabled = isCustomPortPriorityGroupsEnabled(config);
+  const overrides = readPortPriorityGroupOverrides(config);
+
+  return {
+    ...definition,
+    portGroups: definition.portGroups.map((portGroup) => ({
+      ...portGroup,
+      ports: portGroup.ports.map((port) => {
+        const overrideKey = resolvePortPriorityGroupOverrideKey(portGroup.id, port.id);
+
+        return {
+          ...port,
+          priorityGroup: customEnabled
+            ? normalizePortPriorityGroup(overrides[overrideKey])
+            : normalizePortPriorityGroup(port.priorityGroup),
+        };
+      }),
+    })),
+  };
 }
 
 function cloneJson<T>(value: T): T {

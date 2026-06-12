@@ -355,7 +355,7 @@ function createTestPort(
     //
     // Original code:
     // count: 1,
-    priorityGroup: 0,
+    priorityGroup: 5,
     roundRobinSeed: 0,
   };
 }

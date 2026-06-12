@@ -1482,6 +1482,165 @@
   }
 }
 
+.port-priority-group-inspector {
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+}
+
+.port-priority-panel-body {
+  padding: 8px;
+  gap: 8px;
+}
+
+.port-priority-custom-switch {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-1);
+  font-size: 0.76rem;
+  font-weight: 560;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.port-priority-custom-switch input {
+  appearance: none;
+  position: relative;
+  width: 30px;
+  height: 18px;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-3) 72%, var(--surface-1));
+  cursor: pointer;
+}
+
+.port-priority-custom-switch input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-2);
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.port-priority-custom-switch input:checked {
+  border-color: color-mix(in srgb, var(--accent-strong) 56%, var(--line));
+  background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface-2));
+}
+
+.port-priority-custom-switch input:checked::after {
+  background: var(--accent-strong);
+  transform: translateX(12px);
+}
+
+.port-priority-list {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.port-priority-row {
+  --port-priority-accent: var(--text-2);
+
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+}
+
+.port-priority-row[data-port-kind="item"] {
+  --port-priority-accent: #b88a2f;
+}
+
+.port-priority-row[data-port-kind="fluid"] {
+  --port-priority-accent: #4f8fa8;
+}
+
+.port-priority-port-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  min-width: 52px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--port-priority-accent) 42%, var(--line));
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  color: var(--text-0);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.port-priority-number-button {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 30px;
+  border: 1px solid color-mix(in srgb, var(--port-priority-accent) 48%, var(--line));
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  color: var(--text-0);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 820;
+  line-height: 1;
+}
+
+.port-priority-number-button:hover:not(:disabled),
+.port-priority-number-button[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--port-priority-accent) 72%, var(--line));
+  background: color-mix(in srgb, var(--surface-1) 82%, var(--port-priority-accent) 12%);
+}
+
+.port-priority-number-button:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.port-priority-picker {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, 30px);
+  justify-content: end;
+  gap: 5px;
+}
+
+.port-priority-picker button {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface-1) 90%, transparent);
+  color: var(--text-1);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 720;
+  line-height: 1;
+}
+
+.port-priority-picker button:hover,
+.port-priority-picker button.is-selected {
+  border-color: color-mix(in srgb, var(--port-priority-accent) 72%, var(--line));
+  background: color-mix(in srgb, var(--surface-1) 78%, var(--port-priority-accent) 16%);
+  color: var(--text-0);
+}
+
 .slot-config-tile-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
