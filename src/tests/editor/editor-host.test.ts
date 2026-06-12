@@ -1692,7 +1692,7 @@ describe("createEditorHost", () => {
         y: 0.5,
       },
       pivotCell: {
-        x: 2,
+        x: 1,
         y: 0,
       },
     });
@@ -1715,7 +1715,7 @@ describe("createEditorHost", () => {
 
     expect(editorHost.queries.findEntityCollectionGeometry(EntityCollectionType.selection)?.pivotCell).toEqual({
       x: 1,
-      y: 1,
+      y: 0,
     });
   });
 
@@ -1899,7 +1899,7 @@ describe("createEditorHost", () => {
     );
   });
 
-  it("rotates preview draft collections around pivot without clamping negative grid positions", () => {
+  it("keeps 1x1 pivot-cell preview rotation in place without clamping negative grid positions", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
@@ -1924,7 +1924,7 @@ describe("createEditorHost", () => {
     expect(editorHost.internalState.drafts[0]).toMatchObject({
       id: "preview-belt",
       position: {
-        x: -3,
+        x: -2,
         y: 3,
       },
       rotation: 90,

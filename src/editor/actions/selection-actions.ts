@@ -392,7 +392,7 @@ export function createEditorSelectionActions({
     }
     const rotationCenter = pivotMode === "center"
       ? geometry.centerPoint
-      : geometry.pivotCell;
+      : resolvePivotCellRotationPoint(geometry.pivotCell);
     const rotatedBoundingBox = pivotMode === "center"
       ? alignRotatedBoundingBoxToGrid(
         rotateGridRectAroundPoint({
@@ -805,6 +805,13 @@ function rotateGridRectAroundPoint(options: {
     y: normalizeNumber(top),
     width: normalizeNumber(right - left),
     height: normalizeNumber(bottom - top),
+  };
+}
+
+function resolvePivotCellRotationPoint(pivotCell: GridPoint): { readonly x: number; readonly y: number } {
+  return {
+    x: pivotCell.x + 0.5,
+    y: pivotCell.y + 0.5,
   };
 }
 

@@ -6,22 +6,38 @@
 }
 
 .inspector-dialog-header {
-  min-height: 60px;
-  padding: 0 18px;
+  min-height: 46px;
+  padding: 0 16px;
   background: color-mix(in srgb, var(--surface-1) 92%, transparent);
 }
 
 .inspector-dialog-header-copy h2 {
   color: var(--text-0);
-  font-size: 1.18rem;
+  font-size: 1rem;
   font-weight: 700;
+  line-height: 1.2;
 }
 
 .inspector-dialog-header-button {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border: 1px solid color-mix(in srgb, var(--line-strong) 54%, var(--line));
   background: color-mix(in srgb, var(--surface-2) 76%, transparent);
+}
+
+.inspector-dialog.is-mobile-compact .inspector-dialog-header {
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.inspector-dialog.is-mobile-compact .inspector-dialog-header-copy h2 {
+  font-size: 0.875rem;
+  line-height: 1.15;
+}
+
+.inspector-dialog.is-mobile-compact .inspector-dialog-header-button {
+  width: 28px;
+  height: 28px;
 }
 
 .inspector-dialog-body {

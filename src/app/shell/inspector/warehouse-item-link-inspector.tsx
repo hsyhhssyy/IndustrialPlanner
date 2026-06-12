@@ -114,6 +114,12 @@ export function WarehouseItemLinkInspector({
         slotId: row.slotId,
         itemId,
       });
+
+      // 自然资源物品默认开启无限供应
+      const selectedItem = itemById.get(itemId);
+      if (selectedItem?.tags.includes("自然资源")) {
+        patchEntityConfig({ [row.ignoreStockPath]: true });
+      }
     } finally {
       setPendingLinkIndex((current) => current === row.linkIndex ? null : current);
     }

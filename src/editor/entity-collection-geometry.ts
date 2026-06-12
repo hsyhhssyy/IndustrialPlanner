@@ -147,8 +147,9 @@ function resolvePivotCell(options: {
   centerPoint: { readonly x: number; readonly y: number };
   phase: WorldEntity["rotation"];
 }): GridPoint {
-  const xCandidates = resolveNearestIntegerCandidates(options.centerPoint.x);
-  const yCandidates = resolveNearestIntegerCandidates(options.centerPoint.y);
+  // pivotCell 是 cell index；cell center 的几何坐标是 index + 0.5。
+  const xCandidates = resolveNearestIntegerCandidates(options.centerPoint.x - 0.5);
+  const yCandidates = resolveNearestIntegerCandidates(options.centerPoint.y - 0.5);
   const preferRight = options.phase === 90 || options.phase === 180;
   const preferBottom = options.phase === 180 || options.phase === 270;
 

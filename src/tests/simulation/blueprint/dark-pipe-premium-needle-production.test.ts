@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { createRegistryContract } from "@/registry";
 import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
 import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
-import { runBlueprintSimulation } from "./blueprint-runner";
+import { runBlueprintSimulation } from "../blueprint-runner";
 import {
   createEntity,
   loadBlueprintWithExtras,
-} from "./blueprint-test-helpers";
+} from "../blueprint-test-helpers";
 
 // ============================================================
 // 暗管芽针针剂 — 完整产线产出验证
