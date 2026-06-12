@@ -221,6 +221,14 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
             <span className={cm(styles, "top-bar-version")}>(Dev)</span>
           )}
         </div>
+        <a
+          className={cm(styles, "top-bar-old-version-link")}
+          href="/v2/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {t("topBar.switchToOldVersion")}
+        </a>
       </div>
       <div className={cm(styles, "toolbar-group top-bar-controls")}>
         <SimulationControlButton

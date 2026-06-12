@@ -38,8 +38,25 @@ jobs:
         run: |
           echo "window.__APP_VERSION__ = '${{ inputs.tag }}';" > public/version.js
 
-      - name: Build
+      - name: Build V3
         run: npm run build
+
+      - name: Checkout V2 source
+        uses: actions/checkout@v4
+        with:
+          ref: v2
+          path: .temp/v2-src
+
+      - name: Install V2 dependencies
+        working-directory: .temp/v2-src
+        run: npm ci
+
+      - name: Build V2
+        working-directory: .temp/v2-src
+        run: npm run build
+
+      - name: Merge V2 into dist
+        run: mv .temp/v2-src/dist dist/v2
 
       - name: Load deploy config
         env:

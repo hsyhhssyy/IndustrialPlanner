@@ -47,6 +47,23 @@
   opacity: 0.7;
 }
 
+// AI-GENERATED 2026-06-12: 旧版切换链接，紧跟标题后在标题块右侧显示。
+.top-bar-old-version-link {
+  margin-left: 12px;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-dim);
+  text-decoration: none;
+  white-space: nowrap;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 1;
+    color: var(--text-accent);
+  }
+}
+
 .toolbar-group,
 .toolbar-meta,
 .header-actions,
