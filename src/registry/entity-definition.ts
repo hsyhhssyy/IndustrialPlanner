@@ -2227,7 +2227,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 2, height: 2 },
     uiGroup: "resourcePower",
     displayOrder: 303,
-    tags: [],
+    tags: [PRODUCER_TAG],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [

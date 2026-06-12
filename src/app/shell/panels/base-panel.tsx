@@ -84,8 +84,9 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
   if (baseBatteryJoules !== null && baseBatteryCapacity !== null && baseBatteryCapacity > 0) {
     const rawPct = (baseBatteryJoules / baseBatteryCapacity) * 100;
     // 99.5~99.9 强制显示 99%，防止四舍五入虚标 100%
-    const pct = (rawPct >= 99.5 && rawPct < 100) ? 99 : Math.min(100, Math.round(rawPct));
-    percentageText = `${pct}%`;
+    // AI-CORRECTION 2026-06-12: 阈值从 >=99.5→99 调整为 >=99.995→99.99，显示从整数改为2位小数
+    const pct = (rawPct >= 99.995 && rawPct < 100) ? 99.99 : Math.min(100, rawPct);
+    percentageText = `${pct.toFixed(2)}%`;
   }
 
   // 停电时文字变红
