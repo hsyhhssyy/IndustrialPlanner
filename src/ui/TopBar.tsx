@@ -63,6 +63,14 @@ export function TopBar({
           </button>
         </div>
         <div className="topbar-title">{title}</div>
+        <a
+          className="topbar-switch-link"
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {t('top.switchToNewVersion')}
+        </a>
       </div>
 
       <div className="topbar-controls">

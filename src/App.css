@@ -28,6 +28,19 @@
   font-weight: 600;
 }
 
+/* AI-GENERATED 2026-06-12: 新版切换链接，紧跟标题后显示。 */
+.topbar-switch-link {
+  font-size: 13px;
+  font-weight: 400;
+  color: #7b8aa0;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.topbar-switch-link:hover {
+  color: #e5ebf3;
+}
+
 .topbar-left {
   display: flex;
   align-items: center;
