@@ -3,6 +3,7 @@ import { observer } from "mobx-react-lite";
 import { makeAutoObservable, runInAction } from "mobx";
 
 import type { AppHost } from "@/app/host/app-host";
+import type { V2MigrationController } from "@/app/migration";
 import type { PwaController } from "@/app/pwa/pwa-controller";
 import { PwaSettingsSection } from "@/app/pwa/pwa-settings-section";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
@@ -29,6 +30,7 @@ interface SettingsDialogProps {
   appHost: AppHost;
   controller: WorkbenchSettingsDialogController;
   pwaController: PwaController;
+  migrationController?: V2MigrationController;
 }
 
 function shouldUseImmersiveMaximizedDialog(
@@ -40,6 +42,7 @@ function shouldUseImmersiveMaximizedDialog(
 export const SettingsDialog = observer(function SettingsDialog({
   appHost,
   controller,
+  migrationController,
   pwaController,
 }: SettingsDialogProps) {
   const t = appHost.actions.translate;
@@ -309,10 +312,15 @@ export const SettingsDialog = observer(function SettingsDialog({
                   </div>
                 )}
                 {group.id === "other" && (
-                  <ActivitySettingsCard
-                    effectiveActivityIds={effectiveActivityIds}
-                    onOpen={handleOpenActivityDialog}
-                  />
+                  <>
+                    {migrationController === undefined ? null : (
+                      <V2MigrationSettingsCard controller={migrationController} />
+                    )}
+                    <ActivitySettingsCard
+                      effectiveActivityIds={effectiveActivityIds}
+                      onOpen={handleOpenActivityDialog}
+                    />
+                  </>
                 )}
               </section>
             ))}
@@ -339,6 +347,37 @@ export const SettingsDialog = observer(function SettingsDialog({
       />
     )}
     </>
+  );
+});
+
+const V2MigrationSettingsCard = observer(function V2MigrationSettingsCard({
+  controller,
+}: {
+  controller: V2MigrationController;
+}) {
+  const summary = controller.result ?? controller.migrationState.summary;
+  const statusText = summary !== null && controller.migrationState.completedAt !== null
+    ? `已迁移地图 ${summary.migratedMapCount} 个，蓝图 ${summary.migratedBlueprintCount} 个`
+    : controller.detection.hasData
+      ? `检测到 v2 地图 ${controller.detection.mapCount} 个，蓝图 ${controller.detection.blueprintCount} 个`
+      : "未检测到可迁移的 v2 数据";
+
+  return (
+    <article className={cm(styles, "settings-dialog-setting-card")}>
+      <div className={cm(styles, "settings-dialog-setting-copy")}>
+        <h4>v2 数据迁移</h4>
+        <p>{statusText}</p>
+      </div>
+      <div className={cm(styles, "settings-dialog-migration-control")}>
+        <button
+          className={cm(styles, "settings-dialog-reset-button")}
+          onClick={controller.openDialog}
+          type="button"
+        >
+          打开迁移
+        </button>
+      </div>
+    </article>
   );
 });
 

@@ -23,6 +23,7 @@ import { MobilePortraitGate } from "@/app/shell/layout/mobile-portrait-gate";
 import { RecipePickerDialog } from "@/app/shell/dialogs/recipe-picker-dialog";
 import { SaveBlueprintDialog } from "@/app/shell/dialogs/save-blueprint-dialog";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
+import { V2MigrationDialog } from "@/app/shell/dialogs/v2-migration-dialog";
 import { WarehouseStatsDialog } from "@/app/shell/dialogs/warehouse-stats-dialog";
 import { EncyclopediaPickerDialog } from "@/app/shell/encyclopedia/encyclopedia-picker-dialog";
 import {
@@ -35,6 +36,7 @@ import { PwaController } from "@/app/pwa/pwa-controller";
 import { PwaGateway } from "@/app/pwa/pwa-gateway";
 import LeftDock from "@/app/shell/layout/left-dock";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
+import { V2MigrationController } from "@/app/migration";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
 import { RightDock } from "@/app/shell/layout/right-dock";
 import { SimulationControlButton, TopBar } from "@/app/shell/layout/top-bar";
@@ -77,6 +79,7 @@ function isAppThemeId(value: unknown): value is AppThemeId {
 export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const [pwaController] = useState(() => new PwaController());
+  const [migrationController] = useState(() => new V2MigrationController());
   const [settingsDialog] = useState(() => new WorkbenchSettingsDialogController({
     externalBindings: {
       "system-language": {
@@ -441,11 +444,17 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
   const previousScreenProfileRef = useRef(screenProfile);
   const prevUseInspectorPanelRef = useRef(useInspectorPanel);
-  const hasVisibleDialogShell = isAnyDialogShellVisible(appHost, { showToolboxBottomDock });
+  const hasVisibleDialogShell =
+    isAnyDialogShellVisible(appHost, { showToolboxBottomDock })
+    || migrationController.dialogState.visible;
   const effectiveCanvasTheme = resolveEffectiveCanvasTheme(
     appHost.state.theme,
     appHost.state.settings.gameUseSimplifiedDeviceIcons,
   );
+
+  useEffect(() => {
+    migrationController.initialize();
+  }, [migrationController]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -733,7 +742,13 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       <EncyclopediaPickerDialog appHost={appHost} />
       <RecipePickerDialog appHost={appHost} />
       <HelpDialog appHost={appHost} />
-      <SettingsDialog appHost={appHost} controller={settingsDialog} pwaController={pwaController} />
+      <SettingsDialog
+        appHost={appHost}
+        controller={settingsDialog}
+        migrationController={migrationController}
+        pwaController={pwaController}
+      />
+      <V2MigrationDialog appHost={appHost} controller={migrationController} />
       <PwaGateway appHost={appHost} pwaController={pwaController} />
       {showMobilePortraitGate ? <MobilePortraitGate appHost={appHost} /> : null}
     </div>

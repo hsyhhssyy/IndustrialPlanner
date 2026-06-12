@@ -350,9 +350,64 @@ describe("legacy-blueprint-import", () => {
     });
 
     expect(converted?.entities.storager_no_submit_0001?.config).toEqual({
-      "storageSlotGroups[1].slots[0].lock": "item_iron_ore",
       "storageSlotGroups[1].slots[0].initialItemType": "item_iron_ore",
       "storageSlotGroups[1].slots[0].initialCount": 12,
+    });
+  });
+
+  it("migrates legacy single-slot preload config", () => {
+    const converted = convertLegacyBlueprintJson({
+      schema: "industrial-planner-blueprint",
+      name: "单槽预置迁移测试",
+      createdAt: "2026-03-04T15:00:38.701Z",
+      baseId: "wuling_tianwangping_aid",
+      devices: [{
+        typeId: "item_port_power_sta_1",
+        rotation: 0,
+        origin: { x: 0, y: 0 },
+        config: {
+          preloadInputItemId: "item_originium_ore",
+          preloadInputAmount: 4,
+        },
+      }],
+    }, {
+      entityIdPrefix: "single_preload",
+    });
+
+    expect(converted?.entities.single_preload_0001?.config).toEqual({
+      "storageSlotGroups[0].slots[0].initialItemType": "item_originium_ore",
+      "storageSlotGroups[0].slots[0].initialCount": 4,
+    });
+  });
+
+  it("migrates legacy admission config", () => {
+    const converted = convertLegacyBlueprintJson({
+      schema: "industrial-planner-blueprint",
+      name: "准入口迁移测试",
+      createdAt: "2026-03-04T15:00:38.701Z",
+      baseId: "wuling_tianwangping_aid",
+      devices: [{
+        typeId: "item_log_admission",
+        rotation: 0,
+        origin: { x: 0, y: 0 },
+        config: {
+          admissionItemId: "item_iron_ore",
+          admissionAmount: 3,
+        },
+      }],
+    }, {
+      entityIdPrefix: "admission",
+    });
+
+    expect(converted?.entities.admission_0001?.config).toEqual({
+      "portGroups[0].ports[0].acceptRule": {
+        base: { kind: "item", itemId: "item_iron_ore" },
+        exclude: [],
+      },
+      "portGroups[0].ports[0].admissionRule": {
+        itemId: "item_iron_ore",
+        limit: 3,
+      },
     });
   });
 
@@ -385,24 +440,61 @@ describe("legacy-blueprint-import", () => {
     });
   });
 
-  it("rejects legacy blueprints that contain unsupported dark-pipe links", () => {
-    expect(convertLegacyBlueprintJson({
+  it("migrates legacy dark-pipe links", () => {
+    const converted = convertLegacyBlueprintJson({
       schema: "industrial-planner-blueprint",
       name: "暗管蓝图",
       createdAt: "2026-03-04T15:00:38.701Z",
       baseId: "wuling_tianwangping_aid",
-      devices: [{
-        typeId: "item_port_udpipe_loader_1",
-        rotation: 0,
-        origin: { x: 0, y: 0 },
-        config: {},
-      }],
+      devices: [
+        {
+          blueprintInstanceId: "inlet",
+          typeId: "item_port_udpipe_loader_2",
+          rotation: 0,
+          origin: { x: 0, y: 0 },
+          config: {
+            darkPipeInletMode: "link",
+          },
+        },
+        {
+          blueprintInstanceId: "outlet",
+          typeId: "item_port_udpipe_unloader_2",
+          rotation: 180,
+          origin: { x: 4, y: 0 },
+          config: {
+            darkPipeOutletMode: "link",
+            pumpOutputItemId: "item_liquid_water",
+          },
+        },
+      ],
       links: [{
         kind: "dark_pipe",
-        sourceBlueprintInstanceId: "source",
-        targetBlueprintInstanceId: "target",
+        sourceBlueprintInstanceId: "inlet",
+        targetBlueprintInstanceId: "outlet",
       }],
-    })).toBeNull();
+    }, {
+      entityIdPrefix: "dark_pipe",
+    });
+
+    expect(converted?.entities.dark_pipe_0001?.config).toEqual({
+      "recipeChannels[0].manualRecipeOnly": true,
+      "recipeChannels[1].manualRecipeOnly": true,
+    });
+    expect(converted?.entities.dark_pipe_0002?.config).toEqual({});
+    expect(converted?.slotLinks).toEqual([{
+      id: "dark-pipe-link:dark_pipe_0002:dark_pipe_0001",
+      linkType: "share-all",
+      source: {
+        entityId: "dark_pipe_0002",
+        storageSlotGroupId: "unloader_buffer",
+        slotId: "slot_1",
+      },
+      target: {
+        entityId: "dark_pipe_0001",
+        storageSlotGroupId: "loader_buffer",
+        slotId: "slot_1",
+      },
+    }]);
   });
 
   it("normalizes a valid legacy payload and preserves optional fields", () => {

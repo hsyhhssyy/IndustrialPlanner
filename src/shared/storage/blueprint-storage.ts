@@ -49,6 +49,10 @@ export interface CreateBlueprintFolderInput {
   parentFolderId?: string | null;
 }
 
+export interface UpsertBlueprintFolderInput extends CreateBlueprintFolderInput {
+  folderId: string;
+}
+
 export interface RenameBlueprintFolderInput {
   folderId: string;
   name: string;
@@ -85,6 +89,40 @@ export async function createBlueprintFolder(
     name,
     parentFolderId,
     createdAt: timestamp,
+    updatedAt: timestamp,
+    deletedAt: null,
+  };
+
+  return await writeBlueprintEntry(createFolderKey(folderRecord.folderId), folderRecord);
+}
+
+export async function upsertBlueprintFolder(
+  input: UpsertBlueprintFolderInput,
+): Promise<BlueprintFolderRecord | null> {
+  const folderId = normalizeName(input.folderId);
+  const name = normalizeName(input.name);
+
+  if (folderId === null || name === null) {
+    return null;
+  }
+
+  const parentFolderId = normalizeOptionalId(input.parentFolderId);
+
+  if (!(await doesFolderExist(parentFolderId))) {
+    return null;
+  }
+
+  const existingFolder = await readBlueprintFolder(folderId, {
+    includeDeleted: true,
+  });
+  const timestamp = new Date().toISOString();
+  const folderRecord: BlueprintFolderRecord = {
+    schemaVersion: existingFolder?.schemaVersion ?? BLUEPRINT_SCHEMA_VERSION,
+    kind: "folder",
+    folderId,
+    name,
+    parentFolderId,
+    createdAt: existingFolder?.createdAt ?? timestamp,
     updatedAt: timestamp,
     deletedAt: null,
   };

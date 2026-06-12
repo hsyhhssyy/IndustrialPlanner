@@ -44,6 +44,14 @@ const LEGACY_DEVICE_REMAPPERS: Readonly<Record<string, {
     definitionId: "item_port_unloader_1",
     rotationOffset: 180,
   },
+  item_port_udpipe_loader_large_1: {
+    definitionId: "item_port_udpipe_loader_2",
+    rotationOffset: 0,
+  },
+  item_port_udpipe_unloader_large_1: {
+    definitionId: "item_port_udpipe_unloader_2",
+    rotationOffset: 0,
+  },
   belt_turn_cw_1x1: {
     definitionId: "belt_turn_ccw_1x1",
     rotationOffset: 0,
@@ -82,6 +90,10 @@ const LEGACY_DEVICE_REMAPPERS: Readonly<Record<string, {
 };
 const WAREHOUSE_SUBMIT_CHANNEL_ID = "warehouse_submit";
 const WAREHOUSE_SUBMIT_RECIPE_ID = "r_warehouse_submit";
+const DARK_PIPE_INLET_STORAGE_GROUP_ID = "loader_buffer";
+const DARK_PIPE_OUTLET_STORAGE_GROUP_ID = "unloader_buffer";
+const DARK_PIPE_SLOT_ID = "slot_1";
+const DARK_PIPE_LINK_ID_PREFIX = "dark-pipe-link:";
 const PROTOCOL_CORE_OUTPUTS_BY_PORT_ID: Readonly<Record<string, {
   readonly linkIndex: number;
   readonly storageGroupId: string;
@@ -111,6 +123,7 @@ export interface LegacyBlueprintJson {
 }
 
 export interface LegacyBlueprintDeviceJson {
+  readonly blueprintInstanceId?: string;
   readonly typeId: string;
   readonly rotation: GridRotation;
   readonly origin: GridPoint;
@@ -136,7 +149,19 @@ export function convertLegacyBlueprintJson(
 ): BlueprintDocument | null {
   const legacyBlueprint = normalizeLegacyBlueprintJson(value);
 
-  if (legacyBlueprint === null || (legacyBlueprint.links?.length ?? 0) > 0) {
+  // AI-REMOVED 2026-06-12:
+  // Reason: v2 → v3 迁移要求当前地图与用户蓝图都复用蓝图迁移脚本，暗管链接必须在这里统一迁移。
+  // Trigger: 用户明确要求“链接和未链接的暗管逻辑不同，都要放都要测”，并要求地图也通过蓝图迁移脚本复制粘贴式迁移。
+  // Evidence: LegacyBlueprintJson 已有 links 字段，v3 文档使用 slotLinks 表达暗管链接。
+  // Replacement: 下方 appendLegacyDarkPipeLinks 解析 links 并生成 v3 dark-pipe slotLink。
+  // Risk: Medium - 旧蓝图中无效链接会被跳过，而不再让整个导入失败。
+  // Human Review: Required
+  //
+  // Original code:
+  // if (legacyBlueprint === null || (legacyBlueprint.links?.length ?? 0) > 0) {
+  //   return null;
+  // }
+  if (legacyBlueprint === null) {
     return null;
   }
 
@@ -145,6 +170,7 @@ export function convertLegacyBlueprintJson(
   const entities: BlueprintDocument["entities"] = {};
   const entityOrder: string[] = [];
   const slotLinks: SlotLinkDefinition[] = [];
+  const entityIdByLegacyBlueprintInstanceId = new Map<string, string>();
 
   for (const [deviceIndex, device] of legacyBlueprint.devices.entries()) {
     const entityId = `${entityIdPrefix}_${String(deviceIndex + 1).padStart(4, "0")}`;
@@ -169,10 +195,21 @@ export function convertLegacyBlueprintJson(
     };
     entityOrder.push(entityId);
 
+    if (typeof device.blueprintInstanceId === "string" && device.blueprintInstanceId.trim() !== "") {
+      entityIdByLegacyBlueprintInstanceId.set(device.blueprintInstanceId, entityId);
+    }
+
     for (const link of converted.slotLinks) {
       slotLinks.push(link);
     }
   }
+
+  appendLegacyDarkPipeLinks({
+    links: legacyBlueprint.links ?? [],
+    entities,
+    entityIdByLegacyBlueprintInstanceId,
+    slotLinks,
+  });
 
   return createBlueprintDocument({
     blueprintId,
@@ -196,10 +233,11 @@ export function convertLegacyBlueprintJson(
  *   旧：pickupItemId + pickupIgnoreInventory + protocolHubOutputs[0].ignoreInventory
  *   新：slotLinks 中的 warehouse-link + storageSlotGroups[0].slots[0].ignoreStock
  *
- * 暗管出口（item_port_udpipe_unloader_1）：
+ * 暗管出口（item_port_udpipe_unloader_1 / item_port_udpipe_unloader_2）：
  *   旧：pumpOutputItemId + darkPipeOutletMode
  *   新：slotLinks 中的 warehouse-link + storageSlotGroups[0].slots[0].ignoreStock
  *   darkPipeOutletMode === "generate" → ignoreStock: true
+ *   链接模式由 LegacyBlueprintJson.links 统一迁移为 dark-pipe slotLink，并清空入口 / 出口本地 config。
  *
  * AI-CORRECTION 2026-06-09: EntityDefinition.links 已移除，旧蓝图导入改为产出 document.slotLinks。
  *
@@ -224,6 +262,8 @@ export function convertLegacyBlueprintJson(
  * 通用预置物品（preloadInputs）：
  *   旧：preloadInputs: [{ slotIndex, itemId, amount }]
  *   新：storageSlotGroups[0].slots[slotIndex].initialItemType / initialCount
+ *   AI-CORRECTION 2026-06-12: v2 单槽预置字段 preloadInputItemId/preloadInputAmount
+ *     也需要迁移到 storageSlotGroups[0].slots[0].initialItemType / initialCount。
  */
 function convertLegacyDeviceConfig(options: {
   definitionId: string;
@@ -237,8 +277,12 @@ function convertLegacyDeviceConfig(options: {
     return convertLegacyUnloaderConfig(config, options.entityId);
   }
 
-  if (options.definitionId === "item_port_udpipe_unloader_1") {
+  if (options.definitionId === "item_port_udpipe_unloader_1" || options.definitionId === "item_port_udpipe_unloader_2") {
     return convertLegacyDarkPipeUnloaderConfig(config, options.entityId);
+  }
+
+  if (options.definitionId === "item_port_udpipe_loader_1" || options.definitionId === "item_port_udpipe_loader_2") {
+    return { ...empty, config: convertLegacyDarkPipeLoaderConfig(config) };
   }
 
   if (options.definitionId === "item_port_storager_1") {
@@ -251,6 +295,10 @@ function convertLegacyDeviceConfig(options: {
 
   if (options.definitionId === "item_port_loader_1") {
     return { ...empty, config: convertLegacyWarehouseLoaderConfig(config) };
+  }
+
+  if (options.definitionId === "item_log_admission" || options.definitionId === "item_pipe_admission") {
+    return { ...empty, config: convertLegacyAdmissionConfig(config) };
   }
 
   if (options.definitionId === "item_port_mix_pool_1" || options.definitionId === "item_port_mix_pool_large_1") {
@@ -378,11 +426,13 @@ function convertLegacyPreloadInputs(
 ): Record<string, unknown> {
   const preloadInputs = config.preloadInputs;
   if (!Array.isArray(preloadInputs) || preloadInputs.length === 0) {
-    return config;
+    return convertLegacySinglePreloadInput(config);
   }
 
   const nextConfig: Record<string, unknown> = { ...config };
   delete nextConfig.preloadInputs;
+  delete nextConfig.preloadInputItemId;
+  delete nextConfig.preloadInputAmount;
 
   for (const entry of preloadInputs) {
     if (!isRecord(entry)) {
@@ -401,6 +451,29 @@ function convertLegacyPreloadInputs(
     nextConfig[`storageSlotGroups[0].slots[${slotIndex}].initialItemType`] = itemId;
     nextConfig[`storageSlotGroups[0].slots[${slotIndex}].initialCount`] = count;
   }
+
+  return nextConfig;
+}
+
+function convertLegacySinglePreloadInput(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const itemId = config.preloadInputItemId;
+  const amount = config.preloadInputAmount;
+
+  if (typeof itemId !== "string" || itemId === "") {
+    const nextConfig = { ...config };
+    delete nextConfig.preloadInputItemId;
+    delete nextConfig.preloadInputAmount;
+    return nextConfig;
+  }
+
+  const nextConfig: Record<string, unknown> = { ...config };
+  delete nextConfig.preloadInputItemId;
+  delete nextConfig.preloadInputAmount;
+  nextConfig["storageSlotGroups[0].slots[0].initialItemType"] = itemId;
+  nextConfig["storageSlotGroups[0].slots[0].initialCount"] =
+    typeof amount === "number" && Number.isFinite(amount) ? Math.max(0, Math.floor(amount)) : 0;
 
   return nextConfig;
 }
@@ -457,21 +530,20 @@ function convertLegacyDarkPipeUnloaderConfig(
   config: Record<string, unknown>,
   entityId: string,
 ): { config: Record<string, unknown>; slotLinks: SlotLinkDefinition[] } {
+  const nextConfig: Record<string, unknown> = { ...config };
+  delete nextConfig.pumpOutputItemId;
+  delete nextConfig.darkPipeInletMode;
+  delete nextConfig.darkPipeOutletMode;
+  // AI-CORRECTION 2026-06-09: 旧 links[N] config key 已废弃，改为产出 slotLinks。
+  delete nextConfig.links;
+
   const itemId = config.pumpOutputItemId;
   if (typeof itemId !== "string" || itemId === "") {
-    return { config, slotLinks: [] };
+    return { config: nextConfig, slotLinks: [] };
   }
 
   // darkPipeOutletMode === "generate" → 无限供应 → ignoreStock: true
   const ignoreStock = config.darkPipeOutletMode === "generate";
-
-  const nextConfig: Record<string, unknown> = { ...config };
-
-  // 移除旧 key
-  delete nextConfig.pumpOutputItemId;
-  delete nextConfig.darkPipeOutletMode;
-  // AI-CORRECTION 2026-06-09: 旧 links[N] config key 已废弃，改为产出 slotLinks。
-  delete nextConfig.links;
 
   nextConfig["storageSlotGroups[0].slots[0].ignoreStock"] = ignoreStock;
 
@@ -491,6 +563,19 @@ function convertLegacyDarkPipeUnloaderConfig(
   }];
 
   return { config: nextConfig, slotLinks };
+}
+
+function convertLegacyDarkPipeLoaderConfig(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const nextConfig = convertLegacyPreloadInputs({ ...config });
+
+  delete nextConfig.darkPipeInletMode;
+  delete nextConfig.darkPipeOutletMode;
+  delete nextConfig.pumpOutputItemId;
+  delete nextConfig.links;
+
+  return nextConfig;
 }
 
 function convertLegacyStoragerConfig(
@@ -604,6 +689,34 @@ function convertLegacyWarehouseLoaderConfig(
   return nextConfig;
 }
 
+function convertLegacyAdmissionConfig(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const nextConfig = convertLegacyPreloadInputs({ ...config });
+  const itemId = config.admissionItemId;
+  const limit = config.admissionAmount;
+
+  delete nextConfig.admissionItemId;
+  delete nextConfig.admissionAmount;
+
+  if (typeof itemId !== "string" || itemId === "") {
+    return nextConfig;
+  }
+
+  nextConfig["portGroups[0].ports[0].acceptRule"] = {
+    base: { kind: "item", itemId },
+    exclude: [],
+  };
+  nextConfig["portGroups[0].ports[0].admissionRule"] = {
+    itemId,
+    limit: typeof limit === "number" && Number.isFinite(limit) && limit > 0
+      ? Math.floor(limit)
+      : null,
+  };
+
+  return nextConfig;
+}
+
 function convertLegacyStoragePreloadInputsIntoGroups(
   config: Record<string, unknown>,
   storagePreloadInputs: unknown,
@@ -644,9 +757,18 @@ function convertLegacyStorageSlotsIntoGroups(
       continue;
     }
 
-    if (entry.mode === "pinned" && typeof entry.pinnedItemId === "string" && entry.pinnedItemId !== "") {
-      config[`storageSlotGroups[${slotIndex}].slots[0].lock`] = entry.pinnedItemId;
-    }
+    // AI-REMOVED 2026-06-12:
+    // Reason: v2 的存储槽位锁定在本次迁移中明确放弃，不迁移到 v3。
+    // Trigger: 用户补充说明“v2 功能里有一个存储槽位锁定，那个我们放弃了不迁移”。
+    // Evidence: v3 迁移仍需保留 preloadItemId / preloadAmount，但不能写入 lock 字段。
+    // Replacement: 下方 writeStoragerInitialSlotConfig 仅迁移预置物品与数量。
+    // Risk: Medium - 依赖锁定槽位筛选的旧存储箱迁移后需要用户手动重新配置。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (entry.mode === "pinned" && typeof entry.pinnedItemId === "string" && entry.pinnedItemId !== "") {
+    //   config[`storageSlotGroups[${slotIndex}].slots[0].lock`] = entry.pinnedItemId;
+    // }
 
     writeStoragerInitialSlotConfig({
       config,
@@ -765,6 +887,115 @@ function asStringRecord(value: unknown): Record<string, string> {
   );
 }
 
+function appendLegacyDarkPipeLinks(options: {
+  links: readonly LegacyBlueprintLinkJson[];
+  entities: BlueprintDocument["entities"];
+  entityIdByLegacyBlueprintInstanceId: ReadonlyMap<string, string>;
+  slotLinks: SlotLinkDefinition[];
+}): void {
+  const linkedEntityIds = new Set<string>();
+  const linkIds = new Set(options.slotLinks.map((link) => link.id));
+
+  for (const link of options.links) {
+    const inletEntityId = options.entityIdByLegacyBlueprintInstanceId.get(link.sourceBlueprintInstanceId);
+    const outletEntityId = options.entityIdByLegacyBlueprintInstanceId.get(link.targetBlueprintInstanceId);
+
+    if (inletEntityId === undefined || outletEntityId === undefined) {
+      continue;
+    }
+
+    const inletEntity = options.entities[inletEntityId];
+    const outletEntity = options.entities[outletEntityId];
+
+    if (
+      inletEntity === undefined
+      || outletEntity === undefined
+      || resolveLegacyDarkPipeRole(inletEntity.definitionId) !== "inlet"
+      || resolveLegacyDarkPipeRole(outletEntity.definitionId) !== "outlet"
+      || linkedEntityIds.has(inletEntityId)
+      || linkedEntityIds.has(outletEntityId)
+    ) {
+      continue;
+    }
+
+    removeSlotLinksForEntity(options.slotLinks, inletEntityId);
+    removeSlotLinksForEntity(options.slotLinks, outletEntityId);
+    inletEntity.config = createLegacyDarkPipeInletLinkedConfig(inletEntity.definitionId);
+    outletEntity.config = {};
+
+    const slotLink = createLegacyDarkPipeSlotLink({ inletEntityId, outletEntityId });
+    if (!linkIds.has(slotLink.id)) {
+      options.slotLinks.push(slotLink);
+      linkIds.add(slotLink.id);
+    }
+    linkedEntityIds.add(inletEntityId);
+    linkedEntityIds.add(outletEntityId);
+  }
+}
+
+function removeSlotLinksForEntity(
+  slotLinks: SlotLinkDefinition[],
+  entityId: string,
+): void {
+  for (let index = slotLinks.length - 1; index >= 0; index -= 1) {
+    const link = slotLinks[index];
+    if (link?.source.entityId === entityId || link?.target.entityId === entityId) {
+      slotLinks.splice(index, 1);
+    }
+  }
+}
+
+function createLegacyDarkPipeSlotLink(options: {
+  inletEntityId: string;
+  outletEntityId: string;
+}): SlotLinkDefinition {
+  return {
+    id: `${DARK_PIPE_LINK_ID_PREFIX}${options.outletEntityId}:${options.inletEntityId}`,
+    linkType: "share-all",
+    source: {
+      entityId: options.outletEntityId,
+      storageSlotGroupId: DARK_PIPE_OUTLET_STORAGE_GROUP_ID,
+      slotId: DARK_PIPE_SLOT_ID,
+    },
+    target: {
+      entityId: options.inletEntityId,
+      storageSlotGroupId: DARK_PIPE_INLET_STORAGE_GROUP_ID,
+      slotId: DARK_PIPE_SLOT_ID,
+    },
+  };
+}
+
+function createLegacyDarkPipeInletLinkedConfig(
+  definitionId: string,
+): Record<string, true> {
+  if (definitionId === "item_port_udpipe_loader_2") {
+    return {
+      "recipeChannels[0].manualRecipeOnly": true,
+      "recipeChannels[1].manualRecipeOnly": true,
+    };
+  }
+
+  if (definitionId === "item_port_udpipe_loader_1") {
+    return {
+      "recipeChannels[0].manualRecipeOnly": true,
+    };
+  }
+
+  return {};
+}
+
+function resolveLegacyDarkPipeRole(definitionId: string): "inlet" | "outlet" | null {
+  if (definitionId === "item_port_udpipe_loader_1" || definitionId === "item_port_udpipe_loader_2") {
+    return "inlet";
+  }
+
+  if (definitionId === "item_port_udpipe_unloader_1" || definitionId === "item_port_udpipe_unloader_2") {
+    return "outlet";
+  }
+
+  return null;
+}
+
 export function normalizeLegacyBlueprintJson(value: unknown): LegacyBlueprintJson | null {
   if (!isRecord(value)) {
     return null;
@@ -838,7 +1069,10 @@ function normalizeLegacyBlueprintDevice(
     return null;
   }
 
+  const blueprintInstanceId = normalizeOptionalString(value.blueprintInstanceId);
+
   return {
+    ...(blueprintInstanceId === null ? {} : { blueprintInstanceId }),
     typeId: value.typeId,
     rotation: value.rotation,
     origin: {

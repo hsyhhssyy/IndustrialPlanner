@@ -20,6 +20,7 @@ import { WorkbenchBlueprintPreviewController } from "../shell/state/blueprint-pr
 import { WorkbenchEncyclopediaPickerController } from "../shell/state/encyclopedia-picker-state";
 import { WorkbenchRecipePickerController } from "../shell/state/recipe-picker-state";
 import { WorkbenchSaveBlueprintDialogController } from "../shell/state/save-blueprint-dialog-state";
+import { cleanupDiscardableV2LocalStorageBeforeV3Boot } from "../migration";
 
 export interface AppHost extends AppContract {
   workspace: WorkspaceContract;
@@ -173,6 +174,7 @@ export function createAppHost(
   disposers.push(gestureAdapter.subscribeKeyboardSnapshot((snapshot) => {
     gestureDiagnostics.setKeyboardSnapshot(snapshot);
   }));
+  cleanupDiscardableV2LocalStorageBeforeV3Boot();
   disposers.push(hookLocalstorage(host));
   disposers.push(hookThemeApplicator(host));
 

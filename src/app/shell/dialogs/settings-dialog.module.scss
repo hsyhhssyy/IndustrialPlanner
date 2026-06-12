@@ -411,6 +411,131 @@
   background: var(--surface-2);
 }
 
+// ─── v2 数据迁移 ───
+
+.v2-migration-dialog {
+  width: min(560px, 100%);
+  max-height: min(640px, 92vh);
+}
+
+.v2-migration-dialog-body {
+  overflow: auto;
+}
+
+.v2-migration-content {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.v2-migration-section,
+.v2-migration-status {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.v2-migration-section h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.v2-migration-section p,
+.v2-migration-section ul {
+  margin: 0;
+}
+
+.v2-migration-section ul {
+  display: grid;
+  gap: 6px;
+  padding-left: 18px;
+  color: var(--text-1);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.v2-migration-warning {
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--line));
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface-2));
+}
+
+.v2-migration-status {
+  gap: 4px;
+  font-size: 0.88rem;
+}
+
+.v2-migration-status strong {
+  color: var(--text-0);
+}
+
+.v2-migration-status span {
+  color: var(--text-1);
+  line-height: 1.4;
+}
+
+.v2-migration-status.is-success {
+  border-color: color-mix(in srgb, #16a34a 45%, var(--line));
+  background: color-mix(in srgb, #16a34a 10%, var(--surface-2));
+}
+
+.v2-migration-status.is-error {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface-2));
+}
+
+.v2-migration-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.v2-migration-primary-button,
+.v2-migration-secondary-button,
+.v2-migration-danger-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.v2-migration-primary-button {
+  border: 1px solid var(--accent-strong);
+  background: var(--accent);
+  color: #fff;
+}
+
+.v2-migration-secondary-button {
+  border: 1px solid var(--line);
+  background: var(--surface-3);
+  color: var(--text-0);
+}
+
+.v2-migration-danger-button {
+  border: 1px solid color-mix(in srgb, var(--danger) 72%, var(--line));
+  background: color-mix(in srgb, var(--danger) 16%, var(--surface-3));
+  color: var(--text-0);
+}
+
+.v2-migration-primary-button:disabled,
+.v2-migration-secondary-button:disabled,
+.v2-migration-danger-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.settings-dialog-migration-control {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .activity-selection-row input {
   width: 16px;
   height: 16px;
