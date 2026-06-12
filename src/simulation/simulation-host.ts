@@ -1,6 +1,7 @@
 import type { SimulationContract } from "@/domain/simulation/simulation-contract";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type {
+  SimulationAdmissionCounterReset,
   SimulationDeviceRuntimeChannelRecipeStatus,
   SimulationDeviceRuntimeSlotItemReadModel,
   SimulationDeviceRuntimeStatusReadModel,
@@ -302,6 +303,18 @@ function resolveDeviceRuntimeStatus(options: {
   //     : convertSimulationTicksToSeconds(deviceSnapshot.recipe.durationTicks),
   return {
     channelRecipes,
+    admissionCounters: Object.fromEntries(
+      Object.entries(deviceSnapshot.admissionCounters ?? {}).map(([portRef, counter]) => [
+        portRef,
+        {
+          portGroupId: counter.portGroupId,
+          portId: counter.portDefinitionId,
+          itemType: counter.itemId,
+          limit: counter.limit,
+          count: counter.count,
+        },
+      ]),
+    ),
     powerStatus: options.topology.devices[compiledDeviceId]?.powerStatus ?? null,
     slotItems: resolveDeviceRuntimeSlotItems({
       topology: options.topology,
@@ -480,6 +493,17 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     }, "runtime-slot-patched");
   }
 
+  public resetAdmissionCounter(reset: SimulationAdmissionCounterReset): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "admission-counter-reset" }
+  >> {
+    return this.request({
+      type: "reset-admission-counter",
+      requestId: this.createRequestId(),
+      reset,
+    }, "admission-counter-reset");
+  }
+
   public getPerfReport(): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "perf-report" }
@@ -614,6 +638,21 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       patch,
     });
     if (response.type !== "runtime-slot-patched") {
+      throw new Error(`Unexpected simulation worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public resetAdmissionCounter(reset: SimulationAdmissionCounterReset): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "admission-counter-reset" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "reset-admission-counter",
+      requestId: this.createRequestId(),
+      reset,
+    });
+    if (response.type !== "admission-counter-reset") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
     }
     return Promise.resolve(response);

@@ -66,7 +66,7 @@ type PortDefinitionInput = Pick<
   "id" | "localCellX" | "localCellY" | "edge"
 > & Partial<Pick<
   PortDefinition,
-  "acceptRule" | "count" | "priorityGroup" | "roundRobinSeed"
+  "acceptRule" | "admissionRule" | "priorityGroup" | "roundRobinSeed"
 >>;
 
 /** createEntityDefinition() 的输入类型 — inspectors / placementBehaviors / recipeChannels / displayOrder 可选，由工厂补全默认值 */
@@ -262,7 +262,7 @@ function resolveEdge(edge: PortEdgeInput): PortDefinition["edge"] {
  * 创建端口定义。
  * acceptRule 默认按 portGroup.kind 推导（item→solid, fluid→liquid），
  * 可通过 options 覆盖。
- * count 默认 "unlimited"。
+ * admissionRule 仅由准入口 input port 显式声明。
  * priorityGroup 默认 0。
  * roundRobinSeed 默认等于端口在组内的 index。
  */
@@ -273,7 +273,7 @@ function createPort(
   edge: PortEdgeInput,
   options: Partial<Pick<
     PortDefinition,
-    "acceptRule" | "count" | "priorityGroup" | "roundRobinSeed"
+    "acceptRule" | "admissionRule" | "priorityGroup" | "roundRobinSeed"
   >> = {},
 ): PortDefinitionInput {
   return {
@@ -289,10 +289,10 @@ function createPort(
  * 创建端口组。
  * kind：item（固体物品端口）/ fluid（液体端口）——决定默认 acceptRule。
  * direction：input（物品流入）/ output（物品流出）/ bidirectional（编译时分解为 input+output）。
- * 每个端口的 acceptRule 默认按 kind 推导，count 默认 "unlimited"，
+ * 每个端口的 acceptRule 默认按 kind 推导，
  * priorityGroup 默认 0，roundRobinSeed 默认按 index 递增。
  *
- * 对应《仿真运行原理》§3.1 中 Port 的两个通用配置（acceptRule, count）。
+ * 对应《仿真运行原理》§3.1 中 Port 的 accept-rule 配置。
  */
 function createPortGroup(
   id: string,
@@ -307,7 +307,16 @@ function createPortGroup(
     ports: ports.map((port, index) => ({
       ...port,
       acceptRule: port.acceptRule ?? acceptRuleFromPortKind(kind),
-      count: port.count ?? "unlimited",
+      // AI-REMOVED 2026-06-12:
+      // Reason: createPortGroup 不再为端口补 count 默认值，per-tick count 已从设计中删除。
+      // Trigger: 用户确认 per tick count 应删除。
+      // Evidence: PortDefinition.count 已注释化删除。
+      // Replacement: admissionRule 只在 admission input port 上显式声明。
+      // Risk: Medium - 旧依赖 count 的测试或配置需要迁移。
+      // Human Review: Required
+      //
+      // Original code:
+      // count: port.count ?? "unlimited",
       priorityGroup: port.priorityGroup ?? 0,
       roundRobinSeed: port.roundRobinSeed ?? index,
     })),
@@ -2881,7 +2890,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         "item",
         "input",
-        [createPort("in_w", 0, 0, "W")],
+        [createPort("in_w", 0, 0, "W", {
+          admissionRule: { itemId: null, limit: null },
+        })],
       ),
       createPortGroup(
         "item_output",
@@ -2907,6 +2918,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_buffer"),
       createBinding("bind_item_output", "item_output", "item_buffer"),
     ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.admissionRule,
+        portGroupId: "item_input",
+        portId: "in_w",
+      },
+    ],
   }),
   createEntityDefinition({
     id: "item_pipe_admission",
@@ -2923,7 +2941,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         "fluid",
         "input",
-        [createPort("in_w", 0, 0, "W")],
+        [createPort("in_w", 0, 0, "W", {
+          admissionRule: { itemId: null, limit: null },
+        })],
       ),
       createPortGroup(
         "fluid_output",
@@ -2948,6 +2968,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_fluid_input", "fluid_input", "fluid_buffer"),
       createBinding("bind_fluid_output", "fluid_output", "fluid_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.admissionRule,
+        portGroupId: "fluid_input",
+        portId: "in_w",
+      },
     ],
   }),
   // =========================================================================

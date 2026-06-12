@@ -18,7 +18,16 @@ describe("REQ-076: config overrides", () => {
         "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
         "storageSlotGroups[0].slots[0].initialCount": 7,
         "storageSlotGroups[0].slots[0].ignoreStock": true,
-        "portGroups[1].ports[0].count": 3,
+        // AI-REMOVED 2026-06-12:
+        // Reason: port.count per-tick 覆盖属于已删除的错误设计。
+        // Trigger: 用户确认 per tick count 应删除，准入口数量限制改为跨 tick admission counter。
+        // Evidence: PortDefinition.count / CompiledSimulationTransferEdge.count 已注释化删除。
+        // Replacement: src/tests/simulation/admission-rule.test.ts 覆盖 admissionRule.limit。
+        // Risk: Low - 本测试仍覆盖 slot config override。
+        // Human Review: Required
+        //
+        // Original code:
+        // "portGroups[1].ports[0].count": 3,
       }),
       createEntity("belt", "belt_straight_1x1", 0, 0, 270),
       createEntity("sink-storage", "item_port_storager_1", 0, -3),
@@ -66,7 +75,7 @@ describe("REQ-076: config overrides", () => {
       && t.targetSlotId.includes("device:sink-storage"),
     )).toBe(true);
 
-    // 验证 port count 覆盖生效：source 的 portGroups[1].ports[0].count 被设为 3
+    // 验证 slot config 覆盖后的输送结果；port count 覆盖已移至 admission-rule 测试。
     expect(findSlot(report, 60, "sink-storage", "storage_slot_1", "slot_1"))
       .toMatchObject({
         itemType: "item_iron_ore",

@@ -35,7 +35,16 @@ function createTestEntityDefinition(options: {
             localCellY: 0,
             edge: "NORTH",
             acceptRule: { base: { kind: "solid" }, exclude: [] },
-            count: "unlimited",
+            // AI-REMOVED 2026-06-12:
+            // Reason: PortDefinition.count per-tick 限流字段已删除。
+            // Trigger: 用户确认文档没有 per tick count。
+            // Evidence: 编译器不再读取 port.count。
+            // Replacement: None - 该 fixture 只测试 recipe channel role 编译。
+            // Risk: Low
+            // Human Review: Required
+            //
+            // Original code:
+            // count: "unlimited",
             priorityGroup: 0,
             roundRobinSeed: 0,
           },

@@ -6,7 +6,7 @@ import { resolveStorageSlotId } from "./runtime-slot-access";
 /**
  * 对应《仿真运行原理》§5.2 Tick 阶段 2 与 §7.1 生成求解图。
  * 这里只生成本 tick 临时求解状态：Node 的占用排除集、Edge 的 shadowPull/shadowPush
- * 初始 uncertain 状态，以及 edge 本 tick 通过量计数。真实库存仍保留在 persistent slots。
+ * 初始 uncertain 状态。真实库存和准入口计数仍保留在 persistent state。
  */
 export function buildSolveGraph(
   topology: CompiledSimulationTopology,
@@ -47,7 +47,16 @@ export function buildSolveGraph(
       edgeId,
       shadowPull: "uncertain",
       shadowPush: "uncertain",
-      currentThroughCount: 0,
+      // AI-REMOVED 2026-06-12:
+      // Reason: currentThroughCount 是单 tick 临时限流状态，准入口上限改为 persistent admission counter。
+      // Trigger: 用户要求删除 per tick count。
+      // Evidence: RuntimeTickEdgeState.currentThroughCount 已注释化删除。
+      // Replacement: state.persistent.admissionCounters。
+      // Risk: Medium - stage-3 必须在实际搬运成功后增加 admission counter。
+      // Human Review: Required
+      //
+      // Original code:
+      // currentThroughCount: 0,
       sourceSlotId: null,
       targetSlotId: null,
       itemType: null,

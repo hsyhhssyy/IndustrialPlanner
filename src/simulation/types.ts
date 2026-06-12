@@ -6,7 +6,16 @@ export type SimulationItemDomain = "solid" | "liquid";
 export type SimulationPortKind = "item" | "fluid";
 export type SimulationPortDirection = "input" | "output";
 export type SimulationNodeViewRole = "input-view" | "output-view";
-export type SimulationCountLimit = number | "unlimited";
+// AI-REMOVED 2026-06-12:
+// Reason: 端口/边 per-tick count 是错误设计；准入口上限必须由跨 tick runtime counter 表达。
+// Trigger: 用户确认 per tick count 应删除，文档中没有该概念。
+// Evidence: .docs/common/模拟器/仿真运行原理.md 已改为 admissionRule + persistent counter。
+// Replacement: SimulationAdmissionRule。
+// Risk: Medium - topology 编译与 runtime 求解需同步迁移。
+// Human Review: Required
+//
+// Original code:
+// export type SimulationCountLimit = number | "unlimited";
 export type SimulationPowerStatus = "no-power-needed" | "in-power-range" | "out-of-power-range";
 /**
  * 仿真运输类别，决定设备在物流拓扑中的角色。
@@ -53,6 +62,11 @@ export interface SimulationAcceptRule {
     | { readonly kind: "item"; readonly itemId: string }
     | { readonly kind: "none" };
   readonly exclude: readonly string[];
+}
+
+export interface SimulationAdmissionRule {
+  readonly itemId: string | null;
+  readonly limit: number | null;
 }
 
 export interface SimulationCompileDiagnostic {
@@ -191,7 +205,18 @@ export interface CompiledSimulationPort {
   readonly edge: GridEdge;
   readonly boundNodeIds: readonly string[];
   readonly acceptRule: SimulationAcceptRule;
-  readonly count: SimulationCountLimit;
+  /** 仅 admission 设备 input port 使用；计数存放于 runtime persistent state。 */
+  readonly admissionRule: SimulationAdmissionRule | null;
+  // AI-REMOVED 2026-06-12:
+  // Reason: CompiledSimulationPort 不再携带 per-tick count。
+  // Trigger: 用户要求彻底删除错误的通用 port count 设计。
+  // Evidence: stage-3 求解将改为基于 admissionRule 的跨 tick counter。
+  // Replacement: admissionRule。
+  // Risk: Medium - 旧 topology fixture 需迁移。
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly count: SimulationCountLimit;
   readonly priorityGroup: number;
   readonly roundRobinSeed: number;
   readonly order: number;
@@ -226,7 +251,16 @@ export interface CompiledSimulationTransferEdge {
   readonly sourceNodeId: string;
   readonly targetNodeId: string;
   readonly acceptRule: SimulationAcceptRule;
-  readonly count: SimulationCountLimit;
+  // AI-REMOVED 2026-06-12:
+  // Reason: TransferEdge 不再承载 per-tick count；准入口限制属于 target input port 的跨 tick 状态。
+  // Trigger: 用户要求删除 per tick count。
+  // Evidence: topology compiler 不再计算 min(sourcePort.count, targetPort.count)。
+  // Replacement: targetPort.admissionRule + persistent admission counter。
+  // Risk: Medium - runtime 求解逻辑需统一使用 targetPortId。
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly count: SimulationCountLimit;
 }
 
 export interface CompiledSimulationSlotLink {
@@ -367,6 +401,17 @@ export interface RuntimeDeviceSnapshot {
   readonly recipe: RuntimeDeviceRecipeSnapshot | null;
   /** 每个 channel 的当前运行时配方状态，key 为 channel id，null 表示该 channel 空闲 */
   readonly channelRecipes: Record<string, RuntimeDeviceRecipeSnapshot | null>;
+  /** 准入口 runtime 计数，key 为 `${portGroupId}:${portId}`。 */
+  readonly admissionCounters: Record<string, RuntimeAdmissionCounterSnapshot>;
+}
+
+export interface RuntimeAdmissionCounterSnapshot {
+  readonly portId: string;
+  readonly portGroupId: string;
+  readonly portDefinitionId: string;
+  readonly itemId: string | null;
+  readonly limit: number | null;
+  readonly count: number;
 }
 
 export interface RuntimeDeviceRecipeSnapshot {

@@ -1,4 +1,7 @@
-import type { SimulationRuntimeSlotPatch } from "./types/simulation-types";
+import type {
+  SimulationAdmissionCounterReset,
+  SimulationRuntimeSlotPatch,
+} from "./types/simulation-types";
 
 export interface SimulationAction {
   start(): Promise<void>;
@@ -8,4 +11,5 @@ export interface SimulationAction {
   setSimulationSpeed(value: number): void;
   advancePlaybackByDeltaMs(deltaMs: number): Promise<void>;
   patchRuntimeSlot(patch: SimulationRuntimeSlotPatch): Promise<void>;
+  resetAdmissionCounter(reset: SimulationAdmissionCounterReset): Promise<void>;
 }

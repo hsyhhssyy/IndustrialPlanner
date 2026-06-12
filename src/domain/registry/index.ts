@@ -14,7 +14,17 @@ export type {
 	StorageSlotDefinition,
 	PortStorageBindingDefinition,
 	EntityAcceptRuleDefinition,
-	CountLimit,
+	EntityAdmissionRuleDefinition,
+	// AI-REMOVED 2026-06-12:
+	// Reason: 通用 port.count per-tick 限流已删除，domain API 不再导出 CountLimit。
+	// Trigger: 用户确认 per tick count 不属于设计文档，应彻底删除。
+	// Evidence: src/domain/registry/types/entity-definition.ts 已注释化删除 CountLimit。
+	// Replacement: EntityAdmissionRuleDefinition。
+	// Risk: Medium - 外部引用需迁移。
+	// Human Review: Required
+	//
+	// Original code:
+	// CountLimit,
 	// AI-REMOVED 2026-06-06:
 	// Reason: SubmitMode 类型已从 StorageSlotDefinition 删除，domain API 不再导出旧机制。
 	// Trigger: 用户要求 submit mode 机制彻底删除。

@@ -1,7 +1,10 @@
 import { action, runInAction } from "mobx";
 
 import type { SimulationAction } from "@/domain/simulation/simulation-action";
-import type { SimulationRuntimeSlotPatch } from "@/domain/simulation/types/simulation-types";
+import type {
+  SimulationAdmissionCounterReset,
+  SimulationRuntimeSlotPatch,
+} from "@/domain/simulation/types/simulation-types";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -58,6 +61,10 @@ export interface SimulationWorkerBridge {
   patchRuntimeSlot(patch: SimulationRuntimeSlotPatch): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "runtime-slot-patched" }
+  >>;
+  resetAdmissionCounter(reset: SimulationAdmissionCounterReset): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "admission-counter-reset" }
   >>;
   getPerfReport(): Promise<Extract<
     SimulationWorkerResponse,
@@ -302,6 +309,23 @@ implements SimulationAction, SimulationInternalAction {
     }
 
     const response = await this.bridge.patchRuntimeSlot(patch);
+    runInAction(() => {
+      this.stateReadWrite.runtimeStatus = response.status;
+    });
+
+    const targetTickNumber = Math.trunc(this.stateReadWrite.currentPlaybackTickNumber);
+    const status = await this.syncToTick(targetTickNumber);
+    if (status.status === "not-found") {
+      await this.recoverPlaybackFromUnavailableTick(status, targetTickNumber);
+    }
+  };
+
+  public readonly resetAdmissionCounter: SimulationAction["resetAdmissionCounter"] = async (reset) => {
+    if (this.stateReadWrite.runningState === "stop") {
+      return;
+    }
+
+    const response = await this.bridge.resetAdmissionCounter(reset);
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = response.status;
     });

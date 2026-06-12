@@ -4,7 +4,6 @@ import type {
   CompiledSimulationPort,
   CompiledSimulationTopology,
   SimulationAcceptRule,
-  SimulationCountLimit,
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import {
@@ -252,10 +251,22 @@ function solveOutputNode(
       if (edge === undefined || edgeState === undefined || edgeState.shadowPull !== "accept") {
         continue;
       }
-      if (edgeState.currentThroughCount >= resolvePerTickLimit(edge.count)) {
+      // AI-REMOVED 2026-06-12:
+      // Reason: edge.currentThroughCount / edge.count 是 per-tick 限流旧设计。
+      // Trigger: 用户要求准入口上限使用跨 tick 计数。
+      // Evidence: CompiledSimulationTransferEdge.count 已删除。
+      // Replacement: canAdmitItemThroughTargetPort(topology, state, edge.targetPortId, itemType)。
+      // Risk: Medium - 这里必须在 moveOneItem 前重新检查，避免同 tick 内并发候选越过总量上限。
+      // Human Review: Required
+      //
+      // Original code:
+      // if (edgeState.currentThroughCount >= resolvePerTickLimit(edge.count)) {
+      //   continue;
+      // }
+      if (edgeState.sourceSlotId === null || edgeState.targetSlotId === null || edgeState.itemType === null) {
         continue;
       }
-      if (edgeState.sourceSlotId === null || edgeState.targetSlotId === null || edgeState.itemType === null) {
+      if (!canAdmitItemThroughTargetPort(topology, state, edge.targetPortId, edgeState.itemType)) {
         continue;
       }
 
@@ -275,7 +286,7 @@ function solveOutputNode(
       movedAny = true;
       edgeState.shadowPush = "accept";
       edgeState.amount += 1;
-      edgeState.currentThroughCount += 1;
+      recordAdmissionMove(topology, state, edge.targetPortId, edgeState.itemType);
       edgeState.shadowPull = "moved";
       edgeState.shadowPush = "moved";
       pushUnique(state.transient.nodes[node.id]?.acceptedOutputEdgeIds, edgeId);
@@ -317,7 +328,7 @@ function solveInputNode(
   for (const edgeId of getOrderedInputEdgeIds(topology, state, node)) {
     const edge = topology.transferEdges[edgeId];
     const edgeState = state.transient.edges[edgeId];
-    if (edge === undefined || edgeState === undefined || edgeState.currentThroughCount >= resolvePerTickLimit(edge.count)) {
+    if (edge === undefined || edgeState === undefined) {
       continue;
     }
 
@@ -331,6 +342,7 @@ function solveInputNode(
       state,
       sourceNode,
       targetNode: node,
+      targetPortId: edge.targetPortId,
       acceptRule: edge.acceptRule,
     });
     if (selection === null) {
@@ -355,6 +367,7 @@ function selectAcceptedSourceForEdge(options: {
   readonly state: SimulationMutableRuntimeState;
   readonly sourceNode: CompiledSimulationNode;
   readonly targetNode: CompiledSimulationNode;
+  readonly targetPortId: string;
   readonly acceptRule: SimulationAcceptRule;
 }): SourceSelection | null {
   const perf = options.state.transient._perf;
@@ -365,6 +378,9 @@ function selectAcceptedSourceForEdge(options: {
     const storageSlotId = resolveStorageSlotId(options.state, sourceSlotId);
     const itemType = options.state.persistent.slots[storageSlotId]?.itemType ?? slot?.lock ?? null;
     if (slot === undefined || itemType === null || !acceptsItem(options.topology, options.acceptRule, itemType)) {
+      continue;
+    }
+    if (!canAdmitItemThroughTargetPort(options.topology, options.state, options.targetPortId, itemType)) {
       continue;
     }
     if (!canOutputSlotProvideItem({
@@ -388,6 +404,39 @@ function selectAcceptedSourceForEdge(options: {
   }
 
   return null;
+}
+
+function canAdmitItemThroughTargetPort(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  targetPortId: string,
+  itemType: string,
+): boolean {
+  const rule = topology.ports[targetPortId]?.admissionRule;
+  if (rule === undefined || rule === null || rule.itemId === null) {
+    return true;
+  }
+  if (rule.itemId !== itemType) {
+    return false;
+  }
+  if (rule.limit === null) {
+    return true;
+  }
+  return (state.persistent.admissionCounters[targetPortId] ?? 0) < rule.limit;
+}
+
+function recordAdmissionMove(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  targetPortId: string,
+  itemType: string,
+): void {
+  const rule = topology.ports[targetPortId]?.admissionRule;
+  if (rule === undefined || rule === null || rule.itemId !== itemType) {
+    return;
+  }
+  state.persistent.admissionCounters[targetPortId] =
+    (state.persistent.admissionCounters[targetPortId] ?? 0) + 1;
 }
 
 function inputNodeHasAnyCapacity(
@@ -629,9 +678,18 @@ function sortInputAnchors(
   });
 }
 
-function resolvePerTickLimit(count: SimulationCountLimit): number {
-  return count === "unlimited" ? Number.MAX_SAFE_INTEGER : count;
-}
+// AI-REMOVED 2026-06-12:
+// Reason: per-tick count resolver 属于被删除的旧限流设计。
+// Trigger: 用户确认文档没有 per tick count。
+// Evidence: SimulationCountLimit 已删除，准入口限制改由 canAdmitItemThroughTargetPort 读取 persistent counter。
+// Replacement: canAdmitItemThroughTargetPort。
+// Risk: Low - 所有调用点已移除。
+// Human Review: Required
+//
+// Original code:
+// function resolvePerTickLimit(count: SimulationCountLimit): number {
+//   return count === "unlimited" ? Number.MAX_SAFE_INTEGER : count;
+// }
 
 function getOrderedInputEdgeIds(
   topology: CompiledSimulationTopology,

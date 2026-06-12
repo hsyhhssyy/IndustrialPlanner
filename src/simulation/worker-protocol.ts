@@ -6,7 +6,10 @@ import type {
   SimulationTopologyMigration,
   SimulationTickSnapshotResult,
 } from "./types";
-import type { SimulationRuntimeSlotPatch } from "@/domain/simulation/types/simulation-types";
+import type {
+  SimulationAdmissionCounterReset,
+  SimulationRuntimeSlotPatch,
+} from "@/domain/simulation/types/simulation-types";
 
 export type SimulationWorkerRequest =
   | {
@@ -32,6 +35,11 @@ export type SimulationWorkerRequest =
       readonly type: "patch-runtime-slot";
       readonly requestId: number;
       readonly patch: SimulationRuntimeSlotPatch;
+    }
+  | {
+      readonly type: "reset-admission-counter";
+      readonly requestId: number;
+      readonly reset: SimulationAdmissionCounterReset;
     }
   | {
       readonly type: "get-perf-report";
@@ -63,6 +71,11 @@ export type SimulationWorkerResponse =
     }
   | {
       readonly type: "runtime-slot-patched";
+      readonly requestId: number;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "admission-counter-reset";
       readonly requestId: number;
       readonly status: SimulationRuntimeStatus;
     }

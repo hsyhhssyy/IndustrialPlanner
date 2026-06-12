@@ -135,20 +135,37 @@ export const INSPECTOR_TYPE = {
   /**
    * ## 端口过滤器面板
    *
-   * **编辑目标**：portGroups[*].ports[*] 的 acceptRule 和 count。
+   * **编辑目标**：portGroups[*].ports[*] 的 acceptRule。
    *
    * 绑定方式：`portRef` — 格式为 `"groupId:portId"` 或 `"groupIndex:portIndex"`。
    *
    * 编辑功能：
    * - **acceptRule 编辑**：设置端口允许通过的物品类型（base 规则 + exclude 列表）
-   * - **count 编辑**：设置每 tick 允许通过的物品数量上限
    *
    * 语义：
-   * - 输入口（准入口）：不选物品 = 接受所有，可编辑 count
-   * - 输出口：不选物品 = 拒绝所有，不可编辑 count
+   * - 输入口：不选物品 = 接受所有
+   * - 输出口：不选物品 = 拒绝所有
    * - 这些语义由面板根据端口所在 group 的 direction 自行判断
    */
   portFilter: "port-filter",
+
+  /**
+   * ## 物品准入面板
+   *
+   * **编辑目标**：admission 设备 input port 的 acceptRule 与 admissionRule。
+   *
+   * 绑定方式：`portGroupId` + `portId` 直接引用 EntityDefinition.portGroups。
+   *
+   * 编辑功能：
+   * - **选择物品**：只能选择一个准入物品，可清除或切换
+   * - **总量上限**：设置跨 tick 总准入数量；达到上限后不再放行该物品
+   * - **运行时计数**：显示已准入数量，并提供 reset 按钮将计数置 0
+   *
+   * 写入路径：
+   * - `portGroups[${groupIndex}].ports[${portIndex}].acceptRule`
+   * - `portGroups[${groupIndex}].ports[${portIndex}].admissionRule`
+   */
+  admissionRule: "admission-rule",
 
   /**
    * ## 分流/优先级面板
@@ -354,6 +371,15 @@ export interface PortFilterInspectorDeclaration {
   readonly portRef: string;
 }
 
+/** admissionRule 声明：编辑指定准入口端口的跨 tick 准入规则 */
+export interface AdmissionRuleInspectorDeclaration {
+  readonly type: typeof INSPECTOR_TYPE.admissionRule;
+  /** 目标端口组 ID。 */
+  readonly portGroupId: string;
+  /** 目标端口 ID。 */
+  readonly portId: string;
+}
+
 /** routing 声明：编辑指定端口的调度策略 */
 export interface RoutingInspectorDeclaration {
   readonly type: typeof INSPECTOR_TYPE.routing;
@@ -418,6 +444,7 @@ export type EntityInspectorDeclaration =
   | SlotConfigInspectorDeclaration
   | WarehouseItemLinkInspectorDeclaration
   | PortFilterInspectorDeclaration
+  | AdmissionRuleInspectorDeclaration
   | RoutingInspectorDeclaration
   | LinkConfigInspectorDeclaration
   | { readonly type: typeof INSPECTOR_TYPE.genericDevice }

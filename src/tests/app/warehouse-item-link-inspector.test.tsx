@@ -345,7 +345,16 @@ function createTestPort(
       base: { kind: "solid" },
       exclude: [],
     },
-    count: 1,
+    // AI-REMOVED 2026-06-12:
+    // Reason: PortDefinition.count per-tick 限流字段已删除。
+    // Trigger: 用户确认 per tick count 不属于设计文档。
+    // Evidence: 仿真已改为 admissionRule 跨 tick counter。
+    // Replacement: None - 此测试端口 fixture 仅用于 inspector row 定位。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // count: 1,
     priorityGroup: 0,
     roundRobinSeed: 0,
   };

@@ -123,9 +123,40 @@ function createDeviceSnapshots(
             state: firstRecipe.state,
           },
       channelRecipes,
+      admissionCounters: createAdmissionCounterSnapshots(topology, state, deviceId),
     };
   }
   return devices;
+}
+
+function createAdmissionCounterSnapshots(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  deviceId: string,
+): RuntimeTickSnapshot["devices"][string]["admissionCounters"] {
+  const result: RuntimeTickSnapshot["devices"][string]["admissionCounters"] = {};
+  const device = topology.devices[deviceId];
+  if (device === undefined) {
+    return result;
+  }
+
+  for (const portId of device.portIds) {
+    const port = topology.ports[portId];
+    if (port === undefined || port.admissionRule === null) {
+      continue;
+    }
+
+    result[`${port.portGroupId}:${port.portDefinitionId}`] = {
+      portId,
+      portGroupId: port.portGroupId,
+      portDefinitionId: port.portDefinitionId,
+      itemId: port.admissionRule.itemId,
+      limit: port.admissionRule.limit,
+      count: state.persistent.admissionCounters[portId] ?? 0,
+    };
+  }
+
+  return result;
 }
 
 function createNodeSnapshots(

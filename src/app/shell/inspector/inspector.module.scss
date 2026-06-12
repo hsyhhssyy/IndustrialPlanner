@@ -848,6 +848,250 @@
   display: none;
 }
 
+.admission-rule-inspector {
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+}
+
+.admission-rule-panel-body {
+  padding: 8px;
+  gap: 8px;
+}
+
+.admission-rule-row {
+  --admission-accent: #b88a2f;
+  --admission-accent-soft: rgb(184 138 47 / 10%);
+
+  display: grid;
+  /*
+    AI-REMOVED 2026-06-12:
+    Reason: 物品选择、数量与按钮挤在同一行，在 tablet/dialog 和 mobile 下可点击区域过小。
+    Trigger: 用户反馈“平板和手机上 ui 团成一团无法点击”，要求数量和物品选择分成两行。
+    Evidence: Playwright mobile/tablet 截图中单行控件水平空间不足。
+    Replacement: 外层固定单列，.admission-rule-controls-row 承载第二行。
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    grid-template-columns: minmax(0, 1fr) 82px 76px auto;
+  */
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  min-width: 0;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+}
+
+.admission-rule-controls-row {
+  display: grid;
+  grid-template-columns: minmax(86px, 112px) minmax(76px, 1fr) auto;
+  align-items: stretch;
+  min-width: 0;
+  gap: 8px;
+}
+
+.admission-rule-row[data-port-kind="fluid"] {
+  --admission-accent: #4f8fa8;
+  --admission-accent-soft: rgb(79 143 168 / 10%);
+}
+
+.admission-rule-item-button {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  min-width: 0;
+  min-height: 36px;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--admission-accent) 34%, var(--line));
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface-1) 88%, var(--admission-accent-soft));
+  color: var(--text-0);
+  text-align: left;
+}
+
+.admission-rule-item-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--admission-accent) 58%, var(--line));
+  background: color-mix(in srgb, var(--surface-1) 76%, var(--admission-accent-soft));
+}
+
+.admission-rule-item-button:disabled,
+.admission-rule-action-button:disabled,
+.admission-rule-limit input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.admission-rule-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+  color: var(--text-2);
+}
+
+.admission-rule-item-icon img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
+.admission-rule-item-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.admission-rule-item-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-0);
+  font-size: 0.82rem;
+  font-weight: 620;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admission-rule-limit,
+.admission-rule-count {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  min-height: 36px;
+  gap: 2px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 52%, var(--line));
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface-1) 82%, transparent);
+}
+
+.admission-rule-limit span,
+.admission-rule-count span {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 0.68rem;
+  font-weight: 620;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admission-rule-limit input {
+  width: 100%;
+  min-width: 0;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-0);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 720;
+}
+
+.admission-rule-count strong {
+  overflow: hidden;
+  color: var(--text-0);
+  font-size: 0.86rem;
+  font-weight: 760;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admission-rule-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 6px;
+}
+
+.admission-rule-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 56%, var(--line));
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  color: var(--text-1);
+}
+
+.admission-rule-action-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--admission-accent) 54%, var(--line));
+  color: color-mix(in srgb, var(--admission-accent) 76%, var(--text-0));
+}
+
+.admission-rule-clear-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, #c84f4f 52%, var(--line));
+  color: #c84f4f;
+}
+
+.admission-rule-action-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+/*
+  AI-REMOVED 2026-06-12:
+  Reason: 旧响应式规则仍让 tablet/dialog 使用单行布局，mobile 下按钮也被压到狭窄网格里。
+  Trigger: 用户要求数量与物品选择分成两行，提升平板和手机可点击性。
+  Evidence: .admission-rule-controls-row 已接管二级布局。
+  Replacement: 下方 controls-row 响应式规则。
+  Risk: Low
+  Human Review: Required
+
+  Original code:
+  .admission-rule-inspector[data-render-mode="dock"] .admission-rule-row,
+  .admission-rule-inspector[data-device-class="mobile"] .admission-rule-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .admission-rule-inspector[data-render-mode="dock"] .admission-rule-item-button,
+  .admission-rule-inspector[data-device-class="mobile"] .admission-rule-item-button {
+    grid-column: 1 / -1;
+  }
+
+  .admission-rule-inspector[data-render-mode="dock"] .admission-rule-limit,
+  .admission-rule-inspector[data-device-class="mobile"] .admission-rule-limit {
+    grid-column: 1 / 2;
+  }
+
+  .admission-rule-inspector[data-render-mode="dock"] .admission-rule-count,
+  .admission-rule-inspector[data-device-class="mobile"] .admission-rule-count {
+    grid-column: 2 / 3;
+  }
+
+  .admission-rule-inspector[data-render-mode="dock"] .admission-rule-actions,
+  .admission-rule-inspector[data-device-class="mobile"] .admission-rule-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+*/
+
+.admission-rule-inspector[data-render-mode="dock"] .admission-rule-controls-row,
+.admission-rule-inspector[data-device-class="mobile"] .admission-rule-controls-row,
+.admission-rule-inspector[data-device-class="tablet"] .admission-rule-controls-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.admission-rule-inspector[data-render-mode="dock"] .admission-rule-actions,
+.admission-rule-inspector[data-device-class="mobile"] .admission-rule-actions,
+.admission-rule-inspector[data-device-class="tablet"] .admission-rule-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+}
+
 .port-output-config-inspector {
   background: color-mix(in srgb, var(--surface-1) 92%, transparent);
 }

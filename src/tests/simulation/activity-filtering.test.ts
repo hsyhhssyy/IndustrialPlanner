@@ -39,7 +39,16 @@ function createActivityTestEntityDefinition(): EntityDefinition {
             localCellY: 0,
             edge: "NORTH",
             acceptRule: { base: { kind: "item", itemId: ACTIVITY_ITEM_ID }, exclude: [] },
-            count: "unlimited",
+            // AI-REMOVED 2026-06-12:
+            // Reason: PortDefinition.count per-tick 限流字段已删除。
+            // Trigger: 用户要求删除 per tick count。
+            // Evidence: 仿真准入数量限制已改为 admissionRule 跨 tick counter。
+            // Replacement: None - 此测试仅需要 acceptRule。
+            // Risk: Low
+            // Human Review: Required
+            //
+            // Original code:
+            // count: "unlimited",
             priorityGroup: 0,
             roundRobinSeed: 0,
           },

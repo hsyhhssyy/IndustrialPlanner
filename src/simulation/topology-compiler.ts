@@ -28,8 +28,8 @@ import type {
   CompiledSimulationTransferEdge,
   CompiledTransportComponent,
   SimulationAcceptRule,
+  SimulationAdmissionRule,
   SimulationCompileDiagnostic,
-  SimulationCountLimit,
   SimulationItemDomain,
   SimulationNodeViewRole,
   SimulationPowerStatus,
@@ -238,7 +238,6 @@ export function compileSimulationTopology(
           sourceNodeId,
           targetNodeId,
           acceptRule,
-          count: minCountLimit(sourcePort.count, targetPort.count),
         };
         transferEdges[edge.id] = edge;
         edgeOrder.push(edge.id);
@@ -1032,7 +1031,7 @@ function compilePorts(options: {
             nodeBindingsByStorageGroupId: options.nodeBindingsByStorageGroupId,
           }),
           acceptRule,
-          count: port.count,
+          admissionRule: direction === "input" ? readPortAdmissionRule(port) : null,
           priorityGroup: port.priorityGroup,
           roundRobinSeed: port.roundRobinSeed,
           order,
@@ -1403,6 +1402,22 @@ function readPortAcceptRule(port: PortDefinition): SimulationAcceptRule {
   };
 }
 
+function readPortAdmissionRule(port: PortDefinition): SimulationAdmissionRule | null {
+  const rule = port.admissionRule;
+  if (rule === undefined || rule === null) {
+    return null;
+  }
+
+  const itemId = typeof rule.itemId === "string" && rule.itemId.length > 0
+    ? rule.itemId
+    : null;
+  const limit = typeof rule.limit === "number" && Number.isFinite(rule.limit)
+    ? Math.max(0, Math.floor(rule.limit))
+    : null;
+
+  return { itemId, limit };
+}
+
 function intersectAcceptRules(
   left: SimulationAcceptRule,
   right: SimulationAcceptRule,
@@ -1495,18 +1510,27 @@ function resolveAcceptRuleCandidateDomains(
   }
 }
 
-function minCountLimit(
-  left: SimulationCountLimit,
-  right: SimulationCountLimit,
-): SimulationCountLimit {
-  if (left === "unlimited") {
-    return right;
-  }
-  if (right === "unlimited") {
-    return left;
-  }
-  return Math.min(left, right);
-}
+// AI-REMOVED 2026-06-12:
+// Reason: 边的 count = min(sourcePort.count, targetPort.count) 是 per-tick 限流旧设计。
+// Trigger: 用户要求删除 per tick count，并改为准入口跨 tick admission counter。
+// Evidence: CompiledSimulationTransferEdge.count 已注释化删除。
+// Replacement: target input port 的 admissionRule。
+// Risk: Medium - 分流求解逻辑需通过 targetPortId 查询 runtime counter。
+// Human Review: Required
+//
+// Original code:
+// function minCountLimit(
+//   left: SimulationCountLimit,
+//   right: SimulationCountLimit,
+// ): SimulationCountLimit {
+//   if (left === "unlimited") {
+//     return right;
+//   }
+//   if (right === "unlimited") {
+//     return left;
+//   }
+//   return Math.min(left, right);
+// }
 
 /**
  * 解析设备的运输类别。

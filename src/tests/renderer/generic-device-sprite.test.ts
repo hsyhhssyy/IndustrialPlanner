@@ -2399,7 +2399,16 @@ function createPortDefaults(
         : { kind: "solid" as const },
       exclude: [],
     },
-    count: "unlimited" as const,
+    // AI-REMOVED 2026-06-12:
+    // Reason: PortDefinition.count per-tick 限流字段已删除。
+    // Trigger: 用户要求删除 per tick count。
+    // Evidence: 通用端口 fixture 不应继续生成旧 count 字段。
+    // Replacement: None.
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // count: "unlimited" as const,
     priorityGroup: 0,
     roundRobinSeed,
   }

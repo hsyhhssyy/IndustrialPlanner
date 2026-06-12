@@ -27,6 +27,7 @@ import { DarkPipeLinkInspector } from "./dark-pipe-link-inspector";
 import { SubmitToWarehouseInspector } from "./submit-to-warehouse-inspector";
 import { ProblemInspector } from "./problem-inspector";
 import { PortOutputConfigInspector } from "./port-output-config-inspector";
+import { AdmissionRuleInspector } from "./admission-rule-inspector";
 import { InspectorCollapsiblePanel } from "./inspector-collapsible-panel";
 import { CanvasFloatingToolbarButtonStrip } from "@/app/shell/shared/canvas-floating-toolbar-button-strip";
 import {
@@ -60,6 +61,7 @@ const INSPECTOR_LABELS: Partial<Record<EntityInspectorType, string>> = {
   [INSPECTOR_TYPE.storageManagement]: "缓存管理",
   [INSPECTOR_TYPE.storageTypeFilter]: "缓存类型过滤",
   [INSPECTOR_TYPE.portFilter]: "端口过滤器",
+  [INSPECTOR_TYPE.admissionRule]: "物品准入",
   [INSPECTOR_TYPE.submitToWarehouse]: "定时提交到仓库",
   [INSPECTOR_TYPE.slotConfig]: "槽位配置",
   [INSPECTOR_TYPE.linkConfig]: "链接配置",
@@ -197,6 +199,17 @@ function renderInspector(options: {
           declaration={options.declaration}
           entity={options.entity}
           definition={options.definition}
+          translate={options.translate}
+        />
+      );
+    case INSPECTOR_TYPE.admissionRule:
+      return (
+        <AdmissionRuleInspector
+          appHost={options.appHost}
+          declaration={options.declaration}
+          entity={options.entity}
+          definition={options.definition}
+          runtimeStatus={options.runtimeStatus}
           translate={options.translate}
         />
       );
@@ -552,6 +565,8 @@ function resolveInspectorDiscriminator(
     case INSPECTOR_TYPE.portFilter:
     case INSPECTOR_TYPE.routing:
       return declaration.portRef;
+    case INSPECTOR_TYPE.admissionRule:
+      return `${declaration.portGroupId}:${declaration.portId}`;
     case INSPECTOR_TYPE.linkConfig:
       return String(declaration.cacheLinkIndex);
     case INSPECTOR_TYPE.portOutputConfig:

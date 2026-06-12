@@ -95,8 +95,8 @@ export interface EntityDefinition {
 
   /**
    * 端口组（对应《仿真运行原理》§3.1 缓存类型中 Port 与 Cache 的关系）。
-   * 每个端口有 acceptRule（允许的物品类型）和 count（每 tick 通过上限），
-   * 见《仿真运行原理》§3.1 表格。
+   * 每个端口有 acceptRule（允许的物品类型）；准入口可额外声明 admissionRule
+   * 用于跨 tick 的准入计数与上限。
    */
   portGroups: PortGroupDefinition[];
 
@@ -205,7 +205,16 @@ export interface StorageSlotGroupDefinition {
 }
 
 
-export type CountLimit = number | "unlimited";
+// AI-REMOVED 2026-06-12:
+// Reason: 端口/边的 per-tick count 不属于仿真设计文档，且会把准入口上限错误实现为单 tick 计数。
+// Trigger: 用户要求删除 per tick count，并以准入口 admissionRule 的跨 tick 计数替代。
+// Evidence: .docs/common/模拟器/仿真运行原理.md 已改为仅定义准入口跨 tick admission counter。
+// Replacement: EntityAdmissionRuleDefinition + Runtime admission counter。
+// Risk: Medium - 外部代码若仍引用 CountLimit 或 port.count 需要迁移到准入口 admissionRule。
+// Human Review: Required
+//
+// Original code:
+// export type CountLimit = number | "unlimited";
 // AI-REMOVED 2026-06-06:
 // Reason: submitMode 机制已删除，domain API 不应继续导出旧提交模式类型。
 // Trigger: 用户要求 submit mode 机制彻底删除，未来统一用 WarehouseSink 或 r_warehouse_submit 配方交货。
@@ -279,7 +288,7 @@ export interface PortStorageBindingDefinition {
 }
 
 // ---------------------------------------------------------------------------
-// 端口定义（对应《仿真运行原理》§3.1 中 port 的两个通用配置）
+// 端口定义（对应《仿真运行原理》§3.1 中 port 的 accept-rule 配置）
 // ---------------------------------------------------------------------------
 
 export interface PortDefinition {
@@ -303,11 +312,22 @@ export interface PortDefinition {
    */
   acceptRule: EntityAcceptRuleDefinition;
   /**
-   * 端口每 tick 允许通过的物品数量上限（对应《仿真运行原理》§3.1 表格中的 count）。
-   * "unlimited" = 无上限，数字 = 上限值。
-   * 编译时边的 count = min(sourcePort.count, targetPort.count)（§5.2）。
+   * 准入口跨 tick 准入规则。
+   *
+   * 只应挂在 admission 设备的 input port 上。itemId=null 表示未选择准入物品；
+   * limit=null 表示不设总量上限。计数由仿真 runtime 持久化，不随 tick 清零。
    */
-  count: CountLimit;
+  admissionRule?: EntityAdmissionRuleDefinition | null;
+  // AI-REMOVED 2026-06-12:
+  // Reason: 端口 per-tick count 是错误设计，不应继续作为通用 PortDefinition 字段。
+  // Trigger: 用户确认“per tick count 应删除，文档里没有这个概念”。
+  // Evidence: 新需求要求准入口限制为跨 tick 总计数，而不是 edge 每 tick 当前通过数。
+  // Replacement: admissionRule.limit + runtime admission counter。
+  // Risk: Medium - 旧 config 中 portGroups[*].ports[*].count 会被忽略。
+  // Human Review: Required
+  //
+  // Original code:
+  // count: CountLimit;
   /** 优先级分组（用于分流器调度，对应《仿真运行原理》中 routing 概念） */
   priorityGroup: number;
   /** 轮询种子（同一 priorityGroup 内用于 round-robin 调度） */
@@ -326,4 +346,11 @@ export interface EntityAcceptRuleDefinition {
     | { readonly kind: "item"; readonly itemId: string }
     | { readonly kind: "none" };
   readonly exclude: readonly string[];
+}
+
+export interface EntityAdmissionRuleDefinition {
+  /** 准入物品。null 表示未选择，此时不启用准入口限制。 */
+  readonly itemId: string | null;
+  /** 跨 tick 总准入上限。null 表示无总量上限。 */
+  readonly limit: number | null;
 }

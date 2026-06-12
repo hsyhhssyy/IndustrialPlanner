@@ -21,6 +21,8 @@ export interface SimulationMutableRuntimeState {
 export interface SimulationPersistentRuntimeState {
   slots: Record<string, RuntimeSlotState>;
   devices: Record<string, RuntimeDeviceState>;
+  /** 准入口跨 tick 计数。key 为 compiled port id。 */
+  admissionCounters: Record<string, number>;
   routingCursors: Record<string, number>;
   shareAllTargetSlotIdBySourceSlotId: Record<string, string>;
   sharedCapacitySlotIdsBySlotId: Record<string, readonly string[]>;
@@ -131,7 +133,16 @@ export interface RuntimeTickEdgeState {
   edgeId: string;
   shadowPull: RuntimeShadowState;
   shadowPush: RuntimeShadowState;
-  currentThroughCount: number;
+  // AI-REMOVED 2026-06-12:
+  // Reason: edge 的 currentThroughCount 是单 tick 临时计数，不符合准入口跨 tick 上限语义。
+  // Trigger: 用户确认 per tick count 应删除。
+  // Evidence: 新 admission counter 存放于 SimulationPersistentRuntimeState.admissionCounters。
+  // Replacement: persistent.admissionCounters[targetPortId]。
+  // Risk: Medium - stage-3 求解需改为查询 target port admissionRule。
+  // Human Review: Required
+  //
+  // Original code:
+  // currentThroughCount: number;
   sourceSlotId: string | null;
   targetSlotId: string | null;
   itemType: string | null;
@@ -169,6 +180,7 @@ export function createSimulationMutableRuntimeState(
   normalizeShareAllSources(slots, linkState.shareAllTargetSlotIdBySourceSlotId);
 
   const devices: Record<string, RuntimeDeviceState> = {};
+  const admissionCounters = createInitialAdmissionCounters(topology);
   const routingCursors: Record<string, number> = {};
   for (const deviceId of topology.ordering.deviceOrder) {
     const device = topology.devices[deviceId];
@@ -194,6 +206,7 @@ export function createSimulationMutableRuntimeState(
     persistent: {
       slots,
       devices,
+      admissionCounters,
       routingCursors,
       ...linkState,
       nextRecipeRunIndex: 1,
@@ -245,6 +258,20 @@ export function createMigratedSimulationMutableRuntimeState(
     }
 
     state.persistent.devices[deviceId] = cloneRuntimeDeviceState(previousDeviceState);
+    for (const portId of nextDevice.portIds) {
+      const previousPort = options.previousTopology.ports[portId];
+      const nextPort = options.topology.ports[portId];
+      if (
+        previousPort?.admissionRule !== undefined
+        && previousPort.admissionRule !== null
+        && nextPort?.admissionRule !== undefined
+        && nextPort.admissionRule !== null
+        && previousPort.admissionRule.itemId === nextPort.admissionRule.itemId
+      ) {
+        state.persistent.admissionCounters[portId] =
+          options.previousState.persistent.admissionCounters[portId] ?? 0;
+      }
+    }
     for (const cursorKey of Object.keys(state.persistent.routingCursors)) {
       if (!cursorKey.startsWith(`${deviceId}:`)) {
         continue;
@@ -276,6 +303,7 @@ export function cloneSimulationMutableRuntimeState(
         deviceId,
         cloneRuntimeDeviceState(device),
       ])),
+      admissionCounters: { ...state.persistent.admissionCounters },
       routingCursors: { ...state.persistent.routingCursors },
       shareAllTargetSlotIdBySourceSlotId: { ...state.persistent.shareAllTargetSlotIdBySourceSlotId },
       sharedCapacitySlotIdsBySlotId: Object.fromEntries(
@@ -362,6 +390,19 @@ function createInitialSlotState(slot: CompiledSimulationSlot): RuntimeSlotState 
     itemType: slot.initialItemType ?? slot.lock,
     count: Math.max(0, slot.initialCount),
   };
+}
+
+function createInitialAdmissionCounters(
+  topology: CompiledSimulationTopology,
+): Record<string, number> {
+  const counters: Record<string, number> = {};
+  for (const portId of topology.ordering.portOrder) {
+    const port = topology.ports[portId];
+    if (port?.admissionRule !== null && port?.admissionRule !== undefined) {
+      counters[portId] = 0;
+    }
+  }
+  return counters;
 }
 
 function cloneRuntimeSlotState(slot: RuntimeSlotState): RuntimeSlotState {

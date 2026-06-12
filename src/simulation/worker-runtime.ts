@@ -11,7 +11,10 @@ import type {
   TickPerfEntry,
   TickPerfStage3Details,
 } from "./types";
-import type { SimulationRuntimeSlotPatch } from "@/domain/simulation/types/simulation-types";
+import type {
+  SimulationAdmissionCounterReset,
+  SimulationRuntimeSlotPatch,
+} from "@/domain/simulation/types/simulation-types";
 import type {
   SimulationWorkerRequest,
   SimulationWorkerResponse,
@@ -122,6 +125,13 @@ export class SimulationWorkerRuntime {
             requestId: request.requestId,
             status: this.getStatus(),
           };
+        case "reset-admission-counter":
+          this.resetAdmissionCounter(request.reset);
+          return {
+            type: "admission-counter-reset",
+            requestId: request.requestId,
+            status: this.getStatus(),
+          };
         case "get-perf-report":
           return {
             type: "perf-report",
@@ -168,6 +178,12 @@ export class SimulationWorkerRuntime {
         case "patch-runtime-slot":
           return {
             type: "runtime-slot-patched",
+            requestId: request.requestId,
+            status,
+          };
+        case "reset-admission-counter":
+          return {
+            type: "admission-counter-reset",
             requestId: request.requestId,
             status,
           };
@@ -261,6 +277,46 @@ export class SimulationWorkerRuntime {
     maintainTransportComponentDomains(effectiveTopology, nextState);
 
     this.topology = effectiveTopology;
+    this.runtimeState = nextState;
+    this.clearTickCachesFrom(patchTickNumber);
+    this.lastRequestedTickNumber = patchTickNumber;
+    this.stopLineTick = Math.max(this.stopLineTick, patchTickNumber + MAX_RETAINED_TICKS);
+    this.scheduleBackgroundFill();
+  }
+
+  private resetAdmissionCounter(reset: SimulationAdmissionCounterReset): void {
+    if (this.topology === null || this.runtimeState === null) {
+      return;
+    }
+
+    const compiledDeviceId = resolveCompiledDeviceId(this.topology, reset.entityId);
+    if (compiledDeviceId === null) {
+      return;
+    }
+
+    const compiledPortId = resolveAdmissionCounterPortId({
+      topology: this.topology,
+      compiledDeviceId,
+      portGroupId: reset.portGroupId,
+      portId: reset.portId,
+    });
+    if (compiledPortId === null) {
+      return;
+    }
+
+    if (this.fillTimerId !== null) {
+      clearTimeout(this.fillTimerId);
+      this.fillTimerId = null;
+    }
+
+    const patchTickNumber = this.resolvePatchBaseTickNumber();
+    const baseState = this.tickRuntimeStates.get(patchTickNumber) ?? this.runtimeState;
+    const nextState = cloneSimulationMutableRuntimeState(baseState);
+    nextState.persistent.admissionCounters[compiledPortId] = 0;
+    nextState.tickNumber = patchTickNumber;
+    nextState.lastAdvancedTickNumber = patchTickNumber;
+    nextState.transient = createEmptyTransientState();
+
     this.runtimeState = nextState;
     this.clearTickCachesFrom(patchTickNumber);
     this.lastRequestedTickNumber = patchTickNumber;
@@ -898,6 +954,33 @@ function resolvePatchTargetSlotIds(options: {
   }
 
   return [...new Set(slotIds)];
+}
+
+function resolveAdmissionCounterPortId(options: {
+  readonly topology: CompiledSimulationTopology;
+  readonly compiledDeviceId: string;
+  readonly portGroupId: string;
+  readonly portId: string;
+}): string | null {
+  const device = options.topology.devices[options.compiledDeviceId];
+  if (device === undefined) {
+    return null;
+  }
+
+  for (const compiledPortId of device.portIds) {
+    const port = options.topology.ports[compiledPortId];
+    if (
+      port !== undefined
+      && port.direction === "input"
+      && port.portGroupId === options.portGroupId
+      && port.portDefinitionId === options.portId
+      && port.admissionRule !== null
+    ) {
+      return compiledPortId;
+    }
+  }
+
+  return null;
 }
 
 function patchSlotIgnoreStock(

@@ -50,8 +50,18 @@ export interface SimulationDeviceRuntimeStatusReadModel {
   /** 每个 channel 的运行时配方状态，key 为 channel id */
   readonly channelRecipes: Record<string, SimulationDeviceRuntimeChannelRecipeStatus | null>;
   readonly slotItems: readonly SimulationDeviceRuntimeSlotItemReadModel[];
+  /** 准入口 runtime 计数，key 为 `${portGroupId}:${portId}`。非 admission 设备或旧测试 mock 可省略。 */
+  readonly admissionCounters?: Record<string, SimulationAdmissionCounterStatusReadModel>;
   /** 设备供电范围状态（编译期确定，非运行时变化） */
   readonly powerStatus: "no-power-needed" | "in-power-range" | "out-of-power-range" | null;
+}
+
+export interface SimulationAdmissionCounterStatusReadModel {
+  readonly portGroupId: string;
+  readonly portId: string;
+  readonly itemType: string | null;
+  readonly limit: number | null;
+  readonly count: number;
 }
 
 // AI-CORRECTION 2026-05-14: slotType 字段已删除。
@@ -91,6 +101,12 @@ export interface SimulationRuntimeSlotPatch {
   readonly itemType: string | null;
   readonly count: number;
   readonly ignoreStock: boolean;
+}
+
+export interface SimulationAdmissionCounterReset {
+  readonly entityId: string;
+  readonly portGroupId: string;
+  readonly portId: string;
 }
 
 /** 文档级仿真运行时只读视图 */
