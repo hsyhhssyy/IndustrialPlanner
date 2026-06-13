@@ -32,7 +32,9 @@ const projectRoot = path.resolve(scriptDirectory, '..', '..');
 const defaultOutputDirectory = path.resolve(projectRoot, '.temp', 'device-blueprint-sprites');
 const defaultBatchOutputDirectory = path.resolve(projectRoot, 'public', 'blueprint-view', 'sprites');
 const blueprintAssetDirectory = path.resolve(projectRoot, '.temp', '素材库', '解包素材库', '设备蓝图资源');
+const blueprintPortPartDirectory = path.resolve(projectRoot, 'resources', 'blueprint-port-parts');
 const blueprintAssetExistenceCache = new Map();
+const blueprintPortPartCache = new Map();
 
 void main();
 
@@ -278,13 +280,33 @@ async function loadBlueprintAsset(fileName, rotationDegrees = 0) {
   };
 }
 
-async function cropBlueprintAsset(asset, left, width) {
+async function loadPngAssetWithoutTrim(filePath) {
+  const { data, info } = await sharp(filePath)
+    .ensureAlpha()
+    .png()
+    .toBuffer({ resolveWithObject: true });
+
+  return {
+    input: data,
+    width: info.width,
+    height: info.height,
+  };
+}
+
+async function trimBlueprintAsset(asset, trimPx = BLUEPRINT_ASSET_TRIM_PX) {
+  const trimmedWidth = asset.width - trimPx * 2;
+  const trimmedHeight = asset.height - trimPx * 2;
+
+  if (trimmedWidth <= 0 || trimmedHeight <= 0) {
+    throw new Error('Blueprint asset is too small to trim.');
+  }
+
   const { data, info } = await sharp(asset.input)
     .extract({
-      left,
-      top: 0,
-      width,
-      height: asset.height,
+      left: trimPx,
+      top: trimPx,
+      width: trimmedWidth,
+      height: trimmedHeight,
     })
     .png()
     .toBuffer({ resolveWithObject: true });
@@ -295,6 +317,35 @@ async function cropBlueprintAsset(asset, left, width) {
     height: info.height,
   };
 }
+
+/*
+  AI-REMOVED 2026-06-13:
+  Reason: 协议核心拼接不再从完整端口块裁 overlay；当前实现改为 resources/blueprint-port-parts 的 cell 片段合成。
+  Trigger: 用户指出协议核心蓝图精灵存在重叠元素，并要求重新考虑拼接方法。
+  Evidence: rg 显示 cropBlueprintAsset 仅剩 AI-REMOVED 历史注释引用；npx eslint src/scripts/draw-device-blueprint-sprite.mjs 通过。
+  Replacement: composePortBandAsset
+  Risk: Low - 该 helper 仅服务旧协议核心 overlay 拼接路径，当前 active code 不再调用。
+  Human Review: Required
+
+  Original code:
+  async function cropBlueprintAsset(asset, left, width) {
+    const { data, info } = await sharp(asset.input)
+      .extract({
+        left,
+        top: 0,
+        width,
+        height: asset.height,
+      })
+      .png()
+      .toBuffer({ resolveWithObject: true });
+
+    return {
+      input: data,
+      width: info.width,
+      height: info.height,
+    };
+  }
+*/
 
 async function composeBlueprintAsset(width, height, layers) {
   const { data, info } = await sharp({
@@ -314,6 +365,75 @@ async function composeBlueprintAsset(width, height, layers) {
     width: info.width,
     height: info.height,
   };
+}
+
+async function loadBlueprintPortPart(kind, direction, part) {
+  const cacheKey = `${kind}:${direction}:${part}`;
+  const cached = blueprintPortPartCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const fileName = `${kind}-${direction}-${part}.png`;
+  const partPromise = loadPngAssetWithoutTrim(path.join(blueprintPortPartDirectory, fileName));
+  blueprintPortPartCache.set(cacheKey, partPromise);
+  return partPromise;
+}
+
+async function composePortBandAsset(kind, direction, edgeSpan, portIndices, options = {}) {
+  if (edgeSpan <= 0) {
+    throw new Error(`Unsupported port band span: ${edgeSpan}`);
+  }
+
+  const partByCellKind = new Map([
+    ['left', await loadBlueprintPortPart(kind, direction, 'left')],
+    ['blank', await loadBlueprintPortPart(kind, direction, 'blank')],
+    ['port', await loadBlueprintPortPart(kind, direction, 'port')],
+    ['right', await loadBlueprintPortPart(kind, direction, 'right')],
+  ]);
+  const firstPart = partByCellKind.get('left');
+  if (firstPart === undefined) {
+    throw new Error(`Missing blueprint port part: ${kind}:${direction}:left`);
+  }
+
+  const portIndexSet = new Set(portIndices);
+  const layers = [];
+  for (let cellIndex = 0; cellIndex < edgeSpan; cellIndex += 1) {
+    if (
+      options.omitBlankEndCells === true
+      && !portIndexSet.has(cellIndex)
+      && (cellIndex === 0 || cellIndex === edgeSpan - 1)
+    ) {
+      continue;
+    }
+
+    const partKind = portIndexSet.has(cellIndex)
+      ? 'port'
+      : options.useEndCaps !== false && cellIndex === 0
+        ? 'left'
+        : options.useEndCaps !== false && cellIndex === edgeSpan - 1
+          ? 'right'
+          : 'blank';
+    const part = partByCellKind.get(partKind);
+
+    if (part === undefined) {
+      throw new Error(`Missing blueprint port part: ${kind}:${direction}:${partKind}`);
+    }
+
+    layers.push({
+      input: part.input,
+      left: cellIndex * CELL_SIZE,
+      top: 0,
+    });
+  }
+
+  const composedAsset = await composeBlueprintAsset(
+    edgeSpan * CELL_SIZE,
+    firstPart.height,
+    layers,
+  );
+
+  return trimBlueprintAsset(composedAsset);
 }
 
 async function rotateBlueprintAsset(asset, rotationDegrees) {
@@ -374,41 +494,53 @@ async function maybeCreateSpecialPortCompositeLayer(definition, kind, portEdge) 
 }
 
 async function createSpHubInputCompositeAsset(edge) {
-  const assetWidth = 9 * CELL_SIZE;
-  const leftSegment = await loadBlueprintAsset('port_in_2.png');
-  const middleSegment = await loadBlueprintAsset('port_in_3.png');
-  const rightSegment = await loadBlueprintAsset('port_in_2.png');
-  const sideOverlaySource = await loadBlueprintAsset('port_in_5_2.png');
-  const centerOverlaySource = await loadBlueprintAsset('port_in_5_3.png');
-  const sideOverlayHalfWidth = Math.floor(sideOverlaySource.width / 2);
-  const centerOverlayThirdWidth = Math.floor(centerOverlaySource.width / 3);
-  const leftOverlay = await cropBlueprintAsset(sideOverlaySource, 0, sideOverlayHalfWidth);
-  const rightOverlay = await cropBlueprintAsset(
-    sideOverlaySource,
-    sideOverlaySource.width - sideOverlayHalfWidth,
-    sideOverlayHalfWidth,
-  );
-  const middleOverlay = await cropBlueprintAsset(
-    centerOverlaySource,
-    centerOverlayThirdWidth,
-    centerOverlayThirdWidth,
-  );
-  const assetHeight = Math.max(
-    leftSegment.height,
-    middleSegment.height,
-    rightSegment.height,
-    leftOverlay.height,
-    rightOverlay.height,
-    middleOverlay.height,
-  );
-  const composedAsset = await composeBlueprintAsset(assetWidth, assetHeight, [
-    { input: leftSegment.input, left: CELL_SIZE, top: 0 },
-    { input: middleSegment.input, left: CELL_SIZE * 3, top: 0 },
-    { input: rightSegment.input, left: CELL_SIZE * 6, top: 0 },
-    { input: leftOverlay.input, left: 0, top: 0 },
-    { input: rightOverlay.input, left: assetWidth - rightOverlay.width, top: 0 },
-    { input: middleOverlay.input, left: Math.round((assetWidth - middleOverlay.width) / 2), top: 0 },
-  ]);
+  const composedAsset = await composePortBandAsset('item', 'input', 9, [1, 2, 3, 4, 5, 6, 7]);
+  /*
+    AI-REMOVED 2026-06-13:
+    Reason: 协议核心输入边改为公共端口 cell 片段重复拼接，避免完整端口块与 overlay 块重复叠加造成元素重影。
+    Trigger: 用户指出协议核心蓝图模式精灵下方存在重叠元素，并建议从扩容反应池端口素材裁切公共左侧/端口/右侧片段。
+    Evidence: public/blueprint-view/sprites/item_port_sp_hub_1.png 视觉检查显示端口块边框和灰条重复；旧实现同时叠加 port_in_2/3 完整块和 port_in_5_2/5_3 裁剪 overlay。
+    Replacement: 当前函数顶部 composePortBandAsset('item', 'input', 9, [1..7])。
+    Risk: Low - 仅影响生成脚本和重新生成后的蓝图精灵资源；端口定义未变。
+    Human Review: Required
+
+    Original code:
+    const assetWidth = 9 * CELL_SIZE;
+    const leftSegment = await loadBlueprintAsset('port_in_2.png');
+    const middleSegment = await loadBlueprintAsset('port_in_3.png');
+    const rightSegment = await loadBlueprintAsset('port_in_2.png');
+    const sideOverlaySource = await loadBlueprintAsset('port_in_5_2.png');
+    const centerOverlaySource = await loadBlueprintAsset('port_in_5_3.png');
+    const sideOverlayHalfWidth = Math.floor(sideOverlaySource.width / 2);
+    const centerOverlayThirdWidth = Math.floor(centerOverlaySource.width / 3);
+    const leftOverlay = await cropBlueprintAsset(sideOverlaySource, 0, sideOverlayHalfWidth);
+    const rightOverlay = await cropBlueprintAsset(
+      sideOverlaySource,
+      sideOverlaySource.width - sideOverlayHalfWidth,
+      sideOverlayHalfWidth,
+    );
+    const middleOverlay = await cropBlueprintAsset(
+      centerOverlaySource,
+      centerOverlayThirdWidth,
+      centerOverlayThirdWidth,
+    );
+    const assetHeight = Math.max(
+      leftSegment.height,
+      middleSegment.height,
+      rightSegment.height,
+      leftOverlay.height,
+      rightOverlay.height,
+      middleOverlay.height,
+    );
+    const composedAsset = await composeBlueprintAsset(assetWidth, assetHeight, [
+      { input: leftSegment.input, left: CELL_SIZE, top: 0 },
+      { input: middleSegment.input, left: CELL_SIZE * 3, top: 0 },
+      { input: rightSegment.input, left: CELL_SIZE * 6, top: 0 },
+      { input: leftOverlay.input, left: 0, top: 0 },
+      { input: rightOverlay.input, left: assetWidth - rightOverlay.width, top: 0 },
+      { input: middleOverlay.input, left: Math.round((assetWidth - middleOverlay.width) / 2), top: 0 },
+    ]);
+  */
 
   if (edge === 'SOUTH') {
     return rotateBlueprintAsset(composedAsset, 180);
@@ -418,38 +550,55 @@ async function createSpHubInputCompositeAsset(edge) {
 }
 
 async function createSpHubOutputCompositeAsset(edge) {
-  const assetWidth = 9 * CELL_SIZE;
-  const segmentBandWidth = 3 * CELL_SIZE;
-  const centerOverlaySource = await loadBlueprintAsset('port_out_5_3.png');
-  const overlayThirdWidth = Math.floor(centerOverlaySource.width / 3);
-  const leftOverlay = await cropBlueprintAsset(centerOverlaySource, 0, overlayThirdWidth);
-  const middleOverlay = await cropBlueprintAsset(
-    centerOverlaySource,
-    overlayThirdWidth,
-    overlayThirdWidth,
-  );
-  const rightOverlay = await cropBlueprintAsset(
-    centerOverlaySource,
-    centerOverlaySource.width - overlayThirdWidth,
-    overlayThirdWidth,
-  );
-  const composedAsset = await composeBlueprintAsset(assetWidth, centerOverlaySource.height, [
-    {
-      input: leftOverlay.input,
-      left: Math.round((segmentBandWidth - leftOverlay.width) / 2),
-      top: 0,
-    },
-    {
-      input: middleOverlay.input,
-      left: segmentBandWidth + Math.round((segmentBandWidth - middleOverlay.width) / 2),
-      top: 0,
-    },
-    {
-      input: rightOverlay.input,
-      left: segmentBandWidth * 2 + Math.round((segmentBandWidth - rightOverlay.width) / 2),
-      top: 0,
-    },
-  ]);
+  const composedAsset = await composePortBandAsset('item', 'output', 9, [1, 4, 7], {
+    useEndCaps: false,
+    omitBlankEndCells: true,
+  });
+  /*
+    AI-REMOVED 2026-06-13:
+    Reason: 协议核心输出边改为公共端口 cell 片段按真实端口位置拼接，避免从 port_out_5_3 裁三段后在 3 格带内二次居中造成装饰错位。
+    Trigger: 用户指出协议核心蓝图模式精灵存在重叠元素，并要求重新考虑拼接方法。
+    Evidence: 旧实现把 port_out_5_3 的三段 overlay 分别放进 3 个 segmentBand，保留了源素材内的边框/灰条上下文，旋转到 W/E 后视觉上出现重叠。
+    Replacement: 当前函数顶部 composePortBandAsset('item', 'output', 9, [1, 4, 7])。
+    AI-CORRECTION 2026-06-13: 左右输出边现在通过 { useEndCaps: false } 关闭端帽，避免与上下输入边端帽在四角重叠。
+    AI-CORRECTION 2026-06-13: 左右输出边首尾空格现在通过 { omitBlankEndCells: true } 保持透明，只由上下输入边负责角部装饰。
+    Risk: Low - 仅影响生成脚本和重新生成后的蓝图精灵资源；端口定义未变。
+    Human Review: Required
+
+    Original code:
+    const assetWidth = 9 * CELL_SIZE;
+    const segmentBandWidth = 3 * CELL_SIZE;
+    const centerOverlaySource = await loadBlueprintAsset('port_out_5_3.png');
+    const overlayThirdWidth = Math.floor(centerOverlaySource.width / 3);
+    const leftOverlay = await cropBlueprintAsset(centerOverlaySource, 0, overlayThirdWidth);
+    const middleOverlay = await cropBlueprintAsset(
+      centerOverlaySource,
+      overlayThirdWidth,
+      overlayThirdWidth,
+    );
+    const rightOverlay = await cropBlueprintAsset(
+      centerOverlaySource,
+      centerOverlaySource.width - overlayThirdWidth,
+      overlayThirdWidth,
+    );
+    const composedAsset = await composeBlueprintAsset(assetWidth, centerOverlaySource.height, [
+      {
+        input: leftOverlay.input,
+        left: Math.round((segmentBandWidth - leftOverlay.width) / 2),
+        top: 0,
+      },
+      {
+        input: middleOverlay.input,
+        left: segmentBandWidth + Math.round((segmentBandWidth - middleOverlay.width) / 2),
+        top: 0,
+      },
+      {
+        input: rightOverlay.input,
+        left: segmentBandWidth * 2 + Math.round((segmentBandWidth - rightOverlay.width) / 2),
+        top: 0,
+      },
+    ]);
+  */
 
   return rotateBlueprintAsset(composedAsset, resolveEdgeRotationDegrees(edge));
 }
@@ -464,8 +613,9 @@ async function createPortCompositeLayers(definition, kind) {
     }
 
     const assetSource = await resolvePortAssetSource(definition, kind, portEdge);
-    const fileName = assetSource.fileName;
-    const asset = await loadBlueprintAsset(fileName, resolveEdgeRotationDegrees(portEdge.edge));
+    const asset = assetSource.asset === undefined
+      ? await loadBlueprintAsset(assetSource.fileName, resolveEdgeRotationDegrees(portEdge.edge))
+      : await rotateBlueprintAsset(assetSource.asset, resolveEdgeRotationDegrees(portEdge.edge));
     const position = resolveEdgeAssetPosition(
       definition.footprint,
       portEdge.edge,
@@ -605,6 +755,17 @@ async function resolvePortAssetSource(definition, kind, portEdge) {
         segmentSpan: fallbackSegment.segmentSpan,
       };
     }
+
+    return {
+      asset: await composePortBandAsset(
+        kind,
+        portEdge.direction,
+        fallbackSegment.segmentSpan,
+        portEdge.boundaryIndices.map((index) => index - fallbackSegment.segmentStart),
+      ),
+      segmentStart: fallbackSegment.segmentStart,
+      segmentSpan: fallbackSegment.segmentSpan,
+    };
   }
 
   throw new Error(`Input file is missing: ${path.join(blueprintAssetDirectory, directFileName)}`);
@@ -636,7 +797,7 @@ async function resolveFallbackPortAssetFileName(kind, portEdge, segmentSpan) {
     resolvePortAssetFileNameByValues(kind, portEdge.direction, segmentSpan, portEdge.portCount),
   ];
 
-  if (portEdge.portCount === 1) {
+  if (portEdge.portCount === 1 && segmentSpan === 1) {
     candidateFileNames.push(resolveCollapsedSinglePortAssetFileName(kind, portEdge.direction, segmentSpan));
   }
 

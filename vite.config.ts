@@ -57,8 +57,8 @@ export default defineConfig({
         ],
       },
       injectManifest: {
-        globPatterns: ["**/*.{js,css,html,ico,png,webp,svg,jpg,jpeg,json,webmanifest}"],
-        globIgnores: ["**/sw.js", "**/workbox-*.js"],
+        globPatterns: ["**/*.{js,css,html,ico,png,webp,svg,jpg,jpeg,json,webmanifest,md}"],
+        globIgnores: ["**/sw.js", "**/workbox-*.js", "changelog/**/*.{png,jpg,jpeg,webp,svg,gif}"],
         maximumFileSizeToCacheInBytes: PWA_MAX_CACHE_FILE_BYTES,
         manifestTransforms: [
           (entries) => ({

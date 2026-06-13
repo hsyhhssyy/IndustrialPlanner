@@ -55,6 +55,10 @@ describe("PortPriorityGroupInspector", () => {
     renderInspector(currentAppHost, definition, entity, root);
 
     expect(container.textContent).toContain("端口优先级组");
+    // 自定义关闭时默认折叠，需先展开面板
+    const expandToggle = container.querySelector<HTMLButtonElement>("[aria-label='展开端口优先级组']");
+    act(() => { expandToggle?.click(); });
+
     expect(container.textContent).toContain("P1.1");
     expect(container.textContent).toContain("P1.2");
     expect(container.textContent).toContain("P1.3");

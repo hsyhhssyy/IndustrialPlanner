@@ -63,10 +63,12 @@ export function PortPriorityGroupInspector({
 
   return (
     <InspectorCollapsiblePanel
+      key={`port-priority-group-${customEnabled}`}
       bodyClassName="port-priority-panel-body"
       className="port-priority-group-inspector"
       data-device-class={deviceClass}
       dataInspectorKey="port-priority-group"
+      defaultExpanded={customEnabled}
       headerActions={(
         <label className={cm(styles, "port-priority-custom-switch")}>
           <input

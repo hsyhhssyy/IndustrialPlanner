@@ -2,6 +2,8 @@ import { makeAutoObservable, runInAction } from "mobx";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
+import { isBaseBuiltinEntityId } from "@/domain/registry/types/base-definition";
+import { listWorldDocuments } from "@/shared/storage";
 
 import {
   detectV2MigrationData,
@@ -32,7 +34,11 @@ export class V2MigrationController {
   detection: V2MigrationDetection = detectV2MigrationData();
   migrationState: V2MigrationState = readV2MigrationState();
   phase: V2MigrationPhase = "idle";
+  // AI-CORRECTION 2026-06-13: confirmationRequested 已替换为 showClearConfirmation 文字确认流程。
   confirmationRequested = false;
+  v3IsEmpty: boolean | null = null;
+  showClearConfirmation = false;
+  clearConfirmationText = "";
   errorMessage: string | null = null;
   result: V2MigrationExecutorResult | null = null;
   private didAutoOpen = false;
@@ -65,10 +71,13 @@ export class V2MigrationController {
     this.refresh();
     this.dialogState.visible = true;
     this.confirmationRequested = false;
+    this.showClearConfirmation = false;
+    this.clearConfirmationText = "";
     this.errorMessage = null;
     if (this.phase !== "migrating") {
       this.phase = this.result === null ? "idle" : "completed";
     }
+    void this.checkV3Emptiness();
   }
 
   closeDialog(): void {
@@ -78,15 +87,27 @@ export class V2MigrationController {
 
     this.dialogState.visible = false;
     this.confirmationRequested = false;
+    this.showClearConfirmation = false;
+    this.clearConfirmationText = "";
   }
 
-  requestConfirmation(): void {
+  async requestConfirmation(appHost: AppHost): Promise<void> {
     if (this.phase === "migrating") {
       return;
     }
 
-    this.confirmationRequested = true;
-    this.errorMessage = null;
+    await this.checkV3Emptiness();
+
+    if (this.v3IsEmpty === true) {
+      void this.runMigration(appHost);
+      return;
+    }
+
+    runInAction(() => {
+      this.showClearConfirmation = true;
+      this.clearConfirmationText = "";
+      this.errorMessage = null;
+    });
   }
 
   cancelConfirmation(): void {
@@ -95,6 +116,41 @@ export class V2MigrationController {
     }
 
     this.confirmationRequested = false;
+    this.showClearConfirmation = false;
+    this.clearConfirmationText = "";
+  }
+
+  submitClearConfirmation(appHost: AppHost): void {
+    if (this.phase === "migrating") {
+      return;
+    }
+
+    if (this.clearConfirmationText !== "清除所有基地数据") {
+      return;
+    }
+
+    this.showClearConfirmation = false;
+    void this.runMigration(appHost);
+  }
+
+  private async checkV3Emptiness(): Promise<void> {
+    try {
+      const documents = await listWorldDocuments();
+      const isEmpty = documents.length === 0
+        || documents.every((document) =>
+          Object.keys(document.entities).every((entityId) =>
+            isBaseBuiltinEntityId(entityId),
+          ),
+        );
+
+      runInAction(() => {
+        this.v3IsEmpty = isEmpty;
+      });
+    } catch {
+      runInAction(() => {
+        this.v3IsEmpty = null;
+      });
+    }
   }
 
   async runMigration(appHost: AppHost): Promise<void> {
@@ -106,6 +162,8 @@ export class V2MigrationController {
       this.phase = "migrating";
       this.errorMessage = null;
       this.confirmationRequested = false;
+      this.showClearConfirmation = false;
+      this.clearConfirmationText = "";
     });
 
     try {

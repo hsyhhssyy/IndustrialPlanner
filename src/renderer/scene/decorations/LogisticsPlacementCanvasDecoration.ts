@@ -26,8 +26,8 @@ const MODE_LABEL_TEXT_STYLE = {
 } satisfies TextStyleOptions;
 
 const LOGISTICS_PLACEMENT_LABELS = {
-  belt: "布设传送带",
-  pipe: "布设管道",
+  belt: "//布设传送带",
+  pipe: "//布设管道",
 } as const;
 
 interface AppWithLogisticsPlacementRuntime {
@@ -85,8 +85,8 @@ export function createLogisticsPlacementCanvasDecoration(): DecorationLayer {
         : logisticsKind === null
           ? ""
           : LOGISTICS_PLACEMENT_LABELS[logisticsKind];
-      modeLabel.x = 12;
-      modeLabel.y = 12;
+      modeLabel.x = 14;
+      modeLabel.y = 8;
 
       if (modeLabel.style.dropShadow) {
         modeLabel.style.dropShadow.color = resolveAppThemeColorNumber(

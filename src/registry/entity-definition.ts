@@ -100,10 +100,12 @@ const DEDICATED_BELT_PLACEMENT_BEHAVIORS = [
 const WAREHOUSE_BUS_SEGMENT_PLACEMENT_BEHAVIORS = [
   { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
   { type: PLACEMENT_BEHAVIOR_TYPE.mustConnectToHub },
+  { type: PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase },
 ] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
 
 const WAREHOUSE_BUS_SOURCE_PLACEMENT_BEHAVIORS = [
   { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+  { type: PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase },
 ] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
 
 const WAREHOUSE_PORT_PLACEMENT_BEHAVIORS = [

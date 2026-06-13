@@ -44,6 +44,11 @@ const PREVIEW_BORDER_ALPHA = 0.5
 const PREVIEW_NORMAL_COLOR = 0xffffff
 const PREVIEW_INVALID_SCANLINE_TINT = 0xff0000
 const PREVIEW_INVALID_BORDER_COLOR = 0xff3b30
+const PIPE_IDLE_BODY_ALPHA = 0.62
+const PIPE_ACTIVE_BODY_ALPHA = 1
+const PIPE_SELECTION_GLOW_ALPHA = 0.42
+const PIPE_SELECTION_GLOW_SCALE = 1.08
+const PIPE_SELECTION_GLOW_TINT = 0xd8f7ff
 
 interface LocalPoint {
   readonly x: number;
@@ -64,6 +69,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   private readonly scanlineTiling: TilingSprite
   private readonly scanlineRectMask: Graphics
   private readonly previewBorderGraphics: Graphics
+  private readonly selectionGlow: Sprite | null
   private scanlineTexture: Texture | null = null
   private scanlineLoadStarted = false
   private currentLayout: RenderSpriteLayout | null = null
@@ -102,9 +108,23 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     this.previewBorderGraphics = new Graphics({ roundPixels: true })
     this.previewBorderGraphics.visible = false
 
+    this.selectionGlow = resolveSpriteLogisticsFamily(this.spriteId) === "pipe"
+      ? new Sprite(Texture.EMPTY)
+      : null
+    if (this.selectionGlow !== null) {
+      this.selectionGlow.anchor.set(0.5)
+      this.selectionGlow.roundPixels = true
+      this.selectionGlow.visible = false
+      this.selectionGlow.alpha = PIPE_SELECTION_GLOW_ALPHA
+      this.selectionGlow.tint = PIPE_SELECTION_GLOW_TINT
+    }
+
     this.previewEffectRoot.addChild(this.scanlineTiling)
     this.previewEffectRoot.addChild(this.scanlineRectMask)
     this.previewEffectRoot.addChild(this.previewBorderGraphics)
+    if (this.selectionGlow !== null) {
+      this.previewEffectRoot.addChild(this.selectionGlow)
+    }
     this.getRootOfLayer("overlay").addChild(this.previewEffectRoot)
 
     this.syncDeviceTexture()
@@ -140,6 +160,11 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
       theme: context.theme,
       workspace: context.workspace,
     })
+    this.body.alpha = resolveDedicatedLogisticBodyAlpha({
+      entityId: this.entityId,
+      spriteId: this.spriteId,
+      workspace: context.workspace,
+    })
   }
 
   protected resetCollectionOverlay(
@@ -152,6 +177,9 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     this.scanlineTiling.visible = false
     this.previewBorderGraphics.clear()
     this.previewBorderGraphics.visible = false
+    if (this.selectionGlow !== null) {
+      this.selectionGlow.visible = false
+    }
     this.previewEffectRoot.visible = false
   }
 
@@ -174,8 +202,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
-    void layout
-    void context
+    this.drawPipeSelectionGlow(layout, context)
   }
 
   protected onDestroy(): void {
@@ -235,6 +262,30 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
         alpha: PREVIEW_BORDER_ALPHA,
       })
 
+    this.previewEffectRoot.visible = true
+  }
+
+  private drawPipeSelectionGlow(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    void context
+
+    if (this.selectionGlow === null || !this.isTextureReady) {
+      return
+    }
+
+    const centeredLayout = this.resolveCenteredSpriteLayout(layout)
+    applyCenteredSpriteLayout(this.selectionGlow, {
+      x: centeredLayout.x,
+      y: centeredLayout.y,
+      width: centeredLayout.width * PIPE_SELECTION_GLOW_SCALE,
+      height: centeredLayout.height * PIPE_SELECTION_GLOW_SCALE,
+      rotation: centeredLayout.rotation,
+    })
+    this.selectionGlow.tint = PIPE_SELECTION_GLOW_TINT
+    this.selectionGlow.alpha = PIPE_SELECTION_GLOW_ALPHA
+    this.selectionGlow.visible = true
     this.previewEffectRoot.visible = true
   }
 
@@ -352,6 +403,9 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
         }
 
         this.body.texture = bodyTexture
+        if (this.selectionGlow !== null) {
+          this.selectionGlow.texture = bodyTexture
+        }
         this.isTextureReady = true
 
         if (this.currentLayout !== null && this.currentSyncContext !== null) {
@@ -372,6 +426,11 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
             theme: this.currentSyncContext.theme,
             workspace: this.currentSyncContext.workspace,
           })
+          this.body.alpha = resolveDedicatedLogisticBodyAlpha({
+            entityId: this.entityId,
+            spriteId: this.spriteId,
+            workspace: this.currentSyncContext.workspace,
+          })
           this.afterDeviceTextureReady(this.currentLayout, this.currentSyncContext)
           return
         }
@@ -384,6 +443,9 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
         }
 
         this.body.visible = false
+        if (this.selectionGlow !== null) {
+          this.selectionGlow.visible = false
+        }
       })
   }
 }
@@ -570,6 +632,39 @@ export function resolveDedicatedLogisticTintColor(options: {
   }
 
   return ordinaryColor
+}
+
+function resolveDedicatedLogisticBodyAlpha(options: {
+  entityId: string;
+  spriteId: string;
+  workspace: WorkspaceContract;
+}): number {
+  const { entityId, spriteId, workspace } = options
+  if (!spriteId.startsWith("pipe_")) {
+    return 1
+  }
+
+  const collections = workspace.editor?.state?.collections
+  if (!collections) {
+    return PIPE_IDLE_BODY_ALPHA
+  }
+
+  const previewCollection = collections[EntityCollectionType.preview]
+  const marqueeCollection = collections[EntityCollectionType.marquee]
+  const reverseMarqueeCollection = collections[EntityCollectionType.reverseMarquee]
+  const logisticsHeadCollection = collections[EntityCollectionType.logisticsHead]
+  const selectionCollection = collections[EntityCollectionType.selection]
+  const isPreview = previewCollection?.contains(entityId) ?? false
+  const isMarquee = marqueeCollection?.contains(entityId) ?? false
+  const isReverseMarquee = reverseMarqueeCollection?.contains(entityId) ?? false
+  const isPlacementHead = logisticsHeadCollection?.contains(entityId) ?? false
+  const isSelected = selectionCollection?.contains(entityId) ?? false
+
+  if (isPreview || isMarquee || isPlacementHead || (isSelected && !isReverseMarquee)) {
+    return PIPE_ACTIVE_BODY_ALPHA
+  }
+
+  return PIPE_IDLE_BODY_ALPHA
 }
 
 function applyCenteredSpriteLayout(

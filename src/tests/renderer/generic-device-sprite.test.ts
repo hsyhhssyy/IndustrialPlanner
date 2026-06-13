@@ -1367,7 +1367,7 @@ describe("GenericDeviceSprite", () => {
     ))
   })
 
-  it("keeps the pipe multi-selection tint aligned with belt states", async () => {
+  it("makes selected pipes opaque and adds a low-cost glow sprite", async () => {
     const resolvedTexture = createLoadedTextureMock("pipe-device-texture")
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()
@@ -1394,14 +1394,44 @@ describe("GenericDeviceSprite", () => {
     await flushMicrotasks(4)
 
     sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    }))
+
+    expect(resolveEntitySprite(entityLayer)).toMatchObject({
+      alpha: 0.62,
+      tint: resolveAppThemeColorNumber(
+        AYU_LIGHT_THEME,
+        AYU_LIGHT_THEME.renderer.pipeBodyTintColorKey,
+      ),
+    })
+    expect(resolvePipeSelectionGlowSprite(overlayLayer)).toMatchObject({
+      visible: false,
+    })
+
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
       selectionIds: ["pipe-entity-3", "other-entity"],
       previewIds: [],
     }))
 
-    expect(resolveEntitySprite(entityLayer)?.tint).toBe(resolveAppThemeColorNumber(
-      AYU_LIGHT_THEME,
-      AYU_LIGHT_THEME.renderer.worldPreviewRectFillColorKey,
-    ))
+    expect(resolveEntitySprite(entityLayer)).toMatchObject({
+      alpha: 1,
+      tint: resolveAppThemeColorNumber(
+        AYU_LIGHT_THEME,
+        AYU_LIGHT_THEME.renderer.worldPreviewRectFillColorKey,
+      ),
+    })
+    expect(resolvePipeSelectionGlowSprite(overlayLayer)).toMatchObject({
+      texture: resolvedTexture,
+      visible: true,
+      x: 26,
+      y: 36,
+      width: 34.56,
+      height: 34.56,
+      rotation: 0,
+      tint: 0xd8f7ff,
+      alpha: 0.42,
+    })
   })
 
   it("uses the preview blue tint for marquee candidates before apply", async () => {
@@ -2789,6 +2819,10 @@ function resolvePreviewEffectRoot(overlayLayer: ReturnType<typeof createLayerStu
     visible?: boolean;
     children?: unknown[];
   } | undefined
+}
+
+function resolvePipeSelectionGlowSprite(overlayLayer: ReturnType<typeof createLayerStub>) {
+  return resolvePreviewEffectRoot(overlayLayer)?.children?.[3] as RenderedSpriteSnapshot | undefined
 }
 
 function resolveSelectionEffectRoot(overlayLayer: ReturnType<typeof createLayerStub>) {

@@ -81,6 +81,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // AI-GENERATED 2026-06-13:
+  // changelog 图片不进入 PWA 缓存，每次在线加载，确保版本更新后图片即时生效。
+  if (/^\/changelog\/.*\.(png|jpe?g|webp|svg|gif)$/i.test(requestUrl.pathname)) {
+    return;
+  }
+
   event.respondWith(resolvePrecachedResponse(request));
 });
 

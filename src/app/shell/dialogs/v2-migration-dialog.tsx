@@ -84,25 +84,11 @@ export const V2MigrationDialog = observer(function V2MigrationDialog({
         )}
 
         <div className={cm(styles, "v2-migration-actions")}>
-          {controller.confirmationRequested ? (
-            <>
-              <button
-                className={cm(styles, "v2-migration-secondary-button")}
-                disabled={controller.phase === "migrating"}
-                onClick={controller.cancelConfirmation}
-                type="button"
-              >
-                取消
-              </button>
-              <button
-                className={cm(styles, "v2-migration-danger-button")}
-                disabled={controller.phase === "migrating"}
-                onClick={() => void controller.runMigration(appHost)}
-                type="button"
-              >
-                确认清空 v3 地图并迁移
-              </button>
-            </>
+          {controller.showClearConfirmation ? (
+            <ClearConfirmationBlock
+              appHost={appHost}
+              controller={controller}
+            />
           ) : (
             <>
               <button
@@ -116,7 +102,7 @@ export const V2MigrationDialog = observer(function V2MigrationDialog({
               <button
                 className={cm(styles, "v2-migration-primary-button")}
                 disabled={!controller.detection.hasData || controller.phase === "migrating"}
-                onClick={controller.requestConfirmation}
+                onClick={() => void controller.requestConfirmation(appHost)}
                 type="button"
               >
                 {controller.phase === "migrating" ? "迁移中..." : isCompleted ? "重新迁移" : "开始迁移"}
@@ -182,5 +168,61 @@ const MigrationStatus = observer(function MigrationStatus({
         模块配平数据 {controller.detection.hasModuleBalancingData ? "存在" : "未检测到"}。
       </span>
     </section>
+  );
+});
+
+interface ClearConfirmationBlockProps {
+  appHost: AppHost;
+  controller: V2MigrationController;
+}
+
+const CLEAR_CONFIRMATION_PHRASE = "清除所有基地数据";
+
+const ClearConfirmationBlock = observer(function ClearConfirmationBlock({
+  appHost,
+  controller,
+}: ClearConfirmationBlockProps) {
+  const isMigrating = controller.phase === "migrating";
+  const inputMatches = controller.clearConfirmationText === CLEAR_CONFIRMATION_PHRASE;
+
+  return (
+    <div className={cm(styles, "v2-migration-clear-confirm")}>
+      <section className={cm(styles, "v2-migration-section v2-migration-warning")}>
+        <h3>当前 v3 地图已有内容</h3>
+        <p>迁移会清空 v3 当前所有地图数据。请输入「{CLEAR_CONFIRMATION_PHRASE}」确认操作。</p>
+      </section>
+
+      <input
+        className={cm(styles, "v2-migration-confirm-input")}
+        disabled={isMigrating}
+        onChange={(event) => {
+          runInAction(() => {
+            controller.clearConfirmationText = event.target.value;
+          });
+        }}
+        placeholder="请输入「清除所有基地数据」"
+        type="text"
+        value={controller.clearConfirmationText}
+      />
+
+      <div className={cm(styles, "v2-migration-actions")}>
+        <button
+          className={cm(styles, "v2-migration-secondary-button")}
+          disabled={isMigrating}
+          onClick={controller.cancelConfirmation}
+          type="button"
+        >
+          取消
+        </button>
+        <button
+          className={cm(styles, "v2-migration-danger-button")}
+          disabled={!inputMatches || isMigrating}
+          onClick={() => controller.submitClearConfirmation(appHost)}
+          type="button"
+        >
+          确认清空 v3 地图并迁移
+        </button>
+      </div>
+    </div>
   );
 });

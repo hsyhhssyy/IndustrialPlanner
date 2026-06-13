@@ -24,6 +24,7 @@ import { RecipePickerDialog } from "@/app/shell/dialogs/recipe-picker-dialog";
 import { SaveBlueprintDialog } from "@/app/shell/dialogs/save-blueprint-dialog";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
 import { V2MigrationDialog } from "@/app/shell/dialogs/v2-migration-dialog";
+import { ChangelogDialog } from "@/app/shell/dialogs/changelog-dialog";
 import { WarehouseStatsDialog } from "@/app/shell/dialogs/warehouse-stats-dialog";
 import { EncyclopediaPickerDialog } from "@/app/shell/encyclopedia/encyclopedia-picker-dialog";
 import {
@@ -749,6 +750,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         pwaController={pwaController}
       />
       <V2MigrationDialog appHost={appHost} controller={migrationController} />
+      <ChangelogDialog appHost={appHost} />
       <PwaGateway appHost={appHost} pwaController={pwaController} />
       {showMobilePortraitGate ? <MobilePortraitGate appHost={appHost} /> : null}
     </div>
