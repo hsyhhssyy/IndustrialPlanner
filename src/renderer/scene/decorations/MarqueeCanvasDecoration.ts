@@ -6,23 +6,24 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 
 /** 框选模式标签固定蓝色 */
-const MARQUEE_LABEL_COLOR = 0x3B82F6;
+/** AI-CORRECTION 2026-06-13: 参考游戏 HUD 后，框选模式标签改为白色主标题，避免和浅蓝画布背景抢色。 */
+const MARQUEE_LABEL_COLOR = 0xF8FBFF;
 
 /** 左上角模式标签样式（不含 dropShadow.color，由 sync 动态设置） */
 const MODE_LABEL_TEXT_STYLE = {
-  fontSize: 28,
+  fontSize: 31,
   fontFamily: "sans-serif",
-  fontWeight: "bold",
+  fontWeight: "900",
   stroke: {
-    color: 0x20242a,
-    width: 4,
-    alpha: 0.42,
+    color: 0x111827,
+    width: 5,
+    alpha: 0.62,
   },
   dropShadow: {
     angle: Math.PI / 4,
-    alpha: 0.6,
-    blur: 4,
-    distance: 1,
+    alpha: 0.72,
+    blur: 3,
+    distance: 2,
   },
 } satisfies TextStyleOptions;
 
@@ -54,9 +55,9 @@ export function createMarqueeCanvasDecoration(): DecorationLayer {
 
       const isReverse =
         ctx.renderHost.workspace.app!.state.toolInfo.marqueeType === EntityCollectionType.reverseMarquee;
-      modeLabel.text = isReverse ? "批量反选模式" : "批量选择模式";
-      modeLabel.x = 12;
-      modeLabel.y = 12;
+      modeLabel.text = isReverse ? "//批量反选模式" : "//批量选择模式";
+      modeLabel.x = 14;
+      modeLabel.y = 8;
 
       modeLabel.style.fill = MARQUEE_LABEL_COLOR;
       if (modeLabel.style.dropShadow) {

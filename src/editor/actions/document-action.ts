@@ -8,7 +8,6 @@ import {
   resolveLatestWorldDocumentForBase,
 } from "../document-storage";
 import type { EditorStateReadWrite } from "../state-impl";
-import { syncPoweredEntityCollection } from "./powered-collection";
 import { action, runInAction } from "mobx";
 import type { EditorActionsContext } from "./types";
 
@@ -37,12 +36,7 @@ export function createEditorDocumentActions({
 
       runInAction(() => {
         resetDocumentRuntimeState(state);
-        const committedDocument = document.setSnapshot(nextDocument);
-        syncPoweredEntityCollection({
-          document: committedDocument,
-          state,
-          workspace,
-        });
+        document.setSnapshot(nextDocument);
       });
 
       return true;

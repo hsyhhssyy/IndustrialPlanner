@@ -10,7 +10,6 @@ import {
   resolveEntityGridRect,
   isGridPointInsideRect,
 } from "../logistics/logistics-utils";
-import { syncPoweredEntityCollection } from "./powered-collection";
 import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 
@@ -202,7 +201,7 @@ export function createEditorTransportActions(
       }
     }
 
-    const committedDocument = documentWriter.commit({
+    documentWriter.commit({
       action: {
         type: "entity.delete",
         label,
@@ -215,14 +214,6 @@ export function createEditorTransportActions(
         entities: nextEntities,
       }),
     });
-
-    if (committedDocument !== null) {
-      syncPoweredEntityCollection({
-        document: committedDocument,
-        state,
-        workspace,
-      });
-    }
 
     // 从所有集合中移除已删除的实体
     removeEntityIdsFromCollections(toDelete);

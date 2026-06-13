@@ -8,7 +8,6 @@ import { createUuid } from "@/domain/shared/uuid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 
 import { syncPlacementValidationState } from "../placement-validation";
-import { syncPoweredEntityCollection } from "./powered-collection";
 import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 
@@ -305,14 +304,6 @@ export function createEditorPlacementActions({
           slotLinks: nextSlotLinks,
         }),
       });
-
-      if (committedDocument !== null) {
-        syncPoweredEntityCollection({
-          document: committedDocument,
-          state,
-          workspace,
-        });
-      }
 
       syncPlacementValidationState({
         document: committedDocument ?? document.getSnapshot(),

@@ -20,7 +20,6 @@ import {
   hasOutsideBasePlacementReason,
   syncPlacementValidationState,
 } from "../placement-validation";
-import { syncPoweredEntityCollection } from "./powered-collection";
 import type { EditorActionsContext } from "./types";
 
 type EditorCollectionActions = Pick<
@@ -143,7 +142,7 @@ export function createEditorSelectionActions({
         return;
       }
 
-      const committedDocument = documentWriter.commit({
+      documentWriter.commit({
         action: {
           type: "entity.move",
           label: "移动设备",
@@ -159,13 +158,6 @@ export function createEditorSelectionActions({
         }),
       });
 
-      if (committedDocument !== null) {
-        syncPoweredEntityCollection({
-          document: committedDocument,
-          state,
-          workspace,
-        });
-      }
     }
 
     let didUpdateDrafts = false;
@@ -310,7 +302,7 @@ export function createEditorSelectionActions({
         return;
       }
 
-      const committedDocument = documentWriter.commit({
+      documentWriter.commit({
         action: {
           type: "entity.rotate",
           label: "旋转设备",
@@ -326,13 +318,6 @@ export function createEditorSelectionActions({
         }),
       });
 
-      if (committedDocument !== null) {
-        syncPoweredEntityCollection({
-          document: committedDocument,
-          state,
-          workspace,
-        });
-      }
     }
 
     let didUpdateDrafts = false;
@@ -512,7 +497,7 @@ export function createEditorSelectionActions({
             return entity === undefined ? [] : [entity];
           });
 
-        const committedDocument = documentWriter.commit({
+        documentWriter.commit({
           action: {
             type: "entity.delete",
             label: "删除设备",
@@ -535,13 +520,6 @@ export function createEditorSelectionActions({
           }),
         });
 
-        if (committedDocument !== null) {
-          syncPoweredEntityCollection({
-            document: committedDocument,
-            state,
-            workspace,
-          });
-        }
       }
 
       const removedDraftIds = new Set<string>();

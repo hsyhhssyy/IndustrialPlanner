@@ -2,7 +2,6 @@ import type { EditorAction } from "@/domain/editor/editor-action";
 import type { WorldEntity } from "@/domain/document/world-document";
 
 import { syncPlacementValidationState } from "../placement-validation";
-import { syncPoweredEntityCollection } from "./powered-collection";
 import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 
@@ -44,14 +43,6 @@ export function createEditorDefinitionActions({
             ),
           }),
         });
-
-        if (committedDocument !== null) {
-          syncPoweredEntityCollection({
-            document: committedDocument,
-            state,
-            workspace,
-          });
-        }
 
         syncPlacementValidationState({
           document: committedDocument ?? document.getSnapshot(),

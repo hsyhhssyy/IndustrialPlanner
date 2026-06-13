@@ -12,7 +12,6 @@ import {
   hasOutsideBasePlacementReason,
   syncPlacementValidationState,
 } from "../placement-validation";
-import { syncPoweredEntityCollection } from "./powered-collection";
 import type { EditorActionsContext } from "./types";
 
 type EditorMoveActions = Pick<
@@ -133,7 +132,7 @@ export function createEditorMoveActions({
       }
 
       if (didUpdateDocument) {
-        const committedDocument = documentWriter.commit({
+        documentWriter.commit({
           action: {
             type: "entity.move",
             label: "移动设备",
@@ -155,13 +154,6 @@ export function createEditorMoveActions({
           }),
         });
 
-        if (committedDocument !== null) {
-          syncPoweredEntityCollection({
-            document: committedDocument,
-            state,
-            workspace,
-          });
-        }
       }
 
       clearMoveOperationState(state);

@@ -17,6 +17,7 @@ import {
 } from "./history";
 import { createEditorQueries } from "./queries";
 import { syncPlacementValidationState } from "./placement-validation";
+import { syncPoweredEntityCollection } from "./actions/powered-collection";
 import { hookLocalstorage } from "./storage-hook";
 import { createEditorStateReadWrite, EditorStateReadWrite } from "./state-impl";
 
@@ -93,6 +94,7 @@ export function createEditorHost(
   disposers.push(hookDocumentHistory(host));
   disposers.push(hookDocumentViewport(host));
   disposers.push(hookPlacementValidation(host));
+  disposers.push(hookPoweredCollection(host));
   disposers.push(hookLocalstorage(host));
   disposers.push(hookDocumentStorage(host));
 
@@ -113,6 +115,22 @@ function hookPlacementValidation(editorHost: EditorHost): () => void {
   syncPlacementValidation(editorHost.internalDocument.getSnapshot());
 
   return editorHost.internalDocument.subscribe(syncPlacementValidation);
+}
+
+function hookPoweredCollection(editorHost: EditorHost): () => void {
+  const syncPowered = (document: WorldDocument): void => {
+    runInAction(() => {
+      syncPoweredEntityCollection({
+        document,
+        state: editorHost.internalState,
+        workspace: editorHost.workspace,
+      });
+    });
+  };
+
+  syncPowered(editorHost.internalDocument.getSnapshot());
+
+  return editorHost.internalDocument.subscribe(syncPowered);
 }
 
 function hookDocumentHistory(editorHost: EditorHost): () => void {

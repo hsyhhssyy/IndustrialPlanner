@@ -17,7 +17,6 @@ import type {
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { DraftEntity } from "../draft-entity";
 import { syncPlacementValidationState } from "../placement-validation";
-import { syncPoweredEntityCollection } from "./powered-collection";
 import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 import {
@@ -447,7 +446,7 @@ export function createEditorLogisticsActions(
         }
       }
 
-      const committedDocument = logisticsContext.documentWriter.commit({
+      logisticsContext.documentWriter.commit({
         action: {
           type: "logistics.place",
           label: "铺设物流",
@@ -463,14 +462,6 @@ export function createEditorLogisticsActions(
           entityOrder: nextEntityOrder,
         }),
       });
-
-      if (committedDocument !== null) {
-        syncPoweredEntityCollection({
-          document: committedDocument,
-          state: logisticsContext.state,
-          workspace: logisticsContext.workspace,
-        });
-      }
 
       clearLogisticsDraftState(logisticsContext);
       return true;

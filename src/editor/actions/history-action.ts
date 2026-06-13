@@ -8,7 +8,6 @@ import type {
 import {
   applyWorldDocumentDelta,
 } from "../history";
-import { syncPoweredEntityCollection } from "./powered-collection";
 import { action } from "mobx";
 import type {
   EditorActionsContext,
@@ -27,7 +26,7 @@ export function createEditorHistoryActions({
   documentWriter,
   history,
   state,
-  workspace,
+  workspace: _workspace,
 }: EditorActionsContext): EditorHistoryActions {
   return {
     undoDocumentHistory: action(() => {
@@ -44,17 +43,10 @@ export function createEditorHistoryActions({
         "inverse",
       );
 
-      const committedDocument = documentWriter.setSnapshot(nextDocument, {
+      documentWriter.setSnapshot(nextDocument, {
         action: createRestoreAction("撤销", record),
         mode: "replay",
       });
-      if (committedDocument !== null) {
-        syncPoweredEntityCollection({
-          document: committedDocument,
-          state,
-          workspace,
-        });
-      }
       history.setCursorSequence(currentDocument.documentKey, record.sequence - 1);
 
       return true;
@@ -74,17 +66,10 @@ export function createEditorHistoryActions({
         "forward",
       );
 
-      const committedDocument = documentWriter.setSnapshot(nextDocument, {
+      documentWriter.setSnapshot(nextDocument, {
         action: createRestoreAction("重做", record),
         mode: "replay",
       });
-      if (committedDocument !== null) {
-        syncPoweredEntityCollection({
-          document: committedDocument,
-          state,
-          workspace,
-        });
-      }
       history.setCursorSequence(currentDocument.documentKey, record.sequence);
 
       return true;
@@ -127,17 +112,10 @@ export function createEditorHistoryActions({
         currentDocument,
       );
 
-      const committedDocument = documentWriter.setSnapshot(nextDocument, {
+      documentWriter.setSnapshot(nextDocument, {
         action: createRestoreAction("还原历史", restoreRecords.at(-1) ?? restoreRecords[0]),
         mode: "replay",
       });
-      if (committedDocument !== null) {
-        syncPoweredEntityCollection({
-          document: committedDocument,
-          state,
-          workspace,
-        });
-      }
       history.setCursorSequence(currentDocument.documentKey, targetSequence);
 
       return true;
