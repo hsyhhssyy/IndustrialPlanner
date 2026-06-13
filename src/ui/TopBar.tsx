@@ -66,8 +66,6 @@ export function TopBar({
         <a
           className="topbar-switch-link"
           href="/"
-          target="_blank"
-          rel="noopener noreferrer"
         >
           {t('top.switchToNewVersion')}
         </a>

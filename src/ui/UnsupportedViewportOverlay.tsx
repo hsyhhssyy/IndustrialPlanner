@@ -62,8 +62,6 @@ export function UnsupportedViewportOverlay({ t, onOpenTool }: UnsupportedViewpor
           <a
             className="global-dialog-btn primary unsupported-viewport-overlay__switch-link"
             href="/"
-            target="_blank"
-            rel="noopener noreferrer"
           >
             {t('viewportGate.switchToNewVersion')}
           </a>
