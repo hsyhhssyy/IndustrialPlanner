@@ -41,6 +41,9 @@ jobs:
       - name: Build V3
         run: npm run build
 
+      - name: Move V3 dist out of workspace
+        run: mv dist /tmp/v3-dist
+
       - name: Checkout V2 source
         uses: actions/checkout@v4
         with:
@@ -55,8 +58,10 @@ jobs:
         working-directory: .temp/v2-src
         run: npm run build
 
-      - name: Merge V2 into dist
-        run: mv .temp/v2-src/dist dist/v2
+      - name: Restore V3 dist and merge V2
+        run: |
+          mv /tmp/v3-dist dist
+          mv .temp/v2-src/dist dist/v2
 
       - name: Load deploy config
         env:
