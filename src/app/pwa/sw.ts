@@ -74,6 +74,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // AI-GENERATED 2026-06-13:
+  // V2 旧版部署在 /v2/ 子路径下，不参与 PWA 预缓存。
+  // SW 对 /v2/ 路径完全放行，避免用 v3 预缓存响应 v2 请求。
+  if (requestUrl.pathname.startsWith("/v2/") || requestUrl.pathname === "/v2") {
+    return;
+  }
+
   event.respondWith(resolvePrecachedResponse(request));
 });
 
