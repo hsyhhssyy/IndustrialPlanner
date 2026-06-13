@@ -41,14 +41,43 @@ jobs:
       - name: Build V3
         run: npm run build
 
+      - name: Diagnose V3 dist
+        run: |
+          echo "=== V3 dist structure ==="
+          ls -la dist/
+          echo ""
+          echo "=== V3 dist/assets/ ==="
+          ls -la dist/assets/ | head -20
+          echo ""
+          echo "=== V3 index.html asset references ==="
+          grep -oE '(src|href)="[^"]*"' dist/index.html | head -20
+
       - name: Move V3 dist out of workspace
         run: mv dist /tmp/v3-dist
+
+      - name: Diagnose workspace after move
+        run: |
+          echo "=== Workspace files after mv ==="
+          ls -la | grep -v node_modules
+          echo ""
+          echo "=== /tmp/v3-dist/assets/ JS count ==="
+          ls /tmp/v3-dist/assets/*.js 2>/dev/null | wc -l
+          echo "=== /tmp/v3-dist/assets/ CSS count ==="
+          ls /tmp/v3-dist/assets/*.css 2>/dev/null | wc -l
 
       - name: Checkout V2 source
         uses: actions/checkout@v4
         with:
           ref: v2
           path: .temp/v2-src
+
+      - name: Diagnose workspace after V2 checkout
+        run: |
+          echo "=== Dist in workspace ==="
+          ls dist 2>/dev/null || echo "(dist absent — cleared by checkout)"
+          echo ""
+          echo "=== /tmp/v3-dist still present ==="
+          ls /tmp/v3-dist/assets/*.js 2>/dev/null | wc -l
 
       - name: Install V2 dependencies
         working-directory: .temp/v2-src
@@ -58,10 +87,35 @@ jobs:
         working-directory: .temp/v2-src
         run: npm run build
 
+      - name: Diagnose V2 dist
+        working-directory: .temp/v2-src
+        run: |
+          echo "=== V2 dist structure ==="
+          ls -la dist/
+          echo ""
+          echo "=== V2 dist/assets/ JS count ==="
+          ls dist/assets/*.js 2>/dev/null | wc -l
+
       - name: Restore V3 dist and merge V2
         run: |
           mv /tmp/v3-dist dist
           mv .temp/v2-src/dist dist/v2
+
+      - name: Diagnose final merged dist
+        run: |
+          echo "=== Final dist structure ==="
+          ls -la dist/
+          echo ""
+          echo "=== dist/assets/ JS count ==="
+          ls dist/assets/*.js 2>/dev/null | wc -l
+          echo "=== dist/assets/ CSS count ==="
+          ls dist/assets/*.css 2>/dev/null | wc -l
+          echo ""
+          echo "=== dist/v2/ exists ==="
+          ls -la dist/v2/
+          echo ""
+          echo "=== dist/v2/index.html exists ==="
+          test -f dist/v2/index.html && echo "YES" || echo "NO"
 
       - name: Load deploy config
         env:
