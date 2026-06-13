@@ -17,6 +17,7 @@ export const V2MigrationDialog = observer(function V2MigrationDialog({
   controller,
 }: V2MigrationDialogProps) {
   const t = appHost.actions.translate;
+  const locale = appHost.state.settings.locale;
   const isCompact = appHost.state.screenProfile.deviceClass === "mobile";
   const isCompleted = controller.migrationState.completedAt !== null;
 
@@ -74,6 +75,14 @@ export const V2MigrationDialog = observer(function V2MigrationDialog({
 
         <MigrationStatus controller={controller} />
 
+        {!isCompleted && (
+          <p className={cm(styles, "v2-migration-hint")}>
+            {locale === "zh-CN"
+              ? "今后如需再次迁移，请在设置对话框中点击「v2 数据迁移」按钮。"
+              : "To migrate again later, click the 'v2 Data Migration' button in the Settings dialog."}
+          </p>
+        )}
+
         <div className={cm(styles, "v2-migration-actions")}>
           {controller.confirmationRequested ? (
             <>
@@ -102,7 +111,7 @@ export const V2MigrationDialog = observer(function V2MigrationDialog({
                 onClick={controller.closeDialog}
                 type="button"
               >
-                {isCompleted ? "关闭" : "稍后"}
+                {locale === "zh-CN" ? "稍后在设置中手动迁移" : "Migrate later in Settings"}
               </button>
               <button
                 className={cm(styles, "v2-migration-primary-button")}

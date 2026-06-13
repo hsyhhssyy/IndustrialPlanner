@@ -462,6 +462,14 @@
   background: color-mix(in srgb, var(--warn) 10%, var(--surface-2));
 }
 
+// AI-GENERATED 2026-06-13: 迁移对话框底部提示文案，告知用户未来在设置中触发迁移。
+.v2-migration-hint {
+  margin: 12px 0 0;
+  font-size: 0.84rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
 .v2-migration-status {
   gap: 4px;
   font-size: 0.88rem;
