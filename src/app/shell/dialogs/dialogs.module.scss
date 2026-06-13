@@ -1033,8 +1033,9 @@
   display: grid;
   gap: 8px;
   align-content: start;
+  align-self: start;
   min-height: 0;
-  overflow: auto;
+  overflow: visible;
 }
 
 .changelog-accordion {
@@ -1180,4 +1181,28 @@
 
 .changelog-error {
   color: var(--danger);
+}
+
+.changelog-placeholder {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 100%;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--surface-2) 0%, var(--surface-1) 100%);
+
+  h3 {
+    margin: 0;
+    color: var(--text-0);
+    font-size: 0.96rem;
+    font-weight: 650;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-1);
+    font-size: 0.86rem;
+  }
 }

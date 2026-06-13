@@ -65,6 +65,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
 
         activeTouchLogisticsDragGestureId = null;
         cleanupLogisticsPlacement(context.appHost);
+        context.appHost.internalActions.hideCanvasTopLeftCornerToolbar();
         return { status: "handled" };
       }
 

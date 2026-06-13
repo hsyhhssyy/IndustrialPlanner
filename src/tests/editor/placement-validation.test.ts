@@ -267,9 +267,11 @@ describe("placement validation", () => {
     ]);
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithEntities([
-      createEntity("segment", "item_port_log_hongs_bus", 4, 0),
+      createEntity("segment", "item_port_log_hongs_bus", 4, 1),
       // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°（已撤销），rot 恢复为 0。
-      createEntity("loader", "item_port_loader_1", 8, 0),
+      // AI-CORRECTION 2026-06-13: 存货口改用 mustConnectToHubViaOppositePortEdge，
+      // rotation=0 端口朝N→对边S，需将 loader 放在 segment 上方使其 S 边贴段。
+      createEntity("loader", "item_port_loader_1", 4, 0),
       createEntity("isolated-unloader", "item_port_unloader_1", 20, 20),
     ], TEST_BUILTIN_BASE_ID);
 
@@ -327,9 +329,11 @@ describe("placement validation", () => {
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("source", "item_port_log_hongs_bus_source", 0, 0),
-      createEntity("segment", "item_port_log_hongs_bus", 4, 0),
+      createEntity("segment", "item_port_log_hongs_bus", 4, 1),
       // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°（已撤销），rot 恢复为 0。
-      createEntity("loader", "item_port_loader_1", 8, 0),
+      // AI-CORRECTION 2026-06-13: 存货口改用 mustConnectToHubViaOppositePortEdge，
+      // rotation=0 端口朝N→对边S，需将 loader 放在 segment 上方使其 S 边贴段。
+      createEntity("loader", "item_port_loader_1", 4, 0),
       createEntity("isolated-unloader", "item_port_unloader_1", 20, 20),
     ]);
 

@@ -2652,7 +2652,32 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".help-dialog-backdrop")?.classList.contains("is-immersive-maximized")).toBe(true);
   });
 
-  it("opens the help dialog through app internal actions", () => {
+  it("opens the help dialog through app internal actions", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.pathname
+          : input.url;
+
+      if (url === "/changelog/index.json") {
+        return new Response(JSON.stringify(["older.md", "newer.md"]), {
+          headers: { "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
+      if (url === "/changelog/older.md") {
+        return new Response("# Older\n\n旧版本内容", { status: 200 });
+      }
+
+      if (url === "/changelog/newer.md") {
+        return new Response("# Newer\n\n新版本内容", { status: 200 });
+      }
+
+      return new Response("Not found", { status: 404 });
+    }));
+
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -2661,9 +2686,40 @@ describe("WorkbenchApp", () => {
       appHost.internalActions.openDialog("help:version");
     });
 
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
     expect(container.querySelector(".help-dialog")).not.toBeNull();
     expect(container.querySelector("#help-dialog-tab-version")?.getAttribute("aria-selected")).toBe("true");
-    expect(container.querySelector(".help-dialog-placeholder h3")?.textContent).toBe("版本更新");
+    expect(container.querySelector("#help-dialog-panel-version > .help-dialog-content")).not.toBeNull();
+    expect(container.querySelector(".changelog-markdown")?.textContent).toContain("Newer");
+
+    const accordions = Array.from(container.querySelectorAll(".changelog-accordion"));
+    const headers = Array.from(container.querySelectorAll(".changelog-accordion-header")) as HTMLButtonElement[];
+
+    expect(accordions.map((accordion) => accordion.getAttribute("data-expanded"))).toEqual([
+      "true",
+      "false",
+    ]);
+
+    act(() => {
+      headers[1]?.click();
+    });
+
+    expect(accordions.map((accordion) => accordion.getAttribute("data-expanded"))).toEqual([
+      "false",
+      "true",
+    ]);
+
+    act(() => {
+      headers[1]?.click();
+    });
+
+    expect(accordions.map((accordion) => accordion.getAttribute("data-expanded"))).toEqual([
+      "false",
+      "false",
+    ]);
   });
 
     /*

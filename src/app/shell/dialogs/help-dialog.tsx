@@ -54,7 +54,11 @@ export const HelpDialog = observer(function HelpDialog({ appHost }: { appHost: A
         </div>
       );
     } else if (tab.id === "version") {
-      content = <ChangelogSection />;
+      content = (
+        <div className={cm(styles, "help-dialog-content")}>
+          <ChangelogSection />
+        </div>
+      );
     } else {
       content = (
         <div className={cm(styles, "help-dialog-content")}>

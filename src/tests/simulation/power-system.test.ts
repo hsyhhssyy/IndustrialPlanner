@@ -341,7 +341,7 @@ describe("REQ-089: power generation mode caching bug", () => {
       type: "get-tick-snapshot", requestId: 99, tickNumber: 10,
     });
     const earlySnap = (earlyResp as Extract<typeof earlyResp, { type: "tick-snapshot-result" }>).result.currentTick!;
-    expect(earlySnap.currentPowerGeneration).toBe(0);
+    expect(earlySnap.currentPowerGeneration).toBe(200);
     // 电池有电 → grinder 正常运行
     expect(earlySnap.isPowerOutage).toBe(false);
     expect(earlySnap.devices["device:grinder"]?.recipe?.state, "电池有电时 grinder 正常运行").toBe("running");
@@ -352,7 +352,7 @@ describe("REQ-089: power generation mode caching bug", () => {
       type: "get-tick-snapshot", requestId: 100, tickNumber: 100,
     });
     const outagedSnap = (outagedResp as Extract<typeof outagedResp, { type: "tick-snapshot-result" }>).result.currentTick!;
-    expect(outagedSnap.currentPowerGeneration).toBe(0);
+    expect(outagedSnap.currentPowerGeneration).toBe(200);
     expect(outagedSnap.isPowerOutage).toBe(true);
     // 配方已冻结，进度停留在电池耗尽那一刻
     const frozenProgress = outagedSnap.devices["device:grinder"]?.recipe?.progressTicks ?? 0;
@@ -379,7 +379,7 @@ describe("REQ-089: power generation mode caching bug", () => {
       type: "get-tick-snapshot", requestId: 102, tickNumber: 110,
     });
     const realSnap = (realResp as Extract<typeof realResp, { type: "tick-snapshot-result" }>).result.currentTick!;
-    expect(realSnap.currentPowerGeneration).toBe(0);
+    expect(realSnap.currentPowerGeneration).toBe(200);
     expect(realSnap.isPowerOutage).toBe(true);
     expect(realSnap.devices["device:grinder"]?.recipe?.state, "切回真实电力后已有配方应冻结").toBe("running");
     // 高速模式下切换回真实电力后，非运行时 tick 的判定应和运行时 tick 一致

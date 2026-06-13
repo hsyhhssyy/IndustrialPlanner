@@ -22,9 +22,15 @@ function resolveChangelogImageUrl(url: string): string {
   if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
     return url;
   }
+
+  // ./img/xxx → /changelog/img/xxx（去掉 ./ 前缀后直接拼接 base）
   if (url.startsWith("./")) {
-    return `${CHANGELOG_IMG_BASE}${url.slice(2)}`;
+    const relative = url.slice(2);
+
+    // relative 已经是 img/xxx 的形式，直接拼 /changelog/ 前缀
+    return `/changelog/${relative}`;
   }
+
   return `${CHANGELOG_IMG_BASE}${url}`;
 }
 
@@ -132,11 +138,9 @@ export function ChangelogSection() {
 
   const toggle = (index: number) => {
     setExpandedSet((prev) => {
-      const next = new Set(prev);
+      const next = new Set<number>();
 
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
+      if (!prev.has(index)) {
         next.add(index);
       }
 
@@ -146,60 +150,54 @@ export function ChangelogSection() {
 
   if (loadError !== null) {
     return (
-      <div className={cm(styles, "help-dialog-content")}>
-        <div className={cm(styles, "help-dialog-placeholder")}>
-          <h3>版本更新</h3>
-          <p>加载失败：{loadError}</p>
-        </div>
+      <div className={cm(styles, "changelog-placeholder")}>
+        <h3>版本更新</h3>
+        <p>加载失败：{loadError}</p>
       </div>
     );
   }
 
   if (entries === null) {
     return (
-      <div className={cm(styles, "help-dialog-content")}>
-        <div className={cm(styles, "help-dialog-placeholder")}>
-          <h3>版本更新</h3>
-          <p>加载中…</p>
-        </div>
+      <div className={cm(styles, "changelog-placeholder")}>
+        <h3>版本更新</h3>
+        <p>加载中…</p>
       </div>
     );
   }
 
   return (
-    <div className={cm(styles, "help-dialog-content")}>
-      <div className={cm(styles, "changelog-section")}>
-        {entries.map((entry, index) => (
-          <div
-            className={cm(styles, "changelog-accordion")}
-            data-expanded={expandedSet.has(index) ? "true" : "false"}
-            key={entry.file}
+    <div className={cm(styles, "changelog-section")}>
+      {entries.map((entry, index) => (
+        <div
+          className={cm(styles, "changelog-accordion")}
+          data-expanded={expandedSet.has(index) ? "true" : "false"}
+          key={entry.file}
+        >
+          <button
+            className={cm(styles, "changelog-accordion-header")}
+            onClick={() => toggle(index)}
+            type="button"
           >
-            <button
-              className={cm(styles, "changelog-accordion-header")}
-              onClick={() => toggle(index)}
-              type="button"
-            >
-              <span className={cm(styles, "changelog-accordion-chevron")} />
-              <span className={cm(styles, "changelog-accordion-title")}>{entry.title}</span>
-            </button>
-            <div className={cm(styles, "changelog-accordion-body")}>
-              <div className={cm(styles, "changelog-accordion-content")}>
-                {entry.error !== null ? (
-                  <p className={cm(styles, "changelog-error")}>加载失败：{entry.error}</p>
-                ) : entry.html !== null ? (
-                  <div
-                    className={cm(styles, "changelog-markdown")}
-                    dangerouslySetInnerHTML={{ __html: entry.html }}
-                  />
-                ) : (
-                  <p className={cm(styles, "changelog-loading")}>加载中…</p>
-                )}
-              </div>
+            <span className={cm(styles, "changelog-accordion-chevron")} />
+            <span className={cm(styles, "changelog-accordion-title")}>{entry.title}</span>
+          </button>
+          <div className={cm(styles, "changelog-accordion-body")}>
+            <div className={cm(styles, "changelog-accordion-content")}>
+              {entry.error !== null ? (
+                <p className={cm(styles, "changelog-error")}>加载失败：{entry.error}</p>
+              ) : entry.html !== null ? (
+                <div
+                  className={cm(styles, "changelog-markdown")}
+                  dangerouslySetInnerHTML={{ __html: entry.html }}
+                />
+              ) : (
+                <p className={cm(styles, "changelog-loading")}>加载中…</p>
+              )}
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 }
