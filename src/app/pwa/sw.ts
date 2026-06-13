@@ -148,9 +148,37 @@ async function activatePrecache(): Promise<void> {
 async function resolvePrecachedResponse(request: Request): Promise<Response> {
   const cache = await caches.open(CACHE_NAME);
   const requestUrl = new URL(request.url);
-  const cacheUrl = request.mode === "navigate"
+  const isNavigation = request.mode === "navigate";
+  const cacheUrl = isNavigation
     ? INDEX_CACHE_URL
     : createCacheUrl(`${requestUrl.pathname}${requestUrl.search}`);
+
+  // AI-CORRECTION 2026-06-13:
+  // 导航请求改用 network-first：先尝试网络获取最新 index.html，
+  // 成功后更新缓存；网络失败时回退到缓存中的 index.html。
+  // 旧逻辑为 cache-first，导致旧 SW 在 waiting 期间始终返回缓存中的
+  // 旧 index.html → 旧 hash 的 assets 已在服务器上被替换 → 404 白屏。
+  if (isNavigation) {
+    try {
+      const networkResponse = await fetch(request);
+      if (networkResponse.ok) {
+        await cache.put(INDEX_CACHE_URL, networkResponse.clone());
+        return networkResponse;
+      }
+    } catch {
+      // 网络不可用，回退到缓存（离线场景）
+    }
+
+    const cachedResponse = await cache.match(INDEX_CACHE_URL);
+    if (cachedResponse !== undefined) {
+      return cachedResponse;
+    }
+
+    return fetch(request);
+  }
+
+  // 非导航请求（assets/ 等）保持 cache-first：文件名含内容 hash，
+  // 缓存命中即直接返回，避免不必要网络请求并保证离线可用。
   const cachedResponse = await cache.match(cacheUrl);
 
   if (cachedResponse !== undefined) {
