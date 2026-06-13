@@ -79,7 +79,7 @@ export class WorkbenchEncyclopediaPickerController {
     this._resolveSharedFilterState = resolveSharedFilterState;
 
     try {
-      const raw = localStorage.getItem("planner.recent-picker-items");
+      const raw = localStorage.getItem("v3-planner-recent-picker-items");
       if (raw !== null) {
         const parsed: unknown = JSON.parse(raw);
         if (Array.isArray(parsed)) {
@@ -93,7 +93,7 @@ export class WorkbenchEncyclopediaPickerController {
     }
 
     try {
-      const raw = localStorage.getItem("planner.last-picker-query");
+      const raw = localStorage.getItem("v3-planner-last-picker-query");
       if (raw !== null) {
         this.query = raw;
       }
@@ -229,7 +229,7 @@ export class WorkbenchEncyclopediaPickerController {
     this.recentItemIds = next.slice(0, 20);
 
     try {
-      localStorage.setItem("planner.recent-picker-items", JSON.stringify(this.recentItemIds));
+      localStorage.setItem("v3-planner-recent-picker-items", JSON.stringify(this.recentItemIds));
     } catch {
       // Storage 不可用时静默失败
     }
@@ -244,7 +244,7 @@ export class WorkbenchEncyclopediaPickerController {
     this.includeInactiveActivityItems = false;
 
     try {
-      localStorage.setItem("planner.last-picker-query", this.query);
+      localStorage.setItem("v3-planner-last-picker-query", this.query);
     } catch {
       // Storage 不可用时静默失败
     }

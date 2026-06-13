@@ -5,7 +5,7 @@ import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 import type { EditorHost } from "./editor-host";
 import type { EditorInternalPersistStateReadWrite } from "./state-impl";
 
-export const EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY = "v1-editor-persist-state";
+export const EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY = "v3-editor-persist-state";
 
 export function hookLocalstorage(editorHost: EditorHost): () => void {
   const persistedInternalPersistState =

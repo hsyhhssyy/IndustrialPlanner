@@ -9,7 +9,7 @@ import {
   type IndexedDbStoreLocation,
 } from "./browser-storage";
 
-const BLUEPRINT_DATABASE_NAME = "industrial-planner";
+const BLUEPRINT_DATABASE_NAME = "v3-industrial-planner";
 const BLUEPRINT_STORE_NAME = "blueprints";
 const BLUEPRINT_DELETED_RETENTION_DAYS = 30;
 const BLUEPRINT_DELETED_RETENTION_MS = BLUEPRINT_DELETED_RETENTION_DAYS * 24 * 60 * 60 * 1000;

@@ -3,7 +3,7 @@ import {
   saveToLocalStorage,
 } from "./browser-storage";
 
-export const EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY = "v1-editor-persist-state";
+export const EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY = "v3-editor-persist-state";
 
 export interface EditorPersistState {
   lastDocumentId: string | null;

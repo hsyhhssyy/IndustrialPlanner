@@ -1,10 +1,12 @@
 import { runInAction } from "mobx";
 
 import type { AppHost } from "@/app/host/app-host";
+import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import {
   convertLegacyBlueprintJson,
   convertLegacyV2LayoutToWorldDocument,
   createLegacyBlueprintJsonFromV2BlueprintSnapshot,
+  filterLegacyV2LayoutBaseBuiltinEntities,
   normalizeLegacyV2BlueprintSnapshotsStorage,
   normalizeLegacyV2LayoutsByBaseStorage,
   readFromLocalStorage,
@@ -38,7 +40,9 @@ export async function executeV2Migration(
 ): Promise<V2MigrationExecutorResult> {
   cleanupDiscardableV2LocalStorageBeforeV3Boot();
 
-  const migratedWorldDocuments = createMigratedWorldDocuments();
+  const migratedWorldDocuments = createMigratedWorldDocuments(
+    appHost.workspace.registry.baseDefinitions,
+  );
   const didReplaceWorldDocuments = await replaceWorldDocuments(migratedWorldDocuments);
 
   if (!didReplaceWorldDocuments) {
@@ -80,7 +84,7 @@ export async function executeV2Migration(
   };
 }
 
-function createMigratedWorldDocuments() {
+function createMigratedWorldDocuments(baseDefinitions: readonly BaseDefinition[]) {
   const layoutsByBase = normalizeLegacyV2LayoutsByBaseStorage(
     readFromLocalStorage<unknown>(V2_LAYOUTS_BY_BASE_LOCAL_STORAGE_KEY),
   );
@@ -88,7 +92,11 @@ function createMigratedWorldDocuments() {
   return Object.values(layoutsByBase)
     .sort((left, right) => left.baseId.localeCompare(right.baseId))
     .flatMap((layout) => {
-      const document = convertLegacyV2LayoutToWorldDocument(layout, {
+      const filteredLayout = filterLegacyV2LayoutBaseBuiltinEntities(
+        layout,
+        baseDefinitions,
+      );
+      const document = convertLegacyV2LayoutToWorldDocument(filteredLayout, {
         documentKey: createMigratedWorldDocumentKey(layout.baseId),
         blueprintId: `${V3_MIGRATION_ID_PREFIX}map-blueprint:${stableKeyPart(layout.baseId)}`,
         entityIdPrefix: `v2map_${stableKeyPart(layout.baseId)}`,

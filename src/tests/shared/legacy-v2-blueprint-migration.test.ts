@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import { convertLegacyBlueprintJson } from "@/shared/storage/legacy-blueprint-import";
 import {
   createLegacyBlueprintJsonFromV2BlueprintSnapshot,
+  createLegacyBlueprintJsonFromV2Layout,
+  filterLegacyV2LayoutBaseBuiltinEntities,
+  type LegacyV2LayoutSnapshot,
   normalizeLegacyV2BlueprintSnapshotsStorage,
 } from "@/shared/storage/legacy-v2-blueprint-migration";
 
@@ -62,5 +66,94 @@ describe("legacy-v2-blueprint-migration", () => {
         warehouse_submit: "r_warehouse_submit",
       },
     });
+  });
+
+  it("filters v2 foundation devices that v3 already provides as base builtins", () => {
+    const baseDefinitions: BaseDefinition[] = [{
+      id: "valley4_protocol_core",
+      name: "协议核心区",
+      placeableArea: { width: 70, height: 70 },
+      outerRing: { top: 5, right: 5, bottom: 5, left: 5 },
+      tag: "四号谷地",
+      builtinEntities: [
+        {
+          id: "valley4_bus_source",
+          definitionId: "item_port_log_hongs_bus_source",
+          position: { x: -4, y: -4 },
+          rotation: 0,
+        },
+        {
+          id: "valley4_bus_seg_x_0",
+          definitionId: "item_port_log_hongs_bus",
+          position: { x: 0, y: -4 },
+          rotation: 90,
+        },
+      ],
+    }];
+    const layout: LegacyV2LayoutSnapshot = {
+      baseId: "valley4_protocol_core",
+      devices: [
+        {
+          instanceId: "base_bus_source",
+          typeId: "item_port_log_hongs_bus_source",
+          rotation: 0,
+          origin: { x: -4, y: -4 },
+          config: {},
+        },
+        {
+          instanceId: "base_bus_seg",
+          typeId: "item_port_log_hongs_bus",
+          rotation: 90,
+          origin: { x: 0, y: -4 },
+          config: {},
+        },
+        {
+          instanceId: "base_protocol_hub",
+          typeId: "item_port_sp_hub_1",
+          rotation: 0,
+          origin: { x: 0, y: 0 },
+          config: {},
+        },
+        {
+          instanceId: "user_bus_seg",
+          typeId: "item_port_log_hongs_bus",
+          rotation: 90,
+          origin: { x: 8, y: 8 },
+          config: {},
+        },
+      ],
+      links: [
+        {
+          kind: "dark_pipe",
+          sourceInstanceId: "base_bus_source",
+          targetInstanceId: "user_bus_seg",
+        },
+        {
+          kind: "dark_pipe",
+          sourceInstanceId: "base_protocol_hub",
+          targetInstanceId: "user_bus_seg",
+        },
+      ],
+    };
+
+    const filteredLayout = filterLegacyV2LayoutBaseBuiltinEntities(
+      layout,
+      baseDefinitions,
+    );
+    const legacyBlueprint = createLegacyBlueprintJsonFromV2Layout(filteredLayout);
+
+    expect(filteredLayout.devices.map((device) => device.instanceId)).toEqual([
+      "base_protocol_hub",
+      "user_bus_seg",
+    ]);
+    expect(filteredLayout.links).toEqual([{
+      kind: "dark_pipe",
+      sourceInstanceId: "base_protocol_hub",
+      targetInstanceId: "user_bus_seg",
+    }]);
+    expect(legacyBlueprint.devices.map((device) => device.blueprintInstanceId)).toEqual([
+      "base_protocol_hub",
+      "user_bus_seg",
+    ]);
   });
 });

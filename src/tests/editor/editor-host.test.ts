@@ -29,7 +29,7 @@ import {
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 
 const WORLD_DOCUMENT_DATABASE_LOCATION = {
-  databaseName: "industrial-planner",
+  databaseName: "v3-industrial-planner",
   storeName: "worddocument",
 };
 

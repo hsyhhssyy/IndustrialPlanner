@@ -105,9 +105,9 @@ export function normalizePlannerPersistedState(value: unknown): PlannerPersisted
 // ── 数据库定位 ──
 
 const PLANNER_STORE_LOCATION: IndexedDbStorageLocation = {
-  databaseName: "industrial-planner",
+  databaseName: "v3-industrial-planner",
   storeName: "planner-state",
-  key: "v2",
+  key: "v3",
 };
 
 const CURRENT_VERSION = 3;

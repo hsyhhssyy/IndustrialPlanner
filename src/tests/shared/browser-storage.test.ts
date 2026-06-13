@@ -36,7 +36,7 @@ describe("browser-storage", () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
     const location = {
-      databaseName: "industrial-planner",
+      databaseName: "v3-industrial-planner",
       storeName: "workspace",
       key: "primary",
     } satisfies {
@@ -60,7 +60,7 @@ describe("browser-storage", () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
     const storeLocation = {
-      databaseName: "industrial-planner",
+      databaseName: "v3-industrial-planner",
       storeName: "workspace",
     } satisfies {
       databaseName: string;
@@ -95,7 +95,7 @@ describe("browser-storage", () => {
 
     await expect(
       readFromIndexedDb({
-        databaseName: "industrial-planner",
+        databaseName: "v3-industrial-planner",
         storeName: "workspace",
         key: "primary",
       }),

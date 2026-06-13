@@ -6,6 +6,7 @@ import {
   createWorldDocument,
   type WorldDocument,
 } from "@/domain/document/world-document";
+import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { GridPoint, GridRotation } from "@/domain/shared/grid";
 
@@ -85,6 +86,51 @@ export function normalizeLegacyV2BlueprintSnapshotsStorage(
 
     return snapshot === null ? [] : [snapshot];
   });
+}
+
+export function filterLegacyV2LayoutBaseBuiltinEntities(
+  layout: LegacyV2LayoutSnapshot,
+  baseDefinitions: readonly BaseDefinition[],
+): LegacyV2LayoutSnapshot {
+  const baseDefinition = baseDefinitions.find((definition) =>
+    definition.id === layout.baseId,
+  );
+  const builtinEntities = baseDefinition?.builtinEntities ?? [];
+
+  if (builtinEntities.length === 0) {
+    return layout;
+  }
+
+  const builtinSignatures = new Set(
+    builtinEntities.map((entity) => createPlacementSignature({
+      typeId: entity.definitionId,
+      origin: entity.position,
+      rotation: entity.rotation,
+    })),
+  );
+  const removedInstanceIds = new Set<string>();
+  const devices = layout.devices.filter((device) => {
+    const shouldRemove = builtinSignatures.has(createPlacementSignature(device));
+
+    if (shouldRemove && device.instanceId !== undefined) {
+      removedInstanceIds.add(device.instanceId);
+    }
+
+    return !shouldRemove;
+  });
+
+  if (devices.length === layout.devices.length) {
+    return layout;
+  }
+
+  return {
+    ...layout,
+    devices,
+    links: layout.links.filter((link) =>
+      !removedInstanceIds.has(link.sourceInstanceId)
+      && !removedInstanceIds.has(link.targetInstanceId),
+    ),
+  };
 }
 
 export function createLegacyBlueprintJsonFromV2Layout(
@@ -192,6 +238,14 @@ export function convertLegacyV2LayoutToWorldDocument(
     documentKey: options.documentKey ?? `v2-migration-map:${layout.baseId}`,
     name: options.name ?? `v2 迁移地图 ${layout.baseId}`,
   });
+}
+
+function createPlacementSignature(options: {
+  readonly typeId: string;
+  readonly origin: GridPoint;
+  readonly rotation: GridRotation;
+}): string {
+  return `${options.typeId}:${options.origin.x}:${options.origin.y}:${options.rotation}`;
 }
 
 export function createWorldDocumentFromMigratedBlueprint(

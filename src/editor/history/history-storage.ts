@@ -6,7 +6,7 @@ import {
   saveToIndexedDb,
 } from "@/shared/storage";
 
-const DOCUMENT_DATABASE_NAME = "industrial-planner";
+const DOCUMENT_DATABASE_NAME = "v3-industrial-planner";
 const EDITOR_HISTORY_STORE_NAME = "editorhistory";
 
 export interface PersistedEditorHistoryState {

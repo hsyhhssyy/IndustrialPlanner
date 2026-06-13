@@ -669,7 +669,7 @@ describe("createAppHost", () => {
 
   it("ignores legacy workbench storage snapshots from the previous schema key", () => {
     localStorage.setItem(
-      "v3-workbench-state",
+      "v4-workbench-state",
       JSON.stringify({
         leftDockOpen: true,
         rightDockOpen: true,

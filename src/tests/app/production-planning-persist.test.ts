@@ -14,9 +14,9 @@ import { createProductionPlanningDemandSignature } from "@/app/shell/production-
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 
 const PLANNER_STORE_LOCATION: IndexedDbStorageLocation = {
-  databaseName: "industrial-planner",
+  databaseName: "v3-industrial-planner",
   storeName: "planner-state",
-  key: "v2",
+  key: "v3",
 };
 
 function createPlannerState(patch: Partial<PlannerPersistedState> = {}): PlannerPersistedState {

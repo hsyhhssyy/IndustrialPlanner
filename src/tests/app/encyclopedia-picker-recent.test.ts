@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { WorkbenchEncyclopediaPickerController } from "@/app/shell/state/encyclopedia-picker-state";
 import type { EncyclopediaPickerSharedFilterState } from "@/app/shell/state/encyclopedia-picker-state";
 
-const PERSISTED_ITEMS_KEY = "planner.recent-picker-items";
-const PERSISTED_QUERY_KEY = "planner.last-picker-query";
+const PERSISTED_ITEMS_KEY = "v3-planner-recent-picker-items";
+const PERSISTED_QUERY_KEY = "v3-planner-last-picker-query";
 
 function createSharedFilterState(): EncyclopediaPickerSharedFilterState {
   return {

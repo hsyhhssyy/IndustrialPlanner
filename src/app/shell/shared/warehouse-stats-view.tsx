@@ -9,7 +9,7 @@ import LucidePin from "~icons/lucide/pin";
 import LucidePinOff from "~icons/lucide/pin-off";
 
 const WAREHOUSE_STATS_INTERVAL_MS = 250;
-const WAREHOUSE_PINNED_ITEMS_KEY = "industrial-planner.warehouse-pinned-items";
+const WAREHOUSE_PINNED_ITEMS_KEY = "v3-warehouse-pinned-items";
 const WAREHOUSE_PINNED_ITEMS_EVENT = "warehouse-pinned-items-changed";
 const MAX_PINNED_ITEMS = 10;
 

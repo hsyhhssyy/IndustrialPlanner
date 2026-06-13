@@ -2519,10 +2519,10 @@ describe("Base panel power bar", () => {
     );
     const basePanel = switchToBasePanel();
 
-    // 真实电力 + 仿真数据 → 100 kW / 200 kW  75%
+    // 真实电力 + 仿真数据 → 100 kW / 200 kW  75.00%
     expect(basePanel?.textContent).toContain("100 kW");
     expect(basePanel?.textContent).toContain("200 kW");
-    expect(basePanel?.querySelector(".power-bar-percent")?.textContent).toBe("75%");
+    expect(basePanel?.querySelector(".power-bar-percent")?.textContent).toBe("75.00%");
     // switch 应为关闭状态
     const switchButton = basePanel?.querySelector('[role="switch"]');
     expect(switchButton?.getAttribute("aria-checked")).toBe("false");

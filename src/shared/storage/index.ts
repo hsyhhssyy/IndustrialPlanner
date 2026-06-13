@@ -55,6 +55,7 @@ export {
   createLegacyBlueprintJsonFromV2BlueprintSnapshot,
   createLegacyBlueprintJsonFromV2Layout,
   createWorldDocumentFromMigratedBlueprint,
+  filterLegacyV2LayoutBaseBuiltinEntities,
   normalizeLegacyV2BlueprintSnapshotsStorage,
   normalizeLegacyV2LayoutsByBaseStorage,
 } from "@/shared/storage/legacy-v2-blueprint-migration";

@@ -11,7 +11,7 @@ import { runInAction } from "mobx";
 
 import type { EditorHost } from "./editor-host";
 
-const DOCUMENT_DATABASE_NAME = "industrial-planner";
+const DOCUMENT_DATABASE_NAME = "v3-industrial-planner";
 const WORD_DOCUMENT_STORE_NAME = "worddocument";
 
 export const WORLD_DOCUMENT_DATABASE_LOCATION = {

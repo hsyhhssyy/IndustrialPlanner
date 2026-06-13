@@ -33,7 +33,7 @@ import {
 } from "./state-impl";
 
 export const APP_SETTINGS_LOCAL_STORAGE_KEY = "v3-app-settings";
-export const WORKBENCH_STATE_LOCAL_STORAGE_KEY = "v4-workbench-state";
+export const WORKBENCH_STATE_LOCAL_STORAGE_KEY = "v3-workbench-state";
 
 export function hookLocalstorage(appHost: AppHost): () => void {
   const persistedAppSettings = readFromLocalStorage<AppSettingsReadWrite>(
