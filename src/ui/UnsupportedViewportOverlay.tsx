@@ -58,6 +58,16 @@ export function UnsupportedViewportOverlay({ t, onOpenTool }: UnsupportedViewpor
           {t('viewportGate.title')}
         </h2>
         <p className="unsupported-viewport-overlay__message">{t('viewportGate.message')}</p>
+        <div className="unsupported-viewport-overlay__actions">
+          <a
+            className="global-dialog-btn primary unsupported-viewport-overlay__switch-link"
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('viewportGate.switchToNewVersion')}
+          </a>
+        </div>
         {shouldShowToolboxButton ? (
           <button
             type="button"

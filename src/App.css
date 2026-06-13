@@ -2514,6 +2514,22 @@ button:disabled {
   line-height: 1.6;
 }
 
+/* AI-GENERATED 2026-06-13: 移动端遮罩上的切换到新版按钮区域。 */
+.unsupported-viewport-overlay__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.unsupported-viewport-overlay__switch-link {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
 .unsupported-viewport-overlay__toolbox-button {
   width: 100%;
 }
