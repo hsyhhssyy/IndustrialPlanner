@@ -1097,11 +1097,14 @@ function createNotFoundStatus(
   };
 }
 
+/** 基地基础发电量（kW）。即使没有任何发电设备运行，系统也自带此发电量。 */
+const BASE_POWER_GENERATION_KW = 200;
+
 function computeCurrentPowerGeneration(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): number {
-  let total = 0;
+  let total = BASE_POWER_GENERATION_KW;
   for (const deviceState of Object.values(state.persistent.devices)) {
     for (const recipe of Object.values(deviceState.channelRecipes)) {
       if (recipe === null || recipe.state !== "running") {

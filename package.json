@@ -25,6 +25,7 @@
     "generate-logistics-delete-icon": "node src/scripts/icon-gen/generate-logistics-delete-icon.mjs"
   },
   "dependencies": {
+    "marked": "^18.0.5",
     "mobx": "^6.15.0",
     "mobx-react-lite": "^4.1.1",
     "pixi.js": "^8.17.1",

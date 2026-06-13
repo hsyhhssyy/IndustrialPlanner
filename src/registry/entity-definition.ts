@@ -109,7 +109,8 @@ const WAREHOUSE_BUS_SOURCE_PLACEMENT_BEHAVIORS = [
 ] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
 
 const WAREHOUSE_PORT_PLACEMENT_BEHAVIORS = [
-  { type: PLACEMENT_BEHAVIOR_TYPE.mustConnectToHub },
+  { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+  { type: PLACEMENT_BEHAVIOR_TYPE.mustConnectToHubViaOppositePortEdge },
 ] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
 
 const WAREHOUSE_SINK_TAG = "WarehouseSink";

@@ -9,6 +9,7 @@ export const PLACEMENT_BEHAVIOR_TYPE = {
   defaultPlacement: "default-placement",
   allowPipeOverlap: "allow-pipe-overlap",
   mustConnectToHub: "must-connect-to-hub",
+  mustConnectToHubViaOppositePortEdge: "must-connect-to-hub-via-opposite-port-edge",
   cannotBePlacedOutsideBase: "cannot-be-placed-outside-base",
 } as const;
 
@@ -19,4 +20,5 @@ export type EntityPlacementBehaviorDeclaration =
   | { readonly type: typeof PLACEMENT_BEHAVIOR_TYPE.defaultPlacement }
   | { readonly type: typeof PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap }
   | { readonly type: typeof PLACEMENT_BEHAVIOR_TYPE.mustConnectToHub }
+  | { readonly type: typeof PLACEMENT_BEHAVIOR_TYPE.mustConnectToHubViaOppositePortEdge }
   | { readonly type: typeof PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase };

@@ -13,8 +13,9 @@ import {
   isBaseBuiltinEntityId,
   resolveBaseBuiltinEntities,
 } from "@/domain/registry/types/base-definition";
-import type { GridRect } from "@/domain/shared/grid";
+import type { GridEdge, GridRect } from "@/domain/shared/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import { rotateGridEdge } from "@/shared/geometry/port";
 import { runInAction } from "mobx";
 
 import type { EditorStateReadWrite } from "./state-impl";
@@ -360,6 +361,119 @@ function applyWarehouseConnectionReasons(options: {
       entry.entity.id,
       "warehouse-bus-disconnected",
     );
+  }
+
+  for (const entry of options.entries) {
+    if (isBaseBuiltinEntityId(entry.entity.id)) {
+      continue;
+    }
+
+    if (!hasPlacementBehavior(entry.definition, PLACEMENT_BEHAVIOR_TYPE.mustConnectToHubViaOppositePortEdge)) {
+      continue;
+    }
+
+    const requiredEdge = resolvePortOppositeWorldEdge(entry);
+    if (requiredEdge === null) {
+      appendReason(options.reasonsByEntityId, entry.entity.id, "warehouse-bus-disconnected");
+      continue;
+    }
+
+    if (isEntryAdjacentToHubOnEdge({
+      entry,
+      edge: requiredEdge,
+      sourceEntries,
+      segmentEntries,
+      validSegmentIds,
+    })) {
+      continue;
+    }
+
+    appendReason(
+      options.reasonsByEntityId,
+      entry.entity.id,
+      "warehouse-bus-disconnected",
+    );
+  }
+}
+
+function resolvePortOppositeWorldEdge(
+  entry: PlacementValidationEntry,
+): GridEdge | null {
+  const firstPortGroup = entry.definition.portGroups[0];
+  if (firstPortGroup === undefined) {
+    return null;
+  }
+
+  const firstPort = firstPortGroup.ports[0];
+  if (firstPort === undefined) {
+    return null;
+  }
+
+  // rotation=0 时端口边的对边
+  const oppositeAtZero = oppositeGridEdge(firstPort.edge);
+  // 按 entity rotation 旋转得到世界坐标中的边
+  return rotateGridEdge(oppositeAtZero, entry.entity.rotation);
+}
+
+function isEntryAdjacentToHubOnEdge(options: {
+  entry: PlacementValidationEntry;
+  edge: GridEdge;
+  sourceEntries: readonly PlacementValidationEntry[];
+  segmentEntries: readonly PlacementValidationEntry[];
+  validSegmentIds: ReadonlySet<string>;
+}): boolean {
+  const candidates = [
+    ...options.sourceEntries,
+    ...options.segmentEntries.filter(
+      (seg) =>
+        seg.entity.id !== options.entry.entity.id
+        && options.validSegmentIds.has(seg.entity.id),
+    ),
+  ];
+
+  return candidates.some((candidate) =>
+    isEntryAdjacentOnEdge(options.entry, candidate, options.edge),
+  );
+}
+
+function isEntryAdjacentOnEdge(
+  entry: PlacementValidationEntry,
+  candidate: PlacementValidationEntry,
+  edge: GridEdge,
+): boolean {
+  const a = entry.gridRect;
+  const b = candidate.gridRect;
+
+  switch (edge) {
+    case "NORTH":
+      return a.y === b.y + b.height && overlapsX(a, b);
+    case "SOUTH":
+      return a.y + a.height === b.y && overlapsX(a, b);
+    case "EAST":
+      return a.x + a.width === b.x && overlapsY(a, b);
+    case "WEST":
+      return a.x === b.x + b.width && overlapsY(a, b);
+  }
+}
+
+function overlapsX(a: GridRect, b: GridRect): boolean {
+  return a.x < b.x + b.width && a.x + a.width > b.x;
+}
+
+function overlapsY(a: GridRect, b: GridRect): boolean {
+  return a.y < b.y + b.height && a.y + a.height > b.y;
+}
+
+function oppositeGridEdge(edge: GridEdge): GridEdge {
+  switch (edge) {
+    case "NORTH":
+      return "SOUTH";
+    case "EAST":
+      return "WEST";
+    case "SOUTH":
+      return "NORTH";
+    case "WEST":
+      return "EAST";
   }
 }
 

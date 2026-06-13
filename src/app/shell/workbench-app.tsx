@@ -24,7 +24,6 @@ import { RecipePickerDialog } from "@/app/shell/dialogs/recipe-picker-dialog";
 import { SaveBlueprintDialog } from "@/app/shell/dialogs/save-blueprint-dialog";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
 import { V2MigrationDialog } from "@/app/shell/dialogs/v2-migration-dialog";
-import { ChangelogDialog } from "@/app/shell/dialogs/changelog-dialog";
 import { WarehouseStatsDialog } from "@/app/shell/dialogs/warehouse-stats-dialog";
 import { EncyclopediaPickerDialog } from "@/app/shell/encyclopedia/encyclopedia-picker-dialog";
 import {
@@ -457,6 +456,44 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     migrationController.initialize();
   }, [migrationController]);
 
+  // 版本检测：新版本自动弹出帮助对话框并切换到"版本更新"tab
+  useEffect(() => {
+    const LAST_READ_VERSION_KEY = "industrial-planner-changelog-last-read-version";
+
+    const currentVersion = (window as { __APP_VERSION__?: string }).__APP_VERSION__;
+
+    if (currentVersion === undefined || currentVersion === "0.0.0-dev") {
+      return;
+    }
+
+    let lastReadVersion: string;
+
+    try {
+      lastReadVersion = localStorage.getItem(LAST_READ_VERSION_KEY) ?? "";
+    } catch {
+      return;
+    }
+
+    if (currentVersion === lastReadVersion) {
+      return;
+    }
+
+    // 记录已读版本
+    try {
+      localStorage.setItem(LAST_READ_VERSION_KEY, currentVersion);
+    } catch {
+      // 静默忽略
+    }
+
+    // 计算 80% 屏幕宽高
+    const width = Math.floor(window.innerWidth * 0.8);
+    const height = Math.floor(window.innerHeight * 0.8);
+
+    appHost.internalActions.setDialogSize("help", width, height);
+    appHost.internalActions.setDialogTab("help", "version");
+    appHost.internalActions.openDialog("help");
+  }, [appHost]);
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -750,7 +787,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         pwaController={pwaController}
       />
       <V2MigrationDialog appHost={appHost} controller={migrationController} />
-      <ChangelogDialog appHost={appHost} />
       <PwaGateway appHost={appHost} pwaController={pwaController} />
       {showMobilePortraitGate ? <MobilePortraitGate appHost={appHost} /> : null}
     </div>

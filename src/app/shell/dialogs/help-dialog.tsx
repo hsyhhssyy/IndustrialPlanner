@@ -7,6 +7,7 @@ import { HELP_DIALOG_TAB_IDS, type HelpDialogTabId } from "@/app/state/state-imp
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { OperationGuideContent } from "@/app/shell/dialogs/help-dialog-operation-guide";
+import { ChangelogSection } from "@/app/shell/dialogs/changelog-section";
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -52,6 +53,8 @@ export const HelpDialog = observer(function HelpDialog({ appHost }: { appHost: A
           />
         </div>
       );
+    } else if (tab.id === "version") {
+      content = <ChangelogSection />;
     } else {
       content = (
         <div className={cm(styles, "help-dialog-content")}>

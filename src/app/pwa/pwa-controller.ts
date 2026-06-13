@@ -119,7 +119,13 @@ export class PwaController {
   }
 
   public get canPromptDesktopInstall(): boolean {
-    return this.installPromptAvailable && !this.desktopInstallPromptDismissed && !this.standalone;
+    return this.installPromptAvailable
+      && !this.desktopInstallPromptDismissed
+      && !this.standalone
+      && this.offlineStatus !== "installing"
+      && this.offlineStatus !== "registering"
+      && this.offlineStatus !== "updating"
+      && this.offlineStatus !== "update-available";
   }
 
   public get isOfflineModeAccepted(): boolean {
