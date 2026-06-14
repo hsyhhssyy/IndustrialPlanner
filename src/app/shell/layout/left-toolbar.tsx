@@ -81,6 +81,12 @@ const UTILITY_TOOLBAR_ITEMS = [
     dialogKey: "help",
   },
   {
+    id: "utility-feedback",
+    icon: "feedback" as const,
+    labelKey: "workbench.utility.feedback",
+    dialogKey: "feedback",
+  },
+  {
     id: "utility-settings",
     icon: "settings" as const,
     labelKey: "workbench.utility.settings",

@@ -183,6 +183,7 @@ function createWorkbenchStorageSnapshot(options: {
   inspectorDialog?: ReturnType<typeof createDialogStateSnapshot>;
   saveBlueprintDialog?: ReturnType<typeof createDialogStateSnapshot>;
   baseSelectDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  feedbackDialog?: ReturnType<typeof createDialogStateSnapshot>;
   toolboxDockPreference?: "floating" | "bottom";
   toolboxBottomDockCollapsed?: boolean;
   toolboxBottomDockHeight?: number;
@@ -203,6 +204,7 @@ function createWorkbenchStorageSnapshot(options: {
       "save-blueprint": options.saveBlueprintDialog ?? createDialogStateSnapshot(),
       "base-select": options.baseSelectDialog ?? createDialogStateSnapshot(),
       "warehouse-stats": createDialogStateSnapshot(),
+      feedback: options.feedbackDialog ?? createDialogStateSnapshot(),
     },
     toolbox: {
       dockPreference: options.toolboxDockPreference ?? "floating",

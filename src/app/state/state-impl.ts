@@ -318,7 +318,7 @@ export function isRightDockTabId(value: unknown): value is RightDockTabId {
   return typeof value === "string" && RIGHT_DOCK_TAB_IDS.includes(value as RightDockTabId);
 }
 
-export const DIALOG_KEYS = ["toolbox", "help", "settings", "debug-log", "inspector", "save-blueprint", "base-select", "warehouse-stats"] as const;
+export const DIALOG_KEYS = ["toolbox", "help", "settings", "debug-log", "inspector", "save-blueprint", "base-select", "warehouse-stats", "feedback"] as const;
 export type DialogKey = typeof DIALOG_KEYS[number];
 
 export interface DialogStateReadWrite {
@@ -340,6 +340,7 @@ export interface DialogStateMapReadWrite extends Record<string, DialogStateReadW
   "save-blueprint": DialogStateReadWrite;
   "base-select": DialogStateReadWrite;
   "warehouse-stats": DialogStateReadWrite;
+  feedback: DialogStateReadWrite;
 }
 
 export function resolveDefaultDialogTabId(dialogKey: string): string | null {
@@ -476,6 +477,7 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
     "save-blueprint": createDefaultDialogStateForKey("save-blueprint"),
     "base-select": createDefaultDialogStateForKey("base-select"),
     "warehouse-stats": createDefaultDialogStateForKey("warehouse-stats"),
+    feedback: createDefaultDialogStateForKey("feedback"),
   };
   toolbox: ToolboxStateReadWrite = new ToolboxStateReadWriteImpl();
 

@@ -1161,8 +1161,10 @@
     display: block;
     max-width: 100%;
     height: auto;
-    margin: 8px 0;
-    border-radius: 6px;
+    margin: 8px auto;
+    padding: 6px;
+    background: var(--surface-2);
+    border-radius: 8px;
   }
 
   hr {
@@ -1204,5 +1206,110 @@
     margin: 0;
     color: var(--text-1);
     font-size: 0.86rem;
+  }
+}
+
+// === Feedback Dialog ===
+
+.feedback-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 24px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.feedback-dialog-intro {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.feedback-channel-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feedback-channel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 6%, var(--surface-2));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+}
+
+.feedback-channel-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--surface-1);
+  color: var(--text-0);
+  font-size: 1.4rem;
+}
+
+.feedback-channel-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.feedback-channel-card-title {
+  margin: 0;
+  color: var(--text-0);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.feedback-channel-card-description {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.feedback-channel-card-note {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.feedback-dialog.is-mobile-compact {
+  .feedback-dialog-body {
+    padding: 14px 16px;
+    gap: 14px;
+  }
+
+  .feedback-channel-card {
+    padding: 14px;
+    gap: 8px;
+  }
+
+  .feedback-channel-card-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 1.2rem;
   }
 }

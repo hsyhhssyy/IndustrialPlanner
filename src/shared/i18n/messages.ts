@@ -165,6 +165,8 @@ export type MessageKey =
   | "settingsDialog.groups"
   | "settingsAction.resetOperationAndShortcuts"
   | "settingsAction.resetOperationAndShortcutsConfirm"
+  | "settingsAction.resetAllSettings"
+  | "settingsAction.resetAllSettingsConfirm"
   | "encyclopediaPicker.title.item"
   | "encyclopediaPicker.title.entity"
   | "encyclopediaPicker.title.entry"
@@ -199,6 +201,16 @@ export type MessageKey =
   | "helpDialog.empty"
   | "helpDialog.maximize"
   | "helpDialog.restore"
+  | "feedbackDialog.title"
+  | "feedbackDialog.intro"
+  | "feedbackDialog.github.title"
+  | "feedbackDialog.github.description"
+  | "feedbackDialog.github.note"
+  | "feedbackDialog.github.action"
+  | "feedbackDialog.bilibili.title"
+  | "feedbackDialog.bilibili.description"
+  | "feedbackDialog.bilibili.note"
+  | "feedbackDialog.bilibili.action"
   | "settingsGroup.system"
   | "settingsGroup.systemDescription"
   | "settingsGroup.display"
@@ -496,6 +508,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsDialog.groups": "设置分组",
     "settingsAction.resetOperationAndShortcuts": "重置操作方式与快捷键",
     "settingsAction.resetOperationAndShortcutsConfirm": "确定要将操作方式与快捷键恢复为默认设置吗？",
+    "settingsAction.resetAllSettings": "重置设置",
+    "settingsAction.resetAllSettingsConfirm": "确定要将所有设置恢复为默认值吗？",
     "encyclopediaPicker.title.item": "选择物品",
     "encyclopediaPicker.title.entity": "选择设备",
     "encyclopediaPicker.title.entry": "选择物品或设备",
@@ -652,6 +666,16 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "helpDialog.empty": "当前没有可显示的帮助内容。",
     "helpDialog.maximize": "最大化帮助",
     "helpDialog.restore": "还原帮助",
+    "feedbackDialog.title": "问题反馈",
+    "feedbackDialog.intro": "请选择反馈渠道。GitHub 支持上传图片、日志和更长的描述；Bilibili 更方便、更容易被看到，也更适合国内用户快速反馈。",
+    "feedbackDialog.github.title": "GitHub 反馈",
+    "feedbackDialog.github.description": "适合复杂问题、仿真异常、布局错误和需要精确复现步骤的情况。",
+    "feedbackDialog.github.note": "可以附带截图、日志和更长的说明，后续整理和追踪也更方便。",
+    "feedbackDialog.github.action": "前往 GitHub",
+    "feedbackDialog.bilibili.title": "Bilibili 反馈",
+    "feedbackDialog.bilibili.description": "适合快速留言、补充现象或提出简单建议。",
+    "feedbackDialog.bilibili.note": "更方便、更快被看到，也更适合国内用户直接反馈。",
+    "feedbackDialog.bilibili.action": "前往 Bilibili",
     "settingsGroup.system": "系统",
     "settingsGroup.systemDescription": "语言、主题与全局界面偏好。",
     "settingsGroup.display": "显示",
@@ -962,6 +986,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsDialog.groups": "Setting Groups",
     "settingsAction.resetOperationAndShortcuts": "Reset Operation Mode & Shortcuts",
     "settingsAction.resetOperationAndShortcutsConfirm": "Are you sure you want to reset operation mode and shortcuts to defaults?",
+    "settingsAction.resetAllSettings": "Reset Settings",
+    "settingsAction.resetAllSettingsConfirm": "Are you sure you want to reset all settings to defaults?",
     "encyclopediaPicker.title.item": "Select Item",
     "encyclopediaPicker.title.entity": "Select Device",
     "encyclopediaPicker.title.entry": "Select Item or Device",
@@ -1118,6 +1144,16 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "helpDialog.empty": "There is no help content to show right now.",
     "helpDialog.maximize": "Maximize Help",
     "helpDialog.restore": "Restore Help",
+    "feedbackDialog.title": "Feedback",
+    "feedbackDialog.intro": "Choose where to send your report. GitHub is better for screenshots, logs, and longer descriptions; Bilibili is faster for quick reports and easier for users in mainland China.",
+    "feedbackDialog.github.title": "GitHub Feedback",
+    "feedbackDialog.github.description": "Best for complex issues, simulation mismatches, layout bugs, or anything that needs clear reproduction steps.",
+    "feedbackDialog.github.note": "You can attach screenshots, logs, and longer explanations, which also makes follow-up tracking easier.",
+    "feedbackDialog.github.action": "Open GitHub",
+    "feedbackDialog.bilibili.title": "Bilibili Feedback",
+    "feedbackDialog.bilibili.description": "Best for quick comments, brief issue reports, or simple suggestions.",
+    "feedbackDialog.bilibili.note": "It is easier, more visible, and usually more convenient for domestic users.",
+    "feedbackDialog.bilibili.action": "Open Bilibili",
     "settingsGroup.system": "System",
     "settingsGroup.systemDescription": "Language, theme, and global interface preferences.",
     "settingsGroup.display": "Display",

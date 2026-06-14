@@ -267,7 +267,7 @@ describe("Left dock panel switching", () => {
     const visiblePanel = queryVisibleLeftDockPanel(container);
 
     expect(primaryButtons).toHaveLength(4);
-    expect(utilityButtons).toHaveLength(3);
+    expect(utilityButtons).toHaveLength(4);
     expect(container.textContent).toContain("放置模式");
     expect(visiblePanel).not.toBeNull();
 
@@ -315,7 +315,7 @@ describe("Left dock panel switching", () => {
       utilityGroup?.querySelectorAll(".rail-button") ?? [],
     ).map((button) => button.getAttribute("title"));
 
-    expect(utilityTitlesBefore).toEqual(["工具箱", "帮助", "设置"]);
+    expect(utilityTitlesBefore).toEqual(["工具箱", "帮助", "问题反馈", "设置"]);
 
     act(() => {
       runInAction(() => {
@@ -327,7 +327,7 @@ describe("Left dock panel switching", () => {
       utilityGroup?.querySelectorAll(".rail-button") ?? [],
     ).map((button) => button.getAttribute("title"));
 
-    expect(utilityTitlesAfter).toEqual(["调试日志", "工具箱", "帮助", "设置"]);
+    expect(utilityTitlesAfter).toEqual(["调试日志", "工具箱", "帮助", "问题反馈", "设置"]);
   });
 
   it("frames the selected placement group and shows number shortcuts only inside it", () => {

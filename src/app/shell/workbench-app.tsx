@@ -14,6 +14,7 @@ import {
   resolveFullscreenState,
 } from "@/app/shell/layout/fullscreen-toggle-button";
 import { DebugLogDialog } from "@/app/shell/dialogs/debug-log-dialog";
+import { FeedbackDialog } from "@/app/shell/dialogs/feedback-dialog";
 import { BaseSelectDialog } from "@/app/shell/dialogs/base-select-dialog";
 import { BlueprintFolderDialog } from "@/app/shell/dialogs/blueprint-folder-dialog";
 import { BlueprintPreviewDialog } from "@/app/shell/dialogs/blueprint-preview-dialog";
@@ -385,6 +386,12 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           }
 
           appHost.internalState.settings.debugMode = value;
+
+          // 关闭调试模式时，同步关闭级联子选项
+          if (!value) {
+            appHost.internalState.settings.debugShowFps = false;
+            appHost.internalState.settings.debugShowGestureDiagnosticsWindow = false;
+          }
         }),
       },
       "other-toolbox-show-all-activity-content": {
@@ -780,6 +787,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       <EncyclopediaPickerDialog appHost={appHost} />
       <RecipePickerDialog appHost={appHost} />
       <HelpDialog appHost={appHost} />
+      <FeedbackDialog appHost={appHost} />
       <SettingsDialog
         appHost={appHost}
         controller={settingsDialog}

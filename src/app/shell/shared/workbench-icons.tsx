@@ -58,6 +58,8 @@ import LucideTablet from "~icons/lucide/tablet";
 import LucideTrash2 from "~icons/lucide/trash-2";
 import LucideUndo2 from "~icons/lucide/undo-2";
 import LucideX from "~icons/lucide/x";
+import LucideBug from "~icons/lucide/bug";
+import LucideGithub from "~icons/lucide/github";
 import MaterialSymbolsDeleteSweep from "~icons/material-symbols/delete-sweep";
 import MaterialSymbolsPauseRounded from "~icons/material-symbols/pause-rounded";
 import MaterialSymbolsPlayArrowRounded from "~icons/material-symbols/play-arrow-rounded";
@@ -121,7 +123,9 @@ type WorkbenchIconKind =
   | "select-arrow"
   | "stop-outlined"
   | "remove-backward"
-  | "remove-forward";
+  | "remove-forward"
+  | "feedback"
+  | "github";
 
 interface WorkbenchIconProps {
   kind: WorkbenchIconKind;
@@ -182,6 +186,8 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   "stop-outlined": AntDesignStopOutlined,
   "remove-backward": RemoveBackwardIcon,
   "remove-forward": RemoveForwardIcon,
+  feedback: LucideBug,
+  github: LucideGithub,
 };
 
 function RemoveBackwardIcon(props: SVGProps<SVGSVGElement>) {

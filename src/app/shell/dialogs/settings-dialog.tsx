@@ -72,6 +72,16 @@ export const SettingsDialog = observer(function SettingsDialog({
     activeTab: null,
   }), []);
 
+  const resetAllConfirmDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 420,
+    height: null,
+    activeTab: null,
+  }), []);
+
   const activityDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
     visible: false,
     maximized: false,
@@ -100,6 +110,25 @@ export const SettingsDialog = observer(function SettingsDialog({
       confirmDialogState.visible = false;
     });
   }, [confirmDialogState]);
+
+  const handleResetAllSettings = useCallback(() => {
+    runInAction(() => {
+      resetAllConfirmDialogState.visible = true;
+    });
+  }, [resetAllConfirmDialogState]);
+
+  const handleResetAllConfirm = useCallback(() => {
+    controller.resetAllSettings();
+    runInAction(() => {
+      resetAllConfirmDialogState.visible = false;
+    });
+  }, [controller, resetAllConfirmDialogState]);
+
+  const handleResetAllCancel = useCallback(() => {
+    runInAction(() => {
+      resetAllConfirmDialogState.visible = false;
+    });
+  }, [resetAllConfirmDialogState]);
 
   const handleOpenActivityDialog = useCallback(() => {
     runInAction(() => {
@@ -339,6 +368,15 @@ export const SettingsDialog = observer(function SettingsDialog({
                 )}
                 {group.id === "other" && (
                   <>
+                    <div className={cm(styles, "settings-dialog-reset-row")}>
+                      <button
+                        className={cm(styles, "settings-dialog-reset-button")}
+                        onClick={handleResetAllSettings}
+                        type="button"
+                      >
+                        {t("settingsAction.resetAllSettings")}
+                      </button>
+                    </div>
                     {migrationController === undefined ? null : (
                       <V2MigrationSettingsCard controller={migrationController} />
                     )}
@@ -356,6 +394,16 @@ export const SettingsDialog = observer(function SettingsDialog({
         onCancel={handleResetCancel}
         onConfirm={handleResetConfirm}
         t={t}
+      />
+    )}
+    {resetAllConfirmDialogState.visible && (
+      <ConfirmResetDialog
+        confirmDialogState={resetAllConfirmDialogState}
+        confirmMessageKey="settingsAction.resetAllSettingsConfirm"
+        onCancel={handleResetAllCancel}
+        onConfirm={handleResetAllConfirm}
+        t={t}
+        titleKey="settingsAction.resetAllSettings"
       />
     )}
     {activityDialogState.visible && (
@@ -770,9 +818,23 @@ interface ConfirmResetDialogProps {
   onCancel: () => void;
   onConfirm: () => void;
   t: AppHost["actions"]["translate"];
+  titleKey?: string;
+  confirmMessageKey?: string;
 }
 
-function ConfirmResetDialog({ confirmDialogState, onCancel, onConfirm, t }: ConfirmResetDialogProps) {
+function ConfirmResetDialog({
+  confirmDialogState,
+  onCancel,
+  onConfirm,
+  t,
+  titleKey,
+  confirmMessageKey,
+}: ConfirmResetDialogProps) {
+  const title = titleKey ? t(titleKey as Parameters<typeof t>[0]) : t("settingsAction.resetOperationAndShortcuts");
+  const message = confirmMessageKey
+    ? t(confirmMessageKey as Parameters<typeof t>[0])
+    : t("settingsAction.resetOperationAndShortcutsConfirm");
+
   return (
     <DialogShell
       className="confirm-reset-dialog"
@@ -786,11 +848,11 @@ function ConfirmResetDialog({ confirmDialogState, onCancel, onConfirm, t }: Conf
       onToggleMaximized={() => {}}
       restoreTitle=""
       showMaximizeButton={false}
-      title={t("settingsAction.resetOperationAndShortcuts")}
+      title={title}
       titleId="confirm-reset-dialog-title"
     >
       <div className={cm(styles, "confirm-reset-content")}>
-        <p>{t("settingsAction.resetOperationAndShortcutsConfirm")}</p>
+        <p>{message}</p>
         <div className={cm(styles, "confirm-reset-actions")}>
           <button
             className={cm(styles, "confirm-reset-cancel-btn")}

@@ -741,6 +741,24 @@ export class WorkbenchSettingsDialogController {
     this.persist();
   }
 
+  /** 重置所有设置为默认值，包括快捷键、外部绑定和本地值。 */
+  public resetAllSettings(): void {
+    // 先批量重置快捷键默认值
+    this.shortcutResetAll?.();
+
+    for (const setting of SETTING_DEFINITION_BY_ID.values()) {
+      const externalBinding = this.externalBindings.get(setting.id);
+      if (externalBinding) {
+        externalBinding.writeValue(setting.defaultValue);
+      } else {
+        this.values[setting.id] = setting.defaultValue;
+      }
+    }
+
+    this.normalizeLocalValues();
+    this.persist();
+  }
+
   private hydrate(persistedState: unknown): void {
     if (!isRecord(persistedState)) {
       return;
