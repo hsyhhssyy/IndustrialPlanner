@@ -267,12 +267,36 @@ export const SettingsDialog = observer(function SettingsDialog({
                   <p>{t(group.descriptionKey)}</p>
                 </div>
                 <div className={cm(styles, "settings-dialog-settings-list")}>
-                  {group.items.filter((setting) => !isNonDesktop || !setting.mobileHidden).map((setting) => {
+                  {group.items.filter((setting) => !isNonDesktop || !setting.mobileHidden).flatMap((setting, index, _filtered) => {
                     const isEditable = controller.isSettingEditable(setting.id);
-
                     const isKeybinding = setting.kind === "keybinding";
+                    const isDebugGroup = group.id === "debug";
+                    const isGameGroup = group.id === "game";
 
-                    return (
+                    // 调试分组：调试模式关闭时隐藏除调试模式开关外的所有项
+                    if (isDebugGroup && index > 0 && !controller.getValue("other-debug-mode")) {
+                      return [];
+                    }
+
+                    const elements: React.ReactNode[] = [];
+
+                    // 游戏分组分隔符
+                    if (isGameGroup && (index === 2 || index === 3 || index === 6)) {
+                      elements.push(<hr key={`sep-${group.id}-${index}`} className={cm(styles, "settings-dialog-separator")} />);
+                    }
+
+                    // 游戏分组：活动设置按钮（在第一条分隔符之后）
+                    if (isGameGroup && index === 2) {
+                      elements.push(
+                        <ActivitySettingsCard
+                          effectiveActivityIds={effectiveActivityIds}
+                          key="activity-card"
+                          onOpen={handleOpenActivityDialog}
+                        />,
+                      );
+                    }
+
+                    elements.push(
                       <article
                         aria-disabled={!isEditable}
                         className={cm(styles, [
@@ -296,11 +320,13 @@ export const SettingsDialog = observer(function SettingsDialog({
                             onStartCapturing: setCapturingKeybindingId,
                           })}
                         </div>
-                      </article>
+                      </article>,
                     );
+
+                    return elements;
                   })}
                 </div>
-                {group.id === "arknights-operation" && (
+                {group.id === "operation" && (
                   <div className={cm(styles, "settings-dialog-reset-row")}>
                     <button
                       className={cm(styles, "settings-dialog-reset-button")}
@@ -316,15 +342,11 @@ export const SettingsDialog = observer(function SettingsDialog({
                     {migrationController === undefined ? null : (
                       <V2MigrationSettingsCard controller={migrationController} />
                     )}
-                    <ActivitySettingsCard
-                      effectiveActivityIds={effectiveActivityIds}
-                      onOpen={handleOpenActivityDialog}
-                    />
+                    <PwaSettingsSection appHost={appHost} hideHeader pwaController={pwaController} />
                   </>
                 )}
               </section>
             ))}
-            <PwaSettingsSection appHost={appHost} pwaController={pwaController} />
           </div>
         </div>
     </DialogShell>

@@ -13,8 +13,9 @@ import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import {
   getRotatedGridFootprint,
   rotateSpriteOffset,
+  resolveSpriteGridRect,
 } from "@/shared/geometry/grid"
-import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
+import { WORLD_GRID_CELL_PIXEL_SIZE, resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform"
 import type { GridRectSize, GridRotation } from "@/domain/shared/grid"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
@@ -53,7 +54,15 @@ const SCANLINE_TEXTURE_PATH = "/textures/scanline-45deg-50opacity.png";
 const SCANLINE_PADDING_TILES = 2;
 const SCANLINE_SCROLL_INTERVAL_MS = 2000;
 
-const BLUEPRINT_MASK_TEXTURE_PATH = "/textures/blueprint-mask-50opacity.png";
+// AI-REMOVED 2026-06-14:
+// Reason: selection 不再使用 blueprint-mask 纹理，改为 scanline
+// Trigger: 用户需求"线框+扫描线线"
+// Replacement: drawSelectionOverlay 走 scanline 路径
+// Risk: Low
+// Human Review: Not Required
+//
+// Original code:
+// const BLUEPRINT_MASK_TEXTURE_PATH = "/textures/blueprint-mask-50opacity.png";
 const PREVIEW_BORDER_WIDTH = 1;
 const PREVIEW_BORDER_ALPHA = 0.5;
 
@@ -67,13 +76,39 @@ const DEVICE_LABEL_DEFAULT_TEXT_COLOR = 0xffffff;
 const DEVICE_LABEL_DEFAULT_STROKE_COLOR = 0x20242a;
 const DEVICE_LABEL_BLUEPRINT_TEXT_COLOR = 0x111111;
 
-const FLOW_GLOW_TEXTURE_PATH = "/textures/flow-glow.png";
-/** 边缘流光内边框粗细（px），默认 5px */
-/** 2026-05-05: 现改为动态计算后的上限值，真实线宽按实体渲染后最长边的 8% 决定，并夹取到 1-5px。 */
-const FLOW_GLOW_BORDER_MAX_WIDTH = 5;
-const FLOW_GLOW_BORDER_MIN_WIDTH = 1;
-/** 流光滑动周期（ms） */
-const FLOW_GLOW_SCROLL_INTERVAL_MS = 5000;
+// AI-REMOVED 2026-06-14:
+// Reason: 边缘流光特效已移除
+// Trigger: 用户需求"不再做流光特效"
+// Replacement: None
+// Risk: Low
+// Human Review: Not Required
+//
+// Original code:
+// const FLOW_GLOW_TEXTURE_PATH = "/textures/flow-glow.png";
+// AI-REMOVED 2026-06-14:
+// Reason: 未使用，ESLint no-unused-vars；resolveFlowGlowBorderWidth 被注释删除后无引用
+// Trigger: ESLint 检查报错（resolveFlowGlowBorderWidth 注释后级联暴露）
+// Evidence: 全局搜索仅在被注释的 resolveFlowGlowBorderWidth 中有引用
+// Replacement: None
+// Risk: Low — 边缘流光线宽参数，等待流光功能实现后恢复
+// Human Review: Not Required
+//
+// Original code:
+// /** 边缘流光内边框粗细（px），默认 5px */
+// /** 2026-05-05: 现改为动态计算后的上限值，真实线宽按实体渲染后最长边的 8% 决定，并夹取到 1-5px。 */
+// const FLOW_GLOW_BORDER_MAX_WIDTH = 5;
+// const FLOW_GLOW_BORDER_MIN_WIDTH = 1;
+// AI-REMOVED 2026-06-14:
+// Reason: 未使用，ESLint no-unused-vars
+// Trigger: ESLint 检查报错
+// Evidence: 全局搜索无引用，功能可能未实现或重构遗留
+// Replacement: None
+// Risk: Low — 仅用于流光滑动动画，当前无调用者
+// Human Review: Not Required
+//
+// Original code:
+// /** 流光滑动周期（ms） */
+// const FLOW_GLOW_SCROLL_INTERVAL_MS = 5000;
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
@@ -110,6 +145,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly deviceIcon: Sprite
   private readonly deviceNameText: Text
   private currentLayout: RenderSpriteLayout | null = null
+  /** 足迹（不含 spriteOffset）在视口中的布局，用于绘制线框。仅有 spriteOffset 的设备才需要计算。 */
+  private currentFootprintLayout: { x: number; y: number; width: number; height: number } | null = null
   private disposed = false
   private isTextureReady = false
   private currentBodyTextureKey: string | null = null
@@ -144,16 +181,25 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   /** 蓝图模式下框选特效的矩形遮罩，替代 selectionMask 纹理遮罩 */
   private readonly selectionRectMask: Graphics;
 
-  /** 边缘流光特效 */
-  private readonly flowGlowEffectRoot: Container;
-  /** 内边框底色 Graphics */
-  private readonly flowGlowBorderGraphics: Graphics;
-  /** 矩形遮罩 Graphics，将流光裁剪到设备矩形区域内 */
-  private readonly flowGlowMask: Graphics;
-  /** 扇形光束 TilingSprite，从设备中心旋转，纹理平铺填充 */
-  private readonly flowGlowBeam: TilingSprite;
-  private flowGlowTexture: Texture | null = null;
-  private flowGlowTextureLoadStarted = false;
+  // AI-REMOVED 2026-06-14:
+  // Reason: 边缘流光特效改为扫描线+线框方案
+  // Trigger: 用户需求"线框+扫描线线，不再做流光特效"
+  // Evidence: 单选改用 drawSelectionOverlay (扫描线+drawCollectionOverlayStroke)
+  // Replacement: selection 特效统一走 drawSelectionOverlay 的扫描线+线框路径
+  // Risk: Low
+  // Human Review: Not Required
+  //
+  // Original code:
+  // /** 边缘流光特效 */
+  // private readonly flowGlowEffectRoot: Container;
+  // /** 内边框底色 Graphics */
+  // private readonly flowGlowBorderGraphics: Graphics;
+  // /** 矩形遮罩 Graphics，将流光裁剪到设备矩形区域内 */
+  // private readonly flowGlowMask: Graphics;
+  // /** 扇形光束 TilingSprite，从设备中心旋转，纹理平铺填充 */
+  // private readonly flowGlowBeam: TilingSprite;
+  // private flowGlowTexture: Texture | null = null;
+  // private flowGlowTextureLoadStarted = false;
 
   private defaultCollectionOverlayGraphics: Graphics | null = null;
 
@@ -267,24 +313,33 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.selectionEffectRoot.addChild(this.selectionRectMask)
     this.getRootOfLayer("overlay").addChild(this.selectionEffectRoot)
 
-    // 边缘流光特效：内边框底色 + 扇形光束从中心旋转，矩形遮罩裁剪
-    this.flowGlowEffectRoot = new Container()
-    this.flowGlowEffectRoot.visible = false
-
-    this.flowGlowBorderGraphics = new Graphics({ roundPixels: true });
-
-    this.flowGlowMask = new Graphics({ roundPixels: true });
-    this.flowGlowEffectRoot.addChild(this.flowGlowMask);
-    this.flowGlowEffectRoot.mask = this.flowGlowMask;
-
-    this.flowGlowBeam = new TilingSprite({ texture: Texture.EMPTY, width: 0, height: 0 });
-    this.flowGlowBeam.anchor.set(0.5);
-    this.flowGlowBeam.roundPixels = true;
-    this.flowGlowBeam.visible = false;
-
-    this.flowGlowEffectRoot.addChild(this.flowGlowBorderGraphics);
-    this.flowGlowEffectRoot.addChild(this.flowGlowBeam);
-    this.getRootOfLayer("overlay").addChild(this.flowGlowEffectRoot);
+    // AI-REMOVED 2026-06-14:
+    // Reason: 边缘流光特效改为扫描线+线框方案
+    // Trigger: 用户需求"线框+扫描线线，不再做流光特效"
+    // Evidence: 单选改用 drawSelectionOverlay (扫描线+drawCollectionOverlayStroke)
+    // Replacement: selection 特效统一走 drawSelectionOverlay 的扫描线+线框路径
+    // Risk: Low
+    // Human Review: Not Required
+    //
+    // Original code:
+    // // 边缘流光特效：内边框底色 + 扇形光束从中心旋转，矩形遮罩裁剪
+    // this.flowGlowEffectRoot = new Container()
+    // this.flowGlowEffectRoot.visible = false
+    //
+    // this.flowGlowBorderGraphics = new Graphics({ roundPixels: true });
+    //
+    // this.flowGlowMask = new Graphics({ roundPixels: true });
+    // this.flowGlowEffectRoot.addChild(this.flowGlowMask);
+    // this.flowGlowEffectRoot.mask = this.flowGlowMask;
+    //
+    // this.flowGlowBeam = new TilingSprite({ texture: Texture.EMPTY, width: 0, height: 0 });
+    // this.flowGlowBeam.anchor.set(0.5);
+    // this.flowGlowBeam.roundPixels = true;
+    // this.flowGlowBeam.visible = false;
+    //
+    // this.flowGlowEffectRoot.addChild(this.flowGlowBorderGraphics);
+    // this.flowGlowEffectRoot.addChild(this.flowGlowBeam);
+    // this.getRootOfLayer("overlay").addChild(this.flowGlowEffectRoot);
 
     this.portOverlayRoot = new Container()
     this.portOverlayRoot.visible = false
@@ -299,6 +354,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   ): void {
     this.currentLayout = layout
     this.currentGridCellPixelSize = this.resolveWorkspaceGridCellPixelSize(context)
+    this.currentFootprintLayout = this.computeFootprintLayout(layout, context)
     this.syncDeviceTextures(context)
 
     if (!this.isTextureReady) {
@@ -325,8 +381,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.previewBorderGraphics.visible = false;
     this.previewEffectRoot.visible = false;
     this.selectionEffectRoot.visible = false;
-    this.flowGlowBorderGraphics.clear();
-    this.flowGlowEffectRoot.visible = false;
+    // AI-REMOVED 2026-06-14: 边缘流光特效已移除
+    // this.flowGlowBorderGraphics.clear();
+    // this.flowGlowEffectRoot.visible = false;
     this.portOverlayRoot.visible = false;
     this.hidePortChevronSprites();
     this.hidePortCrossSprites();
@@ -427,9 +484,11 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     // 固定宽度边框线，50% 不透明度。始终为白色预览边框，红色 invalid 边框由 InvalidPlacementDecoration 统一绘制。
+    // 2026-06-14: 边框改用足迹布局（不含 spriteOffset），避免仓库等大偏移设备边框超出 footprint。
     this.previewBorderGraphics.visible = true;
+    const borderLayout = this.currentFootprintLayout ?? layout;
     this.previewBorderGraphics
-      .rect(layout.x, layout.y, layout.width, layout.height)
+      .rect(borderLayout.x, borderLayout.y, borderLayout.width, borderLayout.height)
       .stroke({
         width: PREVIEW_BORDER_WIDTH,
         color: borderColor,
@@ -447,13 +506,24 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return;
     }
 
-    // 当只有自己处于 selection 中，且不是 marquee/move 模式时，使用边缘流光特效
-    if (this.shouldDrawFlowGlowOverlay(context)) {
-      this.drawFlowGlowOverlay(layout, context);
-      return;
-    }
+    // AI-REMOVED 2026-06-14:
+    // Reason: 边缘流光特效改为扫描线+线框方案
+    // Trigger: 用户需求"线框+扫描线线，不再做流光特效"
+    // Evidence: 单选/多选/marquee 统一走此路径
+    // Replacement: 扫描线平铺 + drawCollectionOverlayStroke 线框
+    // Risk: Low
+    // Human Review: Not Required
+    //
+    // Original code (流光分支):
+    // if (this.shouldDrawFlowGlowOverlay(context)) {
+    //   this.drawFlowGlowOverlay(layout, context);
+    //   return;
+    // }
 
-    this.loadSelectionTexture();
+    // 加载扫描线纹理（与 preview 共用同一纹理）
+    this.loadScanlineTexture();
+
+    const tilePixelSize = this.scanlineTexture?.width ?? 64;
 
     this.selectionTiling.visible = true;
     this.selectionTiling.x = layout.x + layout.width / 2;
@@ -461,29 +531,28 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.selectionTiling.rotation = 0;
     this.selectionTiling.width = layout.width;
     this.selectionTiling.height = layout.height;
+    this.selectionTiling.tint = 0xffffff;
+
+    // 扫描线水平滚动（复用 SCANLINE_SCROLL_INTERVAL_MS 周期）
+    const phase = (context.time.nowMs % SCANLINE_SCROLL_INTERVAL_MS) / SCANLINE_SCROLL_INTERVAL_MS;
+    this.selectionTiling.tilePosition.x = phase * tilePixelSize;
 
     // 蓝图模式下使用 footprint 矩形遮罩，替代 blueprint-masks 纹理遮罩
-    // 因为蓝图精灵是大块透明线框图，对应 mask 同样大面积透明，会错误裁剪框选特效
-    // AI-CORRECTION 2026-05-25: Pixi v8 WebGL 下 Graphics 矩形 mask 会让多选蓝图特效完全不可见；现在直接让 TilingSprite 按 footprint 矩形显示。
     if (readSimplifiedDeviceIconPreference(context.workspace.app)) {
       this.selectionRectMask.clear();
-      // AI-REMOVED 2026-05-25:
-      // Reason: Pixi v8 WebGL 中该 Graphics mask 会导致蓝图样式多选特效完全不可见。
-      // Trigger: 用户反馈批量选择框中采种机、种植机等蓝图样式设备没有蓝图遮罩特效。
-      // Evidence: Playwright 截图显示 marquee 覆盖多个设备但设备内部无 selectionTiling 效果；selectionTiling 本身已是 footprint 矩形。
-      // Replacement: 当前分支的 selectionTiling.mask = null，依靠 TilingSprite 的 width/height 裁剪到 footprint。
-      // Risk: Low；蓝图样式多选特效变为完整 footprint 矩形，不再受 sprite 透明区域影响。
-      // Human Review: Required
-      //
-      // Original code:
-      // this.selectionRectMask
-      //   .rect(layout.x, layout.y, layout.width, layout.height)
-      //   .fill({ color: 0xffffff });
-      // this.selectionTiling.mask = this.selectionRectMask;
+      // AI-REMOVED 2026-05-25: 已由更早提交处理
       this.selectionTiling.mask = null;
     } else {
       this.selectionTiling.mask = this.selectionMask;
     }
+
+    // 线框（足迹布局，不含 spriteOffset）
+    const strokeLayout = this.currentFootprintLayout ?? layout;
+    this.drawCollectionOverlayStroke({
+      layout: { x: strokeLayout.x, y: strokeLayout.y, width: strokeLayout.width, height: strokeLayout.height, rotation: layout.rotation },
+      color: this.resolveSelectionCollectionOverlayColor(context),
+      width: this.resolveSelectionCollectionOverlayStrokeWidth(context),
+    });
 
     this.selectionEffectRoot.visible = true;
   }
@@ -563,6 +632,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
       this.scanlineTexture = texture;
       this.scanlineTiling.texture = texture;
+      this.selectionTiling.texture = texture;
     }).catch(() => {
       // 扫描线纹理加载失败，无伤大雅
     });
@@ -628,7 +698,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.body.visible = false
       this.previewEffectRoot.visible = false
       this.selectionEffectRoot.visible = false
-      this.flowGlowEffectRoot.visible = false
+      // AI-REMOVED 2026-06-14: 边缘流光特效已移除
+      // this.flowGlowEffectRoot.visible = false
       this.portOverlayRoot.visible = false
       this.deviceLabelRoot.visible = false
       this.hidePortChevronSprites()
@@ -748,131 +819,163 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     });
   }
 
-  private loadSelectionTexture(): void {
-    if (this.selectionTextureLoadStarted) {
-      return;
-    }
+  // AI-REMOVED 2026-06-14:
+  // Reason: selection 不再使用 blueprint-mask 纹理，改为 scanline 扫描线
+  // Trigger: 用户需求"线框+扫描线线"
+  // Replacement: drawSelectionOverlay 直接调用 loadScanlineTexture() 加载扫描线纹理
+  // Risk: Low
+  // Human Review: Not Required
+  //
+  // Original code:
+  // private loadSelectionTexture(): void {
+  //   if (this.selectionTextureLoadStarted) {
+  //     return;
+  //   }
+  //
+  //   this.selectionTextureLoadStarted = true;
+  //
+  //   void Assets.load<Texture>(BLUEPRINT_MASK_TEXTURE_PATH).then((texture) => {
+  //     if (this.disposed) {
+  //       return;
+  //     }
+  //
+  //     this.selectionTexture = texture;
+  //     this.selectionTiling.texture = texture;
+  //   }).catch(() => {
+  //     // blueprint mask 纹理加载失败，无伤大雅
+  //   });
+  // }
 
-    this.selectionTextureLoadStarted = true;
+  // AI-REMOVED 2026-06-14:
+  // Reason: 边缘流光特效改为扫描线+线框方案
+  // Trigger: 用户需求"线框+扫描线线，不再做流光特效"
+  // Replacement: None；selection 统一走 drawSelectionOverlay 的扫描线+线框路径
+  // Risk: Low
+  // Human Review: Not Required
+  //
+  // Original code:
+  // private shouldDrawFlowGlowOverlay(context: RenderSpriteSyncContext): boolean {
+  //   const collections = context.workspace.editor?.state.collections;
+  //   if (!collections) {
+  //     return false;
+  //   }
+  //
+  //   // 只有自己处于 selection 中
+  //   const selectionCollection = collections[EntityCollectionType.selection];
+  //   if (!isOnlyEntityInCollection(selectionCollection, this.entityId)) {
+  //     return false;
+  //   }
+  //
+  //   // 不是 marquee 模式
+  //   const activeTool = context.workspace.app?.state.activeTool;
+  //   if (activeTool === "marquee" || activeTool === "move") {
+  //     return false;
+  //   }
+  //
+  //   return true;
+  // }
 
-    void Assets.load<Texture>(BLUEPRINT_MASK_TEXTURE_PATH).then((texture) => {
-      if (this.disposed) {
-        return;
-      }
+  // AI-REMOVED 2026-06-14:
+  // Reason: 边缘流光特效改为扫描线+线框方案
+  // Trigger: 用户需求"线框+扫描线线，不再做流光特效"
+  // Replacement: None；selection 统一走 drawSelectionOverlay 的扫描线+线框路径
+  // Risk: Low
+  // Human Review: Not Required
+  //
+  // Original code:
+  // private drawFlowGlowOverlay(
+  //   layout: RenderSpriteLayout,
+  //   context: RenderSpriteSyncContext,
+  // ): void {
+  //   if (!this.isTextureReady) {
+  //     return;
+  //   }
+  //
+  //   this.loadFlowGlowTexture();
+  //
+  //   const bw = resolveFlowGlowBorderWidth(layout);
+  //   const x0 = layout.x;
+  //   const y0 = layout.y;
+  //   const w = layout.width;
+  //   const h = layout.height;
+  //   const cx = x0 + w / 2;
+  //   const cy = y0 + h / 2;
+  //   const halfBw = bw / 2;
+  //
+  //   // 1. 内边框底色（向内缩进半线宽 stroke）
+  //   this.flowGlowBorderGraphics.clear();
+  //   const strokeColor = resolveAppThemeColorNumber(
+  //     context.theme,
+  //     context.theme.renderer.flowGlowStrokeColorKey,
+  //   );
+  //   this.flowGlowBorderGraphics
+  //     .rect(x0 + halfBw, y0 + halfBw, w - bw, h - bw)
+  //     .stroke({ width: bw, color: strokeColor });
+  //
+  //   // 2. 矩形边框环遮罩：光束只在边缘边框区域可见（挖空内部）
+  //   this.flowGlowMask.clear();
+  //   this.flowGlowMask
+  //     .rect(x0, y0, w, h).fill({ color: 0xffffff })
+  //     .rect(x0 + bw, y0 + bw, w - 2 * bw, h - 2 * bw).cut();
+  //
+  //   // 3. 扇形光束 TilingSprite：从设备中心旋转，纹理平铺
+  //   if (this.flowGlowTexture !== null) {
+  //     const texSize = this.flowGlowTexture.width; // 512
+  //
+  //     // 边长至少覆盖设备对角线，确保旋转 45° 时仍填满矩形
+  //     const diag = Math.sqrt(w * w + h * h);
+  //     const tileSize = Math.max(diag, texSize);
+  //
+  //     // 旋转相位：一个周期完成 360° 旋转
+  //     const phase = ((context.time.nowMs % FLOW_GLOW_SCROLL_INTERVAL_MS) / FLOW_GLOW_SCROLL_INTERVAL_MS);
+  //     const rotation = phase * Math.PI * 2;
+  //
+  //     const tintColor = resolveAppThemeColorNumber(
+  //       context.theme,
+  //       context.theme.renderer.flowGlowTintColorKey,
+  //     );
+  //
+  //     this.flowGlowBeam.visible = true;
+  //     this.flowGlowBeam.x = cx;
+  //     this.flowGlowBeam.y = cy;
+  //     this.flowGlowBeam.width = tileSize;
+  //     this.flowGlowBeam.height = tileSize;
+  //     this.flowGlowBeam.tileScale.set(1);
+  //     this.flowGlowBeam.rotation = rotation;
+  //     this.flowGlowBeam.tint = tintColor;
+  //   } else {
+  //     this.flowGlowBeam.visible = false;
+  //   }
+  //
+  //   this.flowGlowEffectRoot.visible = true;
+  // }
 
-      this.selectionTexture = texture;
-      this.selectionTiling.texture = texture;
-    }).catch(() => {
-      // blueprint mask 纹理加载失败，无伤大雅
-    });
-  }
-
-  private shouldDrawFlowGlowOverlay(context: RenderSpriteSyncContext): boolean {
-    const collections = context.workspace.editor?.state.collections;
-    if (!collections) {
-      return false;
-    }
-
-    // 只有自己处于 selection 中
-    const selectionCollection = collections[EntityCollectionType.selection];
-    if (!isOnlyEntityInCollection(selectionCollection, this.entityId)) {
-      return false;
-    }
-
-    // 不是 marquee 模式
-    const activeTool = context.workspace.app?.state.activeTool;
-    if (activeTool === "marquee" || activeTool === "move") {
-      return false;
-    }
-
-    return true;
-  }
-
-  private drawFlowGlowOverlay(
-    layout: RenderSpriteLayout,
-    context: RenderSpriteSyncContext,
-  ): void {
-    if (!this.isTextureReady) {
-      return;
-    }
-
-    this.loadFlowGlowTexture();
-
-    const bw = resolveFlowGlowBorderWidth(layout);
-    const x0 = layout.x;
-    const y0 = layout.y;
-    const w = layout.width;
-    const h = layout.height;
-    const cx = x0 + w / 2;
-    const cy = y0 + h / 2;
-    const halfBw = bw / 2;
-
-    // 1. 内边框底色（向内缩进半线宽 stroke）
-    this.flowGlowBorderGraphics.clear();
-    const strokeColor = resolveAppThemeColorNumber(
-      context.theme,
-      context.theme.renderer.flowGlowStrokeColorKey,
-    );
-    this.flowGlowBorderGraphics
-      .rect(x0 + halfBw, y0 + halfBw, w - bw, h - bw)
-      .stroke({ width: bw, color: strokeColor });
-
-    // 2. 矩形边框环遮罩：光束只在边缘边框区域可见（挖空内部）
-    this.flowGlowMask.clear();
-    this.flowGlowMask
-      .rect(x0, y0, w, h).fill({ color: 0xffffff })
-      .rect(x0 + bw, y0 + bw, w - 2 * bw, h - 2 * bw).cut();
-
-    // 3. 扇形光束 TilingSprite：从设备中心旋转，纹理平铺
-    if (this.flowGlowTexture !== null) {
-      const texSize = this.flowGlowTexture.width; // 512
-
-      // 边长至少覆盖设备对角线，确保旋转 45° 时仍填满矩形
-      const diag = Math.sqrt(w * w + h * h);
-      const tileSize = Math.max(diag, texSize);
-
-      // 旋转相位：一个周期完成 360° 旋转
-      const phase = ((context.time.nowMs % FLOW_GLOW_SCROLL_INTERVAL_MS) / FLOW_GLOW_SCROLL_INTERVAL_MS);
-      const rotation = phase * Math.PI * 2;
-
-      const tintColor = resolveAppThemeColorNumber(
-        context.theme,
-        context.theme.renderer.flowGlowTintColorKey,
-      );
-
-      this.flowGlowBeam.visible = true;
-      this.flowGlowBeam.x = cx;
-      this.flowGlowBeam.y = cy;
-      this.flowGlowBeam.width = tileSize;
-      this.flowGlowBeam.height = tileSize;
-      this.flowGlowBeam.tileScale.set(1);
-      this.flowGlowBeam.rotation = rotation;
-      this.flowGlowBeam.tint = tintColor;
-    } else {
-      this.flowGlowBeam.visible = false;
-    }
-
-    this.flowGlowEffectRoot.visible = true;
-  }
-
-  private loadFlowGlowTexture(): void {
-    if (this.flowGlowTextureLoadStarted) {
-      return;
-    }
-
-    this.flowGlowTextureLoadStarted = true;
-
-    void Assets.load<Texture>(FLOW_GLOW_TEXTURE_PATH).then((texture) => {
-      if (this.disposed) {
-        return;
-      }
-
-      this.flowGlowTexture = texture;
-      this.flowGlowBeam.texture = texture;
-    }).catch(() => {
-      // flow-glow 纹理加载失败，无伤大雅
-    });
-  }
+  // AI-REMOVED 2026-06-14:
+  // Reason: 边缘流光特效改为扫描线+线框方案
+  // Trigger: 用户需求"线框+扫描线线，不再做流光特效"
+  // Replacement: None；selection 统一走 drawSelectionOverlay 的扫描线+线框路径
+  // Risk: Low
+  // Human Review: Not Required
+  //
+  // Original code:
+  // private loadFlowGlowTexture(): void {
+  //   if (this.flowGlowTextureLoadStarted) {
+  //     return;
+  //   }
+  //
+  //   this.flowGlowTextureLoadStarted = true;
+  //
+  //   void Assets.load<Texture>(FLOW_GLOW_TEXTURE_PATH).then((texture) => {
+  //     if (this.disposed) {
+  //       return;
+  //     }
+  //
+  //     this.flowGlowTexture = texture;
+  //     this.flowGlowBeam.texture = texture;
+  //   }).catch(() => {
+  //     // flow-glow 纹理加载失败，无伤大雅
+  //   });
+  // }
 
   private loadPortChevronTextures(useMobile: boolean): void {
     // 同变体已加载，跳过
@@ -1256,6 +1359,63 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     applyCenteredSpriteLayout(this.previewMask, normalizedLayout)
     applyCenteredSpriteLayout(this.selectionMask, normalizedLayout)
     this.syncDeviceLabel(layout)
+  }
+
+  /**
+   * 计算足迹（不含 spriteOffset）在视口中的像素矩形。
+   * 仅当 definition.spriteOffset 存在时才计算（此时足迹 ≠ 精灵矩形），
+   * 否则返回 null，表示可直接使用 layout。
+   */
+  private computeFootprintLayout(
+    spriteLayout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): { x: number; y: number; width: number; height: number } | null {
+    if (!this.definition.spriteOffset) {
+      return null
+    }
+
+    const editor = context.workspace.editor
+    if (!editor) {
+      return null
+    }
+
+    const entity = editor.queries?.getEntityById?.(this.entityId)
+    if (!entity) {
+      return null
+    }
+
+    const viewport = editor.state.viewport
+
+    const footprintGridRect = resolveSpriteGridRect(
+      { x: entity.position.x, y: entity.position.y },
+      this.definition.footprint,
+      null,
+      entity.rotation,
+    )
+
+    const viewportRect = resolveViewportRectFromWorldGridRect({
+      gridRect: footprintGridRect,
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: viewport.clientRect.width,
+        height: viewport.clientRect.height,
+      },
+      viewportCenter: { x: viewport.center.x, y: viewport.center.y },
+      gridCellPixelSize: viewport.gridCellPixelSize,
+      displayRotation: viewport.displayRotation,
+    })
+
+    if (!viewportRect) {
+      return null
+    }
+
+    return {
+      x: viewportRect.left,
+      y: viewportRect.top,
+      width: viewportRect.width,
+      height: viewportRect.height,
+    }
   }
 
 }
@@ -1762,14 +1922,23 @@ function resolveWorldEntitySelectionStrokeWidth(gridCellPixelSize: number): numb
   );
 }
 
-function resolveFlowGlowBorderWidth(layout: Pick<RenderSpriteLayout, "width" | "height">): number {
-  const width = Math.max(layout.width, layout.height) * 0.08;
-
-  return Math.max(
-    FLOW_GLOW_BORDER_MIN_WIDTH,
-    Math.min(FLOW_GLOW_BORDER_MAX_WIDTH, width),
-  );
-}
+// AI-REMOVED 2026-06-14:
+// Reason: 未使用，ESLint no-unused-vars
+// Trigger: ESLint 检查报错
+// Evidence: 全局搜索无调用者，与 resolveWorldEntitySelectionStrokeWidth 结构对称但无引用
+// Replacement: None
+// Risk: Low — 边缘流光线宽计算，当前无调用者
+// Human Review: Not Required
+//
+// Original code:
+// function resolveFlowGlowBorderWidth(layout: Pick<RenderSpriteLayout, "width" | "height">): number {
+//   const width = Math.max(layout.width, layout.height) * 0.08;
+//
+//   return Math.max(
+//     FLOW_GLOW_BORDER_MIN_WIDTH,
+//     Math.min(FLOW_GLOW_BORDER_MAX_WIDTH, width),
+//   );
+// }
 
 function resolveInnerStrokeRect(
   layout: RenderSpriteLayout,

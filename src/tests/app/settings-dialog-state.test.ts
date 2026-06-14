@@ -215,7 +215,7 @@ describe("WorkbenchSettingsDialogController", () => {
       },
     });
 
-    controller.selectGroup("system");
+    controller.selectGroup("display-system");
     controller.updateSelectValue("system-language", "en-US");
     controller.updateSelectValue("system-theme", "ayu-dark");
     controller.updateSwitchValue("other-debug-mode", true);
@@ -225,7 +225,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(controller.getValue("system-language")).toBe("en-US");
     expect(controller.getValue("system-theme")).toBe("ayu-dark");
     expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
-      selectedGroupId: "system",
+      selectedGroupId: "display-system",
       values: {
         "display-frame-rate-limit": "unlimited",
         "game-arknights-immediate-move": true,

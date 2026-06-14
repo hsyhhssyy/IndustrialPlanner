@@ -137,7 +137,7 @@ describe("SettingsDialog", () => {
         return DOMRect.fromRect({ x: 0, y: 100, width: 360, height: 400 });
       }
 
-      if (this.id === "settings-dialog-group-system") {
+      if (this.id === "settings-dialog-group-display-system") {
         return DOMRect.fromRect({ x: 0, y: 100, width: 340, height: 120 });
       }
 

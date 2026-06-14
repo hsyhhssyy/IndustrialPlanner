@@ -9,11 +9,13 @@ import { formatPwaBytes, type PwaController } from "./pwa-controller";
 interface PwaSettingsSectionProps {
   readonly appHost: AppHost;
   readonly pwaController: PwaController;
+  readonly hideHeader?: boolean;
 }
 
 export const PwaSettingsSection = observer(function PwaSettingsSection({
   appHost,
   pwaController,
+  hideHeader = false,
 }: PwaSettingsSectionProps) {
   const copy = PWA_SETTINGS_COPY[appHost.state.settings.locale];
   const offlineAction = resolveOfflineAction(copy, pwaController);
@@ -21,10 +23,12 @@ export const PwaSettingsSection = observer(function PwaSettingsSection({
 
   return (
     <section className={cm(styles, "settings-dialog-group-section pwa-settings-section")}>
-      <div className={cm(styles, "settings-dialog-group-header")}>
-        <h3>{copy.title}</h3>
-        <p>{copy.description}</p>
-      </div>
+      {hideHeader ? null : (
+        <div className={cm(styles, "settings-dialog-group-header")}>
+          <h3>{copy.title}</h3>
+          <p>{copy.description}</p>
+        </div>
+      )}
       <div className={cm(styles, "pwa-settings-card")}>
         <div className={cm(styles, "pwa-settings-copy")}>
           <h4>{copy.offlineMode}</h4>

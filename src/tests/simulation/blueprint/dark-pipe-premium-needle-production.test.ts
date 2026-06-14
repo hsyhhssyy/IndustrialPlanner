@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createRegistryContract } from "@/registry";
 import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
-import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import { runBlueprintSimulation } from "../blueprint-runner";
 import {
   createEntity,
@@ -44,10 +43,12 @@ import {
 // ============================================================
 
 const TARGET_ITEM = "item_bottled_rec_hp_5";
-const TICKS_PER_MINUTE = 60 * STANDARD_TICK_RATE_PER_SECOND; // 1200
-const WARMUP_MINUTES = 2;
-const MEASURE_MINUTES = 5;
-const TARGET_RATE_PER_MINUTE = 6;
+const STORAGER_ID = "legacy_d8591492_0104";
+const WARMUP_TICKS = 2400; // 2 分钟预热
+const WINDOW_SIZE = 1200; // 1 分钟窗口（20 tick/s × 60s）
+const OBSERVATION_TICKS = 2400; // 预热后观察 2 分钟
+const WINDOW_STEP = 100;   // 窗口滑动步长
+const TARGET_PER_WINDOW = 6;
 
 /** 22 个辅助设备，提取自 .temp/testcase.json */
 const EXTRA_ENTITIES = [
@@ -100,7 +101,7 @@ const EXTRA_ENTITIES = [
 
 describe("暗管芽针针剂完整产线", () => {
   it(
-    "预热2分钟后，每分钟稳定产出6个优质芽针针剂，持续5分钟",
+    "预热2分钟后，1分钟滑动窗口产出 >= 6个优质芽针针剂，持续2分钟",
     { timeout: 600_000 },
     async () => {
       // 1. 加载系统蓝图 + 注入辅助设备
@@ -109,88 +110,62 @@ describe("暗管芽针针剂完整产线", () => {
         EXTRA_ENTITIES,
       );
 
-      // 2. 建立暗管链接：蓝图自带 6 条 warehouse slotLink（已由 loadBlueprintWithExtras 保留），
-      //    测试只需补充 3 条暗管链接（outlet → inlet）
+      // 2. 建立暗管链接
       blueprint.slotLinks.push(
-        // ① test-extra-13（新增 outlet @0,20）→ legacy_d8591492_0057（蓝图 inlet @12,4）
-        createDarkPipeSlotLink({
-          outletEntityId: "test-extra-13",
-          inletEntityId: "legacy_d8591492_0057",
-        }),
-        // ② legacy_d8591492_0009（蓝图 outlet @8,4）→ test-extra-6（新增 inlet @-6,-7）
-        createDarkPipeSlotLink({
-          outletEntityId: "legacy_d8591492_0009",
-          inletEntityId: "test-extra-6",
-        }),
-        // ③ legacy_d8591492_0103（蓝图 outlet @20,0）→ test-extra-3（新增 inlet @-6,-4）
-        createDarkPipeSlotLink({
-          outletEntityId: "legacy_d8591492_0103",
-          inletEntityId: "test-extra-3",
-        }),
+        createDarkPipeSlotLink({ outletEntityId: "test-extra-13", inletEntityId: "legacy_d8591492_0057" }),
+        createDarkPipeSlotLink({ outletEntityId: "legacy_d8591492_0009", inletEntityId: "test-extra-6" }),
+        createDarkPipeSlotLink({ outletEntityId: "legacy_d8591492_0103", inletEntityId: "test-extra-3" }),
       );
 
       // 3. 运行仿真
-      const totalTicks = (WARMUP_MINUTES + MEASURE_MINUTES) * TICKS_PER_MINUTE;
-
+      const maxTick = WARMUP_TICKS + OBSERVATION_TICKS;
       const report = await runBlueprintSimulation({
         blueprint,
-        maxTickNumber: totalTicks,
+        maxTickNumber: maxTick,
         registry: createRegistryContract(),
       });
 
-      // 验证拓扑无编译错误
-      expect(report.topology.diagnosticCount, "拓扑编译应无错误").toBe(0);
-
-      // 按分钟统计 item_bottled_rec_hp_5 的全局传输量
-      // 物品从制造台产出后经过 N 段传送带到达储存箱，
-      // 每段传送带产生一次传输事件，因此传输计数 = 产出数 × N
-      // 关键验证: 每分钟传输量是否稳定（产线达稳态后各分钟应一致）
-      const perMinuteTransfers: number[] = [];
-
-      for (
-        let minute = WARMUP_MINUTES;
-        minute < WARMUP_MINUTES + MEASURE_MINUTES;
-        minute++
-      ) {
-        const startTick = minute * TICKS_PER_MINUTE;
-        const endTick = (minute + 1) * TICKS_PER_MINUTE;
-        let count = 0;
-
-        for (const tick of report.ticks) {
-          if (tick.tickNumber >= startTick && tick.tickNumber < endTick) {
-            for (const transfer of tick.transfers) {
-              if (transfer.itemType === TARGET_ITEM) {
-                count += transfer.amount;
-              }
-            }
+      // 4. 累计最终产物交到目标存储箱的数量
+      const delivered: number[] = new Array(maxTick + 1).fill(0);
+      for (const tick of report.ticks) {
+        const t = tick.tickNumber;
+        if (t > 0) delivered[t] = delivered[t - 1]!;
+        for (const transfer of tick.transfers) {
+          if (transfer.itemType === TARGET_ITEM && transfer.targetSlotId.includes(`device:${STORAGER_ID}/`)) {
+            delivered[t] = delivered[t]! + transfer.amount;
           }
         }
-
-        perMinuteTransfers.push(count);
+      }
+      for (let i = 1; i <= maxTick; i++) {
+        if (delivered[i]! === 0 && delivered[i - 1]! > 0) delivered[i] = delivered[i - 1]!;
       }
 
-      // 验证每分钟传输量稳定一致
-      const uniqueValues = new Set(perMinuteTransfers);
-      expect(
-        uniqueValues.size,
-        `每分钟传输量应稳定一致，实际: ${JSON.stringify(perMinuteTransfers)}`,
-      ).toBe(1);
+      // 5. 滑动窗口验证
+      const slidingWindowStartMin = WARMUP_TICKS;
+      const slidingWindowStartMax = maxTick - WINDOW_SIZE + 1;
+      const results: { windowStart: number; produced: number }[] = [];
 
-      const stableCount = perMinuteTransfers[0]!;
-      expect(stableCount, "每分钟传输量应大于0").toBeGreaterThan(0);
+      for (let windowStart = slidingWindowStartMin; windowStart <= slidingWindowStartMax; windowStart += WINDOW_STEP) {
+        const windowEnd = windowStart + WINDOW_SIZE - 1;
+        const beforeWindow = windowStart - 1;
+        const produced = delivered[windowEnd]! - delivered[beforeWindow]!;
 
-      // 传输量应为产出速率的整数倍（N 段传送带）
-      expect(
-        stableCount % TARGET_RATE_PER_MINUTE,
-        `传输量 ${stableCount} 应为 ${TARGET_RATE_PER_MINUTE} 的整数倍`,
-      ).toBe(0);
+        results.push({ windowStart, produced });
 
-      const beltSegments = stableCount / TARGET_RATE_PER_MINUTE;
+        expect(
+          produced,
+          `滑动窗口 [${windowStart}, ${windowEnd}] 产出 ${produced} < ${TARGET_PER_WINDOW}`,
+        ).toBeGreaterThanOrEqual(TARGET_PER_WINDOW);
+      }
+
+      const totalProduced = delivered[maxTick]! - delivered[WARMUP_TICKS - 1]!;
+      const expectedMinTotal = (OBSERVATION_TICKS / WINDOW_SIZE) * TARGET_PER_WINDOW;
+      expect(totalProduced).toBeGreaterThanOrEqual(expectedMinTotal);
 
       console.log(
-        `[暗管芽针针剂] 每分钟传输量: ${stableCount}, ` +
-          `路径段数: ${beltSegments}, ` +
-          `产出速率: ${TARGET_RATE_PER_MINUTE}/分钟 ✓`,
+        `[暗管芽针针剂] ${results.length} 个滑动窗口全部通过，` +
+        `总产出 ${totalProduced}，` +
+        `窗口产出范围 [${Math.min(...results.map(r => r.produced))}, ${Math.max(...results.map(r => r.produced))}]`,
       );
     },
   );

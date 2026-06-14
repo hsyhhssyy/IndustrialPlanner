@@ -218,10 +218,19 @@ interface RenderedSpriteSnapshot {
   mask?: unknown;
 }
 
-interface RenderedGraphicsSnapshot {
-  visible: boolean;
-  strokeCalls: unknown[];
-}
+// AI-REMOVED 2026-06-14:
+// Reason: 未使用，ESLint no-unused-vars
+// Trigger: ESLint 检查报错
+// Evidence: 测试文件中定义但从未引用
+// Replacement: None
+// Risk: Low — 仅测试辅助类型
+// Human Review: Not Required
+//
+// Original code:
+// interface RenderedGraphicsSnapshot {
+//   visible: boolean;
+//   strokeCalls: unknown[];
+// }
 
 interface RenderedTextSnapshot {
   x: number;
@@ -1155,7 +1164,7 @@ describe("GenericDeviceSprite", () => {
       height: 32,
       mask: null,
       texture: {
-        id: "/textures/blueprint-mask-50opacity.png",
+        id: "/textures/scanline-45deg-50opacity.png",
       },
     })
   })
@@ -1651,7 +1660,8 @@ describe("GenericDeviceSprite", () => {
       children?: unknown[];
     } | undefined
 
-    expect(overlayRoot.children).toHaveLength(4)
+    // 2026-06-14: flowGlowEffectRoot 已移除，overlay children 从 4 降为 3
+    expect(overlayRoot.children).toHaveLength(3)
     expect(previewEffectRoot?.visible).toBe(true)
 
     const scanlineTiling = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
@@ -1773,86 +1783,17 @@ describe("GenericDeviceSprite", () => {
     })
   })
 
-  it("scales the single-selection flow glow border width from the longest side and clamps it", async () => {
-    const resolvedTexture = createLoadedTextureMock("device-texture")
-    const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
-
-    const entityLayer = createLayerStub()
-    const overlayLayer = createLayerStub()
-    const renderHost = createRenderHostStub({
-      [BODY_KEY]: resolvedTexture,
-      [MASK_KEY]: resolvedMaskTexture,
-    })
-    const sprite = new GenericDeviceSprite(
-      "single-selected-device",
-      createEntityDefinitionStub(),
-      renderHost as never,
-    )
-
-    sprite.attach({
-      background: {} as never,
-      entityLow: {} as never,
-      entityHigh: {} as never,
-      logisticsBelt: {} as never,
-      logisticsPipe: {} as never,
-      entity: entityLayer as never,
-      overlay: overlayLayer as never,
-    })
-
-    const context = createRenderContextStub({
-      selectionIds: ["single-selected-device"],
-      previewIds: [],
-    })
-
-    sprite.syncLayout({
-      x: 16,
-      y: 24,
-      width: 48,
-      height: 32,
-      rotation: 0,
-    }, context)
-
-    await flushMicrotasks(8)
-
-    sprite.syncLayout({
-      x: 16,
-      y: 24,
-      width: 48,
-      height: 32,
-      rotation: 0,
-    }, context)
-
-    const flowGlowBorder = resolveFlowGlowBorderGraphics(overlayLayer)
-    expect(flowGlowBorder?.visible).toBe(true)
-    expect(flowGlowBorder?.strokeCalls).toHaveLength(1)
-    expect(flowGlowBorder?.strokeCalls[0]).toMatchObject({
-      width: 3.84,
-    })
-
-    sprite.syncLayout({
-      x: 16,
-      y: 24,
-      width: 8,
-      height: 8,
-      rotation: 0,
-    }, context)
-
-    expect(flowGlowBorder?.strokeCalls.at(-1)).toMatchObject({
-      width: 1,
-    })
-
-    sprite.syncLayout({
-      x: 16,
-      y: 24,
-      width: 96,
-      height: 40,
-      rotation: 0,
-    }, context)
-
-    expect(flowGlowBorder?.strokeCalls.at(-1)).toMatchObject({
-      width: 5,
-    })
-  })
+  // AI-REMOVED 2026-06-14:
+  // Reason: 边缘流光特效已移除，对应测试不再适用
+  // Trigger: 用户需求"不再做流光特效"
+  // Replacement: None
+  // Risk: Low
+  // Human Review: Not Required
+  //
+  // Original code:
+  // it("scales the single-selection flow glow border width from the longest side and clamps it", async () => {
+  //   ... (77 lines of test code omitted)
+  // })
 
   it("draws solid input and output port chevrons for the only selected device", async () => {
     const resolvedTexture = createLoadedTextureMock("device-texture")
@@ -2841,23 +2782,31 @@ function resolvePortOverlayRoot(overlayLayer: ReturnType<typeof createLayerStub>
     children?: unknown[];
   } | undefined
 
-  return overlayRoot?.children?.[3] as {
+  return overlayRoot?.children?.[2] as {
     visible?: boolean;
     children?: unknown[];
   } | undefined
 }
 
-function resolveFlowGlowBorderGraphics(overlayLayer: ReturnType<typeof createLayerStub>) {
-  const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
-    children?: unknown[];
-  } | undefined
-
-  const flowGlowRoot = overlayRoot?.children?.[2] as {
-    children?: unknown[];
-  } | undefined
-
-  return flowGlowRoot?.children?.[1] as RenderedGraphicsSnapshot | undefined
-}
+// AI-REMOVED 2026-06-14:
+// Reason: 边缘流光特效已移除，无对应 Graphics 对象可查询
+// Trigger: 用户需求"不再做流光特效"
+// Replacement: None；测试 "scales the single-selection flow glow border width" 已同步删除
+// Risk: Low
+// Human Review: Not Required
+//
+// Original code:
+// function resolveFlowGlowBorderGraphics(overlayLayer: ReturnType<typeof createLayerStub>) {
+//   const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
+//     children?: unknown[];
+//   } | undefined
+//
+//   const flowGlowRoot = overlayRoot?.children?.[2] as {
+//     children?: unknown[];
+//   } | undefined
+//
+//   return flowGlowRoot?.children?.[1] as RenderedGraphicsSnapshot | undefined
+// }
 
 function createLayerStub() {
   const layer = {

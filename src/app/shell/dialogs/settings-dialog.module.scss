@@ -146,6 +146,12 @@
   gap: 8px;
 }
 
+.settings-dialog-separator {
+  margin: 4px 0;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+
 .settings-dialog-setting-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(200px, 236px);

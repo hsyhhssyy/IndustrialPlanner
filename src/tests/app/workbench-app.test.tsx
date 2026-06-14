@@ -2323,18 +2323,16 @@ describe("WorkbenchApp", () => {
     const themeOptionLabels = Array.from(themeSelect?.options ?? []).map((option) => option.textContent);
 
     expect(dialog).not.toBeNull();
-    // 2026-05-26: game-arknights-operation-mode 开关已从「游戏」分组移除，
-    // 但「鹰角操作模式」分组及其子设置仍保留。
-    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他", "调试", "离线与安装"]);
+    // 2026-06-14: system 与 display 合并为「显示与系统」；arknights-operation 改为「操作」；
+    // PWA 区域移入「其他」分组内部。
+    expect(groupTitles).toEqual(["显示与系统", "游戏", "操作", "快捷键", "其他", "调试"]);
     expect(groupDescriptions).toEqual([
-      "语言、主题与全局界面偏好。",
-      "图像输出与帧率表现相关设置。",
-      "与游戏操作习惯和显示风格对齐的选项。",
-      "与鹰角操作模式附加行为相关的选项。",
+      "语言、主题与显示设置。",
+      "显示风格调整",
+      "调整仿真工具中的操作逻辑。可以选择与游戏操作习惯对齐或开启增强选项。",
       "编辑当前可自定义的快捷键设置。",
-      "调试和附加能力开关。",
-      "FPS 与手势测试开关，可用于开发调试。",
-      "管理断网使用和桌面入口。",
+      "其他功能与设置",
+      "一系列用于调试的设置内容。",
     ]);
     expect(languageOptionLabels).toEqual(["中文(简体)", "English"]);
     expect(themeOptionLabels).toEqual(["Ayu Light", "Ayu Dark"]);
@@ -3171,7 +3169,7 @@ describe("WorkbenchApp", () => {
       ?.querySelector(".settings-dialog-setting-copy p");
 
     expect(immediateMarqueeDescription?.textContent).toBe(
-      "鼠标模式：从画布空白处开始拖动时，立即开始框选。\n触控模式：从画布空白处长按并拖动时，立即开始框选。\n开启该选项会强制打开立即移动。",
+      "仅鼠标模式有效，从画布空白处开始拖动时，立即开始框选而不需要长按。",
     );
 
     act(() => {
@@ -3209,6 +3207,18 @@ describe("WorkbenchApp", () => {
       settingsButton?.click();
     });
 
+    // 2026-06-14: debug-mode 移至调试分组首位；关闭时隐藏后续调试项，
+    // 需要先开启调试模式才能看到 FPS/手势测试开关。
+    const debugModeToggle = container.querySelector(
+      'input[name="other-debug-mode"]',
+    ) as HTMLInputElement | null;
+
+    act(() => {
+      if (debugModeToggle) {
+        debugModeToggle.click();
+      }
+    });
+
     const showFpsToggle = container.querySelector(
       'input[name="debug-show-fps"]',
     ) as HTMLInputElement | null;
@@ -3233,6 +3243,7 @@ describe("WorkbenchApp", () => {
         ...DEFAULT_APP_SETTINGS_STORAGE,
         debugShowFps: true,
         debugShowGestureDiagnosticsWindow: true,
+        debugMode: true,
       }),
     );
   });
@@ -3612,7 +3623,9 @@ describe("WorkbenchApp", () => {
 
     expect(dialog).not.toBeNull();
     expect(container.querySelector(".settings-dialog-sidebar")).toBeNull();
-    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "其他", "调试", "离线与安装"]);
+    // 2026-06-14: system/display 合并，arknights-operation 改为 operation，
+    // PWA 移入 other 分组内，快捷键分组 mobileHidden。
+    expect(groupTitles).toEqual(["显示与系统", "游戏", "操作", "其他", "调试"]);
   });
 
   it("marks help and toolbox dialogs as compact shells on phones", () => {

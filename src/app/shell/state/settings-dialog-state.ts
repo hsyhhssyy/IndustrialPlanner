@@ -5,7 +5,7 @@ import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
 export const USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY = "v3-user-settings-dialog";
 
-export type SettingsGroupId = "system" | "display" | "game" | "arknights-operation" | "shortcuts" | "other" | "debug";
+export type SettingsGroupId = "display-system" | "game" | "operation" | "shortcuts" | "other" | "debug";
 
 export type WorkbenchSettingControlValue = string | number | boolean;
 
@@ -95,9 +95,9 @@ const SHOW_DEVICE_ICONS_SETTING_ID = "game-show-device-icons";
 
 export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinition[] = [
   {
-    id: "system",
-    labelKey: "settingsGroup.system",
-    descriptionKey: "settingsGroup.systemDescription",
+    id: "display-system",
+    labelKey: "settingsGroup.displaySystem",
+    descriptionKey: "settingsGroup.displaySystemDescription",
     items: [
       {
         id: "system-language",
@@ -111,24 +111,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         ],
       },
       {
-        id: "system-theme",
-        kind: "select",
-        labelKey: "settingsField.theme",
-        descriptionKey: "settingsField.themeDescription",
-        defaultValue: "ayu-light",
-        options: [
-          { value: "ayu-light", labelKey: "settingsOption.ayuLight" },
-          { value: "ayu-dark", labelKey: "settingsOption.ayuDark" },
-        ],
-      },
-    ],
-  },
-  {
-    id: "display",
-    labelKey: "settingsGroup.display",
-    descriptionKey: "settingsGroup.displayDescription",
-    items: [
-      {
         id: "display-frame-rate-limit",
         kind: "select",
         labelKey: "settingsField.frameRateLimit",
@@ -138,6 +120,17 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
           { value: "30", labelKey: "settingsOption.frameRate30" },
           { value: "60", labelKey: "settingsOption.frameRate60" },
           { value: "unlimited", labelKey: "settingsOption.unlimited" },
+        ],
+      },
+      {
+        id: "system-theme",
+        kind: "select",
+        labelKey: "settingsField.theme",
+        descriptionKey: "settingsField.themeDescription",
+        defaultValue: "ayu-light",
+        options: [
+          { value: "ayu-light", labelKey: "settingsOption.ayuLight" },
+          { value: "ayu-dark", labelKey: "settingsOption.ayuDark" },
         ],
       },
     ],
@@ -191,10 +184,35 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         },
       },
       {
+        id: "other-toolbox-show-all-activity-content",
+        kind: "switch",
+        labelText: "工具箱显示所有活动内容",
+        descriptionText: "开启后，工具箱会无视活动设置展示所有物品和配方。",
+        defaultValue: true,
+      },
+      {
         id: "game-use-inspector-panel",
         kind: "switch",
         labelKey: "settingsField.useInspectorPanel",
         descriptionKey: "settingsField.useInspectorPanelDescription",
+        defaultValue: false,
+      },
+      {
+        id: "game-arknights-selection-right-dock-sync",
+        kind: "switch",
+        labelKey: "settingsField.arknightsSelectionRightDockSync",
+        descriptionKey: "settingsField.arknightsSelectionRightDockSyncDescription",
+        defaultValue: true,
+        editableWhen: {
+          settingId: "game-use-inspector-panel",
+          equals: true,
+        },
+      },
+      {
+        id: "game-arknights-inspector-open-on-second-click",
+        kind: "switch",
+        labelKey: "settingsField.arknightsInspectorOpenOnSecondClick",
+        descriptionKey: "settingsField.arknightsInspectorOpenOnSecondClickDescription",
         defaultValue: false,
       },
       {
@@ -230,9 +248,9 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     ],
   },
   {
-    id: "arknights-operation",
-    labelKey: "settingsGroup.arknightsOperation",
-    descriptionKey: "settingsGroup.arknightsOperationDescription",
+    id: "operation",
+    labelKey: "settingsGroup.operation",
+    descriptionKey: "settingsGroup.operationDescription",
     items: [
       {
         id: "game-arknights-immediate-move",
@@ -261,20 +279,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         labelKey: "settingsField.arknightsAutoCreateLogisticsDevices",
         descriptionKey: "settingsField.arknightsAutoCreateLogisticsDevicesDescription",
         defaultValue: true,
-      },
-      {
-        id: "game-arknights-selection-right-dock-sync",
-        kind: "switch",
-        labelKey: "settingsField.arknightsSelectionRightDockSync",
-        descriptionKey: "settingsField.arknightsSelectionRightDockSyncDescription",
-        defaultValue: true,
-      },
-      {
-        id: "game-arknights-inspector-open-on-second-click",
-        kind: "switch",
-        labelKey: "settingsField.arknightsInspectorOpenOnSecondClick",
-        descriptionKey: "settingsField.arknightsInspectorOpenOnSecondClickDescription",
-        defaultValue: false,
       },
     ],
   },
@@ -395,10 +399,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         labelKey: shortcutKeybindingLabelKey("shortcut-undo"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-undo"),
         defaultValue: "Ctrl+Z",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-redo",
@@ -406,10 +406,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         labelKey: shortcutKeybindingLabelKey("shortcut-redo"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-redo"),
         defaultValue: "Ctrl+Y",
-        editableWhen: {
-          settingId: "game-arknights-operation-mode",
-          equals: false,
-        },
       },
       {
         id: "shortcut-toggle-placement-panel",
@@ -445,14 +441,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     id: "other",
     labelKey: "settingsGroup.other",
     descriptionKey: "settingsGroup.otherDescription",
+    items: [],
+  },
+  {
+    id: "debug",
+    labelKey: "settingsGroup.debug",
+    descriptionKey: "settingsGroup.debugDescription",
     items: [
-      {
-        id: "other-toolbox-show-all-activity-content",
-        kind: "switch",
-        labelText: "在工具箱内显示所有活动物品和配方",
-        descriptionText: "关闭后，工具箱只显示当前生效活动的物品和配方。",
-        defaultValue: true,
-      },
       {
         id: "other-debug-mode",
         kind: "switch",
@@ -460,13 +455,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         descriptionKey: "settingsField.debugModeDescription",
         defaultValue: false,
       },
-    ],
-  },
-  {
-    id: "debug",
-    labelKey: "settingsGroup.debug",
-    descriptionKey: "settingsGroup.debugDescription",
-    items: [
       {
         id: "debug-show-fps",
         kind: "switch",
@@ -530,15 +518,13 @@ export class WorkbenchSettingsDialogController {
   public selectedGroupId: SettingsGroupId = DEFAULT_SETTINGS_GROUP.id;
   public values: Record<string, WorkbenchSettingControlValue> = {};
 
-  // Hardcoded：重置「鹰角操作模式」和「快捷键」时需要恢复为默认值的 setting id。
+  // Hardcoded：重置「操作」和「快捷键」时需要恢复为默认值的 setting id。
   private static readonly RESET_OPERATION_AND_SHORTCUT_KEYS: readonly string[] = [
-    // 鹰角操作模式
+    // 操作
     "game-arknights-immediate-move",
     "game-arknights-immediate-marquee",
     "game-arknights-allow-empty-logistics-endpoints",
     "game-arknights-auto-create-logistics-devices",
-    "game-arknights-selection-right-dock-sync",
-    "game-arknights-inspector-open-on-second-click",
     // 快捷键
     "shortcut-place-conveyor",
     "shortcut-place-pipe",
