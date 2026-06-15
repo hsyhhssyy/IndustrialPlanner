@@ -356,27 +356,61 @@ export const SettingsDialog = observer(function SettingsDialog({
                   })}
                 </div>
                 {group.id === "operation" && (
-                  <div className={cm(styles, "settings-dialog-reset-row")}>
-                    <button
-                      className={cm(styles, "settings-dialog-reset-button")}
-                      onClick={handleResetOperationAndShortcuts}
-                      type="button"
-                    >
-                      {t("settingsAction.resetOperationAndShortcuts")}
-                    </button>
-                  </div>
+                  /*
+                   * AI-REMOVED 2026-06-15:
+                   * Reason: 重置操作需要与普通设置项使用同一张卡片，避免按钮脱离设置列表。
+                   * Trigger: 用户反馈重置按钮没有走设置选项样式、视觉突兀。
+                   * Evidence: Playwright 截图显示重置按钮位于卡片列表外；代码中使用 settings-dialog-reset-row 单独渲染。
+                   * Replacement: SettingsActionCard in this file.
+                   * Risk: Low
+                   * Human Review: Required
+                   *
+                   * Original code:
+                   * <div className={cm(styles, "settings-dialog-reset-row")}>
+                   *   <button
+                   *     className={cm(styles, "settings-dialog-reset-button")}
+                   *     onClick={handleResetOperationAndShortcuts}
+                   *     type="button"
+                   *   >
+                   *     {t("settingsAction.resetOperationAndShortcuts")}
+                   *   </button>
+                   * </div>
+                   */
+                  <SettingsActionCard
+                    buttonLabel={t("settingsAction.resetOperationAndShortcuts")}
+                    description={t("settingsAction.resetOperationAndShortcutsConfirm")}
+                    onClick={handleResetOperationAndShortcuts}
+                    title={t("settingsAction.resetOperationAndShortcuts")}
+                  />
                 )}
                 {group.id === "other" && (
                   <>
-                    <div className={cm(styles, "settings-dialog-reset-row")}>
-                      <button
-                        className={cm(styles, "settings-dialog-reset-button")}
-                        onClick={handleResetAllSettings}
-                        type="button"
-                      >
-                        {t("settingsAction.resetAllSettings")}
-                      </button>
-                    </div>
+                    {/*
+                      AI-REMOVED 2026-06-15:
+                      Reason: 全部重置操作需要与普通设置项使用同一张卡片，避免按钮脱离设置列表。
+                      Trigger: 用户反馈重置按钮没有走设置选项样式、视觉突兀。
+                      Evidence: Playwright 截图显示重置按钮位于卡片列表外；代码中使用 settings-dialog-reset-row 单独渲染。
+                      Replacement: SettingsActionCard in this file.
+                      Risk: Low
+                      Human Review: Required
+
+                      Original code:
+                      <div className={cm(styles, "settings-dialog-reset-row")}>
+                        <button
+                          className={cm(styles, "settings-dialog-reset-button")}
+                          onClick={handleResetAllSettings}
+                          type="button"
+                        >
+                          {t("settingsAction.resetAllSettings")}
+                        </button>
+                      </div>
+                    */}
+                    <SettingsActionCard
+                      buttonLabel={t("settingsAction.resetAllSettings")}
+                      description={t("settingsAction.resetAllSettingsConfirm")}
+                      onClick={handleResetAllSettings}
+                      title={t("settingsAction.resetAllSettings")}
+                    />
                     {migrationController === undefined ? null : (
                       <V2MigrationSettingsCard controller={migrationController} />
                     )}
@@ -419,6 +453,36 @@ export const SettingsDialog = observer(function SettingsDialog({
     </>
   );
 });
+
+function SettingsActionCard({
+  buttonLabel,
+  description,
+  onClick,
+  title,
+}: {
+  buttonLabel: string;
+  description: string;
+  onClick: () => void;
+  title: string;
+}) {
+  return (
+    <article className={cm(styles, "settings-dialog-setting-card")}>
+      <div className={cm(styles, "settings-dialog-setting-copy")}>
+        <h4>{title}</h4>
+        <p>{description}</p>
+      </div>
+      <div className={cm(styles, "settings-dialog-setting-control")}>
+        <button
+          className={cm(styles, "settings-dialog-reset-button")}
+          onClick={onClick}
+          type="button"
+        >
+          {buttonLabel}
+        </button>
+      </div>
+    </article>
+  );
+}
 
 const V2MigrationSettingsCard = observer(function V2MigrationSettingsCard({
   controller,

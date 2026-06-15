@@ -58,6 +58,10 @@
 .pwa-gateway-secondary-button,
 .pwa-settings-primary-button,
 .pwa-settings-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 132px;
   min-height: 34px;
   padding: 0 14px;
   border-radius: 6px;
@@ -134,13 +138,13 @@
 
 .pwa-settings-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(132px, auto);
+  gap: 12px;
   align-items: center;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-1);
+  border-radius: 12px;
+  background: var(--surface-2);
 }
 
 .pwa-settings-card + .pwa-settings-card {
@@ -170,8 +174,32 @@
     width: calc(100vw - 24px);
   }
 
-  .pwa-settings-card,
   .pwa-gateway-toast {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* AI-REMOVED 2026-06-15:
+     Reason: 711px 平板设置页仍有足够横向空间，PWA 设置项不应比普通设置项更早折行。
+     Trigger: 用户反馈按钮类设置长短/排版不统一。
+     Evidence: Playwright tablet-square 截图显示普通设置项已两列，PWA 设置项仍在 760px 规则下单列。
+     Replacement: 同文件 @media (max-width: 640px) 中的 PWA 窄屏单列规则。
+     Risk: Low
+     Human Review: Required
+
+     Original code:
+     .pwa-settings-card,
+     .pwa-gateway-toast {
+       grid-template-columns: minmax(0, 1fr);
+     }
+
+     .pwa-settings-actions {
+       justify-content: flex-start;
+     }
+   */
+}
+
+@media (max-width: 640px) {
+  .pwa-settings-card {
     grid-template-columns: minmax(0, 1fr);
   }
 

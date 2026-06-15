@@ -168,13 +168,14 @@
 }
 
 /* 快捷键设置项-伪表格样式 */
+/* AI-CORRECTION 2026-06-15:
+   快捷键项保留紧凑文本，但视觉上回归设置卡片，避免比普通设置项少一层内缩。 */
 .settings-dialog-setting-card.is-keybinding {
-  border: none;
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
-  padding: 6px 0;
-  gap: 8px;
-  background: transparent;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  gap: 12px;
 }
 
 .settings-dialog-setting-card.is-keybinding:first-child {
@@ -212,6 +213,7 @@
 .settings-dialog-setting-control {
   display: flex;
   justify-content: flex-end;
+  min-width: 0;
 }
 
 .settings-dialog-activity-card {
@@ -368,7 +370,10 @@
 .settings-dialog-reset-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  min-width: 132px;
+  min-height: 36px;
   padding: 8px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -631,14 +636,16 @@
 // ─── 确认对话框 ───
 
 .confirm-reset-dialog {
-  width: 420px;
+  grid-template-rows: auto auto;
+  width: min(420px, 100%);
   height: auto;
-  max-height: min(240px, 60vh);
+  min-height: 0;
+  max-height: min(220px, 60vh);
 }
 
 .confirm-reset-dialog-body {
-  display: flex;
-  align-items: center;
+  display: block;
+  min-height: 0;
 }
 
 .confirm-reset-content {
@@ -665,7 +672,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 72px;
+  min-width: 96px;
+  min-height: 36px;
   padding: 8px 16px;
   border: 1px solid var(--line);
   border-radius: 8px;

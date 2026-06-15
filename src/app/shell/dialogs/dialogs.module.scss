@@ -878,13 +878,23 @@
     height: min(620px, 100%);
   }
 
-  .settings-dialog-setting-card {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  /* AI-REMOVED 2026-06-15:
+     Reason: 900px 以下仍有足够横向空间时不应强制设置项单列。
+     Trigger: 用户反馈移动端/平板设置项右侧有空间但控件折行。
+     Evidence: Playwright mobile-landscape/tablet-square 截图与 DOM 数据显示 694px/644px 卡片宽度仍被强制单列。
+     Replacement: 同文件 @media (max-width: 640px) 中的窄屏单列规则。
+     Risk: Low
+     Human Review: Required
 
-  .settings-dialog-setting-control {
-    justify-content: flex-start;
-  }
+     Original code:
+     .settings-dialog-setting-card {
+       grid-template-columns: minmax(0, 1fr);
+     }
+
+     .settings-dialog-setting-control {
+       justify-content: flex-start;
+     }
+   */
 }
 
 @media (max-width: 640px) {
@@ -922,6 +932,14 @@
 
   .settings-dialog-header {
     gap: 10px;
+  }
+
+  .settings-dialog-setting-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-dialog-setting-control {
+    justify-content: flex-start;
   }
 
   .help-dialog-header,

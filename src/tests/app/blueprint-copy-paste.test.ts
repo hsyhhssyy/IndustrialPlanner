@@ -728,19 +728,15 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
   });
 });
 
-// ─── Phase 3: ID 重写 — config 和 slotLinks 中的 entity ID 映射 ───
+// ─── Phase 3: ID 重写 — slotLinks 中的 entity ID 映射 ───
 //
-// 当前缺陷：createBlueprintPlacementDraft 中构建的 entityIdMap（原始 ID → draft ID）
-// 仅用于 slotLinks，未存储。applyPlacementDraft 中的 rewriteEntityIdInConfig
-// 只处理 oldIdToNewId（draft ID → 正式 ID），遗漏了 config 中的原始 entity ID。
+// 2026-06-09: entity ID 引用已从 entity.config 迁移至 document.slotLinks。
+// applyPlacementDraft 不再重写 config 中的 entity ID。
 //
-// 修复方案：
-//   1. 存储 entityIdMap 到 state.internalTransientState
-//   2. applyPlacementDraft 中组合完整映射：原始 ID → draft ID → 正式 ID
-//   3. rewriteEntityIdInConfig 增加外部实体断连逻辑：
-//      - 值在完整映射中 → 替换为新 ID
-//      - 值在 document entities 中但不在映射中（外部引用）→ 设为 ""
-//      - 否则 → 保留原值（非 entity ID）
+// AI-CORRECTION 2026-06-15: 原注释描述的"当前缺陷"（config 中 entity ID
+// 未被重写）已通过架构迁移解决——config 不再承载 entity ID 引用，
+// 因此不再需要 rewriteEntityIdInConfig。R1.3a/R3.1/R3.2 三个基于旧 config
+// 模型的测试已移除。
 
 describe("ID rewriting in blueprint placement", () => {
   /**
@@ -890,60 +886,73 @@ describe("ID rewriting in blueprint placement", () => {
     expect(newLink!.target.entityId).toBe(newStorager!.id);
   });
 
-  it.skip("R1.3a [SKIP-2026-06-09]: 引用蓝图外部普通实体 → 放置后 target.entityId 断开", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const doc = createTestDocument({
-      entities: {
-        "loader-A": {
-          id: "loader-A",
-          definitionId: "item_port_unloader_1",
-          position: { x: 10, y: 10 },
-          rotation: 0,
-          config: {
-            "links[0].target.entityId": "external-storager",
-            "links[0].target.storageSlotGroupId": "storage",
-            "links[0].target.slotId": "slot_0",
-          },
-          tags: [],
-        },
-        "external-storager": {
-          id: "external-storager",
-          definitionId: "item_port_storager_1",
-          position: { x: 20, y: 10 },
-          rotation: 0,
-          config: {},
-          tags: [],
-        },
-      },
-      entityOrder: ["loader-A", "external-storager"],
-    });
-    editorHost.internalDocument.setSnapshot(doc);
-
-    const blueprint = createBlueprintDocument({
-      name: "test-external-ref",
-      baseId: doc.baseId,
-      initialGridPoint: { x: 10, y: 10 },
-      entities: {
-        "loader-A": {
-          ...doc.entities["loader-A"]!,
-          config: { ...doc.entities["loader-A"]!.config },
-        },
-      },
-      entityOrder: ["loader-A"],
-      slotLinks: [],
-    });
-
-    const applied = placeBlueprint(editorHost, blueprint);
-    expect(applied).toBe(true);
-
-    const loaders = findEntitiesByDef(editorHost, "item_port_unloader_1");
-    const newLoader = loaders.find((e) => e.id !== "loader-A");
-    expect(newLoader).toBeDefined();
-
-    // R1.3a: 外部普通实体引用应断开（空字符串）
-    expect(newLoader!.config["links[0].target.entityId"]).toBe("");
-  });
+  // AI-REMOVED 2026-06-15:
+  // Reason: 2026-06-09 已将 entity ID 引用从 config.links 迁移至 document.slotLinks。
+  //   applyPlacementDraft 不再重写 config 中的 entity ID。外部引用断开逻辑
+  //   已在 slotLinks 管道中由 resolveSlotLinkEntityIdForPlacement 处理，
+  //   对应测试为 R1.1（外部非蛇兵实体 slotLink 被丢弃）。
+  // Trigger: 取消 skip 后 3 个测试全部按预期失败，config 路径已废弃。
+  // Evidence: placement-action.ts:262 AI-CORRECTION 2026-06-09；
+  //   legacy-blueprint-import.ts 已有 config→slotLinks 迁移。
+  // Replacement: R1.1（slotLinks 外部引用丢弃）
+  // Risk: Low — config 中不再产生 entityId 引用，旧数据有迁移逻辑。
+  // Human Review: Not Required
+  //
+  // Original code:
+  // it("R1.3a [SKIP-2026-06-09]: 引用蓝图外部普通实体 → 放置后 target.entityId 断开", () => {
+  //   const workspace = createWorkspace();
+  //   const editorHost = createEditorHost(workspace);
+  //   const doc = createTestDocument({
+  //     entities: {
+  //       "loader-A": {
+  //         id: "loader-A",
+  //         definitionId: "item_port_unloader_1",
+  //         position: { x: 10, y: 10 },
+  //         rotation: 0,
+  //         config: {
+  //           "links[0].target.entityId": "external-storager",
+  //           "links[0].target.storageSlotGroupId": "storage",
+  //           "links[0].target.slotId": "slot_0",
+  //         },
+  //         tags: [],
+  //       },
+  //       "external-storager": {
+  //         id: "external-storager",
+  //         definitionId: "item_port_storager_1",
+  //         position: { x: 20, y: 10 },
+  //         rotation: 0,
+  //         config: {},
+  //         tags: [],
+  //       },
+  //     },
+  //     entityOrder: ["loader-A", "external-storager"],
+  //   });
+  //   editorHost.internalDocument.setSnapshot(doc);
+  //
+  //   const blueprint = createBlueprintDocument({
+  //     name: "test-external-ref",
+  //     baseId: doc.baseId,
+  //     initialGridPoint: { x: 10, y: 10 },
+  //     entities: {
+  //       "loader-A": {
+  //         ...doc.entities["loader-A"]!,
+  //         config: { ...doc.entities["loader-A"]!.config },
+  //       },
+  //     },
+  //     entityOrder: ["loader-A"],
+  //     slotLinks: [],
+  //   });
+  //
+  //   const applied = placeBlueprint(editorHost, blueprint);
+  //   expect(applied).toBe(true);
+  //
+  //   const loaders = findEntitiesByDef(editorHost, "item_port_unloader_1");
+  //   const newLoader = loaders.find((e) => e.id !== "loader-A");
+  //   expect(newLoader).toBeDefined();
+  //
+  //   // R1.3a: 外部普通实体引用应断开（空字符串）
+  //   expect(newLoader!.config["links[0].target.entityId"]).toBe("");
+  // });
 
   it("R1.3b [FIX-REQUIRED]: 引用 warehouse 哨兵 → 放置后保持不变", () => {
     // "warehouse" 是全球仓库的哨兵 ID，不属于任何具体设备，每个基地都有。
@@ -1316,124 +1325,29 @@ describe("ID rewriting in blueprint placement", () => {
     expect(finalDoc.slotLinks).toHaveLength(0);
   });
 
-  // ── Group R3: 全链路 Ctrl+C → applyPlacementDraft 的 config 重写 ──
-
-  it.skip("R3.1 [SKIP-2026-06-09]: Ctrl+C unloader → 放置后 source.entityId 指向新 ID", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const doc = createTestDocument({
-      entities: {
-        "unloader-1": {
-          id: "unloader-1",
-          definitionId: "item_port_unloader_1",
-          position: { x: 32, y: 26 },
-          rotation: 180,
-          config: {
-            "links[0].id": "",
-            "links[0].linkType": "share-all",
-            "links[0].source.entityId": "unloader-1",
-            "links[0].source.storageSlotGroupId": "unloader_buffer",
-            "links[0].source.slotId": "slot_1",
-            "links[0].target.entityId": "warehouse",
-            "links[0].target.storageSlotGroupId": "warehouse",
-            "links[0].target.slotId": "item_originium_ore",
-            "storageSlotGroups[0].slots[0].ignoreStock": true,
-          },
-          tags: [],
-        },
-      },
-      entityOrder: ["unloader-1"],
-    });
-    editorHost.internalDocument.setSnapshot(doc);
-    const appHost = createAppHost(workspace);
-
-    editorHost.actions.addToCollection({
-      collectionType: EntityCollectionType.selection,
-      entityId: "unloader-1",
-    });
-
-    appHost.internalActions.setActiveTool("marquee");
-
-    // Ctrl+C
-    appHost.gestureAdapter.handleKeyDown(
-      keyEvent({ code: "KeyC", key: "c", keyCode: 67, ctrlKey: true }),
-    );
-    // 放置
-    editorHost.actions.applyPlacementDraft();
-
-    const unloaders = findEntitiesByDef(editorHost, "item_port_unloader_1");
-    expect(unloaders).toHaveLength(2);
-
-    const newUnloader = unloaders.find((e) => e.id !== "unloader-1");
-    expect(newUnloader).toBeDefined();
-
-    // R3.1b: source.entityId 是自引用，应被重写（当前缺陷 — FIX-REQUIRED）
-    expect(newUnloader!.config["links[0].source.entityId"]).toBe(newUnloader!.id);
-    expect(newUnloader!.config["links[0].source.entityId"]).not.toBe("unloader-1");
-
-    // R3.1c: warehouse 是哨兵 ID，必须保留，不可断开
-    expect(newUnloader!.config["links[0].target.entityId"]).toBe("warehouse");
-  });
-
-  it.skip("R3.2 [SKIP-2026-06-09]: Ctrl+C 两个关联实体 → cross-ref 重写正确", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const doc = createTestDocument({
-      entities: {
-        "loader-A": {
-          id: "loader-A",
-          definitionId: "item_port_unloader_1",
-          position: { x: 10, y: 10 },
-          rotation: 0,
-          config: {
-            "links[0].target.entityId": "storager-A",
-            "links[0].target.storageSlotGroupId": "storage",
-            "links[0].target.slotId": "slot_0",
-          },
-          tags: [],
-        },
-        "storager-A": {
-          id: "storager-A",
-          definitionId: "item_port_storager_1",
-          position: { x: 15, y: 10 },
-          rotation: 0,
-          config: {},
-          tags: [],
-        },
-      },
-      entityOrder: ["loader-A", "storager-A"],
-    });
-    editorHost.internalDocument.setSnapshot(doc);
-    const appHost = createAppHost(workspace);
-
-    editorHost.actions.addToCollection({
-      collectionType: EntityCollectionType.selection,
-      entityId: "loader-A",
-    });
-    editorHost.actions.addToCollection({
-      collectionType: EntityCollectionType.selection,
-      entityId: "storager-A",
-    });
-
-    appHost.internalActions.setActiveTool("marquee");
-
-    // Ctrl+C
-    appHost.gestureAdapter.handleKeyDown(
-      keyEvent({ code: "KeyC", key: "c", keyCode: 67, ctrlKey: true }),
-    );
-    // 放置
-    editorHost.actions.applyPlacementDraft();
-
-    const loaders = findEntitiesByDef(editorHost, "item_port_unloader_1");
-    const storagers = findEntitiesByDef(editorHost, "item_port_storager_1");
-
-    const newLoader = loaders.find((e) => e.id !== "loader-A");
-    const newStorager = storagers.find((e) => e.id !== "storager-A");
-    expect(newLoader).toBeDefined();
-    expect(newStorager).toBeDefined();
-
-    expect(newLoader!.config["links[0].target.entityId"]).toBe(newStorager!.id);
-  });
+  // AI-REMOVED 2026-06-15:
+  // Reason: Group R3 测试基于旧 config.links 路径（Ctrl+C 产生的 blueprint 中 link 数据
+  //   在 entity.config 而非 document.slotLinks）。2026-06-09 已迁移至 slotLinks 架构，
+  //   Ctrl+C 经由 createSelectionBlueprintDocument 仅处理 slotLinks，config 不再包含
+  //   entityId 引用。自引用重写由 slotLinks 管道的 resolveSlotLinkEntityIdForPlacement
+  //   处理，跨引用重写由 R1.2 覆盖。
+  // Trigger: 取消 skip 后 R3.1/R3.2 均按 config 路径预期失败。
+  // Evidence: placement-action.ts:262 AI-CORRECTION 2026-06-09；
+  //   createSelectionBlueprintDocument 仅从 currentDocument.slotLinks 过滤。
+  // Replacement: R1.1（slotLinks 自引用/外部引用）、R1.2（slotLinks 跨引用）
+  // Risk: Low
+  // Human Review: Not Required
+  //
+  // Original code:
+  // // ── Group R3: 全链路 Ctrl+C → applyPlacementDraft 的 config 重写 ──
+  //
+  // it("R3.1 [SKIP-2026-06-09]: Ctrl+C unloader → 放置后 source.entityId 指向新 ID", () => {
+  //   ... (省略，见 git history)
+  // });
+  //
+  // it("R3.2 [SKIP-2026-06-09]: Ctrl+C 两个关联实体 → cross-ref 重写正确", () => {
+  //   ... (省略，见 git history)
+  // });
 
   it("R4: 暗管连接蓝图放置 — 文档已有 inlet/outlet 暗管对，蓝图完全复制后放置，四设备 ID 无冲突且暗管链路正确", () => {
     const workspace = createWorkspace();
