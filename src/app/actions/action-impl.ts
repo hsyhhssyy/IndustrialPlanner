@@ -40,6 +40,7 @@ import {
 } from "../state/state-impl";
 
 const DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT = 44;
+const FLOATING_TOOLBAR_DEVICE_GAP_PX = 6;
 
 // DialogShell 默认最大尺寸（对应 dialog-shell.module.scss 中 .dialog-shell 的 width/height）
 const DIALOG_DEFAULT_MAX_WIDTH = 980;
@@ -502,43 +503,48 @@ export class AppActionImpl implements AppAction, AppInternalAction {
       return false;
     }
 
-    const topLeftAboveCellRect = editor.queries.findClientRectForGridCell({
+    const topLeftCellRect = editor.queries.findClientRectForGridCell({
       x: collectionRect.x,
-      y: collectionRect.y - 1,
+      y: collectionRect.y,
     });
-    if (topLeftAboveCellRect === null) {
+    if (topLeftCellRect === null) {
       return false;
     }
 
     const toolbarHeight = toolbar.measuredSize?.height ?? DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT;
     const toolbarWidth = toolbar.measuredSize?.width ?? 0;
     const viewport = editor.state.viewport.clientRect;
-    const cellHeight = topLeftAboveCellRect.height;
+    const cellWidth = topLeftCellRect.width;
 
-    const aboveAnchor = resolveCanvasFloatingToolbarAnchor({
-      collectionWidth: collectionRect.width,
-      deviceClass: this.internalState.screenProfile.deviceClass,
-      topLeftAboveCellRect,
-      toolbarHeight,
-    });
+    const halfToolbarHeight = toolbarHeight / 2;
+
+    const aboveAnchor: ClientPixelPoint = {
+      x:
+        topLeftCellRect.left
+        + cellWidth * collectionRect.width / 2,
+      y:
+        topLeftCellRect.top
+        - halfToolbarHeight
+        - FLOATING_TOOLBAR_DEVICE_GAP_PX,
+    };
 
     let anchor = aboveAnchor;
 
     const viewportTopSixth = viewport.top + viewport.height / 6;
     if (aboveAnchor.y < viewportTopSixth) {
-      const topLeftBelowCellRect = editor.queries.findClientRectForGridCell({
+      const bottomCellY = collectionRect.y + collectionRect.height - 1;
+      const bottomCellRect = editor.queries.findClientRectForGridCell({
         x: collectionRect.x,
-        y: collectionRect.y + collectionRect.height,
+        y: bottomCellY,
       });
       const viewportBottomFiveSixths = viewport.top + (viewport.height * 5) / 6;
 
-      if (topLeftBelowCellRect !== null) {
-        const verticalOverflow = Math.max(0, toolbarHeight - cellHeight);
+      if (bottomCellRect !== null) {
         const belowY =
-          topLeftBelowCellRect.top
-          + cellHeight
-          + cellHeight / 2
-          + verticalOverflow / 2;
+          bottomCellRect.top
+          + bottomCellRect.height
+          + halfToolbarHeight
+          + FLOATING_TOOLBAR_DEVICE_GAP_PX;
 
         if (belowY <= viewportBottomFiveSixths) {
           anchor = {
@@ -968,24 +974,33 @@ function normalizeCanvasFloatingToolbarSize(
   };
 }
 
-function resolveCanvasFloatingToolbarAnchor(options: {
-  collectionWidth: number;
-  deviceClass: ScreenProfile["deviceClass"];
-  topLeftAboveCellRect: ClientPixelRect;
-  toolbarHeight: number;
-}): ClientPixelPoint {
-  const cellHeight = options.topLeftAboveCellRect.height;
-  const verticalOverflow = Math.max(0, options.toolbarHeight - cellHeight);
-  const desktopOffset = options.deviceClass === "desktop" ? cellHeight : 0;
-
-  return {
-    x:
-      options.topLeftAboveCellRect.left
-      + options.topLeftAboveCellRect.width * options.collectionWidth / 2,
-    y:
-      options.topLeftAboveCellRect.top
-      - cellHeight / 2
-      - verticalOverflow / 2
-      + desktopOffset,
-  };
-}
+// AI-REMOVED 2026-06-15:
+// Reason: 重构为像素偏移锚点，不再需要基于格子和 deviceClass 的间距计算。
+// Trigger: 用户需求 — toolbar 改为距离设备包围盒 0 格 + 半按钮高 + 6px，统一桌面/移动。
+// Evidence: alignCanvasFloatingToolbar 内已直接计算 aboveAnchor，不再调用此函数。
+// Replacement: alignCanvasFloatingToolbar 方法内直接计算。
+// Risk: Low
+// Human Review: Not required
+//
+// Original code:
+// function resolveCanvasFloatingToolbarAnchor(options: {
+//   collectionWidth: number;
+//   deviceClass: ScreenProfile["deviceClass"];
+//   topLeftAboveCellRect: ClientPixelRect;
+//   toolbarHeight: number;
+// }): ClientPixelPoint {
+//   const cellHeight = options.topLeftAboveCellRect.height;
+//   const verticalOverflow = Math.max(0, options.toolbarHeight - cellHeight);
+//   const desktopOffset = options.deviceClass === "desktop" ? cellHeight : 0;
+//
+//   return {
+//     x:
+//       options.topLeftAboveCellRect.left
+//       + options.topLeftAboveCellRect.width * options.collectionWidth / 2,
+//     y:
+//       options.topLeftAboveCellRect.top
+//       - cellHeight / 2
+//       - verticalOverflow / 2
+//       + desktopOffset,
+//   };
+// }

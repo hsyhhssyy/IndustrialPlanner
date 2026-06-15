@@ -1176,7 +1176,7 @@ describe("createAppHost", () => {
     ]);
   });
 
-  it("aligns an attached canvas floating toolbar to the adjacent row on desktop", () => {
+  it("aligns an attached canvas floating toolbar with pixel offset from the device top edge", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
@@ -1209,7 +1209,7 @@ describe("createAppHost", () => {
     );
     expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 520,
-      y: 386,
+      y: 380,
     });
 
     appHost.internalActions.setCanvasFloatingToolbarSize({
@@ -1219,11 +1219,11 @@ describe("createAppHost", () => {
 
     expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 498,
-      y: 400,
+      y: 394,
     });
   });
 
-  it("keeps the larger floating toolbar gap on mobile", () => {
+  it("aligns an attached canvas floating toolbar with pixel offset from the device top edge on mobile", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
@@ -1253,7 +1253,7 @@ describe("createAppHost", () => {
     )).toBe(true);
     expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 520,
-      y: 370,
+      y: 380,
     });
 
     appHost.internalActions.setCanvasFloatingToolbarSize({
@@ -1263,7 +1263,7 @@ describe("createAppHost", () => {
 
     expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 498,
-      y: 384,
+      y: 394,
     });
   });
 
