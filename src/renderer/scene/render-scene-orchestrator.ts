@@ -442,6 +442,7 @@ export function createRenderSceneOrchestrator(
     layers.entityHigh,
     layers.logisticsBelt,
     layers.logisticsPipe,
+    layers.draft,
     layers.overlay,
     invalidPlacementOverlayLayer,
     marqueeOverlayLayer,
@@ -499,6 +500,7 @@ export function createRenderSceneOrchestrator(
       layers.entityHigh.destroy({ children: true })
       layers.logisticsBelt.destroy({ children: true })
       layers.logisticsPipe.destroy({ children: true })
+      layers.draft.destroy({ children: true })
       invalidPlacementOverlayLayer.destroy({ children: true })
       layers.overlay.destroy({ children: true })
       marqueeOverlayLayer.destroy({ children: true })
@@ -517,6 +519,7 @@ function createRenderLayers(): RenderLayerMap {
     entityHigh: new Container(),
     logisticsBelt: new Container(),
     logisticsPipe: new Container(),
+    draft: new Container(),
     overlay: new Container(),
   }
 }
@@ -881,7 +884,11 @@ function syncWorldEntitySprites(options: {
         continue
       }
 
-      sprite.attach(selectRenderLayerMap(entity.definitionId, options.layers, options.beltSubEntity, options.pipeSubEntity))
+      let layerMap = selectRenderLayerMap(entity.definitionId, options.layers, options.beltSubEntity, options.pipeSubEntity)
+      if ("originalEntityId" in entity) {
+        layerMap = { ...layerMap, entity: options.layers.draft }
+      }
+      sprite.attach(layerMap)
       options.entitySprites.set(entity.id, sprite)
       options.entitySpriteDefinitionIds.set(entity.id, entity.definitionId)
       if (stats !== null) {

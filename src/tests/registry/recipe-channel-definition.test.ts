@@ -37,9 +37,12 @@ describe("recipe channel definitions", () => {
   });
 
   it("declares water pump fluid buffer as both ingredient and product", () => {
-    expect(getDefaultChannel("item_port_water_pump_1")).toMatchObject({
-      ingredientStorageGroupIds: ["fluid_output_buffer"],
-      productStorageGroupIds: ["fluid_output_buffer"],
-    });
+    // AI-CORRECTION 2026-06-15: 抽水泵已改为 warehouse link 模式，不再有 recipe channel。
+    // recipeChannels 为空，流体通过 warehouseItemLink 从仓库获取。
+    const registry = createRegistryContract();
+    expect(
+      registry.entityDefinitions.find((candidate) => candidate.id === "item_port_water_pump_1")
+        ?.recipeChannels,
+    ).toEqual([]);
   });
 });

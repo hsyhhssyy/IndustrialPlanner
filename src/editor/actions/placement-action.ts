@@ -5,7 +5,7 @@ import type { DraftEntity } from "../draft-entity";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRectSize } from "@/domain/shared/grid";
 import { createUuid } from "@/domain/shared/uuid";
-import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { EntityDefinition, EntityPlacementDefaults } from "@/domain/registry/types/entity-definition";
 
 import { syncPlacementValidationState } from "../placement-validation";
 import { action } from "mobx";
@@ -69,13 +69,25 @@ export function createEditorPlacementActions({
         originalEntityId: nextDraftId,
       };
 
+      // placementDefaults 必须在 state.drafts 赋值之前应用到 draft，
+      // 确保 MobX 追踪到的 draft 已携带完整 config 与 slotLinks。
+      state.internalTransientState.placementDraftSlotLinks = null;
+      if (definition.placementDefaults) {
+        const expanded = expandPlacementDefaults(
+          definition.placementDefaults,
+          draft.id,
+        );
+        draft.config = expanded.config;
+        state.internalTransientState.placementDraftSlotLinks = expanded.slotLinks;
+      }
+
       state.drafts = replacePreviewDrafts({
         drafts: state.drafts,
         previewDraftIds: preview,
         nextPreviewDrafts: [draft],
       });
       preview.replace([draft.id]);
-      state.internalTransientState.placementDraftSlotLinks = null;
+
       state.internalTransientState.placementHistoryAction = {
         type: "entity.place",
         label: "放置设备",
@@ -341,6 +353,25 @@ function resolvePlacementDraftPosition(options: {
 
 function resolvePlacementCenterOffset(size: number): number {
   return Math.floor((size - 1) / 2);
+}
+
+const PLACEMENT_SELF = "[Self]";
+
+function expandPlacementDefaults(
+  defaults: EntityPlacementDefaults,
+  entityId: string,
+): { config: Record<string, unknown>; slotLinks: SlotLinkDefinition[] } {
+  return {
+    config: defaults.config ? { ...defaults.config } : {},
+    slotLinks: (defaults.slotLinks ?? []).map((link) => ({
+      ...link,
+      id: link.id.replaceAll(PLACEMENT_SELF, entityId),
+      source: {
+        ...link.source,
+        entityId: link.source.entityId.replaceAll(PLACEMENT_SELF, entityId),
+      },
+    })),
+  };
 }
 
 function clearPlacementState(state: EditorActionsContext["state"]): void {

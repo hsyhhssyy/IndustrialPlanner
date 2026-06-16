@@ -27,6 +27,7 @@
 import type {
   EntityDefinition,
   ItemFilterDefinition,
+  EntityPlacementDefaults,
 } from "@/domain/registry/types/entity-definition";
 import {
   INSPECTOR_TYPE,
@@ -439,6 +440,18 @@ function createRecipeChannel(
   manualRecipeOnly?: boolean,
 ): RecipeChannelDefinition {
   return { id, ingredientStorageGroupIds, productStorageGroupIds, manualRecipeOnly };
+}
+
+/**
+ * 创建放置默认值。
+ * 供设备定义在 placementDefaults 字段中使用，声明放置时自动写入的
+ * entity.config 覆盖和自动创建的 slotLinks。
+ */
+function createPlacementDefaults(options: {
+  config?: Record<string, unknown>;
+  slotLinks?: EntityPlacementDefaults["slotLinks"];
+}): EntityPlacementDefaults {
+  return options;
 }
 
 type DirectionalBufferLayoutInput = {
@@ -2671,13 +2684,47 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_e_1", 2, 1, "E")],
       ),
     ],
-    ...createSimpleProductionDevice([
-      { kind: "fluid", direction: "output", capacities: [50] },
-    ]),
-    // AI-CORRECTION 2026-06-07: 抽水泵的 fluid_output_buffer 在 channel 中同时作为原料/产物，用于统一混合槽位显示。
-    recipeChannels: [
-      createRecipeChannel("default", ["fluid_output_buffer"], ["fluid_output_buffer"]),
+
+    // AI-CORRECTION 2026-06-15: 移除 createSimpleProductionDevice 和 recipeChannels。
+    // 改用 warehouseItemLink 模式从仓库获取液体，放置时默认链接清水并开启无限供应。
+    // r_pump_water_basic / r_pump_acid_basic 配方保留在 recipe-definition.ts（见 4）。
+
+    storageSlotGroups: [
+      createStorageSlotGroup("fluid_output_buffer", "fluid",
+        createSlots("output_fluid_slot", [50], "liquid"),
+      ),
     ],
+    portStorageBindings: [
+      createBinding("bind_fluid_output", "fluid_output", "fluid_output_buffer"),
+    ],
+    recipeChannels: [],
+
+    inspectors: [
+      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["fluid_output_buffer"] },
+      { type: INSPECTOR_TYPE.slotConfig, slotGroupIds: ["fluid_output_buffer"] },
+    ],
+
+    placementDefaults: createPlacementDefaults({
+      config: {
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+      },
+      slotLinks: [
+        {
+          id: "warehouse-link:[Self]:fluid_output_buffer:output_fluid_slot_1",
+          linkType: "share-all",
+          source: {
+            entityId: "[Self]",
+            storageSlotGroupId: "fluid_output_buffer",
+            slotId: "output_fluid_slot_1",
+          },
+          target: {
+            entityId: "warehouse",
+            storageSlotGroupId: "warehouse",
+            slotId: "item_liquid_water",
+          },
+        },
+      ],
+    }),
   }),
   createEntityDefinition({
     id: "item_port_udpipe_loader_2",

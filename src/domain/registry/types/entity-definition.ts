@@ -1,4 +1,5 @@
 import type { GridEdge, GridRectSize } from "../../shared/grid";
+import type { SlotLinkDefinition } from "../../shared/slot-link";
 import type { EntityInspectorDeclaration } from "./entity-inspector";
 import type { EntityPlacementBehaviorDeclaration } from "./entity-placement-behavior";
 
@@ -91,6 +92,14 @@ export interface EntityDefinition {
    */
   placementBehaviors: EntityPlacementBehaviorDeclaration[];
 
+  /**
+   * 放置默认值。
+   * 声明设备放置时自动写入 entity.config 的默认值，以及自动创建的 slotLinks。
+   * slotLinks 中 entityId 使用 "[Self]" 占位符，由 editor placement 层展开为实际实体 ID。
+   * 未声明时无默认行为。
+   */
+  readonly placementDefaults?: EntityPlacementDefaults;
+
   // ---- 端口与存储槽组 ----
 
   /**
@@ -123,6 +132,22 @@ export interface EntityDefinition {
    */
   portStorageBindings: PortStorageBindingDefinition[];
 
+}
+
+// ---------------------------------------------------------------------------
+// EntityPlacementDefaults — 设备放置时的默认行为
+// ---------------------------------------------------------------------------
+
+/**
+ * 设备放置默认值。
+ * 声明设备放置时自动应用的 config 覆盖和 slotLinks。
+ * entityId 使用 "[Self]" 占位符，由 editor placement 层展开为实际实体 ID。
+ */
+export interface EntityPlacementDefaults {
+  /** 放置时直接写入 entity.config */
+  readonly config?: Record<string, unknown>;
+  /** 放置时自动创建的 slot links。entityId 使用占位符 "[Self]" */
+  readonly slotLinks?: readonly SlotLinkDefinition[];
 }
 
 // ---------------------------------------------------------------------------

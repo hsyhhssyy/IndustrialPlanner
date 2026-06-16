@@ -19,6 +19,7 @@ import { rotateGridEdge } from "@/shared/geometry/port";
 import { runInAction } from "mobx";
 
 import type { EditorStateReadWrite } from "./state-impl";
+import { isDraftEntity } from "./draft-entity";
 
 const WAREHOUSE_BUS_SEGMENT_DEFINITION_ID = "item_port_log_hongs_bus";
 const WAREHOUSE_BUS_SOURCE_DEFINITION_ID = "item_port_log_hongs_bus_source";
@@ -312,6 +313,20 @@ function applyOverlapReasons(options: {
         left,
         right,
       })) {
+        continue;
+      }
+
+      // 拖拽中 draft 与文档实体 overlap 时，仅标记 draft 为 invalid，
+      // 文档中正式 entity 不显示 invalid。draft 放下后（变为普通 entity）
+      // 再触发 validation 时双方都会正常标记。
+      const leftIsDraft = isDraftEntity(left.entity);
+      const rightIsDraft = isDraftEntity(right.entity);
+      if (leftIsDraft && !rightIsDraft) {
+        appendReason(options.reasonsByEntityId, left.entity.id, "overlap");
+        continue;
+      }
+      if (!leftIsDraft && rightIsDraft) {
+        appendReason(options.reasonsByEntityId, right.entity.id, "overlap");
         continue;
       }
 

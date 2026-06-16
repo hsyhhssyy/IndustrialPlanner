@@ -3193,6 +3193,9 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
 
   // =========================================================================
   // 自然资源采集配方 — 无限产出
+  // AI-CORRECTION 2026-06-15: 抽水泵已改为 warehouse link 模式，当前不使用 recipe channel。
+  // 这两个配方保留不删，供未来可能切换回 recipe 模式或作为参考定义。
+  // machineId 仍指向 item_port_water_pump_1，但该设备当前 recipeChannels 为空。
   // =========================================================================
   {
     id: "r_pump_water_basic",

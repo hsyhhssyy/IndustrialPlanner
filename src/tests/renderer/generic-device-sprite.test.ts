@@ -289,6 +289,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -395,6 +396,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -452,6 +454,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -517,6 +520,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: smallEntityLayer as never,
       overlay: smallOverlayLayer as never,
     })
@@ -526,6 +530,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: largeEntityLayer as never,
       overlay: largeOverlayLayer as never,
     })
@@ -598,6 +603,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -645,6 +651,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -692,6 +699,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -747,6 +755,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -816,6 +825,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -872,6 +882,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -930,6 +941,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -991,6 +1003,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1046,6 +1059,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1119,6 +1133,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1195,6 +1210,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1265,6 +1281,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1309,6 +1326,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1359,6 +1377,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1396,6 +1415,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1462,6 +1482,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1499,6 +1520,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1536,6 +1558,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1585,6 +1608,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1703,6 +1727,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1823,6 +1848,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1919,6 +1945,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -1972,6 +1999,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -2054,6 +2082,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -2129,6 +2158,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -2187,6 +2217,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -2264,6 +2295,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
@@ -2332,6 +2364,7 @@ describe("GenericDeviceSprite", () => {
       entityHigh: {} as never,
       logisticsBelt: {} as never,
       logisticsPipe: {} as never,
+      draft: {} as never,
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
