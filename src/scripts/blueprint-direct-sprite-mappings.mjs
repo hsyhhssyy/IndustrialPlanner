@@ -39,22 +39,30 @@ export const DIRECT_BLUEPRINT_SPRITE_MAPPINGS = [
     assetFileName: 'bg_machine_unloader.png',
     spriteId: 'item_port_unloader_1',
   },
-  {
-    assetFileName: 'bg_machine_underground_pipe_2.png',
-    spriteId: 'item_port_udpipe_loader_2',
-  },
-  {
-    assetFileName: 'bg_machine_underground_pipe_2.png',
-    spriteId: 'item_port_udpipe_unloader_2',
-  },
-  {
-    assetFileName: 'bg_machine_underground_pipe_1.png',
-    spriteId: 'item_port_udpipe_loader_1',
-  },
-  {
-    assetFileName: 'bg_machine_underground_pipe_1.png',
-    spriteId: 'item_port_udpipe_unloader_1',
-  },
+  // AI-REMOVED 2026-06-17:
+  // Reason: 暗管蓝图精灵改为标准计算（端口+边框），不再使用直接素材映射
+  // Trigger: 用户要求暗管蓝图精灵走标准计算流程，使用方形结果
+  // Replacement: draw-device-blueprint-sprite.mjs 的 createDeviceBlueprintSprite 标准流程
+  // Risk: Low — 标准流程按 3×3 footprint 生成 384×384 方形精灵，与原有直接素材一致
+  // Human Review: Required
+  //
+  // Original code:
+  // {
+  //   assetFileName: 'bg_machine_underground_pipe_2.png',
+  //   spriteId: 'item_port_udpipe_loader_2',
+  // },
+  // {
+  //   assetFileName: 'bg_machine_underground_pipe_2.png',
+  //   spriteId: 'item_port_udpipe_unloader_2',
+  // },
+  // {
+  //   assetFileName: 'bg_machine_underground_pipe_1.png',
+  //   spriteId: 'item_port_udpipe_loader_1',
+  // },
+  // {
+  //   assetFileName: 'bg_machine_underground_pipe_1.png',
+  //   spriteId: 'item_port_udpipe_unloader_1',
+  // },
   {
     assetFileName: 'bg_machine_squirter_1.png',
     spriteId: 'item_liquid_cleaner_1',

@@ -229,11 +229,11 @@ function isExcludedFromBlueprintBatch(definition) {
     return true;
   }
 
+  // AI-CORRECTION 2026-06-17: 暗管不再走例外排除，改为标准计算。
   return definition.id.startsWith('belt_')
     || definition.id.startsWith('pipe_')
     || definition.id.startsWith('item_log_')
     || definition.id.startsWith('item_pipe_')
-    || definition.id.includes('udpipe')
     || definition.id.includes('water_pump');
 }
 
