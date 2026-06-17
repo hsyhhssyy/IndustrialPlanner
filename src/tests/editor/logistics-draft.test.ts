@@ -55,6 +55,25 @@ function createDocumentWithTestEntities(
   return document;
 }
 
+function createFurnanceSeparatedByOneBeltDocument(options: {
+  readonly includeLowerFurnance?: boolean;
+  readonly includeUpperFurnance?: boolean;
+} = {}): WorldDocument {
+  const includeLowerFurnance = options.includeLowerFurnance ?? true;
+  const includeUpperFurnance = options.includeUpperFurnance ?? true;
+  return createDocumentWithTestEntities([
+    ...(includeLowerFurnance
+      ? [createTestEntity("lower-furnance", "item_port_furnance_1", 43, 58)]
+      : []),
+    ...(includeUpperFurnance
+      ? [createTestEntity("upper-furnance", "item_port_furnance_1", 43, 54)]
+      : []),
+    createTestEntity("crossing-belt", "belt_straight_1x1", 45, 57, 180),
+    createTestEntity("left-belt-1", "belt_straight_1x1", 44, 57, 180),
+    createTestEntity("left-belt-2", "belt_straight_1x1", 43, 57, 180),
+  ]);
+}
+
 function findPreviewDraftAt(
   editorHost: ReturnType<typeof createEditorHost>,
   x: number,
@@ -1092,6 +1111,331 @@ describe("物流绘制模式", () => {
     expect(moveResult.canApply).toBe(true);
     expect(editorHost.state.collections.ghost).toEqual(["crossing"]);
     expect(findPreviewDraftAt(editorHost, 6, 6)).toMatchObject({
+      definitionId: "item_log_connector",
+    });
+  });
+
+  it("creates a connector on PC when two furnances are separated by one horizontal belt", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument());
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "device",
+        entityId: "lower-furnance",
+        pointerGridPoint: { x: 45, y: 58 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 45, y: 56 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+      sourceEntityId: "lower-furnance",
+      targetEntityId: "upper-furnance",
+    });
+    expect(moveResult.headGridPoint?.y).toBe(57);
+
+    const replacedEntityId = editorHost.state.collections.ghost[0];
+    expect(replacedEntityId).toBeDefined();
+    expect(["crossing-belt", "left-belt-1", "left-belt-2"]).toContain(replacedEntityId);
+    expect(findPreviewDraftAt(
+      editorHost,
+      moveResult.headGridPoint!.x,
+      moveResult.headGridPoint!.y,
+    )).toMatchObject({
+      definitionId: "item_log_connector",
+    });
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
+
+    const snapshot = editorHost.internalDocument.getSnapshot();
+    expect(snapshot.entities[replacedEntityId!]).toBeUndefined();
+    expect(findDocumentEntityAt(
+      snapshot,
+      moveResult.headGridPoint!.x,
+      moveResult.headGridPoint!.y,
+    )).toMatchObject({
+      definitionId: "item_log_connector",
+    });
+  });
+
+  it("creates a connector on touch when two furnances are separated by one horizontal belt", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument());
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "device",
+        entityId: "lower-furnance",
+        pointerGridPoint: { x: 45, y: 57 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 45, y: 56 },
+      routeMode: { type: "freehand" },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+      headGridPoint: { x: 45, y: 57 },
+      sourceEntityId: "lower-furnance",
+      targetEntityId: "upper-furnance",
+    });
+    expect(editorHost.state.collections.ghost).toEqual(["crossing-belt"]);
+    expect(findPreviewDraftAt(editorHost, 45, 57)).toMatchObject({
+      definitionId: "item_log_connector",
+    });
+  });
+
+  it("creates a turn when drawing one cell up from the rightmost furnace output and stopping on the belt", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
+      includeUpperFurnance: false,
+    }));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "device",
+        entityId: "lower-furnance",
+        pointerGridPoint: { x: 45, y: 58 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 45, y: 57 },
+      routeMode: { type: "freehand" },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+      sourceEntityId: "lower-furnance",
+      targetEntityId: null,
+    });
+    // belt at (45,57) rot=180 (E→W) has no predecessor from E → should be replaced with turn
+    expect(editorHost.state.collections.ghost).toEqual(["crossing-belt"]);
+    expect(findPreviewDraftAt(editorHost, 45, 57)?.definitionId).not.toBe("item_log_connector");
+    expect(findPreviewDraftAt(editorHost, 45, 57)?.definitionId).toMatch(/belt_turn/);
+  });
+
+  it("creates a converger when drawing one cell up from the middle furnace output and stopping on the belt", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
+      includeUpperFurnance: false,
+    }));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "device",
+        entityId: "lower-furnance",
+        pointerGridPoint: { x: 44, y: 57 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 44, y: 57 },
+      routeMode: { type: "freehand" },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+      sourceEntityId: "lower-furnance",
+      targetEntityId: null,
+    });
+    // belt at (44,57) has input from (45,57) and output to (43,57) → converger
+    expect(editorHost.state.collections.ghost).toEqual(["left-belt-1"]);
+    expect(findPreviewDraftAt(editorHost, 44, 57)).toMatchObject({
+      definitionId: "item_log_converger",
+    });
+  });
+
+  it("creates a converger when drawing one cell up from the left furnace output and stopping on the belt", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
+      includeUpperFurnance: false,
+    }));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "device",
+        entityId: "lower-furnance",
+        pointerGridPoint: { x: 43, y: 56 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 43, y: 57 },
+      routeMode: { type: "freehand" },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+      sourceEntityId: "lower-furnance",
+      targetEntityId: null,
+    });
+    // belt at (43,57) has input from (44,57) → converger
+    expect(editorHost.state.collections.ghost).toEqual(["left-belt-2"]);
+    expect(findPreviewDraftAt(editorHost, 43, 57)).toMatchObject({
+      definitionId: "item_log_converger",
+    });
+  });
+
+  it("creates a connector on PC when drawing from the lower furnance through the belt to a distant cell", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
+      includeUpperFurnance: false,
+    }));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "device",
+        entityId: "lower-furnance",
+        pointerGridPoint: { x: 45, y: 57 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 45, y: 54 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+      sourceEntityId: "lower-furnance",
+      targetEntityId: null,
+    });
+    expect(editorHost.state.collections.ghost).toEqual(["crossing-belt"]);
+    expect(findPreviewDraftAt(editorHost, 45, 57)).toMatchObject({
+      definitionId: "item_log_connector",
+    });
+  });
+
+  it("creates a connector on touch when drawing from the lower furnance through the belt to a distant cell", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
+      includeUpperFurnance: false,
+    }));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "device",
+        entityId: "lower-furnance",
+        pointerGridPoint: { x: 45, y: 57 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 45, y: 54 },
+      routeMode: { type: "freehand" },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+      sourceEntityId: "lower-furnance",
+      targetEntityId: null,
+    });
+    expect(editorHost.state.collections.ghost).toEqual(["crossing-belt"]);
+    expect(findPreviewDraftAt(editorHost, 45, 57)).toMatchObject({
+      definitionId: "item_log_connector",
+    });
+  });
+
+  it("creates a connector on PC when drawing from a distant cell through the belt into the upper furnance", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
+      includeLowerFurnance: false,
+    }));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 45, y: 60 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 45, y: 56 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+      sourceEntityId: null,
+      targetEntityId: "upper-furnance",
+    });
+    expect(editorHost.state.collections.ghost).toEqual(["crossing-belt"]);
+    expect(findPreviewDraftAt(editorHost, 45, 57)).toMatchObject({
+      definitionId: "item_log_connector",
+    });
+  });
+
+  it("creates a connector on touch when drawing from a distant cell through the belt into the upper furnance", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
+      includeLowerFurnance: false,
+    }));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 45, y: 60 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 45, y: 56 },
+      routeMode: { type: "freehand" },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+      sourceEntityId: null,
+      targetEntityId: "upper-furnance",
+    });
+    expect(editorHost.state.collections.ghost).toEqual(["crossing-belt"]);
+    expect(findPreviewDraftAt(editorHost, 45, 57)).toMatchObject({
       definitionId: "item_log_connector",
     });
   });

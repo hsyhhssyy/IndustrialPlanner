@@ -233,6 +233,7 @@ export function createEditorLogisticsActions(
           sourceEntityId: draft.source.entityId,
           targetEntityId: cursorTarget.entityId,
           preferredRouteOrder: options.routeMode.routeOrder,
+          autoCreateLogisticsDevices: options.autoCreateLogisticsDevices ?? true,
         });
 
         if (deviceRoute !== null) {
@@ -271,7 +272,9 @@ export function createEditorLogisticsActions(
           return createLogisticsActionResultFromDraft(draft);
         }
 
-        const currentPoints = draft.cells.map((cell) => cell.gridPoint);
+        const currentPoints = draft.cells.length === 0
+          ? [resolveSourceStartGridPoint(source)]
+          : draft.cells.map((cell) => cell.gridPoint);
 
         const tentativePoints = appendFreehandPathPoints({
           points: currentPoints,
@@ -1155,6 +1158,7 @@ function resolveDeviceToDeviceRoute(options: {
   sourceEntityId: string;
   targetEntityId: string;
   preferredRouteOrder: LogisticsRouteOrder;
+  autoCreateLogisticsDevices: boolean;
 }): DeviceRouteCandidate | null {
   const currentDocument = options.context.document.getSnapshot();
   const sourceEntity = findEntityById({
@@ -1217,15 +1221,25 @@ function resolveDeviceToDeviceRoute(options: {
           replacingEntity: null,
           replacingDefinition: null,
         });
-        if (resolveInvalidReason({
+        const autoDraftPlan = resolveAutoDraftPlan({
+          context: options.context,
+          kind: options.draft.kind,
+          source: sourceEndpoint,
+          target: targetEndpoint,
+          cells,
+          replacingEntityId: options.draft.replacingEntityId,
+          autoCreateLogisticsDevices: options.autoCreateLogisticsDevices,
+        });
+        const candidateInvalidReason = resolveInvalidReason({
           context: options.context,
           kind: options.draft.kind,
           cells,
-          replacingEntityIds: [],
-          autoDraftCellKeys: new Set(),
+          replacingEntityIds: autoDraftPlan.replacingEntityIds,
+          autoDraftCellKeys: new Set(autoDraftPlan.cellOverridesByGridKey.keys()),
           target: targetEndpoint,
           allowEmptyTarget: true,
-        }) !== null) {
+        }) ?? autoDraftPlan.invalidReason;
+        if (candidateInvalidReason !== null) {
           continue;
         }
 
@@ -1358,7 +1372,7 @@ function resolveAutoDraftPlan(options: {
   }
 
   const lastCell = options.cells[options.cells.length - 1] ?? null;
-  if (lastCell !== null && options.cells.length > 1) {
+  if (lastCell !== null && (options.cells.length > 1 || options.source.type === "device-port")) {
     const targetEntity = findTopEntityAtGridPoint({
       gridPoint: lastCell.gridPoint,
       document: currentDocument,
@@ -1409,44 +1423,102 @@ function resolveAutoDraftPlan(options: {
     }
   }
 
+  if (firstCell !== null && options.source.type === "device-port") {
+    if (options.target?.type === "device-port" || options.cells.length > 1) {
+      invalidReason = resolveConnectorCrossingAutoDraftCell({
+        context: options.context,
+        kind: options.kind,
+        document: currentDocument,
+        cell: firstCell,
+        autoCreateLogisticsDevices: options.autoCreateLogisticsDevices,
+        cellOverridesByGridKey,
+        replacingEntityIds,
+      }) ?? invalidReason;
+    }
+  }
+
+  // AI-REMOVED 2026-06-16:
+  // Reason: 设备到设备单格特例没有覆盖删除任一设备后的首格/末格跨越，已被统一端点桥接判定替代。
+  // Trigger: 用户指出同一蓝图删掉任意设备后，从远处拉过来或拉到远处也应创建桥接器。
+  // Evidence: 新增 PC/touch 回归覆盖 source device -> distant cell 与 distant cell -> target device；根因是端点相邻格未参与 connector 判定。
+  // Replacement: resolveConnectorCrossingAutoDraftCell + firstCell/lastCell 端点调用。
+  // Risk: Low - 原特例只覆盖 source/target 均为 device-port 且 cells.length=1 的窄场景。
+  // Human Review: Required
+  //
+  // Original code:
+  // if (
+  //   options.cells.length === 1
+  //   && options.source.type === "device-port"
+  //   && options.target?.type === "device-port"
+  // ) {
+  //   const cell = options.cells[0];
+  //   if (cell !== undefined) {
+  //     const entity = findTopEntityAtGridPoint({
+  //       gridPoint: cell.gridPoint,
+  //       document: currentDocument,
+  //       drafts: [],
+  //       entityDefinitionMap: options.context.entityDefinitionMap,
+  //       baseDefinitions: options.context.workspace.registry.baseDefinitions,
+  //     });
+  //     const info = entity === null
+  //       ? null
+  //       : resolveOrdinaryLogisticsConnectionInfo({
+  //           context: options.context,
+  //           kind: options.kind,
+  //           document: currentDocument,
+  //           entityId: entity.id,
+  //         });
+  //
+  //     if (info !== null && (info.inputConnected || info.outputConnected)) {
+  //       if (!isPerpendicularConnectorPass({ cell, info })) {
+  //         invalidReason = "unknown";
+  //       } else if (!options.autoCreateLogisticsDevices) {
+  //         invalidReason = "overlap-existing-logistics";
+  //       } else {
+  //         cellOverridesByGridKey.set(
+  //           gridPointKey(cell.gridPoint),
+  //           createAutoDeviceOverride(options.kind, "connector", null),
+  //         );
+  //         replacingEntityIds.add(info.entity.id);
+  //       }
+  //     }
+  //   }
+  // }
+
+  if (
+    lastCell !== null
+    && options.target?.type === "device-port"
+    && (
+      firstCell === null
+      || gridPointKey(lastCell.gridPoint) !== gridPointKey(firstCell.gridPoint)
+      || options.source.type !== "device-port"
+    )
+  ) {
+    invalidReason = resolveConnectorCrossingAutoDraftCell({
+      context: options.context,
+      kind: options.kind,
+      document: currentDocument,
+      cell: lastCell,
+      autoCreateLogisticsDevices: options.autoCreateLogisticsDevices,
+      cellOverridesByGridKey,
+      replacingEntityIds,
+    }) ?? invalidReason;
+  }
+
   for (let index = 1; index < options.cells.length - 1; index += 1) {
     const cell = options.cells[index];
     if (cell === undefined) {
       continue;
     }
-
-    const entity = findTopEntityAtGridPoint({
-      gridPoint: cell.gridPoint,
+    invalidReason = resolveConnectorCrossingAutoDraftCell({
+      context: options.context,
+      kind: options.kind,
       document: currentDocument,
-      drafts: [],
-      entityDefinitionMap: options.context.entityDefinitionMap,
-      baseDefinitions: options.context.workspace.registry.baseDefinitions,
-    });
-    const info = entity === null
-      ? null
-      : resolveOrdinaryLogisticsConnectionInfo({
-          context: options.context,
-          kind: options.kind,
-          document: currentDocument,
-          entityId: entity.id,
-        });
-    if (info !== null && info.inputConnected && info.outputConnected) {
-      if (!isPerpendicularConnectorPass({ cell, info })) {
-        invalidReason = "unknown";
-        continue;
-      }
-
-      if (!options.autoCreateLogisticsDevices) {
-        invalidReason = "overlap-existing-logistics";
-        continue;
-      }
-
-      cellOverridesByGridKey.set(
-        gridPointKey(cell.gridPoint),
-        createAutoDeviceOverride(options.kind, "connector", null),
-      );
-      replacingEntityIds.add(info.entity.id);
-    }
+      cell,
+      autoCreateLogisticsDevices: options.autoCreateLogisticsDevices,
+      cellOverridesByGridKey,
+      replacingEntityIds,
+    }) ?? invalidReason;
   }
 
   const firstIndexByGridKey = new Map<string, number>();
@@ -1508,6 +1580,50 @@ function resolveAutoDraftPlan(options: {
     replacingEntityIds: Array.from(replacingEntityIds),
     invalidReason,
   };
+}
+
+function resolveConnectorCrossingAutoDraftCell(options: {
+  readonly context: LogisticsActionContext;
+  readonly kind: LogisticsKind;
+  readonly document: WorldDocument;
+  readonly cell: LogisticsPathCell;
+  readonly autoCreateLogisticsDevices: boolean;
+  readonly cellOverridesByGridKey: Map<string, AutoDraftCellOverride>;
+  readonly replacingEntityIds: Set<string>;
+}): LogisticsDraftInvalidReason | null {
+  const entity = findTopEntityAtGridPoint({
+    gridPoint: options.cell.gridPoint,
+    document: options.document,
+    drafts: [],
+    entityDefinitionMap: options.context.entityDefinitionMap,
+    baseDefinitions: options.context.workspace.registry.baseDefinitions,
+  });
+  const info = entity === null
+    ? null
+    : resolveOrdinaryLogisticsConnectionInfo({
+        context: options.context,
+        kind: options.kind,
+        document: options.document,
+        entityId: entity.id,
+      });
+  if (info === null || (!info.inputConnected && !info.outputConnected)) {
+    return null;
+  }
+
+  if (!isPerpendicularConnectorPass({ cell: options.cell, info })) {
+    return "unknown";
+  }
+
+  if (!options.autoCreateLogisticsDevices) {
+    return "overlap-existing-logistics";
+  }
+
+  options.cellOverridesByGridKey.set(
+    gridPointKey(options.cell.gridPoint),
+    createAutoDeviceOverride(options.kind, "connector", null),
+  );
+  options.replacingEntityIds.add(info.entity.id);
+  return null;
 }
 
 function canCreateAutoDeviceForSelfOverlap(options: {
