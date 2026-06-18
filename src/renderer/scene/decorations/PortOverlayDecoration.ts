@@ -235,12 +235,16 @@ export function createPortOverlayDecoration(): DecorationLayer {
         });
       }
 
+      const useMobile = app.state.screenProfile.deviceClass === "mobile"
+        || app.state.screenProfile.deviceClass === "tablet";
+
+      if (useMobile) {
+        entries = deduplicateEntriesByGridCell(entries);
+      }
+
       if (entries.length === 0) {
         return;
       }
-
-      const useMobile = app.state.screenProfile.deviceClass === "mobile"
-        || app.state.screenProfile.deviceClass === "tablet";
       if (!ensureTextures(ctx, useMobile)) {
         return;
       }
@@ -541,6 +545,38 @@ function resolveOccupiedDraftPortKeys(
 
 function resolveEntityPortKey(endpoint: ResolvedPortEndpoint): string {
   return `${endpoint.entityId}:${endpoint.portGroupId}:${endpoint.portId}`;
+}
+
+/**
+ * 触控模式端口去重（同一 grid cell 内）：
+ * - 若存在箭头 → 过滤所有叉号，保留全部箭头
+ * - 若全是叉号 → 只保留一个
+ */
+export function deduplicateEntriesByGridCell(
+  entries: readonly PortOverlayEntry[],
+): PortOverlayEntry[] {
+  const groups = new Map<string, PortOverlayEntry[]>();
+  for (const entry of entries) {
+    const key = `${entry.outsideGridPoint.x},${entry.outsideGridPoint.y}`;
+    const group = groups.get(key);
+    if (group === undefined) {
+      groups.set(key, [entry]);
+    } else {
+      group.push(entry);
+    }
+  }
+
+  const result: PortOverlayEntry[] = [];
+  for (const group of groups.values()) {
+    const chevrons = group.filter((entry) => entry.state === "chevron");
+    if (chevrons.length > 0) {
+      result.push(...chevrons);
+    } else {
+      // 全是叉号，只保留第一个
+      result.push(group[0]!);
+    }
+  }
+  return result;
 }
 
 function toPortOverlayEntry(

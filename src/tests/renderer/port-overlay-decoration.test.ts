@@ -5,7 +5,9 @@ import { createRegistryContract } from "@/registry";
 import {
   resolveLogisticsPortOverlayEntries,
   resolveSelectedPortOverlayEntries,
+  deduplicateEntriesByGridCell,
 } from "@/renderer/scene/decorations/PortOverlayDecoration";
+import type { PortOverlayEntry } from "@/renderer/scene/decorations/PortOverlayDecoration";
 
 const registry = createRegistryContract();
 const entityDefinitionMap = new Map(
@@ -137,6 +139,69 @@ describe("PortOverlayDecoration 端口语义", () => {
   });
 });
 
+describe("deduplicateEntriesByGridCell 触控模式去重", () => {
+  it("同一 cell 有箭头和叉号时，过滤叉号保留全部箭头", () => {
+    const entries: PortOverlayEntry[] = [
+      createChevronEntry("a", 5, 5),
+      createCrossEntry("b", 5, 5),
+      createChevronEntry("c", 5, 5),
+    ];
+
+    const result = deduplicateEntriesByGridCell(entries);
+
+    expect(result).toHaveLength(2);
+    expect(result.every((entry) => entry.state === "chevron")).toBe(true);
+    expect(result.map((entry) => entry.entityId)).toEqual(["a", "c"]);
+  });
+
+  it("同一 cell 全是叉号时只保留一个", () => {
+    const entries: PortOverlayEntry[] = [
+      createCrossEntry("a", 5, 5),
+      createCrossEntry("b", 5, 5),
+      createCrossEntry("c", 5, 5),
+    ];
+
+    const result = deduplicateEntriesByGridCell(entries);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.state).toBe("cross");
+    expect(result[0]!.entityId).toBe("a");
+  });
+
+  it("不同 cell 的箭头和叉号互不影响", () => {
+    const entries: PortOverlayEntry[] = [
+      createChevronEntry("a", 5, 5),
+      createCrossEntry("b", 6, 6),
+      createCrossEntry("c", 6, 6),
+    ];
+
+    const result = deduplicateEntriesByGridCell(entries);
+
+    // cell (5,5): 1 个箭头
+    // cell (6,6): 两个叉号 → 去重为 1 个
+    expect(result).toHaveLength(2);
+    expect(result.filter((entry) => entry.state === "chevron")).toHaveLength(1);
+    expect(result.filter((entry) => entry.state === "cross")).toHaveLength(1);
+  });
+
+  it("空数组返回空数组", () => {
+    expect(deduplicateEntriesByGridCell([])).toEqual([]);
+  });
+
+  it("同一 cell 多个箭头全部保留", () => {
+    const entries: PortOverlayEntry[] = [
+      createChevronEntry("a", 5, 5),
+      createChevronEntry("b", 5, 5),
+      createChevronEntry("c", 5, 5),
+    ];
+
+    const result = deduplicateEntriesByGridCell(entries);
+
+    expect(result).toHaveLength(3);
+    expect(result.every((entry) => entry.state === "chevron")).toBe(true);
+  });
+});
+
 function outputChevronKeys(
   entries: ReturnType<typeof resolveLogisticsPortOverlayEntries>,
 ): string[] {
@@ -164,5 +229,39 @@ function createEntity(
     rotation,
     config: {},
     tags: [],
+  };
+}
+
+function createChevronEntry(
+  entityId: string,
+  x: number,
+  y: number,
+): PortOverlayEntry {
+  return {
+    entityId,
+    portGroupId: "pg",
+    portId: "p",
+    outsideGridPoint: { x, y },
+    edge: "NORTH",
+    material: "solid",
+    direction: "output",
+    state: "chevron",
+  };
+}
+
+function createCrossEntry(
+  entityId: string,
+  x: number,
+  y: number,
+): PortOverlayEntry {
+  return {
+    entityId,
+    portGroupId: "pg",
+    portId: "p",
+    outsideGridPoint: { x, y },
+    edge: "NORTH",
+    material: "solid",
+    direction: "output",
+    state: "cross",
   };
 }
