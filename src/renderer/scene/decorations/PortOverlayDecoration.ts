@@ -258,7 +258,8 @@ export function createPortOverlayDecoration(): DecorationLayer {
           const sprite = getOrCreateSprite(crossSprites, crossIndex, container);
           crossIndex += 1;
           sprite.texture = crossTexture;
-          sprite.tint = 0xff0000;
+          // AI-CORRECTION 2026-06-18: 实机端口叉号使用高亮橙红色而非纯红色，配合贴图中的 alpha 柔光还原发光标记。
+          sprite.tint = 0xff4b24;
           applyPortSpriteLayout(sprite, layout);
           continue;
         }

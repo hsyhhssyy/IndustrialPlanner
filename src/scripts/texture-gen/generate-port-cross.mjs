@@ -20,13 +20,15 @@ const CROSS_PC_LINES = [
 // =============================================================================
 const CROSS_MOBILE_LINES = [
   // NW-SE
-  { x1: 17, y1: 17, x2: 47, y2: 47 },
+  { x1: 14, y1: 14, x2: 50, y2: 50 },
   // NE-SW
-  { x1: 47, y1: 17, x2: 17, y2: 47 },
+  { x1: 50, y1: 14, x2: 14, y2: 50 },
 ];
 
 const STROKE_WIDTH = 2;
 const STROKE_COLOR = { r: 255, g: 0, b: 0 };
+// AI-CORRECTION 2026-06-18: 实机移动端叉号是粗圆头实体标记，原 2px 无抗锯齿线条与目标视觉不符。
+const MOBILE_STROKE_WIDTH = 10;
 
 // =============================================================================
 // Bresenham 直线光栅化 — 保证纯色像素、无抗锯齿
@@ -112,12 +114,36 @@ async function renderTexture(outputFilePath, lines) {
     .toFile(outputFilePath);
 }
 
+async function renderMobileTexture(outputFilePath, lines) {
+  await mkdir(path.dirname(outputFilePath), { recursive: true });
+  const lineMarkup = lines
+    .map(({ x1, y1, x2, y2 }) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`)
+    .join('');
+  const svg = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${TILE_SIZE}" height="${TILE_SIZE}" viewBox="0 0 ${TILE_SIZE} ${TILE_SIZE}">`,
+    '<defs>',
+    '  <filter id="port-cross-glow" x="-50%" y="-50%" width="200%" height="200%">',
+    '    <feGaussianBlur stdDeviation="3.5" />',
+    '  </filter>',
+    '</defs>',
+    `<g fill="none" stroke="#ffffff" stroke-width="${MOBILE_STROKE_WIDTH}" stroke-linecap="butt" opacity="0.58" filter="url(#port-cross-glow)">`,
+    lineMarkup,
+    '</g>',
+    `<g fill="none" stroke="#ffffff" stroke-width="${MOBILE_STROKE_WIDTH}" stroke-linecap="butt">`,
+    lineMarkup,
+    '</g>',
+    '</svg>',
+  ].join('');
+
+  await sharp(Buffer.from(svg)).png().toFile(outputFilePath);
+}
+
 // =============================================================================
 // 主流程
 // =============================================================================
 const TEXTURES = [
   { fileName: 'port-cross.png', lines: CROSS_PC_LINES },
-  { fileName: 'port-cross-mobile.png', lines: CROSS_MOBILE_LINES },
+  { fileName: 'port-cross-mobile.png', lines: CROSS_MOBILE_LINES, mobileAppearance: true },
 ];
 
 async function main() {
@@ -126,7 +152,11 @@ async function main() {
 
   for (const texture of TEXTURES) {
     const outputFilePath = path.join(outputDirectory, texture.fileName);
-    await renderTexture(outputFilePath, texture.lines);
+    if (texture.mobileAppearance === true) {
+      await renderMobileTexture(outputFilePath, texture.lines);
+    } else {
+      await renderTexture(outputFilePath, texture.lines);
+    }
     outputFilePaths.push(outputFilePath);
   }
 

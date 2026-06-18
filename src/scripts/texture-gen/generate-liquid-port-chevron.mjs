@@ -116,13 +116,40 @@ function formatPoint([x, y]) {
   return `${x},${y}`;
 }
 
-function createSvgMarkup(polygons) {
+function createSvgMarkup(polygons, appearance = {}) {
+  const {
+    glow = false,
+    cornerStrokeWidth = 0,
+  } = appearance;
+  const filterMarkup = glow
+    ? [
+        '<defs>',
+        '  <filter id="port-glow" x="-50%" y="-50%" width="200%" height="200%">',
+        '    <feGaussianBlur stdDeviation="2.5" />',
+        '  </filter>',
+        '</defs>',
+      ].join('')
+    : '';
+  const glowMarkup = glow
+    ? polygons
+        .map((polygon) => `<polygon points="${polygon.map(formatPoint).join(' ')}" fill="#ffffff" opacity="0.45" filter="url(#port-glow)" />`)
+        .join('')
+    : '';
   const polygonMarkup = polygons
-    .map((polygon) => `<polygon points="${polygon.map(formatPoint).join(' ')}" fill="#ffffff" />`)
+    .map((polygon) => [
+      `<polygon points="${polygon.map(formatPoint).join(' ')}"`,
+      ' fill="#ffffff"',
+      cornerStrokeWidth > 0
+        ? ` stroke="#ffffff" stroke-width="${cornerStrokeWidth}" stroke-linejoin="round"`
+        : '',
+      ' />',
+    ].join(''))
     .join('');
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${TILE_SIZE}" height="${TILE_SIZE}" viewBox="0 0 ${TILE_SIZE} ${TILE_SIZE}">`,
+    filterMarkup,
+    glowMarkup,
     polygonMarkup,
     '</svg>',
   ].join('');
@@ -134,9 +161,9 @@ function resolveOutputDirectory() {
   return path.resolve(process.argv[2] ?? path.join(projectRoot, 'public', 'textures'));
 }
 
-async function renderTexture(outputFilePath, polygons) {
+async function renderTexture(outputFilePath, polygons, appearance) {
   await mkdir(path.dirname(outputFilePath), { recursive: true });
-  await sharp(Buffer.from(createSvgMarkup(polygons))).png().toFile(outputFilePath);
+  await sharp(Buffer.from(createSvgMarkup(polygons, appearance))).png().toFile(outputFilePath);
 }
 
 // =============================================================================
@@ -147,8 +174,9 @@ const TEXTURES = [
   { fileName: 'liquid-port-chevron-input.png',  polygons: LIQUID_DOWN_POLYGONS },
   { fileName: 'liquid-port-chevron-output.png', polygons: LIQUID_UP_POLYGONS },
   // Mobile 版本
-  { fileName: 'liquid-port-chevron-input-mobile.png',  polygons: LIQUID_DOWN_MOBILE_POLYGONS },
-  { fileName: 'liquid-port-chevron-output-mobile.png', polygons: LIQUID_UP_MOBILE_POLYGONS },
+  // AI-CORRECTION 2026-06-18: 移动端参考游戏实机效果增加圆角轮廓与柔光，保持液体端口语义的同时统一视觉质感。
+  { fileName: 'liquid-port-chevron-input-mobile.png',  polygons: LIQUID_DOWN_MOBILE_POLYGONS, appearance: { glow: true, cornerStrokeWidth: 0.75 } },
+  { fileName: 'liquid-port-chevron-output-mobile.png', polygons: LIQUID_UP_MOBILE_POLYGONS, appearance: { glow: true, cornerStrokeWidth: 0.75 } },
 ];
 
 async function main() {
@@ -157,7 +185,7 @@ async function main() {
 
   for (const texture of TEXTURES) {
     const outputFilePath = path.join(outputDirectory, texture.fileName);
-    await renderTexture(outputFilePath, texture.polygons);
+    await renderTexture(outputFilePath, texture.polygons, texture.appearance);
     outputFilePaths.push(outputFilePath);
   }
 

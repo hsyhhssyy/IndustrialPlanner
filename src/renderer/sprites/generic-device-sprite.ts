@@ -1131,7 +1131,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     // 绘制红叉
     if (portCrossSpecs.length > 0 && this.isPortCrossTextureReady && this.portCrossTexture !== null) {
-      const crossTint = 0xff0000;
+      // AI-CORRECTION 2026-06-18: 实机端口叉号使用高亮橙红色而非纯红色，配合贴图中的 alpha 柔光还原发光标记。
+      const crossTint = 0xff4b24;
 
       for (let index = 0; index < portCrossSpecs.length; index += 1) {
         const spec = portCrossSpecs[index];
