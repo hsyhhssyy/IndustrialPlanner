@@ -112,6 +112,71 @@ describe("PortOverlayDecoration 端口语义", () => {
     )).toBe(true);
   });
 
+  it("方向不匹配的输入端口已经合法连接时不显示叉号", () => {
+    const device = createEntity("device", "item_port_storager_1", 5, 5, 0);
+    const connectedBelt = createEntity("connected", "belt_straight_1x1", 5, 8, 270);
+
+    const entries = resolveLogisticsPortOverlayEntries({
+      entities: [device, connectedBelt],
+      entityDefinitionMap,
+      kind: "belt",
+      direction: "output",
+    });
+
+    expect(inputCrossKeys(entries)).toEqual([
+      "item_input:in_s_1",
+      "item_input:in_s_2",
+    ]);
+  });
+
+  it("方向不匹配的输入端口被设备足印堵塞时不显示叉号", () => {
+    const device = createEntity("device", "item_port_storager_1", 5, 5, 0);
+    const wall = createEntity("wall", "item_port_storager_1", 5, 8, 0);
+
+    const entries = resolveLogisticsPortOverlayEntries({
+      entities: [device, wall],
+      entityDefinitionMap,
+      kind: "belt",
+      direction: "output",
+    });
+
+    expect(inputCrossKeys(entries)).toEqual([]);
+  });
+
+  it("方向不匹配的输入端口可正交桥接时保留叉号", () => {
+    const device = createEntity("device", "item_port_storager_1", 5, 5, 0);
+    const left = createEntity("left", "belt_straight_1x1", 4, 8, 0);
+    const crossing = createEntity("crossing", "belt_straight_1x1", 5, 8, 0);
+    const right = createEntity("right", "belt_straight_1x1", 6, 8, 0);
+
+    const entries = resolveLogisticsPortOverlayEntries({
+      entities: [device, left, crossing, right],
+      entityDefinitionMap,
+      kind: "belt",
+      direction: "output",
+    });
+
+    expect(inputCrossKeys(entries)).toContain("item_input:in_s_0");
+  });
+
+  it("类型不匹配的液体端口被设备堵塞时不显示叉号", () => {
+    const device = createEntity("device", "item_port_liquid_filling_pd_mc_1", 5, 5, 0);
+    const wall = createEntity("wall", "item_port_storager_1", 11, 6, 0);
+
+    const entries = resolveLogisticsPortOverlayEntries({
+      entities: [device, wall],
+      entityDefinitionMap,
+      kind: "belt",
+      direction: "output",
+    });
+
+    expect(entries.some((entry) =>
+      entry.entityId === "device"
+      && entry.state === "cross"
+      && entry.portGroupId === "fluid_input"
+    )).toBe(false);
+  });
+
   it("单设备 selection 和 preview 语义下展示全部端口箭头", () => {
     const device = createEntity("device", "item_port_storager_1", 5, 5, 0);
 
@@ -210,6 +275,19 @@ function outputChevronKeys(
       entry.entityId === "device"
       && entry.state === "chevron"
       && entry.direction === "output"
+    )
+    .map((entry) => `${entry.portGroupId}:${entry.portId}`)
+    .sort();
+}
+
+function inputCrossKeys(
+  entries: ReturnType<typeof resolveLogisticsPortOverlayEntries>,
+): string[] {
+  return entries
+    .filter((entry) =>
+      entry.entityId === "device"
+      && entry.state === "cross"
+      && entry.direction === "input"
     )
     .map((entry) => `${entry.portGroupId}:${entry.portId}`)
     .sort();

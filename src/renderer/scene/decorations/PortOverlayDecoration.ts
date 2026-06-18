@@ -67,31 +67,35 @@ export function resolveLogisticsPortOverlayEntries(options: {
     }
 
     for (const endpoint of resolveEntityPortEndpoints(entity, definition)) {
-      const directionMatches = endpoint.direction === options.direction
-        || endpoint.direction === "bidirectional";
-      const kindMatches = endpoint.kind === portKind;
-
-      if (!directionMatches || !kindMatches) {
-        entries.push(toPortOverlayEntry(endpoint, "cross"));
-        continue;
-      }
-
       if (options.occupiedDraftPortKeys?.has(resolveEntityPortKey(endpoint))) {
         continue;
       }
 
+      const directionMatches = endpoint.direction === options.direction
+        || endpoint.direction === "bidirectional";
+      const kindMatches = endpoint.kind === portKind;
+      const endpointKind = resolveLogisticsKindForPortKind(endpoint.kind);
+      const endpointDirection = endpoint.direction === "bidirectional"
+        ? options.direction
+        : endpoint.direction;
+
       if (!canLegallyLeadLogisticsFromPort({
         endpoint,
-        kind: options.kind,
-        direction: options.direction,
+        kind: endpointKind,
+        direction: endpointDirection,
         entities: options.entities,
         entityDefinitionMap: options.entityDefinitionMap,
-        basePlaceableArea: options.basePlaceableArea,
+        basePlaceableArea: endpointKind === "belt"
+          ? options.basePlaceableArea
+          : undefined,
       })) {
         continue;
       }
 
-      entries.push(toPortOverlayEntry(endpoint, "chevron"));
+      entries.push(toPortOverlayEntry(
+        endpoint,
+        directionMatches && kindMatches ? "chevron" : "cross",
+      ));
     }
   }
 
@@ -223,9 +227,7 @@ export function createPortOverlayDecoration(): DecorationLayer {
           kind: logisticsKind,
           direction,
           occupiedDraftPortKeys: resolveOccupiedDraftPortKeys(draft),
-          basePlaceableArea: logisticsKind === "belt"
-            ? currentBase?.placeableArea
-            : undefined,
+          basePlaceableArea: currentBase?.placeableArea,
         });
       } else {
         entries = resolveSelectedPortOverlayEntries({
@@ -545,6 +547,10 @@ function resolveOccupiedDraftPortKeys(
 
 function resolveEntityPortKey(endpoint: ResolvedPortEndpoint): string {
   return `${endpoint.entityId}:${endpoint.portGroupId}:${endpoint.portId}`;
+}
+
+function resolveLogisticsKindForPortKind(kind: LogisticsPortKind): LogisticsKind {
+  return kind === "item" ? "belt" : "pipe";
 }
 
 /**
