@@ -567,7 +567,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.drawScanlineOverlay(layout, context);
     }
 
-    this.syncPortOverlay(layout, context);
+    // AI-CORRECTION 2026-06-18:
+    // 端口箭头与红叉改由 PortOverlayDecoration 全局计算和绘制。
+    // 旧方法保留用于删除审计，但不再由每个设备 sprite 重复执行端口拓扑判断。
+    if (context.portOverlayManagedGlobally !== true) {
+      this.syncPortOverlay(layout, context);
+    }
   }
 
   // ---- overlay 辅助方法 ----

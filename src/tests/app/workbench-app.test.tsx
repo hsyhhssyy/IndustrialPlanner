@@ -55,7 +55,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   hypergryphOperationMode: true,
   hypergryphImmediateMove: true,
   hypergryphImmediateMarquee: false,
-  hypergryphAllowEmptyLogisticsEndpoints: true,
+  hypergryphAllowEmptyLogisticsEndpoints: false,
   hypergryphAutoCreateLogisticsDevices: true,
   hypergryphSelectionRightDockSync: true,
   hypergryphInspectorOpenOnSecondClick: false,

@@ -275,7 +275,7 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
-    expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(true);
+    expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(appHost.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
     expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(appHost.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
@@ -288,7 +288,7 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
-    expect(appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(true);
+    expect(appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
     expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
@@ -298,7 +298,7 @@ describe("createAppHost", () => {
     expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
-    expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(true);
+    expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
     expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(workspace.app?.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
@@ -345,7 +345,7 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
-    expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(true);
+    expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(appHost.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
     expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(appHost.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
@@ -357,7 +357,7 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
-    expect(appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(true);
+    expect(appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
     expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
@@ -367,7 +367,7 @@ describe("createAppHost", () => {
     expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
-    expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(true);
+    expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
     expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(workspace.app?.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);

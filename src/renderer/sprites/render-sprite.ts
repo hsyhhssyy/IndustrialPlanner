@@ -47,6 +47,8 @@ export interface RenderSpriteSyncContext {
    * sprite 在物流模式下据此过滤已连接端口，不显示箭头或叉号。
    */
   logisticsPortOccupancy: ReadonlyMap<string, ReadonlySet<string>> | null;
+  /** true 时端口提示由全局 PortOverlayDecoration 统一绘制。 */
+  portOverlayManagedGlobally?: boolean;
 }
 
 export interface RenderSprite {

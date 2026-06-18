@@ -55,6 +55,7 @@ import { createPowerRangeDecoration } from "./decorations/PowerRangeDecoration"
 import { createDarkPipeLinkLineDecoration } from "./decorations/DarkPipeLinkLineDecoration"
 import { createDarkPipeLinkSelectionDecoration } from "./decorations/DarkPipeLinkSelectionDecoration"
 import { createHoverCornersDecoration } from "./decorations/HoverCornersDecoration"
+import { createPortOverlayDecoration } from "./decorations/PortOverlayDecoration"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
@@ -176,6 +177,7 @@ export function createRenderSceneOrchestrator(
   const logisticsPlacementCanvasDecoration = createLogisticsPlacementCanvasDecoration()
   const logisticsPlacementIdleCursorDecoration = createLogisticsPlacementIdleCursorDecoration()
   const hoverCornersDecoration = createHoverCornersDecoration()
+  const portOverlayDecoration = createPortOverlayDecoration()
   const beltFlowDecoration = createBeltFlowDecoration()
   const pipeFlowDecoration = createPipeFlowDecoration()
   const darkPipeLinkLineDecoration = createDarkPipeLinkLineDecoration()
@@ -265,6 +267,10 @@ export function createRenderSceneOrchestrator(
     portOccupancyCache = occupancy;
     return occupancy;
   }
+  // AI-CORRECTION 2026-06-18:
+  // 旧的“外侧格存在物流实体即视为占用”逻辑已由 PortOverlayDecoration 的合法引出判断替代。
+  // 保留函数用于删除审计；禁止执行，避免与全局 decoration 重复扫描实体。
+  void resolveLogisticsPortOccupancy;
 
   const flushViewport = (): void => {
     const frameStartedAtMs = performance.now()
@@ -355,10 +361,7 @@ export function createRenderSceneOrchestrator(
         viewportBounds: ctx.viewportBounds,
         theme: effectiveCanvasTheme,
         profiler: frameProfiler,
-        logisticsPortOccupancy: resolveLogisticsPortOccupancy(
-          entities,
-          entityDefinitionMap,
-        ),
+        logisticsPortOccupancy: null,
       }),
     )
     recordEntitySpriteSyncStats(frameProfiler, entitySpriteStats)
@@ -385,6 +388,10 @@ export function createRenderSceneOrchestrator(
 
     measureRenderStage(frameProfiler, "decoration.hoverCorners", () => {
       hoverCornersDecoration.sync(ctx)
+    })
+
+    measureRenderStage(frameProfiler, "decoration.portOverlay", () => {
+      portOverlayDecoration.sync(ctx)
     })
 
     measureRenderStage(frameProfiler, "decoration.diagnostics", () => {
@@ -462,6 +469,7 @@ export function createRenderSceneOrchestrator(
   marqueeOverlayLayer.addChild(logisticsPlacementCanvasDecoration.container)
   marqueeOverlayLayer.addChild(logisticsPlacementIdleCursorDecoration.container)
   marqueeOverlayLayer.addChild(hoverCornersDecoration.container)
+  marqueeOverlayLayer.addChild(portOverlayDecoration.container)
   marqueeOverlayLayer.addChild(marqueeDecoration.container)
   marqueeOverlayLayer.addChild(darkPipeLinkSelectionDecoration.container)
   layers.overlay.addChild(diagnosticsDecoration.container)
@@ -487,6 +495,7 @@ export function createRenderSceneOrchestrator(
       logisticsPlacementCanvasDecoration.destroy()
       logisticsPlacementIdleCursorDecoration.destroy()
       hoverCornersDecoration.destroy()
+      portOverlayDecoration.destroy()
       diagnosticsDecoration.destroy()
       beltFlowDecoration.destroy()
       pipeFlowDecoration.destroy()
@@ -920,6 +929,7 @@ function syncWorldEntitySprites(options: {
         suppressBelts: options.workspace.editor?.state.suppressBelts ?? false,
         suppressPipes: options.workspace.editor?.state.suppressPipes ?? false,
         logisticsPortOccupancy: options.logisticsPortOccupancy,
+        portOverlayManagedGlobally: true,
       },
     )
     nextEntityIds.add(entity.id)

@@ -618,7 +618,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphOperationMode: true,
     hypergryphImmediateMove: true,
     hypergryphImmediateMarquee: false,
-    hypergryphAllowEmptyLogisticsEndpoints: true,
+    hypergryphAllowEmptyLogisticsEndpoints: false,
     hypergryphAutoCreateLogisticsDevices: true,
     hypergryphSelectionRightDockSync: true,
     hypergryphInspectorOpenOnSecondClick: false,

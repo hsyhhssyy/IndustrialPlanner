@@ -271,7 +271,7 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         kind: "switch",
         labelKey: "settingsField.arknightsAllowEmptyLogisticsEndpoints",
         descriptionKey: "settingsField.arknightsAllowEmptyLogisticsEndpointsDescription",
-        defaultValue: true,
+        defaultValue: false,
       },
       {
         id: "game-arknights-auto-create-logistics-devices",

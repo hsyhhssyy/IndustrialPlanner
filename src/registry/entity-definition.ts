@@ -945,7 +945,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   createEntityDefinition({
     id: "item_port_liquid_filling_pd_mc_1",
     nameKey: "registry.entity.item_port_liquid_filling_pd_mc_1.name",
-    spriteId: "item_port_filling_pd_mc_1",
+    spriteId: "item_port_liquid_filling_pd_mc_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
     displayOrder: 603,
@@ -2116,7 +2116,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   createEntityDefinition({
     id: "item_port_hydro_planter_1",
     nameKey: "registry.entity.item_port_hydro_planter_1.name",
-    spriteId: "item_port_planter_1",
+    spriteId: "item_port_hydro_planter_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
     displayOrder: 508,
