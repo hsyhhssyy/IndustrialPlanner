@@ -32,7 +32,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "display-frame-rate-limit": "30",
         "game-arknights-immediate-move": true,
         "game-arknights-immediate-marquee": false,
-        "game-arknights-allow-empty-logistics-endpoints": true,
+        "game-arknights-allow-empty-logistics-endpoints": false,
         "game-arknights-auto-create-logistics-devices": true,
         "game-arknights-selection-right-dock-sync": true,
         "game-arknights-inspector-open-on-second-click": false,
@@ -79,7 +79,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["display-frame-rate-limit"]).toBe("30");
     expect(hydratedController.values["game-arknights-immediate-move"]).toBe(true);
     expect(hydratedController.values["game-arknights-immediate-marquee"]).toBe(false);
-    expect(hydratedController.values["game-arknights-allow-empty-logistics-endpoints"]).toBe(true);
+    expect(hydratedController.values["game-arknights-allow-empty-logistics-endpoints"]).toBe(false);
     expect(hydratedController.values["game-arknights-auto-create-logistics-devices"]).toBe(true);
     expect(hydratedController.values["game-arknights-selection-right-dock-sync"]).toBe(true);
     expect(hydratedController.values["game-arknights-inspector-open-on-second-click"]).toBe(false);
@@ -230,7 +230,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "display-frame-rate-limit": "unlimited",
         "game-arknights-immediate-move": true,
         "game-arknights-immediate-marquee": false,
-        "game-arknights-allow-empty-logistics-endpoints": true,
+        "game-arknights-allow-empty-logistics-endpoints": false,
         "game-arknights-auto-create-logistics-devices": true,
         "game-arknights-selection-right-dock-sync": true,
         "game-arknights-inspector-open-on-second-click": false,

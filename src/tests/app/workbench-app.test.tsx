@@ -2346,7 +2346,7 @@ describe("WorkbenchApp", () => {
     expect(immediateMoveToggle?.disabled).toBe(false);
     expect(immediateMarqueeToggle?.checked).toBe(false);
     expect(immediateMarqueeToggle?.disabled).toBe(false);
-    expect(allowEmptyLogisticsEndpointsToggle?.checked).toBe(true);
+    expect(allowEmptyLogisticsEndpointsToggle?.checked).toBe(false);
     expect(allowEmptyLogisticsEndpointsToggle?.disabled).toBe(false);
     expect(autoCreateLogisticsDevicesToggle?.checked).toBe(true);
     expect(autoCreateLogisticsDevicesToggle?.disabled).toBe(false);

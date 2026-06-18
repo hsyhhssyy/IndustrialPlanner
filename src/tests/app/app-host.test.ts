@@ -2342,6 +2342,9 @@ describe("createAppHost", () => {
       height: 400,
     });
     const appHost = createAppHost(workspace);
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
+    });
     const initialEntityOrderLength = editorHost.document.getSnapshot().entityOrder.length;
     const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
     const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 2, y: 0 });
@@ -2447,6 +2450,9 @@ describe("createAppHost", () => {
       height: 800,
     });
     const appHost = createAppHost(workspace);
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
+    });
     const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 7 });
     const targetPoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 8 });
 
@@ -2653,6 +2659,7 @@ describe("createAppHost", () => {
     });
     const appHost = createAppHost(workspace);
     runInAction(() => {
+      appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
       appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices = false;
     });
     const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 6 });
@@ -2884,6 +2891,9 @@ describe("createAppHost", () => {
       height: 400,
     });
     const appHost = createAppHost(workspace);
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
+    });
     const initialEntityOrderLength = editorHost.document.getSnapshot().entityOrder.length;
 
     // Place a device with input ports (3x3 footprint, input ports on south edge)
@@ -2965,6 +2975,9 @@ describe("createAppHost", () => {
       height: 400,
     });
     const appHost = createAppHost(workspace);
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
+    });
     const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
     const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
 
@@ -3171,6 +3184,9 @@ describe("createAppHost", () => {
       height: 400,
     });
     const appHost = createAppHost(workspace);
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
+    });
     const panSpy = vi.spyOn(editorHost.actions, "moveViewportByClientPixelVector");
     const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
     const headPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
