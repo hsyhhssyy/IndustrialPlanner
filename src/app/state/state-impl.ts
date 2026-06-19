@@ -395,6 +395,7 @@ export interface RuntimeStateReadWrite {
   blueprintPlacementRecord: BlueprintLibraryRecord | null;
   blueprintPlacementPointerMode: "mouse" | "touch" | null;
   blueprintPlacementRotationSteps: number;
+  blueprintPlacementContinuous: boolean;
   singlePlacementDeviceId: string | null;
   singlePlacementPointerMode: "mouse" | "touch" | null;
   singlePlacementContinuous: boolean;
@@ -588,6 +589,7 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   blueprintPlacementRecord: BlueprintLibraryRecord | null = null;
   blueprintPlacementPointerMode: "mouse" | "touch" | null = null;
   blueprintPlacementRotationSteps = 0;
+  blueprintPlacementContinuous = false;
   singlePlacementDeviceId: string | null = null;
   singlePlacementPointerMode: "mouse" | "touch" | null = null;
   singlePlacementContinuous = false;

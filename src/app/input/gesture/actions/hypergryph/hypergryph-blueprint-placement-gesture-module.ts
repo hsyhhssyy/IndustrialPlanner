@@ -23,6 +23,13 @@ import {
 } from "./hypergryph-single-placement-gesture-module";
 
 const BLUEPRINT_PREVIEW_PLACE_BUTTON_ID = "blueprint-preview-place-button";
+const RIGHT_DOCK_COPY_BUTTON_ID = "canvas-right-dock-toolbar-button-copy";
+const CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID =
+  "canvas-top-left-corner-toolbar-button-toggle-continuous-placement";
+const TOGGLE_CONTINUOUS_PLACEMENT_ON =
+  `${CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID}-on`;
+const TOGGLE_CONTINUOUS_PLACEMENT_OFF =
+  `${CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID}-off`;
 const TEMP_BLUEPRINT_NAME = "Temp Blueprint";
 
 type TempBlueprintShortcut = "copy" | "paste";
@@ -61,23 +68,16 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           }
 
           if (shortcut === "copy") {
-            if (context.appHost.internalState.activeTool !== "marquee") {
-              return { status: "ignored" };
-            }
-
-            const record = createTempBlueprintRecord(context);
-            if (record === null) {
-              return { status: "ignored" };
-            }
-
-            lastTempBlueprint = record;
-            return enterBlueprintPlacement({
-              appHost: context.appHost,
+            const result = copySelectionAsTempBlueprint({
+              context,
               editor,
-              record,
               source: "mouse",
               initialMousePosition: lastMousePosition,
             });
+            if (result.status === "handled") {
+              lastTempBlueprint = context.appHost.internalState.runtime.blueprintPlacementRecord;
+            }
+            return result;
           }
 
           if (lastTempBlueprint === null) {
@@ -112,11 +112,53 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
         syncPlacementEntryUi(
           context.appHost,
           context.appHost.internalState.runtime.blueprintPlacementPointerMode,
+          context.appHost.internalState.runtime.blueprintPlacementContinuous,
         );
         return { status: "handled" };
       }
 
       const editor = context.workspace.editor;
+
+      if (
+        event.type === "ui-button-touch-tap"
+        && event.uiButtonId === RIGHT_DOCK_COPY_BUTTON_ID
+      ) {
+        if (editor === null) {
+          return { status: "ignored" };
+        }
+
+        const result = copySelectionAsTempBlueprint({
+          context,
+          editor,
+          source: "touch",
+          initialMousePosition: null,
+        });
+        if (result.status === "handled") {
+          lastTempBlueprint = context.appHost.internalState.runtime.blueprintPlacementRecord;
+        }
+        return result;
+      }
+
+      if (
+        event.type === "ui-button-mouse-tap"
+        && event.button === 0
+        && event.uiButtonId === RIGHT_DOCK_COPY_BUTTON_ID
+      ) {
+        if (editor === null) {
+          return { status: "ignored" };
+        }
+
+        const result = copySelectionAsTempBlueprint({
+          context,
+          editor,
+          source: "mouse",
+          initialMousePosition: lastMousePosition,
+        });
+        if (result.status === "handled") {
+          lastTempBlueprint = context.appHost.internalState.runtime.blueprintPlacementRecord;
+        }
+        return result;
+      }
 
       if (
         event.type === "ui-button-touch-tap"
@@ -238,8 +280,21 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           return { status: "handled" };
 
         case "ui-button-touch-tap":
+          if (event.uiButtonId === TOGGLE_CONTINUOUS_PLACEMENT_ON) {
+            context.appHost.internalState.runtime.blueprintPlacementContinuous = true;
+            return { status: "handled" };
+          }
+
+          if (event.uiButtonId === TOGGLE_CONTINUOUS_PLACEMENT_OFF) {
+            context.appHost.internalState.runtime.blueprintPlacementContinuous = false;
+            return { status: "handled" };
+          }
+
           if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
-            applyBlueprintPlacement(context.appHost, editor, null, { continuous: false });
+            applyBlueprintPlacement(context.appHost, editor, null, {
+              continuous:
+                context.appHost.internalState.runtime.blueprintPlacementContinuous,
+            });
             return { status: "handled" };
           }
 
@@ -260,8 +315,21 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             return { status: "ignored" };
           }
 
+          if (event.uiButtonId === TOGGLE_CONTINUOUS_PLACEMENT_ON) {
+            context.appHost.internalState.runtime.blueprintPlacementContinuous = true;
+            return { status: "handled" };
+          }
+
+          if (event.uiButtonId === TOGGLE_CONTINUOUS_PLACEMENT_OFF) {
+            context.appHost.internalState.runtime.blueprintPlacementContinuous = false;
+            return { status: "handled" };
+          }
+
           if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
-            applyBlueprintPlacement(context.appHost, editor, lastMousePosition, { continuous: false });
+            applyBlueprintPlacement(context.appHost, editor, lastMousePosition, {
+              continuous:
+                context.appHost.internalState.runtime.blueprintPlacementContinuous,
+            });
             return { status: "handled" };
           }
 
@@ -326,6 +394,7 @@ function enterBlueprintPlacement(options: {
     options.appHost.internalState.runtime.blueprintPlacementRecord = record;
     options.appHost.internalState.runtime.blueprintPlacementPointerMode = options.source;
     options.appHost.internalState.runtime.blueprintPlacementRotationSteps = 0;
+    options.appHost.internalState.runtime.blueprintPlacementContinuous = false;
     options.editor.actions.createBlueprintPlacementDraft(record, placementAnchor);
 
     const previewRect = options.editor.queries.findEntityCollectionGridRect(
@@ -467,7 +536,14 @@ function applyBlueprintPlacement(
 
       const previewRect = editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
 
-      if (previewRect === null || !syncPlacementEntryUi(appHost, pointerMode)) {
+      if (
+        previewRect === null
+        || !syncPlacementEntryUi(
+          appHost,
+          pointerMode,
+          appHost.internalState.runtime.blueprintPlacementContinuous,
+        )
+      ) {
         throw new Error("failed to re-arm blueprint placement preview");
       }
 
@@ -532,7 +608,9 @@ function clearBlueprintPlacementUi(appHost: AppHost): void {
   appHost.internalState.runtime.blueprintPlacementRecord = null;
   appHost.internalState.runtime.blueprintPlacementPointerMode = null;
   appHost.internalState.runtime.blueprintPlacementRotationSteps = 0;
+  appHost.internalState.runtime.blueprintPlacementContinuous = false;
   appHost.internalActions.hideCanvasFloatingToolbar();
+  appHost.internalActions.hideCanvasTopLeftCornerToolbar();
 }
 
 function restoreFailedBlueprintPlacementEnter(appHost: AppHost, editor: EditorContract): void {
@@ -591,6 +669,30 @@ function createTempBlueprintRecord(
     ...blueprintDocument,
     parentFolderId: null,
   };
+}
+
+function copySelectionAsTempBlueprint(options: {
+  context: GestureActionContext<AppHost>;
+  editor: EditorContract;
+  source: "mouse" | "touch";
+  initialMousePosition: GesturePosition | null;
+}): GestureHandleResult {
+  if (options.context.appHost.internalState.activeTool !== "marquee") {
+    return { status: "ignored" };
+  }
+
+  const record = createTempBlueprintRecord(options.context);
+  if (record === null) {
+    return { status: "ignored" };
+  }
+
+  return enterBlueprintPlacement({
+    appHost: options.context.appHost,
+    editor: options.editor,
+    record,
+    source: options.source,
+    initialMousePosition: options.initialMousePosition,
+  });
 }
 
 function resolveTempBlueprintShortcut(options: {

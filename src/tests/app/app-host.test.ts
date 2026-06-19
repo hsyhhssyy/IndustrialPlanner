@@ -1696,6 +1696,75 @@ describe("createAppHost", () => {
     expect(previewEntity?.definitionId).toBe("item_port_storager_1");
   });
 
+  it("copies the current selection as a temporary blueprint from the marquee touch button", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+    const initialEntityCount = editorHost.document.getSnapshot().entityOrder.length;
+
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "dummy-entity-2",
+    });
+    appHost.internalActions.setActiveTool("marquee");
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "canvas-right-dock-toolbar-button-copy",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.internalState.runtime.blueprintPlacementPointerMode).toBe("touch");
+    expect(appHost.internalState.runtime.blueprintPlacementRecord).toMatchObject({
+      parentFolderId: null,
+      entityOrder: ["dummy-entity-2"],
+    });
+    expect(editorHost.state.collections.preview).toHaveLength(1);
+    expect(appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible).toBe(true);
+    expect(appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds).toEqual([
+      "canvas-top-left-corner-toolbar-button-toggle-continuous-placement",
+    ]);
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "canvas-top-left-corner-toolbar-button-toggle-continuous-placement-on",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.runtime.blueprintPlacementContinuous).toBe(true);
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "canvas-floating-toolbar-button-ok",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(initialEntityCount + 1);
+    expect(editorHost.state.collections.preview).toHaveLength(1);
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "canvas-floating-toolbar-button-cancel",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.internalState.runtime.blueprintPlacementContinuous).toBe(false);
+    expect(appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible).toBe(false);
+    expect(appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds).toEqual([]);
+  });
+
   it("pastes the last temporary blueprint from Ctrl+V without persistent storage", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -2175,12 +2244,10 @@ describe("createAppHost", () => {
     expect(appHost.internalState.runtime.canvasRightDockToolbar.visible).toBe(true);
     expect(appHost.internalState.runtime.canvasRightDockToolbar.buttonIds).toEqual([
       "canvas-right-dock-toolbar-button-exit",
-      "canvas-right-dock-toolbar-button-move",
-      "canvas-right-dock-toolbar-button-delete",
     ]);
   });
 
-  it("opens the save blueprint dialog from the save shortcut and selection action button only for multi-selection", () => {
+  it("opens the save blueprint dialog from the save shortcut and selection action button for a non-empty selection", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
@@ -2194,6 +2261,9 @@ describe("createAppHost", () => {
       ctrlKey: true,
     }));
 
+    expect(appHost.internalState.workbench.dialogState["save-blueprint"].visible).toBe(true);
+
+    appHost.internalActions.closeDialog("save-blueprint");
     expect(appHost.internalState.workbench.dialogState["save-blueprint"].visible).toBe(false);
 
     editorHost.internalState.collections.selection.replace(["dummy-entity-2", "dummy-entity-3"]);

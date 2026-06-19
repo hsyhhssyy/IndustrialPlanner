@@ -1953,7 +1953,7 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector('[data-dialog-key="save-blueprint"]')).not.toBeNull();
   });
 
-  it("hides the canvas right dock save blueprint button for a single selection", async () => {
+  it("shows the canvas right dock save blueprint button for a single selection", async () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     await flushMicrotasks(20);
@@ -1987,7 +1987,7 @@ describe("WorkbenchApp", () => {
 
     expect(container.querySelector(
       '[data-ui-button-id="canvas-right-dock-toolbar-button-save-blueprint"]',
-    )).toBeNull();
+    )).not.toBeNull();
   });
 
   it("shows the canvas top left corner toolbar and updates toggle labels locally", () => {

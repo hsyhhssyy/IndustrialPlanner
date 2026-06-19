@@ -13,7 +13,7 @@ import {
 } from "@/shared/storage";
 
 export function canSaveSelectionAsBlueprint(workspace: WorkspaceContract): boolean {
-  return (workspace.editor?.state.collections.selection.length ?? 0) > 1;
+  return (workspace.editor?.state.collections.selection.length ?? 0) > 0;
 }
 
 export function createSelectionBlueprintDocument(options: {

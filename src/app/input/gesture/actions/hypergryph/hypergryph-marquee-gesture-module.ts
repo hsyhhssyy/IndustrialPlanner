@@ -14,8 +14,13 @@ import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 const MARQUEE_RIGHT_DOCK_BUTTON_IDS = [
   "canvas-right-dock-toolbar-button-exit",
   "canvas-right-dock-toolbar-button-move",
+  "canvas-right-dock-toolbar-button-copy",
   "canvas-right-dock-toolbar-button-save-blueprint",
   "canvas-right-dock-toolbar-button-delete",
+] as const;
+
+const EMPTY_MARQUEE_RIGHT_DOCK_BUTTON_IDS = [
+  "canvas-right-dock-toolbar-button-exit",
 ] as const;
 
 const MARQUEE_TOP_LEFT_BUTTON_IDS = [
@@ -77,6 +82,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
 
           enterMarqueeMode({
             appHost: context.appHost,
+            editor,
             source: "mouse",
           });
           return { status: "handled" };
@@ -119,6 +125,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
 
           if (event.button === 0 && editor !== null && event.pointerEntity !== null) {
             toggleEntityInSelection(editor, event.pointerEntity.id);
+            showMarqueeRightDockToolbar(context.appHost, editor);
             return { status: "handled" };
           }
 
@@ -131,6 +138,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
 
           if (editor !== null && event.pointerEntity !== null) {
             toggleEntityInSelection(editor, event.pointerEntity.id);
+            showMarqueeRightDockToolbar(context.appHost, editor);
             return { status: "handled" };
           }
 
@@ -149,6 +157,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           ) {
             enterMarqueeMode({
               appHost: context.appHost,
+              editor,
               source: "mouse",
             });
           }
@@ -180,6 +189,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           ) {
             enterMarqueeMode({
               appHost: context.appHost,
+              editor,
               source: "touch",
             });
           }
@@ -224,6 +234,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           editor.actions.applyMarquee();
           context.appHost.internalState.runtime.marqueeAnchor = null;
           editor.actions.setHoverPoint(event.position);
+          showMarqueeRightDockToolbar(context.appHost, editor);
           return { status: "handled" };
 
         default:
@@ -243,6 +254,7 @@ function handleUiButtonTap(options: {
     case "placement-tool-marquee":
       enterMarqueeMode({
         appHost: options.appHost,
+        editor: options.editor,
         source: options.source,
       });
       return { status: "handled" };
@@ -294,21 +306,19 @@ function handleUiButtonTap(options: {
 
 function enterMarqueeMode(options: {
   appHost: AppHost;
+  editor: EditorContract | null;
   source: "mouse" | "touch";
 }): void {
   options.appHost.internalActions.setActiveTool("marquee");
   // options.appHost.workspace.editor?.actions.clearCollection(EntityCollectionType.selection);
 
   if (options.source === "touch") {
-    options.appHost.internalActions.showCanvasRightDockToolbar(MARQUEE_RIGHT_DOCK_BUTTON_IDS);
+    showMarqueeRightDockToolbar(options.appHost, options.editor, "icon");
     if (options.appHost.internalState.workbench.rightDockOpen) {
       options.appHost.internalActions.toggleRightDock();
     }
   } else {
-    options.appHost.internalActions.showCanvasRightDockToolbar(
-      MARQUEE_RIGHT_DOCK_BUTTON_IDS,
-      "shortcut",
-    );
+    showMarqueeRightDockToolbar(options.appHost, options.editor, "shortcut");
   }
   options.appHost.internalActions.showCanvasTopLeftCornerToolbar(
     resolveMarqueeTopLeftButtonIds(options.appHost),
@@ -412,6 +422,18 @@ export function cleanupMarquee(appHost: AppHost, editor: EditorContract | null, 
   appHost.internalState.runtime.marqueeAnchor = null;
   appHost.internalState.toolInfo.marqueeType = EntityCollectionType.marquee;
   appHost.internalActions.hideCanvasRightDockToolbar();
+}
+
+export function showMarqueeRightDockToolbar(
+  appHost: AppHost,
+  editor: EditorContract | null,
+  mode = appHost.internalState.runtime.canvasRightDockToolbar.mode,
+): void {
+  const buttonIds = (editor?.state.collections.selection?.length ?? 0) > 0
+    ? MARQUEE_RIGHT_DOCK_BUTTON_IDS
+    : EMPTY_MARQUEE_RIGHT_DOCK_BUTTON_IDS;
+
+  appHost.internalActions.showCanvasRightDockToolbar(buttonIds, mode);
 }
 
 function toggleEntityInSelection(editor: EditorContract, entityId: string): void {

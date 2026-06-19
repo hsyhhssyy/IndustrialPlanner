@@ -9,12 +9,17 @@ import {
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
-import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import {
+  EntityCollectionType,
+  type EntityCollection,
+} from "@/domain/editor/types/editor-types";
 import type { GridPoint } from "@/domain/shared/grid";
 
 describe("createHypergryphMarqueeGestureModule", () => {
   it("enters and exits marquee from the X key", () => {
-    const { context, appHost, editor } = createContext();
+    const { context, appHost, editor } = createContext({
+      selectedEntityIds: ["entity-1"],
+    });
     const module = createHypergryphMarqueeGestureModule();
 
     expect(module.handle(keyDownEvent("KeyX"), context)).toEqual({ status: "handled" });
@@ -23,6 +28,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
       [
         "canvas-right-dock-toolbar-button-exit",
         "canvas-right-dock-toolbar-button-move",
+        "canvas-right-dock-toolbar-button-copy",
         "canvas-right-dock-toolbar-button-save-blueprint",
         "canvas-right-dock-toolbar-button-delete",
       ],
@@ -39,7 +45,9 @@ describe("createHypergryphMarqueeGestureModule", () => {
   });
 
   it("enters touch marquee from the placement button and collapses the right dock", () => {
-    const { context, appHost } = createContext();
+    const { context, appHost } = createContext({
+      selectedEntityIds: ["entity-1"],
+    });
     const module = createHypergryphMarqueeGestureModule();
 
     const result = module.handle(
@@ -52,9 +60,10 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
       "canvas-right-dock-toolbar-button-exit",
       "canvas-right-dock-toolbar-button-move",
+      "canvas-right-dock-toolbar-button-copy",
       "canvas-right-dock-toolbar-button-save-blueprint",
       "canvas-right-dock-toolbar-button-delete",
-    ]);
+    ], "icon");
     expect(appHost.internalState.runtime.canvasRightDockToolbar.mode).toBe("icon");
     expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       "canvas-top-left-corner-toolbar-button-toggle-pipe",
@@ -65,7 +74,9 @@ describe("createHypergryphMarqueeGestureModule", () => {
   });
 
   it("enters mouse marquee with shortcut mode toolbar from the placement button", () => {
-    const { context, appHost } = createContext();
+    const { context, appHost } = createContext({
+      selectedEntityIds: ["entity-1"],
+    });
     const module = createHypergryphMarqueeGestureModule();
 
     const result = module.handle(
@@ -79,12 +90,35 @@ describe("createHypergryphMarqueeGestureModule", () => {
       [
         "canvas-right-dock-toolbar-button-exit",
         "canvas-right-dock-toolbar-button-move",
+        "canvas-right-dock-toolbar-button-copy",
         "canvas-right-dock-toolbar-button-save-blueprint",
         "canvas-right-dock-toolbar-button-delete",
       ],
       "shortcut",
     );
     expect(appHost.internalState.runtime.canvasRightDockToolbar.mode).toBe("shortcut");
+  });
+
+  it("shows selection action buttons only while the marquee selection is non-empty", () => {
+    const { context, appHost } = createContext({
+      activeTool: "marquee",
+    });
+    const module = createHypergryphMarqueeGestureModule();
+    const entity = { id: "entity-1" } as WorldEntity;
+
+    expect(module.handle(mouseTapEvent(entity), context)).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.canvasRightDockToolbar.buttonIds).toEqual([
+      "canvas-right-dock-toolbar-button-exit",
+      "canvas-right-dock-toolbar-button-move",
+      "canvas-right-dock-toolbar-button-copy",
+      "canvas-right-dock-toolbar-button-save-blueprint",
+      "canvas-right-dock-toolbar-button-delete",
+    ]);
+
+    expect(module.handle(mouseTapEvent(entity), context)).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.canvasRightDockToolbar.buttonIds).toEqual([
+      "canvas-right-dock-toolbar-button-exit",
+    ]);
   });
 
   it("closes the left dock on marquee enter for mobile and tablet", () => {
@@ -150,10 +184,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
       "canvas-right-dock-toolbar-button-exit",
-      "canvas-right-dock-toolbar-button-move",
-      "canvas-right-dock-toolbar-button-save-blueprint",
-      "canvas-right-dock-toolbar-button-delete",
-    ]);
+    ], "icon");
     expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       "canvas-top-left-corner-toolbar-button-toggle-pipe",
       "canvas-top-left-corner-toolbar-button-toggle-belt",
@@ -335,20 +366,47 @@ function createContext(options: {
   rightDockOpen?: boolean;
   leftDockOpen?: boolean;
   deviceClass?: "desktop" | "tablet" | "mobile";
+  selectedEntityIds?: readonly string[];
 } = {}): {
   context: GestureActionContext<AppHost>;
   editor: MockEditor;
   appHost: AppHost;
 } {
+  const selection = createSelectionCollection(options.selectedEntityIds ?? []);
+  const mutableSelection = selection as unknown as string[];
   const editor: MockEditor = {
     state: {
-      collections: {},
+      collections: {
+        selection,
+      },
     } as EditorContract["state"],
     actions: {
       setMarqueeRange: vi.fn(),
       applyMarquee: vi.fn(),
       cancelMarquee: vi.fn(),
-      clearCollection: vi.fn(),
+      clearCollection: vi.fn((collectionType) => {
+        if (collectionType === EntityCollectionType.selection) {
+          mutableSelection.splice(0, mutableSelection.length);
+        }
+      }),
+      addToCollection: vi.fn(({ collectionType, entityId }) => {
+        if (
+          collectionType === EntityCollectionType.selection
+          && !selection.includes(entityId)
+        ) {
+          mutableSelection.push(entityId);
+        }
+      }),
+      removeFromCollection: vi.fn(({ collectionType, entityId }) => {
+        if (collectionType !== EntityCollectionType.selection) {
+          return;
+        }
+
+        const index = selection.indexOf(entityId);
+        if (index >= 0) {
+          mutableSelection.splice(index, 1);
+        }
+      }),
       setLogisticsSuppression: vi.fn(),
       setHoverPoint: vi.fn(),
       clearHoverPoint: vi.fn(),
@@ -448,6 +506,8 @@ type MockEditor = {
     | "applyMarquee"
     | "cancelMarquee"
     | "clearCollection"
+    | "addToCollection"
+    | "removeFromCollection"
     | "setMarqueeRange"
     | "setLogisticsSuppression"
     | "setHoverPoint"
@@ -458,6 +518,12 @@ type MockEditor = {
     "findGridCellForClientPixelPoint"
   >;
 };
+
+function createSelectionCollection(entityIds: readonly string[]): EntityCollection {
+  const selection = [...entityIds] as string[] & EntityCollection;
+  selection.contains = (entityId: string) => selection.includes(entityId);
+  return selection;
+}
 
 function keyDownEvent(code: string) {
   return {
@@ -487,6 +553,20 @@ function uiButtonMouseTapEvent(uiButtonId: string) {
     gestureId: `ui-mouse-${uiButtonId}`,
     uiButtonId,
     button: 0,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function mouseTapEvent(pointerEntity: WorldEntity) {
+  return {
+    type: "mouse tap" as const,
+    gestureId: `mouse-tap-${pointerEntity.id}`,
+    button: 0,
+    buttons: 0,
+    position: { x: 2, y: 2 },
+    longPress: false,
+    pointerEntity,
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };

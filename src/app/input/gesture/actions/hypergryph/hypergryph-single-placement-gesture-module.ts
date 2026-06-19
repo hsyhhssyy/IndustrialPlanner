@@ -964,6 +964,7 @@ function safelyCancelPlacementDraft(editor: EditorContract): void {
 export function syncPlacementEntryUi(
   appHost: AppHost,
   pointerMode = appHost.internalState.runtime.singlePlacementPointerMode,
+  continuous = appHost.internalState.runtime.singlePlacementContinuous,
 ): boolean {
   if (pointerMode === null) {
     return true;
@@ -976,7 +977,7 @@ export function syncPlacementEntryUi(
   }
 
   appHost.internalActions.showCanvasTopLeftCornerToolbar(
-    resolveSinglePlacementTopLeftToolbarButtonIds(appHost),
+    resolveSinglePlacementTopLeftToolbarButtonIds(appHost, continuous),
   );
 
   return appHost.internalActions.showCanvasFloatingToolbarForCollection(
@@ -1009,8 +1010,15 @@ function handleContinuousPlacementToggleTap(
 
 function resolveSinglePlacementTopLeftToolbarButtonIds(
   appHost: AppHost,
+  continuous = appHost.internalState.runtime.singlePlacementContinuous,
 ): readonly CanvasTopLeftCornerToolbarShowButtonId[] {
-  return appHost.internalState.runtime.singlePlacementContinuous
+  return resolveContinuousPlacementTopLeftToolbarButtonIds(continuous);
+}
+
+function resolveContinuousPlacementTopLeftToolbarButtonIds(
+  continuous: boolean,
+): readonly CanvasTopLeftCornerToolbarShowButtonId[] {
+  return continuous
     ? [TOGGLE_CONTINUOUS_PLACEMENT_OFF]
     : [CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID];
 }

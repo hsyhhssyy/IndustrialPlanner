@@ -5,6 +5,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
+import { showMarqueeRightDockToolbar } from "./hypergryph-marquee-gesture-module";
 
 const FLOATING_DELETE_BUTTON_ID = "canvas-floating-toolbar-button-delete";
 const FLOATING_DELETE_MANY_BUTTON_ID = "canvas-floating-toolbar-button-delete-many";
@@ -99,6 +100,8 @@ function deleteSelection(
   if (activeTool === "select") {
     appHost.internalActions.hideCanvasFloatingToolbar();
     appHost.internalActions.hideCanvasRightDockToolbar();
+  } else {
+    showMarqueeRightDockToolbar(appHost, editor);
   }
 
   return { status: "handled" };

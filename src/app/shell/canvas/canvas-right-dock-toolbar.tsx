@@ -75,10 +75,20 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
   mode = "icon",
 }: CanvasRightDockToolbarProps) {
   const t = appHost.actions.translate;
-  const canSaveBlueprint = (appHost.workspace.editor?.state.collections.selection.length ?? 0) > 1;
-  const visibleButtonIds = buttonIds.filter(
-    (buttonId) => canSaveBlueprint || buttonId !== "canvas-right-dock-toolbar-button-save-blueprint",
-  );
+  // AI-REMOVED 2026-06-19:
+  // Reason: 右侧工具栏只负责渲染手势模组声明的按钮，不应持有“保存蓝图何时显示”的业务规则。
+  // Trigger: marquee 模式下选区操作按钮的显示规则统一回收到手势模组。
+  // Evidence: showCanvasRightDockToolbar 已由各手势模组负责传入完整 buttonIds。
+  // Replacement: hypergryph-marquee-gesture-module.ts 的 showMarqueeRightDockToolbar。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const canSaveBlueprint = (appHost.workspace.editor?.state.collections.selection.length ?? 0) > 1;
+  // const visibleButtonIds = buttonIds.filter(
+  //   (buttonId) => canSaveBlueprint || buttonId !== "canvas-right-dock-toolbar-button-save-blueprint",
+  // );
+  const visibleButtonIds = buttonIds;
 
   const isShortcutMode = mode === "shortcut";
 

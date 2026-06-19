@@ -73,6 +73,7 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
       deleteCollection,
       hideCanvasFloatingToolbar,
       hideCanvasRightDockToolbar,
+      showCanvasRightDockToolbar,
     } = createContext({ activeTool: "marquee" });
     const module = createHypergryphDeleteSelectionGestureModule();
 
@@ -85,6 +86,10 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
     expect(deleteCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
     expect(hideCanvasFloatingToolbar).not.toHaveBeenCalled();
     expect(hideCanvasRightDockToolbar).not.toHaveBeenCalled();
+    expect(showCanvasRightDockToolbar).toHaveBeenCalledWith(
+      ["canvas-right-dock-toolbar-button-exit"],
+      "icon",
+    );
   });
 
   it("handles batch delete from the floating toolbar via removeTransportComponent", () => {
@@ -169,18 +174,25 @@ function createContext(options: {
   removeTransportComponent: ReturnType<typeof vi.fn>;
   hideCanvasFloatingToolbar: ReturnType<typeof vi.fn>;
   hideCanvasRightDockToolbar: ReturnType<typeof vi.fn>;
+  showCanvasRightDockToolbar: ReturnType<typeof vi.fn>;
   isShortcutFor: ReturnType<typeof vi.fn>;
 } {
-  const deleteCollection = vi.fn();
   const removeTransportComponent = vi.fn();
   const hideCanvasFloatingToolbar = vi.fn();
   const hideCanvasRightDockToolbar = vi.fn();
+  const showCanvasRightDockToolbar = vi.fn();
   const isShortcutFor = vi.fn((shortcutKeyId: string, code: string | null, key: string | null) => (
     shortcutKeyId === SHORTCUT_KEY.DELETE_DEVICE
     && code === "KeyF"
     && key === "f"
   ));
   const selection = createSelectionCollection(options.selectedEntityIds ?? ["entity-1"]);
+  const mutableSelection = selection as unknown as string[];
+  const deleteCollection = vi.fn((collectionType) => {
+    if (collectionType === EntityCollectionType.selection) {
+      mutableSelection.splice(0, mutableSelection.length);
+    }
+  });
 
   return {
     context: {
@@ -205,11 +217,17 @@ function createContext(options: {
         },
         internalState: {
           activeTool: options.activeTool ?? "select",
+          runtime: {
+            canvasRightDockToolbar: {
+              mode: "icon",
+            },
+          },
         },
         internalActions: {
           isShortcutFor,
           hideCanvasFloatingToolbar,
           hideCanvasRightDockToolbar,
+          showCanvasRightDockToolbar,
         },
       } as unknown as AppHost,
       keyboard: emptyKeyboardSnapshot(),
@@ -218,6 +236,7 @@ function createContext(options: {
     removeTransportComponent,
     hideCanvasFloatingToolbar,
     hideCanvasRightDockToolbar,
+    showCanvasRightDockToolbar,
     isShortcutFor,
   };
 }
