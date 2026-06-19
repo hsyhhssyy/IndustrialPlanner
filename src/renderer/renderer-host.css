@@ -38,6 +38,19 @@
   animation: industrial-planner-renderer-placement-glow-pulse 2s ease-in-out infinite;
 }
 
+.industrial-planner-renderer__blueprint-glow {
+  z-index: 2;
+  --glow-depth: 10px;
+  --glow-spread: 5px;
+  box-shadow:
+    inset 0 0 var(--glow-depth) var(--glow-spread) rgba(66, 165, 245, 0.24),
+    inset 0 0 calc(var(--glow-depth) * 3) calc(var(--glow-spread) * 3) rgba(66, 165, 245, 0.12);
+}
+
+.industrial-planner-renderer__blueprint-glow.is-active {
+  animation: industrial-planner-renderer-blueprint-glow-pulse 2s ease-in-out infinite;
+}
+
 .industrial-planner-renderer__marquee-glow {
   z-index: 2;
   --glow-depth: 10px;
@@ -53,6 +66,17 @@
 }
 
 @keyframes industrial-planner-renderer-placement-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes industrial-planner-renderer-blueprint-glow-pulse {
   0%,
   100% {
     opacity: 0.6;

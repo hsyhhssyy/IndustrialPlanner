@@ -15,6 +15,7 @@ import "./renderer-host.css";
 
 interface RenderHostDomElements {
   placementGlowOverlay: HTMLDivElement;
+  blueprintGlowOverlay: HTMLDivElement;
   marqueeGlowOverlay: HTMLDivElement;
 }
 
@@ -61,18 +62,25 @@ function createRendererContainer(app: Application): {
     "industrial-planner-renderer__placement-glow",
   ].join(" ");
 
+  const blueprintGlowOverlay = document.createElement("div");
+  blueprintGlowOverlay.className = [
+    "industrial-planner-renderer__glow-overlay",
+    "industrial-planner-renderer__blueprint-glow",
+  ].join(" ");
+
   const marqueeGlowOverlay = document.createElement("div");
   marqueeGlowOverlay.className = [
     "industrial-planner-renderer__glow-overlay",
     "industrial-planner-renderer__marquee-glow",
   ].join(" ");
 
-  container.append(app.canvas, placementGlowOverlay, marqueeGlowOverlay);
+  container.append(app.canvas, placementGlowOverlay, blueprintGlowOverlay, marqueeGlowOverlay);
 
   return {
     container,
     dom: {
       placementGlowOverlay,
+      blueprintGlowOverlay,
       marqueeGlowOverlay,
     },
   };

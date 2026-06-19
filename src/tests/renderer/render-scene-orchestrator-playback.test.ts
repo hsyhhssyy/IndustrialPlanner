@@ -140,6 +140,10 @@ vi.mock("@/renderer/scene/decorations/DiagnosticsDecoration", () => ({
   createDiagnosticsDecoration: () => orchestratorTestState.createDecoration(),
 }))
 
+vi.mock("@/renderer/scene/decorations/BlueprintPlacementCanvasDecoration", () => ({
+  createBlueprintPlacementCanvasDecoration: () => orchestratorTestState.createDecoration(),
+}))
+
 vi.mock("@/renderer/scene/decorations/LogisticsPlacementCanvasDecoration", () => ({
   createLogisticsPlacementCanvasDecoration: () => orchestratorTestState.createDecoration(),
 }))
@@ -210,6 +214,7 @@ describe("createRenderSceneOrchestrator", () => {
     const renderHost = {
       dom: {
         placementGlowOverlay: document.createElement("div"),
+        blueprintGlowOverlay: document.createElement("div"),
         marqueeGlowOverlay: document.createElement("div"),
       },
       app: {
@@ -341,6 +346,7 @@ describe("createRenderSceneOrchestrator", () => {
     const renderHost = {
       dom: {
         placementGlowOverlay: document.createElement("div"),
+        blueprintGlowOverlay: document.createElement("div"),
         marqueeGlowOverlay: document.createElement("div"),
       },
       app: {

@@ -40,6 +40,7 @@ import {
 import { createGridLineDecoration } from "./decorations/GridLineDecoration"
 import { createBaseBoundaryDecoration } from "./decorations/BaseBoundaryDecoration"
 import { createDiagnosticsDecoration } from "./decorations/DiagnosticsDecoration"
+import { createBlueprintPlacementCanvasDecoration } from "./decorations/BlueprintPlacementCanvasDecoration"
 import { createLogisticsPlacementCanvasDecoration } from "./decorations/LogisticsPlacementCanvasDecoration"
 import { createLogisticsPlacementIdleCursorDecoration } from "./decorations/LogisticsPlacementIdleCursorDecoration"
 import { createMarqueeRectDecoration } from "./decorations/MarqueeRectDecoration"
@@ -174,6 +175,7 @@ export function createRenderSceneOrchestrator(
   const marqueeDecoration = createMarqueeRectDecoration()
   const diagnosticsDecoration = createDiagnosticsDecoration()
   const marqueeCanvasDecoration = createMarqueeCanvasDecoration()
+  const blueprintPlacementCanvasDecoration = createBlueprintPlacementCanvasDecoration()
   const logisticsPlacementCanvasDecoration = createLogisticsPlacementCanvasDecoration()
   const logisticsPlacementIdleCursorDecoration = createLogisticsPlacementIdleCursorDecoration()
   const hoverCornersDecoration = createHoverCornersDecoration()
@@ -378,6 +380,10 @@ export function createRenderSceneOrchestrator(
       marqueeCanvasDecoration.sync(ctx)
     })
 
+    measureRenderStage(frameProfiler, "decoration.blueprintPlacementCanvas", () => {
+      blueprintPlacementCanvasDecoration.sync(ctx)
+    })
+
     measureRenderStage(frameProfiler, "decoration.logisticsPlacementCanvas", () => {
       logisticsPlacementCanvasDecoration.sync(ctx)
     })
@@ -466,6 +472,7 @@ export function createRenderSceneOrchestrator(
   beltInsertionLayer.addChild(beltPortInsertionDecoration.container)
   beltCargoOverlayLayer.addChild(beltCargoDecoration.container)
   marqueeOverlayLayer.addChild(marqueeCanvasDecoration.container)
+  marqueeOverlayLayer.addChild(blueprintPlacementCanvasDecoration.container)
   marqueeOverlayLayer.addChild(logisticsPlacementCanvasDecoration.container)
   marqueeOverlayLayer.addChild(logisticsPlacementIdleCursorDecoration.container)
   marqueeOverlayLayer.addChild(hoverCornersDecoration.container)
@@ -492,6 +499,7 @@ export function createRenderSceneOrchestrator(
       invalidPlacementDecoration.destroy()
       marqueeDecoration.destroy()
       marqueeCanvasDecoration.destroy()
+      blueprintPlacementCanvasDecoration.destroy()
       logisticsPlacementCanvasDecoration.destroy()
       logisticsPlacementIdleCursorDecoration.destroy()
       hoverCornersDecoration.destroy()
@@ -541,6 +549,7 @@ function syncRendererDomOverlays(
 
   if (app === null) {
     renderHost.dom.placementGlowOverlay.classList.remove("is-active")
+    renderHost.dom.blueprintGlowOverlay.classList.remove("is-active")
     renderHost.dom.marqueeGlowOverlay.classList.remove("is-active")
     return
   }
@@ -549,9 +558,11 @@ function syncRendererDomOverlays(
   const logisticsKind = resolveRendererLogisticsPlacementKind(renderHost)
   const isPlacementGlowActive = activeTool === "single-placement"
     || (activeTool === "logistics-placement" && logisticsKind !== null)
+  const isBlueprintGlowActive = activeTool === "blueprint-placement"
   const isMarqueeGlowActive = activeTool === "marquee"
 
   renderHost.dom.placementGlowOverlay.classList.toggle("is-active", isPlacementGlowActive)
+  renderHost.dom.blueprintGlowOverlay.classList.toggle("is-active", isBlueprintGlowActive)
   renderHost.dom.marqueeGlowOverlay.classList.toggle("is-active", isMarqueeGlowActive)
 
   const canvasLongerSide = Math.max(
@@ -563,6 +574,8 @@ function syncRendererDomOverlays(
 
   renderHost.dom.placementGlowOverlay.style.setProperty("--glow-depth", `${glowDepth}px`)
   renderHost.dom.placementGlowOverlay.style.setProperty("--glow-spread", `${glowSpread}px`)
+  renderHost.dom.blueprintGlowOverlay.style.setProperty("--glow-depth", `${glowDepth}px`)
+  renderHost.dom.blueprintGlowOverlay.style.setProperty("--glow-spread", `${glowSpread}px`)
   renderHost.dom.marqueeGlowOverlay.style.setProperty("--glow-depth", `${glowDepth}px`)
   renderHost.dom.marqueeGlowOverlay.style.setProperty("--glow-spread", `${glowSpread}px`)
 
