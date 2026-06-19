@@ -12,6 +12,7 @@ import {
   Container,
   Graphics,
   Rectangle,
+  RenderTexture,
   Sprite,
   Texture,
 } from "pixi.js"
@@ -60,7 +61,8 @@ interface BeltCargoEntry {
 
 interface BeltCargoView {
   readonly root: Container;
-  readonly mask: Graphics;
+  readonly maskContainer: Container;
+  readonly extensionGraphics: Graphics;
   readonly cargoRoot: Container;
   readonly boxGraphics: Graphics;
   readonly icon: Sprite;
@@ -106,6 +108,9 @@ export function createBeltCargoDecoration(): DecorationLayer {
   // beltRects — 文档变更或视口变更时失效
   let cachedBeltRects: BeltCargoClipRect[] | null = null
   let cachedBeltRectsViewportKey: string | null = null
+  // 共享 beltRects mask 精灵 — 视口/文档变更时重建，测试环境为 null（无 renderer）
+  let sharedBeltRectsMaskSprite: Sprite | null = null
+  let sharedBeltRectsMaskRenderTexture: RenderTexture | null = null
 
   const hideAll = (): void => {
     container.visible = false
@@ -153,28 +158,101 @@ export function createBeltCargoDecoration(): DecorationLayer {
     }
 
     const root = new Container()
-    const mask = new Graphics({ roundPixels: true })
+    const maskContainer = new Container()
+    const extensionGraphics = new Graphics({ roundPixels: true })
     const cargoRoot = new Container()
     const box = new Graphics({ roundPixels: true })
     const icon = new Sprite(Texture.EMPTY)
     icon.anchor.set(0.5)
     icon.roundPixels = true
 
+    // maskContainer 结构：sharedSprite（子0） + extensionGraphics（子1）
+    // 若 sharedBeltRectsMaskSprite 已创建则加入，否则留空占位
+    if (sharedBeltRectsMaskSprite !== null) {
+      maskContainer.addChild(sharedBeltRectsMaskSprite)
+    }
+    maskContainer.addChild(extensionGraphics)
+
     cargoRoot.addChild(box)
     cargoRoot.addChild(icon)
-    root.addChild(mask)
+    root.addChild(maskContainer)
     root.addChild(cargoRoot)
     cargoLayer.addChild(root)
 
     view = {
       root,
-      mask,
+      maskContainer,
+      extensionGraphics,
       cargoRoot,
       boxGraphics: box,
       icon,
     }
     cargoViews.push(view)
     return view
+  }
+
+  const rebuildSharedBeltRectsMaskSprite = (
+    beltRects: readonly BeltCargoClipRect[],
+    renderer: unknown,
+    viewportWidth: number,
+    viewportHeight: number,
+  ): void => {
+    // 测试环境无真实 renderer → 不可用，回退到逐视图绘制
+    if (renderer === null || renderer === undefined || typeof (renderer as { render?: unknown }).render !== "function") {
+      return
+    }
+
+    if (sharedBeltRectsMaskRenderTexture !== null) {
+      sharedBeltRectsMaskRenderTexture.destroy()
+      sharedBeltRectsMaskRenderTexture = null
+    }
+
+    if (sharedBeltRectsMaskSprite !== null) {
+      sharedBeltRectsMaskSprite.texture = Texture.EMPTY
+    }
+
+    if (beltRects.length === 0 || viewportWidth <= 0 || viewportHeight <= 0) {
+      return
+    }
+
+    // 将 beltRects 一次性绘制到 Graphics，再渲染到 RenderTexture
+    const g = new Graphics({ roundPixels: true })
+    for (const rect of beltRects) {
+      g.rect(rect.x, rect.y, rect.width, rect.height).fill(0xffffff)
+    }
+
+    const rt = RenderTexture.create({
+      width: viewportWidth,
+      height: viewportHeight,
+    })
+
+    try {
+      const pixiRenderer = renderer as { render(args: { container: Container; target: RenderTexture }): void }
+      pixiRenderer.render({ container: g, target: rt })
+    } catch {
+      // 渲染失败（如测试环境无真正 GPU）→ 跳过
+      g.destroy()
+      rt.destroy()
+      return
+    }
+
+    g.destroy()
+
+    if (sharedBeltRectsMaskSprite === null) {
+      sharedBeltRectsMaskSprite = new Sprite(rt)
+      // 将新创建的 sharedSprite 加入到已有 views 的 maskContainer
+      for (const view of cargoViews) {
+        // maskContainer children: [sharedSprite(0), extensionGraphics(1)]
+        // 若尚未加入则插入到位置 0
+        if (view.maskContainer.children.length > 0 && view.maskContainer.children[0] !== sharedBeltRectsMaskSprite) {
+          view.maskContainer.addChildAt(sharedBeltRectsMaskSprite, 0)
+        }
+      }
+    } else {
+      sharedBeltRectsMaskSprite.texture = rt
+    }
+
+    sharedBeltRectsMaskRenderTexture = rt
   }
 
   return {
@@ -212,6 +290,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
       if (cachedBeltRects === null || !documentStable || cachedBeltRectsViewportKey !== viewportKey) {
         cachedBeltRects = resolveBeltCargoClipBeltRects(ctx, vs.gridCellPixelSize, definitionMap)
         cachedBeltRectsViewportKey = viewportKey
+        rebuildSharedBeltRectsMaskSprite(cachedBeltRects, ctx.renderHost.app?.renderer, vs.width, vs.height)
       }
       const beltRects = cachedBeltRects
 
@@ -304,6 +383,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
             insetTextures,
             itemIconMap,
             resolvedTextures,
+            sharedBeltRectsMaskSprite,
             profiler: ctx.profiler,
           })
         })
@@ -316,6 +396,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
           insetTextures,
           itemIconMap,
           resolvedTextures,
+          sharedBeltRectsMaskSprite,
         })
       }
     },
@@ -328,6 +409,15 @@ export function createBeltCargoDecoration(): DecorationLayer {
         texture.destroy()
       }
       insetTextures.clear()
+
+      if (sharedBeltRectsMaskRenderTexture !== null) {
+        sharedBeltRectsMaskRenderTexture.destroy()
+        sharedBeltRectsMaskRenderTexture = null
+      }
+      if (sharedBeltRectsMaskSprite !== null) {
+        sharedBeltRectsMaskSprite.destroy()
+        sharedBeltRectsMaskSprite = null
+      }
 
       for (const view of cargoViews) {
         view.root.destroy({ children: true })
@@ -723,10 +813,14 @@ function syncBeltCargoViews(options: {
   insetTextures: Map<string, Texture>;
   itemIconMap: ReadonlyMap<string, string>;
   resolvedTextures: ReadonlyMap<string, Texture>;
+  sharedBeltRectsMaskSprite?: Sprite | null;
   profiler?: DecorationProfiler;
 }): void {
   const iconSize = options.boxSize * BOX_ICON_SIZE_RATIO
   const boxCornerRadius = options.boxSize * BOX_CORNER_RADIUS_RATIO
+  const hasSharedMaskSprite = options.sharedBeltRectsMaskSprite !== null
+    && options.sharedBeltRectsMaskSprite !== undefined
+    && options.sharedBeltRectsMaskSprite.texture !== Texture.EMPTY
   let visibleCount = 0
   let maskClearMs = 0
   let maskDrawMs = 0
@@ -756,16 +850,34 @@ function syncBeltCargoViews(options: {
     if (entry.clipMask === null) {
       const tMask = performance.now()
       view.root.mask = null
-      view.mask.visible = false
-      view.mask.clear()
+      view.maskContainer.visible = false
+      view.extensionGraphics.clear()
       maskClearMs += performance.now() - tMask
     } else {
       const tMask = performance.now()
-      view.root.mask = view.mask
-      view.mask.visible = true
-      drawBeltCargoClipMask(view.mask, entry.clipMask, options.profiler)
+      view.root.mask = view.maskContainer
+      view.maskContainer.visible = true
+
+      if (hasSharedMaskSprite) {
+        // 生产路径：beltRects 来自共享 sprite，仅绘制 extensions
+        drawBeltCargoExtensionMask(view.extensionGraphics, entry.clipMask.extensions)
+      } else {
+        // 测试回退：beltRects + extensions 全量绘制（保持 drawCommands 顺序：rects... polys...）
+        view.extensionGraphics.clear()
+        drawBeltRectsToGraphics(view.extensionGraphics, entry.clipMask.beltRects)
+        for (const extension of entry.clipMask.extensions) {
+          view.extensionGraphics
+            .poly(resolveRotatedRectanglePoints({
+              center: extension.center,
+              angleRadians: extension.angleRadians,
+              length: extension.length,
+              width: extension.width,
+            }), true)
+            .fill(0xffffff)
+        }
+      }
       maskDrawMs += performance.now() - tMask
-      // 细粒度计数：记录每次 draw 的 rect/poly 数量
+      // 细粒度计数
       if (options.profiler) {
         options.profiler.count("beltCargo.vM-beltRects-perEntry", entry.clipMask.beltRects.length)
         options.profiler.count("beltCargo.vM-extensions-perEntry", entry.clipMask.extensions.length)
@@ -813,7 +925,8 @@ function syncBeltCargoViews(options: {
     if (view !== undefined) {
       view.root.visible = false
       view.root.mask = null
-      view.mask.clear()
+      view.maskContainer.visible = false
+      view.extensionGraphics.clear()
     }
   }
   const hideMs = performance.now() - tHide
@@ -891,17 +1004,11 @@ function createInsetTexture(texture: Texture, insetPx: number): Texture {
   })
 }
 
-function drawBeltCargoClipMask(
+function drawBeltRectsToGraphics(
   graphics: Graphics,
-  mask: BeltCargoClipMask,
-  profiler?: DecorationProfiler,
+  beltRects: readonly BeltCargoClipRect[],
 ): void {
-  let t = performance.now()
-  graphics.clear()
-  const clearMs = performance.now() - t
-
-  t = performance.now()
-  for (const beltRect of mask.beltRects) {
+  for (const beltRect of beltRects) {
     graphics
       .rect(
         beltRect.x,
@@ -911,10 +1018,19 @@ function drawBeltCargoClipMask(
       )
       .fill(0xffffff)
   }
-  const rectsMs = performance.now() - t
+}
 
-  t = performance.now()
-  for (const extension of mask.extensions) {
+function drawBeltCargoExtensionMask(
+  graphics: Graphics,
+  extensions: readonly BeltCargoClipExtensionRect[],
+): void {
+  graphics.clear()
+
+  if (extensions.length === 0) {
+    return
+  }
+
+  for (const extension of extensions) {
     graphics
       .poly(resolveRotatedRectanglePoints({
         center: extension.center,
@@ -923,13 +1039,6 @@ function drawBeltCargoClipMask(
         width: extension.width,
       }), true)
       .fill(0xffffff)
-  }
-  const polysMs = performance.now() - t
-
-  if (profiler) {
-    profiler.count("beltCargo.vM-clear-us", Math.round(clearMs * 1000))
-    profiler.count("beltCargo.vM-rects-us", Math.round(rectsMs * 1000))
-    profiler.count("beltCargo.vM-polys-us", Math.round(polysMs * 1000))
   }
 }
 

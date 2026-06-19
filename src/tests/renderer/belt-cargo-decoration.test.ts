@@ -457,7 +457,8 @@ describe("createBeltCargoDecoration", () => {
     expect(cargoRoot.rotation).toBeCloseTo(0)
     expect(cargoViewRoot.mask).toBe(cargoViewRoot.children[0])
 
-    const mask = cargoViewRoot.children[0] as {
+    const maskContainer = cargoViewRoot.children[0] as { children: unknown[] }
+    const mask = maskContainer.children[0] as {
       drawCommands: Array<{
         type: "rect" | "poly";
         x: number;
@@ -526,7 +527,8 @@ describe("createBeltCargoDecoration", () => {
     const cargoRoot = resolveCargoRoot(decoration, 0)
     expect(cargoRoot.x).toBeCloseTo(55)
     expect(cargoViewRoot.mask).toBe(cargoViewRoot.children[0])
-    const mask = cargoViewRoot.children[0] as {
+    const maskContainer = cargoViewRoot.children[0] as { children: unknown[] }
+    const mask = maskContainer.children[0] as {
       drawCommands: Array<{
         type: "rect" | "poly";
         x: number;
@@ -573,7 +575,8 @@ describe("createBeltCargoDecoration", () => {
     })
 
     decoration.sync(connectedFrame as never)
-    const connectedMask = resolveCargoViewRoot(decoration, 0).children[0] as {
+    const connectedMaskContainer = resolveCargoViewRoot(decoration, 0).children[0] as { children: unknown[] }
+    const connectedMask = connectedMaskContainer.children[0] as {
       drawCommands: Array<{ points?: number[] }>;
     }
     expect(connectedMask.drawCommands[1]).toMatchObject({
@@ -593,7 +596,8 @@ describe("createBeltCargoDecoration", () => {
     })
 
     decoration.sync(disconnectedFrame as never)
-    const disconnectedMask = resolveCargoViewRoot(decoration, 0).children[0] as {
+    const disconnectedMaskContainer = resolveCargoViewRoot(decoration, 0).children[0] as { children: unknown[] }
+    const disconnectedMask = disconnectedMaskContainer.children[0] as {
       drawCommands: Array<{ points?: number[] }>;
     }
     expect(disconnectedMask.drawCommands[2]).toMatchObject({
@@ -620,7 +624,8 @@ describe("createBeltCargoDecoration", () => {
     })
 
     decoration.sync(connectedFrame as never)
-    const connectedMask = resolveCargoViewRoot(decoration, 0).children[0] as {
+    const connectedMaskContainer = resolveCargoViewRoot(decoration, 0).children[0] as { children: unknown[] }
+    const connectedMask = connectedMaskContainer.children[0] as {
       drawCommands: Array<{ points?: number[] }>;
     }
     expect(connectedMask.drawCommands[2]).toMatchObject({
@@ -640,7 +645,8 @@ describe("createBeltCargoDecoration", () => {
     })
 
     decoration.sync(disconnectedFrame as never)
-    const disconnectedMask = resolveCargoViewRoot(decoration, 0).children[0] as {
+    const disconnectedMaskContainer = resolveCargoViewRoot(decoration, 0).children[0] as { children: unknown[] }
+    const disconnectedMask = disconnectedMaskContainer.children[0] as {
       drawCommands: Array<{ points?: number[] }>;
     }
     expect(disconnectedMask.drawCommands[2]).toMatchObject({
@@ -669,7 +675,8 @@ describe("createBeltCargoDecoration", () => {
     decoration.sync(ctx as never)
 
     const cargoViewRoot = resolveCargoViewRoot(decoration, 0)
-    const mask = cargoViewRoot.children[0] as {
+    const maskContainer = cargoViewRoot.children[0] as { children: unknown[] }
+    const mask = maskContainer.children[0] as {
       drawCommands: Array<{
         type: "rect" | "poly";
         x: number;
