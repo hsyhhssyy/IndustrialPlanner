@@ -776,7 +776,7 @@ describe("物流绘制模式", () => {
     });
   });
 
-  it("rejects extending a fully connected source tile toward its original output", () => {
+  it("allows extending a fully connected source tile along its original output", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
@@ -803,11 +803,14 @@ describe("物流绘制模式", () => {
       },
     });
 
-    expect(moveResult.canApply).toBe(false);
-    expect(editorHost.actions.applyLogisticDraft()).toBe(false);
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+    });
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
   });
 
-  it("rejects extending a vertically stacked source tile toward its original downward output", () => {
+  it("allows extending a vertically stacked source tile along its original downward output", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
@@ -835,8 +838,11 @@ describe("物流绘制模式", () => {
       },
     });
 
-    expect(moveResult.canApply).toBe(false);
-    expect(editorHost.actions.applyLogisticDraft()).toBe(false);
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+    });
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
   });
 
   it("creates a converger when ending on a logistics tile with upstream and downstream connections", () => {
@@ -907,6 +913,45 @@ describe("物流绘制模式", () => {
     expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
       definitionId: "item_log_converger",
       rotation: 270,
+    });
+  });
+
+  it("replaces a connected target entrance while preserving its output when auto devices are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    // predecessor(12,9) → target(12,8) → successor(12,7)，旧带方向 S→N。
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "belt_straight_1x1", 12, 9, 270),
+      createTestEntity("target", "belt_straight_1x1", 12, 8, 270),
+      createTestEntity("successor", "belt_straight_1x1", 12, 7, 270),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 13, y: 8 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 12, y: 8 },
+      autoCreateSplittersAndConvergers: false,
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+    });
+    expect(editorHost.state.collections.ghost).toEqual(["target"]);
+    expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
+      definitionId: "belt_turn_cw_1x1",
+      rotation: 0,
     });
   });
 

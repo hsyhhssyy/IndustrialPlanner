@@ -183,11 +183,22 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
           });
 
         case "touch dragstart": {
+          console.warn("[LOGISTICS-DEBUG]","touch-dragstart", {
+            gestureId: event.gestureId,
+            kind: context.appHost.internalState.runtime.logisticsPlacement.kind,
+            allowEmptySource: resolveLogisticsPlacementBehaviorOptions(context.appHost).allowEmptySource,
+            startPosition: event.startPosition,
+            position: event.position,
+          });
           const result = handleTouchDragStart({
             appHost: context.appHost,
             editor,
             position: event.position,
             startPosition: event.startPosition,
+          });
+          console.warn("[LOGISTICS-DEBUG]","touch-dragstart-result", {
+            gestureId: event.gestureId,
+            status: result.status,
           });
           activeTouchLogisticsDragGestureId = result.status === "claimed" ? event.gestureId : null;
           return result;
@@ -390,12 +401,19 @@ function handleTouchDragStart(options: {
   const kind = options.appHost.internalState.runtime.logisticsPlacement.kind;
   const startGridPoint = resolveGridPointFromGesturePosition(options.editor, options.startPosition);
   const pointerGridPoint = resolveGridPointFromGesturePosition(options.editor, options.position);
+  console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-enter", {
+    kind, startGridPoint, pointerGridPoint,
+    draftState: options.editor.queries.resolveLogisticsDraftState() !== null ? "present" : "null",
+  });
   if (kind === null || startGridPoint === null || pointerGridPoint === null) {
+    console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-null-early-return", { kind, startGridPoint, pointerGridPoint });
     return { status: "ignored" };
   }
 
   if (options.editor.queries.resolveLogisticsDraftState() !== null) {
-    if (!isTouchDragStartOnLogisticsHead(options.editor, options.startPosition)) {
+    const onHead = isTouchDragStartOnLogisticsHead(options.editor, options.startPosition);
+    console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-existing-draft", { onHead });
+    if (!onHead) {
       return { status: "ignored" };
     }
 
@@ -412,6 +430,10 @@ function handleTouchDragStart(options: {
     startGridPoint,
     kind,
   );
+  console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-endpoint", {
+    type: endpoint?.type ?? "null",
+    portDirection: endpoint?.type === "device-port" ? endpoint.portDirection : "N/A",
+  });
   if (endpoint?.type === "device-port" && endpoint.portDirection === "output") {
     const runtime = options.appHost.internalState.runtime.logisticsPlacement;
     runtime.pointerMode = "touch";
@@ -475,8 +497,13 @@ function handleTouchDragStart(options: {
   }
 
   const startEntity = options.editor.queries.findEntityAtClientPixelPoint(options.startPosition);
+  console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-startEntity", {
+    hasEntity: startEntity !== null,
+    allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
+  });
   if (startEntity === null) {
     if (!resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource) {
+      console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-empty-rejected");
       return { status: "ignored" };
     }
 

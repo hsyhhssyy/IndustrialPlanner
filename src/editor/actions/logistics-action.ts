@@ -1070,24 +1070,67 @@ function doesFirstStepOverlapExistingLogistics(options: {
   points: readonly GridPoint[];
   replacingEntityId: string;
 }): boolean {
+  const start = options.points[0];
   const firstStep = options.points[1];
-  if (firstStep === undefined) {
+  if (start === undefined || firstStep === undefined) {
     return false;
   }
 
   const currentDocument = options.context.document.getSnapshot();
-  return currentDocument.entityOrder.some((entityId) => {
-    if (entityId === options.replacingEntityId) {
-      return false;
-    }
-
-    const entity = currentDocument.entities[entityId];
-    return (
+  const overlappingEntity = currentDocument.entityOrder
+    .map((entityId) => currentDocument.entities[entityId])
+    .find((entity) => (
       entity !== undefined
+      && entity.id !== options.replacingEntityId
       && isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
       && areGridPointsEqual(entity.position, firstStep)
-    );
-  });
+    )) ?? null;
+  if (overlappingEntity === null) {
+    return false;
+  }
+
+  // AI-CORRECTION 2026-06-19:
+  // 首步与旧传送带同入口重叠属于合法沿线覆盖，不应为了避让而翻转单拐路径顺序。
+  // 只有入口不兼容的首步重叠才需要尝试另一种 routeOrder。
+  if (options.kind === "belt") {
+    const stepDirection = resolveDirectionEdge(start, firstStep);
+    const overlapInfo = resolveOrdinaryLogisticsConnectionInfo({
+      context: options.context,
+      kind: options.kind,
+      document: currentDocument,
+      entityId: overlappingEntity.id,
+    });
+    if (
+      stepDirection !== null
+      && overlapInfo !== null
+      && oppositeEdge(stepDirection) === overlapInfo.inputEdge
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+  // AI-REMOVED 2026-06-19:
+  // Reason: 仅按位置判定首步重叠会错误翻转合法的同入口沿线覆盖路径。
+  // Trigger: 人工物流完整测试要求从 (6,3) 沿旧带入口经过 (6,4)，保持纵向优先。
+  // Evidence: 旧逻辑将路径翻为横向优先，导致终点 (2,5) 从旧出口方向反向进入并被判头对头。
+  // Replacement: 上方基于现有物流 inputEdge 的兼容性判定。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // return currentDocument.entityOrder.some((entityId) => {
+  //   if (entityId === options.replacingEntityId) {
+  //     return false;
+  //   }
+  //
+  //   const entity = currentDocument.entities[entityId];
+  //   return (
+  //     entity !== undefined
+  //     && isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+  //     && areGridPointsEqual(entity.position, firstStep)
+  //   );
+  // });
 }
 
 function resolvePreviewDrafts(options: {
@@ -1368,9 +1411,10 @@ function resolveAutoDraftPlan(options: {
     });
     const firstStepEdge = resolveDirectionEdge(firstCell.gridPoint, secondCell.gridPoint);
     if (sourceInfo !== null && sourceInfo.inputConnected && sourceInfo.outputConnected) {
-      if (firstStepEdge === sourceInfo.outputEdge) {
-        invalidReason = "unknown";
-      } else if (firstStepEdge !== null) {
+      // AI-CORRECTION 2026-06-19:
+      // 沿已有物流段原出口方向继续绘制属于合法复用，不应判非法或创建分流器。
+      // 只有从其他方向拉出新分支时才按自动创建开关生成分流器。
+      if (firstStepEdge !== null && firstStepEdge !== sourceInfo.outputEdge) {
         if (options.autoCreateSplittersAndConvergers) {
           cellOverridesByGridKey.set(
             gridPointKey(firstCell.gridPoint),
@@ -1429,7 +1473,24 @@ function resolveAutoDraftPlan(options: {
         }
         replacingEntityIds.add(targetInfo.entity.id);
       } else if (targetInfo.inputConnected) {
-        if (!options.autoCreateSplittersAndConvergers) {
+        if (
+          options.kind === "belt"
+          && !options.autoCreateSplittersAndConvergers
+          && lastCell.fromEdge !== null
+        ) {
+          // AI-CORRECTION 2026-06-19:
+          // 关闭自动分/汇流时，终点允许替换已有传送带的入口并保留其出口。
+          // 头对头已在上方由 fromEdge === outputEdge 拦截。
+          const { shape, rotation } = resolveCellFromEdges(lastCell.fromEdge, targetInfo.outputEdge);
+          cellOverridesByGridKey.set(
+            gridPointKey(lastCell.gridPoint),
+            {
+              definitionId: resolveLogisticsDefinitionId({ kind: options.kind, shape }),
+              rotation,
+            },
+          );
+          replacingEntityIds.add(targetInfo.entity.id);
+        } else if (!options.autoCreateSplittersAndConvergers) {
           invalidReason = "overlap-existing-logistics";
         } else {
           // 有合法上游 → 创建汇流器
