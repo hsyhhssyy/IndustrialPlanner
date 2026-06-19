@@ -1964,7 +1964,7 @@ describe("物流绘制模式", () => {
     }
   });
 
-  it("cycles equal-cost device routes across different port pairs", () => {
+  it("keeps the pointer-selected nearest device route stable across route-order changes", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
@@ -1983,7 +1983,8 @@ describe("物流绘制模式", () => {
       routeOrder: "vertical-first",
     });
 
-    const seenPortPairs = new Set<string>();
+    const seenTargetPortIds = new Set<string>();
+    const seenRouteSignatures = new Set<string>();
     for (const routeOrder of [
       "vertical-first",
       "horizontal-first",
@@ -2003,11 +2004,21 @@ describe("物流绘制模式", () => {
 
       expect(moveResult.canApply).toBe(true);
       if (draft?.source?.type === "device-port" && draft.target?.type === "device-port") {
-        seenPortPairs.add(`${draft.source.portId}->${draft.target.portId}`);
+        seenTargetPortIds.add(draft.target.portId);
+        seenRouteSignatures.add([
+          draft.source.portId,
+          draft.target.portId,
+          ...draft.cells.map((cell) => `${cell.gridPoint.x}:${cell.gridPoint.y}`),
+        ].join("|"));
       }
     }
 
-    expect(seenPortPairs.size).toBeGreaterThan(1);
+    // AI-CORRECTION 2026-06-19:
+    // AI-CORRECTION 2026-06-19:
+    // 目标端口由鼠标落点就近锁定，源端口再按该目标端口就近选择；
+    // routeOrder 变化不应把连接切换到更远的端口组合。
+    expect(seenTargetPortIds.size).toBe(1);
+    expect(seenRouteSignatures.size).toBe(1);
   });
 
   it("applies a converger auto-draft and exposes the head entity as converger so gestures can stop", () => {

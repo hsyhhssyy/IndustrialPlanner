@@ -56,7 +56,6 @@ describe("物流布设模式完全测试集", () => {
     });
 
     enterBeltLogisticsPlacement(appHost);
-    pressRouteOrderShortcut(appHost);
     clickCell(appHost, editorHost, { x: 10, y: 2 }, nextPointerId++);
     moveToCell(appHost, editorHost, { x: 7, y: 6 }, nextPointerId++);
     clickCell(appHost, editorHost, { x: 7, y: 6 }, nextPointerId++);
@@ -583,7 +582,7 @@ function enterBeltLogisticsPlacement(appHost: AppHost): void {
     runtime.shortcutPlacementGroup = "beltLogistics";
     runtime.pointerMode = "mouse";
     runtime.phase = "idle";
-    runtime.routeOrder = "horizontal-first";
+    runtime.routeOrder = "vertical-first";
     appHost.internalState.runtime.selectingPlacementGroup = "beltLogistics";
   });
   appHost.internalActions.setActiveTool("logistics-placement");

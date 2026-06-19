@@ -239,7 +239,7 @@ export function createEditorLogisticsActions(
           context: logisticsContext,
           draft,
           sourceEntityId: draft.source.entityId,
-          targetEntityId: cursorTarget.entityId,
+          targetEndpoint: cursorTarget,
           preferredRouteOrder: options.routeMode.routeOrder,
           autoCreateSplittersAndConvergers:
             options.autoCreateSplittersAndConvergers ?? true,
@@ -1277,7 +1277,7 @@ function resolveDeviceToDeviceRoute(options: {
   context: LogisticsActionContext;
   draft: LogisticsDraftReadonlyState;
   sourceEntityId: string;
-  targetEntityId: string;
+  targetEndpoint: DevicePortEndpoint;
   preferredRouteOrder: LogisticsRouteOrder;
   autoCreateSplittersAndConvergers: boolean;
 }): DeviceRouteCandidate | null {
@@ -1289,7 +1289,7 @@ function resolveDeviceToDeviceRoute(options: {
     baseDefinitions: options.context.workspace.registry.baseDefinitions,
   });
   const targetEntity = findEntityById({
-    entityId: options.targetEntityId,
+    entityId: options.targetEndpoint.entityId,
     document: currentDocument,
     drafts: [],
     baseDefinitions: options.context.workspace.registry.baseDefinitions,
@@ -1299,8 +1299,7 @@ function resolveDeviceToDeviceRoute(options: {
   }
 
   const sourceDefinition = options.context.entityDefinitionMap.get(sourceEntity.definitionId);
-  const targetDefinition = options.context.entityDefinitionMap.get(targetEntity.definitionId);
-  if (sourceDefinition === undefined || targetDefinition === undefined) {
+  if (sourceDefinition === undefined) {
     return null;
   }
 
@@ -1311,13 +1310,7 @@ function resolveDeviceToDeviceRoute(options: {
     direction: "output",
     pointerGridPoint: targetEntity.position,
   });
-  const targetEndpoints = resolveDevicePortEndpoints({
-    entity: targetEntity,
-    definition: targetDefinition,
-    kind: options.draft.kind,
-    direction: "input",
-    pointerGridPoint: sourceEntity.position,
-  });
+  const targetEndpoints = [options.targetEndpoint];
   const routeOrders = [
     options.preferredRouteOrder,
     flipRouteOrder(options.preferredRouteOrder),
@@ -1401,7 +1394,9 @@ function resolveDeviceToDeviceRoute(options: {
   );
   const signature = [
     options.sourceEntityId,
-    options.targetEntityId,
+    options.targetEndpoint.entityId,
+    options.targetEndpoint.portGroupId,
+    options.targetEndpoint.portId,
     best.lengthScore,
     best.bendScore,
     ...bestCandidates.map((candidate) => candidate.signature),
@@ -1483,19 +1478,17 @@ function resolveAutoDraftPlan(options: {
       const sourceAxis = resolveEdgeAxis(options.source.edge);
       const existingAxis = resolveEdgeAxis(sourceInfo.inputEdge);
 
-      // 旧物流横跨设备输出轴时，首格必须成为双通道桥接器，不受自动分/汇流开关影响。
+      // AI-CORRECTION 2026-06-19:
+      // 设备出口与旧物流正交时，只有新路径在首格沿设备输出轴直穿才生成桥接器。
+      // 若首格立即转弯，则新弯道直接替换旧物流格。
       if (sourceAxis !== existingAxis) {
-        if (
-          resolveStraightCellAxis(firstCell) !== sourceAxis
-        ) {
-          invalidReason = "overlap-existing-logistics";
-        } else {
+        if (resolveStraightCellAxis(firstCell) === sourceAxis) {
           cellOverridesByGridKey.set(
             gridPointKey(firstCell.gridPoint),
             createAutoDeviceOverride(options.kind, "connector", null),
           );
-          replacingEntityIds.add(sourceInfo.entity.id);
         }
+        replacingEntityIds.add(sourceInfo.entity.id);
       } else if (firstCell.fromEdge === sourceInfo.inputEdge) {
         // 旧物流本身就是设备输出：拉出新分支时按开关创建分流器，否则改写普通物流段。
         replacingEntityIds.add(sourceInfo.entity.id);

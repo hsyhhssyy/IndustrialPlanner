@@ -228,7 +228,14 @@ export function createBeltCargoDecoration(): DecorationLayer {
       }
 
       // --- 货物条目收集 ---
-      const beltCargoEntries = resolveBeltCargoEntries(ctx, definitionMap)
+      const beltCargoEntries = (
+        ctx.profiler
+          ? ctx.profiler.measure("beltCargo.entries-collect", () =>
+              resolveBeltCargoEntries(ctx, definitionMap),
+            )
+          : resolveBeltCargoEntries(ctx, definitionMap)
+      )
+      ctx.profiler?.count("beltCargo.entries-collected", beltCargoEntries.length)
       if (beltCargoEntries.length === 0) {
         hideAll()
         return
@@ -239,37 +246,47 @@ export function createBeltCargoDecoration(): DecorationLayer {
       const boxHalfSize = boxSize / 2
       const portExtensionEntriesByBeltId = groupBeltPortEntriesByBeltId(portConnectivityEntries.extensions)
       const disconnectedPortEntriesByBeltId = groupBeltPortEntriesByBeltId(portConnectivityEntries.disconnectedPorts)
-      const entries: BeltCargoRenderEntry[] = []
 
-      for (const beltCargoEntry of beltCargoEntries) {
-        const center = resolveBeltCargoViewportCenter({
-          entry: beltCargoEntry,
-          viewportBounds: ctx.viewportBounds,
-          viewportState: ctx.viewportState,
-        })
-        if (!isPointVisible(center, ctx.viewportBounds, boxHalfSize)) {
-          continue
+      // --- 渲染条目构建 ---
+      const buildRenderEntries = (): BeltCargoRenderEntry[] => {
+        const result: BeltCargoRenderEntry[] = []
+
+        for (const beltCargoEntry of beltCargoEntries) {
+          const center = resolveBeltCargoViewportCenter({
+            entry: beltCargoEntry,
+            viewportBounds: ctx.viewportBounds,
+            viewportState: ctx.viewportState,
+          })
+          if (!isPointVisible(center, ctx.viewportBounds, boxHalfSize)) {
+            continue
+          }
+
+          ensureTexture(ctx, resolveItemIconTextureKey(beltCargoEntry.itemId, itemIconMap))
+          result.push({
+            centerX: center.x,
+            centerY: center.y,
+            angleRadians: beltCargoEntry.angleRadians
+              + resolveDisplayRotationRadians(ctx.viewportState.displayRotation),
+            itemId: beltCargoEntry.itemId,
+            clipMask: resolveBeltCargoClipMask({
+              ctx,
+              boxHalfSize,
+              simplifiedDeviceIcons,
+              disconnectedPortEntries: disconnectedPortEntriesByBeltId.get(beltCargoEntry.entityId)
+                ?? EMPTY_BELT_DISCONNECTED_PORT_ENTRIES,
+              portExtensionEntries: portExtensionEntriesByBeltId.get(beltCargoEntry.entityId)
+                ?? EMPTY_BELT_PORT_EXTENSION_ENTRIES,
+              beltRects,
+            }),
+          })
         }
 
-        ensureTexture(ctx, resolveItemIconTextureKey(beltCargoEntry.itemId, itemIconMap))
-        entries.push({
-          centerX: center.x,
-          centerY: center.y,
-          angleRadians: beltCargoEntry.angleRadians
-            + resolveDisplayRotationRadians(ctx.viewportState.displayRotation),
-          itemId: beltCargoEntry.itemId,
-          clipMask: resolveBeltCargoClipMask({
-            ctx,
-            boxHalfSize,
-            simplifiedDeviceIcons,
-            disconnectedPortEntries: disconnectedPortEntriesByBeltId.get(beltCargoEntry.entityId)
-              ?? EMPTY_BELT_DISCONNECTED_PORT_ENTRIES,
-            portExtensionEntries: portExtensionEntriesByBeltId.get(beltCargoEntry.entityId)
-              ?? EMPTY_BELT_PORT_EXTENSION_ENTRIES,
-            beltRects,
-          }),
-        })
+        return result
       }
+      const entries = ctx.profiler
+        ? ctx.profiler.measure("beltCargo.entries-render-build", buildRenderEntries)
+        : buildRenderEntries()
+      ctx.profiler?.count("beltCargo.entries-visible", entries.length)
 
       if (entries.length === 0) {
         hideAll()
@@ -277,15 +294,29 @@ export function createBeltCargoDecoration(): DecorationLayer {
       }
 
       container.visible = true
-      syncBeltCargoViews({
-        entries,
-        boxSize,
-        ensureCargoView,
-        cargoViews,
-        insetTextures,
-        itemIconMap,
-        resolvedTextures,
-      })
+      if (ctx.profiler) {
+        ctx.profiler.measure("beltCargo.views-sync", () => {
+          syncBeltCargoViews({
+            entries,
+            boxSize,
+            ensureCargoView,
+            cargoViews,
+            insetTextures,
+            itemIconMap,
+            resolvedTextures,
+          })
+        })
+      } else {
+        syncBeltCargoViews({
+          entries,
+          boxSize,
+          ensureCargoView,
+          cargoViews,
+          insetTextures,
+          itemIconMap,
+          resolvedTextures,
+        })
+      }
     },
 
     destroy(): void {

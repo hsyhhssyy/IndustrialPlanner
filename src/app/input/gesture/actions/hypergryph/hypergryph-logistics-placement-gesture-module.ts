@@ -759,6 +759,7 @@ function handleMouseLeftTap(options: {
       editor: options.editor,
       kind,
       gridPoint: headGridPoint,
+      entityId: headDraftId,
     });
   } else {
     softResetLogisticsRuntime(options.appHost);
@@ -880,35 +881,51 @@ function createContinuedMouseLogisticsStart(options: {
   editor: NonNullable<AppHost["workspace"]["editor"]>;
   kind: LogisticsKind;
   gridPoint: GridPoint;
+  entityId: string | null;
 }): void {
-  const endpoint = options.editor.queries.findLogisticsDraftEndpointAtGridPoint(
-    options.gridPoint,
-    options.kind,
-  );
+  const continuedEntity = options.entityId === null
+    ? null
+    : options.editor.queries.getEntityById(options.entityId);
+  const continuedEntityKind = continuedEntity === null
+    ? null
+    : options.appHost.workspace.registry.queries.resolveDedicatedLogisticsKind(
+        continuedEntity.definitionId,
+      );
   let result: LogisticsDraftActionResult;
-  if (endpoint?.type === "logistics-entity") {
+  // AI-CORRECTION 2026-06-19:
+  // 自动续画必须继承刚提交的普通物流末端，不能被同格相邻设备输出端口重新解释。
+  if (
+    continuedEntity !== null
+    && continuedEntityKind === options.kind
+  ) {
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
       allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
       source: {
         type: "logistics-entity",
-        entityId: endpoint.entityId,
-        gridPoint: endpoint.gridPoint,
+        entityId: continuedEntity.id,
+        gridPoint: { ...continuedEntity.position },
       },
       routeOrder: options.appHost.internalState.runtime.logisticsPlacement.routeOrder,
     });
-  } else if (endpoint?.type === "device-port" && endpoint.portDirection === "output") {
+  } else {
+    const endpoint = options.editor.queries.findLogisticsDraftEndpointAtGridPoint(
+      options.gridPoint,
+      options.kind,
+    );
+    if (endpoint?.type !== "device-port" || endpoint.portDirection !== "output") {
+      // 2026-05-23: endpoint 非 logistics-entity 也非有效输出 device-port（如分流器/汇流器/桥接器
+      // 已替代原普通物流段），不应从该格以 empty-cell 继续，否则会产生重叠管道。
+      softResetLogisticsRuntime(options.appHost);
+      return;
+    }
+
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
       allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
       source: resolveDevicePortStartSource(endpoint, options.gridPoint),
       routeOrder: options.appHost.internalState.runtime.logisticsPlacement.routeOrder,
     });
-  } else {
-    // 2026-05-23: endpoint 非 logistics-entity 也非有效输出 device-port（如分流器/汇流器/桥接器
-    // 已替代原普通物流段），不应从该格以 empty-cell 继续，否则会产生重叠管道。
-    softResetLogisticsRuntime(options.appHost);
-    return;
   }
 
   updateRuntimeFromResult({
