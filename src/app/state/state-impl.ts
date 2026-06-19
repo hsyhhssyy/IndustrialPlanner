@@ -73,6 +73,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   // 2026-05-26: 该字段当前无特殊作用，始终为 true；未来会修改其语义或移除。
   hypergryphOperationMode: boolean;
   hypergryphImmediateMove: boolean;
+  hypergryphCopyWhileMoving: boolean;
   hypergryphImmediateMarquee: boolean;
   hypergryphAllowEmptyLogisticsEndpoints: boolean;
   hypergryphAutoCreateLogisticsDevices: boolean;
@@ -164,6 +165,7 @@ export const CANVAS_FLOATING_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-rotate",
   "canvas-floating-toolbar-button-switch-mode",
   "canvas-floating-toolbar-button-move",
+  "canvas-floating-toolbar-button-copy",
   "canvas-floating-toolbar-button-save-blueprint",
   "canvas-floating-toolbar-button-delete",
   "canvas-floating-toolbar-button-delete-many",
@@ -617,6 +619,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     // 2026-05-26: 该字段当前无特殊作用，始终为 true；未来会修改其语义或移除。
     hypergryphOperationMode: true,
     hypergryphImmediateMove: true,
+    hypergryphCopyWhileMoving: true,
     hypergryphImmediateMarquee: false,
     hypergryphAllowEmptyLogisticsEndpoints: false,
     hypergryphAutoCreateLogisticsDevices: true,

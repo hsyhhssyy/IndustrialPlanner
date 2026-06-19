@@ -7,6 +7,7 @@ import type { EditorContract } from "@/domain/editor/editor-contract";
 import {
   EntityCollectionType,
 } from "@/domain/editor/types/editor-types";
+import type { GridPoint } from "@/domain/shared/grid";
 import type { BlueprintLibraryRecord } from "@/shared/blueprints/blueprint-library";
 
 import type { GestureActionContext, GestureHandleResult, GestureMappingModule } from "../types";
@@ -289,6 +290,7 @@ function enterBlueprintPlacement(options: {
   record?: BlueprintLibraryRecord;
   source: "mouse" | "touch";
   initialMousePosition: GesturePosition | null;
+  placementAnchor?: GridPoint;
 }): GestureHandleResult {
   const record = options.record ?? options.appHost.blueprintPreview.record;
 
@@ -312,7 +314,8 @@ function enterBlueprintPlacement(options: {
     clearBlueprintPlacementUi(options.appHost);
   }
 
-  const placementAnchor = resolveViewportCenterGridPoint(options.editor);
+  const placementAnchor = options.placementAnchor
+    ?? resolveViewportCenterGridPoint(options.editor);
 
   if (placementAnchor === null) {
     return { status: "ignored" };
@@ -362,6 +365,35 @@ function enterBlueprintPlacement(options: {
     restoreFailedBlueprintPlacementEnter(options.appHost, options.editor);
     return { status: "ignored" };
   }
+}
+
+export function placeBlueprintFromMoveAndContinue(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+  record: BlueprintLibraryRecord;
+  source: "mouse" | "touch";
+  placementAnchor: GridPoint;
+  currentMousePosition: GesturePosition | null;
+}): GestureHandleResult {
+  const enterResult = enterBlueprintPlacement({
+    appHost: options.appHost,
+    editor: options.editor,
+    record: options.record,
+    source: options.source,
+    initialMousePosition: null,
+    placementAnchor: options.placementAnchor,
+  });
+  if (enterResult.status !== "handled") {
+    return enterResult;
+  }
+
+  applyBlueprintPlacement(
+    options.appHost,
+    options.editor,
+    options.currentMousePosition,
+    { continuous: true },
+  );
+  return { status: "handled" };
 }
 
 function handlePlacementMouseDragStart(options: {

@@ -8,6 +8,7 @@ export interface AppSettings {
   readonly themeId: AppThemeId;
   readonly hypergryphOperationMode: boolean;
   readonly hypergryphImmediateMove: boolean;
+  readonly hypergryphCopyWhileMoving: boolean;
   readonly hypergryphImmediateMarquee: boolean;
   readonly hypergryphAllowEmptyLogisticsEndpoints: boolean;
   readonly hypergryphAutoCreateLogisticsDevices: boolean;

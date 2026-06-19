@@ -70,6 +70,14 @@ const CANVAS_FLOATING_TOOLBAR_DEFINITIONS: Record<CanvasFloatingToolbarButtonId,
     },
     icon: "move",
   },
+  "canvas-floating-toolbar-button-copy": {
+    label: {
+      "zh-CN": "复制",
+      "en-US": "Copy",
+    },
+    icon: "copy",
+    tone: "confirm",
+  },
   "canvas-floating-toolbar-button-save-blueprint": {
     label: {
       "zh-CN": "保存蓝图",

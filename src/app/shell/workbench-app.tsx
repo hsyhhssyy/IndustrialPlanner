@@ -140,6 +140,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.hypergryphImmediateMove = value;
         }),
       },
+      "game-arknights-copy-while-moving": {
+        readValue: () => appHost.state.settings.hypergryphCopyWhileMoving,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.hypergryphCopyWhileMoving === value) {
+            return;
+          }
+
+          appHost.internalState.settings.hypergryphCopyWhileMoving = value;
+        }),
+      },
       "game-arknights-immediate-marquee": {
         readValue: () => appHost.state.settings.hypergryphImmediateMarquee,
         writeValue: action((value) => {

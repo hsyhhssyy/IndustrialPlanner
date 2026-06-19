@@ -274,6 +274,7 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.themeId).toBe("ayu-light");
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
+    expect(appHost.state.settings.hypergryphCopyWhileMoving).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(appHost.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
@@ -287,6 +288,7 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.themeId).toBe("ayu-light");
     expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
+    expect(appHost.internalState.settings.hypergryphCopyWhileMoving).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
@@ -297,6 +299,7 @@ describe("createAppHost", () => {
     expect(workspace.app?.state.settings.locale).toBe("zh-CN");
     expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
+    expect(workspace.app?.state.settings.hypergryphCopyWhileMoving).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
@@ -344,6 +347,7 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.themeId).toBe("ayu-light");
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
+    expect(appHost.state.settings.hypergryphCopyWhileMoving).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(appHost.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
@@ -1171,6 +1175,7 @@ describe("createAppHost", () => {
     expect(appHost.internalState.runtime.canvasFloatingToolbar.buttonIds).toEqual([
       "canvas-floating-toolbar-button-cancel",
       "canvas-floating-toolbar-button-switch-mode",
+      "canvas-floating-toolbar-button-copy",
       "canvas-floating-toolbar-button-rotate",
       "canvas-floating-toolbar-button-ok",
     ]);

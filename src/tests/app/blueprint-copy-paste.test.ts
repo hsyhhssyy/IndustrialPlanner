@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { createAppHost } from "@/app/host/app-host";
 import type { GestureKeyboardEventLike } from "@/app/input/gesture/adapter";
-import { createSelectionBlueprintDocument } from "@/app/blueprint/save-blueprint";
+import {
+  createMovePreviewBlueprintDocument,
+  createSelectionBlueprintDocument,
+} from "@/app/blueprint/save-blueprint";
 import {
   createBlueprintDocument,
   type BlueprintDocument,
@@ -321,9 +324,261 @@ describe("createSelectionBlueprintDocument", () => {
   });
 });
 
+describe("createMovePreviewBlueprintDocument", () => {
+  it("uses the moved preview position, rotation, mode, config and internal links", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(
+      createTestDocument({
+        entities: {
+          "device-a": {
+            id: "device-a",
+            definitionId: "item_port_storager_1",
+            position: { x: 4, y: 4 },
+            rotation: 0,
+            config: { itemId: "item_originium_ore" },
+            tags: ["a"],
+          },
+          "device-b": {
+            id: "device-b",
+            definitionId: "belt_straight_1x1",
+            position: { x: 7, y: 4 },
+            rotation: 0,
+            config: {},
+            tags: ["b"],
+          },
+        },
+        entityOrder: ["device-a", "device-b"],
+        slotLinks: [{
+          id: "link-a-b",
+          linkType: "share-all",
+          source: {
+            entityId: "device-a",
+            storageSlotGroupId: "storage",
+            slotId: "slot_0",
+          },
+          target: {
+            entityId: "device-b",
+            storageSlotGroupId: "storage",
+            slotId: "slot_0",
+          },
+        }],
+      }),
+    );
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "device-a",
+    });
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "device-b",
+    });
+    editorHost.actions.createMoveOperationDraft();
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 4, y: 4 },
+      endGridPoint: { x: 14, y: 12 },
+    });
+    editorHost.actions.rotateCollectionAroundPivotCell(
+      EntityCollectionType.preview,
+      90,
+    );
+
+    const previewIds = [...editorHost.state.collections.preview];
+    const firstPreview = editorHost.queries.getEntityById(previewIds[0]!);
+    expect(firstPreview).not.toBeNull();
+    editorHost.actions.replaceEntityDefinition(
+      previewIds[0]!,
+      "item_port_filling_pd_mc_1",
+    );
+
+    const blueprint = createMovePreviewBlueprintDocument({
+      workspace: editorHost.workspace,
+      name: "move-copy",
+    });
+
+    expect(blueprint).not.toBeNull();
+    expect(blueprint!.entityOrder).toEqual(["device-a", "device-b"]);
+    expect(blueprint!.entities["device-a"]).toMatchObject({
+      id: "device-a",
+      definitionId: "item_port_filling_pd_mc_1",
+    });
+    expect(blueprint!.entities["device-a"]!.position).not.toEqual({ x: 4, y: 4 });
+    expect(blueprint!.entities["device-b"]!.position).not.toEqual({ x: 7, y: 4 });
+    expect(blueprint!.slotLinks).toHaveLength(1);
+    expect(blueprint!.slotLinks[0]!.source.entityId).toBe("device-a");
+    expect(blueprint!.slotLinks[0]!.target.entityId).toBe("device-b");
+  });
+
+  it("rejects an incomplete move preview without changing the move draft", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(
+      createTestDocument({
+        entities: {
+          "device-a": {
+            id: "device-a",
+            definitionId: "belt_straight_1x1",
+            position: { x: 4, y: 4 },
+            rotation: 0,
+            config: {},
+            tags: [],
+          },
+        },
+      }),
+    );
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "device-a",
+    });
+    editorHost.actions.createMoveOperationDraft();
+    (editorHost.state.collections.ghost as unknown as {
+      replace(items: readonly string[]): void;
+    }).replace([]);
+
+    expect(createMovePreviewBlueprintDocument({
+      workspace: editorHost.workspace,
+      name: "invalid",
+    })).toBeNull();
+    expect(editorHost.state.collections.preview).toHaveLength(1);
+  });
+});
+
 // ─── Phase 2: 全链路 Ctrl+C / Ctrl+V 集成测试 ───
 
 describe("Ctrl+C/Ctrl+V full pipeline", () => {
+  it("2.0: moving multi-selection Ctrl+click restores originals, places one copy and keeps paste armed", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(
+      createTestDocument({
+        entities: {
+          "belt-1": {
+            id: "belt-1",
+            definitionId: "belt_straight_1x1",
+            position: { x: 4, y: 4 },
+            rotation: 0,
+            config: {},
+            tags: [],
+          },
+          "belt-2": {
+            id: "belt-2",
+            definitionId: "belt_straight_1x1",
+            position: { x: 6, y: 4 },
+            rotation: 0,
+            config: {},
+            tags: [],
+          },
+        },
+        entityOrder: ["belt-1", "belt-2"],
+      }),
+    );
+    const appHost = createAppHost(workspace);
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "belt-1",
+    });
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "belt-2",
+    });
+    editorHost.actions.createMoveOperationDraft();
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 4, y: 4 },
+      endGridPoint: { x: 14, y: 10 },
+    });
+    appHost.internalState.runtime.movePointerMode = "mouse";
+    appHost.internalState.runtime.moveEnterFrom = "marquee";
+    appHost.internalActions.setActiveTool("move");
+
+    const result = appHost.gestureActionRouter.handleGesture({
+      type: "mouse tap",
+      gestureId: "move-copy",
+      button: 0,
+      buttons: 0,
+      position: { x: 14, y: 10 },
+      longPress: false,
+      pointerEntity: null,
+      modifiers: {
+        alt: false,
+        ctrl: true,
+        meta: false,
+        shift: false,
+      },
+      sourceEvent: null,
+    });
+
+    expect(result.handledBy).toContain("hypergryph-move-gesture");
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(editorHost.state.collections.selection).toHaveLength(0);
+    expect(editorHost.state.collections.preview).toHaveLength(2);
+    const document = editorHost.internalDocument.getSnapshot();
+    expect(Object.keys(document.entities)).toHaveLength(4);
+    expect(document.entities["belt-1"]!.position).toEqual({ x: 4, y: 4 });
+    expect(document.entities["belt-2"]!.position).toEqual({ x: 6, y: 4 });
+    const copiedEntities = Object.values(document.entities).filter(
+      (entity) => entity.id !== "belt-1" && entity.id !== "belt-2",
+    );
+    expect(copiedEntities.map((entity) => entity.position)).toEqual(
+      expect.arrayContaining([{ x: 14, y: 10 }, { x: 16, y: 10 }]),
+    );
+  });
+
+  it("2.0b: touch move copy button places a single copy and keeps paste armed", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(
+      createTestDocument({
+        entities: {
+          "device-1": {
+            id: "device-1",
+            definitionId: "belt_straight_1x1",
+            position: { x: 4, y: 4 },
+            rotation: 0,
+            config: {},
+            tags: [],
+          },
+        },
+      }),
+    );
+    const appHost = createAppHost(workspace);
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "device-1",
+    });
+    editorHost.actions.createMoveOperationDraft();
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 4, y: 4 },
+      endGridPoint: { x: 12, y: 9 },
+    });
+    appHost.internalState.runtime.movePointerMode = "touch";
+    appHost.internalState.runtime.moveAnchor = { x: 12, y: 9 };
+    appHost.internalState.runtime.moveEnterFrom = "select";
+    appHost.internalActions.setActiveTool("move");
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "canvas-floating-toolbar-button-copy",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(editorHost.state.collections.selection).toHaveLength(0);
+    expect(editorHost.state.collections.preview).toHaveLength(1);
+    const document = editorHost.internalDocument.getSnapshot();
+    expect(Object.keys(document.entities)).toHaveLength(2);
+    expect(document.entities["device-1"]!.position).toEqual({ x: 4, y: 4 });
+    expect(Object.values(document.entities)).toContainEqual(
+      expect.objectContaining({
+        position: { x: 12, y: 9 },
+      }),
+    );
+  });
+
   it("2.1: 单实体 Ctrl+C — blueprintPlacementRecord 应只有 1 个实体", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

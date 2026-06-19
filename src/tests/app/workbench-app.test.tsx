@@ -54,6 +54,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   themeId: "ayu-light",
   hypergryphOperationMode: true,
   hypergryphImmediateMove: true,
+  hypergryphCopyWhileMoving: true,
   hypergryphImmediateMarquee: false,
   hypergryphAllowEmptyLogisticsEndpoints: false,
   hypergryphAutoCreateLogisticsDevices: true,
@@ -2294,6 +2295,9 @@ describe("WorkbenchApp", () => {
     const immediateMoveToggle = container.querySelector(
       'input[name="game-arknights-immediate-move"]',
     ) as HTMLInputElement | null;
+    const copyWhileMovingToggle = container.querySelector(
+      'input[name="game-arknights-copy-while-moving"]',
+    ) as HTMLInputElement | null;
     const immediateMarqueeToggle = container.querySelector(
       'input[name="game-arknights-immediate-marquee"]',
     ) as HTMLInputElement | null;
@@ -2344,6 +2348,8 @@ describe("WorkbenchApp", () => {
     // immediateMove / immediateMarquee 不再受 editableWhen 锁定。
     expect(immediateMoveToggle?.checked).toBe(true);
     expect(immediateMoveToggle?.disabled).toBe(false);
+    expect(copyWhileMovingToggle?.checked).toBe(true);
+    expect(copyWhileMovingToggle?.disabled).toBe(false);
     expect(immediateMarqueeToggle?.checked).toBe(false);
     expect(immediateMarqueeToggle?.disabled).toBe(false);
     expect(allowEmptyLogisticsEndpointsToggle?.checked).toBe(false);
@@ -3155,11 +3161,16 @@ describe("WorkbenchApp", () => {
     const immediateMoveToggle = container.querySelector(
       'input[name="game-arknights-immediate-move"]',
     ) as HTMLInputElement | null;
+    const copyWhileMovingToggle = container.querySelector(
+      'input[name="game-arknights-copy-while-moving"]',
+    ) as HTMLInputElement | null;
     const immediateMarqueeToggle = container.querySelector(
       'input[name="game-arknights-immediate-marquee"]',
     ) as HTMLInputElement | null;
 
     expect(immediateMoveToggle).not.toBeNull();
+    expect(copyWhileMovingToggle).not.toBeNull();
+    expect(copyWhileMovingToggle?.checked).toBe(true);
     expect(immediateMarqueeToggle).not.toBeNull();
     expect(immediateMoveToggle?.checked).toBe(false);
     expect(immediateMoveToggle?.disabled).toBe(false);
@@ -3175,6 +3186,13 @@ describe("WorkbenchApp", () => {
     );
 
     act(() => {
+      copyWhileMovingToggle?.click();
+    });
+
+    expect(appHost.state.settings.hypergryphCopyWhileMoving).toBe(false);
+    expect(copyWhileMovingToggle?.checked).toBe(false);
+
+    act(() => {
       if (immediateMarqueeToggle === null) {
         return;
       }
@@ -3188,6 +3206,7 @@ describe("WorkbenchApp", () => {
       JSON.stringify({
         ...DEFAULT_APP_SETTINGS_STORAGE,
         hypergryphImmediateMove: false,
+        hypergryphCopyWhileMoving: false,
         hypergryphImmediateMarquee: true,
       }),
     );

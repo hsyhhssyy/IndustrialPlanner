@@ -260,6 +260,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         defaultValue: true,
       },
       {
+        id: "game-arknights-copy-while-moving",
+        kind: "switch",
+        labelKey: "settingsField.arknightsCopyWhileMoving",
+        descriptionKey: "settingsField.arknightsCopyWhileMovingDescription",
+        defaultValue: true,
+      },
+      {
         id: "game-arknights-immediate-marquee",
         kind: "switch",
         labelKey: "settingsField.arknightsImmediateMarquee",
@@ -522,6 +529,7 @@ export class WorkbenchSettingsDialogController {
   private static readonly RESET_OPERATION_AND_SHORTCUT_KEYS: readonly string[] = [
     // 操作
     "game-arknights-immediate-move",
+    "game-arknights-copy-while-moving",
     "game-arknights-immediate-marquee",
     "game-arknights-allow-empty-logistics-endpoints",
     "game-arknights-auto-create-logistics-devices",
@@ -718,7 +726,7 @@ export class WorkbenchSettingsDialogController {
   }
 
   /**
-   * 将鹰角操作模式（4 个 switch）和所有快捷键恢复为默认值。
+   * 将鹰角操作模式相关开关和所有快捷键恢复为默认值。
    * 快捷键通过 shortcutResetAll 直接批量重置，绕过鹰角模式写入限制。
    */
   public resetArknightsOperationAndShortcuts(): void {

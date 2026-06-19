@@ -1,6 +1,7 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
+import { createMovePreviewBlueprintDocument } from "@/app/blueprint/save-blueprint";
 import {
   SWITCH_DEVICE_MODE_BUTTON_ID,
   canSwitchEntityVariantDefinition,
@@ -15,10 +16,12 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
+import { placeBlueprintFromMoveAndContinue } from "./hypergryph-blueprint-placement-gesture-module";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
 const MOVE_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-cancel",
+  "canvas-floating-toolbar-button-copy",
   "canvas-floating-toolbar-button-rotate",
   "canvas-floating-toolbar-button-ok",
 ] as const satisfies readonly CanvasFloatingToolbarButtonId[];
@@ -170,6 +173,18 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             }
 
             if (event.button === 0 && !event.longPress) {
+              if (
+                event.modifiers.ctrl
+                && context.appHost.state.settings.hypergryphCopyWhileMoving
+              ) {
+                return copyMoveOperation({
+                  appHost: context.appHost,
+                  editor,
+                  source: "mouse",
+                  currentMousePosition: lastMousePosition,
+                });
+              }
+
               applyMoveOperation(context.appHost, editor, "mouse");
               return { status: "handled" };
             }
@@ -184,6 +199,15 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
               applyMoveOperation(context.appHost, editor, "touch");
               return { status: "handled" };
+            }
+
+            if (event.uiButtonId === "canvas-floating-toolbar-button-copy") {
+              return copyMoveOperation({
+                appHost: context.appHost,
+                editor,
+                source: "touch",
+                currentMousePosition: null,
+              });
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
@@ -210,6 +234,15 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
               applyMoveOperation(context.appHost, editor, "mouse");
               return { status: "handled" };
+            }
+
+            if (event.uiButtonId === "canvas-floating-toolbar-button-copy") {
+              return copyMoveOperation({
+                appHost: context.appHost,
+                editor,
+                source: "mouse",
+                currentMousePosition: lastMousePosition,
+              });
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
@@ -984,6 +1017,48 @@ function applyMoveOperation(
   }
 }
 
+function copyMoveOperation(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+  source: "mouse" | "touch";
+  currentMousePosition: GesturePosition | null;
+}): GestureHandleResult {
+  if (!options.appHost.state.settings.hypergryphCopyWhileMoving) {
+    return { status: "ignored" };
+  }
+
+  const blueprint = createMovePreviewBlueprintDocument({
+    workspace: options.appHost.workspace,
+    name: "Temp Blueprint",
+  });
+  if (blueprint === null) {
+    return { status: "ignored" };
+  }
+
+  const placementAnchor = blueprint.initialGridPoint;
+  const record = {
+    ...blueprint,
+    parentFolderId: null,
+  };
+
+  try {
+    options.editor.actions.cancelMoveOperationDraft();
+  } catch {
+    return { status: "ignored" };
+  }
+
+  clearMoveUi(options.appHost);
+  options.editor.actions.clearCollection(EntityCollectionType.selection);
+  return placeBlueprintFromMoveAndContinue({
+    appHost: options.appHost,
+    editor: options.editor,
+    record,
+    source: options.source,
+    placementAnchor,
+    currentMousePosition: options.currentMousePosition,
+  });
+}
+
 function cancelMoveOperation(
   appHost: AppHost,
   editor: EditorContract,
@@ -1081,7 +1156,7 @@ function resolveMoveToolbarButtonIds(
 ): readonly CanvasFloatingToolbarButtonId[] {
   const editor = appHost.workspace.editor;
   if (editor === null || editor === undefined) {
-    return MOVE_TOOLBAR_BUTTON_IDS;
+    return resolveBaseMoveToolbarButtonIds(appHost);
   }
 
   const previewEntity = resolveSinglePreviewEntity(editor);
@@ -1092,12 +1167,32 @@ function resolveMoveToolbarButtonIds(
       definitionId: previewEntity.definitionId,
     })
   ) {
+    return resolveBaseMoveToolbarButtonIds(appHost);
+  }
+
+  const buttonIds: CanvasFloatingToolbarButtonId[] = [
+    "canvas-floating-toolbar-button-cancel",
+    SWITCH_DEVICE_MODE_BUTTON_ID,
+  ];
+  if (appHost.state.settings.hypergryphCopyWhileMoving) {
+    buttonIds.push("canvas-floating-toolbar-button-copy");
+  }
+  buttonIds.push(
+    "canvas-floating-toolbar-button-rotate",
+    "canvas-floating-toolbar-button-ok",
+  );
+  return buttonIds;
+}
+
+function resolveBaseMoveToolbarButtonIds(
+  appHost: AppHost,
+): readonly CanvasFloatingToolbarButtonId[] {
+  if (appHost.state.settings.hypergryphCopyWhileMoving) {
     return MOVE_TOOLBAR_BUTTON_IDS;
   }
 
   return [
     "canvas-floating-toolbar-button-cancel",
-    SWITCH_DEVICE_MODE_BUTTON_ID,
     "canvas-floating-toolbar-button-rotate",
     "canvas-floating-toolbar-button-ok",
   ];

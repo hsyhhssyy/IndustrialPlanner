@@ -239,6 +239,8 @@ export type MessageKey =
   | "settingsField.arknightsOperationModeDescription"
   | "settingsField.arknightsImmediateMove"
   | "settingsField.arknightsImmediateMoveDescription"
+  | "settingsField.arknightsCopyWhileMoving"
+  | "settingsField.arknightsCopyWhileMovingDescription"
   | "settingsField.arknightsImmediateMarquee"
   | "settingsField.arknightsImmediateMarqueeDescription"
   | "settingsField.arknightsAllowEmptyLogisticsEndpoints"
@@ -704,6 +706,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.arknightsOperationModeDescription": "使用和游戏内一致的操作模式和快捷键；当前版本暂不可修改。",
     "settingsField.arknightsImmediateMove": "立即移动",
     "settingsField.arknightsImmediateMoveDescription": "从已选择的设备拖动时，立即触发移动而不需要长按。",
+    "settingsField.arknightsCopyWhileMoving": "移动时复制",
+    "settingsField.arknightsCopyWhileMovingDescription": "开启后，移动设备时按住 Ctrl 点击可在当前位置复制，触控工具栏也会显示复制按钮。",
     "settingsField.arknightsImmediateMarquee": "立即框选",
     "settingsField.arknightsImmediateMarqueeDescription": "仅鼠标模式有效，从画布空白处开始拖动时，立即开始框选而不需要长按。",
     "settingsField.arknightsAllowEmptyLogisticsEndpoints": "物流允许以空地为起点",
@@ -1182,6 +1186,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.arknightsOperationModeDescription": "Use the same operation mode and shortcuts as the game; this setting is currently unavailable.",
     "settingsField.arknightsImmediateMove": "Immediate Move",
     "settingsField.arknightsImmediateMoveDescription": "When dragging from a selected device, immediately trigger move without a long press.",
+    "settingsField.arknightsCopyWhileMoving": "Copy While Moving",
+    "settingsField.arknightsCopyWhileMovingDescription": "When enabled, Ctrl-click while moving places a copy at the current position, and touch controls show a Copy button.",
     "settingsField.arknightsImmediateMarquee": "Immediate Marquee",
     "settingsField.arknightsImmediateMarqueeDescription": "Mouse mode only: immediately start marquee selection when dragging from empty canvas without a long press.",
     "settingsField.arknightsAllowEmptyLogisticsEndpoints": "Allow Empty Logistics Starts",

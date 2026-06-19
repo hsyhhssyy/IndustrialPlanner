@@ -127,6 +127,10 @@ function normalizePersistedAppSettings(
     hypergryphImmediateMove: typeof persistedAppSettings.hypergryphImmediateMove === "boolean"
       ? persistedAppSettings.hypergryphImmediateMove
       : fallback.hypergryphImmediateMove,
+    hypergryphCopyWhileMoving:
+      typeof persistedAppSettings.hypergryphCopyWhileMoving === "boolean"
+        ? persistedAppSettings.hypergryphCopyWhileMoving
+        : fallback.hypergryphCopyWhileMoving,
     hypergryphImmediateMarquee: typeof persistedAppSettings.hypergryphImmediateMarquee === "boolean"
       ? persistedAppSettings.hypergryphImmediateMarquee
       : fallback.hypergryphImmediateMarquee,

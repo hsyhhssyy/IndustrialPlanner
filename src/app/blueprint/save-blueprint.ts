@@ -104,6 +104,82 @@ export function createSelectionBlueprintDocument(options: {
   });
 }
 
+export function createMovePreviewBlueprintDocument(options: {
+  workspace: WorkspaceContract;
+  name: string;
+  description?: string;
+}): BlueprintDocument | null {
+  const editor = options.workspace.editor;
+  if (editor === null) {
+    return null;
+  }
+
+  const previewIds = [...editor.state.collections.preview];
+  const originalEntityIds = [...editor.state.collections.ghost];
+  if (
+    previewIds.length === 0
+    || previewIds.length !== originalEntityIds.length
+  ) {
+    return null;
+  }
+
+  const previewRect = editor.queries.findEntityCollectionGridRect(
+    EntityCollectionType.preview,
+  );
+  if (previewRect === null) {
+    return null;
+  }
+
+  const entities: Record<string, WorldEntity> = {};
+  const entityOrder: string[] = [];
+
+  for (let index = 0; index < previewIds.length; index += 1) {
+    const previewId = previewIds[index];
+    const originalEntityId = originalEntityIds[index];
+    if (previewId === undefined || originalEntityId === undefined) {
+      return null;
+    }
+
+    const previewEntity = editor.queries.getEntityById(previewId);
+    if (previewEntity === null) {
+      return null;
+    }
+
+    entities[originalEntityId] = {
+      ...cloneWorldEntity(previewEntity),
+      id: originalEntityId,
+    };
+    entityOrder.push(originalEntityId);
+  }
+
+  const currentDocument = editor.document.getSnapshot();
+  const originalEntityIdSet = new Set(originalEntityIds);
+  const centerCells = getGridBoundsCenterCells({
+    left: previewRect.x,
+    top: previewRect.y,
+    width: previewRect.width,
+    height: previewRect.height,
+  });
+
+  return createBlueprintDocument({
+    name: options.name,
+    description: options.description,
+    baseId: currentDocument.baseId,
+    initialGridPoint: {
+      x: Math.round(centerCells.x),
+      y: Math.round(centerCells.y),
+    },
+    entities,
+    entityOrder,
+    slotLinks: currentDocument.slotLinks
+      .filter((slotLink) => (
+        isValidSlotLinkEndpointForBlueprint(slotLink.source.entityId, originalEntityIdSet)
+        && isValidSlotLinkEndpointForBlueprint(slotLink.target.entityId, originalEntityIdSet)
+      ))
+      .map(cloneSlotLinkDefinition),
+  });
+}
+
 export async function saveSelectionBlueprint(options: {
   workspace: WorkspaceContract;
   name: string;

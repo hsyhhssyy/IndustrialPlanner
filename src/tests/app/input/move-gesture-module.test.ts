@@ -592,6 +592,48 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(cancelContext.appHost.internalState.runtime.moveAnchor).toBeNull();
   });
 
+  it("treats Ctrl+left-click as ordinary move apply when copy while moving is disabled", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 5, y: 5 },
+      copyWhileMoving: false,
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    expect(
+      module.handle(mouseTapEvent({
+        button: 0,
+        longPress: false,
+        modifiers: { ctrl: true },
+      }), context),
+    ).toEqual({ status: "handled" });
+
+    expect(editor.actions.applyMoveOerationDraft).toHaveBeenCalledTimes(1);
+    expect(editor.actions.cancelMoveOperationDraft).not.toHaveBeenCalled();
+    expect(appHost.internalState.activeTool).toBe("select");
+  });
+
+  it("hides the touch copy button when copy while moving is disabled", () => {
+    const { context, appHost } = createContext({
+      activeTool: "move",
+      movePointerMode: "touch",
+      copyWhileMoving: false,
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    expect(module.handle(onEnterActiveToolEvent("select", "move"), context)).toEqual({
+      status: "handled",
+    });
+    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
+      [
+        "canvas-floating-toolbar-button-cancel",
+        "canvas-floating-toolbar-button-rotate",
+        "canvas-floating-toolbar-button-ok",
+      ],
+      EntityCollectionType.preview,
+    );
+  });
+
   it("keeps mouse move active when applying is rejected", () => {
     const { context, editor, appHost } = createContext({
       activeTool: "move",
@@ -761,6 +803,7 @@ function createContext(options: {
   toolbarVisible?: boolean;
   previewRect?: GridRect;
   previewDefinitionId?: string;
+  copyWhileMoving?: boolean;
 } = {}): {
   context: GestureActionContext<AppHost>;
   editor: MockEditor;
@@ -894,6 +937,7 @@ function createContext(options: {
       settings: {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
+        hypergryphCopyWhileMoving: options.copyWhileMoving ?? true,
       },
     },
     internalState: {
@@ -1055,6 +1099,7 @@ function mouseLongPressReadyEvent(options: {
 
 const MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST = [
   "canvas-floating-toolbar-button-cancel",
+  "canvas-floating-toolbar-button-copy",
   "canvas-floating-toolbar-button-rotate",
   "canvas-floating-toolbar-button-ok",
 ] as const;
@@ -1112,6 +1157,7 @@ function touchDragMoveEvent(options: {
 function mouseTapEvent(options: {
   button: number;
   longPress: boolean;
+  modifiers?: Partial<ReturnType<typeof emptyModifiers>>;
 }) {
   return {
     type: "mouse tap" as const,
@@ -1121,7 +1167,10 @@ function mouseTapEvent(options: {
     position: { x: 6, y: 4 },
     longPress: options.longPress,
     pointerEntity: null,
-    modifiers: emptyModifiers(),
+    modifiers: {
+      ...emptyModifiers(),
+      ...options.modifiers,
+    },
     sourceEvent: null,
   };
 }
