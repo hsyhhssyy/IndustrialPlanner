@@ -84,6 +84,7 @@ function clampDialogOffset(
 
 export interface AppInternalAction {
   toggleLeftDock: () => void;
+  setLeftDockSuppressed: (suppressed: boolean) => void;
   toggleRightDock: () => void;
   setRightDockOpen: (open: boolean, options?: { preserveSingleSelection?: boolean }) => void;
   toggleTopBarCollapsed: () => void;
@@ -158,6 +159,27 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
   public readonly toggleLeftDock: AppInternalAction["toggleLeftDock"] = action(() => {
     this.setLeftDockOpen(!this.internalState.workbench.leftDockOpen);
+  });
+
+  public readonly setLeftDockSuppressed: AppInternalAction["setLeftDockSuppressed"] = action((suppressed) => {
+    if (this.internalState.workbench.leftDockSuppressed === suppressed) {
+      return;
+    }
+
+    const wasEffectiveOpen = this.internalState.workbench.leftDockOpen
+      && !this.internalState.workbench.leftDockSuppressed;
+
+    this.internalState.workbench.leftDockSuppressed = suppressed;
+
+    const isEffectiveOpen = this.internalState.workbench.leftDockOpen
+      && !this.internalState.workbench.leftDockSuppressed;
+
+    if (wasEffectiveOpen !== isEffectiveOpen) {
+      this.applyPredictedViewportRectForDockToggle({
+        dock: "left",
+        willOpen: isEffectiveOpen,
+      });
+    }
   });
 
   public readonly toggleRightDock: AppInternalAction["toggleRightDock"] = action(() => {

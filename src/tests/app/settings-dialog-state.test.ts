@@ -31,7 +31,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "system-theme": "ayu-dark",
         "display-frame-rate-limit": "30",
         "game-arknights-immediate-move": true,
-        "game-arknights-copy-while-moving": true,
+        "game-arknights-copy-while-moving": false,
         "game-arknights-immediate-marquee": false,
         "game-arknights-allow-empty-logistics-endpoints": false,
         "game-arknights-auto-create-splitters-and-convergers": true,
@@ -79,7 +79,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["system-theme"]).toBe("ayu-dark");
     expect(hydratedController.values["display-frame-rate-limit"]).toBe("30");
     expect(hydratedController.values["game-arknights-immediate-move"]).toBe(true);
-    expect(hydratedController.values["game-arknights-copy-while-moving"]).toBe(true);
+    expect(hydratedController.values["game-arknights-copy-while-moving"]).toBe(false);
     expect(hydratedController.values["game-arknights-immediate-marquee"]).toBe(false);
     expect(hydratedController.values["game-arknights-allow-empty-logistics-endpoints"]).toBe(false);
     expect(
@@ -233,7 +233,7 @@ describe("WorkbenchSettingsDialogController", () => {
       values: {
         "display-frame-rate-limit": "unlimited",
         "game-arknights-immediate-move": true,
-        "game-arknights-copy-while-moving": true,
+        "game-arknights-copy-while-moving": false,
         "game-arknights-immediate-marquee": false,
         "game-arknights-allow-empty-logistics-endpoints": false,
         "game-arknights-auto-create-splitters-and-convergers": true,

@@ -474,6 +474,7 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
       }),
     );
     const appHost = createAppHost(workspace);
+    appHost.internalState.settings.hypergryphCopyWhileMoving = true;
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
       entityId: "belt-1",
@@ -543,6 +544,7 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
       }),
     );
     const appHost = createAppHost(workspace);
+    appHost.internalState.settings.hypergryphCopyWhileMoving = true;
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
       entityId: "device-1",

@@ -13,6 +13,7 @@ import type { GridEdge, GridPoint, GridRectSize, GridRotation } from "@/domain/s
 import type { LogisticsDraftReadonlyState } from "@/domain/shared/logistics"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import { resolveEffectiveCanvasTheme } from "@/shared/theme/canvas-theme"
+import { createMemorySnapshotCollector, type MemorySnapshotCollector } from "./memory-monitor"
 import {
   Container,
   UPDATE_PRIORITY,
@@ -60,7 +61,7 @@ import { createPortOverlayDecoration } from "./decorations/PortOverlayDecoration
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
-const RENDER_PERF_LOG_WINDOW_MS = 2000
+const RENDER_PERF_LOG_WINDOW_MS = 10_000
 const RENDER_PERF_LONG_FRAME_MS = 50
 const RENDER_PERF_TOP_STAGE_COUNT = 12
 
@@ -198,6 +199,12 @@ export function createRenderSceneOrchestrator(
   const entitySpriteDefinitionIds = new Map<string, string>()
   const grassBackgroundDecoration = createGrassBackgroundDecoration(renderHost)
   const renderPerfDiagnostics = createRenderPerfDiagnostics(renderHost)
+  const memoryCollector: MemorySnapshotCollector = createMemorySnapshotCollector(
+    app,
+    (snap) => {
+      console.debug("[memory-monitor] " + JSON.stringify(snap))
+    },
+  )
 
   // 物流端口占用缓存：entityId → 已连接端口键集合("portGroupId:portId")
   // 仅当 entityOrder 长度或 draft 指纹变化时重新计算
@@ -435,6 +442,14 @@ export function createRenderSceneOrchestrator(
     frameProfiler?.finishFrame({
       activeTool: readRenderActiveTool(renderHost),
     })
+
+    // 内存快照：仅在 debugMode 下输出
+    if (isRenderPerfDiagnosticsEnabled(renderHost)) {
+      memoryCollector.tick(Date.now(), {
+        "entities.total": entities.length,
+        "sprites.liveBeforeSync": entitySprites.size,
+      })
+    }
   }
 
   // 物流传送带层级（从底到顶）
@@ -485,6 +500,7 @@ export function createRenderSceneOrchestrator(
   const host: RenderSceneOrchestrator = {
     destroy: () => {
       app.ticker.remove(flushViewport)
+      memoryCollector.stop()
 
       for (const sprite of entitySprites.values()) {
         sprite.destroy()

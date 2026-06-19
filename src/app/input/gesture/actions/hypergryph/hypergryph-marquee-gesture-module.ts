@@ -63,6 +63,9 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           if (event.to !== "logistics-placement") {
             context.appHost.internalActions.hideCanvasTopLeftCornerToolbar();
           }
+          if (event.to === "select") {
+            context.appHost.internalActions.setLeftDockSuppressed(false);
+          }
           return { status: "handled" };
 
         case "key down":
@@ -336,14 +339,11 @@ function resolveMarqueeTopLeftButtonIds(appHost: AppHost) {
 
 function closeCompactLeftDockOnMarqueeEnter(appHost: AppHost): void {
   const deviceClass = appHost.state.screenProfile.deviceClass;
-  if (
-    (deviceClass !== "mobile" && deviceClass !== "tablet")
-    || !appHost.state.workbench.leftDockOpen
-  ) {
+  if (deviceClass !== "mobile" && deviceClass !== "tablet") {
     return;
   }
 
-  appHost.internalActions.toggleLeftDock();
+  appHost.internalActions.setLeftDockSuppressed(true);
 }
 
 function startMouseMarqueeDrag(options: {

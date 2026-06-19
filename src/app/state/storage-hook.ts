@@ -199,6 +199,7 @@ function normalizePersistedWorkbenchState(
     leftDockOpen: typeof persistedWorkbenchState.leftDockOpen === "boolean"
       ? persistedWorkbenchState.leftDockOpen
       : fallback.leftDockOpen,
+    leftDockSuppressed: false,
     rightDockOpen: typeof persistedWorkbenchState.rightDockOpen === "boolean"
       ? persistedWorkbenchState.rightDockOpen
       : fallback.rightDockOpen,

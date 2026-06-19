@@ -264,7 +264,7 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         kind: "switch",
         labelKey: "settingsField.arknightsCopyWhileMoving",
         descriptionKey: "settingsField.arknightsCopyWhileMovingDescription",
-        defaultValue: true,
+        defaultValue: false,
       },
       {
         id: "game-arknights-immediate-marquee",

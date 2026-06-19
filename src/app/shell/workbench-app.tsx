@@ -435,6 +435,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     },
   }));
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
+  const leftDockSuppressed = appHost.internalState.workbench.leftDockSuppressed;
+  const effectiveLeftDockOpen = leftDockOpen && !leftDockSuppressed;
   const rightDockOpen = appHost.state.workbench.rightDockOpen;
   const useInspectorPanel = appHost.state.settings.gameUseInspectorPanel;
   const leftDockWidth = appHost.state.workbench.leftDockWidth;
@@ -456,7 +458,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
-  const showCanvasBottomLeftToolbar = !leftDockOpen;
+  const showCanvasBottomLeftToolbar = !effectiveLeftDockOpen;
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
   const showRightDock = useInspectorPanel && rightDockOpen;
   const canKeepInspectorDialogOpen = !useInspectorPanel
@@ -703,7 +705,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     ...resolveInCanvasThemeCssVariables(effectiveCanvasTheme),
     "--left-toolbar-width": isCompactLeftToolbar ? "51px" : "68px",
     "--left-toolbar-button-scale": isCompactLeftToolbar ? "0.75" : "1",
-    "--left-dock-width": leftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
+    "--left-dock-width": effectiveLeftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
     "--right-dock-width": showRightDock ? `${DEFAULT_RIGHT_DOCK_WIDTH}px` : "0px",
     "--top-bar-height": showFloatingTopBarControls ? "0px" : "48px",
     "--bottom-bar-height": showBottomStatusBar ? "28px" : "0px",
@@ -760,7 +762,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         </div>
       ) : null}
       <LeftToolbar appHost={appHost} />
-      {leftDockOpen ? <LeftDock appHost={appHost} /> : null}
+      {effectiveLeftDockOpen ? <LeftDock appHost={appHost} /> : null}
       <CanvasPanel appHost={appHost} />
       <CanvasBottomLeftSecondaryToolbar
         appHost={appHost}

@@ -37,7 +37,7 @@ const MOVE_EVENT_TYPES: ReadonlySet<GestureEventType> = new Set([
   "touch dragmove",
 ]);
 
-const GESTURE_PERF_LOG_WINDOW_MS = 2000
+const GESTURE_PERF_LOG_WINDOW_MS = 10_000
 
 interface GestureRafPerfWindow {
   startedAtMs: number

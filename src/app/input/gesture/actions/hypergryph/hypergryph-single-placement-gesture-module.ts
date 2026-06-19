@@ -192,6 +192,9 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
 
         pendingPlacementEnter = null;
         cleanupPlacementDraft(context.appHost);
+        if (event.to === "select") {
+          context.appHost.internalActions.setLeftDockSuppressed(false);
+        }
         flushPlacementPreviewPerf("on-exit-single-placement")
         return { status: "handled" };
       }
@@ -936,14 +939,11 @@ function clearPlacementUi(appHost: AppHost): void {
 
 export function closeCompactLeftDockOnPlacementEnter(appHost: AppHost): void {
   const deviceClass = appHost.state.screenProfile.deviceClass;
-  if (
-    (deviceClass !== "mobile" && deviceClass !== "tablet")
-    || !appHost.state.workbench.leftDockOpen
-  ) {
+  if (deviceClass !== "mobile" && deviceClass !== "tablet") {
     return;
   }
 
-  appHost.internalActions.toggleLeftDock();
+  appHost.internalActions.setLeftDockSuppressed(true);
 }
 
 function restoreFailedPlacementEnter(appHost: AppHost, editor: EditorContract): void {

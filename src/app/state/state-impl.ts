@@ -95,6 +95,7 @@ export interface AppSettingsReadWrite extends AppSettings {
 
 export interface WorkbenchStateReadWrite extends WorkbenchState {
   leftDockOpen: boolean;
+  leftDockSuppressed: boolean;
   rightDockOpen: boolean;
   leftDockWidth: number;
   topBarCollapsed: boolean;
@@ -467,6 +468,7 @@ export interface UiStateReadWrite extends UiState {
 
 class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   leftDockOpen = true;
+  leftDockSuppressed = false;
   rightDockOpen = true;
   leftDockWidth = DEFAULT_LEFT_DOCK_WIDTH;
   topBarCollapsed = false;
@@ -621,7 +623,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     // 2026-05-26: 该字段当前无特殊作用，始终为 true；未来会修改其语义或移除。
     hypergryphOperationMode: true,
     hypergryphImmediateMove: true,
-    hypergryphCopyWhileMoving: true,
+    hypergryphCopyWhileMoving: false,
     hypergryphImmediateMarquee: false,
     hypergryphAllowEmptyLogisticsEndpoints: false,
     hypergryphAutoCreateSplittersAndConvergers: true,

@@ -36,12 +36,12 @@ const defaultMaskDirectory = path.join(projectRoot, 'public', '3d-top-view', 'sp
 // rotation 为顺时针旋转角度（度），默认 0。
 // 图片输入端口在 N 方向，设备定义 0° 输入端口在 S 方向时需要 rotation: 180。
 const DEVICE_SPRITE_MAPPINGS = [
-  ['塑形机', 'item_port_shaper_1'],
-  ['种植机', 'item_port_planter_1'],
-  ['粉碎机', 'item_port_grinder_1'],
-  ['精炼炉', 'item_port_furnance_1'],
-  ['配件机', 'item_port_cmpt_mc_1'],
-  ['采种机', 'item_port_seedcol_1'],
+  ['塑形机', 'item_port_shaper_1', 180],
+  ['种植机', 'item_port_planter_1', 180],
+  ['粉碎机', 'item_port_grinder_1', 180],
+  ['精炼炉', 'item_port_furnance_1', 180],
+  ['配件机', 'item_port_cmpt_mc_1', 180],
+  ['采种机', 'item_port_seedcol_1', 180],
   ['存取线基段', 'item_port_log_hongs_bus'],
   ['存取线源桩', 'item_port_log_hongs_bus_source'],
   ['反应池', 'item_port_mix_pool_1', 180],

@@ -130,13 +130,15 @@ describe("createHypergryphMarqueeGestureModule", () => {
       const module = createHypergryphMarqueeGestureModule();
 
       expect(module.handle(keyDownEvent("KeyX"), context)).toEqual({ status: "handled" });
-      expect(appHost.internalActions.toggleLeftDock).not.toHaveBeenCalled();
+      expect(appHost.internalActions.setLeftDockSuppressed).not.toHaveBeenCalled();
 
       expect(
         module.handle(onEnterActiveToolEvent("select", "marquee"), context),
       ).toEqual({ status: "handled" });
-      expect(appHost.internalActions.toggleLeftDock).toHaveBeenCalledTimes(1);
-      expect(appHost.state.workbench.leftDockOpen).toBe(false);
+      expect(appHost.internalActions.setLeftDockSuppressed).toHaveBeenCalledTimes(1);
+      expect(appHost.internalActions.setLeftDockSuppressed).toHaveBeenCalledWith(true);
+      expect(appHost.state.workbench.leftDockOpen).toBe(true);
+      expect(appHost.internalState.workbench.leftDockSuppressed).toBe(true);
     }
   });
 
@@ -423,6 +425,7 @@ function createContext(options: {
   };
   const workbenchState = {
     leftDockOpen: options.leftDockOpen ?? true,
+    leftDockSuppressed: false,
     rightDockOpen: options.rightDockOpen ?? true,
   };
   const appHost = {
@@ -459,8 +462,8 @@ function createContext(options: {
       setActiveTool: vi.fn((activeTool) => {
         appHost.internalState.activeTool = activeTool;
       }),
-      toggleLeftDock: vi.fn(() => {
-        appHost.internalState.workbench.leftDockOpen = !appHost.internalState.workbench.leftDockOpen;
+      setLeftDockSuppressed: vi.fn((suppressed) => {
+        appHost.internalState.workbench.leftDockSuppressed = suppressed;
       }),
       toggleRightDock: vi.fn(() => {
         appHost.internalState.workbench.rightDockOpen =

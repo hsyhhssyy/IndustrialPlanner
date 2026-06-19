@@ -18,7 +18,7 @@ export interface GestureActionRouterOptions<THost = unknown> {
   readonly modules?: readonly GestureMappingModule<THost>[];
 }
 
-const MODULE_PERF_LOG_WINDOW_MS = 2000
+const MODULE_PERF_LOG_WINDOW_MS = 10_000
 // AI-REMOVED 2026-05-21:
 // Reason: MODULE_PERF_TOP_COUNT 声明后未被任何代码引用，ESLint 报 no-unused-vars
 // Trigger: lint error @typescript-eslint/no-unused-vars

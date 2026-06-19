@@ -106,6 +106,7 @@ export function createAppHost(
   const actionImpl = new AppActionImpl(internalState, workspace, shortcutManager);
   const internalActions: AppInternalAction = {
     toggleLeftDock: actionImpl.toggleLeftDock,
+    setLeftDockSuppressed: actionImpl.setLeftDockSuppressed,
     toggleRightDock: actionImpl.toggleRightDock,
     setRightDockOpen: actionImpl.setRightDockOpen,
     toggleTopBarCollapsed: actionImpl.toggleTopBarCollapsed,

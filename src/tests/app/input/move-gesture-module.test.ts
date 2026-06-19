@@ -937,7 +937,7 @@ function createContext(options: {
       settings: {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
-        hypergryphCopyWhileMoving: options.copyWhileMoving ?? true,
+        hypergryphCopyWhileMoving: options.copyWhileMoving ?? false,
       },
     },
     internalState: {
@@ -1099,7 +1099,6 @@ function mouseLongPressReadyEvent(options: {
 
 const MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST = [
   "canvas-floating-toolbar-button-cancel",
-  "canvas-floating-toolbar-button-copy",
   "canvas-floating-toolbar-button-rotate",
   "canvas-floating-toolbar-button-ok",
 ] as const;

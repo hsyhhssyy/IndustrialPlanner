@@ -20,6 +20,7 @@ import { createLogger } from "@/shared/logging/logger";
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import {
+  closeCompactLeftDockOnPlacementEnter,
   resolveDeviceIdForPlacementGroupShortcut,
   resolveDeviceShortcutIndex,
   resolvePlacementGroupByShortcut,
@@ -66,6 +67,9 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
         activeTouchLogisticsDragGestureId = null;
         cleanupLogisticsPlacement(context.appHost);
         context.appHost.internalActions.hideCanvasTopLeftCornerToolbar();
+        if (event.to === "select") {
+          context.appHost.internalActions.setLeftDockSuppressed(false);
+        }
         return { status: "handled" };
       }
 
@@ -74,6 +78,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
           return { status: "ignored" };
         }
 
+        closeCompactLeftDockOnPlacementEnter(context.appHost);
         syncLogisticsPlacementEntryUi(context.appHost);
         return { status: "handled" };
       }

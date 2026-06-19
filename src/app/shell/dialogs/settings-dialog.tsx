@@ -309,13 +309,13 @@ export const SettingsDialog = observer(function SettingsDialog({
 
                     const elements: React.ReactNode[] = [];
 
-                    // 游戏分组分隔符
-                    if (isGameGroup && (index === 2 || index === 3 || index === 6)) {
+                    // 游戏分组分隔符：index 0-2 为第一组(使用蓝图样式+显示设备名称+显示设备图标)，index 3 为第二组(工具箱显示所有活动)
+                    if (isGameGroup && (index === 3 || index === 4 || index === 6)) {
                       elements.push(<hr key={`sep-${group.id}-${index}`} className={cm(styles, "settings-dialog-separator")} />);
                     }
 
-                    // 游戏分组：活动设置按钮（在第一条分隔符之后）
-                    if (isGameGroup && index === 2) {
+                    // 游戏分组：活动设置按钮（第二组中，工具箱显示所有活动后面）
+                    if (isGameGroup && index === 3) {
                       elements.push(
                         <ActivitySettingsCard
                           effectiveActivityIds={effectiveActivityIds}

@@ -100,6 +100,9 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
         }
 
         cleanupBlueprintPlacement(context.appHost, context.workspace.editor);
+        if (event.to === "select") {
+          context.appHost.internalActions.setLeftDockSuppressed(false);
+        }
         return { status: "handled" };
       }
 

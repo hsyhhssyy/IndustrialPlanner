@@ -54,7 +54,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   themeId: "ayu-light",
   hypergryphOperationMode: true,
   hypergryphImmediateMove: true,
-  hypergryphCopyWhileMoving: true,
+  hypergryphCopyWhileMoving: false,
   hypergryphImmediateMarquee: false,
   hypergryphAllowEmptyLogisticsEndpoints: false,
   hypergryphAutoCreateSplittersAndConvergers: true,
@@ -193,6 +193,7 @@ function createWorkbenchStorageSnapshot(options: {
 } = {}) {
   return {
     leftDockOpen: options.leftDockOpen ?? true,
+    leftDockSuppressed: false,
     rightDockOpen: options.rightDockOpen ?? false,
     leftDockWidth: options.leftDockWidth ?? 375,
     topBarCollapsed: options.topBarCollapsed ?? false,
@@ -2352,7 +2353,7 @@ describe("WorkbenchApp", () => {
     // immediateMove / immediateMarquee 不再受 editableWhen 锁定。
     expect(immediateMoveToggle?.checked).toBe(true);
     expect(immediateMoveToggle?.disabled).toBe(false);
-    expect(copyWhileMovingToggle?.checked).toBe(true);
+    expect(copyWhileMovingToggle?.checked).toBe(false);
     expect(copyWhileMovingToggle?.disabled).toBe(false);
     expect(immediateMarqueeToggle?.checked).toBe(false);
     expect(immediateMarqueeToggle?.disabled).toBe(false);
@@ -3174,7 +3175,7 @@ describe("WorkbenchApp", () => {
 
     expect(immediateMoveToggle).not.toBeNull();
     expect(copyWhileMovingToggle).not.toBeNull();
-    expect(copyWhileMovingToggle?.checked).toBe(true);
+    expect(copyWhileMovingToggle?.checked).toBe(false);
     expect(immediateMarqueeToggle).not.toBeNull();
     expect(immediateMoveToggle?.checked).toBe(false);
     expect(immediateMoveToggle?.disabled).toBe(false);
@@ -3193,8 +3194,8 @@ describe("WorkbenchApp", () => {
       copyWhileMovingToggle?.click();
     });
 
-    expect(appHost.state.settings.hypergryphCopyWhileMoving).toBe(false);
-    expect(copyWhileMovingToggle?.checked).toBe(false);
+    expect(appHost.state.settings.hypergryphCopyWhileMoving).toBe(true);
+    expect(copyWhileMovingToggle?.checked).toBe(true);
 
     act(() => {
       if (immediateMarqueeToggle === null) {
@@ -3210,7 +3211,7 @@ describe("WorkbenchApp", () => {
       JSON.stringify({
         ...DEFAULT_APP_SETTINGS_STORAGE,
         hypergryphImmediateMove: false,
-        hypergryphCopyWhileMoving: false,
+        hypergryphCopyWhileMoving: true,
         hypergryphImmediateMarquee: true,
       }),
     );
