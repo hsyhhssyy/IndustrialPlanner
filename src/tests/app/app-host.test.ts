@@ -277,7 +277,7 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.hypergryphCopyWhileMoving).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
-    expect(appHost.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
+    expect(appHost.state.settings.hypergryphAutoCreateSplittersAndConvergers).toBe(true);
     expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(appHost.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.state.settings.debugShowFps).toBe(false);
@@ -291,7 +291,9 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.hypergryphCopyWhileMoving).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
-    expect(appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
+    expect(
+      appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers,
+    ).toBe(true);
     expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.internalState.settings.debugShowFps).toBe(false);
@@ -302,7 +304,7 @@ describe("createAppHost", () => {
     expect(workspace.app?.state.settings.hypergryphCopyWhileMoving).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
-    expect(workspace.app?.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
+    expect(workspace.app?.state.settings.hypergryphAutoCreateSplittersAndConvergers).toBe(true);
     expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(workspace.app?.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(workspace.app?.state.settings.debugShowFps).toBe(false);
@@ -350,7 +352,7 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.hypergryphCopyWhileMoving).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
-    expect(appHost.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
+    expect(appHost.state.settings.hypergryphAutoCreateSplittersAndConvergers).toBe(true);
     expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(appHost.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.state.settings.debugShowFps).toBe(false);
@@ -362,7 +364,9 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
-    expect(appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
+    expect(
+      appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers,
+    ).toBe(true);
     expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.internalState.settings.debugShowFps).toBe(false);
@@ -372,7 +376,7 @@ describe("createAppHost", () => {
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
-    expect(workspace.app?.state.settings.hypergryphAutoCreateLogisticsDevices).toBe(true);
+    expect(workspace.app?.state.settings.hypergryphAutoCreateSplittersAndConvergers).toBe(true);
     expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(true);
     expect(workspace.app?.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(workspace.app?.state.settings.debugShowFps).toBe(false);
@@ -2694,7 +2698,7 @@ describe("createAppHost", () => {
     expect(editorHost.state.collections.ghost).toEqual(["source"]);
   });
 
-  it("passes disabled auto logistics devices setting into mouse logistics previews", () => {
+  it("always creates bridge previews when automatic splitters and convergers are disabled", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDummyWorldDocument();
@@ -2735,7 +2739,7 @@ describe("createAppHost", () => {
     const appHost = createAppHost(workspace);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
-      appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices = false;
+      appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = false;
     });
     const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 6 });
     const targetPoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 10 });
@@ -2766,10 +2770,10 @@ describe("createAppHost", () => {
     appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
 
     expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
-      canApply: false,
-      invalidReason: "overlap-existing-logistics",
+      canApply: true,
+      invalidReason: null,
     });
-    expect(editorHost.state.collections.ghost).toEqual([]);
+    expect(editorHost.state.collections.ghost).toEqual(["crossing"]);
   });
 
   it("applies mouse logistics turns from existing internal belts when auto devices are disabled", () => {
@@ -2812,7 +2816,7 @@ describe("createAppHost", () => {
     });
     const appHost = createAppHost(workspace);
     runInAction(() => {
-      appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices = false;
+      appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = false;
     });
     const sourcePoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 8 });
     const branchPoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 7 });

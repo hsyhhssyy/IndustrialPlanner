@@ -182,18 +182,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = value;
         }),
       },
-      "game-arknights-auto-create-logistics-devices": {
-        readValue: () => appHost.state.settings.hypergryphAutoCreateLogisticsDevices,
+      "game-arknights-auto-create-splitters-and-convergers": {
+        readValue: () => appHost.state.settings.hypergryphAutoCreateSplittersAndConvergers,
         writeValue: action((value) => {
           if (typeof value !== "boolean") {
             return;
           }
 
-          if (appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices === value) {
+          if (
+            appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers === value
+          ) {
             return;
           }
 
-          appHost.internalState.settings.hypergryphAutoCreateLogisticsDevices = value;
+          appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = value;
         }),
       },
       "game-arknights-selection-right-dock-sync": {

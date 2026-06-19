@@ -34,7 +34,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-copy-while-moving": true,
         "game-arknights-immediate-marquee": false,
         "game-arknights-allow-empty-logistics-endpoints": false,
-        "game-arknights-auto-create-logistics-devices": true,
+        "game-arknights-auto-create-splitters-and-convergers": true,
         "game-arknights-selection-right-dock-sync": true,
         "game-arknights-inspector-open-on-second-click": false,
         "shortcut-place-conveyor": "E",
@@ -82,7 +82,9 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["game-arknights-copy-while-moving"]).toBe(true);
     expect(hydratedController.values["game-arknights-immediate-marquee"]).toBe(false);
     expect(hydratedController.values["game-arknights-allow-empty-logistics-endpoints"]).toBe(false);
-    expect(hydratedController.values["game-arknights-auto-create-logistics-devices"]).toBe(true);
+    expect(
+      hydratedController.values["game-arknights-auto-create-splitters-and-convergers"],
+    ).toBe(true);
     expect(hydratedController.values["game-arknights-selection-right-dock-sync"]).toBe(true);
     expect(hydratedController.values["game-arknights-inspector-open-on-second-click"]).toBe(false);
     expect(hydratedController.values["shortcut-place-conveyor"]).toBe("E");
@@ -234,7 +236,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-copy-while-moving": true,
         "game-arknights-immediate-marquee": false,
         "game-arknights-allow-empty-logistics-endpoints": false,
-        "game-arknights-auto-create-logistics-devices": true,
+        "game-arknights-auto-create-splitters-and-convergers": true,
         "game-arknights-selection-right-dock-sync": true,
         "game-arknights-inspector-open-on-second-click": false,
         "shortcut-place-conveyor": "E",

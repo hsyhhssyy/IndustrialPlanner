@@ -48,7 +48,7 @@ const GRID_EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
 
 interface LogisticsPlacementBehaviorOptions {
   readonly allowEmptySource: boolean;
-  readonly autoCreateLogisticsDevices: boolean;
+  readonly autoCreateSplittersAndConvergers: boolean;
 }
 
 export function createHypergryphLogisticsPlacementGestureModule(): GestureMappingModule<AppHost> {
@@ -1053,18 +1053,19 @@ function updateRuntimeFromResult(options: {
 function resolveLogisticsPlacementBehaviorOptions(appHost: AppHost): LogisticsPlacementBehaviorOptions {
   return {
     allowEmptySource: appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints,
-    autoCreateLogisticsDevices: appHost.state.settings.hypergryphAutoCreateLogisticsDevices,
+    autoCreateSplittersAndConvergers:
+      appHost.state.settings.hypergryphAutoCreateSplittersAndConvergers,
   };
 }
 
 function resolveMoveLogisticsDraftBehaviorOptions(appHost: AppHost): {
   readonly allowEmptyTarget: boolean;
-  readonly autoCreateLogisticsDevices: boolean;
+  readonly autoCreateSplittersAndConvergers: boolean;
 } {
   const behavior = resolveLogisticsPlacementBehaviorOptions(appHost);
   return {
     allowEmptyTarget: true,
-    autoCreateLogisticsDevices: behavior.autoCreateLogisticsDevices,
+    autoCreateSplittersAndConvergers: behavior.autoCreateSplittersAndConvergers,
   };
 }
 

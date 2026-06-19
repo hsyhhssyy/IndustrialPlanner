@@ -281,10 +281,10 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         defaultValue: false,
       },
       {
-        id: "game-arknights-auto-create-logistics-devices",
+        id: "game-arknights-auto-create-splitters-and-convergers",
         kind: "switch",
-        labelKey: "settingsField.arknightsAutoCreateLogisticsDevices",
-        descriptionKey: "settingsField.arknightsAutoCreateLogisticsDevicesDescription",
+        labelKey: "settingsField.arknightsAutoCreateSplittersAndConvergers",
+        descriptionKey: "settingsField.arknightsAutoCreateSplittersAndConvergersDescription",
         defaultValue: true,
       },
     ],
@@ -532,7 +532,7 @@ export class WorkbenchSettingsDialogController {
     "game-arknights-copy-while-moving",
     "game-arknights-immediate-marquee",
     "game-arknights-allow-empty-logistics-endpoints",
-    "game-arknights-auto-create-logistics-devices",
+    "game-arknights-auto-create-splitters-and-convergers",
     // 快捷键
     "shortcut-place-conveyor",
     "shortcut-place-pipe",

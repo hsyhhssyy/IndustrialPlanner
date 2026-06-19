@@ -171,7 +171,7 @@ export function createEditorLogisticsActions(
         points: [start],
         replacingEntityId,
         allowEmptyTarget: options.allowEmptySource !== false,
-        autoCreateLogisticsDevices: true,
+        autoCreateSplittersAndConvergers: true,
         status: "created",
       });
     }),
@@ -233,7 +233,8 @@ export function createEditorLogisticsActions(
           sourceEntityId: draft.source.entityId,
           targetEntityId: cursorTarget.entityId,
           preferredRouteOrder: options.routeMode.routeOrder,
-          autoCreateLogisticsDevices: options.autoCreateLogisticsDevices ?? true,
+          autoCreateSplittersAndConvergers:
+            options.autoCreateSplittersAndConvergers ?? true,
         });
 
         if (deviceRoute !== null) {
@@ -246,7 +247,8 @@ export function createEditorLogisticsActions(
             points: deviceRoute.points,
             replacingEntityId: draft.replacingEntityId,
             allowEmptyTarget: options.allowEmptyTarget ?? true,
-            autoCreateLogisticsDevices: options.autoCreateLogisticsDevices ?? true,
+            autoCreateSplittersAndConvergers:
+              options.autoCreateSplittersAndConvergers ?? true,
             status: "updated",
           });
         }
@@ -327,7 +329,8 @@ export function createEditorLogisticsActions(
           points,
           replacingEntityId: draft.replacingEntityId,
           allowEmptyTarget: options.allowEmptyTarget ?? true,
-          autoCreateLogisticsDevices: options.autoCreateLogisticsDevices ?? true,
+          autoCreateSplittersAndConvergers:
+            options.autoCreateSplittersAndConvergers ?? true,
           status: "updated",
         });
       }
@@ -386,7 +389,8 @@ export function createEditorLogisticsActions(
         points,
         replacingEntityId: draft.replacingEntityId,
         allowEmptyTarget: options.allowEmptyTarget ?? true,
-        autoCreateLogisticsDevices: options.autoCreateLogisticsDevices ?? true,
+        autoCreateSplittersAndConvergers:
+          options.autoCreateSplittersAndConvergers ?? true,
         status: "updated",
       });
     }),
@@ -641,7 +645,7 @@ function rebuildLogisticsDraft(options: {
   points: readonly GridPoint[];
   replacingEntityId: string | null;
   allowEmptyTarget: boolean;
-  autoCreateLogisticsDevices: boolean;
+  autoCreateSplittersAndConvergers: boolean;
   status: "created" | "updated";
 }): LogisticsDraftActionResult {
   const currentDocument = options.context.document.getSnapshot();
@@ -681,7 +685,7 @@ function rebuildLogisticsDraft(options: {
     target: options.target,
     cells,
     replacingEntityId: options.replacingEntityId,
-    autoCreateLogisticsDevices: options.autoCreateLogisticsDevices,
+    autoCreateSplittersAndConvergers: options.autoCreateSplittersAndConvergers,
   });
 
   const prevConvergerGridKey = options.context.state.internalTransientState.convergerEntityGridKey;
@@ -1158,7 +1162,7 @@ function resolveDeviceToDeviceRoute(options: {
   sourceEntityId: string;
   targetEntityId: string;
   preferredRouteOrder: LogisticsRouteOrder;
-  autoCreateLogisticsDevices: boolean;
+  autoCreateSplittersAndConvergers: boolean;
 }): DeviceRouteCandidate | null {
   const currentDocument = options.context.document.getSnapshot();
   const sourceEntity = findEntityById({
@@ -1228,7 +1232,7 @@ function resolveDeviceToDeviceRoute(options: {
           target: targetEndpoint,
           cells,
           replacingEntityId: options.draft.replacingEntityId,
-          autoCreateLogisticsDevices: options.autoCreateLogisticsDevices,
+          autoCreateSplittersAndConvergers: options.autoCreateSplittersAndConvergers,
         });
         const candidateInvalidReason = resolveInvalidReason({
           context: options.context,
@@ -1333,7 +1337,7 @@ function resolveAutoDraftPlan(options: {
   target: LogisticsDraftEndpoint | null;
   cells: readonly LogisticsPathCell[];
   replacingEntityId: string | null;
-  autoCreateLogisticsDevices: boolean;
+  autoCreateSplittersAndConvergers: boolean;
 }): AutoDraftPlan {
   const currentDocument = options.context.document.getSnapshot();
   const cellOverridesByGridKey = new Map<string, AutoDraftCellOverride>();
@@ -1360,7 +1364,7 @@ function resolveAutoDraftPlan(options: {
       if (firstStepEdge === sourceInfo.outputEdge) {
         invalidReason = "unknown";
       } else if (firstStepEdge !== null) {
-        if (options.autoCreateLogisticsDevices) {
+        if (options.autoCreateSplittersAndConvergers) {
           cellOverridesByGridKey.set(
             gridPointKey(firstCell.gridPoint),
             createAutoDeviceOverride(options.kind, "splitter", sourceInfo.inputEdge),
@@ -1394,15 +1398,17 @@ function resolveAutoDraftPlan(options: {
       && targetInfo.entity.id !== options.replacingEntityId
       && options.target === null
     ) {
-      if (!options.autoCreateLogisticsDevices) {
-        invalidReason = "overlap-existing-logistics";
-      } else if (targetInfo.inputConnected) {
-        // 有合法上游 → 创建汇流器
-        cellOverridesByGridKey.set(
-          gridPointKey(lastCell.gridPoint),
-          createAutoDeviceOverride(options.kind, "converger", targetInfo.outputEdge),
-        );
-        replacingEntityIds.add(targetInfo.entity.id);
+      if (targetInfo.inputConnected) {
+        if (!options.autoCreateSplittersAndConvergers) {
+          invalidReason = "overlap-existing-logistics";
+        } else {
+          // 有合法上游 → 创建汇流器
+          cellOverridesByGridKey.set(
+            gridPointKey(lastCell.gridPoint),
+            createAutoDeviceOverride(options.kind, "converger", targetInfo.outputEdge),
+          );
+          replacingEntityIds.add(targetInfo.entity.id);
+        }
       } else {
         // AI-CORRECTION 2026-05-29:
         // 无合法上游 → 替换目标物流格为普通物流段（弯道/直道），
@@ -1430,7 +1436,6 @@ function resolveAutoDraftPlan(options: {
         kind: options.kind,
         document: currentDocument,
         cell: firstCell,
-        autoCreateLogisticsDevices: options.autoCreateLogisticsDevices,
         cellOverridesByGridKey,
         replacingEntityIds,
       }) ?? invalidReason;
@@ -1499,7 +1504,6 @@ function resolveAutoDraftPlan(options: {
       kind: options.kind,
       document: currentDocument,
       cell: lastCell,
-      autoCreateLogisticsDevices: options.autoCreateLogisticsDevices,
       cellOverridesByGridKey,
       replacingEntityIds,
     }) ?? invalidReason;
@@ -1515,7 +1519,6 @@ function resolveAutoDraftPlan(options: {
       kind: options.kind,
       document: currentDocument,
       cell,
-      autoCreateLogisticsDevices: options.autoCreateLogisticsDevices,
       cellOverridesByGridKey,
       replacingEntityIds,
     }) ?? invalidReason;
@@ -1554,12 +1557,15 @@ function resolveAutoDraftPlan(options: {
       continue;
     }
 
-    if (!options.autoCreateLogisticsDevices) {
+    const overrideKind: AutoDeviceKind = isLastCell ? "converger" : "connector";
+    if (
+      overrideKind === "converger"
+      && !options.autoCreateSplittersAndConvergers
+    ) {
       invalidReason = "overlap-own-preview";
       continue;
     }
 
-    const overrideKind: AutoDeviceKind = isLastCell ? "converger" : "connector";
     const edge = isLastCell ? cell.toEdge : null;
     cellOverridesByGridKey.set(
       key,
@@ -1587,7 +1593,6 @@ function resolveConnectorCrossingAutoDraftCell(options: {
   readonly kind: LogisticsKind;
   readonly document: WorldDocument;
   readonly cell: LogisticsPathCell;
-  readonly autoCreateLogisticsDevices: boolean;
   readonly cellOverridesByGridKey: Map<string, AutoDraftCellOverride>;
   readonly replacingEntityIds: Set<string>;
 }): LogisticsDraftInvalidReason | null {
@@ -1612,10 +1617,6 @@ function resolveConnectorCrossingAutoDraftCell(options: {
 
   if (!isPerpendicularConnectorPass({ cell: options.cell, info })) {
     return "unknown";
-  }
-
-  if (!options.autoCreateLogisticsDevices) {
-    return "overlap-existing-logistics";
   }
 
   options.cellOverridesByGridKey.set(

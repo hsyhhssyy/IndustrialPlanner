@@ -629,7 +629,7 @@ describe("物流绘制模式", () => {
       },
     });
     const moveResult = editorHost.actions.moveLogisticEnd({
-      autoCreateLogisticsDevices: false,
+      autoCreateSplittersAndConvergers: false,
       pointerGridPoint: { x: 12, y: 7 },
       routeMode: {
         type: "single-bend",
@@ -1046,7 +1046,7 @@ describe("物流绘制模式", () => {
     });
   });
 
-  it("marks existing logistics crossings invalid when auto logistics devices are disabled", () => {
+  it("creates a connector at an existing logistics crossing when auto splitters and convergers are disabled", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
@@ -1065,7 +1065,7 @@ describe("物流绘制模式", () => {
     });
     const moveResult = editorHost.actions.moveLogisticEnd({
       pointerGridPoint: { x: 12, y: 10 },
-      autoCreateLogisticsDevices: false,
+      autoCreateSplittersAndConvergers: false,
       routeMode: {
         type: "single-bend",
         routeOrder: "vertical-first",
@@ -1074,11 +1074,50 @@ describe("物流绘制模式", () => {
     });
 
     expect(moveResult).toMatchObject({
-      canApply: false,
-      invalidReason: "overlap-existing-logistics",
+      canApply: true,
+      invalidReason: null,
     });
-    expect(editorHost.state.collections.ghost).toEqual([]);
-    expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual([]);
+    expect(editorHost.state.collections.ghost).toEqual(["crossing"]);
+    expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
+      definitionId: "item_log_connector",
+    });
+  });
+
+  it("creates a pipe connector at an existing pipe crossing when auto splitters and convergers are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("predecessor", "pipe_straight_1x1", 11, 8),
+      createTestEntity("crossing", "pipe_straight_1x1", 12, 8),
+      createTestEntity("successor", "pipe_straight_1x1", 13, 8),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "pipe",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 12, y: 6 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 12, y: 10 },
+      autoCreateSplittersAndConvergers: false,
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+    });
+    expect(editorHost.state.collections.ghost).toEqual(["crossing"]);
+    expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
+      definitionId: "item_pipe_connector",
+    });
   });
 
   it("creates a connector when a new horizontal path crosses a vertically stacked logistics tile", () => {
@@ -1480,7 +1519,46 @@ describe("物流绘制模式", () => {
     });
   });
 
-  it("marks freehand self-overlap invalid when auto logistics devices are disabled", () => {
+  it("creates a connector for freehand self-overlap when auto splitters and convergers are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 0, y: 0 },
+      },
+    });
+    for (const pointerGridPoint of [
+      { x: 2, y: 0 },
+      { x: 2, y: 2 },
+      { x: 0, y: 2 },
+      { x: 0, y: 1 },
+    ]) {
+      editorHost.actions.moveLogisticEnd({
+        pointerGridPoint,
+        autoCreateSplittersAndConvergers: false,
+        routeMode: { type: "freehand" },
+      });
+    }
+
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 3, y: 1 },
+      autoCreateSplittersAndConvergers: false,
+      routeMode: { type: "freehand" },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+    });
+    expect(findPreviewDraftAt(editorHost, 2, 1)).toMatchObject({
+      definitionId: "item_log_connector",
+    });
+  });
+
+  it("marks freehand self-overlap convergers invalid when auto splitters and convergers are disabled", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
@@ -1504,7 +1582,7 @@ describe("物流绘制模式", () => {
 
     const moveResult = editorHost.actions.moveLogisticEnd({
       pointerGridPoint: { x: 2, y: 1 },
-      autoCreateLogisticsDevices: false,
+      autoCreateSplittersAndConvergers: false,
       routeMode: { type: "freehand" },
     });
 

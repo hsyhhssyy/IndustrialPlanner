@@ -245,8 +245,8 @@ export type MessageKey =
   | "settingsField.arknightsImmediateMarqueeDescription"
   | "settingsField.arknightsAllowEmptyLogisticsEndpoints"
   | "settingsField.arknightsAllowEmptyLogisticsEndpointsDescription"
-  | "settingsField.arknightsAutoCreateLogisticsDevices"
-  | "settingsField.arknightsAutoCreateLogisticsDevicesDescription"
+  | "settingsField.arknightsAutoCreateSplittersAndConvergers"
+  | "settingsField.arknightsAutoCreateSplittersAndConvergersDescription"
   | "settingsField.arknightsSelectionRightDockSync"
   | "settingsField.arknightsSelectionRightDockSyncDescription"
   | "settingsField.arknightsInspectorOpenOnSecondClick"
@@ -712,8 +712,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.arknightsImmediateMarqueeDescription": "仅鼠标模式有效，从画布空白处开始拖动时，立即开始框选而不需要长按。",
     "settingsField.arknightsAllowEmptyLogisticsEndpoints": "物流允许以空地为起点",
     "settingsField.arknightsAllowEmptyLogisticsEndpointsDescription": "开启后，布设传送带和管道时可以从空地起笔，否则只能从有出口的设备起笔。",
-    "settingsField.arknightsAutoCreateLogisticsDevices": "自动创建物流设备",
-    "settingsField.arknightsAutoCreateLogisticsDevicesDescription": "开启后，传送带和管道与自身或已有物流交叉时自动创建分流器、汇流器或连接器。",
+    "settingsField.arknightsAutoCreateSplittersAndConvergers": "自动创建分/汇流",
+    "settingsField.arknightsAutoCreateSplittersAndConvergersDescription": "传送带/管道绘制到交汇处时，自动创建分流器和汇流器。",
     "settingsField.arknightsSelectionRightDockSync": "右侧面板与选择联动",
     "settingsField.arknightsSelectionRightDockSyncDescription": "开启\"使用右侧面板显示设备属性\"后有效，在选择设备时如果面板未展开则自动展开面板。",
     "settingsField.arknightsInspectorOpenOnSecondClick": "再次点击打开设备属性",
@@ -1192,8 +1192,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.arknightsImmediateMarqueeDescription": "Mouse mode only: immediately start marquee selection when dragging from empty canvas without a long press.",
     "settingsField.arknightsAllowEmptyLogisticsEndpoints": "Allow Empty Logistics Starts",
     "settingsField.arknightsAllowEmptyLogisticsEndpointsDescription": "When enabled, conveyors and pipes can start from empty cells. Otherwise they must start from a device with an output.",
-    "settingsField.arknightsAutoCreateLogisticsDevices": "Auto Create Logistics Devices",
-    "settingsField.arknightsAutoCreateLogisticsDevicesDescription": "Automatically create splitters, convergers, or connectors when conveyors and pipes cross with themselves or existing logistics.",
+    "settingsField.arknightsAutoCreateSplittersAndConvergers": "Auto Create Splitters/Convergers",
+    "settingsField.arknightsAutoCreateSplittersAndConvergersDescription": "Automatically create splitters and convergers when conveyors or pipes are drawn into junctions.",
     "settingsField.arknightsSelectionRightDockSync": "Sync Right Dock With Selection",
     "settingsField.arknightsSelectionRightDockSyncDescription": "Effective when \"Use Right Panel For Device Properties\" is enabled. Automatically expand the right panel on selection when it is not already open.",
     "settingsField.arknightsInspectorOpenOnSecondClick": "Open Inspector On Second Click",

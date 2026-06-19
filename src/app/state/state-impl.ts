@@ -76,7 +76,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   hypergryphCopyWhileMoving: boolean;
   hypergryphImmediateMarquee: boolean;
   hypergryphAllowEmptyLogisticsEndpoints: boolean;
-  hypergryphAutoCreateLogisticsDevices: boolean;
+  hypergryphAutoCreateSplittersAndConvergers: boolean;
   hypergryphSelectionRightDockSync: boolean;
   hypergryphInspectorOpenOnSecondClick: boolean;
   gameUseSimplifiedDeviceIcons: boolean;
@@ -624,7 +624,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphCopyWhileMoving: true,
     hypergryphImmediateMarquee: false,
     hypergryphAllowEmptyLogisticsEndpoints: false,
-    hypergryphAutoCreateLogisticsDevices: true,
+    hypergryphAutoCreateSplittersAndConvergers: true,
     hypergryphSelectionRightDockSync: true,
     hypergryphInspectorOpenOnSecondClick: false,
     gameUseSimplifiedDeviceIcons: false,

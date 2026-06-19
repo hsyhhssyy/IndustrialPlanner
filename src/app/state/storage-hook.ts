@@ -138,10 +138,10 @@ function normalizePersistedAppSettings(
       typeof persistedAppSettings.hypergryphAllowEmptyLogisticsEndpoints === "boolean"
         ? persistedAppSettings.hypergryphAllowEmptyLogisticsEndpoints
         : fallback.hypergryphAllowEmptyLogisticsEndpoints,
-    hypergryphAutoCreateLogisticsDevices:
-      typeof persistedAppSettings.hypergryphAutoCreateLogisticsDevices === "boolean"
-        ? persistedAppSettings.hypergryphAutoCreateLogisticsDevices
-        : fallback.hypergryphAutoCreateLogisticsDevices,
+    hypergryphAutoCreateSplittersAndConvergers:
+      typeof persistedAppSettings.hypergryphAutoCreateSplittersAndConvergers === "boolean"
+        ? persistedAppSettings.hypergryphAutoCreateSplittersAndConvergers
+        : fallback.hypergryphAutoCreateSplittersAndConvergers,
     hypergryphSelectionRightDockSync:
       typeof persistedAppSettings.hypergryphSelectionRightDockSync === "boolean"
         ? persistedAppSettings.hypergryphSelectionRightDockSync

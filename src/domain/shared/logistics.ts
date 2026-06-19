@@ -90,7 +90,7 @@ export interface CreateLogisticsDraftStartOptions {
 export interface MoveLogisticsDraftEndOptions {
   readonly pointerGridPoint: GridPoint;
   readonly allowEmptyTarget?: boolean;
-  readonly autoCreateLogisticsDevices?: boolean;
+  readonly autoCreateSplittersAndConvergers?: boolean;
   readonly routeMode:
     | {
         readonly type: "freehand";

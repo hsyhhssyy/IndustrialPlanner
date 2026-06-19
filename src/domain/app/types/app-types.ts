@@ -11,7 +11,7 @@ export interface AppSettings {
   readonly hypergryphCopyWhileMoving: boolean;
   readonly hypergryphImmediateMarquee: boolean;
   readonly hypergryphAllowEmptyLogisticsEndpoints: boolean;
-  readonly hypergryphAutoCreateLogisticsDevices: boolean;
+  readonly hypergryphAutoCreateSplittersAndConvergers: boolean;
   readonly hypergryphSelectionRightDockSync: boolean;
   readonly hypergryphInspectorOpenOnSecondClick: boolean;
   readonly gameUseSimplifiedDeviceIcons: boolean;

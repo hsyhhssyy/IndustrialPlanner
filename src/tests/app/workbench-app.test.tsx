@@ -57,7 +57,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   hypergryphCopyWhileMoving: true,
   hypergryphImmediateMarquee: false,
   hypergryphAllowEmptyLogisticsEndpoints: false,
-  hypergryphAutoCreateLogisticsDevices: true,
+  hypergryphAutoCreateSplittersAndConvergers: true,
   hypergryphSelectionRightDockSync: true,
   hypergryphInspectorOpenOnSecondClick: false,
   gameUseSimplifiedDeviceIcons: false,
@@ -2304,8 +2304,8 @@ describe("WorkbenchApp", () => {
     const allowEmptyLogisticsEndpointsToggle = container.querySelector(
       'input[name="game-arknights-allow-empty-logistics-endpoints"]',
     ) as HTMLInputElement | null;
-    const autoCreateLogisticsDevicesToggle = container.querySelector(
-      'input[name="game-arknights-auto-create-logistics-devices"]',
+    const autoCreateSplittersAndConvergersToggle = container.querySelector(
+      'input[name="game-arknights-auto-create-splitters-and-convergers"]',
     ) as HTMLInputElement | null;
     const debugToggle = container.querySelector(
       'input[name="other-debug-mode"]',
@@ -2340,6 +2340,10 @@ describe("WorkbenchApp", () => {
       "其他功能与设置",
       "一系列用于调试的设置内容。",
     ]);
+    expect(dialog?.textContent).toContain("自动创建分/汇流");
+    expect(dialog?.textContent).toContain(
+      "传送带/管道绘制到交汇处时，自动创建分流器和汇流器。",
+    );
     expect(languageOptionLabels).toEqual(["中文(简体)", "English"]);
     expect(themeOptionLabels).toEqual(["Ayu Light", "Ayu Dark"]);
     expect(languageSelect?.value).toBe("zh-CN");
@@ -2354,8 +2358,8 @@ describe("WorkbenchApp", () => {
     expect(immediateMarqueeToggle?.disabled).toBe(false);
     expect(allowEmptyLogisticsEndpointsToggle?.checked).toBe(false);
     expect(allowEmptyLogisticsEndpointsToggle?.disabled).toBe(false);
-    expect(autoCreateLogisticsDevicesToggle?.checked).toBe(true);
-    expect(autoCreateLogisticsDevicesToggle?.disabled).toBe(false);
+    expect(autoCreateSplittersAndConvergersToggle?.checked).toBe(true);
+    expect(autoCreateSplittersAndConvergersToggle?.disabled).toBe(false);
     expect(debugToggle?.checked).toBe(true);
     expect(alwaysShowGridLinesToggle?.checked).toBe(true);
     expect(showFpsToggle?.checked).toBe(true);
