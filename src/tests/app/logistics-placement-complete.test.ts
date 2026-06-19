@@ -110,6 +110,100 @@ describe("物流布设模式完全测试集", () => {
       position: { x: 2, y: 5 },
     }, { soft: true });
   });
+
+  it("连续放置时不会被起笔处端口干扰", () => {
+    // 第一段：从 (2,4) 到 (4,3)
+    clickCell(appHost, editorHost, { x: 2, y: 4 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+    // 第二段：从 (4,3) 续接到 (4,6)，不应被起笔处的端口方向干扰
+    clickCell(appHost, editorHost, { x: 4, y: 6 }, nextPointerId++);
+
+    expectEntityAt(editorHost, {
+      definitionId: "belt_turn_cw_1x1",
+      position: { x: 4, y: 3 },
+      rotation: 180,
+    });
+  });
+
+  it("右键结束布设后从已有传送带端点重新起笔生成桥接器", () => {
+    // 第一段：从 (2,4) 到 (4,3)
+    clickCell(appHost, editorHost, { x: 2, y: 4 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+    // 右键结束布设
+    rightClickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
+
+    expectEntityAt(editorHost, {
+      definitionId: "belt_straight_1x1",
+      position: { x: 4, y: 3 },
+      rotation: 0,
+    });
+
+    // 第二段：从已有传送带的 (4,3) 起笔到 (5,6)，应生成桥接器
+    clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 5, y: 6 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 5, y: 6 }, nextPointerId++);
+
+    expectEntityAt(editorHost, {
+      definitionId: "item_log_connector",
+      position: { x: 4, y: 3 },
+    });
+  });
+
+  it("从已有传送带端点续接时切换线序生成弯道", () => {
+    // 第一段：从 (2,4) 到 (4,3)
+    clickCell(appHost, editorHost, { x: 2, y: 4 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+    // 右键结束布设
+    rightClickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
+
+    expectEntityAt(editorHost, {
+      definitionId: "belt_straight_1x1",
+      position: { x: 4, y: 3 },
+      rotation: 0,
+    });
+
+    // 第二段：从已有传送带 (4,3) 起笔到 (5,6)
+    clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 5, y: 6 }, nextPointerId++);
+    // 按下 R 切换为先横后竖
+    pressRouteOrderShortcut(appHost);
+    // 原地点击完成布设
+    clickCell(appHost, editorHost, { x: 5, y: 6 }, nextPointerId++);
+
+    expectEntityAt(editorHost, {
+      definitionId: "belt_turn_ccw_1x1",
+      position: { x: 4, y: 3 },
+      rotation: 0,
+    });
+    expectEntityAt(editorHost, {
+      definitionId: "belt_turn_cw_1x1",
+      position: { x: 5, y: 3 },
+      rotation: 180,
+    });
+  });
+
+  it("场景2-从5,3横先布设到2,4生成弯道", () => {
+    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_SCENE2);
+    enterBeltLogisticsPlacement(appHost);
+    pressRouteOrderShortcut(appHost);
+
+    clickCell(appHost, editorHost, { x: 5, y: 3 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 2, y: 4 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 2, y: 4 }, nextPointerId++);
+
+    expectEntityAt(editorHost, {
+      definitionId: "belt_turn_cw_1x1",
+      position: { x: 5, y: 3 },
+      rotation: 270,
+    });
+    expectEntityAt(editorHost, {
+      definitionId: "belt_turn_ccw_1x1",
+      position: { x: 2, y: 3 },
+      rotation: 90,
+    });
+  });
 });
 
 const USER_PROVIDED_BLUEPRINT: BlueprintDocument = {
@@ -219,6 +313,122 @@ const USER_PROVIDED_BLUEPRINT: BlueprintDocument = {
   updatedAt: "2026-06-19T08:48:20.300Z",
 };
 
+const USER_PROVIDED_BLUEPRINT_SCENE2: BlueprintDocument = {
+  schemaVersion: 1,
+  blueprintId: "41bf5dc4-f741-45af-850a-0e81b583e219",
+  version: "v1.3.0",
+  name: "场景2",
+  description: "",
+  baseId: "wuling_protocol_core",
+  initialGridPoint: { x: 7, y: 4 },
+  entities: {
+    "item_port_cmpt_mc_1:12": {
+      id: "item_port_cmpt_mc_1:12",
+      definitionId: "item_port_cmpt_mc_1",
+      position: { x: 8, y: 3 },
+      rotation: 270,
+      config: {},
+      tags: [],
+    },
+    "item_port_liquid_furnance_1:9": {
+      id: "item_port_liquid_furnance_1:9",
+      definitionId: "item_port_liquid_furnance_1",
+      position: { x: 4, y: 0 },
+      rotation: 180,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:414:0": {
+      id: "logistics-draft:belt:414:0",
+      definitionId: "belt_straight_1x1",
+      position: { x: 7, y: 3 },
+      rotation: 180,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:415:1": {
+      id: "logistics-draft:belt:415:1",
+      definitionId: "belt_straight_1x1",
+      position: { x: 6, y: 3 },
+      rotation: 180,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:416:2": {
+      id: "logistics-draft:belt:416:2",
+      definitionId: "belt_straight_1x1",
+      position: { x: 5, y: 3 },
+      rotation: 180,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:426:0": {
+      id: "logistics-draft:belt:426:0",
+      definitionId: "belt_straight_1x1",
+      position: { x: 2, y: 4 },
+      rotation: 90,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:427:1": {
+      id: "logistics-draft:belt:427:1",
+      definitionId: "belt_straight_1x1",
+      position: { x: 2, y: 5 },
+      rotation: 90,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:428:2": {
+      id: "logistics-draft:belt:428:2",
+      definitionId: "belt_straight_1x1",
+      position: { x: 2, y: 6 },
+      rotation: 90,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:445:0": {
+      id: "logistics-draft:belt:445:0",
+      definitionId: "belt_straight_1x1",
+      position: { x: 7, y: 7 },
+      rotation: 180,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:446:1": {
+      id: "logistics-draft:belt:446:1",
+      definitionId: "belt_straight_1x1",
+      position: { x: 6, y: 7 },
+      rotation: 180,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:447:2": {
+      id: "logistics-draft:belt:447:2",
+      definitionId: "belt_straight_1x1",
+      position: { x: 5, y: 7 },
+      rotation: 180,
+      config: {},
+      tags: [],
+    },
+  },
+  entityOrder: [
+    "item_port_cmpt_mc_1:12",
+    "item_port_liquid_furnance_1:9",
+    "logistics-draft:belt:414:0",
+    "logistics-draft:belt:415:1",
+    "logistics-draft:belt:416:2",
+    "logistics-draft:belt:426:0",
+    "logistics-draft:belt:427:1",
+    "logistics-draft:belt:428:2",
+    "logistics-draft:belt:445:0",
+    "logistics-draft:belt:446:1",
+    "logistics-draft:belt:447:2",
+  ],
+  slotLinks: [],
+  createdAt: "2026-06-19T13:28:08.212Z",
+  updatedAt: "2026-06-19T13:28:08.212Z",
+};
+
 function createWorkspace(): WorkspaceContract {
   return {
     state: createWorkspaceState(),
@@ -246,21 +456,24 @@ async function waitForEditorInitialDocumentLoad(
   throw new Error("等待 editor 初始文档加载超时");
 }
 
-function resetCanvasFromUserBlueprint(editorHost: EditorHost): void {
+function resetCanvasFromUserBlueprint(
+  editorHost: EditorHost,
+  blueprint: BlueprintDocument = USER_PROVIDED_BLUEPRINT,
+): void {
   const emptyDocument = createWorldDocument({
-    baseId: USER_PROVIDED_BLUEPRINT.baseId,
+    baseId: blueprint.baseId,
   });
   editorHost.internalDocument.setSnapshot(emptyDocument);
 
   const blueprintDocument: WorldDocument = {
     ...emptyDocument,
-    entities: structuredClone(USER_PROVIDED_BLUEPRINT.entities),
-    entityOrder: [...USER_PROVIDED_BLUEPRINT.entityOrder],
-    slotLinks: structuredClone(USER_PROVIDED_BLUEPRINT.slotLinks),
+    entities: structuredClone(blueprint.entities),
+    entityOrder: [...blueprint.entityOrder],
+    slotLinks: structuredClone(blueprint.slotLinks),
     documentSettings: {
       ...emptyDocument.documentSettings,
       viewport: {
-        center: { ...USER_PROVIDED_BLUEPRINT.initialGridPoint },
+        center: { ...blueprint.initialGridPoint },
         gridSize: emptyDocument.documentSettings.viewport.gridSize,
         displayRotation: 0,
       },

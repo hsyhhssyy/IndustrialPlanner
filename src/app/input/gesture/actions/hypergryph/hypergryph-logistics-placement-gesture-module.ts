@@ -8,7 +8,9 @@ import type { WorldDocument, WorldEntity } from "@/domain/document/world-documen
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridEdge, GridPoint, GridRotation } from "@/domain/shared/grid";
 import type {
+  CreateLogisticsDraftStartOptions,
   LogisticsDraftActionResult,
+  LogisticsDraftEndpoint,
   LogisticsDraftReadonlyState,
   LogisticsKind,
   LogisticsRouteOrder,
@@ -365,11 +367,7 @@ function handleTouchTap(options: {
   const result = options.editor.actions.createLogisticsDraftStart({
     kind,
     allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
-    source: {
-      type: "device",
-      entityId: endpoint.entityId,
-      pointerGridPoint: gridPoint,
-    },
+    source: resolveDevicePortStartSource(endpoint, gridPoint),
     routeOrder: options.appHost.internalState.runtime.logisticsPlacement.routeOrder,
   });
 
@@ -453,11 +451,7 @@ function handleTouchDragStart(options: {
     const result = options.editor.actions.createLogisticsDraftStart({
       kind,
       allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
-      source: {
-        type: "device",
-        entityId: endpoint.entityId,
-        pointerGridPoint,
-      },
+      source: resolveDevicePortStartSource(endpoint, pointerGridPoint),
       routeOrder: runtime.routeOrder,
     });
     updateRuntimeFromResult({
@@ -679,11 +673,7 @@ function driveMouseLogisticsStartPreview(options: {
   const result = options.editor.actions.createLogisticsDraftStart({
     kind: options.kind,
     allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
-    source: {
-      type: "device",
-      entityId: endpoint.entityId,
-      pointerGridPoint: options.gridPoint,
-    },
+    source: resolveDevicePortStartSource(endpoint, options.gridPoint),
     routeOrder: runtime.routeOrder,
   });
   updateRuntimeFromResult({
@@ -794,11 +784,7 @@ function createMouseLogisticsStart(options: {
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
       allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
-      source: {
-        type: "device",
-        entityId: endpoint.entityId,
-        pointerGridPoint: options.gridPoint,
-      },
+      source: resolveDevicePortStartSource(endpoint, options.gridPoint),
       routeOrder: options.appHost.internalState.runtime.logisticsPlacement.routeOrder,
     });
   } else if (endpoint?.type === "logistics-entity") {
@@ -915,11 +901,7 @@ function createContinuedMouseLogisticsStart(options: {
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
       allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
-      source: {
-        type: "device",
-        entityId: endpoint.entityId,
-        pointerGridPoint: options.gridPoint,
-      },
+      source: resolveDevicePortStartSource(endpoint, options.gridPoint),
       routeOrder: options.appHost.internalState.runtime.logisticsPlacement.routeOrder,
     });
   } else {
@@ -1087,6 +1069,27 @@ function resolveLogisticsPlacementBehaviorOptions(appHost: AppHost): LogisticsPl
     allowEmptySource: appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints,
     autoCreateSplittersAndConvergers:
       appHost.state.settings.hypergryphAutoCreateSplittersAndConvergers,
+  };
+}
+
+function resolveDevicePortStartSource(
+  endpoint: Extract<LogisticsDraftEndpoint, { readonly type: "device-port" }>,
+  pointerGridPoint: GridPoint,
+): CreateLogisticsDraftStartOptions["source"] {
+  if (endpoint.fixedSource === true) {
+    return {
+      type: "fixed-device-port",
+      entityId: endpoint.entityId,
+      portGroupId: endpoint.portGroupId,
+      portId: endpoint.portId,
+      outsideGridPoint: { ...endpoint.outsideGridPoint },
+    };
+  }
+
+  return {
+    type: "device",
+    entityId: endpoint.entityId,
+    pointerGridPoint,
   };
 }
 

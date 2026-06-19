@@ -130,6 +130,13 @@ export function createEditorLogisticsActions(
       // 避免在鼠标悬浮阶段暴露多余的 1 格传送带/管道草稿。
       // moveLogisticEnd 首次调用时从 source 和 pointer 重新生成实际路径。
       if (source.type === "device-port") {
+        const replacingEntityId = source.fixedSource === true
+          ? resolveFixedSourceReplacingEntityId({
+              context: logisticsContext,
+              kind: options.kind,
+              source,
+            })
+          : null;
         logisticsContext.state.internalTransientState.logisticsDraft = {
           kind: options.kind,
           source,
@@ -137,7 +144,7 @@ export function createEditorLogisticsActions(
           routeOrder,
           cells: [],
           headDraftEntityId: null,
-          replacingEntityId: null,
+          replacingEntityId,
           canApply: false,
           invalidReason: null,
         };
@@ -225,6 +232,7 @@ export function createEditorLogisticsActions(
       if (
         options.routeMode.type === "single-bend"
         && draft.source.type === "device-port"
+        && draft.source.fixedSource !== true
         && cursorTarget !== null
       ) {
         const deviceRoute = resolveDeviceToDeviceRoute({
@@ -526,6 +534,43 @@ function resolveCreateSourceEndpoint(
       });
     }
 
+    case "fixed-device-port": {
+      const source = options.source;
+      const entity = findEntityById({
+        entityId: source.entityId,
+        document: currentDocument,
+        drafts: [],
+        baseDefinitions: context.workspace.registry.baseDefinitions,
+      });
+      if (entity === null) {
+        return null;
+      }
+
+      const definition = context.entityDefinitionMap.get(entity.definitionId);
+      if (definition === undefined) {
+        return null;
+      }
+
+      const endpoint = resolveDevicePortEndpoints({
+        entity,
+        definition,
+        kind: options.kind,
+        direction: "output",
+        pointerGridPoint: source.outsideGridPoint,
+      }).find((candidate) =>
+        candidate.portGroupId === source.portGroupId
+        && candidate.portId === source.portId
+        && areGridPointsEqual(candidate.outsideGridPoint, source.outsideGridPoint)
+      );
+
+      return endpoint === undefined
+        ? null
+        : {
+            ...endpoint,
+            fixedSource: true,
+          };
+    }
+
     case "logistics-entity": {
       const entity = currentDocument.entities[options.source.entityId];
       if (
@@ -560,7 +605,11 @@ function resolveMoveSourceEndpoint(options: {
   options: MoveLogisticsDraftEndOptions;
 }): LogisticsDraftEndpoint | null {
   const source = options.draft.source;
-  if (source?.type !== "device-port" || options.options.routeMode.type !== "single-bend") {
+  if (
+    source?.type !== "device-port"
+    || source.fixedSource === true
+    || options.options.routeMode.type !== "single-bend"
+  ) {
     return source;
   }
 
@@ -587,6 +636,24 @@ function resolveMoveSourceEndpoint(options: {
     direction: "output",
     pointerGridPoint: options.options.pointerGridPoint,
   });
+}
+
+function resolveFixedSourceReplacingEntityId(options: {
+  context: LogisticsActionContext;
+  kind: LogisticsKind;
+  source: DevicePortEndpoint;
+}): string | null {
+  const entity = findTopEntityAtGridPoint({
+    gridPoint: options.source.outsideGridPoint,
+    document: options.context.document.getSnapshot(),
+    drafts: [],
+    entityDefinitionMap: options.context.entityDefinitionMap,
+    baseDefinitions: options.context.workspace.registry.baseDefinitions,
+  });
+
+  return entity !== null && isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+    ? entity.id
+    : null;
 }
 
 function resolveEffectiveSingleBendRouteOrder(options: {
@@ -1398,6 +1465,55 @@ function resolveAutoDraftPlan(options: {
 
   const firstCell = options.cells[0] ?? null;
   const secondCell = options.cells[1] ?? null;
+  let handledFixedExistingSource = false;
+  if (
+    firstCell !== null
+    && options.source.type === "device-port"
+    && options.source.fixedSource === true
+    && options.replacingEntityId !== null
+  ) {
+    const sourceInfo = resolveOrdinaryLogisticsConnectionInfo({
+      context: options.context,
+      kind: options.kind,
+      document: currentDocument,
+      entityId: options.replacingEntityId,
+    });
+    if (sourceInfo !== null) {
+      handledFixedExistingSource = true;
+      const sourceAxis = resolveEdgeAxis(options.source.edge);
+      const existingAxis = resolveEdgeAxis(sourceInfo.inputEdge);
+
+      // 旧物流横跨设备输出轴时，首格必须成为双通道桥接器，不受自动分/汇流开关影响。
+      if (sourceAxis !== existingAxis) {
+        if (
+          resolveStraightCellAxis(firstCell) !== sourceAxis
+        ) {
+          invalidReason = "overlap-existing-logistics";
+        } else {
+          cellOverridesByGridKey.set(
+            gridPointKey(firstCell.gridPoint),
+            createAutoDeviceOverride(options.kind, "connector", null),
+          );
+          replacingEntityIds.add(sourceInfo.entity.id);
+        }
+      } else if (firstCell.fromEdge === sourceInfo.inputEdge) {
+        // 旧物流本身就是设备输出：拉出新分支时按开关创建分流器，否则改写普通物流段。
+        replacingEntityIds.add(sourceInfo.entity.id);
+        if (
+          options.autoCreateSplittersAndConvergers
+          && firstCell.toEdge !== sourceInfo.outputEdge
+        ) {
+          cellOverridesByGridKey.set(
+            gridPointKey(firstCell.gridPoint),
+            createAutoDeviceOverride(options.kind, "splitter", sourceInfo.inputEdge),
+          );
+        }
+      } else {
+        invalidReason = "overlap-existing-logistics";
+      }
+    }
+  }
+
   if (
     firstCell !== null
     && secondCell !== null
@@ -1520,7 +1636,11 @@ function resolveAutoDraftPlan(options: {
     }
   }
 
-  if (firstCell !== null && options.source.type === "device-port") {
+  if (
+    firstCell !== null
+    && options.source.type === "device-port"
+    && !handledFixedExistingSource
+  ) {
     if (options.target?.type === "device-port" || options.cells.length > 1) {
       invalidReason = resolveConnectorCrossingAutoDraftCell({
         context: options.context,

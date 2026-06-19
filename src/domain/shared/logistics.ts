@@ -43,6 +43,8 @@ export type LogisticsDraftEndpoint =
       readonly insideGridPoint: GridPoint;
       readonly outsideGridPoint: GridPoint;
       readonly edge: GridEdge;
+      /** 从端口外侧格起笔时固定该端口；普通设备格起笔仍可动态选择最近端口。 */
+      readonly fixedSource?: true;
     }
   | {
       readonly type: "logistics-entity";
@@ -74,6 +76,14 @@ export interface CreateLogisticsDraftStartOptions {
         readonly type: "device";
         readonly entityId: string;
         readonly pointerGridPoint: GridPoint;
+      }
+    | {
+        /** 从端口外侧的空地或普通物流格起笔，并固定到指定输出端口。 */
+        readonly type: "fixed-device-port";
+        readonly entityId: string;
+        readonly portGroupId: string;
+        readonly portId: string;
+        readonly outsideGridPoint: GridPoint;
       }
     | {
         readonly type: "logistics-entity";

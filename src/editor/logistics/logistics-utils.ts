@@ -41,6 +41,13 @@ export const LOGISTICS_DEFINITION_IDS = {
 } as const;
 
 const EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
+// 以起笔格为中心，设备来源方向优先级固定为左、上、右、下。
+const ADJACENT_OUTPUT_SOURCE_OFFSETS = [
+  { x: -1, y: 0 },
+  { x: 0, y: -1 },
+  { x: 1, y: 0 },
+  { x: 0, y: 1 },
+] as const;
 
 export function createEntityDefinitionMap(
   definitions: readonly EntityDefinition[],
@@ -98,22 +105,29 @@ export function resolveLogisticsEndpointAtGridPoint(options: {
 }): LogisticsDraftEndpoint | null {
   const entity = findTopEntityAtGridPoint(options);
 
-  if (entity === null) {
-    return {
-      type: "empty-cell",
-      gridPoint: { ...options.gridPoint },
-    };
-  }
-
   if (
-    isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
-    && !isBaseBuiltinEntityId(entity.id)
+    entity === null
+    || (
+      isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+      && !isBaseBuiltinEntityId(entity.id)
+    )
   ) {
-    return {
-      type: "logistics-entity",
-      entityId: entity.id,
-      gridPoint: { ...entity.position },
-    };
+    // 空地和普通物流格优先视为相邻设备的固定输出端口外侧格。
+    const adjacentOutput = resolveAdjacentFixedOutputPortEndpoint(options);
+    if (adjacentOutput !== null) {
+      return adjacentOutput;
+    }
+
+    return entity === null
+      ? {
+          type: "empty-cell",
+          gridPoint: { ...options.gridPoint },
+        }
+      : {
+          type: "logistics-entity",
+          entityId: entity.id,
+          gridPoint: { ...entity.position },
+        };
   }
 
   const definition = options.entityDefinitionMap.get(entity.definitionId);
@@ -128,6 +142,56 @@ export function resolveLogisticsEndpointAtGridPoint(options: {
     direction: "output",
     pointerGridPoint: options.gridPoint,
   });
+}
+
+function resolveAdjacentFixedOutputPortEndpoint(options: {
+  gridPoint: GridPoint;
+  kind: LogisticsKind;
+  document: WorldDocument;
+  drafts: readonly WorldEntity[];
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  baseDefinitions?: readonly BaseDefinition[];
+}): DevicePortEndpoint | null {
+  for (const offset of ADJACENT_OUTPUT_SOURCE_OFFSETS) {
+    const neighborGridPoint = {
+      x: options.gridPoint.x + offset.x,
+      y: options.gridPoint.y + offset.y,
+    };
+    const neighbor = findTopEntityAtGridPoint({
+      ...options,
+      gridPoint: neighborGridPoint,
+    });
+    if (neighbor === null || isOrdinaryLogisticsDefinitionId(neighbor.definitionId, options.kind)) {
+      continue;
+    }
+
+    const definition = options.entityDefinitionMap.get(neighbor.definitionId);
+    if (definition === undefined) {
+      continue;
+    }
+
+    const endpoints = resolveDevicePortEndpoints({
+      entity: neighbor,
+      definition,
+      kind: options.kind,
+      direction: "output",
+      pointerGridPoint: options.gridPoint,
+    })
+      .filter((endpoint) => areGridPointsEqual(endpoint.outsideGridPoint, options.gridPoint))
+      .sort((left, right) => {
+        const groupDelta = left.portGroupId.localeCompare(right.portGroupId);
+        return groupDelta !== 0 ? groupDelta : left.portId.localeCompare(right.portId);
+      });
+    const endpoint = endpoints[0];
+    if (endpoint !== undefined) {
+      return {
+        ...endpoint,
+        fixedSource: true,
+      };
+    }
+  }
+
+  return null;
 }
 
 export function resolveNearestDevicePortEndpoint(options: {

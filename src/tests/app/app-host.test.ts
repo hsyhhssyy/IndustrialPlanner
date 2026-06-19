@@ -3091,6 +3091,122 @@ describe("createAppHost", () => {
     expect(logisticsDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 0, y: 2 });
   });
 
+  it("starts mouse logistics from an adjacent fixed output while empty starts are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = false;
+    });
+    const document = createDummyWorldDocument();
+    document.entities = {
+      storage: {
+        id: "storage",
+        definitionId: "item_port_storager_1",
+        position: { x: 6, y: 6 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    };
+    document.entityOrder = ["storage"];
+    editorHost.internalDocument.setSnapshot(document);
+
+    const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 7, y: 5 });
+    const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 9, y: 5 });
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyE",
+      key: "e",
+      keyCode: 69,
+    }));
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 91,
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 91,
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 92,
+      clientX: endPoint.x,
+      clientY: endPoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
+
+    expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
+      canApply: true,
+      source: {
+        type: "device-port",
+        entityId: expect.any(String),
+        portId: "out_n_1",
+        outsideGridPoint: { x: 7, y: 5 },
+        fixedSource: true,
+      },
+    });
+  });
+
+  it("starts touch logistics from an adjacent fixed output while empty starts are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = false;
+    });
+    const document = createDummyWorldDocument();
+    document.entities = {
+      storage: {
+        id: "storage",
+        definitionId: "item_port_storager_1",
+        position: { x: 6, y: 6 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    };
+    document.entityOrder = ["storage"];
+    editorHost.internalDocument.setSnapshot(document);
+
+    const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 7, y: 5 });
+    const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 7, y: 3 });
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "placement-action-belt-draw",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+    appHost.gestureAdapter.handlePointerDown(touchEvent(93, startPoint.x, startPoint.y));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(93, endPoint.x, endPoint.y));
+
+    expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
+      canApply: true,
+      source: {
+        type: "device-port",
+        portId: "out_n_1",
+        outsideGridPoint: { x: 7, y: 5 },
+        fixedSource: true,
+      },
+    });
+  });
+
   it("shows the floating toolbar when touch-tapping a device output port to start logistics", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
