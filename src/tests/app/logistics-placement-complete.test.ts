@@ -114,8 +114,10 @@ describe("物流布设模式完全测试集", () => {
   it("连续放置时不会被起笔处端口干扰", () => {
     // 第一段：从 (2,4) 到 (4,3)
     clickCell(appHost, editorHost, { x: 2, y: 4 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
     clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
     // 第二段：从 (4,3) 续接到 (4,6)，不应被起笔处的端口方向干扰
+    moveToCell(appHost, editorHost, { x: 4, y: 6 }, nextPointerId++);
     clickCell(appHost, editorHost, { x: 4, y: 6 }, nextPointerId++);
 
     expectEntityAt(editorHost, {
@@ -128,6 +130,7 @@ describe("物流布设模式完全测试集", () => {
   it("右键结束布设后从已有传送带端点重新起笔生成桥接器", () => {
     // 第一段：从 (2,4) 到 (4,3)
     clickCell(appHost, editorHost, { x: 2, y: 4 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
     clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
     // 右键结束布设
     rightClickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
@@ -153,6 +156,7 @@ describe("物流布设模式完全测试集", () => {
   it("从已有传送带端点续接时切换线序生成弯道", () => {
     // 第一段：从 (2,4) 到 (4,3)
     clickCell(appHost, editorHost, { x: 2, y: 4 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
     clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
     // 右键结束布设
     rightClickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
@@ -202,6 +206,34 @@ describe("物流布设模式完全测试集", () => {
       definitionId: "belt_turn_ccw_1x1",
       position: { x: 2, y: 3 },
       rotation: 90,
+    });
+  });
+
+  it("就近原则A", () => {
+    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_SCENE3);
+    enterBeltLogisticsPlacement(appHost);
+
+    clickCell(appHost, editorHost, { x: 6, y: 5 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+
+    expectEntityAt(editorHost, {
+      definitionId: "item_log_connector",
+      position: { x: 5, y: 3 },
+    });
+  });
+
+  it("就近原则B", () => {
+    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_SCENE3);
+    enterBeltLogisticsPlacement(appHost);
+
+    clickCell(appHost, editorHost, { x: 6, y: 3 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 4, y: 5 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 4, y: 5 }, nextPointerId++);
+
+    expectEntityAt(editorHost, {
+      definitionId: "item_log_connector",
+      position: { x: 5, y: 5 },
     });
   });
 });
@@ -427,6 +459,68 @@ const USER_PROVIDED_BLUEPRINT_SCENE2: BlueprintDocument = {
   slotLinks: [],
   createdAt: "2026-06-19T13:28:08.212Z",
   updatedAt: "2026-06-19T13:28:08.212Z",
+};
+
+const USER_PROVIDED_BLUEPRINT_SCENE3: BlueprintDocument = {
+  schemaVersion: 1,
+  blueprintId: "1041aaaf-437b-435d-ad2b-2241bb520fbe",
+  version: "v1.3.0",
+  name: "场景3",
+  description: "",
+  baseId: "wuling_protocol_core",
+  initialGridPoint: { x: 6, y: 5 },
+  entities: {
+    "item_port_cmpt_mc_1:9": {
+      id: "item_port_cmpt_mc_1:9",
+      definitionId: "item_port_cmpt_mc_1",
+      position: { x: 2, y: 3 },
+      rotation: 270,
+      config: {},
+      tags: [],
+    },
+    "item_port_cmpt_mc_1:11": {
+      id: "item_port_cmpt_mc_1:11",
+      definitionId: "item_port_cmpt_mc_1",
+      position: { x: 6, y: 3 },
+      rotation: 270,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:580:1": {
+      id: "logistics-draft:belt:580:1",
+      definitionId: "belt_straight_1x1",
+      position: { x: 5, y: 5 },
+      rotation: 270,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:581:2": {
+      id: "logistics-draft:belt:581:2",
+      definitionId: "belt_straight_1x1",
+      position: { x: 5, y: 4 },
+      rotation: 270,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:582:3": {
+      id: "logistics-draft:belt:582:3",
+      definitionId: "belt_straight_1x1",
+      position: { x: 5, y: 3 },
+      rotation: 270,
+      config: {},
+      tags: [],
+    },
+  },
+  entityOrder: [
+    "item_port_cmpt_mc_1:9",
+    "item_port_cmpt_mc_1:11",
+    "logistics-draft:belt:580:1",
+    "logistics-draft:belt:581:2",
+    "logistics-draft:belt:582:3",
+  ],
+  slotLinks: [],
+  createdAt: "2026-06-19T13:36:00.575Z",
+  updatedAt: "2026-06-19T13:36:00.575Z",
 };
 
 function createWorkspace(): WorkspaceContract {
