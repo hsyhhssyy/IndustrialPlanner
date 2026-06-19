@@ -977,6 +977,135 @@ describe("物流绘制模式", () => {
     });
   });
 
+  it("replaces every same-input overlap cell when auto devices are disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("old-straight", "belt_straight_1x1", 5, 4, 90),
+      createTestEntity("old-turn", "belt_turn_ccw_1x1", 5, 5),
+      createTestEntity("old-successor", "belt_straight_1x1", 6, 5),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 5, y: 3 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 5, y: 6 },
+      autoCreateSplittersAndConvergers: false,
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+    });
+    expect(editorHost.state.collections.ghost).toEqual([
+      "old-straight",
+      "old-turn",
+    ]);
+    expect(findPreviewDraftAt(editorHost, 5, 5)).toMatchObject({
+      definitionId: "belt_straight_1x1",
+      rotation: 90,
+    });
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
+
+    const snapshot = editorHost.internalDocument.getSnapshot();
+    expect(snapshot.entities["old-straight"]).toBeUndefined();
+    expect(snapshot.entities["old-turn"]).toBeUndefined();
+    expect(snapshot.entities["old-successor"]).toBeDefined();
+    expect(findDocumentEntityAt(snapshot, 5, 5)).toMatchObject({
+      definitionId: "belt_straight_1x1",
+      rotation: 90,
+    });
+  });
+
+  it("creates a splitter at a same-input overlap branch when auto devices are enabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("old-straight", "belt_straight_1x1", 5, 4, 90),
+      createTestEntity("old-turn", "belt_turn_ccw_1x1", 5, 5),
+      createTestEntity("old-successor", "belt_straight_1x1", 6, 5),
+    ]));
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 5, y: 3 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 5, y: 6 },
+      autoCreateSplittersAndConvergers: true,
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+    });
+    expect(editorHost.state.collections.ghost).toEqual([
+      "old-straight",
+      "old-turn",
+    ]);
+    expect(findPreviewDraftAt(editorHost, 5, 5)).toMatchObject({
+      definitionId: "item_log_splitter",
+      rotation: 0,
+    });
+  });
+
+  it.each([false, true])(
+    "rejects head-to-head overlap regardless of auto devices: %s",
+    (autoCreateSplittersAndConvergers) => {
+      const workspace = createWorkspace();
+      const editorHost = createEditorHost(workspace);
+
+      editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+        createTestEntity("old-left", "belt_straight_1x1", 4, 5),
+        createTestEntity("old-middle", "belt_straight_1x1", 5, 5),
+        createTestEntity("old-right", "belt_straight_1x1", 6, 5),
+      ]));
+
+      editorHost.actions.createLogisticsDraftStart({
+        kind: "belt",
+        source: {
+          type: "empty-cell",
+          gridPoint: { x: 7, y: 5 },
+        },
+      });
+      const moveResult = editorHost.actions.moveLogisticEnd({
+        pointerGridPoint: { x: 3, y: 5 },
+        autoCreateSplittersAndConvergers,
+        routeMode: {
+          type: "single-bend",
+          routeOrder: "horizontal-first",
+          allowTemporaryOrderFlip: true,
+        },
+      });
+
+      expect(moveResult).toMatchObject({
+        canApply: false,
+        invalidReason: "overlap-existing-logistics",
+      });
+      expect(editorHost.actions.applyLogisticDraft()).toBe(false);
+    },
+  );
+
   it("creates a converger when ending on a vertically stacked logistics tile with upstream and downstream", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

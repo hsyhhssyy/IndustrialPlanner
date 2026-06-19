@@ -14,22 +14,7 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
 const SIMULATION_CONTROL_BUTTON_ID = "top-bar-simulation-control";
-const SIMULATION_SECONDARY_BUTTON_ID = "top-bar-simulation-secondary-control";
-const SIMULATION_SPEED_OPTIONS = [0.25, 1, 2, 4, 8, 16] as const;
-
-function getNextSimulationSpeed(current: number): number {
-  const currentIndex = SIMULATION_SPEED_OPTIONS.findIndex((candidate) => candidate === current);
-  if (currentIndex !== -1) {
-    return SIMULATION_SPEED_OPTIONS[(currentIndex + 1) % SIMULATION_SPEED_OPTIONS.length] ?? 1;
-  }
-
-  const nextIndex = SIMULATION_SPEED_OPTIONS.findIndex((candidate) => candidate > current);
-  if (nextIndex !== -1) {
-    return SIMULATION_SPEED_OPTIONS[nextIndex] ?? 1;
-  }
-
-  return SIMULATION_SPEED_OPTIONS[0] ?? 1;
-}
+const SIMULATION_SPEED_OPTIONS = [0.25, 1, 2, 4, 16] as const;
 
 function formatSimulationSpeedLabel(speed: number) {
   return `x${speed}`;
@@ -119,55 +104,74 @@ export const SimulationControlButton = observer(function SimulationControlButton
   );
 });
 
-export const SimulationSecondaryButton = observer(function SimulationSecondaryButton({
+// AI-REMOVED 2026-06-19:
+// Reason: 速度控制从逐级循环切换改为平铺直选按钮组（x0.25/x1/x2/x4/x16/停止）。
+// Trigger: 用户需求 — topbar 展开时直接展示所有速度选项。
+// Evidence: SimulationSecondaryButton 仅在 TopBar 内使用，已替换为 SimulationSpeedButtons。
+// Replacement: SimulationSpeedButtons
+// Risk: Low
+// Human Review: Not Required
+//
+// Original code:
+// export const SimulationSecondaryButton = observer(function SimulationSecondaryButton({
+//   appHost,
+// }: {
+//   appHost: AppHost;
+// }) {
+//   ...
+// });
+
+export const SimulationSpeedButtons = observer(function SimulationSpeedButtons({
   appHost,
 }: {
   appHost: AppHost;
 }) {
   const simulation = appHost.workspace.simulation;
-  const simulationState = simulation?.state.runningState ?? "stop";
-  const isRunning = simulationState === "start";
-  const simulationSpeed = simulation?.state.simulationSpeed ?? 1;
-  const speedLabel = formatSimulationSpeedLabel(simulationSpeed);
-  const label = isRunning
-    ? `${appHost.actions.translate("statusBar.speed")} ${speedLabel}`
-    : appHost.actions.translate("action.stop");
+  const currentSpeed = simulation?.state.simulationSpeed ?? 1;
+  const t = appHost.actions.translate;
 
-  const handleClick = () => {
-    if (simulation === null) {
-      return;
-    }
+  const handleSpeedClick = (speed: number) => {
+    if (simulation === null) return;
+    simulation.actions.setSimulationSpeed(speed);
+  };
 
-    if (!isRunning) {
-      simulation.actions.stop();
-      return;
-    }
-
-    simulation.actions.setSimulationSpeed(getNextSimulationSpeed(simulation.state.simulationSpeed));
+  const handleStopClick = () => {
+    if (simulation === null) return;
+    simulation.actions.stop();
   };
 
   return (
-    <button
-      aria-label={label}
-      className={cm(styles, isRunning
-        ? "top-bar-simulation-secondary-button top-bar-speed-button"
-        : "top-bar-simulation-secondary-button top-bar-icon-button")}
-      data-ui-button-id={SIMULATION_SECONDARY_BUTTON_ID}
-      onClick={handleClick}
-      title={label}
-      type="button"
-    >
-      {isRunning ? (
-        <span className={cm(styles, "top-bar-speed-label")}>{speedLabel}</span>
-      ) : (
-        <>
-          <span className={cm(styles, "top-bar-toggle-icon")}>
-            <WorkbenchIcon kind="stop" />
-          </span>
-          <span className={cm(styles, "sr-only")}>{label}</span>
-        </>
-      )}
-    </button>
+    <>
+      {SIMULATION_SPEED_OPTIONS.map((speed) => (
+        <button
+          key={speed}
+          aria-label={`${t("statusBar.speed")} ${formatSimulationSpeedLabel(speed)}`}
+          aria-pressed={currentSpeed === speed}
+          className={cm(styles, currentSpeed === speed
+            ? "top-bar-speed-button top-bar-speed-active"
+            : "top-bar-speed-button")}
+          data-ui-button-id={`top-bar-speed-${speed}`}
+          onClick={() => handleSpeedClick(speed)}
+          title={`${t("statusBar.speed")} ${formatSimulationSpeedLabel(speed)}`}
+          type="button"
+        >
+          <span className={cm(styles, "top-bar-speed-label")}>{formatSimulationSpeedLabel(speed)}</span>
+        </button>
+      ))}
+      <button
+        aria-label={t("action.stop")}
+        className={cm(styles, "top-bar-icon-button")}
+        data-ui-button-id="top-bar-simulation-stop"
+        onClick={handleStopClick}
+        title={t("action.stop")}
+        type="button"
+      >
+        <span className={cm(styles, "top-bar-toggle-icon")}>
+          <WorkbenchIcon kind="stop" />
+        </span>
+        <span className={cm(styles, "sr-only")}>{t("action.stop")}</span>
+      </button>
+    </>
   );
 });
 
@@ -233,7 +237,7 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
           appHost={appHost}
           className={cm(styles, "top-bar-icon-button")}
         />
-        <SimulationSecondaryButton appHost={appHost} />
+        <SimulationSpeedButtons appHost={appHost} />
         <FullscreenToggleButton
           appHost={appHost}
           className={cm(styles, "top-bar-icon-button top-bar-fullscreen-button")}

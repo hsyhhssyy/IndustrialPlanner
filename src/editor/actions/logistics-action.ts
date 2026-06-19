@@ -689,6 +689,7 @@ function rebuildLogisticsDraft(options: {
   });
 
   const prevConvergerGridKey = options.context.state.internalTransientState.convergerEntityGridKey;
+  let invalidatedByExtendingConverger = false;
   let effectiveInvalidReason = resolveInvalidReason({
     context: options.context,
     kind: options.kind,
@@ -710,14 +711,20 @@ function rebuildLogisticsDraft(options: {
     );
     if (prevConvergerCellIndex >= 0 && prevConvergerCellIndex < cells.length - 1) {
       effectiveInvalidReason = "unknown";
+      invalidatedByExtendingConverger = true;
     }
   }
 
   const canApply = effectiveInvalidReason === null;
+  // AI-CORRECTION 2026-06-19:
+  // 从既有汇流器终点继续延伸而被拦截时，不得保留本轮重新规划出的汇流器虚影。
+  const effectiveCellOverridesByGridKey = invalidatedByExtendingConverger
+    ? new Map<string, AutoDraftCellOverride>()
+    : autoDraftPlan.cellOverridesByGridKey;
 
   // 记录本次自动创建的汇流器（含实体替换）所在 cell，供下一帧检测延伸。
   let nextConvergerGridKey: string | null = null;
-  for (const [key, override] of autoDraftPlan.cellOverridesByGridKey) {
+  for (const [key, override] of effectiveCellOverridesByGridKey) {
     if (
       override.definitionId.endsWith("_converger")
       && autoDraftPlan.replacingEntityIds.length > 0
@@ -731,7 +738,7 @@ function rebuildLogisticsDraft(options: {
     context: options.context,
     kind: options.kind,
     cells,
-    cellOverridesByGridKey: autoDraftPlan.cellOverridesByGridKey,
+    cellOverridesByGridKey: effectiveCellOverridesByGridKey,
     currentDocument,
     previousPreviewDrafts,
     previousPreviewDraftIds,
@@ -1398,7 +1405,30 @@ function resolveAutoDraftPlan(options: {
       && targetInfo.entity.id !== options.replacingEntityId
       && options.target === null
     ) {
-      if (targetInfo.inputConnected) {
+      // AI-CORRECTION 2026-06-19:
+      // 从已有物流段的出口方向反向拉入会形成头对头，不能创建汇流器或普通替换。
+      if (
+        options.kind === "belt"
+        && lastCell.fromEdge === targetInfo.outputEdge
+      ) {
+        invalidReason = "overlap-existing-logistics";
+      } else if (
+        options.kind === "belt"
+        && lastCell.fromEdge === targetInfo.inputEdge
+      ) {
+        // 沿已有物流段同入口覆盖时，保留新路径形态并替换旧格。
+        if (
+          options.autoCreateSplittersAndConvergers
+          && lastCell.toEdge !== targetInfo.outputEdge
+          && targetInfo.outputConnected
+        ) {
+          cellOverridesByGridKey.set(
+            gridPointKey(lastCell.gridPoint),
+            createAutoDeviceOverride(options.kind, "splitter", targetInfo.inputEdge),
+          );
+        }
+        replacingEntityIds.add(targetInfo.entity.id);
+      } else if (targetInfo.inputConnected) {
         if (!options.autoCreateSplittersAndConvergers) {
           invalidReason = "overlap-existing-logistics";
         } else {
@@ -1514,11 +1544,12 @@ function resolveAutoDraftPlan(options: {
     if (cell === undefined) {
       continue;
     }
-    invalidReason = resolveConnectorCrossingAutoDraftCell({
+    invalidReason = resolveExistingLogisticsOverlapAutoDraftCell({
       context: options.context,
       kind: options.kind,
       document: currentDocument,
       cell,
+      autoCreateSplittersAndConvergers: options.autoCreateSplittersAndConvergers,
       cellOverridesByGridKey,
       replacingEntityIds,
     }) ?? invalidReason;
@@ -1586,6 +1617,73 @@ function resolveAutoDraftPlan(options: {
     replacingEntityIds: Array.from(replacingEntityIds),
     invalidReason,
   };
+}
+
+function resolveExistingLogisticsOverlapAutoDraftCell(options: {
+  readonly context: LogisticsActionContext;
+  readonly kind: LogisticsKind;
+  readonly document: WorldDocument;
+  readonly cell: LogisticsPathCell;
+  readonly autoCreateSplittersAndConvergers: boolean;
+  readonly cellOverridesByGridKey: Map<string, AutoDraftCellOverride>;
+  readonly replacingEntityIds: Set<string>;
+}): LogisticsDraftInvalidReason | null {
+  if (options.kind !== "belt") {
+    return resolveConnectorCrossingAutoDraftCell(options);
+  }
+
+  const entity = findTopEntityAtGridPoint({
+    gridPoint: options.cell.gridPoint,
+    document: options.document,
+    drafts: [],
+    entityDefinitionMap: options.context.entityDefinitionMap,
+    baseDefinitions: options.context.workspace.registry.baseDefinitions,
+  });
+  const info = entity === null
+    ? null
+    : resolveOrdinaryLogisticsConnectionInfo({
+        context: options.context,
+        kind: options.kind,
+        document: options.document,
+        entityId: entity.id,
+      });
+  if (info === null) {
+    return null;
+  }
+
+  const fromEdge = options.cell.fromEdge;
+  const toEdge = options.cell.toEdge;
+  if (fromEdge === null || toEdge === null) {
+    return "overlap-existing-logistics";
+  }
+
+  // 新路径从旧路径出口进入，或朝旧路径入口退出，都会形成头对头。
+  if (fromEdge === info.outputEdge || toEdge === info.inputEdge) {
+    return "overlap-existing-logistics";
+  }
+
+  if (fromEdge === info.inputEdge) {
+    options.replacingEntityIds.add(info.entity.id);
+    if (
+      options.autoCreateSplittersAndConvergers
+      && toEdge !== info.outputEdge
+      && info.outputConnected
+    ) {
+      options.cellOverridesByGridKey.set(
+        gridPointKey(options.cell.gridPoint),
+        createAutoDeviceOverride(options.kind, "splitter", info.inputEdge),
+      );
+    }
+    return null;
+  }
+
+  if (toEdge === info.outputEdge) {
+    // 汇流只允许作为终点。若从侧面接入后继续沿旧主干移动，
+    // 该格已经不是终点，继续覆盖会形成自动设备链，整条路径应判定为非法。
+    return "overlap-existing-logistics";
+  }
+
+  return resolveConnectorCrossingAutoDraftCell(options);
 }
 
 function resolveConnectorCrossingAutoDraftCell(options: {

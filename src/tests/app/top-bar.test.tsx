@@ -358,7 +358,7 @@ describe("TopBar", () => {
     expect(pause).not.toHaveBeenCalled();
   });
 
-  it("shows a local speed cycle button beside the pause button while running", async () => {
+  it("shows flat speed buttons beside the pause button while running", async () => {
     const workspace = createWorkspace();
     const { setSimulationSpeed } = attachSimulationStub(workspace, { state: "start" });
     const appHost = createAppHost(workspace);
@@ -367,32 +367,32 @@ describe("TopBar", () => {
       root.render(<TopBar appHost={appHost} />);
     });
 
-    const speedButton = container.querySelector(
-      '[data-ui-button-id="top-bar-simulation-secondary-control"]',
-    ) as HTMLButtonElement | null;
-
-    expect(speedButton).not.toBeNull();
-    expect(speedButton?.textContent).toBe("x1");
-    expect(speedButton?.title).toBe("速率 x1");
-
-    for (const [expectedCall, expectedLabel] of [
-      [2, "x2"],
-      [4, "x4"],
-      [8, "x8"],
-      [16, "x16"],
-      [0.25, "x0.25"],
-      [1, "x1"],
-    ] as const) {
-      await act(async () => {
-        speedButton?.click();
-      });
-
-      expect(setSimulationSpeed).toHaveBeenLastCalledWith(expectedCall);
-      expect(speedButton?.textContent).toBe(expectedLabel);
+    // 验证5个速度按钮全部渲染
+    for (const speed of [0.25, 1, 2, 4, 16]) {
+      const speedButton = container.querySelector(
+        `[data-ui-button-id="top-bar-speed-${speed}"]`,
+      ) as HTMLButtonElement | null;
+      expect(speedButton).not.toBeNull();
+      expect(speedButton?.textContent).toBe(`x${speed}`);
     }
+
+    // 验证当前速度高亮
+    const activeButton = container.querySelector(
+      '[data-ui-button-id="top-bar-speed-1"]',
+    ) as HTMLButtonElement | null;
+    expect(activeButton?.getAttribute("aria-pressed")).toBe("true");
+
+    // 点击 x4 直接设置速度
+    const x4Button = container.querySelector(
+      '[data-ui-button-id="top-bar-speed-4"]',
+    ) as HTMLButtonElement | null;
+    await act(async () => {
+      x4Button?.click();
+    });
+    expect(setSimulationSpeed).toHaveBeenLastCalledWith(4);
   });
 
-  it("shows a stop button beside the play button while the simulation is not running", async () => {
+  it("shows a stop button in the speed button group", async () => {
     const workspace = createWorkspace();
     const { stop } = attachSimulationStub(workspace, { state: "pause" });
     const appHost = createAppHost(workspace);
@@ -401,18 +401,18 @@ describe("TopBar", () => {
       root.render(<TopBar appHost={appHost} />);
     });
 
-    const secondaryButton = container.querySelector(
-      '[data-ui-button-id="top-bar-simulation-secondary-control"]',
+    const stopButton = container.querySelector(
+      '[data-ui-button-id="top-bar-simulation-stop"]',
     ) as HTMLButtonElement | null;
 
-    expect(secondaryButton).not.toBeNull();
-    expect(secondaryButton?.title).toBe("停止仿真");
+    expect(stopButton).not.toBeNull();
+    expect(stopButton?.title).toBe("停止仿真");
     expect(
-      secondaryButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
+      stopButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
     ).toBe("stop");
 
     await act(async () => {
-      secondaryButton?.click();
+      stopButton?.click();
     });
 
     expect(stop).toHaveBeenCalledTimes(1);
@@ -429,9 +429,6 @@ describe("TopBar", () => {
     const simulationButton = container.querySelector(
       '[data-ui-button-id="top-bar-simulation-control"]',
     ) as HTMLButtonElement | null;
-    const secondaryButton = container.querySelector(
-      '[data-ui-button-id="top-bar-simulation-secondary-control"]',
-    ) as HTMLButtonElement | null;
     const fullscreenButton = container.querySelector(
       ".top-bar-fullscreen-button",
     ) as HTMLButtonElement | null;
@@ -442,15 +439,9 @@ describe("TopBar", () => {
     expect(container.textContent).not.toContain("设备:");
     expect(container.textContent).not.toContain("屏幕:");
     expect(simulationButton).not.toBeNull();
-    expect(secondaryButton).not.toBeNull();
     expect(fullscreenButton).not.toBeNull();
-    expect(
-      Array.from(container.querySelectorAll(".top-bar-controls button")),
-    ).toEqual([
-      simulationButton,
-      secondaryButton,
-      fullscreenButton,
-    ]);
+    // 速度按钮组：5个速度 + 1个停止 + 主控 + 全屏 = 8
+    expect(container.querySelectorAll(".top-bar-controls button")).toHaveLength(8);
     expect(container.querySelector(".top-bar-theme-button")).toBeNull();
   });
 
@@ -478,25 +469,15 @@ describe("TopBar", () => {
     const simulationButton = container.querySelector(
       '[data-ui-button-id="top-bar-simulation-control"]',
     ) as HTMLButtonElement | null;
-    const secondaryButton = container.querySelector(
-      '[data-ui-button-id="top-bar-simulation-secondary-control"]',
-    ) as HTMLButtonElement | null;
     const collapseButton = container.querySelector(
       ".top-bar-collapse-button",
     ) as HTMLButtonElement | null;
 
     expect(simulationButton).not.toBeNull();
-    expect(secondaryButton).not.toBeNull();
     expect(fullscreenButton).not.toBeNull();
     expect(collapseButton).not.toBeNull();
-    expect(
-      Array.from(container.querySelectorAll(".top-bar-controls button")),
-    ).toEqual([
-      simulationButton,
-      secondaryButton,
-      fullscreenButton,
-      collapseButton,
-    ]);
+    // 速度按钮组：5个速度 + 1个停止 + 主控 + 全屏 + 折叠 = 9
+    expect(container.querySelectorAll(".top-bar-controls button")).toHaveLength(9);
     expect(container.querySelector(".top-bar-theme-button")).toBeNull();
     expect(collapseButton?.title).toBe("折叠 运行控制");
     expect(appHost.state.workbench.topBarCollapsed).toBe(false);
