@@ -17,7 +17,7 @@ import {
 } from "pixi.js"
 
 import type { DecorationLayer } from "./DecorationLayer"
-import type { DecorationSyncContext } from "./DecorationSyncContext"
+import type { DecorationProfiler, DecorationSyncContext } from "./DecorationSyncContext"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import {
   createEntityDefinitionMap,
@@ -304,6 +304,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
             insetTextures,
             itemIconMap,
             resolvedTextures,
+            profiler: ctx.profiler,
           })
         })
       } else {
@@ -722,13 +723,24 @@ function syncBeltCargoViews(options: {
   insetTextures: Map<string, Texture>;
   itemIconMap: ReadonlyMap<string, string>;
   resolvedTextures: ReadonlyMap<string, Texture>;
+  profiler?: DecorationProfiler;
 }): void {
   const iconSize = options.boxSize * BOX_ICON_SIZE_RATIO
   const boxCornerRadius = options.boxSize * BOX_CORNER_RADIUS_RATIO
   let visibleCount = 0
+  let maskClearMs = 0
+  let maskDrawMs = 0
+  let boxDrawMs = 0
+  let iconSetupMs = 0
+  let ensureViewMs = 0
+
+  const t0 = performance.now()
 
   for (const entry of options.entries) {
+    const tEnsure = performance.now()
     const view = options.ensureCargoView(visibleCount)
+    ensureViewMs += performance.now() - tEnsure
+
     const textureKey = resolveItemIconTextureKey(entry.itemId, options.itemIconMap)
     const texture = resolveInsetItemIconTexture({
       textureKey,
@@ -742,19 +754,29 @@ function syncBeltCargoViews(options: {
     view.root.rotation = 0
 
     if (entry.clipMask === null) {
+      const tMask = performance.now()
       view.root.mask = null
       view.mask.visible = false
       view.mask.clear()
+      maskClearMs += performance.now() - tMask
     } else {
+      const tMask = performance.now()
       view.root.mask = view.mask
       view.mask.visible = true
-      drawBeltCargoClipMask(view.mask, entry.clipMask)
+      drawBeltCargoClipMask(view.mask, entry.clipMask, options.profiler)
+      maskDrawMs += performance.now() - tMask
+      // 细粒度计数：记录每次 draw 的 rect/poly 数量
+      if (options.profiler) {
+        options.profiler.count("beltCargo.vM-beltRects-perEntry", entry.clipMask.beltRects.length)
+        options.profiler.count("beltCargo.vM-extensions-perEntry", entry.clipMask.extensions.length)
+      }
     }
 
     view.cargoRoot.x = entry.centerX
     view.cargoRoot.y = entry.centerY
     view.cargoRoot.rotation = entry.angleRadians
 
+    const tBox = performance.now()
     view.boxGraphics
       .clear()
       .roundRect(
@@ -770,7 +792,9 @@ function syncBeltCargoViews(options: {
         color: 0x000000,
         pixelLine: true,
       })
+    boxDrawMs += performance.now() - tBox
 
+    const tIcon = performance.now()
     view.icon.visible = texture !== undefined
     view.icon.texture = texture ?? Texture.EMPTY
     view.icon.width = iconSize
@@ -778,10 +802,12 @@ function syncBeltCargoViews(options: {
     view.icon.x = 0
     view.icon.y = 0
     view.icon.rotation = 0
+    iconSetupMs += performance.now() - tIcon
 
     visibleCount += 1
   }
 
+  const tHide = performance.now()
   for (let index = visibleCount; index < options.cargoViews.length; index += 1) {
     const view = options.cargoViews[index]
     if (view !== undefined) {
@@ -789,6 +815,20 @@ function syncBeltCargoViews(options: {
       view.root.mask = null
       view.mask.clear()
     }
+  }
+  const hideMs = performance.now() - tHide
+
+  // 循环中未单独计时的部分：变量声明、resolveInsetItemIconTexture、cargoRoot 定位等
+  const loopOtherMs = Math.max(0, performance.now() - t0 - ensureViewMs - maskClearMs - maskDrawMs - boxDrawMs - iconSetupMs - hideMs)
+
+  if (options.profiler) {
+    options.profiler.count("beltCargo.v-ensureView-ms", Math.round(ensureViewMs * 100) / 100)
+    options.profiler.count("beltCargo.v-maskClear-ms", Math.round(maskClearMs * 100) / 100)
+    options.profiler.count("beltCargo.v-maskDraw-ms", Math.round(maskDrawMs * 100) / 100)
+    options.profiler.count("beltCargo.v-boxDraw-ms", Math.round(boxDrawMs * 100) / 100)
+    options.profiler.count("beltCargo.v-iconSetup-ms", Math.round(iconSetupMs * 100) / 100)
+    options.profiler.count("beltCargo.v-hide-ms", Math.round(hideMs * 100) / 100)
+    options.profiler.count("beltCargo.v-loopOther-ms", Math.round(loopOtherMs * 100) / 100)
   }
 }
 
@@ -851,9 +891,16 @@ function createInsetTexture(texture: Texture, insetPx: number): Texture {
   })
 }
 
-function drawBeltCargoClipMask(graphics: Graphics, mask: BeltCargoClipMask): void {
+function drawBeltCargoClipMask(
+  graphics: Graphics,
+  mask: BeltCargoClipMask,
+  profiler?: DecorationProfiler,
+): void {
+  let t = performance.now()
   graphics.clear()
+  const clearMs = performance.now() - t
 
+  t = performance.now()
   for (const beltRect of mask.beltRects) {
     graphics
       .rect(
@@ -864,7 +911,9 @@ function drawBeltCargoClipMask(graphics: Graphics, mask: BeltCargoClipMask): voi
       )
       .fill(0xffffff)
   }
+  const rectsMs = performance.now() - t
 
+  t = performance.now()
   for (const extension of mask.extensions) {
     graphics
       .poly(resolveRotatedRectanglePoints({
@@ -874,6 +923,13 @@ function drawBeltCargoClipMask(graphics: Graphics, mask: BeltCargoClipMask): voi
         width: extension.width,
       }), true)
       .fill(0xffffff)
+  }
+  const polysMs = performance.now() - t
+
+  if (profiler) {
+    profiler.count("beltCargo.vM-clear-us", Math.round(clearMs * 1000))
+    profiler.count("beltCargo.vM-rects-us", Math.round(rectsMs * 1000))
+    profiler.count("beltCargo.vM-polys-us", Math.round(polysMs * 1000))
   }
 }
 
