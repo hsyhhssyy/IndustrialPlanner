@@ -19,6 +19,8 @@ export interface SimulationState{
    */
   readonly simulationSpeed: number;
   readonly statistics: SimulationRuntimeStatistics;
+  /** Worker 缓存中当前保留的 tick 快照数 */
+  readonly bufferSize: number;
 }
 
 export interface SimulationDeviceRuntimeChannelRecipeStatus {

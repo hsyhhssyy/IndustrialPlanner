@@ -105,6 +105,18 @@ implements SimulationAction, SimulationInternalAction {
   private nextPerfReportTick = 180;
   private playbackTickRequestInFlight = false;
 
+  // === 诊断计数器：10 秒输出一次 ===
+  private diagFrameCount = 0;
+  private diagCrossCount = 0;
+  private diagInFlightSkipCount = 0;
+  private diagNotReadyCount = 0;
+  private diagTickConsumedCount = 0;
+  private diagTotalDeltaMs = 0;
+  private diagLastLogFrame = 0;
+  private diagLastLogPlaybackTick = 0;
+  private diagConsecutiveRollbacks = 0;
+  private diagMaxConsecutiveRollbacks = 0;
+
   public constructor(options: SimulationActionImplOptions) {
     this.workspace = options.workspace;
     this.stateReadWrite = options.state;
@@ -146,11 +158,37 @@ implements SimulationAction, SimulationInternalAction {
   public readonly advancePlaybackByDeltaMs: SimulationAction["advancePlaybackByDeltaMs"] = async (
     deltaMs,
   ) => {
-    if (this.stateReadWrite.runningState !== "start") {
-      return;
+    // === 诊断：每 ~600 帧（约 10 秒）输出统计 ===
+    this.diagFrameCount += 1;
+    this.diagTotalDeltaMs += deltaMs;
+
+    if (this.diagFrameCount - this.diagLastLogFrame >= 600) {
+      const intervalFrames = this.diagFrameCount - this.diagLastLogFrame;
+      const avgDeltaMs = this.diagTotalDeltaMs / intervalFrames;
+      const avgTickDelta = avgDeltaMs * STANDARD_TICK_RATE_PER_SECOND * this.stateReadWrite.simulationSpeed / 1000;
+      const playbackProgress = this.stateReadWrite.currentPlaybackTickNumber - this.diagLastLogPlaybackTick;
+      const inFlightRate = intervalFrames > 0 ? (this.diagInFlightSkipCount / intervalFrames * 100).toFixed(1) : '0';
+      const notReadyRate = intervalFrames > 0 ? (this.diagNotReadyCount / intervalFrames * 100).toFixed(1) : '0';
+      console.debug(
+        `[PlaybackDiag] +${intervalFrames}f avgMs=${avgDeltaMs.toFixed(2)} tickΔ=${avgTickDelta.toFixed(4)} ` +
+        `crosses=${this.diagCrossCount} consumed=${this.diagTickConsumedCount} ` +
+        `inFlightSkip=${this.diagInFlightSkipCount}(${inFlightRate}%) notReady=${this.diagNotReadyCount}(${notReadyRate}%) ` +
+        `rollbackMaxConsec=${this.diagMaxConsecutiveRollbacks} ` +
+        `playbackΔ=${playbackProgress.toFixed(2)} ` +
+        `tps=${this.stateReadWrite.statistics.tickPerSecond} buff=${this.stateReadWrite.runtimeStatus.bufferSize}`,
+      );
+
+      this.diagLastLogFrame = this.diagFrameCount;
+      this.diagLastLogPlaybackTick = this.stateReadWrite.currentPlaybackTickNumber;
+      this.diagTotalDeltaMs = 0;
+      this.diagCrossCount = 0;
+      this.diagInFlightSkipCount = 0;
+      this.diagNotReadyCount = 0;
+      this.diagTickConsumedCount = 0;
+      this.diagMaxConsecutiveRollbacks = 0;
     }
-    if (this.playbackTickRequestInFlight) {
-      this.accumulateTps(deltaMs, 0);
+
+    if (this.stateReadWrite.runningState !== "start") {
       return;
     }
 
@@ -163,6 +201,8 @@ implements SimulationAction, SimulationInternalAction {
       * this.stateReadWrite.simulationSpeed
       / 1000;
 
+    // 位置始终按墙钟推进，不受 Worker bridge 在途状态影响。
+    // playbackTickRequestInFlight 仅阻止并发请求，不冻结动画。
     runInAction(() => {
       this.stateReadWrite.currentPlaybackTickNumber += tickDelta;
     });
@@ -175,15 +215,33 @@ implements SimulationAction, SimulationInternalAction {
 
     if (previousIntegerTickNumber === nextIntegerTickNumber) {
       // 未跨越整数 tick 边界
+      this.diagConsecutiveRollbacks = 0;
       this.accumulateTps(deltaMs, actualTicksProcessed);
       return;
     }
+
+    this.diagCrossCount += 1;
+
+    // bridge 在途时跳过本帧请求，但位置已推进；将位置回退到整数边界之下，
+    // 确保 bridge 返回后下一帧再次跨越同一 tick 边界，不会丢 tick。
+    if (this.playbackTickRequestInFlight) {
+      this.diagInFlightSkipCount += 1;
+      this.diagConsecutiveRollbacks += 1;
+      this.diagMaxConsecutiveRollbacks = Math.max(this.diagMaxConsecutiveRollbacks, this.diagConsecutiveRollbacks);
+      runInAction(() => {
+        this.stateReadWrite.currentPlaybackTickNumber = nextIntegerTickNumber - 1e-9;
+      });
+      this.accumulateTps(deltaMs, 0);
+      return;
+    }
+
+    this.diagConsecutiveRollbacks = 0;
 
     this.playbackTickRequestInFlight = true;
     try {
       const result = await this.syncToTick(nextIntegerTickNumber);
       if (result.status === "not-ready") {
-        // worker 尚未就绪，本 delta 未实际获得 tick
+        // worker 尚未就绪（buffer 耗尽），本 delta 未实际获得 tick，回滚到请求发起时的位置
         this.accumulateTps(deltaMs, actualTicksProcessed);
         runInAction(() => {
           this.stateReadWrite.currentPlaybackTickNumber = previousPlaybackTickNumber;
@@ -193,6 +251,7 @@ implements SimulationAction, SimulationInternalAction {
 
       // tick 获取成功
       actualTicksProcessed = nextIntegerTickNumber - previousIntegerTickNumber;
+      this.diagTickConsumedCount += actualTicksProcessed;
       this.accumulateTps(deltaMs, actualTicksProcessed);
 
       if (result.status === "not-found") {

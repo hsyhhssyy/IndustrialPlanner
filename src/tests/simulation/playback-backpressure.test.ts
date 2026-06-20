@@ -35,8 +35,10 @@ describe("simulation playback backpressure", () => {
       { length: 120 },
       () => action.advancePlaybackByDeltaMs(50),
     );
+    // inFlight 期间位置被回退到整数边界之下，不丢 tick，不无限增长
     expect(getTickSnapshot).toHaveBeenCalledTimes(1);
-    expect(state.currentPlaybackTickNumber).toBe(1);
+    expect(state.currentPlaybackTickNumber).toBeGreaterThanOrEqual(1);
+    expect(state.currentPlaybackTickNumber).toBeLessThan(3);
 
     firstResponse.resolve(createNotReadyResponse(1));
     await firstAdvance;

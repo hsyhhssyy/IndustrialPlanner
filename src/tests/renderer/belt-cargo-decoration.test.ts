@@ -898,6 +898,7 @@ function createContext(options: {
           state: {
             runningState: "start",
             simulationSpeed: 1,
+            bufferSize: 0,
           },
           queries: {
             getDeviceRuntimeStatus: (entityId: string) => {

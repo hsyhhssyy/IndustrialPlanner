@@ -73,7 +73,8 @@ export function createDiagnosticsDecoration(): DecorationLayer {
       const stats = ctx.renderHost.workspace.simulation?.state.statistics;
       const currentTps = stats?.tickPerSecond ?? 0;
       const currentTargetTps = stats?.targetTickPerSecond ?? 0;
-      text.text = `FPS:${currentFps} TPS:${currentTps.toFixed(1)} dTPS:${currentTargetTps}`;
+      const bufferSize = ctx.renderHost.workspace.simulation?.state.bufferSize ?? 0;
+      text.text = `FPS:${currentFps} TPS:${currentTps.toFixed(1)} dTPS:${currentTargetTps} BUF:${bufferSize}`;
 
       // Position at the top-right corner of the viewport
       text.x = ctx.viewportBounds.left + ctx.viewportBounds.width - text.width - 4;

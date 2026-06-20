@@ -934,6 +934,7 @@ describe("WorkbenchApp", () => {
         runningState: "stop",
         simulationSpeed: 1,
         statistics: { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 },
+        bufferSize: 0,
       },
       topology: createSnapshotStore(null),
       queries: {
