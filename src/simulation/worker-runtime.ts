@@ -91,6 +91,13 @@ export class SimulationWorkerRuntime {
   private perfEnabled = false;
   private perfEntries: TickPerfEntry[] = [];
 
+  /** Worker 线程内异步路径（setTimeout 回调等）错误时的回调，由 simulation-worker.ts 注入。 */
+  private onError: ((error: string, tickNumber: number | null) => void) | null = null;
+
+  public setOnError(callback: (error: string, tickNumber: number | null) => void): void {
+    this.onError = callback;
+  }
+
   public handleRequest(request: SimulationWorkerRequest): SimulationWorkerResponse {
     try {
       switch (request.type) {
@@ -543,6 +550,7 @@ export class SimulationWorkerRuntime {
       } catch (error) {
         this.mode = "error";
         this.error = error instanceof Error ? error.message : String(error);
+        this.onError?.(this.error, this.nextTickNumber);
         return;
       }
     }
@@ -573,6 +581,7 @@ export class SimulationWorkerRuntime {
       this.mode = "error";
       this.error = error instanceof Error ? error.message : String(error);
       console.error(`[SimWorker] fillOneTick failed at tick ${this.nextTickNumber}:`, this.error);
+      this.onError?.(this.error, this.nextTickNumber);
       return; // 出错后停止填充
     }
 

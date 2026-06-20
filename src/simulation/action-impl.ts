@@ -102,6 +102,7 @@ implements SimulationAction, SimulationInternalAction {
   private tpsAccumulatedTicks = 0;
   private tpsAccumulatedMs = 0;
   private nextPerfReportTick = 180;
+  private playbackTickRequestInFlight = false;
 
   public constructor(options: SimulationActionImplOptions) {
     this.workspace = options.workspace;
@@ -147,6 +148,10 @@ implements SimulationAction, SimulationInternalAction {
     if (this.stateReadWrite.runningState !== "start") {
       return;
     }
+    if (this.playbackTickRequestInFlight) {
+      this.accumulateTps(deltaMs, 0);
+      return;
+    }
 
     const previousPlaybackTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
     // simulationSpeed 有且仅有这一处可以参与运算：它只影响 add time 的推进速度。
@@ -173,22 +178,27 @@ implements SimulationAction, SimulationInternalAction {
       return;
     }
 
-    const result = await this.syncToTick(nextIntegerTickNumber);
-    if (result.status === "not-ready") {
-      // worker 尚未就绪，本 delta 未实际获得 tick
+    this.playbackTickRequestInFlight = true;
+    try {
+      const result = await this.syncToTick(nextIntegerTickNumber);
+      if (result.status === "not-ready") {
+        // worker 尚未就绪，本 delta 未实际获得 tick
+        this.accumulateTps(deltaMs, actualTicksProcessed);
+        runInAction(() => {
+          this.stateReadWrite.currentPlaybackTickNumber = previousPlaybackTickNumber;
+        });
+        return;
+      }
+
+      // tick 获取成功
+      actualTicksProcessed = nextIntegerTickNumber - previousIntegerTickNumber;
       this.accumulateTps(deltaMs, actualTicksProcessed);
-      runInAction(() => {
-        this.stateReadWrite.currentPlaybackTickNumber = previousPlaybackTickNumber;
-      });
-      return;
-    }
 
-    // tick 获取成功
-    actualTicksProcessed = nextIntegerTickNumber - previousIntegerTickNumber;
-    this.accumulateTps(deltaMs, actualTicksProcessed);
-
-    if (result.status === "not-found") {
-      await this.recoverPlaybackFromUnavailableTick(result, previousPlaybackTickNumber);
+      if (result.status === "not-found") {
+        await this.recoverPlaybackFromUnavailableTick(result, previousPlaybackTickNumber);
+      }
+    } finally {
+      this.playbackTickRequestInFlight = false;
     }
   };
 
@@ -413,6 +423,7 @@ implements SimulationAction, SimulationInternalAction {
     this.tpsAccumulatedTicks = 0;
     this.tpsAccumulatedMs = 0;
     this.nextPerfReportTick = 180;
+    this.playbackTickRequestInFlight = false;
   }
 
   /** 累积 tick 和时间，每 TPS_WINDOW_MS 刷新一次 TPS 统计 */

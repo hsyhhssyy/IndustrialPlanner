@@ -24,6 +24,7 @@ import {
 } from "./state-impl";
 import { SimulationWorkerRuntime } from "./worker-runtime";
 import type {
+  SimulationWorkerErrorNotification,
   SimulationWorkerRequest,
   SimulationWorkerResponse,
 } from "./worker-protocol";
@@ -425,7 +426,16 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     this.worker = new Worker(new URL("./simulation-worker.ts", import.meta.url), {
       type: "module",
     });
-    this.worker.addEventListener("message", (event: MessageEvent<SimulationWorkerResponse>) => {
+    this.worker.addEventListener("message", (event: MessageEvent<SimulationWorkerResponse | SimulationWorkerErrorNotification>) => {
+      if (event.data.type === "worker-error") {
+        // Worker 异步路径（fillOneTick/advanceToTick setTimeout 回调）中捕获的错误，
+        // 主动推送到主线程，通过 console.error 输出以纳入 debug-log 窗口。
+        const notification = event.data;
+        const tickInfo = notification.tickNumber !== null ? ` at tick ${notification.tickNumber}` : "";
+        console.error(`[SimWorker] ${notification.error}${tickInfo}`);
+        return;
+      }
+
       const handlers = this.pending.get(event.data.requestId);
       if (handlers === undefined) {
         return;

@@ -1,5 +1,6 @@
 import { SimulationWorkerRuntime } from "./worker-runtime";
 import type {
+  SimulationWorkerErrorNotification,
   SimulationWorkerRequest,
   SimulationWorkerResponse,
 } from "./worker-protocol";
@@ -10,8 +11,17 @@ const workerScope = globalThis as unknown as {
     type: "message",
     listener: (event: MessageEvent<SimulationWorkerRequest>) => void,
   ): void;
-  postMessage(response: SimulationWorkerResponse): void;
+  postMessage(response: SimulationWorkerResponse | SimulationWorkerErrorNotification): void;
 };
+
+// 异步路径（setTimeout 回调中的 fillOneTick/advanceToTick）错误时主动推送到主线程
+runtime.setOnError((error, tickNumber) => {
+  workerScope.postMessage({
+    type: "worker-error",
+    error,
+    tickNumber,
+  });
+});
 
 workerScope.addEventListener("message", (event: MessageEvent<SimulationWorkerRequest>) => {
   try {

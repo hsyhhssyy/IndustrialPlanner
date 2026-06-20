@@ -90,3 +90,14 @@ export type SimulationWorkerResponse =
       readonly requestId: number;
       readonly status: SimulationRuntimeStatus;
     };
+
+/**
+ * Worker 主动推送的错误通知（非请求-响应）。
+ * 用于 setTimeout 回调等异步路径中的错误，主线程收到后通过 console.error 记录，
+ * 以便 debug-log 窗口捕获。
+ */
+export interface SimulationWorkerErrorNotification {
+  readonly type: "worker-error";
+  readonly error: string;
+  readonly tickNumber: number | null;
+}
