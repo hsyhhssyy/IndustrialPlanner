@@ -232,7 +232,7 @@ export class GestureAdapter {
     initialPosition: GesturePosition;
   } | null = null;
   private rafId: number | null = null;
-  private gestureRafPerfWindow!: GestureRafPerfWindow;
+  private gestureRafPerfWindow: GestureRafPerfWindow | null = null;
   private gestureRafPreviousTickEndedAtMs: number | null = null;
   private wheelAccumulator = 0;
   private wheelDirection: 1 | -1 | 0 = 0;
@@ -285,20 +285,22 @@ export class GestureAdapter {
         this.dispatchActiveToolEvents(previousActiveTool, activeTool);
       },
     );
-    this.gestureRafPerfWindow = {
-      startedAtMs: 0,
-      tickCount: 0,
-      flushCount: 0,
-      dispatchCount: 0,
-      totalTickSelfMs: 0,
-      totalFlushSelfMs: 0,
-      totalDispatchSelfMs: 0,
-      maxTickMs: 0,
-      maxFlushMs: 0,
-      maxDispatchMs: 0,
-      eventTypeCounts: new Map(),
-      moduleTimingsMs: new Map(),
-    }
+    this.gestureRafPerfWindow = getDebugMode(appHost)
+      ? {
+        startedAtMs: 0,
+        tickCount: 0,
+        flushCount: 0,
+        dispatchCount: 0,
+        totalTickSelfMs: 0,
+        totalFlushSelfMs: 0,
+        totalDispatchSelfMs: 0,
+        maxTickMs: 0,
+        maxFlushMs: 0,
+        maxDispatchMs: 0,
+        eventTypeCounts: new Map(),
+        moduleTimingsMs: new Map(),
+      }
+      : null
     this.startRafLoop();
   }
 
@@ -1118,32 +1120,34 @@ export class GestureAdapter {
 
   private startRafLoop(): void {
     const appHost = this.appHost
-    const perfWindow = this.gestureRafPerfWindow!
+    const perfWindow = this.gestureRafPerfWindow
     const tick = () => {
       this.rafId = requestAnimationFrame(tick);
-      const tickStartedAtMs = performance.now()
-      if (this.gestureRafPreviousTickEndedAtMs === null) {
-        this.gestureRafPreviousTickEndedAtMs = tickStartedAtMs
-      }
-      if (perfWindow.startedAtMs === 0) {
-        perfWindow.startedAtMs = tickStartedAtMs
-      }
-      const hadPendingMove = this.pendingMergedMove !== null
-      this.flushPendingMergedMove();
-      const tickSelfMs = performance.now() - tickStartedAtMs
-      perfWindow.tickCount += 1
-      perfWindow.totalTickSelfMs += tickSelfMs
-      perfWindow.maxTickMs = Math.max(perfWindow.maxTickMs, tickSelfMs)
-      if (hadPendingMove) {
-        perfWindow.flushCount += 1
-      }
-      if (getDebugMode(appHost)) {
+      if (perfWindow !== null) {
+        const tickStartedAtMs = performance.now()
+        if (this.gestureRafPreviousTickEndedAtMs === null) {
+          this.gestureRafPreviousTickEndedAtMs = tickStartedAtMs
+        }
+        if (perfWindow.startedAtMs === 0) {
+          perfWindow.startedAtMs = tickStartedAtMs
+        }
+        const hadPendingMove = this.pendingMergedMove !== null
+        this.flushPendingMergedMove();
+        const tickSelfMs = performance.now() - tickStartedAtMs
+        perfWindow.tickCount += 1
+        perfWindow.totalTickSelfMs += tickSelfMs
+        perfWindow.maxTickMs = Math.max(perfWindow.maxTickMs, tickSelfMs)
+        if (hadPendingMove) {
+          perfWindow.flushCount += 1
+        }
         flushGestureRafPerfLogIfReady(
           appHost,
           perfWindow,
           performance.now(),
           appHost.internalState?.activeTool ?? "unknown",
         )
+      } else {
+        this.flushPendingMergedMove();
       }
     };
     this.rafId = requestAnimationFrame(tick);
@@ -1157,8 +1161,8 @@ export class GestureAdapter {
   }
 
   private doDispatchGesture(event: GestureEvent): boolean {
-    const perfWindow = this.gestureRafPerfWindow!
-    const dispatchStartedAtMs = performance.now()
+    const perfWindow = this.gestureRafPerfWindow
+    const dispatchStartedAtMs = perfWindow !== null ? performance.now() : 0
     let consumed = false;
 
     for (const listener of this.gestureListeners) {
@@ -1169,14 +1173,16 @@ export class GestureAdapter {
     }
 
     this.persistDragPayload(event);
-    perfWindow.dispatchCount += 1
-    const dispatchMs = performance.now() - dispatchStartedAtMs
-    perfWindow.totalDispatchSelfMs += dispatchMs
-    perfWindow.maxDispatchMs = Math.max(perfWindow.maxDispatchMs, dispatchMs)
-    perfWindow.eventTypeCounts.set(
-      event.type,
-      (perfWindow.eventTypeCounts.get(event.type) ?? 0) + 1,
-    )
+    if (perfWindow !== null) {
+      perfWindow.dispatchCount += 1
+      const dispatchMs = performance.now() - dispatchStartedAtMs
+      perfWindow.totalDispatchSelfMs += dispatchMs
+      perfWindow.maxDispatchMs = Math.max(perfWindow.maxDispatchMs, dispatchMs)
+      perfWindow.eventTypeCounts.set(
+        event.type,
+        (perfWindow.eventTypeCounts.get(event.type) ?? 0) + 1,
+      )
+    }
     return consumed;
   }
 
@@ -1189,15 +1195,17 @@ export class GestureAdapter {
       return;
     }
 
-    const perfWindow = this.gestureRafPerfWindow!
-    const flushStartedAtMs = performance.now()
+    const perfWindow = this.gestureRafPerfWindow
+    const flushStartedAtMs = perfWindow !== null ? performance.now() : 0
     const merged = this.pendingMergedMove;
     this.pendingMergedMove = null;
     const event: GestureEvent = { ...merged.event, mergedCount: merged.mergedCount };
     this.doDispatchGesture(event);
-    const flushMs = performance.now() - flushStartedAtMs
-    perfWindow.totalFlushSelfMs += flushMs
-    perfWindow.maxFlushMs = Math.max(perfWindow.maxFlushMs, flushMs)
+    if (perfWindow !== null) {
+      const flushMs = performance.now() - flushStartedAtMs
+      perfWindow.totalFlushSelfMs += flushMs
+      perfWindow.maxFlushMs = Math.max(perfWindow.maxFlushMs, flushMs)
+    }
   }
 
   private dispatchGesture(event: GestureEvent): boolean {

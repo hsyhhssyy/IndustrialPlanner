@@ -20,6 +20,12 @@ vi.mock("pixi.js", () => {
     public mask: unknown = null
 
     public addChild<T extends { parent: MockContainer | null }>(child: T): T {
+      if (child.parent !== null) {
+        const previousIndex = child.parent.children.indexOf(child)
+        if (previousIndex >= 0) {
+          child.parent.children.splice(previousIndex, 1)
+        }
+      }
       child.parent = this
       this.children.push(child)
       return child
@@ -45,6 +51,7 @@ vi.mock("pixi.js", () => {
     }> = []
     public parent: MockContainer | null = null
     public visible = true
+    public renderable = true
     public clearCalls = 0
 
     public constructor(_options?: { roundPixels?: boolean }) {}
@@ -103,6 +110,7 @@ vi.mock("pixi.js", () => {
     public width = 0
     public height = 0
     public visible = true
+    public renderable = true
     public roundPixels = false
     public rotation = 0
     public readonly anchor = {
@@ -156,10 +164,28 @@ vi.mock("pixi.js", () => {
     public destroy(): void {}
   }
 
+  class MockRenderTexture extends MockTexture {
+    public static create(options: {
+      width: number;
+      height: number;
+    }): MockRenderTexture {
+      return new MockRenderTexture({
+        frame: new MockRectangle(0, 0, options.width, options.height),
+      })
+    }
+
+    public resize(width: number, height: number): this {
+      this.frame.width = width
+      this.frame.height = height
+      return this
+    }
+  }
+
   return {
     Container: MockContainer,
     Graphics: MockGraphics,
     Rectangle: MockRectangle,
+    RenderTexture: MockRenderTexture,
     Sprite: MockSprite,
     Texture: MockTexture,
   }
@@ -289,8 +315,7 @@ describe("createBeltCargoDecoration", () => {
     decoration.sync(ctx as never)
 
     expect(decoration.container.visible).toBe(true)
-    const cargoLayer = decoration.container.children[0] as { children: unknown[] }
-    expect(cargoLayer.children).toHaveLength(2)
+    expect(resolveCargoViewRoots(decoration)).toHaveLength(2)
 
     decoration.destroy()
   })
@@ -457,18 +482,10 @@ describe("createBeltCargoDecoration", () => {
     expect(cargoRoot.x).toBeCloseTo(145)
     expect(cargoRoot.y).toBeCloseTo(100)
     expect(cargoRoot.rotation).toBeCloseTo(0)
-    expect(cargoViewRoot.mask).toBe(cargoViewRoot.children[0])
+    expect(cargoViewRoot.mask).toBe(null)
+    expect(cargoViewRoot.parent).toBe(resolveSharedCargoLayer(decoration))
 
-    const mask = cargoViewRoot.children[0] as {
-      drawCommands: Array<{
-        type: "rect" | "poly";
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-        points?: number[];
-      }>;
-    }
+    const mask = resolveRenderedMaskSource(ctx)
     expect(mask.drawCommands).toHaveLength(3)
     expect(mask.drawCommands[0]).toMatchObject({
       type: "rect",
@@ -527,17 +544,9 @@ describe("createBeltCargoDecoration", () => {
     const cargoViewRoot = resolveCargoViewRoot(decoration, 0)
     const cargoRoot = resolveCargoRoot(decoration, 0)
     expect(cargoRoot.x).toBeCloseTo(55)
-    expect(cargoViewRoot.mask).toBe(cargoViewRoot.children[0])
-    const mask = cargoViewRoot.children[0] as {
-      drawCommands: Array<{
-        type: "rect" | "poly";
-        x: number;
-        y?: number;
-        width: number;
-        height?: number;
-        points?: number[];
-      }>;
-    }
+    expect(cargoViewRoot.mask).toBe(null)
+    expect(cargoViewRoot.parent).toBe(resolveSharedCargoLayer(decoration))
+    const mask = resolveRenderedMaskSource(ctx)
     expect(mask.drawCommands).toHaveLength(3)
     expect(mask.drawCommands[0]).toMatchObject({
       type: "rect",
@@ -575,9 +584,7 @@ describe("createBeltCargoDecoration", () => {
     })
 
     decoration.sync(connectedFrame as never)
-    const connectedMask = resolveCargoViewRoot(decoration, 0).children[0] as {
-      drawCommands: Array<{ points?: number[] }>;
-    }
+    const connectedMask = resolveRenderedMaskSource(connectedFrame)
     expect(connectedMask.drawCommands[1]).toMatchObject({
       points: [150, 50, 170, 50, 170, 150, 150, 150],
     })
@@ -595,9 +602,7 @@ describe("createBeltCargoDecoration", () => {
     })
 
     decoration.sync(disconnectedFrame as never)
-    const disconnectedMask = resolveCargoViewRoot(decoration, 0).children[0] as {
-      drawCommands: Array<{ points?: number[] }>;
-    }
+    const disconnectedMask = resolveRenderedMaskSource(disconnectedFrame)
     expect(disconnectedMask.drawCommands[2]).toMatchObject({
       points: [150, 50, 175, 50, 175, 150, 150, 150],
     })
@@ -622,9 +627,7 @@ describe("createBeltCargoDecoration", () => {
     })
 
     decoration.sync(connectedFrame as never)
-    const connectedMask = resolveCargoViewRoot(decoration, 0).children[0] as {
-      drawCommands: Array<{ points?: number[] }>;
-    }
+    const connectedMask = resolveRenderedMaskSource(connectedFrame)
     expect(connectedMask.drawCommands[2]).toMatchObject({
       points: [30, 50, 50, 50, 50, 150, 30, 150],
     })
@@ -642,9 +645,7 @@ describe("createBeltCargoDecoration", () => {
     })
 
     decoration.sync(disconnectedFrame as never)
-    const disconnectedMask = resolveCargoViewRoot(decoration, 0).children[0] as {
-      drawCommands: Array<{ points?: number[] }>;
-    }
+    const disconnectedMask = resolveRenderedMaskSource(disconnectedFrame)
     expect(disconnectedMask.drawCommands[2]).toMatchObject({
       points: [25, 50, 50, 50, 50, 150, 25, 150],
     })
@@ -671,40 +672,13 @@ describe("createBeltCargoDecoration", () => {
     decoration.sync(ctx as never)
 
     const cargoViewRoot = resolveCargoViewRoot(decoration, 0)
-    const mask = cargoViewRoot.children[0] as {
-      drawCommands: Array<{
-        type: "rect" | "poly";
-        x: number;
-        y?: number;
-        width: number;
-        height?: number;
-        points?: number[];
-      }>;
-    }
-    expect(mask.drawCommands).toHaveLength(3)
-    expect(mask.drawCommands[0]).toMatchObject({
-      type: "rect",
-      x: 50,
-      y: 50,
-      width: 100,
-      height: 100,
-    })
-    expect(mask.drawCommands[1]).toMatchObject({
-      type: "rect",
-      x: 150,
-      y: 50,
-      width: 100,
-      height: 100,
-    })
-    expect(mask.drawCommands[2]).toMatchObject({
-      type: "poly",
-      points: [30, 50, 50, 50, 50, 150, 30, 150],
-    })
+    expect(cargoViewRoot.mask).toBe(null)
+    expect(cargoViewRoot.parent).toBe(resolveSharedCargoLayer(decoration))
 
     decoration.destroy()
   })
 
-  it("limits each cargo mask to its own and orthogonally adjacent belt cells", () => {
+  it("builds the shared bitmap mask from all visible belt cells", () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
     const ctx = createContext({
@@ -718,16 +692,25 @@ describe("createBeltCargoDecoration", () => {
 
     decoration.sync(ctx as never)
 
-    const mask = resolveCargoViewRoot(decoration, 0).children[0] as {
+    const render = (ctx as unknown as {
+      renderHost: {
+        app: {
+          renderer: {
+            render: ReturnType<typeof vi.fn>;
+          };
+        };
+      };
+    }).renderHost.app.renderer.render
+    const maskSource = render.mock.calls[0]?.[0]?.container as {
       drawCommands: Array<{
         type: "rect" | "poly";
         x?: number;
         y?: number;
       }>;
     }
-    const rectCommands = mask.drawCommands.filter((command) => command.type === "rect")
-    expect(rectCommands).toHaveLength(3)
-    expect(rectCommands).not.toContainEqual(expect.objectContaining({
+    const rectCommands = maskSource.drawCommands.filter((command) => command.type === "rect")
+    expect(rectCommands).toHaveLength(4)
+    expect(rectCommands).toContainEqual(expect.objectContaining({
       x: 150,
       y: 150,
     }))
@@ -745,13 +728,19 @@ describe("createBeltCargoDecoration", () => {
     })
 
     decoration.sync(ctx as never)
-    const mask = resolveCargoViewRoot(decoration, 0).children[0] as {
-      clearCalls: number;
-    }
-    expect(mask.clearCalls).toBe(1)
+    const render = (ctx as unknown as {
+      renderHost: {
+        app: {
+          renderer: {
+            render: ReturnType<typeof vi.fn>;
+          };
+        };
+      };
+    }).renderHost.app.renderer.render
+    expect(render).toHaveBeenCalledTimes(1)
 
     decoration.sync(ctx as never)
-    expect(mask.clearCalls).toBe(1)
+    expect(render).toHaveBeenCalledTimes(1)
 
     decoration.destroy()
   })
@@ -888,6 +877,11 @@ function createContext(options: {
       height: 200,
     },
     renderHost: {
+      app: {
+        renderer: {
+          render: vi.fn(),
+        },
+      },
       workspace: {
         app: {
           state: {
@@ -996,8 +990,20 @@ function resolveCargoViewRoot(
   decoration: ReturnType<typeof createBeltCargoDecoration>,
   index: number,
 ) {
-  const cargoLayer = decoration.container.children[0] as {
-    children: Array<{
+  const root = resolveCargoViewRoots(decoration)[index]
+  if (root === undefined) {
+    throw new Error(`Expected cargo view root at index ${index}.`)
+  }
+
+  return root
+}
+
+function resolveCargoViewRoots(
+  decoration: ReturnType<typeof createBeltCargoDecoration>,
+) {
+  const layers = decoration.container.children.slice(1) as Array<{
+    children?: Array<{
+      parent: unknown;
       visible: boolean;
       x: number;
       y: number;
@@ -1005,13 +1011,48 @@ function resolveCargoViewRoot(
       mask: unknown;
       children: unknown[];
     }>;
-  }
-  const root = cargoLayer.children[index]
-  if (root === undefined) {
-    throw new Error(`Expected cargo view root at index ${index}.`)
-  }
+  }>
 
-  return root
+  return layers.flatMap((layer) =>
+    (layer.children ?? []).filter((child) => child.children.length === 2),
+  )
+}
+
+function resolveSharedCargoLayer(
+  decoration: ReturnType<typeof createBeltCargoDecoration>,
+) {
+  const layer = decoration.container.children[1]
+  if (layer === undefined) {
+    throw new Error("Expected shared cargo layer.")
+  }
+  return layer
+}
+
+function resolveRenderedMaskSource(ctx: unknown) {
+  const render = (ctx as {
+    renderHost: {
+      app: {
+        renderer: {
+          render: ReturnType<typeof vi.fn>;
+        };
+      };
+    };
+  }).renderHost.app.renderer.render
+  const lastCall = render.mock.calls.at(-1)
+  const source = lastCall?.[0]?.container as {
+    drawCommands: Array<{
+      type: "rect" | "poly";
+      x?: number;
+      y?: number;
+      width?: number;
+      height?: number;
+      points?: number[];
+    }>;
+  } | undefined
+  if (source === undefined) {
+    throw new Error("Expected shared belt cargo mask source.")
+  }
+  return source
 }
 
 function resolveCargoRoot(

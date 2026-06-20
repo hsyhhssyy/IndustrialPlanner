@@ -462,16 +462,21 @@ implements SimulationAction, SimulationInternalAction {
         const s = response.report.summary;
         const r = response.report.tickRange;
         const st = s.avgStageMs;
-        console.log(
-          `[SimPerf] ticks ${r.from}-${r.to} | avg=${s.avgMs}ms max=${s.maxMs}ms | ` +
-          `target=${Math.round(1000 / 20)}ms/tick @20TPS`,
-        );
-        console.log(
-          `[SimPerf]   stages: ` +
-          `advDev=${st.advanceDevices}ms buildGraph=${st.buildSolveGraph}ms ` +
-          `solve=${st.solveTransferGraph}ms cursor=${st.rotateRoutingCursors}ms ` +
-          `settle=${st.settleRecipes}ms domain=${st.maintainDomains}ms snap=${st.createSnapshot}ms`,
-        );
+        const logPayload: Record<string, unknown> = {
+          tickRange: { from: r.from, to: r.to },
+          avgMs: s.avgMs,
+          maxMs: s.maxMs,
+          targetMs: Math.round(1000 / 20),
+          stages: {
+            advanceDevices: st.advanceDevices,
+            buildSolveGraph: st.buildSolveGraph,
+            solveTransferGraph: st.solveTransferGraph,
+            rotateRoutingCursors: st.rotateRoutingCursors,
+            settleRecipes: st.settleRecipes,
+            maintainDomains: st.maintainDomains,
+            createSnapshot: st.createSnapshot,
+          },
+        };
 
         // Stage 3 细分汇总
         const s3s = response.report.entries
@@ -480,18 +485,23 @@ implements SimulationAction, SimulationInternalAction {
         if (s3s.length > 0) {
           const avg = <T extends keyof TickPerfStage3Details>(key: T) =>
             Math.round(s3s.reduce((sum, s3) => sum + (s3[key] as number), 0) / s3s.length * 100) / 100;
-          console.log(
-            `[SimPerf]   stage3: layers=${avg("layerCount")} anchors=${avg("anchorCount")} ` +
-            `outNodes=${avg("outputNodeCount")} moves=${avg("moveCount")} ` +
-            `refreshBlocked=${avg("refreshBlockedMs")}ms(${Math.round(avg("refreshBlockedCalls"))}x)`,
-          );
-          console.log(
-            `[SimPerf]   stage3 calls: selectSrc=${Math.round(avg("selectSourceCalls"))} ` +
-            `canOut=${Math.round(avg("canOutputProvideCalls"))} findIn=${Math.round(avg("findInputSlotCalls"))} ` +
-            `remCap=${Math.round(avg("getRemainingCapacityCalls"))} getRsv=${Math.round(avg("getReservedCalls"))} ` +
-            `edgeChk=${Math.round(avg("solveOutputEdgeChecks"))}`,
-          );
+          logPayload.stage3 = {
+            layers: avg("layerCount"),
+            anchors: avg("anchorCount"),
+            outNodes: avg("outputNodeCount"),
+            moves: avg("moveCount"),
+            refreshBlockedMs: avg("refreshBlockedMs"),
+            refreshBlockedCalls: Math.round(avg("refreshBlockedCalls")),
+            selectSourceCalls: Math.round(avg("selectSourceCalls")),
+            canOutputProvideCalls: Math.round(avg("canOutputProvideCalls")),
+            findInputSlotCalls: Math.round(avg("findInputSlotCalls")),
+            getRemainingCapacityCalls: Math.round(avg("getRemainingCapacityCalls")),
+            getReservedCalls: Math.round(avg("getReservedCalls")),
+            solveOutputEdgeChecks: Math.round(avg("solveOutputEdgeChecks")),
+          };
         }
+
+        console.debug(`[SimWorkerPerf] ${JSON.stringify(logPayload)}`);
       }
     } catch {
       // perf 失败不影响主流程

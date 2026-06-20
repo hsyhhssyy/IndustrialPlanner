@@ -12,6 +12,7 @@ import {
   Container,
   Graphics,
   Rectangle,
+  RenderTexture,
   Sprite,
   Texture,
 } from "pixi.js"
@@ -39,6 +40,10 @@ const BOX_STROKE_WIDTH_PX = 1
 const BOX_TURN_CLEARANCE_PX = 2
 const EMPTY_BELT_PORT_EXTENSION_ENTRIES: readonly BeltPortExtensionEntry[] = []
 const EMPTY_BELT_DISCONNECTED_PORT_ENTRIES: readonly BeltDisconnectedPortEntry[] = []
+// AI-CORRECTION 2026-06-20:
+// 全局 Bitmap 遮罩不再按货物读取空端口集合；旧常量仅保留用于删除审计。
+void EMPTY_BELT_PORT_EXTENSION_ENTRIES
+void EMPTY_BELT_DISCONNECTED_PORT_ENTRIES
 
 interface BeltCargoRenderEntry {
   readonly centerX: number;
@@ -46,6 +51,7 @@ interface BeltCargoRenderEntry {
   readonly angleRadians: number;
   readonly itemId: string;
   readonly clipMask: BeltCargoClipMask | null;
+  readonly useLocalMask: boolean;
 }
 
 interface BeltCargoEntry {
@@ -92,12 +98,19 @@ interface BeltCargoClipExtensionRect {
 
 export function createBeltCargoDecoration(): DecorationLayer {
   const container = new Container()
-  const cargoLayer = new Container()
+  const sharedCargoLayer = new Container()
+  const localCargoLayer = new Container()
+  const sharedMaskSprite = new Sprite(Texture.EMPTY)
+  const sharedMaskSource = new Graphics({ roundPixels: true })
   const cargoViews: BeltCargoView[] = []
   const resolvedTextures = new Map<string, Texture>()
   const insetTextures = new Map<string, Texture>()
   const pendingTextures = new Map<string, Promise<Texture>>()
-  container.addChild(cargoLayer)
+  sharedMaskSprite.renderable = false
+  sharedCargoLayer.mask = sharedMaskSprite
+  container.addChild(sharedMaskSprite)
+  container.addChild(sharedCargoLayer)
+  container.addChild(localCargoLayer)
 
   let destroyed = false
   let itemIconIdByItemId: Map<string, string> | null = null
@@ -112,6 +125,8 @@ export function createBeltCargoDecoration(): DecorationLayer {
   let cachedBeltRects: BeltCargoClipRect[] | null = null
   let cachedBeltRectsByGridKey: Map<string, BeltCargoClipRect> | null = null
   let cachedBeltRectsViewportKey: string | null = null
+  let sharedMaskTexture: RenderTexture | null = null
+  let sharedMaskRevision = -1
   let clipMaskRevision = 0
 
   const hideAll = (): void => {
@@ -171,7 +186,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
     cargoRoot.addChild(icon)
     root.addChild(mask)
     root.addChild(cargoRoot)
-    cargoLayer.addChild(root)
+    sharedCargoLayer.addChild(root)
 
     view = {
       root,
@@ -225,6 +240,9 @@ export function createBeltCargoDecoration(): DecorationLayer {
         clipMaskRevision += 1
       }
       const beltRectsByGridKey = cachedBeltRectsByGridKey
+      // AI-CORRECTION 2026-06-20:
+      // 全局 Bitmap 遮罩直接合并全部可见传送带，局部格索引不再参与当前渲染。
+      void beltRectsByGridKey
 
       // 端口连通性缓存：文档或 gameUseSimplifiedDeviceIcons 变更时重算
       if (cachedPortConnectivity === null || !documentStable || cachedSimplifiedDeviceIcons !== simplifiedDeviceIcons) {
@@ -256,8 +274,27 @@ export function createBeltCargoDecoration(): DecorationLayer {
       const itemIconMap = ensureItemIconMap(ctx)
       const boxSize = resolveBeltCargoBoxSize(ctx.viewportState.gridCellPixelSize)
       const boxHalfSize = boxSize / 2
-      const portExtensionEntriesByBeltId = groupBeltPortEntriesByBeltId(portConnectivityEntries.extensions)
-      const disconnectedPortEntriesByBeltId = groupBeltPortEntriesByBeltId(portConnectivityEntries.disconnectedPorts)
+      sharedCargoLayer.mask = simplifiedDeviceIcons ? null : sharedMaskSprite
+      const sharedMaskBuildStartedAtMs = performance.now()
+      if (!simplifiedDeviceIcons && sharedMaskRevision !== clipMaskRevision) {
+        sharedMaskTexture = rebuildSharedBeltCargoMask({
+          ctx,
+          beltRects: cachedBeltRects ?? [],
+          portExtensionEntries: portConnectivityEntries.extensions,
+          disconnectedPortEntries: portConnectivityEntries.disconnectedPorts,
+          disconnectedCapLength: boxHalfSize + BOX_STROKE_WIDTH_PX,
+          source: sharedMaskSource,
+          sprite: sharedMaskSprite,
+          texture: sharedMaskTexture,
+        })
+        sharedMaskRevision = clipMaskRevision
+      }
+      const sharedMaskBuildMs = performance.now() - sharedMaskBuildStartedAtMs
+      ctx.profiler?.count("beltCargo.globalMaskBeltRects", cachedBeltRects?.length ?? 0)
+      ctx.profiler?.count(
+        "beltCargo.globalMaskExtensions",
+        portConnectivityEntries.extensions.length + portConnectivityEntries.disconnectedPorts.length,
+      )
 
       // --- 渲染条目构建 ---
       const buildRenderEntries = (): BeltCargoRenderEntry[] => {
@@ -280,20 +317,8 @@ export function createBeltCargoDecoration(): DecorationLayer {
             angleRadians: beltCargoEntry.angleRadians
               + resolveDisplayRotationRadians(ctx.viewportState.displayRotation),
             itemId: beltCargoEntry.itemId,
-            clipMask: resolveBeltCargoClipMask({
-              ctx,
-              boxHalfSize,
-              simplifiedDeviceIcons,
-              disconnectedPortEntries: disconnectedPortEntriesByBeltId.get(beltCargoEntry.entityId)
-                ?? EMPTY_BELT_DISCONNECTED_PORT_ENTRIES,
-              portExtensionEntries: portExtensionEntriesByBeltId.get(beltCargoEntry.entityId)
-                ?? EMPTY_BELT_PORT_EXTENSION_ENTRIES,
-              beltRects: resolveLocalBeltCargoClipRects(
-                beltCargoEntry.position,
-                beltRectsByGridKey,
-              ),
-              maskKey: `${clipMaskRevision}:${beltCargoEntry.entityId}`,
-            }),
+            clipMask: null,
+            useLocalMask: false,
           })
         }
 
@@ -317,6 +342,8 @@ export function createBeltCargoDecoration(): DecorationLayer {
             boxSize,
             ensureCargoView,
             cargoViews,
+            sharedCargoLayer,
+            localCargoLayer,
             insetTextures,
             itemIconMap,
             resolvedTextures,
@@ -329,11 +356,17 @@ export function createBeltCargoDecoration(): DecorationLayer {
           boxSize,
           ensureCargoView,
           cargoViews,
+          sharedCargoLayer,
+          localCargoLayer,
           insetTextures,
           itemIconMap,
           resolvedTextures,
         })
       }
+      ctx.profiler?.count(
+        "beltCargo.sharedMaskBuild-ms",
+        Math.round(sharedMaskBuildMs * 100) / 100,
+      )
     },
 
     destroy(): void {
@@ -344,13 +377,17 @@ export function createBeltCargoDecoration(): DecorationLayer {
         texture.destroy()
       }
       insetTextures.clear()
+      sharedMaskTexture?.destroy(true)
+      sharedMaskTexture = null
+      sharedMaskSource.destroy()
 
       for (const view of cargoViews) {
         view.root.destroy({ children: true })
       }
 
       cargoViews.length = 0
-      cargoLayer.destroy({ children: true })
+      sharedCargoLayer.destroy({ children: true })
+      localCargoLayer.destroy({ children: true })
       container.destroy({ children: true })
     },
   }
@@ -610,6 +647,10 @@ function resolveBeltCargoClipMask(options: {
   }
 }
 
+// AI-CORRECTION 2026-06-20:
+// 单货物 clipMask 已被全局 Bitmap 遮罩替代；旧解析函数仅保留用于删除审计。
+void resolveBeltCargoClipMask
+
 function groupBeltPortEntriesByBeltId<T extends { readonly beltEntityId: string }>(
   entries: readonly T[],
 ): Map<string, T[]> {
@@ -754,6 +795,115 @@ function resolveBeltCargoClipRectGridKey(x: number, y: number): string {
   return `${x},${y}`
 }
 
+function rebuildSharedBeltCargoMask(options: {
+  ctx: DecorationSyncContext;
+  beltRects: readonly BeltCargoClipRect[];
+  portExtensionEntries: readonly BeltPortExtensionEntry[];
+  disconnectedPortEntries: readonly BeltDisconnectedPortEntry[];
+  disconnectedCapLength: number;
+  source: Graphics;
+  sprite: Sprite;
+  texture: RenderTexture | null;
+}): RenderTexture {
+  const width = Math.max(1, options.ctx.viewportBounds.width)
+  const height = Math.max(1, options.ctx.viewportBounds.height)
+  const texture = options.texture ?? RenderTexture.create({
+    width,
+    height,
+    resolution: 1,
+    dynamic: true,
+  })
+  texture.resize(width, height, 1)
+
+  options.source.clear()
+  for (const beltRect of options.beltRects) {
+    options.source
+      .rect(beltRect.x, beltRect.y, beltRect.width, beltRect.height)
+      .fill(0xffffff)
+  }
+  for (const extension of options.portExtensionEntries) {
+    drawBeltCargoClipExtension(
+      options.source,
+      resolveBeltCargoClipExtensionRect({
+        ctx: options.ctx,
+        extension,
+      }),
+    )
+  }
+  for (const port of options.disconnectedPortEntries) {
+    drawBeltCargoClipExtension(
+      options.source,
+      resolveBeltCargoClipDisconnectedPortRect({
+        ctx: options.ctx,
+        port,
+        capLength: options.disconnectedCapLength,
+      }),
+    )
+  }
+
+  options.ctx.renderHost.app.renderer.render({
+    container: options.source,
+    target: texture,
+    clear: true,
+  })
+  options.sprite.texture = texture
+  options.sprite.x = 0
+  options.sprite.y = 0
+  options.sprite.width = width
+  options.sprite.height = height
+
+  return texture
+}
+
+function drawBeltCargoClipExtension(
+  graphics: Graphics,
+  extension: BeltCargoClipExtensionRect,
+): void {
+  graphics
+    .poly(resolveRotatedRectanglePoints({
+      center: extension.center,
+      angleRadians: extension.angleRadians,
+      length: extension.length,
+      width: extension.width,
+    }), true)
+    .fill(0xffffff)
+}
+
+function shouldUseLocalBeltCargoMask(options: {
+  center: GridFloatPoint;
+  boxHalfSize: number;
+  extensions: readonly BeltCargoClipExtensionRect[];
+}): boolean {
+  const cargoRadius = options.boxHalfSize * Math.SQRT2
+
+  return options.extensions.some((extension) =>
+    isPointWithinExpandedRotatedRect(options.center, extension, cargoRadius),
+  )
+}
+
+function isPointWithinExpandedRotatedRect(
+  point: GridFloatPoint,
+  rect: BeltCargoClipExtensionRect,
+  expansion: number,
+): boolean {
+  const dx = point.x - rect.center.x
+  const dy = point.y - rect.center.y
+  const cos = Math.cos(rect.angleRadians)
+  const sin = Math.sin(rect.angleRadians)
+  const localX = dx * cos + dy * sin
+  const localY = -dx * sin + dy * cos
+
+  return Math.abs(localX) <= rect.length / 2 + expansion
+    && Math.abs(localY) <= rect.width / 2 + expansion
+}
+
+// AI-CORRECTION 2026-06-20:
+// 以下局部遮罩辅助函数已被单一全局 Bitmap 遮罩替代，仅保留用于删除审计，禁止执行。
+void groupBeltPortEntriesByBeltId
+void resolveLocalBeltCargoClipRects
+void shouldUseLocalBeltCargoMask
+void isPointWithinExpandedRotatedRect
+
 function resolveBeltCargoClipExtensionRect(options: {
   ctx: DecorationSyncContext;
   extension: BeltPortExtensionEntry;
@@ -788,6 +938,8 @@ function syncBeltCargoViews(options: {
   boxSize: number;
   ensureCargoView: (index: number) => BeltCargoView;
   cargoViews: readonly BeltCargoView[];
+  sharedCargoLayer: Container;
+  localCargoLayer: Container;
   insetTextures: Map<string, Texture>;
   itemIconMap: ReadonlyMap<string, string>;
   resolvedTextures: ReadonlyMap<string, Texture>;
@@ -797,10 +949,12 @@ function syncBeltCargoViews(options: {
   const boxCornerRadius = options.boxSize * BOX_CORNER_RADIUS_RATIO
   let visibleCount = 0
   let maskClearMs = 0
-  let maskDrawMs = 0
+  const maskDrawMs = 0
   let boxDrawMs = 0
   let iconSetupMs = 0
   let ensureViewMs = 0
+  let sharedMaskCount = 0
+  const localMaskCount = 0
 
   const t0 = performance.now()
 
@@ -821,30 +975,19 @@ function syncBeltCargoViews(options: {
     view.root.y = 0
     view.root.rotation = 0
 
-    if (entry.clipMask === null) {
-      const tMask = performance.now()
-      view.root.mask = null
-      view.mask.visible = false
-      if (view.maskKey !== null) {
-        view.mask.clear()
-        view.maskKey = null
-      }
-      maskClearMs += performance.now() - tMask
-    } else {
-      const tMask = performance.now()
-      view.root.mask = view.mask
-      view.mask.visible = true
-      if (view.maskKey !== entry.clipMask.key) {
-        drawBeltCargoClipMask(view.mask, entry.clipMask, options.profiler)
-        view.maskKey = entry.clipMask.key
-      }
-      maskDrawMs += performance.now() - tMask
-      // 细粒度计数：记录每次 draw 的 rect/poly 数量
-      if (options.profiler) {
-        options.profiler.count("beltCargo.vM-beltRects-perEntry", entry.clipMask.beltRects.length)
-        options.profiler.count("beltCargo.vM-extensions-perEntry", entry.clipMask.extensions.length)
-      }
+    if (view.root.parent !== options.sharedCargoLayer) {
+      options.sharedCargoLayer.addChild(view.root)
     }
+
+    const tMask = performance.now()
+    view.root.mask = null
+    view.mask.visible = false
+    if (view.maskKey !== null) {
+      view.mask.clear()
+      view.maskKey = null
+    }
+    maskClearMs += performance.now() - tMask
+    sharedMaskCount += 1
 
     view.cargoRoot.x = entry.centerX
     view.cargoRoot.y = entry.centerY
@@ -905,6 +1048,8 @@ function syncBeltCargoViews(options: {
     options.profiler.count("beltCargo.v-iconSetup-ms", Math.round(iconSetupMs * 100) / 100)
     options.profiler.count("beltCargo.v-hide-ms", Math.round(hideMs * 100) / 100)
     options.profiler.count("beltCargo.v-loopOther-ms", Math.round(loopOtherMs * 100) / 100)
+    options.profiler.count("beltCargo.sharedMaskEntries", sharedMaskCount)
+    options.profiler.count("beltCargo.localMaskEntries", localMaskCount)
   }
 }
 
@@ -1008,6 +1153,10 @@ function drawBeltCargoClipMask(
     profiler.count("beltCargo.vM-polys-us", Math.round(polysMs * 1000))
   }
 }
+
+// AI-CORRECTION 2026-06-20:
+// 每货物 Graphics mask 已退出执行路径；旧绘制函数仅保留用于删除审计。
+void drawBeltCargoClipMask
 
 function resolveRotatedRectanglePoints(options: {
   center: GridFloatPoint;

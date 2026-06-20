@@ -30,7 +30,7 @@ describe("system-blueprint public assets", () => {
       rootDirectory.folders[0]?.folderId ?? null,
     );
 
-    expect(sampleFolderDirectory.blueprints).toHaveLength(4);
+    expect(sampleFolderDirectory.blueprints).toHaveLength(5);
     expect(sampleFolderDirectory.blueprints[0]).toMatchObject({
       blueprintId: "429609a4-61cb-4083-98fa-b8de1268bec4",
       name: "精选荞愈胶囊产线",

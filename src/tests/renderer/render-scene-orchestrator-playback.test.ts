@@ -59,6 +59,7 @@ vi.mock("pixi.js", () => {
     },
     UPDATE_PRIORITY: {
       HIGH: 50,
+      LOW: -25,
     },
   }
 })
@@ -206,8 +207,10 @@ describe("createRenderSceneOrchestrator", () => {
     const ticker = {
       lastTime: 1200,
       deltaMS: 16.67,
-      add: vi.fn((handler: () => void) => {
-        orchestratorTestState.setTickHandler(handler)
+      add: vi.fn((handler: () => void, _context: unknown, priority: number) => {
+        if (priority === 50) {
+          orchestratorTestState.setTickHandler(handler)
+        }
       }),
       remove: vi.fn(),
     }
@@ -301,7 +304,7 @@ describe("createRenderSceneOrchestrator", () => {
     const orchestrator = createRenderSceneOrchestrator(renderHost)
     const tickHandler = orchestratorTestState.getTickHandler()
 
-    expect(ticker.add).toHaveBeenCalledTimes(1)
+    expect(ticker.add).toHaveBeenCalledTimes(3)
     expect(renderHost.app.stage.addChild).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
@@ -321,7 +324,7 @@ describe("createRenderSceneOrchestrator", () => {
     expect(advancePlaybackByDeltaMs).toHaveBeenCalledWith(16.67)
 
     orchestrator.destroy()
-    expect(ticker.remove).toHaveBeenCalledTimes(1)
+    expect(ticker.remove).toHaveBeenCalledTimes(3)
   })
 
   it("recreates an entity sprite when an entity keeps its id but changes definition", () => {
@@ -338,8 +341,10 @@ describe("createRenderSceneOrchestrator", () => {
     const ticker = {
       lastTime: 1200,
       deltaMS: 16.67,
-      add: vi.fn((handler: () => void) => {
-        orchestratorTestState.setTickHandler(handler)
+      add: vi.fn((handler: () => void, _context: unknown, priority: number) => {
+        if (priority === 50) {
+          orchestratorTestState.setTickHandler(handler)
+        }
       }),
       remove: vi.fn(),
     }

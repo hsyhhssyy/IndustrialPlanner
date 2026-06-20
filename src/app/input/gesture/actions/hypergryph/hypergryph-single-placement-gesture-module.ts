@@ -119,47 +119,55 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
       return { status: "ignored" };
     }
 
-    const startedAtMs = performance.now()
-    const t0 = performance.now()
+    const debugOn = options.appHost.internalState.settings?.debugMode === true
+
+    const startedAtMs = debugOn ? performance.now() : 0
+    const t0 = debugOn ? performance.now() : 0
     const nextGridPoint = options.editor.queries.findGridCellForClientPixelPoint(options.position);
-    perfFindGridMs += performance.now() - t0
+    if (debugOn) perfFindGridMs += performance.now() - t0
 
     if (nextGridPoint === null) {
-      perfTotalMs += performance.now() - startedAtMs
-      perfCallCount += 1
-      perfSkippedCount += 1
+      if (debugOn) {
+        perfTotalMs += performance.now() - startedAtMs
+        perfCallCount += 1
+        perfSkippedCount += 1
+      }
       return { status: "ignored" };
     }
 
     if (areGridPointsEqual(placementAnchor, nextGridPoint)) {
-      perfTotalMs += performance.now() - startedAtMs
-      perfCallCount += 1
-      perfSkippedCount += 1
+      if (debugOn) {
+        perfTotalMs += performance.now() - startedAtMs
+        perfCallCount += 1
+        perfSkippedCount += 1
+      }
       return { status: "handled" };
     }
 
-    const t1 = performance.now()
+    const t1 = debugOn ? performance.now() : 0
     const beforeRect = options.editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
-    perfBeforeRectMs += performance.now() - t1
+    if (debugOn) perfBeforeRectMs += performance.now() - t1
 
     if (beforeRect === null) {
-      perfTotalMs += performance.now() - startedAtMs
-      perfCallCount += 1
+      if (debugOn) {
+        perfTotalMs += performance.now() - startedAtMs
+        perfCallCount += 1
+      }
       return { status: "ignored" };
     }
 
     // 非跳过路径: drivePlacementPreview 核心逻辑
-    const t2 = performance.now()
+    const t2 = debugOn ? performance.now() : 0
     options.editor.actions.moveCollectionTo({
       collectionType: EntityCollectionType.preview,
       startGridPoint: placementAnchor,
       endGridPoint: nextGridPoint,
     });
-    perfMoveCollectionMs += performance.now() - t2
+    if (debugOn) perfMoveCollectionMs += performance.now() - t2
 
-    const t3 = performance.now()
+    const t3 = debugOn ? performance.now() : 0
     const afterRect = options.editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
-    perfAfterRectMs += performance.now() - t3
+    if (debugOn) perfAfterRectMs += performance.now() - t3
 
     if (
       afterRect !== null
@@ -171,13 +179,15 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
       })
     ) {
       options.appHost.internalState.runtime.placementAnchor = nextGridPoint;
-      const t4 = performance.now()
+      const t4 = debugOn ? performance.now() : 0
       options.appHost.internalActions.alignCanvasFloatingToolbar();
-      perfAlignToolbarMs += performance.now() - t4
+      if (debugOn) perfAlignToolbarMs += performance.now() - t4
     }
 
-    perfTotalMs += performance.now() - startedAtMs
-    perfCallCount += 1
+    if (debugOn) {
+      perfTotalMs += performance.now() - startedAtMs
+      perfCallCount += 1
+    }
     return { status: "handled" };
   }
 

@@ -69,11 +69,13 @@ export class GestureActionRouter<THost = unknown> {
       return this.handleGesture(event);
     });
 
-    this.modulePerfWindow = {
-      startedAtMs: 0,
-      eventCount: 0,
-      timingsMs: new Map(),
-    }
+    this.modulePerfWindow = getRouterDebugMode(this.getAppHost)
+      ? {
+          startedAtMs: 0,
+          eventCount: 0,
+          timingsMs: new Map(),
+        }
+      : null
   }
 
   public registerModule(module: GestureMappingModule<THost>): () => void {

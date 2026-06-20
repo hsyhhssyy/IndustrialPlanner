@@ -64,6 +64,8 @@ const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
 const RENDER_PERF_LOG_WINDOW_MS = 10_000
 const RENDER_PERF_LONG_FRAME_MS = 50
 const RENDER_PERF_TOP_STAGE_COUNT = 12
+const PIXI_RENDER_START_PRIORITY = UPDATE_PRIORITY.LOW + 1
+const PIXI_RENDER_FINISH_PRIORITY = UPDATE_PRIORITY.LOW - 1
 
 /** 渲染低层设备定义 ID —— 先渲染，被其他设备覆盖 */
 const ENTITY_LOW_DEFINITION_IDS = new Set([
@@ -126,6 +128,8 @@ interface PerfAggregate {
 }
 
 interface RenderFrameProfiler extends DecorationProfiler {
+  finishSceneSync(): void;
+  startPixiRender(): void;
   finishFrame(options: {
     activeTool: string;
   }): void;
@@ -199,6 +203,7 @@ export function createRenderSceneOrchestrator(
   const entitySpriteDefinitionIds = new Map<string, string>()
   const grassBackgroundDecoration = createGrassBackgroundDecoration(renderHost)
   const renderPerfDiagnostics = createRenderPerfDiagnostics(renderHost)
+  let activeFrameProfiler: RenderFrameProfiler | null = null
   const memoryCollector: MemorySnapshotCollector = createMemorySnapshotCollector(
     app,
     (snap) => {
@@ -287,6 +292,7 @@ export function createRenderSceneOrchestrator(
       startedAtMs: frameStartedAtMs,
       tickerDeltaMs: renderHost.app.ticker.deltaMS,
     })
+    activeFrameProfiler = frameProfiler
     const viewportState = measureRenderStage(
       frameProfiler,
       "viewport.readState",
@@ -439,9 +445,7 @@ export function createRenderSceneOrchestrator(
       darkPipeLinkSelectionDecoration.sync(ctx)
     })
 
-    frameProfiler?.finishFrame({
-      activeTool: readRenderActiveTool(renderHost),
-    })
+    frameProfiler?.finishSceneSync()
 
     // 内存快照：仅在 debugMode 下输出
     if (isRenderPerfDiagnosticsEnabled(renderHost)) {
@@ -450,6 +454,18 @@ export function createRenderSceneOrchestrator(
         "sprites.liveBeforeSync": entitySprites.size,
       })
     }
+  }
+
+  const startPixiRenderMeasurement = (): void => {
+    activeFrameProfiler?.startPixiRender()
+  }
+
+  const finishPixiRenderMeasurement = (): void => {
+    const frameProfiler = activeFrameProfiler
+    activeFrameProfiler = null
+    frameProfiler?.finishFrame({
+      activeTool: readRenderActiveTool(renderHost),
+    })
   }
 
   // 物流传送带层级（从底到顶）
@@ -496,10 +512,14 @@ export function createRenderSceneOrchestrator(
   marqueeOverlayLayer.addChild(darkPipeLinkSelectionDecoration.container)
   layers.overlay.addChild(diagnosticsDecoration.container)
   app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
+  app.ticker.add(startPixiRenderMeasurement, undefined, PIXI_RENDER_START_PRIORITY)
+  app.ticker.add(finishPixiRenderMeasurement, undefined, PIXI_RENDER_FINISH_PRIORITY)
 
   const host: RenderSceneOrchestrator = {
     destroy: () => {
       app.ticker.remove(flushViewport)
+      app.ticker.remove(startPixiRenderMeasurement)
+      app.ticker.remove(finishPixiRenderMeasurement)
       memoryCollector.stop()
 
       for (const sprite of entitySprites.values()) {
@@ -1054,6 +1074,12 @@ function createRenderPerfDiagnostics(renderHost: RenderHost): {
   let maxTickerDeltaMs = 0
   let totalRenderSelfMs = 0
   let maxRenderSelfMs = 0
+  let totalSceneToPixiRenderMs = 0
+  let maxSceneToPixiRenderMs = 0
+  let totalPixiRenderMs = 0
+  let maxPixiRenderMs = 0
+  let totalTickerWorkMs = 0
+  let maxTickerWorkMs = 0
   let longFrameCount = 0
 
   const resetWindow = (): void => {
@@ -1070,6 +1096,12 @@ function createRenderPerfDiagnostics(renderHost: RenderHost): {
     maxTickerDeltaMs = 0
     totalRenderSelfMs = 0
     maxRenderSelfMs = 0
+    totalSceneToPixiRenderMs = 0
+    maxSceneToPixiRenderMs = 0
+    totalPixiRenderMs = 0
+    maxPixiRenderMs = 0
+    totalTickerWorkMs = 0
+    maxTickerWorkMs = 0
     longFrameCount = 0
   }
 
@@ -1086,6 +1118,8 @@ function createRenderPerfDiagnostics(renderHost: RenderHost): {
         windowStartedAtMs = options.startedAtMs
       }
 
+      let sceneSyncFinishedAtMs: number | null = null
+      let pixiRenderStartedAtMs: number | null = null
       const profiler: RenderFrameProfiler = {
         count(name, value = 1): void {
           addPerfSample(countAggregates, name, value)
@@ -1098,9 +1132,24 @@ function createRenderPerfDiagnostics(renderHost: RenderHost): {
             addPerfSample(stageAggregates, stage, performance.now() - stageStartedAtMs)
           }
         },
+        finishSceneSync(): void {
+          sceneSyncFinishedAtMs = performance.now()
+        },
+        startPixiRender(): void {
+          pixiRenderStartedAtMs = performance.now()
+        },
         finishFrame({ activeTool }): void {
           const finishedAtMs = performance.now()
-          const renderSelfMs = finishedAtMs - options.startedAtMs
+          const effectiveSceneSyncFinishedAtMs = sceneSyncFinishedAtMs ?? finishedAtMs
+          const effectivePixiRenderStartedAtMs = pixiRenderStartedAtMs
+            ?? effectiveSceneSyncFinishedAtMs
+          const renderSelfMs = effectiveSceneSyncFinishedAtMs - options.startedAtMs
+          const sceneToPixiRenderMs = Math.max(
+            0,
+            effectivePixiRenderStartedAtMs - effectiveSceneSyncFinishedAtMs,
+          )
+          const pixiRenderMs = Math.max(0, finishedAtMs - effectivePixiRenderStartedAtMs)
+          const tickerWorkMs = finishedAtMs - options.startedAtMs
           const frameIntervalMs = previousFrameStartedAtMs === null
             ? null
             : options.startedAtMs - previousFrameStartedAtMs
@@ -1111,6 +1160,13 @@ function createRenderPerfDiagnostics(renderHost: RenderHost): {
           maxTickerDeltaMs = Math.max(maxTickerDeltaMs, options.tickerDeltaMs)
           totalRenderSelfMs += renderSelfMs
           maxRenderSelfMs = Math.max(maxRenderSelfMs, renderSelfMs)
+          totalSceneToPixiRenderMs += sceneToPixiRenderMs
+          maxSceneToPixiRenderMs = Math.max(maxSceneToPixiRenderMs, sceneToPixiRenderMs)
+          totalPixiRenderMs += pixiRenderMs
+          maxPixiRenderMs = Math.max(maxPixiRenderMs, pixiRenderMs)
+          totalTickerWorkMs += tickerWorkMs
+          maxTickerWorkMs = Math.max(maxTickerWorkMs, tickerWorkMs)
+          addPerfSample(stageAggregates, "pixi.renderer.render", pixiRenderMs)
           activeToolFrameCounts.set(
             activeTool,
             (activeToolFrameCounts.get(activeTool) ?? 0) + 1,
@@ -1144,11 +1200,28 @@ function createRenderPerfDiagnostics(renderHost: RenderHost): {
               maxTickerDeltaMs: roundPerfValue(maxTickerDeltaMs),
               avgRenderSelfMs: roundPerfValue(safeAverage(totalRenderSelfMs, frameCount)),
               maxRenderSelfMs: roundPerfValue(maxRenderSelfMs),
+              avgSceneSyncMs: roundPerfValue(safeAverage(totalRenderSelfMs, frameCount)),
+              maxSceneSyncMs: roundPerfValue(maxRenderSelfMs),
+              avgSceneToPixiRenderMs: roundPerfValue(
+                safeAverage(totalSceneToPixiRenderMs, frameCount),
+              ),
+              maxSceneToPixiRenderMs: roundPerfValue(maxSceneToPixiRenderMs),
+              avgPixiRenderMs: roundPerfValue(safeAverage(totalPixiRenderMs, frameCount)),
+              maxPixiRenderMs: roundPerfValue(maxPixiRenderMs),
+              avgTickerWorkMs: roundPerfValue(safeAverage(totalTickerWorkMs, frameCount)),
+              maxTickerWorkMs: roundPerfValue(maxTickerWorkMs),
               avgIntervalMinusRenderSelfMs: roundPerfValue(
                 Math.max(
                   0,
                   safeAverage(totalFrameIntervalMs, frameIntervalCount)
                     - safeAverage(totalRenderSelfMs, frameCount),
+                ),
+              ),
+              avgIntervalMinusTickerWorkMs: roundPerfValue(
+                Math.max(
+                  0,
+                  safeAverage(totalFrameIntervalMs, frameIntervalCount)
+                    - safeAverage(totalTickerWorkMs, frameCount),
                 ),
               ),
             },
