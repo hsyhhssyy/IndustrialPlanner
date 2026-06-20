@@ -9,6 +9,7 @@ import type {
   SimulationStartResult,
   SimulationTopologyMigration,
   TickPerfEntry,
+  TickPerfHotPathDetails,
   TickPerfStage3Details,
 } from "./types";
 import type {
@@ -53,6 +54,7 @@ import {
   rollRecipeStatsWindow,
   BASE_BATTERY_CAPACITY_J,
   type SimulationMutableRuntimeState,
+  type SimulationRuntimePerf,
 } from "./runtime/runtime-state";
 import {
   DEFAULT_SIMULATION_SPEED,
@@ -63,6 +65,54 @@ import {
 } from "./tick-rate";
 
 const MAX_RETAINED_TICKS = 180;
+
+function createRuntimePerfCounters(): SimulationRuntimePerf {
+  return {
+    getReservedCalls: 0,
+    canOutputProvideCalls: 0,
+    findInputSlotCalls: 0,
+    getRemainingCapacityCalls: 0,
+    selectSourceCalls: 0,
+    solveOutputEdgeChecks: 0,
+    inputEdgeLookupCalls: 0,
+    inputEdgeLookupMs: 0,
+    outputEdgeLookupCalls: 0,
+    outputEdgeLookupMs: 0,
+    edgeIndexFallbackScans: 0,
+    reservedLookupCalls: 0,
+    reservedLookupMs: 0,
+    reservedIndexBuilds: 0,
+    reservedIndexBuildMs: 0,
+    reservationAdjustCalls: 0,
+    recipeFinishCalls: 0,
+    recipeFinishSuccesses: 0,
+    recipeFinishFailures: 0,
+    recipeFinishPreflightMs: 0,
+    recipeFinishCommitMs: 0,
+    recipeFinishChangedSlots: 0,
+  };
+}
+
+function createHotPathPerfDetails(perf: SimulationRuntimePerf): TickPerfHotPathDetails {
+  return {
+    inputEdgeLookupCalls: perf.inputEdgeLookupCalls,
+    inputEdgeLookupMs: perf.inputEdgeLookupMs,
+    outputEdgeLookupCalls: perf.outputEdgeLookupCalls,
+    outputEdgeLookupMs: perf.outputEdgeLookupMs,
+    edgeIndexFallbackScans: perf.edgeIndexFallbackScans,
+    reservedLookupCalls: perf.reservedLookupCalls,
+    reservedLookupMs: perf.reservedLookupMs,
+    reservedIndexBuilds: perf.reservedIndexBuilds,
+    reservedIndexBuildMs: perf.reservedIndexBuildMs,
+    reservationAdjustCalls: perf.reservationAdjustCalls,
+    recipeFinishCalls: perf.recipeFinishCalls,
+    recipeFinishSuccesses: perf.recipeFinishSuccesses,
+    recipeFinishFailures: perf.recipeFinishFailures,
+    recipeFinishPreflightMs: perf.recipeFinishPreflightMs,
+    recipeFinishCommitMs: perf.recipeFinishCommitMs,
+    recipeFinishChangedSlots: perf.recipeFinishChangedSlots,
+  };
+}
 
 export class SimulationWorkerRuntime {
   private topology: CompiledSimulationTopology | null = null;
@@ -618,7 +668,13 @@ export class SimulationWorkerRuntime {
     const runtimeStepTicks = tickNumber - this.runtimeState.lastAdvancedTickNumber;
     const shouldRunRuntime = shouldAdvance && runtimeStepTicks >= this.standardStepTicks;
 
-    const perfTiming = this.perfEnabled ? { tickNumber, start: performance.now(), stages: {} as Record<string, number>, stage3: undefined as TickPerfStage3Details | undefined } : null;
+    const perfTiming = this.perfEnabled ? {
+      tickNumber,
+      start: performance.now(),
+      stages: {} as Record<string, number>,
+      stage3: undefined as TickPerfStage3Details | undefined,
+      hotPath: undefined as TickPerfHotPathDetails | undefined,
+    } : null;
 
     if (shouldAdvance && !shouldRunRuntime) {
       // 非运行时 tick：仿真未推进，但需正确反映当前电力状态（含电池缓冲）
@@ -676,6 +732,11 @@ export class SimulationWorkerRuntime {
         }
       }
 
+      this.runtimeState.transient.reservedAmountByStorageSlotId = null;
+      if (this.perfEnabled) {
+        this.runtimeState.transient._perf = createRuntimePerfCounters();
+      }
+
       const t0 = this.perfEnabled ? performance.now() : 0;
       advanceDevices(
         this.topology,
@@ -694,14 +755,10 @@ export class SimulationWorkerRuntime {
       const stage3Perf: SolveTransferGraphPerf | undefined = this.perfEnabled
         ? { layerCount: 0, anchorCount: 0, outputNodeCount: 0, moveCount: 0, refreshBlockedMs: 0, refreshBlockedCalls: 0 }
         : undefined;
-      if (this.perfEnabled) {
-        this.runtimeState!.transient._perf = { getReservedCalls: 0, canOutputProvideCalls: 0, findInputSlotCalls: 0, getRemainingCapacityCalls: 0, selectSourceCalls: 0, solveOutputEdgeChecks: 0 };
-      }
       solveTransferGraph(this.topology, this.runtimeState, stage3Perf);
       if (this.perfEnabled) {
         perfTiming!.stages["solveTransferGraph"] = performance.now() - t2;
-        const p = this.runtimeState!.transient._perf!;
-        delete this.runtimeState!.transient._perf;
+        const p = this.runtimeState.transient._perf!;
         perfTiming!.stage3 = {
           layerCount: stage3Perf!.layerCount,
           anchorCount: stage3Perf!.anchorCount,
@@ -740,7 +797,11 @@ export class SimulationWorkerRuntime {
         this.powerMode,
         effectiveGeneration,
       );
-      if (this.perfEnabled) { perfTiming!.stages["settleRecipes"] = performance.now() - t4; }
+      if (this.perfEnabled) {
+        perfTiming!.stages["settleRecipes"] = performance.now() - t4;
+        perfTiming!.hotPath = createHotPathPerfDetails(this.runtimeState.transient._perf!);
+        delete this.runtimeState.transient._perf;
+      }
 
       const t5 = this.perfEnabled ? performance.now() : 0;
       maintainTransportComponentDomains(this.topology, this.runtimeState);
@@ -775,6 +836,7 @@ export class SimulationWorkerRuntime {
             createSnapshot: perfTiming!.stages["createSnapshot"] ?? 0,
           },
           stage3: perfTiming!.stage3,
+          hotPath: perfTiming!.hotPath,
         });
       }
       this.adjustDynamicTickRateAtLegalPoint(tickNumber);

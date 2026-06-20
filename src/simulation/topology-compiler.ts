@@ -115,6 +115,8 @@ export function compileSimulationTopology(
   const links: Record<string, CompiledSimulationSlotLink> = {};
   const physicalConnections: Record<string, CompiledSimulationPhysicalConnection> = {};
   const transferEdges: Record<string, CompiledSimulationTransferEdge> = {};
+  const edgeIdsByInputPortId: Record<string, string[]> = {};
+  const edgeIdsByOutputPortId: Record<string, string[]> = {};
 
   addDeviceCompileResult({
     result: compileWarehouseDevice(options.document, itemCatalog),
@@ -247,6 +249,8 @@ export function compileSimulationTopology(
         };
         transferEdges[edge.id] = edge;
         edgeOrder.push(edge.id);
+        (edgeIdsByOutputPortId[edge.sourcePortId] ??= []).push(edge.id);
+        (edgeIdsByInputPortId[edge.targetPortId] ??= []).push(edge.id);
       }
     }
   }
@@ -276,6 +280,9 @@ export function compileSimulationTopology(
   });
   const documentHash = createSimulationDocumentHash(options.document);
   const totalPowerDemand = computeTotalPowerDemand(devices);
+  const deviceOrderIndexById = Object.fromEntries(
+    deviceOrder.map((deviceId, index) => [deviceId, index]),
+  );
   const topologyHashInput = {
     documentHash,
     registryHash,
@@ -290,6 +297,9 @@ export function compileSimulationTopology(
     links,
     physicalConnections,
     transferEdges,
+    edgeIdsByInputPortId,
+    edgeIdsByOutputPortId,
+    deviceOrderIndexById,
     ordering: {
       deviceOrder,
       nodeOrder,
@@ -318,6 +328,9 @@ export function compileSimulationTopology(
     links,
     physicalConnections,
     transferEdges,
+    edgeIdsByInputPortId,
+    edgeIdsByOutputPortId,
+    deviceOrderIndexById,
     ordering: {
       deviceOrder,
       nodeOrder,

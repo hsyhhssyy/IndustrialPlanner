@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { advanceDevices } from "@/simulation/runtime/stage-1-advance-devices";
-import { createSimulationMutableRuntimeState } from "@/simulation/runtime/runtime-state";
+import {
+  createSimulationMutableRuntimeState,
+  type RuntimeDeviceRecipeState,
+} from "@/simulation/runtime/runtime-state";
+import {
+  adjustReservedAmounts,
+  getReservedAmount,
+} from "@/simulation/runtime/runtime-slot-access";
 import {
   isDynamicTickRateCompatibleWithTransferUnits,
 } from "@/simulation/tick-rate";
@@ -107,6 +114,79 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       progressTicks: 5,
       state: "waiting-output",
     });
+  });
+
+  it("does not commit partial recipe outputs when local transaction preflight fails", () => {
+    const topology = createProductionOverflowTopology(1);
+    const state = createSimulationMutableRuntimeState(topology);
+    state.persistent.devices["device:maker"]!.channelRecipes["main"] =
+      createRunningRecipe(5, 2);
+
+    advanceDevices(topology, state, 1);
+
+    expect(state.persistent.slots["slot:out"]).toEqual({
+      itemType: null,
+      count: 0,
+    });
+    expect(state.persistent.devices["device:maker"]!.channelRecipes["main"])
+      .toMatchObject({
+        progressTicks: 5,
+        state: "waiting-output",
+      });
+  });
+
+  it("builds the reservation aggregate once and maintains it incrementally", () => {
+    const topology = createProductionOverflowTopology(10);
+    const state = createSimulationMutableRuntimeState(topology);
+    const recipe = createRunningRecipe(0);
+    recipe.reservations = [{
+      slotId: "slot:out",
+      itemType: "item_test",
+      amount: 2,
+    }];
+    state.persistent.devices["device:maker"]!.channelRecipes["main"] = recipe;
+
+    expect(getReservedAmount(state, "slot:out")).toBe(2);
+    expect(getReservedAmount(state, "slot:out")).toBe(2);
+    adjustReservedAmounts(state, recipe.reservations, -1);
+    expect(getReservedAmount(state, "slot:out")).toBe(0);
+    adjustReservedAmounts(state, recipe.reservations, 1);
+    expect(getReservedAmount(state, "slot:out")).toBe(2);
+  });
+
+  it("reports indexed hot-path and local recipe transaction timings", () => {
+    const runtime = new SimulationWorkerRuntime();
+    runtime.handleRequest({
+      type: "load-topology",
+      requestId: 1,
+      topology: createProductionOverflowTopology(10),
+      perfEnabled: true,
+      simulationSpeed: 1,
+    });
+
+    for (let tickNumber = 1; tickNumber <= 7; tickNumber += 1) {
+      runtime.advanceToTick(tickNumber);
+    }
+
+    const response = runtime.handleRequest({
+      type: "get-perf-report",
+      requestId: 2,
+    });
+    expect(response.type).toBe("perf-report");
+    if (response.type !== "perf-report") {
+      return;
+    }
+
+    const hotPaths = response.report?.entries.flatMap((entry) =>
+      entry.hotPath === undefined ? [] : [entry.hotPath],
+    ) ?? [];
+    expect(hotPaths.length).toBeGreaterThan(0);
+    expect(hotPaths.reduce((sum, details) => sum + details.recipeFinishCalls, 0))
+      .toBeGreaterThan(0);
+    expect(hotPaths.reduce((sum, details) => sum + details.recipeFinishChangedSlots, 0))
+      .toBeGreaterThan(0);
+    expect(hotPaths.every((details) => details.edgeIndexFallbackScans === 0)).toBe(true);
+
   });
 });
 
@@ -229,13 +309,16 @@ function createProductionOverflowTopology(
   };
 }
 
-function createRunningRecipe(progressTicks: number) {
+function createRunningRecipe(
+  progressTicks: number,
+  outputAmount = 1,
+): RuntimeDeviceRecipeState {
   const plan: CompiledSimulationRecipePlan = {
     recipeId: "recipe:test",
     recipeType: "immediate-consume",
     durationTicks: 5,
     inputs: [],
-    outputs: [{ itemId: "item_test", amount: 1 }],
+    outputs: [{ itemId: "item_test", amount: outputAmount }],
     ingredientNodeIds: [],
     productNodeIds: ["node:out"],
   };

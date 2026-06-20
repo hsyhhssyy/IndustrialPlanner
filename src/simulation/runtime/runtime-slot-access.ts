@@ -78,24 +78,51 @@ export function getReservedAmount(
   storageSlotId: string,
 ): number {
   const perf = state.transient._perf;
+  const lookupStartedAt = perf === undefined ? 0 : performance.now();
   if (perf !== undefined) {
     perf.getReservedCalls += 1;
+    perf.reservedLookupCalls += 1;
   }
 
-  let reservedAmount = 0;
-  for (const deviceState of Object.values(state.persistent.devices)) {
-    for (const recipe of Object.values(deviceState.channelRecipes)) {
-      if (recipe === null) {
-        continue;
-      }
-      for (const reservation of recipe.reservations) {
-        if (reservation.slotId === storageSlotId) {
-          reservedAmount += reservation.amount;
+  if (state.transient.reservedAmountByStorageSlotId === null) {
+    const buildStartedAt = perf === undefined ? 0 : performance.now();
+    const index: Record<string, number> = {};
+    for (const deviceState of Object.values(state.persistent.devices)) {
+      for (const recipe of Object.values(deviceState.channelRecipes)) {
+        if (recipe === null) continue;
+        for (const reservation of recipe.reservations) {
+          index[reservation.slotId] = (index[reservation.slotId] ?? 0) + reservation.amount;
         }
       }
     }
+    state.transient.reservedAmountByStorageSlotId = index;
+    if (perf !== undefined) {
+      perf.reservedIndexBuilds += 1;
+      perf.reservedIndexBuildMs += performance.now() - buildStartedAt;
+    }
   }
-  return reservedAmount;
+
+  const result = state.transient.reservedAmountByStorageSlotId[storageSlotId] ?? 0;
+  if (perf !== undefined) {
+    perf.reservedLookupMs += performance.now() - lookupStartedAt;
+  }
+  return result;
+}
+
+export function adjustReservedAmounts(
+  state: SimulationMutableRuntimeState,
+  reservations: readonly RuntimeReservedItem[],
+  direction: 1 | -1,
+): void {
+  const index = state.transient.reservedAmountByStorageSlotId;
+  if (index === null || reservations.length === 0) return;
+  const perf = state.transient._perf;
+  if (perf !== undefined) perf.reservationAdjustCalls += 1;
+  for (const reservation of reservations) {
+    const next = (index[reservation.slotId] ?? 0) + reservation.amount * direction;
+    if (next > 0) index[reservation.slotId] = next;
+    else delete index[reservation.slotId];
+  }
 }
 
 export function acceptsItem(
@@ -391,33 +418,67 @@ export function placeRecipeOutputs(
   plan: CompiledSimulationRecipePlan,
   inputItems: readonly RuntimeRecipeItem[],
 ): boolean {
-  const simulatedSlots = cloneSlotStates(state.persistent.slots);
-  const simulatedState: SimulationMutableRuntimeState = {
-    ...state,
-    persistent: {
-      ...state.persistent,
-      slots: simulatedSlots,
-    },
-  };
+  const overlayState = createSlotOverlayState(state);
+  if (!placeRecipeOutputsIntoOverlay(topology, overlayState, plan, inputItems)) {
+    return false;
+  }
+  commitSlotOverlay(state.persistent.slots, overlayState.persistent.slots);
+  return true;
+}
 
+function placeRecipeOutputsIntoOverlay(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  plan: CompiledSimulationRecipePlan,
+  inputItems: readonly RuntimeRecipeItem[],
+): boolean {
   for (const output of resolveRecipeOutputItems(plan.outputs, inputItems)) {
     for (let amount = 0; amount < output.amount; amount += 1) {
-      const targetSlotId = findRecipeOutputSlot(topology, simulatedState, plan, output.itemType);
-      if (targetSlotId === null) {
-        return false;
-      }
-      const storageSlotId = resolveStorageSlotId(simulatedState, targetSlotId);
-      const slotState = simulatedSlots[storageSlotId];
-      if (slotState === undefined) {
-        return false;
-      }
+      const targetSlotId = findRecipeOutputSlot(topology, state, plan, output.itemType);
+      if (targetSlotId === null) return false;
+      const storageSlotId = resolveStorageSlotId(state, targetSlotId);
+      const slotState = cloneSlotIntoOverlay(state.persistent.slots, storageSlotId);
+      if (slotState === null) return false;
       slotState.itemType = slotState.itemType ?? output.itemType;
       slotState.count += 1;
     }
   }
-
-  state.persistent.slots = simulatedSlots;
   return true;
+}
+
+function createSlotOverlayState(
+  state: SimulationMutableRuntimeState,
+): SimulationMutableRuntimeState {
+  return {
+    ...state,
+    persistent: {
+      ...state.persistent,
+      slots: Object.create(state.persistent.slots) as Record<string, RuntimeSlotState>,
+    },
+  };
+}
+
+function cloneSlotIntoOverlay(
+  slots: Record<string, RuntimeSlotState>,
+  slotId: string,
+): RuntimeSlotState | null {
+  if (Object.prototype.hasOwnProperty.call(slots, slotId)) {
+    return slots[slotId] ?? null;
+  }
+  const source = slots[slotId];
+  if (source === undefined) return null;
+  const clone = { ...source };
+  slots[slotId] = clone;
+  return clone;
+}
+
+function commitSlotOverlay(
+  targetSlots: Record<string, RuntimeSlotState>,
+  overlaySlots: Record<string, RuntimeSlotState>,
+): void {
+  for (const [slotId, slotState] of Object.entries(overlaySlots)) {
+    targetSlots[slotId] = slotState;
+  }
 }
 
 export function selectRecipeInputs(options: {
@@ -482,28 +543,52 @@ export function finishRecipeIfPossible(
   state: SimulationMutableRuntimeState,
   recipe: RuntimeDeviceRecipeState,
 ): boolean {
+  const perf = state.transient._perf;
+  const preflightStartedAt = perf === undefined ? 0 : performance.now();
+  if (perf !== undefined) perf.recipeFinishCalls += 1;
   if (!canRecipeFinishAtCurrentPhase(topology, state, recipe)) {
+    if (perf !== undefined) {
+      perf.recipeFinishFailures += 1;
+      perf.recipeFinishPreflightMs += performance.now() - preflightStartedAt;
+    }
     return false;
   }
 
-  const simulatedSlots = cloneSlotStates(state.persistent.slots);
+  const overlayState = createSlotOverlayState(state);
   const hadReservations = recipe.reservations.length > 0;
   if (hadReservations) {
-    consumeSelections(simulatedSlots, recipe.reservations);
+    for (const reservation of recipe.reservations) {
+      if (cloneSlotIntoOverlay(overlayState.persistent.slots, reservation.slotId) === null) {
+        if (perf !== undefined) {
+          perf.recipeFinishFailures += 1;
+          perf.recipeFinishPreflightMs += performance.now() - preflightStartedAt;
+        }
+        return false;
+      }
+    }
+    consumeSelections(overlayState.persistent.slots, recipe.reservations);
   }
 
-  const simulatedState: SimulationMutableRuntimeState = {
-    ...state,
-    persistent: {
-      ...state.persistent,
-      slots: simulatedSlots,
-    },
-  };
-  if (!placeRecipeOutputs(topology, simulatedState, recipe.plan, recipe.inputItems)) {
+  if (!placeRecipeOutputsIntoOverlay(topology, overlayState, recipe.plan, recipe.inputItems)) {
+    if (perf !== undefined) {
+      perf.recipeFinishFailures += 1;
+      perf.recipeFinishPreflightMs += performance.now() - preflightStartedAt;
+    }
     return false;
   }
+  if (perf !== undefined) {
+    perf.recipeFinishPreflightMs += performance.now() - preflightStartedAt;
+  }
 
-  state.persistent.slots = simulatedState.persistent.slots;
+  const commitStartedAt = perf === undefined ? 0 : performance.now();
+  const changedSlotCount = Object.keys(overlayState.persistent.slots).length;
+  commitSlotOverlay(state.persistent.slots, overlayState.persistent.slots);
+  if (hadReservations) adjustReservedAmounts(state, recipe.reservations, -1);
+  if (perf !== undefined) {
+    perf.recipeFinishSuccesses += 1;
+    perf.recipeFinishChangedSlots += changedSlotCount;
+    perf.recipeFinishCommitMs += performance.now() - commitStartedAt;
+  }
 
   // 只统计生产设备的配方（编译期 isProducer 缓存，零开销判断）
   const producerDevice = resolveRecipeProducerDevice(topology, recipe.plan);
@@ -799,9 +884,18 @@ function recipeInputMatches(input: CompiledSimulationRecipeItem, itemType: strin
   return input.itemId === "any" || input.itemId === itemType;
 }
 
-function cloneSlotStates(slots: Record<string, RuntimeSlotState>): Record<string, RuntimeSlotState> {
-  return Object.fromEntries(Object.entries(slots).map(([slotId, slot]) => [slotId, { ...slot }]));
-}
+// AI-REMOVED 2026-06-20:
+// Reason: 配方完成只涉及少量输入/输出槽位，全量复制所有运行时槽位造成主要仿真瓶颈。
+// Trigger: 用户要求优化 advanceDevices 的全槽位双重克隆。
+// Evidence: finishRecipeIfPossible 与 placeRecipeOutputs 原先连续调用该函数；性能日志显示 advanceDevices 平均 26.12ms。
+// Replacement: createSlotOverlayState + cloneSlotIntoOverlay + commitSlotOverlay。
+// Risk: Medium - 局部事务必须保持失败时零写入，已由 dynamic-tick-rate.test.ts 回归覆盖。
+// Human Review: Required
+//
+// Original code:
+// function cloneSlotStates(slots: Record<string, RuntimeSlotState>): Record<string, RuntimeSlotState> {
+//   return Object.fromEntries(Object.entries(slots).map(([slotId, slot]) => [slotId, { ...slot }]));
+// }
 
 /**
  * 在每个 tick 结束后维护运输组件的域锁：

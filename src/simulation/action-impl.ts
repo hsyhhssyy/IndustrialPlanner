@@ -37,6 +37,7 @@ import type {
   SimulationStartResult,
   SimulationTickPullStatus,
   SimulationTopologyMigration,
+  TickPerfHotPathDetails,
   TickPerfStage3Details,
 } from "./types";
 import type { SimulationWorkerResponse } from "./worker-protocol";
@@ -498,6 +499,36 @@ implements SimulationAction, SimulationInternalAction {
             getRemainingCapacityCalls: Math.round(avg("getRemainingCapacityCalls")),
             getReservedCalls: Math.round(avg("getReservedCalls")),
             solveOutputEdgeChecks: Math.round(avg("solveOutputEdgeChecks")),
+          };
+        }
+
+        const hotPaths = response.report.entries
+          .filter((entry) => entry.hotPath !== undefined)
+          .map((entry) => entry.hotPath!);
+        if (hotPaths.length > 0) {
+          const avgHotPath = <T extends keyof TickPerfHotPathDetails>(key: T) =>
+            Math.round(
+              hotPaths.reduce((sum, details) => sum + (details[key] as number), 0)
+                / hotPaths.length
+                * 100,
+            ) / 100;
+          logPayload.hotPath = {
+            inputEdgeLookupCalls: Math.round(avgHotPath("inputEdgeLookupCalls")),
+            inputEdgeLookupMs: avgHotPath("inputEdgeLookupMs"),
+            outputEdgeLookupCalls: Math.round(avgHotPath("outputEdgeLookupCalls")),
+            outputEdgeLookupMs: avgHotPath("outputEdgeLookupMs"),
+            edgeIndexFallbackScans: Math.round(avgHotPath("edgeIndexFallbackScans")),
+            reservedLookupCalls: Math.round(avgHotPath("reservedLookupCalls")),
+            reservedLookupMs: avgHotPath("reservedLookupMs"),
+            reservedIndexBuilds: avgHotPath("reservedIndexBuilds"),
+            reservedIndexBuildMs: avgHotPath("reservedIndexBuildMs"),
+            reservationAdjustCalls: Math.round(avgHotPath("reservationAdjustCalls")),
+            recipeFinishCalls: Math.round(avgHotPath("recipeFinishCalls")),
+            recipeFinishSuccesses: Math.round(avgHotPath("recipeFinishSuccesses")),
+            recipeFinishFailures: Math.round(avgHotPath("recipeFinishFailures")),
+            recipeFinishPreflightMs: avgHotPath("recipeFinishPreflightMs"),
+            recipeFinishCommitMs: avgHotPath("recipeFinishCommitMs"),
+            recipeFinishChangedSlots: avgHotPath("recipeFinishChangedSlots"),
           };
         }
 

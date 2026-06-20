@@ -9,6 +9,34 @@ import { createRegistryContract } from "@/registry";
 import { compileSimulationTopology } from "@/simulation/topology-compiler";
 
 describe("port priority groups", () => {
+  it("compiles direct port adjacency and device-order indexes for runtime solving", () => {
+    const registry = createRegistryContract();
+    const document: WorldDocument = {
+      ...createWorldDocument(),
+      entities: {
+        source: createEntity("source", "item_port_storager_1", 0, 0, 0),
+        belt: createEntity("belt", "belt_straight_1x1", 0, -1, 270),
+        sink: createEntity("sink", "item_port_storager_1", 0, -4, 0),
+      },
+      entityOrder: ["source", "belt", "sink"],
+    };
+    const topology = compileSimulationTopology({
+      document,
+      registry,
+      poweredEntityIds: new Set(document.entityOrder),
+    });
+
+    expect(topology.ordering.edgeOrder.length).toBeGreaterThan(0);
+    for (const edgeId of topology.ordering.edgeOrder) {
+      const edge = topology.transferEdges[edgeId]!;
+      expect(topology.edgeIdsByOutputPortId?.[edge.sourcePortId]).toContain(edgeId);
+      expect(topology.edgeIdsByInputPortId?.[edge.targetPortId]).toContain(edgeId);
+    }
+    expect(topology.deviceOrderIndexById).toEqual(
+      Object.fromEntries(topology.ordering.deviceOrder.map((deviceId, index) => [deviceId, index])),
+    );
+  });
+
   it("uses default priority group 5 for registry ports", () => {
     const topology = compileSplitterTopology({});
     const priorities = resolveSplitterPortPriorities(topology);
@@ -62,6 +90,23 @@ describe("port priority groups", () => {
     expect(priorities.out_e).toBe(5);
   });
 });
+
+function createEntity(
+  id: string,
+  definitionId: string,
+  x: number,
+  y: number,
+  rotation: WorldEntity["rotation"],
+): WorldEntity {
+  return {
+    id,
+    definitionId,
+    position: { x, y },
+    rotation,
+    config: {},
+    tags: [],
+  };
+}
 
 function compileSplitterTopology(config: WorldEntity["config"]) {
   const registry = createRegistryContract();

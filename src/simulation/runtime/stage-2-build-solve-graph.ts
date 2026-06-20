@@ -14,8 +14,12 @@ export function buildSolveGraph(
 ): void {
   // 保留前一阶段的 recipeStatsDelta，避免被 createEmptyTransientState 清空
   const preservedDelta = state.transient.recipeStatsDelta;
+  const preservedReservedAmounts = state.transient.reservedAmountByStorageSlotId;
+  const preservedPerf = state.transient._perf;
   state.transient = createEmptyTransientState();
   state.transient.recipeStatsDelta = preservedDelta;
+  state.transient.reservedAmountByStorageSlotId = preservedReservedAmounts;
+  state.transient._perf = preservedPerf;
 
   for (const nodeId of topology.ordering.nodeOrder) {
     const node = topology.nodes[nodeId];

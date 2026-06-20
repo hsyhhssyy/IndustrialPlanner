@@ -5,6 +5,7 @@ import type {
 } from "../types";
 import type { RuntimeDeviceRecipeState, SimulationMutableRuntimeState } from "./runtime-state";
 import {
+  adjustReservedAmounts,
   aggregateInputItems,
   consumeSelections,
   finishRecipeIfPossible,
@@ -96,6 +97,8 @@ function startIdleDevices(
           }
         }
         recipe.reservations = [];
+      } else {
+        adjustReservedAmounts(state, recipe.reservations, 1);
       }
 
       deviceState.channelRecipes[channel.id] = recipe;

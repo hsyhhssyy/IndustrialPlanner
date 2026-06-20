@@ -94,6 +94,11 @@ export interface CompiledSimulationTopology {
   readonly links: Record<string, CompiledSimulationSlotLink>;
   readonly physicalConnections: Record<string, CompiledSimulationPhysicalConnection>;
   readonly transferEdges: Record<string, CompiledSimulationTransferEdge>;
+  /** 编译期邻接索引。旧测试夹具可省略，运行时会回退到 edgeOrder 扫描。 */
+  readonly edgeIdsByInputPortId?: Readonly<Record<string, readonly string[]>>;
+  readonly edgeIdsByOutputPortId?: Readonly<Record<string, readonly string[]>>;
+  /** 编译期设备顺序索引，避免热路径排序反复调用 indexOf。 */
+  readonly deviceOrderIndexById?: Readonly<Record<string, number>>;
   readonly ordering: {
     readonly deviceOrder: readonly string[];
     readonly nodeOrder: readonly string[];
@@ -480,6 +485,7 @@ export interface TickPerfEntry {
     readonly createSnapshot: number;
   };
   readonly stage3?: TickPerfStage3Details;
+  readonly hotPath?: TickPerfHotPathDetails;
 }
 
 export interface TickPerfStage3Details {
@@ -495,6 +501,25 @@ export interface TickPerfStage3Details {
   readonly getRemainingCapacityCalls: number;
   readonly selectSourceCalls: number;
   readonly solveOutputEdgeChecks: number;
+}
+
+export interface TickPerfHotPathDetails {
+  readonly inputEdgeLookupCalls: number;
+  readonly inputEdgeLookupMs: number;
+  readonly outputEdgeLookupCalls: number;
+  readonly outputEdgeLookupMs: number;
+  readonly edgeIndexFallbackScans: number;
+  readonly reservedLookupCalls: number;
+  readonly reservedLookupMs: number;
+  readonly reservedIndexBuilds: number;
+  readonly reservedIndexBuildMs: number;
+  readonly reservationAdjustCalls: number;
+  readonly recipeFinishCalls: number;
+  readonly recipeFinishSuccesses: number;
+  readonly recipeFinishFailures: number;
+  readonly recipeFinishPreflightMs: number;
+  readonly recipeFinishCommitMs: number;
+  readonly recipeFinishChangedSlots: number;
 }
 
 export interface SimulationPerfReport {

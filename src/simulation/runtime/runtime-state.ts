@@ -102,6 +102,8 @@ export interface SimulationTickTransientState {
   diagnostics: RuntimeTickDiagnosticRecord[];
   /** Stage 3 增量优化：被阻塞的 input-view node ID 集合，避免 refreshBlockedInputNodesAfterMove 每次全量扫描 nodeOrder。 */
   blockedInputNodeIds: Set<string>;
+  /** 当前 tick 的槽位预留量聚合索引；首次查询时构建，后续随配方生命周期增量维护。 */
+  reservedAmountByStorageSlotId: Record<string, number> | null;
   /** Perf 埋点：当前 tick 的热点函数调用计数累积器。仅在 perfEnabled 时非空。 */
   _perf?: SimulationRuntimePerf;
   /** 当前 tick 的配方统计增量（产出/消耗），由各阶段累积，tick 结束时滚入滑动窗口后清空。 */
@@ -115,6 +117,22 @@ export interface SimulationRuntimePerf {
   getRemainingCapacityCalls: number;
   selectSourceCalls: number;
   solveOutputEdgeChecks: number;
+  inputEdgeLookupCalls: number;
+  inputEdgeLookupMs: number;
+  outputEdgeLookupCalls: number;
+  outputEdgeLookupMs: number;
+  edgeIndexFallbackScans: number;
+  reservedLookupCalls: number;
+  reservedLookupMs: number;
+  reservedIndexBuilds: number;
+  reservedIndexBuildMs: number;
+  reservationAdjustCalls: number;
+  recipeFinishCalls: number;
+  recipeFinishSuccesses: number;
+  recipeFinishFailures: number;
+  recipeFinishPreflightMs: number;
+  recipeFinishCommitMs: number;
+  recipeFinishChangedSlots: number;
 }
 
 export type RuntimeNodeResolveState = "unresolved" | "visited" | "blocked-resolved";
@@ -329,6 +347,7 @@ export function createEmptyTransientState(): SimulationTickTransientState {
     transfers: [],
     diagnostics: [],
     blockedInputNodeIds: new Set(),
+    reservedAmountByStorageSlotId: null,
     recipeStatsDelta: createRecipeStatsDelta(),
   };
 }
@@ -459,6 +478,9 @@ function cloneTransientState(transient: SimulationTickTransientState): Simulatio
     transfers: transient.transfers.map((transfer) => ({ ...transfer })),
     diagnostics: transient.diagnostics.map((diagnostic) => ({ ...diagnostic })),
     blockedInputNodeIds: new Set(transient.blockedInputNodeIds),
+    reservedAmountByStorageSlotId: transient.reservedAmountByStorageSlotId === null
+      ? null
+      : { ...transient.reservedAmountByStorageSlotId },
     _perf: transient._perf === undefined ? undefined : { ...transient._perf },
     recipeStatsDelta: {
       produced: { ...transient.recipeStatsDelta.produced },

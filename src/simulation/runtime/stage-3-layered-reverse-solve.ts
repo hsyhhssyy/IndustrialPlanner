@@ -482,7 +482,7 @@ function allDownstreamInputNodesResolved(
   state: SimulationMutableRuntimeState,
   outputNode: CompiledSimulationNode,
 ): boolean {
-  for (const edgeId of getRawOutputEdgeIds(topology, outputNode)) {
+  for (const edgeId of getRawOutputEdgeIds(topology, state, outputNode)) {
     const targetNodeId = topology.transferEdges[edgeId]?.targetNodeId;
     const targetNode = targetNodeId === undefined ? undefined : topology.nodes[targetNodeId];
     if (targetNode !== undefined && !isInputNodeResolved(state, targetNode)) {
@@ -669,8 +669,11 @@ function sortInputAnchors(
   nodes: readonly CompiledSimulationNode[],
 ): readonly CompiledSimulationNode[] {
   return [...nodes].sort((left, right) => {
-    const deviceOrder = topology.ordering.deviceOrder.indexOf(right.deviceId)
-      - topology.ordering.deviceOrder.indexOf(left.deviceId);
+    const rightOrder = topology.deviceOrderIndexById?.[right.deviceId]
+      ?? topology.ordering.deviceOrder.indexOf(right.deviceId);
+    const leftOrder = topology.deviceOrderIndexById?.[left.deviceId]
+      ?? topology.ordering.deviceOrder.indexOf(left.deviceId);
+    const deviceOrder = rightOrder - leftOrder;
     if (deviceOrder !== 0) {
       return deviceOrder;
     }
@@ -721,10 +724,14 @@ function getOrderedEdgeIdsForPorts(options: {
   readonly topology: CompiledSimulationTopology;
   readonly state: SimulationMutableRuntimeState;
   readonly portIds: readonly string[];
-  readonly edgeSelector: (topology: CompiledSimulationTopology, portId: string) => readonly string[];
+  readonly edgeSelector: (
+    topology: CompiledSimulationTopology,
+    state: SimulationMutableRuntimeState,
+    portId: string,
+  ) => readonly string[];
 }): readonly string[] {
   return getOrderedPorts(options.topology, options.state, options.portIds)
-    .flatMap((port) => options.edgeSelector(options.topology, port.id));
+    .flatMap((port) => options.edgeSelector(options.topology, options.state, port.id));
 }
 
 function getOrderedPorts(
@@ -761,18 +768,52 @@ function getRoutingCursorGroupKey(port: CompiledSimulationPort | undefined): str
   return `${port.deviceId}:${port.portGroupId}:${port.direction}:priority-${port.priorityGroup}`;
 }
 
-function getRawOutputEdgeIds(topology: CompiledSimulationTopology, node: CompiledSimulationNode): readonly string[] {
+function getRawOutputEdgeIds(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  node: CompiledSimulationNode,
+): readonly string[] {
   return node.outputPortIds
-    .flatMap((portId) => getPortOutputEdgeIds(topology, portId))
+    .flatMap((portId) => getPortOutputEdgeIds(topology, state, portId))
     .filter((edgeId) => topology.transferEdges[edgeId]?.sourceNodeId === node.id);
 }
 
-function getPortInputEdgeIds(topology: CompiledSimulationTopology, portId: string): readonly string[] {
-  return topology.ordering.edgeOrder.filter((edgeId) => topology.transferEdges[edgeId]?.targetPortId === portId);
+function getPortInputEdgeIds(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  portId: string,
+): readonly string[] {
+  const startedAt = state.transient._perf === undefined ? 0 : performance.now();
+  const indexed = topology.edgeIdsByInputPortId?.[portId];
+  const result = indexed ?? topology.ordering.edgeOrder.filter(
+    (edgeId) => topology.transferEdges[edgeId]?.targetPortId === portId,
+  );
+  const perf = state.transient._perf;
+  if (perf !== undefined) {
+    perf.inputEdgeLookupCalls += 1;
+    perf.inputEdgeLookupMs += performance.now() - startedAt;
+    if (indexed === undefined) perf.edgeIndexFallbackScans += 1;
+  }
+  return result;
 }
 
-function getPortOutputEdgeIds(topology: CompiledSimulationTopology, portId: string): readonly string[] {
-  return topology.ordering.edgeOrder.filter((edgeId) => topology.transferEdges[edgeId]?.sourcePortId === portId);
+function getPortOutputEdgeIds(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  portId: string,
+): readonly string[] {
+  const startedAt = state.transient._perf === undefined ? 0 : performance.now();
+  const indexed = topology.edgeIdsByOutputPortId?.[portId];
+  const result = indexed ?? topology.ordering.edgeOrder.filter(
+    (edgeId) => topology.transferEdges[edgeId]?.sourcePortId === portId,
+  );
+  const perf = state.transient._perf;
+  if (perf !== undefined) {
+    perf.outputEdgeLookupCalls += 1;
+    perf.outputEdgeLookupMs += performance.now() - startedAt;
+    if (indexed === undefined) perf.edgeIndexFallbackScans += 1;
+  }
+  return result;
 }
 
 function pushUnique(values: string[] | undefined, value: string): void {

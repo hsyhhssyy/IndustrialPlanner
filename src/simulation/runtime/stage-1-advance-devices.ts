@@ -9,6 +9,7 @@ import type {
   RuntimeDeviceState,
 } from "./runtime-state";
 import {
+  adjustReservedAmounts,
   consumeSelections,
   createStartableRecipeForChannel,
   finishRecipeIfPossible,
@@ -117,6 +118,8 @@ function advanceChannelRecipe(options: {
     if (nextRecipe.recipeType === "immediate-consume") {
       consumeSelections(options.state.persistent.slots, nextRecipe.reservations);
       nextRecipe.reservations = [];
+    } else {
+      adjustReservedAmounts(options.state, nextRecipe.reservations, 1);
     }
 
     nextRecipe.progressTicks = overflowTicks;
