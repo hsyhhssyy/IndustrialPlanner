@@ -64,14 +64,19 @@ interface BeltCargoView {
   readonly cargoRoot: Container;
   readonly boxGraphics: Graphics;
   readonly icon: Sprite;
+  maskKey: string | null;
+  boxSize: number | null;
 }
 
 interface BeltCargoClipMask {
+  readonly key: string;
   readonly beltRects: readonly BeltCargoClipRect[];
   readonly extensions: readonly BeltCargoClipExtensionRect[];
 }
 
 interface BeltCargoClipRect {
+  readonly gridX: number;
+  readonly gridY: number;
   readonly x: number;
   readonly y: number;
   readonly width: number;
@@ -105,7 +110,9 @@ export function createBeltCargoDecoration(): DecorationLayer {
   let cachedSimplifiedDeviceIcons: boolean | null = null
   // beltRects — 文档变更或视口变更时失效
   let cachedBeltRects: BeltCargoClipRect[] | null = null
+  let cachedBeltRectsByGridKey: Map<string, BeltCargoClipRect> | null = null
   let cachedBeltRectsViewportKey: string | null = null
+  let clipMaskRevision = 0
 
   const hideAll = (): void => {
     container.visible = false
@@ -172,6 +179,8 @@ export function createBeltCargoDecoration(): DecorationLayer {
       cargoRoot,
       boxGraphics: box,
       icon,
+      maskKey: null,
+      boxSize: null,
     }
     cargoViews.push(view)
     return view
@@ -211,14 +220,17 @@ export function createBeltCargoDecoration(): DecorationLayer {
       // beltRects 缓存：文档或视口变更时重算
       if (cachedBeltRects === null || !documentStable || cachedBeltRectsViewportKey !== viewportKey) {
         cachedBeltRects = resolveBeltCargoClipBeltRects(ctx, vs.gridCellPixelSize, definitionMap)
+        cachedBeltRectsByGridKey = createBeltCargoClipRectMap(cachedBeltRects)
         cachedBeltRectsViewportKey = viewportKey
+        clipMaskRevision += 1
       }
-      const beltRects = cachedBeltRects
+      const beltRectsByGridKey = cachedBeltRectsByGridKey
 
       // 端口连通性缓存：文档或 gameUseSimplifiedDeviceIcons 变更时重算
       if (cachedPortConnectivity === null || !documentStable || cachedSimplifiedDeviceIcons !== simplifiedDeviceIcons) {
         cachedPortConnectivity = resolveBeltPortConnectivityEntries(ctx)
         cachedSimplifiedDeviceIcons = simplifiedDeviceIcons
+        clipMaskRevision += 1
       }
       const portConnectivityEntries = cachedPortConnectivity
 
@@ -276,7 +288,11 @@ export function createBeltCargoDecoration(): DecorationLayer {
                 ?? EMPTY_BELT_DISCONNECTED_PORT_ENTRIES,
               portExtensionEntries: portExtensionEntriesByBeltId.get(beltCargoEntry.entityId)
                 ?? EMPTY_BELT_PORT_EXTENSION_ENTRIES,
-              beltRects,
+              beltRects: resolveLocalBeltCargoClipRects(
+                beltCargoEntry.position,
+                beltRectsByGridKey,
+              ),
+              maskKey: `${clipMaskRevision}:${beltCargoEntry.entityId}`,
             }),
           })
         }
@@ -541,6 +557,7 @@ function resolveBeltCargoClipMask(options: {
   disconnectedPortEntries: readonly BeltDisconnectedPortEntry[];
   portExtensionEntries: readonly BeltPortExtensionEntry[];
   beltRects: readonly BeltCargoClipRect[];
+  maskKey: string;
 }): BeltCargoClipMask | null {
   // 简化/蓝图渲染模式下完全不裁切
   if (options.simplifiedDeviceIcons) {
@@ -553,6 +570,9 @@ function resolveBeltCargoClipMask(options: {
   }
 
   // mask = beltRects（所有可见传送带格子矩形）+ 各端口独立产生的条目。
+  // AI-CORRECTION 2026-06-20:
+  // 旧注释中的 beltRects 曾表示“所有可见传送带格子矩形”，导致每个货物重复绘制整张传送带遮罩，
+  // 复杂度为 O(可见货物数 × 可见传送带数)。当前 beltRects 只包含当前传送带格和四邻接传送带格。
   // 各端口按对面匹配情况决定自身条目：
   //
   //   ┌────────────────────────────┬──────────────────┬──────────────────┬────────────────────┐
@@ -571,6 +591,7 @@ function resolveBeltCargoClipMask(options: {
   // 各端口独立判断，互不干扰。例如传送带一端连生产设备一端连桥接器：
   // 生产设备端 extension ✅ 货物可见，桥接器端无条目被 beltRects 裁切。
   return {
+    key: options.maskKey,
     beltRects: options.beltRects,
     extensions: [
       ...options.portExtensionEntries.map((extension) =>
@@ -678,12 +699,59 @@ function resolveBeltCargoClipBeltRects(
       }
 
       return [{
+        gridX: entity.position.x,
+        gridY: entity.position.y,
         x: viewportRect.left,
         y: viewportRect.top,
         width: viewportRect.width,
         height: viewportRect.height,
       }]
     })
+}
+
+function createBeltCargoClipRectMap(
+  beltRects: readonly BeltCargoClipRect[],
+): Map<string, BeltCargoClipRect> {
+  return new Map(
+    beltRects.map((beltRect) => [
+      resolveBeltCargoClipRectGridKey(beltRect.gridX, beltRect.gridY),
+      beltRect,
+    ]),
+  )
+}
+
+function resolveLocalBeltCargoClipRects(
+  position: GridPoint,
+  beltRectsByGridKey: ReadonlyMap<string, BeltCargoClipRect> | null,
+): BeltCargoClipRect[] {
+  if (beltRectsByGridKey === null) {
+    return []
+  }
+
+  const neighborOffsets = [
+    { x: 0, y: 0 },
+    { x: -1, y: 0 },
+    { x: 1, y: 0 },
+    { x: 0, y: -1 },
+    { x: 0, y: 1 },
+  ] as const
+  const result: BeltCargoClipRect[] = []
+
+  for (const offset of neighborOffsets) {
+    const beltRect = beltRectsByGridKey.get(resolveBeltCargoClipRectGridKey(
+      position.x + offset.x,
+      position.y + offset.y,
+    ))
+    if (beltRect !== undefined) {
+      result.push(beltRect)
+    }
+  }
+
+  return result
+}
+
+function resolveBeltCargoClipRectGridKey(x: number, y: number): string {
+  return `${x},${y}`
 }
 
 function resolveBeltCargoClipExtensionRect(options: {
@@ -757,13 +825,19 @@ function syncBeltCargoViews(options: {
       const tMask = performance.now()
       view.root.mask = null
       view.mask.visible = false
-      view.mask.clear()
+      if (view.maskKey !== null) {
+        view.mask.clear()
+        view.maskKey = null
+      }
       maskClearMs += performance.now() - tMask
     } else {
       const tMask = performance.now()
       view.root.mask = view.mask
       view.mask.visible = true
-      drawBeltCargoClipMask(view.mask, entry.clipMask, options.profiler)
+      if (view.maskKey !== entry.clipMask.key) {
+        drawBeltCargoClipMask(view.mask, entry.clipMask, options.profiler)
+        view.maskKey = entry.clipMask.key
+      }
       maskDrawMs += performance.now() - tMask
       // 细粒度计数：记录每次 draw 的 rect/poly 数量
       if (options.profiler) {
@@ -777,21 +851,24 @@ function syncBeltCargoViews(options: {
     view.cargoRoot.rotation = entry.angleRadians
 
     const tBox = performance.now()
-    view.boxGraphics
-      .clear()
-      .roundRect(
-        -options.boxSize / 2,
-        -options.boxSize / 2,
-        options.boxSize,
-        options.boxSize,
-        boxCornerRadius,
-      )
-      .fill(0xffffff)
-      .stroke({
-        width: BOX_STROKE_WIDTH_PX,
-        color: 0x000000,
-        pixelLine: true,
-      })
+    if (view.boxSize !== options.boxSize) {
+      view.boxGraphics
+        .clear()
+        .roundRect(
+          -options.boxSize / 2,
+          -options.boxSize / 2,
+          options.boxSize,
+          options.boxSize,
+          boxCornerRadius,
+        )
+        .fill(0xffffff)
+        .stroke({
+          width: BOX_STROKE_WIDTH_PX,
+          color: 0x000000,
+          pixelLine: true,
+        })
+      view.boxSize = options.boxSize
+    }
     boxDrawMs += performance.now() - tBox
 
     const tIcon = performance.now()
@@ -813,7 +890,6 @@ function syncBeltCargoViews(options: {
     if (view !== undefined) {
       view.root.visible = false
       view.root.mask = null
-      view.mask.clear()
     }
   }
   const hideMs = performance.now() - tHide

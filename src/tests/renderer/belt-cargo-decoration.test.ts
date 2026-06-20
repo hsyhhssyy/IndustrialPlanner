@@ -45,6 +45,7 @@ vi.mock("pixi.js", () => {
     }> = []
     public parent: MockContainer | null = null
     public visible = true
+    public clearCalls = 0
 
     public constructor(_options?: { roundPixels?: boolean }) {}
 
@@ -86,6 +87,7 @@ vi.mock("pixi.js", () => {
     }
 
     public clear(): this {
+      this.clearCalls += 1
       this.drawCommands.length = 0
       return this
     }
@@ -702,6 +704,58 @@ describe("createBeltCargoDecoration", () => {
     decoration.destroy()
   })
 
+  it("limits each cargo mask to its own and orthogonally adjacent belt cells", () => {
+    const decoration = createBeltCargoDecoration()
+    const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    const ctx = createContext({
+      getTexture,
+      extraEntities: [
+        createEntity("right-belt", "belt_straight_1x1", { x: 1, y: 0 }, 0),
+        createEntity("bottom-belt", "belt_straight_1x1", { x: 0, y: 1 }, 0),
+        createEntity("diagonal-belt", "belt_straight_1x1", { x: 1, y: 1 }, 0),
+      ],
+    })
+
+    decoration.sync(ctx as never)
+
+    const mask = resolveCargoViewRoot(decoration, 0).children[0] as {
+      drawCommands: Array<{
+        type: "rect" | "poly";
+        x?: number;
+        y?: number;
+      }>;
+    }
+    const rectCommands = mask.drawCommands.filter((command) => command.type === "rect")
+    expect(rectCommands).toHaveLength(3)
+    expect(rectCommands).not.toContainEqual(expect.objectContaining({
+      x: 150,
+      y: 150,
+    }))
+
+    decoration.destroy()
+  })
+
+  it("reuses an unchanged cargo mask instead of rebuilding its graphics commands", () => {
+    const decoration = createBeltCargoDecoration()
+    const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    const documentSnapshot = {}
+    const ctx = createContext({
+      getTexture,
+      documentSnapshot,
+    })
+
+    decoration.sync(ctx as never)
+    const mask = resolveCargoViewRoot(decoration, 0).children[0] as {
+      clearCalls: number;
+    }
+    expect(mask.clearCalls).toBe(1)
+
+    decoration.sync(ctx as never)
+    expect(mask.clearCalls).toBe(1)
+
+    decoration.destroy()
+  })
+
   it("does not apply device-overlap masks in simplified blueprint-style display", () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
@@ -763,6 +817,7 @@ function createContext(options: {
   }>;
   simplifiedDeviceIcons?: boolean;
   nowMs?: number;
+  documentSnapshot?: object;
 }) {
   const registry = createRegistryContract()
   const entries = options.entries ?? [{
@@ -879,6 +934,11 @@ function createContext(options: {
           },
         },
         editor: {
+          document: options.documentSnapshot === undefined
+            ? undefined
+            : {
+                getSnapshot: () => options.documentSnapshot,
+              },
           queries: {
             listEntities: () => entities,
           },
