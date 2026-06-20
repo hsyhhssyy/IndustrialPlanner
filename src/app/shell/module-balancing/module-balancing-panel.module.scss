@@ -7,32 +7,204 @@
   background: var(--surface-1);
 }
 
-.module-balancing-desktop-layout,
-.module-balancing-mobile-layout {
+.module-balancing-wizard {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   height: 100%;
 }
 
-.module-balancing-desktop-layout {
-  grid-template-rows: auto minmax(0, 1fr);
-  grid-template-columns: 280px minmax(420px, 1fr) minmax(260px, 300px);
-}
-
-.module-balancing-mobile-layout {
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
-}
-
-.module-balancing-toolbar {
-  grid-column: 1 / -1;
+.module-balancing-wizard-nav {
   display: flex;
   align-items: center;
-  gap: 8px;
   min-width: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
+}
+
+.module-balancing-library-button,
+.module-balancing-wizard-tab,
+.module-balancing-wizard-add {
+  flex: 0 0 auto;
+  min-height: 42px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.module-balancing-library-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  font-weight: 700;
+}
+
+.module-balancing-library-button svg,
+.module-balancing-wizard-add svg {
+  width: 17px;
+  height: 17px;
+}
+
+.module-balancing-wizard-tabs {
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.module-balancing-wizard-tab {
+  position: relative;
+  min-width: 92px;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+
+.module-balancing-wizard-tab::after {
+  position: absolute;
+  right: -7px;
+  bottom: 7px;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  background: inherit;
+  content: "";
+  transform: rotate(45deg);
+}
+
+.module-balancing-wizard-tab.is-active {
+  background: var(--accent-soft);
+  color: var(--text-0);
+  font-weight: 800;
+}
+
+.module-balancing-wizard-tab.is-active::before {
+  position: absolute;
+  right: 12px;
+  bottom: 0;
+  left: 12px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent-strong);
+  content: "";
+}
+
+.module-balancing-library-button:hover,
+.module-balancing-wizard-tab:hover,
+.module-balancing-wizard-add:hover {
+  background: var(--surface-3);
+}
+
+.module-balancing-wizard-tab.is-active:hover {
+  background: var(--accent-soft);
+}
+
+.module-balancing-wizard-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+}
+
+.module-balancing-page {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px;
+  background: var(--surface-2);
+}
+
+.module-balancing-page > .module-balancing-input-panel,
+.module-balancing-page > .module-balancing-stage-detail,
+.module-balancing-page > .module-balancing-summary,
+.module-balancing-page > .module-balancing-canvas-settings {
+  width: min(1120px, 100%);
+  min-height: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.module-balancing-canvas-settings {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-content: start;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+}
+
+.module-balancing-canvas-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  align-content: start;
+  gap: 12px;
+}
+
+.module-balancing-drawer-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--shell-bg) 35%, transparent);
+}
+
+.module-balancing-drawer {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  width: min(420px, 88%);
+  height: 100%;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+  background: var(--surface-1);
+  box-shadow: 14px 0 36px var(--shadow-floating-control);
+}
+
+.module-balancing-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
-  background: var(--surface-2);
+}
+
+.module-balancing-drawer-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.module-balancing-library-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 8px 10px 0;
+}
+
+.module-balancing-library-tabs button {
+  min-height: 34px;
+  border: 0;
+  border-bottom: 2px solid var(--line);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.module-balancing-library-tabs button.is-active {
+  border-color: var(--accent-strong);
+  color: var(--text-0);
+  font-weight: 800;
+}
+
+.module-balancing-drawer > .module-balancing-library {
+  min-height: 0;
+  overflow: auto;
 }
 
 .module-balancing-field,
@@ -657,7 +829,10 @@
 }
 
 .module-balancing-custom-form {
+  width: min(680px, 100%);
+  max-height: 100%;
   overflow: auto;
+  box-shadow: 0 18px 50px var(--shadow-floating-control);
 }
 
 .module-balancing-form-field {
@@ -705,6 +880,82 @@
   justify-content: center;
   padding: 16px;
   background: color-mix(in srgb, var(--shell-bg) 38%, transparent);
+}
+
+@media (max-width: 800px) {
+  .module-balancing-library-button {
+    padding: 0 11px;
+  }
+
+  .module-balancing-wizard-tab {
+    min-width: 82px;
+    padding: 0 14px;
+  }
+
+  .module-balancing-page {
+    padding: 10px;
+  }
+
+  .module-balancing-canvas-form {
+    grid-template-columns: 1fr;
+  }
+
+  .module-balancing-stage-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .module-balancing-stage-actions {
+    justify-content: stretch;
+  }
+
+  .module-balancing-stage-actions > button {
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-height: 420px) {
+  .module-balancing-library-button,
+  .module-balancing-wizard-tab,
+  .module-balancing-wizard-add {
+    min-height: 36px;
+  }
+
+  .module-balancing-page {
+    padding: 7px;
+  }
+
+  .module-balancing-page > .module-balancing-input-panel,
+  .module-balancing-page > .module-balancing-stage-detail,
+  .module-balancing-page > .module-balancing-summary,
+  .module-balancing-page > .module-balancing-canvas-settings {
+    min-height: auto;
+  }
+
+  .module-balancing-canvas-settings,
+  .module-balancing-stage-detail {
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .module-balancing-canvas-form {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+    gap: 7px;
+  }
+
+  .module-balancing-stage-entry,
+  .module-balancing-stage-add-entry {
+    min-height: 76px;
+  }
+
+  .module-balancing-stage-entry img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .module-balancing-editor-backdrop {
+    padding: 7px;
+  }
 }
 
 .module-balancing-quantity-editor,

@@ -1,9 +1,7 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
 import LucideArrowLeft from "~icons/lucide/arrow-left";
-import LucideChevronDown from "~icons/lucide/chevron-down";
-import LucideClipboardList from "~icons/lucide/clipboard-list";
 import LucideEdit3 from "~icons/lucide/edit-3";
 import LucideLayers3 from "~icons/lucide/layers-3";
 import LucidePlus from "~icons/lucide/plus";
@@ -70,7 +68,13 @@ const CUSTOM_MODULE_COLORS = [
   "#be185d",
 ] as const;
 
-type MobilePanelTab = "module-library" | "canvas-input" | "stage-detail";
+type ModuleBalancingPage =
+  | { kind: "canvas" }
+  | { kind: "input" }
+  | { kind: "stage"; stageId: string }
+  | { kind: "summary" };
+
+type ModuleLibraryTab = "recipes" | "modules";
 
 interface QuantityDraft {
   mode: "add" | "edit";
@@ -108,7 +112,11 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
-  const [mobileTab, setMobileTab] = useState<MobilePanelTab>("stage-detail");
+  const [activePage, setActivePage] = useState<ModuleBalancingPage>({ kind: "canvas" });
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [libraryTab, setLibraryTab] = useState<ModuleLibraryTab>("recipes");
+  const [newCanvasDialogOpen, setNewCanvasDialogOpen] = useState(false);
+  const [newCanvasName, setNewCanvasName] = useState("");
   const [expandedBalanceIds, setExpandedBalanceIds] = useState<Set<string>>(() => new Set());
   const [quantityDraft, setQuantityDraft] = useState<QuantityDraft | null>(null);
   const [customModuleForm, setCustomModuleForm] = useState<CustomModuleFormState | null>(null);
@@ -179,7 +187,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       });
     });
     setSelectedStageId(stageId);
-    setMobileTab("stage-detail");
+    setActivePage({ kind: "stage", stageId });
   };
 
   const openNewCustomModuleForm = () => {
@@ -221,7 +229,6 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       inputs,
       outputs,
     });
-    setMobileTab("module-library");
   };
 
   const closeCustomModuleForm = () => {
@@ -341,109 +348,6 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     addPort(target, itemId);
   };
 
-  const renderTopToolbar = () => {
-    if (activeCanvas === null) {
-      return null;
-    }
-    const activeCanvasActivityIds = showAllActivityContent
-      ? resolveCanvasActivityIds(activeCanvas, index)
-      : [];
-
-    return (
-      <div className={cm(styles, "module-balancing-toolbar")}>
-        <label className={cm(styles, "module-balancing-field is-select")}>
-          <span>{t("moduleBalancing.canvas")}</span>
-          <select
-            value={activeCanvas.id}
-            onChange={(event) => {
-              const nextCanvasId = event.currentTarget.value;
-              runInAction(() => {
-                balancingState.activeCanvasId = nextCanvasId;
-              });
-              setSelectedStageId(null);
-            }}
-          >
-            {visibleCanvases.map((canvas) => (
-              <option key={canvas.id} value={canvas.id}>{canvas.name}</option>
-            ))}
-          </select>
-          <ActivityIconStrip activityIds={activeCanvasActivityIds} />
-        </label>
-        <label className={cm(styles, "module-balancing-field is-name")}>
-          <span>{t("moduleBalancing.canvasPlaceholder")}</span>
-          <input
-            value={activeCanvas.name}
-            onChange={(event) => {
-              const nextName = event.currentTarget.value;
-              runInAction(() => {
-                activeCanvas.name = nextName;
-              });
-            }}
-          />
-          <ActivityIconStrip activityIds={activeCanvasActivityIds} />
-        </label>
-        <button
-          className={cm(styles, "module-balancing-icon-text-button")}
-          type="button"
-          onClick={() => {
-            const nextCanvas = createDefaultModuleBalancingCanvas();
-            nextCanvas.id = createModuleBalancingId("canvas");
-            nextCanvas.name = `${t("moduleBalancing.canvas")} ${balancingState.canvases.length + 1}`;
-            nextCanvas.stages[0] = {
-              id: createModuleBalancingId("stage"),
-              name: `${t("moduleBalancing.stage")} 1`,
-              entries: [],
-            };
-            runInAction(() => {
-              balancingState.canvases.push(nextCanvas);
-              balancingState.activeCanvasId = nextCanvas.id;
-            });
-            setSelectedStageId(nextCanvas.stages[0]?.id ?? null);
-          }}
-        >
-          <LucidePlus aria-hidden="true" />
-          <span>{t("moduleBalancing.newCanvas")}</span>
-        </button>
-        <button
-          aria-label={t("moduleBalancing.deleteCanvas")}
-          className={cm(styles, "module-balancing-icon-button")}
-          disabled={visibleCanvases.length <= 1}
-          title={t("moduleBalancing.deleteCanvas")}
-          type="button"
-          onClick={() => {
-            runInAction(() => {
-              const indexToDelete = balancingState.canvases.findIndex((canvas) => canvas.id === activeCanvas.id);
-              if (indexToDelete < 0 || balancingState.canvases.length <= 1) {
-                return;
-              }
-              balancingState.canvases.splice(indexToDelete, 1);
-              balancingState.activeCanvasId = balancingState.canvases[Math.max(0, indexToDelete - 1)]?.id ?? null;
-            });
-            setSelectedStageId(null);
-          }}
-        >
-          <LucideTrash2 aria-hidden="true" />
-        </button>
-        <label className={cm(styles, "module-balancing-field is-capacity")}>
-          <span>{t("moduleBalancing.warehouseCapacity")}</span>
-          <input
-            min="0"
-            placeholder={t("moduleBalancing.warehouseCapacityHint")}
-            step="1"
-            type="number"
-            value={activeCanvas.warehouseCapacity ?? ""}
-            onChange={(event) => {
-              const rawValue = event.currentTarget.value;
-              runInAction(() => {
-                activeCanvas.warehouseCapacity = rawValue === "" ? null : Math.max(0, Number(rawValue));
-              });
-            }}
-          />
-        </label>
-      </div>
-    );
-  };
-
   if (activeCanvas === null || computation === null) {
     return (
       <div className={cm(styles, "toolbox-dialog-content module-balancing-panel")}>
@@ -456,221 +360,211 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   }
 
   const stageBalanceByStageId = new Map(computation.stageBalances.map((balance) => [balance.stageId, balance]));
-  const content = isTouch ? (
-    <div className={cm(styles, "module-balancing-mobile-layout")}>
-      {renderTopToolbar()}
-      <StageNavigation
+  const deleteCustomModule = (moduleId: string) => {
+    runInAction(() => {
+      balancingState.customModules = balancingState.customModules.filter((module) => module.id !== moduleId);
+      for (const canvas of balancingState.canvases) {
+        for (const stage of canvas.stages) {
+          stage.entries = stage.entries.filter((entry) => entry.moduleId !== moduleId);
+        }
+      }
+    });
+  };
+  const addModuleToSelectedStage = (moduleId: string) => {
+    if (selectedStage === null) {
+      addStage();
+      return;
+    }
+    openAddModuleDraft(selectedStage.id, moduleId);
+  };
+  const createCanvas = () => {
+    const normalizedName = newCanvasName.trim();
+    const nextCanvas = createDefaultModuleBalancingCanvas();
+    nextCanvas.id = createModuleBalancingId("canvas");
+    nextCanvas.name = normalizedName || `${t("moduleBalancing.canvas")} ${balancingState.canvases.length + 1}`;
+    nextCanvas.stages[0] = {
+      id: createModuleBalancingId("stage"),
+      name: `${t("moduleBalancing.stage")} 1`,
+      entries: [],
+    };
+    runInAction(() => {
+      balancingState.canvases.push(nextCanvas);
+      balancingState.activeCanvasId = nextCanvas.id;
+    });
+    setSelectedStageId(nextCanvas.stages[0]?.id ?? null);
+    setActivePage({ kind: "canvas" });
+    setNewCanvasName("");
+    setNewCanvasDialogOpen(false);
+  };
+
+  const content = (
+    <div className={cm(styles, "module-balancing-wizard")}>
+      <WizardNavigation
         activeCanvas={activeCanvas}
+        activePage={activePage}
         onAddStage={addStage}
-        onSelectInput={() => setMobileTab("canvas-input")}
-        onSelectStage={(stageId) => {
-          setSelectedStageId(stageId);
-          setMobileTab("stage-detail");
+        onOpenLibrary={() => setLibraryOpen(true)}
+        onSelectPage={(page) => {
+          setActivePage(page);
+          if (page.kind === "stage") {
+            setSelectedStageId(page.stageId);
+          }
         }}
-        selectedStageId={selectedStage?.id ?? null}
         t={t}
       />
-      <main className={cm(styles, "module-balancing-mobile-main")}>
-        {mobileTab === "module-library" ? (
-          <ModuleLibrary
+      <main className={cm(styles, "module-balancing-page")}>
+        {activePage.kind === "canvas" ? (
+          <CanvasSettingsPanel
             activeCanvas={activeCanvas}
-            customModuleForm={customModuleForm}
-            activeActivityIds={activeActivityIds}
-            index={index}
-            isTouch={isTouch}
-            onAddModule={(moduleId) => {
-              if (selectedStage === null) {
-                addStage();
-                return;
-              }
-              openAddModuleDraft(selectedStage.id, moduleId);
+            activityIds={showAllActivityContent ? resolveCanvasActivityIds(activeCanvas, index) : []}
+            canDelete={visibleCanvases.length > 1}
+            onCreateCanvas={() => {
+              setNewCanvasName("");
+              setNewCanvasDialogOpen(true);
             }}
-            onCancelCustomModule={closeCustomModuleForm}
-            onCreateCustomModule={openNewCustomModuleForm}
-            onDeleteCustomModule={(moduleId) => {
+            onDeleteCanvas={() => {
               runInAction(() => {
-                balancingState.customModules = balancingState.customModules.filter((module) => module.id !== moduleId);
-                for (const canvas of balancingState.canvases) {
-                  for (const stage of canvas.stages) {
-                    stage.entries = stage.entries.filter((entry) => entry.moduleId !== moduleId);
-                  }
+                const indexToDelete = balancingState.canvases.findIndex((canvas) => canvas.id === activeCanvas.id);
+                if (indexToDelete < 0 || balancingState.canvases.length <= 1) {
+                  return;
                 }
+                balancingState.canvases.splice(indexToDelete, 1);
+                balancingState.activeCanvasId = balancingState.canvases[Math.max(0, indexToDelete - 1)]?.id ?? null;
               });
+              setSelectedStageId(null);
             }}
-            onEditCustomModule={openEditCustomModuleForm}
-            onOpenPortPicker={(target) => {
-              void requestPortSelection(target);
+            onSelectCanvas={(canvasId) => {
+              runInAction(() => { balancingState.activeCanvasId = canvasId; });
+              setSelectedStageId(null);
             }}
-            onSaveCustomModule={saveCustomModule}
-            onUpdateCustomModuleForm={setCustomModuleForm}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            showActivityIcons={showAllActivityContent}
             t={t}
+            visibleCanvases={visibleCanvases}
           />
         ) : null}
-        {mobileTab === "canvas-input" ? (
+        {activePage.kind === "input" ? (
           <CanvasInputPanel
             canvas={activeCanvas}
             index={index}
-            onOpenPortPicker={() => {
-              void requestPortSelection({ kind: "global" });
-            }}
+            onOpenPortPicker={() => { void requestPortSelection({ kind: "global" }); }}
             t={t}
           />
         ) : null}
-        {mobileTab === "stage-detail" ? (
+        {activePage.kind === "stage" ? (
           <StageDetailPanel
-            canvas={activeCanvas}
-            computationSummary={computation.summaryBalances}
             expandedBalanceIds={expandedBalanceIds}
             index={index}
-            onAddModule={() => setMobileTab("module-library")}
+            onAddModule={() => setLibraryOpen(true)}
             onAddStage={addStage}
             onClearStage={(stage) => runInAction(() => { stage.entries = []; })}
             onEditEntry={openEditEntryDraft}
             onOpenStageAsModule={openStageAsCustomModuleForm}
             onRenameStage={(stage, name) => runInAction(() => { stage.name = name; })}
             onToggleBalance={(stageId) => setExpandedBalanceIds(toggleSetValue(expandedBalanceIds, stageId))}
-            selectedStage={selectedStage}
+            selectedStage={activeCanvas.stages.find((stage) => stage.id === activePage.stageId) ?? null}
             showActivityIcons={showAllActivityContent}
-            stageBalance={selectedStage === null ? null : stageBalanceByStageId.get(selectedStage.id)?.balances ?? []}
+            stageBalance={stageBalanceByStageId.get(activePage.stageId)?.balances ?? []}
+            t={t}
+          />
+        ) : null}
+        {activePage.kind === "summary" ? (
+          <SummaryPanel
+            balances={computation.summaryBalances}
+            canvas={activeCanvas}
+            index={index}
             t={t}
             warehouseForecasts={computation.warehouseForecasts}
           />
         ) : null}
       </main>
-      <nav className={cm(styles, "module-balancing-bottom-tabs")} aria-label={t("toolboxDialog.tab.moduleBalancing")}> 
-        <MobileTabButton active={mobileTab === "module-library"} onClick={() => setMobileTab("module-library")}> 
-          <LucideLayers3 aria-hidden="true" />
-          <span>{t("moduleBalancing.moduleLibrary")}</span>
-        </MobileTabButton>
-        <MobileTabButton active={mobileTab === "canvas-input"} onClick={() => setMobileTab("canvas-input")}> 
-          <LucideClipboardList aria-hidden="true" />
-          <span>{t("moduleBalancing.canvasInput")}</span>
-        </MobileTabButton>
-        <MobileTabButton active={mobileTab === "stage-detail"} onClick={() => setMobileTab("stage-detail")}> 
-          <LucideChevronDown aria-hidden="true" />
-          <span>{t("moduleBalancing.stageDetail")}</span>
-        </MobileTabButton>
-      </nav>
-    </div>
-  ) : (
-    <div className={cm(styles, "module-balancing-desktop-layout")}>
-      {renderTopToolbar()}
-      <aside className={cm(styles, "module-balancing-library-pane")}>
-        <ModuleLibrary
-          activeCanvas={activeCanvas}
-          customModuleForm={customModuleForm}
-          activeActivityIds={activeActivityIds}
-          index={index}
-          isTouch={isTouch}
-          onAddModule={(moduleId) => {
-            if (selectedStage === null) {
-              addStage();
-              return;
-            }
-            openAddModuleDraft(selectedStage.id, moduleId);
-          }}
-          onCancelCustomModule={closeCustomModuleForm}
-          onCreateCustomModule={openNewCustomModuleForm}
-          onDeleteCustomModule={(moduleId) => {
-            runInAction(() => {
-              balancingState.customModules = balancingState.customModules.filter((module) => module.id !== moduleId);
-              for (const canvas of balancingState.canvases) {
-                for (const stage of canvas.stages) {
-                  stage.entries = stage.entries.filter((entry) => entry.moduleId !== moduleId);
-                }
-              }
-            });
-          }}
-          onEditCustomModule={openEditCustomModuleForm}
-          onOpenPortPicker={(target) => {
-            void requestPortSelection(target);
-          }}
-          onSaveCustomModule={saveCustomModule}
-          onUpdateCustomModuleForm={setCustomModuleForm}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          showActivityIcons={showAllActivityContent}
-          t={t}
-        />
-      </aside>
-      <main className={cm(styles, "module-balancing-canvas-pane")}>
-        <CanvasInputPanel
-          canvas={activeCanvas}
-          index={index}
-          onOpenPortPicker={() => {
-            void requestPortSelection({ kind: "global" });
-          }}
-          t={t}
-        />
-        <div className={cm(styles, "module-balancing-stage-list")}>
-          {activeCanvas.stages.map((stage) => (
-            <section
-              className={cm(styles, "module-balancing-stage")}
-              key={stage.id}
-              onDragOver={(event) => {
-                if (event.dataTransfer.types.includes(MODULE_DRAG_TYPE)) {
-                  event.preventDefault();
-                }
-              }}
-              onDrop={(event) => {
-                const moduleId = event.dataTransfer.getData(MODULE_DRAG_TYPE);
-                if (moduleId.length === 0) {
-                  return;
-                }
-                event.preventDefault();
-                openAddModuleDraft(stage.id, moduleId);
-              }}
-            >
-              <StageHeader
-                onClear={() => runInAction(() => { stage.entries = []; })}
-                onSaveAsModule={() => openStageAsCustomModuleForm(stage)}
-                onUpdateName={(name) => runInAction(() => { stage.name = name; })}
-                stage={stage}
-                t={t}
-              />
-              <StageEntryGrid
-                index={index}
-                isTouch={isTouch}
-                onAddModule={() => openAddModuleDraft(stage.id, index.systemModules[0]?.id ?? "")}
-                onEditEntry={(moduleId, entryIndex, quantity) => openEditEntryDraft(stage.id, moduleId, entryIndex, quantity)}
-                onMoveEntry={(fromIndex, toIndex) => moveStageEntry(stage, fromIndex, toIndex)}
-                onOpenLibrary={() => setMobileTab("module-library")}
-                showActivityIcons={showAllActivityContent}
-                stage={stage}
-                t={t}
-              />
-              <BalanceStrip
-                balances={stageBalanceByStageId.get(stage.id)?.balances ?? []}
-                expanded={expandedBalanceIds.has(stage.id)}
-                index={index}
-                onToggle={() => setExpandedBalanceIds(toggleSetValue(expandedBalanceIds, stage.id))}
-                t={t}
-              />
-            </section>
-          ))}
-        </div>
-        <button className={cm(styles, "module-balancing-add-stage")} type="button" onClick={addStage}>
-          <LucidePlus aria-hidden="true" />
-          <span>{t("moduleBalancing.newStage")}</span>
-        </button>
-      </main>
-      <aside className={cm(styles, "module-balancing-summary-pane")}>
-        <SummaryPanel
-          balances={computation.summaryBalances}
-          index={index}
-          t={t}
-          warehouseForecasts={computation.warehouseForecasts}
-        />
-      </aside>
     </div>
   );
 
   return (
     <div className={cm(styles, `toolbox-dialog-content module-balancing-panel${isTouch ? " is-touch" : ""}`)}>
       {content}
+      {libraryOpen ? (
+        <div className={cm(styles, "module-balancing-drawer-layer")} onMouseDown={(event) => {
+          if (event.target === event.currentTarget) {
+            setLibraryOpen(false);
+          }
+        }}>
+          <aside className={cm(styles, "module-balancing-drawer")}>
+            <header className={cm(styles, "module-balancing-drawer-header")}>
+              <h3>{t("moduleBalancing.moduleLibrary")}</h3>
+              <button className={cm(styles, "module-balancing-icon-button")} type="button" onClick={() => setLibraryOpen(false)} aria-label={t("action.close")}>
+                <LucideX aria-hidden="true" />
+              </button>
+            </header>
+            <div className={cm(styles, "module-balancing-library-tabs")}>
+              <button className={cm(styles, libraryTab === "recipes" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("recipes")}>{t("moduleBalancing.recipes")}</button>
+              <button className={cm(styles, libraryTab === "modules" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("modules")}>{t("moduleBalancing.modules")}</button>
+            </div>
+            <ModuleLibrary
+              activeCanvas={activeCanvas}
+              activeActivityIds={activeActivityIds}
+              index={index}
+              isTouch={isTouch}
+              libraryTab={libraryTab}
+              onAddModule={addModuleToSelectedStage}
+              onCreateCustomModule={openNewCustomModuleForm}
+              onDeleteCustomModule={deleteCustomModule}
+              onEditCustomModule={openEditCustomModuleForm}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              showActivityIcons={showAllActivityContent}
+              t={t}
+            />
+          </aside>
+        </div>
+      ) : null}
+      {newCanvasDialogOpen ? (
+        <div className={cm(styles, "module-balancing-editor-backdrop")} onMouseDown={(event) => {
+          if (event.target === event.currentTarget) {
+            setNewCanvasDialogOpen(false);
+          }
+        }}>
+          <section className={cm(styles, "module-balancing-quantity-editor")} role="dialog" aria-modal="true">
+            <header className={cm(styles, "module-balancing-form-header")}>
+              <h3>{t("moduleBalancing.newCanvas")}</h3>
+              <button className={cm(styles, "module-balancing-icon-button")} type="button" onClick={() => setNewCanvasDialogOpen(false)} aria-label={t("action.close")}>
+                <LucideX aria-hidden="true" />
+              </button>
+            </header>
+            <label className={cm(styles, "module-balancing-form-field")}>
+              <span>{t("moduleBalancing.canvasPlaceholder")}</span>
+              <input autoFocus value={newCanvasName} onChange={(event) => setNewCanvasName(event.currentTarget.value)} onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  createCanvas();
+                }
+              }} />
+            </label>
+            <footer className={cm(styles, "module-balancing-form-actions")}>
+              <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={() => setNewCanvasDialogOpen(false)}>{t("action.close")}</button>
+              <button className={cm(styles, "module-balancing-primary-button")} type="button" onClick={createCanvas}>
+                <LucidePlus aria-hidden="true" />
+                <span>{t("moduleBalancing.newCanvas")}</span>
+              </button>
+            </footer>
+          </section>
+        </div>
+      ) : null}
+      {customModuleForm !== null ? (
+        <div className={cm(styles, "module-balancing-editor-backdrop")} onMouseDown={(event) => {
+          if (event.target === event.currentTarget) {
+            closeCustomModuleForm();
+          }
+        }}>
+          <CustomModuleForm
+            draft={customModuleForm}
+            index={index}
+            onCancel={closeCustomModuleForm}
+            onOpenPortPicker={(target) => { void requestPortSelection(target); }}
+            onSave={() => saveCustomModule(customModuleForm)}
+            onUpdate={setCustomModuleForm}
+            t={t}
+          />
+        </div>
+      ) : null}
       {quantityDraft !== null ? (
         <QuantityEditor
           draft={quantityDraft}
@@ -689,17 +583,13 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
 function ModuleLibrary({
   activeCanvas,
   activeActivityIds,
-  customModuleForm,
   index,
   isTouch,
+  libraryTab,
   onAddModule,
-  onCancelCustomModule,
   onCreateCustomModule,
   onDeleteCustomModule,
   onEditCustomModule,
-  onOpenPortPicker,
-  onSaveCustomModule,
-  onUpdateCustomModuleForm,
   searchQuery,
   setSearchQuery,
   showActivityIcons,
@@ -707,36 +597,18 @@ function ModuleLibrary({
 }: {
   activeCanvas: ModuleBalancingCanvasReadWrite;
   activeActivityIds: readonly string[];
-  customModuleForm: CustomModuleFormState | null;
   index: ModuleBalancingIndex;
   isTouch: boolean;
+  libraryTab: ModuleLibraryTab;
   onAddModule: (moduleId: string) => void;
-  onCancelCustomModule: () => void;
   onCreateCustomModule: () => void;
   onDeleteCustomModule: (moduleId: string) => void;
   onEditCustomModule: (module: ModuleBalancingCustomModule) => void;
-  onOpenPortPicker: (target: PendingPortTarget) => void;
-  onSaveCustomModule: (draft: CustomModuleFormState) => void;
-  onUpdateCustomModuleForm: (draft: CustomModuleFormState | null) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   showActivityIcons: boolean;
   t: (key: string) => string;
 }) {
-  if (customModuleForm !== null) {
-    return (
-      <CustomModuleForm
-        draft={customModuleForm}
-        index={index}
-        onCancel={onCancelCustomModule}
-        onOpenPortPicker={onOpenPortPicker}
-        onSave={() => onSaveCustomModule(customModuleForm)}
-        onUpdate={onUpdateCustomModuleForm}
-        t={t}
-      />
-    );
-  }
-
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const systemModules = index.systemModules.filter((module) => matchesModuleQuery(module, normalizedQuery, index, t));
   const customModules = Array.from(index.customModuleById.values())
@@ -756,32 +628,37 @@ function ModuleLibrary({
           onChange={(event) => setSearchQuery(event.currentTarget.value)}
         />
       </div>
-      <ModuleSection
-        count={systemModules.length}
-        index={index}
-        isTouch={isTouch}
-        modules={systemModules}
-        onAddModule={onAddModule}
-        showActivityIcons={showActivityIcons}
-        t={t}
-        title={t("moduleBalancing.systemModules")}
-      />
-      <ModuleSection
-        count={customModules.length}
-        index={index}
-        isTouch={isTouch}
-        modules={customModules}
-        onAddModule={onAddModule}
-        onDeleteCustomModule={onDeleteCustomModule}
-        onEditCustomModule={onEditCustomModule}
-        showActivityIcons={showActivityIcons}
-        t={t}
-        title={t("moduleBalancing.customModules")}
-      />
-      <button className={cm(styles, "module-balancing-new-module-button")} type="button" onClick={onCreateCustomModule}>
-        <LucidePlus aria-hidden="true" />
-        <span>{t("moduleBalancing.newModule")}</span>
-      </button>
+      {libraryTab === "recipes" ? (
+        <ModuleSection
+          count={systemModules.length}
+          index={index}
+          isTouch={isTouch}
+          modules={systemModules}
+          onAddModule={onAddModule}
+          showActivityIcons={showActivityIcons}
+          t={t}
+          title={t("moduleBalancing.systemModules")}
+        />
+      ) : (
+        <>
+          <ModuleSection
+            count={customModules.length}
+            index={index}
+            isTouch={isTouch}
+            modules={customModules}
+            onAddModule={onAddModule}
+            onDeleteCustomModule={onDeleteCustomModule}
+            onEditCustomModule={onEditCustomModule}
+            showActivityIcons={showActivityIcons}
+            t={t}
+            title={t("moduleBalancing.customModules")}
+          />
+          <button className={cm(styles, "module-balancing-new-module-button")} type="button" onClick={onCreateCustomModule}>
+            <LucidePlus aria-hidden="true" />
+            <span>{t("moduleBalancing.newModule")}</span>
+          </button>
+        </>
+      )}
       {activeCanvas.stages.length === 0 ? (
         <p className={cm(styles, "module-balancing-muted")}>{t("moduleBalancing.noStages")}</p>
       ) : null}
@@ -940,42 +817,146 @@ function CanvasInputPanel({
   );
 }
 
-function StageNavigation({
+function WizardNavigation({
   activeCanvas,
+  activePage,
   onAddStage,
-  onSelectInput,
-  onSelectStage,
-  selectedStageId,
+  onOpenLibrary,
+  onSelectPage,
   t,
 }: {
   activeCanvas: ModuleBalancingCanvasReadWrite;
+  activePage: ModuleBalancingPage;
   onAddStage: () => void;
-  onSelectInput: () => void;
-  onSelectStage: (stageId: string) => void;
-  selectedStageId: string | null;
+  onOpenLibrary: () => void;
+  onSelectPage: (page: ModuleBalancingPage) => void;
   t: (key: string) => string;
 }) {
   return (
-    <div className={cm(styles, "module-balancing-stage-nav")}>
-      <button className={cm(styles, "module-balancing-stage-nav-button is-input")} type="button" onClick={onSelectInput}>◆ {t("moduleBalancing.systemInput")}</button>
-      {activeCanvas.stages.map((stage) => (
+    <nav className={cm(styles, "module-balancing-wizard-nav")} aria-label={t("toolboxDialog.tab.moduleBalancing")}>
+      <button className={cm(styles, "module-balancing-library-button")} type="button" onClick={onOpenLibrary}>
+        <LucideLayers3 aria-hidden="true" />
+        <span>{t("moduleBalancing.moduleLibrary")}</span>
+      </button>
+      <div className={cm(styles, "module-balancing-wizard-tabs")}>
         <button
-          className={cm(styles, `module-balancing-stage-nav-button${stage.id === selectedStageId ? " is-active" : ""}`)}
-          key={stage.id}
+          className={cm(styles, `module-balancing-wizard-tab${activePage.kind === "canvas" ? " is-active" : ""}`)}
           type="button"
-          onClick={() => onSelectStage(stage.id)}
+          onClick={() => onSelectPage({ kind: "canvas" })}
         >
-          {stage.name}
+          {t("moduleBalancing.canvas")}
         </button>
-      ))}
-      <button className={cm(styles, "module-balancing-stage-nav-button")} type="button" onClick={onAddStage}>+ {t("moduleBalancing.stage")}</button>
-    </div>
+        <button
+          className={cm(styles, `module-balancing-wizard-tab${activePage.kind === "input" ? " is-active" : ""}`)}
+          type="button"
+          onClick={() => onSelectPage({ kind: "input" })}
+        >
+          {t("moduleBalancing.systemInput")}
+        </button>
+        {activeCanvas.stages.map((stage) => (
+          <button
+            className={cm(styles, `module-balancing-wizard-tab${activePage.kind === "stage" && activePage.stageId === stage.id ? " is-active" : ""}`)}
+            key={stage.id}
+            type="button"
+            onClick={() => onSelectPage({ kind: "stage", stageId: stage.id })}
+          >
+            {stage.name}
+          </button>
+        ))}
+        <button
+          className={cm(styles, `module-balancing-wizard-tab${activePage.kind === "summary" ? " is-active" : ""}`)}
+          type="button"
+          onClick={() => onSelectPage({ kind: "summary" })}
+        >
+          {t("moduleBalancing.summary")}
+        </button>
+        <button
+          aria-label={t("moduleBalancing.newStage")}
+          className={cm(styles, "module-balancing-wizard-add")}
+          title={t("moduleBalancing.newStage")}
+          type="button"
+          onClick={onAddStage}
+        >
+          <LucidePlus aria-hidden="true" />
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+function CanvasSettingsPanel({
+  activeCanvas,
+  activityIds,
+  canDelete,
+  onCreateCanvas,
+  onDeleteCanvas,
+  onSelectCanvas,
+  t,
+  visibleCanvases,
+}: {
+  activeCanvas: ModuleBalancingCanvasReadWrite;
+  activityIds: readonly string[];
+  canDelete: boolean;
+  onCreateCanvas: () => void;
+  onDeleteCanvas: () => void;
+  onSelectCanvas: (canvasId: string) => void;
+  t: (key: string) => string;
+  visibleCanvases: readonly ModuleBalancingCanvasReadWrite[];
+}) {
+  return (
+    <section className={cm(styles, "module-balancing-canvas-settings")}>
+      <header className={cm(styles, "module-balancing-section-header")}>
+        <h3>{t("moduleBalancing.canvas")}</h3>
+        <ActivityIconStrip activityIds={activityIds} />
+      </header>
+      <div className={cm(styles, "module-balancing-canvas-form")}>
+        <label className={cm(styles, "module-balancing-form-field")}>
+          <span>{t("moduleBalancing.canvas")}</span>
+          <select value={activeCanvas.id} onChange={(event) => onSelectCanvas(event.currentTarget.value)}>
+            {visibleCanvases.map((canvas) => (
+              <option key={canvas.id} value={canvas.id}>{canvas.name}</option>
+            ))}
+          </select>
+        </label>
+        <label className={cm(styles, "module-balancing-form-field")}>
+          <span>{t("moduleBalancing.canvasPlaceholder")}</span>
+          <input value={activeCanvas.name} onChange={(event) => {
+            const name = event.currentTarget.value;
+            runInAction(() => { activeCanvas.name = name; });
+          }} />
+        </label>
+        <label className={cm(styles, "module-balancing-form-field")}>
+          <span>{t("moduleBalancing.warehouseCapacity")}</span>
+          <input
+            min="0"
+            placeholder={t("moduleBalancing.warehouseCapacityHint")}
+            step="1"
+            type="number"
+            value={activeCanvas.warehouseCapacity ?? ""}
+            onChange={(event) => {
+              const rawValue = event.currentTarget.value;
+              runInAction(() => {
+                activeCanvas.warehouseCapacity = rawValue === "" ? null : Math.max(0, Number(rawValue));
+              });
+            }}
+          />
+        </label>
+      </div>
+      <footer className={cm(styles, "module-balancing-form-actions")}>
+        <button className={cm(styles, "module-balancing-danger-button")} disabled={!canDelete} type="button" onClick={onDeleteCanvas}>
+          <LucideTrash2 aria-hidden="true" />
+          <span>{t("moduleBalancing.deleteCanvas")}</span>
+        </button>
+        <button className={cm(styles, "module-balancing-primary-button")} type="button" onClick={onCreateCanvas}>
+          <LucidePlus aria-hidden="true" />
+          <span>{t("moduleBalancing.newCanvas")}</span>
+        </button>
+      </footer>
+    </section>
   );
 }
 
 function StageDetailPanel({
-  canvas,
-  computationSummary,
   expandedBalanceIds,
   index,
   onAddModule,
@@ -989,10 +970,7 @@ function StageDetailPanel({
   showActivityIcons,
   stageBalance,
   t,
-  warehouseForecasts,
 }: {
-  canvas: ModuleBalancingCanvasReadWrite;
-  computationSummary: ModuleBalancingItemBalance[];
   expandedBalanceIds: Set<string>;
   index: ModuleBalancingIndex;
   onAddModule: () => void;
@@ -1006,7 +984,6 @@ function StageDetailPanel({
   showActivityIcons: boolean;
   stageBalance: ModuleBalancingItemBalance[] | null;
   t: (key: string) => string;
-  warehouseForecasts: ModuleBalancingWarehouseForecast[];
 }) {
   if (selectedStage === null) {
     return (
@@ -1046,13 +1023,6 @@ function StageDetailPanel({
         index={index}
         onToggle={() => onToggleBalance(selectedStage.id)}
         t={t}
-      />
-      <SummaryPanel
-        balances={computationSummary}
-        canvas={canvas}
-        index={index}
-        t={t}
-        warehouseForecasts={warehouseForecasts}
       />
     </section>
   );
@@ -1523,22 +1493,6 @@ function QuantityEditor({
         </footer>
       </section>
     </div>
-  );
-}
-
-function MobileTabButton({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean;
-  children: ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button className={cm(styles, `module-balancing-bottom-tab${active ? " is-active" : ""}`)} type="button" onClick={onClick}>
-      {children}
-    </button>
   );
 }
 
