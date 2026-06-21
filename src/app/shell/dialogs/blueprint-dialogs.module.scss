@@ -123,6 +123,12 @@
   min-width: 0;
 }
 
+.blueprint-preview-header-copy p {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .blueprint-preview-header-copy h3 {
   margin: 0;
   color: var(--text-0);
@@ -147,11 +153,15 @@
   grid-column: 1 / -1;
 }
 
-.blueprint-preview-actions .save-blueprint-primary-button,
+.blueprint-preview-actions .save-blueprint-primary-button {
+  width: 100%;
+  font-size: 0.875rem;
+}
+
 .blueprint-preview-actions .save-blueprint-secondary-button,
 .blueprint-preview-actions .blueprint-preview-danger-button {
   width: 100%;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
 }
 
 .blueprint-preview-folder-picker-card {

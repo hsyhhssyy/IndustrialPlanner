@@ -2346,7 +2346,7 @@ describe("WorkbenchApp", () => {
     expect(dialog?.textContent).toContain(
       "传送带/管道绘制到交汇处时，自动创建分流器和汇流器。",
     );
-    expect(languageOptionLabels).toEqual(["中文(简体)", "English"]);
+    expect(languageOptionLabels).toEqual(["中文(简体)", "English (AI Translate)"]);
     expect(themeOptionLabels).toEqual(["Ayu Light", "Ayu Dark"]);
     expect(languageSelect?.value).toBe("zh-CN");
     expect(themeSelect?.value).toBe("ayu-light");

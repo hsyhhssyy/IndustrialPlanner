@@ -11,4 +11,6 @@ export interface RecipeDefinition {
   tags: string[];
   /** 配方运行时发电量（kW），默认 0。仅供发电设备配方使用。 */
   powerOutput?: number;
+  /** 主要产物物品 ID 列表。与 outputs 可以不同，用于仿真运行时的设备图标替换。 */
+  primaryOutputs?: string[];
 }

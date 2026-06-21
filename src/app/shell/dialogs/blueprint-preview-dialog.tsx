@@ -285,6 +285,8 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       previewTitle: "蓝图预览",
       previewHint: "布局总览",
       place: "放置",
+      placeOriginal: "放置到原位 (调试模式)",
+      placeOriginalHint: "将当前蓝图放置到保存时的原始位置",
       placeBlockedByBase: "包含不可放置设备",
       placeHint: "将当前蓝图放置到场景",
       version: "版本",
@@ -303,7 +305,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       deleteFailed: "删除蓝图失败，请检查浏览器存储是否可用。",
       deleteHint: "将当前蓝图移入已删除列表",
       deleting: "删除中...",
-      edit: "修改",
+      edit: "编辑详细信息",
       editHint: "修改蓝图名称、描述或保存位置",
       move: "移动",
       moveHint: "将当前蓝图移动到其他文件夹",
@@ -322,6 +324,8 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       previewTitle: "Blueprint Preview",
       previewHint: "Layout Overview",
       place: "Place",
+      placeOriginal: "Place at Origin (Debug)",
+      placeOriginalHint: "Place this blueprint at its original saved position",
       placeBlockedByBase: "Contains unplaceable devices",
       placeHint: "Place this blueprint into the scene",
       version: "Version",
@@ -340,7 +344,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       deleteFailed: "Failed to delete the blueprint. Check browser storage availability.",
       deleteHint: "Move this blueprint into deleted items",
       deleting: "Deleting...",
-      edit: "Edit",
+      edit: "Edit Details",
       editHint: "Edit the blueprint name, description, or saved folder",
       move: "Move",
       moveHint: "Move this blueprint to another folder",
@@ -681,6 +685,28 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       shiftKey: event.shiftKey,
       sourceEvent: event.nativeEvent,
     });
+  };
+  const handlePlaceOriginalButtonClick = () => {
+    if (!canPlaceBlueprint) {
+      return;
+    }
+
+    const editor = appHost.workspace.editor;
+    if (editor === null || editor.actions.createBlueprintPlacementDraft === undefined) {
+      return;
+    }
+
+    try {
+      editor.actions.createBlueprintPlacementDraft(record, record.initialGridPoint);
+      const applied = editor.actions.applyPlacementDraft();
+      if (!applied) {
+        editor.actions.cancelPlacementDraft();
+        return;
+      }
+      controller.close();
+    } catch {
+      // 放置失败，静默忽略
+    }
   };
   const handleDeleteButtonClick = async () => {
     if (!controller.canDelete) {
@@ -1082,6 +1108,18 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                       >
                         {canPlaceBlueprint ? copy.place : copy.placeBlockedByBase}
                       </button>
+                      {appHost.state.settings.debugMode ? (
+                        <button
+                          className={cm(styles, "save-blueprint-primary-button")}
+                          data-ui-button-id="blueprint-preview-place-original-button"
+                          disabled={!canPlaceBlueprint}
+                          onClick={handlePlaceOriginalButtonClick}
+                          title={copy.placeOriginalHint}
+                          type="button"
+                        >
+                          {canPlaceBlueprint ? copy.placeOriginal : copy.placeBlockedByBase}
+                        </button>
+                      ) : null}
                       <button
                         className={cm(styles, "save-blueprint-secondary-button")}
                         data-ui-button-id="blueprint-preview-export-file-button"

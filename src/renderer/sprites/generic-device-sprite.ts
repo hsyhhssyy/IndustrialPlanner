@@ -26,6 +26,7 @@ import {
   resolveDeviceLabelIconTextureKey,
   resolveDeviceMaskTextureKey,
 } from "@/renderer/sprites/device-texture-key"
+import { applyBitmapTextureConfig, type RenderTextureConfig } from "@/renderer/texture/texture-config"
 import {
   RenderSpriteLayout,
   RenderSpriteSyncContext,
@@ -68,6 +69,64 @@ const PREVIEW_BORDER_ALPHA = 0.5;
 
 const DEVICE_LABEL_ICON_SIZE = 14;
 const DEVICE_LABEL_FONT_SIZE = 8;
+
+// ---- 主要产物图标 ----
+/** 预生成的圆圈纹理尺寸（px），所有实例共享 */
+const PRIMARY_OUTPUT_CIRCLE_TEXTURE_SIZE = 64;
+/** 预生成的加号纹理尺寸（px） */
+const PRIMARY_OUTPUT_PLUS_TEXTURE_SIZE = 32;
+
+/** 加号宽度占圆圈外径的比例 */
+const PRIMARY_OUTPUT_PLUS_WIDTH_RATIO = 0.3;
+/** 圆圈描边颜色 */
+const PRIMARY_OUTPUT_CIRCLE_STROKE = 0x333333;
+/** 圆圈描边宽度（px，在 64px 纹理上的值） */
+const PRIMARY_OUTPUT_CIRCLE_STROKE_WIDTH = 2;
+
+let cachedCircleTexture: Texture | null = null;
+function getPrimaryOutputCircleTexture(textureConfig: RenderTextureConfig): Texture {
+  if (cachedCircleTexture === null) {
+    const size = PRIMARY_OUTPUT_CIRCLE_TEXTURE_SIZE;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+    const radius = size / 2 - PRIMARY_OUTPUT_CIRCLE_STROKE_WIDTH / 2;
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, radius, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+    ctx.strokeStyle = `#${PRIMARY_OUTPUT_CIRCLE_STROKE.toString(16).padStart(6, "0")}`;
+    ctx.lineWidth = PRIMARY_OUTPUT_CIRCLE_STROKE_WIDTH;
+    ctx.stroke();
+    cachedCircleTexture = Texture.from(canvas);
+    applyBitmapTextureConfig(cachedCircleTexture, textureConfig);
+  }
+  return cachedCircleTexture;
+}
+
+let cachedPlusTexture: Texture | null = null;
+function getPrimaryOutputPlusTexture(textureConfig: RenderTextureConfig): Texture {
+  if (cachedPlusTexture === null) {
+    const size = PRIMARY_OUTPUT_PLUS_TEXTURE_SIZE;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+    const fontSize = Math.round(size * 0.75);
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.strokeStyle = `#${PRIMARY_OUTPUT_CIRCLE_STROKE.toString(16).padStart(6, "0")}`;
+    ctx.lineWidth = 3;
+    ctx.strokeText("+", size / 2, size / 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText("+", size / 2, size / 2);
+    cachedPlusTexture = Texture.from(canvas);
+    applyBitmapTextureConfig(cachedPlusTexture, textureConfig);
+  }
+  return cachedPlusTexture;
+}
 const DEVICE_LABEL_TEXT_WIDTH_RATIO = 0.88;
 const DEVICE_LABEL_MIN_TEXT_WIDTH = 24;
 const DEVICE_LABEL_GAP = 2;
@@ -216,6 +275,13 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private portCrossTextureUseMobile: boolean | null = null;
   private isPortCrossTextureReady = false;
 
+  /** 主要产物图标根容器，放置在 deviceLabelRoot 内。仿真运行时，若有主产物则替换 deviceIcon 显示 */
+  private readonly primaryOutputRoot: Container;
+  private readonly primaryOutputCircleSprites: Sprite[] = [];
+  private readonly primaryOutputPlusSprites: Sprite[] = [];
+  private readonly primaryOutputItemIconSprites: Sprite[] = [];
+  private currentPrimaryOutputItemIds: string[] | null = null;
+
   public constructor(
     entityId: string,
     private readonly definition: EntityDefinition,
@@ -253,6 +319,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     this.deviceLabelRoot.addChild(this.deviceIcon)
     this.deviceLabelRoot.addChild(this.deviceNameText)
+
+    // 主要产物图标容器：仿真正运行时替换 deviceIcon
+    this.primaryOutputRoot = new Container()
+    this.primaryOutputRoot.visible = false
+    this.deviceLabelRoot.addChild(this.primaryOutputRoot)
+
     this.getRootOfLayer("entity").addChild(this.deviceLabelRoot)
 
     this.previewEffectRoot = new Container()
@@ -387,6 +459,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.portOverlayRoot.visible = false;
     this.hidePortChevronSprites();
     this.hidePortCrossSprites();
+    // 隐藏主要产物
+    this.primaryOutputRoot.visible = false;
+    this.hidePrimaryOutputSprites();
   }
 
   // ---- 三个 abstract overlay 方法实现 ----
@@ -717,31 +792,46 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.deviceLabelRoot.visible = false;
       this.deviceIcon.visible = false;
       this.deviceNameText.visible = false;
+      this.primaryOutputRoot.visible = false;
       return;
     }
 
     const useBlueprintStyle = app?.state.settings.gameUseSimplifiedDeviceIcons ?? false;
     const avatarHidden = this.definition.tags.includes("AvatarHidden");
     const showDeviceName = avatarHidden ? false : (app?.state.settings.gameShowDeviceNames ?? true);
-    const showDeviceIcon = avatarHidden ? false : (app?.state.settings.gameShowDeviceIcons ?? false);
+    const showDeviceIconSetting = avatarHidden ? false : (app?.state.settings.gameShowDeviceIcons ?? false);
 
-    if (!this.isTextureReady || (!showDeviceName && !showDeviceIcon)) {
+    // 仿真正运行中：尝试获取主要产物
+    const primaryOutputIds = this.resolvePrimaryOutputItemIds();
+
+    // 主要产物存在 → 始终显示（不受 showDeviceIcon 设置控制）
+    const hasPrimaryOutput = primaryOutputIds !== null && primaryOutputIds.length > 0;
+
+    if (!this.isTextureReady || (!showDeviceName && !showDeviceIconSetting && !hasPrimaryOutput)) {
       this.deviceLabelRoot.visible = false;
       this.deviceIcon.visible = false;
       this.deviceNameText.visible = false;
+      this.primaryOutputRoot.visible = false;
       return;
     }
 
+    const effectiveShowIcon = hasPrimaryOutput || showDeviceIconSetting;
     const labelLayout = resolveDeviceLabelLayout({
       layout,
-      showDeviceIcon,
+      showDeviceIcon: effectiveShowIcon,
       showDeviceName,
       gridCellPixelSize: this.currentGridCellPixelSize,
     });
 
     this.deviceLabelRoot.visible = true;
 
-    if (showDeviceIcon) {
+    // 处理图标区域：主要产物 或 普通设备图标
+    if (hasPrimaryOutput) {
+      this.deviceIcon.visible = false;
+      this.syncPrimaryOutputSprites(primaryOutputIds, labelLayout);
+    } else if (showDeviceIconSetting) {
+      this.primaryOutputRoot.visible = false;
+      this.hidePrimaryOutputSprites();
       this.syncDeviceIconTexture();
       this.deviceIcon.x = labelLayout.icon.x;
       this.deviceIcon.y = labelLayout.icon.y;
@@ -751,6 +841,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.deviceIcon.visible = this.isDeviceIconReady;
     } else {
       this.deviceIcon.visible = false;
+      this.primaryOutputRoot.visible = false;
     }
 
     if (showDeviceName) {
@@ -822,6 +913,232 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.isDeviceIconReady = false;
       this.deviceIcon.visible = false;
     });
+  }
+
+  // ---- 主要产物图标 ----
+
+  /**
+   * 查询仿真运行时该设备正在执行的配方的 primaryOutputs。
+   * 返回 null 表示无主要产物可显示（仿真未运行 / 无运行中配方 / 配方无 primaryOutputs）。
+   */
+  private resolvePrimaryOutputItemIds(): string[] | null {
+    const simulation = this.renderHost.workspace.simulation;
+    if (!simulation || simulation.state.runningState === "stop") {
+      return null;
+    }
+
+    const status = simulation.queries.getDeviceRuntimeStatus(this.entityId);
+    if (!status) {
+      return null;
+    }
+
+    const channelRecipes = status.channelRecipes;
+    if (!channelRecipes) {
+      return null;
+    }
+
+    const recipeDefs = this.renderHost.workspace.registry.recipeDefinitions;
+
+    for (const channelKey of Object.keys(channelRecipes)) {
+      const channel = channelRecipes[channelKey];
+      if (!channel || !channel.recipeId) {
+        continue;
+      }
+
+      // 仅处理正在运行的 channel（running 或 waiting-output）
+      if (channel.state !== "running" && channel.state !== "waiting-output") {
+        continue;
+      }
+
+      const recipe = recipeDefs.find((r) => r.id === channel.recipeId);
+      if (recipe && recipe.primaryOutputs && recipe.primaryOutputs.length > 0) {
+        return recipe.primaryOutputs;
+      }
+    }
+
+    return null;
+  }
+
+  private syncPrimaryOutputSprites(
+    itemIds: string[],
+    labelLayout: ReturnType<typeof resolveDeviceLabelLayout>,
+  ): void {
+    const iconSize = labelLayout.icon.size;
+    const circleRadius = iconSize / 2;
+    const textureConfig = this.renderHost.internalState.textureConfig as RenderTextureConfig;
+    const circleTex = getPrimaryOutputCircleTexture(textureConfig);
+    const plusTex = getPrimaryOutputPlusTexture(textureConfig);
+    // 物品图标内接于圆：正方形边长 = 直径 / √2，再 -4px 减少空白
+    const itemIconInsideSize = Math.max(4, Math.floor(iconSize / Math.SQRT2) - 4);
+    const plusWidth = iconSize * PRIMARY_OUTPUT_PLUS_WIDTH_RATIO;
+    const gapWidth = iconSize * 0.04;
+    const totalWidth = itemIds.length * iconSize + (itemIds.length - 1) * (plusWidth + gapWidth * 2);
+    const startX = labelLayout.icon.x - totalWidth / 2;
+    const centerY = labelLayout.icon.y;
+
+    // 如果主产物列表变化，清理旧状态
+    if (!this.currentPrimaryOutputItemIds
+      || this.currentPrimaryOutputItemIds.length !== itemIds.length
+      || this.currentPrimaryOutputItemIds.some((id, i) => id !== itemIds[i])
+    ) {
+      this.currentPrimaryOutputItemIds = itemIds;
+      // 重置 item icon 加载版本，触发重新加载
+      this.primaryOutputIconLoadVersions = itemIds.map(() => 0);
+    }
+
+    let xOffset = 0;
+
+    for (let i = 0; i < itemIds.length; i += 1) {
+      const itemId = itemIds[i]!;
+      const cx = startX + xOffset + circleRadius;
+
+      // 圆圈精灵
+      const circleSprite = this.getPrimaryOutputCircleSprite(i);
+      circleSprite.texture = circleTex;
+      circleSprite.x = cx;
+      circleSprite.y = centerY;
+      circleSprite.width = iconSize;
+      circleSprite.height = iconSize;
+      circleSprite.anchor.set(0.5);
+      circleSprite.visible = true;
+
+      // 物品图标精灵
+      this.syncPrimaryOutputItemIcon(i, itemId, cx, centerY, itemIconInsideSize);
+
+      xOffset += iconSize;
+
+      // 加号（如果还有下一个）
+      if (i < itemIds.length - 1) {
+        xOffset += gapWidth;
+        const plusSprite = this.getPrimaryOutputPlusSprite(i);
+        plusSprite.texture = plusTex;
+        plusSprite.x = startX + xOffset + plusWidth / 2;
+        plusSprite.y = centerY;
+        plusSprite.width = plusWidth;
+        plusSprite.height = plusWidth;
+        plusSprite.anchor.set(0.5);
+        plusSprite.visible = true;
+        xOffset += plusWidth + gapWidth;
+      }
+    }
+
+    // 隐藏多余的精灵
+    for (let i = itemIds.length; i < this.primaryOutputCircleSprites.length; i += 1) {
+      const s = this.primaryOutputCircleSprites[i];
+      if (s) s.visible = false;
+    }
+    for (let i = itemIds.length; i < this.primaryOutputItemIconSprites.length; i += 1) {
+      const s = this.primaryOutputItemIconSprites[i];
+      if (s) s.visible = false;
+    }
+    for (let i = itemIds.length - 1; i < this.primaryOutputPlusSprites.length; i += 1) {
+      const s = this.primaryOutputPlusSprites[i];
+      if (s) s.visible = false;
+    }
+
+    this.primaryOutputRoot.visible = true;
+  }
+
+  private primaryOutputIconLoadVersions: number[] = [];
+
+  private syncPrimaryOutputItemIcon(
+    index: number,
+    itemId: string,
+    cx: number,
+    cy: number,
+    size: number,
+  ): void {
+    const sprite = this.getPrimaryOutputItemIconSprite(index);
+    const textureKey = `item-icon-${itemId}`;
+    const loadVersion = (this.primaryOutputIconLoadVersions[index] ?? 0);
+
+    // 设置位置和大小（即使纹理尚未加载，也先布局）
+    sprite.x = cx;
+    sprite.y = cy;
+    sprite.width = size;
+    sprite.height = size;
+    sprite.anchor.set(0.5);
+
+    // 如果当前位置已有正确纹理，直接显示
+    if (sprite.texture !== Texture.EMPTY
+      && this.currentPrimaryOutputItemIds?.[index] === itemId
+    ) {
+      sprite.visible = true;
+      return;
+    }
+
+    // 启动异步加载
+    const activeVersion = loadVersion + 1;
+    this.primaryOutputIconLoadVersions[index] = activeVersion;
+
+    void this.renderHost.textureManager.getTexture(textureKey).then((texture) => {
+      if (
+        this.disposed
+        || this.primaryOutputIconLoadVersions[index] !== activeVersion
+        || this.currentPrimaryOutputItemIds?.[index] !== itemId
+      ) {
+        return;
+      }
+
+      sprite.texture = texture;
+      sprite.visible = true;
+    }).catch(() => {
+      if (this.disposed || this.primaryOutputIconLoadVersions[index] !== activeVersion) {
+        return;
+      }
+      sprite.visible = false;
+    });
+  }
+
+  private getPrimaryOutputCircleSprite(index: number): Sprite {
+    const existing = this.primaryOutputCircleSprites[index];
+    if (existing) return existing;
+
+    const sprite = new Sprite(Texture.EMPTY);
+    sprite.anchor.set(0.5);
+    sprite.roundPixels = true;
+    sprite.visible = false;
+    this.primaryOutputRoot.addChild(sprite);
+    this.primaryOutputCircleSprites[index] = sprite;
+    return sprite;
+  }
+
+  private getPrimaryOutputPlusSprite(index: number): Sprite {
+    const existing = this.primaryOutputPlusSprites[index];
+    if (existing) return existing;
+
+    const sprite = new Sprite(Texture.EMPTY);
+    sprite.anchor.set(0.5);
+    sprite.roundPixels = true;
+    sprite.visible = false;
+    this.primaryOutputRoot.addChild(sprite);
+    this.primaryOutputPlusSprites[index] = sprite;
+    return sprite;
+  }
+
+  private getPrimaryOutputItemIconSprite(index: number): Sprite {
+    const existing = this.primaryOutputItemIconSprites[index];
+    if (existing) return existing;
+
+    const sprite = new Sprite(Texture.EMPTY);
+    sprite.anchor.set(0.5);
+    sprite.roundPixels = true;
+    sprite.visible = false;
+    this.primaryOutputRoot.addChild(sprite);
+    this.primaryOutputItemIconSprites[index] = sprite;
+    return sprite;
+  }
+
+  private hidePrimaryOutputSprites(): void {
+    for (const sprite of this.primaryOutputCircleSprites) {
+      sprite.visible = false;
+    }
+    for (const sprite of this.primaryOutputPlusSprites) {
+      sprite.visible = false;
+    }
+    for (const sprite of this.primaryOutputItemIconSprites) {
+      sprite.visible = false;
+    }
   }
 
   // AI-REMOVED 2026-06-14:

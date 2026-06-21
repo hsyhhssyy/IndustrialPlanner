@@ -14,6 +14,9 @@ export const createRegistryContract = (): RegistryContract => {
         baseDefinitions: [...BASE_DEFINITIONS],
         entityDefinitions: [...ENTITY_DEFINITIONS],
         itemDefinitions: [...ITEM_DEFINITIONS],
-        recipeDefinitions: [...RECIPE_DEFINITIONS],
+        recipeDefinitions: RECIPE_DEFINITIONS.map((recipe) => ({
+            ...recipe,
+            primaryOutputs: recipe.outputs.length > 0 ? [recipe.outputs[0]!.itemId] : [],
+        })),
     }
 }
