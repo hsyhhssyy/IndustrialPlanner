@@ -107,8 +107,9 @@ export default defineConfig({
         test: {
           name: "blueprint",
           include: ["src/tests/simulation/blueprint/**"],
-          // 蓝图仿真测试耗时且 CPU 密集，限制最多 2 个文件并行
-          maxConcurrency: 2,
+          // 蓝图仿真测试内存密集，串行执行防止 OOM
+          fileParallelism: false,
+          maxConcurrency: 1,
           testTimeout: 120_000,
         },
       },

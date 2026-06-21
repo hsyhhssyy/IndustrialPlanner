@@ -446,6 +446,19 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             canvas={activeCanvas}
             index={index}
             onOpenPortPicker={() => { void requestPortSelection({ kind: "global" }); }}
+            onRequestPickItem={(portIndex) => {
+              void (async () => {
+                const itemId = await appHost.encyclopediaPicker.pickItem({
+                  includeInactiveActivityItems: showAllActivityContent,
+                  title: t("encyclopediaPicker.title.item"),
+                });
+                if (itemId === null) return;
+                runInAction(() => {
+                  const port = activeCanvas.globalInputs[portIndex];
+                  if (port) port.itemId = itemId;
+                });
+              })();
+            }}
             t={t}
           />
         ) : null}
@@ -559,6 +572,23 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             index={index}
             onCancel={closeCustomModuleForm}
             onOpenPortPicker={(target) => { void requestPortSelection(target); }}
+            onRequestPickItem={(kind, portIndex) => {
+              void (async () => {
+                const itemId = await appHost.encyclopediaPicker.pickItem({
+                  includeInactiveActivityItems: showAllActivityContent,
+                  title: t("encyclopediaPicker.title.item"),
+                });
+                if (itemId === null) return;
+                setCustomModuleForm((draft) => {
+                  if (!draft) return draft;
+                  const key = kind === 'input' ? 'inputs' as const : 'outputs' as const;
+                  const ports = draft[key].map(clonePort);
+                  const target = ports[portIndex];
+                  if (target) target.itemId = itemId;
+                  return { ...draft, [key]: ports };
+                });
+              })();
+            }}
             onSave={() => saveCustomModule(customModuleForm)}
             onUpdate={setCustomModuleForm}
             t={t}
@@ -739,12 +769,19 @@ function ModuleCard({
     : `${formatPortList(inputs, index, t)} -> ${formatPortList(outputs, index, t)}`;
 
   return (
-    <button
+    <div
       className={cm(styles, "module-balancing-module-card")}
       draggable={!isTouch}
+      role="button"
+      tabIndex={0}
       title={formatModuleTooltip(module, index, t)}
-      type="button"
       onClick={onAdd}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onAdd();
+        }
+      }}
       onDragStart={(event) => {
         event.dataTransfer.setData(MODULE_DRAG_TYPE, module.id);
         event.dataTransfer.effectAllowed = "copy";
@@ -783,7 +820,7 @@ function ModuleCard({
           </button>
         </span>
       ) : null}
-    </button>
+    </div>
   );
 }
 
@@ -791,17 +828,22 @@ function CanvasInputPanel({
   canvas,
   index,
   onOpenPortPicker,
+  onRequestPickItem,
   t,
 }: {
   canvas: ModuleBalancingCanvasReadWrite;
   index: ModuleBalancingIndex;
   onOpenPortPicker: () => void;
+  onRequestPickItem: (portIndex: number) => void;
   t: (key: string) => string;
 }) {
   return (
     <section className={cm(styles, "module-balancing-input-panel")}>
       <header className={cm(styles, "module-balancing-section-header")}>
-        <h3>{t("moduleBalancing.systemInput")}</h3>
+        <div className={cm(styles, "module-balancing-section-title")}>
+          <h3>{t("moduleBalancing.systemInput")}</h3>
+          <span>{canvas.globalInputs.length}</span>
+        </div>
         <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={onOpenPortPicker}>
           <LucidePlus aria-hidden="true" />
           <span>{t("moduleBalancing.addInput")}</span>
@@ -810,6 +852,7 @@ function CanvasInputPanel({
       <PortListEditor
         index={index}
         onChange={(ports) => runInAction(() => { canvas.globalInputs = ports; })}
+        onRequestPickItem={onRequestPickItem}
         ports={canvas.globalInputs}
         t={t}
       />
@@ -906,8 +949,14 @@ function CanvasSettingsPanel({
   return (
     <section className={cm(styles, "module-balancing-canvas-settings")}>
       <header className={cm(styles, "module-balancing-section-header")}>
-        <h3>{t("moduleBalancing.canvas")}</h3>
-        <ActivityIconStrip activityIds={activityIds} />
+        <div className={cm(styles, "module-balancing-section-title")}>
+          <h3>{t("moduleBalancing.canvas")}</h3>
+          <span>{activeCanvas.name}</span>
+        </div>
+        <div className={cm(styles, "module-balancing-canvas-header-meta")}>
+          <ActivityIconStrip activityIds={activityIds} />
+          <span>{activeCanvas.stages.length} {t("moduleBalancing.stage")}</span>
+        </div>
       </header>
       <div className={cm(styles, "module-balancing-canvas-form")}>
         <label className={cm(styles, "module-balancing-form-field")}>
@@ -1044,7 +1093,7 @@ function StageHeader({
   return (
     <header className={cm(styles, "module-balancing-stage-header")}>
       <label className={cm(styles, "module-balancing-stage-name")}>
-        <span>{t("moduleBalancing.stage")}</span>
+        <span>{t("moduleBalancing.stage")} · {stage.entries.length}</span>
         <input value={stage.name} onChange={(event) => onUpdateName(event.currentTarget.value)} />
       </label>
       <div className={cm(styles, "module-balancing-stage-actions")}>
@@ -1090,6 +1139,8 @@ function StageEntryGrid({
           return null;
         }
         const activityIds = showActivityIcons ? resolveModuleActivityIds(module, index) : [];
+        const inputs = resolveModuleInputs(module, index);
+        const outputs = resolveModuleOutputs(module, index);
 
         return (
           <button
@@ -1123,7 +1174,10 @@ function StageEntryGrid({
               <span>{resolveModuleTitle(module, index, t)}</span>
               <ActivityIconStrip activityIds={activityIds} />
             </span>
-            <strong>x{formatFlow(entry.quantity)}</strong>
+            <span className={cm(styles, "module-balancing-stage-entry-flow")}>
+              {formatPortList(inputs, index, t)} → {formatPortList(outputs, index, t)}
+            </span>
+            <strong className={cm(styles, "module-balancing-stage-entry-quantity")}>× {formatFlow(entry.quantity)}</strong>
           </button>
         );
       })}
@@ -1207,8 +1261,11 @@ function SummaryPanel({
   return (
     <section className={cm(styles, "module-balancing-summary")}>
       <header className={cm(styles, "module-balancing-section-header")}>
-        <h3>{t("moduleBalancing.summary")}</h3>
-        {canvas !== undefined ? <span>{canvas.name}</span> : null}
+        <div className={cm(styles, "module-balancing-section-title")}>
+          <h3>{t("moduleBalancing.summary")}</h3>
+          {canvas !== undefined ? <span>{canvas.name}</span> : null}
+        </div>
+        <span className={cm(styles, "module-balancing-summary-count")}>{balances.length}</span>
       </header>
       <div className={cm(styles, "module-balancing-summary-list")}>
         {balances.length === 0 ? (
@@ -1216,10 +1273,10 @@ function SummaryPanel({
         ) : balances.map((balance) => (
           <div className={cm(styles, "module-balancing-summary-row")} key={balance.itemId}>
             <img alt="" src={resolveItemIconSrc(balance.itemId, index)} />
-            <span>{resolveItemName(balance.itemId, index, t)}</span>
-            <span>{t("moduleBalancing.outputItems")} {formatFlow(balance.totalOutput)}</span>
-            <span>{t("moduleBalancing.inputItems")} {formatFlow(balance.totalInput)}</span>
-            <strong className={cm(styles, resolveBalanceClassName(balance.netDelta))}>{formatSignedFlow(balance.netDelta)}</strong>
+            <strong className={cm(styles, "module-balancing-summary-item-name")}>{resolveItemName(balance.itemId, index, t)}</strong>
+            <span className={cm(styles, "module-balancing-summary-metric")}>{t("moduleBalancing.outputItems")} <strong>{formatFlow(balance.totalOutput)}</strong></span>
+            <span className={cm(styles, "module-balancing-summary-metric")}>{t("moduleBalancing.inputItems")} <strong>{formatFlow(balance.totalInput)}</strong></span>
+            <strong className={cm(styles, `module-balancing-summary-net ${resolveBalanceClassName(balance.netDelta)}`)}>{formatSignedFlow(balance.netDelta)}/min</strong>
           </div>
         ))}
       </div>
@@ -1251,6 +1308,7 @@ function CustomModuleForm({
   index,
   onCancel,
   onOpenPortPicker,
+  onRequestPickItem,
   onSave,
   onUpdate,
   t,
@@ -1259,6 +1317,7 @@ function CustomModuleForm({
   index: ModuleBalancingIndex;
   onCancel: () => void;
   onOpenPortPicker: (target: PendingPortTarget) => void;
+  onRequestPickItem: (kind: 'input' | 'output', portIndex: number) => void;
   onSave: () => void;
   onUpdate: (draft: CustomModuleFormState | null) => void;
   t: (key: string) => string;
@@ -1321,6 +1380,7 @@ function CustomModuleForm({
         <PortListEditor
           index={index}
           onChange={(ports) => onUpdate({ ...draft, inputs: ports })}
+          onRequestPickItem={(portIndex) => onRequestPickItem('input', portIndex)}
           ports={draft.inputs}
           t={t}
         />
@@ -1336,6 +1396,7 @@ function CustomModuleForm({
         <PortListEditor
           index={index}
           onChange={(ports) => onUpdate({ ...draft, outputs: ports })}
+          onRequestPickItem={(portIndex) => onRequestPickItem('output', portIndex)}
           ports={draft.outputs}
           t={t}
         />
@@ -1357,11 +1418,13 @@ function CustomModuleForm({
 function PortListEditor({
   index,
   onChange,
+  onRequestPickItem,
   ports,
   t,
 }: {
   index: ModuleBalancingIndex;
   onChange: (ports: ModuleBalancingIOPortReadWrite[]) => void;
+  onRequestPickItem: (portIndex: number) => void;
   ports: readonly ModuleBalancingIOPort[];
   t: (key: string) => string;
 }) {
@@ -1374,21 +1437,13 @@ function PortListEditor({
       {ports.map((port, portIndex) => (
         <div className={cm(styles, "module-balancing-port-row")} key={`${port.itemId}-${portIndex}`}>
           <img alt="" src={resolveItemIconSrc(port.itemId, index)} />
-          <select
-            value={port.itemId}
-            onChange={(event) => {
-              const nextPorts = ports.map(clonePort);
-              const target = nextPorts[portIndex];
-              if (target !== undefined) {
-                target.itemId = event.currentTarget.value;
-              }
-              onChange(nextPorts);
-            }}
+          <button
+            type="button"
+            className={cm(styles, "module-balancing-port-item-pick")}
+            onClick={() => onRequestPickItem(portIndex)}
           >
-            {index.allItems.map((item) => (
-              <option key={item.id} value={item.id}>{t(item.nameKey)}</option>
-            ))}
-          </select>
+            {resolveItemName(port.itemId, index, t)}
+          </button>
           <NumberInput
             min={0}
             value={port.perMinute}
