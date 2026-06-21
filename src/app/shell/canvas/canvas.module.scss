@@ -215,6 +215,103 @@
   color: color-mix(in srgb, var(--in-canvas-toolbar-button-text) 62%, transparent);
 }
 
+// FPS panel — positioned top-left, reuses gesture panel CSS variables
+.canvas-fps {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 3;
+  display: grid;
+  gap: 8px;
+  width: min(220px, calc(100% - 24px));
+  padding: 10px 12px;
+  border: 1px solid var(--in-canvas-gesture-panel-border);
+  background: var(--in-canvas-gesture-panel-bg);
+  color: var(--in-canvas-toolbar-button-text);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  pointer-events: none;
+  box-shadow: 0 14px 36px var(--in-canvas-gesture-panel-shadow);
+}
+
+.canvas-fps.is-collapsed {
+  width: auto;
+  max-width: min(160px, calc(100% - 24px));
+  padding: 8px 10px;
+}
+
+.canvas-fps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: color-mix(in srgb, var(--in-canvas-toolbar-button-text) 74%, transparent);
+}
+
+.canvas-fps-header-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.canvas-fps-header-copy span,
+.canvas-fps-header-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-fps-header-copy strong {
+  color: var(--in-canvas-toolbar-active-border);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.canvas-fps-toggle {
+  pointer-events: auto;
+  flex: 0 0 auto;
+  padding: 0.22rem 0.58rem;
+  border-color: var(--in-canvas-gesture-button-border);
+  border-radius: 999px;
+  background: var(--in-canvas-gesture-button-bg);
+  color: var(--in-canvas-toolbar-button-text);
+  font-size: 0.68rem;
+  line-height: 1.1;
+}
+
+.canvas-fps-toggle:hover {
+  border-color: var(--in-canvas-gesture-button-hover-border);
+  background: var(--in-canvas-gesture-button-hover-bg);
+}
+
+.canvas-fps-body {
+  min-width: 0;
+}
+
+.canvas-fps-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+}
+
+.canvas-fps-table th {
+  text-align: left;
+  color: color-mix(in srgb, var(--in-canvas-toolbar-button-text) 62%, transparent);
+  font-size: 0.68rem;
+  font-weight: 400;
+  padding: 1px 8px 1px 0;
+  white-space: nowrap;
+}
+
+.canvas-fps-table td {
+  text-align: right;
+  overflow: hidden;
+  color: var(--in-canvas-toolbar-button-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @keyframes canvas-touch-hold-progress {
   from {
     stroke-dashoffset: 100.53;

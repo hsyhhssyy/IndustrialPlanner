@@ -900,8 +900,8 @@ function createContext(options: {
           render: vi.fn(),
           generateTexture: vi.fn().mockImplementation((source: { clearCalls: number; drawCommands: unknown[] }) => {
             // 返回一个带有 drawCommands 的伪纹理，便于测试验证 box 烘焙结果
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return new Texture({
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               source: { width: 100, height: 100 } as any,
               frame: new Rectangle(0, 0, 100, 100),
               orig: new Rectangle(0, 0, 100, 100),

@@ -1,6 +1,7 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { LongPressState } from "@/app/input/gesture/adapter";
 import type { GestureDiagnosticsSnapshot } from "@/app/input/gesture/diagnostics";
+import type { SimulationRuntimeStatistics } from "@/domain/simulation";
 import { useViewportResizeAdapter } from "@/app/shell/canvas/viewport-resize-adapter";
 import { observer } from "mobx-react-lite";
 import { useEffect, useId, useRef, useState } from "react";
@@ -8,11 +9,31 @@ import type { KeyboardEvent, MouseEvent, PointerEvent, WheelEvent } from "react"
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
+interface FpsSnapshot {
+  fps: number;
+  tps: number;
+  targetTps: number;
+  bufferSize: number;
+}
+
+function pollSimulationStats(appHost: AppHost): FpsSnapshot {
+  const sim = appHost.workspace.simulation;
+  const stats: SimulationRuntimeStatistics | undefined = sim?.state.statistics;
+  return {
+    // fps 由 setInterval 回调中的 rAF 计数器填充，此处仅返回其他字段
+    fps: 0,
+    tps: stats?.tickPerSecond ?? 0,
+    targetTps: stats?.targetTickPerSecond ?? 0,
+    bufferSize: sim?.state.bufferSize ?? 0,
+  };
+}
+
 export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const gestureAdapter = appHost.gestureAdapter;
   const gestureDiagnostics = appHost.gestureDiagnostics;
   const showGestureDiagnosticsWindow = appHost.state.settings.debugShowGestureDiagnosticsWindow;
+  const showFps = appHost.state.settings.debugShowFps;
   const rendererHostRef = useRef<HTMLDivElement | null>(null);
   const viewportSurfaceRef = useRef<HTMLDivElement | null>(null);
   const renderContainer = appHost.workspace.render?.container ?? null;
@@ -22,6 +43,32 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
   const [diagnosticsSnapshot, setDiagnosticsSnapshot] = useState<GestureDiagnosticsSnapshot>(() =>
     gestureDiagnostics.getSnapshot(),
   );
+  const [fpsSnapshot, setFpsSnapshot] = useState<FpsSnapshot>(() =>
+    pollSimulationStats(appHost),
+  );
+  const fpsFrameCountRef = useRef(0);
+
+  // rAF 计数器：每帧递增
+  useEffect(() => {
+    let rafId: number;
+    const tick = () => {
+      fpsFrameCountRef.current += 1;
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  // 每秒轮询一次 simulation stats + FPS 帧计数
+  useEffect(() => {
+    const id = setInterval(() => {
+      const fps = fpsFrameCountRef.current;
+      fpsFrameCountRef.current = 0;
+      const base = pollSimulationStats(appHost);
+      setFpsSnapshot({ ...base, fps });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [appHost]);
 
   useViewportResizeAdapter({
     editor: appHost.workspace.editor,
@@ -163,6 +210,9 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
           {showGestureDiagnosticsWindow ? (
             <CanvasGestureDiagnosticsOverlay snapshot={diagnosticsSnapshot} />
           ) : null}
+          {showFps ? (
+            <CanvasFpsOverlay snapshot={fpsSnapshot} />
+          ) : null}
         </div>
       </div>
     </main>
@@ -200,6 +250,75 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
 //
 //   return <div className={cm(styles, "canvas-placement-glow-overlay")} />;
 // });
+
+function CanvasFpsOverlay({
+  snapshot,
+}: {
+  snapshot: FpsSnapshot;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+  const bodyId = useId();
+  const toggleLabel = collapsed ? "Show" : "Hide";
+
+  const handleToggleClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    setCollapsed((value) => !value);
+  };
+  const stopToggleInputPropagation = (
+    event: PointerEvent<HTMLButtonElement> | KeyboardEvent<HTMLButtonElement>,
+  ) => {
+    event.stopPropagation();
+  };
+
+  return (
+    <section
+      className={cm(styles, `canvas-fps${collapsed ? " is-collapsed" : ""}`)}
+      aria-label="fps diagnostics"
+    >
+      <div className={cm(styles, "canvas-fps-header")}>
+        <div className={cm(styles, "canvas-fps-header-copy")}>
+          <span>FPS</span>
+          <strong>{snapshot.fps}</strong>
+        </div>
+        <button
+          aria-controls={bodyId}
+          aria-expanded={!collapsed}
+          className={cm(styles, "canvas-fps-toggle")}
+          onClick={handleToggleClick}
+          onKeyDown={stopToggleInputPropagation}
+          onKeyUp={stopToggleInputPropagation}
+          onPointerCancel={stopToggleInputPropagation}
+          onPointerDown={stopToggleInputPropagation}
+          onPointerMove={stopToggleInputPropagation}
+          onPointerUp={stopToggleInputPropagation}
+          type="button"
+        >
+          {toggleLabel}
+        </button>
+      </div>
+      {collapsed ? null : (
+        <div className={cm(styles, "canvas-fps-body")} id={bodyId}>
+          <table className={cm(styles, "canvas-fps-table")}>
+            <tbody>
+              <tr>
+                <th>Tick生成/秒</th>
+                <td>{snapshot.tps.toFixed(1)}</td>
+              </tr>
+              <tr>
+                <th>动态Tick因数</th>
+                <td>{snapshot.targetTps}</td>
+              </tr>
+              <tr>
+                <th>帧缓存</th>
+                <td>{snapshot.bufferSize}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
 
 function CanvasGestureDiagnosticsOverlay({
   snapshot,

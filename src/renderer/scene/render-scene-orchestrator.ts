@@ -40,7 +40,6 @@ import {
 } from "./decorations/BeltVisualGeometry"
 import { createGridLineDecoration } from "./decorations/GridLineDecoration"
 import { createBaseBoundaryDecoration } from "./decorations/BaseBoundaryDecoration"
-import { createDiagnosticsDecoration } from "./decorations/DiagnosticsDecoration"
 import { createBlueprintPlacementCanvasDecoration } from "./decorations/BlueprintPlacementCanvasDecoration"
 import { createLogisticsPlacementCanvasDecoration } from "./decorations/LogisticsPlacementCanvasDecoration"
 import { createLogisticsPlacementIdleCursorDecoration } from "./decorations/LogisticsPlacementIdleCursorDecoration"
@@ -178,7 +177,6 @@ export function createRenderSceneOrchestrator(
   const previewRectDecoration = createPreviewRectDecoration()
   const invalidPlacementDecoration = createInvalidPlacementDecoration()
   const marqueeDecoration = createMarqueeRectDecoration()
-  const diagnosticsDecoration = createDiagnosticsDecoration()
   const marqueeCanvasDecoration = createMarqueeCanvasDecoration()
   const blueprintPlacementCanvasDecoration = createBlueprintPlacementCanvasDecoration()
   const logisticsPlacementCanvasDecoration = createLogisticsPlacementCanvasDecoration()
@@ -413,10 +411,6 @@ export function createRenderSceneOrchestrator(
       portOverlayDecoration.sync(ctx)
     })
 
-    measureRenderStage(frameProfiler, "decoration.diagnostics", () => {
-      diagnosticsDecoration.sync(ctx)
-    })
-
     measureRenderStage(frameProfiler, "decoration.beltFlow", () => {
       beltFlowDecoration.sync(ctx)
     })
@@ -510,7 +504,6 @@ export function createRenderSceneOrchestrator(
   marqueeOverlayLayer.addChild(portOverlayDecoration.container)
   marqueeOverlayLayer.addChild(marqueeDecoration.container)
   marqueeOverlayLayer.addChild(darkPipeLinkSelectionDecoration.container)
-  layers.overlay.addChild(diagnosticsDecoration.container)
   app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
   app.ticker.add(startPixiRenderMeasurement, undefined, PIXI_RENDER_START_PRIORITY)
   app.ticker.add(finishPixiRenderMeasurement, undefined, PIXI_RENDER_FINISH_PRIORITY)
@@ -540,7 +533,6 @@ export function createRenderSceneOrchestrator(
       logisticsPlacementIdleCursorDecoration.destroy()
       hoverCornersDecoration.destroy()
       portOverlayDecoration.destroy()
-      diagnosticsDecoration.destroy()
       beltFlowDecoration.destroy()
       pipeFlowDecoration.destroy()
       darkPipeLinkLineDecoration.destroy()
