@@ -785,9 +785,9 @@ function getPortInputEdgeIds(
 ): readonly string[] {
   const startedAt = state.transient._perf === undefined ? 0 : performance.now();
   const indexed = topology.edgeIdsByInputPortId?.[portId];
-  const result = indexed ?? topology.ordering.edgeOrder.filter(
-    (edgeId) => topology.transferEdges[edgeId]?.targetPortId === portId,
-  );
+  // 编译期每条 edge 同时写入 edgeIdsByInputPortId 和 edgeIdsByOutputPortId。
+  // 端口不在索引中 ⇒ 该端口无任何连接边 ⇒ 无需回退全扫描。
+  const result = indexed ?? [];
   const perf = state.transient._perf;
   if (perf !== undefined) {
     perf.inputEdgeLookupCalls += 1;
@@ -804,9 +804,9 @@ function getPortOutputEdgeIds(
 ): readonly string[] {
   const startedAt = state.transient._perf === undefined ? 0 : performance.now();
   const indexed = topology.edgeIdsByOutputPortId?.[portId];
-  const result = indexed ?? topology.ordering.edgeOrder.filter(
-    (edgeId) => topology.transferEdges[edgeId]?.sourcePortId === portId,
-  );
+  // 编译期每条 edge 同时写入 edgeIdsByInputPortId 和 edgeIdsByOutputPortId。
+  // 端口不在索引中 ⇒ 该端口无任何连接边 ⇒ 无需回退全扫描。
+  const result = indexed ?? [];
   const perf = state.transient._perf;
   if (perf !== undefined) {
     perf.outputEdgeLookupCalls += 1;

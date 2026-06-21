@@ -339,7 +339,9 @@ function drawArrowMask(ctx: DecorationSyncContext, graphics: Graphics): void {
 export function resolveBeltFlowMarks(ctx: DecorationSyncContext): BeltFlowMark[] {
   const entries = resolveBeltVisualPathEntries(ctx)
   const marks: BeltFlowMark[] = []
+  const tChain = performance.now()
   const chains = resolveBeltFlowChains(entries)
+  ctx.profiler?.count("beltFlow.buildChains-ms", Math.round((performance.now() - tChain) * 100) / 100)
 
   if (BELT_HIGHLIGHT_ENABLED) {
     for (const chain of chains) {
@@ -362,7 +364,12 @@ export function resolveBeltFlowMarks(ctx: DecorationSyncContext): BeltFlowMark[]
     }
   }
 
+  const tPortExt = performance.now()
   const portExtensionEntries = resolveBeltPortExtensionEntries(ctx)
+  ctx.profiler?.count("beltFlow.portExtensions-ms", Math.round((performance.now() - tPortExt) * 100) / 100)
+
+  const tArrowGen = performance.now()
+  let arrowMarkCount = 0
   for (const chain of chains) {
     const overflowCells = resolveBeltFlowChainArrowOverflowCells({
       chain,
@@ -386,9 +393,12 @@ export function resolveBeltFlowMarks(ctx: DecorationSyncContext): BeltFlowMark[]
       })
       if (mark !== null) {
         marks.push(mark)
+        arrowMarkCount += 1
       }
     }
   }
+  ctx.profiler?.count("beltFlow.genArrowMarks-ms", Math.round((performance.now() - tArrowGen) * 100) / 100)
+  ctx.profiler?.count("beltFlow.arrowMarkCount", arrowMarkCount)
 
   // AI-REMOVED 2026-05-12:
   // Reason: Arrow marks must survive while only the arrow tail remains inside the belt mask; per-tile generation removed marks as soon as their center left a tile.
