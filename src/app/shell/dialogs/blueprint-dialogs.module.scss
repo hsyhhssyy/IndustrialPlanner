@@ -161,7 +161,9 @@
 .blueprint-preview-actions .save-blueprint-secondary-button,
 .blueprint-preview-actions .blueprint-preview-danger-button {
   width: 100%;
-  font-size: 0.75rem;
+  min-width: 0;
+  padding: 0 10px;
+  font-size: 0.8125rem;
 }
 
 .blueprint-preview-folder-picker-card {

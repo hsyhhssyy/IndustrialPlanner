@@ -41,9 +41,11 @@ const FORCE_BLUEPRINT_PREVIEW_DEFINITION_IDS = new Set([
   "item_log_splitter",
   "item_log_converger",
   "item_log_connector",
+  "item_log_admission",
   "item_pipe_splitter",
   "item_pipe_converger",
   "item_pipe_connector",
+  "item_pipe_admission",
 ])
 
 const DEFAULT_GHOST_ROOT_ALPHA = 0.2;
@@ -282,6 +284,13 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly primaryOutputItemIconSprites: Sprite[] = [];
   private currentPrimaryOutputItemIds: string[] | null = null;
 
+  /** 准入口图标根容器，挂载在 entity 层，独立于 deviceLabel 体系。无视 BeltFamily/PipeFamily 压制，始终显示。 */
+  private readonly admissionIconRoot: Container;
+  private readonly admissionIconCircleSprite: Sprite;
+  private readonly admissionIconItemSprite: Sprite;
+  private admissionIconItemId: string | null = null;
+  private admissionIconLoadVersion = 0;
+
   public constructor(
     entityId: string,
     private readonly definition: EntityDefinition,
@@ -326,6 +335,24 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.deviceLabelRoot.addChild(this.primaryOutputRoot)
 
     this.getRootOfLayer("entity").addChild(this.deviceLabelRoot)
+
+    // 准入口图标：独立于 deviceLabelRoot，不参与 BeltFamily/PipeFamily 压制
+    this.admissionIconRoot = new Container()
+    this.admissionIconRoot.visible = false
+
+    this.admissionIconCircleSprite = new Sprite(Texture.EMPTY)
+    this.admissionIconCircleSprite.anchor.set(0.5)
+    this.admissionIconCircleSprite.roundPixels = true
+    this.admissionIconCircleSprite.visible = false
+
+    this.admissionIconItemSprite = new Sprite(Texture.EMPTY)
+    this.admissionIconItemSprite.anchor.set(0.5)
+    this.admissionIconItemSprite.roundPixels = true
+    this.admissionIconItemSprite.visible = false
+
+    this.admissionIconRoot.addChild(this.admissionIconCircleSprite)
+    this.admissionIconRoot.addChild(this.admissionIconItemSprite)
+    this.getRootOfLayer("entity").addChild(this.admissionIconRoot)
 
     this.previewEffectRoot = new Container()
     this.previewEffectRoot.visible = false
@@ -462,6 +489,11 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     // 隐藏主要产物
     this.primaryOutputRoot.visible = false;
     this.hidePrimaryOutputSprites();
+    // 隐藏准入口图标
+    this.admissionIconRoot.visible = false;
+    this.admissionIconCircleSprite.visible = false;
+    this.admissionIconItemSprite.visible = false;
+    this.admissionIconItemId = null;
   }
 
   // ---- 三个 abstract overlay 方法实现 ----
@@ -648,6 +680,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     if (context.portOverlayManagedGlobally !== true) {
       this.syncPortOverlay(layout, context);
     }
+
+    // 准入口图标：独立于 deviceLabel 体系，不受 BeltFamily/PipeFamily 压制
+    this.syncAdmissionIcon();
   }
 
   // ---- overlay 辅助方法 ----
@@ -959,6 +994,40 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     return null;
   }
 
+  /**
+   * 从 entity config 中读取准入口的准入物品 ID。
+   * 遍历 definition.portGroups，找到 input 方向且有 admissionRule 声明的端口，
+   * 从 config 或 port definition 默认值中读取 itemId。
+   * 返回 null 表示该设备不是准入口，或未设置准入物品。
+   */
+  private resolveAdmissionItemId(): string | null {
+    const snapshot = this.renderHost.workspace.editor?.document.getSnapshot();
+    if (!snapshot) return null;
+
+    const entity = snapshot.entities[this.entityId];
+    if (!entity) return null;
+
+    for (let gi = 0; gi < this.definition.portGroups.length; gi += 1) {
+      const group = this.definition.portGroups[gi]!;
+      if (group.direction !== "input") continue;
+
+      for (let pi = 0; pi < group.ports.length; pi += 1) {
+        const port = group.ports[pi]!;
+        if (!port.admissionRule) continue;
+
+        const path = `portGroups[${gi}].ports[${pi}].admissionRule`;
+        const rule = entity.config[path];
+        if (rule && typeof rule === "object") {
+          const itemId = (rule as Record<string, unknown>).itemId;
+          if (typeof itemId === "string" && itemId.length > 0) return itemId;
+        }
+        if (port.admissionRule.itemId) return port.admissionRule.itemId;
+      }
+    }
+
+    return null;
+  }
+
   private syncPrimaryOutputSprites(
     itemIds: string[],
     labelLayout: ReturnType<typeof resolveDeviceLabelLayout>,
@@ -1139,6 +1208,89 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     for (const sprite of this.primaryOutputItemIconSprites) {
       sprite.visible = false;
     }
+  }
+
+  // ---- 准入口图标 ----
+
+  /**
+   * 渲染准入口图标：圆圈边框 + 准入物品图标。
+   * 独立于 deviceLabel 体系，无视 BeltFamily/PipeFamily 压制和任何显示设置。
+   *
+   * 复用 getPrimaryOutputCircleTexture() 缓存纹理，避免每 tick 重复创建。
+   */
+  private syncAdmissionIcon(): void {
+    const itemId = this.resolveAdmissionItemId();
+
+    if (itemId === null) {
+      this.admissionIconRoot.visible = false;
+      this.admissionIconCircleSprite.visible = false;
+      this.admissionIconItemSprite.visible = false;
+      this.admissionIconItemId = null;
+      return;
+    }
+
+    if (this.currentLayout === null) return;
+
+    const layout = this.currentLayout;
+    const gridCellPixelSize = this.currentGridCellPixelSize ?? WORLD_GRID_CELL_PIXEL_SIZE;
+    const zoomRatio = Number.isFinite(gridCellPixelSize) && gridCellPixelSize > 0
+      ? gridCellPixelSize / WORLD_GRID_CELL_PIXEL_SIZE
+      : 1;
+    const iconSize = DEVICE_LABEL_ICON_SIZE * zoomRatio;
+    const centerX = layout.x + layout.width / 2;
+    const centerY = layout.y + layout.height / 2;
+
+    // 圆圈纹理（复用缓存，不新建）
+    const textureConfig = this.renderHost.internalState.textureConfig as RenderTextureConfig;
+    const circleTex = getPrimaryOutputCircleTexture(textureConfig);
+
+    this.admissionIconCircleSprite.texture = circleTex;
+    this.admissionIconCircleSprite.x = centerX;
+    this.admissionIconCircleSprite.y = centerY;
+    this.admissionIconCircleSprite.width = iconSize;
+    this.admissionIconCircleSprite.height = iconSize;
+    this.admissionIconCircleSprite.visible = true;
+
+    // 物品图标内接于圆：边长 = 直径 / √2，再 -4px 减少空白
+    const itemIconInsideSize = Math.max(4, Math.floor(iconSize / Math.SQRT2) - 4);
+
+    this.admissionIconItemSprite.x = centerX;
+    this.admissionIconItemSprite.y = centerY;
+    this.admissionIconItemSprite.width = itemIconInsideSize;
+    this.admissionIconItemSprite.height = itemIconInsideSize;
+    this.admissionIconItemSprite.anchor.set(0.5);
+
+    // 仅当 itemId 变化时才重新加载纹理
+    if (this.admissionIconItemId !== itemId) {
+      this.admissionIconItemId = itemId;
+      this.admissionIconItemSprite.texture = Texture.EMPTY;
+      this.admissionIconItemSprite.visible = false;
+
+      const textureKey = `item-icon-${itemId}`;
+      const loadVersion = this.admissionIconLoadVersion + 1;
+      this.admissionIconLoadVersion = loadVersion;
+
+      void this.renderHost.textureManager.getTexture(textureKey).then((texture) => {
+        if (
+          this.disposed
+          || this.admissionIconLoadVersion !== loadVersion
+          || this.admissionIconItemId !== itemId
+        ) {
+          return;
+        }
+        this.admissionIconItemSprite.texture = texture;
+        this.admissionIconItemSprite.visible = true;
+      }).catch(() => {
+        if (this.disposed || this.admissionIconLoadVersion !== loadVersion) {
+          return;
+        }
+        this.admissionIconItemSprite.visible = false;
+      });
+    } else if (this.admissionIconItemSprite.texture !== Texture.EMPTY) {
+      this.admissionIconItemSprite.visible = true;
+    }
+
+    this.admissionIconRoot.visible = true;
   }
 
   // AI-REMOVED 2026-06-14:

@@ -1,10 +1,15 @@
 {
   "version": "v1.3.0",
   "folders": [
-    {
-      "name": "产线样例",
+        {
+      "name": "四号谷地产线样例",
       "blueprints": [
-        "premium-capsule-line",
+        "premium-capsule-line"
+      ]
+    },
+    {
+      "name": "武陵产线样例",
+      "blueprints": [
         "dual-oven-xiranite",
         "wuling-battery-line",
         "dark-pipe-premium-needle-line",

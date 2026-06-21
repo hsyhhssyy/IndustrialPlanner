@@ -1,22 +1,36 @@
 import { type CSSProperties, type ReactNode } from "react";
-import {
-  resolveProductionPlanningEntityIconSrc,
-  resolveProductionPlanningItemIconSrc,
-  type ProductionPlanningIndex,
-} from "@/app/shell/production-planning/production-planning-model";
+import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import LucideChevronsRight from "~icons/lucide/chevrons-right";
 import styles from "./recipe-display.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
+/** 配方展示所需的最小索引，同时被 ProductionPlanningIndex 和 ModuleBalancingIndex 满足 */
+export interface RecipeDisplayIndex {
+  itemById: Map<string, ItemDefinition>;
+  entityById: Map<string, EntityDefinition>;
+  recipeById: Map<string, RecipeDefinition>;
+}
+
 export interface RecipeDisplayProps {
   recipeId: string;
-  index: ProductionPlanningIndex;
+  index: RecipeDisplayIndex;
   /** 是否显示设备图标和名称，默认 false */
   showDevice?: boolean;
   variant?: "default" | "inspectorStatus";
   progressPercent?: number | null;
   progressKind?: "ring" | "bar";
   t: (key: string) => string;
+}
+
+function resolveItemIconSrc(itemId: string, index: RecipeDisplayIndex): string {
+  const item = index.itemById.get(itemId);
+  return `/item-icons/${item?.iconId ?? itemId}.webp`;
+}
+
+function resolveEntityIconSrc(entityId: string): string {
+  return `/device-icons/${entityId}.webp`;
 }
 
 export function RecipeDisplay({
@@ -48,7 +62,7 @@ export function RecipeDisplay({
             <span key={`in-${input.itemId}`} className={cm(styles, "recipe-display-formula-item")}>
               {i > 0 && <span className={cm(styles, "recipe-display-formula-plus")}>+</span>}
               <span className={cm(styles, "recipe-display-formula-icon")}>
-                <img alt="" src={resolveProductionPlanningItemIconSrc(input.itemId, index)} />
+                <img alt="" src={resolveItemIconSrc(input.itemId, index)} />
                 <span>{input.amount}</span>
               </span>
             </span>
@@ -67,7 +81,7 @@ export function RecipeDisplay({
             <span key={`out-${output.itemId}`} className={cm(styles, "recipe-display-formula-item")}>
               {i > 0 && <span className={cm(styles, "recipe-display-formula-plus")}>+</span>}
               <span className={cm(styles, "recipe-display-formula-icon")}>
-                <img alt="" src={resolveProductionPlanningItemIconSrc(output.itemId, index)} />
+                <img alt="" src={resolveItemIconSrc(output.itemId, index)} />
                 <span>{output.amount}</span>
               </span>
             </span>
@@ -83,7 +97,7 @@ export function RecipeDisplay({
         <span key={`in-${input.itemId}`} className={cm(styles, "recipe-display-formula-item")}>
           {i > 0 && <span className={cm(styles, "recipe-display-formula-plus")}>+</span>}
           <span className={cm(styles, "recipe-display-formula-icon")}>
-            <img alt="" src={resolveProductionPlanningItemIconSrc(input.itemId, index)} />
+            <img alt="" src={resolveItemIconSrc(input.itemId, index)} />
             <span>{input.amount}</span>
           </span>
         </span>
@@ -95,7 +109,7 @@ export function RecipeDisplay({
       {recipe.outputs.map((output) => (
         <span key={`out-${output.itemId}`} className={cm(styles, "recipe-display-formula-item")}>
           <span className={cm(styles, "recipe-display-formula-icon")}>
-            <img alt="" src={resolveProductionPlanningItemIconSrc(output.itemId, index)} />
+            <img alt="" src={resolveItemIconSrc(output.itemId, index)} />
             <span>{output.amount}</span>
           </span>
         </span>
@@ -110,7 +124,7 @@ export function RecipeDisplay({
       <div className={cm(styles, "recipe-display-device")}>
         <img
           alt=""
-          src={machine === null ? "/device-icons/item_port_grinder_1.webp" : resolveProductionPlanningEntityIconSrc(machine.id)}
+          src={machine === null ? "/device-icons/item_port_grinder_1.webp" : resolveEntityIconSrc(machine.id)}
         />
         <span>{machine === null ? recipe.machineId : t(machine.nameKey)}</span>
       </div>

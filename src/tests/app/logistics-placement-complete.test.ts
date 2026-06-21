@@ -236,21 +236,8 @@ describe("物流布设模式完全测试集", () => {
     });
   });
 
-  it.skip("从4,3起笔向上到4,2生成顺时针弯道", () => {
-    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_SCENE2);
-    enterBeltLogisticsPlacement(appHost);
-
-    clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
-    moveToCell(appHost, editorHost, { x: 4, y: 2 }, nextPointerId++);
-    clickCell(appHost, editorHost, { x: 4, y: 2 }, nextPointerId++);
-
-    expectEntityAt(editorHost, {
-      definitionId: "belt_turn_cw_1x1",
-      position: { x: 4, y: 3 },
-      rotation: 0,
-    });
-  });
 });
+
 
 const USER_PROVIDED_BLUEPRINT: BlueprintDocument = {
   schemaVersion: 1,

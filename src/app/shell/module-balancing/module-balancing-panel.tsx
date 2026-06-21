@@ -26,6 +26,7 @@ import type {
   ModuleBalancingCustomModule,
   ModuleBalancingIOPort,
   ModuleBalancingModule,
+  ModuleBalancingSystemRecipeModule,
 } from "@/app/toolbox-types";
 import {
   buildModuleBalancingIndex,
@@ -53,6 +54,7 @@ import {
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { NumberInput } from "@/app/shell/shared/number-input";
+import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 
 const MODULE_DRAG_TYPE = "application/x-industrial-planner-module-balancing-module";
 const ENTRY_DRAG_TYPE = "application/x-industrial-planner-module-balancing-entry";
@@ -766,7 +768,8 @@ function ModuleCard({
   const activityIds = showActivityIcons ? resolveModuleActivityIds(module, index) : [];
   const subtitle = module.sourceType === "custom"
     ? formatPortList(outputs, index, t)
-    : `${formatPortList(inputs, index, t)} -> ${formatPortList(outputs, index, t)}`;
+    : undefined;
+  const isSystemRecipe = module.sourceType === "system-recipe";
 
   return (
     <div
@@ -793,7 +796,11 @@ function ModuleCard({
           <span className={cm(styles, "module-balancing-module-title")}>{title}</span>
           <ActivityIconStrip activityIds={activityIds} />
         </span>
-        <span className={cm(styles, "module-balancing-module-subtitle")}>{subtitle}</span>
+        {isSystemRecipe ? (
+          <RecipeDisplay recipeId={(module as ModuleBalancingSystemRecipeModule).recipeId} index={index} t={t} />
+        ) : subtitle !== undefined ? (
+          <span className={cm(styles, "module-balancing-module-subtitle")}>{subtitle}</span>
+        ) : null}
       </span>
       {outputs[0] !== undefined ? (
         <span className={cm(styles, "module-balancing-module-rate")}>{formatFlow(outputs[0].perMinute)}/min</span>
@@ -1563,6 +1570,12 @@ function resolveModuleTitle(
   const outputs = resolveModuleOutputs(module, index);
   if (outputs.length > 0) {
     return formatPortList(outputs, index, t, false);
+  }
+
+  // 无产出配方：优先用输入物品名作为标题，而非 recipe.nameKey（后者 i18n 可能缺失导致显示 ID）
+  const inputs = resolveModuleInputs(module, index);
+  if (inputs.length > 0) {
+    return formatPortList(inputs, index, t, false);
   }
 
   const recipe = index.recipeById.get(module.recipeId);
