@@ -1002,10 +1002,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
    */
   private resolveAdmissionItemId(): string | null {
     const snapshot = this.renderHost.workspace.editor?.document.getSnapshot();
-    if (!snapshot) return null;
+    if (!snapshot) { console.log('[admission] no snapshot'); return null; }
 
     const entity = snapshot.entities[this.entityId];
-    if (!entity) return null;
+    if (!entity) { console.log('[admission] no entity', this.entityId); return null; }
+
+    console.log('[admission] entityId=', this.entityId, 'defId=', entity.definitionId, 'config=', JSON.stringify(entity.config));
 
     for (let gi = 0; gi < this.definition.portGroups.length; gi += 1) {
       const group = this.definition.portGroups[gi]!;
@@ -1017,6 +1019,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
         const path = `portGroups[${gi}].ports[${pi}].admissionRule`;
         const rule = entity.config[path];
+        console.log('[admission] path=', path, 'rule=', JSON.stringify(rule), 'defItemId=', port.admissionRule.itemId);
         if (rule && typeof rule === "object") {
           const itemId = (rule as Record<string, unknown>).itemId;
           if (typeof itemId === "string" && itemId.length > 0) return itemId;
@@ -1025,6 +1028,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       }
     }
 
+    console.log('[admission] no match');
     return null;
   }
 
@@ -1220,6 +1224,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
    */
   private syncAdmissionIcon(): void {
     const itemId = this.resolveAdmissionItemId();
+    console.log('[admission] syncAdmissionIcon itemId=', itemId, 'layout=', this.currentLayout !== null);
 
     if (itemId === null) {
       this.admissionIconRoot.visible = false;

@@ -333,9 +333,17 @@ export function resolveModuleIconSrc(
   }
 
   const recipe = index.recipeById.get(module.recipeId);
-  return recipe === undefined
-    ? "/device-icons/item_port_grinder_1.webp"
-    : resolveEntityIconSrc(recipe.machineId);
+  if (recipe === undefined) {
+    return "/device-icons/item_port_grinder_1.webp";
+  }
+
+  // 优先用第 1 个主要产物图标，其次用第 1 个产出图标，最后 fallback 到设备图标
+  const primaryId = recipe.primaryOutputs?.[0] ?? recipe.outputs[0]?.itemId;
+  if (primaryId !== undefined) {
+    return resolveItemIconSrc(primaryId, index);
+  }
+
+  return resolveEntityIconSrc(recipe.machineId);
 }
 
 export function resolveAnyIconSrc(iconId: string, index: ModuleBalancingIndex): string {

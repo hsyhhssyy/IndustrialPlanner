@@ -762,7 +762,6 @@ function ModuleCard({
   showActivityIcons: boolean;
   t: (key: string) => string;
 }) {
-  const inputs = resolveModuleInputs(module, index);
   const outputs = resolveModuleOutputs(module, index);
   const title = resolveModuleTitle(module, index, t);
   const activityIds = showActivityIcons ? resolveModuleActivityIds(module, index) : [];
