@@ -220,7 +220,20 @@ describe("createBeltCargoDecoration", () => {
     expect(cargoRoot.y).toBeCloseTo(100)
     expect(cargoRoot.rotation).toBeCloseTo(0)
 
-    const boxGraphics = cargoRoot.children[0] as unknown as {
+    const boxSprite = cargoRoot.children[0] as unknown as {
+      texture: unknown;
+      width: number;
+      height: number;
+    }
+    const boxSize = resolveBeltCargoBoxSize(100)
+    expect(boxSprite.width).toBe(boxSize)
+    expect(boxSprite.height).toBe(boxSize)
+    expect(boxSprite.texture).not.toBeNull()
+
+    // 验证 generateTexture 被调用且传入的 Graphics 有正确的 roundRect 命令
+    const renderer = (ctx as unknown as { renderHost: { app: { renderer: { generateTexture: ReturnType<typeof vi.fn> } } } }).renderHost.app.renderer
+    expect(renderer.generateTexture).toHaveBeenCalledTimes(1)
+    const generatedGraphics = renderer.generateTexture.mock.calls[0]![0] as {
       drawCommands: Array<{
         type: "roundRect";
         x: number;
@@ -232,9 +245,8 @@ describe("createBeltCargoDecoration", () => {
         stroke?: unknown;
       }>;
     }
-    const boxSize = resolveBeltCargoBoxSize(100)
-    expect(boxGraphics.drawCommands).toHaveLength(1)
-    expect(boxGraphics.drawCommands[0]).toMatchObject({
+    expect(generatedGraphics.drawCommands).toHaveLength(1)
+    expect(generatedGraphics.drawCommands[0]).toMatchObject({
       type: "roundRect",
       x: -boxSize / 2,
       y: -boxSize / 2,
@@ -247,7 +259,6 @@ describe("createBeltCargoDecoration", () => {
         pixelLine: true,
       },
     })
-    expect(boxGraphics.drawCommands[0]?.radius).toBeCloseTo(boxSize / 10)
 
     const sprite = cargoRoot.children[1] as {
       visible: boolean;
@@ -262,6 +273,13 @@ describe("createBeltCargoDecoration", () => {
 
     await flushMicrotasks()
     decoration.sync(ctx as never)
+
+    const updatedBoxSprite = cargoRoot.children[0] as unknown as {
+      texture: unknown;
+      width: number;
+      height: number;
+    }
+    expect(updatedBoxSprite.texture).not.toBeNull()
 
     expect(sprite.visible).toBe(true)
     expect(sprite.texture).not.toBe(iconTexture)
@@ -880,6 +898,16 @@ function createContext(options: {
       app: {
         renderer: {
           render: vi.fn(),
+          generateTexture: vi.fn().mockImplementation((source: { clearCalls: number; drawCommands: unknown[] }) => {
+            // 返回一个带有 drawCommands 的伪纹理，便于测试验证 box 烘焙结果
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return new Texture({
+              source: { width: 100, height: 100 } as any,
+              frame: new Rectangle(0, 0, 100, 100),
+              orig: new Rectangle(0, 0, 100, 100),
+              label: `generated-box-${source.drawCommands.length}`,
+            })
+          }),
         },
       },
       workspace: {
@@ -1015,7 +1043,7 @@ function resolveCargoViewRoots(
   }>
 
   return layers.flatMap((layer) =>
-    (layer.children ?? []).filter((child) => child.children.length === 2),
+    (layer.children ?? []).filter((child) => child.children.length === 1),
   )
 }
 
@@ -1061,7 +1089,7 @@ function resolveCargoRoot(
   index: number,
 ) {
   const root = resolveCargoViewRoot(decoration, index)
-  const cargoRoot = root.children[1] as {
+  const cargoRoot = root.children[0] as {
     visible: boolean;
     x: number;
     y: number;

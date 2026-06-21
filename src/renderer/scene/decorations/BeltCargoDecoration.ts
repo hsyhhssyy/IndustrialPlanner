@@ -66,11 +66,9 @@ interface BeltCargoEntry {
 
 interface BeltCargoView {
   readonly root: Container;
-  readonly mask: Graphics;
   readonly cargoRoot: Container;
-  readonly boxGraphics: Graphics;
+  readonly box: Sprite;
   readonly icon: Sprite;
-  maskKey: string | null;
   boxSize: number | null;
 }
 
@@ -128,12 +126,16 @@ export function createBeltCargoDecoration(): DecorationLayer {
   let sharedMaskTexture: RenderTexture | null = null
   let sharedMaskRevision = -1
   let clipMaskRevision = 0
+  // 共享 box 纹理 —— 只在 gridCellPixelSize 变化时重新烘焙
+  let sharedBoxTexture: Texture | null = null
+  let sharedBoxTextureSize = -1
 
   const hideAll = (): void => {
     container.visible = false
 
     for (const view of cargoViews) {
       view.root.visible = false
+      // AI-CORRECTION 2026-06-21: view.mask 已删除，不再需要逐一重置
     }
   }
 
@@ -175,26 +177,24 @@ export function createBeltCargoDecoration(): DecorationLayer {
     }
 
     const root = new Container()
-    const mask = new Graphics({ roundPixels: true })
     const cargoRoot = new Container()
-    const box = new Graphics({ roundPixels: true })
+    const box = new Sprite(Texture.EMPTY)
+    box.anchor.set(0.5)
+    box.roundPixels = true
     const icon = new Sprite(Texture.EMPTY)
     icon.anchor.set(0.5)
     icon.roundPixels = true
 
     cargoRoot.addChild(box)
     cargoRoot.addChild(icon)
-    root.addChild(mask)
     root.addChild(cargoRoot)
     sharedCargoLayer.addChild(root)
 
     view = {
       root,
-      mask,
       cargoRoot,
-      boxGraphics: box,
+      box,
       icon,
-      maskKey: null,
       boxSize: null,
     }
     cargoViews.push(view)
@@ -274,6 +274,20 @@ export function createBeltCargoDecoration(): DecorationLayer {
       const itemIconMap = ensureItemIconMap(ctx)
       const boxSize = resolveBeltCargoBoxSize(ctx.viewportState.gridCellPixelSize)
       const boxHalfSize = boxSize / 2
+
+      // 共享 box 纹理：只在 zoom 变化时重新烘焙
+      if (sharedBoxTextureSize !== boxSize) {
+        const boxCornerRadius = boxSize * BOX_CORNER_RADIUS_RATIO
+        const temp = new Graphics({ roundPixels: true })
+        temp
+          .roundRect(-boxSize / 2, -boxSize / 2, boxSize, boxSize, boxCornerRadius)
+          .fill(0xffffff)
+          .stroke({ width: BOX_STROKE_WIDTH_PX, color: 0x000000, pixelLine: true })
+        sharedBoxTexture?.destroy(true)
+        sharedBoxTexture = ctx.renderHost.app.renderer.generateTexture(temp)
+        temp.destroy()
+        sharedBoxTextureSize = boxSize
+      }
       sharedCargoLayer.mask = simplifiedDeviceIcons ? null : sharedMaskSprite
       const sharedMaskBuildStartedAtMs = performance.now()
       if (!simplifiedDeviceIcons && sharedMaskRevision !== clipMaskRevision) {
@@ -335,33 +349,25 @@ export function createBeltCargoDecoration(): DecorationLayer {
       }
 
       container.visible = true
+      const syncOptions = {
+        entries,
+        boxSize,
+        ensureCargoView,
+        cargoViews,
+        sharedCargoLayer,
+        localCargoLayer,
+        insetTextures,
+        itemIconMap,
+        resolvedTextures,
+        sharedBoxTexture: sharedBoxTexture!,
+        profiler: ctx.profiler,
+      }
       if (ctx.profiler) {
         ctx.profiler.measure("beltCargo.views-sync", () => {
-          syncBeltCargoViews({
-            entries,
-            boxSize,
-            ensureCargoView,
-            cargoViews,
-            sharedCargoLayer,
-            localCargoLayer,
-            insetTextures,
-            itemIconMap,
-            resolvedTextures,
-            profiler: ctx.profiler,
-          })
+          syncBeltCargoViews(syncOptions)
         })
       } else {
-        syncBeltCargoViews({
-          entries,
-          boxSize,
-          ensureCargoView,
-          cargoViews,
-          sharedCargoLayer,
-          localCargoLayer,
-          insetTextures,
-          itemIconMap,
-          resolvedTextures,
-        })
+        syncBeltCargoViews(syncOptions)
       }
       ctx.profiler?.count(
         "beltCargo.sharedMaskBuild-ms",
@@ -380,6 +386,8 @@ export function createBeltCargoDecoration(): DecorationLayer {
       sharedMaskTexture?.destroy(true)
       sharedMaskTexture = null
       sharedMaskSource.destroy()
+      sharedBoxTexture?.destroy(true)
+      sharedBoxTexture = null
 
       for (const view of cargoViews) {
         view.root.destroy({ children: true })
@@ -943,18 +951,13 @@ function syncBeltCargoViews(options: {
   insetTextures: Map<string, Texture>;
   itemIconMap: ReadonlyMap<string, string>;
   resolvedTextures: ReadonlyMap<string, Texture>;
+  sharedBoxTexture: Texture;
   profiler?: DecorationProfiler;
 }): void {
   const iconSize = options.boxSize * BOX_ICON_SIZE_RATIO
-  const boxCornerRadius = options.boxSize * BOX_CORNER_RADIUS_RATIO
   let visibleCount = 0
-  let maskClearMs = 0
-  const maskDrawMs = 0
-  let boxDrawMs = 0
   let iconSetupMs = 0
   let ensureViewMs = 0
-  let sharedMaskCount = 0
-  const localMaskCount = 0
 
   const t0 = performance.now()
 
@@ -979,40 +982,16 @@ function syncBeltCargoViews(options: {
       options.sharedCargoLayer.addChild(view.root)
     }
 
-    const tMask = performance.now()
-    view.root.mask = null
-    view.mask.visible = false
-    if (view.maskKey !== null) {
-      view.mask.clear()
-      view.maskKey = null
-    }
-    maskClearMs += performance.now() - tMask
-    sharedMaskCount += 1
-
     view.cargoRoot.x = entry.centerX
     view.cargoRoot.y = entry.centerY
     view.cargoRoot.rotation = entry.angleRadians
 
-    const tBox = performance.now()
-    if (view.boxSize !== options.boxSize) {
-      view.boxGraphics
-        .clear()
-        .roundRect(
-          -options.boxSize / 2,
-          -options.boxSize / 2,
-          options.boxSize,
-          options.boxSize,
-          boxCornerRadius,
-        )
-        .fill(0xffffff)
-        .stroke({
-          width: BOX_STROKE_WIDTH_PX,
-          color: 0x000000,
-          pixelLine: true,
-        })
-      view.boxSize = options.boxSize
+    // 共享 box 纹理：缩放不变时仅设 texture，无 clear / redraw 开销
+    if (view.box.texture !== options.sharedBoxTexture) {
+      view.box.texture = options.sharedBoxTexture
+      view.box.width = options.boxSize
+      view.box.height = options.boxSize
     }
-    boxDrawMs += performance.now() - tBox
 
     const tIcon = performance.now()
     view.icon.visible = texture !== undefined
@@ -1032,24 +1011,23 @@ function syncBeltCargoViews(options: {
     const view = options.cargoViews[index]
     if (view !== undefined) {
       view.root.visible = false
-      view.root.mask = null
     }
   }
   const hideMs = performance.now() - tHide
 
   // 循环中未单独计时的部分：变量声明、resolveInsetItemIconTexture、cargoRoot 定位等
-  const loopOtherMs = Math.max(0, performance.now() - t0 - ensureViewMs - maskClearMs - maskDrawMs - boxDrawMs - iconSetupMs - hideMs)
+  const loopOtherMs = Math.max(0, performance.now() - t0 - ensureViewMs - iconSetupMs - hideMs)
 
   if (options.profiler) {
     options.profiler.count("beltCargo.v-ensureView-ms", Math.round(ensureViewMs * 100) / 100)
-    options.profiler.count("beltCargo.v-maskClear-ms", Math.round(maskClearMs * 100) / 100)
-    options.profiler.count("beltCargo.v-maskDraw-ms", Math.round(maskDrawMs * 100) / 100)
-    options.profiler.count("beltCargo.v-boxDraw-ms", Math.round(boxDrawMs * 100) / 100)
+    options.profiler.count("beltCargo.v-maskClear-ms", 0)
+    options.profiler.count("beltCargo.v-maskDraw-ms", 0)
+    options.profiler.count("beltCargo.v-boxDraw-ms", 0)
     options.profiler.count("beltCargo.v-iconSetup-ms", Math.round(iconSetupMs * 100) / 100)
     options.profiler.count("beltCargo.v-hide-ms", Math.round(hideMs * 100) / 100)
     options.profiler.count("beltCargo.v-loopOther-ms", Math.round(loopOtherMs * 100) / 100)
-    options.profiler.count("beltCargo.sharedMaskEntries", sharedMaskCount)
-    options.profiler.count("beltCargo.localMaskEntries", localMaskCount)
+    options.profiler.count("beltCargo.sharedMaskEntries", visibleCount)
+    options.profiler.count("beltCargo.localMaskEntries", 0)
   }
 }
 

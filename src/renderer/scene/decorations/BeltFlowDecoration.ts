@@ -136,13 +136,17 @@ export function createBeltFlowDecoration(): DecorationLayer {
         return
       }
 
+      const tEntries = performance.now()
       const entries = resolveBeltVisualPathEntries(ctx)
+      ctx.profiler?.count("beltFlow.resolvePathEntries-ms", Math.round((performance.now() - tEntries) * 100) / 100)
       if (entries.length === 0) {
         hide()
         return
       }
 
+      const tMarks = performance.now()
       const marks = resolveBeltFlowMarks(ctx)
+      ctx.profiler?.count("beltFlow.resolveMarks-ms", Math.round((performance.now() - tMarks) * 100) / 100)
       if (marks.length === 0) {
         hide()
         return
@@ -159,12 +163,17 @@ export function createBeltFlowDecoration(): DecorationLayer {
       arrowGraphics.visible = true
       arrowMask.visible = true
       if (hasHighlightMarks) {
+        const tHMask = performance.now()
         drawHighlightMask(ctx, highlightMask)
+        ctx.profiler?.count("beltFlow.drawHighlightMask-ms", Math.round((performance.now() - tHMask) * 100) / 100)
       } else {
         highlightMask.clear()
       }
+      const tAMask = performance.now()
       drawArrowMask(ctx, arrowMask)
+      ctx.profiler?.count("beltFlow.drawArrowMask-ms", Math.round((performance.now() - tAMask) * 100) / 100)
 
+      const tHMesh = performance.now()
       syncHighlightMeshes({
         marks,
         texture: hasHighlightMarks ? highlightTexture : null,
@@ -172,11 +181,14 @@ export function createBeltFlowDecoration(): DecorationLayer {
         ensureHighlightMesh,
         highlightMeshes,
       })
+      ctx.profiler?.count("beltFlow.syncHighlightMeshes-ms", Math.round((performance.now() - tHMesh) * 100) / 100)
+      const tDrawMarks = performance.now()
       drawBeltFlowMarks({
         graphics: arrowGraphics,
         marks,
         gridCellSize: ctx.viewportState.gridCellPixelSize,
       })
+      ctx.profiler?.count("beltFlow.drawMarks-ms", Math.round((performance.now() - tDrawMarks) * 100) / 100)
     },
 
     destroy(): void {
