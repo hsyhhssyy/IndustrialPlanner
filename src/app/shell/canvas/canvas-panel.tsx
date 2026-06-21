@@ -277,8 +277,14 @@ function CanvasFpsOverlay({
     >
       <div className={cm(styles, "canvas-fps-header")}>
         <div className={cm(styles, "canvas-fps-header-copy")}>
-          <span>FPS</span>
-          <strong>{snapshot.fps}</strong>
+          {collapsed ? (
+            <>
+              <span>FPS</span>
+              <strong>{snapshot.fps}</strong>
+            </>
+          ) : (
+            <span>性能统计</span>
+          )}
         </div>
         <button
           aria-controls={bodyId}
@@ -300,6 +306,10 @@ function CanvasFpsOverlay({
         <div className={cm(styles, "canvas-fps-body")} id={bodyId}>
           <table className={cm(styles, "canvas-fps-table")}>
             <tbody>
+              <tr>
+                <th>帧率</th>
+                <td>{snapshot.fps}</td>
+              </tr>
               <tr>
                 <th>Tick生成/秒</th>
                 <td>{snapshot.tps.toFixed(1)}</td>
