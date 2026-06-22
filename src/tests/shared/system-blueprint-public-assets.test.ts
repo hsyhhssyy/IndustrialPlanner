@@ -19,19 +19,31 @@ describe("system-blueprint public assets", () => {
     const rootDirectory = listSystemBlueprintDirectory(snapshot, null);
 
     expect(snapshot.version).toBe("v1.3.0");
-    expect(rootDirectory.folders).toHaveLength(2);
+    expect(rootDirectory.folders).toHaveLength(3);
     expect(rootDirectory.folders[0]).toMatchObject({
-      name: "产线样例",
+      name: "四号谷地产线样例",
+      parentFolderId: null,
+    });
+    expect(rootDirectory.folders[1]).toMatchObject({
+      name: "武陵产线样例",
+      parentFolderId: null,
+    });
+    expect(rootDirectory.folders[2]).toMatchObject({
+      name: "赤石科技",
       parentFolderId: null,
     });
 
-    const sampleFolderDirectory = listSystemBlueprintDirectory(
+    const valley4FolderDirectory = listSystemBlueprintDirectory(
       snapshot,
       rootDirectory.folders[0]?.folderId ?? null,
     );
+    const wulingFolderDirectory = listSystemBlueprintDirectory(
+      snapshot,
+      rootDirectory.folders[1]?.folderId ?? null,
+    );
 
-    expect(sampleFolderDirectory.blueprints).toHaveLength(5);
-    expect(sampleFolderDirectory.blueprints[0]).toMatchObject({
+    expect(valley4FolderDirectory.blueprints).toHaveLength(1);
+    expect(valley4FolderDirectory.blueprints[0]).toMatchObject({
       blueprintId: "429609a4-61cb-4083-98fa-b8de1268bec4",
       name: "精选荞愈胶囊产线",
       baseId: "valley4_protocol_core",
@@ -41,19 +53,20 @@ describe("system-blueprint public assets", () => {
         y: 22,
       },
     });
-    expect(sampleFolderDirectory.blueprints[0]?.entityOrder).toHaveLength(227);
+    expect(valley4FolderDirectory.blueprints[0]?.entityOrder).toHaveLength(227);
     // 2026-06-10: 蓝图导入后取货口的 warehouse link 写入 slotLinks，不再为空。
-    expect(sampleFolderDirectory.blueprints[0]?.slotLinks.length).toBeGreaterThan(0);
-    expect(sampleFolderDirectory.blueprints[0]?.entities.legacy_429609a4_0082).toMatchObject({
+    expect(valley4FolderDirectory.blueprints[0]?.slotLinks.length).toBeGreaterThan(0);
+    expect(valley4FolderDirectory.blueprints[0]?.entities.legacy_429609a4_0082).toMatchObject({
       definitionId: "belt_turn_cw_1x1",
       rotation: 90,
     });
-    expect(sampleFolderDirectory.blueprints[0]?.entities.legacy_429609a4_0106).toMatchObject({
+    expect(valley4FolderDirectory.blueprints[0]?.entities.legacy_429609a4_0106).toMatchObject({
       definitionId: "belt_turn_ccw_1x1",
       rotation: 180,
     });
 
-    expect(sampleFolderDirectory.blueprints[1]).toMatchObject({
+    expect(wulingFolderDirectory.blueprints).toHaveLength(4);
+    expect(wulingFolderDirectory.blueprints[0]).toMatchObject({
       blueprintId: "c96944de-0608-4abf-901a-8b3d27a476d1",
       name: "双烘炉息壤产线",
       baseId: "wuling_tianwangping_aid",
@@ -63,27 +76,54 @@ describe("system-blueprint public assets", () => {
         y: 13,
       },
     });
-    expect(sampleFolderDirectory.blueprints[1]?.entityOrder).toHaveLength(148);
+    expect(wulingFolderDirectory.blueprints[0]?.entityOrder).toHaveLength(148);
     // 2026-06-10: dual-oven-xiranite 没有取货口，但迁移后 dudpipe_unloader 的 warehouse link 也在 slotLinks 中。
-    expect(sampleFolderDirectory.blueprints[1]?.slotLinks.length).toBeGreaterThanOrEqual(0);
-    expect(sampleFolderDirectory.blueprints[1]?.entities.legacy_c96944de_0009).toMatchObject({
+    expect(wulingFolderDirectory.blueprints[0]?.slotLinks.length).toBeGreaterThanOrEqual(0);
+    expect(wulingFolderDirectory.blueprints[0]?.entities.legacy_c96944de_0009).toMatchObject({
       definitionId: "belt_turn_cw_1x1",
       rotation: 270,
     });
-    expect(sampleFolderDirectory.blueprints[1]?.entities.legacy_c96944de_0031).toMatchObject({
+    expect(wulingFolderDirectory.blueprints[0]?.entities.legacy_c96944de_0031).toMatchObject({
       definitionId: "pipe_turn_ccw_1x1",
       rotation: 180,
     });
 
-    expect(sampleFolderDirectory.blueprints[2]).toMatchObject({
+    expect(wulingFolderDirectory.blueprints[1]).toMatchObject({
       blueprintId: "2dec8da2-1c38-47f3-a574-a586bd4efad5",
       name: "中容武陵电池产线",
       baseId: "wuling_tianwangping_aid",
       sourcePath: "wuling-battery-line.json",
     });
-    expect(sampleFolderDirectory.blueprints[2]?.entityOrder).toHaveLength(338);
+    expect(wulingFolderDirectory.blueprints[1]?.entityOrder).toHaveLength(338);
     // 2026-06-10: 蓝图导入后取货口的 warehouse link 写入 slotLinks。
-    expect(sampleFolderDirectory.blueprints[2]?.slotLinks.length).toBeGreaterThan(0);
+    expect(wulingFolderDirectory.blueprints[1]?.slotLinks.length).toBeGreaterThan(0);
+
+    const chishiFolderDirectory = listSystemBlueprintDirectory(
+      snapshot,
+      rootDirectory.folders[2]?.folderId ?? null,
+    );
+    expect(chishiFolderDirectory.blueprints).toHaveLength(1);
+    expect(chishiFolderDirectory.blueprints[0]).toMatchObject({
+      blueprintId: "f00abb80-6b5e-45ab-ae01-32bd1e3e1771",
+      name: "一键去世机7.1",
+      baseId: "valley4_protocol_core",
+      sourcePath: "resurrection-machine-7.1.json",
+      initialGridPoint: {
+        x: 11,
+        y: 6,
+      },
+    });
+    expect(chishiFolderDirectory.blueprints[0]?.entityOrder).toHaveLength(188);
+    // 2026-06-10: 蓝图导入后取货口的 warehouse link 写入 slotLinks。
+    expect(chishiFolderDirectory.blueprints[0]?.slotLinks.length).toBeGreaterThan(0);
+    expect(chishiFolderDirectory.blueprints[0]?.entities.legacy_f00abb80_0014).toMatchObject({
+      definitionId: "belt_turn_cw_1x1",
+      rotation: 90,
+    });
+    expect(chishiFolderDirectory.blueprints[0]?.entities.legacy_f00abb80_0017).toMatchObject({
+      definitionId: "belt_turn_ccw_1x1",
+      rotation: 90,
+    });
   });
 });
 

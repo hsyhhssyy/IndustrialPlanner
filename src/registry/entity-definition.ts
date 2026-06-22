@@ -39,6 +39,7 @@ import {
 } from "@/domain/registry/types/entity-placement-behavior";
 import { DEFAULT_PORT_PRIORITY_GROUP } from "@/shared/port-priority-groups";
 
+import { ITEM_DEFINITIONS } from "./item-definition";
 import { RECIPE_DEFINITIONS } from "./recipe-definition";
 
 // ---------------------------------------------------------------------------
@@ -88,6 +89,29 @@ type EmptyEntityDefinitionInput = Pick<
 const RECIPE_MACHINE_IDS = new Set(
   RECIPE_DEFINITIONS.map((recipe) => recipe.machineId),
 );
+
+const LIQUID_PURIFIER_LEFT_OUTPUT_ITEM_IDS = [
+  "item_liquid_water",
+  "item_liquid_acid",
+] as const;
+
+const LIQUID_PURIFIER_RIGHT_OUTPUT_ITEM_IDS = [
+  "item_liquid_xiranite_poly",
+  "item_liquid_copper_enr",
+] as const;
+
+function createLiquidPurifierOutputAcceptRule(
+  itemIds: readonly string[],
+): PortDefinition["acceptRule"] {
+  const allowedItemIds = new Set<string>(itemIds);
+  return {
+    base: { kind: "liquid" },
+    exclude: ITEM_DEFINITIONS
+      .filter((item) => item.tags.includes("liquid") && !allowedItemIds.has(item.id))
+      .map((item) => item.id)
+      .sort(),
+  };
+}
 
 const ALLOW_PIPE_OVERLAP_PLACEMENT_BEHAVIORS = [
   { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
@@ -2356,7 +2380,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_output",
         "fluid",
         "output",
-        [1, 3].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+        [
+          createPort("out_n_1", 1, 0, "N", {
+            acceptRule: createLiquidPurifierOutputAcceptRule(LIQUID_PURIFIER_LEFT_OUTPUT_ITEM_IDS),
+          }),
+          createPort("out_n_3", 3, 0, "N", {
+            acceptRule: createLiquidPurifierOutputAcceptRule(LIQUID_PURIFIER_RIGHT_OUTPUT_ITEM_IDS),
+          }),
+        ],
       ),
     ],
     ...createSimpleProductionDevice([

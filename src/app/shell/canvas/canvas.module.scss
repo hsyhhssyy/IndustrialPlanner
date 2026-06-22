@@ -391,7 +391,7 @@
   left: calc(var(--left-toolbar-width, 68px) + var(--left-dock-width, 0px) + 14px);
   z-index: 4;
   display: grid;
-  justify-items: start;
+  justify-items: stretch;
   gap: 6px;
   max-width: calc(100% - var(--left-toolbar-width, 68px) - var(--left-dock-width, 0px) - var(--right-dock-width, 0px) - 28px);
   pointer-events: auto;
@@ -421,9 +421,10 @@
 }
 
 .canvas-top-left-corner-toolbar-button {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
+  justify-self: stretch;
   gap: 7px;
   min-width: 104px;
   min-height: 29px;

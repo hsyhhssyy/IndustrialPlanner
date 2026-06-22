@@ -1,7 +1,7 @@
 {
   "version": "v1.3.0",
   "folders": [
-        {
+    {
       "name": "四号谷地产线样例",
       "blueprints": [
         "premium-capsule-line"
@@ -14,6 +14,12 @@
         "wuling-battery-line",
         "dark-pipe-premium-needle-line",
         "utimate-xiranite"
+      ]
+    },
+    {
+      "name": "赤石科技",
+      "blueprints": [
+        "resurrection-machine-7.1"
       ]
     }
   ]
