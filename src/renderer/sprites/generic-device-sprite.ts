@@ -69,7 +69,7 @@ const SCANLINE_SCROLL_INTERVAL_MS = 2000;
 const PREVIEW_BORDER_WIDTH = 1;
 const PREVIEW_BORDER_ALPHA = 0.5;
 
-const DEVICE_LABEL_ICON_SIZE = 14;
+export const DEVICE_LABEL_ICON_SIZE = 14;
 const DEVICE_LABEL_FONT_SIZE = 8;
 
 // ---- 主要产物图标 ----
@@ -86,7 +86,7 @@ const PRIMARY_OUTPUT_CIRCLE_STROKE = 0x333333;
 const PRIMARY_OUTPUT_CIRCLE_STROKE_WIDTH = 2;
 
 let cachedCircleTexture: Texture | null = null;
-function getPrimaryOutputCircleTexture(textureConfig: RenderTextureConfig): Texture {
+export function getPrimaryOutputCircleTexture(textureConfig: RenderTextureConfig): Texture {
   if (cachedCircleTexture === null) {
     const size = PRIMARY_OUTPUT_CIRCLE_TEXTURE_SIZE;
     const canvas = document.createElement("canvas");

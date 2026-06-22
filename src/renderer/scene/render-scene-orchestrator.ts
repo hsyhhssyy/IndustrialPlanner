@@ -57,6 +57,7 @@ import { createDarkPipeLinkLineDecoration } from "./decorations/DarkPipeLinkLine
 import { createDarkPipeLinkSelectionDecoration } from "./decorations/DarkPipeLinkSelectionDecoration"
 import { createHoverCornersDecoration } from "./decorations/HoverCornersDecoration"
 import { createPortOverlayDecoration } from "./decorations/PortOverlayDecoration"
+import { createAdmissionItemIconDecoration } from "./decorations/AdmissionItemIconDecoration"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
@@ -183,6 +184,7 @@ export function createRenderSceneOrchestrator(
   const logisticsPlacementIdleCursorDecoration = createLogisticsPlacementIdleCursorDecoration()
   const hoverCornersDecoration = createHoverCornersDecoration()
   const portOverlayDecoration = createPortOverlayDecoration()
+  const admissionItemIconDecoration = createAdmissionItemIconDecoration()
   const beltFlowDecoration = createBeltFlowDecoration()
   const pipeFlowDecoration = createPipeFlowDecoration()
   const darkPipeLinkLineDecoration = createDarkPipeLinkLineDecoration()
@@ -411,6 +413,10 @@ export function createRenderSceneOrchestrator(
       portOverlayDecoration.sync(ctx)
     })
 
+    measureRenderStage(frameProfiler, "decoration.admissionItemIcon", () => {
+      admissionItemIconDecoration.sync(ctx)
+    })
+
     measureRenderStage(frameProfiler, "decoration.beltFlow", () => {
       beltFlowDecoration.sync(ctx)
     })
@@ -502,6 +508,7 @@ export function createRenderSceneOrchestrator(
   marqueeOverlayLayer.addChild(logisticsPlacementIdleCursorDecoration.container)
   marqueeOverlayLayer.addChild(hoverCornersDecoration.container)
   marqueeOverlayLayer.addChild(portOverlayDecoration.container)
+  marqueeOverlayLayer.addChild(admissionItemIconDecoration.container)
   marqueeOverlayLayer.addChild(marqueeDecoration.container)
   marqueeOverlayLayer.addChild(darkPipeLinkSelectionDecoration.container)
   app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
@@ -533,6 +540,7 @@ export function createRenderSceneOrchestrator(
       logisticsPlacementIdleCursorDecoration.destroy()
       hoverCornersDecoration.destroy()
       portOverlayDecoration.destroy()
+      admissionItemIconDecoration.destroy()
       beltFlowDecoration.destroy()
       pipeFlowDecoration.destroy()
       darkPipeLinkLineDecoration.destroy()
