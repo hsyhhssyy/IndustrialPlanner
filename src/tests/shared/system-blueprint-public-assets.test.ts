@@ -19,7 +19,7 @@ describe("system-blueprint public assets", () => {
     const rootDirectory = listSystemBlueprintDirectory(snapshot, null);
 
     expect(snapshot.version).toBe("v1.3.0");
-    expect(rootDirectory.folders).toHaveLength(1);
+    expect(rootDirectory.folders).toHaveLength(2);
     expect(rootDirectory.folders[0]).toMatchObject({
       name: "产线样例",
       parentFolderId: null,

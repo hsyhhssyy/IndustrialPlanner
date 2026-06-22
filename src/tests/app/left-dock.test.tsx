@@ -2245,7 +2245,7 @@ describe("Left dock panel switching", () => {
     ) as HTMLButtonElement | null;
 
     expect(editButton).not.toBeNull();
-    expect(editButton?.textContent?.trim()).toBe("修改");
+    expect(editButton?.textContent?.trim()).toBe("编辑详细信息");
 
     await act(async () => {
       editButton?.click();
