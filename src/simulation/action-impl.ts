@@ -59,6 +59,10 @@ export interface SimulationWorkerBridge {
     SimulationWorkerResponse,
     { readonly type: "power-mode-set" }
   >>;
+  setPowerConsumptionOverride(powerConsumptionOverride: number | undefined): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "power-consumption-override-set" }
+  >>;
   patchRuntimeSlot(patch: SimulationRuntimeSlotPatch): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "runtime-slot-patched" }

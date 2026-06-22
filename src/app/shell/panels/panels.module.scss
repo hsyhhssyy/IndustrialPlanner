@@ -929,6 +929,71 @@
   transform: translateX(18px);
 }
 
+// 手动覆盖总耗电行
+.power-override-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+.power-override-label {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.power-override-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.power-override-input {
+  width: 80px;
+  height: 28px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-1);
+  color: var(--text-1);
+  font-size: 0.8rem;
+  text-align: right;
+  outline: none;
+  transition: border-color 120ms ease;
+
+  &:focus {
+    border-color: var(--accent-strong);
+  }
+}
+
+.power-override-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-1);
+  color: var(--text-2);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 120ms ease, border-color 120ms ease;
+
+  &:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
 .warehouse-stats-card-header {
   align-items: center;
 }

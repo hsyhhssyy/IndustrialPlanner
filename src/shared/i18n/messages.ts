@@ -77,6 +77,9 @@ export type MessageKey =
   | "rightDock.collapsed"
   | "rightDock.base"
   | "rightDock.power"
+  | "workbench.power.covered"
+  | "workbench.power.clearOverride"
+  | "workbench.powerValue.covered"
   | "rightDock.selection"
   | "rightDock.simulation"
   | "warehouseStats.title"
@@ -435,6 +438,9 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "rightDock.collapsed": "检视",
     "rightDock.base": "基地",
     "rightDock.power": "电力",
+    "workbench.power.covered": "强制电力消耗",
+    "workbench.power.clearOverride": "清除强制消耗",
+    "workbench.powerValue.covered": "按真实值",
     "rightDock.selection": "设备属性",
     "rightDock.simulation": "仿真",
     "warehouseStats.title": "仓库统计",
@@ -903,6 +909,9 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "rightDock.collapsed": "Inspector",
     "rightDock.base": "Base",
     "rightDock.power": "Power",
+    "workbench.power.covered": "Forced Load",
+    "workbench.power.clearOverride": "Clear Forced Load",
+    "workbench.powerValue.covered": "Auto (real value)",
     "rightDock.selection": "Device Properties",
     "rightDock.simulation": "Simulation",
     "warehouseStats.title": "Warehouse Stats",

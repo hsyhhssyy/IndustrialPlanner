@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 
 import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
+import { NumberInput } from "@/app/shell/shared/number-input";
+import LucideTrash2 from "~icons/lucide/trash-2";
 import type { AppHost } from "@/app/host/app-host";
 import { DEFAULT_WORLD_BASE_ID } from "@/domain/document/world-document";
 import {
@@ -13,6 +15,7 @@ import {
 } from "@/app/shell/shared/warehouse-stats-view";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import panelStyles from "@/app/shell/panels/panels.module.scss";
 
 const BASE_PANEL_POWER_INTERVAL_MS = 250;
 
@@ -68,6 +71,23 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
     const nextMode: "real" | "infinite" = powerMode === "real" ? "infinite" : "real";
     // 写入 documentSettings（silent）→ simulation 自动监听到并同步到 worker
     editor.actions.writeDocumentSettings({ powerMode: nextMode });
+  };
+
+  // 手动覆盖总耗电
+  const powerConsumptionOverride: number | undefined = (() => {
+    const raw = currentDocument?.documentSettings?.powerConsumptionOverride;
+    return typeof raw === "number" && Number.isFinite(raw) && raw >= 0 ? raw : undefined;
+  })();
+  const hasOverride = powerConsumptionOverride !== undefined;
+
+  const handleOverrideCommit = (value: number) => {
+    if (editor === null) return;
+    editor.actions.writeDocumentSettings({ powerConsumptionOverride: Math.max(0, value) });
+  };
+
+  const handleClearOverride = () => {
+    if (editor === null) return;
+    editor.actions.writeDocumentSettings({ powerConsumptionOverride: undefined });
   };
 
   // 电力横条数据
@@ -143,6 +163,32 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
             <span className={cm(styles, "power-switch-thumb")} />
           </button>
         </label>
+        {!isInfinite ? (
+          <div className={cm(panelStyles, "power-override-row")}>
+            <label className={cm(panelStyles, "power-override-label")}>
+              {t("workbench.power.covered")}
+            </label>
+            <div className={cm(panelStyles, "power-override-controls")}>
+              <NumberInput
+                className={cm(panelStyles, "power-override-input")}
+                min={0}
+                placeholder={t("workbench.powerValue.covered")}
+                value={hasOverride ? powerConsumptionOverride : ""}
+                onCommit={handleOverrideCommit}
+              />
+              {hasOverride ? (
+                <button
+                  aria-label={t("workbench.power.clearOverride")}
+                  className={cm(panelStyles, "power-override-clear")}
+                  type="button"
+                  onClick={handleClearOverride}
+                >
+                  <LucideTrash2 aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </article>
       <article className={cm(styles, "inspector-card")}> 
         <div className={cm(styles, "card-header warehouse-stats-card-header")}> 

@@ -141,6 +141,9 @@ export class SimulationWorkerRuntime {
   private perfEnabled = false;
   private perfEntries: TickPerfEntry[] = [];
 
+  /** 手动覆盖总耗电（kW），undefined = 按编译期真实值。 */
+  private powerConsumptionOverride: number | undefined = undefined;
+
   /** Worker 线程内异步路径（setTimeout 回调等）错误时的回调，由 simulation-worker.ts 注入。 */
   private onError: ((error: string, tickNumber: number | null) => void) | null = null;
 
@@ -203,6 +206,13 @@ export class SimulationWorkerRuntime {
             requestId: request.requestId,
             status: this.getStatus(),
           };
+        case "set-power-consumption-override":
+          this.setPowerConsumptionOverride(request.powerConsumptionOverride);
+          return {
+            type: "power-consumption-override-set",
+            requestId: request.requestId,
+            status: this.getStatus(),
+          };
       }
     } catch (error) {
       this.mode = "error";
@@ -254,6 +264,12 @@ export class SimulationWorkerRuntime {
         case "set-power-mode":
           return {
             type: "power-mode-set",
+            requestId: request.requestId,
+            status,
+          };
+        case "set-power-consumption-override":
+          return {
+            type: "power-consumption-override-set",
             requestId: request.requestId,
             status,
           };
@@ -572,6 +588,25 @@ export class SimulationWorkerRuntime {
   }
 
   /**
+   * 设置手动覆盖总耗电（kW）。undefined = 清除覆盖，按编译期真实值。
+   * 不触发拓扑重编译，仅影响后续 tick 的有效耗电计算。
+   */
+  public setPowerConsumptionOverride(powerConsumptionOverride: number | undefined): void {
+    if (this.powerConsumptionOverride === powerConsumptionOverride) return;
+    this.powerConsumptionOverride = powerConsumptionOverride;
+    this.invalidateFrom(this.nextTickNumber);
+  }
+
+  /** 考虑手动覆盖后的有效总耗电。 */
+  private get effectiveTotalPowerDemand(): number {
+    const override = this.powerConsumptionOverride;
+    if (typeof override === "number" && Number.isFinite(override) && override >= 0) {
+      return override;
+    }
+    return this.topology?.totalPowerDemand ?? 0;
+  }
+
+  /**
    * 同步推进到目标 tick（Local 模式专用）。
    * 在没有事件循环的环境（测试/CLI）中，setTimeout 无法触发后台填充，
    * 需要调用方在 getTickSnapshot 前显式推进。
@@ -649,7 +684,7 @@ export class SimulationWorkerRuntime {
     return computeEffectivePowerState(
       this.powerMode,
       currentPowerGeneration,
-      this.topology?.totalPowerDemand ?? 0,
+      this.effectiveTotalPowerDemand,
       this.runtimeState?.persistent.baseBatteryJoules ?? 0,
     );
   }
@@ -713,7 +748,7 @@ export class SimulationWorkerRuntime {
       // 真实电力模式下更新基地电池，并计算计入电池补足后的有效发电量
       let effectiveGeneration = currentPowerGeneration;
       if (this.powerMode === "real") {
-        const netPowerKW = currentPowerGeneration - this.topology.totalPowerDemand;
+        const netPowerKW = currentPowerGeneration - this.effectiveTotalPowerDemand;
         const joulesPerStandardTick = 1000 / this.topology.standardTickRate;
         const netJoules = netPowerKW * joulesPerStandardTick * runtimeStepTicks;
         if (netJoules > 0) {
@@ -725,7 +760,7 @@ export class SimulationWorkerRuntime {
           const deficit = -netJoules;
           if (this.runtimeState.persistent.baseBatteryJoules >= deficit) {
             this.runtimeState.persistent.baseBatteryJoules -= deficit;
-            effectiveGeneration = this.topology.totalPowerDemand; // 电池补足差额，视为电力充足
+            effectiveGeneration = this.effectiveTotalPowerDemand; // 电池补足差额，视为电力充足
           } else {
             this.runtimeState.persistent.baseBatteryJoules = 0;
           }
@@ -818,7 +853,7 @@ export class SimulationWorkerRuntime {
 
       const t6 = this.perfEnabled ? performance.now() : 0;
       const isPowerOutageRun = this.powerMode === "real"
-        && effectiveGeneration < this.topology.totalPowerDemand;
+        && effectiveGeneration < this.effectiveTotalPowerDemand;
       const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutageRun, currentPowerGeneration);
       if (this.perfEnabled) {
         perfTiming!.stages["createSnapshot"] = performance.now() - t6;

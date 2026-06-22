@@ -49,6 +49,11 @@ export type SimulationWorkerRequest =
       readonly type: "set-power-mode";
       readonly requestId: number;
       readonly powerMode: "real" | "infinite";
+    }
+  | {
+      readonly type: "set-power-consumption-override";
+      readonly requestId: number;
+      readonly powerConsumptionOverride: number | undefined;
     };
 
 export type SimulationWorkerResponse =
@@ -87,6 +92,11 @@ export type SimulationWorkerResponse =
     }
   | {
       readonly type: "power-mode-set";
+      readonly requestId: number;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "power-consumption-override-set";
       readonly requestId: number;
       readonly status: SimulationRuntimeStatus;
     };

@@ -35,6 +35,8 @@ export interface WorldDocumentSettings {
   readonly viewport: WorldDocumentViewportSettings;
   /** 电力模式：real（真实电力）或 infinite（无限电力），默认 infinite。 */
   readonly powerMode: "real" | "infinite";
+  /** 手动覆盖总耗电（kW）。undefined = 按真实计算值。仅 powerMode === "real" 时生效。 */
+  readonly powerConsumptionOverride?: number;
   readonly [key: string]: unknown;
 }
 

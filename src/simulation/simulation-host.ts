@@ -74,11 +74,22 @@ export function createSimulationHost(
   const editorDocument = workspace.editor?.document;
   if (editorDocument !== undefined) {
     let previousPowerMode = editorDocument.getSnapshot().documentSettings.powerMode ?? "infinite";
+    let previousPowerConsumptionOverride: number | undefined =
+      editorDocument.getSnapshot().documentSettings.powerConsumptionOverride;
     const unsubscribe = editorDocument.subscribe((doc) => {
       const currentPowerMode = doc.documentSettings.powerMode ?? "infinite";
       if (currentPowerMode !== previousPowerMode) {
         previousPowerMode = currentPowerMode;
         void bridge.setPowerMode(currentPowerMode).catch(() => undefined);
+      }
+      const currentOverride = doc.documentSettings.powerConsumptionOverride;
+      if (currentOverride !== previousPowerConsumptionOverride) {
+        previousPowerConsumptionOverride = currentOverride;
+        void bridge.setPowerConsumptionOverride(
+          typeof currentOverride === "number" && Number.isFinite(currentOverride) && currentOverride >= 0
+            ? currentOverride
+            : undefined,
+        ).catch(() => undefined);
       }
     });
     disposers.push(unsubscribe);
@@ -113,9 +124,14 @@ export function createSimulationHost(
       getDocumentRuntimeStatus: () => {
         const topology = topologyStore.getSnapshot();
         if (topology === null) return null;
+        const override = workspace.editor?.document?.getSnapshot().documentSettings.powerConsumptionOverride;
+        const effectiveTotalPowerDemand =
+          typeof override === "number" && Number.isFinite(override) && override >= 0
+            ? override
+            : topology.totalPowerDemand;
         return {
           tickNumber: internalState.currentSnapshot?.tickNumber ?? null,
-          totalPowerDemand: topology.totalPowerDemand,
+          totalPowerDemand: effectiveTotalPowerDemand,
           currentPowerGeneration: internalState.currentSnapshot?.currentPowerGeneration ?? null,
           isPowerOutage: internalState.currentSnapshot?.isPowerOutage ?? false,
         };
@@ -535,6 +551,17 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     }, "power-mode-set");
   }
 
+  public setPowerConsumptionOverride(powerConsumptionOverride: number | undefined): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "power-consumption-override-set" }
+  >> {
+    return this.request({
+      type: "set-power-consumption-override",
+      requestId: this.createRequestId(),
+      powerConsumptionOverride,
+    }, "power-consumption-override-set");
+  }
+
   public dispose(): void {
     const error = new Error("Simulation worker disposed");
     for (const handlers of this.pending.values()) {
@@ -692,6 +719,21 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       powerMode,
     });
     if (response.type !== "power-mode-set") {
+      throw new Error(`Unexpected simulation worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public setPowerConsumptionOverride(powerConsumptionOverride: number | undefined): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "power-consumption-override-set" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "set-power-consumption-override",
+      requestId: this.createRequestId(),
+      powerConsumptionOverride,
+    });
+    if (response.type !== "power-consumption-override-set") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
     }
     return Promise.resolve(response);
