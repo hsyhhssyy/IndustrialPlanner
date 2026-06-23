@@ -1624,6 +1624,15 @@ describe("createAppHost", () => {
     });
 
     expect(appHost.internalState.activeTool).toBe("single-placement");
+    // 2026-06-23 订正：mouse 模式延迟创建 draft，按钮点击后不立即出现。
+    // 模拟鼠标移入 canvas 触发 draft 创建。跟随一次 keyDown 以 flush RAF 缓冲的 mouse move。
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 62,
+      clientX: 400,
+      clientY: 300,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "AltLeft", key: "Alt", keyCode: 18 }));
     expect(editorHost.state.collections.preview).toHaveLength(1);
 
     appHost.internalActions.setActiveTool("select");

@@ -1048,11 +1048,13 @@ function handleLogisticsDeviceShortcut(options: {
   // 2026-05-19 订正：不再手动创建 draft / 清理 logistics，改为写桥接变量 + setActiveTool。
   // logistics-placement 的 on-exit 自动清理 logistics draft，
   // single-placement 的 on-enter 读取桥接变量创建 placement draft。
+  // 2026-06-23 订正：传入 logistics 追踪的鼠标位置作为 initialMousePosition，
+  // 使 single-placement 的 on-enter 能正确判断鼠标是否在 viewport 内并立即创建 draft。
   setPendingSinglePlacementEnter({
     deviceId,
     anchor,
     pointerMode: "mouse",
-    initialMousePosition: null,
+    initialMousePosition: options.appHost.internalState.runtime.logisticsPlacement.lastMousePosition,
   });
   options.appHost.internalState.runtime.selectingPlacementGroup = group;
   options.appHost.internalActions.setActiveTool("single-placement");

@@ -13,9 +13,9 @@ import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 const BLUEPRINT_PATH = resolve(process.cwd(), "public/blueprints/resurrection-machine-7.1.json");
 
 /** 预热 2 小时（游戏时间） */
-const WARMUP_TICKS = 144_000; // 2h × 3600s × 20 TPS
+const WARMUP_TICKS = 2 * 3600 * STANDARD_TICK_RATE_PER_SECOND;
 /** 观测 2 小时（游戏时间） */
-const OBSERVATION_TICKS = 144_000;
+const OBSERVATION_TICKS = 2 * 3600 * STANDARD_TICK_RATE_PER_SECOND;
 /** 采样间隔（tick），减少 syncToTick 调用次数 */
 const SAMPLE_INTERVAL = 100;
 /** 仿真速度倍率 */
