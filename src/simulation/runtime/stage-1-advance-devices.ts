@@ -27,10 +27,11 @@ export function advanceDevices(
   standardStepTicks = 1,
   powerMode: "real" | "infinite" = "infinite",
   currentPowerGeneration = Infinity,
+  effectiveTotalPowerDemand = topology.totalPowerDemand,
 ): void {
   const progressTicks = Math.max(1, Math.trunc(standardStepTicks));
   const powerInsufficient = powerMode === "real"
-    && currentPowerGeneration < topology.totalPowerDemand;
+    && currentPowerGeneration < effectiveTotalPowerDemand;
 
   for (const deviceId of topology.ordering.deviceOrder) {
     const device = topology.devices[deviceId];

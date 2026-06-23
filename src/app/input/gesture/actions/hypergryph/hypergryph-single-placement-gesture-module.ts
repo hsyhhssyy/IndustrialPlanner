@@ -221,10 +221,45 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
 
           closeCompactLeftDockOnPlacementEnter(context.appHost);
 
+          const editor = context.workspace.editor;
+
+          // 2026-06-23 订正：mouse 模式延迟创建 draft，鼠标滑入 canvas 时才出现。
+          // 但如果鼠标在点击时已位于 viewport 内（如快捷键触发），则立即创建。
+          if (pointerMode === "mouse") {
+            context.appHost.internalState.runtime.singlePlacementPointerMode = pointerMode;
+            runInAction(() => {
+              context.appHost.internalState.runtime.singlePlacementDeviceId = deviceId;
+            });
+
+            if (
+              editor !== null
+              && initialMousePosition !== null
+              && isClientPointInsideViewport(editor, initialMousePosition)
+            ) {
+              const gridPoint = editor.queries.findGridCellForClientPixelPoint(initialMousePosition);
+              if (gridPoint !== null) {
+                try {
+                  editor.actions.createSinglePlacementDraft(deviceId, gridPoint);
+                  context.appHost.internalState.runtime.placementAnchor = gridPoint;
+                } catch {
+                  restoreFailedPlacementEnter(context.appHost, editor);
+                  return { status: "handled" };
+                }
+              } else {
+                context.appHost.internalState.runtime.placementAnchor = null;
+              }
+            } else {
+              context.appHost.internalState.runtime.placementAnchor = null;
+            }
+
+            syncPlacementEntryUi(context.appHost, pointerMode);
+            return { status: "handled" };
+          }
+
+          // touch 模式保持原有逻辑：立即创建 draft
           context.appHost.internalState.runtime.placementAnchor = anchor;
           context.appHost.internalState.runtime.singlePlacementPointerMode = pointerMode;
 
-          const editor = context.workspace.editor;
           if (editor !== null) {
             try {
               editor.actions.createSinglePlacementDraft(deviceId, anchor);
@@ -234,16 +269,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
               if (previewRect === null) {
                 restoreFailedPlacementEnter(context.appHost, editor);
                 return { status: "handled" };
-              }
-              if (
-                pointerMode === "mouse"
-                && initialMousePosition !== null
-                && isClientPointInsideViewport(editor, initialMousePosition)
-              ) {
-                editor.actions.moveCollectionCenterPointTo(
-                  EntityCollectionType.preview,
-                  initialMousePosition,
-                );
               }
               runInAction(() => {
                 context.appHost.internalState.runtime.singlePlacementDeviceId = deviceId;
@@ -370,6 +395,9 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return { status: "handled" };
 
         case "mouse dragstart":
+          if (!ensurePlacementDraftForMouse(context.appHost, editor, event.position)) {
+            return { status: "handled" };
+          }
           return handlePlacementMouseDragStart({
             appHost: context.appHost,
             editor,
@@ -385,6 +413,9 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           });
 
         case "mouse move":
+          if (!ensurePlacementDraftForMouse(context.appHost, editor, event.position)) {
+            return { status: "handled" };
+          }
           return driveMousePlacementPreview({
             appHost: context.appHost,
             editor,
@@ -396,6 +427,9 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             return { status: "ignored" };
           }
 
+          if (!ensurePlacementDraftForMouse(context.appHost, editor, event.position)) {
+            return { status: "handled" };
+          }
           return driveMousePlacementPreview({
             appHost: context.appHost,
             editor,
@@ -678,6 +712,25 @@ function finalizePlacementEnter(options: {
 
   // shouldSetActiveTool: false 路径：已在 single-placement 中，不走生命周期，保持原位创建
   try {
+    // 2026-06-23 订正：mouse 模式延迟创建 draft。
+    // 仅当鼠标不在 viewport 内且为全新入口（无 initialPlacementAnchor）时才延迟。
+    // 有 initialPlacementAnchor 时（如快捷键、continuation）说明鼠标在 canvas 内，立即创建。
+    const isFreshMouseEntry =
+      options.initialPlacementAnchor === undefined
+      && options.source === "mouse"
+      && (options.initialMousePosition === null
+          || !isClientPointInsideViewport(options.editor, options.initialMousePosition));
+
+    if (isFreshMouseEntry) {
+      options.appHost.internalState.runtime.placementAnchor = null;
+      options.appHost.internalState.runtime.singlePlacementPointerMode = options.source;
+      runInAction(() => {
+        options.appHost.internalState.runtime.singlePlacementDeviceId = options.deviceId;
+      });
+      syncPlacementEntryUi(options.appHost);
+      return { status: "handled" };
+    }
+
     options.appHost.internalState.runtime.placementAnchor = placementAnchor;
     options.appHost.internalState.runtime.singlePlacementPointerMode = options.source;
     options.editor.actions.createSinglePlacementDraft(options.deviceId, placementAnchor);
@@ -1274,6 +1327,42 @@ function isClientPointInsideViewport(
     && position.x <= clientRect.left + clientRect.width
     && position.y >= clientRect.top
     && position.y <= clientRect.top + clientRect.height;
+}
+
+// 2026-06-23: mouse 模式延迟创建 placement draft。
+// 鼠标滑入 canvas 时才首次创建 draft，而非点击按钮时立即出现。
+function ensurePlacementDraftForMouse(
+  appHost: AppHost,
+  editor: EditorContract,
+  position: GesturePosition,
+): boolean {
+  const runtime = appHost.internalState.runtime;
+  // 已有 draft 或 anchor 已设定，无需再创建
+  if (runtime.placementAnchor !== null) return true;
+  // 非 mouse 模式，不在此处理
+  if (runtime.singlePlacementPointerMode !== "mouse") return true;
+  // 无设备 id，不处理
+  if (runtime.singlePlacementDeviceId === null) return false;
+
+  // 鼠标不在 canvas 内，暂不创建
+  if (!isClientPointInsideViewport(editor, position)) return false;
+
+  const gridPoint = editor.queries.findGridCellForClientPixelPoint(position);
+  if (gridPoint === null) return false;
+
+  try {
+    editor.actions.createSinglePlacementDraft(runtime.singlePlacementDeviceId, gridPoint);
+    const previewRect = editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
+    if (previewRect === null) {
+      restoreFailedPlacementEnter(appHost, editor);
+      return false;
+    }
+    runtime.placementAnchor = gridPoint;
+    return true;
+  } catch {
+    restoreFailedPlacementEnter(appHost, editor);
+    return false;
+  }
 }
 
 function areGridRectsEqual(left: GridRect, right: GridRect): boolean {

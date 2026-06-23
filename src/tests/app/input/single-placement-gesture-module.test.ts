@@ -33,13 +33,11 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(
       module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
     ).toEqual({ status: "handled" });
-    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-a", {
-      x: 50,
-      y: 40,
-    });
+    // 2026-06-23 订正：mouse 模式延迟创建 draft，鼠标不在 viewport 内时不创建
+    expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
     expect(editor.actions.moveCollectionTo).not.toHaveBeenCalled();
     expect(editor.actions.moveCollectionCenterPointTo).not.toHaveBeenCalled();
-    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 50, y: 40 });
+    expect(appHost.internalState.runtime.placementAnchor).toBeNull();
     expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-a");
     expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
@@ -60,10 +58,8 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(
       module.handle(onEnterActiveToolEvent("marquee", "single-placement"), context),
     ).toEqual({ status: "handled" });
-    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-a", {
-      x: 50,
-      y: 40,
-    });
+    // 2026-06-23 订正：mouse 模式延迟创建 draft，鼠标不在 viewport 内时不创建
+    expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
   });
 
   it("still only enters from select when using a number shortcut", () => {
@@ -179,10 +175,8 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(
       module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
     ).toEqual({ status: "handled" });
-    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith(
-      "item_port_unloader_1",
-      { x: 50, y: 40 },
-    );
+    // 2026-06-23 订正：mouse 模式延迟创建 draft，鼠标不在 viewport 内时不创建
+    expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
     expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("item_port_unloader_1");
   });
 
@@ -251,10 +245,8 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       status: "handled",
     });
     expect(different.editor.actions.cancelPlacementDraft).toHaveBeenCalledTimes(1);
-    expect(different.editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-b", {
-      x: 50,
-      y: 40,
-    });
+    // 2026-06-23 订正：mouse 模式延迟创建 draft，切换设备后鼠标不在 viewport 内时不创建
+    expect(different.editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
     expect(different.appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
     expect(different.appHost.internalState.activeTool).toBe("single-placement");
     expect(different.appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-b");

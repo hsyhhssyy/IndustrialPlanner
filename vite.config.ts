@@ -98,7 +98,7 @@ export default defineConfig({
         test: {
           name: "normal",
           include: ["src/tests/**/*.test.ts", "src/tests/**/*.test.tsx"],
-          exclude: ["src/tests/simulation/blueprint/**"],
+          exclude: ["src/tests/simulation/blueprint/**", "src/tests/simulation/blueprint-slow/**"],
         },
       },
       {
@@ -111,6 +111,17 @@ export default defineConfig({
           fileParallelism: false,
           maxConcurrency: 1,
           testTimeout: 120_000,
+        },
+      },
+      {
+        // 长耗时蓝图仿真测试，独立 project 与 blueprint 并行执行
+        extends: true,
+        test: {
+          name: "blueprint-slow",
+          include: ["src/tests/simulation/blueprint-slow/**"],
+          fileParallelism: false,
+          maxConcurrency: 1,
+          testTimeout: 1_800_000,
         },
       },
     ],

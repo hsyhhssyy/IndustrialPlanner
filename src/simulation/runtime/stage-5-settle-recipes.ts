@@ -24,9 +24,10 @@ export function settleRecipes(
   state: SimulationMutableRuntimeState,
   powerMode: "real" | "infinite" = "infinite",
   currentPowerGeneration = Infinity,
+  effectiveTotalPowerDemand = topology.totalPowerDemand,
 ): void {
   settleWaitingOutputs(topology, state);
-  startIdleDevices(topology, state, powerMode, currentPowerGeneration);
+  startIdleDevices(topology, state, powerMode, currentPowerGeneration, effectiveTotalPowerDemand);
 }
 
 function settleWaitingOutputs(
@@ -58,9 +59,10 @@ function startIdleDevices(
   state: SimulationMutableRuntimeState,
   powerMode: "real" | "infinite" = "infinite",
   currentPowerGeneration = Infinity,
+  effectiveTotalPowerDemand = topology.totalPowerDemand,
 ): void {
   const powerInsufficient = powerMode === "real"
-    && currentPowerGeneration < topology.totalPowerDemand;
+    && currentPowerGeneration < effectiveTotalPowerDemand;
 
   for (const deviceId of topology.ordering.deviceOrder) {
     const device = topology.devices[deviceId];

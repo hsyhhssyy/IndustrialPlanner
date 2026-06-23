@@ -305,7 +305,7 @@ function convertLegacyDeviceConfig(options: {
     return { ...empty, config: convertLegacyReactorPoolConfig(options.definitionId, config) };
   }
 
-  return { ...empty, config: convertLegacyPreloadInputs(config) };
+  return { ...empty, config: convertLegacyPortPriorityGroups(options.definitionId, convertLegacyPreloadInputs(config)) };
 }
 
 /**
@@ -407,6 +407,86 @@ function convertLegacyReactorPoolConfig(
 
   // 5. 传递 preloadInputs 处理（反应池可能有预置输入）
   return convertLegacyPreloadInputs(nextConfig);
+}
+
+/**
+ * 旧版端口优先组的 port ID → v3 portGroupId:portId 映射。
+ *
+ * v2 旧蓝图格式使用裸 port ID 作为 key（如 { "in_n": 2 }），
+ * v3 使用 `portGroupId:portId` 格式且需要 `customPortPriorityGroups: true` 开关。
+ *
+ * 映射必须补偿 REMAPPERS rotationOffset（+90°）带来的方向变化：
+ *   分流器: v2 input=E → v3 input=N
+ *   汇流器: v2 inputs=N/E/S output=W → v3 inputs=N/E/W output=S
+ * 因此 v2 port ID 对应的物理方向已偏移 -90°，映射需基于方向匹配而非名称匹配。
+ */
+const LEGACY_PORT_PRIORITY_GROUP_MAPPINGS: Record<string, Record<string, string>> = {
+  item_log_splitter: {
+    in_e: "item_input:in_n",
+    out_n: "item_output:out_w",
+    out_s: "item_output:out_e",
+    out_w: "item_output:out_s",
+  },
+  item_log_converger: {
+    in_n: "item_input:in_w",
+    in_e: "item_input:in_n",
+    in_s: "item_input:in_e",
+    out_w: "item_output:out_s",
+  },
+  item_pipe_splitter: {
+    in_e: "fluid_input:in_n",
+    out_n: "fluid_output:out_w",
+    out_s: "fluid_output:out_e",
+    out_w: "fluid_output:out_s",
+  },
+  item_pipe_converger: {
+    in_n: "fluid_input:in_w",
+    in_e: "fluid_input:in_n",
+    in_s: "fluid_input:in_e",
+    out_w: "fluid_output:out_s",
+  },
+};
+
+function convertLegacyPortPriorityGroups(
+  definitionId: string,
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const rawPortPriority = config.portPriorityGroups;
+  if (!isRecord(rawPortPriority) || Object.keys(rawPortPriority).length === 0) {
+    return config;
+  }
+
+  const mapping = LEGACY_PORT_PRIORITY_GROUP_MAPPINGS[definitionId];
+  if (mapping === undefined) {
+    return config;
+  }
+
+  const nextPortPriority: Record<string, unknown> = {};
+  let hasMapped = false;
+
+  for (const [legacyPortId, value] of Object.entries(rawPortPriority)) {
+    const newKey = mapping[legacyPortId];
+    if (newKey !== undefined) {
+      nextPortPriority[newKey] = value;
+      hasMapped = true;
+    } else {
+      console.warn(
+        `[legacy-blueprint-import] 端口优先组迁移: "${definitionId}" 的旧端口 "${legacyPortId}" 在新版定义中不存在，已跳过。`,
+      );
+    }
+  }
+
+  if (!hasMapped) {
+    const nextConfig = { ...config };
+    delete nextConfig.portPriorityGroups;
+    return nextConfig;
+  }
+
+  return {
+    ...config,
+    customPortPriorityGroups: true,
+    portPriorityGroups: nextPortPriority,
+  };
 }
 
 /**

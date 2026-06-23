@@ -113,8 +113,9 @@
       "rotation": 270,
       "config": {
         "portPriorityGroups": {
-          "in_s": 2
-        }
+          "item_input:in_e": 2
+        },
+        "customPortPriorityGroups": true
       },
       "tags": []
     },
@@ -128,8 +129,9 @@
       "rotation": 270,
       "config": {
         "portPriorityGroups": {
-          "in_n": 2
-        }
+          "item_input:in_w": 2
+        },
+        "customPortPriorityGroups": true
       },
       "tags": []
     },
@@ -539,8 +541,9 @@
       "rotation": 180,
       "config": {
         "portPriorityGroups": {
-          "in_e": 2
-        }
+          "item_input:in_n": 2
+        },
+        "customPortPriorityGroups": true
       },
       "tags": []
     },
@@ -1029,8 +1032,9 @@
       "rotation": 270,
       "config": {
         "portPriorityGroups": {
-          "in_n": 2
-        }
+          "item_input:in_w": 2
+        },
+        "customPortPriorityGroups": true
       },
       "tags": []
     },

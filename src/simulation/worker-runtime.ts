@@ -779,6 +779,7 @@ export class SimulationWorkerRuntime {
         runtimeStepTicks,
         this.powerMode,
         effectiveGeneration,
+        this.effectiveTotalPowerDemand,
       );
       if (this.perfEnabled) { perfTiming!.stages["advanceDevices"] = performance.now() - t0; }
 
@@ -831,6 +832,7 @@ export class SimulationWorkerRuntime {
         this.runtimeState,
         this.powerMode,
         effectiveGeneration,
+        this.effectiveTotalPowerDemand,
       );
       if (this.perfEnabled) {
         perfTiming!.stages["settleRecipes"] = performance.now() - t4;
