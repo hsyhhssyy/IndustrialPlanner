@@ -2402,8 +2402,8 @@ describe("WorkbenchApp", () => {
     const shortcutsTab = container.querySelector(
       '#help-dialog-tab-shortcuts',
     ) as HTMLButtonElement | null;
-    const faqTab = container.querySelector(
-      '#help-dialog-tab-faq',
+    const featureGuideTab = container.querySelector(
+      '#help-dialog-tab-feature-guide',
     ) as HTMLButtonElement | null;
     const maximizeButton = container.querySelector(
       'button[title="最大化帮助"]',
@@ -2411,10 +2411,8 @@ describe("WorkbenchApp", () => {
 
     expect(dialog).not.toBeNull();
     expect(helpButton?.getAttribute("aria-pressed")).toBe("true");
-    expect(container.querySelector(".help-dialog-placeholder h3")?.textContent).toBe("概览");
-    expect(container.querySelector(".help-dialog-placeholder p")?.textContent).toBe(
-      "当前没有可显示的帮助内容。",
-    );
+    // 默认标签页为"新手入门"
+    expect(container.querySelector('.help-dialog [aria-selected="true"]')?.textContent).toBe("新手入门");
 
     act(() => {
       shortcutsTab?.click();
@@ -2425,11 +2423,10 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".help-dialog")?.textContent).toContain("Ctrl+R");
 
     act(() => {
-      faqTab?.click();
+      featureGuideTab?.click();
     });
 
-    expect(faqTab?.getAttribute("aria-selected")).toBe("true");
-    expect(container.querySelector(".help-dialog-placeholder h3")?.textContent).toBe("常见问题");
+    expect(featureGuideTab?.getAttribute("aria-selected")).toBe("true");
 
     act(() => {
       maximizeButton?.click();
@@ -2441,7 +2438,7 @@ describe("WorkbenchApp", () => {
         helpDialog: createDialogStateSnapshot({
           visible: true,
           maximized: true,
-          activeTab: "faq",
+          activeTab: "feature-guide",
         }),
       })),
     );

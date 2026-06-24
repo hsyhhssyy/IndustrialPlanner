@@ -303,9 +303,9 @@ export function createDefaultModuleBalancingState(): ModuleBalancingStateReadWri
 }
 
 export const HELP_DIALOG_TAB_IDS = [
-  "overview",
+  "getting-started",
   "shortcuts",
-  "faq",
+  "feature-guide",
   "version",
 ] as const;
 

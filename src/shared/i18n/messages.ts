@@ -207,9 +207,9 @@ export type MessageKey =
   | "debugLogDialog.guidance"
   | "helpDialog.title"
   | "helpDialog.description"
-  | "helpDialog.tab.overview"
+  | "helpDialog.tab.gettingStarted"
   | "helpDialog.tab.shortcuts"
-  | "helpDialog.tab.faq"
+  | "helpDialog.tab.featureGuide"
   | "helpDialog.tab.versionUpdates"
   | "helpDialog.empty"
   | "helpDialog.maximize"
@@ -694,9 +694,9 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "productionPlanning.resetLayout": "重置布局",
     "helpDialog.title": "帮助",
     "helpDialog.description": "多个帮助主题会在这里按标签页组织。",
-    "helpDialog.tab.overview": "概览",
+    "helpDialog.tab.gettingStarted": "新手入门",
     "helpDialog.tab.shortcuts": "操作说明",
-    "helpDialog.tab.faq": "常见问题",
+    "helpDialog.tab.featureGuide": "功能介绍",
     "helpDialog.tab.versionUpdates": "版本更新",
     "helpDialog.empty": "当前没有可显示的帮助内容。",
     "helpDialog.maximize": "最大化帮助",
@@ -1194,9 +1194,9 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "productionPlanning.resetLayout": "Reset Layout",
     "helpDialog.title": "Help",
     "helpDialog.description": "Help topics will be organized here as multiple tabs.",
-    "helpDialog.tab.overview": "Overview",
+    "helpDialog.tab.gettingStarted": "Getting Started",
     "helpDialog.tab.shortcuts": "Controls",
-    "helpDialog.tab.faq": "FAQ",
+    "helpDialog.tab.featureGuide": "Feature Guide",
     "helpDialog.tab.versionUpdates": "Version Updates",
     "helpDialog.empty": "There is no help content to show right now.",
     "helpDialog.maximize": "Maximize Help",

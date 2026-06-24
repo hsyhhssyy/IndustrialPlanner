@@ -953,6 +953,20 @@
   }
 }
 
+// 窄屏：功能介绍目录与正文上下堆叠
+@media (max-width: 640px) {
+  .feature-guide-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .feature-guide-toc {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    max-height: 140px;
+  }
+}
+
 // ─── 操作说明表格 ───
 .operation-guide {
   display: grid;
@@ -1224,6 +1238,78 @@
     margin: 0;
     color: var(--text-1);
     font-size: 0.86rem;
+  }
+}
+
+// === Feature Guide (功能介绍) ===
+
+.feature-guide-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.feature-guide-toc {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px 0;
+  border-right: 1px solid var(--line);
+}
+
+.feature-guide-toc-title {
+  padding: 0 14px 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.feature-guide-toc-list {
+  margin: 0;
+  padding: 0 8px;
+  list-style: none;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.feature-guide-toc-item {
+  margin: 0;
+}
+
+.feature-guide-toc-link {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-1);
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+  word-break: break-all;
+
+  &:hover {
+    background: var(--surface-3);
+    color: var(--text-0);
+  }
+}
+
+.feature-guide-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 14px;
+}
+
+.feature-guide-section {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+
+  &:last-child {
+    border-bottom: 0;
   }
 }
 

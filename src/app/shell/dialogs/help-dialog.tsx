@@ -8,6 +8,8 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { OperationGuideContent } from "@/app/shell/dialogs/help-dialog-operation-guide";
 import { ChangelogSection } from "@/app/shell/dialogs/changelog-section";
+import { GettingStartedContent } from "@/app/shell/dialogs/help-dialog-getting-started";
+import { FeatureGuideContent } from "@/app/shell/dialogs/help-dialog-feature-guide";
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -21,7 +23,7 @@ const HELP_DIALOG_TABS: Array<{
 }> = [
   {
     id: HELP_DIALOG_TAB_IDS[0],
-    labelKey: "helpDialog.tab.overview",
+    labelKey: "helpDialog.tab.gettingStarted",
   },
   {
     id: HELP_DIALOG_TAB_IDS[1],
@@ -29,7 +31,7 @@ const HELP_DIALOG_TABS: Array<{
   },
   {
     id: HELP_DIALOG_TAB_IDS[2],
-    labelKey: "helpDialog.tab.faq",
+    labelKey: "helpDialog.tab.featureGuide",
   },
   {
     id: HELP_DIALOG_TAB_IDS[3],
@@ -43,7 +45,13 @@ export const HelpDialog = observer(function HelpDialog({ appHost }: { appHost: A
   const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
   const tabs: DialogShellTab[] = HELP_DIALOG_TABS.map((tab) => {
     let content: ReactNode;
-    if (tab.id === "shortcuts") {
+    if (tab.id === "getting-started") {
+      content = (
+        <div className={cm(styles, "help-dialog-content")}>
+          <GettingStartedContent />
+        </div>
+      );
+    } else if (tab.id === "shortcuts") {
       content = (
         <div className={cm(styles, "help-dialog-content")}>
           <OperationGuideContent
@@ -51,6 +59,12 @@ export const HelpDialog = observer(function HelpDialog({ appHost }: { appHost: A
             getShortcut={(key) => appHost.internalActions.getKeyboardShortcutFor(key)}
             settings={appHost.state.settings}
           />
+        </div>
+      );
+    } else if (tab.id === "feature-guide") {
+      content = (
+        <div className={cm(styles, "help-dialog-content")}>
+          <FeatureGuideContent />
         </div>
       );
     } else if (tab.id === "version") {

@@ -427,10 +427,10 @@ describe("createAppHost", () => {
 
     appHost.internalActions.closeDialog("toolbox");
 
-    appHost.internalActions.openDialog("help:faq");
+    appHost.internalActions.openDialog("help:feature-guide");
 
     expect(appHost.internalState.workbench.dialogState.help.visible).toBe(true);
-    expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe("faq");
+    expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe("feature-guide");
 
     appHost.internalActions.toggleDialogMaximized("help");
     appHost.internalActions.setDialogOffset("help", 18.4, -7.6);
@@ -453,7 +453,7 @@ describe("createAppHost", () => {
           offsetY: -8,
           width: 768,
           height: 512,
-          activeTab: "faq",
+          activeTab: "feature-guide",
         }),
       })),
     );
@@ -466,7 +466,7 @@ describe("createAppHost", () => {
 
     expect(appHost.internalState.workbench.dialogState.help.visible).toBe(false);
     expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(true);
-    expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe("faq");
+    expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe("feature-guide");
   });
 
   it.each([
