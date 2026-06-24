@@ -3331,6 +3331,6 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [],
     machineId: "item_port_storager_1",
     recipeType: "reserved-item",
-    tags: [],
+    tags: ["ToolboxHidden"],
   },
 ];
