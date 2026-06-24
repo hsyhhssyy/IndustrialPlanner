@@ -136,6 +136,7 @@ interface GestureAdapterThresholds {
 
 export interface GestureAdapterOptions {
   readonly thresholds?: Partial<GestureAdapterThresholds>;
+  queryLongPressAcceptance?: (gridHasEntity: boolean) => boolean;
 }
 
 export interface GestureAdapterAppHost {
@@ -208,6 +209,7 @@ interface MultiTouchSnapshot {
 export class GestureAdapter {
   private readonly appHost: GestureAdapterAppHost;
   private readonly thresholds: GestureAdapterThresholds;
+  private adapterOptions: GestureAdapterOptions;
   private readonly now = () => performance.now();
   private readonly scheduleTimeout = (callback: () => void, delayMs: number): TimerHandle =>
     setTimeout(callback, delayMs);
@@ -258,6 +260,7 @@ export class GestureAdapter {
 
   public constructor(appHost: GestureAdapterAppHost, options: GestureAdapterOptions = {}) {
     this.appHost = appHost;
+    this.adapterOptions = options;
     this.thresholds = {
       touchLongPressMs: options.thresholds?.touchLongPressMs ?? TOUCH_LONG_PRESS_MS,
       touchMoveSlopPx: options.thresholds?.touchMoveSlopPx ?? TOUCH_MOVE_SLOP_PX,
@@ -1036,6 +1039,15 @@ export class GestureAdapter {
     session.longPressIndicatorTimer = this.scheduleTimeout(() => {
       if (!options.isActive()) {
         return;
+      }
+
+      const queryFn = this.adapterOptions.queryLongPressAcceptance;
+      if (queryFn !== undefined) {
+        const entity = this.resolvePointerEntityAt(session.lastPosition);
+        if (!queryFn(entity !== null)) {
+          this.clearLongPressTimers(session);
+          return;
+        }
       }
 
       const elapsedMs = Math.min(

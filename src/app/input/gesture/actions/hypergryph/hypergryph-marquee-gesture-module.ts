@@ -42,6 +42,22 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
   return {
     id: "hypergryph-marquee-gesture",
     when: isHypergryphGestureEnabled,
+    acceptsLongPress(context, gridHasEntity) {
+      const tool = context.appHost.internalState.activeTool;
+      if (tool === "marquee") {
+        return true;
+      }
+
+      if (
+        tool === "select"
+        && context.appHost.state.settings.hypergryphImmediateMarquee
+        && !gridHasEntity
+      ) {
+        return true;
+      }
+
+      return false;
+    },
     handle(event, context) {
       const editor = context.workspace.editor;
 

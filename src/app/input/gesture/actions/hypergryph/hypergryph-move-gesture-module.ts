@@ -38,6 +38,10 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
   return {
     id: "hypergryph-move-gesture",
     when: isHypergryphGestureEnabled,
+    acceptsLongPress(context) {
+      const tool = context.appHost.internalState.activeTool;
+      return tool === "select" || tool === "marquee";
+    },
     handle(event, context) {
       if (
         event.type === "mouse move"

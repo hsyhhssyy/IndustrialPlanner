@@ -210,6 +210,25 @@ export class GestureActionRouter<THost = unknown> {
     this.disposed = true;
   }
 
+  public queryLongPressAcceptance(gridHasEntity: boolean): boolean {
+    if (this.disposed) {
+      return false;
+    }
+
+    const context = this.createContext();
+    for (const entry of this.getSortedModules()) {
+      if (!this.moduleMatches(entry.module, context)) {
+        continue;
+      }
+
+      if (entry.module.acceptsLongPress?.(context, gridHasEntity) === true) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private dispatchToClaimOwner(
     event: GestureEvent,
     ownerId: string,

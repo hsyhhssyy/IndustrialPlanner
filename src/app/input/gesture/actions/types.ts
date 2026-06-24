@@ -28,6 +28,10 @@ export interface GestureMappingModule<THost = unknown> {
     event: GestureEvent,
     context: GestureActionContext<THost>,
   ) => GestureHandleResult;
+  readonly acceptsLongPress?: (
+    context: GestureActionContext<THost>,
+    gridHasEntity: boolean,
+  ) => boolean;
 }
 
 export interface GestureActionRouterDispatchResult {

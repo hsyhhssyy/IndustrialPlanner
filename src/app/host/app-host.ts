@@ -84,6 +84,11 @@ export function createAppHost(
     getAppHost: () => host,
   });
 
+  // 将 router 的长按查询能力回注到 gestureAdapter，由 adapter 在显示长按圆圈前询问
+  gestureAdapter["adapterOptions"].queryLongPressAcceptance = (
+    gridHasEntity: boolean,
+  ) => gestureActionRouter.queryLongPressAcceptance(gridHasEntity);
+
   // 先组装 host 的基础部分（state 必须就绪，shortcutManager 构造时需要读）
   Object.assign(host, {
     state: publicState,
