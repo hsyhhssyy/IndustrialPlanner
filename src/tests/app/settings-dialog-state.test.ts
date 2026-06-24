@@ -18,7 +18,6 @@ describe("WorkbenchSettingsDialogController", () => {
     controller.selectGroup("shortcuts");
     controller.updateSelectValue("system-language", "en-US");
     controller.updateSelectValue("system-theme", "ayu-dark");
-    controller.updateSelectValue("display-frame-rate-limit", "30");
     controller.updateSwitchValue("game-use-simplified-device-icons", true);
     controller.updateSwitchValue("other-debug-mode", true);
     controller.updateSwitchValue("debug-show-fps", true);
@@ -29,7 +28,6 @@ describe("WorkbenchSettingsDialogController", () => {
       values: {
         "system-language": "en-US",
         "system-theme": "ayu-dark",
-        "display-frame-rate-limit": "30",
         "game-arknights-immediate-move": true,
         "game-arknights-copy-while-moving": false,
         "game-arknights-immediate-marquee": false,
@@ -77,7 +75,6 @@ describe("WorkbenchSettingsDialogController", () => {
   expect(hydratedController.selectedGroupId).toBe("shortcuts");
     expect(hydratedController.values["system-language"]).toBe("en-US");
     expect(hydratedController.values["system-theme"]).toBe("ayu-dark");
-    expect(hydratedController.values["display-frame-rate-limit"]).toBe("30");
     expect(hydratedController.values["game-arknights-immediate-move"]).toBe(true);
     expect(hydratedController.values["game-arknights-copy-while-moving"]).toBe(false);
     expect(hydratedController.values["game-arknights-immediate-marquee"]).toBe(false);
@@ -231,7 +228,6 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
       selectedGroupId: "display-system",
       values: {
-        "display-frame-rate-limit": "unlimited",
         "game-arknights-immediate-move": true,
         "game-arknights-copy-while-moving": false,
         "game-arknights-immediate-marquee": false,

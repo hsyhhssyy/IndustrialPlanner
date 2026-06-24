@@ -102,8 +102,8 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       {
         id: "system-language",
         kind: "select",
-        labelKey: "settingsField.language",
-        descriptionKey: "settingsField.languageDescription",
+        labelKey: "settingsField.system-language",
+        descriptionKey: "settingsField.system-languageDescription",
         defaultValue: "zh-CN",
         options: [
           { value: "zh-CN", labelKey: "settingsOption.languageZhHans" },
@@ -111,22 +111,10 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         ],
       },
       {
-        id: "display-frame-rate-limit",
-        kind: "select",
-        labelKey: "settingsField.frameRateLimit",
-        descriptionKey: "settingsField.frameRateLimitDescription",
-        defaultValue: "unlimited",
-        options: [
-          { value: "30", labelKey: "settingsOption.frameRate30" },
-          { value: "60", labelKey: "settingsOption.frameRate60" },
-          { value: "unlimited", labelKey: "settingsOption.unlimited" },
-        ],
-      },
-      {
         id: "system-theme",
         kind: "select",
-        labelKey: "settingsField.theme",
-        descriptionKey: "settingsField.themeDescription",
+        labelKey: "settingsField.system-theme",
+        descriptionKey: "settingsField.system-themeDescription",
         defaultValue: "ayu-light",
         options: [
           { value: "ayu-light", labelKey: "settingsOption.ayuLight" },
@@ -161,22 +149,22 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       {
         id: "game-use-simplified-device-icons",
         kind: "switch",
-        labelKey: "settingsField.useSimplifiedDeviceIcons",
-        descriptionKey: "settingsField.useSimplifiedDeviceIconsDescription",
+        labelKey: "settingsField.game-use-simplified-device-icons",
+        descriptionKey: "settingsField.game-use-simplified-device-iconsDescription",
         defaultValue: false,
       },
       {
         id: SHOW_DEVICE_NAMES_SETTING_ID,
         kind: "switch",
-        labelText: "显示设备名称",
-        descriptionText: "在设备上显示名称文本。",
+        labelKey: "settingsField.game-show-device-names",
+        descriptionKey: "settingsField.game-show-device-namesDescription",
         defaultValue: true,
       },
       {
         id: SHOW_DEVICE_ICONS_SETTING_ID,
         kind: "switch",
-        labelText: "显示设备图标",
-        descriptionText: "在设备上显示图标；开启蓝图样式设备图片时会锁定为开启。",
+        labelKey: "settingsField.game-show-device-icons",
+        descriptionKey: "settingsField.game-show-device-iconsDescription",
         defaultValue: false,
         editableWhen: {
           settingId: SIMPLIFIED_DEVICE_ICONS_SETTING_ID,
@@ -186,22 +174,22 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       {
         id: "other-toolbox-show-all-activity-content",
         kind: "switch",
-        labelText: "工具箱显示所有活动内容",
-        descriptionText: "开启后，工具箱会无视活动设置展示所有物品和配方。",
+        labelKey: "settingsField.other-toolbox-show-all-activity-content",
+        descriptionKey: "settingsField.other-toolbox-show-all-activity-contentDescription",
         defaultValue: true,
       },
       {
         id: "game-use-inspector-panel",
         kind: "switch",
-        labelKey: "settingsField.useInspectorPanel",
-        descriptionKey: "settingsField.useInspectorPanelDescription",
+        labelKey: "settingsField.game-use-inspector-panel",
+        descriptionKey: "settingsField.game-use-inspector-panelDescription",
         defaultValue: false,
       },
       {
         id: "game-arknights-selection-right-dock-sync",
         kind: "switch",
-        labelKey: "settingsField.arknightsSelectionRightDockSync",
-        descriptionKey: "settingsField.arknightsSelectionRightDockSyncDescription",
+        labelKey: "settingsField.game-arknights-selection-right-dock-sync",
+        descriptionKey: "settingsField.game-arknights-selection-right-dock-syncDescription",
         defaultValue: true,
         editableWhen: {
           settingId: "game-use-inspector-panel",
@@ -211,23 +199,23 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       {
         id: "game-arknights-inspector-open-on-second-click",
         kind: "switch",
-        labelKey: "settingsField.arknightsInspectorOpenOnSecondClick",
-        descriptionKey: "settingsField.arknightsInspectorOpenOnSecondClickDescription",
+        labelKey: "settingsField.game-arknights-inspector-open-on-second-click",
+        descriptionKey: "settingsField.game-arknights-inspector-open-on-second-clickDescription",
         defaultValue: false,
       },
       {
         id: "game-show-hotkeys",
         kind: "switch",
-        labelKey: "settingsField.showHotkeys",
-        descriptionKey: "settingsField.showHotkeysDescription",
+        labelKey: "settingsField.game-show-hotkeys",
+        descriptionKey: "settingsField.game-show-hotkeysDescription",
         defaultValue: true,
         mobileHidden: true,
       },
       {
         id: "game-always-show-grid-lines",
         kind: "switch",
-        labelKey: "settingsField.alwaysShowGridLines",
-        descriptionKey: "settingsField.alwaysShowGridLinesDescription",
+        labelKey: "settingsField.game-always-show-grid-lines",
+        descriptionKey: "settingsField.game-always-show-grid-linesDescription",
         defaultValue: true,
         editableWhen: {
           settingId: "game-use-simplified-device-icons",
@@ -237,8 +225,8 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       {
         id: "game-show-grass-background",
         kind: "switch",
-        labelKey: "settingsField.showGrassBackground",
-        descriptionKey: "settingsField.showGrassBackgroundDescription",
+        labelKey: "settingsField.game-show-grass-background",
+        descriptionKey: "settingsField.game-show-grass-backgroundDescription",
         defaultValue: false,
         editableWhen: {
           settingId: "game-use-simplified-device-icons",
@@ -255,36 +243,36 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       {
         id: "game-arknights-immediate-move",
         kind: "switch",
-        labelKey: "settingsField.arknightsImmediateMove",
-        descriptionKey: "settingsField.arknightsImmediateMoveDescription",
+        labelKey: "settingsField.game-arknights-immediate-move",
+        descriptionKey: "settingsField.game-arknights-immediate-moveDescription",
         defaultValue: true,
       },
       {
         id: "game-arknights-copy-while-moving",
         kind: "switch",
-        labelKey: "settingsField.arknightsCopyWhileMoving",
-        descriptionKey: "settingsField.arknightsCopyWhileMovingDescription",
+        labelKey: "settingsField.game-arknights-copy-while-moving",
+        descriptionKey: "settingsField.game-arknights-copy-while-movingDescription",
         defaultValue: false,
       },
       {
         id: "game-arknights-immediate-marquee",
         kind: "switch",
-        labelKey: "settingsField.arknightsImmediateMarquee",
-        descriptionKey: "settingsField.arknightsImmediateMarqueeDescription",
+        labelKey: "settingsField.game-arknights-immediate-marquee",
+        descriptionKey: "settingsField.game-arknights-immediate-marqueeDescription",
         defaultValue: false,
       },
       {
         id: "game-arknights-allow-empty-logistics-endpoints",
         kind: "switch",
-        labelKey: "settingsField.arknightsAllowEmptyLogisticsEndpoints",
-        descriptionKey: "settingsField.arknightsAllowEmptyLogisticsEndpointsDescription",
+        labelKey: "settingsField.game-arknights-allow-empty-logistics-endpoints",
+        descriptionKey: "settingsField.game-arknights-allow-empty-logistics-endpointsDescription",
         defaultValue: false,
       },
       {
         id: "game-arknights-auto-create-splitters-and-convergers",
         kind: "switch",
-        labelKey: "settingsField.arknightsAutoCreateSplittersAndConvergers",
-        descriptionKey: "settingsField.arknightsAutoCreateSplittersAndConvergersDescription",
+        labelKey: "settingsField.game-arknights-auto-create-splitters-and-convergers",
+        descriptionKey: "settingsField.game-arknights-auto-create-splitters-and-convergersDescription",
         defaultValue: true,
       },
     ],
@@ -368,8 +356,8 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       {
         id: "shortcut-rotate-viewport",
         kind: "keybinding",
-        labelText: "旋转画布",
-        descriptionText: "设置旋转画布视角的快捷键。",
+        labelKey: shortcutKeybindingLabelKey("shortcut-rotate-viewport"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-rotate-viewport"),
         defaultValue: "Ctrl+R",
       },
       {
@@ -458,22 +446,22 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       {
         id: "other-debug-mode",
         kind: "switch",
-        labelKey: "settingsField.debugMode",
-        descriptionKey: "settingsField.debugModeDescription",
+        labelKey: "settingsField.other-debug-mode",
+        descriptionKey: "settingsField.other-debug-modeDescription",
         defaultValue: false,
       },
       {
         id: "debug-show-fps",
         kind: "switch",
-        labelKey: "settingsField.showFps",
-        descriptionKey: "settingsField.showFpsDescription",
+        labelKey: "settingsField.debug-show-fps",
+        descriptionKey: "settingsField.debug-show-fpsDescription",
         defaultValue: false,
       },
       {
         id: "debug-show-gesture-diagnostics-window",
         kind: "switch",
-        labelKey: "settingsField.showGestureTestWindow",
-        descriptionKey: "settingsField.showGestureTestWindowDescription",
+        labelKey: "settingsField.debug-show-gesture-diagnostics-window",
+        descriptionKey: "settingsField.debug-show-gesture-diagnostics-windowDescription",
         defaultValue: false,
       },
     ],
@@ -492,7 +480,7 @@ const SETTING_DEFINITION_BY_ID = new Map<string, WorkbenchSettingDefinition>(
 );
 
 /** 所有 keybinding 类型的 setting 定义 */
-const ALL_KEYBINDING_SETTINGS: readonly WorkbenchKeybindingSettingDefinition[] =
+export const ALL_KEYBINDING_SETTINGS: readonly WorkbenchKeybindingSettingDefinition[] =
   WORKBENCH_SETTINGS_GROUPS.flatMap((group) =>
     group.items.filter((setting) => setting.kind === "keybinding"),
   ) as WorkbenchKeybindingSettingDefinition[];
@@ -726,8 +714,46 @@ export class WorkbenchSettingsDialogController {
   }
 
   /**
+   * 查找与给定值冲突的快捷键设置。
+   * 返回冲突的 settingId，若没有冲突返回 null。
+   * 排除 currentSettingId 自身。
+   */
+  public findKeybindingConflict(currentSettingId: string, value: string): string | null {
+    const normalizedValue = normalizeKeybindingValue(value);
+    if (normalizedValue === null) {
+      return null;
+    }
+
+    for (const setting of ALL_KEYBINDING_SETTINGS) {
+      if (setting.id === currentSettingId) continue;
+
+      const existingValue = this.getValue(setting.id);
+      if (typeof existingValue === "string" && normalizeKeybindingValue(existingValue) === normalizedValue) {
+        return setting.id;
+      }
+    }
+
+    return null;
+  }
+
+  /** 清空指定快捷键设置的值（设为空字符串）。 */
+  public clearKeybinding(settingId: string): void {
+    const setting = SETTING_DEFINITION_BY_ID.get(settingId);
+    if (setting?.kind !== "keybinding") return;
+
+    const externalBinding = this.externalBindings.get(settingId);
+    if (externalBinding) {
+      externalBinding.writeValue("");
+    } else {
+      this.values[settingId] = "";
+    }
+
+    this.persist();
+  }
+
+  /**
    * 将鹰角操作模式相关开关和所有快捷键恢复为默认值。
-   * 快捷键通过 shortcutResetAll 直接批量重置，绕过鹰角模式写入限制。
+   * 快捷键通过 shortcutResetAll 直接批量重置。
    */
   public resetArknightsOperationAndShortcuts(): void {
     // 先批量重置快捷键默认值

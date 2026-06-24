@@ -64,7 +64,7 @@ export const HelpDialog = observer(function HelpDialog({ appHost }: { appHost: A
     } else if (tab.id === "feature-guide") {
       content = (
         <div className={cm(styles, "help-dialog-content")}>
-          <FeatureGuideContent />
+          <FeatureGuideContent translate={t} />
         </div>
       );
     } else if (tab.id === "version") {

@@ -44,12 +44,24 @@ interface DocSection {
   label: string;
   path: string;
   html: string | null;
-  error: string | null;
 }
 
-function fileNameToLabel(fileName: string): string {
-  // 去除 .md 后缀
-  return fileName.replace(/\.md$/i, "");
+/** 根据帮助文档路径推导 i18n key，复用已有翻译。 */
+function resolveSectionLabel(path: string, translate: (key: string) => string): string {
+  const match = path.match(/^\/help\/(feature-guide|config-guide)\/(.+)\.md$/);
+  if (!match) {
+    const fileName = path.split("/").pop() ?? path;
+    return fileName.replace(/\.md$/i, "");
+  }
+  const [, dir, name] = match;
+  if (!name) return path;
+  if (dir === "feature-guide") {
+    // kebab-case → camelCase：item-encyclopedia → itemEncyclopedia
+    const camel = name.replace(/-./g, (s) => s[1]!.toUpperCase());
+    return translate(`toolboxDialog.tab.${camel}`);
+  }
+  // config-guide：setting id 即 i18n key
+  return translate(`settingsField.${name}`);
 }
 
 async function fetchMarkdown(path: string): Promise<string> {
@@ -64,7 +76,7 @@ async function fetchMarkdown(path: string): Promise<string> {
 
 // ── 组件 ──
 
-export function FeatureGuideContent() {
+export function FeatureGuideContent({ translate }: { translate: (key: string) => string }) {
   const [sections, setSections] = useState<DocSection[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
@@ -94,37 +106,38 @@ export function FeatureGuideContent() {
 
         // 3) 构建 section 列表
         const allSections: DocSection[] = [
-          ...fgFiles.map((file): DocSection => ({
-            id: `fg-${file}`,
-            label: fileNameToLabel(file),
-            path: `/help/feature-guide/${file}`,
-            html: null,
-            error: null,
-          })),
-          ...cgFiles.map((file): DocSection => ({
-            id: `cg-${file}`,
-            label: fileNameToLabel(file),
-            path: `/help/config-guide/${file}`,
-            html: null,
-            error: null,
-          })),
+          ...fgFiles.map((file): DocSection => {
+            const filePath = `/help/feature-guide/${file}`;
+            return {
+              id: `fg-${file}`,
+              label: resolveSectionLabel(filePath, translate),
+              path: filePath,
+              html: null,
+            };
+          }),
+          ...cgFiles.map((file): DocSection => {
+            const filePath = `/help/config-guide/${file}`;
+            return {
+              id: `cg-${file}`,
+              label: resolveSectionLabel(filePath, translate),
+              path: filePath,
+              html: null,
+            };
+          }),
         ];
 
         if (cancelled) return;
         setSections(allSections);
 
-        // 4) 逐个加载
+        // 4) 逐个加载，失败的忽略不展示
         const loaded: DocSection[] = [];
         for (const section of allSections) {
           if (cancelled) return;
           try {
             const html = await fetchMarkdown(section.path);
             loaded.push({ ...section, html });
-          } catch (err) {
-            loaded.push({
-              ...section,
-              error: err instanceof Error ? err.message : "加载失败",
-            });
+          } catch {
+            // 文件不存在或加载失败，跳过该条目
           }
           // 逐个更新以便渐进渲染
           if (!cancelled) {
@@ -199,11 +212,7 @@ export function FeatureGuideContent() {
             }}
             className={cm(styles, "feature-guide-section")}
           >
-            {section.error !== null ? (
-              <div className={cm(styles, "changelog-placeholder")}>
-                <p>加载失败：{section.error}</p>
-              </div>
-            ) : section.html !== null ? (
+            {section.html !== null ? (
               <div
                 className={cm(styles, "changelog-markdown")}
                 dangerouslySetInnerHTML={{ __html: section.html }}

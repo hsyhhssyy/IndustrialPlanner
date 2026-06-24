@@ -136,28 +136,35 @@ export class KeyboardShortcutManager {
   /**
    * 统一的快捷键写入 action。
    * 所有 keybinding 设置写入都通过此方法。
-   * 鹰角网络模式下静默拒绝。
+   * 传入空字符串可清空该快捷键。
    */
   public readonly setShortcutFor = (key: string, value: string): void => {
     if (!isShortcutKey(key)) return;
-    if (this.appHost.state.settings.hypergryphOperationMode) return;
 
     const normalized = value.trim();
-    if (normalized === "") return;
+    if (normalized === "") {
+      // 清空快捷键：显式设为空字符串，表示该功能无快捷键
+      this.shortcuts[key] = "";
+      return;
+    }
 
     this.shortcuts[key] = normalized;
   };
 
   /**
    * 根据快捷键 key 获取当前快捷键值。
-   * 鹰角网络模式下始终返回默认值。
    * 此方法同时用于：画布上的快捷键显示、settings 界面上的 keybinding 值展示。
    */
   public getKeyboardShortcutFor(key: string): string {
     if (!isShortcutKey(key)) return "";
-    if (this.appHost.state.settings.hypergryphOperationMode) return SHORTCUT_DEFAULTS[key];
 
-    return this.shortcuts[key] || SHORTCUT_DEFAULTS[key];
+    // 如果用户显式设置过（包括设为空字符串），使用用户值；
+    // 否则回退到默认值。
+    if (Object.prototype.hasOwnProperty.call(this.shortcuts, key)) {
+      return this.shortcuts[key];
+    }
+
+    return SHORTCUT_DEFAULTS[key];
   }
 
   public isShortcutFor(

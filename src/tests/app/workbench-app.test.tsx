@@ -2258,7 +2258,6 @@ describe("WorkbenchApp", () => {
         selectedGroupId: "system",
         values: {
           "system-theme": "follow-system",
-          "display-frame-rate-limit": "60",
           "game-arknights-operation-mode": true,
           "game-use-simplified-device-icons": false,
           "other-debug-mode": true,

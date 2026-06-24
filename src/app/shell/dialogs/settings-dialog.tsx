@@ -92,6 +92,24 @@ export const SettingsDialog = observer(function SettingsDialog({
     activeTab: null,
   }), []);
 
+  const conflictDialogState = useMemo(() => makeAutoObservable({
+    visible: false,
+    currentSettingId: null as string | null,
+    conflictSettingId: null as string | null,
+    newKeyValue: null as string | null,
+  }), []);
+
+  // AI-REMOVED 2026-06-24:
+  // Reason: conflictPendingRef 被声明但从未被使用，属于死代码
+  // Trigger: ESLint @typescript-eslint/no-unused-vars error
+  // Evidence: 全仓库搜索仅此一处声明，无任何读取或写入引用
+  // Replacement: None
+  // Risk: Low — 若后续需要冲突暂存逻辑，可从此处恢复
+  // Human Review: Required
+  //
+  // Original code:
+  // const conflictPendingRef = useRef<{ settingId: string; value: string } | null>(null);
+
   const handleResetOperationAndShortcuts = useCallback(() => {
     runInAction(() => {
       confirmDialogState.visible = true;
@@ -155,6 +173,34 @@ export const SettingsDialog = observer(function SettingsDialog({
     });
   }, [appHost]);
 
+  const handleConflictCancel = useCallback(() => {
+    runInAction(() => {
+      conflictDialogState.visible = false;
+      conflictDialogState.currentSettingId = null;
+      conflictDialogState.conflictSettingId = null;
+      conflictDialogState.newKeyValue = null;
+    });
+  }, [conflictDialogState]);
+
+  const handleConflictConfirm = useCallback(() => {
+    const currentId = conflictDialogState.currentSettingId;
+    const conflictId = conflictDialogState.conflictSettingId;
+    const newValue = conflictDialogState.newKeyValue;
+
+    runInAction(() => {
+      conflictDialogState.visible = false;
+      conflictDialogState.currentSettingId = null;
+      conflictDialogState.conflictSettingId = null;
+      conflictDialogState.newKeyValue = null;
+    });
+
+    if (currentId === null || conflictId === null || newValue === null) return;
+
+    // 先清空冲突快捷键，再设置当前快捷键
+    controller.clearKeybinding(conflictId);
+    controller.updateKeybindingValue(currentId, newValue);
+  }, [controller, conflictDialogState]);
+
   const handleWindowKeyDown = useCallback((event: KeyboardEvent) => {
     if (capturingKeybindingId === null) {
       return false;
@@ -180,11 +226,26 @@ export const SettingsDialog = observer(function SettingsDialog({
       return true;
     }
 
+    // 检查快捷键冲突
+    const conflictSettingId = controller.findKeybindingConflict(capturingKeybindingId, nextValue);
+    if (conflictSettingId !== null) {
+      // 有冲突：弹出确认对话框
+      runInAction(() => {
+        conflictDialogState.visible = true;
+        conflictDialogState.currentSettingId = capturingKeybindingId;
+        conflictDialogState.conflictSettingId = conflictSettingId;
+        conflictDialogState.newKeyValue = nextValue;
+      });
+      setCapturingKeybindingId(null);
+
+      return true;
+    }
+
     controller.updateKeybindingValue(capturingKeybindingId, nextValue);
     setCapturingKeybindingId(null);
 
     return true;
-  }, [capturingKeybindingId, controller]);
+  }, [capturingKeybindingId, controller, conflictDialogState]);
 
   useEffect(() => {
     if (isOpen) {
@@ -447,6 +508,15 @@ export const SettingsDialog = observer(function SettingsDialog({
         onClose={handleCloseActivityDialog}
         onToggleActivity={handleToggleActivity}
         selectedActivityIds={selectedActivityIds}
+        t={t}
+      />
+    )}
+    {conflictDialogState.visible && (
+      <ConflictDialog
+        conflictDialogState={conflictDialogState}
+        controller={controller}
+        onCancel={handleConflictCancel}
+        onConfirm={handleConflictConfirm}
         t={t}
       />
     )}
@@ -936,4 +1006,105 @@ function ConfirmResetDialog({
       </div>
     </DialogShell>
   );
+}
+
+// ─── 快捷键冲突对话框 ───
+
+interface ConflictDialogProps {
+  conflictDialogState: {
+    visible: boolean;
+    currentSettingId: string | null;
+    conflictSettingId: string | null;
+    newKeyValue: string | null;
+  };
+  controller: WorkbenchSettingsDialogController;
+  onCancel: () => void;
+  onConfirm: () => void;
+  t: AppHost["actions"]["translate"];
+}
+
+function ConflictDialog({
+  conflictDialogState,
+  controller,
+  onCancel,
+  onConfirm,
+  t,
+}: ConflictDialogProps) {
+  const conflictLabel = useMemo(() => {
+    if (conflictDialogState.conflictSettingId === null) return "";
+    return resolveSettingLabelById(conflictDialogState.conflictSettingId, controller, t);
+  }, [conflictDialogState.conflictSettingId, controller, t]);
+
+  const newKey = conflictDialogState.newKeyValue ?? "";
+
+  const message = t("settingsKeybinding.conflictMessage")
+    .replace("{newKey}", newKey)
+    .replace("{conflictLabel}", conflictLabel);
+
+  // 为 ConflictDialog 创建一个简单的 DialogStateReadWrite
+  const dialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: conflictDialogState.visible,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 420,
+    height: null,
+    activeTab: null,
+  }), [conflictDialogState.visible]);
+
+  return (
+    <DialogShell
+      className="conflict-dialog"
+      bodyClassName={cm(styles, "confirm-reset-dialog-body")}
+      closeTitle={t("action.close")}
+      compactMobileLayout={false}
+      dialogKey="shortcut-conflict"
+      dialogState={dialogState}
+      maximizeTitle=""
+      onClose={onCancel}
+      onToggleMaximized={() => {}}
+      restoreTitle=""
+      showMaximizeButton={false}
+      title={t("settingsKeybinding.conflictTitle")}
+      titleId="shortcut-conflict-dialog-title"
+    >
+      <div className={cm(styles, "confirm-reset-content")}>
+        <p>{message}</p>
+        <div className={cm(styles, "confirm-reset-actions")}>
+          <button
+            className={cm(styles, "confirm-reset-cancel-btn")}
+            onClick={onCancel}
+            type="button"
+          >
+            {t("settingsKeybinding.conflictCancel")}
+          </button>
+          <button
+            className={cm(styles, "confirm-reset-confirm-btn")}
+            onClick={onConfirm}
+            type="button"
+          >
+            {t("settingsKeybinding.conflictReplace")}
+          </button>
+        </div>
+      </div>
+    </DialogShell>
+  );
+}
+
+/** 根据 setting id 解析显示标签 */
+function resolveSettingLabelById(
+  settingId: string,
+  controller: WorkbenchSettingsDialogController,
+  translate: AppHost["actions"]["translate"],
+): string {
+  // 通过 WORKBENCH_SETTINGS_GROUPS 查找
+  for (const group of WORKBENCH_SETTINGS_GROUPS) {
+    for (const setting of group.items) {
+      if (setting.id === settingId) {
+        return resolveSettingLabel(setting, translate);
+      }
+    }
+  }
+
+  return settingId;
 }

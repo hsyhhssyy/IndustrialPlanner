@@ -242,28 +242,26 @@ export type MessageKey =
   | "settingsGroup.operationDescription"
   | "settingsGroup.debug"
   | "settingsGroup.debugDescription"
-  | "settingsField.language"
-  | "settingsField.languageDescription"
-  | "settingsField.theme"
-  | "settingsField.themeDescription"
-  | "settingsField.frameRateLimit"
-  | "settingsField.frameRateLimitDescription"
-  | "settingsField.arknightsOperationMode"
-  | "settingsField.arknightsOperationModeDescription"
-  | "settingsField.arknightsImmediateMove"
-  | "settingsField.arknightsImmediateMoveDescription"
-  | "settingsField.arknightsCopyWhileMoving"
-  | "settingsField.arknightsCopyWhileMovingDescription"
-  | "settingsField.arknightsImmediateMarquee"
-  | "settingsField.arknightsImmediateMarqueeDescription"
-  | "settingsField.arknightsAllowEmptyLogisticsEndpoints"
-  | "settingsField.arknightsAllowEmptyLogisticsEndpointsDescription"
-  | "settingsField.arknightsAutoCreateSplittersAndConvergers"
-  | "settingsField.arknightsAutoCreateSplittersAndConvergersDescription"
-  | "settingsField.arknightsSelectionRightDockSync"
-  | "settingsField.arknightsSelectionRightDockSyncDescription"
-  | "settingsField.arknightsInspectorOpenOnSecondClick"
-  | "settingsField.arknightsInspectorOpenOnSecondClickDescription"
+  | "settingsField.system-language"
+  | "settingsField.system-languageDescription"
+  | "settingsField.system-theme"
+  | "settingsField.system-themeDescription"
+  | "settingsField.game-arknights-operation-mode"
+  | "settingsField.game-arknights-operation-modeDescription"
+  | "settingsField.game-arknights-immediate-move"
+  | "settingsField.game-arknights-immediate-moveDescription"
+  | "settingsField.game-arknights-copy-while-moving"
+  | "settingsField.game-arknights-copy-while-movingDescription"
+  | "settingsField.game-arknights-immediate-marquee"
+  | "settingsField.game-arknights-immediate-marqueeDescription"
+  | "settingsField.game-arknights-allow-empty-logistics-endpoints"
+  | "settingsField.game-arknights-allow-empty-logistics-endpointsDescription"
+  | "settingsField.game-arknights-auto-create-splitters-and-convergers"
+  | "settingsField.game-arknights-auto-create-splitters-and-convergersDescription"
+  | "settingsField.game-arknights-selection-right-dock-sync"
+  | "settingsField.game-arknights-selection-right-dock-syncDescription"
+  | "settingsField.game-arknights-inspector-open-on-second-click"
+  | "settingsField.game-arknights-inspector-open-on-second-clickDescription"
   | "settingsField.shortcut-place-conveyor"
   | "settingsField.shortcut-place-conveyorDescription"
   | "settingsField.shortcut-place-pipe"
@@ -304,33 +302,42 @@ export type MessageKey =
   | "settingsField.shortcut-toggle-history-panelDescription"
   | "settingsField.shortcut-toggle-base-panel"
   | "settingsField.shortcut-toggle-base-panelDescription"
-  | "settingsField.useSimplifiedDeviceIcons"
-  | "settingsField.useSimplifiedDeviceIconsDescription"
-  | "settingsField.useInspectorPanel"
-  | "settingsField.useInspectorPanelDescription"
-  | "settingsField.showHotkeys"
-  | "settingsField.showHotkeysDescription"
-  | "settingsField.alwaysShowGridLines"
-  | "settingsField.alwaysShowGridLinesDescription"
-  | "settingsField.showGrassBackground"
-  | "settingsField.showGrassBackgroundDescription"
-  | "settingsField.debugMode"
-  | "settingsField.debugModeDescription"
-  | "settingsField.showFps"
-  | "settingsField.showFpsDescription"
-  | "settingsField.showGestureTestWindow"
-  | "settingsField.showGestureTestWindowDescription"
+  | "settingsField.shortcut-rotate-viewport"
+  | "settingsField.shortcut-rotate-viewportDescription"
+  | "settingsField.game-use-simplified-device-icons"
+  | "settingsField.game-use-simplified-device-iconsDescription"
+  | "settingsField.game-use-inspector-panel"
+  | "settingsField.game-use-inspector-panelDescription"
+  | "settingsField.game-show-hotkeys"
+  | "settingsField.game-show-hotkeysDescription"
+  | "settingsField.game-always-show-grid-lines"
+  | "settingsField.game-always-show-grid-linesDescription"
+  | "settingsField.game-show-grass-background"
+  | "settingsField.game-show-grass-backgroundDescription"
+  | "settingsField.game-show-device-names"
+  | "settingsField.game-show-device-namesDescription"
+  | "settingsField.game-show-device-icons"
+  | "settingsField.game-show-device-iconsDescription"
+  | "settingsField.other-toolbox-show-all-activity-content"
+  | "settingsField.other-toolbox-show-all-activity-contentDescription"
+  | "settingsField.other-debug-mode"
+  | "settingsField.other-debug-modeDescription"
+  | "settingsField.debug-show-fps"
+  | "settingsField.debug-show-fpsDescription"
+  | "settingsField.debug-show-gesture-diagnostics-window"
+  | "settingsField.debug-show-gesture-diagnostics-windowDescription"
   | "settingsOption.languageZhHans"
   | "settingsOption.languageEnglish"
-  | "settingsOption.frameRate30"
-  | "settingsOption.frameRate60"
   | "settingsOption.ayuLight"
   | "settingsOption.ayuDark"
   | "settingsOption.followSystem"
-  | "settingsOption.unlimited"
   | "settingsOption.enabled"
   | "settingsOption.disabled"
   | "settingsKeybinding.awaitingInput"
+  | "settingsKeybinding.conflictTitle"
+  | "settingsKeybinding.conflictMessage"
+  | "settingsKeybinding.conflictReplace"
+  | "settingsKeybinding.conflictCancel"
   | "device.mobile"
   | "device.tablet"
   | "device.desktop"
@@ -729,28 +736,26 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsGroup.operationDescription": "调整仿真工具中的操作逻辑。可以选择与游戏操作习惯对齐或开启增强选项。",
     "settingsGroup.debug": "调试",
     "settingsGroup.debugDescription": "一系列用于调试的设置内容。",
-    "settingsField.language": "选择语言/Choose Language",
-    "settingsField.languageDescription": "切换界面语言。",
-    "settingsField.theme": "主题",
-    "settingsField.themeDescription": "选择界面主题。",
-    "settingsField.frameRateLimit": "帧率限制",
-    "settingsField.frameRateLimitDescription": "设置渲染帧率上限。",
-    "settingsField.arknightsOperationMode": "鹰角网络操作模式",
-    "settingsField.arknightsOperationModeDescription": "使用和游戏内一致的操作模式和快捷键；当前版本暂不可修改。",
-    "settingsField.arknightsImmediateMove": "立即移动",
-    "settingsField.arknightsImmediateMoveDescription": "从已选择的设备拖动时，立即触发移动而不需要长按。",
-    "settingsField.arknightsCopyWhileMoving": "移动时复制",
-    "settingsField.arknightsCopyWhileMovingDescription": "开启后，移动设备时按住 Ctrl 点击可在当前位置复制，触控工具栏也会显示复制按钮。",
-    "settingsField.arknightsImmediateMarquee": "立即框选",
-    "settingsField.arknightsImmediateMarqueeDescription": "仅鼠标模式有效，从画布空白处开始拖动时，立即开始框选而不需要长按。",
-    "settingsField.arknightsAllowEmptyLogisticsEndpoints": "物流允许以空地为起点",
-    "settingsField.arknightsAllowEmptyLogisticsEndpointsDescription": "开启后，布设传送带和管道时可以从空地起笔，否则只能从有出口的设备起笔。",
-    "settingsField.arknightsAutoCreateSplittersAndConvergers": "自动创建分/汇流",
-    "settingsField.arknightsAutoCreateSplittersAndConvergersDescription": "传送带/管道绘制到交汇处时，自动创建分流器和汇流器。",
-    "settingsField.arknightsSelectionRightDockSync": "右侧面板与选择联动",
-    "settingsField.arknightsSelectionRightDockSyncDescription": "开启\"使用右侧面板显示设备属性\"后有效，在选择设备时如果面板未展开则自动展开面板。",
-    "settingsField.arknightsInspectorOpenOnSecondClick": "再次点击打开设备属性",
-    "settingsField.arknightsInspectorOpenOnSecondClickDescription": "开启后，首次点击设备只会选中；再次点击已选中设备时才打开属性面板。",
+    "settingsField.system-language": "选择语言/Choose Language",
+    "settingsField.system-languageDescription": "切换界面语言。",
+    "settingsField.system-theme": "主题",
+    "settingsField.system-themeDescription": "选择界面主题。",
+    "settingsField.game-arknights-operation-mode": "鹰角网络操作模式",
+    "settingsField.game-arknights-operation-modeDescription": "使用和游戏内一致的操作模式和快捷键；当前版本暂不可修改。",
+    "settingsField.game-arknights-immediate-move": "立即移动",
+    "settingsField.game-arknights-immediate-moveDescription": "从已选择的设备拖动时，立即触发移动而不需要长按。",
+    "settingsField.game-arknights-copy-while-moving": "移动时复制",
+    "settingsField.game-arknights-copy-while-movingDescription": "开启后，移动设备时按住 Ctrl 点击可在当前位置复制，触控工具栏也会显示复制按钮。",
+    "settingsField.game-arknights-immediate-marquee": "立即框选",
+    "settingsField.game-arknights-immediate-marqueeDescription": "仅鼠标模式有效，从画布空白处开始拖动时，立即开始框选而不需要长按。",
+    "settingsField.game-arknights-allow-empty-logistics-endpoints": "物流允许以空地为起点",
+    "settingsField.game-arknights-allow-empty-logistics-endpointsDescription": "开启后，布设传送带和管道时可以从空地起笔，否则只能从有出口的设备起笔。",
+    "settingsField.game-arknights-auto-create-splitters-and-convergers": "自动创建分/汇流",
+    "settingsField.game-arknights-auto-create-splitters-and-convergersDescription": "传送带/管道绘制到交汇处时，自动创建分流器和汇流器。",
+    "settingsField.game-arknights-selection-right-dock-sync": "右侧面板与选择联动",
+    "settingsField.game-arknights-selection-right-dock-syncDescription": "开启\"使用右侧面板显示设备属性\"后有效，在选择设备时如果面板未展开则自动展开面板。",
+    "settingsField.game-arknights-inspector-open-on-second-click": "再次点击打开设备属性",
+    "settingsField.game-arknights-inspector-open-on-second-clickDescription": "开启后，首次点击设备只会选中；再次点击已选中设备时才打开属性面板。",
     "settingsField.shortcut-place-conveyor": "布设传送带",
     "settingsField.shortcut-place-conveyorDescription": "设置布设传送带的快捷键。",
     "settingsField.shortcut-place-pipe": "布设管道",
@@ -791,33 +796,43 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-toggle-history-panelDescription": "设置打开/关闭操作历史面板的快捷键。",
     "settingsField.shortcut-toggle-base-panel": "基地面板",
     "settingsField.shortcut-toggle-base-panelDescription": "设置打开/关闭基地面板的快捷键。",
-    "settingsField.useSimplifiedDeviceIcons": "使用蓝图样式的设备图片",
-    "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图样式显示设备图片，不会提高性能。",
-    "settingsField.useInspectorPanel": "使用右侧面板显示设备属性",
-    "settingsField.useInspectorPanelDescription": "开启后改为使用右侧面板而不是对话框进行设备设置。",
-    "settingsField.showHotkeys": "显示快捷键",
-    "settingsField.showHotkeysDescription": "在界面按钮上展示对应的快捷键提示。",
-    "settingsField.alwaysShowGridLines": "总是显示网格线",
-    "settingsField.alwaysShowGridLinesDescription": "开启后总是显示网格线；关闭后仅在特定模式显示附近的网格线。",
-    "settingsField.showGrassBackground": "草地背景",
-    "settingsField.showGrassBackgroundDescription": "在画布背景使用草地贴图。",
-    "settingsField.debugMode": "调试模式",
-    "settingsField.debugModeDescription": "打开调试模式",
-    "settingsField.showFps": "显示 FPS/TPS",
-    "settingsField.showFpsDescription": "开启后在画布左上角显示可折叠的 FPS/TPS 指示面板。",
-    "settingsField.showGestureTestWindow": "显示手势测试窗口",
-    "settingsField.showGestureTestWindowDescription": "显示用于测试鼠标键盘操作的调试工具",
+    "settingsField.shortcut-rotate-viewport": "旋转画布",
+    "settingsField.shortcut-rotate-viewportDescription": "设置旋转画布视角的快捷键。",
+    "settingsField.game-use-simplified-device-icons": "使用蓝图样式的设备图片",
+    "settingsField.game-use-simplified-device-iconsDescription": "使用蓝图样式显示设备图片，不会提高性能。",
+    "settingsField.game-use-inspector-panel": "使用右侧面板显示设备属性",
+    "settingsField.game-use-inspector-panelDescription": "开启后改为使用右侧面板而不是对话框进行设备设置。",
+    "settingsField.game-show-hotkeys": "显示快捷键",
+    "settingsField.game-show-hotkeysDescription": "在界面按钮上展示对应的快捷键提示。",
+    "settingsField.game-always-show-grid-lines": "总是显示网格线",
+    "settingsField.game-always-show-grid-linesDescription": "开启后总是显示网格线；关闭后仅在特定模式显示附近的网格线。",
+    "settingsField.game-show-grass-background": "草地背景",
+    "settingsField.game-show-grass-backgroundDescription": "在画布背景使用草地贴图。",
+    "settingsField.game-show-device-names": "显示设备名称",
+    "settingsField.game-show-device-namesDescription": "在设备上显示名称文本。",
+    "settingsField.game-show-device-icons": "显示设备图标",
+    "settingsField.game-show-device-iconsDescription": "在设备上显示图标；开启蓝图样式设备图片时会锁定为开启。",
+    "settingsField.other-toolbox-show-all-activity-content": "工具箱显示所有活动内容",
+    "settingsField.other-toolbox-show-all-activity-contentDescription": "开启后，工具箱会无视活动设置展示所有物品和配方。",
+    "settingsField.other-debug-mode": "调试模式",
+    "settingsField.other-debug-modeDescription": "打开调试模式",
+    "settingsField.debug-show-fps": "显示 FPS/TPS",
+    "settingsField.debug-show-fpsDescription": "开启后在画布左上角显示可折叠的 FPS/TPS 指示面板。",
+    "settingsField.debug-show-gesture-diagnostics-window": "显示手势测试窗口",
+    "settingsField.debug-show-gesture-diagnostics-windowDescription": "显示用于测试鼠标键盘操作的调试工具",
     "settingsOption.languageZhHans": "中文(简体)",
     "settingsOption.languageEnglish": "English (AI Translate)",
     "settingsOption.frameRate30": "30",
-    "settingsOption.frameRate60": "60",
     "settingsOption.ayuLight": "Ayu Light",
     "settingsOption.ayuDark": "Ayu Dark",
     "settingsOption.followSystem": "跟随系统",
-    "settingsOption.unlimited": "不限",
     "settingsOption.enabled": "已开启",
     "settingsOption.disabled": "已关闭",
     "settingsKeybinding.awaitingInput": "按任意键...",
+    "settingsKeybinding.conflictTitle": "快捷键冲突",
+    "settingsKeybinding.conflictMessage": "您选择的快捷键 {newKey} 正在被 {conflictLabel} 使用，是否更换？",
+    "settingsKeybinding.conflictReplace": "更换",
+    "settingsKeybinding.conflictCancel": "取消",
     "device.mobile": "手机",
     "device.tablet": "平板",
     "device.desktop": "电脑",
@@ -1229,28 +1244,26 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsGroup.operationDescription": "Adjust operational logic in the simulator. Align with game habits or enable enhanced options.",
     "settingsGroup.debug": "Debug",
     "settingsGroup.debugDescription": "A set of debug settings.",
-    "settingsField.language": "选择语言/Choose Language",
-    "settingsField.languageDescription": "Switch the interface language.",
-    "settingsField.theme": "Theme",
-    "settingsField.themeDescription": "Choose the interface theme.",
-    "settingsField.frameRateLimit": "Frame Rate Limit",
-    "settingsField.frameRateLimitDescription": "Set the render frame rate cap.",
-    "settingsField.arknightsOperationMode": "Arknights Operation Mode",
-    "settingsField.arknightsOperationModeDescription": "Use the same operation mode and shortcuts as the game; this setting is currently unavailable.",
-    "settingsField.arknightsImmediateMove": "Immediate Move",
-    "settingsField.arknightsImmediateMoveDescription": "When dragging from a selected device, immediately trigger move without a long press.",
-    "settingsField.arknightsCopyWhileMoving": "Copy While Moving",
-    "settingsField.arknightsCopyWhileMovingDescription": "When enabled, Ctrl-click while moving places a copy at the current position, and touch controls show a Copy button.",
-    "settingsField.arknightsImmediateMarquee": "Immediate Marquee",
-    "settingsField.arknightsImmediateMarqueeDescription": "Mouse mode only: immediately start marquee selection when dragging from empty canvas without a long press.",
-    "settingsField.arknightsAllowEmptyLogisticsEndpoints": "Allow Empty Logistics Starts",
-    "settingsField.arknightsAllowEmptyLogisticsEndpointsDescription": "When enabled, conveyors and pipes can start from empty cells. Otherwise they must start from a device with an output.",
-    "settingsField.arknightsAutoCreateSplittersAndConvergers": "Auto Create Splitters/Convergers",
-    "settingsField.arknightsAutoCreateSplittersAndConvergersDescription": "Automatically create splitters and convergers when conveyors or pipes are drawn into junctions.",
-    "settingsField.arknightsSelectionRightDockSync": "Sync Right Dock With Selection",
-    "settingsField.arknightsSelectionRightDockSyncDescription": "Effective when \"Use Right Panel For Device Properties\" is enabled. Automatically expand the right panel on selection when it is not already open.",
-    "settingsField.arknightsInspectorOpenOnSecondClick": "Open Inspector On Second Click",
-    "settingsField.arknightsInspectorOpenOnSecondClickDescription": "When enabled, the first click only selects the device. Click the selected device again to open the properties panel.",
+    "settingsField.system-language": "选择语言/Choose Language",
+    "settingsField.system-languageDescription": "Switch the interface language.",
+    "settingsField.system-theme": "Theme",
+    "settingsField.system-themeDescription": "Choose the interface theme.",
+    "settingsField.game-arknights-operation-mode": "Arknights Operation Mode",
+    "settingsField.game-arknights-operation-modeDescription": "Use the same operation mode and shortcuts as the game; this setting is currently unavailable.",
+    "settingsField.game-arknights-immediate-move": "Immediate Move",
+    "settingsField.game-arknights-immediate-moveDescription": "When dragging from a selected device, immediately trigger move without a long press.",
+    "settingsField.game-arknights-copy-while-moving": "Copy While Moving",
+    "settingsField.game-arknights-copy-while-movingDescription": "When enabled, Ctrl-click while moving places a copy at the current position, and touch controls show a Copy button.",
+    "settingsField.game-arknights-immediate-marquee": "Immediate Marquee",
+    "settingsField.game-arknights-immediate-marqueeDescription": "Mouse mode only: immediately start marquee selection when dragging from empty canvas without a long press.",
+    "settingsField.game-arknights-allow-empty-logistics-endpoints": "Allow Empty Logistics Starts",
+    "settingsField.game-arknights-allow-empty-logistics-endpointsDescription": "When enabled, conveyors and pipes can start from empty cells. Otherwise they must start from a device with an output.",
+    "settingsField.game-arknights-auto-create-splitters-and-convergers": "Auto Create Splitters/Convergers",
+    "settingsField.game-arknights-auto-create-splitters-and-convergersDescription": "Automatically create splitters and convergers when conveyors or pipes are drawn into junctions.",
+    "settingsField.game-arknights-selection-right-dock-sync": "Sync Right Dock With Selection",
+    "settingsField.game-arknights-selection-right-dock-syncDescription": "Effective when \"Use Right Panel For Device Properties\" is enabled. Automatically expand the right panel on selection when it is not already open.",
+    "settingsField.game-arknights-inspector-open-on-second-click": "Open Inspector On Second Click",
+    "settingsField.game-arknights-inspector-open-on-second-clickDescription": "When enabled, the first click only selects the device. Click the selected device again to open the properties panel.",
     "settingsField.shortcut-place-conveyor": "Place Conveyor",
     "settingsField.shortcut-place-conveyorDescription": "Set the shortcut key for placing conveyors; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-place-pipe": "Place Pipe",
@@ -1291,33 +1304,42 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-toggle-history-panelDescription": "Set the shortcut key for toggling the history panel.",
     "settingsField.shortcut-toggle-base-panel": "Base Panel",
     "settingsField.shortcut-toggle-base-panelDescription": "Set the shortcut key for toggling the base panel.",
-    "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",
-    "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
-    "settingsField.useInspectorPanel": "Use Right Panel For Device Properties",
-    "settingsField.useInspectorPanelDescription": "When enabled, use the right panel for device settings instead of a dialog.",
-    "settingsField.alwaysShowGridLines": "Always Show Grid Lines",
-    "settingsField.alwaysShowGridLinesDescription": "When enabled, grid lines are always visible. When disabled, they only appear in specific modes near the current preview.",
-    "settingsField.showGrassBackground": "Grass Background",
-    "settingsField.showGrassBackgroundDescription": "Use a grass texture on the canvas background.",
-    "settingsField.showHotkeys": "Show Hotkeys",
-    "settingsField.showHotkeysDescription": "Display shortcut key hints on interface buttons.",
-    "settingsField.debugMode": "Debug Mode",
-    "settingsField.debugModeDescription": "Enable debug mode",
-    "settingsField.showFps": "Show FPS/TPS",
-    "settingsField.showFpsDescription": "Show a collapsible FPS/TPS indicator panel at the top-left corner of the canvas when enabled.",
-    "settingsField.showGestureTestWindow": "Show Gesture Test Window",
-    "settingsField.showGestureTestWindowDescription": "Show a debug tool for testing mouse and keyboard operations",
+    "settingsField.shortcut-rotate-viewport": "Rotate Viewport",
+    "settingsField.shortcut-rotate-viewportDescription": "Set the shortcut key for rotating the viewport.",
+    "settingsField.game-use-simplified-device-icons": "Use Simplified Device Icons",
+    "settingsField.game-use-simplified-device-iconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
+    "settingsField.game-use-inspector-panel": "Use Right Panel For Device Properties",
+    "settingsField.game-use-inspector-panelDescription": "When enabled, use the right panel for device settings instead of a dialog.",
+    "settingsField.game-always-show-grid-lines": "Always Show Grid Lines",
+    "settingsField.game-always-show-grid-linesDescription": "When enabled, grid lines are always visible. When disabled, they only appear in specific modes near the current preview.",
+    "settingsField.game-show-grass-background": "Grass Background",
+    "settingsField.game-show-grass-backgroundDescription": "Use a grass texture on the canvas background.",
+    "settingsField.game-show-device-names": "Show Device Names",
+    "settingsField.game-show-device-namesDescription": "Show name labels on devices.",
+    "settingsField.game-show-device-icons": "Show Device Icons",
+    "settingsField.game-show-device-iconsDescription": "Show icons on devices; locked on when simplified device icons are enabled.",
+    "settingsField.other-toolbox-show-all-activity-content": "Show All Activity Content in Toolbox",
+    "settingsField.other-toolbox-show-all-activity-contentDescription": "When enabled, the toolbox displays all items and recipes regardless of activity settings.",
+    "settingsField.game-show-hotkeys": "Show Hotkeys",
+    "settingsField.game-show-hotkeysDescription": "Display shortcut key hints on interface buttons.",
+    "settingsField.other-debug-mode": "Debug Mode",
+    "settingsField.other-debug-modeDescription": "Enable debug mode",
+    "settingsField.debug-show-fps": "Show FPS/TPS",
+    "settingsField.debug-show-fpsDescription": "Show a collapsible FPS/TPS indicator panel at the top-left corner of the canvas when enabled.",
+    "settingsField.debug-show-gesture-diagnostics-window": "Show Gesture Test Window",
+    "settingsField.debug-show-gesture-diagnostics-windowDescription": "Show a debug tool for testing mouse and keyboard operations",
     "settingsOption.languageZhHans": "中文(简体)",
     "settingsOption.languageEnglish": "English (AI Translate)",
-    "settingsOption.frameRate30": "30",
-    "settingsOption.frameRate60": "60",
     "settingsOption.ayuLight": "Ayu Light",
     "settingsOption.ayuDark": "Ayu Dark",
     "settingsOption.followSystem": "Follow System",
-    "settingsOption.unlimited": "Unlimited",
     "settingsOption.enabled": "Enabled",
     "settingsOption.disabled": "Disabled",
     "settingsKeybinding.awaitingInput": "Press any key...",
+    "settingsKeybinding.conflictTitle": "Shortcut Conflict",
+    "settingsKeybinding.conflictMessage": "The shortcut {newKey} you selected is already used by {conflictLabel}. Replace it?",
+    "settingsKeybinding.conflictReplace": "Replace",
+    "settingsKeybinding.conflictCancel": "Cancel",
     "device.mobile": "Phone",
     "device.tablet": "Tablet",
     "device.desktop": "Desktop",
