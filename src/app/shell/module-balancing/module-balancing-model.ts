@@ -37,10 +37,19 @@ export interface ModuleBalancingWarehouseForecast {
   timeToEmptyMinutes: number | null;
 }
 
+export interface ModuleBalancingDispatchTicketSummary {
+  itemId: string;
+  value: number;
+  region: string | null;
+  netDelta: number;
+  dispatchPerMin: number;
+}
+
 export interface ModuleBalancingComputation {
   stageBalances: ModuleBalancingStageBalance[];
   summaryBalances: ModuleBalancingItemBalance[];
   warehouseForecasts: ModuleBalancingWarehouseForecast[];
+  dispatchTicketSummaries: ModuleBalancingDispatchTicketSummary[];
 }
 
 export interface ModuleBalancingIndex {
@@ -133,6 +142,7 @@ export function computeModuleBalancing(
     stageBalances,
     summaryBalances: finalizedSummary,
     warehouseForecasts: computeWarehouseForecasts(finalizedSummary, canvas.warehouseCapacity),
+    dispatchTicketSummaries: computeDispatchTicketSummaries(finalizedSummary, index),
   };
 }
 
@@ -503,4 +513,53 @@ function clonePort(port: ModuleBalancingIOPort): ModuleBalancingIOPort {
 
 function roundFlow(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+const DISPATCH_TICKET_VALUE_TAG_PREFIX = "调度券价值:";
+const DISPATCH_TICKET_REGION_TAG_PREFIX = "调度券地区:";
+
+export function resolveDispatchTicketValue(tags: readonly string[]): number {
+  for (const tag of tags) {
+    if (tag.startsWith(DISPATCH_TICKET_VALUE_TAG_PREFIX)) {
+      const parsed = parseFloat(tag.slice(DISPATCH_TICKET_VALUE_TAG_PREFIX.length));
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+  }
+  return 0;
+}
+
+export function resolveDispatchTicketRegion(tags: readonly string[]): string | null {
+  for (const tag of tags) {
+    if (tag.startsWith(DISPATCH_TICKET_REGION_TAG_PREFIX)) {
+      return tag.slice(DISPATCH_TICKET_REGION_TAG_PREFIX.length);
+    }
+  }
+  return null;
+}
+
+export function computeDispatchTicketSummaries(
+  balances: readonly ModuleBalancingItemBalance[],
+  index: ModuleBalancingIndex,
+): ModuleBalancingDispatchTicketSummary[] {
+  const summaries: ModuleBalancingDispatchTicketSummary[] = [];
+
+  for (const balance of balances) {
+    const item = index.itemById.get(balance.itemId);
+    if (item === undefined) continue;
+
+    const value = resolveDispatchTicketValue(item.tags);
+    if (value <= 0) continue;
+
+    summaries.push({
+      itemId: balance.itemId,
+      value,
+      region: resolveDispatchTicketRegion(item.tags),
+      netDelta: balance.netDelta,
+      dispatchPerMin: roundFlow(balance.netDelta * value),
+    });
+  }
+
+  return summaries;
 }

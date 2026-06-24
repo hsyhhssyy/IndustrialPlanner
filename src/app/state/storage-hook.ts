@@ -438,8 +438,9 @@ function normalizePersistedCustomModules(
     }
     seenModuleIds.add(id);
 
+    const inputs = normalizePersistedIOPorts(customModule.inputs);
     const outputs = normalizePersistedIOPorts(customModule.outputs);
-    if (outputs.length === 0) {
+    if (inputs.length === 0 && outputs.length === 0) {
       return [];
     }
 
@@ -449,7 +450,7 @@ function normalizePersistedCustomModules(
       color: normalizeCssColor(customModule.color),
       iconId,
       notes: typeof customModule.notes === "string" ? customModule.notes : "",
-      inputs: normalizePersistedIOPorts(customModule.inputs),
+      inputs,
       outputs,
       sourceType: "custom",
     }];

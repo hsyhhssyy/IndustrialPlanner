@@ -47,6 +47,7 @@ import {
   resolveModuleIconSrc,
   resolveModuleInputs,
   resolveModuleOutputs,
+  type ModuleBalancingDispatchTicketSummary,
   type ModuleBalancingIndex,
   type ModuleBalancingItemBalance,
   type ModuleBalancingWarehouseForecast,
@@ -243,8 +244,9 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
 
   const saveCustomModule = (draft: CustomModuleFormState) => {
     const normalizedName = draft.name.trim();
+    const inputs = draft.inputs.filter((port) => port.itemId.length > 0 && port.perMinute > 0);
     const outputs = draft.outputs.filter((port) => port.itemId.length > 0 && port.perMinute > 0);
-    if (normalizedName.length === 0 || outputs.length === 0) {
+    if (normalizedName.length === 0 || (inputs.length === 0 && outputs.length === 0)) {
       return;
     }
 
@@ -254,7 +256,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       color: draft.color,
       iconId: draft.iconId,
       notes: draft.notes,
-      inputs: draft.inputs.filter((port) => port.itemId.length > 0 && port.perMinute > 0).map(clonePort),
+      inputs: inputs.map(clonePort),
       outputs: outputs.map(clonePort),
       sourceType: "custom",
     };
@@ -490,6 +492,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           <SummaryPanel
             balances={computation.summaryBalances}
             canvas={activeCanvas}
+            dispatchTicketSummaries={computation.dispatchTicketSummaries}
             index={index}
             t={t}
             warehouseForecasts={computation.warehouseForecasts}
@@ -787,11 +790,13 @@ function ModuleCard({
     ? formatPortList(outputs, index, t)
     : undefined;
   const isSystemRecipe = module.sourceType === "system-recipe";
+  const moduleColor = module.sourceType === "custom" ? module.color : undefined;
 
   return (
     <div
       className={cm(styles, "module-balancing-module-card")}
       draggable={!isTouch}
+      style={moduleColor !== undefined ? { borderLeftColor: moduleColor } : undefined}
       role="button"
       tabIndex={0}
       title={formatModuleTooltip(module, index, t)}
@@ -1270,17 +1275,20 @@ function BalanceStrip({
 function SummaryPanel({
   balances,
   canvas,
+  dispatchTicketSummaries,
   index,
   t,
   warehouseForecasts,
 }: {
   balances: ModuleBalancingItemBalance[];
   canvas?: ModuleBalancingCanvasReadWrite;
+  dispatchTicketSummaries: ModuleBalancingDispatchTicketSummary[];
   index: ModuleBalancingIndex;
   t: (key: string) => string;
   warehouseForecasts: ModuleBalancingWarehouseForecast[];
 }) {
   const meaningfulForecasts = warehouseForecasts.filter((forecast) => Math.abs(forecast.netDeltaPerMin) >= 0.005);
+  const dispatchTotal = dispatchTicketSummaries.reduce((sum, item) => sum + item.dispatchPerMin, 0);
 
   return (
     <section className={cm(styles, "module-balancing-summary")}>
@@ -1304,6 +1312,22 @@ function SummaryPanel({
           </div>
         ))}
       </div>
+      {dispatchTicketSummaries.length > 0 ? (
+        <div className={cm(styles, "module-balancing-dispatch-list")}>
+          <h4>{t("moduleBalancing.dispatchTicketTitle")}</h4>
+          {dispatchTicketSummaries.map((summary) => (
+            <div className={cm(styles, "module-balancing-warehouse-row")} key={summary.itemId}>
+              <img alt="" src={resolveItemIconSrc(summary.itemId, index)} />
+              <span>{resolveItemName(summary.itemId, index, t)}</span>
+              <strong>{formatFlow(summary.dispatchPerMin)} {t("moduleBalancing.dispatchTicketUnit")}/min</strong>
+            </div>
+          ))}
+          <div className={cm(styles, "module-balancing-dispatch-total")}>
+            <strong>{t("moduleBalancing.dispatchTicketTotal")}</strong>
+            <strong>{formatFlow(dispatchTotal)} {t("moduleBalancing.dispatchTicketUnit")}/min</strong>
+          </div>
+        </div>
+      ) : null}
       {warehouseForecasts.length > 0 ? (
         <div className={cm(styles, "module-balancing-warehouse-list")}>
           <h4>{t("moduleBalancing.warehouseAnalysis")}</h4>
@@ -1348,7 +1372,10 @@ function CustomModuleForm({
   onUpdate: (draft: CustomModuleFormState | null) => void;
   t: (key: string) => string;
 }) {
-  const canSave = draft.name.trim().length > 0 && draft.outputs.some((port) => port.itemId.length > 0 && port.perMinute > 0);
+  const canSave = draft.name.trim().length > 0 && (
+    draft.inputs.some((port) => port.itemId.length > 0 && port.perMinute > 0)
+    || draft.outputs.some((port) => port.itemId.length > 0 && port.perMinute > 0)
+  );
 
   return (
     <section className={cm(styles, "module-balancing-custom-form")}>

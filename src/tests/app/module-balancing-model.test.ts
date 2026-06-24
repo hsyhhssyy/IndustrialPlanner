@@ -51,7 +51,7 @@ const TEST_REGISTRY: RegistryContract = {
   itemDefinitions: [
     { id: "ore", nameKey: "item.ore", iconId: "ore", displayOrder: 10000, tags: [] },
     { id: "plate", nameKey: "item.plate", iconId: "plate", displayOrder: 10000, tags: [] },
-    { id: "gear", nameKey: "item.gear", iconId: "gear", displayOrder: 10000, tags: [] },
+    { id: "gear", nameKey: "item.gear", iconId: "gear", displayOrder: 10000, tags: ["调度券地区:武陵", "调度券价值:22"] },
   ],
   recipeDefinitions: [
     {
@@ -168,4 +168,38 @@ describe("module-balancing-model", () => {
       { itemId: "plate", totalInput: 0, totalOutput: 20, netDelta: 20 },
     ]));
   });
-});
+  it("computes dispatch ticket summaries from summary balances", () => {
+    const state = createState();
+    const index = buildModuleBalancingIndex(TEST_REGISTRY, state);
+    const canvas: ModuleBalancingCanvas = {
+      id: "canvas",
+      name: "Main",
+      globalInputs: [{ itemId: "ore", perMinute: 30 }],
+      stages: [
+        {
+          id: "stage-1",
+          name: "Smelt",
+          entries: [{ moduleId: "smelt_plate", quantity: 1 }],
+        },
+        {
+          id: "stage-2",
+          name: "Gear",
+          entries: [{ moduleId: "assemble_gear", quantity: 0.5 }],
+        },
+      ],
+      warehouseCapacity: null,
+    };
+
+    const result = computeModuleBalancing(canvas, index);
+
+    // gear has netDelta 7.5, dispatch ticket value 22 → dispatchPerMin = 7.5 * 22 = 165
+    expect(result.dispatchTicketSummaries).toEqual([
+      {
+        itemId: "gear",
+        value: 22,
+        region: "武陵",
+        netDelta: 7.5,
+        dispatchPerMin: 165,
+      },
+    ]);
+  });});
