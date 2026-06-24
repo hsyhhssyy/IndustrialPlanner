@@ -145,6 +145,7 @@ export interface ModuleBalancingCustomModuleReadWrite extends ModuleBalancingCus
   name: string;
   color: string;
   iconId: string;
+  notes: string;
   inputs: ModuleBalancingIOPortReadWrite[];
   outputs: ModuleBalancingIOPortReadWrite[];
   sourceType: "custom";

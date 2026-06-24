@@ -334,6 +334,17 @@
   gap: 8px;
 }
 
+.status-bar-group-center {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  justify-content: center;
+}
+
 .status-chip {
   display: inline-flex;
   align-items: center;

@@ -1,4 +1,6 @@
 import type { AppHost } from "@/app/host/app-host";
+import type { ActiveTool } from "@/domain/app/types/app-types";
+import type { MessageKey } from "@/shared/i18n/messages";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import {
   type DeviceClass,
@@ -56,6 +58,10 @@ function getScreenShapeIconKind(screenShape: ScreenShape) {
   return "screen-landscape";
 }
 
+function getActiveToolLabelKey(activeTool: ActiveTool): MessageKey {
+  return `activeTool.${activeTool}` as MessageKey;
+}
+
 export const BottomStatusBar = observer(function BottomStatusBar({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
     const { screenProfile } = appHost.state;
@@ -69,9 +75,33 @@ export const BottomStatusBar = observer(function BottomStatusBar({ appHost }: { 
   return (
     <footer className={cm(styles, "status-bar")}>
       <div className={cm(styles, "status-bar-group status-bar-group-left")}>
-        <span className={cm(styles, "status-chip status-chip-primary")}>{`工具:${activeTool}`}</span>
+        <span className={cm(styles, "status-chip status-chip-primary")}>{`${t("statusBar.tool")}: ${t(getActiveToolLabelKey(activeTool))}`}</span>
         {}
         <span className={cm(styles, "status-chip")}>{`${t("topBar.zoom")}: ${zoomPercent}%`}</span>
+      </div>
+      <div className={cm(styles, "status-bar-group status-bar-group-center")}>
+        <span className={cm(styles, "status-bar-copyright")}>
+          {'© '}{new Date().getFullYear()}{' '}{t("statusBar.copyright")}
+        </span>
+        <a
+          className={cm(styles, "status-chip")}
+          href="https://beian.miit.gov.cn/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {t("statusBar.icpFiling")}
+        </a>
+        <a
+          className={cm(styles, "status-chip")}
+          href="https://github.com/hsyhhssyy/IndustrialPlanner"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {t("statusBar.githubRepo")}
+        </a>
+        <span className={cm(styles, "status-bar-copyright")}>
+          {t("statusBar.trademarkNotice")}
+        </span>
       </div>
       <div className={cm(styles, "status-bar-group status-bar-group-right")}>
         <span

@@ -397,14 +397,14 @@ describe("createAppHost", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
-    expect(appHost.actions.translate("app.title")).toBe("集成工业仿真器");
+    expect(appHost.actions.translate("app.title")).toBe("终末地工业系统仿真器");
     expect(appHost.actions.translate("workbench.leftRail.placement")).toBe("放置模式");
     expect(appHost.actions.translate("workbench.leftRail.base")).toBe("基地");
     expect(appHost.actions.translate("unknown.key")).toBe("unknown.key");
 
     appHost.internalActions.setLocale("en-US");
 
-    expect(appHost.actions.translate("app.title")).toBe("Industrial Planner Stage1");
+    expect(appHost.actions.translate("app.title")).toBe("Endfield Industrial System Simulator");
     expect(appHost.actions.translate("workbench.leftRail.placement")).toBe("Placement");
     expect(appHost.actions.translate("workbench.leftRail.base")).toBe("Base");
     expect(appHost.actions.translate("workbench.base.wuling")).toBe("Wuling");

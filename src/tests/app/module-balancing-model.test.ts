@@ -97,6 +97,7 @@ function createState(): ModuleBalancingState {
         name: "Loop",
         color: "#4f8cff",
         iconId: "gear",
+        notes: "",
         sourceType: "custom",
         inputs: [{ itemId: "gear", perMinute: 5 }],
         outputs: [{ itemId: "plate", perMinute: 10 }],

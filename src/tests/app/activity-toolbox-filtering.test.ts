@@ -23,6 +23,7 @@ function createModuleBalancingState(canvas: ModuleBalancingCanvas): ModuleBalanc
         name: "Activity Module",
         color: "#4f8cff",
         iconId: ACTIVITY_ITEM_ID,
+        notes: "",
         sourceType: "custom",
         inputs: [],
         outputs: [{ itemId: ACTIVITY_ITEM_ID, perMinute: 60 }],

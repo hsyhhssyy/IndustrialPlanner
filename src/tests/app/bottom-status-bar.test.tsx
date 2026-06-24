@@ -131,9 +131,8 @@ describe("BottomStatusBar", () => {
       throw new Error("Bottom status bar groups were not rendered.");
     }
 
-    expect(leftGroup.textContent).toContain("工具:select");
+    expect(leftGroup.textContent).toContain("工具: 选择");
     expect(leftGroup.textContent).toContain("缩放: 100%");
-    expect(leftGroup.textContent).not.toContain("集成工业仿真");
     expect(leftGroup.textContent).not.toContain("语言: 中文");
     expect(leftGroup.textContent).not.toContain("当前视图: 左侧面板");
 
@@ -142,7 +141,7 @@ describe("BottomStatusBar", () => {
       setGridSize(1.25);
     });
 
-    expect(leftGroup.textContent).toContain("工具:move");
+    expect(leftGroup.textContent).toContain("工具: 移动");
     expect(leftGroup.textContent).toContain("缩放: 125%");
 
     const icons = rightGroup.querySelectorAll(".status-bar-icon-chip");

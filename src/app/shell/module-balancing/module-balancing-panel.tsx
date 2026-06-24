@@ -91,6 +91,7 @@ interface CustomModuleFormState {
   name: string;
   color: string;
   iconId: string;
+  notes: string;
   inputs: ModuleBalancingIOPort[];
   outputs: ModuleBalancingIOPort[];
 }
@@ -198,6 +199,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       name: "",
       color: CUSTOM_MODULE_COLORS[0],
       iconId: index.allItems[0]?.id ?? index.allEntities[0]?.id ?? "item_port_grinder_1",
+      notes: "",
       inputs: [],
       outputs: [],
     });
@@ -209,6 +211,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       name: customModule.name,
       color: customModule.color,
       iconId: customModule.iconId,
+      notes: customModule.notes,
       inputs: customModule.inputs.map(clonePort),
       outputs: customModule.outputs.map(clonePort),
     });
@@ -228,6 +231,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       name: stage.name,
       color: CUSTOM_MODULE_COLORS[0],
       iconId: outputs[0]?.itemId ?? inputs[0]?.itemId ?? index.allItems[0]?.id ?? "item_port_grinder_1",
+      notes: "",
       inputs,
       outputs,
     });
@@ -249,6 +253,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       name: normalizedName,
       color: draft.color,
       iconId: draft.iconId,
+      notes: draft.notes,
       inputs: draft.inputs.filter((port) => port.itemId.length > 0 && port.perMinute > 0).map(clonePort),
       outputs: outputs.map(clonePort),
       sourceType: "custom",
@@ -574,6 +579,19 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             index={index}
             onCancel={closeCustomModuleForm}
             onOpenPortPicker={(target) => { void requestPortSelection(target); }}
+            onPickIcon={() => {
+              void (async () => {
+                const itemId = await appHost.encyclopediaPicker.pickItem({
+                  includeInactiveActivityItems: showAllActivityContent,
+                  title: t("moduleBalancing.moduleIcon"),
+                });
+                if (itemId === null) return;
+                setCustomModuleForm((draft) => {
+                  if (!draft) return draft;
+                  return { ...draft, iconId: itemId };
+                });
+              })();
+            }}
             onRequestPickItem={(kind, portIndex) => {
               void (async () => {
                 const itemId = await appHost.encyclopediaPicker.pickItem({
@@ -1314,6 +1332,7 @@ function CustomModuleForm({
   index,
   onCancel,
   onOpenPortPicker,
+  onPickIcon,
   onRequestPickItem,
   onSave,
   onUpdate,
@@ -1323,6 +1342,7 @@ function CustomModuleForm({
   index: ModuleBalancingIndex;
   onCancel: () => void;
   onOpenPortPicker: (target: PendingPortTarget) => void;
+  onPickIcon: () => void;
   onRequestPickItem: (kind: 'input' | 'output', portIndex: number) => void;
   onSave: () => void;
   onUpdate: (draft: CustomModuleFormState | null) => void;
@@ -1343,37 +1363,24 @@ function CustomModuleForm({
         <input value={draft.name} onChange={(event) => onUpdate({ ...draft, name: event.currentTarget.value })} />
       </label>
       <div className={cm(styles, "module-balancing-form-field")}>
-        <span>{t("moduleBalancing.moduleColor")}</span>
-        <div className={cm(styles, "module-balancing-color-row")}>
-          {CUSTOM_MODULE_COLORS.map((color) => (
-            <button
-              aria-label={color}
-              className={cm(styles, `module-balancing-color-swatch${draft.color === color ? " is-active" : ""}`)}
-              key={color}
-              style={{ backgroundColor: color }}
-              type="button"
-              onClick={() => onUpdate({ ...draft, color })}
-            />
-          ))}
-        </div>
-      </div>
-      <label className={cm(styles, "module-balancing-form-field")}>
         <span>{t("moduleBalancing.moduleIcon")}</span>
-        <select value={draft.iconId} onChange={(event) => onUpdate({ ...draft, iconId: event.currentTarget.value })}>
-          <optgroup label={t("encyclopedia.category.items")}>
-            {index.allItems.map((item) => (
-              <option key={item.id} value={item.id}>{t(item.nameKey)}</option>
+        <div className={cm(styles, "module-balancing-icon-color-row")}>
+          <button className={cm(styles, "module-balancing-icon-picker")} type="button" onClick={onPickIcon}>
+            <img alt="" src={resolveAnyIconSrc(draft.iconId, index)} />
+          </button>
+          <div className={cm(styles, "module-balancing-color-row")}>
+            {CUSTOM_MODULE_COLORS.map((color) => (
+              <button
+                aria-label={color}
+                className={cm(styles, `module-balancing-color-swatch${draft.color === color ? " is-active" : ""}`)}
+                key={color}
+                style={{ backgroundColor: color }}
+                type="button"
+                onClick={() => onUpdate({ ...draft, color })}
+              />
             ))}
-          </optgroup>
-          <optgroup label={t("encyclopedia.category.entities")}>
-            {index.allEntities.map((entity) => (
-              <option key={entity.id} value={entity.id}>{t(entity.nameKey)}</option>
-            ))}
-          </optgroup>
-        </select>
-      </label>
-      <div className={cm(styles, "module-balancing-custom-icon-preview")}>
-        <img alt="" src={resolveAnyIconSrc(draft.iconId, index)} />
+          </div>
+        </div>
       </div>
       <section className={cm(styles, "module-balancing-form-ports")}>
         <header className={cm(styles, "module-balancing-section-header")}>
@@ -1407,6 +1414,16 @@ function CustomModuleForm({
           t={t}
         />
       </section>
+      <label className={cm(styles, "module-balancing-form-field", "module-balancing-form-notes")}>
+        <span>{t("moduleBalancing.moduleNotes")}</span>
+        <textarea
+          maxLength={200}
+          rows={3}
+          value={draft.notes}
+          onChange={(event) => onUpdate({ ...draft, notes: event.currentTarget.value })}
+          placeholder={t("moduleBalancing.moduleNotesPlaceholder")}
+        />
+      </label>
       <footer className={cm(styles, "module-balancing-form-actions")}>
         <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={onCancel}>
           <LucideX aria-hidden="true" />

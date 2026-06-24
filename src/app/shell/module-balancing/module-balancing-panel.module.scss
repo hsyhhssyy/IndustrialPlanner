@@ -902,7 +902,35 @@
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
-.module-balancing-custom-icon-preview img,
+.module-balancing-icon-color-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.module-balancing-icon-picker {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.module-balancing-icon-picker img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+// AI-CORRECTION 2026-06-24: .module-balancing-custom-icon-preview 已废弃，
+//   图标预览移入 .module-balancing-icon-picker 按钮中，不再使用独立 preview 区域。
+//   .module-balancing-quantity-module img 保留，仍被 QuantityEditor 使用。
 .module-balancing-quantity-module img {
   width: 42px;
   height: 42px;
@@ -1379,19 +1407,30 @@
   border-top: 1px solid var(--line);
 }
 
-.module-balancing-custom-icon-preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 74px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface-2);
-}
+// AI-REMOVED 2026-06-24:
+// Reason: 图标预览已移入 .module-balancing-icon-picker 按钮中，不再需要独立 preview 区域。
+// Trigger: 需求"图标改为和颜色在同一行，使用物品选择器选择图标"。
+// Replacement: .module-balancing-icon-picker
+// Risk: Low
+//
+// Original code:
+// .module-balancing-custom-icon-preview {
+//   display: flex;
+//   align-items: center;
+//   justify-content: center;
+//   min-height: 74px;
+//   border: 1px solid var(--line);
+//   border-radius: 10px;
+//   background: var(--surface-2);
+// }
+//
+// .module-balancing-custom-icon-preview img {
+//   width: 54px;
+//   height: 54px;
+// }
 
-.module-balancing-custom-icon-preview img {
-  width: 54px;
-  height: 54px;
+.module-balancing-form-notes {
+  grid-column: 1 / -1;
 }
 
 .module-balancing-module-card {

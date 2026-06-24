@@ -54,6 +54,7 @@ export interface ModuleBalancingCustomModule {
   readonly name: string;
   readonly color: string;
   readonly iconId: string;
+  readonly notes: string;
   readonly inputs: readonly ModuleBalancingIOPort[];
   readonly outputs: readonly ModuleBalancingIOPort[];
   readonly sourceType: "custom";

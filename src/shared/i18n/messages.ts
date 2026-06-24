@@ -71,6 +71,13 @@ export type MessageKey =
   | "view.diagnostics"
   | "leftDock.currentMode"
   | "leftDock.activeTool"
+  | "activeTool.select"
+  | "activeTool.move"
+  | "activeTool.marquee"
+  | "activeTool.blueprint-placement"
+  | "activeTool.single-placement"
+  | "activeTool.logistics-placement"
+  | "activeTool.dark-pipe-link"
   | "leftDock.title"
   | "leftDock.collapsed"
   | "rightDock.title"
@@ -141,6 +148,9 @@ export type MessageKey =
   | "statusBar.view"
   | "statusBar.running"
   | "statusBar.copyright"
+  | "statusBar.icpFiling"
+  | "statusBar.githubRepo"
+  | "statusBar.trademarkNotice"
   | "statusBar.locale"
   | "statusBar.theme"
   | "statusBar.tool"
@@ -362,7 +372,7 @@ export type MessageKey =
 
 const MESSAGES: Record<AppLocale, Record<string, string>> = {
   "zh-CN": {
-    "app.title": "集成工业仿真器",
+    "app.title": "终末地工业系统仿真器",
     "mode.edit": "放置模式",
     "action.start": "开始仿真",
     "action.stop": "停止仿真",
@@ -432,6 +442,13 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "view.diagnostics": "诊断",
     "leftDock.currentMode": "当前面板",
     "leftDock.activeTool": "当前工具",
+    "activeTool.select": "选择",
+    "activeTool.move": "移动",
+    "activeTool.marquee": "框选",
+    "activeTool.blueprint-placement": "蓝图放置",
+    "activeTool.single-placement": "单次放置",
+    "activeTool.logistics-placement": "物流铺设",
+    "activeTool.dark-pipe-link": "暗线链接",
     "leftDock.title": "左侧上下文面板",
     "leftDock.collapsed": "面板",
     "rightDock.title": "右侧检视面板",
@@ -488,7 +505,10 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "statusBar.mode": "当前模式",
     "statusBar.view": "当前视图",
     "statusBar.running": "仿真占位中",
-    "statusBar.copyright": "集成工业仿真",
+    "statusBar.copyright": "终末地工业系统仿真器",
+    "statusBar.icpFiling": "粤ICP备2021107697号-1",
+    "statusBar.githubRepo": "GitHub 仓库",
+    "statusBar.trademarkNotice": "明日方舟：终末地是鹰角网络的商标。本工具与鹰角网络无关，未获其认可。图片和数据资源来自明日方舟：终末地游戏数据，版权归鹰角网络所有。",
     "statusBar.locale": "语言",
     "statusBar.theme": "主题",
     "statusBar.tool": "工具",
@@ -573,6 +593,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "moduleBalancing.moduleName": "模块名称",
     "moduleBalancing.moduleColor": "颜色",
     "moduleBalancing.moduleIcon": "图标",
+    "moduleBalancing.moduleNotes": "备注",
+    "moduleBalancing.moduleNotesPlaceholder": "可填写该模块的补充说明…",
     "moduleBalancing.inputItems": "输入",
     "moduleBalancing.outputItems": "输出",
     "moduleBalancing.addInputItem": "添加输入",
@@ -833,7 +855,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "encyclopedia.recentItems": "最近搜索",
   },
   "en-US": {
-    "app.title": "Industrial Planner Stage1",
+    "app.title": "Endfield Industrial System Simulator",
     "mode.edit": "Edit",
     "action.start": "Start",
     "action.stop": "Stop",
@@ -903,6 +925,13 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "view.diagnostics": "Diagnostics",
     "leftDock.currentMode": "Panel",
     "leftDock.activeTool": "Tool",
+    "activeTool.select": "Select",
+    "activeTool.move": "Move",
+    "activeTool.marquee": "Marquee",
+    "activeTool.blueprint-placement": "Blueprint Placement",
+    "activeTool.single-placement": "Single Placement",
+    "activeTool.logistics-placement": "Logistics Placement",
+    "activeTool.dark-pipe-link": "Dark Pipe Link",
     "leftDock.title": "Left Context Panel",
     "leftDock.collapsed": "Library",
     "rightDock.title": "Right Inspector Panel",
@@ -973,7 +1002,10 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "statusBar.mode": "Mode",
     "statusBar.view": "View",
     "statusBar.running": "Simulation Stub",
-    "statusBar.copyright": "Integrated Industry Simulator",
+    "statusBar.copyright": "Endfield Industrial System Simulator",
+    "statusBar.icpFiling": "Yue ICP 2021107697-1",
+    "statusBar.githubRepo": "GitHub Repository",
+    "statusBar.trademarkNotice": "Arknights: Endfield is a trademark of Hypergryph. This tool is not affiliated with or endorsed by Hypergryph. Image and data assets are sourced from Arknights: Endfield game data, copyright Hypergryph.",
     "statusBar.locale": "Locale",
     "statusBar.theme": "Theme",
     "statusBar.tool": "Tool",
@@ -1058,6 +1090,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "moduleBalancing.moduleName": "Module Name",
     "moduleBalancing.moduleColor": "Color",
     "moduleBalancing.moduleIcon": "Icon",
+    "moduleBalancing.moduleNotes": "Notes",
+    "moduleBalancing.moduleNotesPlaceholder": "Optional notes for this module…",
     "moduleBalancing.inputItems": "Inputs",
     "moduleBalancing.outputItems": "Outputs",
     "moduleBalancing.addInputItem": "Add Input",
