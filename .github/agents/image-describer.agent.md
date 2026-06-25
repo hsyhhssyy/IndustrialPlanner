@@ -2,7 +2,7 @@
 name: image-describer
 description: Use this agent to view image and describe what is in the image
 tools: ['search/codebase', 'search']
-model: GPT-5.4
+model: GPT-5.5
 user-invocable: false
 ---
 

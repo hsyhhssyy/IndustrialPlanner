@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
 import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
-import { createBlueprint, createEntity, findSlot, findSlotWithItem, getDevice } from "./blueprint-test-helpers";
+import { createBlueprint, createEntity, getDevice } from "./blueprint-test-helpers";
 
 // 重息壤产线验证：水泵 + 暗管(水/污水) → 混合池B(息壤+水→液化息壤)
 // → 混合池C(液化息壤+污水→废液) → 希壤炉(息壤+废液→重息壤)
@@ -63,19 +63,19 @@ describe("重息壤产线配方链验证", () => {
       registry,
     });
 
+    // immediate-consume: 原料立即消耗，产物写入空槽
     const slotItems = getDevice(report, MAX_TICK, "pool").slotItems;
     console.log("[step2] 30s 槽位:", JSON.stringify(slotItems));
 
     const polySlot = slotItems.find(s => s.itemType === "item_liquid_xiranite_poly");
     const lowpolySlot = slotItems.find(s => s.itemType === "item_liquid_xiranite_lowpoly");
-    const liquidXiraniteSlot = slotItems.find(s => s.itemType === "item_liquid_xiranite");
 
-    expect(liquidXiraniteSlot, "液化息壤应被消耗一部分").toBeDefined();
-    expect(liquidXiraniteSlot!.count, "液化息壤应<10").toBeLessThan(10);
     expect(polySlot, "应有废液(liquid_xiranite_poly)产出").toBeDefined();
     expect(polySlot!.count, "废液数量应>0").toBeGreaterThan(0);
+    expect(polySlot!.count, "10液化息壤+10污水 → 10废液").toBe(10);
     expect(lowpolySlot, "应有低聚废液产出").toBeDefined();
     expect(lowpolySlot!.count, "低聚废液数量应>0").toBeGreaterThan(0);
+    expect(lowpolySlot!.count, "联产也是10").toBe(10);
   });
 
   it("步骤3: 希壤炉 — 息壤+废液→重息壤", { timeout: 300_000 }, async () => {
