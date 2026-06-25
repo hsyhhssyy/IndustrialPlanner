@@ -14,7 +14,7 @@ export interface AppSettings {
   readonly hypergryphAutoCreateSplittersAndConvergers: boolean;
   readonly hypergryphSelectionRightDockSync: boolean;
   readonly hypergryphInspectorOpenOnSecondClick: boolean;
-  readonly gameUseSimplifiedDeviceIcons: boolean;
+  readonly gameUseBlueprintStyleDeviceImages: boolean;
   readonly gameShowDeviceNames: boolean;
   readonly gameShowDeviceIcons: boolean;
   readonly gameUseInspectorPanel: boolean;

@@ -306,7 +306,7 @@ function createGeometryContext(options: {
         app: {
           state: {
             settings: {
-              gameUseSimplifiedDeviceIcons: options.simplifiedDeviceIcons ?? false,
+              gameUseBlueprintStyleDeviceImages: options.simplifiedDeviceIcons ?? false,
             },
           },
         },

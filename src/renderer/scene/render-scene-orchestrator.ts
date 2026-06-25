@@ -308,7 +308,7 @@ export function createRenderSceneOrchestrator(
       "theme.resolveEffectiveCanvasTheme",
       () => resolveEffectiveCanvasTheme(
         workspaceApp.state.theme,
-        workspaceApp.state.settings.gameUseSimplifiedDeviceIcons,
+        workspaceApp.state.settings.gameUseBlueprintStyleDeviceImages,
       ),
     )
 
@@ -1468,7 +1468,7 @@ export function resolveWorldEntitySpriteLayout(options: {
 
 /**
  * 根据当前渲染模式（蓝图 / 3D-top）解析有效的 spriteOffset。
- * gameUseSimplifiedDeviceIcons=true 时使用 blueprint 偏移，否则使用 topView 偏移。
+ * gameUseBlueprintStyleDeviceImages=true 时使用 blueprint 偏移，否则使用 topView 偏移。
  */
 function resolveEffectiveSpriteOffset(
   spriteOffset: EntityDefinition["spriteOffset"] | undefined,
@@ -1478,7 +1478,7 @@ function resolveEffectiveSpriteOffset(
     return undefined
   }
 
-  const isBlueprint = app?.state.settings.gameUseSimplifiedDeviceIcons ?? false
+  const isBlueprint = app?.state.settings.gameUseBlueprintStyleDeviceImages ?? false
   return isBlueprint ? spriteOffset.blueprint : spriteOffset.topView
 }
 

@@ -60,7 +60,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   hypergryphAutoCreateSplittersAndConvergers: true,
   hypergryphSelectionRightDockSync: true,
   hypergryphInspectorOpenOnSecondClick: false,
-  gameUseSimplifiedDeviceIcons: false,
+  gameUseBlueprintStyleDeviceImages: false,
   gameShowDeviceNames: true,
   gameShowDeviceIcons: false,
   gameUseInspectorPanel: false,
@@ -2259,7 +2259,7 @@ describe("WorkbenchApp", () => {
         values: {
           "system-theme": "follow-system",
           "game-arknights-operation-mode": true,
-          "game-use-simplified-device-icons": false,
+          "game-use-blueprint-style-device-images": false,
           "other-debug-mode": true,
         },
       }),
@@ -3334,7 +3334,7 @@ describe("WorkbenchApp", () => {
     });
 
     const simplifiedDeviceIconsToggle = container.querySelector(
-      'input[name="game-use-simplified-device-icons"]',
+      'input[name="game-use-blueprint-style-device-images"]',
     ) as HTMLInputElement | null;
     const alwaysShowGridLinesToggle = container.querySelector(
       'input[name="game-always-show-grid-lines"]',
@@ -3356,7 +3356,7 @@ describe("WorkbenchApp", () => {
       simplifiedDeviceIconsToggle?.click();
     });
 
-    expect(appHost.state.settings.gameUseSimplifiedDeviceIcons).toBe(true);
+    expect(appHost.state.settings.gameUseBlueprintStyleDeviceImages).toBe(true);
     expect(appHost.state.settings.gameAlwaysShowGridLines).toBe(true);
     expect(appHost.state.settings.showGrassBackground).toBe(false);
     expect(simplifiedDeviceIconsToggle?.checked).toBe(true);
@@ -3367,7 +3367,7 @@ describe("WorkbenchApp", () => {
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
         ...DEFAULT_APP_SETTINGS_STORAGE,
-        gameUseSimplifiedDeviceIcons: true,
+        gameUseBlueprintStyleDeviceImages: true,
         gameShowDeviceIcons: true,
         gameAlwaysShowGridLines: true,
         showGrassBackground: false,
@@ -3396,7 +3396,7 @@ describe("WorkbenchApp", () => {
 
     act(() => {
       runInAction(() => {
-        appHost.internalState.settings.gameUseSimplifiedDeviceIcons = true;
+        appHost.internalState.settings.gameUseBlueprintStyleDeviceImages = true;
       });
     });
 
@@ -3427,7 +3427,7 @@ describe("WorkbenchApp", () => {
     });
 
     const simplifiedDeviceIconsToggle = container.querySelector(
-      'input[name="game-use-simplified-device-icons"]',
+      'input[name="game-use-blueprint-style-device-images"]',
     ) as HTMLInputElement | null;
     const showDeviceNamesToggle = container.querySelector(
       'input[name="game-show-device-names"]',
@@ -3449,14 +3449,14 @@ describe("WorkbenchApp", () => {
       simplifiedDeviceIconsToggle?.click();
     });
 
-    expect(appHost.state.settings.gameUseSimplifiedDeviceIcons).toBe(true);
+    expect(appHost.state.settings.gameUseBlueprintStyleDeviceImages).toBe(true);
     expect(appHost.state.settings.gameShowDeviceIcons).toBe(true);
     expect(showDeviceIconsToggle?.checked).toBe(true);
     expect(showDeviceIconsToggle?.disabled).toBe(true);
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
         ...DEFAULT_APP_SETTINGS_STORAGE,
-        gameUseSimplifiedDeviceIcons: true,
+        gameUseBlueprintStyleDeviceImages: true,
         gameShowDeviceIcons: true,
       }),
     );

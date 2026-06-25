@@ -247,7 +247,7 @@ describe("createRenderSceneOrchestrator", () => {
               devicePixelRatio: 1,
             },
             settings: {
-              gameUseSimplifiedDeviceIcons: false,
+              gameUseBlueprintStyleDeviceImages: false,
             },
             activeTool: "select",
             toolInfo: {
@@ -396,7 +396,7 @@ describe("createRenderSceneOrchestrator", () => {
               devicePixelRatio: 1,
             },
             settings: {
-              gameUseSimplifiedDeviceIcons: false,
+              gameUseBlueprintStyleDeviceImages: false,
             },
             activeTool: "single-placement",
             toolInfo: {

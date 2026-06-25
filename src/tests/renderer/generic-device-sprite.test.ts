@@ -438,7 +438,7 @@ describe("GenericDeviceSprite", () => {
       [BLUEPRINT_MASK_KEY]: resolvedMaskTexture,
       [BLUEPRINT_AVATAR_KEY]: createLoadedTextureMock("blueprint-avatar"),
     }, {
-      gameUseSimplifiedDeviceIcons: true,
+      gameUseBlueprintStyleDeviceImages: true,
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,
     })
@@ -989,7 +989,7 @@ describe("GenericDeviceSprite", () => {
       [BLUEPRINT_BODY_KEY]: resolvedTexture,
       [BLUEPRINT_MASK_KEY]: resolvedMaskTexture,
     }, {
-      gameUseSimplifiedDeviceIcons: true,
+      gameUseBlueprintStyleDeviceImages: true,
     })
     const sprite = new GenericDeviceSprite(
       "dummy-blueprint-entity",
@@ -1045,7 +1045,7 @@ describe("GenericDeviceSprite", () => {
       [BLUEPRINT_BODY_KEY]: resolvedTexture,
       [BLUEPRINT_MASK_KEY]: resolvedMaskTexture,
     }, {
-      gameUseSimplifiedDeviceIcons: true,
+      gameUseBlueprintStyleDeviceImages: true,
     })
     const sprite = new GenericDeviceSprite(
       "dummy-blueprint-preview",
@@ -1119,7 +1119,7 @@ describe("GenericDeviceSprite", () => {
       [BLUEPRINT_BODY_KEY]: resolvedTexture,
       [BLUEPRINT_MASK_KEY]: resolvedMaskTexture,
     }, {
-      gameUseSimplifiedDeviceIcons: true,
+      gameUseBlueprintStyleDeviceImages: true,
     })
     const sprite = new GenericDeviceSprite(
       "dummy-blueprint-marquee",
@@ -1232,7 +1232,7 @@ describe("GenericDeviceSprite", () => {
 
     expect(resolveEntitySprite(entityLayer)?.texture).toBe(defaultTexture)
 
-    renderHost.workspace.app.state.settings.gameUseSimplifiedDeviceIcons = true
+    renderHost.workspace.app.state.settings.gameUseBlueprintStyleDeviceImages = true
 
     sprite.syncLayout({
       x: 16,
@@ -1297,7 +1297,7 @@ describe("GenericDeviceSprite", () => {
 
     expect(resolveEntitySprite(entityLayer)?.texture).toBe(defaultTexture)
 
-    renderHost.workspace.app.state.settings.gameUseSimplifiedDeviceIcons = true
+    renderHost.workspace.app.state.settings.gameUseBlueprintStyleDeviceImages = true
 
     sprite.syncLayout(createBeltLayout(), context)
 
@@ -2861,7 +2861,7 @@ function createLayerStub() {
 function createRenderHostStub(
   textureByKey: Record<string, object>,
   options?: {
-    gameUseSimplifiedDeviceIcons?: boolean;
+    gameUseBlueprintStyleDeviceImages?: boolean;
     gameShowDeviceIcons?: boolean;
     gameShowDeviceNames?: boolean;
   },
@@ -2895,7 +2895,7 @@ function createRenderHostStub(
         },
         state: {
           settings: {
-            gameUseSimplifiedDeviceIcons: options?.gameUseSimplifiedDeviceIcons ?? false,
+            gameUseBlueprintStyleDeviceImages: options?.gameUseBlueprintStyleDeviceImages ?? false,
             gameShowDeviceIcons: options?.gameShowDeviceIcons ?? false,
             gameShowDeviceNames: options?.gameShowDeviceNames ?? true,
           },

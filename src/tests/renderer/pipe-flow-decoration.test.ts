@@ -102,7 +102,7 @@ function createPipeFlowContext(options: {
         app: {
           state: {
             settings: {
-              gameUseSimplifiedDeviceIcons: false,
+              gameUseBlueprintStyleDeviceImages: false,
             },
           },
         },

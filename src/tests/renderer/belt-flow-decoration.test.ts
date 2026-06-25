@@ -499,7 +499,7 @@ function createFlowContext(options: {
           state: {
             theme: AYU_LIGHT_THEME,
             settings: {
-              gameUseSimplifiedDeviceIcons: options.simplifiedDeviceIcons ?? false,
+              gameUseBlueprintStyleDeviceImages: options.simplifiedDeviceIcons ?? false,
             },
           },
         },

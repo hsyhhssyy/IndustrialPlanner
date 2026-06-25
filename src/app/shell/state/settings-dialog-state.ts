@@ -87,7 +87,7 @@ interface PersistedUserSettingsDialogState {
   readonly values: Record<string, WorkbenchSettingControlValue>;
 }
 
-const SIMPLIFIED_DEVICE_ICONS_SETTING_ID = "game-use-simplified-device-icons";
+const SIMPLIFIED_DEVICE_ICONS_SETTING_ID = "game-use-blueprint-style-device-images";
 const ALWAYS_SHOW_GRID_LINES_SETTING_ID = "game-always-show-grid-lines";
 const SHOW_GRASS_BACKGROUND_SETTING_ID = "game-show-grass-background";
 const SHOW_DEVICE_NAMES_SETTING_ID = "game-show-device-names";
@@ -147,10 +147,10 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     // },
     items: [
       {
-        id: "game-use-simplified-device-icons",
+        id: "game-use-blueprint-style-device-images",
         kind: "switch",
-        labelKey: "settingsField.game-use-simplified-device-icons",
-        descriptionKey: "settingsField.game-use-simplified-device-iconsDescription",
+        labelKey: "settingsField.game-use-blueprint-style-device-images",
+        descriptionKey: "settingsField.game-use-blueprint-style-device-imagesDescription",
         defaultValue: false,
       },
       {
@@ -218,7 +218,7 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         descriptionKey: "settingsField.game-always-show-grid-linesDescription",
         defaultValue: true,
         editableWhen: {
-          settingId: "game-use-simplified-device-icons",
+          settingId: "game-use-blueprint-style-device-images",
           equals: false,
         },
       },
@@ -229,7 +229,7 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         descriptionKey: "settingsField.game-show-grass-backgroundDescription",
         defaultValue: false,
         editableWhen: {
-          settingId: "game-use-simplified-device-icons",
+          settingId: "game-use-blueprint-style-device-images",
           equals: false,
         },
       },

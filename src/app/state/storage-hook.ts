@@ -101,14 +101,14 @@ function normalizePersistedAppSettings(
   persistedAppSettings: AppSettingsReadWrite,
   fallback: AppSettingsReadWrite,
 ): AppSettingsReadWrite {
-  const gameUseSimplifiedDeviceIcons =
-    typeof persistedAppSettings.gameUseSimplifiedDeviceIcons === "boolean"
-      ? persistedAppSettings.gameUseSimplifiedDeviceIcons
-      : fallback.gameUseSimplifiedDeviceIcons;
+  const gameUseBlueprintStyleDeviceImages =
+    typeof persistedAppSettings.gameUseBlueprintStyleDeviceImages === "boolean"
+      ? persistedAppSettings.gameUseBlueprintStyleDeviceImages
+      : fallback.gameUseBlueprintStyleDeviceImages;
   const gameShowDeviceNames = typeof persistedAppSettings.gameShowDeviceNames === "boolean"
     ? persistedAppSettings.gameShowDeviceNames
     : fallback.gameShowDeviceNames;
-  const gameShowDeviceIcons = gameUseSimplifiedDeviceIcons
+  const gameShowDeviceIcons = gameUseBlueprintStyleDeviceImages
     ? true
     : typeof persistedAppSettings.gameShowDeviceIcons === "boolean"
       ? persistedAppSettings.gameShowDeviceIcons
@@ -150,7 +150,7 @@ function normalizePersistedAppSettings(
       typeof persistedAppSettings.hypergryphInspectorOpenOnSecondClick === "boolean"
         ? persistedAppSettings.hypergryphInspectorOpenOnSecondClick
         : fallback.hypergryphInspectorOpenOnSecondClick,
-    gameUseSimplifiedDeviceIcons,
+    gameUseBlueprintStyleDeviceImages,
     gameShowDeviceNames,
     gameShowDeviceIcons,
     gameUseInspectorPanel: typeof persistedAppSettings.gameUseInspectorPanel === "boolean"
@@ -159,7 +159,7 @@ function normalizePersistedAppSettings(
     gameShowHotkeys: typeof persistedAppSettings.gameShowHotkeys === "boolean"
       ? persistedAppSettings.gameShowHotkeys
       : fallback.gameShowHotkeys,
-    gameAlwaysShowGridLines: gameUseSimplifiedDeviceIcons
+    gameAlwaysShowGridLines: gameUseBlueprintStyleDeviceImages
       ? true
       : typeof persistedAppSettings.gameAlwaysShowGridLines === "boolean"
         ? persistedAppSettings.gameAlwaysShowGridLines
@@ -169,7 +169,7 @@ function normalizePersistedAppSettings(
       typeof persistedAppSettings.toolboxShowAllActivityContent === "boolean"
         ? persistedAppSettings.toolboxShowAllActivityContent
         : fallback.toolboxShowAllActivityContent,
-    showGrassBackground: gameUseSimplifiedDeviceIcons
+    showGrassBackground: gameUseBlueprintStyleDeviceImages
       ? false
       : typeof persistedAppSettings.showGrassBackground === "boolean"
         ? persistedAppSettings.showGrassBackground

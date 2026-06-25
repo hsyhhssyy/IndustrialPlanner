@@ -116,7 +116,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
   // 缓存：文档稳定数据
   let cachedDocumentSnapshot: unknown = null
   let cachedDefinitionMap: Map<string, EntityDefinition> | null = null
-  // 端口连通性 — 文档变更或 gameUseSimplifiedDeviceIcons 变更时失效
+  // 端口连通性 — 文档变更或 gameUseBlueprintStyleDeviceImages 变更时失效
   let cachedPortConnectivity: ReturnType<typeof resolveBeltPortConnectivityEntries> | null = null
   let cachedSimplifiedDeviceIcons: boolean | null = null
   // beltRects — 文档变更或视口变更时失效
@@ -219,7 +219,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
       const documentSnapshot = editor?.document?.getSnapshot() ?? null
       // 文档版本不变时缓存命中；snapshot 不可用时始终失效（如测试 mock 缺少 document）
       const documentStable = documentSnapshot !== null && cachedDocumentSnapshot === documentSnapshot
-      const simplifiedDeviceIcons = ctx.renderHost.workspace.app?.state?.settings?.gameUseSimplifiedDeviceIcons === true
+      const simplifiedDeviceIcons = ctx.renderHost.workspace.app?.state?.settings?.gameUseBlueprintStyleDeviceImages === true
 
       // 定义映射（会话级稳定，只算一次）
       if (cachedDefinitionMap === null) {
@@ -244,7 +244,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
       // 全局 Bitmap 遮罩直接合并全部可见传送带，局部格索引不再参与当前渲染。
       void beltRectsByGridKey
 
-      // 端口连通性缓存：文档或 gameUseSimplifiedDeviceIcons 变更时重算
+      // 端口连通性缓存：文档或 gameUseBlueprintStyleDeviceImages 变更时重算
       if (cachedPortConnectivity === null || !documentStable || cachedSimplifiedDeviceIcons !== simplifiedDeviceIcons) {
         cachedPortConnectivity = resolveBeltPortConnectivityEntries(ctx)
         cachedSimplifiedDeviceIcons = simplifiedDeviceIcons

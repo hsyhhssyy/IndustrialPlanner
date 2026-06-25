@@ -79,7 +79,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   hypergryphAutoCreateSplittersAndConvergers: boolean;
   hypergryphSelectionRightDockSync: boolean;
   hypergryphInspectorOpenOnSecondClick: boolean;
-  gameUseSimplifiedDeviceIcons: boolean;
+  gameUseBlueprintStyleDeviceImages: boolean;
   gameShowDeviceNames: boolean;
   gameShowDeviceIcons: boolean;
   gameUseInspectorPanel: boolean;
@@ -630,7 +630,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphAutoCreateSplittersAndConvergers: true,
     hypergryphSelectionRightDockSync: true,
     hypergryphInspectorOpenOnSecondClick: false,
-    gameUseSimplifiedDeviceIcons: false,
+    gameUseBlueprintStyleDeviceImages: false,
     gameShowDeviceNames: true,
     gameShowDeviceIcons: false,
     gameUseInspectorPanel: false,

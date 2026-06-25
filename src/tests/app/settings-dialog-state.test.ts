@@ -18,7 +18,7 @@ describe("WorkbenchSettingsDialogController", () => {
     controller.selectGroup("shortcuts");
     controller.updateSelectValue("system-language", "en-US");
     controller.updateSelectValue("system-theme", "ayu-dark");
-    controller.updateSwitchValue("game-use-simplified-device-icons", true);
+    controller.updateSwitchValue("game-use-blueprint-style-device-images", true);
     controller.updateSwitchValue("other-debug-mode", true);
     controller.updateSwitchValue("debug-show-fps", true);
     controller.updateSwitchValue("debug-show-gesture-diagnostics-window", true);
@@ -62,7 +62,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-always-show-grid-lines": true,
         "game-show-grass-background": false,
         "game-use-inspector-panel": false,
-        "game-use-simplified-device-icons": true,
+        "game-use-blueprint-style-device-images": true,
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "debug-show-fps": true,
@@ -100,7 +100,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["game-show-device-icons"]).toBe(true);
     expect(hydratedController.values["game-always-show-grid-lines"]).toBe(true);
     expect(hydratedController.values["game-show-grass-background"]).toBe(false);
-    expect(hydratedController.values["game-use-simplified-device-icons"]).toBe(true);
+    expect(hydratedController.values["game-use-blueprint-style-device-images"]).toBe(true);
     expect(hydratedController.values["other-toolbox-show-all-activity-content"]).toBe(true);
     expect(hydratedController.values["other-debug-mode"]).toBe(true);
     expect(hydratedController.values["debug-show-fps"]).toBe(true);
@@ -163,7 +163,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(controller.isSettingEditable("game-always-show-grid-lines")).toBe(true);
     expect(controller.isSettingEditable("game-show-grass-background")).toBe(true);
 
-    controller.updateSwitchValue("game-use-simplified-device-icons", true);
+    controller.updateSwitchValue("game-use-blueprint-style-device-images", true);
 
     expect(controller.isSettingEditable("game-always-show-grid-lines")).toBe(false);
     expect(controller.isSettingEditable("game-show-grass-background")).toBe(false);
@@ -182,7 +182,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(controller.getValue("game-show-device-icons")).toBe(false);
     expect(controller.isSettingEditable("game-show-device-icons")).toBe(true);
 
-    controller.updateSwitchValue("game-use-simplified-device-icons", true);
+    controller.updateSwitchValue("game-use-blueprint-style-device-images", true);
 
     expect(controller.getValue("game-show-device-icons")).toBe(true);
     expect(controller.isSettingEditable("game-show-device-icons")).toBe(false);
@@ -262,7 +262,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-always-show-grid-lines": true,
         "game-show-grass-background": false,
         "game-use-inspector-panel": false,
-        "game-use-simplified-device-icons": false,
+        "game-use-blueprint-style-device-images": false,
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "debug-show-fps": false,

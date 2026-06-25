@@ -116,7 +116,7 @@ export function createPipeFlowDecoration(): DecorationLayer {
     container,
 
     sync(ctx: DecorationSyncContext): void {
-      if (ctx.renderHost.workspace.app?.state?.settings?.gameUseSimplifiedDeviceIcons === true) {
+      if (ctx.renderHost.workspace.app?.state?.settings?.gameUseBlueprintStyleDeviceImages === true) {
         hide()
         return
       }

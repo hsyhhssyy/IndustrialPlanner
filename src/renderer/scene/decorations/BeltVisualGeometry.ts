@@ -235,7 +235,7 @@ export function resolveBeltPortConnectivityEntries(
   options: ResolveBeltPortConnectivityOptions = {},
 ): BeltPortConnectivityEntries {
   const app = ctx.renderHost.workspace.app
-  if (app?.state?.settings?.gameUseSimplifiedDeviceIcons === true) {
+  if (app?.state?.settings?.gameUseBlueprintStyleDeviceImages === true) {
     return {
       extensions: [],
       disconnectedPorts: [],

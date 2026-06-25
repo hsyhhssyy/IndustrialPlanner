@@ -8,7 +8,7 @@ const TOP_VIEW_AVATAR_PREFIX = "top-view-avatar-"
 const BLUEPRINT_AVATAR_PREFIX = "blueprint-avatar-"
 
 export function readSimplifiedDeviceIconPreference(app: AppContract | null): boolean {
-  return app?.state.settings.gameUseSimplifiedDeviceIcons ?? false
+  return app?.state.settings.gameUseBlueprintStyleDeviceImages ?? false
 }
 
 export function resolveDeviceBodyTextureKey(

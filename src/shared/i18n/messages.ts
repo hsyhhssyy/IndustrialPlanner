@@ -304,8 +304,8 @@ export type MessageKey =
   | "settingsField.shortcut-toggle-base-panelDescription"
   | "settingsField.shortcut-rotate-viewport"
   | "settingsField.shortcut-rotate-viewportDescription"
-  | "settingsField.game-use-simplified-device-icons"
-  | "settingsField.game-use-simplified-device-iconsDescription"
+  | "settingsField.game-use-blueprint-style-device-images"
+  | "settingsField.game-use-blueprint-style-device-imagesDescription"
   | "settingsField.game-use-inspector-panel"
   | "settingsField.game-use-inspector-panelDescription"
   | "settingsField.game-show-hotkeys"
@@ -798,8 +798,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-toggle-base-panelDescription": "设置打开/关闭基地面板的快捷键。",
     "settingsField.shortcut-rotate-viewport": "旋转画布",
     "settingsField.shortcut-rotate-viewportDescription": "设置旋转画布视角的快捷键。",
-    "settingsField.game-use-simplified-device-icons": "使用蓝图样式的设备图片",
-    "settingsField.game-use-simplified-device-iconsDescription": "使用蓝图样式显示设备图片，不会提高性能。",
+    "settingsField.game-use-blueprint-style-device-images": "使用蓝图样式的设备图片",
+    "settingsField.game-use-blueprint-style-device-imagesDescription": "使用蓝图样式显示设备图片，不会提高性能。",
     "settingsField.game-use-inspector-panel": "使用右侧面板显示设备属性",
     "settingsField.game-use-inspector-panelDescription": "开启后改为使用右侧面板而不是对话框进行设备设置。",
     "settingsField.game-show-hotkeys": "显示快捷键",
@@ -1306,8 +1306,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-toggle-base-panelDescription": "Set the shortcut key for toggling the base panel.",
     "settingsField.shortcut-rotate-viewport": "Rotate Viewport",
     "settingsField.shortcut-rotate-viewportDescription": "Set the shortcut key for rotating the viewport.",
-    "settingsField.game-use-simplified-device-icons": "Use Simplified Device Icons",
-    "settingsField.game-use-simplified-device-iconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
+    "settingsField.game-use-blueprint-style-device-images": "Use Blueprint Style Device Images",
+    "settingsField.game-use-blueprint-style-device-imagesDescription": "Display device images in blueprint style; this does not improve performance.",
     "settingsField.game-use-inspector-panel": "Use Right Panel For Device Properties",
     "settingsField.game-use-inspector-panelDescription": "When enabled, use the right panel for device settings instead of a dialog.",
     "settingsField.game-always-show-grid-lines": "Always Show Grid Lines",

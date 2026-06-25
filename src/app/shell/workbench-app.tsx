@@ -261,7 +261,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             return;
           }
 
-          if (appHost.internalState.settings.gameUseSimplifiedDeviceIcons) {
+          if (appHost.internalState.settings.gameUseBlueprintStyleDeviceImages) {
             if (!appHost.internalState.settings.gameShowDeviceIcons) {
               appHost.internalState.settings.gameShowDeviceIcons = true;
             }
@@ -276,8 +276,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.gameShowDeviceIcons = value;
         }),
       },
-      "game-use-simplified-device-icons": {
-        readValue: () => appHost.state.settings.gameUseSimplifiedDeviceIcons,
+      "game-use-blueprint-style-device-images": {
+        readValue: () => appHost.state.settings.gameUseBlueprintStyleDeviceImages,
         writeValue: action((value) => {
           if (typeof value !== "boolean") {
             return;
@@ -290,12 +290,12 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
               || !appHost.internalState.settings.gameShowDeviceIcons
             );
 
-          if (appHost.internalState.settings.gameUseSimplifiedDeviceIcons === value
+          if (appHost.internalState.settings.gameUseBlueprintStyleDeviceImages === value
             && !shouldEnforceLinkedSettings) {
             return;
           }
 
-          appHost.internalState.settings.gameUseSimplifiedDeviceIcons = value;
+          appHost.internalState.settings.gameUseBlueprintStyleDeviceImages = value;
 
           if (value) {
             appHost.internalState.settings.gameAlwaysShowGridLines = true;
@@ -325,7 +325,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             return;
           }
 
-          if (appHost.internalState.settings.gameUseSimplifiedDeviceIcons) {
+          if (appHost.internalState.settings.gameUseBlueprintStyleDeviceImages) {
             if (!appHost.internalState.settings.gameAlwaysShowGridLines) {
               appHost.internalState.settings.gameAlwaysShowGridLines = true;
             }
@@ -347,7 +347,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             return;
           }
 
-          if (appHost.internalState.settings.gameUseSimplifiedDeviceIcons) {
+          if (appHost.internalState.settings.gameUseBlueprintStyleDeviceImages) {
             if (appHost.internalState.settings.showGrassBackground) {
               appHost.internalState.settings.showGrassBackground = false;
             }
@@ -474,7 +474,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     || migrationController.dialogState.visible;
   const effectiveCanvasTheme = resolveEffectiveCanvasTheme(
     appHost.state.theme,
-    appHost.state.settings.gameUseSimplifiedDeviceIcons,
+    appHost.state.settings.gameUseBlueprintStyleDeviceImages,
   );
 
   useEffect(() => {
