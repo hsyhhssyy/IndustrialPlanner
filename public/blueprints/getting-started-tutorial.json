@@ -26,9 +26,9 @@
       "definitionId": "item_port_log_hongs_bus",
       "position": {
         "x": 9,
-        "y": 5
+        "y": 3
       },
-      "rotation": 0,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -812,7 +812,7 @@
         "x": 20,
         "y": 32
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1338,7 +1338,7 @@
         "x": 23,
         "y": 24
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -1349,7 +1349,7 @@
         "x": 23,
         "y": 25
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -1360,7 +1360,7 @@
         "x": 23,
         "y": 26
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -1371,7 +1371,7 @@
         "x": 23,
         "y": 27
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -1382,7 +1382,7 @@
         "x": 23,
         "y": 28
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -1393,7 +1393,7 @@
         "x": 23,
         "y": 29
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1428,7 +1428,7 @@
       "definitionId": "item_port_power_diffuser_1",
       "position": {
         "x": 20,
-        "y": 17
+        "y": 19
       },
       "rotation": 0,
       "config": {},
@@ -1456,7 +1456,7 @@
         "x": 19,
         "y": 26
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },

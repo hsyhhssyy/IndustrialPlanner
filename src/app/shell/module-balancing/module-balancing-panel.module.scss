@@ -38,10 +38,17 @@
   align-items: center;
   gap: 7px;
   min-height: 42px;
-  padding: 0 14px;
+  padding: 0 12px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-1);
+  font-weight: 600;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.module-balancing-library-button:hover {
   background: var(--surface-2);
-  color: var(--text-0);
-  font-weight: 700;
 }
 
 .module-balancing-library-button svg,
@@ -55,23 +62,29 @@
 .module-balancing-wizard-tabs {
   display: flex;
   align-items: center;
-  position: relative;
   min-width: 0;
   overflow-x: auto;
   scrollbar-width: thin;
-  padding: 6px 6px;
+  padding: 8px 10px;
 }
 
-// 步骤连接线（贯穿所有圆点）
-.module-balancing-wizard-tabs::before {
+// 步骤连接线（贯穿所有圆点中心），只覆盖 step-track，不延伸到 + 按钮
+.module-balancing-wizard-step-track {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.module-balancing-wizard-step-track::before {
   position: absolute;
-  top: 18px;
-  left: 20px;
-  right: 20px;
-  height: 2px;
+  top: 6px;
+  left: 14px;
+  right: 36px;
+  height: 3px;
   background: var(--line);
   content: "";
   z-index: 0;
+  border-radius: 2px;
 }
 
 .module-balancing-wizard-tab {
@@ -80,24 +93,27 @@
   align-items: center;
   gap: 5px;
   position: relative;
-  min-width: 48px;
+  min-width: 52px;
   padding: 0 14px;
   white-space: nowrap;
   z-index: 1;
   font-size: 12px;
   line-height: 1.4;
   color: var(--text-2);
+  border-radius: 4px;
+  transition: color 0.15s;
 }
 
 // 步骤圆点
 .module-balancing-wizard-tab::before {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   border: 2px solid var(--line);
   background: var(--surface-1);
   content: "";
   flex-shrink: 0;
+  transition: border-color 0.15s, background 0.15s;
 }
 
 .module-balancing-wizard-tab.is-active {
@@ -110,33 +126,37 @@
   background: var(--accent-strong);
 }
 
-.module-balancing-library-button:hover,
-.module-balancing-wizard-add:hover {
-  background: var(--surface-3);
-}
-
 .module-balancing-wizard-tab:hover {
   color: var(--text-0);
+  background: transparent;
 }
 
 .module-balancing-wizard-tab:hover::before {
-  border-color: var(--text-1);
-}
-
-.module-balancing-wizard-tab.is-active:hover {
-  color: var(--text-0);
+  border-color: var(--accent-soft);
 }
 
 .module-balancing-wizard-tab.is-active:hover::before {
   border-color: var(--accent-strong);
+  background: var(--accent-strong);
 }
 
 .module-balancing-wizard-add {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  min-height: 42px;
-  width: 44px;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 4px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--surface-1);
+  transition: border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.module-balancing-wizard-add:hover {
+  border-color: var(--accent-soft);
+  background: var(--accent-soft);
 }
 
 .module-balancing-page {
@@ -1045,8 +1065,8 @@
     padding: 4px 4px;
   }
 
-  .module-balancing-wizard-tabs::before {
-    top: 12px;
+  .module-balancing-wizard-step-track::before {
+    top: 4px;
   }
 
   .module-balancing-page {

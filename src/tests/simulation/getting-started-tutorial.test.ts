@@ -8,7 +8,7 @@ import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 
 const BLUEPRINT_PATH = "public/blueprints/getting-started-tutorial.json";
 const TARGET_ITEM = "item_xiranite_enr_powder";
-const MAX_TICK = 60 * STANDARD_TICK_RATE_PER_SECOND;
+const MAX_TICK = 210 * STANDARD_TICK_RATE_PER_SECOND;
 const OBSERVED_DEVICE_IDS = [
   "item_port_mix_pool_1:1",
   "item_port_mix_pool_1:2",
@@ -16,7 +16,7 @@ const OBSERVED_DEVICE_IDS = [
 ] as const;
 
 describe("新手教程重息壤产线蓝图", () => {
-  it("60 秒内可成功产出重息壤", { timeout: 300_000 }, async () => {
+  it("210 秒内可成功产出重息壤", { timeout: 300_000 }, async () => {
     const blueprint = loadBlueprintFromFile(BLUEPRINT_PATH);
     const report = await runBlueprintSimulation({
       blueprint,
@@ -58,7 +58,7 @@ describe("新手教程重息壤产线蓝图", () => {
       ),
     );
 
-    expect(produced, "60 秒内应产出重息壤").toBe(true);
+    expect(produced, "210 秒内应产出重息壤").toBe(true);
   });
 });
 

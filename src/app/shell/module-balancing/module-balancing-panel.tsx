@@ -911,6 +911,7 @@ function WizardNavigation({
         <span>{t("moduleBalancing.moduleLibrary")}</span>
       </button>
       <div className={cm(styles, "module-balancing-wizard-tabs")}>
+        <div className={cm(styles, "module-balancing-wizard-step-track")}>
         <button
           className={cm(styles, `module-balancing-wizard-tab${activePage.kind === "canvas" ? " is-active" : ""}`)}
           type="button"
@@ -942,6 +943,7 @@ function WizardNavigation({
         >
           {t("moduleBalancing.summary")}
         </button>
+        </div>
         <button
           aria-label={t("moduleBalancing.newStage")}
           className={cm(styles, "module-balancing-wizard-add")}
