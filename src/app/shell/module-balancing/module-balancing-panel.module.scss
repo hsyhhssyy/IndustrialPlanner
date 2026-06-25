@@ -29,7 +29,6 @@
   flex: 0 0 auto;
   min-height: 42px;
   border: 0;
-  border-right: 1px solid var(--line);
   background: transparent;
   color: var(--text-1);
   cursor: pointer;
@@ -69,11 +68,11 @@
   position: absolute;
   right: -7px;
   bottom: 7px;
-  z-index: 1;
   width: 12px;
   height: 12px;
-  border-top: 1px solid var(--line);
-  border-right: 1px solid var(--line);
+  // 菱形作为当前 tab 的视觉延伸，仅靠 background:inherit 填色；
+  // 不用 border 以避免在 tab 内部产生多余分隔线。
+  // 不设 z-index，让后续兄弟 tab 自然遮盖右半菱形。
   background: inherit;
   content: "";
   transform: rotate(45deg);
@@ -157,7 +156,7 @@
 
 .module-balancing-drawer {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   width: min(560px, 92%);
   height: 100%;
   min-height: 0;
@@ -169,36 +168,47 @@
 .module-balancing-drawer-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
+  min-width: 0;
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
 }
 
 .module-balancing-drawer-header h3 {
+  flex: 0 0 auto;
   margin: 0;
   font-size: 0.9rem;
 }
 
 .module-balancing-library-tabs {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding: 8px 10px 0;
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  gap: 4px;
+  padding: 0;
 }
 
 .module-balancing-library-tabs button {
-  min-height: 34px;
-  border: 0;
-  border-bottom: 2px solid var(--line);
+  min-width: 52px;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
   background: transparent;
   color: var(--text-2);
   cursor: pointer;
+  font-size: 0.72rem;
 }
 
 .module-balancing-library-tabs button.is-active {
-  border-color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent-strong) 55%, var(--line));
+  background: var(--accent-soft);
   color: var(--text-0);
   font-weight: 800;
+}
+
+.module-balancing-drawer-header > .module-balancing-icon-button {
+  margin-left: auto;
 }
 
 .module-balancing-drawer > .module-balancing-library {

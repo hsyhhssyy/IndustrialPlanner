@@ -2,6 +2,12 @@
   "version": "v1.3.0",
   "folders": [
     {
+      "name": "新手教程",
+      "blueprints": [
+        "getting-started-tutorial"
+      ]
+    },
+    {
       "name": "四号谷地产线样例",
       "blueprints": [
         "premium-capsule-line"

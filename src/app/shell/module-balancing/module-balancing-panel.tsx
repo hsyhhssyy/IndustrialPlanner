@@ -514,14 +514,14 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           <aside className={cm(styles, "module-balancing-drawer")}>
             <header className={cm(styles, "module-balancing-drawer-header")}>
               <h3>{t("moduleBalancing.moduleLibrary")}</h3>
+              <div className={cm(styles, "module-balancing-library-tabs")}>
+                <button className={cm(styles, libraryTab === "recipes" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("recipes")}>{t("moduleBalancing.recipes")}</button>
+                <button className={cm(styles, libraryTab === "modules" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("modules")}>{t("moduleBalancing.modules")}</button>
+              </div>
               <button className={cm(styles, "module-balancing-icon-button")} type="button" onClick={() => setLibraryOpen(false)} aria-label={t("action.close")}>
                 <LucideX aria-hidden="true" />
               </button>
             </header>
-            <div className={cm(styles, "module-balancing-library-tabs")}>
-              <button className={cm(styles, libraryTab === "recipes" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("recipes")}>{t("moduleBalancing.recipes")}</button>
-              <button className={cm(styles, libraryTab === "modules" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("modules")}>{t("moduleBalancing.modules")}</button>
-            </div>
             <ModuleLibrary
               activeCanvas={activeCanvas}
               activeActivityIds={activeActivityIds}
