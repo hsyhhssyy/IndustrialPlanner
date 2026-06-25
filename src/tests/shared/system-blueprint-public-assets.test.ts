@@ -19,27 +19,31 @@ describe("system-blueprint public assets", () => {
     const rootDirectory = listSystemBlueprintDirectory(snapshot, null);
 
     expect(snapshot.version).toBe("v1.3.0");
-    expect(rootDirectory.folders).toHaveLength(3);
+    expect(rootDirectory.folders).toHaveLength(4);
     expect(rootDirectory.folders[0]).toMatchObject({
-      name: "四号谷地产线样例",
+      name: "新手教程",
       parentFolderId: null,
     });
     expect(rootDirectory.folders[1]).toMatchObject({
-      name: "武陵产线样例",
+      name: "四号谷地产线样例",
       parentFolderId: null,
     });
     expect(rootDirectory.folders[2]).toMatchObject({
+      name: "武陵产线样例",
+      parentFolderId: null,
+    });
+    expect(rootDirectory.folders[3]).toMatchObject({
       name: "赤石科技",
       parentFolderId: null,
     });
 
     const valley4FolderDirectory = listSystemBlueprintDirectory(
       snapshot,
-      rootDirectory.folders[0]?.folderId ?? null,
+      rootDirectory.folders[1]?.folderId ?? null,
     );
     const wulingFolderDirectory = listSystemBlueprintDirectory(
       snapshot,
-      rootDirectory.folders[1]?.folderId ?? null,
+      rootDirectory.folders[2]?.folderId ?? null,
     );
 
     expect(valley4FolderDirectory.blueprints).toHaveLength(1);
@@ -100,7 +104,7 @@ describe("system-blueprint public assets", () => {
 
     const chishiFolderDirectory = listSystemBlueprintDirectory(
       snapshot,
-      rootDirectory.folders[2]?.folderId ?? null,
+      rootDirectory.folders[3]?.folderId ?? null,
     );
     expect(chishiFolderDirectory.blueprints).toHaveLength(1);
     expect(chishiFolderDirectory.blueprints[0]).toMatchObject({

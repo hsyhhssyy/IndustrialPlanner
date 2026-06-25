@@ -27,7 +27,6 @@
 .module-balancing-wizard-tab,
 .module-balancing-wizard-add {
   flex: 0 0 auto;
-  min-height: 42px;
   border: 0;
   background: transparent;
   color: var(--text-1);
@@ -38,6 +37,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  min-height: 42px;
   padding: 0 14px;
   background: var(--surface-2);
   color: var(--text-0);
@@ -50,65 +50,92 @@
   height: 17px;
 }
 
+// AI-CORRECTION 2026-06-25: 从 ::after 菱形分隔符改为 stepper 步骤条（圆点+横线）。
+// 避免菱形在 hover/active 状态下边界泄漏和 "反向箭头" 问题。
 .module-balancing-wizard-tabs {
   display: flex;
+  align-items: center;
+  position: relative;
   min-width: 0;
   overflow-x: auto;
   scrollbar-width: thin;
+  padding: 6px 6px;
+}
+
+// 步骤连接线（贯穿所有圆点）
+.module-balancing-wizard-tabs::before {
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background: var(--line);
+  content: "";
+  z-index: 0;
 }
 
 .module-balancing-wizard-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
   position: relative;
-  min-width: 92px;
-  padding: 0 18px;
+  min-width: 48px;
+  padding: 0 14px;
   white-space: nowrap;
+  z-index: 1;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-2);
 }
 
-.module-balancing-wizard-tab::after {
-  position: absolute;
-  right: -7px;
-  bottom: 7px;
-  width: 12px;
-  height: 12px;
-  // 菱形作为当前 tab 的视觉延伸，仅靠 background:inherit 填色；
-  // 不用 border 以避免在 tab 内部产生多余分隔线。
-  // 不设 z-index，让后续兄弟 tab 自然遮盖右半菱形。
-  background: inherit;
+// 步骤圆点
+.module-balancing-wizard-tab::before {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--surface-1);
   content: "";
-  transform: rotate(45deg);
+  flex-shrink: 0;
 }
 
 .module-balancing-wizard-tab.is-active {
-  background: var(--accent-soft);
   color: var(--text-0);
   font-weight: 800;
 }
 
 .module-balancing-wizard-tab.is-active::before {
-  position: absolute;
-  right: 12px;
-  bottom: 0;
-  left: 12px;
-  height: 3px;
-  border-radius: 3px 3px 0 0;
+  border-color: var(--accent-strong);
   background: var(--accent-strong);
-  content: "";
 }
 
 .module-balancing-library-button:hover,
-.module-balancing-wizard-tab:hover,
 .module-balancing-wizard-add:hover {
   background: var(--surface-3);
 }
 
+.module-balancing-wizard-tab:hover {
+  color: var(--text-0);
+}
+
+.module-balancing-wizard-tab:hover::before {
+  border-color: var(--text-1);
+}
+
 .module-balancing-wizard-tab.is-active:hover {
-  background: var(--accent-soft);
+  color: var(--text-0);
+}
+
+.module-balancing-wizard-tab.is-active:hover::before {
+  border-color: var(--accent-strong);
 }
 
 .module-balancing-wizard-add {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
+  min-height: 42px;
   width: 44px;
 }
 
@@ -969,8 +996,9 @@
   }
 
   .module-balancing-wizard-tab {
-    min-width: 82px;
-    padding: 0 14px;
+    min-width: 40px;
+    padding: 0 10px;
+    font-size: 11px;
   }
 
   .module-balancing-page {
@@ -997,9 +1025,28 @@
 
 @media (max-height: 420px) {
   .module-balancing-library-button,
-  .module-balancing-wizard-tab,
   .module-balancing-wizard-add {
     min-height: 36px;
+  }
+
+  // Stepper 模式在紧凑高度下缩小间距
+  .module-balancing-wizard-tab {
+    gap: 3px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .module-balancing-wizard-tab::before {
+    width: 8px;
+    height: 8px;
+  }
+
+  .module-balancing-wizard-tabs {
+    padding: 4px 4px;
+  }
+
+  .module-balancing-wizard-tabs::before {
+    top: 12px;
   }
 
   .module-balancing-page {
