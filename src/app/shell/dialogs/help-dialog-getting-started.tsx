@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { marked } from "marked";
+import { marked, Renderer } from "marked";
 
 import styles from "@/app/shell/dialogs/dialogs.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -7,24 +7,28 @@ import { cm } from "@/app/shell/shared/css-module-class";
 const GETTING_STARTED_PATH = "/help/getting-started.md";
 
 // 复用与 changelog 相同的 marked 图片解析逻辑
-marked.use({
-  renderer: {
-    image({ href, title, text }) {
-      const resolvedUrl = resolveHelpImageUrl(href);
-      const titleAttr = title !== null ? ` title="${escapeAttr(title)}"` : "";
-      return `<img src="${escapeAttr(resolvedUrl)}" alt="${escapeAttr(text)}"${titleAttr} loading="lazy">`;
-    },
-  },
-});
+let currentMarkdownBaseDir = "/help";
+
+function createHelpRenderer(): Renderer {
+  const renderer = new Renderer();
+  renderer.image = function ({ href, title, text }: { href: string; title: string | null; text: string }) {
+    const resolvedUrl = resolveHelpImageUrl(href);
+    const titleAttr = title !== null ? ` title="${escapeAttr(title)}"` : "";
+    return `<img src="${escapeAttr(resolvedUrl)}" alt="${escapeAttr(text)}"${titleAttr} loading="lazy">`;
+  };
+  return renderer;
+}
+
+const helpRenderer = createHelpRenderer();
 
 function resolveHelpImageUrl(url: string): string {
   if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
     return url;
   }
   if (url.startsWith("./")) {
-    return `/help/${url.slice(2)}`;
+    return `${currentMarkdownBaseDir}/${url.slice(2)}`;
   }
-  return `/help/${url}`;
+  return `${currentMarkdownBaseDir}/${url}`;
 }
 
 function escapeAttr(value: string): string {
@@ -49,7 +53,8 @@ export function GettingStartedContent() {
           throw new Error(`HTTP ${resp.status}`);
         }
         const md = await resp.text();
-        const parsed = await marked.parse(md);
+        currentMarkdownBaseDir = GETTING_STARTED_PATH.substring(0, GETTING_STARTED_PATH.lastIndexOf("/"));
+        const parsed = await marked.parse(md, { renderer: helpRenderer });
         if (!cancelled) {
           setHtml(parsed as string);
         }

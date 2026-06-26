@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { marked } from "marked";
+import { marked, Renderer } from "marked";
 
 import styles from "@/app/shell/dialogs/dialogs.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -7,16 +7,17 @@ import { cm } from "@/app/shell/shared/css-module-class";
 const CHANGELOG_INDEX_PATH = "/changelog/index.json";
 const CHANGELOG_IMG_BASE = "/changelog/img/";
 
-// 配置 marked：解析 changelog 图片相对路径
-marked.use({
-  renderer: {
-    image({ href, title, text }) {
-      const resolvedUrl = resolveChangelogImageUrl(href);
-      const titleAttr = title !== null ? ` title="${escapeAttr(title)}"` : "";
-      return `<img src="${escapeAttr(resolvedUrl)}" alt="${escapeAttr(text)}"${titleAttr} loading="lazy">`;
-    },
-  },
-});
+function createChangelogRenderer(): Renderer {
+  const renderer = new Renderer();
+  renderer.image = function ({ href, title, text }: { href: string; title: string | null; text: string }) {
+    const resolvedUrl = resolveChangelogImageUrl(href);
+    const titleAttr = title !== null ? ` title="${escapeAttr(title)}"` : "";
+    return `<img src="${escapeAttr(resolvedUrl)}" alt="${escapeAttr(text)}"${titleAttr} loading="lazy">`;
+  };
+  return renderer;
+}
+
+const changelogRenderer = createChangelogRenderer();
 
 function resolveChangelogImageUrl(url: string): string {
   if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
@@ -85,7 +86,7 @@ async function loadSingleEntry(entry: ChangelogEntry): Promise<ChangelogEntry> {
     }
 
     const md = await resp.text();
-    const html = await marked.parse(md);
+    const html = await marked.parse(md, { renderer: changelogRenderer });
 
     return { ...entry, loaded: true, html: html as string };
   } catch (err) {
