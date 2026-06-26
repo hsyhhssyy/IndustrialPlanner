@@ -34,7 +34,22 @@ export function resolveStorageSlotId(
   state: SimulationMutableRuntimeState,
   slotId: string,
 ): string {
-  return state.persistent.shareAllTargetSlotIdBySourceSlotId[slotId] ?? slotId;
+  const visited = new Set<string>();
+  let current = slotId;
+
+  while (true) {
+    if (visited.has(current)) {
+      return slotId;
+    }
+    visited.add(current);
+
+    const next = state.persistent.shareAllTargetSlotIdBySourceSlotId[current];
+    if (next === undefined || next === current) {
+      return current;
+    }
+
+    current = next;
+  }
 }
 
 /**

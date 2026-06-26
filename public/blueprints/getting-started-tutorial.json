@@ -829,17 +829,26 @@
       },
       "tags": []
     },
+    "pipe_straight_1x1:37": {
+      "id": "pipe_straight_1x1:37",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 8,
+        "y": 15
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
     "item_port_udpipe_loader_1:1": {
       "id": "item_port_udpipe_loader_1:1",
       "definitionId": "item_port_udpipe_loader_1",
       "position": {
-        "x": 8,
+        "x": 9,
         "y": 14
       },
       "rotation": 0,
       "config": {
-        "storageSlotGroups[0].slots[0].lock": "item_liquid_water",
-        "storageSlotGroups[0].slots[0].ignoreStock": true,
         "recipeChannels[0].manualRecipeOnly": true
       },
       "tags": []
@@ -1241,10 +1250,7 @@
         "y": 23
       },
       "rotation": 180,
-      "config": {
-        "storageSlotGroups[0].slots[0].lock": "item_liquid_sewage",
-        "storageSlotGroups[0].slots[0].ignoreStock": true
-      },
+      "config": {},
       "tags": []
     },
     "pipe_straight_1x1:28": {
@@ -1680,6 +1686,7 @@
     "belt_turn_cw_1x1:3",
     "belt_straight_1x1:64",
     "item_port_water_pump_1:1",
+    "pipe_straight_1x1:37",
     "item_port_udpipe_loader_1:1",
     "item_port_udpipe_unloader_1:1",
     "pipe_straight_1x1:1",
@@ -1764,6 +1771,20 @@
       }
     },
     {
+      "id": "warehouse-link:item_port_udpipe_loader_1:2:loader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "item_port_udpipe_loader_1:2",
+        "storageSlotGroupId": "loader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_liquid_sewage"
+      }
+    },
+    {
       "id": "tutorial-dark-pipe-water-link",
       "linkType": "share-all",
       "source": {
@@ -1789,20 +1810,6 @@
         "entityId": "item_port_udpipe_loader_1:2",
         "storageSlotGroupId": "loader_buffer",
         "slotId": "slot_1"
-      }
-    },
-    {
-      "id": "warehouse-link:item_port_udpipe_unloader_1:2:unloader_buffer:slot_1",
-      "linkType": "share-all",
-      "source": {
-        "entityId": "item_port_udpipe_unloader_1:2",
-        "storageSlotGroupId": "unloader_buffer",
-        "slotId": "slot_1"
-      },
-      "target": {
-        "entityId": "warehouse",
-        "storageSlotGroupId": "warehouse",
-        "slotId": "item_liquid_sewage"
       }
     }
   ],

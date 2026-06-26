@@ -7,6 +7,7 @@ import { runBlueprintSimulation } from "./blueprint-runner";
 import {
   createBlueprint,
   createEntity,
+  createWarehouseSlotLink,
   findSlot,
   getDevice,
 } from "./blueprint-test-helpers";
@@ -92,5 +93,39 @@ describe("dark pipe liquid void", () => {
 
     expect(getDevice(report, 1, "inlet").channelRecipes["void_liquid"]).toBeUndefined();
     expect(findSlot(report, finalTick, "inlet", "loader_buffer", "slot_1").count).toBe(4);
+  });
+
+  it("outputs liquid through a linked outlet when the inlet is chained to warehouse stock", async () => {
+    const finalTick = (3 * STANDARD_TICK_RATE_PER_SECOND) + 5;
+    const report = await runBlueprintSimulation({
+      blueprint: createBlueprint(
+        "linked-dark-pipe-inlet-warehouse-source",
+        [
+          createEntity("inlet", "item_port_udpipe_loader_1", -6, 0, 0, {
+            "storageSlotGroups[0].slots[0].lock": "item_liquid_sewage",
+            "storageSlotGroups[0].slots[0].ignoreStock": true,
+            "recipeChannels[0].manualRecipeOnly": true,
+          }),
+          createEntity("outlet", "item_port_udpipe_unloader_1", 0, 0),
+          createEntity("pipe", "pipe_straight_1x1", 3, 1),
+          createEntity("sink", "item_port_udpipe_loader_1", 4, 0, 0, {
+            "recipeChannels[0].manualRecipeOnly": true,
+          }),
+        ],
+        [
+          createWarehouseSlotLink("inlet", "item_liquid_sewage", "loader_buffer", "slot_1"),
+          createDarkPipeSlotLink({
+            inletEntityId: "inlet",
+            outletEntityId: "outlet",
+          }),
+        ],
+      ),
+      maxTickNumber: finalTick,
+      registry: createRegistryContract(),
+    });
+
+    const sinkSlot = findSlot(report, finalTick, "sink", "loader_buffer", "slot_1");
+    expect(sinkSlot.itemType).toBe("item_liquid_sewage");
+    expect(sinkSlot.count).toBeGreaterThan(0);
   });
 });

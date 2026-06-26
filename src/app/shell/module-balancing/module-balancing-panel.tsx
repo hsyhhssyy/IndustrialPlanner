@@ -1205,10 +1205,10 @@ function StageEntryGrid({
               <span>{resolveModuleTitle(module, index, t)}</span>
               <ActivityIconStrip activityIds={activityIds} />
             </span>
+            <strong className={cm(styles, "module-balancing-stage-entry-quantity")}>× {formatFlow(entry.quantity)}</strong>
             <span className={cm(styles, "module-balancing-stage-entry-flow")}>
               {formatPortList(inputs, index, t)} → {formatPortList(outputs, index, t)}
             </span>
-            <strong className={cm(styles, "module-balancing-stage-entry-quantity")}>× {formatFlow(entry.quantity)}</strong>
           </button>
         );
       })}

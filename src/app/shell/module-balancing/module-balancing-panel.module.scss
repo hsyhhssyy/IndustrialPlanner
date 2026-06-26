@@ -701,7 +701,7 @@
   justify-items: stretch;
   gap: 4px 10px;
   min-height: 88px;
-  padding: 12px;
+  padding: 10px 12px;
   border-radius: 10px;
   text-align: left;
 }
@@ -736,9 +736,24 @@
 .module-balancing-stage-entry-title {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 4px;
   min-width: 0;
+}
+
+.module-balancing-stage-entry-flow {
+  grid-column: 2 / -1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.68rem;
+  color: var(--text-2);
+}
+
+.module-balancing-stage-entry-quantity {
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 .module-balancing-stage-entry-title .activity-icon-strip {
@@ -1210,7 +1225,7 @@
 }
 
 .module-balancing-panel.is-touch .module-balancing-stage-entry-grid {
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
 }
 
 .module-balancing-panel.is-touch .module-balancing-balance-detail,
