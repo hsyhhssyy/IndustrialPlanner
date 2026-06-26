@@ -11,8 +11,8 @@ const TARGET_ITEM = "item_xiranite_enr_powder";
 const MAX_TICK = 210 * STANDARD_TICK_RATE_PER_SECOND;
 const OBSERVED_DEVICE_IDS = [
   "item_port_mix_pool_1:1",
-  "item_port_mix_pool_1:2",
   "item_port_xiranite_oven_1:1",
+  "item_liquid_cleaner_1:1",
 ] as const;
 
 describe("新手教程重息壤产线蓝图", () => {

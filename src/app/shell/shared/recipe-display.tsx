@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode } from "react";
+import { type CSSProperties, type MouseEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
@@ -21,6 +21,8 @@ export interface RecipeDisplayProps {
   variant?: "default" | "inspectorStatus";
   progressPercent?: number | null;
   progressKind?: "ring" | "bar";
+  /** 是否为触屏设备，触屏时禁用 hover 触发，仅保留 click toggle */
+  isTouch?: boolean;
   t: (key: string) => string;
 }
 
@@ -40,12 +42,98 @@ export function RecipeDisplay({
   variant = "default",
   progressPercent = null,
   progressKind = "ring",
+  isTouch = false,
   t,
 }: RecipeDisplayProps): ReactNode {
+  const [hoverItemId, setHoverItemId] = useState<string | null>(null);
+  const [clickedItemId, setClickedItemId] = useState<string | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const itemElements = useRef<Map<string, HTMLElement>>(new Map());
+
+  // 点击外部关闭 tooltip
+  useEffect(() => {
+    if (clickedItemId === null) return;
+
+    const handler = (e: PointerEvent) => {
+      const tooltipEl = tooltipRef.current;
+      const itemEl = itemElements.current.get(clickedItemId);
+      const target = e.target as Node | null;
+      if (target === null) return;
+      // 点击在 tooltip 内 → 不关闭
+      if (tooltipEl?.contains(target)) return;
+      // 点击在触发 item 上 → 不关闭，交给 item 的 onClick 处理 toggle
+      if (itemEl?.contains(target)) return;
+      setClickedItemId(null);
+    };
+
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [clickedItemId]);
+
+  const handleItemClick = useCallback((itemId: string) => {
+    setClickedItemId((prev) => {
+      if (prev === itemId) {
+        setHoverItemId(null);
+        return null;
+      }
+      return itemId;
+    });
+  }, []);
+
+  const handleItemEnter = useCallback((itemId: string) => {
+    if (isTouch) return;
+    setHoverItemId(itemId);
+  }, [isTouch]);
+
+  const handleItemLeave = useCallback((itemId: string) => {
+    if (isTouch) return;
+    setHoverItemId((prev) => (prev === itemId ? null : prev));
+  }, [isTouch]);
+
   const recipe = index.recipeById.get(recipeId);
   if (recipe === undefined) return null;
 
   const machine = index.entityById.get(recipe.machineId) ?? null;
+
+  const activeTooltipItemId = clickedItemId ?? hoverItemId;
+  const activeTooltipItem = activeTooltipItemId !== null ? index.itemById.get(activeTooltipItemId) ?? null : null;
+
+  const renderItemIcon = (itemId: string, amount: number, key: string) => {
+    const isActive = activeTooltipItemId === itemId;
+    return (
+      <span
+        key={key}
+        className={cm(styles, "recipe-display-formula-item")}
+        ref={(el) => {
+          if (el !== null) {
+            itemElements.current.set(itemId, el);
+          } else {
+            itemElements.current.delete(itemId);
+          }
+        }}
+        onMouseEnter={() => handleItemEnter(itemId)}
+        onMouseLeave={() => handleItemLeave(itemId)}
+        onClick={(e: MouseEvent) => {
+          e.stopPropagation();
+          handleItemClick(itemId);
+        }}
+      >
+        <span className={cm(styles, "recipe-display-formula-icon")}>
+          <img alt="" src={resolveItemIconSrc(itemId, index)} />
+          <span>{amount}</span>
+        </span>
+        {isActive && activeTooltipItem !== null ? (
+          <div
+            ref={tooltipRef}
+            className={cm(styles, "recipe-display-item-tooltip")}
+          >
+            <img alt="" src={resolveItemIconSrc(activeTooltipItem.id, index)} />
+            <span>{t(activeTooltipItem.nameKey)}</span>
+          </div>
+        ) : null}
+      </span>
+    );
+  };
 
   if (variant === "inspectorStatus") {
     const progressStyle = progressPercent === null
@@ -59,12 +147,9 @@ export function RecipeDisplay({
       <div className={cm(styles, "recipe-display-formula recipe-display-formula-inspector")}>
         <span className={cm(styles, "recipe-display-formula-group")}>
           {recipe.inputs.map((input, i) => (
-            <span key={`in-${input.itemId}`} className={cm(styles, "recipe-display-formula-item")}>
+            <span key={`in-${input.itemId}`} className={cm(styles, "recipe-display-formula-item-group")}>
               {i > 0 && <span className={cm(styles, "recipe-display-formula-plus")}>+</span>}
-              <span className={cm(styles, "recipe-display-formula-icon")}>
-                <img alt="" src={resolveItemIconSrc(input.itemId, index)} />
-                <span>{input.amount}</span>
-              </span>
+              {renderItemIcon(input.itemId, input.amount, `in-${input.itemId}`)}
             </span>
           ))}
         </span>
@@ -77,13 +162,9 @@ export function RecipeDisplay({
           <LucideChevronsRight aria-hidden="true" />
         </span>
         <span className={cm(styles, "recipe-display-formula-group")}>
-          {recipe.outputs.map((output, i) => (
-            <span key={`out-${output.itemId}`} className={cm(styles, "recipe-display-formula-item")}>
-              {i > 0 && <span className={cm(styles, "recipe-display-formula-plus")}>+</span>}
-              <span className={cm(styles, "recipe-display-formula-icon")}>
-                <img alt="" src={resolveItemIconSrc(output.itemId, index)} />
-                <span>{output.amount}</span>
-              </span>
+          {recipe.outputs.map((output, _i) => (
+            <span key={`out-${output.itemId}`} className={cm(styles, "recipe-display-formula-item-group")}>
+              {renderItemIcon(output.itemId, output.amount, `out-${output.itemId}`)}
             </span>
           ))}
         </span>
@@ -94,12 +175,9 @@ export function RecipeDisplay({
   const formula = (
     <div className={cm(styles, "recipe-display-formula")}>
       {recipe.inputs.map((input, i) => (
-        <span key={`in-${input.itemId}`} className={cm(styles, "recipe-display-formula-item")}>
+        <span key={`in-${input.itemId}`} className={cm(styles, "recipe-display-formula-item-group")}>
           {i > 0 && <span className={cm(styles, "recipe-display-formula-plus")}>+</span>}
-          <span className={cm(styles, "recipe-display-formula-icon")}>
-            <img alt="" src={resolveItemIconSrc(input.itemId, index)} />
-            <span>{input.amount}</span>
-          </span>
+          {renderItemIcon(input.itemId, input.amount, `in-${input.itemId}`)}
         </span>
       ))}
       <span className={cm(styles, "recipe-display-formula-arrow")}>
@@ -107,11 +185,8 @@ export function RecipeDisplay({
         <span>{recipe.durationSeconds}{t("productionPlanning.second_short")}</span>
       </span>
       {recipe.outputs.map((output) => (
-        <span key={`out-${output.itemId}`} className={cm(styles, "recipe-display-formula-item")}>
-          <span className={cm(styles, "recipe-display-formula-icon")}>
-            <img alt="" src={resolveItemIconSrc(output.itemId, index)} />
-            <span>{output.amount}</span>
-          </span>
+        <span key={`out-${output.itemId}`} className={cm(styles, "recipe-display-formula-item-group")}>
+          {renderItemIcon(output.itemId, output.amount, `out-${output.itemId}`)}
         </span>
       ))}
     </div>

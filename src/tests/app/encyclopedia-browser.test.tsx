@@ -63,6 +63,7 @@ function BrowserHarness({ appHost }: { appHost: AppHost }) {
       index={index}
       isTouch
       itemFilter={(item) => item.id === "item_copper_ore"}
+      locale="zh-CN"
       mobileSelectedCategories={mobileSelectedCategories}
       onDesktopCategoryChange={setDesktopCategory}
       onEntityClick={() => {}}

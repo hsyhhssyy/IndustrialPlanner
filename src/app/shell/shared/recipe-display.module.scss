@@ -61,9 +61,47 @@
 }
 
 .recipe-display-formula-item {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  cursor: default;
+}
+
+.recipe-display-formula-item-group {
+  display: contents;
+}
+
+.recipe-display-item-tooltip {
+  position: absolute;
+  z-index: 1000;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid color-mix(in srgb, var(--line) 40%, transparent);
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+
+  img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    border-radius: 3px;
+  }
+
+  span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.2;
+  }
 }
 
 .recipe-display-formula-plus {

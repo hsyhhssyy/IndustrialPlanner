@@ -819,7 +819,7 @@ function ModuleCard({
           <ActivityIconStrip activityIds={activityIds} />
         </span>
         {isSystemRecipe ? (
-          <RecipeDisplay recipeId={(module as ModuleBalancingSystemRecipeModule).recipeId} index={index} t={t} />
+          <RecipeDisplay recipeId={(module as ModuleBalancingSystemRecipeModule).recipeId} index={index} isTouch={isTouch} t={t} />
         ) : subtitle !== undefined ? (
           <span className={cm(styles, "module-balancing-module-subtitle")}>{subtitle}</span>
         ) : null}

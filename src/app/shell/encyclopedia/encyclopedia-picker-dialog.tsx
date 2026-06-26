@@ -84,6 +84,7 @@ export const EncyclopediaPickerDialog = observer(function EncyclopediaPickerDial
           (controller.includeInactiveActivityItems || isItemAvailableByActivity(item, effectiveActivityIds))
           && controller.matchesItem(item)
         )}
+        locale={appHost.state.settings.locale}
         mobileSelectedCategories={controller.mobileSelectedCategories}
         recentItemIds={controller.recentItemIds}
         onDesktopCategoryChange={controller.setDesktopCategory}

@@ -6,29 +6,18 @@
   "description": "根据新手入门教程搭建的重息壤生产线，覆盖仓库存取、传送带、管道、暗管、反应池、天有洪炉、供电与存储。",
   "baseId": "wuling_tianwangping_aid",
   "initialGridPoint": {
-    "x": 21,
-    "y": 19
+    "x": 3,
+    "y": 9
   },
   "entities": {
     "item_port_log_hongs_bus_source:1": {
       "id": "item_port_log_hongs_bus_source:1",
       "definitionId": "item_port_log_hongs_bus_source",
       "position": {
-        "x": 5,
-        "y": 5
+        "x": 0,
+        "y": 0
       },
       "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "item_port_log_hongs_bus:1": {
-      "id": "item_port_log_hongs_bus:1",
-      "definitionId": "item_port_log_hongs_bus",
-      "position": {
-        "x": 9,
-        "y": 3
-      },
-      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -36,8 +25,8 @@
       "id": "item_port_unloader_1:1",
       "definitionId": "item_port_unloader_1",
       "position": {
-        "x": 13,
-        "y": 7
+        "x": 1,
+        "y": 4
       },
       "rotation": 0,
       "config": {
@@ -46,36 +35,25 @@
       },
       "tags": []
     },
+    "belt_turn_ccw_1x1:1": {
+      "id": "belt_turn_ccw_1x1:1",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 2,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
     "belt_straight_1x1:1": {
       "id": "belt_straight_1x1:1",
       "definitionId": "belt_straight_1x1",
       "position": {
-        "x": 14,
-        "y": 8
+        "x": 3,
+        "y": 5
       },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:2": {
-      "id": "belt_straight_1x1:2",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 14,
-        "y": 9
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:3": {
-      "id": "belt_straight_1x1:3",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 14,
-        "y": 10
-      },
-      "rotation": 90,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -83,8 +61,30 @@
       "id": "item_log_splitter:1",
       "definitionId": "item_log_splitter",
       "position": {
-        "x": 14,
-        "y": 11
+        "x": 4,
+        "y": 5
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "belt_straight_1x1:2": {
+      "id": "belt_straight_1x1:2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 5,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "belt_straight_1x1:3": {
+      "id": "belt_straight_1x1:3",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 6,
+        "y": 5
       },
       "rotation": 0,
       "config": {},
@@ -94,10 +94,10 @@
       "id": "belt_straight_1x1:4",
       "definitionId": "belt_straight_1x1",
       "position": {
-        "x": 14,
-        "y": 12
+        "x": 7,
+        "y": 5
       },
-      "rotation": 90,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -105,8 +105,8 @@
       "id": "belt_straight_1x1:5",
       "definitionId": "belt_straight_1x1",
       "position": {
-        "x": 14,
-        "y": 13
+        "x": 4,
+        "y": 6
       },
       "rotation": 90,
       "config": {},
@@ -116,318 +116,10 @@
       "id": "belt_straight_1x1:6",
       "definitionId": "belt_straight_1x1",
       "position": {
-        "x": 14,
-        "y": 14
+        "x": 4,
+        "y": 7
       },
       "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:7": {
-      "id": "belt_straight_1x1:7",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 14,
-        "y": 15
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:8": {
-      "id": "belt_straight_1x1:8",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 14,
-        "y": 16
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:9": {
-      "id": "belt_straight_1x1:9",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 14,
-        "y": 17
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:10": {
-      "id": "belt_straight_1x1:10",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 14,
-        "y": 18
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:11": {
-      "id": "belt_straight_1x1:11",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 14,
-        "y": 19
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_turn_ccw_1x1:1": {
-      "id": "belt_turn_ccw_1x1:1",
-      "definitionId": "belt_turn_ccw_1x1",
-      "position": {
-        "x": 14,
-        "y": 20
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:12": {
-      "id": "belt_straight_1x1:12",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 15,
-        "y": 20
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:13": {
-      "id": "belt_straight_1x1:13",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 16,
-        "y": 20
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:14": {
-      "id": "belt_straight_1x1:14",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 17,
-        "y": 20
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:15": {
-      "id": "belt_straight_1x1:15",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 18,
-        "y": 20
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_turn_ccw_1x1:2": {
-      "id": "belt_turn_ccw_1x1:2",
-      "definitionId": "belt_turn_ccw_1x1",
-      "position": {
-        "x": 19,
-        "y": 20
-      },
-      "rotation": 270,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:16": {
-      "id": "belt_straight_1x1:16",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 19,
-        "y": 19
-      },
-      "rotation": 270,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:17": {
-      "id": "belt_straight_1x1:17",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 15,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:18": {
-      "id": "belt_straight_1x1:18",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 16,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:19": {
-      "id": "belt_straight_1x1:19",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 17,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:20": {
-      "id": "belt_straight_1x1:20",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 18,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:21": {
-      "id": "belt_straight_1x1:21",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 19,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:22": {
-      "id": "belt_straight_1x1:22",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 20,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:23": {
-      "id": "belt_straight_1x1:23",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 21,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:24": {
-      "id": "belt_straight_1x1:24",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 22,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:25": {
-      "id": "belt_straight_1x1:25",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 23,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:26": {
-      "id": "belt_straight_1x1:26",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 24,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:27": {
-      "id": "belt_straight_1x1:27",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 25,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:28": {
-      "id": "belt_straight_1x1:28",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 26,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:29": {
-      "id": "belt_straight_1x1:29",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 27,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:30": {
-      "id": "belt_straight_1x1:30",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 28,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:31": {
-      "id": "belt_straight_1x1:31",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 29,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:32": {
-      "id": "belt_straight_1x1:32",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 30,
-        "y": 11
-      },
-      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -435,384 +127,10 @@
       "id": "belt_turn_cw_1x1:1",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
-        "x": 37,
-        "y": 11
+        "x": 13,
+        "y": 2
       },
       "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:33": {
-      "id": "belt_straight_1x1:33",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 12
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:34": {
-      "id": "belt_straight_1x1:34",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 13
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:35": {
-      "id": "belt_straight_1x1:35",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 14
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:36": {
-      "id": "belt_straight_1x1:36",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 15
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:37": {
-      "id": "belt_straight_1x1:37",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 16
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:38": {
-      "id": "belt_straight_1x1:38",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 17
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:39": {
-      "id": "belt_straight_1x1:39",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 18
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:40": {
-      "id": "belt_straight_1x1:40",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 19
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:41": {
-      "id": "belt_straight_1x1:41",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 20
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:42": {
-      "id": "belt_straight_1x1:42",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 21
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:43": {
-      "id": "belt_straight_1x1:43",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 22
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:44": {
-      "id": "belt_straight_1x1:44",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 23
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:45": {
-      "id": "belt_straight_1x1:45",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 24
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:46": {
-      "id": "belt_straight_1x1:46",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 25
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:47": {
-      "id": "belt_straight_1x1:47",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 26
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:48": {
-      "id": "belt_straight_1x1:48",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 27
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:49": {
-      "id": "belt_straight_1x1:49",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 28
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:50": {
-      "id": "belt_straight_1x1:50",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 29
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:51": {
-      "id": "belt_straight_1x1:51",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 30
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:52": {
-      "id": "belt_straight_1x1:52",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 31
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:53": {
-      "id": "belt_straight_1x1:53",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 37,
-        "y": 32
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "belt_turn_cw_1x1:2": {
-      "id": "belt_turn_cw_1x1:2",
-      "definitionId": "belt_turn_cw_1x1",
-      "position": {
-        "x": 37,
-        "y": 33
-      },
-      "rotation": 270,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:54": {
-      "id": "belt_straight_1x1:54",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 30,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:55": {
-      "id": "belt_straight_1x1:55",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 29,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:56": {
-      "id": "belt_straight_1x1:56",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 28,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:57": {
-      "id": "belt_straight_1x1:57",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 27,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:58": {
-      "id": "belt_straight_1x1:58",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 26,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:59": {
-      "id": "belt_straight_1x1:59",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 25,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:60": {
-      "id": "belt_straight_1x1:60",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 24,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:61": {
-      "id": "belt_straight_1x1:61",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 23,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:62": {
-      "id": "belt_straight_1x1:62",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 22,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:63": {
-      "id": "belt_straight_1x1:63",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 21,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_turn_cw_1x1:3": {
-      "id": "belt_turn_cw_1x1:3",
-      "definitionId": "belt_turn_cw_1x1",
-      "position": {
-        "x": 20,
-        "y": 33
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:64": {
-      "id": "belt_straight_1x1:64",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 20,
-        "y": 32
-      },
-      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -820,8 +138,8 @@
       "id": "item_port_water_pump_1:1",
       "definitionId": "item_port_water_pump_1",
       "position": {
-        "x": 5,
-        "y": 14
+        "x": -10,
+        "y": 9
       },
       "rotation": 0,
       "config": {
@@ -829,12 +147,12 @@
       },
       "tags": []
     },
-    "pipe_straight_1x1:37": {
-      "id": "pipe_straight_1x1:37",
+    "pipe_straight_1x1:1": {
+      "id": "pipe_straight_1x1:1",
       "definitionId": "pipe_straight_1x1",
       "position": {
-        "x": 8,
-        "y": 15
+        "x": -7,
+        "y": 10
       },
       "rotation": 0,
       "config": {},
@@ -844,8 +162,8 @@
       "id": "item_port_udpipe_loader_1:1",
       "definitionId": "item_port_udpipe_loader_1",
       "position": {
-        "x": 9,
-        "y": 14
+        "x": -6,
+        "y": 9
       },
       "rotation": 0,
       "config": {
@@ -857,21 +175,21 @@
       "id": "item_port_udpipe_unloader_1:1",
       "definitionId": "item_port_udpipe_unloader_1",
       "position": {
-        "x": 26,
-        "y": 14
+        "x": 0,
+        "y": 6
       },
-      "rotation": 180,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
-    "pipe_straight_1x1:1": {
-      "id": "pipe_straight_1x1:1",
-      "definitionId": "pipe_straight_1x1",
+    "pipe_turn_ccw_1x1:1": {
+      "id": "pipe_turn_ccw_1x1:1",
+      "definitionId": "pipe_turn_ccw_1x1",
       "position": {
-        "x": 25,
-        "y": 15
+        "x": 1,
+        "y": 9
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -879,21 +197,10 @@
       "id": "pipe_straight_1x1:2",
       "definitionId": "pipe_straight_1x1",
       "position": {
-        "x": 24,
-        "y": 15
+        "x": 2,
+        "y": 9
       },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:3": {
-      "id": "pipe_straight_1x1:3",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 23,
-        "y": 15
-      },
-      "rotation": 180,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -901,424 +208,14 @@
       "id": "item_port_mix_pool_1:1",
       "definitionId": "item_port_mix_pool_1",
       "position": {
-        "x": 18,
-        "y": 14
+        "x": 3,
+        "y": 8
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "channelRecipes": {
-          "ch1": "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic"
-        },
-        "portGroups[2].ports[0].acceptRule": {
-          "base": {
-            "kind": "item",
-            "itemId": "item_liquid_xiranite"
-          },
-          "exclude": []
-        }
-      },
-      "tags": []
-    },
-    "pipe_straight_1x1:4": {
-      "id": "pipe_straight_1x1:4",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 17,
-        "y": 15
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "pipe_turn_cw_1x1:1": {
-      "id": "pipe_turn_cw_1x1:1",
-      "definitionId": "pipe_turn_cw_1x1",
-      "position": {
-        "x": 16,
-        "y": 15
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:5": {
-      "id": "pipe_straight_1x1:5",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 16,
-        "y": 14
-      },
-      "rotation": 270,
-      "config": {},
-      "tags": []
-    },
-    "pipe_turn_cw_1x1:2": {
-      "id": "pipe_turn_cw_1x1:2",
-      "definitionId": "pipe_turn_cw_1x1",
-      "position": {
-        "x": 16,
-        "y": 13
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:6": {
-      "id": "pipe_straight_1x1:6",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 17,
-        "y": 13
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:7": {
-      "id": "pipe_straight_1x1:7",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 18,
-        "y": 13
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:8": {
-      "id": "pipe_straight_1x1:8",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 19,
-        "y": 13
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:9": {
-      "id": "pipe_straight_1x1:9",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 20,
-        "y": 13
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:10": {
-      "id": "pipe_straight_1x1:10",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 21,
-        "y": 13
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:11": {
-      "id": "pipe_straight_1x1:11",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 22,
-        "y": 13
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:12": {
-      "id": "pipe_straight_1x1:12",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 23,
-        "y": 13
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:13": {
-      "id": "pipe_straight_1x1:13",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 24,
-        "y": 13
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:14": {
-      "id": "pipe_straight_1x1:14",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 25,
-        "y": 13
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:15": {
-      "id": "pipe_straight_1x1:15",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 26,
-        "y": 13
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:16": {
-      "id": "pipe_straight_1x1:16",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 27,
-        "y": 13
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:17": {
-      "id": "pipe_straight_1x1:17",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 28,
-        "y": 13
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:18": {
-      "id": "pipe_straight_1x1:18",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 29,
-        "y": 13
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "pipe_turn_cw_1x1:3": {
-      "id": "pipe_turn_cw_1x1:3",
-      "definitionId": "pipe_turn_cw_1x1",
-      "position": {
-        "x": 30,
-        "y": 13
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:19": {
-      "id": "pipe_straight_1x1:19",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 30,
-        "y": 14
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:20": {
-      "id": "pipe_straight_1x1:20",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 30,
-        "y": 15
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:21": {
-      "id": "pipe_straight_1x1:21",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 30,
-        "y": 16
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:22": {
-      "id": "pipe_straight_1x1:22",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 30,
-        "y": 17
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:23": {
-      "id": "pipe_straight_1x1:23",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 30,
-        "y": 18
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:24": {
-      "id": "pipe_straight_1x1:24",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 30,
-        "y": 19
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:25": {
-      "id": "pipe_straight_1x1:25",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 30,
-        "y": 20
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:26": {
-      "id": "pipe_straight_1x1:26",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 30,
-        "y": 21
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_turn_cw_1x1:4": {
-      "id": "pipe_turn_cw_1x1:4",
-      "definitionId": "pipe_turn_cw_1x1",
-      "position": {
-        "x": 30,
-        "y": 22
-      },
-      "rotation": 270,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:27": {
-      "id": "pipe_straight_1x1:27",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 29,
-        "y": 22
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "item_port_udpipe_loader_1:2": {
-      "id": "item_port_udpipe_loader_1:2",
-      "definitionId": "item_port_udpipe_loader_1",
-      "position": {
-        "x": 5,
-        "y": 20
-      },
-      "rotation": 0,
-      "config": {
-        "storageSlotGroups[0].slots[0].lock": "item_liquid_sewage",
-        "storageSlotGroups[0].slots[0].ignoreStock": true,
-        "recipeChannels[0].manualRecipeOnly": true
-      },
-      "tags": []
-    },
-    "item_port_udpipe_unloader_1:2": {
-      "id": "item_port_udpipe_unloader_1:2",
-      "definitionId": "item_port_udpipe_unloader_1",
-      "position": {
-        "x": 34,
-        "y": 23
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:28": {
-      "id": "pipe_straight_1x1:28",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 33,
-        "y": 24
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:29": {
-      "id": "pipe_straight_1x1:29",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 32,
-        "y": 24
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:30": {
-      "id": "pipe_straight_1x1:30",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 31,
-        "y": 24
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:35": {
-      "id": "pipe_straight_1x1:35",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 30,
-        "y": 24
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:36": {
-      "id": "pipe_straight_1x1:36",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 29,
-        "y": 24
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "item_port_mix_pool_1:2": {
-      "id": "item_port_mix_pool_1:2",
-      "definitionId": "item_port_mix_pool_1",
-      "position": {
-        "x": 24,
-        "y": 21
-      },
-      "rotation": 0,
-      "config": {
-        "channelRecipes": {
-          "ch1": "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
+          "ch1": "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic",
+          "ch2": "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
         },
         "portGroups[2].ports[0].acceptRule": {
           "base": {
@@ -1337,69 +234,128 @@
       },
       "tags": []
     },
-    "pipe_turn_ccw_1x1:1": {
-      "id": "pipe_turn_ccw_1x1:1",
-      "definitionId": "pipe_turn_ccw_1x1",
-      "position": {
-        "x": 23,
-        "y": 24
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:31": {
-      "id": "pipe_straight_1x1:31",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 23,
-        "y": 25
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:32": {
-      "id": "pipe_straight_1x1:32",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 23,
-        "y": 26
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:33": {
-      "id": "pipe_straight_1x1:33",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 23,
-        "y": 27
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_straight_1x1:34": {
-      "id": "pipe_straight_1x1:34",
-      "definitionId": "pipe_straight_1x1",
-      "position": {
-        "x": 23,
-        "y": 28
-      },
-      "rotation": 90,
-      "config": {},
-      "tags": []
-    },
-    "pipe_turn_cw_1x1:5": {
-      "id": "pipe_turn_cw_1x1:5",
+    "pipe_turn_cw_1x1:1": {
+      "id": "pipe_turn_cw_1x1:1",
       "definitionId": "pipe_turn_cw_1x1",
       "position": {
-        "x": 23,
-        "y": 29
+        "x": 1,
+        "y": 11
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "pipe_straight_1x1:3": {
+      "id": "pipe_straight_1x1:3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 11
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "item_port_udpipe_loader_1:2": {
+      "id": "item_port_udpipe_loader_1:2",
+      "definitionId": "item_port_udpipe_loader_1",
+      "position": {
+        "x": -10,
+        "y": 14
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].lock": "item_liquid_sewage",
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "recipeChannels[0].manualRecipeOnly": true
+      },
+      "tags": []
+    },
+    "item_port_udpipe_unloader_1:2": {
+      "id": "item_port_udpipe_unloader_1:2",
+      "definitionId": "item_port_udpipe_unloader_1",
+      "position": {
+        "x": 0,
+        "y": 12
       },
       "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "pipe_straight_1x1:4": {
+      "id": "pipe_straight_1x1:4",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 8,
+        "y": 9
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pipe_straight_1x1:5": {
+      "id": "pipe_straight_1x1:5",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 9
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pipe_turn_ccw_1x1:2": {
+      "id": "pipe_turn_ccw_1x1:2",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 10,
+        "y": 9
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "pipe_straight_1x1:6": {
+      "id": "pipe_straight_1x1:6",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 8
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "pipe_straight_1x1:7": {
+      "id": "pipe_straight_1x1:7",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 7
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "pipe_straight_1x1:8": {
+      "id": "pipe_straight_1x1:8",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 8,
+        "y": 11
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pipe_straight_1x1:9": {
+      "id": "pipe_straight_1x1:9",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 11
+      },
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -1407,10 +363,10 @@
       "id": "item_port_xiranite_oven_1:1",
       "definitionId": "item_port_xiranite_oven_1",
       "position": {
-        "x": 18,
-        "y": 27
+        "x": 8,
+        "y": 2
       },
-      "rotation": 0,
+      "rotation": 90,
       "config": {
         "channelRecipes": {
           "default": "r_xiranite_oven_xiranite_enr_powder_from_xiranite_powder_and_waste_liquid_basic"
@@ -1418,12 +374,38 @@
       },
       "tags": []
     },
+    "item_port_storager_1:1": {
+      "id": "item_port_storager_1:1",
+      "definitionId": "item_port_storager_1",
+      "position": {
+        "x": 13,
+        "y": 3
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "warehouse_submit": "r_warehouse_submit"
+        }
+      },
+      "tags": []
+    },
+    "item_liquid_cleaner_1:1": {
+      "id": "item_liquid_cleaner_1:1",
+      "definitionId": "item_liquid_cleaner_1",
+      "position": {
+        "x": 10,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
     "item_port_power_diffuser_1:1": {
       "id": "item_port_power_diffuser_1:1",
       "definitionId": "item_port_power_diffuser_1",
       "position": {
-        "x": 15,
-        "y": 27
+        "x": 8,
+        "y": 7
       },
       "rotation": 0,
       "config": {},
@@ -1433,317 +415,53 @@
       "id": "item_port_power_diffuser_1:2",
       "definitionId": "item_port_power_diffuser_1",
       "position": {
-        "x": 20,
-        "y": 19
+        "x": -7,
+        "y": 12
       },
       "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "item_port_storager_1:1": {
-      "id": "item_port_storager_1:1",
-      "definitionId": "item_port_storager_1",
-      "position": {
-        "x": 19,
-        "y": 23
-      },
-      "rotation": 0,
-      "config": {
-        "channelRecipes": {
-          "warehouse_submit": "r_warehouse_submit"
-        }
-      },
-      "tags": []
-    },
-    "belt_straight_1x1:65": {
-      "id": "belt_straight_1x1:65",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 19,
-        "y": 26
-      },
-      "rotation": 270,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:66": {
-      "id": "belt_straight_1x1:66",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 31,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:67": {
-      "id": "belt_straight_1x1:67",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 32,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:68": {
-      "id": "belt_straight_1x1:68",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 33,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:69": {
-      "id": "belt_straight_1x1:69",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 34,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:70": {
-      "id": "belt_straight_1x1:70",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 35,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:71": {
-      "id": "belt_straight_1x1:71",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 36,
-        "y": 11
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:72": {
-      "id": "belt_straight_1x1:72",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 36,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:73": {
-      "id": "belt_straight_1x1:73",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 35,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:74": {
-      "id": "belt_straight_1x1:74",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 34,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:75": {
-      "id": "belt_straight_1x1:75",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 33,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:76": {
-      "id": "belt_straight_1x1:76",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 32,
-        "y": 33
-      },
-      "rotation": 180,
-      "config": {},
-      "tags": []
-    },
-    "belt_straight_1x1:77": {
-      "id": "belt_straight_1x1:77",
-      "definitionId": "belt_straight_1x1",
-      "position": {
-        "x": 31,
-        "y": 33
-      },
-      "rotation": 180,
       "config": {},
       "tags": []
     }
   },
   "entityOrder": [
     "item_port_log_hongs_bus_source:1",
-    "item_port_log_hongs_bus:1",
     "item_port_unloader_1:1",
+    "belt_turn_ccw_1x1:1",
     "belt_straight_1x1:1",
+    "item_log_splitter:1",
     "belt_straight_1x1:2",
     "belt_straight_1x1:3",
-    "item_log_splitter:1",
     "belt_straight_1x1:4",
     "belt_straight_1x1:5",
     "belt_straight_1x1:6",
-    "belt_straight_1x1:7",
-    "belt_straight_1x1:8",
-    "belt_straight_1x1:9",
-    "belt_straight_1x1:10",
-    "belt_straight_1x1:11",
-    "belt_turn_ccw_1x1:1",
-    "belt_straight_1x1:12",
-    "belt_straight_1x1:13",
-    "belt_straight_1x1:14",
-    "belt_straight_1x1:15",
-    "belt_turn_ccw_1x1:2",
-    "belt_straight_1x1:16",
-    "belt_straight_1x1:17",
-    "belt_straight_1x1:18",
-    "belt_straight_1x1:19",
-    "belt_straight_1x1:20",
-    "belt_straight_1x1:21",
-    "belt_straight_1x1:22",
-    "belt_straight_1x1:23",
-    "belt_straight_1x1:24",
-    "belt_straight_1x1:25",
-    "belt_straight_1x1:26",
-    "belt_straight_1x1:27",
-    "belt_straight_1x1:28",
-    "belt_straight_1x1:29",
-    "belt_straight_1x1:30",
-    "belt_straight_1x1:31",
-    "belt_straight_1x1:32",
-    "belt_straight_1x1:66",
-    "belt_straight_1x1:67",
-    "belt_straight_1x1:68",
-    "belt_straight_1x1:69",
-    "belt_straight_1x1:70",
-    "belt_straight_1x1:71",
     "belt_turn_cw_1x1:1",
-    "belt_straight_1x1:33",
-    "belt_straight_1x1:34",
-    "belt_straight_1x1:35",
-    "belt_straight_1x1:36",
-    "belt_straight_1x1:37",
-    "belt_straight_1x1:38",
-    "belt_straight_1x1:39",
-    "belt_straight_1x1:40",
-    "belt_straight_1x1:41",
-    "belt_straight_1x1:42",
-    "belt_straight_1x1:43",
-    "belt_straight_1x1:44",
-    "belt_straight_1x1:45",
-    "belt_straight_1x1:46",
-    "belt_straight_1x1:47",
-    "belt_straight_1x1:48",
-    "belt_straight_1x1:49",
-    "belt_straight_1x1:50",
-    "belt_straight_1x1:51",
-    "belt_straight_1x1:52",
-    "belt_straight_1x1:53",
-    "belt_turn_cw_1x1:2",
-    "belt_straight_1x1:72",
-    "belt_straight_1x1:73",
-    "belt_straight_1x1:74",
-    "belt_straight_1x1:75",
-    "belt_straight_1x1:76",
-    "belt_straight_1x1:77",
-    "belt_straight_1x1:54",
-    "belt_straight_1x1:55",
-    "belt_straight_1x1:56",
-    "belt_straight_1x1:57",
-    "belt_straight_1x1:58",
-    "belt_straight_1x1:59",
-    "belt_straight_1x1:60",
-    "belt_straight_1x1:61",
-    "belt_straight_1x1:62",
-    "belt_straight_1x1:63",
-    "belt_turn_cw_1x1:3",
-    "belt_straight_1x1:64",
     "item_port_water_pump_1:1",
-    "pipe_straight_1x1:37",
+    "pipe_straight_1x1:1",
     "item_port_udpipe_loader_1:1",
     "item_port_udpipe_unloader_1:1",
-    "pipe_straight_1x1:1",
+    "pipe_turn_ccw_1x1:1",
     "pipe_straight_1x1:2",
-    "pipe_straight_1x1:3",
     "item_port_mix_pool_1:1",
-    "pipe_straight_1x1:4",
     "pipe_turn_cw_1x1:1",
+    "pipe_straight_1x1:3",
+    "item_port_udpipe_loader_1:2",
+    "item_port_udpipe_unloader_1:2",
+    "pipe_straight_1x1:4",
     "pipe_straight_1x1:5",
-    "pipe_turn_cw_1x1:2",
+    "pipe_turn_ccw_1x1:2",
     "pipe_straight_1x1:6",
     "pipe_straight_1x1:7",
     "pipe_straight_1x1:8",
     "pipe_straight_1x1:9",
-    "pipe_straight_1x1:10",
-    "pipe_straight_1x1:11",
-    "pipe_straight_1x1:12",
-    "pipe_straight_1x1:13",
-    "pipe_straight_1x1:14",
-    "pipe_straight_1x1:15",
-    "pipe_straight_1x1:16",
-    "pipe_straight_1x1:17",
-    "pipe_straight_1x1:18",
-    "pipe_turn_cw_1x1:3",
-    "pipe_straight_1x1:19",
-    "pipe_straight_1x1:20",
-    "pipe_straight_1x1:21",
-    "pipe_straight_1x1:22",
-    "pipe_straight_1x1:23",
-    "pipe_straight_1x1:24",
-    "pipe_straight_1x1:25",
-    "pipe_straight_1x1:26",
-    "pipe_turn_cw_1x1:4",
-    "pipe_straight_1x1:27",
-    "item_port_udpipe_loader_1:2",
-    "item_port_udpipe_unloader_1:2",
-    "pipe_straight_1x1:28",
-    "pipe_straight_1x1:29",
-    "pipe_straight_1x1:30",
-    "pipe_straight_1x1:35",
-    "pipe_straight_1x1:36",
-    "item_port_mix_pool_1:2",
-    "pipe_turn_ccw_1x1:1",
-    "pipe_straight_1x1:31",
-    "pipe_straight_1x1:32",
-    "pipe_straight_1x1:33",
-    "pipe_straight_1x1:34",
-    "pipe_turn_cw_1x1:5",
     "item_port_xiranite_oven_1:1",
-    "item_port_power_diffuser_1:1",
-    "item_port_power_diffuser_1:2",
     "item_port_storager_1:1",
-    "belt_straight_1x1:65"
+    "item_liquid_cleaner_1:1",
+    "item_port_power_diffuser_1:1",
+    "item_port_power_diffuser_1:2"
   ],
   "slotLinks": [
     {
-      "id": "warehouse-link:item_port_unloader_1:1:unloader_buffer:slot_1",
+      "id": "0ac06499-aaed-4c9d-b098-7f064a62861e",
       "linkType": "share-all",
       "source": {
         "entityId": "item_port_unloader_1:1",
@@ -1757,7 +475,7 @@
       }
     },
     {
-      "id": "warehouse-link:item_port_water_pump_1:1:fluid_output_buffer:output_fluid_slot_1",
+      "id": "f7f504f5-5d0a-4173-b051-ca58d9b5627e",
       "linkType": "share-all",
       "source": {
         "entityId": "item_port_water_pump_1:1",
@@ -1771,7 +489,7 @@
       }
     },
     {
-      "id": "warehouse-link:item_port_udpipe_loader_1:2:loader_buffer:slot_1",
+      "id": "1fed36b1-597b-428a-8087-366f974b58e5",
       "linkType": "share-all",
       "source": {
         "entityId": "item_port_udpipe_loader_1:2",
@@ -1785,7 +503,7 @@
       }
     },
     {
-      "id": "tutorial-dark-pipe-water-link",
+      "id": "221fc216-5b84-491a-92db-1fa516d65fee",
       "linkType": "share-all",
       "source": {
         "entityId": "item_port_udpipe_unloader_1:1",
@@ -1799,7 +517,7 @@
       }
     },
     {
-      "id": "tutorial-dark-pipe-sewage-link",
+      "id": "d857e447-0160-4d88-bda5-cce8abc4fbb0",
       "linkType": "share-all",
       "source": {
         "entityId": "item_port_udpipe_unloader_1:2",
@@ -1814,5 +532,5 @@
     }
   ],
   "createdAt": "2026-06-25T00:00:00.000Z",
-  "updatedAt": "2026-06-25T00:00:00.000Z"
+  "updatedAt": "2026-06-26T00:00:00.000Z"
 }

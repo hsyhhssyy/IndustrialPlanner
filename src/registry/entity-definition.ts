@@ -2705,7 +2705,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "resourcePower",
     displayOrder: 301,
     tags: ["武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
-    requiresPower: false,
+    requiresPower: true,
     powerDemand: 10,
     portGroups: [
       createPortGroup(

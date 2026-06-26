@@ -656,6 +656,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
                   index={index}
                   recipeChoices={resultRecipeChoiceMap}
                   treeScrollTop={session.treeScrollTop}
+                  isTouch={isTouch}
                   onFlowViewportChange={setFlowViewport}
                   onSelectRecipe={selectRecipe}
                   onRequestRecipeSelection={requestRecipeSelection}
@@ -997,6 +998,7 @@ function PlanGraph({
   index,
   recipeChoices,
   treeScrollTop,
+  isTouch,
   onFlowViewportChange,
   onSelectRecipe,
   onRequestRecipeSelection,
@@ -1012,6 +1014,7 @@ function PlanGraph({
   index: ProductionPlanningIndex;
   recipeChoices: ReadonlyMap<string, string>;
   treeScrollTop: number;
+  isTouch: boolean;
   onFlowViewportChange: (viewport: PlannerFlowViewportState) => void;
   onSelectRecipe: (itemId: string, recipeId: string | null) => void;
   onRequestRecipeSelection: (itemId: string, recipes: readonly RecipeDefinition[]) => void;
@@ -1043,6 +1046,7 @@ function PlanGraph({
       index={index}
       recipeChoices={recipeChoices}
       treeScrollTop={treeScrollTop}
+      isTouch={isTouch}
       onSelectRecipe={onSelectRecipe}
       onRequestRecipeSelection={onRequestRecipeSelection}
       onCoverDemand={onCoverDemand}
@@ -1059,6 +1063,7 @@ function ProductionPlanningTreeTable({
   index,
   recipeChoices,
   treeScrollTop,
+  isTouch,
   onSelectRecipe,
   onRequestRecipeSelection,
   onCoverDemand,
@@ -1071,6 +1076,7 @@ function ProductionPlanningTreeTable({
   index: ProductionPlanningIndex;
   recipeChoices: ReadonlyMap<string, string>;
   treeScrollTop: number;
+  isTouch: boolean;
   onSelectRecipe: (itemId: string, recipeId: string | null) => void;
   onRequestRecipeSelection: (itemId: string, recipes: readonly RecipeDefinition[]) => void;
   onCoverDemand: (itemId: string) => void;
@@ -1214,6 +1220,7 @@ function ProductionPlanningTreeTable({
             index={index}
             displayMode={displayMode}
             recipeChoices={recipeChoices}
+            isTouch={isTouch}
             onSelectRow={selectRow}
             onSelectRecipe={onSelectRecipe}
             onRequestRecipeSelection={onRequestRecipeSelection}
@@ -1503,6 +1510,7 @@ function ProductionPlanningTreeDetail({
   index,
   displayMode,
   recipeChoices,
+  isTouch,
   onSelectRow,
   onSelectRecipe,
   onRequestRecipeSelection,
@@ -1515,6 +1523,7 @@ function ProductionPlanningTreeDetail({
   index: ProductionPlanningIndex;
   displayMode: ProductionPlanningDisplayMode;
   recipeChoices: ReadonlyMap<string, string>;
+  isTouch: boolean;
   onSelectRow: (rowId: string) => void;
   onSelectRecipe: (itemId: string, recipeId: string | null) => void;
   onRequestRecipeSelection: (itemId: string, recipes: readonly RecipeDefinition[]) => void;
@@ -1575,7 +1584,7 @@ function ProductionPlanningTreeDetail({
         onSelectRecipe={onSelectRecipe}
         t={t}
       />
-      <RecipeDisplay recipeId={row.recipeNode.recipeId} index={index} t={t} />
+      <RecipeDisplay recipeId={row.recipeNode.recipeId} index={index} isTouch={isTouch} t={t} />
       <div className={cm(styles, "production-planning-recipe-ports")}>
         <PortChipList title={t("productionPlanning.requiredInputs")} ports={row.recipeNode.inputs} index={index} t={t} />
         <PortChipList title={t("productionPlanning.totalOutputs")} ports={row.recipeNode.outputs} index={index} t={t} />

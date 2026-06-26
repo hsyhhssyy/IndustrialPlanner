@@ -586,6 +586,7 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
       desktopCategory={wikiState.desktopCategory}
       index={index}
       isTouch={isTouch}
+      locale={appHost.state.settings.locale}
       mobileSelectedCategories={wikiState.mobileSelectedCategories}
       onDesktopCategoryChange={(category) => {
         runInAction(() => {

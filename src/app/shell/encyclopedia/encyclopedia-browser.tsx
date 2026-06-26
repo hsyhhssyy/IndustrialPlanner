@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { pinyin } from "pinyin-pro";
 
+import type { AppLocale } from "@/domain/app/types/app-types";
 import type {
   ToolboxWikiDesktopCategory as CategoryType,
   ToolboxWikiEntityGroupCategory,
@@ -10,6 +12,8 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
+import { lookupMessageText } from "@/shared/i18n/messages";
+import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -40,11 +44,15 @@ export interface EncyclopediaIndex {
   recipesByMachine: Map<string, RecipeDefinition[]>;
   allItems: ItemDefinition[];
   allEntities: EntityDefinition[];
+  /** 拼音全拼索引（无音调），key 为 item/entity id，仅中文名非空时有值 */
+  itemPinyin: Map<string, { full: string; initial: string }>;
+  entityPinyin: Map<string, { full: string; initial: string }>;
 }
 
 export interface EncyclopediaBrowserProps {
   index: EncyclopediaIndex;
   isTouch: boolean;
+  locale: AppLocale;
   query: string;
   desktopCategory: CategoryType;
   mobileSelectedCategories: ToolboxWikiMobileFilterOption[];
@@ -73,6 +81,33 @@ export function buildEncyclopediaIndex(
   const entityById = new Map<string, EntityDefinition>();
   for (const entity of entities) {
     entityById.set(entity.id, entity);
+  }
+
+  // 构建拼音索引：始终基于 zh-CN 中文名，使用与 translate 相同的两级查找
+  const itemPinyin = new Map<string, { full: string; initial: string }>();
+  for (const item of items) {
+    const zhName = lookupMessageText("zh-CN", item.nameKey)
+      ?? lookupWorkbenchText("zh-CN", item.nameKey);
+    if (zhName && zhName.length > 0) {
+      const full = pinyin(zhName, { toneType: "none", separator: "" });
+      const initial = pinyin(zhName, { pattern: "first", toneType: "none", separator: "" });
+      if (full.length > 0) {
+        itemPinyin.set(item.id, { full, initial });
+      }
+    }
+  }
+
+  const entityPinyin = new Map<string, { full: string; initial: string }>();
+  for (const entity of entities) {
+    const zhName = lookupMessageText("zh-CN", entity.nameKey)
+      ?? lookupWorkbenchText("zh-CN", entity.nameKey);
+    if (zhName && zhName.length > 0) {
+      const full = pinyin(zhName, { toneType: "none", separator: "" });
+      const initial = pinyin(zhName, { pattern: "first", toneType: "none", separator: "" });
+      if (full.length > 0) {
+        entityPinyin.set(entity.id, { full, initial });
+      }
+    }
   }
 
   const recipesByInputItem = new Map<string, RecipeDefinition[]>();
@@ -115,6 +150,8 @@ export function buildEncyclopediaIndex(
     allEntities: entities
       .filter((entity) => entity.uiGroup !== "hidden")
       .sort((a, b) => a.displayOrder - b.displayOrder || a.id.localeCompare(b.id)),
+    itemPinyin,
+    entityPinyin,
   };
 }
 
@@ -177,6 +214,14 @@ function includesSearchQuery(
   }
 
   return tags.some((tag) => tag.toLowerCase().includes(query));
+}
+
+function matchesPinyinSearch(
+  pinyinData: { full: string; initial: string } | undefined,
+  query: string,
+): boolean {
+  if (!pinyinData) return false;
+  return pinyinData.full.includes(query) || pinyinData.initial.includes(query);
 }
 
 function isBottledLiquid(item: ItemDefinition): boolean {
@@ -516,6 +561,7 @@ export function EncyclopediaBrowser({
   index,
   isTouch,
   itemFilter,
+  locale,
   mobileSelectedCategories,
   recentItemIds,
   onDesktopCategoryChange,
@@ -528,6 +574,7 @@ export function EncyclopediaBrowser({
 }: EncyclopediaBrowserProps) {
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const normalizedQuery = query.trim().toLowerCase();
+  const isZhLocale = locale === "zh-CN";
   const selectedMobileFilters = useMemo(
     () => new Set<ToolboxWikiMobileFilterOption>(mobileSelectedCategories),
     [mobileSelectedCategories],
@@ -543,9 +590,17 @@ export function EncyclopediaBrowser({
         return false;
       }
 
-      return includesSearchQuery(t(item.nameKey), item.tags, normalizedQuery);
+      if (includesSearchQuery(t(item.nameKey), item.tags, normalizedQuery)) {
+        return true;
+      }
+
+      if (isZhLocale && normalizedQuery.length > 0) {
+        return matchesPinyinSearch(index.itemPinyin.get(item.id), normalizedQuery);
+      }
+
+      return false;
     }),
-    [index, itemFilter, normalizedQuery, t],
+    [index, itemFilter, normalizedQuery, t, isZhLocale],
   );
 
   const searchMatchedEntities = useMemo(
@@ -554,9 +609,17 @@ export function EncyclopediaBrowser({
         return false;
       }
 
-      return includesSearchQuery(t(entity.nameKey), entity.tags, normalizedQuery);
+      if (includesSearchQuery(t(entity.nameKey), entity.tags, normalizedQuery)) {
+        return true;
+      }
+
+      if (isZhLocale && normalizedQuery.length > 0) {
+        return matchesPinyinSearch(index.entityPinyin.get(entity.id), normalizedQuery);
+      }
+
+      return false;
     }),
-    [entityFilter, index, normalizedQuery, t],
+    [entityFilter, index, normalizedQuery, t, isZhLocale],
   );
 
   const availableDesktopCategories = useMemo(() => {
