@@ -75,7 +75,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
   },
   {
     id: "wuling_tianwangping_aid",
-    name: "天工坪援建点",
+    name: "天王坪援建点",
     placeableArea: {
       width: 50,
       height: 50,

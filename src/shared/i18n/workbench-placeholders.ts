@@ -153,7 +153,7 @@ const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, strin
     "workbench.base.refugeeOutpost": "难民前哨处",
     "workbench.base.infraForward": "基建前站",
     "workbench.base.rebuildHQ": "重建指挥部",
-    "workbench.base.tiangongpingAid": "天工坪援建点",
+    "workbench.base.tianwangpingAid": "天王坪援建点",
     "workbench.summary.buildableArea": "可放置区域",
     "workbench.summaryValue.buildableArea": "80x80",
     "workbench.summary.expansion": "外扩尺寸",

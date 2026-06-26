@@ -9,28 +9,24 @@ const CONFIG_GUIDE_INDEX_PATH = "/help/config-guide/index.json";
 
 // ── marked 图片解析 ──
 
-let currentMarkdownBaseDir = "/help";
-
-function createHelpRenderer(): Renderer {
+function createHelpRenderer(baseDir: string): Renderer {
   const renderer = new Renderer();
   renderer.image = function ({ href, title, text }: { href: string; title: string | null; text: string }) {
-    const resolvedUrl = resolveHelpImageUrl(href);
+    const resolvedUrl = resolveHelpImageUrl(href, baseDir);
     const titleAttr = title !== null ? ` title="${escapeAttr(title)}"` : "";
     return `<img src="${escapeAttr(resolvedUrl)}" alt="${escapeAttr(text)}"${titleAttr} loading="lazy">`;
   };
   return renderer;
 }
 
-const helpRenderer = createHelpRenderer();
-
-function resolveHelpImageUrl(url: string): string {
+function resolveHelpImageUrl(url: string, baseDir: string): string {
   if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
     return url;
   }
   if (url.startsWith("./")) {
-    return `${currentMarkdownBaseDir}/${url.slice(2)}`;
+    return `${baseDir}/${url.slice(2)}`;
   }
-  return `${currentMarkdownBaseDir}/${url}`;
+  return `${baseDir}/${url}`;
 }
 
 function escapeAttr(value: string): string {
@@ -69,14 +65,14 @@ function resolveSectionLabel(path: string, translate: (key: string) => string): 
 }
 
 async function fetchMarkdown(path: string): Promise<string> {
-  // 设置当前 markdown 文件所在目录，供 resolveHelpImageUrl 使用
-  currentMarkdownBaseDir = path.substring(0, path.lastIndexOf("/"));
+  const baseDir = path.substring(0, path.lastIndexOf("/"));
+  const renderer = createHelpRenderer(baseDir);
   const resp = await fetch(path);
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status}`);
   }
   const md = await resp.text();
-  const parsed = await marked.parse(md, { renderer: helpRenderer });
+  const parsed = await marked.parse(md, { renderer });
   return parsed as string;
 }
 
@@ -135,21 +131,20 @@ export function FeatureGuideContent({ translate }: { translate: (key: string) =>
         if (cancelled) return;
         setSections(allSections);
 
-        // 4) 逐个加载，失败的忽略不展示
-        const loaded: DocSection[] = [];
-        for (const section of allSections) {
-          if (cancelled) return;
-          try {
-            const html = await fetchMarkdown(section.path);
-            loaded.push({ ...section, html });
-          } catch {
-            // 文件不存在或加载失败，跳过该条目
-          }
-          // 逐个更新以便渐进渲染
-          if (!cancelled) {
-            setSections([...loaded]);
-          }
-        }
+        // 4) 并行加载所有 markdown，完成后一次性设 state，避免逐条更新导致 DOM 重建、图片闪烁
+        const results = await Promise.allSettled(
+          allSections.map((section) => fetchMarkdown(section.path))
+        );
+        if (cancelled) return;
+
+        const loadedSections = allSections.map((section, i) => {
+          const result = results[i]!;
+          return {
+            ...section,
+            html: result.status === "fulfilled" ? result.value : null,
+          };
+        });
+        setSections(loadedSections);
       } catch (err) {
         if (!cancelled) {
           setLoadError(err instanceof Error ? err.message : "加载失败");
