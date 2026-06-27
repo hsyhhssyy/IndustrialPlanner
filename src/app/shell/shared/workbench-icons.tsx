@@ -43,6 +43,8 @@ import LucidePanelRightOpen from "~icons/lucide/panel-right-open";
 // Original code:
 // import LucidePlay from "~icons/lucide/play";
 import LucideActivity from "~icons/lucide/activity";
+import LucideChevronLeft from "~icons/lucide/chevron-left";
+import LucideChevronRight from "~icons/lucide/chevron-right";
 import LucideRectangleHorizontal from "~icons/lucide/rectangle-horizontal";
 import LucideRectangleVertical from "~icons/lucide/rectangle-vertical";
 import LucideRedo2 from "~icons/lucide/redo-2";
@@ -127,6 +129,8 @@ type WorkbenchIconKind =
   | "remove-backward"
   | "remove-forward"
   | "feedback"
+  | "chevron-left"
+  | "chevron-right"
   | "github";
 
 interface WorkbenchIconProps {
@@ -190,6 +194,8 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   "remove-forward": RemoveForwardIcon,
   feedback: LucideBug,
   github: LucideGithub,
+  "chevron-left": LucideChevronLeft,
+  "chevron-right": LucideChevronRight,
 };
 
 // 从 public/svg/icons/ 导入的 SVG 原始内容，提取 <path> 内部以复用外层 SVG 属性。

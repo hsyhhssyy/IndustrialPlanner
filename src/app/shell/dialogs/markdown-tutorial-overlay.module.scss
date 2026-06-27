@@ -1,0 +1,179 @@
+.markdown-tutorial-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(8px, 4vh, 36px) clamp(16px, 6vw, 80px);
+  background: color-mix(in srgb, var(--surface-1) 72%, transparent);
+  backdrop-filter: grayscale(0.32) blur(1.5px);
+}
+
+.markdown-tutorial-overlay-backdrop,
+.markdown-tutorial-overlay-backdrop * {
+  touch-action: auto;
+}
+
+.markdown-tutorial-overlay {
+  position: relative;
+  width: min(100%, 1280px);
+  max-height: calc(100dvh - clamp(16px, 8vh, 72px));
+  color: var(--text-0);
+  outline: none;
+}
+
+.markdown-tutorial-overlay-body {
+  min-height: 0;
+  width: 100%;
+  overflow: visible;
+}
+
+.markdown-tutorial-overlay-page {
+  display: grid;
+  grid-template-rows: minmax(0, auto) auto;
+  gap: clamp(8px, 2vh, 18px);
+  align-items: center;
+  justify-items: center;
+  min-height: 0;
+  width: 100%;
+  max-height: calc(100dvh - clamp(24px, 9vh, 96px));
+}
+
+.markdown-tutorial-overlay-image-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  margin: 0;
+}
+
+.markdown-tutorial-overlay-image-frame img {
+  display: block;
+  width: auto;
+  max-width: min(100%, 1280px);
+  max-height: min(72dvh, 980px);
+  border: 1px solid color-mix(in srgb, var(--line-strong) 72%, transparent);
+  background: var(--surface-1);
+  box-shadow: 0 22px 72px color-mix(in srgb, var(--shadow-floating-control) 78%, transparent);
+  object-fit: contain;
+}
+
+.markdown-tutorial-overlay[data-compact-layout="true"] .markdown-tutorial-overlay-image-frame img {
+  max-height: min(56dvh, 720px);
+}
+
+.markdown-tutorial-overlay-markdown {
+  justify-self: center;
+  width: min(100%, 820px);
+  color: color-mix(in srgb, var(--text-0) 82%, var(--text-1));
+  font-size: clamp(0.76rem, 1.25vw, 1.08rem);
+  font-weight: 650;
+  line-height: 1.38;
+  text-align: left;
+  text-wrap: pretty;
+}
+
+.markdown-tutorial-overlay-markdown p,
+.markdown-tutorial-overlay-markdown blockquote,
+.markdown-tutorial-overlay-markdown ul,
+.markdown-tutorial-overlay-markdown ol {
+  margin: 0;
+}
+
+.markdown-tutorial-overlay-markdown blockquote {
+  padding: 0;
+  border: none;
+  color: inherit;
+}
+
+.markdown-tutorial-overlay-markdown p + p,
+.markdown-tutorial-overlay-markdown p + ul,
+.markdown-tutorial-overlay-markdown ul + p,
+.markdown-tutorial-overlay-markdown blockquote + p {
+  margin-top: 0.36em;
+}
+
+.markdown-tutorial-overlay-markdown ul,
+.markdown-tutorial-overlay-markdown ol {
+  padding-left: 1.2em;
+}
+
+.markdown-tutorial-overlay-markdown strong {
+  color: color-mix(in srgb, var(--accent-strong) 84%, var(--text-0));
+}
+
+.markdown-tutorial-overlay-placeholder {
+  display: grid;
+  place-items: center;
+  min-width: min(320px, 72vw);
+  min-height: 120px;
+  padding: 18px 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  color: var(--text-1);
+  box-shadow: 0 18px 54px var(--shadow-floating-control);
+}
+
+.markdown-tutorial-overlay-placeholder p {
+  margin: 0;
+}
+
+.markdown-tutorial-overlay-page-button {
+  position: absolute;
+  top: 42%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(34px, 4vw, 48px);
+  height: clamp(34px, 4vw, 48px);
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 78%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-1) 82%, transparent);
+  color: var(--text-0);
+  box-shadow: 0 14px 36px var(--shadow-floating-control);
+  transform: translateY(-50%);
+}
+
+.markdown-tutorial-overlay-page-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+}
+
+.markdown-tutorial-overlay-page-button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.markdown-tutorial-overlay-page-button svg {
+  width: 62%;
+  height: 62%;
+}
+
+.markdown-tutorial-overlay-page-button-previous {
+  left: clamp(-56px, -5vw, -32px);
+}
+
+.markdown-tutorial-overlay-page-button-next {
+  right: clamp(-56px, -5vw, -32px);
+}
+
+.markdown-tutorial-overlay-page-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: clamp(8px, 2vh, 16px);
+}
+
+.markdown-tutorial-overlay-page-dot {
+  width: clamp(24px, 4vw, 44px);
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-1) 36%, transparent);
+}
+
+.markdown-tutorial-overlay-page-dot.is-active {
+  background: color-mix(in srgb, var(--text-0) 78%, var(--accent));
+}

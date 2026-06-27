@@ -1,3 +1,3 @@
-> 使用蓝图样式显示设备图片，不会提高性能。
+![占位图片](/help/__missing-tutorial-image__.png)
 
-![普通模式与蓝图样式对比](./game-use-simplified-device-icons.png)
+开启后，设备会使用更简化的图形显示。该文件保留给旧配置说明使用；当前设置项以「使用蓝图样式的设备图片」为准。

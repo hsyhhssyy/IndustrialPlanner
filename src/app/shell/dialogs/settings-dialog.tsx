@@ -10,7 +10,7 @@ import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { ActivityIconStrip } from "@/app/shell/shared/activity-icon-strip";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
-import { fetchHelpMarkdownHtml } from "@/app/shell/dialogs/help-markdown";
+import { MarkdownTutorialOverlay } from "@/app/shell/dialogs/markdown-tutorial-overlay";
 import {
   type SettingsGroupId,
   type WorkbenchSettingDefinition,
@@ -648,107 +648,13 @@ function SettingGuideDialog({
   const path = `/help/config-guide/${setting.id}.md`;
 
   return (
-    <DialogShell
-      bodyClassName={cm(styles, "settings-guide-dialog-body")}
-      className="settings-guide-dialog"
-      closeTitle={t("action.close")}
-      compactMobileLayout={compactMobileLayout}
+    <MarkdownTutorialOverlay
+      compactLayout={compactMobileLayout}
       dialogKey="settings-guide"
-      dialogState={dialogState}
-      maximizeTitle=""
       onClose={onClose}
-      onOffsetChange={(offsetX, offsetY) => {
-        runInAction(() => {
-          dialogState.offsetX = offsetX;
-          dialogState.offsetY = offsetY;
-        });
-      }}
-      onResize={(width, height) => {
-        runInAction(() => {
-          dialogState.width = width;
-          dialogState.height = height;
-        });
-      }}
-      onToggleMaximized={() => {}}
-      restoreTitle=""
-      showMaximizeButton={false}
+      path={path}
       title={title}
-      titleId={`settings-guide-dialog-title-${setting.id}`}
-    >
-      <SettingGuideMarkdown path={path} />
-    </DialogShell>
-  );
-}
-
-function SettingGuideMarkdown({ path }: { path: string }) {
-  const [loadState, setLoadState] = useState<{
-    path: string;
-    html: string | null;
-    error: string | null;
-  }>(() => ({
-    path,
-    html: null,
-    error: null,
-  }));
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const nextHtml = await fetchHelpMarkdownHtml(path, { stripLeadingH1: true });
-        if (!cancelled) {
-          setLoadState({
-            path,
-            html: nextHtml,
-            error: null,
-          });
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setLoadState({
-            path,
-            html: null,
-            error: err instanceof Error ? err.message : "加载失败",
-          });
-        }
-      }
-    }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [path]);
-
-  if (loadState.path !== path) {
-    return (
-      <div className={cm(styles, "changelog-placeholder settings-guide-placeholder")}>
-        <p>加载中…</p>
-      </div>
-    );
-  }
-
-  if (loadState.error !== null) {
-    return (
-      <div className={cm(styles, "changelog-placeholder settings-guide-placeholder")}>
-        <p>加载失败：{loadState.error}</p>
-      </div>
-    );
-  }
-
-  if (loadState.html === null) {
-    return (
-      <div className={cm(styles, "changelog-placeholder settings-guide-placeholder")}>
-        <p>加载中…</p>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={cm(styles, "changelog-markdown settings-guide-markdown")}
-      dangerouslySetInnerHTML={{ __html: loadState.html }}
+      visible={dialogState.visible}
     />
   );
 }
