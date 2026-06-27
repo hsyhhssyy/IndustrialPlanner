@@ -8,7 +8,9 @@ import type { PwaController } from "@/app/pwa/pwa-controller";
 import { PwaSettingsSection } from "@/app/pwa/pwa-settings-section";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { ActivityIconStrip } from "@/app/shell/shared/activity-icon-strip";
+import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
+import { fetchHelpMarkdownHtml } from "@/app/shell/dialogs/help-markdown";
 import {
   type SettingsGroupId,
   type WorkbenchSettingDefinition,
@@ -25,6 +27,27 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
 const SETTINGS_DIALOG_SECTION_SCROLL_OFFSET = 10;
+
+const CONFIG_GUIDE_SETTING_DOC_FILES: ReadonlySet<string> = new Set([
+  "game-use-blueprint-style-device-images.md",
+  "game-show-device-names.md",
+  "game-show-device-icons.md",
+  "other-toolbox-show-all-activity-content.md",
+  "game-use-inspector-panel.md",
+  "game-arknights-selection-right-dock-sync.md",
+  "game-arknights-inspector-open-on-second-click.md",
+  "game-show-hotkeys.md",
+  "game-always-show-grid-lines.md",
+  "game-show-grass-background.md",
+  "game-arknights-immediate-move.md",
+  "game-arknights-copy-while-moving.md",
+  "game-arknights-immediate-marquee.md",
+  "game-arknights-allow-empty-logistics-endpoints.md",
+  "game-arknights-auto-create-splitters-and-convergers.md",
+  "other-debug-mode.md",
+  "debug-show-fps.md",
+  "debug-show-gesture-diagnostics-window.md",
+]);
 
 interface SettingsDialogProps {
   appHost: AppHost;
@@ -53,14 +76,49 @@ export const SettingsDialog = observer(function SettingsDialog({
   const selectedActivityIds = appHost.internalState.settings.selectedActivityIds;
   const effectiveActivityIds = resolveEffectiveActivityIds({ selectedActivityIds });
   const isOpen = dialogState.visible;
+  const [settingGuideSettingId, setSettingGuideSettingId] = useState<string | null>(null);
   const hideGroupSidebar = appHost.state.screenProfile.deviceClass !== "desktop";
   const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
   const isNonDesktop = appHost.state.screenProfile.deviceClass !== "desktop";
+  const selectedSettingGuideSetting = settingGuideSettingId === null
+    ? null
+    : findWorkbenchSettingDefinition(settingGuideSettingId);
+
+  const settingGuideDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: null,
+    height: null,
+    activeTab: null,
+  }), []);
 
   const handleClose = useCallback(() => {
     setCapturingKeybindingId(null);
+    setSettingGuideSettingId(null);
+    runInAction(() => {
+      settingGuideDialogState.visible = false;
+    });
     appHost.internalActions.closeDialog("settings");
-  }, [appHost]);
+  }, [appHost, settingGuideDialogState]);
+
+  const handleOpenSettingGuide = useCallback((settingId: string) => {
+    setSettingGuideSettingId(settingId);
+    runInAction(() => {
+      settingGuideDialogState.visible = true;
+      settingGuideDialogState.maximized = false;
+      settingGuideDialogState.offsetX = 0;
+      settingGuideDialogState.offsetY = 0;
+    });
+  }, [settingGuideDialogState]);
+
+  const handleCloseSettingGuide = useCallback(() => {
+    runInAction(() => {
+      settingGuideDialogState.visible = false;
+    });
+    setSettingGuideSettingId(null);
+  }, [settingGuideDialogState]);
 
   const confirmDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
     visible: false,
@@ -253,7 +311,11 @@ export const SettingsDialog = observer(function SettingsDialog({
     }
 
     setCapturingKeybindingId(null);
-  }, [isOpen]);
+    setSettingGuideSettingId(null);
+    runInAction(() => {
+      settingGuideDialogState.visible = false;
+    });
+  }, [isOpen, settingGuideDialogState]);
 
   useEffect(() => {
     if (!isOpen || hideGroupSidebar) {
@@ -362,6 +424,8 @@ export const SettingsDialog = observer(function SettingsDialog({
                     const isKeybinding = setting.kind === "keybinding";
                     const isDebugGroup = group.id === "debug";
                     const isGameGroup = group.id === "game";
+                    const settingLabel = resolveSettingLabel(setting, t);
+                    const hasSettingGuide = CONFIG_GUIDE_SETTING_DOC_FILES.has(`${setting.id}.md`);
 
                     // 调试分组：调试模式关闭时隐藏除调试模式开关外的所有项
                     if (isDebugGroup && index > 0 && !controller.getValue("other-debug-mode")) {
@@ -397,7 +461,16 @@ export const SettingsDialog = observer(function SettingsDialog({
                         key={setting.id}
                       >
                         <div className={cm(styles, "settings-dialog-setting-copy")}>
-                          <h4>{resolveSettingLabel(setting, t)}</h4>
+                          <h4 className={cm(styles, "settings-dialog-setting-title")}>
+                            <span>{settingLabel}</span>
+                            {hasSettingGuide ? (
+                              <SettingGuideButton
+                                label={settingLabel}
+                                onClick={() => handleOpenSettingGuide(setting.id)}
+                                t={t}
+                              />
+                            ) : null}
+                          </h4>
                           {!isKeybinding && <p>{resolveSettingDescription(setting, t)}</p>}
                         </div>
                         <div className={cm(styles, "settings-dialog-setting-control")}>
@@ -520,9 +593,165 @@ export const SettingsDialog = observer(function SettingsDialog({
         t={t}
       />
     )}
+    {settingGuideDialogState.visible && selectedSettingGuideSetting !== null ? (
+      <SettingGuideDialog
+        compactMobileLayout={isMobileCompactLayout}
+        dialogState={settingGuideDialogState}
+        onClose={handleCloseSettingGuide}
+        setting={selectedSettingGuideSetting}
+        t={t}
+      />
+    ) : null}
     </>
   );
 });
+
+function SettingGuideButton({
+  label,
+  onClick,
+  t,
+}: {
+  label: string;
+  onClick: () => void;
+  t: AppHost["actions"]["translate"];
+}) {
+  const buttonLabel = `${t("helpDialog.title")}: ${label}`;
+
+  return (
+    <button
+      aria-label={buttonLabel}
+      className={cm(styles, "settings-dialog-setting-help-button")}
+      onClick={onClick}
+      title={buttonLabel}
+      type="button"
+    >
+      <WorkbenchIcon kind="help" />
+      <span className={cm(styles, "sr-only")}>{buttonLabel}</span>
+    </button>
+  );
+}
+
+function SettingGuideDialog({
+  compactMobileLayout,
+  dialogState,
+  onClose,
+  setting,
+  t,
+}: {
+  compactMobileLayout: boolean;
+  dialogState: DialogStateReadWrite;
+  onClose: () => void;
+  setting: WorkbenchSettingDefinition;
+  t: AppHost["actions"]["translate"];
+}) {
+  const title = resolveSettingLabel(setting, t);
+  const path = `/help/config-guide/${setting.id}.md`;
+
+  return (
+    <DialogShell
+      bodyClassName={cm(styles, "settings-guide-dialog-body")}
+      className="settings-guide-dialog"
+      closeTitle={t("action.close")}
+      compactMobileLayout={compactMobileLayout}
+      dialogKey="settings-guide"
+      dialogState={dialogState}
+      maximizeTitle=""
+      onClose={onClose}
+      onOffsetChange={(offsetX, offsetY) => {
+        runInAction(() => {
+          dialogState.offsetX = offsetX;
+          dialogState.offsetY = offsetY;
+        });
+      }}
+      onResize={(width, height) => {
+        runInAction(() => {
+          dialogState.width = width;
+          dialogState.height = height;
+        });
+      }}
+      onToggleMaximized={() => {}}
+      restoreTitle=""
+      showMaximizeButton={false}
+      title={title}
+      titleId={`settings-guide-dialog-title-${setting.id}`}
+    >
+      <SettingGuideMarkdown path={path} />
+    </DialogShell>
+  );
+}
+
+function SettingGuideMarkdown({ path }: { path: string }) {
+  const [loadState, setLoadState] = useState<{
+    path: string;
+    html: string | null;
+    error: string | null;
+  }>(() => ({
+    path,
+    html: null,
+    error: null,
+  }));
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const nextHtml = await fetchHelpMarkdownHtml(path, { stripLeadingH1: true });
+        if (!cancelled) {
+          setLoadState({
+            path,
+            html: nextHtml,
+            error: null,
+          });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setLoadState({
+            path,
+            html: null,
+            error: err instanceof Error ? err.message : "加载失败",
+          });
+        }
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [path]);
+
+  if (loadState.path !== path) {
+    return (
+      <div className={cm(styles, "changelog-placeholder settings-guide-placeholder")}>
+        <p>加载中…</p>
+      </div>
+    );
+  }
+
+  if (loadState.error !== null) {
+    return (
+      <div className={cm(styles, "changelog-placeholder settings-guide-placeholder")}>
+        <p>加载失败：{loadState.error}</p>
+      </div>
+    );
+  }
+
+  if (loadState.html === null) {
+    return (
+      <div className={cm(styles, "changelog-placeholder settings-guide-placeholder")}>
+        <p>加载中…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cm(styles, "changelog-markdown settings-guide-markdown")}
+      dangerouslySetInnerHTML={{ __html: loadState.html }}
+    />
+  );
+}
 
 function SettingsActionCard({
   buttonLabel,
@@ -695,6 +924,17 @@ function scrollSettingsDialogContentToSection(options: {
   }
 
   contentElement.scrollTop = nextScrollTop;
+}
+
+function findWorkbenchSettingDefinition(settingId: string): WorkbenchSettingDefinition | null {
+  for (const group of WORKBENCH_SETTINGS_GROUPS) {
+    const setting = group.items.find((item) => item.id === settingId);
+    if (setting !== undefined) {
+      return setting;
+    }
+  }
+
+  return null;
 }
 
 function resolveSettingLabel(
