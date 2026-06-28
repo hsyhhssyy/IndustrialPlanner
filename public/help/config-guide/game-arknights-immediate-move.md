@@ -1,4 +1,4 @@
-![占位图片](/help/__missing-tutorial-image__.png)
+![立即移动演示](./game-arknights-immediate-move.gif)
 
 开启后，从已选中的设备拖动会直接进入移动预览，不需要先长按。适合频繁微调设备位置的操作习惯。
 

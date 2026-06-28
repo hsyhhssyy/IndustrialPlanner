@@ -1,4 +1,4 @@
-![占位图片](/help/__missing-tutorial-image__.png)
+![调试模式对比](./other-debug-mode.png)
 
 开启后会显示额外的调试选项和诊断信息。它主要用于排查问题，普通规划不需要开启。
 

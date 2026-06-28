@@ -1,4 +1,4 @@
-![占位图片](/help/__missing-tutorial-image__.png)
+![显示快捷键对比](./game-show-hotkeys.png)
 
 开启后，界面按钮会显示对应的快捷键提示，方便记忆常用操作。熟悉快捷键后可以关闭，让界面更简洁。
 

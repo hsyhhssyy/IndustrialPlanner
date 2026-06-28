@@ -1,4 +1,4 @@
-![占位图片](/help/__missing-tutorial-image__.png)
+![总是显示网格线对比](./game-always-show-grid-lines.png)
 
 开启后，画布网格线会持续显示，方便对齐设备和物流线。关闭后，网格线只会在放置、绘制等需要定位的场景附近出现。
 

@@ -6,8 +6,14 @@
   align-items: center;
   justify-content: center;
   padding: clamp(8px, 4vh, 36px) clamp(16px, 6vw, 80px);
-  background: color-mix(in srgb, var(--surface-1) 72%, transparent);
-  backdrop-filter: grayscale(0.32) blur(1.5px);
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--text-0) 4%, transparent),
+      color-mix(in srgb, var(--text-0) 4%, transparent)
+    ),
+    color-mix(in srgb, var(--surface-1) 90%, transparent);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
 }
 
 .markdown-tutorial-overlay-backdrop,
@@ -21,6 +27,7 @@
   max-height: calc(100dvh - clamp(16px, 8vh, 72px));
   color: var(--text-0);
   outline: none;
+  cursor: pointer;
 }
 
 .markdown-tutorial-overlay-body {
@@ -56,6 +63,7 @@
   border: 1px solid color-mix(in srgb, var(--line-strong) 72%, transparent);
   background: var(--surface-1);
   box-shadow: 0 22px 72px color-mix(in srgb, var(--shadow-floating-control) 78%, transparent);
+  cursor: default;
   object-fit: contain;
 }
 
@@ -72,6 +80,7 @@
   line-height: 1.38;
   text-align: left;
   text-wrap: pretty;
+  text-shadow: 0 1px 14px color-mix(in srgb, var(--surface-1) 88%, transparent);
 }
 
 .markdown-tutorial-overlay-markdown p,

@@ -73,7 +73,7 @@ export function MarkdownTutorialOverlay({
   return (
     <div
       className={cm(styles, "markdown-tutorial-overlay-backdrop")}
-      onMouseDown={(event) => {
+      onPointerDown={(event) => {
         if (!closeOnBackdropClick || event.target !== event.currentTarget) {
           return;
         }
@@ -87,12 +87,24 @@ export function MarkdownTutorialOverlay({
         className={cm(styles, "markdown-tutorial-overlay")}
         data-compact-layout={compactLayout ? "true" : "false"}
         data-dialog-key={dialogKey}
+        onPointerDown={(event) => {
+          if (!closeOnBackdropClick || shouldKeepMarkdownTutorialOverlayOpen(event.target)) {
+            return;
+          }
+
+          onClose();
+        }}
         role="dialog"
       >
         <MarkdownTutorialOverlayContent path={path} title={title} />
       </section>
     </div>
   );
+}
+
+function shouldKeepMarkdownTutorialOverlayOpen(target: EventTarget): boolean {
+  return target instanceof HTMLElement
+    && target.closest("[data-markdown-tutorial-overlay-stay-open]") !== null;
 }
 
 function MarkdownTutorialOverlayContent({
@@ -198,6 +210,7 @@ function MarkdownTutorialOverlayContent({
           <button
             aria-label="上一页"
             className={cm(styles, "markdown-tutorial-overlay-page-button markdown-tutorial-overlay-page-button-previous")}
+            data-markdown-tutorial-overlay-stay-open
             disabled={!hasPreviousPage}
             onClick={goToPreviousPage}
             type="button"
@@ -208,6 +221,7 @@ function MarkdownTutorialOverlayContent({
           <button
             aria-label="下一页"
             className={cm(styles, "markdown-tutorial-overlay-page-button markdown-tutorial-overlay-page-button-next")}
+            data-markdown-tutorial-overlay-stay-open
             disabled={!hasNextPage}
             onClick={goToNextPage}
             type="button"
@@ -268,6 +282,7 @@ function MarkdownTutorialOverlayImageFrame({
     <figure className={cm(styles, "markdown-tutorial-overlay-image-frame")}>
       <img
         alt={image.alt || title}
+        data-markdown-tutorial-overlay-stay-open
         onError={() => {
           setFailedImageSrc(image.src);
         }}
