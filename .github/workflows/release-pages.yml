@@ -20,7 +20,19 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+    outputs:
+      is_prerelease: ${{ steps.detect-release-type.outputs.is_prerelease }}
     steps:
+      - name: Detect release type
+        id: detect-release-type
+        run: |
+          if echo "${{ env.RELEASE_TAG }}" | grep -qE '\-pre'; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "Prerelease detected: ${{ env.RELEASE_TAG }} — will skip Pages deploy & CDN refresh"
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout V3 (release tag or default branch)
         uses: actions/checkout@v4
         with:
@@ -131,6 +143,7 @@ jobs:
           path: ./dist
 
   deploy:
+    if: needs.build.outputs.is_prerelease != 'true'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
