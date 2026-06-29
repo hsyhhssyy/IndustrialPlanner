@@ -6,6 +6,7 @@ import type { AppHost } from "@/app/host/app-host";
 import type { V2MigrationController } from "@/app/migration";
 import type { PwaController } from "@/app/pwa/pwa-controller";
 import { PwaSettingsSection } from "@/app/pwa/pwa-settings-section";
+import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { ActivityIconStrip } from "@/app/shell/shared/activity-icon-strip";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
@@ -645,7 +646,7 @@ function SettingGuideDialog({
   t: AppHost["actions"]["translate"];
 }) {
   const title = resolveSettingLabel(setting, t);
-  const path = `/help/config-guide/${setting.id}.md`;
+  const path = createPublicAssetUrl(`help/config-guide/${setting.id}.md`);
 
   return (
     <MarkdownTutorialOverlay
@@ -797,7 +798,7 @@ function ActivitySelectionDialog({
                 onChange={(event) => onToggleActivity(activity.id, event.currentTarget.checked)}
                 type="checkbox"
               />
-              <img alt="" src={activity.icon} />
+              <img alt="" src={createPublicAssetUrl(activity.icon)} />
               <span className={cm(styles, "activity-selection-row-copy")}>
                 <strong>{activity.name}</strong>
                 <span>{formatActivityTimeRange(activity.startTime, activity.endTime)}</span>

@@ -19,6 +19,7 @@ import {
   isProductionPlanningExternalSupplyRecipeId,
   type ProductionPlanningLedgerRow,
 } from "../production-planning-ledger";
+import { createDeviceIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import type { SankeyInputLink, SankeyInputNode } from "./sankey-layout";
 
 export type ProductionFlowNodeKind = "item" | "recipe";
@@ -76,7 +77,7 @@ interface ItemFlowEndpoint {
 }
 
 const FLOW_EPSILON = 0.0001;
-const EXTERNAL_SUPPLY_ENTITY_ICON_SRC = "/3d-top-view/sprites/item_port_sp_hub_1.webp";
+const EXTERNAL_SUPPLY_ENTITY_ICON_SRC = createPublicAssetUrl("3d-top-view/sprites/item_port_sp_hub_1.webp");
 const PLANTER_MACHINE_IDS = new Set(["item_port_planter_1", "item_port_hydro_planter_1"]);
 const SEED_COLLECTOR_MACHINE_IDS = new Set(["item_port_seedcol_1"]);
 
@@ -212,7 +213,7 @@ function resolveLedgerRowMachineIconSrc(row: ProductionPlanningLedgerRow, index:
 
   const recipe = index.recipeById.get(row.recipeId);
   return recipe === undefined
-    ? "/device-icons/item_port_grinder_1.webp"
+    ? createDeviceIconAssetUrl("item_port_grinder_1")
     : resolveProductionPlanningEntityIconSrc(recipe.machineId);
 }
 

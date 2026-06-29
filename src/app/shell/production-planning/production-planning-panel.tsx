@@ -56,6 +56,7 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { NumberInput } from "@/app/shell/shared/number-input";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
+import { createDeviceIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 
 type ProductionPlanningScreen = "input" | "result";
 
@@ -1461,7 +1462,7 @@ function ProductionPlanningTreeRowRate({
     <div className={cm(styles, "production-planning-tree-table-rate")}>
       <span className={cm(styles, "production-planning-tree-rate-piece")} title={recipe === undefined ? row.recipeId : t(index.entityById.get(machineId)?.nameKey ?? recipe.nameKey)}>
         <strong>{formatProductionDeviceCount(row.total?.deviceCount ?? row.recipeNode.deviceCount)}</strong>
-        <img alt="" src={recipe === undefined ? "/device-icons/item_port_grinder_1.webp" : resolveProductionPlanningEntityIconSrc(machineId)} />
+        <img alt="" src={recipe === undefined ? createDeviceIconAssetUrl("item_port_grinder_1") : resolveProductionPlanningEntityIconSrc(machineId)} />
       </span>
       <span className={cm(styles, "production-planning-tree-rate-separator")}>·</span>
       <span className={cm(styles, "production-planning-tree-rate-piece")}>
@@ -1551,7 +1552,7 @@ function ProductionPlanningTreeDetail({
     : isExternal
       ? resolveProductionPlanningExternalSupplyIconSrc()
       : machine === null
-        ? "/device-icons/item_port_grinder_1.webp"
+        ? createDeviceIconAssetUrl("item_port_grinder_1")
         : resolveProductionPlanningEntityIconSrc(machine.id);
   const availableRecipes = row.targetItemId.length > 0
     ? index.recipesByOutputItem.get(row.targetItemId) ?? []
@@ -1774,7 +1775,7 @@ function ProductionPlanningTreeRelationIdentity({
     ? resolveProductionPlanningExternalSupplyIconSrc()
     : machineId.length > 0
       ? resolveProductionPlanningEntityIconSrc(machineId)
-      : "/device-icons/item_port_grinder_1.webp";
+      : createDeviceIconAssetUrl("item_port_grinder_1");
 
   return (
     <>
@@ -1823,7 +1824,7 @@ function RecipeIdentity({
       return resolveProductionPlanningExternalSupplyIconSrc();
     }
     return recipe === undefined
-      ? "/device-icons/item_port_grinder_1.webp"
+      ? createDeviceIconAssetUrl("item_port_grinder_1")
       : resolveProductionPlanningEntityIconSrc(recipe.machineId);
   })();
 
@@ -2760,7 +2761,7 @@ function createProductionPlanningExternalSupplyRecipeNode(
 
 
 function resolveProductionPlanningExternalSupplyIconSrc(): string {
-  return `/3d-top-view/sprites/${EXTERNAL_SUPPLY_ENTITY_ID}.webp`;
+  return createPublicAssetUrl(`3d-top-view/sprites/${EXTERNAL_SUPPLY_ENTITY_ID}.webp`);
 }
 
 // AI-REMOVED 2026-05-24:

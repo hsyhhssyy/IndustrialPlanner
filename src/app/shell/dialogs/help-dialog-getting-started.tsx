@@ -3,11 +3,12 @@ import { marked, Renderer } from "marked";
 
 import styles from "@/app/shell/dialogs/dialogs.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 
-const GETTING_STARTED_PATH = "/help/getting-started.md";
+const GETTING_STARTED_PATH = createPublicAssetUrl("help/getting-started.md");
 
 // 复用与 changelog 相同的 marked 图片解析逻辑
-let currentMarkdownBaseDir = "/help";
+let currentMarkdownBaseDir = createPublicAssetUrl("help");
 
 function createHelpRenderer(): Renderer {
   const renderer = new Renderer();
@@ -22,8 +23,11 @@ function createHelpRenderer(): Renderer {
 const helpRenderer = createHelpRenderer();
 
 function resolveHelpImageUrl(url: string): string {
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
+  if (url.startsWith("http://") || url.startsWith("https://")) {
     return url;
+  }
+  if (url.startsWith("/")) {
+    return createPublicAssetUrl(url);
   }
   if (url.startsWith("./")) {
     return `${currentMarkdownBaseDir}/${url.slice(2)}`;

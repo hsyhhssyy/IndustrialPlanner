@@ -20,6 +20,7 @@ import {
 import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-collapsible-panel";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 
@@ -509,7 +510,7 @@ function matchesItemDomain(
 }
 
 function resolveItemIconSrc(item: ItemDefinition | null): string | null {
-  return item === null ? null : `/item-icons/${item.iconId}.webp`;
+  return item === null ? null : createItemIconAssetUrl(item.iconId);
 }
 
 function readSlotConfigBoolean(

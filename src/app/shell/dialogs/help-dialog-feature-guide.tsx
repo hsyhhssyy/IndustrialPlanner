@@ -9,6 +9,7 @@ import {
 } from "@/app/shell/dialogs/help-markdown";
 import styles from "@/app/shell/dialogs/dialogs.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 
 // ── 类型 ──
 
@@ -45,7 +46,7 @@ export function FeatureGuideContent({ translate }: { translate: (key: string) =>
         // 3) 构建 section 列表
         const allSections: DocSection[] = [
           ...fgFiles.map((file): DocSection => {
-            const filePath = `/help/feature-guide/${file}`;
+            const filePath = createPublicAssetUrl(`help/feature-guide/${file}`);
             return {
               id: `fg-${file}`,
               label: resolveHelpDocumentTitle(filePath, translate),
@@ -54,7 +55,7 @@ export function FeatureGuideContent({ translate }: { translate: (key: string) =>
             };
           }),
           ...cgFiles.map((file): DocSection => {
-            const filePath = `/help/config-guide/${file}`;
+            const filePath = createPublicAssetUrl(`help/config-guide/${file}`);
             return {
               id: `cg-${file}`,
               label: resolveHelpDocumentTitle(filePath, translate),

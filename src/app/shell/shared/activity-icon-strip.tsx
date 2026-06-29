@@ -4,6 +4,7 @@ import {
 } from "@/shared/registry/activity-availability";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 
 export function ActivityIconStrip({
   activityIds,
@@ -27,7 +28,7 @@ export function ActivityIconStrip({
           alt={activity.name}
           className={cm(styles, "activity-icon-strip-icon")}
           key={activity.id}
-          src={activity.icon}
+          src={createPublicAssetUrl(activity.icon)}
           title={activity.name}
         />
       ))}

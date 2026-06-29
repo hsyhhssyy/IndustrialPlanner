@@ -11,6 +11,7 @@ import type {
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { createDeviceIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
 import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
@@ -167,11 +168,11 @@ export function resolveItemName(
 export function resolveItemIcon(itemId: string, index: EncyclopediaIndex): string {
   const def = index.itemById.get(itemId);
   const iconId = def?.iconId ?? itemId;
-  return `/item-icons/${iconId}.webp`;
+  return createItemIconAssetUrl(iconId);
 }
 
 export function resolveEntityIcon(entityId: string): string {
-  return `/device-icons/${entityId}.webp`;
+  return createDeviceIconAssetUrl(entityId);
 }
 
 export function isMobileDisplayCategory(

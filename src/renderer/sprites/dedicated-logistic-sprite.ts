@@ -13,6 +13,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { RenderHost } from "@/renderer/renderer-host"
 import { resolveDeviceBodyTextureKey } from "@/renderer/sprites/device-texture-key"
+import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
 import { BaseRenderSprite } from "./base-render-sprite"
@@ -27,7 +28,7 @@ const SUPPRESSED_PIPE_COLOR = 0x448AFF
 const SUPPRESSED_LINE_WIDTH_RATIO = 1 / 6
 const SUPPRESSED_ARROW_LENGTH_RATIO = 1 / 5
 const SUPPRESSED_ARROW_WIDTH_RATIO = 1 / 6
-const SCANLINE_TEXTURE_PATH = "/textures/scanline-45deg-50opacity.png"
+const SCANLINE_TEXTURE_PATH = createPublicAssetUrl("textures/scanline-45deg-50opacity.png")
 // AI-REMOVED 2026-05-25:
 // Reason: 常量从 generic-device-sprite.ts 复制后从未在本文件中被引用
 // Trigger: ESLint @typescript-eslint/no-unused-vars

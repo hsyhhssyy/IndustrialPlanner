@@ -11,6 +11,7 @@ import type {
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { createDeviceIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import {
   isItemAvailableByActivity,
   isRecipeAvailableByActivity,
@@ -327,11 +328,11 @@ export function resolveItemName(
 
 export function resolveItemIconSrc(itemId: string, index: ModuleBalancingIndex): string {
   const item = index.itemById.get(itemId);
-  return `/item-icons/${item?.iconId ?? itemId}.webp`;
+  return createItemIconAssetUrl(item?.iconId ?? itemId);
 }
 
 export function resolveEntityIconSrc(entityId: string): string {
-  return `/device-icons/${entityId}.webp`;
+  return createDeviceIconAssetUrl(entityId);
 }
 
 export function resolveModuleIconSrc(
@@ -344,7 +345,7 @@ export function resolveModuleIconSrc(
 
   const recipe = index.recipeById.get(module.recipeId);
   if (recipe === undefined) {
-    return "/device-icons/item_port_grinder_1.webp";
+    return createDeviceIconAssetUrl("item_port_grinder_1");
   }
 
   // 优先用第 1 个主要产物图标，其次用第 1 个产出图标，最后 fallback 到设备图标
@@ -365,7 +366,7 @@ export function resolveAnyIconSrc(iconId: string, index: ModuleBalancingIndex): 
     return resolveEntityIconSrc(iconId);
   }
 
-  return `/item-icons/${iconId}.webp`;
+  return createItemIconAssetUrl(iconId);
 }
 
 export function formatFlow(value: number): string {

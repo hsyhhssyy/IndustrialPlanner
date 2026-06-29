@@ -3,6 +3,7 @@ import type { AppHost } from "@/app/host/app-host";
 import { canCurrentBaseAcceptWulingOnlyEntities } from "@/app/placement-zone-availability";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { MessageKey } from "@/shared/i18n/messages";
+import { createDeviceIconAssetUrl } from "@/shared/browser/public-asset-url";
 import type { ComponentProps } from "react";
 
 type PlacementOperationIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
@@ -38,7 +39,7 @@ const MARQUEE_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
 const BELT_DRAW_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
   uiButtonId: "placement-action-belt-draw",
   labelKey: "workbench.button.beltDraw",
-  iconSrc: "/device-icons/item_log_belt_01.webp",
+  iconSrc: createDeviceIconAssetUrl("item_log_belt_01"),
   hotkeyKeyId: SHORTCUT_KEY.PLACE_CONVEYOR,
   activeWhen: (appHost) =>
     appHost.state.activeTool === "logistics-placement"
@@ -48,7 +49,7 @@ const BELT_DRAW_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
 const PIPE_DRAW_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
   uiButtonId: "placement-action-pipe-draw",
   labelKey: "workbench.button.pipeDraw",
-  iconSrc: "/device-icons/item_log_pipe_01.webp",
+  iconSrc: createDeviceIconAssetUrl("item_log_pipe_01"),
   hotkeyKeyId: SHORTCUT_KEY.PLACE_PIPE,
   visibleWhen: canCurrentBaseAcceptWulingOnlyEntities,
   activeWhen: (appHost) =>

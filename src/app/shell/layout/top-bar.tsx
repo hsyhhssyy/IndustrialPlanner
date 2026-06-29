@@ -10,6 +10,7 @@ import type {
 import {
   isTouchLandscapeScreenProfile,
 } from "@/shared/browser/screen-profile";
+import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -227,7 +228,7 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
         </div>
         <a
           className={cm(styles, "top-bar-old-version-link")}
-          href="/v2/"
+          href={createPublicAssetUrl("../v2/")}
         >
           {t("topBar.switchToOldVersion")}
         </a>

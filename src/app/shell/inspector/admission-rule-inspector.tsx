@@ -19,6 +19,7 @@ import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-colla
 import { useInspectorRenderMode } from "@/app/shell/inspector/selection-inspector-model";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
@@ -36,7 +37,7 @@ interface AdmissionPortRow {
 }
 
 function resolveItemIconSrc(item: ItemDefinition | null): string | null {
-  return item === null ? null : `/item-icons/${item.iconId}.webp`;
+  return item === null ? null : createItemIconAssetUrl(item.iconId);
 }
 
 export function AdmissionRuleInspector({

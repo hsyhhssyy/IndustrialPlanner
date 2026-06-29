@@ -21,6 +21,7 @@ import {
 import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-collapsible-panel";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 
 /*
   AI-REMOVED 2026-06-03:
@@ -106,7 +107,7 @@ import { cm } from "@/app/shell/shared/css-module-class";
 */
 
 function resolveItemIconSrc(item: ItemDefinition | null): string | null {
-  return item === null ? null : `/item-icons/${item.iconId}.webp`;
+  return item === null ? null : createItemIconAssetUrl(item.iconId);
 }
 
 export function PortOutputConfigInspector({

@@ -1,8 +1,10 @@
 import { marked, Renderer, type Token, type Tokens } from "marked";
 
-export const FEATURE_GUIDE_INDEX_PATH = "/help/feature-guide/index.json";
-export const CONFIG_GUIDE_INDEX_PATH = "/help/config-guide/index.json";
-export const MISSING_HELP_TUTORIAL_IMAGE_PATH = "/help/__missing-tutorial-image__.png";
+import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
+
+export const FEATURE_GUIDE_INDEX_PATH = createPublicAssetUrl("help/feature-guide/index.json");
+export const CONFIG_GUIDE_INDEX_PATH = createPublicAssetUrl("help/config-guide/index.json");
+export const MISSING_HELP_TUTORIAL_IMAGE_PATH = createPublicAssetUrl("help/__missing-tutorial-image__.png");
 
 export interface HelpTutorialImage {
   alt: string;
@@ -30,8 +32,11 @@ function createHelpRenderer(baseDir: string): Renderer {
 }
 
 function resolveHelpImageUrl(url: string, baseDir: string): string {
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
+  if (url.startsWith("http://") || url.startsWith("https://")) {
     return url;
+  }
+  if (url.startsWith("/")) {
+    return createPublicAssetUrl(url);
   }
   if (url.startsWith("./")) {
     return `${baseDir}/${url.slice(2)}`;
@@ -129,7 +134,7 @@ function parseHelpTutorialPages(markdown: string, baseDir: string): HelpTutorial
 }
 
 export function resolveHelpDocumentTitle(path: string, translate: (key: string) => string): string {
-  const match = path.match(/^\/help\/(feature-guide|config-guide)\/(.+)\.md$/);
+  const match = path.match(/(?:^|[/.])help\/(feature-guide|config-guide)\/(.+)\.md$/);
   if (!match) {
     const fileName = path.split("/").pop() ?? path;
     return fileName.replace(/\.md$/i, "");

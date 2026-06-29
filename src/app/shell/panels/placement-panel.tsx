@@ -13,6 +13,7 @@ import {
   getVisiblePlacementOperationButtons,
   type PlacementOperationButtonDefinition,
 } from "@/app/shell/panels/placement-operation-buttons";
+import { createDeviceIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -23,10 +24,9 @@ const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] 
 function resolveDeviceIconPath(entityId: string): string {
   // 特殊映射：entity id 与图标文件名不一致的情况
   const SPECIAL_ICON_MAP: Record<string, string> = {
-    "item_port_liquid_filling_pd_mc_1": "/device-icons/item_port_filling_pd_mc_1.webp",
+    "item_port_liquid_filling_pd_mc_1": "item_port_filling_pd_mc_1",
   };
-  if (SPECIAL_ICON_MAP[entityId]) return SPECIAL_ICON_MAP[entityId];
-  return `/device-icons/${entityId}.webp`;
+  return createDeviceIconAssetUrl(SPECIAL_ICON_MAP[entityId] ?? entityId);
 }
 
 // ─── uiGroup → 分组配置映射 ───

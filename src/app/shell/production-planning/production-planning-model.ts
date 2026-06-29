@@ -2,6 +2,7 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { createDeviceIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import {
   isItemAvailableByActivity,
   isRecipeAvailableByActivity,
@@ -309,11 +310,11 @@ export function resolveProductionPlanningRecipeName(
 
 export function resolveProductionPlanningItemIconSrc(itemId: string, index: ProductionPlanningIndex): string {
   const item = index.itemById.get(itemId);
-  return `/item-icons/${item?.iconId ?? itemId}.webp`;
+  return createItemIconAssetUrl(item?.iconId ?? itemId);
 }
 
 export function resolveProductionPlanningEntityIconSrc(entityId: string): string {
-  return `/device-icons/${entityId}.webp`;
+  return createDeviceIconAssetUrl(entityId);
 }
 
 export function formatProductionFlow(value: number): string {

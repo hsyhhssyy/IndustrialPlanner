@@ -19,6 +19,7 @@ import {
 import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-collapsible-panel";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { NumberInput } from "@/app/shell/shared/number-input";
 
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
@@ -1108,7 +1109,7 @@ function resolveSlotDomain(
 }
 
 function resolveItemIconSrc(item: ItemDefinition): string {
-  return `/item-icons/${item.iconId}.webp`;
+  return createItemIconAssetUrl(item.iconId);
 }
 
 function canSelectItemForRow(

@@ -7,6 +7,7 @@ import { VitePWA } from "vite-plugin-pwa";
 const PWA_MAX_CACHE_FILE_BYTES = 50 * 1024 * 1024;
 
 export default defineConfig({
+  base: "./",
   build: {
     chunkSizeWarningLimit: 4096,
   },
@@ -22,7 +23,7 @@ export default defineConfig({
       filename: "sw.ts",
       injectRegister: false,
       registerType: "prompt",
-      scope: "/",
+      scope: "./",
       manifestFilename: "manifest.webmanifest",
       includeAssets: ["pwa-icon.svg", "pwa-icon-192.png", "pwa-icon-512.png"],
       manifest: {
@@ -30,26 +31,26 @@ export default defineConfig({
         short_name: "工业仿真",
         description: "离线可用的工业规划与仿真工具",
         lang: "zh-CN",
-        start_url: "/",
-        scope: "/",
+        start_url: ".",
+        scope: ".",
         display: "standalone",
         background_color: "#15231f",
         theme_color: "#15231f",
         icons: [
           {
-            src: "/pwa-icon-192.png",
+            src: "pwa-icon-192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any maskable",
           },
           {
-            src: "/pwa-icon-512.png",
+            src: "pwa-icon-512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable",
           },
           {
-            src: "/pwa-icon.svg",
+            src: "pwa-icon.svg",
             sizes: "any",
             type: "image/svg+xml",
             purpose: "any",

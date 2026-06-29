@@ -4,6 +4,7 @@ import type { Renderer } from "pixi.js"
 
 import type { AppContract } from "@/domain/app/app-contract"
 import { resolveRenderResolutionFromApp } from "@/renderer/render-resolution"
+import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 
 import {
   applyBitmapTextureConfig,
@@ -19,7 +20,7 @@ const PREFIX_BLUEPRINT_AVATAR = "blueprint-avatar-"
 const PREFIX_TEXTURE = "texture-"
 const PREFIX_DEVICE_MASKS = "device-masks-"
 const PREFIX_ITEM_ICON = "item-icon-"
-const TOP_VIEW_ASSET_ROOT = "/3d-top-view"
+const TOP_VIEW_ASSET_ROOT = "3d-top-view"
 
 /**
  * TextureActions 是 src/renderer/texture 对外唯一出口。
@@ -121,45 +122,45 @@ class TextureActionsImpl implements TextureActions {
 
   private resolveCandidatePaths(key: string): string[] {
     if (key.startsWith(PREFIX_DEVICE_SPRITE)) {
-      return [`${TOP_VIEW_ASSET_ROOT}/sprites/${key.slice(PREFIX_DEVICE_SPRITE.length)}.webp`]
+      return [createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprites/${key.slice(PREFIX_DEVICE_SPRITE.length)}.webp`)]
     }
 
     if (key.startsWith(PREFIX_BLUEPRINT_SPRITE)) {
       const id = key.slice(PREFIX_BLUEPRINT_SPRITE.length)
-      return [`/blueprint-view/sprites/${id}.png`]
+      return [createPublicAssetUrl(`blueprint-view/sprites/${id}.png`)]
     }
 
     if (key.startsWith(PREFIX_BLUEPRINT_MASKS)) {
       const id = key.slice(PREFIX_BLUEPRINT_MASKS.length)
-      return [`/blueprint-view/sprite-masks/${id}.png`]
+      return [createPublicAssetUrl(`blueprint-view/sprite-masks/${id}.png`)]
     }
 
     if (key.startsWith(PREFIX_TOP_VIEW_AVATAR)) {
       const id = key.slice(PREFIX_TOP_VIEW_AVATAR.length)
-      return [`${TOP_VIEW_ASSET_ROOT}/avatar/${id}.webp`]
+      return [createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/avatar/${id}.webp`)]
     }
 
     if (key.startsWith(PREFIX_BLUEPRINT_AVATAR)) {
       const id = key.slice(PREFIX_BLUEPRINT_AVATAR.length)
-      return [`/blueprint-view/avatar/${id}.webp`]
+      return [createPublicAssetUrl(`blueprint-view/avatar/${id}.webp`)]
     }
 
     if (key.startsWith(PREFIX_TEXTURE)) {
       const id = key.slice(PREFIX_TEXTURE.length)
-      return [`/textures/${id}.webp`, `/textures/${id}.png`]
+      return [createPublicAssetUrl(`textures/${id}.webp`), createPublicAssetUrl(`textures/${id}.png`)]
     }
 
     if (key.startsWith(PREFIX_DEVICE_MASKS)) {
       const id = key.slice(PREFIX_DEVICE_MASKS.length)
       return [
-        `${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.webp`,
-        `${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.png`,
+        createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.webp`),
+        createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.png`),
       ]
     }
 
     if (key.startsWith(PREFIX_ITEM_ICON)) {
       const id = key.slice(PREFIX_ITEM_ICON.length)
-      return [`/item-icons/${id}.webp`, `/item-icons/${id}.png`]
+      return [createPublicAssetUrl(`item-icons/${id}.webp`), createPublicAssetUrl(`item-icons/${id}.png`)]
     }
 
     return []

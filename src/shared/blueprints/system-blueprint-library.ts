@@ -256,6 +256,10 @@ function createPublicAssetUrl(path: string): string {
   const baseUrl = import.meta.env.BASE_URL;
   const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
 
+  if (normalizedBaseUrl.startsWith(".")) {
+    return `${normalizedBaseUrl}${path.replace(/^\/+/, "")}`;
+  }
+
   return new URL(path, `https://placeholder.local${normalizedBaseUrl}`).pathname;
 }
 

@@ -1,5 +1,6 @@
 import { makeAutoObservable, runInAction } from "mobx";
 
+import { isRootPublicAssetBaseUrl } from "@/shared/browser/public-asset-url";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
 const PWA_PREFERENCE_LOCAL_STORAGE_KEY = "industrial-planner-pwa-preference";
@@ -144,6 +145,11 @@ export class PwaController {
     this.initialized = true;
     this.standalone = resolveStandaloneMode();
 
+    if (!isRootPublicAssetBaseUrl()) {
+      this.offlineStatus = "unsupported";
+      return;
+    }
+
     if (isPwaDevelopmentServer()) {
       this.offlineStatus = "unsupported";
       void cleanupDevelopmentPwaState();
@@ -201,7 +207,7 @@ export class PwaController {
   }
 
   public async enableOfflineMode(): Promise<void> {
-    if (!isServiceWorkerSupported()) {
+    if (!isRootPublicAssetBaseUrl() || !isServiceWorkerSupported()) {
       runInAction(() => {
         this.offlineStatus = "unsupported";
       });

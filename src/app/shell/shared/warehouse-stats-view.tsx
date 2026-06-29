@@ -7,6 +7,7 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import LucidePin from "~icons/lucide/pin";
 import LucidePinOff from "~icons/lucide/pin-off";
+import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 
 const WAREHOUSE_STATS_INTERVAL_MS = 250;
 const WAREHOUSE_PINNED_ITEMS_KEY = "v3-warehouse-pinned-items";
@@ -104,7 +105,7 @@ export function buildWarehouseStatsEntries(options: {
         itemId,
         item,
         label: item === null ? itemId : t(item.nameKey),
-        iconSrc: `/item-icons/${item?.iconId ?? itemId}.webp`,
+        iconSrc: createItemIconAssetUrl(item?.iconId ?? itemId),
         producedPerMinute: stats.producedPerMinute,
         consumedPerMinute: stats.consumedPerMinute,
         warehouseCount: stats.warehouseCount,

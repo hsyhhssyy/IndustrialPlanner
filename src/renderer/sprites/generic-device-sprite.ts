@@ -20,6 +20,7 @@ import type { GridRectSize, GridRotation } from "@/domain/shared/grid"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { RenderHost } from "@/renderer/renderer-host"
+import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 import {
   readSimplifiedDeviceIconPreference,
   resolveDeviceBodyTextureKey,
@@ -52,7 +53,7 @@ const DEFAULT_GHOST_ROOT_ALPHA = 0.2;
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1;
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4;
 
-const SCANLINE_TEXTURE_PATH = "/textures/scanline-45deg-50opacity.png";
+const SCANLINE_TEXTURE_PATH = createPublicAssetUrl("textures/scanline-45deg-50opacity.png");
 /** 扫描线超出设备边界的像素 padding（按 tile 个数 × 纹理原始宽度） */
 const SCANLINE_PADDING_TILES = 2;
 const SCANLINE_SCROLL_INTERVAL_MS = 2000;
