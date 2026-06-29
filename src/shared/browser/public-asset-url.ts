@@ -27,5 +27,18 @@ export function createItemIconAssetUrl(iconId: string): string {
 }
 
 export function isRootPublicAssetBaseUrl(): boolean {
-  return import.meta.env.BASE_URL === "/";
+  const baseUrl = import.meta.env.BASE_URL;
+  if (baseUrl === "/") {
+    return true;
+  }
+
+  if (!baseUrl.startsWith(".")) {
+    return false;
+  }
+
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.location.pathname === "/" || window.location.pathname === "/index.html";
 }
