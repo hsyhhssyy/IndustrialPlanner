@@ -100,6 +100,23 @@ jobs:
           echo "=== dist/v2/index.html exists ==="
           test -f dist/v2/index.html && echo "YES" || echo "NO"
 
+      - name: Package dist zip
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+        run: |
+          mkdir -p .temp
+          zip_name="IndustrialPlanner-${RELEASE_TAG}-dist.zip"
+          cd dist && zip -r "../.temp/${zip_name}" . && cd ..
+          echo "zip_path=.temp/${zip_name}" >> $GITHUB_ENV
+
+      - name: Upload dist zip to release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+        run: gh release upload "$RELEASE_TAG" "${{ env.zip_path }}" --clobber
+
       - name: Write deployment metadata
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
