@@ -42,6 +42,7 @@ export class V2MigrationController {
   errorMessage: string | null = null;
   result: V2MigrationExecutorResult | null = null;
   private didAutoOpen = false;
+  private shouldCloseDialogAfterSuccessfulMigration = false;
 
   constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -60,6 +61,7 @@ export class V2MigrationController {
 
     this.didAutoOpen = true;
     this.openDialog();
+    this.shouldCloseDialogAfterSuccessfulMigration = true;
   }
 
   refresh(): void {
@@ -73,6 +75,7 @@ export class V2MigrationController {
     this.confirmationRequested = false;
     this.showClearConfirmation = false;
     this.clearConfirmationText = "";
+    this.shouldCloseDialogAfterSuccessfulMigration = false;
     this.errorMessage = null;
     if (this.phase !== "migrating") {
       this.phase = this.result === null ? "idle" : "completed";
@@ -89,6 +92,7 @@ export class V2MigrationController {
     this.confirmationRequested = false;
     this.showClearConfirmation = false;
     this.clearConfirmationText = "";
+    this.shouldCloseDialogAfterSuccessfulMigration = false;
   }
 
   async requestConfirmation(appHost: AppHost): Promise<void> {
@@ -158,6 +162,8 @@ export class V2MigrationController {
       return;
     }
 
+    const shouldCloseDialogAfterSuccessfulMigration = this.shouldCloseDialogAfterSuccessfulMigration;
+
     runInAction(() => {
       this.phase = "migrating";
       this.errorMessage = null;
@@ -173,6 +179,10 @@ export class V2MigrationController {
         this.result = result;
         this.phase = "completed";
         this.refresh();
+        this.shouldCloseDialogAfterSuccessfulMigration = false;
+        if (shouldCloseDialogAfterSuccessfulMigration) {
+          this.dialogState.visible = false;
+        }
       });
     } catch (error) {
       runInAction(() => {
