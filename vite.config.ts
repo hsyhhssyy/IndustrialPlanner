@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { isAbsolute, relative, resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
@@ -5,6 +8,47 @@ import Icons from "unplugin-icons/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 const PWA_MAX_CACHE_FILE_BYTES = 50 * 1024 * 1024;
+const PWA_DIST_DIRECTORY = fileURLToPath(new URL("./dist/", import.meta.url));
+
+interface WorkboxManifestEntryWithSize {
+  readonly integrity?: string;
+  readonly revision: string | null;
+  readonly size: number;
+  readonly url: string;
+}
+
+interface IndustrialPlannerPrecacheManifestEntry extends WorkboxManifestEntryWithSize {
+  readonly bytes: number;
+  readonly sha256: string;
+}
+
+async function createIndustrialPlannerPrecacheManifestEntry(
+  entry: WorkboxManifestEntryWithSize,
+): Promise<IndustrialPlannerPrecacheManifestEntry> {
+  const fileBuffer = await readFile(resolvePrecacheFilePath(entry.url));
+
+  return {
+    integrity: entry.integrity,
+    revision: entry.revision,
+    size: entry.size,
+    bytes: fileBuffer.byteLength,
+    sha256: createHash("sha256").update(fileBuffer).digest("hex"),
+    url: entry.url,
+  };
+}
+
+function resolvePrecacheFilePath(entryUrl: string): string {
+  const url = new URL(entryUrl, "https://industrial-planner.local/");
+  const relativeFilePath = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+  const filePath = resolve(PWA_DIST_DIRECTORY, relativeFilePath);
+  const pathInsideDist = relative(PWA_DIST_DIRECTORY, filePath);
+
+  if (pathInsideDist.startsWith("..") || isAbsolute(pathInsideDist)) {
+    throw new Error(`Invalid PWA precache path: ${entryUrl}`);
+  }
+
+  return filePath;
+}
 
 export default defineConfig({
   base: "./",
@@ -58,17 +102,25 @@ export default defineConfig({
         ],
       },
       injectManifest: {
-        globPatterns: ["**/*.{js,css,html,ico,png,webp,svg,jpg,jpeg,json,webmanifest,md}"],
-        globIgnores: ["**/sw.js", "**/workbox-*.js", "changelog/**/*.{png,jpg,jpeg,webp,svg,gif}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,webp,svg,gif,jpg,jpeg,json,webmanifest,md}"],
+        globIgnores: [
+          "**/sw.js",
+          "**/workbox-*.js",
+          // AI-REMOVED 2026-06-29:
+          // Reason: 安装型离线包需要覆盖 changelog 图片，否则离线打开更新记录会缺图。
+          // Trigger: 用户要求不做实时缓存，而是安装后真正离线可用。
+          // Evidence: public/changelog 下存在图片资源；旧 globIgnores 会让这些资源永远不进入预缓存。
+          // Replacement: globPatterns 已覆盖 gif/png/jpg/jpeg/webp/svg，SW 统一 cache-first。
+          // Risk: 离线包体积增加；通过哈希复用和并发下载降低更新成本。
+          // Human Review: Required
+          //
+          // Original code:
+          // "changelog/**/*.{png,jpg,jpeg,webp,svg,gif}",
+        ],
         maximumFileSizeToCacheInBytes: PWA_MAX_CACHE_FILE_BYTES,
         manifestTransforms: [
-          (entries) => ({
-            manifest: entries.map((entry) => ({
-              integrity: entry.integrity,
-              revision: entry.revision,
-              size: entry.size,
-              url: entry.url,
-            })),
+          async (entries) => ({
+            manifest: await Promise.all(entries.map(createIndustrialPlannerPrecacheManifestEntry)),
             warnings: [],
           }),
         ],
