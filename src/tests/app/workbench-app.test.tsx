@@ -309,6 +309,36 @@ async function flushMicrotasks(iterations = 8): Promise<void> {
   }
 }
 
+function stubChangelogFetch(entries: Record<string, string>): void {
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+    const url = typeof input === "string"
+      ? input
+      : input instanceof URL
+        ? input.pathname
+        : input.url;
+
+    if (url === "/changelog/index.json") {
+      return new Response(JSON.stringify(Object.keys(entries)), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    const changelogPrefix = "/changelog/";
+
+    if (url.startsWith(changelogPrefix)) {
+      const file = decodeURIComponent(url.slice(changelogPrefix.length));
+      const markdown = entries[file];
+
+      if (markdown !== undefined) {
+        return new Response(markdown, { status: 200 });
+      }
+    }
+
+    return new Response("Not found", { status: 404 });
+  }));
+}
+
 describe("WorkbenchApp", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -358,6 +388,12 @@ describe("WorkbenchApp", () => {
       configurable: true,
       writable: true,
       value: 1,
+    });
+
+    Object.defineProperty(window, "__APP_VERSION__", {
+      configurable: true,
+      writable: true,
+      value: undefined,
     });
 
     setViewport({
@@ -2661,30 +2697,11 @@ describe("WorkbenchApp", () => {
   });
 
   it("opens the help dialog through app internal actions", async () => {
-    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
-      const url = typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.pathname
-          : input.url;
-
-      if (url === "/changelog/index.json") {
-        return new Response(JSON.stringify(["older.md", "newer.md"]), {
-          headers: { "Content-Type": "application/json" },
-          status: 200,
-        });
-      }
-
-      if (url === "/changelog/older.md") {
-        return new Response("# Older\n\n旧版本内容", { status: 200 });
-      }
-
-      if (url === "/changelog/newer.md") {
-        return new Response("# Newer\n\n新版本内容", { status: 200 });
-      }
-
-      return new Response("Not found", { status: 404 });
-    }));
+    stubChangelogFetch({
+      "正式更新-v1.2.0.md": "# Previous Main\n\n旧主版本内容",
+      "全新版本-v1.3.0.md": "# Current Main\n\n当前主版本内容",
+      "补丁更新-v1.3.0.1.md": "# Current Patch\n\n当前子版本内容",
+    });
 
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
@@ -2701,31 +2718,75 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".help-dialog")).not.toBeNull();
     expect(container.querySelector("#help-dialog-tab-version")?.getAttribute("aria-selected")).toBe("true");
     expect(container.querySelector("#help-dialog-panel-version > .help-dialog-content")).not.toBeNull();
-    expect(container.querySelector(".changelog-markdown")?.textContent).toContain("Newer");
+    expect(container.querySelector(".changelog-markdown")?.textContent).toContain("Current Patch");
 
     const accordions = Array.from(container.querySelectorAll(".changelog-accordion"));
     const headers = Array.from(container.querySelectorAll(".changelog-accordion-header")) as HTMLButtonElement[];
 
     expect(accordions.map((accordion) => accordion.getAttribute("data-expanded"))).toEqual([
       "true",
+      "true",
+      "false",
+    ]);
+    expect(headers.map((header) => header.getAttribute("aria-expanded"))).toEqual([
+      "true",
+      "true",
       "false",
     ]);
 
     act(() => {
-      headers[1]?.click();
+      headers[2]?.click();
+    });
+
+    expect(accordions.map((accordion) => accordion.getAttribute("data-expanded"))).toEqual([
+      "true",
+      "true",
+      "true",
+    ]);
+
+    const collapseButtons = Array.from(
+      container.querySelectorAll(".changelog-collapse-button"),
+    ) as HTMLButtonElement[];
+
+    act(() => {
+      collapseButtons[0]?.click();
     });
 
     expect(accordions.map((accordion) => accordion.getAttribute("data-expanded"))).toEqual([
       "false",
       "true",
+      "true",
     ]);
+  });
+
+  it("treats X.X.X.0 changelog versions as main versions for default expansion", async () => {
+    Object.defineProperty(window, "__APP_VERSION__", {
+      configurable: true,
+      value: "v1.3.0.0",
+    });
+    stubChangelogFetch({
+      "正式更新-v1.2.0.md": "# Previous Main\n\n旧主版本内容",
+      "全新版本-v1.3.0.md": "# Current Main\n\n当前主版本内容",
+      "补丁更新-v1.3.0.1.md": "# Current Patch\n\n当前子版本内容",
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
 
     act(() => {
-      headers[1]?.click();
+      root.render(<WorkbenchApp appHost={appHost} />);
+      appHost.internalActions.openDialog("help:version");
     });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    const accordions = Array.from(container.querySelectorAll(".changelog-accordion"));
 
     expect(accordions.map((accordion) => accordion.getAttribute("data-expanded"))).toEqual([
       "false",
+      "true",
       "false",
     ]);
   });

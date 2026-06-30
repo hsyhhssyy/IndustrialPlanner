@@ -1143,6 +1143,45 @@
   padding: 0 14px 14px;
 }
 
+.changelog-collapse-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.changelog-collapse-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-3);
+    border-color: var(--line-strong);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--highlight-ring);
+    outline-offset: 2px;
+  }
+}
+
+.changelog-collapse-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-1);
+}
+
 .changelog-markdown {
   color: var(--text-0);
   font-size: 0.88rem;
