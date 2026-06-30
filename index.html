@@ -6,6 +6,18 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
+    <script>
+      (() => {
+        const pathname = location.pathname
+        const lastSegment = pathname.split('/').pop() ?? ''
+        const hasFileExtension = /\.[^/.]+$/.test(lastSegment)
+
+        if (pathname !== '/' && !pathname.endsWith('/') && !hasFileExtension) {
+          const baseHref = `${location.origin}${pathname}/`.replace(/"/g, '&quot;')
+          document.write(`<base href="${baseHref}">`)
+        }
+      })()
+    </script>
     <link rel="icon" type="image/webp" href="%BASE_URL%device-icons/item_log_belt_01.webp" />
     <title>终末地工业系统仿真器</title>
   </head>
