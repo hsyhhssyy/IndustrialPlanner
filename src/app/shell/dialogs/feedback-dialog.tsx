@@ -11,7 +11,7 @@ import { cm } from "@/app/shell/shared/css-module-class";
 
 const FEEDBACK_GITHUB_URL =
   "https://github.com/hsyhhssyy/IndustrialPlanner/issues/new?template=bilingual-feedback.md";
-const FEEDBACK_BILIBILI_URL = "https://www.bilibili.com/opus/1192571620530585617";
+const FEEDBACK_BILIBILI_URL = "https://www.bilibili.com/opus/1219275845955223568";
 
 type FeedbackChannel = "github" | "bilibili";
 
