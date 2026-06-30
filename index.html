@@ -18,6 +18,58 @@
         }
       })()
     </script>
+    <script>
+      (() => {
+        const badge = document.createElement('div')
+        badge.id = 'index-html-debug-badge'
+        badge.textContent = `index.html loaded · ${new Date().toISOString()}`
+        badge.style.cssText = [
+          'position:fixed',
+          'z-index:2147483647',
+          'right:8px',
+          'bottom:8px',
+          'max-width:min(420px,calc(100vw - 16px))',
+          'padding:6px 8px',
+          'border-radius:4px',
+          'background:rgba(0,0,0,.78)',
+          'color:#fff',
+          'font:12px/1.4 monospace',
+          'pointer-events:none',
+        ].join(';')
+
+        const mountBadge = () => {
+          if (document.body === null) {
+            window.setTimeout(mountBadge, 0)
+            return
+          }
+
+          document.body.appendChild(badge)
+        }
+
+        window.__INDEX_HTML_DEBUG__ = {
+          baseURI: document.baseURI,
+          href: location.href,
+          pathname: location.pathname,
+        }
+        mountBadge()
+
+        const script = document.createElement('script')
+        script.src = 'https://cdn.jsdelivr.net/npm/vconsole@3.15.1/dist/vconsole.min.js'
+        script.onload = () => {
+          if (typeof window.VConsole === 'function') {
+            window.__INDEX_HTML_VCONSOLE__ = new window.VConsole()
+            badge.textContent = `index.html loaded + vConsole · ${new Date().toISOString()}`
+            console.log('[index-html-debug]', window.__INDEX_HTML_DEBUG__)
+          } else {
+            badge.textContent = 'index.html loaded · vConsole missing'
+          }
+        }
+        script.onerror = () => {
+          badge.textContent = 'index.html loaded · vConsole load failed'
+        }
+        document.head.appendChild(script)
+      })()
+    </script>
     <link rel="icon" type="image/webp" href="%BASE_URL%device-icons/item_log_belt_01.webp" />
     <title>终末地工业系统仿真器</title>
   </head>
