@@ -27,6 +27,18 @@
   -webkit-touch-callout: none;
 }
 
+.overlay-stack-root {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+  touch-action: auto;
+}
+
+.overlay-stack-root > * {
+  pointer-events: auto;
+}
+
 .workbench-floating-top-bar-controls {
   position: absolute;
   top: 10px;

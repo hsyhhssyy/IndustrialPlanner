@@ -2093,9 +2093,21 @@
 }
 
 .slot-config-dialog-backdrop {
-  position: fixed;
+  /* AI-CORRECTION 2026-06-30: 槽位配置器已迁移到 OverlayStack，定位跟随统一 overlay root。 */
+  position: absolute;
   inset: 0;
-  z-index: 80;
+  /*
+    AI-REMOVED 2026-06-30:
+    Reason: 业务弹层层级改由 OverlayStack 按打开顺序统一分配，避免右侧面板模式下压住物品选择器。
+    Trigger: 用户反馈开启“使用右侧面板显示设备属性”后，槽位配置器层级高于物品选择器导致无法选物品。
+    Evidence: .slot-config-dialog-backdrop 原 z-index 80 高于 DialogShell z-index 13；迁移后组件通过 inline style 接收 OverlayStack zIndex。
+    Replacement: src/app/shell/shared/overlay-stack.tsx
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    z-index: 80;
+  */
   display: grid;
   place-items: center;
   padding: 8px;

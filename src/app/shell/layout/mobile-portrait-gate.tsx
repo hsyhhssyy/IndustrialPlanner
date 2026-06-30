@@ -1,5 +1,6 @@
 import type { AppHost } from "@/app/host/app-host";
 import { requestDocumentFullscreen } from "@/app/shell/layout/fullscreen-toggle-button";
+import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { AppLocale } from "@/domain/app";
 import styles from "@/app/shell/app-shell.module.scss";
@@ -33,35 +34,40 @@ export function MobilePortraitGate({ appHost }: { appHost: AppHost }) {
   };
 
   return (
-    <section
-      aria-label={copy.ariaLabel}
-      aria-modal="true"
-      className={cm(styles, "mobile-portrait-gate")}
-      role="dialog"
-    >
-      <div className={cm(styles, "mobile-portrait-gate-panel")}>
-        <div className={cm(styles, "mobile-portrait-gate-motion")} aria-hidden="true">
-          <span className={cm(styles, "mobile-portrait-gate-phone")}>
-            <WorkbenchIcon kind="device-mobile" />
-          </span>
-          <span className={cm(styles, "mobile-portrait-gate-landscape")}>
-            <WorkbenchIcon kind="screen-landscape" />
-          </span>
-        </div>
-        <div className={cm(styles, "mobile-portrait-gate-copy")}>
-          <h2>{copy.title}</h2>
-          <p>{copy.description}</p>
-          <p>{copy.fullscreenHint}</p>
-        </div>
-        <button
-          className={cm(styles, "mobile-portrait-gate-fullscreen")}
-          onClick={handleFullscreenClick}
-          type="button"
+    <OverlayStackLayer kind="system" layerId="mobile-portrait-gate" visible>
+      {({ zIndex }) => (
+        <section
+          aria-label={copy.ariaLabel}
+          aria-modal="true"
+          className={cm(styles, "mobile-portrait-gate")}
+          role="dialog"
+          style={{ zIndex }}
         >
-          <WorkbenchIcon kind="expand" />
-          <span>{fullscreenLabel}</span>
-        </button>
-      </div>
-    </section>
+          <div className={cm(styles, "mobile-portrait-gate-panel")}>
+            <div className={cm(styles, "mobile-portrait-gate-motion")} aria-hidden="true">
+              <span className={cm(styles, "mobile-portrait-gate-phone")}>
+                <WorkbenchIcon kind="device-mobile" />
+              </span>
+              <span className={cm(styles, "mobile-portrait-gate-landscape")}>
+                <WorkbenchIcon kind="screen-landscape" />
+              </span>
+            </div>
+            <div className={cm(styles, "mobile-portrait-gate-copy")}>
+              <h2>{copy.title}</h2>
+              <p>{copy.description}</p>
+              <p>{copy.fullscreenHint}</p>
+            </div>
+            <button
+              className={cm(styles, "mobile-portrait-gate-fullscreen")}
+              onClick={handleFullscreenClick}
+              type="button"
+            >
+              <WorkbenchIcon kind="expand" />
+              <span>{fullscreenLabel}</span>
+            </button>
+          </div>
+        </section>
+      )}
+    </OverlayStackLayer>
   );
 }

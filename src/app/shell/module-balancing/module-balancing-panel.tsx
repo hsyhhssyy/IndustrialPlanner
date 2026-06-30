@@ -55,6 +55,7 @@ import {
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { NumberInput } from "@/app/shell/shared/number-input";
+import { OverlayStackLayer, useOverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 
 const MODULE_DRAG_TYPE = "application/x-industrial-planner-module-balancing-module";
@@ -124,6 +125,10 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   const [expandedBalanceIds, setExpandedBalanceIds] = useState<Set<string>>(() => new Set());
   const [quantityDraft, setQuantityDraft] = useState<QuantityDraft | null>(null);
   const [customModuleForm, setCustomModuleForm] = useState<CustomModuleFormState | null>(null);
+  const libraryLayer = useOverlayStackLayer({
+    layerId: "module-balancing:library",
+    visible: libraryOpen,
+  });
 
   const index = buildModuleBalancingIndex(appHost.workspace.registry, balancingState, {
     includeInactiveActivityContent: showAllActivityContent,
@@ -510,7 +515,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           if (event.target === event.currentTarget) {
             setLibraryOpen(false);
           }
-        }}>
+        }} style={{ zIndex: libraryLayer.zIndex }}>
           <aside className={cm(styles, "module-balancing-drawer")}>
             <header className={cm(styles, "module-balancing-drawer-header")}>
               <h3>{t("moduleBalancing.moduleLibrary")}</h3>
@@ -541,11 +546,13 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
         </div>
       ) : null}
       {newCanvasDialogOpen ? (
-        <div className={cm(styles, "module-balancing-editor-backdrop")} onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            setNewCanvasDialogOpen(false);
-          }
-        }}>
+        <OverlayStackLayer layerId="module-balancing:new-canvas" visible>
+          {({ zIndex }) => (
+            <div className={cm(styles, "module-balancing-editor-backdrop")} onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setNewCanvasDialogOpen(false);
+              }
+            }} style={{ zIndex }}>
           <section className={cm(styles, "module-balancing-quantity-editor")} role="dialog" aria-modal="true">
             <header className={cm(styles, "module-balancing-form-header")}>
               <h3>{t("moduleBalancing.newCanvas")}</h3>
@@ -569,14 +576,18 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
               </button>
             </footer>
           </section>
-        </div>
+            </div>
+          )}
+        </OverlayStackLayer>
       ) : null}
       {customModuleForm !== null ? (
-        <div className={cm(styles, "module-balancing-editor-backdrop")} onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            closeCustomModuleForm();
-          }
-        }}>
+        <OverlayStackLayer layerId={`module-balancing:custom-module:${customModuleForm.id}`} visible>
+          {({ zIndex }) => (
+            <div className={cm(styles, "module-balancing-editor-backdrop")} onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                closeCustomModuleForm();
+              }
+            }} style={{ zIndex }}>
           <CustomModuleForm
             draft={customModuleForm}
             index={index}
@@ -616,7 +627,9 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             onUpdate={setCustomModuleForm}
             t={t}
           />
-        </div>
+            </div>
+          )}
+        </OverlayStackLayer>
       ) : null}
       {quantityDraft !== null ? (
         <QuantityEditor
@@ -889,7 +902,7 @@ function CanvasInputPanel({
   );
 }
 
-function WizardNavigation({
+const WizardNavigation = observer(function WizardNavigation({
   activeCanvas,
   activePage,
   onAddStage,
@@ -956,9 +969,9 @@ function WizardNavigation({
       </div>
     </nav>
   );
-}
+});
 
-function CanvasSettingsPanel({
+const CanvasSettingsPanel = observer(function CanvasSettingsPanel({
   activeCanvas,
   activityIds,
   canDelete,
@@ -1034,9 +1047,9 @@ function CanvasSettingsPanel({
       </footer>
     </section>
   );
-}
+});
 
-function StageDetailPanel({
+const StageDetailPanel = observer(function StageDetailPanel({
   expandedBalanceIds,
   index,
   onAddModule,
@@ -1106,9 +1119,9 @@ function StageDetailPanel({
       />
     </section>
   );
-}
+});
 
-function StageHeader({
+const StageHeader = observer(function StageHeader({
   onClear,
   onSaveAsModule,
   onUpdateName,
@@ -1139,7 +1152,7 @@ function StageHeader({
       </div>
     </header>
   );
-}
+});
 
 function StageEntryGrid({
   index,
@@ -1554,11 +1567,13 @@ function QuantityEditor({
   };
 
   return (
-    <div className={cm(styles, "module-balancing-editor-backdrop")} onMouseDown={(event) => {
-      if (event.target === event.currentTarget) {
-        onCancel();
-      }
-    }}>
+    <OverlayStackLayer layerId={`module-balancing:quantity:${draft.stageId}:${draft.moduleId}`} visible>
+      {({ zIndex }) => (
+        <div className={cm(styles, "module-balancing-editor-backdrop")} onMouseDown={(event) => {
+          if (event.target === event.currentTarget) {
+            onCancel();
+          }
+        }} style={{ zIndex }}>
       <section className={cm(styles, "module-balancing-quantity-editor")} role="dialog" aria-modal="true">
         <header className={cm(styles, "module-balancing-form-header")}>
           <h3>{draft.mode === "add" ? t("moduleBalancing.addToStage") : t("moduleBalancing.editQuantity")}</h3>
@@ -1599,7 +1614,9 @@ function QuantityEditor({
           </button>
         </footer>
       </section>
-    </div>
+        </div>
+      )}
+    </OverlayStackLayer>
   );
 }
 

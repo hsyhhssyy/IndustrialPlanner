@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   fetchHelpTutorialPages,
@@ -6,6 +7,7 @@ import {
   type HelpTutorialImage,
   type HelpTutorialPage,
 } from "@/app/shell/dialogs/help-markdown";
+import { useOverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -33,6 +35,12 @@ export function MarkdownTutorialOverlay({
   dialogKey = "markdown-tutorial-overlay",
   durationMs = DEFAULT_MARKDOWN_TUTORIAL_OVERLAY_DURATION_MS,
 }: MarkdownTutorialOverlayProps) {
+  const overlayLayer = useOverlayStackLayer({
+    layerId: dialogKey,
+    visible,
+    kind: "system",
+  });
+
   useEffect(() => {
     if (!visible || durationMs === null || durationMs <= 0) {
       return;
@@ -51,11 +59,16 @@ export function MarkdownTutorialOverlay({
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (!overlayLayer.isTop) {
+        return;
+      }
+
       if (event.key !== "Escape") {
         return;
       }
 
       event.preventDefault();
+      event.stopImmediatePropagation();
       onClose();
     };
 
@@ -64,13 +77,13 @@ export function MarkdownTutorialOverlay({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onClose, visible]);
+  }, [onClose, overlayLayer.isTop, visible]);
 
   if (!visible) {
     return null;
   }
 
-  return (
+  const overlayElement = (
     <div
       className={cm(styles, "markdown-tutorial-overlay-backdrop")}
       onPointerDown={(event) => {
@@ -80,6 +93,7 @@ export function MarkdownTutorialOverlay({
 
         onClose();
       }}
+      style={{ zIndex: overlayLayer.zIndex }}
     >
       <section
         aria-label={title}
@@ -100,6 +114,12 @@ export function MarkdownTutorialOverlay({
       </section>
     </div>
   );
+
+  if (overlayLayer.portalHost === null) {
+    return overlayElement;
+  }
+
+  return createPortal(overlayElement, overlayLayer.portalHost);
 }
 
 function shouldKeepMarkdownTutorialOverlayOpen(target: EventTarget): boolean {

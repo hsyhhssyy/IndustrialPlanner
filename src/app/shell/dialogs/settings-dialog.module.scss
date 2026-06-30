@@ -1,7 +1,18 @@
 .settings-dialog-backdrop {
   position: absolute;
   inset: 0;
-  z-index: 12;
+  /*
+    AI-REMOVED 2026-06-30:
+    Reason: settings dialog 已由 DialogShell 接入 OverlayStack，不再维护独立固定层级。
+    Trigger: 用户要求所有弹层场景系统性避免 z-index 冲突。
+    Evidence: SettingsDialog 使用 DialogShell，DialogShell backdrop 通过 inline zIndex 接收统一栈序。
+    Replacement: src/app/shell/shared/overlay-stack.tsx
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    z-index: 12;
+  */
   display: flex;
   align-items: center;
   justify-content: center;

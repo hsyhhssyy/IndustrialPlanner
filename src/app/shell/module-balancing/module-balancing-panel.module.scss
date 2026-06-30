@@ -197,7 +197,18 @@
 .module-balancing-drawer-layer {
   position: absolute;
   inset: 0;
-  z-index: 20;
+  /*
+    AI-REMOVED 2026-06-30:
+    Reason: 模块配平素材库抽屉已接入 OverlayStack 层级计算，层级由打开顺序统一分配。
+    Trigger: 用户要求工具箱内弹层也纳入系统性层级治理，避免抽屉与编辑器/picker 互相压错。
+    Evidence: ModuleBalancingPanel 中 module-balancing-drawer-layer 现在通过 useOverlayStackLayer 接收 inline zIndex。
+    Replacement: src/app/shell/shared/overlay-stack.tsx
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    z-index: 20;
+  */
   background: color-mix(in srgb, var(--shell-bg) 35%, transparent);
 }
 
@@ -1017,7 +1028,18 @@
 .module-balancing-editor-backdrop {
   position: absolute;
   inset: 0;
-  z-index: 30;
+  /*
+    AI-REMOVED 2026-06-30:
+    Reason: 模块配平局部编辑器已接入 OverlayStack，层级由打开顺序统一分配。
+    Trigger: 用户要求工具箱内弹层也纳入系统性层级治理，避免编辑器与物品选择器/其他 picker 互相压错。
+    Evidence: ModuleBalancingPanel 中 module-balancing-editor-backdrop 现在通过 OverlayStackLayer 接收 inline zIndex。
+    Replacement: src/app/shell/shared/overlay-stack.tsx
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    z-index: 30;
+  */
   display: flex;
   align-items: center;
   justify-content: center;

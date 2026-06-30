@@ -1,7 +1,18 @@
 .markdown-tutorial-overlay-backdrop {
   position: absolute;
   inset: 0;
-  z-index: 14;
+  /*
+    AI-REMOVED 2026-06-30:
+    Reason: Markdown 教程 overlay 已接入 OverlayStack 的 system 层级，不再维护独立固定层级。
+    Trigger: 用户要求所有弹层场景系统性避免 z-index 冲突。
+    Evidence: MarkdownTutorialOverlay.tsx 通过 useOverlayStackLayer(kind="system") 写入 inline zIndex。
+    Replacement: src/app/shell/shared/overlay-stack.tsx
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    z-index: 14;
+  */
   display: flex;
   align-items: center;
   justify-content: center;

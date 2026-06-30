@@ -6,10 +6,12 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { observer } from "mobx-react-lite";
 
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
+import { useOverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -71,6 +73,10 @@ export const DialogShell = observer(function DialogShell({
   const dragCleanupRef = useRef<(() => void) | null>(null);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
   const shellRef = useRef<HTMLElement | null>(null);
+  const overlayLayer = useOverlayStackLayer({
+    layerId: dialogKey,
+    visible: dialogState.visible,
+  });
   const [liveSize, setLiveSize] = useState<{ width: number | null; height: number | null }>({
     width: null,
     height: null,
@@ -86,7 +92,12 @@ export const DialogShell = observer(function DialogShell({
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (!overlayLayer.isTop) {
+        return;
+      }
+
       if (onWindowKeyDown?.(event)) {
+        event.stopImmediatePropagation();
         return;
       }
 
@@ -95,6 +106,7 @@ export const DialogShell = observer(function DialogShell({
       }
 
       event.preventDefault();
+      event.stopImmediatePropagation();
       onClose();
     };
 
@@ -103,7 +115,7 @@ export const DialogShell = observer(function DialogShell({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [dialogState.visible, onClose, onWindowKeyDown]);
+  }, [dialogState.visible, onClose, onWindowKeyDown, overlayLayer.isTop]);
 
   useEffect(() => {
     if (!dialogState.visible || dialogState.maximized) {
@@ -296,7 +308,7 @@ export const DialogShell = observer(function DialogShell({
     resizeCleanupRef.current = cleanup;
   };
 
-  return (
+  const dialogElement = (
     <div
       className={cm(styles, backdropClassName)}
       onMouseDown={(event) => {
@@ -306,6 +318,7 @@ export const DialogShell = observer(function DialogShell({
 
         onClose();
       }}
+      style={{ zIndex: overlayLayer.zIndex }}
     >
       <section
         aria-labelledby={titleId}
@@ -407,4 +420,10 @@ export const DialogShell = observer(function DialogShell({
       </section>
     </div>
   );
+
+  if (overlayLayer.portalHost === null) {
+    return dialogElement;
+  }
+
+  return createPortal(dialogElement, overlayLayer.portalHost);
 });

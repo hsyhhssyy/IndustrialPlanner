@@ -1,7 +1,18 @@
 .mobile-portrait-gate {
   position: absolute;
   inset: 0;
-  z-index: 40;
+  /*
+    AI-REMOVED 2026-06-30:
+    Reason: 移动端竖屏拦截层已接入 OverlayStack system 层，层级由统一弹层栈分配。
+    Trigger: 用户要求系统性治理所有跨界面弹层，避免固定 z-index 绕过统一机制。
+    Evidence: MobilePortraitGate 现在通过 OverlayStackLayer 接收 inline zIndex。
+    Replacement: src/app/shell/shared/overlay-stack.tsx
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    z-index: 40;
+  */
   display: grid;
   place-items: center;
   padding: 20px;

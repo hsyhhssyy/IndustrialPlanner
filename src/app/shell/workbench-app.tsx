@@ -41,6 +41,7 @@ import { V2MigrationController } from "@/app/migration";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
 import { RightDock } from "@/app/shell/layout/right-dock";
 import { SimulationControlButton, TopBar } from "@/app/shell/layout/top-bar";
+import { OverlayStackProvider } from "@/app/shell/shared/overlay-stack";
 import {
   preventMiddleMousePointerDownBrowserBehavior,
   preventNativeBrowserEvent,
@@ -722,99 +723,101 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       onPointerDownCapture={preventMiddleMousePointerDownBrowserBehavior}
       style={workbenchStyle}
     >
-      <TopBar appHost={appHost} />
-      {showFloatingTopBarControls ? (
-        <div className={cm(styles, "workbench-floating-top-bar-controls")}>
-          <SimulationControlButton
-            appHost={appHost}
-            className={cm(styles, "workbench-floating-top-bar-button")}
-          />
-          <FullscreenToggleButton
-            appHost={appHost}
-            className={cm(styles, "workbench-floating-top-bar-button workbench-floating-fullscreen-button")}
-          />
-          {useInspectorPanel && !rightDockOpen ? (
+      <OverlayStackProvider>
+        <TopBar appHost={appHost} />
+        {showFloatingTopBarControls ? (
+          <div className={cm(styles, "workbench-floating-top-bar-controls")}>
+            <SimulationControlButton
+              appHost={appHost}
+              className={cm(styles, "workbench-floating-top-bar-button")}
+            />
+            <FullscreenToggleButton
+              appHost={appHost}
+              className={cm(styles, "workbench-floating-top-bar-button workbench-floating-fullscreen-button")}
+            />
+            {useInspectorPanel && !rightDockOpen ? (
+              <button
+                aria-label={floatingOpenRightDockLabel}
+                className={cm(styles, "workbench-floating-top-bar-button workbench-floating-right-dock-button")}
+                onClick={appHost.internalActions.toggleRightDock}
+                title={floatingOpenRightDockLabel}
+                type="button"
+              >
+                <span className={cm(styles, "top-bar-toggle-icon")}>
+                  <WorkbenchIcon kind="panel-right-open" />
+                </span>
+                <span className={cm(styles, "sr-only")}>{floatingOpenRightDockLabel}</span>
+              </button>
+            ) : null}
             <button
-              aria-label={floatingOpenRightDockLabel}
-              className={cm(styles, "workbench-floating-top-bar-button workbench-floating-right-dock-button")}
-              onClick={appHost.internalActions.toggleRightDock}
-              title={floatingOpenRightDockLabel}
+              aria-label={`${t("action.expand")} ${t("topBar.controls")}`}
+              className={cm(styles, "workbench-floating-top-bar-button workbench-floating-top-bar-toggle")}
+              onClick={appHost.internalActions.toggleTopBarCollapsed}
+              title={`${t("action.expand")} ${t("topBar.controls")}`}
               type="button"
             >
               <span className={cm(styles, "top-bar-toggle-icon")}>
-                <WorkbenchIcon kind="panel-right-open" />
+                <WorkbenchIcon kind="panel-top-open" />
               </span>
-              <span className={cm(styles, "sr-only")}>{floatingOpenRightDockLabel}</span>
+              <span className={cm(styles, "sr-only")}>{`${t("action.expand")} ${t("topBar.controls")}`}</span>
             </button>
-          ) : null}
-          <button
-            aria-label={`${t("action.expand")} ${t("topBar.controls")}`}
-            className={cm(styles, "workbench-floating-top-bar-button workbench-floating-top-bar-toggle")}
-            onClick={appHost.internalActions.toggleTopBarCollapsed}
-            title={`${t("action.expand")} ${t("topBar.controls")}`}
-            type="button"
-          >
-            <span className={cm(styles, "top-bar-toggle-icon")}>
-              <WorkbenchIcon kind="panel-top-open" />
-            </span>
-            <span className={cm(styles, "sr-only")}>{`${t("action.expand")} ${t("topBar.controls")}`}</span>
-          </button>
-        </div>
-      ) : null}
-      <LeftToolbar appHost={appHost} />
-      {effectiveLeftDockOpen ? <LeftDock appHost={appHost} /> : null}
-      <CanvasPanel appHost={appHost} />
-      <CanvasBottomLeftSecondaryToolbar
-        appHost={appHost}
-        offsetForFloatingTools={showCanvasBottomLeftToolbar}
-      />
-      {showCanvasBottomLeftToolbar ? <CanvasBottomLeftToolbar appHost={appHost} /> : null}
-      {canvasTopLeftCornerToolbar.visible && canvasTopLeftCornerToolbar.buttonIds.length > 0 ? (
-        <CanvasTopLeftCornerToolbar
+          </div>
+        ) : null}
+        <LeftToolbar appHost={appHost} />
+        {effectiveLeftDockOpen ? <LeftDock appHost={appHost} /> : null}
+        <CanvasPanel appHost={appHost} />
+        <CanvasBottomLeftSecondaryToolbar
           appHost={appHost}
-          buttonIds={canvasTopLeftCornerToolbar.buttonIds}
-          initialOffButtonIds={canvasTopLeftCornerToolbar.initialOffButtonIds}
-          key={canvasTopLeftCornerToolbarKey}
+          offsetForFloatingTools={showCanvasBottomLeftToolbar}
         />
-      ) : null}
-      {canvasFloatingToolbar.visible && canvasFloatingToolbar.anchor !== null && canvasFloatingToolbar.buttonIds.length > 0 ? (
-        <CanvasFloatingToolbar
-          anchor={canvasFloatingToolbar.anchor}
+        {showCanvasBottomLeftToolbar ? <CanvasBottomLeftToolbar appHost={appHost} /> : null}
+        {canvasTopLeftCornerToolbar.visible && canvasTopLeftCornerToolbar.buttonIds.length > 0 ? (
+          <CanvasTopLeftCornerToolbar
+            appHost={appHost}
+            buttonIds={canvasTopLeftCornerToolbar.buttonIds}
+            initialOffButtonIds={canvasTopLeftCornerToolbar.initialOffButtonIds}
+            key={canvasTopLeftCornerToolbarKey}
+          />
+        ) : null}
+        {canvasFloatingToolbar.visible && canvasFloatingToolbar.anchor !== null && canvasFloatingToolbar.buttonIds.length > 0 ? (
+          <CanvasFloatingToolbar
+            anchor={canvasFloatingToolbar.anchor}
+            appHost={appHost}
+            buttonIds={canvasFloatingToolbar.buttonIds}
+          />
+        ) : null}
+        {canvasRightDockToolbar.visible && canvasRightDockToolbar.buttonIds.length > 0 ? (
+          <CanvasRightDockToolbar
+            appHost={appHost}
+            buttonIds={canvasRightDockToolbar.buttonIds}
+            mode={canvasRightDockToolbar.mode}
+          />
+        ) : null}
+        {showRightDock ? <RightDock appHost={appHost} /> : null}
+        {showToolboxBottomDock ? <ToolboxBottomDock appHost={appHost} /> : null}
+        {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}
+        {appHost.state.settings.debugMode ? <DebugLogDialog appHost={appHost} /> : null}
+        <BaseSelectDialog appHost={appHost} />
+        <BlueprintFolderDialog appHost={appHost} controller={appHost.blueprintFolderDialog} />
+        <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
+        <InspectorDialog appHost={appHost} />
+        <SaveBlueprintDialog appHost={appHost} />
+        <ToolboxDialog appHost={appHost} />
+        <WarehouseStatsDialog appHost={appHost} />
+        <EncyclopediaPickerDialog appHost={appHost} />
+        <RecipePickerDialog appHost={appHost} />
+        <HelpDialog appHost={appHost} />
+        <FeedbackDialog appHost={appHost} />
+        <SettingsDialog
           appHost={appHost}
-          buttonIds={canvasFloatingToolbar.buttonIds}
+          controller={settingsDialog}
+          migrationController={migrationController}
+          pwaController={pwaController}
         />
-      ) : null}
-      {canvasRightDockToolbar.visible && canvasRightDockToolbar.buttonIds.length > 0 ? (
-        <CanvasRightDockToolbar
-          appHost={appHost}
-          buttonIds={canvasRightDockToolbar.buttonIds}
-          mode={canvasRightDockToolbar.mode}
-        />
-      ) : null}
-      {showRightDock ? <RightDock appHost={appHost} /> : null}
-      {showToolboxBottomDock ? <ToolboxBottomDock appHost={appHost} /> : null}
-      {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}
-      {appHost.state.settings.debugMode ? <DebugLogDialog appHost={appHost} /> : null}
-      <BaseSelectDialog appHost={appHost} />
-      <BlueprintFolderDialog appHost={appHost} controller={appHost.blueprintFolderDialog} />
-      <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
-      <InspectorDialog appHost={appHost} />
-      <SaveBlueprintDialog appHost={appHost} />
-      <ToolboxDialog appHost={appHost} />
-      <WarehouseStatsDialog appHost={appHost} />
-      <EncyclopediaPickerDialog appHost={appHost} />
-      <RecipePickerDialog appHost={appHost} />
-      <HelpDialog appHost={appHost} />
-      <FeedbackDialog appHost={appHost} />
-      <SettingsDialog
-        appHost={appHost}
-        controller={settingsDialog}
-        migrationController={migrationController}
-        pwaController={pwaController}
-      />
-      <V2MigrationDialog appHost={appHost} controller={migrationController} />
-      <PwaGateway appHost={appHost} pwaController={pwaController} />
-      {showMobilePortraitGate ? <MobilePortraitGate appHost={appHost} /> : null}
+        <V2MigrationDialog appHost={appHost} controller={migrationController} />
+        <PwaGateway appHost={appHost} pwaController={pwaController} />
+        {showMobilePortraitGate ? <MobilePortraitGate appHost={appHost} /> : null}
+      </OverlayStackProvider>
     </div>
   );
 });

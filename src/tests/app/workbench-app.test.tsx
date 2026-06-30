@@ -28,6 +28,7 @@ import {
   DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TOOLBOX_DIALOG_TAB_ID,
   MOBILE_LEFT_DOCK_WIDTH,
+  TOOLBOX_DIALOG_TAB_IDS,
 } from "@/app/state/state-impl";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -2961,6 +2962,51 @@ describe("WorkbenchApp", () => {
     expect(appHost.internalState.workbench.toolbox.dockPreference).toBe("floating");
     expect(container.querySelector(".toolbox-bottom-dock")).toBeNull();
     expect(container.querySelector(".toolbox-dialog")).not.toBeNull();
+  });
+
+  it("edits a module balancing stage name and updates the stage navigation label", async () => {
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        toolboxDialog: createDialogStateSnapshot({
+          visible: true,
+          activeTab: TOOLBOX_DIALOG_TAB_IDS[2],
+        }),
+      })),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const stageTab = Array.from(container.querySelectorAll("button"))
+      .find((button) => button.textContent === "Stage 1") as HTMLButtonElement | undefined;
+
+    expect(stageTab).toBeDefined();
+
+    act(() => {
+      stageTab?.click();
+    });
+
+    const stageNameInput = container.querySelector(
+      ".module-balancing-stage-name input",
+    ) as HTMLInputElement | null;
+
+    expect(stageNameInput).not.toBeNull();
+    expect(stageNameInput?.readOnly).toBe(false);
+    expect(stageNameInput?.disabled).toBe(false);
+    expect(stageNameInput?.value).toBe("Stage 1");
+
+    await act(async () => {
+      dispatchInputEvent(stageNameInput as HTMLInputElement, "炼铁阶段");
+      await flushMicrotasks();
+    });
+
+    expect(stageNameInput?.value).toBe("炼铁阶段");
+    expect(stageTab?.textContent).toBe("炼铁阶段");
   });
 
   it("temporarily falls back to the floating toolbox on phones and restores bottom dock on tablets", () => {

@@ -197,7 +197,18 @@
 .debug-log-dialog-backdrop {
   position: absolute;
   inset: 0;
-  z-index: 13;
+  /*
+    AI-REMOVED 2026-06-30:
+    Reason: help/toolbox/debug-log 均由 DialogShell 渲染，层级已改由 OverlayStack 统一分配。
+    Trigger: 用户要求包括工具箱在内的所有弹层场景系统性避免 z-index 冲突。
+    Evidence: DialogShell backdrop 现在通过 inline zIndex 接收 useOverlayStackLayer 的栈序。
+    Replacement: src/app/shell/shared/overlay-stack.tsx
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    z-index: 13;
+  */
   display: flex;
   align-items: center;
   justify-content: center;

@@ -21,6 +21,7 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { NumberInput } from "@/app/shell/shared/number-input";
+import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 type StorageSlotDefinition = StorageSlotGroupDefinition["slots"][number];
@@ -624,20 +625,26 @@ export function SlotConfigInspector({
         </div>
       )}
       {editingSlot !== null ? (
-        <div
-          className={cm(styles, "slot-config-dialog-backdrop")}
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setEditingSlot(null);
-            }
-          }}
+        <OverlayStackLayer
+          layerId={`slot-config:${entity.id}:${editingSlot.storageGroupId}:${editingSlot.slotId}`}
+          visible
         >
-          <div
-            aria-label="槽位配置器"
-            aria-modal="true"
-            className={cm(styles, "slot-config-dialog")}
-            role="dialog"
-          >
+          {({ zIndex }) => (
+            <div
+              className={cm(styles, "slot-config-dialog-backdrop")}
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  setEditingSlot(null);
+                }
+              }}
+              style={{ zIndex }}
+            >
+              <div
+                aria-label="槽位配置器"
+                aria-modal="true"
+                className={cm(styles, "slot-config-dialog")}
+                role="dialog"
+              >
             <div className={cm(styles, "slot-config-dialog-header")}>
               <h3>槽位配置器</h3>
               <button
@@ -828,8 +835,10 @@ export function SlotConfigInspector({
                 确定
               </button>
             </div>
-          </div>
-        </div>
+              </div>
+            </div>
+          )}
+        </OverlayStackLayer>
       ) : null}
     </InspectorCollapsiblePanel>
   );

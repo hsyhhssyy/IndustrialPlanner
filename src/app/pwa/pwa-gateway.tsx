@@ -3,6 +3,7 @@ import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 import styles from "@/app/shell/app-shell.module.scss";
 
 import { formatPwaBytes, type PwaController, type PwaProgress } from "./pwa-controller";
@@ -30,18 +31,122 @@ export const PwaGateway = observer(function PwaGateway({
     return null;
   }
 
+  const pwaProgress = pwaController.progress;
+  const pwaStatus = pwaController.offlineStatus;
+  const shouldShowProgress = pwaProgress !== null && (
+    pwaStatus === "installing"
+    || pwaStatus === "updating"
+    || pwaStatus === "registering"
+  );
+
   return (
     <>
       {pwaController.shouldShowOfflinePrompt ? (
-        <div className={cm(styles, "pwa-gateway-backdrop")} role="presentation">
-          <section
-            aria-labelledby="pwa-gateway-title"
-            className={cm(styles, "pwa-gateway-card")}
-            role="dialog"
-          >
-            <h2 id="pwa-gateway-title">{copy.offlineTitle}</h2>
-            <p>{copy.offlineBody}</p>
-            <div className={cm(styles, "pwa-gateway-actions")}>
+        <OverlayStackLayer kind="system" layerId="pwa:offline-prompt" visible>
+          {({ zIndex }) => (
+            <div className={cm(styles, "pwa-gateway-backdrop")} role="presentation" style={{ zIndex }}>
+              <section
+                aria-labelledby="pwa-gateway-title"
+                className={cm(styles, "pwa-gateway-card")}
+                role="dialog"
+              >
+                <h2 id="pwa-gateway-title">{copy.offlineTitle}</h2>
+                <p>{copy.offlineBody}</p>
+                <div className={cm(styles, "pwa-gateway-actions")}>
+                  <button
+                    className={cm(styles, "pwa-gateway-primary-button")}
+                    onClick={() => {
+                      void pwaController.enableOfflineMode();
+                    }}
+                    type="button"
+                  >
+                    {copy.enableOffline}
+                  </button>
+                  <button
+                    className={cm(styles, "pwa-gateway-secondary-button")}
+                    onClick={pwaController.declineOfflineMode}
+                    type="button"
+                  >
+                    {copy.notNow}
+                  </button>
+                </div>
+              </section>
+            </div>
+          )}
+        </OverlayStackLayer>
+      ) : null}
+      {shouldShowProgress ? (
+        <OverlayStackLayer kind="system" layerId={`pwa:${pwaStatus}-progress`} visible>
+          {({ zIndex }) => (
+            <ProgressToast
+              copy={copy}
+              progress={pwaProgress}
+              title={pwaStatus === "updating" ? copy.updateProgress : copy.installProgress}
+              zIndex={zIndex}
+            />
+          )}
+        </OverlayStackLayer>
+      ) : null}
+      {pwaController.offlineStatus === "update-available" ? (
+        <OverlayStackLayer kind="system" layerId="pwa:update-available" visible>
+          {({ zIndex }) => (
+            <section className={cm(styles, "pwa-gateway-toast")} role="status" style={{ zIndex }}>
+              <div className={cm(styles, "pwa-gateway-toast-copy")}>
+                <strong>{copy.updateReadyTitle}</strong>
+                <span>{copy.updateReadyBody}</span>
+              </div>
+              <button
+                className={cm(styles, "pwa-gateway-primary-button")}
+                onClick={pwaController.applyWaitingUpdate}
+                type="button"
+              >
+                {copy.applyUpdate}
+              </button>
+            </section>
+          )}
+        </OverlayStackLayer>
+      ) : null}
+      {pwaController.canPromptDesktopInstall ? (
+        <OverlayStackLayer kind="system" layerId="pwa:desktop-install" visible>
+          {({ zIndex }) => (
+            <section
+              aria-labelledby="pwa-install-title"
+              className={cm(styles, "pwa-gateway-card pwa-install-card")}
+              role="dialog"
+              style={{ zIndex }}
+            >
+              <h2 id="pwa-install-title">{copy.desktopInstallTitle}</h2>
+              <p>{copy.desktopInstallBody}</p>
+              <div className={cm(styles, "pwa-gateway-actions")}>
+                <button
+                  className={cm(styles, "pwa-gateway-primary-button")}
+                  onClick={() => {
+                    void pwaController.promptDesktopInstall();
+                  }}
+                  type="button"
+                >
+                  {copy.installDesktop}
+                </button>
+                <button
+                  className={cm(styles, "pwa-gateway-secondary-button")}
+                  onClick={pwaController.dismissDesktopInstallPrompt}
+                  type="button"
+                >
+                  {copy.later}
+                </button>
+              </div>
+            </section>
+          )}
+        </OverlayStackLayer>
+      ) : null}
+      {pwaController.offlineStatus === "error" && pwaController.errorMessage !== null ? (
+        <OverlayStackLayer kind="system" layerId="pwa:error" visible>
+          {({ zIndex }) => (
+            <section className={cm(styles, "pwa-gateway-toast pwa-gateway-toast-error")} role="alert" style={{ zIndex }}>
+              <div className={cm(styles, "pwa-gateway-toast-copy")}>
+                <strong>{copy.errorTitle}</strong>
+                <span>{pwaController.errorMessage}</span>
+              </div>
               <button
                 className={cm(styles, "pwa-gateway-primary-button")}
                 onClick={() => {
@@ -49,89 +154,11 @@ export const PwaGateway = observer(function PwaGateway({
                 }}
                 type="button"
               >
-                {copy.enableOffline}
+                {copy.retry}
               </button>
-              <button
-                className={cm(styles, "pwa-gateway-secondary-button")}
-                onClick={pwaController.declineOfflineMode}
-                type="button"
-              >
-                {copy.notNow}
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
-      {pwaController.progress !== null && (
-        pwaController.offlineStatus === "installing"
-        || pwaController.offlineStatus === "updating"
-        || pwaController.offlineStatus === "registering"
-      ) ? (
-        <ProgressToast
-          copy={copy}
-          progress={pwaController.progress}
-          title={pwaController.offlineStatus === "updating" ? copy.updateProgress : copy.installProgress}
-        />
-      ) : null}
-      {pwaController.offlineStatus === "update-available" ? (
-        <section className={cm(styles, "pwa-gateway-toast")} role="status">
-          <div className={cm(styles, "pwa-gateway-toast-copy")}>
-            <strong>{copy.updateReadyTitle}</strong>
-            <span>{copy.updateReadyBody}</span>
-          </div>
-          <button
-            className={cm(styles, "pwa-gateway-primary-button")}
-            onClick={pwaController.applyWaitingUpdate}
-            type="button"
-          >
-            {copy.applyUpdate}
-          </button>
-        </section>
-      ) : null}
-      {pwaController.canPromptDesktopInstall ? (
-        <section
-          aria-labelledby="pwa-install-title"
-          className={cm(styles, "pwa-gateway-card pwa-install-card")}
-          role="dialog"
-        >
-          <h2 id="pwa-install-title">{copy.desktopInstallTitle}</h2>
-          <p>{copy.desktopInstallBody}</p>
-          <div className={cm(styles, "pwa-gateway-actions")}>
-            <button
-              className={cm(styles, "pwa-gateway-primary-button")}
-              onClick={() => {
-                void pwaController.promptDesktopInstall();
-              }}
-              type="button"
-            >
-              {copy.installDesktop}
-            </button>
-            <button
-              className={cm(styles, "pwa-gateway-secondary-button")}
-              onClick={pwaController.dismissDesktopInstallPrompt}
-              type="button"
-            >
-              {copy.later}
-            </button>
-          </div>
-        </section>
-      ) : null}
-      {pwaController.offlineStatus === "error" && pwaController.errorMessage !== null ? (
-        <section className={cm(styles, "pwa-gateway-toast pwa-gateway-toast-error")} role="alert">
-          <div className={cm(styles, "pwa-gateway-toast-copy")}>
-            <strong>{copy.errorTitle}</strong>
-            <span>{pwaController.errorMessage}</span>
-          </div>
-          <button
-            className={cm(styles, "pwa-gateway-primary-button")}
-            onClick={() => {
-              void pwaController.enableOfflineMode();
-            }}
-            type="button"
-          >
-            {copy.retry}
-          </button>
-        </section>
+            </section>
+          )}
+        </OverlayStackLayer>
       ) : null}
     </>
   );
@@ -141,15 +168,17 @@ function ProgressToast({
   copy,
   progress,
   title,
+  zIndex,
 }: {
   readonly copy: PwaGatewayCopy;
   readonly progress: PwaProgress;
   readonly title: string;
+  readonly zIndex: number;
 }) {
   const percent = resolveProgressPercent(progress);
 
   return (
-    <section className={cm(styles, "pwa-gateway-toast")} role="status">
+    <section className={cm(styles, "pwa-gateway-toast")} role="status" style={{ zIndex }}>
       <div className={cm(styles, "pwa-gateway-toast-copy")}>
         <strong>{title}</strong>
         <span>

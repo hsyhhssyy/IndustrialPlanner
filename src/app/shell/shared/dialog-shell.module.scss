@@ -1,7 +1,18 @@
 .dialog-shell-backdrop {
   position: absolute;
   inset: 0;
-  z-index: 13;
+  /*
+    AI-REMOVED 2026-06-30:
+    Reason: DialogShell 层级已改由 OverlayStack 按打开顺序统一分配。
+    Trigger: 用户要求所有弹层场景系统性避免 z-index 互相压错。
+    Evidence: DialogShell.tsx 通过 useOverlayStackLayer 写入 inline zIndex。
+    Replacement: src/app/shell/shared/overlay-stack.tsx
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    z-index: 13;
+  */
   display: flex;
   align-items: center;
   justify-content: center;

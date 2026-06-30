@@ -1,7 +1,18 @@
 .pwa-gateway-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  /*
+    AI-REMOVED 2026-06-30:
+    Reason: PWA 离线提示已接入 OverlayStack system 层，层级由统一弹层栈分配。
+    Trigger: 用户要求系统性治理所有跨界面弹层，避免固定 z-index 绕过统一机制。
+    Evidence: PwaGateway 中 pwa-gateway-backdrop 现在通过 OverlayStackLayer 接收 inline zIndex。
+    Replacement: src/app/shell/shared/overlay-stack.tsx
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    z-index: 80;
+  */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -27,7 +38,18 @@
   position: fixed;
   right: 20px;
   bottom: 20px;
-  z-index: 70;
+  /*
+    AI-REMOVED 2026-06-30:
+    Reason: PWA 桌面安装提示已接入 OverlayStack system 层，层级由统一弹层栈分配。
+    Trigger: 用户要求系统性治理所有跨界面弹层，避免固定 z-index 绕过统一机制。
+    Evidence: PwaGateway 中 pwa-install-card 现在通过 OverlayStackLayer 接收 inline zIndex。
+    Replacement: src/app/shell/shared/overlay-stack.tsx
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    z-index: 70;
+  */
 }
 
 .pwa-gateway-card h2 {
@@ -92,7 +114,18 @@
   position: fixed;
   right: 20px;
   bottom: 20px;
-  z-index: 75;
+  /*
+    AI-REMOVED 2026-06-30:
+    Reason: PWA 状态 toast 已接入 OverlayStack system 层，层级由统一弹层栈分配。
+    Trigger: 用户要求系统性治理所有跨界面弹层，避免固定 z-index 绕过统一机制。
+    Evidence: PwaGateway 中 pwa-gateway-toast 现在通过 OverlayStackLayer 接收 inline zIndex。
+    Replacement: src/app/shell/shared/overlay-stack.tsx
+    Risk: Low
+    Human Review: Required
+
+    Original code:
+    z-index: 75;
+  */
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
