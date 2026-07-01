@@ -921,9 +921,10 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
 
   const initialShellStyle: CSSProperties | undefined = dialogState.width === null && dialogState.height === null
     ? {
-      width: isPhoneLayout ? "100dvw" : isTabletLayout ? "720px" : "760px",
-      height: isPhoneLayout ? "100dvh" : isTabletLayout ? "720px" : "680px",
-      minHeight: isPhoneLayout ? "100dvh" : "520px",
+      // TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 inline style 中的 dvh/dvw，手机对话框使用 vh/vw。
+      width: isPhoneLayout ? "100vw" : isTabletLayout ? "720px" : "760px",
+      height: isPhoneLayout ? "100vh" : isTabletLayout ? "720px" : "680px",
+      minHeight: isPhoneLayout ? "100vh" : "520px",
     }
     : undefined;
 

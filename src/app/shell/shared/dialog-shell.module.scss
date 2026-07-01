@@ -599,3 +599,87 @@
   height: var(--dialog-shell-tab-track-height);
   padding-inline: 12px;
 }
+
+/*
+  TapTap 手机端按 Chrome 89 兼容：
+  TapTap 的 Chrome 版本过低，Chrome 89 无法解析 color-mix()，包含它的声明会被丢弃。
+  现代浏览器继续使用上方 color-mix() 声明；本分支只提供旧 Chrome fallback，不影响新版本呈现。
+*/
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .dialog-shell-backdrop {
+    background: var(--shell-bg);
+  }
+
+  .dialog-shell-tab-list::after {
+    background: var(--line);
+  }
+
+  .dialog-shell-tab {
+    --dialog-shell-tab-border: var(--accent-strong);
+    --dialog-shell-tab-top: var(--surface-2);
+    --dialog-shell-tab-bottom: var(--surface-1);
+
+    box-shadow: 0 4px 10px var(--shadow-floating-control);
+    color: var(--text-0);
+  }
+
+  .dialog-shell-tab:hover {
+    --dialog-shell-tab-border: var(--accent-strong);
+    --dialog-shell-tab-top: var(--surface-3);
+    --dialog-shell-tab-bottom: var(--surface-1);
+
+    box-shadow: 0 6px 12px var(--shadow-floating-control);
+    color: var(--text-0);
+  }
+
+  .dialog-shell-tab.is-active {
+    --dialog-shell-tab-border: var(--accent-strong);
+    --dialog-shell-tab-top: var(--accent-soft);
+    --dialog-shell-tab-bottom: var(--surface-1);
+
+    box-shadow:
+      0 1px 0 var(--surface-1),
+      0 10px 20px var(--shadow-floating-control);
+    color: var(--text-0);
+  }
+
+  .dialog-shell.has-tabs .dialog-shell-header {
+    --dialog-shell-tab-divider: var(--line-strong);
+  }
+
+  .dialog-shell.has-tabs .dialog-shell-tab {
+    --dialog-shell-tab-border: var(--line-strong);
+    --dialog-shell-tab-bg: var(--surface-2);
+
+    background: var(--surface-2);
+    box-shadow: inset 0 1px 0 var(--surface-1);
+    color: var(--text-0);
+  }
+
+  .dialog-shell.has-tabs .dialog-shell-tab::before,
+  .dialog-shell.has-tabs .dialog-shell-tab::after {
+    background: transparent;
+  }
+
+  .dialog-shell.has-tabs .dialog-shell-tab:hover {
+    --dialog-shell-tab-border: var(--line-strong);
+    --dialog-shell-tab-bg: var(--surface-3);
+
+    background: var(--surface-3);
+    box-shadow: inset 0 1px 0 var(--surface-1);
+    color: var(--text-0);
+  }
+
+  .dialog-shell.has-tabs .dialog-shell-tab.is-active {
+    --dialog-shell-tab-border: var(--accent-strong);
+    --dialog-shell-tab-bg: var(--surface-1);
+
+    background: var(--surface-1);
+    box-shadow: 0 -1px 0 var(--surface-1);
+    color: var(--text-0);
+  }
+
+  .dialog-shell.has-tabs .dialog-shell-tab.is-active::after {
+    background: var(--surface-1);
+  }
+}

@@ -36,6 +36,8 @@
 .markdown-tutorial-overlay {
   position: relative;
   width: min(100%, 1280px);
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
+  max-height: calc(100vh - clamp(16px, 8vh, 72px));
   max-height: calc(100dvh - clamp(16px, 8vh, 72px));
   color: var(--text-0);
   outline: none;
@@ -56,6 +58,8 @@
   justify-items: center;
   min-height: 0;
   width: 100%;
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
+  max-height: calc(100vh - clamp(24px, 9vh, 96px));
   max-height: calc(100dvh - clamp(24px, 9vh, 96px));
 }
 
@@ -71,6 +75,8 @@
   display: block;
   width: auto;
   max-width: min(100%, 1280px);
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
+  max-height: min(72vh, 980px);
   max-height: min(72dvh, 980px);
   border: 1px solid color-mix(in srgb, var(--line-strong) 72%, transparent);
   background: var(--surface-1);
@@ -80,6 +86,8 @@
 }
 
 .markdown-tutorial-overlay[data-compact-layout="true"] .markdown-tutorial-overlay-image-frame img {
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
+  max-height: min(56vh, 720px);
   max-height: min(56dvh, 720px);
 }
 
@@ -197,4 +205,43 @@
 
 .markdown-tutorial-overlay-page-dot.is-active {
   background: color-mix(in srgb, var(--text-0) 78%, var(--accent));
+}
+
+/*
+  TapTap 手机端按 Chrome 89 兼容：
+  TapTap 的 Chrome 版本过低，Chrome 89 无法解析 color-mix()，包含它的声明会被丢弃。
+  现代浏览器继续使用上方 color-mix() 声明；本分支只提供旧 Chrome fallback，不影响新版本呈现。
+*/
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .markdown-tutorial-overlay-backdrop {
+    background: var(--surface-1);
+  }
+
+  .markdown-tutorial-overlay-image-frame img {
+    border-color: var(--line-strong);
+    box-shadow: 0 22px 72px var(--shadow-floating-control);
+  }
+
+  .markdown-tutorial-overlay-markdown {
+    color: var(--text-0);
+    text-shadow: none;
+  }
+
+  .markdown-tutorial-overlay-placeholder,
+  .markdown-tutorial-overlay-page-button {
+    border-color: var(--line);
+    background: var(--surface-1);
+  }
+
+  .markdown-tutorial-overlay-page-button:hover:not(:disabled) {
+    background: var(--surface-2);
+  }
+
+  .markdown-tutorial-overlay-page-dot {
+    background: var(--text-2);
+  }
+
+  .markdown-tutorial-overlay-page-dot.is-active {
+    background: var(--accent);
+  }
 }

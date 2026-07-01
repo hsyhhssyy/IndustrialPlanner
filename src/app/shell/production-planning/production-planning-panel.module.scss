@@ -1373,3 +1373,37 @@ Original code:
   }
 }
 */
+
+/*
+  TapTap 手机端按 Chrome 89 兼容：
+  TapTap 的 Chrome 版本过低，Chrome 89 无法解析 gradient 里的 color-mix()，流程格线背景会被丢弃。
+  现代浏览器继续使用上方 color-mix() 格线；本分支只提供旧 Chrome fallback，不影响新版本呈现。
+*/
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .production-flow-canvas {
+    background:
+      linear-gradient(var(--surface-2), var(--surface-2)) padding-box,
+      repeating-linear-gradient(0deg, transparent 0 27px, var(--line) 28px),
+      repeating-linear-gradient(90deg, transparent 0 27px, var(--line) 28px);
+  }
+
+  .production-planning-flow-warning {
+    border-color: var(--warn);
+  }
+
+  .production-flow-edge.is-main {
+    stroke: var(--accent-strong);
+  }
+
+  .production-flow-edge.is-warning {
+    stroke: var(--warn);
+  }
+
+  .production-planning-flow-summary {
+    background: var(--surface-1);
+  }
+
+  .production-planning-flow-node {
+    background: var(--surface-2);
+  }
+}

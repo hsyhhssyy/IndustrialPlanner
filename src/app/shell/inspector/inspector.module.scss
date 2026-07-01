@@ -2121,9 +2121,15 @@
 .slot-config-dialog {
   display: grid;
   align-content: start;
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
+  gap: clamp(6px, 1.5vh, 10px);
   gap: clamp(6px, 1.5dvh, 10px);
   width: min(340px, calc(100vw - 16px));
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
+  max-height: calc(100vh - 16px);
   max-height: calc(100dvh - 16px);
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
+  padding: clamp(10px, 2vh, 14px);
   padding: clamp(10px, 2dvh, 14px);
   overflow-y: auto;
   overflow-x: hidden;
@@ -2157,6 +2163,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
+  min-height: clamp(32px, 6vh, 34px);
   min-height: clamp(32px, 6dvh, 34px);
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -2167,6 +2175,8 @@
 
 .slot-config-dialog-icon-button {
   flex: 0 0 auto;
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
+  width: clamp(32px, 6vh, 34px);
   width: clamp(32px, 6dvh, 34px);
   padding: 0;
 }
@@ -2178,7 +2188,11 @@
 
 .slot-config-dialog-item-button {
   justify-self: center;
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
+  width: clamp(56px, 18vh, 96px);
   width: clamp(56px, 18dvh, 96px);
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
+  height: clamp(56px, 18vh, 96px);
   height: clamp(56px, 18dvh, 96px);
   padding: 0;
 }
@@ -2192,6 +2206,58 @@
   color: var(--text-0);
   font-size: 0.82rem;
   text-align: center;
+}
+
+/*
+  TapTap 手机端按 Chrome 89 兼容：
+  TapTap 的 Chrome 版本过低，Chrome 89 无法解析 color-mix()，包含它的声明会被丢弃。
+  现代浏览器继续使用上方 color-mix() 声明；本分支只提供旧 Chrome fallback，不影响新版本呈现。
+*/
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .inspector-expanded-panel {
+    border-color: var(--line);
+    background: var(--surface-1);
+  }
+
+  .inspector-expanded-header {
+    border-bottom-color: var(--line);
+  }
+
+  .inspector-expanded-header-toggle:hover,
+  .inspector-scope-toggle {
+    background: var(--surface-2);
+  }
+
+  .selection-inspector-device-header,
+  .slot-config-row,
+  .slot-config-item-button,
+  .slot-config-step-button {
+    border-color: var(--line);
+    background: var(--surface-2);
+  }
+
+  .problem-row {
+    border-left-color: var(--line-strong);
+    border-bottom-color: var(--line);
+  }
+
+  .inspector-scope-toggle {
+    border-color: var(--line);
+  }
+
+  .slot-config-clear-button {
+    border-color: var(--danger);
+    background: var(--surface-2);
+  }
+
+  .slot-config-clear-button:hover:not(:disabled) {
+    border-color: var(--danger);
+    background: var(--surface-3);
+  }
+
+  .slot-config-lock-tag {
+    background: var(--surface-2);
+  }
 }
 
 .slot-config-dialog-count-row {
@@ -2869,4 +2935,27 @@
 
 [data-problem-severity="error"] p {
   color: #ef4444;
+}
+
+/*
+  TapTap 手机端按 Chrome 89 兼容：
+  TapTap 的 Chrome 版本过低，Chrome 89 无法解析 color-mix()，配方操作控件需要稳定 fallback。
+  现代浏览器继续使用上方 color-mix() 声明；本分支只提供旧 Chrome fallback，不影响新版本呈现。
+*/
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .recipe-remove-button,
+  .recipe-add-button {
+    border-color: var(--line);
+    background: var(--surface-2);
+  }
+
+  .recipe-remove-button:hover,
+  .recipe-add-button:hover {
+    border-color: var(--line-strong);
+    background: var(--surface-3);
+  }
+
+  .recipe-locked-control {
+    color: var(--text-2);
+  }
 }

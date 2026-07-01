@@ -174,3 +174,14 @@
     transform: translate(-50%, -50%) rotate(90deg);
   }
 }
+
+/*
+  TapTap 手机端按 Chrome 89 兼容：
+  TapTap 的 Chrome 版本过低，Chrome 89 无法解析 color-mix()，竖屏提示遮罩会变透明。
+  现代浏览器继续使用上方 color-mix() 遮罩；本分支只提供旧 Chrome fallback，不影响新版本呈现。
+*/
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .mobile-portrait-gate {
+    background: var(--shell-bg);
+  }
+}

@@ -756,3 +756,25 @@
     color: var(--text-accent);
   }
 }
+
+/*
+  TapTap 手机端按 Chrome 89 兼容：
+  TapTap 的 Chrome 版本过低，Chrome 89 无法解析 color-mix()，包含它的声明会被丢弃。
+  现代浏览器继续使用上方 color-mix() 声明；本分支只提供旧 Chrome fallback，不影响新版本呈现。
+*/
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .settings-dialog-backdrop {
+    background: var(--shell-bg);
+  }
+
+  .v2-migration-status.is-success,
+  .v2-migration-status.is-error {
+    border-color: var(--line);
+    background: var(--surface-2);
+  }
+
+  .v2-migration-danger-button {
+    border-color: var(--danger);
+    background: var(--surface-3);
+  }
+}
