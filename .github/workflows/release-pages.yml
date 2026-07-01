@@ -5,6 +5,11 @@ on:
     types:
       - published
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: '已创建的 Release tag 名称'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -19,7 +24,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+      RELEASE_TAG: ${{ inputs.tag_name || github.event.release.tag_name || github.ref_name }}
     outputs:
       is_prerelease: ${{ steps.detect-release-type.outputs.is_prerelease }}
     steps:
@@ -36,7 +41,7 @@ jobs:
       - name: Checkout V3 (release tag or default branch)
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name || '' }}
+          ref: ${{ inputs.tag_name || github.event.release.tag_name || '' }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -113,7 +118,6 @@ jobs:
           test -f dist/v2/index.html && echo "YES" || echo "NO"
 
       - name: Package dist zip
-        if: github.event_name == 'release'
         env:
           RELEASE_TAG: ${{ env.RELEASE_TAG }}
         run: |
@@ -123,7 +127,6 @@ jobs:
           echo "zip_path=.temp/${zip_name}" >> $GITHUB_ENV
 
       - name: Upload dist zip to release
-        if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ env.RELEASE_TAG }}
@@ -131,7 +134,7 @@ jobs:
 
       - name: Write deployment metadata
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
         run: |
           cat > dist/release.json <<EOF
           {"releaseTag":"${RELEASE_TAG}","sha":"${GITHUB_SHA}","runId":"${GITHUB_RUN_ID}"}
