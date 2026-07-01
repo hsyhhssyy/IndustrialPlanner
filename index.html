@@ -16,6 +16,8 @@
           const baseHref = `${location.origin}${pathname}/`.replace(/"/g, '&quot;')
           document.write(`<base href="${baseHref}">`)
         }
+
+        document.write('<script src="./taptap-compat.js"><\\/script>')
       })()
     </script>
     <script>
