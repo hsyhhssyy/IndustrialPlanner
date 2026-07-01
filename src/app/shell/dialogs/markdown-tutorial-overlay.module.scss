@@ -17,6 +17,7 @@
   align-items: center;
   justify-content: center;
   padding: clamp(8px, 4vh, 36px) clamp(16px, 6vw, 80px);
+  background: var(--surface-1);
   background:
     linear-gradient(
       color-mix(in srgb, var(--text-0) 4%, transparent),

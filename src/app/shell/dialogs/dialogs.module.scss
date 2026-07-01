@@ -2,13 +2,13 @@
   max-width: min(1180px, 100%);
   max-height: min(760px, 100%);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  background: var(--surface-1);
 }
 
 .inspector-dialog-header {
   min-height: 46px;
   padding: 0 16px;
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: var(--surface-1);
 }
 
 .inspector-dialog-header-copy h2 {
@@ -22,6 +22,7 @@
   width: 30px;
   height: 30px;
   border: 1px solid color-mix(in srgb, var(--line-strong) 54%, var(--line));
+  background: var(--surface-2);
   background: color-mix(in srgb, var(--surface-2) 76%, transparent);
 }
 
@@ -62,6 +63,7 @@
   padding: 10px;
   border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
   border-radius: 0;
+  background: var(--surface-1);
   background: color-mix(in srgb, var(--surface-1) 94%, black 2%);
 }
 
@@ -213,6 +215,7 @@
   align-items: center;
   justify-content: center;
   padding: clamp(12px, 2.6vw, 28px);
+  background: var(--shell-bg);
   background: color-mix(in srgb, var(--shell-bg) 42%, transparent);
 }
 

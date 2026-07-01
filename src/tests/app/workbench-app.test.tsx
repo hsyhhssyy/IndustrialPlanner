@@ -567,6 +567,68 @@ describe("WorkbenchApp", () => {
     expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(1);
   });
 
+  it("opens the version help dialog on phone portrait without storing portrait viewport dimensions", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 390,
+      height: 844,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+    Object.defineProperty(window, "__APP_VERSION__", {
+      configurable: true,
+      writable: true,
+      value: "9.9.9-test",
+    });
+    stubChangelogFetch({
+      "patch.md": "# Patch",
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const helpState = appHost.internalState.workbench.dialogState.help;
+    const helpDialog = container.querySelector<HTMLElement>(".help-dialog");
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
+    expect(appHost.state.screenProfile.screenShape).toBe("portrait");
+    expect(helpState.visible).toBe(true);
+    expect(helpState.activeTab).toBe("version");
+    expect(helpState.width).toBeNull();
+    expect(helpState.height).toBeNull();
+    expect(helpDialog).not.toBeNull();
+    expect(helpDialog?.style.width).toBe("");
+    expect(helpDialog?.style.height).toBe("");
+    expect(helpDialog?.querySelector(".dialog-shell-resize-grip")).toBeNull();
+    expect(helpDialog?.querySelector('button[title="最大化"]')).toBeNull();
+
+    setViewport({
+      width: 844,
+      height: 390,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    act(() => {
+      window.dispatchEvent(new Event("orientationchange"));
+    });
+
+    const rotatedHelpDialog = container.querySelector<HTMLElement>(".help-dialog");
+
+    expect(appHost.state.screenProfile.screenShape).toBe("landscape");
+    expect(helpState.width).toBeNull();
+    expect(helpState.height).toBeNull();
+    expect(rotatedHelpDialog?.style.width).toBe("");
+    expect(rotatedHelpDialog?.style.height).toBe("");
+  });
+
   it("updates left dock width through the edge handle and clamps the value", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);

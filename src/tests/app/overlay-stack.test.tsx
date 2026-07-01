@@ -195,4 +195,56 @@ describe("OverlayStack", () => {
       getBackdropZIndex(container, "local-editor"),
     );
   });
+
+  it("keeps compact mobile dialog shells on their default size without drag, resize, or maximize controls", () => {
+    const offsetChange = vi.fn();
+    const resize = vi.fn();
+
+    function Harness() {
+      const dialogState = useMemo(() => {
+        const state = createDialogState(true);
+
+        runInAction(() => {
+          state.maximized = true;
+          state.offsetX = 96;
+          state.offsetY = 48;
+          state.width = 360;
+          state.height = 260;
+        });
+
+        return state;
+      }, []);
+
+      return (
+        <OverlayStackProvider>
+          <DialogShell
+            {...createDialogShellProps("mobile-fixed-dialog", dialogState, () => undefined)}
+            compactMobileLayout
+            onOffsetChange={offsetChange}
+            onResize={resize}
+            showMaximizeButton
+          >
+            mobile fixed
+          </DialogShell>
+        </OverlayStackProvider>
+      );
+    }
+
+    act(() => {
+      root.render(<Harness />);
+    });
+
+    const dialog = container.querySelector<HTMLElement>("[data-dialog-key='mobile-fixed-dialog']");
+    const header = dialog?.querySelector<HTMLElement>(".dialog-shell-header");
+
+    expect(dialog).not.toBeNull();
+    expect(dialog?.classList.contains("is-mobile-fixed")).toBe(true);
+    expect(dialog?.classList.contains("is-maximized")).toBe(false);
+    expect(dialog?.style.transform).toBe("");
+    expect(dialog?.style.width).toBe("");
+    expect(dialog?.style.height).toBe("");
+    expect(header?.classList.contains("is-draggable")).toBe(false);
+    expect(dialog?.querySelector(".dialog-shell-resize-grip")).toBeNull();
+    expect(dialog?.querySelector('button[title="最大化"]')).toBeNull();
+  });
 });

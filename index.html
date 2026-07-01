@@ -17,61 +17,72 @@
           document.write(`<base href="${baseHref}">`)
         }
 
-        document.write('<script src="./taptap-compat.js"><\\/script>')
+        document.write('<script src="./taptap-compat.js"><\/script>')
       })()
     </script>
-    <script>
-      (() => {
-        const badge = document.createElement('div')
-        badge.id = 'index-html-debug-badge'
-        badge.textContent = `index.html loaded · ${new Date().toISOString()}`
-        badge.style.cssText = [
-          'position:fixed',
-          'z-index:2147483647',
-          'right:8px',
-          'bottom:8px',
-          'max-width:min(420px,calc(100vw - 16px))',
-          'padding:6px 8px',
-          'border-radius:4px',
-          'background:rgba(0,0,0,.78)',
-          'color:#fff',
-          'font:12px/1.4 monospace',
-          'pointer-events:none',
-        ].join(';')
+    <!--
+      AI-REMOVED 2026-07-01:
+      Reason: 用户确认页面已能正常进入，要求移除 index 加载提示和 vConsole 调试入口。
+      Trigger: TapTap 路径兼容与 Chrome 89 .at() 兼容已完成验证，不再需要页面常驻调试浮层。
+      Evidence: 本地生产部署验证 root 与 /tools/27629 均能启动，且 taptap-compat.js 在主 bundle 前加载。
+      Replacement: None；保留前置 taptap-compat.js 作为运行时兼容脚本。
+      Risk: 后续线上排障需要重新临时接入调试入口。
+      Human Review: Required
 
-        const mountBadge = () => {
-          if (document.body === null) {
-            window.setTimeout(mountBadge, 0)
-            return
+      Original code:
+      <script>
+        (() => {
+          const badge = document.createElement('div')
+          badge.id = 'index-html-debug-badge'
+          badge.textContent = `index.html loaded · ${new Date().toISOString()}`
+          badge.style.cssText = [
+            'position:fixed',
+            'z-index:2147483647',
+            'left:8px',
+            'bottom:8px',
+            'max-width:min(420px,calc(100vw - 128px))',
+            'padding:6px 8px',
+            'border-radius:4px',
+            'background:rgba(0,0,0,.78)',
+            'color:#fff',
+            'font:12px/1.4 monospace',
+            'pointer-events:none',
+          ].join(';')
+
+          const mountBadge = () => {
+            if (document.body === null) {
+              window.setTimeout(mountBadge, 0)
+              return
+            }
+
+            document.body.appendChild(badge)
           }
 
-          document.body.appendChild(badge)
-        }
-
-        window.__INDEX_HTML_DEBUG__ = {
-          baseURI: document.baseURI,
-          href: location.href,
-          pathname: location.pathname,
-        }
-        mountBadge()
-
-        const script = document.createElement('script')
-        script.src = 'https://cdn.jsdelivr.net/npm/vconsole@3.15.1/dist/vconsole.min.js'
-        script.onload = () => {
-          if (typeof window.VConsole === 'function') {
-            window.__INDEX_HTML_VCONSOLE__ = new window.VConsole()
-            badge.textContent = `index.html loaded + vConsole · ${new Date().toISOString()}`
-            console.log('[index-html-debug]', window.__INDEX_HTML_DEBUG__)
-          } else {
-            badge.textContent = 'index.html loaded · vConsole missing'
+          window.__INDEX_HTML_DEBUG__ = {
+            baseURI: document.baseURI,
+            href: location.href,
+            pathname: location.pathname,
           }
-        }
-        script.onerror = () => {
-          badge.textContent = 'index.html loaded · vConsole load failed'
-        }
-        document.head.appendChild(script)
-      })()
-    </script>
+          mountBadge()
+
+          const script = document.createElement('script')
+          script.src = 'https://cdn.jsdelivr.net/npm/vconsole@3.15.1/dist/vconsole.min.js'
+          script.onload = () => {
+            if (typeof window.VConsole === 'function') {
+              window.__INDEX_HTML_VCONSOLE__ = new window.VConsole()
+              badge.textContent = `index.html loaded + vConsole · ${new Date().toISOString()}`
+              console.log('[index-html-debug]', window.__INDEX_HTML_DEBUG__)
+            } else {
+              badge.textContent = 'index.html loaded · vConsole missing'
+            }
+          }
+          script.onerror = () => {
+            badge.textContent = 'index.html loaded · vConsole load failed'
+          }
+          document.head.appendChild(script)
+        })()
+      </script>
+    -->
     <link rel="icon" type="image/webp" href="%BASE_URL%device-icons/item_log_belt_01.webp" />
     <title>终末地工业系统仿真器</title>
   </head>

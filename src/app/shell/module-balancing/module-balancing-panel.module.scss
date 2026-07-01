@@ -209,6 +209,7 @@
     Original code:
     z-index: 20;
   */
+  background: var(--shell-bg);
   background: color-mix(in srgb, var(--shell-bg) 35%, transparent);
 }
 
@@ -1044,6 +1045,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
+  background: var(--shell-bg);
   background: color-mix(in srgb, var(--shell-bg) 38%, transparent);
 }
 

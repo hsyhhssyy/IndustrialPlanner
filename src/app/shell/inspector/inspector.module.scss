@@ -353,7 +353,7 @@
 
 .inspector-scope-toggle button.is-selected,
 .inspector-scope-toggle button:hover:not(:disabled) {
-  background: var(--surface-0);
+  background: var(--surface-1);
   color: var(--text-0);
 }
 
@@ -1674,7 +1674,8 @@
   height: 18px;
   padding: 0 4px;
   border-radius: 5px;
-  background: color-mix(in srgb, var(--surface-0) 88%, transparent);
+  background: var(--surface-1);
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
   color: var(--text-1);
   font-size: 0.68rem;
   line-height: 18px;
@@ -1697,7 +1698,8 @@
   height: 20px;
   padding: 0 5px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-0) 90%, transparent);
+  background: var(--surface-1);
+  background: color-mix(in srgb, var(--surface-1) 90%, transparent);
   color: var(--text-0);
   font-size: 0.72rem;
   font-weight: 700;
@@ -2014,7 +2016,8 @@
   height: 18px;
   padding: 0 5px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-0) 88%, black 12%);
+  background: var(--surface-1);
+  background: color-mix(in srgb, var(--surface-1) 88%, black 12%);
   color: var(--text-0);
   font-size: 0.68rem;
   font-weight: 700;
@@ -2031,7 +2034,8 @@
   height: 18px;
   padding: 0 5px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-0) 88%, black 12%);
+  background: var(--surface-1);
+  background: color-mix(in srgb, var(--surface-1) 88%, black 12%);
   color: var(--text-0);
   font-size: 0.68rem;
   font-weight: 700;

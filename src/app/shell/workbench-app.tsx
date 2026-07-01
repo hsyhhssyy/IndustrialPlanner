@@ -511,14 +511,17 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       // 静默忽略
     }
 
-    // 计算 80% 屏幕宽高
-    const width = Math.floor(window.innerWidth * 0.8);
-    const height = Math.floor(window.innerHeight * 0.8);
+    if (screenProfile.deviceClass !== "mobile") {
+      // 计算 80% 屏幕宽高
+      const width = Math.floor(window.innerWidth * 0.8);
+      const height = Math.floor(window.innerHeight * 0.8);
 
-    appHost.internalActions.setDialogSize("help", width, height);
+      appHost.internalActions.setDialogSize("help", width, height);
+    }
+
     appHost.internalActions.setDialogTab("help", "version");
     appHost.internalActions.openDialog("help");
-  }, [appHost]);
+  }, [appHost, screenProfile.deviceClass]);
 
   useEffect(() => {
     if (typeof window === "undefined") {

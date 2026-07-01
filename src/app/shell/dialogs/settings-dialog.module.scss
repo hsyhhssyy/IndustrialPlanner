@@ -17,6 +17,7 @@
   align-items: center;
   justify-content: center;
   padding: clamp(12px, 2.6vw, 28px);
+  background: var(--shell-bg);
   background: color-mix(in srgb, var(--shell-bg) 42%, transparent);
 }
 

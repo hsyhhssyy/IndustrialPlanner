@@ -82,8 +82,11 @@ export const DialogShell = observer(function DialogShell({
     height: null,
   });
   const activeTab = tabs.find((tab) => tab.id === dialogState.activeTab) ?? tabs[0] ?? null;
-  const isDraggable = !dialogState.maximized && onOffsetChange !== undefined;
-  const isResizable = !dialogState.maximized && onResize !== undefined;
+  const isFixedMobileLayout = compactMobileLayout;
+  const isEffectivelyMaximized = !isFixedMobileLayout && dialogState.maximized;
+  const isDraggable = !isFixedMobileLayout && !isEffectivelyMaximized && onOffsetChange !== undefined;
+  const isResizable = !isFixedMobileLayout && !isEffectivelyMaximized && onResize !== undefined;
+  const effectiveShowMaximizeButton = showMaximizeButton && !isFixedMobileLayout;
   const maximizeButtonTitle = dialogState.maximized ? restoreTitle : maximizeTitle;
 
   useEffect(() => {
@@ -118,11 +121,11 @@ export const DialogShell = observer(function DialogShell({
   }, [dialogState.visible, onClose, onWindowKeyDown, overlayLayer.isTop]);
 
   useEffect(() => {
-    if (!dialogState.visible || dialogState.maximized) {
+    if (!dialogState.visible || isEffectivelyMaximized || isFixedMobileLayout) {
       dragCleanupRef.current?.();
       resizeCleanupRef.current?.();
     }
-  }, [dialogState.visible, dialogState.maximized]);
+  }, [dialogState.visible, isEffectivelyMaximized, isFixedMobileLayout]);
 
   useEffect(() => {
     return () => {
@@ -142,7 +145,7 @@ export const DialogShell = observer(function DialogShell({
     return null;
   }
 
-  const resolvedShellStyle: CSSProperties | undefined = dialogState.maximized
+  const resolvedShellStyle: CSSProperties | undefined = isEffectivelyMaximized || isFixedMobileLayout
     ? shellStyle
     : {
       transform: `translate(${dialogState.offsetX}px, ${dialogState.offsetY}px)`,
@@ -156,7 +159,8 @@ export const DialogShell = observer(function DialogShell({
     className,
     tabs.length > 0 ? "has-tabs" : "",
     compactMobileLayout ? "is-mobile-compact" : "",
-    dialogState.maximized ? "is-maximized" : "",
+    isFixedMobileLayout ? "is-mobile-fixed" : "",
+    isEffectivelyMaximized ? "is-maximized" : "",
   ].filter(Boolean).join(" ");
   const backdropClassName = [
     "dialog-shell-backdrop",
@@ -368,7 +372,7 @@ export const DialogShell = observer(function DialogShell({
             ) : null}
             <div className={cm(styles, "dialog-shell-header-actions", `${classPrefix}-header-actions`)}>
               {headerActions}
-              {showMaximizeButton ? (
+              {effectiveShowMaximizeButton ? (
                 <button
                   aria-label={maximizeButtonTitle}
                   className={cm(styles, "dialog-shell-header-button", `${classPrefix}-header-button`)}
