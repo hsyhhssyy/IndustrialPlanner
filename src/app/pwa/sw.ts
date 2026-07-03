@@ -135,6 +135,7 @@ async function installPrecache(): Promise<void> {
   const cache = await caches.open(CACHE_NAME);
   const totalFiles = PRECACHE_ENTRIES.length;
   const totalBytes = calculateTotalBytes(PRECACHE_ENTRIES);
+  const cachedEntries: PrecacheEntry[] = [];
   const progress: PrecacheInstallProgress = {
     completedBytes: 0,
     completedFiles: 0,
@@ -152,14 +153,19 @@ async function installPrecache(): Promise<void> {
         continue;
       }
 
+      cachedEntries.push(entry);
       await reportPrecacheProgress(entry, reusedBytes, progress, totalBytes, totalFiles);
     }
 
     await downloadPrecacheEntries(entriesToDownload, cache, async (entry, downloadedBytes) => {
-      await reportPrecacheProgress(entry, downloadedBytes, progress, totalBytes, totalFiles);
+      if (downloadedBytes !== null) {
+        cachedEntries.push(entry);
+      }
+
+      await reportPrecacheProgress(entry, downloadedBytes ?? 0, progress, totalBytes, totalFiles);
     });
 
-    await writePrecacheMetadata(cache, PRECACHE_ENTRIES);
+    await writePrecacheMetadata(cache, cachedEntries);
     await broadcastMessage({
       type: "PWA_PRECACHE_DONE",
       cacheName: CACHE_NAME,
@@ -229,7 +235,7 @@ async function tryReusePrecachedEntry(
 async function downloadPrecacheEntries(
   entries: readonly PrecacheEntry[],
   cache: Cache,
-  onEntryComplete: (entry: PrecacheEntry, completedBytes: number) => Promise<void>,
+  onEntryComplete: (entry: PrecacheEntry, completedBytes: number | null) => Promise<void>,
 ): Promise<void> {
   if (entries.length === 0) {
     return;
@@ -279,7 +285,7 @@ async function downloadAndCachePrecacheEntry(
   entry: PrecacheEntry,
   cache: Cache,
   signal: AbortSignal,
-): Promise<number> {
+): Promise<number | null> {
   const fetchUrl = createFetchUrl(entry);
   const response = await fetch(fetchUrl, {
     credentials: "same-origin",
@@ -287,6 +293,10 @@ async function downloadAndCachePrecacheEntry(
   });
 
   if (!response.ok) {
+    if (response.status === 404 || response.status === 410) {
+      return null;
+    }
+
     throw new Error(`Failed to precache ${entry.url}: ${response.status}`);
   }
 
