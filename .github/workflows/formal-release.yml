@@ -73,6 +73,9 @@ jobs:
     needs: create-release
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Trigger release-pages workflow
         run: |
           gh workflow run release-pages.yml \
