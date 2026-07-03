@@ -1,3 +1,4 @@
+/* TapTap 手机端按 Chrome 89 兼容：本文件中 color-mix() 的前置声明是旧 Chrome fallback，紧随其后的 @supports 分支保留现代浏览器原效果。 */
 .canvas-panel {
   grid-area: canvas;
   outline: none;
@@ -116,7 +117,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: color-mix(in srgb, var(--in-canvas-toolbar-button-text) 74%, transparent);
+  color: var(--in-canvas-toolbar-button-text);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--in-canvas-toolbar-button-text) 74%, transparent);
+  }
 }
 
 .canvas-gesture-diagnostics-header-copy {
@@ -172,7 +176,10 @@
 }
 
 .canvas-gesture-diagnostics-grid dt {
-  color: color-mix(in srgb, var(--in-canvas-toolbar-button-text) 62%, transparent);
+  color: var(--in-canvas-toolbar-button-text);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--in-canvas-toolbar-button-text) 62%, transparent);
+  }
   font-size: 0.68rem;
 }
 
@@ -212,7 +219,10 @@
 }
 
 .canvas-gesture-diagnostics-events small {
-  color: color-mix(in srgb, var(--in-canvas-toolbar-button-text) 62%, transparent);
+  color: var(--in-canvas-toolbar-button-text);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--in-canvas-toolbar-button-text) 62%, transparent);
+  }
 }
 
 // FPS panel — positioned top-left, reuses gesture panel CSS variables
@@ -245,7 +255,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: color-mix(in srgb, var(--in-canvas-toolbar-button-text) 74%, transparent);
+  color: var(--in-canvas-toolbar-button-text);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--in-canvas-toolbar-button-text) 74%, transparent);
+  }
 }
 
 .canvas-fps-header-copy {
@@ -297,7 +310,10 @@
 
 .canvas-fps-table th {
   text-align: left;
-  color: color-mix(in srgb, var(--in-canvas-toolbar-button-text) 62%, transparent);
+  color: var(--in-canvas-toolbar-button-text);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--in-canvas-toolbar-button-text) 62%, transparent);
+  }
   font-size: 0.68rem;
   font-weight: 400;
   padding: 1px 8px 1px 0;
@@ -449,7 +465,12 @@
   background: var(--in-canvas-toolbar-active-bg);
   box-shadow:
     0 6px 14px var(--in-canvas-toolbar-shadow),
-    inset 0 0 0 1px color-mix(in srgb, var(--in-canvas-toolbar-active-border) 22%, transparent);
+    inset 0 0 0 1px var(--in-canvas-toolbar-active-border);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow:
+      0 6px 14px var(--in-canvas-toolbar-shadow),
+      inset 0 0 0 1px color-mix(in srgb, var(--in-canvas-toolbar-active-border) 22%, transparent);
+  }
   color: var(--in-canvas-toolbar-active-text);
 }
 

@@ -1,3 +1,4 @@
+/* TapTap 手机端按 Chrome 89 兼容：本文件中 color-mix() 的前置声明是旧 Chrome fallback，紧随其后的 @supports 分支保留现代浏览器原效果。 */
 .dock-collapsed-body {
   display: flex;
   align-items: center;
@@ -61,8 +62,14 @@
   gap: 0;
   padding: 0;
   overflow: hidden;
-  border-color: color-mix(in srgb, var(--line-strong) 64%, var(--line));
-  background: color-mix(in srgb, var(--surface-1) 86%, transparent);
+  border-color: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  }
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 86%, transparent);
+  }
 }
 
 .inspector-expanded-header {
@@ -72,7 +79,10 @@
   min-height: 38px;
   gap: 10px;
   padding: 0 12px;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  border-bottom: 1px solid var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  }
   color: var(--text-0);
   font-size: 0.86rem;
   font-weight: 650;
@@ -110,7 +120,10 @@
 }
 
 .inspector-expanded-header-toggle:hover {
-  background: color-mix(in srgb, var(--surface-2) 66%, transparent);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 66%, transparent);
+  }
 }
 
 .inspector-expanded-header-toggle:focus-visible {
@@ -175,9 +188,15 @@
   gap: 14px;
   min-width: 0;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 54%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 54%, var(--line));
+  }
   border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-2) 76%, transparent);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 76%, transparent);
+  }
 }
 
 .selection-inspector-device-copy {
@@ -247,8 +266,14 @@
   min-width: 0;
   padding: 9px 0 9px 10px;
   border: 0;
-  border-left: 2px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-left: 2px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-left: 2px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  }
+  border-bottom: 1px solid var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  }
   background: transparent;
 }
 
@@ -335,9 +360,15 @@
   gap: 4px;
   margin: 10px;
   padding: 3px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  }
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  }
 }
 
 .inspector-scope-toggle button {
@@ -434,9 +465,15 @@
 
 .slot-config-row {
   padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  }
   border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-2) 62%, var(--surface-1));
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 62%, var(--surface-1));
+  }
 }
 
 .slot-config-row-main {
@@ -454,25 +491,43 @@
   min-height: 32px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  }
   color: var(--text-0);
   font: inherit;
 }
 
 .slot-config-item-button:hover:not(:disabled),
 .slot-config-step-button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
-  background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  border-color: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  }
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  }
 }
 
 .slot-config-clear-button {
-  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  border-color: var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  }
   color: var(--danger);
 }
 
 .slot-config-clear-button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--danger) 70%, var(--line));
-  background: color-mix(in srgb, var(--danger) 8%, var(--surface-1));
+  border-color: var(--danger);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--danger) 70%, var(--line));
+  }
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--danger) 8%, var(--surface-1));
+  }
   color: var(--danger);
 }
 
@@ -497,7 +552,10 @@
 .slot-config-lock-tag {
   padding: 2px 6px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-1) 72%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 72%, transparent);
+  }
   color: var(--text-1);
   font-size: 0.72rem;
 }
@@ -535,7 +593,10 @@
 }
 
 .warehouse-item-link-inspector {
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  }
 }
 
 .warehouse-link-panel-body {
@@ -551,7 +612,10 @@
 
 .warehouse-link-row {
   --port-output-accent: var(--text-2);
-  --port-output-accent-soft: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  --port-output-accent-soft: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --port-output-accent-soft: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  }
 
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
@@ -560,9 +624,15 @@
   min-height: 52px;
   gap: 8px;
   padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  }
   border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+  }
 }
 
 .warehouse-link-row[data-port-kind="item"] {
@@ -582,9 +652,15 @@
   width: 56px;
   height: 32px;
   min-width: 0;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 42%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 42%, var(--line));
+  }
   border-radius: 5px;
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  }
   color: var(--text-1);
 }
 
@@ -615,7 +691,10 @@
 }
 
 .warehouse-link-item-button:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+  }
 }
 
 .warehouse-link-item-icon {
@@ -742,9 +821,15 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 56%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 56%, var(--line));
+  }
   border-radius: 5px;
-  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  }
   color: var(--text-1);
   font: inherit;
   font-size: 1.04rem;
@@ -753,16 +838,31 @@
 }
 
 .warehouse-link-infinity-button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
-  background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  border-color: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  }
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  }
   color: var(--text-0);
 }
 
 .warehouse-link-infinity-button[aria-pressed="true"] {
-  border-color: color-mix(in srgb, var(--accent-strong) 76%, var(--line));
-  background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface-1));
+  border-color: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--accent-strong) 76%, var(--line));
+  }
+  background: var(--accent-soft);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface-1));
+  }
   color: var(--accent-strong);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-strong) 24%, transparent);
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-strong) 24%, transparent);
+  }
 }
 
 .warehouse-link-infinity-button[aria-pressed="true"] span {
@@ -789,7 +889,10 @@
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 5px;
-  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  }
   color: var(--text-1);
   font: inherit;
   font-size: 0.75rem;
@@ -798,8 +901,14 @@
 }
 
 .warehouse-link-action-button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
-  background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  border-color: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  }
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  }
   color: var(--text-0);
 }
 
@@ -816,13 +925,22 @@
 }
 
 .warehouse-link-clear-button {
-  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  border-color: var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  }
   color: var(--danger);
 }
 
 .warehouse-link-clear-button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--danger) 70%, var(--line));
-  background: color-mix(in srgb, var(--danger) 8%, var(--surface-1));
+  border-color: var(--danger);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--danger) 70%, var(--line));
+  }
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--danger) 8%, var(--surface-1));
+  }
   color: var(--danger);
 }
 
@@ -849,7 +967,10 @@
 }
 
 .admission-rule-inspector {
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  }
 }
 
 .admission-rule-panel-body {
@@ -879,9 +1000,15 @@
   min-width: 0;
   gap: 8px;
   padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  }
   border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+  }
 }
 
 .admission-rule-controls-row {
@@ -905,16 +1032,28 @@
   min-height: 36px;
   gap: 8px;
   padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--admission-accent) 34%, var(--line));
+  border: 1px solid var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--admission-accent) 34%, var(--line));
+  }
   border-radius: 5px;
-  background: color-mix(in srgb, var(--surface-1) 88%, var(--admission-accent-soft));
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 88%, var(--admission-accent-soft));
+  }
   color: var(--text-0);
   text-align: left;
 }
 
 .admission-rule-item-button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--admission-accent) 58%, var(--line));
-  background: color-mix(in srgb, var(--surface-1) 76%, var(--admission-accent-soft));
+  border-color: var(--admission-accent);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--admission-accent) 58%, var(--line));
+  }
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 76%, var(--admission-accent-soft));
+  }
 }
 
 .admission-rule-item-button:disabled,
@@ -932,7 +1071,10 @@
   height: 30px;
   overflow: hidden;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+  }
   color: var(--text-2);
 }
 
@@ -966,9 +1108,15 @@
   min-height: 36px;
   gap: 2px;
   padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 52%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 52%, var(--line));
+  }
   border-radius: 5px;
-  background: color-mix(in srgb, var(--surface-1) 82%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 82%, transparent);
+  }
 }
 
 .admission-rule-limit span,
@@ -1021,19 +1169,34 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 56%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 56%, var(--line));
+  }
   border-radius: 5px;
-  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  }
   color: var(--text-1);
 }
 
 .admission-rule-action-button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--admission-accent) 54%, var(--line));
-  color: color-mix(in srgb, var(--admission-accent) 76%, var(--text-0));
+  border-color: var(--admission-accent);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--admission-accent) 54%, var(--line));
+  }
+  color: var(--admission-accent);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--admission-accent) 76%, var(--text-0));
+  }
 }
 
 .admission-rule-clear-button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, #c84f4f 52%, var(--line));
+  border-color: #c84f4f;
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, #c84f4f 52%, var(--line));
+  }
   color: #c84f4f;
 }
 
@@ -1093,7 +1256,10 @@
 }
 
 .port-output-config-inspector {
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  }
 }
 
 .port-output-panel-header {
@@ -1155,7 +1321,10 @@
 
 .port-output-row {
   --port-output-accent: var(--text-2);
-  --port-output-accent-soft: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  --port-output-accent-soft: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --port-output-accent-soft: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  }
 
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
@@ -1164,9 +1333,15 @@
   min-height: 52px;
   gap: 8px;
   padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  }
   border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+  }
 }
 
 .port-output-row[data-port-kind="item"] {
@@ -1241,9 +1416,15 @@
   min-width: 56px;
   gap: 2px;
   padding: 2px 5px 2px 4px;
-  border: 1px solid color-mix(in srgb, var(--port-output-accent) 42%, var(--line));
+  border: 1px solid var(--port-output-accent);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--port-output-accent) 42%, var(--line));
+  }
   border-radius: 5px;
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  }
   color: var(--text-0);
 }
 
@@ -1255,13 +1436,22 @@
 }
 
 .port-output-locator-body {
-  fill: color-mix(in srgb, var(--surface-2) 72%, transparent);
-  stroke: color-mix(in srgb, var(--line-strong) 56%, var(--line));
+  fill: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    fill: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  }
+  stroke: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    stroke: color-mix(in srgb, var(--line-strong) 56%, var(--line));
+  }
   stroke-width: 0.08;
 }
 
 .port-output-locator-marker {
-  fill: color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  fill: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    fill: color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  }
 }
 
 .port-output-locator-selected-line {
@@ -1274,7 +1464,10 @@
 
 .port-output-locator-selected-marker {
   fill: var(--port-output-accent);
-  stroke: color-mix(in srgb, var(--surface-1) 92%, #ffffff);
+  stroke: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    stroke: color-mix(in srgb, var(--surface-1) 92%, #ffffff);
+  }
   stroke-width: 0.08;
 }
 
@@ -1331,7 +1524,10 @@
 }
 
 .port-output-item-button:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+  }
 }
 
 .port-output-item-button:disabled,
@@ -1417,7 +1613,10 @@
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 5px;
-  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  }
   color: var(--text-1);
   font: inherit;
   font-size: 0.75rem;
@@ -1426,8 +1625,14 @@
 }
 
 .port-output-action-button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
-  background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  border-color: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  }
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  }
   color: var(--text-0);
 }
 
@@ -1438,13 +1643,22 @@
 }
 
 .port-output-clear-button {
-  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  border-color: var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  }
   color: var(--danger);
 }
 
 .port-output-clear-button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--danger) 70%, var(--line));
-  background: color-mix(in srgb, var(--danger) 8%, var(--surface-1));
+  border-color: var(--danger);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--danger) 70%, var(--line));
+  }
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--danger) 8%, var(--surface-1));
+  }
   color: var(--danger);
 }
 
@@ -1483,7 +1697,10 @@
 }
 
 .port-priority-group-inspector {
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  }
 }
 
 .port-priority-panel-body {
@@ -1510,9 +1727,15 @@
   width: 30px;
   height: 18px;
   margin: 0;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  }
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-3) 72%, var(--surface-1));
+  background: var(--surface-3);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-3) 72%, var(--surface-1));
+  }
   cursor: pointer;
 }
 
@@ -1529,8 +1752,14 @@
 }
 
 .port-priority-custom-switch input:checked {
-  border-color: color-mix(in srgb, var(--accent-strong) 56%, var(--line));
-  background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface-2));
+  border-color: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--accent-strong) 56%, var(--line));
+  }
+  background: var(--accent-soft);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface-2));
+  }
 }
 
 .port-priority-custom-switch input:checked::after {
@@ -1554,9 +1783,15 @@
   min-width: 0;
   gap: 8px;
   padding: 8px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  }
   border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+  }
 }
 
 .port-priority-row[data-port-kind="item"] {
@@ -1575,9 +1810,15 @@
   min-width: 52px;
   height: 30px;
   padding: 0 8px;
-  border: 1px solid color-mix(in srgb, var(--port-priority-accent) 42%, var(--line));
+  border: 1px solid var(--port-priority-accent);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--port-priority-accent) 42%, var(--line));
+  }
   border-radius: 5px;
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  }
   color: var(--text-0);
   font-size: 0.78rem;
   font-weight: 800;
@@ -1590,9 +1831,15 @@
   place-items: center;
   width: 32px;
   height: 30px;
-  border: 1px solid color-mix(in srgb, var(--port-priority-accent) 48%, var(--line));
+  border: 1px solid var(--port-priority-accent);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--port-priority-accent) 48%, var(--line));
+  }
   border-radius: 5px;
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  }
   color: var(--text-0);
   font: inherit;
   font-size: 0.86rem;
@@ -1602,8 +1849,14 @@
 
 .port-priority-number-button:hover:not(:disabled),
 .port-priority-number-button[aria-expanded="true"] {
-  border-color: color-mix(in srgb, var(--port-priority-accent) 72%, var(--line));
-  background: color-mix(in srgb, var(--surface-1) 82%, var(--port-priority-accent) 12%);
+  border-color: var(--port-priority-accent);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--port-priority-accent) 72%, var(--line));
+  }
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 82%, var(--port-priority-accent) 12%);
+  }
 }
 
 .port-priority-number-button:disabled {
@@ -1626,7 +1879,10 @@
   height: 28px;
   border: 1px solid var(--line);
   border-radius: 5px;
-  background: color-mix(in srgb, var(--surface-1) 90%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 90%, transparent);
+  }
   color: var(--text-1);
   font: inherit;
   font-size: 0.76rem;
@@ -1636,8 +1892,14 @@
 
 .port-priority-picker button:hover,
 .port-priority-picker button.is-selected {
-  border-color: color-mix(in srgb, var(--port-priority-accent) 72%, var(--line));
-  background: color-mix(in srgb, var(--surface-1) 78%, var(--port-priority-accent) 16%);
+  border-color: var(--port-priority-accent);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--port-priority-accent) 72%, var(--line));
+  }
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 78%, var(--port-priority-accent) 16%);
+  }
   color: var(--text-0);
 }
 
@@ -1675,7 +1937,10 @@
   padding: 0 4px;
   border-radius: 5px;
   background: var(--surface-1);
-  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  }
   color: var(--text-1);
   font-size: 0.68rem;
   line-height: 18px;
@@ -1699,7 +1964,10 @@
   padding: 0 5px;
   border-radius: 999px;
   background: var(--surface-1);
-  background: color-mix(in srgb, var(--surface-1) 90%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 90%, transparent);
+  }
   color: var(--text-0);
   font-size: 0.72rem;
   font-weight: 700;
@@ -1788,7 +2056,10 @@
   width: 36px;
   height: 20px;
   margin: 0;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  }
   border-radius: 999px;
   background: var(--surface-2);
   cursor: pointer;
@@ -1843,9 +2114,15 @@
   min-width: 0;
   gap: 10px;
   padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  }
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface-2) 62%, var(--surface-1));
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 62%, var(--surface-1));
+  }
 }
 
 /*
@@ -1954,20 +2231,32 @@
   padding: 8px 8px 8px 10px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: color-mix(in srgb, var(--surface-1) 72%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 72%, transparent);
+  }
   color: var(--text-0);
   font: inherit;
   text-align: left;
 }
 
 .slot-config-flow-slot:hover {
-  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
-  background: color-mix(in srgb, var(--surface-2) 70%, var(--surface-1));
+  border-color: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  }
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 70%, var(--surface-1));
+  }
 }
 
 .slot-config-flow-slot-label {
   overflow: hidden;
-  color: color-mix(in srgb, var(--text-0) 84%, var(--text-1));
+  color: var(--text-0);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--text-0) 84%, var(--text-1));
+  }
   font-size: 0.78rem;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -1988,7 +2277,10 @@
   place-items: center;
   width: 36px;
   height: 36px;
-  border: 1px dashed color-mix(in srgb, var(--text-1) 78%, transparent);
+  border: 1px dashed var(--text-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px dashed color-mix(in srgb, var(--text-1) 78%, transparent);
+  }
   border-radius: 7px;
   color: var(--text-1);
 }
@@ -2017,7 +2309,10 @@
   padding: 0 5px;
   border-radius: 999px;
   background: var(--surface-1);
-  background: color-mix(in srgb, var(--surface-1) 88%, black 12%);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 88%, black 12%);
+  }
   color: var(--text-0);
   font-size: 0.68rem;
   font-weight: 700;
@@ -2035,7 +2330,10 @@
   padding: 0 5px;
   border-radius: 999px;
   background: var(--surface-1);
-  background: color-mix(in srgb, var(--surface-1) 88%, black 12%);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 88%, black 12%);
+  }
   color: var(--text-0);
   font-size: 0.68rem;
   font-weight: 700;
@@ -2076,7 +2374,10 @@
 .slot-config-flow-direction svg {
   width: min(64px, 100%);
   height: 32px;
-  color: color-mix(in srgb, var(--text-1) 64%, var(--line-strong));
+  color: var(--text-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--text-1) 64%, var(--line-strong));
+  }
   stroke-width: 2.2;
 }
 
@@ -2084,7 +2385,10 @@
   display: grid;
   place-items: center;
   min-height: 54px;
-  border: 1px dashed color-mix(in srgb, var(--line-strong) 66%, var(--line));
+  border: 1px dashed var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px dashed color-mix(in srgb, var(--line-strong) 66%, var(--line));
+  }
   border-radius: 7px;
   color: var(--text-2);
   font-size: 0.76rem;
@@ -2121,16 +2425,22 @@
 .slot-config-dialog {
   display: grid;
   align-content: start;
-  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
   gap: clamp(6px, 1.5vh, 10px);
-  gap: clamp(6px, 1.5dvh, 10px);
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，旧版保留 vh fallback，现代浏览器由 @supports 内声明覆盖。 */
+  @supports (height: 100dvh) {
+    gap: clamp(6px, 1.5dvh, 10px);
+  }
   width: min(340px, calc(100vw - 16px));
-  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
   max-height: calc(100vh - 16px);
-  max-height: calc(100dvh - 16px);
-  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，旧版保留 vh fallback，现代浏览器由 @supports 内声明覆盖。 */
+  @supports (height: 100dvh) {
+    max-height: calc(100dvh - 16px);
+  }
   padding: clamp(10px, 2vh, 14px);
-  padding: clamp(10px, 2dvh, 14px);
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，旧版保留 vh fallback，现代浏览器由 @supports 内声明覆盖。 */
+  @supports (height: 100dvh) {
+    padding: clamp(10px, 2dvh, 14px);
+  }
   overflow-y: auto;
   overflow-x: hidden;
   border: 1px solid var(--line);
@@ -2163,9 +2473,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
   min-height: clamp(32px, 6vh, 34px);
-  min-height: clamp(32px, 6dvh, 34px);
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，旧版保留 vh fallback，现代浏览器由 @supports 内声明覆盖。 */
+  @supports (height: 100dvh) {
+    min-height: clamp(32px, 6dvh, 34px);
+  }
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--surface-2);
@@ -2175,9 +2487,11 @@
 
 .slot-config-dialog-icon-button {
   flex: 0 0 auto;
-  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
   width: clamp(32px, 6vh, 34px);
-  width: clamp(32px, 6dvh, 34px);
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，旧版保留 vh fallback，现代浏览器由 @supports 内声明覆盖。 */
+  @supports (height: 100dvh) {
+    width: clamp(32px, 6dvh, 34px);
+  }
   padding: 0;
 }
 
@@ -2188,12 +2502,16 @@
 
 .slot-config-dialog-item-button {
   justify-self: center;
-  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
   width: clamp(56px, 18vh, 96px);
-  width: clamp(56px, 18dvh, 96px);
-  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，先写 vh fallback，现代浏览器由下一行 dvh 覆盖。 */
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，旧版保留 vh fallback，现代浏览器由 @supports 内声明覆盖。 */
+  @supports (height: 100dvh) {
+    width: clamp(56px, 18dvh, 96px);
+  }
   height: clamp(56px, 18vh, 96px);
-  height: clamp(56px, 18dvh, 96px);
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 dvh，旧版保留 vh fallback，现代浏览器由 @supports 内声明覆盖。 */
+  @supports (height: 100dvh) {
+    height: clamp(56px, 18dvh, 96px);
+  }
   padding: 0;
 }
 
@@ -2289,8 +2607,42 @@
   height: 32px;
   margin: 0;
   padding: 0;
-  accent-color: var(--primary);
+  @supports (accent-color: auto) {
+    accent-color: var(--primary);
+  }
   cursor: pointer;
+}
+
+/*
+  TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 accent-color，旧版用 WebKit range 伪元素补上主色轨道和滑块。
+  现代浏览器继续使用上方 accent-color；本分支只提供旧 Chrome fallback，不影响新版本呈现。
+*/
+@supports not (accent-color: auto) {
+  .slot-config-dialog-range {
+    appearance: none;
+    background: transparent;
+  }
+
+  .slot-config-dialog-range::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--line-strong);
+  }
+
+  .slot-config-dialog-range::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    margin-top: -7px;
+    border: 2px solid var(--surface-1);
+    border-radius: 50%;
+    background: var(--primary);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 24%);
+  }
+
+  .slot-config-dialog-range:disabled::-webkit-slider-thumb {
+    background: var(--text-2);
+  }
 }
 
 .slot-config-dialog-range:disabled {
@@ -2357,7 +2709,10 @@
 
 .slot-config-dialog-clear {
   width: 100%;
-  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  border-color: var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  }
   color: var(--danger);
 }
 
@@ -2376,13 +2731,25 @@
 .slot-config-dialog-icon-button:hover:not(:disabled),
 .slot-config-dialog-item-button:hover:not(:disabled),
 .slot-config-dialog-actions button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
-  background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  border-color: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  }
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  }
 }
 
 .slot-config-dialog-clear:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--danger) 70%, var(--line));
-  background: color-mix(in srgb, var(--danger) 8%, var(--surface-1));
+  border-color: var(--danger);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--danger) 70%, var(--line));
+  }
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--danger) 8%, var(--surface-1));
+  }
   color: var(--danger);
 }
 
@@ -2464,7 +2831,10 @@
 */
 
 .submit-to-warehouse-inspector {
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  }
 }
 
 .submit-to-warehouse-panel-body {
@@ -2480,14 +2850,26 @@
   min-height: 52px;
   gap: 8px;
   padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 62%, var(--line));
+  }
   border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+  }
 }
 
 .submit-to-warehouse-row[data-submit-enabled="true"] {
-  border-color: color-mix(in srgb, var(--accent-strong) 42%, var(--line));
-  background: color-mix(in srgb, var(--surface-1) 86%, var(--accent-soft));
+  border-color: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--accent-strong) 42%, var(--line));
+  }
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 86%, var(--accent-soft));
+  }
 }
 
 .submit-to-warehouse-icon {
@@ -2496,9 +2878,15 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 42%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 42%, var(--line));
+  }
   border-radius: 5px;
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  }
   color: var(--text-1);
 }
 
@@ -2508,7 +2896,10 @@
 }
 
 .submit-to-warehouse-row[data-submit-enabled="true"] .submit-to-warehouse-icon {
-  border-color: color-mix(in srgb, var(--accent-strong) 44%, var(--line));
+  border-color: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--accent-strong) 44%, var(--line));
+  }
   color: var(--accent-strong);
 }
 
@@ -2530,10 +2921,19 @@
   min-width: 34px;
   height: 26px;
   padding: 0 8px;
-  border: 1px solid color-mix(in srgb, var(--accent-strong) 30%, var(--line));
+  border: 1px solid var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--accent-strong) 30%, var(--line));
+  }
   border-radius: 5px;
-  background: color-mix(in srgb, var(--accent-soft) 56%, var(--surface-1));
-  color: color-mix(in srgb, var(--accent-strong) 86%, var(--text-1));
+  background: var(--accent-soft);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--accent-soft) 56%, var(--surface-1));
+  }
+  color: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--accent-strong) 86%, var(--text-1));
+  }
   font-size: 0.76rem;
   font-weight: 720;
   line-height: 1;
@@ -2545,14 +2945,23 @@
   width: 44px;
   height: 26px;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  }
   border-radius: 999px;
   background: var(--surface-2);
 }
 
 .submit-to-warehouse-toggle:hover {
-  border-color: color-mix(in srgb, var(--line-strong) 78%, var(--line));
-  background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+  border-color: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--line-strong) 78%, var(--line));
+  }
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
+  }
 }
 
 .submit-to-warehouse-toggle[aria-checked="true"] {
@@ -2640,7 +3049,10 @@
   min-width: 104px;
   height: 32px;
   padding: 0 10px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  }
   border-radius: 6px;
   background: var(--surface-2);
   color: var(--text-1);
@@ -2674,7 +3086,10 @@
   width: 42px;
   height: 24px;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  }
   border-radius: 999px;
   background: var(--surface-2);
   color: transparent;
@@ -2775,7 +3190,10 @@
 
 .recipe-select-button:hover {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface-1));
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--accent) 8%, var(--surface-1));
+  }
 }
 
 .recipe-select-placeholder {
@@ -2785,9 +3203,15 @@
 
 .recipe-status-placeholder {
   min-height: 72px;
-  border: 1px dashed color-mix(in srgb, var(--line-strong) 60%, var(--line));
+  border: 1px dashed var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px dashed color-mix(in srgb, var(--line-strong) 60%, var(--line));
+  }
   border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-2) 58%, transparent);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 58%, transparent);
+  }
 }
 
 // AI-CORRECTION 2026-05-29: 多 channel 分区展示相关样式。
@@ -2802,7 +3226,10 @@
 .recipe-section-divider {
   height: 1px;
   margin: 5px 0;
-  background: color-mix(in srgb, var(--line) 76%, transparent);
+  background: var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--line) 76%, transparent);
+  }
 }
 
 .recipe-channel-row {
@@ -2813,9 +3240,15 @@
   min-height: 48px;
   gap: 4px;
   padding: 5px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 66%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 66%, var(--line));
+  }
   border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-2) 62%, var(--surface-1));
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 62%, var(--surface-1));
+  }
   /*
     AI-REMOVED 2026-06-04:
     Reason: 配方状态行是 Inspector 内列表行，不应通过渐变和内阴影制造卡片立体感。
@@ -2846,9 +3279,15 @@
   padding: 0;
   margin-left: 0;
   flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 60%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 60%, var(--line));
+  }
   border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-1) 86%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 86%, transparent);
+  }
   color: var(--danger);
   cursor: pointer;
   line-height: 1;
@@ -2860,8 +3299,14 @@
   }
 
   &:hover {
-    border-color: color-mix(in srgb, var(--danger) 54%, var(--line));
-    background: color-mix(in srgb, var(--danger) 9%, var(--surface-1));
+    border-color: var(--danger);
+    @supports (background: color-mix(in srgb, red 50%, blue)) {
+      border-color: color-mix(in srgb, var(--danger) 54%, var(--line));
+    }
+    background: var(--surface-1);
+    @supports (background: color-mix(in srgb, red 50%, blue)) {
+      background: color-mix(in srgb, var(--danger) 9%, var(--surface-1));
+    }
     color: var(--danger);
   }
 }
@@ -2876,7 +3321,10 @@
   flex: 0 0 auto;
   border: 1px solid transparent;
   border-radius: 6px;
-  color: color-mix(in srgb, var(--text-2) 82%, var(--line-strong));
+  color: var(--text-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--text-2) 82%, var(--line-strong));
+  }
 
   svg {
     width: 16px;
@@ -2892,9 +3340,15 @@
   width: 100%;
   min-height: 48px;
   padding: 8px 12px;
-  border: 1px dashed color-mix(in srgb, var(--line-strong) 66%, var(--line));
+  border: 1px dashed var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px dashed color-mix(in srgb, var(--line-strong) 66%, var(--line));
+  }
   border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-2) 58%, transparent);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 58%, transparent);
+  }
   color: var(--accent-strong);
   cursor: pointer;
   font: inherit;
@@ -2902,8 +3356,14 @@
   transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 
   &:hover {
-    border-color: color-mix(in srgb, var(--accent-strong) 60%, var(--line));
-    background: color-mix(in srgb, var(--accent-soft) 26%, var(--surface-2));
+    border-color: var(--accent-strong);
+    @supports (background: color-mix(in srgb, red 50%, blue)) {
+      border-color: color-mix(in srgb, var(--accent-strong) 60%, var(--line));
+    }
+    background: var(--surface-2);
+    @supports (background: color-mix(in srgb, red 50%, blue)) {
+      background: color-mix(in srgb, var(--accent-soft) 26%, var(--surface-2));
+    }
     color: var(--accent-strong);
   }
 }

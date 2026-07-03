@@ -1,3 +1,4 @@
+/* TapTap 手机端按 Chrome 89 兼容：本文件中 color-mix() 的前置声明是旧 Chrome fallback，紧随其后的 @supports 分支保留现代浏览器原效果。 */
 .dialog-shell-backdrop {
   position: absolute;
   inset: 0;
@@ -18,7 +19,10 @@
   justify-content: center;
   padding: clamp(12px, 2.6vw, 28px);
   background: var(--shell-bg);
-  background: color-mix(in srgb, var(--shell-bg) 42%, transparent);
+  background: var(--shell-bg);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--shell-bg) 42%, transparent);
+  }
 }
 
 .dialog-shell-backdrop,
@@ -149,13 +153,25 @@
   bottom: 0;
   left: 0;
   height: 1px;
-  background: color-mix(in srgb, var(--accent-strong) 42%, var(--line));
+  background: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--accent-strong) 42%, var(--line));
+  }
 }
 
 .dialog-shell-tab {
-  --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 66%, var(--line));
-  --dialog-shell-tab-top: color-mix(in srgb, var(--accent) 24%, var(--surface-1));
-  --dialog-shell-tab-bottom: color-mix(in srgb, var(--accent) 14%, var(--surface-1));
+  --dialog-shell-tab-border: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 66%, var(--line));
+  }
+  --dialog-shell-tab-top: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-top: color-mix(in srgb, var(--accent) 24%, var(--surface-1));
+  }
+  --dialog-shell-tab-bottom: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-bottom: color-mix(in srgb, var(--accent) 14%, var(--surface-1));
+  }
   position: relative;
   z-index: 0;
   display: inline-flex;
@@ -169,9 +185,17 @@
   border-radius: 10px 10px 0 0;
   background: linear-gradient(180deg, var(--dialog-shell-tab-top) 0%, var(--dialog-shell-tab-bottom) 100%);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--surface-1) 82%, transparent),
-    0 4px 10px color-mix(in srgb, var(--shadow-floating-control) 32%, transparent);
-  color: color-mix(in srgb, var(--accent-strong) 78%, var(--text-0));
+    inset 0 1px 0 var(--surface-1),
+    0 4px 10px var(--shadow-floating-control);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--surface-1) 82%, transparent),
+      0 4px 10px color-mix(in srgb, var(--shadow-floating-control) 32%, transparent);
+  }
+  color: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--accent-strong) 78%, var(--text-0));
+  }
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -210,26 +234,58 @@
 
 .dialog-shell-tab:hover {
   z-index: 2;
-  --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 82%, var(--line));
-  --dialog-shell-tab-top: color-mix(in srgb, var(--accent) 30%, var(--surface-1));
-  --dialog-shell-tab-bottom: color-mix(in srgb, var(--accent) 18%, var(--surface-1));
-  color: color-mix(in srgb, var(--accent-strong) 88%, var(--text-0));
+  --dialog-shell-tab-border: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 82%, var(--line));
+  }
+  --dialog-shell-tab-top: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-top: color-mix(in srgb, var(--accent) 30%, var(--surface-1));
+  }
+  --dialog-shell-tab-bottom: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-bottom: color-mix(in srgb, var(--accent) 18%, var(--surface-1));
+  }
+  color: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--accent-strong) 88%, var(--text-0));
+  }
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--surface-1) 88%, transparent),
-    0 6px 12px color-mix(in srgb, var(--shadow-floating-control) 44%, transparent);
+    inset 0 1px 0 var(--surface-1),
+    0 6px 12px var(--shadow-floating-control);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--surface-1) 88%, transparent),
+      0 6px 12px color-mix(in srgb, var(--shadow-floating-control) 44%, transparent);
+  }
 }
 
 .dialog-shell-tab.is-active {
   z-index: 3;
   --dialog-shell-tab-border: var(--accent-strong);
-  --dialog-shell-tab-top: color-mix(in srgb, var(--accent) 38%, var(--surface-1));
-  --dialog-shell-tab-bottom: color-mix(in srgb, var(--accent) 24%, var(--surface-1));
+  --dialog-shell-tab-top: var(--accent);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-top: color-mix(in srgb, var(--accent) 38%, var(--surface-1));
+  }
+  --dialog-shell-tab-bottom: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-bottom: color-mix(in srgb, var(--accent) 24%, var(--surface-1));
+  }
   min-height: 52px;
-  color: color-mix(in srgb, var(--accent-strong) 92%, var(--text-0));
+  color: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--accent-strong) 92%, var(--text-0));
+  }
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--surface-1) 92%, transparent),
+    inset 0 1px 0 var(--surface-1),
     0 1px 0 var(--surface-1),
-    0 10px 20px color-mix(in srgb, var(--shadow-floating-control) 44%, transparent);
+    0 10px 20px var(--shadow-floating-control);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--surface-1) 92%, transparent),
+      0 1px 0 var(--surface-1),
+      0 10px 20px color-mix(in srgb, var(--shadow-floating-control) 44%, transparent);
+  }
 }
 
 .dialog-shell.has-tabs {
@@ -239,7 +295,10 @@
 .dialog-shell.has-tabs .dialog-shell-header {
   --dialog-shell-header-row-height: 42px;
   --dialog-shell-tab-track-height: 34px;
-  --dialog-shell-tab-divider: color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  --dialog-shell-tab-divider: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-divider: color-mix(in srgb, var(--line-strong) 64%, var(--line));
+  }
   position: relative;
   display: grid;
   gap: 0;
@@ -304,8 +363,14 @@
 }
 
 .dialog-shell.has-tabs .dialog-shell-tab {
-  --dialog-shell-tab-border: color-mix(in srgb, var(--line-strong) 72%, var(--line));
-  --dialog-shell-tab-bg: color-mix(in srgb, var(--surface-2) 92%, var(--surface-1));
+  --dialog-shell-tab-border: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-border: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  }
+  --dialog-shell-tab-bg: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-bg: color-mix(in srgb, var(--surface-2) 92%, var(--surface-1));
+  }
   min-height: 0;
   height: var(--dialog-shell-tab-track-height);
   padding: 0 16px;
@@ -317,13 +382,28 @@
   border-radius: 9px 9px 0 0;
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--dialog-shell-tab-bg) 88%, var(--surface-1)) 0%,
+    var(--dialog-shell-tab-bg) 0%,
     var(--dialog-shell-tab-bg) 100%
   );
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--dialog-shell-tab-bg) 88%, var(--surface-1)) 0%,
+      var(--dialog-shell-tab-bg) 100%
+    );
+  }
   box-shadow:
-    inset 0 -8px 12px color-mix(in srgb, var(--line) 26%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--surface-1) 70%, transparent);
-  color: color-mix(in srgb, var(--text-0) 74%, var(--text-1));
+    inset 0 -8px 12px var(--line),
+    inset 0 1px 0 var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow:
+      inset 0 -8px 12px color-mix(in srgb, var(--line) 26%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--surface-1) 70%, transparent);
+  }
+  color: var(--text-0);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--text-0) 74%, var(--text-1));
+  }
   transform: none;
   transition:
     background 180ms ease,
@@ -371,24 +451,45 @@
 }
 
 .dialog-shell.has-tabs .dialog-shell-tab:hover {
-  --dialog-shell-tab-border: color-mix(in srgb, var(--line-strong) 86%, var(--accent-strong));
-  --dialog-shell-tab-bg: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  --dialog-shell-tab-border: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-border: color-mix(in srgb, var(--line-strong) 86%, var(--accent-strong));
+  }
+  --dialog-shell-tab-bg: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-bg: color-mix(in srgb, var(--surface-2) 78%, var(--surface-1));
+  }
   border-color: var(--dialog-shell-tab-border);
   border-bottom-color: var(--dialog-shell-tab-divider);
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--dialog-shell-tab-bg) 88%, var(--surface-1)) 0%,
+    var(--dialog-shell-tab-bg) 0%,
     var(--dialog-shell-tab-bg) 100%
   );
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--dialog-shell-tab-bg) 88%, var(--surface-1)) 0%,
+      var(--dialog-shell-tab-bg) 100%
+    );
+  }
   box-shadow:
-    inset 0 -7px 10px color-mix(in srgb, var(--line) 20%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--surface-1) 76%, transparent);
+    inset 0 -7px 10px var(--line),
+    inset 0 1px 0 var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow:
+      inset 0 -7px 10px color-mix(in srgb, var(--line) 20%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--surface-1) 76%, transparent);
+  }
   color: var(--text-0);
   transform: none;
 }
 
 .dialog-shell.has-tabs .dialog-shell-tab.is-active {
-  --dialog-shell-tab-border: color-mix(in srgb, var(--line-strong) 86%, var(--accent-strong));
+  --dialog-shell-tab-border: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-border: color-mix(in srgb, var(--line-strong) 86%, var(--accent-strong));
+  }
   --dialog-shell-tab-bg: var(--surface-1);
   height: var(--dialog-shell-tab-track-height);
   padding-inline: 16px;
@@ -396,8 +497,13 @@
   border-bottom-color: transparent;
   background: var(--dialog-shell-tab-bg);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--surface-1) 88%, transparent),
-    0 -1px 0 color-mix(in srgb, var(--surface-1) 80%, transparent);
+    inset 0 1px 0 var(--surface-1),
+    0 -1px 0 var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--surface-1) 88%, transparent),
+      0 -1px 0 color-mix(in srgb, var(--surface-1) 80%, transparent);
+  }
   color: var(--text-0);
   transform: none;
 }

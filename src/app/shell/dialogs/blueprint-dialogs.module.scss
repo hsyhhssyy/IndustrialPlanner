@@ -1,10 +1,14 @@
+/* TapTap 手机端按 Chrome 89 兼容：本文件中 color-mix() 的前置声明是旧 Chrome fallback，紧随其后的 @supports 分支保留现代浏览器原效果。 */
 .save-blueprint-dialog {
   width: min(760px, 100%);
   height: min(680px, 100%);
 }
 
 .save-blueprint-dialog .dialog-shell-header {
-  border-bottom-color: color-mix(in srgb, var(--line) 58%, transparent);
+  border-bottom-color: var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-bottom-color: color-mix(in srgb, var(--line) 58%, transparent);
+  }
 }
 
 .blueprint-preview-dialog {
@@ -43,13 +47,24 @@
   display: grid;
   min-height: 0;
   flex: 1 1 auto;
-  border: 1px solid color-mix(in srgb, var(--accent-strong) 18%, var(--line));
+  border: 1px solid var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--accent-strong) 18%, var(--line));
+  }
   border-radius: 18px;
   overflow: hidden;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--accent-soft) 75%, transparent) 0%, transparent 48%),
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-3) 80%, white 6%) 0%, var(--surface-1) 100%);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
+    radial-gradient(circle at top left, var(--accent-soft) 0%, transparent 48%),
+    linear-gradient(180deg, var(--surface-3) 0%, var(--surface-1) 100%);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background:
+      radial-gradient(circle at top left, color-mix(in srgb, var(--accent-soft) 75%, transparent) 0%, transparent 48%),
+      linear-gradient(180deg, color-mix(in srgb, var(--surface-3) 80%, white 6%) 0%, var(--surface-1) 100%);
+  }
+  box-shadow: inset 0 1px 0 white;
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
+  }
 }
 
 .blueprint-preview-canvas {
@@ -59,7 +74,11 @@
   touch-action: none;
   cursor: grab;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-3) 84%, white 3%) 0%, color-mix(in srgb, var(--surface-1) 96%, black 2%) 100%);
+    linear-gradient(180deg, var(--surface-3) 0%, var(--surface-1) 100%);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--surface-3) 84%, white 3%) 0%, color-mix(in srgb, var(--surface-1) 96%, black 2%) 100%);
+  }
 }
 
 .blueprint-preview-canvas > canvas {
@@ -90,7 +109,10 @@
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--surface-2) 94%, white 3%);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 94%, white 3%);
+  }
 }
 
 .blueprint-preview-summary-card {
@@ -248,14 +270,20 @@
 
 .blueprint-preview-danger-button,
 .blueprint-folder-danger-button {
-  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  border-color: var(--danger);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  }
   color: var(--danger);
 }
 
 .blueprint-preview-danger-button:hover:not(:disabled),
 .blueprint-folder-danger-button:hover:not(:disabled) {
   border-color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 8%, var(--surface-2));
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--danger) 8%, var(--surface-2));
+  }
 }
 
 .blueprint-preview-danger-button.is-confirm,
@@ -267,7 +295,10 @@
 
 .blueprint-preview-danger-button.is-confirm:hover:not(:disabled),
 .blueprint-folder-danger-button.is-confirm:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger) 88%, var(--shell-bg));
+  background: var(--danger);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--danger) 88%, var(--shell-bg));
+  }
 }
 
 .blueprint-preview-metadata {
@@ -361,8 +392,15 @@
   padding: 16px;
   border: 0;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 94%, white 3%) 0%, var(--surface-1) 100%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 40%, transparent);
+    linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 94%, white 3%) 0%, var(--surface-1) 100%);
+  }
+  box-shadow: inset 0 0 0 1px var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 40%, transparent);
+  }
 }
 
 .save-blueprint-form-content {
@@ -436,7 +474,10 @@
 .save-blueprint-dialog .save-blueprint-textarea:focus-visible {
   outline: none;
   border-color: var(--accent-strong);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-strong) 20%, transparent);
+  box-shadow: 0 0 0 3px var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-strong) 20%, transparent);
+  }
 }
 
 .save-blueprint-textarea {
@@ -461,7 +502,10 @@
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--surface-1) 92%, white 4%);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 92%, white 4%);
+  }
 }
 
 .save-blueprint-dialog .save-blueprint-folder-picker-card {
@@ -469,8 +513,14 @@
   padding: 12px;
   border: 0;
   border-radius: 14px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 95%, white 3%) 0%, color-mix(in srgb, var(--surface-2) 92%, var(--surface-1)) 100%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 34%, transparent);
+  background: linear-gradient(180deg, var(--surface-1) 0%, var(--surface-2) 100%);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 95%, white 3%) 0%, color-mix(in srgb, var(--surface-2) 92%, var(--surface-1)) 100%);
+  }
+  box-shadow: inset 0 0 0 1px var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 34%, transparent);
+  }
 }
 
 .save-blueprint-folder-picker-toolbar {
@@ -547,13 +597,19 @@
 }
 
 .save-blueprint-secondary-button.blueprint-preview-danger-button {
-  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  border-color: var(--danger);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  }
   color: var(--danger);
 }
 
 .save-blueprint-secondary-button.blueprint-preview-danger-button:hover:not(:disabled) {
   border-color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 8%, var(--surface-2));
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--danger) 8%, var(--surface-2));
+  }
 }
 
 .save-blueprint-primary-button {

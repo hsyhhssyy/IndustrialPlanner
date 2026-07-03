@@ -1,3 +1,4 @@
+/* TapTap 手机端按 Chrome 89 兼容：本文件中 color-mix() 的前置声明是旧 Chrome fallback，紧随其后的 @supports 分支保留现代浏览器原效果。 */
 .mobile-portrait-gate {
   position: absolute;
   inset: 0;
@@ -20,10 +21,19 @@
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--shell-bg) 76%, transparent),
-      color-mix(in srgb, var(--shell-bg) 88%, transparent)
+      var(--shell-bg),
+      var(--shell-bg)
     ),
     var(--shell-bg);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--shell-bg) 76%, transparent),
+        color-mix(in srgb, var(--shell-bg) 88%, transparent)
+      ),
+      var(--shell-bg);
+  }
   color: var(--text-0);
   pointer-events: auto;
 }

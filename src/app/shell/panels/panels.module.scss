@@ -1,3 +1,4 @@
+/* TapTap 手机端按 Chrome 89 兼容：本文件中 color-mix() 的前置声明是旧 Chrome fallback，紧随其后的 @supports 分支保留现代浏览器原效果。 */
 .stack {
   display: grid;
   gap: 8px;
@@ -246,10 +247,19 @@
 
 .blueprint-tab-shell {
   min-width: 0;
-  --blueprint-tab-border: color-mix(in srgb, var(--line-strong) 74%, var(--line));
-  --blueprint-tab-divider: color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  --blueprint-tab-border: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --blueprint-tab-border: color-mix(in srgb, var(--line-strong) 74%, var(--line));
+  }
+  --blueprint-tab-divider: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --blueprint-tab-divider: color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  }
   --blueprint-tab-bg: var(--surface-3);
-  --blueprint-tab-bg-hover: color-mix(in srgb, var(--surface-3) 44%, var(--surface-2));
+  --blueprint-tab-bg-hover: var(--surface-3);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --blueprint-tab-bg-hover: color-mix(in srgb, var(--surface-3) 44%, var(--surface-2));
+  }
   --blueprint-tab-bg-active: var(--surface-2);
   --dialog-shell-tab-track-height: 36px;
   --dialog-shell-tab-divider: var(--blueprint-tab-divider);
@@ -322,7 +332,10 @@
   border-radius: 12px 12px 0 0;
   background: var(--dialog-shell-tab-bg);
   box-shadow: none;
-  color: color-mix(in srgb, var(--text-0) 72%, var(--text-1));
+  color: var(--text-0);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--text-0) 72%, var(--text-1));
+  }
   transform: none;
   transition:
     background 180ms ease,
@@ -336,7 +349,10 @@
 }
 
 .blueprint-tab-shell .blueprint-tab-button:hover {
-  --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 26%, var(--line-strong));
+  --dialog-shell-tab-border: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 26%, var(--line-strong));
+  }
   --dialog-shell-tab-bg: var(--blueprint-tab-bg-hover);
   border-color: var(--dialog-shell-tab-border);
   border-bottom-color: var(--dialog-shell-tab-divider);
@@ -346,7 +362,10 @@
 }
 
 .blueprint-tab-shell .blueprint-tab-button.is-active {
-  --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 40%, var(--line-strong));
+  --dialog-shell-tab-border: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 40%, var(--line-strong));
+  }
   --dialog-shell-tab-bg: var(--blueprint-tab-bg-active);
   border-color: var(--dialog-shell-tab-border);
   border-bottom-color: transparent;
@@ -1026,9 +1045,15 @@
   place-items: center;
   min-height: 74px;
   padding: 12px;
-  border: 1px dashed color-mix(in srgb, var(--line-strong) 55%, var(--line));
+  border: 1px dashed var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px dashed color-mix(in srgb, var(--line-strong) 55%, var(--line));
+  }
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface-1) 70%, transparent);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 70%, transparent);
+  }
   color: var(--text-2);
   font-size: 0.8rem;
   text-align: center;
@@ -1061,7 +1086,10 @@
   align-items: center;
   min-width: 0;
   min-height: 34px;
-  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border-top: 1px solid var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  }
 }
 
 .warehouse-stats-table-dialog .warehouse-stats-row {
@@ -1079,14 +1107,20 @@
 
 .warehouse-stats-row-head {
   min-height: 30px;
-  background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-4));
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 78%, var(--surface-4));
+  }
   color: var(--text-2);
   font-size: 0.68rem;
   font-weight: 700;
 }
 
 .warehouse-stats-row.is-pinned {
-  background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface-1));
+  background: var(--accent-soft);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface-1));
+  }
 }
 
 .warehouse-stats-item-cell {
@@ -1395,9 +1429,15 @@
 .selection-inspector-action-group.is-inline .selection-inspector-action-button {
   min-height: 36px;
   padding: 0 14px;
-  border-color: color-mix(in srgb, var(--line-strong) 74%, var(--line));
+  border-color: var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--line-strong) 74%, var(--line));
+  }
   border-radius: 7px;
-  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  }
   font-size: 0.76rem;
 }
 

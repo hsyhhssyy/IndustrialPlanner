@@ -1,3 +1,4 @@
+/* TapTap 手机端按 Chrome 89 兼容：本文件中 color-mix() 的前置声明是旧 Chrome fallback，紧随其后的 @supports 分支保留现代浏览器原效果。 */
 .inspector-dialog {
   max-width: min(1180px, 100%);
   max-height: min(760px, 100%);
@@ -21,9 +22,15 @@
 .inspector-dialog-header-button {
   width: 30px;
   height: 30px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 54%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 54%, var(--line));
+  }
   background: var(--surface-2);
-  background: color-mix(in srgb, var(--surface-2) 76%, transparent);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 76%, transparent);
+  }
 }
 
 .inspector-dialog.is-mobile-compact .inspector-dialog-header {
@@ -61,10 +68,16 @@
   min-height: 0;
   overflow: auto;
   padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  }
   border-radius: 0;
   background: var(--surface-1);
-  background: color-mix(in srgb, var(--surface-1) 94%, black 2%);
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 94%, black 2%);
+  }
 }
 
 .inspector-neighborhood-preview {
@@ -74,7 +87,10 @@
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  }
 }
 
 .inspector-neighborhood-preview-frame {
@@ -94,8 +110,14 @@
   max-height: 100%;
   overflow: hidden;
   border-radius: 6px;
-  outline: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
-  background: color-mix(in srgb, var(--surface-1) 84%, var(--text-0) 4%);
+  outline: 1px solid var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    outline: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  }
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 84%, var(--text-0) 4%);
+  }
   pointer-events: none;
 }
 
@@ -134,13 +156,19 @@
 }
 
 .inspector-port-callout-marker {
-  fill: color-mix(in srgb, var(--surface-1) 92%, #ffffff);
+  fill: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    fill: color-mix(in srgb, var(--surface-1) 92%, #ffffff);
+  }
   stroke: var(--inspector-port-callout-accent);
   stroke-width: 2;
 }
 
 .inspector-port-callout-label rect {
-  fill: color-mix(in srgb, var(--surface-1) 94%, #ffffff);
+  fill: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    fill: color-mix(in srgb, var(--surface-1) 94%, #ffffff);
+  }
   stroke: var(--inspector-port-callout-accent);
   stroke-width: 1;
 }
@@ -216,7 +244,10 @@
   justify-content: center;
   padding: clamp(12px, 2.6vw, 28px);
   background: var(--shell-bg);
-  background: color-mix(in srgb, var(--shell-bg) 42%, transparent);
+  background: var(--shell-bg);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--shell-bg) 42%, transparent);
+  }
 }
 
 .help-dialog-backdrop,
@@ -574,7 +605,10 @@
   gap: 12px;
   padding: 8px 10px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+  }
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-1);
@@ -1413,7 +1447,10 @@
 
   &:hover {
     border-color: var(--primary);
-    background: color-mix(in srgb, var(--primary) 6%, var(--surface-2));
+    background: var(--surface-2);
+    @supports (background: color-mix(in srgb, red 50%, blue)) {
+      background: color-mix(in srgb, var(--primary) 6%, var(--surface-2));
+    }
   }
 
   &:focus-visible {

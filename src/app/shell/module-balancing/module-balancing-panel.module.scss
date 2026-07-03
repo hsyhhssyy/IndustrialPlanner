@@ -1,3 +1,4 @@
+/* TapTap 手机端按 Chrome 89 兼容：本文件中 color-mix() 的前置声明是旧 Chrome fallback，紧随其后的 @supports 分支保留现代浏览器原效果。 */
 /* --- Module Balancing --- */
 
 .module-balancing-panel {
@@ -210,7 +211,10 @@
     z-index: 20;
   */
   background: var(--shell-bg);
-  background: color-mix(in srgb, var(--shell-bg) 35%, transparent);
+  background: var(--shell-bg);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--shell-bg) 35%, transparent);
+  }
 }
 
 .module-balancing-drawer {
@@ -260,7 +264,10 @@
 }
 
 .module-balancing-library-tabs button.is-active {
-  border-color: color-mix(in srgb, var(--accent-strong) 55%, var(--line));
+  border-color: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--accent-strong) 55%, var(--line));
+  }
   background: var(--accent-soft);
   color: var(--text-0);
   font-weight: 800;
@@ -401,7 +408,10 @@
 }
 
 .module-balancing-danger-button {
-  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  border-color: var(--danger);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  }
   color: var(--danger);
 }
 
@@ -833,13 +843,25 @@
 }
 
 .module-balancing-balance-chip.is-surplus {
-  border-color: color-mix(in srgb, var(--canvas-floating-toolbar-confirm) 34%, var(--line));
-  background: color-mix(in srgb, var(--canvas-floating-toolbar-confirm) 12%, var(--surface-1));
+  border-color: var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--canvas-floating-toolbar-confirm) 34%, var(--line));
+  }
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--canvas-floating-toolbar-confirm) 12%, var(--surface-1));
+  }
 }
 
 .module-balancing-balance-chip.is-deficit {
-  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
-  background: color-mix(in srgb, var(--danger) 12%, var(--surface-1));
+  border-color: var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  }
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface-1));
+  }
 }
 
 .module-balancing-balance-detail,
@@ -1046,7 +1068,10 @@
   justify-content: center;
   padding: 16px;
   background: var(--shell-bg);
-  background: color-mix(in srgb, var(--shell-bg) 38%, transparent);
+  background: var(--shell-bg);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--shell-bg) 38%, transparent);
+  }
 }
 
 @media (max-width: 800px) {
@@ -1314,7 +1339,10 @@
 .module-balancing-input-panel,
 .module-balancing-summary {
   border-radius: 12px;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow-floating-control) 28%, transparent);
+  box-shadow: 0 1px 2px var(--shadow-floating-control);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow-floating-control) 28%, transparent);
+  }
 }
 
 .module-balancing-canvas-form > .module-balancing-form-field {
@@ -1409,7 +1437,10 @@
   justify-content: center;
   gap: 7px;
   border-style: dashed;
-  background: color-mix(in srgb, var(--surface-2) 58%, transparent);
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-2) 58%, transparent);
+  }
   text-align: center;
 }
 

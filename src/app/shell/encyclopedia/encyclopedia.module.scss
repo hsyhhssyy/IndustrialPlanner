@@ -1,3 +1,4 @@
+/* TapTap 手机端按 Chrome 89 兼容：本文件中 color-mix() 的前置声明是旧 Chrome fallback，紧随其后的 @supports 分支保留现代浏览器原效果。 */
 /* ================================================================
    Encyclopedia Panel
    ================================================================ */
@@ -334,8 +335,13 @@
   border-color: var(--accent-strong);
   background: linear-gradient(135deg, var(--accent-soft) 0%, var(--surface-2) 100%);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--accent-strong) 18%, transparent),
-    0 8px 18px color-mix(in srgb, var(--accent-strong) 8%, transparent);
+    0 0 0 1px var(--accent-strong),
+    0 8px 18px var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent-strong) 18%, transparent),
+      0 8px 18px color-mix(in srgb, var(--accent-strong) 8%, transparent);
+  }
 }
 
 .encyclopedia-category-dropdown-trigger:hover {

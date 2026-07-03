@@ -267,7 +267,10 @@
   height: 100%;
   overflow-x: hidden;
   overflow-y: scroll;
-  scrollbar-gutter: stable;
+  /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 scrollbar-gutter，旧版保持原滚动行为，现代浏览器由 @supports 内声明覆盖。 */
+  @supports (scrollbar-gutter: stable) {
+    scrollbar-gutter: stable;
+  }
 }
 
 .dock-resize-handle {

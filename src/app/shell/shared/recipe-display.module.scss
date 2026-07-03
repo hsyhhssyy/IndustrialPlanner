@@ -1,3 +1,4 @@
+/* TapTap 手机端按 Chrome 89 兼容：本文件中 color-mix() 的前置声明是旧 Chrome fallback，紧随其后的 @supports 分支保留现代浏览器原效果。 */
 .recipe-display {
   display: flex;
   align-items: center;
@@ -83,7 +84,10 @@
   gap: 6px;
   padding: 4px 10px 4px 6px;
   background: rgba(0, 0, 0, 0.85);
-  border: 1px solid color-mix(in srgb, var(--line) 40%, transparent);
+  border: 1px solid var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line) 40%, transparent);
+  }
   border-radius: 6px;
   white-space: nowrap;
   pointer-events: none;
@@ -146,7 +150,10 @@
 
 .recipe-display-formula-inspector .recipe-display-formula-plus {
   margin: 0 1px;
-  color: color-mix(in srgb, var(--text-1) 70%, var(--line-strong));
+  color: var(--text-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--text-1) 70%, var(--line-strong));
+  }
   font-size: 0.94rem;
   font-weight: 700;
 }
@@ -156,9 +163,15 @@
   height: 34px;
 
   img {
-    border-color: color-mix(in srgb, var(--line-strong) 70%, var(--line));
+    border-color: var(--line-strong);
+    @supports (background: color-mix(in srgb, red 50%, blue)) {
+      border-color: color-mix(in srgb, var(--line-strong) 70%, var(--line));
+    }
     border-radius: 6px;
-    background: color-mix(in srgb, var(--surface-2) 72%, var(--surface-1));
+    background: var(--surface-2);
+    @supports (background: color-mix(in srgb, red 50%, blue)) {
+      background: color-mix(in srgb, var(--surface-2) 72%, var(--surface-1));
+    }
     /*
       AI-REMOVED 2026-06-04:
       Reason: inspectorStatus 图标框属于 Inspector 行内容，不应使用渐变、内高光和投影制造立体感。
@@ -186,7 +199,10 @@
     padding: 0 4px;
     transform: none;
     border-radius: 3px;
-    background: color-mix(in srgb, var(--text-0) 72%, transparent);
+    background: var(--text-0);
+    @supports (background: color-mix(in srgb, red 50%, blue)) {
+      background: color-mix(in srgb, var(--text-0) 72%, transparent);
+    }
     font-size: 0.68rem;
     line-height: 15px;
     text-align: center;
@@ -213,7 +229,10 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  color: color-mix(in srgb, var(--text-1) 78%, var(--line-strong));
+  color: var(--text-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--text-1) 78%, var(--line-strong));
+  }
 
   svg {
     position: relative;
@@ -232,9 +251,18 @@
     conic-gradient(
       var(--accent-strong) 0deg,
       var(--accent-strong) var(--recipe-progress-deg),
-      color-mix(in srgb, var(--line) 70%, transparent) var(--recipe-progress-deg),
-      color-mix(in srgb, var(--line) 70%, transparent) 360deg
+      var(--line) var(--recipe-progress-deg),
+      var(--line) 360deg
     );
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background:
+      conic-gradient(
+        var(--accent-strong) 0deg,
+        var(--accent-strong) var(--recipe-progress-deg),
+        color-mix(in srgb, var(--line) 70%, transparent) var(--recipe-progress-deg),
+        color-mix(in srgb, var(--line) 70%, transparent) 360deg
+      );
+  }
 
   &::before {
     content: "";
@@ -246,7 +274,10 @@
 }
 
 .recipe-display-formula-progress[data-progress-kind="ring"][data-progress-empty="true"] {
-  background: color-mix(in srgb, var(--line) 68%, transparent);
+  background: var(--line);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--line) 68%, transparent);
+  }
 }
 
 .recipe-display-formula-progress[data-progress-kind="bar"] {
@@ -266,7 +297,10 @@
   }
 
   &::before {
-    background: color-mix(in srgb, var(--line) 78%, transparent);
+    background: var(--line);
+    @supports (background: color-mix(in srgb, red 50%, blue)) {
+      background: color-mix(in srgb, var(--line) 78%, transparent);
+    }
   }
 
   &::after {

@@ -1,3 +1,4 @@
+/* TapTap 手机端按 Chrome 89 兼容：本文件中 color-mix() 的前置声明是旧 Chrome fallback，紧随其后的 @supports 分支保留现代浏览器原效果。 */
 .settings-dialog-backdrop {
   position: absolute;
   inset: 0;
@@ -18,7 +19,10 @@
   justify-content: center;
   padding: clamp(12px, 2.6vw, 28px);
   background: var(--shell-bg);
-  background: color-mix(in srgb, var(--shell-bg) 42%, transparent);
+  background: var(--shell-bg);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--shell-bg) 42%, transparent);
+  }
 }
 
 .settings-dialog-backdrop,
@@ -232,10 +236,19 @@
   width: 22px;
   height: 22px;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 54%, var(--line));
+  border: 1px solid var(--line-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--line-strong) 54%, var(--line));
+  }
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-1) 82%, transparent);
-  color: color-mix(in srgb, var(--accent-strong) 78%, var(--text-1));
+  background: var(--surface-1);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--surface-1) 82%, transparent);
+  }
+  color: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    color: color-mix(in srgb, var(--accent-strong) 78%, var(--text-1));
+  }
   cursor: pointer;
   transition:
     background 120ms ease,
@@ -244,8 +257,14 @@
 }
 
 .settings-dialog-setting-help-button:hover {
-  border-color: color-mix(in srgb, var(--accent-strong) 70%, var(--line));
-  background: color-mix(in srgb, var(--accent-soft) 74%, var(--surface-1));
+  border-color: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--accent-strong) 70%, var(--line));
+  }
+  background: var(--accent-soft);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--accent-soft) 74%, var(--surface-1));
+  }
   color: var(--accent-strong);
 }
 
@@ -523,8 +542,14 @@
 }
 
 .v2-migration-warning {
-  border-color: color-mix(in srgb, var(--warn) 45%, var(--line));
-  background: color-mix(in srgb, var(--warn) 10%, var(--surface-2));
+  border-color: var(--warn);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--warn) 45%, var(--line));
+  }
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--warn) 10%, var(--surface-2));
+  }
 }
 
 // AI-GENERATED 2026-06-13: 迁移对话框底部提示文案，告知用户未来在设置中触发迁移。
@@ -550,13 +575,25 @@
 }
 
 .v2-migration-status.is-success {
-  border-color: color-mix(in srgb, #16a34a 45%, var(--line));
-  background: color-mix(in srgb, #16a34a 10%, var(--surface-2));
+  border-color: #16a34a;
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, #16a34a 45%, var(--line));
+  }
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, #16a34a 10%, var(--surface-2));
+  }
 }
 
 .v2-migration-status.is-error {
-  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
-  background: color-mix(in srgb, var(--danger) 10%, var(--surface-2));
+  border-color: var(--danger);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  }
+  background: var(--surface-2);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--danger) 10%, var(--surface-2));
+  }
 }
 
 .v2-migration-actions {
@@ -592,8 +629,14 @@
 }
 
 .v2-migration-danger-button {
-  border: 1px solid color-mix(in srgb, var(--danger) 72%, var(--line));
-  background: color-mix(in srgb, var(--danger) 16%, var(--surface-3));
+  border: 1px solid var(--danger);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    border: 1px solid color-mix(in srgb, var(--danger) 72%, var(--line));
+  }
+  background: var(--surface-3);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--danger) 16%, var(--surface-3));
+  }
   color: var(--text-0);
 }
 
