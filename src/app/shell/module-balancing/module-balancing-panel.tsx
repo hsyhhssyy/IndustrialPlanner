@@ -803,11 +803,12 @@ function ModuleCard({
     ? formatPortList(outputs, index, t)
     : undefined;
   const isSystemRecipe = module.sourceType === "system-recipe";
+  const hasModuleActions = module.sourceType === "custom";
   const moduleColor = module.sourceType === "custom" ? module.color : undefined;
 
   return (
     <div
-      className={cm(styles, "module-balancing-module-card")}
+      className={cm(styles, "module-balancing-module-card", hasModuleActions && "has-module-actions")}
       draggable={!isTouch}
       style={moduleColor !== undefined ? { borderLeftColor: moduleColor } : undefined}
       role="button"
@@ -840,7 +841,7 @@ function ModuleCard({
       {outputs[0] !== undefined ? (
         <span className={cm(styles, "module-balancing-module-rate")}>{formatFlow(outputs[0].perMinute)}/min</span>
       ) : null}
-      {module.sourceType === "custom" ? (
+      {hasModuleActions ? (
         <span className={cm(styles, "module-balancing-module-actions")} onClick={(event) => event.stopPropagation()}>
           <button
             aria-label={t("moduleBalancing.editModule")}
@@ -1304,9 +1305,10 @@ function SummaryPanel({
 }) {
   const meaningfulForecasts = warehouseForecasts.filter((forecast) => Math.abs(forecast.netDeltaPerMin) >= 0.005);
   const dispatchTotal = dispatchTicketSummaries.reduce((sum, item) => sum + item.dispatchPerMin, 0);
+  const hasSideLists = dispatchTicketSummaries.length > 0 || warehouseForecasts.length > 0;
 
   return (
-    <section className={cm(styles, "module-balancing-summary")}>
+    <section className={cm(styles, "module-balancing-summary", !hasSideLists && "is-summary-full-width")}>
       <header className={cm(styles, "module-balancing-section-header")}>
         <div className={cm(styles, "module-balancing-section-title")}>
           <h3>{t("moduleBalancing.summary")}</h3>

@@ -1440,7 +1440,7 @@
   gap: 8px;
 }
 
-.module-balancing-summary:not(:has(.module-balancing-warehouse-list)):not(:has(.module-balancing-dispatch-list)) .module-balancing-summary-list {
+.module-balancing-summary.is-summary-full-width .module-balancing-summary-list {
   grid-column: 1 / -1;
 }
 
@@ -1712,7 +1712,7 @@
   padding: 4px 8px;
 }
 
-.module-balancing-module-card:has(.module-balancing-module-actions) {
+.module-balancing-module-card.has-module-actions {
   min-height: 76px;
   padding-bottom: 38px;
 }
