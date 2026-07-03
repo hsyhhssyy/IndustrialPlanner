@@ -15,6 +15,8 @@ export type PwaOfflineStatus =
   | "registering"
   | "installing"
   | "enabled"
+  | "checking-update"
+  | "up-to-date"
   | "update-available"
   | "updating"
   | "error";
@@ -224,18 +226,40 @@ export class PwaController {
     await this.registerServiceWorker();
   }
 
-  public async checkForUpdate(): Promise<void> {
+  public async checkForUpdate(showNoUpdateResult = true): Promise<void> {
     if (!isServiceWorkerSupported() || this.offlinePreference !== "accepted") {
       return;
     }
 
+    if (showNoUpdateResult) {
+      runInAction(() => {
+        this.errorMessage = null;
+        this.offlineStatus = "checking-update";
+      });
+    }
+
     if (this.registration === null) {
       await this.registerServiceWorker();
+
+      const registeredServiceWorker = this.registration;
+
+      if (showNoUpdateResult && registeredServiceWorker !== null) {
+        runInAction(() => {
+          this.resolveCheckedRegistrationState(registeredServiceWorker);
+        });
+      }
+
       return;
     }
 
     try {
-      await this.registration.update();
+      const registration = await this.registration.update();
+
+      if (showNoUpdateResult) {
+        runInAction(() => {
+          this.resolveCheckedRegistrationState(registration);
+        });
+      }
     } catch (error) {
       runInAction(() => {
         this.errorMessage = error instanceof Error ? error.message : "Service worker update failed";
@@ -377,13 +401,34 @@ export class PwaController {
     this.offlineStatus = "registering";
   }
 
+  private resolveCheckedRegistrationState(registration: ServiceWorkerRegistration): void {
+    if (registration.waiting !== null && navigator.serviceWorker.controller !== null) {
+      this.waitingWorker = registration.waiting;
+      this.offlineStatus = "update-available";
+      return;
+    }
+
+    if (registration.installing !== null) {
+      this.offlineStatus = navigator.serviceWorker.controller === null ? "installing" : "updating";
+      return;
+    }
+
+    if (registration.active !== null) {
+      this.offlineStatus = "up-to-date";
+      this.progress = null;
+      return;
+    }
+
+    this.offlineStatus = "registering";
+  }
+
   private startUpdatePolling(): void {
     if (this.pollIntervalId !== null) {
       return;
     }
 
     this.pollIntervalId = window.setInterval(() => {
-      void this.checkForUpdate();
+      void this.checkForUpdate(false);
     }, UPDATE_POLL_INTERVAL_MS);
   }
 

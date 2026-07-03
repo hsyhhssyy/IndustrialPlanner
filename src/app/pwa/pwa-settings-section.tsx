@@ -106,6 +106,7 @@ interface PwaSettingsCopy {
   readonly enableOffline: string;
   readonly install: string;
   readonly offlineMode: string;
+  readonly offlineCheckingAction: string;
   readonly offlineSavingAction: string;
   readonly offlinePreparingAction: string;
   readonly progress: (
@@ -119,8 +120,10 @@ interface PwaSettingsCopy {
   readonly statusInstalling: string;
   readonly statusNotEnabled: string;
   readonly statusRegistering: string;
+  readonly statusCheckingUpdate: string;
   readonly statusUnsupported: string;
   readonly statusUpdateAvailable: string;
+  readonly statusUpToDate: string;
   readonly statusUpdating: string;
   readonly offlineRetry: string;
   readonly offlineUnableAction: string;
@@ -145,6 +148,7 @@ const PWA_SETTINGS_COPY: Record<AppHost["state"]["settings"]["locale"], PwaSetti
     enableOffline: "开启断网使用",
     install: "添加",
     offlineMode: "断网使用",
+    offlineCheckingAction: "检查中",
     offlineSavingAction: "正在保存",
     offlinePreparingAction: "正在准备",
     progress: (completedFiles, totalFiles, completedBytes, totalBytes) => {
@@ -159,8 +163,10 @@ const PWA_SETTINGS_COPY: Record<AppHost["state"]["settings"]["locale"], PwaSetti
     statusInstalling: "正在保存应用内容，完成后断网也能打开。",
     statusNotEnabled: "开启后会先保存应用内容，完成后断网也能打开。",
     statusRegistering: "正在准备断网使用。",
+    statusCheckingUpdate: "正在检查是否有新版本。",
     statusUnsupported: "当前浏览器不支持断网使用。",
     statusUpdateAvailable: "新版本已准备好，更新后断网打开的也是最新版。",
+    statusUpToDate: "已是最新版。断网时也可以打开这个应用。",
     statusUpdating: "正在更新保存的内容。",
     offlineRetry: "重试",
     offlineUnableAction: "无法开启",
@@ -183,6 +189,7 @@ const PWA_SETTINGS_COPY: Record<AppHost["state"]["settings"]["locale"], PwaSetti
     enableOffline: "Enable Offline Use",
     install: "Add",
     offlineMode: "Offline Use",
+    offlineCheckingAction: "Checking",
     offlineSavingAction: "Saving",
     offlinePreparingAction: "Preparing",
     progress: (completedFiles, totalFiles, completedBytes, totalBytes) => {
@@ -197,8 +204,10 @@ const PWA_SETTINGS_COPY: Record<AppHost["state"]["settings"]["locale"], PwaSetti
     statusInstalling: "Saving app content so it can open without internet.",
     statusNotEnabled: "Enable this to save app content, then it can open without internet.",
     statusRegistering: "Preparing offline use.",
+    statusCheckingUpdate: "Checking for a new version.",
     statusUnsupported: "This browser does not support offline use.",
     statusUpdateAvailable: "A new version is ready. Update so offline use opens the latest version.",
+    statusUpToDate: "You are on the latest version. You can open this app without internet.",
     statusUpdating: "Updating saved content.",
     offlineRetry: "Retry",
     offlineUnableAction: "Unavailable",
@@ -233,6 +242,10 @@ function resolveOfflineAction(copy: PwaSettingsCopy, pwaController: PwaControlle
 
   if (pwaController.offlineStatus === "updating") {
     return createDisabledAction(copy.offlineUpdatingAction);
+  }
+
+  if (pwaController.offlineStatus === "checking-update") {
+    return createDisabledAction(copy.offlineCheckingAction);
   }
 
   if (pwaController.offlineStatus === "update-available") {
@@ -299,6 +312,14 @@ function resolveOfflineStatusText(copy: PwaSettingsCopy, pwaController: PwaContr
 
   if (pwaController.offlineStatus === "enabled") {
     return copy.statusEnabled;
+  }
+
+  if (pwaController.offlineStatus === "checking-update") {
+    return copy.statusCheckingUpdate;
+  }
+
+  if (pwaController.offlineStatus === "up-to-date") {
+    return copy.statusUpToDate;
   }
 
   if (pwaController.offlineStatus === "update-available") {

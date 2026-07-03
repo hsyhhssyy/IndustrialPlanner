@@ -149,6 +149,25 @@
   font-size: 14px;
 }
 
+.pwa-progress-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: max-content minmax(120px, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pwa-progress-version {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-1);
+  font-size: 11px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .pwa-progress {
   grid-column: 1 / -1;
   width: 100%;
@@ -163,6 +182,10 @@
   height: 100%;
   border-radius: inherit;
   background: var(--accent);
+}
+
+.pwa-progress-row .pwa-progress {
+  grid-column: auto;
 }
 
 .pwa-settings-section {
@@ -208,6 +231,10 @@
   }
 
   .pwa-gateway-toast {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pwa-progress-row {
     grid-template-columns: minmax(0, 1fr);
   }
 

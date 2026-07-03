@@ -8,6 +8,8 @@ import styles from "@/app/shell/app-shell.module.scss";
 
 import { formatPwaBytes, type PwaController, type PwaProgress } from "./pwa-controller";
 
+const PRECACHE_CACHE_NAME_PREFIX = "industrial-planner-precache-";
+
 interface PwaGatewayProps {
   readonly appHost: AppHost;
   readonly pwaController: PwaController;
@@ -176,6 +178,7 @@ function ProgressToast({
   readonly zIndex: number;
 }) {
   const percent = resolveProgressPercent(progress);
+  const updaterVersion = resolveUpdaterVersion(progress.cacheName);
 
   return (
     <section className={cm(styles, "pwa-gateway-toast")} role="status" style={{ zIndex }}>
@@ -190,15 +193,18 @@ function ProgressToast({
           )}
         </span>
       </div>
-      <div
-        aria-label={copy.progressAria(percent)}
-        aria-valuemax={100}
-        aria-valuemin={0}
-        aria-valuenow={percent}
-        className={cm(styles, "pwa-progress")}
-        role="progressbar"
-      >
-        <span style={{ width: `${percent}%` }} />
+      <div className={cm(styles, "pwa-progress-row")}>
+        <span className={cm(styles, "pwa-progress-version")}>{copy.updaterVersion(updaterVersion)}</span>
+        <div
+          aria-label={copy.progressAria(percent)}
+          aria-valuemax={100}
+          aria-valuemin={0}
+          aria-valuenow={percent}
+          className={cm(styles, "pwa-progress")}
+          role="progressbar"
+        >
+          <span style={{ width: `${percent}%` }} />
+        </div>
       </div>
     </section>
   );
@@ -214,6 +220,14 @@ function resolveProgressPercent(progress: PwaProgress): number {
   }
 
   return 0;
+}
+
+function resolveUpdaterVersion(cacheName: string): string {
+  if (cacheName.startsWith(PRECACHE_CACHE_NAME_PREFIX)) {
+    return cacheName.slice(PRECACHE_CACHE_NAME_PREFIX.length);
+  }
+
+  return cacheName;
 }
 
 interface PwaGatewayCopy {
@@ -239,6 +253,7 @@ interface PwaGatewayCopy {
   readonly updateProgress: string;
   readonly updateReadyBody: string;
   readonly updateReadyTitle: string;
+  readonly updaterVersion: (version: string) => string;
 }
 
 const PWA_GATEWAY_COPY: Record<AppHost["state"]["settings"]["locale"], PwaGatewayCopy> = {
@@ -266,6 +281,7 @@ const PWA_GATEWAY_COPY: Record<AppHost["state"]["settings"]["locale"], PwaGatewa
     updateProgress: "正在更新离线资源",
     updateReadyBody: "离线资源已更新完成，刷新后切换到新版本。",
     updateReadyTitle: "新版本可用",
+    updaterVersion: (version) => `更新器版本: ${version}`,
   },
   "en-US": {
     applyUpdate: "Update",
@@ -291,5 +307,6 @@ const PWA_GATEWAY_COPY: Record<AppHost["state"]["settings"]["locale"], PwaGatewa
     updateProgress: "Updating offline resources",
     updateReadyBody: "Offline resources are ready. Reload to switch to the new version.",
     updateReadyTitle: "New Version Available",
+    updaterVersion: (version) => `Updater version: ${version}`,
   },
 };
