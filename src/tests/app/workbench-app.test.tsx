@@ -93,6 +93,9 @@ const _DEFAULT_APP_SHORTCUTS_STORAGE = {
   [SHORTCUT_KEY.PASTE_SELECTION]: "Ctrl+V",
 } as const;
 
+const CHANGELOG_READ_STATE_KEY = "industrial-planner-changelog-read-state";
+const LEGACY_LAST_READ_VERSION_KEY = "industrial-planner-changelog-last-read-version";
+
 function createDialogStateSnapshot(options: {
   visible?: boolean;
   maximized?: boolean;
@@ -567,7 +570,7 @@ describe("WorkbenchApp", () => {
     expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(1);
   });
 
-  it("opens the version help dialog on phone portrait without storing portrait viewport dimensions", () => {
+  it("opens the version help dialog on phone portrait without storing portrait viewport dimensions", async () => {
     coarsePointer = true;
     hoverNone = true;
     setViewport({
@@ -583,7 +586,7 @@ describe("WorkbenchApp", () => {
       value: "9.9.9-test",
     });
     stubChangelogFetch({
-      "patch.md": "# Patch",
+      "patch-v9.9.9.md": "# Patch",
     });
 
     const workspace = createWorkspace();
@@ -591,6 +594,10 @@ describe("WorkbenchApp", () => {
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
     });
 
     const helpState = appHost.internalState.workbench.dialogState.help;
@@ -627,6 +634,109 @@ describe("WorkbenchApp", () => {
     expect(helpState.height).toBeNull();
     expect(rotatedHelpDialog?.style.width).toBe("");
     expect(rotatedHelpDialog?.style.height).toBe("");
+  });
+
+  it("opens the version help dialog only when the app version and current changelog entry both changed", async () => {
+    localStorage.setItem(
+      CHANGELOG_READ_STATE_KEY,
+      JSON.stringify({
+        version: "1.3.0",
+        changelogKey: "1.3.0:全新版本-v1.3.0.md",
+      }),
+    );
+    Object.defineProperty(window, "__APP_VERSION__", {
+      configurable: true,
+      writable: true,
+      value: "v1.3.0.1",
+    });
+    stubChangelogFetch({
+      "全新版本-v1.3.0.md": "# Main",
+      "增量更新-v1.3.0.1.md": "# Patch",
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    const helpState = appHost.internalState.workbench.dialogState.help;
+
+    expect(helpState.visible).toBe(true);
+    expect(helpState.activeTab).toBe("version");
+    expect(JSON.parse(localStorage.getItem(CHANGELOG_READ_STATE_KEY) ?? "null")).toEqual({
+      version: "1.3.0.1",
+      changelogKey: "1.3.0.1:增量更新-v1.3.0.1.md",
+    });
+    expect(localStorage.getItem(LEGACY_LAST_READ_VERSION_KEY)).toBe("1.3.0.1");
+  });
+
+  it("does not open the version help dialog when the app version changed without a matching changelog entry", async () => {
+    const previousReadState = JSON.stringify({
+      version: "1.3.0.1",
+      changelogKey: "1.3.0.1:增量更新-v1.3.0.1.md",
+    });
+    localStorage.setItem(CHANGELOG_READ_STATE_KEY, previousReadState);
+    Object.defineProperty(window, "__APP_VERSION__", {
+      configurable: true,
+      writable: true,
+      value: "v1.3.0.2",
+    });
+    stubChangelogFetch({
+      "全新版本-v1.3.0.md": "# Main",
+      "增量更新-v1.3.0.1.md": "# Patch",
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(appHost.internalState.workbench.dialogState.help.visible).toBe(false);
+    expect(localStorage.getItem(CHANGELOG_READ_STATE_KEY)).toBe(previousReadState);
+  });
+
+  it("does not open the version help dialog when the changelog entry changed without an app version change", async () => {
+    const previousReadState = JSON.stringify({
+      version: "1.3.0.1",
+      changelogKey: "1.3.0.1:增量更新-v1.3.0.1.md",
+    });
+    localStorage.setItem(CHANGELOG_READ_STATE_KEY, previousReadState);
+    Object.defineProperty(window, "__APP_VERSION__", {
+      configurable: true,
+      writable: true,
+      value: "v1.3.0.1",
+    });
+    stubChangelogFetch({
+      "全新版本-v1.3.0.md": "# Main",
+      "增量更新-v1.3.0.1.md": "# Patch",
+      "热修更新-v1.3.0.1.md": "# Hotfix",
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(appHost.internalState.workbench.dialogState.help.visible).toBe(false);
+    expect(localStorage.getItem(CHANGELOG_READ_STATE_KEY)).toBe(previousReadState);
   });
 
   it("updates left dock width through the edge handle and clamps the value", () => {

@@ -5,10 +5,12 @@ import LucideChevronUp from "~icons/lucide/chevron-up";
 import styles from "@/app/shell/dialogs/dialogs.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
-
-const CHANGELOG_INDEX_PATH = createPublicAssetUrl("changelog/index.json");
-const CHANGELOG_IMG_BASE = createPublicAssetUrl("changelog/img/");
-const CHANGELOG_VERSION_PATTERN = /(?:^|[^0-9])v?(\d+\.\d+\.\d+(?:\.\d+)?)(?=$|[^0-9])/i;
+import {
+  CHANGELOG_IMG_BASE,
+  type ChangelogIndexEntry,
+  loadChangelogIndexEntries,
+  parseChangelogVersion,
+} from "@/app/shell/dialogs/changelog-data";
 
 function createChangelogRenderer(): Renderer {
   const renderer = new Renderer();
@@ -50,40 +52,10 @@ function escapeAttr(value: string): string {
     .replace(/>/g, "&gt;");
 }
 
-interface ChangelogEntry {
-  file: string;
-  title: string;
-  version: ChangelogVersion | null;
+interface ChangelogEntry extends ChangelogIndexEntry {
   loaded: boolean;
   html: string | null;
   error: string | null;
-}
-
-interface ChangelogVersion {
-  canonical: string;
-  isMain: boolean;
-}
-
-function parseChangelogVersion(source: string): ChangelogVersion | null {
-  const match = CHANGELOG_VERSION_PATTERN.exec(source);
-
-  if (match === null) {
-    return null;
-  }
-
-  const versionText = match[1];
-
-  if (versionText === undefined) {
-    return null;
-  }
-
-  const segments = versionText.split(".").map((segment) => Number.parseInt(segment, 10));
-  const isMain = segments.length === 3 || segments[3] === 0;
-  const canonical = isMain
-    ? segments.slice(0, 3).join(".")
-    : segments.join(".");
-
-  return { canonical, isMain };
 }
 
 function getCurrentAppVersionText(): string | undefined {
@@ -137,27 +109,10 @@ function createDefaultExpandedSet(entries: ChangelogEntry[]): Set<number> {
  * index.json 中条目按发布顺序排列（旧→新），读取后反转为新→旧。
  */
 async function loadChangelogEntries(): Promise<ChangelogEntry[]> {
-  const indexResp = await fetch(CHANGELOG_INDEX_PATH);
-
-  if (!indexResp.ok) {
-    throw new Error(`无法加载更新日志索引 (HTTP ${indexResp.status})`);
-  }
-
-  const fileList: string[] = await indexResp.json();
-
-  if (!Array.isArray(fileList) || fileList.length === 0) {
-    throw new Error("更新日志索引为空");
-  }
-
-  // 倒序：最新在前
-  const reversed = [...fileList].reverse();
-
-  return reversed.map((file) => {
-    const title = file.replace(/\.md$/i, "");
+  const indexEntries = await loadChangelogIndexEntries();
+  return indexEntries.map((entry) => {
     return {
-      file,
-      title,
-      version: parseChangelogVersion(title),
+      ...entry,
       loaded: false,
       html: null,
       error: null,

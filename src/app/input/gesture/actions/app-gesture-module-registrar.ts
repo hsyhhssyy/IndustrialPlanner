@@ -26,6 +26,9 @@ import {
   createHypergryphMoveGestureModule,
 } from "./hypergryph/hypergryph-move-gesture-module";
 import {
+  createHypergryphOverlapEntityMenuGuardModule,
+} from "./hypergryph/hypergryph-overlap-entity-menu-guard";
+import {
   createHypergryphSinglePlacementGestureModule,
 } from "./hypergryph/hypergryph-single-placement-gesture-module";
 import { createHypergryphSaveBlueprintGestureModule } from "./hypergryph/hypergryph-save-blueprint-gesture-module";
@@ -52,6 +55,7 @@ export class AppGestureModuleRegistrar {
 
   public constructor(options: AppGestureModuleRegistrarOptions) {
     this.unregisterModules.push(
+      options.router.registerModule(createHypergryphOverlapEntityMenuGuardModule()),
       options.router.registerModule(createHypergryphBlueprintPlacementGestureModule()),
       options.router.registerModule(createHypergryphLogisticsPlacementGestureModule()),
       options.router.registerModule(createHypergryphSinglePlacementGestureModule()),

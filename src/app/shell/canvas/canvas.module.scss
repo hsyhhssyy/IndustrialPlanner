@@ -401,6 +401,78 @@
   fill: currentColor;
 }
 
+.overlap-entity-menu-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.overlap-entity-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  background: transparent;
+}
+
+.overlap-entity-menu {
+  position: fixed;
+  z-index: 1;
+  display: grid;
+  gap: 1px;
+  width: min(196px, calc(100vw - 12px));
+  max-height: min(260px, calc(100vh - 12px));
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid var(--floating-control-border);
+  border-radius: 6px;
+  background: var(--surface-1);
+  box-shadow: 0 10px 24px var(--shadow-floating-control);
+}
+
+.overlap-entity-menu-item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 3px 6px 3px 3px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-0);
+  text-align: left;
+}
+
+.overlap-entity-menu-item:hover,
+.overlap-entity-menu-item:focus-visible {
+  background: var(--floating-control-bg-hover);
+  outline: none;
+}
+
+.overlap-entity-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.overlap-entity-menu-icon img {
+  display: block;
+  max-width: 22px;
+  max-height: 22px;
+  object-fit: contain;
+}
+
+.overlap-entity-menu-label {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .canvas-top-left-corner-toolbar {
   position: absolute;
   top: calc(var(--top-bar-height, 48px) + 78px);

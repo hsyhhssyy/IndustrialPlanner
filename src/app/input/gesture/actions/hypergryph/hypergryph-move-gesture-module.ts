@@ -18,6 +18,10 @@ import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { placeBlueprintFromMoveAndContinue } from "./hypergryph-blueprint-placement-gesture-module";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
+import {
+  openOverlapEntityMenuForCandidates,
+  resolveOverlappingEntityCandidatesAtClientPoint,
+} from "./overlap-entity-candidates";
 
 const MOVE_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-cancel",
@@ -297,13 +301,16 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             return { status: "ignored" };
           }
 
-          return tryEnterMoveMode({
+          return tryEnterMoveModeFromPointerEvent({
             appHost: context.appHost,
             editor,
             pointerEntity: event.pointerEntity,
-            position: event.position,
+            candidatePosition: event.startPosition,
+            menuPosition: event.startPosition,
+            enterPosition: event.position,
             source: "mouse",
-            initialMousePosition: event.position,
+            directInitialMousePosition: event.position,
+            menuInitialMousePosition: event.startPosition,
           });
 
         case "mouse-long-press-ready":
@@ -311,23 +318,29 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             return { status: "ignored" };
           }
 
-          return tryEnterMoveMode({
+          return tryEnterMoveModeFromPointerEvent({
             appHost: context.appHost,
             editor,
             pointerEntity: event.pointerEntity,
-            position: event.position,
+            candidatePosition: event.position,
+            menuPosition: event.position,
+            enterPosition: event.position,
             source: "mouse",
-            initialMousePosition: event.position,
+            directInitialMousePosition: event.position,
+            menuInitialMousePosition: event.position,
           });
 
         case "tap-long-press-ready":
-          return tryEnterMoveMode({
+          return tryEnterMoveModeFromPointerEvent({
             appHost: context.appHost,
             editor,
             pointerEntity: event.pointerEntity,
-            position: event.position,
+            candidatePosition: event.position,
+            menuPosition: event.position,
+            enterPosition: event.position,
             source: "touch",
-            initialMousePosition: null,
+            directInitialMousePosition: null,
+            menuInitialMousePosition: null,
           });
 
         case "key down":
@@ -357,6 +370,86 @@ function handleMoveEntryButtonTap(options: {
   initialMousePosition: GesturePosition | null;
 }): GestureHandleResult {
   return tryEnterMoveModeFromSelection(options);
+}
+
+// AI-REMOVED 2026-07-03:
+// Reason: 移动入口现在必须在真正进入 move 前支持重叠设备菜单；旧实现直接使用 event.pointerEntity，无法让用户在同一格多个设备中选择目标。
+// Trigger: 用户需求——重叠设备点击选择与长按移动时必须弹出设备菜单，用户选择后才执行操作。
+// Evidence: Search-First 定位到 mouse dragstart / mouse-long-press-ready / tap-long-press-ready 均直接调用 tryEnterMoveMode；新实现统一通过 tryEnterMoveModeFromPointerEvent 先解析多候选。
+// Replacement: tryEnterMoveModeFromPointerEvent
+// Risk: Medium；立即拖拽多候选时不延续原始拖拽链，选择后进入 move 模式等待后续操作。
+// Human Review: Required
+//
+// Original code:
+// return tryEnterMoveMode({
+//   appHost: context.appHost,
+//   editor,
+//   pointerEntity: event.pointerEntity,
+//   position: event.position,
+//   source: "mouse",
+//   initialMousePosition: event.position,
+// });
+// return tryEnterMoveMode({
+//   appHost: context.appHost,
+//   editor,
+//   pointerEntity: event.pointerEntity,
+//   position: event.position,
+//   source: "touch",
+//   initialMousePosition: null,
+// });
+function tryEnterMoveModeFromPointerEvent(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+  pointerEntity: WorldEntity | null;
+  candidatePosition: GesturePosition;
+  menuPosition: GesturePosition;
+  enterPosition: GesturePosition;
+  source: "mouse" | "touch";
+  directInitialMousePosition: GesturePosition | null;
+  menuInitialMousePosition: GesturePosition | null;
+}): GestureHandleResult {
+  const previousTool = options.appHost.internalState.activeTool;
+  const selection = options.editor.state.collections[EntityCollectionType.selection];
+  const filterCandidate = previousTool === "marquee"
+    ? (entity: WorldEntity) => selection.contains(entity.id)
+    : undefined;
+  const candidates = resolveOverlappingEntityCandidatesAtClientPoint({
+    appHost: options.appHost,
+    editor: options.editor,
+    position: options.candidatePosition,
+    pointerEntity: options.pointerEntity,
+    filterCandidate,
+  });
+
+  if (
+    openOverlapEntityMenuForCandidates({
+      appHost: options.appHost,
+      editor: options.editor,
+      position: options.menuPosition,
+      candidates,
+      onSelect: (entity) => {
+        tryEnterMoveMode({
+          appHost: options.appHost,
+          editor: options.editor,
+          pointerEntity: entity,
+          position: options.menuPosition,
+          source: options.source,
+          initialMousePosition: options.menuInitialMousePosition,
+        });
+      },
+    })
+  ) {
+    return { status: "handled" };
+  }
+
+  return tryEnterMoveMode({
+    appHost: options.appHost,
+    editor: options.editor,
+    pointerEntity: candidates[0] ?? options.pointerEntity,
+    position: options.enterPosition,
+    source: options.source,
+    initialMousePosition: options.directInitialMousePosition,
+  });
 }
 
 function tryEnterMoveMode(options: {

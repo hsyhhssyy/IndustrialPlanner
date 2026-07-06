@@ -44,8 +44,14 @@ export interface RecipeStatsDelta {
   consumed: Record<string, number>;
 }
 
+export interface RecipeStatsBucket extends RecipeStatsDelta {
+  /** 该 bucket 覆盖的标准 tick 数。 */
+  standardTicks: number;
+}
+
 /** 配方统计滑动窗口状态 */
 export interface RecipeStatsState {
+  // AI-CORRECTION 2026-07-03: 统计窗口改为 phase-safe bucket；旧 tick 环形字段仅保留为兼容诊断字段，当前有效窗口见 windowBuckets/activeBucket。
   /** 环形缓冲：最近 N 个 tick 的 delta */
   windowDeltas: RecipeStatsDelta[];
   /** 当前写入游标 */
@@ -58,6 +64,16 @@ export interface RecipeStatsState {
   aggregated: Record<string, { producedPerMinute: number; consumedPerMinute: number }>;
   /** 各物品最后一次发生变化的 tick */
   lastChangedTick: Record<string, number>;
+  /** 已封桶的 phase-safe 统计窗口。 */
+  windowBuckets: RecipeStatsBucket[];
+  /** 正在累积、尚未到 phase-safe 边界的 bucket。 */
+  activeBucket: RecipeStatsBucket;
+  /** 已封桶窗口当前覆盖的标准 tick 数。 */
+  coveredStandardTicks: number;
+  /** 已封桶窗口内各物品产出总量。 */
+  windowProducedTotals: Record<string, number>;
+  /** 已封桶窗口内各物品消耗总量。 */
+  windowConsumedTotals: Record<string, number>;
 }
 
 export interface RuntimeSlotState {
@@ -539,15 +555,24 @@ export function createRecipeStatsDelta(): RecipeStatsDelta {
   return { produced: {}, consumed: {} };
 }
 
+export function createRecipeStatsBucket(): RecipeStatsBucket {
+  return { standardTicks: 0, produced: {}, consumed: {} };
+}
+
 export function createRecipeStatsState(standardTickRate: number): RecipeStatsState {
   const windowCapacity = Math.max(1, standardTickRate * 60); // 1 min simulation time
   return {
-    windowDeltas: Array.from({ length: windowCapacity }, () => createRecipeStatsDelta()),
+    windowDeltas: [],
     windowCursor: 0,
     windowCount: 0,
     windowCapacity,
     aggregated: {},
     lastChangedTick: {},
+    windowBuckets: [],
+    activeBucket: createRecipeStatsBucket(),
+    coveredStandardTicks: 0,
+    windowProducedTotals: {},
+    windowConsumedTotals: {},
   };
 }
 
@@ -567,6 +592,11 @@ export function cloneRecipeStatsState(state: RecipeStatsState): RecipeStatsState
       ]),
     ),
     lastChangedTick: { ...state.lastChangedTick },
+    windowBuckets: state.windowBuckets.map(cloneRecipeStatsBucket),
+    activeBucket: cloneRecipeStatsBucket(state.activeBucket),
+    coveredStandardTicks: state.coveredStandardTicks,
+    windowProducedTotals: { ...state.windowProducedTotals },
+    windowConsumedTotals: { ...state.windowConsumedTotals },
   };
 }
 
@@ -585,59 +615,172 @@ export function accumulateRecipeStatsDelta(accum: RecipeStatsDelta, inc: RecipeS
 /**
  * 将当前 tick 的 delta 写入环形缓冲，并重新计算聚合值。
  * 返回聚合后的 per-min 值。
+ * AI-CORRECTION 2026-07-03: 当前实现只在 phase-safe 边界封桶；per-min 按已封桶窗口覆盖的标准 tick 数归一。
  */
+// AI-REMOVED 2026-07-03:
+// Reason: 旧实现把每次 runtime step 当成一个标准 tick 窗口格；动态 tick rate 降频后，1200 格会覆盖超过 60 秒仿真时间。
+// Trigger: 用户反馈二倍速下基地仓库统计产出/消耗也被放大，要求统计窗口只能在动态帧率切换点截断。
+// Evidence: worker-runtime 在 dynamicTickRate=10 时每 2 个标准 tick 才运行一次，旧 rollRecipeStatsWindow 仍按运行步数填满 1200 格。
+// Replacement: 下方 rollRecipeStatsWindow + phase-safe bucket 状态字段。
+// Risk: Low - 仓库统计启动前 60 秒可能显示 0，用户确认可接受。
+// Human Review: Required
+//
+// Original code:
+// export function rollRecipeStatsWindow(
+//   stats: RecipeStatsState,
+//   tickDelta: RecipeStatsDelta,
+//   tickNumber: number,
+// ): void {
+//   const capacity = stats.windowCapacity;
+//   // 淘汰旧条目
+//   if (stats.windowCount >= capacity) {
+//     const oldDelta = stats.windowDeltas[stats.windowCursor];
+//     if (oldDelta !== undefined) {
+//       for (const itemType of Object.keys(oldDelta.produced)) {
+//         const entry = stats.aggregated[itemType];
+//         if (entry !== undefined) {
+//           entry.producedPerMinute -= oldDelta.produced[itemType] ?? 0;
+//           if (entry.producedPerMinute < 0) entry.producedPerMinute = 0;
+//         }
+//       }
+//       for (const itemType of Object.keys(oldDelta.consumed)) {
+//         const entry = stats.aggregated[itemType];
+//         if (entry !== undefined) {
+//           entry.consumedPerMinute -= oldDelta.consumed[itemType] ?? 0;
+//           if (entry.consumedPerMinute < 0) entry.consumedPerMinute = 0;
+//         }
+//       }
+//     }
+//   }
+//
+//   // 写入新条目
+//   stats.windowDeltas[stats.windowCursor] = {
+//     produced: { ...tickDelta.produced },
+//     consumed: { ...tickDelta.consumed },
+//   };
+//   stats.windowCursor = (stats.windowCursor + 1) % capacity;
+//   stats.windowCount = Math.min(stats.windowCount + 1, capacity);
+//
+//   // 聚合新条目
+//   for (const itemType of Object.keys(tickDelta.produced)) {
+//     const entry = stats.aggregated[itemType] ??= { producedPerMinute: 0, consumedPerMinute: 0 };
+//     entry.producedPerMinute += tickDelta.produced[itemType] ?? 0;
+//     stats.lastChangedTick[itemType] = tickNumber;
+//   }
+//   for (const itemType of Object.keys(tickDelta.consumed)) {
+//     const entry = stats.aggregated[itemType] ??= { producedPerMinute: 0, consumedPerMinute: 0 };
+//     entry.consumedPerMinute += tickDelta.consumed[itemType] ?? 0;
+//     stats.lastChangedTick[itemType] = tickNumber;
+//   }
+//
+//   // 清理归零的条目
+//   for (const itemType of Object.keys(stats.aggregated)) {
+//     const entry = stats.aggregated[itemType]!;
+//     if (entry.producedPerMinute <= 0 && entry.consumedPerMinute <= 0) {
+//       delete stats.aggregated[itemType];
+//     }
+//   }
+// }
 export function rollRecipeStatsWindow(
   stats: RecipeStatsState,
   tickDelta: RecipeStatsDelta,
   tickNumber: number,
+  elapsedStandardTicks = 1,
+  shouldSealBucket = true,
 ): void {
-  const capacity = stats.windowCapacity;
-  // 淘汰旧条目
-  if (stats.windowCount >= capacity) {
-    const oldDelta = stats.windowDeltas[stats.windowCursor];
-    if (oldDelta !== undefined) {
-      for (const itemType of Object.keys(oldDelta.produced)) {
-        const entry = stats.aggregated[itemType];
-        if (entry !== undefined) {
-          entry.producedPerMinute -= oldDelta.produced[itemType] ?? 0;
-          if (entry.producedPerMinute < 0) entry.producedPerMinute = 0;
-        }
-      }
-      for (const itemType of Object.keys(oldDelta.consumed)) {
-        const entry = stats.aggregated[itemType];
-        if (entry !== undefined) {
-          entry.consumedPerMinute -= oldDelta.consumed[itemType] ?? 0;
-          if (entry.consumedPerMinute < 0) entry.consumedPerMinute = 0;
-        }
-      }
-    }
-  }
+  const standardTicks = Math.max(1, Math.trunc(elapsedStandardTicks));
+  stats.activeBucket.standardTicks += standardTicks;
+  accumulateRecipeStatsDelta(stats.activeBucket, tickDelta);
 
-  // 写入新条目
-  stats.windowDeltas[stats.windowCursor] = {
-    produced: { ...tickDelta.produced },
-    consumed: { ...tickDelta.consumed },
-  };
-  stats.windowCursor = (stats.windowCursor + 1) % capacity;
-  stats.windowCount = Math.min(stats.windowCount + 1, capacity);
-
-  // 聚合新条目
   for (const itemType of Object.keys(tickDelta.produced)) {
-    const entry = stats.aggregated[itemType] ??= { producedPerMinute: 0, consumedPerMinute: 0 };
-    entry.producedPerMinute += tickDelta.produced[itemType] ?? 0;
     stats.lastChangedTick[itemType] = tickNumber;
   }
   for (const itemType of Object.keys(tickDelta.consumed)) {
-    const entry = stats.aggregated[itemType] ??= { producedPerMinute: 0, consumedPerMinute: 0 };
-    entry.consumedPerMinute += tickDelta.consumed[itemType] ?? 0;
     stats.lastChangedTick[itemType] = tickNumber;
   }
 
-  // 清理归零的条目
-  for (const itemType of Object.keys(stats.aggregated)) {
-    const entry = stats.aggregated[itemType]!;
-    if (entry.producedPerMinute <= 0 && entry.consumedPerMinute <= 0) {
-      delete stats.aggregated[itemType];
-    }
+  if (!shouldSealBucket) {
+    return;
   }
+
+  sealRecipeStatsBucket(stats);
+}
+
+function sealRecipeStatsBucket(stats: RecipeStatsState): void {
+  const bucket = stats.activeBucket;
+  if (bucket.standardTicks <= 0) {
+    return;
+  }
+
+  const sealedBucket = cloneRecipeStatsBucket(bucket);
+  stats.windowBuckets.push(sealedBucket);
+  stats.coveredStandardTicks += sealedBucket.standardTicks;
+  addRecipeStatsTotals(stats.windowProducedTotals, sealedBucket.produced);
+  addRecipeStatsTotals(stats.windowConsumedTotals, sealedBucket.consumed);
+  stats.activeBucket = createRecipeStatsBucket();
+
+  trimRecipeStatsWindow(stats);
+  refreshRecipeStatsAggregated(stats);
+}
+
+function trimRecipeStatsWindow(stats: RecipeStatsState): void {
+  while (
+    stats.windowBuckets.length > 1
+    && stats.coveredStandardTicks - stats.windowBuckets[0]!.standardTicks >= stats.windowCapacity
+  ) {
+    const removed = stats.windowBuckets.shift()!;
+    stats.coveredStandardTicks -= removed.standardTicks;
+    subtractRecipeStatsTotals(stats.windowProducedTotals, removed.produced);
+    subtractRecipeStatsTotals(stats.windowConsumedTotals, removed.consumed);
+  }
+  stats.windowCount = stats.windowBuckets.length;
+}
+
+function refreshRecipeStatsAggregated(stats: RecipeStatsState): void {
+  stats.aggregated = {};
+  if (stats.coveredStandardTicks < stats.windowCapacity) {
+    return;
+  }
+
+  const normalization = stats.windowCapacity / stats.coveredStandardTicks;
+  const itemTypes = new Set([
+    ...Object.keys(stats.windowProducedTotals),
+    ...Object.keys(stats.windowConsumedTotals),
+  ]);
+  for (const itemType of itemTypes) {
+    const producedPerMinute = (stats.windowProducedTotals[itemType] ?? 0) * normalization;
+    const consumedPerMinute = (stats.windowConsumedTotals[itemType] ?? 0) * normalization;
+    if (producedPerMinute <= 0 && consumedPerMinute <= 0) {
+      continue;
+    }
+    stats.aggregated[itemType] = { producedPerMinute, consumedPerMinute };
+  }
+}
+
+function addRecipeStatsTotals(
+  target: Record<string, number>,
+  source: Record<string, number>,
+): void {
+  for (const [itemType, amount] of Object.entries(source)) {
+    target[itemType] = (target[itemType] ?? 0) + amount;
+  }
+}
+
+function subtractRecipeStatsTotals(
+  target: Record<string, number>,
+  source: Record<string, number>,
+): void {
+  for (const [itemType, amount] of Object.entries(source)) {
+    const next = (target[itemType] ?? 0) - amount;
+    if (next > 0) target[itemType] = next;
+    else delete target[itemType];
+  }
+}
+
+function cloneRecipeStatsBucket(bucket: RecipeStatsBucket): RecipeStatsBucket {
+  return {
+    standardTicks: bucket.standardTicks,
+    produced: { ...bucket.produced },
+    consumed: { ...bucket.consumed },
+  };
 }

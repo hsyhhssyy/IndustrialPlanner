@@ -10,6 +10,7 @@ import type { GridPoint, GridRect } from "@/domain/shared/grid";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
+import { openOverlapEntityMenuIfNeeded } from "./overlap-entity-candidates";
 
 const MARQUEE_RIGHT_DOCK_BUTTON_IDS = [
   "canvas-right-dock-toolbar-button-exit",
@@ -143,6 +144,21 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           }
 
           if (event.button === 0 && editor !== null && event.pointerEntity !== null) {
+            if (
+              openOverlapEntityMenuIfNeeded({
+                appHost: context.appHost,
+                editor,
+                position: event.position,
+                pointerEntity: event.pointerEntity,
+                onSelect: (entity) => {
+                  toggleEntityInSelection(editor, entity.id);
+                  showMarqueeRightDockToolbar(context.appHost, editor);
+                },
+              })
+            ) {
+              return { status: "handled" };
+            }
+
             toggleEntityInSelection(editor, event.pointerEntity.id);
             showMarqueeRightDockToolbar(context.appHost, editor);
             return { status: "handled" };
@@ -156,6 +172,21 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           }
 
           if (editor !== null && event.pointerEntity !== null) {
+            if (
+              openOverlapEntityMenuIfNeeded({
+                appHost: context.appHost,
+                editor,
+                position: event.position,
+                pointerEntity: event.pointerEntity,
+                onSelect: (entity) => {
+                  toggleEntityInSelection(editor, entity.id);
+                  showMarqueeRightDockToolbar(context.appHost, editor);
+                },
+              })
+            ) {
+              return { status: "handled" };
+            }
+
             toggleEntityInSelection(editor, event.pointerEntity.id);
             showMarqueeRightDockToolbar(context.appHost, editor);
             return { status: "handled" };

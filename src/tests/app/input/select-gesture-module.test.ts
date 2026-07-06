@@ -8,13 +8,56 @@ import {
   createHypergryphSelectGestureModule,
   type GestureActionContext,
 } from "@/app/input/gesture/actions";
+import { WorkbenchOverlapEntityMenuController } from "@/app/shell/state/overlap-entity-menu-state";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { EntityCollection } from "@/domain/editor/types/editor-types";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { createRegistryContract } from "@/registry";
 
 describe("createHypergryphSelectGestureModule", () => {
+  it("opens the overlap entity menu before selecting an entity from a stacked cell", () => {
+    const {
+      context,
+      addToCollection,
+      clearCollection,
+      overlapEntityMenu,
+    } = createOverlapSelectContext();
+    const module = createHypergryphSelectGestureModule();
+
+    const result = module.handle(
+      {
+        type: "mouse tap",
+        gestureId: "mouse-select-overlap-1",
+        button: 0,
+        buttons: 0,
+        position: { x: 0, y: 0 },
+        longPress: false,
+        pointerEntity: entity("top-entity", "pipe_straight_1x1"),
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(overlapEntityMenu.visible).toBe(true);
+    expect(overlapEntityMenu.candidates.map((candidate) => candidate.entityId)).toEqual([
+      "top-entity",
+      "bottom-entity",
+    ]);
+    expect(addToCollection).not.toHaveBeenCalled();
+
+    overlapEntityMenu.select("bottom-entity");
+
+    expect(clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
+    expect(addToCollection).toHaveBeenCalledWith({
+      collectionType: EntityCollectionType.selection,
+      entityId: "bottom-entity",
+    });
+  });
+
   it("clears the selection collection before selecting a different clicked entity and syncs the right dock", () => {
     const {
       context,
@@ -806,6 +849,85 @@ function createContext(
     setActiveTool,
     setRightDockActiveTab,
     toggleRightDock,
+  };
+}
+
+function createOverlapSelectContext(): {
+  context: GestureActionContext<AppHost>;
+  addToCollection: ReturnType<typeof vi.fn>;
+  clearCollection: ReturnType<typeof vi.fn>;
+  overlapEntityMenu: WorkbenchOverlapEntityMenuController;
+} {
+  const registry = createRegistryContract();
+  const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
+  const bottomEntity = entity("bottom-entity", "belt_straight_1x1");
+  const topEntity = entity("top-entity", "pipe_straight_1x1");
+  const entities = [bottomEntity, topEntity];
+  const addToCollection = vi.fn();
+  const clearCollection = vi.fn();
+  const selection = createSelectionCollection([]);
+  const editor = {
+    state: {
+      suppressBelts: false,
+      suppressPipes: false,
+      collections: {
+        selection,
+      },
+    },
+    queries: {
+      listEntities: () => entities,
+      getEntityById: (entityId: string) =>
+        entities.find((candidate) => candidate.id === entityId) ?? null,
+      findGridCellForClientPixelPoint: (point: { readonly x: number; readonly y: number }) => ({
+        x: Math.floor(point.x),
+        y: Math.floor(point.y),
+      }),
+    },
+    actions: {
+      addToCollection,
+      clearCollection,
+    },
+  };
+  const appHost = {
+    state: {
+      settings: {
+        hypergryphOperationMode: true,
+        hypergryphSelectionRightDockSync: true,
+        hypergryphInspectorOpenOnSecondClick: false,
+        gameUseInspectorPanel: true,
+      },
+      workbench: {
+        rightDockOpen: true,
+      },
+    },
+    internalState: {
+      activeTool: "select",
+      workbench: {
+        rightDockOpen: true,
+      },
+    },
+    internalActions: {
+      openDialog: vi.fn(),
+      setRightDockActiveTab: vi.fn(),
+      hideCanvasFloatingToolbar: vi.fn(),
+      toggleRightDock: vi.fn(),
+    },
+    overlapEntityMenu,
+    workspace: {
+      editor,
+      registry,
+    },
+  } as unknown as AppHost;
+
+  return {
+    context: {
+      workspace: appHost.workspace,
+      appHost,
+      keyboard: emptyKeyboardSnapshot(),
+    } as unknown as GestureActionContext<AppHost>,
+    addToCollection,
+    clearCollection,
+    overlapEntityMenu,
   };
 }
 

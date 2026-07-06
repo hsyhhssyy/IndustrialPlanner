@@ -4,6 +4,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
 import type { GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
+import { openOverlapEntityMenuIfNeeded } from "./overlap-entity-candidates";
 
 export function createHypergryphSelectGestureModule(): GestureMappingModule<AppHost> {
   return {
@@ -144,6 +145,23 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
             return { status: "ignored" };
           }
 
+          if (
+            openOverlapEntityMenuIfNeeded({
+              appHost: context.appHost,
+              editor,
+              position: event.position,
+              pointerEntity: event.pointerEntity,
+              onSelect: (entity) => {
+                selectEntity({
+                  entityId: entity.id,
+                  definitionId: entity.definitionId,
+                });
+              },
+            })
+          ) {
+            return { status: "handled" };
+          }
+
           selectEntity({
             entityId: event.pointerEntity.id,
             definitionId: event.pointerEntity.definitionId,
@@ -153,6 +171,23 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
         case "touch tap":
           if (event.pointerEntity === null) {
             return { status: "ignored" };
+          }
+
+          if (
+            openOverlapEntityMenuIfNeeded({
+              appHost: context.appHost,
+              editor,
+              position: event.position,
+              pointerEntity: event.pointerEntity,
+              onSelect: (entity) => {
+                selectEntity({
+                  entityId: entity.id,
+                  definitionId: entity.definitionId,
+                });
+              },
+            })
+          ) {
+            return { status: "handled" };
           }
 
           selectEntity({

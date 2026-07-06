@@ -21,6 +21,7 @@ import { WorkbenchEncyclopediaPickerController } from "../shell/state/encycloped
 import { WorkbenchRecipePickerController } from "../shell/state/recipe-picker-state";
 import { WorkbenchSaveBlueprintDialogController } from "../shell/state/save-blueprint-dialog-state";
 import { cleanupDiscardableV2LocalStorageBeforeV3Boot } from "../migration";
+import { WorkbenchOverlapEntityMenuController } from "../shell/state/overlap-entity-menu-state";
 
 export interface AppHost extends AppContract {
   workspace: WorkspaceContract;
@@ -34,6 +35,7 @@ export interface AppHost extends AppContract {
   saveBlueprintDialog: WorkbenchSaveBlueprintDialogController;
   encyclopediaPicker: WorkbenchEncyclopediaPickerController;
   recipePicker: WorkbenchRecipePickerController;
+  overlapEntityMenu: WorkbenchOverlapEntityMenuController;
   dispose: () => void;
 }
 
@@ -74,6 +76,7 @@ export function createAppHost(
   const saveBlueprintDialog = new WorkbenchSaveBlueprintDialogController(
     internalState.workbench.dialogState["save-blueprint"],
   );
+  const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
   const encyclopediaPicker = new WorkbenchEncyclopediaPickerController(
     () => internalState.workbench.toolbox.wiki,
   );
@@ -100,6 +103,7 @@ export function createAppHost(
     blueprintFolderDialog,
     blueprintPreview,
     saveBlueprintDialog,
+    overlapEntityMenu,
     encyclopediaPicker,
     recipePicker,
   });
@@ -156,6 +160,7 @@ export function createAppHost(
       blueprintFolderDialog.close();
       blueprintPreview.close();
       saveBlueprintDialog.close();
+      overlapEntityMenu.dispose();
       encyclopediaPicker.dispose();
       recipePicker.dispose();
       gestureActionRouter.dispose();

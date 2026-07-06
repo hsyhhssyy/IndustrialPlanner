@@ -8,6 +8,7 @@ import { CanvasPanel } from "@/app/shell/canvas/canvas-panel";
 import { CanvasFloatingToolbar } from "@/app/shell/canvas/canvas-floating-toolbar";
 import { CanvasTopLeftCornerToolbar } from "@/app/shell/canvas/canvas-top-left-corner-toolbar";
 import { CanvasRightDockToolbar } from "@/app/shell/canvas/canvas-right-dock-toolbar";
+import { OverlapEntityMenu } from "@/app/shell/canvas/overlap-entity-menu";
 import {
   FullscreenToggleButton,
   requestDocumentFullscreen,
@@ -73,9 +74,68 @@ import {
 } from "@/shared/theme/canvas-theme";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import {
+  loadChangelogIndexEntries,
+  normalizeChangelogVersionText,
+  resolveCurrentVersionChangelogKey,
+} from "@/app/shell/dialogs/changelog-data";
+
+const CHANGELOG_READ_STATE_KEY = "industrial-planner-changelog-read-state";
+const LEGACY_LAST_READ_VERSION_KEY = "industrial-planner-changelog-last-read-version";
+
+interface ChangelogReadState {
+  version: string;
+  changelogKey: string;
+}
 
 function isAppThemeId(value: unknown): value is AppThemeId {
   return value === "ayu-light" || value === "ayu-dark";
+}
+
+function normalizeStoredChangelogVersion(version: string): string {
+  return normalizeChangelogVersionText(version) ?? version;
+}
+
+function isChangelogReadState(value: unknown): value is ChangelogReadState {
+  return typeof value === "object"
+    && value !== null
+    && typeof (value as ChangelogReadState).version === "string"
+    && typeof (value as ChangelogReadState).changelogKey === "string";
+}
+
+function readChangelogReadState(): ChangelogReadState | null {
+  const rawState = localStorage.getItem(CHANGELOG_READ_STATE_KEY);
+
+  if (rawState !== null) {
+    try {
+      const parsed: unknown = JSON.parse(rawState);
+
+      if (isChangelogReadState(parsed)) {
+        return {
+          version: normalizeStoredChangelogVersion(parsed.version),
+          changelogKey: parsed.changelogKey,
+        };
+      }
+    } catch {
+      // 损坏的结构化状态会回退到旧版已读版本。
+    }
+  }
+
+  const legacyVersion = localStorage.getItem(LEGACY_LAST_READ_VERSION_KEY);
+
+  if (legacyVersion === null || legacyVersion.length === 0) {
+    return null;
+  }
+
+  return {
+    version: normalizeStoredChangelogVersion(legacyVersion),
+    changelogKey: "",
+  };
+}
+
+function writeChangelogReadState(state: ChangelogReadState): void {
+  localStorage.setItem(CHANGELOG_READ_STATE_KEY, JSON.stringify(state));
+  localStorage.setItem(LEGACY_LAST_READ_VERSION_KEY, state.version);
 }
 
 export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHost: AppHost }) {
@@ -483,44 +543,82 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   }, [migrationController]);
 
   // 版本检测：新版本自动弹出帮助对话框并切换到"版本更新"tab
+  // AI-CORRECTION 2026-07-06: 现在必须同时满足版本变更与当前版本存在新的 changelog 条目，才自动弹出。
   useEffect(() => {
-    const LAST_READ_VERSION_KEY = "industrial-planner-changelog-last-read-version";
+    const currentVersionText = (window as { __APP_VERSION__?: string }).__APP_VERSION__;
 
-    const currentVersion = (window as { __APP_VERSION__?: string }).__APP_VERSION__;
-
-    if (currentVersion === undefined || currentVersion === "0.0.0-dev") {
+    if (currentVersionText === undefined || currentVersionText === "0.0.0-dev") {
       return;
     }
 
-    let lastReadVersion: string;
+    const currentVersion = normalizeChangelogVersionText(currentVersionText);
+
+    if (currentVersion === null) {
+      return;
+    }
+
+    const currentVersionKey = currentVersion;
+    let lastReadState: ChangelogReadState | null;
 
     try {
-      lastReadVersion = localStorage.getItem(LAST_READ_VERSION_KEY) ?? "";
+      lastReadState = readChangelogReadState();
     } catch {
       return;
     }
 
-    if (currentVersion === lastReadVersion) {
-      return;
+    let cancelled = false;
+
+    async function checkChangelogAnnouncement() {
+      try {
+        const entries = await loadChangelogIndexEntries();
+
+        if (cancelled) {
+          return;
+        }
+
+        const currentChangelogKey = resolveCurrentVersionChangelogKey(entries, currentVersionText);
+
+        if (currentChangelogKey === null) {
+          return;
+        }
+
+        const versionChanged = lastReadState?.version !== currentVersionKey;
+        const changelogChanged = lastReadState?.changelogKey !== currentChangelogKey;
+
+        if (!versionChanged || !changelogChanged) {
+          return;
+        }
+
+        // 记录已读版本
+        try {
+          writeChangelogReadState({
+            version: currentVersionKey,
+            changelogKey: currentChangelogKey,
+          });
+        } catch {
+          // 静默忽略
+        }
+
+        if (screenProfile.deviceClass !== "mobile") {
+          // 计算 80% 屏幕宽高
+          const width = Math.floor(window.innerWidth * 0.8);
+          const height = Math.floor(window.innerHeight * 0.8);
+
+          appHost.internalActions.setDialogSize("help", width, height);
+        }
+
+        appHost.internalActions.setDialogTab("help", "version");
+        appHost.internalActions.openDialog("help");
+      } catch {
+        // 更新日志索引不可用时不自动弹出，避免误判为已读。
+      }
     }
 
-    // 记录已读版本
-    try {
-      localStorage.setItem(LAST_READ_VERSION_KEY, currentVersion);
-    } catch {
-      // 静默忽略
-    }
+    void checkChangelogAnnouncement();
 
-    if (screenProfile.deviceClass !== "mobile") {
-      // 计算 80% 屏幕宽高
-      const width = Math.floor(window.innerWidth * 0.8);
-      const height = Math.floor(window.innerHeight * 0.8);
-
-      appHost.internalActions.setDialogSize("help", width, height);
-    }
-
-    appHost.internalActions.setDialogTab("help", "version");
-    appHost.internalActions.openDialog("help");
+    return () => {
+      cancelled = true;
+    };
   }, [appHost, screenProfile.deviceClass]);
 
   useEffect(() => {
@@ -769,6 +867,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         <LeftToolbar appHost={appHost} />
         {effectiveLeftDockOpen ? <LeftDock appHost={appHost} /> : null}
         <CanvasPanel appHost={appHost} />
+        <OverlapEntityMenu appHost={appHost} />
         <CanvasBottomLeftSecondaryToolbar
           appHost={appHost}
           offsetForFloatingTools={showCanvasBottomLeftToolbar}

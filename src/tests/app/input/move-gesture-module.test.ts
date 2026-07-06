@@ -7,6 +7,7 @@ import {
   createHypergryphMoveGestureModule,
   type GestureActionContext,
 } from "@/app/input/gesture/actions";
+import { WorkbenchOverlapEntityMenuController } from "@/app/shell/state/overlap-entity-menu-state";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -19,6 +20,72 @@ import type { GridPoint, GridRect } from "@/domain/shared/grid";
 import { createRegistryContract } from "@/registry";
 
 describe("createHypergryphMoveGestureModule", () => {
+  it("opens the overlap entity menu before entering move from a stacked long-press cell", () => {
+    const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
+    const bottomEntity = entity("bottom-overlap-entity", { x: 2, y: 2 });
+    const topEntity = entity("top-overlap-entity", { x: 2, y: 2 }, "pipe_straight_1x1");
+    const { context, editor, appHost } = createContext({
+      overlapEntityMenu,
+      listedEntities: [bottomEntity, topEntity],
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    const result = module.handle(
+      mouseLongPressReadyEvent({
+        pointerEntity: topEntity,
+        position: { x: 2, y: 2 },
+      }),
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(overlapEntityMenu.visible).toBe(true);
+    expect(overlapEntityMenu.candidates.map((candidate) => candidate.entityId)).toEqual([
+      "top-overlap-entity",
+      "bottom-overlap-entity",
+    ]);
+    expect(editor.actions.createMoveOperationDraft).not.toHaveBeenCalled();
+
+    overlapEntityMenu.select("bottom-overlap-entity");
+
+    expect(editor.actions.clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
+    expect(editor.actions.addToCollection).toHaveBeenCalledWith({
+      collectionType: EntityCollectionType.selection,
+      entityId: "bottom-overlap-entity",
+    });
+    expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
+    expect(appHost.internalActions.setActiveTool).toHaveBeenCalledWith("move");
+  });
+
+  it("resolves immediate-drag overlap candidates from the drag start position", () => {
+    const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
+    const bottomEntity = entity("bottom-overlap-entity", { x: 2, y: 2 });
+    const topEntity = entity("top-overlap-entity", { x: 2, y: 2 }, "pipe_straight_1x1");
+    const { context, editor } = createContext({
+      overlapEntityMenu,
+      listedEntities: [bottomEntity, topEntity],
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    const result = module.handle(
+      mouseDragStartEvent({
+        originButton: 0,
+        pointerEntity: null,
+        startPosition: { x: 2, y: 2 },
+        position: { x: 3, y: 2 },
+      }),
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(overlapEntityMenu.visible).toBe(true);
+    expect(overlapEntityMenu.candidates.map((candidate) => candidate.entityId)).toEqual([
+      "top-overlap-entity",
+      "bottom-overlap-entity",
+    ]);
+    expect(editor.actions.createMoveOperationDraft).not.toHaveBeenCalled();
+  });
+
   it("enters mouse move from select by selecting the pointer entity first", () => {
     const { context, editor, appHost } = createContext();
     const module = createHypergryphMoveGestureModule();
@@ -804,6 +871,8 @@ function createContext(options: {
   previewRect?: GridRect;
   previewDefinitionId?: string;
   copyWhileMoving?: boolean;
+  overlapEntityMenu?: WorkbenchOverlapEntityMenuController;
+  listedEntities?: readonly WorldEntity[];
 } = {}): {
   context: GestureActionContext<AppHost>;
   editor: MockEditor;
@@ -832,6 +901,9 @@ function createContext(options: {
   );
   const selectedEntity = entity("selected-entity", { x: 2, y: 2 });
   const unselectedEntity = entity("unselected-entity", { x: 4, y: 4 });
+  const listedEntityMap = new Map(
+    (options.listedEntities ?? []).map((listedEntity) => [listedEntity.id, listedEntity]),
+  );
   const shortcuts: Record<string, string> = {
     [SHORTCUT_KEY.ROTATE]: "R",
     [SHORTCUT_KEY.SWITCH_DEVICE_MODE]: "Tab",
@@ -859,6 +931,11 @@ function createContext(options: {
     },
     queries: {
       getEntityById: vi.fn((entityId: string) => {
+        const listedEntity = listedEntityMap.get(entityId);
+        if (listedEntity !== undefined) {
+          return listedEntity;
+        }
+
         if (entityId === "preview-entity") {
           return previewEntity;
         }
@@ -888,6 +965,9 @@ function createContext(options: {
         width: 16,
         height: 16,
       })),
+      ...(options.listedEntities !== undefined
+        ? { listEntities: vi.fn(() => options.listedEntities ?? []) }
+        : {}),
     },
     actions: {
       createMoveOperationDraft: vi.fn(() => {
@@ -1008,6 +1088,9 @@ function createContext(options: {
       editor,
       registry: createRegistryContract(),
     },
+    ...(options.overlapEntityMenu !== undefined
+      ? { overlapEntityMenu: options.overlapEntityMenu }
+      : {}),
   } as unknown as AppHost;
 
   return {
@@ -1054,7 +1137,9 @@ type MockEditor = {
     | "findEntityCollectionGridRect"
     | "findGridCellForClientPixelPoint"
     | "getEntityById"
-  >;
+  > & {
+    listEntities?: () => readonly WorldEntity[];
+  };
 };
 
 function createCollection(entityIds: readonly string[]): MockCollection {
@@ -1239,6 +1324,7 @@ function mouseDragStartEvent(options: {
   originButton: number;
   pointerEntity: WorldEntity | null;
   position: GridPoint;
+  startPosition?: GridPoint;
 }) {
   return {
     type: "mouse dragstart" as const,
@@ -1247,7 +1333,7 @@ function mouseDragStartEvent(options: {
     button: options.originButton,
     buttons: 1,
     position: options.position,
-    startPosition: options.position,
+    startPosition: options.startPosition ?? options.position,
     longPress: false,
     pointerEntity: options.pointerEntity,
     modifiers: emptyModifiers(),

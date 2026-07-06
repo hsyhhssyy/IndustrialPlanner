@@ -850,6 +850,8 @@ export class SimulationWorkerRuntime {
         this.runtimeState.persistent.recipeStats,
         this.runtimeState.transient.recipeStatsDelta,
         tickNumber,
+        runtimeStepTicks,
+        canAdjustDynamicTickRateAtTick({ topology: this.topology, standardTick: tickNumber }),
       );
       this.runtimeState.transient.recipeStatsDelta = createEmptyTransientState().recipeStatsDelta;
 

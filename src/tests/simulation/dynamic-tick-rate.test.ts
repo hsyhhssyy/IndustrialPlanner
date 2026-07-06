@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { advanceDevices } from "@/simulation/runtime/stage-1-advance-devices";
 import {
+  createRecipeStatsState,
   createSimulationMutableRuntimeState,
+  rollRecipeStatsWindow,
   type RuntimeDeviceRecipeState,
 } from "@/simulation/runtime/runtime-state";
 import {
@@ -78,6 +80,36 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     });
 
     expect(loaded.status.dynamicTickRate).toBe(10);
+  });
+
+  it("normalizes recipe stats by covered simulation ticks when dynamic runtime steps are coarser", () => {
+    const stats = createRecipeStatsState(20);
+
+    for (let tickNumber = 2; tickNumber <= 2400; tickNumber += 2) {
+      rollRecipeStatsWindow(
+        stats,
+        {
+          produced: tickNumber % 20 === 0 ? { item_test: 1 } : {},
+          consumed: tickNumber % 20 === 0 ? { item_input: 1 } : {},
+        },
+        tickNumber,
+        2,
+        tickNumber % 20 === 0,
+      );
+    }
+
+    expect(stats.coveredStandardTicks).toBe(1200);
+    expect(stats.aggregated.item_test?.producedPerMinute).toBe(60);
+    expect(stats.aggregated.item_input?.consumedPerMinute).toBe(60);
+  });
+
+  it("keeps warehouse production stats stable after worker dynamic tick rate changes", () => {
+    const normal = readProductionStatsAtSpeed(1);
+    const dynamic = readProductionStatsAtSpeed(4);
+
+    expect(normal.producedPerMinute).toBe(240);
+    expect(dynamic.initialDynamicTickRate).toBeLessThan(20);
+    expect(dynamic.producedPerMinute).toBe(240);
   });
 
   it("carries production overflow across successful output writes", () => {
@@ -189,6 +221,34 @@ describe("REQ-080: dynamic simulation tick rate", () => {
 
   });
 });
+
+function readProductionStatsAtSpeed(
+  simulationSpeed: number,
+): { readonly initialDynamicTickRate: number; readonly producedPerMinute: number } {
+  const runtime = new SimulationWorkerRuntime();
+  const loaded = runtime.handleRequest({
+    type: "load-topology",
+    requestId: 1,
+    topology: createProductionOverflowTopology(10000),
+    simulationSpeed,
+  });
+  runtime.advanceToTick(2400);
+
+  const response = runtime.handleRequest({
+    type: "get-tick-snapshot",
+    requestId: 2,
+    tickNumber: 2400,
+    simulationSpeed,
+  });
+  if (response.type !== "tick-snapshot-result" || response.result.status.status !== "ready" || response.result.currentTick === null) {
+    throw new Error("Expected production stats tick to be ready.");
+  }
+
+  return {
+    initialDynamicTickRate: loaded.status.dynamicTickRate ?? 0,
+    producedPerMinute: response.result.currentTick.warehouseStats?.items.item_test?.producedPerMinute ?? 0,
+  };
+}
 
 function createEmptyTopology(): CompiledSimulationTopology {
   return {
