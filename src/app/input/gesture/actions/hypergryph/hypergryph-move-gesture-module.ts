@@ -13,11 +13,13 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRect } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { placeBlueprintFromMoveAndContinue } from "./hypergryph-blueprint-placement-gesture-module";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
+import {
+  isPreviewBoundingBoxAtClientPoint,
+} from "./mobile-preview-bounds";
 import {
   openOverlapEntityMenuForCandidates,
   resolveOverlappingEntityCandidatesAtClientPoint,
@@ -1434,62 +1436,39 @@ function isPreviewEntityAtClientPoint(options: {
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   position: GesturePosition;
 }): boolean {
-  const gridCell = options.editor.queries.findGridCellForClientPixelPoint(
-    options.position,
-  );
-
-  if (gridCell === null) {
-    return false;
-  }
-
-  const preview = options.editor.state.collections[EntityCollectionType.preview];
-  for (let index = preview.length - 1; index >= 0; index -= 1) {
-    const entityId = preview[index];
-    if (entityId === undefined) {
-      continue;
-    }
-
-    const entity = options.editor.queries.getEntityById(entityId);
-    if (entity === null) {
-      continue;
-    }
-
-    const definition = options.entityDefinitionMap.get(entity.definitionId);
-    if (definition === undefined) {
-      continue;
-    }
-
-    if (
-      isGridCellInsideEntity({
-        cell: gridCell,
-        entity,
-        footprint: definition.footprint,
-      })
-    ) {
-      return true;
-    }
-  }
-
-  return false;
+  void options.entityDefinitionMap;
+  return isPreviewBoundingBoxAtClientPoint({
+    editor: options.editor,
+    position: options.position,
+  });
 }
 
-function isGridCellInsideEntity(options: {
-  cell: GridPoint;
-  entity: WorldEntity;
-  footprint: EntityDefinition["footprint"];
-}): boolean {
-  const footprint = getRotatedGridFootprint(
-    options.footprint,
-    options.entity.rotation,
-  );
-
-  return (
-    options.cell.x >= options.entity.position.x
-    && options.cell.x < options.entity.position.x + footprint.width
-    && options.cell.y >= options.entity.position.y
-    && options.cell.y < options.entity.position.y + footprint.height
-  );
-}
+// AI-REMOVED 2026-07-06:
+// Reason: 移动端 move drag start 需要按当前 preview 包围盒命中，而不是逐个 preview 实体 footprint 命中；否则包围盒仍可见但实体虚影已移出屏幕时无法再次拖动。
+// Trigger: 用户需求——移动端放置和移动模式在 drag start 时判断当前位置是否在虚影包围盒内。
+// Evidence: Search-First 定位到 primeMoveAnchorFromPreview 仅通过 isPreviewEntityAtClientPoint 命中实体 footprint；新实现统一使用 isPreviewBoundingBoxAtClientPoint。
+// Replacement: isPreviewEntityAtClientPoint -> isPreviewBoundingBoxAtClientPoint
+// Risk: Low；命中范围扩大到 preview 包围盒，符合移动端多设备/蓝图拖动需求。
+// Human Review: Required
+//
+// Original code:
+// function isGridCellInsideEntity(options: {
+//   cell: GridPoint;
+//   entity: WorldEntity;
+//   footprint: EntityDefinition["footprint"];
+// }): boolean {
+//   const footprint = getRotatedGridFootprint(
+//     options.footprint,
+//     options.entity.rotation,
+//   );
+//
+//   return (
+//     options.cell.x >= options.entity.position.x
+//     && options.cell.x < options.entity.position.x + footprint.width
+//     && options.cell.y >= options.entity.position.y
+//     && options.cell.y < options.entity.position.y + footprint.height
+//   );
+// }
 
 function didRectMoveByGridVector(options: {
   beforeRect: GridRect;

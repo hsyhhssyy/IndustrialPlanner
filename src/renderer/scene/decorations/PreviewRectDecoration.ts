@@ -1,11 +1,11 @@
 import { Graphics } from "pixi.js";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 import { resolveMarqueeGridRectLayout } from "./MarqueeRectDecoration";
 
-const PREVIEW_RECT_FILL_ALPHA = 0.18;
+const PREVIEW_RECT_FILL_ALPHA = 0.5;
+const PREVIEW_RECT_FILL_COLOR = 0x0f2f66;
 
 export function createPreviewRectDecoration(): DecorationLayer {
   const graphics = new Graphics({ roundPixels: true });
@@ -24,7 +24,8 @@ export function createPreviewRectDecoration(): DecorationLayer {
       }
 
       // 仅在 move 模式下显示
-      if (app.state.activeTool !== "move") {
+      // 2026-07-06 订正：多设备 preview 包围盒背景也用于 blueprint-placement，方便移动端拖动包围盒空白区域。
+      if (!shouldShowPreviewRectForActiveTool(app.state.activeTool)) {
         return;
       }
 
@@ -65,17 +66,11 @@ export function createPreviewRectDecoration(): DecorationLayer {
         return;
       }
 
-      const theme = ctx.theme;
-      const fillColor = resolveAppThemeColorNumber(
-        theme,
-        theme.renderer.worldPreviewRectFillColorKey,
-      );
-
       measureDecorationStep(ctx, "previewRect.draw", () => {
         graphics
           .rect(layout.x, layout.y, layout.width, layout.height)
           .fill({
-            color: fillColor,
+            color: PREVIEW_RECT_FILL_COLOR,
             alpha: PREVIEW_RECT_FILL_ALPHA,
           });
       });
@@ -85,6 +80,14 @@ export function createPreviewRectDecoration(): DecorationLayer {
       graphics.destroy();
     },
   };
+}
+
+function shouldShowPreviewRectForActiveTool(activeTool: string): boolean {
+  return (
+    activeTool === "move"
+    || activeTool === "blueprint-placement"
+    || activeTool === "single-placement"
+  );
 }
 
 function measureDecorationStep<T>(

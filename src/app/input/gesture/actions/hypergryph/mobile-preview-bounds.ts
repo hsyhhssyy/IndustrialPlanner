@@ -1,0 +1,302 @@
+import type { AppHost } from "@/app/host/app-host";
+import type { GesturePosition } from "@/app/input/gesture/adapter";
+import type { EditorContract } from "@/domain/editor/editor-contract";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import type { GridPoint } from "@/domain/shared/grid";
+import {
+  resolveViewportRectFromWorldGridRect,
+  resolveWorldVectorFromViewportVector,
+} from "@/shared/geometry/viewport-transform";
+
+export const MOBILE_PREVIEW_SAFE_INSET_CELLS = {
+  x: 1,
+  y: 1,
+};
+
+const GRID_VECTOR_EPSILON = 1e-6;
+
+export function isPreviewBoundingBoxAtClientPoint(options: {
+  editor: EditorContract;
+  position: GesturePosition;
+}): boolean {
+  const gridCell = options.editor.queries.findGridCellForClientPixelPoint(
+    options.position,
+  );
+  const previewRect = options.editor.queries.findEntityCollectionGridRect(
+    EntityCollectionType.preview,
+  );
+
+  return (
+    gridCell !== null
+    && previewRect !== null
+    && gridCell.x >= previewRect.x
+    && gridCell.x < previewRect.x + previewRect.width
+    && gridCell.y >= previewRect.y
+    && gridCell.y < previewRect.y + previewRect.height
+  );
+}
+
+export function nudgeMobilePreviewIntoSafeViewport(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+}): boolean {
+  if (!shouldNudgePreviewForCurrentMobileTool(options.appHost)) {
+    return false;
+  }
+
+  const previewGridRect = options.editor.queries.findEntityCollectionGridRect(
+    EntityCollectionType.preview,
+  );
+  if (previewGridRect === null) {
+    return false;
+  }
+
+  const viewport = options.editor.state.viewport;
+  const safeViewportRect = resolveSafeViewportClientRect({
+    clientRect: viewport.clientRect,
+    gridCellPixelSize: viewport.gridCellPixelSize,
+  });
+  if (safeViewportRect === null) {
+    return false;
+  }
+
+  const previewViewportRect = resolveViewportRectFromWorldGridRect({
+    gridRect: previewGridRect,
+    viewportBounds: viewport.clientRect,
+    viewportCenter: viewport.center,
+    gridCellPixelSize: viewport.gridCellPixelSize,
+    displayRotation: viewport.displayRotation,
+  });
+  if (previewViewportRect === null) {
+    return false;
+  }
+
+  const viewportPixelVector = resolvePreviewNudgeViewportPixelVector({
+    previewViewportRect,
+    safeViewportRect,
+    gridCellPixelSize: viewport.gridCellPixelSize,
+  });
+  if (viewportPixelVector.x === 0 && viewportPixelVector.y === 0) {
+    return false;
+  }
+
+  const gridVector = resolveGridVectorFromViewportPixelVector({
+    viewportPixelVector,
+    gridCellPixelSize: viewport.gridCellPixelSize,
+    displayRotation: viewport.displayRotation,
+  });
+  if (gridVector.x === 0 && gridVector.y === 0) {
+    return false;
+  }
+
+  options.editor.actions.moveCollectionTo({
+    collectionType: EntityCollectionType.preview,
+    startGridPoint: {
+      x: previewGridRect.x,
+      y: previewGridRect.y,
+    },
+    endGridPoint: {
+      x: previewGridRect.x + gridVector.x,
+      y: previewGridRect.y + gridVector.y,
+    },
+  });
+  nudgeRuntimeAnchor(options.appHost, gridVector);
+  return true;
+}
+
+function shouldNudgePreviewForCurrentMobileTool(appHost: AppHost): boolean {
+  const deviceClass = appHost.state.screenProfile?.deviceClass;
+  if (deviceClass !== "mobile" && deviceClass !== "tablet") {
+    return false;
+  }
+
+  const activeTool = appHost.internalState.activeTool;
+  return (
+    activeTool === "single-placement"
+    || activeTool === "blueprint-placement"
+    || activeTool === "move"
+  );
+}
+
+function resolveSafeViewportClientRect(options: {
+  clientRect: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  gridCellPixelSize: number;
+}): {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+} | null {
+  if (
+    !Number.isFinite(options.clientRect.left)
+    || !Number.isFinite(options.clientRect.top)
+    || !Number.isFinite(options.clientRect.width)
+    || !Number.isFinite(options.clientRect.height)
+    || !Number.isFinite(options.gridCellPixelSize)
+    || options.clientRect.width <= 0
+    || options.clientRect.height <= 0
+    || options.gridCellPixelSize <= 0
+  ) {
+    return null;
+  }
+
+  const horizontal = resolveSafeViewportAxis({
+    start: options.clientRect.left,
+    span: options.clientRect.width,
+    rawInset: MOBILE_PREVIEW_SAFE_INSET_CELLS.x * options.gridCellPixelSize,
+    gridCellPixelSize: options.gridCellPixelSize,
+  });
+  const vertical = resolveSafeViewportAxis({
+    start: options.clientRect.top,
+    span: options.clientRect.height,
+    rawInset: MOBILE_PREVIEW_SAFE_INSET_CELLS.y * options.gridCellPixelSize,
+    gridCellPixelSize: options.gridCellPixelSize,
+  });
+
+  return {
+    left: horizontal.start,
+    top: vertical.start,
+    width: horizontal.end - horizontal.start,
+    height: vertical.end - vertical.start,
+  };
+}
+
+function resolveSafeViewportAxis(options: {
+  start: number;
+  span: number;
+  rawInset: number;
+  gridCellPixelSize: number;
+}): {
+  start: number;
+  end: number;
+} {
+  const requiredVisibleSpan = Math.min(options.gridCellPixelSize, options.span);
+  const maxInset = Math.max(0, (options.span - requiredVisibleSpan) / 2);
+  const inset = Math.min(Math.max(0, options.rawInset), maxInset);
+
+  return {
+    start: options.start + inset,
+    end: options.start + options.span - inset,
+  };
+}
+
+function resolvePreviewNudgeViewportPixelVector(options: {
+  previewViewportRect: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  safeViewportRect: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  gridCellPixelSize: number;
+}): GridPoint {
+  return {
+    x: resolvePreviewNudgeAxisPixelVector({
+      previewStart: options.previewViewportRect.left,
+      previewSpan: options.previewViewportRect.width,
+      safeStart: options.safeViewportRect.left,
+      safeSpan: options.safeViewportRect.width,
+      gridCellPixelSize: options.gridCellPixelSize,
+    }),
+    y: resolvePreviewNudgeAxisPixelVector({
+      previewStart: options.previewViewportRect.top,
+      previewSpan: options.previewViewportRect.height,
+      safeStart: options.safeViewportRect.top,
+      safeSpan: options.safeViewportRect.height,
+      gridCellPixelSize: options.gridCellPixelSize,
+    }),
+  };
+}
+
+function resolvePreviewNudgeAxisPixelVector(options: {
+  previewStart: number;
+  previewSpan: number;
+  safeStart: number;
+  safeSpan: number;
+  gridCellPixelSize: number;
+}): number {
+  const previewEnd = options.previewStart + options.previewSpan;
+  const safeEnd = options.safeStart + options.safeSpan;
+  const requiredVisibleSpan = Math.min(
+    options.gridCellPixelSize,
+    options.previewSpan,
+    options.safeSpan,
+  );
+
+  if (requiredVisibleSpan <= 0) {
+    return 0;
+  }
+
+  if (previewEnd < options.safeStart + requiredVisibleSpan) {
+    return options.safeStart + requiredVisibleSpan - previewEnd;
+  }
+
+  if (options.previewStart > safeEnd - requiredVisibleSpan) {
+    return safeEnd - requiredVisibleSpan - options.previewStart;
+  }
+
+  return 0;
+}
+
+function resolveGridVectorFromViewportPixelVector(options: {
+  viewportPixelVector: GridPoint;
+  gridCellPixelSize: number;
+  displayRotation: EditorContract["state"]["viewport"]["displayRotation"];
+}): GridPoint {
+  const worldVector = resolveWorldVectorFromViewportVector({
+    viewportVector: options.viewportPixelVector,
+    displayRotation: options.displayRotation,
+  });
+
+  return {
+    x: roundGridVectorAwayFromZero(worldVector.x / options.gridCellPixelSize),
+    y: roundGridVectorAwayFromZero(worldVector.y / options.gridCellPixelSize),
+  };
+}
+
+function roundGridVectorAwayFromZero(value: number): number {
+  const nearestInteger = Math.round(value);
+  if (Math.abs(value - nearestInteger) <= GRID_VECTOR_EPSILON) {
+    return nearestInteger;
+  }
+
+  return value > 0 ? Math.ceil(value) : Math.floor(value);
+}
+
+function nudgeRuntimeAnchor(appHost: AppHost, gridVector: GridPoint): void {
+  const runtime = appHost.internalState.runtime;
+
+  if (
+    appHost.internalState.activeTool === "single-placement"
+    || appHost.internalState.activeTool === "blueprint-placement"
+  ) {
+    const anchor = runtime.placementAnchor;
+    if (anchor !== null) {
+      runtime.placementAnchor = {
+        x: anchor.x + gridVector.x,
+        y: anchor.y + gridVector.y,
+      };
+    }
+    return;
+  }
+
+  if (appHost.internalState.activeTool === "move") {
+    const anchor = runtime.moveAnchor;
+    if (anchor !== null) {
+      runtime.moveAnchor = {
+        x: anchor.x + gridVector.x,
+        y: anchor.y + gridVector.y,
+      };
+    }
+  }
+}

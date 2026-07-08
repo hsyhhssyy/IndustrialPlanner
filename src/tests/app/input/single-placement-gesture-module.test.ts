@@ -323,6 +323,24 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(appHost.internalState.runtime.placementAnchor).toBeNull();
   });
 
+  it("starts touch dragging from the preview bounding box even when no entity is hit", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "single-placement",
+      placementAnchor: { x: 5, y: 5 },
+      singlePlacementDeviceId: "device-a",
+      initialPreview: true,
+      previewRect: { x: 5, y: 5, width: 4, height: 4 },
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    vi.mocked(editor.queries.findEntityAtClientPixelPoint).mockReturnValue(null);
+
+    const result = module.handle(touchDragStartEvent({ position: { x: 8, y: 8 } }), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 8, y: 8 });
+  });
+
   it("rotates from the R key and toolbar button while placing", () => {
     const keyboard = createContext({
       activeTool: "single-placement",

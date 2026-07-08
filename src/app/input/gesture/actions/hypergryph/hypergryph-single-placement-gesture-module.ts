@@ -27,6 +27,9 @@ import { runInAction } from "mobx";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
+import {
+  isPreviewBoundingBoxAtClientPoint,
+} from "./mobile-preview-bounds";
 
 // 桥接变量：触发点（UI 按钮 / 快捷键）写入，on-enter-active-tool("single-placement") 读取后立即置 null。
 // 用于在 setActiveTool 触发生命周期事件之前，将进入参数暂存在模块内部，
@@ -1309,12 +1312,10 @@ function isPreviewEntityAtClientPoint(
   editor: EditorContract,
   position: GesturePosition,
 ): boolean {
-  const entity = editor.queries.findEntityAtClientPixelPoint(position);
-
-  return (
-    entity !== null
-    && editor.state.collections[EntityCollectionType.preview].contains(entity.id)
-  );
+  return isPreviewBoundingBoxAtClientPoint({
+    editor,
+    position,
+  });
 }
 
 function isClientPointInsideViewport(

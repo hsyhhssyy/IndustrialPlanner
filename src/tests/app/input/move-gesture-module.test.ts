@@ -429,7 +429,7 @@ describe("createHypergryphMoveGestureModule", () => {
     expect([...selection]).toEqual(["selected-entity"]);
   });
 
-  it("uses preview entity hit testing for touch drag start while already moving", () => {
+  it("uses preview bounding box hit testing for touch drag start while already moving", () => {
     const { context, appHost } = createContext({
       activeTool: "move",
       moveAnchor: { x: 5, y: 5 },
@@ -457,6 +457,26 @@ describe("createHypergryphMoveGestureModule", () => {
 
     expect(previewResult).toEqual({ status: "handled" });
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 5, y: 5 });
+  });
+
+  it("starts touch moving from an empty cell inside the preview bounding box", () => {
+    const { context, appHost } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 5, y: 5 },
+      previewRect: { x: 5, y: 5, width: 4, height: 4 },
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    const result = module.handle(
+      touchDragStartEvent({
+        position: { x: 8, y: 8 },
+        pointerEntity: null,
+      }),
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 8, y: 8 });
   });
 
   it("moves the preview by incremental grid vectors and follows it with the toolbar", () => {

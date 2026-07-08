@@ -3,6 +3,9 @@ import type { GesturePosition } from "@/app/input/gesture/adapter";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
+import {
+  nudgeMobilePreviewIntoSafeViewport,
+} from "./mobile-preview-bounds";
 
 export function createHypergryphMouseViewportPanModule(): GestureMappingModule<AppHost> {
   return {
@@ -21,6 +24,10 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
           }
 
           moveViewport(editor, event.startPosition, event.position);
+          nudgeMobilePreviewIntoSafeViewport({
+            appHost: context.appHost,
+            editor,
+          });
           context.appHost.internalActions.alignCanvasFloatingToolbar();
 
           return { status: "handled" };
@@ -32,6 +39,10 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
           }
 
           moveViewport(editor, event.startPosition, event.position);
+          nudgeMobilePreviewIntoSafeViewport({
+            appHost: context.appHost,
+            editor,
+          });
           context.appHost.internalActions.alignCanvasFloatingToolbar();
 
           return { status: "handled" };
@@ -46,6 +57,10 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
             x: event.position.x - event.delta.x,
             y: event.position.y - event.delta.y,
           }, event.position);
+          nudgeMobilePreviewIntoSafeViewport({
+            appHost: context.appHost,
+            editor,
+          });
           context.appHost.internalActions.alignCanvasFloatingToolbar();
 
           return { status: "handled" };
@@ -60,6 +75,10 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
             x: event.position.x - event.delta.x,
             y: event.position.y - event.delta.y,
           }, event.position);
+          nudgeMobilePreviewIntoSafeViewport({
+            appHost: context.appHost,
+            editor,
+          });
           context.appHost.internalActions.alignCanvasFloatingToolbar();
 
           return { status: "handled" };

@@ -6,7 +6,10 @@ import {
   createHypergryphMouseViewportPanModule,
   type GestureActionContext,
 } from "@/app/input/gesture/actions";
+import type { EditorContract } from "@/domain/editor/editor-contract";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { GridRect } from "@/domain/shared/grid";
 
 describe("createHypergryphMouseViewportPanModule", () => {
   it("accepts left mouse drag in select mode", () => {
@@ -195,6 +198,40 @@ describe("createHypergryphMouseViewportPanModule", () => {
     expect(alignCanvasFloatingToolbar).not.toHaveBeenCalled();
   });
 
+  it("nudges a mobile placement preview back into the safe viewport after touch pan", () => {
+    const {
+      context,
+      moveCollectionTo,
+      previewRectRef,
+    } = createMobilePlacementContext();
+    const module = createHypergryphMouseViewportPanModule();
+
+    const result = module.handle(
+      {
+        type: "touch dragstart",
+        gestureId: "touch-pan-preview-1",
+        primaryId: 1,
+        position: { x: 136, y: 64 },
+        startPosition: { x: 120, y: 80 },
+        activeTouchCount: 1,
+        longPress: false,
+        pointerEntity: null,
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(moveCollectionTo).toHaveBeenCalledWith({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 20, y: 0 },
+      endGridPoint: { x: 3, y: 0 },
+    });
+    expect(previewRectRef.current).toEqual({ x: 3, y: 0, width: 2, height: 2 });
+    expect(context.appHost.internalState.runtime.placementAnchor).toEqual({ x: 3, y: 0 });
+  });
+
   it("only enables the module while hypergryph operation mode is on", () => {
     const module = createHypergryphMouseViewportPanModule();
 
@@ -247,6 +284,100 @@ function createContext(hypergryphOperationMode = true, activeTool: "select" | "m
     alignCanvasFloatingToolbar,
     moveViewportByClientPixelVector,
   };
+}
+
+function createMobilePlacementContext(): {
+  context: GestureActionContext<AppHost>;
+  moveCollectionTo: ReturnType<typeof vi.fn>;
+  previewRectRef: { current: GridRect };
+} {
+  const previewRectRef = {
+    current: { x: 20, y: 0, width: 2, height: 2 },
+  };
+  const moveViewportByClientPixelVector = vi.fn();
+  const moveCollectionTo = vi.fn(({ startGridPoint, endGridPoint }) => {
+    previewRectRef.current = {
+      ...previewRectRef.current,
+      x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
+      y: previewRectRef.current.y + endGridPoint.y - startGridPoint.y,
+    };
+  });
+  const editor = {
+    state: {
+      viewport: {
+        center: { x: 0, y: 0 },
+        clientRect: { left: 0, top: 0, width: 10, height: 10 },
+        gridSize: 1,
+        gridCellPixelSize: 1,
+        displayRotation: 0,
+      },
+      collections: {
+        [EntityCollectionType.selection]: createCollection([]),
+        [EntityCollectionType.marquee]: createCollection([]),
+        [EntityCollectionType.reverseMarquee]: createCollection([]),
+        [EntityCollectionType.preview]: createCollection(["preview-entity"]),
+        [EntityCollectionType.ghost]: createCollection([]),
+        [EntityCollectionType.logisticsHead]: createCollection([]),
+        [EntityCollectionType.powered]: createCollection([]),
+        [EntityCollectionType.invalidPlacement]: createCollection([]),
+      },
+    },
+    queries: {
+      findEntityCollectionGridRect: vi.fn((collectionType) =>
+        collectionType === EntityCollectionType.preview
+          ? previewRectRef.current
+          : null,
+      ),
+    },
+    actions: {
+      moveViewportByClientPixelVector,
+      moveCollectionTo,
+    },
+  } as unknown as EditorContract;
+
+  return {
+    context: {
+      workspace: {
+        editor,
+      } as unknown as WorkspaceContract,
+      appHost: {
+        state: {
+          settings: {
+            hypergryphOperationMode: true,
+          },
+          screenProfile: {
+            deviceClass: "mobile",
+          },
+        },
+        internalState: {
+          activeTool: "single-placement",
+          runtime: {
+            placementAnchor: { x: 20, y: 0 },
+          },
+        },
+        internalActions: {
+          alignCanvasFloatingToolbar: vi.fn(() => true),
+        },
+      } as unknown as AppHost,
+      keyboard: emptyKeyboardSnapshot(),
+    },
+    moveCollectionTo,
+    previewRectRef,
+  };
+}
+
+type MockCollection = string[] & {
+  contains(entityId: string): boolean;
+  replace(entityIds: readonly string[]): void;
+};
+
+function createCollection(entityIds: readonly string[]): MockCollection {
+  const collection = [...entityIds] as MockCollection;
+  collection.contains = (entityId: string) => collection.includes(entityId);
+  collection.replace = (nextEntityIds: readonly string[]) => {
+    collection.splice(0, collection.length, ...nextEntityIds);
+  };
+  return collection;
 }
 
 function emptyKeyboardSnapshot(): KeyboardSnapshot {

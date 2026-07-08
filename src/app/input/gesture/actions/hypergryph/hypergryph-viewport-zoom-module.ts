@@ -1,6 +1,9 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
+import {
+  nudgeMobilePreviewIntoSafeViewport,
+} from "./mobile-preview-bounds";
 
 const PINCH_ZOOM_STEPS_PER_DOUBLING = 4;
 const MIN_WHEEL_ZOOM_STEP = 1;
@@ -26,6 +29,10 @@ export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHo
           }
 
           editor.actions.zoom(step);
+          nudgeMobilePreviewIntoSafeViewport({
+            appHost: context.appHost,
+            editor,
+          });
           context.appHost.internalActions.alignCanvasFloatingToolbar();
           return { status: "handled" };
         }
@@ -39,6 +46,10 @@ export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHo
           }
 
           editor.actions.zoom(step);
+          nudgeMobilePreviewIntoSafeViewport({
+            appHost: context.appHost,
+            editor,
+          });
           context.appHost.internalActions.alignCanvasFloatingToolbar();
           return { status: "handled" };
         }
