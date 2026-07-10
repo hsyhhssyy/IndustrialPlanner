@@ -37,6 +37,10 @@ export function createTickSnapshot(
     routingCursors: { ...state.persistent.routingCursors },
     transportComponentDomain: { ...state.persistent.transportComponentDomain },
     diagnostics: state.transient.diagnostics.map((diagnostic) => ({ ...diagnostic })),
+    gasDiffusions: state.transient.activeGasDiffusions.map((diffusion) => ({
+      ...diffusion,
+      gridRect: { ...diffusion.gridRect },
+    })),
     warehouseStats: buildWarehouseStats(topology, state),
   };
 }

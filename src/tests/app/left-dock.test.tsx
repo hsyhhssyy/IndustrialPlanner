@@ -362,7 +362,7 @@ describe("Left dock panel switching", () => {
     expect(productionGroup?.classList.contains("is-placement-group-active")).toBe(false);
     expect(warehouseDeviceButtons.length).toBeGreaterThan(0);
     expect(warehouseGroup?.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(
-      warehouseDeviceButtons.length,
+      Math.min(warehouseDeviceButtons.length, 10),
     );
     expect(productionGroup?.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(0);
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);

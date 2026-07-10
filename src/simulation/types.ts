@@ -1,8 +1,9 @@
 import type { LinkType } from "@/domain/document/world-document";
-import type { GridEdge, GridPoint, GridRotation } from "@/domain/shared/grid";
+import type { GridEdge, GridPoint, GridRect, GridRectSize, GridRotation } from "@/domain/shared/grid";
 import type { RecipeDefinition, RecipeType } from "@/domain/registry/types/recipe-definition";
 
-export type SimulationItemDomain = "solid" | "liquid";
+export type SimulationItemDomain = "solid" | "liquid" | "gas";
+export type SimulationItemDomainFilter = SimulationItemDomain | "fluid";
 export type SimulationPortKind = "item" | "fluid";
 export type SimulationPortDirection = "input" | "output";
 export type SimulationNodeViewRole = "input-view" | "output-view";
@@ -59,6 +60,8 @@ export interface SimulationAcceptRule {
     | { readonly kind: "any" }
     | { readonly kind: "solid" }
     | { readonly kind: "liquid" }
+    | { readonly kind: "gas" }
+    | { readonly kind: "fluid" }
     | { readonly kind: "item"; readonly itemId: string }
     | { readonly kind: "none" };
   readonly exclude: readonly string[];
@@ -129,6 +132,15 @@ export interface CompiledSimulationRecipeDefinition {
   readonly tags: readonly string[];
   /** 配方运行时发电量（kW），默认 0。 */
   readonly powerOutput: number;
+  /** 配方运行/启动所需气体扩散范围。值为气体物品 ID。 */
+  readonly requiredGasDiffusion: string | null;
+  /** 配方运行期间提供的气体扩散范围。 */
+  readonly gasDiffusionOutput: CompiledSimulationGasDiffusionOutput | null;
+}
+
+export interface CompiledSimulationGasDiffusionOutput {
+  readonly gasItemId: string;
+  readonly range: number;
 }
 
 export interface CompiledSimulationDevice {
@@ -137,6 +149,7 @@ export interface CompiledSimulationDevice {
   readonly definitionId: string;
   readonly position: GridPoint | null;
   readonly rotation: GridRotation | null;
+  readonly footprint: GridRectSize | null;
   readonly tags: readonly string[];
   readonly powerStatus: SimulationPowerStatus;
   readonly powerDemand: number;
@@ -180,7 +193,7 @@ export interface CompiledSimulationSlot {
   readonly sourceStorageSlotGroupId: string | null;
   readonly sourceSlotId: string | null;
   readonly capacity: number;
-  readonly domain: SimulationItemDomain | "any";
+  readonly domain: SimulationItemDomainFilter | "any";
   readonly lock: string | null;
   readonly initialItemType: string | null;
   readonly initialCount: number;
@@ -284,6 +297,8 @@ export interface CompiledSimulationRecipePlan {
   readonly outputs: readonly CompiledSimulationRecipeItem[];
   readonly ingredientNodeIds: readonly string[];
   readonly productNodeIds: readonly string[];
+  readonly requiredGasDiffusion: string | null;
+  readonly gasDiffusionOutput: CompiledSimulationGasDiffusionOutput | null;
 }
 
 export interface CompiledSimulationRecipeItem {
@@ -368,8 +383,15 @@ export interface RuntimeTickSnapshot {
   readonly routingCursors: Record<string, number>;
   readonly transportComponentDomain: Record<string, string | null>;
   readonly diagnostics: readonly RuntimeDiagnosticSnapshot[];
+  readonly gasDiffusions: readonly RuntimeGasDiffusionSnapshot[];
   /** 仓库统计快照：配方产出/消耗 per-min 与当前库存。仿真未启动时为 null。 */
   readonly warehouseStats: WarehouseStats | null;
+}
+
+export interface RuntimeGasDiffusionSnapshot {
+  readonly sourceDeviceId: string;
+  readonly gasItemId: string;
+  readonly gridRect: GridRect;
 }
 
 /** 单种物品的仓库统计数据 */
@@ -465,6 +487,30 @@ export function compileRecipeDefinition(
     recipeType: recipe.recipeType,
     tags: [...recipe.tags].sort(),
     powerOutput: recipe.powerOutput ?? 0,
+    requiredGasDiffusion: normalizeRecipeGasItemId(recipe.requiredGasDiffusion),
+    gasDiffusionOutput: normalizeRecipeGasDiffusionOutput(recipe.gasDiffusionOutput),
+  };
+}
+
+function normalizeRecipeGasItemId(itemId: string | undefined): string | null {
+  return typeof itemId === "string" && itemId.length > 0 ? itemId : null;
+}
+
+function normalizeRecipeGasDiffusionOutput(
+  output: RecipeDefinition["gasDiffusionOutput"],
+): CompiledSimulationGasDiffusionOutput | null {
+  if (output === undefined || output === null) {
+    return null;
+  }
+  if (typeof output.gasItemId !== "string" || output.gasItemId.length === 0) {
+    return null;
+  }
+  if (!Number.isFinite(output.range) || output.range <= 0) {
+    return null;
+  }
+  return {
+    gasItemId: output.gasItemId,
+    range: output.range,
   };
 }
 

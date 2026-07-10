@@ -76,25 +76,47 @@ describe("PortOutputConfigInspector", () => {
     expect(container.textContent).toContain("无可用输出端口配置");
   });
 
-  it("filters items: solid port shows only solid items, fluid port shows only liquid items", async () => {
+  it("filters items: solid ports reject fluid items, liquid ports reject gas items", async () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_mix_pool_1");
-    const entity = createEmptyEntity("reactor-2", "item_port_mix_pool_1");
+    const definition = requireDefinition(workspace, "item_port_liquid_furnance_1");
+    const entity = createEmptyEntity("furnace-2", "item_port_liquid_furnance_1");
     const currentAppHost = buildAppHost(workspace, entity);
     appHost = currentAppHost;
     const ore = requireItem(workspace, "item_copper_ore");
     const liquid = requireItem(workspace, "item_liquid_water");
-    renderInspector(currentAppHost, definition, entity, root);
+    const gas = requireItem(workspace, "item_gas_inert");
+    renderInspector(currentAppHost, definition, entity, root, ["item_output", "fluid_output"]);
 
     const solidPickBtn = container.querySelector<HTMLButtonElement>("[data-port-group-id='item_output'] [data-slot-action='pick-item']");
     act(() => { solidPickBtn?.click(); });
     expect(currentAppHost.encyclopediaPicker.matchesItem(ore)).toBe(true);
     expect(currentAppHost.encyclopediaPicker.matchesItem(liquid)).toBe(false);
+    expect(currentAppHost.encyclopediaPicker.matchesItem(gas)).toBe(false);
     await act(async () => { currentAppHost.encyclopediaPicker.cancel(); await Promise.resolve(); });
 
-    const fluidPickBtn = container.querySelector<HTMLButtonElement>("[data-port-group-id='fluid_output_a'] [data-slot-action='pick-item']");
+    const fluidPickBtn = container.querySelector<HTMLButtonElement>("[data-port-group-id='fluid_output'] [data-slot-action='pick-item']");
     act(() => { fluidPickBtn?.click(); });
     expect(currentAppHost.encyclopediaPicker.matchesItem(liquid)).toBe(true);
+    expect(currentAppHost.encyclopediaPicker.matchesItem(ore)).toBe(false);
+    expect(currentAppHost.encyclopediaPicker.matchesItem(gas)).toBe(false);
+    await act(async () => { currentAppHost.encyclopediaPicker.cancel(); await Promise.resolve(); });
+  });
+
+  it("filters gas output ports to gas items", async () => {
+    const workspace = createWorkspace();
+    const definition = requireDefinition(workspace, "item_port_gas_storager_1");
+    const entity = createEmptyEntity("gas-tank", "item_port_gas_storager_1");
+    const currentAppHost = buildAppHost(workspace, entity);
+    appHost = currentAppHost;
+    const ore = requireItem(workspace, "item_copper_ore");
+    const liquid = requireItem(workspace, "item_liquid_water");
+    const gas = requireItem(workspace, "item_gas_inert");
+    renderInspector(currentAppHost, definition, entity, root, ["gas_output"]);
+
+    const gasPickBtn = container.querySelector<HTMLButtonElement>("[data-port-group-id='gas_output'] [data-slot-action='pick-item']");
+    act(() => { gasPickBtn?.click(); });
+    expect(currentAppHost.encyclopediaPicker.matchesItem(gas)).toBe(true);
+    expect(currentAppHost.encyclopediaPicker.matchesItem(liquid)).toBe(false);
     expect(currentAppHost.encyclopediaPicker.matchesItem(ore)).toBe(false);
     await act(async () => { currentAppHost.encyclopediaPicker.cancel(); await Promise.resolve(); });
   });
@@ -317,12 +339,18 @@ function buildAppHostWithEditor(
   } as unknown as AppHost;
 }
 
-function renderInspector(appHost: AppHost, definition: EntityDefinition, entity: WorldEntity, root: Root) {
+function renderInspector(
+  appHost: AppHost,
+  definition: EntityDefinition,
+  entity: WorldEntity,
+  root: Root,
+  portGroupIds: string[] = ["item_output", "fluid_output_a", "fluid_output_b"],
+) {
   act(() => {
     root.render(
       <PortOutputConfigInspector
         appHost={appHost}
-        declaration={{ type: INSPECTOR_TYPE.portOutputConfig, portGroupIds: ["item_output", "fluid_output_a", "fluid_output_b"] }}
+        declaration={{ type: INSPECTOR_TYPE.portOutputConfig, portGroupIds }}
         definition={definition}
         entity={entity}
         translate={appHost.actions.translate}

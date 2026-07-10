@@ -256,6 +256,8 @@ describe("REQ-089: power generation mode caching bug", () => {
           recipeType: "immediate-consume",
           tags: [],
           powerOutput: 0,
+          requiredGasDiffusion: null,
+          gasDiffusionOutput: null,
         },
       },
       devices: {
@@ -265,6 +267,7 @@ describe("REQ-089: power generation mode caching bug", () => {
           definitionId: "test_machine",
           position: null,
           rotation: null,
+          footprint: null,
           tags: [],
           powerStatus: "in-power-range",
           powerDemand: 40_000,

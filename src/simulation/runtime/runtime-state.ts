@@ -1,6 +1,7 @@
 import type {
   CompiledSimulationDevice,
   CompiledSimulationRecipePlan,
+  RuntimeGasDiffusionSnapshot,
   CompiledSimulationSlot,
   CompiledSimulationTopology,
   SimulationRecipeType,
@@ -120,6 +121,8 @@ export interface SimulationTickTransientState {
   blockedInputNodeIds: Set<string>;
   /** 当前 tick 的槽位预留量聚合索引；首次查询时构建，后续随配方生命周期增量维护。 */
   reservedAmountByStorageSlotId: Record<string, number> | null;
+  /** 当前 tick 判定用气体扩散范围。 */
+  activeGasDiffusions: readonly RuntimeGasDiffusionSnapshot[];
   /** Perf 埋点：当前 tick 的热点函数调用计数累积器。仅在 perfEnabled 时非空。 */
   _perf?: SimulationRuntimePerf;
   /** 当前 tick 的配方统计增量（产出/消耗），由各阶段累积，tick 结束时滚入滑动窗口后清空。 */
@@ -364,6 +367,7 @@ export function createEmptyTransientState(): SimulationTickTransientState {
     diagnostics: [],
     blockedInputNodeIds: new Set(),
     reservedAmountByStorageSlotId: null,
+    activeGasDiffusions: [],
     recipeStatsDelta: createRecipeStatsDelta(),
   };
 }
@@ -473,6 +477,10 @@ function cloneRecipePlan(plan: CompiledSimulationRecipePlan): CompiledSimulation
     outputs: plan.outputs.map((output) => ({ ...output })),
     ingredientNodeIds: [...plan.ingredientNodeIds],
     productNodeIds: [...plan.productNodeIds],
+    requiredGasDiffusion: plan.requiredGasDiffusion,
+    gasDiffusionOutput: plan.gasDiffusionOutput === null
+      ? null
+      : { ...plan.gasDiffusionOutput },
   };
 }
 
@@ -497,6 +505,10 @@ function cloneTransientState(transient: SimulationTickTransientState): Simulatio
     reservedAmountByStorageSlotId: transient.reservedAmountByStorageSlotId === null
       ? null
       : { ...transient.reservedAmountByStorageSlotId },
+    activeGasDiffusions: transient.activeGasDiffusions.map((diffusion) => ({
+      ...diffusion,
+      gridRect: { ...diffusion.gridRect },
+    })),
     _perf: transient._perf === undefined ? undefined : { ...transient._perf },
     recipeStatsDelta: {
       produced: { ...transient.recipeStatsDelta.produced },

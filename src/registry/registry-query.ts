@@ -1,11 +1,17 @@
 import type { RegistryQuery } from "@/domain/registry/registry-query"
 import type { LogisticsKind } from "@/domain/shared/logistics"
+import type { ItemDomain } from "@/domain/registry/types/entity-definition"
 import { ITEM_DEFINITIONS } from "./item-definition"
 
-const LIQUID_ITEM_IDS = new Set(
-    ITEM_DEFINITIONS
-        .filter((item) => item.tags.includes("liquid"))
-        .map((item) => item.id),
+const ITEM_DOMAIN_BY_ID = new Map<string, ItemDomain>(
+    ITEM_DEFINITIONS.map((item) => [
+        item.id,
+        item.tags.includes("gas")
+            ? "gas"
+            : item.tags.includes("liquid")
+                ? "liquid"
+                : "solid",
+    ]),
 )
 
 /**
@@ -65,7 +71,10 @@ export const createRegistryQuery = (): RegistryQuery => {
             return PROTOCOL_CORE_DEVICE_IDS.has(definitionId)
         },
         isItemLiquid(itemId) {
-            return LIQUID_ITEM_IDS.has(itemId)
+            return ITEM_DOMAIN_BY_ID.get(itemId) === "liquid"
+        },
+        resolveItemDomain(itemId) {
+            return ITEM_DOMAIN_BY_ID.get(itemId) ?? "solid"
         },
         buildWarehouseSlotLinkForEntity({
             entityId,

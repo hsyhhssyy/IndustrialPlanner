@@ -26,7 +26,7 @@
 
 import type {
   EntityDefinition,
-  ItemFilterDefinition,
+  ItemFilterType,
   EntityPlacementDefaults,
 } from "@/domain/registry/types/entity-definition";
 import {
@@ -61,7 +61,8 @@ type StorageSlotOptionsInput = Partial<Pick<
 type PortEdgeInput = "N" | "S" | "W" | "E";
 
 /** 槽位物品过滤类型：solid（固体）/ liquid（液体）/ any（任意） */
-type FilterType = NonNullable<ItemFilterDefinition["itemFilterType"]>;
+/** AI-CORRECTION 2026-07-10: 过滤类型新增 gas 与 fluid；fluid 表示液体或气体，仅管道基础设施默认使用。 */
+type FilterType = ItemFilterType;
 
 /** createPort() 的输入类型 — 必填字段 + 可选覆盖字段 */
 type PortDefinitionInput = Pick<
@@ -166,19 +167,60 @@ const PRODUCER_TAG = "Producer";
  * AI-CORRECTION 2026-06-09: links 字段已从 EntityDefinition 移除，所有槽位链接统一存于 document.slotLinks。
  */
 function createEntityDefinition(definition: EntityDefinitionInput): EntityDefinition {
-  const declaredInspectors = [...(definition.inspectors ?? [])];
-  const recipeMachineInspectors = createRecipeMachineIngredientSlotInspectors(definition);
+  const normalizedDefinition = normalizePipeFamilyFluidDefinition(definition);
+  const declaredInspectors = [...(normalizedDefinition.inspectors ?? [])];
+  const recipeMachineInspectors = createRecipeMachineIngredientSlotInspectors(normalizedDefinition);
 
   // 所有设备默认追加问题面板，用于展示放置/电力/堵塞等问题
   declaredInspectors.unshift({ type: INSPECTOR_TYPE.problem });
 
   return {
-    ...definition,
-    displayOrder: definition.displayOrder ?? 100,
-    recipeChannels: [...(definition.recipeChannels ?? [])],
-    placementBehaviors: normalizePlacementBehaviors(definition.placementBehaviors ?? []),
+    ...normalizedDefinition,
+    displayOrder: normalizedDefinition.displayOrder ?? 100,
+    recipeChannels: [...(normalizedDefinition.recipeChannels ?? [])],
+    placementBehaviors: normalizePlacementBehaviors(normalizedDefinition.placementBehaviors ?? []),
     inspectors: appendMissingInspectors(declaredInspectors, recipeMachineInspectors),
   };
+}
+
+function normalizePipeFamilyFluidDefinition(definition: EntityDefinitionInput): EntityDefinitionInput {
+  if (!definition.tags.includes("PipeFamily")) {
+    return definition;
+  }
+
+  return {
+    ...definition,
+    portGroups: definition.portGroups.map((portGroup) =>
+      portGroup.kind === "fluid"
+        ? {
+            ...portGroup,
+            ports: portGroup.ports.map((port) => ({
+              ...port,
+              acceptRule: normalizePipeFamilyAcceptRule(port.acceptRule),
+            })),
+          }
+        : portGroup,
+    ),
+    storageSlotGroups: definition.storageSlotGroups.map((storageSlotGroup) =>
+      storageSlotGroup.kind === "fluid"
+        ? {
+            ...storageSlotGroup,
+            slots: storageSlotGroup.slots.map((slot) => ({
+              ...slot,
+              itemFilterType: slot.itemFilterType === "liquid" ? "fluid" : slot.itemFilterType,
+            })),
+          }
+        : storageSlotGroup,
+    ),
+  };
+}
+
+function normalizePipeFamilyAcceptRule(
+  acceptRule: PortDefinition["acceptRule"],
+): PortDefinition["acceptRule"] {
+  return acceptRule.base.kind === "liquid" && acceptRule.exclude.length === 0
+    ? { base: { kind: "fluid" }, exclude: [] }
+    : acceptRule;
 }
 
 function normalizePlacementBehaviors(
@@ -360,6 +402,7 @@ function createPortGroup(
  * - itemFilterType：solid/liquid/any — 决定可存放的物品域
  * - lock：锁定物品 ID，null=不锁定。用户可通过 entity.config["slots[N].lock"] 覆盖
  * - ignoreStock：忽略仓库库存检查，取货口/出货口常用
+ * AI-CORRECTION 2026-07-10: itemFilterType 现在还支持 gas 与 fluid；fluid 表示 liquid/gas。
  * AI-CORRECTION 2026-06-06: submitMode 不再作为可配置运行时语义；槽位仅保留 domain 默认字段，入仓改用 WarehouseSink 或配方。
  * AI-CORRECTION 2026-06-06: domain 默认 submitMode 字段也已删除；createSlot 不再生成旧提交字段。
  */
@@ -533,6 +576,7 @@ function createSimpleProductionDevice(
  * 从端口 kind 推导默认 acceptRule。
  * item → { base: { kind: "solid" }, exclude: [] }
  * fluid → { base: { kind: "liquid" }, exclude: [] }
+ * AI-CORRECTION 2026-07-10: fluid 端口默认仍是 liquid；仅 PipeFamily 定义会归一化为 fluid 以允许液体/气体共用管道。
  *
  * 对应《仿真运行原理》§3.1 表格中 Port 的 acceptRule 默认值。
  */
@@ -1464,6 +1508,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   //   - reserved-item 搬运配方
   // 订正（2026-05-04）：管道类搬运配方时间为 0.5 秒。
   //   - 仅物品域为 liquid
+  // AI-CORRECTION 2026-07-10: 管道默认接受 fluid（liquid/gas），普通设备 fluid 槽位仍默认 liquid。
   // 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks 字段，本注册表不再内联这些运行时配置。
   // =========================================================================
 
@@ -2946,6 +2991,56 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       },
     ],
   }),
+  createEntityDefinition({
+    id: "item_port_gas_storager_1",
+    nameKey: "registry.entity.item_port_gas_storager_1.name",
+    spriteId: "item_port_liquid_storager_1",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "warehouse",
+    displayOrder: 411,
+    tags: ["武陵", "OuterRingAllowed"],
+    requiresPower: false,
+    powerDemand: 0,
+    portGroups: [
+      createPortGroup(
+        "gas_input",
+        "fluid",
+        "input",
+        [
+          createPort("in_w_1", 0, 1, "W", {
+            acceptRule: { base: { kind: "gas" }, exclude: [] },
+          }),
+        ],
+      ),
+      createPortGroup(
+        "gas_output",
+        "fluid",
+        "output",
+        [
+          createPort("out_e_1", 2, 1, "E", {
+            acceptRule: { base: { kind: "gas" }, exclude: [] },
+          }),
+        ],
+      ),
+    ],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "gas_storage",
+        "fluid",
+        createSlots("slot", [500], "gas"),
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_gas_input", "gas_input", "gas_storage"),
+      createBinding("bind_gas_output", "gas_output", "gas_storage"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.slotConfig,
+        slotGroupIds: ["gas_storage"],
+      },
+    ],
+  }),
   createEmptyEntityDefinition({
     id: "item_port_power_diffuser_1",
     nameKey: "registry.entity.item_port_power_diffuser_1.name",
@@ -2955,6 +3050,52 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     displayOrder: 302,
     powerRange: 12,
     tags: [],
+  }),
+  createEntityDefinition({
+    id: "item_port_gas_diffuser_1",
+    nameKey: "registry.entity.item_port_gas_diffuser_1.name",
+    spriteId: "item_port_power_diffuser_1",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "resourcePower",
+    displayOrder: 304,
+    tags: [PRODUCER_TAG],
+    requiresPower: true,
+    powerDemand: 5,
+    portGroups: [
+      createPortGroup(
+        "gas_input",
+        "fluid",
+        "input",
+        [
+          createPort("in_s_1", 1, 2, "S", {
+            acceptRule: { base: { kind: "gas" }, exclude: [] },
+          }),
+        ],
+      ),
+    ],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "gas_input_buffer",
+        "fluid",
+        createSlots("gas_input_slot", [500], "gas"),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["gas_input_buffer"], []),
+    ],
+    portStorageBindings: [
+      createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
+      {
+        type: INSPECTOR_TYPE.slotConfig,
+        slotGroupIds: ["gas_input_buffer"],
+      },
+    ],
   }),
   createEntityDefinition({
     id: "item_log_admission",

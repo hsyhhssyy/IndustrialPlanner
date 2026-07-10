@@ -3,6 +3,9 @@ import type { SlotLinkDefinition } from "../../shared/slot-link";
 import type { EntityInspectorDeclaration } from "./entity-inspector";
 import type { EntityPlacementBehaviorDeclaration } from "./entity-placement-behavior";
 
+export type ItemDomain = "solid" | "liquid" | "gas";
+export type ItemFilterType = ItemDomain | "fluid" | "any";
+
 // ---------------------------------------------------------------------------
 // UI 分组 — 决定设备在放置面板中属于哪个折叠组
 // ---------------------------------------------------------------------------
@@ -175,7 +178,8 @@ export interface ItemFilterDefinition {
   /** 白名单/黑名单物品 ID 列表 */
   itemFilterIds?: string[];
   /** 按域过滤：solid（固体）、liquid（液体）、any（任意） */
-  itemFilterType?: "solid" | "liquid" | "any";
+  /** AI-CORRECTION 2026-07-10: 新增 gas（气体）与 fluid（液体或气体），any 扩展为 solid/liquid/gas。 */
+  itemFilterType?: ItemFilterType;
   /** 按标签过滤 */
   itemFilterTag?: string[];
 }
@@ -368,6 +372,8 @@ export interface EntityAcceptRuleDefinition {
     | { readonly kind: "any" }
     | { readonly kind: "solid" }
     | { readonly kind: "liquid" }
+    | { readonly kind: "gas" }
+    | { readonly kind: "fluid" }
     | { readonly kind: "item"; readonly itemId: string }
     | { readonly kind: "none" };
   readonly exclude: readonly string[];

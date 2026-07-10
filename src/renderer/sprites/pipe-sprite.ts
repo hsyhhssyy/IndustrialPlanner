@@ -11,6 +11,8 @@ import type {
 } from "./render-sprite"
 
 const DEGREE_TO_RADIAN = Math.PI / 180
+const GAS_COLOR_TAG_PREFIX = "gas_color:"
+const FLUID_COLOR_TAG_PREFIX = "fluid_color:"
 const LIQUID_COLOR_TAG_PREFIX = "liquid_color:"
 const DEFAULT_PIPE_BEAD_COLOR = 0xffffff
 const LIQUID_TEXTURE_KEY_PREFIX = "texture-"
@@ -19,6 +21,7 @@ const LIQUID_TEXTURE_KEY_PREFIX = "texture-"
  * 首润模式开关：true 时管道只在液体第 1 次流过才开始显示填充贴图，
  * 之后只要连通段未排空就保持显示；false 时退回到旧行为（连通段有液体即全量渲染）。
  * 设置为 false 可消除每帧额外的 isPipeDeviceSlotOccupied 查询开销。
+ * AI-CORRECTION 2026-07-10: 气体加入后该逻辑适用于 fluid（液体或气体）；气体复用管道内腔填充贴图。
  */
 const PIPE_FIRST_WET_ENABLED = true
 
@@ -29,7 +32,7 @@ export class PipeSprite extends DedicatedLogisticSprite {
   private beadColor = DEFAULT_PIPE_BEAD_COLOR
   private liquidTexture: Texture | null = null
   private liquidTextureLoaded = false
-  /** 首润模式：记录已经在该连通段会话中被液体润湿过的设备 ID。连通段排空时清空。 */
+  /** 首润模式：记录已经在该连通段会话中被 fluid 润湿过的设备 ID。连通段排空时清空。 */
   private static wetDevices = new Set<string>()
 
   public constructor(
@@ -126,7 +129,7 @@ export class PipeSprite extends DedicatedLogisticSprite {
 
     if (fluidItemId !== this.lastFluidItemId) {
       this.lastFluidItemId = fluidItemId
-      this.beadColor = resolveLiquidColor(fluidItemId, context.workspace.registry)
+      this.beadColor = resolveFluidColor(fluidItemId, context.workspace.registry)
     }
 
     this.positionBead(layout)
@@ -149,18 +152,27 @@ export class PipeSprite extends DedicatedLogisticSprite {
   }
 }
 
-function resolveLiquidColor(
+function resolveFluidColor(
   itemId: string,
   registry: RegistryContract,
 ): number {
   const itemDefinition = registry.itemDefinitions.find((item) => item.id === itemId)
-  const colorTag = itemDefinition?.tags.find((tag) => tag.startsWith(LIQUID_COLOR_TAG_PREFIX))
+  const colorTag = itemDefinition?.tags.find((tag) =>
+    tag.startsWith(GAS_COLOR_TAG_PREFIX)
+    || tag.startsWith(FLUID_COLOR_TAG_PREFIX)
+    || tag.startsWith(LIQUID_COLOR_TAG_PREFIX)
+  )
   if (colorTag === undefined) {
     return DEFAULT_PIPE_BEAD_COLOR
   }
 
+  const prefix = resolveFluidColorTagPrefix(colorTag)
+  if (prefix === null) {
+    return DEFAULT_PIPE_BEAD_COLOR
+  }
+
   const normalizedHex = colorTag
-    .slice(LIQUID_COLOR_TAG_PREFIX.length)
+    .slice(prefix.length)
     .trim()
     .replace(/^#/, "")
 
@@ -169,4 +181,17 @@ function resolveLiquidColor(
   }
 
   return Number.parseInt(normalizedHex, 16)
+}
+
+function resolveFluidColorTagPrefix(tag: string): string | null {
+  if (tag.startsWith(GAS_COLOR_TAG_PREFIX)) {
+    return GAS_COLOR_TAG_PREFIX
+  }
+  if (tag.startsWith(FLUID_COLOR_TAG_PREFIX)) {
+    return FLUID_COLOR_TAG_PREFIX
+  }
+  if (tag.startsWith(LIQUID_COLOR_TAG_PREFIX)) {
+    return LIQUID_COLOR_TAG_PREFIX
+  }
+  return null
 }

@@ -36,6 +36,7 @@ import {
   maintainTransportComponentDomains,
   resolveStorageSlotId,
 } from "./runtime/runtime-slot-access";
+import { computeActiveGasDiffusions } from "./runtime/gas-diffusion";
 // AI-REMOVED 2026-06-06:
 // Reason: submitMode 全局扫描机制已删除；入仓必须走 WarehouseSink 或 r_warehouse_submit 配方。
 // Trigger: 用户要求 submit mode 机制彻底删除，避免旧蓝图 submitMode 配置影响所有 slot。
@@ -716,6 +717,7 @@ export class SimulationWorkerRuntime {
       const currentPowerGeneration = computeCurrentPowerGeneration(this.topology, this.runtimeState);
       const isPowerOutage = this.resolveTickPowerOutage(currentPowerGeneration);
       this.runtimeState.transient = createEmptyTransientState();
+      this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(this.topology, this.runtimeState);
       const t0 = this.perfEnabled ? performance.now() : 0;
       const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutage, currentPowerGeneration);
       if (this.perfEnabled) {
@@ -768,6 +770,10 @@ export class SimulationWorkerRuntime {
       }
 
       this.runtimeState.transient.reservedAmountByStorageSlotId = null;
+      this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(
+        this.topology,
+        this.runtimeState,
+      );
       if (this.perfEnabled) {
         this.runtimeState.transient._perf = createRuntimePerfCounters();
       }
@@ -889,6 +895,7 @@ export class SimulationWorkerRuntime {
 
     const currentPowerGenForSnapshot = computeCurrentPowerGeneration(this.topology, this.runtimeState);
     const isPowerOutageForSnapshot = this.resolveTickPowerOutage(currentPowerGenForSnapshot);
+    this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(this.topology, this.runtimeState);
 
     const t1 = this.perfEnabled ? performance.now() : 0;
     const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutageForSnapshot, currentPowerGenForSnapshot);
@@ -1162,7 +1169,14 @@ function canPatchSlotHoldItem(
     return false;
   }
 
-  return slot.domain === "any" || getItemDomain(topology, itemType) === slot.domain;
+  const itemDomain = getItemDomain(topology, itemType);
+  if (slot.domain === "any") {
+    return true;
+  }
+  if (slot.domain === "fluid") {
+    return itemDomain === "liquid" || itemDomain === "gas";
+  }
+  return itemDomain === slot.domain;
 }
 
 function resetRuntimeRecipesAffectedByPatch(

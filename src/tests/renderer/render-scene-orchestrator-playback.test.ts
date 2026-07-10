@@ -151,6 +151,8 @@ vi.mock("@/renderer/scene/decorations/LogisticsPlacementCanvasDecoration", () =>
 
 vi.mock("@/renderer/scene/decorations/MarqueeRectDecoration", () => ({
   createMarqueeRectDecoration: () => orchestratorTestState.createDecoration(),
+  resolveMarqueeGridRectLayout: () => null,
+  resolveWorldAuxiliaryStrokeWidth: () => 1,
 }))
 
 vi.mock("@/renderer/scene/decorations/MarqueeCanvasDecoration", () => ({
@@ -279,7 +281,9 @@ describe("createRenderSceneOrchestrator", () => {
           state: "start",
           simulationSpeed: 1,
           topology: {} as never,
-          queries: {} as never,
+          queries: {
+            getActiveGasDiffusionRanges: () => [],
+          } as never,
           actions: {
             start: vi.fn(async () => ({
               status: "started" as const,

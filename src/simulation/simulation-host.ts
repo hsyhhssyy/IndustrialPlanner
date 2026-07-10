@@ -198,6 +198,12 @@ export function createSimulationHost(
 
         return false;
       },
+      getActiveGasDiffusionRanges: () =>
+        (internalState.currentSnapshot?.gasDiffusions ?? []).map((diffusion) => ({
+          sourceDeviceId: diffusion.sourceDeviceId,
+          gasItemId: diffusion.gasItemId,
+          gridRect: { ...diffusion.gridRect },
+        })),
       getWarehouseStats: (): WarehouseStatsReadModel | null => {
         const snapshot = internalState.currentSnapshot;
         if (snapshot === null || snapshot.warehouseStats === null) {

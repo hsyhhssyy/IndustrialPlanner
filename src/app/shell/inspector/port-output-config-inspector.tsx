@@ -22,6 +22,7 @@ import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-colla
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { matchesItemAcceptRule } from "./item-domain";
 
 /*
   AI-REMOVED 2026-06-03:
@@ -159,11 +160,14 @@ export function PortOutputConfigInspector({
     setPendingGroupId(row.portGroup.id);
 
     try {
-      const isLiquid = row.portGroup.kind === "fluid";
       const itemId = await appHost.encyclopediaPicker.pickItem({
         title: translate("encyclopediaPicker.title.item"),
         filterItem: (item: ItemDefinition) =>
-          appHost.workspace.registry.queries.isItemLiquid(item.id) === isLiquid,
+          matchesOutputPortGroupAcceptRule(
+            item,
+            row,
+            appHost.workspace.registry.queries.resolveItemDomain,
+          ),
       });
 
       if (itemId === null) {
@@ -402,4 +406,17 @@ export function PortOutputConfigInspector({
       </div>
     </InspectorCollapsiblePanel>
   );
+}
+
+function matchesOutputPortGroupAcceptRule(
+  item: ItemDefinition,
+  row: OutputGroupRow,
+  resolveItemDomain: Parameters<typeof matchesItemAcceptRule>[2],
+): boolean {
+  const firstPort = row.portGroup.ports[0];
+  if (firstPort === undefined) {
+    return true;
+  }
+
+  return matchesItemAcceptRule(item, firstPort.acceptRule, resolveItemDomain);
 }

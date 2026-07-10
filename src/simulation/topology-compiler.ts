@@ -37,6 +37,7 @@ import type {
   SimulationAdmissionRule,
   SimulationCompileDiagnostic,
   SimulationItemDomain,
+  SimulationItemDomainFilter,
   SimulationNodeViewRole,
   SimulationPowerStatus,
   SimulationPortDirection,
@@ -394,7 +395,7 @@ function compileItemCatalog(
 
     catalog[item.id] = {
       id: item.id,
-      domain: registry.queries.isItemLiquid(item.id) ? "liquid" : "solid",
+      domain: registry.queries.resolveItemDomain(item.id),
       tags: [...item.tags].sort(),
     };
   }
@@ -474,6 +475,7 @@ function compileWarehouseDevice(
       definitionId: "warehouse",
       position: null,
       rotation: null,
+      footprint: null,
       tags: ["warehouse"],
       powerStatus: "no-power-needed",
       powerDemand: 0,
@@ -577,6 +579,7 @@ function compileEntityDevice(options: {
     definitionId: definition.id,
     position: { ...options.entity.position },
     rotation: options.entity.rotation,
+    footprint: { ...definition.footprint },
     tags: [...definition.tags].sort(),
     powerStatus,
     powerDemand,
@@ -864,7 +867,7 @@ function addSyntheticNode(options: {
   readonly nodes: CompiledSimulationNode[];
   readonly slots: CompiledSimulationSlot[];
   readonly nodeBindingsByStorageGroupId: Map<string, StorageGroupNodeBinding>;
-  readonly domain: SimulationItemDomain | "any";
+  readonly domain: SimulationItemDomainFilter | "any";
   readonly bindDirection: SimulationPortDirection;
 }): void {
   const nodeId = `${options.deviceId}/node:${options.sourceStorageSlotGroupId}`;
@@ -1031,7 +1034,7 @@ function compilePorts(options: {
         const acceptRule = portAcceptRule.base.kind === "none"
           ? portAcceptRule
           : (intersectAcceptRules(
-              acceptRuleFromPortKind(portGroup.kind),
+              acceptRuleConstraintFromPortKind(portGroup.kind),
               portAcceptRule,
               options.itemCatalog,
             ) ?? fallbackAcceptRule);
@@ -1359,8 +1362,13 @@ function resolveStorageGroupPortDirections(
 function resolveSlotDomain(
   storageGroup: StorageSlotGroupDefinition,
   slot: StorageSlotDefinition,
-): SimulationItemDomain | "any" {
-  if (slot.itemFilterType === "solid" || slot.itemFilterType === "liquid") {
+): SimulationItemDomainFilter | "any" {
+  if (
+    slot.itemFilterType === "solid"
+    || slot.itemFilterType === "liquid"
+    || slot.itemFilterType === "gas"
+    || slot.itemFilterType === "fluid"
+  ) {
     return slot.itemFilterType;
   }
   // AI-CORRECTION 2026-05-30: itemFilterType="any" 必须直接返回 "any"，
@@ -1382,7 +1390,7 @@ function resolveSlotDomain(
 function inferStorageDomainFromPortGroups(
   portGroups: readonly PortGroupDefinition[],
   direction: SimulationPortDirection,
-): SimulationItemDomain | "any" {
+): SimulationItemDomainFilter | "any" {
   const matchingKinds = new Set(portGroups
     .filter((portGroup) =>
       portGroup.direction === direction || portGroup.direction === "bidirectional",
@@ -1391,7 +1399,29 @@ function inferStorageDomainFromPortGroups(
   if (matchingKinds.size !== 1) {
     return "any";
   }
-  return matchingKinds.has("fluid") ? "liquid" : "solid";
+  if (!matchingKinds.has("fluid")) {
+    return "solid";
+  }
+
+  const fluidRuleKinds = portGroups
+    .filter((portGroup) =>
+      portGroup.direction === direction || portGroup.direction === "bidirectional",
+    )
+    .filter((portGroup) => portGroup.kind === "fluid")
+    .flatMap((portGroup) => portGroup.ports.map((port) => port.acceptRule.base.kind));
+
+  if (fluidRuleKinds.includes("fluid")) {
+    return "fluid";
+  }
+  const hasLiquid = fluidRuleKinds.includes("liquid");
+  const hasGas = fluidRuleKinds.includes("gas");
+  if (hasLiquid && hasGas) {
+    return "fluid";
+  }
+  if (hasGas) {
+    return "gas";
+  }
+  return "liquid";
 }
 
 function resolvePortGroupDirections(
@@ -1406,6 +1436,13 @@ function resolvePortGroupDirections(
 function acceptRuleFromPortKind(kind: SimulationPortKind): SimulationAcceptRule {
   return {
     base: kind === "fluid" ? { kind: "liquid" } : { kind: "solid" },
+    exclude: [],
+  };
+}
+
+function acceptRuleConstraintFromPortKind(kind: SimulationPortKind): SimulationAcceptRule {
+  return {
+    base: kind === "fluid" ? { kind: "fluid" } : { kind: "solid" },
     exclude: [],
   };
 }
@@ -1493,6 +1530,17 @@ function intersectAcceptRules(
     };
   }
 
+  if (
+    sharedDomains.length === 2
+    && sharedDomains.includes("liquid")
+    && sharedDomains.includes("gas")
+  ) {
+    return {
+      base: { kind: "fluid" },
+      exclude,
+    };
+  }
+
   return {
     base: { kind: "any" },
     exclude,
@@ -1508,11 +1556,15 @@ function resolveAcceptRuleCandidateDomains(
 } {
   switch (rule.base.kind) {
     case "any":
-      return { domains: ["solid", "liquid"], itemId: null };
+      return { domains: ["solid", "liquid", "gas"], itemId: null };
     case "solid":
       return { domains: ["solid"], itemId: null };
     case "liquid":
       return { domains: ["liquid"], itemId: null };
+    case "gas":
+      return { domains: ["gas"], itemId: null };
+    case "fluid":
+      return { domains: ["liquid", "gas"], itemId: null };
     case "item": {
       const item = itemCatalog[rule.base.itemId];
       if (item === undefined) {

@@ -213,7 +213,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "Digit4", key: "4" }), context);
+    const result = module.handle(keyDownEvent({ code: "Digit0", key: "0" }), context);
 
     expect(result).toEqual({ status: "ignored" });
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();

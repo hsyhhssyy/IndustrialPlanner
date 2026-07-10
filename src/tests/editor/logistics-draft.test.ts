@@ -219,6 +219,53 @@ describe("物流绘制模式", () => {
     )).toHaveLength(4);
   });
 
+  it("creates a pipe logistics draft from a gas output port", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("gas-source", "item_port_gas_storager_1", 0, 0),
+    ]));
+
+    const startResult = editorHost.actions.createLogisticsDraftStart({
+      kind: "pipe",
+      source: {
+        type: "device",
+        entityId: "gas-source",
+        pointerGridPoint: { x: 3, y: 1 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 5, y: 1 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+    const draft = editorHost.queries.resolveLogisticsDraftState();
+
+    expect(startResult).toMatchObject({
+      status: "created",
+      sourceEntityId: "gas-source",
+    });
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+    });
+    expect(draft?.source).toMatchObject({
+      type: "device-port",
+      entityId: "gas-source",
+      portGroupId: "gas_output",
+      portId: "out_e_1",
+    });
+    expect(draft?.cells.map((cell) => cell.shape)).toEqual([
+      "straight",
+      "straight",
+      "straight",
+    ]);
+  });
+
   it("reuses preview draft ids for unchanged logistics cells across updates", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

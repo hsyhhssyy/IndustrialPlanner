@@ -103,7 +103,8 @@ export function resolveOutputGroupRows(
       }
     }
 
-    const kindLabel = portGroup.kind === "fluid" ? "液体输出" : "固体输出";
+    // AI-CORRECTION 2026-07-10: fluid 输出端口不是都可承载气体；标签按端口 acceptRule 区分液体/气体/流体。
+    const kindLabel = resolveOutputKindLabel(portGroup);
 
     rows.push({
       portGroup,
@@ -141,4 +142,19 @@ export function resolveOutputGroupRows(
 */
 export function resolvePortTone(portGroup: PortGroupDefinition): "item" | "fluid" {
   return portGroup.kind === "fluid" ? "fluid" : "item";
+}
+
+function resolveOutputKindLabel(portGroup: PortGroupDefinition): string {
+  if (portGroup.kind !== "fluid") {
+    return "固体输出";
+  }
+
+  const firstPortRuleKind = portGroup.ports[0]?.acceptRule.base.kind ?? "liquid";
+  if (firstPortRuleKind === "gas") {
+    return "气体输出";
+  }
+  if (firstPortRuleKind === "fluid") {
+    return "流体输出";
+  }
+  return "液体输出";
 }

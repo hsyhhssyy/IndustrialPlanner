@@ -48,6 +48,7 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
     item_port_water_pump_1: 301,
     item_port_power_diffuser_1: 302,
     item_port_power_sta_1: 303,
+    item_port_gas_diffuser_1: 304,
 
     // 400 — warehouse
     item_port_storager_1: 401,
@@ -60,6 +61,7 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
     item_port_udpipe_unloader_1: 408,
     item_port_udpipe_loader_2: 409,
     item_port_udpipe_unloader_2: 410,
+    item_port_gas_storager_1: 411,
 
     // 500 — basicProduction
     item_port_furnance_1: 501,

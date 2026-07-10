@@ -58,6 +58,17 @@ export interface SimulationDeviceRuntimeStatusReadModel {
   readonly powerStatus: "no-power-needed" | "in-power-range" | "out-of-power-range" | null;
 }
 
+export interface SimulationGasDiffusionRangeReadModel {
+  readonly sourceDeviceId: string;
+  readonly gasItemId: string;
+  readonly gridRect: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  };
+}
+
 export interface SimulationAdmissionCounterStatusReadModel {
   readonly portGroupId: string;
   readonly portId: string;

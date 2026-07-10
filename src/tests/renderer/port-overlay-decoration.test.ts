@@ -177,6 +177,31 @@ describe("PortOverlayDecoration 端口语义", () => {
     )).toBe(false);
   });
 
+  it("管道铺设模式同时展示液体端口和气体端口", () => {
+    const liquid = createEntity("liquid", "item_port_liquid_storager_1", 5, 5, 0);
+    const gas = createEntity("gas", "item_port_gas_storager_1", 12, 5, 0);
+
+    const entries = resolveLogisticsPortOverlayEntries({
+      entities: [liquid, gas],
+      entityDefinitionMap,
+      kind: "pipe",
+      direction: "output",
+    });
+
+    expect(entries.some((entry) =>
+      entry.entityId === "liquid" && entry.portGroupId === "fluid_output" && entry.state === "chevron"
+    )).toBe(true);
+    expect(entries.some((entry) =>
+      entry.entityId === "liquid" && entry.portGroupId === "fluid_input" && entry.state === "cross"
+    )).toBe(true);
+    expect(entries.some((entry) =>
+      entry.entityId === "gas" && entry.portGroupId === "gas_output" && entry.state === "chevron"
+    )).toBe(true);
+    expect(entries.some((entry) =>
+      entry.entityId === "gas" && entry.portGroupId === "gas_input" && entry.state === "cross"
+    )).toBe(true);
+  });
+
   it("单设备 selection 和 preview 语义下展示全部端口箭头", () => {
     const device = createEntity("device", "item_port_storager_1", 5, 5, 0);
 

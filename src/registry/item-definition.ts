@@ -920,6 +920,20 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     displayOrder: 10000,
   },
   {
+    id: "item_gas_inert",
+    nameKey: "registry.item.item_gas_inert.name",
+    iconId: "item_liquid_water",
+    tags: ["gas", "gas_color:#3366cc"],
+    displayOrder: 10000,
+  },
+  {
+    id: "item_gas_xiranite",
+    nameKey: "registry.item.item_gas_xiranite.name",
+    iconId: "item_liquid_plant_grass_2",
+    tags: ["gas", "gas_color:#62bf4b"],
+    displayOrder: 10000,
+  },
+  {
     id: "item_muck_feces_1",
     nameKey: "registry.item.item_muck_feces_1.name",
     iconId: "item_muck_feces_1",

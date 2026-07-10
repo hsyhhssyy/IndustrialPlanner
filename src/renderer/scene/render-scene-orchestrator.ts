@@ -53,6 +53,7 @@ import { createBeltPortInsertionDecoration } from "./decorations/BeltPortInserti
 import { createBeltFlowDecoration } from "./decorations/BeltFlowDecoration"
 import { createPipeFlowDecoration } from "./decorations/PipeFlowDecoration"
 import { createPowerRangeDecoration } from "./decorations/PowerRangeDecoration"
+import { createGasDiffusionRangeDecoration } from "./decorations/GasDiffusionRangeDecoration"
 import { createDarkPipeLinkLineDecoration } from "./decorations/DarkPipeLinkLineDecoration"
 import { createDarkPipeLinkSelectionDecoration } from "./decorations/DarkPipeLinkSelectionDecoration"
 import { createHoverCornersDecoration } from "./decorations/HoverCornersDecoration"
@@ -175,6 +176,7 @@ export function createRenderSceneOrchestrator(
   const gridDecoration = createGridLineDecoration()
   const baseBoundaryDecoration = createBaseBoundaryDecoration()
   const powerRangeDecoration = createPowerRangeDecoration()
+  const gasDiffusionRangeDecoration = createGasDiffusionRangeDecoration()
   const previewRectDecoration = createPreviewRectDecoration()
   const invalidPlacementDecoration = createInvalidPlacementDecoration()
   const marqueeDecoration = createMarqueeRectDecoration()
@@ -349,6 +351,10 @@ export function createRenderSceneOrchestrator(
       powerRangeDecoration.sync(ctx)
     })
 
+    measureRenderStage(frameProfiler, "decoration.gasDiffusionRange", () => {
+      gasDiffusionRangeDecoration.sync(ctx)
+    })
+
     measureRenderStage(frameProfiler, "decoration.previewRect", () => {
       previewRectDecoration.sync(ctx)
     })
@@ -495,6 +501,7 @@ export function createRenderSceneOrchestrator(
   layers.background.addChild(gridDecoration.container)
   layers.background.addChild(baseBoundaryDecoration.container)
   layers.background.addChild(powerRangeDecoration.container)
+  layers.background.addChild(gasDiffusionRangeDecoration.container)
   layers.background.addChild(previewRectDecoration.container)
   invalidPlacementOverlayLayer.addChild(invalidPlacementDecoration.container)
   beltFlowLayer.addChild(beltFlowDecoration.container)
@@ -531,6 +538,7 @@ export function createRenderSceneOrchestrator(
       gridDecoration.destroy()
       baseBoundaryDecoration.destroy()
       powerRangeDecoration.destroy()
+      gasDiffusionRangeDecoration.destroy()
       previewRectDecoration.destroy()
       invalidPlacementDecoration.destroy()
       marqueeDecoration.destroy()

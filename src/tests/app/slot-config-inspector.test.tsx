@@ -133,6 +133,7 @@ describe("SlotConfigInspector", () => {
     const ore = requireItem(workspace, "item_copper_ore");
     const powder = requireItem(workspace, "item_carbon_powder");
     const liquid = requireItem(workspace, "item_liquid_xiranite");
+    const gas = requireItem(workspace, "item_gas_inert");
 
     const renderInspector = () => {
       act(() => {
@@ -175,6 +176,7 @@ describe("SlotConfigInspector", () => {
 
     expect(currentAppHost.encyclopediaPicker.matchesItem(ore)).toBe(true);
     expect(currentAppHost.encyclopediaPicker.matchesItem(liquid)).toBe(false);
+    expect(currentAppHost.encyclopediaPicker.matchesItem(gas)).toBe(false);
 
     await act(async () => {
       currentAppHost.encyclopediaPicker.cancel();
@@ -258,6 +260,73 @@ describe("SlotConfigInspector", () => {
       "storageSlotGroups[0].slots[0].initialCount": 50,
     });
     expect(patchEntityConfig).toHaveBeenCalled();
+  });
+
+  it("allows any slot filters to select solid, liquid, and gas items", async () => {
+    const workspace = createWorkspace();
+    const entity: WorldEntity = {
+      id: "mix-pool",
+      definitionId: "item_port_mix_pool_1",
+      position: { x: 0, y: 0 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    };
+    const picker = new WorkbenchEncyclopediaPickerController(() => ({
+      desktopCategory: "all",
+      mobileSelectedCategories: [],
+    }));
+    const currentAppHost = {
+      workspace,
+      encyclopediaPicker: picker,
+      actions: {
+        translate: (key: string) => key,
+      },
+    } as unknown as AppHost;
+    appHost = currentAppHost;
+
+    const definition = requireDefinition(workspace, "item_port_mix_pool_1");
+    act(() => {
+      root.render(
+        <SlotConfigInspector
+          appHost={currentAppHost}
+          declaration={{
+            type: INSPECTOR_TYPE.slotConfig,
+            slotGroupIds: ["shared_input_buffer"],
+          }}
+          definition={definition}
+          entity={entity}
+          translate={currentAppHost.actions.translate}
+        />,
+      );
+    });
+
+    const firstTileButton = container.querySelector<HTMLButtonElement>("[data-slot-action='open-slot-editor']");
+    if (firstTileButton === null) {
+      throw new Error("Expected an any-filter slot tile button to be rendered.");
+    }
+
+    act(() => {
+      firstTileButton.click();
+    });
+
+    const firstPickButton = container.querySelector<HTMLButtonElement>("[data-slot-dialog-action='pick-item']");
+    if (firstPickButton === null) {
+      throw new Error("Expected the any-filter slot dialog pick button to be rendered.");
+    }
+
+    act(() => {
+      firstPickButton.click();
+    });
+
+    expect(currentAppHost.encyclopediaPicker.matchesItem(requireItem(workspace, "item_copper_ore"))).toBe(true);
+    expect(currentAppHost.encyclopediaPicker.matchesItem(requireItem(workspace, "item_liquid_water"))).toBe(true);
+    expect(currentAppHost.encyclopediaPicker.matchesItem(requireItem(workspace, "item_gas_inert"))).toBe(true);
+
+    await act(async () => {
+      currentAppHost.encyclopediaPicker.cancel();
+      await Promise.resolve();
+    });
   });
 
   it("renders the data scope switch in the panel header", () => {

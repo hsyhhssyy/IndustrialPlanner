@@ -20,6 +20,7 @@ import { useInspectorRenderMode } from "@/app/shell/inspector/selection-inspecto
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { matchesItemAcceptRule } from "./item-domain";
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
@@ -91,11 +92,14 @@ export function AdmissionRuleInspector({
     setPending(true);
 
     try {
-      const isLiquid = row.portGroup.kind === "fluid";
       const itemId = await appHost.encyclopediaPicker.pickItem({
         title: translate("encyclopediaPicker.title.item"),
         filterItem: (item: ItemDefinition) =>
-          appHost.workspace.registry.queries.isItemLiquid(item.id) === isLiquid,
+          matchesItemAcceptRule(
+            item,
+            row.port.acceptRule,
+            appHost.workspace.registry.queries.resolveItemDomain,
+          ),
       });
 
       if (itemId === null) {

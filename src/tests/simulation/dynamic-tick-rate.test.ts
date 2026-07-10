@@ -304,6 +304,8 @@ function createProductionOverflowTopology(
         machineId: "test_machine",
         recipeType: "immediate-consume",
         powerOutput: 0,
+        requiredGasDiffusion: null,
+        gasDiffusionOutput: null,
         tags: [],
       },
     },
@@ -314,6 +316,7 @@ function createProductionOverflowTopology(
         definitionId: "test_machine",
         position: null,
         rotation: null,
+        footprint: null,
         tags: [],
         powerStatus: "in-power-range",
         powerDemand: 1,
@@ -381,6 +384,8 @@ function createRunningRecipe(
     outputs: [{ itemId: "item_test", amount: outputAmount }],
     ingredientNodeIds: [],
     productNodeIds: ["node:out"],
+    requiredGasDiffusion: null,
+    gasDiffusionOutput: null,
   };
 
   return {

@@ -2362,7 +2362,8 @@ function resolveProductionPlanningLogisticsKind(
   itemId: string,
   index: ProductionPlanningIndex,
 ): "belt" | "pipe" {
-  return index.itemById.get(itemId)?.tags.includes("liquid") ? "pipe" : "belt";
+  const tags = index.itemById.get(itemId)?.tags ?? [];
+  return tags.includes("liquid") || tags.includes("gas") ? "pipe" : "belt";
 }
 
 function resolveProductionPlanningLogisticsThroughput(kind: "belt" | "pipe"): number {

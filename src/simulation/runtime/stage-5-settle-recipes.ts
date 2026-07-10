@@ -12,6 +12,10 @@ import {
   resolveDeviceRecipePlans,
   selectRecipeInputs,
 } from "./runtime-slot-access";
+import {
+  computeActiveGasDiffusions,
+  isDeviceInRequiredGasDiffusion,
+} from "./gas-diffusion";
 
 /**
  * 对应《仿真运行原理》§5.5 Tick 阶段 5 二次结算，以及 §4 设备与配方状态。
@@ -26,6 +30,7 @@ export function settleRecipes(
   currentPowerGeneration = Infinity,
   effectiveTotalPowerDemand = topology.totalPowerDemand,
 ): void {
+  state.transient.activeGasDiffusions = computeActiveGasDiffusions(topology, state);
   settleWaitingOutputs(topology, state);
   startIdleDevices(topology, state, powerMode, currentPowerGeneration, effectiveTotalPowerDemand);
 }
@@ -42,6 +47,17 @@ function settleWaitingOutputs(
 
     for (const [chId, recipe] of Object.entries(deviceState.channelRecipes)) {
       if (recipe === null || recipe.state !== "waiting-output") {
+        continue;
+      }
+      const device = topology.devices[deviceId];
+      if (
+        device !== undefined
+        && !isDeviceInRequiredGasDiffusion({
+          device,
+          requiredGasDiffusion: recipe.plan.requiredGasDiffusion,
+          activeGasDiffusions: state.transient.activeGasDiffusions,
+        })
+      ) {
         continue;
       }
 
@@ -61,12 +77,39 @@ function startIdleDevices(
   currentPowerGeneration = Infinity,
   effectiveTotalPowerDemand = topology.totalPowerDemand,
 ): void {
-  const powerInsufficient = powerMode === "real"
-    && currentPowerGeneration < effectiveTotalPowerDemand;
+  startIdleDeviceChannels({
+    topology,
+    state,
+    powerMode,
+    currentPowerGeneration,
+    effectiveTotalPowerDemand,
+    shouldStartPlan: (plan) => plan.gasDiffusionOutput !== null,
+  });
+  state.transient.activeGasDiffusions = computeActiveGasDiffusions(topology, state);
+  startIdleDeviceChannels({
+    topology,
+    state,
+    powerMode,
+    currentPowerGeneration,
+    effectiveTotalPowerDemand,
+    shouldStartPlan: () => true,
+  });
+}
 
-  for (const deviceId of topology.ordering.deviceOrder) {
-    const device = topology.devices[deviceId];
-    const deviceState = state.persistent.devices[deviceId];
+function startIdleDeviceChannels(options: {
+  topology: CompiledSimulationTopology;
+  state: SimulationMutableRuntimeState;
+  powerMode: "real" | "infinite";
+  currentPowerGeneration: number;
+  effectiveTotalPowerDemand: number;
+  shouldStartPlan: (plan: RuntimeDeviceRecipeState["plan"]) => boolean;
+}): void {
+  const powerInsufficient = options.powerMode === "real"
+    && options.currentPowerGeneration < options.effectiveTotalPowerDemand;
+
+  for (const deviceId of options.topology.ordering.deviceOrder) {
+    const device = options.topology.devices[deviceId];
+    const deviceState = options.state.persistent.devices[deviceId];
     if (device === undefined || deviceState === undefined) {
       continue;
     }
@@ -84,23 +127,29 @@ function startIdleDevices(
         continue;
       }
 
-      const recipe = selectStartableRecipe(topology, state, device, channel);
+      const recipe = selectStartableRecipe(
+        options.topology,
+        options.state,
+        device,
+        channel,
+        options.shouldStartPlan,
+      );
       if (recipe === null) {
         continue;
       }
 
       if (recipe.recipeType === "immediate-consume") {
-        consumeSelections(state.persistent.slots, recipe.reservations);
+        consumeSelections(options.state.persistent.slots, recipe.reservations);
         // 记录 immediate-consume 配方的消耗统计（仅生产设备）
         if (device.isProducer) {
-          const delta = state.transient.recipeStatsDelta;
+          const delta = options.state.transient.recipeStatsDelta;
           for (const input of recipe.inputItems) {
             delta.consumed[input.itemType] = (delta.consumed[input.itemType] ?? 0) + input.amount;
           }
         }
         recipe.reservations = [];
       } else {
-        adjustReservedAmounts(state, recipe.reservations, 1);
+        adjustReservedAmounts(options.state, recipe.reservations, 1);
       }
 
       deviceState.channelRecipes[channel.id] = recipe;
@@ -118,6 +167,7 @@ function selectStartableRecipe(
   state: SimulationMutableRuntimeState,
   device: CompiledSimulationDevice,
   channel: CompiledSimulationRecipeChannel,
+  shouldStartPlan: (plan: RuntimeDeviceRecipeState["plan"]) => boolean = () => true,
 ): RuntimeDeviceRecipeState | null {
   for (const plan of resolveDeviceRecipePlans({
     topology,
@@ -125,6 +175,9 @@ function selectStartableRecipe(
     device,
     channel,
   })) {
+    if (!shouldStartPlan(plan)) {
+      continue;
+    }
     const reservations = selectRecipeInputs({ topology, state, plan });
     if (reservations === null) {
       continue;

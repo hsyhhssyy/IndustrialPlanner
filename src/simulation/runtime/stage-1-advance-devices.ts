@@ -14,6 +14,7 @@ import {
   createStartableRecipeForChannel,
   finishRecipeIfPossible,
 } from "./runtime-slot-access";
+import { isDeviceInRequiredGasDiffusion } from "./gas-diffusion";
 import { submitSlotsToWarehouse } from "./warehouse-submit";
 /**
  * 对应《仿真运行原理》§5.1 Tick 阶段 1：推进设备内部状态。
@@ -49,6 +50,13 @@ export function advanceDevices(
 
     for (const [chId, recipe] of Object.entries(deviceState.channelRecipes)) {
       if (recipe === null) {
+        continue;
+      }
+      if (!isDeviceInRequiredGasDiffusion({
+        device,
+        requiredGasDiffusion: recipe.plan.requiredGasDiffusion,
+        activeGasDiffusions: state.transient.activeGasDiffusions,
+      })) {
         continue;
       }
 

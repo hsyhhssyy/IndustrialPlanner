@@ -22,6 +22,10 @@ import { cm } from "@/app/shell/shared/css-module-class";
 import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { NumberInput } from "@/app/shell/shared/number-input";
 import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
+import {
+  matchesItemDomainFilter,
+  type InspectorItemDomainFilter,
+} from "./item-domain";
 
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 type StorageSlotDefinition = StorageSlotGroupDefinition["slots"][number];
@@ -41,7 +45,7 @@ interface EffectiveSlotRow {
   lockItemId: string | null;
   initialItemType: string | null;
   displayItemId: string | null;
-  domain: "solid" | "liquid" | "any";
+  domain: InspectorItemDomainFilter;
   source: InspectorDataScope;
 }
 
@@ -190,7 +194,12 @@ export function SlotConfigInspector({
       const rowForFilter = rowsForFilter.find((candidate) => candidate.slotId === row.slotId) ?? row;
       const itemId = await appHost.encyclopediaPicker.pickItem({
         title: translate("encyclopediaPicker.title.item"),
-        filterItem: (item) => canSelectItemForRow(item, rowForFilter, rowsForFilter, appHost.workspace.registry.queries.isItemLiquid),
+        filterItem: (item) => canSelectItemForRow(
+          item,
+          rowForFilter,
+          rowsForFilter,
+          appHost.workspace.registry.queries.resolveItemDomain,
+        ),
       });
 
       if (itemId === null) {
@@ -1096,7 +1105,7 @@ function readFilterTypeOverride(
   fallback: StorageSlotDefinition["itemFilterType"],
 ): StorageSlotDefinition["itemFilterType"] {
   const value = config[path];
-  return value === "solid" || value === "liquid" || value === "any"
+  return value === "solid" || value === "liquid" || value === "gas" || value === "fluid" || value === "any"
     ? value
     : fallback;
 }
@@ -1104,8 +1113,14 @@ function readFilterTypeOverride(
 function resolveSlotDomain(
   storageGroup: StorageSlotGroupDefinition,
   itemFilterType: StorageSlotDefinition["itemFilterType"],
-): "solid" | "liquid" | "any" {
-  if (itemFilterType === "solid" || itemFilterType === "liquid") {
+): InspectorItemDomainFilter {
+  if (
+    itemFilterType === "solid"
+    || itemFilterType === "liquid"
+    || itemFilterType === "gas"
+    || itemFilterType === "fluid"
+    || itemFilterType === "any"
+  ) {
     return itemFilterType;
   }
   if (storageGroup.kind === "fluid") {
@@ -1125,9 +1140,9 @@ function canSelectItemForRow(
   item: ItemDefinition,
   row: EffectiveSlotRow,
   rows: readonly EffectiveSlotRow[],
-  isItemLiquid: (itemId: string) => boolean,
+  resolveItemDomain: (itemId: string) => ReturnType<AppHost["workspace"]["registry"]["queries"]["resolveItemDomain"]>,
 ): boolean {
-  if (!matchesItemDomain(item, row.domain, isItemLiquid)) {
+  if (!matchesItemDomain(item, row.domain, resolveItemDomain)) {
     return false;
   }
 
@@ -1141,16 +1156,13 @@ function canSelectItemForRow(
 }
 
 // AI-CORRECTION 2026-05-16: domain 判定统一委托 RegistryQuery.isItemLiquid，不再本地推断。
+// AI-CORRECTION 2026-07-10: domain 判定升级为 resolveItemDomain，支持 gas 与 fluid。
 function matchesItemDomain(
   item: ItemDefinition,
   domain: EffectiveSlotRow["domain"],
-  isItemLiquid: (itemId: string) => boolean,
+  resolveItemDomain: (itemId: string) => ReturnType<AppHost["workspace"]["registry"]["queries"]["resolveItemDomain"]>,
 ): boolean {
-  if (domain === "any") {
-    return true;
-  }
-
-  return isItemLiquid(item.id) === (domain === "liquid");
+  return matchesItemDomainFilter(item, domain, resolveItemDomain);
 }
 
 function clampCount(value: number, capacity: number): number {

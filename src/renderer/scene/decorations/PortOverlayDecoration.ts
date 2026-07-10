@@ -673,12 +673,20 @@ function resolvePortChevronMaterial(
     const storageSlotGroup = storageSlotGroupById.get(binding.storageSlotGroupId);
     if (
       storageSlotGroup?.kind === "fluid"
-      || storageSlotGroup?.slots.some((slot) => slot.itemFilterType === "liquid")
+      || storageSlotGroup?.slots.some((slot) => isFluidSlotFilter(slot.itemFilterType))
     ) {
       return "liquid";
     }
   }
   return "solid";
+}
+
+function isFluidSlotFilter(
+  itemFilterType: EntityDefinition["storageSlotGroups"][number]["slots"][number]["itemFilterType"],
+): boolean {
+  return itemFilterType === "liquid"
+    || itemFilterType === "gas"
+    || itemFilterType === "fluid";
 }
 
 function rotateLocalPortCell(options: {

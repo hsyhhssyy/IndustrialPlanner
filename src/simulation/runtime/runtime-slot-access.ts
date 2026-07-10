@@ -9,6 +9,7 @@ import type {
   CompiledSimulationTopology,
   SimulationAcceptRule,
   SimulationItemDomain,
+  SimulationItemDomainFilter,
 } from "../types";
 import type {
   RuntimeDeviceRecipeState,
@@ -21,6 +22,7 @@ import {
   canRecipeFinishAtCurrentPhase,
   resolveTransportRecipeTiming,
 } from "./phase-gating";
+import { isDeviceInRequiredGasDiffusion } from "./gas-diffusion";
 
 const WAREHOUSE_SINK_TAG = "WarehouseSink";
 
@@ -154,7 +156,12 @@ export function acceptsItem(
       return true;
     case "solid":
     case "liquid":
+    case "gas":
       return getItemDomain(topology, itemType) === rule.base.kind;
+    case "fluid": {
+      const domain = getItemDomain(topology, itemType);
+      return domain === "liquid" || domain === "gas";
+    }
     case "item":
       return rule.base.itemId === itemType;
     case "none":
@@ -421,6 +428,7 @@ export function resolveDeviceRecipePlans(options: {
 
   return resolveRecipes({
     topology: options.topology,
+    state: options.state,
     device: options.device,
     channel: options.channel,
     ingredientSlotContents,
@@ -550,7 +558,13 @@ export function getItemDomain(
   itemType: string,
 ): SimulationItemDomain {
   return topology.itemCatalog[itemType]?.domain
-    ?? (itemType.includes("_liquid") || itemType.startsWith("liquid_") ? "liquid" : "solid");
+    ?? (
+      itemType.includes("_gas") || itemType.startsWith("gas_")
+        ? "gas"
+        : itemType.includes("_liquid") || itemType.startsWith("liquid_")
+          ? "liquid"
+          : "solid"
+    );
 }
 
 export function finishRecipeIfPossible(
@@ -641,6 +655,7 @@ function resolveRecipeProducerDevice(
 // 函数体内本身就从 options.device 读取 definitionId 和 tags，签名中的冗余参数从未被使用。
 function resolveRecipes(options: {
   topology: CompiledSimulationTopology;
+  state: SimulationMutableRuntimeState;
   device: CompiledSimulationDevice;
   channel: CompiledSimulationRecipeChannel;
   ingredientSlotContents: readonly IngredientSlotContent[];
@@ -663,6 +678,8 @@ function resolveRecipes(options: {
       outputs: [{ itemId: "same-as-input", amount: 1 }],
       ingredientNodeIds: options.channel.ingredientNodeIds,
       productNodeIds: options.channel.productNodeIds,
+      requiredGasDiffusion: null,
+      gasDiffusionOutput: null,
     }];
   }
 
@@ -675,6 +692,13 @@ function resolveRecipes(options: {
     if (selectedRecipe === undefined) {
       return [];
     }
+    if (!isDeviceInRequiredGasDiffusion({
+      device: options.device,
+      requiredGasDiffusion: selectedRecipe.requiredGasDiffusion,
+      activeGasDiffusions: options.state.transient.activeGasDiffusions,
+    })) {
+      return [];
+    }
     return [{
       recipeId: selectedRecipe.id,
       recipeType: selectedRecipe.recipeType,
@@ -683,6 +707,8 @@ function resolveRecipes(options: {
       outputs: selectedRecipe.outputs,
       ingredientNodeIds: options.channel.ingredientNodeIds,
       productNodeIds: options.channel.productNodeIds,
+      requiredGasDiffusion: selectedRecipe.requiredGasDiffusion,
+      gasDiffusionOutput: selectedRecipe.gasDiffusionOutput,
     }];
   }
 
@@ -708,12 +734,19 @@ function resolveRecipes(options: {
       outputs: [{ itemId: "same-as-input", amount: 1 }],
       ingredientNodeIds: options.channel.ingredientNodeIds,
       productNodeIds: options.channel.productNodeIds,
+      requiredGasDiffusion: null,
+      gasDiffusionOutput: null,
     }];
   }
 
   return Object.values(options.topology.recipeCatalog)
     .filter((recipe) => recipe.machineId === options.device.definitionId)
     .filter((recipe) => recipeCanMatchContents(recipe, options.ingredientSlotContents))
+    .filter((recipe) => isDeviceInRequiredGasDiffusion({
+      device: options.device,
+      requiredGasDiffusion: recipe.requiredGasDiffusion,
+      activeGasDiffusions: options.state.transient.activeGasDiffusions,
+    }))
     .sort((left, right) => left.id.localeCompare(right.id))
     .map((recipe) => ({
       recipeId: recipe.id,
@@ -723,6 +756,8 @@ function resolveRecipes(options: {
       outputs: recipe.outputs,
       ingredientNodeIds: options.channel.ingredientNodeIds,
       productNodeIds: options.channel.productNodeIds,
+      requiredGasDiffusion: recipe.requiredGasDiffusion,
+      gasDiffusionOutput: recipe.gasDiffusionOutput,
     }));
 }
 
@@ -830,7 +865,20 @@ function slotCanHold(
   if (slot.lock !== null && slot.lock !== itemType) {
     return false;
   }
-  return slot.domain === "any" || getItemDomain(topology, itemType) === slot.domain;
+  return doesDomainFilterAcceptItemDomain(slot.domain, getItemDomain(topology, itemType));
+}
+
+function doesDomainFilterAcceptItemDomain(
+  filter: SimulationItemDomainFilter | "any",
+  domain: SimulationItemDomain,
+): boolean {
+  if (filter === "any") {
+    return true;
+  }
+  if (filter === "fluid") {
+    return domain === "liquid" || domain === "gas";
+  }
+  return domain === filter;
 }
 
 function findRecipeOutputSlot(

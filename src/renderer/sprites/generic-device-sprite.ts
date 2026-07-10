@@ -2058,12 +2058,20 @@ function resolvePortChevronMaterial(
       return "liquid";
     }
 
-    if (storageSlotGroup.slots.some((slot) => slot.itemFilterType === "liquid")) {
+    if (storageSlotGroup.slots.some((slot) => isFluidSlotFilter(slot.itemFilterType))) {
       return "liquid";
     }
   }
 
   return "solid";
+}
+
+function isFluidSlotFilter(
+  itemFilterType: EntityDefinition["storageSlotGroups"][number]["slots"][number]["itemFilterType"],
+): boolean {
+  return itemFilterType === "liquid"
+    || itemFilterType === "gas"
+    || itemFilterType === "fluid";
 }
 
 function resolvePortChevronDirection(

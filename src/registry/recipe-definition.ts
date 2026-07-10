@@ -2905,6 +2905,20 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: [],
   },
   {
+    id: "r_xiranite_oven_xiranite_powder_from_carbon_mtl_and_water_in_inert_gas_basic",
+    nameKey: "registry.recipe.r_xiranite_oven_xiranite_powder_from_carbon_mtl_and_water_in_inert_gas_basic.name",
+    durationSeconds: 2,
+    inputs: [
+      { itemId: "item_carbon_mtl", amount: 1 },
+      { itemId: "item_liquid_water", amount: 1 },
+    ],
+    outputs: [{ itemId: "item_xiranite_powder", amount: 1 }],
+    machineId: "item_port_xiranite_oven_1",
+    recipeType: "immediate-consume",
+    tags: [],
+    requiredGasDiffusion: "item_gas_inert",
+  },
+  {
     id: "r_xiranite_oven_xiranite_enr_powder_from_xiranite_powder_and_waste_liquid_basic",
     nameKey: "registry.recipe.r_xiranite_oven_xiranite_enr_powder_from_xiranite_powder_and_waste_liquid_basic.name",
     durationSeconds: 10,
@@ -3216,6 +3230,20 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "item_port_water_pump_1",
     recipeType: "immediate-consume",
     tags: ["自然资源采集"],
+  },
+  {
+    id: "r_gas_diffuser_inert_gas_environment_basic",
+    nameKey: "registry.recipe.r_gas_diffuser_inert_gas_environment_basic.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_gas_inert", amount: 1 }],
+    outputs: [],
+    machineId: "item_port_gas_diffuser_1",
+    recipeType: "immediate-consume",
+    tags: [],
+    gasDiffusionOutput: {
+      gasItemId: "item_gas_inert",
+      range: 15,
+    },
   },
   {
     id: "r_miner_originium_ore_basic",

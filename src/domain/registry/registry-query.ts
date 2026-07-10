@@ -1,5 +1,6 @@
 import type { LogisticsKind } from "../shared/logistics";
 import type { SlotLinkDefinition } from "../shared/slot-link";
+import type { ItemDomain } from "./types/entity-definition";
 
 export interface RegistryQuery {
 	isDedicatedLogisticsDevice(definitionId: string): boolean;
@@ -18,6 +19,12 @@ export interface RegistryQuery {
 	 * 未标记或不在注册表中的物品一律返回 false（固体）。
 	 */
 	isItemLiquid(itemId: string): boolean;
+
+	/**
+	 * 解析物品域。
+	 * gas 标记优先于 liquid；未标记或不在注册表中的物品按 solid 处理。
+	 */
+	resolveItemDomain(itemId: string): ItemDomain;
 
 	/**
 	 * 构建"实体槽位 → 仓库槽位"的 Slot Link 定义。

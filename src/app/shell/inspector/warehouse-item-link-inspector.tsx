@@ -21,6 +21,10 @@ import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-colla
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+import {
+  matchesItemDomainFilter,
+  type InspectorItemDomainFilter,
+} from "./item-domain";
 
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 
@@ -35,7 +39,7 @@ interface WarehouseLinkRow {
   currentItemId: string | null;
   currentIgnoreStock: boolean;
   /** 槽位所属物品域 */
-  domain: "solid" | "liquid" | "any";
+  domain: InspectorItemDomainFilter;
 }
 
 export function WarehouseItemLinkInspector({
@@ -102,7 +106,11 @@ export function WarehouseItemLinkInspector({
     try {
       const itemId = await appHost.encyclopediaPicker.pickItem({
         title: translate("encyclopediaPicker.title.item"),
-        filterItem: (item) => matchesItemDomain(item, row.domain, appHost.workspace.registry.queries.isItemLiquid),
+        filterItem: (item) => matchesItemDomain(
+          item,
+          row.domain,
+          appHost.workspace.registry.queries.resolveItemDomain,
+        ),
       });
 
       if (itemId === null) {
@@ -444,7 +452,7 @@ interface ExpandedSlotDef {
   slotId: string;
   /** 槽位在所属 storageGroup 中的索引（用于 slots[N]） */
   slotIndex: number;
-  domain: "solid" | "liquid" | "any";
+  domain: InspectorItemDomainFilter;
 }
 
 function expandSlotDefinitions(
@@ -486,7 +494,7 @@ function expandSlotDefinitions(
 
 function resolveSlotGroupDomain(
   storageGroup: StorageSlotGroupDefinition,
-): "solid" | "liquid" | "any" {
+): InspectorItemDomainFilter {
   if (storageGroup.kind === "fluid") {
     return "liquid";
   }
@@ -497,16 +505,13 @@ function resolveSlotGroupDomain(
 }
 
 // AI-CORRECTION 2026-05-16: domain 判定统一委托 RegistryQuery.isItemLiquid，不再本地推断。
+// AI-CORRECTION 2026-07-10: 气体加入后改为 RegistryQuery.resolveItemDomain，并允许 fluid 匹配 liquid/gas。
 function matchesItemDomain(
   item: ItemDefinition,
-  domain: "solid" | "liquid" | "any",
-  isItemLiquid: (itemId: string) => boolean,
+  domain: InspectorItemDomainFilter,
+  resolveItemDomain: Parameters<typeof matchesItemDomainFilter>[2],
 ): boolean {
-  if (domain === "any") {
-    return true;
-  }
-
-  return isItemLiquid(item.id) === (domain === "liquid");
+  return matchesItemDomainFilter(item, domain, resolveItemDomain);
 }
 
 function resolveItemIconSrc(item: ItemDefinition | null): string | null {

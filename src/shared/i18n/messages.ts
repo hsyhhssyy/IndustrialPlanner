@@ -356,6 +356,12 @@ export type MessageKey =
   | "uiGroup.basicProduction"
   | "uiGroup.advancedManufacturing"
   | "registry.entity.item_port_filling_pd_mc_1.name"
+  | "registry.entity.item_port_gas_diffuser_1.name"
+  | "registry.entity.item_port_gas_storager_1.name"
+  | "registry.item.item_gas_inert.name"
+  | "registry.item.item_gas_xiranite.name"
+  | "registry.recipe.r_xiranite_oven_xiranite_powder_from_carbon_mtl_and_water_in_inert_gas_basic.name"
+  | "registry.recipe.r_gas_diffuser_inert_gas_environment_basic.name"
   | "uiGroup.hidden"
   | "encyclopedia.searchPlaceholder"
   | "encyclopedia.category.all"
@@ -851,6 +857,12 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "uiGroup.basicProduction": "基础生产",
     "uiGroup.advancedManufacturing": "合成制造",
     "registry.entity.item_port_filling_pd_mc_1.name": "灌装机",
+    "registry.entity.item_port_gas_diffuser_1.name": "气体扩散机",
+    "registry.entity.item_port_gas_storager_1.name": "储气罐",
+    "registry.item.item_gas_inert.name": "惰气",
+    "registry.item.item_gas_xiranite.name": "息壤气",
+    "registry.recipe.r_xiranite_oven_xiranite_powder_from_carbon_mtl_and_water_in_inert_gas_basic.name": "惰气炼息壤",
+    "registry.recipe.r_gas_diffuser_inert_gas_environment_basic.name": "惰气扩散",
     "uiGroup.hidden": "隐藏设备",
     "encyclopedia.searchPlaceholder": "搜索物品或设备…",
     "encyclopedia.category.all": "全部",
@@ -1358,6 +1370,12 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "uiGroup.basicProduction": "Basic Production",
     "uiGroup.advancedManufacturing": "Advanced Manufacturing",
     "registry.entity.item_port_filling_pd_mc_1.name": "Filling Unit",
+    "registry.entity.item_port_gas_diffuser_1.name": "Gas Diffuser",
+    "registry.entity.item_port_gas_storager_1.name": "Gas Tank",
+    "registry.item.item_gas_inert.name": "Inert Gas",
+    "registry.item.item_gas_xiranite.name": "Xiranite Gas",
+    "registry.recipe.r_xiranite_oven_xiranite_powder_from_carbon_mtl_and_water_in_inert_gas_basic.name": "Xiranite in Inert Gas",
+    "registry.recipe.r_gas_diffuser_inert_gas_environment_basic.name": "Inert Gas Diffusion",
     "uiGroup.hidden": "Hidden Devices",
     "encyclopedia.searchPlaceholder": "Search items or devices…",
     "encyclopedia.category.all": "All",
