@@ -2840,7 +2840,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_sp_hub_1",
     footprint: { width: 9, height: 9 },
     uiGroup: "hidden",
-    tags: ["AvatarHidden", WAREHOUSE_SINK_TAG],
+    tags: [WAREHOUSE_SINK_TAG],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
