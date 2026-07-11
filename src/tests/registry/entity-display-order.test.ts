@@ -73,6 +73,7 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
     item_port_planter_1: 507,
     item_port_hydro_planter_1: 508,
     item_liquid_cleaner_1: 509,
+    item_water_purifier_node_1: 510,
 
     // 600 — advancedManufacturing
     item_port_winder_1: 601,

@@ -31,12 +31,14 @@ import { buildSolveGraph } from "./runtime/stage-2-build-solve-graph";
 import { solveTransferGraph, type SolveTransferGraphPerf } from "./runtime/stage-3-layered-reverse-solve";
 import { rotateRoutingCursors } from "./runtime/stage-4-rotate-routing-cursors";
 import { settleRecipes } from "./runtime/stage-5-settle-recipes";
+import { applyBlockageAutoClearance } from "./runtime/blockage-auto-clearance";
 import {
   getItemDomain,
   maintainTransportComponentDomains,
   resolveStorageSlotId,
 } from "./runtime/runtime-slot-access";
 import { computeActiveGasDiffusions } from "./runtime/gas-diffusion";
+import { applyWaterPurifierManualOutput } from "./runtime/water-purifier-node";
 // AI-REMOVED 2026-06-06:
 // Reason: submitMode 全局扫描机制已删除；入仓必须走 WarehouseSink 或 r_warehouse_submit 配方。
 // Trigger: 用户要求 submit mode 机制彻底删除，避免旧蓝图 submitMode 配置影响所有 slot。
@@ -794,6 +796,14 @@ export class SimulationWorkerRuntime {
         effectiveGeneration,
         this.effectiveTotalPowerDemand,
       );
+      applyWaterPurifierManualOutput(
+        this.topology,
+        this.runtimeState,
+        runtimeStepTicks,
+        this.powerMode,
+        effectiveGeneration,
+        this.effectiveTotalPowerDemand,
+      );
       if (this.perfEnabled) { perfTiming!.stages["advanceDevices"] = performance.now() - t0; }
 
       const t1 = this.perfEnabled ? performance.now() : 0;
@@ -847,6 +857,7 @@ export class SimulationWorkerRuntime {
         effectiveGeneration,
         this.effectiveTotalPowerDemand,
       );
+      applyBlockageAutoClearance(this.topology, this.runtimeState);
       if (this.perfEnabled) {
         perfTiming!.stages["settleRecipes"] = performance.now() - t4;
         perfTiming!.hotPath = createHotPathPerfDetails(this.runtimeState.transient._perf!);

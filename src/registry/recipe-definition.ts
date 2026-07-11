@@ -1,6 +1,12 @@
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { ACTIVITY_LIMITED_FORMULA_1_TAG } from "@/shared/registry/activity-availability";
 import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
+import {
+  WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
+  WATER_PURIFIER_COLLECT_RECIPE_ID,
+  WATER_PURIFIER_NODE_ENTITY_ID,
+  WATER_PURIFIER_OUTPUT_ITEM_ID,
+} from "@/shared/water-purifier-node";
 
 export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   {
@@ -78,6 +84,26 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "item_liquid_cleaner_1",
     recipeType: "immediate-consume",
     tags: [],
+  },
+  {
+    id: WATER_PURIFIER_COLLECT_RECIPE_ID,
+    nameKey: "registry.recipe.r_water_purifier_node_collect_sewage_basic.name",
+    durationSeconds: 1,
+    inputs: [{ itemId: "item_liquid_sewage", amount: 2 }],
+    outputs: [{ itemId: "item_liquid_sewage", amount: 2 }],
+    machineId: WATER_PURIFIER_NODE_ENTITY_ID,
+    recipeType: "immediate-consume",
+    tags: ["new"],
+  },
+  {
+    id: WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
+    nameKey: "registry.recipe.r_water_purifier_node_xiranite_waste_from_sewage_basic.name",
+    durationSeconds: 1,
+    inputs: [{ itemId: "item_liquid_sewage", amount: 30 }],
+    outputs: [{ itemId: WATER_PURIFIER_OUTPUT_ITEM_ID, amount: 1 }],
+    machineId: WATER_PURIFIER_NODE_ENTITY_ID,
+    recipeType: "immediate-consume",
+    tags: ["new"],
   },
   {
     id: "r_chrono_winder_copper_equip_script_from_refined_copper_and_xiranite_basic",

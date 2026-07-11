@@ -35,6 +35,8 @@ export interface SimulationPersistentRuntimeState {
   transportComponentDomain: Record<string, string | null>;
   /** 基地电池当前电量（焦耳），进入仿真时满电。 */
   baseBatteryJoules: number;
+  /** 净水节点手动产出的跨 tick 小数余量。key 为 compiled device id。 */
+  waterPurifierManualRemainders: Record<string, number>;
   /** 配方产出/消耗统计状态（1 分钟滑动窗口） */
   recipeStats: RecipeStatsState;
 }
@@ -260,6 +262,7 @@ export function createSimulationMutableRuntimeState(
         Object.keys(topology.transportComponents).map((id) => [id, null]),
       ),
       baseBatteryJoules: BASE_BATTERY_CAPACITY_J,
+      waterPurifierManualRemainders: createWaterPurifierManualRemainders(topology),
       recipeStats: createRecipeStatsState(topology.standardTickRate),
     },
     transient: createEmptyTransientState(),
@@ -304,6 +307,10 @@ export function createMigratedSimulationMutableRuntimeState(
     }
 
     state.persistent.devices[deviceId] = cloneRuntimeDeviceState(previousDeviceState);
+    if (nextDevice.waterPurifierNode !== undefined && nextDevice.waterPurifierNode !== null) {
+      state.persistent.waterPurifierManualRemainders[deviceId] =
+        (options.previousState.persistent.waterPurifierManualRemainders ?? {})[deviceId] ?? 0;
+    }
     for (const portId of nextDevice.portIds) {
       const previousPort = options.previousTopology.ports[portId];
       const nextPort = options.topology.ports[portId];
@@ -373,6 +380,7 @@ export function cloneSimulationMutableRuntimeState(
       nextRecipeRunIndex: state.persistent.nextRecipeRunIndex,
       transportComponentDomain: { ...state.persistent.transportComponentDomain },
       baseBatteryJoules: state.persistent.baseBatteryJoules,
+      waterPurifierManualRemainders: { ...(state.persistent.waterPurifierManualRemainders ?? {}) },
       recipeStats: cloneRecipeStatsState(state.persistent.recipeStats),
     },
     transient: cloneTransientState(state.transient),
@@ -462,6 +470,19 @@ function createInitialAdmissionCounters(
     }
   }
   return counters;
+}
+
+function createWaterPurifierManualRemainders(
+  topology: CompiledSimulationTopology,
+): Record<string, number> {
+  const remainders: Record<string, number> = {};
+  for (const deviceId of topology.ordering.deviceOrder) {
+    const device = topology.devices[deviceId];
+    if (device?.waterPurifierNode !== undefined && device.waterPurifierNode !== null) {
+      remainders[deviceId] = 0;
+    }
+  }
+  return remainders;
 }
 
 function createInitialAdmissionMinuteCounters(

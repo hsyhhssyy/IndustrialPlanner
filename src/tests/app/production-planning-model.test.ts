@@ -266,7 +266,10 @@ describe("production planning model", () => {
       targets: [port("item_equip_script_4_2", 1)],
       supplies: [],
       infiniteItemIds: new Set(["item_liquid_sewage"]),
-      recipeChoices: new Map(),
+      recipeChoices: new Map([[
+        "item_liquid_xiranite_poly",
+        "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic",
+      ]]),
       sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
 

@@ -32,7 +32,9 @@ import {
   canConfigurePortPriorityGroups,
 } from "./port-priority-group-model";
 import { AdmissionRuleInspector } from "./admission-rule-inspector";
+import { BlockageAutoClearanceInspector } from "./blockage-auto-clearance-inspector";
 import { InspectorCollapsiblePanel } from "./inspector-collapsible-panel";
+import { WaterPurifierNodeInspector } from "./water-purifier-node-inspector";
 import { CanvasFloatingToolbarButtonStrip } from "@/app/shell/shared/canvas-floating-toolbar-button-strip";
 import {
   findDarkPipeSlotLinkForEntity,
@@ -75,6 +77,8 @@ const INSPECTOR_LABELS: Partial<Record<EntityInspectorType, string>> = {
   [INSPECTOR_TYPE.warehouseItemLink]: "仓库物品链接",
   [INSPECTOR_TYPE.portOutputConfig]: "输出端口配置",
   [INSPECTOR_TYPE.darkPipeLink]: "暗管链接",
+  [INSPECTOR_TYPE.waterPurifierNode]: "净水节点",
+  [INSPECTOR_TYPE.blockageAutoClearance]: "自动处理复数配方阻塞",
 };
 
 function EmptyInspector({
@@ -215,6 +219,22 @@ function renderInspector(options: {
           definition={options.definition}
           runtimeStatus={options.runtimeStatus}
           translate={options.translate}
+        />
+      );
+    case INSPECTOR_TYPE.waterPurifierNode:
+      return (
+        <WaterPurifierNodeInspector
+          appHost={options.appHost}
+          entity={options.entity}
+          definition={options.definition}
+        />
+      );
+    case INSPECTOR_TYPE.blockageAutoClearance:
+      return (
+        <BlockageAutoClearanceInspector
+          appHost={options.appHost}
+          entity={options.entity}
+          definition={options.definition}
         />
       );
     default:
@@ -588,6 +608,10 @@ function resolveInspectorDiscriminator(
       return String(declaration.cacheLinkIndex);
     case INSPECTOR_TYPE.portOutputConfig:
       return declaration.portGroupIds.join(",");
+    case INSPECTOR_TYPE.waterPurifierNode:
+      return "water-purifier-node";
+    case INSPECTOR_TYPE.blockageAutoClearance:
+      return "blockage-auto-clearance";
     default:
       return String(fallbackIndex);
   }

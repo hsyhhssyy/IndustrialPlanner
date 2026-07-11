@@ -103,6 +103,12 @@ export interface EntityDefinition {
    */
   readonly placementDefaults?: EntityPlacementDefaults;
 
+  /**
+   * 配方堵塞自动清除配置。
+   * 未声明时设备不具备该能力；声明后由仿真 runtime 按配置检测指定 channel 堵塞并清空指定槽位。
+   */
+  readonly blockageAutoClearance?: EntityBlockageAutoClearanceDefinition;
+
   // ---- 端口与存储槽组 ----
 
   /**
@@ -151,6 +157,23 @@ export interface EntityPlacementDefaults {
   readonly config?: Record<string, unknown>;
   /** 放置时自动创建的 slot links。entityId 使用占位符 "[Self]" */
   readonly slotLinks?: readonly SlotLinkDefinition[];
+}
+
+// ---------------------------------------------------------------------------
+// EntityBlockageAutoClearanceDefinition — 配方堵塞自动清除
+// ---------------------------------------------------------------------------
+
+export interface EntityBlockageAutoClearanceSlotRef {
+  readonly storageSlotGroupId: string;
+  readonly slotId?: string;
+}
+
+export interface EntityBlockageAutoClearanceDefinition {
+  readonly enabledByDefault: boolean;
+  readonly enabledConfigKey: string;
+  readonly channelIds: readonly string[];
+  readonly slotRefs: readonly EntityBlockageAutoClearanceSlotRef[];
+  readonly blockedChannelThreshold: number;
 }
 
 // ---------------------------------------------------------------------------

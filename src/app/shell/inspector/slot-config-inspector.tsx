@@ -91,8 +91,12 @@ export function SlotConfigInspector({
     appHost.workspace.registry.itemDefinitions.map((item) => [item.id, item]),
   );
   const runtimeSlotByKey = buildRuntimeSlotMap(runtimeStatus ?? null);
+  const debugMode = appHost.state?.settings?.debugMode === true;
+  const slotGroupIds = debugMode
+    ? definition.storageSlotGroups.map((storageGroup) => storageGroup.id)
+    : declaration.slotGroupIds;
   const groupViews = resolveSlotConfigGroupViews({
-    slotGroupIds: declaration.slotGroupIds,
+    slotGroupIds,
     definition,
     entity,
     runtimeSlotByKey,

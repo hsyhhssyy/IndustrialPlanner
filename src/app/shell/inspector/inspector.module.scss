@@ -3036,6 +3036,110 @@
   font-size: 0.82rem;
 }
 
+.water-purifier-node-panel-body,
+.blockage-auto-clearance-panel-body {
+  display: grid;
+  gap: 10px;
+}
+
+.water-purifier-mode-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-height: 32px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-2);
+  gap: 2px;
+}
+
+.water-purifier-mode-button {
+  min-width: 0;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.water-purifier-mode-button:hover,
+.water-purifier-mode-button.is-selected {
+  background: var(--surface-1);
+  color: var(--text-0);
+}
+
+.water-purifier-mode-button.is-selected {
+  box-shadow: 0 0 0 1px var(--line-strong);
+}
+
+.water-purifier-rate-row,
+.blockage-auto-clearance-switch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-1);
+  font-size: 0.82rem;
+}
+
+.water-purifier-rate-row[data-enabled="false"] {
+  color: var(--text-3);
+}
+
+.water-purifier-rate-input {
+  width: 92px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-0);
+  color: var(--text-0);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.water-purifier-rate-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.blockage-auto-clearance-switch input {
+  appearance: none;
+  position: relative;
+  width: 42px;
+  height: 24px;
+  margin: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.blockage-auto-clearance-switch input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-2);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.blockage-auto-clearance-switch input:checked {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.blockage-auto-clearance-switch input:checked::after {
+  transform: translateX(18px);
+  background: var(--accent-strong);
+}
+
 .dark-pipe-link-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

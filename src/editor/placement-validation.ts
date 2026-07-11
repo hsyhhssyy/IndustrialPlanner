@@ -116,6 +116,12 @@ export function resolvePlacementValidations(options: {
     registry: options.workspace.registry,
     reasonsByEntityId: mutableReasonsByEntityId,
   });
+  applyInsideBaseForbiddenReasons({
+    entries,
+    document: options.document,
+    registry: options.workspace.registry,
+    reasonsByEntityId: mutableReasonsByEntityId,
+  });
   applyOverlapReasons({
     entries,
     registry: options.workspace.registry,
@@ -267,6 +273,40 @@ function applyOutsideOuterRingReasons(options: {
     }
 
     if (!isGridRectContainedBy(outerRingGridRect, entry.gridRect)) {
+      appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
+    }
+  }
+}
+
+function applyInsideBaseForbiddenReasons(options: {
+  entries: readonly PlacementValidationEntry[];
+  document: WorldDocument;
+  registry: WorkspaceContract["registry"];
+  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+}): void {
+  const baseDefinition = resolveCurrentBaseDefinition({
+    baseId: options.document.baseId,
+    registry: options.registry,
+  });
+  if (baseDefinition === null) {
+    return;
+  }
+
+  const baseGridRect: GridRect = {
+    x: 0,
+    y: 0,
+    width: baseDefinition.placeableArea.width,
+    height: baseDefinition.placeableArea.height,
+  };
+
+  for (const entry of options.entries) {
+    if (isBaseBuiltinEntityId(entry.entity.id)) {
+      continue;
+    }
+    if (!entry.definition.tags.includes("InnerRingNotAllowed")) {
+      continue;
+    }
+    if (areGridRectsIntersecting(baseGridRect, entry.gridRect)) {
       appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
     }
   }

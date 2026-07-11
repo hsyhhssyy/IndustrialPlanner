@@ -26,6 +26,7 @@
 
 import type {
   EntityDefinition,
+  EntityBlockageAutoClearanceDefinition,
   ItemFilterType,
   EntityPlacementDefaults,
 } from "@/domain/registry/types/entity-definition";
@@ -38,6 +39,20 @@ import {
   type EntityPlacementBehaviorDeclaration,
 } from "@/domain/registry/types/entity-placement-behavior";
 import { DEFAULT_PORT_PRIORITY_GROUP } from "@/shared/port-priority-groups";
+import {
+  BLOCKAGE_AUTO_CLEARANCE_ENABLED_CONFIG_KEY,
+  WATER_PURIFIER_BYPRODUCT_CHANNEL_ID,
+  WATER_PURIFIER_DEFAULT_MANUAL_OUTPUT_PER_MINUTE,
+  WATER_PURIFIER_DEFAULT_OUTPUT_MODE,
+  WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS,
+  WATER_PURIFIER_INTAKE_CHANNEL_IDS,
+  WATER_PURIFIER_MANUAL_OUTPUT_PER_MINUTE_CONFIG_KEY,
+  WATER_PURIFIER_NODE_ENTITY_ID,
+  WATER_PURIFIER_OUTPUT_ITEM_ID,
+  WATER_PURIFIER_OUTPUT_MODE_CONFIG_KEY,
+  WATER_PURIFIER_OUTPUT_STORAGE_GROUP_ID,
+  WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID,
+} from "@/shared/water-purifier-node";
 
 import { ITEM_DEFINITIONS } from "./item-definition";
 import { RECIPE_DEFINITIONS } from "./recipe-definition";
@@ -518,6 +533,12 @@ function createPlacementDefaults(options: {
   config?: Record<string, unknown>;
   slotLinks?: EntityPlacementDefaults["slotLinks"];
 }): EntityPlacementDefaults {
+  return options;
+}
+
+function createBlockageAutoClearance(
+  options: EntityBlockageAutoClearanceDefinition,
+): EntityBlockageAutoClearanceDefinition {
   return options;
 }
 
@@ -2393,6 +2414,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_fluid_output_a", "fluid_output_a", "shared_input_buffer"),
       createBinding("bind_fluid_output_b", "fluid_output_b", "shared_input_buffer"),
     ],
+    blockageAutoClearance: createBlockageAutoClearance({
+      enabledByDefault: true,
+      enabledConfigKey: BLOCKAGE_AUTO_CLEARANCE_ENABLED_CONFIG_KEY,
+      channelIds: ["ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8"],
+      slotRefs: [{ storageSlotGroupId: "shared_input_buffer" }],
+      blockedChannelThreshold: 2,
+    }),
     inspectors: [
       {
         type: INSPECTOR_TYPE.recipeStatus,
@@ -2401,6 +2429,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       {
         type: INSPECTOR_TYPE.portOutputConfig,
         portGroupIds: ["item_output", "fluid_output_a", "fluid_output_b"],
+      },
+      {
+        type: INSPECTOR_TYPE.blockageAutoClearance,
       },
     ],
   }),
@@ -3220,6 +3251,147 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ...createSimpleProductionDevice([
       { kind: "fluid", direction: "input", capacities: [50] },
     ]),
+  }),
+  createEntityDefinition({
+    id: WATER_PURIFIER_NODE_ENTITY_ID,
+    nameKey: "registry.entity.item_water_purifier_node_1.name",
+    spriteId: "item_water_purifier_node_1",
+    footprint: { width: 27, height: 3 },
+    spriteOffset: {
+      topView: { x: 0, y: -5, width: 27, height: 8 },
+    },
+    uiGroup: "basicProduction",
+    displayOrder: 510,
+    tags: [PRODUCER_TAG, "武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
+    requiresPower: true,
+    powerDemand: 20,
+    portGroups: [
+      createPortGroup(
+        "fluid_input_1",
+        "fluid",
+        "input",
+        [
+          createPort("in_s_1", 1, 2, "S", {
+            acceptRule: { base: { kind: "item", itemId: "item_liquid_sewage" }, exclude: [] },
+          }),
+        ],
+      ),
+      createPortGroup(
+        "fluid_input_2",
+        "fluid",
+        "input",
+        [
+          createPort("in_s_9", 9, 2, "S", {
+            acceptRule: { base: { kind: "item", itemId: "item_liquid_sewage" }, exclude: [] },
+          }),
+        ],
+      ),
+      createPortGroup(
+        "fluid_input_3",
+        "fluid",
+        "input",
+        [
+          createPort("in_s_17", 17, 2, "S", {
+            acceptRule: { base: { kind: "item", itemId: "item_liquid_sewage" }, exclude: [] },
+          }),
+        ],
+      ),
+      createPortGroup(
+        "fluid_output",
+        "fluid",
+        "output",
+        [
+          createPort("out_s_25", 25, 2, "S", {
+            acceptRule: { base: { kind: "item", itemId: WATER_PURIFIER_OUTPUT_ITEM_ID }, exclude: [] },
+          }),
+        ],
+      ),
+    ],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[0],
+        "fluid",
+        createSlots("slot", [2], "liquid", { lock: "item_liquid_sewage" }),
+      ),
+      createStorageSlotGroup(
+        WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[1],
+        "fluid",
+        createSlots("slot", [2], "liquid", { lock: "item_liquid_sewage" }),
+      ),
+      createStorageSlotGroup(
+        WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[2],
+        "fluid",
+        createSlots("slot", [2], "liquid", { lock: "item_liquid_sewage" }),
+      ),
+      createStorageSlotGroup(
+        WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID,
+        "fluid",
+        createSlots("slot", [500], "liquid", { lock: "item_liquid_sewage" }),
+      ),
+      createStorageSlotGroup(
+        WATER_PURIFIER_OUTPUT_STORAGE_GROUP_ID,
+        "fluid",
+        createSlots("slot", [50], "liquid", { lock: WATER_PURIFIER_OUTPUT_ITEM_ID }),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel(
+        WATER_PURIFIER_INTAKE_CHANNEL_IDS[0],
+        [WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[0]],
+        [WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID],
+      ),
+      createRecipeChannel(
+        WATER_PURIFIER_INTAKE_CHANNEL_IDS[1],
+        [WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[1]],
+        [WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID],
+      ),
+      createRecipeChannel(
+        WATER_PURIFIER_INTAKE_CHANNEL_IDS[2],
+        [WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[2]],
+        [WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID],
+      ),
+      createRecipeChannel(
+        WATER_PURIFIER_BYPRODUCT_CHANNEL_ID,
+        [WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID],
+        [WATER_PURIFIER_OUTPUT_STORAGE_GROUP_ID],
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_fluid_input_1", "fluid_input_1", WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[0]),
+      createBinding("bind_fluid_input_2", "fluid_input_2", WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[1]),
+      createBinding("bind_fluid_input_3", "fluid_input_3", WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[2]),
+      createBinding("bind_fluid_output", "fluid_output", WATER_PURIFIER_OUTPUT_STORAGE_GROUP_ID),
+    ],
+    placementDefaults: createPlacementDefaults({
+      config: {
+        [WATER_PURIFIER_OUTPUT_MODE_CONFIG_KEY]: WATER_PURIFIER_DEFAULT_OUTPUT_MODE,
+        [WATER_PURIFIER_MANUAL_OUTPUT_PER_MINUTE_CONFIG_KEY]:
+          WATER_PURIFIER_DEFAULT_MANUAL_OUTPUT_PER_MINUTE,
+      },
+    }),
+    blockageAutoClearance: createBlockageAutoClearance({
+      enabledByDefault: true,
+      enabledConfigKey: BLOCKAGE_AUTO_CLEARANCE_ENABLED_CONFIG_KEY,
+      channelIds: WATER_PURIFIER_INTAKE_CHANNEL_IDS,
+      slotRefs: [{ storageSlotGroupId: WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID }],
+      blockedChannelThreshold: 1,
+    }),
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.waterPurifierNode,
+      },
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: [
+          ...WATER_PURIFIER_INTAKE_CHANNEL_IDS,
+          WATER_PURIFIER_BYPRODUCT_CHANNEL_ID,
+        ],
+      },
+      {
+        type: INSPECTOR_TYPE.slotConfig,
+        slotGroupIds: [WATER_PURIFIER_OUTPUT_STORAGE_GROUP_ID],
+      },
+    ],
   }),
   createEntityDefinition({
     id: "item_port_liquid_storager_1",

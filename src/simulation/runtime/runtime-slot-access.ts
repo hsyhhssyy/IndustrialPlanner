@@ -23,6 +23,13 @@ import {
   resolveTransportRecipeTiming,
 } from "./phase-gating";
 import { isDeviceInRequiredGasDiffusion } from "./gas-diffusion";
+import {
+  WATER_PURIFIER_BYPRODUCT_CHANNEL_ID,
+  WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
+  WATER_PURIFIER_COLLECT_RECIPE_ID,
+  WATER_PURIFIER_INTAKE_CHANNEL_IDS,
+  WATER_PURIFIER_NODE_ENTITY_ID,
+} from "@/shared/water-purifier-node";
 
 const WAREHOUSE_SINK_TAG = "WarehouseSink";
 
@@ -683,6 +690,41 @@ function resolveRecipes(options: {
     }];
   }
 
+  if (options.device.definitionId === WATER_PURIFIER_NODE_ENTITY_ID) {
+    if (options.device.waterPurifierNode?.outputMode === "manual-rate") {
+      return [];
+    }
+
+    const allowedRecipeId = resolveWaterPurifierAllowedRecipeId(options.channel.id);
+    if (allowedRecipeId === null) {
+      return [];
+    }
+    const recipe = options.topology.recipeCatalog[allowedRecipeId];
+    if (
+      recipe === undefined
+      || !recipeCanMatchContents(recipe, options.ingredientSlotContents)
+      || !isDeviceInRequiredGasDiffusion({
+        device: options.device,
+        requiredGasDiffusion: recipe.requiredGasDiffusion,
+        activeGasDiffusions: options.state.transient.activeGasDiffusions,
+      })
+    ) {
+      return [];
+    }
+
+    return [{
+      recipeId: recipe.id,
+      recipeType: recipe.recipeType,
+      durationTicks: recipe.durationTicks,
+      inputs: recipe.inputs,
+      outputs: recipe.outputs,
+      ingredientNodeIds: options.channel.ingredientNodeIds,
+      productNodeIds: options.channel.productNodeIds,
+      requiredGasDiffusion: recipe.requiredGasDiffusion,
+      gasDiffusionOutput: recipe.gasDiffusionOutput,
+    }];
+  }
+
   // 手选配方设备：不自动根据原料匹配配方，必须由用户手动指定配方后设备才运行
   if (options.channel.manualRecipeOnly) {
     if (options.channel.defaultRecipeId === null) {
@@ -759,6 +801,16 @@ function resolveRecipes(options: {
       requiredGasDiffusion: recipe.requiredGasDiffusion,
       gasDiffusionOutput: recipe.gasDiffusionOutput,
     }));
+}
+
+function resolveWaterPurifierAllowedRecipeId(channelId: string): string | null {
+  if ((WATER_PURIFIER_INTAKE_CHANNEL_IDS as readonly string[]).includes(channelId)) {
+    return WATER_PURIFIER_COLLECT_RECIPE_ID;
+  }
+  if (channelId === WATER_PURIFIER_BYPRODUCT_CHANNEL_ID) {
+    return WATER_PURIFIER_BYPRODUCT_RECIPE_ID;
+  }
+  return null;
 }
 
 function readIngredientSlotContents(options: {

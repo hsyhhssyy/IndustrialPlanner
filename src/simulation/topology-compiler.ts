@@ -16,6 +16,16 @@ import {
   readPortPriorityGroupOverrides,
   resolvePortPriorityGroupOverrideKey,
 } from "@/shared/port-priority-groups";
+import {
+  WATER_PURIFIER_DEFAULT_MANUAL_OUTPUT_PER_MINUTE,
+  WATER_PURIFIER_DEFAULT_OUTPUT_MODE,
+  WATER_PURIFIER_MANUAL_OUTPUT_PER_MINUTE_CONFIG_KEY,
+  WATER_PURIFIER_NODE_ENTITY_ID,
+  WATER_PURIFIER_OUTPUT_ITEM_ID,
+  WATER_PURIFIER_OUTPUT_MODE_CONFIG_KEY,
+  WATER_PURIFIER_OUTPUT_SLOT_ID,
+  WATER_PURIFIER_OUTPUT_STORAGE_GROUP_ID,
+} from "@/shared/water-purifier-node";
 
 import { hashStable } from "./deterministic";
 import { STANDARD_TICK_RATE_PER_SECOND } from "./tick-rate";
@@ -33,6 +43,8 @@ import type {
   CompiledSimulationTopology,
   CompiledSimulationTransferEdge,
   CompiledTransportComponent,
+  CompiledSimulationBlockageAutoClearance,
+  CompiledSimulationWaterPurifierNodeConfig,
   SimulationAcceptRule,
   SimulationAdmissionRule,
   SimulationCompileDiagnostic,
@@ -488,6 +500,8 @@ function compileWarehouseDevice(
       routing: {},
       configHash: hashStable({ baseId: document.baseId, itemIds: Object.keys(itemCatalog).sort() }),
       isProducer: false,
+      blockageAutoClearance: null,
+      waterPurifierNode: null,
     },
     nodes: [node],
     slots,
@@ -600,6 +614,8 @@ function compileEntityDevice(options: {
       definition,
     }),
     isProducer: definition.tags.includes("Producer"),
+    blockageAutoClearance: compileBlockageAutoClearance(definition, options.entity.config),
+    waterPurifierNode: compileWaterPurifierNode(definition.id, options.entity.config),
   };
 
   return {
@@ -1128,6 +1144,69 @@ function compileRouting(
   }
 
   return routing;
+}
+
+function compileBlockageAutoClearance(
+  definition: EntityDefinition,
+  config: Readonly<Record<string, unknown>>,
+): CompiledSimulationBlockageAutoClearance | null {
+  const declaration = definition.blockageAutoClearance;
+  if (declaration === undefined) {
+    return null;
+  }
+
+  const configuredEnabled = config[declaration.enabledConfigKey];
+  const enabled = typeof configuredEnabled === "boolean"
+    ? configuredEnabled
+    : declaration.enabledByDefault;
+  const channelIds = [...new Set(declaration.channelIds.filter((id) => id.length > 0))];
+  const slotRefs = declaration.slotRefs
+    .filter((slotRef) => slotRef.storageSlotGroupId.length > 0)
+    .map((slotRef) => ({
+      storageSlotGroupId: slotRef.storageSlotGroupId,
+      slotId: slotRef.slotId ?? null,
+    }));
+  const blockedChannelThreshold = Number.isFinite(declaration.blockedChannelThreshold)
+    ? Math.max(1, Math.trunc(declaration.blockedChannelThreshold))
+    : 1;
+
+  if (channelIds.length === 0 || slotRefs.length === 0) {
+    return null;
+  }
+
+  return {
+    enabled,
+    channelIds,
+    slotRefs,
+    blockedChannelThreshold,
+  };
+}
+
+function compileWaterPurifierNode(
+  definitionId: string,
+  config: Readonly<Record<string, unknown>>,
+): CompiledSimulationWaterPurifierNodeConfig | null {
+  if (definitionId !== WATER_PURIFIER_NODE_ENTITY_ID) {
+    return null;
+  }
+
+  const rawMode = config[WATER_PURIFIER_OUTPUT_MODE_CONFIG_KEY];
+  const outputMode = rawMode === "manual-rate" || rawMode === "input-derived"
+    ? rawMode
+    : WATER_PURIFIER_DEFAULT_OUTPUT_MODE;
+  const rawManualOutputPerMinute = config[WATER_PURIFIER_MANUAL_OUTPUT_PER_MINUTE_CONFIG_KEY];
+  const manualOutputPerMinute = typeof rawManualOutputPerMinute === "number"
+    && Number.isFinite(rawManualOutputPerMinute)
+    ? Math.max(0, rawManualOutputPerMinute)
+    : WATER_PURIFIER_DEFAULT_MANUAL_OUTPUT_PER_MINUTE;
+
+  return {
+    outputMode,
+    manualOutputPerMinute,
+    outputStorageGroupId: WATER_PURIFIER_OUTPUT_STORAGE_GROUP_ID,
+    outputSlotId: WATER_PURIFIER_OUTPUT_SLOT_ID,
+    outputItemId: WATER_PURIFIER_OUTPUT_ITEM_ID,
+  };
 }
 
 function compileDocumentSlotLinks(options: {

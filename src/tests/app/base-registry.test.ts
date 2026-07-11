@@ -4,6 +4,7 @@ import { createRegistryContract } from "@/registry";
 import {
   buildBaseBuiltinEntityId,
 } from "@/domain/registry/types/base-definition";
+import { WATER_PURIFIER_NODE_ENTITY_ID } from "@/shared/water-purifier-node";
 import { describe, expect, it } from "vitest";
 
 describe("createRegistryContract", () => {
@@ -137,6 +138,10 @@ describe("createRegistryContract", () => {
       ).toBe(true);
 
       const slotGroupIds = (inspector as { slotGroupIds: readonly string[] }).slotGroupIds;
+      if (machineId === WATER_PURIFIER_NODE_ENTITY_ID) {
+        expect(slotGroupIds).toEqual(["xiranite_waste_buffer"]);
+        continue;
+      }
       expect([...slotGroupIds].sort()).toEqual([...boundStorageSlotGroupIds].sort());
     }
   });

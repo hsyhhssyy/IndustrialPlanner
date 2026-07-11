@@ -1,6 +1,7 @@
 import type { LinkType } from "@/domain/document/world-document";
 import type { GridEdge, GridPoint, GridRect, GridRectSize, GridRotation } from "@/domain/shared/grid";
 import type { RecipeDefinition, RecipeType } from "@/domain/registry/types/recipe-definition";
+import type { WaterPurifierOutputMode } from "@/shared/water-purifier-node";
 
 export type SimulationItemDomain = "solid" | "liquid" | "gas";
 export type SimulationItemDomainFilter = SimulationItemDomain | "fluid";
@@ -166,6 +167,30 @@ export interface CompiledSimulationDevice {
   readonly configHash: string;
   /** 编译期缓存：该设备是否有实质生产配方（非运输、非仓库提交）。运行时零开销判断。 */
   readonly isProducer: boolean;
+  /** 显式声明的阻塞清理机制；未配置的设备运行时完全不生效。 */
+  readonly blockageAutoClearance?: CompiledSimulationBlockageAutoClearance | null;
+  /** 净水节点专用运行配置；其他设备为 null。 */
+  readonly waterPurifierNode?: CompiledSimulationWaterPurifierNodeConfig | null;
+}
+
+export interface CompiledSimulationBlockageAutoClearanceSlotRef {
+  readonly storageSlotGroupId: string;
+  readonly slotId: string | null;
+}
+
+export interface CompiledSimulationBlockageAutoClearance {
+  readonly enabled: boolean;
+  readonly channelIds: readonly string[];
+  readonly slotRefs: readonly CompiledSimulationBlockageAutoClearanceSlotRef[];
+  readonly blockedChannelThreshold: number;
+}
+
+export interface CompiledSimulationWaterPurifierNodeConfig {
+  readonly outputMode: WaterPurifierOutputMode;
+  readonly manualOutputPerMinute: number;
+  readonly outputStorageGroupId: string;
+  readonly outputSlotId: string;
+  readonly outputItemId: string;
 }
 
 export interface CompiledSimulationRecipeChannel {

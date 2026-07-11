@@ -249,6 +249,33 @@ export const INSPECTOR_TYPE = {
   behaviorToggle: "behavior-toggle",
 
   /**
+   * ## 净水节点面板
+   *
+   * **净水节点专用 Inspector。**
+   *
+   * 编辑功能：
+   * - 切换产出模式：按污水输入 / 手动每分钟产出
+   * - 手动模式下配置每分钟壤晶废液产出数量
+   *
+   * 写入路径：
+   * - `waterPurifierOutputMode`
+   * - `waterPurifierManualOutputPerMinute`
+   */
+  waterPurifierNode: "water-purifier-node",
+
+  /**
+   * ## 自动处理复数配方阻塞面板
+   *
+   * **编辑目标**：设备声明的 blockageAutoClearance 开关。
+   *
+   * 编辑功能：
+   * - 开启 / 关闭当前设备的堵塞自动清除机制
+   *
+   * 写入路径：EntityDefinition.blockageAutoClearance.enabledConfigKey 指向的 config key。
+   */
+  blockageAutoClearance: "blockage-auto-clearance",
+
+  /**
    * ## 输出端口配置面板
    *
    * **编辑目标**：portGroups[*].ports[*] 的 acceptRule。
@@ -457,4 +484,6 @@ export type EntityInspectorDeclaration =
   | PortOutputConfigInspectorDeclaration
   | DarkPipeLinkInspectorDeclaration
   | { readonly type: typeof INSPECTOR_TYPE.structure }
-  | { readonly type: typeof INSPECTOR_TYPE.behaviorToggle };
+  | { readonly type: typeof INSPECTOR_TYPE.behaviorToggle }
+  | { readonly type: typeof INSPECTOR_TYPE.waterPurifierNode }
+  | { readonly type: typeof INSPECTOR_TYPE.blockageAutoClearance };
