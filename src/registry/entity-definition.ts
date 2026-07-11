@@ -106,7 +106,7 @@ function createLiquidPurifierOutputAcceptRule(
 ): PortDefinition["acceptRule"] {
   const allowedItemIds = new Set<string>(itemIds);
   return {
-    base: { kind: "liquid" },
+    base: { kind: "fluid" },
     exclude: ITEM_DEFINITIONS
       .filter((item) => item.tags.includes("liquid") && !allowedItemIds.has(item.id))
       .map((item) => item.id)
@@ -2425,7 +2425,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         "fluid",
         "input",
-        [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+        [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S", {
+          acceptRule: { base: { kind: "fluid" }, exclude: [] },
+        })),
       ),
       createPortGroup(
         "fluid_output",
@@ -2441,11 +2443,52 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    ...createSimpleProductionDevice([
-      { kind: "fluid", direction: "input", capacities: [50] },
-      { kind: "fluid", direction: "output", capacities: [50, 50] },
-      { kind: "item", direction: "input", capacities: [50] },
-    ]),
+    // AI-REMOVED 2026-07-11:
+    // Reason: createSimpleProductionDevice 会把 kind="fluid" 的槽位过滤器固定为 liquid；
+    //   提纯机现在是首个非管道的 fluid 设备，四个管道出入口和对应缓存都必须允许 liquid/gas。
+    // Trigger: 用户要求提纯机四个管道出入口可以同时接受气体和液体。
+    // Evidence: resolveSlotFilterType("fluid") 返回 "liquid"，仅改端口 acceptRule 会导致气体仍被缓存槽拒绝。
+    // Replacement: 下方显式 storageSlotGroups / recipeChannels / portStorageBindings / inspectors。
+    // Risk: Low - 保留原 storage group id 与 channel id，旧蓝图路径不变。
+    // Human Review: Required
+    //
+    // Original code:
+    // ...createSimpleProductionDevice([
+    //   { kind: "fluid", direction: "input", capacities: [50] },
+    //   { kind: "fluid", direction: "output", capacities: [50, 50] },
+    //   { kind: "item", direction: "input", capacities: [50] },
+    // ]),
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "fluid_input_buffer",
+        "fluid",
+        createSlots("input_fluid_slot", [50], "fluid"),
+      ),
+      createStorageSlotGroup(
+        "fluid_output_buffer",
+        "fluid",
+        createSlots("output_fluid_slot", [50, 50], "fluid"),
+      ),
+      createStorageSlotGroup(
+        "item_input_buffer",
+        "item",
+        createSlots("input_item_slot", [50], "solid"),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["fluid_input_buffer", "item_input_buffer"], ["fluid_output_buffer"]),
+    ],
+    portStorageBindings: [
+      createBinding("bind_fluid_input", "fluid_input", "fluid_input_buffer"),
+      createBinding("bind_fluid_output", "fluid_output", "fluid_output_buffer"),
+      createBinding("bind_item_input", "item_input", "item_input_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
+    ],
   }),
   createEntityDefinition({
     id: "item_port_xiranite_oven_1",
@@ -2651,6 +2694,93 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     portStorageBindings: [
       createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
+      createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
+    ],
+  }),
+  createEntityDefinition({
+    id: "item_port_liquid_gas_converter_1",
+    nameKey: "registry.entity.item_port_liquid_gas_converter_1.name",
+    spriteId: "item_port_liquid_purifier_1",
+    footprint: { width: 5, height: 5 },
+    uiGroup: "advancedManufacturing",
+    displayOrder: 613,
+    tags: [PRODUCER_TAG, "武陵"],
+    requiresPower: true,
+    powerDemand: 50,
+    portGroups: [
+      createPortGroup(
+        "liquid_output",
+        "fluid",
+        "output",
+        [1, 3].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+      createPortGroup(
+        "liquid_input",
+        "fluid",
+        "input",
+        [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+      ),
+      createPortGroup(
+        "gas_input",
+        "fluid",
+        "input",
+        [
+          createPort("in_s_2", 2, 4, "S", {
+            acceptRule: { base: { kind: "gas" }, exclude: [] },
+          }),
+          ...[1, 3].map((y) => createPort(`in_e_${y}`, 4, y, "E", {
+            acceptRule: { base: { kind: "gas" }, exclude: [] },
+          })),
+        ],
+      ),
+      createPortGroup(
+        "gas_output",
+        "fluid",
+        "output",
+        [1, 3].map((y) => createPort(`out_w_${y}`, 0, y, "W", {
+          acceptRule: { base: { kind: "gas" }, exclude: [] },
+        })),
+      ),
+    ],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "liquid_input_buffer",
+        "fluid",
+        createSlots("input_liquid_slot", [50], "liquid"),
+      ),
+      createStorageSlotGroup(
+        "gas_input_buffer",
+        "fluid",
+        createSlots("input_gas_slot", [50], "gas"),
+      ),
+      createStorageSlotGroup(
+        "liquid_output_buffer",
+        "fluid",
+        createSlots("output_liquid_slot", [50], "liquid"),
+      ),
+      createStorageSlotGroup(
+        "gas_output_buffer",
+        "fluid",
+        createSlots("output_gas_slot", [50], "gas"),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel(
+        "default",
+        ["liquid_input_buffer", "gas_input_buffer"],
+        ["liquid_output_buffer", "gas_output_buffer"],
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_liquid_input", "liquid_input", "liquid_input_buffer"),
+      createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
+      createBinding("bind_liquid_output", "liquid_output", "liquid_output_buffer"),
       createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
     ],
     inspectors: [

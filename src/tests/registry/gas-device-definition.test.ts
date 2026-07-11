@@ -49,6 +49,20 @@ function expectGasOnlyPorts(portGroup: PortGroupDefinition): void {
   );
 }
 
+function expectLiquidOnlyPorts(portGroup: PortGroupDefinition): void {
+  expect(portGroup.kind).toBe("fluid");
+  expect(portGroup.ports.map((port) => port.acceptRule)).toEqual(
+    portGroup.ports.map(() => ({ base: { kind: "liquid" }, exclude: [] })),
+  );
+}
+
+function expectFluidBasePorts(portGroup: PortGroupDefinition): void {
+  expect(portGroup.kind).toBe("fluid");
+  expect(portGroup.ports.map((port) => port.acceptRule.base.kind)).toEqual(
+    portGroup.ports.map(() => "fluid"),
+  );
+}
+
 describe("gas item and device definitions", () => {
   it("marks registered gas resources as natural resources", () => {
     for (const itemId of ["item_gas_inert", "item_gas_xiranite"]) {
@@ -111,6 +125,53 @@ describe("gas item and device definitions", () => {
     });
   });
 
+  it("defines liquid-gas converter as the liquid counterpart of solid-gas converter", () => {
+    const definition = requireEntity("item_port_liquid_gas_converter_1");
+    const liquidOutput = requirePortGroup(definition, "liquid_output");
+    const liquidInput = requirePortGroup(definition, "liquid_input");
+    const gasInput = requirePortGroup(definition, "gas_input");
+    const gasOutput = requirePortGroup(definition, "gas_output");
+
+    expect(definition.footprint).toEqual({ width: 5, height: 5 });
+    expectPortLayout(liquidOutput, [
+      { id: "out_n_1", localCellX: 1, localCellY: 0, edge: "NORTH" },
+      { id: "out_n_3", localCellX: 3, localCellY: 0, edge: "NORTH" },
+    ]);
+    expectPortLayout(liquidInput, [
+      { id: "in_s_1", localCellX: 1, localCellY: 4, edge: "SOUTH" },
+      { id: "in_s_3", localCellX: 3, localCellY: 4, edge: "SOUTH" },
+    ]);
+    expectLiquidOnlyPorts(liquidOutput);
+    expectLiquidOnlyPorts(liquidInput);
+    expectPortLayout(gasInput, [
+      { id: "in_s_2", localCellX: 2, localCellY: 4, edge: "SOUTH" },
+      { id: "in_e_1", localCellX: 4, localCellY: 1, edge: "EAST" },
+      { id: "in_e_3", localCellX: 4, localCellY: 3, edge: "EAST" },
+    ]);
+    expectGasOnlyPorts(gasInput);
+    expectPortLayout(gasOutput, [
+      { id: "out_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
+      { id: "out_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
+    ]);
+    expectGasOnlyPorts(gasOutput);
+    expect(definition.storageSlotGroups.map((slotGroup) => ({
+      id: slotGroup.id,
+      kind: slotGroup.kind,
+      itemFilterType: slotGroup.slots[0]?.itemFilterType,
+      capacity: slotGroup.slots[0]?.capacity,
+    }))).toEqual([
+      { id: "liquid_input_buffer", kind: "fluid", itemFilterType: "liquid", capacity: 50 },
+      { id: "gas_input_buffer", kind: "fluid", itemFilterType: "gas", capacity: 50 },
+      { id: "liquid_output_buffer", kind: "fluid", itemFilterType: "liquid", capacity: 50 },
+      { id: "gas_output_buffer", kind: "fluid", itemFilterType: "gas", capacity: 50 },
+    ]);
+    expect(definition.recipeChannels[0]).toMatchObject({
+      id: "default",
+      ingredientStorageGroupIds: ["liquid_input_buffer", "gas_input_buffer"],
+      productStorageGroupIds: ["liquid_output_buffer", "gas_output_buffer"],
+    });
+  });
+
   it("defines gas reactor as gas-only north input and south output", () => {
     const definition = requireEntity("item_port_gas_reactor_1");
     const gasInput = requirePortGroup(definition, "gas_input");
@@ -138,9 +199,11 @@ describe("gas item and device definitions", () => {
     ]);
   });
 
-  it("adds five west solid inputs and a 50-capacity solid buffer to liquid purifier", () => {
+  it("makes liquid purifier pipe ports and buffers accept fluid while keeping solid inputs", () => {
     const definition = requireEntity("item_port_liquid_purifier_1");
     const itemInput = requirePortGroup(definition, "item_input");
+    const fluidInput = requirePortGroup(definition, "fluid_input");
+    const fluidOutput = requirePortGroup(definition, "fluid_output");
 
     expectPortLayout(itemInput, [
       { id: "in_w_0", localCellX: 0, localCellY: 0, edge: "WEST" },
@@ -149,11 +212,36 @@ describe("gas item and device definitions", () => {
       { id: "in_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
       { id: "in_w_4", localCellX: 0, localCellY: 4, edge: "WEST" },
     ]);
+    expectPortLayout(fluidInput, [
+      { id: "in_s_1", localCellX: 1, localCellY: 4, edge: "SOUTH" },
+      { id: "in_s_3", localCellX: 3, localCellY: 4, edge: "SOUTH" },
+    ]);
+    expectPortLayout(fluidOutput, [
+      { id: "out_n_1", localCellX: 1, localCellY: 0, edge: "NORTH" },
+      { id: "out_n_3", localCellX: 3, localCellY: 0, edge: "NORTH" },
+    ]);
+    expectFluidBasePorts(fluidInput);
+    expectFluidBasePorts(fluidOutput);
+    expect(fluidOutput.ports.flatMap((port) => port.acceptRule.exclude)).not.toContain("item_gas_inert");
+    expect(fluidOutput.ports.flatMap((port) => port.acceptRule.exclude)).not.toContain("item_gas_xiranite");
     expect(definition.storageSlotGroups.map((slotGroup) => slotGroup.id)).toEqual([
       "fluid_input_buffer",
       "fluid_output_buffer",
       "item_input_buffer",
     ]);
+    expect(definition.storageSlotGroups[0]).toMatchObject({
+      id: "fluid_input_buffer",
+      kind: "fluid",
+      slots: [{ capacity: 50, itemFilterType: "fluid" }],
+    });
+    expect(definition.storageSlotGroups[1]).toMatchObject({
+      id: "fluid_output_buffer",
+      kind: "fluid",
+      slots: [
+        { capacity: 50, itemFilterType: "fluid" },
+        { capacity: 50, itemFilterType: "fluid" },
+      ],
+    });
     expect(definition.storageSlotGroups[2]).toMatchObject({
       id: "item_input_buffer",
       kind: "item",
