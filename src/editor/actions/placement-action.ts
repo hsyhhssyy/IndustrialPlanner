@@ -10,6 +10,7 @@ import type { EntityDefinition, EntityPlacementDefaults } from "@/domain/registr
 import { syncPlacementValidationState } from "../placement-validation";
 import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
+import { snapPlacementToOuterRingEdge } from "../placement-snapping";
 
 type EditorPlacementActions = Pick<
   EditorAction,
@@ -56,14 +57,21 @@ export function createEditorPlacementActions({
         reservedIds,
       );
 
+      const rawPosition = resolvePlacementDraftPosition({
+        centerGridPoint,
+        footprint: definition.footprint,
+      });
+      const snappedPlacement = snapPlacementToOuterRingEdge({
+        definition,
+        baseDefinition: resolveBaseDefinition(currentDocument.baseId, workspace.registry.baseDefinitions),
+        position: rawPosition,
+        rotation: 0,
+      });
       const draft: DraftEntity = {
         id: nextDraftId,
         definitionId: deviceDefinitionId,
-        position: resolvePlacementDraftPosition({
-          centerGridPoint,
-          footprint: definition.footprint,
-        }),
-        rotation: 0,
+        position: snappedPlacement.position,
+        rotation: snappedPlacement.rotation,
         config: {},
         tags: [],
         originalEntityId: nextDraftId,
@@ -353,6 +361,13 @@ function resolvePlacementDraftPosition(options: {
 
 function resolvePlacementCenterOffset(size: number): number {
   return Math.floor((size - 1) / 2);
+}
+
+function resolveBaseDefinition(
+  baseId: string,
+  baseDefinitions: EditorActionsContext["workspace"]["registry"]["baseDefinitions"],
+) {
+  return baseDefinitions.find((definition) => definition.id === baseId) ?? null;
 }
 
 const PLACEMENT_SELF = "[Self]";

@@ -2,7 +2,8 @@ import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import type { GridPoint } from "@/domain/shared/grid";
+import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
+import type { GridPoint, GridRect } from "@/domain/shared/grid";
 import {
   resolveViewportRectFromWorldGridRect,
   resolveWorldVectorFromViewportVector,
@@ -34,6 +35,69 @@ export function isPreviewBoundingBoxAtClientPoint(options: {
     && gridCell.y >= previewRect.y
     && gridCell.y < previewRect.y + previewRect.height
   );
+}
+
+export function resolveTouchDragAnchorAfterPreviewMove(options: {
+  beforeRect: GridRect;
+  afterRect: GridRect;
+  startGridPoint: GridPoint;
+  endGridPoint: GridPoint;
+}): GridPoint {
+  const vector = {
+    x: options.endGridPoint.x - options.startGridPoint.x,
+    y: options.endGridPoint.y - options.startGridPoint.y,
+  };
+
+  return {
+    x: options.afterRect.x === options.beforeRect.x + vector.x
+      && options.afterRect.width === options.beforeRect.width
+      ? options.endGridPoint.x
+      : options.startGridPoint.x,
+    y: options.afterRect.y === options.beforeRect.y + vector.y
+      && options.afterRect.height === options.beforeRect.height
+      ? options.endGridPoint.y
+      : options.startGridPoint.y,
+  };
+}
+
+export function didPreviewRectChange(
+  beforeRect: GridRect,
+  afterRect: GridRect,
+): boolean {
+  return (
+    beforeRect.x !== afterRect.x
+    || beforeRect.y !== afterRect.y
+    || beforeRect.width !== afterRect.width
+    || beforeRect.height !== afterRect.height
+  );
+}
+
+export function hasSingleOuterRingEdgeSnapPreview(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+}): boolean {
+  const preview = options.editor.state.collections[EntityCollectionType.preview];
+  if (preview.length !== 1) {
+    return false;
+  }
+
+  const entityId = preview[0];
+  if (entityId === undefined) {
+    return false;
+  }
+
+  const entity = options.editor.queries.getEntityById(entityId);
+  if (entity === null) {
+    return false;
+  }
+
+  const definition = options.appHost.workspace.registry.entityDefinitions.find((candidate) =>
+    candidate.id === entity.definitionId,
+  );
+
+  return definition?.placementBehaviors.some((behavior) =>
+    behavior.type === PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge,
+  ) ?? false;
 }
 
 export function nudgeMobilePreviewIntoSafeViewport(options: {
@@ -100,7 +164,23 @@ export function nudgeMobilePreviewIntoSafeViewport(options: {
       y: previewGridRect.y + gridVector.y,
     },
   });
-  nudgeRuntimeAnchor(options.appHost, gridVector);
+  const afterRect = options.editor.queries.findEntityCollectionGridRect(
+    EntityCollectionType.preview,
+  );
+  if (afterRect !== null) {
+    nudgeRuntimeAnchor(options.appHost, {
+      beforeRect: previewGridRect,
+      afterRect,
+      startGridPoint: {
+        x: previewGridRect.x,
+        y: previewGridRect.y,
+      },
+      endGridPoint: {
+        x: previewGridRect.x + gridVector.x,
+        y: previewGridRect.y + gridVector.y,
+      },
+    });
+  }
   return true;
 }
 
@@ -273,7 +353,12 @@ function roundGridVectorAwayFromZero(value: number): number {
   return value > 0 ? Math.ceil(value) : Math.floor(value);
 }
 
-function nudgeRuntimeAnchor(appHost: AppHost, gridVector: GridPoint): void {
+function nudgeRuntimeAnchor(appHost: AppHost, options: {
+  beforeRect: GridRect;
+  afterRect: GridRect;
+  startGridPoint: GridPoint;
+  endGridPoint: GridPoint;
+}): void {
   const runtime = appHost.internalState.runtime;
 
   if (
@@ -282,10 +367,14 @@ function nudgeRuntimeAnchor(appHost: AppHost, gridVector: GridPoint): void {
   ) {
     const anchor = runtime.placementAnchor;
     if (anchor !== null) {
-      runtime.placementAnchor = {
-        x: anchor.x + gridVector.x,
-        y: anchor.y + gridVector.y,
-      };
+      runtime.placementAnchor = resolveTouchDragAnchorAfterPreviewMove({
+        ...options,
+        startGridPoint: anchor,
+        endGridPoint: {
+          x: anchor.x + options.endGridPoint.x - options.startGridPoint.x,
+          y: anchor.y + options.endGridPoint.y - options.startGridPoint.y,
+        },
+      });
     }
     return;
   }
@@ -293,10 +382,14 @@ function nudgeRuntimeAnchor(appHost: AppHost, gridVector: GridPoint): void {
   if (appHost.internalState.activeTool === "move") {
     const anchor = runtime.moveAnchor;
     if (anchor !== null) {
-      runtime.moveAnchor = {
-        x: anchor.x + gridVector.x,
-        y: anchor.y + gridVector.y,
-      };
+      runtime.moveAnchor = resolveTouchDragAnchorAfterPreviewMove({
+        ...options,
+        startGridPoint: anchor,
+        endGridPoint: {
+          x: anchor.x + options.endGridPoint.x - options.startGridPoint.x,
+          y: anchor.y + options.endGridPoint.y - options.startGridPoint.y,
+        },
+      });
     }
   }
 }

@@ -22,6 +22,7 @@ import { createRegistryContract } from "@/registry";
 import { resolveWorldEntitySpriteLayout } from "@/renderer/scene/render-scene-orchestrator";
 import { EDITOR_GRID_CELL_PIXEL_SIZE } from "@/editor/viewport-constants";
 import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform";
+import { WATER_PURIFIER_NODE_ENTITY_ID } from "@/shared/water-purifier-node";
 import {
   readFromIndexedDb,
   saveToIndexedDb,
@@ -1133,6 +1134,115 @@ describe("createEditorHost", () => {
       y: 17,
       width: 4,
       height: 8,
+    });
+  });
+
+  it("snaps water purifier node placement previews to the outer ring edge", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createSinglePlacementDraft(WATER_PURIFIER_NODE_ENTITY_ID, {
+      x: 37,
+      y: -5,
+    });
+
+    const draftId = editorHost.state.collections.preview[0];
+    expect(draftId).toBeDefined();
+    expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
+      definitionId: WATER_PURIFIER_NODE_ENTITY_ID,
+      position: {
+        x: 24,
+        y: -10,
+      },
+      rotation: 0,
+    });
+
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 37, y: -5 },
+      endGridPoint: { x: 44, y: -4 },
+    });
+
+    expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
+      position: {
+        x: 31,
+        y: -10,
+      },
+      rotation: 0,
+    });
+  });
+
+  it("marks water purifier node drafts too far from the outer edge invalid", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createSinglePlacementDraft(WATER_PURIFIER_NODE_ENTITY_ID, {
+      x: 37,
+      y: 20,
+    });
+
+    const draftId = editorHost.state.collections.preview[0];
+    expect(draftId).toBeDefined();
+    expect(
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(draftId ?? ""),
+    ).toBe(true);
+    expect(editorHost.queries.getEntityPlacementValidation(draftId ?? "").reasons).toEqual([
+      {
+        code: "outside-base",
+        message: "必须靠近地图边缘放置",
+      },
+    ]);
+    expect(editorHost.actions.applyPlacementDraft()).toBe(false);
+    expect(editorHost.document.getSnapshot().entityOrder).toEqual([]);
+  });
+
+  it("keeps water purifier node rotation fixed away from corners", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createSinglePlacementDraft(WATER_PURIFIER_NODE_ENTITY_ID, {
+      x: 37,
+      y: -5,
+    });
+    const draftId = editorHost.state.collections.preview[0];
+
+    editorHost.actions.rotateCollection(EntityCollectionType.preview);
+
+    expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
+      position: {
+        x: 24,
+        y: -10,
+      },
+      rotation: 0,
+    });
+  });
+
+  it("switches water purifier node snap edge when rotating near a corner", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createSinglePlacementDraft(WATER_PURIFIER_NODE_ENTITY_ID, {
+      x: 1,
+      y: -5,
+    });
+    const draftId = editorHost.state.collections.preview[0];
+
+    expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
+      position: {
+        x: -10,
+        y: -10,
+      },
+      rotation: 0,
+    });
+
+    editorHost.actions.rotateCollection(EntityCollectionType.preview);
+
+    expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
+      position: {
+        x: -10,
+        y: -10,
+      },
+      rotation: 270,
     });
   });
 

@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
+import { Text } from "pixi.js"
 
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document"
 import { AYU_DARK_THEME, AYU_LIGHT_THEME } from "@/app/theme"
+import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import { createRegistryContract } from "@/registry"
 import {
   applyViewportSize,
@@ -36,6 +38,7 @@ import {
   resolveWorldAuxiliaryStrokeWidth,
 } from "@/renderer/scene/decorations/MarqueeRectDecoration"
 import {
+  createInvalidPlacementDecoration,
   resolveInvalidPlacementToastReasonText,
 } from "@/renderer/scene/decorations/InvalidPlacementDecoration"
 import { resolvePowerRangeOutlineLayouts } from "@/renderer/scene/decorations/PowerRangeDecoration"
@@ -409,6 +412,86 @@ describe("resolveInvalidPlacementToastReasonText", () => {
     })).toBe("必须放置在基地内")
   })
 })
+
+describe("createInvalidPlacementDecoration", () => {
+  it("renders preview invalid placement reason text", () => {
+    const decoration = createInvalidPlacementDecoration()
+    const preview = createCollection(["preview-water-node"])
+    const invalidPlacement = createCollection(["preview-water-node"])
+    const registry = createRegistryContract()
+
+    decoration.sync({
+      viewportState: {
+        width: 320,
+        height: 240,
+        resolution: 1,
+        centerX: 0,
+        centerY: 0,
+        gridCellPixelSize: 10,
+        displayRotation: 0,
+      },
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 320,
+        height: 240,
+      },
+      renderHost: {
+        workspace: {
+          app: null,
+          registry,
+          editor: {
+            state: {
+              collections: {
+                [EntityCollectionType.preview]: preview,
+                [EntityCollectionType.invalidPlacement]: invalidPlacement,
+              },
+            },
+            queries: {
+              getEntityById: (entityId: string) =>
+                entityId === "preview-water-node"
+                  ? {
+                    id: entityId,
+                    definitionId: "item_water_purifier_node_1",
+                    position: { x: 0, y: 0 },
+                    rotation: 0,
+                    config: {},
+                    tags: [],
+                  }
+                  : null,
+              getEntityPlacementValidation: () => ({
+                canPlace: false,
+                reasons: [{
+                  code: "outside-base",
+                  message: "必须靠近地图边缘放置",
+                }],
+              }),
+            },
+          },
+        },
+      } as unknown as RenderHost,
+      theme: AYU_DARK_THEME,
+      nowMs: 0,
+    })
+
+    const reasonText = decoration.container.children.find((child): child is Text =>
+      child instanceof Text,
+    )
+
+    expect(reasonText?.text).toBe("必须靠近地图边缘放置")
+    expect(reasonText?.visible).toBe(true)
+
+    decoration.destroy()
+  })
+})
+
+function createCollection(entityIds: readonly string[]) {
+  const collection = [...entityIds] as string[] & {
+    contains(entityId: string): boolean;
+  }
+  collection.contains = (entityId: string) => collection.includes(entityId)
+  return collection
+}
 
 describe("resolveWorldEntitySelectionOverlayLayouts", () => {
   it("returns overlay layouts only for selected entities and respects rotated footprints", () => {

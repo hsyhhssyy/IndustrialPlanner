@@ -515,6 +515,35 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
+  it("updates touch move anchor per axis when snapping constrains one axis", () => {
+    const { context, editor, appHost, previewRectRef } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 20, y: -9 },
+      movePointerMode: "touch",
+      previewDefinitionId: "item_water_purifier_node_1",
+      previewRect: { x: 10, y: -10, width: 27, height: 3 },
+      toolbarVisible: true,
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    vi.mocked(editor.actions.moveCollectionTo).mockImplementation(({
+      startGridPoint,
+      endGridPoint,
+    }) => {
+      previewRectRef.current = {
+        ...previewRectRef.current,
+        x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
+        y: previewRectRef.current.y,
+      };
+    });
+
+    const result = module.handle(touchDragMoveEvent({ position: { x: 21, y: -8 } }), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 21, y: -9 });
+    expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+  });
+
   it("rotates the preview with the R key while moving", () => {
     const { context, editor, appHost } = createContext({
       activeTool: "move",

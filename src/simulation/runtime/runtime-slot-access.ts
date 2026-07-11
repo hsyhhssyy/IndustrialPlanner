@@ -691,12 +691,14 @@ function resolveRecipes(options: {
   }
 
   if (options.device.definitionId === WATER_PURIFIER_NODE_ENTITY_ID) {
-    if (options.device.waterPurifierNode?.outputMode === "manual-rate") {
-      return [];
-    }
-
     const allowedRecipeId = resolveWaterPurifierAllowedRecipeId(options.channel.id);
     if (allowedRecipeId === null) {
+      return [];
+    }
+    if (
+      options.device.waterPurifierNode?.outputMode === "manual-rate"
+      && allowedRecipeId === WATER_PURIFIER_BYPRODUCT_RECIPE_ID
+    ) {
       return [];
     }
     const recipe = options.topology.recipeCatalog[allowedRecipeId];

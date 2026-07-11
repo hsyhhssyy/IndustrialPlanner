@@ -9,6 +9,7 @@ import { cm } from "@/app/shell/shared/css-module-class";
 import {
   WATER_PURIFIER_DEFAULT_MANUAL_OUTPUT_PER_MINUTE,
   WATER_PURIFIER_DEFAULT_OUTPUT_MODE,
+  WATER_PURIFIER_INPUT_DERIVED_OUTPUT_PER_MINUTE,
   WATER_PURIFIER_MANUAL_OUTPUT_PER_MINUTE_CONFIG_KEY,
   WATER_PURIFIER_OUTPUT_MODE_CONFIG_KEY,
   type WaterPurifierOutputMode,
@@ -26,6 +27,9 @@ export function WaterPurifierNodeInspector({
   const deviceClass = appHost.state?.screenProfile?.deviceClass ?? "desktop";
   const outputMode = readOutputMode(entity.config);
   const manualOutputPerMinute = readManualOutputPerMinute(entity.config);
+  const displayedOutputPerMinute = outputMode === "manual-rate"
+    ? manualOutputPerMinute
+    : WATER_PURIFIER_INPUT_DERIVED_OUTPUT_PER_MINUTE;
   const patchEntityConfig = (patch: Record<string, unknown>) => {
     appHost.workspace.editor?.actions.patchEntityConfig(entity.id, patch);
   };
@@ -82,7 +86,7 @@ export function WaterPurifierNodeInspector({
           className={cm(styles, "water-purifier-rate-row")}
           data-enabled={outputMode === "manual-rate" ? "true" : "false"}
         >
-          <span>每分钟产出</span>
+          <span>每分钟产出 壤晶废液</span>
           <NumberInput
             className={cm(styles, "water-purifier-rate-input")}
             data-water-purifier-rate-input
@@ -94,7 +98,7 @@ export function WaterPurifierNodeInspector({
                 [WATER_PURIFIER_MANUAL_OUTPUT_PER_MINUTE_CONFIG_KEY]: Math.max(0, value),
               });
             }}
-            value={manualOutputPerMinute}
+            value={displayedOutputPerMinute}
           />
         </label>
       </div>

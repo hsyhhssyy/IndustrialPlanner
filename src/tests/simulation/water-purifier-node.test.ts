@@ -100,7 +100,7 @@ describe("净水节点 runtime", () => {
       });
   });
 
-  it("manual mode disables sewage-driven recipes", async () => {
+  it("manual mode keeps sewage intake running but disables automatic byproduct output", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("water-purifier-node-manual-disables-input", [
         createWaterPurifierNode({
@@ -108,6 +108,8 @@ describe("净水节点 runtime", () => {
           [WATER_PURIFIER_MANUAL_OUTPUT_PER_MINUTE_CONFIG_KEY]: 0,
           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_sewage",
           "storageSlotGroups[0].slots[0].initialCount": 2,
+          "storageSlotGroups[3].slots[0].initialItemType": "item_liquid_sewage",
+          "storageSlotGroups[3].slots[0].initialCount": 30,
         }),
         createEntity("power", "item_port_power_diffuser_1", 28, -5),
       ]),
@@ -115,10 +117,16 @@ describe("净水节点 runtime", () => {
       registry: createRegistryContract(),
     });
 
-    expect(getDevice(report, 5, "water-node").channelRecipes).not.toHaveProperty("intake_1");
-    expect(findSlot(report, 5, "water-node", "input_buffer_1", "slot_1")).toMatchObject({
+    expect(getDevice(report, 1, "water-node").channelRecipes).toMatchObject({
+      intake_1: { recipeId: "r_water_purifier_node_collect_sewage_basic" },
+    });
+    expect(getDevice(report, 5, "water-node").channelRecipes).not.toHaveProperty("byproduct");
+    expect(findSlot(report, 1, "water-node", "input_buffer_1", "slot_1")).toMatchObject({
+      count: 0,
+    });
+    expect(findSlot(report, 5, "water-node", WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID, "slot_1")).toMatchObject({
       itemType: "item_liquid_sewage",
-      count: 2,
+      count: 30,
     });
   });
 });

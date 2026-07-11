@@ -65,14 +65,24 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
       );
 
       const previewCollection = editor.state.collections[EntityCollectionType.preview];
+      ctx.profiler?.count("invalidPlacement.previewEntityIds", previewCollection?.length ?? 0);
 
       measureDecorationStep(ctx, "invalidPlacement.syncEntities", () => {
         for (const entityId of invalidEntityIds) {
+          // AI-REMOVED 2026-07-11:
+          // Reason: 净水节点等特殊放置规则需要在 preview 阶段直接用 InvalidPlacementDecoration 绘制 footprint 红框和原因文本。
+          // Trigger: 用户明确要求不可放置 preview 使用 decoration 红框，而不是只依赖 preview 扫描线或问题列表。
+          // Evidence: editor placement validation 已将不可放置 preview 放入 invalidPlacement collection；跳过 preview 会导致画布不显示原因。
+          // Replacement: 当前循环继续处理 preview entity，并复用 drawInvalidPlacementStroke / syncReasonToast。
+          // Risk: Medium；preview overlap 也会显示红框，符合“不可放置显示红框”的新要求。
+          // Human Review: Required
+          //
+          // Original code:
           // 预览阶段（拿起/拖拽放置中）不显示红色 invalid 边框和 toast，
           // 此时精灵层的白色扫描线 preview 特效已足够了。
-          if (previewCollection?.contains(entityId)) {
-            continue;
-          }
+          // if (previewCollection?.contains(entityId)) {
+          //   continue;
+          // }
 
           const entity = editor.queries.getEntityById(entityId);
           if (entity === null) {
@@ -103,6 +113,9 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
             continue;
           }
 
+          // AI-CORRECTION 2026-07-11:
+          // Reason: 2026-06-09 的订正已被新的 preview 不可放置提示需求覆盖；
+          // 此处现在同时绘制已提交实体和 preview 实体的 invalid footprint 红框。
           // AI-CORRECTION 2026-06-09:
           // Reason: 预览阶段（preview collection）的实体已由上述 continue 跳过，
           // 此处仅绘制已放下/已提交实体的 invalid 红色边框。
@@ -250,18 +263,24 @@ function syncReasonToast(options: {
     lineHeight,
   };
 
+  const textSize = resolveReasonToastTextSize({
+    text: options.reasonText,
+    fontSize,
+    lineHeight,
+    maxLineWidth: Math.max(4, maxToastWidth - INVALID_PLACEMENT_TOAST_HORIZONTAL_PADDING * 2),
+  });
   const toastWidth = Math.min(
     maxToastWidth,
     Math.max(
       8,
-      options.text.width + INVALID_PLACEMENT_TOAST_HORIZONTAL_PADDING * 2,
+      textSize.width + INVALID_PLACEMENT_TOAST_HORIZONTAL_PADDING * 2,
     ),
   );
   const toastHeight = Math.min(
     Math.max(8, options.layout.height),
     Math.max(
       lineHeight + INVALID_PLACEMENT_TOAST_VERTICAL_PADDING * 2,
-      options.text.height + INVALID_PLACEMENT_TOAST_VERTICAL_PADDING * 2,
+      textSize.height + INVALID_PLACEMENT_TOAST_VERTICAL_PADDING * 2,
     ),
   );
   const toastX = options.layout.x + (options.layout.width - toastWidth) / 2;
@@ -283,6 +302,37 @@ function syncReasonToast(options: {
   options.text.x = toastX + toastWidth / 2;
   options.text.y = toastY + toastHeight / 2;
   options.text.visible = true;
+}
+
+function resolveReasonToastTextSize(options: {
+  text: string;
+  fontSize: number;
+  lineHeight: number;
+  maxLineWidth: number;
+}): { width: number; height: number } {
+  const averageCharacterWidth = Math.max(1, options.fontSize * 0.58);
+  const maxCharactersPerLine = Math.max(
+    1,
+    Math.floor(options.maxLineWidth / averageCharacterWidth),
+  );
+  const lineCount = Math.max(
+    1,
+    options.text.split(/\s+/).reduce((total, segment) =>
+      total + Math.max(1, Math.ceil(segment.length / maxCharactersPerLine)),
+    0),
+  );
+  const longestLineCharacterCount = Math.min(
+    options.text.length,
+    maxCharactersPerLine,
+  );
+
+  return {
+    width: Math.min(
+      options.maxLineWidth,
+      Math.max(1, longestLineCharacterCount * averageCharacterWidth),
+    ),
+    height: lineCount * options.lineHeight,
+  };
 }
 
 function hideUnusedReasonTexts(

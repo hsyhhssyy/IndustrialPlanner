@@ -3263,6 +3263,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "basicProduction",
     displayOrder: 510,
     tags: [PRODUCER_TAG, "武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge },
+    ],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [

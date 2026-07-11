@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
+import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
 import { RECIPE_DEFINITIONS } from "@/registry/recipe-definition";
 import {
@@ -47,6 +48,9 @@ describe("water purifier node definition", () => {
     expect(definition.uiGroup).toBe("basicProduction");
     expect(definition.tags).toEqual(
       expect.arrayContaining(["Producer", "武陵", "OuterRingAllowed", "InnerRingNotAllowed"]),
+    );
+    expect(definition.placementBehaviors).toEqual(
+      expect.arrayContaining([{ type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge }]),
     );
     expectPort(requirePortGroup(definition, "fluid_input_1"), "in_s_1", 1, 2, "SOUTH", "item_liquid_sewage");
     expectPort(requirePortGroup(definition, "fluid_input_2"), "in_s_9", 9, 2, "SOUTH", "item_liquid_sewage");

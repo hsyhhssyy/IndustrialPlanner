@@ -285,6 +285,36 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
+  it("updates touch placement anchor per axis when snapping constrains one axis", () => {
+    const { context, editor, appHost, previewRectRef } = createContext({
+      activeTool: "single-placement",
+      placementAnchor: { x: 20, y: -9 },
+      singlePlacementDeviceId: "item_water_purifier_node_1",
+      singlePlacementPointerMode: "touch",
+      initialPreview: true,
+      previewDefinitionId: "item_water_purifier_node_1",
+      previewRect: { x: 10, y: -10, width: 27, height: 3 },
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    vi.mocked(editor.actions.moveCollectionTo).mockImplementation(({
+      startGridPoint,
+      endGridPoint,
+    }) => {
+      previewRectRef.current = {
+        ...previewRectRef.current,
+        x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
+        y: previewRectRef.current.y,
+      };
+    });
+
+    const result = module.handle(touchDragMoveEvent({ position: { x: 21, y: -8 } }), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 21, y: -9 });
+    expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+  });
+
   it("moves the mouse placement preview by collection center point", () => {
     const { context, editor, appHost } = createContext({
       activeTool: "single-placement",

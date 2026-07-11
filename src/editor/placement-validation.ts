@@ -20,9 +20,14 @@ import { runInAction } from "mobx";
 
 import type { EditorStateReadWrite } from "./state-impl";
 import { isDraftEntity } from "./draft-entity";
+import {
+  hasOuterRingEdgeSnapBehavior,
+  resolveOuterRingEdgeSnap,
+} from "./placement-snapping";
 
 const WAREHOUSE_BUS_SEGMENT_DEFINITION_ID = "item_port_log_hongs_bus";
 const WAREHOUSE_BUS_SOURCE_DEFINITION_ID = "item_port_log_hongs_bus_source";
+const OUTER_RING_EDGE_SNAP_REASON_MESSAGE = "必须靠近地图边缘放置";
 
 const VALID_PLACEMENT_RESULT: EntityPlacementValidationResult = {
   canPlace: true,
@@ -104,6 +109,12 @@ export function resolvePlacementValidations(options: {
     entries.map((entry) => [entry.entity.id, []]),
   );
 
+  applyOuterRingEdgeSnapReasons({
+    entries,
+    document: options.document,
+    registry: options.workspace.registry,
+    reasonsByEntityId: mutableReasonsByEntityId,
+  });
   applyOutsideBaseReasons({
     entries,
     document: options.document,
@@ -242,6 +253,47 @@ function applyOutsideBaseReasons(options: {
     if (!isGridRectContainedBy(baseGridRect, entry.gridRect)) {
       appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
     }
+  }
+}
+
+function applyOuterRingEdgeSnapReasons(options: {
+  entries: readonly PlacementValidationEntry[];
+  document: WorldDocument;
+  registry: WorkspaceContract["registry"];
+  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+}): void {
+  const baseDefinition = resolveCurrentBaseDefinition({
+    baseId: options.document.baseId,
+    registry: options.registry,
+  });
+  if (baseDefinition === null) {
+    return;
+  }
+
+  for (const entry of options.entries) {
+    if (isBaseBuiltinEntityId(entry.entity.id)) {
+      continue;
+    }
+
+    if (!hasOuterRingEdgeSnapBehavior(entry.definition)) {
+      continue;
+    }
+
+    if (resolveOuterRingEdgeSnap({
+      definition: entry.definition,
+      baseDefinition,
+      position: entry.entity.position,
+      rotation: entry.entity.rotation,
+    }) !== null) {
+      continue;
+    }
+
+    appendReason(
+      options.reasonsByEntityId,
+      entry.entity.id,
+      "outside-base",
+      OUTER_RING_EDGE_SNAP_REASON_MESSAGE,
+    );
   }
 }
 
@@ -609,6 +661,7 @@ function appendReason(
   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>,
   entityId: string,
   code: EntityPlacementValidationReasonCode,
+  message = PLACEMENT_REASON_MESSAGES[code],
 ): void {
   const reasons = reasonsByEntityId.get(entityId);
   if (reasons === undefined || reasons.some((reason) => reason.code === code)) {
@@ -617,7 +670,7 @@ function appendReason(
 
   reasons.push({
     code,
-    message: PLACEMENT_REASON_MESSAGES[code],
+    message,
   });
 }
 

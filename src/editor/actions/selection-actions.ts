@@ -20,6 +20,11 @@ import {
   hasOutsideBasePlacementReason,
   syncPlacementValidationState,
 } from "../placement-validation";
+import {
+  hasOuterRingEdgeSnapBehavior,
+  rotateOuterRingEdgeSnappedPlacement,
+  snapPlacementToOuterRingEdge,
+} from "../placement-snapping";
 import type { EditorActionsContext } from "./types";
 
 type EditorCollectionActions = Pick<
@@ -105,6 +110,9 @@ export function createEditorSelectionActions({
     const currentDocument = document.getSnapshot();
     const targetEntityIds = new Set(collection);
     const nextEntities = { ...currentDocument.entities };
+    const baseDefinition = workspace.registry.baseDefinitions.find((definition) =>
+      definition.id === currentDocument.baseId,
+    ) ?? null;
     let didUpdateDocument = false;
 
     for (const entityId of collection) {
@@ -167,7 +175,24 @@ export function createEditorSelectionActions({
       }
 
       didUpdateDrafts = true;
-      return moveEntityByGridVector(entity, gridVector);
+      const movedEntity = moveEntityByGridVector(entity, gridVector);
+      const definition = entityDefinitionMap.get(movedEntity.definitionId);
+      if (collectionType !== EntityCollectionType.preview || definition === undefined) {
+        return movedEntity;
+      }
+
+      const snappedPlacement = snapPlacementToOuterRingEdge({
+        definition,
+        baseDefinition,
+        position: movedEntity.position,
+        rotation: movedEntity.rotation,
+      });
+
+      return {
+        ...movedEntity,
+        position: snappedPlacement.position,
+        rotation: snappedPlacement.rotation,
+      };
     });
 
     if (didUpdateDrafts) {
@@ -349,6 +374,111 @@ export function createEditorSelectionActions({
     });
   };
 
+  const tryRotateOuterRingEdgeSnapCollection = (options: {
+    readonly collectionType: EntityCollectionType;
+    readonly angle: GridRotation;
+    readonly currentDocument: ReturnType<EditorActionsContext["document"]["getSnapshot"]>;
+  }): boolean => {
+    const collection = resolveCollection(options.collectionType);
+    if (collection.length !== 1) {
+      return false;
+    }
+
+    const entityId = collection[0];
+    if (entityId === undefined) {
+      return false;
+    }
+
+    const entity = resolveEntityById({
+      entityId,
+      document: options.currentDocument,
+      drafts: state.drafts,
+    });
+    if (entity === null) {
+      return false;
+    }
+
+    const definition = entityDefinitionMap.get(entity.definitionId);
+    if (definition === undefined || !hasOuterRingEdgeSnapBehavior(definition)) {
+      return false;
+    }
+
+    const baseDefinition = workspace.registry.baseDefinitions.find((candidate) =>
+      candidate.id === options.currentDocument.baseId,
+    ) ?? null;
+    const rotatedPlacement = rotateOuterRingEdgeSnappedPlacement({
+      definition,
+      baseDefinition,
+      position: entity.position,
+      rotation: entity.rotation,
+      angle: options.angle,
+    });
+
+    if (rotatedPlacement === null) {
+      syncPlacementValidationState({
+        document: options.currentDocument,
+        state,
+        workspace,
+      });
+      return true;
+    }
+
+    if (
+      entity.position.x === rotatedPlacement.position.x
+      && entity.position.y === rotatedPlacement.position.y
+      && entity.rotation === rotatedPlacement.rotation
+    ) {
+      return true;
+    }
+
+    if (options.currentDocument.entities[entity.id] !== undefined) {
+      documentWriter.commit({
+        action: {
+          type: "entity.rotate",
+          label: "旋转设备",
+          entityIds: [entity.id],
+          definitionIds: [entity.definitionId],
+          count: 1,
+        },
+        update: (documentSnapshot) => {
+          const currentEntity = documentSnapshot.entities[entity.id];
+          if (currentEntity === undefined) {
+            return documentSnapshot;
+          }
+
+          return {
+            ...documentSnapshot,
+            entities: {
+              ...documentSnapshot.entities,
+              [entity.id]: {
+                ...currentEntity,
+                position: rotatedPlacement.position,
+                rotation: rotatedPlacement.rotation,
+              },
+            },
+          };
+        },
+      });
+    } else {
+      state.drafts = state.drafts.map((draft) =>
+        draft.id === entity.id
+          ? {
+            ...draft,
+            position: rotatedPlacement.position,
+            rotation: rotatedPlacement.rotation,
+          }
+          : draft,
+      );
+    }
+
+    syncPlacementValidationState({
+      document: document.getSnapshot(),
+      state,
+      workspace,
+    });
+    return true;
+  };
+
   const rotateCollectionByAngle = (
     collectionType: EntityCollectionType,
     angle: number,
@@ -365,6 +495,14 @@ export function createEditorSelectionActions({
       return;
     }
     const currentDocument = document.getSnapshot();
+    if (tryRotateOuterRingEdgeSnapCollection({
+      collectionType,
+      angle: rotationAngle,
+      currentDocument,
+    })) {
+      return;
+    }
+
     const geometry = resolveEntityCollectionGeometry({
       collection,
       document: currentDocument,

@@ -18,7 +18,9 @@ import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { placeBlueprintFromMoveAndContinue } from "./hypergryph-blueprint-placement-gesture-module";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import {
+  didPreviewRectChange,
   isPreviewBoundingBoxAtClientPoint,
+  resolveTouchDragAnchorAfterPreviewMove,
 } from "./mobile-preview-bounds";
 import {
   openOverlapEntityMenuForCandidates,
@@ -851,17 +853,17 @@ function driveMovePreview(options: {
       EntityCollectionType.preview,
     );
 
-    if (
-      afterRect !== null
-      && didRectMoveByGridVector({
+    if (afterRect !== null) {
+      options.appHost.internalState.runtime.moveAnchor = resolveTouchDragAnchorAfterPreviewMove({
         beforeRect,
         afterRect,
         startGridPoint: moveAnchor,
         endGridPoint: nextGridPoint,
-      })
-    ) {
-      options.appHost.internalState.runtime.moveAnchor = nextGridPoint;
-      options.appHost.internalActions.alignCanvasFloatingToolbar();
+      });
+
+      if (didPreviewRectChange(beforeRect, afterRect)) {
+        options.appHost.internalActions.alignCanvasFloatingToolbar();
+      }
     }
 
     return { status: "handled" };
@@ -1470,24 +1472,33 @@ function isPreviewEntityAtClientPoint(options: {
 //   );
 // }
 
-function didRectMoveByGridVector(options: {
-  beforeRect: GridRect;
-  afterRect: GridRect;
-  startGridPoint: GridPoint;
-  endGridPoint: GridPoint;
-}): boolean {
-  const vector = {
-    x: options.endGridPoint.x - options.startGridPoint.x,
-    y: options.endGridPoint.y - options.startGridPoint.y,
-  };
-
-  return (
-    options.afterRect.x === options.beforeRect.x + vector.x
-    && options.afterRect.y === options.beforeRect.y + vector.y
-    && options.afterRect.width === options.beforeRect.width
-    && options.afterRect.height === options.beforeRect.height
-  );
-}
+// AI-REMOVED 2026-07-11:
+// Reason: 移动模式触控拖动吸附设备时，旧函数要求 footprint 完全按手指向量移动，无法表达沿边吸附的单轴跟随行为。
+// Trigger: 用户反馈移动端净水节点吸附后，拖动位移被异常放大。
+// Evidence: driveMovePreview 已改用 resolveTouchDragAnchorAfterPreviewMove 按轴更新 moveAnchor。
+// Replacement: src/app/input/gesture/actions/hypergryph/mobile-preview-bounds.ts resolveTouchDragAnchorAfterPreviewMove
+// Risk: Low；普通非吸附拖动在两个轴上仍会得到相同 anchor 更新结果。
+// Human Review: Required
+//
+// Original code:
+// function didRectMoveByGridVector(options: {
+//   beforeRect: GridRect;
+//   afterRect: GridRect;
+//   startGridPoint: GridPoint;
+//   endGridPoint: GridPoint;
+// }): boolean {
+//   const vector = {
+//     x: options.endGridPoint.x - options.startGridPoint.x,
+//     y: options.endGridPoint.y - options.startGridPoint.y,
+//   };
+//
+//   return (
+//     options.afterRect.x === options.beforeRect.x + vector.x
+//     && options.afterRect.y === options.beforeRect.y + vector.y
+//     && options.afterRect.width === options.beforeRect.width
+//     && options.afterRect.height === options.beforeRect.height
+//   );
+// }
 
 function areGridPointsEqual(left: GridPoint, right: GridPoint): boolean {
   return left.x === right.x && left.y === right.y;

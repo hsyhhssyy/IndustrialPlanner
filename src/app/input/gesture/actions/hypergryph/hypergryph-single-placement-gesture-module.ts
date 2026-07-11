@@ -28,7 +28,9 @@ import { runInAction } from "mobx";
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import {
+  didPreviewRectChange,
   isPreviewBoundingBoxAtClientPoint,
+  resolveTouchDragAnchorAfterPreviewMove,
 } from "./mobile-preview-bounds";
 
 // 桥接变量：触发点（UI 按钮 / 快捷键）写入，on-enter-active-tool("single-placement") 读取后立即置 null。
@@ -172,19 +174,19 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
     const afterRect = options.editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
     if (debugOn) perfAfterRectMs += performance.now() - t3
 
-    if (
-      afterRect !== null
-      && didRectMoveByGridVector({
+    if (afterRect !== null) {
+      options.appHost.internalState.runtime.placementAnchor = resolveTouchDragAnchorAfterPreviewMove({
         beforeRect,
         afterRect,
         startGridPoint: placementAnchor,
         endGridPoint: nextGridPoint,
-      })
-    ) {
-      options.appHost.internalState.runtime.placementAnchor = nextGridPoint;
-      const t4 = debugOn ? performance.now() : 0
-      options.appHost.internalActions.alignCanvasFloatingToolbar();
-      if (debugOn) perfAlignToolbarMs += performance.now() - t4
+      });
+
+      if (didPreviewRectChange(beforeRect, afterRect)) {
+        const t4 = debugOn ? performance.now() : 0
+        options.appHost.internalActions.alignCanvasFloatingToolbar();
+        if (debugOn) perfAlignToolbarMs += performance.now() - t4
+      }
     }
 
     if (debugOn) {
@@ -864,17 +866,17 @@ export function drivePlacementPreview(options: {
       EntityCollectionType.preview,
     );
 
-    if (
-      afterRect !== null
-      && didRectMoveByGridVector({
+    if (afterRect !== null) {
+      options.appHost.internalState.runtime.placementAnchor = resolveTouchDragAnchorAfterPreviewMove({
         beforeRect,
         afterRect,
         startGridPoint: placementAnchor,
         endGridPoint: nextGridPoint,
-      })
-    ) {
-      options.appHost.internalState.runtime.placementAnchor = nextGridPoint;
-      options.appHost.internalActions.alignCanvasFloatingToolbar();
+      });
+
+      if (didPreviewRectChange(beforeRect, afterRect)) {
+        options.appHost.internalActions.alignCanvasFloatingToolbar();
+      }
     }
 
     return { status: "handled" };
@@ -1497,24 +1499,33 @@ export function resolveDeviceIdForPlacementGroupShortcut(options: {
   return entities[options.shortcutIndex]?.id ?? null;
 }
 
-function didRectMoveByGridVector(options: {
-  beforeRect: GridRect;
-  afterRect: GridRect;
-  startGridPoint: GridPoint;
-  endGridPoint: GridPoint;
-}): boolean {
-  const vector = {
-    x: options.endGridPoint.x - options.startGridPoint.x,
-    y: options.endGridPoint.y - options.startGridPoint.y,
-  };
-
-  return (
-    options.afterRect.x === options.beforeRect.x + vector.x
-    && options.afterRect.y === options.beforeRect.y + vector.y
-    && options.afterRect.width === options.beforeRect.width
-    && options.afterRect.height === options.beforeRect.height
-  );
-}
+// AI-REMOVED 2026-07-11:
+// Reason: 触控拖动吸附设备时，footprint 可能只在某个轴跟随手指，另一个轴被吸附锁定；旧函数的全量匹配会阻止 anchor 局部更新并放大后续位移。
+// Trigger: 用户反馈移动端净水节点吸附后，手指只移动一小截设备就飞出屏幕。
+// Evidence: drivePlacementPreviewWithPerf / drivePlacementPreview 已改用 resolveTouchDragAnchorAfterPreviewMove 按轴更新 anchor。
+// Replacement: src/app/input/gesture/actions/hypergryph/mobile-preview-bounds.ts resolveTouchDragAnchorAfterPreviewMove
+// Risk: Low；普通非吸附拖动在两个轴上仍会得到相同 anchor 更新结果。
+// Human Review: Required
+//
+// Original code:
+// function didRectMoveByGridVector(options: {
+//   beforeRect: GridRect;
+//   afterRect: GridRect;
+//   startGridPoint: GridPoint;
+//   endGridPoint: GridPoint;
+// }): boolean {
+//   const vector = {
+//     x: options.endGridPoint.x - options.startGridPoint.x,
+//     y: options.endGridPoint.y - options.startGridPoint.y,
+//   };
+//
+//   return (
+//     options.afterRect.x === options.beforeRect.x + vector.x
+//     && options.afterRect.y === options.beforeRect.y + vector.y
+//     && options.afterRect.width === options.beforeRect.width
+//     && options.afterRect.height === options.beforeRect.height
+//   );
+// }
 
 function areGridPointsEqual(left: GridPoint, right: GridPoint): boolean {
   return left.x === right.x && left.y === right.y;

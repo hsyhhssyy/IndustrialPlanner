@@ -21,6 +21,13 @@ export const WATER_PURIFIER_BYPRODUCT_CHANNEL_ID = "byproduct";
 export const WATER_PURIFIER_COLLECT_RECIPE_ID = "r_water_purifier_node_collect_sewage_basic";
 export const WATER_PURIFIER_BYPRODUCT_RECIPE_ID =
   "r_water_purifier_node_xiranite_waste_from_sewage_basic";
+export const WATER_PURIFIER_INPUT_SLOT_SEWAGE_PER_SECOND = 2;
+export const WATER_PURIFIER_BYPRODUCT_SEWAGE_PER_OUTPUT = 30;
+export const WATER_PURIFIER_INPUT_DERIVED_OUTPUT_PER_MINUTE =
+  WATER_PURIFIER_INTAKE_CHANNEL_IDS.length
+  * WATER_PURIFIER_INPUT_SLOT_SEWAGE_PER_SECOND
+  * 60
+  / WATER_PURIFIER_BYPRODUCT_SEWAGE_PER_OUTPUT;
 
 export const WATER_PURIFIER_OUTPUT_MODE_CONFIG_KEY = "waterPurifierOutputMode";
 export const WATER_PURIFIER_MANUAL_OUTPUT_PER_MINUTE_CONFIG_KEY = "waterPurifierManualOutputPerMinute";
