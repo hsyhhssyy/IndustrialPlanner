@@ -254,3 +254,9 @@ AI 在分析代码时必须区分：
 你不能直接执行 tsc -b 或者 npm run test
 
 请阅读 `.github/prompts/check.prompt.md` 了解如何执行各项测试
+
+## 临时目录的使用
+
+.temp/.trash 才是真正的临时目录
+当你想要生成一次性脚本，在磁盘上放置一次性临时文件时，请放置到 .temp/.trash 下的某个位置
+未经用户明确允许，不可以在.temp下其他位置写入文件。
