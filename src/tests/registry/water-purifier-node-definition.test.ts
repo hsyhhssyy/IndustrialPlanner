@@ -45,7 +45,9 @@ describe("water purifier node definition", () => {
 
     expect(definition.footprint).toEqual({ width: 27, height: 3 });
     expect(definition.spriteOffset?.topView).toEqual({ x: 0, y: -5, width: 27, height: 8 });
-    expect(definition.uiGroup).toBe("basicProduction");
+    expect(definition.uiGroup).toBe("resourcePower");
+    expect(definition.requiresPower).toBe(false);
+    expect(definition.powerDemand).toBe(0);
     expect(definition.tags).toEqual(
       expect.arrayContaining(["Producer", "武陵", "OuterRingAllowed", "InnerRingNotAllowed"]),
     );

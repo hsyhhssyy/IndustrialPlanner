@@ -598,7 +598,7 @@ const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, strin
     "registry.entity.item_port_udpipe_loader_2.name": "Multi-Port Dark Pipe Inlet",
     "registry.entity.item_port_udpipe_unloader_2.name": "Multi-Port Dark Pipe Outlet",
     "registry.entity.item_liquid_cleaner_1.name": "Wastewater Treatment Machine",
-    "registry.entity.item_water_purifier_node_1.name": "Water Purification Node",
+    "registry.entity.item_water_purifier_node_1.name": "Purification Node",
     "registry.entity.belt_straight_1x1.name": "Straight Belt",
     "registry.entity.belt_turn_cw_1x1.name": "CW Turn Belt",
     "registry.entity.belt_turn_ccw_1x1.name": "CCW Turn Belt",

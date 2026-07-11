@@ -49,6 +49,7 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
     item_port_power_diffuser_1: 302,
     item_port_power_sta_1: 303,
     item_port_gas_diffuser_1: 304,
+    item_water_purifier_node_1: 305,
 
     // 400 — warehouse
     item_port_storager_1: 401,
@@ -73,7 +74,6 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
     item_port_planter_1: 507,
     item_port_hydro_planter_1: 508,
     item_liquid_cleaner_1: 509,
-    item_water_purifier_node_1: 510,
 
     // 600 — advancedManufacturing
     item_port_winder_1: 601,

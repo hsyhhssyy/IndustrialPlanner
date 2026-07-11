@@ -3260,14 +3260,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteOffset: {
       topView: { x: 0, y: -5, width: 27, height: 8 },
     },
-    uiGroup: "basicProduction",
-    displayOrder: 510,
+    uiGroup: "resourcePower",
+    displayOrder: 305,
     tags: [PRODUCER_TAG, "武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge },
     ],
-    requiresPower: true,
-    powerDemand: 20,
+    requiresPower: false,
+    powerDemand: 0,
     portGroups: [
       createPortGroup(
         "fluid_input_1",
