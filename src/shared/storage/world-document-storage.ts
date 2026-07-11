@@ -1,4 +1,5 @@
 import type { WorldDocument } from "@/domain/document/world-document";
+import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
 
 import {
   applyIndexedDbStoreMutations,
@@ -124,6 +125,7 @@ export function normalizeWorldDocument(
   // 2026-05-31: 反序列化时对 entityOrder 做去重，作为历史数据修复的最后防线。
   return {
     ...value,
+    entities: migrateBlueprintEntityDeviceIds(value.entities),
     entityOrder: Array.from(new Set(value.entityOrder)),
   };
 }

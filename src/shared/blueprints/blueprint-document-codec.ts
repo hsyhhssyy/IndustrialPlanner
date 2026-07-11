@@ -1,4 +1,5 @@
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
+import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
 
 export function normalizeBlueprintDocument(value: unknown): BlueprintDocument | null {
   if (!isRecord(value)) {
@@ -30,7 +31,7 @@ export function normalizeBlueprintDocument(value: unknown): BlueprintDocument | 
     description: value.description,
     baseId: value.baseId,
     initialGridPoint: value.initialGridPoint,
-    entities: value.entities as BlueprintDocument["entities"],
+    entities: migrateBlueprintEntityDeviceIds(value.entities as BlueprintDocument["entities"]),
     entityOrder: [...value.entityOrder],
     slotLinks: [...value.slotLinks] as BlueprintDocument["slotLinks"],
     createdAt: value.createdAt,

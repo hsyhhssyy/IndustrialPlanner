@@ -43,6 +43,42 @@ describe("blueprint-storage", () => {
     await expect(readBlueprintRecord(blueprint.blueprintId)).resolves.toEqual(saved);
   });
 
+  it("migrates historical device ids when reading blueprint records", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const blueprint = createTestBlueprint({
+      blueprintId: "historical-device-blueprint",
+      entities: {
+        pool: {
+          id: "pool",
+          definitionId: "item_port_mix_pool_large_1",
+          position: { x: 10, y: 12 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+      },
+      entityOrder: ["pool"],
+    });
+
+    await saveToIndexedDb(
+      {
+        ...BLUEPRINT_STORE_LOCATION,
+        key: `blueprint:${blueprint.blueprintId}`,
+      },
+      {
+        ...blueprint,
+        kind: "blueprint" as const,
+        parentFolderId: null,
+        deletedAt: null,
+      },
+    );
+
+    const record = await readBlueprintRecord(blueprint.blueprintId);
+
+    expect(record?.entities.pool?.definitionId).toBe("item_port_mix_pool_2");
+  });
+
   it("reads folders directly and rejects non-folder entries", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 

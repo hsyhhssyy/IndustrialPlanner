@@ -166,7 +166,7 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
   it("resolves output port callouts for expanded reaction pool", () => {
     const registry = createRegistryContract();
     const selectedDefinition = registry.entityDefinitions.find((definition) =>
-      definition.id === "item_port_mix_pool_large_1",
+      definition.id === "item_port_mix_pool_2",
     );
     if (selectedDefinition === undefined) {
       throw new Error("Expected expanded reaction pool definition.");

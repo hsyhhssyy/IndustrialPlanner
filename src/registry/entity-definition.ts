@@ -2349,9 +2349,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    id: "item_port_mix_pool_large_1",
-    nameKey: "registry.entity.item_port_mix_pool_large_1.name",
-    spriteId: "item_port_mix_pool_large_1",
+    id: "item_port_mix_pool_2",
+    nameKey: "registry.entity.item_port_mix_pool_2.name",
+    spriteId: "item_port_mix_pool_2",
     footprint: { width: 6, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 607,

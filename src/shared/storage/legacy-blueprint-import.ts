@@ -5,6 +5,7 @@ import {
 } from "@/domain/document/blueprint-document";
 import type { GridPoint, GridRotation } from "@/domain/shared/grid";
 import type { SlotLinkDefinition } from "@/domain/document/world-document";
+import { resolveLatestBlueprintDeviceId } from "@/shared/blueprint-device-id-migration";
 
 const LEGACY_BLUEPRINT_SCHEMA = "industrial-planner-blueprint";
 const LEGACY_BLUEPRINT_ID_PATTERN = /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i;
@@ -256,6 +257,8 @@ export function convertLegacyBlueprintJson(
  *   新：无交货 config，运行时由 WarehouseSink 动态入仓
  *
  * 反应池 / 扩容反应池（item_port_mix_pool_1 / item_port_mix_pool_large_1）：
+ *   AI-CORRECTION 2026-07-11: 扩容反应池当前最新设备 id 为 item_port_mix_pool_2，
+ *     item_port_mix_pool_large_1 仅作为历史蓝图 id 通过迁移表解析。
  *   旧：reactorPool.selectedRecipeIds / solidOutputItemId / liquidOutputItemIdA / liquidOutputItemIdB
  *   新：channelRecipes + portGroups[N].ports[M].acceptRule
  *
@@ -301,7 +304,7 @@ function convertLegacyDeviceConfig(options: {
     return { ...empty, config: convertLegacyAdmissionConfig(config) };
   }
 
-  if (options.definitionId === "item_port_mix_pool_1" || options.definitionId === "item_port_mix_pool_large_1") {
+  if (options.definitionId === "item_port_mix_pool_1" || options.definitionId === "item_port_mix_pool_2") {
     return { ...empty, config: convertLegacyReactorPoolConfig(options.definitionId, config) };
   }
 
@@ -311,6 +314,8 @@ function convertLegacyDeviceConfig(options: {
 /**
  * 扩容反应池旧配方 ID → 新版 _large 配方 ID 映射。
  * 仅当迁移定义目标是 item_port_mix_pool_large_1 时应用。
+ * AI-CORRECTION 2026-07-11: 扩容反应池当前最新设备 id 为 item_port_mix_pool_2，
+ *   item_port_mix_pool_large_1 仅作为历史蓝图 id 通过迁移表解析。
  */
 const LARGE_REACTOR_RECIPE_ID_BY_LEGACY_ID: Record<string, string> = {
   "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic":
@@ -325,6 +330,8 @@ const LARGE_REACTOR_RECIPE_ID_BY_LEGACY_ID: Record<string, string> = {
  * 将旧版反应池 config.reactorPool 转换为新版 channelRecipes + acceptRule。
  *
  * 反应池 / 扩容反应池（item_port_mix_pool_1 / item_port_mix_pool_large_1）：
+ *   AI-CORRECTION 2026-07-11: 扩容反应池当前最新设备 id 为 item_port_mix_pool_2，
+ *     item_port_mix_pool_large_1 仅作为历史蓝图 id 通过迁移表解析。
  *   旧格式 config.reactorPool：
  *     selectedRecipeIds: string[]  → channelRecipes: { ch1, ch2, ... }
  *     solidOutputItemId: string    → portGroups[0].ports[*].acceptRule（item_output）
@@ -348,7 +355,7 @@ function convertLegacyReactorPoolConfig(
   const nextConfig: Record<string, unknown> = { ...config };
   delete nextConfig.reactorPool;
 
-  const isLarge = definitionId === "item_port_mix_pool_large_1";
+  const isLarge = definitionId === "item_port_mix_pool_2";
 
   // 1. 配方：selectedRecipeIds → channelRecipes
   const rawRecipeIds = reactorPool.selectedRecipeIds;
@@ -375,6 +382,7 @@ function convertLegacyReactorPoolConfig(
   // 2. 固体输出：solidOutputItemId → portGroups[0] = item_output
   //    item_port_mix_pool_1: 2 ports（out_n_1, out_n_3）
   //    item_port_mix_pool_large_1: 4 ports（out_n_1..out_n_4）
+  //    AI-CORRECTION 2026-07-11: item_port_mix_pool_2 是扩容反应池最新 id，仍为 4 ports。
   const solidOutputItemId = reactorPool.solidOutputItemId;
   if (typeof solidOutputItemId === "string" && solidOutputItemId.trim().length > 0) {
     const portCount = isLarge ? 4 : 2;
@@ -1189,12 +1197,19 @@ function remapLegacyDevice(
   const remapper = LEGACY_DEVICE_REMAPPERS[device.typeId];
 
   if (remapper === undefined) {
-    return device;
+    const latestDeviceId = resolveLatestBlueprintDeviceId(device.typeId);
+
+    return latestDeviceId === device.typeId
+      ? device
+      : {
+          ...device,
+          typeId: latestDeviceId,
+        };
   }
 
   return {
     ...device,
-    typeId: remapper.definitionId,
+    typeId: resolveLatestBlueprintDeviceId(remapper.definitionId),
     rotation: rotateGridRotation(device.rotation, remapper.rotationOffset),
   };
 }

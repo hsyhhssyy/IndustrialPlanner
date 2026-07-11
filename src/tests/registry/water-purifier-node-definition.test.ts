@@ -146,7 +146,7 @@ describe("water purifier node definition", () => {
   });
 
   it("enables explicit blockage clearance only on expanded reactor and water purifier node", () => {
-    const expandedPool = requireEntity("item_port_mix_pool_large_1");
+    const expandedPool = requireEntity("item_port_mix_pool_2");
     const normalPool = requireEntity("item_port_mix_pool_1");
     const waterNode = requireEntity(WATER_PURIFIER_NODE_ENTITY_ID);
 

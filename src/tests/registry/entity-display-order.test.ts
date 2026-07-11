@@ -82,7 +82,7 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
     item_port_tools_asm_mc_1: 604,
     item_port_thickener_1: 605,
     item_port_mix_pool_1: 606,
-    item_port_mix_pool_large_1: 607,
+    item_port_mix_pool_2: 607,
     item_port_xiranite_oven_1: 608,
     item_port_liquid_purifier_1: 609,
     item_port_dismantler_1: 610,

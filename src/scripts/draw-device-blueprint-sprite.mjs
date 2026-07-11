@@ -19,7 +19,7 @@ const DEVICE_BORDER_COLOR = '#2a2a2a';
 // static port coordinates yet. Blueprint drawing uses local overrides until the
 // registry migration is finished.
 const FLUID_BLUEPRINT_PORT_LAYOUT_OVERRIDES = new Map([
-  ['item_port_mix_pool_large_1', [
+  ['item_port_mix_pool_2', [
     { direction: 'output', localCellX: 0, localCellY: 1, edge: 'WEST' },
     { direction: 'output', localCellX: 0, localCellY: 3, edge: 'WEST' },
     { direction: 'input', localCellX: 5, localCellY: 1, edge: 'EAST' },

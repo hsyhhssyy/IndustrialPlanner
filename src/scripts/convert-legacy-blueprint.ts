@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { parseArgs } from "node:util";
 
+import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 import { convertLegacyBlueprintJson } from "@/shared/storage/legacy-blueprint-import";
 
@@ -23,10 +24,15 @@ async function main(): Promise<void> {
 
     const raw = JSON.parse(await readFile(cliOptions.inputPath, "utf-8")) as unknown;
 
-    // 新格式直接原样输出
+    // 新格式也要经过 normalize，确保历史设备 id 一步到位更新到最新 id。
     const normalized = normalizeBlueprintDocument(raw);
     if (normalized !== null) {
-      console.log(`"${cliOptions.inputPath}" 已是新版格式，无需转换。`);
+      if (isSameJsonPayload(raw, normalized)) {
+        console.log(`"${cliOptions.inputPath}" 已是最新版蓝图格式，无需转换。`);
+        return;
+      }
+
+      await writeConvertedBlueprint(cliOptions, normalized);
       return;
     }
 
@@ -37,15 +43,26 @@ async function main(): Promise<void> {
       process.exit(1);
     }
 
-    const outputPath = cliOptions.outputPath ?? (cliOptions.overwrite ? cliOptions.inputPath : `${cliOptions.inputPath}.converted.json`);
-    await mkdir(dirname(resolve(outputPath)), { recursive: true });
-    await writeFile(outputPath, JSON.stringify(converted, null, 2) + "\n", "utf-8");
-
-    console.log(`已转换 → "${outputPath}"`);
+    await writeConvertedBlueprint(cliOptions, converted);
   } catch (error) {
     console.error(`错误：${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   }
+}
+
+async function writeConvertedBlueprint(
+  cliOptions: CliOptions,
+  document: BlueprintDocument,
+): Promise<void> {
+  const outputPath = cliOptions.outputPath ?? (cliOptions.overwrite ? cliOptions.inputPath : `${cliOptions.inputPath}.converted.json`);
+  await mkdir(dirname(resolve(outputPath)), { recursive: true });
+  await writeFile(outputPath, JSON.stringify(document, null, 2) + "\n", "utf-8");
+
+  console.log(`已转换 → "${outputPath}"`);
+}
+
+function isSameJsonPayload(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 function parseCliOptions(args: readonly string[]): CliOptions | null {

@@ -199,8 +199,8 @@ describe("PortOutputConfigInspector", () => {
 
   it("renders large reactor pool with three output port groups", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_mix_pool_large_1");
-    const entity = createEmptyEntity("large-reactor-1", "item_port_mix_pool_large_1");
+    const definition = requireDefinition(workspace, "item_port_mix_pool_2");
+    const entity = createEmptyEntity("large-reactor-1", "item_port_mix_pool_2");
     const currentAppHost = buildAppHost(workspace, entity);
     appHost = currentAppHost;
     renderInspector(currentAppHost, definition, entity, root);
@@ -209,9 +209,9 @@ describe("PortOutputConfigInspector", () => {
 
   it("renders row-level locator badges for expanded reactor output port groups", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_mix_pool_large_1");
+    const definition = requireDefinition(workspace, "item_port_mix_pool_2");
     const entity: WorldEntity = {
-      ...createEmptyEntity("large-reactor-2", "item_port_mix_pool_large_1"),
+      ...createEmptyEntity("large-reactor-2", "item_port_mix_pool_2"),
       rotation: 90,
     };
     const currentAppHost = buildAppHost(workspace, entity, { displayRotation: 90, deviceClass: "tablet" });
@@ -231,8 +231,8 @@ describe("PortOutputConfigInspector", () => {
 
   it("renders compact output row actions without duplicate status or type indicators", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_mix_pool_large_1");
-    const entity = createEmptyEntity("large-reactor-compact", "item_port_mix_pool_large_1");
+    const definition = requireDefinition(workspace, "item_port_mix_pool_2");
+    const entity = createEmptyEntity("large-reactor-compact", "item_port_mix_pool_2");
     const currentAppHost = buildAppHost(workspace, entity, { deviceClass: "tablet" });
     appHost = currentAppHost;
     renderInspector(currentAppHost, definition, entity, root);

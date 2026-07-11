@@ -65,7 +65,7 @@ const FOOTPRINT_MAP: Record<string, { w: number; h: number }> = {
   item_port_planter_1: { w: 4, h: 3 },
   item_port_xiranite_oven_1: { w: 3, h: 3 },
   item_port_mix_pool_1: { w: 5, h: 3 },
-  item_port_mix_pool_large_1: { w: 5, h: 3 },
+  item_port_mix_pool_2: { w: 5, h: 3 },
 };
 
 function getFootprint(defId: string): { w: number; h: number } {

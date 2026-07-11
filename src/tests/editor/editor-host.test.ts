@@ -92,7 +92,7 @@ function createComplexRotationDrafts(): DraftEntity[] {
     createRotationDraft("preview-furnace", "item_port_furnance_1", 30, 21, 180),
     createRotationDraft("preview-belt", "belt_straight_1x1", 27, 27, 270),
     createRotationDraft("preview-hydro", "item_port_hydro_planter_1", 36, 25, 90),
-    createRotationDraft("preview-large-pool", "item_port_mix_pool_large_1", 42, 18, 270),
+    createRotationDraft("preview-large-pool", "item_port_mix_pool_2", 42, 18, 270),
     createRotationDraft("preview-planter", "item_port_planter_1", 20, 30, 0),
   ];
 }
@@ -2087,7 +2087,7 @@ describe("createEditorHost", () => {
     const initialDraft: DraftEntity = {
       id: "preview-large-reaction-pool",
       originalEntityId: "preview-large-reaction-pool",
-      definitionId: "item_port_mix_pool_large_1",
+      definitionId: "item_port_mix_pool_2",
       position: {
         x: 10,
         y: 10,

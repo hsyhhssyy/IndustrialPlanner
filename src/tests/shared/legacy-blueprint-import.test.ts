@@ -124,6 +124,38 @@ describe("legacy-blueprint-import", () => {
     });
   });
 
+  it("converts historical expanded reactor ids directly to the latest device id", () => {
+    const converted = convertLegacyBlueprintJson({
+      schema: "industrial-planner-blueprint",
+      name: "扩容反应池 id 迁移测试",
+      createdAt: "2026-03-04T15:00:38.701Z",
+      baseId: "wuling_tianwangping_aid",
+      devices: [{
+        typeId: "item_port_mix_pool_large_1",
+        rotation: 0,
+        origin: { x: 0, y: 0 },
+        config: {
+          reactorPool: {
+            selectedRecipeIds: [
+              "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic",
+            ],
+          },
+        },
+      }],
+    }, {
+      entityIdPrefix: "large_pool",
+    });
+
+    expect(converted?.entities.large_pool_0001).toMatchObject({
+      definitionId: "item_port_mix_pool_2",
+      config: {
+        channelRecipes: {
+          ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large",
+        },
+      },
+    });
+  });
+
   // AI-REMOVED 2026-05-10:
   // Reason: The warehouse-unloader blanket remap assertion was based on a false
   //   hypothesis and would force the current system blueprints to migrate into an

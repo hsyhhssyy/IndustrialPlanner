@@ -96,6 +96,38 @@ describe("system-blueprint-library", () => {
       },
     ]);
   });
+
+  it("migrates historical device ids when loading system blueprints", async () => {
+    vi.stubGlobal("fetch", createFetchStub({
+      "/blueprints/index.json": {
+        version: "v1.3.0",
+        folders: [{
+          name: "迁移样例",
+          blueprints: ["historical-device"],
+        }],
+      },
+      "/blueprints/historical-device.json": createTestBlueprint({
+        blueprintId: "system-historical-device",
+        entities: {
+          pool: {
+            id: "pool",
+            definitionId: "item_port_mix_pool_large_1",
+            position: { x: 10, y: 12 },
+            rotation: 0,
+            config: {},
+            tags: [],
+          },
+        },
+        entityOrder: ["pool"],
+      }),
+    }));
+
+    const snapshot = await readSystemBlueprintLibrary();
+    const rootDirectory = listSystemBlueprintDirectory(snapshot, null);
+    const directory = listSystemBlueprintDirectory(snapshot, rootDirectory.folders[0]?.folderId ?? null);
+
+    expect(directory.blueprints[0]?.entities.pool?.definitionId).toBe("item_port_mix_pool_2");
+  });
 });
 
 function createFetchStub(payloads: Record<string, unknown>) {
