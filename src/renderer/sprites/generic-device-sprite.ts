@@ -208,6 +208,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly deviceNameText: Text
   private currentLayout: RenderSpriteLayout | null = null
   /** 足迹（不含 spriteOffset）在视口中的布局，用于绘制线框。仅有 spriteOffset 的设备才需要计算。 */
+  /** AI-CORRECTION 2026-07-11: 该布局现在也作为设备信息层的居中基准，避免图标/名称跟随偏移后的精灵中心。 */
   private currentFootprintLayout: { x: number; y: number; width: number; height: number } | null = null
   private disposed = false
   private isTextureReady = false
@@ -819,8 +820,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     const effectiveShowIcon = hasPrimaryOutput || showDeviceIconSetting;
+    const labelAnchorLayout = this.currentFootprintLayout ?? layout;
     const labelLayout = resolveDeviceLabelLayout({
-      layout,
+      layout: labelAnchorLayout,
       showDeviceIcon: effectiveShowIcon,
       showDeviceName,
       gridCellPixelSize: this.currentGridCellPixelSize,
@@ -1814,7 +1816,7 @@ function createDeviceNameTextStyle(options: {
 }
 
 function resolveDeviceLabelLayout(options: {
-  layout: RenderSpriteLayout;
+  layout: Pick<RenderSpriteLayout, "x" | "y" | "width" | "height">;
   showDeviceIcon: boolean;
   showDeviceName: boolean;
   gridCellPixelSize: number;

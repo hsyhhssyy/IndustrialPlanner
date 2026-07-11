@@ -428,6 +428,99 @@ describe("GenericDeviceSprite", () => {
     expect(text?.style.dropShadow).toEqual(expect.objectContaining({ color: 0x20242a }))
   })
 
+  it("centers device label content on footprint instead of offset sprite bounds", async () => {
+    const resolvedTexture = createLoadedTextureMock("water-pump-device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("water-pump-mask-texture")
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      "device-sprite-item_port_water_pump_1": resolvedTexture,
+      "device-masks-item_port_water_pump_1": resolvedMaskTexture,
+      "top-view-avatar-item_port_water_pump_1": createLoadedTextureMock("water-pump-avatar"),
+    }, {
+      gameShowDeviceIcons: true,
+      gameShowDeviceNames: true,
+    })
+    const definition = createWaterPumpEntityDefinitionStub()
+    const sprite = new GenericDeviceSprite(
+      "water-pump-1",
+      definition,
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
+      logisticsBelt: {} as never,
+      logisticsPipe: {} as never,
+      draft: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    }) as {
+      workspace: {
+        editor: {
+          state: {
+            viewport: {
+              gridCellPixelSize: number;
+              clientRect: { width: number; height: number };
+              center: { x: number; y: number };
+              displayRotation: 0;
+            };
+          };
+          queries: {
+            resolveLogisticsDraftState: () => undefined;
+            getEntityById: (entityId: string) => {
+              id: string;
+              definitionId: string;
+              position: { x: number; y: number };
+              rotation: 0;
+            } | null;
+          };
+        };
+      };
+    }
+    context.workspace.editor.state.viewport = {
+      gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
+      clientRect: { width: 1000, height: 1000 },
+      center: { x: 0, y: 0 },
+      displayRotation: 0,
+    }
+    context.workspace.editor.queries.getEntityById = (entityId: string) =>
+      entityId === "water-pump-1"
+        ? {
+            id: "water-pump-1",
+            definitionId: definition.id,
+            position: { x: 0, y: 0 },
+            rotation: 0,
+          }
+        : null
+
+    sprite.syncLayout({
+      x: 468,
+      y: 500,
+      width: 80,
+      height: 48,
+      rotation: 0,
+    }, context as never)
+
+    await flushMicrotasks(8)
+
+    const labelRoot = resolveDeviceLabelRoot(entityLayer)
+    const icon = labelRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+    const text = labelRoot?.children?.[1] as RenderedTextSnapshot | undefined
+
+    expect(labelRoot?.visible).toBe(true)
+    expect(icon?.x).toBe(524)
+    expect(text?.x).toBe(524)
+    expect(text?.style.wordWrapWidth).toBeCloseTo(42.24)
+  })
+
   it("uses blueprint avatar and black unoutlined text when simplified device icons are enabled", async () => {
     const resolvedTexture = createLoadedTextureMock("blueprint-device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("blueprint-mask-texture")
