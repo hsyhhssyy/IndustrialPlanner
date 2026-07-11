@@ -85,6 +85,8 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
     item_port_xiranite_oven_1: 608,
     item_port_liquid_purifier_1: 609,
     item_port_dismantler_1: 610,
+    item_port_solid_gas_converter_1: 611,
+    item_port_gas_reactor_1: 612,
   };
 
   for (const [id, expectedOrder] of Object.entries(EXPECTED_ORDERS)) {

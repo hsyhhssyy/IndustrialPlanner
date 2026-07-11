@@ -923,14 +923,14 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_gas_inert",
     nameKey: "registry.item.item_gas_inert.name",
     iconId: "item_liquid_water",
-    tags: ["gas", "gas_color:#3366cc"],
+    tags: ["gas", "gas_color:#3366cc", "自然资源"],
     displayOrder: 10000,
   },
   {
     id: "item_gas_xiranite",
     nameKey: "registry.item.item_gas_xiranite.name",
     iconId: "item_liquid_plant_grass_2",
-    tags: ["gas", "gas_color:#62bf4b"],
+    tags: ["gas", "gas_color:#62bf4b", "自然资源"],
     displayOrder: 10000,
   },
   {

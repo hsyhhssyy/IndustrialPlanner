@@ -335,6 +335,8 @@ function resolveDeviceRuntimeStatus(options: {
           itemType: counter.itemId,
           limit: counter.limit,
           count: counter.count,
+          perMinuteLimit: counter.perMinuteLimit,
+          perMinuteCount: counter.perMinuteCount,
         },
       ]),
     ),

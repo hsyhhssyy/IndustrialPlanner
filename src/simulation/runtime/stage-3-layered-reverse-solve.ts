@@ -1,11 +1,17 @@
 import type {
+  SimulationMutableRuntimeState,
+} from "./runtime-state";
+import {
+  incrementAdmissionMinuteCounterForCurrentWindow,
+  readAdmissionMinuteCounterForCurrentWindow,
+} from "./runtime-state";
+import type {
   CompiledSimulationDevice,
   CompiledSimulationNode,
   CompiledSimulationPort,
   CompiledSimulationTopology,
   SimulationAcceptRule,
 } from "../types";
-import type { SimulationMutableRuntimeState } from "./runtime-state";
 import {
   acceptsItem,
   canOutputSlotProvideItem,
@@ -419,10 +425,13 @@ function canAdmitItemThroughTargetPort(
   if (rule.itemId !== itemType) {
     return false;
   }
-  if (rule.limit === null) {
+  if (rule.limit !== null && (state.persistent.admissionCounters[targetPortId] ?? 0) >= rule.limit) {
+    return false;
+  }
+  if (rule.perMinuteLimit === null) {
     return true;
   }
-  return (state.persistent.admissionCounters[targetPortId] ?? 0) < rule.limit;
+  return readAdmissionMinuteCounterForCurrentWindow(topology, state, targetPortId).count < rule.perMinuteLimit;
 }
 
 function recordAdmissionMove(
@@ -437,6 +446,7 @@ function recordAdmissionMove(
   }
   state.persistent.admissionCounters[targetPortId] =
     (state.persistent.admissionCounters[targetPortId] ?? 0) + 1;
+  incrementAdmissionMinuteCounterForCurrentWindow(topology, state, targetPortId);
 }
 
 function inputNodeHasAnyCapacity(

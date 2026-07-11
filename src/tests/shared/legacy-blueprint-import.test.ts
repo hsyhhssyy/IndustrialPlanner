@@ -407,6 +407,7 @@ describe("legacy-blueprint-import", () => {
       "portGroups[0].ports[0].admissionRule": {
         itemId: "item_iron_ore",
         limit: 3,
+        perMinuteLimit: null,
       },
     });
   });

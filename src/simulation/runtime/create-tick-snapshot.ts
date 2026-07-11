@@ -5,6 +5,7 @@ import type {
   WarehouseStats,
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
+import { readAdmissionMinuteCounterForCurrentWindow } from "./runtime-state";
 import {
   resolveEffectiveIgnoreStock,
   resolveStorageSlotId,
@@ -149,6 +150,7 @@ function createAdmissionCounterSnapshots(
     if (port === undefined || port.admissionRule === null) {
       continue;
     }
+    const minuteCounter = readAdmissionMinuteCounterForCurrentWindow(topology, state, portId);
 
     result[`${port.portGroupId}:${port.portDefinitionId}`] = {
       portId,
@@ -157,6 +159,8 @@ function createAdmissionCounterSnapshots(
       itemId: port.admissionRule.itemId,
       limit: port.admissionRule.limit,
       count: state.persistent.admissionCounters[portId] ?? 0,
+      perMinuteLimit: port.admissionRule.perMinuteLimit,
+      perMinuteCount: minuteCounter.count,
     };
   }
 

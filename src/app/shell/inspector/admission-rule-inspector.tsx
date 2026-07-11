@@ -1,7 +1,16 @@
 import { useState } from "react";
 
 import LucideCircleDashed from "~icons/lucide/circle-dashed";
-import LucidePencil from "~icons/lucide/pencil";
+// AI-REMOVED 2026-07-10:
+// Reason: 物品选择器本身已承担更换动作，独立铅笔按钮与当前交互重复。
+// Trigger: 用户要求删除无意义的铅笔按钮，并将垃圾桶按钮放到物品选择器同行。
+// Evidence: 本文件 requestItemSelection 已同时用于初选和更换，保留铅笔按钮会增加一处重复入口。
+// Replacement: 物品选择按钮直接用于更换；清除按钮移动到 .admission-rule-item-row。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import LucidePencil from "~icons/lucide/pencil";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 import LucideTrash2 from "~icons/lucide/trash-2";
 
@@ -34,7 +43,9 @@ interface AdmissionPortRow {
   readonly admissionRulePath: string;
   readonly selectedItemId: string | null;
   readonly limit: number | null;
+  readonly perMinuteLimit: number | null;
   readonly runtimeCount: number;
+  readonly runtimePerMinuteCount: number;
 }
 
 function resolveItemIconSrc(item: ItemDefinition | null): string | null {
@@ -111,6 +122,7 @@ export function AdmissionRuleInspector({
         [row.admissionRulePath]: {
           itemId,
           limit: row.limit,
+          perMinuteLimit: row.perMinuteLimit,
         } satisfies EntityAdmissionRuleDefinition,
       });
     } finally {
@@ -134,15 +146,40 @@ export function AdmissionRuleInspector({
       [row.admissionRulePath]: {
         itemId: row.selectedItemId,
         limit: normalizeLimit(rawValue),
+        perMinuteLimit: row.perMinuteLimit,
       } satisfies EntityAdmissionRuleDefinition,
     });
   };
 
-  const resetCounter = () => {
+  const changePerMinuteLimit = (rawValue: string) => {
+    if (row.selectedItemId === null) {
+      return;
+    }
+
+    patchEntityConfig({
+      [row.admissionRulePath]: {
+        itemId: row.selectedItemId,
+        limit: row.limit,
+        perMinuteLimit: normalizeLimit(rawValue),
+      } satisfies EntityAdmissionRuleDefinition,
+    });
+  };
+
+  const resetTotalCounter = () => {
     void appHost.workspace.simulation?.actions.resetAdmissionCounter({
       entityId: entity.id,
       portGroupId: row.portGroup.id,
       portId: row.port.id,
+      scope: "total",
+    });
+  };
+
+  const resetMinuteCounter = () => {
+    void appHost.workspace.simulation?.actions.resetAdmissionCounter({
+      entityId: entity.id,
+      portGroupId: row.portGroup.id,
+      portId: row.port.id,
+      scope: "per-minute",
     });
   };
 
@@ -161,29 +198,47 @@ export function AdmissionRuleInspector({
         data-admission-port-id={row.port.id}
         data-port-kind={row.portGroup.kind}
       >
-        <button
-          className={cm(styles, "admission-rule-item-button")}
-          data-admission-action="pick-item"
-          disabled={pending}
-          onClick={() => {
-            void requestItemSelection();
-          }}
-          title={itemLabel}
-          type="button"
-        >
-          <span className={cm(styles, "admission-rule-item-icon")}>
-            {itemIconSrc === null ? (
-              <LucideCircleDashed aria-hidden="true" />
-            ) : (
-              <img alt="" src={itemIconSrc} />
-            )}
-          </span>
-          <span className={cm(styles, "admission-rule-item-name")}>{itemLabel}</span>
-        </button>
+        <div className={cm(styles, "admission-rule-item-row")}>
+          <button
+            className={cm(styles, "admission-rule-item-button")}
+            data-admission-action="pick-item"
+            disabled={pending}
+            onClick={() => {
+              void requestItemSelection();
+            }}
+            title={itemLabel}
+            type="button"
+          >
+            <span className={cm(styles, "admission-rule-item-icon")}>
+              {itemIconSrc === null ? (
+                <LucideCircleDashed aria-hidden="true" />
+              ) : (
+                <img alt="" src={itemIconSrc} />
+              )}
+            </span>
+            <span className={cm(styles, "admission-rule-item-name")}>{itemLabel}</span>
+          </button>
 
-        <div className={cm(styles, "admission-rule-controls-row")} data-admission-controls>
+          <button
+            aria-label="清除"
+            className={cm(styles, "admission-rule-action-button admission-rule-clear-button")}
+            data-admission-action="clear-item"
+            disabled={row.selectedItemId === null}
+            onClick={clearSelection}
+            title="清除"
+            type="button"
+          >
+            <LucideTrash2 aria-hidden="true" />
+          </button>
+        </div>
+
+        <div
+          className={cm(styles, "admission-rule-controls-row")}
+          data-admission-controls
+          data-admission-counter-scope="total"
+        >
           <label className={cm(styles, "admission-rule-limit")}>
-            <span>上限</span>
+            <span>总计准入</span>
             <input
               data-admission-limit-input
               disabled={row.selectedItemId === null}
@@ -199,42 +254,81 @@ export function AdmissionRuleInspector({
           </label>
 
           <div className={cm(styles, "admission-rule-count")} data-admission-current-count>
-            <span>已准入</span>
+            <span>总计已准入</span>
             <strong>{row.runtimeCount}</strong>
           </div>
 
           <div className={cm(styles, "admission-rule-actions")}>
+            {/* AI-REMOVED 2026-07-10:
+                Reason: 更换按钮与物品选择按钮调用同一个 requestItemSelection，重复占用一格操作区。
+                Trigger: 用户要求删除无意义的铅笔按钮，并为总计/每分钟两行各保留一个重置按钮。
+                Evidence: 物品选择器可直接点击更换，且新增 per-minute reset 后操作区需要按行表达语义。
+                Replacement: 顶部物品选择按钮；本行只保留总计重置。
+                Risk: Low
+                Human Review: Required
+
+                Original code:
+                <button
+                  aria-label="更换"
+                  className={cm(styles, "admission-rule-action-button")}
+                  data-admission-action="change-item"
+                  disabled={pending}
+                  onClick={() => {
+                    void requestItemSelection();
+                  }}
+                  title="更换"
+                  type="button"
+                >
+                  <LucidePencil aria-hidden="true" />
+                </button>
+            */}
             <button
-              aria-label="更换"
+              aria-label="重置总计"
               className={cm(styles, "admission-rule-action-button")}
-              data-admission-action="change-item"
-              disabled={pending}
-              onClick={() => {
-                void requestItemSelection();
-              }}
-              title="更换"
-              type="button"
-            >
-              <LucidePencil aria-hidden="true" />
-            </button>
-            <button
-              aria-label="清除"
-              className={cm(styles, "admission-rule-action-button admission-rule-clear-button")}
-              data-admission-action="clear-item"
-              disabled={row.selectedItemId === null}
-              onClick={clearSelection}
-              title="清除"
-              type="button"
-            >
-              <LucideTrash2 aria-hidden="true" />
-            </button>
-            <button
-              aria-label="重置"
-              className={cm(styles, "admission-rule-action-button")}
-              data-admission-action="reset-count"
+              data-admission-action="reset-total-count"
               disabled={!canReset}
-              onClick={resetCounter}
-              title="重置"
+              onClick={resetTotalCounter}
+              title="重置总计"
+              type="button"
+            >
+              <LucideRotateCcw aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        <div
+          className={cm(styles, "admission-rule-controls-row")}
+          data-admission-counter-scope="per-minute"
+        >
+          <label className={cm(styles, "admission-rule-limit")}>
+            <span>每分钟准入</span>
+            <input
+              data-admission-per-minute-limit-input
+              disabled={row.selectedItemId === null}
+              inputMode="numeric"
+              min={0}
+              onChange={(event) => {
+                changePerMinuteLimit(event.currentTarget.value);
+              }}
+              step={1}
+              type="number"
+              value={row.perMinuteLimit === null ? "" : String(row.perMinuteLimit)}
+            />
+          </label>
+
+          <div className={cm(styles, "admission-rule-count")} data-admission-current-minute-count>
+            <span>本分钟已准入</span>
+            <strong>{row.runtimePerMinuteCount}</strong>
+          </div>
+
+          <div className={cm(styles, "admission-rule-actions")}>
+            <button
+              aria-label="重置本分钟"
+              className={cm(styles, "admission-rule-action-button")}
+              data-admission-action="reset-minute-count"
+              disabled={!canReset}
+              onClick={resetMinuteCounter}
+              title="重置本分钟"
               type="button"
             >
               <LucideRotateCcw aria-hidden="true" />
@@ -284,7 +378,9 @@ function resolveAdmissionPortRow(
     admissionRulePath,
     selectedItemId,
     limit: admissionRule?.limit ?? null,
+    perMinuteLimit: admissionRule?.perMinuteLimit ?? null,
     runtimeCount: runtimeCounter?.count ?? 0,
+    runtimePerMinuteCount: runtimeCounter?.perMinuteCount ?? 0,
   };
 }
 
@@ -300,8 +396,11 @@ function readAdmissionRule(value: unknown): EntityAdmissionRuleDefinition | null
   const limit = typeof record.limit === "number" && Number.isFinite(record.limit)
     ? Math.max(0, Math.floor(record.limit))
     : null;
+  const perMinuteLimit = typeof record.perMinuteLimit === "number" && Number.isFinite(record.perMinuteLimit)
+    ? Math.max(0, Math.floor(record.perMinuteLimit))
+    : null;
 
-  return { itemId, limit };
+  return { itemId, limit, perMinuteLimit };
 }
 
 function readAcceptRuleItemId(value: unknown): string | null {

@@ -36,6 +36,77 @@ describe("admission rule runtime counter", () => {
         itemType: "item_iron_ore",
         limit: 2,
         count: 2,
+        perMinuteLimit: null,
+        perMinuteCount: 2,
+      });
+  });
+
+  it("resets per-minute admission count at simulation minute boundaries", async () => {
+    const report = await runBlueprintSimulation({
+      blueprint: createAdmissionBlueprint({
+        sourceItemId: "item_iron_ore",
+        admissionItemId: "item_iron_ore",
+        limit: null,
+        perMinuteLimit: 2,
+      }),
+      registry: createRegistryContract(),
+      maxTickNumber: 1300,
+    });
+
+    const sourceToAdmissionTransfers = report.ticks.flatMap((tick) =>
+      tick.transfers
+        .filter((transfer) =>
+          transfer.sourceSlotId.includes("device:source")
+          && transfer.targetSlotId.includes("device:admission"),
+        )
+        .map((transfer) => ({ tickNumber: tick.tickNumber, transfer })),
+    );
+
+    expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 60, 1200, 1240]);
+    expect(report.ticks[1199]?.devices.admission?.admissionCounters?.["item_input:in_w"])
+      .toMatchObject({
+        limit: null,
+        count: 2,
+        perMinuteLimit: 2,
+        perMinuteCount: 2,
+      });
+    expect(report.ticks[1200]?.devices.admission?.admissionCounters?.["item_input:in_w"])
+      .toMatchObject({
+        limit: null,
+        count: 3,
+        perMinuteLimit: 2,
+        perMinuteCount: 1,
+      });
+  });
+
+  it("applies total and per-minute limits independently", async () => {
+    const report = await runBlueprintSimulation({
+      blueprint: createAdmissionBlueprint({
+        sourceItemId: "item_iron_ore",
+        admissionItemId: "item_iron_ore",
+        limit: 3,
+        perMinuteLimit: 2,
+      }),
+      registry: createRegistryContract(),
+      maxTickNumber: 1300,
+    });
+
+    const sourceToAdmissionTransfers = report.ticks.flatMap((tick) =>
+      tick.transfers
+        .filter((transfer) =>
+          transfer.sourceSlotId.includes("device:source")
+          && transfer.targetSlotId.includes("device:admission"),
+        )
+        .map((transfer) => ({ tickNumber: tick.tickNumber, transfer })),
+    );
+
+    expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 60, 1200]);
+    expect(report.ticks.at(-1)?.devices.admission?.admissionCounters?.["item_input:in_w"])
+      .toMatchObject({
+        limit: 3,
+        count: 3,
+        perMinuteLimit: 2,
+        perMinuteCount: 1,
       });
   });
 
@@ -63,6 +134,8 @@ describe("admission rule runtime counter", () => {
         itemType: "item_iron_ore",
         limit: 5,
         count: 0,
+        perMinuteLimit: null,
+        perMinuteCount: 0,
       });
   });
 });
@@ -70,7 +143,8 @@ describe("admission rule runtime counter", () => {
 function createAdmissionBlueprint(options: {
   readonly sourceItemId: string;
   readonly admissionItemId: string;
-  readonly limit: number;
+  readonly limit: number | null;
+  readonly perMinuteLimit?: number | null;
 }) {
   return createBlueprint("admission-rule", [
     createEntity("source", "item_port_storager_1", 0, 0, 90, {
@@ -86,6 +160,7 @@ function createAdmissionBlueprint(options: {
       "portGroups[0].ports[0].admissionRule": {
         itemId: options.admissionItemId,
         limit: options.limit,
+        perMinuteLimit: options.perMinuteLimit ?? null,
       },
     }),
     createEntity("belt", "belt_straight_1x1", 4, 1, 0),

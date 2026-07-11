@@ -75,6 +75,8 @@ export interface SimulationAdmissionCounterStatusReadModel {
   readonly itemType: string | null;
   readonly limit: number | null;
   readonly count: number;
+  readonly perMinuteLimit: number | null;
+  readonly perMinuteCount: number;
 }
 
 // AI-CORRECTION 2026-05-14: slotType 字段已删除。
@@ -120,6 +122,7 @@ export interface SimulationAdmissionCounterReset {
   readonly entityId: string;
   readonly portGroupId: string;
   readonly portId: string;
+  readonly scope?: "total" | "per-minute";
 }
 
 /** 文档级仿真运行时只读视图 */

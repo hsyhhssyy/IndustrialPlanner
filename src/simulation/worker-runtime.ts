@@ -52,6 +52,8 @@ import {
   createEmptyTransientState,
   createMigratedSimulationMutableRuntimeState,
   createSimulationMutableRuntimeState,
+  normalizeAdmissionMinuteCountersForCurrentWindow,
+  resetAdmissionMinuteCounterForCurrentWindow,
   rollRecipeStatsWindow,
   BASE_BATTERY_CAPACITY_J,
   type SimulationMutableRuntimeState,
@@ -386,9 +388,13 @@ export class SimulationWorkerRuntime {
     const patchTickNumber = this.resolvePatchBaseTickNumber();
     const baseState = this.tickRuntimeStates.get(patchTickNumber) ?? this.runtimeState;
     const nextState = cloneSimulationMutableRuntimeState(baseState);
-    nextState.persistent.admissionCounters[compiledPortId] = 0;
     nextState.tickNumber = patchTickNumber;
     nextState.lastAdvancedTickNumber = patchTickNumber;
+    if (reset.scope === "per-minute") {
+      resetAdmissionMinuteCounterForCurrentWindow(this.topology, nextState, compiledPortId);
+    } else {
+      nextState.persistent.admissionCounters[compiledPortId] = 0;
+    }
     nextState.transient = createEmptyTransientState();
 
     this.runtimeState = nextState;
@@ -701,6 +707,7 @@ export class SimulationWorkerRuntime {
 
     const shouldAdvance = tickNumber > this.runtimeState.tickNumber;
     this.runtimeState.tickNumber = tickNumber;
+    normalizeAdmissionMinuteCountersForCurrentWindow(this.topology, this.runtimeState);
     const runtimeStepTicks = tickNumber - this.runtimeState.lastAdvancedTickNumber;
     const shouldRunRuntime = shouldAdvance && runtimeStepTicks >= this.standardStepTicks;
 

@@ -792,6 +792,7 @@ function convertLegacyAdmissionConfig(
     limit: typeof limit === "number" && Number.isFinite(limit) && limit > 0
       ? Math.floor(limit)
       : null,
+    perMinuteLimit: null,
   };
 
   return nextConfig;

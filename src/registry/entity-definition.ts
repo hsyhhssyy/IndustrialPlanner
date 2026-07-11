@@ -2416,6 +2416,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     powerDemand: 50,
     portGroups: [
       createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2, 3, 4].map((y) => createPort(`in_w_${y}`, 0, y, "W")),
+      ),
+      createPortGroup(
         "fluid_input",
         "fluid",
         "input",
@@ -2438,6 +2444,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ...createSimpleProductionDevice([
       { kind: "fluid", direction: "input", capacities: [50] },
       { kind: "fluid", direction: "output", capacities: [50, 50] },
+      { kind: "item", direction: "input", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -2511,6 +2518,147 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       { kind: "item", direction: "output", capacities: [50] },
       { kind: "fluid", direction: "output", capacities: [50] },
     ]),
+  }),
+  createEntityDefinition({
+    id: "item_port_solid_gas_converter_1",
+    nameKey: "registry.entity.item_port_solid_gas_converter_1.name",
+    spriteId: "item_port_liquid_purifier_1",
+    footprint: { width: 5, height: 5 },
+    uiGroup: "advancedManufacturing",
+    displayOrder: 611,
+    tags: [PRODUCER_TAG, "武陵"],
+    requiresPower: true,
+    powerDemand: 50,
+    portGroups: [
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [1, 3].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+      ),
+      createPortGroup(
+        "gas_input",
+        "fluid",
+        "input",
+        [
+          createPort("in_s_2", 2, 4, "S", {
+            acceptRule: { base: { kind: "gas" }, exclude: [] },
+          }),
+          ...[1, 3].map((y) => createPort(`in_e_${y}`, 4, y, "E", {
+            acceptRule: { base: { kind: "gas" }, exclude: [] },
+          })),
+        ],
+      ),
+      createPortGroup(
+        "gas_output",
+        "fluid",
+        "output",
+        [1, 3].map((y) => createPort(`out_w_${y}`, 0, y, "W", {
+          acceptRule: { base: { kind: "gas" }, exclude: [] },
+        })),
+      ),
+    ],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "item_input_buffer",
+        "item",
+        createSlots("input_item_slot", [50], "solid"),
+      ),
+      createStorageSlotGroup(
+        "gas_input_buffer",
+        "fluid",
+        createSlots("input_gas_slot", [50], "gas"),
+      ),
+      createStorageSlotGroup(
+        "item_output_buffer",
+        "item",
+        createSlots("output_item_slot", [50], "solid"),
+      ),
+      createStorageSlotGroup(
+        "gas_output_buffer",
+        "fluid",
+        createSlots("output_gas_slot", [50], "gas"),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel(
+        "default",
+        ["item_input_buffer", "gas_input_buffer"],
+        ["item_output_buffer", "gas_output_buffer"],
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "item_input_buffer"),
+      createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
+      createBinding("bind_item_output", "item_output", "item_output_buffer"),
+      createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
+    ],
+  }),
+  createEntityDefinition({
+    id: "item_port_gas_reactor_1",
+    nameKey: "registry.entity.item_port_gas_reactor_1.name",
+    spriteId: "item_port_xiranite_oven_1",
+    footprint: { width: 5, height: 5 },
+    uiGroup: "advancedManufacturing",
+    displayOrder: 612,
+    tags: [PRODUCER_TAG, "武陵"],
+    requiresPower: true,
+    powerDemand: 50,
+    portGroups: [
+      createPortGroup(
+        "gas_input",
+        "fluid",
+        "input",
+        [1, 3].map((x) => createPort(`in_n_${x}`, x, 0, "N", {
+          acceptRule: { base: { kind: "gas" }, exclude: [] },
+        })),
+      ),
+      createPortGroup(
+        "gas_output",
+        "fluid",
+        "output",
+        [1, 3].map((x) => createPort(`out_s_${x}`, x, 4, "S", {
+          acceptRule: { base: { kind: "gas" }, exclude: [] },
+        })),
+      ),
+    ],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "gas_input_buffer",
+        "fluid",
+        createSlots("input_gas_slot", [50], "gas"),
+      ),
+      createStorageSlotGroup(
+        "gas_output_buffer",
+        "fluid",
+        createSlots("output_gas_slot", [50], "gas"),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["gas_input_buffer"], ["gas_output_buffer"]),
+    ],
+    portStorageBindings: [
+      createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
+      createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
+    ],
   }),
   /**
    * item_port_sp_hub_1 — 协议核心（9×9）
@@ -3114,7 +3262,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item",
         "input",
         [createPort("in_w", 0, 0, "W", {
-          admissionRule: { itemId: null, limit: null },
+          admissionRule: { itemId: null, limit: null, perMinuteLimit: null },
         })],
       ),
       createPortGroup(
@@ -3165,7 +3313,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid",
         "input",
         [createPort("in_w", 0, 0, "W", {
-          admissionRule: { itemId: null, limit: null },
+          admissionRule: { itemId: null, limit: null, perMinuteLimit: null },
         })],
       ),
       createPortGroup(
@@ -3217,6 +3365,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: "item_port_dumper_1",
     nameKey: "registry.entity.item_port_dumper_1.name",
     spriteId: "item_port_dumper_1",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "resourcePower",
+    tags: ["不可摆放"],
+  }),
+
+  /**
+   * item_port_gas_collector_1 — 气体收集泵（3×3）
+   *
+   * 不可摆放设备，无精灵定义，无端口/槽位/配方。
+   * 仅作为气体采集配方的目标设备。
+   */
+  createEmptyEntityDefinition({
+    id: "item_port_gas_collector_1",
+    nameKey: "registry.entity.item_port_gas_collector_1.name",
+    spriteId: "item_port_gas_collector_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
     tags: ["不可摆放"],

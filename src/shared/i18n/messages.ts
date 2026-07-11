@@ -358,6 +358,9 @@ export type MessageKey =
   | "registry.entity.item_port_filling_pd_mc_1.name"
   | "registry.entity.item_port_gas_diffuser_1.name"
   | "registry.entity.item_port_gas_storager_1.name"
+  | "registry.entity.item_port_gas_collector_1.name"
+  | "registry.entity.item_port_solid_gas_converter_1.name"
+  | "registry.entity.item_port_gas_reactor_1.name"
   | "registry.item.item_gas_inert.name"
   | "registry.item.item_gas_xiranite.name"
   | "registry.recipe.r_xiranite_oven_xiranite_powder_from_carbon_mtl_and_water_in_inert_gas_basic.name"
@@ -859,6 +862,9 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "registry.entity.item_port_filling_pd_mc_1.name": "灌装机",
     "registry.entity.item_port_gas_diffuser_1.name": "气体扩散机",
     "registry.entity.item_port_gas_storager_1.name": "储气罐",
+    "registry.entity.item_port_gas_collector_1.name": "气体收集泵",
+    "registry.entity.item_port_solid_gas_converter_1.name": "固气转化机",
+    "registry.entity.item_port_gas_reactor_1.name": "气体反应炉",
     "registry.item.item_gas_inert.name": "惰气",
     "registry.item.item_gas_xiranite.name": "息壤气",
     "registry.recipe.r_xiranite_oven_xiranite_powder_from_carbon_mtl_and_water_in_inert_gas_basic.name": "惰气炼息壤",
@@ -1372,6 +1378,9 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "registry.entity.item_port_filling_pd_mc_1.name": "Filling Unit",
     "registry.entity.item_port_gas_diffuser_1.name": "Gas Diffuser",
     "registry.entity.item_port_gas_storager_1.name": "Gas Tank",
+    "registry.entity.item_port_gas_collector_1.name": "Gas Collection Pump",
+    "registry.entity.item_port_solid_gas_converter_1.name": "Solid-Gas Converter",
+    "registry.entity.item_port_gas_reactor_1.name": "Gas Reactor",
     "registry.item.item_gas_inert.name": "Inert Gas",
     "registry.item.item_gas_xiranite.name": "Xiranite Gas",
     "registry.recipe.r_xiranite_oven_xiranite_powder_from_carbon_mtl_and_water_in_inert_gas_basic.name": "Xiranite in Inert Gas",

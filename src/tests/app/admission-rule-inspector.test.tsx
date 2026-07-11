@@ -69,11 +69,12 @@ describe("AdmissionRuleInspector", () => {
       "portGroups[0].ports[0].admissionRule": {
         itemId: "item_iron_ore",
         limit: null,
+        perMinuteLimit: null,
       },
     });
   });
 
-  it("edits limit, resets runtime count, and clears both config paths", () => {
+  it("edits total and per-minute limits, resets both counts, and clears both config paths", () => {
     const workspace = createWorkspace();
     const definition = requireDefinition(workspace, "item_log_admission");
     const declaration = requireAdmissionDeclaration(definition);
@@ -85,6 +86,7 @@ describe("AdmissionRuleInspector", () => {
       "portGroups[0].ports[0].admissionRule": {
         itemId: "item_iron_ore",
         limit: 2,
+        perMinuteLimit: 4,
       },
     });
     const patchEntityConfig = vi.fn();
@@ -99,10 +101,16 @@ describe("AdmissionRuleInspector", () => {
     renderInspector(appHost, definition, declaration, entity, createRuntimeStatus(), root);
 
     expect(container.querySelector("[data-admission-current-count]")?.textContent).toContain("2");
+    expect(container.querySelector("[data-admission-current-minute-count]")?.textContent).toContain("1");
+    expect(container.querySelector("[data-admission-action='change-item']")).toBeNull();
 
     const input = container.querySelector<HTMLInputElement>("[data-admission-limit-input]");
     if (input === null) {
       throw new Error("Expected admission limit input.");
+    }
+    const perMinuteInput = container.querySelector<HTMLInputElement>("[data-admission-per-minute-limit-input]");
+    if (perMinuteInput === null) {
+      throw new Error("Expected admission per-minute limit input.");
     }
 
     act(() => {
@@ -115,17 +123,44 @@ describe("AdmissionRuleInspector", () => {
       "portGroups[0].ports[0].admissionRule": {
         itemId: "item_iron_ore",
         limit: 5,
+        perMinuteLimit: 4,
       },
     });
 
     act(() => {
-      container.querySelector<HTMLButtonElement>("[data-admission-action='reset-count']")?.click();
+      setInputValue(perMinuteInput, "7");
+      perMinuteInput.dispatchEvent(new Event("input", { bubbles: true }));
+      perMinuteInput.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(patchEntityConfig).toHaveBeenCalledWith("admission", {
+      "portGroups[0].ports[0].admissionRule": {
+        itemId: "item_iron_ore",
+        limit: 2,
+        perMinuteLimit: 7,
+      },
+    });
+
+    act(() => {
+      container.querySelector<HTMLButtonElement>("[data-admission-action='reset-total-count']")?.click();
     });
 
     expect(resetAdmissionCounter).toHaveBeenCalledWith({
       entityId: "admission",
       portGroupId: "item_input",
       portId: "in_w",
+      scope: "total",
+    });
+
+    act(() => {
+      container.querySelector<HTMLButtonElement>("[data-admission-action='reset-minute-count']")?.click();
+    });
+
+    expect(resetAdmissionCounter).toHaveBeenCalledWith({
+      entityId: "admission",
+      portGroupId: "item_input",
+      portId: "in_w",
+      scope: "per-minute",
     });
 
     act(() => {
@@ -238,6 +273,8 @@ function createRuntimeStatus(): SimulationDeviceRuntimeStatusReadModel {
         itemType: "item_iron_ore",
         limit: 2,
         count: 2,
+        perMinuteLimit: 4,
+        perMinuteCount: 1,
       },
     },
     powerStatus: "in-power-range",

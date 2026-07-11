@@ -70,6 +70,7 @@ export interface SimulationAcceptRule {
 export interface SimulationAdmissionRule {
   readonly itemId: string | null;
   readonly limit: number | null;
+  readonly perMinuteLimit: number | null;
 }
 
 export interface SimulationCompileDiagnostic {
@@ -439,6 +440,8 @@ export interface RuntimeAdmissionCounterSnapshot {
   readonly itemId: string | null;
   readonly limit: number | null;
   readonly count: number;
+  readonly perMinuteLimit: number | null;
+  readonly perMinuteCount: number;
 }
 
 export interface RuntimeDeviceRecipeSnapshot {

@@ -24,6 +24,8 @@ export interface SimulationPersistentRuntimeState {
   devices: Record<string, RuntimeDeviceState>;
   /** 准入口跨 tick 计数。key 为 compiled port id。 */
   admissionCounters: Record<string, number>;
+  /** 准入口每仿真分钟窗口计数。key 为 compiled port id。 */
+  admissionMinuteCounters: Record<string, RuntimeAdmissionMinuteCounterState>;
   routingCursors: Record<string, number>;
   shareAllTargetSlotIdBySourceSlotId: Record<string, string>;
   sharedCapacitySlotIdsBySlotId: Record<string, readonly string[]>;
@@ -110,6 +112,11 @@ export interface RuntimeReservedItem {
   slotId: string;
   itemType: string;
   amount: number;
+}
+
+export interface RuntimeAdmissionMinuteCounterState {
+  windowStartTick: number;
+  count: number;
 }
 
 export interface SimulationTickTransientState {
@@ -218,6 +225,7 @@ export function createSimulationMutableRuntimeState(
 
   const devices: Record<string, RuntimeDeviceState> = {};
   const admissionCounters = createInitialAdmissionCounters(topology);
+  const admissionMinuteCounters = createInitialAdmissionMinuteCounters(topology);
   const routingCursors: Record<string, number> = {};
   for (const deviceId of topology.ordering.deviceOrder) {
     const device = topology.devices[deviceId];
@@ -244,6 +252,7 @@ export function createSimulationMutableRuntimeState(
       slots,
       devices,
       admissionCounters,
+      admissionMinuteCounters,
       routingCursors,
       ...linkState,
       nextRecipeRunIndex: 1,
@@ -307,6 +316,11 @@ export function createMigratedSimulationMutableRuntimeState(
       ) {
         state.persistent.admissionCounters[portId] =
           options.previousState.persistent.admissionCounters[portId] ?? 0;
+        const previousMinuteCounter = options.previousState.persistent.admissionMinuteCounters[portId];
+        if (previousMinuteCounter !== undefined) {
+          state.persistent.admissionMinuteCounters[portId] =
+            cloneAdmissionMinuteCounterState(previousMinuteCounter);
+        }
       }
     }
     for (const cursorKey of Object.keys(state.persistent.routingCursors)) {
@@ -341,6 +355,12 @@ export function cloneSimulationMutableRuntimeState(
         cloneRuntimeDeviceState(device),
       ])),
       admissionCounters: { ...state.persistent.admissionCounters },
+      admissionMinuteCounters: Object.fromEntries(
+        Object.entries(state.persistent.admissionMinuteCounters).map(([portId, counter]) => [
+          portId,
+          cloneAdmissionMinuteCounterState(counter),
+        ]),
+      ),
       routingCursors: { ...state.persistent.routingCursors },
       shareAllTargetSlotIdBySourceSlotId: { ...state.persistent.shareAllTargetSlotIdBySourceSlotId },
       sharedCapacitySlotIdsBySlotId: Object.fromEntries(
@@ -444,10 +464,99 @@ function createInitialAdmissionCounters(
   return counters;
 }
 
+function createInitialAdmissionMinuteCounters(
+  topology: CompiledSimulationTopology,
+): Record<string, RuntimeAdmissionMinuteCounterState> {
+  const counters: Record<string, RuntimeAdmissionMinuteCounterState> = {};
+  for (const portId of topology.ordering.portOrder) {
+    const port = topology.ports[portId];
+    if (port?.admissionRule !== null && port?.admissionRule !== undefined) {
+      counters[portId] = { windowStartTick: 0, count: 0 };
+    }
+  }
+  return counters;
+}
+
+export function normalizeAdmissionMinuteCountersForCurrentWindow(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+): void {
+  for (const portId of topology.ordering.portOrder) {
+    const port = topology.ports[portId];
+    if (port?.admissionRule !== null && port?.admissionRule !== undefined) {
+      ensureAdmissionMinuteCounterForCurrentWindow(topology, state, portId);
+    }
+  }
+}
+
+export function readAdmissionMinuteCounterForCurrentWindow(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  portId: string,
+): RuntimeAdmissionMinuteCounterState {
+  return ensureAdmissionMinuteCounterForCurrentWindow(topology, state, portId);
+}
+
+export function incrementAdmissionMinuteCounterForCurrentWindow(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  portId: string,
+): void {
+  const counter = ensureAdmissionMinuteCounterForCurrentWindow(topology, state, portId);
+  counter.count += 1;
+}
+
+export function resetAdmissionMinuteCounterForCurrentWindow(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  portId: string,
+): void {
+  state.persistent.admissionMinuteCounters[portId] = {
+    windowStartTick: resolveAdmissionMinuteWindowStartTick(state.tickNumber, topology.standardTickRate),
+    count: 0,
+  };
+}
+
+function ensureAdmissionMinuteCounterForCurrentWindow(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  portId: string,
+): RuntimeAdmissionMinuteCounterState {
+  const windowStartTick = resolveAdmissionMinuteWindowStartTick(state.tickNumber, topology.standardTickRate);
+  const counter = state.persistent.admissionMinuteCounters[portId];
+  if (counter === undefined || counter.windowStartTick !== windowStartTick) {
+    const nextCounter = { windowStartTick, count: 0 };
+    state.persistent.admissionMinuteCounters[portId] = nextCounter;
+    return nextCounter;
+  }
+  return counter;
+}
+
+function resolveAdmissionMinuteWindowStartTick(
+  tickNumber: number,
+  standardTickRate: number,
+): number {
+  const normalizedTickRate = Number.isFinite(standardTickRate) && standardTickRate > 0
+    ? Math.floor(standardTickRate)
+    : 1;
+  const minuteWindowTicks = Math.max(1, normalizedTickRate * 60);
+  const currentTick = Math.max(0, Math.trunc(tickNumber));
+  return Math.floor(currentTick / minuteWindowTicks) * minuteWindowTicks;
+}
+
 function cloneRuntimeSlotState(slot: RuntimeSlotState): RuntimeSlotState {
   return {
     itemType: slot.itemType,
     count: slot.count,
+  };
+}
+
+function cloneAdmissionMinuteCounterState(
+  counter: RuntimeAdmissionMinuteCounterState,
+): RuntimeAdmissionMinuteCounterState {
+  return {
+    windowStartTick: counter.windowStartTick,
+    count: counter.count,
   };
 }
 

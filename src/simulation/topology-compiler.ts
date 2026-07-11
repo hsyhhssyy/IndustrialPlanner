@@ -1473,8 +1473,11 @@ function readPortAdmissionRule(port: PortDefinition): SimulationAdmissionRule | 
   const limit = typeof rule.limit === "number" && Number.isFinite(rule.limit)
     ? Math.max(0, Math.floor(rule.limit))
     : null;
+  const perMinuteLimit = typeof rule.perMinuteLimit === "number" && Number.isFinite(rule.perMinuteLimit)
+    ? Math.max(0, Math.floor(rule.perMinuteLimit))
+    : null;
 
-  return { itemId, limit };
+  return { itemId, limit, perMinuteLimit };
 }
 
 function intersectAcceptRules(

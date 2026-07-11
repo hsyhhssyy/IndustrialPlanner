@@ -1013,7 +1013,15 @@
 
 .admission-rule-controls-row {
   display: grid;
-  grid-template-columns: minmax(86px, 112px) minmax(76px, 1fr) auto;
+  grid-template-columns: minmax(104px, 1fr) minmax(92px, 0.85fr) auto;
+  align-items: stretch;
+  min-width: 0;
+  gap: 8px;
+}
+
+.admission-rule-item-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
   min-width: 0;
   gap: 8px;
@@ -1245,14 +1253,16 @@
 .admission-rule-inspector[data-render-mode="dock"] .admission-rule-controls-row,
 .admission-rule-inspector[data-device-class="mobile"] .admission-rule-controls-row,
 .admission-rule-inspector[data-device-class="tablet"] .admission-rule-controls-row {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* AI-CORRECTION 2026-07-10: 每行现在有独立重置按钮，响应式布局仍需保留第三个操作列，避免按钮被压到额外行。 */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
 }
 
 .admission-rule-inspector[data-render-mode="dock"] .admission-rule-actions,
 .admission-rule-inspector[data-device-class="mobile"] .admission-rule-actions,
 .admission-rule-inspector[data-device-class="tablet"] .admission-rule-actions {
-  grid-column: 1 / -1;
-  justify-content: flex-start;
+  /* AI-CORRECTION 2026-07-10: 与上方三列配置行一致，操作按钮留在当前行右侧。 */
+  grid-column: auto;
+  justify-content: flex-end;
 }
 
 .port-output-config-inspector {
