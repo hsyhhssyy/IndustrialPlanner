@@ -6,8 +6,10 @@ export {
   moveQuickPlaceFavoriteToSlot,
   normalizeQuickPlaceFavorites,
   placeQuickPlaceFavoriteAtSlot,
+  removeQuickPlaceFavoriteAtSlot,
   resolveQuickPlaceSlotIndexFromKey,
   triggerQuickPlaceDeviceSelection,
   type BuildQuickPlaceDeviceEntriesOptions,
   type QuickPlaceDeviceEntry,
+  type QuickPlaceFavoriteSlots,
 } from "./quick-place-model";

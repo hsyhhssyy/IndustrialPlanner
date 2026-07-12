@@ -101,7 +101,7 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   leftDockWidth: number;
   topBarCollapsed: boolean;
   rightDockActiveTab: RightDockTabId;
-  quickPlaceFavoriteEntityIds: string[];
+  quickPlaceFavoriteEntityIds: Array<string | null>;
   dialogState: DialogStateMapReadWrite;
   toolbox: ToolboxStateReadWrite;
 }
@@ -483,7 +483,7 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   leftDockWidth = DEFAULT_LEFT_DOCK_WIDTH;
   topBarCollapsed = false;
   rightDockActiveTab = DEFAULT_RIGHT_DOCK_TAB_ID;
-  quickPlaceFavoriteEntityIds: string[] = [];
+  quickPlaceFavoriteEntityIds: Array<string | null> = [];
   dialogState: DialogStateMapReadWrite = {
     toolbox: createDefaultDialogStateForKey("toolbox"),
     help: createDefaultDialogStateForKey("help"),

@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, type CSSProperties, type DragEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+  type KeyboardEvent,
+} from "react";
 import { observer } from "mobx-react-lite";
 import { runInAction } from "mobx";
 
@@ -11,6 +19,7 @@ import {
   moveQuickPlaceFavoriteToSlot,
   normalizeQuickPlaceFavorites,
   placeQuickPlaceFavoriteAtSlot,
+  removeQuickPlaceFavoriteAtSlot,
   resolveQuickPlaceSlotIndexFromKey,
   triggerQuickPlaceDeviceSelection,
 } from "@/app/quick-place";
@@ -37,7 +46,11 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   const documentSnapshot = useEditorDocumentSnapshot(editor);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const favoritesRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const favoriteDropHandledRef = useRef(false);
+  const [draggingFavoriteIndex, setDraggingFavoriteIndex] = useState<number | null>(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const t = appHost.actions.translate;
   const runtime = appHost.internalState.runtime.quickPlace;
   const anchor = runtime.anchor;
@@ -139,7 +152,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     }
 
     const deviceId = favorites[slotIndex];
-    if (deviceId === undefined) {
+    if (deviceId === null || deviceId === undefined) {
       return;
     }
 
@@ -163,9 +176,18 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     event.dataTransfer.setData(QUICK_PLACE_DRAG_FORMAT, JSON.stringify(payload));
   }
 
+  function commitFavorites(nextFavorites: readonly (string | null)[]): void {
+    runInAction(() => {
+      appHost.internalState.workbench.quickPlaceFavoriteEntityIds =
+        normalizeQuickPlaceFavorites(nextFavorites, availableEntityIds);
+    });
+  }
+
   function handleFavoriteDrop(event: DragEvent<HTMLElement>, slotIndex: number): void {
     event.preventDefault();
     event.stopPropagation();
+    favoriteDropHandledRef.current = true;
+    setDropTargetIndex(null);
 
     const payload = readDragPayload(event);
     if (payload === null) {
@@ -176,10 +198,21 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
       ? moveQuickPlaceFavoriteToSlot(favorites, payload.index, slotIndex)
       : placeQuickPlaceFavoriteAtSlot(favorites, payload.deviceId, slotIndex);
 
-    runInAction(() => {
-      appHost.internalState.workbench.quickPlaceFavoriteEntityIds =
-        normalizeQuickPlaceFavorites(nextFavorites, availableEntityIds);
-    });
+    commitFavorites(nextFavorites);
+  }
+
+  function handleFavoriteDragEnd(event: DragEvent<HTMLElement>, slotIndex: number): void {
+    event.stopPropagation();
+    setDraggingFavoriteIndex(null);
+    setDropTargetIndex(null);
+
+    const droppedOnFavoriteSlot = favoriteDropHandledRef.current;
+    favoriteDropHandledRef.current = false;
+    if (droppedOnFavoriteSlot || isPointInsideElement(event, favoritesRef.current)) {
+      return;
+    }
+
+    commitFavorites(removeQuickPlaceFavoriteAtSlot(favorites, slotIndex));
   }
 
   return (
@@ -194,6 +227,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
       <section
         aria-label={t("workbench.quickPlace.favoritesLabel")}
         className={cm(styles, "quick-place-favorites")}
+        ref={favoritesRef}
       >
         {favoriteSlots.map((deviceId, index) => {
           const entry = deviceId === null ? null : entryById.get(deviceId) ?? null;
@@ -205,9 +239,13 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
           return (
             <button
               aria-label={label}
-              className={cm(styles, entry === null
-                ? "quick-place-favorite-slot is-empty"
-                : "quick-place-favorite-slot")}
+              className={cm(
+                styles,
+                "quick-place-favorite-slot",
+                entry === null && "is-empty",
+                draggingFavoriteIndex === index && "is-dragging",
+                dropTargetIndex === index && "is-drop-target",
+              )}
               draggable={entry !== null}
               key={shortcut}
               onClick={(event) => {
@@ -217,10 +255,24 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
               }}
               onDragOver={(event) => {
                 event.preventDefault();
-                event.dataTransfer.dropEffect = "move";
+                event.dataTransfer.dropEffect = draggingFavoriteIndex === null ? "copy" : "move";
+                setDropTargetIndex(index);
+              }}
+              onDragEnter={() => setDropTargetIndex(index)}
+              onDragLeave={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                  setDropTargetIndex((current) => current === index ? null : current);
+                }
+              }}
+              onDragEnd={(event) => {
+                if (entry !== null) {
+                  handleFavoriteDragEnd(event, index);
+                }
               }}
               onDragStart={(event) => {
                 if (entry !== null) {
+                  favoriteDropHandledRef.current = false;
+                  setDraggingFavoriteIndex(index);
                   writeDragPayload(event, {
                     source: "favorite",
                     deviceId: entry.id,
@@ -275,7 +327,13 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
               draggable
               key={entry.id}
               onClick={(event) => selectDevice(entry.id, event.nativeEvent)}
+              onDragEnd={() => {
+                favoriteDropHandledRef.current = false;
+                setDropTargetIndex(null);
+              }}
               onDragStart={(event) => {
+                favoriteDropHandledRef.current = false;
+                setDraggingFavoriteIndex(null);
                 writeDragPayload(event, {
                   source: "menu",
                   deviceId: entry.id,
@@ -340,18 +398,32 @@ function readDragPayload(event: DragEvent<HTMLElement>): QuickPlaceDragPayload |
   return null;
 }
 
+function isPointInsideElement(event: DragEvent<HTMLElement>, element: HTMLElement | null): boolean {
+  if (element === null) {
+    return false;
+  }
+
+  const rect = element.getBoundingClientRect();
+  return (
+    event.clientX >= rect.left
+    && event.clientX <= rect.right
+    && event.clientY >= rect.top
+    && event.clientY <= rect.bottom
+  );
+}
+
 function resolvePopupStyle(anchorX: number, anchorY: number): CSSProperties {
-  const width = Math.min(420, Math.max(320, window.innerWidth - 16));
-  const height = Math.min(480, Math.max(260, window.innerHeight - 16));
-  const favoriteColumnWidth = 76;
-  const left = clamp(anchorX - favoriteColumnWidth - 8, 8, window.innerWidth - width - 8);
-  const top = clamp(anchorY - 16, 8, window.innerHeight - height - 8);
+  const width = Math.min(560, Math.max(420, window.innerWidth - 16));
+  const height = Math.min(520, Math.max(300, window.innerHeight - 16));
+  const favoriteColumnWidth = 112;
+  const left = clamp(anchorX - favoriteColumnWidth - 10, 8, window.innerWidth - width - 8);
+  const top = clamp(anchorY - 20, 8, window.innerHeight - height - 8);
 
   return {
+    height,
     left,
     top,
     width,
-    maxHeight: height,
   };
 }
 
@@ -359,7 +431,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), Math.max(min, max));
 }
 
-function arraysEqual(left: readonly string[], right: readonly string[]): boolean {
+function arraysEqual(left: readonly (string | null)[], right: readonly (string | null)[]): boolean {
   if (left.length !== right.length) {
     return false;
   }

@@ -8,11 +8,31 @@ import type { GestureEvent } from "@/app/input/gesture/adapter";
 import type { WorldEntity } from "@/domain/document/world-document";
 
 type MouseTapGestureEvent = Extract<GestureEvent, { type: "mouse tap" }>;
+type MouseDoubleTapGestureEvent = Extract<GestureEvent, { type: "mouse double tap" }>;
 type MouseLongPressReadyGestureEvent = Extract<GestureEvent, { type: "mouse-long-press-ready" }>;
 
 function mouseTapEvent(gestureId = "tap-1"): MouseTapGestureEvent {
   return {
     type: "mouse tap",
+    gestureId,
+    button: 0,
+    buttons: 0,
+    position: { x: 12, y: 24 },
+    longPress: false,
+    pointerEntity: null,
+    modifiers: {
+      alt: false,
+      ctrl: false,
+      meta: false,
+      shift: false,
+    },
+    sourceEvent: null,
+  };
+}
+
+function mouseDoubleTapEvent(gestureId = "double-tap-1"): MouseDoubleTapGestureEvent {
+  return {
+    type: "mouse double tap",
     gestureId,
     button: 0,
     buttons: 0,
@@ -121,6 +141,17 @@ describe("GestureDiagnosticsStore", () => {
 
     expect(module.when).toBeUndefined();
     expect(module.id).toBe("gesture-diagnostics");
+  });
+
+  it("records double tap detail", () => {
+    const store = createGestureDiagnosticsStore();
+
+    store.recordGesture(mouseDoubleTapEvent());
+
+    expect(store.getSnapshot().latestEvent).toMatchObject({
+      type: "mouse double tap",
+      detail: "button 0, double",
+    });
   });
 
   it("keeps a bounded event history and publishes keyboard snapshots", () => {

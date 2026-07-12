@@ -145,6 +145,8 @@ function getEventDetail(event: GestureEvent): string {
       return `${event.reason}, button ${event.releaseButton}, ${event.longPress ? "long press" : "direct"}`;
     case "mouse tap":
       return `button ${event.button}, ${event.longPress ? "long press" : "direct"}${pointerEntityDetail}`;
+    case "mouse double tap":
+      return `button ${event.button}, double${pointerEntityDetail}`;
     case "mouse-long-press-ready":
       return `button ${event.button}, buttons ${event.buttons}, ready${pointerEntityDetail}`;
     case "mouse move":
@@ -157,6 +159,8 @@ function getEventDetail(event: GestureEvent): string {
       return `${event.reason}, primary ${event.primaryId}, ${event.longPress ? "long press" : "direct"}`;
     case "touch tap":
       return `primary ${event.primaryId}, ${event.longPress ? "long press" : "direct"}${pointerEntityDetail}`;
+    case "touch double tap":
+      return `primary ${event.primaryId}, double${pointerEntityDetail}`;
     case "tap-long-press-ready":
       return `primary ${event.primaryId}, touches ${event.activeTouchCount}, ready${pointerEntityDetail}`;
     case "pinch in":

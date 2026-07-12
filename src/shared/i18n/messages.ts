@@ -224,6 +224,14 @@ export type MessageKey =
   | "feedbackDialog.bilibili.description"
   | "feedbackDialog.bilibili.note"
   | "feedbackDialog.bilibili.action"
+  | "feedbackDialog.skland.title"
+  | "feedbackDialog.skland.description"
+  | "feedbackDialog.skland.note"
+  | "feedbackDialog.skland.action"
+  | "feedbackDialog.taptap.title"
+  | "feedbackDialog.taptap.description"
+  | "feedbackDialog.taptap.note"
+  | "feedbackDialog.taptap.action"
   | "settingsGroup.system"
   | "settingsGroup.systemDescription"
   | "settingsGroup.display"
@@ -723,7 +731,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "helpDialog.maximize": "最大化帮助",
     "helpDialog.restore": "还原帮助",
     "feedbackDialog.title": "问题反馈",
-    "feedbackDialog.intro": "请选择反馈渠道。GitHub 支持上传图片、日志和更长的描述；Bilibili 更方便、更容易被看到，也更适合国内用户快速反馈。",
+    "feedbackDialog.intro": "请选择反馈渠道。GitHub 支持上传图片、日志和更长的描述；Bilibili 和森空岛更方便、更容易被看到，也更适合国内用户快速反馈。",
     "feedbackDialog.github.title": "GitHub 反馈",
     "feedbackDialog.github.description": "适合复杂问题、仿真异常、布局错误和需要精确复现步骤的情况。",
     "feedbackDialog.github.note": "可以附带截图、日志和更长的说明，后续整理和追踪也更方便。",
@@ -732,6 +740,14 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "feedbackDialog.bilibili.description": "适合快速留言、补充现象或提出简单建议。",
     "feedbackDialog.bilibili.note": "更方便、更快被看到，也更适合国内用户直接反馈。",
     "feedbackDialog.bilibili.action": "前往 Bilibili",
+    "feedbackDialog.skland.title": "森空岛反馈",
+    "feedbackDialog.skland.description": "适合快速留言、补充现象或提出简单建议。",
+    "feedbackDialog.skland.note": "明日方舟官方社区，更适合舟友直接反馈和交流。",
+    "feedbackDialog.skland.action": "前往森空岛",
+    "feedbackDialog.taptap.title": "TapTap 反馈",
+    "feedbackDialog.taptap.description": "适合快速留言、补充现象或提出简单建议。",
+    "feedbackDialog.taptap.note": "手游玩家社区，方便 TapTap 用户直接反馈和交流。",
+    "feedbackDialog.taptap.action": "前往 TapTap",
     "settingsGroup.system": "系统",
     "settingsGroup.systemDescription": "语言、主题与全局界面偏好。",
     "settingsGroup.display": "显示",

@@ -7,6 +7,7 @@ import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 
 export const QUICK_PLACE_FAVORITE_LIMIT = 10;
 export const QUICK_PLACE_SLOT_SHORTCUTS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
+export type QuickPlaceFavoriteSlots = Array<string | null>;
 
 export interface QuickPlaceDeviceEntry {
   readonly id: string;
@@ -75,66 +76,89 @@ export function filterQuickPlaceDeviceEntries(
 }
 
 export function normalizeQuickPlaceFavorites(
-  entityIds: readonly string[],
+  entityIds: readonly (string | null | undefined)[],
   availableEntityIds?: ReadonlySet<string>,
-): string[] {
-  const result: string[] = [];
+): QuickPlaceFavoriteSlots {
+  const result: QuickPlaceFavoriteSlots = [];
   const seen = new Set<string>();
 
-  for (const rawId of entityIds) {
+  for (const rawId of entityIds.slice(0, QUICK_PLACE_FAVORITE_LIMIT)) {
+    if (rawId === null || rawId === undefined) {
+      result.push(null);
+      continue;
+    }
+
     const id = rawId.trim();
     if (
       id === ""
       || seen.has(id)
       || (availableEntityIds !== undefined && !availableEntityIds.has(id))
     ) {
+      result.push(null);
       continue;
     }
 
     seen.add(id);
     result.push(id);
-    if (result.length >= QUICK_PLACE_FAVORITE_LIMIT) {
-      break;
-    }
   }
 
-  return result;
+  return trimTrailingEmptyFavoriteSlots(result);
 }
 
 export function placeQuickPlaceFavoriteAtSlot(
-  current: readonly string[],
+  current: readonly (string | null | undefined)[],
   deviceId: string,
   slotIndex: number,
-): string[] {
+): QuickPlaceFavoriteSlots {
   const targetIndex = clampFavoriteSlotIndex(slotIndex);
-  const next = current.filter((id) => id !== deviceId);
+  const next = createFavoriteSlots(current);
 
-  next.splice(targetIndex, 0, deviceId);
-  return next.slice(0, QUICK_PLACE_FAVORITE_LIMIT);
+  for (let index = 0; index < next.length; index += 1) {
+    if (next[index] === deviceId) {
+      next[index] = null;
+    }
+  }
+
+  next[targetIndex] = deviceId;
+  return trimTrailingEmptyFavoriteSlots(next);
 }
 
 export function moveQuickPlaceFavoriteToSlot(
-  current: readonly string[],
+  current: readonly (string | null | undefined)[],
   sourceIndex: number,
   targetIndex: number,
-): string[] {
+): QuickPlaceFavoriteSlots {
   if (
     sourceIndex < 0
-    || sourceIndex >= current.length
     || targetIndex < 0
     || targetIndex >= QUICK_PLACE_FAVORITE_LIMIT
   ) {
-    return [...current];
+    return createFavoriteSlots(current);
   }
 
-  const deviceId = current[sourceIndex];
-  if (deviceId === undefined) {
-    return [...current];
+  const next = createFavoriteSlots(current);
+  const deviceId = next[sourceIndex];
+  if (deviceId === null || deviceId === undefined) {
+    return trimTrailingEmptyFavoriteSlots(next);
   }
 
-  const next = current.filter((_, index) => index !== sourceIndex);
-  next.splice(Math.min(targetIndex, next.length), 0, deviceId);
-  return next.slice(0, QUICK_PLACE_FAVORITE_LIMIT);
+  const targetDeviceId = next[targetIndex] ?? null;
+  next[targetIndex] = deviceId;
+  next[sourceIndex] = sourceIndex === targetIndex ? deviceId : targetDeviceId;
+  return trimTrailingEmptyFavoriteSlots(next);
+}
+
+export function removeQuickPlaceFavoriteAtSlot(
+  current: readonly (string | null | undefined)[],
+  slotIndex: number,
+): QuickPlaceFavoriteSlots {
+  const next = createFavoriteSlots(current);
+  if (slotIndex < 0 || slotIndex >= QUICK_PLACE_FAVORITE_LIMIT) {
+    return next;
+  }
+
+  next[slotIndex] = null;
+  return trimTrailingEmptyFavoriteSlots(next);
 }
 
 export function resolveQuickPlaceSlotIndexFromKey(options: {
@@ -220,4 +244,26 @@ function clampFavoriteSlotIndex(slotIndex: number): number {
     QUICK_PLACE_FAVORITE_LIMIT - 1,
     Math.max(0, Math.trunc(slotIndex)),
   );
+}
+
+function createFavoriteSlots(
+  current: readonly (string | null | undefined)[],
+): QuickPlaceFavoriteSlots {
+  const slots = normalizeQuickPlaceFavorites(current);
+  while (slots.length < QUICK_PLACE_FAVORITE_LIMIT) {
+    slots.push(null);
+  }
+
+  return slots;
+}
+
+function trimTrailingEmptyFavoriteSlots(
+  slots: readonly (string | null)[],
+): QuickPlaceFavoriteSlots {
+  const next = slots.slice(0, QUICK_PLACE_FAVORITE_LIMIT);
+  while (next.at(-1) === null) {
+    next.pop();
+  }
+
+  return next;
 }

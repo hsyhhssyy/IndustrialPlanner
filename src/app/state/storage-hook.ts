@@ -229,29 +229,37 @@ function normalizePersistedWorkbenchState(
 
 function normalizeQuickPlaceFavoriteEntityIds(
   value: unknown,
-  fallback: readonly string[],
-): string[] {
+  fallback: readonly (string | null)[],
+): Array<string | null> {
   if (!Array.isArray(value)) {
     return [...fallback];
   }
 
-  const result: string[] = [];
+  const result: Array<string | null> = [];
   const seen = new Set<string>();
-  for (const rawId of value) {
+  for (const rawId of value.slice(0, 10)) {
+    if (rawId === null) {
+      result.push(null);
+      continue;
+    }
+
     if (typeof rawId !== "string") {
+      result.push(null);
       continue;
     }
 
     const id = rawId.trim();
     if (id === "" || seen.has(id)) {
+      result.push(null);
       continue;
     }
 
     seen.add(id);
     result.push(id);
-    if (result.length >= 10) {
-      break;
-    }
+  }
+
+  while (result.at(-1) === null) {
+    result.pop();
   }
 
   return result;

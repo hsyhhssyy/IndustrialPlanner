@@ -28,6 +28,8 @@ const PINCH_DISTANCE_THRESHOLD_PX = 2;
 const ROTATE_ANGLE_THRESHOLD_DEGREES = 15;
 const TWO_FINGER_MOVE_THRESHOLD_PX = 2;
 const WHEEL_ACCUMULATE_THRESHOLD = 1;
+const DOUBLE_TAP_MS = 300;
+const DOUBLE_TAP_SLOP_PX = 12;
 const WHEEL_LINE_HEIGHT_PX = 16;
 const WHEEL_PAGE_HEIGHT_PX = 800;
 
@@ -132,6 +134,8 @@ interface GestureAdapterThresholds {
   readonly rotateAngleThresholdDegrees: number;
   readonly twoFingerMoveThresholdPx: number;
   readonly wheelAccumulateThreshold: number;
+  readonly doubleTapMs: number;
+  readonly doubleTapSlopPx: number;
 }
 
 export interface GestureAdapterOptions {
@@ -206,6 +210,14 @@ interface MultiTouchSnapshot {
   readonly center: GesturePosition;
 }
 
+type TapKind = "mouse" | "touch";
+
+interface UnconsumedTapCandidate {
+  readonly kind: TapKind;
+  readonly endedAtMs: number;
+  readonly position: GesturePosition;
+}
+
 export class GestureAdapter {
   private readonly appHost: GestureAdapterAppHost;
   private readonly thresholds: GestureAdapterThresholds;
@@ -238,6 +250,7 @@ export class GestureAdapter {
   private gestureRafPreviousTickEndedAtMs: number | null = null;
   private wheelAccumulator = 0;
   private wheelDirection: 1 | -1 | 0 = 0;
+  private lastUnconsumedTap: UnconsumedTapCandidate | null = null;
   private keyboardSnapshot: KeyboardSnapshot = {
     pressedKeys: new Set<string>(),
     lastCode: null,
@@ -273,6 +286,8 @@ export class GestureAdapter {
         options.thresholds?.twoFingerMoveThresholdPx ?? TWO_FINGER_MOVE_THRESHOLD_PX,
       wheelAccumulateThreshold:
         options.thresholds?.wheelAccumulateThreshold ?? WHEEL_ACCUMULATE_THRESHOLD,
+      doubleTapMs: options.thresholds?.doubleTapMs ?? DOUBLE_TAP_MS,
+      doubleTapSlopPx: options.thresholds?.doubleTapSlopPx ?? DOUBLE_TAP_SLOP_PX,
     };
     this.longPressState = {
       ...this.longPressState,
@@ -418,6 +433,7 @@ export class GestureAdapter {
       return;
     }
 
+    this.lastUnconsumedTap = null;
     const normalizedDelta = normalizeWheelDeltaY(event);
     const direction: 1 | -1 = normalizedDelta > 0 ? 1 : -1;
     if (this.wheelDirection !== direction) {
@@ -577,6 +593,7 @@ export class GestureAdapter {
       this.hideLongPressState();
       session.state = "dragging";
       session.lastPosition = position;
+      this.lastUnconsumedTap = null;
       this.dispatchGesture({
         type: "mouse dragstart",
         gestureId: session.gestureId,
@@ -638,7 +655,7 @@ export class GestureAdapter {
         sourceEvent: event,
       });
     } else if (reason === "release") {
-      this.dispatchGesture({
+      const tapEvent: Extract<GestureEvent, { type: "mouse tap" }> = {
         type: "mouse tap",
         gestureId: session.gestureId,
         button: event.button,
@@ -648,7 +665,9 @@ export class GestureAdapter {
         pointerEntity: this.resolvePointerEntityAt(position),
         modifiers: getModifiers(event),
         sourceEvent: event,
-      });
+      };
+      const consumed = this.dispatchGesture(tapEvent);
+      this.dispatchDoubleTapIfNeeded("mouse", tapEvent, consumed);
     }
 
     this.mouseSession = null;
@@ -756,6 +775,7 @@ export class GestureAdapter {
 
       this.hideLongPressState();
       session.state = "dragging";
+      this.lastUnconsumedTap = null;
       this.dispatchGesture({
         type: "touch dragstart",
         gestureId: session.gestureId,
@@ -823,7 +843,7 @@ export class GestureAdapter {
       (session.state === "pending-long-press" || (session.state === "drag-ready" && session.longPress))
     ) {
       const position = getPosition(event);
-      this.dispatchGesture({
+      const tapEvent: Extract<GestureEvent, { type: "touch tap" }> = {
         type: "touch tap",
         gestureId: session.gestureId,
         primaryId: session.primaryId,
@@ -832,7 +852,9 @@ export class GestureAdapter {
         pointerEntity: this.resolvePointerEntityAt(position),
         modifiers: getModifiers(event),
         sourceEvent: event,
-      });
+      };
+      const consumed = this.dispatchGesture(tapEvent);
+      this.dispatchDoubleTapIfNeeded("touch", tapEvent, consumed);
     } else if (session.state === "dragging") {
       this.dispatchGesture({
         type: "touch dragend",
@@ -871,6 +893,7 @@ export class GestureAdapter {
 
     this.clearLongPressTimers(session);
     this.hideLongPressState();
+    this.lastUnconsumedTap = null;
 
     if (session.state === "dragging") {
       this.dispatchGesture({
@@ -993,7 +1016,64 @@ export class GestureAdapter {
     this.multiTouchSnapshot = null;
     this.wheelAccumulator = 0;
     this.wheelDirection = 0;
+    this.lastUnconsumedTap = null;
     this.hideLongPressState();
+  }
+
+  private dispatchDoubleTapIfNeeded(
+    kind: TapKind,
+    tapEvent: Extract<GestureEvent, { type: "mouse tap" | "touch tap" }>,
+    consumed: boolean,
+  ): void {
+    if (consumed || !isDoubleTapCandidate(tapEvent)) {
+      this.lastUnconsumedTap = null;
+      return;
+    }
+
+    const endedAtMs = this.now();
+    const previousTap = this.lastUnconsumedTap;
+    const nextTap: UnconsumedTapCandidate = {
+      kind,
+      endedAtMs,
+      position: tapEvent.position,
+    };
+
+    if (
+      previousTap === null
+      || previousTap.kind !== kind
+      || endedAtMs - previousTap.endedAtMs > this.thresholds.doubleTapMs
+      || distance(previousTap.position, tapEvent.position) > this.thresholds.doubleTapSlopPx
+    ) {
+      this.lastUnconsumedTap = nextTap;
+      return;
+    }
+
+    this.lastUnconsumedTap = null;
+    if (tapEvent.type === "mouse tap") {
+      this.dispatchGesture({
+        type: "mouse double tap",
+        gestureId: this.nextGestureId("mouse-double-tap"),
+        button: tapEvent.button,
+        buttons: tapEvent.buttons,
+        position: tapEvent.position,
+        longPress: tapEvent.longPress,
+        pointerEntity: tapEvent.pointerEntity,
+        modifiers: tapEvent.modifiers,
+        sourceEvent: tapEvent.sourceEvent,
+      });
+      return;
+    }
+
+    this.dispatchGesture({
+      type: "touch double tap",
+      gestureId: this.nextGestureId("touch-double-tap"),
+      primaryId: tapEvent.primaryId,
+      position: tapEvent.position,
+      longPress: tapEvent.longPress,
+      pointerEntity: tapEvent.pointerEntity,
+      modifiers: tapEvent.modifiers,
+      sourceEvent: tapEvent.sourceEvent,
+    });
   }
 
   private clearPressedKeys(): void {
@@ -1345,6 +1425,20 @@ function isTouchDragGestureEvent(
     event.type === "touch dragmove" ||
     event.type === "touch dragend"
   );
+}
+
+function isDoubleTapCandidate(
+  event: Extract<GestureEvent, { type: "mouse tap" | "touch tap" }>,
+): boolean {
+  if (event.longPress) {
+    return false;
+  }
+
+  if (event.type === "mouse tap") {
+    return event.button === 0;
+  }
+
+  return true;
 }
 
 function getPosition(event: { readonly clientX: number; readonly clientY: number }): GesturePosition {

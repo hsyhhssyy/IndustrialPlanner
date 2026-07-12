@@ -155,6 +155,98 @@ describe("GestureAdapter", () => {
     });
   });
 
+  it("emits mouse double tap after two unconsumed direct left taps", () => {
+    const { adapter } = createAdapterHarness({
+      adapterOptions: {
+        thresholds: {
+          doubleTapMs: 300,
+          doubleTapSlopPx: 12,
+        },
+      },
+    });
+    const events: GestureEvent[] = [];
+    adapter.subscribe((event) => events.push(event));
+
+    adapter.handlePointerDown(pointerEvent({ pointerId: 101, clientX: 20, clientY: 20, buttons: 1 }));
+    adapter.handlePointerUp(pointerEvent({ pointerId: 101, clientX: 20, clientY: 20, buttons: 0 }));
+    vi.advanceTimersByTime(120);
+    adapter.handlePointerDown(pointerEvent({ pointerId: 102, clientX: 24, clientY: 21, buttons: 1 }));
+    adapter.handlePointerUp(pointerEvent({ pointerId: 102, clientX: 24, clientY: 21, buttons: 0 }));
+
+    expect(events.map((event) => event.type)).toEqual([
+      "mouse tap",
+      "mouse tap",
+      "mouse double tap",
+    ]);
+    expect(events[2]).toMatchObject({
+      type: "mouse double tap",
+      button: 0,
+      position: { x: 24, y: 21 },
+      longPress: false,
+    });
+  });
+
+  it("emits touch double tap after two unconsumed direct touch taps", () => {
+    const { adapter } = createAdapterHarness({
+      adapterOptions: {
+        thresholds: {
+          doubleTapMs: 300,
+          doubleTapSlopPx: 12,
+        },
+      },
+    });
+    const events: GestureEvent[] = [];
+    adapter.subscribe((event) => events.push(event));
+
+    adapter.handlePointerDown(touchEvent(201, 40, 40));
+    adapter.handlePointerUp(touchEvent(201, 40, 40));
+    vi.advanceTimersByTime(120);
+    adapter.handlePointerDown(touchEvent(202, 44, 42));
+    adapter.handlePointerUp(touchEvent(202, 44, 42));
+
+    expect(events.map((event) => event.type)).toEqual([
+      "touch tap",
+      "touch tap",
+      "touch double tap",
+    ]);
+    expect(events[2]).toMatchObject({
+      type: "touch double tap",
+      primaryId: 202,
+      position: { x: 44, y: 42 },
+      longPress: false,
+    });
+  });
+
+  it("skips double tap when the matching direct tap is consumed", () => {
+    const { adapter } = createAdapterHarness({
+      adapterOptions: {
+        thresholds: {
+          doubleTapMs: 300,
+          doubleTapSlopPx: 12,
+        },
+      },
+    });
+    const events: GestureEvent[] = [];
+    let mouseTapCount = 0;
+    adapter.subscribe((event) => {
+      events.push(event);
+      if (event.type !== "mouse tap") {
+        return { consumedBy: null };
+      }
+
+      mouseTapCount += 1;
+      return { consumedBy: mouseTapCount === 2 ? "tap-consumer" : null };
+    });
+
+    adapter.handlePointerDown(pointerEvent({ pointerId: 301, clientX: 60, clientY: 60, buttons: 1 }));
+    adapter.handlePointerUp(pointerEvent({ pointerId: 301, clientX: 60, clientY: 60, buttons: 0 }));
+    vi.advanceTimersByTime(120);
+    adapter.handlePointerDown(pointerEvent({ pointerId: 302, clientX: 62, clientY: 61, buttons: 1 }));
+    adapter.handlePointerUp(pointerEvent({ pointerId: 302, clientX: 62, clientY: 61, buttons: 0 }));
+
+    expect(events.map((event) => event.type)).toEqual(["mouse tap", "mouse tap"]);
+  });
+
   it("attaches resolved pointerEntity to mouse and touch tap or dragstart events", () => {
     const { adapter } = createAdapterHarness({
       resolvePointerEntity: (position) => createPointerEntity(`entity-${position.x}-${position.y}`),

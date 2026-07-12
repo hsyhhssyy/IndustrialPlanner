@@ -183,7 +183,7 @@ function createWorkbenchStorageSnapshot(options: {
   leftDockWidth?: number;
   topBarCollapsed?: boolean;
   rightDockActiveTab?: "selection";
-  quickPlaceFavoriteEntityIds?: string[];
+  quickPlaceFavoriteEntityIds?: Array<string | null>;
   toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;

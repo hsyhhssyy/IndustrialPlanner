@@ -7,6 +7,7 @@ import {
   moveQuickPlaceFavoriteToSlot,
   normalizeQuickPlaceFavorites,
   placeQuickPlaceFavoriteAtSlot,
+  removeQuickPlaceFavoriteAtSlot,
   resolveQuickPlaceSlotIndexFromKey,
   triggerQuickPlaceDeviceSelection,
 } from "@/app/quick-place";
@@ -37,12 +38,18 @@ describe("quick-place model", () => {
     expect(normalizeQuickPlaceFavorites(
       [" a ", "", "b", "a", "missing", "c"],
       availableEntityIds,
-    )).toEqual(["a", "b", "c"]);
+    )).toEqual(["a", null, "b", null, null, "c"]);
 
-    expect(placeQuickPlaceFavoriteAtSlot(["a", "b", "c"], "d", 1)).toEqual(["a", "d", "b", "c"]);
-    expect(placeQuickPlaceFavoriteAtSlot(["a", "b", "c"], "b", 9)).toEqual(["a", "c", "b"]);
-    expect(moveQuickPlaceFavoriteToSlot(["a", "b", "c"], 0, 2)).toEqual(["b", "c", "a"]);
+    expect(placeQuickPlaceFavoriteAtSlot(["a", null, "c"], "d", 1)).toEqual(["a", "d", "c"]);
+    expect(placeQuickPlaceFavoriteAtSlot(["a", null, "c"], "a", 1)).toEqual([null, "a", "c"]);
+    expect(placeQuickPlaceFavoriteAtSlot([], "d", 4)).toEqual([null, null, null, null, "d"]);
+    expect(placeQuickPlaceFavoriteAtSlot(["d"], "d", 4)).toEqual([null, null, null, null, "d"]);
+    expect(moveQuickPlaceFavoriteToSlot(["a", "b", "c"], 0, 2)).toEqual(["c", "b", "a"]);
+    expect(moveQuickPlaceFavoriteToSlot(["a", null, "c"], 0, 1)).toEqual([null, "a", "c"]);
+    expect(moveQuickPlaceFavoriteToSlot([null, null, null, null, "d"], 4, 0)).toEqual(["d"]);
     expect(moveQuickPlaceFavoriteToSlot(["a", "b", "c"], 5, 1)).toEqual(["a", "b", "c"]);
+    expect(removeQuickPlaceFavoriteAtSlot(["a", "b", "c"], 1)).toEqual(["a", null, "c"]);
+    expect(removeQuickPlaceFavoriteAtSlot(["a", "b", "c"], 5)).toEqual(["a", "b", "c"]);
     expect(normalizeQuickPlaceFavorites([
       "a",
       "b",

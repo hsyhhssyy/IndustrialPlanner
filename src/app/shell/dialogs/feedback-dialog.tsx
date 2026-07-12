@@ -11,9 +11,11 @@ import { cm } from "@/app/shell/shared/css-module-class";
 
 const FEEDBACK_GITHUB_URL =
   "https://github.com/hsyhhssyy/IndustrialPlanner/issues/new?template=bilingual-feedback.md";
-const FEEDBACK_BILIBILI_URL = "https://www.bilibili.com/opus/1219275845955223568";
+const FEEDBACK_BILIBILI_URL = "https://www.bilibili.com/video/BV1P6NJ6LEJ8/";
+const FEEDBACK_SKLAND_URL = "https://www.skland.com/article?id=5960603";
+const FEEDBACK_TAPTAP_URL = "https://www.taptap.cn/moment/822093303359999141";
 
-type FeedbackChannel = "github" | "bilibili";
+type FeedbackChannel = "github" | "bilibili" | "skland" | "taptap";
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -36,7 +38,11 @@ export const FeedbackDialog = observer(function FeedbackDialog({
   }
 
   const openChannel = (channel: FeedbackChannel) => {
-    const url = channel === "github" ? FEEDBACK_GITHUB_URL : FEEDBACK_BILIBILI_URL;
+    const url =
+      channel === "github" ? FEEDBACK_GITHUB_URL :
+      channel === "bilibili" ? FEEDBACK_BILIBILI_URL :
+      channel === "skland" ? FEEDBACK_SKLAND_URL :
+      FEEDBACK_TAPTAP_URL;
     window.open(url, "_blank", "noopener,noreferrer");
     appHost.internalActions.closeDialog("feedback");
   };
@@ -116,6 +122,54 @@ export const FeedbackDialog = observer(function FeedbackDialog({
               </p>
               <p className={cm(styles, "feedback-channel-card-note")}>
                 {t("feedbackDialog.bilibili.note")}
+              </p>
+            </div>
+          </section>
+
+          <section
+            aria-label={t("feedbackDialog.skland.action")}
+            className={cm(styles, "feedback-channel-card")}
+            onClick={() => openChannel("skland")}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openChannel("skland"); }}}
+            role="button"
+            tabIndex={0}
+          >
+            <div className={cm(styles, "feedback-channel-card-icon")}>
+              <WorkbenchIcon kind="skland" />
+            </div>
+            <div className={cm(styles, "feedback-channel-card-content")}>
+              <h3 id="feedback-channel-skland-title" className={cm(styles, "feedback-channel-card-title")}>
+                {t("feedbackDialog.skland.title")}
+              </h3>
+              <p className={cm(styles, "feedback-channel-card-description")}>
+                {t("feedbackDialog.skland.description")}
+              </p>
+              <p className={cm(styles, "feedback-channel-card-note")}>
+                {t("feedbackDialog.skland.note")}
+              </p>
+            </div>
+          </section>
+
+          <section
+            aria-label={t("feedbackDialog.taptap.action")}
+            className={cm(styles, "feedback-channel-card")}
+            onClick={() => openChannel("taptap")}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openChannel("taptap"); }}}
+            role="button"
+            tabIndex={0}
+          >
+            <div className={cm(styles, "feedback-channel-card-icon")}>
+              <WorkbenchIcon kind="taptap" />
+            </div>
+            <div className={cm(styles, "feedback-channel-card-content")}>
+              <h3 id="feedback-channel-taptap-title" className={cm(styles, "feedback-channel-card-title")}>
+                {t("feedbackDialog.taptap.title")}
+              </h3>
+              <p className={cm(styles, "feedback-channel-card-description")}>
+                {t("feedbackDialog.taptap.description")}
+              </p>
+              <p className={cm(styles, "feedback-channel-card-note")}>
+                {t("feedbackDialog.taptap.note")}
               </p>
             </div>
           </section>
