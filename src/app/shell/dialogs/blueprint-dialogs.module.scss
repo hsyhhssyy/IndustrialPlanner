@@ -151,6 +151,13 @@
   overflow-wrap: anywhere;
 }
 
+.blueprint-preview-description {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
+  cursor: text;
+}
+
 .blueprint-preview-header-copy h3 {
   margin: 0;
   color: var(--text-0);

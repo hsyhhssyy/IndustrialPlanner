@@ -3059,6 +3059,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "resourcePower",
     displayOrder: 301,
     tags: ["武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge },
+    ],
     requiresPower: true,
     powerDemand: 10,
     portGroups: [

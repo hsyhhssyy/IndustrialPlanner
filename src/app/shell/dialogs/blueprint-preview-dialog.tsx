@@ -1062,7 +1062,9 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                 <div className={cm(styles, "blueprint-preview-header")}>
                   <div className={cm(styles, "blueprint-preview-header-copy")}>
                     <h3>{record.name}</h3>
-                    <p>{record.description.length > 0 ? record.description : copy.noDescription}</p>
+                    <p className={cm(styles, "blueprint-preview-description")}>
+                      {record.description.length > 0 ? record.description : copy.noDescription}
+                    </p>
                   </div>
                 </div>
                 {activeErrorMessage === null ? null : (

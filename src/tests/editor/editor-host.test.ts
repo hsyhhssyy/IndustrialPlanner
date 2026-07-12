@@ -1172,6 +1172,27 @@ describe("createEditorHost", () => {
     });
   });
 
+  it("snaps water pump placement previews to the opposite side of its port edge", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createSinglePlacementDraft("item_port_water_pump_1", {
+      x: -5,
+      y: 40,
+    });
+
+    const draftId = editorHost.state.collections.preview[0];
+    expect(draftId).toBeDefined();
+    expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
+      definitionId: "item_port_water_pump_1",
+      position: {
+        x: -10,
+        y: 39,
+      },
+      rotation: 0,
+    });
+  });
+
   it("marks water purifier node drafts too far from the outer edge invalid", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

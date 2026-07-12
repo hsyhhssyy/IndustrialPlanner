@@ -230,6 +230,9 @@ function isExcludedFromBlueprintBatch(definition) {
   }
 
   // AI-CORRECTION 2026-06-17: 暗管不再走例外排除，改为标准计算。
+  // AI-CORRECTION 2026-07-12: 暗管入口(item_port_udpipe_loader_1)和出口(item_port_udpipe_unloader_1)
+  //   已恢复为 DIRECT_BLUEPRINT_SPRITE_MAPPINGS 直接素材映射，使用 bg_machine_udpipe_loader_1.png
+  //   和 bg_machine_udpipe_unloader_1.png；该映射通过 DIRECT_BLUEPRINT_SPRITE_IDS 自动排除标准计算。
   return definition.id.startsWith('belt_')
     || definition.id.startsWith('pipe_')
     || definition.id.startsWith('item_log_')
@@ -456,6 +459,35 @@ async function rotateBlueprintAsset(asset, rotationDegrees) {
   };
 }
 
+async function flipBlueprintAssetVertically(asset) {
+  const { data, info } = await sharp(asset.input)
+    .flip()
+    .png()
+    .toBuffer({ resolveWithObject: true });
+
+  return {
+    input: data,
+    width: info.width,
+    height: info.height,
+  };
+}
+
+async function loadBlueprintAssetForEdge(fileName, edge) {
+  if (edge === 'SOUTH') {
+    return flipBlueprintAssetVertically(await loadBlueprintAsset(fileName));
+  }
+
+  return loadBlueprintAsset(fileName, resolveEdgeRotationDegrees(edge));
+}
+
+async function orientBlueprintAssetForEdge(asset, edge) {
+  if (edge === 'SOUTH') {
+    return flipBlueprintAssetVertically(asset);
+  }
+
+  return rotateBlueprintAsset(asset, resolveEdgeRotationDegrees(edge));
+}
+
 async function maybeCreateSpecialPortCompositeLayer(definition, kind, portEdge) {
   if (definition.id !== 'item_port_sp_hub_1' || kind !== 'item') {
     return null;
@@ -542,11 +574,7 @@ async function createSpHubInputCompositeAsset(edge) {
     ]);
   */
 
-  if (edge === 'SOUTH') {
-    return rotateBlueprintAsset(composedAsset, 180);
-  }
-
-  return composedAsset;
+  return orientBlueprintAssetForEdge(composedAsset, edge);
 }
 
 async function createSpHubOutputCompositeAsset(edge) {
@@ -613,9 +641,10 @@ async function createPortCompositeLayers(definition, kind) {
     }
 
     const assetSource = await resolvePortAssetSource(definition, kind, portEdge);
+    // AI-CORRECTION 2026-07-12: SOUTH 边端口需要只翻到下边，不应通过 180 度旋转镜像 registry 的 x 坐标。
     const asset = assetSource.asset === undefined
-      ? await loadBlueprintAsset(assetSource.fileName, resolveEdgeRotationDegrees(portEdge.edge))
-      : await rotateBlueprintAsset(assetSource.asset, resolveEdgeRotationDegrees(portEdge.edge));
+      ? await loadBlueprintAssetForEdge(assetSource.fileName, portEdge.edge)
+      : await orientBlueprintAssetForEdge(assetSource.asset, portEdge.edge);
     const position = resolveEdgeAssetPosition(
       definition.footprint,
       portEdge.edge,
