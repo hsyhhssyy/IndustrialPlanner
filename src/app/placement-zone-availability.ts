@@ -15,8 +15,27 @@ export function canPlaceEntityDefinitionInCurrentBase(
   appHost: AppHost,
   definition: EntityDefinition,
 ): boolean {
+  let baseId: string | null = null;
+  try {
+    const editor = appHost.workspace?.editor;
+    baseId = editor?.document.getSnapshot().baseId ?? null;
+  } catch {
+    baseId = null;
+  }
+
+  return canPlaceEntityDefinitionInBase(appHost, definition, baseId);
+}
+
+export function canPlaceEntityDefinitionInBase(
+  appHost: AppHost,
+  definition: EntityDefinition,
+  baseId: string | null,
+): boolean {
+  const baseTag = resolveBaseTag(appHost, baseId);
+
   return !isWulingOnlyEntityDefinition(definition)
-    || canCurrentBaseAcceptWulingOnlyEntities(appHost);
+    || baseTag === null
+    || baseTag === WULING_ZONE_TAG;
 }
 
 export function hasPlaceableEntityDefinitionInCurrentBase(
@@ -61,6 +80,18 @@ function resolveCurrentBaseTag(appHost: AppHost): string | null {
     }
 
     const baseId = editor.document.getSnapshot().baseId;
+    return resolveBaseTag(appHost, baseId);
+  } catch {
+    return null;
+  }
+}
+
+function resolveBaseTag(appHost: AppHost, baseId: string | null): string | null {
+  if (baseId === null) {
+    return null;
+  }
+
+  try {
     const baseDefinition = appHost.workspace.registry.baseDefinitions.find((definition) =>
       definition.id === baseId,
     );

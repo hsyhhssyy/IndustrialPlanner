@@ -40,6 +40,7 @@ import { createHypergryphViewportZoomModule } from "./hypergryph/hypergryph-view
 import { createHypergryphViewportRotationModule } from "./hypergryph/hypergryph-viewport-rotation-module";
 import { createHypergryphHistoryGestureModule } from "./hypergryph/hypergryph-history-gesture-module";
 import { createPanelToggleGestureModule } from "./panel-toggle-gesture-module";
+import { createQuickPlaceGestureModule } from "./quick-place-gesture-module";
 import { createSimulationControlGestureModule } from "./simulation-control-gesture-module";
 import { createToolboxOpenGestureModule } from "./toolbox-open-gesture-module";
 
@@ -70,6 +71,7 @@ export class AppGestureModuleRegistrar {
       options.router.registerModule(createHypergryphViewportZoomModule()),
       options.router.registerModule(createHypergryphViewportRotationModule()),
       options.router.registerModule(createHypergryphHistoryGestureModule()),
+      options.router.registerModule(createQuickPlaceGestureModule()),
       options.router.registerModule(createPanelToggleGestureModule()),
       options.router.registerModule(createSimulationControlGestureModule()),
       options.router.registerModule(createToolboxOpenGestureModule()),

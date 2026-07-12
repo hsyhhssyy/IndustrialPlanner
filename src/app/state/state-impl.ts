@@ -77,6 +77,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   hypergryphImmediateMarquee: boolean;
   hypergryphAllowEmptyLogisticsEndpoints: boolean;
   hypergryphAutoCreateSplittersAndConvergers: boolean;
+  quickPlaceEnabled: boolean;
   hypergryphSelectionRightDockSync: boolean;
   hypergryphInspectorOpenOnSecondClick: boolean;
   gameUseBlueprintStyleDeviceImages: boolean;
@@ -100,6 +101,7 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   leftDockWidth: number;
   topBarCollapsed: boolean;
   rightDockActiveTab: RightDockTabId;
+  quickPlaceFavoriteEntityIds: string[];
   dialogState: DialogStateMapReadWrite;
   toolbox: ToolboxStateReadWrite;
 }
@@ -390,6 +392,7 @@ export interface CanvasTopLeftCornerToolbarStateReadWrite {
 
 export interface RuntimeStateReadWrite {
   activePanel: ActivePanel;
+  quickPlace: QuickPlaceRuntimeStateReadWrite;
   moveAnchor: GridPoint | null;
   moveEnterFrom: ActiveTool | null;
   movePointerMode: "mouse" | "touch" | null;
@@ -407,6 +410,12 @@ export interface RuntimeStateReadWrite {
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite;
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite;
   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite;
+}
+
+export interface QuickPlaceRuntimeStateReadWrite {
+  visible: boolean;
+  anchor: ClientPixelPoint | null;
+  searchQuery: string;
 }
 
 export interface LogisticsPlacementRuntimeStateReadWrite {
@@ -474,6 +483,7 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   leftDockWidth = DEFAULT_LEFT_DOCK_WIDTH;
   topBarCollapsed = false;
   rightDockActiveTab = DEFAULT_RIGHT_DOCK_TAB_ID;
+  quickPlaceFavoriteEntityIds: string[] = [];
   dialogState: DialogStateMapReadWrite = {
     toolbox: createDefaultDialogStateForKey("toolbox"),
     help: createDefaultDialogStateForKey("help"),
@@ -563,6 +573,16 @@ class CanvasTopLeftCornerToolbarStateReadWriteImpl implements CanvasTopLeftCorne
   }
 }
 
+class QuickPlaceRuntimeStateReadWriteImpl implements QuickPlaceRuntimeStateReadWrite {
+  visible = false;
+  anchor: ClientPixelPoint | null = null;
+  searchQuery = "";
+
+  public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+}
+
 class LogisticsPlacementRuntimeStateReadWriteImpl implements LogisticsPlacementRuntimeStateReadWrite {
   kind: LogisticsKind | null = null;
   shortcutPlacementGroup: "beltLogistics" | "pipeLogistics" | null = null;
@@ -585,6 +605,7 @@ class LogisticsPlacementRuntimeStateReadWriteImpl implements LogisticsPlacementR
 
 class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   activePanel: ActivePanel = null;
+  quickPlace: QuickPlaceRuntimeStateReadWrite = new QuickPlaceRuntimeStateReadWriteImpl();
   moveAnchor: GridPoint | null = null;
   moveEnterFrom: ActiveTool | null = null;
   movePointerMode: "mouse" | "touch" | null = null;
@@ -628,6 +649,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphImmediateMarquee: false,
     hypergryphAllowEmptyLogisticsEndpoints: false,
     hypergryphAutoCreateSplittersAndConvergers: true,
+    quickPlaceEnabled: true,
     hypergryphSelectionRightDockSync: true,
     hypergryphInspectorOpenOnSecondClick: false,
     gameUseBlueprintStyleDeviceImages: false,

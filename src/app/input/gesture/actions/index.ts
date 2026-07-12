@@ -37,6 +37,7 @@ export { createHypergryphViewportZoomModule } from "./hypergryph/hypergryph-view
 export { createHypergryphViewportRotationModule } from "./hypergryph/hypergryph-viewport-rotation-module";
 export { createHypergryphHistoryGestureModule } from "./hypergryph/hypergryph-history-gesture-module";
 export { createPanelToggleGestureModule } from "./panel-toggle-gesture-module";
+export { createQuickPlaceGestureModule } from "./quick-place-gesture-module";
 export type {
   GestureActionContext,
   GestureActionRouterDispatchResult,

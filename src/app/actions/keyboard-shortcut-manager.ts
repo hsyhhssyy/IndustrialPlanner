@@ -1,6 +1,10 @@
 import type { AppHost } from "@/app/host/app-host";
 import { makeAutoObservable, reaction } from "mobx";
-import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
+import {
+  readFromLocalStorageWithMigration,
+  saveToLocalStorageWithVersion,
+  type StorageMigration,
+} from "@/shared/storage/migration";
 
 // ─── Key 常量定义 ───
 /** 所有快捷键 key 的常量对象。新增快捷键只需在此添加。 */
@@ -26,6 +30,7 @@ export const SHORTCUT_KEY = {
   TOGGLE_BLUEPRINT_PANEL: "shortcut-toggle-blueprint-panel",
   TOGGLE_HISTORY_PANEL:   "shortcut-toggle-history-panel",
   TOGGLE_BASE_PANEL:      "shortcut-toggle-base-panel",
+  QUICK_PLACE:            "shortcut-quick-place",
   OPEN_TOOLBOX:           "shortcut-open-toolbox",
 } as const;
 
@@ -62,10 +67,11 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.PASTE_SELECTION]:  "Ctrl+V",
   [SHORTCUT_KEY.UNDO]:             "Ctrl+Z",
   [SHORTCUT_KEY.REDO]:             "Ctrl+Y",
-  [SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL]: "Z",
+  [SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL]: "P",
   [SHORTCUT_KEY.TOGGLE_BLUEPRINT_PANEL]: "L",
   [SHORTCUT_KEY.TOGGLE_HISTORY_PANEL]:   "H",
   [SHORTCUT_KEY.TOGGLE_BASE_PANEL]:      "K",
+  [SHORTCUT_KEY.QUICK_PLACE]:            "Z",
   [SHORTCUT_KEY.OPEN_TOOLBOX]:           "T",
 };
 
@@ -79,6 +85,16 @@ export type AppShortcutState = Record<ShortcutKeyId, string>;
 
 // ─── localStorage key ───
 export const APP_SHORTCUTS_LOCAL_STORAGE_KEY = "v3-app-shortcuts";
+export const APP_SHORTCUTS_STORAGE_VERSION = 1;
+
+type PersistedShortcutState = Partial<Record<ShortcutKeyId, string>>;
+
+const APP_SHORTCUT_MIGRATIONS: readonly StorageMigration<PersistedShortcutState>[] = [
+  {
+    version: 1,
+    migrate: (raw) => migrateLegacyShortcutStateToV1(raw),
+  },
+];
 
 // ─── Manager 类 ───
 export class KeyboardShortcutManager {
@@ -93,12 +109,10 @@ export class KeyboardShortcutManager {
 
     // 初始化：先取默认值，再用 localStorage 覆盖
     const initial = { ...SHORTCUT_DEFAULTS };
-    const persisted = readFromLocalStorage<Partial<AppShortcutState>>(
-      APP_SHORTCUTS_LOCAL_STORAGE_KEY,
-    );
+    const persisted = readPersistedShortcutState();
     if (persisted !== null) {
       for (const [k, v] of Object.entries(persisted)) {
-        if (isShortcutKey(k) && typeof v === "string" && v.trim() !== "") {
+        if (isShortcutKey(k) && typeof v === "string") {
           initial[k] = migrateLegacyShortcutValue(k, v.trim());
         }
       }
@@ -123,7 +137,11 @@ export class KeyboardShortcutManager {
     this.disposeReaction = reaction(
       () => JSON.stringify(this.shortcuts),
       () => {
-        saveToLocalStorage(APP_SHORTCUTS_LOCAL_STORAGE_KEY, this.shortcuts);
+        saveToLocalStorageWithVersion(
+          APP_SHORTCUTS_LOCAL_STORAGE_KEY,
+          APP_SHORTCUTS_STORAGE_VERSION,
+          this.shortcuts,
+        );
       },
     );
 
@@ -220,6 +238,89 @@ export class KeyboardShortcutManager {
 // ─── 辅助函数 ───
 function isShortcutKey(key: string): key is ShortcutKeyId {
   return VALID_SHORTCUT_KEYS.has(key);
+}
+
+function readPersistedShortcutState(): PersistedShortcutState | null {
+  const migrated = readFromLocalStorageWithMigration<PersistedShortcutState, void>(
+    APP_SHORTCUTS_LOCAL_STORAGE_KEY,
+    APP_SHORTCUTS_STORAGE_VERSION,
+    APP_SHORTCUT_MIGRATIONS,
+    undefined,
+  );
+
+  return normalizePersistedShortcutState(migrated);
+}
+
+function migrateLegacyShortcutStateToV1(raw: unknown): PersistedShortcutState | null {
+  const migrated = normalizePersistedShortcutState(raw);
+  if (migrated === null) {
+    return null;
+  }
+
+  const quickPlaceShortcut = SHORTCUT_DEFAULTS[SHORTCUT_KEY.QUICK_PLACE];
+  const placementPanelShortcut = SHORTCUT_DEFAULTS[SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL];
+
+  for (const key of Object.values(SHORTCUT_KEY)) {
+    if (
+      key !== SHORTCUT_KEY.QUICK_PLACE
+      && normalizeShortcut(migrated[key] ?? "") === normalizeShortcut(quickPlaceShortcut)
+    ) {
+      migrated[key] = "";
+    }
+  }
+
+  migrated[SHORTCUT_KEY.QUICK_PLACE] = quickPlaceShortcut;
+  migrated[SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL] =
+    isShortcutValueOccupiedByOtherKey(
+      migrated,
+      placementPanelShortcut,
+      SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL,
+    )
+      ? ""
+      : placementPanelShortcut;
+
+  return migrated;
+}
+
+function normalizePersistedShortcutState(raw: unknown): PersistedShortcutState | null {
+  if (typeof raw !== "object" || raw === null) {
+    return null;
+  }
+
+  const normalized: PersistedShortcutState = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (!isShortcutKey(key) || typeof value !== "string") {
+      continue;
+    }
+
+    normalized[key] = migrateLegacyShortcutValue(key, value.trim());
+  }
+
+  return normalized;
+}
+
+function isShortcutValueOccupiedByOtherKey(
+  shortcuts: PersistedShortcutState,
+  value: string,
+  ignoredKey: ShortcutKeyId,
+): boolean {
+  const normalizedValue = normalizeShortcut(value);
+  if (normalizedValue === "") {
+    return false;
+  }
+
+  for (const key of Object.values(SHORTCUT_KEY)) {
+    if (key === ignoredKey) {
+      continue;
+    }
+
+    const candidate = shortcuts[key] ?? SHORTCUT_DEFAULTS[key];
+    if (normalizeShortcut(candidate) === normalizedValue) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function doesShortcutMatchKeyEvent(options: {

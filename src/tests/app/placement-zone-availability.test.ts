@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { AppHost } from "@/app/host/app-host";
 import {
   canCurrentBaseAcceptWulingOnlyEntities,
+  canPlaceEntityDefinitionInBase,
   canPlaceBlueprintDocumentInCurrentBase,
   canPlaceEntityDefinitionInCurrentBase,
   hasPlaceableEntityDefinitionInCurrentBase,
@@ -29,6 +30,15 @@ describe("placement-zone-availability", () => {
     expect(canPlaceEntityDefinitionInCurrentBase(valleyHost, wulingDefinition)).toBe(false);
     expect(canCurrentBaseAcceptWulingOnlyEntities(wulingHost)).toBe(true);
     expect(canPlaceEntityDefinitionInCurrentBase(wulingHost, wulingDefinition)).toBe(true);
+  });
+
+  it("checks entity availability against an explicit base id", () => {
+    const wulingDefinition = createEntityDefinition("wuling-device", ["武陵"], "basicProduction");
+    const appHost = createAppHostStub("valley4_protocol_core", [wulingDefinition]);
+
+    expect(canPlaceEntityDefinitionInBase(appHost, wulingDefinition, "valley4_protocol_core")).toBe(false);
+    expect(canPlaceEntityDefinitionInBase(appHost, wulingDefinition, "wuling_protocol_core")).toBe(true);
+    expect(canPlaceEntityDefinitionInBase(appHost, wulingDefinition, null)).toBe(true);
   });
 
   it("reports only visible and current-base-placeable groups as available", () => {

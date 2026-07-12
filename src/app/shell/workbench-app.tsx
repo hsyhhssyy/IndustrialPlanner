@@ -9,6 +9,7 @@ import { CanvasFloatingToolbar } from "@/app/shell/canvas/canvas-floating-toolba
 import { CanvasTopLeftCornerToolbar } from "@/app/shell/canvas/canvas-top-left-corner-toolbar";
 import { CanvasRightDockToolbar } from "@/app/shell/canvas/canvas-right-dock-toolbar";
 import { OverlapEntityMenu } from "@/app/shell/canvas/overlap-entity-menu";
+import { QuickPlacePopup } from "@/app/shell/quick-place/quick-place-popup";
 import {
   FullscreenToggleButton,
   requestDocumentFullscreen,
@@ -199,6 +200,25 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           }
 
           appHost.internalState.settings.hypergryphImmediateMove = value;
+        }),
+      },
+      "game-quick-place": {
+        readValue: () => appHost.internalState.settings.quickPlaceEnabled,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.quickPlaceEnabled === value) {
+            return;
+          }
+
+          appHost.internalState.settings.quickPlaceEnabled = value;
+          if (!value) {
+            appHost.internalState.runtime.quickPlace.visible = false;
+            appHost.internalState.runtime.quickPlace.anchor = null;
+            appHost.internalState.runtime.quickPlace.searchQuery = "";
+          }
         }),
       },
       "game-arknights-copy-while-moving": {
@@ -868,6 +888,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         {effectiveLeftDockOpen ? <LeftDock appHost={appHost} /> : null}
         <CanvasPanel appHost={appHost} />
         <OverlapEntityMenu appHost={appHost} />
+        <QuickPlacePopup appHost={appHost} />
         <CanvasBottomLeftSecondaryToolbar
           appHost={appHost}
           offsetForFloatingTools={showCanvasBottomLeftToolbar}

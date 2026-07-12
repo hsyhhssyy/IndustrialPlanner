@@ -142,6 +142,9 @@ function normalizePersistedAppSettings(
       typeof persistedAppSettings.hypergryphAutoCreateSplittersAndConvergers === "boolean"
         ? persistedAppSettings.hypergryphAutoCreateSplittersAndConvergers
         : fallback.hypergryphAutoCreateSplittersAndConvergers,
+    quickPlaceEnabled: typeof persistedAppSettings.quickPlaceEnabled === "boolean"
+      ? persistedAppSettings.quickPlaceEnabled
+      : fallback.quickPlaceEnabled,
     hypergryphSelectionRightDockSync:
       typeof persistedAppSettings.hypergryphSelectionRightDockSync === "boolean"
         ? persistedAppSettings.hypergryphSelectionRightDockSync
@@ -215,9 +218,43 @@ function normalizePersistedWorkbenchState(
       persistedWorkbenchState,
       fallback.rightDockActiveTab,
     ),
+    quickPlaceFavoriteEntityIds: normalizeQuickPlaceFavoriteEntityIds(
+      persistedWorkbenchState.quickPlaceFavoriteEntityIds,
+      fallback.quickPlaceFavoriteEntityIds,
+    ),
     dialogState: normalizePersistedDialogStateMap(persistedWorkbenchState, fallback.dialogState),
     toolbox: normalizePersistedToolboxState(persistedWorkbenchState, fallback.toolbox),
   };
+}
+
+function normalizeQuickPlaceFavoriteEntityIds(
+  value: unknown,
+  fallback: readonly string[],
+): string[] {
+  if (!Array.isArray(value)) {
+    return [...fallback];
+  }
+
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (const rawId of value) {
+    if (typeof rawId !== "string") {
+      continue;
+    }
+
+    const id = rawId.trim();
+    if (id === "" || seen.has(id)) {
+      continue;
+    }
+
+    seen.add(id);
+    result.push(id);
+    if (result.length >= 10) {
+      break;
+    }
+  }
+
+  return result;
 }
 
 function normalizePersistedToolboxState(

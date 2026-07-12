@@ -241,6 +241,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     descriptionKey: "settingsGroup.operationDescription",
     items: [
       {
+        id: "game-quick-place",
+        kind: "switch",
+        labelKey: "settingsField.game-quick-place",
+        descriptionKey: "settingsField.game-quick-placeDescription",
+        defaultValue: true,
+      },
+      {
         id: "game-arknights-immediate-move",
         kind: "switch",
         labelKey: "settingsField.game-arknights-immediate-move",
@@ -283,6 +290,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     descriptionKey: "settingsGroup.shortcutsDescription",
     mobileHidden: true,
     items: [
+      {
+        id: "shortcut-quick-place",
+        kind: "keybinding",
+        labelKey: shortcutKeybindingLabelKey("shortcut-quick-place"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-quick-place"),
+        defaultValue: "Z",
+      },
       {
         id: "shortcut-place-conveyor",
         kind: "keybinding",
@@ -407,7 +421,7 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         kind: "keybinding",
         labelKey: shortcutKeybindingLabelKey("shortcut-toggle-placement-panel"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-toggle-placement-panel"),
-        defaultValue: "Z",
+        defaultValue: "P",
       },
       {
         id: "shortcut-toggle-blueprint-panel",
@@ -516,12 +530,14 @@ export class WorkbenchSettingsDialogController {
   // Hardcoded：重置「操作」和「快捷键」时需要恢复为默认值的 setting id。
   private static readonly RESET_OPERATION_AND_SHORTCUT_KEYS: readonly string[] = [
     // 操作
+    "game-quick-place",
     "game-arknights-immediate-move",
     "game-arknights-copy-while-moving",
     "game-arknights-immediate-marquee",
     "game-arknights-allow-empty-logistics-endpoints",
     "game-arknights-auto-create-splitters-and-convergers",
     // 快捷键
+    "shortcut-quick-place",
     "shortcut-place-conveyor",
     "shortcut-place-pipe",
     "shortcut-resources-power",

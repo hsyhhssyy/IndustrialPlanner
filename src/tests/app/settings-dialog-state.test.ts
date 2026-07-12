@@ -33,8 +33,10 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-immediate-marquee": false,
         "game-arknights-allow-empty-logistics-endpoints": false,
         "game-arknights-auto-create-splitters-and-convergers": true,
+        "game-quick-place": true,
         "game-arknights-selection-right-dock-sync": true,
         "game-arknights-inspector-open-on-second-click": false,
+        "shortcut-quick-place": "Z",
         "shortcut-place-conveyor": "E",
         "shortcut-place-pipe": "Q",
         "shortcut-resources-power": "G",
@@ -53,7 +55,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "shortcut-toggle-base-panel": "K",
         "shortcut-toggle-blueprint-panel": "L",
         "shortcut-toggle-history-panel": "H",
-        "shortcut-toggle-placement-panel": "Z",
+        "shortcut-toggle-placement-panel": "P",
         "shortcut-undo": "Ctrl+Z",
         "shortcut-redo": "Ctrl+Y",
         "game-show-device-names": true,
@@ -82,8 +84,10 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(
       hydratedController.values["game-arknights-auto-create-splitters-and-convergers"],
     ).toBe(true);
+    expect(hydratedController.values["game-quick-place"]).toBe(true);
     expect(hydratedController.values["game-arknights-selection-right-dock-sync"]).toBe(true);
     expect(hydratedController.values["game-arknights-inspector-open-on-second-click"]).toBe(false);
+    expect(hydratedController.values["shortcut-quick-place"]).toBe("Z");
     expect(hydratedController.values["shortcut-place-conveyor"]).toBe("E");
     expect(hydratedController.values["shortcut-place-pipe"]).toBe("Q");
     expect(hydratedController.values["shortcut-resources-power"]).toBe("G");
@@ -233,8 +237,10 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-immediate-marquee": false,
         "game-arknights-allow-empty-logistics-endpoints": false,
         "game-arknights-auto-create-splitters-and-convergers": true,
+        "game-quick-place": true,
         "game-arknights-selection-right-dock-sync": true,
         "game-arknights-inspector-open-on-second-click": false,
+        "shortcut-quick-place": "Z",
         "shortcut-place-conveyor": "E",
         "shortcut-place-pipe": "Q",
         "shortcut-resources-power": "G",
@@ -253,7 +259,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "shortcut-toggle-base-panel": "K",
         "shortcut-toggle-blueprint-panel": "L",
         "shortcut-toggle-history-panel": "H",
-        "shortcut-toggle-placement-panel": "Z",
+        "shortcut-toggle-placement-panel": "P",
         "shortcut-undo": "Ctrl+Z",
         "shortcut-redo": "Ctrl+Y",
         "game-show-device-names": true,

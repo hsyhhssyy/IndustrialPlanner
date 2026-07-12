@@ -10,7 +10,7 @@ import {
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 
 const SHORTCUT_DEFAULTS: Record<string, string> = {
-  [SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL]: "Z",
+  [SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL]: "P",
   [SHORTCUT_KEY.TOGGLE_BLUEPRINT_PANEL]: "L",
   [SHORTCUT_KEY.TOGGLE_HISTORY_PANEL]: "H",
   [SHORTCUT_KEY.TOGGLE_BASE_PANEL]: "K",
@@ -66,7 +66,7 @@ describe("createPanelToggleGestureModule", () => {
     });
     const module = createPanelToggleGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "KeyZ", key: "z" }), context);
+    const result = module.handle(keyDownEvent({ code: "KeyP", key: "p" }), context);
 
     expect(result).toEqual({ status: "handled", consume: true });
     expect(internalActions.toggleLeftDock).toHaveBeenCalledTimes(1);
@@ -99,14 +99,14 @@ describe("createPanelToggleGestureModule", () => {
     expect(
       module.handle(
         keyDownEvent({
-          code: "KeyZ",
-          key: "z",
+          code: "KeyP",
+          key: "p",
           modifiers: { alt: false, ctrl: true, meta: false, shift: false },
         }),
         context,
       ),
     ).toEqual({ status: "ignored" });
-    expect(module.handle(keyUpEvent({ code: "KeyZ", key: "z" }), context)).toEqual({
+    expect(module.handle(keyUpEvent({ code: "KeyP", key: "p" }), context)).toEqual({
       status: "ignored",
     });
 

@@ -248,6 +248,8 @@ export type MessageKey =
   | "settingsField.system-themeDescription"
   | "settingsField.game-arknights-operation-mode"
   | "settingsField.game-arknights-operation-modeDescription"
+  | "settingsField.game-quick-place"
+  | "settingsField.game-quick-placeDescription"
   | "settingsField.game-arknights-immediate-move"
   | "settingsField.game-arknights-immediate-moveDescription"
   | "settingsField.game-arknights-copy-while-moving"
@@ -262,6 +264,8 @@ export type MessageKey =
   | "settingsField.game-arknights-selection-right-dock-syncDescription"
   | "settingsField.game-arknights-inspector-open-on-second-click"
   | "settingsField.game-arknights-inspector-open-on-second-clickDescription"
+  | "settingsField.shortcut-quick-place"
+  | "settingsField.shortcut-quick-placeDescription"
   | "settingsField.shortcut-place-conveyor"
   | "settingsField.shortcut-place-conveyorDescription"
   | "settingsField.shortcut-place-pipe"
@@ -752,6 +756,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.system-themeDescription": "选择界面主题。",
     "settingsField.game-arknights-operation-mode": "鹰角网络操作模式",
     "settingsField.game-arknights-operation-modeDescription": "使用和游戏内一致的操作模式和快捷键；当前版本暂不可修改。",
+    "settingsField.game-quick-place": "快速放置",
+    "settingsField.game-quick-placeDescription": "开启后，可用快捷键在鼠标位置打开快速放置浮窗。",
     "settingsField.game-arknights-immediate-move": "立即移动",
     "settingsField.game-arknights-immediate-moveDescription": "从已选择的设备拖动时，立即触发移动而不需要长按。",
     "settingsField.game-arknights-copy-while-moving": "移动时复制",
@@ -766,6 +772,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.game-arknights-selection-right-dock-syncDescription": "开启\"使用右侧面板显示设备属性\"后有效，在选择设备时如果面板未展开则自动展开面板。",
     "settingsField.game-arknights-inspector-open-on-second-click": "再次点击打开设备属性",
     "settingsField.game-arknights-inspector-open-on-second-clickDescription": "开启后，首次点击设备只会选中；再次点击已选中设备时才打开属性面板。",
+    "settingsField.shortcut-quick-place": "快速放置",
+    "settingsField.shortcut-quick-placeDescription": "设置打开快速放置浮窗的快捷键。",
     "settingsField.shortcut-place-conveyor": "布设传送带",
     "settingsField.shortcut-place-conveyorDescription": "设置布设传送带的快捷键。",
     "settingsField.shortcut-place-pipe": "布设管道",
@@ -1270,6 +1278,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.system-themeDescription": "Choose the interface theme.",
     "settingsField.game-arknights-operation-mode": "Arknights Operation Mode",
     "settingsField.game-arknights-operation-modeDescription": "Use the same operation mode and shortcuts as the game; this setting is currently unavailable.",
+    "settingsField.game-quick-place": "Quick Place",
+    "settingsField.game-quick-placeDescription": "When enabled, use a shortcut to open the quick place popup at the mouse position.",
     "settingsField.game-arknights-immediate-move": "Immediate Move",
     "settingsField.game-arknights-immediate-moveDescription": "When dragging from a selected device, immediately trigger move without a long press.",
     "settingsField.game-arknights-copy-while-moving": "Copy While Moving",
@@ -1284,6 +1294,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.game-arknights-selection-right-dock-syncDescription": "Effective when \"Use Right Panel For Device Properties\" is enabled. Automatically expand the right panel on selection when it is not already open.",
     "settingsField.game-arknights-inspector-open-on-second-click": "Open Inspector On Second Click",
     "settingsField.game-arknights-inspector-open-on-second-clickDescription": "When enabled, the first click only selects the device. Click the selected device again to open the properties panel.",
+    "settingsField.shortcut-quick-place": "Quick Place",
+    "settingsField.shortcut-quick-placeDescription": "Set the shortcut key for opening the quick place popup.",
     "settingsField.shortcut-place-conveyor": "Place Conveyor",
     "settingsField.shortcut-place-conveyorDescription": "Set the shortcut key for placing conveyors; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-place-pipe": "Place Pipe",
