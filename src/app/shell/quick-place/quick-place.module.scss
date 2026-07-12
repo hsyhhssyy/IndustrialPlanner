@@ -1,10 +1,12 @@
 .quick-place-popup {
   box-sizing: border-box;
+  --quick-place-favorite-column-width: 136px;
+  --quick-place-favorite-slot-size: 64px;
   position: fixed;
   z-index: 80;
   display: grid;
   min-height: 0;
-  grid-template-columns: 104px minmax(0, 1fr);
+  grid-template-columns: var(--quick-place-favorite-column-width) minmax(0, 1fr);
   gap: 10px;
   padding: 10px;
   border: 1px solid color-mix(in srgb, var(--line-strong) 72%, transparent);
@@ -18,11 +20,12 @@
   display: grid;
   height: 100%;
   min-width: 0;
-  grid-template-columns: repeat(2, 46px);
-  grid-template-rows: repeat(5, 46px);
+  width: var(--quick-place-favorite-column-width);
+  grid-template-columns: repeat(2, var(--quick-place-favorite-slot-size));
+  grid-template-rows: repeat(5, var(--quick-place-favorite-slot-size));
   column-gap: 8px;
   row-gap: 8px;
-  align-content: space-between;
+  align-content: start;
 }
 
 .quick-place-favorite-slot {
@@ -30,8 +33,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
+  width: var(--quick-place-favorite-slot-size);
+  height: var(--quick-place-favorite-slot-size);
   padding: 0;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -183,8 +186,8 @@
 }
 
 .quick-place-favorite-slot .quick-place-device-icon {
-  width: 30px;
-  height: 30px;
+  width: clamp(30px, calc(var(--quick-place-favorite-slot-size) - 24px), 40px);
+  height: clamp(30px, calc(var(--quick-place-favorite-slot-size) - 24px), 40px);
 }
 
 .quick-place-device-name {

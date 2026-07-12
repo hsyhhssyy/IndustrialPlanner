@@ -413,18 +413,35 @@ function isPointInsideElement(event: DragEvent<HTMLElement>, element: HTMLElemen
 }
 
 function resolvePopupStyle(anchorX: number, anchorY: number): CSSProperties {
-  const width = Math.min(560, Math.max(420, window.innerWidth - 16));
-  const height = Math.min(520, Math.max(300, window.innerHeight - 16));
-  const favoriteColumnWidth = 112;
+  const viewportMargin = 8;
+  const popupPaddingBlock = 20;
+  const popupPaddingInline = 20;
+  const contentGap = 10;
+  const favoriteRows = 5;
+  const favoriteGap = 8;
+  const favoriteMinSlotSize = 50;
+  const favoriteMaxSlotSize = 64;
+  const menuMinWidth = 278;
+  const menuMaxWidth = 418;
+  const minHeight = popupPaddingBlock + favoriteRows * favoriteMinSlotSize + (favoriteRows - 1) * favoriteGap;
+  const maxHeight = popupPaddingBlock + favoriteRows * favoriteMaxSlotSize + (favoriteRows - 1) * favoriteGap;
+  const height = Math.min(maxHeight, Math.max(minHeight, window.innerHeight - viewportMargin * 2));
+  const favoriteSlotSize = (height - popupPaddingBlock - (favoriteRows - 1) * favoriteGap) / favoriteRows;
+  const favoriteColumnWidth = favoriteSlotSize * 2 + favoriteGap;
+  const minWidth = popupPaddingInline + favoriteColumnWidth + contentGap + menuMinWidth;
+  const maxWidth = popupPaddingInline + favoriteColumnWidth + contentGap + menuMaxWidth;
+  const width = Math.min(maxWidth, Math.max(minWidth, window.innerWidth - viewportMargin * 2));
   const left = clamp(anchorX - favoriteColumnWidth - 10, 8, window.innerWidth - width - 8);
-  const top = clamp(anchorY - 20, 8, window.innerHeight - height - 8);
+  const top = clamp(anchorY - 20, viewportMargin, window.innerHeight - height - viewportMargin);
 
   return {
+    "--quick-place-favorite-column-width": `${favoriteColumnWidth}px`,
+    "--quick-place-favorite-slot-size": `${favoriteSlotSize}px`,
     height,
     left,
     top,
     width,
-  };
+  } as CSSProperties;
 }
 
 function clamp(value: number, min: number, max: number): number {
