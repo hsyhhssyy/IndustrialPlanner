@@ -70,6 +70,15 @@ const SCANLINE_SCROLL_INTERVAL_MS = 2000;
 const PREVIEW_BORDER_WIDTH = 1;
 const PREVIEW_BORDER_ALPHA = 0.5;
 
+// ---- Fallback 精灵纹理 ----
+const FALLBACK_SPRITE_TEXTURE_PATH = createPublicAssetUrl("textures/missing-sprite-texture.png");
+/** Fallback 纹理生成时每格像素密度（世界像素） */
+const FALLBACK_PX_PER_CELL = 128;
+/** Footprint 内收 padding（世界像素） */
+const FALLBACK_PADDING = 5;
+/** 描边宽度（世界像素） */
+const FALLBACK_STROKE = 2;
+
 export const DEVICE_LABEL_ICON_SIZE = 14;
 const DEVICE_LABEL_FONT_SIZE = 8;
 
@@ -765,6 +774,13 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         return
       }
 
+      // TextureManager 加载失败时返回 16×16 红色 fallback，Promise 不 reject。
+      // 通过尺寸判断 body 纹理是否为 fallback，若是则走自定义 fallback 渲染。
+      if (bodyTexture.width === 16 && bodyTexture.height === 16) {
+        this.loadFallbackTexture(activeLoadVersion)
+        return
+      }
+
       this.body.texture = bodyTexture
       this.previewMask.texture = previewMaskTexture
       this.selectionMask.texture = previewMaskTexture
@@ -779,15 +795,95 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         return
       }
 
+      this.loadFallbackTexture(activeLoadVersion)
+    })
+  }
+
+  /**
+   * 当设备 3D-top 精灵纹理加载失败时，使用 missing-sprite-texture.png 生成 fallback。
+   * 按 footprint 比例裁剪原图（保持高度，左右均匀裁切），内收 padding 后外描边。
+   */
+  private async loadFallbackTexture(activeLoadVersion: number): Promise<void> {
+    try {
+      const img = new Image()
+      img.src = FALLBACK_SPRITE_TEXTURE_PATH
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error("Fallback image load failed"))
+      })
+
+      if (this.disposed || activeLoadVersion !== this.textureLoadVersion) {
+        return
+      }
+
+      const footprint = this.definition.footprint
+      const pxPerCell = FALLBACK_PX_PER_CELL
+      const canvasW = footprint.width * pxPerCell
+      const canvasH = footprint.height * pxPerCell
+
+      // 按 footprint 比例裁剪：保持高度，左右均匀裁切
+      const targetAspect = footprint.width / footprint.height
+      const iw = img.naturalWidth
+      const ih = img.naturalHeight
+      const iAspect = iw / ih
+      let sx = 0, sy = 0, sw = iw, sh = ih
+
+      if (iAspect > targetAspect) {
+        // 原图更宽 → 裁左右
+        sw = ih * targetAspect
+        sx = (iw - sw) / 2
+      } else {
+        // 原图更高 → 裁上下
+        sh = iw / targetAspect
+        sy = (ih - sh) / 2
+      }
+
+      const padding = FALLBACK_PADDING
+      const stroke = FALLBACK_STROKE
+
+      // Body Canvas：裁剪后的图 → padding → 描边
+      const bodyCanvas = document.createElement("canvas")
+      bodyCanvas.width = canvasW
+      bodyCanvas.height = canvasH
+      const bctx = bodyCanvas.getContext("2d")!
+      bctx.drawImage(img, sx, sy, sw, sh, padding, padding, canvasW - padding * 2, canvasH - padding * 2)
+      bctx.strokeStyle = "#000000"
+      bctx.lineWidth = stroke
+      bctx.strokeRect(padding, padding, canvasW - padding * 2, canvasH - padding * 2)
+
+      const bodyTexture = Texture.from(bodyCanvas)
+
+      // Mask Canvas：白色矩形（与 body 同尺寸，用于 scanline 矩形裁剪）
+      const maskCanvas = document.createElement("canvas")
+      maskCanvas.width = canvasW
+      maskCanvas.height = canvasH
+      const mctx = maskCanvas.getContext("2d")!
+      mctx.fillStyle = "#ffffff"
+      mctx.fillRect(0, 0, canvasW, canvasH)
+      const maskTexture = Texture.from(maskCanvas)
+
+      this.body.texture = bodyTexture
+      this.previewMask.texture = maskTexture
+      this.selectionMask.texture = maskTexture
+      this.isTextureReady = true
+      this.body.visible = true
+
+      if (this.currentLayout !== null) {
+        this.applyLayout(this.currentLayout)
+      }
+    } catch {
+      // Fallback 也失败了，回退到隐藏设备
+      if (this.disposed || activeLoadVersion !== this.textureLoadVersion) {
+        return
+      }
+
       this.body.visible = false
       this.previewEffectRoot.visible = false
       this.selectionEffectRoot.visible = false
-      // AI-REMOVED 2026-06-14: 边缘流光特效已移除
-      // this.flowGlowEffectRoot.visible = false
       this.portOverlayRoot.visible = false
       this.deviceLabelRoot.visible = false
       this.hidePortChevronSprites()
-    })
+    }
   }
 
   private syncDeviceLabel(layout: RenderSpriteLayout): void {

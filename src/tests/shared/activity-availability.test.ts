@@ -54,10 +54,10 @@ describe("activity availability", () => {
   });
 
   it("requires every activity tag on a definition to be effective", () => {
-    expect(resolveActivityIdsFromTags(["new", ACTIVITY_LIMITED_FORMULA_1_TAG]))
+    expect(resolveActivityIdsFromTags(["non-activity", ACTIVITY_LIMITED_FORMULA_1_TAG]))
       .toEqual([ACTIVITY_LIMITED_FORMULA_1_ID]);
     expect(areActivityTagsEffective([ACTIVITY_LIMITED_FORMULA_1_TAG], [])).toBe(false);
     expect(areActivityTagsEffective([ACTIVITY_LIMITED_FORMULA_1_TAG], [ACTIVITY_LIMITED_FORMULA_1_ID])).toBe(true);
-    expect(areActivityTagsEffective(["new"], [])).toBe(true);
+    expect(areActivityTagsEffective(["non-activity"], [])).toBe(true);
   });
 });

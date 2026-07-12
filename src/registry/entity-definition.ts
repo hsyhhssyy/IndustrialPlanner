@@ -2596,7 +2596,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   createEntityDefinition({
     id: "item_port_solid_gas_converter_1",
     nameKey: "registry.entity.item_port_solid_gas_converter_1.name",
-    spriteId: "item_port_liquid_purifier_1",
+    spriteId: "item_port_solid_gas_converter_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 611,
@@ -2683,7 +2683,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   createEntityDefinition({
     id: "item_port_gas_reactor_1",
     nameKey: "registry.entity.item_port_gas_reactor_1.name",
-    spriteId: "item_port_xiranite_oven_1",
+    spriteId: "item_port_gas_reactor_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 612,
@@ -2737,7 +2737,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   createEntityDefinition({
     id: "item_port_liquid_gas_converter_1",
     nameKey: "registry.entity.item_port_liquid_gas_converter_1.name",
-    spriteId: "item_port_liquid_purifier_1",
+    spriteId: "item_port_liquid_gas_converter_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 613,
@@ -3450,7 +3450,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   createEntityDefinition({
     id: "item_port_gas_storager_1",
     nameKey: "registry.entity.item_port_gas_storager_1.name",
-    spriteId: "item_port_liquid_storager_1",
+    spriteId: "item_port_gas_storager_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
     displayOrder: 411,
@@ -3510,7 +3510,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   createEntityDefinition({
     id: "item_port_gas_diffuser_1",
     nameKey: "registry.entity.item_port_gas_diffuser_1.name",
-    spriteId: "item_port_power_diffuser_1",
+    spriteId: "item_port_gas_diffuser_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
     displayOrder: 304,

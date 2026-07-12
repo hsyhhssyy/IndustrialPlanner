@@ -48,7 +48,8 @@ push_if_has_upstream() {
     if git -C "$repo_path" push; then
       echo "已推送: $repo_label"
     else
-      echo "推送失败: $repo_label（提交已保存，请稍后手动推送）" >&2
+      echo "推送失败: $repo_label —— 远端可能有新提交，请手动拉取后再推送，禁止自动合并。" >&2
+      exit 1
     fi
   fi
 }
@@ -110,7 +111,22 @@ if [[ -d "$repo_root/.temp" ]] && git -C "$repo_root/.temp" rev-parse --is-insid
     echo "已提交: .temp（$temp_msg）"
   fi
   if git -C "$repo_root/.temp" rev-parse --abbrev-ref @{u} >/dev/null 2>&1; then
-    git -C "$repo_root/.temp" push || echo "推送 .temp 失败（提交已保存，请稍后手动推送）" >&2
+    if ! git -C "$repo_root/.temp" push; then
+      echo ".temp 推送失败，尝试自动拉取远端变更并合并..."
+      if git -C "$repo_root/.temp" pull --no-edit; then
+        echo ".temp 合并远端成功，重新推送..."
+        if ! git -C "$repo_root/.temp" push; then
+          echo "推送 .temp 依然失败（提交已保存，请稍后手动推送）" >&2
+        else
+          echo "已推送: .temp"
+        fi
+      else
+        echo ".temp 自动合并冲突，需要手动解决。" >&2
+        exit 1
+      fi
+    else
+      echo "已推送: .temp"
+    fi
   fi
 fi
 

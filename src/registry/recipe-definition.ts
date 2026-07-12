@@ -93,7 +93,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_liquid_sewage", amount: 2 }],
     machineId: WATER_PURIFIER_NODE_ENTITY_ID,
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
@@ -103,7 +103,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: WATER_PURIFIER_OUTPUT_ITEM_ID, amount: 1 }],
     machineId: WATER_PURIFIER_NODE_ENTITY_ID,
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_chrono_winder_copper_equip_script_from_refined_copper_and_xiranite_basic",
@@ -148,7 +148,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_mix_pool_2",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_chrono_mix_pool_inert_waste_liquid_water_slag_from_waste_liquid_and_iron_powder_basic",
@@ -180,7 +180,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_mix_pool_2",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_chrono_tools_asm_medium_wuling_battery_from_waste_slag_and_originium_enr_powder_basic",
@@ -689,7 +689,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_enr_cmpt", amount: 1 }],
     machineId: "item_port_cmpt_mc_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_component_activity_xiranite_cmpt_from_xiranite_powder_basic",
@@ -699,7 +699,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_cmpt", amount: 1 }],
     machineId: "item_port_cmpt_mc_1",
     recipeType: "immediate-consume",
-    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
+    tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_component_activity_xiranite_enr_cmpt_from_xiranite_enr_powder_basic",
@@ -709,7 +709,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_enr_cmpt", amount: 2 }],
     machineId: "item_port_cmpt_mc_1",
     recipeType: "immediate-consume",
-    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
+    tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_component_glass_cmpt_from_quartz_glass_basic",
@@ -924,7 +924,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_enr_tool", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
     recipeType: "immediate-consume",
-    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
+    tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_packaging_activity_xiranite_hulu_from_activity_xiranite_bottle_and_activity_xiranite_cmpt_basic",
@@ -937,7 +937,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_hulu", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
     recipeType: "immediate-consume",
-    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
+    tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_packaging_activity_xiranite_enr_hulu_from_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2_and_activity_xiranite_enr_tool_basic",
@@ -950,7 +950,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_enr_hulu", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
     recipeType: "immediate-consume",
-    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
+    tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_winder_equip_script_1_from_crystal_shell_and_quartz_glass_basic",
@@ -1015,7 +1015,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_equip_script_4_2", amount: 1 }],
     machineId: "item_port_winder_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_filling_bottled_food_1_from_glass_bottle_and_moss_powder_2_basic",
@@ -1652,7 +1652,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_acid", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_iron_bottle_copper_hidden",
@@ -1665,7 +1665,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_copper", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_iron_bottle_copper_enr_hidden",
@@ -1678,7 +1678,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_copper_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_iron_bottle_xiranite_enr_hidden",
@@ -1691,7 +1691,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_glass_bottle_acid_hidden",
@@ -1704,7 +1704,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_acid", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_glass_bottle_copper_hidden",
@@ -1717,7 +1717,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_copper", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_glass_bottle_copper_enr_hidden",
@@ -1730,7 +1730,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_copper_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_glass_bottle_xiranite_enr_hidden",
@@ -1743,7 +1743,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_glass_enr_bottle_acid_hidden",
@@ -1756,7 +1756,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_acid", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_glass_enr_bottle_copper_hidden",
@@ -1769,7 +1769,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_copper", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_glass_enr_bottle_copper_enr_hidden",
@@ -1782,7 +1782,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_copper_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_glass_enr_bottle_xiranite_enr_hidden",
@@ -1795,7 +1795,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_iron_enr_bottle_acid_hidden",
@@ -1808,7 +1808,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_acid", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_iron_enr_bottle_copper_hidden",
@@ -1821,7 +1821,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_copper", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_iron_enr_bottle_copper_enr_hidden",
@@ -1834,7 +1834,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_copper_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_iron_enr_bottle_xiranite_enr_hidden",
@@ -1847,7 +1847,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_copper_bottle_acid_hidden",
@@ -1860,7 +1860,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_acid", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_copper_bottle_copper_hidden",
@@ -1873,7 +1873,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_copper", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_copper_bottle_copper_enr_hidden",
@@ -1886,7 +1886,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_copper_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_copper_bottle_xiranite_enr_hidden",
@@ -1899,7 +1899,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_copper_enr_bottle_acid_hidden",
@@ -1912,7 +1912,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_acid", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_copper_enr_bottle_copper_hidden",
@@ -1925,7 +1925,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_copper", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_copper_enr_bottle_copper_enr_hidden",
@@ -1938,7 +1938,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_copper_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_liquid_filling_copper_enr_bottle_xiranite_enr_hidden",
@@ -1951,7 +1951,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["bottle_filling", "new"],
+    tags: ["bottle_filling"],
   },
   {
     id: "r_filling_activity_xiranite_enr_bottle_grass_2_basic",
@@ -1964,7 +1964,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
+    tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_dismantling_activity_xiranite_enr_bottle_grass_2_basic",
@@ -1977,7 +1977,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["new", "liquid_bottle_dismantle", ACTIVITY_LIMITED_FORMULA_1_TAG],
+    tags: ["liquid_bottle_dismantle", ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_liquid_dismantling_iron_bottle_water_default",
@@ -2536,7 +2536,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_iron_bottle_copper_hidden",
@@ -2549,7 +2549,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_iron_bottle_copper_enr_hidden",
@@ -2562,7 +2562,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_iron_bottle_xiranite_enr_hidden",
@@ -2575,7 +2575,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_glass_bottle_acid_hidden",
@@ -2588,7 +2588,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_glass_bottle_copper_hidden",
@@ -2601,7 +2601,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_glass_bottle_copper_enr_hidden",
@@ -2614,7 +2614,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_glass_bottle_xiranite_enr_hidden",
@@ -2627,7 +2627,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_glass_enr_bottle_acid_hidden",
@@ -2640,7 +2640,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_glass_enr_bottle_copper_hidden",
@@ -2653,7 +2653,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_glass_enr_bottle_copper_enr_hidden",
@@ -2666,7 +2666,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_glass_enr_bottle_xiranite_enr_hidden",
@@ -2679,7 +2679,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_iron_enr_bottle_acid_hidden",
@@ -2692,7 +2692,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_iron_enr_bottle_copper_hidden",
@@ -2705,7 +2705,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_iron_enr_bottle_copper_enr_hidden",
@@ -2718,7 +2718,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_iron_enr_bottle_xiranite_enr_hidden",
@@ -2731,7 +2731,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_copper_bottle_acid_hidden",
@@ -2744,7 +2744,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_copper_bottle_copper_hidden",
@@ -2757,7 +2757,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_copper_bottle_copper_enr_hidden",
@@ -2770,7 +2770,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_copper_bottle_xiranite_enr_hidden",
@@ -2783,7 +2783,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_copper_enr_bottle_acid_hidden",
@@ -2796,7 +2796,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_copper_enr_bottle_copper_hidden",
@@ -2809,7 +2809,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_copper_enr_bottle_copper_enr_hidden",
@@ -2822,7 +2822,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_liquid_dismantling_copper_enr_bottle_xiranite_enr_hidden",
@@ -2835,7 +2835,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["liquid_bottle_dismantle", "new"],
+    tags: ["liquid_bottle_dismantle"],
   },
   {
     id: "r_shaper_iron_bottle_from_iron_nugget_basic",
@@ -2885,7 +2885,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_enr_bottle", amount: 1 }],
     machineId: "item_port_shaper_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_shaper_glass_enr_bottle_from_quartz_enr_basic",
@@ -2905,7 +2905,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_bottle", amount: 1 }],
     machineId: "item_port_shaper_1",
     recipeType: "immediate-consume",
-    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
+    tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_shaper_activity_xiranite_enr_bottle_from_xiranite_enr_powder_basic",
@@ -2915,7 +2915,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_activity_xiranite_enr_bottle", amount: 2 }],
     machineId: "item_port_shaper_1",
     recipeType: "immediate-consume",
-    tags: ["new", ACTIVITY_LIMITED_FORMULA_1_TAG],
+    tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
   {
     id: "r_xiranite_oven_xiranite_powder_from_carbon_enr_and_water_basic",
@@ -2955,7 +2955,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_xiranite_enr_powder", amount: 1 }],
     machineId: "item_port_xiranite_oven_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_xiranite_oven_muck_xiranite_1_from_muck_feces_1_and_liquid_xiranite_hidden",
@@ -3020,7 +3020,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_liquid_plant_grass_1", amount: 1 }],
     machineId: "item_port_mix_pool_2",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_mix_pool_liquid_plant_grass_2_from_powder_and_water_basic",
@@ -3046,7 +3046,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_liquid_plant_grass_2", amount: 1 }],
     machineId: "item_port_mix_pool_2",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic",
@@ -3072,7 +3072,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_liquid_xiranite", amount: 1 }],
     machineId: "item_port_mix_pool_2",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_mix_pool_liquid_xiranite_enr_from_xiranite_enr_powder_and_acid_basic",
@@ -3085,7 +3085,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_mix_pool_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_mix_pool_liquid_xiranite_enr_from_xiranite_enr_powder_and_acid_basic_large",
@@ -3098,7 +3098,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_mix_pool_2",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_mix_pool_liquid_copper_from_copper_powder_and_acid_basic",
@@ -3111,7 +3111,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_liquid_copper", amount: 1 }],
     machineId: "item_port_mix_pool_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_mix_pool_liquid_copper_from_copper_powder_and_acid_basic_large",
@@ -3124,7 +3124,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_liquid_copper", amount: 1 }],
     machineId: "item_port_mix_pool_2",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_mix_pool_copper_enr_from_liquid_copper_enr_and_iron_powder_basic",
@@ -3140,7 +3140,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_mix_pool_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_mix_pool_copper_enr_from_liquid_copper_enr_and_iron_powder_basic_large",
@@ -3156,7 +3156,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_mix_pool_2",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_liquid_purifier_water_and_xiranite_poly_from_xiranite_lowpoly_basic",
@@ -3169,7 +3169,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_liquid_purifier_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   {
     id: "r_liquid_purifier_acid_and_copper_enr_from_copper_basic",
@@ -3182,7 +3182,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     machineId: "item_port_liquid_purifier_1",
     recipeType: "immediate-consume",
-    tags: ["new"],
+    tags: [],
   },
   // =========================================================================
   // 给水器倾倒配方 — 物品直接消失
