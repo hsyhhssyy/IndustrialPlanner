@@ -1,6 +1,6 @@
 import { makeAutoObservable } from "mobx";
 
-import type { MessageKey } from "@/shared/i18n/messages";
+import type { UiKey } from "@/shared/i18n";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
 export const USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY = "v3-user-settings-dialog";
@@ -16,9 +16,9 @@ interface WorkbenchSettingEditableWhenDefinition {
 
 interface WorkbenchSettingBaseDefinition {
   readonly id: string;
-  readonly labelKey?: MessageKey;
+  readonly labelKey?: UiKey;
   readonly labelText?: string;
-  readonly descriptionKey?: MessageKey;
+  readonly descriptionKey?: UiKey;
   readonly descriptionText?: string;
   readonly disabled?: boolean;
   readonly editableWhen?: WorkbenchSettingEditableWhenDefinition;
@@ -28,7 +28,7 @@ interface WorkbenchSettingBaseDefinition {
 
 interface WorkbenchSelectOptionDefinition {
   readonly value: string;
-  readonly labelKey: MessageKey;
+  readonly labelKey: UiKey;
 }
 
 interface WorkbenchSelectSettingDefinition extends WorkbenchSettingBaseDefinition {
@@ -63,8 +63,8 @@ export type WorkbenchSettingDefinition =
 
 export interface WorkbenchSettingsGroupDefinition {
   readonly id: SettingsGroupId;
-  readonly labelKey: MessageKey;
-  readonly descriptionKey: MessageKey;
+  readonly labelKey: UiKey;
+  readonly descriptionKey: UiKey;
   readonly items: readonly WorkbenchSettingDefinition[];
   /** 非桌面端（移动端/平板）隐藏该整个设置分组 */
   readonly mobileHidden?: boolean;
@@ -500,13 +500,13 @@ export const ALL_KEYBINDING_SETTINGS: readonly WorkbenchKeybindingSettingDefinit
   ) as WorkbenchKeybindingSettingDefinition[];
 
 /** 从 shortcut setting id 推导 i18n label key。前缀 `settingsField.` + setting id */
-function shortcutKeybindingLabelKey(id: string): MessageKey {
-  return `settingsField.${id}` as MessageKey;
+function shortcutKeybindingLabelKey(id: string): UiKey {
+  return `settingsField.${id}` as UiKey;
 }
 
 /** 从 shortcut setting id 推导 i18n description key。前缀 `settingsField.` + setting id + `Description` */
-function shortcutKeybindingDescriptionKey(id: string): MessageKey {
-  return `settingsField.${id}Description` as MessageKey;
+function shortcutKeybindingDescriptionKey(id: string): UiKey {
+  return `settingsField.${id}Description` as UiKey;
 }
 
 function createDefaultValues(externalBindingIds: ReadonlySet<string> = new Set()): Record<string, WorkbenchSettingControlValue> {

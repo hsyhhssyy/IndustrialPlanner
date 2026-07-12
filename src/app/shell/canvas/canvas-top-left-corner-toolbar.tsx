@@ -2,7 +2,7 @@ import type { AppHost } from "@/app/host/app-host";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { CanvasTopLeftCornerToolbarButtonId } from "@/app/state/state-impl";
-import type { MessageKey } from "@/shared/i18n/messages";
+import type { UiKey } from "@/shared/i18n";
 import {
   useEffect,
   useRef,
@@ -20,8 +20,8 @@ type CanvasTopLeftCornerToolbarIconKind = ComponentProps<typeof WorkbenchIcon>["
 interface CanvasTopLeftCornerToolbarDefinition {
   readonly iconForOnButton: CanvasTopLeftCornerToolbarIconKind;
   readonly iconForOffButton: CanvasTopLeftCornerToolbarIconKind;
-  readonly labelKeyForOnButton: MessageKey;
-  readonly labelKeyForOffButton: MessageKey;
+  readonly labelKeyForOnButton: UiKey;
+  readonly labelKeyForOffButton: UiKey;
 }
 
 interface CanvasTopLeftCornerToolbarProps {

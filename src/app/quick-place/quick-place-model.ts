@@ -2,8 +2,7 @@ import { pinyin } from "pinyin-pro";
 
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { createDeviceIconAssetUrl } from "@/shared/browser/public-asset-url";
-import { lookupMessageText } from "@/shared/i18n/messages";
-import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
+import { lookupText } from "@/shared/i18n";
 
 export const QUICK_PLACE_FAVORITE_LIMIT = 10;
 export const QUICK_PLACE_SLOT_SHORTCUTS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
@@ -40,9 +39,7 @@ export function buildQuickPlaceDeviceEntries(
     .sort((left, right) => left.displayOrder - right.displayOrder || left.id.localeCompare(right.id))
     .map((definition) => {
       const name = options.translate(definition.nameKey);
-      const zhName = lookupMessageText("zh-CN", definition.nameKey)
-        ?? lookupWorkbenchText("zh-CN", definition.nameKey)
-        ?? name;
+      const zhName = lookupText("zh-CN", definition.nameKey) ?? name;
       const pinyinFull = pinyin(zhName, { toneType: "none", separator: "" }).toLowerCase();
       const pinyinInitial = pinyin(zhName, { pattern: "first", toneType: "none", separator: "" }).toLowerCase();
 

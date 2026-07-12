@@ -2,7 +2,7 @@ import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcu
 import type { AppHost } from "@/app/host/app-host";
 import { canCurrentBaseAcceptWulingOnlyEntities } from "@/app/placement-zone-availability";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
-import type { MessageKey } from "@/shared/i18n/messages";
+import type { UiKey } from "@/shared/i18n";
 import { createDeviceIconAssetUrl } from "@/shared/browser/public-asset-url";
 import type { ComponentProps } from "react";
 
@@ -10,7 +10,7 @@ type PlacementOperationIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
 
 export interface PlacementOperationButtonDefinition {
   readonly uiButtonId: string;
-  readonly labelKey: MessageKey;
+  readonly labelKey: UiKey;
   readonly icon?: PlacementOperationIconKind;
   readonly iconSrc?: string;
   readonly hotkey?: string | null;

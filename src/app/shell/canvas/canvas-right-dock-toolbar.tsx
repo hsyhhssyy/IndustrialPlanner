@@ -5,7 +5,7 @@ import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcu
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { CanvasRightDockToolbarButtonId } from "@/app/state/state-impl";
-import type { MessageKey } from "@/shared/i18n/messages";
+import type { UiKey } from "@/shared/i18n";
 import {
   Fragment,
   type ComponentProps,
@@ -21,7 +21,7 @@ type CanvasRightDockToolbarTone = "exit";
 type CanvasRightDockToolbarMode = "icon" | "shortcut";
 
 interface CanvasRightDockToolbarDefinition {
-  readonly labelKey: MessageKey;
+  readonly labelKey: UiKey;
   icon: CanvasRightDockToolbarIconKind;
   tone?: CanvasRightDockToolbarTone;
   shortcutKeyId?: ShortcutKeyId;

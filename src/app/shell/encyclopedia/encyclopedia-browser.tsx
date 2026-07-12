@@ -13,8 +13,7 @@ import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { createDeviceIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
-import { lookupMessageText } from "@/shared/i18n/messages";
-import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
+import { lookupText } from "@/shared/i18n";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -87,8 +86,7 @@ export function buildEncyclopediaIndex(
   // 构建拼音索引：始终基于 zh-CN 中文名，使用与 translate 相同的两级查找
   const itemPinyin = new Map<string, { full: string; initial: string }>();
   for (const item of items) {
-    const zhName = lookupMessageText("zh-CN", item.nameKey)
-      ?? lookupWorkbenchText("zh-CN", item.nameKey);
+    const zhName = lookupText("zh-CN", item.nameKey);
     if (zhName && zhName.length > 0) {
       const full = pinyin(zhName, { toneType: "none", separator: "" });
       const initial = pinyin(zhName, { pattern: "first", toneType: "none", separator: "" });
@@ -100,8 +98,7 @@ export function buildEncyclopediaIndex(
 
   const entityPinyin = new Map<string, { full: string; initial: string }>();
   for (const entity of entities) {
-    const zhName = lookupMessageText("zh-CN", entity.nameKey)
-      ?? lookupWorkbenchText("zh-CN", entity.nameKey);
+    const zhName = lookupText("zh-CN", entity.nameKey);
     if (zhName && zhName.length > 0) {
       const full = pinyin(zhName, { toneType: "none", separator: "" });
       const initial = pinyin(zhName, { pattern: "first", toneType: "none", separator: "" });

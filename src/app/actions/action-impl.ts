@@ -10,8 +10,7 @@ import type {
   ClientPixelRect,
 } from "@/domain/shared/client-pixel";
 import type { AppLocale } from "@/domain/app";
-import { lookupMessageText } from "@/shared/i18n/messages";
-import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
+import { lookupText } from "@/shared/i18n";
 import type { KeyboardShortcutManager, ShortcutEventModifiers } from "./keyboard-shortcut-manager";
 
 import type { ActiveTool } from "@/domain/app/types/app-types";
@@ -150,11 +149,7 @@ export class AppActionImpl implements AppAction, AppInternalAction {
   public readonly translate: AppAction["translate"] = (key) => {
     const locale = this.internalState.settings.locale;
 
-    return (
-      lookupMessageText(locale, key) ??
-      lookupWorkbenchText(locale, key) ??
-      key
-    );
+    return lookupText(locale, key) ?? key;
   };
 
   public readonly toggleLeftDock: AppInternalAction["toggleLeftDock"] = action(() => {

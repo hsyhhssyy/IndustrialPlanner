@@ -1,6 +1,6 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { ActiveTool } from "@/domain/app/types/app-types";
-import type { MessageKey } from "@/shared/i18n/messages";
+import type { UiKey } from "@/shared/i18n";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import {
   type DeviceClass,
@@ -58,8 +58,8 @@ function getScreenShapeIconKind(screenShape: ScreenShape) {
   return "screen-landscape";
 }
 
-function getActiveToolLabelKey(activeTool: ActiveTool): MessageKey {
-  return `activeTool.${activeTool}` as MessageKey;
+function getActiveToolLabelKey(activeTool: ActiveTool): UiKey {
+  return `activeTool.${activeTool}` as UiKey;
 }
 
 export const BottomStatusBar = observer(function BottomStatusBar({ appHost }: { appHost: AppHost }) {
