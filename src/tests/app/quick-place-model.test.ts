@@ -85,11 +85,13 @@ describe("quick-place model", () => {
 
   it("selects devices through the existing placement button gesture path", () => {
     const handleUiButtonMouseTap = vi.fn();
+    const handleUiButtonTouchTap = vi.fn();
 
     triggerQuickPlaceDeviceSelection({
       appHost: {
         gestureAdapter: {
           handleUiButtonMouseTap,
+          handleUiButtonTouchTap,
         },
       },
       deviceId: "assembler",
@@ -105,6 +107,35 @@ describe("quick-place model", () => {
       shiftKey: false,
       sourceEvent: "source-event",
     });
+    expect(handleUiButtonTouchTap).not.toHaveBeenCalled();
+  });
+
+  it("selects devices through the touch placement button gesture path", () => {
+    const handleUiButtonMouseTap = vi.fn();
+    const handleUiButtonTouchTap = vi.fn();
+
+    triggerQuickPlaceDeviceSelection({
+      appHost: {
+        gestureAdapter: {
+          handleUiButtonMouseTap,
+          handleUiButtonTouchTap,
+        },
+      },
+      deviceId: "assembler",
+      source: "touch",
+      altKey: true,
+      sourceEvent: "touch-event",
+    });
+
+    expect(handleUiButtonTouchTap).toHaveBeenCalledWith({
+      uiButtonId: "ui-left-dock-placement-mode-assembler-touch-tap",
+      altKey: true,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      sourceEvent: "touch-event",
+    });
+    expect(handleUiButtonMouseTap).not.toHaveBeenCalled();
   });
 });
 

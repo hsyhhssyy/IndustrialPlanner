@@ -191,6 +191,14 @@ export function resolveQuickPlaceSlotIndexFromKey(options: {
 export function triggerQuickPlaceDeviceSelection(options: {
   readonly appHost: {
     readonly gestureAdapter: {
+      handleUiButtonTouchTap(event: {
+        readonly uiButtonId: string;
+        readonly altKey: boolean;
+        readonly ctrlKey: boolean;
+        readonly metaKey: boolean;
+        readonly shiftKey: boolean;
+        readonly sourceEvent?: unknown;
+      }): void;
       handleUiButtonMouseTap(event: {
         readonly uiButtonId: string;
         readonly button: number;
@@ -203,16 +211,32 @@ export function triggerQuickPlaceDeviceSelection(options: {
     };
   };
   readonly deviceId: string;
+  readonly source?: "mouse" | "touch";
+  readonly button?: number;
+  readonly altKey?: boolean;
+  readonly ctrlKey?: boolean;
+  readonly metaKey?: boolean;
+  readonly shiftKey?: boolean;
   readonly sourceEvent?: unknown;
 }): void {
-  options.appHost.gestureAdapter.handleUiButtonMouseTap({
-    uiButtonId: `ui-left-dock-placement-mode-${options.deviceId}-mouse-tap`,
-    button: 0,
-    altKey: false,
-    ctrlKey: false,
-    metaKey: false,
-    shiftKey: false,
+  const source = options.source ?? "mouse";
+  const gestureEvent = {
+    uiButtonId: `ui-left-dock-placement-mode-${options.deviceId}-${source}-tap`,
+    altKey: options.altKey ?? false,
+    ctrlKey: options.ctrlKey ?? false,
+    metaKey: options.metaKey ?? false,
+    shiftKey: options.shiftKey ?? false,
     sourceEvent: options.sourceEvent,
+  };
+
+  if (source === "touch") {
+    options.appHost.gestureAdapter.handleUiButtonTouchTap(gestureEvent);
+    return;
+  }
+
+  options.appHost.gestureAdapter.handleUiButtonMouseTap({
+    ...gestureEvent,
+    button: options.button ?? 0,
   });
 }
 

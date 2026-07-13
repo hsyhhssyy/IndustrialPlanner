@@ -6,6 +6,8 @@ import {
   type CSSProperties,
   type DragEvent,
   type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
 import { observer } from "mobx-react-lite";
 import { runInAction } from "mobx";
@@ -26,6 +28,7 @@ import {
 import type { AppHost } from "@/app/host/app-host";
 import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import styles from "@/app/shell/app-shell.module.scss";
 
 const QUICK_PLACE_DRAG_FORMAT = "application/x-industrial-planner-quick-place";
@@ -49,6 +52,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   const favoritesRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const favoriteDropHandledRef = useRef(false);
+  const suppressPointerSelectionRef = useRef(false);
   const [draggingFavoriteIndex, setDraggingFavoriteIndex] = useState<number | null>(null);
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const t = appHost.actions.translate;
@@ -158,20 +162,81 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
 
     event.preventDefault();
     event.stopPropagation();
-    selectDevice(deviceId, event.nativeEvent);
+    selectDevice(deviceId, {
+      source: "mouse",
+      button: 0,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey,
+      sourceEvent: event.nativeEvent,
+    });
   }
 
-  function selectDevice(deviceId: string, sourceEvent: unknown): void {
+  function selectDevice(deviceId: string, options: {
+    readonly source: "mouse" | "touch";
+    readonly button?: number;
+    readonly altKey: boolean;
+    readonly ctrlKey: boolean;
+    readonly metaKey: boolean;
+    readonly shiftKey: boolean;
+    readonly sourceEvent: unknown;
+  }): void {
     closeQuickPlace(appHost);
     triggerQuickPlaceDeviceSelection({
       appHost,
       deviceId,
-      sourceEvent,
+      source: options.source,
+      button: options.button,
+      altKey: options.altKey,
+      ctrlKey: options.ctrlKey,
+      metaKey: options.metaKey,
+      shiftKey: options.shiftKey,
+      sourceEvent: options.sourceEvent,
+    });
+  }
+
+  function selectDeviceFromPointer(deviceId: string, event: ReactPointerEvent<HTMLButtonElement>): void {
+    if (suppressPointerSelectionRef.current) {
+      suppressPointerSelectionRef.current = false;
+      return;
+    }
+
+    selectDevice(deviceId, {
+      source: event.pointerType === "mouse" ? "mouse" : "touch",
+      button: event.button,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey,
+      sourceEvent: event.nativeEvent,
+    });
+  }
+
+  function handleSelectablePointerDown(event: ReactPointerEvent<HTMLButtonElement>): void {
+    suppressPointerSelectionRef.current = false;
+    preventTouchPointerCompatibilityMouseEvents(event);
+  }
+
+  function selectDeviceFromKeyboardClick(deviceId: string, event: ReactMouseEvent<HTMLButtonElement>): void {
+    if (event.detail !== 0) {
+      return;
+    }
+
+    selectDevice(deviceId, {
+      source: "mouse",
+      button: 0,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey,
+      sourceEvent: event.nativeEvent,
     });
   }
 
   function writeDragPayload(event: DragEvent<HTMLElement>, payload: QuickPlaceDragPayload): void {
     event.stopPropagation();
+    suppressPointerSelectionRef.current = true;
     event.dataTransfer.effectAllowed = "copyMove";
     event.dataTransfer.setData(QUICK_PLACE_DRAG_FORMAT, JSON.stringify(payload));
   }
@@ -250,7 +315,13 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
               key={shortcut}
               onClick={(event) => {
                 if (entry !== null) {
-                  selectDevice(entry.id, event.nativeEvent);
+                  selectDeviceFromKeyboardClick(entry.id, event);
+                }
+              }}
+              onPointerDown={handleSelectablePointerDown}
+              onPointerUp={(event) => {
+                if (entry !== null) {
+                  selectDeviceFromPointer(entry.id, event);
                 }
               }}
               onDragOver={(event) => {
@@ -326,11 +397,13 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
               className={cm(styles, "quick-place-device-button")}
               draggable
               key={entry.id}
-              onClick={(event) => selectDevice(entry.id, event.nativeEvent)}
+              onClick={(event) => selectDeviceFromKeyboardClick(entry.id, event)}
               onDragEnd={() => {
                 favoriteDropHandledRef.current = false;
                 setDropTargetIndex(null);
               }}
+              onPointerDown={handleSelectablePointerDown}
+              onPointerUp={(event) => selectDeviceFromPointer(entry.id, event)}
               onDragStart={(event) => {
                 favoriteDropHandledRef.current = false;
                 setDraggingFavoriteIndex(null);
