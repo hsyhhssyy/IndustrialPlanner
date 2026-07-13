@@ -145,6 +145,8 @@ interface EntitySpriteSyncStats {
   syncLayoutCalls: number;
 }
 
+type EntitySpriteLayerKey = "entityLow" | "entity" | "entityHigh" | "belt" | "pipe" | "draft"
+
 interface RenderFrameTimeState {
   nowMs: number;
   deltaMs: number;
@@ -201,6 +203,7 @@ export function createRenderSceneOrchestrator(
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
   const entitySprites = new Map<string, RenderSprite>()
   const entitySpriteDefinitionIds = new Map<string, string>()
+  const entitySpriteLayerKeys = new Map<string, EntitySpriteLayerKey>()
   const grassBackgroundDecoration = createGrassBackgroundDecoration(renderHost)
   const renderPerfDiagnostics = createRenderPerfDiagnostics(renderHost)
   let activeFrameProfiler: RenderFrameProfiler | null = null
@@ -368,6 +371,7 @@ export function createRenderSceneOrchestrator(
         entityDefinitionMap,
         entitySprites,
         entitySpriteDefinitionIds,
+        entitySpriteLayerKeys,
         layers,
         beltSubEntity,
         pipeSubEntity,
@@ -852,6 +856,7 @@ function syncWorldEntitySprites(options: {
   entityDefinitionMap: Map<string, EntityDefinition>;
   entitySprites: Map<string, RenderSprite>;
   entitySpriteDefinitionIds: Map<string, string>;
+  entitySpriteLayerKeys: Map<string, EntitySpriteLayerKey>;
   layers: RenderLayerMap;
   beltSubEntity: Container;
   pipeSubEntity: Container;
@@ -902,12 +907,15 @@ function syncWorldEntitySprites(options: {
       sprite.destroy()
       options.entitySprites.delete(entity.id)
       options.entitySpriteDefinitionIds.delete(entity.id)
+      options.entitySpriteLayerKeys.delete(entity.id)
       sprite = null
       if (stats !== null) {
         stats.destroyedSprites += 1
         stats.recreatedSprites += 1
       }
     }
+
+    const spriteLayerKey = resolveEntitySpriteLayerKey(entity)
 
     const effectiveOffset = resolveEffectiveSpriteOffset(
       definition.spriteOffset,
@@ -926,6 +934,15 @@ function syncWorldEntitySprites(options: {
       }
       // 离屏实体的 sprite 保留但隐藏，避免反复创建/销毁
       if (sprite !== null) {
+        syncEntitySpriteLayer({
+          entity,
+          sprite,
+          spriteLayerKey,
+          layers: options.layers,
+          beltSubEntity: options.beltSubEntity,
+          pipeSubEntity: options.pipeSubEntity,
+          entitySpriteLayerKeys: options.entitySpriteLayerKeys,
+        })
         sprite.setVisible(false)
       }
       nextEntityIds.add(entity.id)
@@ -942,16 +959,30 @@ function syncWorldEntitySprites(options: {
         continue
       }
 
-      let layerMap = selectRenderLayerMap(entity.definitionId, options.layers, options.beltSubEntity, options.pipeSubEntity)
-      if ("originalEntityId" in entity) {
-        layerMap = { ...layerMap, entity: options.layers.draft }
-      }
-      sprite.attach(layerMap)
+      syncEntitySpriteLayer({
+        entity,
+        sprite,
+        spriteLayerKey,
+        layers: options.layers,
+        beltSubEntity: options.beltSubEntity,
+        pipeSubEntity: options.pipeSubEntity,
+        entitySpriteLayerKeys: options.entitySpriteLayerKeys,
+      })
       options.entitySprites.set(entity.id, sprite)
       options.entitySpriteDefinitionIds.set(entity.id, entity.definitionId)
       if (stats !== null) {
         stats.createdSprites += 1
       }
+    } else {
+      syncEntitySpriteLayer({
+        entity,
+        sprite,
+        spriteLayerKey,
+        layers: options.layers,
+        beltSubEntity: options.beltSubEntity,
+        pipeSubEntity: options.pipeSubEntity,
+        entitySpriteLayerKeys: options.entitySpriteLayerKeys,
+      })
     }
 
     sprite.setVisible(true)
@@ -992,12 +1023,59 @@ function syncWorldEntitySprites(options: {
     sprite.destroy()
     options.entitySprites.delete(entityId)
     options.entitySpriteDefinitionIds.delete(entityId)
+    options.entitySpriteLayerKeys.delete(entityId)
     if (stats !== null) {
       stats.destroyedSprites += 1
     }
   }
 
   return stats
+}
+
+function resolveEntitySpriteLayerKey(entity: WorldEntity): EntitySpriteLayerKey {
+  if ("originalEntityId" in entity) {
+    return "draft"
+  }
+  if (ENTITY_LOW_DEFINITION_IDS.has(entity.definitionId)) {
+    return "entityLow"
+  }
+  if (ENTITY_HIGH_DEFINITION_IDS.has(entity.definitionId)) {
+    return "entityHigh"
+  }
+  if (BELT_DEFINITION_IDS.has(entity.definitionId)) {
+    return "belt"
+  }
+  if (PIPE_DEFINITION_IDS.has(entity.definitionId)) {
+    return "pipe"
+  }
+  return "entity"
+}
+
+function syncEntitySpriteLayer(options: {
+  entity: WorldEntity;
+  sprite: RenderSprite;
+  spriteLayerKey: EntitySpriteLayerKey;
+  layers: RenderLayerMap;
+  beltSubEntity: Container;
+  pipeSubEntity: Container;
+  entitySpriteLayerKeys: Map<string, EntitySpriteLayerKey>;
+}): void {
+  if (options.entitySpriteLayerKeys.get(options.entity.id) === options.spriteLayerKey) {
+    return
+  }
+
+  let layerMap = selectRenderLayerMap(
+    options.entity.definitionId,
+    options.layers,
+    options.beltSubEntity,
+    options.pipeSubEntity,
+  )
+  if (options.spriteLayerKey === "draft") {
+    layerMap = { ...layerMap, entity: options.layers.draft }
+  }
+
+  options.sprite.attach(layerMap)
+  options.entitySpriteLayerKeys.set(options.entity.id, options.spriteLayerKey)
 }
 
 function measureRenderStage<T>(

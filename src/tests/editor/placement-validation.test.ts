@@ -286,6 +286,35 @@ describe("placement validation", () => {
     ).toEqual(["warehouse-bus-disconnected"]);
   });
 
+  it("uses configured base builtin warehouse bus segments as connection seeds", () => {
+    const workspace = createWorkspace();
+    registerBuiltinBase(workspace, [
+      {
+        id: "seed-segment",
+        definitionId: "item_port_log_hongs_bus",
+        position: { x: 0, y: 0 },
+        rotation: 90,
+        config: { warehouseBusSeed: true },
+      },
+    ]);
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithEntities([
+      createEntity("extension-segment", "item_port_log_hongs_bus", 8, 0, 90),
+      createEntity("unloader", "item_port_unloader_1", 10, 4),
+      createEntity("isolated-unloader", "item_port_unloader_1", 20, 20),
+    ], TEST_BUILTIN_BASE_ID);
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    expect(editorHost.queries.getEntityPlacementValidation("extension-segment").canPlace).toBe(true);
+    expect(editorHost.queries.getEntityPlacementValidation("unloader").canPlace).toBe(true);
+    expect(
+      editorHost.queries.getEntityPlacementValidation("isolated-unloader").reasons.map(
+        (reason) => reason.code,
+      ),
+    ).toEqual(["warehouse-bus-disconnected"]);
+  });
+
   it("resolves base builtin device ports as logistics endpoints", () => {
     const workspace = createWorkspace();
     const builtinEntityId = buildBaseBuiltinEntityId({

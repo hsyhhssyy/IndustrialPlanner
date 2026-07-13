@@ -15,6 +15,7 @@ import {
 } from "@/domain/registry/types/base-definition";
 import { createRegistryContract } from "@/registry";
 import { createSimulationHost } from "@/simulation/simulation-host";
+import { createWarehouseSlotLink } from "./blueprint-test-helpers";
 
 const TEST_BUILTIN_BASE_ID = "test_simulation_builtin_base";
 
@@ -162,6 +163,42 @@ describe("invalid placement simulation compile", () => {
       expect(topology?.devices[`device:${builtinEntityId}`]).toBeDefined();
       expect(topology?.devices["device:document-storage"]).toBeDefined();
       expect(topology?.links["document-link:builtin-storage-link"]).toBeDefined();
+    } finally {
+      simulationHost.dispose();
+    }
+  });
+
+  it("keeps warehouse ports connected to valley4 non-core builtin bus seeds in simulation topology", async () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = {
+      ...createDocumentWithEntities([
+        createEntity("unloader", "item_port_unloader_1", 2, 0),
+      ], "valley4_infra_outpost"),
+      slotLinks: [
+        createWarehouseSlotLink("unloader", "item_plant_moss_3"),
+      ],
+    } satisfies WorldDocument;
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    expect(editorHost.state.collections[EntityCollectionType.invalidPlacement].contains("unloader"))
+      .toBe(false);
+
+    const simulationHost = createSimulationHost(workspace, {
+      workerMode: "runtime",
+    });
+
+    try {
+      const result = await simulationHost.internalActions.refreshFromCurrentDocument();
+      const topology = simulationHost.topology.getSnapshot();
+      const warehouseLink = topology?.links["document-link:warehouse-link:unloader:unloader_buffer:slot_1"];
+
+      expect(result.status).toBe("started");
+      expect(topology?.devices["device:unloader"]).toBeDefined();
+      expect(warehouseLink).toBeDefined();
+      expect(warehouseLink?.sourceSlotIds.length).toBeGreaterThan(0);
+      expect(warehouseLink?.targetSlotIds.length).toBeGreaterThan(0);
     } finally {
       simulationHost.dispose();
     }

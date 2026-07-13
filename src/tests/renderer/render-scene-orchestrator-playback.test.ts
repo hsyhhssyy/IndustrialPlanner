@@ -4,12 +4,19 @@ const orchestratorTestState = vi.hoisted(() => {
   let tickHandler: (() => void) | null = null
   const createdSprites: Array<{ kind: string; entityId: string; definitionId: string }> = []
   const destroyedSprites: Array<{ kind: string; entityId: string; definitionId: string }> = []
+  const attachedSprites: Array<{
+    kind: string;
+    entityId: string;
+    definitionId: string;
+    entityLayer: unknown;
+  }> = []
 
   return {
     reset() {
       tickHandler = null
       createdSprites.length = 0
       destroyedSprites.length = 0
+      attachedSprites.length = 0
     },
     setTickHandler(handler: () => void) {
       tickHandler = handler
@@ -32,18 +39,33 @@ const orchestratorTestState = vi.hoisted(() => {
     recordDestroyedSprite(kind: string, entityId: string, definitionId: string) {
       destroyedSprites.push({ kind, entityId, definitionId })
     },
+    recordAttachedSprite(kind: string, entityId: string, definitionId: string, entityLayer: unknown) {
+      attachedSprites.push({
+        kind,
+        entityId,
+        definitionId,
+        entityLayer,
+      })
+    },
     getCreatedSprites() {
       return [...createdSprites]
     },
     getDestroyedSprites() {
       return [...destroyedSprites]
     },
+    getAttachedSprites() {
+      return [...attachedSprites]
+    },
   }
 })
 
 vi.mock("pixi.js", () => {
   class MockContainer {
-    public readonly addChild = vi.fn()
+    public readonly children: unknown[] = []
+    public readonly addChild = vi.fn((...children: unknown[]) => {
+      this.children.push(...children)
+      return children[0]
+    })
     public readonly addChildAt = vi.fn()
     public readonly destroy = vi.fn()
   }
@@ -67,7 +89,14 @@ vi.mock("pixi.js", () => {
 vi.mock("@/renderer/sprites/belt-sprite", () => ({
   BeltSprite: class {
     private readonly kind = "belt"
-    public readonly attach = vi.fn()
+    public readonly attach = vi.fn((layers: { readonly entity: unknown }) => {
+      orchestratorTestState.recordAttachedSprite(
+        this.kind,
+        this.entityId,
+        this.definition.id,
+        layers.entity,
+      )
+    })
     public readonly setVisible = vi.fn()
     public readonly syncLayout = vi.fn()
 
@@ -87,7 +116,14 @@ vi.mock("@/renderer/sprites/belt-sprite", () => ({
 vi.mock("@/renderer/sprites/generic-device-sprite", () => ({
   GenericDeviceSprite: class {
     private readonly kind = "generic"
-    public readonly attach = vi.fn()
+    public readonly attach = vi.fn((layers: { readonly entity: unknown }) => {
+      orchestratorTestState.recordAttachedSprite(
+        this.kind,
+        this.entityId,
+        this.definition.id,
+        layers.entity,
+      )
+    })
     public readonly setVisible = vi.fn()
     public readonly syncLayout = vi.fn()
 
@@ -107,7 +143,14 @@ vi.mock("@/renderer/sprites/generic-device-sprite", () => ({
 vi.mock("@/renderer/sprites/pipe-sprite", () => ({
   PipeSprite: class {
     private readonly kind = "pipe"
-    public readonly attach = vi.fn()
+    public readonly attach = vi.fn((layers: { readonly entity: unknown }) => {
+      orchestratorTestState.recordAttachedSprite(
+        this.kind,
+        this.entityId,
+        this.definition.id,
+        layers.entity,
+      )
+    })
     public readonly setVisible = vi.fn()
     public readonly syncLayout = vi.fn()
 
@@ -446,6 +489,157 @@ describe("createRenderSceneOrchestrator", () => {
     ])
     expect(orchestratorTestState.getDestroyedSprites()).toEqual([
       { kind: "generic", entityId: "preview-entity", definitionId: "device-a" },
+    ])
+
+    orchestrator.destroy()
+  })
+
+  it("reattaches a logistics draft belt sprite when the same id becomes a formal belt entity", () => {
+    const beltEntityId = "logistics-draft:belt:1:0"
+    let entities: Array<{
+      id: string;
+      originalEntityId?: string;
+      definitionId: string;
+      position: { x: number; y: number };
+      rotation: number;
+      config: Record<string, never>;
+      tags: string[];
+    }> = [
+      {
+        id: beltEntityId,
+        originalEntityId: beltEntityId,
+        definitionId: "belt_straight_1x1",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    ]
+    const ticker = {
+      lastTime: 1200,
+      deltaMS: 16.67,
+      add: vi.fn((handler: () => void, _context: unknown, priority: number) => {
+        if (priority === 50) {
+          orchestratorTestState.setTickHandler(handler)
+        }
+      }),
+      remove: vi.fn(),
+    }
+    const stage = {
+      addChild: vi.fn(),
+      addChildAt: vi.fn(),
+    }
+    const renderHost = {
+      dom: {
+        placementGlowOverlay: document.createElement("div"),
+        blueprintGlowOverlay: document.createElement("div"),
+        marqueeGlowOverlay: document.createElement("div"),
+      },
+      app: {
+        stage,
+        renderer: {
+          width: 640,
+          height: 480,
+          resolution: 1,
+          resize: vi.fn(),
+        },
+        ticker,
+      },
+      internalState: {
+      },
+      workspace: {
+        state: {} as never,
+        registry: {
+          entityDefinitions: [
+            {
+              id: "belt_straight_1x1",
+              spriteId: "belt_straight_1x1",
+              footprint: { width: 1, height: 1 },
+            },
+          ],
+          baseDefinitions: [],
+          queries: {
+            isDedicatedLogisticsDevice: vi.fn((definitionId: string) =>
+              definitionId === "belt_straight_1x1",
+            ),
+            resolveDedicatedLogisticsKind: vi.fn(() => "belt"),
+          },
+        },
+        app: {
+          state: {
+            screenProfile: {
+              devicePixelRatio: 1,
+            },
+            settings: {
+              gameUseBlueprintStyleDeviceImages: false,
+            },
+            activeTool: "select",
+            toolInfo: {
+              marqueeType: "marquee",
+            },
+            theme: AYU_LIGHT_THEME,
+          },
+        },
+        editor: {
+          state: {
+            viewport: {
+              clientRect: {
+                width: 640,
+                height: 480,
+              },
+              center: {
+                x: 0,
+                y: 0,
+              },
+              gridCellPixelSize: 16,
+            },
+          },
+          queries: {
+            listEntities: () => entities,
+          },
+        },
+        render: null,
+        simulation: null,
+      },
+    } as unknown as RenderHost
+
+    const orchestrator = createRenderSceneOrchestrator(renderHost)
+    const tickHandler = orchestratorTestState.getTickHandler()
+    const stageLayers = stage.addChild.mock.calls[0] ?? []
+    const logisticsBeltLayer = stageLayers[4] as { readonly children: readonly unknown[] }
+    const beltSubEntity = logisticsBeltLayer.children[0]
+    const draftLayer = stageLayers[6]
+
+    tickHandler?.()
+    entities = [
+      {
+        id: beltEntityId,
+        definitionId: "belt_straight_1x1",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    ]
+    tickHandler?.()
+
+    expect(orchestratorTestState.getCreatedSprites()).toEqual([
+      { kind: "belt", entityId: beltEntityId, definitionId: "belt_straight_1x1" },
+    ])
+    expect(orchestratorTestState.getDestroyedSprites()).toEqual([])
+    expect(orchestratorTestState.getAttachedSprites()).toMatchObject([
+      {
+        kind: "belt",
+        entityId: beltEntityId,
+        definitionId: "belt_straight_1x1",
+        entityLayer: draftLayer,
+      },
+      {
+        kind: "belt",
+        entityId: beltEntityId,
+        definitionId: "belt_straight_1x1",
+        entityLayer: beltSubEntity,
+      },
     ])
 
     orchestrator.destroy()
