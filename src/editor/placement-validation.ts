@@ -28,6 +28,7 @@ import {
 const WAREHOUSE_BUS_SEGMENT_DEFINITION_ID = "item_port_log_hongs_bus";
 const WAREHOUSE_BUS_SOURCE_DEFINITION_ID = "item_port_log_hongs_bus_source";
 const OUTER_RING_EDGE_SNAP_REASON_MESSAGE = "必须靠近地图边缘放置";
+const WAREHOUSE_BUS_SEED_CONFIG_KEY = "warehouseBusSeed";
 
 const VALID_PLACEMENT_RESULT: EntityPlacementValidationResult = {
   canPlace: true,
@@ -433,7 +434,7 @@ function applyWarehouseConnectionReasons(options: {
   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
 }): void {
   const sourceEntries = options.entries.filter((entry) =>
-    entry.definition.id === WAREHOUSE_BUS_SOURCE_DEFINITION_ID
+    isWarehouseBusSeedEntry(entry)
     && hasNoBasePlacementReason(options.reasonsByEntityId, entry.entity.id),
   );
   const segmentEntries = options.entries.filter((entry) =>
@@ -501,6 +502,18 @@ function applyWarehouseConnectionReasons(options: {
       "warehouse-bus-disconnected",
     );
   }
+}
+
+function isWarehouseBusSeedEntry(entry: PlacementValidationEntry): boolean {
+  if (entry.definition.id === WAREHOUSE_BUS_SOURCE_DEFINITION_ID) {
+    return true;
+  }
+
+  return (
+    isBaseBuiltinEntityId(entry.entity.id)
+    && entry.definition.id === WAREHOUSE_BUS_SEGMENT_DEFINITION_ID
+    && entry.entity.config[WAREHOUSE_BUS_SEED_CONFIG_KEY] === true
+  );
 }
 
 function resolvePortOppositeWorldEdge(

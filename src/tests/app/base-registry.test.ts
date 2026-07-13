@@ -161,6 +161,7 @@ describe("createRegistryContract", () => {
     expect(valley4Definitions).toHaveLength(4);
 
     // 其他三个基地有 5 个 X 方向基段，无源桩
+    // 订正（2026-07-13）：首个内置基段通过 warehouseBusSeed 声明为隐藏仓库总线锚点。
     const nonCoreDefinitions = valley4Definitions.filter(
       (definition) => definition.id !== "valley4_protocol_core",
     );
@@ -173,6 +174,7 @@ describe("createRegistryContract", () => {
         expect(builtin.definitionId).toBe("item_port_log_hongs_bus");
         expect(builtin.position).toEqual({ x: index * 8, y: -4 });
         expect(builtin.rotation).toBe(90);
+        expect(builtin.config).toEqual(index === 0 ? { warehouseBusSeed: true } : undefined);
       }
     }
 

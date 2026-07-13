@@ -2,6 +2,7 @@ import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import type { BaseBuiltinEntityDefinition } from "@/domain/registry/types/base-definition";
 
 const VALLEY4_BUILTIN_BUS_SOURCE_ID = "valley4_bus_source";
+const WAREHOUSE_BUS_SEED_CONFIG_KEY = "warehouseBusSeed";
 
 /** 四号谷地小基地（难民前哨处、基建前站、重建指挥部）共用：X 方向 5 个基段，从 (0,-4) 向右排布。 */
 function createValley4SmallBaseBuiltinEntities(): readonly BaseBuiltinEntityDefinition[] {
@@ -13,6 +14,7 @@ function createValley4SmallBaseBuiltinEntities(): readonly BaseBuiltinEntityDefi
       definitionId: "item_port_log_hongs_bus",
       position: { x: index * 8, y: -4 },
       rotation: 90,
+      config: index === 0 ? { [WAREHOUSE_BUS_SEED_CONFIG_KEY]: true } : undefined,
     });
   }
 
