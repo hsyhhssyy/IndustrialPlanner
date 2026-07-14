@@ -17,6 +17,10 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
 let skipTimelineEditRollbackWarning = false;
+const TIMELINE_DRAG_LEFT_EDGE_SCROLL_START_PERCENT = 10;
+const TIMELINE_DRAG_EDGE_SCROLL_START_PERCENT = 90;
+const TIMELINE_DRAG_EDGE_SCROLL_MIN_TICKS_PER_SECOND = 120;
+const TIMELINE_DRAG_EDGE_SCROLL_MAX_TICKS_PER_SECOND = 600;
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -289,6 +293,7 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
   const simulation = appHost.workspace.simulation;
   const timeline = simulation?.state.timeline ?? null;
   const [dragTickNumber, setDragTickNumber] = useState<number | null>(null);
+  const [dragWindowStartTickNumber, setDragWindowStartTickNumber] = useState<number | null>(null);
   const [pendingSeek, setPendingSeek] = useState<{
     readonly tickNumber: number;
     readonly crossedMarks: readonly SimulationTimelineMark[];
@@ -300,6 +305,24 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
   const pendingSeekShouldResumeRef = useRef(false);
   const lastSeekPromiseRef = useRef<Promise<boolean> | null>(null);
   const rollbackSeekInFlightRef = useRef(false);
+  const edgeScrollFrameRef = useRef<number | null>(null);
+  const edgeScrollLastFrameMsRef = useRef<number | null>(null);
+  const edgeScrollTickCarryRef = useRef(0);
+  const edgeScrollDirectionRef = useRef<"left" | "right" | null>(null);
+  const edgeScrollPointerPercentRef = useRef<number | null>(null);
+  const edgeScrollLastSeekTickRef = useRef<number | null>(null);
+  const simulationRef = useRef(simulation);
+  const timelineMarksRef = useRef<readonly SimulationTimelineMark[]>([]);
+  const timelineMetricsRef = useRef({
+    availableFromTick: 0,
+    availableToTick: 0,
+    retainedAvailableFromTick: 0,
+    retainedAvailableToTick: 0,
+    totalTimelineTicks: 1,
+    windowStartTick: 0,
+  });
+
+  simulationRef.current = simulation;
 
   useEffect(() => {
     if (timeline === null) {
@@ -309,8 +332,18 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
     lastAcceptedTickRef.current = Math.trunc(timeline.cursorTickNumber);
     if (dragTickNumber !== null && !timeline.isSeeking && !dragActiveRef.current) {
       setDragTickNumber(null);
+      setDragWindowStartTickNumber(null);
     }
   }, [dragTickNumber, timeline, timeline?.cursorTickNumber, timeline?.isSeeking]);
+
+  useEffect(() => {
+    return () => {
+      if (edgeScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(edgeScrollFrameRef.current);
+        edgeScrollFrameRef.current = null;
+      }
+    };
+  }, []);
 
   if (simulation === null || timeline === null) {
     return (
@@ -325,32 +358,81 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
     1,
     Math.round(timeline.rulerDurationSeconds / tickDurationSeconds),
   );
-  const windowStartTick = Math.max(0, timeline.windowStartTickNumber);
+  const windowStartTick = Math.max(0, dragWindowStartTickNumber ?? timeline.windowStartTickNumber);
   const windowEndTick = windowStartTick + totalTimelineTicks - 1;
-  const cursorTick = clampNumber(
-    dragTickNumber ?? timeline.cursorTickNumber,
+  const timelineCursorTick = dragTickNumber ?? timeline.cursorTickNumber;
+  const visibleCursorTick = clampNumber(
+    timelineCursorTick,
     windowStartTick,
     windowEndTick,
   );
   const availableFromTick = Math.max(windowStartTick, Math.floor(timeline.availableFromTickNumber));
-  const availableToTick = clampNumber(
+  const retainedAvailableFromTick = Math.max(0, Math.floor(timeline.availableFromTickNumber));
+  const retainedAvailableToTick = Math.max(
+    retainedAvailableFromTick,
     Math.floor(timeline.availableToTickNumber),
+  );
+  const availableToTick = clampNumber(
+    retainedAvailableToTick,
     availableFromTick,
     windowEndTick,
   );
   const availableLeft = resolveTimelinePercent(availableFromTick, windowStartTick, totalTimelineTicks);
   const availableRight = resolveTimelinePercent(availableToTick, windowStartTick, totalTimelineTicks);
   const availableWidth = Math.max(0, availableRight - availableLeft);
-  const cursorLeft = resolveTimelinePercent(cursorTick, windowStartTick, totalTimelineTicks);
+  const cursorLeft = dragActiveRef.current && edgeScrollDirectionRef.current === "left"
+    ? TIMELINE_DRAG_LEFT_EDGE_SCROLL_START_PERCENT
+    : dragActiveRef.current && edgeScrollDirectionRef.current === "right"
+      ? TIMELINE_DRAG_EDGE_SCROLL_START_PERCENT
+      : resolveTimelinePercent(visibleCursorTick, windowStartTick, totalTimelineTicks);
   const majorTicks = createMajorTimelineTicks(windowStartTick, totalTimelineTicks, tickDurationSeconds);
+  timelineMarksRef.current = timeline.marks;
+  timelineMetricsRef.current = {
+    availableFromTick,
+    availableToTick,
+    retainedAvailableFromTick,
+    retainedAvailableToTick,
+    totalTimelineTicks,
+    windowStartTick,
+  };
 
-  const requestSeek = (rawTickNumber: number) => {
-    const targetTickNumber = clampNumber(Math.trunc(rawTickNumber), availableFromTick, availableToTick);
+  const stopEdgeScroll = () => {
+    if (edgeScrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(edgeScrollFrameRef.current);
+      edgeScrollFrameRef.current = null;
+    }
+    edgeScrollLastFrameMsRef.current = null;
+    edgeScrollTickCarryRef.current = 0;
+    edgeScrollDirectionRef.current = null;
+    edgeScrollPointerPercentRef.current = null;
+    edgeScrollLastSeekTickRef.current = null;
+  };
+
+  const requestSeek = (
+    rawTickNumber: number,
+    options: { readonly allowEdgeOverflow?: boolean } = {},
+  ) => {
+    const metrics = timelineMetricsRef.current;
+    const leftEdgeAnchorTick = metrics.windowStartTick + resolveTimelineDragLeftEdgeAnchorOffset(metrics.totalTimelineTicks);
+    const rightEdgeAnchorTick = metrics.windowStartTick + resolveTimelineDragRightEdgeAnchorOffset(metrics.totalTimelineTicks);
+    const canScrollLeft = metrics.retainedAvailableFromTick < metrics.windowStartTick;
+    const seekMinTick = dragActiveRef.current && options.allowEdgeOverflow !== true && canScrollLeft
+      ? Math.max(metrics.retainedAvailableFromTick, leftEdgeAnchorTick)
+      : metrics.retainedAvailableFromTick;
+    const seekMaxTick = dragActiveRef.current && options.allowEdgeOverflow !== true
+      ? Math.min(metrics.availableToTick, rightEdgeAnchorTick)
+      : metrics.retainedAvailableToTick;
+    const targetTickNumber = clampNumber(
+      Math.trunc(rawTickNumber),
+      seekMinTick,
+      seekMaxTick,
+    );
     setDragTickNumber(targetTickNumber);
 
-    const crossedMarks = resolveCrossedTimelineMarks(timeline.marks, targetTickNumber);
+    const crossedMarks = resolveCrossedTimelineMarks(timelineMarksRef.current, targetTickNumber);
 
     if (crossedMarks.length > 0 && !skipTimelineEditRollbackWarning) {
+      stopEdgeScroll();
       simulation.actions.pause();
       setPendingSeek({
         tickNumber: targetTickNumber,
@@ -365,11 +447,17 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
   };
 
   const seekToTick = async (targetTickNumber: number) => {
-    const moved = await simulation.actions.seekTimelineToTick(targetTickNumber);
+    const currentSimulation = simulationRef.current;
+    if (currentSimulation === null) {
+      return false;
+    }
+
+    const moved = await currentSimulation.actions.seekTimelineToTick(targetTickNumber);
     if (moved) {
       lastAcceptedTickRef.current = targetTickNumber;
       if (!dragActiveRef.current) {
         setDragTickNumber(null);
+        setDragWindowStartTickNumber(null);
       }
     }
     return moved;
@@ -391,7 +479,12 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
         return false;
       }
 
-      const moved = await simulation.actions.seekTimelineToTick(targetTickNumber);
+      const currentSimulation = simulationRef.current;
+      if (currentSimulation === null) {
+        return false;
+      }
+
+      const moved = await currentSimulation.actions.seekTimelineToTick(targetTickNumber);
       if (!moved) {
         return false;
       }
@@ -407,10 +500,124 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
       lastAcceptedTickRef.current = targetTickNumber;
       if (!dragActiveRef.current) {
         setDragTickNumber(null);
+        setDragWindowStartTickNumber(null);
       }
       return true;
     } finally {
       rollbackSeekInFlightRef.current = false;
+    }
+  };
+
+  const runEdgeScrollFrame = (frameMs: number) => {
+    const direction = edgeScrollDirectionRef.current;
+    const pointerPercent = edgeScrollPointerPercentRef.current;
+    if (
+      direction === null
+      || pointerPercent === null
+      || !dragActiveRef.current
+    ) {
+      stopEdgeScroll();
+      return;
+    }
+
+    if (
+      direction === "left"
+      && pointerPercent >= TIMELINE_DRAG_LEFT_EDGE_SCROLL_START_PERCENT
+    ) {
+      stopEdgeScroll();
+      return;
+    }
+
+    if (
+      direction === "right"
+      && pointerPercent <= TIMELINE_DRAG_EDGE_SCROLL_START_PERCENT
+    ) {
+      stopEdgeScroll();
+      return;
+    }
+
+    const previousFrameMs = edgeScrollLastFrameMsRef.current ?? frameMs;
+    edgeScrollLastFrameMsRef.current = frameMs;
+    const elapsedSeconds = clampNumber((frameMs - previousFrameMs) / 1000, 0, 0.12);
+    const metrics = timelineMetricsRef.current;
+    const leftEdgeAnchorTick = metrics.windowStartTick + resolveTimelineDragLeftEdgeAnchorOffset(metrics.totalTimelineTicks);
+    const rightEdgeAnchorTick = metrics.windowStartTick + resolveTimelineDragRightEdgeAnchorOffset(metrics.totalTimelineTicks);
+    const intensity = direction === "left"
+      ? clampNumber(
+        (TIMELINE_DRAG_LEFT_EDGE_SCROLL_START_PERCENT - pointerPercent) / TIMELINE_DRAG_LEFT_EDGE_SCROLL_START_PERCENT,
+        0,
+        1,
+      )
+      : clampNumber(
+        (pointerPercent - TIMELINE_DRAG_EDGE_SCROLL_START_PERCENT) / (100 - TIMELINE_DRAG_EDGE_SCROLL_START_PERCENT),
+        0,
+        1,
+      );
+    const ticksPerSecond = TIMELINE_DRAG_EDGE_SCROLL_MIN_TICKS_PER_SECOND
+      + (TIMELINE_DRAG_EDGE_SCROLL_MAX_TICKS_PER_SECOND - TIMELINE_DRAG_EDGE_SCROLL_MIN_TICKS_PER_SECOND)
+      * intensity
+      * intensity;
+    edgeScrollTickCarryRef.current += ticksPerSecond * elapsedSeconds;
+    const deltaTicks = Math.floor(edgeScrollTickCarryRef.current);
+
+    if (deltaTicks > 0) {
+      edgeScrollTickCarryRef.current -= deltaTicks;
+      const baseTargetTickNumber = edgeScrollLastSeekTickRef.current
+        ?? (direction === "left" ? leftEdgeAnchorTick : rightEdgeAnchorTick);
+      const targetTickNumber = direction === "left"
+        ? clampNumber(
+          baseTargetTickNumber - deltaTicks,
+          metrics.retainedAvailableFromTick,
+          metrics.availableToTick,
+        )
+        : clampNumber(
+          baseTargetTickNumber + deltaTicks,
+          metrics.retainedAvailableFromTick,
+          metrics.retainedAvailableToTick,
+        );
+      if (targetTickNumber !== edgeScrollLastSeekTickRef.current) {
+        edgeScrollLastSeekTickRef.current = targetTickNumber;
+        const targetWindowStartTickNumber = direction === "left"
+          ? Math.max(
+            metrics.retainedAvailableFromTick,
+            targetTickNumber - resolveTimelineDragLeftEdgeAnchorOffset(metrics.totalTimelineTicks),
+          )
+          : Math.max(
+            0,
+            targetTickNumber - resolveTimelineDragRightEdgeAnchorOffset(metrics.totalTimelineTicks),
+          );
+        setDragWindowStartTickNumber(targetWindowStartTickNumber);
+        requestSeek(targetTickNumber, { allowEdgeOverflow: true });
+      }
+    }
+
+    edgeScrollFrameRef.current = window.requestAnimationFrame(runEdgeScrollFrame);
+  };
+
+  const updateEdgeScrollFromPointer = (event: ReactPointerEvent<HTMLInputElement>) => {
+    if (!dragActiveRef.current) {
+      return;
+    }
+
+    const pointerPercent = resolveTimelinePointerPercent(event.currentTarget, event.clientX);
+    const metrics = timelineMetricsRef.current;
+    const canScrollLeft = metrics.retainedAvailableFromTick < metrics.windowStartTick;
+    const direction = pointerPercent < TIMELINE_DRAG_LEFT_EDGE_SCROLL_START_PERCENT && canScrollLeft
+      ? "left"
+      : pointerPercent > TIMELINE_DRAG_EDGE_SCROLL_START_PERCENT
+        ? "right"
+        : null;
+
+    if (direction === null) {
+      stopEdgeScroll();
+      return;
+    }
+
+    edgeScrollDirectionRef.current = direction;
+    edgeScrollPointerPercentRef.current = pointerPercent;
+    if (edgeScrollFrameRef.current === null) {
+      edgeScrollLastFrameMsRef.current = null;
+      edgeScrollFrameRef.current = window.requestAnimationFrame(runEdgeScrollFrame);
     }
   };
 
@@ -431,6 +638,7 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
     if (dragWasRunningRef.current) {
       simulation.actions.pause();
     }
+    updateEdgeScrollFromPointer(event);
   };
 
   const finishDrag = () => {
@@ -438,6 +646,7 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
       return;
     }
 
+    stopEdgeScroll();
     dragActiveRef.current = false;
     if (pendingSeek !== null) {
       pendingSeekShouldResumeRef.current = dragWasRunningRef.current;
@@ -448,27 +657,41 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
     const seekPromise = lastSeekPromiseRef.current;
     dragWasRunningRef.current = false;
     if (!shouldResume) {
-      setDragTickNumber(null);
+      if (seekPromise === null) {
+        setDragTickNumber(null);
+        setDragWindowStartTickNumber(null);
+        return;
+      }
+
+      void seekPromise.finally(() => {
+        setDragTickNumber(null);
+        setDragWindowStartTickNumber(null);
+        lastSeekPromiseRef.current = null;
+      });
       return;
     }
 
     if (seekPromise === null) {
       setDragTickNumber(null);
+      setDragWindowStartTickNumber(null);
       simulation.actions.resume();
       return;
     }
 
     void seekPromise.finally(() => {
       setDragTickNumber(null);
+      setDragWindowStartTickNumber(null);
       lastSeekPromiseRef.current = null;
       simulation.actions.resume();
     });
   };
 
   const cancelPendingSeek = () => {
+    stopEdgeScroll();
     setPendingSeek(null);
     setDoNotWarnAgain(false);
     setDragTickNumber(lastAcceptedTickRef.current);
+    setDragWindowStartTickNumber(null);
     if (pendingSeekShouldResumeRef.current) {
       simulation.actions.resume();
     }
@@ -488,6 +711,7 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
     const targetTickNumber = pendingSeek.tickNumber;
     const crossedMarks = pendingSeek.crossedMarks;
     const shouldResume = pendingSeekShouldResumeRef.current;
+    stopEdgeScroll();
     setPendingSeek(null);
     setDoNotWarnAgain(false);
     pendingSeekShouldResumeRef.current = false;
@@ -501,7 +725,7 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
   return (
     <div className={cm(styles, "timeline-ruler-panel")}>
       <div className={cm(styles, "timeline-ruler-meta")}>
-        <span>{formatTimelineTime(cursorTick, tickDurationSeconds)}</span>
+        <span>{formatTimelineTime(timelineCursorTick, tickDurationSeconds)}</span>
         <span>{`${formatTimelineTime(availableFromTick, tickDurationSeconds)} - ${formatTimelineTime(availableToTick, tickDurationSeconds)}`}</span>
       </div>
       <div className={cm(styles, "timeline-ruler")}>
@@ -542,16 +766,17 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
           <input
             aria-label={t("timelineDialog.title")}
             className={cm(styles, "timeline-ruler-input")}
-            max={availableToTick}
-            min={availableFromTick}
+            max={windowEndTick}
+            min={windowStartTick}
             onBlur={finishDrag}
             onInput={(event) => requestSeek(Number(event.currentTarget.value))}
             onPointerCancel={finishDrag}
             onPointerDown={startDrag}
+            onPointerMove={updateEdgeScrollFromPointer}
             onPointerUp={finishDrag}
             step={1}
             type="range"
-            value={Math.trunc(cursorTick)}
+            value={Math.trunc(visibleCursorTick)}
           />
         </div>
         <div className={cm(styles, "timeline-ruler-second-labels")}>
@@ -659,6 +884,23 @@ function resolveTimelinePercent(
     0,
     100,
   );
+}
+
+function resolveTimelineDragLeftEdgeAnchorOffset(totalTimelineTicks: number): number {
+  return Math.round(Math.max(0, totalTimelineTicks - 1) * TIMELINE_DRAG_LEFT_EDGE_SCROLL_START_PERCENT / 100);
+}
+
+function resolveTimelineDragRightEdgeAnchorOffset(totalTimelineTicks: number): number {
+  return Math.round(Math.max(0, totalTimelineTicks - 1) * TIMELINE_DRAG_EDGE_SCROLL_START_PERCENT / 100);
+}
+
+function resolveTimelinePointerPercent(element: HTMLElement, clientX: number): number {
+  const rect = element.getBoundingClientRect();
+  if (rect.width <= 0) {
+    return 0;
+  }
+
+  return clampNumber((clientX - rect.left) / rect.width * 100, 0, 100);
 }
 
 function createMajorTimelineTicks(

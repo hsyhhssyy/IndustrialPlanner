@@ -11,6 +11,8 @@ interface TimelineCheckpoint {
   readonly runtimeExport: SimulationRuntimeExport;
 }
 
+const TIMELINE_FILL_BATCH_SIZE = 64;
+
 export class TimelineWorkerRuntime {
   private runtime: SimulationWorkerRuntime | null = null;
   private checkpoints = new Map<number, TimelineCheckpoint>();
@@ -32,8 +34,18 @@ export class TimelineWorkerRuntime {
             runtimeExport: request.runtimeExport,
             startTimelineTickNumber: request.startTimelineTickNumber,
             retainedFromTimelineTickNumber: request.retainedFromTimelineTickNumber,
+            targetTimelineTickNumber: request.targetTimelineTickNumber,
             capacityTimelineTicks: request.capacityTimelineTicks,
             stepStandardTicks: request.stepStandardTicks,
+          }),
+        };
+      case "retarget-timeline":
+        return {
+          type: "timeline-retargeted",
+          requestId: request.requestId,
+          status: this.retargetTimeline({
+            retainedFromTimelineTickNumber: request.retainedFromTimelineTickNumber,
+            targetTimelineTickNumber: request.targetTimelineTickNumber,
           }),
         };
       case "get-timeline-status":
@@ -79,6 +91,7 @@ export class TimelineWorkerRuntime {
     readonly runtimeExport: SimulationRuntimeExport;
     readonly startTimelineTickNumber: number;
     readonly retainedFromTimelineTickNumber: number | undefined;
+    readonly targetTimelineTickNumber: number | undefined;
     readonly capacityTimelineTicks: number;
     readonly stepStandardTicks: number;
   }): TimelineWorkerStatus {
@@ -94,7 +107,9 @@ export class TimelineWorkerRuntime {
       ? startTimelineTickNumber
       : Math.max(0, Math.trunc(options.retainedFromTimelineTickNumber));
     retainedFromTimelineTickNumber = Math.min(retainedFromTimelineTickNumber, startTimelineTickNumber);
-    let targetTimelineTickNumber = retainedFromTimelineTickNumber + capacityTimelineTicks - 1;
+    let targetTimelineTickNumber = options.targetTimelineTickNumber === undefined
+      ? retainedFromTimelineTickNumber + capacityTimelineTicks - 1
+      : Math.max(startTimelineTickNumber, Math.trunc(options.targetTimelineTickNumber));
     if (targetTimelineTickNumber < startTimelineTickNumber) {
       targetTimelineTickNumber = startTimelineTickNumber;
       retainedFromTimelineTickNumber = Math.max(0, targetTimelineTickNumber - capacityTimelineTicks + 1);
@@ -119,7 +134,7 @@ export class TimelineWorkerRuntime {
     this.runtime = runtime;
     this.startTimelineTickNumber = startTimelineTickNumber;
     this.baseStandardTickNumber = baseStandardTickNumber;
-    this.capacityTimelineTicks = capacityTimelineTicks;
+    this.capacityTimelineTicks = Math.max(1, targetTimelineTickNumber - retainedFromTimelineTickNumber + 1);
     this.stepStandardTicks = stepStandardTicks;
     this.nextTimelineTickNumber = startTimelineTickNumber + 1;
     this.targetTimelineTickNumber = targetTimelineTickNumber;
@@ -130,6 +145,92 @@ export class TimelineWorkerRuntime {
     this.scheduleFill();
 
     return this.getStatus();
+  }
+
+  private retargetTimeline(options: {
+    readonly retainedFromTimelineTickNumber: number;
+    readonly targetTimelineTickNumber: number;
+  }): TimelineWorkerStatus {
+    if (this.runtime === null) {
+      return this.getStatus();
+    }
+
+    const retainedFromTimelineTickNumber = Math.max(
+      0,
+      Math.trunc(options.retainedFromTimelineTickNumber),
+    );
+    const targetTimelineTickNumber = Math.max(
+      retainedFromTimelineTickNumber,
+      Math.trunc(options.targetTimelineTickNumber),
+    );
+
+    let deletedFutureCheckpoint = false;
+    for (const timelineTickNumber of this.checkpoints.keys()) {
+      if (
+        timelineTickNumber < retainedFromTimelineTickNumber
+        || timelineTickNumber > targetTimelineTickNumber
+      ) {
+        if (timelineTickNumber > targetTimelineTickNumber) {
+          deletedFutureCheckpoint = true;
+        }
+        this.checkpoints.delete(timelineTickNumber);
+      }
+    }
+
+    if (
+      deletedFutureCheckpoint
+      && this.nextTimelineTickNumber !== null
+      && this.nextTimelineTickNumber > targetTimelineTickNumber + 1
+    ) {
+      this.rewindRuntimeToLatestCheckpointAtOrBefore(targetTimelineTickNumber);
+    }
+
+    if (
+      this.nextTimelineTickNumber === null
+      || this.nextTimelineTickNumber < retainedFromTimelineTickNumber
+    ) {
+      this.nextTimelineTickNumber = retainedFromTimelineTickNumber;
+    }
+    this.targetTimelineTickNumber = targetTimelineTickNumber;
+    this.capacityTimelineTicks = Math.max(
+      1,
+      targetTimelineTickNumber - retainedFromTimelineTickNumber + 1,
+    );
+    this.scheduleFill();
+
+    return this.getStatus();
+  }
+
+  private rewindRuntimeToLatestCheckpointAtOrBefore(timelineTickNumber: number): void {
+    let latestCheckpoint: TimelineCheckpoint | null = null;
+    for (const checkpoint of this.checkpoints.values()) {
+      if (
+        checkpoint.timelineTickNumber <= timelineTickNumber
+        && (
+          latestCheckpoint === null
+          || checkpoint.timelineTickNumber > latestCheckpoint.timelineTickNumber
+        )
+      ) {
+        latestCheckpoint = checkpoint;
+      }
+    }
+
+    if (latestCheckpoint === null) {
+      this.runtime = null;
+      this.nextTimelineTickNumber = null;
+      return;
+    }
+
+    const runtime = new SimulationWorkerRuntime();
+    runtime.importRuntimeState(latestCheckpoint.runtimeExport, { scheduleBackgroundFill: false });
+    const fixedDynamicTickRate =
+      latestCheckpoint.runtimeExport.topology.standardTickRate / this.stepStandardTicks;
+    runtime.setFixedDynamicTickRate(fixedDynamicTickRate);
+
+    this.runtime = runtime;
+    this.startTimelineTickNumber = latestCheckpoint.timelineTickNumber;
+    this.baseStandardTickNumber = latestCheckpoint.runtimeExport.runtimeState.tickNumber;
+    this.nextTimelineTickNumber = latestCheckpoint.timelineTickNumber + 1;
   }
 
   private scheduleFill(): void {
@@ -144,38 +245,42 @@ export class TimelineWorkerRuntime {
       return;
     }
 
-    this.fillTimerId = setTimeout(() => this.fillOneTimelineTick(), 0);
+    this.fillTimerId = setTimeout(() => this.fillTimelineTickBatch(), 0);
   }
 
-  private fillOneTimelineTick(): void {
+  private fillTimelineTickBatch(): void {
     this.fillTimerId = null;
 
-    if (
-      this.runtime === null
-      || this.startTimelineTickNumber === null
-      || this.baseStandardTickNumber === null
-      || this.nextTimelineTickNumber === null
-      || this.targetTimelineTickNumber === null
-    ) {
-      return;
+    for (let batchIndex = 0; batchIndex < TIMELINE_FILL_BATCH_SIZE; batchIndex += 1) {
+      if (
+        this.runtime === null
+        || this.startTimelineTickNumber === null
+        || this.baseStandardTickNumber === null
+        || this.nextTimelineTickNumber === null
+        || this.targetTimelineTickNumber === null
+        || this.nextTimelineTickNumber > this.targetTimelineTickNumber
+      ) {
+        break;
+      }
+
+      const timelineTickNumber = this.nextTimelineTickNumber;
+      const standardTickNumber = this.baseStandardTickNumber
+        + (timelineTickNumber - this.startTimelineTickNumber) * this.stepStandardTicks;
+      const snapshot = this.runtime.createSparseTickSnapshot(standardTickNumber);
+      const runtimeExport = snapshot === null
+        ? null
+        : this.runtime.exportRuntimeState(standardTickNumber);
+
+      if (runtimeExport !== null) {
+        this.checkpoints.set(timelineTickNumber, {
+          timelineTickNumber,
+          runtimeExport,
+        });
+      }
+
+      this.nextTimelineTickNumber = timelineTickNumber + 1;
     }
 
-    const timelineTickNumber = this.nextTimelineTickNumber;
-    const standardTickNumber = this.baseStandardTickNumber
-      + (timelineTickNumber - this.startTimelineTickNumber) * this.stepStandardTicks;
-    const snapshot = this.runtime.createSparseTickSnapshot(standardTickNumber);
-    const runtimeExport = snapshot === null
-      ? null
-      : this.runtime.exportRuntimeState(standardTickNumber);
-
-    if (runtimeExport !== null) {
-      this.checkpoints.set(timelineTickNumber, {
-        timelineTickNumber,
-        runtimeExport,
-      });
-    }
-
-    this.nextTimelineTickNumber = timelineTickNumber + 1;
     this.scheduleFill();
   }
 

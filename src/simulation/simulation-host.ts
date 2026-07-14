@@ -506,6 +506,17 @@ class BrowserTimelineWorkerBridge implements TimelineWorkerBridge {
     }, "timeline-status");
   }
 
+  public retargetTimeline(options: Parameters<TimelineWorkerBridge["retargetTimeline"]>[0]): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-retargeted" }
+  >> {
+    return this.request({
+      type: "retarget-timeline",
+      requestId: this.createRequestId(),
+      ...options,
+    }, "timeline-retargeted");
+  }
+
   public getTimelineCheckpoint(timelineTickNumber: number): Promise<Extract<
     TimelineWorkerResponse,
     { readonly type: "timeline-checkpoint-result" }
@@ -590,6 +601,21 @@ class LocalTimelineWorkerBridge implements TimelineWorkerBridge {
       requestId: this.createRequestId(),
     });
     if (response.type !== "timeline-status") {
+      throw new Error(`Unexpected timeline worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public retargetTimeline(options: Parameters<TimelineWorkerBridge["retargetTimeline"]>[0]): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-retargeted" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "retarget-timeline",
+      requestId: this.createRequestId(),
+      ...options,
+    });
+    if (response.type !== "timeline-retargeted") {
       throw new Error(`Unexpected timeline worker response "${response.type}".`);
     }
     return Promise.resolve(response);

@@ -130,6 +130,111 @@ describe("TimelineWorkerRuntime", () => {
     }
     expect(filledFutureCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(90);
   });
+
+  it("retargets the rolling window beyond the initial five minute cache", () => {
+    vi.useFakeTimers();
+
+    const timelineRuntime = new TimelineWorkerRuntime();
+    timelineRuntime.handleRequest({
+      type: "load-timeline",
+      requestId: 1,
+      runtimeExport: createRuntimeExport(0),
+      startTimelineTickNumber: 0,
+      capacityTimelineTicks: 600,
+      stepStandardTicks: 10,
+    });
+    vi.runAllTimers();
+
+    const retargeted = timelineRuntime.handleRequest({
+      type: "retarget-timeline",
+      requestId: 2,
+      retainedFromTimelineTickNumber: 1,
+      targetTimelineTickNumber: 600,
+    });
+    expect(retargeted.type).toBe("timeline-retargeted");
+    expect(retargeted.status.availableFromTimelineTickNumber).toBe(1);
+    expect(retargeted.status.availableToTimelineTickNumber).toBe(599);
+
+    vi.runAllTimers();
+
+    const status = timelineRuntime.handleRequest({
+      type: "get-timeline-status",
+      requestId: 3,
+    });
+    expect(status.type).toBe("timeline-status");
+    expect(status.status.availableFromTimelineTickNumber).toBe(1);
+    expect(status.status.availableToTimelineTickNumber).toBe(600);
+
+    const droppedCheckpoint = timelineRuntime.handleRequest({
+      type: "get-timeline-checkpoint",
+      requestId: 4,
+      timelineTickNumber: 0,
+    });
+    if (droppedCheckpoint.type !== "timeline-checkpoint-result") {
+      throw new Error(`Unexpected checkpoint response "${droppedCheckpoint.type}".`);
+    }
+    expect(droppedCheckpoint.runtimeExport).toBeNull();
+
+    const extendedCheckpoint = timelineRuntime.handleRequest({
+      type: "get-timeline-checkpoint",
+      requestId: 5,
+      timelineTickNumber: 600,
+    });
+    if (extendedCheckpoint.type !== "timeline-checkpoint-result") {
+      throw new Error(`Unexpected checkpoint response "${extendedCheckpoint.type}".`);
+    }
+    expect(extendedCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(6000);
+  });
+
+  it("continues filling after retargeting backward and then forward again", () => {
+    vi.useFakeTimers();
+
+    const timelineRuntime = new TimelineWorkerRuntime();
+    timelineRuntime.handleRequest({
+      type: "load-timeline",
+      requestId: 1,
+      runtimeExport: createRuntimeExport(0),
+      startTimelineTickNumber: 0,
+      capacityTimelineTicks: 20,
+      stepStandardTicks: 10,
+    });
+    vi.runAllTimers();
+
+    timelineRuntime.handleRequest({
+      type: "retarget-timeline",
+      requestId: 2,
+      retainedFromTimelineTickNumber: 0,
+      targetTimelineTickNumber: 10,
+    });
+
+    const deletedFutureCheckpoint = timelineRuntime.handleRequest({
+      type: "get-timeline-checkpoint",
+      requestId: 3,
+      timelineTickNumber: 15,
+    });
+    if (deletedFutureCheckpoint.type !== "timeline-checkpoint-result") {
+      throw new Error(`Unexpected checkpoint response "${deletedFutureCheckpoint.type}".`);
+    }
+    expect(deletedFutureCheckpoint.runtimeExport).toBeNull();
+
+    timelineRuntime.handleRequest({
+      type: "retarget-timeline",
+      requestId: 4,
+      retainedFromTimelineTickNumber: 0,
+      targetTimelineTickNumber: 15,
+    });
+    vi.runAllTimers();
+
+    const refilledCheckpoint = timelineRuntime.handleRequest({
+      type: "get-timeline-checkpoint",
+      requestId: 5,
+      timelineTickNumber: 15,
+    });
+    if (refilledCheckpoint.type !== "timeline-checkpoint-result") {
+      throw new Error(`Unexpected checkpoint response "${refilledCheckpoint.type}".`);
+    }
+    expect(refilledCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(150);
+  });
 });
 
 function createRuntimeExport(tickNumber = 0): SimulationRuntimeExport {

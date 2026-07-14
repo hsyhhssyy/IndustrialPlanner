@@ -16,8 +16,15 @@ export type TimelineWorkerRequest =
       readonly runtimeExport: SimulationRuntimeExport;
       readonly startTimelineTickNumber: number;
       readonly retainedFromTimelineTickNumber?: number;
+      readonly targetTimelineTickNumber?: number;
       readonly capacityTimelineTicks: number;
       readonly stepStandardTicks: number;
+    }
+  | {
+      readonly type: "retarget-timeline";
+      readonly requestId: number;
+      readonly retainedFromTimelineTickNumber: number;
+      readonly targetTimelineTickNumber: number;
     }
   | {
       readonly type: "get-timeline-status";
@@ -36,6 +43,11 @@ export type TimelineWorkerRequest =
 export type TimelineWorkerResponse =
   | {
       readonly type: "timeline-loaded";
+      readonly requestId: number;
+      readonly status: TimelineWorkerStatus;
+    }
+  | {
+      readonly type: "timeline-retargeted";
       readonly requestId: number;
       readonly status: TimelineWorkerStatus;
     }

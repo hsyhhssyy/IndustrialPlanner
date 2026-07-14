@@ -189,6 +189,277 @@ describe("simulation timeline actions", () => {
     }));
   });
 
+  it("retargets timeline prediction when playback scrolls beyond the default half-window anchor", async () => {
+    const state = createSimulationStateReadWrite();
+    state.hasStarted = true;
+    state.runningState = "start";
+    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    state.currentPlaybackTickNumber = 0;
+
+    const bridge = createSimulationBridge();
+    const timelineBridge = createTimelineBridge();
+    const action = new SimulationActionImpl({
+      workspace: {} as WorkspaceContract,
+      state,
+      topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
+      bridge,
+      createTimelineBridge: () => timelineBridge,
+    });
+
+    await action.enableTimeline();
+    await action.syncToTick(3020, 3020);
+    await flushMicrotasks(2);
+
+    expect(state.timeline.windowStartTickNumber).toBeGreaterThan(0);
+    expect(timelineBridge.retargetTimeline).toHaveBeenCalledWith({
+      retainedFromTimelineTickNumber: 0,
+      targetTimelineTickNumber: 6601,
+    });
+    action.disableTimeline();
+  });
+
+  it("keeps a forward seek between half and edge positions as the playback anchor", async () => {
+    const state = createSimulationStateReadWrite();
+    state.hasStarted = true;
+    state.runningState = "start";
+    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    state.currentPlaybackTickNumber = 0;
+
+    const bridge = createSimulationBridge();
+    const timelineBridge = createTimelineBridge();
+    const action = new SimulationActionImpl({
+      workspace: {} as WorkspaceContract,
+      state,
+      topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
+      bridge,
+      createTimelineBridge: () => timelineBridge,
+    });
+
+    await action.enableTimeline();
+    await expect(action.seekTimelineToTick(420)).resolves.toBe(true);
+
+    expect(state.timeline.cursorTickNumber).toBe(420);
+    expect(state.timeline.windowStartTickNumber).toBe(0);
+
+    await action.syncToTick(4210, 4210);
+    await flushMicrotasks(2);
+
+    expect(state.timeline.cursorTickNumber).toBe(421);
+    expect(state.timeline.windowStartTickNumber).toBe(1);
+    expect(timelineBridge.retargetTimeline).toHaveBeenLastCalledWith({
+      retainedFromTimelineTickNumber: 0,
+      targetTimelineTickNumber: 6600,
+    });
+    action.disableTimeline();
+  });
+
+  it("clears the custom playback anchor when seeking backward", async () => {
+    const state = createSimulationStateReadWrite();
+    state.hasStarted = true;
+    state.runningState = "start";
+    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    state.currentPlaybackTickNumber = 0;
+
+    const bridge = createSimulationBridge();
+    const timelineBridge = createTimelineBridge();
+    const action = new SimulationActionImpl({
+      workspace: {} as WorkspaceContract,
+      state,
+      topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
+      bridge,
+      createTimelineBridge: () => timelineBridge,
+    });
+
+    await action.enableTimeline();
+    await expect(action.seekTimelineToTick(420)).resolves.toBe(true);
+    await expect(action.seekTimelineToTick(200)).resolves.toBe(true);
+
+    expect(state.timeline.cursorTickNumber).toBe(200);
+    expect(state.timeline.windowStartTickNumber).toBe(0);
+
+    await action.syncToTick(2010, 2010);
+    expect(state.timeline.windowStartTickNumber).toBe(0);
+
+    await action.syncToTick(3010, 3010);
+    expect(state.timeline.windowStartTickNumber).toBe(1);
+    action.disableTimeline();
+  });
+
+  it("anchors a seek beyond the right edge drag threshold at the edge position", async () => {
+    const state = createSimulationStateReadWrite();
+    state.hasStarted = true;
+    state.runningState = "start";
+    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    state.currentPlaybackTickNumber = 0;
+
+    const bridge = createSimulationBridge();
+    const timelineBridge = createTimelineBridge();
+    const action = new SimulationActionImpl({
+      workspace: {} as WorkspaceContract,
+      state,
+      topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
+      bridge,
+      createTimelineBridge: () => timelineBridge,
+    });
+
+    await action.enableTimeline();
+    await expect(action.seekTimelineToTick(580)).resolves.toBe(true);
+
+    expect(state.timeline.cursorTickNumber).toBe(580);
+    expect(state.timeline.windowStartTickNumber).toBe(41);
+
+    await action.syncToTick(5810, 5810);
+    await flushMicrotasks(2);
+
+    expect(state.timeline.cursorTickNumber).toBe(581);
+    expect(state.timeline.windowStartTickNumber).toBe(42);
+    expect(timelineBridge.retargetTimeline).toHaveBeenLastCalledWith({
+      retainedFromTimelineTickNumber: 0,
+      targetTimelineTickNumber: 6641,
+    });
+    action.disableTimeline();
+  });
+
+  it("keeps at most ten visible windows of timeline history while playback retargets", async () => {
+    const state = createSimulationStateReadWrite();
+    state.hasStarted = true;
+    state.runningState = "start";
+    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    state.currentPlaybackTickNumber = 0;
+
+    const bridge = createSimulationBridge();
+    const timelineBridge = createTimelineBridge();
+    const action = new SimulationActionImpl({
+      workspace: {} as WorkspaceContract,
+      state,
+      topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
+      bridge,
+      createTimelineBridge: () => timelineBridge,
+    });
+
+    await action.enableTimeline();
+    await action.syncToTick(66_000, 66_000);
+    await flushMicrotasks(2);
+
+    expect(state.timeline.windowStartTickNumber).toBe(6300);
+    expect(timelineBridge.retargetTimeline).toHaveBeenLastCalledWith({
+      retainedFromTimelineTickNumber: 300,
+      targetTimelineTickNumber: 12899,
+    });
+    action.disableTimeline();
+  });
+
+  it("scrolls the timeline window left when seeking inside the left edge history band", async () => {
+    const state = createSimulationStateReadWrite();
+    state.hasStarted = true;
+    state.runningState = "start";
+    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    state.currentPlaybackTickNumber = 0;
+
+    const bridge = createSimulationBridge();
+    const timelineBridge = createTimelineBridge();
+    const action = new SimulationActionImpl({
+      workspace: {} as WorkspaceContract,
+      state,
+      topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
+      bridge,
+      createTimelineBridge: () => timelineBridge,
+    });
+
+    await action.enableTimeline();
+    state.timeline.availableFromTickNumber = 1000;
+    state.timeline.availableToTickNumber = 2199;
+    state.timeline.cursorTickNumber = 1700;
+    state.timeline.windowStartTickNumber = 1600;
+
+    await expect(action.seekTimelineToTick(1620)).resolves.toBe(true);
+
+    expect(state.timeline.cursorTickNumber).toBe(1620);
+    expect(state.timeline.windowStartTickNumber).toBe(1560);
+
+    await action.syncToTick(16_300, 16_300);
+
+    expect(state.timeline.cursorTickNumber).toBe(1630);
+    expect(state.timeline.windowStartTickNumber).toBe(1560);
+    action.disableTimeline();
+  });
+
+  it("allows the cursor to move below the left edge anchor at the retained history limit", async () => {
+    const state = createSimulationStateReadWrite();
+    state.hasStarted = true;
+    state.runningState = "start";
+    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    state.currentPlaybackTickNumber = 0;
+
+    const bridge = createSimulationBridge();
+    const timelineBridge = createTimelineBridge();
+    const action = new SimulationActionImpl({
+      workspace: {} as WorkspaceContract,
+      state,
+      topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
+      bridge,
+      createTimelineBridge: () => timelineBridge,
+    });
+
+    await action.enableTimeline();
+    state.timeline.availableFromTickNumber = 1000;
+    state.timeline.availableToTickNumber = 1599;
+    state.timeline.cursorTickNumber = 1100;
+    state.timeline.windowStartTickNumber = 1000;
+
+    await expect(action.seekTimelineToTick(1020)).resolves.toBe(true);
+
+    expect(state.timeline.cursorTickNumber).toBe(1020);
+    expect(state.timeline.windowStartTickNumber).toBe(1000);
+    action.disableTimeline();
+  });
+
+  it("reloads timeline prediction when playback rolls back outside the retained history range", async () => {
+    const state = createSimulationStateReadWrite();
+    state.hasStarted = true;
+    state.runningState = "start";
+    state.currentSnapshot = createRuntimeExport(0).snapshot;
+    state.currentPlaybackTickNumber = 0;
+
+    const bridge = createSimulationBridge({
+      getTickSnapshot: vi.fn(async (tickNumber: number) => ({
+        type: "tick-snapshot-result" as const,
+        requestId: tickNumber,
+        result: {
+          status: {
+            status: "not-found" as const,
+            reason: "cleared" as const,
+            requestedTickNumber: tickNumber,
+            retainedFromTick: 0,
+            latestTickNumber: 0,
+            bufferSize: 1,
+          },
+          currentTick: null,
+        },
+        status: createRuntimeStatus(0),
+      })),
+    });
+    const timelineBridge = createTimelineBridge();
+    const action = new SimulationActionImpl({
+      workspace: {} as WorkspaceContract,
+      state,
+      topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
+      bridge,
+      createTimelineBridge: () => timelineBridge,
+    });
+
+    await action.enableTimeline();
+    state.timeline.availableFromTickNumber = 500;
+    state.timeline.availableToTickNumber = 1099;
+    state.timeline.windowStartTickNumber = 500;
+    await action.advancePlaybackByDeltaMs(305_000);
+    await flushMicrotasks(2);
+
+    expect(state.timeline.cursorTickNumber).toBe(0);
+    expect(timelineBridge.loadTimeline).toHaveBeenCalledTimes(2);
+    action.disableTimeline();
+  });
+
   it("jumps forward to the first retained aligned checkpoint when the previous boundary was cleared", async () => {
     const state = createSimulationStateReadWrite();
     state.hasStarted = true;
@@ -446,6 +717,14 @@ function createTimelineBridge(
       type: "timeline-status" as const,
       requestId: 1,
       status: createTimelineStatus(0, 0),
+    })),
+    retargetTimeline: vi.fn(async (options) => ({
+      type: "timeline-retargeted" as const,
+      requestId: 1,
+      status: createTimelineStatus(
+        options.retainedFromTimelineTickNumber,
+        options.targetTimelineTickNumber,
+      ),
     })),
     getTimelineCheckpoint: vi.fn(async (timelineTickNumber: number) => ({
       type: "timeline-checkpoint-result" as const,

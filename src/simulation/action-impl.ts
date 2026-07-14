@@ -49,8 +49,17 @@ import type {
 const TPS_WINDOW_MS = 1000;
 const TIMELINE_TICK_DURATION_SECONDS = 0.5;
 const TIMELINE_STEP_STANDARD_TICKS = STANDARD_TICK_RATE_PER_SECOND * TIMELINE_TICK_DURATION_SECONDS;
-const TIMELINE_RULER_DURATION_SECONDS = 300;
-const TIMELINE_CAPACITY_TICKS = TIMELINE_RULER_DURATION_SECONDS / TIMELINE_TICK_DURATION_SECONDS;
+const TIMELINE_WINDOW_DURATION_SECONDS = 300;
+const TIMELINE_RULER_DURATION_SECONDS = TIMELINE_WINDOW_DURATION_SECONDS;
+const TIMELINE_CAPACITY_TICKS = TIMELINE_WINDOW_DURATION_SECONDS / TIMELINE_TICK_DURATION_SECONDS;
+const TIMELINE_WINDOW_SPAN_TICKS = TIMELINE_CAPACITY_TICKS - 1;
+const TIMELINE_HISTORY_WINDOW_MULTIPLIER = 10;
+const TIMELINE_FUTURE_WINDOW_MULTIPLIER = 10;
+const TIMELINE_MAX_HISTORY_TICKS = TIMELINE_CAPACITY_TICKS * TIMELINE_HISTORY_WINDOW_MULTIPLIER;
+const TIMELINE_MAX_FUTURE_TICKS = TIMELINE_CAPACITY_TICKS * TIMELINE_FUTURE_WINDOW_MULTIPLIER;
+const TIMELINE_SEEK_LEFT_EDGE_SCROLL_ANCHOR_OFFSET_TICKS = Math.round(TIMELINE_WINDOW_SPAN_TICKS * 0.1);
+const TIMELINE_DEFAULT_PLAYBACK_ANCHOR_OFFSET_TICKS = Math.round(TIMELINE_WINDOW_SPAN_TICKS * 0.5);
+const TIMELINE_SEEK_EDGE_SCROLL_ANCHOR_OFFSET_TICKS = Math.round(TIMELINE_WINDOW_SPAN_TICKS * 0.9);
 const TIMELINE_STATUS_POLL_MS = 250;
 const TIMELINE_EXPORT_LOOKBACK_STEPS = 18;
 
@@ -103,9 +112,14 @@ export interface TimelineWorkerBridge {
     runtimeExport: SimulationRuntimeExport;
     startTimelineTickNumber: number;
     retainedFromTimelineTickNumber?: number;
+    targetTimelineTickNumber?: number;
     capacityTimelineTicks: number;
     stepStandardTicks: number;
   }): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-loaded" }>>;
+  retargetTimeline(options: {
+    retainedFromTimelineTickNumber: number;
+    targetTimelineTickNumber: number;
+  }): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-retargeted" }>>;
   getTimelineStatus(): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-status" }>>;
   getTimelineCheckpoint(timelineTickNumber: number): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-checkpoint-result" }>>;
   stopTimeline(): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-stopped" }>>;
@@ -163,6 +177,10 @@ implements SimulationAction, SimulationInternalAction {
   private timelineSeekSerial = 0;
   private timelineSeekImportPromise: Promise<unknown> | null = null;
   private timelineRestartInFlight = false;
+  private timelineWindowRetargetInFlight = false;
+  private timelineWindowRetargetPending = false;
+  private lastTimelineRetargetRange: TimelineRebaseRange | null = null;
+  private timelinePlaybackAnchorOffsetTicks: number | null = null;
   private timelineMarkSerial = 1;
   private lastTimelineSafetySyncStandardTick: number | null = null;
   private readonly timelineCheckpointMetadataByTickNumber = new Map<number, TimelineCheckpointMetadata>();
@@ -519,6 +537,7 @@ implements SimulationAction, SimulationInternalAction {
     }
 
     const targetTimelineTickNumber = Math.max(0, Math.trunc(timelineTickNumber));
+    const previousCursorTickNumber = this.stateReadWrite.timeline.cursorTickNumber;
     const serial = ++this.timelineSeekSerial;
     runInAction(() => {
       this.stateReadWrite.timeline.isSeeking = true;
@@ -558,7 +577,7 @@ implements SimulationAction, SimulationInternalAction {
           this.stateReadWrite.currentPlaybackTickNumber =
             imported.result.currentTick?.tickNumber ?? runtimeExport.snapshot.tickNumber;
           this.stateReadWrite.timeline.cursorTickNumber = targetTimelineTickNumber;
-          this.updateTimelineWindowForCursor(targetTimelineTickNumber);
+          this.updateTimelineWindowForSeek(targetTimelineTickNumber, previousCursorTickNumber);
           if (crossesTimelineMark) {
             this.stateReadWrite.timeline.marks = this.stateReadWrite.timeline.marks.filter((mark) =>
               mark.tickNumber <= targetTimelineTickNumber,
@@ -574,6 +593,8 @@ implements SimulationAction, SimulationInternalAction {
       const ready = imported.result.status.status === "ready";
       if (ready && crossesTimelineMark) {
         await this.restartTimelineFromCurrentSimulation();
+      } else if (ready) {
+        this.requestTimelineWindowRetarget();
       }
 
       return ready;
@@ -643,7 +664,9 @@ implements SimulationAction, SimulationInternalAction {
     if (recoveryTickNumber === null || recoveryTickNumber === undefined) {
       runInAction(() => {
         this.stateReadWrite.currentPlaybackTickNumber = fallbackPlaybackTickNumber;
+        this.syncTimelineCursorFromPlayback({ retargetWindow: false });
       });
+      await this.restartTimelineAfterPlaybackRollbackIfNeeded();
       return;
     }
 
@@ -651,8 +674,10 @@ implements SimulationAction, SimulationInternalAction {
     if (recoveryStatus.status !== "ready") {
       runInAction(() => {
         this.stateReadWrite.currentPlaybackTickNumber = fallbackPlaybackTickNumber;
+        this.syncTimelineCursorFromPlayback({ retargetWindow: false });
       });
     }
+    await this.restartTimelineAfterPlaybackRollbackIfNeeded();
   }
 
   private async restartTimelineFromCurrentSimulation(): Promise<void> {
@@ -684,6 +709,7 @@ implements SimulationAction, SimulationInternalAction {
         runtimeExport: exported.response.runtimeExport,
         startTimelineTickNumber: exported.startTimelineTickNumber,
         retainedFromTimelineTickNumber: rebaseRange.retainedFromTimelineTickNumber,
+        targetTimelineTickNumber: rebaseRange.targetTimelineTickNumber,
         capacityTimelineTicks: TIMELINE_CAPACITY_TICKS,
         stepStandardTicks: TIMELINE_STEP_STANDARD_TICKS,
       });
@@ -696,6 +722,7 @@ implements SimulationAction, SimulationInternalAction {
         retainedFromTimelineTickNumber: rebaseRange.retainedFromTimelineTickNumber,
         targetTimelineTickNumber: rebaseRange.targetTimelineTickNumber,
       });
+      this.lastTimelineRetargetRange = rebaseRange;
       runInAction(() => {
         this.applyTimelineStatus(loaded.status);
         this.syncTimelineCursorFromPlayback();
@@ -710,12 +737,18 @@ implements SimulationAction, SimulationInternalAction {
     shouldPreserveExistingCheckpoints: boolean,
   ): TimelineRebaseRange {
     const startTickNumber = Math.max(0, Math.trunc(startTimelineTickNumber));
-    let retainedFromTickNumber = shouldPreserveExistingCheckpoints
+    const windowStartTickNumber = shouldPreserveExistingCheckpoints
       ? Math.max(0, Math.floor(this.stateReadWrite.timeline.windowStartTickNumber))
+      : startTickNumber;
+    let retainedFromTickNumber = shouldPreserveExistingCheckpoints
+      ? this.resolveTimelineHistoryRetainedFrom(windowStartTickNumber)
       : startTickNumber;
     retainedFromTickNumber = Math.min(retainedFromTickNumber, startTickNumber);
 
-    let targetTimelineTickNumber = retainedFromTickNumber + TIMELINE_CAPACITY_TICKS - 1;
+    let targetTimelineTickNumber = Math.max(
+      startTickNumber,
+      this.resolveTimelinePredictionTarget(windowStartTickNumber),
+    );
     if (targetTimelineTickNumber < startTickNumber) {
       targetTimelineTickNumber = startTickNumber;
       retainedFromTickNumber = Math.max(0, targetTimelineTickNumber - TIMELINE_CAPACITY_TICKS + 1);
@@ -725,6 +758,14 @@ implements SimulationAction, SimulationInternalAction {
       retainedFromTimelineTickNumber: retainedFromTickNumber,
       targetTimelineTickNumber,
     };
+  }
+
+  private resolveTimelineHistoryRetainedFrom(windowStartTickNumber: number): number {
+    return Math.max(0, Math.floor(windowStartTickNumber) - TIMELINE_MAX_HISTORY_TICKS);
+  }
+
+  private resolveTimelinePredictionTarget(windowStartTickNumber: number): number {
+    return Math.floor(windowStartTickNumber) + TIMELINE_CAPACITY_TICKS - 1 + TIMELINE_MAX_FUTURE_TICKS;
   }
 
   private rebaseTimelineCheckpointMetadata(options: {
@@ -756,6 +797,119 @@ implements SimulationAction, SimulationInternalAction {
     ) {
       this.timelineCheckpointMetadataByTickNumber.set(timelineTickNumber, metadata);
     }
+  }
+
+  private requestTimelineWindowRetarget(): void {
+    if (!this.stateReadWrite.timeline.enabled || this.timelineBridge === null) {
+      return;
+    }
+
+    const range = this.resolveCurrentTimelineWindowRange();
+    if (
+      !this.timelineWindowRetargetInFlight
+      && this.lastTimelineRetargetRange !== null
+      && this.lastTimelineRetargetRange.retainedFromTimelineTickNumber === range.retainedFromTimelineTickNumber
+      && this.lastTimelineRetargetRange.targetTimelineTickNumber === range.targetTimelineTickNumber
+    ) {
+      return;
+    }
+
+    if (this.timelineWindowRetargetInFlight) {
+      this.timelineWindowRetargetPending = true;
+      return;
+    }
+
+    void this.retargetTimelineWindow(range);
+  }
+
+  private resolveCurrentTimelineWindowRange(): TimelineRebaseRange {
+    const windowStartTickNumber = Math.max(
+      0,
+      Math.floor(this.stateReadWrite.timeline.windowStartTickNumber),
+    );
+    const retainedFromTimelineTickNumber = this.resolveTimelineHistoryRetainedFrom(windowStartTickNumber);
+
+    return {
+      retainedFromTimelineTickNumber,
+      targetTimelineTickNumber: this.resolveTimelinePredictionTarget(windowStartTickNumber),
+    };
+  }
+
+  private async retargetTimelineWindow(range: TimelineRebaseRange): Promise<void> {
+    const bridge = this.timelineBridge;
+    if (bridge === null || !this.stateReadWrite.timeline.enabled) {
+      return;
+    }
+
+    this.timelineWindowRetargetInFlight = true;
+    try {
+      const response = await bridge.retargetTimeline({
+        retainedFromTimelineTickNumber: range.retainedFromTimelineTickNumber,
+        targetTimelineTickNumber: range.targetTimelineTickNumber,
+      });
+      if (!this.stateReadWrite.timeline.enabled || this.timelineBridge !== bridge) {
+        return;
+      }
+
+      this.retargetTimelineCheckpointMetadata(range);
+      this.lastTimelineRetargetRange = range;
+      runInAction(() => {
+        this.applyTimelineStatus(response.status);
+      });
+    } catch {
+      // timeline-worker 是辅助预测缓存，窗口续算失败不应影响正式 sim-worker。
+    } finally {
+      this.timelineWindowRetargetInFlight = false;
+      if (this.timelineWindowRetargetPending) {
+        this.timelineWindowRetargetPending = false;
+        this.requestTimelineWindowRetarget();
+      }
+    }
+  }
+
+  private retargetTimelineCheckpointMetadata(range: TimelineRebaseRange): void {
+    for (const timelineTickNumber of this.timelineCheckpointMetadataByTickNumber.keys()) {
+      if (
+        timelineTickNumber < range.retainedFromTimelineTickNumber
+        || timelineTickNumber > range.targetTimelineTickNumber
+      ) {
+        this.timelineCheckpointMetadataByTickNumber.delete(timelineTickNumber);
+      }
+    }
+
+    if (this.compiledDocument === null || this.compiledActivitySignature === null) {
+      return;
+    }
+
+    const metadata: TimelineCheckpointMetadata = {
+      document: cloneWorldDocument(this.compiledDocument),
+      activitySignature: this.compiledActivitySignature,
+    };
+    for (
+      let timelineTickNumber = range.retainedFromTimelineTickNumber;
+      timelineTickNumber <= range.targetTimelineTickNumber;
+      timelineTickNumber += 1
+    ) {
+      if (!this.timelineCheckpointMetadataByTickNumber.has(timelineTickNumber)) {
+        this.timelineCheckpointMetadataByTickNumber.set(timelineTickNumber, metadata);
+      }
+    }
+  }
+
+  private async restartTimelineAfterPlaybackRollbackIfNeeded(): Promise<void> {
+    if (!this.stateReadWrite.timeline.enabled) {
+      return;
+    }
+
+    const cursorTickNumber = this.stateReadWrite.timeline.cursorTickNumber;
+    if (
+      cursorTickNumber >= this.stateReadWrite.timeline.availableFromTickNumber
+      && cursorTickNumber <= this.stateReadWrite.timeline.availableToTickNumber
+    ) {
+      return;
+    }
+
+    await this.restartTimelineFromCurrentSimulation();
   }
 
   private async exportLatestAlignedTimelineRuntimeState(
@@ -908,7 +1062,9 @@ implements SimulationAction, SimulationInternalAction {
     );
   }
 
-  private syncTimelineCursorFromPlayback(): void {
+  private syncTimelineCursorFromPlayback(options: {
+    readonly retargetWindow?: boolean;
+  } = {}): void {
     if (!this.stateReadWrite.timeline.enabled) {
       return;
     }
@@ -918,7 +1074,9 @@ implements SimulationAction, SimulationInternalAction {
       this.stateReadWrite.currentPlaybackTickNumber / TIMELINE_STEP_STANDARD_TICKS,
     );
     this.stateReadWrite.timeline.cursorTickNumber = cursorTickNumber;
-    this.updateTimelineWindowForCursor(cursorTickNumber);
+    if (this.updateTimelineWindowForCursor(cursorTickNumber) && options.retargetWindow !== false) {
+      this.requestTimelineWindowRetarget();
+    }
   }
 
   private async checkTimelineSafetySync(tickNumber: number): Promise<void> {
@@ -971,17 +1129,66 @@ implements SimulationAction, SimulationInternalAction {
     }
   }
 
-  private updateTimelineWindowForCursor(cursorTickNumber: number): void {
-    const halfWindowTicks = TIMELINE_CAPACITY_TICKS / 2;
+  private updateTimelineWindowForCursor(cursorTickNumber: number): boolean {
+    const anchorOffsetTicks =
+      this.timelinePlaybackAnchorOffsetTicks ?? TIMELINE_DEFAULT_PLAYBACK_ANCHOR_OFFSET_TICKS;
     const currentWindowStart = this.stateReadWrite.timeline.windowStartTickNumber;
-    if (cursorTickNumber > currentWindowStart + halfWindowTicks) {
-      this.stateReadWrite.timeline.windowStartTickNumber = cursorTickNumber - halfWindowTicks;
-      return;
+    if (cursorTickNumber > currentWindowStart + anchorOffsetTicks) {
+      this.stateReadWrite.timeline.windowStartTickNumber = cursorTickNumber - anchorOffsetTicks;
+      return true;
     }
 
     if (cursorTickNumber < currentWindowStart) {
       this.stateReadWrite.timeline.windowStartTickNumber = cursorTickNumber;
+      return true;
     }
+
+    return false;
+  }
+
+  private updateTimelineWindowForSeek(
+    targetTimelineTickNumber: number,
+    previousCursorTickNumber: number,
+  ): void {
+    const currentWindowStart = this.stateReadWrite.timeline.windowStartTickNumber;
+    const relativeTickNumber = targetTimelineTickNumber - currentWindowStart;
+    if (relativeTickNumber < TIMELINE_SEEK_LEFT_EDGE_SCROLL_ANCHOR_OFFSET_TICKS) {
+      this.timelinePlaybackAnchorOffsetTicks = null;
+      const retainedFromTickNumber = Math.max(
+        0,
+        Math.floor(this.stateReadWrite.timeline.availableFromTickNumber),
+      );
+      const targetWindowStart = Math.max(
+        retainedFromTickNumber,
+        targetTimelineTickNumber - TIMELINE_SEEK_LEFT_EDGE_SCROLL_ANCHOR_OFFSET_TICKS,
+      );
+      if (targetWindowStart < currentWindowStart) {
+        this.stateReadWrite.timeline.windowStartTickNumber = targetWindowStart;
+      }
+      return;
+    }
+
+    if (
+      targetTimelineTickNumber < previousCursorTickNumber
+      || relativeTickNumber < TIMELINE_DEFAULT_PLAYBACK_ANCHOR_OFFSET_TICKS
+    ) {
+      this.timelinePlaybackAnchorOffsetTicks = null;
+      if (targetTimelineTickNumber < currentWindowStart) {
+        this.stateReadWrite.timeline.windowStartTickNumber = targetTimelineTickNumber;
+      }
+      return;
+    }
+
+    if (relativeTickNumber > TIMELINE_SEEK_EDGE_SCROLL_ANCHOR_OFFSET_TICKS) {
+      this.timelinePlaybackAnchorOffsetTicks = TIMELINE_SEEK_EDGE_SCROLL_ANCHOR_OFFSET_TICKS;
+      this.stateReadWrite.timeline.windowStartTickNumber = Math.max(
+        0,
+        targetTimelineTickNumber - TIMELINE_SEEK_EDGE_SCROLL_ANCHOR_OFFSET_TICKS,
+      );
+      return;
+    }
+
+    this.timelinePlaybackAnchorOffsetTicks = relativeTickNumber;
   }
 
   private stopTimelineWorker(): void {
@@ -991,6 +1198,10 @@ implements SimulationAction, SimulationInternalAction {
     }
     this.timelineSeekSerial += 1;
     this.lastTimelineSafetySyncStandardTick = null;
+    this.timelineWindowRetargetInFlight = false;
+    this.timelineWindowRetargetPending = false;
+    this.lastTimelineRetargetRange = null;
+    this.timelinePlaybackAnchorOffsetTicks = null;
     this.timelineCheckpointMetadataByTickNumber.clear();
     this.timelineBridge?.dispose();
     this.timelineBridge = null;

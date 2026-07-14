@@ -473,7 +473,8 @@
 
 .timeline-ruler {
   display: grid;
-  grid-template-rows: minmax(54px, 1fr) auto;
+  grid-template-rows: 27px auto;
+  align-content: start;
   min-width: 0;
   min-height: 0;
   gap: 8px;
@@ -482,7 +483,8 @@
 .timeline-ruler-track {
   position: relative;
   min-width: 0;
-  min-height: 54px;
+  height: 27px;
+  min-height: 27px;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -500,16 +502,12 @@
 .timeline-ruler-available {
   position: absolute;
   inset-block: 0;
-  background: var(--accent-soft);
-  @supports (background: color-mix(in srgb, red 50%, blue)) {
-    background: color-mix(in srgb, var(--accent-soft) 82%, var(--surface-1));
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-strong) 42%, transparent);
-  }
+  background: #ffffff;
 }
 
 .timeline-ruler-cursor {
   position: absolute;
-  inset-block: 5px;
+  inset-block: 3px;
   width: 2px;
   transform: translateX(-1px);
   border-radius: 999px;
@@ -530,13 +528,13 @@
 
 .timeline-ruler-mark {
   position: absolute;
-  top: 5px;
+  top: 3px;
   width: 0;
   height: 0;
-  transform: translateX(-6px);
-  border-right: 6px solid transparent;
-  border-left: 6px solid transparent;
-  border-top: 10px solid #c07a2a;
+  transform: translateX(-5px);
+  border-right: 5px solid transparent;
+  border-left: 5px solid transparent;
+  border-top: 8px solid #c07a2a;
   pointer-events: none;
 }
 
