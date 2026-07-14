@@ -12,4 +12,7 @@ export interface SimulationAction {
   advancePlaybackByDeltaMs(deltaMs: number): Promise<void>;
   patchRuntimeSlot(patch: SimulationRuntimeSlotPatch): Promise<void>;
   resetAdmissionCounter(reset: SimulationAdmissionCounterReset): Promise<void>;
+  enableTimeline(): Promise<void>;
+  disableTimeline(): void;
+  seekTimelineToTick(timelineTickNumber: number): Promise<boolean>;
 }

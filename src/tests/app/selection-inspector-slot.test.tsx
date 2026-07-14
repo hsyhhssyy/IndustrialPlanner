@@ -14,6 +14,7 @@ import type { WorldDocument } from "@/domain/document/world-document";
 import { createEditorHost, type EditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
+import { createInitialSimulationTimelineState } from "@/simulation/state-impl";
 
 import { SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY } from "@/app/shell/inspector/simulation-recipe-status-runtime-inspector";
 
@@ -86,6 +87,7 @@ function attachSimulationStub(
       simulationSpeed: 1,
       statistics: { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 },
       bufferSize: 0,
+      timeline: createInitialSimulationTimelineState(),
     },
     topology: createSnapshotStore(null),
     queries: {
@@ -128,6 +130,9 @@ function attachSimulationStub(
       advancePlaybackByDeltaMs: vi.fn(async () => {}),
       patchRuntimeSlot: vi.fn(async () => {}),
       resetAdmissionCounter: vi.fn(async () => {}),
+      enableTimeline: vi.fn(async () => {}),
+      disableTimeline: vi.fn(),
+      seekTimelineToTick: vi.fn(async () => false),
     },
   } as NonNullable<WorkspaceContract["simulation"]>;
 

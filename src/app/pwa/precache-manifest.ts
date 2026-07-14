@@ -59,6 +59,22 @@ export function hashPrecacheEntries(entries: readonly PrecacheEntry[]): string {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
+export function createPrecacheCacheUrl(path: string, scope: string): string {
+  const url = new URL(path, scope);
+  url.hash = "";
+
+  return url.href;
+}
+
+export function createRuntimePrecacheCacheUrl(requestUrl: URL, scope: string): string {
+  const versionScriptPathname = new URL("version.js", scope).pathname;
+  const cachePath = requestUrl.pathname === versionScriptPathname
+    ? requestUrl.pathname
+    : `${requestUrl.pathname}${requestUrl.search}`;
+
+  return createPrecacheCacheUrl(cachePath, scope);
+}
+
 function shouldPreferPrecacheEntry(candidate: PrecacheEntry, current: PrecacheEntry): boolean {
   const candidateScore = scorePrecacheEntry(candidate);
   const currentScore = scorePrecacheEntry(current);

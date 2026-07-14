@@ -2,6 +2,7 @@ import type { LinkType } from "@/domain/document/world-document";
 import type { GridEdge, GridPoint, GridRect, GridRectSize, GridRotation } from "@/domain/shared/grid";
 import type { RecipeDefinition, RecipeType } from "@/domain/registry/types/recipe-definition";
 import type { WaterPurifierOutputMode } from "@/shared/water-purifier-node";
+import type { SimulationMutableRuntimeState } from "./runtime/runtime-state";
 
 export type SimulationItemDomain = "solid" | "liquid" | "gas";
 export type SimulationItemDomainFilter = SimulationItemDomain | "fluid";
@@ -387,6 +388,14 @@ export interface SimulationTopologyMigration {
 export interface SimulationTickSnapshotResult {
   readonly status: SimulationTickPullStatus;
   readonly currentTick: RuntimeTickSnapshot | null;
+}
+
+export interface SimulationRuntimeExport {
+  readonly topology: CompiledSimulationTopology;
+  readonly runtimeState: SimulationMutableRuntimeState;
+  readonly snapshot: RuntimeTickSnapshot;
+  readonly powerMode: "real" | "infinite";
+  readonly powerConsumptionOverride: number | undefined;
 }
 
 export interface RuntimeTickSnapshot {

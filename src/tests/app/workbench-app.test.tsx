@@ -25,6 +25,7 @@ import {
   DEFAULT_RIGHT_DOCK_TAB_ID,
   DEFAULT_RIGHT_DOCK_WIDTH,
   COLLAPSED_TOOLBOX_BOTTOM_DOCK_HEIGHT,
+  DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TOOLBOX_DIALOG_TAB_ID,
   MOBILE_LEFT_DOCK_WIDTH,
@@ -37,6 +38,7 @@ import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { listBlueprintDirectory } from "@/shared/storage";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
+import { createInitialSimulationTimelineState } from "@/simulation/state-impl";
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 
 function createWorkspace(): WorkspaceContract {
@@ -185,6 +187,7 @@ function createWorkbenchStorageSnapshot(options: {
   rightDockActiveTab?: "selection";
   quickPlaceFavoriteEntityIds?: Array<string | null>;
   toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  timelineDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
   inspectorDialog?: ReturnType<typeof createDialogStateSnapshot>;
@@ -194,6 +197,9 @@ function createWorkbenchStorageSnapshot(options: {
   toolboxDockPreference?: "floating" | "bottom";
   toolboxBottomDockCollapsed?: boolean;
   toolboxBottomDockHeight?: number;
+  timelineDockPreference?: "floating" | "bottom";
+  timelineBottomDockCollapsed?: boolean;
+  timelineBottomDockHeight?: number;
   toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
   moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
 } = {}) {
@@ -207,6 +213,7 @@ function createWorkbenchStorageSnapshot(options: {
     quickPlaceFavoriteEntityIds: options.quickPlaceFavoriteEntityIds ?? [],
     dialogState: {
       toolbox: options.toolboxDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID }),
+      timeline: options.timelineDialog ?? createDialogStateSnapshot(),
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
       inspector: options.inspectorDialog ?? createDialogStateSnapshot(),
@@ -222,6 +229,9 @@ function createWorkbenchStorageSnapshot(options: {
       wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),
       moduleBalancing: options.moduleBalancing ?? createModuleBalancingStorageSnapshot(),
     },
+    timelineDockPreference: options.timelineDockPreference ?? "floating",
+    timelineBottomDockCollapsed: options.timelineBottomDockCollapsed ?? false,
+    timelineBottomDockHeight: options.timelineBottomDockHeight ?? DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT,
   };
 }
 
@@ -1147,6 +1157,7 @@ describe("WorkbenchApp", () => {
         simulationSpeed: 1,
         statistics: { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 },
         bufferSize: 0,
+        timeline: createInitialSimulationTimelineState(),
       },
       topology: createSnapshotStore(null),
       queries: {
@@ -1191,6 +1202,9 @@ describe("WorkbenchApp", () => {
         advancePlaybackByDeltaMs: vi.fn(async () => {}),
         patchRuntimeSlot: vi.fn(async () => {}),
         resetAdmissionCounter: vi.fn(async () => {}),
+        enableTimeline: vi.fn(async () => {}),
+        disableTimeline: vi.fn(),
+        seekTimelineToTick: vi.fn(async () => false),
       },
     } as NonNullable<WorkspaceContract["simulation"]>;
 

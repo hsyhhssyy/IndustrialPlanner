@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   calculateTotalBytes,
+  createRuntimePrecacheCacheUrl,
   hashPrecacheEntries,
   normalizePrecacheEntries,
   resolvePrecacheEntryByteSize,
@@ -93,5 +94,18 @@ describe("precache manifest helpers", () => {
         url: "asset.js",
       },
     ]));
+  });
+
+  it("ignores the version script cache buster when resolving runtime cache URLs", () => {
+    const scope = "https://planner.example.com/tools/27629/";
+
+    expect(createRuntimePrecacheCacheUrl(
+      new URL("https://planner.example.com/tools/27629/version.js?v=v1.3.0"),
+      scope,
+    )).toBe("https://planner.example.com/tools/27629/version.js");
+    expect(createRuntimePrecacheCacheUrl(
+      new URL("https://planner.example.com/tools/27629/assets/index.js?v=v1.3.0"),
+      scope,
+    )).toBe("https://planner.example.com/tools/27629/assets/index.js?v=v1.3.0");
   });
 });

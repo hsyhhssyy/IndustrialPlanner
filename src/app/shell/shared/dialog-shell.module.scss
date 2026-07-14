@@ -34,6 +34,15 @@
   padding: 0;
 }
 
+.dialog-shell-backdrop.is-non-modal {
+  pointer-events: none;
+  background: transparent;
+}
+
+.dialog-shell-backdrop.is-non-modal .dialog-shell {
+  pointer-events: auto;
+}
+
 .dialog-shell {
   position: relative;
   display: grid;

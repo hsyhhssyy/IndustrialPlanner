@@ -176,6 +176,36 @@ export const SimulationSpeedButtons = observer(function SimulationSpeedButtons({
   );
 });
 
+export const TimelineButton = observer(function TimelineButton({
+  appHost,
+  className,
+}: {
+  appHost: AppHost;
+  className: string;
+}) {
+  const label = appHost.actions.translate("timelineDialog.title");
+  const active = appHost.internalState.workbench.dialogState.timeline.visible;
+
+  return (
+    <button
+      aria-label={label}
+      aria-pressed={active}
+      className={cm(styles, className)}
+      data-ui-button-id="top-bar-timeline"
+      onClick={() => {
+        appHost.internalActions.openDialog("timeline");
+      }}
+      title={label}
+      type="button"
+    >
+      <span className={cm(styles, "top-bar-toggle-icon")}>
+        <WorkbenchIcon kind="timeline" />
+      </span>
+      <span className={cm(styles, "sr-only")}>{label}</span>
+    </button>
+  );
+});
+
 export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const {
@@ -239,6 +269,10 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
           className={cm(styles, "top-bar-icon-button")}
         />
         <SimulationSpeedButtons appHost={appHost} />
+        <TimelineButton
+          appHost={appHost}
+          className={cm(styles, "top-bar-icon-button")}
+        />
         <FullscreenToggleButton
           appHost={appHost}
           className={cm(styles, "top-bar-icon-button top-bar-fullscreen-button")}

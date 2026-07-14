@@ -224,6 +224,7 @@
 
 .help-dialog-backdrop,
 .toolbox-dialog-backdrop,
+.timeline-dialog-backdrop,
 .debug-log-dialog-backdrop {
   position: absolute;
   inset: 0;
@@ -252,21 +253,25 @@
 
 .help-dialog-backdrop,
 .toolbox-dialog-backdrop,
+.timeline-dialog-backdrop,
 .debug-log-dialog-backdrop,
 .help-dialog-backdrop *,
 .toolbox-dialog-backdrop *,
+.timeline-dialog-backdrop *,
 .debug-log-dialog-backdrop * {
   touch-action: auto;
 }
 
 .help-dialog-backdrop.is-immersive-maximized,
 .toolbox-dialog-backdrop.is-immersive-maximized,
+.timeline-dialog-backdrop.is-immersive-maximized,
 .debug-log-dialog-backdrop.is-immersive-maximized {
   padding: 0;
 }
 
 .help-dialog,
 .toolbox-dialog,
+.timeline-dialog,
 .debug-log-dialog {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -290,8 +295,14 @@
   height: min(640px, 100%);
 }
 
+.timeline-dialog {
+  width: min(920px, 100%);
+  height: min(250px, 100%);
+}
+
 .help-dialog.is-maximized,
 .toolbox-dialog.is-maximized,
+.timeline-dialog.is-maximized,
 .debug-log-dialog.is-maximized {
   width: 100%;
   height: 100%;
@@ -299,6 +310,7 @@
 
 .help-dialog-backdrop.is-immersive-maximized .help-dialog,
 .toolbox-dialog-backdrop.is-immersive-maximized .toolbox-dialog,
+.timeline-dialog-backdrop.is-immersive-maximized .timeline-dialog,
 .debug-log-dialog-backdrop.is-immersive-maximized .debug-log-dialog {
   border: 0;
   border-radius: 0;
@@ -307,6 +319,7 @@
 
 .help-dialog-header,
 .toolbox-dialog-header,
+.timeline-dialog-header,
 .debug-log-dialog-header {
   display: flex;
   align-items: center;
@@ -318,6 +331,7 @@
 
 .help-dialog-header-copy,
 .toolbox-dialog-header-copy,
+.timeline-dialog-header-copy,
 .debug-log-dialog-header-copy {
   display: flex;
   align-items: center;
@@ -327,6 +341,7 @@
 
 .help-dialog-header.is-draggable,
 .toolbox-dialog-header.is-draggable,
+.timeline-dialog-header.is-draggable,
 .debug-log-dialog-header.is-draggable {
   cursor: grab;
   user-select: none;
@@ -334,6 +349,7 @@
 
 .help-dialog-header-copy h2,
 .toolbox-dialog-header-copy h2,
+.timeline-dialog-header-copy h2,
 .debug-log-dialog-header-copy h2,
 .help-dialog-placeholder h3,
 .toolbox-dialog-placeholder h3 {
@@ -348,6 +364,7 @@
 
 .help-dialog-header-actions,
 .toolbox-dialog-header-actions,
+.timeline-dialog-header-actions,
 .debug-log-dialog-header-actions {
   display: inline-flex;
   align-items: center;
@@ -358,6 +375,7 @@
 
 .help-dialog-header-button,
 .toolbox-dialog-header-button,
+.timeline-dialog-header-button,
 .debug-log-dialog-header-button {
   display: inline-flex;
   align-items: center;
@@ -372,6 +390,7 @@
 .toolbox-dialog-tab,
 .help-dialog-header-button,
 .toolbox-dialog-header-button,
+.timeline-dialog-header-button,
 .debug-log-dialog-header-button {
   cursor: pointer;
 }
@@ -426,6 +445,192 @@
   padding: 14px;
 }
 
+.timeline-dialog-body {
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px;
+}
+
+.timeline-ruler-panel {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.timeline-ruler-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-1);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-ruler {
+  display: grid;
+  grid-template-rows: minmax(54px, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+  gap: 8px;
+}
+
+.timeline-ruler-track {
+  position: relative;
+  min-width: 0;
+  min-height: 54px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background-color: #a4abb4;
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background-color: color-mix(in srgb, var(--surface-2) 68%, var(--text-2) 32%);
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 10px,
+      color-mix(in srgb, var(--text-2) 30%, transparent) 10px 13px
+    );
+  }
+}
+
+.timeline-ruler-available {
+  position: absolute;
+  inset-block: 0;
+  background: var(--accent-soft);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    background: color-mix(in srgb, var(--accent-soft) 82%, var(--surface-1));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-strong) 42%, transparent);
+  }
+}
+
+.timeline-ruler-cursor {
+  position: absolute;
+  inset-block: 5px;
+  width: 2px;
+  transform: translateX(-1px);
+  border-radius: 999px;
+  background: var(--accent-strong);
+  box-shadow: 0 0 0 1px var(--surface-1), 0 0 0 4px var(--highlight-ring);
+  pointer-events: none;
+}
+
+.timeline-ruler-major-tick {
+  position: absolute;
+  inset-block: 0;
+  width: 1px;
+  transform: translateX(-0.5px);
+  background: var(--line-strong);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.timeline-ruler-mark {
+  position: absolute;
+  top: 5px;
+  width: 0;
+  height: 0;
+  transform: translateX(-6px);
+  border-right: 6px solid transparent;
+  border-left: 6px solid transparent;
+  border-top: 10px solid #c07a2a;
+  pointer-events: none;
+}
+
+.timeline-ruler-mark.is-document-change {
+  border-top-color: #b44747;
+}
+
+.timeline-ruler-mark.is-runtime-change {
+  border-top-color: #9b7a2d;
+}
+
+.timeline-ruler-mark.is-safety-resync {
+  border-top-color: #4775b4;
+}
+
+.timeline-ruler-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: ew-resize;
+}
+
+.timeline-ruler-second-labels {
+  position: relative;
+  min-height: 14px;
+  color: var(--text-2);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.timeline-ruler-second-label {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.timeline-empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  color: var(--text-1);
+}
+
+.timeline-confirm-dialog {
+  width: min(420px, 100%);
+  height: auto;
+  min-height: 0;
+}
+
+.timeline-confirm-dialog-body {
+  padding: 14px;
+}
+
+.timeline-confirm-content {
+  display: grid;
+  gap: 10px;
+}
+
+.timeline-confirm-content p {
+  margin: 0;
+  color: var(--text-0);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.timeline-confirm-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-1);
+  font-size: 0.82rem;
+}
+
+.timeline-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.timeline-confirm-actions button {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-0);
+}
+
 .toolbox-bottom-dock {
   position: relative;
   grid-area: toolbox-bottom;
@@ -436,6 +641,90 @@
   overflow: hidden;
   border-top: 1px solid var(--line);
   border-right: 1px solid var(--line);
+}
+
+.timeline-bottom-dock {
+  position: relative;
+  grid-area: toolbox-bottom;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+}
+
+.timeline-bottom-dock.is-collapsed {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.timeline-bottom-dock-resize-handle {
+  position: absolute;
+  inset: -4px 0 auto;
+  z-index: 2;
+  height: 8px;
+  cursor: row-resize;
+}
+
+.timeline-bottom-dock-resize-handle::before {
+  content: "";
+  position: absolute;
+  inset: 3px 0 auto;
+  height: 1px;
+  background: var(--transparent);
+  transition: background-color 120ms ease;
+}
+
+.timeline-bottom-dock-resize-handle:hover::before {
+  background: var(--dock-resize-hover);
+}
+
+:global(body.is-resizing-timeline-bottom-dock),
+:global(body.is-resizing-timeline-bottom-dock *) {
+  cursor: row-resize !important;
+  user-select: none;
+}
+
+.timeline-bottom-dock-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
+}
+
+.timeline-bottom-dock-title {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.timeline-bottom-dock-title h2 {
+  margin: 0;
+  color: var(--text-0);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.timeline-bottom-dock-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.timeline-bottom-dock-body {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px 12px 12px;
 }
 
 .toolbox-bottom-dock.is-collapsed {
@@ -561,8 +850,10 @@
 
 .help-dialog button:focus-visible,
 .toolbox-dialog button:focus-visible,
+.timeline-dialog button:focus-visible,
 .debug-log-dialog button:focus-visible,
 .toolbox-dialog input:focus-visible,
+.timeline-dialog input:focus-visible,
 .toolbox-dialog select:focus-visible,
 .debug-log-dialog textarea:focus-visible {
   outline: 2px solid var(--highlight-ring);

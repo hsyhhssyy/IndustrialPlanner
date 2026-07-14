@@ -2,6 +2,7 @@ import type {
   CompiledSimulationTopology,
   SimulationPerfReport,
   SimulationRuntimeStatus,
+  SimulationRuntimeExport,
   SimulationStartResult,
   SimulationTopologyMigration,
   SimulationTickSnapshotResult,
@@ -54,6 +55,16 @@ export type SimulationWorkerRequest =
       readonly type: "set-power-consumption-override";
       readonly requestId: number;
       readonly powerConsumptionOverride: number | undefined;
+    }
+  | {
+      readonly type: "export-runtime-state";
+      readonly requestId: number;
+      readonly tickNumber?: number;
+    }
+  | {
+      readonly type: "import-runtime-state";
+      readonly requestId: number;
+      readonly runtimeExport: SimulationRuntimeExport;
     };
 
 export type SimulationWorkerResponse =
@@ -98,6 +109,18 @@ export type SimulationWorkerResponse =
   | {
       readonly type: "power-consumption-override-set";
       readonly requestId: number;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "runtime-state-exported";
+      readonly requestId: number;
+      readonly runtimeExport: SimulationRuntimeExport | null;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "runtime-state-imported";
+      readonly requestId: number;
+      readonly result: SimulationTickSnapshotResult;
       readonly status: SimulationRuntimeStatus;
     };
 

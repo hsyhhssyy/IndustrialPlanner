@@ -22,6 +22,7 @@ import {
   DEFAULT_MODULE_BALANCING_CANVAS_ID,
   DEFAULT_MODULE_BALANCING_STAGE_ID,
   DEFAULT_RIGHT_DOCK_TAB_ID,
+  DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TOOLBOX_DIALOG_TAB_ID,
   MOBILE_LEFT_DOCK_WIDTH,
@@ -132,6 +133,7 @@ function createWorkbenchStorageSnapshot(options: {
   rightDockActiveTab?: "selection";
   quickPlaceFavoriteEntityIds?: Array<string | null>;
   toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  timelineDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
   inspectorDialog?: ReturnType<typeof createDialogStateSnapshot>;
@@ -141,6 +143,9 @@ function createWorkbenchStorageSnapshot(options: {
   toolboxDockPreference?: "floating" | "bottom";
   toolboxBottomDockCollapsed?: boolean;
   toolboxBottomDockHeight?: number;
+  timelineDockPreference?: "floating" | "bottom";
+  timelineBottomDockCollapsed?: boolean;
+  timelineBottomDockHeight?: number;
   toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
   moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
 } = {}) {
@@ -154,6 +159,7 @@ function createWorkbenchStorageSnapshot(options: {
     quickPlaceFavoriteEntityIds: options.quickPlaceFavoriteEntityIds ?? [],
     dialogState: {
       toolbox: options.toolboxDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID }),
+      timeline: options.timelineDialog ?? createDialogStateSnapshot(),
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
       inspector: options.inspectorDialog ?? createDialogStateSnapshot(),
@@ -169,6 +175,9 @@ function createWorkbenchStorageSnapshot(options: {
       wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),
       moduleBalancing: options.moduleBalancing ?? createModuleBalancingStorageSnapshot(),
     },
+    timelineDockPreference: options.timelineDockPreference ?? "floating",
+    timelineBottomDockCollapsed: options.timelineBottomDockCollapsed ?? false,
+    timelineBottomDockHeight: options.timelineBottomDockHeight ?? DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT,
   };
 }
 

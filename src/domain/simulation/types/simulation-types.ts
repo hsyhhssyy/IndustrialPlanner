@@ -21,6 +21,25 @@ export interface SimulationState{
   readonly statistics: SimulationRuntimeStatistics;
   /** Worker 缓存中当前保留的 tick 快照数 */
   readonly bufferSize: number;
+  readonly timeline: SimulationTimelineState;
+}
+
+export interface SimulationTimelineMark {
+  readonly id: string;
+  readonly tickNumber: number;
+  readonly kind: "document-change" | "runtime-change" | "safety-resync";
+}
+
+export interface SimulationTimelineState {
+  readonly enabled: boolean;
+  readonly tickDurationSeconds: number;
+  readonly rulerDurationSeconds: number;
+  readonly windowStartTickNumber: number;
+  readonly cursorTickNumber: number;
+  readonly availableFromTickNumber: number;
+  readonly availableToTickNumber: number;
+  readonly marks: readonly SimulationTimelineMark[];
+  readonly isSeeking: boolean;
 }
 
 export interface SimulationDeviceRuntimeChannelRecipeStatus {

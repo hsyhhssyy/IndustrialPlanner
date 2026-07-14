@@ -37,6 +37,7 @@ interface DialogShellProps {
   headerActions?: ReactNode;
   immersiveMaximized?: boolean;
   showMaximizeButton?: boolean;
+  modal?: boolean;
   onClose: () => void;
   onToggleMaximized: () => void;
   onTabChange?: (tabId: string) => void;
@@ -62,6 +63,7 @@ export const DialogShell = observer(function DialogShell({
   headerActions,
   immersiveMaximized = false,
   showMaximizeButton = true,
+  modal = true,
   onClose,
   onToggleMaximized,
   onTabChange,
@@ -166,6 +168,7 @@ export const DialogShell = observer(function DialogShell({
     "dialog-shell-backdrop",
     `${classPrefix}-backdrop`,
     immersiveMaximized ? "is-immersive-maximized" : "",
+    modal ? "" : "is-non-modal",
   ].filter(Boolean).join(" ");
   const headerClassName = [
     "dialog-shell-header",
@@ -316,6 +319,10 @@ export const DialogShell = observer(function DialogShell({
     <div
       className={cm(styles, backdropClassName)}
       onMouseDown={(event) => {
+        if (!modal) {
+          return;
+        }
+
         if (event.target !== event.currentTarget) {
           return;
         }
@@ -326,7 +333,7 @@ export const DialogShell = observer(function DialogShell({
     >
       <section
         aria-labelledby={titleId}
-        aria-modal="true"
+        aria-modal={modal}
         className={cm(styles, shellClassName)}
         data-dialog-key={dialogKey}
         ref={shellRef}

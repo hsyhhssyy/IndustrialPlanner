@@ -23,24 +23,36 @@ import {
 import { createSimulationTopologyMigration } from "./topology-migration";
 import {
   createInitialSimulationRuntimeStatus,
+  createInitialSimulationTimelineState,
   type SimulationStateReadWrite,
 } from "./state-impl";
 import {
   DEFAULT_SIMULATION_SPEED,
   STANDARD_TICK_RATE_PER_SECOND,
 } from "./tick-rate";
-
-/** TPS 统计的累积窗口，毫秒 */
-const TPS_WINDOW_MS = 1000;
 import type {
   CompiledSimulationTopology,
   SimulationStartResult,
   SimulationTickPullStatus,
   SimulationTopologyMigration,
+  SimulationRuntimeExport,
   TickPerfHotPathDetails,
   TickPerfStage3Details,
 } from "./types";
 import type { SimulationWorkerResponse } from "./worker-protocol";
+import type {
+  TimelineWorkerResponse,
+  TimelineWorkerStatus,
+} from "./timeline-worker-protocol";
+
+/** TPS 统计的累积窗口，毫秒 */
+const TPS_WINDOW_MS = 1000;
+const TIMELINE_TICK_DURATION_SECONDS = 0.5;
+const TIMELINE_STEP_STANDARD_TICKS = STANDARD_TICK_RATE_PER_SECOND * TIMELINE_TICK_DURATION_SECONDS;
+const TIMELINE_RULER_DURATION_SECONDS = 300;
+const TIMELINE_CAPACITY_TICKS = TIMELINE_RULER_DURATION_SECONDS / TIMELINE_TICK_DURATION_SECONDS;
+const TIMELINE_STATUS_POLL_MS = 250;
+const TIMELINE_EXPORT_LOOKBACK_STEPS = 18;
 
 export interface SimulationWorkerBridge {
   loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number): Promise<Extract<
@@ -75,6 +87,28 @@ export interface SimulationWorkerBridge {
     SimulationWorkerResponse,
     { readonly type: "perf-report" }
   >>;
+  exportRuntimeState(tickNumber?: number): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "runtime-state-exported" }
+  >>;
+  importRuntimeState(runtimeExport: SimulationRuntimeExport): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "runtime-state-imported" }
+  >>;
+  dispose(): void;
+}
+
+export interface TimelineWorkerBridge {
+  loadTimeline(options: {
+    runtimeExport: SimulationRuntimeExport;
+    startTimelineTickNumber: number;
+    retainedFromTimelineTickNumber?: number;
+    capacityTimelineTicks: number;
+    stepStandardTicks: number;
+  }): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-loaded" }>>;
+  getTimelineStatus(): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-status" }>>;
+  getTimelineCheckpoint(timelineTickNumber: number): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-checkpoint-result" }>>;
+  stopTimeline(): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-stopped" }>>;
   dispose(): void;
 }
 
@@ -90,8 +124,23 @@ interface SimulationActionImplOptions {
   state: SimulationStateReadWrite;
   topology: SnapshotStoreReadWrite<CompiledSimulationTopology | null>;
   bridge: SimulationWorkerBridge;
+  createTimelineBridge?: () => TimelineWorkerBridge;
   getPerfEnabled?: () => boolean;
   getActiveActivityIds?: () => readonly string[];
+}
+
+interface TimelineCheckpointMetadata {
+  readonly document: WorldDocument;
+  readonly activitySignature: string;
+}
+
+interface TimelineRebaseRange {
+  readonly retainedFromTimelineTickNumber: number;
+  readonly targetTimelineTickNumber: number;
+}
+
+function createMissingTimelineWorkerBridge(): TimelineWorkerBridge {
+  throw new Error("Timeline worker bridge is not configured.");
 }
 
 export class SimulationActionImpl
@@ -100,6 +149,7 @@ implements SimulationAction, SimulationInternalAction {
   private readonly stateReadWrite: SimulationStateReadWrite;
   private readonly topology: SnapshotStoreReadWrite<CompiledSimulationTopology | null>;
   private readonly bridge: SimulationWorkerBridge;
+  private readonly createTimelineBridge: () => TimelineWorkerBridge;
   private readonly getPerfEnabled: (() => boolean) | undefined;
   private readonly getActiveActivityIds: (() => readonly string[]) | undefined;
   private compiledDocument: WorldDocument | null = null;
@@ -108,6 +158,14 @@ implements SimulationAction, SimulationInternalAction {
   private tpsAccumulatedMs = 0;
   private nextPerfReportTick = 180;
   private playbackTickRequestInFlight = false;
+  private timelineBridge: TimelineWorkerBridge | null = null;
+  private timelineStatusTimerId: ReturnType<typeof setInterval> | null = null;
+  private timelineSeekSerial = 0;
+  private timelineSeekImportPromise: Promise<unknown> | null = null;
+  private timelineRestartInFlight = false;
+  private timelineMarkSerial = 1;
+  private lastTimelineSafetySyncStandardTick: number | null = null;
+  private readonly timelineCheckpointMetadataByTickNumber = new Map<number, TimelineCheckpointMetadata>();
 
   // === 诊断计数器：10 秒输出一次 ===
   private diagFrameCount = 0;
@@ -126,6 +184,7 @@ implements SimulationAction, SimulationInternalAction {
     this.stateReadWrite = options.state;
     this.topology = options.topology;
     this.bridge = options.bridge;
+    this.createTimelineBridge = options.createTimelineBridge ?? createMissingTimelineWorkerBridge;
     this.getPerfEnabled = options.getPerfEnabled;
     this.getActiveActivityIds = options.getActiveActivityIds;
   }
@@ -209,6 +268,7 @@ implements SimulationAction, SimulationInternalAction {
     // playbackTickRequestInFlight 仅阻止并发请求，不冻结动画。
     runInAction(() => {
       this.stateReadWrite.currentPlaybackTickNumber += tickDelta;
+      this.syncTimelineCursorFromPlayback();
     });
 
     const previousIntegerTickNumber = Math.trunc(previousPlaybackTickNumber);
@@ -332,6 +392,10 @@ implements SimulationAction, SimulationInternalAction {
       activeActivityIds,
     });
     const previousDocument = this.compiledDocument;
+    const shouldMarkTimelineDocumentChange =
+      this.stateReadWrite.timeline.enabled
+      && previousDocument !== null
+      && previousTopology !== null;
     const baseTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber ?? 0;
     const playbackTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
     const migration = createSimulationTopologyMigration({
@@ -365,6 +429,11 @@ implements SimulationAction, SimulationInternalAction {
       }
     }
 
+    if (shouldMarkTimelineDocumentChange) {
+      this.addTimelineMark("document-change");
+      await this.restartTimelineFromCurrentSimulation();
+    }
+
     return response.result;
   };
 
@@ -392,6 +461,9 @@ implements SimulationAction, SimulationInternalAction {
     if (status.status === "not-found") {
       await this.recoverPlaybackFromUnavailableTick(status, targetTickNumber);
     }
+
+    this.addTimelineMark("runtime-change");
+    await this.restartTimelineFromCurrentSimulation();
   };
 
   public readonly resetAdmissionCounter: SimulationAction["resetAdmissionCounter"] = async (reset) => {
@@ -408,6 +480,109 @@ implements SimulationAction, SimulationInternalAction {
     const status = await this.syncToTick(targetTickNumber);
     if (status.status === "not-found") {
       await this.recoverPlaybackFromUnavailableTick(status, targetTickNumber);
+    }
+
+    this.addTimelineMark("runtime-change");
+    await this.restartTimelineFromCurrentSimulation();
+  };
+
+  public readonly enableTimeline: SimulationAction["enableTimeline"] = async () => {
+    runInAction(() => {
+      this.stateReadWrite.timeline.enabled = true;
+      this.stateReadWrite.timeline.tickDurationSeconds = TIMELINE_TICK_DURATION_SECONDS;
+      this.stateReadWrite.timeline.rulerDurationSeconds = TIMELINE_RULER_DURATION_SECONDS;
+      this.stateReadWrite.timeline.isSeeking = false;
+      this.syncTimelineCursorFromPlayback();
+    });
+
+    if (!this.stateReadWrite.hasStarted) {
+      await this.start();
+    }
+
+    await this.restartTimelineFromCurrentSimulation();
+    this.startTimelineStatusPolling();
+  };
+
+  public readonly disableTimeline: SimulationAction["disableTimeline"] = action(() => {
+    this.stopTimelineWorker();
+    Object.assign(this.stateReadWrite.timeline, createInitialSimulationTimelineState());
+  });
+
+  public readonly seekTimelineToTick: SimulationAction["seekTimelineToTick"] = async (timelineTickNumber) => {
+    if (!this.stateReadWrite.timeline.enabled) {
+      return false;
+    }
+
+    const bridge = this.timelineBridge;
+    if (bridge === null) {
+      return false;
+    }
+
+    const targetTimelineTickNumber = Math.max(0, Math.trunc(timelineTickNumber));
+    const serial = ++this.timelineSeekSerial;
+    runInAction(() => {
+      this.stateReadWrite.timeline.isSeeking = true;
+    });
+
+    try {
+      const checkpoint = await bridge.getTimelineCheckpoint(targetTimelineTickNumber);
+      const runtimeExport = checkpoint.runtimeExport;
+      if (serial !== this.timelineSeekSerial || runtimeExport === null) {
+        return false;
+      }
+
+      const checkpointMetadata = this.resolveTimelineCheckpointMetadata(
+        targetTimelineTickNumber,
+        runtimeExport,
+      );
+      const crossesTimelineMark = this.stateReadWrite.timeline.marks.some((mark) =>
+        mark.tickNumber > targetTimelineTickNumber,
+      );
+      const imported = await this.importTimelineRuntimeStateForSeek(serial, runtimeExport);
+      if (serial !== this.timelineSeekSerial || imported === null) {
+        return false;
+      }
+
+      this.topology.setSnapshot(runtimeExport.topology);
+      if (checkpointMetadata === null) {
+        this.compiledDocument = null;
+        this.compiledActivitySignature = null;
+      } else {
+        this.compiledDocument = cloneWorldDocument(checkpointMetadata.document);
+        this.compiledActivitySignature = checkpointMetadata.activitySignature;
+      }
+      runInAction(() => {
+        this.stateReadWrite.runtimeStatus = imported.status;
+        if (imported.result.status.status === "ready") {
+          this.stateReadWrite.currentSnapshot = imported.result.currentTick;
+          this.stateReadWrite.currentPlaybackTickNumber =
+            imported.result.currentTick?.tickNumber ?? runtimeExport.snapshot.tickNumber;
+          this.stateReadWrite.timeline.cursorTickNumber = targetTimelineTickNumber;
+          this.updateTimelineWindowForCursor(targetTimelineTickNumber);
+          if (crossesTimelineMark) {
+            this.stateReadWrite.timeline.marks = this.stateReadWrite.timeline.marks.filter((mark) =>
+              mark.tickNumber <= targetTimelineTickNumber,
+            );
+            this.stateReadWrite.timeline.availableToTickNumber = Math.min(
+              this.stateReadWrite.timeline.availableToTickNumber,
+              targetTimelineTickNumber,
+            );
+          }
+        }
+      });
+
+      const ready = imported.result.status.status === "ready";
+      if (ready && crossesTimelineMark) {
+        await this.restartTimelineFromCurrentSimulation();
+      }
+
+      return ready;
+    } finally {
+      if (serial === this.timelineSeekSerial) {
+        runInAction(() => {
+          this.stateReadWrite.timeline.isSeeking = false;
+        });
+      }
     }
   };
 
@@ -442,12 +617,17 @@ implements SimulationAction, SimulationInternalAction {
         if (playbackTickNumberOnReady !== undefined) {
           this.stateReadWrite.currentPlaybackTickNumber = playbackTickNumberOnReady;
         }
+        this.syncTimelineCursorFromPlayback();
       }
     });
 
     // Perf 轮询：每 180 tick 阈值追赶
     if (response.result.status.status === "ready" && this.getPerfEnabled?.()) {
       this.pollPerfReport(tickNumber);
+    }
+
+    if (response.result.status.status === "ready") {
+      void this.checkTimelineSafetySync(tickNumber);
     }
 
     return response.result.status;
@@ -475,7 +655,349 @@ implements SimulationAction, SimulationInternalAction {
     }
   }
 
+  private async restartTimelineFromCurrentSimulation(): Promise<void> {
+    if (!this.stateReadWrite.timeline.enabled || this.timelineRestartInFlight) {
+      return;
+    }
+
+    this.timelineRestartInFlight = true;
+    try {
+      const currentStandardTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber
+        ?? Math.trunc(this.stateReadWrite.currentPlaybackTickNumber);
+      const startTimelineTickNumber = Math.max(
+        0,
+        Math.floor(currentStandardTickNumber / TIMELINE_STEP_STANDARD_TICKS),
+      );
+      const exported = await this.exportLatestAlignedTimelineRuntimeState(startTimelineTickNumber);
+      if (exported === null || !this.stateReadWrite.timeline.enabled) {
+        return;
+      }
+
+      const shouldPreserveExistingCheckpoints = this.timelineBridge !== null;
+      const rebaseRange = this.resolveTimelineRebaseRange(
+        exported.startTimelineTickNumber,
+        shouldPreserveExistingCheckpoints,
+      );
+      const bridge = this.timelineBridge ?? this.createTimelineBridge();
+      this.timelineBridge = bridge;
+      const loaded = await bridge.loadTimeline({
+        runtimeExport: exported.response.runtimeExport,
+        startTimelineTickNumber: exported.startTimelineTickNumber,
+        retainedFromTimelineTickNumber: rebaseRange.retainedFromTimelineTickNumber,
+        capacityTimelineTicks: TIMELINE_CAPACITY_TICKS,
+        stepStandardTicks: TIMELINE_STEP_STANDARD_TICKS,
+      });
+      if (!this.stateReadWrite.timeline.enabled) {
+        return;
+      }
+
+      this.rebaseTimelineCheckpointMetadata({
+        startTimelineTickNumber: exported.startTimelineTickNumber,
+        retainedFromTimelineTickNumber: rebaseRange.retainedFromTimelineTickNumber,
+        targetTimelineTickNumber: rebaseRange.targetTimelineTickNumber,
+      });
+      runInAction(() => {
+        this.applyTimelineStatus(loaded.status);
+        this.syncTimelineCursorFromPlayback();
+      });
+    } finally {
+      this.timelineRestartInFlight = false;
+    }
+  }
+
+  private resolveTimelineRebaseRange(
+    startTimelineTickNumber: number,
+    shouldPreserveExistingCheckpoints: boolean,
+  ): TimelineRebaseRange {
+    const startTickNumber = Math.max(0, Math.trunc(startTimelineTickNumber));
+    let retainedFromTickNumber = shouldPreserveExistingCheckpoints
+      ? Math.max(0, Math.floor(this.stateReadWrite.timeline.windowStartTickNumber))
+      : startTickNumber;
+    retainedFromTickNumber = Math.min(retainedFromTickNumber, startTickNumber);
+
+    let targetTimelineTickNumber = retainedFromTickNumber + TIMELINE_CAPACITY_TICKS - 1;
+    if (targetTimelineTickNumber < startTickNumber) {
+      targetTimelineTickNumber = startTickNumber;
+      retainedFromTickNumber = Math.max(0, targetTimelineTickNumber - TIMELINE_CAPACITY_TICKS + 1);
+    }
+
+    return {
+      retainedFromTimelineTickNumber: retainedFromTickNumber,
+      targetTimelineTickNumber,
+    };
+  }
+
+  private rebaseTimelineCheckpointMetadata(options: {
+    readonly startTimelineTickNumber: number;
+    readonly retainedFromTimelineTickNumber: number;
+    readonly targetTimelineTickNumber: number;
+  }): void {
+    for (const timelineTickNumber of this.timelineCheckpointMetadataByTickNumber.keys()) {
+      if (
+        timelineTickNumber < options.retainedFromTimelineTickNumber
+        || timelineTickNumber > options.startTimelineTickNumber
+      ) {
+        this.timelineCheckpointMetadataByTickNumber.delete(timelineTickNumber);
+      }
+    }
+
+    if (this.compiledDocument === null || this.compiledActivitySignature === null) {
+      return;
+    }
+
+    const metadata: TimelineCheckpointMetadata = {
+      document: cloneWorldDocument(this.compiledDocument),
+      activitySignature: this.compiledActivitySignature,
+    };
+    for (
+      let timelineTickNumber = options.startTimelineTickNumber;
+      timelineTickNumber <= options.targetTimelineTickNumber;
+      timelineTickNumber += 1
+    ) {
+      this.timelineCheckpointMetadataByTickNumber.set(timelineTickNumber, metadata);
+    }
+  }
+
+  private async exportLatestAlignedTimelineRuntimeState(
+    startTimelineTickNumber: number,
+  ): Promise<{
+    readonly startTimelineTickNumber: number;
+    readonly response: Extract<SimulationWorkerResponse, { readonly type: "runtime-state-exported" }> & {
+      readonly runtimeExport: SimulationRuntimeExport;
+    };
+  } | null> {
+    let candidateTimelineTickNumber = startTimelineTickNumber;
+    const visitedTimelineTickNumbers = new Set<number>();
+    for (
+      let attempt = 0;
+      attempt <= TIMELINE_EXPORT_LOOKBACK_STEPS && candidateTimelineTickNumber >= 0;
+      attempt += 1
+    ) {
+      visitedTimelineTickNumbers.add(candidateTimelineTickNumber);
+      const exportTickNumber = candidateTimelineTickNumber * TIMELINE_STEP_STANDARD_TICKS;
+      const exported = await this.bridge.exportRuntimeState(exportTickNumber);
+      if (exported.runtimeExport !== null) {
+        return {
+          startTimelineTickNumber: candidateTimelineTickNumber,
+          response: exported as typeof exported & { readonly runtimeExport: SimulationRuntimeExport },
+        };
+      }
+
+      const latestTickNumber = exported.status.latestTickNumber;
+      const retainedFromTick = exported.status.retainedFromTick;
+      let nextCandidateTimelineTickNumber = candidateTimelineTickNumber - 1;
+      if (retainedFromTick !== null && retainedFromTick > exportTickNumber) {
+        nextCandidateTimelineTickNumber = Math.ceil(retainedFromTick / TIMELINE_STEP_STANDARD_TICKS);
+      }
+      if (latestTickNumber !== null && latestTickNumber < exportTickNumber) {
+        nextCandidateTimelineTickNumber = Math.min(
+          candidateTimelineTickNumber - 1,
+          Math.floor(latestTickNumber / TIMELINE_STEP_STANDARD_TICKS),
+        );
+      }
+
+      if (visitedTimelineTickNumbers.has(nextCandidateTimelineTickNumber)) {
+        nextCandidateTimelineTickNumber = candidateTimelineTickNumber - 1;
+      }
+      candidateTimelineTickNumber = nextCandidateTimelineTickNumber;
+    }
+
+    return null;
+  }
+
+  private async importTimelineRuntimeStateForSeek(
+    serial: number,
+    runtimeExport: SimulationRuntimeExport,
+  ): Promise<Extract<SimulationWorkerResponse, { readonly type: "runtime-state-imported" }> | null> {
+    const previousImport = this.timelineSeekImportPromise ?? Promise.resolve();
+    const importPromise = previousImport
+      .catch(() => undefined)
+      .then(async () => {
+        if (serial !== this.timelineSeekSerial) {
+          return null;
+        }
+
+        return this.bridge.importRuntimeState(runtimeExport);
+      });
+
+    const trackedPromise: Promise<Extract<SimulationWorkerResponse, { readonly type: "runtime-state-imported" }> | null> = importPromise.finally(() => {
+      if (this.timelineSeekImportPromise === trackedPromise) {
+        this.timelineSeekImportPromise = null;
+      }
+    });
+    this.timelineSeekImportPromise = trackedPromise;
+
+    return importPromise;
+  }
+
+  private resolveTimelineCheckpointMetadata(
+    timelineTickNumber: number,
+    runtimeExport: SimulationRuntimeExport,
+  ): TimelineCheckpointMetadata | null {
+    const metadata = this.timelineCheckpointMetadataByTickNumber.get(timelineTickNumber) ?? null;
+    if (metadata === null) {
+      return null;
+    }
+
+    if (createSimulationDocumentHash(metadata.document) !== runtimeExport.topology.documentHash) {
+      console.debug(
+        `[TimelineWorker] checkpoint document mismatch at timelineTick=${timelineTickNumber}`,
+      );
+      return null;
+    }
+
+    return metadata;
+  }
+
+  private startTimelineStatusPolling(): void {
+    if (this.timelineStatusTimerId !== null) {
+      return;
+    }
+
+    this.timelineStatusTimerId = setInterval(() => {
+      void this.refreshTimelineStatus();
+    }, TIMELINE_STATUS_POLL_MS);
+  }
+
+  private async refreshTimelineStatus(): Promise<void> {
+    if (!this.stateReadWrite.timeline.enabled) {
+      return;
+    }
+
+    const bridge = this.timelineBridge;
+    if (bridge === null) {
+      await this.restartTimelineFromCurrentSimulation();
+      return;
+    }
+
+    try {
+      const response = await bridge.getTimelineStatus();
+      runInAction(() => {
+        this.applyTimelineStatus(response.status);
+      });
+    } catch {
+      // timeline-worker 是辅助预测缓存，状态轮询失败不应影响正式仿真。
+    }
+  }
+
+  private applyTimelineStatus(status: TimelineWorkerStatus): void {
+    this.stateReadWrite.timeline.availableFromTickNumber =
+      status.availableFromTimelineTickNumber ?? this.stateReadWrite.timeline.cursorTickNumber;
+    this.stateReadWrite.timeline.availableToTickNumber =
+      status.availableToTimelineTickNumber ?? this.stateReadWrite.timeline.cursorTickNumber;
+  }
+
+  private addTimelineMark(kind: "document-change" | "runtime-change" | "safety-resync"): void {
+    if (!this.stateReadWrite.timeline.enabled) {
+      return;
+    }
+
+    const tickNumber = Math.max(
+      0,
+      Math.trunc(this.stateReadWrite.currentPlaybackTickNumber / TIMELINE_STEP_STANDARD_TICKS),
+    );
+    this.stateReadWrite.timeline.marks.push({
+      id: `timeline-mark:${this.timelineMarkSerial}`,
+      tickNumber,
+      kind,
+    });
+    this.timelineMarkSerial += 1;
+    this.stateReadWrite.timeline.availableToTickNumber = Math.min(
+      this.stateReadWrite.timeline.availableToTickNumber,
+      tickNumber,
+    );
+  }
+
+  private syncTimelineCursorFromPlayback(): void {
+    if (!this.stateReadWrite.timeline.enabled) {
+      return;
+    }
+
+    const cursorTickNumber = Math.max(
+      0,
+      this.stateReadWrite.currentPlaybackTickNumber / TIMELINE_STEP_STANDARD_TICKS,
+    );
+    this.stateReadWrite.timeline.cursorTickNumber = cursorTickNumber;
+    this.updateTimelineWindowForCursor(cursorTickNumber);
+  }
+
+  private async checkTimelineSafetySync(tickNumber: number): Promise<void> {
+    const timelineBridge = this.timelineBridge;
+    if (!this.stateReadWrite.timeline.enabled || timelineBridge === null) {
+      return;
+    }
+
+    const standardTickNumber = Math.max(0, Math.trunc(tickNumber));
+    const safetyIntervalTicks = STANDARD_TICK_RATE_PER_SECOND * 60;
+    if (
+      standardTickNumber === 0
+      || standardTickNumber % safetyIntervalTicks !== 0
+      || standardTickNumber % TIMELINE_STEP_STANDARD_TICKS !== 0
+      || this.lastTimelineSafetySyncStandardTick === standardTickNumber
+    ) {
+      return;
+    }
+
+    this.lastTimelineSafetySyncStandardTick = standardTickNumber;
+    const timelineTickNumber = standardTickNumber / TIMELINE_STEP_STANDARD_TICKS;
+    try {
+      const [officialExport, timelineCheckpoint] = await Promise.all([
+        this.bridge.exportRuntimeState(standardTickNumber),
+        timelineBridge.getTimelineCheckpoint(timelineTickNumber),
+      ]);
+      if (
+        officialExport.runtimeExport === null
+        || timelineCheckpoint.runtimeExport === null
+      ) {
+        return;
+      }
+
+      if (
+        JSON.stringify(officialExport.runtimeExport.snapshot)
+        === JSON.stringify(timelineCheckpoint.runtimeExport.snapshot)
+      ) {
+        return;
+      }
+
+      console.debug(
+        `[TimelineWorker] safety resync at standardTick=${standardTickNumber} timelineTick=${timelineTickNumber}`,
+      );
+      runInAction(() => {
+        this.addTimelineMark("safety-resync");
+      });
+      await this.restartTimelineFromCurrentSimulation();
+    } catch {
+      // 安全同步是兜底机制，失败时不影响正式 sim-worker 的播放。
+    }
+  }
+
+  private updateTimelineWindowForCursor(cursorTickNumber: number): void {
+    const halfWindowTicks = TIMELINE_CAPACITY_TICKS / 2;
+    const currentWindowStart = this.stateReadWrite.timeline.windowStartTickNumber;
+    if (cursorTickNumber > currentWindowStart + halfWindowTicks) {
+      this.stateReadWrite.timeline.windowStartTickNumber = cursorTickNumber - halfWindowTicks;
+      return;
+    }
+
+    if (cursorTickNumber < currentWindowStart) {
+      this.stateReadWrite.timeline.windowStartTickNumber = cursorTickNumber;
+    }
+  }
+
+  private stopTimelineWorker(): void {
+    if (this.timelineStatusTimerId !== null) {
+      clearInterval(this.timelineStatusTimerId);
+      this.timelineStatusTimerId = null;
+    }
+    this.timelineSeekSerial += 1;
+    this.lastTimelineSafetySyncStandardTick = null;
+    this.timelineCheckpointMetadataByTickNumber.clear();
+    this.timelineBridge?.dispose();
+    this.timelineBridge = null;
+  }
+
   private clearPlaybackProgress(): void {
+    this.stopTimelineWorker();
     this.topology.setSnapshot(null);
     this.compiledDocument = null;
     this.stateReadWrite.runningState = "stop";
@@ -488,6 +1010,7 @@ implements SimulationAction, SimulationInternalAction {
     this.tpsAccumulatedMs = 0;
     this.nextPerfReportTick = 180;
     this.playbackTickRequestInFlight = false;
+    Object.assign(this.stateReadWrite.timeline, createInitialSimulationTimelineState());
   }
 
   /** 累积 tick 和时间，每 TPS_WINDOW_MS 刷新一次 TPS 统计 */

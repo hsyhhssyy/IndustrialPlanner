@@ -12,6 +12,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
+import { createInitialSimulationTimelineState } from "@/simulation/state-impl";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -40,6 +41,7 @@ function attachSimulationStub(
     simulationSpeed: 1,
     statistics: { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 },
     bufferSize: 0,
+    timeline: createInitialSimulationTimelineState(),
   });
   const start = options.start ?? vi.fn(action(async () => {
     state.runningState = "start";
@@ -100,6 +102,9 @@ function attachSimulationStub(
       advancePlaybackByDeltaMs: vi.fn(async () => {}),
       patchRuntimeSlot: vi.fn(async () => {}),
       resetAdmissionCounter: vi.fn(async () => {}),
+      enableTimeline: vi.fn(async () => {}),
+      disableTimeline: vi.fn(),
+      seekTimelineToTick: vi.fn(async () => false),
     },
   } as NonNullable<WorkspaceContract["simulation"]>;
 
@@ -226,7 +231,7 @@ describe("TopBar", () => {
     expect(container.querySelector(".top-bar-layout-controls")).toBeNull();
     // AI-CORRECTION 2026-05-20: title 现在紧随版本标签 "(Dev)"，textContent 包含完整内容。
     expect(container.querySelector(".top-bar-title")?.textContent).toBe(appHost.actions.translate("app.title") + "(Dev)");
-    expect(container.querySelectorAll(".top-bar-controls .top-bar-icon-button")).toHaveLength(3);
+    expect(container.querySelectorAll(".top-bar-controls .top-bar-icon-button")).toHaveLength(4);
   });
 
   it("toggles fullscreen state through the top bar button", async () => {
@@ -431,6 +436,9 @@ describe("TopBar", () => {
     const simulationButton = container.querySelector(
       '[data-ui-button-id="top-bar-simulation-control"]',
     ) as HTMLButtonElement | null;
+    const timelineButton = container.querySelector(
+      '[data-ui-button-id="top-bar-timeline"]',
+    ) as HTMLButtonElement | null;
     const fullscreenButton = container.querySelector(
       ".top-bar-fullscreen-button",
     ) as HTMLButtonElement | null;
@@ -441,9 +449,10 @@ describe("TopBar", () => {
     expect(container.textContent).not.toContain("设备:");
     expect(container.textContent).not.toContain("屏幕:");
     expect(simulationButton).not.toBeNull();
+    expect(timelineButton).not.toBeNull();
     expect(fullscreenButton).not.toBeNull();
-    // 速度按钮组：5个速度 + 1个停止 + 主控 + 全屏 = 8
-    expect(container.querySelectorAll(".top-bar-controls button")).toHaveLength(8);
+    // 速度按钮组：5个速度 + 1个停止 + 主控 + 时间轴 + 全屏 = 9
+    expect(container.querySelectorAll(".top-bar-controls button")).toHaveLength(9);
     expect(container.querySelector(".top-bar-theme-button")).toBeNull();
   });
 
@@ -471,15 +480,19 @@ describe("TopBar", () => {
     const simulationButton = container.querySelector(
       '[data-ui-button-id="top-bar-simulation-control"]',
     ) as HTMLButtonElement | null;
+    const timelineButton = container.querySelector(
+      '[data-ui-button-id="top-bar-timeline"]',
+    ) as HTMLButtonElement | null;
     const collapseButton = container.querySelector(
       ".top-bar-collapse-button",
     ) as HTMLButtonElement | null;
 
     expect(simulationButton).not.toBeNull();
+    expect(timelineButton).not.toBeNull();
     expect(fullscreenButton).not.toBeNull();
     expect(collapseButton).not.toBeNull();
-    // 速度按钮组：5个速度 + 1个停止 + 主控 + 全屏 + 折叠 = 9
-    expect(container.querySelectorAll(".top-bar-controls button")).toHaveLength(9);
+    // 速度按钮组：5个速度 + 1个停止 + 主控 + 时间轴 + 全屏 + 折叠 = 10
+    expect(container.querySelectorAll(".top-bar-controls button")).toHaveLength(10);
     expect(container.querySelector(".top-bar-theme-button")).toBeNull();
     expect(collapseButton?.title).toBe("折叠 运行控制");
     expect(appHost.state.workbench.topBarCollapsed).toBe(false);

@@ -15,6 +15,7 @@ import {
 import {
   SimulationActionImpl,
   type SimulationInternalAction,
+  type TimelineWorkerBridge,
   type SimulationWorkerBridge,
 } from "./action-impl";
 import { convertSimulationTicksToSeconds } from "./tick-rate";
@@ -29,7 +30,13 @@ import type {
   SimulationWorkerResponse,
 } from "./worker-protocol";
 import type {
+  TimelineWorkerRequest,
+  TimelineWorkerResponse,
+} from "./timeline-worker-protocol";
+import { TimelineWorkerRuntime } from "./timeline-worker-runtime";
+import type {
   CompiledSimulationTopology,
+  SimulationRuntimeExport,
   RuntimeTickSnapshot,
   SimulationTopologyMigration,
 } from "./types";
@@ -63,6 +70,7 @@ export function createSimulationHost(
     state: internalState,
     topology: topologyStore,
     bridge,
+    createTimelineBridge: () => createTimelineWorkerBridge(options.workerMode ?? "auto"),
     getPerfEnabled: options.getPerfEnabled,
     getActiveActivityIds: options.getActiveActivityIds,
   });
@@ -435,6 +443,198 @@ function createSimulationWorkerBridge(workerMode: SimulationHostWorkerMode): Sim
   return new LocalSimulationWorkerBridge();
 }
 
+function createTimelineWorkerBridge(workerMode: SimulationHostWorkerMode): TimelineWorkerBridge {
+  if (workerMode === "auto" && typeof Worker === "function") {
+    return new BrowserTimelineWorkerBridge();
+  }
+
+  return new LocalTimelineWorkerBridge();
+}
+
+class BrowserTimelineWorkerBridge implements TimelineWorkerBridge {
+  private readonly worker: Worker;
+  private nextRequestId = 1;
+  private readonly pending = new Map<
+    number,
+    {
+      resolve: (response: TimelineWorkerResponse) => void;
+      reject: (error: Error) => void;
+    }
+  >();
+
+  public constructor() {
+    this.worker = new Worker(new URL("./timeline-worker.ts", import.meta.url), {
+      type: "module",
+    });
+    this.worker.addEventListener("message", (event: MessageEvent<TimelineWorkerResponse>) => {
+      const handlers = this.pending.get(event.data.requestId);
+      if (handlers === undefined) {
+        return;
+      }
+
+      this.pending.delete(event.data.requestId);
+      handlers.resolve(event.data);
+    });
+    this.worker.addEventListener("error", (event) => {
+      const message = event.message || "Unknown timeline worker error";
+      const error = new Error(`Timeline worker crashed: ${message}`);
+      for (const handlers of this.pending.values()) {
+        handlers.reject(error);
+      }
+      this.pending.clear();
+    });
+  }
+
+  public loadTimeline(options: Parameters<TimelineWorkerBridge["loadTimeline"]>[0]): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-loaded" }
+  >> {
+    return this.request({
+      type: "load-timeline",
+      requestId: this.createRequestId(),
+      ...options,
+    }, "timeline-loaded");
+  }
+
+  public getTimelineStatus(): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-status" }
+  >> {
+    return this.request({
+      type: "get-timeline-status",
+      requestId: this.createRequestId(),
+    }, "timeline-status");
+  }
+
+  public getTimelineCheckpoint(timelineTickNumber: number): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-checkpoint-result" }
+  >> {
+    return this.request({
+      type: "get-timeline-checkpoint",
+      requestId: this.createRequestId(),
+      timelineTickNumber,
+    }, "timeline-checkpoint-result");
+  }
+
+  public stopTimeline(): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-stopped" }
+  >> {
+    return this.request({
+      type: "stop-timeline",
+      requestId: this.createRequestId(),
+    }, "timeline-stopped");
+  }
+
+  public dispose(): void {
+    const error = new Error("Timeline worker disposed");
+    for (const handlers of this.pending.values()) {
+      handlers.reject(error);
+    }
+    this.pending.clear();
+    this.worker.terminate();
+  }
+
+  private request<TType extends TimelineWorkerResponse["type"]>(
+    request: TimelineWorkerRequest,
+    expectedType: TType,
+  ): Promise<Extract<TimelineWorkerResponse, { readonly type: TType }>> {
+    return new Promise((resolve, reject) => {
+      this.pending.set(request.requestId, {
+        resolve: (response) => {
+          if (response.type !== expectedType) {
+            reject(new Error(`Unexpected timeline worker response "${response.type}".`));
+            return;
+          }
+          resolve(response as Extract<TimelineWorkerResponse, { readonly type: TType }>);
+        },
+        reject,
+      });
+      this.worker.postMessage(request);
+    });
+  }
+
+  private createRequestId(): number {
+    const requestId = this.nextRequestId;
+    this.nextRequestId += 1;
+    return requestId;
+  }
+}
+
+class LocalTimelineWorkerBridge implements TimelineWorkerBridge {
+  private readonly runtime = new TimelineWorkerRuntime();
+  private nextRequestId = 1;
+
+  public loadTimeline(options: Parameters<TimelineWorkerBridge["loadTimeline"]>[0]): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-loaded" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "load-timeline",
+      requestId: this.createRequestId(),
+      ...options,
+    });
+    if (response.type !== "timeline-loaded") {
+      throw new Error(`Unexpected timeline worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public getTimelineStatus(): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-status" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "get-timeline-status",
+      requestId: this.createRequestId(),
+    });
+    if (response.type !== "timeline-status") {
+      throw new Error(`Unexpected timeline worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public getTimelineCheckpoint(timelineTickNumber: number): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-checkpoint-result" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "get-timeline-checkpoint",
+      requestId: this.createRequestId(),
+      timelineTickNumber,
+    });
+    if (response.type !== "timeline-checkpoint-result") {
+      throw new Error(`Unexpected timeline worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public stopTimeline(): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-stopped" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "stop-timeline",
+      requestId: this.createRequestId(),
+    });
+    if (response.type !== "timeline-stopped") {
+      throw new Error(`Unexpected timeline worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public dispose(): void {
+    this.runtime.stop();
+  }
+
+  private createRequestId(): number {
+    const requestId = this.nextRequestId;
+    this.nextRequestId += 1;
+    return requestId;
+  }
+}
+
 class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
   private readonly worker: Worker;
   private nextRequestId = 1;
@@ -546,6 +746,28 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
       type: "get-perf-report",
       requestId: this.createRequestId(),
     }, "perf-report");
+  }
+
+  public exportRuntimeState(tickNumber?: number): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "runtime-state-exported" }
+  >> {
+    return this.request({
+      type: "export-runtime-state",
+      requestId: this.createRequestId(),
+      tickNumber,
+    }, "runtime-state-exported");
+  }
+
+  public importRuntimeState(runtimeExport: SimulationRuntimeExport): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "runtime-state-imported" }
+  >> {
+    return this.request({
+      type: "import-runtime-state",
+      requestId: this.createRequestId(),
+      runtimeExport,
+    }, "runtime-state-imported");
   }
 
   public setPowerMode(powerMode: "real" | "infinite"): Promise<Extract<
@@ -712,6 +934,36 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       requestId: this.createRequestId(),
     });
     if (response.type !== "perf-report") {
+      throw new Error(`Unexpected simulation worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public exportRuntimeState(tickNumber?: number): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "runtime-state-exported" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "export-runtime-state",
+      requestId: this.createRequestId(),
+      tickNumber,
+    });
+    if (response.type !== "runtime-state-exported") {
+      throw new Error(`Unexpected simulation worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public importRuntimeState(runtimeExport: SimulationRuntimeExport): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "runtime-state-imported" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "import-runtime-state",
+      requestId: this.createRequestId(),
+      runtimeExport,
+    });
+    if (response.type !== "runtime-state-imported") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
     }
     return Promise.resolve(response);

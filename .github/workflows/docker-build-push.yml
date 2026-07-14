@@ -39,6 +39,8 @@ jobs:
           echo "window.__APP_VERSION__ = '${{ inputs.tag }}';" > public/version.js
 
       - name: Build V3
+        env:
+          VITE_APP_VERSION: ${{ inputs.tag }}
         run: npm run build
 
       - name: Diagnose V3 dist

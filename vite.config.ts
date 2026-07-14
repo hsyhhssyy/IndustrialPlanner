@@ -9,6 +9,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 const PWA_MAX_CACHE_FILE_BYTES = 50 * 1024 * 1024;
 const PWA_DIST_DIRECTORY = fileURLToPath(new URL("./dist/", import.meta.url));
+const APP_VERSION_CACHE_KEY = encodeURIComponent(process.env.VITE_APP_VERSION?.trim() || "dev");
 
 interface WorkboxManifestEntryWithSize {
   readonly integrity?: string;
@@ -52,6 +53,9 @@ function resolvePrecacheFilePath(entryUrl: string): string {
 
 export default defineConfig({
   base: "./",
+  define: {
+    "import.meta.env.VITE_APP_VERSION_CACHE_KEY": JSON.stringify(APP_VERSION_CACHE_KEY),
+  },
   build: {
     chunkSizeWarningLimit: 4096,
   },

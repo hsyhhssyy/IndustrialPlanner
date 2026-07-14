@@ -3,6 +3,7 @@ import type {
   CompiledSimulationTopology,
   RuntimeTickSnapshot,
   SimulationPerfReport,
+  SimulationRuntimeExport,
   SimulationTickPullStatus,
   SimulationTickSnapshotResult,
   SimulationRuntimeStatus,
@@ -132,6 +133,7 @@ export class SimulationWorkerRuntime {
   private simulationSpeed = DEFAULT_SIMULATION_SPEED;
   private dynamicTickRate = STANDARD_TICK_RATE_PER_SECOND;
   private standardStepTicks = 1;
+  private fixedDynamicTickRate: number | null = null;
   private lastRequestedTickNumber = 0;
   private lastDynamicRateAdjustmentTick: number | null = null;
   private powerMode: "real" | "infinite" = "infinite";
@@ -218,6 +220,20 @@ export class SimulationWorkerRuntime {
             requestId: request.requestId,
             status: this.getStatus(),
           };
+        case "export-runtime-state":
+          return {
+            type: "runtime-state-exported",
+            requestId: request.requestId,
+            runtimeExport: this.exportRuntimeState(request.tickNumber),
+            status: this.getStatus(),
+          };
+        case "import-runtime-state":
+          return {
+            type: "runtime-state-imported",
+            requestId: request.requestId,
+            result: this.importRuntimeState(request.runtimeExport),
+            status: this.getStatus(),
+          };
       }
     } catch (error) {
       this.mode = "error";
@@ -278,6 +294,23 @@ export class SimulationWorkerRuntime {
             requestId: request.requestId,
             status,
           };
+        case "export-runtime-state":
+          return {
+            type: "runtime-state-exported",
+            requestId: request.requestId,
+            runtimeExport: null,
+            status,
+          };
+        case "import-runtime-state":
+          return {
+            type: "runtime-state-imported",
+            requestId: request.requestId,
+            result: {
+              status: createNotFoundStatus(0, "missing-topology", null, null, 0),
+              currentTick: null,
+            },
+            status,
+          };
       }
     }
   }
@@ -294,6 +327,144 @@ export class SimulationWorkerRuntime {
       dynamicTickRate: this.topology === null ? null : this.dynamicTickRate,
       error: this.error,
     };
+  }
+
+  public exportRuntimeState(tickNumber?: number): SimulationRuntimeExport | null {
+    if (this.topology === null || this.runtimeState === null) {
+      return null;
+    }
+
+    const targetTickNumber = tickNumber === undefined
+      ? this.runtimeState.tickNumber
+      : Math.max(0, Math.trunc(tickNumber));
+    const runtimeState = this.tickRuntimeStates.get(targetTickNumber)
+      ?? (this.runtimeState.tickNumber === targetTickNumber ? this.runtimeState : null);
+
+    if (runtimeState === null) {
+      return null;
+    }
+
+    const snapshot = this.tickSnapshots.get(targetTickNumber)
+      ?? this.createSnapshotFromRuntimeState(runtimeState);
+
+    return {
+      topology: this.topology,
+      runtimeState: cloneSimulationMutableRuntimeState(runtimeState),
+      snapshot,
+      powerMode: this.powerMode,
+      powerConsumptionOverride: this.powerConsumptionOverride,
+    };
+  }
+
+  public importRuntimeState(
+    runtimeExport: SimulationRuntimeExport,
+    options: { readonly scheduleBackgroundFill?: boolean } = {},
+  ): SimulationTickSnapshotResult {
+    if (this.fillTimerId !== null) {
+      clearTimeout(this.fillTimerId);
+      this.fillTimerId = null;
+    }
+
+    this.topology = runtimeExport.topology;
+    this.runtimeState = cloneSimulationMutableRuntimeState(runtimeExport.runtimeState);
+    this.powerMode = runtimeExport.powerMode;
+    this.powerConsumptionOverride = runtimeExport.powerConsumptionOverride;
+    this.tickSnapshots.clear();
+    this.tickRuntimeStates.clear();
+
+    const tickNumber = this.runtimeState.tickNumber;
+    const snapshot = this.createSnapshotFromRuntimeState(this.runtimeState);
+    this.tickSnapshots.set(tickNumber, snapshot);
+    this.tickRuntimeStates.set(tickNumber, cloneSimulationMutableRuntimeState(this.runtimeState));
+    this.nextTickNumber = tickNumber + 1;
+    this.retainedFromTick = tickNumber;
+    this.latestTickNumber = tickNumber;
+    this.lastRequestedTickNumber = tickNumber;
+    this.dynamicTickRate = this.topology.standardTickRate;
+    this.standardStepTicks = 1;
+    this.fixedDynamicTickRate = null;
+    this.lastDynamicRateAdjustmentTick = null;
+    this.adjustDynamicTickRateAtLegalPoint(tickNumber);
+    this.mode = "running";
+    this.error = null;
+    this.stopLineTick = this.nextTickNumber + MAX_RETAINED_TICKS;
+    if (options.scheduleBackgroundFill !== false) {
+      this.scheduleBackgroundFill();
+    }
+
+    return {
+      status: {
+        status: "ready",
+        retainedFromTick: tickNumber,
+        latestTickNumber: tickNumber,
+        bufferSize: this.tickSnapshots.size,
+      },
+      currentTick: snapshot,
+    };
+  }
+
+  public setFixedDynamicTickRate(dynamicTickRate: number | null): void {
+    if (dynamicTickRate === null) {
+      this.fixedDynamicTickRate = null;
+      return;
+    }
+
+    if (this.topology === null || resolveStandardStepTicks(dynamicTickRate, this.topology.standardTickRate) === null) {
+      return;
+    }
+
+    this.fixedDynamicTickRate = dynamicTickRate;
+    this.setDynamicTickRate(dynamicTickRate);
+  }
+
+  public createSparseTickSnapshot(tickNumber: number): RuntimeTickSnapshot | null {
+    if (this.topology === null || this.runtimeState === null) {
+      return null;
+    }
+
+    const targetTickNumber = Math.max(this.runtimeState.tickNumber, Math.trunc(tickNumber));
+    try {
+      const snapshot = this.createNextTickSnapshot(targetTickNumber);
+      this.tickSnapshots.set(targetTickNumber, snapshot);
+      this.tickRuntimeStates.set(
+        targetTickNumber,
+        cloneSimulationMutableRuntimeState(this.runtimeState),
+      );
+      this.latestTickNumber = targetTickNumber;
+      this.retainedFromTick = Math.min(
+        this.retainedFromTick ?? targetTickNumber,
+        targetTickNumber,
+      );
+      this.nextTickNumber = targetTickNumber + 1;
+      return snapshot;
+    } catch (error) {
+      this.mode = "error";
+      this.error = error instanceof Error ? error.message : String(error);
+      this.onError?.(this.error, targetTickNumber);
+      return null;
+    }
+  }
+
+  private createSnapshotFromRuntimeState(
+    runtimeState: SimulationMutableRuntimeState,
+  ): RuntimeTickSnapshot {
+    if (this.topology === null) {
+      throw new Error("Simulation runtime is not initialized.");
+    }
+
+    const state = cloneSimulationMutableRuntimeState(runtimeState);
+    normalizeAdmissionMinuteCountersForCurrentWindow(this.topology, state);
+    state.transient = createEmptyTransientState();
+    buildSolveGraph(this.topology, state);
+    const currentPowerGeneration = computeCurrentPowerGeneration(this.topology, state);
+    const isPowerOutage = computeEffectivePowerState(
+      this.powerMode,
+      currentPowerGeneration,
+      this.effectiveTotalPowerDemand,
+      state.persistent.baseBatteryJoules,
+    );
+    state.transient.activeGasDiffusions = computeActiveGasDiffusions(this.topology, state);
+    return createTickSnapshot(this.topology, state, isPowerOutage, currentPowerGeneration);
   }
 
   private patchRuntimeSlot(patch: SimulationRuntimeSlotPatch): void {
@@ -950,6 +1121,11 @@ export class SimulationWorkerRuntime {
   }
 
   private adjustDynamicTickRateAtLegalPoint(standardTick: number): void {
+    if (this.fixedDynamicTickRate !== null) {
+      this.setDynamicTickRate(this.fixedDynamicTickRate);
+      return;
+    }
+
     if (this.topology === null || !canAdjustDynamicTickRateAtTick({ topology: this.topology, standardTick })) {
       return;
     }

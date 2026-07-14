@@ -84,6 +84,7 @@ type WorkbenchIconKind =
   | "history"
   | "base"
   | "simulation"
+  | "timeline"
   | "debug-log"
   | "save-blueprint"
   | "copy"
@@ -150,6 +151,7 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   history: LucideHistory,
   base: LucideBuilding2,
   simulation: LucideActivity,
+  timeline: LucideHistory,
   "debug-log": LucideHistory,
   "save-blueprint": LucideSave,
   copy: LucideCopy,

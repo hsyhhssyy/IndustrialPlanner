@@ -88,7 +88,7 @@
   </head>
   <body>
     <div id="root"></div>
-    <script src="%BASE_URL%version.js"></script>
+    <script vite-ignore src="%BASE_URL%version.js?v=%VITE_APP_VERSION_CACHE_KEY%"></script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       const hostname = location.hostname

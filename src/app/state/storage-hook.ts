@@ -20,12 +20,14 @@ import type {
 } from "./state-impl";
 import {
   clampLeftDockWidth,
+  clampTimelineBottomDockHeight,
   clampToolboxBottomDockHeight,
   createDefaultDialogStateForKey,
   createDefaultModuleBalancingState,
   createDefaultToolboxWikiOpenedPage,
   DIALOG_KEYS,
   isRightDockTabId,
+  isTimelineDockPreference,
   isToolboxDockPreference,
   isToolboxWikiDesktopCategory,
   isToolboxWikiMobileFilterOption,
@@ -224,6 +226,17 @@ function normalizePersistedWorkbenchState(
     ),
     dialogState: normalizePersistedDialogStateMap(persistedWorkbenchState, fallback.dialogState),
     toolbox: normalizePersistedToolboxState(persistedWorkbenchState, fallback.toolbox),
+    timelineDockPreference: isTimelineDockPreference(persistedWorkbenchState.timelineDockPreference)
+      ? persistedWorkbenchState.timelineDockPreference
+      : fallback.timelineDockPreference,
+    timelineBottomDockCollapsed: typeof persistedWorkbenchState.timelineBottomDockCollapsed === "boolean"
+      ? persistedWorkbenchState.timelineBottomDockCollapsed
+      : fallback.timelineBottomDockCollapsed,
+    timelineBottomDockHeight:
+      typeof persistedWorkbenchState.timelineBottomDockHeight === "number"
+      && Number.isFinite(persistedWorkbenchState.timelineBottomDockHeight)
+        ? clampTimelineBottomDockHeight(persistedWorkbenchState.timelineBottomDockHeight)
+        : fallback.timelineBottomDockHeight,
   };
 }
 
@@ -691,6 +704,11 @@ function normalizePersistedDialogStateMap(
       "toolbox",
       persistedDialogStateMap.toolbox,
       fallback.toolbox,
+    ),
+    timeline: normalizePersistedDialogState(
+      "timeline",
+      persistedDialogStateMap.timeline,
+      fallback.timeline,
     ),
     help: normalizePersistedDialogState(
       "help",

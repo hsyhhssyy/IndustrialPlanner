@@ -34,6 +34,11 @@ import {
   ToolboxDialog,
   resolveToolboxBottomDockGridHeight,
 } from "@/app/shell/dialogs/toolbox-dialog";
+import {
+  TimelineBottomDock,
+  TimelineDialog,
+  resolveTimelineBottomDockGridHeight,
+} from "@/app/shell/dialogs/timeline-dialog";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import { PwaController } from "@/app/pwa/pwa-controller";
 import { PwaGateway } from "@/app/pwa/pwa-gateway";
@@ -42,7 +47,7 @@ import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { V2MigrationController } from "@/app/migration";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
 import { RightDock } from "@/app/shell/layout/right-dock";
-import { SimulationControlButton, TopBar } from "@/app/shell/layout/top-bar";
+import { SimulationControlButton, TimelineButton, TopBar } from "@/app/shell/layout/top-bar";
 import { OverlayStackProvider } from "@/app/shell/shared/overlay-stack";
 import {
   preventMiddleMousePointerDownBrowserBehavior,
@@ -529,8 +534,15 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const canvasTopLeftCornerToolbar = appHost.internalState.runtime.canvasTopLeftCornerToolbar;
   const canvasTopLeftCornerToolbarKey = `${canvasTopLeftCornerToolbar.buttonIds.join("|")}::${canvasTopLeftCornerToolbar.initialOffButtonIds.join("|")}`;
   const inspectorDialogState = appHost.internalState.workbench.dialogState.inspector;
-  const toolboxBottomDockGridHeight = resolveToolboxBottomDockGridHeight(appHost);
+  const timelineBottomDockGridHeight = resolveTimelineBottomDockGridHeight(appHost);
+  const showTimelineBottomDock = timelineBottomDockGridHeight > 0;
+  const toolboxBottomDockGridHeight = showTimelineBottomDock
+    ? 0
+    : resolveToolboxBottomDockGridHeight(appHost);
   const showToolboxBottomDock = toolboxBottomDockGridHeight > 0;
+  const bottomDockGridHeight = showTimelineBottomDock
+    ? timelineBottomDockGridHeight
+    : toolboxBottomDockGridHeight;
   const selectionCount = appHost.workspace.editor?.state.collections.selection.length ?? 0;
   const openInspectorOnSecondClick = appHost.state.settings.hypergryphInspectorOpenOnSecondClick;
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
@@ -551,7 +563,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const previousScreenProfileRef = useRef(screenProfile);
   const prevUseInspectorPanelRef = useRef(useInspectorPanel);
   const hasVisibleDialogShell =
-    isAnyDialogShellVisible(appHost, { showToolboxBottomDock })
+    isAnyDialogShellVisible(appHost, { showTimelineBottomDock, showToolboxBottomDock })
     || migrationController.dialogState.visible;
   const effectiveCanvasTheme = resolveEffectiveCanvasTheme(
     appHost.state.theme,
@@ -831,7 +843,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     "--right-dock-width": showRightDock ? `${DEFAULT_RIGHT_DOCK_WIDTH}px` : "0px",
     "--top-bar-height": showFloatingTopBarControls ? "0px" : "48px",
     "--bottom-bar-height": showBottomStatusBar ? "28px" : "0px",
-    "--toolbox-bottom-dock-height": `${toolboxBottomDockGridHeight}px`,
+    "--toolbox-bottom-dock-height": `${bottomDockGridHeight}px`,
     "--canvas-bottom-obstruction-height": "calc(var(--bottom-bar-height, 28px) + var(--toolbox-bottom-dock-height, 0px))",
   } as CSSProperties;
 
@@ -849,6 +861,10 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         {showFloatingTopBarControls ? (
           <div className={cm(styles, "workbench-floating-top-bar-controls")}>
             <SimulationControlButton
+              appHost={appHost}
+              className={cm(styles, "workbench-floating-top-bar-button")}
+            />
+            <TimelineButton
               appHost={appHost}
               className={cm(styles, "workbench-floating-top-bar-button")}
             />
@@ -918,6 +934,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         ) : null}
         {showRightDock ? <RightDock appHost={appHost} /> : null}
         {showToolboxBottomDock ? <ToolboxBottomDock appHost={appHost} /> : null}
+        {showTimelineBottomDock ? <TimelineBottomDock appHost={appHost} /> : null}
         {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}
         {appHost.state.settings.debugMode ? <DebugLogDialog appHost={appHost} /> : null}
         <BaseSelectDialog appHost={appHost} />
@@ -926,6 +943,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         <InspectorDialog appHost={appHost} />
         <SaveBlueprintDialog appHost={appHost} />
         <ToolboxDialog appHost={appHost} />
+        <TimelineDialog appHost={appHost} />
         <WarehouseStatsDialog appHost={appHost} />
         <EncyclopediaPickerDialog appHost={appHost} />
         <RecipePickerDialog appHost={appHost} />
@@ -947,7 +965,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
 
 function isAnyDialogShellVisible(
   appHost: AppHost,
-  options: { showToolboxBottomDock: boolean },
+  options: { showTimelineBottomDock: boolean; showToolboxBottomDock: boolean },
 ): boolean {
   return Object.entries(appHost.internalState.workbench.dialogState).some(
     ([dialogKey, dialogState]) => {
@@ -956,6 +974,10 @@ function isAnyDialogShellVisible(
       }
 
       if (dialogKey === "toolbox" && options.showToolboxBottomDock) {
+        return false;
+      }
+
+      if (dialogKey === "timeline" && options.showTimelineBottomDock) {
         return false;
       }
 

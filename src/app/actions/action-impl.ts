@@ -24,6 +24,7 @@ import {
   type CanvasTopLeftCornerToolbarButtonId,
   type CanvasTopLeftCornerToolbarShowButtonId,
   clampLeftDockWidth,
+  clampTimelineBottomDockHeight,
   clampToolboxBottomDockHeight,
   createDefaultDialogStateForKey,
   DEFAULT_RIGHT_DOCK_WIDTH,
@@ -34,6 +35,7 @@ import {
   resolveLeftDockWidthForScreenProfile,
   TOOLBOX_DIALOG_TAB_IDS,
   type ActivePanel,
+  type TimelineDockPreference,
   type ToolboxDockPreference,
   type UiStateReadWrite,
 } from "../state/state-impl";
@@ -97,6 +99,9 @@ export interface AppInternalAction {
   setToolboxDockPreference: (preference: ToolboxDockPreference) => void;
   setToolboxBottomDockCollapsed: (collapsed: boolean) => void;
   setToolboxBottomDockHeight: (height: number) => void;
+  setTimelineDockPreference: (preference: TimelineDockPreference) => void;
+  setTimelineBottomDockCollapsed: (collapsed: boolean) => void;
+  setTimelineBottomDockHeight: (height: number) => void;
   setActivePanel: (panel: ActivePanel) => void;
   setActiveTool: (activeTool: ActiveTool) => void;
   showCanvasFloatingToolbar: (
@@ -270,6 +275,21 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
     if (target.dialogKey === "toolbox") {
       this.internalState.workbench.toolbox.bottomDockCollapsed = false;
+      if (this.internalState.workbench.toolbox.dockPreference === "bottom") {
+        this.internalState.workbench.dialogState.timeline.visible = false;
+        this.workspace.simulation?.actions.disableTimeline();
+      }
+    }
+
+    if (target.dialogKey === "timeline") {
+      this.internalState.workbench.timelineBottomDockCollapsed = false;
+      void this.workspace.simulation?.actions.enableTimeline();
+      if (
+        this.internalState.workbench.timelineDockPreference === "bottom"
+        || this.internalState.screenProfile.deviceClass === "mobile"
+      ) {
+        this.internalState.workbench.dialogState.toolbox.visible = false;
+      }
     }
 
     if (target.tabId !== null) {
@@ -291,6 +311,9 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     }
 
     this.ensureDialogState(normalizedDialogKey).visible = false;
+    if (normalizedDialogKey === "timeline") {
+      this.workspace.simulation?.actions.disableTimeline();
+    }
   });
 
   public readonly toggleDialogMaximized: AppInternalAction["toggleDialogMaximized"] = action((dialogKey) => {
@@ -402,6 +425,8 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
     if (preference === "bottom") {
       this.internalState.workbench.dialogState.toolbox.maximized = false;
+      this.internalState.workbench.dialogState.timeline.visible = false;
+      this.workspace.simulation?.actions.disableTimeline();
     }
   });
 
@@ -419,6 +444,36 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     }
 
     this.internalState.workbench.toolbox.bottomDockHeight = clampToolboxBottomDockHeight(height);
+  });
+
+  public readonly setTimelineDockPreference: AppInternalAction["setTimelineDockPreference"] = action((preference) => {
+    if (this.internalState.workbench.timelineDockPreference === preference) {
+      return;
+    }
+
+    this.internalState.workbench.timelineDockPreference = preference;
+    this.internalState.workbench.timelineBottomDockCollapsed = false;
+
+    if (preference === "bottom") {
+      this.internalState.workbench.dialogState.timeline.maximized = false;
+      this.internalState.workbench.dialogState.toolbox.visible = false;
+    }
+  });
+
+  public readonly setTimelineBottomDockCollapsed: AppInternalAction["setTimelineBottomDockCollapsed"] = action((collapsed) => {
+    if (this.internalState.workbench.timelineBottomDockCollapsed === collapsed) {
+      return;
+    }
+
+    this.internalState.workbench.timelineBottomDockCollapsed = collapsed;
+  });
+
+  public readonly setTimelineBottomDockHeight: AppInternalAction["setTimelineBottomDockHeight"] = action((height) => {
+    if (!Number.isFinite(height)) {
+      return;
+    }
+
+    this.internalState.workbench.timelineBottomDockHeight = clampTimelineBottomDockHeight(height);
   });
 
   public readonly setActivePanel: AppInternalAction["setActivePanel"] = action((panel) => {

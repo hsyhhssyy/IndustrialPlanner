@@ -2,6 +2,7 @@
 
 import {
   calculateTotalBytes as calculatePrecacheTotalBytes,
+  createRuntimePrecacheCacheUrl,
   hashPrecacheEntries as hashManifestPrecacheEntries,
   normalizePrecacheEntries,
   resolvePrecacheEntryByteSize,
@@ -491,7 +492,7 @@ async function resolvePrecachedResponse(request: Request): Promise<Response> {
   const isNavigation = request.mode === "navigate";
   const cacheUrl = isNavigation
     ? INDEX_CACHE_URL
-    : createCacheUrl(`${requestUrl.pathname}${requestUrl.search}`);
+    : createRuntimePrecacheCacheUrl(requestUrl, self.registration.scope);
 
   // AI-CORRECTION 2026-06-13:
   // 导航请求改用 network-first：先尝试网络获取最新 index.html，

@@ -104,6 +104,9 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   quickPlaceFavoriteEntityIds: Array<string | null>;
   dialogState: DialogStateMapReadWrite;
   toolbox: ToolboxStateReadWrite;
+  timelineDockPreference: TimelineDockPreference;
+  timelineBottomDockCollapsed: boolean;
+  timelineBottomDockHeight: number;
 }
 
 export interface ToolboxStateReadWrite extends ToolboxState {
@@ -218,6 +221,13 @@ export const MIN_TOOLBOX_BOTTOM_DOCK_HEIGHT = 220;
 export const DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT = 320;
 export const MAX_TOOLBOX_BOTTOM_DOCK_HEIGHT = 720;
 export const COLLAPSED_TOOLBOX_BOTTOM_DOCK_HEIGHT = 44;
+export const TIMELINE_DOCK_PREFERENCES = ["floating", "bottom"] as const;
+export type TimelineDockPreference = typeof TIMELINE_DOCK_PREFERENCES[number];
+export const DEFAULT_TIMELINE_DOCK_PREFERENCE: TimelineDockPreference = "floating";
+export const MIN_TIMELINE_BOTTOM_DOCK_HEIGHT = 112;
+export const DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT = 160;
+export const MAX_TIMELINE_BOTTOM_DOCK_HEIGHT = 360;
+export const COLLAPSED_TIMELINE_BOTTOM_DOCK_HEIGHT = 44;
 
 export function isToolboxDockPreference(value: unknown): value is ToolboxDockPreference {
   return typeof value === "string"
@@ -228,6 +238,18 @@ export function clampToolboxBottomDockHeight(height: number): number {
   return Math.min(
     MAX_TOOLBOX_BOTTOM_DOCK_HEIGHT,
     Math.max(MIN_TOOLBOX_BOTTOM_DOCK_HEIGHT, Math.round(height)),
+  );
+}
+
+export function isTimelineDockPreference(value: unknown): value is TimelineDockPreference {
+  return typeof value === "string"
+    && TIMELINE_DOCK_PREFERENCES.includes(value as TimelineDockPreference);
+}
+
+export function clampTimelineBottomDockHeight(height: number): number {
+  return Math.min(
+    MAX_TIMELINE_BOTTOM_DOCK_HEIGHT,
+    Math.max(MIN_TIMELINE_BOTTOM_DOCK_HEIGHT, Math.round(height)),
   );
 }
 
@@ -324,7 +346,7 @@ export function isRightDockTabId(value: unknown): value is RightDockTabId {
   return typeof value === "string" && RIGHT_DOCK_TAB_IDS.includes(value as RightDockTabId);
 }
 
-export const DIALOG_KEYS = ["toolbox", "help", "settings", "debug-log", "inspector", "save-blueprint", "base-select", "warehouse-stats", "feedback"] as const;
+export const DIALOG_KEYS = ["toolbox", "timeline", "help", "settings", "debug-log", "inspector", "save-blueprint", "base-select", "warehouse-stats", "feedback"] as const;
 export type DialogKey = typeof DIALOG_KEYS[number];
 
 export interface DialogStateReadWrite {
@@ -339,6 +361,7 @@ export interface DialogStateReadWrite {
 
 export interface DialogStateMapReadWrite extends Record<string, DialogStateReadWrite | undefined> {
   toolbox: DialogStateReadWrite;
+  timeline: DialogStateReadWrite;
   help: DialogStateReadWrite;
   settings: DialogStateReadWrite;
   "debug-log": DialogStateReadWrite | undefined;
@@ -486,6 +509,7 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   quickPlaceFavoriteEntityIds: Array<string | null> = [];
   dialogState: DialogStateMapReadWrite = {
     toolbox: createDefaultDialogStateForKey("toolbox"),
+    timeline: createDefaultDialogStateForKey("timeline"),
     help: createDefaultDialogStateForKey("help"),
     settings: createDefaultDialogStateForKey("settings"),
     "debug-log": undefined,
@@ -496,6 +520,9 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
     feedback: createDefaultDialogStateForKey("feedback"),
   };
   toolbox: ToolboxStateReadWrite = new ToolboxStateReadWriteImpl();
+  timelineDockPreference: TimelineDockPreference = DEFAULT_TIMELINE_DOCK_PREFERENCE;
+  timelineBottomDockCollapsed = false;
+  timelineBottomDockHeight = DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
