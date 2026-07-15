@@ -7,6 +7,7 @@ import {
   readFromIndexedDb,
   saveToIndexedDb,
 } from "@/shared/storage";
+import { writeWorldDocumentShadowSave } from "@/shared/storage/sync-shadow-storage";
 import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
 import { runInAction } from "mobx";
 
@@ -24,11 +25,30 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
   let disposed = false;
   let unsubscribeDocument: (() => void) | null = null;
   let writeQueue = Promise.resolve();
+  let shadowQueue = Promise.resolve();
 
-  const enqueueWrite = (document: WorldDocument): void => {
-    writeQueue = writeQueue
+  const enqueueWrite = (
+    document: WorldDocument,
+    options: {
+      recordShadow?: boolean;
+    } = {},
+  ): void => {
+    const snapshotWrite = writeQueue
       .catch(() => undefined)
-      .then(() => writeWorldDocument(document));
+      .then(() => writeWorldDocument(document, { recordShadow: false }));
+
+    writeQueue = snapshotWrite;
+
+    if (options.recordShadow === false) {
+      return;
+    }
+
+    shadowQueue = shadowQueue
+      .catch(() => undefined)
+      .then(() => snapshotWrite)
+      .then(async () => {
+        await writeWorldDocumentShadowSave({ document });
+      });
   };
 
   void (async () => {
@@ -40,7 +60,7 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
 
     rememberLatestWorldDocument(editorHost, initialDocument);
     editorHost.internalDocument.setSnapshot(initialDocument);
-    enqueueWrite(initialDocument);
+    enqueueWrite(initialDocument, { recordShadow: false });
 
     unsubscribeDocument = editorHost.internalDocument.subscribe((document) => {
       rememberLatestWorldDocument(editorHost, document);
@@ -81,11 +101,26 @@ export async function readWorldDocument(
   return normalizeWorldDocument(persistedDocument);
 }
 
-export async function writeWorldDocument(document: WorldDocument): Promise<void> {
+export async function writeWorldDocument(
+  document: WorldDocument,
+  options: {
+    recordShadow?: boolean;
+  } = {},
+): Promise<void> {
+  if (options.recordShadow === false) {
+    await saveToIndexedDb(
+      createWordDocumentLocation(document.documentKey),
+      document,
+    );
+    return;
+  }
+
   await saveToIndexedDb(
     createWordDocumentLocation(document.documentKey),
     document,
   );
+
+  await writeWorldDocumentShadowSave({ document });
 }
 
 export async function listWorldDocuments(): Promise<WorldDocument[]> {

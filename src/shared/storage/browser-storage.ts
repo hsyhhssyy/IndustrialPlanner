@@ -9,6 +9,11 @@ export interface IndexedDbStoreLocation {
   version?: number;
 }
 
+export interface IndexedDbDatabaseLocation {
+  databaseName: string;
+  version?: number;
+}
+
 export interface IndexedDbStorageLocation extends IndexedDbStoreLocation {
   key: IDBValidKey;
 }
@@ -23,6 +28,11 @@ export type IndexedDbMutationOperation<TValue> =
     type: "delete";
     key: IDBValidKey;
   };
+
+export interface IndexedDbStoreMutationBatch<TValue> {
+  storeName: string;
+  operations: readonly IndexedDbMutationOperation<TValue>[];
+}
 
 export function readFromLocalStorage<TValue>(
   key: string,
@@ -147,31 +157,60 @@ export async function applyIndexedDbStoreMutations<TValue>(
   operations: readonly IndexedDbMutationOperation<TValue>[],
   codec: JsonStorageCodec<TValue> = {},
 ): Promise<boolean> {
-  if (operations.length === 0) {
+  return await applyIndexedDbTransactionMutations(
+    {
+      databaseName: location.databaseName,
+      version: location.version,
+    },
+    [{
+      storeName: location.storeName,
+      operations,
+    }],
+    codec,
+  );
+}
+
+export async function applyIndexedDbTransactionMutations<TValue>(
+  location: IndexedDbDatabaseLocation,
+  batches: readonly IndexedDbStoreMutationBatch<TValue>[],
+  codec: JsonStorageCodec<TValue> = {},
+): Promise<boolean> {
+  const activeBatches = batches.filter((batch) => batch.operations.length > 0);
+
+  if (activeBatches.length === 0) {
     return true;
   }
 
-  const database = await openIndexedDb(location);
+  const database = await openIndexedDbStores(
+    location,
+    activeBatches.map((batch) => batch.storeName),
+  );
 
   if (database === null) {
     return false;
   }
 
   try {
-    const transaction = database.transaction(location.storeName, "readwrite");
+    const transaction = database.transaction(
+      Array.from(new Set(activeBatches.map((batch) => batch.storeName))),
+      "readwrite",
+    );
     const completion = waitForTransaction(transaction);
-    const objectStore = transaction.objectStore(location.storeName);
     const serialize = getCodec(codec).serialize;
 
-    for (const operation of operations) {
-      if (operation.type === "put") {
-        await waitForRequest(
-          objectStore.put(serialize(operation.value), operation.key),
-        );
-        continue;
-      }
+    for (const batch of activeBatches) {
+      const objectStore = transaction.objectStore(batch.storeName);
 
-      await waitForRequest(objectStore.delete(operation.key));
+      for (const operation of batch.operations) {
+        if (operation.type === "put") {
+          await waitForRequest(
+            objectStore.put(serialize(operation.value), operation.key),
+          );
+          continue;
+        }
+
+        await waitForRequest(objectStore.delete(operation.key));
+      }
     }
 
     await completion;
@@ -227,17 +266,29 @@ function getCodec<TValue>(codec: JsonStorageCodec<TValue>) {
 async function openIndexedDb(
   location: IndexedDbStoreLocation,
 ): Promise<IDBDatabase | null> {
+  return await openIndexedDbStores(location, [location.storeName]);
+}
+
+async function openIndexedDbStores(
+  location: IndexedDbDatabaseLocation,
+  storeNames: readonly string[],
+): Promise<IDBDatabase | null> {
   if (typeof globalThis.indexedDB === "undefined") {
     return null;
   }
 
   try {
+    const uniqueStoreNames = Array.from(new Set(storeNames.filter((storeName) => storeName.trim() !== "")));
     const database = await openDatabase(
       location.databaseName,
       location.version,
     );
 
-    if (database.objectStoreNames.contains(location.storeName)) {
+    const missingStoreNames = uniqueStoreNames.filter((storeName) => (
+      !database.objectStoreNames.contains(storeName)
+    ));
+
+    if (missingStoreNames.length === 0) {
       return database;
     }
 
@@ -248,7 +299,7 @@ async function openIndexedDb(
     return await openDatabase(
       location.databaseName,
       nextVersion,
-      location.storeName,
+      missingStoreNames,
     );
   } catch {
     return null;
@@ -258,7 +309,7 @@ async function openIndexedDb(
 function openDatabase(
   databaseName: string,
   version?: number,
-  storeNameToCreate?: string,
+  storeNamesToCreate?: readonly string[],
 ): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request =
@@ -274,14 +325,16 @@ function openDatabase(
     };
 
     request.onupgradeneeded = () => {
-      if (!storeNameToCreate) {
+      if (storeNamesToCreate === undefined) {
         return;
       }
 
       const database = request.result;
 
-      if (!database.objectStoreNames.contains(storeNameToCreate)) {
-        database.createObjectStore(storeNameToCreate);
+      for (const storeNameToCreate of storeNamesToCreate) {
+        if (!database.objectStoreNames.contains(storeNameToCreate)) {
+          database.createObjectStore(storeNameToCreate);
+        }
       }
     };
 

@@ -69,26 +69,31 @@ function createDatabaseHandle(databaseState: FakeDatabaseState): IDBDatabase {
       return {} as IDBObjectStore;
     },
     transaction: (storeName: string | string[]) => {
-      const targetStoreName = Array.isArray(storeName) ? storeName[0] : storeName;
+      const targetStoreNames = Array.isArray(storeName) ? storeName : [storeName];
 
-      if (targetStoreName === undefined) {
+      if (targetStoreNames.length === 0) {
         throw new Error("Store name is required.");
       }
 
-      const store = databaseState.stores.get(targetStoreName);
+      const stores = new Map<string, Map<IDBValidKey, unknown>>();
 
-      if (!store) {
-        throw new Error(`Store "${targetStoreName}" does not exist.`);
+      for (const targetStoreName of targetStoreNames) {
+        const store = databaseState.stores.get(targetStoreName);
+
+        if (!store) {
+          throw new Error(`Store "${targetStoreName}" does not exist.`);
+        }
+
+        stores.set(targetStoreName, store);
       }
 
-      return createTransactionHandle(targetStoreName, store);
+      return createTransactionHandle(stores);
     },
   } as unknown as IDBDatabase;
 }
 
 function createTransactionHandle(
-  storeName: string,
-  store: Map<IDBValidKey, unknown>,
+  stores: ReadonlyMap<string, Map<IDBValidKey, unknown>>,
 ): IDBTransaction {
   const transactionState: FakeTransactionState = {
     pendingRequestCount: 0,
@@ -101,7 +106,9 @@ function createTransactionHandle(
     onerror: null,
     onabort: null,
     objectStore: (requestedStoreName: string) => {
-      if (requestedStoreName !== storeName) {
+      const store = stores.get(requestedStoreName);
+
+      if (store === undefined) {
         throw new Error(`Unexpected store "${requestedStoreName}".`);
       }
 

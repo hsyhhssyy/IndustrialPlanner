@@ -1,4 +1,5 @@
 export {
+  applyIndexedDbTransactionMutations,
   listFromIndexedDb,
   readFromIndexedDb,
   readFromLocalStorage,
@@ -61,10 +62,30 @@ export {
 } from "@/shared/storage/legacy-v2-blueprint-migration";
 
 export type {
+  IndexedDbDatabaseLocation,
+  IndexedDbStoreMutationBatch,
   IndexedDbStoreLocation,
   IndexedDbStorageLocation,
+  IndexedDbMutationOperation,
   JsonStorageCodec,
 } from "@/shared/storage/browser-storage";
+
+export type {
+  LocalDocumentSyncState,
+  LocalSyncOutboxEntry,
+  LocalSyncOutboxEntryStatus,
+  WorldDocumentShadowSnapshotPayload,
+} from "@/shared/storage/sync-shadow-storage";
+
+export {
+  createStableJsonHash,
+  listLocalSyncOutboxEntriesForAsset,
+  readLocalDocumentSyncState,
+  SYNC_SHADOW_OUTBOX_STORE_LOCATION,
+  SYNC_SHADOW_STATE_STORE_LOCATION,
+  writeWorldDocumentShadowSave,
+  writeWorldDocumentWithShadowSave,
+} from "@/shared/storage/sync-shadow-storage";
 
 export type {
   EditorPersistState,

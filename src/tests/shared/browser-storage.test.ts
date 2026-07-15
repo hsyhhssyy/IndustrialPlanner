@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  applyIndexedDbTransactionMutations,
   listFromIndexedDb,
   readFromIndexedDb,
   readFromLocalStorage,
@@ -88,6 +89,51 @@ describe("browser-storage", () => {
       { locale: "zh-CN", zoom: 1 },
       { locale: "en-US", zoom: 4 },
     ]);
+  });
+
+  it("applies mutations across multiple IndexedDB stores in one transaction", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const databaseName = "v3-industrial-planner";
+
+    await expect(
+      applyIndexedDbTransactionMutations(
+        { databaseName },
+        [
+          {
+            storeName: "worlddocument",
+            operations: [{
+              type: "put",
+              key: "document-a",
+              value: { documentKey: "document-a" },
+            }],
+          },
+          {
+            storeName: "sync-shadow-state",
+            operations: [{
+              type: "put",
+              key: "world-document:document-a",
+              value: { documentKey: "document-a", nextLocalSequence: 2 },
+            }],
+          },
+        ],
+      ),
+    ).resolves.toBe(true);
+
+    await expect(
+      readFromIndexedDb({
+        databaseName,
+        storeName: "worlddocument",
+        key: "document-a",
+      }),
+    ).resolves.toEqual({ documentKey: "document-a" });
+    await expect(
+      readFromIndexedDb({
+        databaseName,
+        storeName: "sync-shadow-state",
+        key: "world-document:document-a",
+      }),
+    ).resolves.toEqual({ documentKey: "document-a", nextLocalSequence: 2 });
   });
 
   it("returns null when IndexedDB is unavailable", async () => {
