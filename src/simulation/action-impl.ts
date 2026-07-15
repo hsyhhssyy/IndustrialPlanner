@@ -9,6 +9,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { resolveBaseBuiltinEntities } from "@/domain/registry/types/base-definition";
+import { createLogger } from "@/shared/logging/logger";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 import {
   areGridRectsIntersecting,
@@ -36,6 +37,7 @@ import type {
   SimulationTickPullStatus,
   SimulationTopologyMigration,
   SimulationRuntimeExport,
+  SimulationRuntimeTransition,
   TickPerfHotPathDetails,
   TickPerfStage3Details,
 } from "./types";
@@ -63,12 +65,40 @@ const TIMELINE_SEEK_EDGE_SCROLL_ANCHOR_OFFSET_TICKS = Math.round(TIMELINE_WINDOW
 const TIMELINE_STATUS_POLL_MS = 250;
 const TIMELINE_EXPORT_LOOKBACK_STEPS = 18;
 
+const logger = createLogger("simulation-runtime");
+
+function logTopologyRuntimeTransition(
+  transition: SimulationRuntimeTransition | undefined,
+): void {
+  if (transition === undefined) {
+    return;
+  }
+
+  const resetDevices = transition.resetDeviceIds.length === 0
+    ? "none"
+    : transition.resetDeviceIds.join(", ");
+  const message = transition.kind === "topology-hot-swap"
+    ? `Simulation topology hot-swapped at tick ${transition.baseTickNumber}. Reason: ${transition.reason}. Preserved unaffected device runtime state; reset devices: [${resetDevices}]. Future snapshots invalidated from tick ${transition.invalidatedFromTickNumber}.`
+    : transition.kind === "full-reset"
+      ? `Simulation runtime fully reset at tick ${transition.baseTickNumber}. Reason: ${transition.reason}. Reset devices: [${resetDevices}].`
+      : transition.kind === "migration-rejected"
+        ? `Simulation topology migration rejected at tick ${transition.baseTickNumber}. Reason: ${transition.reason}. Existing simulation runtime remains active.`
+        : `Simulation runtime initialized at tick ${transition.baseTickNumber}. Reason: ${transition.reason}.`;
+
+  if (transition.kind === "full-reset" || transition.kind === "migration-rejected") {
+    logger.warn(message);
+    return;
+  }
+
+  logger.info(message);
+}
+
 export interface SimulationWorkerBridge {
   loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >>;
-  getTickSnapshot(tickNumber: number, simulationSpeed?: number): Promise<Extract<
+  getTickSnapshot(tickNumber: number, simulationSpeed?: number, retainTickNumber?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "tick-snapshot-result" }
   >>;
@@ -153,6 +183,12 @@ interface TimelineRebaseRange {
   readonly targetTimelineTickNumber: number;
 }
 
+interface TopologyPresentationBoundary {
+  readonly maxPlaybackTickNumber: number;
+  readonly reached: Promise<void>;
+  readonly resolveReached: () => void;
+}
+
 function createMissingTimelineWorkerBridge(): TimelineWorkerBridge {
   throw new Error("Timeline worker bridge is not configured.");
 }
@@ -172,6 +208,8 @@ implements SimulationAction, SimulationInternalAction {
   private tpsAccumulatedMs = 0;
   private nextPerfReportTick = 180;
   private playbackTickRequestInFlight = false;
+  private playbackTickRequestCompletion: Promise<void> | null = null;
+  private playbackTargetTickNumber = 0;
   private timelineBridge: TimelineWorkerBridge | null = null;
   private timelineStatusTimerId: ReturnType<typeof setInterval> | null = null;
   private timelineSeekSerial = 0;
@@ -184,6 +222,9 @@ implements SimulationAction, SimulationInternalAction {
   private timelineMarkSerial = 1;
   private lastTimelineSafetySyncStandardTick: number | null = null;
   private readonly timelineCheckpointMetadataByTickNumber = new Map<number, TimelineCheckpointMetadata>();
+  private topologyRefreshQueue: Promise<void> | null = null;
+  private topologyPresentationBoundary: TopologyPresentationBoundary | null = null;
+  private topologyRevision = 0;
 
   // === 诊断计数器：10 秒输出一次 ===
   private diagFrameCount = 0;
@@ -222,6 +263,7 @@ implements SimulationAction, SimulationInternalAction {
 
   public readonly pause: SimulationAction["pause"] = action(() => {
     this.stateReadWrite.runningState = "pause";
+    this.completeTopologyPresentationBoundary(true);
   });
 
   public readonly resume: SimulationAction["resume"] = action(() => {
@@ -284,10 +326,32 @@ implements SimulationAction, SimulationInternalAction {
 
     // 位置始终按墙钟推进，不受 Worker bridge 在途状态影响。
     // playbackTickRequestInFlight 仅阻止并发请求，不冻结动画。
+    // AI-CORRECTION 2026-07-15: 墙钟目标继续累计，但公开播放游标必须受已展示快照与本帧步长约束；
+    // Worker 背压期间冻结在下一边界，恢复后逐步消费欠账，不能一次跳到最新墙钟目标。
     runInAction(() => {
-      this.stateReadWrite.currentPlaybackTickNumber += tickDelta;
+      this.playbackTargetTickNumber = Math.max(
+        this.playbackTargetTickNumber,
+        this.stateReadWrite.currentPlaybackTickNumber,
+      ) + tickDelta;
+      const synchronizedTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber
+        ?? Math.min(
+          Math.trunc(previousPlaybackTickNumber),
+          this.stateReadWrite.runtimeStatus.latestTickNumber ?? 0,
+        );
+      const maxFrameStepTicks = Math.max(1, Math.ceil(Math.max(0, tickDelta)));
+      const migrationBoundaryTickNumber = this.topologyPresentationBoundary?.maxPlaybackTickNumber
+        ?? Number.POSITIVE_INFINITY;
+      this.stateReadWrite.currentPlaybackTickNumber = Math.max(
+        previousPlaybackTickNumber,
+        Math.min(
+          this.playbackTargetTickNumber,
+          synchronizedTickNumber + maxFrameStepTicks,
+          migrationBoundaryTickNumber,
+        ),
+      );
       this.syncTimelineCursorFromPlayback();
     });
+    this.resolveReachedTopologyPresentationBoundary();
 
     const previousIntegerTickNumber = Math.trunc(previousPlaybackTickNumber);
     const nextIntegerTickNumber = Math.trunc(this.stateReadWrite.currentPlaybackTickNumber);
@@ -295,8 +359,14 @@ implements SimulationAction, SimulationInternalAction {
     // 计算本 delta 内实际获得的整数 tick 数，用于 TPS 统计
     let actualTicksProcessed = 0;
 
-    if (previousIntegerTickNumber === nextIntegerTickNumber) {
+    const synchronizedTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber
+      ?? Math.min(
+        previousIntegerTickNumber,
+        this.stateReadWrite.runtimeStatus.latestTickNumber ?? 0,
+      );
+    if (synchronizedTickNumber >= nextIntegerTickNumber) {
       // 未跨越整数 tick 边界
+      // AI-CORRECTION 2026-07-15: 此处同时覆盖“已经跨界且对应快照已同步”；是否拉取由播放目标与当前快照的差值决定。
       this.diagConsecutiveRollbacks = 0;
       this.accumulateTps(deltaMs, actualTicksProcessed);
       return;
@@ -306,13 +376,24 @@ implements SimulationAction, SimulationInternalAction {
 
     // bridge 在途时跳过本帧请求，但位置已推进；将位置回退到整数边界之下，
     // 确保 bridge 返回后下一帧再次跨越同一 tick 边界，不会丢 tick。
-    if (this.playbackTickRequestInFlight) {
+    // AI-CORRECTION 2026-07-15: 播放位置必须保持单调；请求完成或拓扑迁移结束后，按当前快照与最新播放目标的差值追赶。
+    // AI-CORRECTION 2026-07-15: “追赶”必须受当前快照 + 本帧步长限制；在途期间公开游标停在待拉取边界，不能越过它累计可见欠账。
+    if (this.playbackTickRequestInFlight || this.topologyRefreshQueue !== null) {
       this.diagInFlightSkipCount += 1;
       this.diagConsecutiveRollbacks += 1;
       this.diagMaxConsecutiveRollbacks = Math.max(this.diagMaxConsecutiveRollbacks, this.diagConsecutiveRollbacks);
-      runInAction(() => {
-        this.stateReadWrite.currentPlaybackTickNumber = nextIntegerTickNumber - 1e-9;
-      });
+      // AI-REMOVED 2026-07-15:
+      // Reason: 在途请求或拓扑迁移期间回写整数边界会让连续播放游标倒退，并重复播放同一 tick 区间。
+      // Trigger: 摆放或切换设备触发迁移时，画面出现顿挫和回退。
+      // Evidence: currentPlaybackTickNumber 已按墙钟推进，但这里又覆盖为 nextIntegerTickNumber - 1e-9。
+      // Replacement: 本分支保留单调播放目标；后续帧依据 synchronizedTickNumber 与最新目标主动追赶。
+      // Risk: Low；Worker 落后时快照会短暂滞后，但游标不再倒退。
+      // Human Review: Required
+      //
+      // Original code:
+      // runInAction(() => {
+      //   this.stateReadWrite.currentPlaybackTickNumber = nextIntegerTickNumber - 1e-9;
+      // });
       this.accumulateTps(deltaMs, 0);
       return;
     }
@@ -320,19 +401,49 @@ implements SimulationAction, SimulationInternalAction {
     this.diagConsecutiveRollbacks = 0;
 
     this.playbackTickRequestInFlight = true;
+    const tickRequest = this.syncToTick(nextIntegerTickNumber);
+    let resolveTickRequestCompletion: () => void = () => undefined;
+    const tickRequestCompletion = new Promise<void>((resolve) => {
+      resolveTickRequestCompletion = resolve;
+    });
+    // AI-REMOVED 2026-07-15:
+    // Reason: 只等待 bridge 请求会漏掉 not-found 恢复流程，拓扑刷新仍可能与旧拓扑恢复并发。
+    // Trigger: 拓扑刷新必须在完整播放拉取事务结束后再选择迁移锚点。
+    // Evidence: tickRequest.then 会早于 recoverPlaybackFromUnavailableTick 完成。
+    // Replacement: tickRequestCompletion 由本方法 finally 在拉取与恢复流程全部结束后显式完成。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // const tickRequestCompletion = tickRequest.then(
+    //   () => undefined,
+    //   () => undefined,
+    // );
+    this.playbackTickRequestCompletion = tickRequestCompletion;
     try {
-      const result = await this.syncToTick(nextIntegerTickNumber);
+      const result = await tickRequest;
       if (result.status === "not-ready") {
         // worker 尚未就绪（buffer 耗尽），本 delta 未实际获得 tick，回滚到请求发起时的位置
+        // AI-CORRECTION 2026-07-15: 未就绪时只保留旧快照，播放目标继续按墙钟单调推进；后续帧请求最新目标。
+        // AI-CORRECTION 2026-07-15: 后续帧只重试相邻的受控目标；私有墙钟目标可累计，但不得直接成为下一次快照请求目标。
         this.accumulateTps(deltaMs, actualTicksProcessed);
-        runInAction(() => {
-          this.stateReadWrite.currentPlaybackTickNumber = previousPlaybackTickNumber;
-        });
+        // AI-REMOVED 2026-07-15:
+        // Reason: Worker 暂未就绪不应重置墙钟播放目标，否则会把等待时间重复计算并造成可见回退。
+        // Trigger: 拓扑迁移及普通背压期间播放不平滑。
+        // Evidence: previousPlaybackTickNumber 是请求发起前的旧游标，异步等待期间可能已出现新的 RAF 推进。
+        // Replacement: 当前快照保持不变，advancePlaybackByDeltaMs 下一帧按快照落后量重试。
+        // Risk: Low；持续算力不足时播放目标可领先快照，统计会如实显示实际 TPS 下降。
+        // Human Review: Required
+        //
+        // Original code:
+        // runInAction(() => {
+        //   this.stateReadWrite.currentPlaybackTickNumber = previousPlaybackTickNumber;
+        // });
         return;
       }
 
       // tick 获取成功
-      actualTicksProcessed = nextIntegerTickNumber - previousIntegerTickNumber;
+      actualTicksProcessed = Math.max(0, nextIntegerTickNumber - synchronizedTickNumber);
       this.diagTickConsumedCount += actualTicksProcessed;
       this.accumulateTps(deltaMs, actualTicksProcessed);
 
@@ -341,10 +452,37 @@ implements SimulationAction, SimulationInternalAction {
       }
     } finally {
       this.playbackTickRequestInFlight = false;
+      resolveTickRequestCompletion();
+      if (this.playbackTickRequestCompletion === tickRequestCompletion) {
+        this.playbackTickRequestCompletion = null;
+      }
     }
   };
 
-  public readonly refreshFromCurrentDocument: SimulationInternalAction["refreshFromCurrentDocument"] = async () => {
+  public readonly refreshFromCurrentDocument: SimulationInternalAction["refreshFromCurrentDocument"] = () => {
+    const queuedRefresh = this.topologyRefreshQueue;
+    const refresh = queuedRefresh === null
+      ? this.refreshFromCurrentDocumentNow()
+      : queuedRefresh.then(() => this.refreshFromCurrentDocumentNow());
+    const completion = refresh.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.topologyRefreshQueue = completion;
+    void completion.then(() => {
+      if (this.topologyRefreshQueue === completion) {
+        this.topologyRefreshQueue = null;
+      }
+    });
+    return refresh;
+  };
+
+  private readonly refreshFromCurrentDocumentNow = async (): Promise<SimulationStartResult> => {
+    const playbackTickRequestCompletion = this.playbackTickRequestCompletion;
+    if (playbackTickRequestCompletion !== null) {
+      await playbackTickRequestCompletion;
+    }
+
     const sourceDocument = this.workspace.editor?.document.getSnapshot();
     if (sourceDocument === undefined) {
       this.topology.setSnapshot(null);
@@ -353,6 +491,7 @@ implements SimulationAction, SimulationInternalAction {
       runInAction(() => {
         this.stateReadWrite.currentSnapshot = null;
         this.stateReadWrite.currentPlaybackTickNumber = 0;
+        this.playbackTargetTickNumber = 0;
       });
       runInAction(() => {
         this.stateReadWrite.runtimeStatus = {
@@ -392,6 +531,7 @@ implements SimulationAction, SimulationInternalAction {
       };
     }
 
+    this.topologyRevision += 1;
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = {
         ...this.stateReadWrite.runtimeStatus,
@@ -414,8 +554,25 @@ implements SimulationAction, SimulationInternalAction {
       this.stateReadWrite.timeline.enabled
       && previousDocument !== null
       && previousTopology !== null;
-    const baseTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber ?? 0;
-    const playbackTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
+    const displayedTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber ?? 0;
+    const nextTickNumber = displayedTickNumber + 1;
+    const canMigrateAtNextTick = previousDocument !== null
+      && previousTopology !== null
+      && this.stateReadWrite.runningState === "start"
+      && this.stateReadWrite.simulationSpeed > 0
+      && (this.stateReadWrite.runtimeStatus.latestTickNumber ?? displayedTickNumber) >= nextTickNumber;
+    const baseTickNumber = canMigrateAtNextTick ? nextTickNumber : displayedTickNumber;
+    // AI-REMOVED 2026-07-15:
+    // Reason: 迁移开始时捕获的浮点播放游标会在异步迁移结束后变成旧值，不能再用于恢复播放位置。
+    // Trigger: 设备拓扑迁移完成时画面回退。
+    // Evidence: RAF 在 bridge.loadTopology 等待期间持续推进 currentPlaybackTickNumber。
+    // Replacement: 迁移完成后直接读取最新 currentPlaybackTickNumber，并用新拓扑追赶其整数目标。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // const playbackTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
+    // AI-CORRECTION 2026-07-15: 新实现不再在迁移完成时追赶最新游标；它冻结公开游标到迁移边界，私有墙钟目标由正常播放逐步消费。
     const migration = createSimulationTopologyMigration({
       previousDocument,
       nextDocument: document,
@@ -423,13 +580,37 @@ implements SimulationAction, SimulationInternalAction {
       nextTopology: compiledTopology,
       baseTickNumber,
     });
+    const presentationBoundary = migration === null
+      ? null
+      : this.beginTopologyPresentationBoundary(
+          canMigrateAtNextTick
+            ? baseTickNumber
+            : this.stateReadWrite.currentPlaybackTickNumber,
+        );
     const perfEnabled = this.getPerfEnabled?.() ?? false;
-    const response = await this.bridge.loadTopology(
-      compiledTopology,
-      migration ?? undefined,
-      perfEnabled,
-      this.stateReadWrite.simulationSpeed,
-    );
+    let response: Awaited<ReturnType<SimulationWorkerBridge["loadTopology"]>>;
+    try {
+      response = await this.bridge.loadTopology(
+        compiledTopology,
+        migration ?? undefined,
+        perfEnabled,
+        this.stateReadWrite.simulationSpeed,
+      );
+    } catch (error) {
+      this.releaseTopologyPresentationBoundary(presentationBoundary);
+      throw error;
+    }
+    logTopologyRuntimeTransition(response.result.runtimeTransition);
+    if (response.result.status !== "started") {
+      this.releaseTopologyPresentationBoundary(presentationBoundary);
+      runInAction(() => {
+        this.stateReadWrite.runtimeStatus = response.status;
+      });
+      return response.result;
+    }
+    if (presentationBoundary !== null) {
+      await presentationBoundary.reached;
+    }
     this.topology.setSnapshot(compiledTopology);
     this.compiledDocument = cloneWorldDocument(document);
     this.compiledActivitySignature = nextActivitySignature;
@@ -438,14 +619,56 @@ implements SimulationAction, SimulationInternalAction {
       this.stateReadWrite.runtimeStatus = response.status;
     });
 
-    if (response.result.status === "started") {
-      const targetTickNumber = migration?.baseTickNumber ?? 0;
-      const targetPlaybackTickNumber = migration === null ? 0 : playbackTickNumber;
-      const tickStatus = await this.syncToTick(targetTickNumber, targetPlaybackTickNumber);
-      if (tickStatus.status === "not-found") {
-        await this.recoverPlaybackFromUnavailableTick(tickStatus, targetPlaybackTickNumber);
-      }
+    const targetTickNumber = response.result.runtimeTransition?.baseTickNumber
+      ?? migration?.baseTickNumber
+      ?? 0;
+    // AI-REMOVED 2026-07-15:
+    // Reason: topology migration 不得把播放游标恢复为异步请求前的旧值。
+    // Trigger: 迁移后重复等待并播放同一 tick 区间。
+    // Evidence: migration 非空时 playbackTickNumber 可能落后当前墙钟目标多个 tick。
+    // Replacement: 首次初始化仍归零；迁移先发布精确锚点快照，再追赶到完成时的最新播放目标。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // const targetPlaybackTickNumber = migration === null ? 0 : playbackTickNumber;
+    // AI-CORRECTION 2026-07-15: 迁移使用当前或已缓存的下一 tick 作为原子边界；完成后不额外跳到累计墙钟目标。
+    const initialPlaybackTickNumber = migration === null ? 0 : undefined;
+    let tickStatus: SimulationTickPullStatus;
+    try {
+      tickStatus = await this.syncToTick(targetTickNumber, initialPlaybackTickNumber);
+    } finally {
+      this.releaseTopologyPresentationBoundary(presentationBoundary);
     }
+    if (tickStatus.status === "not-found") {
+      await this.recoverPlaybackFromUnavailableTick(
+        tickStatus,
+        this.stateReadWrite.currentPlaybackTickNumber,
+      );
+    }
+
+    // AI-REMOVED 2026-07-15:
+    // Reason: 迁移完成后直接跳到累计墙钟目标会跨过中间展示快照，使传送带进度在配方周期边界产生可见“前进后退”。
+    // Trigger: 拓扑迁移期间 RAF 累计多个 tick 后，部分设备出现卡带式回退。
+    // Evidence: catchUpTickNumber 直接取异步迁移完成时的播放整数目标，可能远大于 targetTickNumber。
+    // Replacement: advancePlaybackByDeltaMs 以当前快照 + 本帧步长逐步消费 playbackTargetTickNumber。
+    // Risk: Low；算力不足时画面会停在边界而不是跳帧，实际 TPS 会如实下降。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (migration !== null && tickStatus.status === "ready") {
+    //   const latestPlaybackTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
+    //   const catchUpTickNumber = Math.trunc(latestPlaybackTickNumber);
+    //   if (catchUpTickNumber > targetTickNumber) {
+    //     const catchUpStatus = await this.syncToTick(catchUpTickNumber);
+    //     if (catchUpStatus.status === "not-found") {
+    //       await this.recoverPlaybackFromUnavailableTick(
+    //         catchUpStatus,
+    //         latestPlaybackTickNumber,
+    //       );
+    //     }
+    //   }
+    // }
 
     if (shouldMarkTimelineDocumentChange) {
       this.addTimelineMark("document-change");
@@ -461,6 +684,9 @@ implements SimulationAction, SimulationInternalAction {
     }
 
     this.stateReadWrite.simulationSpeed = value;
+    if (value === 0) {
+      this.completeTopologyPresentationBoundary(true);
+    }
     void this.bridge.setSimulationSpeed(value).catch(() => undefined);
   });
 
@@ -576,6 +802,7 @@ implements SimulationAction, SimulationInternalAction {
           this.stateReadWrite.currentSnapshot = imported.result.currentTick;
           this.stateReadWrite.currentPlaybackTickNumber =
             imported.result.currentTick?.tickNumber ?? runtimeExport.snapshot.tickNumber;
+          this.playbackTargetTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
           this.stateReadWrite.timeline.cursorTickNumber = targetTimelineTickNumber;
           this.updateTimelineWindowForSeek(targetTimelineTickNumber, previousCursorTickNumber);
           if (crossesTimelineMark) {
@@ -616,7 +843,17 @@ implements SimulationAction, SimulationInternalAction {
     tickNumber: number,
     playbackTickNumberOnReady?: number,
   ): Promise<SimulationTickPullStatus> => {
-    const response = await this.bridge.getTickSnapshot(tickNumber, this.stateReadWrite.simulationSpeed);
+    const requestTopologyRevision = this.topologyRevision;
+    const retainTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber;
+    const response = await this.bridge.getTickSnapshot(
+      tickNumber,
+      this.stateReadWrite.simulationSpeed,
+      retainTickNumber,
+    );
+
+    if (requestTopologyRevision !== this.topologyRevision) {
+      return response.result.status;
+    }
 
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = response.status;
@@ -637,6 +874,7 @@ implements SimulationAction, SimulationInternalAction {
         }
         if (playbackTickNumberOnReady !== undefined) {
           this.stateReadWrite.currentPlaybackTickNumber = playbackTickNumberOnReady;
+          this.playbackTargetTickNumber = playbackTickNumberOnReady;
         }
         this.syncTimelineCursorFromPlayback();
       }
@@ -664,6 +902,7 @@ implements SimulationAction, SimulationInternalAction {
     if (recoveryTickNumber === null || recoveryTickNumber === undefined) {
       runInAction(() => {
         this.stateReadWrite.currentPlaybackTickNumber = fallbackPlaybackTickNumber;
+        this.playbackTargetTickNumber = fallbackPlaybackTickNumber;
         this.syncTimelineCursorFromPlayback({ retargetWindow: false });
       });
       await this.restartTimelineAfterPlaybackRollbackIfNeeded();
@@ -674,6 +913,7 @@ implements SimulationAction, SimulationInternalAction {
     if (recoveryStatus.status !== "ready") {
       runInAction(() => {
         this.stateReadWrite.currentPlaybackTickNumber = fallbackPlaybackTickNumber;
+        this.playbackTargetTickNumber = fallbackPlaybackTickNumber;
         this.syncTimelineCursorFromPlayback({ retargetWindow: false });
       });
     }
@@ -1207,7 +1447,74 @@ implements SimulationAction, SimulationInternalAction {
     this.timelineBridge = null;
   }
 
+  private beginTopologyPresentationBoundary(
+    maxPlaybackTickNumber: number,
+  ): TopologyPresentationBoundary {
+    let hasResolved = false;
+    let resolvePromise: (() => void) | null = null;
+    const reached = new Promise<void>((resolve) => {
+      resolvePromise = resolve;
+    });
+    const boundary: TopologyPresentationBoundary = {
+      maxPlaybackTickNumber,
+      reached,
+      resolveReached: () => {
+        if (hasResolved) {
+          return;
+        }
+        hasResolved = true;
+        resolvePromise?.();
+      },
+    };
+    this.topologyPresentationBoundary = boundary;
+    this.resolveReachedTopologyPresentationBoundary();
+    return boundary;
+  }
+
+  private resolveReachedTopologyPresentationBoundary(): void {
+    const boundary = this.topologyPresentationBoundary;
+    if (
+      boundary !== null
+      && this.stateReadWrite.currentPlaybackTickNumber >= boundary.maxPlaybackTickNumber
+    ) {
+      boundary.resolveReached();
+    }
+  }
+
+  private completeTopologyPresentationBoundary(snapToBoundary: boolean): void {
+    const boundary = this.topologyPresentationBoundary;
+    if (boundary === null) {
+      return;
+    }
+    if (snapToBoundary) {
+      this.stateReadWrite.currentPlaybackTickNumber = Math.max(
+        this.stateReadWrite.currentPlaybackTickNumber,
+        boundary.maxPlaybackTickNumber,
+      );
+      this.playbackTargetTickNumber = Math.max(
+        this.playbackTargetTickNumber,
+        boundary.maxPlaybackTickNumber,
+      );
+      this.syncTimelineCursorFromPlayback();
+    }
+    this.releaseTopologyPresentationBoundary(boundary);
+  }
+
+  private releaseTopologyPresentationBoundary(
+    boundary: TopologyPresentationBoundary | null,
+  ): void {
+    if (boundary === null) {
+      return;
+    }
+    boundary.resolveReached();
+    if (this.topologyPresentationBoundary === boundary) {
+      this.topologyPresentationBoundary = null;
+    }
+  }
+
   private clearPlaybackProgress(): void {
+    this.topologyRevision += 1;
+    this.completeTopologyPresentationBoundary(false);
     this.stopTimelineWorker();
     this.topology.setSnapshot(null);
     this.compiledDocument = null;
@@ -1216,6 +1523,7 @@ implements SimulationAction, SimulationInternalAction {
     this.stateReadWrite.runtimeStatus = createInitialSimulationRuntimeStatus();
     this.stateReadWrite.currentSnapshot = null;
     this.stateReadWrite.currentPlaybackTickNumber = 0;
+    this.playbackTargetTickNumber = 0;
     this.stateReadWrite.statistics = { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 };
     this.tpsAccumulatedTicks = 0;
     this.tpsAccumulatedMs = 0;

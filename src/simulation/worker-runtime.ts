@@ -4,6 +4,7 @@ import type {
   RuntimeTickSnapshot,
   SimulationPerfReport,
   SimulationRuntimeExport,
+  SimulationRuntimeTransition,
   SimulationTickPullStatus,
   SimulationTickSnapshotResult,
   SimulationRuntimeStatus,
@@ -72,6 +73,79 @@ import {
 
 const MAX_RETAINED_TICKS = 180;
 
+function createTopologyRuntimeTransition(options: {
+  readonly previousTopology: CompiledSimulationTopology | null;
+  readonly migration: SimulationTopologyMigration | undefined;
+  readonly previousBaseState: SimulationMutableRuntimeState | null;
+  readonly requestedMigrationBaseTickNumber: number;
+  readonly baseTickNumber: number;
+  readonly cachedRuntimeStateTickNumbers: readonly number[];
+}): SimulationRuntimeTransition {
+  const resetDeviceIds = options.migration?.resetDeviceIds ?? [];
+  const invalidatedFromTickNumber = options.baseTickNumber + 1;
+
+  if (options.previousTopology === null) {
+    return {
+      kind: "initialization",
+      reason: "no previous simulation topology is loaded",
+      baseTickNumber: options.baseTickNumber,
+      invalidatedFromTickNumber,
+      resetDeviceIds,
+    };
+  }
+
+  if (options.migration === undefined) {
+    return {
+      kind: "full-reset",
+      reason: "topology migration metadata is unavailable",
+      baseTickNumber: options.baseTickNumber,
+      invalidatedFromTickNumber,
+      resetDeviceIds,
+    };
+  }
+
+  if (options.previousBaseState === null) {
+    const cachedTicks = options.cachedRuntimeStateTickNumbers;
+    const cachedTickDescription = cachedTicks.length === 0
+      ? "no cached runtime states are available"
+      : `cached runtime states cover ticks ${cachedTicks[0]} through ${cachedTicks[cachedTicks.length - 1]} (${cachedTicks.length} total)`;
+    return {
+      kind: "full-reset",
+      reason: `runtime state at migration base tick ${options.baseTickNumber} is unavailable; ${cachedTickDescription}`,
+      baseTickNumber: options.baseTickNumber,
+      invalidatedFromTickNumber,
+      resetDeviceIds,
+    };
+  }
+
+  return {
+    kind: "topology-hot-swap",
+    reason: options.baseTickNumber === options.requestedMigrationBaseTickNumber
+      ? "topology document changed and a runtime state exists at the migration base tick"
+      : `topology document changed; requested migration base tick ${options.requestedMigrationBaseTickNumber} was no longer retained, so cached runtime state at tick ${options.baseTickNumber} was used`,
+    baseTickNumber: options.baseTickNumber,
+    invalidatedFromTickNumber,
+    resetDeviceIds,
+  };
+}
+
+function resolveMigrationBaseRuntimeState(options: {
+  readonly requestedTickNumber: number;
+  readonly tickRuntimeStates: ReadonlyMap<number, SimulationMutableRuntimeState>;
+  readonly migrationAnchorTickNumber: number | null;
+  readonly runtimeState: SimulationMutableRuntimeState | null;
+}): SimulationMutableRuntimeState | null {
+  const exactState = options.tickRuntimeStates.get(options.requestedTickNumber);
+  if (exactState !== undefined) {
+    return exactState;
+  }
+
+  return options.migrationAnchorTickNumber === options.requestedTickNumber
+    && options.runtimeState?.tickNumber === options.requestedTickNumber
+    ? options.runtimeState
+    : null;
+}
+
 function createRuntimePerfCounters(): SimulationRuntimePerf {
   return {
     getReservedCalls: 0,
@@ -135,7 +209,19 @@ export class SimulationWorkerRuntime {
   private standardStepTicks = 1;
   private fixedDynamicTickRate: number | null = null;
   private lastRequestedTickNumber = 0;
+  /** 主线程最后确认展示的状态，拓扑迁移只能从此精确 tick 接续。 */
+  private migrationAnchorTickNumber: number | null = null;
   private lastDynamicRateAdjustmentTick: number | null = null;
+  // AI-REMOVED 2026-07-15:
+  // Reason: x1 粗粒度降级破坏了配方、气体与净水的精确 tick 语义。
+  // Trigger: 完整测试出现 7 个确定性产量回归。
+  // Evidence: gas-diffusion、power-system、production、water-purifier-node、xiranite-enr-chain 均在 x1 降级后失败。
+  // Replacement: 保留 x1 的 20 TPS 精确运行；低性能时只允许播放背压与未来边界替换。
+  // Risk: 性能极差机器无法维持实时速度时会平滑减速，但不会牺牲仿真准确性。
+  // Human Review: Required
+  //
+  // Original code:
+  // private forceHighestDynamicTickRateAtNextLegalPoint = false;
   private powerMode: "real" | "infinite" = "infinite";
 
   // 停止线：Worker 自主推进到该 tick 后暂停，等待外部拉取更新停止线。
@@ -175,7 +261,7 @@ export class SimulationWorkerRuntime {
           return {
             type: "tick-snapshot-result",
             requestId: request.requestId,
-            result: this.getTickSnapshot(request.tickNumber),
+            result: this.getTickSnapshot(request.tickNumber, request.retainTickNumber),
             status: this.getStatus(),
           };
         case "set-simulation-speed":
@@ -380,10 +466,21 @@ export class SimulationWorkerRuntime {
     this.retainedFromTick = tickNumber;
     this.latestTickNumber = tickNumber;
     this.lastRequestedTickNumber = tickNumber;
+    this.migrationAnchorTickNumber = tickNumber;
     this.dynamicTickRate = this.topology.standardTickRate;
     this.standardStepTicks = 1;
     this.fixedDynamicTickRate = null;
     this.lastDynamicRateAdjustmentTick = null;
+    // AI-REMOVED 2026-07-15:
+    // Reason: 对应的 x1 粗粒度切换状态已因准确性回归撤销。
+    // Trigger: 完整仿真测试 7 项失败。
+    // Evidence: forceHighestDynamicTickRateAtNextLegalPoint 不再是有效运行状态。
+    // Replacement: adjustDynamicTickRateAtLegalPoint 在 x1 固定选择最高合法粒度。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // this.forceHighestDynamicTickRateAtNextLegalPoint = false;
     this.adjustDynamicTickRateAtLegalPoint(tickNumber);
     this.mode = "running";
     this.error = null;
@@ -529,6 +626,7 @@ export class SimulationWorkerRuntime {
     this.runtimeState = nextState;
     this.clearTickCachesFrom(patchTickNumber);
     this.lastRequestedTickNumber = patchTickNumber;
+    this.migrationAnchorTickNumber = patchTickNumber;
     this.stopLineTick = Math.max(this.stopLineTick, patchTickNumber + MAX_RETAINED_TICKS);
     this.scheduleBackgroundFill();
   }
@@ -573,6 +671,7 @@ export class SimulationWorkerRuntime {
     this.runtimeState = nextState;
     this.clearTickCachesFrom(patchTickNumber);
     this.lastRequestedTickNumber = patchTickNumber;
+    this.migrationAnchorTickNumber = patchTickNumber;
     this.stopLineTick = Math.max(this.stopLineTick, patchTickNumber + MAX_RETAINED_TICKS);
     this.scheduleBackgroundFill();
   }
@@ -603,6 +702,9 @@ export class SimulationWorkerRuntime {
     const retainedTickNumbers = [...this.tickSnapshots.keys()].sort((left, right) => left - right);
     this.latestTickNumber = retainedTickNumbers[retainedTickNumbers.length - 1] ?? null;
     this.retainedFromTick = retainedTickNumbers[0] ?? null;
+    if (this.migrationAnchorTickNumber !== null && this.migrationAnchorTickNumber >= tickNumber) {
+      this.migrationAnchorTickNumber = null;
+    }
     this.nextTickNumber = tickNumber;
   }
 
@@ -621,10 +723,41 @@ export class SimulationWorkerRuntime {
     }
 
     const previousTopology = this.topology;
+    const migrationBaseTickNumber = migration === undefined
+      ? 0
+      : Math.max(0, Math.trunc(migration.baseTickNumber));
+    const cachedRuntimeStateTickNumbers = [...this.tickRuntimeStates.keys()].sort((left, right) => left - right);
     const previousBaseState = migration === undefined
       ? null
-      : this.tickRuntimeStates.get(migration.baseTickNumber) ?? null;
-    const nextRuntimeState = previousTopology !== null && previousBaseState !== null && migration !== undefined
+      : resolveMigrationBaseRuntimeState({
+          requestedTickNumber: migrationBaseTickNumber,
+          tickRuntimeStates: this.tickRuntimeStates,
+          migrationAnchorTickNumber: this.migrationAnchorTickNumber,
+          runtimeState: this.runtimeState,
+        });
+    if (previousTopology !== null && migration !== undefined && previousBaseState === null) {
+      const cachedTickDescription = cachedRuntimeStateTickNumbers.length === 0
+        ? "no cached runtime states are available"
+        : `cached runtime states cover ticks ${cachedRuntimeStateTickNumbers[0]} through ${cachedRuntimeStateTickNumbers[cachedRuntimeStateTickNumbers.length - 1]} (${cachedRuntimeStateTickNumbers.length} total)`;
+      const reason = `exact migration anchor tick ${migrationBaseTickNumber} is unavailable; ${cachedTickDescription}`;
+      return {
+        status: "failed",
+        topologyId: previousTopology.topologyId,
+        diagnostics: topology.diagnostics,
+        error: reason,
+        runtimeTransition: {
+          kind: "migration-rejected",
+          reason,
+          baseTickNumber: migrationBaseTickNumber,
+          invalidatedFromTickNumber: migrationBaseTickNumber + 1,
+          resetDeviceIds: migration.resetDeviceIds,
+        },
+      };
+    }
+    const canHotSwapTopology = previousTopology !== null
+      && previousBaseState !== null
+      && migration !== undefined;
+    const nextRuntimeState = canHotSwapTopology
       ? createMigratedSimulationMutableRuntimeState({
           previousTopology,
           previousState: previousBaseState,
@@ -633,21 +766,39 @@ export class SimulationWorkerRuntime {
         })
       : createSimulationMutableRuntimeState(topology);
     if (previousBaseState === null && migration !== undefined) {
-      nextRuntimeState.tickNumber = Math.max(0, Math.trunc(migration.baseTickNumber));
+      nextRuntimeState.tickNumber = migrationBaseTickNumber;
+      nextRuntimeState.lastAdvancedTickNumber = migrationBaseTickNumber;
     }
+
+    const runtimeTransition = createTopologyRuntimeTransition({
+      previousTopology,
+      migration,
+      previousBaseState,
+      requestedMigrationBaseTickNumber: migrationBaseTickNumber,
+      baseTickNumber: nextRuntimeState.tickNumber,
+      cachedRuntimeStateTickNumbers,
+    });
 
     this.topology = topology;
     this.runtimeState = nextRuntimeState;
     this.tickSnapshots.clear();
     this.tickRuntimeStates.clear();
-    this.nextTickNumber = this.runtimeState.tickNumber;
-    this.retainedFromTick = null;
-    this.latestTickNumber = null;
-    this.lastRequestedTickNumber = this.runtimeState.tickNumber;
+    const baseTickNumber = this.runtimeState.tickNumber;
+    const baseSnapshot = this.createSnapshotFromRuntimeState(this.runtimeState);
+    this.tickSnapshots.set(baseTickNumber, baseSnapshot);
+    this.tickRuntimeStates.set(
+      baseTickNumber,
+      cloneSimulationMutableRuntimeState(this.runtimeState),
+    );
+    this.nextTickNumber = baseTickNumber + 1;
+    this.retainedFromTick = baseTickNumber;
+    this.latestTickNumber = baseTickNumber;
+    this.lastRequestedTickNumber = baseTickNumber;
+    this.migrationAnchorTickNumber = baseTickNumber;
     this.dynamicTickRate = topology.standardTickRate;
     this.standardStepTicks = 1;
     this.lastDynamicRateAdjustmentTick = null;
-    this.adjustDynamicTickRateAtLegalPoint(this.runtimeState.tickNumber);
+    this.adjustDynamicTickRateAtLegalPoint(baseTickNumber);
     this.mode = "running";
     this.error = null;
 
@@ -660,10 +811,14 @@ export class SimulationWorkerRuntime {
       status: "started",
       topologyId: topology.topologyId,
       diagnostics: topology.diagnostics,
+      runtimeTransition,
     };
   }
 
-  private getTickSnapshot(tickNumber: number): SimulationTickSnapshotResult {
+  private getTickSnapshot(
+    tickNumber: number,
+    retainTickNumber?: number,
+  ): SimulationTickSnapshotResult {
     if (this.topology === null || this.runtimeState === null) {
       return {
         status: createNotFoundStatus(tickNumber, "missing-topology", null, null, 0),
@@ -672,6 +827,7 @@ export class SimulationWorkerRuntime {
     }
 
     this.lastRequestedTickNumber = Math.max(0, Math.trunc(tickNumber));
+    this.retainMigrationAnchor(retainTickNumber);
 
     // 始终更新停止线：外部请求 tick N → Worker 需要跑到 N + MAX_RETAINED_TICKS。
     // 即使当前 tick 未就绪也更新，确保 Worker 知道目标位置。
@@ -720,12 +876,16 @@ export class SimulationWorkerRuntime {
     }
 
     for (const retainedTickNumber of [...this.tickSnapshots.keys()]) {
-      if (retainedTickNumber < tickNumber) {
+      if (
+        retainedTickNumber < tickNumber
+        && retainedTickNumber !== this.migrationAnchorTickNumber
+      ) {
         this.tickSnapshots.delete(retainedTickNumber);
         this.tickRuntimeStates.delete(retainedTickNumber);
       }
     }
-    this.retainedFromTick = tickNumber;
+    this.retainedFromTick = [...this.tickSnapshots.keys()]
+      .sort((left, right) => left - right)[0] ?? tickNumber;
 
     // 消费后缓冲区有空位，通知后台填充继续推进到停止线
     this.scheduleBackgroundFill();
@@ -739,6 +899,20 @@ export class SimulationWorkerRuntime {
       },
       currentTick,
     };
+  }
+
+  private retainMigrationAnchor(retainTickNumber: number | undefined): void {
+    if (retainTickNumber === undefined) {
+      return;
+    }
+
+    const normalizedTickNumber = Math.max(0, Math.trunc(retainTickNumber));
+    if (
+      this.tickRuntimeStates.has(normalizedTickNumber)
+      || this.runtimeState?.tickNumber === normalizedTickNumber
+    ) {
+      this.migrationAnchorTickNumber = normalizedTickNumber;
+    }
   }
 
   /**
@@ -1114,6 +1288,18 @@ export class SimulationWorkerRuntime {
       return;
     }
 
+    // AI-REMOVED 2026-07-15:
+    // Reason: 不再允许 x1 根据缓存余量降低运行粒度，因此无需安排恢复最高粒度的切换标记。
+    // Trigger: x1 粗粒度导致确定性仿真结果变化。
+    // Evidence: 完整测试中配方产量与净水转换结果回归。
+    // Replacement: simulationSpeed < 2 分支始终选择最高合法 dynamic tick rate。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (this.simulationSpeed >= 2 && value < 2) {
+    //   this.forceHighestDynamicTickRateAtNextLegalPoint = true;
+    // }
     this.simulationSpeed = value;
     if (this.topology !== null && this.runtimeState !== null) {
       this.adjustDynamicTickRateAtLegalPoint(this.runtimeState.tickNumber);
@@ -1129,6 +1315,22 @@ export class SimulationWorkerRuntime {
     if (this.topology === null || !canAdjustDynamicTickRateAtTick({ topology: this.topology, standardTick })) {
       return;
     }
+    // AI-REMOVED 2026-07-15:
+    // Reason: x1 自适应粗粒度方案已因准确性回归撤销。
+    // Trigger: 7 项完整仿真测试失败。
+    // Evidence: 多个 runtime stage 尚不能保证粗粒度与逐 tick 运行等价。
+    // Replacement: 下方 simulationSpeed < 2 分支固定最高合法粒度。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (this.forceHighestDynamicTickRateAtNextLegalPoint) {
+    //   this.forceHighestDynamicTickRateAtNextLegalPoint = false;
+    //   this.lastDynamicRateAdjustmentTick = standardTick;
+    //   const legalDynamicTickRates = resolveLegalDynamicTickRates(this.topology);
+    //   this.setDynamicTickRate(legalDynamicTickRates[0] ?? this.topology.standardTickRate);
+    //   return;
+    // }
     if (this.lastDynamicRateAdjustmentTick === standardTick) {
       return;
     }
@@ -1141,6 +1343,8 @@ export class SimulationWorkerRuntime {
       return;
     }
 
+    // AI-CORRECTION 2026-07-15: x1 速度也必须依据缓存墙钟余量自适应降级；只在初始化、暂停或从加速模式切回时先恢复最高粒度。
+    // AI-CORRECTION 2026-07-15: 完整测试证明上述策略会改变确定性结果；在所有 runtime stage 通过粗粒度等价验证前，x1 必须保持最高合法粒度。
     if (this.simulationSpeed < 2) {
       this.setDynamicTickRate(legalDynamicTickRates[0] ?? this.topology.standardTickRate);
       return;

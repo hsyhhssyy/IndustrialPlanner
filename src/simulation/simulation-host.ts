@@ -719,7 +719,7 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     }, "topology-loaded");
   }
 
-  public getTickSnapshot(tickNumber: number, simulationSpeed?: number): Promise<Extract<
+  public getTickSnapshot(tickNumber: number, simulationSpeed?: number, retainTickNumber?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "tick-snapshot-result" }
   >> {
@@ -727,6 +727,7 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
       type: "get-tick-snapshot",
       requestId: this.createRequestId(),
       tickNumber,
+      retainTickNumber,
       simulationSpeed,
     }, "tick-snapshot-result");
   }
@@ -875,7 +876,7 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
     return Promise.resolve(response);
   }
 
-  public getTickSnapshot(tickNumber: number, simulationSpeed?: number): Promise<Extract<
+  public getTickSnapshot(tickNumber: number, simulationSpeed?: number, retainTickNumber?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "tick-snapshot-result" }
   >> {
@@ -884,6 +885,7 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       type: "get-tick-snapshot",
       requestId: this.createRequestId(),
       tickNumber,
+      retainTickNumber,
       simulationSpeed,
     });
     if (initialResponse.type !== "tick-snapshot-result") {
@@ -898,6 +900,7 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       type: "get-tick-snapshot",
       requestId: this.createRequestId(),
       tickNumber,
+      retainTickNumber,
       simulationSpeed,
     });
     if (response.type !== "tick-snapshot-result") {

@@ -10,7 +10,7 @@ import { createSimulationStateReadWrite } from "@/simulation/state-impl";
 import type { CompiledSimulationTopology } from "@/simulation/types";
 
 describe("simulation playback backpressure", () => {
-  it("keeps one tick request in flight and retries the same tick after not-ready", async () => {
+  it("keeps one tick request in flight without skipping presentation ticks", async () => {
     const firstResponse = createDeferred<Awaited<ReturnType<SimulationWorkerBridge["getTickSnapshot"]>>>();
     const secondResponse = createDeferred<Awaited<ReturnType<SimulationWorkerBridge["getTickSnapshot"]>>>();
     const getTickSnapshot = vi.fn()
@@ -29,29 +29,30 @@ describe("simulation playback backpressure", () => {
 
     const firstAdvance = action.advancePlaybackByDeltaMs(50);
     expect(getTickSnapshot).toHaveBeenCalledTimes(1);
-    expect(getTickSnapshot).toHaveBeenLastCalledWith(1, 1);
+    expect(getTickSnapshot).toHaveBeenLastCalledWith(1, 1, undefined);
 
     const overlappingAdvances = Array.from(
       { length: 120 },
       () => action.advancePlaybackByDeltaMs(50),
     );
     // inFlight 期间位置被回退到整数边界之下，不丢 tick，不无限增长
+    // AI-CORRECTION 2026-07-15: 播放目标按墙钟单调推进；单请求约束只限制 Worker 并发，不再回退游标。
+    // AI-CORRECTION 2026-07-15: 私有墙钟目标继续累计，公开游标单调停在待拉取边界；恢复后逐 tick 消费，避免快照跳跃。
     expect(getTickSnapshot).toHaveBeenCalledTimes(1);
-    expect(state.currentPlaybackTickNumber).toBeGreaterThanOrEqual(1);
-    expect(state.currentPlaybackTickNumber).toBeLessThan(3);
+    expect(state.currentPlaybackTickNumber).toBe(1);
 
     firstResponse.resolve(createNotReadyResponse(1));
     await firstAdvance;
     await Promise.all(overlappingAdvances);
-    expect(state.currentPlaybackTickNumber).toBe(0);
+    expect(state.currentPlaybackTickNumber).toBe(1);
 
     const retryAdvance = action.advancePlaybackByDeltaMs(50);
     expect(getTickSnapshot).toHaveBeenCalledTimes(2);
-    expect(getTickSnapshot).toHaveBeenLastCalledWith(1, 1);
+    expect(getTickSnapshot).toHaveBeenLastCalledWith(1, 1, undefined);
 
     secondResponse.resolve(createNotReadyResponse(1));
     await retryAdvance;
-    expect(state.currentPlaybackTickNumber).toBe(0);
+    expect(state.currentPlaybackTickNumber).toBe(1);
   });
 
   it("counts wall time while waiting so measured TPS falls to zero", async () => {

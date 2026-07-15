@@ -25,6 +25,8 @@ export type SimulationWorkerRequest =
       readonly type: "get-tick-snapshot";
       readonly requestId: number;
       readonly tickNumber: number;
+      /** 主线程最后确认展示的 tick；Worker 必须保留其运行时状态供拓扑迁移使用。 */
+      readonly retainTickNumber?: number;
       readonly simulationSpeed?: number;
     }
   | {

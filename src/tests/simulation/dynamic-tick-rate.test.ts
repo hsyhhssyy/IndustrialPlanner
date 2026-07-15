@@ -31,7 +31,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 5, transferUnitTicks })).toBe(false);
   });
 
-  it("lowers and restores worker dynamic tick rate only through legal switch points", () => {
+  it("adapts worker dynamic tick rate only through legal switch points", () => {
     const runtime = new SimulationWorkerRuntime();
     runtime.handleRequest({
       type: "load-topology",
@@ -64,6 +64,28 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       simulationSpeed: 1,
     });
     runtime.advanceToTick(40);
+
+    expect(runtime.getStatus().dynamicTickRate).toBe(20);
+  });
+
+  it("keeps normal-speed runtime exact when the buffer is exhausted", () => {
+    const runtime = new SimulationWorkerRuntime();
+    runtime.handleRequest({
+      type: "load-topology",
+      requestId: 1,
+      topology: createEmptyTopology(),
+      simulationSpeed: 1,
+    });
+
+    expect(runtime.getStatus().dynamicTickRate).toBe(20);
+
+    runtime.handleRequest({
+      type: "get-tick-snapshot",
+      requestId: 2,
+      tickNumber: 20,
+      simulationSpeed: 1,
+    });
+    runtime.advanceToTick(20);
 
     expect(runtime.getStatus().dynamicTickRate).toBe(20);
   });

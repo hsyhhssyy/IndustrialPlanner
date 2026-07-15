@@ -378,6 +378,19 @@ export interface SimulationStartResult {
   readonly topologyId: string | null;
   readonly diagnostics: readonly SimulationCompileDiagnostic[];
   readonly error?: string;
+  readonly runtimeTransition?: SimulationRuntimeTransition;
+}
+
+/**
+ * 一次拓扑装载对运行时的实际影响。
+ * 用于区分首次初始化、保留状态的热替换与无法迁移时的完整重置。
+ */
+export interface SimulationRuntimeTransition {
+  readonly kind: "initialization" | "topology-hot-swap" | "full-reset" | "migration-rejected";
+  readonly reason: string;
+  readonly baseTickNumber: number;
+  readonly invalidatedFromTickNumber: number;
+  readonly resetDeviceIds: readonly string[];
 }
 
 export interface SimulationTopologyMigration {
