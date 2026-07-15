@@ -179,6 +179,8 @@ const UI: Record<string, string> = {
     "settingsAction.resetOperationAndShortcutsConfirm": "Are you sure you want to reset operation mode and shortcuts to defaults?",
     "settingsDialog.groups": "Setting Groups",
     "settingsDialog.title": "Settings",
+    "settingsField.debug-backend-api-address-override": "Backend Address Override",
+    "settingsField.debug-backend-api-address-overrideDescription": "Override the backend API address when filled. Empty or whitespace-only values use the default endfield-api.amiyabot.com.",
     "settingsField.debug-show-fps": "Show FPS/TPS",
     "settingsField.debug-show-fpsDescription": "Show a collapsible FPS/TPS indicator panel at the top-left corner of the canvas when enabled.",
     "settingsField.debug-show-gesture-diagnostics-window": "Show Gesture Test Window",

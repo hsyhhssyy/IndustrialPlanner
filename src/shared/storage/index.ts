@@ -71,21 +71,77 @@ export type {
 } from "@/shared/storage/browser-storage";
 
 export type {
+  LocalAccountImportRequiredDecision,
+  LocalAccountImportResolution,
+  LocalAccountRemoteDatasetStatus,
+  LocalSyncDataOwner,
+  LocalSyncOwnerKind,
+  LocalSyncOwnerState,
+  LocalPendingAccountImport,
+  LocalCompletedAccountImport,
+} from "@/shared/storage/sync-owner-storage";
+
+export {
+  activateAccountOwnerAfterImport,
+  areLocalSyncDataOwnersEqual,
+  createLocalSyncOwnerScopeKey,
+  ensureLocalSyncOwnerState,
+  normalizeLocalSyncDataOwner,
+  readLocalSyncOwnerState,
+  recordPendingAccountImportDecision,
+  SYNC_OWNER_STATE_STORE_LOCATION,
+} from "@/shared/storage/sync-owner-storage";
+
+export type {
   LocalDocumentSyncState,
+  LocalSyncCompactSummary,
+  LocalSyncDiagnosticCategory,
+  LocalSyncDiagnosticEvent,
+  LocalSyncDiagnosticSeverity,
+  LocalSyncShadowSaveResult,
   LocalSyncOutboxEntry,
   LocalSyncOutboxEntryStatus,
+  WorldDocumentShadowDeltaPayload,
+  WorldDocumentShadowOperationPayload,
   WorldDocumentShadowSnapshotPayload,
 } from "@/shared/storage/sync-shadow-storage";
 
 export {
+  appendLocalSyncDiagnosticEvent,
+  compactWorldDocumentShadowOutbox,
   createStableJsonHash,
+  listLocalSyncCompactSummaries,
+  listLocalSyncDiagnosticEvents,
   listLocalSyncOutboxEntriesForAsset,
+  markWorldDocumentShadowEntryValidated,
+  markWorldDocumentShadowEntriesValidated,
   readLocalDocumentSyncState,
+  SYNC_SHADOW_COMPACT_SUMMARY_STORE_LOCATION,
+  SYNC_SHADOW_DIAGNOSTIC_STORE_LOCATION,
   SYNC_SHADOW_OUTBOX_STORE_LOCATION,
   SYNC_SHADOW_STATE_STORE_LOCATION,
   writeWorldDocumentShadowSave,
+  writeWorldDocumentShadowSaveWithResult,
   writeWorldDocumentWithShadowSave,
 } from "@/shared/storage/sync-shadow-storage";
+
+export {
+  ENABLE_LOCAL_SYNC_SHADOW_MODE,
+  ENABLE_LOCAL_SYNC_TELEMETRY_UPLOAD,
+} from "@/shared/storage/sync-shadow-build-flags";
+
+export type {
+  LocalSyncTelemetryCompactSummary,
+  LocalSyncTelemetryDiagnosticEvent,
+  LocalSyncTelemetryPayload,
+  LocalSyncTelemetryUploadResult,
+  LocalSyncTelemetryUploadStatus,
+} from "@/shared/storage/sync-telemetry-upload";
+
+export {
+  createLocalSyncTelemetryPayload,
+  tryUploadLocalSyncTelemetry,
+} from "@/shared/storage/sync-telemetry-upload";
 
 export type {
   EditorPersistState,

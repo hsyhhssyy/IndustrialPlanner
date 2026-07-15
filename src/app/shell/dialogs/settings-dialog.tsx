@@ -423,6 +423,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                   {group.items.filter((setting) => !isNonDesktop || !setting.mobileHidden).flatMap((setting, index, _filtered) => {
                     const isEditable = controller.isSettingEditable(setting.id);
                     const isKeybinding = setting.kind === "keybinding";
+                    const isText = setting.kind === "text";
                     const isDebugGroup = group.id === "debug";
                     const isGameGroup = group.id === "game";
                     const settingLabel = resolveSettingLabel(setting, t);
@@ -458,6 +459,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                           "settings-dialog-setting-card",
                           isEditable ? "" : "is-disabled",
                           isKeybinding ? "is-keybinding" : "",
+                          isText ? "is-text" : "",
                         ].filter(Boolean).join(" "))}
                         key={setting.id}
                       >
@@ -883,6 +885,25 @@ function renderSettingControl(options: {
     onStartCapturing,
   } = options;
   const value = controller.getValue(setting.id);
+
+  if (setting.kind === "text") {
+    return (
+      <label className={cm(styles, "settings-dialog-text-shell")} htmlFor={`setting-${setting.id}`}>
+        <input
+          autoComplete="off"
+          disabled={!isEditable}
+          id={`setting-${setting.id}`}
+          name={setting.id}
+          onChange={(event) => {
+            controller.updateTextValue(setting.id, event.target.value);
+          }}
+          placeholder={setting.placeholderText}
+          type="text"
+          value={typeof value === "string" ? value : setting.defaultValue}
+        />
+      </label>
+    );
+  }
 
   if (setting.kind === "select") {
     return (

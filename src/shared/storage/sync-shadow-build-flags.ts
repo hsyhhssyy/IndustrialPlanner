@@ -1,0 +1,2 @@
+export const ENABLE_LOCAL_SYNC_SHADOW_MODE = true;
+export const ENABLE_LOCAL_SYNC_TELEMETRY_UPLOAD = true;

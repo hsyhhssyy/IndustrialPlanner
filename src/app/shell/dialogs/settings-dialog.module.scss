@@ -183,6 +183,10 @@
   opacity: 0.72;
 }
 
+.settings-dialog-setting-card.is-text {
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 320px);
+}
+
 /* 快捷键设置项-伪表格样式 */
 /* AI-CORRECTION 2026-06-15:
    快捷键项保留紧凑文本，但视觉上回归设置卡片，避免比普通设置项少一层内缩。 */
@@ -307,9 +311,14 @@
 }
 
 .settings-dialog-field-shell,
+.settings-dialog-text-shell,
 .settings-dialog-slider-shell,
 .settings-dialog-switch-shell {
   width: min(100%, 236px);
+}
+
+.settings-dialog-text-shell {
+  width: min(100%, 320px);
 }
 
 .settings-dialog-keybinding-button {
@@ -333,24 +342,35 @@
 }
 
 .settings-dialog-field-shell select,
+.settings-dialog-text-shell input,
 .settings-dialog-slider-shell input[type="range"] {
   width: 100%;
 }
 
 .settings-dialog-field-shell select:disabled,
+.settings-dialog-text-shell input:disabled,
 .settings-dialog-slider-shell input[type="range"]:disabled,
 .settings-dialog-keybinding-button:disabled {
   background: var(--surface-2);
   color: var(--text-1);
 }
 
-.settings-dialog-field-shell select {
+.settings-dialog-field-shell select,
+.settings-dialog-text-shell input {
   min-height: 34px;
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-1);
   color: var(--text-0);
+}
+
+.settings-dialog-text-shell input {
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    monospace;
+  font-size: 0.82rem;
 }
 
 .settings-dialog-slider-shell {

@@ -67,6 +67,10 @@ import {
   setLogLevel,
 } from "@/shared/logging/logger";
 import {
+  readBackendApiAddressOverride,
+  writeBackendApiAddressOverride,
+} from "@/shared/storage/backend-api-address";
+import {
   isMobileOrTabletScreenProfile,
   isMobileLandscapeScreenProfile,
   isMobilePortraitScreenProfile,
@@ -475,6 +479,14 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
 
           appHost.internalState.settings.debugShowGestureDiagnosticsWindow = value;
         }),
+      },
+      "debug-backend-api-address-override": {
+        readValue: () => readBackendApiAddressOverride(),
+        writeValue: (value) => {
+          if (typeof value === "string") {
+            writeBackendApiAddressOverride(value);
+          }
+        },
       },
       "other-debug-mode": {
         readValue: () => appHost.state.settings.debugMode,

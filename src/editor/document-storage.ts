@@ -7,11 +7,19 @@ import {
   readFromIndexedDb,
   saveToIndexedDb,
 } from "@/shared/storage";
-import { writeWorldDocumentShadowSave } from "@/shared/storage/sync-shadow-storage";
+import { ENABLE_LOCAL_SYNC_SHADOW_MODE } from "@/shared/storage/sync-shadow-build-flags";
+import { writeWorldDocumentShadowSaveWithResult } from "@/shared/storage/sync-shadow-storage";
+import {
+  LOCAL_SYNC_TELEMETRY_MIN_INTERVAL_MS,
+  tryUploadLocalSyncTelemetry,
+} from "@/shared/storage/sync-telemetry-upload";
 import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
+import type { EditorHistoryDocumentDelta } from "@/domain/editor/editor-history";
 import { runInAction } from "mobx";
 
 import type { EditorHost } from "./editor-host";
+import { createWorldDocumentDelta } from "./history";
+import { createSyncShadowReplayValidator } from "./sync-shadow-replay-validator";
 
 const DOCUMENT_DATABASE_NAME = "v3-industrial-planner";
 const WORD_DOCUMENT_STORE_NAME = "worddocument";
@@ -26,10 +34,23 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
   let unsubscribeDocument: (() => void) | null = null;
   let writeQueue = Promise.resolve();
   let shadowQueue = Promise.resolve();
+  let lastShadowBaseDocument: WorldDocument | null = null;
+  let telemetryHeartbeatId: ReturnType<typeof globalThis.setInterval> | null = null;
+  const shadowReplayValidator = createSyncShadowReplayValidator();
+
+  if (ENABLE_LOCAL_SYNC_SHADOW_MODE) {
+    void tryUploadLocalSyncTelemetry({ trigger: "sync-shadow-heartbeat" });
+    telemetryHeartbeatId = globalThis.setInterval(() => {
+      void tryUploadLocalSyncTelemetry({ trigger: "sync-shadow-heartbeat" });
+    }, LOCAL_SYNC_TELEMETRY_MIN_INTERVAL_MS);
+    unrefTimer(telemetryHeartbeatId);
+  }
 
   const enqueueWrite = (
     document: WorldDocument,
     options: {
+      baseDocument?: WorldDocument;
+      delta?: EditorHistoryDocumentDelta | null;
       recordShadow?: boolean;
     } = {},
   ): void => {
@@ -39,7 +60,7 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
 
     writeQueue = snapshotWrite;
 
-    if (options.recordShadow === false) {
+    if (options.recordShadow === false || !ENABLE_LOCAL_SYNC_SHADOW_MODE) {
       return;
     }
 
@@ -47,7 +68,18 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
       .catch(() => undefined)
       .then(() => snapshotWrite)
       .then(async () => {
-        await writeWorldDocumentShadowSave({ document });
+        const result = await writeWorldDocumentShadowSaveWithResult({
+          document,
+          baseDocument: options.baseDocument,
+          delta: options.delta,
+        });
+
+        if (result !== null && options.baseDocument !== undefined) {
+          shadowReplayValidator.validate({
+            baseDocument: options.baseDocument,
+            outboxEntry: result.outboxEntry,
+          });
+        }
       });
   };
 
@@ -60,11 +92,21 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
 
     rememberLatestWorldDocument(editorHost, initialDocument);
     editorHost.internalDocument.setSnapshot(initialDocument);
+    lastShadowBaseDocument = initialDocument;
     enqueueWrite(initialDocument, { recordShadow: false });
 
     unsubscribeDocument = editorHost.internalDocument.subscribe((document) => {
       rememberLatestWorldDocument(editorHost, document);
-      enqueueWrite(document);
+      const baseDocument = lastShadowBaseDocument;
+      const delta = baseDocument === null
+        ? null
+        : createWorldDocumentDelta(baseDocument, document);
+
+      lastShadowBaseDocument = document;
+      enqueueWrite(document, {
+        baseDocument: baseDocument ?? undefined,
+        delta,
+      });
     });
   })();
 
@@ -72,7 +114,20 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
     disposed = true;
     unsubscribeDocument?.();
     unsubscribeDocument = null;
+    if (telemetryHeartbeatId !== null) {
+      globalThis.clearInterval(telemetryHeartbeatId);
+      telemetryHeartbeatId = null;
+    }
+    shadowReplayValidator.dispose();
   };
+}
+
+function unrefTimer(timer: ReturnType<typeof globalThis.setInterval>): void {
+  const nodeTimer = timer as {
+    readonly unref?: () => void;
+  };
+
+  nodeTimer.unref?.();
 }
 
 async function resolveInitialDocument(
@@ -104,6 +159,8 @@ export async function readWorldDocument(
 export async function writeWorldDocument(
   document: WorldDocument,
   options: {
+    baseDocument?: WorldDocument;
+    delta?: EditorHistoryDocumentDelta | null;
     recordShadow?: boolean;
   } = {},
 ): Promise<void> {
@@ -120,7 +177,15 @@ export async function writeWorldDocument(
     document,
   );
 
-  await writeWorldDocumentShadowSave({ document });
+  if (!ENABLE_LOCAL_SYNC_SHADOW_MODE) {
+    return;
+  }
+
+  await writeWorldDocumentShadowSaveWithResult({
+    document,
+    baseDocument: options.baseDocument,
+    delta: options.delta,
+  });
 }
 
 export async function listWorldDocuments(): Promise<WorldDocument[]> {

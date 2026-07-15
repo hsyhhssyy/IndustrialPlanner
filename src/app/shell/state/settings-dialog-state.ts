@@ -55,11 +55,18 @@ interface WorkbenchKeybindingSettingDefinition extends WorkbenchSettingBaseDefin
   readonly defaultValue: string;
 }
 
+interface WorkbenchTextSettingDefinition extends WorkbenchSettingBaseDefinition {
+  readonly kind: "text";
+  readonly defaultValue: string;
+  readonly placeholderText?: string;
+}
+
 export type WorkbenchSettingDefinition =
   | WorkbenchSelectSettingDefinition
   | WorkbenchSliderSettingDefinition
   | WorkbenchSwitchSettingDefinition
-  | WorkbenchKeybindingSettingDefinition;
+  | WorkbenchKeybindingSettingDefinition
+  | WorkbenchTextSettingDefinition;
 
 export interface WorkbenchSettingsGroupDefinition {
   readonly id: SettingsGroupId;
@@ -465,6 +472,14 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         defaultValue: false,
       },
       {
+        id: "debug-backend-api-address-override",
+        kind: "text",
+        labelKey: "settingsField.debug-backend-api-address-override",
+        descriptionKey: "settingsField.debug-backend-api-address-overrideDescription",
+        defaultValue: "",
+        placeholderText: "endfield-api.amiyabot.com",
+      },
+      {
         id: "debug-show-fps",
         kind: "switch",
         labelKey: "settingsField.debug-show-fps",
@@ -614,7 +629,19 @@ export class WorkbenchSettingsDialogController {
   }
 
   public getValue(settingId: string): WorkbenchSettingControlValue | undefined {
-    return this.externalBindings.get(settingId)?.readValue() ?? this.values[settingId];
+    const externalBinding = this.externalBindings.get(settingId);
+    if (!externalBinding) {
+      return this.values[settingId];
+    }
+
+    const localValue = this.values[settingId];
+    const setting = SETTING_DEFINITION_BY_ID.get(settingId);
+
+    if (setting?.kind === "text" && localValue !== undefined) {
+      return localValue;
+    }
+
+    return externalBinding.readValue();
   }
 
   public isSettingEditable(settingId: string): boolean {
@@ -729,6 +756,24 @@ export class WorkbenchSettingsDialogController {
     this.persist();
   }
 
+  public updateTextValue(settingId: string, value: string): void {
+    const setting = SETTING_DEFINITION_BY_ID.get(settingId);
+    if (setting?.kind !== "text" || !this.isSettingEditable(settingId)) {
+      return;
+    }
+
+    const externalBinding = this.externalBindings.get(settingId);
+    if (externalBinding) {
+      externalBinding.writeValue(value);
+      this.values[settingId] = value;
+
+      return;
+    }
+
+    this.values[settingId] = value;
+    this.persist();
+  }
+
   /**
    * 查找与给定值冲突的快捷键设置。
    * 返回冲突的 settingId，若没有冲突返回 null。
@@ -800,6 +845,9 @@ export class WorkbenchSettingsDialogController {
       const externalBinding = this.externalBindings.get(setting.id);
       if (externalBinding) {
         externalBinding.writeValue(setting.defaultValue);
+        if (setting.kind === "text") {
+          this.values[setting.id] = setting.defaultValue;
+        }
       } else {
         this.values[setting.id] = setting.defaultValue;
       }
@@ -859,6 +907,12 @@ export class WorkbenchSettingsDialogController {
         if (normalizedValue !== null) {
           nextValues[settingId] = normalizedValue;
         }
+
+        continue;
+      }
+
+      if (setting.kind === "text" && typeof rawValue === "string") {
+        nextValues[settingId] = rawValue;
       }
     }
 
@@ -867,9 +921,13 @@ export class WorkbenchSettingsDialogController {
   }
 
   private persist(): PersistedUserSettingsDialogState {
+    const values = Object.fromEntries(
+      Object.entries(this.values).filter(([settingId]) => !this.externalBindingIds.has(settingId)),
+    );
+
     return saveToLocalStorage(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY, {
       selectedGroupId: this.selectedGroupId,
-      values: this.values,
+      values,
     });
   }
 

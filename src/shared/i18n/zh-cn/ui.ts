@@ -172,6 +172,8 @@ const UI: Record<string, string> = {
     "settingsAction.resetOperationAndShortcutsConfirm": "确定要将操作方式与快捷键恢复为默认设置吗？",
     "settingsDialog.groups": "设置分组",
     "settingsDialog.title": "设置",
+    "settingsField.debug-backend-api-address-override": "覆盖后端地址",
+    "settingsField.debug-backend-api-address-overrideDescription": "填写后会覆盖后端 API 地址；留空或只输入空白字符时使用默认地址 endfield-api.amiyabot.com。",
     "settingsField.debug-show-fps": "显示 FPS/TPS",
     "settingsField.debug-show-fpsDescription": "开启后在画布左上角显示可折叠的 FPS/TPS 指示面板。",
     "settingsField.debug-show-gesture-diagnostics-window": "显示手势测试窗口",

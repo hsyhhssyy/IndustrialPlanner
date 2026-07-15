@@ -20,6 +20,7 @@ describe("WorkbenchSettingsDialogController", () => {
     controller.updateSelectValue("system-theme", "ayu-dark");
     controller.updateSwitchValue("game-use-blueprint-style-device-images", true);
     controller.updateSwitchValue("other-debug-mode", true);
+    controller.updateTextValue("debug-backend-api-address-override", "https://debug.example.test/api");
     controller.updateSwitchValue("debug-show-fps", true);
     controller.updateSwitchValue("debug-show-gesture-diagnostics-window", true);
 
@@ -67,6 +68,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-use-blueprint-style-device-images": true,
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
+        "debug-backend-api-address-override": "https://debug.example.test/api",
         "debug-show-fps": true,
         "debug-show-gesture-diagnostics-window": true,
       },
@@ -107,6 +109,9 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["game-use-blueprint-style-device-images"]).toBe(true);
     expect(hydratedController.values["other-toolbox-show-all-activity-content"]).toBe(true);
     expect(hydratedController.values["other-debug-mode"]).toBe(true);
+    expect(hydratedController.values["debug-backend-api-address-override"]).toBe(
+      "https://debug.example.test/api",
+    );
     expect(hydratedController.values["debug-show-fps"]).toBe(true);
     expect(hydratedController.values["debug-show-gesture-diagnostics-window"]).toBe(true);
   });
@@ -196,6 +201,41 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(controller.getValue("game-show-device-icons")).toBe(true);
   });
 
+  it("uses external bindings as the source of truth for text settings", () => {
+    let backendApiAddressOverride = "";
+    const controller = new WorkbenchSettingsDialogController({
+      externalBindings: {
+        "debug-backend-api-address-override": {
+          readValue: () => backendApiAddressOverride,
+          writeValue: (value) => {
+            if (typeof value === "string") {
+              backendApiAddressOverride = value;
+            }
+          },
+        },
+      },
+    });
+
+    controller.updateSwitchValue("other-debug-mode", true);
+    controller.updateTextValue(
+      "debug-backend-api-address-override",
+      " http://localhost:8787 ",
+    );
+    controller.updateSwitchValue("debug-show-fps", true);
+
+    expect(backendApiAddressOverride).toBe(" http://localhost:8787 ");
+    expect(controller.getValue("debug-backend-api-address-override")).toBe(
+      " http://localhost:8787 ",
+    );
+    expect(controller.values["debug-backend-api-address-override"]).toBe(
+      " http://localhost:8787 ",
+    );
+    expect(
+      JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")
+        .values["debug-backend-api-address-override"],
+    ).toBeUndefined();
+  });
+
   it("uses external bindings as the source of truth for connected settings", () => {
     let locale = "zh-CN";
     let themeId = "ayu-light";
@@ -271,6 +311,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-use-blueprint-style-device-images": false,
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
+        "debug-backend-api-address-override": "",
         "debug-show-fps": false,
         "debug-show-gesture-diagnostics-window": false,
       },

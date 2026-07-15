@@ -16,6 +16,9 @@ import {
   APP_SETTINGS_LOCAL_STORAGE_KEY,
   WORKBENCH_STATE_LOCAL_STORAGE_KEY,
 } from "@/app/state/storage-hook";
+import {
+  BACKEND_API_ADDRESS_OVERRIDE_LOCAL_STORAGE_KEY,
+} from "@/shared/storage/backend-api-address";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import {
@@ -3625,19 +3628,28 @@ describe("WorkbenchApp", () => {
     const showGestureTestWindowToggle = container.querySelector(
       'input[name="debug-show-gesture-diagnostics-window"]',
     ) as HTMLInputElement | null;
+    const backendApiAddressInput = container.querySelector(
+      'input[name="debug-backend-api-address-override"]',
+    ) as HTMLInputElement | null;
 
     expect(showFpsToggle).not.toBeNull();
     expect(showGestureTestWindowToggle).not.toBeNull();
+    expect(backendApiAddressInput).not.toBeNull();
     expect(showFpsToggle?.checked).toBe(false);
     expect(showGestureTestWindowToggle?.checked).toBe(false);
+    expect(backendApiAddressInput?.placeholder).toBe("endfield-api.amiyabot.com");
 
     act(() => {
+      if (backendApiAddressInput) {
+        dispatchInputEvent(backendApiAddressInput, "http://localhost:8787");
+      }
       showFpsToggle?.click();
       showGestureTestWindowToggle?.click();
     });
 
     expect(appHost.state.settings.debugShowFps).toBe(true);
     expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(true);
+    expect(backendApiAddressInput?.value).toBe("http://localhost:8787");
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
         ...DEFAULT_APP_SETTINGS_STORAGE,
@@ -3646,6 +3658,9 @@ describe("WorkbenchApp", () => {
         debugMode: true,
       }),
     );
+    expect(JSON.parse(
+      localStorage.getItem(BACKEND_API_ADDRESS_OVERRIDE_LOCAL_STORAGE_KEY) ?? "null",
+    )).toBe("http://localhost:8787");
   });
 
   it("writes always-show-grid-lines into AppSettings storage without applying grid behavior yet", () => {
