@@ -1,15 +1,10 @@
 import type { EditorAction } from "@/domain/editor/editor-action";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import type { GridPoint } from "@/domain/shared/grid";
 import type { LogisticsKind, LogisticsPortDirection } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { collectConnectedStrictLogisticsEntityIds } from "@/shared/transport-component";
 
-import {
-  resolveDevicePortEndpoints,
-  resolveEntityGridRect,
-  isGridPointInsideRect,
-} from "../logistics/logistics-utils";
 import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 
@@ -34,90 +29,16 @@ function collectConnectedStrictLogistics(
   resolveDedicatedLogisticsKind: (definitionId: string) => LogisticsKind | null,
   directions: readonly LogisticsPortDirection[] = ["input", "output"],
 ): ReadonlySet<string> {
-  const visited = new Set<string>();
-  const toDelete = new Set<string>();
-  const queue: string[] = [startEntityId];
-  visited.add(startEntityId);
-
-  while (queue.length > 0) {
-    const currentId = queue.shift()!;
-    const entity = currentId === startEntityId
-      ? startEntity
-      : document.entities[currentId];
-
-    if (entity === undefined) {
-      continue;
-    }
-
-    if (!isDedicatedLogisticsDevice(entity.definitionId)) {
-      continue;
-    }
-    if (resolveDedicatedLogisticsKind(entity.definitionId) !== kind) {
-      continue;
-    }
-
-    toDelete.add(currentId);
-
-    const definition = entityDefinitionMap.get(entity.definitionId);
-    if (definition === undefined) {
-      continue;
-    }
-
-    // 收集指定方向的端口端点
-    const adjacentCells = new Set<string>();
-
-    for (const direction of directions) {
-      const endpoints = resolveDevicePortEndpoints({
-        entity,
-        definition,
-        kind,
-        direction,
-        pointerGridPoint: entity.position,
-      });
-
-      for (const endpoint of endpoints) {
-        const key = `${endpoint.outsideGridPoint.x},${endpoint.outsideGridPoint.y}`;
-        adjacentCells.add(key);
-      }
-    }
-
-    // 检查每个邻接格是否有同种类严格物流设备
-    for (const key of adjacentCells) {
-      const [cx, cy] = key.split(",").map(Number) as [number, number];
-      const cellPoint: GridPoint = { x: cx, y: cy };
-
-      for (const [otherId, otherEntity] of Object.entries(document.entities)) {
-        if (visited.has(otherId)) {
-          continue;
-        }
-
-        if (!isDedicatedLogisticsDevice(otherEntity.definitionId)) {
-          continue;
-        }
-        if (resolveDedicatedLogisticsKind(otherEntity.definitionId) !== kind) {
-          continue;
-        }
-
-        const otherDefinition = entityDefinitionMap.get(otherEntity.definitionId);
-        if (otherDefinition === undefined) {
-          continue;
-        }
-
-        // 检查该实体是否占据 cellPoint
-        if (
-          isGridPointInsideRect(
-            cellPoint,
-            resolveEntityGridRect({ entity: otherEntity, definition: otherDefinition }),
-          )
-        ) {
-          visited.add(otherId);
-          queue.push(otherId);
-        }
-      }
-    }
-  }
-
-  return toDelete;
+  return collectConnectedStrictLogisticsEntityIds({
+    startEntityId,
+    startEntity,
+    kind,
+    document,
+    entityDefinitionMap,
+    isDedicatedLogisticsDevice,
+    resolveDedicatedLogisticsKind,
+    directions,
+  });
 }
 
 export function createEditorTransportActions(

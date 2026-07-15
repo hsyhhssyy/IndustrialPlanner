@@ -1,12 +1,14 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { canCurrentBaseAcceptWulingOnlyEntities } from "@/app/placement-zone-availability";
+import type { WorldEntity } from "@/domain/document/world-document";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import {
   EntityCollectionType,
   type MarqueeCollectionType,
 } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRect } from "@/domain/shared/grid";
+import { collectConnectedStrictLogisticsEntityIds } from "@/shared/transport-component";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
@@ -151,7 +153,11 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
                 position: event.position,
                 pointerEntity: event.pointerEntity,
                 onSelect: (entity) => {
-                  toggleEntityInSelection(editor, entity.id);
+                  toggleEntityOrStrictLogisticsSegmentInSelection({
+                    appHost: context.appHost,
+                    editor,
+                    entity,
+                  });
                   showMarqueeRightDockToolbar(context.appHost, editor);
                 },
               })
@@ -159,7 +165,11 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
               return { status: "handled" };
             }
 
-            toggleEntityInSelection(editor, event.pointerEntity.id);
+            toggleEntityOrStrictLogisticsSegmentInSelection({
+              appHost: context.appHost,
+              editor,
+              entity: event.pointerEntity,
+            });
             showMarqueeRightDockToolbar(context.appHost, editor);
             return { status: "handled" };
           }
@@ -179,7 +189,11 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
                 position: event.position,
                 pointerEntity: event.pointerEntity,
                 onSelect: (entity) => {
-                  toggleEntityInSelection(editor, entity.id);
+                  toggleEntityOrStrictLogisticsSegmentInSelection({
+                    appHost: context.appHost,
+                    editor,
+                    entity,
+                  });
                   showMarqueeRightDockToolbar(context.appHost, editor);
                 },
               })
@@ -187,7 +201,11 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
               return { status: "handled" };
             }
 
-            toggleEntityInSelection(editor, event.pointerEntity.id);
+            toggleEntityOrStrictLogisticsSegmentInSelection({
+              appHost: context.appHost,
+              editor,
+              entity: event.pointerEntity,
+            });
             showMarqueeRightDockToolbar(context.appHost, editor);
             return { status: "handled" };
           }
@@ -493,14 +511,72 @@ export function showMarqueeRightDockToolbar(
   appHost.internalActions.showCanvasRightDockToolbar(buttonIds, mode);
 }
 
-function toggleEntityInSelection(editor: EditorContract, entityId: string): void {
+function toggleEntityOrStrictLogisticsSegmentInSelection(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+  entity: WorldEntity;
+}): void {
+  const entityIds = resolveStrictLogisticsSegmentSelectionIds(options);
+  const shouldRemove = options.editor.state.collections.selection.contains(options.entity.id);
+
+  for (const entityId of entityIds) {
+    if (shouldRemove) {
+      removeEntityFromSelection(options.editor, entityId);
+    } else {
+      addEntityToSelection(options.editor, entityId);
+    }
+  }
+}
+
+function resolveStrictLogisticsSegmentSelectionIds(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+  entity: WorldEntity;
+}): readonly string[] {
+  const registry = options.appHost.workspace.registry;
+  if (!registry.queries.isDedicatedLogisticsDevice(options.entity.definitionId)) {
+    return [options.entity.id];
+  }
+
+  const kind = registry.queries.resolveDedicatedLogisticsKind(options.entity.definitionId);
+  if (kind === null) {
+    return [options.entity.id];
+  }
+
+  const entityDefinitionMap = new Map(
+    registry.entityDefinitions.map((definition) => [
+      definition.id,
+      definition,
+    ]),
+  );
+  const segmentEntityIds = collectConnectedStrictLogisticsEntityIds({
+    startEntityId: options.entity.id,
+    startEntity: options.entity,
+    kind,
+    document: options.editor.document.getSnapshot(),
+    entityDefinitionMap,
+    isDedicatedLogisticsDevice: registry.queries.isDedicatedLogisticsDevice.bind(registry.queries),
+    resolveDedicatedLogisticsKind: registry.queries.resolveDedicatedLogisticsKind.bind(registry.queries),
+    directions: ["input", "output"],
+  });
+
+  return segmentEntityIds.size > 0 ? Array.from(segmentEntityIds) : [options.entity.id];
+}
+
+function addEntityToSelection(editor: EditorContract, entityId: string): void {
+  if (editor.state.collections.selection.contains(entityId)) {
+    return;
+  }
+
+  editor.actions.addToCollection({
+    collectionType: EntityCollectionType.selection,
+    entityId,
+  });
+}
+
+function removeEntityFromSelection(editor: EditorContract, entityId: string): void {
   if (editor.state.collections.selection.contains(entityId)) {
     editor.actions.removeFromCollection({
-      collectionType: EntityCollectionType.selection,
-      entityId,
-    });
-  } else {
-    editor.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
       entityId,
     });

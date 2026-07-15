@@ -2,18 +2,25 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
+import { WorkbenchOverlapEntityMenuController } from "@/app/shell/state/overlap-entity-menu-state";
 import {
   createHypergryphMarqueeGestureModule,
   type GestureActionContext,
 } from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
-import type { EditorContract } from "@/domain/editor/editor-contract";
-import type { WorldEntity } from "@/domain/document/world-document";
+import type { EditorContract, EditorSnapshotStore } from "@/domain/editor/editor-contract";
+import {
+  createWorldDocument,
+  type WorldDocument,
+  type WorldEntity,
+} from "@/domain/document/world-document";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
 import {
   EntityCollectionType,
   type EntityCollection,
 } from "@/domain/editor/types/editor-types";
 import type { GridPoint } from "@/domain/shared/grid";
+import { createRegistryContract } from "@/registry";
 
 describe("createHypergryphMarqueeGestureModule", () => {
   it("enters and exits marquee from the X key", () => {
@@ -119,6 +126,104 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(appHost.internalState.runtime.canvasRightDockToolbar.buttonIds).toEqual([
       "canvas-right-dock-toolbar-button-exit",
     ]);
+  });
+
+  it("toggles the whole strict logistics segment when tapping a belt in marquee mode", () => {
+    const beltA = entity("belt-a", "belt_straight_1x1", { x: 0, y: 0 });
+    const beltB = entity("belt-b", "belt_straight_1x1", { x: 1, y: 0 });
+    const beltC = entity("belt-c", "belt_straight_1x1", { x: 2, y: 0 });
+    const pipe = entity("pipe-a", "pipe_straight_1x1", { x: 0, y: 1 });
+    const { context, editor } = createContext({
+      activeTool: "marquee",
+      document: createDocumentWithEntities([beltA, beltB, beltC, pipe]),
+    });
+    const module = createHypergryphMarqueeGestureModule();
+
+    expect(module.handle(mouseTapEvent(beltB), context)).toEqual({ status: "handled" });
+    expect([...editor.state.collections.selection].sort()).toEqual([
+      "belt-a",
+      "belt-b",
+      "belt-c",
+    ]);
+    expect(editor.state.collections.selection.contains("pipe-a")).toBe(false);
+
+    expect(module.handle(mouseTapEvent(beltB), context)).toEqual({ status: "handled" });
+    expect([...editor.state.collections.selection]).toEqual([]);
+  });
+
+  it("toggles the whole strict logistics segment when tapping a pipe in marquee mode", () => {
+    const pipeA = entity("pipe-a", "pipe_straight_1x1", { x: 0, y: 0 });
+    const pipeB = entity("pipe-b", "pipe_straight_1x1", { x: 1, y: 0 });
+    const pipeC = entity("pipe-c", "pipe_straight_1x1", { x: 2, y: 0 });
+    const belt = entity("belt-a", "belt_straight_1x1", { x: 0, y: 1 });
+    const { context, editor } = createContext({
+      activeTool: "marquee",
+      document: createDocumentWithEntities([pipeA, pipeB, pipeC, belt]),
+    });
+    const module = createHypergryphMarqueeGestureModule();
+
+    expect(module.handle(mouseTapEvent(pipeB), context)).toEqual({ status: "handled" });
+    expect([...editor.state.collections.selection].sort()).toEqual([
+      "pipe-a",
+      "pipe-b",
+      "pipe-c",
+    ]);
+    expect(editor.state.collections.selection.contains("belt-a")).toBe(false);
+  });
+
+  it("toggles the whole strict logistics segment from the overlap entity menu in marquee mode", () => {
+    const beltA = entity("belt-a", "belt_straight_1x1", { x: 0, y: 0 });
+    const beltB = entity("belt-b", "belt_straight_1x1", { x: 1, y: 0 });
+    const beltC = entity("belt-c", "belt_straight_1x1", { x: 2, y: 0 });
+    const pipe = entity("pipe-a", "pipe_straight_1x1", { x: 1, y: 0 });
+    const { context, appHost, editor } = createContext({
+      activeTool: "marquee",
+      document: createDocumentWithEntities([beltA, beltB, beltC, pipe]),
+    });
+    const module = createHypergryphMarqueeGestureModule();
+
+    expect(module.handle(mouseTapEvent(pipe, { x: 1, y: 0 }), context)).toEqual({ status: "handled" });
+    expect(appHost.overlapEntityMenu.visible).toBe(true);
+    expect(appHost.overlapEntityMenu.candidates.map((candidate) => candidate.entityId)).toEqual([
+      "pipe-a",
+      "belt-b",
+    ]);
+    expect(editor.actions.addToCollection).not.toHaveBeenCalled();
+
+    appHost.overlapEntityMenu.select("belt-b");
+
+    expect([...editor.state.collections.selection].sort()).toEqual([
+      "belt-a",
+      "belt-b",
+      "belt-c",
+    ]);
+    expect(editor.state.collections.selection.contains("pipe-a")).toBe(false);
+  });
+
+  it("keeps marquee drag selection delegated to applyMarquee without expanding strict logistics segments", () => {
+    const beltA = entity("belt-a", "belt_straight_1x1", { x: 0, y: 0 });
+    const beltB = entity("belt-b", "belt_straight_1x1", { x: 1, y: 0 });
+    const { context, editor } = createContext({
+      activeTool: "marquee",
+      document: createDocumentWithEntities([beltA, beltB]),
+    });
+    const module = createHypergryphMarqueeGestureModule();
+
+    expect(
+      module.handle(
+        mouseDragStartEvent({
+          originButton: 0,
+          pointerEntity: null,
+          position: { x: 0, y: 0 },
+        }),
+        context,
+      ),
+    ).toEqual({ status: "handled" });
+    expect(module.handle(mouseDragEndEvent(), context).status).toBe("handled");
+
+    expect(editor.actions.applyMarquee).toHaveBeenCalledTimes(1);
+    expect(editor.actions.addToCollection).not.toHaveBeenCalled();
+    expect(editor.actions.removeFromCollection).not.toHaveBeenCalled();
   });
 
   it("closes the left dock on marquee enter for mobile and tablet", () => {
@@ -396,6 +501,8 @@ function createContext(options: {
   leftDockOpen?: boolean;
   deviceClass?: "desktop" | "tablet" | "mobile";
   selectedEntityIds?: readonly string[];
+  document?: WorldDocument;
+  registry?: RegistryContract;
 } = {}): {
   context: GestureActionContext<AppHost>;
   editor: MockEditor;
@@ -403,7 +510,11 @@ function createContext(options: {
 } {
   const selection = createSelectionCollection(options.selectedEntityIds ?? []);
   const mutableSelection = selection as unknown as string[];
+  const documentSnapshot = options.document ?? createDocumentWithEntities([]);
   const editor: MockEditor = {
+    document: {
+      getSnapshot: vi.fn(() => documentSnapshot),
+    } as unknown as EditorSnapshotStore<WorldDocument>,
     state: {
       collections: {
         selection,
@@ -441,6 +552,11 @@ function createContext(options: {
       clearHoverPoint: vi.fn(),
     },
     queries: {
+      getEntityById: vi.fn((entityId) => documentSnapshot.entities[entityId] ?? null),
+      listEntities: vi.fn(() => documentSnapshot.entityOrder.flatMap((entityId) => {
+        const currentEntity = documentSnapshot.entities[entityId];
+        return currentEntity === undefined ? [] : [currentEntity];
+      })),
       findGridCellForClientPixelPoint: vi.fn((point) => ({
         x: Math.floor(point.x),
         y: Math.floor(point.y),
@@ -457,6 +573,7 @@ function createContext(options: {
   };
   const workspace = {
     editor,
+    registry: options.registry ?? createRegistryContract(),
   } as unknown as WorkspaceContract;
   const appHost = {
     workspace,
@@ -518,6 +635,7 @@ function createContext(options: {
         appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [];
       }),
     },
+    overlapEntityMenu: new WorkbenchOverlapEntityMenuController(),
   } as unknown as AppHost;
 
   return {
@@ -532,6 +650,7 @@ function createContext(options: {
 }
 
 type MockEditor = {
+  document: Pick<EditorContract["document"], "getSnapshot">;
   state: Pick<EditorContract["state"], "collections">;
   actions: Pick<
     EditorContract["actions"],
@@ -547,7 +666,9 @@ type MockEditor = {
   >;
   queries: Pick<
     EditorContract["queries"],
-    "findGridCellForClientPixelPoint"
+    | "findGridCellForClientPixelPoint"
+    | "getEntityById"
+    | "listEntities"
   >;
 };
 
@@ -555,6 +676,33 @@ function createSelectionCollection(entityIds: readonly string[]): EntityCollecti
   const selection = [...entityIds] as string[] & EntityCollection;
   selection.contains = (entityId: string) => selection.includes(entityId);
   return selection;
+}
+
+function createDocumentWithEntities(entities: readonly WorldEntity[]): WorldDocument {
+  const document = createWorldDocument();
+  return {
+    ...document,
+    entities: Object.fromEntries(entities.map((currentEntity) => [
+      currentEntity.id,
+      currentEntity,
+    ])),
+    entityOrder: entities.map((currentEntity) => currentEntity.id),
+  };
+}
+
+function entity(
+  id: string,
+  definitionId = "item_port_grinder_1",
+  position: GridPoint = { x: 0, y: 0 },
+): WorldEntity {
+  return {
+    id,
+    definitionId,
+    position,
+    rotation: 0,
+    config: {},
+    tags: [],
+  };
 }
 
 function keyDownEvent(code: string) {
@@ -590,13 +738,13 @@ function uiButtonMouseTapEvent(uiButtonId: string) {
   };
 }
 
-function mouseTapEvent(pointerEntity: WorldEntity) {
+function mouseTapEvent(pointerEntity: WorldEntity, position: GridPoint = { x: 2, y: 2 }) {
   return {
     type: "mouse tap" as const,
     gestureId: `mouse-tap-${pointerEntity.id}`,
     button: 0,
     buttons: 0,
-    position: { x: 2, y: 2 },
+    position,
     longPress: false,
     pointerEntity,
     modifiers: emptyModifiers(),
