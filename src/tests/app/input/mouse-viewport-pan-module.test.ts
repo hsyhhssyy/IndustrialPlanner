@@ -198,6 +198,36 @@ describe("createHypergryphMouseViewportPanModule", () => {
     expect(alignCanvasFloatingToolbar).not.toHaveBeenCalled();
   });
 
+  it("pans long-press touch drags while placing", () => {
+    const {
+      context,
+      moveViewportByClientPixelVector,
+    } = createContext(true, "single-placement");
+    const module = createHypergryphMouseViewportPanModule();
+
+    const result = module.handle(
+      {
+        type: "touch dragstart",
+        gestureId: "touch-placement-pan-1",
+        primaryId: 1,
+        position: { x: 136, y: 64 },
+        startPosition: { x: 120, y: 80 },
+        activeTouchCount: 1,
+        longPress: true,
+        pointerEntity: null,
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(moveViewportByClientPixelVector).toHaveBeenCalledWith({
+      startClientPixel: { x: 120, y: 80 },
+      endClientPixel: { x: 136, y: 64 },
+    });
+  });
+
   it("nudges a mobile placement preview back into the safe viewport after touch pan", () => {
     const {
       context,

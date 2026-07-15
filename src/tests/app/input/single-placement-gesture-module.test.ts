@@ -371,6 +371,34 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 8, y: 8 });
   });
 
+  it("keeps a preview drag when the first movement leaves its bounds", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "single-placement",
+      placementAnchor: { x: 5, y: 5 },
+      singlePlacementDeviceId: "device-a",
+      initialPreview: true,
+      previewRect: { x: 5, y: 5, width: 1, height: 1 },
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    const result = module.handle(touchDragStartEvent({
+      startPosition: { x: 5, y: 5 },
+      position: { x: 6, y: 5 },
+    }), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 5, y: 5 });
+
+    expect(module.handle(touchDragMoveEvent({ position: { x: 7, y: 5 } }), context)).toEqual({
+      status: "handled",
+    });
+    expect(editor.actions.moveCollectionTo).toHaveBeenCalledWith({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 5, y: 5 },
+      endGridPoint: { x: 7, y: 5 },
+    });
+  });
+
   it("rotates from the R key and toolbar button while placing", () => {
     const keyboard = createContext({
       activeTool: "single-placement",
@@ -987,13 +1015,16 @@ function placementTouchTapEvent(deviceId: string) {
   };
 }
 
-function touchDragStartEvent(options: { position: GridPoint }) {
+function touchDragStartEvent(options: {
+  position: GridPoint;
+  startPosition?: GridPoint;
+}) {
   return {
     type: "touch dragstart" as const,
     gestureId: "touch-drag-1",
     primaryId: 1,
     position: options.position,
-    startPosition: options.position,
+    startPosition: options.startPosition ?? options.position,
     activeTouchCount: 1,
     longPress: true,
     pointerEntity: null,

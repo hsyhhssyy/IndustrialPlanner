@@ -34,7 +34,10 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
         }
 
         case "touch dragstart": {
-          if (event.longPress) {
+          if (!canPanTouchDrag(
+            context.appHost.internalState.activeTool,
+            event.longPress,
+          )) {
             return { status: "ignored" };
           }
 
@@ -67,7 +70,10 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
         }
 
         case "touch dragmove": {
-          if (event.longPress) {
+          if (!canPanTouchDrag(
+            context.appHost.internalState.activeTool,
+            event.longPress,
+          )) {
             return { status: "ignored" };
           }
 
@@ -90,9 +96,12 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
             : { status: "ignored" };
 
         case "touch dragend":
-          return event.longPress
-            ? { status: "ignored" }
-            : { status: "handled" };
+          return canPanTouchDrag(
+            context.appHost.internalState.activeTool,
+            event.longPress,
+          )
+            ? { status: "handled" }
+            : { status: "ignored" };
 
         default:
           return { status: "ignored" };
@@ -122,4 +131,10 @@ function isMousePanButtonAllowed(activeTool: ActiveTool, originButton: number): 
     || activeTool === "logistics-placement"
     || activeTool === "dark-pipe-link"
   ) && originButton === 0;
+}
+
+function canPanTouchDrag(activeTool: ActiveTool, longPress: boolean): boolean {
+  return !longPress
+    || activeTool === "single-placement"
+    || activeTool === "blueprint-placement";
 }

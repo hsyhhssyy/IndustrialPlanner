@@ -226,7 +226,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           return primePlacementAnchorFromPreview({
             appHost: context.appHost,
             editor,
-            position: event.position,
+            position: event.startPosition,
           });
 
         case "mouse move":
