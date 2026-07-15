@@ -213,7 +213,7 @@ describe("simulation timeline actions", () => {
     expect(state.timeline.windowStartTickNumber).toBeGreaterThan(0);
     expect(timelineBridge.retargetTimeline).toHaveBeenCalledWith({
       retainedFromTimelineTickNumber: 0,
-      targetTimelineTickNumber: 6601,
+      targetTimelineTickNumber: 2401,
     });
     action.disableTimeline();
   });
@@ -248,7 +248,7 @@ describe("simulation timeline actions", () => {
     expect(state.timeline.windowStartTickNumber).toBe(1);
     expect(timelineBridge.retargetTimeline).toHaveBeenLastCalledWith({
       retainedFromTimelineTickNumber: 0,
-      targetTimelineTickNumber: 6600,
+      targetTimelineTickNumber: 2400,
     });
     action.disableTimeline();
   });
@@ -315,12 +315,12 @@ describe("simulation timeline actions", () => {
     expect(state.timeline.windowStartTickNumber).toBe(42);
     expect(timelineBridge.retargetTimeline).toHaveBeenLastCalledWith({
       retainedFromTimelineTickNumber: 0,
-      targetTimelineTickNumber: 6641,
+      targetTimelineTickNumber: 2441,
     });
     action.disableTimeline();
   });
 
-  it("keeps at most ten visible windows of timeline history while playback retargets", async () => {
+  it("keeps at most three visible windows of timeline history while playback retargets", async () => {
     const state = createSimulationStateReadWrite();
     state.hasStarted = true;
     state.runningState = "start";
@@ -343,8 +343,8 @@ describe("simulation timeline actions", () => {
 
     expect(state.timeline.windowStartTickNumber).toBe(6300);
     expect(timelineBridge.retargetTimeline).toHaveBeenLastCalledWith({
-      retainedFromTimelineTickNumber: 300,
-      targetTimelineTickNumber: 12899,
+      retainedFromTimelineTickNumber: 4500,
+      targetTimelineTickNumber: 8699,
     });
     action.disableTimeline();
   });

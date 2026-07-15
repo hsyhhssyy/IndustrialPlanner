@@ -3026,6 +3026,86 @@ describe("WorkbenchApp", () => {
       });
     */
 
+  it("keeps timeline height fixed in floating and bottom dock modes", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.workbench.dialogState.timeline.height = 480;
+      appHost.internalState.workbench.timelineBottomDockHeight = 360;
+    });
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
+    const timelineButton = container.querySelector(
+      'button[title="时间轴"]',
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      timelineButton?.click();
+    });
+
+    const timelineDialog = container.querySelector(".timeline-dialog") as HTMLElement | null;
+    const eastHandle = timelineDialog?.querySelector(".dialog-shell-resize-edge--e") as HTMLElement | null;
+
+    expect(timelineDialog).not.toBeNull();
+    expect(timelineDialog?.style.height).toBe("250px");
+    expect(timelineDialog?.querySelector(".dialog-shell-resize-grip")).toBeNull();
+    expect(timelineDialog?.querySelectorAll(".dialog-shell-resize-edge")).toHaveLength(6);
+    expect(timelineDialog?.querySelector(".dialog-shell-resize-edge--w")).not.toBeNull();
+    expect(timelineDialog?.querySelector(".dialog-shell-resize-edge--nw")).not.toBeNull();
+    expect(eastHandle).not.toBeNull();
+    expect(timelineDialog?.querySelector(".dialog-shell-resize-edge--s")).toBeNull();
+    expect(timelineDialog?.querySelector(".dialog-shell-resize-edge--n")).toBeNull();
+    expect(timelineDialog?.querySelector(".dialog-shell-resize-edge--se")).not.toBeNull();
+
+    act(() => {
+      dispatchPointerEvent(eastHandle!, "pointerdown", {
+        pointerId: 61,
+        pointerType: "mouse",
+        clientX: 200,
+        clientY: 120,
+        button: 0,
+        buttons: 1,
+      });
+      dispatchWindowPointerEvent("pointermove", {
+        pointerId: 61,
+        pointerType: "mouse",
+        clientX: 280,
+        clientY: 220,
+        buttons: 1,
+      });
+      dispatchWindowPointerEvent("pointerup", {
+        pointerId: 61,
+        pointerType: "mouse",
+        clientX: 280,
+        clientY: 220,
+        buttons: 0,
+      });
+    });
+
+    expect(appHost.internalState.workbench.dialogState.timeline.width).toBe(480);
+    expect(appHost.internalState.workbench.dialogState.timeline.height).toBeNull();
+    expect(appHost.internalState.workbench.dialogState.timeline.offsetX).toBe(40);
+
+    const dockButton = container.querySelector(
+      '.timeline-dialog-header button[title="停靠到底部"]',
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      dockButton?.click();
+    });
+
+    expect(container.querySelector(".timeline-dialog")).toBeNull();
+    expect(container.querySelector(".timeline-bottom-dock")).not.toBeNull();
+    expect(container.querySelector(".timeline-bottom-dock-resize-handle")).toBeNull();
+    expect(appHost.internalState.workbench.timelineBottomDockHeight).toBe(360);
+    expect(workbench?.style.getPropertyValue("--toolbox-bottom-dock-height")).toBe(`${DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT}px`);
+  });
+
   it("docks the toolbox to the canvas bottom area, resizes, collapses, reopens, and undocks", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);

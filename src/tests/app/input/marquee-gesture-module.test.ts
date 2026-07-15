@@ -340,6 +340,33 @@ describe("createHypergryphMarqueeGestureModule", () => {
     ).toEqual({ status: "handled" });
   });
 
+  it("resets logistics suppression when exiting marquee", () => {
+    const { context, editor } = createContext({
+      activeTool: "marquee",
+    });
+    const module = createHypergryphMarqueeGestureModule();
+    const setLogisticsSuppression = vi.mocked(editor.actions.setLogisticsSuppression);
+
+    expect(
+      module.handle(
+        uiButtonTouchTapEvent("canvas-top-left-corner-toolbar-button-toggle-belt-on"),
+        context,
+      ),
+    ).toEqual({ status: "handled" });
+    expect(setLogisticsSuppression).toHaveBeenLastCalledWith("belt", true);
+
+    expect(
+      module.handle(
+        uiButtonTouchTapEvent("canvas-right-dock-toolbar-button-exit"),
+        context,
+      ),
+    ).toEqual({ status: "handled" });
+    expect(setLogisticsSuppression.mock.calls.slice(-2)).toEqual([
+      ["belt", false],
+      ["pipe", false],
+    ]);
+  });
+
   it("handles the exit right dock button without restoring the right dock", () => {
     const exitContext = createContext({
       activeTool: "marquee",
@@ -428,7 +455,11 @@ function createContext(options: {
     leftDockSuppressed: false,
     rightDockOpen: options.rightDockOpen ?? true,
   };
+  const workspace = {
+    editor,
+  } as unknown as WorkspaceContract;
   const appHost = {
+    workspace,
     state: {
       settings: {
         hypergryphOperationMode: true,
@@ -491,9 +522,7 @@ function createContext(options: {
 
   return {
     context: {
-      workspace: {
-        editor,
-      } as unknown as WorkspaceContract,
+      workspace,
       appHost,
       keyboard: emptyKeyboardSnapshot(),
     },

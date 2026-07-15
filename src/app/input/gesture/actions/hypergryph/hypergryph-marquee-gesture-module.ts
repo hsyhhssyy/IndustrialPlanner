@@ -359,8 +359,12 @@ function enterMarqueeMode(options: {
   editor: EditorContract | null;
   source: "mouse" | "touch";
 }): void {
+  const wasMarquee = options.appHost.internalState.activeTool === "marquee";
   options.appHost.internalActions.setActiveTool("marquee");
   // options.appHost.workspace.editor?.actions.clearCollection(EntityCollectionType.selection);
+  if (!wasMarquee) {
+    resetMarqueeLogisticsSuppression(options.editor);
+  }
 
   if (options.source === "touch") {
     showMarqueeRightDockToolbar(options.appHost, options.editor, "icon");
@@ -466,9 +470,15 @@ export function cleanupMarquee(appHost: AppHost, editor: EditorContract | null, 
   if (!skipClearSelection) {
     editor?.actions.clearCollection(EntityCollectionType.selection);
   }
+  resetMarqueeLogisticsSuppression(editor);
   appHost.internalState.runtime.marqueeAnchor = null;
   appHost.internalState.toolInfo.marqueeType = EntityCollectionType.marquee;
   appHost.internalActions.hideCanvasRightDockToolbar();
+}
+
+function resetMarqueeLogisticsSuppression(editor: EditorContract | null): void {
+  editor?.actions.setLogisticsSuppression("belt", false);
+  editor?.actions.setLogisticsSuppression("pipe", false);
 }
 
 export function showMarqueeRightDockToolbar(

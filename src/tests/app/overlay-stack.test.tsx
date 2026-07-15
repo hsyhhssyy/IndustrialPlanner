@@ -53,6 +53,31 @@ function getBackdropZIndex(container: ParentNode, dialogKey: string): number {
   return Number(backdrop.style.zIndex);
 }
 
+function dispatchPointerEvent(
+  target: EventTarget,
+  type: string,
+  init: {
+    pointerId: number;
+    pointerType: string;
+    clientX: number;
+    clientY: number;
+    button?: number;
+    buttons?: number;
+  },
+): Event {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperties(event, {
+    pointerId: { value: init.pointerId },
+    pointerType: { value: init.pointerType },
+    clientX: { value: init.clientX },
+    clientY: { value: init.clientY },
+    button: { value: init.button ?? 0 },
+    buttons: { value: init.buttons ?? 0 },
+  });
+  target.dispatchEvent(event);
+  return event;
+}
+
 describe("OverlayStack", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -194,6 +219,175 @@ describe("OverlayStack", () => {
     expect(getBackdropZIndex(container, "picker-dialog")).toBeGreaterThan(
       getBackdropZIndex(container, "local-editor"),
     );
+  });
+
+  it("resizes dialog shells from Windows-style edges and corners", () => {
+    const dialogState = createDialogState(true);
+
+    runInAction(() => {
+      dialogState.offsetX = 100;
+      dialogState.offsetY = 80;
+      dialogState.width = 400;
+      dialogState.height = 300;
+    });
+
+    function Harness() {
+      return (
+        <OverlayStackProvider>
+          <DialogShell
+            {...createDialogShellProps("resizable-dialog", dialogState, () => undefined)}
+            onOffsetChange={(offsetX, offsetY) => {
+              runInAction(() => {
+                dialogState.offsetX = offsetX;
+                dialogState.offsetY = offsetY;
+              });
+            }}
+            onResize={(width, height) => {
+              runInAction(() => {
+                dialogState.width = width;
+                dialogState.height = height;
+              });
+            }}
+          >
+            resizable
+          </DialogShell>
+        </OverlayStackProvider>
+      );
+    }
+
+    act(() => {
+      root.render(<Harness />);
+    });
+
+    const dialog = container.querySelector<HTMLElement>("[data-dialog-key='resizable-dialog']");
+    const northwestHandle = dialog?.querySelector<HTMLElement>(".dialog-shell-resize-edge--nw");
+
+    expect(dialog).not.toBeNull();
+    expect(dialog?.querySelectorAll(".dialog-shell-resize-edge")).toHaveLength(8);
+    expect(dialog?.querySelector(".dialog-shell-resize-grip")).toBeNull();
+    expect(northwestHandle).not.toBeNull();
+
+    act(() => {
+      dispatchPointerEvent(northwestHandle!, "pointerdown", {
+        pointerId: 10,
+        pointerType: "mouse",
+        clientX: 200,
+        clientY: 180,
+        button: 0,
+        buttons: 1,
+      });
+      dispatchPointerEvent(window, "pointermove", {
+        pointerId: 10,
+        pointerType: "mouse",
+        clientX: 160,
+        clientY: 150,
+        buttons: 1,
+      });
+    });
+
+    expect(document.body.classList.contains("is-resizing-dialog-shell")).toBe(true);
+    expect(document.body.classList.contains("is-resizing-dialog-shell-nw")).toBe(true);
+    expect(dialogState.width).toBe(440);
+    expect(dialogState.height).toBe(330);
+    expect(dialogState.offsetX).toBe(80);
+    expect(dialogState.offsetY).toBe(65);
+    expect(dialogState.offsetX + (dialogState.width ?? Number.NaN) / 2).toBe(300);
+    expect(dialogState.offsetY + (dialogState.height ?? Number.NaN) / 2).toBe(230);
+
+    act(() => {
+      dispatchPointerEvent(window, "pointerup", {
+        pointerId: 10,
+        pointerType: "mouse",
+        clientX: 160,
+        clientY: 150,
+        buttons: 0,
+      });
+    });
+
+    expect(document.body.classList.contains("is-resizing-dialog-shell")).toBe(false);
+    expect(document.body.classList.contains("is-resizing-dialog-shell-nw")).toBe(false);
+  });
+
+  it("keeps height fixed when a dialog shell only allows width resizing", () => {
+    const dialogState = createDialogState(true);
+
+    runInAction(() => {
+      dialogState.offsetX = 20;
+      dialogState.offsetY = 10;
+      dialogState.width = 360;
+      dialogState.height = 260;
+    });
+
+    function Harness() {
+      return (
+        <OverlayStackProvider>
+          <DialogShell
+            {...createDialogShellProps("width-only-dialog", dialogState, () => undefined)}
+            onOffsetChange={(offsetX, offsetY) => {
+              runInAction(() => {
+                dialogState.offsetX = offsetX;
+                dialogState.offsetY = offsetY;
+              });
+            }}
+            onResize={(width) => {
+              runInAction(() => {
+                dialogState.width = width;
+              });
+            }}
+            resizableHeight={false}
+          >
+            width only
+          </DialogShell>
+        </OverlayStackProvider>
+      );
+    }
+
+    act(() => {
+      root.render(<Harness />);
+    });
+
+    const dialog = container.querySelector<HTMLElement>("[data-dialog-key='width-only-dialog']");
+    const northwestHandle = dialog?.querySelector<HTMLElement>(".dialog-shell-resize-edge--nw");
+
+    expect(dialog).not.toBeNull();
+    expect(dialog?.querySelectorAll(".dialog-shell-resize-edge")).toHaveLength(6);
+    expect(dialog?.querySelector(".dialog-shell-resize-edge--e")).not.toBeNull();
+    expect(dialog?.querySelector(".dialog-shell-resize-edge--w")).not.toBeNull();
+    expect(northwestHandle).not.toBeNull();
+    expect(dialog?.querySelector(".dialog-shell-resize-edge--s")).toBeNull();
+    expect(dialog?.querySelector(".dialog-shell-resize-edge--n")).toBeNull();
+    expect(dialog?.querySelector(".dialog-shell-resize-edge--se")).not.toBeNull();
+
+    act(() => {
+      dispatchPointerEvent(northwestHandle!, "pointerdown", {
+        pointerId: 11,
+        pointerType: "mouse",
+        clientX: 120,
+        clientY: 120,
+        button: 0,
+        buttons: 1,
+      });
+      dispatchPointerEvent(window, "pointermove", {
+        pointerId: 11,
+        pointerType: "mouse",
+        clientX: 90,
+        clientY: 180,
+        buttons: 1,
+      });
+      dispatchPointerEvent(window, "pointerup", {
+        pointerId: 11,
+        pointerType: "mouse",
+        clientX: 90,
+        clientY: 180,
+        buttons: 0,
+      });
+    });
+
+    expect(dialogState.width).toBe(390);
+    expect(dialogState.height).toBe(260);
+    expect(dialogState.offsetX).toBe(5);
+    expect(dialogState.offsetY).toBe(10);
+    expect(dialogState.offsetX + (dialogState.width ?? Number.NaN) / 2).toBe(200);
   });
 
   it("keeps compact mobile dialog shells on their default size without drag, resize, or maximize controls", () => {

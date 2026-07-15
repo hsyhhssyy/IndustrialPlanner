@@ -90,6 +90,17 @@ export function createEditorSelectionActions({
 
     collection.push(entity.id);
   };
+  const isSuppressedDedicatedLogisticsEntity = (entity: WorldEntity): boolean => {
+    if (!workspace.registry.queries.isDedicatedLogisticsDevice(entity.definitionId)) {
+      return false;
+    }
+
+    const kind = workspace.registry.queries.resolveDedicatedLogisticsKind(entity.definitionId);
+    return (
+      (kind === "belt" && state.suppressBelts)
+      || (kind === "pipe" && state.suppressPipes)
+    );
+  };
   const entityDefinitionMap = new Map(
     workspace.registry.entityDefinitions.map((definition) => [
       definition.id,
@@ -728,6 +739,7 @@ export function createEditorSelectionActions({
           gridRect,
           entityDefinitionMap,
         }))
+        .filter((entity) => !isSuppressedDedicatedLogisticsEntity(entity))
         .map((entity) => entity.id);
 
       marquee.replace(nextEntityIds);
@@ -736,14 +748,35 @@ export function createEditorSelectionActions({
     applyMarquee: action(() => {
       const marquee = resolveCollection(EntityCollectionType.marquee);
       const reverseMarquee = resolveCollection(EntityCollectionType.reverseMarquee);
+      const currentDocument = document.getSnapshot();
 
       for (const entityId of marquee) {
+        const entity = resolveEntityById({
+          entityId,
+          document: currentDocument,
+          drafts: state.drafts,
+        });
+
+        if (entity === null || isSuppressedDedicatedLogisticsEntity(entity)) {
+          continue;
+        }
+
         addEntityIdToCollection(EntityCollectionType.selection, entityId);
       }
 
       marquee.replace([]);
 
       for (const entityId of reverseMarquee) {
+        const entity = resolveEntityById({
+          entityId,
+          document: currentDocument,
+          drafts: state.drafts,
+        });
+
+        if (entity === null || isSuppressedDedicatedLogisticsEntity(entity)) {
+          continue;
+        }
+
         const entityIndex = resolveCollection(EntityCollectionType.selection).indexOf(entityId);
 
         if (entityIndex < 0) {

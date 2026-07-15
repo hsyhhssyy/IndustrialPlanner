@@ -21,6 +21,56 @@ export interface DialogShellTab {
   content: ReactNode;
 }
 
+type DialogShellResizeDirection = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
+type DialogShellResizeCursor = "ns" | "ew" | "nesw" | "nwse";
+
+const DIALOG_SHELL_MIN_WIDTH = 320;
+const DIALOG_SHELL_MIN_HEIGHT = 240;
+const DIALOG_SHELL_RESIZE_DIRECTIONS: readonly DialogShellResizeDirection[] = [
+  "n",
+  "ne",
+  "e",
+  "se",
+  "s",
+  "sw",
+  "w",
+  "nw",
+];
+
+function resolveDialogShellResizeAxes(options: {
+  direction: DialogShellResizeDirection;
+  canResizeWidth: boolean;
+  canResizeHeight: boolean;
+}): { width: boolean; height: boolean } {
+  return {
+    width: options.canResizeWidth && (options.direction.includes("e") || options.direction.includes("w")),
+    height: options.canResizeHeight && (options.direction.includes("n") || options.direction.includes("s")),
+  };
+}
+
+function resolveDialogShellResizeCursor(
+  direction: DialogShellResizeDirection,
+  axes: { width: boolean; height: boolean },
+): DialogShellResizeCursor {
+  if (axes.width && !axes.height) {
+    return "ew";
+  }
+
+  if (!axes.width && axes.height) {
+    return "ns";
+  }
+
+  if (direction === "ne" || direction === "sw") {
+    return "nesw";
+  }
+
+  if (direction === "nw" || direction === "se") {
+    return "nwse";
+  }
+
+  return direction === "n" || direction === "s" ? "ns" : "ew";
+}
+
 interface DialogShellProps {
   dialogKey: string;
   dialogState: DialogStateReadWrite;
@@ -37,6 +87,8 @@ interface DialogShellProps {
   headerActions?: ReactNode;
   immersiveMaximized?: boolean;
   showMaximizeButton?: boolean;
+  resizableWidth?: boolean;
+  resizableHeight?: boolean;
   modal?: boolean;
   onClose: () => void;
   onToggleMaximized: () => void;
@@ -63,6 +115,8 @@ export const DialogShell = observer(function DialogShell({
   headerActions,
   immersiveMaximized = false,
   showMaximizeButton = true,
+  resizableWidth = true,
+  resizableHeight = true,
   modal = true,
   onClose,
   onToggleMaximized,
@@ -87,9 +141,23 @@ export const DialogShell = observer(function DialogShell({
   const isFixedMobileLayout = compactMobileLayout;
   const isEffectivelyMaximized = !isFixedMobileLayout && dialogState.maximized;
   const isDraggable = !isFixedMobileLayout && !isEffectivelyMaximized && onOffsetChange !== undefined;
-  const isResizable = !isFixedMobileLayout && !isEffectivelyMaximized && onResize !== undefined;
+  const canResizeWidth = !isFixedMobileLayout && !isEffectivelyMaximized && onResize !== undefined && resizableWidth;
+  const canResizeHeight = !isFixedMobileLayout && !isEffectivelyMaximized && onResize !== undefined && resizableHeight;
   const effectiveShowMaximizeButton = showMaximizeButton && !isFixedMobileLayout;
   const maximizeButtonTitle = dialogState.maximized ? restoreTitle : maximizeTitle;
+  const resizeDirections = DIALOG_SHELL_RESIZE_DIRECTIONS.filter((direction) => {
+    const axes = resolveDialogShellResizeAxes({
+      direction,
+      canResizeWidth,
+      canResizeHeight,
+    });
+
+    if ((axes.width || axes.height) && onOffsetChange === undefined) {
+      return false;
+    }
+
+    return axes.width || axes.height;
+  });
 
   useEffect(() => {
     if (!dialogState.visible) {
@@ -249,8 +317,21 @@ export const DialogShell = observer(function DialogShell({
     dragCleanupRef.current = cleanup;
   };
 
-  const handleResizePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
-    if (!isResizable || onResize === undefined) {
+  const handleResizePointerDown = (
+    event: ReactPointerEvent<HTMLElement>,
+    direction: DialogShellResizeDirection,
+  ) => {
+    const axes = resolveDialogShellResizeAxes({
+      direction,
+      canResizeWidth,
+      canResizeHeight,
+    });
+
+    if (
+      onResize === undefined
+      || (!axes.width && !axes.height)
+      || onOffsetChange === undefined
+    ) {
       return;
     }
 
@@ -267,14 +348,27 @@ export const DialogShell = observer(function DialogShell({
 
     // 获取当前实际渲染的尺寸作为起始尺寸
     const shellElement = shellRef.current;
-    const originWidth = shellElement?.offsetWidth ?? dialogState.width ?? 400;
-    const originHeight = shellElement?.offsetHeight ?? dialogState.height ?? 300;
+    const renderedWidth = shellElement?.offsetWidth;
+    const renderedHeight = shellElement?.offsetHeight;
+    const originWidth = renderedWidth !== undefined && renderedWidth > 0
+      ? renderedWidth
+      : dialogState.width ?? 400;
+    const originHeight = renderedHeight !== undefined && renderedHeight > 0
+      ? renderedHeight
+      : dialogState.height ?? 300;
+    const originOffsetX = dialogState.offsetX;
+    const originOffsetY = dialogState.offsetY;
 
     resizeCleanupRef.current?.();
+    const cursor = resolveDialogShellResizeCursor(direction, axes);
     document.body.classList.add("is-resizing-dialog-shell");
+    document.body.classList.add(`is-resizing-dialog-shell-${direction}`);
+    document.body.classList.add(`is-resizing-dialog-shell-cursor-${cursor}`);
 
     const cleanup = () => {
       document.body.classList.remove("is-resizing-dialog-shell");
+      document.body.classList.remove(`is-resizing-dialog-shell-${direction}`);
+      document.body.classList.remove(`is-resizing-dialog-shell-cursor-${cursor}`);
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerEnd);
       window.removeEventListener("pointercancel", handlePointerEnd);
@@ -291,14 +385,40 @@ export const DialogShell = observer(function DialogShell({
 
       const deltaX = moveEvent.clientX - startX;
       const deltaY = moveEvent.clientY - startY;
-      const nextWidth = Math.max(320, originWidth + deltaX);
-      const nextHeight = Math.max(240, originHeight + deltaY);
+      let nextWidth = originWidth;
+      let nextHeight = originHeight;
+      let nextOffsetX = originOffsetX;
+      let nextOffsetY = originOffsetY;
+
+      if (axes.width && direction.includes("e")) {
+        nextWidth = Math.max(DIALOG_SHELL_MIN_WIDTH, originWidth + deltaX);
+        nextOffsetX = originOffsetX + (nextWidth - originWidth) / 2;
+      }
+
+      if (axes.width && direction.includes("w")) {
+        nextWidth = Math.max(DIALOG_SHELL_MIN_WIDTH, originWidth - deltaX);
+        nextOffsetX = originOffsetX + (originWidth - nextWidth) / 2;
+      }
+
+      if (axes.height && direction.includes("s")) {
+        nextHeight = Math.max(DIALOG_SHELL_MIN_HEIGHT, originHeight + deltaY);
+        nextOffsetY = originOffsetY + (nextHeight - originHeight) / 2;
+      }
+
+      if (axes.height && direction.includes("n")) {
+        nextHeight = Math.max(DIALOG_SHELL_MIN_HEIGHT, originHeight - deltaY);
+        nextOffsetY = originOffsetY + (originHeight - nextHeight) / 2;
+      }
 
       setLiveSize({
-        width: nextWidth,
-        height: nextHeight,
+        width: axes.width ? nextWidth : dialogState.width,
+        height: axes.height ? nextHeight : dialogState.height,
       });
       onResize(nextWidth, nextHeight);
+
+      if (nextOffsetX !== originOffsetX || nextOffsetY !== originOffsetY) {
+        onOffsetChange?.(nextOffsetX, nextOffsetY);
+      }
     };
 
     const handlePointerEnd = (endEvent: PointerEvent) => {
@@ -422,12 +542,44 @@ export const DialogShell = observer(function DialogShell({
             </section>
           )}
         </div>
-        {isResizable ? (
-          <div
-            className={cm(styles, "dialog-shell-resize-grip")}
-            onPointerDown={handleResizePointerDown}
-          />
-        ) : null}
+        {/* AI-REMOVED 2026-07-14:
+            Reason: 右下角单点 resize grip 与用户要求的 Windows 式八方向边缘 resize 冲突。
+            Trigger: 用户要求移除右下角句柄绘制，并改为窗口边缘八个方向调整。
+            Evidence: DialogShell 当前统一负责浮窗尺寸交互，替代实现已在下方按 direction 渲染边缘热区。
+            Replacement: DialogShell resizeDirections.map(...) in this file.
+            Risk: Low
+            Human Review: Required
+
+            Original code:
+            {isResizable ? (
+              <div
+                className={cm(styles, "dialog-shell-resize-grip")}
+                onPointerDown={handleResizePointerDown}
+              />
+            ) : null}
+        */}
+        {resizeDirections.map((direction) => {
+          const axes = resolveDialogShellResizeAxes({
+            direction,
+            canResizeWidth,
+            canResizeHeight,
+          });
+          const cursor = resolveDialogShellResizeCursor(direction, axes);
+
+          return (
+            <div
+              aria-hidden="true"
+              className={cm(
+                styles,
+                "dialog-shell-resize-edge",
+                `dialog-shell-resize-edge--${direction}`,
+                `dialog-shell-resize-edge--cursor-${cursor}`,
+              )}
+              key={direction}
+              onPointerDown={(event) => handleResizePointerDown(event, direction)}
+            />
+          );
+        })}
       </section>
     </div>
   );

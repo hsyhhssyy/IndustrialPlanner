@@ -590,31 +590,175 @@
   user-select: none;
 }
 
-.dialog-shell-resize-grip {
+// AI-REMOVED 2026-07-14:
+// Reason: 右下角单点 resize grip 与用户要求的 Windows 式八方向边缘 resize 冲突。
+// Trigger: 用户要求移除右下角句柄绘制，并改为窗口边缘八个方向调整。
+// Evidence: DialogShell 现在渲染 dialog-shell-resize-edge--n/ne/e/se/s/sw/w/nw 八个边缘热区。
+// Replacement: .dialog-shell-resize-edge and direction modifiers below.
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// .dialog-shell-resize-grip {
+//   position: absolute;
+//   right: 0;
+//   bottom: 0;
+//   width: 20px;
+//   height: 20px;
+//   cursor: nwse-resize;
+//   z-index: 1;
+// }
+//
+// .dialog-shell-resize-grip::after {
+//   content: "";
+//   position: absolute;
+//   right: 4px;
+//   bottom: 4px;
+//   width: 10px;
+//   height: 10px;
+//   border-right: 2px solid var(--text-2);
+//   border-bottom: 2px solid var(--text-2);
+//   opacity: 0.5;
+//   transition: opacity 0.15s;
+// }
+//
+// .dialog-shell-resize-grip:hover::after {
+//   opacity: 1;
+// }
+
+:global(body.is-resizing-dialog-shell-n),
+:global(body.is-resizing-dialog-shell-n *),
+:global(body.is-resizing-dialog-shell-s),
+:global(body.is-resizing-dialog-shell-s *) {
+  cursor: ns-resize !important;
+}
+
+:global(body.is-resizing-dialog-shell-e),
+:global(body.is-resizing-dialog-shell-e *),
+:global(body.is-resizing-dialog-shell-w),
+:global(body.is-resizing-dialog-shell-w *) {
+  cursor: ew-resize !important;
+}
+
+:global(body.is-resizing-dialog-shell-ne),
+:global(body.is-resizing-dialog-shell-ne *),
+:global(body.is-resizing-dialog-shell-sw),
+:global(body.is-resizing-dialog-shell-sw *) {
+  cursor: nesw-resize !important;
+}
+
+:global(body.is-resizing-dialog-shell-nw),
+:global(body.is-resizing-dialog-shell-nw *),
+:global(body.is-resizing-dialog-shell-se),
+:global(body.is-resizing-dialog-shell-se *) {
+  cursor: nwse-resize !important;
+}
+
+:global(body.is-resizing-dialog-shell-cursor-ns),
+:global(body.is-resizing-dialog-shell-cursor-ns *) {
+  cursor: ns-resize !important;
+}
+
+:global(body.is-resizing-dialog-shell-cursor-ew),
+:global(body.is-resizing-dialog-shell-cursor-ew *) {
+  cursor: ew-resize !important;
+}
+
+:global(body.is-resizing-dialog-shell-cursor-nesw),
+:global(body.is-resizing-dialog-shell-cursor-nesw *) {
+  cursor: nesw-resize !important;
+}
+
+:global(body.is-resizing-dialog-shell-cursor-nwse),
+:global(body.is-resizing-dialog-shell-cursor-nwse *) {
+  cursor: nwse-resize !important;
+}
+
+.dialog-shell-resize-edge {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 20px;
-  height: 20px;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.dialog-shell-resize-edge--n,
+.dialog-shell-resize-edge--s {
+  right: 10px;
+  left: 10px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.dialog-shell-resize-edge--n {
+  top: -4px;
+}
+
+.dialog-shell-resize-edge--s {
+  bottom: -4px;
+}
+
+.dialog-shell-resize-edge--e,
+.dialog-shell-resize-edge--w {
+  top: 10px;
+  bottom: 10px;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.dialog-shell-resize-edge--e {
+  right: -4px;
+}
+
+.dialog-shell-resize-edge--w {
+  left: -4px;
+}
+
+.dialog-shell-resize-edge--ne,
+.dialog-shell-resize-edge--se,
+.dialog-shell-resize-edge--sw,
+.dialog-shell-resize-edge--nw {
+  width: 16px;
+  height: 16px;
+  z-index: 3;
+}
+
+.dialog-shell-resize-edge--ne {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.dialog-shell-resize-edge--se {
+  right: -6px;
+  bottom: -6px;
   cursor: nwse-resize;
-  z-index: 1;
 }
 
-.dialog-shell-resize-grip::after {
-  content: "";
-  position: absolute;
-  right: 4px;
-  bottom: 4px;
-  width: 10px;
-  height: 10px;
-  border-right: 2px solid var(--text-2);
-  border-bottom: 2px solid var(--text-2);
-  opacity: 0.5;
-  transition: opacity 0.15s;
+.dialog-shell-resize-edge--sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
 }
 
-.dialog-shell-resize-grip:hover::after {
-  opacity: 1;
+.dialog-shell-resize-edge--nw {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+.dialog-shell-resize-edge--cursor-ns {
+  cursor: ns-resize;
+}
+
+.dialog-shell-resize-edge--cursor-ew {
+  cursor: ew-resize;
+}
+
+.dialog-shell-resize-edge--cursor-nesw {
+  cursor: nesw-resize;
+}
+
+.dialog-shell-resize-edge--cursor-nwse {
+  cursor: nwse-resize;
 }
 
 .dialog-shell.is-mobile-compact .dialog-shell-header {

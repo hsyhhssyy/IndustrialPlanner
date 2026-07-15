@@ -10,6 +10,7 @@ import type { AppHost } from "@/app/host/app-host";
 import type { SimulationTimelineMark } from "@/domain/simulation/types/simulation-types";
 import {
   COLLAPSED_TIMELINE_BOTTOM_DOCK_HEIGHT,
+  DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT,
 } from "@/app/state/state-impl";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
@@ -54,7 +55,7 @@ export function resolveTimelineBottomDockGridHeight(appHost: AppHost): number {
 
   return appHost.internalState.workbench.timelineBottomDockCollapsed
     ? COLLAPSED_TIMELINE_BOTTOM_DOCK_HEIGHT
-    : appHost.internalState.workbench.timelineBottomDockHeight;
+    : DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT;
 }
 
 export const TimelineDialog = observer(function TimelineDialog({ appHost }: { appHost: AppHost }) {
@@ -128,13 +129,15 @@ export const TimelineDialog = observer(function TimelineDialog({ appHost }: { ap
       onOffsetChange={(offsetX, offsetY) => {
         appHost.internalActions.setDialogOffset("timeline", offsetX, offsetY);
       }}
-      onResize={(width, height) => {
-        appHost.internalActions.setDialogSize("timeline", width, height);
+      onResize={(width) => {
+        appHost.internalActions.setDialogSize("timeline", width, null);
       }}
       onToggleMaximized={() => {
         appHost.internalActions.toggleDialogMaximized("timeline");
       }}
+      resizableHeight={false}
       restoreTitle={t("timelineDialog.restore")}
+      shellStyle={dialogState.maximized ? undefined : { height: "250px" }}
       title={t("timelineDialog.title")}
       titleId="timeline-dialog-title"
     >
@@ -146,71 +149,81 @@ export const TimelineDialog = observer(function TimelineDialog({ appHost }: { ap
 export const TimelineBottomDock = observer(function TimelineBottomDock({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const timelineCollapsed = appHost.internalState.workbench.timelineBottomDockCollapsed;
-  const resizeCleanupRef = useRef<(() => void) | null>(null);
   const collapseTitle = timelineCollapsed
     ? t("timelineDialog.expandBottomDock")
     : t("timelineDialog.collapseBottomDock");
   const canUndock = appHost.state.screenProfile.deviceClass !== "mobile";
 
-  useEffect(() => {
-    return () => {
-      resizeCleanupRef.current?.();
-    };
-  }, []);
-
   if (!shouldRenderTimelineBottomDock(appHost)) {
     return null;
   }
 
-  const handleResizePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === "mouse" && event.button !== 0) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const pointerId = event.pointerId;
-    const startY = event.clientY;
-    const originHeight = appHost.internalState.workbench.timelineBottomDockHeight;
-
-    resizeCleanupRef.current?.();
-    document.body.classList.add("is-resizing-timeline-bottom-dock");
-
-    const cleanup = () => {
-      document.body.classList.remove("is-resizing-timeline-bottom-dock");
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerEnd);
-      window.removeEventListener("pointercancel", handlePointerEnd);
-
-      if (resizeCleanupRef.current === cleanup) {
-        resizeCleanupRef.current = null;
-      }
-    };
-
-    const handlePointerMove = (moveEvent: PointerEvent) => {
-      if (moveEvent.pointerId !== pointerId) {
-        return;
-      }
-
-      appHost.internalActions.setTimelineBottomDockHeight(
-        originHeight + startY - moveEvent.clientY,
-      );
-    };
-
-    const handlePointerEnd = (endEvent: PointerEvent) => {
-      if (endEvent.pointerId !== pointerId) {
-        return;
-      }
-
-      cleanup();
-    };
-
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerEnd);
-    window.addEventListener("pointercancel", handlePointerEnd);
-    resizeCleanupRef.current = cleanup;
-  };
+  // AI-REMOVED 2026-07-14:
+  // Reason: 时间轴底部停靠态高度不应由用户拖拽调整，避免底部区域留下过大空白。
+  // Trigger: 用户要求时间轴停靠后也不可以调整高度。
+  // Evidence: resolveTimelineBottomDockGridHeight 现在对展开态返回 DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT。
+  // Replacement: fixed height in resolveTimelineBottomDockGridHeight in this file.
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const resizeCleanupRef = useRef<(() => void) | null>(null);
+  //
+  // useEffect(() => {
+  //   return () => {
+  //     resizeCleanupRef.current?.();
+  //   };
+  // }, []);
+  //
+  // const handleResizePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+  //   if (event.pointerType === "mouse" && event.button !== 0) {
+  //     return;
+  //   }
+  //
+  //   event.preventDefault();
+  //   event.stopPropagation();
+  //
+  //   const pointerId = event.pointerId;
+  //   const startY = event.clientY;
+  //   const originHeight = appHost.internalState.workbench.timelineBottomDockHeight;
+  //
+  //   resizeCleanupRef.current?.();
+  //   document.body.classList.add("is-resizing-timeline-bottom-dock");
+  //
+  //   const cleanup = () => {
+  //     document.body.classList.remove("is-resizing-timeline-bottom-dock");
+  //     window.removeEventListener("pointermove", handlePointerMove);
+  //     window.removeEventListener("pointerup", handlePointerEnd);
+  //     window.removeEventListener("pointercancel", handlePointerEnd);
+  //
+  //     if (resizeCleanupRef.current === cleanup) {
+  //       resizeCleanupRef.current = null;
+  //     }
+  //   };
+  //
+  //   const handlePointerMove = (moveEvent: PointerEvent) => {
+  //     if (moveEvent.pointerId !== pointerId) {
+  //       return;
+  //     }
+  //
+  //     appHost.internalActions.setTimelineBottomDockHeight(
+  //       originHeight + startY - moveEvent.clientY,
+  //     );
+  //   };
+  //
+  //   const handlePointerEnd = (endEvent: PointerEvent) => {
+  //     if (endEvent.pointerId !== pointerId) {
+  //       return;
+  //     }
+  //
+  //     cleanup();
+  //   };
+  //
+  //   window.addEventListener("pointermove", handlePointerMove);
+  //   window.addEventListener("pointerup", handlePointerEnd);
+  //   window.addEventListener("pointercancel", handlePointerEnd);
+  //   resizeCleanupRef.current = cleanup;
+  // };
 
   return (
     <section
@@ -219,15 +232,25 @@ export const TimelineBottomDock = observer(function TimelineBottomDock({ appHost
         ? "timeline-bottom-dock panel-surface is-collapsed"
         : "timeline-bottom-dock panel-surface")}
     >
-      {timelineCollapsed ? null : (
-        <div
-          aria-label={t("timelineDialog.resizeBottomDock")}
-          className={cm(styles, "timeline-bottom-dock-resize-handle")}
-          onPointerDown={handleResizePointerDown}
-          role="separator"
-          title={t("timelineDialog.resizeBottomDock")}
-        />
-      )}
+      {/* AI-REMOVED 2026-07-14:
+          Reason: 时间轴底部停靠态高度不应由用户拖拽调整，避免底部区域留下过大空白。
+          Trigger: 用户要求时间轴停靠后也不可以调整高度。
+          Evidence: resolveTimelineBottomDockGridHeight 现在对展开态返回 DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT。
+          Replacement: fixed height in resolveTimelineBottomDockGridHeight in this file.
+          Risk: Low
+          Human Review: Required
+
+          Original code:
+          {timelineCollapsed ? null : (
+            <div
+              aria-label={t("timelineDialog.resizeBottomDock")}
+              className={cm(styles, "timeline-bottom-dock-resize-handle")}
+              onPointerDown={handleResizePointerDown}
+              role="separator"
+              title={t("timelineDialog.resizeBottomDock")}
+            />
+          )}
+      */}
       <header className={cm(styles, "timeline-bottom-dock-header")}>
         <div className={cm(styles, "timeline-bottom-dock-title")}>
           <h2 id="timeline-bottom-dock-title">{t("timelineDialog.title")}</h2>

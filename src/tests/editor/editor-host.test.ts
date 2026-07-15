@@ -694,6 +694,32 @@ describe("createEditorHost", () => {
     expect(emptyCellEntity).toBeNull();
   });
 
+  it("skips suppressed dedicated logistics when resolving entity hits", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("pipe", "pipe_straight_1x1", 5, 5),
+      createTestEntity("belt", "belt_straight_1x1", 5, 5),
+    ]));
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+
+    const hitPoint = resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 5 });
+
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint)?.id).toBe("belt");
+
+    editorHost.actions.setLogisticsSuppression("belt", true);
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint)?.id).toBe("pipe");
+
+    editorHost.actions.setLogisticsSuppression("pipe", true);
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint)).toBeNull();
+  });
+
   it("finds draft entities at a client pixel point and prioritizes them over document entities", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -1020,6 +1046,59 @@ describe("createEditorHost", () => {
       editorHost.state.collections[EntityCollectionType.reverseMarquee],
     ).toEqual([]);
     expect(editorHost.state.marqueeGridRect).toBeNull();
+  });
+
+  it("excludes suppressed dedicated logistics from marquee range and apply", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("belt", "belt_straight_1x1", 1, 1),
+      createTestEntity("pipe", "pipe_straight_1x1", 2, 1),
+      createTestEntity("machine", "item_port_storager_1", 3, 1),
+    ]));
+
+    editorHost.actions.setLogisticsSuppression("belt", true);
+    editorHost.actions.setMarqueeRange(EntityCollectionType.marquee, {
+      x: 1,
+      y: 1,
+      width: 3,
+      height: 1,
+    });
+
+    expect(editorHost.state.collections.marquee).toEqual([
+      "pipe",
+      "machine",
+    ]);
+
+    editorHost.actions.setLogisticsSuppression("belt", false);
+    editorHost.actions.setLogisticsSuppression("pipe", true);
+    editorHost.actions.setMarqueeRange(EntityCollectionType.marquee, {
+      x: 1,
+      y: 1,
+      width: 3,
+      height: 1,
+    });
+
+    expect(editorHost.state.collections.marquee).toEqual([
+      "belt",
+      "machine",
+    ]);
+
+    editorHost.actions.setLogisticsSuppression("pipe", false);
+    editorHost.actions.setMarqueeRange(EntityCollectionType.marquee, {
+      x: 1,
+      y: 1,
+      width: 3,
+      height: 1,
+    });
+    editorHost.actions.setLogisticsSuppression("belt", true);
+    editorHost.actions.applyMarquee();
+
+    expect(editorHost.state.collections.selection).toEqual([
+      "pipe",
+      "machine",
+    ]);
   });
 
   it("applies marquee additions, removes reverse marquee entities, and clears both collections", () => {
