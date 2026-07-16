@@ -72,6 +72,15 @@ export const INSPECTOR_TYPE = {
   runtimeStatistics: "runtime-statistics",
 
   /**
+   * ## 运行消耗面板
+   *
+   * **只读展示。** 显示计量消耗设备上一个完整分钟窗口的消费量。
+   * 标尺范围来自 EntityDefinition.meteredConsumption，游标值来自
+   * SimulationDeviceRuntimeStatusReadModel.meteredConsumption。
+   */
+  meteredConsumption: "metered-consumption",
+
+  /**
    * ## 物流物品面板
    *
    * **只读展示。** 不编辑任何 config 或运行时字段。
@@ -491,6 +500,7 @@ export type EntityInspectorDeclaration =
   | { readonly type: typeof INSPECTOR_TYPE.genericDevice }
   | { readonly type: typeof INSPECTOR_TYPE.problem }
   | { readonly type: typeof INSPECTOR_TYPE.runtimeStatistics }
+  | { readonly type: typeof INSPECTOR_TYPE.meteredConsumption }
   | { readonly type: typeof INSPECTOR_TYPE.logisticsItem }
   | { readonly type: typeof INSPECTOR_TYPE.storageManagement }
   | { readonly type: typeof INSPECTOR_TYPE.storageTypeFilter }

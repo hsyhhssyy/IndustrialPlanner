@@ -123,6 +123,7 @@ export interface RuntimeReservedItem {
   slotId: string;
   itemType: string;
   amount: number;
+  ignoreStock: boolean;
 }
 
 export interface RuntimeAdmissionMinuteCounterState {

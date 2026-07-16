@@ -73,8 +73,15 @@ export interface SimulationDeviceRuntimeStatusReadModel {
   readonly slotItems: readonly SimulationDeviceRuntimeSlotItemReadModel[];
   /** 准入口 runtime 计数，key 为 `${portGroupId}:${portId}`。非 admission 设备或旧测试 mock 可省略。 */
   readonly admissionCounters?: Record<string, SimulationAdmissionCounterStatusReadModel>;
+  /** 销毁型计量消耗状态；非计量设备为 null，旧测试 mock 可省略。 */
+  readonly meteredConsumption?: SimulationMeteredConsumptionStatusReadModel | null;
   /** 设备供电范围状态（编译期确定，非运行时变化） */
   readonly powerStatus: "no-power-needed" | "in-power-range" | "out-of-power-range" | null;
+}
+
+export interface SimulationMeteredConsumptionStatusReadModel {
+  /** 上一个已经完成的固定分钟窗口内实际销毁的物品数量。 */
+  readonly previousWindowCount: number;
 }
 
 export interface SimulationGasDiffusionRangeReadModel {

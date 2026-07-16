@@ -294,6 +294,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       slotId: "slot:out",
       itemType: "item_test",
       amount: 2,
+      ignoreStock: false,
     }];
     state.persistent.devices["device:maker"]!.channelRecipes["main"] = recipe;
 

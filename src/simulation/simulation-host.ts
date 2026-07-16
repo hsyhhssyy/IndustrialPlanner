@@ -372,6 +372,11 @@ function resolveDeviceRuntimeStatus(options: {
   //     : convertSimulationTicksToSeconds(deviceSnapshot.recipe.durationTicks),
   return {
     channelRecipes,
+    meteredConsumption: deviceSnapshot.meteredConsumption === null
+      ? null
+      : {
+          previousWindowCount: deviceSnapshot.meteredConsumption.previousWindowCount,
+        },
     admissionCounters: Object.fromEntries(
       Object.entries(deviceSnapshot.admissionCounters ?? {}).map(([portRef, counter]) => [
         portRef,

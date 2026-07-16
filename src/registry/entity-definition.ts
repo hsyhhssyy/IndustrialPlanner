@@ -188,6 +188,12 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
 
   // 所有设备默认追加问题面板，用于展示放置/电力/堵塞等问题
   declaredInspectors.unshift({ type: INSPECTOR_TYPE.problem });
+  if (
+    normalizedDefinition.meteredConsumption !== undefined
+    && !declaredInspectors.some((inspector) => inspector.type === INSPECTOR_TYPE.meteredConsumption)
+  ) {
+    declaredInspectors.push({ type: INSPECTOR_TYPE.meteredConsumption });
+  }
 
   return {
     ...normalizedDefinition,
@@ -546,6 +552,16 @@ type DirectionalBufferLayoutInput = {
   kind: StorageSlotGroupDefinition["kind"];
   direction: "input" | "output";
   capacities: number[];
+  // AI-REMOVED 2026-07-16:
+  // Reason: 用户要求拆解机不再通过 helper 生成定义，注册表保持显式字典声明；该覆盖字段因此没有保留价值。
+  // Trigger: 用户明确希望持续去除 helper，直接写入设备定义。
+  // Evidence: itemFilterType 覆盖仅由 item_port_dismantler_1 使用；拆解机已在下方展开完整定义。
+  // Replacement: item_port_dismantler_1.storageSlotGroups 中显式声明 fluid_output_buffer。
+  // Risk: Low - 其他 createSimpleProductionDevice 调用仍使用既有默认物态推导。
+  // Human Review: Required
+  //
+  // Original code:
+  // itemFilterType?: FilterType;
 };
 
 function resolveSlotFilterType(kind: DirectionalBufferLayoutInput["kind"]): FilterType {
@@ -557,6 +573,8 @@ function resolveSlotFilterType(kind: DirectionalBufferLayoutInput["kind"]): Filt
  *
  * 每个 layout 声明一个方向性缓冲（input/output, item/fluid, 多容量），
  * 函数自动生成对应的定义片段，减少样板代码。
+ * AI-CORRECTION 2026-07-16: layout 可显式覆盖 itemFilterType，用于声明兼容液体与气体的生产设备缓存。
+ * AI-CORRECTION 2026-07-16: 上述覆盖机制已按用户要求撤回；特殊设备改用显式字典声明。
  */
 function createSimpleProductionDevice(
   layouts: readonly DirectionalBufferLayoutInput[],
@@ -582,6 +600,16 @@ function createSimpleProductionDevice(
       createSlots(
         `${layout.direction}_${layout.kind}_slot`,
         layout.capacities,
+        // AI-REMOVED 2026-07-16:
+        // Reason: itemFilterType 覆盖字段已撤回，helper 恢复原有默认物态推导。
+        // Trigger: 用户要求拆解机脱离 createSimpleProductionDevice，避免为单个设备扩展 helper。
+        // Evidence: item_port_dismantler_1 已显式声明气液兼容缓存。
+        // Replacement: resolveSlotFilterType(layout.kind)。
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        // layout.itemFilterType ?? resolveSlotFilterType(layout.kind),
         resolveSlotFilterType(layout.kind),
       ),
     )),
@@ -1059,6 +1087,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *
    * 本设备是 item_port_filling_pd_mc_1 的液体变体（alter-variant:liquid），
    * 增加了 fluid_input 端口和对应的 fluid 输入缓冲。
+   * AI-CORRECTION 2026-07-16: fluid_input 及其输入缓冲现兼容 liquid/gas。
    */
   createEntityDefinition({
     id: "item_port_liquid_filling_pd_mc_1",
@@ -1081,7 +1110,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         "fluid",
         "input",
-        [createPort("in_e_2", 5, 2, "E")],
+        [createPort("in_e_2", 5, 2, "E", {
+          acceptRule: { base: { kind: "fluid" }, exclude: [] },
+        })],
       ),
       createPortGroup(
         "item_output",
@@ -1099,7 +1130,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "fluid_input_buffer",
         "fluid",
-        createSlots("input_fluid_slot", [50], "liquid"),
+        createSlots("input_fluid_slot", [50], "fluid"),
       ),
       createStorageSlotGroup(
         "item_output_buffer",
@@ -2233,12 +2264,82 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
+    id: "shaper_1_gas",
+    nameKey: "registry.entity.shaper_1_gas.name",
+    spriteId: "shaper_1_gas",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "basicProduction",
+    displayOrder: 506,
+    tags: [
+      PRODUCER_TAG,
+      "alter:item_port_shaper_1",
+      "alter-variant:gas",
+    ],
+    requiresPower: true,
+    powerDemand: 10,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+      createPortGroup(
+        "gas_input",
+        "fluid",
+        "input",
+        [
+          createPort("in_w_1", 0, 1, "W", {
+            acceptRule: { base: { kind: "gas" }, exclude: [] },
+          }),
+        ],
+      ),
+    ],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "item_input_buffer",
+        "item",
+        createSlots("input_item_slot", [50], "solid"),
+      ),
+      createStorageSlotGroup(
+        "item_output_buffer",
+        "item",
+        createSlots("output_item_slot", [50], "solid"),
+      ),
+      createStorageSlotGroup(
+        "gas_input_buffer",
+        "fluid",
+        createSlots("input_gas_slot", [50], "gas"),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_input_buffer", "gas_input_buffer"], ["item_output_buffer"]),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "item_input_buffer"),
+      createBinding("bind_item_output", "item_output", "item_output_buffer"),
+      createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
+    ],
+  }),
+  createEntityDefinition({
     id: "item_port_seedcol_1",
     nameKey: "registry.entity.item_port_seedcol_1.name",
     spriteId: "item_port_seedcol_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
-    displayOrder: 506,
+    displayOrder: 507,
     tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 10,
@@ -2267,7 +2368,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_planter_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
-    displayOrder: 507,
+    displayOrder: 508,
     tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 20,
@@ -2296,7 +2397,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_hydro_planter_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
-    displayOrder: 508,
+    displayOrder: 509,
     tags: [PRODUCER_TAG, "武陵", "alter:item_port_planter_1", "alter-variant:liquid"],
     requiresPower: true,
     powerDemand: 20,
@@ -2732,14 +2833,60 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_output",
         "fluid",
         "output",
-        [createPort("out_w_2", 0, 2, "W")],
+        [createPort("out_w_2", 0, 2, "W", {
+          acceptRule: { base: { kind: "fluid" }, exclude: [] },
+        })],
       ),
     ],
-    ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50] },
-      { kind: "item", direction: "output", capacities: [50] },
-      { kind: "fluid", direction: "output", capacities: [50] },
-    ]),
+    // AI-REMOVED 2026-07-16:
+    // Reason: 用户要求拆解机注册表使用显式字典声明，不再由 helper 隐式生成缓存、通道和绑定。
+    // Trigger: 用户持续推进注册表去 helper 化，并明确要求 item_port_dismantler_1 脱离 createSimpleProductionDevice。
+    // Evidence: 下方显式定义保持原 group/slot/channel/binding ID，并将管道输出缓存声明为 fluid。
+    // Replacement: 下方 storageSlotGroups / recipeChannels / portStorageBindings / inspectors。
+    // Risk: Low - 标识符和容量保持不变，仅定义方式从 helper 展开为显式字段。
+    // Human Review: Required
+    //
+    // Original code:
+    // ...createSimpleProductionDevice([
+    //   { kind: "item", direction: "input", capacities: [50] },
+    //   { kind: "item", direction: "output", capacities: [50] },
+    //   { kind: "fluid", direction: "output", capacities: [50], itemFilterType: "fluid" },
+    // ]),
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "item_input_buffer",
+        "item",
+        createSlots("input_item_slot", [50], "solid"),
+      ),
+      createStorageSlotGroup(
+        "item_output_buffer",
+        "item",
+        createSlots("output_item_slot", [50], "solid"),
+      ),
+      createStorageSlotGroup(
+        "fluid_output_buffer",
+        "fluid",
+        createSlots("output_fluid_slot", [50], "fluid"),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel(
+        "default",
+        ["item_input_buffer"],
+        ["item_output_buffer", "fluid_output_buffer"],
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "item_input_buffer"),
+      createBinding("bind_item_output", "item_output", "item_output_buffer"),
+      createBinding("bind_fluid_output", "fluid_output", "fluid_output_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
+    ],
   }),
   createEntityDefinition({
     id: "transmuter_2_gastrans",
@@ -2796,11 +2943,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid",
         createSlots("output_gas_slot", [50], "gas"),
       ),
-      createStorageSlotGroup(
-        "consume_buffer",
-        "fluid",
-        createSlots("consume_slot", [50], "gas"),
-      ),
+      // AI-REMOVED 2026-07-16:
+      // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
+      // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
+      // Evidence: compiler 会为未绑定的 metered input port 生成内部 synthetic-input node/slot。
+      // Replacement: topology-compiler.compileSyntheticNodesForUnboundPorts。
+      // Risk: Low - 目标 synthetic slot 仅作求解锚点，consumeAtTarget 不会写入库存。
+      // Human Review: Required
+      //
+      // Original code:
+      // createStorageSlotGroup(
+      //   "consume_buffer",
+      //   "fluid",
+      //   createSlots("consume_slot", [50], "gas"),
+      // ),
     ],
     recipeChannels: [
       createRecipeChannel(
@@ -2812,7 +2968,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
-      createBinding("bind_consume", "consume_input", "consume_buffer"),
+      // AI-REMOVED 2026-07-16:
+      // Reason: consume_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 consume_buffer。
+      // Trigger: 用户要求删除消耗槽位并验证求解。
+      // Evidence: meteredConsumption.inputPortGroupId 仍指向 consume_input，计量配置不依赖 storage binding。
+      // Replacement: synthetic-input node binding。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // createBinding("bind_consume", "consume_input", "consume_buffer"),
     ],
     inspectors: [
       {
@@ -2876,11 +3041,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item",
         createSlots("output_item_slot", [50], "solid"),
       ),
-      createStorageSlotGroup(
-        "consume_buffer",
-        "fluid",
-        createSlots("consume_slot", [50], "gas"),
-      ),
+      // AI-REMOVED 2026-07-16:
+      // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
+      // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
+      // Evidence: compiler 会为未绑定的 metered input port 生成内部 synthetic-input node/slot。
+      // Replacement: topology-compiler.compileSyntheticNodesForUnboundPorts。
+      // Risk: Low - 目标 synthetic slot 仅作求解锚点，consumeAtTarget 不会写入库存。
+      // Human Review: Required
+      //
+      // Original code:
+      // createStorageSlotGroup(
+      //   "consume_buffer",
+      //   "fluid",
+      //   createSlots("consume_slot", [50], "gas"),
+      // ),
     ],
     recipeChannels: [
       createRecipeChannel("default", ["gas_input_buffer"], ["item_output_buffer"]),
@@ -2888,7 +3062,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
-      createBinding("bind_consume", "consume_input", "consume_buffer"),
+      // AI-REMOVED 2026-07-16:
+      // Reason: consume_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 consume_buffer。
+      // Trigger: 用户要求删除消耗槽位并验证求解。
+      // Evidence: meteredConsumption.inputPortGroupId 仍指向 consume_input，计量配置不依赖 storage binding。
+      // Replacement: synthetic-input node binding。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // createBinding("bind_consume", "consume_input", "consume_buffer"),
     ],
     inspectors: [
       {
@@ -3023,11 +3206,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid",
         createSlots("output_gas_slot", [50], "gas"),
       ),
-      createStorageSlotGroup(
-        "consume_buffer",
-        "fluid",
-        createSlots("consume_slot", [50], "liquid"),
-      ),
+      // AI-REMOVED 2026-07-16:
+      // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
+      // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
+      // Evidence: compiler 会为未绑定的 metered input port 生成内部 synthetic-input node/slot。
+      // Replacement: topology-compiler.compileSyntheticNodesForUnboundPorts。
+      // Risk: Low - 目标 synthetic slot 仅作求解锚点，consumeAtTarget 不会写入库存。
+      // Human Review: Required
+      //
+      // Original code:
+      // createStorageSlotGroup(
+      //   "consume_buffer",
+      //   "fluid",
+      //   createSlots("consume_slot", [50], "liquid"),
+      // ),
     ],
     recipeChannels: [
       createRecipeChannel(
@@ -3039,7 +3231,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_liquid_input", "liquid_input", "liquid_input_buffer"),
       createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
-      createBinding("bind_consume", "consume_input", "consume_buffer"),
+      // AI-REMOVED 2026-07-16:
+      // Reason: consume_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 consume_buffer。
+      // Trigger: 用户要求删除消耗槽位并验证求解。
+      // Evidence: meteredConsumption.inputPortGroupId 仍指向 consume_input，计量配置不依赖 storage binding。
+      // Replacement: synthetic-input node binding。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // createBinding("bind_consume", "consume_input", "consume_buffer"),
     ],
     inspectors: [
       {
@@ -3103,11 +3304,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid",
         createSlots("output_liquid_slot", [50], "liquid"),
       ),
-      createStorageSlotGroup(
-        "consume_buffer",
-        "fluid",
-        createSlots("consume_slot", [50], "liquid"),
-      ),
+      // AI-REMOVED 2026-07-16:
+      // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
+      // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
+      // Evidence: compiler 会为未绑定的 metered input port 生成内部 synthetic-input node/slot。
+      // Replacement: topology-compiler.compileSyntheticNodesForUnboundPorts。
+      // Risk: Low - 目标 synthetic slot 仅作求解锚点，consumeAtTarget 不会写入库存。
+      // Human Review: Required
+      //
+      // Original code:
+      // createStorageSlotGroup(
+      //   "consume_buffer",
+      //   "fluid",
+      //   createSlots("consume_slot", [50], "liquid"),
+      // ),
     ],
     recipeChannels: [
       createRecipeChannel("default", ["gas_input_buffer"], ["liquid_output_buffer"]),
@@ -3115,7 +3325,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
       createBinding("bind_liquid_output", "liquid_output", "liquid_output_buffer"),
-      createBinding("bind_consume", "consume_input", "consume_buffer"),
+      // AI-REMOVED 2026-07-16:
+      // Reason: consume_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 consume_buffer。
+      // Trigger: 用户要求删除消耗槽位并验证求解。
+      // Evidence: meteredConsumption.inputPortGroupId 仍指向 consume_input，计量配置不依赖 storage binding。
+      // Replacement: synthetic-input node binding。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // createBinding("bind_consume", "consume_input", "consume_buffer"),
     ],
     inspectors: [
       {
@@ -3542,7 +3761,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_liquid_cleaner_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
-    displayOrder: 509,
+    displayOrder: 510,
     tags: [PRODUCER_TAG, "武陵", "OuterRingAllowed"],
     requiresPower: true,
     powerDemand: 50,
@@ -3845,13 +4064,23 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    storageSlotGroups: [
-      createStorageSlotGroup(
-        "gas_input_buffer",
-        "fluid",
-        createSlots("gas_input_slot", [500], "gas"),
-      ),
-    ],
+    // AI-REMOVED 2026-07-16:
+    // Reason: vaporizer 输入气体由 metered sink 立即销毁，真实 gas_input_buffer 不再保存任何物品。
+    // Trigger: 用户要求删除消耗槽位并现场验证求解。
+    // Evidence: 未绑定 gas_input 会由 compiler 生成内部 synthetic-input node/slot。
+    // Replacement: topology-compiler.compileSyntheticNodesForUnboundPorts。
+    // Risk: Low - synthetic slot 保持空槽，仅用于 Stage 3 目标定位。
+    // Human Review: Required
+    //
+    // Original code:
+    // storageSlotGroups: [
+    //   createStorageSlotGroup(
+    //     "gas_input_buffer",
+    //     "fluid",
+    //     createSlots("gas_input_slot", [500], "gas"),
+    //   ),
+    // ],
+    storageSlotGroups: [],
     // AI-REMOVED 2026-07-16:
     // Reason: 气体散布机改由计量消费窗口直接销毁输入并产生气体环境，不再运行计时配方。
     // Trigger: 用户确认下限 6、上限 30 的整分钟计量机制适用于 vaporizer_1。
@@ -3865,9 +4094,19 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     //   createRecipeChannel("default", ["gas_input_buffer"], []),
     // ],
     recipeChannels: [],
-    portStorageBindings: [
-      createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
-    ],
+    // AI-REMOVED 2026-07-16:
+    // Reason: gas_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 gas_input_buffer。
+    // Trigger: 用户要求删除消耗槽位并验证求解。
+    // Evidence: meteredConsumption 通过 inputPortGroupId 定位 compiled port，不依赖 storage binding。
+    // Replacement: synthetic-input node binding。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // portStorageBindings: [
+    //   createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
+    // ],
+    portStorageBindings: [],
     inspectors: [
       // AI-REMOVED 2026-07-16:
       // Reason: vaporizer_1 不再运行配方，配方状态面板没有有效 channel 可展示。
@@ -3882,10 +4121,19 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       //   type: INSPECTOR_TYPE.recipeStatus,
       //   channelIds: ["default"],
       // },
-      {
-        type: INSPECTOR_TYPE.slotConfig,
-        slotGroupIds: ["gas_input_buffer"],
-      },
+      // AI-REMOVED 2026-07-16:
+      // Reason: gas_input_buffer 已删除，内部 synthetic sink 不应暴露为可配置库存。
+      // Trigger: 用户要求删除消耗槽位；若不能删除则至少从 inspector 隐藏。
+      // Evidence: vaporizer 的计量状态由 runtime snapshot 表达，不再由 slotConfig 表达。
+      // Replacement: None。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // {
+      //   type: INSPECTOR_TYPE.slotConfig,
+      //   slotGroupIds: ["gas_input_buffer"],
+      // },
     ],
   }),
   createEntityDefinition({

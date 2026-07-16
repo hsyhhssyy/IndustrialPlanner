@@ -65,6 +65,8 @@ describe("gas diffusion simulation", () => {
     const recipeAfterGasEnds = getDevice(report, afterGasEndsTick, "xiranite-oven").channelRecipes["default"];
     const recipeFinal = getDevice(report, finalTick, "xiranite-oven").channelRecipes["default"];
 
+    expect(getDevice(report, 60 * STANDARD_TICK_RATE_PER_SECOND, "gas-diffuser").meteredConsumption)
+      .toEqual({ previousWindowCount: 6 });
     expect(outputAfterGasEnds).toBeGreaterThan(0);
     expect(outputFinal).toBe(outputAfterGasEnds);
     expect(recipeFinal?.progressSeconds ?? null).toBe(recipeAfterGasEnds?.progressSeconds ?? null);

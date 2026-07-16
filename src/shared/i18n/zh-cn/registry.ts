@@ -42,6 +42,7 @@ const REGISTRY: Record<string, string> = {
   "registry.entity.item_port_power_sta_1.name": "热能池",
   "registry.entity.item_port_seedcol_1.name": "采种机",
   "registry.entity.item_port_shaper_1.name": "塑形机",
+  "registry.entity.shaper_1_gas.name": "塑形机(气体)",
   "registry.entity.transmuter_2_gastrans.name": "固气转化机(气体)",
   "registry.entity.transmuter_2_solidtrans.name": "固气转化机(固体)",
   "registry.entity.item_port_sp_hub_1.name": "协议核心",

@@ -907,7 +907,10 @@ function compileSyntheticNodesForUnboundPorts(options: {
       nodes: options.nodes,
       slots: options.slots,
       nodeBindingsByStorageGroupId: options.nodeBindingsByStorageGroupId,
-      domain: inferStorageDomainFromPortGroups(options.definition.portGroups, "input"),
+      domain: options.definition.meteredConsumption !== undefined
+        && !boundPortGroupIds.has(options.definition.meteredConsumption.inputPortGroupId)
+        ? "any"
+        : inferStorageDomainFromPortGroups(options.definition.portGroups, "input"),
       bindDirection: "input",
     });
   }

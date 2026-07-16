@@ -42,6 +42,7 @@ const REGISTRY: Record<string, string> = {
   "registry.entity.item_port_power_sta_1.name": "Thermal Pool",
   "registry.entity.item_port_seedcol_1.name": "Seed-Picking Unit",
   "registry.entity.item_port_shaper_1.name": "Moulding Unit",
+  "registry.entity.shaper_1_gas.name": "Moulding Unit (Gas)",
   "registry.entity.transmuter_2_gastrans.name": "Solid-Gas Transmuting Unit (Gas)",
   "registry.entity.transmuter_2_solidtrans.name": "Solid-Gas Transmuting Unit (Solid)",
   "registry.entity.item_port_sp_hub_1.name": "Protocol Hub",

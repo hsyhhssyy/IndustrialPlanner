@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
 import { ITEM_DEFINITIONS } from "@/registry/item-definition";
+import { RECIPE_DEFINITIONS } from "@/registry/recipe-definition";
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 
@@ -248,5 +249,50 @@ describe("gas item and device definitions", () => {
         { capacity: 50, itemFilterType: "fluid" },
       ],
     });
+  });
+
+  it("makes liquid filling machine pipe input and buffer accept fluid", () => {
+    const definition = requireEntity("item_port_liquid_filling_pd_mc_1");
+    const fluidInput = requirePortGroup(definition, "fluid_input");
+    const fluidInputBuffer = definition.storageSlotGroups.find(
+      (slotGroup) => slotGroup.id === "fluid_input_buffer",
+    );
+
+    expectFluidBasePorts(fluidInput);
+    expect(fluidInputBuffer).toMatchObject({
+      kind: "fluid",
+      slots: [{ capacity: 50, itemFilterType: "fluid" }],
+    });
+  });
+
+  it("makes dismantler pipe output and buffer accept fluid", () => {
+    const definition = requireEntity("item_port_dismantler_1");
+    const fluidOutput = requirePortGroup(definition, "fluid_output");
+    const fluidOutputBuffer = definition.storageSlotGroups.find(
+      (slotGroup) => slotGroup.id === "fluid_output_buffer",
+    );
+
+    expectFluidBasePorts(fluidOutput);
+    expect(fluidOutputBuffer).toMatchObject({
+      kind: "fluid",
+      slots: [{ capacity: 50, itemFilterType: "fluid" }],
+    });
+  });
+
+  it("assigns gas filling recipes to the liquid filling machine", () => {
+    const gasItemIds = new Set(
+      ITEM_DEFINITIONS
+        .filter((item) => item.tags.includes("gas"))
+        .map((item) => item.id),
+    );
+    const gasFillingRecipes = RECIPE_DEFINITIONS.filter((recipe) =>
+      recipe.tags.includes("bottle_filling")
+      && recipe.inputs.some((input) => gasItemIds.has(input.itemId)),
+    );
+
+    expect(gasFillingRecipes).toHaveLength(8);
+    expect(gasFillingRecipes.every(
+      (recipe) => recipe.machineId === "item_port_liquid_filling_pd_mc_1",
+    )).toBe(true);
   });
 });

@@ -271,6 +271,95 @@ describe("EncyclopediaPanel", () => {
     ]);
   });
 
+  it("shows the required gas environment beside the recipe machine", () => {
+    const workspace = createWorkspace();
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    runInAction(() => {
+      currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
+        { type: "item", id: "item_gas_copper_enr2" },
+      ];
+      currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
+        kind: "item",
+        id: "item_gas_copper_enr2",
+      };
+    });
+
+    act(() => {
+      root.render(<EncyclopediaPanel appHost={currentAppHost} isTouch={false} />);
+    });
+
+    const environment = container.querySelector(
+      ".encyclopedia-recipe-gas-environment",
+    ) as HTMLButtonElement | null;
+
+    expect(environment?.textContent).toBe("酸气环境");
+
+    act(() => {
+      environment?.click();
+    });
+
+    expect(currentAppHost.internalState.workbench.toolbox.wiki.openedPage).toEqual({
+      kind: "item",
+      id: "item_gas_acid",
+    });
+  });
+
+  it("shows a device's single metered consumption item beside the machine", () => {
+    const workspace = createWorkspace();
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    runInAction(() => {
+      currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
+        { type: "entity", id: "transmuter_1_gastrans" },
+      ];
+      currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
+        kind: "entity",
+        id: "transmuter_1_gastrans",
+      };
+    });
+
+    act(() => {
+      root.render(<EncyclopediaPanel appHost={currentAppHost} isTouch={false} />);
+    });
+
+    const consumption = container.querySelector(
+      ".encyclopedia-recipe-device-consumption",
+    );
+
+    expect(consumption?.textContent).toBe("消耗清水");
+    expect(consumption?.querySelectorAll(".encyclopedia-recipe-consumed-item")).toHaveLength(1);
+  });
+
+  it("marks multiple metered consumption items as alternatives", () => {
+    const workspace = createWorkspace();
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    runInAction(() => {
+      currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
+        { type: "entity", id: "vaporizer_1" },
+      ];
+      currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
+        kind: "entity",
+        id: "vaporizer_1",
+      };
+    });
+
+    act(() => {
+      root.render(<EncyclopediaPanel appHost={currentAppHost} isTouch={false} />);
+    });
+
+    const consumption = container.querySelector(
+      ".encyclopedia-recipe-device-consumption",
+    );
+
+    expect(consumption?.textContent).toBe("消耗（任选）酸气惰气水蒸气息壤气");
+    expect(consumption?.querySelectorAll(".encyclopedia-recipe-consumed-item")).toHaveLength(4);
+  });
+
   it("shows liquid dismantle recipes below generic machine recipes", () => {
     const workspace = createWorkspace();
     const currentAppHost = createAppHost(workspace);

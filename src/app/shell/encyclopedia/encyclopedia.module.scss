@@ -696,11 +696,20 @@
 .encyclopedia-recipe-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 8px 10px;
   border-top: 1px solid var(--line);
   background: var(--surface-1);
+}
+
+.encyclopedia-recipe-metadata {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
 }
 
 .encyclopedia-recipe-machine {
@@ -732,7 +741,63 @@
   color: var(--text-0);
 }
 
+.encyclopedia-recipe-gas-environment,
+.encyclopedia-recipe-device-consumption {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  box-sizing: border-box;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  font-size: 0.72rem;
+}
+
+.encyclopedia-recipe-gas-environment {
+  cursor: pointer;
+}
+
+.encyclopedia-recipe-gas-environment:hover,
+.encyclopedia-recipe-consumed-item:hover {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.encyclopedia-recipe-metadata-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.encyclopedia-recipe-device-consumption {
+  flex-wrap: wrap;
+  padding: 2px 4px 2px 7px;
+}
+
+.encyclopedia-recipe-device-consumption-label {
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.encyclopedia-recipe-consumed-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 3px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-0);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
 .encyclopedia-recipe-duration {
+  margin-left: auto;
   font-size: 0.72rem;
   color: var(--text-2);
   white-space: nowrap;

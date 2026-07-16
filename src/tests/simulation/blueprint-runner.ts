@@ -224,6 +224,11 @@ function createTickReport(options: {
           { ...counter },
         ]),
       ),
+      meteredConsumption: status.meteredConsumption === undefined
+        ? undefined
+        : status.meteredConsumption === null
+          ? null
+          : { ...status.meteredConsumption },
       // AI-CORRECTION 2026-05-30: recipeId/progressSeconds/desiredSeconds 已从 readmodel 删除，
       //   改为从 channelRecipes 获取。此处仅做浅拷贝传递给测试断言。
       powerStatus: status.powerStatus,

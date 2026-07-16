@@ -67,6 +67,7 @@ export function resolveStorageSlotId(
  * 对应《仿真运行原理》§7.2 share-all 写入代理模型 ——
  *   source 端读写全部代理到 target 端存储，ignoreStock 作为 slot 属性应沿链继承。
  * 订正（2026-05-15）：ignoreStock 不再仅是编译槽位局部属性，支持跨链 OR 语义。
+ * AI-CORRECTION 2026-07-16: 无限库存同时适用于物流供给和配方原料，配方匹配、预定与消耗均不得受实际数量限制。
  */
 export function resolveEffectiveIgnoreStock(
   topology: CompiledSimulationTopology,
@@ -115,6 +116,7 @@ export function getReservedAmount(
       for (const recipe of Object.values(deviceState.channelRecipes)) {
         if (recipe === null) continue;
         for (const reservation of recipe.reservations) {
+          if (reservation.ignoreStock) continue;
           index[reservation.slotId] = (index[reservation.slotId] ?? 0) + reservation.amount;
         }
       }
@@ -143,6 +145,7 @@ export function adjustReservedAmounts(
   const perf = state.transient._perf;
   if (perf !== undefined) perf.reservationAdjustCalls += 1;
   for (const reservation of reservations) {
+    if (reservation.ignoreStock) continue;
     const next = (index[reservation.slotId] ?? 0) + reservation.amount * direction;
     if (next > 0) index[reservation.slotId] = next;
     else delete index[reservation.slotId];
@@ -533,7 +536,12 @@ export function selectRecipeInputs(options: {
         return null;
       }
       const amount = Math.min(selection.availableAmount, remainingAmount);
-      selections.push({ slotId: selection.slotId, itemType: selection.itemType, amount });
+      selections.push({
+        slotId: selection.slotId,
+        itemType: selection.itemType,
+        amount,
+        ignoreStock: selection.ignoreStock,
+      });
       localTakenBySlot[selection.slotId] = (localTakenBySlot[selection.slotId] ?? 0) + amount;
       remainingAmount -= amount;
     }
@@ -547,6 +555,9 @@ export function consumeSelections(
   selections: readonly RuntimeReservedItem[],
 ): void {
   for (const selection of selections) {
+    if (selection.ignoreStock) {
+      continue;
+    }
     const slotState = slots[selection.slotId];
     if (slotState === undefined) {
       continue;
@@ -841,7 +852,9 @@ function readIngredientSlotContents(options: {
         continue;
       }
 
-      const availableAmount = Math.max(0, slotState.count - getReservedAmount(options.state, storageSlotId));
+      const availableAmount = resolveEffectiveIgnoreStock(options.topology, options.state, slotId)
+        ? Number.POSITIVE_INFINITY
+        : Math.max(0, slotState.count - getReservedAmount(options.state, storageSlotId));
       if (availableAmount > 0) {
         contents.push({ slotId: storageSlotId, itemType, availableAmount });
       }
@@ -979,7 +992,12 @@ function findRecipeInputSelection(
   plan: CompiledSimulationRecipePlan,
   input: CompiledSimulationRecipeItem,
   localTakenBySlot: Record<string, number>,
-): { readonly slotId: string; readonly itemType: string; readonly availableAmount: number } | null {
+): {
+  readonly slotId: string;
+  readonly itemType: string;
+  readonly availableAmount: number;
+  readonly ignoreStock: boolean;
+} | null {
   for (const nodeId of plan.ingredientNodeIds) {
     const node = topology.nodes[nodeId];
     if (node === undefined) {
@@ -992,11 +1010,14 @@ function findRecipeInputSelection(
         continue;
       }
       const itemType = slotState.itemType;
-      const availableAmount = slotState.count
-        - getReservedAmount(state, storageSlotId)
-        - (localTakenBySlot[storageSlotId] ?? 0);
+      const ignoreStock = resolveEffectiveIgnoreStock(topology, state, slotId);
+      const availableAmount = ignoreStock
+        ? Number.POSITIVE_INFINITY
+        : slotState.count
+          - getReservedAmount(state, storageSlotId)
+          - (localTakenBySlot[storageSlotId] ?? 0);
       if (availableAmount > 0) {
-        return { slotId: storageSlotId, itemType, availableAmount };
+        return { slotId: storageSlotId, itemType, availableAmount, ignoreStock };
       }
     }
   }

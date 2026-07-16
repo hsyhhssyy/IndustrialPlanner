@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
 import { RECIPE_DEFINITIONS } from "@/registry/recipe-definition";
+import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 
 function requireEntity(id: string) {
   const definition = ENTITY_DEFINITIONS.find((candidate) => candidate.id === id);
@@ -73,6 +74,32 @@ describe("machine-mode entity definitions", () => {
         gasDiffusionRange: null,
       });
     }
+
+    for (const entityId of [
+      "transmuter_1_gastrans",
+      "transmuter_1_liquidtrans",
+      "transmuter_2_gastrans",
+      "transmuter_2_solidtrans",
+    ] as const) {
+      const definition = requireEntity(entityId);
+      expect(definition.storageSlotGroups.some((group) => group.id === "consume_buffer")).toBe(false);
+      expect(definition.portStorageBindings.some((binding) => binding.portGroupId === "consume_input"))
+        .toBe(false);
+      expect(definition.inspectors).toContainEqual({
+        type: INSPECTOR_TYPE.meteredConsumption,
+      });
+    }
+  });
+
+  it("keeps vaporizer metered input internal instead of exposing a configurable storage slot", () => {
+    const definition = requireEntity("vaporizer_1");
+
+    expect(definition.storageSlotGroups).toEqual([]);
+    expect(definition.portStorageBindings).toEqual([]);
+    expect(definition.inspectors.some((inspector) => inspector.type === INSPECTOR_TYPE.slotConfig)).toBe(false);
+    expect(definition.inspectors).toContainEqual({
+      type: INSPECTOR_TYPE.meteredConsumption,
+    });
   });
 
   it("defines the gas purifier as the gas mode of the existing purifier", () => {

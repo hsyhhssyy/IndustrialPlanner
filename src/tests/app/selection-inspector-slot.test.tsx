@@ -90,6 +90,24 @@ function createDummyWorldWithLogisticsDevice(): WorldDocument {
   };
 }
 
+function createDummyWorldWithMeteredDevice(): WorldDocument {
+  const doc = createDummyWorldDocument();
+  return {
+    ...doc,
+    entities: {
+      ...doc.entities,
+      "dummy-metered-device": {
+        id: "dummy-metered-device",
+        definitionId: "vaporizer_1",
+        position: { x: 1, y: 1 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    },
+  };
+}
+
 function attachSimulationStub(
   workspace: WorkspaceContract,
   options: {
@@ -286,6 +304,47 @@ describe("SelectionInspectorSlot", () => {
     expect(panel?.querySelector("[data-item-id='item_copper_ore'] img")).not.toBeNull();
     expect(panel?.querySelectorAll("button")).toHaveLength(1);
     expect(panel?.querySelector("input, select, textarea")).toBeNull();
+  });
+
+  it("renders the previous minute metered consumption on a 0-30 ruler", () => {
+    const workspace = createWorkspace();
+    editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldWithMeteredDevice());
+    editorHost.internalState.collections.selection.replace(["dummy-metered-device"]);
+    attachSimulationStub(workspace, {
+      state: "start",
+      runtimeStatus: {
+        slotItems: [],
+        channelRecipes: {},
+        meteredConsumption: { previousWindowCount: 18 },
+        powerStatus: "in-power-range",
+      },
+    });
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    act(() => {
+      root.render(
+        <SelectionInspectorSlot
+          appHost={currentAppHost}
+          translate={(key) => key}
+        />,
+      );
+      vi.advanceTimersByTime(50);
+    });
+
+    const panel = container.querySelector<HTMLElement>("[data-inspector-key='metered-consumption']");
+    const ruler = panel?.querySelector<HTMLElement>("[role='meter']");
+    const cursor = panel?.querySelector<HTMLElement>("[data-metered-consumption-cursor='18']");
+    const threshold = panel?.querySelector<HTMLElement>("[data-metered-consumption-threshold='6']");
+
+    expect(panel?.textContent).toContain("运行消耗");
+    expect(panel?.textContent).toContain("上一分钟平均值");
+    expect(ruler?.getAttribute("aria-valuemin")).toBe("0");
+    expect(ruler?.getAttribute("aria-valuemax")).toBe("30");
+    expect(ruler?.getAttribute("aria-valuenow")).toBe("18");
+    expect(cursor?.style.left).toBe("60%");
+    expect(threshold?.style.left).toBe("20%");
   });
 
   it("hides on multi selection and remounts after narrowing back to one entity", () => {

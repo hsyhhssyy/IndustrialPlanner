@@ -191,6 +191,12 @@ function RecipeCard({
 }) {
   const maxRows = Math.max(recipe.inputs.length, recipe.outputs.length);
   const activityIds = showActivityIcons ? resolveActivityIdsFromTags(recipe.tags) : [];
+  const machineDefinition = index.entityById.get(recipe.machineId);
+  const requiredGasItemId = recipe.requiredGasDiffusion;
+  const consumedItemIds = machineDefinition?.meteredConsumption?.itemIds ?? [];
+  const consumptionLabel = consumedItemIds.length > 1
+    ? t("encyclopedia.recipe.deviceConsumptionAny")
+    : t("encyclopedia.recipe.deviceConsumption");
 
   return (
     <article className={cm(styles, "encyclopedia-recipe-card definition-card")}>
@@ -242,16 +248,57 @@ function RecipeCard({
       </div>
 
       <div className={cm(styles, "encyclopedia-recipe-footer")}>
-        <button
-          type="button"
-          className={cm(styles, "encyclopedia-recipe-machine")}
-          onClick={() => onEntityClick(recipe.machineId)}
-        >
-          <img alt="" className={cm(styles, "encyclopedia-recipe-machine-icon")} src={resolveEntityIcon(recipe.machineId)} />
-          <span className={cm(styles, "encyclopedia-recipe-machine-name")}>
-            {t(index.entityById.get(recipe.machineId)?.nameKey ?? recipe.machineId)}
-          </span>
-        </button>
+        <div className={cm(styles, "encyclopedia-recipe-metadata")}>
+          <button
+            type="button"
+            className={cm(styles, "encyclopedia-recipe-machine")}
+            onClick={() => onEntityClick(recipe.machineId)}
+          >
+            <img alt="" className={cm(styles, "encyclopedia-recipe-machine-icon")} src={resolveEntityIcon(recipe.machineId)} />
+            <span className={cm(styles, "encyclopedia-recipe-machine-name")}>
+              {t(machineDefinition?.nameKey ?? recipe.machineId)}
+            </span>
+          </button>
+          {requiredGasItemId && (
+            <button
+              type="button"
+              className={cm(styles, "encyclopedia-recipe-gas-environment")}
+              onClick={() => onItemClick(requiredGasItemId)}
+            >
+              <img
+                alt=""
+                className={cm(styles, "encyclopedia-recipe-metadata-icon")}
+                src={resolveItemIcon(requiredGasItemId, index)}
+              />
+              <span>
+                {resolveItemName(requiredGasItemId, index, t)}
+                {t("encyclopedia.recipe.gasEnvironmentSuffix")}
+              </span>
+            </button>
+          )}
+          {consumedItemIds.length > 0 && (
+            <div className={cm(styles, "encyclopedia-recipe-device-consumption")}>
+              <span className={cm(styles, "encyclopedia-recipe-device-consumption-label")}>
+                {consumptionLabel}
+              </span>
+              {consumedItemIds.map((itemId) => (
+                <button
+                  key={itemId}
+                  type="button"
+                  className={cm(styles, "encyclopedia-recipe-consumed-item")}
+                  onClick={() => onItemClick(itemId)}
+                >
+                  <img
+                    alt=""
+                    className={cm(styles, "encyclopedia-recipe-metadata-icon")}
+                    src={resolveItemIcon(itemId, index)}
+                  />
+                  <span>{resolveItemName(itemId, index, t)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <ActivityIconStrip activityIds={activityIds} />
         <span className={cm(styles, "encyclopedia-recipe-duration")}>{recipe.durationSeconds}s</span>
       </div>

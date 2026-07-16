@@ -22,6 +22,32 @@ import {
 } from "./blueprint-test-helpers";
 
 describe("metered device consumption", () => {
+  it("compiles every metered input to an internal synthetic sink", () => {
+    for (const definitionId of [
+      "transmuter_1_gastrans",
+      "transmuter_1_liquidtrans",
+      "transmuter_2_gastrans",
+      "transmuter_2_solidtrans",
+      "vaporizer_1",
+    ] as const) {
+      const topology = compilePoweredBlueprint(createBlueprint(`synthetic-${definitionId}`, [
+        createEntity("device", definitionId, 0, 0),
+      ]));
+      const device = topology.devices["device:device"]!;
+      const portId = device.meteredConsumption!.inputPortId;
+      const nodeId = topology.ports[portId]!.boundNodeIds[0]!;
+      const slotId = topology.nodes[nodeId]!.slotIds[0]!;
+
+      expect(topology.nodes[nodeId]?.sourceStorageSlotGroupId).toBe("synthetic-input");
+      expect(topology.slots[slotId]).toMatchObject({
+        sourceStorageSlotGroupId: "synthetic-input",
+        domain: "any",
+        initialItemType: null,
+        initialCount: 0,
+      });
+    }
+  });
+
   it("destroys at most 30 items per fixed minute and preserves the count across a short outage", () => {
     const topology = compilePoweredBlueprint(createBlueprint("metered-vaporizer", [
       createEntity("source", "gas_storager_1", -4, 0, 0, {
@@ -35,6 +61,9 @@ describe("metered device consumption", () => {
     const portId = device.meteredConsumption!.inputPortId;
     const state = createSimulationMutableRuntimeState(topology);
     state.tickNumber = 1;
+    expect(topology.ports[portId]?.boundNodeIds).toEqual([
+      "device:vaporizer/node:synthetic-input",
+    ]);
     expect(Object.values(topology.transferEdges)).toEqual(expect.arrayContaining([
       expect.objectContaining({ targetPortId: portId }),
     ]));
@@ -55,6 +84,7 @@ describe("metered device consumption", () => {
     expect(readAdmissionMinuteCounterForCurrentWindow(topology, state, portId).count).toBe(30);
     expect(canAcceptMeteredConsumptionItem(topology, state, portId, "item_gas_inert")).toBe(false);
     const sinkSlotId = topology.nodes[topology.ports[portId]!.boundNodeIds[0]!]!.slotIds[0]!;
+    expect(topology.slots[sinkSlotId]?.sourceStorageSlotGroupId).toBe("synthetic-input");
     expect(state.persistent.slots[sinkSlotId]).toMatchObject({ itemType: null, count: 0 });
     expect(state.transient.recipeStatsDelta.consumed.item_gas_inert).toBe(30);
   });

@@ -163,6 +163,88 @@
   padding: 10px;
 }
 
+.metered-consumption-body {
+  gap: 14px;
+  padding: 12px;
+}
+
+.metered-consumption-ruler {
+  min-width: 0;
+  padding: 17px 8px 0;
+}
+
+.metered-consumption-track {
+  position: relative;
+  height: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(10% - 1px),
+      var(--line) calc(10% - 1px),
+      var(--line) 10%
+    ),
+    var(--surface-2);
+}
+
+.metered-consumption-threshold {
+  position: absolute;
+  top: -8px;
+  width: 1px;
+  height: 22px;
+  background: var(--warning, #d8a53a);
+  transform: translateX(-50%);
+}
+
+.metered-consumption-threshold > span {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 2px);
+  color: var(--text-2);
+  font-size: 0.62rem;
+  line-height: 1;
+  transform: translateX(-50%);
+}
+
+.metered-consumption-cursor {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 18px;
+  border: 2px solid var(--surface-1);
+  border-radius: 4px;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--line-strong);
+  transform: translate(-50%, -50%);
+  transition: left 160ms ease;
+}
+
+.metered-consumption-limits {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 7px;
+  color: var(--text-2);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.metered-consumption-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-1);
+  font-size: 0.76rem;
+}
+
+.metered-consumption-summary strong {
+  color: var(--text-0);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .logistics-item-list {
   gap: 0;
   padding-top: 3px;

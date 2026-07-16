@@ -36,6 +36,7 @@ import { BlockageAutoClearanceInspector } from "./blockage-auto-clearance-inspec
 import { LogisticsItemInspector } from "./logistics-item-inspector";
 import { InspectorCollapsiblePanel } from "./inspector-collapsible-panel";
 import { WaterPurifierNodeInspector } from "./water-purifier-node-inspector";
+import { MeteredConsumptionInspector } from "./metered-consumption-inspector";
 import { CanvasFloatingToolbarButtonStrip } from "@/app/shell/shared/canvas-floating-toolbar-button-strip";
 import {
   findDarkPipeSlotLinkForEntity,
@@ -65,6 +66,7 @@ interface InspectorSlotState {
 const INSPECTOR_LABELS: Partial<Record<EntityInspectorType, string>> = {
   [INSPECTOR_TYPE.genericDevice]: "设备概览",
   [INSPECTOR_TYPE.runtimeStatistics]: "运行统计",
+  [INSPECTOR_TYPE.meteredConsumption]: "运行消耗",
   [INSPECTOR_TYPE.logisticsItem]: "物流物品",
   [INSPECTOR_TYPE.storageManagement]: "缓存管理",
   [INSPECTOR_TYPE.storageTypeFilter]: "缓存类型过滤",
@@ -245,6 +247,13 @@ function renderInspector(options: {
           appHost={options.appHost}
           entity={options.entity}
           definition={options.definition}
+        />
+      );
+    case INSPECTOR_TYPE.meteredConsumption:
+      return (
+        <MeteredConsumptionInspector
+          definition={options.definition}
+          runtimeStatus={options.runtimeStatus}
         />
       );
     default:
@@ -622,6 +631,8 @@ function resolveInspectorDiscriminator(
       return "water-purifier-node";
     case INSPECTOR_TYPE.blockageAutoClearance:
       return "blockage-auto-clearance";
+    case INSPECTOR_TYPE.meteredConsumption:
+      return "metered-consumption";
     default:
       return String(fallbackIndex);
   }
