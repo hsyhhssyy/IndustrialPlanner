@@ -80,8 +80,14 @@ export interface SimulationDeviceRuntimeStatusReadModel {
 }
 
 export interface SimulationMeteredConsumptionStatusReadModel {
+  /** 当前固定分钟窗口内已经实际销毁的物品数量。 */
+  readonly currentWindowCount: number;
+  /** 当前固定分钟窗口锁定的计量物品 ID；尚未消费时为 null。 */
+  readonly currentWindowItemId: string | null;
   /** 上一个已经完成的固定分钟窗口内实际销毁的物品数量。 */
   readonly previousWindowCount: number;
+  /** 上一个已经完成的固定分钟窗口锁定的计量物品 ID。 */
+  readonly previousWindowItemId: string | null;
 }
 
 export interface SimulationGasDiffusionRangeReadModel {

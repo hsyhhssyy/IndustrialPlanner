@@ -375,7 +375,10 @@ function resolveDeviceRuntimeStatus(options: {
     meteredConsumption: deviceSnapshot.meteredConsumption === null
       ? null
       : {
+          currentWindowCount: deviceSnapshot.meteredConsumption.currentCount,
+          currentWindowItemId: deviceSnapshot.meteredConsumption.currentItemId,
           previousWindowCount: deviceSnapshot.meteredConsumption.previousWindowCount,
+          previousWindowItemId: deviceSnapshot.meteredConsumption.previousWindowItemId,
         },
     admissionCounters: Object.fromEntries(
       Object.entries(deviceSnapshot.admissionCounters ?? {}).map(([portRef, counter]) => [

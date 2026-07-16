@@ -97,6 +97,7 @@ export interface RuntimeDeviceState {
 
 export interface RuntimeMeteredConsumptionState {
   currentItemId: string | null;
+  previousWindowItemId: string | null;
   previousWindowCount: number;
   authorizedUntilTick: number | null;
   activeEffectItemId: string | null;
@@ -550,6 +551,7 @@ function createInitialMeteredConsumptions(
     }
     states[deviceId] = {
       currentItemId: null,
+      previousWindowItemId: null,
       previousWindowCount: 0,
       authorizedUntilTick: null,
       activeEffectItemId: null,
@@ -652,6 +654,7 @@ function rolloverMeteredConsumptionWindow(options: {
   );
   const completedCount = crossedWindows === 1 ? options.counter?.count ?? 0 : 0;
   const completedItemId = crossedWindows === 1 ? meteredState.currentItemId : null;
+  meteredState.previousWindowItemId = completedItemId;
   meteredState.previousWindowCount = completedCount;
   meteredState.currentItemId = null;
 
@@ -766,7 +769,10 @@ function cloneAdmissionMinuteCounterState(
 function cloneRuntimeMeteredConsumptionState(
   state: RuntimeMeteredConsumptionState,
 ): RuntimeMeteredConsumptionState {
-  return { ...state };
+  return {
+    ...state,
+    previousWindowItemId: state.previousWindowItemId ?? state.activeEffectItemId ?? null,
+  };
 }
 
 function cloneRuntimeDeviceState(device: RuntimeDeviceState): RuntimeDeviceState {

@@ -30,6 +30,12 @@ describe("gas diffusion simulation", () => {
       && transfer.itemType === "item_gas_inert"
     ));
     expect(consumedGasTransfers).toHaveLength(6);
+    expect(getDevice(report, finalTick, "gas-diffuser").meteredConsumption).toEqual({
+      currentWindowCount: 6,
+      currentWindowItemId: "item_gas_inert",
+      previousWindowCount: 0,
+      previousWindowItemId: null,
+    });
     expect(getDevice(report, finalTick, "gas-diffuser").slotItems.every((slot) => slot.count === 0))
       .toBe(true);
     expect(getDevice(report, finalTick, "xiranite-oven").channelRecipes["default"]).toMatchObject({
@@ -66,7 +72,12 @@ describe("gas diffusion simulation", () => {
     const recipeFinal = getDevice(report, finalTick, "xiranite-oven").channelRecipes["default"];
 
     expect(getDevice(report, 60 * STANDARD_TICK_RATE_PER_SECOND, "gas-diffuser").meteredConsumption)
-      .toEqual({ previousWindowCount: 6 });
+      .toEqual({
+        currentWindowCount: 0,
+        currentWindowItemId: null,
+        previousWindowCount: 6,
+        previousWindowItemId: "item_gas_inert",
+      });
     expect(outputAfterGasEnds).toBeGreaterThan(0);
     expect(outputFinal).toBe(outputAfterGasEnds);
     expect(recipeFinal?.progressSeconds ?? null).toBe(recipeAfterGasEnds?.progressSeconds ?? null);

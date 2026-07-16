@@ -252,6 +252,7 @@ function renderInspector(options: {
     case INSPECTOR_TYPE.meteredConsumption:
       return (
         <MeteredConsumptionInspector
+          appHost={options.appHost}
           definition={options.definition}
           runtimeStatus={options.runtimeStatus}
         />

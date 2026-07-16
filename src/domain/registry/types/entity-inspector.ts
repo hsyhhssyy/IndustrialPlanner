@@ -74,7 +74,8 @@ export const INSPECTOR_TYPE = {
   /**
    * ## 运行消耗面板
    *
-   * **只读展示。** 显示计量消耗设备上一个完整分钟窗口的消费量。
+   * **只读展示。** 显示计量消耗设备当前窗口与上一个完整分钟窗口消费量中的较大值。
+   * 标尺左侧显示该较大值所属窗口锁定的计量物品图标。
    * 标尺范围来自 EntityDefinition.meteredConsumption，游标值来自
    * SimulationDeviceRuntimeStatusReadModel.meteredConsumption。
    */

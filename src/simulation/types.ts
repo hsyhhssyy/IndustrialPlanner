@@ -498,6 +498,7 @@ export interface RuntimeMeteredConsumptionSnapshot {
   readonly windowStartTick: number;
   readonly currentCount: number;
   readonly currentItemId: string | null;
+  readonly previousWindowItemId: string | null;
   readonly previousWindowCount: number;
   readonly authorizedUntilTick: number | null;
   readonly activeEffectItemId: string | null;

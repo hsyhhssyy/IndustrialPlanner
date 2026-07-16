@@ -306,7 +306,7 @@ describe("SelectionInspectorSlot", () => {
     expect(panel?.querySelector("input, select, textarea")).toBeNull();
   });
 
-  it("renders the previous minute metered consumption on a 0-30 ruler", () => {
+  it("renders the larger current or previous minute count on a 0-30 ruler", () => {
     const workspace = createWorkspace();
     editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldWithMeteredDevice());
@@ -316,7 +316,12 @@ describe("SelectionInspectorSlot", () => {
       runtimeStatus: {
         slotItems: [],
         channelRecipes: {},
-        meteredConsumption: { previousWindowCount: 18 },
+        meteredConsumption: {
+          currentWindowCount: 24,
+          currentWindowItemId: "item_gas_acid",
+          previousWindowCount: 18,
+          previousWindowItemId: "item_gas_inert",
+        },
         powerStatus: "in-power-range",
       },
     });
@@ -335,15 +340,23 @@ describe("SelectionInspectorSlot", () => {
 
     const panel = container.querySelector<HTMLElement>("[data-inspector-key='metered-consumption']");
     const ruler = panel?.querySelector<HTMLElement>("[role='meter']");
-    const cursor = panel?.querySelector<HTMLElement>("[data-metered-consumption-cursor='18']");
+    const cursor = panel?.querySelector<HTMLElement>("[data-metered-consumption-cursor='24']");
     const threshold = panel?.querySelector<HTMLElement>("[data-metered-consumption-threshold='6']");
+    const itemIcon = panel?.querySelector<HTMLElement>(
+      "[data-metered-consumption-item-id='item_gas_acid']",
+    );
 
     expect(panel?.textContent).toContain("运行消耗");
-    expect(panel?.textContent).toContain("上一分钟平均值");
+    expect(panel?.textContent).not.toContain("当前/上一分钟最大值");
+    expect(itemIcon?.querySelector("img")?.getAttribute("src")).toContain(
+      "item-icons/item_gas_acid.webp",
+    );
     expect(ruler?.getAttribute("aria-valuemin")).toBe("0");
     expect(ruler?.getAttribute("aria-valuemax")).toBe("30");
-    expect(ruler?.getAttribute("aria-valuenow")).toBe("18");
-    expect(cursor?.style.left).toBe("60%");
+    expect(ruler?.getAttribute("aria-valuenow")).toBe("24");
+    expect(ruler?.dataset.meteredConsumptionCurrent).toBe("24");
+    expect(ruler?.dataset.meteredConsumptionPrevious).toBe("18");
+    expect(cursor?.style.left).toBe("80%");
     expect(threshold?.style.left).toBe("20%");
   });
 

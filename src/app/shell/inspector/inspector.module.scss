@@ -164,8 +164,39 @@
 }
 
 .metered-consumption-body {
-  gap: 14px;
+  gap: 0;
   padding: 12px;
+}
+
+.metered-consumption-content {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.metered-consumption-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.metered-consumption-item-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.metered-consumption-item-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .metered-consumption-ruler {
@@ -230,20 +261,29 @@
   font-variant-numeric: tabular-nums;
 }
 
-.metered-consumption-summary {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--text-1);
-  font-size: 0.76rem;
-}
-
-.metered-consumption-summary strong {
-  color: var(--text-0);
-  font-size: 0.9rem;
-  font-variant-numeric: tabular-nums;
-}
+// AI-REMOVED 2026-07-16:
+// Reason: 标尺下方的文字说明行已按用户要求移除，对应样式不再参与渲染。
+// Trigger: “文字说明那一行直接去掉，只留下标尺”。
+// Evidence: MeteredConsumptionInspector 已只渲染 .metered-consumption-content。
+// Replacement: .metered-consumption-content + .metered-consumption-item-icon。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// .metered-consumption-summary {
+//   display: flex;
+//   align-items: baseline;
+//   justify-content: space-between;
+//   gap: 12px;
+//   color: var(--text-1);
+//   font-size: 0.76rem;
+// }
+//
+// .metered-consumption-summary strong {
+//   color: var(--text-0);
+//   font-size: 0.9rem;
+//   font-variant-numeric: tabular-nums;
+// }
 
 .logistics-item-list {
   gap: 0;

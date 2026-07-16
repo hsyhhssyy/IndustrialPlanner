@@ -187,6 +187,7 @@ function createMeteredConsumptionSnapshot(
     windowStartTick: counter.windowStartTick,
     currentCount: counter.count,
     currentItemId: runtime.currentItemId,
+    previousWindowItemId: runtime.previousWindowItemId,
     previousWindowCount: runtime.previousWindowCount,
     authorizedUntilTick: runtime.authorizedUntilTick,
     activeEffectItemId: runtime.activeEffectItemId,

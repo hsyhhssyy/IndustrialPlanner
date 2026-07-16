@@ -109,6 +109,7 @@ describe("metered device consumption", () => {
     consume(topology, state, portId, "item_gas_acid", 6);
     expect(state.persistent.meteredConsumptions[device.id]).toMatchObject({
       previousWindowCount: 6,
+      previousWindowItemId: "item_gas_inert",
       currentItemId: "item_gas_acid",
       activeEffectItemId: "item_gas_inert",
       authorizedUntilTick: 2400,
