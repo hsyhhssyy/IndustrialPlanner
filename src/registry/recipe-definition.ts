@@ -3447,7 +3447,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_jar", amount: 1 }, { itemId: "item_gas_acid", amount: 1 }],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "liquid_bottle_dismantle"],
   },
   {
     id: "dismantler_copperjar_gas_copper_1",
@@ -3457,7 +3457,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_jar", amount: 1 }, { itemId: "item_gas_copper", amount: 1 }],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "liquid_bottle_dismantle"],
   },
   {
     id: "dismantler_copperjar_gas_copper_enr2_1",
@@ -3467,7 +3467,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_jar", amount: 1 }, { itemId: "item_gas_copper_enr2", amount: 1 }],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "liquid_bottle_dismantle"],
   },
   {
     id: "dismantler_copperjar_gas_copper_enr_1",
@@ -3477,7 +3477,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_jar", amount: 1 }, { itemId: "item_gas_copper_enr", amount: 1 }],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "liquid_bottle_dismantle"],
   },
   {
     id: "dismantler_copperjar_gas_inert_1",
@@ -3487,7 +3487,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_jar", amount: 1 }, { itemId: "item_gas_inert", amount: 1 }],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "liquid_bottle_dismantle"],
   },
   {
     id: "dismantler_copperjar_gas_water_1",
@@ -3497,7 +3497,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_jar", amount: 1 }, { itemId: "item_gas_water", amount: 1 }],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "liquid_bottle_dismantle"],
   },
   {
     id: "dismantler_copperjar_gas_xiranite_1",
@@ -3507,7 +3507,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_jar", amount: 1 }, { itemId: "item_gas_xiranite", amount: 1 }],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "liquid_bottle_dismantle"],
   },
   {
     id: "dismantler_copperjar_gas_xiranite_enr_1",
@@ -3517,7 +3517,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_copper_jar", amount: 1 }, { itemId: "item_gas_xiranite_enr", amount: 1 }],
     machineId: "item_port_dismantler_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "liquid_bottle_dismantle"],
   },
   {
     id: "filling_copperjar_copper_enr2_1",
@@ -3527,7 +3527,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_gasjar_copper_gas_copper_enr2", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "bottle_filling"],
   },
   {
     id: "filling_copperjar_gas_acid_1",
@@ -3537,7 +3537,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_gasjar_copper_gas_acid", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "bottle_filling"],
   },
   {
     id: "filling_copperjar_gas_copper_1",
@@ -3547,7 +3547,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_gasjar_copper_gas_copper", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "bottle_filling"],
   },
   {
     id: "filling_copperjar_gas_copper_enr_1",
@@ -3557,7 +3557,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_gasjar_copper_gas_copper_enr", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "bottle_filling"],
   },
   {
     id: "filling_copperjar_gas_inert_1",
@@ -3567,7 +3567,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_gasjar_copper_gas_inert", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "bottle_filling"],
   },
   {
     id: "filling_copperjar_gas_water_1",
@@ -3577,7 +3577,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_gasjar_copper_gas_water", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "bottle_filling"],
   },
   {
     id: "filling_copperjar_gas_xiranite_1",
@@ -3587,7 +3587,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_gasjar_copper_gas_xiranite", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "bottle_filling"],
   },
   {
     id: "filling_copperjar_gas_xiranite_enr_1",
@@ -3597,7 +3597,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     outputs: [{ itemId: "item_gasjar_copper_gas_xiranite_enr", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
     recipeType: "immediate-consume",
-    tags: ["introduced:1.4"],
+    tags: ["introduced:1.4", "bottle_filling"],
   },
   {
     id: "furnance_carbon_material_4",

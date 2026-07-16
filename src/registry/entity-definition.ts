@@ -2444,7 +2444,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     displayOrder: 607,
     tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
-    powerDemand: 50,
+    powerDemand: 100,
     portGroups: [
       createPortGroup(
         "item_output",
@@ -3545,7 +3545,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     displayOrder: 509,
     tags: [PRODUCER_TAG, "武陵", "OuterRingAllowed"],
     requiresPower: true,
-    powerDemand: 20,
+    powerDemand: 50,
     portGroups: [
       createPortGroup(
         "fluid_input",

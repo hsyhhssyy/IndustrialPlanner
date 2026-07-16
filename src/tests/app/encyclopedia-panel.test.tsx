@@ -247,6 +247,30 @@ describe("EncyclopediaPanel", () => {
     ]);
   });
 
+  it("groups every filling machine recipe under bottle filling", () => {
+    const workspace = createWorkspace();
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    runInAction(() => {
+      currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
+        { type: "entity", id: "item_port_filling_pd_mc_1" },
+      ];
+      currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
+        kind: "entity",
+        id: "item_port_filling_pd_mc_1",
+      };
+    });
+
+    act(() => {
+      root.render(<EncyclopediaPanel appHost={currentAppHost} isTouch={false} />);
+    });
+
+    expect(getRecipeGroupTitles(container)).toEqual([
+      currentAppHost.actions.translate("encyclopedia.group.liquidFilling"),
+    ]);
+  });
+
   it("shows liquid dismantle recipes below generic machine recipes", () => {
     const workspace = createWorkspace();
     const currentAppHost = createAppHost(workspace);
@@ -267,6 +291,7 @@ describe("EncyclopediaPanel", () => {
     });
 
     // 当前拆瓶器全部 67 条配方均带 liquid_bottle_dismantle 标签，asMachine 分组为空不渲染
+    // AI-CORRECTION 2026-07-16: 新增气罐拆解配方已补同标签，拆解机仍不渲染 asMachine 分组。
     expect(getRecipeGroupTitles(container)).toEqual([
       currentAppHost.actions.translate("encyclopedia.group.liquidDismantle"),
     ]);
