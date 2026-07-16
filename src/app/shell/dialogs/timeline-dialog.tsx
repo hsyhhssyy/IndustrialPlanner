@@ -853,7 +853,14 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
             max={windowEndTick}
             min={windowStartTick}
             onBlur={finishDrag}
-            onInput={(event) => requestSeek(Number(event.currentTarget.value))}
+            onInput={(event) => {
+              if (!dragActiveRef.current) {
+                event.currentTarget.value = String(Math.trunc(visibleCursorTick));
+                return;
+              }
+
+              requestSeek(Number(event.currentTarget.value));
+            }}
             onPointerCancel={finishDrag}
             onPointerDown={startDrag}
             onPointerMove={updateEdgeScrollFromPointer}
