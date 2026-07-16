@@ -288,6 +288,15 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel.querySelectorAll(".placement-device-button .button-icon-image")).toHaveLength(
       visiblePanel.querySelectorAll(".placement-device-button").length,
     );
+    const compactDeviceLabel = visiblePanel.querySelector(
+      '[data-ui-button-id="placement-transmuter_2_gastrans"] .placement-button-label',
+    );
+    const regularDeviceLabel = visiblePanel.querySelector(
+      '[data-ui-button-id="placement-item_port_storager_1"] .placement-button-label',
+    );
+    expect(compactDeviceLabel?.textContent).toBe("固气转化机(气体)");
+    expect(compactDeviceLabel?.classList.contains("is-compact")).toBe(true);
+    expect(regularDeviceLabel?.classList.contains("is-compact")).toBe(false);
     expect(visiblePanel.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(
       visiblePanel.querySelectorAll(".placement-action-button").length,
     );

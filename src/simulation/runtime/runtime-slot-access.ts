@@ -330,6 +330,8 @@ export function moveOneItem(options: {
   sourceSlotId: string;
   targetSlotId: string;
   itemType: string;
+  /** true 时目标是销毁型虚拟入口：来源扣除后不写入目标库存。 */
+  consumeAtTarget?: boolean;
 }): boolean {
   const sourceSlot = options.topology.slots[options.sourceSlotId];
   const targetSlot = options.topology.slots[options.targetSlotId];
@@ -372,6 +374,10 @@ export function moveOneItem(options: {
     if (sourceState.count === 0) {
       sourceState.itemType = null;
     }
+  }
+
+  if (options.consumeAtTarget === true) {
+    return true;
   }
 
   targetState.itemType = targetState.itemType ?? options.itemType;

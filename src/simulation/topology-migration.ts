@@ -85,6 +85,13 @@ function collectEntityResetReasons(options: {
     return reasons;
   }
 
+  if (
+    JSON.stringify(previousDevice.meteredConsumption ?? null)
+    !== JSON.stringify(nextDevice.meteredConsumption ?? null)
+  ) {
+    reasons.push("meteredConsumption changed");
+  }
+
   const prevNodeIds = [...previousDevice.nodeIds].sort();
   const nextNodeIds = [...nextDevice.nodeIds].sort();
   if (prevNodeIds.join(',') !== nextNodeIds.join(',')) {

@@ -109,6 +109,14 @@ export interface EntityDefinition {
    */
   readonly blockageAutoClearance?: EntityBlockageAutoClearanceDefinition;
 
+  /**
+   * 按固定时间窗口吞噬物品并授予设备运行许可的配置。
+   * 输入物品不会进入普通库存；达到 startThreshold 后设备运行到当前窗口末尾，
+   * 上一窗口达标时会授权下一整个窗口。gasDiffusionRange 非空时，运行许可同时提供
+   * 与窗口锁定物品对应的气体环境。
+   */
+  readonly meteredConsumption?: EntityMeteredConsumptionDefinition;
+
   // ---- 端口与存储槽组 ----
 
   /**
@@ -141,6 +149,25 @@ export interface EntityDefinition {
    */
   portStorageBindings: PortStorageBindingDefinition[];
 
+}
+
+// ---------------------------------------------------------------------------
+// EntityMeteredConsumptionDefinition — 计量消费与窗口运行许可
+// ---------------------------------------------------------------------------
+
+export interface EntityMeteredConsumptionDefinition {
+  /** 承载销毁型计量入口的端口组；该组必须只有一个 input port。 */
+  readonly inputPortGroupId: string;
+  /** 允许被吞噬并计数的物品 ID；窗口内由第一个物品锁定具体类型。 */
+  readonly itemIds: readonly string[];
+  /** 固定计数窗口长度，单位秒。 */
+  readonly windowSeconds: number;
+  /** 当前或上一窗口达到该计数时授予运行许可。 */
+  readonly startThreshold: number;
+  /** 当前窗口达到该计数后停止接收，直到下一窗口。 */
+  readonly acceptanceLimit: number;
+  /** 非空时，运行许可提供与锁定物品同 ID 的气体环境。 */
+  readonly gasDiffusionRange: number | null;
 }
 
 // ---------------------------------------------------------------------------

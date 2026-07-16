@@ -36,4 +36,33 @@ describe("entity variant helpers", () => {
       definitions: createRegistryContract().entityDefinitions,
     })).toBeNull();
   });
+
+  it("groups machine modes by building id without requiring a base entity definition", () => {
+    const definitions = createRegistryContract().entityDefinitions;
+
+    expect(
+      resolveEntityVariantDefinitions({
+        definitionId: "transmuter_1_gastrans",
+        definitions,
+      }).map((definition) => definition.id),
+    ).toEqual([
+      "transmuter_1_gastrans",
+      "transmuter_1_liquidtrans",
+    ]);
+
+    expect(resolveNextEntityVariantDefinitionId({
+      definitionId: "transmuter_2_solidtrans",
+      definitions,
+    })).toBe("transmuter_2_gastrans");
+
+    expect(
+      resolveEntityVariantDefinitions({
+        definitionId: "item_port_liquid_purifier_1",
+        definitions,
+      }).map((definition) => definition.id),
+    ).toEqual([
+      "item_port_liquid_purifier_1",
+      "liquid_purifier_1_gas",
+    ]);
+  });
 });

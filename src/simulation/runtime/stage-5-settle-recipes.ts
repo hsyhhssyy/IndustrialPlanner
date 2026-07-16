@@ -16,6 +16,7 @@ import {
   computeActiveGasDiffusions,
   isDeviceInRequiredGasDiffusion,
 } from "./gas-diffusion";
+import { isMeteredConsumptionAuthorized } from "./metered-consumption";
 
 /**
  * 对应《仿真运行原理》§5.5 Tick 阶段 5 二次结算，以及 §4 设备与配方状态。
@@ -118,6 +119,9 @@ function startIdleDeviceChannels(options: {
     }
     // 真实电力模式下发电不足 → 所有 requiresPower 设备不启动新配方
     if (powerInsufficient && device.requiresPower) {
+      continue;
+    }
+    if (!isMeteredConsumptionAuthorized(device, options.state)) {
       continue;
     }
 

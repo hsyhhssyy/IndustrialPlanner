@@ -146,6 +146,15 @@ export interface CompiledSimulationGasDiffusionOutput {
   readonly range: number;
 }
 
+export interface CompiledSimulationMeteredConsumption {
+  readonly inputPortId: string;
+  readonly itemIds: readonly string[];
+  readonly windowTicks: number;
+  readonly startThreshold: number;
+  readonly acceptanceLimit: number;
+  readonly gasDiffusionRange: number | null;
+}
+
 export interface CompiledSimulationDevice {
   readonly id: string;
   readonly sourceEntityId: string | null;
@@ -172,6 +181,8 @@ export interface CompiledSimulationDevice {
   readonly blockageAutoClearance?: CompiledSimulationBlockageAutoClearance | null;
   /** 净水节点专用运行配置；其他设备为 null。 */
   readonly waterPurifierNode?: CompiledSimulationWaterPurifierNodeConfig | null;
+  /** 销毁型计量入口及其窗口运行许可；未声明时为 null。 */
+  readonly meteredConsumption?: CompiledSimulationMeteredConsumption | null;
 }
 
 export interface CompiledSimulationBlockageAutoClearanceSlotRef {
@@ -480,6 +491,16 @@ export interface RuntimeDeviceSnapshot {
   readonly channelRecipes: Record<string, RuntimeDeviceRecipeSnapshot | null>;
   /** 准入口 runtime 计数，key 为 `${portGroupId}:${portId}`。 */
   readonly admissionCounters: Record<string, RuntimeAdmissionCounterSnapshot>;
+  readonly meteredConsumption: RuntimeMeteredConsumptionSnapshot | null;
+}
+
+export interface RuntimeMeteredConsumptionSnapshot {
+  readonly windowStartTick: number;
+  readonly currentCount: number;
+  readonly currentItemId: string | null;
+  readonly previousWindowCount: number;
+  readonly authorizedUntilTick: number | null;
+  readonly activeEffectItemId: string | null;
 }
 
 export interface RuntimeAdmissionCounterSnapshot {

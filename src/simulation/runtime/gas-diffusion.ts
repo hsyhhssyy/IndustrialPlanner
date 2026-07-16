@@ -11,6 +11,10 @@ import {
   getGridFootprintCenterCells,
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid";
+import {
+  isDeviceElectricallyPowered,
+  isMeteredConsumptionAuthorized,
+} from "./metered-consumption";
 
 export function computeActiveGasDiffusions(
   topology: CompiledSimulationTopology,
@@ -22,6 +26,33 @@ export function computeActiveGasDiffusions(
     const device = topology.devices[deviceId];
     const deviceState = state.persistent.devices[deviceId];
     if (device === undefined || deviceState === undefined) {
+      continue;
+    }
+    if (!isDeviceElectricallyPowered(device, state)) {
+      continue;
+    }
+
+    const metered = device.meteredConsumption;
+    const meteredState = state.persistent.meteredConsumptions[device.id];
+    if (
+      metered !== undefined
+      && metered !== null
+      && metered.gasDiffusionRange !== null
+      && meteredState?.activeEffectItemId !== null
+      && meteredState?.activeEffectItemId !== undefined
+      && isMeteredConsumptionAuthorized(device, state)
+    ) {
+      const gridRect = resolveDeviceCenteredRangeRect(device, metered.gasDiffusionRange);
+      if (gridRect !== null) {
+        result.push({
+          sourceDeviceId: device.id,
+          gasItemId: meteredState.activeEffectItemId,
+          gridRect,
+        });
+      }
+    }
+
+    if (!isMeteredConsumptionAuthorized(device, state)) {
       continue;
     }
 

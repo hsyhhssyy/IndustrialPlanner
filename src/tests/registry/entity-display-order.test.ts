@@ -85,10 +85,13 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
     item_port_mix_pool_2: 607,
     item_port_xiranite_oven_1: 608,
     item_port_liquid_purifier_1: 609,
-    item_port_dismantler_1: 610,
-    transmuter_2: 611,
-    item_port_gas_reactor_1: 612,
-    transmuter_1: 613,
+    liquid_purifier_1_gas: 610,
+    item_port_dismantler_1: 611,
+    transmuter_2_gastrans: 612,
+    transmuter_2_solidtrans: 613,
+    item_port_gas_reactor_1: 614,
+    transmuter_1_gastrans: 615,
+    transmuter_1_liquidtrans: 616,
   };
 
   for (const [id, expectedOrder] of Object.entries(EXPECTED_ORDERS)) {

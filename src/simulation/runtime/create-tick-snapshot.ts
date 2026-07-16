@@ -162,9 +162,35 @@ function createDeviceSnapshots(
           },
       channelRecipes,
       admissionCounters: createAdmissionCounterSnapshots(topology, state, deviceId),
+      meteredConsumption: createMeteredConsumptionSnapshot(topology, state, deviceId),
     };
   }
   return devices;
+}
+
+function createMeteredConsumptionSnapshot(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  deviceId: string,
+): RuntimeTickSnapshot["devices"][string]["meteredConsumption"] {
+  const config = topology.devices[deviceId]?.meteredConsumption;
+  const runtime = state.persistent.meteredConsumptions[deviceId];
+  if (config === undefined || config === null || runtime === undefined) {
+    return null;
+  }
+  const counter = readAdmissionMinuteCounterForCurrentWindow(
+    topology,
+    state,
+    config.inputPortId,
+  );
+  return {
+    windowStartTick: counter.windowStartTick,
+    currentCount: counter.count,
+    currentItemId: runtime.currentItemId,
+    previousWindowCount: runtime.previousWindowCount,
+    authorizedUntilTick: runtime.authorizedUntilTick,
+    activeEffectItemId: runtime.activeEffectItemId,
+  };
 }
 
 function createAdmissionCounterSnapshots(

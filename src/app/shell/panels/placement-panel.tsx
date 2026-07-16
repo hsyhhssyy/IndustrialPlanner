@@ -19,6 +19,15 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
 const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
+const COMPACT_DEVICE_LABEL_MAX_WIDTH = 6.5;
+
+function estimateDeviceLabelWidth(label: string): number {
+  let width = 0;
+  for (const character of label) {
+    width += (character.codePointAt(0) ?? 0) <= 0x7f ? 0.5 : 1;
+  }
+  return width;
+}
 
 // ─── 设备图标路径映射 ───
 function resolveDeviceIconPath(entityId: string): string {
@@ -276,6 +285,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
               </div>
               <div className={cm(styles, isTouchLayout ? "placement-button-list is-single-column" : "placement-button-list")}>
                 {section.buttons.map((button, buttonIndex) => {
+                  const buttonLabel = t(button.labelKey);
                   const hotkey = button.hotkey
                     ?? (button.hotkeyKeyId
                       ? appHost.internalActions.getKeyboardShortcutFor(button.hotkeyKeyId)
@@ -287,6 +297,9 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                   const className = isActive
                     ? "placement-button placement-device-button is-active"
                     : "placement-button placement-device-button";
+                  const labelClassName = estimateDeviceLabelWidth(buttonLabel) > COMPACT_DEVICE_LABEL_MAX_WIDTH
+                    ? "placement-button-label is-compact"
+                    : "placement-button-label";
 
                   return (
                     <button
@@ -303,7 +316,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                       <span className={cm(styles, "button-icon")} aria-hidden="true">
                         <img alt="" className={cm(styles, "button-icon-image")} src={resolveDeviceIconPath(deviceId)} />
                       </span>
-                      <span className={cm(styles, "placement-button-label")}>{t(button.labelKey)}</span>
+                      <span className={cm(styles, labelClassName)}>{buttonLabel}</span>
                       {showDeviceHotkey ? <span className={cm(styles, "placement-button-hotkey")}>{hotkey}</span> : null}
                       
                     </button>

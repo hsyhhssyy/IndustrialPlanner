@@ -581,6 +581,7 @@ export class SimulationWorkerRuntime {
       this.effectiveTotalPowerDemand,
       state.persistent.baseBatteryJoules,
     );
+    state.transient.isPowerOutage = isPowerOutage;
     state.transient.activeGasDiffusions = computeActiveGasDiffusions(this.topology, state);
     return createTickSnapshot(this.topology, state, isPowerOutage, currentPowerGeneration);
   }
@@ -1141,6 +1142,7 @@ export class SimulationWorkerRuntime {
       const currentPowerGeneration = computeCurrentPowerGeneration(this.topology, this.runtimeState);
       const isPowerOutage = this.resolveTickPowerOutage(currentPowerGeneration);
       this.runtimeState.transient = createEmptyTransientState();
+      this.runtimeState.transient.isPowerOutage = isPowerOutage;
       this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(this.topology, this.runtimeState);
       const t0 = this.perfEnabled ? performance.now() : 0;
       const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutage, currentPowerGeneration);
@@ -1193,6 +1195,9 @@ export class SimulationWorkerRuntime {
         }
       }
 
+      const isPowerOutageRun = this.powerMode === "real"
+        && effectiveGeneration < this.effectiveTotalPowerDemand;
+      this.runtimeState.transient.isPowerOutage = isPowerOutageRun;
       this.runtimeState.transient.reservedAmountByStorageSlotId = null;
       this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(
         this.topology,
@@ -1295,8 +1300,6 @@ export class SimulationWorkerRuntime {
       this.runtimeState.transient.recipeStatsDelta = createEmptyTransientState().recipeStatsDelta;
 
       const t6 = this.perfEnabled ? performance.now() : 0;
-      const isPowerOutageRun = this.powerMode === "real"
-        && effectiveGeneration < this.effectiveTotalPowerDemand;
       const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutageRun, currentPowerGeneration);
       if (this.perfEnabled) {
         perfTiming!.stages["createSnapshot"] = performance.now() - t6;
@@ -1328,6 +1331,7 @@ export class SimulationWorkerRuntime {
 
     const currentPowerGenForSnapshot = computeCurrentPowerGeneration(this.topology, this.runtimeState);
     const isPowerOutageForSnapshot = this.resolveTickPowerOutage(currentPowerGenForSnapshot);
+    this.runtimeState.transient.isPowerOutage = isPowerOutageForSnapshot;
     this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(this.topology, this.runtimeState);
 
     const t1 = this.perfEnabled ? performance.now() : 0;

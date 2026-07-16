@@ -883,6 +883,23 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 50,
+    // AI-REMOVED 2026-07-16:
+    // Reason: 首轮机械定位误把固气转化机的计量配置写入反应池；反应池没有 consume_input。
+    // Trigger: 注册表补充 meteredConsumption 时命中了相邻的 powerDemand: 50 定义。
+    // Evidence: item_port_mix_pool_1 的端口组不包含 consume_input，编译后配置必然失效。
+    // Replacement: transmuter_2_gastrans.meteredConsumption。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // meteredConsumption: {
+    //   inputPortGroupId: "consume_input",
+    //   itemIds: ["item_gas_inert"],
+    //   windowSeconds: 60,
+    //   startThreshold: 6,
+    //   acceptanceLimit: 30,
+    //   gasDiffusionRange: null,
+    // },
     portGroups: [
       createPortGroup(
         "item_output",
@@ -2517,12 +2534,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     powerDemand: 50,
     portGroups: [
       createPortGroup(
-        "item_input",
-        "item",
-        "input",
-        [0, 1, 2, 3, 4].map((y) => createPort(`in_w_${y}`, 0, y, "W")),
-      ),
-      createPortGroup(
         "fluid_input",
         "fluid",
         "input",
@@ -2570,19 +2581,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid",
         createSlots("output_fluid_slot", [50, 50], "fluid"),
       ),
-      createStorageSlotGroup(
-        "item_input_buffer",
-        "item",
-        createSlots("input_item_slot", [50], "solid"),
-      ),
     ],
     recipeChannels: [
-      createRecipeChannel("default", ["fluid_input_buffer", "item_input_buffer"], ["fluid_output_buffer"]),
+      createRecipeChannel("default", ["fluid_input_buffer"], ["fluid_output_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_fluid_input", "fluid_input", "fluid_input_buffer"),
       createBinding("bind_fluid_output", "fluid_output", "fluid_output_buffer"),
-      createBinding("bind_item_input", "item_input", "item_input_buffer"),
     ],
     inspectors: [
       {
@@ -2592,13 +2597,18 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "liquid_purifier_1_vari_gas",
-    nameKey: "registry.entity.liquid_purifier_1_vari_gas.name",
-    spriteId: "liquid_purifier_1_vari_gas",
+    id: "liquid_purifier_1_gas",
+    nameKey: "registry.entity.liquid_purifier_1_gas.name",
+    spriteId: "liquid_purifier_1_gas",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 610,
-    tags: [PRODUCER_TAG, "武陵"],
+    tags: [
+      PRODUCER_TAG,
+      "武陵",
+      "alter:item_port_liquid_purifier_1",
+      "alter-variant:gas",
+    ],
     requiresPower: true,
     powerDemand: 50,
     portGroups: [
@@ -2606,40 +2616,37 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         "item",
         "input",
-        [0, 1, 2, 3, 4].map((y) => createPort(`in_w_${y}`, 0, y, "W")),
+        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
       ),
       createPortGroup(
-        "fluid_input",
+        "gas_input",
         "fluid",
         "input",
-        [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S", {
-          acceptRule: { base: { kind: "fluid" }, exclude: [] },
-        })),
-      ),
-      createPortGroup(
-        "fluid_output",
-        "fluid",
-        "output",
         [
-          createPort("out_n_1", 1, 0, "N", {
-            acceptRule: { base: { kind: "fluid" }, exclude: [] },
-          }),
-          createPort("out_n_3", 3, 0, "N", {
-            acceptRule: { base: { kind: "fluid" }, exclude: [] },
+          createPort("in_w_2", 0, 2, "W", {
+            acceptRule: { base: { kind: "gas" }, exclude: [] },
           }),
         ],
+      ),
+      createPortGroup(
+        "gas_output",
+        "fluid",
+        "output",
+        [1, 3].map((z) => createPort(`out_e_${z}`, 4, z, "E", {
+          acceptRule: { base: { kind: "gas" }, exclude: [] },
+        })),
       ),
     ],
     storageSlotGroups: [
       createStorageSlotGroup(
-        "fluid_input_buffer",
+        "gas_input_buffer",
         "fluid",
-        createSlots("input_fluid_slot", [50, 50], "fluid"),
+        createSlots("input_gas_slot", [50], "gas"),
       ),
       createStorageSlotGroup(
-        "fluid_output_buffer",
+        "gas_output_buffer",
         "fluid",
-        createSlots("output_fluid_slot", [50, 50], "fluid"),
+        createSlots("output_gas_slot", [50, 50], "gas"),
       ),
       createStorageSlotGroup(
         "item_input_buffer",
@@ -2648,11 +2655,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     recipeChannels: [
-      createRecipeChannel("default", ["fluid_input_buffer", "item_input_buffer"], ["fluid_output_buffer"]),
+      createRecipeChannel("default", ["gas_input_buffer", "item_input_buffer"], ["gas_output_buffer"]),
     ],
     portStorageBindings: [
-      createBinding("bind_fluid_input", "fluid_input", "fluid_input_buffer"),
-      createBinding("bind_fluid_output", "fluid_output", "fluid_output_buffer"),
+      createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
+      createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
     ],
     inspectors: [
@@ -2704,7 +2711,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_dismantler_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
-    displayOrder: 610,
+    displayOrder: 611,
     tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 20,
@@ -2735,40 +2742,29 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    id: "transmuter_2",
-    nameKey: "registry.entity.transmuter_2.name",
-    spriteId: "transmuter_2",
+    id: "transmuter_2_gastrans",
+    nameKey: "registry.entity.transmuter_2_gastrans.name",
+    spriteId: "transmuter_2_gastrans",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
-    displayOrder: 611,
-    tags: [PRODUCER_TAG, "武陵"],
+    displayOrder: 612,
+    tags: [PRODUCER_TAG, "武陵", "alter:transmuter_2", "alter-variant:gastrans"],
     requiresPower: true,
     powerDemand: 50,
+    meteredConsumption: {
+      inputPortGroupId: "consume_input",
+      itemIds: ["item_gas_inert"],
+      windowSeconds: 60,
+      startThreshold: 6,
+      acceptanceLimit: 30,
+      gasDiffusionRange: null,
+    },
     portGroups: [
-      createPortGroup(
-        "item_output",
-        "item",
-        "output",
-        [1, 3].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
-      ),
       createPortGroup(
         "item_input",
         "item",
         "input",
         [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
-      ),
-      createPortGroup(
-        "gas_input",
-        "fluid",
-        "input",
-        [
-          ...[1, 3].map((z) => createPort(`in_w_${z}`, 0, z, "W", {
-            acceptRule: { base: { kind: "gas" }, exclude: [] },
-          })),
-          createPort("in_s_2", 2, 4, "S", {
-            acceptRule: { base: { kind: "gas" }, exclude: [] },
-          }),
-        ],
       ),
       createPortGroup(
         "gas_output",
@@ -2778,6 +2774,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
           acceptRule: { base: { kind: "gas" }, exclude: [] },
         })),
       ),
+      createPortGroup(
+        "consume_input",
+        "fluid",
+        "input",
+        [
+          createPort("in_s_2", 2, 4, "S", {
+            acceptRule: { base: { kind: "item", itemId: "item_gas_inert" }, exclude: [] },
+          }),
+        ],
+      ),
     ],
     storageSlotGroups: [
       createStorageSlotGroup(
@@ -2785,6 +2791,81 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item",
         createSlots("input_item_slot", [50], "solid"),
       ),
+      createStorageSlotGroup(
+        "gas_output_buffer",
+        "fluid",
+        createSlots("output_gas_slot", [50], "gas"),
+      ),
+      createStorageSlotGroup(
+        "consume_buffer",
+        "fluid",
+        createSlots("consume_slot", [50], "gas"),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel(
+        "default",
+        ["item_input_buffer"],
+        ["gas_output_buffer"],
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "item_input_buffer"),
+      createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
+      createBinding("bind_consume", "consume_input", "consume_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
+    ],
+  }),
+  createEntityDefinition({
+    id: "transmuter_2_solidtrans",
+    nameKey: "registry.entity.transmuter_2_solidtrans.name",
+    spriteId: "transmuter_2_solidtrans",
+    footprint: { width: 5, height: 5 },
+    uiGroup: "advancedManufacturing",
+    displayOrder: 613,
+    tags: [PRODUCER_TAG, "武陵", "alter:transmuter_2", "alter-variant:solidtrans"],
+    requiresPower: true,
+    powerDemand: 50,
+    meteredConsumption: {
+      inputPortGroupId: "consume_input",
+      itemIds: ["item_gas_inert"],
+      windowSeconds: 60,
+      startThreshold: 6,
+      acceptanceLimit: 30,
+      gasDiffusionRange: null,
+    },
+    portGroups: [
+      createPortGroup(
+        "gas_input",
+        "fluid",
+        "input",
+        [1, 3].map((z) => createPort(`in_w_${z}`, 0, z, "W", {
+          acceptRule: { base: { kind: "gas" }, exclude: [] },
+        })),
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [1, 3].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+      createPortGroup(
+        "consume_input",
+        "fluid",
+        "input",
+        [
+          createPort("in_s_2", 2, 4, "S", {
+            acceptRule: { base: { kind: "item", itemId: "item_gas_inert" }, exclude: [] },
+          }),
+        ],
+      ),
+    ],
+    storageSlotGroups: [
       createStorageSlotGroup(
         "gas_input_buffer",
         "fluid",
@@ -2796,23 +2877,18 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("output_item_slot", [50], "solid"),
       ),
       createStorageSlotGroup(
-        "gas_output_buffer",
+        "consume_buffer",
         "fluid",
-        createSlots("output_gas_slot", [50], "gas"),
+        createSlots("consume_slot", [50], "gas"),
       ),
     ],
     recipeChannels: [
-      createRecipeChannel(
-        "default",
-        ["item_input_buffer", "gas_input_buffer"],
-        ["item_output_buffer", "gas_output_buffer"],
-      ),
+      createRecipeChannel("default", ["gas_input_buffer"], ["item_output_buffer"]),
     ],
     portStorageBindings: [
-      createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
-      createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
+      createBinding("bind_consume", "consume_input", "consume_buffer"),
     ],
     inspectors: [
       {
@@ -2827,10 +2903,27 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_gas_reactor_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
-    displayOrder: 612,
+    displayOrder: 614,
     tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 50,
+    // AI-REMOVED 2026-07-16:
+    // Reason: 首轮机械定位误把液气转化机的计量配置写入气体反应机；该设备没有 consume_input。
+    // Trigger: 注册表补充 meteredConsumption 时命中了相邻的 powerDemand: 50 定义。
+    // Evidence: item_port_gas_reactor_1 的端口组只有 gas_input/gas_output。
+    // Replacement: transmuter_1_gastrans.meteredConsumption。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // meteredConsumption: {
+    //   inputPortGroupId: "consume_input",
+    //   itemIds: ["item_liquid_water"],
+    //   windowSeconds: 60,
+    //   startThreshold: 6,
+    //   acceptanceLimit: 30,
+    //   gasDiffusionRange: null,
+    // },
     portGroups: [
       createPortGroup(
         "gas_input",
@@ -2876,24 +2969,104 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "transmuter_1",
-    nameKey: "registry.entity.transmuter_1.name",
-    spriteId: "transmuter_1",
+    id: "transmuter_1_gastrans",
+    nameKey: "registry.entity.transmuter_1_gastrans.name",
+    spriteId: "transmuter_1_gastrans",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
-    displayOrder: 613,
-    tags: [PRODUCER_TAG, "武陵"],
+    displayOrder: 615,
+    tags: [PRODUCER_TAG, "武陵", "alter:transmuter_1", "alter-variant:gastrans"],
     requiresPower: true,
     powerDemand: 50,
+    meteredConsumption: {
+      inputPortGroupId: "consume_input",
+      itemIds: ["item_liquid_water"],
+      windowSeconds: 60,
+      startThreshold: 6,
+      acceptanceLimit: 30,
+      gasDiffusionRange: null,
+    },
     portGroups: [
       createPortGroup(
         "liquid_input",
         "fluid",
         "input",
+        [1, 3].map((z) => createPort(`in_w_${z}`, 0, z, "W")),
+      ),
+      createPortGroup(
+        "gas_output",
+        "fluid",
+        "output",
+        [1, 3].map((z) => createPort(`out_e_${z}`, 4, z, "E", {
+          acceptRule: { base: { kind: "gas" }, exclude: [] },
+        })),
+      ),
+      createPortGroup(
+        "consume_input",
+        "fluid",
+        "input",
         [
-          createPort("in_s_2", 2, 4, "S"),
+          createPort("in_s_2", 2, 4, "S", {
+            acceptRule: { base: { kind: "item", itemId: "item_liquid_water" }, exclude: [] },
+          }),
         ],
       ),
+    ],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "liquid_input_buffer",
+        "fluid",
+        createSlots("input_liquid_slot", [50], "liquid"),
+      ),
+      createStorageSlotGroup(
+        "gas_output_buffer",
+        "fluid",
+        createSlots("output_gas_slot", [50], "gas"),
+      ),
+      createStorageSlotGroup(
+        "consume_buffer",
+        "fluid",
+        createSlots("consume_slot", [50], "liquid"),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel(
+        "default",
+        ["liquid_input_buffer"],
+        ["gas_output_buffer"],
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_liquid_input", "liquid_input", "liquid_input_buffer"),
+      createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
+      createBinding("bind_consume", "consume_input", "consume_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: ["default"],
+      },
+    ],
+  }),
+  createEntityDefinition({
+    id: "transmuter_1_liquidtrans",
+    nameKey: "registry.entity.transmuter_1_liquidtrans.name",
+    spriteId: "transmuter_1_liquidtrans",
+    footprint: { width: 5, height: 5 },
+    uiGroup: "advancedManufacturing",
+    displayOrder: 616,
+    tags: [PRODUCER_TAG, "武陵", "alter:transmuter_1", "alter-variant:liquidtrans"],
+    requiresPower: true,
+    powerDemand: 50,
+    meteredConsumption: {
+      inputPortGroupId: "consume_input",
+      itemIds: ["item_liquid_water"],
+      windowSeconds: 60,
+      startThreshold: 6,
+      acceptanceLimit: 30,
+      gasDiffusionRange: null,
+    },
+    portGroups: [
       createPortGroup(
         "gas_input",
         "fluid",
@@ -2906,27 +3079,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "liquid_output",
         "fluid",
         "output",
-        [
-          createPort("out_e_1", 4, 1, "E"),
-        ],
+        [1, 3].map((z) => createPort(`out_e_${z}`, 4, z, "E")),
       ),
       createPortGroup(
-        "gas_output",
+        "consume_input",
         "fluid",
-        "output",
+        "input",
         [
-          createPort("out_e_3", 4, 3, "E", {
-            acceptRule: { base: { kind: "gas" }, exclude: [] },
+          createPort("in_s_2", 2, 4, "S", {
+            acceptRule: { base: { kind: "item", itemId: "item_liquid_water" }, exclude: [] },
           }),
         ],
       ),
     ],
     storageSlotGroups: [
-      createStorageSlotGroup(
-        "liquid_input_buffer",
-        "fluid",
-        createSlots("input_liquid_slot", [50], "liquid"),
-      ),
       createStorageSlotGroup(
         "gas_input_buffer",
         "fluid",
@@ -2938,23 +3104,18 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("output_liquid_slot", [50], "liquid"),
       ),
       createStorageSlotGroup(
-        "gas_output_buffer",
+        "consume_buffer",
         "fluid",
-        createSlots("output_gas_slot", [50], "gas"),
+        createSlots("consume_slot", [50], "liquid"),
       ),
     ],
     recipeChannels: [
-      createRecipeChannel(
-        "default",
-        ["liquid_input_buffer", "gas_input_buffer"],
-        ["liquid_output_buffer", "gas_output_buffer"],
-      ),
+      createRecipeChannel("default", ["gas_input_buffer"], ["liquid_output_buffer"]),
     ],
     portStorageBindings: [
-      createBinding("bind_liquid_input", "liquid_input", "liquid_input_buffer"),
       createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
       createBinding("bind_liquid_output", "liquid_output", "liquid_output_buffer"),
-      createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
+      createBinding("bind_consume", "consume_input", "consume_buffer"),
     ],
     inspectors: [
       {
@@ -3659,6 +3820,19 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 5,
+    meteredConsumption: {
+      inputPortGroupId: "gas_input",
+      itemIds: [
+        "item_gas_acid",
+        "item_gas_inert",
+        "item_gas_water",
+        "item_gas_xiranite",
+      ],
+      windowSeconds: 60,
+      startThreshold: 6,
+      acceptanceLimit: 30,
+      gasDiffusionRange: 13,
+    },
     portGroups: [
       createPortGroup(
         "gas_input",
@@ -3678,17 +3852,36 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("gas_input_slot", [500], "gas"),
       ),
     ],
-    recipeChannels: [
-      createRecipeChannel("default", ["gas_input_buffer"], []),
-    ],
+    // AI-REMOVED 2026-07-16:
+    // Reason: 气体散布机改由计量消费窗口直接销毁输入并产生气体环境，不再运行计时配方。
+    // Trigger: 用户确认下限 6、上限 30 的整分钟计量机制适用于 vaporizer_1。
+    // Evidence: meteredConsumption 已声明 gas_input 为销毁型入口，配方通道无法再从该虚拟槽取得输入。
+    // Replacement: vaporizer_1.meteredConsumption + simulation/runtime/metered-consumption.ts。
+    // Risk: Medium - 旧蓝图中的 channelRecipes.default 配置将保留为无效配置。
+    // Human Review: Required
+    //
+    // Original code:
+    // recipeChannels: [
+    //   createRecipeChannel("default", ["gas_input_buffer"], []),
+    // ],
+    recipeChannels: [],
     portStorageBindings: [
       createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
     ],
     inspectors: [
-      {
-        type: INSPECTOR_TYPE.recipeStatus,
-        channelIds: ["default"],
-      },
+      // AI-REMOVED 2026-07-16:
+      // Reason: vaporizer_1 不再运行配方，配方状态面板没有有效 channel 可展示。
+      // Trigger: 气体环境生命周期迁移到 meteredConsumption 运行许可。
+      // Evidence: recipeChannels 已清空；气体效果由计量状态决定。
+      // Replacement: None；计量状态通过仿真快照提供。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // {
+      //   type: INSPECTOR_TYPE.recipeStatus,
+      //   channelIds: ["default"],
+      // },
       {
         type: INSPECTOR_TYPE.slotConfig,
         slotGroupIds: ["gas_input_buffer"],

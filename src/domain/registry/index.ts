@@ -15,6 +15,7 @@ export type {
 	PortStorageBindingDefinition,
 	EntityAcceptRuleDefinition,
 	EntityAdmissionRuleDefinition,
+	EntityMeteredConsumptionDefinition,
 	// AI-REMOVED 2026-06-12:
 	// Reason: 通用 port.count per-tick 限流已删除，domain API 不再导出 CountLimit。
 	// Trigger: 用户确认 per tick count 不属于设计文档，应彻底删除。

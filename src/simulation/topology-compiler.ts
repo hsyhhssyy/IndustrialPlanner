@@ -45,6 +45,7 @@ import type {
   CompiledTransportComponent,
   CompiledSimulationBlockageAutoClearance,
   CompiledSimulationWaterPurifierNodeConfig,
+  CompiledSimulationMeteredConsumption,
   SimulationAcceptRule,
   SimulationAdmissionRule,
   SimulationCompileDiagnostic,
@@ -502,6 +503,7 @@ function compileWarehouseDevice(
       isProducer: false,
       blockageAutoClearance: null,
       waterPurifierNode: null,
+      meteredConsumption: null,
     },
     nodes: [node],
     slots,
@@ -616,6 +618,7 @@ function compileEntityDevice(options: {
     isProducer: definition.tags.includes("Producer"),
     blockageAutoClearance: compileBlockageAutoClearance(definition, options.entity.config),
     waterPurifierNode: compileWaterPurifierNode(definition.id, options.entity.config),
+    meteredConsumption: compileMeteredConsumption(definition, ports, options.itemCatalog),
   };
 
   return {
@@ -624,6 +627,53 @@ function compileEntityDevice(options: {
     slots,
     ports,
     links,
+  };
+}
+
+function compileMeteredConsumption(
+  definition: EntityDefinition,
+  ports: readonly CompiledSimulationPort[],
+  itemCatalog: Readonly<Record<string, CompiledSimulationItem>>,
+): CompiledSimulationMeteredConsumption | null {
+  const source = definition.meteredConsumption;
+  if (source === undefined) {
+    return null;
+  }
+
+  const inputPorts = ports.filter((port) =>
+    port.direction === "input" && port.portGroupId === source.inputPortGroupId,
+  );
+  if (inputPorts.length !== 1) {
+    return null;
+  }
+
+  const itemIds = [...new Set(source.itemIds)]
+    .filter((itemId) => itemCatalog[itemId] !== undefined)
+    .sort();
+  if (itemIds.length === 0) {
+    return null;
+  }
+
+  const windowTicks = convertSecondsToSimulationTicks(source.windowSeconds);
+  const acceptanceLimit = Number.isFinite(source.acceptanceLimit)
+    ? Math.max(1, Math.floor(source.acceptanceLimit))
+    : 1;
+  const startThreshold = Number.isFinite(source.startThreshold)
+    ? Math.min(acceptanceLimit, Math.max(1, Math.floor(source.startThreshold)))
+    : 1;
+  const gasDiffusionRange = source.gasDiffusionRange !== null
+    && Number.isFinite(source.gasDiffusionRange)
+    && source.gasDiffusionRange > 0
+    ? source.gasDiffusionRange
+    : null;
+
+  return {
+    inputPortId: inputPorts[0]!.id,
+    itemIds,
+    windowTicks,
+    startThreshold,
+    acceptanceLimit,
+    gasDiffusionRange,
   };
 }
 

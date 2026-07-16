@@ -18,6 +18,7 @@
     "draw-device-blueprint-svg": "tsx --tsconfig tsconfig.app.json src/scripts/draw-device-blueprint-svg.mjs",
     "format-device-sprites": "node src/scripts/format-device-sprites.mjs",
     "split-device-sprites": "node src/scripts/split-device-sprites.mjs",
+    "compare-exported-devices": "node src/scripts/compare-exported-devices.mjs",
     "generate-textures": "node src/scripts/texture-gen/generate-all-textures.mjs",
     "generate-liquid-port-chevron": "node src/scripts/texture-gen/generate-liquid-port-chevron.mjs",
     "generate-solid-port-chevron": "node src/scripts/texture-gen/generate-solid-port-chevron.mjs",

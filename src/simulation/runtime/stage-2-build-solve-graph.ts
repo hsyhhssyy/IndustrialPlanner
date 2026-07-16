@@ -16,10 +16,12 @@ export function buildSolveGraph(
   const preservedDelta = state.transient.recipeStatsDelta;
   const preservedReservedAmounts = state.transient.reservedAmountByStorageSlotId;
   const preservedPerf = state.transient._perf;
+  const preservedPowerOutage = state.transient.isPowerOutage;
   state.transient = createEmptyTransientState();
   state.transient.recipeStatsDelta = preservedDelta;
   state.transient.reservedAmountByStorageSlotId = preservedReservedAmounts;
   state.transient._perf = preservedPerf;
+  state.transient.isPowerOutage = preservedPowerOutage;
 
   for (const nodeId of topology.ordering.nodeOrder) {
     const node = topology.nodes[nodeId];

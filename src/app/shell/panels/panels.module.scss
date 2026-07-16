@@ -192,6 +192,10 @@
   overflow-wrap: anywhere;
 }
 
+.placement-button-label.is-compact {
+  font-size: 1rem;
+}
+
 .blueprint-operation-button-list.is-compact-import-actions .placement-button-label {
   min-height: 18px;
   font-size: 0.62rem;

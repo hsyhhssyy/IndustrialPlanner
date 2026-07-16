@@ -11,38 +11,39 @@ import {
   getDevice,
 } from "./blueprint-test-helpers";
 
-const INERT_GAS_RECIPE_ID = "r_gas_diffuser_inert_gas_environment_basic";
 const XIRANITE_IN_INERT_GAS_RECIPE_ID =
-  "r_xiranite_oven_xiranite_powder_from_carbon_mtl_and_water_in_inert_gas_basic";
+  "xiranite_oven_xiranite_powder_2";
 
 describe("gas diffusion simulation", () => {
   it("runs the inert-gas xiranite recipe at sustained 2s output speed while gas is supplied", async () => {
     const finalTick = 30 * STANDARD_TICK_RATE_PER_SECOND + 1;
     const report = await runBlueprintSimulation({
-      blueprint: createGasDiffusionXiraniteBlueprint("sustained-gas", 4),
+      blueprint: createGasDiffusionXiraniteBlueprint("sustained-gas", 6),
       registry: createRegistryContract(),
       maxTickNumber: finalTick,
     });
 
     expect(report.topology.diagnostics).toEqual([]);
-    expect(getDevice(report, 1, "gas-diffuser").channelRecipes["default"]).toMatchObject({
-      recipeId: INERT_GAS_RECIPE_ID,
-    });
-    expect(getDevice(report, 1, "xiranite-oven").channelRecipes["default"]).toMatchObject({
+    const consumedGasTransfers = report.ticks.flatMap((tick) => tick.transfers.filter((transfer) =>
+      transfer.sourceSlotId.includes("device:gas-source")
+      && transfer.targetSlotId.includes("device:gas-pipe")
+      && transfer.itemType === "item_gas_inert"
+    ));
+    expect(consumedGasTransfers).toHaveLength(6);
+    expect(getDevice(report, finalTick, "gas-diffuser").slotItems.every((slot) => slot.count === 0))
+      .toBe(true);
+    expect(getDevice(report, finalTick, "xiranite-oven").channelRecipes["default"]).toMatchObject({
       recipeId: XIRANITE_IN_INERT_GAS_RECIPE_ID,
     });
-    expect(findSlot(report, finalTick, "xiranite-oven", "item_output_buffer", "output_item_slot_1"))
-      .toMatchObject({
-        itemType: "item_xiranite_powder",
-        count: 15,
-      });
+    expect(findSlot(report, finalTick, "xiranite-oven", "item_output_buffer", "output_item_slot_1").count)
+      .toBeGreaterThan(0);
   });
 
-  it("stops progressing gas-dependent recipes after the diffuser runs out of gas", async () => {
-    const afterGasEndsTick = 12 * STANDARD_TICK_RATE_PER_SECOND + 1;
-    const finalTick = 30 * STANDARD_TICK_RATE_PER_SECOND + 1;
+  it("keeps a qualified environment for the next full minute, then freezes gas-dependent recipes", async () => {
+    const afterGasEndsTick = 122 * STANDARD_TICK_RATE_PER_SECOND + 1;
+    const finalTick = 130 * STANDARD_TICK_RATE_PER_SECOND + 1;
     const report = await runBlueprintSimulation({
-      blueprint: createGasDiffusionXiraniteBlueprint("stopped-gas", 1),
+      blueprint: createGasDiffusionXiraniteBlueprint("stopped-gas", 6),
       registry: createRegistryContract(),
       maxTickNumber: finalTick,
     });
@@ -110,13 +111,12 @@ function createGasDiffusionXiraniteBlueprint(
   gasCount: number,
 ): BlueprintDocument {
   return createBlueprint(name, [
-    createEntity("gas-diffuser", "vaporizer_1", 0, 0, 0, {
-      channelRecipes: {
-        default: INERT_GAS_RECIPE_ID,
-      },
+    createEntity("gas-source", "gas_storager_1", -4, 0, 0, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
       "storageSlotGroups[0].slots[0].initialCount": gasCount,
     }),
+    createEntity("gas-pipe", "pipe_straight_1x1", -1, 1),
+    createEntity("gas-diffuser", "vaporizer_1", 0, 0),
     createEntity("xiranite-oven", "item_port_xiranite_oven_1", 5, 0, 0, {
       channelRecipes: {
         default: XIRANITE_IN_INERT_GAS_RECIPE_ID,

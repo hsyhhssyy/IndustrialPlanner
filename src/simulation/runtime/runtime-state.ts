@@ -26,6 +26,8 @@ export interface SimulationPersistentRuntimeState {
   admissionCounters: Record<string, number>;
   /** 准入口每仿真分钟窗口计数。key 为 compiled port id。 */
   admissionMinuteCounters: Record<string, RuntimeAdmissionMinuteCounterState>;
+  /** 销毁型计量入口的窗口物品锁与运行许可。key 为 compiled device id。 */
+  meteredConsumptions: Record<string, RuntimeMeteredConsumptionState>;
   routingCursors: Record<string, number>;
   shareAllTargetSlotIdBySourceSlotId: Record<string, string>;
   sharedCapacitySlotIdsBySlotId: Record<string, readonly string[]>;
@@ -93,6 +95,13 @@ export interface RuntimeDeviceState {
   channelRecipes: Record<string, RuntimeDeviceRecipeState | null>;
 }
 
+export interface RuntimeMeteredConsumptionState {
+  currentItemId: string | null;
+  previousWindowCount: number;
+  authorizedUntilTick: number | null;
+  activeEffectItemId: string | null;
+}
+
 export interface RuntimeDeviceRecipeState {
   runId: string;
   recipeId: string;
@@ -132,6 +141,8 @@ export interface SimulationTickTransientState {
   reservedAmountByStorageSlotId: Record<string, number> | null;
   /** 当前 tick 判定用气体扩散范围。 */
   activeGasDiffusions: readonly RuntimeGasDiffusionSnapshot[];
+  /** 当前 tick 是否处于真实电力不足状态；计量入口与环境效果据此暂停。 */
+  isPowerOutage: boolean;
   /** Perf 埋点：当前 tick 的热点函数调用计数累积器。仅在 perfEnabled 时非空。 */
   _perf?: SimulationRuntimePerf;
   /** 当前 tick 的配方统计增量（产出/消耗），由各阶段累积，tick 结束时滚入滑动窗口后清空。 */
@@ -228,6 +239,7 @@ export function createSimulationMutableRuntimeState(
   const devices: Record<string, RuntimeDeviceState> = {};
   const admissionCounters = createInitialAdmissionCounters(topology);
   const admissionMinuteCounters = createInitialAdmissionMinuteCounters(topology);
+  const meteredConsumptions = createInitialMeteredConsumptions(topology);
   const routingCursors: Record<string, number> = {};
   for (const deviceId of topology.ordering.deviceOrder) {
     const device = topology.devices[deviceId];
@@ -255,6 +267,7 @@ export function createSimulationMutableRuntimeState(
       devices,
       admissionCounters,
       admissionMinuteCounters,
+      meteredConsumptions,
       routingCursors,
       ...linkState,
       nextRecipeRunIndex: 1,
@@ -307,19 +320,40 @@ export function createMigratedSimulationMutableRuntimeState(
     }
 
     state.persistent.devices[deviceId] = cloneRuntimeDeviceState(previousDeviceState);
+    const previousMeteredConsumption = options.previousState.persistent.meteredConsumptions?.[deviceId];
+    if (
+      nextDevice.meteredConsumption !== undefined
+      && nextDevice.meteredConsumption !== null
+      && previousMeteredConsumption !== undefined
+    ) {
+      state.persistent.meteredConsumptions[deviceId] = cloneRuntimeMeteredConsumptionState(
+        previousMeteredConsumption,
+      );
+    }
     if (nextDevice.waterPurifierNode !== undefined && nextDevice.waterPurifierNode !== null) {
       state.persistent.waterPurifierManualRemainders[deviceId] =
         (options.previousState.persistent.waterPurifierManualRemainders ?? {})[deviceId] ?? 0;
     }
     for (const portId of nextDevice.portIds) {
-      const previousPort = options.previousTopology.ports[portId];
+      // AI-REMOVED 2026-07-16:
+      // Reason: canPreserveMinuteCounter 已集中比较旧/新 admission 与 metered 配置，局部 previousPort 不再被读取。
+      // Trigger: 计量入口迁移需要同时支持无 admissionRule 的固定窗口计数。
+      // Evidence: 定向 ESLint 报告 previousPort 为 unused variable。
+      // Replacement: canPreserveMinuteCounter({ previousTopology, topology, previousPortId, portId })。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // const previousPort = options.previousTopology.ports[portId];
       const nextPort = options.topology.ports[portId];
       if (
-        previousPort?.admissionRule !== undefined
-        && previousPort.admissionRule !== null
-        && nextPort?.admissionRule !== undefined
-        && nextPort.admissionRule !== null
-        && previousPort.admissionRule.itemId === nextPort.admissionRule.itemId
+        nextPort !== undefined
+        && canPreserveMinuteCounter({
+          previousTopology: options.previousTopology,
+          topology: options.topology,
+          previousPortId: portId,
+          portId,
+        })
       ) {
         state.persistent.admissionCounters[portId] =
           options.previousState.persistent.admissionCounters[portId] ?? 0;
@@ -368,6 +402,12 @@ export function cloneSimulationMutableRuntimeState(
           cloneAdmissionMinuteCounterState(counter),
         ]),
       ),
+      meteredConsumptions: Object.fromEntries(
+        Object.entries(state.persistent.meteredConsumptions ?? {}).map(([deviceId, metered]) => [
+          deviceId,
+          cloneRuntimeMeteredConsumptionState(metered),
+        ]),
+      ),
       routingCursors: { ...state.persistent.routingCursors },
       shareAllTargetSlotIdBySourceSlotId: { ...state.persistent.shareAllTargetSlotIdBySourceSlotId },
       sharedCapacitySlotIdsBySlotId: Object.fromEntries(
@@ -396,6 +436,7 @@ export function createEmptyTransientState(): SimulationTickTransientState {
     blockedInputNodeIds: new Set(),
     reservedAmountByStorageSlotId: null,
     activeGasDiffusions: [],
+    isPowerOutage: false,
     recipeStatsDelta: createRecipeStatsDelta(),
   };
 }
@@ -490,12 +531,30 @@ function createInitialAdmissionMinuteCounters(
 ): Record<string, RuntimeAdmissionMinuteCounterState> {
   const counters: Record<string, RuntimeAdmissionMinuteCounterState> = {};
   for (const portId of topology.ordering.portOrder) {
-    const port = topology.ports[portId];
-    if (port?.admissionRule !== null && port?.admissionRule !== undefined) {
+    if (portUsesMinuteCounter(topology, portId)) {
       counters[portId] = { windowStartTick: 0, count: 0 };
     }
   }
   return counters;
+}
+
+function createInitialMeteredConsumptions(
+  topology: CompiledSimulationTopology,
+): Record<string, RuntimeMeteredConsumptionState> {
+  const states: Record<string, RuntimeMeteredConsumptionState> = {};
+  for (const deviceId of topology.ordering.deviceOrder) {
+    const device = topology.devices[deviceId];
+    if (device?.meteredConsumption === undefined || device.meteredConsumption === null) {
+      continue;
+    }
+    states[deviceId] = {
+      currentItemId: null,
+      previousWindowCount: 0,
+      authorizedUntilTick: null,
+      activeEffectItemId: null,
+    };
+  }
+  return states;
 }
 
 export function normalizeAdmissionMinuteCountersForCurrentWindow(
@@ -503,8 +562,7 @@ export function normalizeAdmissionMinuteCountersForCurrentWindow(
   state: SimulationMutableRuntimeState,
 ): void {
   for (const portId of topology.ordering.portOrder) {
-    const port = topology.ports[portId];
-    if (port?.admissionRule !== null && port?.admissionRule !== undefined) {
+    if (portUsesMinuteCounter(topology, portId)) {
       ensureAdmissionMinuteCounterForCurrentWindow(topology, state, portId);
     }
   }
@@ -533,9 +591,16 @@ export function resetAdmissionMinuteCounterForCurrentWindow(
   portId: string,
 ): void {
   state.persistent.admissionMinuteCounters[portId] = {
-    windowStartTick: resolveAdmissionMinuteWindowStartTick(state.tickNumber, topology.standardTickRate),
+    windowStartTick: resolveCounterWindowStartTick(topology, state.tickNumber, portId),
     count: 0,
   };
+  const meteredDevice = resolveMeteredConsumptionDeviceForPort(topology, portId);
+  const meteredState = meteredDevice === null
+    ? undefined
+    : state.persistent.meteredConsumptions[meteredDevice.id];
+  if (meteredState !== undefined) {
+    meteredState.currentItemId = null;
+  }
 }
 
 function ensureAdmissionMinuteCounterForCurrentWindow(
@@ -543,9 +608,16 @@ function ensureAdmissionMinuteCounterForCurrentWindow(
   state: SimulationMutableRuntimeState,
   portId: string,
 ): RuntimeAdmissionMinuteCounterState {
-  const windowStartTick = resolveAdmissionMinuteWindowStartTick(state.tickNumber, topology.standardTickRate);
+  const windowStartTick = resolveCounterWindowStartTick(topology, state.tickNumber, portId);
   const counter = state.persistent.admissionMinuteCounters[portId];
   if (counter === undefined || counter.windowStartTick !== windowStartTick) {
+    rolloverMeteredConsumptionWindow({
+      topology,
+      state,
+      portId,
+      counter,
+      nextWindowStartTick: windowStartTick,
+    });
     const nextCounter = { windowStartTick, count: 0 };
     state.persistent.admissionMinuteCounters[portId] = nextCounter;
     return nextCounter;
@@ -553,17 +625,126 @@ function ensureAdmissionMinuteCounterForCurrentWindow(
   return counter;
 }
 
-function resolveAdmissionMinuteWindowStartTick(
-  tickNumber: number,
-  standardTickRate: number,
-): number {
-  const normalizedTickRate = Number.isFinite(standardTickRate) && standardTickRate > 0
-    ? Math.floor(standardTickRate)
-    : 1;
-  const minuteWindowTicks = Math.max(1, normalizedTickRate * 60);
-  const currentTick = Math.max(0, Math.trunc(tickNumber));
-  return Math.floor(currentTick / minuteWindowTicks) * minuteWindowTicks;
+function rolloverMeteredConsumptionWindow(options: {
+  readonly topology: CompiledSimulationTopology;
+  readonly state: SimulationMutableRuntimeState;
+  readonly portId: string;
+  readonly counter: RuntimeAdmissionMinuteCounterState | undefined;
+  readonly nextWindowStartTick: number;
+}): void {
+  const device = resolveMeteredConsumptionDeviceForPort(options.topology, options.portId);
+  if (device === null || device.meteredConsumption === undefined || device.meteredConsumption === null) {
+    return;
+  }
+  const meteredState = options.state.persistent.meteredConsumptions[device.id];
+  if (meteredState === undefined) {
+    return;
+  }
+
+  const previousWindowStartTick = options.counter?.windowStartTick ?? options.nextWindowStartTick;
+  const crossedWindows = Math.max(
+    0,
+    Math.floor(
+      (options.nextWindowStartTick - previousWindowStartTick)
+      / device.meteredConsumption.windowTicks,
+    ),
+  );
+  const completedCount = crossedWindows === 1 ? options.counter?.count ?? 0 : 0;
+  const completedItemId = crossedWindows === 1 ? meteredState.currentItemId : null;
+  meteredState.previousWindowCount = completedCount;
+  meteredState.currentItemId = null;
+
+  if (completedCount >= device.meteredConsumption.startThreshold && completedItemId !== null) {
+    meteredState.authorizedUntilTick =
+      options.nextWindowStartTick + device.meteredConsumption.windowTicks;
+    meteredState.activeEffectItemId = completedItemId;
+    return;
+  }
+
+  meteredState.authorizedUntilTick = null;
+  meteredState.activeEffectItemId = null;
 }
+
+function resolveCounterWindowStartTick(
+  topology: CompiledSimulationTopology,
+  tickNumber: number,
+  portId: string,
+): number {
+  const meteredDevice = resolveMeteredConsumptionDeviceForPort(topology, portId);
+  const windowTicks = meteredDevice?.meteredConsumption?.windowTicks
+    ?? Math.max(1, topology.standardTickRate * 60);
+  const currentTick = Math.max(0, Math.trunc(tickNumber));
+  return Math.floor(currentTick / windowTicks) * windowTicks;
+}
+
+function portUsesMinuteCounter(
+  topology: CompiledSimulationTopology,
+  portId: string,
+): boolean {
+  const port = topology.ports[portId];
+  return (port?.admissionRule !== null && port?.admissionRule !== undefined)
+    || resolveMeteredConsumptionDeviceForPort(topology, portId) !== null;
+}
+
+function resolveMeteredConsumptionDeviceForPort(
+  topology: CompiledSimulationTopology,
+  portId: string,
+): CompiledSimulationDevice | null {
+  const port = topology.ports[portId];
+  const device = port === undefined ? undefined : topology.devices[port.deviceId];
+  return device?.meteredConsumption?.inputPortId === portId ? device : null;
+}
+
+function canPreserveMinuteCounter(options: {
+  readonly previousTopology: CompiledSimulationTopology;
+  readonly topology: CompiledSimulationTopology;
+  readonly previousPortId: string;
+  readonly portId: string;
+}): boolean {
+  const previousPort = options.previousTopology.ports[options.previousPortId];
+  const nextPort = options.topology.ports[options.portId];
+  const preservesAdmission = previousPort?.admissionRule !== undefined
+    && previousPort.admissionRule !== null
+    && nextPort?.admissionRule !== undefined
+    && nextPort.admissionRule !== null
+    && previousPort.admissionRule.itemId === nextPort.admissionRule.itemId;
+  const previousMetered = resolveMeteredConsumptionDeviceForPort(
+    options.previousTopology,
+    options.previousPortId,
+  )?.meteredConsumption;
+  const nextMetered = resolveMeteredConsumptionDeviceForPort(
+    options.topology,
+    options.portId,
+  )?.meteredConsumption;
+  const preservesMetered = previousMetered !== undefined
+    && previousMetered !== null
+    && nextMetered !== undefined
+    && nextMetered !== null
+    && previousMetered.itemIds.join("\u0000") === nextMetered.itemIds.join("\u0000")
+    && previousMetered.windowTicks === nextMetered.windowTicks;
+  return preservesAdmission || preservesMetered;
+}
+
+// AI-REMOVED 2026-07-16:
+// Reason: 计量消耗允许显式 windowTicks，准入口与计量入口必须共用统一窗口起点解析。
+// Trigger: 用户授权复用 perMinuteLimit 的整分钟窗口机制实现持续消耗。
+// Evidence: resolveCounterWindowStartTick 会按计量配置或标准仿真分钟计算固定窗口。
+// Replacement: resolveCounterWindowStartTick(topology, tickNumber, portId)。
+// Risk: Low - 普通 admissionRule 仍回退到 standardTickRate * 60。
+// Human Review: Required
+//
+// Original code:
+// function resolveAdmissionMinuteWindowStartTick(
+//   tickNumber: number,
+//   standardTickRate: number,
+// ): number {
+//   const normalizedTickRate = Number.isFinite(standardTickRate) && standardTickRate > 0
+//     ? Math.floor(standardTickRate)
+//     : 1;
+//   const minuteWindowTicks = Math.max(1, normalizedTickRate * 60);
+//   const currentTick = Math.max(0, Math.trunc(tickNumber));
+//   return Math.floor(currentTick / minuteWindowTicks) * minuteWindowTicks;
+// }
 
 function cloneRuntimeSlotState(slot: RuntimeSlotState): RuntimeSlotState {
   return {
@@ -579,6 +760,12 @@ function cloneAdmissionMinuteCounterState(
     windowStartTick: counter.windowStartTick,
     count: counter.count,
   };
+}
+
+function cloneRuntimeMeteredConsumptionState(
+  state: RuntimeMeteredConsumptionState,
+): RuntimeMeteredConsumptionState {
+  return { ...state };
 }
 
 function cloneRuntimeDeviceState(device: RuntimeDeviceState): RuntimeDeviceState {
@@ -639,6 +826,7 @@ function cloneTransientState(transient: SimulationTickTransientState): Simulatio
       ...diffusion,
       gridRect: { ...diffusion.gridRect },
     })),
+    isPowerOutage: transient.isPowerOutage,
     _perf: transient._perf === undefined ? undefined : { ...transient._perf },
     recipeStatsDelta: {
       produced: { ...transient.recipeStatsDelta.produced },

@@ -16,6 +16,7 @@ import {
 } from "./runtime-slot-access";
 import { isDeviceInRequiredGasDiffusion } from "./gas-diffusion";
 import { submitSlotsToWarehouse } from "./warehouse-submit";
+import { isMeteredConsumptionAuthorized } from "./metered-consumption";
 /**
  * 对应《仿真运行原理》§5.1 Tick 阶段 1：推进设备内部状态。
  * 该阶段只处理已经启动的配方：累计进度，完成后尝试把产物写入输出缓存；
@@ -45,6 +46,9 @@ export function advanceDevices(
     }
     // 真实电力模式下发电不足 → 所有 requiresPower 设备冻结
     if (powerInsufficient && device.requiresPower) {
+      continue;
+    }
+    if (!isMeteredConsumptionAuthorized(device, state)) {
       continue;
     }
 
