@@ -16,6 +16,12 @@ import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import {
+  createTimelineFrameApplyPerformanceWindow,
+  getTimelineFrameApplyPerformancePeriodMs,
+  recordTimelineFrameApplyPerformance,
+  takeTimelineFrameApplyPerformanceReport,
+} from "@/app/shell/dialogs/timeline-performance-statistics";
 
 let skipTimelineEditRollbackWarning = false;
 const TIMELINE_DRAG_LEFT_EDGE_SCROLL_START_PERCENT = 10;
@@ -315,6 +321,7 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
   const t = appHost.actions.translate;
   const simulation = appHost.workspace.simulation;
   const timeline = simulation?.state.timeline ?? null;
+  const debugMode = appHost.state.settings.debugMode;
   const [dragTickNumber, setDragTickNumber] = useState<number | null>(null);
   const [dragWindowStartTickNumber, setDragWindowStartTickNumber] = useState<number | null>(null);
   const [pendingSeek, setPendingSeek] = useState<{
@@ -335,6 +342,9 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
   const edgeScrollPointerPercentRef = useRef<number | null>(null);
   const edgeScrollLastSeekTickRef = useRef<number | null>(null);
   const simulationRef = useRef(simulation);
+  const frameApplyPerformanceWindowRef = useRef<ReturnType<
+    typeof createTimelineFrameApplyPerformanceWindow
+  > | null>(null);
   const timelineMarksRef = useRef<readonly SimulationTimelineMark[]>([]);
   const timelineMetricsRef = useRef({
     availableFromTick: 0,
@@ -367,6 +377,32 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!debugMode) {
+      frameApplyPerformanceWindowRef.current = null;
+      return;
+    }
+
+    const performanceWindow = createTimelineFrameApplyPerformanceWindow(performance.now());
+    frameApplyPerformanceWindowRef.current = performanceWindow;
+    const intervalId = window.setInterval(() => {
+      const report = takeTimelineFrameApplyPerformanceReport(
+        performanceWindow,
+        performance.now(),
+      );
+      if (report !== null) {
+        console.debug(`[timeline-frame-apply-perf] ${JSON.stringify(report)}`);
+      }
+    }, getTimelineFrameApplyPerformancePeriodMs());
+
+    return () => {
+      window.clearInterval(intervalId);
+      if (frameApplyPerformanceWindowRef.current === performanceWindow) {
+        frameApplyPerformanceWindowRef.current = null;
+      }
+    };
+  }, [debugMode]);
 
   if (simulation === null || timeline === null) {
     return (
@@ -431,6 +467,31 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
     edgeScrollLastSeekTickRef.current = null;
   };
 
+  const applyTimelineFrame = async (targetTickNumber: number): Promise<boolean> => {
+    const currentSimulation = simulationRef.current;
+    if (currentSimulation === null) {
+      return false;
+    }
+
+    const performanceWindow = debugMode
+      ? frameApplyPerformanceWindowRef.current
+      : null;
+    const startedAtMs = performanceWindow === null ? 0 : performance.now();
+    let applied = false;
+    try {
+      applied = await currentSimulation.actions.seekTimelineToTick(targetTickNumber);
+      return applied;
+    } finally {
+      if (performanceWindow !== null && frameApplyPerformanceWindowRef.current === performanceWindow) {
+        recordTimelineFrameApplyPerformance(
+          performanceWindow,
+          performance.now() - startedAtMs,
+          applied,
+        );
+      }
+    }
+  };
+
   const requestSeek = (
     rawTickNumber: number,
     options: { readonly allowEdgeOverflow?: boolean } = {},
@@ -475,7 +536,7 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
       return false;
     }
 
-    const moved = await currentSimulation.actions.seekTimelineToTick(targetTickNumber);
+    const moved = await applyTimelineFrame(targetTickNumber);
     if (moved) {
       lastAcceptedTickRef.current = targetTickNumber;
       if (!dragActiveRef.current) {
@@ -507,7 +568,7 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
         return false;
       }
 
-      const moved = await currentSimulation.actions.seekTimelineToTick(targetTickNumber);
+      const moved = await applyTimelineFrame(targetTickNumber);
       if (!moved) {
         return false;
       }

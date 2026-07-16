@@ -5,6 +5,7 @@ import type {
   GestureActionRouterDispatchResult,
   GestureMappingModule,
 } from "./types";
+import { DEBUG_PERFORMANCE_STATISTICS_PERIOD_MS } from "@/shared/debug-performance-statistics";
 
 interface RegisteredGestureMappingModule<THost> {
   readonly module: GestureMappingModule<THost>;
@@ -18,7 +19,7 @@ export interface GestureActionRouterOptions<THost = unknown> {
   readonly modules?: readonly GestureMappingModule<THost>[];
 }
 
-const MODULE_PERF_LOG_WINDOW_MS = 10_000
+const MODULE_PERF_LOG_WINDOW_MS = DEBUG_PERFORMANCE_STATISTICS_PERIOD_MS
 // AI-REMOVED 2026-05-21:
 // Reason: MODULE_PERF_TOP_COUNT 声明后未被任何代码引用，ESLint 报 no-unused-vars
 // Trigger: lint error @typescript-eslint/no-unused-vars

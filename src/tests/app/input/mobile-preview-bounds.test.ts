@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppHost } from "@/app/host/app-host";
 import {
   MOBILE_PREVIEW_SAFE_INSET_CELLS,
+  TOUCH_PREVIEW_HIT_SLOP_PX,
+  isPreviewBoundingBoxAtClientPoint,
   nudgeMobilePreviewIntoSafeViewport,
 } from "@/app/input/gesture/actions/hypergryph/mobile-preview-bounds";
 import type { EditorContract } from "@/domain/editor/editor-contract";
@@ -58,6 +60,24 @@ describe("mobile preview bounds", () => {
     });
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: -5, y: 0 });
   });
+
+  it("uses CSS-pixel touch hit slop around the preview bounding box", () => {
+    const { editor } = createContext({
+      previewRect: { x: 0, y: 0, width: 2, height: 2 },
+    });
+
+    expect(TOUCH_PREVIEW_HIT_SLOP_PX).toBe(16);
+    expect(isPreviewBoundingBoxAtClientPoint({
+      editor,
+      position: { x: 23, y: 6 },
+      hitSlopPx: TOUCH_PREVIEW_HIT_SLOP_PX,
+    })).toBe(true);
+    expect(isPreviewBoundingBoxAtClientPoint({
+      editor,
+      position: { x: 23.01, y: 6 },
+      hitSlopPx: TOUCH_PREVIEW_HIT_SLOP_PX,
+    })).toBe(false);
+  });
 });
 
 function createContext(options: {
@@ -94,6 +114,7 @@ function createContext(options: {
       },
     },
     queries: {
+      findGridCellForClientPixelPoint: vi.fn(() => ({ x: 100, y: 100 })),
       findEntityCollectionGridRect: vi.fn((collectionType) =>
         collectionType === EntityCollectionType.preview
           ? previewRectRef.current

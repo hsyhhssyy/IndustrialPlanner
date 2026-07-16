@@ -12,6 +12,7 @@ import type { BlueprintLibraryRecord } from "@/shared/blueprints/blueprint-libra
 
 import type { GestureActionContext, GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
+import { TOUCH_PREVIEW_HIT_SLOP_PX } from "./mobile-preview-bounds";
 import {
   closeCompactLeftDockOnPlacementEnter,
   driveMousePlacementPreview,
@@ -227,6 +228,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             appHost: context.appHost,
             editor,
             position: event.startPosition,
+            hitSlopPx: TOUCH_PREVIEW_HIT_SLOP_PX,
           });
 
         case "mouse move":

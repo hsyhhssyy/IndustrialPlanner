@@ -31,6 +31,7 @@ import {
   didPreviewRectChange,
   isPreviewBoundingBoxAtClientPoint,
   resolveTouchDragAnchorAfterPreviewMove,
+  TOUCH_PREVIEW_HIT_SLOP_PX,
 } from "./mobile-preview-bounds";
 
 // 桥接变量：触发点（UI 按钮 / 快捷键）写入，on-enter-active-tool("single-placement") 读取后立即置 null。
@@ -415,6 +416,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             appHost: context.appHost,
             editor,
             position: event.startPosition,
+            hitSlopPx: TOUCH_PREVIEW_HIT_SLOP_PX,
           });
 
         case "mouse move":
@@ -801,9 +803,14 @@ export function primePlacementAnchorFromPreview(options: {
   appHost: AppHost;
   editor: EditorContract;
   position: GesturePosition;
+  hitSlopPx?: number;
 }): GestureHandleResult {
   try {
-    if (!isPreviewEntityAtClientPoint(options.editor, options.position)) {
+    if (!isPreviewEntityAtClientPoint(
+      options.editor,
+      options.position,
+      options.hitSlopPx,
+    )) {
       options.appHost.internalState.runtime.placementAnchor = null;
       return { status: "ignored" };
     }
@@ -1313,10 +1320,12 @@ function resolveGridPointFromGesturePosition(
 function isPreviewEntityAtClientPoint(
   editor: EditorContract,
   position: GesturePosition,
+  hitSlopPx?: number,
 ): boolean {
   return isPreviewBoundingBoxAtClientPoint({
     editor,
     position,
+    hitSlopPx,
   });
 }
 

@@ -11,6 +11,7 @@ import { CanvasPanel } from "@/app/shell/canvas/canvas-panel";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
+import type { SimulationContract } from "@/domain/simulation/simulation-contract";
 import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
 
@@ -367,6 +368,55 @@ describe("CanvasPanel", () => {
     });
 
     expect(container.querySelector(".canvas-gesture-diagnostics")).toBeNull();
+  });
+
+  it("shows retained timeline frames and their calculation rate in the FPS panel", () => {
+    const workspace = createWorkspace();
+    const timeline = {
+      enabled: true,
+      tickDurationSeconds: 0.5,
+      rulerDurationSeconds: 300,
+      windowStartTickNumber: 0,
+      cursorTickNumber: 100,
+      availableFromTickNumber: 100,
+      availableToTickNumber: 109,
+      marks: [],
+      isSeeking: false,
+    };
+    workspace.simulation = {
+      state: {
+        runningState: "start",
+        simulationSpeed: 1,
+        statistics: {
+          tickPerSecond: 20,
+          targetTickPerSecond: 20,
+          baseBatteryJoules: 0,
+          baseBatteryCapacity: 0,
+        },
+        bufferSize: 180,
+        timeline,
+      },
+      actions: {} as SimulationContract["actions"],
+      queries: {} as SimulationContract["queries"],
+    };
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.settings.debugShowFps = true;
+    });
+
+    act(() => {
+      root.render(<CanvasPanel appHost={appHost} />);
+    });
+
+    timeline.availableToTickNumber = 159;
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+
+    const panelText = container.querySelector(".canvas-fps")?.textContent ?? "";
+    expect(panelText).toContain("时间轴保存帧60");
+    expect(panelText).toContain("时间轴计算帧/秒50.0");
   });
 
   it("pans the editor viewport on middle mouse drag", () => {

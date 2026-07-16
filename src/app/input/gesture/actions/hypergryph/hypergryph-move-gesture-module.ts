@@ -21,6 +21,7 @@ import {
   didPreviewRectChange,
   isPreviewBoundingBoxAtClientPoint,
   resolveTouchDragAnchorAfterPreviewMove,
+  TOUCH_PREVIEW_HIT_SLOP_PX,
 } from "./mobile-preview-bounds";
 import {
   openOverlapEntityMenuForCandidates,
@@ -134,7 +135,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
               appHost: context.appHost,
               editor,
               entityDefinitionMap: createEntityDefinitionMap(context.appHost),
-              position: event.position,
+              position: event.startPosition,
             });
 
           case "mouse move":
@@ -729,7 +730,10 @@ function handleMoveTouchDragStart(options: {
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   position: GesturePosition;
 }): GestureHandleResult {
-  return primeMoveAnchorFromPreview(options);
+  return primeMoveAnchorFromPreview({
+    ...options,
+    hitSlopPx: TOUCH_PREVIEW_HIT_SLOP_PX,
+  });
 }
 
 function handleMoveMouseDragStart(options: {
@@ -768,12 +772,14 @@ function primeMoveAnchorFromPreview(options: {
   editor: EditorContract;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   position: GesturePosition;
+  hitSlopPx?: number;
 }): GestureHandleResult {
   try {
     if (!isPreviewEntityAtClientPoint({
       editor: options.editor,
       entityDefinitionMap: options.entityDefinitionMap,
       position: options.position,
+      hitSlopPx: options.hitSlopPx,
     })) {
       options.appHost.internalState.runtime.moveAnchor = null;
       return { status: "ignored" };
@@ -1437,11 +1443,13 @@ function isPreviewEntityAtClientPoint(options: {
   editor: EditorContract;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   position: GesturePosition;
+  hitSlopPx?: number;
 }): boolean {
   void options.entityDefinitionMap;
   return isPreviewBoundingBoxAtClientPoint({
     editor: options.editor,
     position: options.position,
+    hitSlopPx: options.hitSlopPx,
   });
 }
 

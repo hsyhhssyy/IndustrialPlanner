@@ -8,15 +8,27 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent, PointerEvent, WheelEvent } from "react";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import {
+  calculateTimelineFrameRate,
+  countSavedTimelineFrames,
+  createTimelineFrameStatisticsSample,
+  type TimelineFrameStatisticsSample,
+} from "@/app/shell/canvas/timeline-frame-statistics";
 
 interface FpsSnapshot {
   fps: number;
   tps: number;
   targetTps: number;
   bufferSize: number;
+  timelineSavedFrames: number;
+  timelineFrameRate: number;
 }
 
-function pollSimulationStats(appHost: AppHost): FpsSnapshot {
+function pollSimulationStats(
+  appHost: AppHost,
+  timelineSample: TimelineFrameStatisticsSample,
+  timelineFrameRate: number,
+): FpsSnapshot {
   const sim = appHost.workspace.simulation;
   const stats: SimulationRuntimeStatistics | undefined = sim?.state.statistics;
   return {
@@ -25,6 +37,8 @@ function pollSimulationStats(appHost: AppHost): FpsSnapshot {
     tps: stats?.tickPerSecond ?? 0,
     targetTps: stats?.targetTickPerSecond ?? 0,
     bufferSize: sim?.state.bufferSize ?? 0,
+    timelineSavedFrames: countSavedTimelineFrames(timelineSample),
+    timelineFrameRate,
   };
 }
 
@@ -43,10 +57,15 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
   const [diagnosticsSnapshot, setDiagnosticsSnapshot] = useState<GestureDiagnosticsSnapshot>(() =>
     gestureDiagnostics.getSnapshot(),
   );
-  const [fpsSnapshot, setFpsSnapshot] = useState<FpsSnapshot>(() =>
-    pollSimulationStats(appHost),
-  );
+  const [fpsSnapshot, setFpsSnapshot] = useState<FpsSnapshot>(() => {
+    const timelineSample = createTimelineFrameStatisticsSample(
+      appHost.workspace.simulation?.state.timeline,
+      performance.now(),
+    );
+    return pollSimulationStats(appHost, timelineSample, 0);
+  });
   const fpsFrameCountRef = useRef(0);
+  const timelineFrameSampleRef = useRef<TimelineFrameStatisticsSample | null>(null);
 
   // rAF 计数器：每帧递增
   useEffect(() => {
@@ -61,13 +80,29 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
 
   // 每秒轮询一次 simulation stats + FPS 帧计数
   useEffect(() => {
+    timelineFrameSampleRef.current = createTimelineFrameStatisticsSample(
+      appHost.workspace.simulation?.state.timeline,
+      performance.now(),
+    );
     const id = setInterval(() => {
       const fps = fpsFrameCountRef.current;
       fpsFrameCountRef.current = 0;
-      const base = pollSimulationStats(appHost);
+      const timelineSample = createTimelineFrameStatisticsSample(
+        appHost.workspace.simulation?.state.timeline,
+        performance.now(),
+      );
+      const timelineFrameRate = calculateTimelineFrameRate(
+        timelineFrameSampleRef.current,
+        timelineSample,
+      );
+      timelineFrameSampleRef.current = timelineSample;
+      const base = pollSimulationStats(appHost, timelineSample, timelineFrameRate);
       setFpsSnapshot({ ...base, fps });
     }, 1000);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      timelineFrameSampleRef.current = null;
+    };
   }, [appHost]);
 
   useViewportResizeAdapter({
@@ -321,6 +356,14 @@ function CanvasFpsOverlay({
               <tr>
                 <th>帧缓存</th>
                 <td>{snapshot.bufferSize}</td>
+              </tr>
+              <tr>
+                <th>时间轴保存帧</th>
+                <td>{snapshot.timelineSavedFrames}</td>
+              </tr>
+              <tr>
+                <th>时间轴计算帧/秒</th>
+                <td>{snapshot.timelineFrameRate.toFixed(1)}</td>
               </tr>
             </tbody>
           </table>

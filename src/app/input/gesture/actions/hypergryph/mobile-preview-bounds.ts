@@ -14,11 +14,14 @@ export const MOBILE_PREVIEW_SAFE_INSET_CELLS = {
   y: 1,
 };
 
+export const TOUCH_PREVIEW_HIT_SLOP_PX = 16;
+
 const GRID_VECTOR_EPSILON = 1e-6;
 
 export function isPreviewBoundingBoxAtClientPoint(options: {
   editor: EditorContract;
   position: GesturePosition;
+  hitSlopPx?: number;
 }): boolean {
   const gridCell = options.editor.queries.findGridCellForClientPixelPoint(
     options.position,
@@ -27,7 +30,7 @@ export function isPreviewBoundingBoxAtClientPoint(options: {
     EntityCollectionType.preview,
   );
 
-  return (
+  const isStrictHit = (
     gridCell !== null
     && previewRect !== null
     && gridCell.x >= previewRect.x
@@ -35,6 +38,49 @@ export function isPreviewBoundingBoxAtClientPoint(options: {
     && gridCell.y >= previewRect.y
     && gridCell.y < previewRect.y + previewRect.height
   );
+
+  if (isStrictHit) {
+    return true;
+  }
+
+  const hitSlopPx = options.hitSlopPx ?? 0;
+  if (previewRect === null || !Number.isFinite(hitSlopPx) || hitSlopPx <= 0) {
+    return false;
+  }
+
+  const viewport = options.editor.state.viewport;
+  const previewClientRect = resolveViewportRectFromWorldGridRect({
+    gridRect: previewRect,
+    viewportBounds: viewport.clientRect,
+    viewportCenter: viewport.center,
+    gridCellPixelSize: viewport.gridCellPixelSize,
+    displayRotation: viewport.displayRotation,
+  });
+
+  return previewClientRect !== null && isClientPointWithinHitSlop({
+    position: options.position,
+    clientRect: previewClientRect,
+    hitSlopPx,
+  });
+}
+
+function isClientPointWithinHitSlop(options: {
+  position: GesturePosition;
+  clientRect: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  hitSlopPx: number;
+}): boolean {
+  const right = options.clientRect.left + options.clientRect.width;
+  const bottom = options.clientRect.top + options.clientRect.height;
+  const nearestX = Math.min(Math.max(options.position.x, options.clientRect.left), right);
+  const nearestY = Math.min(Math.max(options.position.y, options.clientRect.top), bottom);
+
+  return Math.hypot(options.position.x - nearestX, options.position.y - nearestY)
+    <= options.hitSlopPx;
 }
 
 export function resolveTouchDragAnchorAfterPreviewMove(options: {

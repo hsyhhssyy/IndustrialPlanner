@@ -19,6 +19,7 @@ import type {
 import { reaction, type IReactionDisposer } from "mobx";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { ActiveTool } from "@/domain/app/types/app-types";
+import { DEBUG_PERFORMANCE_STATISTICS_PERIOD_MS } from "@/shared/debug-performance-statistics";
 
 const TOUCH_LONG_PRESS_MS = 500;
 const TOUCH_LONG_PRESS_INDICATOR_DELAY_MS = 200;
@@ -39,7 +40,7 @@ const MOVE_EVENT_TYPES: ReadonlySet<GestureEventType> = new Set([
   "touch dragmove",
 ]);
 
-const GESTURE_PERF_LOG_WINDOW_MS = 10_000
+const GESTURE_PERF_LOG_WINDOW_MS = DEBUG_PERFORMANCE_STATISTICS_PERIOD_MS
 
 interface GestureRafPerfWindow {
   startedAtMs: number

@@ -479,6 +479,25 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 8, y: 8 });
   });
 
+  it("starts touch moving from within the preview hit slop", () => {
+    const { context, appHost } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 5, y: 5 },
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    const result = module.handle(
+      touchDragStartEvent({
+        position: { x: 54, y: 55 },
+        pointerEntity: null,
+      }),
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 54, y: 55 });
+  });
+
   it("moves the preview by incremental grid vectors and follows it with the toolbar", () => {
     const { context, editor, appHost, previewRectRef } = createContext({
       activeTool: "move",
@@ -1256,13 +1275,14 @@ function tapLongPressReadyEvent(options: {
 function touchDragStartEvent(options: {
   position: GridPoint;
   pointerEntity: WorldEntity | null;
+  startPosition?: GridPoint;
 }) {
   return {
     type: "touch dragstart" as const,
     gestureId: "touch-drag-1",
     primaryId: 1,
     position: options.position,
-    startPosition: options.position,
+    startPosition: options.startPosition ?? options.position,
     activeTouchCount: 1,
     longPress: true,
     pointerEntity: options.pointerEntity,

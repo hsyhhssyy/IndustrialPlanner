@@ -424,7 +424,7 @@ export function createRenderSceneOrchestrator(
     })
 
     measureRenderStage(frameProfiler, "decoration.admissionItemIcon", () => {
-      admissionItemIconDecoration.sync(ctx)
+      admissionItemIconDecoration.sync(ctx, entities)
     })
 
     measureRenderStage(frameProfiler, "decoration.beltFlow", () => {
