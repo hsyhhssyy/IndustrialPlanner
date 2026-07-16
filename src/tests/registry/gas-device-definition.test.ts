@@ -73,7 +73,7 @@ describe("gas item and device definitions", () => {
   });
 
   it("defines gas collection pump as a hidden 3x3 gas gathering machine shell", () => {
-    const definition = requireEntity("item_port_gas_collector_1");
+    const definition = requireEntity("gas_pump_1");
 
     expect(definition.footprint).toEqual({ width: 3, height: 3 });
     expect(definition.uiGroup).toBe("resourcePower");
@@ -83,7 +83,7 @@ describe("gas item and device definitions", () => {
   });
 
   it("defines solid-gas converter ports and buffers", () => {
-    const definition = requireEntity("item_port_solid_gas_converter_1");
+    const definition = requireEntity("transmuter_2");
 
     expect(definition.footprint).toEqual({ width: 5, height: 5 });
     expectPortLayout(requirePortGroup(definition, "item_output"), [
@@ -126,7 +126,7 @@ describe("gas item and device definitions", () => {
   });
 
   it("defines liquid-gas converter as the liquid counterpart of solid-gas converter", () => {
-    const definition = requireEntity("item_port_liquid_gas_converter_1");
+    const definition = requireEntity("transmuter_1");
     const liquidOutput = requirePortGroup(definition, "liquid_output");
     const liquidInput = requirePortGroup(definition, "liquid_input");
     const gasInput = requirePortGroup(definition, "gas_input");

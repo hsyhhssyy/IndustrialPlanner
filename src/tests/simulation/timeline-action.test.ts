@@ -628,6 +628,36 @@ describe("simulation timeline actions", () => {
     expect(internals.compiledActivitySignature).toBe("[]");
     action.disableTimeline();
   });
+
+  it("syncs debug mode only on change events and keeps tick requests free of debug flags", async () => {
+    const state = createSimulationStateReadWrite();
+    const bridge = createSimulationBridge();
+    const action = new SimulationActionImpl({
+      workspace: {} as WorkspaceContract,
+      state,
+      topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
+      bridge,
+      getPerfEnabled: () => false,
+    });
+    const internals = action as unknown as { lastWorkerDebugEnabled: boolean | null };
+    internals.lastWorkerDebugEnabled = false;
+
+    await action.syncToTick(0);
+    await action.syncToTick(1);
+    expect(bridge.setDebugEnabled).not.toHaveBeenCalled();
+
+    action.setDebugEnabled(true);
+    action.setDebugEnabled(true);
+    await action.syncToTick(2);
+    expect(bridge.setDebugEnabled).toHaveBeenCalledTimes(1);
+    expect(bridge.setDebugEnabled).toHaveBeenLastCalledWith(true);
+
+    action.setDebugEnabled(false);
+    await action.syncToTick(3);
+    expect(bridge.setDebugEnabled).toHaveBeenCalledTimes(2);
+    expect(bridge.setDebugEnabled).toHaveBeenLastCalledWith(false);
+    expect(vi.mocked(bridge.getTickSnapshot).mock.calls.every((call) => call.length === 3)).toBe(true);
+  });
 });
 
 function createSimulationBridge(
@@ -656,6 +686,11 @@ function createSimulationBridge(
     })),
     setSimulationSpeed: vi.fn(async () => ({
       type: "simulation-speed-set" as const,
+      requestId: 1,
+      status: createRuntimeStatus(0),
+    })),
+    setDebugEnabled: vi.fn(async () => ({
+      type: "debug-enabled-set" as const,
       requestId: 1,
       status: createRuntimeStatus(0),
     })),

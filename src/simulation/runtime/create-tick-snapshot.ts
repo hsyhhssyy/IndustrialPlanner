@@ -47,6 +47,39 @@ export function createTickSnapshot(
 }
 
 /**
+ * 仅为实际展示的调试 tick 序列化完整内部帧。
+ * 后台缓存快照始终不含 debugData，避免为每个预计算 tick 重复保存整份 topology。
+ */
+export function createTickDebugData(
+  options: {
+    readonly topology: CompiledSimulationTopology;
+    readonly runtimeState: SimulationMutableRuntimeState;
+    readonly snapshot: RuntimeTickSnapshot;
+    readonly workerRuntime: Readonly<Record<string, unknown>>;
+  },
+): string {
+  return JSON.stringify(
+    {
+      topology: options.topology,
+      runtimeState: options.runtimeState,
+      snapshot: options.snapshot,
+      workerRuntime: options.workerRuntime,
+    },
+    (_key, value: unknown) => {
+      if (value instanceof Set) {
+        return [...value];
+      }
+      if (value instanceof Map) {
+        return Object.fromEntries(
+          [...value.entries()].map(([entryKey, entryValue]) => [String(entryKey), entryValue]),
+        );
+      }
+      return value;
+    },
+  );
+}
+
+/**
  * 一次扫描所有设备/配方/预留，构建 storageSlotId → reservedAmount 映射。
  * 复杂度 O(Σ devices × Σ recipes × Σ reservations)，替代原逐槽 O(S × D × R)。
  */

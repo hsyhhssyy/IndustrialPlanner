@@ -48,7 +48,7 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
     item_port_water_pump_1: 301,
     item_port_power_diffuser_1: 302,
     item_port_power_sta_1: 303,
-    item_port_gas_diffuser_1: 304,
+    vaporizer_1: 304,
     item_water_purifier_node_1: 305,
 
     // 400 — warehouse
@@ -62,7 +62,7 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
     item_port_udpipe_unloader_1: 408,
     item_port_udpipe_loader_2: 409,
     item_port_udpipe_unloader_2: 410,
-    item_port_gas_storager_1: 411,
+    gas_storager_1: 411,
 
     // 500 — basicProduction
     item_port_furnance_1: 501,
@@ -86,9 +86,9 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
     item_port_xiranite_oven_1: 608,
     item_port_liquid_purifier_1: 609,
     item_port_dismantler_1: 610,
-    item_port_solid_gas_converter_1: 611,
+    transmuter_2: 611,
     item_port_gas_reactor_1: 612,
-    item_port_liquid_gas_converter_1: 613,
+    transmuter_1: 613,
   };
 
   for (const [id, expectedOrder] of Object.entries(EXPECTED_ORDERS)) {

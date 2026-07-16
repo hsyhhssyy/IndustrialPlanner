@@ -124,6 +124,7 @@ const UI: Record<string, string> = {
     "inspector.warehouseItemLink.description": "为每个槽位选择从仓库取出的物品。",
     "inspector.warehouseItemLink.ignoreStock": "忽略库存",
     "inspector.warehouseItemLink.selectItem": "选择仓库物品",
+    "label.currentTickInternalData": "当前tick内部数据",
     "label.currentTickSnapshot": "当前 Tick 读模型",
     "label.definition": "定义",
     "label.definitions": "定义",

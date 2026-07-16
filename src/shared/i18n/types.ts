@@ -136,6 +136,7 @@ export type UiKey =
   | "inspector.warehouseItemLink.description"
   | "inspector.warehouseItemLink.ignoreStock"
   | "inspector.warehouseItemLink.selectItem"
+  | "label.currentTickInternalData"
   | "label.currentTickSnapshot"
   | "label.definition"
   | "label.definitions"

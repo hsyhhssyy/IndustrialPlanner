@@ -163,6 +163,65 @@
   padding: 10px;
 }
 
+.logistics-item-list {
+  gap: 0;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.logistics-item-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 42px;
+  gap: 10px;
+  padding: 7px 2px;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+
+.logistics-item-row:last-child {
+  border-bottom: 0;
+}
+
+.logistics-item-row.is-empty {
+  color: var(--text-2);
+}
+
+.logistics-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  color: var(--text-2);
+}
+
+.logistics-item-icon img {
+  display: block;
+  width: 27px;
+  height: 27px;
+  object-fit: contain;
+}
+
+.logistics-item-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.7;
+}
+
+.logistics-item-name {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-size: 0.84rem;
+  font-weight: 560;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .recipe-status-panel-header {
   justify-content: flex-start;
 }

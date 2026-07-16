@@ -1,3 +1,4 @@
+import { reaction } from "mobx";
 import type { SimulationContract } from "@/domain/simulation/simulation-contract";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type {
@@ -76,6 +77,36 @@ export function createSimulationHost(
   });
   const actions: SimulationContract["actions"] = actionImpl;
   const internalActions: SimulationInternalAction = actionImpl;
+  let currentTickDebugRefreshInFlight = false;
+
+  if (options.getPerfEnabled !== undefined) {
+    disposers.push(reaction(
+      options.getPerfEnabled,
+      (debugEnabled) => internalActions.setDebugEnabled(debugEnabled),
+    ));
+  }
+
+  const requestPausedCurrentTickDebugRefresh = (): void => {
+    const currentSnapshot = internalState.currentSnapshot;
+    if (
+      options.getPerfEnabled?.() !== true
+      || internalState.runningState !== "pause"
+      || currentSnapshot === null
+      || currentSnapshot.debugData !== undefined
+      || currentTickDebugRefreshInFlight
+    ) {
+      return;
+    }
+
+    currentTickDebugRefreshInFlight = true;
+    void internalActions.syncToTick(currentSnapshot.tickNumber)
+      .catch((error: unknown) => {
+        console.error("[SimHost] Failed to refresh current tick debug data.", error);
+      })
+      .finally(() => {
+        currentTickDebugRefreshInFlight = false;
+      });
+  };
 
   // 监听 documentSettings.powerMode 变化，自动同步到 worker。
   // editor.document 在 createSimulationHost 调用时已可用（main.tsx 中先创建 editor 再创建 simulation）。
@@ -112,23 +143,30 @@ export function createSimulationHost(
     },
     topology: topologyStore,
     queries: {
-      getStatusRuntimeJson: () => JSON.stringify({
-        state: {
-          runningState: internalState.runningState,
-          simulationSpeed: internalState.simulationSpeed,
-          currentPlaybackTickNumber: internalState.currentPlaybackTickNumber,
-        },
-        runtimeStatus: internalState.runtimeStatus,
-        currentTick: internalState.currentSnapshot === null
-          ? null
-          : {
-              tickNumber: internalState.currentSnapshot.tickNumber,
-              status: internalState.currentSnapshot.status,
-              totalPowerDemand: internalState.currentSnapshot.totalPowerDemand,
-              transferCount: internalState.currentSnapshot.transfers.length,
-              diagnosticCount: internalState.currentSnapshot.diagnostics.length,
-            },
-      }),
+      getStatusRuntimeJson: () => {
+        requestPausedCurrentTickDebugRefresh();
+        return JSON.stringify({
+          state: {
+            runningState: internalState.runningState,
+            simulationSpeed: internalState.simulationSpeed,
+            currentPlaybackTickNumber: internalState.currentPlaybackTickNumber,
+          },
+          runtimeStatus: internalState.runtimeStatus,
+          currentTick: internalState.currentSnapshot === null
+            ? null
+            : {
+                tickNumber: internalState.currentSnapshot.tickNumber,
+                status: internalState.currentSnapshot.status,
+                totalPowerDemand: internalState.currentSnapshot.totalPowerDemand,
+                transferCount: internalState.currentSnapshot.transfers.length,
+                diagnosticCount: internalState.currentSnapshot.diagnostics.length,
+                ...(options.getPerfEnabled?.() === true
+                  && internalState.currentSnapshot.debugData !== undefined
+                  ? { debugData: internalState.currentSnapshot.debugData }
+                  : {}),
+              },
+        });
+      },
       getDocumentRuntimeStatus: () => {
         const topology = topologyStore.getSnapshot();
         if (topology === null) return null;
@@ -732,6 +770,17 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     }, "tick-snapshot-result");
   }
 
+  public setDebugEnabled(value: boolean): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "debug-enabled-set" }
+  >> {
+    return this.request({
+      type: "set-debug-enabled",
+      requestId: this.createRequestId(),
+      debugEnabled: value,
+    }, "debug-enabled-set");
+  }
+
   public setSimulationSpeed(value: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "simulation-speed-set" }
@@ -904,6 +953,21 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       simulationSpeed,
     });
     if (response.type !== "tick-snapshot-result") {
+      throw new Error(`Unexpected simulation worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public setDebugEnabled(value: boolean): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "debug-enabled-set" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "set-debug-enabled",
+      requestId: this.createRequestId(),
+      debugEnabled: value,
+    });
+    if (response.type !== "debug-enabled-set") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
     }
     return Promise.resolve(response);

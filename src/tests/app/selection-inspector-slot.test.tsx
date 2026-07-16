@@ -72,6 +72,24 @@ function createDummyWorldWithAutoRecipeDevice(): WorldDocument {
   };
 }
 
+function createDummyWorldWithLogisticsDevice(): WorldDocument {
+  const doc = createDummyWorldDocument();
+  return {
+    ...doc,
+    entities: {
+      ...doc.entities,
+      "dummy-logistics-device": {
+        id: "dummy-logistics-device",
+        definitionId: "belt_straight_1x1",
+        position: { x: 1, y: 1 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    },
+  };
+}
+
 function attachSimulationStub(
   workspace: WorkspaceContract,
   options: {
@@ -201,6 +219,73 @@ describe("SelectionInspectorSlot", () => {
     const firstSlotTile = container.querySelector<HTMLElement>("[data-slot-action='open-slot-editor']");
     expect(firstSlotTile?.dataset.slotNumber).toBe("1");
     expect(firstSlotTile?.textContent).not.toContain("slot_1");
+  });
+
+  it("renders the current logistics item as an icon and name without quantity or edit controls", () => {
+    const workspace = createWorkspace();
+    editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldWithLogisticsDevice());
+    editorHost.internalState.collections.selection.replace(["dummy-logistics-device"]);
+    attachSimulationStub(workspace, {
+      state: "start",
+      runtimeStatus: {
+        slotItems: [
+          {
+            storageGroupId: "item_buffer",
+            slotId: "slot_0",
+            viewRole: "input-view",
+            itemType: "item_copper_ore",
+            count: 1,
+            reserved: 0,
+            ignoreStock: false,
+          },
+          {
+            storageGroupId: "item_buffer",
+            slotId: "slot_1",
+            viewRole: "output-view",
+            itemType: "item_copper_ore",
+            count: 1,
+            reserved: 0,
+            ignoreStock: false,
+          },
+          {
+            storageGroupId: "item_buffer",
+            slotId: "slot_2",
+            viewRole: "output-view",
+            itemType: "item_liquid_acid",
+            count: 0,
+            reserved: 0,
+            ignoreStock: false,
+          },
+        ],
+        channelRecipes: {},
+        powerStatus: "no-power-needed",
+      },
+    });
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    act(() => {
+      root.render(
+        <SelectionInspectorSlot
+          appHost={currentAppHost}
+          translate={(key) => key === "registry.item.item_copper_ore.name" ? "测试铜矿" : key}
+        />,
+      );
+      vi.advanceTimersByTime(50);
+    });
+
+    const panel = container.querySelector<HTMLElement>("[data-inspector-key='logistics-item']");
+
+    expect(panel).not.toBeNull();
+    expect(panel?.textContent).toContain("物流物品");
+    expect(panel?.textContent).toContain("测试铜矿");
+    expect(panel?.textContent).not.toContain("item_liquid_acid");
+    expect(panel?.textContent).not.toContain("1");
+    expect(panel?.querySelectorAll("[data-item-id='item_copper_ore']")).toHaveLength(1);
+    expect(panel?.querySelector("[data-item-id='item_copper_ore'] img")).not.toBeNull();
+    expect(panel?.querySelectorAll("button")).toHaveLength(1);
+    expect(panel?.querySelector("input, select, textarea")).toBeNull();
   });
 
   it("hides on multi selection and remounts after narrowing back to one entity", () => {

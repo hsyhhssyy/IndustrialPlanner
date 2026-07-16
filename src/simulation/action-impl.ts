@@ -102,6 +102,10 @@ export interface SimulationWorkerBridge {
     SimulationWorkerResponse,
     { readonly type: "tick-snapshot-result" }
   >>;
+  setDebugEnabled(value: boolean): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "debug-enabled-set" }
+  >>;
   setSimulationSpeed(value: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "simulation-speed-set" }
@@ -159,6 +163,7 @@ export interface TimelineWorkerBridge {
 export interface SimulationInternalAction {
   refreshFromCurrentDocument(): Promise<SimulationStartResult>;
   syncToTick(tickNumber: number, playbackTickNumberOnReady?: number): Promise<SimulationTickPullStatus>;
+  setDebugEnabled(value: boolean): void;
   setSimulationSpeed(value: number): void;
   reset(): void;
 }
@@ -225,6 +230,7 @@ implements SimulationAction, SimulationInternalAction {
   private topologyRefreshQueue: Promise<void> | null = null;
   private topologyPresentationBoundary: TopologyPresentationBoundary | null = null;
   private topologyRevision = 0;
+  private lastWorkerDebugEnabled: boolean | null = null;
 
   // === 诊断计数器：10 秒输出一次 ===
   private diagFrameCount = 0;
@@ -589,6 +595,7 @@ implements SimulationAction, SimulationInternalAction {
         );
     const perfEnabled = this.getPerfEnabled?.() ?? false;
     let response: Awaited<ReturnType<SimulationWorkerBridge["loadTopology"]>>;
+    this.lastWorkerDebugEnabled = perfEnabled;
     try {
       response = await this.bridge.loadTopology(
         compiledTopology,
@@ -597,6 +604,9 @@ implements SimulationAction, SimulationInternalAction {
         this.stateReadWrite.simulationSpeed,
       );
     } catch (error) {
+      if (this.lastWorkerDebugEnabled === perfEnabled) {
+        this.lastWorkerDebugEnabled = null;
+      }
       this.releaseTopologyPresentationBoundary(presentationBoundary);
       throw error;
     }
@@ -890,6 +900,19 @@ implements SimulationAction, SimulationInternalAction {
     }
 
     return response.result.status;
+  };
+
+  public readonly setDebugEnabled: SimulationInternalAction["setDebugEnabled"] = (debugEnabled) => {
+    if (this.lastWorkerDebugEnabled === debugEnabled) {
+      return;
+    }
+
+    this.lastWorkerDebugEnabled = debugEnabled;
+    void this.bridge.setDebugEnabled(debugEnabled).catch(() => {
+      if (this.lastWorkerDebugEnabled === debugEnabled) {
+        this.lastWorkerDebugEnabled = null;
+      }
+    });
   };
 
   private async recoverPlaybackFromUnavailableTick(
@@ -1529,6 +1552,7 @@ implements SimulationAction, SimulationInternalAction {
     this.tpsAccumulatedMs = 0;
     this.nextPerfReportTick = 180;
     this.playbackTickRequestInFlight = false;
+    this.lastWorkerDebugEnabled = null;
     Object.assign(this.stateReadWrite.timeline, createInitialSimulationTimelineState());
   }
 

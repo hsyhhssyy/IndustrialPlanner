@@ -124,6 +124,7 @@ const UI: Record<string, string> = {
     "inspector.warehouseItemLink.description": "Choose a warehouse item for each slot.",
     "inspector.warehouseItemLink.ignoreStock": "Ignore Stock",
     "inspector.warehouseItemLink.selectItem": "Select Warehouse Item",
+    "label.currentTickInternalData": "Current Tick Internal Data",
     "label.currentTickSnapshot": "Current Tick Read Model",
     "label.definition": "Definition",
     "label.definitions": "Definitions",

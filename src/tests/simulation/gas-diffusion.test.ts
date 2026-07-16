@@ -110,7 +110,7 @@ function createGasDiffusionXiraniteBlueprint(
   gasCount: number,
 ): BlueprintDocument {
   return createBlueprint(name, [
-    createEntity("gas-diffuser", "item_port_gas_diffuser_1", 0, 0, 0, {
+    createEntity("gas-diffuser", "vaporizer_1", 0, 0, 0, {
       channelRecipes: {
         default: INERT_GAS_RECIPE_ID,
       },
@@ -132,7 +132,7 @@ function createGasDiffusionXiraniteBlueprint(
 
 function createConvergerLockBlueprint(): BlueprintDocument {
   return createBlueprint("gas-liquid-converger-lock", [
-    createEntity("gas-source", "item_port_gas_storager_1", 1, -1, 180, {
+    createEntity("gas-source", "gas_storager_1", 1, -1, 180, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
       "storageSlotGroups[0].slots[0].initialCount": 2,
     }),

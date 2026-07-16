@@ -33,6 +33,7 @@ import {
 } from "./port-priority-group-model";
 import { AdmissionRuleInspector } from "./admission-rule-inspector";
 import { BlockageAutoClearanceInspector } from "./blockage-auto-clearance-inspector";
+import { LogisticsItemInspector } from "./logistics-item-inspector";
 import { InspectorCollapsiblePanel } from "./inspector-collapsible-panel";
 import { WaterPurifierNodeInspector } from "./water-purifier-node-inspector";
 import { CanvasFloatingToolbarButtonStrip } from "@/app/shell/shared/canvas-floating-toolbar-button-strip";
@@ -64,6 +65,7 @@ interface InspectorSlotState {
 const INSPECTOR_LABELS: Partial<Record<EntityInspectorType, string>> = {
   [INSPECTOR_TYPE.genericDevice]: "设备概览",
   [INSPECTOR_TYPE.runtimeStatistics]: "运行统计",
+  [INSPECTOR_TYPE.logisticsItem]: "物流物品",
   [INSPECTOR_TYPE.storageManagement]: "缓存管理",
   [INSPECTOR_TYPE.storageTypeFilter]: "缓存类型过滤",
   [INSPECTOR_TYPE.portFilter]: "端口过滤器",
@@ -150,6 +152,14 @@ function renderInspector(options: {
           declaration={options.declaration}
           definition={options.definition}
           entity={options.entity}
+          runtimeStatus={options.runtimeStatus}
+          translate={options.translate}
+        />
+      );
+    case INSPECTOR_TYPE.logisticsItem:
+      return (
+        <LogisticsItemInspector
+          appHost={options.appHost}
           runtimeStatus={options.runtimeStatus}
           translate={options.translate}
         />

@@ -23,7 +23,10 @@ import type {
   SimulationWorkerResponse,
 } from "./worker-protocol";
 
-import { createTickSnapshot } from "./runtime/create-tick-snapshot";
+import {
+  createTickDebugData,
+  createTickSnapshot,
+} from "./runtime/create-tick-snapshot";
 import {
   canAdjustDynamicTickRateAtTick,
   resolveLegalDynamicTickRates,
@@ -232,6 +235,7 @@ export class SimulationWorkerRuntime {
 
   // Perf instrumentation
   private perfEnabled = false;
+  private debugEnabled = false;
   private perfEntries: TickPerfEntry[] = [];
 
   /** 手动覆盖总耗电（kW），undefined = 按编译期真实值。 */
@@ -249,6 +253,7 @@ export class SimulationWorkerRuntime {
       switch (request.type) {
         case "load-topology":
           this.perfEnabled = request.perfEnabled ?? false;
+          this.debugEnabled = request.perfEnabled ?? false;
           this.setSimulationSpeedValue(request.simulationSpeed);
           return {
             type: "topology-loaded",
@@ -268,6 +273,14 @@ export class SimulationWorkerRuntime {
           this.setSimulationSpeedValue(request.simulationSpeed);
           return {
             type: "simulation-speed-set",
+            requestId: request.requestId,
+            status: this.getStatus(),
+          };
+        case "set-debug-enabled":
+          this.debugEnabled = request.debugEnabled;
+          this.perfEnabled = request.debugEnabled;
+          return {
+            type: "debug-enabled-set",
             requestId: request.requestId,
             status: this.getStatus(),
           };
@@ -346,6 +359,12 @@ export class SimulationWorkerRuntime {
         case "set-simulation-speed":
           return {
             type: "simulation-speed-set",
+            requestId: request.requestId,
+            status,
+          };
+        case "set-debug-enabled":
+          return {
+            type: "debug-enabled-set",
             requestId: request.requestId,
             status,
           };
@@ -496,7 +515,9 @@ export class SimulationWorkerRuntime {
         latestTickNumber: tickNumber,
         bufferSize: this.tickSnapshots.size,
       },
-      currentTick: snapshot,
+      currentTick: this.debugEnabled
+        ? this.createDebugSnapshotReadModel(snapshot, this.runtimeState)
+        : snapshot,
     };
   }
 
@@ -897,7 +918,56 @@ export class SimulationWorkerRuntime {
         latestTickNumber: this.latestTickNumber ?? tickNumber,
         bufferSize: this.tickSnapshots.size,
       },
-      currentTick,
+      currentTick: this.debugEnabled
+        ? this.createDebugSnapshotReadModel(
+            currentTick,
+            this.tickRuntimeStates.get(tickNumber) ?? this.runtimeState,
+          )
+        : currentTick,
+    };
+  }
+
+  private createDebugSnapshotReadModel(
+    snapshot: RuntimeTickSnapshot,
+    runtimeState: SimulationMutableRuntimeState,
+  ): RuntimeTickSnapshot {
+    if (this.topology === null) {
+      return snapshot;
+    }
+
+    return {
+      ...snapshot,
+      debugData: createTickDebugData({
+        topology: this.topology,
+        runtimeState,
+        snapshot,
+        workerRuntime: {
+          nextTickNumber: this.nextTickNumber,
+          retainedFromTick: this.retainedFromTick,
+          latestTickNumber: this.latestTickNumber,
+          mode: this.mode,
+          error: this.error,
+          simulationSpeed: this.simulationSpeed,
+          dynamicTickRate: this.dynamicTickRate,
+          standardStepTicks: this.standardStepTicks,
+          fixedDynamicTickRate: this.fixedDynamicTickRate,
+          lastRequestedTickNumber: this.lastRequestedTickNumber,
+          migrationAnchorTickNumber: this.migrationAnchorTickNumber,
+          lastDynamicRateAdjustmentTick: this.lastDynamicRateAdjustmentTick,
+          powerMode: this.powerMode,
+          powerConsumptionOverride: this.powerConsumptionOverride ?? null,
+          effectiveTotalPowerDemand: this.effectiveTotalPowerDemand,
+          stopLineTick: this.stopLineTick,
+          fillScheduled: this.fillTimerId !== null,
+          perfEnabled: this.perfEnabled,
+          debugEnabled: this.debugEnabled,
+          perfEntries: this.perfEntries,
+          maxRetainedTicks: MAX_RETAINED_TICKS,
+          cachedTickSnapshotNumbers: [...this.tickSnapshots.keys()].sort((left, right) => left - right),
+          cachedRuntimeStateTickNumbers: [...this.tickRuntimeStates.keys()].sort((left, right) => left - right),
+          errorCallbackRegistered: this.onError !== null,
+        },
+      }),
     };
   }
 

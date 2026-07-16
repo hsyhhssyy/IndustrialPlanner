@@ -71,6 +71,20 @@ export const INSPECTOR_TYPE = {
    */
   runtimeStatistics: "runtime-statistics",
 
+  /**
+   * ## 物流物品面板
+   *
+   * **只读展示。** 不编辑任何 config 或运行时字段。
+   *
+   * 显示物流设备共享槽位中当前容纳的物品：
+   * - 物品图标
+   * - 物品名称
+   *
+   * 物流共享槽位容量为 1，因此不显示数量。
+   * 数据来源：SimulationDeviceRuntimeStatusReadModel.slotItems。
+   */
+  logisticsItem: "logistics-item",
+
   // ========================================================================
   // 槽位编辑类
   // ========================================================================
@@ -477,6 +491,7 @@ export type EntityInspectorDeclaration =
   | { readonly type: typeof INSPECTOR_TYPE.genericDevice }
   | { readonly type: typeof INSPECTOR_TYPE.problem }
   | { readonly type: typeof INSPECTOR_TYPE.runtimeStatistics }
+  | { readonly type: typeof INSPECTOR_TYPE.logisticsItem }
   | { readonly type: typeof INSPECTOR_TYPE.storageManagement }
   | { readonly type: typeof INSPECTOR_TYPE.storageTypeFilter }
   | { readonly type: typeof INSPECTOR_TYPE.submitToWarehouse }

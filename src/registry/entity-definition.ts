@@ -1016,6 +1016,18 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
     inspectors: [
+      // AI-REMOVED 2026-07-16:
+      // Reason: 首次批量补丁误将物流物品 Inspector 挂载到粉碎机，粉碎机不是物流设备。
+      // Trigger: 用户要求仅对所有物流设备挂载“物流物品”Inspector。
+      // Evidence: item_port_grinder_1 的 uiGroup 为 basicProduction，且不在 GENERAL_LOGISTICS_DEVICE_IDS 注册集合中。
+      // Replacement: belt_straight_1x1 等 14 个物流设备的显式 inspectors 声明。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // {
+      //   type: INSPECTOR_TYPE.logisticsItem,
+      // },
       {
         type: INSPECTOR_TYPE.recipeStatus,
         channelIds: ["default"],
@@ -1217,6 +1229,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     inspectors: [
       {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
+      {
         type: INSPECTOR_TYPE.recipeStatus,
         channelIds: ["default"],
       },
@@ -1267,6 +1282,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_buffer"),
       createBinding("bind_item_output", "item_output", "item_buffer"),
     ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
+    ],
   }),
 
   /**
@@ -1312,6 +1332,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_buffer"),
       createBinding("bind_item_output", "item_output", "item_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
     ],
   }),
   /**
@@ -1376,6 +1401,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_buffer"),
       createBinding("bind_item_output", "item_output", "item_buffer"),
     ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
+    ],
   }),
 
   /**
@@ -1432,6 +1462,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_buffer"),
       createBinding("bind_item_output", "item_output", "item_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
     ],
   }),
 
@@ -1519,6 +1554,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input_ew", "item_input_ew", "ew_buffer"),
       createBinding("bind_item_output_ew", "item_output_ew", "ew_buffer"),
     ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
+    ],
   }),
   // =========================================================================
   // 管道物流设备 (uiGroup: "pipeLogistics" 或 "hidden")
@@ -1565,6 +1605,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createRecipeChannel("default", ["synthetic-input"], ["synthetic-output"]),
     ],
     portStorageBindings: [],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
+    ],
   }),
 
   /**
@@ -1599,6 +1644,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createRecipeChannel("default", ["synthetic-input"], ["synthetic-output"]),
     ],
     portStorageBindings: [],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
+    ],
   }),
 
   /**
@@ -1633,6 +1683,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createRecipeChannel("default", ["synthetic-input"], ["synthetic-output"]),
     ],
     portStorageBindings: [],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
+    ],
   }),
 
   /**
@@ -1685,6 +1740,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_fluid_input", "fluid_input", "fluid_buffer"),
       createBinding("bind_fluid_output", "fluid_output", "fluid_buffer"),
     ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
+    ],
   }),
 
   /**
@@ -1735,6 +1795,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_fluid_input", "fluid_input", "fluid_buffer"),
       createBinding("bind_fluid_output", "fluid_output", "fluid_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
     ],
   }),
 
@@ -1820,6 +1885,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_fluid_output_ns", "fluid_output_ns", "ns_buffer"),
       createBinding("bind_fluid_input_ew", "fluid_input_ew", "ew_buffer"),
       createBinding("bind_fluid_output_ew", "fluid_output_ew", "ew_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
     ],
   }),
 
@@ -2594,9 +2664,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    id: "item_port_solid_gas_converter_1",
-    nameKey: "registry.entity.item_port_solid_gas_converter_1.name",
-    spriteId: "item_port_solid_gas_converter_1",
+    id: "transmuter_2",
+    nameKey: "registry.entity.transmuter_2.name",
+    spriteId: "transmuter_2",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 611,
@@ -2735,9 +2805,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_port_liquid_gas_converter_1",
-    nameKey: "registry.entity.item_port_liquid_gas_converter_1.name",
-    spriteId: "item_port_liquid_gas_converter_1",
+    id: "transmuter_1",
+    nameKey: "registry.entity.transmuter_1.name",
+    spriteId: "transmuter_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 613,
@@ -3448,9 +3518,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_port_gas_storager_1",
-    nameKey: "registry.entity.item_port_gas_storager_1.name",
-    spriteId: "item_port_gas_storager_1",
+    id: "gas_storager_1",
+    nameKey: "registry.entity.gas_storager_1.name",
+    spriteId: "gas_storager_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
     displayOrder: 411,
@@ -3508,9 +3578,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [],
   }),
   createEntityDefinition({
-    id: "item_port_gas_diffuser_1",
-    nameKey: "registry.entity.item_port_gas_diffuser_1.name",
-    spriteId: "item_port_gas_diffuser_1",
+    id: "vaporizer_1",
+    nameKey: "registry.entity.vaporizer_1.name",
+    spriteId: "vaporizer_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
     displayOrder: 304,
@@ -3599,6 +3669,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     inspectors: [
       {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
+      {
         type: INSPECTOR_TYPE.admissionRule,
         portGroupId: "item_input",
         portId: "in_w",
@@ -3650,6 +3723,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     inspectors: [
       {
+        type: INSPECTOR_TYPE.logisticsItem,
+      },
+      {
         type: INSPECTOR_TYPE.admissionRule,
         portGroupId: "fluid_input",
         portId: "in_w",
@@ -3679,15 +3755,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /**
-   * item_port_gas_collector_1 — 气体收集泵（3×3）
+   * gas_pump_1 — 气体收集泵（3×3）
    *
    * 不可摆放设备，无精灵定义，无端口/槽位/配方。
    * 仅作为气体采集配方的目标设备。
    */
   createEmptyEntityDefinition({
-    id: "item_port_gas_collector_1",
-    nameKey: "registry.entity.item_port_gas_collector_1.name",
-    spriteId: "item_port_gas_collector_1",
+    id: "gas_pump_1",
+    nameKey: "registry.entity.gas_pump_1.name",
+    spriteId: "gas_pump_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
     tags: ["不可摆放"],

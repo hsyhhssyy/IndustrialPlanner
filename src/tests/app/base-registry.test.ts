@@ -89,6 +89,34 @@ describe("createRegistryContract", () => {
     expect(registry.queries.resolveDedicatedLogisticsKind("item_log_splitter")).toBeNull();
   });
 
+  it("mounts the read-only logistics-item inspector on every logistics device and no others", () => {
+    const registry = createRegistryContract();
+    const expectedDeviceIds = [
+      "belt_straight_1x1",
+      "belt_turn_cw_1x1",
+      "belt_turn_ccw_1x1",
+      "item_log_splitter",
+      "item_log_converger",
+      "item_log_connector",
+      "pipe_straight_1x1",
+      "pipe_turn_cw_1x1",
+      "pipe_turn_ccw_1x1",
+      "item_pipe_splitter",
+      "item_pipe_converger",
+      "item_pipe_connector",
+      "item_log_admission",
+      "item_pipe_admission",
+    ].sort();
+    const mountedDeviceIds = registry.entityDefinitions
+      .filter((definition) => definition.inspectors.some(
+        (inspector) => inspector.type === INSPECTOR_TYPE.logisticsItem,
+      ))
+      .map((definition) => definition.id)
+      .sort();
+
+    expect(mountedDeviceIds).toEqual(expectedDeviceIds);
+  });
+
   it("mounts slot-config inspectors on every recipe machine storage group", () => {
     const registry = createRegistryContract();
     const recipeMachineIds = new Set(

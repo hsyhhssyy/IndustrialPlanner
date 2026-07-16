@@ -416,6 +416,8 @@ export interface RuntimeTickSnapshot {
   readonly documentHash: string;
   readonly tickNumber: number;
   readonly status: "initial" | "running";
+  /** 调试模式下为完整 Tick 与 Worker 可序列化内部状态的 JSON；非调试模式不传输该属性。 */
+  readonly debugData?: string;
   readonly totalPowerDemand: number;
   readonly currentPowerGeneration: number;
   /** 真实电力模式下发电量不足总需求时为 true；无限电力模式下始终为 false */

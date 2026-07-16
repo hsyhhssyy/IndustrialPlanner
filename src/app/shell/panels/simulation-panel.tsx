@@ -6,16 +6,55 @@ import { cm } from "@/app/shell/shared/css-module-class";
 
 const SIMULATION_PANEL_INTERVAL_MS = 250;
 
-function formatSimulationRuntimeJson(appHost: AppHost): string {
+interface SimulationPanelReadModel {
+  readonly runtimeJson: string;
+  readonly tickDebugData: string;
+}
+
+function formatJsonString(value: string): string {
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2);
+  } catch {
+    return value;
+  }
+}
+
+function formatSimulationReadModel(appHost: AppHost): SimulationPanelReadModel {
   const runtimeJson = appHost.workspace.simulation?.queries.getStatusRuntimeJson() ?? null;
   if (runtimeJson === null) {
-    return "null";
+    return { runtimeJson: "null", tickDebugData: "null" };
   }
 
   try {
-    return JSON.stringify(JSON.parse(String(runtimeJson)), null, 2);
+    const parsed = JSON.parse(String(runtimeJson)) as unknown;
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { runtimeJson: JSON.stringify(parsed, null, 2), tickDebugData: "null" };
+    }
+
+    const readModel = parsed as Record<string, unknown>;
+    const currentTick = readModel.currentTick;
+    if (currentTick === null || typeof currentTick !== "object" || Array.isArray(currentTick)) {
+      return { runtimeJson: JSON.stringify(parsed, null, 2), tickDebugData: "null" };
+    }
+
+    const currentTickReadModel = currentTick as Record<string, unknown>;
+    const debugData = currentTickReadModel.debugData;
+    if (typeof debugData !== "string") {
+      return { runtimeJson: JSON.stringify(parsed, null, 2), tickDebugData: "null" };
+    }
+
+    return {
+      runtimeJson: JSON.stringify({
+        ...readModel,
+        currentTick: {
+          ...currentTickReadModel,
+          debugData: `[${debugData.length} chars]`,
+        },
+      }, null, 2),
+      tickDebugData: formatJsonString(debugData),
+    };
   } catch {
-    return String(runtimeJson);
+    return { runtimeJson: String(runtimeJson), tickDebugData: "null" };
   }
 }
 
@@ -30,12 +69,12 @@ function formatWarehouseStatsJson(appHost: AppHost): string {
 
 export function SimulationPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
-  const [runtimeJson, setRuntimeJson] = useState(() => formatSimulationRuntimeJson(appHost));
+  const [simulationReadModel, setSimulationReadModel] = useState(() => formatSimulationReadModel(appHost));
   const [warehouseJson, setWarehouseJson] = useState(() => formatWarehouseStatsJson(appHost));
 
   useEffect(() => {
     const tick = () => {
-      setRuntimeJson(formatSimulationRuntimeJson(appHost));
+      setSimulationReadModel(formatSimulationReadModel(appHost));
       setWarehouseJson(formatWarehouseStatsJson(appHost));
     };
 
@@ -55,7 +94,15 @@ export function SimulationPanel({ appHost }: { appHost: AppHost }) {
         data-simulation-runtime-json
         readOnly
         rows={20}
-        value={runtimeJson}
+        value={simulationReadModel.runtimeJson}
+      />
+      <h4>{t("label.currentTickInternalData")}</h4>
+      <textarea
+        className={cm(styles, "json-debug-textarea")}
+        data-simulation-tick-debug-data
+        readOnly
+        rows={20}
+        value={simulationReadModel.tickDebugData}
       />
       <h4>仓库统计</h4>
       <textarea

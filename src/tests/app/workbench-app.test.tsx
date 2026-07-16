@@ -1182,6 +1182,10 @@ describe("WorkbenchApp", () => {
           },
           currentTick: {
             source: "query-read-model",
+            debugData: JSON.stringify({
+              topology: { topologyId: "topology:debug" },
+              runtimeState: { tickNumber: 3, transient: { edges: {} } },
+            }),
           },
         }),
         getDocumentRuntimeStatus: () => ({
@@ -1233,6 +1237,7 @@ describe("WorkbenchApp", () => {
     });
 
     const snapshotTextarea = container.querySelector("[data-simulation-runtime-json]") as HTMLTextAreaElement | null;
+    const tickDebugDataTextarea = container.querySelector("[data-simulation-tick-debug-data]") as HTMLTextAreaElement | null;
 
     act(() => {
       vi.advanceTimersByTime(250);
@@ -1255,7 +1260,19 @@ describe("WorkbenchApp", () => {
     "error": null
   },
   "currentTick": {
-    "source": "query-read-model"
+    "source": "query-read-model",
+    "debugData": "[101 chars]"
+  }
+}`);
+    expect(tickDebugDataTextarea?.value).toBe(`{
+  "topology": {
+    "topologyId": "topology:debug"
+  },
+  "runtimeState": {
+    "tickNumber": 3,
+    "transient": {
+      "edges": {}
+    }
   }
 }`);
   });

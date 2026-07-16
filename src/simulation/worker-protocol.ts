@@ -35,6 +35,11 @@ export type SimulationWorkerRequest =
       readonly simulationSpeed: number;
     }
   | {
+      readonly type: "set-debug-enabled";
+      readonly requestId: number;
+      readonly debugEnabled: boolean;
+    }
+  | {
       readonly type: "patch-runtime-slot";
       readonly requestId: number;
       readonly patch: SimulationRuntimeSlotPatch;
@@ -84,6 +89,11 @@ export type SimulationWorkerResponse =
     }
   | {
       readonly type: "simulation-speed-set";
+      readonly requestId: number;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "debug-enabled-set";
       readonly requestId: number;
       readonly status: SimulationRuntimeStatus;
     }

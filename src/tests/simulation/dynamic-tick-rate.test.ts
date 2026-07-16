@@ -104,6 +104,103 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     expect(loaded.status.dynamicTickRate).toBe(10);
   });
 
+  it("only exposes complete current-tick internal data when debug mode is enabled", () => {
+    const normalRuntime = new SimulationWorkerRuntime();
+    normalRuntime.handleRequest({
+      type: "load-topology",
+      requestId: 1,
+      topology: createEmptyTopology(),
+      perfEnabled: false,
+    });
+    const normalTick = normalRuntime.handleRequest({
+      type: "get-tick-snapshot",
+      requestId: 2,
+      tickNumber: 0,
+    });
+
+    expect(normalTick.type).toBe("tick-snapshot-result");
+    if (normalTick.type !== "tick-snapshot-result") {
+      throw new Error("Expected a normal tick snapshot response.");
+    }
+    expect(normalTick.result.currentTick?.debugData).toBeUndefined();
+
+    const debugRuntime = new SimulationWorkerRuntime();
+    debugRuntime.handleRequest({
+      type: "load-topology",
+      requestId: 3,
+      topology: createEmptyTopology(),
+      perfEnabled: false,
+    });
+    const debugEnabled = debugRuntime.handleRequest({
+      type: "set-debug-enabled",
+      requestId: 4,
+      debugEnabled: true,
+    });
+    expect(debugEnabled.type).toBe("debug-enabled-set");
+
+    const debugTick = debugRuntime.handleRequest({
+      type: "get-tick-snapshot",
+      requestId: 5,
+      tickNumber: 0,
+    });
+
+    expect(debugTick.type).toBe("tick-snapshot-result");
+    if (debugTick.type !== "tick-snapshot-result") {
+      throw new Error("Expected a debug tick snapshot response.");
+    }
+    const debugData = debugTick.result.currentTick?.debugData;
+    expect(typeof debugData).toBe("string");
+    expect(JSON.parse(debugData ?? "null")).toMatchObject({
+      topology: {
+        topologyId: "topology:empty",
+        documentHash: "hash:test",
+      },
+      runtimeState: {
+        tickNumber: 0,
+        transient: {
+          blockedInputNodeIds: [],
+          edges: {},
+          nodes: {},
+          transfers: [],
+        },
+      },
+      snapshot: {
+        topologyId: "topology:empty",
+        documentHash: "hash:test",
+        tickNumber: 0,
+      },
+      workerRuntime: {
+        mode: "running",
+        simulationSpeed: 1,
+        dynamicTickRate: 20,
+        standardStepTicks: 1,
+        fixedDynamicTickRate: null,
+        powerMode: "infinite",
+        perfEnabled: true,
+        debugEnabled: true,
+        maxRetainedTicks: 180,
+        cachedTickSnapshotNumbers: [0],
+        cachedRuntimeStateTickNumbers: [0],
+      },
+    });
+
+    debugRuntime.handleRequest({
+      type: "set-debug-enabled",
+      requestId: 6,
+      debugEnabled: false,
+    });
+    const debugDisabledTick = debugRuntime.handleRequest({
+      type: "get-tick-snapshot",
+      requestId: 7,
+      tickNumber: 0,
+    });
+    expect(debugDisabledTick.type).toBe("tick-snapshot-result");
+    if (debugDisabledTick.type !== "tick-snapshot-result") {
+      throw new Error("Expected a debug-disabled tick snapshot response.");
+    }
+    expect(debugDisabledTick.result.currentTick).not.toHaveProperty("debugData");
+  });
+
   it("normalizes recipe stats by covered simulation ticks when dynamic runtime steps are coarser", () => {
     const stats = createRecipeStatsState(20);
 
