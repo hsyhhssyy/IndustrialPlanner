@@ -179,7 +179,7 @@ describe("PortOverlayDecoration 端口语义", () => {
 
   it("管道铺设模式同时展示液体端口和气体端口", () => {
     const liquid = createEntity("liquid", "item_port_liquid_storager_1", 5, 5, 0);
-    const gas = createEntity("gas", "item_port_gas_storager_1", 12, 5, 0);
+    const gas = createEntity("gas", "gas_storager_1", 12, 5, 0);
 
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [liquid, gas],

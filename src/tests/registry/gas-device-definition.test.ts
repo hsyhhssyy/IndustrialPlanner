@@ -72,14 +72,23 @@ describe("gas item and device definitions", () => {
     }
   });
 
-  it("defines gas collection pump as a hidden 3x3 gas gathering machine shell", () => {
+  it("defines gas collection pump as a hidden 3x3 gas gathering machine", () => {
     const definition = requireEntity("gas_pump_1");
 
     expect(definition.footprint).toEqual({ width: 3, height: 3 });
     expect(definition.uiGroup).toBe("resourcePower");
     expect(definition.tags).toContain("不可摆放");
-    expect(definition.portGroups).toEqual([]);
-    expect(definition.storageSlotGroups).toEqual([]);
+    // AI-REMOVED 2026-07-16:
+    // Reason: 气体收集泵已按当前注册表定义气体输出端口和缓冲槽，空壳约束属于测试漂移。
+    // Trigger: 用户确认问题 2 为测试漂移并要求移除这项旧断言。
+    // Evidence: gas_pump_1 当前包含 gas_output 端口组和 gas_output_buffer 储存组。
+    // Replacement: None；本用例继续验证尺寸、百科分类和不可摆放标签。
+    // Risk: Low - 本用例不再约束气体收集泵必须没有端口和槽位。
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(definition.portGroups).toEqual([]);
+    // expect(definition.storageSlotGroups).toEqual([]);
   });
 
   it("defines solid-gas converter modes as independent devices", () => {
@@ -178,19 +187,42 @@ describe("gas item and device definitions", () => {
     ]);
   });
 
-  it("makes liquid purifier pipe ports and buffers accept fluid while keeping solid inputs", () => {
+  it("makes liquid purifier pipe ports and buffers accept fluid", () => {
     const definition = requireEntity("item_port_liquid_purifier_1");
-    const itemInput = requirePortGroup(definition, "item_input");
+    // AI-REMOVED 2026-07-16:
+    // Reason: 当前液体提纯机已移除固体输入端口、缓冲槽和配方输入依赖，原固体输入契约属于测试漂移。
+    // Trigger: 用户确认问题 2 为测试漂移并要求移除这项旧断言。
+    // Evidence: item_port_liquid_purifier_1 当前仅保留 fluid_input/fluid_output 端口组与对应缓冲槽。
+    // Replacement: None；本用例继续覆盖仍有效的流体端口、过滤规则和流体缓冲槽。
+    // Risk: Low - 本用例不再要求液体提纯机兼容已移除的固体输入结构。
+    // Human Review: Required
+    //
+    // Original code:
+    // const itemInput = requirePortGroup(definition, "item_input");
+    // expectPortLayout(itemInput, [
+    //   { id: "in_w_0", localCellX: 0, localCellY: 0, edge: "WEST" },
+    //   { id: "in_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
+    //   { id: "in_w_2", localCellX: 0, localCellY: 2, edge: "WEST" },
+    //   { id: "in_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
+    //   { id: "in_w_4", localCellX: 0, localCellY: 4, edge: "WEST" },
+    // ]);
+    // expect(definition.storageSlotGroups.map((slotGroup) => slotGroup.id)).toEqual([
+    //   "fluid_input_buffer",
+    //   "fluid_output_buffer",
+    //   "item_input_buffer",
+    // ]);
+    // expect(definition.storageSlotGroups[2]).toMatchObject({
+    //   id: "item_input_buffer",
+    //   kind: "item",
+    //   slots: [{ capacity: 50, itemFilterType: "solid" }],
+    // });
+    // expect(definition.recipeChannels[0]?.ingredientStorageGroupIds).toEqual([
+    //   "fluid_input_buffer",
+    //   "item_input_buffer",
+    // ]);
     const fluidInput = requirePortGroup(definition, "fluid_input");
     const fluidOutput = requirePortGroup(definition, "fluid_output");
 
-    expectPortLayout(itemInput, [
-      { id: "in_w_0", localCellX: 0, localCellY: 0, edge: "WEST" },
-      { id: "in_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
-      { id: "in_w_2", localCellX: 0, localCellY: 2, edge: "WEST" },
-      { id: "in_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
-      { id: "in_w_4", localCellX: 0, localCellY: 4, edge: "WEST" },
-    ]);
     expectPortLayout(fluidInput, [
       { id: "in_s_1", localCellX: 1, localCellY: 4, edge: "SOUTH" },
       { id: "in_s_3", localCellX: 3, localCellY: 4, edge: "SOUTH" },
@@ -203,11 +235,6 @@ describe("gas item and device definitions", () => {
     expectFluidBasePorts(fluidOutput);
     expect(fluidOutput.ports.flatMap((port) => port.acceptRule.exclude)).not.toContain("item_gas_inert");
     expect(fluidOutput.ports.flatMap((port) => port.acceptRule.exclude)).not.toContain("item_gas_xiranite");
-    expect(definition.storageSlotGroups.map((slotGroup) => slotGroup.id)).toEqual([
-      "fluid_input_buffer",
-      "fluid_output_buffer",
-      "item_input_buffer",
-    ]);
     expect(definition.storageSlotGroups[0]).toMatchObject({
       id: "fluid_input_buffer",
       kind: "fluid",
@@ -221,14 +248,5 @@ describe("gas item and device definitions", () => {
         { capacity: 50, itemFilterType: "fluid" },
       ],
     });
-    expect(definition.storageSlotGroups[2]).toMatchObject({
-      id: "item_input_buffer",
-      kind: "item",
-      slots: [{ capacity: 50, itemFilterType: "solid" }],
-    });
-    expect(definition.recipeChannels[0]?.ingredientStorageGroupIds).toEqual([
-      "fluid_input_buffer",
-      "item_input_buffer",
-    ]);
   });
 });

@@ -104,8 +104,8 @@ describe("PortOutputConfigInspector", () => {
 
   it("filters gas output ports to gas items", async () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_gas_storager_1");
-    const entity = createEmptyEntity("gas-tank", "item_port_gas_storager_1");
+    const definition = requireDefinition(workspace, "gas_storager_1");
+    const entity = createEmptyEntity("gas-tank", "gas_storager_1");
     const currentAppHost = buildAppHost(workspace, entity);
     appHost = currentAppHost;
     const ore = requireItem(workspace, "item_copper_ore");

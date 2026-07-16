@@ -224,7 +224,7 @@ describe("物流绘制模式", () => {
     const editorHost = createEditorHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
-      createTestEntity("gas-source", "item_port_gas_storager_1", 0, 0),
+      createTestEntity("gas-source", "gas_storager_1", 0, 0),
     ]));
 
     const startResult = editorHost.actions.createLogisticsDraftStart({
