@@ -113,7 +113,8 @@ if [[ -d "$repo_root/.temp" ]] && git -C "$repo_root/.temp" rev-parse --is-insid
   if git -C "$repo_root/.temp" rev-parse --abbrev-ref @{u} >/dev/null 2>&1; then
     if ! git -C "$repo_root/.temp" push; then
       echo ".temp 推送失败，尝试自动拉取远端变更并合并..."
-      if git -C "$repo_root/.temp" pull --no-edit; then
+      # --no-rebase 强制 merge 策略（避免 Git 2.27+ 因未配置 pull.rebase 而拒绝执行）
+      if git -C "$repo_root/.temp" pull --no-rebase --no-edit -X ours; then
         echo ".temp 合并远端成功，重新推送..."
         if ! git -C "$repo_root/.temp" push; then
           echo "推送 .temp 依然失败（提交已保存，请稍后手动推送）" >&2
@@ -121,8 +122,7 @@ if [[ -d "$repo_root/.temp" ]] && git -C "$repo_root/.temp" rev-parse --is-insid
           echo "已推送: .temp"
         fi
       else
-        echo ".temp 自动合并冲突，需要手动解决。" >&2
-        exit 1
+        echo ".temp 自动合并失败（提交已保存，请稍后手动处理）" >&2
       fi
     else
       echo "已推送: .temp"
