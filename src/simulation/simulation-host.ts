@@ -378,7 +378,11 @@ function resolveDeviceRuntimeStatus(options: {
           currentWindowCount: deviceSnapshot.meteredConsumption.currentCount,
           currentWindowItemId: deviceSnapshot.meteredConsumption.currentItemId,
           previousWindowCount: deviceSnapshot.meteredConsumption.previousWindowCount,
-          previousWindowItemId: deviceSnapshot.meteredConsumption.previousWindowItemId,
+          previousWindowItemId: deviceSnapshot.meteredConsumption.previousWindowItemId
+            ?? (deviceSnapshot.meteredConsumption.previousWindowCount > 0
+              ? deviceSnapshot.meteredConsumption.activeEffectItemId
+              : null)
+            ?? null,
         },
     admissionCounters: Object.fromEntries(
       Object.entries(deviceSnapshot.admissionCounters ?? {}).map(([portRef, counter]) => [
