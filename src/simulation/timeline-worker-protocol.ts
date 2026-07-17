@@ -41,6 +41,13 @@ export type TimelineWorkerRequest =
       readonly timelineTickNumber: number;
     }
   | {
+      /** 批量读取已计算的呈现帧；只返回当前缓存中存在的帧，不等待未来预测。 */
+      readonly type: "get-timeline-presentation-frame-range";
+      readonly requestId: number;
+      readonly fromTimelineTickNumber: number;
+      readonly toTimelineTickNumber: number;
+    }
+  | {
       readonly type: "stop-timeline";
       readonly requestId: number;
     };
@@ -76,7 +83,20 @@ export type TimelineWorkerResponse =
       readonly status: TimelineWorkerStatus;
     }
   | {
+      readonly type: "timeline-presentation-frame-range-result";
+      readonly requestId: number;
+      readonly fromTimelineTickNumber: number;
+      readonly toTimelineTickNumber: number;
+      readonly frames: readonly TimelinePresentationFrame[];
+      readonly status: TimelineWorkerStatus;
+    }
+  | {
       readonly type: "timeline-stopped";
       readonly requestId: number;
       readonly status: TimelineWorkerStatus;
     };
+
+export interface TimelinePresentationFrame {
+  readonly timelineTickNumber: number;
+  readonly snapshot: RuntimeTickSnapshot;
+}

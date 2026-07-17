@@ -33,6 +33,7 @@ import {
 } from "./tick-rate";
 import type {
   CompiledSimulationTopology,
+  RuntimeTickSnapshot,
   SimulationStartResult,
   SimulationTickPullStatus,
   SimulationTopologyMigration,
@@ -65,6 +66,12 @@ const TIMELINE_SEEK_EDGE_SCROLL_ANCHOR_OFFSET_TICKS = Math.round(TIMELINE_WINDOW
 const TIMELINE_STATUS_POLL_MS = 250;
 const TIMELINE_EXPORT_LOOKBACK_STEPS = 18;
 const TIMELINE_PRESENTATION_COMMIT_IDLE_MS = 1000;
+const TIMELINE_PRESENTATION_CACHE_DIRECTION_TICKS = 32;
+const TIMELINE_PRESENTATION_CACHE_OPPOSITE_TICKS = 4;
+const TIMELINE_PRESENTATION_CACHE_CAPACITY = 80;
+const PLAYBACK_HOT_QUEUE_CAPACITY = 20;
+const PLAYBACK_HOT_QUEUE_LOW_WATER = 10;
+const PLAYBACK_PREFETCH_RETRY_MS = 50;
 
 const logger = createLogger("simulation-runtime");
 
@@ -102,6 +109,14 @@ export interface SimulationWorkerBridge {
   getTickSnapshot(tickNumber: number, simulationSpeed?: number, retainTickNumber?: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "tick-snapshot-result" }
+  >>;
+  getTickSnapshotRange(fromTickNumber: number, toTickNumber: number, generation: number, simulationSpeed?: number): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "tick-snapshot-range-result" }
+  >>;
+  acknowledgePresentedTick(tickNumber: number, generation: number): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "presented-tick-acknowledged" }
   >>;
   setDebugEnabled(value: boolean): Promise<Extract<
     SimulationWorkerResponse,
@@ -161,6 +176,10 @@ export interface TimelineWorkerBridge {
   }): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-retargeted" }>>;
   getTimelineStatus(): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-status" }>>;
   getTimelinePresentationFrame(timelineTickNumber: number): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-presentation-frame-result" }>>;
+  getTimelinePresentationFrameRange(fromTimelineTickNumber: number, toTimelineTickNumber: number): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-presentation-frame-range-result" }
+  >>;
   getTimelineCheckpoint(timelineTickNumber: number): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-checkpoint-result" }>>;
   stopTimeline(): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-stopped" }>>;
   dispose(): void;
@@ -215,6 +234,97 @@ function createMissingTimelineWorkerBridge(): TimelineWorkerBridge {
   throw new Error("Timeline worker bridge is not configured.");
 }
 
+// === timeline safety sync 诊断辅助 ===
+
+/** JSON.stringify replacer：对 object 按键名排序后再序列化，消除键迭代顺序差异。 */
+function sortedKeysReplacer(_key: string, value: unknown): unknown {
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    return Object.keys(value as Record<string, unknown>)
+      .sort()
+      .reduce<Record<string, unknown>>((acc, k) => {
+        acc[k] = (value as Record<string, unknown>)[k];
+        return acc;
+      }, {});
+  }
+  return value;
+}
+
+/**
+ * 深度比较两个快照对象，返回前 maxDiffs 条差异路径 + 值的描述。
+ * 差异仅回溯对象/数组路径，不递归值的内容（避免海量输出）。
+ */
+function deepDiffSnapshots(
+  a: unknown,
+  b: unknown,
+  path: string,
+  maxDiffs: number,
+): string[] {
+  const diffs: string[] = [];
+  walkDiff(a, b, path, diffs, maxDiffs);
+  return diffs;
+}
+
+function walkDiff(
+  a: unknown,
+  b: unknown,
+  path: string,
+  diffs: string[],
+  limit: number,
+): void {
+  if (diffs.length >= limit) return;
+
+  if (a === b) return;
+
+  if (a === null || b === null || typeof a !== typeof b) {
+    diffs.push(`${path || '<root>'}: ${safeDiffString(a)} !== ${safeDiffString(b)}`);
+    return;
+  }
+
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) {
+      diffs.push(`${path}: lengths ${a.length} !== ${b.length}`);
+      if (diffs.length >= limit) return;
+    }
+    const minLen = Math.min(a.length, b.length);
+    for (let i = 0; i < minLen && diffs.length < limit; i++) {
+      walkDiff(a[i], b[i], `${path}[${i}]`, diffs, limit);
+    }
+    return;
+  }
+
+  if (typeof a === 'object' && typeof b === 'object') {
+    const aObj = a as Record<string, unknown>;
+    const bObj = b as Record<string, unknown>;
+    const allKeys = new Set([...Object.keys(aObj), ...Object.keys(bObj)]);
+    for (const key of allKeys) {
+      if (diffs.length >= limit) break;
+      if (!(key in aObj)) {
+        diffs.push(`${path}.${key}: missing in official, timeline=${safeDiffString(bObj[key])}`);
+      } else if (!(key in bObj)) {
+        diffs.push(`${path}.${key}: missing in timeline, official=${safeDiffString(aObj[key])}`);
+      } else {
+        walkDiff(aObj[key], bObj[key], `${path}.${key}`, diffs, limit);
+      }
+    }
+    return;
+  }
+
+  // primitives
+  diffs.push(`${path || '<root>'}: ${safeDiffString(a)} !== ${safeDiffString(b)}`);
+}
+
+/** 安全的差异值截断，对象/Math只打 type。 */
+function safeDiffString(value: unknown): string {
+  if (value === null) return 'null';
+  if (value === undefined) return 'undefined';
+  if (typeof value === 'object') {
+    if (Array.isArray(value)) return `Array(${value.length})`;
+    return `Object(keys=${Object.keys(value as Record<string, unknown>).length})`;
+  }
+  const s = String(value);
+  return s.length > 80 ? s.slice(0, 77) + '...' : s;
+}
+
 export class SimulationActionImpl
 implements SimulationAction, SimulationInternalAction {
   private readonly workspace: WorkspaceContract;
@@ -233,6 +343,11 @@ implements SimulationAction, SimulationInternalAction {
   private playbackTickRequestInFlight = false;
   private playbackTickRequestCompletion: Promise<void> | null = null;
   private playbackTargetTickNumber = 0;
+  private readonly playbackHotQueue = new Map<number, RuntimeTickSnapshot>();
+  private playbackHotQueueGeneration = 0;
+  private playbackPrefetchRetryAfterMs = 0;
+  private playbackAckRequestInFlight = false;
+  private pendingPlaybackAckTickNumber: number | null = null;
   private timelineBridge: TimelineWorkerBridge | null = null;
   private timelineStatusTimerId: ReturnType<typeof setInterval> | null = null;
   private timelineStatusRefreshInFlight = false;
@@ -244,6 +359,7 @@ implements SimulationAction, SimulationInternalAction {
   private timelinePresentationCommitRevision = 0;
   private timelinePresentationCommitTimerId: ReturnType<typeof setTimeout> | null = null;
   private timelinePresentationCommitPromise: Promise<boolean> | null = null;
+  private readonly timelinePresentationFrameCache = new Map<number, RuntimeTickSnapshot>();
   private timelineResumeRequestedAfterCommit = false;
   private timelineResumeAfterCommitPromise: Promise<void> | null = null;
   private timelineRestartInFlight = false;
@@ -293,6 +409,7 @@ implements SimulationAction, SimulationInternalAction {
       runInAction(() => {
         this.stateReadWrite.runningState = "start";
       });
+      this.ensurePlaybackHotQueue();
     }
   };
 
@@ -325,6 +442,7 @@ implements SimulationAction, SimulationInternalAction {
     }
 
     this.stateReadWrite.runningState = "start";
+    this.ensurePlaybackHotQueue();
   });
 
   public readonly stop: SimulationAction["stop"] = action(() => {
@@ -367,6 +485,8 @@ implements SimulationAction, SimulationInternalAction {
     if (this.stateReadWrite.runningState !== "start") {
       return;
     }
+
+    this.ensurePlaybackHotQueue();
 
     const previousPlaybackTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
     // simulationSpeed 有且仅有这一处可以参与运算：它只影响 add time 的推进速度。
@@ -431,7 +551,9 @@ implements SimulationAction, SimulationInternalAction {
     // 确保 bridge 返回后下一帧再次跨越同一 tick 边界，不会丢 tick。
     // AI-CORRECTION 2026-07-15: 播放位置必须保持单调；请求完成或拓扑迁移结束后，按当前快照与最新播放目标的差值追赶。
     // AI-CORRECTION 2026-07-15: “追赶”必须受当前快照 + 本帧步长限制；在途期间公开游标停在待拉取边界，不能越过它累计可见欠账。
-    if (this.playbackTickRequestInFlight || this.topologyRefreshQueue !== null) {
+    // AI-CORRECTION 2026-07-17: 正常播放不再逐 Tick 等待 bridge；优先同步消费主线程热队列，
+    // 仅在热队列缺口或拓扑刷新时冻结于边界，范围预取继续在后台补充。
+    if (this.topologyRefreshQueue !== null) {
       this.diagInFlightSkipCount += 1;
       this.diagConsecutiveRollbacks += 1;
       this.diagMaxConsecutiveRollbacks = Math.max(this.diagMaxConsecutiveRollbacks, this.diagConsecutiveRollbacks);
@@ -451,66 +573,201 @@ implements SimulationAction, SimulationInternalAction {
       return;
     }
 
-    this.diagConsecutiveRollbacks = 0;
+    const prefetchedSnapshot = this.takePlaybackSnapshotThrough(
+      synchronizedTickNumber + 1,
+      nextIntegerTickNumber,
+    );
+    if (prefetchedSnapshot === null) {
+      if (this.playbackTickRequestInFlight) {
+        this.diagInFlightSkipCount += 1;
+      } else {
+        this.diagNotReadyCount += 1;
+      }
+      this.diagConsecutiveRollbacks += 1;
+      this.diagMaxConsecutiveRollbacks = Math.max(
+        this.diagMaxConsecutiveRollbacks,
+        this.diagConsecutiveRollbacks,
+      );
+      this.ensurePlaybackHotQueue();
+      this.accumulateTps(deltaMs, 0);
+      return;
+    }
 
-    this.playbackTickRequestInFlight = true;
-    const tickRequest = this.syncToTick(nextIntegerTickNumber);
-    let resolveTickRequestCompletion: () => void = () => undefined;
-    const tickRequestCompletion = new Promise<void>((resolve) => {
-      resolveTickRequestCompletion = resolve;
+    this.diagConsecutiveRollbacks = 0;
+    this.publishPlaybackSnapshot(prefetchedSnapshot);
+    actualTicksProcessed = Math.max(0, nextIntegerTickNumber - synchronizedTickNumber);
+    this.diagTickConsumedCount += actualTicksProcessed;
+    this.accumulateTps(deltaMs, actualTicksProcessed);
+    this.acknowledgePresentedTick(nextIntegerTickNumber);
+    this.ensurePlaybackHotQueue();
+  };
+
+  /** 仅当目标区间完整存在时才原子消费，避免跨过缺失 Tick。 */
+  private takePlaybackSnapshotThrough(
+    fromTickNumber: number,
+    toTickNumber: number,
+  ): RuntimeTickSnapshot | null {
+    for (let tickNumber = fromTickNumber; tickNumber <= toTickNumber; tickNumber += 1) {
+      if (!this.playbackHotQueue.has(tickNumber)) {
+        return null;
+      }
+    }
+
+    let snapshot: RuntimeTickSnapshot | null = null;
+    for (let tickNumber = fromTickNumber; tickNumber <= toTickNumber; tickNumber += 1) {
+      snapshot = this.playbackHotQueue.get(tickNumber) ?? null;
+      this.playbackHotQueue.delete(tickNumber);
+    }
+    return snapshot;
+  }
+
+  private publishPlaybackSnapshot(snapshot: RuntimeTickSnapshot): void {
+    runInAction(() => {
+      this.stateReadWrite.currentSnapshot = snapshot;
+      this.stateReadWrite.statistics = {
+        ...this.stateReadWrite.statistics,
+        baseBatteryJoules: snapshot.baseBatteryJoules,
+        baseBatteryCapacity: snapshot.baseBatteryCapacity,
+      };
+      this.syncTimelineCursorFromPlayback();
     });
-    // AI-REMOVED 2026-07-15:
-    // Reason: 只等待 bridge 请求会漏掉 not-found 恢复流程，拓扑刷新仍可能与旧拓扑恢复并发。
-    // Trigger: 拓扑刷新必须在完整播放拉取事务结束后再选择迁移锚点。
-    // Evidence: tickRequest.then 会早于 recoverPlaybackFromUnavailableTick 完成。
-    // Replacement: tickRequestCompletion 由本方法 finally 在拉取与恢复流程全部结束后显式完成。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // const tickRequestCompletion = tickRequest.then(
-    //   () => undefined,
-    //   () => undefined,
-    // );
-    this.playbackTickRequestCompletion = tickRequestCompletion;
-    try {
-      const result = await tickRequest;
-      if (result.status === "not-ready") {
-        // worker 尚未就绪（buffer 耗尽），本 delta 未实际获得 tick，回滚到请求发起时的位置
-        // AI-CORRECTION 2026-07-15: 未就绪时只保留旧快照，播放目标继续按墙钟单调推进；后续帧请求最新目标。
-        // AI-CORRECTION 2026-07-15: 后续帧只重试相邻的受控目标；私有墙钟目标可累计，但不得直接成为下一次快照请求目标。
-        this.accumulateTps(deltaMs, actualTicksProcessed);
-        // AI-REMOVED 2026-07-15:
-        // Reason: Worker 暂未就绪不应重置墙钟播放目标，否则会把等待时间重复计算并造成可见回退。
-        // Trigger: 拓扑迁移及普通背压期间播放不平滑。
-        // Evidence: previousPlaybackTickNumber 是请求发起前的旧游标，异步等待期间可能已出现新的 RAF 推进。
-        // Replacement: 当前快照保持不变，advancePlaybackByDeltaMs 下一帧按快照落后量重试。
-        // Risk: Low；持续算力不足时播放目标可领先快照，统计会如实显示实际 TPS 下降。
-        // Human Review: Required
-        //
-        // Original code:
-        // runInAction(() => {
-        //   this.stateReadWrite.currentPlaybackTickNumber = previousPlaybackTickNumber;
-        // });
+
+    if (this.getPerfEnabled?.()) {
+      void this.pollPerfReport(snapshot.tickNumber);
+    }
+    void this.checkTimelineSafetySync(snapshot.tickNumber);
+  }
+
+  /** 低于低水位时补到容量上限；任意时刻最多一个范围请求在途。 */
+  private ensurePlaybackHotQueue(): void {
+    const currentSnapshot = this.stateReadWrite.currentSnapshot;
+    if (
+      currentSnapshot === null
+      || this.stateReadWrite.runningState !== "start"
+      || this.topologyRefreshQueue !== null
+      || this.stateReadWrite.timeline.isSeeking
+      || this.playbackTickRequestInFlight
+      || this.playbackHotQueue.size >= PLAYBACK_HOT_QUEUE_LOW_WATER
+      || performance.now() < this.playbackPrefetchRetryAfterMs
+    ) {
+      return;
+    }
+
+    const generation = this.playbackHotQueueGeneration;
+    const fallbackPlaybackTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
+    const fromTickNumber = currentSnapshot.tickNumber + this.playbackHotQueue.size + 1;
+    const requestCount = PLAYBACK_HOT_QUEUE_CAPACITY - this.playbackHotQueue.size;
+    const toTickNumber = fromTickNumber + requestCount - 1;
+    this.playbackTickRequestInFlight = true;
+
+    const completion = this.bridge.getTickSnapshotRange(
+      fromTickNumber,
+      toTickNumber,
+      generation,
+      this.stateReadWrite.simulationSpeed,
+    ).then(async (response) => {
+      if (
+        generation !== this.playbackHotQueueGeneration
+        || response.result.generation !== generation
+      ) {
         return;
       }
 
-      // tick 获取成功
-      actualTicksProcessed = Math.max(0, nextIntegerTickNumber - synchronizedTickNumber);
-      this.diagTickConsumedCount += actualTicksProcessed;
-      this.accumulateTps(deltaMs, actualTicksProcessed);
+      runInAction(() => {
+        this.stateReadWrite.runtimeStatus = response.status;
+      });
 
-      if (result.status === "not-found") {
-        await this.recoverPlaybackFromUnavailableTick(result, previousPlaybackTickNumber);
+      let expectedTickNumber = fromTickNumber;
+      for (const snapshot of response.result.snapshots) {
+        if (
+          snapshot.tickNumber !== expectedTickNumber
+          || snapshot.topologyId !== currentSnapshot.topologyId
+          || snapshot.documentHash !== currentSnapshot.documentHash
+        ) {
+          break;
+        }
+        this.playbackHotQueue.set(snapshot.tickNumber, snapshot);
+        expectedTickNumber += 1;
       }
-    } finally {
-      this.playbackTickRequestInFlight = false;
-      resolveTickRequestCompletion();
-      if (this.playbackTickRequestCompletion === tickRequestCompletion) {
+
+      if (response.result.snapshots.length === 0) {
+        this.playbackPrefetchRetryAfterMs = performance.now() + PLAYBACK_PREFETCH_RETRY_MS;
+      }
+
+      if (response.result.status.status === "not-found") {
+        await this.recoverPlaybackFromUnavailableTick(
+          response.result.status,
+          fallbackPlaybackTickNumber,
+        );
+      }
+    }).catch((error: unknown) => {
+      if (generation === this.playbackHotQueueGeneration) {
+        this.playbackPrefetchRetryAfterMs = performance.now() + PLAYBACK_PREFETCH_RETRY_MS;
+        console.error("[SimHost] Failed to prefetch playback ticks.", error);
+      }
+    });
+
+    const trackedCompletion = completion.finally(() => {
+      if (this.playbackTickRequestCompletion === trackedCompletion) {
+        this.playbackTickRequestInFlight = false;
         this.playbackTickRequestCompletion = null;
       }
+    });
+    this.playbackTickRequestCompletion = trackedCompletion;
+  }
+
+  /** ACK 只影响 Worker 清理进度，不阻塞当前帧；在途期间合并到最新 Tick。 */
+  private acknowledgePresentedTick(tickNumber: number): void {
+    this.pendingPlaybackAckTickNumber = Math.max(
+      this.pendingPlaybackAckTickNumber ?? tickNumber,
+      tickNumber,
+    );
+    this.flushPlaybackAcknowledgement();
+  }
+
+  private flushPlaybackAcknowledgement(): void {
+    if (
+      this.playbackAckRequestInFlight
+      || this.pendingPlaybackAckTickNumber === null
+    ) {
+      return;
     }
-  };
+
+    const generation = this.playbackHotQueueGeneration;
+    const tickNumber = this.pendingPlaybackAckTickNumber;
+    this.pendingPlaybackAckTickNumber = null;
+    this.playbackAckRequestInFlight = true;
+    void this.bridge.acknowledgePresentedTick(tickNumber, generation)
+      .then((response) => {
+        if (
+          generation === this.playbackHotQueueGeneration
+          && response.generation === generation
+        ) {
+          runInAction(() => {
+            this.stateReadWrite.runtimeStatus = response.status;
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        if (generation === this.playbackHotQueueGeneration) {
+          console.error("[SimHost] Failed to acknowledge presented tick.", error);
+        }
+      })
+      .finally(() => {
+        this.playbackAckRequestInFlight = false;
+        this.flushPlaybackAcknowledgement();
+      });
+  }
+
+  /** 使所有已缓存及在途范围响应失效；异步响应由 generation 检查丢弃。 */
+  private resetPlaybackHotQueue(): void {
+    this.playbackHotQueueGeneration += 1;
+    this.playbackHotQueue.clear();
+    this.playbackPrefetchRetryAfterMs = 0;
+    this.pendingPlaybackAckTickNumber = null;
+    this.playbackTickRequestInFlight = false;
+    this.playbackTickRequestCompletion = null;
+  }
 
   public readonly refreshFromCurrentDocument: SimulationInternalAction["refreshFromCurrentDocument"] = () => {
     const queuedRefresh = this.topologyRefreshQueue;
@@ -585,6 +842,7 @@ implements SimulationAction, SimulationInternalAction {
     }
 
     this.topologyRevision += 1;
+    this.resetPlaybackHotQueue();
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = {
         ...this.stateReadWrite.runtimeStatus,
@@ -758,6 +1016,7 @@ implements SimulationAction, SimulationInternalAction {
       return;
     }
 
+    this.resetPlaybackHotQueue();
     const response = await this.bridge.patchRuntimeSlot(patch);
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = response.status;
@@ -778,6 +1037,7 @@ implements SimulationAction, SimulationInternalAction {
       return;
     }
 
+    this.resetPlaybackHotQueue();
     const response = await this.bridge.resetAdmissionCounter(reset);
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = response.status;
@@ -908,8 +1168,12 @@ implements SimulationAction, SimulationInternalAction {
 
     const lifecycleSerial = this.timelineSeekSerial;
     const previousCursorTickNumber = this.stateReadWrite.timeline.cursorTickNumber;
-    const response = await bridge.getTimelinePresentationFrame(targetTimelineTickNumber);
-    const snapshot = response.snapshot;
+    const snapshot = await this.resolveTimelinePresentationFrame(
+      bridge,
+      targetTimelineTickNumber,
+      previousCursorTickNumber,
+      lifecycleSerial,
+    );
     if (
       lifecycleSerial !== this.timelineSeekSerial
       || snapshot === null
@@ -929,6 +1193,7 @@ implements SimulationAction, SimulationInternalAction {
       this.compiledActivitySignature = checkpointMetadata.activitySignature;
     }
 
+    this.resetPlaybackHotQueue();
     runInAction(() => {
       this.stateReadWrite.currentSnapshot = snapshot;
       this.stateReadWrite.currentPlaybackTickNumber = snapshot.tickNumber;
@@ -939,6 +1204,80 @@ implements SimulationAction, SimulationInternalAction {
     this.requestTimelineWindowRetarget();
     this.scheduleTimelinePresentationCommit(targetTimelineTickNumber, revision);
     return true;
+  }
+
+  /**
+   * 拖动期间优先从主线程呈现帧缓存取快照；缓存缺失时一次读取拖动方向上的小窗口。
+   * Timeline Worker 仍然持有完整预测历史，主线程只保留邻近游标的轻量呈现快照。
+   */
+  private async resolveTimelinePresentationFrame(
+    bridge: TimelineWorkerBridge,
+    targetTimelineTickNumber: number,
+    previousCursorTickNumber: number,
+    lifecycleSerial: number,
+  ): Promise<RuntimeTickSnapshot | null> {
+    const cachedSnapshot = this.timelinePresentationFrameCache.get(targetTimelineTickNumber);
+    if (cachedSnapshot !== undefined) {
+      return cachedSnapshot;
+    }
+
+    const isForwardSeek = targetTimelineTickNumber >= previousCursorTickNumber;
+    // availableToTickNumber 由低频状态轮询更新，拖动时可能暂时落后于游标。
+    // 直接请求游标邻域，Timeline Worker 会只返回已经存在的检查点。
+    const fromTimelineTickNumber = Math.max(
+      0,
+      targetTimelineTickNumber - (
+        isForwardSeek
+          ? TIMELINE_PRESENTATION_CACHE_OPPOSITE_TICKS
+          : TIMELINE_PRESENTATION_CACHE_DIRECTION_TICKS
+      ),
+    );
+    const toTimelineTickNumber = Math.max(
+      fromTimelineTickNumber,
+      targetTimelineTickNumber + (
+        isForwardSeek
+          ? TIMELINE_PRESENTATION_CACHE_DIRECTION_TICKS
+          : TIMELINE_PRESENTATION_CACHE_OPPOSITE_TICKS
+      ),
+    );
+    const response = await bridge.getTimelinePresentationFrameRange(
+      fromTimelineTickNumber,
+      toTimelineTickNumber,
+    );
+    if (
+      lifecycleSerial !== this.timelineSeekSerial
+      || this.timelineBridge !== bridge
+    ) {
+      return null;
+    }
+
+    for (const frame of response.frames) {
+      this.timelinePresentationFrameCache.set(frame.timelineTickNumber, frame.snapshot);
+    }
+    this.pruneTimelinePresentationFrameCache(targetTimelineTickNumber);
+    return this.timelinePresentationFrameCache.get(targetTimelineTickNumber) ?? null;
+  }
+
+  private pruneTimelinePresentationFrameCache(anchorTimelineTickNumber: number): void {
+    if (this.timelinePresentationFrameCache.size <= TIMELINE_PRESENTATION_CACHE_CAPACITY) {
+      return;
+    }
+
+    const retainedTickNumbers = new Set(
+      [...this.timelinePresentationFrameCache.keys()]
+        .sort((left, right) =>
+          Math.abs(left - anchorTimelineTickNumber) - Math.abs(right - anchorTimelineTickNumber))
+        .slice(0, TIMELINE_PRESENTATION_CACHE_CAPACITY),
+    );
+    for (const timelineTickNumber of this.timelinePresentationFrameCache.keys()) {
+      if (!retainedTickNumbers.has(timelineTickNumber)) {
+        this.timelinePresentationFrameCache.delete(timelineTickNumber);
+      }
+    }
+  }
+
+  private resetTimelinePresentationFrameCache(): void {
+    this.timelinePresentationFrameCache.clear();
   }
 
   private async commitTimelineSeekToTick(
@@ -1108,6 +1447,7 @@ implements SimulationAction, SimulationInternalAction {
     tickNumber: number,
     playbackTickNumberOnReady?: number,
   ): Promise<SimulationTickPullStatus> => {
+    this.resetPlaybackHotQueue();
     const requestTopologyRevision = this.topologyRevision;
     const retainTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber;
     const response = await this.bridge.getTickSnapshot(
@@ -1217,6 +1557,7 @@ implements SimulationAction, SimulationInternalAction {
     }
 
     this.timelineRestartInFlight = true;
+    this.resetTimelinePresentationFrameCache();
     try {
       const currentStandardTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber
         ?? Math.trunc(this.stateReadWrite.currentPlaybackTickNumber);
@@ -1504,6 +1845,7 @@ implements SimulationAction, SimulationInternalAction {
           return null;
         }
 
+        this.resetPlaybackHotQueue();
         return this.bridge.importRuntimeState(runtimeExport);
       });
 
@@ -1692,15 +2034,31 @@ implements SimulationAction, SimulationInternalAction {
         return;
       }
 
-      if (
-        JSON.stringify(officialExport.runtimeExport.snapshot)
-        === JSON.stringify(timelineCheckpoint.runtimeExport.snapshot)
-      ) {
+      const officialSnapshot = officialExport.runtimeExport.snapshot;
+      const timelineSnapshot = timelineCheckpoint.runtimeExport.snapshot;
+
+      const officialRaw = JSON.stringify(officialSnapshot);
+      const timelineRaw = JSON.stringify(timelineSnapshot);
+      if (officialRaw === timelineRaw) {
         return;
       }
 
+      // 诊断：先检查是否是键排序假阳性
+      const officialSorted = JSON.stringify(officialSnapshot, sortedKeysReplacer);
+      const timelineSorted = JSON.stringify(timelineSnapshot, sortedKeysReplacer);
+      if (officialSorted === timelineSorted) {
+        console.debug(
+          `[TimelineWorker] safety sync SKIPPED (key-order false positive) ` +
+          `standardTick=${standardTickNumber} timelineTick=${timelineTickNumber}`,
+        );
+        return;
+      }
+
+      // 实际语义不一致 → 打印深度差异
+      const diffs = deepDiffSnapshots(officialSnapshot, timelineSnapshot, '', 30);
       console.debug(
-        `[TimelineWorker] safety resync at standardTick=${standardTickNumber} timelineTick=${timelineTickNumber}`,
+        `[TimelineWorker] safety resync at standardTick=${standardTickNumber} timelineTick=${timelineTickNumber}\n` +
+        `  Diffs (first 30):\n${diffs.map(d => `    ${d}`).join('\n')}`,
       );
       runInAction(() => {
         this.addTimelineMark("safety-resync");
@@ -1793,6 +2151,7 @@ implements SimulationAction, SimulationInternalAction {
     this.timelineWindowRetargetPending = false;
     this.lastTimelineRetargetRange = null;
     this.timelinePlaybackAnchorOffsetTicks = null;
+    this.resetTimelinePresentationFrameCache();
     this.timelineCheckpointMetadataByTickNumber.clear();
     this.timelineBridge?.dispose();
     this.timelineBridge = null;
@@ -1879,7 +2238,7 @@ implements SimulationAction, SimulationInternalAction {
     this.tpsAccumulatedTicks = 0;
     this.tpsAccumulatedMs = 0;
     this.nextPerfReportTick = 180;
-    this.playbackTickRequestInFlight = false;
+    this.resetPlaybackHotQueue();
     this.lastWorkerDebugEnabled = null;
     this.lastWorkerDebugDataEnabled = null;
     Object.assign(this.stateReadWrite.timeline, createInitialSimulationTimelineState());

@@ -536,6 +536,25 @@ describe("simulation timeline actions", () => {
         },
         status: createRuntimeStatus(0),
       })),
+      getTickSnapshotRange: vi.fn(async (fromTickNumber, toTickNumber, generation) => ({
+        type: "tick-snapshot-range-result" as const,
+        requestId: fromTickNumber,
+        result: {
+          generation,
+          fromTickNumber,
+          toTickNumber,
+          status: {
+            status: "not-found" as const,
+            reason: "cleared" as const,
+            requestedTickNumber: fromTickNumber,
+            retainedFromTick: 0,
+            latestTickNumber: 0,
+            bufferSize: 1,
+          },
+          snapshots: [],
+        },
+        status: createRuntimeStatus(0),
+      })),
     });
     const timelineBridge = createTimelineBridge();
     const action = new SimulationActionImpl({
@@ -551,7 +570,7 @@ describe("simulation timeline actions", () => {
     state.timeline.availableToTickNumber = 1099;
     state.timeline.windowStartTickNumber = 500;
     await action.advancePlaybackByDeltaMs(305_000);
-    await flushMicrotasks(2);
+    await flushMicrotasks(20);
 
     expect(state.timeline.cursorTickNumber).toBe(0);
     expect(timelineBridge.loadTimeline).toHaveBeenCalledTimes(2);
@@ -614,7 +633,7 @@ describe("simulation timeline actions", () => {
   });
 
   it("applies the in-flight presentation frame and coalesces pending seeks to the latest tick", async () => {
-    const firstFrame = createDeferred<Awaited<ReturnType<TimelineWorkerBridge["getTimelinePresentationFrame"]>>>();
+    const firstFrameRange = createDeferred<Awaited<ReturnType<TimelineWorkerBridge["getTimelinePresentationFrameRange"]>>>();
     const state = createSimulationStateReadWrite();
     state.hasStarted = true;
     state.runningState = "pause";
@@ -622,19 +641,7 @@ describe("simulation timeline actions", () => {
 
     const bridge = createSimulationBridge();
     const timelineBridge = createTimelineBridge({
-      getTimelinePresentationFrame: vi.fn((timelineTickNumber: number) => {
-        if (timelineTickNumber === 1) {
-          return firstFrame.promise;
-        }
-
-        return Promise.resolve({
-          type: "timeline-presentation-frame-result" as const,
-          requestId: timelineTickNumber,
-          timelineTickNumber,
-          snapshot: createRuntimeExport(timelineTickNumber * 10).snapshot,
-          status: createTimelineStatus(0, timelineTickNumber),
-        });
-      }),
+      getTimelinePresentationFrameRange: vi.fn(() => firstFrameRange.promise),
     });
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
@@ -651,20 +658,23 @@ describe("simulation timeline actions", () => {
     const thirdSeek = action.seekTimelineToTick(3);
     await expect(secondSeek).resolves.toBe(false);
 
-    firstFrame.resolve({
-      type: "timeline-presentation-frame-result",
+    firstFrameRange.resolve({
+      type: "timeline-presentation-frame-range-result",
       requestId: 1,
-      timelineTickNumber: 1,
-      snapshot: createRuntimeExport(10).snapshot,
+      fromTimelineTickNumber: 0,
+      toTimelineTickNumber: 33,
+      frames: [1, 3].map((timelineTickNumber) => ({
+        timelineTickNumber,
+        snapshot: createRuntimeExport(timelineTickNumber * 10).snapshot,
+      })),
       status: createTimelineStatus(0, 3),
     });
 
     await expect(firstSeek).resolves.toBe(true);
     await expect(thirdSeek).resolves.toBe(true);
 
-    expect(timelineBridge.getTimelinePresentationFrame).toHaveBeenCalledTimes(2);
-    expect(timelineBridge.getTimelinePresentationFrame).toHaveBeenNthCalledWith(1, 1);
-    expect(timelineBridge.getTimelinePresentationFrame).toHaveBeenNthCalledWith(2, 3);
+    expect(timelineBridge.getTimelinePresentationFrameRange).toHaveBeenCalledTimes(1);
+    expect(timelineBridge.getTimelinePresentationFrameRange).toHaveBeenCalledWith(0, 33);
     expect(bridge.importRuntimeState).not.toHaveBeenCalled();
     expect(state.currentPlaybackTickNumber).toBe(30);
     expect(state.timeline.cursorTickNumber).toBe(3);
@@ -705,12 +715,16 @@ describe("simulation timeline actions", () => {
       })),
     });
     const timelineBridge = createTimelineBridge({
-      getTimelinePresentationFrame: vi.fn(async (timelineTickNumber: number) => ({
-        type: "timeline-presentation-frame-result" as const,
-        requestId: timelineTickNumber,
-        timelineTickNumber,
-        snapshot: runtimeExportBefore.snapshot,
-        status: createTimelineStatus(0, timelineTickNumber),
+      getTimelinePresentationFrameRange: vi.fn(async (fromTimelineTickNumber, toTimelineTickNumber) => ({
+        type: "timeline-presentation-frame-range-result" as const,
+        requestId: fromTimelineTickNumber,
+        fromTimelineTickNumber,
+        toTimelineTickNumber,
+        frames: [{
+          timelineTickNumber: 0,
+          snapshot: runtimeExportBefore.snapshot,
+        }],
+        status: createTimelineStatus(0, toTimelineTickNumber),
       })),
       getTimelineCheckpoint: vi.fn(async (timelineTickNumber: number) => ({
         type: "timeline-checkpoint-result" as const,
@@ -813,6 +827,33 @@ function createSimulationBridge(
       },
       status: createRuntimeStatus(tickNumber),
     })),
+    getTickSnapshotRange: vi.fn(async (fromTickNumber, toTickNumber, generation) => ({
+      type: "tick-snapshot-range-result" as const,
+      requestId: fromTickNumber,
+      result: {
+        generation,
+        fromTickNumber,
+        toTickNumber,
+        status: {
+          status: "ready" as const,
+          retainedFromTick: fromTickNumber,
+          latestTickNumber: toTickNumber,
+          bufferSize: toTickNumber - fromTickNumber + 1,
+        },
+        snapshots: Array.from(
+          { length: toTickNumber - fromTickNumber + 1 },
+          (_, index) => createRuntimeExport(fromTickNumber + index).snapshot,
+        ),
+      },
+      status: createRuntimeStatus(toTickNumber),
+    })),
+    acknowledgePresentedTick: vi.fn(async (tickNumber, generation) => ({
+      type: "presented-tick-acknowledged" as const,
+      requestId: tickNumber,
+      generation,
+      acknowledgedTickNumber: tickNumber,
+      status: createRuntimeStatus(tickNumber),
+    })),
     setSimulationSpeed: vi.fn(async () => ({
       type: "simulation-speed-set" as const,
       requestId: 1,
@@ -901,6 +942,23 @@ function createTimelineBridge(
       timelineTickNumber,
       snapshot: createRuntimeExport(timelineTickNumber * 10).snapshot,
       status: createTimelineStatus(0, timelineTickNumber),
+    })),
+    getTimelinePresentationFrameRange: vi.fn(async (fromTimelineTickNumber, toTimelineTickNumber) => ({
+      type: "timeline-presentation-frame-range-result" as const,
+      requestId: fromTimelineTickNumber,
+      fromTimelineTickNumber,
+      toTimelineTickNumber,
+      frames: Array.from(
+        { length: toTimelineTickNumber - fromTimelineTickNumber + 1 },
+        (_, index) => {
+          const timelineTickNumber = fromTimelineTickNumber + index;
+          return {
+            timelineTickNumber,
+            snapshot: createRuntimeExport(timelineTickNumber * 10).snapshot,
+          };
+        },
+      ),
+      status: createTimelineStatus(0, toTimelineTickNumber),
     })),
     getTimelineCheckpoint: vi.fn(async (timelineTickNumber: number) => ({
       type: "timeline-checkpoint-result" as const,

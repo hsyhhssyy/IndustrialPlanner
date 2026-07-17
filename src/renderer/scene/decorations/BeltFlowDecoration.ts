@@ -146,6 +146,7 @@ export function createBeltFlowDecoration(): DecorationLayer {
       const topologyInvalidated = versions === undefined
         || lastTopologyDocumentVersion !== versions.document
         || lastTopologyPresentationVersion !== versions.presentation
+      ctx.profiler?.count("beltFlow.topologyCacheMiss", topologyInvalidated ? 1 : 0)
       if (topologyInvalidated) {
         const tEntries = performance.now()
         cachedEntries = resolveBeltVisualPathEntries(ctx)
@@ -161,6 +162,8 @@ export function createBeltFlowDecoration(): DecorationLayer {
         ctx.profiler?.count("beltFlow.resolvePathEntries-ms", 0)
         ctx.profiler?.count("beltFlow.portExtensions-ms", 0)
       }
+      ctx.profiler?.count("beltFlow.pathEntryCount", cachedEntries.length)
+      ctx.profiler?.count("beltFlow.portExtensionCount", cachedPortExtensionEntries.length)
       if (cachedEntries.length === 0) {
         hide()
         return
@@ -197,6 +200,7 @@ export function createBeltFlowDecoration(): DecorationLayer {
       const maskInvalidated = versions === undefined
         || lastMaskDocumentVersion !== versions.document
         || lastMaskViewportVersion !== versions.viewport
+      ctx.profiler?.count("beltFlow.arrowMaskCacheMiss", maskInvalidated ? 1 : 0)
       if (maskInvalidated) {
         const tAMask = performance.now()
         drawArrowMask(ctx, arrowMask, cachedPortExtensionEntries)
@@ -391,6 +395,7 @@ export function resolveBeltFlowMarks(
   const tChain = performance.now()
   const chains = resolveBeltFlowChains(entries)
   ctx.profiler?.count("beltFlow.buildChains-ms", Math.round((performance.now() - tChain) * 100) / 100)
+  ctx.profiler?.count("beltFlow.chainCount", chains.length)
 
   if (BELT_HIGHLIGHT_ENABLED) {
     for (const chain of chains) {

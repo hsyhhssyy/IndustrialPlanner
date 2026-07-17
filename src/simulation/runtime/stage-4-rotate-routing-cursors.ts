@@ -4,6 +4,18 @@ import type {
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 
+interface RoutingTopologyCache {
+  readonly connectedPortIds: ReadonlySet<string>;
+  readonly portGroups: readonly RoutingPortGroup[];
+}
+
+interface RoutingPortGroup {
+  readonly key: string;
+  readonly ports: readonly CompiledSimulationPort[];
+}
+
+const routingTopologyCache = new WeakMap<CompiledSimulationTopology, RoutingTopologyCache>();
+
 /**
  * 对应《仿真运行原理》§5.4 Tick 阶段 4 与 §9 游标轮转。
  * shadowPull 与 shadowPush 同时 accept 的边——即本 tick 准备就绪但未发生实际传输的边——跳过游标；
@@ -24,9 +36,11 @@ export function rotateRoutingCursors(
   // 预建 port→moved 缓存：一次扫描 edgeOrder，避免 portHasMovedEdge 逐 port 重复全量扫描。
   const movedByPort = buildMovedEdgeByPort(topology, state);
   // 预建已连接端口集合：有 transferEdge 的 port 视为"已连接"。
-  const connectedPortIds = buildConnectedPortIds(topology);
+  // AI-CORRECTION 2026-07-17: 连接集合和路由端口组只依赖不可变 topology，现按 topology 缓存并跨 tick 复用。
+  const topologyCache = getRoutingTopologyCache(topology);
+  const connectedPortIds = topologyCache.connectedPortIds;
 
-  for (const portGroup of collectRoutingPortGroups(topology)) {
+  for (const portGroup of topologyCache.portGroups) {
     const currentCursor = state.persistent.routingCursors[portGroup.key] ?? 0;
     const normalizedCursor = ((currentCursor % portGroup.ports.length) + portGroup.ports.length) % portGroup.ports.length;
     const rotatedPorts = [
@@ -61,6 +75,22 @@ export function rotateRoutingCursors(
 
     state.persistent.routingCursors[portGroup.key] = (normalizedCursor + skipped) % portGroup.ports.length;
   }
+}
+
+function getRoutingTopologyCache(
+  topology: CompiledSimulationTopology,
+): RoutingTopologyCache {
+  const cached = routingTopologyCache.get(topology);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const created: RoutingTopologyCache = {
+    connectedPortIds: buildConnectedPortIds(topology),
+    portGroups: collectRoutingPortGroups(topology),
+  };
+  routingTopologyCache.set(topology, created);
+  return created;
 }
 
 /**
@@ -112,10 +142,7 @@ function buildMovedEdgeByPort(
   return moved;
 }
 
-function collectRoutingPortGroups(topology: CompiledSimulationTopology): Array<{
-  readonly key: string;
-  readonly ports: readonly CompiledSimulationPort[];
-}> {
+function collectRoutingPortGroups(topology: CompiledSimulationTopology): readonly RoutingPortGroup[] {
   const portsByKey = new Map<string, CompiledSimulationPort[]>();
   for (const portId of topology.ordering.portOrder) {
     const port = topology.ports[portId];

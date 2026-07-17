@@ -4,12 +4,14 @@ import { advanceDevices } from "@/simulation/runtime/stage-1-advance-devices";
 import {
   createRecipeStatsState,
   createSimulationMutableRuntimeState,
+  cloneSimulationMutableRuntimeState,
   rollRecipeStatsWindow,
   type RuntimeDeviceRecipeState,
 } from "@/simulation/runtime/runtime-state";
 import {
   adjustReservedAmounts,
   getReservedAmount,
+  resolveDeviceRecipePlans,
 } from "@/simulation/runtime/runtime-slot-access";
 import {
   isDynamicTickRateCompatibleWithTransferUnits,
@@ -222,6 +224,71 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       throw new Error("Expected a debug-disabled tick snapshot response.");
     }
     expect(debugDisabledTick.result.currentTick).not.toHaveProperty("debugData");
+  });
+
+  it("keeps cached runtime checkpoints independent while sharing immutable recipe plans", () => {
+    const topology = createProductionOverflowTopology(10);
+    const state = createSimulationMutableRuntimeState(topology);
+    state.persistent.slots["slot:out"] = { itemType: "item_test", count: 3 };
+    const recipe = createRunningRecipe(2);
+    recipe.reservations = [{
+      slotId: "slot:out",
+      itemType: "item_test",
+      amount: 1,
+      ignoreStock: false,
+    }];
+    recipe.inputItems = [{ itemType: "item_input", amount: 1 }];
+    state.persistent.devices["device:maker"]!.channelRecipes.main = recipe;
+    state.transient.nodes["node:temporary"] = {
+      nodeId: "node:temporary",
+      result: "solved-run",
+      resolveState: "visited",
+      excludedItemTypes: [],
+      acceptedInputEdgeIds: [],
+      acceptedOutputEdgeIds: [],
+    };
+
+    const checkpoint = cloneSimulationMutableRuntimeState(state, false);
+    state.persistent.slots["slot:out"]!.count = 9;
+    recipe.progressTicks = 4;
+    recipe.reservations[0]!.amount = 2;
+    recipe.inputItems[0]!.amount = 2;
+
+    const checkpointRecipe = checkpoint.persistent.devices["device:maker"]!
+      .channelRecipes.main;
+
+    expect(checkpoint.persistent.slots["slot:out"]?.count).toBe(3);
+    expect(checkpointRecipe?.plan).toBe(recipe.plan);
+    expect(checkpointRecipe?.progressTicks).toBe(2);
+    expect(checkpointRecipe?.reservations).not.toBe(recipe.reservations);
+    expect(checkpointRecipe?.reservations[0]?.amount).toBe(1);
+    expect(checkpointRecipe?.inputItems).not.toBe(recipe.inputItems);
+    expect(checkpointRecipe?.inputItems[0]?.amount).toBe(1);
+    expect(checkpoint.transient.nodes).toEqual({});
+    expect(checkpoint.transient.edges).toEqual({});
+  });
+
+  it("reuses recipe plans within one topology without crossing topology boundaries", () => {
+    const topology = createProductionOverflowTopology(10);
+    const state = createSimulationMutableRuntimeState(topology);
+    const device = topology.devices["device:maker"]!;
+    const channel = device.recipeChannels[0]!;
+
+    const firstPlan = resolveDeviceRecipePlans({ topology, state, device, channel })[0];
+    const secondPlan = resolveDeviceRecipePlans({ topology, state, device, channel })[0];
+
+    const otherTopology = createProductionOverflowTopology(10);
+    const otherDevice = otherTopology.devices["device:maker"]!;
+    const otherPlan = resolveDeviceRecipePlans({
+      topology: otherTopology,
+      state: createSimulationMutableRuntimeState(otherTopology),
+      device: otherDevice,
+      channel: otherDevice.recipeChannels[0]!,
+    })[0];
+
+    expect(firstPlan).toBeDefined();
+    expect(secondPlan).toBe(firstPlan);
+    expect(otherPlan).not.toBe(firstPlan);
   });
 
   it("normalizes recipe stats by covered simulation ticks when dynamic runtime steps are coarser", () => {

@@ -116,38 +116,84 @@ export function createPipeFlowDecoration(): DecorationLayer {
     container,
 
     sync(ctx: DecorationSyncContext): void {
-      if (ctx.renderHost.workspace.app?.state?.settings?.gameUseBlueprintStyleDeviceImages === true) {
-        hide()
-        return
-      }
+      const profiler = ctx.profiler
+      let activeScanMs = 0
+      let pathEntriesMs = 0
+      let buildChainsMs = 0
+      let generateMarksMs = 0
+      let drawMaskMs = 0
+      let drawMarksMs = 0
+      let activeEntityCount = 0
+      let pathEntryCount = 0
+      let chainCount = 0
+      let markCount = 0
+      let maskRectCount = 0
 
-      const activePipeEntityIds = resolveActivePipeEntityIds(ctx)
-      if (activePipeEntityIds.size === 0) {
-        hide()
-        return
-      }
+      try {
+        if (ctx.renderHost.workspace.app?.state?.settings?.gameUseBlueprintStyleDeviceImages === true) {
+          hide()
+          return
+        }
 
-      const entries = resolvePipeVisualPathEntries(ctx, activePipeEntityIds)
-      if (entries.length === 0) {
-        hide()
-        return
-      }
+        let startedAtMs = profiler === undefined ? 0 : performance.now()
+        const activePipeEntityIds = resolveActivePipeEntityIds(ctx)
+        activeScanMs = profiler === undefined ? 0 : performance.now() - startedAtMs
+        activeEntityCount = activePipeEntityIds.size
+        if (activePipeEntityIds.size === 0) {
+          hide()
+          return
+        }
 
-      const marks = resolvePipeFlowMarks(ctx, entries)
-      if (marks.length === 0) {
-        hide()
-        return
-      }
+        startedAtMs = profiler === undefined ? 0 : performance.now()
+        const entries = resolvePipeVisualPathEntries(ctx, activePipeEntityIds)
+        pathEntriesMs = profiler === undefined ? 0 : performance.now() - startedAtMs
+        pathEntryCount = entries.length
+        if (entries.length === 0) {
+          hide()
+          return
+        }
 
-      container.visible = true
-      arrowGraphics.visible = true
-      arrowMask.visible = true
-      drawPipeFlowMask(ctx, arrowMask, activePipeEntityIds)
-      drawPipeFlowMarks({
-        graphics: arrowGraphics,
-        marks,
-        gridCellSize: ctx.viewportState.gridCellPixelSize,
-      })
+        startedAtMs = profiler === undefined ? 0 : performance.now()
+        const chains = resolvePipeFlowChains(entries)
+        buildChainsMs = profiler === undefined ? 0 : performance.now() - startedAtMs
+        chainCount = chains.length
+
+        startedAtMs = profiler === undefined ? 0 : performance.now()
+        const marks = resolvePipeFlowMarks(ctx, chains)
+        generateMarksMs = profiler === undefined ? 0 : performance.now() - startedAtMs
+        markCount = marks.length
+        if (marks.length === 0) {
+          hide()
+          return
+        }
+
+        container.visible = true
+        arrowGraphics.visible = true
+        arrowMask.visible = true
+        startedAtMs = profiler === undefined ? 0 : performance.now()
+        maskRectCount = drawPipeFlowMask(ctx, arrowMask, activePipeEntityIds)
+        drawMaskMs = profiler === undefined ? 0 : performance.now() - startedAtMs
+
+        startedAtMs = profiler === undefined ? 0 : performance.now()
+        drawPipeFlowMarks({
+          graphics: arrowGraphics,
+          marks,
+          gridCellSize: ctx.viewportState.gridCellPixelSize,
+        })
+        drawMarksMs = profiler === undefined ? 0 : performance.now() - startedAtMs
+      } finally {
+        profiler?.count("pipeFlow.activeScan-ms", activeScanMs)
+        profiler?.count("pipeFlow.pathEntries-ms", pathEntriesMs)
+        profiler?.count("pipeFlow.buildChains-ms", buildChainsMs)
+        profiler?.count("pipeFlow.generateMarks-ms", generateMarksMs)
+        profiler?.count("pipeFlow.drawMask-ms", drawMaskMs)
+        profiler?.count("pipeFlow.drawMarks-ms", drawMarksMs)
+        profiler?.count("pipeFlow.activeEntityCount", activeEntityCount)
+        profiler?.count("pipeFlow.pathEntryCount", pathEntryCount)
+        profiler?.count("pipeFlow.chainCount", chainCount)
+        profiler?.count("pipeFlow.markCount", markCount)
+        profiler?.count("pipeFlow.maskRectCount", maskRectCount)
+      }
     },
 
     destroy(): void {
@@ -191,14 +237,15 @@ function drawPipeFlowMask(
   ctx: DecorationSyncContext,
   graphics: Graphics,
   activePipeEntityIds: ReadonlySet<string>,
-): void {
+): number {
   graphics.clear()
 
   const editor = ctx.renderHost.workspace.editor
   if (editor === null) {
-    return
+    return 0
   }
 
+  let rectCount = 0
   const gridCellSize = ctx.viewportState.gridCellPixelSize
   const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
   const definitionMap = createEntityDefinitionMap(ctx)
@@ -235,16 +282,19 @@ function drawPipeFlowMask(
     graphics
       .rect(cellRect.left, cellRect.top, cellRect.width, cellRect.height)
       .fill(0xffffff)
+    rectCount += 1
   }
+
+  return rectCount
 }
 
 function resolvePipeFlowMarks(
   ctx: DecorationSyncContext,
-  entries: readonly PipeVisualPathEntry[],
+  chains: readonly PipeFlowChain[],
 ): PipeFlowMark[] {
   const marks: PipeFlowMark[] = []
 
-  for (const chain of resolvePipeFlowChains(entries)) {
+  for (const chain of chains) {
     const overflowCells = PIPE_CHEVRON_PAIR_CENTER_SPACING_CELLS / 2
       + PIPE_CHEVRON_LENGTH_CELLS / 2
     const markDistances = resolveRepeatingLocalDistances({

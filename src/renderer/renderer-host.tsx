@@ -4,6 +4,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { Application } from "pixi.js";
 import { createBlueprintPreviewManager } from "./blueprint-preview/blueprint-preview-manager";
 import { resolveRenderResolutionFromApp } from "./render-resolution";
+import { resolveMainRendererAntialias } from "./pixi-render-diagnostics";
 import {
   createRenderSceneOrchestrator,
   type RenderSceneOrchestrator,
@@ -98,12 +99,15 @@ export async function createRenderHost(
   const app = new Application();
   const { clientRect } = editor.state.viewport;
   const renderResolution = resolveRenderResolutionFromApp(workspace.app);
+  const renderAntialias = resolveMainRendererAntialias(
+    workspace.app?.state.settings?.debugMode === true,
+  );
 
   await app.init({
     width: resolveViewportAxisSize(clientRect.width, DEFAULT_VIEWPORT_WIDTH),
     height: resolveViewportAxisSize(clientRect.height, DEFAULT_VIEWPORT_HEIGHT),
     backgroundAlpha: 0,
-    antialias: true,
+    antialias: renderAntialias,
     autoDensity: true,
     resolution: renderResolution,
     preference: "webgl",

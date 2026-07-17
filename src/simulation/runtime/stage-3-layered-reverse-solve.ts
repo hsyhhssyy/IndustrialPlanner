@@ -313,7 +313,12 @@ function solveOutputNode(
       });
 
       const tRefresh = perf !== undefined ? performance.now() : 0;
-      refreshBlockedInputNodesAfterMove(topology, state, nextAnchors);
+      refreshBlockedInputNodesAfterMove(
+        topology,
+        state,
+        nextAnchors,
+        edgeState.sourceSlotId,
+      );
       if (perf !== undefined) {
         perf.refreshBlockedMs += performance.now() - tRefresh;
         perf.refreshBlockedCalls += 1;
@@ -591,16 +596,23 @@ function refreshBlockedInputNodesAfterMove(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   nextAnchors: Map<string, CompiledSimulationNode>,
+  sourceSlotId: string,
 ): void {
   const blockedIds = state.transient.blockedInputNodeIds;
   if (blockedIds.size === 0) return;
 
+  const sourceStorageSlotId = resolveStorageSlotId(state, sourceSlotId);
   const reactivated: string[] = [];
   for (const nodeId of blockedIds) {
     const node = topology.nodes[nodeId];
     const nodeState = node === undefined ? undefined : state.transient.nodes[node.id];
     if (node === undefined || node.viewRole !== "input-view" || nodeState?.resolveState !== "blocked-resolved") {
       reactivated.push(nodeId);
+      continue;
+    }
+    // 同一次搬运只会减少来源库存、增加目标库存；因此只有容量依赖来源存储的
+    // blocked input-view 可能从“无容量”变为“可接收”。
+    if (!inputNodeCapacityDependsOnStorageSlot(state, node, sourceStorageSlotId)) {
       continue;
     }
     if (inputNodeCanAcceptAtCurrentTick(topology, state, node)) {
@@ -615,6 +627,29 @@ function refreshBlockedInputNodesAfterMove(
   for (const nodeId of reactivated) {
     blockedIds.delete(nodeId);
   }
+}
+
+function inputNodeCapacityDependsOnStorageSlot(
+  state: SimulationMutableRuntimeState,
+  node: CompiledSimulationNode,
+  storageSlotId: string,
+): boolean {
+  for (const slotId of node.slotIds) {
+    const sharedSlotIds = state.persistent.sharedCapacitySlotIdsBySlotId[slotId];
+    if (sharedSlotIds === undefined) {
+      if (resolveStorageSlotId(state, slotId) === storageSlotId) {
+        return true;
+      }
+      continue;
+    }
+
+    for (const sharedSlotId of sharedSlotIds) {
+      if (resolveStorageSlotId(state, sharedSlotId) === storageSlotId) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function isNodeVisited(

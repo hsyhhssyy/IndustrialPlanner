@@ -432,6 +432,45 @@ describe("BeltFlowDecoration", () => {
     decoration.destroy()
   })
 
+  it("records cached topology work and flow sizes", () => {
+    const decoration = createBeltFlowDecoration()
+    const firstSamples = new Map<string, number>()
+    const versions = {
+      document: 1,
+      viewport: 1,
+      collections: 1,
+      presentation: 1,
+      simulation: 1,
+    }
+
+    decoration.sync(createFlowContext({
+      nowMs: 0,
+      versions,
+      recordSample: (name, value) => firstSamples.set(name, value),
+    }) as never)
+
+    expect(firstSamples.get("beltFlow.topologyCacheMiss")).toBe(1)
+    expect(firstSamples.get("beltFlow.arrowMaskCacheMiss")).toBe(1)
+    expect(firstSamples.get("beltFlow.pathEntryCount")).toBe(2)
+    expect(firstSamples.get("beltFlow.portExtensionCount")).toBe(0)
+    expect(firstSamples.get("beltFlow.chainCount")).toBe(1)
+
+    const cachedSamples = new Map<string, number>()
+    decoration.sync(createFlowContext({
+      nowMs: 16,
+      versions,
+      recordSample: (name, value) => cachedSamples.set(name, value),
+    }) as never)
+
+    expect(cachedSamples.get("beltFlow.topologyCacheMiss")).toBe(0)
+    expect(cachedSamples.get("beltFlow.arrowMaskCacheMiss")).toBe(0)
+    expect(cachedSamples.get("beltFlow.resolvePathEntries-ms")).toBe(0)
+    expect(cachedSamples.get("beltFlow.portExtensions-ms")).toBe(0)
+    expect(cachedSamples.get("beltFlow.drawArrowMask-ms")).toBe(0)
+
+    decoration.destroy()
+  })
+
   it("keeps repeated local distances inside the path span", () => {
     expect(resolveRepeatingLocalDistances({
       phaseOffsetCells: 1,
@@ -510,6 +549,7 @@ function createFlowContext(options: {
     config: Record<string, never>;
     tags: string[];
   }>;
+  recordSample?: (name: string, value: number) => void;
 }) {
   const registry = createRegistryContract()
 
@@ -579,6 +619,12 @@ function createFlowContext(options: {
     } as never,
     nowMs: options.nowMs,
     versions: options.versions,
+    profiler: options.recordSample === undefined
+      ? undefined
+      : {
+          count: options.recordSample,
+          measure: <T>(_stage: string, callback: () => T): T => callback(),
+        },
   }
 }
 

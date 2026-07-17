@@ -382,8 +382,13 @@ export function createMigratedSimulationMutableRuntimeState(
   return state;
 }
 
+/**
+ * 克隆可变运行时状态。缓存未来 tick 时可省略仅供当前 tick 展示/求解的 transient，
+ * 后续推进会由 buildSolveGraph 重建这些数据。
+ */
 export function cloneSimulationMutableRuntimeState(
   state: SimulationMutableRuntimeState,
+  includeTransientState = true,
 ): SimulationMutableRuntimeState {
   return {
     tickNumber: state.tickNumber,
@@ -425,7 +430,9 @@ export function cloneSimulationMutableRuntimeState(
       waterPurifierManualRemainders: { ...(state.persistent.waterPurifierManualRemainders ?? {}) },
       recipeStats: cloneRecipeStatsState(state.persistent.recipeStats),
     },
-    transient: cloneTransientState(state.transient),
+    transient: includeTransientState
+      ? cloneTransientState(state.transient)
+      : createEmptyTransientState(),
   };
 }
 
@@ -783,7 +790,8 @@ function cloneRuntimeDeviceState(device: RuntimeDeviceState): RuntimeDeviceState
         chId,
         recipe === null ? null : {
           ...recipe,
-          plan: cloneRecipePlan(recipe.plan),
+          // plan 是 topology 级不可变静态对象；检查点共享引用，仅克隆会随 tick 变化的运行字段。
+          plan: recipe.plan,
           reservations: recipe.reservations.map((reservation) => ({ ...reservation })),
           inputItems: recipe.inputItems.map((item) => ({ ...item })),
         },
@@ -792,21 +800,30 @@ function cloneRuntimeDeviceState(device: RuntimeDeviceState): RuntimeDeviceState
   };
 }
 
-function cloneRecipePlan(plan: CompiledSimulationRecipePlan): CompiledSimulationRecipePlan {
-  return {
-    recipeId: plan.recipeId,
-    recipeType: plan.recipeType,
-    durationTicks: plan.durationTicks,
-    inputs: plan.inputs.map((input) => ({ ...input })),
-    outputs: plan.outputs.map((output) => ({ ...output })),
-    ingredientNodeIds: [...plan.ingredientNodeIds],
-    productNodeIds: [...plan.productNodeIds],
-    requiredGasDiffusion: plan.requiredGasDiffusion,
-    gasDiffusionOutput: plan.gasDiffusionOutput === null
-      ? null
-      : { ...plan.gasDiffusionOutput },
-  };
-}
+// AI-REMOVED 2026-07-17:
+// Reason: 配方计划是 topology 级静态数据；为每个 tick 检查点深拷贝会制造大量重复对象并增加 GC 压力。
+// Trigger: 用户要求减少 180 tick 缓存中重复的配方 plan，提升仿真速度并降低快照内存。
+// Evidence: 678 实体场景中 plan 深拷贝占单份 runtime devices 序列化体积 226,862 B（47.7%），180 份约 39 MiB。
+// Replacement: cloneRuntimeDeviceState 共享不可变 recipe.plan；runtime-slot-access 按 topology/device/channel/recipe 缓存唯一 plan。
+// Risk: Low - CompiledSimulationRecipePlan 全部字段为 readonly，且仿真调用点经检索均只读取 plan。
+// Human Review: Required
+//
+// Original code:
+// function cloneRecipePlan(plan: CompiledSimulationRecipePlan): CompiledSimulationRecipePlan {
+//   return {
+//     recipeId: plan.recipeId,
+//     recipeType: plan.recipeType,
+//     durationTicks: plan.durationTicks,
+//     inputs: plan.inputs.map((input) => ({ ...input })),
+//     outputs: plan.outputs.map((output) => ({ ...output })),
+//     ingredientNodeIds: [...plan.ingredientNodeIds],
+//     productNodeIds: [...plan.productNodeIds],
+//     requiredGasDiffusion: plan.requiredGasDiffusion,
+//     gasDiffusionOutput: plan.gasDiffusionOutput === null
+//       ? null
+//       : { ...plan.gasDiffusionOutput },
+//   };
+// }
 
 function cloneTransientState(transient: SimulationTickTransientState): SimulationTickTransientState {
   return {

@@ -33,6 +33,15 @@ import {
 
 const WAREHOUSE_SINK_TAG = "WarehouseSink";
 
+/**
+ * 配方计划只依赖已编译拓扑中的设备、channel 与配方定义；运行时库存只决定该计划当前能否启动。
+ * 用 WeakMap 将计划生命周期绑定到 topology，避免每次启动配方以及每个历史检查点重复创建同一静态对象。
+ */
+const recipePlanCacheByTopology = new WeakMap<
+  CompiledSimulationTopology,
+  Map<string, Map<string, Map<string, CompiledSimulationRecipePlan>>>
+>();
+
 export interface IngredientSlotContent {
   readonly slotId: string;
   readonly itemType: string;
@@ -694,8 +703,9 @@ function resolveRecipes(options: {
       return [];
     }
 
-    return [{
-      recipeId: `${options.device.definitionId}:${timing.recipeIdSuffix}`,
+    const recipeId = `${options.device.definitionId}:${timing.recipeIdSuffix}`;
+    return [getOrCreateRecipePlan(options, recipeId, () => ({
+      recipeId,
       recipeType: "reserved-item",
       durationTicks: timing.durationTicks,
       inputs: [{ itemId: "any", amount: 1 }],
@@ -704,7 +714,7 @@ function resolveRecipes(options: {
       productNodeIds: options.channel.productNodeIds,
       requiredGasDiffusion: null,
       gasDiffusionOutput: null,
-    }];
+    }))];
   }
 
   if (options.device.definitionId === WATER_PURIFIER_NODE_ENTITY_ID) {
@@ -732,7 +742,7 @@ function resolveRecipes(options: {
       return [];
     }
 
-    return [{
+    return [getOrCreateRecipePlan(options, recipe.id, () => ({
       recipeId: recipe.id,
       recipeType: recipe.recipeType,
       durationTicks: recipe.durationTicks,
@@ -742,7 +752,7 @@ function resolveRecipes(options: {
       productNodeIds: options.channel.productNodeIds,
       requiredGasDiffusion: recipe.requiredGasDiffusion,
       gasDiffusionOutput: recipe.gasDiffusionOutput,
-    }];
+    }))];
   }
 
   // 手选配方设备：不自动根据原料匹配配方，必须由用户手动指定配方后设备才运行
@@ -762,7 +772,7 @@ function resolveRecipes(options: {
     })) {
       return [];
     }
-    return [{
+    return [getOrCreateRecipePlan(options, selectedRecipe.id, () => ({
       recipeId: selectedRecipe.id,
       recipeType: selectedRecipe.recipeType,
       durationTicks: selectedRecipe.durationTicks,
@@ -772,7 +782,7 @@ function resolveRecipes(options: {
       productNodeIds: options.channel.productNodeIds,
       requiredGasDiffusion: selectedRecipe.requiredGasDiffusion,
       gasDiffusionOutput: selectedRecipe.gasDiffusionOutput,
-    }];
+    }))];
   }
 
 
@@ -789,8 +799,9 @@ function resolveRecipes(options: {
       return [];
     }
 
-    return [{
-      recipeId: `${options.device.definitionId}:${timing.recipeIdSuffix}`,
+    const recipeId = `${options.device.definitionId}:${timing.recipeIdSuffix}`;
+    return [getOrCreateRecipePlan(options, recipeId, () => ({
+      recipeId,
       recipeType: "reserved-item",
       durationTicks: timing.durationTicks,
       inputs: [{ itemId: "any", amount: 1 }],
@@ -799,7 +810,7 @@ function resolveRecipes(options: {
       productNodeIds: options.channel.productNodeIds,
       requiredGasDiffusion: null,
       gasDiffusionOutput: null,
-    }];
+    }))];
   }
 
   return Object.values(options.topology.recipeCatalog)
@@ -812,17 +823,54 @@ function resolveRecipes(options: {
       requiredGasDiffusion: recipe.requiredGasDiffusion,
     }))
     .sort((left, right) => left.id.localeCompare(right.id))
-    .map((recipe) => ({
-      recipeId: recipe.id,
-      recipeType: recipe.recipeType,
-      durationTicks: recipe.durationTicks,
-      inputs: recipe.inputs,
-      outputs: recipe.outputs,
-      ingredientNodeIds: options.channel.ingredientNodeIds,
-      productNodeIds: options.channel.productNodeIds,
-      requiredGasDiffusion: recipe.requiredGasDiffusion,
-      gasDiffusionOutput: recipe.gasDiffusionOutput,
-    }));
+    .map((recipe) => getOrCreateRecipePlan(options, recipe.id, () => ({
+        recipeId: recipe.id,
+        recipeType: recipe.recipeType,
+        durationTicks: recipe.durationTicks,
+        inputs: recipe.inputs,
+        outputs: recipe.outputs,
+        ingredientNodeIds: options.channel.ingredientNodeIds,
+        productNodeIds: options.channel.productNodeIds,
+        requiredGasDiffusion: recipe.requiredGasDiffusion,
+        gasDiffusionOutput: recipe.gasDiffusionOutput,
+      })));
+}
+
+function getOrCreateRecipePlan(
+  options: {
+    topology: CompiledSimulationTopology;
+    device: CompiledSimulationDevice;
+    channel: CompiledSimulationRecipeChannel;
+  },
+  recipeId: string,
+  createPlan: () => CompiledSimulationRecipePlan,
+): CompiledSimulationRecipePlan {
+  let devicePlans = recipePlanCacheByTopology.get(options.topology);
+  if (devicePlans === undefined) {
+    devicePlans = new Map();
+    recipePlanCacheByTopology.set(options.topology, devicePlans);
+  }
+
+  let channelPlans = devicePlans.get(options.device.id);
+  if (channelPlans === undefined) {
+    channelPlans = new Map();
+    devicePlans.set(options.device.id, channelPlans);
+  }
+
+  let recipePlans = channelPlans.get(options.channel.id);
+  if (recipePlans === undefined) {
+    recipePlans = new Map();
+    channelPlans.set(options.channel.id, recipePlans);
+  }
+
+  const cachedPlan = recipePlans.get(recipeId);
+  if (cachedPlan !== undefined) {
+    return cachedPlan;
+  }
+
+  const plan = createPlan();
+  recipePlans.set(recipeId, plan);
+  return plan;
 }
 
 function resolveWaterPurifierAllowedRecipeId(channelId: string): string | null {

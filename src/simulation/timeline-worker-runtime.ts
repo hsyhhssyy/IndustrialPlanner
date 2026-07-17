@@ -70,6 +70,36 @@ export class TimelineWorkerRuntime {
           status: this.getStatus(),
         };
       }
+      case "get-timeline-presentation-frame-range": {
+        this.deferFillForInteraction();
+        const fromTimelineTickNumber = Math.max(
+          0,
+          Math.trunc(request.fromTimelineTickNumber),
+        );
+        const toTimelineTickNumber = Math.max(
+          fromTimelineTickNumber,
+          Math.trunc(request.toTimelineTickNumber),
+        );
+        const frames = [];
+        for (
+          let timelineTickNumber = fromTimelineTickNumber;
+          timelineTickNumber <= toTimelineTickNumber;
+          timelineTickNumber += 1
+        ) {
+          const snapshot = this.checkpoints.get(timelineTickNumber)?.presentationSnapshot;
+          if (snapshot !== undefined) {
+            frames.push({ timelineTickNumber, snapshot });
+          }
+        }
+        return {
+          type: "timeline-presentation-frame-range-result",
+          requestId: request.requestId,
+          fromTimelineTickNumber,
+          toTimelineTickNumber,
+          frames,
+          status: this.getStatus(),
+        };
+      }
       case "get-timeline-checkpoint": {
         this.deferFillForInteraction();
         const timelineTickNumber = Math.max(0, Math.trunc(request.timelineTickNumber));

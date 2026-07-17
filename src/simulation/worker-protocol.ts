@@ -4,8 +4,10 @@ import type {
   SimulationRuntimeStatus,
   SimulationRuntimeExport,
   SimulationStartResult,
+  SimulationTickPullStatus,
   SimulationTopologyMigration,
   SimulationTickSnapshotResult,
+  RuntimeTickSnapshot,
 } from "./types";
 import type {
   SimulationAdmissionCounterReset,
@@ -31,6 +33,23 @@ export type SimulationWorkerRequest =
       /** 主线程最后确认展示的 tick；Worker 必须保留其运行时状态供拓扑迁移使用。 */
       readonly retainTickNumber?: number;
       readonly simulationSpeed?: number;
+    }
+  | {
+      /** 只读预取连续 Tick 快照；不得推进 Worker 的呈现清理锚点。 */
+      readonly type: "get-tick-snapshot-range";
+      readonly requestId: number;
+      readonly fromTickNumber: number;
+      readonly toTickNumber: number;
+      /** 主线程热队列生命周期；响应原样回传，供调用方丢弃过期结果。 */
+      readonly generation: number;
+      readonly simulationSpeed?: number;
+    }
+  | {
+      /** 确认主线程已呈现到该 Tick；Worker 可清理更早的快照与运行时 checkpoint。 */
+      readonly type: "acknowledge-presented-tick";
+      readonly requestId: number;
+      readonly tickNumber: number;
+      readonly generation: number;
     }
   | {
       readonly type: "set-simulation-speed";
@@ -98,6 +117,20 @@ export type SimulationWorkerResponse =
       readonly status: SimulationRuntimeStatus;
     }
   | {
+      readonly type: "tick-snapshot-range-result";
+      readonly requestId: number;
+      readonly result: SimulationTickSnapshotRangeResult;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "presented-tick-acknowledged";
+      readonly requestId: number;
+      readonly generation: number;
+      /** generation 或 checkpoint 不匹配时为 null，且不会清理缓存。 */
+      readonly acknowledgedTickNumber: number | null;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
       readonly type: "simulation-speed-set";
       readonly requestId: number;
       readonly status: SimulationRuntimeStatus;
@@ -160,4 +193,16 @@ export interface SimulationWorkerErrorNotification {
   readonly type: "worker-error";
   readonly error: string;
   readonly tickNumber: number | null;
+}
+
+/**
+ * 范围预取只返回从 fromTickNumber 开始的连续前缀。
+ * status=ready 时 snapshots 可以少于请求数量；空数组由 not-ready/not-found 解释原因。
+ */
+export interface SimulationTickSnapshotRangeResult {
+  readonly generation: number;
+  readonly fromTickNumber: number;
+  readonly toTickNumber: number;
+  readonly status: SimulationTickPullStatus;
+  readonly snapshots: readonly RuntimeTickSnapshot[];
 }

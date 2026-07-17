@@ -72,6 +72,22 @@ describe("TimelineWorkerRuntime", () => {
     }
     expect(presentationFrame.snapshot?.tickNumber).toBe(5990);
 
+    const presentationRange = timelineRuntime.handleRequest({
+      type: "get-timeline-presentation-frame-range",
+      requestId: 32,
+      fromTimelineTickNumber: 596,
+      toTimelineTickNumber: 601,
+    });
+    if (presentationRange.type !== "timeline-presentation-frame-range-result") {
+      throw new Error(`Unexpected presentation range response "${presentationRange.type}".`);
+    }
+    expect(presentationRange.frames.map((frame) => frame.timelineTickNumber)).toEqual([
+      596, 597, 598, 599,
+    ]);
+    expect(presentationRange.frames.map((frame) => frame.snapshot.tickNumber)).toEqual([
+      5960, 5970, 5980, 5990,
+    ]);
+
     const outsideCheckpoint = timelineRuntime.handleRequest({
       type: "get-timeline-checkpoint",
       requestId: 4,

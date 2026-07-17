@@ -19,6 +19,7 @@ import type {
   SimulationRuntimeSlotPatch,
 } from "@/domain/simulation/types/simulation-types";
 import type {
+  SimulationTickSnapshotRangeResult,
   SimulationWorkerRequest,
   SimulationWorkerResponse,
 } from "./worker-protocol";
@@ -214,6 +215,8 @@ export class SimulationWorkerRuntime {
   private lastRequestedTickNumber = 0;
   /** 主线程最后确认展示的状态，拓扑迁移只能从此精确 tick 接续。 */
   private migrationAnchorTickNumber: number | null = null;
+  /** 当前主线程热队列生命周期；只接受同 generation 的呈现确认。 */
+  private presentationGeneration: number | null = null;
   private lastDynamicRateAdjustmentTick: number | null = null;
   // AI-REMOVED 2026-07-15:
   // Reason: x1 粗粒度降级破坏了配方、气体与净水的精确 tick 语义。
@@ -267,6 +270,29 @@ export class SimulationWorkerRuntime {
             type: "tick-snapshot-result",
             requestId: request.requestId,
             result: this.getTickSnapshot(request.tickNumber, request.retainTickNumber),
+            status: this.getStatus(),
+          };
+        case "get-tick-snapshot-range":
+          this.setSimulationSpeedValue(request.simulationSpeed);
+          return {
+            type: "tick-snapshot-range-result",
+            requestId: request.requestId,
+            result: this.getTickSnapshotRange(
+              request.fromTickNumber,
+              request.toTickNumber,
+              request.generation,
+            ),
+            status: this.getStatus(),
+          };
+        case "acknowledge-presented-tick":
+          return {
+            type: "presented-tick-acknowledged",
+            requestId: request.requestId,
+            generation: request.generation,
+            acknowledgedTickNumber: this.acknowledgePresentedTick(
+              request.tickNumber,
+              request.generation,
+            ),
             status: this.getStatus(),
           };
         case "set-simulation-speed":
@@ -360,6 +386,33 @@ export class SimulationWorkerRuntime {
               status: createNotFoundStatus(0, "missing-topology", null, null, 0),
               currentTick: null,
             },
+            status,
+          };
+        case "get-tick-snapshot-range":
+          return {
+            type: "tick-snapshot-range-result",
+            requestId: request.requestId,
+            result: {
+              generation: request.generation,
+              fromTickNumber: Math.max(0, Math.trunc(request.fromTickNumber)),
+              toTickNumber: Math.max(0, Math.trunc(request.toTickNumber)),
+              status: createNotFoundStatus(
+                request.fromTickNumber,
+                "missing-topology",
+                this.retainedFromTick,
+                this.latestTickNumber,
+                this.tickSnapshots.size,
+              ),
+              snapshots: [],
+            },
+            status,
+          };
+        case "acknowledge-presented-tick":
+          return {
+            type: "presented-tick-acknowledged",
+            requestId: request.requestId,
+            generation: request.generation,
+            acknowledgedTickNumber: null,
             status,
           };
         case "set-simulation-speed":
@@ -492,12 +545,17 @@ export class SimulationWorkerRuntime {
     const tickNumber = this.runtimeState.tickNumber;
     const snapshot = this.createSnapshotFromRuntimeState(this.runtimeState);
     this.tickSnapshots.set(tickNumber, snapshot);
-    this.tickRuntimeStates.set(tickNumber, cloneSimulationMutableRuntimeState(this.runtimeState));
+    // 后台 tick 只需缓存可迁移的持久状态；完整 transient 仅在 debugData 模式保留。
+    this.tickRuntimeStates.set(
+      tickNumber,
+      cloneSimulationMutableRuntimeState(this.runtimeState, this.debugDataEnabled),
+    );
     this.nextTickNumber = tickNumber + 1;
     this.retainedFromTick = tickNumber;
     this.latestTickNumber = tickNumber;
     this.lastRequestedTickNumber = tickNumber;
     this.migrationAnchorTickNumber = tickNumber;
+    this.presentationGeneration = null;
     this.dynamicTickRate = this.topology.standardTickRate;
     this.standardStepTicks = 1;
     this.fixedDynamicTickRate = null;
@@ -558,7 +616,7 @@ export class SimulationWorkerRuntime {
       this.tickSnapshots.set(targetTickNumber, snapshot);
       this.tickRuntimeStates.set(
         targetTickNumber,
-        cloneSimulationMutableRuntimeState(this.runtimeState),
+        cloneSimulationMutableRuntimeState(this.runtimeState, this.debugDataEnabled),
       );
       this.latestTickNumber = targetTickNumber;
       this.retainedFromTick = Math.min(
@@ -822,13 +880,14 @@ export class SimulationWorkerRuntime {
     this.tickSnapshots.set(baseTickNumber, baseSnapshot);
     this.tickRuntimeStates.set(
       baseTickNumber,
-      cloneSimulationMutableRuntimeState(this.runtimeState),
+      cloneSimulationMutableRuntimeState(this.runtimeState, this.debugDataEnabled),
     );
     this.nextTickNumber = baseTickNumber + 1;
     this.retainedFromTick = baseTickNumber;
     this.latestTickNumber = baseTickNumber;
     this.lastRequestedTickNumber = baseTickNumber;
     this.migrationAnchorTickNumber = baseTickNumber;
+    this.presentationGeneration = null;
     this.dynamicTickRate = topology.standardTickRate;
     this.standardStepTicks = 1;
     this.lastDynamicRateAdjustmentTick = null;
@@ -938,6 +997,181 @@ export class SimulationWorkerRuntime {
           )
         : currentTick,
     };
+  }
+
+  /**
+   * 只读返回请求区间内从 fromTickNumber 开始的连续前缀。
+   * AI-CORRECTION 2026-07-17: 范围预取不再复用 getTickSnapshot 的消费即清理语义；
+   * 主线程尚未呈现的 checkpoint 必须保留到 acknowledgePresentedTick。
+   */
+  private getTickSnapshotRange(
+    fromTickNumber: number,
+    toTickNumber: number,
+    generation: number,
+  ): SimulationTickSnapshotRangeResult {
+    const normalizedFromTickNumber = Math.max(0, Math.trunc(fromTickNumber));
+    const normalizedToTickNumber = Math.max(
+      normalizedFromTickNumber,
+      Math.trunc(toTickNumber),
+    );
+    if (this.presentationGeneration === null || generation >= this.presentationGeneration) {
+      this.presentationGeneration = generation;
+    }
+
+    if (this.topology === null || this.runtimeState === null) {
+      return {
+        generation,
+        fromTickNumber: normalizedFromTickNumber,
+        toTickNumber: normalizedToTickNumber,
+        status: createNotFoundStatus(
+          normalizedFromTickNumber,
+          "missing-topology",
+          null,
+          null,
+          0,
+        ),
+        snapshots: [],
+      };
+    }
+
+    // AI-CORRECTION 2026-07-17: 预取范围只扩展到请求末端；未来 180 Tick 的停止线由呈现 ACK 推进，
+    // 避免每次补充热队列都把计算窗口额外向前平移一个完整缓存长度。
+    this.stopLineTick = Math.max(this.stopLineTick, normalizedToTickNumber);
+
+    if (
+      this.retainedFromTick !== null
+      && normalizedFromTickNumber < this.retainedFromTick
+    ) {
+      return {
+        generation,
+        fromTickNumber: normalizedFromTickNumber,
+        toTickNumber: normalizedToTickNumber,
+        status: createNotFoundStatus(
+          normalizedFromTickNumber,
+          "cleared",
+          this.retainedFromTick,
+          this.latestTickNumber,
+          this.tickSnapshots.size,
+        ),
+        snapshots: [],
+      };
+    }
+
+    if (
+      this.latestTickNumber === null
+      || normalizedFromTickNumber > this.latestTickNumber
+    ) {
+      this.scheduleBackgroundFill();
+      return {
+        generation,
+        fromTickNumber: normalizedFromTickNumber,
+        toTickNumber: normalizedToTickNumber,
+        status: {
+          status: "not-ready",
+          requestedTickNumber: normalizedFromTickNumber,
+          retainedFromTick: this.retainedFromTick,
+          latestTickNumber: this.latestTickNumber,
+          bufferSize: this.tickSnapshots.size,
+        },
+        snapshots: [],
+      };
+    }
+
+    const snapshots: RuntimeTickSnapshot[] = [];
+    const availableToTickNumber = Math.min(
+      normalizedToTickNumber,
+      this.latestTickNumber,
+    );
+    for (
+      let tickNumber = normalizedFromTickNumber;
+      tickNumber <= availableToTickNumber;
+      tickNumber += 1
+    ) {
+      const snapshot = this.tickSnapshots.get(tickNumber);
+      if (snapshot === undefined) {
+        if (snapshots.length === 0) {
+          return {
+            generation,
+            fromTickNumber: normalizedFromTickNumber,
+            toTickNumber: normalizedToTickNumber,
+            status: createNotFoundStatus(
+              normalizedFromTickNumber,
+              "unknown",
+              this.retainedFromTick,
+              this.latestTickNumber,
+              this.tickSnapshots.size,
+            ),
+            snapshots: [],
+          };
+        }
+        break;
+      }
+
+      snapshots.push(
+        this.debugDataEnabled
+          ? this.createDebugSnapshotReadModel(
+            snapshot,
+            this.tickRuntimeStates.get(tickNumber) ?? this.runtimeState,
+          )
+          : snapshot,
+      );
+    }
+
+    this.scheduleBackgroundFill();
+    return {
+      generation,
+      fromTickNumber: normalizedFromTickNumber,
+      toTickNumber: normalizedToTickNumber,
+      status: {
+        status: "ready",
+        retainedFromTick: this.retainedFromTick ?? normalizedFromTickNumber,
+        latestTickNumber: this.latestTickNumber,
+        bufferSize: this.tickSnapshots.size,
+      },
+      snapshots,
+    };
+  }
+
+  /** 主线程提交呈现进度后，才允许清理更早的快照与迁移 checkpoint。 */
+  private acknowledgePresentedTick(
+    tickNumber: number,
+    generation: number,
+  ): number | null {
+    if (
+      this.topology === null
+      || this.runtimeState === null
+      || this.presentationGeneration !== generation
+    ) {
+      return null;
+    }
+
+    const normalizedTickNumber = Math.max(0, Math.trunc(tickNumber));
+    if (
+      normalizedTickNumber < this.lastRequestedTickNumber
+      || !this.tickRuntimeStates.has(normalizedTickNumber)
+      || !this.tickSnapshots.has(normalizedTickNumber)
+    ) {
+      return null;
+    }
+
+    this.lastRequestedTickNumber = normalizedTickNumber;
+    this.migrationAnchorTickNumber = normalizedTickNumber;
+    for (const retainedTickNumber of [...this.tickSnapshots.keys()]) {
+      if (retainedTickNumber < normalizedTickNumber) {
+        this.tickSnapshots.delete(retainedTickNumber);
+        this.tickRuntimeStates.delete(retainedTickNumber);
+      }
+    }
+    this.retainedFromTick = [...this.tickSnapshots.keys()]
+      .sort((left, right) => left - right)[0] ?? normalizedTickNumber;
+
+    // AI-CORRECTION 2026-07-17: 正常播放停止线改由已呈现 Tick 推进；范围预取本身不改变消费锚点。
+    this.stopLineTick = Math.max(
+      this.stopLineTick,
+      normalizedTickNumber + MAX_RETAINED_TICKS,
+    );
+    this.scheduleBackgroundFill();
+    return normalizedTickNumber;
   }
 
   private createDebugSnapshotReadModel(
@@ -1061,7 +1295,7 @@ export class SimulationWorkerRuntime {
         this.tickSnapshots.set(this.nextTickNumber, currentTick);
         this.tickRuntimeStates.set(
           this.nextTickNumber,
-          cloneSimulationMutableRuntimeState(this.runtimeState),
+          cloneSimulationMutableRuntimeState(this.runtimeState, this.debugDataEnabled),
         );
         this.latestTickNumber = this.nextTickNumber;
         this.retainedFromTick = Math.min(
@@ -1091,7 +1325,7 @@ export class SimulationWorkerRuntime {
       this.tickSnapshots.set(this.nextTickNumber, currentTick);
       this.tickRuntimeStates.set(
         this.nextTickNumber,
-        cloneSimulationMutableRuntimeState(this.runtimeState),
+        cloneSimulationMutableRuntimeState(this.runtimeState, this.debugDataEnabled),
       );
       this.latestTickNumber = this.nextTickNumber;
       this.retainedFromTick = Math.min(

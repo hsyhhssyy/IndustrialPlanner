@@ -23,6 +23,10 @@ import {
   UPDATE_PRIORITY,
 } from "pixi.js"
 import { resolveRenderResolutionFromApp } from "../render-resolution"
+import {
+  createPixiRenderDiagnostics,
+  type PixiRenderDiagnosticsSnapshot,
+} from "../pixi-render-diagnostics"
 import type { RenderHost } from "../renderer-host"
 
 import { BeltSprite } from "../sprites/belt-sprite"
@@ -147,6 +151,7 @@ interface PerfAggregate {
 interface RenderFrameProfiler extends DecorationProfiler {
   finishSceneSync(): void;
   startPixiRender(): void;
+  finishPixiRender(): void;
   finishFrame(options: {
     activeTool: string;
   }): void;
@@ -253,7 +258,28 @@ export function createRenderSceneOrchestrator(
     visibility: new Map(),
   }
   const grassBackgroundDecoration = createGrassBackgroundDecoration(renderHost)
-  const renderPerfDiagnostics = createRenderPerfDiagnostics(renderHost)
+  const pixiRenderDiagnostics = createPixiRenderDiagnostics({
+    app,
+    layers: {
+      stage: app.stage,
+      pipeFlow: pipeFlowLayer,
+      beltFlow: beltFlowLayer,
+      beltInsertion: beltInsertionLayer,
+      beltCargo: beltCargoOverlayLayer,
+      entities: [
+        layers.entityLow,
+        layers.entity,
+        layers.entityHigh,
+        beltSubEntity,
+        pipeSubEntity,
+        layers.draft,
+      ],
+    },
+  })
+  const renderPerfDiagnostics = createRenderPerfDiagnostics(
+    renderHost,
+    () => pixiRenderDiagnostics.readSnapshot(),
+  )
   let activeFrameProfiler: RenderFrameProfiler | null = null
   let documentVersion = 0
   let viewportVersion = 0
@@ -355,6 +381,7 @@ export function createRenderSceneOrchestrator(
       startedAtMs: frameStartedAtMs,
       tickerDeltaMs: renderHost.app.ticker.deltaMS,
     })
+    pixiRenderDiagnostics.syncDebugState(frameProfiler !== null)
     activeFrameProfiler = frameProfiler
     const viewportState = measureRenderStage(
       frameProfiler,
@@ -568,11 +595,15 @@ export function createRenderSceneOrchestrator(
   }
 
   const startPixiRenderMeasurement = (): void => {
-    activeFrameProfiler?.startPixiRender()
+    const frameProfiler = activeFrameProfiler
+    pixiRenderDiagnostics.beforeRender(frameProfiler)
+    frameProfiler?.startPixiRender()
   }
 
   const finishPixiRenderMeasurement = (): void => {
     const frameProfiler = activeFrameProfiler
+    frameProfiler?.finishPixiRender()
+    pixiRenderDiagnostics.afterRender(frameProfiler)
     activeFrameProfiler = null
     frameProfiler?.finishFrame({
       activeTool: readRenderActiveTool(renderHost),
@@ -634,6 +665,7 @@ export function createRenderSceneOrchestrator(
       app.ticker.remove(finishPixiRenderMeasurement)
       disposeDocumentVersionSubscription()
       memoryCollector.stop()
+      pixiRenderDiagnostics.destroy()
 
       for (const sprite of entitySprites.values()) {
         sprite.destroy()
@@ -1444,7 +1476,10 @@ function recordEntitySpriteSyncStats(
   profiler.count("entitySprites.syncAnimationCalls", stats.syncAnimationCalls)
 }
 
-function createRenderPerfDiagnostics(renderHost: RenderHost): {
+function createRenderPerfDiagnostics(
+  renderHost: RenderHost,
+  readPixiDiagnostics: () => PixiRenderDiagnosticsSnapshot,
+): {
   startFrame(options: {
     startedAtMs: number;
     tickerDeltaMs: number;
@@ -1509,6 +1544,7 @@ function createRenderPerfDiagnostics(renderHost: RenderHost): {
 
       let sceneSyncFinishedAtMs: number | null = null
       let pixiRenderStartedAtMs: number | null = null
+      let pixiRenderFinishedAtMs: number | null = null
       const profiler: RenderFrameProfiler = {
         count(name, value = 1): void {
           addPerfSample(countAggregates, name, value)
@@ -1527,8 +1563,11 @@ function createRenderPerfDiagnostics(renderHost: RenderHost): {
         startPixiRender(): void {
           pixiRenderStartedAtMs = performance.now()
         },
+        finishPixiRender(): void {
+          pixiRenderFinishedAtMs = performance.now()
+        },
         finishFrame({ activeTool }): void {
-          const finishedAtMs = performance.now()
+          const finishedAtMs = pixiRenderFinishedAtMs ?? performance.now()
           const effectiveSceneSyncFinishedAtMs = sceneSyncFinishedAtMs ?? finishedAtMs
           const effectivePixiRenderStartedAtMs = pixiRenderStartedAtMs
             ?? effectiveSceneSyncFinishedAtMs
@@ -1580,6 +1619,7 @@ function createRenderPerfDiagnostics(renderHost: RenderHost): {
             fps: roundPerfValue((frameCount * 1000) / windowMs),
             activeTool: resolveDominantActiveTool(activeToolFrameCounts),
             activeToolFrames: summarizeFrameCounts(activeToolFrameCounts),
+            renderer: readPixiDiagnostics(),
             frame: {
               frames: frameCount,
               longFrames: longFrameCount,

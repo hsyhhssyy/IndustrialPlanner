@@ -57,10 +57,40 @@ describe("PipeFlowDecoration", () => {
 
     decoration.destroy()
   })
+
+  it("records disjoint work stages and their input sizes", () => {
+    const decoration = createPipeFlowDecoration()
+    const samples = new Map<string, number>()
+    const ctx = createPipeFlowContext({
+      getPipeFluidItemId: () => "item_liquid_water",
+      recordSample: (name, value) => samples.set(name, value),
+    })
+
+    decoration.sync(ctx as never)
+
+    for (const name of [
+      "pipeFlow.activeScan-ms",
+      "pipeFlow.pathEntries-ms",
+      "pipeFlow.buildChains-ms",
+      "pipeFlow.generateMarks-ms",
+      "pipeFlow.drawMask-ms",
+      "pipeFlow.drawMarks-ms",
+    ]) {
+      expect(samples.get(name)).toBeGreaterThanOrEqual(0)
+    }
+    expect(samples.get("pipeFlow.activeEntityCount")).toBe(2)
+    expect(samples.get("pipeFlow.pathEntryCount")).toBe(2)
+    expect(samples.get("pipeFlow.chainCount")).toBe(1)
+    expect(samples.get("pipeFlow.markCount")).toBe(1)
+    expect(samples.get("pipeFlow.maskRectCount")).toBe(2)
+
+    decoration.destroy()
+  })
 })
 
 function createPipeFlowContext(options: {
   getPipeFluidItemId: (entityId: string) => string | null;
+  recordSample?: (name: string, value: number) => void;
 }) {
   const registry = createRegistryContract()
   const entities = [
@@ -122,5 +152,11 @@ function createPipeFlowContext(options: {
     },
     theme: AYU_LIGHT_THEME,
     nowMs: 0,
+    profiler: options.recordSample === undefined
+      ? undefined
+      : {
+          count: options.recordSample,
+          measure: <T>(_stage: string, callback: () => T): T => callback(),
+        },
   }
 }

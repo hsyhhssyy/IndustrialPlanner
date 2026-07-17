@@ -600,6 +600,18 @@ class BrowserTimelineWorkerBridge implements TimelineWorkerBridge {
     }, "timeline-presentation-frame-result");
   }
 
+  public getTimelinePresentationFrameRange(fromTimelineTickNumber: number, toTimelineTickNumber: number): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-presentation-frame-range-result" }
+  >> {
+    return this.request({
+      type: "get-timeline-presentation-frame-range",
+      requestId: this.createRequestId(),
+      fromTimelineTickNumber,
+      toTimelineTickNumber,
+    }, "timeline-presentation-frame-range-result");
+  }
+
   public stopTimeline(): Promise<Extract<
     TimelineWorkerResponse,
     { readonly type: "timeline-stopped" }
@@ -723,6 +735,22 @@ class LocalTimelineWorkerBridge implements TimelineWorkerBridge {
     return Promise.resolve(response);
   }
 
+  public getTimelinePresentationFrameRange(fromTimelineTickNumber: number, toTimelineTickNumber: number): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-presentation-frame-range-result" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "get-timeline-presentation-frame-range",
+      requestId: this.createRequestId(),
+      fromTimelineTickNumber,
+      toTimelineTickNumber,
+    });
+    if (response.type !== "timeline-presentation-frame-range-result") {
+      throw new Error(`Unexpected timeline worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
   public stopTimeline(): Promise<Extract<
     TimelineWorkerResponse,
     { readonly type: "timeline-stopped" }
@@ -818,6 +846,32 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
       retainTickNumber,
       simulationSpeed,
     }, "tick-snapshot-result");
+  }
+
+  public getTickSnapshotRange(fromTickNumber: number, toTickNumber: number, generation: number, simulationSpeed?: number): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "tick-snapshot-range-result" }
+  >> {
+    return this.request({
+      type: "get-tick-snapshot-range",
+      requestId: this.createRequestId(),
+      fromTickNumber,
+      toTickNumber,
+      generation,
+      simulationSpeed,
+    }, "tick-snapshot-range-result");
+  }
+
+  public acknowledgePresentedTick(tickNumber: number, generation: number): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "presented-tick-acknowledged" }
+  >> {
+    return this.request({
+      type: "acknowledge-presented-tick",
+      requestId: this.createRequestId(),
+      tickNumber,
+      generation,
+    }, "presented-tick-acknowledged");
   }
 
   public setDebugEnabled(value: boolean): Promise<Extract<
@@ -1015,6 +1069,42 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       simulationSpeed,
     });
     if (response.type !== "tick-snapshot-result") {
+      throw new Error(`Unexpected simulation worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public getTickSnapshotRange(fromTickNumber: number, toTickNumber: number, generation: number, simulationSpeed?: number): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "tick-snapshot-range-result" }
+  >> {
+    // Local 模式没有后台事件循环；同步推进仅用于保持与 Browser Worker 相同的可用范围语义。
+    this.runtime.advanceToTick(toTickNumber);
+    const response = this.runtime.handleRequest({
+      type: "get-tick-snapshot-range",
+      requestId: this.createRequestId(),
+      fromTickNumber,
+      toTickNumber,
+      generation,
+      simulationSpeed,
+    });
+    if (response.type !== "tick-snapshot-range-result") {
+      throw new Error(`Unexpected simulation worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public acknowledgePresentedTick(tickNumber: number, generation: number): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "presented-tick-acknowledged" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "acknowledge-presented-tick",
+      requestId: this.createRequestId(),
+      tickNumber,
+      generation,
+    });
+    if (response.type !== "presented-tick-acknowledged") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
     }
     return Promise.resolve(response);
