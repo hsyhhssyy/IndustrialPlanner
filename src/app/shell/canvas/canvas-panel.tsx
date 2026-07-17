@@ -5,7 +5,7 @@ import type { SimulationRuntimeStatistics } from "@/domain/simulation";
 import { useViewportResizeAdapter } from "@/app/shell/canvas/viewport-resize-adapter";
 import { observer } from "mobx-react-lite";
 import { useEffect, useId, useRef, useState } from "react";
-import type { KeyboardEvent, MouseEvent, PointerEvent, WheelEvent } from "react";
+import type { KeyboardEvent, PointerEvent, WheelEvent } from "react";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import {
@@ -14,6 +14,7 @@ import {
   createTimelineFrameStatisticsSample,
   type TimelineFrameStatisticsSample,
 } from "@/app/shell/canvas/timeline-frame-statistics";
+import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 
 interface FpsSnapshot {
   fps: number;
@@ -295,9 +296,13 @@ function CanvasFpsOverlay({
   const bodyId = useId();
   const toggleLabel = collapsed ? "Show" : "Hide";
 
-  const handleToggleClick = (event: MouseEvent<HTMLButtonElement>) => {
+  const handleTogglePointerUp = (event: PointerEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     setCollapsed((value) => !value);
+  };
+  const stopTogglePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+    preventTouchPointerCompatibilityMouseEvents(event);
+    event.stopPropagation();
   };
   const stopToggleInputPropagation = (
     event: PointerEvent<HTMLButtonElement> | KeyboardEvent<HTMLButtonElement>,
@@ -325,13 +330,12 @@ function CanvasFpsOverlay({
           aria-controls={bodyId}
           aria-expanded={!collapsed}
           className={cm(styles, "canvas-fps-toggle")}
-          onClick={handleToggleClick}
           onKeyDown={stopToggleInputPropagation}
           onKeyUp={stopToggleInputPropagation}
           onPointerCancel={stopToggleInputPropagation}
-          onPointerDown={stopToggleInputPropagation}
+          onPointerDown={stopTogglePointerDown}
           onPointerMove={stopToggleInputPropagation}
-          onPointerUp={stopToggleInputPropagation}
+          onPointerUp={handleTogglePointerUp}
           type="button"
         >
           {toggleLabel}
@@ -384,9 +388,13 @@ function CanvasGestureDiagnosticsOverlay({
   const pressedKeys = Array.from(snapshot.keyboard.pressedKeys);
   const toggleLabel = collapsed ? "Show" : "Hide";
 
-  const handleToggleClick = (event: MouseEvent<HTMLButtonElement>) => {
+  const handleTogglePointerUp = (event: PointerEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     setCollapsed((value) => !value);
+  };
+  const stopTogglePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+    preventTouchPointerCompatibilityMouseEvents(event);
+    event.stopPropagation();
   };
   const stopToggleInputPropagation = (
     event: PointerEvent<HTMLButtonElement> | KeyboardEvent<HTMLButtonElement>,
@@ -408,13 +416,12 @@ function CanvasGestureDiagnosticsOverlay({
           aria-controls={bodyId}
           aria-expanded={!collapsed}
           className={cm(styles, "canvas-gesture-diagnostics-toggle")}
-          onClick={handleToggleClick}
           onKeyDown={stopToggleInputPropagation}
           onKeyUp={stopToggleInputPropagation}
           onPointerCancel={stopToggleInputPropagation}
-          onPointerDown={stopToggleInputPropagation}
+          onPointerDown={stopTogglePointerDown}
           onPointerMove={stopToggleInputPropagation}
-          onPointerUp={stopToggleInputPropagation}
+          onPointerUp={handleTogglePointerUp}
           type="button"
         >
           {toggleLabel}

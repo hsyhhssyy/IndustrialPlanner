@@ -602,6 +602,14 @@
   cursor: grabbing;
 }
 
+.timeline-ruler-input:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+}
+
+.timeline-ruler-input:disabled::-moz-range-thumb {
+  cursor: not-allowed;
+}
+
 .timeline-ruler-second-labels {
   position: relative;
   min-height: 14px;

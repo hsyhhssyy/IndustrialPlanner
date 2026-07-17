@@ -412,6 +412,28 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
     );
   }
 
+  if (
+    timeline.readiness === "preparing"
+    || (
+      timeline.readiness === "idle"
+      && simulation.state.runningState !== "stop"
+    )
+  ) {
+    return (
+      <div className={cm(styles, "timeline-empty-state")}>
+        {t("timelineDialog.preparing")}
+      </div>
+    );
+  }
+
+  if (timeline.readiness === "idle") {
+    return (
+      <div className={cm(styles, "timeline-empty-state")}>
+        {t("timelineDialog.unavailable")}
+      </div>
+    );
+  }
+
   const tickDurationSeconds = timeline.tickDurationSeconds;
   const totalTimelineTicks = Math.max(
     1,
@@ -706,7 +728,7 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
   };
 
   const startDrag = (event: ReactPointerEvent<HTMLInputElement>) => {
-    if (dragActiveRef.current) {
+    if (timeline.readiness !== "ready" || dragActiveRef.current) {
       return;
     }
 
@@ -850,11 +872,12 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
           <input
             aria-label={t("timelineDialog.title")}
             className={cm(styles, "timeline-ruler-input")}
+            disabled={timeline.readiness !== "ready"}
             max={windowEndTick}
             min={windowStartTick}
             onBlur={finishDrag}
             onInput={(event) => {
-              if (!dragActiveRef.current) {
+              if (timeline.readiness !== "ready" || !dragActiveRef.current) {
                 event.currentTarget.value = String(Math.trunc(visibleCursorTick));
                 return;
               }

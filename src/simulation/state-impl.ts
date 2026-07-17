@@ -40,6 +40,7 @@ export interface SimulationStateReadWrite extends SimulationState {
 
 export interface SimulationTimelineStateReadWrite extends SimulationTimelineState {
   enabled: boolean;
+  readiness: SimulationTimelineState["readiness"];
   tickDurationSeconds: number;
   rulerDurationSeconds: number;
   windowStartTickNumber: number;
@@ -53,6 +54,7 @@ export interface SimulationTimelineStateReadWrite extends SimulationTimelineStat
 export function createInitialSimulationTimelineState(): SimulationTimelineStateReadWrite {
   return {
     enabled: false,
+    readiness: "idle",
     tickDurationSeconds: 0.5,
     rulerDurationSeconds: 300,
     windowStartTickNumber: 0,

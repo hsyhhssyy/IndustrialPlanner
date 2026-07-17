@@ -450,6 +450,7 @@ const UI: Record<string, string> = {
     "timelineDialog.doNotWarnAgain": "本次不再提醒",
     "timelineDialog.expandBottomDock": "展开时间轴",
     "timelineDialog.maximize": "最大化时间轴",
+    "timelineDialog.preparing": "正在准备时间轴，请稍后...",
     "timelineDialog.resizeBottomDock": "调整时间轴高度",
     "timelineDialog.restore": "还原时间轴",
     "timelineDialog.rollbackTitle": "确认移动时间轴",

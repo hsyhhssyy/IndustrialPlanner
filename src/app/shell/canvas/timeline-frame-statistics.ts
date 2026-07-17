@@ -11,7 +11,12 @@ export function createTimelineFrameStatisticsSample(
   timeline: SimulationTimelineState | null | undefined,
   sampledAtMs: number,
 ): TimelineFrameStatisticsSample {
-  const enabled = timeline?.enabled === true;
+  const enabled =
+    timeline?.enabled === true
+    && (
+      timeline.readiness === "catching-up"
+      || timeline.readiness === "ready"
+    );
   return {
     enabled,
     availableFromTickNumber: enabled

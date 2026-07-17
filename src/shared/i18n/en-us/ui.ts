@@ -457,6 +457,7 @@ const UI: Record<string, string> = {
     "timelineDialog.doNotWarnAgain": "Do not warn again this session",
     "timelineDialog.expandBottomDock": "Expand Timeline",
     "timelineDialog.maximize": "Maximize Timeline",
+    "timelineDialog.preparing": "Preparing timeline, please wait...",
     "timelineDialog.resizeBottomDock": "Resize Timeline",
     "timelineDialog.restore": "Restore Timeline",
     "timelineDialog.rollbackTitle": "Confirm Timeline Move",

@@ -55,6 +55,64 @@ describe("simulation timeline actions", () => {
     }));
   });
 
+  it("keeps timeline seeks blocked until the first prediction catches the playback cursor", async () => {
+    vi.useFakeTimers();
+
+    const state = createSimulationStateReadWrite();
+    state.hasStarted = true;
+    state.runningState = "start";
+    state.currentSnapshot = createRuntimeExport(100).snapshot;
+    state.currentPlaybackTickNumber = 100;
+
+    const firstLoad = createDeferred<Awaited<ReturnType<TimelineWorkerBridge["loadTimeline"]>>>();
+    let availableToTimelineTickNumber = 13;
+    const timelineBridge = createTimelineBridge({
+      loadTimeline: vi.fn(() => firstLoad.promise),
+      getTimelineStatus: vi.fn(async () => ({
+        type: "timeline-status" as const,
+        requestId: 2,
+        status: createTimelineStatus(10, availableToTimelineTickNumber),
+      })),
+    });
+    const action = new SimulationActionImpl({
+      workspace: {} as WorkspaceContract,
+      state,
+      topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
+      bridge: createSimulationBridge(),
+      createTimelineBridge: () => timelineBridge,
+    });
+
+    const enabling = action.enableTimeline();
+    await flushMicrotasks(2);
+
+    expect(state.timeline.readiness).toBe("preparing");
+    await expect(action.seekTimelineToTick(10)).resolves.toBe(false);
+
+    await action.syncToTick(135, 135);
+    firstLoad.resolve({
+      type: "timeline-loaded",
+      requestId: 1,
+      status: createTimelineStatus(10, 10),
+    });
+    await enabling;
+
+    expect(state.timeline.cursorTickNumber).toBe(13.5);
+    expect(state.timeline.readiness).toBe("catching-up");
+    await expect(action.seekTimelineToTick(10)).resolves.toBe(false);
+
+    await vi.advanceTimersByTimeAsync(250);
+
+    expect(state.timeline.readiness).toBe("catching-up");
+
+    availableToTimelineTickNumber = 14;
+    await vi.advanceTimersByTimeAsync(250);
+
+    expect(state.timeline.readiness).toBe("ready");
+    await expect(action.seekTimelineToTick(10)).resolves.toBe(true);
+    action.disableTimeline();
+    expect(state.timeline.readiness).toBe("idle");
+  });
+
   it("retries timeline prediction startup when the first runtime export is unavailable", async () => {
     vi.useFakeTimers();
 

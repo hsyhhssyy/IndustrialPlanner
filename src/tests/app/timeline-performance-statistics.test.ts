@@ -40,6 +40,7 @@ describe("timeline performance statistics", () => {
   it("counts retained timeline frames and calculates generation speed from the tail delta", () => {
     const previous = createTimelineFrameStatisticsSample({
       enabled: true,
+      readiness: "ready",
       tickDurationSeconds: 0.5,
       rulerDurationSeconds: 300,
       windowStartTickNumber: 0,
@@ -51,6 +52,7 @@ describe("timeline performance statistics", () => {
     }, 1_000);
     const current = createTimelineFrameStatisticsSample({
       enabled: true,
+      readiness: "ready",
       tickDurationSeconds: 0.5,
       rulerDurationSeconds: 300,
       windowStartTickNumber: 0,
@@ -69,6 +71,7 @@ describe("timeline performance statistics", () => {
     const disabled = createTimelineFrameStatisticsSample(undefined, 1_000);
     const enabled = createTimelineFrameStatisticsSample({
       enabled: true,
+      readiness: "ready",
       tickDurationSeconds: 0.5,
       rulerDurationSeconds: 300,
       windowStartTickNumber: 0,
@@ -87,5 +90,22 @@ describe("timeline performance statistics", () => {
     expect(countSavedTimelineFrames(disabled)).toBe(0);
     expect(calculateTimelineFrameRate(disabled, enabled)).toBe(0);
     expect(calculateTimelineFrameRate(enabled, rebased)).toBe(0);
+  });
+
+  it("does not count the default range before the first timeline frame is available", () => {
+    const preparing = createTimelineFrameStatisticsSample({
+      enabled: true,
+      readiness: "preparing",
+      tickDurationSeconds: 0.5,
+      rulerDurationSeconds: 300,
+      windowStartTickNumber: 0,
+      cursorTickNumber: 0,
+      availableFromTickNumber: 0,
+      availableToTickNumber: 0,
+      marks: [],
+      isSeeking: false,
+    }, 1_000);
+
+    expect(countSavedTimelineFrames(preparing)).toBe(0);
   });
 });

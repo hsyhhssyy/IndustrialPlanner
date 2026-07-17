@@ -32,6 +32,7 @@ export interface SimulationTimelineMark {
 
 export interface SimulationTimelineState {
   readonly enabled: boolean;
+  readonly readiness: "idle" | "preparing" | "catching-up" | "ready";
   readonly tickDurationSeconds: number;
   readonly rulerDurationSeconds: number;
   readonly windowStartTickNumber: number;

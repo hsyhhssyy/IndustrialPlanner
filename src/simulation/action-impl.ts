@@ -796,6 +796,7 @@ implements SimulationAction, SimulationInternalAction {
   public readonly enableTimeline: SimulationAction["enableTimeline"] = async () => {
     runInAction(() => {
       this.stateReadWrite.timeline.enabled = true;
+      this.stateReadWrite.timeline.readiness = "preparing";
       this.stateReadWrite.timeline.tickDurationSeconds = TIMELINE_TICK_DURATION_SECONDS;
       this.stateReadWrite.timeline.rulerDurationSeconds = TIMELINE_RULER_DURATION_SECONDS;
       this.stateReadWrite.timeline.isSeeking = false;
@@ -816,7 +817,10 @@ implements SimulationAction, SimulationInternalAction {
   });
 
   public readonly seekTimelineToTick: SimulationAction["seekTimelineToTick"] = async (timelineTickNumber) => {
-    if (!this.stateReadWrite.timeline.enabled) {
+    if (
+      !this.stateReadWrite.timeline.enabled
+      || this.stateReadWrite.timeline.readiness !== "ready"
+    ) {
       return false;
     }
 
@@ -1253,6 +1257,7 @@ implements SimulationAction, SimulationInternalAction {
       runInAction(() => {
         this.applyTimelineStatus(loaded.status);
         this.syncTimelineCursorFromPlayback();
+        this.updateTimelineReadiness(loaded.status);
       });
     } finally {
       this.timelineRestartInFlight = false;
@@ -1382,6 +1387,7 @@ implements SimulationAction, SimulationInternalAction {
       this.lastTimelineRetargetRange = range;
       runInAction(() => {
         this.applyTimelineStatus(response.status);
+        this.updateTimelineReadiness(response.status);
       });
     } catch {
       // timeline-worker 是辅助预测缓存，窗口续算失败不应影响正式 sim-worker。
@@ -1573,6 +1579,7 @@ implements SimulationAction, SimulationInternalAction {
       }
       runInAction(() => {
         this.applyTimelineStatus(response.status);
+        this.updateTimelineReadiness(response.status);
       });
     } catch {
       // timeline-worker 是辅助预测缓存，状态轮询失败不应影响正式仿真。
@@ -1586,6 +1593,34 @@ implements SimulationAction, SimulationInternalAction {
       status.availableFromTimelineTickNumber ?? this.stateReadWrite.timeline.cursorTickNumber;
     this.stateReadWrite.timeline.availableToTickNumber =
       status.availableToTimelineTickNumber ?? this.stateReadWrite.timeline.cursorTickNumber;
+  }
+
+  private updateTimelineReadiness(status: TimelineWorkerStatus): void {
+    if (
+      !this.stateReadWrite.timeline.enabled
+      || this.stateReadWrite.timeline.readiness === "ready"
+    ) {
+      return;
+    }
+
+    const hasFirstFrame =
+      status.availableFromTimelineTickNumber !== null
+      && status.availableToTimelineTickNumber !== null;
+    if (!hasFirstFrame) {
+      return;
+    }
+
+    if (this.stateReadWrite.timeline.readiness === "preparing") {
+      this.stateReadWrite.timeline.readiness = "catching-up";
+    }
+
+    if (
+      this.stateReadWrite.timeline.readiness === "catching-up"
+      && this.stateReadWrite.timeline.availableToTickNumber
+        >= Math.ceil(this.stateReadWrite.timeline.cursorTickNumber)
+    ) {
+      this.stateReadWrite.timeline.readiness = "ready";
+    }
   }
 
   private addTimelineMark(kind: "document-change" | "runtime-change" | "safety-resync"): void {

@@ -287,7 +287,6 @@ describe("CanvasPanel", () => {
         clientY: 12,
         buttons: 0,
       });
-      toggleButton.click();
     });
 
     expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
@@ -297,7 +296,20 @@ describe("CanvasPanel", () => {
     expect(container.querySelector(".canvas-gesture-diagnostics-events")).toBeNull();
 
     act(() => {
-      toggleButton.click();
+      dispatchPointerEvent(toggleButton, "pointerdown", {
+        pointerId: 32,
+        pointerType: "mouse",
+        clientX: 12,
+        clientY: 12,
+        buttons: 1,
+      });
+      dispatchPointerEvent(toggleButton, "pointerup", {
+        pointerId: 32,
+        pointerType: "mouse",
+        clientX: 12,
+        clientY: 12,
+        buttons: 0,
+      });
     });
 
     expect(diagnostics.classList.contains("is-collapsed")).toBe(false);
@@ -374,6 +386,7 @@ describe("CanvasPanel", () => {
     const workspace = createWorkspace();
     const timeline = {
       enabled: true,
+      readiness: "ready" as const,
       tickDurationSeconds: 0.5,
       rulerDurationSeconds: 300,
       windowStartTickNumber: 0,
