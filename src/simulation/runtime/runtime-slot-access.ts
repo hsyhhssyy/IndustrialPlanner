@@ -723,9 +723,10 @@ function resolveRecipes(options: {
       recipe === undefined
       || !recipeCanMatchContents(recipe, options.ingredientSlotContents)
       || !isDeviceInRequiredGasDiffusion({
+        topology: options.topology,
+        state: options.state,
         device: options.device,
         requiredGasDiffusion: recipe.requiredGasDiffusion,
-        activeGasDiffusions: options.state.transient.activeGasDiffusions,
       })
     ) {
       return [];
@@ -754,9 +755,10 @@ function resolveRecipes(options: {
       return [];
     }
     if (!isDeviceInRequiredGasDiffusion({
+      topology: options.topology,
+      state: options.state,
       device: options.device,
       requiredGasDiffusion: selectedRecipe.requiredGasDiffusion,
-      activeGasDiffusions: options.state.transient.activeGasDiffusions,
     })) {
       return [];
     }
@@ -804,9 +806,10 @@ function resolveRecipes(options: {
     .filter((recipe) => recipe.machineId === options.device.definitionId)
     .filter((recipe) => recipeCanMatchContents(recipe, options.ingredientSlotContents))
     .filter((recipe) => isDeviceInRequiredGasDiffusion({
+      topology: options.topology,
+      state: options.state,
       device: options.device,
       requiredGasDiffusion: recipe.requiredGasDiffusion,
-      activeGasDiffusions: options.state.transient.activeGasDiffusions,
     }))
     .sort((left, right) => left.id.localeCompare(right.id))
     .map((recipe) => ({

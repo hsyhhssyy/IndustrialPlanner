@@ -233,9 +233,9 @@ export class SimulationWorkerRuntime {
   // 后台填充定时器 ID，用于取消和防重入。
   private fillTimerId: ReturnType<typeof setTimeout> | null = null;
 
-  // Perf instrumentation
+  // Perf instrumentation：轻量性能统计与完整 debugData 必须独立控制。
   private perfEnabled = false;
-  private debugEnabled = false;
+  private debugDataEnabled = false;
   private perfEntries: TickPerfEntry[] = [];
 
   /** 手动覆盖总耗电（kW），undefined = 按编译期真实值。 */
@@ -253,7 +253,7 @@ export class SimulationWorkerRuntime {
       switch (request.type) {
         case "load-topology":
           this.perfEnabled = request.perfEnabled ?? false;
-          this.debugEnabled = request.perfEnabled ?? false;
+          this.debugDataEnabled = request.debugDataEnabled ?? false;
           this.setSimulationSpeedValue(request.simulationSpeed);
           return {
             type: "topology-loaded",
@@ -277,10 +277,16 @@ export class SimulationWorkerRuntime {
             status: this.getStatus(),
           };
         case "set-debug-enabled":
-          this.debugEnabled = request.debugEnabled;
           this.perfEnabled = request.debugEnabled;
           return {
             type: "debug-enabled-set",
+            requestId: request.requestId,
+            status: this.getStatus(),
+          };
+        case "set-debug-data-enabled":
+          this.debugDataEnabled = request.debugDataEnabled;
+          return {
+            type: "debug-data-enabled-set",
             requestId: request.requestId,
             status: this.getStatus(),
           };
@@ -365,6 +371,12 @@ export class SimulationWorkerRuntime {
         case "set-debug-enabled":
           return {
             type: "debug-enabled-set",
+            requestId: request.requestId,
+            status,
+          };
+        case "set-debug-data-enabled":
+          return {
+            type: "debug-data-enabled-set",
             requestId: request.requestId,
             status,
           };
@@ -515,7 +527,7 @@ export class SimulationWorkerRuntime {
         latestTickNumber: tickNumber,
         bufferSize: this.tickSnapshots.size,
       },
-      currentTick: this.debugEnabled
+      currentTick: this.debugDataEnabled
         ? this.createDebugSnapshotReadModel(snapshot, this.runtimeState)
         : snapshot,
     };
@@ -919,7 +931,7 @@ export class SimulationWorkerRuntime {
         latestTickNumber: this.latestTickNumber ?? tickNumber,
         bufferSize: this.tickSnapshots.size,
       },
-      currentTick: this.debugEnabled
+      currentTick: this.debugDataEnabled
         ? this.createDebugSnapshotReadModel(
             currentTick,
             this.tickRuntimeStates.get(tickNumber) ?? this.runtimeState,
@@ -961,7 +973,7 @@ export class SimulationWorkerRuntime {
           stopLineTick: this.stopLineTick,
           fillScheduled: this.fillTimerId !== null,
           perfEnabled: this.perfEnabled,
-          debugEnabled: this.debugEnabled,
+          debugDataEnabled: this.debugDataEnabled,
           perfEntries: this.perfEntries,
           maxRetainedTicks: MAX_RETAINED_TICKS,
           cachedTickSnapshotNumbers: [...this.tickSnapshots.keys()].sort((left, right) => left - right),

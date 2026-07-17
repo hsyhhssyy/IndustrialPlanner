@@ -14,6 +14,7 @@ import {
 } from "./runtime-slot-access";
 import {
   computeActiveGasDiffusions,
+  getGasDiffusionRecipeSourceDeviceIds,
   isDeviceInRequiredGasDiffusion,
 } from "./gas-diffusion";
 import { isMeteredConsumptionAuthorized } from "./metered-consumption";
@@ -54,9 +55,10 @@ function settleWaitingOutputs(
       if (
         device !== undefined
         && !isDeviceInRequiredGasDiffusion({
+          topology,
+          state,
           device,
           requiredGasDiffusion: recipe.plan.requiredGasDiffusion,
-          activeGasDiffusions: state.transient.activeGasDiffusions,
         })
       ) {
         continue;
@@ -78,15 +80,19 @@ function startIdleDevices(
   currentPowerGeneration = Infinity,
   effectiveTotalPowerDemand = topology.totalPowerDemand,
 ): void {
-  startIdleDeviceChannels({
-    topology,
-    state,
-    powerMode,
-    currentPowerGeneration,
-    effectiveTotalPowerDemand,
-    shouldStartPlan: (plan) => plan.gasDiffusionOutput !== null,
-  });
-  state.transient.activeGasDiffusions = computeActiveGasDiffusions(topology, state);
+  const gasDiffusionRecipeSourceDeviceIds = getGasDiffusionRecipeSourceDeviceIds(topology);
+  if (gasDiffusionRecipeSourceDeviceIds.length > 0) {
+    startIdleDeviceChannels({
+      topology,
+      state,
+      powerMode,
+      currentPowerGeneration,
+      effectiveTotalPowerDemand,
+      deviceIds: gasDiffusionRecipeSourceDeviceIds,
+      shouldStartPlan: (plan) => plan.gasDiffusionOutput !== null,
+    });
+    state.transient.activeGasDiffusions = computeActiveGasDiffusions(topology, state);
+  }
   startIdleDeviceChannels({
     topology,
     state,
@@ -103,12 +109,13 @@ function startIdleDeviceChannels(options: {
   powerMode: "real" | "infinite";
   currentPowerGeneration: number;
   effectiveTotalPowerDemand: number;
+  deviceIds?: readonly string[];
   shouldStartPlan: (plan: RuntimeDeviceRecipeState["plan"]) => boolean;
 }): void {
   const powerInsufficient = options.powerMode === "real"
     && options.currentPowerGeneration < options.effectiveTotalPowerDemand;
 
-  for (const deviceId of options.topology.ordering.deviceOrder) {
+  for (const deviceId of options.deviceIds ?? options.topology.ordering.deviceOrder) {
     const device = options.topology.devices[deviceId];
     const deviceState = options.state.persistent.devices[deviceId];
     if (device === undefined || deviceState === undefined) {

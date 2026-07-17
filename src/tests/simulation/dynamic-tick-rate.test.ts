@@ -104,7 +104,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     expect(loaded.status.dynamicTickRate).toBe(10);
   });
 
-  it("only exposes complete current-tick internal data when debug mode is enabled", () => {
+  it("keeps perf reporting enabled without constructing debugData until detailed reporting is enabled", () => {
     const normalRuntime = new SimulationWorkerRuntime();
     normalRuntime.handleRequest({
       type: "load-topology",
@@ -129,18 +129,41 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       type: "load-topology",
       requestId: 3,
       topology: createEmptyTopology(),
-      perfEnabled: false,
+      perfEnabled: true,
+      debugDataEnabled: false,
     });
-    const debugEnabled = debugRuntime.handleRequest({
-      type: "set-debug-enabled",
+    debugRuntime.advanceToTick(1);
+    const perfReport = debugRuntime.handleRequest({
+      type: "get-perf-report",
       requestId: 4,
-      debugEnabled: true,
     });
-    expect(debugEnabled.type).toBe("debug-enabled-set");
+    expect(perfReport.type).toBe("perf-report");
+    if (perfReport.type !== "perf-report") {
+      throw new Error("Expected a perf report response.");
+    }
+    expect(perfReport.report).not.toBeNull();
+
+    const perfOnlyTick = debugRuntime.handleRequest({
+      type: "get-tick-snapshot",
+      requestId: 5,
+      tickNumber: 0,
+    });
+    expect(perfOnlyTick.type).toBe("tick-snapshot-result");
+    if (perfOnlyTick.type !== "tick-snapshot-result") {
+      throw new Error("Expected a perf-only tick snapshot response.");
+    }
+    expect(perfOnlyTick.result.currentTick?.debugData).toBeUndefined();
+
+    const detailedReportEnabled = debugRuntime.handleRequest({
+      type: "set-debug-data-enabled",
+      requestId: 6,
+      debugDataEnabled: true,
+    });
+    expect(detailedReportEnabled.type).toBe("debug-data-enabled-set");
 
     const debugTick = debugRuntime.handleRequest({
       type: "get-tick-snapshot",
-      requestId: 5,
+      requestId: 7,
       tickNumber: 0,
     });
 
@@ -177,21 +200,21 @@ describe("REQ-080: dynamic simulation tick rate", () => {
         fixedDynamicTickRate: null,
         powerMode: "infinite",
         perfEnabled: true,
-        debugEnabled: true,
+        debugDataEnabled: true,
         maxRetainedTicks: 180,
-        cachedTickSnapshotNumbers: [0],
-        cachedRuntimeStateTickNumbers: [0],
+        cachedTickSnapshotNumbers: [0, 1],
+        cachedRuntimeStateTickNumbers: [0, 1],
       },
     });
 
     debugRuntime.handleRequest({
-      type: "set-debug-enabled",
-      requestId: 6,
-      debugEnabled: false,
+      type: "set-debug-data-enabled",
+      requestId: 8,
+      debugDataEnabled: false,
     });
     const debugDisabledTick = debugRuntime.handleRequest({
       type: "get-tick-snapshot",
-      requestId: 7,
+      requestId: 9,
       tickNumber: 0,
     });
     expect(debugDisabledTick.type).toBe("tick-snapshot-result");

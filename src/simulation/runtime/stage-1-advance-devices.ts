@@ -57,9 +57,10 @@ export function advanceDevices(
         continue;
       }
       if (!isDeviceInRequiredGasDiffusion({
+        topology,
+        state,
         device,
         requiredGasDiffusion: recipe.plan.requiredGasDiffusion,
-        activeGasDiffusions: state.transient.activeGasDiffusions,
       })) {
         continue;
       }

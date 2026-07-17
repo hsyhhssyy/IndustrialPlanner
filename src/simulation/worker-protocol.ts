@@ -18,7 +18,10 @@ export type SimulationWorkerRequest =
       readonly requestId: number;
       readonly topology: CompiledSimulationTopology;
       readonly migration?: SimulationTopologyMigration;
+      /** 轻量 Worker 性能统计，不控制 debugData。 */
       readonly perfEnabled?: boolean;
+      /** 完整 debugData 快照的构造与传输。 */
+      readonly debugDataEnabled?: boolean;
       readonly simulationSpeed?: number;
     }
   | {
@@ -35,9 +38,16 @@ export type SimulationWorkerRequest =
       readonly simulationSpeed: number;
     }
   | {
+      /** 历史协议名：仅同步调试模式下的轻量性能统计，不控制 debugData。 */
       readonly type: "set-debug-enabled";
       readonly requestId: number;
       readonly debugEnabled: boolean;
+    }
+  | {
+      /** 单独同步完整 debugData 快照开关。 */
+      readonly type: "set-debug-data-enabled";
+      readonly requestId: number;
+      readonly debugDataEnabled: boolean;
     }
   | {
       readonly type: "patch-runtime-slot";
@@ -94,6 +104,11 @@ export type SimulationWorkerResponse =
     }
   | {
       readonly type: "debug-enabled-set";
+      readonly requestId: number;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "debug-data-enabled-set";
       readonly requestId: number;
       readonly status: SimulationRuntimeStatus;
     }

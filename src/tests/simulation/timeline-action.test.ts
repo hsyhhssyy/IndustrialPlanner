@@ -687,7 +687,7 @@ describe("simulation timeline actions", () => {
     action.disableTimeline();
   });
 
-  it("syncs debug mode only on change events and keeps tick requests free of debug flags", async () => {
+  it("syncs perf and detailed debug-data modes independently and keeps tick requests free of debug flags", async () => {
     const state = createSimulationStateReadWrite();
     const bridge = createSimulationBridge();
     const action = new SimulationActionImpl({
@@ -697,8 +697,12 @@ describe("simulation timeline actions", () => {
       bridge,
       getPerfEnabled: () => false,
     });
-    const internals = action as unknown as { lastWorkerDebugEnabled: boolean | null };
+    const internals = action as unknown as {
+      lastWorkerDebugEnabled: boolean | null;
+      lastWorkerDebugDataEnabled: boolean | null;
+    };
     internals.lastWorkerDebugEnabled = false;
+    internals.lastWorkerDebugDataEnabled = false;
 
     await action.syncToTick(0);
     await action.syncToTick(1);
@@ -714,6 +718,15 @@ describe("simulation timeline actions", () => {
     await action.syncToTick(3);
     expect(bridge.setDebugEnabled).toHaveBeenCalledTimes(2);
     expect(bridge.setDebugEnabled).toHaveBeenLastCalledWith(false);
+
+    action.setDebugDataEnabled(true);
+    action.setDebugDataEnabled(true);
+    expect(bridge.setDebugDataEnabled).toHaveBeenCalledTimes(1);
+    expect(bridge.setDebugDataEnabled).toHaveBeenLastCalledWith(true);
+
+    action.setDebugDataEnabled(false);
+    expect(bridge.setDebugDataEnabled).toHaveBeenCalledTimes(2);
+    expect(bridge.setDebugDataEnabled).toHaveBeenLastCalledWith(false);
     expect(vi.mocked(bridge.getTickSnapshot).mock.calls.every((call) => call.length === 3)).toBe(true);
   });
 });
@@ -749,6 +762,11 @@ function createSimulationBridge(
     })),
     setDebugEnabled: vi.fn(async () => ({
       type: "debug-enabled-set" as const,
+      requestId: 1,
+      status: createRuntimeStatus(0),
+    })),
+    setDebugDataEnabled: vi.fn(async () => ({
+      type: "debug-data-enabled-set" as const,
       requestId: 1,
       status: createRuntimeStatus(0),
     })),

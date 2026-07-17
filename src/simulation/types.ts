@@ -428,6 +428,7 @@ export interface RuntimeTickSnapshot {
   readonly tickNumber: number;
   readonly status: "initial" | "running";
   /** 调试模式下为完整 Tick 与 Worker 可序列化内部状态的 JSON；非调试模式不传输该属性。 */
+  /** AI-CORRECTION 2026-07-17：仅在“仿真Worker详细汇报”开启时构造并传输，普通调试模式不再生成。 */
   readonly debugData?: string;
   readonly totalPowerDemand: number;
   readonly currentPowerGeneration: number;

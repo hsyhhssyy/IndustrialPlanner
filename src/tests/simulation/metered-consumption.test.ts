@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
-import { computeActiveGasDiffusions } from "@/simulation/runtime/gas-diffusion";
+import {
+  computeActiveGasDiffusions,
+  isDeviceInRequiredGasDiffusion,
+} from "@/simulation/runtime/gas-diffusion";
 import {
   canAcceptMeteredConsumptionItem,
   recordMeteredConsumptionItem,
@@ -92,17 +95,27 @@ describe("metered device consumption", () => {
   it("locks each window to one gas and changes the environment only at the next qualified boundary", () => {
     const topology = compilePoweredBlueprint(createBlueprint("metered-vaporizer-gas", [
       createEntity("vaporizer", "vaporizer_1", 0, 0),
+      createEntity("consumer", "item_port_xiranite_oven_1", 5, 0),
     ]));
     const device = topology.devices["device:vaporizer"]!;
+    const consumer = topology.devices["device:consumer"]!;
     const portId = device.meteredConsumption!.inputPortId;
     const state = createSimulationMutableRuntimeState(topology);
     state.tickNumber = 1;
 
     consume(topology, state, portId, "item_gas_inert", 6);
     expect(canAcceptMeteredConsumptionItem(topology, state, portId, "item_gas_acid")).toBe(false);
-    expect(computeActiveGasDiffusions(topology, state)).toMatchObject([
+    const firstGasDiffusions = computeActiveGasDiffusions(topology, state);
+    expect(firstGasDiffusions).toMatchObject([
       { sourceDeviceId: device.id, gasItemId: "item_gas_inert" },
     ]);
+    expect(computeActiveGasDiffusions(topology, state)).toBe(firstGasDiffusions);
+    expect(isDeviceInRequiredGasDiffusion({
+      topology,
+      state,
+      device: consumer,
+      requiredGasDiffusion: "item_gas_inert",
+    })).toBe(true);
 
     state.tickNumber = 1200;
     normalizeAdmissionMinuteCountersForCurrentWindow(topology, state);
@@ -117,6 +130,12 @@ describe("metered device consumption", () => {
 
     state.transient.isPowerOutage = true;
     expect(computeActiveGasDiffusions(topology, state)).toEqual([]);
+    expect(isDeviceInRequiredGasDiffusion({
+      topology,
+      state,
+      device: consumer,
+      requiredGasDiffusion: "item_gas_inert",
+    })).toBe(false);
     state.transient.isPowerOutage = false;
 
     state.tickNumber = 2400;
@@ -124,6 +143,48 @@ describe("metered device consumption", () => {
     expect(computeActiveGasDiffusions(topology, state)).toMatchObject([
       { sourceDeviceId: device.id, gasItemId: "item_gas_acid" },
     ]);
+    expect(isDeviceInRequiredGasDiffusion({
+      topology,
+      state,
+      device: consumer,
+      requiredGasDiffusion: "item_gas_inert",
+    })).toBe(false);
+    expect(isDeviceInRequiredGasDiffusion({
+      topology,
+      state,
+      device: consumer,
+      requiredGasDiffusion: "item_gas_acid",
+    })).toBe(true);
+  });
+
+  it("rebuilds gas coverage when the topology identity and source position change", () => {
+    const topology = compilePoweredBlueprint(createBlueprint("gas-position-before", [
+      createEntity("vaporizer", "vaporizer_1", 0, 0),
+      createEntity("consumer", "item_port_xiranite_oven_1", 5, 0),
+    ]));
+    const state = createSimulationMutableRuntimeState(topology);
+    const vaporizer = topology.devices["device:vaporizer"]!;
+    const portId = vaporizer.meteredConsumption!.inputPortId;
+    state.tickNumber = 1;
+    consume(topology, state, portId, "item_gas_inert", 6);
+
+    expect(isDeviceInRequiredGasDiffusion({
+      topology,
+      state,
+      device: topology.devices["device:consumer"]!,
+      requiredGasDiffusion: "item_gas_inert",
+    })).toBe(true);
+
+    const movedTopology = compilePoweredBlueprint(createBlueprint("gas-position-after", [
+      createEntity("vaporizer", "vaporizer_1", 100, 100),
+      createEntity("consumer", "item_port_xiranite_oven_1", 5, 0),
+    ]));
+    expect(isDeviceInRequiredGasDiffusion({
+      topology: movedTopology,
+      state,
+      device: movedTopology.devices["device:consumer"]!,
+      requiredGasDiffusion: "item_gas_inert",
+    })).toBe(false);
   });
 
   it("freezes and resumes a transmuter recipe without replacing its running recipe", () => {

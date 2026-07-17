@@ -54,7 +54,10 @@ export type SimulationHostWorkerMode = "auto" | "runtime";
 
 export interface CreateSimulationHostOptions {
   readonly workerMode?: SimulationHostWorkerMode;
+  /** 调试模式下的轻量性能统计开关。 */
   readonly getPerfEnabled?: () => boolean;
+  /** 完整 Worker debugData 快照开关；应由调用方同时应用调试模式总开关。 */
+  readonly getDebugDataEnabled?: () => boolean;
   readonly getActiveActivityIds?: () => readonly string[];
 }
 
@@ -73,6 +76,7 @@ export function createSimulationHost(
     bridge,
     createTimelineBridge: () => createTimelineWorkerBridge(options.workerMode ?? "auto"),
     getPerfEnabled: options.getPerfEnabled,
+    getDebugDataEnabled: options.getDebugDataEnabled,
     getActiveActivityIds: options.getActiveActivityIds,
   });
   const actions: SimulationContract["actions"] = actionImpl;
@@ -86,10 +90,17 @@ export function createSimulationHost(
     ));
   }
 
+  if (options.getDebugDataEnabled !== undefined) {
+    disposers.push(reaction(
+      options.getDebugDataEnabled,
+      (debugDataEnabled) => internalActions.setDebugDataEnabled(debugDataEnabled),
+    ));
+  }
+
   const requestPausedCurrentTickDebugRefresh = (): void => {
     const currentSnapshot = internalState.currentSnapshot;
     if (
-      options.getPerfEnabled?.() !== true
+      options.getDebugDataEnabled?.() !== true
       || internalState.runningState !== "pause"
       || currentSnapshot === null
       || currentSnapshot.debugData !== undefined
@@ -160,7 +171,7 @@ export function createSimulationHost(
                 totalPowerDemand: internalState.currentSnapshot.totalPowerDemand,
                 transferCount: internalState.currentSnapshot.transfers.length,
                 diagnosticCount: internalState.currentSnapshot.diagnostics.length,
-                ...(options.getPerfEnabled?.() === true
+                ...(options.getDebugDataEnabled?.() === true
                   && internalState.currentSnapshot.debugData !== undefined
                   ? { debugData: internalState.currentSnapshot.debugData }
                   : {}),
@@ -781,7 +792,7 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     });
   }
 
-  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number): Promise<Extract<
+  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number, debugDataEnabled?: boolean): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >> {
@@ -791,6 +802,7 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
       topology,
       migration,
       perfEnabled,
+      debugDataEnabled,
       simulationSpeed,
     }, "topology-loaded");
   }
@@ -817,6 +829,17 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
       requestId: this.createRequestId(),
       debugEnabled: value,
     }, "debug-enabled-set");
+  }
+
+  public setDebugDataEnabled(value: boolean): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "debug-data-enabled-set" }
+  >> {
+    return this.request({
+      type: "set-debug-data-enabled",
+      requestId: this.createRequestId(),
+      debugDataEnabled: value,
+    }, "debug-data-enabled-set");
   }
 
   public setSimulationSpeed(value: number): Promise<Extract<
@@ -945,7 +968,7 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
   private readonly runtime = new SimulationWorkerRuntime();
   private nextRequestId = 1;
 
-  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number): Promise<Extract<
+  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number, debugDataEnabled?: boolean): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >> {
@@ -955,6 +978,7 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       topology,
       migration,
       perfEnabled,
+      debugDataEnabled,
       simulationSpeed,
     });
     if (response.type !== "topology-loaded") {
@@ -1006,6 +1030,21 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       debugEnabled: value,
     });
     if (response.type !== "debug-enabled-set") {
+      throw new Error(`Unexpected simulation worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public setDebugDataEnabled(value: boolean): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "debug-data-enabled-set" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "set-debug-data-enabled",
+      requestId: this.createRequestId(),
+      debugDataEnabled: value,
+    });
+    if (response.type !== "debug-data-enabled-set") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
     }
     return Promise.resolve(response);

@@ -95,7 +95,7 @@ function logTopologyRuntimeTransition(
 }
 
 export interface SimulationWorkerBridge {
-  loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number): Promise<Extract<
+  loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number, debugDataEnabled?: boolean): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >>;
@@ -106,6 +106,10 @@ export interface SimulationWorkerBridge {
   setDebugEnabled(value: boolean): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "debug-enabled-set" }
+  >>;
+  setDebugDataEnabled(value: boolean): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "debug-data-enabled-set" }
   >>;
   setSimulationSpeed(value: number): Promise<Extract<
     SimulationWorkerResponse,
@@ -165,7 +169,10 @@ export interface TimelineWorkerBridge {
 export interface SimulationInternalAction {
   refreshFromCurrentDocument(): Promise<SimulationStartResult>;
   syncToTick(tickNumber: number, playbackTickNumberOnReady?: number): Promise<SimulationTickPullStatus>;
+  /** 同步轻量 Worker 性能统计；不会开启完整 debugData。 */
   setDebugEnabled(value: boolean): void;
+  /** 单独控制完整 debugData 的构造与传输。 */
+  setDebugDataEnabled(value: boolean): void;
   setSimulationSpeed(value: number): void;
   reset(): void;
 }
@@ -177,6 +184,7 @@ interface SimulationActionImplOptions {
   bridge: SimulationWorkerBridge;
   createTimelineBridge?: () => TimelineWorkerBridge;
   getPerfEnabled?: () => boolean;
+  getDebugDataEnabled?: () => boolean;
   getActiveActivityIds?: () => readonly string[];
 }
 
@@ -215,6 +223,7 @@ implements SimulationAction, SimulationInternalAction {
   private readonly bridge: SimulationWorkerBridge;
   private readonly createTimelineBridge: () => TimelineWorkerBridge;
   private readonly getPerfEnabled: (() => boolean) | undefined;
+  private readonly getDebugDataEnabled: (() => boolean) | undefined;
   private readonly getActiveActivityIds: (() => readonly string[]) | undefined;
   private compiledDocument: WorldDocument | null = null;
   private compiledActivitySignature: string | null = null;
@@ -249,6 +258,7 @@ implements SimulationAction, SimulationInternalAction {
   private topologyPresentationBoundary: TopologyPresentationBoundary | null = null;
   private topologyRevision = 0;
   private lastWorkerDebugEnabled: boolean | null = null;
+  private lastWorkerDebugDataEnabled: boolean | null = null;
 
   // === 诊断计数器：10 秒输出一次 ===
   private diagFrameCount = 0;
@@ -269,6 +279,7 @@ implements SimulationAction, SimulationInternalAction {
     this.bridge = options.bridge;
     this.createTimelineBridge = options.createTimelineBridge ?? createMissingTimelineWorkerBridge;
     this.getPerfEnabled = options.getPerfEnabled;
+    this.getDebugDataEnabled = options.getDebugDataEnabled;
     this.getActiveActivityIds = options.getActiveActivityIds;
   }
 
@@ -630,18 +641,24 @@ implements SimulationAction, SimulationInternalAction {
             : this.stateReadWrite.currentPlaybackTickNumber,
         );
     const perfEnabled = this.getPerfEnabled?.() ?? false;
+    const debugDataEnabled = this.getDebugDataEnabled?.() ?? false;
     let response: Awaited<ReturnType<SimulationWorkerBridge["loadTopology"]>>;
     this.lastWorkerDebugEnabled = perfEnabled;
+    this.lastWorkerDebugDataEnabled = debugDataEnabled;
     try {
       response = await this.bridge.loadTopology(
         compiledTopology,
         migration ?? undefined,
         perfEnabled,
         this.stateReadWrite.simulationSpeed,
+        debugDataEnabled,
       );
     } catch (error) {
       if (this.lastWorkerDebugEnabled === perfEnabled) {
         this.lastWorkerDebugEnabled = null;
+      }
+      if (this.lastWorkerDebugDataEnabled === debugDataEnabled) {
+        this.lastWorkerDebugDataEnabled = null;
       }
       this.releaseTopologyPresentationBoundary(presentationBoundary);
       throw error;
@@ -1145,6 +1162,19 @@ implements SimulationAction, SimulationInternalAction {
     void this.bridge.setDebugEnabled(debugEnabled).catch(() => {
       if (this.lastWorkerDebugEnabled === debugEnabled) {
         this.lastWorkerDebugEnabled = null;
+      }
+    });
+  };
+
+  public readonly setDebugDataEnabled: SimulationInternalAction["setDebugDataEnabled"] = (debugDataEnabled) => {
+    if (this.lastWorkerDebugDataEnabled === debugDataEnabled) {
+      return;
+    }
+
+    this.lastWorkerDebugDataEnabled = debugDataEnabled;
+    void this.bridge.setDebugDataEnabled(debugDataEnabled).catch(() => {
+      if (this.lastWorkerDebugDataEnabled === debugDataEnabled) {
+        this.lastWorkerDebugDataEnabled = null;
       }
     });
   };
@@ -1816,6 +1846,7 @@ implements SimulationAction, SimulationInternalAction {
     this.nextPerfReportTick = 180;
     this.playbackTickRequestInFlight = false;
     this.lastWorkerDebugEnabled = null;
+    this.lastWorkerDebugDataEnabled = null;
     Object.assign(this.stateReadWrite.timeline, createInitialSimulationTimelineState());
   }
 
