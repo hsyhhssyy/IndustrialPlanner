@@ -10,6 +10,9 @@ const orchestratorTestState = vi.hoisted(() => {
     definitionId: string;
     entityLayer: unknown;
   }> = []
+  const layoutSyncs: string[] = []
+  const runtimeSyncs: string[] = []
+  const animationSyncs: string[] = []
 
   return {
     reset() {
@@ -17,6 +20,9 @@ const orchestratorTestState = vi.hoisted(() => {
       createdSprites.length = 0
       destroyedSprites.length = 0
       attachedSprites.length = 0
+      layoutSyncs.length = 0
+      runtimeSyncs.length = 0
+      animationSyncs.length = 0
     },
     setTickHandler(handler: () => void) {
       tickHandler = handler
@@ -55,6 +61,24 @@ const orchestratorTestState = vi.hoisted(() => {
     },
     getAttachedSprites() {
       return [...attachedSprites]
+    },
+    recordLayoutSync(entityId: string) {
+      layoutSyncs.push(entityId)
+    },
+    recordRuntimeSync(entityId: string) {
+      runtimeSyncs.push(entityId)
+    },
+    recordAnimationSync(entityId: string) {
+      animationSyncs.push(entityId)
+    },
+    getLayoutSyncs() {
+      return [...layoutSyncs]
+    },
+    getRuntimeSyncs() {
+      return [...runtimeSyncs]
+    },
+    getAnimationSyncs() {
+      return [...animationSyncs]
     },
   }
 })
@@ -98,7 +122,12 @@ vi.mock("@/renderer/sprites/belt-sprite", () => ({
       )
     })
     public readonly setVisible = vi.fn()
-    public readonly syncLayout = vi.fn()
+    public readonly syncLayout = vi.fn(() => {
+      orchestratorTestState.recordLayoutSync(this.entityId)
+    })
+    public readonly syncAnimation = vi.fn(() => {
+      orchestratorTestState.recordAnimationSync(this.entityId)
+    })
 
     public constructor(
       private readonly entityId: string,
@@ -125,7 +154,15 @@ vi.mock("@/renderer/sprites/generic-device-sprite", () => ({
       )
     })
     public readonly setVisible = vi.fn()
-    public readonly syncLayout = vi.fn()
+    public readonly syncLayout = vi.fn(() => {
+      orchestratorTestState.recordLayoutSync(this.entityId)
+    })
+    public readonly syncRuntime = vi.fn(() => {
+      orchestratorTestState.recordRuntimeSync(this.entityId)
+    })
+    public readonly syncAnimation = vi.fn(() => {
+      orchestratorTestState.recordAnimationSync(this.entityId)
+    })
 
     public constructor(
       private readonly entityId: string,
@@ -152,7 +189,15 @@ vi.mock("@/renderer/sprites/pipe-sprite", () => ({
       )
     })
     public readonly setVisible = vi.fn()
-    public readonly syncLayout = vi.fn()
+    public readonly syncLayout = vi.fn(() => {
+      orchestratorTestState.recordLayoutSync(this.entityId)
+    })
+    public readonly syncRuntime = vi.fn(() => {
+      orchestratorTestState.recordRuntimeSync(this.entityId)
+    })
+    public readonly syncAnimation = vi.fn(() => {
+      orchestratorTestState.recordAnimationSync(this.entityId)
+    })
 
     public constructor(
       private readonly entityId: string,
@@ -372,6 +417,136 @@ describe("createRenderSceneOrchestrator", () => {
 
     orchestrator.destroy()
     expect(ticker.remove).toHaveBeenCalledTimes(3)
+  })
+
+  it("reuses entity layout while runtime and animation keep their own invalidation paths", () => {
+    let runtimeTick = 10
+    const ticker = {
+      lastTime: 1200,
+      deltaMS: 16.67,
+      add: vi.fn((handler: () => void, _context: unknown, priority: number) => {
+        if (priority === 50) {
+          orchestratorTestState.setTickHandler(handler)
+        }
+      }),
+      remove: vi.fn(),
+    }
+    const renderHost = {
+      dom: {
+        placementGlowOverlay: document.createElement("div"),
+        blueprintGlowOverlay: document.createElement("div"),
+        marqueeGlowOverlay: document.createElement("div"),
+      },
+      app: {
+        stage: {
+          addChild: vi.fn(),
+          addChildAt: vi.fn(),
+        },
+        renderer: {
+          width: 640,
+          height: 480,
+          resolution: 1,
+          resize: vi.fn(),
+        },
+        ticker,
+      },
+      internalState: {},
+      workspace: {
+        state: {} as never,
+        registry: {
+          entityDefinitions: [{
+            id: "device-a",
+            spriteId: "device-a",
+            footprint: { width: 2, height: 1 },
+          }],
+          baseDefinitions: [],
+          recipeDefinitions: [],
+          queries: {
+            isDedicatedLogisticsDevice: vi.fn(() => false),
+            resolveDedicatedLogisticsKind: vi.fn(() => null),
+          },
+        },
+        app: {
+          state: {
+            screenProfile: {
+              devicePixelRatio: 1,
+              deviceClass: "desktop",
+            },
+            settings: {
+              gameUseBlueprintStyleDeviceImages: false,
+              gameShowDeviceNames: true,
+              gameShowDeviceIcons: false,
+            },
+            activeTool: "select",
+            toolInfo: {
+              marqueeType: "marquee",
+            },
+            theme: AYU_LIGHT_THEME,
+          },
+        },
+        editor: {
+          state: {
+            viewport: {
+              clientRect: { width: 640, height: 480 },
+              center: { x: 0, y: 0 },
+              gridCellPixelSize: 16,
+              displayRotation: 0,
+            },
+          },
+          queries: {
+            listEntities: () => [{
+              id: "entity-a",
+              definitionId: "device-a",
+              position: { x: 0, y: 0 },
+              rotation: 0,
+              config: {},
+              tags: [],
+            }],
+          },
+        },
+        render: null,
+        simulation: {
+          state: {
+            runningState: "start",
+            timeline: {
+              cursorTickNumber: 10,
+              readiness: "ready",
+              isSeeking: false,
+            },
+          },
+          queries: {
+            getDocumentRuntimeStatus: () => ({
+              tickNumber: runtimeTick,
+              totalPowerDemand: 0,
+              currentPowerGeneration: null,
+              isPowerOutage: false,
+            }),
+            getActiveGasDiffusionRanges: () => [],
+          },
+          actions: {
+            advancePlaybackByDeltaMs: vi.fn(async () => null),
+          },
+        },
+      },
+    } as unknown as RenderHost
+
+    const orchestrator = createRenderSceneOrchestrator(renderHost)
+    const tickHandler = orchestratorTestState.getTickHandler()
+
+    tickHandler?.()
+    tickHandler?.()
+    runtimeTick = 11
+    tickHandler?.()
+
+    expect(orchestratorTestState.getLayoutSyncs()).toEqual(["entity-a"])
+    expect(orchestratorTestState.getRuntimeSyncs()).toEqual(["entity-a"])
+    expect(orchestratorTestState.getAnimationSyncs()).toEqual([
+      "entity-a",
+      "entity-a",
+      "entity-a",
+    ])
+
+    orchestrator.destroy()
   })
 
   it("recreates an entity sprite when an entity keeps its id but changes definition", () => {

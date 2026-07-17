@@ -168,6 +168,16 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     })
   }
 
+  public syncAnimation(context: RenderSpriteSyncContext): void {
+    if (!this.scanlineTiling.visible) {
+      return
+    }
+
+    const tilePixelSize = this.scanlineTexture?.width ?? 64
+    const phase = (context.time.nowMs % SCANLINE_SCROLL_INTERVAL_MS) / SCANLINE_SCROLL_INTERVAL_MS
+    this.scanlineTiling.tilePosition.x = phase * tilePixelSize
+  }
+
   protected resetCollectionOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,

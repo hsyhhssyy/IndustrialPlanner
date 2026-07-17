@@ -2,7 +2,11 @@ import type {
   WorldEntity,
 } from "@/domain/document/world-document"
 import type { AppTheme } from "@/domain/app/types/theme"
-import { EntityCollectionType } from "@/domain/editor/types/editor-types"
+import {
+  EntityCollectionType,
+  type EntityCollections,
+  type EntityCollectionType as EntityCollectionTypeValue,
+} from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import {
   rotateGridRotation,
@@ -28,6 +32,8 @@ import {
   RenderLayerMap,
   RenderSprite,
   type RenderSpriteLayout,
+  type RenderSpriteSyncContext,
+  type RenderSpriteSyncVersions,
 } from "../sprites/render-sprite"
 import {
   type DecorationProfiler,
@@ -67,6 +73,16 @@ const RENDER_PERF_LONG_FRAME_MS = 50
 const RENDER_PERF_TOP_STAGE_COUNT = 12
 const PIXI_RENDER_START_PRIORITY = UPDATE_PRIORITY.LOW + 1
 const PIXI_RENDER_FINISH_PRIORITY = UPDATE_PRIORITY.LOW - 1
+const RENDER_INVALIDATION_COLLECTION_TYPES: readonly EntityCollectionTypeValue[] = [
+  EntityCollectionType.selection,
+  EntityCollectionType.marquee,
+  EntityCollectionType.reverseMarquee,
+  EntityCollectionType.preview,
+  EntityCollectionType.ghost,
+  EntityCollectionType.logisticsHead,
+  EntityCollectionType.powered,
+  EntityCollectionType.invalidPlacement,
+]
 
 /** 渲染低层设备定义 ID —— 先渲染，被其他设备覆盖 */
 const ENTITY_LOW_DEFINITION_IDS = new Set([
@@ -144,6 +160,26 @@ interface EntitySpriteSyncStats {
   destroyedSprites: number;
   recreatedSprites: number;
   syncLayoutCalls: number;
+  syncRuntimeCalls: number;
+  syncAnimationCalls: number;
+}
+
+interface EntitySpriteSyncCache {
+  documentVersion: number;
+  viewportVersion: number;
+  collectionVersion: number;
+  presentationVersion: number;
+  simulationVersion: number;
+  readonly layouts: Map<string, RenderSpriteLayout>;
+  readonly visibility: Map<string, boolean>;
+}
+
+interface EntityGeometryStamp {
+  readonly definitionId: string;
+  readonly x: number;
+  readonly y: number;
+  readonly rotation: GridRotation;
+  readonly layerKey: EntitySpriteLayerKey;
 }
 
 type EntitySpriteLayerKey = "entityLow" | "entity" | "entityHigh" | "belt" | "pipe" | "draft"
@@ -206,9 +242,31 @@ export function createRenderSceneOrchestrator(
   const entitySprites = new Map<string, RenderSprite>()
   const entitySpriteDefinitionIds = new Map<string, string>()
   const entitySpriteLayerKeys = new Map<string, EntitySpriteLayerKey>()
+  const entityGeometryStamps = new Map<string, EntityGeometryStamp>()
+  const entitySpriteSyncCache: EntitySpriteSyncCache = {
+    documentVersion: -1,
+    viewportVersion: -1,
+    collectionVersion: -1,
+    presentationVersion: -1,
+    simulationVersion: -1,
+    layouts: new Map(),
+    visibility: new Map(),
+  }
   const grassBackgroundDecoration = createGrassBackgroundDecoration(renderHost)
   const renderPerfDiagnostics = createRenderPerfDiagnostics(renderHost)
   let activeFrameProfiler: RenderFrameProfiler | null = null
+  let documentVersion = 0
+  let viewportVersion = 0
+  let collectionVersion = 0
+  let presentationVersion = 0
+  let simulationVersion = 0
+  let lastViewportState: RenderViewportState | null = null
+  let lastPresentationSignature: string | null = null
+  let lastSimulationSignature: string | null = null
+  const collectionSnapshots = new Map<string, readonly string[]>()
+  const disposeDocumentVersionSubscription = renderHost.workspace.editor?.document?.subscribe?.(() => {
+    documentVersion += 1
+  }) ?? (() => undefined)
   const memoryCollector: MemorySnapshotCollector = createMemorySnapshotCollector(
     app,
     (snap) => {
@@ -328,6 +386,38 @@ export function createRenderSceneOrchestrator(
       void renderHost.workspace.simulation?.actions.advancePlaybackByDeltaMs(frameTime.deltaMs)
     })
 
+    if (!areRenderViewportStatesEqual(lastViewportState, viewportState)) {
+      lastViewportState = viewportState
+      viewportVersion += 1
+    }
+    if (refreshCollectionSnapshots(
+      renderHost.workspace.editor?.state.collections,
+      collectionSnapshots,
+    )) {
+      collectionVersion += 1
+    }
+
+    const presentationSignature = createRenderPresentationSignature(renderHost)
+    if (presentationSignature !== lastPresentationSignature) {
+      lastPresentationSignature = presentationSignature
+      presentationVersion += 1
+    }
+
+    const runtimeStatus = renderHost.workspace.simulation?.queries.getDocumentRuntimeStatus?.() ?? null
+    const simulationSignature = createRenderSimulationSignature(renderHost, runtimeStatus?.tickNumber ?? null)
+    if (simulationSignature !== lastSimulationSignature) {
+      lastSimulationSignature = simulationSignature
+      simulationVersion += 1
+    }
+
+    let frameVersions: RenderSpriteSyncVersions = {
+      document: documentVersion,
+      viewport: viewportVersion,
+      collections: collectionVersion,
+      presentation: presentationVersion,
+      simulation: simulationVersion,
+    }
+
     const ctx: DecorationSyncContext = {
       viewportState,
       viewportBounds: {
@@ -340,6 +430,7 @@ export function createRenderSceneOrchestrator(
       theme: effectiveCanvasTheme,
       nowMs: frameTime.nowMs,
       profiler: frameProfiler ?? undefined,
+      versions: frameVersions,
     }
 
     measureRenderStage(frameProfiler, "decoration.grid", () => {
@@ -367,6 +458,14 @@ export function createRenderSceneOrchestrator(
       "editor.listEntities",
       () => renderHost.workspace.editor!.queries.listEntities(),
     )
+    if (refreshEntityGeometryStamps(entities, entityGeometryStamps)) {
+      documentVersion += 1
+      frameVersions = {
+        ...frameVersions,
+        document: documentVersion,
+      }
+      ctx.versions = frameVersions
+    }
     recordRenderFrameCounters(frameProfiler, renderHost, entities.length, entitySprites.size)
 
     const entitySpriteStats = measureRenderStage(frameProfiler, "entitySprites.sync", () =>
@@ -387,6 +486,8 @@ export function createRenderSceneOrchestrator(
         theme: effectiveCanvasTheme,
         profiler: frameProfiler,
         logisticsPortOccupancy: null,
+        versions: frameVersions,
+        cache: entitySpriteSyncCache,
       }),
     )
     recordEntitySpriteSyncStats(frameProfiler, entitySpriteStats)
@@ -531,6 +632,7 @@ export function createRenderSceneOrchestrator(
       app.ticker.remove(flushViewport)
       app.ticker.remove(startPixiRenderMeasurement)
       app.ticker.remove(finishPixiRenderMeasurement)
+      disposeDocumentVersionSubscription()
       memoryCollector.stop()
 
       for (const sprite of entitySprites.values()) {
@@ -539,6 +641,10 @@ export function createRenderSceneOrchestrator(
 
       entitySprites.clear()
       entitySpriteDefinitionIds.clear()
+      entitySpriteLayerKeys.clear()
+      entityGeometryStamps.clear()
+      entitySpriteSyncCache.layouts.clear()
+      entitySpriteSyncCache.visibility.clear()
       gridDecoration.destroy()
       baseBoundaryDecoration.destroy()
       powerRangeDecoration.destroy()
@@ -731,6 +837,136 @@ function readViewportState(renderHost: RenderHost): RenderViewportState {
   }
 }
 
+function areRenderViewportStatesEqual(
+  previous: RenderViewportState | null,
+  next: RenderViewportState,
+): boolean {
+  return previous !== null
+    && previous.width === next.width
+    && previous.height === next.height
+    && previous.resolution === next.resolution
+    && previous.centerX === next.centerX
+    && previous.centerY === next.centerY
+    && previous.gridCellPixelSize === next.gridCellPixelSize
+    && previous.displayRotation === next.displayRotation
+}
+
+function refreshCollectionSnapshots(
+  collections: EntityCollections | undefined,
+  snapshots: Map<string, readonly string[]>,
+): boolean {
+  if (collections === undefined) {
+    const changed = snapshots.size !== 0
+    snapshots.clear()
+    return changed
+  }
+
+  let changed = snapshots.size !== RENDER_INVALIDATION_COLLECTION_TYPES.length
+  for (const collectionType of RENDER_INVALIDATION_COLLECTION_TYPES) {
+    const collection = collections[collectionType]
+    const snapshot = snapshots.get(collectionType)
+    if (
+      snapshot === undefined
+      || snapshot.length !== collection.length
+      || snapshot.some((entityId, index) => entityId !== collection[index])
+    ) {
+      changed = true
+    }
+  }
+
+  if (!changed) {
+    return false
+  }
+
+  snapshots.clear()
+  for (const collectionType of RENDER_INVALIDATION_COLLECTION_TYPES) {
+    snapshots.set(collectionType, [...collections[collectionType]])
+  }
+  return true
+}
+
+function createRenderPresentationSignature(renderHost: RenderHost): string {
+  const appState = renderHost.workspace.app?.state
+  const editor = renderHost.workspace.editor
+  const settings = appState?.settings
+  const draft = editor?.queries.resolveLogisticsDraftState?.() ?? null
+
+  return [
+    settings?.locale,
+    settings?.themeId,
+    settings?.gameUseBlueprintStyleDeviceImages,
+    settings?.gameShowDeviceNames,
+    settings?.gameShowDeviceIcons,
+    settings?.gameAlwaysShowGridLines,
+    settings?.showGrassBackground,
+    appState?.activeTool,
+    appState?.toolInfo?.marqueeType,
+    appState?.screenProfile?.deviceClass,
+    editor?.state.suppressBelts,
+    editor?.state.suppressPipes,
+    draftFingerprintOf(draft),
+    draft?.headDraftEntityId,
+    draft?.invalidReason,
+  ].join("|")
+}
+
+function createRenderSimulationSignature(
+  renderHost: RenderHost,
+  tickNumber: number | null,
+): string {
+  const simulationState = renderHost.workspace.simulation?.state
+  if (simulationState === undefined || typeof simulationState !== "object") {
+    return `${tickNumber ?? "none"}`
+  }
+
+  return [
+    simulationState.runningState,
+    tickNumber ?? "none",
+    simulationState.timeline?.cursorTickNumber ?? "none",
+    simulationState.timeline?.readiness ?? "none",
+    simulationState.timeline?.isSeeking ?? false,
+  ].join("|")
+}
+
+function refreshEntityGeometryStamps(
+  entities: readonly WorldEntity[],
+  stamps: Map<string, EntityGeometryStamp>,
+): boolean {
+  let changed = stamps.size !== entities.length
+  if (!changed) {
+    for (const entity of entities) {
+      const stamp = stamps.get(entity.id)
+      if (
+        stamp === undefined
+        || stamp.definitionId !== entity.definitionId
+        || stamp.x !== entity.position.x
+        || stamp.y !== entity.position.y
+        || stamp.rotation !== entity.rotation
+        || stamp.layerKey !== resolveEntitySpriteLayerKey(entity)
+      ) {
+        changed = true
+        break
+      }
+    }
+  }
+
+  if (!changed) {
+    return false
+  }
+
+  stamps.clear()
+  for (const entity of entities) {
+    stamps.set(entity.id, {
+      definitionId: entity.definitionId,
+      x: entity.position.x,
+      y: entity.position.y,
+      rotation: entity.rotation,
+      layerKey: resolveEntitySpriteLayerKey(entity),
+    })
+  }
+  return true
+}
+
 function resolveViewportAxisSize(
   value: number,
   fallback: number,
@@ -879,6 +1115,8 @@ function syncWorldEntitySprites(options: {
   theme: AppTheme;
   logisticsPortOccupancy: ReadonlyMap<string, ReadonlySet<string>> | null;
   profiler: DecorationProfiler | null;
+  versions: RenderSpriteSyncVersions;
+  cache: EntitySpriteSyncCache;
 }): EntitySpriteSyncStats | null {
   const stats: EntitySpriteSyncStats | null = options.profiler === null
     ? null
@@ -890,7 +1128,62 @@ function syncWorldEntitySprites(options: {
         destroyedSprites: 0,
         recreatedSprites: 0,
         syncLayoutCalls: 0,
+        syncRuntimeCalls: 0,
+        syncAnimationCalls: 0,
       }
+  const spriteContext: RenderSpriteSyncContext = {
+    theme: options.theme,
+    workspace: options.workspace,
+    time: options.frameTime,
+    suppressBelts: options.workspace.editor?.state.suppressBelts ?? false,
+    suppressPipes: options.workspace.editor?.state.suppressPipes ?? false,
+    logisticsPortOccupancy: options.logisticsPortOccupancy,
+    portOverlayManagedGlobally: true,
+    versions: options.versions,
+  }
+  const layoutInvalidated =
+    options.cache.documentVersion !== options.versions.document
+    || options.cache.viewportVersion !== options.versions.viewport
+    || options.cache.collectionVersion !== options.versions.collections
+    || options.cache.presentationVersion !== options.versions.presentation
+  const simulationInvalidated = options.cache.simulationVersion !== options.versions.simulation
+
+  if (!layoutInvalidated) {
+    for (const [entityId, sprite] of options.entitySprites) {
+      const isVisible = options.cache.visibility.get(entityId) === true
+      if (stats !== null) {
+        if (isVisible) {
+          stats.visibleEntities += 1
+        } else {
+          stats.hiddenEntities += 1
+        }
+      }
+      if (!isVisible) {
+        continue
+      }
+
+      const layout = options.cache.layouts.get(entityId)
+      if (layout === undefined) {
+        continue
+      }
+      if (simulationInvalidated && sprite.syncRuntime !== undefined) {
+        sprite.syncRuntime(layout, spriteContext)
+        if (stats !== null) {
+          stats.syncRuntimeCalls += 1
+        }
+      }
+      if (sprite.syncAnimation !== undefined) {
+        sprite.syncAnimation(spriteContext)
+        if (stats !== null) {
+          stats.syncAnimationCalls += 1
+        }
+      }
+    }
+
+    options.cache.simulationVersion = options.versions.simulation
+    return stats
+  }
+
   const nextEntityIds = new Set<string>()
   const visibleRect = measureRenderStage(
     options.profiler,
@@ -916,6 +1209,8 @@ function syncWorldEntitySprites(options: {
       options.entitySprites.delete(entity.id)
       options.entitySpriteDefinitionIds.delete(entity.id)
       options.entitySpriteLayerKeys.delete(entity.id)
+      options.cache.layouts.delete(entity.id)
+      options.cache.visibility.delete(entity.id)
       sprite = null
       if (stats !== null) {
         stats.destroyedSprites += 1
@@ -935,6 +1230,7 @@ function syncWorldEntitySprites(options: {
       effectiveOffset,
       visibleRect,
     )
+    options.cache.visibility.set(entity.id, isVisible)
 
     if (!isVisible) {
       if (stats !== null) {
@@ -997,29 +1293,26 @@ function syncWorldEntitySprites(options: {
     if (stats !== null) {
       stats.syncLayoutCalls += 1
     }
-    sprite.syncLayout(
-      resolveWorldEntitySpriteLayout({
-        entity,
-        footprint: definition.footprint,
-        spriteOffset: effectiveOffset,
-        viewportBounds: options.viewportBounds,
-        viewportCenter: {
-          x: options.viewportState.centerX,
-          y: options.viewportState.centerY,
-        },
-        gridCellPixelSize: options.viewportState.gridCellPixelSize,
-        displayRotation: options.viewportState.displayRotation,
-      }),
-      {
-        theme: options.theme,
-        workspace: options.workspace,
-        time: options.frameTime,
-        suppressBelts: options.workspace.editor?.state.suppressBelts ?? false,
-        suppressPipes: options.workspace.editor?.state.suppressPipes ?? false,
-        logisticsPortOccupancy: options.logisticsPortOccupancy,
-        portOverlayManagedGlobally: true,
+    const layout = resolveWorldEntitySpriteLayout({
+      entity,
+      footprint: definition.footprint,
+      spriteOffset: effectiveOffset,
+      viewportBounds: options.viewportBounds,
+      viewportCenter: {
+        x: options.viewportState.centerX,
+        y: options.viewportState.centerY,
       },
-    )
+      gridCellPixelSize: options.viewportState.gridCellPixelSize,
+      displayRotation: options.viewportState.displayRotation,
+    })
+    options.cache.layouts.set(entity.id, layout)
+    sprite.syncLayout(layout, spriteContext)
+    if (sprite.syncAnimation !== undefined) {
+      sprite.syncAnimation(spriteContext)
+      if (stats !== null) {
+        stats.syncAnimationCalls += 1
+      }
+    }
     nextEntityIds.add(entity.id)
   }
 
@@ -1032,10 +1325,18 @@ function syncWorldEntitySprites(options: {
     options.entitySprites.delete(entityId)
     options.entitySpriteDefinitionIds.delete(entityId)
     options.entitySpriteLayerKeys.delete(entityId)
+    options.cache.layouts.delete(entityId)
+    options.cache.visibility.delete(entityId)
     if (stats !== null) {
       stats.destroyedSprites += 1
     }
   }
+
+  options.cache.documentVersion = options.versions.document
+  options.cache.viewportVersion = options.versions.viewport
+  options.cache.collectionVersion = options.versions.collections
+  options.cache.presentationVersion = options.versions.presentation
+  options.cache.simulationVersion = options.versions.simulation
 
   return stats
 }
@@ -1139,6 +1440,8 @@ function recordEntitySpriteSyncStats(
   profiler.count("entitySprites.destroyedSprites", stats.destroyedSprites)
   profiler.count("entitySprites.recreatedSprites", stats.recreatedSprites)
   profiler.count("entitySprites.syncLayoutCalls", stats.syncLayoutCalls)
+  profiler.count("entitySprites.syncRuntimeCalls", stats.syncRuntimeCalls)
+  profiler.count("entitySprites.syncAnimationCalls", stats.syncAnimationCalls)
 }
 
 function createRenderPerfDiagnostics(renderHost: RenderHost): {

@@ -35,6 +35,14 @@ export interface RenderSpriteTimeContext {
   deltaMs: number;
 }
 
+export interface RenderSpriteSyncVersions {
+  readonly document: number;
+  readonly viewport: number;
+  readonly collections: number;
+  readonly presentation: number;
+  readonly simulation: number;
+}
+
 export interface RenderSpriteSyncContext {
   theme: AppTheme;
   workspace: WorkspaceContract;
@@ -49,11 +57,17 @@ export interface RenderSpriteSyncContext {
   logisticsPortOccupancy: ReadonlyMap<string, ReadonlySet<string>> | null;
   /** true 时端口提示由全局 PortOverlayDecoration 统一绘制。 */
   portOverlayManagedGlobally?: boolean;
+  /** renderer 内部维护的失效版本；直接调用 sprite 的测试可省略并保持全量同步语义。 */
+  versions?: RenderSpriteSyncVersions;
 }
 
 export interface RenderSprite {
   attach(layers: RenderLayerMap): void;
   syncLayout(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void;
+  /** 仿真展示快照变化时同步运行时视觉，不重新计算静态布局。 */
+  syncRuntime?(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void;
+  /** 每个渲染帧只推进已有动画对象的相位。 */
+  syncAnimation?(context: RenderSpriteSyncContext): void;
   setVisible(visible: boolean): void;
   destroy(): void;
 }

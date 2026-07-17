@@ -879,11 +879,36 @@ function drawGridIntersectionDots(options: {
 
 export function createGridLineDecoration(): DecorationLayer {
   const graphics = new Graphics({ roundPixels: true });
+  let lastDocumentVersion = -1;
+  let lastViewportVersion = -1;
+  let lastCollectionVersion = -1;
+  let lastPresentationVersion = -1;
 
   return {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
+      const versions = ctx.versions;
+      const previewActive = (ctx.renderHost.workspace.editor?.state.collections[EntityCollectionType.preview]?.length ?? 0) > 0;
+      const interactionActive = ctx.renderHost.workspace.app?.state.activeTool !== "select";
+      if (
+        versions !== undefined
+        && !previewActive
+        && !interactionActive
+        && lastDocumentVersion === versions.document
+        && lastViewportVersion === versions.viewport
+        && lastCollectionVersion === versions.collections
+        && lastPresentationVersion === versions.presentation
+      ) {
+        return;
+      }
+      if (versions !== undefined) {
+        lastDocumentVersion = versions.document;
+        lastViewportVersion = versions.viewport;
+        lastCollectionVersion = versions.collections;
+        lastPresentationVersion = versions.presentation;
+      }
+
       graphics.clear();
 
       const app = ctx.renderHost.workspace.app;

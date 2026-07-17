@@ -31,4 +31,12 @@ export interface DecorationSyncContext {
   theme: AppTheme;
   nowMs: number;
   profiler?: DecorationProfiler;
+  /** renderer 内部维护的分层失效版本。 */
+  versions?: {
+    readonly document: number;
+    readonly viewport: number;
+    readonly collections: number;
+    readonly presentation: number;
+    readonly simulation: number;
+  };
 }

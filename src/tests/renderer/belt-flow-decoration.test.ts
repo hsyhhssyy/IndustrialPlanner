@@ -236,6 +236,35 @@ describe("BeltFlowDecoration", () => {
     decoration.destroy()
   })
 
+  it("reuses belt topology and masks while only advancing the animation phase", () => {
+    const entities = [
+      createEntity("belt-a", "belt_straight_1x1", { x: 0, y: 0 }),
+      createEntity("belt-b", "belt_straight_1x1", { x: 1, y: 0 }),
+    ]
+    const listEntities = vi.fn(() => entities)
+    const versions = {
+      document: 1,
+      viewport: 1,
+      collections: 1,
+      presentation: 1,
+      simulation: 1,
+    }
+    const decoration = createBeltFlowDecoration()
+
+    decoration.sync(createFlowContext({ nowMs: 0, listEntities, versions }) as never)
+    const firstTopologyReadCount = listEntities.mock.calls.length
+    decoration.sync(createFlowContext({ nowMs: 500, listEntities, versions }) as never)
+
+    expect(firstTopologyReadCount).toBeGreaterThan(0)
+    expect(listEntities).toHaveBeenCalledTimes(firstTopologyReadCount)
+
+    const graphics = decoration.container.children[2] as unknown as {
+      drawCommands: Array<{ type: "poly" }>;
+    }
+    expect(graphics.drawCommands).toHaveLength(2)
+    decoration.destroy()
+  })
+
   it("keeps chain-end arrows alive while the mask still contains part of the arrow", () => {
     const emptyEndMarks = resolveBeltFlowMarks(createFlowContext({
       nowMs: 250,
@@ -465,6 +494,14 @@ function createFlowContext(options: {
   simplifiedDeviceIcons?: boolean;
   getTexture?: (key: string) => Promise<unknown>;
   selectionIds?: readonly string[];
+  listEntities?: () => ReturnType<typeof createEntity>[];
+  versions?: {
+    document: number;
+    viewport: number;
+    collections: number;
+    presentation: number;
+    simulation: number;
+  };
   entities?: Array<{
     id: string;
     definitionId: string;
@@ -515,7 +552,7 @@ function createFlowContext(options: {
             },
           },
           queries: {
-            listEntities: () => options.entities ?? [
+            listEntities: options.listEntities ?? (() => options.entities ?? [
               {
                 id: "belt-a",
                 definitionId: "belt_straight_1x1",
@@ -532,7 +569,7 @@ function createFlowContext(options: {
                 config: {},
                 tags: [],
               },
-            ],
+            ]),
           },
         },
       } as never,
@@ -541,6 +578,7 @@ function createFlowContext(options: {
       } as never,
     } as never,
     nowMs: options.nowMs,
+    versions: options.versions,
   }
 }
 

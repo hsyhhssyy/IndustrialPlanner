@@ -32,6 +32,11 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
   let destroyed = false
   let texture: Texture | null = null
   let textureLoadStarted = false
+  let forceSync = true
+  let lastDocumentVersion = -1
+  let lastViewportVersion = -1
+  let lastCollectionVersion = -1
+  let lastPresentationVersion = -1
 
   const ensureTexture = (ctx: DecorationSyncContext): void => {
     if (textureLoadStarted || texture !== null) {
@@ -45,6 +50,7 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
       }
 
       texture = loadedTexture
+      forceSync = true
     })
   }
 
@@ -87,6 +93,25 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
     sync(ctx: DecorationSyncContext): void {
       if (destroyed) {
         return
+      }
+
+      const versions = ctx.versions
+      if (
+        versions !== undefined
+        && !forceSync
+        && lastDocumentVersion === versions.document
+        && lastViewportVersion === versions.viewport
+        && lastCollectionVersion === versions.collections
+        && lastPresentationVersion === versions.presentation
+      ) {
+        return
+      }
+      forceSync = false
+      if (versions !== undefined) {
+        lastDocumentVersion = versions.document
+        lastViewportVersion = versions.viewport
+        lastCollectionVersion = versions.collections
+        lastPresentationVersion = versions.presentation
       }
 
       const allEntries = resolveBeltPortExtensionEntries(ctx)

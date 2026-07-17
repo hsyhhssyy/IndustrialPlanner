@@ -77,6 +77,13 @@ export class PipeSprite extends DedicatedLogisticSprite {
     this.syncFluidBead(layout, context)
   }
 
+  public syncRuntime(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    this.syncFluidBead(layout, context)
+  }
+
   protected afterDeviceTextureReady(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,

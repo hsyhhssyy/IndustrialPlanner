@@ -449,6 +449,26 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.applyLayout(layout)
   }
 
+  public syncRuntime(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    void context
+    this.syncDeviceLabel(layout)
+  }
+
+  public syncAnimation(context: RenderSpriteSyncContext): void {
+    const tilePixelSize = this.scanlineTexture?.width ?? 64
+    const phase = (context.time.nowMs % SCANLINE_SCROLL_INTERVAL_MS) / SCANLINE_SCROLL_INTERVAL_MS
+
+    if (this.scanlineTiling.visible) {
+      this.scanlineTiling.tilePosition.x = phase * tilePixelSize
+    }
+    if (this.selectionTiling.visible) {
+      this.selectionTiling.tilePosition.x = phase * tilePixelSize
+    }
+  }
+
   protected resetCollectionOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
