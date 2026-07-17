@@ -182,6 +182,8 @@ const UI: Record<string, string> = {
     "settingsField.debug-show-fpsDescription": "开启后在画布左上角显示可折叠的 FPS/TPS 指示面板。",
     "settingsField.debug-show-gesture-diagnostics-window": "显示手势测试窗口",
     "settingsField.debug-show-gesture-diagnostics-windowDescription": "显示用于测试鼠标键盘操作的调试工具",
+    "settingsField.debug-simulation-worker-detailed-report": "仿真Worker详细汇报",
+    "settingsField.debug-simulation-worker-detailed-reportDescription": "该选项将会详细在日志汇报仿真情况，将会严重拖慢性能，仅用于无法确认的仿真出错诊断。",
     "settingsField.game-always-show-grid-lines": "总是显示网格线",
     "settingsField.game-always-show-grid-linesDescription": "开启后总是显示网格线；关闭后仅在特定模式显示附近的网格线。",
     "settingsField.game-arknights-allow-empty-logistics-endpoints": "物流允许以空地为起点",

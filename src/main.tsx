@@ -36,7 +36,8 @@ if (import.meta.env.DEV) {
 createEditorHost(workspace);
 await createRenderHost(workspace);
 const simulationHost = createSimulationHost(workspace, {
-  getPerfEnabled: () => appHost.internalState.settings.debugMode,
+  getPerfEnabled: () => appHost.internalState.settings.debugMode
+    && appHost.internalState.settings.debugSimulationWorkerDetailedReport,
   getActiveActivityIds: () => resolveEffectiveActivityIds({
     selectedActivityIds: appHost.internalState.settings.selectedActivityIds,
   }),

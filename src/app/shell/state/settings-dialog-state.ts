@@ -472,6 +472,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         defaultValue: false,
       },
       {
+        id: "debug-simulation-worker-detailed-report",
+        kind: "switch",
+        labelKey: "settingsField.debug-simulation-worker-detailed-report",
+        descriptionKey: "settingsField.debug-simulation-worker-detailed-reportDescription",
+        defaultValue: false,
+      },
+      {
         id: "debug-backend-api-address-override",
         kind: "text",
         labelKey: "settingsField.debug-backend-api-address-override",

@@ -298,6 +298,8 @@ export type UiKey =
   | "settingsField.debug-show-fpsDescription"
   | "settingsField.debug-show-gesture-diagnostics-window"
   | "settingsField.debug-show-gesture-diagnostics-windowDescription"
+  | "settingsField.debug-simulation-worker-detailed-report"
+  | "settingsField.debug-simulation-worker-detailed-reportDescription"
   | "settingsField.game-always-show-grid-lines"
   | "settingsField.game-always-show-grid-linesDescription"
   | "settingsField.game-arknights-allow-empty-logistics-endpoints"

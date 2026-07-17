@@ -189,6 +189,8 @@ const UI: Record<string, string> = {
     "settingsField.debug-show-fpsDescription": "Show a collapsible FPS/TPS indicator panel at the top-left corner of the canvas when enabled.",
     "settingsField.debug-show-gesture-diagnostics-window": "Show Gesture Test Window",
     "settingsField.debug-show-gesture-diagnostics-windowDescription": "Show a debug tool for testing mouse and keyboard operations",
+    "settingsField.debug-simulation-worker-detailed-report": "Detailed Simulation Worker Reporting",
+    "settingsField.debug-simulation-worker-detailed-reportDescription": "Report detailed simulation diagnostics in the logs. This severely degrades performance and is intended only for diagnosing simulation errors whose cause cannot otherwise be identified.",
     "settingsField.game-always-show-grid-lines": "Always Show Grid Lines",
     "settingsField.game-always-show-grid-linesDescription": "When enabled, grid lines are always visible. When disabled, they only appear in specific modes near the current preview.",
     "settingsField.game-arknights-allow-empty-logistics-endpoints": "Allow Empty Logistics Starts",

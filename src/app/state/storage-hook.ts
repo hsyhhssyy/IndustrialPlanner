@@ -186,6 +186,10 @@ function normalizePersistedAppSettings(
       typeof persistedAppSettings.debugShowGestureDiagnosticsWindow === "boolean"
         ? persistedAppSettings.debugShowGestureDiagnosticsWindow
         : fallback.debugShowGestureDiagnosticsWindow,
+    debugSimulationWorkerDetailedReport:
+      typeof persistedAppSettings.debugSimulationWorkerDetailedReport === "boolean"
+        ? persistedAppSettings.debugSimulationWorkerDetailedReport
+        : fallback.debugSimulationWorkerDetailedReport,
     debugMode: typeof persistedAppSettings.debugMode === "boolean"
       ? persistedAppSettings.debugMode
       : fallback.debugMode,

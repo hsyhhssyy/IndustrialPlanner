@@ -20,6 +20,7 @@ describe("WorkbenchSettingsDialogController", () => {
     controller.updateSelectValue("system-theme", "ayu-dark");
     controller.updateSwitchValue("game-use-blueprint-style-device-images", true);
     controller.updateSwitchValue("other-debug-mode", true);
+    controller.updateSwitchValue("debug-simulation-worker-detailed-report", true);
     controller.updateTextValue("debug-backend-api-address-override", "https://debug.example.test/api");
     controller.updateSwitchValue("debug-show-fps", true);
     controller.updateSwitchValue("debug-show-gesture-diagnostics-window", true);
@@ -68,6 +69,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-use-blueprint-style-device-images": true,
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
+        "debug-simulation-worker-detailed-report": true,
         "debug-backend-api-address-override": "https://debug.example.test/api",
         "debug-show-fps": true,
         "debug-show-gesture-diagnostics-window": true,
@@ -109,6 +111,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["game-use-blueprint-style-device-images"]).toBe(true);
     expect(hydratedController.values["other-toolbox-show-all-activity-content"]).toBe(true);
     expect(hydratedController.values["other-debug-mode"]).toBe(true);
+    expect(hydratedController.values["debug-simulation-worker-detailed-report"]).toBe(true);
     expect(hydratedController.values["debug-backend-api-address-override"]).toBe(
       "https://debug.example.test/api",
     );
@@ -311,6 +314,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-use-blueprint-style-device-images": false,
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
+        "debug-simulation-worker-detailed-report": false,
         "debug-backend-api-address-override": "",
         "debug-show-fps": false,
         "debug-show-gesture-diagnostics-window": false,

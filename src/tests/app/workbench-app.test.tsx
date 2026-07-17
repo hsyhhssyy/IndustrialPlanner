@@ -78,6 +78,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   showGrassBackground: false,
   debugShowFps: false,
   debugShowGestureDiagnosticsWindow: false,
+  debugSimulationWorkerDetailedReport: false,
   debugMode: false,
 } as const;
 
@@ -2496,6 +2497,7 @@ describe("WorkbenchApp", () => {
         gameAlwaysShowGridLines: true,
         debugShowFps: true,
         debugShowGestureDiagnosticsWindow: true,
+        debugSimulationWorkerDetailedReport: true,
         debugMode: true,
       }),
     );
@@ -2567,6 +2569,9 @@ describe("WorkbenchApp", () => {
     const showGestureTestWindowToggle = container.querySelector(
       'input[name="debug-show-gesture-diagnostics-window"]',
     ) as HTMLInputElement | null;
+    const simulationWorkerDetailedReportToggle = container.querySelector(
+      'input[name="debug-simulation-worker-detailed-report"]',
+    ) as HTMLInputElement | null;
     const groupTitles = Array.from(
       dialog?.querySelectorAll(".settings-dialog-group-header h3") ?? [],
     ).map((element) => element.textContent);
@@ -2592,6 +2597,10 @@ describe("WorkbenchApp", () => {
     expect(dialog?.textContent).toContain(
       "传送带/管道绘制到交汇处时，自动创建分流器和汇流器。",
     );
+    expect(dialog?.textContent).toContain("仿真Worker详细汇报");
+    expect(dialog?.textContent).toContain(
+      "该选项将会详细在日志汇报仿真情况，将会严重拖慢性能，仅用于无法确认的仿真出错诊断。",
+    );
     expect(languageOptionLabels).toEqual(["中文(简体)", "English (AI Translate)"]);
     expect(themeOptionLabels).toEqual(["Ayu Light", "Ayu Dark"]);
     expect(languageSelect?.value).toBe("zh-CN");
@@ -2612,6 +2621,7 @@ describe("WorkbenchApp", () => {
     expect(alwaysShowGridLinesToggle?.checked).toBe(true);
     expect(showFpsToggle?.checked).toBe(true);
     expect(showGestureTestWindowToggle?.checked).toBe(true);
+    expect(simulationWorkerDetailedReportToggle?.checked).toBe(true);
 
     const closeButton = container.querySelector(
       ".settings-dialog-close",
@@ -3645,15 +3655,20 @@ describe("WorkbenchApp", () => {
     const showGestureTestWindowToggle = container.querySelector(
       'input[name="debug-show-gesture-diagnostics-window"]',
     ) as HTMLInputElement | null;
+    const simulationWorkerDetailedReportToggle = container.querySelector(
+      'input[name="debug-simulation-worker-detailed-report"]',
+    ) as HTMLInputElement | null;
     const backendApiAddressInput = container.querySelector(
       'input[name="debug-backend-api-address-override"]',
     ) as HTMLInputElement | null;
 
     expect(showFpsToggle).not.toBeNull();
     expect(showGestureTestWindowToggle).not.toBeNull();
+    expect(simulationWorkerDetailedReportToggle).not.toBeNull();
     expect(backendApiAddressInput).not.toBeNull();
     expect(showFpsToggle?.checked).toBe(false);
     expect(showGestureTestWindowToggle?.checked).toBe(false);
+    expect(simulationWorkerDetailedReportToggle?.checked).toBe(false);
     expect(backendApiAddressInput?.placeholder).toBe("endfield-api.amiyabot.com");
 
     act(() => {
@@ -3662,22 +3677,40 @@ describe("WorkbenchApp", () => {
       }
       showFpsToggle?.click();
       showGestureTestWindowToggle?.click();
+      simulationWorkerDetailedReportToggle?.click();
     });
 
     expect(appHost.state.settings.debugShowFps).toBe(true);
     expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(true);
+    expect(appHost.internalState.settings.debugSimulationWorkerDetailedReport).toBe(true);
     expect(backendApiAddressInput?.value).toBe("http://localhost:8787");
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
         ...DEFAULT_APP_SETTINGS_STORAGE,
         debugShowFps: true,
         debugShowGestureDiagnosticsWindow: true,
+        debugSimulationWorkerDetailedReport: true,
         debugMode: true,
       }),
     );
     expect(JSON.parse(
       localStorage.getItem(BACKEND_API_ADDRESS_OVERRIDE_LOCAL_STORAGE_KEY) ?? "null",
     )).toBe("http://localhost:8787");
+
+    act(() => {
+      debugModeToggle?.click();
+    });
+
+    expect(appHost.state.settings.debugMode).toBe(false);
+    expect(appHost.state.settings.debugShowFps).toBe(false);
+    expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
+    expect(appHost.internalState.settings.debugSimulationWorkerDetailedReport).toBe(false);
+    expect(container.querySelector(
+      'input[name="debug-simulation-worker-detailed-report"]',
+    )).toBeNull();
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify(DEFAULT_APP_SETTINGS_STORAGE),
+    );
   });
 
   it("writes always-show-grid-lines into AppSettings storage without applying grid behavior yet", () => {

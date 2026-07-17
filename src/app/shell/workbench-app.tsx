@@ -480,6 +480,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.debugShowGestureDiagnosticsWindow = value;
         }),
       },
+      "debug-simulation-worker-detailed-report": {
+        readValue: () => appHost.internalState.settings.debugSimulationWorkerDetailedReport,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.debugSimulationWorkerDetailedReport === value) {
+            return;
+          }
+
+          appHost.internalState.settings.debugSimulationWorkerDetailedReport = value;
+        }),
+      },
       "debug-backend-api-address-override": {
         readValue: () => readBackendApiAddressOverride(),
         writeValue: (value) => {
@@ -505,6 +519,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           if (!value) {
             appHost.internalState.settings.debugShowFps = false;
             appHost.internalState.settings.debugShowGestureDiagnosticsWindow = false;
+            appHost.internalState.settings.debugSimulationWorkerDetailedReport = false;
           }
         }),
       },

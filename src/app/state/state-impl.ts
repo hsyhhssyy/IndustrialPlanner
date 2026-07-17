@@ -91,6 +91,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   showGrassBackground: boolean;
   debugShowFps: boolean;
   debugShowGestureDiagnosticsWindow: boolean;
+  debugSimulationWorkerDetailedReport: boolean;
   debugMode: boolean;
 }
 
@@ -690,6 +691,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     showGrassBackground: false,
     debugShowFps: false,
     debugShowGestureDiagnosticsWindow: false,
+    debugSimulationWorkerDetailedReport: false,
     debugMode: false,
   };
 

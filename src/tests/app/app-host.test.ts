@@ -310,6 +310,7 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.internalState.settings.debugShowFps).toBe(false);
     expect(appHost.internalState.settings.debugShowGestureDiagnosticsWindow).toBe(false);
+    expect(appHost.internalState.settings.debugSimulationWorkerDetailedReport).toBe(false);
     expect(workspace.app?.state.settings.locale).toBe("zh-CN");
     expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
