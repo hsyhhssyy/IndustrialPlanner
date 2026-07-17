@@ -60,7 +60,7 @@ describe("TimelineWorkerRuntime", () => {
     if (lastCheckpoint.type !== "timeline-checkpoint-result") {
       throw new Error(`Unexpected checkpoint response "${lastCheckpoint.type}".`);
     }
-    expect(lastCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(5990);
+    expect(lastCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(5991);
 
     const presentationFrame = timelineRuntime.handleRequest({
       type: "get-timeline-presentation-frame",
@@ -70,7 +70,7 @@ describe("TimelineWorkerRuntime", () => {
     if (presentationFrame.type !== "timeline-presentation-frame-result") {
       throw new Error(`Unexpected presentation response "${presentationFrame.type}".`);
     }
-    expect(presentationFrame.snapshot?.tickNumber).toBe(5990);
+    expect(presentationFrame.snapshot?.tickNumber).toBe(5991);
 
     const presentationRange = timelineRuntime.handleRequest({
       type: "get-timeline-presentation-frame-range",
@@ -85,7 +85,7 @@ describe("TimelineWorkerRuntime", () => {
       596, 597, 598, 599,
     ]);
     expect(presentationRange.frames.map((frame) => frame.snapshot.tickNumber)).toEqual([
-      5960, 5970, 5980, 5990,
+      5961, 5971, 5981, 5991,
     ]);
 
     const outsideCheckpoint = timelineRuntime.handleRequest({
@@ -115,7 +115,7 @@ describe("TimelineWorkerRuntime", () => {
     timelineRuntime.handleRequest({
       type: "load-timeline",
       requestId: 1,
-      runtimeExport: createRuntimeExport(0),
+      runtimeExport: createRuntimeExport(1),
       startTimelineTickNumber: 0,
       capacityTimelineTicks: 10,
       stepStandardTicks: 10,
@@ -125,7 +125,7 @@ describe("TimelineWorkerRuntime", () => {
     const reloaded = timelineRuntime.handleRequest({
       type: "load-timeline",
       requestId: 2,
-      runtimeExport: createRuntimeExport(40),
+      runtimeExport: createRuntimeExport(41),
       startTimelineTickNumber: 4,
       retainedFromTimelineTickNumber: 0,
       capacityTimelineTicks: 10,
@@ -155,7 +155,7 @@ describe("TimelineWorkerRuntime", () => {
     if (preservedCheckpoint.type !== "timeline-checkpoint-result") {
       throw new Error(`Unexpected checkpoint response "${preservedCheckpoint.type}".`);
     }
-    expect(preservedCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(30);
+    expect(preservedCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(31);
 
     const filledFutureCheckpoint = timelineRuntime.handleRequest({
       type: "get-timeline-checkpoint",
@@ -165,7 +165,7 @@ describe("TimelineWorkerRuntime", () => {
     if (filledFutureCheckpoint.type !== "timeline-checkpoint-result") {
       throw new Error(`Unexpected checkpoint response "${filledFutureCheckpoint.type}".`);
     }
-    expect(filledFutureCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(90);
+    expect(filledFutureCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(91);
   });
 
   it("lets presentation requests pause background prediction until interaction is idle", () => {
@@ -175,7 +175,7 @@ describe("TimelineWorkerRuntime", () => {
     timelineRuntime.handleRequest({
       type: "load-timeline",
       requestId: 1,
-      runtimeExport: createRuntimeExport(0),
+      runtimeExport: createRuntimeExport(1),
       startTimelineTickNumber: 0,
       capacityTimelineTicks: 10,
       stepStandardTicks: 10,
@@ -213,7 +213,7 @@ describe("TimelineWorkerRuntime", () => {
     timelineRuntime.handleRequest({
       type: "load-timeline",
       requestId: 1,
-      runtimeExport: createRuntimeExport(0),
+      runtimeExport: createRuntimeExport(1),
       startTimelineTickNumber: 0,
       capacityTimelineTicks: 600,
       stepStandardTicks: 10,
@@ -258,7 +258,7 @@ describe("TimelineWorkerRuntime", () => {
     if (extendedCheckpoint.type !== "timeline-checkpoint-result") {
       throw new Error(`Unexpected checkpoint response "${extendedCheckpoint.type}".`);
     }
-    expect(extendedCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(6000);
+    expect(extendedCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(6001);
   });
 
   it("continues filling after retargeting backward and then forward again", () => {
@@ -268,7 +268,7 @@ describe("TimelineWorkerRuntime", () => {
     timelineRuntime.handleRequest({
       type: "load-timeline",
       requestId: 1,
-      runtimeExport: createRuntimeExport(0),
+      runtimeExport: createRuntimeExport(1),
       startTimelineTickNumber: 0,
       capacityTimelineTicks: 20,
       stepStandardTicks: 10,
@@ -308,7 +308,53 @@ describe("TimelineWorkerRuntime", () => {
     if (refilledCheckpoint.type !== "timeline-checkpoint-result") {
       throw new Error(`Unexpected checkpoint response "${refilledCheckpoint.type}".`);
     }
-    expect(refilledCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(150);
+    expect(refilledCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(151);
+  });
+
+  it("keeps tick-1 checkpoints equivalent to exact ticks at the first minute boundary", () => {
+    vi.useFakeTimers();
+
+    const topology = createTimelinePhaseTopology();
+    const exactRuntime = new SimulationWorkerRuntime();
+    exactRuntime.handleRequest({
+      type: "load-topology",
+      requestId: 1,
+      topology,
+    });
+    exactRuntime.createSparseTickSnapshot(1);
+    const originRuntimeExport = exactRuntime.exportRuntimeState(1);
+    if (originRuntimeExport === null) {
+      throw new Error("Expected tick-1 runtime export.");
+    }
+
+    const timelineRuntime = new TimelineWorkerRuntime();
+    timelineRuntime.handleRequest({
+      type: "load-timeline",
+      requestId: 2,
+      runtimeExport: originRuntimeExport,
+      startTimelineTickNumber: 0,
+      targetTimelineTickNumber: 120,
+      capacityTimelineTicks: 121,
+      stepStandardTicks: 10,
+    });
+
+    for (let standardTickNumber = 2; standardTickNumber <= 1201; standardTickNumber += 1) {
+      exactRuntime.createSparseTickSnapshot(standardTickNumber);
+    }
+    vi.runAllTimers();
+
+    const exactRuntimeExport = exactRuntime.exportRuntimeState(1201);
+    const timelineCheckpoint = timelineRuntime.handleRequest({
+      type: "get-timeline-checkpoint",
+      requestId: 3,
+      timelineTickNumber: 120,
+    });
+    if (timelineCheckpoint.type !== "timeline-checkpoint-result") {
+      throw new Error(`Unexpected checkpoint response "${timelineCheckpoint.type}".`);
+    }
+
+    expect(timelineCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(1201);
+    expect(timelineCheckpoint.runtimeExport?.snapshot).toEqual(exactRuntimeExport?.snapshot);
   });
 
   it("omits warehouse-wide runtime payloads from presentation frames", () => {
@@ -419,7 +465,7 @@ function createPresentationTestSlotSnapshot(slotId: string) {
   };
 }
 
-function createRuntimeExport(tickNumber = 0): SimulationRuntimeExport {
+function createRuntimeExport(tickNumber = 1): SimulationRuntimeExport {
   const workerRuntime = new SimulationWorkerRuntime();
   const loaded = workerRuntime.handleRequest({
     type: "load-topology",
@@ -467,5 +513,96 @@ function createEmptyTopology(): CompiledSimulationTopology {
     },
     transportComponents: {},
     diagnostics: [],
+  };
+}
+
+function createTimelinePhaseTopology(): CompiledSimulationTopology {
+  return {
+    ...createEmptyTopology(),
+    topologyId: "topology:timeline-phase",
+    itemCatalog: {
+      item_test: {
+        id: "item_test",
+        domain: "solid",
+        tags: [],
+      },
+    },
+    recipeCatalog: {
+      "recipe:test": {
+        id: "recipe:test",
+        nameKey: "recipe.test",
+        durationTicks: 40,
+        inputs: [],
+        outputs: [{ itemId: "item_test", amount: 1 }],
+        machineId: "test_machine",
+        recipeType: "immediate-consume",
+        powerOutput: 0,
+        requiredGasDiffusion: null,
+        gasDiffusionOutput: null,
+        tags: [],
+      },
+    },
+    devices: {
+      "device:maker": {
+        id: "device:maker",
+        sourceEntityId: "maker",
+        definitionId: "test_machine",
+        position: null,
+        rotation: null,
+        footprint: null,
+        tags: [],
+        powerStatus: "no-power-needed",
+        powerDemand: 0,
+        requiresPower: false,
+        transportClass: "anchor",
+        transportComponentId: null,
+        nodeIds: ["node:out"],
+        recipeChannels: [{
+          id: "main",
+          ingredientNodeIds: [],
+          productNodeIds: ["node:out"],
+          manualRecipeOnly: false,
+          defaultRecipeId: null,
+        }],
+        portIds: [],
+        routing: {},
+        configHash: "config:timeline-phase",
+        isProducer: true,
+      },
+    },
+    nodes: {
+      "node:out": {
+        id: "node:out",
+        deviceId: "device:maker",
+        sourceStorageSlotGroupId: "output",
+        viewRole: "output-view",
+        slotIds: ["slot:out"],
+        inputPortIds: [],
+        outputPortIds: [],
+        groupOrder: 0,
+      },
+    },
+    slots: {
+      "slot:out": {
+        id: "slot:out",
+        nodeId: "node:out",
+        sourceStorageSlotGroupId: "output",
+        sourceSlotId: "slot_1",
+        capacity: 1000,
+        domain: "solid",
+        lock: null,
+        initialItemType: null,
+        initialCount: 0,
+        ignoreStock: false,
+      },
+    },
+    ordering: {
+      deviceOrder: ["device:maker"],
+      nodeOrder: ["node:out"],
+      slotOrder: ["slot:out"],
+      portOrder: [],
+      physicalConnectionOrder: [],
+      edgeOrder: [],
+    },
   };
 }

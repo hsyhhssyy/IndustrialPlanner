@@ -52,6 +52,7 @@ import type {
 const TPS_WINDOW_MS = 1000;
 const TIMELINE_TICK_DURATION_SECONDS = 0.5;
 const TIMELINE_STEP_STANDARD_TICKS = STANDARD_TICK_RATE_PER_SECOND * TIMELINE_TICK_DURATION_SECONDS;
+const TIMELINE_ORIGIN_STANDARD_TICK = 1;
 const TIMELINE_WINDOW_DURATION_SECONDS = 300;
 const TIMELINE_RULER_DURATION_SECONDS = TIMELINE_WINDOW_DURATION_SECONDS;
 const TIMELINE_CAPACITY_TICKS = TIMELINE_WINDOW_DURATION_SECONDS / TIMELINE_TICK_DURATION_SECONDS;
@@ -74,6 +75,16 @@ const PLAYBACK_HOT_QUEUE_LOW_WATER = 10;
 const PLAYBACK_PREFETCH_RETRY_MS = 50;
 
 const logger = createLogger("simulation-runtime");
+
+function resolveStandardTickNumberForTimelineTick(timelineTickNumber: number): number {
+  return TIMELINE_ORIGIN_STANDARD_TICK
+    + timelineTickNumber * TIMELINE_STEP_STANDARD_TICKS;
+}
+
+function resolveTimelineTickNumberForStandardTick(standardTickNumber: number): number {
+  return (standardTickNumber - TIMELINE_ORIGIN_STANDARD_TICK)
+    / TIMELINE_STEP_STANDARD_TICKS;
+}
 
 function logTopologyRuntimeTransition(
   transition: SimulationRuntimeTransition | undefined,
@@ -1563,7 +1574,7 @@ implements SimulationAction, SimulationInternalAction {
         ?? Math.trunc(this.stateReadWrite.currentPlaybackTickNumber);
       const startTimelineTickNumber = Math.max(
         0,
-        Math.floor(currentStandardTickNumber / TIMELINE_STEP_STANDARD_TICKS),
+        Math.floor(resolveTimelineTickNumberForStandardTick(currentStandardTickNumber)),
       );
       const exported = await this.exportLatestAlignedTimelineRuntimeState(startTimelineTickNumber);
       if (exported === null || !this.stateReadWrite.timeline.enabled) {
@@ -1802,7 +1813,9 @@ implements SimulationAction, SimulationInternalAction {
       attempt += 1
     ) {
       visitedTimelineTickNumbers.add(candidateTimelineTickNumber);
-      const exportTickNumber = candidateTimelineTickNumber * TIMELINE_STEP_STANDARD_TICKS;
+      const exportTickNumber = resolveStandardTickNumberForTimelineTick(
+        candidateTimelineTickNumber,
+      );
       const exported = await this.bridge.exportRuntimeState(exportTickNumber);
       if (exported.runtimeExport !== null) {
         return {
@@ -1815,12 +1828,14 @@ implements SimulationAction, SimulationInternalAction {
       const retainedFromTick = exported.status.retainedFromTick;
       let nextCandidateTimelineTickNumber = candidateTimelineTickNumber - 1;
       if (retainedFromTick !== null && retainedFromTick > exportTickNumber) {
-        nextCandidateTimelineTickNumber = Math.ceil(retainedFromTick / TIMELINE_STEP_STANDARD_TICKS);
+        nextCandidateTimelineTickNumber = Math.ceil(
+          resolveTimelineTickNumberForStandardTick(retainedFromTick),
+        );
       }
       if (latestTickNumber !== null && latestTickNumber < exportTickNumber) {
         nextCandidateTimelineTickNumber = Math.min(
           candidateTimelineTickNumber - 1,
-          Math.floor(latestTickNumber / TIMELINE_STEP_STANDARD_TICKS),
+          Math.floor(resolveTimelineTickNumberForStandardTick(latestTickNumber)),
         );
       }
 
@@ -1972,7 +1987,9 @@ implements SimulationAction, SimulationInternalAction {
 
     const tickNumber = Math.max(
       0,
-      Math.trunc(this.stateReadWrite.currentPlaybackTickNumber / TIMELINE_STEP_STANDARD_TICKS),
+      Math.trunc(resolveTimelineTickNumberForStandardTick(
+        this.stateReadWrite.currentPlaybackTickNumber,
+      )),
     );
     this.stateReadWrite.timeline.marks.push({
       id: `timeline-mark:${this.timelineMarkSerial}`,
@@ -1995,7 +2012,9 @@ implements SimulationAction, SimulationInternalAction {
 
     const cursorTickNumber = Math.max(
       0,
-      this.stateReadWrite.currentPlaybackTickNumber / TIMELINE_STEP_STANDARD_TICKS,
+      resolveTimelineTickNumberForStandardTick(
+        this.stateReadWrite.currentPlaybackTickNumber,
+      ),
     );
     this.stateReadWrite.timeline.cursorTickNumber = cursorTickNumber;
     if (this.updateTimelineWindowForCursor(cursorTickNumber) && options.retargetWindow !== false) {
@@ -2011,17 +2030,18 @@ implements SimulationAction, SimulationInternalAction {
 
     const standardTickNumber = Math.max(0, Math.trunc(tickNumber));
     const safetyIntervalTicks = STANDARD_TICK_RATE_PER_SECOND * 60;
+    const elapsedStandardTicks = standardTickNumber - TIMELINE_ORIGIN_STANDARD_TICK;
     if (
-      standardTickNumber === 0
-      || standardTickNumber % safetyIntervalTicks !== 0
-      || standardTickNumber % TIMELINE_STEP_STANDARD_TICKS !== 0
+      elapsedStandardTicks <= 0
+      || elapsedStandardTicks % safetyIntervalTicks !== 0
+      || elapsedStandardTicks % TIMELINE_STEP_STANDARD_TICKS !== 0
       || this.lastTimelineSafetySyncStandardTick === standardTickNumber
     ) {
       return;
     }
 
     this.lastTimelineSafetySyncStandardTick = standardTickNumber;
-    const timelineTickNumber = standardTickNumber / TIMELINE_STEP_STANDARD_TICKS;
+    const timelineTickNumber = resolveTimelineTickNumberForStandardTick(standardTickNumber);
     try {
       const [officialExport, timelineCheckpoint] = await Promise.all([
         this.bridge.exportRuntimeState(standardTickNumber),

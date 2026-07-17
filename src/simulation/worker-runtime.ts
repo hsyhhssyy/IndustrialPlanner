@@ -30,6 +30,7 @@ import {
 } from "./runtime/create-tick-snapshot";
 import {
   canAdjustDynamicTickRateAtTick,
+  resolveDynamicTickRateSwitchIntervalTicks,
   resolveLegalDynamicTickRates,
 } from "./runtime/phase-gating";
 import { advanceDevices } from "./runtime/stage-1-advance-devices";
@@ -1541,7 +1542,7 @@ export class SimulationWorkerRuntime {
         this.runtimeState.transient.recipeStatsDelta,
         tickNumber,
         runtimeStepTicks,
-        canAdjustDynamicTickRateAtTick({ topology: this.topology, standardTick: tickNumber }),
+        resolveDynamicTickRateSwitchIntervalTicks(this.topology),
       );
       this.runtimeState.transient.recipeStatsDelta = createEmptyTransientState().recipeStatsDelta;
 

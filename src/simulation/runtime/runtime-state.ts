@@ -970,6 +970,7 @@ export function accumulateRecipeStatsDelta(accum: RecipeStatsDelta, inc: RecipeS
  * 将当前 tick 的 delta 写入环形缓冲，并重新计算聚合值。
  * 返回聚合后的 per-min 值。
  * AI-CORRECTION 2026-07-03: 当前实现只在 phase-safe 边界封桶；per-min 按已封桶窗口覆盖的标准 tick 数归一。
+ * AI-CORRECTION 2026-07-17: 粗步长跨越 phase-safe 边界时按标准 tick 区间拆桶，当前调用的 delta 归入区间终点所在桶。
  */
 // AI-REMOVED 2026-07-03:
 // Reason: 旧实现把每次 runtime step 当成一个标准 tick 窗口格；动态 tick rate 降频后，1200 格会覆盖超过 60 秒仿真时间。
@@ -1040,11 +1041,25 @@ export function rollRecipeStatsWindow(
   tickDelta: RecipeStatsDelta,
   tickNumber: number,
   elapsedStandardTicks = 1,
-  shouldSealBucket = true,
+  sealIntervalStandardTicks = 1,
 ): void {
   const standardTicks = Math.max(1, Math.trunc(elapsedStandardTicks));
-  stats.activeBucket.standardTicks += standardTicks;
-  accumulateRecipeStatsDelta(stats.activeBucket, tickDelta);
+  const sealInterval = Math.max(1, Math.trunc(sealIntervalStandardTicks));
+  const firstStandardTick = tickNumber - standardTicks + 1;
+  let segmentStartTick = firstStandardTick;
+
+  while (segmentStartTick <= tickNumber) {
+    const nextSealTick = Math.ceil(segmentStartTick / sealInterval) * sealInterval;
+    const segmentEndTick = Math.min(tickNumber, nextSealTick);
+    stats.activeBucket.standardTicks += segmentEndTick - segmentStartTick + 1;
+    if (segmentEndTick === tickNumber) {
+      accumulateRecipeStatsDelta(stats.activeBucket, tickDelta);
+    }
+    if (segmentEndTick === nextSealTick) {
+      sealRecipeStatsBucket(stats);
+    }
+    segmentStartTick = segmentEndTick + 1;
+  }
 
   for (const itemType of Object.keys(tickDelta.produced)) {
     stats.lastChangedTick[itemType] = tickNumber;
@@ -1052,12 +1067,6 @@ export function rollRecipeStatsWindow(
   for (const itemType of Object.keys(tickDelta.consumed)) {
     stats.lastChangedTick[itemType] = tickNumber;
   }
-
-  if (!shouldSealBucket) {
-    return;
-  }
-
-  sealRecipeStatsBucket(stats);
 }
 
 function sealRecipeStatsBucket(stats: RecipeStatsState): void {

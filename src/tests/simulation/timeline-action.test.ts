@@ -46,13 +46,47 @@ describe("simulation timeline actions", () => {
     await action.enableTimeline();
     action.disableTimeline();
 
-    expect(bridge.exportRuntimeState).toHaveBeenCalledWith(30);
+    expect(bridge.exportRuntimeState).toHaveBeenCalledWith(31);
     expect(timelineBridge.loadTimeline).toHaveBeenCalledWith(expect.objectContaining({
       startTimelineTickNumber: 3,
       runtimeExport: expect.objectContaining({
-        runtimeState: expect.objectContaining({ tickNumber: 30 }),
+        runtimeState: expect.objectContaining({ tickNumber: 31 }),
       }),
     }));
+  });
+
+  it("checks minute safety sync on the tick-1 checkpoint phase without adding a marker", async () => {
+    const state = createSimulationStateReadWrite();
+    state.hasStarted = true;
+    state.runningState = "start";
+    state.currentSnapshot = createRuntimeExport(1).snapshot;
+    state.currentPlaybackTickNumber = 1;
+
+    const bridge = createSimulationBridge();
+    const timelineBridge = createTimelineBridge();
+    const action = new SimulationActionImpl({
+      workspace: {} as WorkspaceContract,
+      state,
+      topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
+      bridge,
+      createTimelineBridge: () => timelineBridge,
+    });
+
+    await action.enableTimeline();
+    vi.mocked(bridge.exportRuntimeState).mockClear();
+    vi.mocked(timelineBridge.getTimelineCheckpoint).mockClear();
+
+    await action.syncToTick(1200, 1200);
+    await flushMicrotasks(2);
+    expect(timelineBridge.getTimelineCheckpoint).not.toHaveBeenCalled();
+
+    await action.syncToTick(1201, 1201);
+    await flushMicrotasks(2);
+    expect(bridge.exportRuntimeState).toHaveBeenCalledWith(1201);
+    expect(timelineBridge.getTimelineCheckpoint).toHaveBeenCalledWith(120);
+    expect(state.timeline.marks).toEqual([]);
+
+    action.disableTimeline();
   });
 
   it("keeps timeline seeks blocked until the first prediction catches the playback cursor", async () => {
@@ -96,7 +130,7 @@ describe("simulation timeline actions", () => {
     });
     await enabling;
 
-    expect(state.timeline.cursorTickNumber).toBe(13.5);
+    expect(state.timeline.cursorTickNumber).toBe(13.4);
     expect(state.timeline.readiness).toBe("catching-up");
     await expect(action.seekTimelineToTick(10)).resolves.toBe(false);
 
@@ -210,7 +244,7 @@ describe("simulation timeline actions", () => {
     const bridge = createSimulationBridge({
       exportRuntimeState: vi.fn(async (tickNumber?: number) => {
         const exportTickNumber = tickNumber ?? 0;
-        if (exportTickNumber === 590) {
+        if (exportTickNumber === 591) {
           return {
             type: "runtime-state-exported" as const,
             requestId: exportTickNumber,
@@ -239,12 +273,12 @@ describe("simulation timeline actions", () => {
     await action.enableTimeline();
     action.disableTimeline();
 
-    expect(bridge.exportRuntimeState).toHaveBeenCalledWith(600);
-    expect(bridge.exportRuntimeState).toHaveBeenCalledWith(590);
+    expect(bridge.exportRuntimeState).toHaveBeenCalledWith(601);
+    expect(bridge.exportRuntimeState).toHaveBeenCalledWith(591);
     expect(timelineBridge.loadTimeline).toHaveBeenCalledWith(expect.objectContaining({
       startTimelineTickNumber: 59,
       runtimeExport: expect.objectContaining({
-        runtimeState: expect.objectContaining({ tickNumber: 590 }),
+        runtimeState: expect.objectContaining({ tickNumber: 591 }),
       }),
     }));
   });
@@ -278,11 +312,11 @@ describe("simulation timeline actions", () => {
     action.disableTimeline();
 
     expect(timelineBridge.loadTimeline).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      startTimelineTickNumber: 12,
-      retainedFromTimelineTickNumber: 12,
+      startTimelineTickNumber: 11,
+      retainedFromTimelineTickNumber: 11,
     }));
     expect(timelineBridge.loadTimeline).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      startTimelineTickNumber: 12,
+      startTimelineTickNumber: 11,
       retainedFromTimelineTickNumber: 0,
     }));
   });
@@ -305,7 +339,7 @@ describe("simulation timeline actions", () => {
     });
 
     await action.enableTimeline();
-    await action.syncToTick(3020, 3020);
+    await action.syncToTick(3021, 3021);
     await flushMicrotasks(2);
 
     expect(state.timeline.windowStartTickNumber).toBeGreaterThan(0);
@@ -339,7 +373,7 @@ describe("simulation timeline actions", () => {
     expect(state.timeline.cursorTickNumber).toBe(420);
     expect(state.timeline.windowStartTickNumber).toBe(0);
 
-    await action.syncToTick(4210, 4210);
+    await action.syncToTick(4211, 4211);
     await flushMicrotasks(2);
 
     expect(state.timeline.cursorTickNumber).toBe(421);
@@ -375,10 +409,10 @@ describe("simulation timeline actions", () => {
     expect(state.timeline.cursorTickNumber).toBe(200);
     expect(state.timeline.windowStartTickNumber).toBe(0);
 
-    await action.syncToTick(2010, 2010);
+    await action.syncToTick(2011, 2011);
     expect(state.timeline.windowStartTickNumber).toBe(0);
 
-    await action.syncToTick(3010, 3010);
+    await action.syncToTick(3011, 3011);
     expect(state.timeline.windowStartTickNumber).toBe(1);
     action.disableTimeline();
   });
@@ -406,7 +440,7 @@ describe("simulation timeline actions", () => {
     expect(state.timeline.cursorTickNumber).toBe(580);
     expect(state.timeline.windowStartTickNumber).toBe(41);
 
-    await action.syncToTick(5810, 5810);
+    await action.syncToTick(5811, 5811);
     await flushMicrotasks(2);
 
     expect(state.timeline.cursorTickNumber).toBe(581);
@@ -436,7 +470,7 @@ describe("simulation timeline actions", () => {
     });
 
     await action.enableTimeline();
-    await action.syncToTick(66_000, 66_000);
+    await action.syncToTick(66_001, 66_001);
     await flushMicrotasks(2);
 
     expect(state.timeline.windowStartTickNumber).toBe(6300);
@@ -475,7 +509,7 @@ describe("simulation timeline actions", () => {
     expect(state.timeline.cursorTickNumber).toBe(1620);
     expect(state.timeline.windowStartTickNumber).toBe(1560);
 
-    await action.syncToTick(16_300, 16_300);
+    await action.syncToTick(16_301, 16_301);
 
     expect(state.timeline.cursorTickNumber).toBe(1630);
     expect(state.timeline.windowStartTickNumber).toBe(1560);
@@ -587,7 +621,7 @@ describe("simulation timeline actions", () => {
     const bridge = createSimulationBridge({
       exportRuntimeState: vi.fn(async (tickNumber?: number) => {
         const exportTickNumber = tickNumber ?? 0;
-        if (exportTickNumber === 450) {
+        if (exportTickNumber === 451) {
           return {
             type: "runtime-state-exported" as const,
             requestId: exportTickNumber,
@@ -622,12 +656,12 @@ describe("simulation timeline actions", () => {
     await action.enableTimeline();
     action.disableTimeline();
 
-    expect(bridge.exportRuntimeState).toHaveBeenCalledWith(440);
-    expect(bridge.exportRuntimeState).toHaveBeenCalledWith(450);
+    expect(bridge.exportRuntimeState).toHaveBeenCalledWith(441);
+    expect(bridge.exportRuntimeState).toHaveBeenCalledWith(451);
     expect(timelineBridge.loadTimeline).toHaveBeenCalledWith(expect.objectContaining({
       startTimelineTickNumber: 45,
       runtimeExport: expect.objectContaining({
-        runtimeState: expect.objectContaining({ tickNumber: 450 }),
+        runtimeState: expect.objectContaining({ tickNumber: 451 }),
       }),
     }));
   });
@@ -665,7 +699,7 @@ describe("simulation timeline actions", () => {
       toTimelineTickNumber: 33,
       frames: [1, 3].map((timelineTickNumber) => ({
         timelineTickNumber,
-        snapshot: createRuntimeExport(timelineTickNumber * 10).snapshot,
+        snapshot: createRuntimeExport(resolveStandardTickNumberForTimelineTick(timelineTickNumber)).snapshot,
       })),
       status: createTimelineStatus(0, 3),
     });
@@ -676,7 +710,7 @@ describe("simulation timeline actions", () => {
     expect(timelineBridge.getTimelinePresentationFrameRange).toHaveBeenCalledTimes(1);
     expect(timelineBridge.getTimelinePresentationFrameRange).toHaveBeenCalledWith(0, 33);
     expect(bridge.importRuntimeState).not.toHaveBeenCalled();
-    expect(state.currentPlaybackTickNumber).toBe(30);
+    expect(state.currentPlaybackTickNumber).toBe(31);
     expect(state.timeline.cursorTickNumber).toBe(3);
 
     action.resume();
@@ -686,7 +720,7 @@ describe("simulation timeline actions", () => {
     });
 
     expect(bridge.importRuntimeState).toHaveBeenLastCalledWith(expect.objectContaining({
-      runtimeState: expect.objectContaining({ tickNumber: 30 }),
+      runtimeState: expect.objectContaining({ tickNumber: 31 }),
     }));
     action.disableTimeline();
   });
@@ -698,7 +732,7 @@ describe("simulation timeline actions", () => {
       documentKey: "document:after-timeline-edit",
     };
     const runtimeExportBefore = createRuntimeExport(
-      0,
+      1,
       createSimulationDocumentHash(documentBefore),
     );
     const state = createSimulationStateReadWrite();
@@ -940,7 +974,7 @@ function createTimelineBridge(
       type: "timeline-presentation-frame-result" as const,
       requestId: timelineTickNumber,
       timelineTickNumber,
-      snapshot: createRuntimeExport(timelineTickNumber * 10).snapshot,
+      snapshot: createRuntimeExport(resolveStandardTickNumberForTimelineTick(timelineTickNumber)).snapshot,
       status: createTimelineStatus(0, timelineTickNumber),
     })),
     getTimelinePresentationFrameRange: vi.fn(async (fromTimelineTickNumber, toTimelineTickNumber) => ({
@@ -954,7 +988,7 @@ function createTimelineBridge(
           const timelineTickNumber = fromTimelineTickNumber + index;
           return {
             timelineTickNumber,
-            snapshot: createRuntimeExport(timelineTickNumber * 10).snapshot,
+            snapshot: createRuntimeExport(resolveStandardTickNumberForTimelineTick(timelineTickNumber)).snapshot,
           };
         },
       ),
@@ -964,7 +998,7 @@ function createTimelineBridge(
       type: "timeline-checkpoint-result" as const,
       requestId: timelineTickNumber,
       timelineTickNumber,
-      runtimeExport: createRuntimeExport(timelineTickNumber * 10),
+      runtimeExport: createRuntimeExport(resolveStandardTickNumberForTimelineTick(timelineTickNumber)),
       status: createTimelineStatus(0, timelineTickNumber),
     })),
     stopTimeline: vi.fn(async () => ({
@@ -1021,6 +1055,10 @@ function createTimelineStatus(
     capacityTimelineTicks: 600,
     stepStandardTicks: 10,
   };
+}
+
+function resolveStandardTickNumberForTimelineTick(timelineTickNumber: number): number {
+  return 1 + timelineTickNumber * 10;
 }
 
 function createRuntimeExport(

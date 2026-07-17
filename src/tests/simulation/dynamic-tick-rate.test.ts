@@ -303,7 +303,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
         },
         tickNumber,
         2,
-        tickNumber % 20 === 0,
+        20,
       );
     }
 
