@@ -76,48 +76,36 @@ describe("bridge-direction", () => {
     });
 
     // === Tick 1: 两路物品同时进入首段传送带 ===
-    // AI-CORRECTION 2026-05-18: dedicated belt 非相位 tick 不接收，tick 1 应无首段传送。
+    // AI-CORRECTION 2026-07-17: dedicated belt 的首个交付相位前移到 tick 1。
     const tick1 = getTick(report, 1);
     expect(tick1.transfers.some((t) =>
       t.sourceSlotId.includes("device:source-ns")
       && t.targetSlotId.includes("device:belt_ns_in"),
-    )).toBe(false);
-    expect(tick1.transfers.some((t) =>
-      t.sourceSlotId.includes("device:source-ew")
-      && t.targetSlotId.includes("device:belt_ew_in"),
-    )).toBe(false);
-
-    const tick20 = getTick(report, 20);
-    expect(tick20.transfers.some((t) =>
-      t.sourceSlotId.includes("device:source-ns")
-      && t.targetSlotId.includes("device:belt_ns_in"),
     )).toBe(true);
-    expect(tick20.transfers.some((t) =>
+    expect(tick1.transfers.some((t) =>
       t.sourceSlotId.includes("device:source-ew")
       && t.targetSlotId.includes("device:belt_ew_in"),
     )).toBe(true);
 
     // === Tick 41: 物品进入桥接器，验证方向隔离 ===
-    // AI-CORRECTION 2026-05-18: 首段 belt 输出对齐到 tick 60。
-    const tick60 = getTick(report, 60);
-    expect(tick60.transfers.some((t) =>
+    const tick41 = getTick(report, 41);
+    expect(tick41.transfers.some((t) =>
       t.sourceSlotId.includes("belt_ns_in")
       && t.targetSlotId.includes("bridge")
       && t.itemType === "item_iron_ore",
     )).toBe(true);
-    expect(tick60.transfers.some((t) =>
+    expect(tick41.transfers.some((t) =>
       t.sourceSlotId.includes("belt_ew_in")
       && t.targetSlotId.includes("bridge")
       && t.itemType === "item_copper_ore",
     )).toBe(true);
 
     // Tick 42: 桥接器槽位状态应体现方向隔离
-    // AI-CORRECTION 2026-05-18: 桥接器在 tick 60 收货，tick 61 验证槽位状态。
-    const nsInSlot = findSlot(report, 61, "bridge", "ns_buffer", "ns_slot_1", "input-view");
+    const nsInSlot = findSlot(report, 42, "bridge", "ns_buffer", "ns_slot_1", "input-view");
     expect(nsInSlot.itemType).toBe("item_iron_ore");
     expect(nsInSlot.count).toBeGreaterThan(0);
 
-    const ewInSlot = findSlot(report, 61, "bridge", "ew_buffer", "ew_slot_1", "input-view");
+    const ewInSlot = findSlot(report, 42, "bridge", "ew_buffer", "ew_slot_1", "input-view");
     expect(ewInSlot.itemType).toBe("item_copper_ore");
     expect(ewInSlot.count).toBeGreaterThan(0);
 
@@ -126,27 +114,25 @@ describe("bridge-direction", () => {
     expect(ewInSlot.itemType).not.toBe("item_iron_ore");
 
     // === Tick 81: 物品离开桥接器进入末段传送带 ===
-    // AI-CORRECTION 2026-05-18: 桥接器仍是 anchor，输出被下游 dedicated belt 接收相位约束到 tick 100。
-    const tick100 = getTick(report, 100);
-    expect(tick100.transfers.some((t) =>
+    const tick81 = getTick(report, 81);
+    expect(tick81.transfers.some((t) =>
       t.sourceSlotId.includes("device:bridge")
       && t.targetSlotId.includes("device:belt_ns_out")
       && t.itemType === "item_iron_ore",
     )).toBe(true);
-    expect(tick100.transfers.some((t) =>
+    expect(tick81.transfers.some((t) =>
       t.sourceSlotId.includes("device:bridge")
       && t.targetSlotId.includes("device:belt_ew_out")
       && t.itemType === "item_copper_ore",
     )).toBe(true);
 
     // === Tick 121: 两路物品到达终点储存箱 ===
-    // AI-CORRECTION 2026-05-18: 末段 dedicated belt 输出对齐到 tick 140。
-    const tick140 = getTick(report, 140);
-    expect(tick140.transfers.some((t) =>
+    const tick121 = getTick(report, 121);
+    expect(tick121.transfers.some((t) =>
       t.targetSlotId.includes("device:sink-ns")
       && t.itemType === "item_iron_ore",
     )).toBe(true);
-    expect(tick140.transfers.some((t) =>
+    expect(tick121.transfers.some((t) =>
       t.targetSlotId.includes("device:sink-ew")
       && t.itemType === "item_copper_ore",
     )).toBe(true);
@@ -227,51 +213,41 @@ describe("pipe-bridge-direction", () => {
     });
 
     // === Tick 1: 水进入首段管道 ===
-    // AI-CORRECTION 2026-05-18: dedicated pipe 非相位 tick 不接收，tick 1 应无首段传送。
+    // AI-CORRECTION 2026-07-17: dedicated pipe 的首个交付相位前移到 tick 1。
     const tick1 = getTick(report, 1);
     expect(tick1.transfers.some((t) =>
-      t.sourceSlotId.includes("device:liquid-source-ew")
-      && t.targetSlotId.includes("device:pipe_ew_in"),
-    )).toBe(false);
-
-    const tick10 = getTick(report, 10);
-    expect(tick10.transfers.some((t) =>
       t.sourceSlotId.includes("device:liquid-source-ew")
       && t.targetSlotId.includes("device:pipe_ew_in"),
     )).toBe(true);
 
     // === Tick 11: 水从管道进入桥接器 ===
-    // AI-CORRECTION 2026-05-18: pipe 输出对齐到 tick 20。
-    const tick20 = getTick(report, 20);
-    expect(tick20.transfers.some((t) =>
+    const tick11 = getTick(report, 11);
+    expect(tick11.transfers.some((t) =>
       t.sourceSlotId.includes("device:pipe_ew_in")
       && t.targetSlotId.includes("device:pipe-bridge"),
     )).toBe(true);
 
     // === Tick 12: 桥接器槽位隔离验证 ===
-    // AI-CORRECTION 2026-05-18: 桥接器在 tick 20 收货，tick 21 验证槽位状态。
     // 水应在 ew_buffer，ns_buffer 应为空
-    const ewInSlot = findSlot(report, 21, "pipe-bridge", "ew_buffer", "ew_slot_1", "input-view");
+    const ewInSlot = findSlot(report, 12, "pipe-bridge", "ew_buffer", "ew_slot_1", "input-view");
     expect(ewInSlot.itemType).toBe("item_liquid_water");
     expect(ewInSlot.count).toBeGreaterThan(0);
 
     // ns_buffer 应无物品（方向隔离）
-    const nsInSlot = findSlot(report, 21, "pipe-bridge", "ns_buffer", "ns_slot_1", "input-view");
+    const nsInSlot = findSlot(report, 12, "pipe-bridge", "ns_buffer", "ns_slot_1", "input-view");
     expect(nsInSlot.itemType).toBeNull();
     expect(nsInSlot.count).toBe(0);
 
     // === Tick 21: 水离开桥进入末段管道 ===
-    // AI-CORRECTION 2026-05-18: 桥接器输出被下游 dedicated pipe 接收相位约束到 tick 30。
-    const tick30 = getTick(report, 30);
-    expect(tick30.transfers.some((t) =>
+    const tick21 = getTick(report, 21);
+    expect(tick21.transfers.some((t) =>
       t.sourceSlotId.includes("device:pipe-bridge")
       && t.targetSlotId.includes("device:pipe_ew_out"),
     )).toBe(true);
 
     // === Tick 31: 水到达终点 ===
-    // AI-CORRECTION 2026-05-18: 末段 dedicated pipe 输出对齐到 tick 40。
-    const tick40 = getTick(report, 40);
-    expect(tick40.transfers.some((t) =>
+    const tick31 = getTick(report, 31);
+    expect(tick31.transfers.some((t) =>
       t.targetSlotId.includes("device:liquid-sink-ew")
       && t.itemType === "item_liquid_water",
     )).toBe(true);

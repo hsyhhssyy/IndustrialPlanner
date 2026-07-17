@@ -55,28 +55,22 @@ describe("REQ-076: config overrides", () => {
       });
 
     // Tick 1: 物品从 source 传输到 belt（belt buffer 容量为 1，仅接纳 1 个）
-    // AI-CORRECTION 2026-05-18: dedicated belt 相位按标准 tick 对齐，首次接收发生在 tick 20。
+    // AI-CORRECTION 2026-07-17: dedicated belt 的首次接收相位前移到 tick 1。
     const tick1 = getTick(report, 1);
     expect(tick1.transfers.some((t) =>
-      t.sourceSlotId.includes("device:source-storage")
-      && t.targetSlotId.includes("device:belt"),
-    )).toBe(false);
-    const tick20 = getTick(report, 20);
-    expect(tick20.transfers.some((t) =>
       t.sourceSlotId.includes("device:source-storage")
       && t.targetSlotId.includes("device:belt"),
     )).toBe(true);
 
     // Tick 41: belt 配方完成，物品进入 sink
-    // AI-CORRECTION 2026-05-18: dedicated belt 输出也按标准 tick 相位对齐，首件在 tick 60 进入 sink。
-    const tick60 = getTick(report, 60);
-    expect(tick60.transfers.some((t) =>
+    const tick41 = getTick(report, 41);
+    expect(tick41.transfers.some((t) =>
       t.sourceSlotId.includes("device:belt")
       && t.targetSlotId.includes("device:sink-storage"),
     )).toBe(true);
 
     // 验证 slot config 覆盖后的输送结果；port count 覆盖已移至 admission-rule 测试。
-    expect(findSlot(report, 60, "sink-storage", "storage_slot_1", "slot_1"))
+    expect(findSlot(report, 41, "sink-storage", "storage_slot_1", "slot_1"))
       .toMatchObject({
         itemType: "item_iron_ore",
         count: 1,

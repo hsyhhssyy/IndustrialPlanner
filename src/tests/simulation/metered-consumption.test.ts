@@ -103,6 +103,9 @@ describe("metered device consumption", () => {
     const state = createSimulationMutableRuntimeState(topology);
     state.tickNumber = 1;
 
+    expect(readAdmissionMinuteCounterForCurrentWindow(topology, state, portId).windowStartTick)
+      .toBe(1);
+
     consume(topology, state, portId, "item_gas_inert", 6);
     expect(canAcceptMeteredConsumptionItem(topology, state, portId, "item_gas_acid")).toBe(false);
     const firstGasDiffusions = computeActiveGasDiffusions(topology, state);
@@ -119,14 +122,24 @@ describe("metered device consumption", () => {
 
     state.tickNumber = 1200;
     normalizeAdmissionMinuteCountersForCurrentWindow(topology, state);
+    expect(readAdmissionMinuteCounterForCurrentWindow(topology, state, portId)).toMatchObject({
+      windowStartTick: 1,
+      count: 6,
+    });
+    expect(canAcceptMeteredConsumptionItem(topology, state, portId, "item_gas_acid")).toBe(false);
+
+    state.tickNumber = 1201;
+    normalizeAdmissionMinuteCountersForCurrentWindow(topology, state);
     consume(topology, state, portId, "item_gas_acid", 6);
     expect(state.persistent.meteredConsumptions[device.id]).toMatchObject({
       previousWindowCount: 6,
       previousWindowItemId: "item_gas_inert",
       currentItemId: "item_gas_acid",
       activeEffectItemId: "item_gas_inert",
-      authorizedUntilTick: 2400,
+      authorizedUntilTick: 2401,
     });
+    expect(readAdmissionMinuteCounterForCurrentWindow(topology, state, portId).windowStartTick)
+      .toBe(1201);
 
     state.transient.isPowerOutage = true;
     expect(computeActiveGasDiffusions(topology, state)).toEqual([]);
@@ -139,6 +152,12 @@ describe("metered device consumption", () => {
     state.transient.isPowerOutage = false;
 
     state.tickNumber = 2400;
+    normalizeAdmissionMinuteCountersForCurrentWindow(topology, state);
+    expect(computeActiveGasDiffusions(topology, state)).toMatchObject([
+      { sourceDeviceId: device.id, gasItemId: "item_gas_inert" },
+    ]);
+
+    state.tickNumber = 2401;
     normalizeAdmissionMinuteCountersForCurrentWindow(topology, state);
     expect(computeActiveGasDiffusions(topology, state)).toMatchObject([
       { sourceDeviceId: device.id, gasItemId: "item_gas_acid" },
@@ -210,7 +229,7 @@ describe("metered device consumption", () => {
     const runningRecipe = state.persistent.devices[device.id]?.channelRecipes[channelId];
     expect(runningRecipe).toMatchObject({ recipeId, progressTicks: 0, state: "running" });
 
-    state.tickNumber = 2400;
+    state.tickNumber = 2401;
     normalizeAdmissionMinuteCountersForCurrentWindow(topology, state);
     advanceDevices(topology, state, 20);
     expect(state.persistent.devices[device.id]?.channelRecipes[channelId]).toBe(runningRecipe);

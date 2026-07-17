@@ -541,7 +541,7 @@ function createInitialAdmissionMinuteCounters(
   const counters: Record<string, RuntimeAdmissionMinuteCounterState> = {};
   for (const portId of topology.ordering.portOrder) {
     if (portUsesMinuteCounter(topology, portId)) {
-      counters[portId] = { windowStartTick: 0, count: 0 };
+      counters[portId] = { windowStartTick: 1, count: 0 };
     }
   }
   return counters;
@@ -685,7 +685,10 @@ function resolveCounterWindowStartTick(
   const windowTicks = meteredDevice?.meteredConsumption?.windowTicks
     ?? Math.max(1, topology.standardTickRate * 60);
   const currentTick = Math.max(0, Math.trunc(tickNumber));
-  return Math.floor(currentTick / windowTicks) * windowTicks;
+  // AI-CORRECTION 2026-07-17: 与动态运行帧及严格物流统一使用 tick 1 相位。
+  // tick 0 是初始快照；首个有效窗口从 tick 1 开始，后续窗口为
+  // 1 + N * windowTicks（例如 1、11、21 或分钟窗口的 1、1201、2401）。
+  return 1 + Math.floor(Math.max(0, currentTick - 1) / windowTicks) * windowTicks;
 }
 
 function portUsesMinuteCounter(

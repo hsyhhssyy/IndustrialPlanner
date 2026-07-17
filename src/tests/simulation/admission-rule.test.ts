@@ -28,7 +28,7 @@ describe("admission rule runtime counter", () => {
         .map((transfer) => ({ tickNumber: tick.tickNumber, transfer })),
     );
 
-    expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 60]);
+    expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 41]);
     const admissionCounter = report.ticks.at(-1)?.devices.admission?.admissionCounters?.["item_input:in_w"];
     expect(admissionCounter).toBeDefined();
     expect(admissionCounter)
@@ -62,15 +62,15 @@ describe("admission rule runtime counter", () => {
         .map((transfer) => ({ tickNumber: tick.tickNumber, transfer })),
     );
 
-    expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 60, 1200, 1240]);
-    expect(report.ticks[1199]?.devices.admission?.admissionCounters?.["item_input:in_w"])
+    expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 41, 1201, 1241]);
+    expect(report.ticks[1200]?.devices.admission?.admissionCounters?.["item_input:in_w"])
       .toMatchObject({
         limit: null,
         count: 2,
         perMinuteLimit: 2,
         perMinuteCount: 2,
       });
-    expect(report.ticks[1200]?.devices.admission?.admissionCounters?.["item_input:in_w"])
+    expect(report.ticks[1201]?.devices.admission?.admissionCounters?.["item_input:in_w"])
       .toMatchObject({
         limit: null,
         count: 3,
@@ -100,7 +100,7 @@ describe("admission rule runtime counter", () => {
         .map((transfer) => ({ tickNumber: tick.tickNumber, transfer })),
     );
 
-    expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 60, 1200]);
+    expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 41, 1201]);
     expect(report.ticks.at(-1)?.devices.admission?.admissionCounters?.["item_input:in_w"])
       .toMatchObject({
         limit: 3,

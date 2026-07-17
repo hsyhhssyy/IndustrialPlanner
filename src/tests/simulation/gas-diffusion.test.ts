@@ -73,6 +73,13 @@ describe("gas diffusion simulation", () => {
 
     expect(getDevice(report, 60 * STANDARD_TICK_RATE_PER_SECOND, "gas-diffuser").meteredConsumption)
       .toEqual({
+        currentWindowCount: 6,
+        currentWindowItemId: "item_gas_inert",
+        previousWindowCount: 0,
+        previousWindowItemId: null,
+      });
+    expect(getDevice(report, 60 * STANDARD_TICK_RATE_PER_SECOND + 1, "gas-diffuser").meteredConsumption)
+      .toEqual({
         currentWindowCount: 0,
         currentWindowItemId: null,
         previousWindowCount: 6,

@@ -112,12 +112,12 @@ describe("protocol core warehouse links", () => {
       slotLinks,
       ),
       registry: createRegistryContract(),
-      maxTickNumber: 20,
+      maxTickNumber: 1,
     });
 
-    const tick20 = getTick(report, 20);
+    const tick1 = getTick(report, 1);
     for (const output of PROTOCOL_CORE_OUTPUTS) {
-      expect(tick20.transfers).toEqual(expect.arrayContaining([
+      expect(tick1.transfers).toEqual(expect.arrayContaining([
         expect.objectContaining({
           itemType: output.itemId,
           amount: 1,
