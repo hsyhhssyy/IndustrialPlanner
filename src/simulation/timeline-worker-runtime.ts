@@ -9,9 +9,13 @@ import type {
 interface TimelineCheckpoint {
   readonly timelineTickNumber: number;
   readonly runtimeExport: SimulationRuntimeExport;
+  readonly presentationSnapshot: SimulationRuntimeExport["snapshot"];
 }
 
-const TIMELINE_FILL_BATCH_SIZE = 64;
+// 预测填充与拖动取帧共享同一个 worker 事件循环。真实大型蓝图生成单个检查点
+// 需要数毫秒，因此每批只推进少量检查点，及时把控制权还给消息队列。
+const TIMELINE_FILL_BATCH_SIZE = 1;
+const TIMELINE_FILL_INTERACTION_IDLE_MS = 250;
 
 export class TimelineWorkerRuntime {
   private runtime: SimulationWorkerRuntime | null = null;
@@ -54,7 +58,20 @@ export class TimelineWorkerRuntime {
           requestId: request.requestId,
           status: this.getStatus(),
         };
+      case "get-timeline-presentation-frame": {
+        this.deferFillForInteraction();
+        const timelineTickNumber = Math.max(0, Math.trunc(request.timelineTickNumber));
+        const checkpoint = this.checkpoints.get(timelineTickNumber);
+        return {
+          type: "timeline-presentation-frame-result",
+          requestId: request.requestId,
+          timelineTickNumber,
+          snapshot: checkpoint?.presentationSnapshot ?? null,
+          status: this.getStatus(),
+        };
+      }
       case "get-timeline-checkpoint": {
+        this.deferFillForInteraction();
         const timelineTickNumber = Math.max(0, Math.trunc(request.timelineTickNumber));
         return {
           type: "timeline-checkpoint-result",
@@ -141,6 +158,7 @@ export class TimelineWorkerRuntime {
     this.checkpoints.set(startTimelineTickNumber, {
       timelineTickNumber: startTimelineTickNumber,
       runtimeExport: options.runtimeExport,
+      presentationSnapshot: createTimelinePresentationSnapshot(options.runtimeExport),
     });
     this.scheduleFill();
 
@@ -233,7 +251,7 @@ export class TimelineWorkerRuntime {
     this.nextTimelineTickNumber = latestCheckpoint.timelineTickNumber + 1;
   }
 
-  private scheduleFill(): void {
+  private scheduleFill(delayMs = 0): void {
     if (this.fillTimerId !== null || this.runtime === null) {
       return;
     }
@@ -245,7 +263,15 @@ export class TimelineWorkerRuntime {
       return;
     }
 
-    this.fillTimerId = setTimeout(() => this.fillTimelineTickBatch(), 0);
+    this.fillTimerId = setTimeout(() => this.fillTimelineTickBatch(), delayMs);
+  }
+
+  private deferFillForInteraction(): void {
+    if (this.fillTimerId !== null) {
+      clearTimeout(this.fillTimerId);
+      this.fillTimerId = null;
+    }
+    this.scheduleFill(TIMELINE_FILL_INTERACTION_IDLE_MS);
   }
 
   private fillTimelineTickBatch(): void {
@@ -275,6 +301,7 @@ export class TimelineWorkerRuntime {
         this.checkpoints.set(timelineTickNumber, {
           timelineTickNumber,
           runtimeExport,
+          presentationSnapshot: createTimelinePresentationSnapshot(runtimeExport),
         });
       }
 
@@ -295,4 +322,44 @@ export class TimelineWorkerRuntime {
       stepStandardTicks: this.stepStandardTicks,
     };
   }
+}
+
+export function createTimelinePresentationSnapshot(
+  runtimeExport: SimulationRuntimeExport,
+): SimulationRuntimeExport["snapshot"] {
+  const devices: SimulationRuntimeExport["snapshot"]["devices"] = {};
+  const slots: SimulationRuntimeExport["snapshot"]["slots"] = {};
+
+  for (const device of Object.values(runtimeExport.topology.devices)) {
+    if (device.definitionId === "warehouse") {
+      continue;
+    }
+
+    const deviceSnapshot = runtimeExport.snapshot.devices[device.id];
+    if (deviceSnapshot !== undefined) {
+      devices[device.id] = deviceSnapshot;
+    }
+    for (const nodeId of device.nodeIds) {
+      const node = runtimeExport.topology.nodes[nodeId];
+      if (node === undefined) {
+        continue;
+      }
+      for (const slotId of node.slotIds) {
+        const slotSnapshot = runtimeExport.snapshot.slots[slotId];
+        if (slotSnapshot !== undefined) {
+          slots[slotId] = slotSnapshot;
+        }
+      }
+    }
+  }
+
+  return {
+    ...runtimeExport.snapshot,
+    devices,
+    slots,
+    nodes: {},
+    transfers: [],
+    routingCursors: {},
+    diagnostics: [],
+  };
 }

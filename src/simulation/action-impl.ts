@@ -64,6 +64,7 @@ const TIMELINE_DEFAULT_PLAYBACK_ANCHOR_OFFSET_TICKS = Math.round(TIMELINE_WINDOW
 const TIMELINE_SEEK_EDGE_SCROLL_ANCHOR_OFFSET_TICKS = Math.round(TIMELINE_WINDOW_SPAN_TICKS * 0.9);
 const TIMELINE_STATUS_POLL_MS = 250;
 const TIMELINE_EXPORT_LOOKBACK_STEPS = 18;
+const TIMELINE_PRESENTATION_COMMIT_IDLE_MS = 1000;
 
 const logger = createLogger("simulation-runtime");
 
@@ -155,6 +156,7 @@ export interface TimelineWorkerBridge {
     targetTimelineTickNumber: number;
   }): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-retargeted" }>>;
   getTimelineStatus(): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-status" }>>;
+  getTimelinePresentationFrame(timelineTickNumber: number): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-presentation-frame-result" }>>;
   getTimelineCheckpoint(timelineTickNumber: number): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-checkpoint-result" }>>;
   stopTimeline(): Promise<Extract<TimelineWorkerResponse, { readonly type: "timeline-stopped" }>>;
   dispose(): void;
@@ -194,6 +196,13 @@ interface TopologyPresentationBoundary {
   readonly resolveReached: () => void;
 }
 
+interface TimelinePresentationSeekRequest {
+  readonly targetTimelineTickNumber: number;
+  readonly revision: number;
+  readonly resolve: (applied: boolean) => void;
+  readonly reject: (error: unknown) => void;
+}
+
 function createMissingTimelineWorkerBridge(): TimelineWorkerBridge {
   throw new Error("Timeline worker bridge is not configured.");
 }
@@ -217,8 +226,17 @@ implements SimulationAction, SimulationInternalAction {
   private playbackTargetTickNumber = 0;
   private timelineBridge: TimelineWorkerBridge | null = null;
   private timelineStatusTimerId: ReturnType<typeof setInterval> | null = null;
+  private timelineStatusRefreshInFlight = false;
   private timelineSeekSerial = 0;
   private timelineSeekImportPromise: Promise<unknown> | null = null;
+  private timelinePresentationSeekRunning = false;
+  private pendingTimelinePresentationSeek: TimelinePresentationSeekRequest | null = null;
+  private timelinePresentationCommitTarget: number | null = null;
+  private timelinePresentationCommitRevision = 0;
+  private timelinePresentationCommitTimerId: ReturnType<typeof setTimeout> | null = null;
+  private timelinePresentationCommitPromise: Promise<boolean> | null = null;
+  private timelineResumeRequestedAfterCommit = false;
+  private timelineResumeAfterCommitPromise: Promise<void> | null = null;
   private timelineRestartInFlight = false;
   private timelineWindowRetargetInFlight = false;
   private timelineWindowRetargetPending = false;
@@ -268,12 +286,30 @@ implements SimulationAction, SimulationInternalAction {
   };
 
   public readonly pause: SimulationAction["pause"] = action(() => {
+    this.timelineResumeRequestedAfterCommit = false;
     this.stateReadWrite.runningState = "pause";
     this.completeTopologyPresentationBoundary(true);
   });
 
   public readonly resume: SimulationAction["resume"] = action(() => {
     if (this.stateReadWrite.runningState !== "pause") {
+      return;
+    }
+
+    if (
+      this.timelinePresentationCommitTarget !== null
+      || this.timelinePresentationCommitPromise !== null
+    ) {
+      this.timelineResumeRequestedAfterCommit = true;
+      if (this.timelineResumeAfterCommitPromise === null) {
+        const resumePromise = this.resumeAfterTimelinePresentationCommitted();
+        const trackedResumePromise = resumePromise.finally(() => {
+          if (this.timelineResumeAfterCommitPromise === trackedResumePromise) {
+            this.timelineResumeAfterCommitPromise = null;
+          }
+        });
+        this.timelineResumeAfterCommitPromise = trackedResumePromise;
+      }
       return;
     }
 
@@ -767,82 +803,280 @@ implements SimulationAction, SimulationInternalAction {
       return false;
     }
 
-    const bridge = this.timelineBridge;
-    if (bridge === null) {
+    if (this.timelineBridge === null) {
       return false;
     }
 
     const targetTimelineTickNumber = Math.max(0, Math.trunc(timelineTickNumber));
-    const previousCursorTickNumber = this.stateReadWrite.timeline.cursorTickNumber;
-    const serial = ++this.timelineSeekSerial;
+    const revision = ++this.timelinePresentationCommitRevision;
+    if (this.timelinePresentationCommitTimerId !== null) {
+      clearTimeout(this.timelinePresentationCommitTimerId);
+      this.timelinePresentationCommitTimerId = null;
+    }
+    this.timelinePresentationCommitTarget = null;
+
+    return new Promise<boolean>((resolve, reject) => {
+      const request: TimelinePresentationSeekRequest = {
+        targetTimelineTickNumber,
+        revision,
+        resolve,
+        reject,
+      };
+
+      if (this.timelinePresentationSeekRunning) {
+        this.pendingTimelinePresentationSeek?.resolve(false);
+        this.pendingTimelinePresentationSeek = request;
+        return;
+      }
+
+      this.timelinePresentationSeekRunning = true;
+      void this.runTimelinePresentationSeekQueue(request);
+    });
+  };
+
+  private async runTimelinePresentationSeekQueue(
+    initialRequest: TimelinePresentationSeekRequest,
+  ): Promise<void> {
+    let request: TimelinePresentationSeekRequest | null = initialRequest;
     runInAction(() => {
       this.stateReadWrite.timeline.isSeeking = true;
     });
 
     try {
-      const checkpoint = await bridge.getTimelineCheckpoint(targetTimelineTickNumber);
-      const runtimeExport = checkpoint.runtimeExport;
-      if (serial !== this.timelineSeekSerial || runtimeExport === null) {
-        return false;
-      }
-
-      const checkpointMetadata = this.resolveTimelineCheckpointMetadata(
-        targetTimelineTickNumber,
-        runtimeExport,
-      );
-      const crossesTimelineMark = this.stateReadWrite.timeline.marks.some((mark) =>
-        mark.tickNumber > targetTimelineTickNumber,
-      );
-      const imported = await this.importTimelineRuntimeStateForSeek(serial, runtimeExport);
-      if (serial !== this.timelineSeekSerial || imported === null) {
-        return false;
-      }
-
-      this.topology.setSnapshot(runtimeExport.topology);
-      if (checkpointMetadata === null) {
-        this.compiledDocument = null;
-        this.compiledActivitySignature = null;
-      } else {
-        this.compiledDocument = cloneWorldDocument(checkpointMetadata.document);
-        this.compiledActivitySignature = checkpointMetadata.activitySignature;
-      }
-      runInAction(() => {
-        this.stateReadWrite.runtimeStatus = imported.status;
-        if (imported.result.status.status === "ready") {
-          this.stateReadWrite.currentSnapshot = imported.result.currentTick;
-          this.stateReadWrite.currentPlaybackTickNumber =
-            imported.result.currentTick?.tickNumber ?? runtimeExport.snapshot.tickNumber;
-          this.playbackTargetTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
-          this.stateReadWrite.timeline.cursorTickNumber = targetTimelineTickNumber;
-          this.updateTimelineWindowForSeek(targetTimelineTickNumber, previousCursorTickNumber);
-          if (crossesTimelineMark) {
-            this.stateReadWrite.timeline.marks = this.stateReadWrite.timeline.marks.filter((mark) =>
-              mark.tickNumber <= targetTimelineTickNumber,
+      while (request !== null) {
+        const currentRequest = request;
+        try {
+          const crossesTimelineMark = this.stateReadWrite.timeline.marks.some((mark) =>
+            mark.tickNumber > currentRequest.targetTimelineTickNumber,
+          );
+          const applied = crossesTimelineMark
+            ? await this.commitTimelineSeekToTick(
+              currentRequest.targetTimelineTickNumber,
+              currentRequest.revision,
+            )
+            : await this.applyTimelinePresentationFrame(
+              currentRequest.targetTimelineTickNumber,
+              currentRequest.revision,
             );
-            this.stateReadWrite.timeline.availableToTickNumber = Math.min(
-              this.stateReadWrite.timeline.availableToTickNumber,
-              targetTimelineTickNumber,
-            );
-          }
+          currentRequest.resolve(applied);
+        } catch (error) {
+          currentRequest.reject(error);
         }
-      });
 
-      const ready = imported.result.status.status === "ready";
-      if (ready && crossesTimelineMark) {
-        await this.restartTimelineFromCurrentSimulation();
-      } else if (ready) {
-        this.requestTimelineWindowRetarget();
+        request = this.pendingTimelinePresentationSeek;
+        this.pendingTimelinePresentationSeek = null;
       }
-
-      return ready;
     } finally {
-      if (serial === this.timelineSeekSerial) {
+      this.timelinePresentationSeekRunning = false;
+      if (this.timelinePresentationCommitPromise === null) {
         runInAction(() => {
           this.stateReadWrite.timeline.isSeeking = false;
         });
       }
     }
-  };
+  }
+
+  private async applyTimelinePresentationFrame(
+    targetTimelineTickNumber: number,
+    revision: number,
+  ): Promise<boolean> {
+    const bridge = this.timelineBridge;
+    if (bridge === null) {
+      return false;
+    }
+
+    const lifecycleSerial = this.timelineSeekSerial;
+    const previousCursorTickNumber = this.stateReadWrite.timeline.cursorTickNumber;
+    const response = await bridge.getTimelinePresentationFrame(targetTimelineTickNumber);
+    const snapshot = response.snapshot;
+    if (
+      lifecycleSerial !== this.timelineSeekSerial
+      || snapshot === null
+    ) {
+      return false;
+    }
+
+    const checkpointMetadata = this.resolveTimelineCheckpointMetadataForDocumentHash(
+      targetTimelineTickNumber,
+      snapshot.documentHash,
+    );
+    if (checkpointMetadata === null) {
+      this.compiledDocument = null;
+      this.compiledActivitySignature = null;
+    } else {
+      this.compiledDocument = cloneWorldDocument(checkpointMetadata.document);
+      this.compiledActivitySignature = checkpointMetadata.activitySignature;
+    }
+
+    runInAction(() => {
+      this.stateReadWrite.currentSnapshot = snapshot;
+      this.stateReadWrite.currentPlaybackTickNumber = snapshot.tickNumber;
+      this.playbackTargetTickNumber = snapshot.tickNumber;
+      this.stateReadWrite.timeline.cursorTickNumber = targetTimelineTickNumber;
+      this.updateTimelineWindowForSeek(targetTimelineTickNumber, previousCursorTickNumber);
+    });
+    this.requestTimelineWindowRetarget();
+    this.scheduleTimelinePresentationCommit(targetTimelineTickNumber, revision);
+    return true;
+  }
+
+  private async commitTimelineSeekToTick(
+    targetTimelineTickNumber: number,
+    revision: number,
+  ): Promise<boolean> {
+    const bridge = this.timelineBridge;
+    if (bridge === null) {
+      return false;
+    }
+
+    const previousCursorTickNumber = this.stateReadWrite.timeline.cursorTickNumber;
+    const lifecycleSerial = this.timelineSeekSerial;
+    const checkpoint = await bridge.getTimelineCheckpoint(targetTimelineTickNumber);
+    const runtimeExport = checkpoint.runtimeExport;
+    if (
+      lifecycleSerial !== this.timelineSeekSerial
+      || revision !== this.timelinePresentationCommitRevision
+      || runtimeExport === null
+    ) {
+      return false;
+    }
+
+    const checkpointMetadata = this.resolveTimelineCheckpointMetadata(
+      targetTimelineTickNumber,
+      runtimeExport,
+    );
+    const crossesTimelineMark = this.stateReadWrite.timeline.marks.some((mark) =>
+      mark.tickNumber > targetTimelineTickNumber,
+    );
+    const imported = await this.importTimelineRuntimeStateForSeek(lifecycleSerial, runtimeExport);
+    if (
+      lifecycleSerial !== this.timelineSeekSerial
+      || revision !== this.timelinePresentationCommitRevision
+      || imported === null
+    ) {
+      return false;
+    }
+
+    this.topology.setSnapshot(runtimeExport.topology);
+    if (checkpointMetadata === null) {
+      this.compiledDocument = null;
+      this.compiledActivitySignature = null;
+    } else {
+      this.compiledDocument = cloneWorldDocument(checkpointMetadata.document);
+      this.compiledActivitySignature = checkpointMetadata.activitySignature;
+    }
+    runInAction(() => {
+      this.stateReadWrite.runtimeStatus = imported.status;
+      if (imported.result.status.status === "ready") {
+        this.stateReadWrite.currentSnapshot = imported.result.currentTick;
+        this.stateReadWrite.currentPlaybackTickNumber =
+          imported.result.currentTick?.tickNumber ?? runtimeExport.snapshot.tickNumber;
+        this.playbackTargetTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
+        this.stateReadWrite.timeline.cursorTickNumber = targetTimelineTickNumber;
+        this.updateTimelineWindowForSeek(targetTimelineTickNumber, previousCursorTickNumber);
+        if (crossesTimelineMark) {
+          this.stateReadWrite.timeline.marks = this.stateReadWrite.timeline.marks.filter((mark) =>
+            mark.tickNumber <= targetTimelineTickNumber,
+          );
+          this.stateReadWrite.timeline.availableToTickNumber = Math.min(
+            this.stateReadWrite.timeline.availableToTickNumber,
+            targetTimelineTickNumber,
+          );
+        }
+      }
+    });
+
+    const ready = imported.result.status.status === "ready";
+    if (ready && crossesTimelineMark) {
+      await this.restartTimelineFromCurrentSimulation();
+    } else if (ready) {
+      this.requestTimelineWindowRetarget();
+    }
+
+    return ready;
+  }
+
+  private scheduleTimelinePresentationCommit(
+    targetTimelineTickNumber: number,
+    revision: number,
+  ): void {
+    if (revision !== this.timelinePresentationCommitRevision) {
+      return;
+    }
+
+    this.timelinePresentationCommitTarget = targetTimelineTickNumber;
+    if (this.timelinePresentationCommitTimerId !== null) {
+      clearTimeout(this.timelinePresentationCommitTimerId);
+    }
+    this.timelinePresentationCommitTimerId = setTimeout(() => {
+      this.timelinePresentationCommitTimerId = null;
+      const commitPromise = this.flushTimelinePresentationCommit();
+      void commitPromise?.catch(() => undefined);
+    }, TIMELINE_PRESENTATION_COMMIT_IDLE_MS);
+  }
+
+  private flushTimelinePresentationCommit(): Promise<boolean> | null {
+    if (this.timelinePresentationCommitTimerId !== null) {
+      clearTimeout(this.timelinePresentationCommitTimerId);
+      this.timelinePresentationCommitTimerId = null;
+    }
+    if (this.timelinePresentationCommitPromise !== null) {
+      return this.timelinePresentationCommitPromise;
+    }
+
+    const targetTimelineTickNumber = this.timelinePresentationCommitTarget;
+    if (targetTimelineTickNumber === null) {
+      return null;
+    }
+
+    this.timelinePresentationCommitTarget = null;
+    const revision = this.timelinePresentationCommitRevision;
+    runInAction(() => {
+      this.stateReadWrite.timeline.isSeeking = true;
+    });
+    const commitPromise = this.commitTimelineSeekToTick(
+      targetTimelineTickNumber,
+      revision,
+    );
+    const trackedPromise = commitPromise.finally(() => {
+      if (this.timelinePresentationCommitPromise === trackedPromise) {
+        this.timelinePresentationCommitPromise = null;
+      }
+      if (!this.timelinePresentationSeekRunning) {
+        runInAction(() => {
+          this.stateReadWrite.timeline.isSeeking = false;
+        });
+      }
+      if (this.timelinePresentationCommitTarget !== null) {
+        this.scheduleTimelinePresentationCommit(
+          this.timelinePresentationCommitTarget,
+          this.timelinePresentationCommitRevision,
+        );
+      }
+    });
+    this.timelinePresentationCommitPromise = trackedPromise;
+    return trackedPromise;
+  }
+
+  private async resumeAfterTimelinePresentationCommitted(): Promise<void> {
+    while (this.timelineResumeRequestedAfterCommit) {
+      const commitPromise = this.flushTimelinePresentationCommit();
+      if (commitPromise === null) {
+        break;
+      }
+      await commitPromise.catch(() => false);
+    }
+
+    if (!this.timelineResumeRequestedAfterCommit) {
+      return;
+    }
+    this.timelineResumeRequestedAfterCommit = false;
+    runInAction(() => {
+      if (this.stateReadWrite.runningState === "pause") {
+        this.stateReadWrite.runningState = "start";
+      }
+    });
+  }
 
   public readonly reset: SimulationInternalAction["reset"] = action(() => {
     this.clearPlaybackProgress();
@@ -1251,12 +1485,22 @@ implements SimulationAction, SimulationInternalAction {
     timelineTickNumber: number,
     runtimeExport: SimulationRuntimeExport,
   ): TimelineCheckpointMetadata | null {
+    return this.resolveTimelineCheckpointMetadataForDocumentHash(
+      timelineTickNumber,
+      runtimeExport.topology.documentHash,
+    );
+  }
+
+  private resolveTimelineCheckpointMetadataForDocumentHash(
+    timelineTickNumber: number,
+    documentHash: string,
+  ): TimelineCheckpointMetadata | null {
     const metadata = this.timelineCheckpointMetadataByTickNumber.get(timelineTickNumber) ?? null;
     if (metadata === null) {
       return null;
     }
 
-    if (createSimulationDocumentHash(metadata.document) !== runtimeExport.topology.documentHash) {
+    if (createSimulationDocumentHash(metadata.document) !== documentHash) {
       console.debug(
         `[TimelineWorker] checkpoint document mismatch at timelineTick=${timelineTickNumber}`,
       );
@@ -1277,23 +1521,33 @@ implements SimulationAction, SimulationInternalAction {
   }
 
   private async refreshTimelineStatus(): Promise<void> {
-    if (!this.stateReadWrite.timeline.enabled) {
+    if (
+      !this.stateReadWrite.timeline.enabled
+      || this.stateReadWrite.timeline.isSeeking
+      || this.timelineStatusRefreshInFlight
+    ) {
       return;
     }
 
-    const bridge = this.timelineBridge;
-    if (bridge === null) {
-      await this.restartTimelineFromCurrentSimulation();
-      return;
-    }
-
+    this.timelineStatusRefreshInFlight = true;
     try {
+      const bridge = this.timelineBridge;
+      if (bridge === null) {
+        await this.restartTimelineFromCurrentSimulation();
+        return;
+      }
+
       const response = await bridge.getTimelineStatus();
+      if (!this.stateReadWrite.timeline.enabled || this.timelineBridge !== bridge) {
+        return;
+      }
       runInAction(() => {
         this.applyTimelineStatus(response.status);
       });
     } catch {
       // timeline-worker 是辅助预测缓存，状态轮询失败不应影响正式仿真。
+    } finally {
+      this.timelineStatusRefreshInFlight = false;
     }
   }
 
@@ -1460,6 +1714,15 @@ implements SimulationAction, SimulationInternalAction {
       this.timelineStatusTimerId = null;
     }
     this.timelineSeekSerial += 1;
+    this.timelinePresentationCommitRevision += 1;
+    if (this.timelinePresentationCommitTimerId !== null) {
+      clearTimeout(this.timelinePresentationCommitTimerId);
+      this.timelinePresentationCommitTimerId = null;
+    }
+    this.timelinePresentationCommitTarget = null;
+    this.pendingTimelinePresentationSeek?.resolve(false);
+    this.pendingTimelinePresentationSeek = null;
+    this.timelineResumeRequestedAfterCommit = false;
     this.lastTimelineSafetySyncStandardTick = null;
     this.timelineWindowRetargetInFlight = false;
     this.timelineWindowRetargetPending = false;

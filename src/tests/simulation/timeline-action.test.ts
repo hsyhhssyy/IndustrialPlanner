@@ -102,6 +102,46 @@ describe("simulation timeline actions", () => {
     action.disableTimeline();
   });
 
+  it("keeps at most one timeline status refresh in flight", async () => {
+    vi.useFakeTimers();
+
+    const state = createSimulationStateReadWrite();
+    state.hasStarted = true;
+    state.runningState = "start";
+    state.currentSnapshot = createRuntimeExport(0).snapshot;
+
+    const firstStatus = createDeferred<Awaited<ReturnType<TimelineWorkerBridge["getTimelineStatus"]>>>();
+    const timelineBridge = createTimelineBridge({
+      getTimelineStatus: vi.fn()
+        .mockImplementationOnce(() => firstStatus.promise)
+        .mockResolvedValue({
+          type: "timeline-status" as const,
+          requestId: 2,
+          status: createTimelineStatus(0, 2),
+        }),
+    });
+    const action = new SimulationActionImpl({
+      workspace: {} as WorkspaceContract,
+      state,
+      topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
+      bridge: createSimulationBridge(),
+      createTimelineBridge: () => timelineBridge,
+    });
+
+    await action.enableTimeline();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(timelineBridge.getTimelineStatus).toHaveBeenCalledTimes(1);
+
+    firstStatus.resolve({
+      type: "timeline-status",
+      requestId: 1,
+      status: createTimelineStatus(0, 1),
+    });
+    await vi.advanceTimersByTimeAsync(250);
+    expect(timelineBridge.getTimelineStatus).toHaveBeenCalledTimes(2);
+    action.disableTimeline();
+  });
+
   it("falls back to the latest exportable aligned checkpoint", async () => {
     const state = createSimulationStateReadWrite();
     state.hasStarted = true;
@@ -515,30 +555,28 @@ describe("simulation timeline actions", () => {
     }));
   });
 
-  it("serializes timeline seeks so the latest dragged tick wins", async () => {
-    const firstImport = createDeferred<Awaited<ReturnType<SimulationWorkerBridge["importRuntimeState"]>>>();
+  it("applies the in-flight presentation frame and coalesces pending seeks to the latest tick", async () => {
+    const firstFrame = createDeferred<Awaited<ReturnType<TimelineWorkerBridge["getTimelinePresentationFrame"]>>>();
     const state = createSimulationStateReadWrite();
     state.hasStarted = true;
     state.runningState = "pause";
     state.currentSnapshot = createRuntimeExport(0).snapshot;
 
-    const bridge = createSimulationBridge({
-      importRuntimeState: vi.fn((runtimeExport: SimulationRuntimeExport) => {
-        if (runtimeExport.runtimeState.tickNumber === 10) {
-          return firstImport.promise;
+    const bridge = createSimulationBridge();
+    const timelineBridge = createTimelineBridge({
+      getTimelinePresentationFrame: vi.fn((timelineTickNumber: number) => {
+        if (timelineTickNumber === 1) {
+          return firstFrame.promise;
         }
 
-        return Promise.resolve(createImportResponse(runtimeExport));
+        return Promise.resolve({
+          type: "timeline-presentation-frame-result" as const,
+          requestId: timelineTickNumber,
+          timelineTickNumber,
+          snapshot: createRuntimeExport(timelineTickNumber * 10).snapshot,
+          status: createTimelineStatus(0, timelineTickNumber),
+        });
       }),
-    });
-    const timelineBridge = createTimelineBridge({
-      getTimelineCheckpoint: vi.fn(async (timelineTickNumber: number) => ({
-        type: "timeline-checkpoint-result" as const,
-        requestId: timelineTickNumber,
-        timelineTickNumber,
-        runtimeExport: createRuntimeExport(timelineTickNumber * 10),
-        status: createTimelineStatus(0, timelineTickNumber),
-      })),
     });
     const action = new SimulationActionImpl({
       workspace: {} as WorkspaceContract,
@@ -551,24 +589,37 @@ describe("simulation timeline actions", () => {
     await action.enableTimeline();
 
     const firstSeek = action.seekTimelineToTick(1);
-    await flushMicrotasks(3);
-    expect(bridge.importRuntimeState).toHaveBeenCalledTimes(1);
-
     const secondSeek = action.seekTimelineToTick(2);
-    await flushMicrotasks(3);
-    expect(bridge.importRuntimeState).toHaveBeenCalledTimes(1);
+    const thirdSeek = action.seekTimelineToTick(3);
+    await expect(secondSeek).resolves.toBe(false);
 
-    firstImport.resolve(createImportResponse(createRuntimeExport(10)));
+    firstFrame.resolve({
+      type: "timeline-presentation-frame-result",
+      requestId: 1,
+      timelineTickNumber: 1,
+      snapshot: createRuntimeExport(10).snapshot,
+      status: createTimelineStatus(0, 3),
+    });
 
-    await expect(firstSeek).resolves.toBe(false);
-    await expect(secondSeek).resolves.toBe(true);
+    await expect(firstSeek).resolves.toBe(true);
+    await expect(thirdSeek).resolves.toBe(true);
 
-    expect(bridge.importRuntimeState).toHaveBeenCalledTimes(2);
+    expect(timelineBridge.getTimelinePresentationFrame).toHaveBeenCalledTimes(2);
+    expect(timelineBridge.getTimelinePresentationFrame).toHaveBeenNthCalledWith(1, 1);
+    expect(timelineBridge.getTimelinePresentationFrame).toHaveBeenNthCalledWith(2, 3);
+    expect(bridge.importRuntimeState).not.toHaveBeenCalled();
+    expect(state.currentPlaybackTickNumber).toBe(30);
+    expect(state.timeline.cursorTickNumber).toBe(3);
+
+    action.resume();
+    await vi.waitFor(() => {
+      expect(bridge.importRuntimeState).toHaveBeenCalledTimes(1);
+      expect(state.runningState).toBe("start");
+    });
+
     expect(bridge.importRuntimeState).toHaveBeenLastCalledWith(expect.objectContaining({
-      runtimeState: expect.objectContaining({ tickNumber: 20 }),
+      runtimeState: expect.objectContaining({ tickNumber: 30 }),
     }));
-    expect(state.currentPlaybackTickNumber).toBe(20);
-    expect(state.timeline.cursorTickNumber).toBe(2);
     action.disableTimeline();
   });
 
@@ -596,6 +647,13 @@ describe("simulation timeline actions", () => {
       })),
     });
     const timelineBridge = createTimelineBridge({
+      getTimelinePresentationFrame: vi.fn(async (timelineTickNumber: number) => ({
+        type: "timeline-presentation-frame-result" as const,
+        requestId: timelineTickNumber,
+        timelineTickNumber,
+        snapshot: runtimeExportBefore.snapshot,
+        status: createTimelineStatus(0, timelineTickNumber),
+      })),
       getTimelineCheckpoint: vi.fn(async (timelineTickNumber: number) => ({
         type: "timeline-checkpoint-result" as const,
         requestId: timelineTickNumber,
@@ -760,6 +818,13 @@ function createTimelineBridge(
         options.retainedFromTimelineTickNumber,
         options.targetTimelineTickNumber,
       ),
+    })),
+    getTimelinePresentationFrame: vi.fn(async (timelineTickNumber: number) => ({
+      type: "timeline-presentation-frame-result" as const,
+      requestId: timelineTickNumber,
+      timelineTickNumber,
+      snapshot: createRuntimeExport(timelineTickNumber * 10).snapshot,
+      status: createTimelineStatus(0, timelineTickNumber),
     })),
     getTimelineCheckpoint: vi.fn(async (timelineTickNumber: number) => ({
       type: "timeline-checkpoint-result" as const,

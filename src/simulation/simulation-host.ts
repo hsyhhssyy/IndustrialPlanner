@@ -578,6 +578,17 @@ class BrowserTimelineWorkerBridge implements TimelineWorkerBridge {
     }, "timeline-checkpoint-result");
   }
 
+  public getTimelinePresentationFrame(timelineTickNumber: number): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-presentation-frame-result" }
+  >> {
+    return this.request({
+      type: "get-timeline-presentation-frame",
+      requestId: this.createRequestId(),
+      timelineTickNumber,
+    }, "timeline-presentation-frame-result");
+  }
+
   public stopTimeline(): Promise<Extract<
     TimelineWorkerResponse,
     { readonly type: "timeline-stopped" }
@@ -681,6 +692,21 @@ class LocalTimelineWorkerBridge implements TimelineWorkerBridge {
       timelineTickNumber,
     });
     if (response.type !== "timeline-checkpoint-result") {
+      throw new Error(`Unexpected timeline worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public getTimelinePresentationFrame(timelineTickNumber: number): Promise<Extract<
+    TimelineWorkerResponse,
+    { readonly type: "timeline-presentation-frame-result" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "get-timeline-presentation-frame",
+      requestId: this.createRequestId(),
+      timelineTickNumber,
+    });
+    if (response.type !== "timeline-presentation-frame-result") {
       throw new Error(`Unexpected timeline worker response "${response.type}".`);
     }
     return Promise.resolve(response);

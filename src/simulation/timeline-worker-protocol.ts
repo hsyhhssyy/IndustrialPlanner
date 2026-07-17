@@ -1,4 +1,4 @@
-import type { SimulationRuntimeExport } from "./types";
+import type { RuntimeTickSnapshot, SimulationRuntimeExport } from "./types";
 
 export interface TimelineWorkerStatus {
   readonly enabled: boolean;
@@ -36,6 +36,11 @@ export type TimelineWorkerRequest =
       readonly timelineTickNumber: number;
     }
   | {
+      readonly type: "get-timeline-presentation-frame";
+      readonly requestId: number;
+      readonly timelineTickNumber: number;
+    }
+  | {
       readonly type: "stop-timeline";
       readonly requestId: number;
     };
@@ -61,6 +66,13 @@ export type TimelineWorkerResponse =
       readonly requestId: number;
       readonly timelineTickNumber: number;
       readonly runtimeExport: SimulationRuntimeExport | null;
+      readonly status: TimelineWorkerStatus;
+    }
+  | {
+      readonly type: "timeline-presentation-frame-result";
+      readonly requestId: number;
+      readonly timelineTickNumber: number;
+      readonly snapshot: RuntimeTickSnapshot | null;
       readonly status: TimelineWorkerStatus;
     }
   | {

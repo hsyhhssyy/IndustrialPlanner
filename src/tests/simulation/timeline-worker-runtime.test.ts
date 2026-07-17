@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { TimelineWorkerRuntime } from "@/simulation/timeline-worker-runtime";
+import {
+  createTimelinePresentationSnapshot,
+  TimelineWorkerRuntime,
+} from "@/simulation/timeline-worker-runtime";
 import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
 import type {
   CompiledSimulationTopology,
@@ -31,6 +34,14 @@ describe("TimelineWorkerRuntime", () => {
     expect(loaded.status.availableFromTimelineTickNumber).toBe(0);
     expect(loaded.status.availableToTimelineTickNumber).toBe(0);
 
+    vi.advanceTimersToNextTimer();
+    const firstYield = timelineRuntime.handleRequest({
+      type: "get-timeline-status",
+      requestId: 21,
+    });
+    expect(firstYield.type).toBe("timeline-status");
+    expect(firstYield.status.availableToTimelineTickNumber).toBe(1);
+
     vi.runAllTimers();
 
     const filled = timelineRuntime.handleRequest({
@@ -50,6 +61,16 @@ describe("TimelineWorkerRuntime", () => {
       throw new Error(`Unexpected checkpoint response "${lastCheckpoint.type}".`);
     }
     expect(lastCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(5990);
+
+    const presentationFrame = timelineRuntime.handleRequest({
+      type: "get-timeline-presentation-frame",
+      requestId: 31,
+      timelineTickNumber: 599,
+    });
+    if (presentationFrame.type !== "timeline-presentation-frame-result") {
+      throw new Error(`Unexpected presentation response "${presentationFrame.type}".`);
+    }
+    expect(presentationFrame.snapshot?.tickNumber).toBe(5990);
 
     const outsideCheckpoint = timelineRuntime.handleRequest({
       type: "get-timeline-checkpoint",
@@ -129,6 +150,44 @@ describe("TimelineWorkerRuntime", () => {
       throw new Error(`Unexpected checkpoint response "${filledFutureCheckpoint.type}".`);
     }
     expect(filledFutureCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(90);
+  });
+
+  it("lets presentation requests pause background prediction until interaction is idle", () => {
+    vi.useFakeTimers();
+
+    const timelineRuntime = new TimelineWorkerRuntime();
+    timelineRuntime.handleRequest({
+      type: "load-timeline",
+      requestId: 1,
+      runtimeExport: createRuntimeExport(0),
+      startTimelineTickNumber: 0,
+      capacityTimelineTicks: 10,
+      stepStandardTicks: 10,
+    });
+    vi.advanceTimersToNextTimer();
+
+    const presentationFrame = timelineRuntime.handleRequest({
+      type: "get-timeline-presentation-frame",
+      requestId: 2,
+      timelineTickNumber: 0,
+    });
+    expect(presentationFrame.type).toBe("timeline-presentation-frame-result");
+
+    vi.advanceTimersByTime(249);
+    const whileInteracting = timelineRuntime.handleRequest({
+      type: "get-timeline-status",
+      requestId: 3,
+    });
+    expect(whileInteracting.type).toBe("timeline-status");
+    expect(whileInteracting.status.availableToTimelineTickNumber).toBe(1);
+
+    vi.advanceTimersByTime(1);
+    const afterIdle = timelineRuntime.handleRequest({
+      type: "get-timeline-status",
+      requestId: 4,
+    });
+    expect(afterIdle.type).toBe("timeline-status");
+    expect(afterIdle.status.availableToTimelineTickNumber).toBe(2);
   });
 
   it("retargets the rolling window beyond the initial five minute cache", () => {
@@ -235,7 +294,114 @@ describe("TimelineWorkerRuntime", () => {
     }
     expect(refilledCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(150);
   });
+
+  it("omits warehouse-wide runtime payloads from presentation frames", () => {
+    const runtimeExport = createRuntimeExport(20);
+    const topology = {
+      ...runtimeExport.topology,
+      devices: {
+        warehouse: createPresentationTestDevice("warehouse", "warehouse", ["warehouse-node"]),
+        machine: createPresentationTestDevice("machine", "machine", ["machine-node"]),
+      },
+      nodes: {
+        "warehouse-node": createPresentationTestNode("warehouse-node", "warehouse", ["warehouse-slot"]),
+        "machine-node": createPresentationTestNode("machine-node", "machine", ["machine-slot"]),
+      },
+    };
+    const snapshot = {
+      ...runtimeExport.snapshot,
+      devices: {
+        warehouse: createPresentationTestDeviceSnapshot("warehouse"),
+        machine: createPresentationTestDeviceSnapshot("machine"),
+      },
+      nodes: {
+        "warehouse-node": {} as never,
+        "machine-node": {} as never,
+      },
+      slots: {
+        "warehouse-slot": createPresentationTestSlotSnapshot("warehouse-slot"),
+        "machine-slot": createPresentationTestSlotSnapshot("machine-slot"),
+        "orphan-slot": createPresentationTestSlotSnapshot("orphan-slot"),
+      },
+    };
+
+    const presentation = createTimelinePresentationSnapshot({
+      ...runtimeExport,
+      topology,
+      snapshot,
+    });
+
+    expect(presentation.tickNumber).toBe(20);
+    expect(Object.keys(presentation.devices)).toEqual(["machine"]);
+    expect(Object.keys(presentation.nodes)).toEqual([]);
+    expect(Object.keys(presentation.slots)).toEqual(["machine-slot"]);
+  });
 });
+
+function createPresentationTestDevice(
+  id: string,
+  definitionId: string,
+  nodeIds: readonly string[],
+): CompiledSimulationTopology["devices"][string] {
+  return {
+    id,
+    sourceEntityId: id,
+    definitionId,
+    position: null,
+    rotation: null,
+    footprint: null,
+    tags: [],
+    powerStatus: "no-power-needed",
+    powerDemand: 0,
+    requiresPower: false,
+    transportClass: "non-graph",
+    transportComponentId: null,
+    nodeIds,
+    recipeChannels: [],
+    portIds: [],
+    routing: {},
+    configHash: "",
+    isProducer: false,
+  };
+}
+
+function createPresentationTestNode(
+  id: string,
+  deviceId: string,
+  slotIds: readonly string[],
+): CompiledSimulationTopology["nodes"][string] {
+  return {
+    id,
+    deviceId,
+    sourceStorageSlotGroupId: null,
+    viewRole: "input-view",
+    slotIds,
+    inputPortIds: [],
+    outputPortIds: [],
+    groupOrder: 0,
+  };
+}
+
+function createPresentationTestDeviceSnapshot(deviceId: string) {
+  return {
+    deviceId,
+    block: false,
+    recipe: null,
+    channelRecipes: {},
+    admissionCounters: {},
+    meteredConsumption: null,
+  };
+}
+
+function createPresentationTestSlotSnapshot(slotId: string) {
+  return {
+    slotId,
+    itemType: null,
+    count: 0,
+    reserved: 0,
+    ignoreStock: false,
+  };
+}
 
 function createRuntimeExport(tickNumber = 0): SimulationRuntimeExport {
   const workerRuntime = new SimulationWorkerRuntime();
