@@ -28,6 +28,28 @@ const TIMELINE_DRAG_LEFT_EDGE_SCROLL_START_PERCENT = 10;
 const TIMELINE_DRAG_EDGE_SCROLL_START_PERCENT = 90;
 const TIMELINE_DRAG_EDGE_SCROLL_MIN_TICKS_PER_SECOND = 120;
 const TIMELINE_DRAG_EDGE_SCROLL_MAX_TICKS_PER_SECOND = 600;
+const TIMELINE_BACKGROUND_RECOVERY_SESSION_KEY = "v3-timeline-background-recovery-running";
+
+function hasTimelineBackgroundRecoveryEligibility(): boolean {
+  try {
+    return globalThis.sessionStorage?.getItem(TIMELINE_BACKGROUND_RECOVERY_SESSION_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function setTimelineBackgroundRecoveryEligibility(eligible: boolean): void {
+  try {
+    if (eligible) {
+      globalThis.sessionStorage?.setItem(TIMELINE_BACKGROUND_RECOVERY_SESSION_KEY, "true");
+      return;
+    }
+
+    globalThis.sessionStorage?.removeItem(TIMELINE_BACKGROUND_RECOVERY_SESSION_KEY);
+  } catch {
+    // sessionStorage 在受限浏览器上下文中可能不可用；此时保持停止状态，不冒险自动启动仿真。
+  }
+}
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -70,6 +92,33 @@ export const TimelineDialog = observer(function TimelineDialog({ appHost }: { ap
   const simulation = appHost.workspace.simulation;
   const timelineEnabled = simulation?.state.timeline.enabled ?? false;
   const simulationRunningState = simulation?.state.runningState ?? "stop";
+  const discardedPageTimelineRecoveryPendingRef = useRef(
+    dialogState.visible
+    && typeof document !== "undefined"
+    && (document as Document & { readonly wasDiscarded?: boolean }).wasDiscarded === true
+    && hasTimelineBackgroundRecoveryEligibility(),
+  );
+
+  useEffect(() => {
+    const syncBackgroundRecoveryEligibility = () => {
+      if (discardedPageTimelineRecoveryPendingRef.current) {
+        return;
+      }
+
+      setTimelineBackgroundRecoveryEligibility(
+        document.visibilityState === "hidden"
+        && dialogState.visible
+        && simulation !== null
+        && simulationRunningState !== "stop",
+      );
+    };
+
+    syncBackgroundRecoveryEligibility();
+    document.addEventListener("visibilitychange", syncBackgroundRecoveryEligibility);
+    return () => {
+      document.removeEventListener("visibilitychange", syncBackgroundRecoveryEligibility);
+    };
+  }, [dialogState.visible, simulation, simulationRunningState]);
 
   useEffect(() => {
     if (!dialogState.visible || simulation === null) {
@@ -86,11 +135,31 @@ export const TimelineDialog = observer(function TimelineDialog({ appHost }: { ap
       !dialogState.visible
       || simulation === null
       || timelineEnabled
-      || simulationRunningState === "stop"
+      // AI-REMOVED 2026-07-17:
+      // Reason: 持久化恢复的时间轴窗口必须能够从全新的 stop/idle 仿真状态重新启动。
+      // Trigger: 浏览器在后台丢弃页面后重载，时间轴窗口仍可见，但一直显示“时间轴不可用”。
+      // Evidence: openDialog("timeline") 会无条件调用 enableTimeline，且 enableTimeline 已负责启动尚未运行的仿真；此处额外拦截造成恢复路径与主动打开路径语义不一致。
+      // Replacement: 当前 effect 在窗口可见且时间轴未启用时统一调用 enableTimeline。
+      // Risk: Low；只影响已恢复为可见、但时间轴尚未启用的窗口。
+      // Human Review: Required
+      //
+      // Original code:
+      // || simulationRunningState === "stop"
+      // AI-CORRECTION 2026-07-17:
+      // 上述 Replacement 范围过宽。stop/idle 也可能由用户主动停止触发，只有当前页面由浏览器丢弃后重载，
+      // 且时间轴窗口在重载时已经可见，才允许消费一次恢复令牌并重新启用时间轴。
+      // AI-CORRECTION 2026-07-17:
+      // document.wasDiscarded 只证明页面被丢弃，不能证明丢弃前仿真正在运行；恢复令牌还必须来自页面隐藏瞬间的运行状态。
+      || (
+        simulationRunningState === "stop"
+        && !discardedPageTimelineRecoveryPendingRef.current
+      )
     ) {
       return;
     }
 
+    discardedPageTimelineRecoveryPendingRef.current = false;
+    setTimelineBackgroundRecoveryEligibility(false);
     void simulation.actions.enableTimeline();
   }, [dialogState.visible, simulation, simulationRunningState, timelineEnabled]);
 

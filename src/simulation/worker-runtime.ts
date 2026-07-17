@@ -544,7 +544,19 @@ export class SimulationWorkerRuntime {
     this.tickRuntimeStates.clear();
 
     const tickNumber = this.runtimeState.tickNumber;
-    const snapshot = this.createSnapshotFromRuntimeState(this.runtimeState);
+    // AI-CORRECTION 2026-07-17: 导入检查点时必须保留导出端已经计算完成的展示帧；runtimeState 的 transient
+    // 可能为节省历史缓存而被裁剪，重新从它构帧会让当前 tick 的 transfers 等瞬态展示状态消失。
+    const snapshot = runtimeExport.snapshot;
+    // AI-REMOVED 2026-07-17:
+    // Reason: 从 runtimeState 重建导入帧会主动清空 transient，破坏检查点携带的精确展示语义。
+    // Trigger: 平板端时间轴拖动停止并提交后，所有在途物品再次消失。
+    // Evidence: tick 321 检查点快照含 4 个 transfers，而 importRuntimeState 返回的 currentTick 含 0 个。
+    // Replacement: 直接使用 runtimeExport.snapshot；后续 tick 仍从导入的持久运行状态继续计算。
+    // Risk: Low；导出协议已保证 snapshot 与 runtimeState 属于同一 tick。
+    // Human Review: Required
+    //
+    // Original code:
+    // const snapshot = this.createSnapshotFromRuntimeState(this.runtimeState);
     this.tickSnapshots.set(tickNumber, snapshot);
     // 后台 tick 只需缓存可迁移的持久状态；完整 transient 仅在 debugData 模式保留。
     this.tickRuntimeStates.set(
@@ -1374,7 +1386,21 @@ export class SimulationWorkerRuntime {
     this.runtimeState.tickNumber = tickNumber;
     normalizeAdmissionMinuteCountersForCurrentWindow(this.topology, this.runtimeState);
     const runtimeStepTicks = tickNumber - this.runtimeState.lastAdvancedTickNumber;
-    const shouldRunRuntime = shouldAdvance && runtimeStepTicks >= this.standardStepTicks;
+    // AI-CORRECTION 2026-07-17: 动态帧率与严格物流统一以 tick 1 为相位原点。
+    // 粗步长 10 必须在 1、11、21... 执行；否则从时间轴 tick 301 导入后会在 311、321...
+    // 运行仿真，却因严格物流仍等待 10、20... 相位而永久停止交付。
+    const isDynamicStepBoundary = (tickNumber - 1) % this.standardStepTicks === 0;
+    const shouldRunRuntime = shouldAdvance && isDynamicStepBoundary;
+    // AI-REMOVED 2026-07-17:
+    // Reason: 仅按 lastAdvancedTickNumber 累计步长会把动态帧率固定在 tick 0 相位。
+    // Trigger: 严格物流相位改为 tick 1 后，正常动态帧率与时间轴粗步长必须使用同一相位原点。
+    // Evidence: step=10、导入 tick 301 时目标运行帧应为 311；旧判断无法表达全局相位。
+    // Replacement: 使用 (tickNumber - 1) % standardStepTicks === 0 判断动态运行帧。
+    // Risk: 动态帧率切换后的首个区间可能短于完整步长，runtimeStepTicks 会传递真实区间长度。
+    // Human Review: Required
+    //
+    // Original code:
+    // const shouldRunRuntime = shouldAdvance && runtimeStepTicks >= this.standardStepTicks;
 
     const perfTiming = this.perfEnabled ? {
       tickNumber,

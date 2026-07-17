@@ -171,7 +171,7 @@ export async function runBlueprintSimulation(
   }
 }
 
-function createHeadlessWorkspace(documentSnapshot: WorldDocument, registry: RegistryContract): WorkspaceContract {
+export function createHeadlessWorkspace(documentSnapshot: WorldDocument, registry: RegistryContract): WorkspaceContract {
   const document = createSnapshotStore(documentSnapshot);
 
   return {

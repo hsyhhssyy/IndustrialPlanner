@@ -26,32 +26,31 @@ describe("REQ-076: belt transport", () => {
     const report = await runBlueprintSimulation({
       blueprint: createBeltTransportBlueprint(),
       registry: createRegistryContract(),
-      maxTickNumber: 60,
+      maxTickNumber: 41,
     });
     const tickOne = getTick(report, 1);
-    const tickTwenty = getTick(report, 20);
-    const tickSixty = getTick(report, 60);
-    const belt = getDevice(report, 20, "belt");
+    const tickFortyOne = getTick(report, 41);
+    const belt = getDevice(report, 41, "belt");
 
     expect(tickOne.transfers.some((transfer) =>
       transfer.sourceSlotId.includes("device:source-storage")
       && transfer.targetSlotId.includes("device:belt"),
-    )).toBe(false);
-    expect(tickTwenty.transfers).toEqual(expect.arrayContaining([
+    )).toBe(true);
+    expect(tickFortyOne.transfers).toEqual(expect.arrayContaining([
       expect.objectContaining({
         itemType: "item_iron_ore",
         amount: 1,
       }),
     ]));
-    expect(tickTwenty.transfers.some((transfer) =>
+    expect(tickFortyOne.transfers.some((transfer) =>
       transfer.sourceSlotId.includes("device:source-storage")
       && transfer.targetSlotId.includes("device:belt"),
     )).toBe(true);
-    expect(tickSixty.transfers.some((transfer) =>
+    expect(tickFortyOne.transfers.some((transfer) =>
       transfer.sourceSlotId.includes("device:belt")
       && transfer.targetSlotId.includes("device:sink-storage"),
     )).toBe(true);
-    expect(getDevice(report, 20, "source-storage").slotItems).toHaveLength(6);
+    expect(getDevice(report, 41, "source-storage").slotItems).toHaveLength(6);
     expect(belt.slotItems).toEqual(expect.arrayContaining([
       expect.objectContaining({
         storageGroupId: "item_buffer",

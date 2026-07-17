@@ -26,22 +26,17 @@ describe("REQ-076: pipe transport", () => {
     const report = await runBlueprintSimulation({
       blueprint: createLiquidPipeTransportBlueprint(),
       registry: createRegistryContract(),
-      maxTickNumber: 20,
+      maxTickNumber: 11,
     });
     const tickOne = getTick(report, 1);
-    const tickTen = getTick(report, 10);
-    const tickTwenty = getTick(report, 20);
+    const tickEleven = getTick(report, 11);
     const pipe = getDevice(report, 10, "pipe");
 
     expect(tickOne.transfers.some((transfer) =>
       transfer.sourceSlotId.includes("device:source-liquid-storage")
       && transfer.targetSlotId.includes("device:pipe"),
-    )).toBe(false);
-    expect(tickTen.transfers.some((transfer) =>
-      transfer.sourceSlotId.includes("device:source-liquid-storage")
-      && transfer.targetSlotId.includes("device:pipe"),
     )).toBe(true);
-    expect(tickTwenty.transfers.some((transfer) =>
+    expect(tickEleven.transfers.some((transfer) =>
       transfer.sourceSlotId.includes("device:pipe")
       && transfer.targetSlotId.includes("device:sink-liquid-storage"),
     )).toBe(true);

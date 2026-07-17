@@ -696,7 +696,7 @@ describe("simulation timeline actions", () => {
       type: "timeline-presentation-frame-range-result",
       requestId: 1,
       fromTimelineTickNumber: 0,
-      toTimelineTickNumber: 33,
+      toTimelineTickNumber: 5,
       frames: [1, 3].map((timelineTickNumber) => ({
         timelineTickNumber,
         snapshot: createRuntimeExport(resolveStandardTickNumberForTimelineTick(timelineTickNumber)).snapshot,
@@ -708,7 +708,7 @@ describe("simulation timeline actions", () => {
     await expect(thirdSeek).resolves.toBe(true);
 
     expect(timelineBridge.getTimelinePresentationFrameRange).toHaveBeenCalledTimes(1);
-    expect(timelineBridge.getTimelinePresentationFrameRange).toHaveBeenCalledWith(0, 33);
+    expect(timelineBridge.getTimelinePresentationFrameRange).toHaveBeenCalledWith(0, 5);
     expect(bridge.importRuntimeState).not.toHaveBeenCalled();
     expect(state.currentPlaybackTickNumber).toBe(31);
     expect(state.timeline.cursorTickNumber).toBe(3);
@@ -1054,6 +1054,7 @@ function createTimelineStatus(
     availableToTimelineTickNumber: toTickNumber,
     capacityTimelineTicks: 600,
     stepStandardTicks: 10,
+    dynamicTickRate: 2,
   };
 }
 

@@ -106,6 +106,21 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
     tag: "武陵",
   },
   {
+    id: "stm_hongs_3",
+    name: "盈天台建设站",
+    placeableArea: {
+      width: 50,
+      height: 50,
+    },
+    outerRing: {
+      top: 10,
+      right: 10,
+      bottom: 10,
+      left: 10,
+    },
+    tag: "武陵",
+  },
+  {
     id: "valley4_protocol_core",
     name: "协议核心区",
     placeableArea: {
@@ -123,7 +138,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
   },
   {
     id: "valley4_refugee_shelter",
-    name: "难民前哨处",
+    name: "难民暂居处",
     placeableArea: {
       width: 40,
       height: 40,

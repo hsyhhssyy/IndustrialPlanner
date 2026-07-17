@@ -120,6 +120,9 @@ describe("TimelineDialog", () => {
     appHost?.dispose();
     container.remove();
     localStorage.clear();
+    sessionStorage.clear();
+    Reflect.deleteProperty(document, "wasDiscarded");
+    Reflect.deleteProperty(document, "visibilityState");
     document.documentElement.removeAttribute("data-app-theme");
     vi.unstubAllGlobals();
   });
@@ -235,6 +238,131 @@ describe("TimelineDialog", () => {
     expect(container.textContent).toContain("正在准备时间轴，请稍后...");
     expect(container.querySelector(".timeline-ruler")).toBeNull();
     expect(container.querySelector(".timeline-ruler-input")).toBeNull();
+  });
+
+  it("restarts a persisted visible timeline after the browser discarded the page", () => {
+    Object.defineProperty(document, "wasDiscarded", {
+      configurable: true,
+      value: false,
+    });
+    const backgroundWorkspace = createTimelineReadinessWorkspace("preparing");
+    const backgroundAppHost = createAppHost(backgroundWorkspace);
+    runInAction(() => {
+      backgroundAppHost.internalState.workbench.dialogState.timeline.visible = true;
+    });
+    act(() => {
+      root.render(<TimelineDialog appHost={backgroundAppHost} />);
+    });
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    act(() => {
+      root.unmount();
+    });
+    backgroundAppHost.dispose();
+    root = createRoot(container);
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    Object.defineProperty(document, "wasDiscarded", {
+      configurable: true,
+      value: true,
+    });
+
+    const workspace = createTimelineReadinessWorkspace("preparing");
+    const enableTimeline = vi.mocked(workspace.simulation!.actions.enableTimeline);
+    Object.assign(workspace.simulation!.state.timeline, {
+      enabled: false,
+      readiness: "idle",
+    });
+    Object.assign(workspace.simulation!.state, {
+      runningState: "stop",
+    });
+    appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost!.internalState.workbench.dialogState.timeline.visible = true;
+    });
+
+    act(() => {
+      root.render(<TimelineDialog appHost={appHost!} />);
+    });
+
+    expect(enableTimeline).toHaveBeenCalledTimes(1);
+
+    Object.assign(workspace.simulation!.state.timeline, {
+      enabled: true,
+      readiness: "ready",
+    });
+    act(() => {
+      root.render(<TimelineDialog appHost={appHost!} />);
+    });
+
+    Object.assign(workspace.simulation!.state.timeline, {
+      enabled: false,
+      readiness: "idle",
+    });
+    act(() => {
+      root.render(<TimelineDialog appHost={appHost!} />);
+    });
+
+    expect(enableTimeline).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the timeline unavailable after the user explicitly stops simulation", () => {
+    Object.defineProperty(document, "wasDiscarded", {
+      configurable: true,
+      value: false,
+    });
+    const workspace = createTimelineReadinessWorkspace("preparing");
+    const enableTimeline = vi.mocked(workspace.simulation!.actions.enableTimeline);
+    Object.assign(workspace.simulation!.state.timeline, {
+      enabled: false,
+      readiness: "idle",
+    });
+    Object.assign(workspace.simulation!.state, {
+      runningState: "stop",
+    });
+    appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost!.internalState.workbench.dialogState.timeline.visible = true;
+    });
+
+    act(() => {
+      root.render(<TimelineDialog appHost={appHost!} />);
+    });
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    act(() => {
+      root.unmount();
+    });
+    root = createRoot(container);
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    Object.defineProperty(document, "wasDiscarded", {
+      configurable: true,
+      value: true,
+    });
+    act(() => {
+      root.render(<TimelineDialog appHost={appHost!} />);
+    });
+
+    expect(enableTimeline).not.toHaveBeenCalled();
+    expect(container.textContent).toContain("时间轴不可用");
   });
 
   it("renders the generated timeline prefix but disables dragging while it catches up", () => {

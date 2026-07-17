@@ -33,6 +33,8 @@ describe("TimelineWorkerRuntime", () => {
     expect(loaded.type).toBe("timeline-loaded");
     expect(loaded.status.availableFromTimelineTickNumber).toBe(0);
     expect(loaded.status.availableToTimelineTickNumber).toBe(0);
+    expect(loaded.status.stepStandardTicks).toBe(10);
+    expect(loaded.status.dynamicTickRate).toBe(2);
 
     vi.advanceTimersToNextTimer();
     const firstYield = timelineRuntime.handleRequest({
@@ -311,7 +313,7 @@ describe("TimelineWorkerRuntime", () => {
     expect(refilledCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(151);
   });
 
-  it("keeps tick-1 checkpoints equivalent to exact ticks at the first minute boundary", () => {
+  it("keeps a two-minute timeline seek equivalent to the exact standard tick", () => {
     vi.useFakeTimers();
 
     const topology = createTimelinePhaseTopology();
@@ -333,31 +335,31 @@ describe("TimelineWorkerRuntime", () => {
       requestId: 2,
       runtimeExport: originRuntimeExport,
       startTimelineTickNumber: 0,
-      targetTimelineTickNumber: 120,
-      capacityTimelineTicks: 121,
+      targetTimelineTickNumber: 240,
+      capacityTimelineTicks: 241,
       stepStandardTicks: 10,
     });
 
-    for (let standardTickNumber = 2; standardTickNumber <= 1201; standardTickNumber += 1) {
+    for (let standardTickNumber = 2; standardTickNumber <= 2401; standardTickNumber += 1) {
       exactRuntime.createSparseTickSnapshot(standardTickNumber);
     }
     vi.runAllTimers();
 
-    const exactRuntimeExport = exactRuntime.exportRuntimeState(1201);
+    const exactRuntimeExport = exactRuntime.exportRuntimeState(2401);
     const timelineCheckpoint = timelineRuntime.handleRequest({
       type: "get-timeline-checkpoint",
       requestId: 3,
-      timelineTickNumber: 120,
+      timelineTickNumber: 240,
     });
     if (timelineCheckpoint.type !== "timeline-checkpoint-result") {
       throw new Error(`Unexpected checkpoint response "${timelineCheckpoint.type}".`);
     }
 
-    expect(timelineCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(1201);
+    expect(timelineCheckpoint.runtimeExport?.runtimeState.tickNumber).toBe(2401);
     expect(timelineCheckpoint.runtimeExport?.snapshot).toEqual(exactRuntimeExport?.snapshot);
   });
 
-  it("omits warehouse-wide runtime payloads from presentation frames", () => {
+  it("keeps render-critical device, slot, and transfer state in lightweight presentation frames", () => {
     const runtimeExport = createRuntimeExport(20);
     const topology = {
       ...runtimeExport.topology,
@@ -385,6 +387,13 @@ describe("TimelineWorkerRuntime", () => {
         "machine-slot": createPresentationTestSlotSnapshot("machine-slot"),
         "orphan-slot": createPresentationTestSlotSnapshot("orphan-slot"),
       },
+      transfers: [{
+        edgeId: "edge:presentation",
+        sourceSlotId: "machine-slot",
+        targetSlotId: "orphan-slot",
+        itemType: "item:test",
+        amount: 1,
+      }],
     };
 
     const presentation = createTimelinePresentationSnapshot({
@@ -393,10 +402,38 @@ describe("TimelineWorkerRuntime", () => {
       snapshot,
     });
 
-    expect(presentation.tickNumber).toBe(20);
+    expect(presentation).not.toBe(snapshot);
     expect(Object.keys(presentation.devices)).toEqual(["machine"]);
     expect(Object.keys(presentation.nodes)).toEqual([]);
     expect(Object.keys(presentation.slots)).toEqual(["machine-slot"]);
+    expect(presentation.transfers).toEqual(snapshot.transfers);
+  });
+
+  it("preserves the exported transient presentation frame when importing a checkpoint", () => {
+    const runtimeExport = createRuntimeExport(21);
+    const expectedTransfer = {
+      edgeId: "edge:timeline-import",
+      sourceSlotId: "slot:source",
+      targetSlotId: "slot:target",
+      itemType: "item:test",
+      amount: 1,
+    };
+    const checkpointExport: SimulationRuntimeExport = {
+      ...runtimeExport,
+      snapshot: {
+        ...runtimeExport.snapshot,
+        transfers: [expectedTransfer],
+      },
+    };
+    const importedRuntime = new SimulationWorkerRuntime();
+
+    const imported = importedRuntime.importRuntimeState(checkpointExport, {
+      scheduleBackgroundFill: false,
+    });
+
+    expect(imported.status.status).toBe("ready");
+    expect(imported.currentTick?.tickNumber).toBe(21);
+    expect(imported.currentTick?.transfers).toEqual([expectedTransfer]);
   });
 });
 

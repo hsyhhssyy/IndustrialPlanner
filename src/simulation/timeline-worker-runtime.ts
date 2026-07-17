@@ -350,6 +350,7 @@ export class TimelineWorkerRuntime {
       availableToTimelineTickNumber: keys[keys.length - 1] ?? null,
       capacityTimelineTicks: this.capacityTimelineTicks,
       stepStandardTicks: this.stepStandardTicks,
+      dynamicTickRate: this.runtime?.getStatus().dynamicTickRate ?? null,
     };
   }
 }
@@ -388,7 +389,9 @@ export function createTimelinePresentationSnapshot(
     devices,
     slots,
     nodes: {},
-    transfers: [],
+    // AI-CORRECTION 2026-07-17: 轻量帧必须保留当前粗步长产生的物流交付；清空 transfers
+    // 会让呈现层误判本帧没有任何物品流动，而完整检查点仍只在拖动停止后导入。
+    transfers: runtimeExport.snapshot.transfers,
     routingCursors: {},
     diagnostics: [],
   };

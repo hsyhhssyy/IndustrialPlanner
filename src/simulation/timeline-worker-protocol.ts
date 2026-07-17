@@ -7,6 +7,8 @@ export interface TimelineWorkerStatus {
   readonly availableToTimelineTickNumber: number | null;
   readonly capacityTimelineTicks: number;
   readonly stepStandardTicks: number;
+  /** 时间轴专用仿真进程实际锁定的动态帧率，用于确认粗步长预测没有退化为逐 tick。 */
+  readonly dynamicTickRate: number | null;
 }
 
 export type TimelineWorkerRequest =

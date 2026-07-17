@@ -123,7 +123,18 @@ export function canDedicatedLogisticsTransferAtTick(options: {
     return true;
   }
 
-  return options.standardTick % transferUnitTicks === 0;
+  // AI-CORRECTION 2026-07-17: 严格物流与时间轴检查点统一以 tick 1 为首个交付相位。
+  return (options.standardTick - 1) % transferUnitTicks === 0;
+  // AI-REMOVED 2026-07-17:
+  // Reason: tick 0 相位会让 1、11、21... 的时间轴粗步长进程永久错过严格物流交付。
+  // Trigger: 用户明确要求第 1 帧允许物流交付，并保持时间轴每次只计算 10 tick。
+  // Evidence: 7 核息壤时间轴从 tick 301 以 step=10 推进时，旧相位在所有检查点均返回 false。
+  // Replacement: 使用 (standardTick - 1) % transferUnitTicks === 0。
+  // Risk: 所有严格传送带/管道的交付帧整体前移 1 tick，吞吐周期保持不变。
+  // Human Review: Required
+  //
+  // Original code:
+  // return options.standardTick % transferUnitTicks === 0;
 }
 
 export function canDeviceTransferAtCurrentPhase(
