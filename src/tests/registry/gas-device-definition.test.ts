@@ -162,19 +162,19 @@ describe("gas item and device definitions", () => {
     expectLiquidOnlyPorts(liquidOutput);
   });
 
-  it("defines gas reactor as gas-only north input and south output", () => {
+  it("defines gas reactor as gas-only west input and east output", () => {
     const definition = requireEntity("item_port_gas_reactor_1");
     const gasInput = requirePortGroup(definition, "gas_input");
     const gasOutput = requirePortGroup(definition, "gas_output");
 
     expect(definition.footprint).toEqual({ width: 5, height: 5 });
     expectPortLayout(gasInput, [
-      { id: "in_n_1", localCellX: 1, localCellY: 0, edge: "NORTH" },
-      { id: "in_n_3", localCellX: 3, localCellY: 0, edge: "NORTH" },
+      { id: "in_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
+      { id: "in_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
     ]);
     expectPortLayout(gasOutput, [
-      { id: "out_s_1", localCellX: 1, localCellY: 4, edge: "SOUTH" },
-      { id: "out_s_3", localCellX: 3, localCellY: 4, edge: "SOUTH" },
+      { id: "out_e_1", localCellX: 4, localCellY: 1, edge: "EAST" },
+      { id: "out_e_3", localCellX: 4, localCellY: 3, edge: "EAST" },
     ]);
     expectGasOnlyPorts(gasInput);
     expectGasOnlyPorts(gasOutput);

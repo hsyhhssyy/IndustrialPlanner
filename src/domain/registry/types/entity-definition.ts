@@ -241,7 +241,7 @@ export interface ItemFilterDefinition {
 export interface PortGroupDefinition {
   /** 端口组 ID，如 "item_input"、"fluid_output" */
   id: string;
-  /** 物品域：item（固体物品）/ fluid（液体） */
+  /** 物品域：item（固体物品）/ fluid（流体，含液体与气体） */
   kind: "item" | "fluid";
   /**
    * 端口组方向：

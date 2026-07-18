@@ -205,6 +205,9 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
 }
 
 function normalizePipeFamilyFluidDefinition(definition: EntityDefinitionInput): EntityDefinitionInput {
+  // AI-CORRECTION 2026-07-18: acceptRuleFromPortKind 已改为默认返回 { kind: "fluid" }，
+  //   因此本函数的 port acceptRule 转换与 slot itemFilterType 转换都已成为恒等映射。
+  //   保留此函数作为安全网，避免旧蓝图或外部定义中仍有显式 { kind: "liquid" } 的残留。
   if (!definition.tags.includes("PipeFamily")) {
     return definition;
   }
@@ -379,7 +382,7 @@ function createPort(
 
 /**
  * 创建端口组。
- * kind：item（固体物品端口）/ fluid（液体端口）——决定默认 acceptRule。
+ * kind：item（固体物品端口）/ fluid（流体端口，含液体与气体）——决定默认 acceptRule。
  * direction：input（物品流入）/ output（物品流出）/ bidirectional（编译时分解为 input+output）。
  * 每个端口的 acceptRule 默认按 kind 推导，
  * priorityGroup 默认 5，roundRobinSeed 默认按 index 递增。
@@ -624,14 +627,15 @@ function createSimpleProductionDevice(
 /**
  * 从端口 kind 推导默认 acceptRule。
  * item → { base: { kind: "solid" }, exclude: [] }
- * fluid → { base: { kind: "liquid" }, exclude: [] }
- * AI-CORRECTION 2026-07-10: fluid 端口默认仍是 liquid；仅 PipeFamily 定义会归一化为 fluid 以允许液体/气体共用管道。
+ * fluid → { base: { kind: "fluid" }, exclude: [] }
+ * AI-CORRECTION 2026-07-18: fluid 端口默认 acceptRule 从 { kind: "liquid" } 改为 { kind: "fluid" }，
+ *   使所有流体端口（含暗管系列）同时接受液体和气体。旧的 PipeFamily normalize 逻辑成为无害的恒等映射。
  *
  * 对应《仿真运行原理》§3.1 表格中 Port 的 acceptRule 默认值。
  */
 function acceptRuleFromPortKind(kind: PortGroupDefinition["kind"]): PortDefinition["acceptRule"] {
   return {
-    base: kind === "fluid" ? { kind: "liquid" } : { kind: "solid" },
+    base: kind === "fluid" ? { kind: "fluid" } : { kind: "solid" },
     exclude: [],
   };
 }
@@ -2184,13 +2188,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         "fluid",
         "input",
-        [createPort("in_e_1", 2, 1, "E")],
+        [createPort("in_e_1", 2, 1, "E", {
+          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+        })],
       ),
       createPortGroup(
         "fluid_output",
         "fluid",
         "output",
-        [createPort("out_w_1", 0, 1, "W")],
+        [createPort("out_w_1", 0, 1, "W", {
+          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+        })],
       ),
       createPortGroup(
         "item_output",
@@ -2199,12 +2207,24 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50] },
-      { kind: "fluid", direction: "input", capacities: [50] },
-      { kind: "fluid", direction: "output", capacities: [50] },
-      { kind: "item", direction: "output", capacities: [50] },
-    ]),
+    storageSlotGroups: [
+      createStorageSlotGroup("item_input_buffer", "item", createSlots("input_item_slot", [50], "solid")),
+      createStorageSlotGroup("fluid_input_buffer", "fluid", createSlots("input_fluid_slot", [50], "liquid")),
+      createStorageSlotGroup("fluid_output_buffer", "fluid", createSlots("output_fluid_slot", [50], "liquid")),
+      createStorageSlotGroup("item_output_buffer", "item", createSlots("output_item_slot", [50], "solid")),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_input_buffer", "fluid_input_buffer"], ["fluid_output_buffer", "item_output_buffer"]),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "item_input_buffer"),
+      createBinding("bind_fluid_input", "fluid_input", "fluid_input_buffer"),
+      createBinding("bind_fluid_output", "fluid_output", "fluid_output_buffer"),
+      createBinding("bind_item_output", "item_output", "item_output_buffer"),
+    ],
+    inspectors: [
+      { type: INSPECTOR_TYPE.recipeStatus, channelIds: ["default"] },
+    ],
   }),
   createEntityDefinition({
     id: "item_port_cmpt_mc_1",
@@ -2413,7 +2433,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         "fluid",
         "input",
-        [createPort("in_e_2", 4, 2, "E")],
+        [createPort("in_e_2", 4, 2, "E", {
+          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+        })],
       ),
       createPortGroup(
         "item_output",
@@ -2422,11 +2444,22 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50] },
-      { kind: "fluid", direction: "input", capacities: [50] },
-      { kind: "item", direction: "output", capacities: [50] },
-    ]),
+    storageSlotGroups: [
+      createStorageSlotGroup("item_input_buffer", "item", createSlots("input_item_slot", [50], "solid")),
+      createStorageSlotGroup("fluid_input_buffer", "fluid", createSlots("input_fluid_slot", [50], "liquid")),
+      createStorageSlotGroup("item_output_buffer", "item", createSlots("output_item_slot", [50], "solid")),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_input_buffer", "fluid_input_buffer"], ["item_output_buffer"]),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "item_input_buffer"),
+      createBinding("bind_fluid_input", "fluid_input", "fluid_input_buffer"),
+      createBinding("bind_item_output", "item_output", "item_output_buffer"),
+    ],
+    inspectors: [
+      { type: INSPECTOR_TYPE.recipeStatus, channelIds: ["default"] },
+    ],
   }),
   createEntityDefinition({
     id: "item_port_winder_1",
@@ -2792,7 +2825,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         "fluid",
         "input",
-        [createPort("in_e_2", 4, 2, "E")],
+        [createPort("in_e_2", 4, 2, "E", {
+          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+        })],
       ),
       createPortGroup(
         "item_output",
@@ -2801,11 +2836,22 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
-    ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50] },
-      { kind: "fluid", direction: "input", capacities: [50] },
-      { kind: "item", direction: "output", capacities: [50] },
-    ]),
+    storageSlotGroups: [
+      createStorageSlotGroup("item_input_buffer", "item", createSlots("input_item_slot", [50], "solid")),
+      createStorageSlotGroup("fluid_input_buffer", "fluid", createSlots("input_fluid_slot", [50], "liquid")),
+      createStorageSlotGroup("item_output_buffer", "item", createSlots("output_item_slot", [50], "solid")),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_input_buffer", "fluid_input_buffer"], ["item_output_buffer"]),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "item_input_buffer"),
+      createBinding("bind_fluid_input", "fluid_input", "fluid_input_buffer"),
+      createBinding("bind_item_output", "item_output", "item_output_buffer"),
+    ],
+    inspectors: [
+      { type: INSPECTOR_TYPE.recipeStatus, channelIds: ["default"] },
+    ],
   }),
   createEntityDefinition({
     id: "item_port_dismantler_1",
@@ -3175,7 +3221,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "liquid_input",
         "fluid",
         "input",
-        [1, 3].map((z) => createPort(`in_e_${z}`, 4, z, "E")),
+        [1, 3].map((z) => createPort(`in_e_${z}`, 4, z, "E", {
+          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+        })),
       ),
       createPortGroup(
         "gas_output",
@@ -3281,7 +3329,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "liquid_output",
         "fluid",
         "output",
-        [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W")),
+        [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W", {
+          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+        })),
       ),
       createPortGroup(
         "consume_input",
@@ -3592,7 +3642,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_output",
         "fluid",
         "output",
-        [createPort("out_e_1", 2, 1, "E")],
+        [createPort("out_e_1", 2, 1, "E", {
+          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+        })],
       ),
     ],
 
@@ -3772,12 +3824,23 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         "fluid",
         "input",
-        [createPort("in_w_1", 0, 1, "W")],
+        [createPort("in_w_1", 0, 1, "W", {
+          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+        })],
       ),
     ],
-    ...createSimpleProductionDevice([
-      { kind: "fluid", direction: "input", capacities: [50] },
-    ]),
+    storageSlotGroups: [
+      createStorageSlotGroup("fluid_input_buffer", "fluid", createSlots("input_fluid_slot", [50], "liquid")),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["fluid_input_buffer"], []),
+    ],
+    portStorageBindings: [
+      createBinding("bind_fluid_input", "fluid_input", "fluid_input_buffer"),
+    ],
+    inspectors: [
+      { type: INSPECTOR_TYPE.recipeStatus, channelIds: ["default"] },
+    ],
   }),
   createEntityDefinition({
     id: WATER_PURIFIER_NODE_ENTITY_ID,
@@ -3938,13 +4001,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         "fluid",
         "input",
-        [createPort("in_w_1", 0, 1, "W")],
+        [createPort("in_w_1", 0, 1, "W", {
+          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+        })],
       ),
       createPortGroup(
         "fluid_output",
         "fluid",
         "output",
-        [createPort("out_e_1", 2, 1, "E")],
+        [createPort("out_e_1", 2, 1, "E", {
+          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+        })],
       ),
     ],
     // AI-CORRECTION 2026-05-17: 储液罐从 createSimpleProductionDevice（管道/缓冲器模式）改为

@@ -147,8 +147,8 @@ describe("machine-mode entity definitions", () => {
     const gasOutput = definition.portGroups.find((portGroup) => portGroup.id === "gas_output");
 
     expect(definition.tags).toContain("alter:item_port_liquid_purifier_1");
-    expect(gasInput?.ports.map((port) => port.id)).toEqual(["in_w_2"]);
-    expect(gasOutput?.ports.map((port) => port.id)).toEqual(["out_e_1", "out_e_3"]);
+    expect(gasInput?.ports.map((port) => port.id)).toEqual(["in_e_2"]);
+    expect(gasOutput?.ports.map((port) => port.id)).toEqual(["out_w_1", "out_w_3"]);
     expect(gasInput?.ports.every((port) => port.acceptRule.base.kind === "gas")).toBe(true);
     expect(gasOutput?.ports.every((port) => port.acceptRule.base.kind === "gas")).toBe(true);
   });
