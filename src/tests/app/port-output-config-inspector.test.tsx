@@ -59,6 +59,35 @@ describe("PortOutputConfigInspector", () => {
     expect(rows.length).toBe(3);
   });
 
+  it.each([
+    ["反应池", "item_port_mix_pool_1"],
+    ["扩容反应池", "item_port_mix_pool_2"],
+  ])("%s 的未配置输出端口按端口类型提供候选物品", async (_name, definitionId) => {
+    const workspace = createWorkspace();
+    const definition = requireDefinition(workspace, definitionId);
+    const entity = createEmptyEntity(`pool-${definitionId}`, definitionId);
+    const currentAppHost = buildAppHost(workspace, entity);
+    appHost = currentAppHost;
+    const ore = requireItem(workspace, "item_copper_ore");
+    const liquid = requireItem(workspace, "item_liquid_water");
+    const gas = requireItem(workspace, "item_gas_inert");
+    renderInspector(currentAppHost, definition, entity, root);
+
+    const solidPickBtn = container.querySelector<HTMLButtonElement>("[data-port-group-id='item_output'] [data-slot-action='pick-item']");
+    act(() => { solidPickBtn?.click(); });
+    expect(currentAppHost.encyclopediaPicker.matchesItem(ore)).toBe(true);
+    expect(currentAppHost.encyclopediaPicker.matchesItem(liquid)).toBe(false);
+    expect(currentAppHost.encyclopediaPicker.matchesItem(gas)).toBe(false);
+    await act(async () => { currentAppHost.encyclopediaPicker.cancel(); await Promise.resolve(); });
+
+    const fluidPickBtn = container.querySelector<HTMLButtonElement>("[data-port-group-id='fluid_output_a'] [data-slot-action='pick-item']");
+    act(() => { fluidPickBtn?.click(); });
+    expect(currentAppHost.encyclopediaPicker.matchesItem(liquid)).toBe(true);
+    expect(currentAppHost.encyclopediaPicker.matchesItem(ore)).toBe(false);
+    expect(currentAppHost.encyclopediaPicker.matchesItem(gas)).toBe(false);
+    await act(async () => { currentAppHost.encyclopediaPicker.cancel(); await Promise.resolve(); });
+  });
+
   it("renders empty state when definition has no matching output port groups", () => {
     const workspace = createWorkspace();
     const definition: EntityDefinition = {

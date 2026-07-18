@@ -418,5 +418,12 @@ function matchesOutputPortGroupAcceptRule(
     return true;
   }
 
+  if (firstPort.acceptRule.base.kind === "none") {
+    const itemDomain = resolveItemDomain(item.id);
+    return row.portGroup.kind === "fluid"
+      ? itemDomain === "liquid"
+      : itemDomain === "solid";
+  }
+
   return matchesItemAcceptRule(item, firstPort.acceptRule, resolveItemDomain);
 }
