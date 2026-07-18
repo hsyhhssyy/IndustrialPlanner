@@ -16,6 +16,7 @@ import {
 import {
   readV2MigrationState,
   type V2MigrationState,
+  writeV2MigrationDismissedState,
 } from "./v2-migration-state";
 
 export type V2MigrationPhase = "idle" | "migrating" | "completed" | "failed";
@@ -54,6 +55,7 @@ export class V2MigrationController {
     if (
       this.didAutoOpen
       || !this.detection.hasData
+      || this.migrationState.dismissedAt !== null
       || this.migrationState.completedAt !== null
     ) {
       return;
@@ -88,6 +90,9 @@ export class V2MigrationController {
       return;
     }
 
+    if (this.migrationState.completedAt === null) {
+      this.migrationState = writeV2MigrationDismissedState();
+    }
     this.dialogState.visible = false;
     this.confirmationRequested = false;
     this.showClearConfirmation = false;

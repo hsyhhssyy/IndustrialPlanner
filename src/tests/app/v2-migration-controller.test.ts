@@ -56,6 +56,25 @@ describe("V2MigrationController", () => {
     expect(controller.dialogState.visible).toBe(true);
   });
 
+  it("persists dismissal across reloads and still allows reopening from settings", () => {
+    const controller = new V2MigrationController();
+
+    controller.initialize();
+    expect(controller.dialogState.visible).toBe(true);
+
+    controller.closeDialog();
+
+    const reloadedController = new V2MigrationController();
+    reloadedController.initialize();
+
+    expect(reloadedController.migrationState.dismissedAt).not.toBeNull();
+    expect(reloadedController.dialogState.visible).toBe(false);
+
+    reloadedController.openDialog();
+
+    expect(reloadedController.dialogState.visible).toBe(true);
+  });
+
   it("does not auto-close after the automatic dialog is dismissed and reopened manually", async () => {
     const controller = new V2MigrationController();
 

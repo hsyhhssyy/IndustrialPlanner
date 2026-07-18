@@ -2551,7 +2551,25 @@ describe("createEditorHost", () => {
 
     await flushMicrotasks();
 
-    expect(editorHost.document.getSnapshot()).toEqual(persistedDocument);
+    // 修复：resolveInitialDocument 会注入协议核心实体，确保首次加载时核心存在。
+    expect(editorHost.document.getSnapshot()).toEqual({
+      ...persistedDocument,
+      entities: {
+        ...persistedDocument.entities,
+        "protocol-core:wuling_protocol_core": {
+          id: "protocol-core:wuling_protocol_core",
+          definitionId: "item_port_sp_hub_1",
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+      },
+      entityOrder: [
+        "protocol-core:wuling_protocol_core",
+        ...persistedDocument.entityOrder,
+      ],
+    });
     expect(editorHost.internalState.internalPersistState.lastDocumentId).toBe(
       persistedDocument.documentKey,
     );

@@ -14,6 +14,7 @@ export interface V2MigrationCompletionSummary {
 
 export interface V2MigrationState {
   readonly schemaVersion: 1;
+  readonly dismissedAt: string | null;
   readonly completedAt: string | null;
   readonly summary: V2MigrationCompletionSummary | null;
 }
@@ -27,10 +28,27 @@ export function readV2MigrationState(): V2MigrationState {
 export function writeV2MigrationCompletedState(
   summary: V2MigrationCompletionSummary,
 ): V2MigrationState {
+  const currentState = readV2MigrationState();
   const state: V2MigrationState = {
     schemaVersion: 1,
+    dismissedAt: currentState.dismissedAt,
     completedAt: new Date().toISOString(),
     summary,
+  };
+
+  return saveToLocalStorage<V2MigrationState>(V3_MIGRATION_STATE_LOCAL_STORAGE_KEY, state);
+}
+
+export function writeV2MigrationDismissedState(): V2MigrationState {
+  const currentState = readV2MigrationState();
+
+  if (currentState.dismissedAt !== null) {
+    return currentState;
+  }
+
+  const state: V2MigrationState = {
+    ...currentState,
+    dismissedAt: new Date().toISOString(),
   };
 
   return saveToLocalStorage<V2MigrationState>(V3_MIGRATION_STATE_LOCAL_STORAGE_KEY, state);
@@ -41,14 +59,13 @@ function normalizeV2MigrationState(value: unknown): V2MigrationState {
     return createEmptyV2MigrationState();
   }
 
-  const completedAt = typeof value.completedAt === "string"
-    && !Number.isNaN(Date.parse(value.completedAt))
-      ? value.completedAt
-      : null;
+  const dismissedAt = normalizeTimestamp(value.dismissedAt);
+  const completedAt = normalizeTimestamp(value.completedAt);
   const summary = normalizeV2MigrationCompletionSummary(value.summary);
 
   return {
     schemaVersion: 1,
+    dismissedAt,
     completedAt,
     summary,
   };
@@ -72,9 +89,16 @@ function normalizeV2MigrationCompletionSummary(
 function createEmptyV2MigrationState(): V2MigrationState {
   return {
     schemaVersion: 1,
+    dismissedAt: null,
     completedAt: null,
     summary: null,
   };
+}
+
+function normalizeTimestamp(value: unknown): string | null {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value))
+    ? value
+    : null;
 }
 
 function normalizeCount(value: unknown): number {

@@ -20,6 +20,7 @@ import { runInAction } from "mobx";
 import type { EditorHost } from "./editor-host";
 import { createWorldDocumentDelta } from "./history";
 import { createSyncShadowReplayValidator } from "./sync-shadow-replay-validator";
+import { ensureProtocolCoreEntity } from "./ensure-protocol-core";
 
 const DOCUMENT_DATABASE_NAME = "v3-industrial-planner";
 const WORD_DOCUMENT_STORE_NAME = "worddocument";
@@ -134,16 +135,26 @@ async function resolveInitialDocument(
   editorHost: EditorHost,
 ): Promise<WorldDocument> {
   const lastDocumentId = resolveLastDocumentId(editorHost);
+  let document: WorldDocument;
 
   if (lastDocumentId !== null) {
     const persistedDocument = await readWorldDocument(lastDocumentId);
 
     if (persistedDocument !== null) {
-      return persistedDocument;
+      document = persistedDocument;
+    } else {
+      document = createWorldDocument();
     }
+  } else {
+    document = createWorldDocument();
   }
 
-  return createWorldDocument();
+  // 确保协议核心实体在首次加载时即存在，与 loadLatestBaseDocument 路径保持一致。
+  // 修复：首次打开仿真时不加载核心，切换地区后再切回才会注入核心，导致与已放置蓝图冲突。
+  return ensureProtocolCoreEntity({
+    document,
+    queries: editorHost.workspace.registry.queries,
+  });
 }
 
 export async function readWorldDocument(

@@ -51,7 +51,9 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const favoritesRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const activeDragPayloadRef = useRef<QuickPlaceDragPayload | null>(null);
   const favoriteDropHandledRef = useRef(false);
+  const dropTargetIndexRef = useRef<number | null>(null);
   const suppressPointerSelectionRef = useRef(false);
   const [draggingFavoriteIndex, setDraggingFavoriteIndex] = useState<number | null>(null);
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
@@ -96,13 +98,22 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     }
   }, [appHost, favorites, visible]);
 
-  useEffect(() => {
-    if (!visible) {
-      return;
-    }
-
-    searchInputRef.current?.focus({ preventScroll: true });
-  }, [visible]);
+  // AI-REMOVED 2026-07-18:
+  // Reason: 快速放置浮窗不应替用户决定输入焦点，避免打开浮窗时自动唤起输入法。
+  // Trigger: 用户要求 PC 与移动端统一取消自动聚焦，搜索必须由用户主动点击输入框开始。
+  // Evidence: 此 effect 是浮窗显示后唯一主动调用 searchInputRef.focus() 的位置。
+  // Replacement: 搜索框保留原生点击聚焦；下方 document pointerdown 监听统一处理外部交互失焦。
+  // Risk: 键盘用户打开浮窗后需要先手动聚焦搜索框才能输入；符合本次统一交互要求。
+  // Human Review: Required
+  //
+  // Original code:
+  // useEffect(() => {
+  //   if (!visible) {
+  //     return;
+  //   }
+  //
+  //   searchInputRef.current?.focus({ preventScroll: true });
+  // }, [visible]);
 
   useEffect(() => {
     if (!visible) {
@@ -111,7 +122,13 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
 
     const handlePointerDown = (event: PointerEvent) => {
       const root = rootRef.current;
-      if (root === null || root.contains(event.target as Node | null)) {
+      const target = event.target as Node | null;
+
+      if (target !== searchInputRef.current) {
+        searchInputRef.current?.blur();
+      }
+
+      if (root === null || root.contains(target)) {
         return;
       }
 
@@ -236,9 +253,16 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
 
   function writeDragPayload(event: DragEvent<HTMLElement>, payload: QuickPlaceDragPayload): void {
     event.stopPropagation();
+    activeDragPayloadRef.current = payload;
+    updateDropTargetIndex(null);
     suppressPointerSelectionRef.current = true;
     event.dataTransfer.effectAllowed = "copyMove";
     event.dataTransfer.setData(QUICK_PLACE_DRAG_FORMAT, JSON.stringify(payload));
+  }
+
+  function updateDropTargetIndex(index: number | null): void {
+    dropTargetIndexRef.current = index;
+    setDropTargetIndex(index);
   }
 
   function commitFavorites(nextFavorites: readonly (string | null)[]): void {
@@ -251,14 +275,18 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   function handleFavoriteDrop(event: DragEvent<HTMLElement>, slotIndex: number): void {
     event.preventDefault();
     event.stopPropagation();
-    favoriteDropHandledRef.current = true;
-    setDropTargetIndex(null);
 
-    const payload = readDragPayload(event);
+    const payload = readDragPayload(event) ?? activeDragPayloadRef.current;
     if (payload === null) {
       return;
     }
 
+    favoriteDropHandledRef.current = true;
+    updateDropTargetIndex(null);
+    commitDragPayloadAtSlot(payload, slotIndex);
+  }
+
+  function commitDragPayloadAtSlot(payload: QuickPlaceDragPayload, slotIndex: number): void {
     const nextFavorites = payload.source === "favorite"
       ? moveQuickPlaceFavoriteToSlot(favorites, payload.index, slotIndex)
       : placeQuickPlaceFavoriteAtSlot(favorites, payload.deviceId, slotIndex);
@@ -266,14 +294,37 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     commitFavorites(nextFavorites);
   }
 
+  function finishDrag(): void {
+    activeDragPayloadRef.current = null;
+    favoriteDropHandledRef.current = false;
+    setDraggingFavoriteIndex(null);
+    updateDropTargetIndex(null);
+  }
+
+  function commitPendingDropAtDragEnd(): boolean {
+    const payload = activeDragPayloadRef.current;
+    const targetIndex = dropTargetIndexRef.current;
+    if (favoriteDropHandledRef.current || payload === null || targetIndex === null) {
+      return false;
+    }
+
+    commitDragPayloadAtSlot(payload, targetIndex);
+    return true;
+  }
+
+  function handleMenuDragEnd(event: DragEvent<HTMLElement>): void {
+    event.stopPropagation();
+    commitPendingDropAtDragEnd();
+    finishDrag();
+  }
+
   function handleFavoriteDragEnd(event: DragEvent<HTMLElement>, slotIndex: number): void {
     event.stopPropagation();
-    setDraggingFavoriteIndex(null);
-    setDropTargetIndex(null);
 
     const droppedOnFavoriteSlot = favoriteDropHandledRef.current;
-    favoriteDropHandledRef.current = false;
-    if (droppedOnFavoriteSlot || isPointInsideElement(event, favoritesRef.current)) {
+    const committedPendingDrop = commitPendingDropAtDragEnd();
+    finishDrag();
+    if (droppedOnFavoriteSlot || committedPendingDrop || isPointInsideElement(event, favoritesRef.current)) {
       return;
     }
 
@@ -327,12 +378,14 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
               onDragOver={(event) => {
                 event.preventDefault();
                 event.dataTransfer.dropEffect = draggingFavoriteIndex === null ? "copy" : "move";
-                setDropTargetIndex(index);
+                updateDropTargetIndex(index);
               }}
-              onDragEnter={() => setDropTargetIndex(index)}
+              onDragEnter={() => updateDropTargetIndex(index)}
               onDragLeave={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                  setDropTargetIndex((current) => current === index ? null : current);
+                  if (dropTargetIndexRef.current === index) {
+                    updateDropTargetIndex(null);
+                  }
                 }
               }}
               onDragEnd={(event) => {
@@ -398,10 +451,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
               draggable
               key={entry.id}
               onClick={(event) => selectDeviceFromKeyboardClick(entry.id, event)}
-              onDragEnd={() => {
-                favoriteDropHandledRef.current = false;
-                setDropTargetIndex(null);
-              }}
+              onDragEnd={handleMenuDragEnd}
               onPointerDown={handleSelectablePointerDown}
               onPointerUp={(event) => selectDeviceFromPointer(entry.id, event)}
               onDragStart={(event) => {
