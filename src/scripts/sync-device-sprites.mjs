@@ -60,7 +60,7 @@ const DEVICE_SPRITE_MAPPINGS = [
   ['液气转化机', 'transmuter_1_gastrans', 180],
   ['液气转化机', 'transmuter_1_liquidtrans', 180],
   ['气体扩散机', 'vaporizer_1'],
-  ['气体反应炉', 'item_port_gas_reactor_1', 90],
+  ['气体反应炉', 'item_port_gas_reactor_1'],
 ];
 
 function createMaskBuffer(sourceBuffer, width, height, channels) {

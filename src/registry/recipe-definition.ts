@@ -3221,11 +3221,11 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: [],
   },
   // =========================================================================
-  // 暗管入口销毁配方 — 默认销毁进入槽位的任意液体
+  // 暗管入口销毁配方 — 默认销毁进入槽位的任意流体（液体或气体）
   // =========================================================================
   {
-    id: "r_udpipe_loader_void_liquid_any_internal",
-    nameKey: "registry.recipe.r_udpipe_loader_void_liquid_any_internal.name",
+    id: "r_udpipe_loader_void_fluid_any_internal",
+    nameKey: "registry.recipe.r_udpipe_loader_void_fluid_any_internal.name",
     durationSeconds: 0.5,
     inputs: [{ itemId: "any", amount: 1 }],
     outputs: [],
@@ -3234,8 +3234,8 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
   },
   {
-    id: "r_udpipe_loader_multi_void_liquid_any_internal",
-    nameKey: "registry.recipe.r_udpipe_loader_multi_void_liquid_any_internal.name",
+    id: "r_udpipe_loader_multi_void_fluid_any_internal",
+    nameKey: "registry.recipe.r_udpipe_loader_multi_void_fluid_any_internal.name",
     durationSeconds: 0.5,
     inputs: [{ itemId: "any", amount: 1 }],
     outputs: [],
@@ -3776,6 +3776,16 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: ["introduced:1.4"],
   },
   {
+    id: "liquid_transmuter_1_gas_gas_xiranite_1",
+    nameKey: "registry.recipe.liquid_transmuter_1_gas_gas_xiranite_1.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_liquid_xiranite", amount: 1 }],
+    outputs: [{ itemId: "item_gas_xiranite", amount: 1 }],
+    machineId: "transmuter_1_gastrans",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.4"],
+  },
+  {
     id: "liquid_transmuter_1_gas_gas_xiranite_enr_1",
     nameKey: "registry.recipe.liquid_transmuter_1_gas_gas_xiranite_enr_1.name",
     durationSeconds: 10,
@@ -3826,6 +3836,16 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: ["introduced:1.4"],
   },
   {
+    id: "liquid_transmuter_1_liquid_liquid_xiranite_1",
+    nameKey: "registry.recipe.liquid_transmuter_1_liquid_liquid_xiranite_1.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_gas_xiranite", amount: 1 }],
+    outputs: [{ itemId: "item_liquid_xiranite", amount: 1 }],
+    machineId: "transmuter_1_liquidtrans",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.4"],
+  },
+  {
     id: "liquid_transmuter_1_liquid_liquid_xiranite_enr_1",
     nameKey: "registry.recipe.liquid_transmuter_1_liquid_liquid_xiranite_enr_1.name",
     durationSeconds: 10,
@@ -3866,6 +3886,16 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     tags: ["introduced:1.4"],
   },
   {
+    id: "liquid_transmuter_2_gas_gas_xiranite_1",
+    nameKey: "registry.recipe.liquid_transmuter_2_gas_gas_xiranite_1.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_xiranite_powder", amount: 1 }],
+    outputs: [{ itemId: "item_gas_xiranite", amount: 1 }],
+    machineId: "transmuter_2_gastrans",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.4"],
+  },
+  {
     id: "liquid_transmuter_2_gas_gas_xiranite_enr_1",
     nameKey: "registry.recipe.liquid_transmuter_2_gas_gas_xiranite_enr_1.name",
     durationSeconds: 10,
@@ -3901,6 +3931,16 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     durationSeconds: 2,
     inputs: [{ itemId: "item_gas_copper", amount: 1 }],
     outputs: [{ itemId: "item_copper_nugget", amount: 2 }],
+    machineId: "transmuter_2_solidtrans",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.4"],
+  },
+  {
+    id: "liquid_transmuter_2_solid_xiranite_powder_1",
+    nameKey: "registry.recipe.liquid_transmuter_2_solid_xiranite_powder_1.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_gas_xiranite", amount: 1 }],
+    outputs: [{ itemId: "item_xiranite_powder", amount: 1 }],
     machineId: "transmuter_2_solidtrans",
     recipeType: "immediate-consume",
     tags: ["introduced:1.4"],

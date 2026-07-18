@@ -1945,6 +1945,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * item_port_udpipe_loader_1 — 地下管道装载口（3×3）
    * 流体输入方向。仅 1 个 input port(西)。
    * AI-CORRECTION 2026-06-06: 默认行为改为销毁模式；进入 loader_buffer 的液体由隐藏配方消耗。
+   * AI-CORRECTION 2026-07-18: 槽位 itemFilterType 已从 "liquid" 改为 "fluid"，同时接受气体进入销毁。
    */
   createEntityDefinition({
     id: "item_port_udpipe_loader_1",
@@ -1954,10 +1955,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "warehouse",
     displayOrder: 407,
     // AI-REMOVED 2026-06-06:
-    // Reason: 暗管入口默认销毁进入液体，不能再由 WarehouseSink 直接写入仓库槽。
+    // Reason: 暗管入口默认销毁进入流体，不能再由 WarehouseSink 直接写入仓库槽。
     // Trigger: 用户要求未链接暗管入口销毁所有进入液体，并明确默认摆放为销毁模式。
     // Evidence: runtime-slot-access.findInputSlotForItem 会优先将 WarehouseSink 输入写入仓库槽，导致本地隐藏销毁配方拿不到输入。
-    // Replacement: 本定义的 loader_buffer + r_udpipe_loader_void_liquid_any_internal。
+    // Replacement: 本定义的 loader_buffer + r_udpipe_loader_void_fluid_any_internal。
     // Risk: Medium - 已保存蓝图若依赖暗管入口入仓行为，运行结果会改为销毁液体。
     // Human Review: Required
     //
@@ -1975,10 +1976,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     // AI-REMOVED 2026-06-06:
-    // Reason: 暗管入口需要本地液体槽位供隐藏销毁配方消费。
-    // Trigger: 用户要求默认销毁模式使用 0.5 秒销毁 1 液体的隐藏配方实现。
+    // Reason: 暗管入口需要本地槽位供隐藏销毁配方消费。
+    // Trigger: 用户要求默认销毁模式使用 0.5 秒销毁 1 流体的隐藏配方实现。
     // Evidence: 无本地 storageSlotGroups/portStorageBindings 时，入口只能依赖 synthetic 输入节点或 WarehouseSink，无法稳定挂载槽位配置面板与销毁配方通道。
-    // Replacement: 下方 loader_buffer、void_liquid recipeChannel 和 bind_fluid_input。
+    // Replacement: 下方 loader_buffer、void_fluid recipeChannel 和 bind_fluid_input。
     // Risk: Medium - 编译拓扑节点从无显式缓存变为显式缓存。
     // Human Review: Required
     //
@@ -1988,12 +1989,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "loader_buffer",
         "fluid",
-        createSlots("slot", [500], "liquid"),
+        createSlots("slot", [500], "fluid"),
       ),
     ],
     recipeChannels: [
       // AI-CORRECTION 2026-06-07: loader_buffer 同时声明为产物槽，仅用于表达槽位配置的混合归属；销毁配方本身仍没有 outputs。
-      createRecipeChannel("void_liquid", ["loader_buffer"], ["loader_buffer"]),
+      createRecipeChannel("void_fluid", ["loader_buffer"], ["loader_buffer"]),
     ],
     // AI-REMOVED 2026-06-06:
     // Reason: 暗管入口端口必须绑定到本地销毁槽位。
@@ -2028,7 +2029,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 端口：1 fluid output(东)
    *
    * 通过 warehouse-item-link 面板将槽位连接到仓库。
-   * 与取货口结构一致，区别在于 kind="fluid" 限制仅可选液体。
+   * 与取货口结构一致，区别在于 kind="fluid" 限制仅可选流体（液体和气体）。
    * ignoreStock 可设为 true 实现无限取货。
    */
   createEntityDefinition({
@@ -2063,7 +2064,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "unloader_buffer",
         "fluid",
-        createSlots("slot", [500], "liquid"),
+        createSlots("slot", [500], "fluid"),
       ),
     ],
     // AI-CORRECTION 2026-06-07: 暗管出口保留仓库取货式生成语义，但槽位在 channel 中同时作为原料/产物以显示为混合槽位。
@@ -2295,7 +2296,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid",
         "input",
         [
-          createPort("in_w_1", 0, 1, "W", {
+          createPort("in_e_1", 2, 1, "E", {
             acceptRule: { base: { kind: "gas" }, exclude: [] },
           }),
         ],
@@ -2724,7 +2725,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid",
         "input",
         [
-          createPort("in_w_2", 0, 2, "W", {
+          createPort("in_e_2", 4, 2, "E", {
             acceptRule: { base: { kind: "gas" }, exclude: [] },
           }),
         ],
@@ -2733,7 +2734,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "gas_output",
         "fluid",
         "output",
-        [1, 3].map((z) => createPort(`out_e_${z}`, 4, z, "E", {
+        [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W", {
           acceptRule: { base: { kind: "gas" }, exclude: [] },
         })),
       ),
@@ -3009,7 +3010,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "gas_input",
         "fluid",
         "input",
-        [1, 3].map((z) => createPort(`in_w_${z}`, 0, z, "W", {
+        [1, 3].map((z) => createPort(`in_e_${z}`, 4, z, "E", {
           acceptRule: { base: { kind: "gas" }, exclude: [] },
         })),
       ),
@@ -3112,7 +3113,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "gas_input",
         "fluid",
         "input",
-        [1, 3].map((x) => createPort(`in_n_${x}`, x, 0, "N", {
+        [1, 3].map((z) => createPort(`in_w_${z}`, 0, z, "W", {
           acceptRule: { base: { kind: "gas" }, exclude: [] },
         })),
       ),
@@ -3120,7 +3121,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "gas_output",
         "fluid",
         "output",
-        [1, 3].map((x) => createPort(`out_s_${x}`, x, 4, "S", {
+        [1, 3].map((z) => createPort(`out_e_${z}`, 4, z, "E", {
           acceptRule: { base: { kind: "gas" }, exclude: [] },
         })),
       ),
@@ -3272,7 +3273,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "gas_input",
         "fluid",
         "input",
-        [1, 3].map((z) => createPort(`in_w_${z}`, 0, z, "W", {
+        [1, 3].map((z) => createPort(`in_e_${z}`, 4, z, "E", {
           acceptRule: { base: { kind: "gas" }, exclude: [] },
         })),
       ),
@@ -3280,7 +3281,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "liquid_output",
         "fluid",
         "output",
-        [1, 3].map((z) => createPort(`out_e_${z}`, 4, z, "E")),
+        [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W")),
       ),
       createPortGroup(
         "consume_input",
@@ -3662,6 +3663,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     // Trigger: 用户明确“多口暗管入口只需要一个存储槽位，两个端口都对接这一个槽位，两个 channel 绑定一个槽位”。
     // Evidence: createSimpleProductionDevice 只能生成单个默认 channel 和默认 recipeStatus inspector，不适合隐藏销毁配方。
     // Replacement: 下方 loader_buffer、void_liquid_1/2 recipeChannels 和 bind_fluid_input。
+    // AI-CORRECTION 2026-07-18: 槽位 itemFilterType 已从 "liquid" 改为 "fluid"，channel 已从 void_liquid_1/2 改为 void_fluid_1/2，以同时接受气体。
     // Risk: Medium - 旧 synthetic 风格槽组 id 改为 loader_buffer。
     // Human Review: Required
     //
@@ -3673,13 +3675,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "loader_buffer",
         "fluid",
-        createSlots("slot", [500], "liquid"),
+        createSlots("slot", [500], "fluid"),
       ),
     ],
     recipeChannels: [
       // AI-CORRECTION 2026-06-07: loader_buffer 同时声明为产物槽，仅用于表达槽位配置的混合归属；销毁配方本身仍没有 outputs。
-      createRecipeChannel("void_liquid_1", ["loader_buffer"], ["loader_buffer"]),
-      createRecipeChannel("void_liquid_2", ["loader_buffer"], ["loader_buffer"]),
+      createRecipeChannel("void_fluid_1", ["loader_buffer"], ["loader_buffer"]),
+      createRecipeChannel("void_fluid_2", ["loader_buffer"], ["loader_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_fluid_input", "fluid_input", "loader_buffer"),
@@ -3731,7 +3733,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "unloader_buffer",
         "fluid",
-        createSlots("slot", [500], "liquid"),
+        createSlots("slot", [500], "fluid"),
       ),
     ],
     // AI-CORRECTION 2026-06-07: 暗管出口保留仓库取货式生成语义，但槽位在 channel 中同时作为原料/产物以显示为混合槽位。

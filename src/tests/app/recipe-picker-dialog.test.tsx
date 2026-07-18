@@ -159,7 +159,7 @@ describe("RecipePickerDialog", () => {
   });
 
   it("hides toolbox-hidden recipes from explicit recipe sources", () => {
-    const hiddenRecipe = findRecipe(appHost, "r_udpipe_loader_void_liquid_any_internal");
+    const hiddenRecipe = findRecipe(appHost, "r_udpipe_loader_void_fluid_any_internal");
     const visibleRecipe = findRecipe(appHost, "r_furnace_iron_nugget_from_iron_ore_basic");
     let selectionPromise!: Promise<string | null>;
 

@@ -110,9 +110,9 @@ describe("EncyclopediaBrowser", () => {
 
     expect(index.recipesByInputItem.get("any")).toBeUndefined();
     expect(index.recipesByMachine.get("item_port_udpipe_loader_1")?.map((recipe) => recipe.id) ?? [])
-      .not.toContain("r_udpipe_loader_void_liquid_any_internal");
+      .not.toContain("r_udpipe_loader_void_fluid_any_internal");
     expect(index.recipesByMachine.get("item_port_udpipe_loader_2")?.map((recipe) => recipe.id) ?? [])
-      .not.toContain("r_udpipe_loader_multi_void_liquid_any_internal");
+      .not.toContain("r_udpipe_loader_multi_void_fluid_any_internal");
   });
 
   it("hides empty mobile categories after external item filtering", () => {

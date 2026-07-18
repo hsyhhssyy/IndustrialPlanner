@@ -16,7 +16,7 @@ function getEntity(id: string) {
 }
 
 describe("dark pipe definitions", () => {
-  it("configures the single-port inlet as a local hidden liquid sink", () => {
+  it("configures the single-port inlet as a local hidden fluid sink", () => {
     const inlet = getEntity("item_port_udpipe_loader_1");
 
     expect(inlet.tags).not.toContain("WarehouseSink");
@@ -28,7 +28,7 @@ describe("dark pipe definitions", () => {
         expect.objectContaining({
           id: "slot_1",
           capacity: 500,
-          itemFilterType: "liquid",
+          itemFilterType: "fluid",
         }),
       ],
     });
@@ -37,7 +37,7 @@ describe("dark pipe definitions", () => {
     ]);
     expect(inlet.recipeChannels).toEqual([
       {
-        id: "void_liquid",
+        id: "void_fluid",
         ingredientStorageGroupIds: ["loader_buffer"],
         productStorageGroupIds: ["loader_buffer"],
         manualRecipeOnly: undefined,
@@ -61,12 +61,12 @@ describe("dark pipe definitions", () => {
     ]);
     expect(inlet.recipeChannels).toEqual([
       expect.objectContaining({
-        id: "void_liquid_1",
+        id: "void_fluid_1",
         ingredientStorageGroupIds: ["loader_buffer"],
         productStorageGroupIds: ["loader_buffer"],
       }),
       expect.objectContaining({
-        id: "void_liquid_2",
+        id: "void_fluid_2",
         ingredientStorageGroupIds: ["loader_buffer"],
         productStorageGroupIds: ["loader_buffer"],
       }),
@@ -77,7 +77,7 @@ describe("dark pipe definitions", () => {
     ]));
   });
 
-  it("configures dark pipe outlets as warehouse-linked generators with one 500-capacity liquid slot", () => {
+  it("configures dark pipe outlets as warehouse-linked generators with one 500-capacity fluid slot", () => {
     for (const id of ["item_port_udpipe_unloader_1", "item_port_udpipe_unloader_2"]) {
       const outlet = getEntity(id);
 
@@ -92,7 +92,7 @@ describe("dark pipe definitions", () => {
             capacity: 500,
             initialItemType: null,
             initialCount: 0,
-            itemFilterType: "liquid",
+            itemFilterType: "fluid",
           }),
         ],
       });
@@ -112,12 +112,12 @@ describe("dark pipe definitions", () => {
     }
   });
 
-  it("registers hidden any-liquid void recipes for dark pipe inlets", () => {
+  it("registers hidden any-fluid void recipes for dark pipe inlets", () => {
     const registry = createRegistryContract();
 
     expect(registry.recipeDefinitions).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        id: "r_udpipe_loader_void_liquid_any_internal",
+        id: "r_udpipe_loader_void_fluid_any_internal",
         machineId: "item_port_udpipe_loader_1",
         durationSeconds: 0.5,
         inputs: [{ itemId: "any", amount: 1 }],
@@ -126,7 +126,7 @@ describe("dark pipe definitions", () => {
         tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
       }),
       expect.objectContaining({
-        id: "r_udpipe_loader_multi_void_liquid_any_internal",
+        id: "r_udpipe_loader_multi_void_fluid_any_internal",
         machineId: "item_port_udpipe_loader_2",
         durationSeconds: 0.5,
         inputs: [{ itemId: "any", amount: 1 }],

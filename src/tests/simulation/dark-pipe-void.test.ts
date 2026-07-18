@@ -12,8 +12,8 @@ import {
   getDevice,
 } from "./blueprint-test-helpers";
 
-describe("dark pipe liquid void", () => {
-  it("voids liquid from a single-port dark pipe inlet by hidden recipe", async () => {
+describe("dark pipe fluid void", () => {
+  it("voids fluid from a single-port dark pipe inlet by hidden recipe", async () => {
     const finalTick = (2 * STANDARD_TICK_RATE_PER_SECOND) + 5;
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("single-dark-pipe-inlet-void", [
@@ -26,12 +26,12 @@ describe("dark pipe liquid void", () => {
       registry: createRegistryContract(),
     });
 
-    expect(getDevice(report, 1, "inlet").channelRecipes["void_liquid"]?.recipeId)
-      .toBe("r_udpipe_loader_void_liquid_any_internal");
+    expect(getDevice(report, 1, "inlet").channelRecipes["void_fluid"]?.recipeId)
+      .toBe("r_udpipe_loader_void_fluid_any_internal");
     expect(findSlot(report, finalTick, "inlet", "loader_buffer", "slot_1").count).toBe(0);
   });
 
-  it("voids liquid through two channels on the multi-port dark pipe inlet", async () => {
+  it("voids fluid through two channels on the multi-port dark pipe inlet", async () => {
     const finalTick = (2 * STANDARD_TICK_RATE_PER_SECOND) + 5;
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("multi-dark-pipe-inlet-void", [
@@ -44,10 +44,10 @@ describe("dark pipe liquid void", () => {
       registry: createRegistryContract(),
     });
 
-    expect(getDevice(report, 1, "inlet").channelRecipes["void_liquid_1"]?.recipeId)
-      .toBe("r_udpipe_loader_multi_void_liquid_any_internal");
-    expect(getDevice(report, 1, "inlet").channelRecipes["void_liquid_2"]?.recipeId)
-      .toBe("r_udpipe_loader_multi_void_liquid_any_internal");
+    expect(getDevice(report, 1, "inlet").channelRecipes["void_fluid_1"]?.recipeId)
+      .toBe("r_udpipe_loader_multi_void_fluid_any_internal");
+    expect(getDevice(report, 1, "inlet").channelRecipes["void_fluid_2"]?.recipeId)
+      .toBe("r_udpipe_loader_multi_void_fluid_any_internal");
     expect(findSlot(report, finalTick, "inlet", "loader_buffer", "slot_1").count).toBe(0);
   });
 
@@ -67,7 +67,7 @@ describe("dark pipe liquid void", () => {
       .toMatchObject({ itemType: null, count: 0 });
   });
 
-  it("does not void liquid from a linked dark pipe inlet with manual recipe channels", async () => {
+  it("does not void fluid from a linked dark pipe inlet with manual recipe channels", async () => {
     const finalTick = (2 * STANDARD_TICK_RATE_PER_SECOND) + 5;
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint(
@@ -91,7 +91,7 @@ describe("dark pipe liquid void", () => {
       registry: createRegistryContract(),
     });
 
-    expect(getDevice(report, 1, "inlet").channelRecipes["void_liquid"]).toBeUndefined();
+    expect(getDevice(report, 1, "inlet").channelRecipes["void_fluid"]).toBeUndefined();
     expect(findSlot(report, finalTick, "inlet", "loader_buffer", "slot_1").count).toBe(4);
   });
 
