@@ -1,4 +1,4 @@
-import { createWorldDocument } from "@/domain/document/world-document";
+import { createWorldDocument, type WorldDocument } from "@/domain/document/world-document";
 import type { EditorAction } from "@/domain/editor/editor-action";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 

@@ -135,22 +135,26 @@ async function resolveInitialDocument(
   editorHost: EditorHost,
 ): Promise<WorldDocument> {
   const lastDocumentId = resolveLastDocumentId(editorHost);
-  let document: WorldDocument;
+  let document: WorldDocument | null = null;
 
   if (lastDocumentId !== null) {
-    const persistedDocument = await readWorldDocument(lastDocumentId);
+    document = await readWorldDocument(lastDocumentId);
+  }
 
-    if (persistedDocument !== null) {
-      document = persistedDocument;
-    } else {
-      document = createWorldDocument();
+  // 校验 baseId 有效性。IndexedDB 可能残留已废弃基地的旧文档，或 V2 迁移引入了不存在的 baseId。
+  if (document !== null) {
+    const isValidBase = editorHost.workspace.registry.baseDefinitions
+      .some((definition) => definition.id === document!.baseId);
+    if (!isValidBase) {
+      document = null;
     }
-  } else {
+  }
+
+  if (document === null) {
     document = createWorldDocument();
   }
 
   // 确保协议核心实体在首次加载时即存在，与 loadLatestBaseDocument 路径保持一致。
-  // 修复：首次打开仿真时不加载核心，切换地区后再切回才会注入核心，导致与已放置蓝图冲突。
   return ensureProtocolCoreEntity({
     document,
     queries: editorHost.workspace.registry.queries,
