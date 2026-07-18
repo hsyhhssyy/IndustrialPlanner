@@ -1,0 +1,32 @@
+# AI-REMOVED 2026-07-18:
+# Reason: 独立 beta 入口被统一发布矩阵替代，避免 tag 规则和部署链路分散。
+# Trigger: 用户要求将多种发布版本整理为 1～2 个 flow。
+# Evidence: beta、pre、stable 各自触发，且正式/预发布还会二次 dispatch Pages workflow。
+# Replacement: .github/workflows/release.yml (prepare/build-dist/deploy-container)
+# Risk: beta 镜像不再覆盖 latest；K8s 仍使用本次 beta 的精确镜像 tag。
+# Human Review: Required
+#
+# Original code:
+# name: Beta Tag Release
+# 
+# on:
+#   push:
+#     tags:
+#       - 'v*.*.*-beta*'
+# 
+# jobs:
+#   docker-build:
+#     uses: ./.github/workflows/docker-build-push.yml
+#     with:
+#       tag: ${{ github.ref_name }}
+#     secrets:
+#       DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
+# 
+#   k8s-deploy:
+#     needs: docker-build
+#     uses: ./.github/workflows/deploy-v3-dev.yml
+#     with:
+#       image: ${{ needs.docker-build.outputs.image }}
+#     secrets:
+#       DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
+#       KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}

@@ -1,0 +1,61 @@
+# AI-REMOVED 2026-07-18:
+# Reason: 独立 pre 入口被统一发布矩阵替代，消除 Release 创建后的重复 Pages 调度。
+# Trigger: 用户要求将多种发布版本整理为 1～2 个 flow。
+# Evidence: 创建 prerelease 会触发 release:published，同时旧实现又显式 dispatch release-pages.yml。
+# Replacement: .github/workflows/release.yml (prepare/build-dist)
+# Risk: Low；pre 仍创建 prerelease 并上传 dist zip，但不部署 Pages。
+# Human Review: Required
+#
+# Original code:
+# name: Create Pre-Release
+# 
+# on:
+#   push:
+#     tags:
+#       - 'v*.*.*-pre*'
+# 
+# permissions:
+#   contents: write
+#   actions: write
+# 
+# jobs:
+#   create-release:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+# 
+#       - name: Generate changelog from commits since last tag
+#         id: changelog
+#         run: |
+#           # 获取上一个 tag（按时间排序，排除当前 tag）
+#           prev_tag=$(git tag --sort=-creatordate | grep -v '${{ github.ref_name }}' | head -1)
+#           if [ -n "$prev_tag" ]; then
+#             range="${prev_tag}..HEAD"
+#           else
+#             range="HEAD"
+#           fi
+# 
+#           body=$(git log "$range" --pretty=format:'- %s (%h)' --no-merges | head -50)
+#           if [ -z "$body" ]; then
+#             body="Pre-release ${{ github.ref_name }}"
+#           fi
+# 
+#           # 写入文件避免特殊字符问题
+#           echo "$body" > /tmp/changelog.md
+#           echo "changelog_file=/tmp/changelog.md" >> $GITHUB_OUTPUT
+# 
+#       - name: Create GitHub Release
+#         uses: softprops/action-gh-release@v2
+#         with:
+#           tag_name: ${{ github.ref_name }}
+#           name: ${{ github.ref_name }}
+#           body_path: ${{ steps.changelog.outputs.changelog_file }}
+#           prerelease: true
+# 
+#       - name: Trigger release-pages workflow
+#         run: |
+#           gh workflow run release-pages.yml \
+#             -f tag_name='${{ github.ref_name }}'
+#         env:
+#           GH_TOKEN: ${{ github.token }}

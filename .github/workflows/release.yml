@@ -1,0 +1,373 @@
+name: Release
+run-name: Release ${{ inputs.tag_name || github.ref_name }}
+
+# beta: Docker + K8s；pre: GitHub prerelease + dist zip；stable/Patch: 全量发布。
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-beta[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+.[0-9]+-beta[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-pre[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+.[0-9]+-pre[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+.[0-9]+-Patch[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: '要重新发布的 tag，例如 v1.4.0.2、v1.4.0.3-beta1 或 v1.4.0.3-pre1'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: release-${{ inputs.tag_name || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare ${{ inputs.tag_name || github.ref_name }}
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag_name || github.ref_name }}
+    outputs:
+      tag: ${{ steps.classify.outputs.tag }}
+      channel: ${{ steps.classify.outputs.channel }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+
+      - name: Classify and validate tag
+        id: classify
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          beta_pattern='^v[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?-beta[0-9]+$'
+          pre_pattern='^v[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?-pre[0-9]+$'
+          stable_pattern='^v[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$'
+          patch_pattern='^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-Patch[0-9]+$'
+
+          if [[ "$RELEASE_TAG" =~ $beta_pattern ]]; then
+            channel='beta'
+          elif [[ "$RELEASE_TAG" =~ $pre_pattern ]]; then
+            channel='pre'
+          elif [[ "$RELEASE_TAG" =~ $stable_pattern || "$RELEASE_TAG" =~ $patch_pattern ]]; then
+            channel='stable'
+          else
+            echo "Unsupported release tag: $RELEASE_TAG" >&2
+            echo 'Expected vX.Y.Z[.N], vX.Y.Z[.N]-betaN, vX.Y.Z[.N]-preN, or vX.Y.Z.N-PatchN.' >&2
+            exit 1
+          fi
+
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "Release channel: $channel"
+
+      - name: Generate changelog
+        if: steps.classify.outputs.channel != 'beta'
+        id: changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          previous_tag="$(git describe --tags --abbrev=0 "${RELEASE_TAG}^" 2>/dev/null || true)"
+
+          if [ -n "$previous_tag" ]; then
+            range="${previous_tag}..HEAD"
+          else
+            range='HEAD'
+          fi
+
+          body="$(git log "$range" --pretty=format:'- %s (%h)' --no-merges --max-count=50)"
+          if [ -z "$body" ]; then
+            body="Release $RELEASE_TAG"
+          fi
+
+          changelog_file="$RUNNER_TEMP/changelog.md"
+          printf '%s\n' "$body" > "$changelog_file"
+          echo "changelog_file=$changelog_file" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update GitHub Release
+        if: steps.classify.outputs.channel != 'beta'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.classify.outputs.tag }}
+          name: ${{ steps.classify.outputs.tag }}
+          body_path: ${{ steps.changelog.outputs.changelog_file }}
+          prerelease: ${{ steps.classify.outputs.channel == 'pre' }}
+
+  build-dist:
+    name: Build ${{ needs.prepare.outputs.tag }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+      RELEASE_CHANNEL: ${{ needs.prepare.outputs.channel }}
+    outputs:
+      image: ${{ steps.container.outputs.image }}
+      source_sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - name: Checkout V3 release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Record source SHA
+        id: source
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install V3 dependencies
+        run: npm ci
+
+      - name: Write version tag
+        run: printf "window.__APP_VERSION__ = '%s';\n" "$RELEASE_TAG" > public/version.js
+
+      - name: Build V3
+        env:
+          VITE_APP_VERSION: ${{ env.RELEASE_TAG }}
+        run: npm run build
+
+      - name: Preserve V3 dist
+        run: mv dist "$RUNNER_TEMP/v3-dist"
+
+      - name: Checkout V2 source
+        uses: actions/checkout@v4
+        with:
+          ref: v2
+          path: .temp/v2-src
+
+      - name: Install V2 dependencies
+        working-directory: .temp/v2-src
+        run: npm ci
+
+      - name: Build V2
+        working-directory: .temp/v2-src
+        run: npm run build
+
+      - name: Merge V2 and V3 dist
+        run: |
+          mv "$RUNNER_TEMP/v3-dist" dist
+          mv .temp/v2-src/dist dist/v2
+          test -f dist/index.html
+          test -f dist/v2/index.html
+
+      - name: Package release asset
+        if: env.RELEASE_CHANNEL != 'beta'
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip_name="IndustrialPlanner-${RELEASE_TAG}-dist.zip"
+          (cd dist && zip -qr "$RUNNER_TEMP/$zip_name" .)
+          echo "zip_path=$RUNNER_TEMP/$zip_name" >> "$GITHUB_ENV"
+
+      - name: Upload release asset
+        if: env.RELEASE_CHANNEL != 'beta'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$RELEASE_TAG" "$zip_path" --clobber
+
+      - name: Write Pages deployment metadata
+        if: env.RELEASE_CHANNEL == 'stable'
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          printf '{"releaseTag":"%s","sha":"%s","runId":"%s"}\n' \
+            "$RELEASE_TAG" "$SOURCE_SHA" "$GITHUB_RUN_ID" > dist/release.json
+
+      - name: Upload Pages artifact
+        if: env.RELEASE_CHANNEL == 'stable'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - name: Load container publish config
+        if: env.RELEASE_CHANNEL == 'beta' || env.RELEASE_CHANNEL == 'stable'
+        id: container
+        env:
+          DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          config_file="$RUNNER_TEMP/deploy-config.json"
+          printf '%s' "$DEPLOY_CONFIG" > "$config_file"
+          jq -e '
+            [.registry, .username, .password, .image_name]
+            | all(type == "string" and length > 0)
+          ' "$config_file" > /dev/null
+
+          registry="$(jq -r '.registry' "$config_file")"
+          username="$(jq -r '.username' "$config_file")"
+          password="$(jq -r '.password' "$config_file")"
+          image_name="$(jq -r '.image_name' "$config_file")"
+          image="${registry}/${image_name}:${RELEASE_TAG}"
+
+          echo "::add-mask::$password"
+          echo "registry=$registry" >> "$GITHUB_OUTPUT"
+          echo "username=$username" >> "$GITHUB_OUTPUT"
+          echo "password=$password" >> "$GITHUB_OUTPUT"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          {
+            echo 'tags<<EOF'
+            echo "$image"
+            if [ "$RELEASE_CHANNEL" = 'stable' ]; then
+              echo "${registry}/${image_name}:latest"
+            fi
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        if: env.RELEASE_CHANNEL == 'beta' || env.RELEASE_CHANNEL == 'stable'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Registry
+        if: env.RELEASE_CHANNEL == 'beta' || env.RELEASE_CHANNEL == 'stable'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ steps.container.outputs.registry }}
+          username: ${{ steps.container.outputs.username }}
+          password: ${{ steps.container.outputs.password }}
+
+      - name: Build and push Docker image
+        if: env.RELEASE_CHANNEL == 'beta' || env.RELEASE_CHANNEL == 'stable'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./dist
+          file: .github/Dockerfile
+          push: true
+          tags: ${{ steps.container.outputs.tags }}
+
+  deploy-container:
+    name: Deploy container
+    if: needs.prepare.outputs.channel == 'beta' || needs.prepare.outputs.channel == 'stable'
+    needs:
+      - prepare
+      - build-dist
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ${{ needs.build-dist.outputs.image }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - name: Load K8s deploy config
+        env:
+          DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          config_file="$RUNNER_TEMP/deploy-config.json"
+          printf '%s' "$DEPLOY_CONFIG" > "$config_file"
+          jq -e '
+            [.domain, .namespace]
+            | all(type == "string" and length > 0)
+          ' "$config_file" > /dev/null
+
+          echo "domain=$(jq -r '.domain' "$config_file")" >> "$GITHUB_ENV"
+          echo "namespace=$(jq -r '.namespace' "$config_file")" >> "$GITHUB_ENV"
+
+      - name: Render and apply K8s manifests
+        env:
+          DOMAIN: ${{ env.domain }}
+          NAMESPACE: ${{ env.namespace }}
+          KUBECONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          kubeconfig_file="$RUNNER_TEMP/kubeconfig"
+          printf '%s' "$KUBECONFIG_DATA" > "$kubeconfig_file"
+          chmod 600 "$kubeconfig_file"
+          export KUBECONFIG="$kubeconfig_file"
+
+          envsubst < .github/k8s/deployment.yaml | kubectl apply -n "$NAMESPACE" -f -
+          kubectl rollout status deployment/industrial-planner -n "$NAMESPACE" --timeout=120s
+
+  deploy-pages:
+    name: Deploy GitHub Pages
+    if: needs.prepare.outputs.channel == 'stable'
+    needs:
+      - prepare
+      - build-dist
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    env:
+      CDN_REFRESH_URL: https://cdn.amiyabot.com/api/v1/tencent/teo/cache/endfield.amiyabot.com?self=endfield.amiyabot.com
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Wait for deployed release
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+          SOURCE_SHA: ${{ needs.build-dist.outputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SITE_URL:-}" ]; then
+            echo 'Deployment page URL is missing' >&2
+            exit 1
+          fi
+
+          metadata_url="${SITE_URL%/}/release.json"
+          expected_sha="\"sha\":\"${SOURCE_SHA}\""
+
+          for attempt in $(seq 1 30); do
+            response_file="$(mktemp)"
+            status_code="$(curl -L -sS --max-time 20 \
+              -H 'Cache-Control: no-cache' \
+              -H 'Pragma: no-cache' \
+              -o "$response_file" \
+              -w '%{http_code}' \
+              "$metadata_url")"
+
+            if [ "$status_code" = '200' ] && grep -Fq "$expected_sha" "$response_file"; then
+              echo "Detected deployment SHA '$SOURCE_SHA' at $metadata_url"
+              rm -f "$response_file"
+              exit 0
+            fi
+
+            echo "Waiting for deployment SHA '$SOURCE_SHA' at $metadata_url (attempt $attempt/30, status=$status_code)"
+            rm -f "$response_file"
+            sleep 10
+          done
+
+          echo "Timed out waiting for deployment SHA '$SOURCE_SHA' at $metadata_url" >&2
+          exit 1
+
+      - name: Refresh CDN cache
+        env:
+          CDN_REFRESH_TOKEN: ${{ secrets.CDN_REFRESH_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CDN_REFRESH_TOKEN:-}" ]; then
+            echo 'CDN_REFRESH_TOKEN is not configured' >&2
+            exit 1
+          fi
+
+          curl -fsS -X PUT "$CDN_REFRESH_URL" \
+            -H "Authorization: Bearer $CDN_REFRESH_TOKEN"

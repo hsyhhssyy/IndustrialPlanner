@@ -1,0 +1,50 @@
+# AI-REMOVED 2026-07-18:
+# Reason: 单独的 K8s reusable workflow 被合并到统一发布流水线，减少跨文件跳转。
+# Trigger: 用户要求将多种发布版本整理为 1～2 个 flow。
+# Evidence: 该 workflow 仅被 beta/formal 两个入口调用，部署逻辑没有其他调用方。
+# Replacement: .github/workflows/release.yml (deploy-container)
+# Risk: Low；仍渲染同一 .github/k8s/deployment.yaml 并等待 rollout。
+# Human Review: Required
+#
+# Original code:
+# name: Deploy V3 Dev
+# 
+# on:
+#   workflow_call:
+#     inputs:
+#       image:
+#         required: true
+#         type: string
+#     secrets:
+#       DEPLOY_CONFIG:
+#         required: true
+#       KUBE_CONFIG:
+#         required: true
+# 
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+# 
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+# 
+#       - name: Load deploy config
+#         env:
+#           DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
+#         run: |
+#           echo "$DEPLOY_CONFIG" > /tmp/deploy-config.json
+#           echo "domain=$(jq -r '.domain' /tmp/deploy-config.json)" >> $GITHUB_ENV
+#           echo "namespace=$(jq -r '.namespace' /tmp/deploy-config.json)" >> $GITHUB_ENV
+# 
+#       - name: Render and apply K8s manifests
+#         env:
+#           IMAGE: ${{ inputs.image }}
+#           DOMAIN: ${{ env.domain }}
+#           NAMESPACE: ${{ env.namespace }}
+#           KUBECONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
+#         run: |
+#           mkdir -p $HOME/.kube
+#           echo "$KUBECONFIG_DATA" > $HOME/.kube/config
+#           envsubst < .github/k8s/deployment.yaml | kubectl apply -n "$NAMESPACE" -f -
+#           kubectl rollout status deployment/industrial-planner -n "$NAMESPACE" --timeout=120s

@@ -1,0 +1,220 @@
+# AI-REMOVED 2026-07-18:
+# Reason: 独立 Pages 入口并入统一发布流水线，消除 release 事件与手动 dispatch 的双重触发。
+# Trigger: 用户要求将多种发布版本整理为 1～2 个 flow。
+# Evidence: create-pre-release/formal-release 显式 dispatch，本文件又监听 release:published。
+# Replacement: .github/workflows/release.yml (build-dist/deploy-pages)
+# Risk: Pages 不再能脱离统一 Release 手工单独运行；可用 Release 的 workflow_dispatch 重跑指定 tag。
+# Human Review: Required
+#
+# Original code:
+# name: Release to GitHub Pages
+# 
+# on:
+#   release:
+#     types:
+#       - published
+#   workflow_dispatch:
+#     inputs:
+#       tag_name:
+#         description: '已创建的 Release tag 名称'
+#         required: false
+#         type: string
+# 
+# permissions:
+#   contents: write
+#   pages: write
+#   id-token: write
+# 
+# concurrency:
+#   group: pages
+#   cancel-in-progress: true
+# 
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     env:
+#       RELEASE_TAG: ${{ inputs.tag_name || github.event.release.tag_name || github.ref_name }}
+#     outputs:
+#       is_prerelease: ${{ steps.detect-release-type.outputs.is_prerelease }}
+#     steps:
+#       - name: Detect release type
+#         id: detect-release-type
+#         run: |
+#           if echo "${{ env.RELEASE_TAG }}" | grep -qE '\-pre'; then
+#             echo "is_prerelease=true" >> $GITHUB_OUTPUT
+#             echo "Prerelease detected: ${{ env.RELEASE_TAG }} — will skip Pages deploy & CDN refresh"
+#           else
+#             echo "is_prerelease=false" >> $GITHUB_OUTPUT
+#           fi
+# 
+#       - name: Checkout V3 (release tag or default branch)
+#         uses: actions/checkout@v4
+#         with:
+#           ref: ${{ inputs.tag_name || github.event.release.tag_name || '' }}
+# 
+#       - name: Set up Node.js
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: 22
+#           cache: npm
+# 
+#       - name: Install dependencies
+#         run: npm ci
+# 
+#       - name: Write version tag
+#         run: |
+#           echo "window.__APP_VERSION__ = '${{ env.RELEASE_TAG }}';" > public/version.js
+# 
+#       - name: Build V3
+#         env:
+#           VITE_APP_VERSION: ${{ env.RELEASE_TAG }}
+#         run: npm run build
+# 
+#       - name: Diagnose V3 dist
+#         run: |
+#           echo "=== V3 dist structure ==="
+#           ls -la dist/
+#           echo ""
+#           echo "=== V3 dist/assets/ ==="
+#           ls -la dist/assets/ | head -20
+#           echo ""
+#           echo "=== V3 index.html asset references ==="
+#           grep -oE '(src|href)="[^"]*"' dist/index.html | head -20
+# 
+#       - name: Move V3 dist out of workspace
+#         run: mv dist /tmp/v3-dist
+# 
+#       - name: Checkout V2 source
+#         uses: actions/checkout@v4
+#         with:
+#           ref: v2
+#           path: .temp/v2-src
+# 
+#       - name: Install V2 dependencies
+#         working-directory: .temp/v2-src
+#         run: npm ci
+# 
+#       - name: Build V2
+#         working-directory: .temp/v2-src
+#         run: npm run build
+# 
+#       - name: Diagnose V2 dist
+#         working-directory: .temp/v2-src
+#         run: |
+#           echo "=== V2 dist structure ==="
+#           ls -la dist/
+#           echo ""
+#           echo "=== V2 dist/assets/ JS count ==="
+#           ls dist/assets/*.js 2>/dev/null | wc -l
+# 
+#       - name: Restore V3 dist and merge V2
+#         run: |
+#           mv /tmp/v3-dist dist
+#           mv .temp/v2-src/dist dist/v2
+# 
+#       - name: Diagnose final merged dist
+#         run: |
+#           echo "=== Final dist structure ==="
+#           ls -la dist/
+#           echo ""
+#           echo "=== dist/assets/ JS count ==="
+#           ls dist/assets/*.js 2>/dev/null | wc -l
+#           echo "=== dist/assets/ CSS count ==="
+#           ls dist/assets/*.css 2>/dev/null | wc -l
+#           echo ""
+#           echo "=== dist/v2/ exists ==="
+#           ls -la dist/v2/
+#           echo ""
+#           echo "=== dist/v2/index.html exists ==="
+#           test -f dist/v2/index.html && echo "YES" || echo "NO"
+# 
+#       - name: Package dist zip
+#         env:
+#           RELEASE_TAG: ${{ env.RELEASE_TAG }}
+#         run: |
+#           mkdir -p .temp
+#           zip_name="IndustrialPlanner-${RELEASE_TAG}-dist.zip"
+#           cd dist && zip -r "../.temp/${zip_name}" . && cd ..
+#           echo "zip_path=.temp/${zip_name}" >> $GITHUB_ENV
+# 
+#       - name: Upload dist zip to release
+#         env:
+#           GH_TOKEN: ${{ github.token }}
+#           RELEASE_TAG: ${{ env.RELEASE_TAG }}
+#         run: gh release upload "$RELEASE_TAG" "${{ env.zip_path }}" --clobber
+# 
+#       - name: Write deployment metadata
+#         env:
+#           RELEASE_TAG: ${{ env.RELEASE_TAG }}
+#         run: |
+#           cat > dist/release.json <<EOF
+#           {"releaseTag":"${RELEASE_TAG}","sha":"${GITHUB_SHA}","runId":"${GITHUB_RUN_ID}"}
+#           EOF
+# 
+#       - name: Upload artifact
+#         uses: actions/upload-pages-artifact@v3
+#         with:
+#           path: ./dist
+# 
+#   deploy:
+#     if: needs.build.outputs.is_prerelease != 'true'
+#     environment:
+#       name: github-pages
+#       url: ${{ steps.deployment.outputs.page_url }}
+#     runs-on: ubuntu-latest
+#     needs: build
+#     env:
+#       CDN_REFRESH_URL: https://cdn.amiyabot.com/api/v1/tencent/teo/cache/endfield.amiyabot.com?self=endfield.amiyabot.com
+#     steps:
+#       - name: Deploy to GitHub Pages
+#         id: deployment
+#         uses: actions/deploy-pages@v4
+# 
+#       - name: Wait for deployed release tag
+#         env:
+#           SITE_URL: ${{ steps.deployment.outputs.page_url }}
+#         run: |
+#           set -euo pipefail
+#           if [ -z "${SITE_URL:-}" ]; then
+#             echo "Deployment page URL is missing"
+#             exit 1
+#           fi
+# 
+#           metadata_url="${SITE_URL%/}/release.json"
+#           expected_sha="\"sha\":\"${GITHUB_SHA}\""
+# 
+#           for attempt in $(seq 1 30); do
+#             response_file="$(mktemp)"
+#             status_code="$(curl -L -sS --max-time 20 \
+#               -H 'Cache-Control: no-cache' \
+#               -H 'Pragma: no-cache' \
+#               -o "$response_file" \
+#               -w '%{http_code}' \
+#               "$metadata_url")"
+# 
+#             if [ "$status_code" = "200" ] && grep -Fq "$expected_sha" "$response_file"; then
+#               echo "Detected deployment SHA '$GITHUB_SHA' at $metadata_url"
+#               rm -f "$response_file"
+#               exit 0
+#             fi
+# 
+#             echo "Waiting for deployment SHA '$GITHUB_SHA' at $metadata_url (attempt $attempt/30, status=$status_code)"
+#             rm -f "$response_file"
+#             sleep 10
+#           done
+# 
+#           echo "Timed out waiting for deployment SHA '$GITHUB_SHA' at $metadata_url"
+#           exit 1
+# 
+#       - name: Refresh CDN cache
+#         env:
+#           CDN_REFRESH_TOKEN: ${{ secrets.CDN_REFRESH_TOKEN }}
+#         run: |
+#           set -euo pipefail
+#           if [ -z "${CDN_REFRESH_TOKEN:-}" ]; then
+#             echo "CDN_REFRESH_TOKEN is not configured"
+#             exit 1
+#           fi
+# 
+#           curl -fsS -X PUT "$CDN_REFRESH_URL" \
+#             -H "Authorization: Bearer $CDN_REFRESH_TOKEN"

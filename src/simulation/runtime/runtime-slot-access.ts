@@ -731,7 +731,7 @@ function resolveRecipes(options: {
     const recipe = options.topology.recipeCatalog[allowedRecipeId];
     if (
       recipe === undefined
-      || !recipeCanMatchContents(recipe, options.ingredientSlotContents)
+      || !recipeCanMatchContents(options.topology, recipe, options.ingredientSlotContents)
       || !isDeviceInRequiredGasDiffusion({
         topology: options.topology,
         state: options.state,
@@ -815,7 +815,7 @@ function resolveRecipes(options: {
 
   return Object.values(options.topology.recipeCatalog)
     .filter((recipe) => recipe.machineId === options.device.definitionId)
-    .filter((recipe) => recipeCanMatchContents(recipe, options.ingredientSlotContents))
+    .filter((recipe) => recipeCanMatchContents(options.topology, recipe, options.ingredientSlotContents))
     .filter((recipe) => isDeviceInRequiredGasDiffusion({
       topology: options.topology,
       state: options.state,
@@ -915,6 +915,7 @@ function readIngredientSlotContents(options: {
 }
 
 function recipeCanMatchContents(
+  topology: CompiledSimulationTopology,
   recipe: CompiledSimulationRecipeDefinition,
   contents: readonly IngredientSlotContent[],
 ): boolean {
@@ -924,9 +925,20 @@ function recipeCanMatchContents(
 
   const availableByItemType = new Map<string, number>();
   let totalAvailable = 0;
+  let domainSolid = 0;
+  let domainLiquid = 0;
+  let domainGas = 0;
   for (const content of contents) {
     availableByItemType.set(content.itemType, (availableByItemType.get(content.itemType) ?? 0) + content.availableAmount);
     totalAvailable += content.availableAmount;
+    const domain = getItemDomain(topology, content.itemType);
+    if (domain === "solid") {
+      domainSolid += content.availableAmount;
+    } else if (domain === "liquid") {
+      domainLiquid += content.availableAmount;
+    } else {
+      domainGas += content.availableAmount;
+    }
   }
 
   for (const input of recipe.inputs) {
@@ -934,6 +946,36 @@ function recipeCanMatchContents(
       if (totalAvailable < input.amount) {
         return false;
       }
+      totalAvailable -= input.amount;
+      continue;
+    }
+
+    // AI-CORRECTION 2026-07-18: 支持域占位符 "fluid"/"liquid"/"gas"/"solid" 作为配方输入。
+    // 原逻辑仅处理 "any" 和精确物品 ID，无法匹配使用域占位符的隐藏销毁配方（如暗管 fluid void）。
+    if (input.itemId === "solid") {
+      if (domainSolid < input.amount) return false;
+      domainSolid -= input.amount;
+      totalAvailable -= input.amount;
+      continue;
+    }
+    if (input.itemId === "liquid") {
+      if (domainLiquid < input.amount) return false;
+      domainLiquid -= input.amount;
+      totalAvailable -= input.amount;
+      continue;
+    }
+    if (input.itemId === "gas") {
+      if (domainGas < input.amount) return false;
+      domainGas -= input.amount;
+      totalAvailable -= input.amount;
+      continue;
+    }
+    if (input.itemId === "fluid") {
+      const fluidTotal = domainLiquid + domainGas;
+      if (fluidTotal < input.amount) return false;
+      const deductLiquid = Math.min(domainLiquid, input.amount);
+      domainLiquid -= deductLiquid;
+      domainGas -= (input.amount - deductLiquid);
       totalAvailable -= input.amount;
       continue;
     }
@@ -1057,7 +1099,7 @@ function findRecipeInputSelection(
     for (const slotId of node.slotIds) {
       const storageSlotId = resolveStorageSlotId(state, slotId);
       const slotState = state.persistent.slots[storageSlotId];
-      if (slotState === undefined || slotState.itemType === null || !recipeInputMatches(input, slotState.itemType)) {
+      if (slotState === undefined || slotState.itemType === null || !recipeInputMatches(topology, input, slotState.itemType)) {
         continue;
       }
       const itemType = slotState.itemType;
@@ -1075,8 +1117,30 @@ function findRecipeInputSelection(
   return null;
 }
 
-function recipeInputMatches(input: CompiledSimulationRecipeItem, itemType: string): boolean {
-  return input.itemId === "any" || input.itemId === itemType;
+// AI-CORRECTION 2026-07-18: 支持域占位符 "fluid"/"liquid"/"gas"/"solid" 作为配方输入匹配。
+// 原逻辑仅处理 "any" 和精确物品 ID，无法匹配暗管等使用域占位符的隐藏配方。
+function recipeInputMatches(
+  topology: CompiledSimulationTopology,
+  input: CompiledSimulationRecipeItem,
+  itemType: string,
+): boolean {
+  if (input.itemId === "any" || input.itemId === itemType) {
+    return true;
+  }
+  const domain = getItemDomain(topology, itemType);
+  if (input.itemId === "fluid") {
+    return domain === "liquid" || domain === "gas";
+  }
+  if (input.itemId === "liquid") {
+    return domain === "liquid";
+  }
+  if (input.itemId === "gas") {
+    return domain === "gas";
+  }
+  if (input.itemId === "solid") {
+    return domain === "solid";
+  }
+  return false;
 }
 
 // AI-REMOVED 2026-06-20:

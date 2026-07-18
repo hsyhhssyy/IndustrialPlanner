@@ -79,7 +79,7 @@ function storageGroupsDomainUnion(
   for (const gid of groupIds) {
     const group = storageSlotGroups.find((g) => g.id === gid);
     if (!group || group.slots.length === 0) continue;
-    const filterType = group.slots[0].itemFilterType ?? "solid";
+    const filterType = group.slots[0]!.itemFilterType ?? "solid";
     for (const d of slotGroupUnion(filterType)) {
       union.add(d);
     }
