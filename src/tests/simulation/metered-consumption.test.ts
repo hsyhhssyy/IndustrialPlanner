@@ -224,7 +224,7 @@ describe("metered device consumption", () => {
     settleRecipes(topology, state);
     expect(state.persistent.devices[device.id]?.channelRecipes[channelId]).toBeUndefined();
 
-    consume(topology, state, portId, "item_liquid_water", 6);
+    consume(topology, state, portId, "item_liquid_xiranite", 6);
     settleRecipes(topology, state);
     const runningRecipe = state.persistent.devices[device.id]?.channelRecipes[channelId];
     expect(runningRecipe).toMatchObject({ recipeId, progressTicks: 0, state: "running" });
@@ -235,7 +235,7 @@ describe("metered device consumption", () => {
     expect(state.persistent.devices[device.id]?.channelRecipes[channelId]).toBe(runningRecipe);
     expect(runningRecipe?.progressTicks).toBe(0);
 
-    consume(topology, state, portId, "item_liquid_water", 6);
+    consume(topology, state, portId, "item_liquid_xiranite", 6);
     advanceDevices(topology, state, 20);
     expect(state.persistent.devices[device.id]?.channelRecipes[channelId]).toBe(runningRecipe);
     expect(runningRecipe?.progressTicks).toBe(20);

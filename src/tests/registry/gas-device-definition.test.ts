@@ -79,6 +79,7 @@ describe("gas item and device definitions", () => {
     expect(definition.footprint).toEqual({ width: 3, height: 3 });
     expect(definition.uiGroup).toBe("resourcePower");
     expect(definition.tags).toContain("不可摆放");
+    expect(definition.meteredConsumption).toBeUndefined();
     // AI-REMOVED 2026-07-16:
     // Reason: 气体收集泵已按当前注册表定义气体输出端口和缓冲槽，空壳约束属于测试漂移。
     // Trigger: 用户确认问题 2 为测试漂移并要求移除这项旧断言。
@@ -104,8 +105,8 @@ describe("gas item and device definitions", () => {
     ]);
     const gasOutput = requirePortGroup(gasMode, "gas_output");
     expectPortLayout(gasOutput, [
-      { id: "out_e_1", localCellX: 4, localCellY: 1, edge: "EAST" },
-      { id: "out_e_3", localCellX: 4, localCellY: 3, edge: "EAST" },
+      { id: "out_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
+      { id: "out_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
     ]);
     expectGasOnlyPorts(gasOutput);
     expect(gasMode.recipeChannels[0]).toMatchObject({
@@ -115,8 +116,8 @@ describe("gas item and device definitions", () => {
 
     const gasInput = requirePortGroup(solidMode, "gas_input");
     expectPortLayout(gasInput, [
-      { id: "in_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
-      { id: "in_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
+      { id: "in_e_1", localCellX: 4, localCellY: 1, edge: "EAST" },
+      { id: "in_e_3", localCellX: 4, localCellY: 3, edge: "EAST" },
     ]);
     expectGasOnlyPorts(gasInput);
     expectPortLayout(requirePortGroup(solidMode, "item_output"), [
@@ -140,23 +141,23 @@ describe("gas item and device definitions", () => {
     expect(gasMode.footprint).toEqual({ width: 5, height: 5 });
     expect(liquidMode.footprint).toEqual({ width: 5, height: 5 });
     expectPortLayout(liquidInput, [
-      { id: "in_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
-      { id: "in_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
+      { id: "in_e_1", localCellX: 4, localCellY: 1, edge: "EAST" },
+      { id: "in_e_3", localCellX: 4, localCellY: 3, edge: "EAST" },
     ]);
     expectLiquidOnlyPorts(liquidInput);
     expectPortLayout(gasOutput, [
-      { id: "out_e_1", localCellX: 4, localCellY: 1, edge: "EAST" },
-      { id: "out_e_3", localCellX: 4, localCellY: 3, edge: "EAST" },
+      { id: "out_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
+      { id: "out_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
     ]);
     expectGasOnlyPorts(gasOutput);
     expectPortLayout(gasInput, [
-      { id: "in_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
-      { id: "in_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
+      { id: "in_e_1", localCellX: 4, localCellY: 1, edge: "EAST" },
+      { id: "in_e_3", localCellX: 4, localCellY: 3, edge: "EAST" },
     ]);
     expectGasOnlyPorts(gasInput);
     expectPortLayout(liquidOutput, [
-      { id: "out_e_1", localCellX: 4, localCellY: 1, edge: "EAST" },
-      { id: "out_e_3", localCellX: 4, localCellY: 3, edge: "EAST" },
+      { id: "out_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
+      { id: "out_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
     ]);
     expectLiquidOnlyPorts(liquidOutput);
   });

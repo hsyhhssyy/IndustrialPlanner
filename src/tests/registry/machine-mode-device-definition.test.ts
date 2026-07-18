@@ -55,24 +55,40 @@ describe("machine-mode entity definitions", () => {
     });
 
     for (const entityId of ["transmuter_1_gastrans", "transmuter_1_liquidtrans"] as const) {
-      expect(requireEntity(entityId).meteredConsumption).toEqual({
+      const definition = requireEntity(entityId);
+      expect(definition.meteredConsumption).toEqual({
         inputPortGroupId: "consume_input",
-        itemIds: ["item_liquid_water"],
+        itemIds: ["item_liquid_xiranite"],
         windowSeconds: 60,
         startThreshold: 6,
         acceptanceLimit: 30,
         gasDiffusionRange: null,
       });
+      expect(definition.portGroups.find((group) => group.id === "consume_input")?.ports)
+        .toMatchObject([{
+          acceptRule: {
+            base: { kind: "item", itemId: "item_liquid_xiranite" },
+            exclude: [],
+          },
+        }]);
     }
     for (const entityId of ["transmuter_2_gastrans", "transmuter_2_solidtrans"] as const) {
-      expect(requireEntity(entityId).meteredConsumption).toEqual({
+      const definition = requireEntity(entityId);
+      expect(definition.meteredConsumption).toEqual({
         inputPortGroupId: "consume_input",
-        itemIds: ["item_gas_inert"],
+        itemIds: ["item_gas_xiranite"],
         windowSeconds: 60,
         startThreshold: 6,
         acceptanceLimit: 30,
         gasDiffusionRange: null,
       });
+      expect(definition.portGroups.find((group) => group.id === "consume_input")?.ports)
+        .toMatchObject([{
+          acceptRule: {
+            base: { kind: "item", itemId: "item_gas_xiranite" },
+            exclude: [],
+          },
+        }]);
     }
 
     for (const entityId of [
@@ -94,12 +110,35 @@ describe("machine-mode entity definitions", () => {
   it("keeps vaporizer metered input internal instead of exposing a configurable storage slot", () => {
     const definition = requireEntity("vaporizer_1");
 
+    expect(definition.meteredConsumption).toEqual({
+      inputPortGroupId: "gas_input",
+      itemIds: [
+        "item_gas_acid",
+        "item_gas_inert",
+        "item_gas_water",
+        "item_gas_xiranite",
+      ],
+      windowSeconds: 60,
+      startThreshold: 6,
+      acceptanceLimit: 30,
+      gasDiffusionRange: 13,
+    });
     expect(definition.storageSlotGroups).toEqual([]);
     expect(definition.portStorageBindings).toEqual([]);
     expect(definition.inspectors.some((inspector) => inspector.type === INSPECTOR_TYPE.slotConfig)).toBe(false);
     expect(definition.inspectors).toContainEqual({
       type: INSPECTOR_TYPE.meteredConsumption,
     });
+  });
+
+  it("includes the water-driven miner's unpacked per-round water consumption", () => {
+    expect(RECIPE_DEFINITIONS.find((recipe) => recipe.id === "r_miner_copper_ore_basic"))
+      .toMatchObject({
+        durationSeconds: 3,
+        inputs: [{ itemId: "item_liquid_water", amount: 1 }],
+        outputs: [{ itemId: "item_copper_ore", amount: 1 }],
+        machineId: "item_port_miner_4",
+      });
   });
 
   it("defines the gas purifier as the gas mode of the existing purifier", () => {

@@ -2901,7 +2901,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     powerDemand: 50,
     meteredConsumption: {
       inputPortGroupId: "consume_input",
-      itemIds: ["item_gas_inert"],
+      itemIds: ["item_gas_xiranite"],
       windowSeconds: 60,
       startThreshold: 6,
       acceptanceLimit: 30,
@@ -2918,7 +2918,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "gas_output",
         "fluid",
         "output",
-        [1, 3].map((z) => createPort(`out_e_${z}`, 4, z, "E", {
+        [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W", {
           acceptRule: { base: { kind: "gas" }, exclude: [] },
         })),
       ),
@@ -2928,7 +2928,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "input",
         [
           createPort("in_s_2", 2, 4, "S", {
-            acceptRule: { base: { kind: "item", itemId: "item_gas_inert" }, exclude: [] },
+            acceptRule: { base: { kind: "item", itemId: "item_gas_xiranite" }, exclude: [] },
           }),
         ],
       ),
@@ -2999,7 +2999,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     powerDemand: 50,
     meteredConsumption: {
       inputPortGroupId: "consume_input",
-      itemIds: ["item_gas_inert"],
+      itemIds: ["item_gas_xiranite"],
       windowSeconds: 60,
       startThreshold: 6,
       acceptanceLimit: 30,
@@ -3026,7 +3026,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "input",
         [
           createPort("in_s_2", 2, 4, "S", {
-            acceptRule: { base: { kind: "item", itemId: "item_gas_inert" }, exclude: [] },
+            acceptRule: { base: { kind: "item", itemId: "item_gas_xiranite" }, exclude: [] },
           }),
         ],
       ),
@@ -3164,7 +3164,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     powerDemand: 50,
     meteredConsumption: {
       inputPortGroupId: "consume_input",
-      itemIds: ["item_liquid_water"],
+      itemIds: ["item_liquid_xiranite"],
       windowSeconds: 60,
       startThreshold: 6,
       acceptanceLimit: 30,
@@ -3175,13 +3175,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "liquid_input",
         "fluid",
         "input",
-        [1, 3].map((z) => createPort(`in_w_${z}`, 0, z, "W")),
+        [1, 3].map((z) => createPort(`in_e_${z}`, 4, z, "E")),
       ),
       createPortGroup(
         "gas_output",
         "fluid",
         "output",
-        [1, 3].map((z) => createPort(`out_e_${z}`, 4, z, "E", {
+        [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W", {
           acceptRule: { base: { kind: "gas" }, exclude: [] },
         })),
       ),
@@ -3191,7 +3191,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "input",
         [
           createPort("in_s_2", 2, 4, "S", {
-            acceptRule: { base: { kind: "item", itemId: "item_liquid_water" }, exclude: [] },
+            acceptRule: { base: { kind: "item", itemId: "item_liquid_xiranite" }, exclude: [] },
           }),
         ],
       ),
@@ -3262,7 +3262,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     powerDemand: 50,
     meteredConsumption: {
       inputPortGroupId: "consume_input",
-      itemIds: ["item_liquid_water"],
+      itemIds: ["item_liquid_xiranite"],
       windowSeconds: 60,
       startThreshold: 6,
       acceptanceLimit: 30,
@@ -3289,7 +3289,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "input",
         [
           createPort("in_s_2", 2, 4, "S", {
-            acceptRule: { base: { kind: "item", itemId: "item_liquid_water" }, exclude: [] },
+            acceptRule: { base: { kind: "item", itemId: "item_liquid_xiranite" }, exclude: [] },
           }),
         ],
       ),

@@ -329,7 +329,7 @@ describe("EncyclopediaPanel", () => {
       ".encyclopedia-recipe-device-consumption",
     );
 
-    expect(consumption?.textContent).toBe("消耗清水");
+    expect(consumption?.textContent).toBe("消耗液化息壤");
     expect(consumption?.querySelectorAll(".encyclopedia-recipe-consumed-item")).toHaveLength(1);
   });
 

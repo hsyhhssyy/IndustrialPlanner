@@ -3360,7 +3360,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     id: "r_miner_copper_ore_basic",
     nameKey: "registry.recipe.r_miner_copper_ore_basic.name",
     durationSeconds: 3,
-    inputs: [],
+    inputs: [{ itemId: "item_liquid_water", amount: 1 }],
     outputs: [{ itemId: "item_copper_ore", amount: 1 }],
     machineId: "item_port_miner_4",
     recipeType: "immediate-consume",
