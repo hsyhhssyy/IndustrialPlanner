@@ -1527,15 +1527,15 @@
 }
 
 .changelog-accordion-content {
+  position: relative;
   padding: 0 14px 14px;
 }
 
 .changelog-collapse-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 1;
 }
 
 .changelog-collapse-button {
