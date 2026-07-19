@@ -119,6 +119,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [activePage, setActivePage] = useState<ModuleBalancingPage>({ kind: "canvas" });
   const [libraryOpen, setLibraryOpen] = useState(!isTouch);
+  const [libraryHighlight, setLibraryHighlight] = useState(false);
   const [libraryTab, setLibraryTab] = useState<ModuleLibraryTab>("recipes");
   const [newCanvasDialogOpen, setNewCanvasDialogOpen] = useState(false);
   const [newCanvasName, setNewCanvasName] = useState("");
@@ -508,7 +509,17 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           <StageDetailPanel
             expandedBalanceIds={expandedBalanceIds}
             index={index}
-            onAddModule={() => setLibraryOpen(true)}
+            isTouch={isTouch}
+            libraryOpen={libraryOpen}
+            onAddModule={() => {
+              if (libraryOpen) {
+                // 已展开 → 触发高亮闪烁引导用户点击模块库
+                setLibraryHighlight(true);
+                setTimeout(() => setLibraryHighlight(false), 2500);
+              } else {
+                setLibraryOpen(true);
+              }
+            }}
             onAddStage={addStage}
             onClearStage={(stage) => runInAction(() => { stage.entries = []; })}
             onEditEntry={openEditEntryDraft}
@@ -550,6 +561,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       <ModuleLibrary
         activeCanvas={activeCanvas}
         activeActivityIds={activeActivityIds}
+        highlight={libraryHighlight}
         index={index}
         isTouch={isTouch}
         libraryTab={libraryTab}
@@ -696,6 +708,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
 function ModuleLibrary({
   activeCanvas,
   activeActivityIds,
+  highlight,
   index,
   isTouch,
   libraryTab,
@@ -710,6 +723,7 @@ function ModuleLibrary({
 }: {
   activeCanvas: ModuleBalancingCanvasReadWrite;
   activeActivityIds: readonly string[];
+  highlight: boolean;
   index: ModuleBalancingIndex;
   isTouch: boolean;
   libraryTab: ModuleLibraryTab;
@@ -732,7 +746,7 @@ function ModuleLibrary({
     .filter((module) => matchesModuleQuery(module, normalizedQuery, index, t));
 
   return (
-    <div className={cm(styles, "module-balancing-library")}>
+    <div className={cm(styles, `module-balancing-library${highlight ? " is-highlight" : ""}`)}>
       <div className={cm(styles, "module-balancing-search")}>
         <LucideSearch aria-hidden="true" />
         <input
@@ -1105,6 +1119,8 @@ const CanvasSettingsPanel = observer(function CanvasSettingsPanel({
 const StageDetailPanel = observer(function StageDetailPanel({
   expandedBalanceIds,
   index,
+  isTouch,
+  libraryOpen,
   onAddModule,
   onAddStage,
   onClearStage,
@@ -1119,6 +1135,8 @@ const StageDetailPanel = observer(function StageDetailPanel({
 }: {
   expandedBalanceIds: Set<string>;
   index: ModuleBalancingIndex;
+  isTouch: boolean;
+  libraryOpen: boolean;
   onAddModule: () => void;
   onAddStage: () => void;
   onClearStage: (stage: ModuleBalancingStageReadWrite) => void;
@@ -1154,7 +1172,7 @@ const StageDetailPanel = observer(function StageDetailPanel({
       />
       <StageEntryGrid
         index={index}
-        isTouch
+        isTouch={isTouch}
         onAddModule={onAddModule}
         onEditEntry={(moduleId, entryIndex, quantity) => onEditEntry(selectedStage.id, moduleId, entryIndex, quantity)}
         onMoveEntry={(fromIndex, toIndex) => moveStageEntry(selectedStage, fromIndex, toIndex)}

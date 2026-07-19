@@ -63,6 +63,14 @@ description: 这是本项目的基础规范，任何开发行为都必须遵守�
 
 ---
 
+## 解包数据
+
+本项目是游戏的仿真。游戏中的真实解包数据放置在 `/home/coder/IndustrialPlanner/.temp/json-export.json`，需要核对数据准确性时可以读取该文件参考。
+
+分析解包数据时需遵循 `.claude/rules/解包数据分析.md` 中的规范。
+
+---
+
 ## 工作方式
 
 ### 认知要求
