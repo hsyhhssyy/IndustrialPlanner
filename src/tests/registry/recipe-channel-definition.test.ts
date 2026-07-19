@@ -16,21 +16,21 @@ function getDefaultChannel(entityId: string) {
 
 describe("recipe channel definitions", () => {
   it("declares grinder input and output buffers explicitly", () => {
-    expect(getDefaultChannel("item_port_grinder_1")).toMatchObject({
+    expect(getDefaultChannel("grinder_1")).toMatchObject({
       ingredientStorageGroupIds: ["item_input_buffer"],
       productStorageGroupIds: ["item_output_buffer"],
     });
   });
 
   it("declares filling machine input and output buffers explicitly", () => {
-    expect(getDefaultChannel("item_port_filling_pd_mc_1")).toMatchObject({
+    expect(getDefaultChannel("filling_pd_mc_1")).toMatchObject({
       ingredientStorageGroupIds: ["item_input_buffer"],
       productStorageGroupIds: ["item_output_buffer"],
     });
   });
 
   it("declares liquid filling machine input and output buffers explicitly", () => {
-    expect(getDefaultChannel("item_port_liquid_filling_pd_mc_1")).toMatchObject({
+    expect(getDefaultChannel("liquid_filling_pd_mc_1")).toMatchObject({
       ingredientStorageGroupIds: ["item_input_buffer", "fluid_input_buffer"],
       productStorageGroupIds: ["item_output_buffer"],
     });
@@ -41,7 +41,7 @@ describe("recipe channel definitions", () => {
     // recipeChannels 为空，流体通过 warehouseItemLink 从仓库获取。
     const registry = createRegistryContract();
     expect(
-      registry.entityDefinitions.find((candidate) => candidate.id === "item_port_water_pump_1")
+      registry.entityDefinitions.find((candidate) => candidate.id === "water_pump_1")
         ?.recipeChannels,
     ).toEqual([]);
   });

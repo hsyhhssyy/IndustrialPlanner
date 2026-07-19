@@ -564,15 +564,24 @@ function normalizeBlueprintDocument(
     return null;
   }
 
+  const migration = migrateBlueprintEntityDeviceIds(
+    value.entities as BlueprintDocument["entities"],
+    value.schemaVersion,
+  );
+
+  if (migration === null) {
+    return null;
+  }
+
   return {
-    schemaVersion: value.schemaVersion,
+    schemaVersion: migration.schemaVersion,
     blueprintId: value.blueprintId,
     version: value.version,
     name,
     description,
     baseId: value.baseId,
     initialGridPoint: value.initialGridPoint,
-    entities: migrateBlueprintEntityDeviceIds(value.entities as BlueprintDocument["entities"]),
+    entities: migration.entities,
     entityOrder: [...value.entityOrder],
     slotLinks: [...value.slotLinks] as BlueprintDocument["slotLinks"],
     createdAt,

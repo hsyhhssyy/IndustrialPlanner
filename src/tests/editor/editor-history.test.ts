@@ -5,7 +5,10 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
-import { readEditorHistoryState } from "@/editor/history/history-storage";
+import {
+  readEditorHistoryState,
+  writeEditorHistoryState,
+} from "@/editor/history/history-storage";
 import { createRegistryContract } from "@/registry";
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 
@@ -162,6 +165,72 @@ describe("editor document history", () => {
     expect(persistedState?.cursorSequence).toBe(1);
     expect(persistedState?.records).toHaveLength(1);
     expect(persistedState?.records[0]?.action.label).toBe("修改设备配置");
+  });
+
+  it("migrates every persisted history device reference before replay", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    const documentKey = "history-device-id-migration";
+    const legacyPool = {
+      id: "pool",
+      definitionId: "item_port_mix_pool_large_1",
+      position: { x: 1, y: 2 },
+      rotation: 90 as const,
+      config: {},
+      tags: [],
+    };
+    const legacyGrinder = {
+      ...legacyPool,
+      id: "grinder",
+      definitionId: "item_port_grinder_1",
+      rotation: 270 as const,
+    };
+
+    await writeEditorHistoryState({
+      schemaVersion: 1,
+      documentKey,
+      cursorSequence: 1,
+      records: [{
+        schemaVersion: 1,
+        id: "record",
+        documentKey,
+        sequence: 1,
+        createdAt: "2026-07-19T00:00:00.000Z",
+        action: {
+          type: "entity.definition.replace",
+          label: "迁移测试",
+          definitionIds: [legacyPool.definitionId, legacyGrinder.definitionId],
+        },
+        delta: {
+          entities: {
+            added: { pool: legacyPool },
+            removed: { grinder: legacyGrinder },
+            updated: {
+              pool: { before: legacyPool, after: legacyGrinder },
+            },
+          },
+          entityOrder: null,
+          slotLinks: null,
+          documentSettings: {},
+        },
+      }],
+    });
+
+    const restored = await readEditorHistoryState(documentKey);
+    const record = restored?.records[0];
+
+    expect(record?.action.definitionIds).toEqual(["mix_pool_2", "grinder_1"]);
+    expect(record?.delta.entities.added.pool).toMatchObject({
+      definitionId: "mix_pool_2",
+      rotation: 90,
+    });
+    expect(record?.delta.entities.removed.grinder).toMatchObject({
+      definitionId: "grinder_1",
+      rotation: 270,
+    });
+    expect(record?.delta.entities.updated.pool).toMatchObject({
+      before: { definitionId: "mix_pool_2", rotation: 90 },
+      after: { definitionId: "grinder_1", rotation: 270 },
+    });
   });
 });
 

@@ -47,7 +47,7 @@ describe("AdmissionRuleInspector", () => {
 
   it("selects one item and writes acceptRule plus admissionRule", async () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_log_admission");
+    const definition = requireDefinition(workspace, "log_admission");
     const declaration = requireAdmissionDeclaration(definition);
     const entity = createEntity("admission", definition.id);
     const patchEntityConfig = vi.fn();
@@ -76,7 +76,7 @@ describe("AdmissionRuleInspector", () => {
 
   it("edits total and per-minute limits, resets both counts, and clears both config paths", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_log_admission");
+    const definition = requireDefinition(workspace, "log_admission");
     const declaration = requireAdmissionDeclaration(definition);
     const entity = createEntity("admission", definition.id, {
       "portGroups[0].ports[0].acceptRule": {

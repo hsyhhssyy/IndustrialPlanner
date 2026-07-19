@@ -34,7 +34,7 @@ describe("协议存储箱多槽入库路由", () => {
   it("相邻分流器时应从 1、2 槽接收两种物品", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createTwoItemSinkBlueprint({
-        finalHopDefinitionId: "item_log_splitter",
+        finalHopDefinitionId: "log_splitter",
         finalHopRotation: 180
       }),
       registry: createRegistryContract(),
@@ -81,13 +81,13 @@ describe("存储箱满槽观察测试", () => {
 });
 
 function createTwoItemSinkBlueprint(options: {
-  readonly finalHopDefinitionId: "belt_straight_1x1" | "item_log_splitter";
+  readonly finalHopDefinitionId: "belt_straight_1x1" | "log_splitter";
   readonly finalHopRotation: WorldEntity["rotation"];
 }): BlueprintDocument {
   return createBlueprint(`storage-multi-slot-${options.finalHopDefinitionId}`, [
     createEntity(
       "originium-source",
-      "item_port_unloader_1",
+      "unloader_1",
       41,
       25,
       180,
@@ -95,13 +95,13 @@ function createTwoItemSinkBlueprint(options: {
     ),
     createEntity(
       "iron-source",
-      "item_port_unloader_1",
+      "unloader_1",
       45,
       25,
       180,
       createUnloaderWarehouseLinkConfig(),
     ),
-    createEntity("converger", "item_log_converger", 44, 23, 180),
+    createEntity("converger", "log_converger", 44, 23, 180),
     createEntity("right-entry", "belt_straight_1x1", 46, 24, 270),
     createEntity("right-turn", "belt_turn_ccw_1x1", 46, 23, 180),
     createEntity("right-feed", "belt_straight_1x1", 45, 23, 180),
@@ -109,7 +109,7 @@ function createTwoItemSinkBlueprint(options: {
     createEntity("left-turn", "belt_turn_cw_1x1", 42, 23, 90),
     createEntity("left-feed", "belt_straight_1x1", 43, 23, 0),
     createEntity("final-hop", options.finalHopDefinitionId, 44, 22, options.finalHopRotation),
-    createEntity(SINK_STORAGE_ID, "item_port_storager_1", 43, 19, 0),
+    createEntity(SINK_STORAGE_ID, "storager_1", 43, 19, 0),
   ], [
     createWarehouseSlotLink("originium-source", "item_originium_ore"),
     createWarehouseSlotLink("iron-source", "item_iron_ore"),
@@ -120,7 +120,7 @@ function createStorageFillObserveBlueprint(): BlueprintDocument {
   return createBlueprint("storage-fill-observe", [
     createEntity(
       "originium-source",
-      "item_port_unloader_1",
+      "unloader_1",
       32,
       26,
       180,
@@ -128,24 +128,24 @@ function createStorageFillObserveBlueprint(): BlueprintDocument {
     ),
     createEntity(
       "iron-source",
-      "item_port_unloader_1",
+      "unloader_1",
       35,
       26,
       180,
       createUnloaderWarehouseLinkConfig(),
     ),
-    createEntity(OBSERVE_STORAGE_ID, "item_port_storager_1", 33, 18, 0, createObserveStorageInitialConfig()),
-    createEntity("converger", "item_log_converger", 34, 24, 180),
+    createEntity(OBSERVE_STORAGE_ID, "storager_1", 33, 18, 0, createObserveStorageInitialConfig()),
+    createEntity("converger", "log_converger", 34, 24, 180),
     createEntity("left-entry", "belt_straight_1x1", 33, 25, 270),
     createEntity("left-turn", "belt_turn_cw_1x1", 33, 24, 90),
     createEntity("right-entry", "belt_straight_1x1", 36, 25, 270),
     createEntity("right-turn", "belt_turn_ccw_1x1", 36, 24, 180),
     createEntity("right-feed", "belt_straight_1x1", 35, 24, 180),
-    createEntity("splitter", "item_log_splitter", 34, 21, 180),
+    createEntity("splitter", "log_splitter", 34, 21, 180),
     createEntity("splitter-input-1", "belt_straight_1x1", 34, 23, 270),
     createEntity("splitter-input-2", "belt_straight_1x1", 34, 22, 270),
     createEntity("splitter-output", "belt_straight_1x1", 35, 21, 0),
-    createEntity(OTHER_STORAGE_ID, "item_port_storager_1", 36, 19, 90),
+    createEntity(OTHER_STORAGE_ID, "storager_1", 36, 19, 90),
   ], [
     createWarehouseSlotLink("originium-source", "item_originium_ore"),
     createWarehouseSlotLink("iron-source", "item_iron_ore"),

@@ -8,7 +8,7 @@ import { createDeviceIconAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "@/app/shell/canvas/canvas.module.scss";
 
 const DEVICE_ICON_SPECIAL_MAP: Record<string, string> = {
-  item_port_liquid_filling_pd_mc_1: "item_port_filling_pd_mc_1",
+  liquid_filling_pd_mc_1: "item_port_filling_pd_mc_1",
 };
 
 export const OverlapEntityMenu = observer(function OverlapEntityMenu({
@@ -74,7 +74,9 @@ export const OverlapEntityMenu = observer(function OverlapEntityMenu({
                 ? candidate.definitionId
                 : t(definition.nameKey);
               const iconSrc = createDeviceIconAssetUrl(
-                DEVICE_ICON_SPECIAL_MAP[candidate.definitionId] ?? candidate.definitionId,
+                DEVICE_ICON_SPECIAL_MAP[candidate.definitionId]
+                  ?? definition?.spriteId
+                  ?? candidate.definitionId,
               );
 
               return (

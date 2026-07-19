@@ -119,7 +119,7 @@ describe("invalid placement simulation compile", () => {
     registerBuiltinBase(workspace, [
       {
         id: "storage",
-        definitionId: "item_port_storager_1",
+        definitionId: "storager_1",
         position: { x: 0, y: 0 },
         rotation: 0,
       },
@@ -127,7 +127,7 @@ describe("invalid placement simulation compile", () => {
     const editorHost = createEditorHost(workspace);
     const document = {
       ...createDocumentWithEntities([
-        createEntity("document-storage", "item_port_storager_1", 10, 0),
+        createEntity("document-storage", "storager_1", 10, 0),
       ], TEST_BUILTIN_BASE_ID),
       slotLinks: [
         {
@@ -173,7 +173,7 @@ describe("invalid placement simulation compile", () => {
     const editorHost = createEditorHost(workspace);
     const document = {
       ...createDocumentWithEntities([
-        createEntity("unloader", "item_port_unloader_1", 2, 0),
+        createEntity("unloader", "unloader_1", 2, 0),
       ], "valley4_infra_outpost"),
       slotLinks: [
         createWarehouseSlotLink("unloader", "item_plant_moss_3"),

@@ -23,6 +23,7 @@ import {
   EncyclopediaBrowser,
   type EncyclopediaIndex,
   buildEncyclopediaIndex,
+  resolveEntityDisplayName,
   resolveEntityIcon,
   resolveItemIcon,
   resolveItemName,
@@ -254,9 +255,9 @@ function RecipeCard({
             className={cm(styles, "encyclopedia-recipe-machine")}
             onClick={() => onEntityClick(recipe.machineId)}
           >
-            <img alt="" className={cm(styles, "encyclopedia-recipe-machine-icon")} src={resolveEntityIcon(recipe.machineId)} />
+            <img alt="" className={cm(styles, "encyclopedia-recipe-machine-icon")} src={resolveEntityIcon(recipe.machineId, index)} />
             <span className={cm(styles, "encyclopedia-recipe-machine-name")}>
-              {t(machineDefinition?.nameKey ?? recipe.machineId)}
+              {resolveEntityDisplayName(recipe.machineId, index, t)}
             </span>
           </button>
           {requiredGasItemId && (
@@ -335,11 +336,11 @@ function DetailView({
 
   const name = isItem
     ? (itemDef ? t(itemDef.nameKey) : entry.id)
-    : (entityDef ? t(entityDef.nameKey) : entry.id);
+    : resolveEntityDisplayName(entry.id, index, t);
 
   const iconSrc = isItem
     ? resolveItemIcon(entry.id, index)
-    : resolveEntityIcon(entry.id);
+    : resolveEntityIcon(entry.id, index);
 
   const tags = isItem ? itemDef?.tags ?? [] : entityDef?.tags ?? [];
   const activityIds = showActivityIcons ? resolveActivityIdsFromTags(tags) : [];
@@ -513,6 +514,7 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
         items,
         registry.entityDefinitions,
         recipes,
+        registry.entityVariantDefinitions,
       );
     },
     [effectiveActivityIds, registry, showAllActivityContent],

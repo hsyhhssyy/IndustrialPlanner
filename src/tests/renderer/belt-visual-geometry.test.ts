@@ -25,7 +25,7 @@ describe("BeltVisualGeometry", () => {
         },
         {
           id: "target-storager",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 1, y: -1 },
           rotation: 90,
           config: {},
@@ -83,7 +83,7 @@ describe("BeltVisualGeometry", () => {
         },
         {
           id: "target-storager",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 1, y: -1 },
           rotation: 90,
           config: {},
@@ -102,7 +102,7 @@ describe("BeltVisualGeometry", () => {
         createBeltEntity("source-belt", { x: 0, y: 0 }, 0),
         {
           id: "target-splitter",
-          definitionId: "item_log_splitter",
+          definitionId: "log_splitter",
           position: { x: 1, y: 0 },
           rotation: 0,
           config: {},
@@ -114,7 +114,7 @@ describe("BeltVisualGeometry", () => {
       entities: [
         {
           id: "source-connector",
-          definitionId: "item_log_connector",
+          definitionId: "log_connector",
           position: { x: -1, y: 0 },
           rotation: 0,
           config: {},
@@ -133,7 +133,7 @@ describe("BeltVisualGeometry", () => {
       entities: [
         {
           id: "source-storager",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: -3, y: 0 },
           rotation: 90,
           config: {},

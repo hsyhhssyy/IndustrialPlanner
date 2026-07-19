@@ -692,6 +692,8 @@ function acceptRuleFromPortKind(kind: PortGroupDefinition["kind"]): PortDefiniti
 //   - Link 类型
 // =========================================================================
 
+// AI-CORRECTION 2026-07-19: 下方历史段落注释中的 item_/item_port_ 设备名保留为游戏数据与素材 ID；
+// 当前 EntityDefinition.id 已统一移除这些前缀，nameKey 与 spriteId 不随设备定义 ID 改名。
 export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 
   // =========================================================================
@@ -715,7 +717,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 本设备 slot.lock=null（未锁定），用户可通过 storageManagement 面板锁定。
    */
   createEntityDefinition({
-    id: "item_port_storager_1",
+    id: "storager_1",
     nameKey: "registry.entity.item_port_storager_1.name",
     spriteId: "item_port_storager_1",
     footprint: { width: 3, height: 3 },
@@ -803,7 +805,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 空壳设备，仅用于放置面板展示。不参与仿真求解。
    */
   createEntityDefinition({
-    id: "item_port_log_hongs_bus",
+    id: "log_hongs_bus",
     nameKey: "registry.entity.item_port_log_hongs_bus.name",
     spriteId: "item_port_log_hongs_bus",
     footprint: { width: 4, height: 8 },
@@ -823,7 +825,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 空壳设备，仅用于放置面板展示。
    */
   createEntityDefinition({
-    id: "item_port_log_hongs_bus_source",
+    id: "log_hongs_bus_source",
     nameKey: "registry.entity.item_port_log_hongs_bus_source.name",
     spriteId: "item_port_log_hongs_bus_source",
     footprint: { width: 4, height: 4 },
@@ -849,7 +851,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * ignoreStock 可设为 true 实现无限取货。
    */
   createEntityDefinition({
-    id: "item_port_unloader_1",
+    id: "unloader_1",
     nameKey: "registry.entity.item_port_unloader_1.name",
     spriteId: "item_port_unloader_1",
     footprint: { width: 3, height: 1 },
@@ -907,7 +909,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 配方：immediate-consume（进度 0% 时立即扣除原料）
    */
   createEntityDefinition({
-    id: "item_port_mix_pool_1",
+    id: "mix_pool_1",
     nameKey: "registry.entity.item_port_mix_pool_1.name",
     spriteId: "item_port_mix_pool_1",
     footprint: { width: 5, height: 5 },
@@ -1013,7 +1015,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 配方：immediate-consume + recipeShell（选择外部配方 "r_crusher_*"）
    */
   createEntityDefinition({
-    id: "item_port_grinder_1",
+    id: "grinder_1",
     nameKey: "registry.entity.item_port_grinder_1.name",
     spriteId: "item_port_grinder_1",
     footprint: { width: 3, height: 3 },
@@ -1095,13 +1097,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * AI-CORRECTION 2026-07-16: fluid_input 及其输入缓冲现兼容 liquid/gas。
    */
   createEntityDefinition({
-    id: "item_port_liquid_filling_pd_mc_1",
+    id: "liquid_filling_pd_mc_1",
     nameKey: "registry.entity.item_port_liquid_filling_pd_mc_1.name",
     spriteId: "item_port_liquid_filling_pd_mc_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
     displayOrder: 603,
-    tags: [PRODUCER_TAG, "alter:item_port_filling_pd_mc_1", "alter-variant:liquid"],
+    tags: [PRODUCER_TAG, "alter:filling_pd_mc_1", "alter-variant:liquid"],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [
@@ -1169,7 +1171,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_port_filling_pd_mc_1",
+    id: "filling_pd_mc_1",
     nameKey: "registry.entity.item_port_filling_pd_mc_1.name",
     spriteId: "item_port_filling_pd_mc_1",
     footprint: { width: 6, height: 4 },
@@ -1177,7 +1179,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     displayOrder: 602,
     tags: [
       PRODUCER_TAG,
-      "alter:item_port_filling_pd_mc_1",
+      "alter:filling_pd_mc_1",
       "alter-variant:normal",
       MAIN_CRAFT_GROUP_TAG,
     ],
@@ -1410,7 +1412,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *   调度由 port 的 priorityGroup 和 roundRobinSeed 控制。
    */
   createEntityDefinition({
-    id: "item_log_splitter",
+    id: "log_splitter",
     nameKey: "registry.entity.item_log_splitter.name",
     spriteId: "item_log_splitter",
     footprint: { width: 1, height: 1 },
@@ -1473,7 +1475,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *   3 个 input port → ingredient 组节点，1 个 output port → product 组节点
    */
   createEntityDefinition({
-    id: "item_log_converger",
+    id: "log_converger",
     nameKey: "registry.entity.item_log_converger.name",
     spriteId: "item_log_converger",
     footprint: { width: 1, height: 1 },
@@ -1540,7 +1542,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *   禁止 N↔E、N↔W 等跨方向输送。
    */
   createEntityDefinition({
-    id: "item_log_connector",
+    id: "log_connector",
     nameKey: "registry.entity.item_log_connector.name",
     spriteId: "item_log_connector",
     footprint: { width: 1, height: 1 },
@@ -1753,7 +1755,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 与 item_log_splitter 结构相同，kind 为 fluid。
    */
   createEntityDefinition({
-    id: "item_pipe_splitter",
+    id: "pipe_splitter",
     nameKey: "registry.entity.item_pipe_splitter.name",
     spriteId: "item_pipe_splitter",
     footprint: { width: 1, height: 1 },
@@ -1809,7 +1811,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * item_pipe_converger — 管道汇流器（1×1）
    */
   createEntityDefinition({
-    id: "item_pipe_converger",
+    id: "pipe_converger",
     nameKey: "registry.entity.item_pipe_converger.name",
     spriteId: "item_pipe_converger",
     footprint: { width: 1, height: 1 },
@@ -1873,7 +1875,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *   禁止 N↔E、N↔W 等跨方向输送。
    */
   createEntityDefinition({
-    id: "item_pipe_connector",
+    id: "pipe_connector",
     nameKey: "registry.entity.item_pipe_connector.name",
     spriteId: "item_pipe_connector",
     footprint: { width: 1, height: 1 },
@@ -1958,7 +1960,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * AI-CORRECTION 2026-07-18: 槽位 itemFilterType 已从 "liquid" 改为 "fluid"，同时接受气体进入销毁。
    */
   createEntityDefinition({
-    id: "item_port_udpipe_loader_1",
+    id: "udpipe_loader_1",
     nameKey: "registry.entity.item_port_udpipe_loader_1.name",
     spriteId: "item_port_udpipe_loader_1",
     footprint: { width: 3, height: 3 },
@@ -2043,7 +2045,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * ignoreStock 可设为 true 实现无限取货。
    */
   createEntityDefinition({
-    id: "item_port_udpipe_unloader_1",
+    id: "udpipe_unloader_1",
     nameKey: "registry.entity.item_port_udpipe_unloader_1.name",
     spriteId: "item_port_udpipe_unloader_1",
     footprint: { width: 3, height: 3 },
@@ -2116,7 +2118,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   // 目前仍保留为空壳的仅有 v2 本身未提供静态端口的设备。
 
   createEntityDefinition({
-    id: "item_port_loader_1",
+    id: "loader_1",
     nameKey: "registry.entity.item_port_loader_1.name",
     spriteId: "item_port_loader_1",
     footprint: { width: 3, height: 1 },
@@ -2145,7 +2147,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    id: "item_port_furnance_1",
+    id: "furnance_1",
     nameKey: "registry.entity.item_port_furnance_1.name",
     spriteId: "item_port_furnance_1",
     footprint: { width: 3, height: 3 },
@@ -2153,7 +2155,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     displayOrder: 501,
     tags: [
       PRODUCER_TAG,
-      "alter:item_port_furnance_1",
+      "alter:furnance_1",
       "alter-variant:normal",
       MAIN_CRAFT_GROUP_TAG,
     ],
@@ -2179,13 +2181,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    id: "item_port_liquid_furnance_1",
+    id: "liquid_furnance_1",
     nameKey: "registry.entity.item_port_liquid_furnance_1.name",
     spriteId: "item_port_liquid_furnance_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     displayOrder: 502,
-    tags: [PRODUCER_TAG, "武陵", "alter:item_port_furnance_1", "alter-variant:liquid"],
+    tags: [PRODUCER_TAG, "武陵", "alter:furnance_1", "alter-variant:liquid"],
     requiresPower: true,
     powerDemand: 5,
     portGroups: [
@@ -2238,7 +2240,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_port_cmpt_mc_1",
+    id: "cmpt_mc_1",
     nameKey: "registry.entity.item_port_cmpt_mc_1.name",
     spriteId: "item_port_cmpt_mc_1",
     footprint: { width: 3, height: 3 },
@@ -2267,7 +2269,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    id: "item_port_shaper_1",
+    id: "shaper_1",
     nameKey: "registry.entity.item_port_shaper_1.name",
     spriteId: "item_port_shaper_1",
     footprint: { width: 3, height: 3 },
@@ -2275,7 +2277,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     displayOrder: 505,
     tags: [
       PRODUCER_TAG,
-      "alter:item_port_shaper_1",
+      "alter:shaper_1",
       "alter-variant:normal",
       MAIN_CRAFT_GROUP_TAG,
     ],
@@ -2309,7 +2311,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     displayOrder: 506,
     tags: [
       PRODUCER_TAG,
-      "alter:item_port_shaper_1",
+      "alter:shaper_1",
       "alter-variant:gas",
     ],
     requiresPower: true,
@@ -2371,7 +2373,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_port_seedcol_1",
+    id: "seedcol_1",
     nameKey: "registry.entity.item_port_seedcol_1.name",
     spriteId: "item_port_seedcol_1",
     footprint: { width: 5, height: 5 },
@@ -2400,7 +2402,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    id: "item_port_planter_1",
+    id: "planter_1",
     nameKey: "registry.entity.item_port_planter_1.name",
     spriteId: "item_port_planter_1",
     footprint: { width: 5, height: 5 },
@@ -2408,7 +2410,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     displayOrder: 508,
     tags: [
       PRODUCER_TAG,
-      "alter:item_port_planter_1",
+      "alter:planter_1",
       "alter-variant:normal",
       MAIN_CRAFT_GROUP_TAG,
     ],
@@ -2434,13 +2436,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    id: "item_port_hydro_planter_1",
+    id: "hydro_planter_1",
     nameKey: "registry.entity.item_port_hydro_planter_1.name",
     spriteId: "item_port_hydro_planter_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
     displayOrder: 509,
-    tags: [PRODUCER_TAG, "武陵", "alter:item_port_planter_1", "alter-variant:liquid"],
+    tags: [PRODUCER_TAG, "武陵", "alter:planter_1", "alter-variant:liquid"],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [
@@ -2483,7 +2485,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_port_winder_1",
+    id: "winder_1",
     nameKey: "registry.entity.item_port_winder_1.name",
     spriteId: "item_port_winder_1",
     footprint: { width: 6, height: 4 },
@@ -2512,7 +2514,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    id: "item_port_tools_asm_mc_1",
+    id: "tools_asm_mc_1",
     nameKey: "registry.entity.item_port_tools_asm_mc_1.name",
     spriteId: "item_port_tools_asm_mc_1",
     footprint: { width: 6, height: 4 },
@@ -2541,7 +2543,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    id: "item_port_thickener_1",
+    id: "thickener_1",
     nameKey: "registry.entity.item_port_thickener_1.name",
     spriteId: "item_port_thickener_1",
     footprint: { width: 6, height: 4 },
@@ -2570,7 +2572,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    id: "item_port_power_sta_1",
+    id: "power_sta_1",
     nameKey: "registry.entity.item_port_power_sta_1.name",
     spriteId: "item_port_power_sta_1",
     footprint: { width: 2, height: 2 },
@@ -2592,7 +2594,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    id: "item_port_mix_pool_2",
+    id: "mix_pool_2",
     nameKey: "registry.entity.item_port_mix_pool_2.name",
     spriteId: "item_port_mix_pool_2",
     footprint: { width: 6, height: 5 },
@@ -2679,7 +2681,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_port_liquid_purifier_1",
+    id: "liquid_purifier_1",
     nameKey: "registry.entity.item_port_liquid_purifier_1.name",
     spriteId: "item_port_liquid_purifier_1",
     footprint: { width: 5, height: 5 },
@@ -2688,7 +2690,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [
       PRODUCER_TAG,
       "武陵",
-      "alter:item_port_liquid_purifier_1",
+      "alter:liquid_purifier_1",
       "alter-variant:liquid",
       MAIN_CRAFT_GROUP_TAG,
     ],
@@ -2768,7 +2770,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [
       PRODUCER_TAG,
       "武陵",
-      "alter:item_port_liquid_purifier_1",
+      "alter:liquid_purifier_1",
       "alter-variant:gas",
     ],
     requiresPower: true,
@@ -2832,7 +2834,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_port_xiranite_oven_1",
+    id: "xiranite_oven_1",
     nameKey: "registry.entity.item_port_xiranite_oven_1.name",
     spriteId: "item_port_xiranite_oven_1",
     footprint: { width: 5, height: 5 },
@@ -2881,7 +2883,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_port_dismantler_1",
+    id: "dismantler_1",
     nameKey: "registry.entity.item_port_dismantler_1.name",
     spriteId: "item_port_dismantler_1",
     footprint: { width: 6, height: 4 },
@@ -3161,7 +3163,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_port_gas_reactor_1",
+    id: "gas_reactor_1",
     nameKey: "registry.entity.item_port_gas_reactor_1.name",
     spriteId: "item_port_gas_reactor_1",
     footprint: { width: 5, height: 5 },
@@ -3209,7 +3211,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "gas_input_buffer",
         "fluid",
-        createSlots("input_gas_slot", [50], "gas"),
+        createSlots("input_gas_slot", [50, 50], "gas"),
       ),
       createStorageSlotGroup(
         "gas_output_buffer",
@@ -3447,7 +3449,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 编译节点：20 个（14 input-view + 6 output-view）
    */
   createEntityDefinition({
-    id: "item_port_sp_hub_1",
+    id: "sp_hub_1",
     nameKey: "registry.entity.item_port_sp_hub_1.name",
     spriteId: "item_port_sp_hub_1",
     footprint: { width: 9, height: 9 },
@@ -3661,7 +3663,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_port_water_pump_1",
+    id: "water_pump_1",
     nameKey: "registry.entity.item_port_water_pump_1.name",
     spriteId: "item_port_water_pump_1",
     footprint: { width: 3, height: 3 },
@@ -3729,7 +3731,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     }),
   }),
   createEntityDefinition({
-    id: "item_port_udpipe_loader_2",
+    id: "udpipe_loader_2",
     nameKey: "registry.entity.item_port_udpipe_loader_2.name",
     spriteId: "item_port_udpipe_loader_2",
     footprint: { width: 3, height: 5 },
@@ -3788,7 +3790,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_port_udpipe_unloader_2",
+    id: "udpipe_unloader_2",
     nameKey: "registry.entity.item_port_udpipe_unloader_2.name",
     spriteId: "item_port_udpipe_unloader_2",
     footprint: { width: 3, height: 5 },
@@ -3849,7 +3851,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_liquid_cleaner_1",
+    id: "liquid_cleaner_1",
     nameKey: "registry.entity.item_liquid_cleaner_1.name",
     spriteId: "item_liquid_cleaner_1",
     footprint: { width: 3, height: 3 },
@@ -4026,7 +4028,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_port_liquid_storager_1",
+    id: "liquid_storager_1",
     nameKey: "registry.entity.item_port_liquid_storager_1.name",
     spriteId: "item_port_liquid_storager_1",
     footprint: { width: 3, height: 3 },
@@ -4128,7 +4130,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEmptyEntityDefinition({
-    id: "item_port_power_diffuser_1",
+    id: "power_diffuser_1",
     nameKey: "registry.entity.item_port_power_diffuser_1.name",
     spriteId: "item_port_power_diffuser_1",
     footprint: { width: 2, height: 2 },
@@ -4245,7 +4247,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_log_admission",
+    id: "log_admission",
     nameKey: "registry.entity.item_log_admission.name",
     spriteId: "item_log_admission",
     footprint: { width: 1, height: 1 },
@@ -4300,7 +4302,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "item_pipe_admission",
+    id: "pipe_admission",
     nameKey: "registry.entity.item_pipe_admission.name",
     spriteId: "item_pipe_admission",
     footprint: { width: 1, height: 1 },
@@ -4367,7 +4369,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 仅作为倾倒配方的目标设备，产出的物品直接消失。
    */
   createEmptyEntityDefinition({
-    id: "item_port_dumper_1",
+    id: "dumper_1",
     nameKey: "registry.entity.item_port_dumper_1.name",
     spriteId: "item_port_dumper_1",
     footprint: { width: 3, height: 3 },
@@ -4421,7 +4423,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 不可摆放设备，无精灵定义，无端口/槽位/配方。
    */
   createEmptyEntityDefinition({
-    id: "item_port_miner_2",
+    id: "miner_2",
     nameKey: "registry.entity.item_port_miner_2.name",
     spriteId: "item_port_miner_2",
     footprint: { width: 3, height: 3 },
@@ -4435,7 +4437,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 不可摆放设备，无精灵定义，无端口/槽位/配方。
    */
   createEmptyEntityDefinition({
-    id: "item_port_miner_3",
+    id: "miner_3",
     nameKey: "registry.entity.item_port_miner_3.name",
     spriteId: "item_port_miner_3",
     footprint: { width: 3, height: 3 },
@@ -4449,7 +4451,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 不可摆放设备，无精灵定义，无端口/槽位/配方。
    */
   createEmptyEntityDefinition({
-    id: "item_port_miner_4",
+    id: "miner_4",
     nameKey: "registry.entity.item_port_miner_4.name",
     spriteId: "item_port_miner_4",
     footprint: { width: 3, height: 3 },

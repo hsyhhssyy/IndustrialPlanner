@@ -55,6 +55,7 @@ export const EncyclopediaPickerDialog = observer(function EncyclopediaPickerDial
       registry.itemDefinitions,
       registry.entityDefinitions,
       registry.recipeDefinitions,
+      registry.entityVariantDefinitions,
     ),
     [registry],
   );

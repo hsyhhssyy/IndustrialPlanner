@@ -10,9 +10,11 @@ import type {
   ToolboxWikiMobileFilterOption,
 } from "@/app/toolbox-types";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { EntityVariantDefinition } from "@/domain/registry/types/entity-variant-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { createDeviceIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { resolveEntityVariantName } from "@/shared/entity-variants";
 import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
 import { lookupText } from "@/shared/i18n";
 import styles from "@/app/shell/app-shell.module.scss";
@@ -48,6 +50,8 @@ export interface EncyclopediaIndex {
   /** 拼音全拼索引（无音调），key 为 item/entity id，仅中文名非空时有值 */
   itemPinyin: Map<string, { full: string; initial: string }>;
   entityPinyin: Map<string, { full: string; initial: string }>;
+  /** 设备变体定义，用于拼接变体短名称；未提供时仅显示基础名称 */
+  entityVariantDefinitions?: Readonly<Record<string, EntityVariantDefinition>>;
 }
 
 export interface EncyclopediaBrowserProps {
@@ -76,6 +80,7 @@ export function buildEncyclopediaIndex(
   items: ItemDefinition[],
   entities: EntityDefinition[],
   recipes: RecipeDefinition[],
+  entityVariantDefinitions?: Readonly<Record<string, EntityVariantDefinition>>,
 ): EncyclopediaIndex {
   const itemById = new Map<string, ItemDefinition>();
   for (const item of items) {
@@ -154,6 +159,7 @@ export function buildEncyclopediaIndex(
       .sort((a, b) => a.displayOrder - b.displayOrder || a.id.localeCompare(b.id)),
     itemPinyin,
     entityPinyin,
+    entityVariantDefinitions,
   };
 }
 
@@ -172,8 +178,32 @@ export function resolveItemIcon(itemId: string, index: EncyclopediaIndex): strin
   return createItemIconAssetUrl(iconId);
 }
 
-export function resolveEntityIcon(entityId: string): string {
-  return createDeviceIconAssetUrl(entityId);
+export function resolveEntityIcon(entityId: string, index: EncyclopediaIndex): string {
+  return createDeviceIconAssetUrl(index.entityById.get(entityId)?.spriteId ?? entityId);
+}
+
+export function resolveEntityDisplayName(
+  entityId: string,
+  index: EncyclopediaIndex,
+  t: (key: string) => string,
+): string {
+  const def = index.entityById.get(entityId);
+  if (!def) return entityId;
+
+  const baseName = t(def.nameKey);
+  const variantDefs = index.entityVariantDefinitions;
+  if (!variantDefs) return baseName;
+
+  const variantName = resolveEntityVariantName(def);
+  if (!variantName) return baseName;
+
+  const variantDef = variantDefs[variantName];
+  if (!variantDef) return baseName;
+
+  const shortName = t(variantDef.shortNameKey);
+  if (!shortName) return baseName;
+
+  return `${baseName} · ${shortName}`;
 }
 
 export function isMobileDisplayCategory(
@@ -308,9 +338,9 @@ function CardGrid({
           <img
             alt=""
             className={cm(styles, "encyclopedia-card-icon")}
-            src={resolveEntityIcon(entity.id)}
+            src={resolveEntityIcon(entity.id, index)}
           />
-          <span className={cm(styles, "encyclopedia-card-label")}>{t(entity.nameKey)}</span>
+          <span className={cm(styles, "encyclopedia-card-label")}>{resolveEntityDisplayName(entity.id, index, t)}</span>
           <span className={cm(styles, "encyclopedia-card-kind")}>{t("encyclopedia.entityLabel")}</span>
         </button>
       ))}

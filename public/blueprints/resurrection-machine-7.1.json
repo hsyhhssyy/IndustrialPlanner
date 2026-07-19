@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "blueprintId": "f00abb80-6b5e-45ab-ae01-32bd1e3e1771",
   "version": "v1.3.0",
   "name": "一键去世机7.1",
@@ -12,7 +12,7 @@
   "entities": {
     "legacy_f00abb80_0001": {
       "id": "legacy_f00abb80_0001",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 0,
         "y": 0
@@ -25,7 +25,7 @@
     },
     "legacy_f00abb80_0002": {
       "id": "legacy_f00abb80_0002",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 0,
         "y": 3
@@ -38,7 +38,7 @@
     },
     "legacy_f00abb80_0003": {
       "id": "legacy_f00abb80_0003",
-      "definitionId": "item_log_admission",
+      "definitionId": "log_admission",
       "position": {
         "x": 1,
         "y": 3
@@ -61,7 +61,7 @@
     },
     "legacy_f00abb80_0004": {
       "id": "legacy_f00abb80_0004",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 1,
         "y": 4
@@ -72,7 +72,7 @@
     },
     "legacy_f00abb80_0005": {
       "id": "legacy_f00abb80_0005",
-      "definitionId": "item_log_converger",
+      "definitionId": "log_converger",
       "position": {
         "x": 3,
         "y": 4
@@ -83,7 +83,7 @@
     },
     "legacy_f00abb80_0006": {
       "id": "legacy_f00abb80_0006",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 4,
         "y": 3
@@ -94,7 +94,7 @@
     },
     "legacy_f00abb80_0007": {
       "id": "legacy_f00abb80_0007",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 4,
         "y": 0
@@ -105,7 +105,7 @@
     },
     "legacy_f00abb80_0008": {
       "id": "legacy_f00abb80_0008",
-      "definitionId": "item_log_converger",
+      "definitionId": "log_converger",
       "position": {
         "x": 4,
         "y": 1
@@ -121,7 +121,7 @@
     },
     "legacy_f00abb80_0009": {
       "id": "legacy_f00abb80_0009",
-      "definitionId": "item_log_converger",
+      "definitionId": "log_converger",
       "position": {
         "x": 4,
         "y": 2
@@ -225,7 +225,7 @@
     },
     "legacy_f00abb80_0018": {
       "id": "legacy_f00abb80_0018",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 7,
         "y": 1
@@ -236,7 +236,7 @@
     },
     "legacy_f00abb80_0019": {
       "id": "legacy_f00abb80_0019",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 7,
         "y": 2
@@ -247,7 +247,7 @@
     },
     "legacy_f00abb80_0020": {
       "id": "legacy_f00abb80_0020",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 7,
         "y": 3
@@ -258,7 +258,7 @@
     },
     "legacy_f00abb80_0021": {
       "id": "legacy_f00abb80_0021",
-      "definitionId": "item_log_converger",
+      "definitionId": "log_converger",
       "position": {
         "x": 7,
         "y": 4
@@ -269,7 +269,7 @@
     },
     "legacy_f00abb80_0022": {
       "id": "legacy_f00abb80_0022",
-      "definitionId": "item_log_converger",
+      "definitionId": "log_converger",
       "position": {
         "x": 5,
         "y": 5
@@ -280,7 +280,7 @@
     },
     "legacy_f00abb80_0023": {
       "id": "legacy_f00abb80_0023",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 6,
         "y": 5
@@ -291,7 +291,7 @@
     },
     "legacy_f00abb80_0024": {
       "id": "legacy_f00abb80_0024",
-      "definitionId": "item_log_converger",
+      "definitionId": "log_converger",
       "position": {
         "x": 8,
         "y": 5
@@ -390,7 +390,7 @@
     },
     "legacy_f00abb80_0033": {
       "id": "legacy_f00abb80_0033",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 4,
         "y": 6
@@ -401,7 +401,7 @@
     },
     "legacy_f00abb80_0034": {
       "id": "legacy_f00abb80_0034",
-      "definitionId": "item_port_storager_1",
+      "definitionId": "storager_1",
       "position": {
         "x": 1,
         "y": 6
@@ -434,7 +434,7 @@
     },
     "legacy_f00abb80_0037": {
       "id": "legacy_f00abb80_0037",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 2,
         "y": 9
@@ -445,7 +445,7 @@
     },
     "legacy_f00abb80_0038": {
       "id": "legacy_f00abb80_0038",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 5,
         "y": 8
@@ -522,7 +522,7 @@
     },
     "legacy_f00abb80_0045": {
       "id": "legacy_f00abb80_0045",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 4,
         "y": 8
@@ -533,7 +533,7 @@
     },
     "legacy_f00abb80_0046": {
       "id": "legacy_f00abb80_0046",
-      "definitionId": "item_log_converger",
+      "definitionId": "log_converger",
       "position": {
         "x": 4,
         "y": 7
@@ -549,7 +549,7 @@
     },
     "legacy_f00abb80_0047": {
       "id": "legacy_f00abb80_0047",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 8,
         "y": 7
@@ -560,7 +560,7 @@
     },
     "legacy_f00abb80_0048": {
       "id": "legacy_f00abb80_0048",
-      "definitionId": "item_log_admission",
+      "definitionId": "log_admission",
       "position": {
         "x": 7,
         "y": 7
@@ -616,7 +616,7 @@
     },
     "legacy_f00abb80_0052": {
       "id": "legacy_f00abb80_0052",
-      "definitionId": "item_port_power_sta_1",
+      "definitionId": "power_sta_1",
       "position": {
         "x": 9,
         "y": 8
@@ -638,7 +638,7 @@
     },
     "legacy_f00abb80_0054": {
       "id": "legacy_f00abb80_0054",
-      "definitionId": "item_log_admission",
+      "definitionId": "log_admission",
       "position": {
         "x": 8,
         "y": 8
@@ -661,7 +661,7 @@
     },
     "legacy_f00abb80_0055": {
       "id": "legacy_f00abb80_0055",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 9,
         "y": 10
@@ -749,7 +749,7 @@
     },
     "legacy_f00abb80_0063": {
       "id": "legacy_f00abb80_0063",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 10,
         "y": 4
@@ -936,7 +936,7 @@
     },
     "legacy_f00abb80_0080": {
       "id": "legacy_f00abb80_0080",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 13,
         "y": 4
@@ -1013,7 +1013,7 @@
     },
     "legacy_f00abb80_0087": {
       "id": "legacy_f00abb80_0087",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 13,
         "y": 2
@@ -1024,7 +1024,7 @@
     },
     "legacy_f00abb80_0088": {
       "id": "legacy_f00abb80_0088",
-      "definitionId": "item_log_converger",
+      "definitionId": "log_converger",
       "position": {
         "x": 13,
         "y": 1
@@ -1128,7 +1128,7 @@
     },
     "legacy_f00abb80_0097": {
       "id": "legacy_f00abb80_0097",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 18,
         "y": 2
@@ -1194,7 +1194,7 @@
     },
     "legacy_f00abb80_0103": {
       "id": "legacy_f00abb80_0103",
-      "definitionId": "item_log_admission",
+      "definitionId": "log_admission",
       "position": {
         "x": 17,
         "y": 2
@@ -1217,7 +1217,7 @@
     },
     "legacy_f00abb80_0104": {
       "id": "legacy_f00abb80_0104",
-      "definitionId": "item_log_admission",
+      "definitionId": "log_admission",
       "position": {
         "x": 18,
         "y": 3
@@ -1240,7 +1240,7 @@
     },
     "legacy_f00abb80_0105": {
       "id": "legacy_f00abb80_0105",
-      "definitionId": "item_port_storager_1",
+      "definitionId": "storager_1",
       "position": {
         "x": 19,
         "y": 1
@@ -1416,7 +1416,7 @@
     },
     "legacy_f00abb80_0121": {
       "id": "legacy_f00abb80_0121",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 19,
         "y": 4
@@ -1427,7 +1427,7 @@
     },
     "legacy_f00abb80_0122": {
       "id": "legacy_f00abb80_0122",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 19,
         "y": 5
@@ -1438,7 +1438,7 @@
     },
     "legacy_f00abb80_0123": {
       "id": "legacy_f00abb80_0123",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 19,
         "y": 6
@@ -1449,7 +1449,7 @@
     },
     "legacy_f00abb80_0124": {
       "id": "legacy_f00abb80_0124",
-      "definitionId": "item_log_converger",
+      "definitionId": "log_converger",
       "position": {
         "x": 21,
         "y": 4
@@ -1460,7 +1460,7 @@
     },
     "legacy_f00abb80_0125": {
       "id": "legacy_f00abb80_0125",
-      "definitionId": "item_log_converger",
+      "definitionId": "log_converger",
       "position": {
         "x": 21,
         "y": 5
@@ -1471,7 +1471,7 @@
     },
     "legacy_f00abb80_0126": {
       "id": "legacy_f00abb80_0126",
-      "definitionId": "item_log_converger",
+      "definitionId": "log_converger",
       "position": {
         "x": 21,
         "y": 6
@@ -1570,7 +1570,7 @@
     },
     "legacy_f00abb80_0135": {
       "id": "legacy_f00abb80_0135",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 19,
         "y": 7
@@ -1581,7 +1581,7 @@
     },
     "legacy_f00abb80_0136": {
       "id": "legacy_f00abb80_0136",
-      "definitionId": "item_port_storager_1",
+      "definitionId": "storager_1",
       "position": {
         "x": 16,
         "y": 8
@@ -1592,7 +1592,7 @@
     },
     "legacy_f00abb80_0137": {
       "id": "legacy_f00abb80_0137",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 19,
         "y": 9
@@ -1603,7 +1603,7 @@
     },
     "legacy_f00abb80_0138": {
       "id": "legacy_f00abb80_0138",
-      "definitionId": "item_port_power_sta_1",
+      "definitionId": "power_sta_1",
       "position": {
         "x": 19,
         "y": 10
@@ -1614,7 +1614,7 @@
     },
     "legacy_f00abb80_0139": {
       "id": "legacy_f00abb80_0139",
-      "definitionId": "item_port_power_sta_1",
+      "definitionId": "power_sta_1",
       "position": {
         "x": 20,
         "y": 8

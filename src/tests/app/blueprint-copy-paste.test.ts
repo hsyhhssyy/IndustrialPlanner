@@ -55,7 +55,7 @@ function createTestDocument(options: {
   slotLinks?: WorldDocument["slotLinks"];
 }): WorldDocument {
   return {
-    schemaVersion: 1,
+    schemaVersion: 3,
     documentKey: "test-doc-key",
     baseId: "wuling_protocol_core",
     meta: {
@@ -136,7 +136,7 @@ describe("createSelectionBlueprintDocument", () => {
         entities: {
           "unloader-1": {
             id: "unloader-1",
-            definitionId: "item_port_unloader_1",
+            definitionId: "unloader_1",
             position: { x: 32, y: 26 },
             rotation: 180,
             config: {
@@ -188,7 +188,7 @@ describe("createSelectionBlueprintDocument", () => {
         entities: {
           "device-a": {
             id: "device-a",
-            definitionId: "item_port_storager_1",
+            definitionId: "storager_1",
             position: { x: 4, y: 4 },
             rotation: 0,
             config: {},
@@ -333,7 +333,7 @@ describe("createMovePreviewBlueprintDocument", () => {
         entities: {
           "device-a": {
             id: "device-a",
-            definitionId: "item_port_storager_1",
+            definitionId: "storager_1",
             position: { x: 4, y: 4 },
             rotation: 0,
             config: { itemId: "item_originium_ore" },
@@ -389,7 +389,7 @@ describe("createMovePreviewBlueprintDocument", () => {
     expect(firstPreview).not.toBeNull();
     editorHost.actions.replaceEntityDefinition(
       previewIds[0]!,
-      "item_port_filling_pd_mc_1",
+      "filling_pd_mc_1",
     );
 
     const blueprint = createMovePreviewBlueprintDocument({
@@ -401,7 +401,7 @@ describe("createMovePreviewBlueprintDocument", () => {
     expect(blueprint!.entityOrder).toEqual(["device-a", "device-b"]);
     expect(blueprint!.entities["device-a"]).toMatchObject({
       id: "device-a",
-      definitionId: "item_port_filling_pd_mc_1",
+      definitionId: "filling_pd_mc_1",
     });
     expect(blueprint!.entities["device-a"]!.position).not.toEqual({ x: 4, y: 4 });
     expect(blueprint!.entities["device-b"]!.position).not.toEqual({ x: 7, y: 4 });
@@ -589,7 +589,7 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
         entities: {
           "storager-1": {
             id: "storager-1",
-            definitionId: "item_port_storager_1",
+            definitionId: "storager_1",
             position: { x: 4, y: 4 },
             rotation: 0,
             config: {},
@@ -631,7 +631,7 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
       entities: {
         "storager-1": {
           id: "storager-1",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 4, y: 4 },
           rotation: 0,
           config: {},
@@ -673,7 +673,7 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
       entities: {
         "storager-1": {
           id: "storager-1",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 4, y: 4 },
           rotation: 0,
           config: {},
@@ -731,7 +731,7 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
       entities: {
         "unloader-1": {
           id: "unloader-1",
-          definitionId: "item_port_unloader_1",
+          definitionId: "unloader_1",
           position: { x: 32, y: 26 },
           rotation: 180,
           config: {
@@ -780,7 +780,7 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
       entities: {
         "storager-1": {
           id: "storager-1",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 4, y: 4 },
           rotation: 0,
           config: {},
@@ -832,7 +832,7 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
       entities: {
         "unloader-1": {
           id: "unloader-1",
-          definitionId: "item_port_unloader_1",
+          definitionId: "unloader_1",
           position: { x: 32, y: 26 },
           rotation: 180,
           config: {
@@ -868,7 +868,7 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
 
     const doc = editorHost.internalDocument.getSnapshot();
     const newEntity = Object.values(doc.entities).find(
-      (e) => e.id !== "unloader-1" && e.definitionId === "item_port_unloader_1",
+      (e) => e.id !== "unloader-1" && e.definitionId === "unloader_1",
     );
 
     expect(newEntity).toBeDefined();
@@ -902,7 +902,7 @@ describe("Ctrl+C/Ctrl+V full pipeline", () => {
           },
           "storager-1": {
             id: "storager-1",
-            definitionId: "item_port_storager_1",
+            definitionId: "storager_1",
             position: { x: 15, y: 10 },
             rotation: 0,
             config: {},
@@ -1032,7 +1032,7 @@ describe("ID rewriting in blueprint placement", () => {
       entities: {
         "dev-A": {
           id: "dev-A",
-          definitionId: "item_port_unloader_1",
+          definitionId: "unloader_1",
           position: { x: 10, y: 10 },
           rotation: 0,
           config: {
@@ -1042,7 +1042,7 @@ describe("ID rewriting in blueprint placement", () => {
         },
         "external-ref": {
           id: "external-ref",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 20, y: 10 },
           rotation: 0,
           config: {},
@@ -1078,7 +1078,7 @@ describe("ID rewriting in blueprint placement", () => {
     const finalDoc = editorHost.internalDocument.getSnapshot();
     // 2026-06-10: slotLink 的 target 是外部非蛇兵实体（external-ref），
     // blueprint 放置时链路被丢弃。entity 正常放置即可。
-    const unloaders = findEntitiesByDef(editorHost, "item_port_unloader_1");
+    const unloaders = findEntitiesByDef(editorHost, "unloader_1");
     expect(unloaders).toHaveLength(2);
     expect(finalDoc.slotLinks.filter((l) => l.id.startsWith("warehouse-link:")).length).toBe(0);
   });
@@ -1090,7 +1090,7 @@ describe("ID rewriting in blueprint placement", () => {
       entities: {
         "loader-A": {
           id: "loader-A",
-          definitionId: "item_port_unloader_1",
+          definitionId: "unloader_1",
           position: { x: 10, y: 10 },
           rotation: 0,
           config: {},
@@ -1098,7 +1098,7 @@ describe("ID rewriting in blueprint placement", () => {
         },
         "storager-A": {
           id: "storager-A",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 15, y: 10 },
           rotation: 0,
           config: {},
@@ -1129,8 +1129,8 @@ describe("ID rewriting in blueprint placement", () => {
     const applied = placeBlueprint(editorHost, blueprint);
     expect(applied).toBe(true);
 
-    const loaders = findEntitiesByDef(editorHost, "item_port_unloader_1");
-    const storagers = findEntitiesByDef(editorHost, "item_port_storager_1");
+    const loaders = findEntitiesByDef(editorHost, "unloader_1");
+    const storagers = findEntitiesByDef(editorHost, "storager_1");
 
     const newLoader = loaders.find((e) => e.id !== "loader-A");
     const newStorager = storagers.find((e) => e.id !== "storager-A");
@@ -1220,7 +1220,7 @@ describe("ID rewriting in blueprint placement", () => {
       entities: {
         "loader-A": {
           id: "loader-A",
-          definitionId: "item_port_unloader_1",
+          definitionId: "unloader_1",
           position: { x: 10, y: 10 },
           rotation: 0,
           config: {
@@ -1252,7 +1252,7 @@ describe("ID rewriting in blueprint placement", () => {
     const applied = placeBlueprint(editorHost, blueprint);
     expect(applied).toBe(true);
 
-    const loaders = findEntitiesByDef(editorHost, "item_port_unloader_1");
+    const loaders = findEntitiesByDef(editorHost, "unloader_1");
     const newLoader = loaders.find((e) => e.id !== "loader-A");
     expect(newLoader).toBeDefined();
 
@@ -1271,7 +1271,7 @@ describe("ID rewriting in blueprint placement", () => {
       entities: {
         "loader-A": {
           id: "loader-A",
-          definitionId: "item_port_unloader_1",
+          definitionId: "unloader_1",
           position: { x: 10, y: 10 },
           rotation: 0,
           config: {
@@ -1303,7 +1303,7 @@ describe("ID rewriting in blueprint placement", () => {
     const applied = placeBlueprint(editorHost, blueprint);
     expect(applied).toBe(true);
 
-    const loaders = findEntitiesByDef(editorHost, "item_port_unloader_1");
+    const loaders = findEntitiesByDef(editorHost, "unloader_1");
     const newLoader = loaders.find((e) => e.id !== "loader-A");
     expect(newLoader).toBeDefined();
 
@@ -1318,7 +1318,7 @@ describe("ID rewriting in blueprint placement", () => {
       entities: {
         "loader-A": {
           id: "loader-A",
-          definitionId: "item_port_unloader_1",
+          definitionId: "unloader_1",
           position: { x: 10, y: 10 },
           rotation: 0,
           config: {
@@ -1351,7 +1351,7 @@ describe("ID rewriting in blueprint placement", () => {
     const applied = placeBlueprint(editorHost, blueprint);
     expect(applied).toBe(true);
 
-    const loaders = findEntitiesByDef(editorHost, "item_port_unloader_1");
+    const loaders = findEntitiesByDef(editorHost, "unloader_1");
     const newLoader = loaders.find((e) => e.id !== "loader-A");
     expect(newLoader).toBeDefined();
 
@@ -1371,7 +1371,7 @@ describe("ID rewriting in blueprint placement", () => {
       entities: {
         "dev-A": {
           id: "dev-A",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 10, y: 10 },
           rotation: 0,
           config: {},
@@ -1379,7 +1379,7 @@ describe("ID rewriting in blueprint placement", () => {
         },
         "dev-B": {
           id: "dev-B",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 15, y: 10 },
           rotation: 0,
           config: {},
@@ -1467,7 +1467,7 @@ describe("ID rewriting in blueprint placement", () => {
       entities: {
         "dev-A": {
           id: "dev-A",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 10, y: 10 },
           rotation: 0,
           config: {},
@@ -1475,7 +1475,7 @@ describe("ID rewriting in blueprint placement", () => {
         },
         "dev-B": {
           id: "dev-B",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 15, y: 10 },
           rotation: 0,
           config: {},
@@ -1530,7 +1530,7 @@ describe("ID rewriting in blueprint placement", () => {
       entities: {
         "dev-A": {
           id: "dev-A",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 10, y: 10 },
           rotation: 0,
           config: {},
@@ -1538,7 +1538,7 @@ describe("ID rewriting in blueprint placement", () => {
         },
         "dev-B": {
           id: "dev-B",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 15, y: 10 },
           rotation: 0,
           config: {},
@@ -1615,7 +1615,7 @@ describe("ID rewriting in blueprint placement", () => {
       entities: {
         "dp-inlet": {
           id: "dp-inlet",
-          definitionId: "item_port_udpipe_loader_1",
+          definitionId: "udpipe_loader_1",
           position: { x: 0, y: 0 },
           rotation: 0,
           config: {},
@@ -1623,7 +1623,7 @@ describe("ID rewriting in blueprint placement", () => {
         },
         "dp-outlet": {
           id: "dp-outlet",
-          definitionId: "item_port_udpipe_unloader_1",
+          definitionId: "udpipe_unloader_1",
           position: { x: 6, y: 0 },
           rotation: 0,
           config: {},
@@ -1674,10 +1674,10 @@ describe("ID rewriting in blueprint placement", () => {
 
     // ── 验证新增设备有独立 ID ──
     const inlets = Object.values(finalDoc.entities).filter(
-      (e) => e.definitionId === "item_port_udpipe_loader_1",
+      (e) => e.definitionId === "udpipe_loader_1",
     );
     const outlets = Object.values(finalDoc.entities).filter(
-      (e) => e.definitionId === "item_port_udpipe_unloader_1",
+      (e) => e.definitionId === "udpipe_unloader_1",
     );
     expect(inlets).toHaveLength(2);
     expect(outlets).toHaveLength(2);

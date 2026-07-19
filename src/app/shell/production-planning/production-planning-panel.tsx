@@ -133,7 +133,7 @@ type ProductionPlanningTreeRow = {
 
 const PRODUCTION_PLANNING_EPSILON = 0.0001;
 const EXTERNAL_SUPPLY_RECIPE_ID_PREFIX = "external-supply:";
-const EXTERNAL_SUPPLY_ENTITY_ID = "item_port_sp_hub_1";
+const EXTERNAL_SUPPLY_ENTITY_ID = "sp_hub_1";
 
 export const ProductionPlanningPanel = observer(function ProductionPlanningPanel({
   appHost,
@@ -1462,7 +1462,7 @@ function ProductionPlanningTreeRowRate({
     <div className={cm(styles, "production-planning-tree-table-rate")}>
       <span className={cm(styles, "production-planning-tree-rate-piece")} title={recipe === undefined ? row.recipeId : t(index.entityById.get(machineId)?.nameKey ?? recipe.nameKey)}>
         <strong>{formatProductionDeviceCount(row.total?.deviceCount ?? row.recipeNode.deviceCount)}</strong>
-        <img alt="" src={recipe === undefined ? createDeviceIconAssetUrl("item_port_grinder_1") : resolveProductionPlanningEntityIconSrc(machineId)} />
+        <img alt="" src={recipe === undefined ? createDeviceIconAssetUrl("item_port_grinder_1") : resolveProductionPlanningEntityIconSrc(machineId, index)} />
       </span>
       <span className={cm(styles, "production-planning-tree-rate-separator")}>·</span>
       <span className={cm(styles, "production-planning-tree-rate-piece")}>
@@ -1500,7 +1500,7 @@ function ProductionPlanningLogisticsRate({
       title={entity === undefined ? entityId : t(entity.nameKey)}
     >
       <strong>{formatProductionDeviceCount(count)}</strong>
-      <img alt="" src={resolveProductionPlanningEntityIconSrc(entityId)} />
+      <img alt="" src={resolveProductionPlanningEntityIconSrc(entityId, index)} />
     </span>
   );
 }
@@ -1553,7 +1553,7 @@ function ProductionPlanningTreeDetail({
       ? resolveProductionPlanningExternalSupplyIconSrc()
       : machine === null
         ? createDeviceIconAssetUrl("item_port_grinder_1")
-        : resolveProductionPlanningEntityIconSrc(machine.id);
+        : resolveProductionPlanningEntityIconSrc(machine.id, index);
   const availableRecipes = row.targetItemId.length > 0
     ? index.recipesByOutputItem.get(row.targetItemId) ?? []
     : [];
@@ -1774,7 +1774,7 @@ function ProductionPlanningTreeRelationIdentity({
   const iconSrc = isExternal
     ? resolveProductionPlanningExternalSupplyIconSrc()
     : machineId.length > 0
-      ? resolveProductionPlanningEntityIconSrc(machineId)
+      ? resolveProductionPlanningEntityIconSrc(machineId, index)
       : createDeviceIconAssetUrl("item_port_grinder_1");
 
   return (
@@ -1825,7 +1825,7 @@ function RecipeIdentity({
     }
     return recipe === undefined
       ? createDeviceIconAssetUrl("item_port_grinder_1")
-      : resolveProductionPlanningEntityIconSrc(recipe.machineId);
+      : resolveProductionPlanningEntityIconSrc(recipe.machineId, index);
   })();
 
   return (

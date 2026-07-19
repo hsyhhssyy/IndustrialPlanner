@@ -5,7 +5,18 @@ import {
 } from "@/domain/document/blueprint-document";
 import type { GridPoint, GridRotation } from "@/domain/shared/grid";
 import type { SlotLinkDefinition } from "@/domain/document/world-document";
-import { resolveLatestBlueprintDeviceId } from "@/shared/blueprint-device-id-migration";
+import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
+
+// AI-REMOVED 2026-07-19:
+// Reason: 旧版导入不得把历史设备 ID 直接压平到最新版本，否则会跳过 schema 1→2→3 的正式迁移链。
+// Trigger: 用户要求从任意版本逐阶段迁移，并在每一步断言。
+// Evidence: resolveLatestBlueprintDeviceId 已由逐版本实体迁移执行器替代。
+// Replacement: migrateBlueprintEntityDeviceIds
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { resolveLatestBlueprintDeviceId } from "@/shared/blueprint-device-id-migration";
 
 const LEGACY_BLUEPRINT_SCHEMA = "industrial-planner-blueprint";
 const LEGACY_BLUEPRINT_ID_PATTERN = /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i;
@@ -212,19 +223,36 @@ export function convertLegacyBlueprintJson(
     slotLinks,
   });
 
-  return createBlueprintDocument({
-    blueprintId,
-    version: normalizeOptionalString(options.version) ?? BLUEPRINT_VERSION,
-    name: legacyBlueprint.name,
-    description: legacyBlueprint.description,
-    baseId: legacyBlueprint.baseId,
-    initialGridPoint: options.initialGridPoint ?? resolveLegacyInitialGridPoint(legacyBlueprint.devices),
-    entities,
-    entityOrder,
-    slotLinks,
-    createdAt: legacyBlueprint.createdAt,
-    updatedAt: legacyBlueprint.updatedAt ?? legacyBlueprint.createdAt,
-  });
+  const initialVersionDocument: BlueprintDocument = {
+    ...createBlueprintDocument({
+      blueprintId,
+      version: normalizeOptionalString(options.version) ?? BLUEPRINT_VERSION,
+      name: legacyBlueprint.name,
+      description: legacyBlueprint.description,
+      baseId: legacyBlueprint.baseId,
+      initialGridPoint: options.initialGridPoint ?? resolveLegacyInitialGridPoint(legacyBlueprint.devices),
+      entities,
+      entityOrder,
+      slotLinks,
+      createdAt: legacyBlueprint.createdAt,
+      updatedAt: legacyBlueprint.updatedAt ?? legacyBlueprint.createdAt,
+    }),
+    schemaVersion: 1,
+  };
+  const migration = migrateBlueprintEntityDeviceIds(
+    initialVersionDocument.entities,
+    initialVersionDocument.schemaVersion,
+  );
+
+  if (migration === null) {
+    return null;
+  }
+
+  return {
+    ...initialVersionDocument,
+    schemaVersion: migration.schemaVersion,
+    entities: migration.entities,
+  };
 }
 
 /**
@@ -304,7 +332,11 @@ function convertLegacyDeviceConfig(options: {
     return { ...empty, config: convertLegacyAdmissionConfig(config) };
   }
 
-  if (options.definitionId === "item_port_mix_pool_1" || options.definitionId === "item_port_mix_pool_2") {
+  if (
+    options.definitionId === "item_port_mix_pool_1"
+    || options.definitionId === "item_port_mix_pool_large_1"
+    || options.definitionId === "item_port_mix_pool_2"
+  ) {
     return { ...empty, config: convertLegacyReactorPoolConfig(options.definitionId, config) };
   }
 
@@ -355,7 +387,8 @@ function convertLegacyReactorPoolConfig(
   const nextConfig: Record<string, unknown> = { ...config };
   delete nextConfig.reactorPool;
 
-  const isLarge = definitionId === "item_port_mix_pool_2";
+  const isLarge = definitionId === "item_port_mix_pool_large_1"
+    || definitionId === "item_port_mix_pool_2";
 
   // 1. 配方：selectedRecipeIds → channelRecipes
   const rawRecipeIds = reactorPool.selectedRecipeIds;
@@ -1197,19 +1230,12 @@ function remapLegacyDevice(
   const remapper = LEGACY_DEVICE_REMAPPERS[device.typeId];
 
   if (remapper === undefined) {
-    const latestDeviceId = resolveLatestBlueprintDeviceId(device.typeId);
-
-    return latestDeviceId === device.typeId
-      ? device
-      : {
-          ...device,
-          typeId: latestDeviceId,
-        };
+    return device;
   }
 
   return {
     ...device,
-    typeId: resolveLatestBlueprintDeviceId(remapper.definitionId),
+    typeId: remapper.definitionId,
     rotation: rotateGridRotation(device.rotation, remapper.rotationOffset),
   };
 }

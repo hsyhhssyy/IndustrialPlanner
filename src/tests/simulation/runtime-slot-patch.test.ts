@@ -19,7 +19,7 @@ describe("runtime slot patch", () => {
   it("patches current simulation slot state without persisting to initial config", async () => {
     const documentStore = createSnapshotStore(createWorldDocumentFromBlueprint(
       createBlueprint("runtime-slot-patch", [
-        createEntity("storage", "item_port_storager_1", 20, 20, 0),
+        createEntity("storage", "storager_1", 20, 20, 0),
       ]),
     ));
     const workspace = createWorkspace(documentStore);

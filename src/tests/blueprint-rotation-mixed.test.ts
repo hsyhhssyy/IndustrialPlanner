@@ -50,22 +50,22 @@ function overlaps(a: ReturnType<typeof entityBounds>, b: ReturnType<typeof entit
 
 /** 获取定义ID对应的footprint */
 const FOOTPRINT_MAP: Record<string, { w: number; h: number }> = {
-  item_port_storager_1: { w: 3, h: 3 },
+  storager_1: { w: 3, h: 3 },
   belt_straight_1x1: { w: 1, h: 1 },
   belt_turn_cw_1x1: { w: 1, h: 1 },
   belt_turn_ccw_1x1: { w: 1, h: 1 },
   pipe_straight_1x1: { w: 1, h: 1 },
-  item_port_grinder_1: { w: 2, h: 2 },
-  item_pipe_splitter: { w: 1, h: 1 },
-  item_port_thickener_1: { w: 3, h: 2 },
-  item_port_furnance_1: { w: 4, h: 3 },
-  item_port_power_diffuser_1: { w: 3, h: 3 },
-  item_port_hydro_planter_1: { w: 4, h: 3 },
-  item_port_seedcol_1: { w: 2, h: 2 },
-  item_port_planter_1: { w: 4, h: 3 },
-  item_port_xiranite_oven_1: { w: 3, h: 3 },
-  item_port_mix_pool_1: { w: 5, h: 3 },
-  item_port_mix_pool_2: { w: 5, h: 3 },
+  grinder_1: { w: 2, h: 2 },
+  pipe_splitter: { w: 1, h: 1 },
+  thickener_1: { w: 3, h: 2 },
+  furnance_1: { w: 4, h: 3 },
+  power_diffuser_1: { w: 3, h: 3 },
+  hydro_planter_1: { w: 4, h: 3 },
+  seedcol_1: { w: 2, h: 2 },
+  planter_1: { w: 4, h: 3 },
+  xiranite_oven_1: { w: 3, h: 3 },
+  mix_pool_1: { w: 5, h: 3 },
+  mix_pool_2: { w: 5, h: 3 },
 };
 
 function getFootprint(defId: string): { w: number; h: number } {
@@ -121,7 +121,7 @@ describe("蓝图旋转 — 混合尺寸设备相对位置保持", () => {
       initialGridPoint: { x: 2, y: 2 },
       entities: {
         storager: {
-          id: "storager", definitionId: "item_port_storager_1",
+          id: "storager", definitionId: "storager_1",
           position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [],
         },
         belt: {
@@ -129,7 +129,7 @@ describe("蓝图旋转 — 混合尺寸设备相对位置保持", () => {
           position: { x: 3, y: 0 }, rotation: 0, config: {}, tags: [],
         },
         grinder: {
-          id: "grinder", definitionId: "item_port_grinder_1",
+          id: "grinder", definitionId: "grinder_1",
           position: { x: 0, y: 3 }, rotation: 0, config: {}, tags: [],
         },
       },
@@ -184,7 +184,7 @@ describe("蓝图旋转 — 混合尺寸设备相对位置保持", () => {
       initialGridPoint: { x: 3, y: 2 },
       entities: {
         furnace: {
-          id: "furnace", definitionId: "item_port_furnance_1",
+          id: "furnace", definitionId: "furnance_1",
           position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [],
         },
         belt: {
@@ -192,7 +192,7 @@ describe("蓝图旋转 — 混合尺寸设备相对位置保持", () => {
           position: { x: 4, y: 0 }, rotation: 0, config: {}, tags: [],
         },
         grinder: {
-          id: "grinder", definitionId: "item_port_grinder_1",
+          id: "grinder", definitionId: "grinder_1",
           position: { x: 0, y: 3 }, rotation: 0, config: {}, tags: [],
         },
       },

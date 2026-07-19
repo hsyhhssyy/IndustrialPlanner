@@ -57,7 +57,7 @@ function createEntity(options: {
 
 function createWorldDocument(entities: WorldEntity[]): WorldDocument {
   return {
-    schemaVersion: 1,
+    schemaVersion: 3,
     documentKey: "inspector-neighborhood-preview-test",
     baseId: DEFAULT_WORLD_BASE_ID,
     meta: {
@@ -166,7 +166,7 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
   it("resolves output port callouts for expanded reaction pool", () => {
     const registry = createRegistryContract();
     const selectedDefinition = registry.entityDefinitions.find((definition) =>
-      definition.id === "item_port_mix_pool_2",
+      definition.id === "mix_pool_2",
     );
     if (selectedDefinition === undefined) {
       throw new Error("Expected expanded reaction pool definition.");
@@ -212,7 +212,7 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
   it("resolves output port callouts for protocol core warehouse links", () => {
     const registry = createRegistryContract();
     const selectedDefinition = registry.entityDefinitions.find((definition) =>
-      definition.id === "item_port_sp_hub_1",
+      definition.id === "sp_hub_1",
     );
     if (selectedDefinition === undefined) {
       throw new Error("Expected protocol core definition.");
@@ -276,7 +276,7 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
   it("resolves per-port priority callouts when custom priority groups are enabled", () => {
     const registry = createRegistryContract();
     const selectedDefinition = registry.entityDefinitions.find((definition) =>
-      definition.id === "item_log_splitter",
+      definition.id === "log_splitter",
     );
     if (selectedDefinition === undefined) {
       throw new Error("Expected splitter definition.");
@@ -336,7 +336,7 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
   it("does not render splitter port callouts when custom priority groups are off", () => {
     const registry = createRegistryContract();
     const selectedDefinition = registry.entityDefinitions.find((definition) =>
-      definition.id === "item_log_splitter",
+      definition.id === "log_splitter",
     );
     if (selectedDefinition === undefined) {
       throw new Error("Expected splitter definition.");

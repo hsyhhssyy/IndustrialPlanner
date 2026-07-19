@@ -36,7 +36,7 @@ const SOLID_INPUT_PLACEHOLDER_STROKE_COLOR = '#7a7a7a';
 // static port coordinates yet. Blueprint drawing uses local overrides until the
 // registry migration is finished.
 const BLUEPRINT_PORT_LAYOUT_OVERRIDES = new Map([
-  ['item_port_mix_pool_2', [
+  ['mix_pool_2', [
     { kind: 'item', direction: 'input', localCellX: 1, localCellY: 4, edge: 'SOUTH' },
     { kind: 'item', direction: 'input', localCellX: 4, localCellY: 4, edge: 'SOUTH' },
     { kind: 'fluid', direction: 'output', localCellX: 0, localCellY: 1, edge: 'WEST' },

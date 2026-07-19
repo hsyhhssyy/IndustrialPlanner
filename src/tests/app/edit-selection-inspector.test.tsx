@@ -80,7 +80,7 @@ describe("EditSelectionInspector", () => {
     const workspace = createWorkspace();
     editorHost = createEditorHost(workspace);
     const snapshot = createDummyWorldDocument();
-    snapshot.entities["dummy-entity-2"]!.definitionId = "item_port_furnance_1";
+    snapshot.entities["dummy-entity-2"]!.definitionId = "furnance_1";
     editorHost.internalDocument.setSnapshot(snapshot);
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
     const currentAppHost = createAppHost(workspace);

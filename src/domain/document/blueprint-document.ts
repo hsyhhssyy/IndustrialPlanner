@@ -5,7 +5,7 @@ import type {
 	WorldEntity,
 } from "./world-document";
 
-export const BLUEPRINT_SCHEMA_VERSION = 1;
+export const BLUEPRINT_SCHEMA_VERSION = 3;
 export const BLUEPRINT_VERSION = "v1.3.0";
 
 export interface BlueprintDocument {
@@ -57,5 +57,4 @@ export function createBlueprintDocument(
 		updatedAt: input.updatedAt ?? timestamp,
 	};
 }
-
 

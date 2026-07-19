@@ -18,13 +18,13 @@ describe("调试", () => {
     const defs = workspace.registry.entityDefinitions;
     console.log("entityDefinitions type:", typeof defs, Array.isArray(defs) ? `array(${defs.length})` : 'other');
     
-    const planter = defs.find(d => d.id === "item_port_planter_1");
+    const planter = defs.find(d => d.id === "planter_1");
     console.log("planter:", planter ? `fp=${planter.footprint.width}x${planter.footprint.height}` : "NOT FOUND");
     
-    const seedcol = defs.find(d => d.id === "item_port_seedcol_1");
+    const seedcol = defs.find(d => d.id === "seedcol_1");
     console.log("seedcol:", seedcol ? `fp=${seedcol.footprint.width}x${seedcol.footprint.height}` : "NOT FOUND");
     
-    const furnance = defs.find(d => d.id === "item_port_furnance_1");
+    const furnance = defs.find(d => d.id === "furnance_1");
     console.log("furnance:", furnance ? `fp=${furnance.footprint.width}x${furnance.footprint.height}` : "NOT FOUND");
 
     const blueprint = createBlueprintDocument({
@@ -32,8 +32,8 @@ describe("调试", () => {
       baseId: "wuling_protocol_core",
       initialGridPoint: { x: 2, y: 2 },
       entities: {
-        p: { id: "p", definitionId: "item_port_planter_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
-        s: { id: "s", definitionId: "item_port_seedcol_1", position: { x: 6, y: 0 }, rotation: 0, config: {}, tags: [] },
+        p: { id: "p", definitionId: "planter_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
+        s: { id: "s", definitionId: "seedcol_1", position: { x: 6, y: 0 }, rotation: 0, config: {}, tags: [] },
       },
       entityOrder: ["p", "s"],
       slotLinks: [],

@@ -95,7 +95,7 @@ describe("metered device consumption", () => {
   it("locks each window to one gas and changes the environment only at the next qualified boundary", () => {
     const topology = compilePoweredBlueprint(createBlueprint("metered-vaporizer-gas", [
       createEntity("vaporizer", "vaporizer_1", 0, 0),
-      createEntity("consumer", "item_port_xiranite_oven_1", 5, 0),
+      createEntity("consumer", "xiranite_oven_1", 5, 0),
     ]));
     const device = topology.devices["device:vaporizer"]!;
     const consumer = topology.devices["device:consumer"]!;
@@ -179,7 +179,7 @@ describe("metered device consumption", () => {
   it("rebuilds gas coverage when the topology identity and source position change", () => {
     const topology = compilePoweredBlueprint(createBlueprint("gas-position-before", [
       createEntity("vaporizer", "vaporizer_1", 0, 0),
-      createEntity("consumer", "item_port_xiranite_oven_1", 5, 0),
+      createEntity("consumer", "xiranite_oven_1", 5, 0),
     ]));
     const state = createSimulationMutableRuntimeState(topology);
     const vaporizer = topology.devices["device:vaporizer"]!;
@@ -196,7 +196,7 @@ describe("metered device consumption", () => {
 
     const movedTopology = compilePoweredBlueprint(createBlueprint("gas-position-after", [
       createEntity("vaporizer", "vaporizer_1", 100, 100),
-      createEntity("consumer", "item_port_xiranite_oven_1", 5, 0),
+      createEntity("consumer", "xiranite_oven_1", 5, 0),
     ]));
     expect(isDeviceInRequiredGasDiffusion({
       topology: movedTopology,

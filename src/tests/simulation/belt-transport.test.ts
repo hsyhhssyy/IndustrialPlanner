@@ -12,12 +12,12 @@ import {
 
 function createBeltTransportBlueprint(): BlueprintDocument {
   return createBlueprint("belt-transport", [
-    createEntity("source-storage", "item_port_storager_1", 0, 0, 0, {
+    createEntity("source-storage", "storager_1", 0, 0, 0, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
       "storageSlotGroups[0].slots[0].initialCount": 20,
     }),
     createEntity("belt", "belt_straight_1x1", 0, -1, 270),
-    createEntity("sink-storage", "item_port_storager_1", 0, -4),
+    createEntity("sink-storage", "storager_1", 0, -4),
   ]);
 }
 

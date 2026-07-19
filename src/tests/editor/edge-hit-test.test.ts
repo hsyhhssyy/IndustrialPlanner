@@ -107,7 +107,7 @@ describe("findEntityAtClientPixelPoint - 边界场景（仅漏一角）", () => 
     const deviceId = "big-device";
     document.entities[deviceId] = {
       id: deviceId,
-      definitionId: "item_port_storager_1", // 3x3 大小的设备
+      definitionId: "storager_1", // 3x3 大小的设备
       position: { x: 12, y: 12 },
       rotation: 0,
       config: {},
@@ -153,7 +153,7 @@ describe("findEntityAtClientPixelPoint - 边界场景（仅漏一角）", () => 
     const deviceId = "edge-device-offset";
     document.entities[deviceId] = {
       id: deviceId,
-      definitionId: "item_port_storager_1", // 3x3
+      definitionId: "storager_1", // 3x3
       position: { x: 52, y: 52 },
       rotation: 0,
       config: {},

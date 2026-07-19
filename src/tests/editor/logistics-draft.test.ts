@@ -63,10 +63,10 @@ function createFurnanceSeparatedByOneBeltDocument(options: {
   const includeUpperFurnance = options.includeUpperFurnance ?? true;
   return createDocumentWithTestEntities([
     ...(includeLowerFurnance
-      ? [createTestEntity("lower-furnance", "item_port_furnance_1", 43, 58)]
+      ? [createTestEntity("lower-furnance", "furnance_1", 43, 58)]
       : []),
     ...(includeUpperFurnance
-      ? [createTestEntity("upper-furnance", "item_port_furnance_1", 43, 54)]
+      ? [createTestEntity("upper-furnance", "furnance_1", 43, 54)]
       : []),
     createTestEntity("crossing-belt", "belt_straight_1x1", 45, 57, 180),
     createTestEntity("left-belt-1", "belt_straight_1x1", 44, 57, 180),
@@ -90,13 +90,19 @@ function findPreviewDraftAt(
 function listPreviewAutoDeviceDefinitionIds(
   editorHost: ReturnType<typeof createEditorHost>,
 ): string[] {
+  const autoDeviceDefinitionIds = new Set([
+    "log_splitter",
+    "log_converger",
+    "log_connector",
+    "pipe_splitter",
+    "pipe_converger",
+    "pipe_connector",
+  ]);
   const previewIds = new Set(editorHost.state.collections.preview);
   return editorHost.internalState.drafts
     .filter((entity) => previewIds.has(entity.id))
     .map((entity) => entity.definitionId)
-    .filter((definitionId) =>
-      definitionId.startsWith("item_log_") || definitionId.startsWith("item_pipe_"),
-    );
+    .filter((definitionId) => autoDeviceDefinitionIds.has(definitionId));
 }
 
 function findDocumentEntityAt(
@@ -138,7 +144,7 @@ describe("物流绘制模式", () => {
     const editorHost = createEditorHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
-      createTestEntity("source-device", "item_port_storager_1", 0, 8),
+      createTestEntity("source-device", "storager_1", 0, 8),
     ]));
 
     editorHost.actions.createLogisticsDraftStart({
@@ -643,7 +649,7 @@ describe("物流绘制模式", () => {
     });
     expect(editorHost.state.collections.ghost).toEqual(["source"]);
     expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
-      definitionId: "item_log_splitter",
+      definitionId: "log_splitter",
       rotation: 270,
     });
     expect(editorHost.actions.applyLogisticDraft()).toBe(true);
@@ -651,7 +657,7 @@ describe("物流绘制模式", () => {
     const snapshot = editorHost.internalDocument.getSnapshot();
     expect(snapshot.entities.source).toBeUndefined();
     expect(findDocumentEntityAt(snapshot, 12, 8)).toMatchObject({
-      definitionId: "item_log_splitter",
+      definitionId: "log_splitter",
     });
     expect(snapshot.entities.predecessor).toBeDefined();
     expect(snapshot.entities.successor).toBeDefined();
@@ -740,7 +746,7 @@ describe("物流绘制模式", () => {
     });
     expect(editorHost.state.collections.ghost).toEqual(["source"]);
     expect(findPreviewDraftAt(editorHost, 6, 6)).toMatchObject({
-      definitionId: "item_log_splitter",
+      definitionId: "log_splitter",
       rotation: 0,
     });
     expect(editorHost.actions.applyLogisticDraft()).toBe(true);
@@ -748,7 +754,7 @@ describe("物流绘制模式", () => {
     const snapshot = editorHost.internalDocument.getSnapshot();
     expect(snapshot.entities.source).toBeUndefined();
     expect(findDocumentEntityAt(snapshot, 6, 6)).toMatchObject({
-      definitionId: "item_log_splitter",
+      definitionId: "log_splitter",
     });
     expect(snapshot.entities.predecessor).toBeDefined();
     expect(snapshot.entities.successor).toBeDefined();
@@ -783,7 +789,7 @@ describe("物流绘制模式", () => {
 
     expect(moveResult.canApply).toBe(true);
     expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
-      definitionId: "item_log_splitter",
+      definitionId: "log_splitter",
       rotation: 270,
     });
   });
@@ -818,7 +824,7 @@ describe("物流绘制模式", () => {
 
     expect(moveResult.canApply).toBe(true);
     expect(findPreviewDraftAt(editorHost, 6, 6)).toMatchObject({
-      definitionId: "item_log_splitter",
+      definitionId: "log_splitter",
       rotation: 0,
     });
   });
@@ -923,7 +929,7 @@ describe("物流绘制模式", () => {
     expect(moveResult.canApply).toBe(true);
     expect(editorHost.state.collections.ghost).toEqual(["target"]);
     expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
-      definitionId: "item_log_converger",
+      definitionId: "log_converger",
       rotation: 270,
     });
   });
@@ -958,7 +964,7 @@ describe("物流绘制模式", () => {
     expect(moveResult.canApply).toBe(true);
     expect(editorHost.state.collections.ghost).toEqual(["target"]);
     expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
-      definitionId: "item_log_converger",
+      definitionId: "log_converger",
       rotation: 270,
     });
   });
@@ -1156,7 +1162,7 @@ describe("物流绘制模式", () => {
       "old-turn",
     ]);
     expect(findPreviewDraftAt(editorHost, 5, 5)).toMatchObject({
-      definitionId: "item_log_splitter",
+      definitionId: "log_splitter",
       rotation: 0,
     });
   });
@@ -1229,7 +1235,7 @@ describe("物流绘制模式", () => {
     expect(moveResult.canApply).toBe(true);
     expect(editorHost.state.collections.ghost).toEqual(["target"]);
     expect(findPreviewDraftAt(editorHost, 6, 6)).toMatchObject({
-      definitionId: "item_log_converger",
+      definitionId: "log_converger",
       rotation: 0,
     });
   });
@@ -1263,7 +1269,7 @@ describe("物流绘制模式", () => {
     expect(moveResult.canApply).toBe(true);
     expect(editorHost.state.collections.ghost).toEqual(["crossing"]);
     expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
     });
   });
 
@@ -1300,7 +1306,7 @@ describe("物流绘制模式", () => {
     });
     expect(editorHost.state.collections.ghost).toEqual(["crossing"]);
     expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
     });
   });
 
@@ -1337,7 +1343,7 @@ describe("物流绘制模式", () => {
     });
     expect(editorHost.state.collections.ghost).toEqual(["crossing"]);
     expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
-      definitionId: "item_pipe_connector",
+      definitionId: "pipe_connector",
     });
   });
 
@@ -1371,7 +1377,7 @@ describe("物流绘制模式", () => {
     expect(moveResult.canApply).toBe(true);
     expect(editorHost.state.collections.ghost).toEqual(["crossing"]);
     expect(findPreviewDraftAt(editorHost, 6, 6)).toMatchObject({
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
     });
   });
 
@@ -1414,7 +1420,7 @@ describe("物流绘制模式", () => {
       moveResult.headGridPoint!.x,
       moveResult.headGridPoint!.y,
     )).toMatchObject({
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
     });
     expect(editorHost.actions.applyLogisticDraft()).toBe(true);
 
@@ -1425,7 +1431,7 @@ describe("物流绘制模式", () => {
       moveResult.headGridPoint!.x,
       moveResult.headGridPoint!.y,
     )).toMatchObject({
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
     });
   });
 
@@ -1457,7 +1463,7 @@ describe("物流绘制模式", () => {
     });
     expect(editorHost.state.collections.ghost).toEqual(["crossing-belt"]);
     expect(findPreviewDraftAt(editorHost, 45, 57)).toMatchObject({
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
     });
   });
 
@@ -1490,7 +1496,7 @@ describe("物流绘制模式", () => {
     });
     // belt at (45,57) rot=180 (E→W) has no predecessor from E → should be replaced with turn
     expect(editorHost.state.collections.ghost).toEqual(["crossing-belt"]);
-    expect(findPreviewDraftAt(editorHost, 45, 57)?.definitionId).not.toBe("item_log_connector");
+    expect(findPreviewDraftAt(editorHost, 45, 57)?.definitionId).not.toBe("log_connector");
     expect(findPreviewDraftAt(editorHost, 45, 57)?.definitionId).toMatch(/belt_turn/);
   });
 
@@ -1524,7 +1530,7 @@ describe("物流绘制模式", () => {
     // belt at (44,57) has input from (45,57) and output to (43,57) → converger
     expect(editorHost.state.collections.ghost).toEqual(["left-belt-1"]);
     expect(findPreviewDraftAt(editorHost, 44, 57)).toMatchObject({
-      definitionId: "item_log_converger",
+      definitionId: "log_converger",
     });
   });
 
@@ -1558,7 +1564,7 @@ describe("物流绘制模式", () => {
     // belt at (43,57) has input from (44,57) → converger
     expect(editorHost.state.collections.ghost).toEqual(["left-belt-2"]);
     expect(findPreviewDraftAt(editorHost, 43, 57)).toMatchObject({
-      definitionId: "item_log_converger",
+      definitionId: "log_converger",
     });
   });
 
@@ -1595,7 +1601,7 @@ describe("物流绘制模式", () => {
     });
     expect(editorHost.state.collections.ghost).toEqual(["crossing-belt"]);
     expect(findPreviewDraftAt(editorHost, 45, 57)).toMatchObject({
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
     });
   });
 
@@ -1628,7 +1634,7 @@ describe("物流绘制模式", () => {
     });
     expect(editorHost.state.collections.ghost).toEqual(["crossing-belt"]);
     expect(findPreviewDraftAt(editorHost, 45, 57)).toMatchObject({
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
     });
   });
 
@@ -1664,7 +1670,7 @@ describe("物流绘制模式", () => {
     });
     expect(editorHost.state.collections.ghost).toEqual(["crossing-belt"]);
     expect(findPreviewDraftAt(editorHost, 45, 57)).toMatchObject({
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
     });
   });
 
@@ -1696,7 +1702,7 @@ describe("物流绘制模式", () => {
     });
     expect(editorHost.state.collections.ghost).toEqual(["crossing-belt"]);
     expect(findPreviewDraftAt(editorHost, 45, 57)).toMatchObject({
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
     });
   });
 
@@ -1726,7 +1732,7 @@ describe("物流绘制模式", () => {
 
     expect(editorHost.queries.resolveLogisticsDraftState()?.invalidReason).toBeNull();
     expect(findPreviewDraftAt(editorHost, 2, 1)).toMatchObject({
-      definitionId: "item_log_converger",
+      definitionId: "log_converger",
     });
 
     editorHost.actions.moveLogisticEnd({
@@ -1736,7 +1742,7 @@ describe("物流绘制模式", () => {
 
     expect(editorHost.queries.resolveLogisticsDraftState()?.invalidReason).toBeNull();
     expect(findPreviewDraftAt(editorHost, 2, 1)).toMatchObject({
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
     });
   });
 
@@ -1775,7 +1781,7 @@ describe("物流绘制模式", () => {
       invalidReason: null,
     });
     expect(findPreviewDraftAt(editorHost, 2, 1)).toMatchObject({
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
     });
   });
 
@@ -1874,9 +1880,9 @@ describe("物流绘制模式", () => {
       );
       expect(editorHost.queries.resolveLogisticsDraftState()?.cells.at(-1)?.gridPoint).toEqual({ x: 5, y: 5 });
       expect(findPreviewDraftAt(editorHost, 5, 5)).toMatchObject({
-        definitionId: "item_log_converger",
+        definitionId: "log_converger",
       });
-      expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["item_log_converger"]);
+      expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["log_converger"]);
     }
   });
 
@@ -1916,7 +1922,7 @@ describe("物流绘制模式", () => {
       });
       expect(beforeDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 6, y: 5 });
       expect(findPreviewDraftAt(editorHost, 6, 5)).toMatchObject({
-        definitionId: "item_log_converger",
+        definitionId: "log_converger",
       });
 
       const moveResult = editorHost.actions.moveLogisticEnd({
@@ -1939,9 +1945,9 @@ describe("物流绘制模式", () => {
         editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => cell.gridPoint),
       ).toEqual(beforeCells);
       expect(findPreviewDraftAt(editorHost, 6, 5)).toMatchObject({
-        definitionId: "item_log_converger",
+        definitionId: "log_converger",
       });
-      expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["item_log_converger"]);
+      expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["log_converger"]);
     }
   });
 
@@ -2005,9 +2011,9 @@ describe("物流绘制模式", () => {
       );
       expect(editorHost.queries.resolveLogisticsDraftState()?.cells.at(-1)?.gridPoint).toEqual({ x: 5, y: 5 });
       expect(findPreviewDraftAt(editorHost, 5, 5)).toMatchObject({
-        definitionId: "item_log_converger",
+        definitionId: "log_converger",
       });
-      expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["item_log_converger"]);
+      expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["log_converger"]);
     }
   });
 
@@ -2016,8 +2022,8 @@ describe("物流绘制模式", () => {
     const editorHost = createEditorHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
-      createTestEntity("source-device", "item_port_storager_1", 0, 8),
-      createTestEntity("target-device", "item_port_grinder_1", 0, 0),
+      createTestEntity("source-device", "storager_1", 0, 8),
+      createTestEntity("target-device", "grinder_1", 0, 0),
     ]));
 
     editorHost.actions.createLogisticsDraftStart({
@@ -2092,12 +2098,12 @@ describe("物流绘制模式", () => {
     const draft = editorHost.queries.resolveLogisticsDraftState();
     expect(draft?.headDraftEntityId).toBeTruthy();
     const headEntity = editorHost.queries.getEntityById(draft!.headDraftEntityId!);
-    expect(headEntity?.definitionId).toBe("item_log_converger");
+    expect(headEntity?.definitionId).toBe("log_converger");
 
     expect(editorHost.actions.applyLogisticDraft()).toBe(true);
     const committed = editorHost.internalDocument.getSnapshot();
     expect(committed.entities[draft!.headDraftEntityId!]).toMatchObject({
-      definitionId: "item_log_converger",
+      definitionId: "log_converger",
     });
   });
 
@@ -2125,12 +2131,12 @@ describe("物流绘制模式", () => {
     const draft = editorHost.queries.resolveLogisticsDraftState();
     expect(draft?.headDraftEntityId).toBeTruthy();
     const headEntity = editorHost.queries.getEntityById(draft!.headDraftEntityId!);
-    expect(headEntity?.definitionId).toBe("item_log_converger");
+    expect(headEntity?.definitionId).toBe("log_converger");
 
     expect(editorHost.actions.applyLogisticDraft()).toBe(true);
     const committed = editorHost.internalDocument.getSnapshot();
     expect(committed.entities[draft!.headDraftEntityId!]).toMatchObject({
-      definitionId: "item_log_converger",
+      definitionId: "log_converger",
     });
   });
 
@@ -2157,8 +2163,8 @@ describe("物流绘制模式", () => {
     expect(draft?.headDraftEntityId).toBeTruthy();
     const headEntity = editorHost.queries.getEntityById(draft!.headDraftEntityId!);
     // 分流器起点时 head 不是分流器所在格，而是路径末端
-    expect(headEntity?.definitionId).not.toBe("item_log_converger");
-    expect(headEntity?.definitionId).not.toBe("item_log_splitter");
+    expect(headEntity?.definitionId).not.toBe("log_converger");
+    expect(headEntity?.definitionId).not.toBe("log_splitter");
   });
 
   it("applies a vertical splitter auto-draft and does not expose the head as converger", () => {
@@ -2184,8 +2190,8 @@ describe("物流绘制模式", () => {
     const draft = editorHost.queries.resolveLogisticsDraftState();
     expect(draft?.headDraftEntityId).toBeTruthy();
     const headEntity = editorHost.queries.getEntityById(draft!.headDraftEntityId!);
-    expect(headEntity?.definitionId).not.toBe("item_log_converger");
-    expect(headEntity?.definitionId).not.toBe("item_log_splitter");
+    expect(headEntity?.definitionId).not.toBe("log_converger");
+    expect(headEntity?.definitionId).not.toBe("log_splitter");
   });
 
   it("blocks drawing into B from above then toward A or C on a fully connected A→B→C straight belt", () => {
@@ -2211,7 +2217,7 @@ describe("物流绘制模式", () => {
 
     // 终点是 B，auto-draft 应创建汇流器
     expect(findPreviewDraftAt(editorHost, 12, 8)).toMatchObject({
-      definitionId: "item_log_converger",
+      definitionId: "log_converger",
     });
 
     // 左移朝向 A → 禁止
@@ -2266,7 +2272,7 @@ describe("物流绘制模式", () => {
 
     // 终点是 B，auto-draft 应创建汇流器
     expect(findPreviewDraftAt(editorHost, 6, 6)).toMatchObject({
-      definitionId: "item_log_converger",
+      definitionId: "log_converger",
     });
 
     // 上移朝向 A → 禁止
@@ -2317,7 +2323,7 @@ describe("物流绘制模式", () => {
       routeMode: { type: "single-bend", routeOrder: "vertical-first", allowTemporaryOrderFlip: true },
     });
     expect(findPreviewDraftAt(editorHost, 0, -5)).toMatchObject({
-      definitionId: "item_log_converger",
+      definitionId: "log_converger",
     });
 
     const moveForward = editorHost.actions.moveLogisticEnd({
@@ -2366,7 +2372,7 @@ describe("物流绘制模式", () => {
       routeMode: { type: "single-bend", routeOrder: "horizontal-first", allowTemporaryOrderFlip: true },
     });
     expect(findPreviewDraftAt(editorHost, 10, 0)).toMatchObject({
-      definitionId: "item_log_converger",
+      definitionId: "log_converger",
     });
 
     const moveForward = editorHost.actions.moveLogisticEnd({
@@ -2421,10 +2427,10 @@ describe("物流绘制模式", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
-      createTestEntity("left", "item_log_splitter", 4, 5),
-      createTestEntity("up", "item_log_splitter", 5, 4),
-      createTestEntity("right", "item_log_splitter", 6, 5),
-      createTestEntity("down", "item_log_splitter", 5, 6, 180),
+      createTestEntity("left", "log_splitter", 4, 5),
+      createTestEntity("up", "log_splitter", 5, 4),
+      createTestEntity("right", "log_splitter", 6, 5),
+      createTestEntity("down", "log_splitter", 5, 6, 180),
     ]));
 
     expect(
@@ -2442,7 +2448,7 @@ describe("物流绘制模式", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
-      createTestEntity("storage", "item_port_storager_1", 6, 6),
+      createTestEntity("storage", "storager_1", 6, 6),
     ]));
 
     const createResult = editorHost.actions.createLogisticsDraftStart({
@@ -2496,7 +2502,7 @@ describe("物流绘制模式", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
-      createTestEntity("storage", "item_port_storager_1", 6, 6),
+      createTestEntity("storage", "storager_1", 6, 6),
       createTestEntity("predecessor", "belt_straight_1x1", 6, 5),
       createTestEntity("crossing", "belt_straight_1x1", 7, 5),
       createTestEntity("successor", "belt_straight_1x1", 8, 5),
@@ -2532,7 +2538,7 @@ describe("物流绘制模式", () => {
     expect(moveResult).toMatchObject({ canApply: true, invalidReason: null });
     expect(editorHost.state.collections.ghost).toContain("crossing");
     expect(findPreviewDraftAt(editorHost, 7, 5)).toMatchObject({
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
     });
   });
 
@@ -2540,7 +2546,7 @@ describe("物流绘制模式", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithTestEntities([
-      createTestEntity("storage", "item_port_storager_1", 6, 6),
+      createTestEntity("storage", "storager_1", 6, 6),
       createTestEntity("source-belt", "belt_straight_1x1", 7, 5, 270),
       createTestEntity("successor", "belt_straight_1x1", 7, 4, 270),
     ]);
@@ -2568,7 +2574,7 @@ describe("物流绘制模式", () => {
       },
     });
     expect(findPreviewDraftAt(editorHost, 7, 5)).toMatchObject({
-      definitionId: "item_log_splitter",
+      definitionId: "log_splitter",
     });
 
     editorHost.actions.cancelLogisticsDraft();
@@ -2591,7 +2597,7 @@ describe("物流绘制模式", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
-      createTestEntity("pump", "item_port_water_pump_1", 4, 4),
+      createTestEntity("pump", "water_pump_1", 4, 4),
       createTestEntity("predecessor", "pipe_straight_1x1", 7, 4, 90),
       createTestEntity("crossing", "pipe_straight_1x1", 7, 5, 90),
       createTestEntity("successor", "pipe_straight_1x1", 7, 6, 90),
@@ -2630,7 +2636,7 @@ describe("物流绘制模式", () => {
 
     expect(moveResult).toMatchObject({ canApply: true, invalidReason: null });
     expect(findPreviewDraftAt(editorHost, 7, 5)).toMatchObject({
-      definitionId: "item_pipe_connector",
+      definitionId: "pipe_connector",
     });
   });
 
@@ -2642,7 +2648,7 @@ describe("物流绘制模式", () => {
 
 function createTestDocument(entities: readonly WorldEntity[]): WorldDocument {
   return {
-    schemaVersion: 1,
+    schemaVersion: 3,
     documentKey: "test-logistics-turn",
     baseId: DEFAULT_WORLD_BASE_ID,
     meta: {
@@ -2779,7 +2785,7 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
     // fromEdge 仍应从弯道自身的 input port 推断。
     const deviceDoc = createTestDocument([
       makeEntity(TURN_ID, "belt_turn_cw_1x1", TURN_POS.x, TURN_POS.y, TURN_ROT),
-      makeEntity("test-grinder", "item_port_grinder_1", 3, 2, 0),
+      makeEntity("test-grinder", "grinder_1", 3, 2, 0),
     ]);
 
     const sourceEndpoint = {
@@ -2853,7 +2859,7 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
     // converger rotation=0: in_n(N), in_e(E), in_s(S), out_w(W)
     // 放 converger 在 (3,3)，空地在 (4,3)（EAST 邻接，对应 in_e 口）
     const convergerDoc = createTestDocument([
-      makeEntity("test-converger", "item_log_converger", 3, 3, 0),
+      makeEntity("test-converger", "log_converger", 3, 3, 0),
     ]);
 
     // 从空地(4,3)起笔，连入 converger 的 EAST 输入口。

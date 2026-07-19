@@ -25,7 +25,7 @@ describe("createHypergryphEntityVariantSwitchGestureModule", () => {
     expect(result).toEqual({ status: "handled" });
     expect(editor.actions.replaceEntityDefinition).toHaveBeenCalledWith(
       "selected-entity",
-      "item_port_liquid_filling_pd_mc_1",
+      "liquid_filling_pd_mc_1",
     );
   });
 
@@ -67,7 +67,7 @@ function createContext(options: {
   const selection = createCollection(options.selectionIds ?? ["selected-entity"]);
   const entity: WorldEntity = {
     id: "selected-entity",
-    definitionId: options.selectedDefinitionId ?? "item_port_filling_pd_mc_1",
+    definitionId: options.selectedDefinitionId ?? "filling_pd_mc_1",
     position: { x: 0, y: 0 },
     rotation: 0,
     config: { keep: true },

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "blueprintId": "8f3c2b2e-1554-48a9-8b5e-5f2a3fd7a901",
   "version": "v1.3.0",
   "name": "新手入门：重息壤产线",
@@ -12,7 +12,7 @@
   "entities": {
     "item_port_log_hongs_bus_source:1": {
       "id": "item_port_log_hongs_bus_source:1",
-      "definitionId": "item_port_log_hongs_bus_source",
+      "definitionId": "log_hongs_bus_source",
       "position": {
         "x": 0,
         "y": 0
@@ -23,7 +23,7 @@
     },
     "item_port_unloader_1:1": {
       "id": "item_port_unloader_1:1",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 1,
         "y": 4
@@ -59,7 +59,7 @@
     },
     "item_log_splitter:1": {
       "id": "item_log_splitter:1",
-      "definitionId": "item_log_splitter",
+      "definitionId": "log_splitter",
       "position": {
         "x": 4,
         "y": 5
@@ -136,7 +136,7 @@
     },
     "item_port_water_pump_1:1": {
       "id": "item_port_water_pump_1:1",
-      "definitionId": "item_port_water_pump_1",
+      "definitionId": "water_pump_1",
       "position": {
         "x": -10,
         "y": 9
@@ -160,7 +160,7 @@
     },
     "item_port_udpipe_loader_1:1": {
       "id": "item_port_udpipe_loader_1:1",
-      "definitionId": "item_port_udpipe_loader_1",
+      "definitionId": "udpipe_loader_1",
       "position": {
         "x": -6,
         "y": 9
@@ -173,7 +173,7 @@
     },
     "item_port_udpipe_unloader_1:1": {
       "id": "item_port_udpipe_unloader_1:1",
-      "definitionId": "item_port_udpipe_unloader_1",
+      "definitionId": "udpipe_unloader_1",
       "position": {
         "x": 0,
         "y": 6
@@ -206,7 +206,7 @@
     },
     "item_port_mix_pool_1:1": {
       "id": "item_port_mix_pool_1:1",
-      "definitionId": "item_port_mix_pool_1",
+      "definitionId": "mix_pool_1",
       "position": {
         "x": 3,
         "y": 8
@@ -258,7 +258,7 @@
     },
     "item_port_udpipe_loader_1:2": {
       "id": "item_port_udpipe_loader_1:2",
-      "definitionId": "item_port_udpipe_loader_1",
+      "definitionId": "udpipe_loader_1",
       "position": {
         "x": -10,
         "y": 14
@@ -273,7 +273,7 @@
     },
     "item_port_udpipe_unloader_1:2": {
       "id": "item_port_udpipe_unloader_1:2",
-      "definitionId": "item_port_udpipe_unloader_1",
+      "definitionId": "udpipe_unloader_1",
       "position": {
         "x": 0,
         "y": 12
@@ -361,7 +361,7 @@
     },
     "item_port_xiranite_oven_1:1": {
       "id": "item_port_xiranite_oven_1:1",
-      "definitionId": "item_port_xiranite_oven_1",
+      "definitionId": "xiranite_oven_1",
       "position": {
         "x": 8,
         "y": 2
@@ -376,7 +376,7 @@
     },
     "item_port_storager_1:1": {
       "id": "item_port_storager_1:1",
-      "definitionId": "item_port_storager_1",
+      "definitionId": "storager_1",
       "position": {
         "x": 13,
         "y": 3
@@ -391,7 +391,7 @@
     },
     "item_liquid_cleaner_1:1": {
       "id": "item_liquid_cleaner_1:1",
-      "definitionId": "item_liquid_cleaner_1",
+      "definitionId": "liquid_cleaner_1",
       "position": {
         "x": 10,
         "y": 10
@@ -402,7 +402,7 @@
     },
     "item_port_power_diffuser_1:1": {
       "id": "item_port_power_diffuser_1:1",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 8,
         "y": 7
@@ -413,7 +413,7 @@
     },
     "item_port_power_diffuser_1:2": {
       "id": "item_port_power_diffuser_1:2",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": -7,
         "y": 12

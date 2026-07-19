@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "blueprintId": "c96944de-0608-4abf-901a-8b3d27a476d1",
   "version": "v1.3.0",
   "name": "双烘炉息壤产线",
@@ -12,7 +12,7 @@
   "entities": {
     "legacy_c96944de_0001": {
       "id": "legacy_c96944de_0001",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 27,
         "y": 23
@@ -23,7 +23,7 @@
     },
     "legacy_c96944de_0002": {
       "id": "legacy_c96944de_0002",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 26,
         "y": 20
@@ -34,7 +34,7 @@
     },
     "legacy_c96944de_0003": {
       "id": "legacy_c96944de_0003",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 25,
         "y": 16
@@ -45,7 +45,7 @@
     },
     "legacy_c96944de_0004": {
       "id": "legacy_c96944de_0004",
-      "definitionId": "item_port_hydro_planter_1",
+      "definitionId": "hydro_planter_1",
       "position": {
         "x": 21,
         "y": 19
@@ -56,7 +56,7 @@
     },
     "legacy_c96944de_0005": {
       "id": "legacy_c96944de_0005",
-      "definitionId": "item_port_seedcol_1",
+      "definitionId": "seedcol_1",
       "position": {
         "x": 15,
         "y": 19
@@ -70,7 +70,7 @@
     },
     "legacy_c96944de_0006": {
       "id": "legacy_c96944de_0006",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 10,
         "y": 19
@@ -81,7 +81,7 @@
     },
     "legacy_c96944de_0007": {
       "id": "legacy_c96944de_0007",
-      "definitionId": "item_port_seedcol_1",
+      "definitionId": "seedcol_1",
       "position": {
         "x": 5,
         "y": 19
@@ -95,7 +95,7 @@
     },
     "legacy_c96944de_0008": {
       "id": "legacy_c96944de_0008",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 0,
         "y": 19
@@ -216,7 +216,7 @@
     },
     "legacy_c96944de_0019": {
       "id": "legacy_c96944de_0019",
-      "definitionId": "item_pipe_splitter",
+      "definitionId": "pipe_splitter",
       "position": {
         "x": 20,
         "y": 21
@@ -271,7 +271,7 @@
     },
     "legacy_c96944de_0024": {
       "id": "legacy_c96944de_0024",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 21,
         "y": 12
@@ -282,7 +282,7 @@
     },
     "legacy_c96944de_0025": {
       "id": "legacy_c96944de_0025",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 18,
         "y": 15
@@ -293,7 +293,7 @@
     },
     "legacy_c96944de_0026": {
       "id": "legacy_c96944de_0026",
-      "definitionId": "item_port_xiranite_oven_1",
+      "definitionId": "xiranite_oven_1",
       "position": {
         "x": 12,
         "y": 13
@@ -447,7 +447,7 @@
     },
     "legacy_c96944de_0040": {
       "id": "legacy_c96944de_0040",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 25,
         "y": 15
@@ -458,7 +458,7 @@
     },
     "legacy_c96944de_0041": {
       "id": "legacy_c96944de_0041",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 26,
         "y": 12
@@ -524,7 +524,7 @@
     },
     "legacy_c96944de_0047": {
       "id": "legacy_c96944de_0047",
-      "definitionId": "item_port_storager_1",
+      "definitionId": "storager_1",
       "position": {
         "x": 17,
         "y": 12
@@ -605,7 +605,7 @@
     },
     "legacy_c96944de_0054": {
       "id": "legacy_c96944de_0054",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 1,
         "y": 16
@@ -627,7 +627,7 @@
     },
     "legacy_c96944de_0056": {
       "id": "legacy_c96944de_0056",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 5,
         "y": 13
@@ -649,7 +649,7 @@
     },
     "legacy_c96944de_0058": {
       "id": "legacy_c96944de_0058",
-      "definitionId": "item_port_seedcol_1",
+      "definitionId": "seedcol_1",
       "position": {
         "x": 20,
         "y": 1
@@ -663,7 +663,7 @@
     },
     "legacy_c96944de_0059": {
       "id": "legacy_c96944de_0059",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 25,
         "y": 1
@@ -740,7 +740,7 @@
     },
     "legacy_c96944de_0066": {
       "id": "legacy_c96944de_0066",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 26,
         "y": 6
@@ -762,7 +762,7 @@
     },
     "legacy_c96944de_0068": {
       "id": "legacy_c96944de_0068",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 21,
         "y": 6
@@ -784,7 +784,7 @@
     },
     "legacy_c96944de_0070": {
       "id": "legacy_c96944de_0070",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 1,
         "y": 0
@@ -795,7 +795,7 @@
     },
     "legacy_c96944de_0071": {
       "id": "legacy_c96944de_0071",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 1,
         "y": 2
@@ -806,7 +806,7 @@
     },
     "legacy_c96944de_0072": {
       "id": "legacy_c96944de_0072",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 2,
         "y": 6
@@ -817,7 +817,7 @@
     },
     "legacy_c96944de_0073": {
       "id": "legacy_c96944de_0073",
-      "definitionId": "item_port_hydro_planter_1",
+      "definitionId": "hydro_planter_1",
       "position": {
         "x": 4,
         "y": 1
@@ -828,7 +828,7 @@
     },
     "legacy_c96944de_0074": {
       "id": "legacy_c96944de_0074",
-      "definitionId": "item_port_seedcol_1",
+      "definitionId": "seedcol_1",
       "position": {
         "x": 10,
         "y": 1
@@ -842,7 +842,7 @@
     },
     "legacy_c96944de_0075": {
       "id": "legacy_c96944de_0075",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 15,
         "y": 1
@@ -952,7 +952,7 @@
     },
     "legacy_c96944de_0085": {
       "id": "legacy_c96944de_0085",
-      "definitionId": "item_pipe_splitter",
+      "definitionId": "pipe_splitter",
       "position": {
         "x": 9,
         "y": 3
@@ -1007,7 +1007,7 @@
     },
     "legacy_c96944de_0090": {
       "id": "legacy_c96944de_0090",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 5,
         "y": 7
@@ -1018,7 +1018,7 @@
     },
     "legacy_c96944de_0091": {
       "id": "legacy_c96944de_0091",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 9,
         "y": 7
@@ -1029,7 +1029,7 @@
     },
     "legacy_c96944de_0092": {
       "id": "legacy_c96944de_0092",
-      "definitionId": "item_port_xiranite_oven_1",
+      "definitionId": "xiranite_oven_1",
       "position": {
         "x": 13,
         "y": 7
@@ -1183,7 +1183,7 @@
     },
     "legacy_c96944de_0106": {
       "id": "legacy_c96944de_0106",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 4,
         "y": 9
@@ -1194,7 +1194,7 @@
     },
     "legacy_c96944de_0107": {
       "id": "legacy_c96944de_0107",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 1,
         "y": 10
@@ -1260,7 +1260,7 @@
     },
     "legacy_c96944de_0113": {
       "id": "legacy_c96944de_0113",
-      "definitionId": "item_port_storager_1",
+      "definitionId": "storager_1",
       "position": {
         "x": 10,
         "y": 10
@@ -1319,7 +1319,7 @@
     },
     "legacy_c96944de_0118": {
       "id": "legacy_c96944de_0118",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 4,
         "y": 14
@@ -1352,7 +1352,7 @@
     },
     "legacy_c96944de_0121": {
       "id": "legacy_c96944de_0121",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 3,
         "y": 13
@@ -1363,7 +1363,7 @@
     },
     "legacy_c96944de_0122": {
       "id": "legacy_c96944de_0122",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 4,
         "y": 13
@@ -1374,7 +1374,7 @@
     },
     "legacy_c96944de_0123": {
       "id": "legacy_c96944de_0123",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 1,
         "y": 14
@@ -1385,7 +1385,7 @@
     },
     "legacy_c96944de_0124": {
       "id": "legacy_c96944de_0124",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 9,
         "y": 15
@@ -1429,7 +1429,7 @@
     },
     "legacy_c96944de_0128": {
       "id": "legacy_c96944de_0128",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 10,
         "y": 13
@@ -1539,7 +1539,7 @@
     },
     "legacy_c96944de_0138": {
       "id": "legacy_c96944de_0138",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 25,
         "y": 10
@@ -1561,7 +1561,7 @@
     },
     "legacy_c96944de_0140": {
       "id": "legacy_c96944de_0140",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 26,
         "y": 11
@@ -1572,7 +1572,7 @@
     },
     "legacy_c96944de_0141": {
       "id": "legacy_c96944de_0141",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 25,
         "y": 11
@@ -1583,7 +1583,7 @@
     },
     "legacy_c96944de_0142": {
       "id": "legacy_c96944de_0142",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 27,
         "y": 9
@@ -1594,7 +1594,7 @@
     },
     "legacy_c96944de_0143": {
       "id": "legacy_c96944de_0143",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 18,
         "y": 7
@@ -1638,7 +1638,7 @@
     },
     "legacy_c96944de_0147": {
       "id": "legacy_c96944de_0147",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 18,
         "y": 10

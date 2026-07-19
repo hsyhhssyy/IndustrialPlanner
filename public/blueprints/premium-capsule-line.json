@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "blueprintId": "429609a4-61cb-4083-98fa-b8de1268bec4",
   "version": "v1.3.0",
   "name": "精选荞愈胶囊产线",
@@ -12,7 +12,7 @@
   "entities": {
     "legacy_429609a4_0001": {
       "id": "legacy_429609a4_0001",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 0,
         "y": 0
@@ -25,7 +25,7 @@
     },
     "legacy_429609a4_0002": {
       "id": "legacy_429609a4_0002",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 3,
         "y": 0
@@ -38,7 +38,7 @@
     },
     "legacy_429609a4_0003": {
       "id": "legacy_429609a4_0003",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 6,
         "y": 0
@@ -51,7 +51,7 @@
     },
     "legacy_429609a4_0004": {
       "id": "legacy_429609a4_0004",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 9,
         "y": 0
@@ -64,7 +64,7 @@
     },
     "legacy_429609a4_0005": {
       "id": "legacy_429609a4_0005",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 12,
         "y": 0
@@ -77,7 +77,7 @@
     },
     "legacy_429609a4_0006": {
       "id": "legacy_429609a4_0006",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 15,
         "y": 0
@@ -90,7 +90,7 @@
     },
     "legacy_429609a4_0007": {
       "id": "legacy_429609a4_0007",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 18,
         "y": 0
@@ -103,7 +103,7 @@
     },
     "legacy_429609a4_0008": {
       "id": "legacy_429609a4_0008",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 21,
         "y": 0
@@ -116,7 +116,7 @@
     },
     "legacy_429609a4_0009": {
       "id": "legacy_429609a4_0009",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 0,
         "y": 2
@@ -127,7 +127,7 @@
     },
     "legacy_429609a4_0010": {
       "id": "legacy_429609a4_0010",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 3,
         "y": 2
@@ -138,7 +138,7 @@
     },
     "legacy_429609a4_0011": {
       "id": "legacy_429609a4_0011",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 6,
         "y": 2
@@ -149,7 +149,7 @@
     },
     "legacy_429609a4_0012": {
       "id": "legacy_429609a4_0012",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 9,
         "y": 2
@@ -160,7 +160,7 @@
     },
     "legacy_429609a4_0013": {
       "id": "legacy_429609a4_0013",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 12,
         "y": 2
@@ -171,7 +171,7 @@
     },
     "legacy_429609a4_0014": {
       "id": "legacy_429609a4_0014",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 15,
         "y": 2
@@ -182,7 +182,7 @@
     },
     "legacy_429609a4_0015": {
       "id": "legacy_429609a4_0015",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 18,
         "y": 2
@@ -193,7 +193,7 @@
     },
     "legacy_429609a4_0016": {
       "id": "legacy_429609a4_0016",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 21,
         "y": 2
@@ -292,7 +292,7 @@
     },
     "legacy_429609a4_0025": {
       "id": "legacy_429609a4_0025",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 0,
         "y": 6
@@ -303,7 +303,7 @@
     },
     "legacy_429609a4_0026": {
       "id": "legacy_429609a4_0026",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 6,
         "y": 6
@@ -314,7 +314,7 @@
     },
     "legacy_429609a4_0027": {
       "id": "legacy_429609a4_0027",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 9,
         "y": 6
@@ -325,7 +325,7 @@
     },
     "legacy_429609a4_0028": {
       "id": "legacy_429609a4_0028",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 12,
         "y": 6
@@ -336,7 +336,7 @@
     },
     "legacy_429609a4_0029": {
       "id": "legacy_429609a4_0029",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 15,
         "y": 6
@@ -347,7 +347,7 @@
     },
     "legacy_429609a4_0030": {
       "id": "legacy_429609a4_0030",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 21,
         "y": 6
@@ -358,7 +358,7 @@
     },
     "legacy_429609a4_0031": {
       "id": "legacy_429609a4_0031",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 3,
         "y": 10
@@ -369,7 +369,7 @@
     },
     "legacy_429609a4_0032": {
       "id": "legacy_429609a4_0032",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 18,
         "y": 10
@@ -534,7 +534,7 @@
     },
     "legacy_429609a4_0047": {
       "id": "legacy_429609a4_0047",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 4,
         "y": 6
@@ -545,7 +545,7 @@
     },
     "legacy_429609a4_0048": {
       "id": "legacy_429609a4_0048",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 18,
         "y": 6
@@ -556,7 +556,7 @@
     },
     "legacy_429609a4_0049": {
       "id": "legacy_429609a4_0049",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 6,
         "y": 10
@@ -567,7 +567,7 @@
     },
     "legacy_429609a4_0050": {
       "id": "legacy_429609a4_0050",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 12,
         "y": 10
@@ -578,7 +578,7 @@
     },
     "legacy_429609a4_0051": {
       "id": "legacy_429609a4_0051",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 2,
         "y": 14
@@ -589,7 +589,7 @@
     },
     "legacy_429609a4_0052": {
       "id": "legacy_429609a4_0052",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 16,
         "y": 14
@@ -732,7 +732,7 @@
     },
     "legacy_429609a4_0065": {
       "id": "legacy_429609a4_0065",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 9,
         "y": 15
@@ -743,7 +743,7 @@
     },
     "legacy_429609a4_0066": {
       "id": "legacy_429609a4_0066",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 12,
         "y": 15
@@ -754,7 +754,7 @@
     },
     "legacy_429609a4_0067": {
       "id": "legacy_429609a4_0067",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 15,
         "y": 18
@@ -765,7 +765,7 @@
     },
     "legacy_429609a4_0068": {
       "id": "legacy_429609a4_0068",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 6,
         "y": 18
@@ -776,7 +776,7 @@
     },
     "legacy_429609a4_0069": {
       "id": "legacy_429609a4_0069",
-      "definitionId": "item_port_shaper_1",
+      "definitionId": "shaper_1",
       "position": {
         "x": 9,
         "y": 19
@@ -787,7 +787,7 @@
     },
     "legacy_429609a4_0070": {
       "id": "legacy_429609a4_0070",
-      "definitionId": "item_port_shaper_1",
+      "definitionId": "shaper_1",
       "position": {
         "x": 12,
         "y": 19
@@ -798,7 +798,7 @@
     },
     "legacy_429609a4_0071": {
       "id": "legacy_429609a4_0071",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 0,
         "y": 19
@@ -809,7 +809,7 @@
     },
     "legacy_429609a4_0072": {
       "id": "legacy_429609a4_0072",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 21,
         "y": 19
@@ -941,7 +941,7 @@
     },
     "legacy_429609a4_0084": {
       "id": "legacy_429609a4_0084",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 2,
         "y": 9
@@ -952,7 +952,7 @@
     },
     "legacy_429609a4_0085": {
       "id": "legacy_429609a4_0085",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 3,
         "y": 9
@@ -1062,7 +1062,7 @@
     },
     "legacy_429609a4_0095": {
       "id": "legacy_429609a4_0095",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 2,
         "y": 13
@@ -1205,7 +1205,7 @@
     },
     "legacy_429609a4_0108": {
       "id": "legacy_429609a4_0108",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 21,
         "y": 9
@@ -1216,7 +1216,7 @@
     },
     "legacy_429609a4_0109": {
       "id": "legacy_429609a4_0109",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 20,
         "y": 9
@@ -1326,7 +1326,7 @@
     },
     "legacy_429609a4_0119": {
       "id": "legacy_429609a4_0119",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 21,
         "y": 13
@@ -1436,7 +1436,7 @@
     },
     "legacy_429609a4_0129": {
       "id": "legacy_429609a4_0129",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 5,
         "y": 21
@@ -1447,7 +1447,7 @@
     },
     "legacy_429609a4_0130": {
       "id": "legacy_429609a4_0130",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 15,
         "y": 21
@@ -1458,7 +1458,7 @@
     },
     "legacy_429609a4_0131": {
       "id": "legacy_429609a4_0131",
-      "definitionId": "item_port_filling_pd_mc_1",
+      "definitionId": "filling_pd_mc_1",
       "position": {
         "x": 9,
         "y": 23
@@ -1535,7 +1535,7 @@
     },
     "legacy_429609a4_0138": {
       "id": "legacy_429609a4_0138",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 4,
         "y": 19
@@ -1546,7 +1546,7 @@
     },
     "legacy_429609a4_0139": {
       "id": "legacy_429609a4_0139",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 18,
         "y": 19
@@ -1623,7 +1623,7 @@
     },
     "legacy_429609a4_0146": {
       "id": "legacy_429609a4_0146",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 2,
         "y": 24
@@ -1634,7 +1634,7 @@
     },
     "legacy_429609a4_0147": {
       "id": "legacy_429609a4_0147",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 19,
         "y": 24
@@ -1733,7 +1733,7 @@
     },
     "legacy_429609a4_0156": {
       "id": "legacy_429609a4_0156",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 5,
         "y": 27
@@ -1744,7 +1744,7 @@
     },
     "legacy_429609a4_0157": {
       "id": "legacy_429609a4_0157",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 14,
         "y": 27
@@ -1755,7 +1755,7 @@
     },
     "legacy_429609a4_0158": {
       "id": "legacy_429609a4_0158",
-      "definitionId": "item_port_storager_1",
+      "definitionId": "storager_1",
       "position": {
         "x": 10,
         "y": 28
@@ -1792,7 +1792,7 @@
     },
     "legacy_429609a4_0161": {
       "id": "legacy_429609a4_0161",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 0,
         "y": 28
@@ -1803,7 +1803,7 @@
     },
     "legacy_429609a4_0162": {
       "id": "legacy_429609a4_0162",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 19,
         "y": 28
@@ -1880,7 +1880,7 @@
     },
     "legacy_429609a4_0169": {
       "id": "legacy_429609a4_0169",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 1,
         "y": 22
@@ -1891,7 +1891,7 @@
     },
     "legacy_429609a4_0170": {
       "id": "legacy_429609a4_0170",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 21,
         "y": 22
@@ -1902,7 +1902,7 @@
     },
     "legacy_429609a4_0171": {
       "id": "legacy_429609a4_0171",
-      "definitionId": "item_port_seedcol_1",
+      "definitionId": "seedcol_1",
       "position": {
         "x": 6,
         "y": 32
@@ -1916,7 +1916,7 @@
     },
     "legacy_429609a4_0172": {
       "id": "legacy_429609a4_0172",
-      "definitionId": "item_port_seedcol_1",
+      "definitionId": "seedcol_1",
       "position": {
         "x": 13,
         "y": 32
@@ -1930,7 +1930,7 @@
     },
     "legacy_429609a4_0173": {
       "id": "legacy_429609a4_0173",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 1,
         "y": 33
@@ -1941,7 +1941,7 @@
     },
     "legacy_429609a4_0174": {
       "id": "legacy_429609a4_0174",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 18,
         "y": 33
@@ -1952,7 +1952,7 @@
     },
     "legacy_429609a4_0175": {
       "id": "legacy_429609a4_0175",
-      "definitionId": "item_port_seedcol_1",
+      "definitionId": "seedcol_1",
       "position": {
         "x": 2,
         "y": 38
@@ -1966,7 +1966,7 @@
     },
     "legacy_429609a4_0176": {
       "id": "legacy_429609a4_0176",
-      "definitionId": "item_port_seedcol_1",
+      "definitionId": "seedcol_1",
       "position": {
         "x": 17,
         "y": 38
@@ -1980,7 +1980,7 @@
     },
     "legacy_429609a4_0177": {
       "id": "legacy_429609a4_0177",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 7,
         "y": 37
@@ -1991,7 +1991,7 @@
     },
     "legacy_429609a4_0178": {
       "id": "legacy_429609a4_0178",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 12,
         "y": 37
@@ -2079,7 +2079,7 @@
     },
     "legacy_429609a4_0186": {
       "id": "legacy_429609a4_0186",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 12,
         "y": 32
@@ -2332,7 +2332,7 @@
     },
     "legacy_429609a4_0209": {
       "id": "legacy_429609a4_0209",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 11,
         "y": 34
@@ -2343,7 +2343,7 @@
     },
     "legacy_429609a4_0210": {
       "id": "legacy_429609a4_0210",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 0,
         "y": 40
@@ -2354,7 +2354,7 @@
     },
     "legacy_429609a4_0211": {
       "id": "legacy_429609a4_0211",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 22,
         "y": 40
@@ -2530,7 +2530,7 @@
     },
     "legacy_429609a4_0227": {
       "id": "legacy_429609a4_0227",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 21,
         "y": 27

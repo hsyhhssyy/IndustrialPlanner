@@ -50,12 +50,12 @@ function estimateDeviceLabelWidth(label: string): number {
 }
 
 // ─── 设备图标路径映射 ───
-function resolveDeviceIconPath(entityId: string): string {
+function resolveDeviceIconPath(definition: EntityDefinition): string {
   // 特殊映射：entity id 与图标文件名不一致的情况
   const SPECIAL_ICON_MAP: Record<string, string> = {
-    "item_port_liquid_filling_pd_mc_1": "item_port_filling_pd_mc_1",
+    "liquid_filling_pd_mc_1": "item_port_filling_pd_mc_1",
   };
-  return createDeviceIconAssetUrl(SPECIAL_ICON_MAP[entityId] ?? entityId);
+  return createDeviceIconAssetUrl(SPECIAL_ICON_MAP[definition.id] ?? definition.spriteId);
 }
 
 // ─── uiGroup → 分组配置映射 ───
@@ -310,6 +310,7 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
   const entityVariant = button.entityVariant;
   const craftGroupKey = button.craftGroupKey;
   const variantDefinitions = button.variantDefinitions ?? [];
+  const definition = appHost.workspace.registry.entityDefinitions.find((entry) => entry.id === deviceId);
   const canOpenVariantMenu = appHost.state.settings.collapseDeviceModes
     && entityVariant !== undefined
     && craftGroupKey !== undefined
@@ -530,7 +531,11 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
         type="button"
       >
         <span className={cm(styles, "button-icon")} aria-hidden="true">
-          <img alt="" className={cm(styles, "button-icon-image")} src={resolveDeviceIconPath(deviceId)} />
+          <img
+            alt=""
+            className={cm(styles, "button-icon-image")}
+            src={definition === undefined ? "" : resolveDeviceIconPath(definition)}
+          />
         </span>
         <span className={cm(styles, labelClassName)}>{buttonLabel}</span>
         {showDeviceHotkey ? <span className={cm(styles, "placement-button-hotkey")}>{hotkey}</span> : null}
@@ -651,7 +656,7 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
                     type="button"
                   >
                     <span className={cm(styles, "placement-variant-menu-icon")} aria-hidden="true">
-                      <img alt="" src={resolveDeviceIconPath(definition.id)} />
+                      <img alt="" src={resolveDeviceIconPath(definition)} />
                     </span>
                     <span className={cm(styles, "placement-variant-menu-label")}>{menuItemLabel}</span>
                     <span

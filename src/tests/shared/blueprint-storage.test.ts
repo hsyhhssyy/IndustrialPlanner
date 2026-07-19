@@ -68,6 +68,7 @@ describe("blueprint-storage", () => {
       },
       {
         ...blueprint,
+        schemaVersion: 1,
         kind: "blueprint" as const,
         parentFolderId: null,
         deletedAt: null,
@@ -76,7 +77,8 @@ describe("blueprint-storage", () => {
 
     const record = await readBlueprintRecord(blueprint.blueprintId);
 
-    expect(record?.entities.pool?.definitionId).toBe("item_port_mix_pool_2");
+    expect(record?.schemaVersion).toBe(3);
+    expect(record?.entities.pool?.definitionId).toBe("mix_pool_2");
   });
 
   it("reads folders directly and rejects non-folder entries", async () => {

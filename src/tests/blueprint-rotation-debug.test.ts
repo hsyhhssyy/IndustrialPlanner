@@ -42,7 +42,7 @@ describe("蓝图多实体旋转 - 相对位置保持", () => {
       entities: {
         source: {
           id: "source",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 9, y: 9 },
           rotation: 0,
           config: {},
@@ -50,7 +50,7 @@ describe("蓝图多实体旋转 - 相对位置保持", () => {
         },
         target: {
           id: "target",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 12, y: 9 },
           rotation: 90,
           config: {},
@@ -128,7 +128,7 @@ describe("蓝图多实体旋转 - 相对位置保持", () => {
       entities: {
         source: {
           id: "source",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 9, y: 9 },
           rotation: 0,
           config: {},
@@ -136,7 +136,7 @@ describe("蓝图多实体旋转 - 相对位置保持", () => {
         },
         target: {
           id: "target",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 12, y: 9 },
           rotation: 90,
           config: {},

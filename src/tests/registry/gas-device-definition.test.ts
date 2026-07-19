@@ -163,7 +163,7 @@ describe("gas item and device definitions", () => {
   });
 
   it("defines gas reactor as gas-only west input and east output", () => {
-    const definition = requireEntity("item_port_gas_reactor_1");
+    const definition = requireEntity("gas_reactor_1");
     const gasInput = requirePortGroup(definition, "gas_input");
     const gasOutput = requirePortGroup(definition, "gas_output");
 
@@ -190,7 +190,7 @@ describe("gas item and device definitions", () => {
   });
 
   it("makes liquid purifier pipe ports and buffers accept fluid", () => {
-    const definition = requireEntity("item_port_liquid_purifier_1");
+    const definition = requireEntity("liquid_purifier_1");
     // AI-REMOVED 2026-07-16:
     // Reason: 当前液体提纯机已移除固体输入端口、缓冲槽和配方输入依赖，原固体输入契约属于测试漂移。
     // Trigger: 用户确认问题 2 为测试漂移并要求移除这项旧断言。
@@ -253,7 +253,7 @@ describe("gas item and device definitions", () => {
   });
 
   it("makes liquid filling machine pipe input and buffer accept fluid", () => {
-    const definition = requireEntity("item_port_liquid_filling_pd_mc_1");
+    const definition = requireEntity("liquid_filling_pd_mc_1");
     const fluidInput = requirePortGroup(definition, "fluid_input");
     const fluidInputBuffer = definition.storageSlotGroups.find(
       (slotGroup) => slotGroup.id === "fluid_input_buffer",
@@ -267,7 +267,7 @@ describe("gas item and device definitions", () => {
   });
 
   it("makes dismantler pipe output and buffer accept fluid", () => {
-    const definition = requireEntity("item_port_dismantler_1");
+    const definition = requireEntity("dismantler_1");
     const fluidOutput = requirePortGroup(definition, "fluid_output");
     const fluidOutputBuffer = definition.storageSlotGroups.find(
       (slotGroup) => slotGroup.id === "fluid_output_buffer",
@@ -293,7 +293,7 @@ describe("gas item and device definitions", () => {
 
     expect(gasFillingRecipes).toHaveLength(8);
     expect(gasFillingRecipes.every(
-      (recipe) => recipe.machineId === "item_port_liquid_filling_pd_mc_1",
+      (recipe) => recipe.machineId === "liquid_filling_pd_mc_1",
     )).toBe(true);
   });
 });

@@ -13,6 +13,7 @@ import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import {
   buildEncyclopediaIndex,
+  resolveEntityDisplayName,
   resolveEntityIcon,
   resolveItemIcon,
   resolveItemName,
@@ -81,6 +82,7 @@ export const RecipePickerDialog = observer(function RecipePickerDialog({
       registry.itemDefinitions,
       registry.entityDefinitions,
       registry.recipeDefinitions,
+      registry.entityVariantDefinitions,
     ),
     [registry],
   );
@@ -205,7 +207,7 @@ function RecipePickerCard({
       >
         <div className={cm(styles, "recipe-picker-card-header")}>
           <span className={cm(styles, "recipe-picker-machine")}>
-            <img alt="" src={resolveEntityIcon(recipe.machineId)} />
+            <img alt="" src={resolveEntityIcon(recipe.machineId, index)} />
             <span>{machineName}</span>
           </span>
           <span className={cm(styles, "recipe-picker-duration")} title={copy.duration}>
@@ -323,12 +325,10 @@ function matchesRecipeSearch(
 
 function resolveMachineName(
   machineId: string,
-  index: Pick<EncyclopediaIndex, "entityById">,
+  index: EncyclopediaIndex,
   t: (key: string) => string,
 ): string {
-  const machine = index.entityById.get(machineId);
-
-  return machine === undefined ? machineId : t(machine.nameKey);
+  return resolveEntityDisplayName(machineId, index, t);
 }
 
 function formatRecipeDuration(durationSeconds: number): string {

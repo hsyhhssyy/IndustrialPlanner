@@ -44,8 +44,8 @@ describe("蓝图旋转调试", () => {
       baseId: "wuling_protocol_core",
       initialGridPoint: { x: 2, y: 2 },
       entities: {
-        a: { id: "a", definitionId: "item_port_furnance_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
-        b: { id: "b", definitionId: "item_port_grinder_1", position: { x: 3, y: 0 }, rotation: 0, config: {}, tags: [] },
+        a: { id: "a", definitionId: "furnance_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
+        b: { id: "b", definitionId: "grinder_1", position: { x: 3, y: 0 }, rotation: 0, config: {}, tags: [] },
         c: { id: "c", definitionId: "belt_straight_1x1", position: { x: 0, y: 3 }, rotation: 0, config: {}, tags: [] },
       },
       entityOrder: ["a", "b", "c"],

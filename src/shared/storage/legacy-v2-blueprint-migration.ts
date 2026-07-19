@@ -9,6 +9,7 @@ import {
 import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { GridPoint, GridRotation } from "@/domain/shared/grid";
+import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
 
 const LEGACY_BLUEPRINT_SCHEMA = "industrial-planner-blueprint";
 
@@ -245,7 +246,10 @@ function createPlacementSignature(options: {
   readonly origin: GridPoint;
   readonly rotation: GridRotation;
 }): string {
-  return `${options.typeId}:${options.origin.x}:${options.origin.y}:${options.rotation}`;
+  const migration = migrateBlueprintDeviceReference(options.typeId, options.rotation);
+  const currentDeviceId = migration?.deviceId ?? options.typeId;
+  const currentRotation = migration?.rotation ?? options.rotation;
+  return `${currentDeviceId}:${options.origin.x}:${options.origin.y}:${currentRotation}`;
 }
 
 export function createWorldDocumentFromMigratedBlueprint(

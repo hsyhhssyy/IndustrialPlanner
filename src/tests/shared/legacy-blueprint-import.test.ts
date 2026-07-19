@@ -48,7 +48,7 @@ describe("legacy-blueprint-import", () => {
     expect(converted?.entities).toEqual({
       legacy_c96944de_0001: {
         id: "legacy_c96944de_0001",
-        definitionId: "item_port_power_diffuser_1",
+        definitionId: "power_diffuser_1",
         position: { x: 0, y: 0 },
         rotation: 180,
         config: {},
@@ -56,7 +56,7 @@ describe("legacy-blueprint-import", () => {
       },
       legacy_c96944de_0002: {
         id: "legacy_c96944de_0002",
-        definitionId: "item_port_furnance_1",
+        definitionId: "furnance_1",
         position: { x: 3, y: 4 },
         rotation: 0,
         config: {
@@ -147,7 +147,7 @@ describe("legacy-blueprint-import", () => {
     });
 
     expect(converted?.entities.large_pool_0001).toMatchObject({
-      definitionId: "item_port_mix_pool_2",
+      definitionId: "mix_pool_2",
       config: {
         channelRecipes: {
           ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large",
@@ -235,11 +235,11 @@ describe("legacy-blueprint-import", () => {
 
     expect(converted?.entities).toMatchObject({
       warehouse_unloader_remap_0001: {
-        definitionId: "item_port_unloader_1",
+        definitionId: "unloader_1",
         rotation: 180,
       },
       warehouse_unloader_remap_0002: {
-        definitionId: "item_port_unloader_1",
+        definitionId: "unloader_1",
         rotation: 270,
       },
     });
@@ -467,7 +467,7 @@ describe("legacy-blueprint-import", () => {
     });
 
     expect(converted?.entities.warehouse_loader_0001).toMatchObject({
-      definitionId: "item_port_loader_1",
+      definitionId: "loader_1",
       rotation: 270,
       config: {},
     });

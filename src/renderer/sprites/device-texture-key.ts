@@ -30,10 +30,10 @@ export function resolveDeviceMaskTextureKey(
 }
 
 export function resolveDeviceLabelIconTextureKey(
-  entityDefinitionId: string,
+  spriteId: string,
   app: AppContract | null,
 ): string {
   return `${readSimplifiedDeviceIconPreference(app)
     ? BLUEPRINT_AVATAR_PREFIX
-    : TOP_VIEW_AVATAR_PREFIX}${entityDefinitionId}`
+    : TOP_VIEW_AVATAR_PREFIX}${spriteId}`
 }

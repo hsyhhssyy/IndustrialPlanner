@@ -210,7 +210,7 @@ export function createWorldDocumentFromBlueprint(
 	blueprint: BlueprintDocument,
 ): WorldDocument {
 	return {
-		schemaVersion: 1,
+		schemaVersion: 3,
 		documentKey: blueprint.blueprintId,
 		baseId: blueprint.baseId,
 		meta: {

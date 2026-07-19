@@ -29,8 +29,8 @@ describe("createHypergryphDarkPipeLinkGestureModule", () => {
     const module = createHypergryphDarkPipeLinkGestureModule();
 
     editorHost.internalDocument.setSnapshot(createDocument([
-      entity("inlet", "item_port_udpipe_loader_1"),
-      entity("outlet", "item_port_udpipe_unloader_1"),
+      entity("inlet", "udpipe_loader_1"),
+      entity("outlet", "udpipe_unloader_1"),
     ]));
     enterDarkPipeLinkTool(appHost);
 
@@ -41,7 +41,7 @@ describe("createHypergryphDarkPipeLinkGestureModule", () => {
       buttons: 0,
       position: { x: 10, y: 10 },
       longPress: false,
-      pointerEntity: entity("outlet", "item_port_udpipe_unloader_1"),
+      pointerEntity: entity("outlet", "udpipe_unloader_1"),
       modifiers: emptyModifiers(),
       sourceEvent: null,
     }, context);

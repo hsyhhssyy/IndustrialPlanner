@@ -75,8 +75,8 @@ describe("蓝图旋转 — 包含非零旋转的设备", () => {
       baseId: "wuling_protocol_core",
       initialGridPoint: { x: 4, y: 3 },
       entities: {
-        f: { id: "f", definitionId: "item_port_furnance_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
-        p: { id: "p", definitionId: "item_port_planter_1", position: { x: 3, y: 0 }, rotation: 180, config: {}, tags: [] },
+        f: { id: "f", definitionId: "furnance_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
+        p: { id: "p", definitionId: "planter_1", position: { x: 3, y: 0 }, rotation: 180, config: {}, tags: [] },
       },
       entityOrder: ["f", "p"],
       slotLinks: [],

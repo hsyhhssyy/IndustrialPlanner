@@ -730,7 +730,7 @@ function handleMouseLeftTap(options: {
     ? options.editor.queries.getEntityById(headDraftId)
     : null;
   const isHeadConverger = headEntity !== null
-    && (headEntity.definitionId === 'item_log_converger' || headEntity.definitionId === 'item_pipe_converger');
+    && (headEntity.definitionId === 'log_converger' || headEntity.definitionId === 'pipe_converger');
   const shouldStopAtExistingBeltStart = shouldStopAfterApplyingToExistingBeltStart({
     appHost: options.appHost,
     editor: options.editor,

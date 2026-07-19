@@ -55,8 +55,8 @@ describe("WarehouseItemLinkInspector", () => {
 
   it("renders the dedicated warehouse link row without falling back to slot config rows", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_unloader_1");
-    const entity = createEntity("unloader-visual", "item_port_unloader_1");
+    const definition = requireDefinition(workspace, "unloader_1");
+    const entity = createEntity("unloader-visual", "unloader_1");
     const currentAppHost = buildAppHost(workspace);
     appHost = currentAppHost;
 
@@ -96,7 +96,7 @@ describe("WarehouseItemLinkInspector", () => {
 
   it("expands protocol core outputs into one inspector with independent link indices", async () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_sp_hub_1");
+    const definition = requireDefinition(workspace, "sp_hub_1");
     const declarations = definition.inspectors.filter(
       (inspector): inspector is WarehouseItemLinkInspectorDeclaration =>
         inspector.type === INSPECTOR_TYPE.warehouseItemLink,
@@ -145,8 +145,8 @@ describe("WarehouseItemLinkInspector", () => {
 
   it("filters selectable warehouse items by slot domain and writes the same link config", async () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_unloader_1");
-    const entity = createEntity("unloader-select", "item_port_unloader_1");
+    const definition = requireDefinition(workspace, "unloader_1");
+    const entity = createEntity("unloader-select", "unloader_1");
     const patchEntityConfig = vi.fn();
     const deleteEntityConfigKeys = vi.fn();
     const createWarehouseSlotLink = vi.fn(() => true);
@@ -181,8 +181,8 @@ describe("WarehouseItemLinkInspector", () => {
 
   it("keeps ignore-stock and clear actions on their original config paths", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_unloader_1");
-    const entity = createEntity("unloader-actions", "item_port_unloader_1", {
+    const definition = requireDefinition(workspace, "unloader_1");
+    const entity = createEntity("unloader-actions", "unloader_1", {
       "storageSlotGroups[0].slots[0].ignoreStock": false,
     });
     const patchEntityConfig = vi.fn();

@@ -41,21 +41,21 @@ import {
 function createBridgeDirectionBlueprint(): BlueprintDocument {
   return createBlueprint("bridge-direction-verify", [
     // === NS 通道：铁矿石 S→N ===
-    createEntity("source-ns", "item_port_storager_1", 0, 3, 0, {
+    createEntity("source-ns", "storager_1", 0, 3, 0, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
       "storageSlotGroups[0].slots[0].initialCount": 20,
     }),
     // belt rot 270: W→E 旋转为 S→N，源在上 belt 在下
     createEntity("belt_ns_in", "belt_straight_1x1", 0, 2, 270),
-    createEntity("bridge", "item_log_connector", 0, 1, 0),
+    createEntity("bridge", "log_connector", 0, 1, 0),
     createEntity("belt_ns_out", "belt_straight_1x1", 0, 0, 270),
     // sink 在 belt 下方：belt 输出 N 在 (0,-1)，sink 输入 S 在 (0,-1+2)=(0,1)
     // 修正：sink 需在 (0,-3) 使 in_s 的 inside=(0,-1)
-    createEntity("sink-ns", "item_port_storager_1", 0, -3, 0),
+    createEntity("sink-ns", "storager_1", 0, -3, 0),
 
     // === EW 通道：铜矿石 W→E ===
     // source rot 90: out_n→E, 输出在 outside(-1,1)
-    createEntity("source-ew", "item_port_storager_1", -4, 1, 90, {
+    createEntity("source-ew", "storager_1", -4, 1, 90, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
       "storageSlotGroups[0].slots[0].initialCount": 20,
     }),
@@ -63,7 +63,7 @@ function createBridgeDirectionBlueprint(): BlueprintDocument {
     // bridge 同上 (0,1)
     createEntity("belt_ew_out", "belt_straight_1x1", 1, 1, 0),
     // sink rot 90: in_s→W, 接收 belt 的 E 输出
-    createEntity("sink-ew", "item_port_storager_1", 2, 1, 90),
+    createEntity("sink-ew", "storager_1", 2, 1, 90),
   ]);
 }
 
@@ -193,14 +193,14 @@ describe("bridge-direction", () => {
 
 function createPipeBridgeDirectionBlueprint(): BlueprintDocument {
   return createBlueprint("pipe-bridge-direction-verify", [
-    createEntity("liquid-source-ew", "item_port_liquid_storager_1", -4, 0, 0, {
+    createEntity("liquid-source-ew", "liquid_storager_1", -4, 0, 0, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
       "storageSlotGroups[0].slots[0].initialCount": 1,
     }),
     createEntity("pipe_ew_in", "pipe_straight_1x1", -1, 1, 0),
-    createEntity("pipe-bridge", "item_pipe_connector", 0, 1, 0),
+    createEntity("pipe-bridge", "pipe_connector", 0, 1, 0),
     createEntity("pipe_ew_out", "pipe_straight_1x1", 1, 1, 0),
-    createEntity("liquid-sink-ew", "item_port_liquid_storager_1", 2, 0, 0),
+    createEntity("liquid-sink-ew", "liquid_storager_1", 2, 0, 0),
   ]);
 }
 

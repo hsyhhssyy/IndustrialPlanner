@@ -23,16 +23,16 @@ describe("分流器游标轮转 - 死端口不卡游标", () => {
       "splitter-dead-port-test",
       [
         // 水源 — 暗管出口 (8,2) rot=90 → 向东输出清水
-        createEntity("water-source", "item_port_udpipe_unloader_1", 8, 2, 90, {
+        createEntity("water-source", "udpipe_unloader_1", 8, 2, 90, {
           "storageSlotGroups[0].slots[0].ignoreStock": true
         }),
         // 管道链: (9,5)→(9,6) → 分流器
         createEntity("pipe-1", "pipe_straight_1x1", 9, 5, 90),
         createEntity("pipe-2", "pipe_straight_1x1", 9, 6, 90),
         // 分流器 (9,7) rot=0（原 rot=270，2026-05-18 端口方向变更后等效旋转）
-        createEntity(splitter, "item_pipe_splitter", 9, 7, 0),
+        createEntity(splitter, "pipe_splitter", 9, 7, 0),
         // 消费者 A — 液体储存箱 (6,6) rot=180
-        createEntity(storagerA, "item_port_liquid_storager_1", 6, 6, 180),
+        createEntity(storagerA, "liquid_storager_1", 6, 6, 180),
         // 管道链: (9,8)→...→(9,12)
         createEntity("pipe-3", "pipe_straight_1x1", 9, 8, 90),
         createEntity("pipe-4", "pipe_straight_1x1", 9, 9, 90),
@@ -40,7 +40,7 @@ describe("分流器游标轮转 - 死端口不卡游标", () => {
         createEntity("pipe-6", "pipe_straight_1x1", 9, 11, 90),
         createEntity("pipe-7", "pipe_straight_1x1", 9, 12, 90),
         // 消费者 B — 液体储存箱 (8,13) rot=90
-        createEntity(storagerB, "item_port_liquid_storager_1", 8, 13, 90),
+        createEntity(storagerB, "liquid_storager_1", 8, 13, 90),
       ],
       [createWarehouseSlotLink("water-source", "item_liquid_water")],
     );

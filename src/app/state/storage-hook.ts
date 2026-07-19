@@ -1,5 +1,6 @@
 import { reaction, runInAction } from "mobx";
 
+import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
 import { normalizeSelectedActivityIds } from "@/shared/registry/activity-availability";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
@@ -227,7 +228,7 @@ function normalizePersistedWorkbenchState(
       persistedWorkbenchState,
       fallback.rightDockActiveTab,
     ),
-    selectedPlacementVariantByCraftGroup: normalizeStringRecord(
+    selectedPlacementVariantByCraftGroup: normalizeDeviceIdKeyedStringRecord(
       persistedWorkbenchState.selectedPlacementVariantByCraftGroup,
       fallback.selectedPlacementVariantByCraftGroup,
     ),
@@ -275,6 +276,21 @@ function normalizeStringRecord(
   return normalized;
 }
 
+function normalizeDeviceIdKeyedStringRecord(
+  value: unknown,
+  fallback: Readonly<Record<string, string>>,
+): Record<string, string> {
+  const normalized = normalizeStringRecord(value, fallback);
+
+  return Object.fromEntries(
+    Object.entries(normalized).map(([historicalDeviceId, selectedVariant]) => {
+      const deviceId = migrateBlueprintDeviceReference(historicalDeviceId)?.deviceId
+        ?? historicalDeviceId;
+      return [deviceId, selectedVariant];
+    }),
+  );
+}
+
 function normalizeQuickPlaceFavoriteEntityIds(
   value: unknown,
   fallback: readonly (string | null)[],
@@ -296,7 +312,8 @@ function normalizeQuickPlaceFavoriteEntityIds(
       continue;
     }
 
-    const id = rawId.trim();
+    const historicalId = rawId.trim();
+    const id = migrateBlueprintDeviceReference(historicalId)?.deviceId ?? historicalId;
     if (id === "" || seen.has(id)) {
       result.push(null);
       continue;
@@ -525,11 +542,14 @@ function normalizePersistedCustomModules(
 
     const id = normalizeNonEmptyString(customModule.id);
     const name = normalizeNonEmptyString(customModule.name);
-    const iconId = normalizeNonEmptyString(customModule.iconId);
-    if (id === null || name === null || iconId === null || seenModuleIds.has(id)) {
+    const historicalIconId = normalizeNonEmptyString(customModule.iconId);
+    if (id === null || name === null || historicalIconId === null || seenModuleIds.has(id)) {
       return [];
     }
     seenModuleIds.add(id);
+
+    const iconId = migrateBlueprintDeviceReference(historicalIconId)?.deviceId
+      ?? historicalIconId;
 
     const inputs = normalizePersistedIOPorts(customModule.inputs);
     const outputs = normalizePersistedIOPorts(customModule.outputs);

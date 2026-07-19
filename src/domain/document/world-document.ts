@@ -12,6 +12,8 @@ import type {
 
 export type { SlotLinkDefinition, CacheLinkEndpointDefinition, LinkType };
 
+export const WORLD_DOCUMENT_SCHEMA_VERSION = 3;
+
 export interface WorldEntity {
   id: string;
   definitionId: string;
@@ -63,7 +65,7 @@ export const createWorldDocument = (options: {
 } = {}): WorldDocument => {
   const timestamp = new Date().toISOString();
   return {
-    schemaVersion: 1,
+    schemaVersion: WORLD_DOCUMENT_SCHEMA_VERSION,
     documentKey: createUuid(),
     baseId: options.baseId ?? DEFAULT_WORLD_BASE_ID,
     meta: {

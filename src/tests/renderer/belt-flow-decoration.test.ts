@@ -274,14 +274,14 @@ describe("BeltFlowDecoration", () => {
       nowMs: 500,
       entities: [
         createEntity("belt-a", "belt_straight_1x1", { x: 0, y: 0 }),
-        createEntity("target-storager", "item_port_storager_1", { x: 1, y: -1 }, 90),
+        createEntity("target-storager", "storager_1", { x: 1, y: -1 }, 90),
       ],
     }) as never)
     const generalLogisticsEndMarks = resolveBeltFlowMarks(createFlowContext({
       nowMs: 250,
       entities: [
         createEntity("belt-a", "belt_straight_1x1", { x: 0, y: 0 }),
-        createEntity("target-connector", "item_log_connector", { x: 1, y: 0 }),
+        createEntity("target-connector", "log_connector", { x: 1, y: 0 }),
       ],
     }) as never)
 
@@ -311,7 +311,7 @@ describe("BeltFlowDecoration", () => {
         },
         {
           id: "target-storager",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 1, y: -1 },
           rotation: 90,
           config: {},
@@ -347,7 +347,7 @@ describe("BeltFlowDecoration", () => {
         },
         {
           id: "target-connector",
-          definitionId: "item_log_connector",
+          definitionId: "log_connector",
           position: { x: 1, y: 0 },
           rotation: 0,
           config: {},

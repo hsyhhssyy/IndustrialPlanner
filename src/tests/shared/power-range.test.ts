@@ -13,11 +13,11 @@ describe("power range geometry", () => {
     expect(resolvePowerRangeGridRect({
       entity: createEntity({
         id: "pole",
-        definitionId: "item_port_power_diffuser_1",
+        definitionId: "power_diffuser_1",
         position: { x: 10, y: 20 },
       }),
       definition: createDefinition({
-        id: "item_port_power_diffuser_1",
+        id: "power_diffuser_1",
         footprint: { width: 2, height: 2 },
         powerRange: 12,
       }),
@@ -33,12 +33,12 @@ describe("power range geometry", () => {
     expect(resolveEntityGridRect({
       entity: createEntity({
         id: "device",
-        definitionId: "item_port_unloader_1",
+        definitionId: "unloader_1",
         position: { x: 3, y: 4 },
         rotation: 90,
       }),
       definition: createDefinition({
-        id: "item_port_unloader_1",
+        id: "unloader_1",
         footprint: { width: 3, height: 2 },
       }),
     })).toEqual({

@@ -93,7 +93,7 @@ describe("REQ-084: simulation power system", () => {
 
       // 2. 在同一文档中新增供电桩（不替换整个文档，模拟用户放置行为）
       const currentDoc = documentStore.getSnapshot();
-      const powerEntity = createEntity("power", "item_port_power_diffuser_1", 4, 0);
+      const powerEntity = createEntity("power", "power_diffuser_1", 4, 0);
       const nextDoc: WorldDocument = {
         ...currentDoc,
         entities: { ...currentDoc.entities, [powerEntity.id]: powerEntity },
@@ -177,7 +177,7 @@ describe("REQ-084: simulation power system", () => {
     await Promise.resolve();
 
     // 1. 设置只有研磨机（需要供电）的文档
-    const grinder = createTestEntity("grinder", "item_port_grinder_1", 0, 0, {
+    const grinder = createTestEntity("grinder", "grinder_1", 0, 0, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
       "storageSlotGroups[0].slots[0].initialCount": 1,
     });
@@ -200,7 +200,7 @@ describe("REQ-084: simulation power system", () => {
 
       // 4. 模拟用户放置供电桩：创建 placement draft
       editorHost.actions.createSinglePlacementDraft(
-        "item_port_power_diffuser_1",
+        "power_diffuser_1",
         { x: 4, y: 0 },
       );
 
@@ -425,17 +425,17 @@ function createGrinderBlueprint(
   powerX: number,
 ): BlueprintDocument {
   return createBlueprint(name, [
-    createEntity("grinder", "item_port_grinder_1", 0, 0, 0, {
+    createEntity("grinder", "grinder_1", 0, 0, 0, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
       "storageSlotGroups[0].slots[0].initialCount": 1,
     }),
-    createEntity("power", "item_port_power_diffuser_1", powerX, 0),
+    createEntity("power", "power_diffuser_1", powerX, 0),
   ]);
 }
 
 function createGrinderOnlyBlueprint(name: string): BlueprintDocument {
   return createBlueprint(name, [
-    createEntity("grinder", "item_port_grinder_1", 0, 0, 0, {
+    createEntity("grinder", "grinder_1", 0, 0, 0, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
       "storageSlotGroups[0].slots[0].initialCount": 1,
     }),

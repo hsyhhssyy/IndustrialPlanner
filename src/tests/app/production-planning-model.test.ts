@@ -63,7 +63,7 @@ describe("production planning model", () => {
       durationSeconds: 1,
       inputs: [],
       outputs: [{ itemId: "item_iron_nugget", amount: 999 }],
-      machineId: "item_port_furnance_1",
+      machineId: "furnance_1",
       recipeType: "immediate-consume",
       tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
     };

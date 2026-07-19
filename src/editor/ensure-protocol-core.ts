@@ -3,6 +3,7 @@ import type { RegistryQuery } from "@/domain/registry/registry-query";
 
 /**
  * 确保文档中包含协议核心实体（item_port_sp_hub_1）。
+ * AI-CORRECTION 2026-07-19: 当前协议核心设备定义 ID 为 sp_hub_1；上行保留迁移前名称。
  * 如果已存在则直接返回原文档，否则在 (0,0) 注入核心并置顶 entityOrder。
  */
 export function ensureProtocolCoreEntity(options: {
@@ -24,7 +25,7 @@ export function ensureProtocolCoreEntity(options: {
       ...options.document.entities,
       [entityId]: {
         id: entityId,
-        definitionId: "item_port_sp_hub_1",
+        definitionId: "sp_hub_1",
         position: { x: 0, y: 0 },
         rotation: 0,
         config: {},

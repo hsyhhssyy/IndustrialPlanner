@@ -105,7 +105,7 @@ describe("物流布设模式完全测试集", () => {
       rotation: 270,
     }, { soft: true });
     expectEntityAt(editorHost, {
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
       position: { x: 2, y: 5 },
     }, { soft: true });
   });
@@ -147,7 +147,7 @@ describe("物流布设模式完全测试集", () => {
     clickCell(appHost, editorHost, { x: 5, y: 6 }, nextPointerId++);
 
     expectEntityAt(editorHost, {
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
       position: { x: 4, y: 3 },
     });
   });
@@ -217,7 +217,7 @@ describe("物流布设模式完全测试集", () => {
     clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
 
     expectEntityAt(editorHost, {
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
       position: { x: 5, y: 3 },
     });
   });
@@ -231,7 +231,7 @@ describe("物流布设模式完全测试集", () => {
     clickCell(appHost, editorHost, { x: 4, y: 5 }, nextPointerId++);
 
     expectEntityAt(editorHost, {
-      definitionId: "item_log_connector",
+      definitionId: "log_connector",
       position: { x: 5, y: 5 },
     });
   });
@@ -240,7 +240,7 @@ describe("物流布设模式完全测试集", () => {
 
 
 const USER_PROVIDED_BLUEPRINT: BlueprintDocument = {
-  schemaVersion: 1,
+  schemaVersion: 3,
   blueprintId: "7d8dd13e-274d-47c3-9000-799df527c807",
   version: "v1.3.0",
   name: "1111",
@@ -250,7 +250,7 @@ const USER_PROVIDED_BLUEPRINT: BlueprintDocument = {
   entities: {
     "item_port_liquid_furnance_1:2": {
       id: "item_port_liquid_furnance_1:2",
-      definitionId: "item_port_liquid_furnance_1",
+      definitionId: "liquid_furnance_1",
       position: { x: 4, y: 0 },
       rotation: 180,
       config: {},
@@ -347,7 +347,7 @@ const USER_PROVIDED_BLUEPRINT: BlueprintDocument = {
 };
 
 const USER_PROVIDED_BLUEPRINT_SCENE2: BlueprintDocument = {
-  schemaVersion: 1,
+  schemaVersion: 3,
   blueprintId: "41bf5dc4-f741-45af-850a-0e81b583e219",
   version: "v1.3.0",
   name: "场景2",
@@ -357,7 +357,7 @@ const USER_PROVIDED_BLUEPRINT_SCENE2: BlueprintDocument = {
   entities: {
     "item_port_cmpt_mc_1:12": {
       id: "item_port_cmpt_mc_1:12",
-      definitionId: "item_port_cmpt_mc_1",
+      definitionId: "cmpt_mc_1",
       position: { x: 8, y: 3 },
       rotation: 270,
       config: {},
@@ -365,7 +365,7 @@ const USER_PROVIDED_BLUEPRINT_SCENE2: BlueprintDocument = {
     },
     "item_port_liquid_furnance_1:9": {
       id: "item_port_liquid_furnance_1:9",
-      definitionId: "item_port_liquid_furnance_1",
+      definitionId: "liquid_furnance_1",
       position: { x: 4, y: 0 },
       rotation: 180,
       config: {},
@@ -463,7 +463,7 @@ const USER_PROVIDED_BLUEPRINT_SCENE2: BlueprintDocument = {
 };
 
 const USER_PROVIDED_BLUEPRINT_SCENE3: BlueprintDocument = {
-  schemaVersion: 1,
+  schemaVersion: 3,
   blueprintId: "1041aaaf-437b-435d-ad2b-2241bb520fbe",
   version: "v1.3.0",
   name: "场景3",
@@ -473,7 +473,7 @@ const USER_PROVIDED_BLUEPRINT_SCENE3: BlueprintDocument = {
   entities: {
     "item_port_cmpt_mc_1:9": {
       id: "item_port_cmpt_mc_1:9",
-      definitionId: "item_port_cmpt_mc_1",
+      definitionId: "cmpt_mc_1",
       position: { x: 2, y: 3 },
       rotation: 270,
       config: {},
@@ -481,7 +481,7 @@ const USER_PROVIDED_BLUEPRINT_SCENE3: BlueprintDocument = {
     },
     "item_port_cmpt_mc_1:11": {
       id: "item_port_cmpt_mc_1:11",
-      definitionId: "item_port_cmpt_mc_1",
+      definitionId: "cmpt_mc_1",
       position: { x: 6, y: 3 },
       rotation: 270,
       config: {},

@@ -229,11 +229,11 @@ describe("EncyclopediaPanel", () => {
 
     runInAction(() => {
       currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
-        { type: "entity", id: "item_port_liquid_filling_pd_mc_1" },
+        { type: "entity", id: "liquid_filling_pd_mc_1" },
       ];
       currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
         kind: "entity",
-        id: "item_port_liquid_filling_pd_mc_1",
+        id: "liquid_filling_pd_mc_1",
       };
     });
 
@@ -254,11 +254,11 @@ describe("EncyclopediaPanel", () => {
 
     runInAction(() => {
       currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
-        { type: "entity", id: "item_port_filling_pd_mc_1" },
+        { type: "entity", id: "filling_pd_mc_1" },
       ];
       currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
         kind: "entity",
-        id: "item_port_filling_pd_mc_1",
+        id: "filling_pd_mc_1",
       };
     });
 
@@ -367,11 +367,11 @@ describe("EncyclopediaPanel", () => {
 
     runInAction(() => {
       currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
-        { type: "entity", id: "item_port_dismantler_1" },
+        { type: "entity", id: "dismantler_1" },
       ];
       currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
         kind: "entity",
-        id: "item_port_dismantler_1",
+        id: "dismantler_1",
       };
     });
 

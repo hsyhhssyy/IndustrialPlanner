@@ -313,8 +313,11 @@ export function resolveProductionPlanningItemIconSrc(itemId: string, index: Prod
   return createItemIconAssetUrl(item?.iconId ?? itemId);
 }
 
-export function resolveProductionPlanningEntityIconSrc(entityId: string): string {
-  return createDeviceIconAssetUrl(entityId);
+export function resolveProductionPlanningEntityIconSrc(
+  entityId: string,
+  index: ProductionPlanningIndex,
+): string {
+  return createDeviceIconAssetUrl(index.entityById.get(entityId)?.spriteId ?? entityId);
 }
 
 export function formatProductionFlow(value: number): string {

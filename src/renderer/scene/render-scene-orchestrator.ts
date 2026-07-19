@@ -89,14 +89,15 @@ const RENDER_INVALIDATION_COLLECTION_TYPES: readonly EntityCollectionTypeValue[]
 ]
 
 /** 渲染低层设备定义 ID —— 先渲染，被其他设备覆盖 */
+/** AI-CORRECTION 2026-07-19: 设备定义 ID 已移除 item_/item_port_ 前缀。 */
 const ENTITY_LOW_DEFINITION_IDS = new Set([
-  "item_port_log_hongs_bus",         // 仓库存取线基段
-  "item_port_log_hongs_bus_source",  // 源桩
+  "log_hongs_bus",         // 仓库存取线基段
+  "log_hongs_bus_source",  // 源桩
 ])
 
 /** 渲染高层设备定义 ID —— 最后渲染，覆盖其他设备 */
 const ENTITY_HIGH_DEFINITION_IDS = new Set([
-  "item_port_water_pump_1",          // 抽水泵
+  "water_pump_1",          // 抽水泵
 ])
 
 /** 传送带物流设备定义 ID —— 渲染到 logisticsBelt 层 */
@@ -104,10 +105,10 @@ const BELT_DEFINITION_IDS = new Set([
   "belt_straight_1x1",
   "belt_turn_cw_1x1",
   "belt_turn_ccw_1x1",
-  "item_log_splitter",
-  "item_log_converger",
-  "item_log_connector",
-  "item_log_admission",
+  "log_splitter",
+  "log_converger",
+  "log_connector",
+  "log_admission",
 ])
 
 /** 管道物流设备定义 ID —— 渲染到 logisticsPipe 层 */
@@ -115,10 +116,10 @@ const PIPE_DEFINITION_IDS = new Set([
   "pipe_straight_1x1",
   "pipe_turn_cw_1x1",
   "pipe_turn_ccw_1x1",
-  "item_pipe_splitter",
-  "item_pipe_converger",
-  "item_pipe_connector",
-  "item_pipe_admission",
+  "pipe_splitter",
+  "pipe_converger",
+  "pipe_connector",
+  "pipe_admission",
 ])
 
 function selectRenderLayerMap(

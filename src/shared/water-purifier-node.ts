@@ -1,4 +1,4 @@
-export const WATER_PURIFIER_NODE_ENTITY_ID = "item_water_purifier_node_1";
+export const WATER_PURIFIER_NODE_ENTITY_ID = "water_purifier_node_1";
 
 export const WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS = [
   "input_buffer_1",

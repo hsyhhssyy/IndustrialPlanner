@@ -147,12 +147,12 @@ function createAdmissionBlueprint(options: {
   readonly perMinuteLimit?: number | null;
 }) {
   return createBlueprint("admission-rule", [
-    createEntity("source", "item_port_storager_1", 0, 0, 90, {
+    createEntity("source", "storager_1", 0, 0, 90, {
       "storageSlotGroups[0].slots[0].initialItemType": options.sourceItemId,
       "storageSlotGroups[0].slots[0].initialCount": 5,
       "storageSlotGroups[0].slots[0].ignoreStock": true,
     }),
-    createEntity("admission", "item_log_admission", 3, 1, 0, {
+    createEntity("admission", "log_admission", 3, 1, 0, {
       "portGroups[0].ports[0].acceptRule": {
         base: { kind: "item", itemId: options.admissionItemId },
         exclude: [],
@@ -164,6 +164,6 @@ function createAdmissionBlueprint(options: {
       },
     }),
     createEntity("belt", "belt_straight_1x1", 4, 1, 0),
-    createEntity("sink", "item_port_loader_1", 5, 0, 270),
+    createEntity("sink", "loader_1", 5, 0, 270),
   ]);
 }

@@ -78,8 +78,8 @@ interface ItemFlowEndpoint {
 
 const FLOW_EPSILON = 0.0001;
 const EXTERNAL_SUPPLY_ENTITY_ICON_SRC = createPublicAssetUrl("3d-top-view/sprites/item_port_sp_hub_1.webp");
-const PLANTER_MACHINE_IDS = new Set(["item_port_planter_1", "item_port_hydro_planter_1"]);
-const SEED_COLLECTOR_MACHINE_IDS = new Set(["item_port_seedcol_1"]);
+const PLANTER_MACHINE_IDS = new Set(["planter_1", "hydro_planter_1"]);
+const SEED_COLLECTOR_MACHINE_IDS = new Set(["seedcol_1"]);
 
 export function buildProductionFlowGraph(
   plan: ProductionPlanningResult,
@@ -214,7 +214,7 @@ function resolveLedgerRowMachineIconSrc(row: ProductionPlanningLedgerRow, index:
   const recipe = index.recipeById.get(row.recipeId);
   return recipe === undefined
     ? createDeviceIconAssetUrl("item_port_grinder_1")
-    : resolveProductionPlanningEntityIconSrc(recipe.machineId);
+    : resolveProductionPlanningEntityIconSrc(recipe.machineId, index);
 }
 
 function resolveLedgerRowConsumerPorts(row: ProductionPlanningLedgerRow): ProductionPlanningRecipeNode["inputs"] {
@@ -574,14 +574,14 @@ function addRecipeNode(node: ProductionPlanningRecipeNode, context: BuildContext
 
   const recipe = context.index.recipeById.get(node.recipeId);
   const title = recipe === undefined ? node.recipeId : resolveProductionPlanningRecipeName(recipe, context.index, context.translate);
-  const machineId = recipe?.machineId ?? "item_port_grinder_1";
+  const machineId = recipe?.machineId ?? "grinder_1";
   context.nodes.set(id, {
     id,
     kind: "recipe",
     tone: "normal",
     title,
     subtitle: `${formatProductionDeviceCount(node.deviceCount)} devices · ${formatProductionFlow(node.cyclesPerMinute)}/min`,
-    iconSrc: resolveProductionPlanningEntityIconSrc(machineId),
+    iconSrc: resolveProductionPlanningEntityIconSrc(machineId, context.index),
     value: Math.max(sumPorts(node.inputs), sumPorts(node.outputs), 1),
     recipeId: node.recipeId,
     recipeNode: node,

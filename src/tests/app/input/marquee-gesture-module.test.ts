@@ -692,7 +692,7 @@ function createDocumentWithEntities(entities: readonly WorldEntity[]): WorldDocu
 
 function entity(
   id: string,
-  definitionId = "item_port_grinder_1",
+  definitionId = "grinder_1",
   position: GridPoint = { x: 0, y: 0 },
 ): WorldEntity {
   return {

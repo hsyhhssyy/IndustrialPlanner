@@ -1752,6 +1752,7 @@ function resolveAcceptRuleCandidateDomains(
  * 2. 通用物流设备（item_pipe_splitter、item_pipe_converger、item_pipe_connector、
  *    item_log_splitter、item_log_converger、item_log_connector、
  *    item_pipe_admission、item_log_admission）不在专用物流注册表中，
+ *    AI-CORRECTION 2026-07-19: 当前上述设备定义 ID 已移除 item_ 前缀；原名仅作历史审计。
  *    因此 resolveDedicatedLogisticsKind 返回 null → 归为 anchor。
  *    这是有意设计：这些设备有自己的 buffer 和搬运配方，不应受管道域锁约束，
  *    且它们应分割 strict-pipe 的 TransportComponent。

@@ -17,7 +17,7 @@ type LiquidPurifierRecipeCase = {
   readonly rightOutputItemId: string;
 };
 
-const LIQUID_PURIFIER_ENTITY_ID = "item_port_liquid_purifier_1";
+const LIQUID_PURIFIER_ENTITY_ID = "liquid_purifier_1";
 const FINAL_TICK = 8 * STANDARD_TICK_RATE_PER_SECOND;
 
 const RECIPE_CASES: readonly LiquidPurifierRecipeCase[] = [
@@ -108,9 +108,9 @@ function createSingleConnectedPortEntities(options: {
         "storageSlotGroups[0].slots[0].initialCount": 4,
       },
     ),
-    createEntity(`${options.idPrefix}-power`, "item_port_power_diffuser_1", options.purifierX + 6, options.purifierY),
+    createEntity(`${options.idPrefix}-power`, "power_diffuser_1", options.purifierX + 6, options.purifierY),
     createEntity(`${options.idPrefix}-pipe`, "pipe_straight_1x1", portWorldX, portWorldY - 1, 270),
-    createEntity(`${options.idPrefix}-sink`, "item_port_udpipe_loader_1", portWorldX - 1, portWorldY - 4, 270),
+    createEntity(`${options.idPrefix}-sink`, "udpipe_loader_1", portWorldX - 1, portWorldY - 4, 270),
   ];
 }
 

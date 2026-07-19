@@ -2150,7 +2150,7 @@ function createAutoDeviceOverride(
 }
 
 function resolveAutoDeviceDefinitionId(kind: LogisticsKind, deviceKind: AutoDeviceKind): string {
-  const prefix = kind === "belt" ? "item_log" : "item_pipe";
+  const prefix = kind === "belt" ? "log" : "pipe";
   switch (deviceKind) {
     case "splitter":
       return `${prefix}_splitter`;

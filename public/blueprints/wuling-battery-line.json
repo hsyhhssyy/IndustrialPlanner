@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "blueprintId": "2dec8da2-1c38-47f3-a574-a586bd4efad5",
   "version": "v1.3.0",
   "name": "中容武陵电池产线",
@@ -12,7 +12,7 @@
   "entities": {
     "legacy_2dec8da2_0001": {
       "id": "legacy_2dec8da2_0001",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 30,
         "y": 27
@@ -25,7 +25,7 @@
     },
     "legacy_2dec8da2_0002": {
       "id": "legacy_2dec8da2_0002",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 27,
         "y": 27
@@ -38,7 +38,7 @@
     },
     "legacy_2dec8da2_0003": {
       "id": "legacy_2dec8da2_0003",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 24,
         "y": 27
@@ -51,7 +51,7 @@
     },
     "legacy_2dec8da2_0004": {
       "id": "legacy_2dec8da2_0004",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 21,
         "y": 27
@@ -64,7 +64,7 @@
     },
     "legacy_2dec8da2_0005": {
       "id": "legacy_2dec8da2_0005",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 18,
         "y": 27
@@ -77,7 +77,7 @@
     },
     "legacy_2dec8da2_0006": {
       "id": "legacy_2dec8da2_0006",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 15,
         "y": 27
@@ -90,7 +90,7 @@
     },
     "legacy_2dec8da2_0007": {
       "id": "legacy_2dec8da2_0007",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 29,
         "y": 23
@@ -101,7 +101,7 @@
     },
     "legacy_2dec8da2_0008": {
       "id": "legacy_2dec8da2_0008",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 26,
         "y": 23
@@ -156,7 +156,7 @@
     },
     "legacy_2dec8da2_0013": {
       "id": "legacy_2dec8da2_0013",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 25,
         "y": 18
@@ -189,7 +189,7 @@
     },
     "legacy_2dec8da2_0016": {
       "id": "legacy_2dec8da2_0016",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 18,
         "y": 18
@@ -200,7 +200,7 @@
     },
     "legacy_2dec8da2_0017": {
       "id": "legacy_2dec8da2_0017",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 21,
         "y": 23
@@ -211,7 +211,7 @@
     },
     "legacy_2dec8da2_0018": {
       "id": "legacy_2dec8da2_0018",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 18,
         "y": 23
@@ -266,7 +266,7 @@
     },
     "legacy_2dec8da2_0023": {
       "id": "legacy_2dec8da2_0023",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 24,
         "y": 23
@@ -277,7 +277,7 @@
     },
     "legacy_2dec8da2_0024": {
       "id": "legacy_2dec8da2_0024",
-      "definitionId": "item_port_furnance_1",
+      "definitionId": "furnance_1",
       "position": {
         "x": 15,
         "y": 23
@@ -299,7 +299,7 @@
     },
     "legacy_2dec8da2_0026": {
       "id": "legacy_2dec8da2_0026",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 15,
         "y": 18
@@ -332,7 +332,7 @@
     },
     "legacy_2dec8da2_0029": {
       "id": "legacy_2dec8da2_0029",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 15,
         "y": 21
@@ -343,7 +343,7 @@
     },
     "legacy_2dec8da2_0030": {
       "id": "legacy_2dec8da2_0030",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 29,
         "y": 14
@@ -552,7 +552,7 @@
     },
     "legacy_2dec8da2_0049": {
       "id": "legacy_2dec8da2_0049",
-      "definitionId": "item_liquid_cleaner_1",
+      "definitionId": "liquid_cleaner_1",
       "position": {
         "x": 26,
         "y": 13
@@ -563,7 +563,7 @@
     },
     "legacy_2dec8da2_0050": {
       "id": "legacy_2dec8da2_0050",
-      "definitionId": "item_port_mix_pool_1",
+      "definitionId": "mix_pool_1",
       "position": {
         "x": 27,
         "y": 7
@@ -797,7 +797,7 @@
     },
     "legacy_2dec8da2_0069": {
       "id": "legacy_2dec8da2_0069",
-      "definitionId": "item_port_mix_pool_1",
+      "definitionId": "mix_pool_1",
       "position": {
         "x": 20,
         "y": 11
@@ -1244,7 +1244,7 @@
     },
     "legacy_2dec8da2_0108": {
       "id": "legacy_2dec8da2_0108",
-      "definitionId": "item_port_udpipe_unloader_1",
+      "definitionId": "udpipe_unloader_1",
       "position": {
         "x": 20,
         "y": 7
@@ -1268,7 +1268,7 @@
     },
     "legacy_2dec8da2_0110": {
       "id": "legacy_2dec8da2_0110",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 24,
         "y": 8
@@ -1279,7 +1279,7 @@
     },
     "legacy_2dec8da2_0111": {
       "id": "legacy_2dec8da2_0111",
-      "definitionId": "item_port_tools_asm_mc_1",
+      "definitionId": "tools_asm_mc_1",
       "position": {
         "x": 14,
         "y": 6
@@ -1290,7 +1290,7 @@
     },
     "legacy_2dec8da2_0112": {
       "id": "legacy_2dec8da2_0112",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 25,
         "y": 17
@@ -1543,7 +1543,7 @@
     },
     "legacy_2dec8da2_0135": {
       "id": "legacy_2dec8da2_0135",
-      "definitionId": "item_port_mix_pool_1",
+      "definitionId": "mix_pool_1",
       "position": {
         "x": 14,
         "y": 12
@@ -1744,7 +1744,7 @@
     },
     "legacy_2dec8da2_0151": {
       "id": "legacy_2dec8da2_0151",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 28,
         "y": 1
@@ -1755,7 +1755,7 @@
     },
     "legacy_2dec8da2_0152": {
       "id": "legacy_2dec8da2_0152",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 18,
         "y": 1
@@ -1766,7 +1766,7 @@
     },
     "legacy_2dec8da2_0153": {
       "id": "legacy_2dec8da2_0153",
-      "definitionId": "item_port_seedcol_1",
+      "definitionId": "seedcol_1",
       "position": {
         "x": 23,
         "y": 1
@@ -1879,7 +1879,7 @@
     },
     "legacy_2dec8da2_0163": {
       "id": "legacy_2dec8da2_0163",
-      "definitionId": "item_port_storager_1",
+      "definitionId": "storager_1",
       "position": {
         "x": 15,
         "y": 1
@@ -1916,7 +1916,7 @@
     },
     "legacy_2dec8da2_0166": {
       "id": "legacy_2dec8da2_0166",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 15,
         "y": 4
@@ -1927,7 +1927,7 @@
     },
     "legacy_2dec8da2_0167": {
       "id": "legacy_2dec8da2_0167",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 12,
         "y": 27
@@ -1940,7 +1940,7 @@
     },
     "legacy_2dec8da2_0168": {
       "id": "legacy_2dec8da2_0168",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 9,
         "y": 27
@@ -1953,7 +1953,7 @@
     },
     "legacy_2dec8da2_0169": {
       "id": "legacy_2dec8da2_0169",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 6,
         "y": 27
@@ -1966,7 +1966,7 @@
     },
     "legacy_2dec8da2_0170": {
       "id": "legacy_2dec8da2_0170",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 3,
         "y": 27
@@ -1979,7 +1979,7 @@
     },
     "legacy_2dec8da2_0171": {
       "id": "legacy_2dec8da2_0171",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 0,
         "y": 27
@@ -1992,7 +1992,7 @@
     },
     "legacy_2dec8da2_0172": {
       "id": "legacy_2dec8da2_0172",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 12,
         "y": 23
@@ -2003,7 +2003,7 @@
     },
     "legacy_2dec8da2_0173": {
       "id": "legacy_2dec8da2_0173",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 9,
         "y": 23
@@ -2036,7 +2036,7 @@
     },
     "legacy_2dec8da2_0176": {
       "id": "legacy_2dec8da2_0176",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 7,
         "y": 23
@@ -2047,7 +2047,7 @@
     },
     "legacy_2dec8da2_0177": {
       "id": "legacy_2dec8da2_0177",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 4,
         "y": 23
@@ -2058,7 +2058,7 @@
     },
     "legacy_2dec8da2_0178": {
       "id": "legacy_2dec8da2_0178",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 1,
         "y": 23
@@ -2113,7 +2113,7 @@
     },
     "legacy_2dec8da2_0183": {
       "id": "legacy_2dec8da2_0183",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 9,
         "y": 18
@@ -2124,7 +2124,7 @@
     },
     "legacy_2dec8da2_0184": {
       "id": "legacy_2dec8da2_0184",
-      "definitionId": "item_port_thickener_1",
+      "definitionId": "thickener_1",
       "position": {
         "x": 2,
         "y": 18
@@ -2179,7 +2179,7 @@
     },
     "legacy_2dec8da2_0189": {
       "id": "legacy_2dec8da2_0189",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 1,
         "y": 14
@@ -2267,7 +2267,7 @@
     },
     "legacy_2dec8da2_0197": {
       "id": "legacy_2dec8da2_0197",
-      "definitionId": "item_port_mix_pool_1",
+      "definitionId": "mix_pool_1",
       "position": {
         "x": 1,
         "y": 7
@@ -2303,7 +2303,7 @@
     },
     "legacy_2dec8da2_0198": {
       "id": "legacy_2dec8da2_0198",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 0,
         "y": 1
@@ -2314,7 +2314,7 @@
     },
     "legacy_2dec8da2_0199": {
       "id": "legacy_2dec8da2_0199",
-      "definitionId": "item_port_seedcol_1",
+      "definitionId": "seedcol_1",
       "position": {
         "x": 5,
         "y": 1
@@ -2328,7 +2328,7 @@
     },
     "legacy_2dec8da2_0200": {
       "id": "legacy_2dec8da2_0200",
-      "definitionId": "item_port_planter_1",
+      "definitionId": "planter_1",
       "position": {
         "x": 10,
         "y": 1
@@ -2570,7 +2570,7 @@
     },
     "legacy_2dec8da2_0222": {
       "id": "legacy_2dec8da2_0222",
-      "definitionId": "item_port_udpipe_unloader_1",
+      "definitionId": "udpipe_unloader_1",
       "position": {
         "x": 4,
         "y": 13
@@ -2583,7 +2583,7 @@
     },
     "legacy_2dec8da2_0223": {
       "id": "legacy_2dec8da2_0223",
-      "definitionId": "item_pipe_splitter",
+      "definitionId": "pipe_splitter",
       "position": {
         "x": 5,
         "y": 16
@@ -2781,7 +2781,7 @@
     },
     "legacy_2dec8da2_0241": {
       "id": "legacy_2dec8da2_0241",
-      "definitionId": "item_port_mix_pool_1",
+      "definitionId": "mix_pool_1",
       "position": {
         "x": 8,
         "y": 11
@@ -3239,7 +3239,7 @@
     },
     "legacy_2dec8da2_0281": {
       "id": "legacy_2dec8da2_0281",
-      "definitionId": "item_log_connector",
+      "definitionId": "log_connector",
       "position": {
         "x": 7,
         "y": 17
@@ -3558,7 +3558,7 @@
     },
     "legacy_2dec8da2_0310": {
       "id": "legacy_2dec8da2_0310",
-      "definitionId": "item_liquid_cleaner_1",
+      "definitionId": "liquid_cleaner_1",
       "position": {
         "x": 10,
         "y": 7
@@ -3602,7 +3602,7 @@
     },
     "legacy_2dec8da2_0314": {
       "id": "legacy_2dec8da2_0314",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 7,
         "y": 8

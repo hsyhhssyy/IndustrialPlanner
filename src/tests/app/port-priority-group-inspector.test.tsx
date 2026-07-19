@@ -47,8 +47,8 @@ describe("PortPriorityGroupInspector", () => {
 
   it("renders one disabled priority number per splitter port when custom is off", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_log_splitter");
-    const entity = createEmptyEntity("splitter-1", "item_log_splitter");
+    const definition = requireDefinition(workspace, "log_splitter");
+    const entity = createEmptyEntity("splitter-1", "log_splitter");
     const currentAppHost = buildAppHost(workspace);
     appHost = currentAppHost;
 
@@ -71,8 +71,8 @@ describe("PortPriorityGroupInspector", () => {
 
   it("writes the custom switch state to entity config", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_log_splitter");
-    const entity = createEmptyEntity("splitter-2", "item_log_splitter");
+    const definition = requireDefinition(workspace, "log_splitter");
+    const entity = createEmptyEntity("splitter-2", "log_splitter");
     const patchEntityConfig = vi.fn();
     const currentAppHost = buildAppHost(workspace, patchEntityConfig);
     appHost = currentAppHost;
@@ -91,9 +91,9 @@ describe("PortPriorityGroupInspector", () => {
 
   it("opens the 1-9 picker and writes selected custom priority group", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_log_splitter");
+    const definition = requireDefinition(workspace, "log_splitter");
     const entity: WorldEntity = {
-      ...createEmptyEntity("splitter-3", "item_log_splitter"),
+      ...createEmptyEntity("splitter-3", "log_splitter"),
       config: {
         customPortPriorityGroups: true,
         portPriorityGroups: {

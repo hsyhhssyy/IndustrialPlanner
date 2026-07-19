@@ -93,7 +93,7 @@ describe("protocol core warehouse links", () => {
       blueprint: createBlueprint("protocol-core-all-outputs", [
         createEntity(
           CORE_ID,
-          "item_port_sp_hub_1",
+          "sp_hub_1",
           0,
           0,
           0,
@@ -139,7 +139,7 @@ describe("protocol core warehouse links", () => {
       blueprint: createBlueprint("protocol-core-e8-loop-to-s8", [
         createEntity(
           CORE_ID,
-          "item_port_sp_hub_1",
+          "sp_hub_1",
           0,
           0,
           0,
@@ -173,12 +173,12 @@ describe("protocol core warehouse links", () => {
   it("sinks ordinary warehouse loader input directly into the warehouse", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("warehouse-loader-sink", [
-        createEntity("unloader", "item_port_unloader_1", 51, 34, 270, {
+        createEntity("unloader", "unloader_1", 51, 34, 270, {
           "storageSlotGroups[0].slots[0].ignoreStock": true
         }),
         createEntity("belt_0", "belt_straight_1x1", 52, 35, 0),
         // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°（已撤销），rot 恢复为 270。
-        createEntity("loader", "item_port_loader_1", 53, 34, 270),
+        createEntity("loader", "loader_1", 53, 34, 270),
       ], [
         createWarehouseSlotLink("unloader", "item_plant_moss_3"),
       ]),

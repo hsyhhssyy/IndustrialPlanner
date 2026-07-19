@@ -1,6 +1,7 @@
 import { pinyin } from "pinyin-pro";
 
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
 import { createDeviceIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { lookupText } from "@/shared/i18n";
 
@@ -24,7 +25,7 @@ export interface BuildQuickPlaceDeviceEntriesOptions {
 }
 
 const SPECIAL_ICON_MAP: Readonly<Record<string, string>> = {
-  item_port_liquid_filling_pd_mc_1: "item_port_filling_pd_mc_1",
+  liquid_filling_pd_mc_1: "item_port_filling_pd_mc_1",
 };
 
 export function buildQuickPlaceDeviceEntries(
@@ -47,7 +48,7 @@ export function buildQuickPlaceDeviceEntries(
         id: definition.id,
         definition,
         name,
-        iconSrc: resolveQuickPlaceDeviceIconSrc(definition.id),
+        iconSrc: resolveQuickPlaceDeviceIconSrc(definition),
         pinyinFull,
         pinyinInitial,
       };
@@ -85,7 +86,8 @@ export function normalizeQuickPlaceFavorites(
       continue;
     }
 
-    const id = rawId.trim();
+    const historicalId = rawId.trim();
+    const id = migrateBlueprintDeviceReference(historicalId)?.deviceId ?? historicalId;
     if (
       id === ""
       || seen.has(id)
@@ -240,8 +242,8 @@ export function triggerQuickPlaceDeviceSelection(options: {
   });
 }
 
-function resolveQuickPlaceDeviceIconSrc(entityId: string): string {
-  return createDeviceIconAssetUrl(SPECIAL_ICON_MAP[entityId] ?? entityId);
+function resolveQuickPlaceDeviceIconSrc(definition: EntityDefinition): string {
+  return createDeviceIconAssetUrl(SPECIAL_ICON_MAP[definition.id] ?? definition.spriteId);
 }
 
 function resolveQuickPlaceShortcutFromCode(

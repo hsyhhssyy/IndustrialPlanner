@@ -24,7 +24,7 @@ function createGrinderBlueprint(
   initialCount: number,
 ): BlueprintDocument {
   return createBlueprint(name, [
-    createEntity("grinder", "item_port_grinder_1", position.x, position.y, 0, {
+    createEntity("grinder", "grinder_1", position.x, position.y, 0, {
       "storageSlotGroups[0].slots[0].initialItemType": initialItemType,
       "storageSlotGroups[0].slots[0].initialCount": initialCount,
     }),
@@ -35,11 +35,11 @@ function createLinkedGrinderBlueprint(): BlueprintDocument {
   return createBlueprint(
     "linked-grinder",
     [
-      createEntity("grinder", "item_port_grinder_1", 0, 0, 0, {
+      createEntity("grinder", "grinder_1", 0, 0, 0, {
         "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
         "storageSlotGroups[0].slots[0].initialCount": 1,
       }),
-      createEntity("storage", "item_port_storager_1", 5, 0),
+      createEntity("storage", "storager_1", 5, 0),
     ],
     [{
       id: "storage-to-grinder",
@@ -98,11 +98,11 @@ describe("REQ-076: topology migration", () => {
 
   it("resets only the switched device when definition and links change", () => {
     const registry = createRegistryContract();
-    const previousDocument = createVariantSwitchDocument("item_port_filling_pd_mc_1", [
+    const previousDocument = createVariantSwitchDocument("filling_pd_mc_1", [
       createStorageToFactorySlotLink(),
     ]);
     const nextDocument = createVariantSwitchDocument(
-      "item_port_liquid_filling_pd_mc_1",
+      "liquid_filling_pd_mc_1",
       [],
     );
     const previousTopology = compileSimulationTopology({
@@ -132,8 +132,8 @@ describe("REQ-076: topology migration", () => {
 
   it("hot-swaps a switched device without resetting unaffected device runtime state", () => {
     const registry = createRegistryContract();
-    const previousDocument = createVariantSwitchDocument("item_port_furnance_1", []);
-    const nextDocument = createVariantSwitchDocument("item_port_liquid_furnance_1", []);
+    const previousDocument = createVariantSwitchDocument("furnance_1", []);
+    const nextDocument = createVariantSwitchDocument("liquid_furnance_1", []);
     const previousTopology = compileSimulationTopology({
       document: previousDocument,
       registry,
@@ -205,8 +205,8 @@ describe("REQ-076: topology migration", () => {
 
   it("retains the last displayed tick as the exact topology migration anchor", () => {
     const registry = createRegistryContract();
-    const previousDocument = createVariantSwitchDocument("item_port_furnance_1", []);
-    const nextDocument = createVariantSwitchDocument("item_port_liquid_furnance_1", []);
+    const previousDocument = createVariantSwitchDocument("furnance_1", []);
+    const nextDocument = createVariantSwitchDocument("liquid_furnance_1", []);
     const previousTopology = compileSimulationTopology({
       document: previousDocument,
       registry,
@@ -258,8 +258,8 @@ describe("REQ-076: topology migration", () => {
 
   it("rejects a migration with no exact anchor instead of resetting or advancing time", () => {
     const registry = createRegistryContract();
-    const previousDocument = createVariantSwitchDocument("item_port_furnance_1", []);
-    const nextDocument = createVariantSwitchDocument("item_port_liquid_furnance_1", []);
+    const previousDocument = createVariantSwitchDocument("furnance_1", []);
+    const nextDocument = createVariantSwitchDocument("liquid_furnance_1", []);
     const previousTopology = compileSimulationTopology({
       document: previousDocument,
       registry,
@@ -369,7 +369,7 @@ function createVariantSwitchDocument(
 ): WorldDocument {
   const document = createWorldDocument();
   document.entities = {
-    storage: createDocumentEntity("storage", "item_port_storager_1", 4, 10),
+    storage: createDocumentEntity("storage", "storager_1", 4, 10),
     factory: createDocumentEntity("factory", factoryDefinitionId, 10, 10),
   };
   document.entityOrder = ["storage", "factory"];

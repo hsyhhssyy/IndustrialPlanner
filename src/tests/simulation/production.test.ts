@@ -16,22 +16,22 @@ describe("REQ-076: production", () => {
     const registry = createRegistryContract();
     const grinderReport = await runBlueprintSimulation({
       blueprint: createBlueprint("grinder-production", [
-        createEntity("grinder", "item_port_grinder_1", 0, 0, 0, {
+        createEntity("grinder", "grinder_1", 0, 0, 0, {
           "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
           "storageSlotGroups[0].slots[0].initialCount": 1,
         }),
-        createEntity("power", "item_port_power_diffuser_1", 4, 0),
+        createEntity("power", "power_diffuser_1", 4, 0),
       ]),
       maxTickNumber: completionTick,
       registry,
     });
     const furnaceReport = await runBlueprintSimulation({
       blueprint: createBlueprint("furnace-production", [
-        createEntity("furnace", "item_port_furnance_1", 0, 0, 0, {
+        createEntity("furnace", "furnance_1", 0, 0, 0, {
           "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
           "storageSlotGroups[0].slots[0].initialCount": 1,
         }),
-        createEntity("power", "item_port_power_diffuser_1", 4, 0),
+        createEntity("power", "power_diffuser_1", 4, 0),
       ]),
       maxTickNumber: completionTick,
       registry,
@@ -70,7 +70,7 @@ describe("REQ-076: production", () => {
           "storageSlotGroups[2].slots[0].initialCount": 0,
           "storageSlotGroups[2].slots[0].ignoreStock": true,
         }),
-        createEntity("power", "item_port_power_diffuser_1", 6, 0),
+        createEntity("power", "power_diffuser_1", 6, 0),
       ]),
       maxTickNumber: 1,
       registry: createRegistryContract(),

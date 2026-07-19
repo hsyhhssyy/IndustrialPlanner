@@ -35,6 +35,7 @@ export type SimulationPowerStatus = "no-power-needed" | "in-power-range" | "out-
  *   - 通用物流设备（item_pipe_splitter、item_pipe_converger、item_pipe_connector、
  *     item_log_splitter、item_log_converger、item_log_connector、
  *     item_pipe_admission、item_log_admission）
+ *   AI-CORRECTION 2026-07-19: 当前设备定义 ID 已移除 item_/item_port_ 前缀；上行保留迁移前名称。
  *   anchor 设备不参与 TransportComponent，且会**分割** strict-pipe 的连通分量：
  *   两个 strict-pipe 之间如果隔了一个 anchor 设备（如分流器），它们属于不同的 TransportComponent。
  *   这是有意设计——分流器/汇流器/桥接器自身有 buffer 和独立的搬运配方，不应被管道域锁约束。

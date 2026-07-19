@@ -25,8 +25,8 @@ import {
   resolveOuterRingEdgeSnap,
 } from "./placement-snapping";
 
-const WAREHOUSE_BUS_SEGMENT_DEFINITION_ID = "item_port_log_hongs_bus";
-const WAREHOUSE_BUS_SOURCE_DEFINITION_ID = "item_port_log_hongs_bus_source";
+const WAREHOUSE_BUS_SEGMENT_DEFINITION_ID = "log_hongs_bus";
+const WAREHOUSE_BUS_SOURCE_DEFINITION_ID = "log_hongs_bus_source";
 const OUTER_RING_EDGE_SNAP_REASON_MESSAGE = "必须靠近地图边缘放置";
 const WAREHOUSE_BUS_SEED_CONFIG_KEY = "warehouseBusSeed";
 

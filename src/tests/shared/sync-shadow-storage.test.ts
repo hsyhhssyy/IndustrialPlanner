@@ -41,7 +41,7 @@ describe("sync shadow storage", () => {
     document.entities = {
       "entity-1": {
         id: "entity-1",
-        definitionId: "item_port_storager_1",
+        definitionId: "storager_1",
         position: { x: 1, y: 2 },
         rotation: 0,
         config: {},
@@ -150,7 +150,7 @@ describe("sync shadow storage", () => {
       entities: {
         "entity-1": {
           id: "entity-1",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 1, y: 2 },
           rotation: 0,
           config: {},

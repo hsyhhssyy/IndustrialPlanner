@@ -106,27 +106,31 @@ describe("system-blueprint-library", () => {
           blueprints: ["historical-device"],
         }],
       },
-      "/blueprints/historical-device.json": createTestBlueprint({
-        blueprintId: "system-historical-device",
-        entities: {
-          pool: {
-            id: "pool",
-            definitionId: "item_port_mix_pool_large_1",
-            position: { x: 10, y: 12 },
-            rotation: 0,
-            config: {},
-            tags: [],
+      "/blueprints/historical-device.json": {
+        ...createTestBlueprint({
+          blueprintId: "system-historical-device",
+          entities: {
+            pool: {
+              id: "pool",
+              definitionId: "item_port_mix_pool_large_1",
+              position: { x: 10, y: 12 },
+              rotation: 0,
+              config: {},
+              tags: [],
+            },
           },
-        },
-        entityOrder: ["pool"],
-      }),
+          entityOrder: ["pool"],
+        }),
+        schemaVersion: 1,
+      },
     }));
 
     const snapshot = await readSystemBlueprintLibrary();
     const rootDirectory = listSystemBlueprintDirectory(snapshot, null);
     const directory = listSystemBlueprintDirectory(snapshot, rootDirectory.folders[0]?.folderId ?? null);
 
-    expect(directory.blueprints[0]?.entities.pool?.definitionId).toBe("item_port_mix_pool_2");
+    expect(directory.blueprints[0]?.schemaVersion).toBe(3);
+    expect(directory.blueprints[0]?.entities.pool?.definitionId).toBe("mix_pool_2");
   });
 });
 

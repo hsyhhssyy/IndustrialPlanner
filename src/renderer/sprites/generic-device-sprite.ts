@@ -39,14 +39,14 @@ const DEGREE_TO_RADIAN = Math.PI / 180
 const BLUEPRINT_SPRITE_TEXTURE_PREFIX = "blueprint-sprite-"
 const BLUEPRINT_MASK_TEXTURE_PREFIX = "blueprint-masks-"
 const FORCE_BLUEPRINT_PREVIEW_DEFINITION_IDS = new Set([
-  "item_log_splitter",
-  "item_log_converger",
-  "item_log_connector",
-  "item_log_admission",
-  "item_pipe_splitter",
-  "item_pipe_converger",
-  "item_pipe_connector",
-  "item_pipe_admission",
+  "log_splitter",
+  "log_converger",
+  "log_connector",
+  "log_admission",
+  "pipe_splitter",
+  "pipe_converger",
+  "pipe_connector",
+  "pipe_admission",
 ])
 
 const DEFAULT_GHOST_ROOT_ALPHA = 0.2;
@@ -997,7 +997,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
   private syncDeviceIconTexture(): void {
     const nextTextureKey = resolveDeviceLabelIconTextureKey(
-      this.definition.id,
+      this.definition.spriteId,
       this.renderHost.workspace.app,
     );
 

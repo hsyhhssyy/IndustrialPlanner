@@ -19,7 +19,7 @@ const DEVICE_BORDER_COLOR = '#2a2a2a';
 // static port coordinates yet. Blueprint drawing uses local overrides until the
 // registry migration is finished.
 const FLUID_BLUEPRINT_PORT_LAYOUT_OVERRIDES = new Map([
-  ['item_port_mix_pool_2', [
+  ['mix_pool_2', [
     { direction: 'output', localCellX: 0, localCellY: 1, edge: 'WEST' },
     { direction: 'output', localCellX: 0, localCellY: 3, edge: 'WEST' },
     { direction: 'input', localCellX: 5, localCellY: 1, edge: 'EAST' },
@@ -173,7 +173,7 @@ async function generateBlueprintSprites(registryContract, outputDirectory) {
   const candidates = collectBlueprintGenerationCandidates(registryContract.entityDefinitions);
 
   for (const definition of candidates) {
-    const outputFilePath = path.join(outputDirectory, `${definition.id}.png`);
+    const outputFilePath = path.join(outputDirectory, `${definition.spriteId}.png`);
 
     try {
       await writeDeviceBlueprintSprite(definition, outputFilePath);
@@ -217,7 +217,7 @@ function collectUnresolvedPortDevices(registryContract) {
 }
 
 function isExcludedFromBlueprintBatch(definition) {
-  if (DIRECT_BLUEPRINT_SPRITE_IDS.has(definition.id)) {
+  if (DIRECT_BLUEPRINT_SPRITE_IDS.has(definition.spriteId)) {
     return true;
   }
 
@@ -233,10 +233,10 @@ function isExcludedFromBlueprintBatch(definition) {
   // AI-CORRECTION 2026-07-12: 暗管入口(item_port_udpipe_loader_1)和出口(item_port_udpipe_unloader_1)
   //   已恢复为 DIRECT_BLUEPRINT_SPRITE_MAPPINGS 直接素材映射，使用 bg_machine_udpipe_loader_1.png
   //   和 bg_machine_udpipe_unloader_1.png；该映射通过 DIRECT_BLUEPRINT_SPRITE_IDS 自动排除标准计算。
+  // AI-CORRECTION 2026-07-19: 当前 definition.id 已移除 item_ 前缀；素材匹配改用稳定的 definition.spriteId。
   return definition.id.startsWith('belt_')
     || definition.id.startsWith('pipe_')
-    || definition.id.startsWith('item_log_')
-    || definition.id.startsWith('item_pipe_')
+    || definition.id.startsWith('log_')
     || definition.id.includes('water_pump');
 }
 
@@ -489,7 +489,7 @@ async function orientBlueprintAssetForEdge(asset, edge) {
 }
 
 async function maybeCreateSpecialPortCompositeLayer(definition, kind, portEdge) {
-  if (definition.id !== 'item_port_sp_hub_1' || kind !== 'item') {
+  if (definition.id !== 'sp_hub_1' || kind !== 'item') {
     return null;
   }
 

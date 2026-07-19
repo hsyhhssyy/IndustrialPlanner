@@ -1,6 +1,8 @@
 import type {
   EditorHistoryRecord,
 } from "@/domain/editor/editor-history";
+import type { WorldEntity } from "@/domain/document/world-document";
+import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
 import {
   readFromIndexedDb,
   saveToIndexedDb,
@@ -61,8 +63,57 @@ function normalizePersistedEditorHistoryState(
     schemaVersion: 1,
     documentKey: value.documentKey,
     cursorSequence: Math.max(0, Math.floor(value.cursorSequence)),
-    records: value.records.filter(isEditorHistoryRecordLike),
+    records: value.records
+      .filter(isEditorHistoryRecordLike)
+      .map(migrateEditorHistoryRecordDeviceIds),
   };
+}
+
+function migrateEditorHistoryRecordDeviceIds(record: EditorHistoryRecord): EditorHistoryRecord {
+  return {
+    ...record,
+    action: {
+      ...record.action,
+      definitionIds: record.action.definitionIds?.map(migrateHistoryDefinitionId),
+    },
+    delta: {
+      ...record.delta,
+      entities: {
+        added: migrateHistoryEntityRecord(record.delta.entities.added),
+        removed: migrateHistoryEntityRecord(record.delta.entities.removed),
+        updated: Object.fromEntries(
+          Object.entries(record.delta.entities.updated).map(([entityId, change]) => [
+            entityId,
+            {
+              before: migrateHistoryEntity(change.before),
+              after: migrateHistoryEntity(change.after),
+            },
+          ]),
+        ),
+      },
+    },
+  };
+}
+
+function migrateHistoryEntityRecord(
+  entities: Readonly<Record<string, WorldEntity>>,
+): Record<string, WorldEntity> {
+  return migrateBlueprintEntityDeviceIds({ ...entities }, 1)?.entities ?? { ...entities };
+}
+
+function migrateHistoryEntity(entity: WorldEntity): WorldEntity {
+  return migrateHistoryEntityRecord({ entity }).entity ?? entity;
+}
+
+function migrateHistoryDefinitionId(definitionId: string): string {
+  return migrateHistoryEntity({
+    id: "history-definition-id",
+    definitionId,
+    position: { x: 0, y: 0 },
+    rotation: 0,
+    config: {},
+    tags: [],
+  }).definitionId;
 }
 
 function isEditorHistoryRecordLike(value: unknown): value is EditorHistoryRecord {

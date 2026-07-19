@@ -10,7 +10,7 @@ describe("placement behavior definitions", () => {
     const behavior = { type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge };
 
     expect(
-      registry.entityDefinitions.find((candidate) => candidate.id === "item_port_water_pump_1")
+      registry.entityDefinitions.find((candidate) => candidate.id === "water_pump_1")
         ?.placementBehaviors,
     ).toEqual(expect.arrayContaining([behavior]));
     expect(

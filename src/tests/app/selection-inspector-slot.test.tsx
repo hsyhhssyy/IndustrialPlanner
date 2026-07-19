@@ -43,7 +43,7 @@ function createDummyWorldWithRecipeDevice(): WorldDocument {
       ...doc.entities,
       "dummy-recipe-device": {
         id: "dummy-recipe-device",
-        definitionId: "item_port_mix_pool_1",
+        definitionId: "mix_pool_1",
         position: { x: 1, y: 1 },
         rotation: 0,
         config: {},
@@ -62,7 +62,7 @@ function createDummyWorldWithAutoRecipeDevice(): WorldDocument {
       ...doc.entities,
       "dummy-auto-recipe-device": {
         id: "dummy-auto-recipe-device",
-        definitionId: "item_port_grinder_1",
+        definitionId: "grinder_1",
         position: { x: 1, y: 1 },
         rotation: 0,
         config: {},

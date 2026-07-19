@@ -13,7 +13,7 @@ import { ProblemInspector, PROBLEM_INSPECTOR_KEY } from "@/app/shell/inspector/p
 function createMockEntity(overrides: Partial<WorldEntity> = {}): WorldEntity {
   return {
     id: "test-entity-1",
-    definitionId: "item_port_grinder_1",
+    definitionId: "grinder_1",
     position: { x: 4, y: 4 },
     rotation: 0,
     config: {},
@@ -24,7 +24,7 @@ function createMockEntity(overrides: Partial<WorldEntity> = {}): WorldEntity {
 
 function createMockDefinition(overrides: Partial<EntityDefinition> = {}): EntityDefinition {
   return {
-    id: "item_port_grinder_1",
+    id: "grinder_1",
     nameKey: "device.grinder",
     spriteId: "item_port_grinder_1",
     footprint: { width: 1, height: 1 },

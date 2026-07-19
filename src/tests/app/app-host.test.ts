@@ -207,9 +207,37 @@ describe("createAppHost", () => {
     const appHost = createAppHost(workspace);
 
     expect(appHost.state.workbench.selectedPlacementVariantByCraftGroup).toEqual({
-      item_port_filling_pd_mc_1: "liquid",
+      filling_pd_mc_1: "liquid",
       transmuter_2: "solidtrans",
     });
+    appHost.dispose();
+  });
+
+  it("migrates persisted workbench device references to the current ids", () => {
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        quickPlaceFavoriteEntityIds: ["item_port_storager_1", "storager_1"],
+        moduleBalancing: createModuleBalancingStorageSnapshot({
+          customModules: [{
+            id: "custom-old-icon",
+            name: "旧图标模块",
+            color: "#123456",
+            iconId: "item_port_grinder_1",
+            sourceType: "custom",
+            inputs: [{ itemId: "originium_ore", perMinute: 1 }],
+            outputs: [],
+          }],
+        }),
+      })),
+    );
+
+    const appHost = createAppHost(createWorkspace());
+
+    expect(appHost.internalState.workbench.quickPlaceFavoriteEntityIds).toEqual(["storager_1"]);
+    expect(
+      appHost.internalState.workbench.toolbox.moduleBalancing.customModules[0]?.iconId,
+    ).toBe("grinder_1");
     appHost.dispose();
   });
 
@@ -638,8 +666,8 @@ describe("createAppHost", () => {
       appHost.internalState.workbench.rightDockOpen = true;
       appHost.internalState.workbench.leftDockWidth = 420;
       appHost.internalState.workbench.toolbox.wiki.searchQuery = "铜锭";
-      appHost.internalState.workbench.toolbox.wiki.navigationStack = [{ type: "entity", id: "item_port_grinder_1" }];
-      appHost.internalState.workbench.toolbox.wiki.openedPage = { kind: "entity", id: "item_port_grinder_1" };
+      appHost.internalState.workbench.toolbox.wiki.navigationStack = [{ type: "entity", id: "grinder_1" }];
+      appHost.internalState.workbench.toolbox.wiki.openedPage = { kind: "entity", id: "grinder_1" };
     });
 
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
@@ -651,8 +679,8 @@ describe("createAppHost", () => {
           searchQuery: "铜锭",
           desktopCategory: "basicProduction",
           mobileSelectedCategories: ["item", "basicProduction"],
-          navigationStack: [{ type: "entity", id: "item_port_grinder_1" }],
-          openedPage: { kind: "entity", id: "item_port_grinder_1" },
+          navigationStack: [{ type: "entity", id: "grinder_1" }],
+          openedPage: { kind: "entity", id: "grinder_1" },
         }),
         helpDialog: createDialogStateSnapshot({
           maximized: true,
@@ -680,8 +708,8 @@ describe("createAppHost", () => {
           searchQuery: "铜锭",
           desktopCategory: "basicProduction",
           mobileSelectedCategories: ["item", "basicProduction"],
-          navigationStack: [{ type: "entity", id: "item_port_grinder_1" }],
-          openedPage: { kind: "entity", id: "item_port_grinder_1" },
+          navigationStack: [{ type: "entity", id: "grinder_1" }],
+          openedPage: { kind: "entity", id: "grinder_1" },
         }),
         helpDialog: createDialogStateSnapshot({
           maximized: true,
@@ -1154,7 +1182,7 @@ describe("createAppHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const snapshot = createDummyWorldDocument();
-    snapshot.entities["dummy-entity-2"]!.definitionId = "item_port_furnance_1";
+    snapshot.entities["dummy-entity-2"]!.definitionId = "furnance_1";
     editorHost.internalDocument.setSnapshot(snapshot);
     editorHost.actions.setViewportClientRect({
       left: 120,
@@ -1558,7 +1586,7 @@ describe("createAppHost", () => {
     const initialEntityOrderLength = editorHost.document.getSnapshot().entityOrder.length;
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "ui-left-dock-placement-mode-item_port_storager_1-touch-tap",
+      uiButtonId: "ui-left-dock-placement-mode-storager_1-touch-tap",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -1567,14 +1595,14 @@ describe("createAppHost", () => {
 
     expect(appHost.internalState.activeTool).toBe("single-placement");
     expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 0, y: 0 });
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("item_port_storager_1");
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("storager_1");
     expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
     expect(editorHost.state.collections.preview).toHaveLength(1);
 
     const draftId = editorHost.state.collections.preview[0];
     expect(draftId).toBeDefined();
     expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
-      definitionId: "item_port_storager_1",
+      definitionId: "storager_1",
       position: { x: -1, y: -1 },
     });
 
@@ -1598,7 +1626,7 @@ describe("createAppHost", () => {
       ? draftId.slice("placement-draft:".length)
       : draftId;
     expect(editorHost.document.getSnapshot().entities[finalId ?? ""]).toMatchObject({
-      definitionId: "item_port_storager_1",
+      definitionId: "storager_1",
       position: { x: -1, y: -1 },
     });
   });
@@ -1611,14 +1639,14 @@ describe("createAppHost", () => {
     const initialEntityOrder = [...editorHost.document.getSnapshot().entityOrder];
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "ui-left-dock-placement-mode-item_port_storager_1-touch-tap",
+      uiButtonId: "ui-left-dock-placement-mode-storager_1-touch-tap",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
       shiftKey: false,
     });
 
-    editorHost.actions.createSinglePlacementDraft("item_port_storager_1", { x: -10, y: 5 });
+    editorHost.actions.createSinglePlacementDraft("storager_1", { x: -10, y: 5 });
     appHost.internalState.runtime.placementAnchor = { x: -10, y: 5 };
 
     const draftId = editorHost.state.collections.preview[0];
@@ -1639,7 +1667,7 @@ describe("createAppHost", () => {
 
     expect(appHost.internalState.activeTool).toBe("single-placement");
     expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: -10, y: 5 });
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("item_port_storager_1");
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("storager_1");
     expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
     expect(editorHost.state.collections.preview).toEqual([draftId]);
     expect(editorHost.document.getSnapshot().entityOrder).toEqual(initialEntityOrder);
@@ -1652,7 +1680,7 @@ describe("createAppHost", () => {
     const appHost = createAppHost(workspace);
 
     appHost.gestureAdapter.handleUiButtonMouseTap({
-      uiButtonId: "ui-left-dock-placement-mode-item_port_storager_1-mouse-tap",
+      uiButtonId: "ui-left-dock-placement-mode-storager_1-mouse-tap",
       button: 0,
       altKey: false,
       ctrlKey: false,
@@ -1743,7 +1771,7 @@ describe("createAppHost", () => {
     const previewEntity = editorHost.queries.getEntityById(
       editorHost.state.collections.preview[0] ?? "",
     );
-    expect(previewEntity?.definitionId).toBe("item_port_storager_1");
+    expect(previewEntity?.definitionId).toBe("storager_1");
   });
 
   it("copies the current selection as a temporary blueprint from the marquee touch button", () => {
@@ -1980,7 +2008,7 @@ describe("createAppHost", () => {
     expect(editorHost.state.collections.preview).toHaveLength(1);
     expect(editorHost.queries.getEntityById(
       editorHost.state.collections.preview[0] ?? "",
-    )?.definitionId).toBe("item_port_grinder_1");
+    )?.definitionId).toBe("grinder_1");
   });
 
   it("applies blueprint-placement via touch OK and returns to select with placement panel", () => {
@@ -3022,7 +3050,7 @@ describe("createAppHost", () => {
     const initialEntityOrderLength = editorHost.document.getSnapshot().entityOrder.length;
 
     // Place a device with input ports (3x3 footprint, input ports on south edge)
-    editorHost.actions.createSinglePlacementDraft("item_port_storager_1", { x: 6, y: 6 });
+    editorHost.actions.createSinglePlacementDraft("storager_1", { x: 6, y: 6 });
     editorHost.actions.applyPlacementDraft();
 
     // Enter belt logistics placement mode
@@ -3154,7 +3182,7 @@ describe("createAppHost", () => {
     document.entities = {
       storage: {
         id: "storage",
-        definitionId: "item_port_storager_1",
+        definitionId: "storager_1",
         position: { x: 6, y: 6 },
         rotation: 0,
         config: {},
@@ -3220,7 +3248,7 @@ describe("createAppHost", () => {
     document.entities = {
       storage: {
         id: "storage",
-        definitionId: "item_port_storager_1",
+        definitionId: "storager_1",
         position: { x: 6, y: 6 },
         rotation: 0,
         config: {},
@@ -3265,7 +3293,7 @@ describe("createAppHost", () => {
     const appHost = createAppHost(workspace);
 
     // 放置一个带输出端口的设备 (3x3 storager, 北边输出端口在 x=6,7,8, y=6)
-    editorHost.actions.createSinglePlacementDraft("item_port_storager_1", { x: 6, y: 6 });
+    editorHost.actions.createSinglePlacementDraft("storager_1", { x: 6, y: 6 });
     editorHost.actions.applyPlacementDraft();
 
     // 进入传送带物流模式（touch 按钮）
@@ -3316,7 +3344,7 @@ describe("createAppHost", () => {
     const appHost = createAppHost(workspace);
 
     // 放置一个带输出端口的设备 (3x3 storager, 北边输出端口在 x=6,7,8, y=6)
-    editorHost.actions.createSinglePlacementDraft("item_port_storager_1", { x: 6, y: 6 });
+    editorHost.actions.createSinglePlacementDraft("storager_1", { x: 6, y: 6 });
     editorHost.actions.applyPlacementDraft();
 
     // 进入传送带物流模式（touch 按钮）
@@ -3731,7 +3759,7 @@ function createTestBlueprintRecord() {
       entities: {
         source: {
           id: "source",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 9, y: 9 },
           rotation: 0,
           config: {},
@@ -3739,7 +3767,7 @@ function createTestBlueprintRecord() {
         },
         target: {
           id: "target",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 12, y: 9 },
           rotation: 90,
           config: {},

@@ -10,14 +10,14 @@ describe("协议储存箱仓库提交", () => {
   it("选配方后每 10 秒提交到仓库", { timeout: 300_000 }, async () => {
     const bp = createBlueprint("wh-submit", [
       createEntity("belt_0", "belt_straight_1x1", 52, 35, 0),
-      createEntity("bus_src", "item_port_log_hongs_bus_source", 47, 34, 0),
-      createEntity("storager", "item_port_storager_1", 53, 34, 90, {
+      createEntity("bus_src", "log_hongs_bus_source", 47, 34, 0),
+      createEntity("storager", "storager_1", 53, 34, 90, {
         channelRecipes: { warehouse_submit: "r_warehouse_submit" },
       }),
-      createEntity("unloader", "item_port_unloader_1", 51, 34, 270, {
+      createEntity("unloader", "unloader_1", 51, 34, 270, {
         "storageSlotGroups[0].slots[0].ignoreStock": true,
       }),
-      createEntity("power", "item_port_power_diffuser_1", 51, 37, 0),
+      createEntity("power", "power_diffuser_1", 51, 37, 0),
     ], [
       createWarehouseSlotLink("unloader", "item_plant_moss_3"),
     ]);
@@ -41,12 +41,12 @@ describe("协议储存箱仓库提交", () => {
   it("未选配方时物品留在箱内", { timeout: 300_000 }, async () => {
     const bp = createBlueprint("wh-off", [
       createEntity("belt_0", "belt_straight_1x1", 52, 35, 0),
-      createEntity("bus_src", "item_port_log_hongs_bus_source", 47, 34, 0),
-      createEntity("storager", "item_port_storager_1", 53, 34, 90, {}),
-      createEntity("unloader", "item_port_unloader_1", 51, 34, 270, {
+      createEntity("bus_src", "log_hongs_bus_source", 47, 34, 0),
+      createEntity("storager", "storager_1", 53, 34, 90, {}),
+      createEntity("unloader", "unloader_1", 51, 34, 270, {
         "storageSlotGroups[0].slots[0].ignoreStock": true,
       }),
-      createEntity("power", "item_port_power_diffuser_1", 51, 37, 0),
+      createEntity("power", "power_diffuser_1", 51, 37, 0),
     ], [
       createWarehouseSlotLink("unloader", "item_plant_moss_3"),
     ]);

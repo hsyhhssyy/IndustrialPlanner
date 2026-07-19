@@ -76,8 +76,8 @@ describe("蓝图旋转 — 非正方形设备", () => {
       baseId: "wuling_protocol_core",
       initialGridPoint: { x: 3, y: 2 },
       entities: {
-        p: { id: "p", definitionId: "item_port_planter_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
-        s: { id: "s", definitionId: "item_port_seedcol_1", position: { x: 5, y: 0 }, rotation: 0, config: {}, tags: [] },
+        p: { id: "p", definitionId: "planter_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
+        s: { id: "s", definitionId: "seedcol_1", position: { x: 5, y: 0 }, rotation: 0, config: {}, tags: [] },
       },
       entityOrder: ["p", "s"],
       slotLinks: [],
@@ -124,8 +124,8 @@ describe("蓝图旋转 — 非正方形设备", () => {
       baseId: "wuling_protocol_core",
       initialGridPoint: { x: 3, y: 2 },
       entities: {
-        f: { id: "f", definitionId: "item_port_furnance_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
-        g: { id: "g", definitionId: "item_port_grinder_1", position: { x: 3, y: 0 }, rotation: 0, config: {}, tags: [] },
+        f: { id: "f", definitionId: "furnance_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
+        g: { id: "g", definitionId: "grinder_1", position: { x: 3, y: 0 }, rotation: 0, config: {}, tags: [] },
         b: { id: "b", definitionId: "belt_straight_1x1", position: { x: 0, y: 3 }, rotation: 0, config: {}, tags: [] },
       },
       entityOrder: ["f", "g", "b"],

@@ -14,7 +14,7 @@ describe("REQ-076: config overrides", () => {
     // 新规则：设备间不可直接相连，必须通过通用物流设备（如 belt）中转。
     // 布局：source (0,1) → belt (0,0) rot270 → sink (0,-3)
     const blueprint = createBlueprint("config-overrides", [
-      createEntity("source-storage", "item_port_storager_1", 0, 1, 0, {
+      createEntity("source-storage", "storager_1", 0, 1, 0, {
         "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
         "storageSlotGroups[0].slots[0].initialCount": 7,
         "storageSlotGroups[0].slots[0].ignoreStock": true,
@@ -30,7 +30,7 @@ describe("REQ-076: config overrides", () => {
         // "portGroups[1].ports[0].count": 3,
       }),
       createEntity("belt", "belt_straight_1x1", 0, 0, 270),
-      createEntity("sink-storage", "item_port_storager_1", 0, -3),
+      createEntity("sink-storage", "storager_1", 0, -3),
     ]);
 
     const report = await runBlueprintSimulation({

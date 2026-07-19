@@ -16,6 +16,7 @@ export type {
 } from "./world-document";
 export {
 	DEFAULT_WORLD_BASE_ID,
+	WORLD_DOCUMENT_SCHEMA_VERSION,
 	createWorldDocument,
 } from "./world-document";
 export type {

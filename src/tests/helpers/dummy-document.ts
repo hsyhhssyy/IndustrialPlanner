@@ -5,7 +5,7 @@ import {
 
 export function createDummyWorldDocument(): WorldDocument {
   return {
-    schemaVersion: 1,
+    schemaVersion: 3,
     documentKey: "11111111-1111-4111-8111-111111111111",
     baseId: DEFAULT_WORLD_BASE_ID,
     meta: {
@@ -28,7 +28,7 @@ export function createDummyWorldDocument(): WorldDocument {
       },
       "dummy-entity-2": {
         id: "dummy-entity-2",
-        definitionId: "item_port_storager_1",
+        definitionId: "storager_1",
         position: {
           x: 4,
           y: 4,
@@ -39,7 +39,7 @@ export function createDummyWorldDocument(): WorldDocument {
       },
       "dummy-entity-3": {
         id: "dummy-entity-3",
-        definitionId: "item_port_grinder_1",
+        definitionId: "grinder_1",
         position: {
           x: 10,
           y: 4,
@@ -50,7 +50,7 @@ export function createDummyWorldDocument(): WorldDocument {
       },
       "dummy-entity-4": {
         id: "dummy-entity-4",
-        definitionId: "item_port_mix_pool_1",
+        definitionId: "mix_pool_1",
         position: {
           x: 16,
           y: 3,
@@ -61,7 +61,7 @@ export function createDummyWorldDocument(): WorldDocument {
       },
       "dummy-entity-5": {
         id: "dummy-entity-5",
-        definitionId: "item_port_liquid_filling_pd_mc_1",
+        definitionId: "liquid_filling_pd_mc_1",
         position: {
           x: 24,
           y: 4,
@@ -72,7 +72,7 @@ export function createDummyWorldDocument(): WorldDocument {
       },
       "dummy-entity-6": {
         id: "dummy-entity-6",
-        definitionId: "item_log_splitter",
+        definitionId: "log_splitter",
         position: {
           x: 14,
           y: 10,
@@ -94,7 +94,7 @@ export function createDummyWorldDocument(): WorldDocument {
       },
       "dummy-entity-8": {
         id: "dummy-entity-8",
-        definitionId: "item_port_udpipe_loader_1",
+        definitionId: "udpipe_loader_1",
         position: {
           x: 26,
           y: 10,

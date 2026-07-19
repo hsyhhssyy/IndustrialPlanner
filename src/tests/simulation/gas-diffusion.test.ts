@@ -137,7 +137,7 @@ function createGasDiffusionXiraniteBlueprint(
     }),
     createEntity("gas-pipe", "pipe_straight_1x1", -1, 1),
     createEntity("gas-diffuser", "vaporizer_1", 0, 0),
-    createEntity("xiranite-oven", "item_port_xiranite_oven_1", 5, 0, 0, {
+    createEntity("xiranite-oven", "xiranite_oven_1", 5, 0, 0, {
       channelRecipes: {
         default: XIRANITE_IN_INERT_GAS_RECIPE_ID,
       },
@@ -146,7 +146,7 @@ function createGasDiffusionXiraniteBlueprint(
       "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_water",
       "storageSlotGroups[1].slots[0].initialCount": 20,
     }),
-    createEntity("power", "item_port_power_diffuser_1", 3, 5),
+    createEntity("power", "power_diffuser_1", 3, 5),
   ]);
 }
 
@@ -156,12 +156,12 @@ function createConvergerLockBlueprint(): BlueprintDocument {
       "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
       "storageSlotGroups[0].slots[0].initialCount": 2,
     }),
-    createEntity("liquid-source", "item_port_liquid_storager_1", -4, -1, 0, {
+    createEntity("liquid-source", "liquid_storager_1", -4, -1, 0, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
       "storageSlotGroups[0].slots[0].initialCount": 2,
     }),
     createEntity("liquid-delay-pipe", "pipe_straight_1x1", -1, 0),
-    createEntity("converger", "item_pipe_converger", 0, 0),
+    createEntity("converger", "pipe_converger", 0, 0),
     createEntity("locked-pipe", "pipe_straight_1x1", 0, 1, 90),
   ]);
 }

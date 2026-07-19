@@ -23,6 +23,7 @@ const ITEM_DOMAIN_BY_ID = new Map<string, ItemDomain>(
  * 使其归为 anchor 运输类别：
  *   - item_pipe_splitter / item_pipe_converger / item_pipe_connector / item_pipe_admission
  *   - item_log_splitter / item_log_converger / item_log_connector / item_log_admission
+ * AI-CORRECTION 2026-07-19: 当前上述设备定义 ID 已移除 item_ 前缀；原名仅作历史审计。
  *
  * 原因：这些设备有自己的 buffer 和独立搬运配方，不应受管道/传送带域锁约束，
  * 且应分割 TransportComponent 连通分量。这是仿真设计的明确规定。
@@ -42,18 +43,18 @@ const DEDICATED_LOGISTICS_DEVICE_IDS = new Set<string>(
 
 const GENERAL_LOGISTICS_DEVICE_IDS = new Set<string>([
     ...DEDICATED_LOGISTICS_DEVICE_IDS,
-    "item_log_splitter",
-    "item_log_converger",
-    "item_log_connector",
-    "item_log_admission",
-    "item_pipe_splitter",
-    "item_pipe_converger",
-    "item_pipe_connector",
-    "item_pipe_admission",
+    "log_splitter",
+    "log_converger",
+    "log_connector",
+    "log_admission",
+    "pipe_splitter",
+    "pipe_converger",
+    "pipe_connector",
+    "pipe_admission",
 ])
 
 const PROTOCOL_CORE_DEVICE_IDS = new Set<string>([
-    "item_port_sp_hub_1",
+    "sp_hub_1",
 ])
 
 export const createRegistryQuery = (): RegistryQuery => {

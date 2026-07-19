@@ -182,7 +182,7 @@ describe("resolveWorldEntitySpriteLayout", () => {
     const layout = resolveWorldEntitySpriteLayout({
       entity: {
         id: "water-pump",
-        definitionId: "item_port_water_pump_1",
+        definitionId: "water_pump_1",
         position: { x: 10, y: 5 },
         rotation: 0,
         config: {},
@@ -216,7 +216,7 @@ describe("resolveWorldEntitySpriteLayout", () => {
     const layout = resolveWorldEntitySpriteLayout({
       entity: {
         id: "water-pump-90",
-        definitionId: "item_port_water_pump_1",
+        definitionId: "water_pump_1",
         position: { x: 10, y: 5 },
         rotation: 90,
         config: {},
@@ -251,7 +251,7 @@ describe("resolveWorldEntitySpriteLayout", () => {
     const layout = resolveWorldEntitySpriteLayout({
       entity: {
         id: "water-pump-180",
-        definitionId: "item_port_water_pump_1",
+        definitionId: "water_pump_1",
         position: { x: 10, y: 5 },
         rotation: 180,
         config: {},
@@ -282,7 +282,7 @@ describe("resolveWorldEntitySpriteLayout", () => {
     const layout = resolveWorldEntitySpriteLayout({
       entity: {
         id: "water-pump-270",
-        definitionId: "item_port_water_pump_1",
+        definitionId: "water_pump_1",
         position: { x: 10, y: 5 },
         rotation: 270,
         config: {},
@@ -452,7 +452,7 @@ describe("createInvalidPlacementDecoration", () => {
                 entityId === "preview-water-node"
                   ? {
                     id: entityId,
-                    definitionId: "item_water_purifier_node_1",
+                    definitionId: "water_purifier_node_1",
                     position: { x: 0, y: 0 },
                     rotation: 0,
                     config: {},
@@ -504,7 +504,7 @@ describe("resolveWorldEntitySelectionOverlayLayouts", () => {
       entities: [
         {
           id: "selected",
-          definitionId: "item_port_unloader_1",
+          definitionId: "unloader_1",
           position: { x: 4, y: 6 },
           rotation: 90,
           config: {},
@@ -512,7 +512,7 @@ describe("resolveWorldEntitySelectionOverlayLayouts", () => {
         },
         {
           id: "unselected",
-          definitionId: "item_port_unloader_1",
+          definitionId: "unloader_1",
           position: { x: 8, y: 10 },
           rotation: 0,
           config: {},
@@ -692,7 +692,7 @@ describe("resolvePowerRangeOutlineLayouts", () => {
     const layouts = resolvePowerRangeOutlineLayouts({
       entities: [{
         id: "pole",
-        definitionId: "item_port_power_diffuser_1",
+        definitionId: "power_diffuser_1",
         position: { x: 0, y: 0 },
         rotation: 0,
         config: {},
@@ -734,7 +734,7 @@ describe("resolvePowerRangeOutlineLayouts", () => {
     expect(resolvePowerRangeOutlineLayouts({
       entities: [{
         id: "pole",
-        definitionId: "item_port_power_diffuser_1",
+        definitionId: "power_diffuser_1",
         position: { x: 0, y: 0 },
         rotation: 0,
         config: {},

@@ -78,13 +78,13 @@ describe("legacy-v2-blueprint-migration", () => {
       builtinEntities: [
         {
           id: "valley4_bus_source",
-          definitionId: "item_port_log_hongs_bus_source",
+          definitionId: "log_hongs_bus_source",
           position: { x: -4, y: -4 },
           rotation: 0,
         },
         {
           id: "valley4_bus_seg_x_0",
-          definitionId: "item_port_log_hongs_bus",
+          definitionId: "log_hongs_bus",
           position: { x: 0, y: -4 },
           rotation: 90,
         },

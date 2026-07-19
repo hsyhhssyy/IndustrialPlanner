@@ -49,8 +49,8 @@ describe("PortOutputConfigInspector", () => {
 
   it("renders three output port group rows for reactor pool", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_mix_pool_1");
-    const entity = createEmptyEntity("reactor-1", "item_port_mix_pool_1");
+    const definition = requireDefinition(workspace, "mix_pool_1");
+    const entity = createEmptyEntity("reactor-1", "mix_pool_1");
     const currentAppHost = buildAppHost(workspace, entity);
     appHost = currentAppHost;
     renderInspector(currentAppHost, definition, entity, root);
@@ -60,8 +60,8 @@ describe("PortOutputConfigInspector", () => {
   });
 
   it.each([
-    ["反应池", "item_port_mix_pool_1"],
-    ["扩容反应池", "item_port_mix_pool_2"],
+    ["反应池", "mix_pool_1"],
+    ["扩容反应池", "mix_pool_2"],
   ])("%s 的未配置输出端口按端口类型提供候选物品", async (_name, definitionId) => {
     const workspace = createWorkspace();
     const definition = requireDefinition(workspace, definitionId);
@@ -107,8 +107,8 @@ describe("PortOutputConfigInspector", () => {
 
   it("filters items: solid ports reject fluid items, liquid ports reject gas items", async () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_liquid_furnance_1");
-    const entity = createEmptyEntity("furnace-2", "item_port_liquid_furnance_1");
+    const definition = requireDefinition(workspace, "liquid_furnance_1");
+    const entity = createEmptyEntity("furnace-2", "liquid_furnance_1");
     const currentAppHost = buildAppHost(workspace, entity);
     appHost = currentAppHost;
     const ore = requireItem(workspace, "item_copper_ore");
@@ -152,8 +152,8 @@ describe("PortOutputConfigInspector", () => {
 
   it("writes acceptRule config for all ports when user selects an item", async () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_mix_pool_1");
-    const initialEntity = createEmptyEntity("reactor-3", "item_port_mix_pool_1");
+    const definition = requireDefinition(workspace, "mix_pool_1");
+    const initialEntity = createEmptyEntity("reactor-3", "mix_pool_1");
     let currentEntity: WorldEntity = initialEntity;
 
     const patchEntityConfig = vi.fn((_id: string, patch: Record<string, unknown>) => {
@@ -178,9 +178,9 @@ describe("PortOutputConfigInspector", () => {
 
   it("clears acceptRule config for all ports when user clears selection", async () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_mix_pool_1");
+    const definition = requireDefinition(workspace, "mix_pool_1");
     const initialEntity: WorldEntity = {
-      ...createEmptyEntity("reactor-4", "item_port_mix_pool_1"),
+      ...createEmptyEntity("reactor-4", "mix_pool_1"),
       config: {
         "portGroups[0].ports[0].acceptRule": { base: { kind: "item", itemId: "item_copper_ore" }, exclude: [] },
       },
@@ -216,8 +216,8 @@ describe("PortOutputConfigInspector", () => {
 
   it("disables clear button when no item is selected", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_mix_pool_1");
-    const entity = createEmptyEntity("reactor-5", "item_port_mix_pool_1");
+    const definition = requireDefinition(workspace, "mix_pool_1");
+    const entity = createEmptyEntity("reactor-5", "mix_pool_1");
     const currentAppHost = buildAppHost(workspace, entity);
     appHost = currentAppHost;
     renderInspector(currentAppHost, definition, entity, root);
@@ -228,8 +228,8 @@ describe("PortOutputConfigInspector", () => {
 
   it("renders large reactor pool with three output port groups", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_mix_pool_2");
-    const entity = createEmptyEntity("large-reactor-1", "item_port_mix_pool_2");
+    const definition = requireDefinition(workspace, "mix_pool_2");
+    const entity = createEmptyEntity("large-reactor-1", "mix_pool_2");
     const currentAppHost = buildAppHost(workspace, entity);
     appHost = currentAppHost;
     renderInspector(currentAppHost, definition, entity, root);
@@ -238,9 +238,9 @@ describe("PortOutputConfigInspector", () => {
 
   it("renders row-level locator badges for expanded reactor output port groups", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_mix_pool_2");
+    const definition = requireDefinition(workspace, "mix_pool_2");
     const entity: WorldEntity = {
-      ...createEmptyEntity("large-reactor-2", "item_port_mix_pool_2"),
+      ...createEmptyEntity("large-reactor-2", "mix_pool_2"),
       rotation: 90,
     };
     const currentAppHost = buildAppHost(workspace, entity, { displayRotation: 90, deviceClass: "tablet" });
@@ -260,8 +260,8 @@ describe("PortOutputConfigInspector", () => {
 
   it("renders compact output row actions without duplicate status or type indicators", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_mix_pool_2");
-    const entity = createEmptyEntity("large-reactor-compact", "item_port_mix_pool_2");
+    const definition = requireDefinition(workspace, "mix_pool_2");
+    const entity = createEmptyEntity("large-reactor-compact", "mix_pool_2");
     const currentAppHost = buildAppHost(workspace, entity, { deviceClass: "tablet" });
     appHost = currentAppHost;
     renderInspector(currentAppHost, definition, entity, root);
@@ -280,10 +280,10 @@ describe("PortOutputConfigInspector", () => {
 
   it("shows selected item label from existing config", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_mix_pool_1");
+    const definition = requireDefinition(workspace, "mix_pool_1");
     const ore = requireItem(workspace, "item_copper_ore");
     const entity: WorldEntity = {
-      ...createEmptyEntity("reactor-6", "item_port_mix_pool_1"),
+      ...createEmptyEntity("reactor-6", "mix_pool_1"),
       config: { "portGroups[0].ports[0].acceptRule": { base: { kind: "item", itemId: ore.id }, exclude: [] } },
     };
     const currentAppHost = buildAppHost(workspace, entity);

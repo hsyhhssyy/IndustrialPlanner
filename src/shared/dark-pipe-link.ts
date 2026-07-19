@@ -12,13 +12,13 @@ export type DarkPipeRole = "inlet" | "outlet";
 export const DARK_PIPE_LINK_TOOL: ActiveTool = "dark-pipe-link";
 
 export const DARK_PIPE_INLET_DEFINITION_IDS = [
-  "item_port_udpipe_loader_1",
-  "item_port_udpipe_loader_2",
+  "udpipe_loader_1",
+  "udpipe_loader_2",
 ] as const;
 
 export const DARK_PIPE_OUTLET_DEFINITION_IDS = [
-  "item_port_udpipe_unloader_1",
-  "item_port_udpipe_unloader_2",
+  "udpipe_unloader_1",
+  "udpipe_unloader_2",
 ] as const;
 
 export const DARK_PIPE_INLET_STORAGE_GROUP_ID = "loader_buffer";

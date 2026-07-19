@@ -33,64 +33,64 @@ function definitionById(
 describe("ENTITY_DEFINITIONS displayOrder", () => {
   const EXPECTED_ORDERS: Record<string, number> = {
     // 100 — beltLogistics
-    item_log_connector: 101,
-    item_log_splitter: 102,
-    item_log_converger: 103,
-    item_log_admission: 104,
+    log_connector: 101,
+    log_splitter: 102,
+    log_converger: 103,
+    log_admission: 104,
 
     // 200 — pipeLogistics
-    item_pipe_connector: 201,
-    item_pipe_splitter: 202,
-    item_pipe_converger: 203,
-    item_pipe_admission: 204,
+    pipe_connector: 201,
+    pipe_splitter: 202,
+    pipe_converger: 203,
+    pipe_admission: 204,
 
     // 300 — resourcePower
-    item_port_water_pump_1: 301,
-    item_port_power_diffuser_1: 302,
-    item_port_power_sta_1: 303,
+    water_pump_1: 301,
+    power_diffuser_1: 302,
+    power_sta_1: 303,
     vaporizer_1: 304,
-    item_water_purifier_node_1: 305,
+    water_purifier_node_1: 305,
 
     // 400 — warehouse
-    item_port_storager_1: 401,
-    item_port_loader_1: 402,
-    item_port_unloader_1: 403,
-    item_port_liquid_storager_1: 404,
-    item_port_log_hongs_bus: 405,
-    item_port_log_hongs_bus_source: 406,
-    item_port_udpipe_loader_1: 407,
-    item_port_udpipe_unloader_1: 408,
-    item_port_udpipe_loader_2: 409,
-    item_port_udpipe_unloader_2: 410,
+    storager_1: 401,
+    loader_1: 402,
+    unloader_1: 403,
+    liquid_storager_1: 404,
+    log_hongs_bus: 405,
+    log_hongs_bus_source: 406,
+    udpipe_loader_1: 407,
+    udpipe_unloader_1: 408,
+    udpipe_loader_2: 409,
+    udpipe_unloader_2: 410,
     gas_storager_1: 411,
 
     // 500 — basicProduction
-    item_port_furnance_1: 501,
-    item_port_liquid_furnance_1: 502,
-    item_port_grinder_1: 503,
-    item_port_cmpt_mc_1: 504,
-    item_port_shaper_1: 505,
+    furnance_1: 501,
+    liquid_furnance_1: 502,
+    grinder_1: 503,
+    cmpt_mc_1: 504,
+    shaper_1: 505,
     shaper_1_gas: 506,
-    item_port_seedcol_1: 507,
-    item_port_planter_1: 508,
-    item_port_hydro_planter_1: 509,
-    item_liquid_cleaner_1: 510,
+    seedcol_1: 507,
+    planter_1: 508,
+    hydro_planter_1: 509,
+    liquid_cleaner_1: 510,
 
     // 600 — advancedManufacturing
-    item_port_winder_1: 601,
-    item_port_filling_pd_mc_1: 602,
-    item_port_liquid_filling_pd_mc_1: 603,
-    item_port_tools_asm_mc_1: 604,
-    item_port_thickener_1: 605,
-    item_port_mix_pool_1: 606,
-    item_port_mix_pool_2: 607,
-    item_port_xiranite_oven_1: 608,
-    item_port_liquid_purifier_1: 609,
+    winder_1: 601,
+    filling_pd_mc_1: 602,
+    liquid_filling_pd_mc_1: 603,
+    tools_asm_mc_1: 604,
+    thickener_1: 605,
+    mix_pool_1: 606,
+    mix_pool_2: 607,
+    xiranite_oven_1: 608,
+    liquid_purifier_1: 609,
     liquid_purifier_1_gas: 610,
-    item_port_dismantler_1: 611,
+    dismantler_1: 611,
     transmuter_2_gastrans: 612,
     transmuter_2_solidtrans: 613,
-    item_port_gas_reactor_1: 614,
+    gas_reactor_1: 614,
     transmuter_1_gastrans: 615,
     transmuter_1_liquidtrans: 616,
   };
@@ -140,38 +140,38 @@ describe("displayOrder ascending within uiGroup", () => {
   it("beltLogistics entities are ordered 101→104", () => {
     const ids = sortedIdsByGroup("beltLogistics");
     expect(ids).toEqual([
-      "item_log_connector",
-      "item_log_splitter",
-      "item_log_converger",
-      "item_log_admission",
+      "log_connector",
+      "log_splitter",
+      "log_converger",
+      "log_admission",
     ]);
   });
 
   it("pipeLogistics entities are ordered 201→204", () => {
     const ids = sortedIdsByGroup("pipeLogistics");
     expect(ids).toEqual([
-      "item_pipe_connector",
-      "item_pipe_splitter",
-      "item_pipe_converger",
-      "item_pipe_admission",
+      "pipe_connector",
+      "pipe_splitter",
+      "pipe_converger",
+      "pipe_admission",
     ]);
   });
 
   it("resourcePower visible entities begin with water_pump→power_diffuser→power_sta", () => {
     const ids = sortedIdsByGroup("resourcePower");
-    const waterIdx = ids.indexOf("item_port_water_pump_1");
-    const diffuserIdx = ids.indexOf("item_port_power_diffuser_1");
-    const staIdx = ids.indexOf("item_port_power_sta_1");
+    const waterIdx = ids.indexOf("water_pump_1");
+    const diffuserIdx = ids.indexOf("power_diffuser_1");
+    const staIdx = ids.indexOf("power_sta_1");
     expect(waterIdx).toBeLessThan(diffuserIdx);
     expect(diffuserIdx).toBeLessThan(staIdx);
   });
 
   it("warehouse visible entities begin with storager→loader→unloader→liquid_storager", () => {
     const ids = sortedIdsByGroup("warehouse");
-    const storagerIdx = ids.indexOf("item_port_storager_1");
-    const loaderIdx = ids.indexOf("item_port_loader_1");
-    const unloaderIdx = ids.indexOf("item_port_unloader_1");
-    const liquidIdx = ids.indexOf("item_port_liquid_storager_1");
+    const storagerIdx = ids.indexOf("storager_1");
+    const loaderIdx = ids.indexOf("loader_1");
+    const unloaderIdx = ids.indexOf("unloader_1");
+    const liquidIdx = ids.indexOf("liquid_storager_1");
     expect(storagerIdx).toBeLessThan(loaderIdx);
     expect(loaderIdx).toBeLessThan(unloaderIdx);
     expect(unloaderIdx).toBeLessThan(liquidIdx);
@@ -179,10 +179,10 @@ describe("displayOrder ascending within uiGroup", () => {
 
   it("basicProduction entities begin with furnance→liquid_furnance→grinder→cmpt", () => {
     const ids = sortedIdsByGroup("basicProduction");
-    const furnanceIdx = ids.indexOf("item_port_furnance_1");
-    const liquidIdx = ids.indexOf("item_port_liquid_furnance_1");
-    const grinderIdx = ids.indexOf("item_port_grinder_1");
-    const cmptIdx = ids.indexOf("item_port_cmpt_mc_1");
+    const furnanceIdx = ids.indexOf("furnance_1");
+    const liquidIdx = ids.indexOf("liquid_furnance_1");
+    const grinderIdx = ids.indexOf("grinder_1");
+    const cmptIdx = ids.indexOf("cmpt_mc_1");
     expect(furnanceIdx).toBeLessThan(liquidIdx);
     expect(liquidIdx).toBeLessThan(grinderIdx);
     expect(grinderIdx).toBeLessThan(cmptIdx);
@@ -190,9 +190,9 @@ describe("displayOrder ascending within uiGroup", () => {
 
   it("advancedManufacturing entities begin with winder→tools_asm→thickener", () => {
     const ids = sortedIdsByGroup("advancedManufacturing");
-    const winderIdx = ids.indexOf("item_port_winder_1");
-    const toolsIdx = ids.indexOf("item_port_tools_asm_mc_1");
-    const thickenerIdx = ids.indexOf("item_port_thickener_1");
+    const winderIdx = ids.indexOf("winder_1");
+    const toolsIdx = ids.indexOf("tools_asm_mc_1");
+    const thickenerIdx = ids.indexOf("thickener_1");
     expect(winderIdx).toBeLessThan(toolsIdx);
     expect(toolsIdx).toBeLessThan(thickenerIdx);
   });

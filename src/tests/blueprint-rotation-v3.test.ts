@@ -74,8 +74,8 @@ describe("蓝图旋转 — 非正方形(5x5规划器+3x3洪炉)", () => {
       baseId: "wuling_protocol_core",
       initialGridPoint: { x: 5, y: 3 },
       entities: {
-        p: { id: "p", definitionId: "item_port_planter_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
-        s: { id: "s", definitionId: "item_port_seedcol_1", position: { x: 5, y: 0 }, rotation: 0, config: {}, tags: [] },
+        p: { id: "p", definitionId: "planter_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
+        s: { id: "s", definitionId: "seedcol_1", position: { x: 5, y: 0 }, rotation: 0, config: {}, tags: [] },
       },
       entityOrder: ["p", "s"],
       slotLinks: [],
@@ -111,8 +111,8 @@ describe("蓝图旋转 — 非正方形(5x5规划器+3x3洪炉)", () => {
       baseId: "wuling_protocol_core",
       initialGridPoint: { x: 4, y: 3 },
       entities: {
-        f: { id: "f", definitionId: "item_port_furnance_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
-        p: { id: "p", definitionId: "item_port_planter_1", position: { x: 3, y: 0 }, rotation: 0, config: {}, tags: [] },
+        f: { id: "f", definitionId: "furnance_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
+        p: { id: "p", definitionId: "planter_1", position: { x: 3, y: 0 }, rotation: 0, config: {}, tags: [] },
       },
       entityOrder: ["f", "p"],
       slotLinks: [],
@@ -147,8 +147,8 @@ describe("蓝图旋转 — 非正方形(5x5规划器+3x3洪炉)", () => {
       baseId: "wuling_protocol_core",
       initialGridPoint: { x: 5, y: 2 },
       entities: {
-        pool: { id: "p1", definitionId: "item_port_mix_pool_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
-        hydro: { id: "h1", definitionId: "item_port_hydro_planter_1", position: { x: 5, y: 0 }, rotation: 0, config: {}, tags: [] },
+        pool: { id: "p1", definitionId: "mix_pool_1", position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] },
+        hydro: { id: "h1", definitionId: "hydro_planter_1", position: { x: 5, y: 0 }, rotation: 0, config: {}, tags: [] },
       },
       entityOrder: ["p1", "h1"],
       slotLinks: [],

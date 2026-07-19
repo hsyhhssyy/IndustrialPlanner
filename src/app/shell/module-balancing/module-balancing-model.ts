@@ -11,6 +11,7 @@ import type {
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
 import { createDeviceIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import {
   isItemAvailableByActivity,
@@ -331,8 +332,8 @@ export function resolveItemIconSrc(itemId: string, index: ModuleBalancingIndex):
   return createItemIconAssetUrl(item?.iconId ?? itemId);
 }
 
-export function resolveEntityIconSrc(entityId: string): string {
-  return createDeviceIconAssetUrl(entityId);
+export function resolveEntityIconSrc(entityId: string, index: ModuleBalancingIndex): string {
+  return createDeviceIconAssetUrl(index.entityById.get(entityId)?.spriteId ?? entityId);
 }
 
 export function resolveModuleIconSrc(
@@ -354,7 +355,7 @@ export function resolveModuleIconSrc(
     return resolveItemIconSrc(primaryId, index);
   }
 
-  return resolveEntityIconSrc(recipe.machineId);
+  return resolveEntityIconSrc(recipe.machineId, index);
 }
 
 export function resolveAnyIconSrc(iconId: string, index: ModuleBalancingIndex): string {
@@ -362,8 +363,9 @@ export function resolveAnyIconSrc(iconId: string, index: ModuleBalancingIndex): 
     return resolveItemIconSrc(iconId, index);
   }
 
-  if (index.entityById.has(iconId)) {
-    return resolveEntityIconSrc(iconId);
+  const migratedDeviceId = migrateBlueprintDeviceReference(iconId)?.deviceId ?? iconId;
+  if (index.entityById.has(migratedDeviceId)) {
+    return resolveEntityIconSrc(migratedDeviceId, index);
   }
 
   return createItemIconAssetUrl(iconId);

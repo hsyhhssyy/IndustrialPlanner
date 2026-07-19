@@ -32,8 +32,8 @@ function resolveItemIconSrc(itemId: string, index: RecipeDisplayIndex): string {
   return createItemIconAssetUrl(item?.iconId ?? itemId);
 }
 
-function resolveEntityIconSrc(entityId: string): string {
-  return createDeviceIconAssetUrl(entityId);
+function resolveEntityIconSrc(definition: EntityDefinition): string {
+  return createDeviceIconAssetUrl(definition.spriteId);
 }
 
 export function RecipeDisplay({
@@ -200,7 +200,7 @@ export function RecipeDisplay({
       <div className={cm(styles, "recipe-display-device")}>
         <img
           alt=""
-          src={machine === null ? createDeviceIconAssetUrl("item_port_grinder_1") : resolveEntityIconSrc(machine.id)}
+          src={machine === null ? createDeviceIconAssetUrl("item_port_grinder_1") : resolveEntityIconSrc(machine)}
         />
         <span>{machine === null ? recipe.machineId : t(machine.nameKey)}</span>
       </div>

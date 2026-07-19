@@ -137,7 +137,7 @@ describe("machine-mode entity definitions", () => {
         durationSeconds: 3,
         inputs: [{ itemId: "item_liquid_water", amount: 1 }],
         outputs: [{ itemId: "item_copper_ore", amount: 1 }],
-        machineId: "item_port_miner_4",
+        machineId: "miner_4",
       });
   });
 
@@ -146,7 +146,7 @@ describe("machine-mode entity definitions", () => {
     const gasInput = definition.portGroups.find((portGroup) => portGroup.id === "gas_input");
     const gasOutput = definition.portGroups.find((portGroup) => portGroup.id === "gas_output");
 
-    expect(definition.tags).toContain("alter:item_port_liquid_purifier_1");
+    expect(definition.tags).toContain("alter:liquid_purifier_1");
     expect(gasInput?.ports.map((port) => port.id)).toEqual(["in_e_2"]);
     expect(gasOutput?.ports.map((port) => port.id)).toEqual(["out_w_1", "out_w_3"]);
     expect(gasInput?.ports.every((port) => port.acceptRule.base.kind === "gas")).toBe(true);

@@ -60,19 +60,19 @@ describe("传送带同步相位", () => {
   it("分组内传送带状态一致，所有有货传送带相位一致（含起点 belt:3:0）", async () => {
     const blueprint = createBlueprint("belt-phase-sync", [
       // 取货口 — 作为物品源（warehouse link 在 headless 模式无效，改由 initialItem + ignoreStock 驱动）
-      createEntity("item_port_unloader_1:5", "item_port_unloader_1", 51, 25, 180, {
+      createEntity("item_port_unloader_1:5", "unloader_1", 51, 25, 180, {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
         "storageSlotGroups[0].slots[0].initialCount": 100,
         "storageSlotGroups[0].slots[0].ignoreStock": true
       }),
       // 存取线源桩（空壳，仅保持拓扑完整）
-      createEntity("item_port_log_hongs_bus_source:2", "item_port_log_hongs_bus_source", 51, 26, 0),
+      createEntity("item_port_log_hongs_bus_source:2", "log_hongs_bus_source", 51, 26, 0),
       // 粉碎机
-      createEntity("item_port_grinder_1:6", "item_port_grinder_1", 51, 21, 0),
+      createEntity("item_port_grinder_1:6", "grinder_1", 51, 21, 0),
       // 仓储（末端接收）
-      createEntity("item_port_storager_1:7", "item_port_storager_1", 51, 16, 0),
+      createEntity("item_port_storager_1:7", "storager_1", 51, 16, 0),
       // 供电扩散器
-      createEntity("item_port_power_diffuser_1:8", "item_port_power_diffuser_1", 54, 23, 0),
+      createEntity("item_port_power_diffuser_1:8", "power_diffuser_1", 54, 23, 0),
       // 分组测试的六条传送带
       ...BELT_IDS.map((id) => {
         const pos = BELT_POSITIONS[id]!;
@@ -161,16 +161,16 @@ describe("传送带同步相位", () => {
    */
   it("粉碎机部分下游断头时仍能向存活下游稳定出货", async () => {
     const blueprint = createBlueprint("belt-partial-dead-end", [
-      createEntity("item_port_unloader_1:5", "item_port_unloader_1", 51, 25, 180, {
+      createEntity("item_port_unloader_1:5", "unloader_1", 51, 25, 180, {
         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
         "storageSlotGroups[0].slots[0].initialCount": 100,
         "storageSlotGroups[0].slots[0].ignoreStock": true
       }),
-      createEntity("item_port_log_hongs_bus_source:2", "item_port_log_hongs_bus_source", 51, 26, 0),
-      createEntity("item_port_grinder_1:6", "item_port_grinder_1", 51, 21, 0),
+      createEntity("item_port_log_hongs_bus_source:2", "log_hongs_bus_source", 51, 26, 0),
+      createEntity("item_port_grinder_1:6", "grinder_1", 51, 21, 0),
       // 仓储偏移到左侧，只有 belt:17:0(51,20) 的出口能对其南侧输入端口 x=51
-      createEntity("item_port_storager_1:7", "item_port_storager_1", 49, 17, 0),
-      createEntity("item_port_power_diffuser_1:8", "item_port_power_diffuser_1", 55, 22, 0),
+      createEntity("item_port_storager_1:7", "storager_1", 49, 17, 0),
+      createEntity("item_port_power_diffuser_1:8", "power_diffuser_1", 55, 22, 0),
       // 起点传送带
       createEntity("logistics-draft:belt:3:0", "belt_straight_1x1", 52, 24, 270),
       // 三条平行传送带（y=20）：只有 belt:17:0 连接 storager

@@ -21,7 +21,7 @@ import {
 } from "./v2-migration-keys";
 
 const LEGACY_SYSTEM_RECIPE_MODULE_ID_PREFIX = "system_recipe:";
-const DEFAULT_MIGRATED_MODULE_ICON_ID = "item_port_grinder_1";
+const DEFAULT_MIGRATED_MODULE_ICON_ID = "grinder_1";
 const DEFAULT_WAREHOUSE_CAPACITY = 68000;
 const MODULE_COLOR_BY_LEGACY_KEY: Readonly<Record<string, string>> = {
   teal: "#47c1a8",

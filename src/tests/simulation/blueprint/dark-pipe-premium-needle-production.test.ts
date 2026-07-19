@@ -53,33 +53,33 @@ const TARGET_PER_WINDOW = 6;
 /** 22 个辅助设备，提取自 .temp/testcase.json */
 const EXTRA_ENTITIES = [
   // ---- 供水 & 物流总线 ----
-  createEntity("bus", "item_port_log_hongs_bus", 0, 0),
-  createEntity("pump1", "item_port_water_pump_1", -10, -7, 0, {
+  createEntity("bus", "log_hongs_bus", 0, 0),
+  createEntity("pump1", "water_pump_1", -10, -7, 0, {
     "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
     "storageSlotGroups[0].slots[0].initialCount": 1,
     "storageSlotGroups[0].slots[0].ignoreStock": true,
   }),
-  createEntity("bus_source", "item_port_log_hongs_bus_source", 0, 8),
-  createEntity("pump2", "item_port_water_pump_1", -10, -4, 0, {
+  createEntity("bus_source", "log_hongs_bus_source", 0, 8),
+  createEntity("pump2", "water_pump_1", -10, -4, 0, {
     "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
     "storageSlotGroups[0].slots[0].initialCount": 1,
     "storageSlotGroups[0].slots[0].ignoreStock": true,
   }),
 
   // ---- 暗管端点（3 个新增） ----
-  createEntity("dpipe_loader_a", "item_port_udpipe_loader_1", -6, -4, 0, {
+  createEntity("dpipe_loader_a", "udpipe_loader_1", -6, -4, 0, {
     "recipeChannels[0].manualRecipeOnly": true,
   }),
-  createEntity("dpipe_loader_b", "item_port_udpipe_loader_1", -6, -7, 0, {
+  createEntity("dpipe_loader_b", "udpipe_loader_1", -6, -7, 0, {
     "recipeChannels[0].manualRecipeOnly": true,
   }),
-  createEntity("dpipe_unloader_a", "item_port_udpipe_unloader_1", 0, 20, 0),
+  createEntity("dpipe_unloader_a", "udpipe_unloader_1", 0, 20, 0),
 
   // ---- 液体净化器 ×4 ----
-  createEntity("cleaner1", "item_liquid_cleaner_1", 2, 17, 270),
-  createEntity("cleaner2", "item_liquid_cleaner_1", 5, 17, 270),
-  createEntity("cleaner3", "item_liquid_cleaner_1", 2, 23, 90),
-  createEntity("cleaner4", "item_liquid_cleaner_1", 5, 23, 90),
+  createEntity("cleaner1", "liquid_cleaner_1", 2, 17, 270),
+  createEntity("cleaner2", "liquid_cleaner_1", 5, 17, 270),
+  createEntity("cleaner3", "liquid_cleaner_1", 2, 23, 90),
+  createEntity("cleaner4", "liquid_cleaner_1", 5, 23, 90),
 
   // ---- 管道路由 ----
   createEntity("pipe_a", "pipe_straight_1x1", -7, -6),
@@ -92,11 +92,11 @@ const EXTRA_ENTITIES = [
   createEntity("pipe_h", "pipe_straight_1x1", 3, 22, 90),
 
   // ---- 管道分流器 ×2 ----
-  createEntity("splitter_a", "item_pipe_splitter", 6, 21, 270),
-  createEntity("splitter_b", "item_pipe_splitter", 3, 21, 270),
+  createEntity("splitter_a", "pipe_splitter", 6, 21, 270),
+  createEntity("splitter_b", "pipe_splitter", 3, 21, 270),
 
   // ---- 供电 ----
-  createEntity("power_aux", "item_port_power_diffuser_1", 8, 21),
+  createEntity("power_aux", "power_diffuser_1", 8, 21),
 ];
 
 describe("暗管芽针针剂完整产线", () => {

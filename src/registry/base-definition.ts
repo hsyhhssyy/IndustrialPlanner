@@ -11,7 +11,7 @@ function createValley4SmallBaseBuiltinEntities(): readonly BaseBuiltinEntityDefi
   for (let index = 0; index < 5; index += 1) {
     entities.push({
       id: `valley4_bus_seg_x_${index}`,
-      definitionId: "item_port_log_hongs_bus",
+      definitionId: "log_hongs_bus",
       position: { x: index * 8, y: -4 },
       rotation: 90,
       config: index === 0 ? { [WAREHOUSE_BUS_SEED_CONFIG_KEY]: true } : undefined,
@@ -32,7 +32,7 @@ function createValley4ProtocolCoreBuiltinEntities(): readonly BaseBuiltinEntityD
   const entities: BaseBuiltinEntityDefinition[] = [
     {
       id: VALLEY4_BUILTIN_BUS_SOURCE_ID,
-      definitionId: "item_port_log_hongs_bus_source",
+      definitionId: "log_hongs_bus_source",
       position: { x: -4, y: -4 },
       rotation: 0,
     },
@@ -41,7 +41,7 @@ function createValley4ProtocolCoreBuiltinEntities(): readonly BaseBuiltinEntityD
   for (let index = 0; index < 9; index += 1) {
     entities.push({
       id: `valley4_bus_seg_x_${index}`,
-      definitionId: "item_port_log_hongs_bus",
+      definitionId: "log_hongs_bus",
       position: { x: index * 8, y: -4 },
       rotation: 90,
     });
@@ -50,7 +50,7 @@ function createValley4ProtocolCoreBuiltinEntities(): readonly BaseBuiltinEntityD
   for (let index = 0; index < 9; index += 1) {
     entities.push({
       id: `valley4_bus_seg_y_${index}`,
-      definitionId: "item_port_log_hongs_bus",
+      definitionId: "log_hongs_bus",
       position: { x: -4, y: index * 8 },
       rotation: 0,
     });

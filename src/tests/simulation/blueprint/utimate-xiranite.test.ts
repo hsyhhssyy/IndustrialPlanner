@@ -21,7 +21,7 @@ describe("天王坪7核息壤产线 - 息壤粉稳态产量验证", () => {
 
     // 收集蓝图中所有息壤烘炉实体 ID
     const ovenIds = Object.values(blueprint.entities)
-      .filter((e) => e.definitionId === "item_port_xiranite_oven_1")
+      .filter((e) => e.definitionId === "xiranite_oven_1")
       .map((e) => e.id);
 
     if (ovenIds.length === 0) {

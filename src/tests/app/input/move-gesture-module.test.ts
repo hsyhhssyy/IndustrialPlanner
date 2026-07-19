@@ -539,7 +539,7 @@ describe("createHypergryphMoveGestureModule", () => {
       activeTool: "move",
       moveAnchor: { x: 20, y: -9 },
       movePointerMode: "touch",
-      previewDefinitionId: "item_water_purifier_node_1",
+      previewDefinitionId: "water_purifier_node_1",
       previewRect: { x: 10, y: -10, width: 27, height: 3 },
       toolbarVisible: true,
     });
@@ -635,7 +635,7 @@ describe("createHypergryphMoveGestureModule", () => {
     const { context, editor, appHost, previewRectRef } = createContext({
       activeTool: "move",
       moveAnchor: { x: 12, y: 11 },
-      previewDefinitionId: "item_port_filling_pd_mc_1",
+      previewDefinitionId: "filling_pd_mc_1",
       previewRect: { x: 10, y: 10, width: 6, height: 4 },
       toolbarVisible: true,
     });
@@ -657,7 +657,7 @@ describe("createHypergryphMoveGestureModule", () => {
     });
     expect(editor.actions.replaceEntityDefinition).toHaveBeenCalledWith(
       "preview-entity",
-      "item_port_liquid_filling_pd_mc_1",
+      "liquid_filling_pd_mc_1",
     );
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 12, y: 11 });
 
@@ -682,7 +682,7 @@ describe("createHypergryphMoveGestureModule", () => {
     const { context, editor, appHost } = createContext({
       activeTool: "move",
       moveAnchor: { x: 12, y: 11 },
-      previewDefinitionId: "item_port_filling_pd_mc_1",
+      previewDefinitionId: "filling_pd_mc_1",
       previewRect: { x: 10, y: 10, width: 6, height: 4 },
       toolbarVisible: true,
     });

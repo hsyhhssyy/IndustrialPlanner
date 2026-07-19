@@ -88,7 +88,7 @@ describe("RecipePickerDialog", () => {
   });
 
   it("limits recipes by the provided entity list and resolves the selected recipe id", async () => {
-    const furnace = findEntity(appHost, "item_port_furnance_1");
+    const furnace = findEntity(appHost, "furnance_1");
     const recipeId = "r_furnace_iron_nugget_from_iron_ore_basic";
     let selectionPromise!: Promise<string | null>;
 

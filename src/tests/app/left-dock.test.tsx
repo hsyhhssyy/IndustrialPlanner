@@ -293,7 +293,7 @@ describe("Left dock panel switching", () => {
       '[data-ui-button-id="placement-transmuter_2_gastrans"] .placement-button-label',
     );
     const regularDeviceLabel = visiblePanel.querySelector(
-      '[data-ui-button-id="placement-item_port_storager_1"] .placement-button-label',
+      '[data-ui-button-id="placement-storager_1"] .placement-button-label',
     );
     expect(compactDeviceLabel?.textContent).toBe("固气转化机");
     expect(compactDeviceLabel?.classList.contains("is-compact")).toBe(false);
@@ -302,7 +302,7 @@ describe("Left dock panel switching", () => {
       '[data-ui-button-id="placement-transmuter_2_gastrans"] .placement-entity-variant-cap',
     ) as HTMLElement | null;
     const normalVariantCap = visiblePanel.querySelector(
-      '[data-ui-button-id="placement-item_port_filling_pd_mc_1"] .placement-entity-variant-cap',
+      '[data-ui-button-id="placement-filling_pd_mc_1"] .placement-entity-variant-cap',
     ) as HTMLElement | null;
     expect(visiblePanel.querySelectorAll(".placement-entity-variant-cap")).toHaveLength(7);
     expect(gasVariantCap?.getAttribute("title")).toBe("气体模式");
@@ -318,7 +318,7 @@ describe("Left dock panel switching", () => {
     ).toBeNull();
     expect(
       visiblePanel.querySelector(
-        '[data-ui-button-id="placement-item_port_storager_1"] .placement-entity-variant-cap',
+        '[data-ui-button-id="placement-storager_1"] .placement-entity-variant-cap',
       ),
     ).toBeNull();
     expect(visiblePanel.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(
@@ -346,7 +346,7 @@ describe("Left dock panel switching", () => {
     });
 
     const fillingButton = container.querySelector(
-      '[data-ui-button-id="placement-item_port_filling_pd_mc_1"]',
+      '[data-ui-button-id="placement-filling_pd_mc_1"]',
     );
     expect(fillingButton).not.toBeNull();
     vi.spyOn(fillingButton as HTMLElement, "getBoundingClientRect").mockReturnValue({
@@ -400,20 +400,20 @@ describe("Left dock panel switching", () => {
     });
 
     expect(appHost.state.workbench.selectedPlacementVariantByCraftGroup).toEqual({
-      item_port_filling_pd_mc_1: "liquid",
+      filling_pd_mc_1: "liquid",
     });
     expect(container.querySelector(".placement-variant-menu")).toBeNull();
     expect(
-      container.querySelector('[data-ui-button-id="placement-item_port_liquid_filling_pd_mc_1"]'),
+      container.querySelector('[data-ui-button-id="placement-liquid_filling_pd_mc_1"]'),
     ).not.toBeNull();
     expect(placementTap).toHaveBeenCalledWith(expect.objectContaining({
       uiButtonId:
-        "ui-left-dock-placement-mode-item_port_liquid_filling_pd_mc_1-mouse-tap",
+        "ui-left-dock-placement-mode-liquid_filling_pd_mc_1-mouse-tap",
     }));
 
     placementTap.mockClear();
     const selectedDeviceButton = container.querySelector(
-      '[data-ui-button-id="placement-item_port_liquid_filling_pd_mc_1"]',
+      '[data-ui-button-id="placement-liquid_filling_pd_mc_1"]',
     );
     act(() => {
       if (selectedDeviceButton !== null) {
@@ -434,7 +434,7 @@ describe("Left dock panel switching", () => {
     });
     expect(placementTap).toHaveBeenCalledWith(expect.objectContaining({
       uiButtonId:
-        "ui-left-dock-placement-mode-item_port_liquid_filling_pd_mc_1-mouse-tap",
+        "ui-left-dock-placement-mode-liquid_filling_pd_mc_1-mouse-tap",
     }));
   });
 
@@ -450,7 +450,7 @@ describe("Left dock panel switching", () => {
     });
 
     const fillingButton = container.querySelector(
-      '[data-ui-button-id="placement-item_port_filling_pd_mc_1"]',
+      '[data-ui-button-id="placement-filling_pd_mc_1"]',
     ) as HTMLButtonElement | null;
     expect(fillingButton).not.toBeNull();
 
@@ -501,7 +501,7 @@ describe("Left dock panel switching", () => {
       });
     });
     expect(placementTap).toHaveBeenCalledWith(expect.objectContaining({
-      uiButtonId: "ui-left-dock-placement-mode-item_port_filling_pd_mc_1-touch-tap",
+      uiButtonId: "ui-left-dock-placement-mode-filling_pd_mc_1-touch-tap",
     }));
   });
 
@@ -520,15 +520,15 @@ describe("Left dock panel switching", () => {
     const visiblePanel = queryVisibleLeftDockPanel(container);
     expect(visiblePanel?.querySelectorAll(".placement-entity-variant-cap")).toHaveLength(14);
     expect(
-      visiblePanel?.querySelector('[data-ui-button-id="placement-item_port_filling_pd_mc_1"]'),
+      visiblePanel?.querySelector('[data-ui-button-id="placement-filling_pd_mc_1"]'),
     ).not.toBeNull();
     expect(
-      visiblePanel?.querySelector('[data-ui-button-id="placement-item_port_liquid_filling_pd_mc_1"]'),
+      visiblePanel?.querySelector('[data-ui-button-id="placement-liquid_filling_pd_mc_1"]'),
     ).not.toBeNull();
     expect(visiblePanel?.querySelector(".placement-entity-variant-trigger")).toBeNull();
     expect(
       visiblePanel?.querySelector(
-        '[data-ui-button-id="placement-item_port_storager_1"] .placement-entity-variant-cap',
+        '[data-ui-button-id="placement-storager_1"] .placement-entity-variant-cap',
       ),
     ).toBeNull();
   });
@@ -632,7 +632,7 @@ describe("Left dock panel switching", () => {
 
     runInAction(() => {
       appHost.internalState.activeTool = "single-placement";
-      appHost.internalState.runtime.singlePlacementDeviceId = "item_port_storager_1";
+      appHost.internalState.runtime.singlePlacementDeviceId = "storager_1";
     });
 
     act(() => {
@@ -646,10 +646,10 @@ describe("Left dock panel switching", () => {
 
     const visiblePanel = queryVisibleLeftDockPanel(container);
     const activeDeviceButton = visiblePanel?.querySelector(
-      '[data-ui-button-id="placement-item_port_storager_1"]',
+      '[data-ui-button-id="placement-storager_1"]',
     ) as HTMLButtonElement | null;
     const inactiveDeviceButton = visiblePanel?.querySelector(
-      '[data-ui-button-id="placement-item_port_grinder_1"]',
+      '[data-ui-button-id="placement-grinder_1"]',
     ) as HTMLButtonElement | null;
 
     expect(activeDeviceButton).not.toBeNull();
@@ -2908,7 +2908,7 @@ function createPlacementBlueprint(
     entities: {
       source: {
         id: "source",
-        definitionId: "item_port_storager_1",
+        definitionId: "storager_1",
         position: { x: 9, y: 9 },
         rotation: 0,
         config: {},
@@ -2916,7 +2916,7 @@ function createPlacementBlueprint(
       },
       target: {
         id: "target",
-        definitionId: "item_port_storager_1",
+        definitionId: "storager_1",
         position: { x: 12, y: 9 },
         rotation: 90,
         config: {},

@@ -108,7 +108,7 @@ describe("placement validation", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithEntities([
-      createEntity("existing-machine", "item_port_grinder_1", -1, 0),
+      createEntity("existing-machine", "grinder_1", -1, 0),
       createEntity("outside-belt", "belt_straight_1x1", -1, 0),
     ]);
 
@@ -126,7 +126,7 @@ describe("placement validation", () => {
       editorHost.queries.getEntityPlacementValidation("outside-belt").canPlace,
     ).toBe(false);
 
-    editorHost.actions.createSinglePlacementDraft("item_port_grinder_1", { x: 0, y: 0 });
+    editorHost.actions.createSinglePlacementDraft("grinder_1", { x: 0, y: 0 });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -138,7 +138,7 @@ describe("placement validation", () => {
     // 最终 ID 由 commit 时基于文档状态重新分配，不再从 draft ID 剥前缀推导。
     const finalDoc = editorHost.document.getSnapshot();
     const finalId = finalDoc.entityOrder.find(
-      (id) => finalDoc.entities[id]?.definitionId === "item_port_grinder_1",
+      (id) => finalDoc.entities[id]?.definitionId === "grinder_1",
     );
 
     expect(finalId).toBeDefined();
@@ -171,7 +171,7 @@ describe("placement validation", () => {
     const editorHost = createEditorHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithEntities([], TEST_OUTER_RING_BASE_ID));
-    editorHost.actions.createSinglePlacementDraft("item_port_grinder_1", { x: -5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft("grinder_1", { x: -5, y: 5 });
 
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
     expect(draftId).toBeDefined();
@@ -204,7 +204,7 @@ describe("placement validation", () => {
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("belt", "belt_straight_1x1", 0, 0),
-      createEntity("machine", "item_port_grinder_1", 0, 0),
+      createEntity("machine", "grinder_1", 0, 0),
     ]);
 
     editorHost.internalDocument.setSnapshot(document);
@@ -228,14 +228,14 @@ describe("placement validation", () => {
     registerBuiltinBase(workspace, [
       {
         id: "source",
-        definitionId: "item_port_log_hongs_bus_source",
+        definitionId: "log_hongs_bus_source",
         position: { x: 0, y: 0 },
         rotation: 0,
       },
     ]);
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithEntities([
-      createEntity("overlapping-machine", "item_port_grinder_1", 0, 0),
+      createEntity("overlapping-machine", "grinder_1", 0, 0),
     ], TEST_BUILTIN_BASE_ID);
 
     editorHost.internalDocument.setSnapshot(document);
@@ -260,19 +260,19 @@ describe("placement validation", () => {
     registerBuiltinBase(workspace, [
       {
         id: "source",
-        definitionId: "item_port_log_hongs_bus_source",
+        definitionId: "log_hongs_bus_source",
         position: { x: 0, y: 0 },
         rotation: 0,
       },
     ]);
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithEntities([
-      createEntity("segment", "item_port_log_hongs_bus", 4, 1),
+      createEntity("segment", "log_hongs_bus", 4, 1),
       // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°（已撤销），rot 恢复为 0。
       // AI-CORRECTION 2026-06-13: 存货口改用 mustConnectToHubViaOppositePortEdge，
       // rotation=0 端口朝N→对边S，需将 loader 放在 segment 上方使其 S 边贴段。
-      createEntity("loader", "item_port_loader_1", 4, 0),
-      createEntity("isolated-unloader", "item_port_unloader_1", 20, 20),
+      createEntity("loader", "loader_1", 4, 0),
+      createEntity("isolated-unloader", "unloader_1", 20, 20),
     ], TEST_BUILTIN_BASE_ID);
 
     editorHost.internalDocument.setSnapshot(document);
@@ -291,7 +291,7 @@ describe("placement validation", () => {
     registerBuiltinBase(workspace, [
       {
         id: "seed-segment",
-        definitionId: "item_port_log_hongs_bus",
+        definitionId: "log_hongs_bus",
         position: { x: 0, y: 0 },
         rotation: 90,
         config: { warehouseBusSeed: true },
@@ -299,9 +299,9 @@ describe("placement validation", () => {
     ]);
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithEntities([
-      createEntity("extension-segment", "item_port_log_hongs_bus", 8, 0, 90),
-      createEntity("unloader", "item_port_unloader_1", 10, 4),
-      createEntity("isolated-unloader", "item_port_unloader_1", 20, 20),
+      createEntity("extension-segment", "log_hongs_bus", 8, 0, 90),
+      createEntity("unloader", "unloader_1", 10, 4),
+      createEntity("isolated-unloader", "unloader_1", 20, 20),
     ], TEST_BUILTIN_BASE_ID);
 
     editorHost.internalDocument.setSnapshot(document);
@@ -324,7 +324,7 @@ describe("placement validation", () => {
     registerBuiltinBase(workspace, [
       {
         id: "storage",
-        definitionId: "item_port_storager_1",
+        definitionId: "storager_1",
         position: { x: 0, y: 0 },
         rotation: 0,
       },
@@ -357,13 +357,13 @@ describe("placement validation", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithEntities([
-      createEntity("source", "item_port_log_hongs_bus_source", 0, 0),
-      createEntity("segment", "item_port_log_hongs_bus", 4, 1),
+      createEntity("source", "log_hongs_bus_source", 0, 0),
+      createEntity("segment", "log_hongs_bus", 4, 1),
       // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°（已撤销），rot 恢复为 0。
       // AI-CORRECTION 2026-06-13: 存货口改用 mustConnectToHubViaOppositePortEdge，
       // rotation=0 端口朝N→对边S，需将 loader 放在 segment 上方使其 S 边贴段。
-      createEntity("loader", "item_port_loader_1", 4, 0),
-      createEntity("isolated-unloader", "item_port_unloader_1", 20, 20),
+      createEntity("loader", "loader_1", 4, 0),
+      createEntity("isolated-unloader", "unloader_1", 20, 20),
     ]);
 
     editorHost.internalDocument.setSnapshot(document);
@@ -392,7 +392,7 @@ describe("placement validation", () => {
     editorHost.internalDocument.setSnapshot(document);
 
     // 在相同位置放置 item_log_connector（同族 BeltFamily）
-    editorHost.actions.createSinglePlacementDraft("item_log_connector", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft("log_connector", { x: 5, y: 5 });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -416,7 +416,7 @@ describe("placement validation", () => {
     editorHost.internalDocument.setSnapshot(document);
 
     // 在相同位置放置 item_pipe_connector（同族 PipeFamily）
-    editorHost.actions.createSinglePlacementDraft("item_pipe_connector", { x: 3, y: 3 });
+    editorHost.actions.createSinglePlacementDraft("pipe_connector", { x: 3, y: 3 });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -437,7 +437,7 @@ describe("placement validation", () => {
 
     editorHost.internalDocument.setSnapshot(document);
 
-    editorHost.actions.createSinglePlacementDraft("item_log_connector", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft("log_connector", { x: 5, y: 5 });
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
 
     const finalDoc = editorHost.document.getSnapshot();
@@ -446,7 +446,7 @@ describe("placement validation", () => {
     expect(finalDoc.entities["belt-to-replace"]).toBeUndefined();
     // 新 connector 存在
     const connectorEntity = Object.values(finalDoc.entities).find(
-      (entity) => entity.definitionId === "item_log_connector",
+      (entity) => entity.definitionId === "log_connector",
     );
     expect(connectorEntity).toBeDefined();
     expect(connectorEntity?.position).toEqual({ x: 5, y: 5 });
@@ -461,14 +461,14 @@ describe("placement validation", () => {
 
     editorHost.internalDocument.setSnapshot(document);
 
-    editorHost.actions.createSinglePlacementDraft("item_pipe_connector", { x: 3, y: 3 });
+    editorHost.actions.createSinglePlacementDraft("pipe_connector", { x: 3, y: 3 });
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
 
     const finalDoc = editorHost.document.getSnapshot();
 
     expect(finalDoc.entities["pipe-to-replace"]).toBeUndefined();
     const connectorEntity = Object.values(finalDoc.entities).find(
-      (entity) => entity.definitionId === "item_pipe_connector",
+      (entity) => entity.definitionId === "pipe_connector",
     );
     expect(connectorEntity).toBeDefined();
     expect(connectorEntity?.position).toEqual({ x: 3, y: 3 });
@@ -478,12 +478,12 @@ describe("placement validation", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithEntities([
-      createEntity("my-splitter", "item_log_splitter", 5, 5),
+      createEntity("my-splitter", "log_splitter", 5, 5),
     ]);
 
     editorHost.internalDocument.setSnapshot(document);
 
-    editorHost.actions.createSinglePlacementDraft("item_log_connector", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft("log_connector", { x: 5, y: 5 });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -495,7 +495,7 @@ describe("placement validation", () => {
     const finalDoc = editorHost.document.getSnapshot();
     expect(finalDoc.entities["my-splitter"]).toBeUndefined();
     expect(
-      Object.values(finalDoc.entities).some((e) => e.definitionId === "item_log_connector"),
+      Object.values(finalDoc.entities).some((e) => e.definitionId === "log_connector"),
     ).toBe(true);
   });
 
@@ -509,7 +509,7 @@ describe("placement validation", () => {
     editorHost.internalDocument.setSnapshot(document);
 
     // PipeFamily 的 connector 放到 BeltFamily 的 belt 上（管道设备没有 allowPipeOverlap）
-    editorHost.actions.createSinglePlacementDraft("item_pipe_connector", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft("pipe_connector", { x: 5, y: 5 });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -531,12 +531,12 @@ describe("placement validation", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithEntities([
-      createEntity("machine", "item_port_grinder_1", 5, 5),
+      createEntity("machine", "grinder_1", 5, 5),
     ]);
 
     editorHost.internalDocument.setSnapshot(document);
 
-    editorHost.actions.createSinglePlacementDraft("item_log_connector", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft("log_connector", { x: 5, y: 5 });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -569,7 +569,7 @@ describe("placement validation", () => {
       ],
     });
 
-    editorHost.actions.createSinglePlacementDraft("item_log_connector", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft("log_connector", { x: 5, y: 5 });
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
 
     const finalDoc = editorHost.document.getSnapshot();

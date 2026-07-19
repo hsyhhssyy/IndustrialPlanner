@@ -456,6 +456,7 @@ function generatePlacementDraftId(
  * 格式：`definitionId:N`，N 为当前最大值 +1（从 1 开始）。
  *
  * @param definitionId 设备定义 ID，如 "item_port_storager_1"
+ * AI-CORRECTION 2026-07-19: 当前无前缀示例为 "storager_1"；上行保留迁移前 ID 作历史审计。
  * @param existingDocumentIds 提交前文档快照中所有实体 ID 的集合
  * @param newlyAllocatedIds 本次 commit 中已分配的最终 ID 集合（防止同一批 draft 内冲突）
  */

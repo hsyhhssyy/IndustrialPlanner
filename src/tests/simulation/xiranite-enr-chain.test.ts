@@ -15,7 +15,7 @@ describe("重息壤产线配方链验证", () => {
     const registry = createRegistryContract();
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("step1-xiranite-liquid", [
-        createEntity("pool", "item_port_mix_pool_1", 0, 0, 0, {
+        createEntity("pool", "mix_pool_1", 0, 0, 0, {
           channelRecipes: {
             ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic",
           },
@@ -25,7 +25,7 @@ describe("重息壤产线配方链验证", () => {
           "storageSlotGroups[0].slots[1].initialItemType": "item_liquid_water",
           "storageSlotGroups[0].slots[1].initialCount": 10,
         }),
-        createEntity("power", "item_port_power_diffuser_1", 6, 0),
+        createEntity("power", "power_diffuser_1", 6, 0),
       ]),
       maxTickNumber: MAX_TICK,
       registry,
@@ -48,7 +48,7 @@ describe("重息壤产线配方链验证", () => {
     const registry = createRegistryContract();
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("step2-waste-liquid", [
-        createEntity("pool", "item_port_mix_pool_1", 0, 0, 0, {
+        createEntity("pool", "mix_pool_1", 0, 0, 0, {
           channelRecipes: {
             ch1: "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic",
           },
@@ -57,7 +57,7 @@ describe("重息壤产线配方链验证", () => {
           "storageSlotGroups[0].slots[1].initialItemType": "item_liquid_sewage",
           "storageSlotGroups[0].slots[1].initialCount": 10,
         }),
-        createEntity("power", "item_port_power_diffuser_1", 6, 0),
+        createEntity("power", "power_diffuser_1", 6, 0),
       ]),
       maxTickNumber: MAX_TICK,
       registry,
@@ -82,7 +82,7 @@ describe("重息壤产线配方链验证", () => {
     const registry = createRegistryContract();
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("step3-xiranite-enr", [
-        createEntity("oven", "item_port_xiranite_oven_1", 0, 0, 0, {
+        createEntity("oven", "xiranite_oven_1", 0, 0, 0, {
           channelRecipes: {
             default: "r_xiranite_oven_xiranite_enr_powder_from_xiranite_powder_and_waste_liquid_basic",
           },
@@ -92,7 +92,7 @@ describe("重息壤产线配方链验证", () => {
           "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_xiranite_poly",
           "storageSlotGroups[1].slots[0].initialCount": 5,
         }),
-        createEntity("power", "item_port_power_diffuser_1", 6, 0),
+        createEntity("power", "power_diffuser_1", 6, 0),
       ]),
       maxTickNumber: MAX_TICK,
       registry,

@@ -17,6 +17,7 @@ describe("editor document storage device id migration", () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
     const document = createWorldDocument();
+    document.schemaVersion = 1;
     document.entities = {
       pool: {
         id: "pool",
@@ -39,6 +40,7 @@ describe("editor document storage device id migration", () => {
 
     const migratedDocument = await readWorldDocument(document.documentKey);
 
-    expect(migratedDocument?.entities.pool?.definitionId).toBe("item_port_mix_pool_2");
+    expect(migratedDocument?.schemaVersion).toBe(3);
+    expect(migratedDocument?.entities.pool?.definitionId).toBe("mix_pool_2");
   });
 });

@@ -41,12 +41,12 @@ describe("Simulation pipe fluid query", () => {
 
 function createWorkspace(): WorkspaceContract {
   const blueprint = createBlueprint("pipe-fluid-query", [
-    createEntity("source-liquid-storage", "item_port_liquid_storager_1", 0, 0, 0, {
+    createEntity("source-liquid-storage", "liquid_storager_1", 0, 0, 0, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
       "storageSlotGroups[0].slots[0].initialCount": 1,
     }),
     createEntity("pipe", "pipe_straight_1x1", 3, 1),
-    createEntity("sink-liquid-storage", "item_port_liquid_storager_1", 4, 0),
+    createEntity("sink-liquid-storage", "liquid_storager_1", 4, 0),
   ])
   const document = createSnapshotStore(createWorldDocumentFromBlueprint(blueprint))
 

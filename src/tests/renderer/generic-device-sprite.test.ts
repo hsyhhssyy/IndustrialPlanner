@@ -2533,7 +2533,7 @@ function createSlotDefaults() {
 
 function createEntityDefinitionStub(): EntityDefinition {
   return {
-    id: "item_port_storager_1",
+    id: "storager_1",
     nameKey: "registry.entity.item_port_storager_1.name",
     spriteId: "item_port_storager_1",
     footprint: { width: 3, height: 3 },
@@ -2612,7 +2612,7 @@ function createEntityDefinitionStub(): EntityDefinition {
 function createLiquidInputEntityDefinitionStub(): EntityDefinition {
   return {
     ...createEntityDefinitionStub(),
-    id: "item_port_liquid_filling_pd_mc_1",
+    id: "liquid_filling_pd_mc_1",
     nameKey: "registry.entity.item_port_liquid_filling_pd_mc_1.name",
     footprint: { width: 6, height: 4 },
     portGroups: [
@@ -2669,7 +2669,7 @@ function createLiquidInputEntityDefinitionStub(): EntityDefinition {
 function createWaterPumpEntityDefinitionStub(): EntityDefinition {
   return {
     ...createEntityDefinitionStub(),
-    id: "item_port_water_pump_1",
+    id: "water_pump_1",
     nameKey: "registry.entity.item_port_water_pump_1.name",
     spriteId: "item_port_water_pump_1",
     footprint: { width: 3, height: 3 },
@@ -2752,7 +2752,7 @@ function createPipeTurnEntityDefinitionStub(spriteId: "pipe_turn_cw_1x1" | "pipe
 function createBeltLogisticsEntityDefinitionStub(): EntityDefinition {
   return {
     ...createEntityDefinitionStub(),
-    id: "item_log_splitter",
+    id: "log_splitter",
     nameKey: "registry.entity.item_log_splitter.name",
     spriteId: "item_log_splitter",
     footprint: { width: 1, height: 1 },

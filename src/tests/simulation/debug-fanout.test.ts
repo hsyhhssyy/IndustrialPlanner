@@ -22,17 +22,17 @@ describe("debug-fanout", () => {
     ]));
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("blocked-fanout", [
-        createEntity("source-storage", "item_port_storager_1", 0, 1, 0, {
+        createEntity("source-storage", "storager_1", 0, 1, 0, {
           "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
           "storageSlotGroups[0].slots[0].initialCount": 1,
         }),
         createEntity("belt-source", "belt_straight_1x1", 0, 0, 270),
         // AI-CORRECTION 2026-05-18: 分流器端口默认方向变更，rot 90 → 180 保持等效朝向。
-        createEntity("splitter", "item_log_splitter", 0, -1, 180),
+        createEntity("splitter", "log_splitter", 0, -1, 180),
         createEntity("belt-blocked", "belt_straight_1x1", 0, -2, 270),
-        createEntity("blocked-storage", "item_port_storager_1", 0, -5, 0, blockedConfig),
+        createEntity("blocked-storage", "storager_1", 0, -5, 0, blockedConfig),
         createEntity("belt-open", "belt_straight_1x1", 1, -1, 0),
-        createEntity("open-storage", "item_port_storager_1", 2, -1, 90),
+        createEntity("open-storage", "storager_1", 2, -1, 90),
       ]),
       registry: createRegistryContract(),
       maxTickNumber: 150,

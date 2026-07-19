@@ -18,8 +18,8 @@ import {
 } from "./AdmissionItemIconEntityCache";
 
 const ADMISSION_DEFINITION_IDS = new Set([
-  "item_log_admission",
-  "item_pipe_admission",
+  "log_admission",
+  "pipe_admission",
 ]);
 
 interface AdmissionIconView {
@@ -41,6 +41,7 @@ interface AdmissionItemIconDecoration extends DecorationLayer {
  * 物品准入口图标 Decoration。
  *
  * 当准入口设备（item_log_admission / item_pipe_admission）设置了准入物品时，
+ * AI-CORRECTION 2026-07-19: 当前设备定义 ID 为 log_admission / pipe_admission；上行保留迁移前名称。
  * 在设备中心渲染 圆圈 + 物品图标，与主要产物图标样式一致。
  * 无视所有标签压制（BeltFamily/PipeFamily）和设置开关，始终显示。
  */

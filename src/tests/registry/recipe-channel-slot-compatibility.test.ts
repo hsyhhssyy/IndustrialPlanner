@@ -5,10 +5,11 @@
 //
 // 规则：
 //   对每个 RECIPE，找到其 machineId 对应的设备，遍历设备的 recipeChannels：
-//   - 配方每个 input 的物品域，必须在 channel.ingredientStorageGroupIds
-//     对应的槽位组中，至少有一个槽位的 itemFilterType 能容纳该域。
-//   - 配方每个 output 的物品域，必须在 channel.productStorageGroupIds
-//     对应的槽位组中，至少有一个槽位的 itemFilterType 能容纳该域。
+//   - 将 channel.ingredientStorageGroupIds 下所有槽位展开为独立槽位列表。
+//   - 将 recipe.inputs 展开为独立物品域列表（每个 input 一个物品域集合）。
+//   - 通过回溯排列组合检查：是否存在一种分配方式，将每个 input
+//     一对一分配到某个槽位，且该槽位的 itemFilterType 能容纳该物品域。
+//   - 对 outputs / productStorageGroupIds 同理。
 //   - 至少一个 channel 同时满足上述两个条件。
 //
 // 域集合定义（与 port-slot-filter-match.test.ts 一致）：
@@ -61,31 +62,89 @@ function slotDomains(filterType: string): Set<ItemDomain> {
 }
 
 /**
- * 槽位组中所有槽位能容纳的 ItemDomain 并集。
+ * 收集 channel 对应方向（ingredient 或 product）所有独立槽位的 itemFilterType。
+ * 不做去重——每个槽位是独立的分配单元（如 ["gas", "gas"] 表示 2 个 gas 槽位）。
  */
-function slotGroupUnion(filterType: string): Set<ItemDomain> {
-  return slotDomains(filterType);
+function collectSlotFilterTypes(
+  groupIds: string[],
+  storageSlotGroups: typeof ENTITY_DEFINITIONS[number]["storageSlotGroups"],
+): string[] {
+  const filterTypes: string[] = [];
+  for (const gid of groupIds) {
+    const group = storageSlotGroups.find((g) => g.id === gid);
+    if (!group) continue;
+    for (const slot of group.slots) {
+      filterTypes.push(slot.itemFilterType ?? "solid");
+    }
+  }
+  return filterTypes;
 }
 
 /**
- * 给定一组槽位组 ID，返回它们的 itemFilterType 能容纳的域的并集。
- * 组内所有 slot 同质（filterType 一致），取第一个即可。
+ * 检查单个槽位能否容纳某个配方物品的域集合。
  */
-function storageGroupsDomainUnion(
-  groupIds: string[],
-  storageSlotGroups: typeof ENTITY_DEFINITIONS[number]["storageSlotGroups"],
-): Set<ItemDomain> {
-  const union = new Set<ItemDomain>();
-  for (const gid of groupIds) {
-    const group = storageSlotGroups.find((g) => g.id === gid);
-    if (!group || group.slots.length === 0) continue;
-    const filterType = group.slots[0]!.itemFilterType ?? "solid";
-    for (const d of slotGroupUnion(filterType)) {
-      union.add(d);
-    }
-  }
-  return union;
+function slotCanHoldItem(filterType: string, itemDomains: Set<ItemDomain>): boolean {
+  return isSuperset(slotDomains(filterType), itemDomains);
 }
+
+/**
+ * 回溯匹配：inputs 是否能一对一分配到 slots 上（每个 slot 最多一个 input）。
+ * 调用方保证 inputs 去重（每个 input 是独立分配单元）。
+ */
+function canMatchAll(
+  inputDomainSets: Set<ItemDomain>[],
+  slotFilterTypes: string[],
+): boolean {
+  if (inputDomainSets.length === 0) return true;
+  if (slotFilterTypes.length < inputDomainSets.length) return false;
+
+  const used = new Array(slotFilterTypes.length).fill(false);
+
+  function backtrack(inputIdx: number): boolean {
+    if (inputIdx >= inputDomainSets.length) return true;
+    const inputDomains = inputDomainSets[inputIdx]!;
+    for (let slotIdx = 0; slotIdx < slotFilterTypes.length; slotIdx++) {
+      if (used[slotIdx]) continue;
+      if (slotCanHoldItem(slotFilterTypes[slotIdx]!, inputDomains)) {
+        used[slotIdx] = true;
+        if (backtrack(inputIdx + 1)) return true;
+        used[slotIdx] = false;
+      }
+    }
+    return false;
+  }
+
+  return backtrack(0);
+}
+
+// AI-REMOVED 2026-07-19:
+// Reason: 槽位匹配从域并集升级为排列组合匹配，这两个函数不再需要。
+// Trigger: 气体反应炉单 gas 槽位但配方有 2 个 gas 输入 → 并集检测漏检。
+// Evidence: 并集 {gas} ⊇ {gas},{gas} 为 true，但 1 个 gas 槽位无法同时装两种不同气体。
+// Replacement: collectSlotFilterTypes + canMatchAll（回溯排列组合匹配）。
+// Risk: Low — 已有调用方已全部替换。
+// Human Review: Required
+//
+// Original code:
+// function slotGroupUnion(filterType: string): Set<ItemDomain> {
+//   return slotDomains(filterType);
+// }
+//
+// function storageGroupsDomainUnion(
+//   groupIds: string[],
+//   storageSlotGroups: typeof ENTITY_DEFINITIONS[number]["storageSlotGroups"],
+// ): Set<ItemDomain> {
+//   const union = new Set<ItemDomain>();
+//   for (const gid of groupIds) {
+//     const group = storageSlotGroups.find((g) => g.id === gid);
+//     if (!group || group.slots.length === 0) continue;
+//     const filterType = group.slots[0]!.itemFilterType ?? "solid";
+//     for (const d of slotGroupUnion(filterType)) {
+//       union.add(d);
+//     }
+//   }
+//   return union;
+// }
 
 /**
  * 将物品 ID 解析为它能出现的域集合。
@@ -154,57 +213,34 @@ describe("recipe channel slot compatibility", () => {
       const channelResults: string[] = [];
 
       for (const channel of def.recipeChannels) {
-        const ingUnion = storageGroupsDomainUnion(
+        const ingSlotFilterTypes = collectSlotFilterTypes(
           channel.ingredientStorageGroupIds as string[],
           def.storageSlotGroups,
         );
-        const prodUnion = storageGroupsDomainUnion(
+        const prodSlotFilterTypes = collectSlotFilterTypes(
           channel.productStorageGroupIds as string[],
           def.storageSlotGroups,
         );
 
-        const missingIng: Set<ItemDomain>[] = [];
-        for (const ds of inputDomainSets) {
-          if (!isSuperset(ingUnion, ds)) {
-            const missing = [...ds].filter((d) => !ingUnion.has(d));
-            if (missing.length > 0) {
-              missingIng.push(new Set(missing));
-            }
-          }
-        }
-        const missingProd: Set<ItemDomain>[] = [];
-        for (const ds of outputDomainSets) {
-          if (!isSuperset(prodUnion, ds)) {
-            const missing = [...ds].filter((d) => !prodUnion.has(d));
-            if (missing.length > 0) {
-              missingProd.push(new Set(missing));
-            }
-          }
-        }
-
-        const ok = missingIng.length === 0 && missingProd.length === 0;
+        const ingOk = canMatchAll(inputDomainSets, ingSlotFilterTypes);
+        const prodOk = canMatchAll(outputDomainSets, prodSlotFilterTypes);
+        const ok = ingOk && prodOk;
         if (ok) {
           anyChannelOk = true;
           break;
         }
 
         const parts: string[] = [];
-        if (missingIng.length > 0) {
-          const allMissing = new Set<ItemDomain>();
-          for (const s of missingIng) {
-            for (const d of s) allMissing.add(d);
-          }
+        if (!ingOk && inputDomainSets.length > 0) {
           parts.push(
-            `原料缺域 [{${[...allMissing].join(", ")}}] (槽位可容 {${[...ingUnion].join(", ")}}))`,
+            `原料 [${inputDomainSets.map((d) => `{${[...d].join(",")}}`).join(", ")}] ` +
+            `无法匹配槽位 [${ingSlotFilterTypes.join(", ")}]`,
           );
         }
-        if (missingProd.length > 0) {
-          const allMissing = new Set<ItemDomain>();
-          for (const s of missingProd) {
-            for (const d of s) allMissing.add(d);
-          }
+        if (!prodOk && outputDomainSets.length > 0) {
           parts.push(
-            `产物缺域 [{${[...allMissing].join(", ")}}] (槽位可容 {${[...prodUnion].join(", ")}}))`,
+            `产物 [${outputDomainSets.map((d) => `{${[...d].join(",")}}`).join(", ")}] ` +
+            `无法匹配槽位 [${prodSlotFilterTypes.join(", ")}]`,
           );
         }
         channelResults.push(`  channel "${channel.id}": ${parts.join("; ")}`);

@@ -27,12 +27,12 @@ describe("双烘炉息壤产线 - 息壤粉稳态产量验证", () => {
     const blueprint = loadBlueprintWithExtras(BLUEPRINT_PATH, [
       // 上方暗管出口 → 接入左侧水管网末端 pipe_straight_1x1 @ (9,0) rot=90
       // 出水口位于 (9,-1) 朝南，向 (9,0) 输出清水
-      createEntity("extra-top", "item_port_udpipe_unloader_1", 8, -3, 90, {
+      createEntity("extra-top", "udpipe_unloader_1", 8, -3, 90, {
         "storageSlotGroups[0].slots[0].ignoreStock": true
       }),
       // 下方暗管出口 → 接入右侧水管网末端 pipe_straight_1x1 @ (20,24) rot=270
       // rot=270: 出水口位于 (x+1, y+0) = (20, 25) 朝北，向 (20, 24) 输出清水
-      createEntity("extra-bottom", "item_port_udpipe_unloader_1", 19, 25, 270, {
+      createEntity("extra-bottom", "udpipe_unloader_1", 19, 25, 270, {
         "storageSlotGroups[0].slots[0].ignoreStock": true
       }),
     ], [
@@ -42,7 +42,7 @@ describe("双烘炉息壤产线 - 息壤粉稳态产量验证", () => {
 
     // 收集蓝图中所有息壤烘炉实体 ID
     const ovenIds = Object.values(blueprint.entities)
-      .filter((e) => e.definitionId === "item_port_xiranite_oven_1")
+      .filter((e) => e.definitionId === "xiranite_oven_1")
       .map((e) => e.id);
 
     if (ovenIds.length === 0) {

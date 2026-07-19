@@ -14,9 +14,9 @@ describe("port priority groups", () => {
     const document: WorldDocument = {
       ...createWorldDocument(),
       entities: {
-        source: createEntity("source", "item_port_storager_1", 0, 0, 0),
+        source: createEntity("source", "storager_1", 0, 0, 0),
         belt: createEntity("belt", "belt_straight_1x1", 0, -1, 270),
-        sink: createEntity("sink", "item_port_storager_1", 0, -4, 0),
+        sink: createEntity("sink", "storager_1", 0, -4, 0),
       },
       entityOrder: ["source", "belt", "sink"],
     };
@@ -115,7 +115,7 @@ function compileSplitterTopology(config: WorldEntity["config"]) {
     entities: {
       splitter: {
         id: "splitter",
-        definitionId: "item_log_splitter",
+        definitionId: "log_splitter",
         position: { x: 0, y: 0 },
         rotation: 0,
         config,

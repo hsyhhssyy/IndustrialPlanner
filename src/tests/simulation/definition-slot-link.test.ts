@@ -12,7 +12,7 @@ describe("definition slot links", () => {
   it("ignores cleared definition links materialized as null config entries", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("cleared-definition-slot-link", [
-        createEntity("storage", "item_port_storager_1", 0, 0, 0, {
+        createEntity("storage", "storager_1", 0, 0, 0, {
           "links[0]": null,
         }),
       ]),

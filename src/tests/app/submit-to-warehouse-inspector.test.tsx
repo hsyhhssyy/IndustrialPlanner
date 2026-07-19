@@ -47,7 +47,7 @@ describe("SubmitToWarehouseInspector", () => {
 
   it("renders as one switch and writes the fixed hidden submit recipe", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_storager_1");
+    const definition = requireDefinition(workspace, "storager_1");
     const entity = createEntity("storage-submit", definition.id);
     const patchEntityConfig = vi.fn();
     const appHost = buildAppHost(workspace, patchEntityConfig);
@@ -76,7 +76,7 @@ describe("SubmitToWarehouseInspector", () => {
 
   it("shows countdown while enabled and removes only the fixed submit channel when toggled off", () => {
     const workspace = createWorkspace();
-    const definition = requireDefinition(workspace, "item_port_storager_1");
+    const definition = requireDefinition(workspace, "storager_1");
     const entity = createEntity("storage-submit-enabled", definition.id, {
       channelRecipes: {
         warehouse_submit: "r_warehouse_submit",

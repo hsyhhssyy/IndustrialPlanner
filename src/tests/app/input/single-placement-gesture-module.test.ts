@@ -177,7 +177,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     ).toEqual({ status: "handled" });
     // 2026-06-23 订正：mouse 模式延迟创建 draft，鼠标不在 viewport 内时不创建
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("item_port_unloader_1");
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("unloader_1");
   });
 
   it("uses the last mouse position when entering placement from a number shortcut", () => {
@@ -201,7 +201,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
     ).toEqual({ status: "handled" });
     expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith(
-      "item_port_unloader_1",
+      "unloader_1",
       { x: 7, y: 8 },
     );
     expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 7, y: 8 });
@@ -289,10 +289,10 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     const { context, editor, appHost, previewRectRef } = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 20, y: -9 },
-      singlePlacementDeviceId: "item_water_purifier_node_1",
+      singlePlacementDeviceId: "water_purifier_node_1",
       singlePlacementPointerMode: "touch",
       initialPreview: true,
-      previewDefinitionId: "item_water_purifier_node_1",
+      previewDefinitionId: "water_purifier_node_1",
       previewRect: { x: 10, y: -10, width: 27, height: 3 },
     });
     const module = createHypergryphSinglePlacementGestureModule();
@@ -444,9 +444,9 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       activeTool: "single-placement",
       initialPreview: true,
       placementAnchor: { x: 12, y: 11 },
-      previewDefinitionId: "item_port_filling_pd_mc_1",
+      previewDefinitionId: "filling_pd_mc_1",
       previewRect: { x: 10, y: 10, width: 6, height: 4 },
-      singlePlacementDeviceId: "item_port_filling_pd_mc_1",
+      singlePlacementDeviceId: "filling_pd_mc_1",
       singlePlacementPointerMode: "touch",
     });
     const module = createHypergryphSinglePlacementGestureModule();
@@ -461,10 +461,10 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     );
     expect(editor.actions.replaceEntityDefinition).toHaveBeenCalledWith(
       "preview-entity",
-      "item_port_liquid_filling_pd_mc_1",
+      "liquid_filling_pd_mc_1",
     );
     expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe(
-      "item_port_liquid_filling_pd_mc_1",
+      "liquid_filling_pd_mc_1",
     );
     expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenLastCalledWith(
       [

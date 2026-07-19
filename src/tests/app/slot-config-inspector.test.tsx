@@ -129,7 +129,7 @@ describe("SlotConfigInspector", () => {
     } as unknown as AppHost;
     appHost = currentAppHost;
 
-    const definition = requireDefinition(workspace, "item_port_storager_1");
+    const definition = requireDefinition(workspace, "storager_1");
     const ore = requireItem(workspace, "item_copper_ore");
     const powder = requireItem(workspace, "item_carbon_powder");
     const liquid = requireItem(workspace, "item_liquid_xiranite");
@@ -266,7 +266,7 @@ describe("SlotConfigInspector", () => {
     const workspace = createWorkspace();
     const entity: WorldEntity = {
       id: "mix-pool",
-      definitionId: "item_port_mix_pool_1",
+      definitionId: "mix_pool_1",
       position: { x: 0, y: 0 },
       rotation: 0,
       config: {},
@@ -285,7 +285,7 @@ describe("SlotConfigInspector", () => {
     } as unknown as AppHost;
     appHost = currentAppHost;
 
-    const definition = requireDefinition(workspace, "item_port_mix_pool_1");
+    const definition = requireDefinition(workspace, "mix_pool_1");
     act(() => {
       root.render(
         <SlotConfigInspector
@@ -351,7 +351,7 @@ describe("SlotConfigInspector", () => {
     } as unknown as AppHost;
     appHost = currentAppHost;
 
-    const definition = requireDefinition(workspace, "item_port_storager_1");
+    const definition = requireDefinition(workspace, "storager_1");
     const setScope = vi.fn();
     const renderInspector = (scope: "initial-config" | "runtime-state") => {
       act(() => {
@@ -439,7 +439,7 @@ describe("SlotConfigInspector", () => {
     } as unknown as AppHost;
     appHost = currentAppHost;
 
-    const definition = requireDefinition(workspace, "item_port_storager_1");
+    const definition = requireDefinition(workspace, "storager_1");
     const configuredEntity: WorldEntity = {
       ...entity,
       config: {
@@ -663,11 +663,11 @@ describe("SlotConfigInspector", () => {
     appHost = currentAppHost;
 
     const cases = [
-      { definitionId: "item_port_water_pump_1", slotGroupId: "fluid_output_buffer" },
-      { definitionId: "item_port_udpipe_loader_1", slotGroupId: "loader_buffer" },
-      { definitionId: "item_port_udpipe_unloader_1", slotGroupId: "unloader_buffer" },
-      { definitionId: "item_port_udpipe_loader_2", slotGroupId: "loader_buffer" },
-      { definitionId: "item_port_udpipe_unloader_2", slotGroupId: "unloader_buffer" },
+      { definitionId: "water_pump_1", slotGroupId: "fluid_output_buffer" },
+      { definitionId: "udpipe_loader_1", slotGroupId: "loader_buffer" },
+      { definitionId: "udpipe_unloader_1", slotGroupId: "unloader_buffer" },
+      { definitionId: "udpipe_loader_2", slotGroupId: "loader_buffer" },
+      { definitionId: "udpipe_unloader_2", slotGroupId: "unloader_buffer" },
     ];
 
     for (const testCase of cases) {

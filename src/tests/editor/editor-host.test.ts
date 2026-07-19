@@ -88,12 +88,12 @@ interface CollectionRelativeLayout {
 
 function createComplexRotationDrafts(): DraftEntity[] {
   return [
-    createRotationDraft("preview-mix-pool", "item_port_mix_pool_1", 20, 20, 0),
-    createRotationDraft("preview-furnace", "item_port_furnance_1", 30, 21, 180),
+    createRotationDraft("preview-mix-pool", "mix_pool_1", 20, 20, 0),
+    createRotationDraft("preview-furnace", "furnance_1", 30, 21, 180),
     createRotationDraft("preview-belt", "belt_straight_1x1", 27, 27, 270),
-    createRotationDraft("preview-hydro", "item_port_hydro_planter_1", 36, 25, 90),
-    createRotationDraft("preview-large-pool", "item_port_mix_pool_2", 42, 18, 270),
-    createRotationDraft("preview-planter", "item_port_planter_1", 20, 30, 0),
+    createRotationDraft("preview-hydro", "hydro_planter_1", 36, 25, 90),
+    createRotationDraft("preview-large-pool", "mix_pool_2", 42, 18, 270),
+    createRotationDraft("preview-planter", "planter_1", 20, 30, 0),
   ];
 }
 
@@ -375,14 +375,14 @@ describe("createEditorHost", () => {
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithTestEntities([
       {
-        ...createTestEntity("inlet", "item_port_udpipe_loader_2", 0, 0),
+        ...createTestEntity("inlet", "udpipe_loader_2", 0, 0),
         config: {
           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
           "storageSlotGroups[0].slots[0].initialCount": 8,
         },
       },
       {
-        ...createTestEntity("outlet", "item_port_udpipe_unloader_1", 8, 0),
+        ...createTestEntity("outlet", "udpipe_unloader_1", 8, 0),
         config: {
           "links[0].id": "",
           "links[0].linkType": "share-all",
@@ -739,7 +739,7 @@ describe("createEditorHost", () => {
       {
         id: "preview-storager",
         originalEntityId: "dummy-entity-2",
-        definitionId: "item_port_storager_1",
+        definitionId: "storager_1",
         position: { x: 4, y: 4 },
         rotation: 0,
         config: {},
@@ -932,31 +932,31 @@ describe("createEditorHost", () => {
     const editorHost = createEditorHost(workspace);
 
     editorHost.actions.createSinglePlacementDraft(
-      "item_port_power_diffuser_1",
+      "power_diffuser_1",
       { x: 0, y: 0 },
     );
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
 
     editorHost.actions.createSinglePlacementDraft(
-      "item_port_grinder_1",
+      "grinder_1",
       { x: 6, y: 6 },
     );
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
 
     editorHost.actions.createSinglePlacementDraft(
-      "item_port_storager_1",
+      "storager_1",
       { x: 30, y: 30 },
     );
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
 
     expect(editorHost.state.collections.powered).toEqual([
-      "item_port_power_diffuser_1:1",
-      "item_port_grinder_1:1",
+      "power_diffuser_1:1",
+      "grinder_1:1",
     ]);
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
-      entityId: "item_port_grinder_1:1",
+      entityId: "grinder_1:1",
     });
     editorHost.actions.moveCollectionTo({
       collectionType: EntityCollectionType.selection,
@@ -965,7 +965,7 @@ describe("createEditorHost", () => {
     });
 
     expect(editorHost.state.collections.powered).toEqual([
-      "item_port_power_diffuser_1:1",
+      "power_diffuser_1:1",
     ]);
   });
 
@@ -1055,7 +1055,7 @@ describe("createEditorHost", () => {
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("belt", "belt_straight_1x1", 1, 1),
       createTestEntity("pipe", "pipe_straight_1x1", 2, 1),
-      createTestEntity("machine", "item_port_storager_1", 3, 1),
+      createTestEntity("machine", "storager_1", 3, 1),
     ]));
 
     editorHost.actions.setLogisticsSuppression("belt", true);
@@ -1166,7 +1166,7 @@ describe("createEditorHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
-    editorHost.actions.createSinglePlacementDraft("item_port_storager_1", {
+    editorHost.actions.createSinglePlacementDraft("storager_1", {
       x: 10,
       y: 20,
     });
@@ -1174,7 +1174,7 @@ describe("createEditorHost", () => {
     const draftId = editorHost.state.collections.preview[0];
     expect(draftId).toBeDefined();
     expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
-      definitionId: "item_port_storager_1",
+      definitionId: "storager_1",
       position: {
         x: 9,
         y: 19,
@@ -1193,7 +1193,7 @@ describe("createEditorHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
-    editorHost.actions.createSinglePlacementDraft("item_port_log_hongs_bus", {
+    editorHost.actions.createSinglePlacementDraft("log_hongs_bus", {
       x: 10,
       y: 20,
     });
@@ -1201,7 +1201,7 @@ describe("createEditorHost", () => {
     const draftId = editorHost.state.collections.preview[0];
     expect(draftId).toBeDefined();
     expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
-      definitionId: "item_port_log_hongs_bus",
+      definitionId: "log_hongs_bus",
       position: {
         x: 9,
         y: 17,
@@ -1255,7 +1255,7 @@ describe("createEditorHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
-    editorHost.actions.createSinglePlacementDraft("item_port_water_pump_1", {
+    editorHost.actions.createSinglePlacementDraft("water_pump_1", {
       x: -5,
       y: 40,
     });
@@ -1263,7 +1263,7 @@ describe("createEditorHost", () => {
     const draftId = editorHost.state.collections.preview[0];
     expect(draftId).toBeDefined();
     expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
-      definitionId: "item_port_water_pump_1",
+      definitionId: "water_pump_1",
       position: {
         x: -10,
         y: 39,
@@ -1356,7 +1356,7 @@ describe("createEditorHost", () => {
       entities: {
         source: {
           id: "source",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 9, y: 9 },
           rotation: 0,
           config: {},
@@ -1364,7 +1364,7 @@ describe("createEditorHost", () => {
         },
         target: {
           id: "target",
-          definitionId: "item_port_storager_1",
+          definitionId: "storager_1",
           position: { x: 12, y: 9 },
           rotation: 90,
           config: {},
@@ -1395,12 +1395,12 @@ describe("createEditorHost", () => {
     const [sourceDraftId, targetDraftId] = editorHost.state.collections.preview;
 
     expect(editorHost.queries.getEntityById(sourceDraftId ?? "")).toMatchObject({
-      definitionId: "item_port_storager_1",
+      definitionId: "storager_1",
       position: { x: 29, y: 14 },
       rotation: 0,
     });
     expect(editorHost.queries.getEntityById(targetDraftId ?? "")).toMatchObject({
-      definitionId: "item_port_storager_1",
+      definitionId: "storager_1",
       position: { x: 32, y: 14 },
       rotation: 90,
       tags: ["test"],
@@ -1564,10 +1564,10 @@ describe("createEditorHost", () => {
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithTestEntities([
       {
-        ...createTestEntity("factory", "item_port_filling_pd_mc_1", 10, 10),
+        ...createTestEntity("factory", "filling_pd_mc_1", 10, 10),
         config: { recipe: "old" },
       },
-      createTestEntity("storage", "item_port_storager_1", 4, 10),
+      createTestEntity("storage", "storager_1", 4, 10),
     ]);
     document.slotLinks = [createStorageToFactorySlotLink()];
 
@@ -1576,13 +1576,13 @@ describe("createEditorHost", () => {
     expect(
       editorHost.actions.replaceEntityDefinition(
         "factory",
-        "item_port_liquid_filling_pd_mc_1",
+        "liquid_filling_pd_mc_1",
       ),
     ).toBe(true);
 
     const snapshot = editorHost.document.getSnapshot();
     expect(snapshot.entities.factory).toMatchObject({
-      definitionId: "item_port_liquid_filling_pd_mc_1",
+      definitionId: "liquid_filling_pd_mc_1",
       config: {},
     });
     expect(snapshot.entities.storage).toEqual(document.entities.storage);
@@ -1594,10 +1594,10 @@ describe("createEditorHost", () => {
     const applyEditorHost = createEditorHost(applyWorkspace);
     const applyDocument = createDocumentWithTestEntities([
       {
-        ...createTestEntity("factory", "item_port_filling_pd_mc_1", 10, 10),
+        ...createTestEntity("factory", "filling_pd_mc_1", 10, 10),
         config: { recipe: "old" },
       },
-      createTestEntity("storage", "item_port_storager_1", 4, 10),
+      createTestEntity("storage", "storager_1", 4, 10),
     ]);
     applyDocument.slotLinks = [createStorageToFactorySlotLink()];
     applyEditorHost.internalDocument.setSnapshot(applyDocument);
@@ -1609,12 +1609,12 @@ describe("createEditorHost", () => {
     expect(
       applyEditorHost.actions.replaceEntityDefinition(
         applyDraftId ?? "",
-        "item_port_liquid_filling_pd_mc_1",
+        "liquid_filling_pd_mc_1",
       ),
     ).toBe(true);
     expect(applyEditorHost.actions.applyMoveOerationDraft()).toBe(true);
     expect(applyEditorHost.document.getSnapshot().entities.factory).toMatchObject({
-      definitionId: "item_port_liquid_filling_pd_mc_1",
+      definitionId: "liquid_filling_pd_mc_1",
       config: {},
     });
     expect(applyEditorHost.document.getSnapshot().slotLinks).toEqual([]);
@@ -1623,7 +1623,7 @@ describe("createEditorHost", () => {
     const cancelEditorHost = createEditorHost(cancelWorkspace);
     const cancelDocument = createDocumentWithTestEntities([
       {
-        ...createTestEntity("factory", "item_port_filling_pd_mc_1", 10, 10),
+        ...createTestEntity("factory", "filling_pd_mc_1", 10, 10),
         config: { recipe: "old" },
       },
     ]);
@@ -1635,7 +1635,7 @@ describe("createEditorHost", () => {
     expect(
       cancelEditorHost.actions.replaceEntityDefinition(
         cancelDraftId ?? "",
-        "item_port_liquid_filling_pd_mc_1",
+        "liquid_filling_pd_mc_1",
       ),
     ).toBe(true);
     cancelEditorHost.actions.cancelMoveOperationDraft();
@@ -2187,7 +2187,7 @@ describe("createEditorHost", () => {
     const initialDraft: DraftEntity = {
       id: "preview-large-reaction-pool",
       originalEntityId: "preview-large-reaction-pool",
-      definitionId: "item_port_mix_pool_2",
+      definitionId: "mix_pool_2",
       position: {
         x: 10,
         y: 10,
@@ -2265,7 +2265,7 @@ describe("createEditorHost", () => {
       {
         id: "preview-unloader",
         originalEntityId: "preview-unloader",
-        definitionId: "item_port_unloader_1",
+        definitionId: "unloader_1",
         position: {
           x: -2,
           y: 3,
@@ -2320,7 +2320,7 @@ describe("createEditorHost", () => {
       {
         id: "draft-only",
         originalEntityId: "draft-only",
-        definitionId: "item_port_storager_1",
+        definitionId: "storager_1",
         position: {
           x: 40,
           y: 40,
@@ -2455,7 +2455,7 @@ describe("createEditorHost", () => {
 
     document.entities["rotated-entity"] = {
       id: "rotated-entity",
-      definitionId: "item_port_unloader_1",
+      definitionId: "unloader_1",
       position: {
         x: 8,
         y: 12,
@@ -2558,7 +2558,7 @@ describe("createEditorHost", () => {
         ...persistedDocument.entities,
         "protocol-core:wuling_protocol_core": {
           id: "protocol-core:wuling_protocol_core",
-          definitionId: "item_port_sp_hub_1",
+          definitionId: "sp_hub_1",
           position: { x: 0, y: 0 },
           rotation: 0,
           config: {},
@@ -2746,7 +2746,7 @@ describe("createEditorHost", () => {
         ...valleyDocument.entities,
         "protocol-core:valley4_protocol_core": {
           id: "protocol-core:valley4_protocol_core",
-          definitionId: "item_port_sp_hub_1",
+          definitionId: "sp_hub_1",
           position: { x: 0, y: 0 },
           rotation: 0,
           config: {},
@@ -2784,7 +2784,7 @@ describe("createEditorHost", () => {
     expect(document.entityOrder).toEqual(["protocol-core:valley4_infra_outpost"]);
     expect(document.entities["protocol-core:valley4_infra_outpost"]).toEqual({
       id: "protocol-core:valley4_infra_outpost",
-      definitionId: "item_port_sp_hub_1",
+      definitionId: "sp_hub_1",
       position: { x: 0, y: 0 },
       rotation: 0,
       config: {},

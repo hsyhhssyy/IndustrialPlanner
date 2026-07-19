@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "blueprintId": "d8591492-55a4-4ce5-b1ac-8fcc6a1ea226",
   "version": "v1.3.0",
   "name": "全暗管优质芽针针剂",
@@ -12,7 +12,7 @@
   "entities": {
     "legacy_d8591492_0001": {
       "id": "legacy_d8591492_0001",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 0,
         "y": 0
@@ -25,7 +25,7 @@
     },
     "legacy_d8591492_0002": {
       "id": "legacy_d8591492_0002",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 0,
         "y": 3
@@ -38,7 +38,7 @@
     },
     "legacy_d8591492_0003": {
       "id": "legacy_d8591492_0003",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 0,
         "y": 6
@@ -51,7 +51,7 @@
     },
     "legacy_d8591492_0004": {
       "id": "legacy_d8591492_0004",
-      "definitionId": "item_port_unloader_1",
+      "definitionId": "unloader_1",
       "position": {
         "x": 0,
         "y": 9
@@ -64,7 +64,7 @@
     },
     "legacy_d8591492_0005": {
       "id": "legacy_d8591492_0005",
-      "definitionId": "item_port_liquid_furnance_1",
+      "definitionId": "liquid_furnance_1",
       "position": {
         "x": 2,
         "y": 1
@@ -75,7 +75,7 @@
     },
     "legacy_d8591492_0006": {
       "id": "legacy_d8591492_0006",
-      "definitionId": "item_port_liquid_furnance_1",
+      "definitionId": "liquid_furnance_1",
       "position": {
         "x": 5,
         "y": 2
@@ -86,7 +86,7 @@
     },
     "legacy_d8591492_0007": {
       "id": "legacy_d8591492_0007",
-      "definitionId": "item_port_liquid_furnance_1",
+      "definitionId": "liquid_furnance_1",
       "position": {
         "x": 2,
         "y": 7
@@ -97,7 +97,7 @@
     },
     "legacy_d8591492_0008": {
       "id": "legacy_d8591492_0008",
-      "definitionId": "item_port_liquid_furnance_1",
+      "definitionId": "liquid_furnance_1",
       "position": {
         "x": 5,
         "y": 8
@@ -108,7 +108,7 @@
     },
     "legacy_d8591492_0009": {
       "id": "legacy_d8591492_0009",
-      "definitionId": "item_port_udpipe_unloader_1",
+      "definitionId": "udpipe_unloader_1",
       "position": {
         "x": 8,
         "y": 4
@@ -121,7 +121,7 @@
     },
     "legacy_d8591492_0010": {
       "id": "legacy_d8591492_0010",
-      "definitionId": "item_pipe_splitter",
+      "definitionId": "pipe_splitter",
       "position": {
         "x": 6,
         "y": 5
@@ -176,7 +176,7 @@
     },
     "legacy_d8591492_0015": {
       "id": "legacy_d8591492_0015",
-      "definitionId": "item_pipe_splitter",
+      "definitionId": "pipe_splitter",
       "position": {
         "x": 7,
         "y": 5
@@ -275,7 +275,7 @@
     },
     "legacy_d8591492_0024": {
       "id": "legacy_d8591492_0024",
-      "definitionId": "item_pipe_splitter",
+      "definitionId": "pipe_splitter",
       "position": {
         "x": 6,
         "y": 11
@@ -396,7 +396,7 @@
     },
     "legacy_d8591492_0035": {
       "id": "legacy_d8591492_0035",
-      "definitionId": "item_pipe_converger",
+      "definitionId": "pipe_converger",
       "position": {
         "x": 3,
         "y": 6
@@ -572,7 +572,7 @@
     },
     "legacy_d8591492_0051": {
       "id": "legacy_d8591492_0051",
-      "definitionId": "item_pipe_converger",
+      "definitionId": "pipe_converger",
       "position": {
         "x": 3,
         "y": 0
@@ -583,7 +583,7 @@
     },
     "legacy_d8591492_0052": {
       "id": "legacy_d8591492_0052",
-      "definitionId": "item_pipe_converger",
+      "definitionId": "pipe_converger",
       "position": {
         "x": 6,
         "y": 0
@@ -638,7 +638,7 @@
     },
     "legacy_d8591492_0057": {
       "id": "legacy_d8591492_0057",
-      "definitionId": "item_port_udpipe_loader_1",
+      "definitionId": "udpipe_loader_1",
       "position": {
         "x": 12,
         "y": 4
@@ -772,7 +772,7 @@
     },
     "legacy_d8591492_0069": {
       "id": "legacy_d8591492_0069",
-      "definitionId": "item_port_cmpt_mc_1",
+      "definitionId": "cmpt_mc_1",
       "position": {
         "x": 9,
         "y": 0
@@ -783,7 +783,7 @@
     },
     "legacy_d8591492_0070": {
       "id": "legacy_d8591492_0070",
-      "definitionId": "item_port_cmpt_mc_1",
+      "definitionId": "cmpt_mc_1",
       "position": {
         "x": 12,
         "y": 1
@@ -882,7 +882,7 @@
     },
     "legacy_d8591492_0079": {
       "id": "legacy_d8591492_0079",
-      "definitionId": "item_port_tools_asm_mc_1",
+      "definitionId": "tools_asm_mc_1",
       "position": {
         "x": 16,
         "y": 0
@@ -948,7 +948,7 @@
     },
     "legacy_d8591492_0085": {
       "id": "legacy_d8591492_0085",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 9,
         "y": 7
@@ -959,7 +959,7 @@
     },
     "legacy_d8591492_0086": {
       "id": "legacy_d8591492_0086",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 11,
         "y": 7
@@ -970,7 +970,7 @@
     },
     "legacy_d8591492_0087": {
       "id": "legacy_d8591492_0087",
-      "definitionId": "item_port_shaper_1",
+      "definitionId": "shaper_1",
       "position": {
         "x": 10,
         "y": 9
@@ -981,7 +981,7 @@
     },
     "legacy_d8591492_0088": {
       "id": "legacy_d8591492_0088",
-      "definitionId": "item_port_liquid_filling_pd_mc_1",
+      "definitionId": "liquid_filling_pd_mc_1",
       "position": {
         "x": 13,
         "y": 7
@@ -1102,7 +1102,7 @@
     },
     "legacy_d8591492_0099": {
       "id": "legacy_d8591492_0099",
-      "definitionId": "item_port_mix_pool_1",
+      "definitionId": "mix_pool_1",
       "position": {
         "x": 20,
         "y": 4
@@ -1157,7 +1157,7 @@
     },
     "legacy_d8591492_0103": {
       "id": "legacy_d8591492_0103",
-      "definitionId": "item_port_udpipe_unloader_1",
+      "definitionId": "udpipe_unloader_1",
       "position": {
         "x": 20,
         "y": 0
@@ -1170,7 +1170,7 @@
     },
     "legacy_d8591492_0104": {
       "id": "legacy_d8591492_0104",
-      "definitionId": "item_port_storager_1",
+      "definitionId": "storager_1",
       "position": {
         "x": 23,
         "y": 0
@@ -1229,7 +1229,7 @@
     },
     "legacy_d8591492_0109": {
       "id": "legacy_d8591492_0109",
-      "definitionId": "item_port_seedcol_1",
+      "definitionId": "seedcol_1",
       "position": {
         "x": 26,
         "y": 0
@@ -1243,7 +1243,7 @@
     },
     "legacy_d8591492_0110": {
       "id": "legacy_d8591492_0110",
-      "definitionId": "item_port_hydro_planter_1",
+      "definitionId": "hydro_planter_1",
       "position": {
         "x": 26,
         "y": 7
@@ -1254,7 +1254,7 @@
     },
     "legacy_d8591492_0111": {
       "id": "legacy_d8591492_0111",
-      "definitionId": "item_port_power_diffuser_1",
+      "definitionId": "power_diffuser_1",
       "position": {
         "x": 29,
         "y": 5
@@ -1353,7 +1353,7 @@
     },
     "legacy_d8591492_0120": {
       "id": "legacy_d8591492_0120",
-      "definitionId": "item_port_grinder_1",
+      "definitionId": "grinder_1",
       "position": {
         "x": 22,
         "y": 9
@@ -1496,7 +1496,7 @@
     },
     "legacy_d8591492_0133": {
       "id": "legacy_d8591492_0133",
-      "definitionId": "item_pipe_splitter",
+      "definitionId": "pipe_splitter",
       "position": {
         "x": 26,
         "y": 6

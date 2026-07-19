@@ -69,24 +69,24 @@ describe("createRegistryContract", () => {
 
     expect(registry.queries.isDedicatedLogisticsDevice("belt_straight_1x1")).toBe(true);
     expect(registry.queries.isDedicatedLogisticsDevice("pipe_turn_ccw_1x1")).toBe(true);
-    expect(registry.queries.isDedicatedLogisticsDevice("item_log_splitter")).toBe(false);
-    expect(registry.queries.isDedicatedLogisticsDevice("item_pipe_connector")).toBe(false);
+    expect(registry.queries.isDedicatedLogisticsDevice("log_splitter")).toBe(false);
+    expect(registry.queries.isDedicatedLogisticsDevice("pipe_connector")).toBe(false);
 
     expect(registry.queries.isGeneralLogisticsDevice("belt_straight_1x1")).toBe(true);
-    expect(registry.queries.isGeneralLogisticsDevice("item_log_splitter")).toBe(true);
-    expect(registry.queries.isGeneralLogisticsDevice("item_log_converger")).toBe(true);
-    expect(registry.queries.isGeneralLogisticsDevice("item_log_connector")).toBe(true);
-    expect(registry.queries.isGeneralLogisticsDevice("item_pipe_splitter")).toBe(true);
-    expect(registry.queries.isGeneralLogisticsDevice("item_pipe_converger")).toBe(true);
-    expect(registry.queries.isGeneralLogisticsDevice("item_pipe_connector")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("log_splitter")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("log_converger")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("log_connector")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("pipe_splitter")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("pipe_converger")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("pipe_connector")).toBe(true);
 
-    expect(registry.queries.isGeneralLogisticsDevice("item_log_admission")).toBe(true);
-    expect(registry.queries.isGeneralLogisticsDevice("item_pipe_admission")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("log_admission")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("pipe_admission")).toBe(true);
     expect(registry.queries.isGeneralLogisticsDevice("ore_miner")).toBe(false);
 
     expect(registry.queries.resolveDedicatedLogisticsKind("belt_straight_1x1")).toBe("belt");
     expect(registry.queries.resolveDedicatedLogisticsKind("pipe_turn_ccw_1x1")).toBe("pipe");
-    expect(registry.queries.resolveDedicatedLogisticsKind("item_log_splitter")).toBeNull();
+    expect(registry.queries.resolveDedicatedLogisticsKind("log_splitter")).toBeNull();
   });
 
   it("mounts the read-only logistics-item inspector on every logistics device and no others", () => {
@@ -95,17 +95,17 @@ describe("createRegistryContract", () => {
       "belt_straight_1x1",
       "belt_turn_cw_1x1",
       "belt_turn_ccw_1x1",
-      "item_log_splitter",
-      "item_log_converger",
-      "item_log_connector",
+      "log_splitter",
+      "log_converger",
+      "log_connector",
       "pipe_straight_1x1",
       "pipe_turn_cw_1x1",
       "pipe_turn_ccw_1x1",
-      "item_pipe_splitter",
-      "item_pipe_converger",
-      "item_pipe_connector",
-      "item_log_admission",
-      "item_pipe_admission",
+      "pipe_splitter",
+      "pipe_converger",
+      "pipe_connector",
+      "log_admission",
+      "pipe_admission",
     ].sort();
     const mountedDeviceIds = registry.entityDefinitions
       .filter((definition) => definition.inspectors.some(
@@ -199,7 +199,7 @@ describe("createRegistryContract", () => {
 
       for (let index = 0; index < 5; index += 1) {
         const builtin = definition.builtinEntities![index]!;
-        expect(builtin.definitionId).toBe("item_port_log_hongs_bus");
+        expect(builtin.definitionId).toBe("log_hongs_bus");
         expect(builtin.position).toEqual({ x: index * 8, y: -4 });
         expect(builtin.rotation).toBe(90);
         expect(builtin.config).toEqual(index === 0 ? { warehouseBusSeed: true } : undefined);
@@ -213,13 +213,13 @@ describe("createRegistryContract", () => {
     expect(protocolCore.builtinEntities).toHaveLength(19);
 
     const source = protocolCore.builtinEntities![0]!;
-    expect(source.definitionId).toBe("item_port_log_hongs_bus_source");
+    expect(source.definitionId).toBe("log_hongs_bus_source");
     expect(source.position).toEqual({ x: -4, y: -4 });
 
     const xSegments = protocolCore.builtinEntities!.slice(1, 10);
     for (let index = 0; index < xSegments.length; index += 1) {
       const segment = xSegments[index]!;
-      expect(segment.definitionId).toBe("item_port_log_hongs_bus");
+      expect(segment.definitionId).toBe("log_hongs_bus");
       expect(segment.position).toEqual({ x: index * 8, y: -4 });
       expect(segment.rotation).toBe(90);
     }
@@ -227,7 +227,7 @@ describe("createRegistryContract", () => {
     const ySegments = protocolCore.builtinEntities!.slice(10, 19);
     for (let index = 0; index < ySegments.length; index += 1) {
       const segment = ySegments[index]!;
-      expect(segment.definitionId).toBe("item_port_log_hongs_bus");
+      expect(segment.definitionId).toBe("log_hongs_bus");
       expect(segment.position).toEqual({ x: -4, y: index * 8 });
       expect(segment.rotation).toBe(0);
     }
