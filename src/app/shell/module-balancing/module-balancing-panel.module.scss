@@ -8,6 +8,27 @@
   background: var(--surface-1);
 }
 
+// PC 端二栏布局：左侧模块库面板 + 右侧主内容
+.module-balancing-desktop-layout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.module-balancing-library-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 312px;
+  min-width: 200px;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+  background: var(--surface-1);
+  overflow: hidden;
+  transition: width 0.18s ease, min-width 0.18s ease, opacity 0.15s ease, border-color 0.18s ease;
+}
+
 .module-balancing-wizard {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -50,6 +71,11 @@
 
 .module-balancing-library-button:hover {
   background: var(--surface-2);
+}
+
+.module-balancing-library-button.is-pressed {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
 }
 
 .module-balancing-library-button svg,
@@ -277,7 +303,8 @@
   margin-left: auto;
 }
 
-.module-balancing-drawer > .module-balancing-library {
+.module-balancing-drawer > .module-balancing-library,
+.module-balancing-library-panel > .module-balancing-library {
   min-height: 0;
   overflow: auto;
 }

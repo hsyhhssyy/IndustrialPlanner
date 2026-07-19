@@ -118,7 +118,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [activePage, setActivePage] = useState<ModuleBalancingPage>({ kind: "canvas" });
-  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(!isTouch);
   const [libraryTab, setLibraryTab] = useState<ModuleLibraryTab>("recipes");
   const [newCanvasDialogOpen, setNewCanvasDialogOpen] = useState(false);
   const [newCanvasName, setNewCanvasName] = useState("");
@@ -416,8 +416,10 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       <WizardNavigation
         activeCanvas={activeCanvas}
         activePage={activePage}
+        isTouch={isTouch}
+        libraryOpen={libraryOpen}
         onAddStage={addStage}
-        onOpenLibrary={() => setLibraryOpen(true)}
+        onToggleLibrary={() => setLibraryOpen((prev) => !prev)}
         onSelectPage={(page) => {
           setActivePage(page);
           if (page.kind === "stage") {
@@ -507,44 +509,63 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     </div>
   );
 
+  const libraryPanelContent = (
+    <>
+      <header className={cm(styles, "module-balancing-drawer-header")}>
+        <h3>{t("moduleBalancing.moduleLibrary")}</h3>
+        <div className={cm(styles, "module-balancing-library-tabs")}>
+          <button className={cm(styles, libraryTab === "recipes" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("recipes")}>{t("moduleBalancing.recipes")}</button>
+          <button className={cm(styles, libraryTab === "modules" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("modules")}>{t("moduleBalancing.modules")}</button>
+        </div>
+        <button className={cm(styles, "module-balancing-icon-button")} type="button" onClick={() => setLibraryOpen(false)} aria-label={t("action.close")}>
+          <LucideX aria-hidden="true" />
+        </button>
+      </header>
+      <ModuleLibrary
+        activeCanvas={activeCanvas}
+        activeActivityIds={activeActivityIds}
+        index={index}
+        isTouch={isTouch}
+        libraryTab={libraryTab}
+        onAddModule={addModuleToSelectedStage}
+        onCreateCustomModule={openNewCustomModuleForm}
+        onDeleteCustomModule={deleteCustomModule}
+        onEditCustomModule={openEditCustomModuleForm}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        showActivityIcons={showAllActivityContent}
+        t={t}
+      />
+    </>
+  );
+
   return (
     <div className={cm(styles, `toolbox-dialog-content module-balancing-panel${isTouch ? " is-touch" : ""}`)}>
-      {content}
-      {libraryOpen ? (
-        <div className={cm(styles, "module-balancing-drawer-layer")} onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            setLibraryOpen(false);
-          }
-        }} style={{ zIndex: libraryLayer.zIndex }}>
-          <aside className={cm(styles, "module-balancing-drawer")}>
-            <header className={cm(styles, "module-balancing-drawer-header")}>
-              <h3>{t("moduleBalancing.moduleLibrary")}</h3>
-              <div className={cm(styles, "module-balancing-library-tabs")}>
-                <button className={cm(styles, libraryTab === "recipes" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("recipes")}>{t("moduleBalancing.recipes")}</button>
-                <button className={cm(styles, libraryTab === "modules" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("modules")}>{t("moduleBalancing.modules")}</button>
-              </div>
-              <button className={cm(styles, "module-balancing-icon-button")} type="button" onClick={() => setLibraryOpen(false)} aria-label={t("action.close")}>
-                <LucideX aria-hidden="true" />
-              </button>
-            </header>
-            <ModuleLibrary
-              activeCanvas={activeCanvas}
-              activeActivityIds={activeActivityIds}
-              index={index}
-              isTouch={isTouch}
-              libraryTab={libraryTab}
-              onAddModule={addModuleToSelectedStage}
-              onCreateCustomModule={openNewCustomModuleForm}
-              onDeleteCustomModule={deleteCustomModule}
-              onEditCustomModule={openEditCustomModuleForm}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              showActivityIcons={showAllActivityContent}
-              t={t}
-            />
-          </aside>
+      {isTouch ? (
+        <>
+          {content}
+          {libraryOpen ? (
+            <div className={cm(styles, "module-balancing-drawer-layer")} onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setLibraryOpen(false);
+              }
+            }} style={{ zIndex: libraryLayer.zIndex }}>
+              <aside className={cm(styles, "module-balancing-drawer")}>
+                {libraryPanelContent}
+              </aside>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className={cm(styles, "module-balancing-desktop-layout")}>
+          {libraryOpen ? (
+            <aside className={cm(styles, "module-balancing-library-panel")}>
+              {libraryPanelContent}
+            </aside>
+          ) : null}
+          {content}
         </div>
-      ) : null}
+      )}
       {newCanvasDialogOpen ? (
         <OverlayStackLayer layerId="module-balancing:new-canvas" visible>
           {({ zIndex }) => (
@@ -906,21 +927,25 @@ function CanvasInputPanel({
 const WizardNavigation = observer(function WizardNavigation({
   activeCanvas,
   activePage,
+  isTouch,
+  libraryOpen,
   onAddStage,
-  onOpenLibrary,
+  onToggleLibrary,
   onSelectPage,
   t,
 }: {
   activeCanvas: ModuleBalancingCanvasReadWrite;
   activePage: ModuleBalancingPage;
+  isTouch: boolean;
+  libraryOpen: boolean;
   onAddStage: () => void;
-  onOpenLibrary: () => void;
+  onToggleLibrary: () => void;
   onSelectPage: (page: ModuleBalancingPage) => void;
   t: (key: string) => string;
 }) {
   return (
     <nav className={cm(styles, "module-balancing-wizard-nav")} aria-label={t("toolboxDialog.tab.moduleBalancing")}>
-      <button className={cm(styles, "module-balancing-library-button")} type="button" onClick={onOpenLibrary}>
+      <button className={cm(styles, `module-balancing-library-button${!isTouch && libraryOpen ? " is-pressed" : ""}`)} type="button" onClick={onToggleLibrary}>
         <LucideLayers3 aria-hidden="true" />
         <span>{t("moduleBalancing.moduleLibrary")}</span>
       </button>
