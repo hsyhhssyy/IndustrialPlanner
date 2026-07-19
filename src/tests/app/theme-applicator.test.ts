@@ -18,6 +18,9 @@ describe("applyAppThemeToDocument", () => {
     expect(document.documentElement.style.colorScheme).toBe("dark");
     expect(document.documentElement.style.getPropertyValue("--shell-bg")).toBe("#0f1419");
     expect(document.documentElement.style.getPropertyValue("--renderer-grid-line")).toBe("#ffffff");
+    expect(document.documentElement.style.getPropertyValue("--placement-variant-cap-solid")).toBe("#f6c968");
+    expect(document.documentElement.style.getPropertyValue("--placement-variant-cap-liquid")).toBe("#81ddeb");
+    expect(document.documentElement.style.getPropertyValue("--placement-variant-cap-gas")).toBe("#91db9a");
 
     applyAppThemeToDocument(AYU_LIGHT_THEME);
 
@@ -25,5 +28,8 @@ describe("applyAppThemeToDocument", () => {
     expect(document.documentElement.style.colorScheme).toBe("light");
     expect(document.documentElement.style.getPropertyValue("--shell-bg")).toBe("#f5f7fa");
     expect(document.documentElement.style.getPropertyValue("--renderer-grid-line")).toBe("#5c6773");
+    expect(document.documentElement.style.getPropertyValue("--placement-variant-cap-solid")).toBe("#f6c968");
+    expect(document.documentElement.style.getPropertyValue("--placement-variant-cap-liquid")).toBe("#81ddeb");
+    expect(document.documentElement.style.getPropertyValue("--placement-variant-cap-gas")).toBe("#91db9a");
   });
 });

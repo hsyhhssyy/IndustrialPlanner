@@ -144,6 +144,176 @@
   grid-template-columns: 24px minmax(0, 1fr);
 }
 
+.placement-device-button-shell {
+  position: relative;
+  align-self: start;
+  min-width: 0;
+  width: 100%;
+  border-radius: 8px;
+}
+
+.placement-device-button.has-entity-variant {
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.placement-entity-variant-cap {
+  position: absolute;
+  z-index: 0;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: auto;
+  height: 100%;
+  aspect-ratio: 65 / 60;
+  border-start-end-radius: 7px;
+  border-end-end-radius: 7px;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 42% 50%;
+  mask-position: 42% 50%;
+  -webkit-mask-size: auto 140%;
+  mask-size: auto 140%;
+  pointer-events: none;
+}
+
+.placement-entity-variant-trigger {
+  position: absolute;
+  z-index: 2;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: auto;
+  height: 100%;
+  aspect-ratio: 65 / 60;
+  padding: 0;
+  border: 0;
+  border-start-end-radius: 8px;
+  border-end-end-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.placement-entity-variant-trigger:hover,
+.placement-entity-variant-trigger:active,
+.placement-entity-variant-trigger:focus,
+.placement-entity-variant-trigger[aria-expanded="true"] {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.placement-entity-variant-trigger:focus-visible {
+  outline: 2px solid var(--highlight-ring);
+  outline-offset: -2px;
+}
+
+.placement-device-button > .placement-entity-variant-cap {
+  inset-block: -1px;
+  height: calc(100% + 2px);
+}
+
+.placement-device-button.has-entity-variant .button-icon,
+.placement-device-button.has-entity-variant .placement-button-label {
+  position: relative;
+  z-index: 1;
+}
+
+.placement-device-button.has-entity-variant .placement-button-hotkey {
+  z-index: 1;
+}
+
+.placement-variant-menu-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* AI-REMOVED 2026-07-19:
+ * Reason: backdrop 已由 document pointerdown 外部关闭逻辑替代，继续保留只会形成不可达样式。
+ * Trigger: PC 端 hover 菜单需要从主按钮无阻挡地移入浮层。
+ * Evidence: placement-panel.tsx 不再渲染 placement-variant-menu-backdrop。
+ * Replacement: .placement-variant-menu-layer 的 pointer-events 隔离和菜单自身的 pointer-events: auto。
+ * Risk: Low。
+ * Human Review: Required
+ *
+ * Original code:
+ * .placement-variant-menu-backdrop {
+ *   position: absolute;
+ *   inset: 0;
+ * }
+ */
+
+.placement-variant-menu {
+  position: fixed;
+  z-index: 1;
+  display: grid;
+  gap: 3px;
+  max-height: min(55vh, 300px);
+  padding: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface-1);
+  box-shadow: 0 8px 24px var(--shadow-floating-control);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+}
+
+.placement-variant-menu-item {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-1);
+  text-align: start;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.placement-variant-menu-item:hover,
+.placement-variant-menu-item:focus-visible {
+  border-color: var(--line-strong);
+  background: var(--surface-3);
+  color: var(--text-0);
+}
+
+.placement-variant-menu-item.is-selected {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+  color: var(--text-0);
+}
+
+.placement-variant-menu-icon,
+.placement-variant-menu-icon img {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+}
+
+.placement-variant-menu-label {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  padding-inline-end: 14px;
+  font-size: 0.9rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.placement-variant-menu-cap {
+  border-start-end-radius: 6px;
+  border-end-end-radius: 6px;
+}
+
 .placement-operation-button-list.is-mobile-icon-grid .placement-action-button {
   grid-template-columns: minmax(0, 1fr);
   place-items: center;

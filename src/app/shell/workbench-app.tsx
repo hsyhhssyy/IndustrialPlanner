@@ -330,6 +330,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.gameShowHotkeys = value;
         }),
       },
+      "game-collapse-device-modes": {
+        readValue: () => appHost.state.settings.collapseDeviceModes,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.collapseDeviceModes === value) {
+            return;
+          }
+
+          appHost.internalState.settings.collapseDeviceModes = value;
+        }),
+      },
       "game-show-device-names": {
         readValue: () => appHost.state.settings.gameShowDeviceNames,
         writeValue: action((value) => {

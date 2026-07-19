@@ -38,6 +38,7 @@ export type {
 	// SubmitMode,
 	StorageGroupSplitLinkType,
 } from "./types/entity-definition";
+export type { EntityVariantDefinition } from "./types/entity-variant-definition";
 export type {
 	EntityInspectorDeclaration,
 	EntityInspectorType,

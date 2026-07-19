@@ -72,6 +72,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   gameShowDeviceIcons: false,
   gameUseInspectorPanel: false,
   gameShowHotkeys: false,
+  collapseDeviceModes: true,
   gameAlwaysShowGridLines: true,
   selectedActivityIds: [],
   toolboxShowAllActivityContent: true,
@@ -189,6 +190,7 @@ function createWorkbenchStorageSnapshot(options: {
   leftDockWidth?: number;
   topBarCollapsed?: boolean;
   rightDockActiveTab?: "selection";
+  selectedPlacementVariantByCraftGroup?: Record<string, string>;
   quickPlaceFavoriteEntityIds?: Array<string | null>;
   toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
   timelineDialog?: ReturnType<typeof createDialogStateSnapshot>;
@@ -214,6 +216,8 @@ function createWorkbenchStorageSnapshot(options: {
     leftDockWidth: options.leftDockWidth ?? 375,
     topBarCollapsed: options.topBarCollapsed ?? false,
     rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
+    selectedPlacementVariantByCraftGroup:
+      options.selectedPlacementVariantByCraftGroup ?? {},
     quickPlaceFavoriteEntityIds: options.quickPlaceFavoriteEntityIds ?? [],
     dialogState: {
       toolbox: options.toolboxDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID }),

@@ -303,6 +303,8 @@ export type UiKey =
   | "settingsField.debug-simulation-worker-detailed-reportDescription"
   | "settingsField.game-always-show-grid-lines"
   | "settingsField.game-always-show-grid-linesDescription"
+  | "settingsField.game-collapse-device-modes"
+  | "settingsField.game-collapse-device-modesDescription"
   | "settingsField.game-arknights-allow-empty-logistics-endpoints"
   | "settingsField.game-arknights-allow-empty-logistics-endpointsDescription"
   | "settingsField.game-arknights-auto-create-splitters-and-convergers"

@@ -39,6 +39,7 @@ import {
   type EntityPlacementBehaviorDeclaration,
 } from "@/domain/registry/types/entity-placement-behavior";
 import { DEFAULT_PORT_PRIORITY_GROUP } from "@/shared/port-priority-groups";
+import { MAIN_CRAFT_GROUP_TAG } from "@/shared/entity-variants";
 import {
   BLOCKAGE_AUTO_CLEARANCE_ENABLED_CONFIG_KEY,
   WATER_PURIFIER_BYPRODUCT_CHANNEL_ID,
@@ -1174,7 +1175,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
     displayOrder: 602,
-    tags: [PRODUCER_TAG],
+    tags: [
+      PRODUCER_TAG,
+      "alter:item_port_filling_pd_mc_1",
+      "alter-variant:normal",
+      MAIN_CRAFT_GROUP_TAG,
+    ],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [
@@ -2145,7 +2151,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     displayOrder: 501,
-    tags: [PRODUCER_TAG],
+    tags: [
+      PRODUCER_TAG,
+      "alter:item_port_furnance_1",
+      "alter-variant:normal",
+      MAIN_CRAFT_GROUP_TAG,
+    ],
     requiresPower: true,
     powerDemand: 5,
     portGroups: [
@@ -2262,7 +2273,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     displayOrder: 505,
-    tags: [PRODUCER_TAG],
+    tags: [
+      PRODUCER_TAG,
+      "alter:item_port_shaper_1",
+      "alter-variant:normal",
+      MAIN_CRAFT_GROUP_TAG,
+    ],
     requiresPower: true,
     powerDemand: 10,
     portGroups: [
@@ -2390,7 +2406,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
     displayOrder: 508,
-    tags: [PRODUCER_TAG],
+    tags: [
+      PRODUCER_TAG,
+      "alter:item_port_planter_1",
+      "alter-variant:normal",
+      MAIN_CRAFT_GROUP_TAG,
+    ],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [
@@ -2664,7 +2685,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 609,
-    tags: [PRODUCER_TAG, "武陵"],
+    tags: [
+      PRODUCER_TAG,
+      "武陵",
+      "alter:item_port_liquid_purifier_1",
+      "alter-variant:liquid",
+      MAIN_CRAFT_GROUP_TAG,
+    ],
     requiresPower: true,
     powerDemand: 50,
     portGroups: [
@@ -2942,7 +2969,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 612,
-    tags: [PRODUCER_TAG, "武陵", "alter:transmuter_2", "alter-variant:gastrans"],
+    tags: [
+      PRODUCER_TAG,
+      "武陵",
+      "alter:transmuter_2",
+      "alter-variant:gastrans",
+      MAIN_CRAFT_GROUP_TAG,
+    ],
     requiresPower: true,
     powerDemand: 50,
     meteredConsumption: {
@@ -3205,7 +3238,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     displayOrder: 615,
-    tags: [PRODUCER_TAG, "武陵", "alter:transmuter_1", "alter-variant:gastrans"],
+    tags: [
+      PRODUCER_TAG,
+      "武陵",
+      "alter:transmuter_1",
+      "alter-variant:gastrans",
+      MAIN_CRAFT_GROUP_TAG,
+    ],
     requiresPower: true,
     powerDemand: 50,
     meteredConsumption: {

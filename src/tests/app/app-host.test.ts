@@ -131,6 +131,7 @@ function createWorkbenchStorageSnapshot(options: {
   leftDockWidth?: number;
   topBarCollapsed?: boolean;
   rightDockActiveTab?: "selection";
+  selectedPlacementVariantByCraftGroup?: Record<string, string>;
   quickPlaceFavoriteEntityIds?: Array<string | null>;
   toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
   timelineDialog?: ReturnType<typeof createDialogStateSnapshot>;
@@ -156,6 +157,8 @@ function createWorkbenchStorageSnapshot(options: {
     leftDockWidth: options.leftDockWidth ?? 375,
     topBarCollapsed: options.topBarCollapsed ?? false,
     rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
+    selectedPlacementVariantByCraftGroup:
+      options.selectedPlacementVariantByCraftGroup ?? {},
     quickPlaceFavoriteEntityIds: options.quickPlaceFavoriteEntityIds ?? [],
     dialogState: {
       toolbox: options.toolboxDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID }),
@@ -189,6 +192,27 @@ afterEach(() => {
 });
 
 describe("createAppHost", () => {
+  it("hydrates the persisted placement variant selected for each craft group", () => {
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        selectedPlacementVariantByCraftGroup: {
+          item_port_filling_pd_mc_1: "liquid",
+          transmuter_2: "solidtrans",
+        },
+      })),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    expect(appHost.state.workbench.selectedPlacementVariantByCraftGroup).toEqual({
+      item_port_filling_pd_mc_1: "liquid",
+      transmuter_2: "solidtrans",
+    });
+    appHost.dispose();
+  });
+
   it("defaults encyclopedia mobile filters to excluding bottled liquids", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
@@ -598,6 +622,7 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.state.settings.collapseDeviceModes).toBe(true);
     expect(appHost.state.settings.debugShowFps).toBe(false);
     expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(appHost.state.theme.name).toBe("Ayu Light");

@@ -21,6 +21,7 @@ import type {
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { collapseEntityVariantDefinitions } from "@/shared/entity-variants";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRect, GridRotation } from "@/domain/shared/grid";
 import { runInAction } from "mobx";
@@ -663,6 +664,9 @@ function handleSelectPlacementDeviceShortcut(options: {
     registry: options.registry,
     group: selectingGroup,
     shortcutIndex,
+    collapseDeviceModes: options.appHost.state.settings.collapseDeviceModes,
+    selectedVariantNameByCraftGroup:
+      options.appHost.state.workbench.selectedPlacementVariantByCraftGroup,
     canUseDefinition: (definition) => canPlaceEntityDefinitionInCurrentBase(
       options.appHost,
       definition,
@@ -1494,6 +1498,8 @@ export function resolveDeviceIdForPlacementGroupShortcut(options: {
   registry: RegistryContract;
   group: PlacementGroup;
   shortcutIndex: number;
+  collapseDeviceModes?: boolean;
+  selectedVariantNameByCraftGroup?: Readonly<Record<string, string>>;
   canUseDefinition?: (definition: EntityDefinition) => boolean;
 }): string | null {
   const entities = options.registry.entityDefinitions
@@ -1505,7 +1511,14 @@ export function resolveDeviceIdForPlacementGroupShortcut(options: {
     .filter((definition) => options.canUseDefinition?.(definition) ?? true)
     .sort((left, right) => left.displayOrder - right.displayOrder || left.id.localeCompare(right.id));
 
-  return entities[options.shortcutIndex]?.id ?? null;
+  const visibleEntities = options.collapseDeviceModes
+    ? collapseEntityVariantDefinitions({
+        definitions: entities,
+        selectedVariantNameByCraftGroup: options.selectedVariantNameByCraftGroup ?? {},
+      })
+    : entities;
+
+  return visibleEntities[options.shortcutIndex]?.id ?? null;
 }
 
 // AI-REMOVED 2026-07-11:

@@ -19,6 +19,7 @@ export interface AppSettings {
   readonly gameShowDeviceIcons: boolean;
   readonly gameUseInspectorPanel: boolean;
   readonly gameShowHotkeys: boolean;
+  readonly collapseDeviceModes: boolean;
   readonly gameAlwaysShowGridLines: boolean;
   readonly showGrassBackground: boolean;
   readonly debugShowFps: boolean;
@@ -38,6 +39,7 @@ export interface WorkbenchState {
   readonly leftDockWidth: number;
   readonly topBarCollapsed: boolean;
   readonly rightDockActiveTab: RightDockTabId;
+  readonly selectedPlacementVariantByCraftGroup: Readonly<Record<string, string>>;
 }
 
 export type ActiveTool =

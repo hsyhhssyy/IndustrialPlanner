@@ -99,6 +99,7 @@ const ALWAYS_SHOW_GRID_LINES_SETTING_ID = "game-always-show-grid-lines";
 const SHOW_GRASS_BACKGROUND_SETTING_ID = "game-show-grass-background";
 const SHOW_DEVICE_NAMES_SETTING_ID = "game-show-device-names";
 const SHOW_DEVICE_ICONS_SETTING_ID = "game-show-device-icons";
+const COLLAPSE_DEVICE_MODES_SETTING_ID = "game-collapse-device-modes";
 
 export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinition[] = [
   {
@@ -239,6 +240,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
           settingId: "game-use-blueprint-style-device-images",
           equals: false,
         },
+      },
+      {
+        id: COLLAPSE_DEVICE_MODES_SETTING_ID,
+        kind: "switch",
+        labelKey: "settingsField.game-collapse-device-modes",
+        descriptionKey: "settingsField.game-collapse-device-modesDescription",
+        defaultValue: true,
       },
     ],
   },

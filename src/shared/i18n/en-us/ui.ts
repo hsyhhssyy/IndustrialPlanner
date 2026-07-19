@@ -195,6 +195,8 @@ const UI: Record<string, string> = {
     "settingsField.debug-simulation-worker-detailed-reportDescription": "Report detailed simulation diagnostics in the logs. This severely degrades performance and is intended only for diagnosing simulation errors whose cause cannot otherwise be identified.",
     "settingsField.game-always-show-grid-lines": "Always Show Grid Lines",
     "settingsField.game-always-show-grid-linesDescription": "When enabled, grid lines are always visible. When disabled, they only appear in specific modes near the current preview.",
+    "settingsField.game-collapse-device-modes": "Collapse Device Modes",
+    "settingsField.game-collapse-device-modesDescription": "Collapse variants of the same device into one button and select modes from its right cap.",
     "settingsField.game-arknights-allow-empty-logistics-endpoints": "Allow Empty Logistics Starts",
     "settingsField.game-arknights-allow-empty-logistics-endpointsDescription": "When enabled, conveyors and pipes can start from empty cells. Otherwise they must start from a device with an output.",
     "settingsField.game-arknights-auto-create-splitters-and-convergers": "Auto Create Splitters/Convergers",

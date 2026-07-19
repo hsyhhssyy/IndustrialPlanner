@@ -314,6 +314,45 @@ describe("resolveDeviceIdForPlacementGroupShortcut", () => {
     });
     expect(result).toBe("a-device");
   });
+
+  it("uses the persisted family variant when device modes are collapsed", () => {
+    const registry = createRegistryStub([
+      createEntityStub("device-normal", "basicProduction", 100, [
+        "alter:device-family",
+        "alter-variant:normal",
+        "MainCraftGroup",
+      ]),
+      createEntityStub("device-liquid", "basicProduction", 101, [
+        "alter:device-family",
+        "alter-variant:liquid",
+      ]),
+      createEntityStub("standalone", "basicProduction", 200),
+    ]);
+
+    expect(resolveDeviceIdForPlacementGroupShortcut({
+      registry,
+      group: "basicProduction",
+      shortcutIndex: 0,
+      collapseDeviceModes: true,
+      selectedVariantNameByCraftGroup: {
+        "device-family": "liquid",
+      },
+    })).toBe("device-liquid");
+    expect(resolveDeviceIdForPlacementGroupShortcut({
+      registry,
+      group: "basicProduction",
+      shortcutIndex: 0,
+      collapseDeviceModes: true,
+      selectedVariantNameByCraftGroup: {},
+    })).toBe("device-normal");
+    expect(resolveDeviceIdForPlacementGroupShortcut({
+      registry,
+      group: "basicProduction",
+      shortcutIndex: 1,
+      collapseDeviceModes: true,
+      selectedVariantNameByCraftGroup: {},
+    })).toBe("standalone");
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -85,6 +85,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   gameShowDeviceIcons: boolean;
   gameUseInspectorPanel: boolean;
   gameShowHotkeys: boolean;
+  collapseDeviceModes: boolean;
   gameAlwaysShowGridLines: boolean;
   selectedActivityIds: string[];
   toolboxShowAllActivityContent: boolean;
@@ -102,6 +103,7 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   leftDockWidth: number;
   topBarCollapsed: boolean;
   rightDockActiveTab: RightDockTabId;
+  selectedPlacementVariantByCraftGroup: Record<string, string>;
   quickPlaceFavoriteEntityIds: Array<string | null>;
   dialogState: DialogStateMapReadWrite;
   toolbox: ToolboxStateReadWrite;
@@ -507,6 +509,7 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   leftDockWidth = DEFAULT_LEFT_DOCK_WIDTH;
   topBarCollapsed = false;
   rightDockActiveTab = DEFAULT_RIGHT_DOCK_TAB_ID;
+  selectedPlacementVariantByCraftGroup: Record<string, string> = {};
   quickPlaceFavoriteEntityIds: Array<string | null> = [];
   dialogState: DialogStateMapReadWrite = {
     toolbox: createDefaultDialogStateForKey("toolbox"),
@@ -685,6 +688,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     gameShowDeviceIcons: false,
     gameUseInspectorPanel: false,
     gameShowHotkeys: false,
+    collapseDeviceModes: true,
     gameAlwaysShowGridLines: true,
     selectedActivityIds: [],
     toolboxShowAllActivityContent: true,

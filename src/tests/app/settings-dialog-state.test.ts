@@ -63,6 +63,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-device-names": true,
         "game-show-device-icons": true,
         "game-show-hotkeys": true,
+        "game-collapse-device-modes": true,
         "game-always-show-grid-lines": true,
         "game-show-grass-background": false,
         "game-use-inspector-panel": false,
@@ -106,6 +107,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["shortcut-delete-device"]).toBe("F");
     expect(hydratedController.values["game-show-device-names"]).toBe(true);
     expect(hydratedController.values["game-show-device-icons"]).toBe(true);
+    expect(hydratedController.values["game-collapse-device-modes"]).toBe(true);
     expect(hydratedController.values["game-always-show-grid-lines"]).toBe(true);
     expect(hydratedController.values["game-show-grass-background"]).toBe(false);
     expect(hydratedController.values["game-use-blueprint-style-device-images"]).toBe(true);
@@ -308,6 +310,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-device-names": true,
         "game-show-device-icons": false,
         "game-show-hotkeys": true,
+        "game-collapse-device-modes": true,
         "game-always-show-grid-lines": true,
         "game-show-grass-background": false,
         "game-use-inspector-panel": false,

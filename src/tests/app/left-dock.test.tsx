@@ -239,6 +239,7 @@ describe("Left dock panel switching", () => {
       root.unmount();
     });
 
+    vi.useRealTimers();
     container.remove();
     localStorage.clear();
     vi.unstubAllGlobals();
@@ -294,9 +295,32 @@ describe("Left dock panel switching", () => {
     const regularDeviceLabel = visiblePanel.querySelector(
       '[data-ui-button-id="placement-item_port_storager_1"] .placement-button-label',
     );
-    expect(compactDeviceLabel?.textContent).toBe("固气转化机(气体)");
-    expect(compactDeviceLabel?.classList.contains("is-compact")).toBe(true);
+    expect(compactDeviceLabel?.textContent).toBe("固气转化机");
+    expect(compactDeviceLabel?.classList.contains("is-compact")).toBe(false);
     expect(regularDeviceLabel?.classList.contains("is-compact")).toBe(false);
+    const gasVariantCap = visiblePanel.querySelector(
+      '[data-ui-button-id="placement-transmuter_2_gastrans"] .placement-entity-variant-cap',
+    ) as HTMLElement | null;
+    const normalVariantCap = visiblePanel.querySelector(
+      '[data-ui-button-id="placement-item_port_filling_pd_mc_1"] .placement-entity-variant-cap',
+    ) as HTMLElement | null;
+    expect(visiblePanel.querySelectorAll(".placement-entity-variant-cap")).toHaveLength(7);
+    expect(gasVariantCap?.getAttribute("title")).toBe("气体模式");
+    expect(gasVariantCap?.style.maskImage).toContain(
+      "/assets/entity-variant-icons/icon_port_gas.png",
+    );
+    expect(normalVariantCap?.style.maskImage).toContain(
+      "/assets/entity-variant-icons/icon_port_solid.png",
+    );
+    expect(normalVariantCap?.style.backgroundColor).toBe("var(--placement-variant-cap-solid)");
+    expect(
+      visiblePanel.querySelector('[data-ui-button-id="placement-transmuter_2_solidtrans"]'),
+    ).toBeNull();
+    expect(
+      visiblePanel.querySelector(
+        '[data-ui-button-id="placement-item_port_storager_1"] .placement-entity-variant-cap',
+      ),
+    ).toBeNull();
     expect(visiblePanel.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(
       visiblePanel.querySelectorAll(".placement-action-button").length,
     );
@@ -309,6 +333,204 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel.textContent).toContain("G");
     expect(appHost.internalState.runtime.activePanel).toBeNull();
     expect(appHost.internalState.activeTool).toBe("select");
+  });
+
+  it("opens the variant menu when hovering anywhere on the main button and left-aligns it", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+    const placementTap = vi.spyOn(appHost.gestureAdapter, "handleUiButtonMouseTap")
+      .mockImplementation(() => undefined);
+
+    act(() => {
+      root.render(<LeftDock appHost={appHost} />);
+    });
+
+    const fillingButton = container.querySelector(
+      '[data-ui-button-id="placement-item_port_filling_pd_mc_1"]',
+    );
+    expect(fillingButton).not.toBeNull();
+    vi.spyOn(fillingButton as HTMLElement, "getBoundingClientRect").mockReturnValue({
+      bottom: 140,
+      height: 40,
+      left: 64,
+      right: 224,
+      top: 100,
+      width: 160,
+      x: 64,
+      y: 100,
+      toJSON: () => ({}),
+    });
+    act(() => {
+      dispatchPointerEvent(fillingButton as HTMLElement, "pointerover", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 80,
+        clientY: 120,
+      });
+    });
+
+    expect(placementTap).not.toHaveBeenCalled();
+    expect((container.querySelector(".placement-variant-menu") as HTMLElement | null)?.style.left)
+      .toBe("64px");
+    const menuItems = Array.from(container.querySelectorAll(".placement-variant-menu-item"));
+    expect(menuItems.map((item) => item.textContent)).toEqual([
+      "灌装机 · 基础模式",
+      "灌装机 · 液体模式",
+    ]);
+
+    const liquidItem = container.querySelector(
+      '[data-entity-variant-name="liquid"]',
+    );
+    act(() => {
+      if (liquidItem !== null) {
+        dispatchPointerEvent(liquidItem, "pointerdown", {
+          pointerId: 1,
+          pointerType: "mouse",
+          clientX: 0,
+          clientY: 0,
+          buttons: 1,
+        });
+        dispatchPointerEvent(liquidItem, "pointerup", {
+          pointerId: 1,
+          pointerType: "mouse",
+          clientX: 0,
+          clientY: 0,
+        });
+      }
+    });
+
+    expect(appHost.state.workbench.selectedPlacementVariantByCraftGroup).toEqual({
+      item_port_filling_pd_mc_1: "liquid",
+    });
+    expect(container.querySelector(".placement-variant-menu")).toBeNull();
+    expect(
+      container.querySelector('[data-ui-button-id="placement-item_port_liquid_filling_pd_mc_1"]'),
+    ).not.toBeNull();
+    expect(placementTap).toHaveBeenCalledWith(expect.objectContaining({
+      uiButtonId:
+        "ui-left-dock-placement-mode-item_port_liquid_filling_pd_mc_1-mouse-tap",
+    }));
+
+    placementTap.mockClear();
+    const selectedDeviceButton = container.querySelector(
+      '[data-ui-button-id="placement-item_port_liquid_filling_pd_mc_1"]',
+    );
+    act(() => {
+      if (selectedDeviceButton !== null) {
+        dispatchPointerEvent(selectedDeviceButton, "pointerdown", {
+          pointerId: 2,
+          pointerType: "mouse",
+          clientX: 0,
+          clientY: 0,
+          buttons: 1,
+        });
+        dispatchPointerEvent(selectedDeviceButton, "pointerup", {
+          pointerId: 2,
+          pointerType: "mouse",
+          clientX: 0,
+          clientY: 0,
+        });
+      }
+    });
+    expect(placementTap).toHaveBeenCalledWith(expect.objectContaining({
+      uiButtonId:
+        "ui-left-dock-placement-mode-item_port_liquid_filling_pd_mc_1-mouse-tap",
+    }));
+  });
+
+  it("opens the variant menu by long-pressing while preserving short-tap placement", () => {
+    vi.useFakeTimers();
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+    const placementTap = vi.spyOn(appHost.gestureAdapter, "handleUiButtonTouchTap")
+      .mockImplementation(() => undefined);
+
+    act(() => {
+      root.render(<LeftDock appHost={appHost} />);
+    });
+
+    const fillingButton = container.querySelector(
+      '[data-ui-button-id="placement-item_port_filling_pd_mc_1"]',
+    ) as HTMLButtonElement | null;
+    expect(fillingButton).not.toBeNull();
+
+    act(() => {
+      dispatchPointerEvent(fillingButton as HTMLButtonElement, "pointerdown", {
+        pointerId: 8,
+        pointerType: "touch",
+        clientX: 40,
+        clientY: 60,
+        buttons: 1,
+      });
+    });
+    expect(container.querySelector(".placement-variant-menu")).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(container.querySelector(".placement-variant-menu")).not.toBeNull();
+
+    act(() => {
+      dispatchPointerEvent(fillingButton as HTMLButtonElement, "pointerup", {
+        pointerId: 8,
+        pointerType: "touch",
+        clientX: 40,
+        clientY: 60,
+      });
+    });
+    expect(placementTap).not.toHaveBeenCalled();
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", cancelable: true }));
+    });
+    expect(container.querySelector(".placement-variant-menu")).toBeNull();
+
+    act(() => {
+      dispatchPointerEvent(fillingButton as HTMLButtonElement, "pointerdown", {
+        pointerId: 9,
+        pointerType: "touch",
+        clientX: 40,
+        clientY: 60,
+        buttons: 1,
+      });
+      dispatchPointerEvent(fillingButton as HTMLButtonElement, "pointerup", {
+        pointerId: 9,
+        pointerType: "touch",
+        clientX: 40,
+        clientY: 60,
+      });
+    });
+    expect(placementTap).toHaveBeenCalledWith(expect.objectContaining({
+      uiButtonId: "ui-left-dock-placement-mode-item_port_filling_pd_mc_1-touch-tap",
+    }));
+  });
+
+  it("renders every variant as an independent button when device mode collapsing is disabled", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.settings.collapseDeviceModes = false;
+    });
+
+    act(() => {
+      root.render(<LeftDock appHost={appHost} />);
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    expect(visiblePanel?.querySelectorAll(".placement-entity-variant-cap")).toHaveLength(14);
+    expect(
+      visiblePanel?.querySelector('[data-ui-button-id="placement-item_port_filling_pd_mc_1"]'),
+    ).not.toBeNull();
+    expect(
+      visiblePanel?.querySelector('[data-ui-button-id="placement-item_port_liquid_filling_pd_mc_1"]'),
+    ).not.toBeNull();
+    expect(visiblePanel?.querySelector(".placement-entity-variant-trigger")).toBeNull();
+    expect(
+      visiblePanel?.querySelector(
+        '[data-ui-button-id="placement-item_port_storager_1"] .placement-entity-variant-cap',
+      ),
+    ).toBeNull();
   });
 
   it("shows the debug log button above toolbox only when debug mode is enabled", () => {

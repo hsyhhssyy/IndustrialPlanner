@@ -48,6 +48,7 @@ const TEST_REGISTRY: RegistryContract = {
       portStorageBindings: [],
     },
   ],
+  entityVariantDefinitions: {},
   itemDefinitions: [
     { id: "ore", nameKey: "item.ore", iconId: "ore", displayOrder: 10000, tags: [] },
     { id: "plate", nameKey: "item.plate", iconId: "plate", displayOrder: 10000, tags: [] },

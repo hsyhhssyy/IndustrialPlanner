@@ -164,6 +164,9 @@ function normalizePersistedAppSettings(
     gameShowHotkeys: typeof persistedAppSettings.gameShowHotkeys === "boolean"
       ? persistedAppSettings.gameShowHotkeys
       : fallback.gameShowHotkeys,
+    collapseDeviceModes: typeof persistedAppSettings.collapseDeviceModes === "boolean"
+      ? persistedAppSettings.collapseDeviceModes
+      : fallback.collapseDeviceModes,
     gameAlwaysShowGridLines: gameUseBlueprintStyleDeviceImages
       ? true
       : typeof persistedAppSettings.gameAlwaysShowGridLines === "boolean"
@@ -224,6 +227,10 @@ function normalizePersistedWorkbenchState(
       persistedWorkbenchState,
       fallback.rightDockActiveTab,
     ),
+    selectedPlacementVariantByCraftGroup: normalizeStringRecord(
+      persistedWorkbenchState.selectedPlacementVariantByCraftGroup,
+      fallback.selectedPlacementVariantByCraftGroup,
+    ),
     quickPlaceFavoriteEntityIds: normalizeQuickPlaceFavoriteEntityIds(
       persistedWorkbenchState.quickPlaceFavoriteEntityIds,
       fallback.quickPlaceFavoriteEntityIds,
@@ -242,6 +249,30 @@ function normalizePersistedWorkbenchState(
         ? clampTimelineBottomDockHeight(persistedWorkbenchState.timelineBottomDockHeight)
         : fallback.timelineBottomDockHeight,
   };
+}
+
+function normalizeStringRecord(
+  value: unknown,
+  fallback: Readonly<Record<string, string>>,
+): Record<string, string> {
+  if (!isRecord(value)) {
+    return { ...fallback };
+  }
+
+  const normalized: Record<string, string> = {};
+  for (const [rawKey, rawValue] of Object.entries(value)) {
+    const key = rawKey.trim();
+    if (key === "" || typeof rawValue !== "string") {
+      continue;
+    }
+
+    const normalizedValue = rawValue.trim();
+    if (normalizedValue !== "") {
+      normalized[key] = normalizedValue;
+    }
+  }
+
+  return normalized;
 }
 
 function normalizeQuickPlaceFavoriteEntityIds(
