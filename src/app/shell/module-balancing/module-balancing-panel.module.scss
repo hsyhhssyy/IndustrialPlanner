@@ -9,19 +9,24 @@
 }
 
 // PC 端二栏布局：左侧模块库面板 + 右侧主内容
+// AI-CORRECTION 2026-07-19: 模块库收起时必须恢复为单列，展开时才启用固定宽度的双列布局。
 .module-balancing-desktop-layout {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   min-height: 0;
   height: 100%;
   overflow: hidden;
 }
 
+.module-balancing-desktop-layout.has-library {
+  grid-template-columns: 420px minmax(0, 1fr);
+}
+
 .module-balancing-library-panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  width: 312px;
-  min-width: 200px;
+  width: auto;
+  min-width: 0;
   min-height: 0;
   border-right: 1px solid var(--line);
   background: var(--surface-1);
@@ -37,10 +42,41 @@
   height: 100%;
 }
 
+.module-balancing-filtered-empty {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+  height: 100%;
+  padding: 28px;
+  box-sizing: border-box;
+  background: var(--surface-2);
+  text-align: center;
+}
+
+.module-balancing-filtered-empty h3,
+.module-balancing-filtered-empty p {
+  margin: 0;
+}
+
+.module-balancing-filtered-empty p {
+  max-width: 520px;
+  color: var(--text-2);
+}
+
+.module-balancing-filtered-empty-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .module-balancing-wizard-nav {
   display: flex;
   align-items: center;
   min-width: 0;
+  min-height: 56px;
   border-bottom: 1px solid var(--line);
   background: var(--surface-1);
 }
@@ -59,9 +95,10 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-height: 42px;
-  padding: 0 12px;
-  border-radius: 4px;
+  min-height: 40px;
+  margin: 8px;
+  padding: 0 14px;
+  border-radius: 8px;
   background: transparent;
   color: var(--text-1);
   font-weight: 600;
@@ -89,10 +126,14 @@
 .module-balancing-wizard-tabs {
   display: flex;
   align-items: center;
+  flex: 1 1 auto;
+  gap: 12px;
   min-width: 0;
+  min-height: 56px;
+  box-sizing: border-box;
   overflow-x: auto;
   scrollbar-width: thin;
-  padding: 8px 10px;
+  padding: 8px 16px;
 }
 
 // 步骤连接线（贯穿所有圆点中心），只覆盖 step-track，不延伸到 + 按钮
@@ -104,10 +145,10 @@
 
 .module-balancing-wizard-step-track::before {
   position: absolute;
-  top: 6px;
-  left: 14px;
-  right: 36px;
-  height: 3px;
+  top: 7px;
+  left: 28px;
+  right: 28px;
+  height: 2px;
   background: var(--line);
   content: "";
   z-index: 0;
@@ -118,10 +159,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   position: relative;
-  min-width: 52px;
-  padding: 0 14px;
+  min-width: 64px;
+  padding: 0 16px;
   white-space: nowrap;
   z-index: 1;
   font-size: 12px;
@@ -133,8 +174,9 @@
 
 // 步骤圆点
 .module-balancing-wizard-tab::before {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
   border-radius: 50%;
   border: 2px solid var(--line);
   background: var(--surface-1);
@@ -144,8 +186,8 @@
 }
 
 .module-balancing-wizard-tab.is-active {
-  color: var(--text-0);
-  font-weight: 800;
+  color: var(--accent-strong);
+  font-weight: 700;
 }
 
 .module-balancing-wizard-tab.is-active::before {
@@ -171,18 +213,29 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  margin-left: 4px;
-  border-radius: 50%;
-  border: 2px solid var(--line);
+  gap: 7px;
+  width: auto;
+  min-width: max-content;
+  height: 34px;
+  margin-left: auto;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
   background: var(--surface-1);
+  color: var(--text-0);
+  font-size: 0.76rem;
+  font-weight: 600;
   transition: border-color 0.15s, background 0.15s;
   flex-shrink: 0;
 }
 
+.module-balancing-wizard-add svg {
+  color: var(--accent-strong);
+  stroke-width: 2.25;
+}
+
 .module-balancing-wizard-add:hover {
-  border-color: var(--accent-soft);
+  border-color: var(--accent-strong);
   background: var(--accent-soft);
 }
 
@@ -485,8 +538,8 @@
 .module-balancing-custom-form {
   display: grid;
   align-content: start;
-  gap: 10px;
-  padding: 12px;
+  gap: 12px;
+  padding: 16px;
 }
 
 .module-balancing-search {
@@ -514,7 +567,7 @@
 
 .module-balancing-library-section {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .module-balancing-library-section h3,
@@ -539,21 +592,21 @@
 
 .module-balancing-module-list {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .module-balancing-module-card {
   position: relative;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: 34px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
-  min-height: 58px;
-  padding: 8px;
+  gap: 10px;
+  min-height: 72px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
   border-left-width: 3px;
   border-radius: 8px;
-  background: var(--surface-2);
+  background: var(--surface-1);
   color: var(--text-0);
   text-align: left;
   cursor: grab;
@@ -575,6 +628,7 @@
   min-width: 0;
 
   /* RecipeDisplay 在卡片内左对齐 */
+  /* AI-CORRECTION 2026-07-19: 跨 CSS Module 的嵌套选择器不会命中；实际左对齐由 RecipeDisplay 的 moduleLibrary variant 提供。 */
   .recipe-display-formula {
     justify-content: flex-start;
   }
@@ -607,13 +661,14 @@
 }
 
 .module-balancing-module-rate {
+  display: none;
   white-space: nowrap;
 }
 
 .module-balancing-module-actions {
   position: absolute;
-  right: 6px;
-  bottom: 6px;
+  right: 10px;
+  bottom: 10px;
   display: inline-flex;
   gap: 4px;
 }
@@ -655,7 +710,7 @@
 
 .module-balancing-port-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(380px, 380px));
   align-content: start;
   gap: 10px;
 }
@@ -738,7 +793,7 @@
 .module-balancing-stage-entry-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .module-balancing-stage-entry,
@@ -749,15 +804,15 @@
   align-items: center;
   justify-items: stretch;
   gap: 4px 10px;
-  min-height: 88px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  min-height: 92px;
+  padding: 12px 14px;
+  border-radius: 8px;
   text-align: left;
 }
 
 .module-balancing-stage-entry {
   border: 1px solid var(--line);
-  background: var(--surface-2);
+  background: var(--surface-1);
   color: var(--text-0);
   cursor: grab;
 }
@@ -815,12 +870,11 @@
 
 .module-balancing-balance-strip {
   display: grid;
-  gap: 8px;
-  padding: 10px 12px;
-  border: 0;
-  border-left: 3px solid var(--line-strong);
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
+  background: var(--surface-1);
 }
 
 .module-balancing-balance-strip-header {
@@ -854,6 +908,7 @@
 
 .module-balancing-balance-detail-list {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 380px));
 }
 
 .module-balancing-balance-chip {
@@ -911,6 +966,7 @@
 .module-balancing-summary-list,
 .module-balancing-warehouse-list {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 380px));
   gap: 6px;
 }
 
@@ -1365,11 +1421,8 @@
 .module-balancing-canvas-settings,
 .module-balancing-input-panel,
 .module-balancing-summary {
-  border-radius: 12px;
-  box-shadow: 0 1px 2px var(--shadow-floating-control);
-  @supports (background: color-mix(in srgb, red 50%, blue)) {
-    box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow-floating-control) 28%, transparent);
-  }
+  border-radius: 8px;
+  box-shadow: none;
 }
 
 .module-balancing-canvas-form > .module-balancing-form-field {
@@ -1409,14 +1462,14 @@
 
 .module-balancing-stage-detail {
   min-height: 0;
-  gap: 14px;
+  gap: 12px;
   padding: 0;
 }
 
 .module-balancing-stage-header {
-  padding: 14px;
+  padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--surface-1);
 }
 
@@ -1451,7 +1504,7 @@
   grid-column: 3;
   grid-row: 1;
   padding: 3px 7px;
-  border-radius: 999px;
+  border-radius: 7px;
   background: var(--accent-soft);
   color: var(--accent-strong);
   white-space: nowrap;
@@ -1464,18 +1517,17 @@
   justify-content: center;
   gap: 7px;
   border-style: dashed;
-  background: var(--surface-2);
+  background: var(--surface-1);
   @supports (background: color-mix(in srgb, red 50%, blue)) {
-    background: color-mix(in srgb, var(--surface-2) 58%, transparent);
+    background: color-mix(in srgb, var(--surface-1) 92%, var(--surface-2));
   }
   text-align: center;
 }
 
 .module-balancing-balance-strip {
-  padding: 14px;
+  padding: 14px 16px;
   border: 1px solid var(--line);
-  border-left: 4px solid var(--accent-strong);
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 .module-balancing-balance-chip {
@@ -1626,9 +1678,9 @@
 }
 
 .module-balancing-module-card {
-  min-height: 64px;
-  padding: 10px;
-  border-radius: 10px;
+  min-height: 72px;
+  padding: 12px;
+  border-radius: 8px;
 }
 
 @media (max-width: 800px) {

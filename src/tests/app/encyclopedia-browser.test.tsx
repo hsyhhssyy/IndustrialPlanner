@@ -65,11 +65,13 @@ function BrowserHarness({ appHost }: { appHost: AppHost }) {
       itemFilter={(item) => item.id === "item_copper_ore"}
       locale="zh-CN"
       mobileSelectedCategories={mobileSelectedCategories}
+      selectedCustomFilterIndex={null}
       onDesktopCategoryChange={setDesktopCategory}
       onEntityClick={() => {}}
       onItemClick={() => {}}
       onMobileSelectedCategoriesChange={setMobileSelectedCategories}
       onQueryChange={setQuery}
+      onSelectedCustomFilterChange={() => {}}
       query={query}
       t={t}
     />

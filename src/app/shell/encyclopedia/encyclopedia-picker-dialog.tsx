@@ -76,6 +76,7 @@ export const EncyclopediaPickerDialog = observer(function EncyclopediaPickerDial
     >
       <EncyclopediaBrowser
         autoFocusSearch
+        customFilters={controller.customFilters}
         desktopCategory={controller.desktopCategory}
         entityFilter={controller.matchesEntity}
         index={index}
@@ -87,11 +88,13 @@ export const EncyclopediaPickerDialog = observer(function EncyclopediaPickerDial
         locale={appHost.state.settings.locale}
         mobileSelectedCategories={controller.mobileSelectedCategories}
         recentItemIds={controller.recentItemIds}
+        selectedCustomFilterIndex={controller.selectedCustomFilterIndex}
         onDesktopCategoryChange={controller.setDesktopCategory}
         onEntityClick={controller.selectEntity}
         onItemClick={controller.selectItem}
         onMobileSelectedCategoriesChange={controller.setMobileSelectedCategories}
         onQueryChange={controller.setQuery}
+        onSelectedCustomFilterChange={controller.setSelectedCustomFilterIndex}
         query={controller.query}
         t={t}
       />

@@ -193,6 +193,7 @@ export type UiKey =
   | "moduleBalancing.emptyPorts"
   | "moduleBalancing.exhaustTime"
   | "moduleBalancing.expandDetails"
+  | "moduleBalancing.filteredCanvasesEmpty"
   | "moduleBalancing.inputItems"
   | "moduleBalancing.moduleIcon"
   | "moduleBalancing.moduleLibrary"

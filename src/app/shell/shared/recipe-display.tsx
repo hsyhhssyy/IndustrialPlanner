@@ -19,7 +19,7 @@ export interface RecipeDisplayProps {
   index: RecipeDisplayIndex;
   /** 是否显示设备图标和名称，默认 false */
   showDevice?: boolean;
-  variant?: "default" | "inspectorStatus";
+  variant?: "default" | "inspectorStatus" | "moduleLibrary";
   progressPercent?: number | null;
   progressKind?: "ring" | "bar";
   /** 是否为触屏设备，触屏时禁用 hover 触发，仅保留 click toggle */
@@ -174,7 +174,7 @@ export function RecipeDisplay({
   }
 
   const formula = (
-    <div className={cm(styles, "recipe-display-formula")}>
+    <div className={cm(styles, `recipe-display-formula${variant === "moduleLibrary" ? " recipe-display-formula-module-library" : ""}`)}>
       {recipe.inputs.map((input, i) => (
         <span key={`in-${input.itemId}`} className={cm(styles, "recipe-display-formula-item-group")}>
           {i > 0 && <span className={cm(styles, "recipe-display-formula-plus")}>+</span>}

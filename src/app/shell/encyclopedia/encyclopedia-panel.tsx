@@ -630,11 +630,13 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
   }
   return (
     <EncyclopediaBrowser
+      customFilters={[]}
       desktopCategory={wikiState.desktopCategory}
       index={index}
       isTouch={isTouch}
       locale={appHost.state.settings.locale}
       mobileSelectedCategories={wikiState.mobileSelectedCategories}
+      selectedCustomFilterIndex={null}
       onDesktopCategoryChange={(category) => {
         runInAction(() => {
           wikiState.desktopCategory = category;
@@ -652,6 +654,7 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
           wikiState.searchQuery = nextQuery;
         });
       }}
+      onSelectedCustomFilterChange={() => {}}
       query={wikiState.searchQuery}
       t={t}
     />

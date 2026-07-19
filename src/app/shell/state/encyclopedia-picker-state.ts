@@ -2,6 +2,7 @@ import { makeAutoObservable } from "mobx";
 
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
 import type {
+  CustomFilter,
   ToolboxWikiDesktopCategory,
   ToolboxWikiMobileFilterOption,
 } from "@/app/toolbox-types";
@@ -24,6 +25,8 @@ export interface EncyclopediaPickerRequest {
   includeInactiveActivityItems?: boolean;
   initialDesktopCategory?: ToolboxWikiDesktopCategory;
   initialMobileSelectedCategories?: readonly ToolboxWikiMobileFilterOption[];
+  /** 调用方传入的自定义筛选列表，per-invocation，不持久化 */
+  customFilters?: readonly CustomFilter[];
 }
 
 const DEFAULT_PICKER_KINDS: EncyclopediaPickerSelectionKind[] = ["item"];
@@ -69,6 +72,9 @@ export class WorkbenchEncyclopediaPickerController {
   allowedKinds: EncyclopediaPickerSelectionKind[] = [...DEFAULT_PICKER_KINDS];
   includeInactiveActivityItems = false;
   recentItemIds: string[] = [];
+
+  customFilters: readonly CustomFilter[] = [];
+  selectedCustomFilterIndex: number | null = null;
 
   _resolveSharedFilterState: () => EncyclopediaPickerSharedFilterState;
   _itemFilter: ((item: ItemDefinition) => boolean) | undefined;
@@ -119,6 +125,10 @@ export class WorkbenchEncyclopediaPickerController {
 
   public setQuery(query: string) {
     this.query = query;
+  }
+
+  public setSelectedCustomFilterIndex(index: number | null) {
+    this.selectedCustomFilterIndex = index;
   }
 
   public setDesktopCategory(category: ToolboxWikiDesktopCategory) {
@@ -196,6 +206,8 @@ export class WorkbenchEncyclopediaPickerController {
     if (request.initialMobileSelectedCategories !== undefined) {
       this.setMobileSelectedCategories([...request.initialMobileSelectedCategories]);
     }
+    this.customFilters = request.customFilters ?? [];
+    this.selectedCustomFilterIndex = null;
     this._itemFilter = request.filterItem;
     this._entityFilter = request.filterEntity;
     this.includeInactiveActivityItems = request.includeInactiveActivityItems === true;
@@ -239,6 +251,8 @@ export class WorkbenchEncyclopediaPickerController {
     const resolver = this._resolver;
     this._resolver = null;
     this.dialogState.visible = false;
+    this.customFilters = [];
+    this.selectedCustomFilterIndex = null;
     this._itemFilter = undefined;
     this._entityFilter = undefined;
     this.includeInactiveActivityItems = false;

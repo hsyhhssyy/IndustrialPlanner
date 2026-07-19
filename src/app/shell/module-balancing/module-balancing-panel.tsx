@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
 import LucideArrowLeft from "~icons/lucide/arrow-left";
@@ -134,6 +134,13 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     includeInactiveActivityContent: showAllActivityContent,
     activeActivityIds,
   });
+  const naturalResourcesCustomFilter = useMemo(() => {
+    const itemIds = appHost.workspace.registry.itemDefinitions
+      .filter((item) => item.tags.includes("自然资源"))
+      .map((item) => item.id);
+    if (itemIds.length === 0) return [];
+    return [{ i18nKey: "pickerCustomFilter.naturalResources", itemIds }];
+  }, [appHost.workspace.registry.itemDefinitions]);
   const visibleCanvases = showAllActivityContent
     ? balancingState.canvases
     : balancingState.canvases.filter((canvas) =>
@@ -351,6 +358,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
 
   const requestPortSelection = async (target: PendingPortTarget) => {
     const itemId = await appHost.encyclopediaPicker.pickItem({
+      customFilters: naturalResourcesCustomFilter,
       includeInactiveActivityItems: showAllActivityContent,
       title: t("encyclopediaPicker.title.item"),
     });
@@ -362,12 +370,49 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     addPort(target, itemId);
   };
 
+  const createCanvas = () => {
+    const normalizedName = newCanvasName.trim();
+    const nextCanvas = createDefaultModuleBalancingCanvas();
+    nextCanvas.id = createModuleBalancingId("canvas");
+    nextCanvas.name = normalizedName || `${t("moduleBalancing.canvas")} ${balancingState.canvases.length + 1}`;
+    nextCanvas.stages[0] = {
+      id: createModuleBalancingId("stage"),
+      name: `${t("moduleBalancing.stage")} 1`,
+      entries: [],
+    };
+    runInAction(() => {
+      balancingState.canvases.push(nextCanvas);
+      balancingState.activeCanvasId = nextCanvas.id;
+    });
+    setSelectedStageId(nextCanvas.stages[0]?.id ?? null);
+    setActivePage({ kind: "canvas" });
+    setNewCanvasName("");
+    setNewCanvasDialogOpen(false);
+  };
+
   if (activeCanvas === null || computation === null) {
     return (
       <div className={cm(styles, "toolbox-dialog-content module-balancing-panel")}>
-        <div className={cm(styles, "toolbox-dialog-placeholder")}>
+        <div className={cm(styles, "module-balancing-filtered-empty")}>
           <h3>{t("toolboxDialog.tab.moduleBalancing")}</h3>
-          <p>{t("toolboxDialog.empty")}</p>
+          <p>{t("moduleBalancing.filteredCanvasesEmpty")}</p>
+          <div className={cm(styles, "module-balancing-filtered-empty-actions")}>
+            <button className={cm(styles, "module-balancing-primary-button")} type="button" onClick={createCanvas}>
+              <LucidePlus aria-hidden="true" />
+              <span>{t("moduleBalancing.newCanvas")}</span>
+            </button>
+            <button
+              className={cm(styles, "module-balancing-icon-text-button")}
+              type="button"
+              onClick={() => {
+                runInAction(() => {
+                  appHost.internalState.settings.toolboxShowAllActivityContent = true;
+                });
+              }}
+            >
+              <span>{t("settingsField.other-toolbox-show-all-activity-content")}</span>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -390,25 +435,6 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       return;
     }
     openAddModuleDraft(selectedStage.id, moduleId);
-  };
-  const createCanvas = () => {
-    const normalizedName = newCanvasName.trim();
-    const nextCanvas = createDefaultModuleBalancingCanvas();
-    nextCanvas.id = createModuleBalancingId("canvas");
-    nextCanvas.name = normalizedName || `${t("moduleBalancing.canvas")} ${balancingState.canvases.length + 1}`;
-    nextCanvas.stages[0] = {
-      id: createModuleBalancingId("stage"),
-      name: `${t("moduleBalancing.stage")} 1`,
-      entries: [],
-    };
-    runInAction(() => {
-      balancingState.canvases.push(nextCanvas);
-      balancingState.activeCanvasId = nextCanvas.id;
-    });
-    setSelectedStageId(nextCanvas.stages[0]?.id ?? null);
-    setActivePage({ kind: "canvas" });
-    setNewCanvasName("");
-    setNewCanvasDialogOpen(false);
   };
 
   const content = (
@@ -557,7 +583,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           ) : null}
         </>
       ) : (
-        <div className={cm(styles, "module-balancing-desktop-layout")}>
+        <div className={cm(styles, `module-balancing-desktop-layout${libraryOpen ? " has-library" : ""}`)}>
           {libraryOpen ? (
             <aside className={cm(styles, "module-balancing-library-panel")}>
               {libraryPanelContent}
@@ -854,7 +880,7 @@ function ModuleCard({
           <ActivityIconStrip activityIds={activityIds} />
         </span>
         {isSystemRecipe ? (
-          <RecipeDisplay recipeId={(module as ModuleBalancingSystemRecipeModule).recipeId} index={index} isTouch={isTouch} t={t} />
+          <RecipeDisplay recipeId={(module as ModuleBalancingSystemRecipeModule).recipeId} index={index} isTouch={isTouch} t={t} variant="moduleLibrary" />
         ) : subtitle !== undefined ? (
           <span className={cm(styles, "module-balancing-module-subtitle")}>{subtitle}</span>
         ) : null}
@@ -991,6 +1017,7 @@ const WizardNavigation = observer(function WizardNavigation({
           onClick={onAddStage}
         >
           <LucidePlus aria-hidden="true" />
+          <span>{t("moduleBalancing.newStage")}</span>
         </button>
       </div>
     </nav>

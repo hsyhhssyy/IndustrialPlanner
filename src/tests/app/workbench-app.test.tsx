@@ -3309,6 +3309,103 @@ describe("WorkbenchApp", () => {
     expect(stageTab?.textContent).toBe("炼铁阶段");
   });
 
+  it("allows creating a blank canvas when activity filtering hides every persisted canvas", () => {
+    localStorage.setItem(
+      APP_SETTINGS_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_APP_SETTINGS_STORAGE,
+        selectedActivityIds: [],
+        toolboxShowAllActivityContent: false,
+      }),
+    );
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        toolboxDialog: createDialogStateSnapshot({
+          visible: true,
+          activeTab: TOOLBOX_DIALOG_TAB_IDS[2],
+        }),
+        moduleBalancing: createModuleBalancingStorageSnapshot({
+          activeCanvasId: "activity-canvas",
+          canvases: [{
+            id: "activity-canvas",
+            name: "活动画布",
+            globalInputs: [],
+            stages: [{
+              id: "activity-stage",
+              name: "活动阶段",
+              entries: [{
+                moduleId: "r_component_activity_xiranite_cmpt_from_xiranite_powder_basic",
+                quantity: 1,
+              }],
+            }],
+            warehouseCapacity: null,
+          }],
+        }),
+      })),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    expect(container.textContent).toContain("现有画布均包含未启用的活动内容");
+    expect(container.textContent).toContain("工具箱显示所有活动内容");
+
+    const createCanvasButton = Array.from(container.querySelectorAll("button"))
+      .find((button) => button.textContent === "新建画布") as HTMLButtonElement | undefined;
+
+    expect(createCanvasButton).toBeDefined();
+
+    act(() => {
+      createCanvasButton?.click();
+    });
+
+    expect(appHost.internalState.workbench.toolbox.moduleBalancing.canvases).toHaveLength(2);
+    expect(appHost.internalState.workbench.toolbox.moduleBalancing.canvases[0]?.id).toBe("activity-canvas");
+    expect(appHost.internalState.workbench.toolbox.moduleBalancing.activeCanvasId).not.toBe("activity-canvas");
+    expect(container.querySelector(".module-balancing-canvas-settings")).not.toBeNull();
+    expect(container.textContent).not.toContain("现有画布均包含未启用的活动内容");
+  });
+
+  it("restores the full desktop workspace track when the module library closes", () => {
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        toolboxDialog: createDialogStateSnapshot({
+          visible: true,
+          activeTab: TOOLBOX_DIALOG_TAB_IDS[2],
+        }),
+      })),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const desktopLayout = container.querySelector(".module-balancing-desktop-layout");
+    const libraryPanel = desktopLayout?.querySelector(".module-balancing-library-panel");
+    const closeLibraryButton = libraryPanel?.querySelector('button[aria-label="关闭"]') as HTMLButtonElement | null;
+
+    expect(desktopLayout?.classList.contains("has-library")).toBe(true);
+    expect(container.querySelector(".recipe-display-formula-module-library")).not.toBeNull();
+    expect(closeLibraryButton).not.toBeNull();
+
+    act(() => {
+      closeLibraryButton?.click();
+    });
+
+    expect(desktopLayout?.classList.contains("has-library")).toBe(false);
+    expect(desktopLayout?.querySelector(".module-balancing-library-panel")).toBeNull();
+    expect(desktopLayout?.querySelector(".module-balancing-wizard")).not.toBeNull();
+  });
+
   it("temporarily falls back to the floating toolbox on phones and restores bottom dock on tablets", () => {
     coarsePointer = true;
     hoverNone = true;

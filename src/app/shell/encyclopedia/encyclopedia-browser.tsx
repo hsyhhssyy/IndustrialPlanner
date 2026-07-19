@@ -3,6 +3,7 @@ import { pinyin } from "pinyin-pro";
 
 import type { AppLocale } from "@/domain/app/types/app-types";
 import type {
+  CustomFilter,
   ToolboxWikiDesktopCategory as CategoryType,
   ToolboxWikiEntityGroupCategory,
   ToolboxWikiMobileCategory as FilterableCategory,
@@ -57,9 +58,12 @@ export interface EncyclopediaBrowserProps {
   desktopCategory: CategoryType;
   mobileSelectedCategories: ToolboxWikiMobileFilterOption[];
   recentItemIds?: string[];
+  customFilters?: readonly CustomFilter[];
+  selectedCustomFilterIndex: number | null;
   onQueryChange: (query: string) => void;
   onDesktopCategoryChange: (category: CategoryType) => void;
   onMobileSelectedCategoriesChange: (categories: ToolboxWikiMobileFilterOption[]) => void;
+  onSelectedCustomFilterChange: (index: number | null) => void;
   onItemClick: (id: string) => void;
   onEntityClick: (id: string) => void;
   itemFilter?: (item: ItemDefinition) => boolean;
@@ -374,12 +378,18 @@ function RecentItemsRow({
 function SidebarCategories({
   activeCategory,
   availableCategories,
+  customFilters,
+  selectedCustomFilterIndex,
   onChange,
+  onCustomFilterChange,
   t,
 }: {
   activeCategory: CategoryType;
   availableCategories: readonly CategoryType[];
+  customFilters: readonly CustomFilter[];
+  selectedCustomFilterIndex: number | null;
   onChange: (category: CategoryType) => void;
+  onCustomFilterChange: (index: number | null) => void;
   t: (key: string) => string;
 }) {
   const availableSet = useMemo(
@@ -398,6 +408,8 @@ function SidebarCategories({
       id: group as CategoryType,
       label: t(`uiGroup.${group}`),
     }));
+
+  const hasCustomFilters = customFilters.length > 0;
 
   return (
     <div className={cm(styles, "encyclopedia-category-list")}>
@@ -420,25 +432,42 @@ function SidebarCategories({
           onChange={onChange}
         />
       ))}
+      {hasCustomFilters ? <hr className={cm(styles, "encyclopedia-sidebar-divider")} /> : null}
+      {customFilters.map((filter, index) => (
+        <button
+          key={`custom-${index}`}
+          type="button"
+          className={cm(styles, `encyclopedia-category-button${selectedCustomFilterIndex === index ? " is-active" : ""}`)}
+          onClick={() => onCustomFilterChange(selectedCustomFilterIndex === index ? null : index)}
+        >
+          {t(filter.i18nKey)}
+        </button>
+      ))}
     </div>
   );
 }
 
 function CategoryDropdown({
   availableCategories,
+  customFilters,
   isOpen,
   onChange,
   onClose,
+  onCustomFilterChange,
   onToggle,
   selectedCategories,
+  selectedCustomFilterIndex,
   t,
 }: {
   availableCategories: readonly ToolboxWikiMobileFilterOption[];
+  customFilters: readonly CustomFilter[];
   isOpen: boolean;
   onChange: (categories: ToolboxWikiMobileFilterOption[]) => void;
   onClose: () => void;
+  onCustomFilterChange: (index: number | null) => void;
   onToggle: () => void;
   selectedCategories: readonly ToolboxWikiMobileFilterOption[];
+  selectedCustomFilterIndex: number | null;
   t: (key: string) => string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -524,6 +553,27 @@ function CategoryDropdown({
               </span>
             </button>
           ))}
+          {customFilters.length > 0 ? (
+            <>
+              <hr className={cm(styles, "encyclopedia-sidebar-divider")} />
+              {customFilters.map((filter, index) => (
+                <button
+                  key={`custom-${index}`}
+                  type="button"
+                  className={cm(styles, `encyclopedia-category-dropdown-item${selectedCustomFilterIndex === index ? " is-active" : ""}`)}
+                  onClick={() => {
+                    onCustomFilterChange(selectedCustomFilterIndex === index ? null : index);
+                    onClose();
+                  }}
+                >
+                  <span>{t(filter.i18nKey)}</span>
+                  <span className={cm(styles, "encyclopedia-category-dropdown-check")}>
+                    {selectedCustomFilterIndex === index ? "✓" : ""}
+                  </span>
+                </button>
+              ))}
+            </>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -554,6 +604,7 @@ function CategoryButton({
 
 export function EncyclopediaBrowser({
   autoFocusSearch = false,
+  customFilters,
   desktopCategory,
   entityFilter,
   index,
@@ -562,11 +613,13 @@ export function EncyclopediaBrowser({
   locale,
   mobileSelectedCategories,
   recentItemIds,
+  selectedCustomFilterIndex,
   onDesktopCategoryChange,
   onEntityClick,
   onItemClick,
   onMobileSelectedCategoriesChange,
   onQueryChange,
+  onSelectedCustomFilterChange,
   query,
   t,
 }: EncyclopediaBrowserProps) {
@@ -729,21 +782,38 @@ export function EncyclopediaBrowser({
       }
 
       if (selectedMobileCategories.size === 0) {
+        // 自定义筛选叠加：在现有分类过滤结果上进一步收窄
+        if (selectedCustomFilterIndex !== null) {
+          const allowedIds = new Set(customFilters?.[selectedCustomFilterIndex]?.itemIds ?? []);
+          items = items.filter((item) => allowedIds.has(item.id));
+        }
         return items;
       }
 
-      return selectedMobileCategories.has("item") ? items : [];
+      const result = selectedMobileCategories.has("item") ? items : [];
+      if (result.length > 0 && selectedCustomFilterIndex !== null) {
+        const allowedIds = new Set(customFilters?.[selectedCustomFilterIndex]?.itemIds ?? []);
+        return result.filter((item) => allowedIds.has(item.id));
+      }
+      return result;
     }
 
     if (desktopCategory !== "all" && desktopCategory !== "item" && desktopCategory !== "entity") {
       return [];
     }
 
-    return desktopCategory === "entity" ? [] : items;
+    const result = desktopCategory === "entity" ? [] : items;
+    if (result.length > 0 && selectedCustomFilterIndex !== null) {
+      const allowedIds = new Set(customFilters?.[selectedCustomFilterIndex]?.itemIds ?? []);
+      return result.filter((item) => allowedIds.has(item.id));
+    }
+    return result;
   }, [
+    customFilters,
     desktopCategory,
     isTouch,
     searchMatchedItems,
+    selectedCustomFilterIndex,
     selectedMobileCategories,
     selectedMobileFilters,
   ]);
@@ -790,7 +860,10 @@ export function EncyclopediaBrowser({
             <SidebarCategories
               activeCategory={desktopCategory}
               availableCategories={availableDesktopCategories}
+              customFilters={customFilters ?? []}
+              selectedCustomFilterIndex={selectedCustomFilterIndex}
               onChange={onDesktopCategoryChange}
+              onCustomFilterChange={onSelectedCustomFilterChange}
               t={t}
             />
           </nav>
@@ -826,11 +899,14 @@ export function EncyclopediaBrowser({
         />
         <CategoryDropdown
           availableCategories={availableMobileCategories}
+          customFilters={customFilters ?? []}
           isOpen={categoryMenuOpen}
           onChange={onMobileSelectedCategoriesChange}
           onClose={() => setCategoryMenuOpen(false)}
+          onCustomFilterChange={onSelectedCustomFilterChange}
           onToggle={() => setCategoryMenuOpen((value) => !value)}
           selectedCategories={mobileSelectedCategories}
+          selectedCustomFilterIndex={selectedCustomFilterIndex}
           t={t}
         />
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import LucideChevronsRight from "~icons/lucide/chevrons-right";
 import LucideMinus from "~icons/lucide/minus";
@@ -6,6 +6,7 @@ import LucidePlus from "~icons/lucide/plus";
 import LucideX from "~icons/lucide/x";
 
 import type { AppHost } from "@/app/host/app-host";
+import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { SlotConfigInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
@@ -90,6 +91,29 @@ export function SlotConfigInspector({
   const itemById = new Map(
     appHost.workspace.registry.itemDefinitions.map((item) => [item.id, item]),
   );
+  // 计算该设备可以运行的所有配方的原料与产物物品 ID 集合
+  const slotCustomFilters = useMemo(() => {
+    const recipeDefs = appHost.workspace.registry.recipeDefinitions;
+    const machineId = definition.id;
+    const itemIdSet = new Set<string>();
+    for (const recipe of recipeDefs) {
+      if (recipe.machineId !== machineId) continue;
+      if (recipe.tags.includes(TOOLBOX_HIDDEN_RECIPE_TAG)) continue;
+      // 跳过 fluid 通配符等非具体物品
+      for (const input of recipe.inputs) {
+        if (input.itemId !== "fluid") {
+          itemIdSet.add(input.itemId);
+        }
+      }
+      for (const output of recipe.outputs) {
+        if (output.itemId !== "fluid") {
+          itemIdSet.add(output.itemId);
+        }
+      }
+    }
+    if (itemIdSet.size === 0) return [];
+    return [{ i18nKey: "pickerCustomFilter.rawMaterialsAndProducts", itemIds: [...itemIdSet] }];
+  }, [appHost.workspace.registry.recipeDefinitions, definition.id]);
   const runtimeSlotByKey = buildRuntimeSlotMap(runtimeStatus ?? null);
   const debugMode = appHost.state?.settings?.debugMode === true;
   const slotGroupIds = debugMode
@@ -198,6 +222,7 @@ export function SlotConfigInspector({
       const rowForFilter = rowsForFilter.find((candidate) => candidate.slotId === row.slotId) ?? row;
       const itemId = await appHost.encyclopediaPicker.pickItem({
         title: translate("encyclopediaPicker.title.item"),
+        customFilters: slotCustomFilters,
         filterItem: (item) => canSelectItemForRow(
           item,
           rowForFilter,

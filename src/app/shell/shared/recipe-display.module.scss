@@ -35,6 +35,22 @@
   gap: 4px;
 }
 
+.recipe-display-formula-module-library {
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+}
+
+.recipe-display-formula-module-library .recipe-display-formula-arrow {
+  flex: 0 0 auto;
+  margin-inline: 5px;
+}
+
+.recipe-display-formula-module-library .recipe-display-formula-arrow > span:last-child {
+  white-space: nowrap;
+}
+
 .recipe-display-formula-inspector {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr);

@@ -24,6 +24,13 @@ export type ToolboxWikiMobileFilterOption =
   | ToolboxWikiMobileCategory
   | "excludeBottledLiquid";
 
+export interface CustomFilter {
+  /** 翻译 key，通过 t() 获取显示名称 */
+  i18nKey: string;
+  /** 该筛选包含的物品 ID 列表 */
+  itemIds: string[];
+}
+
 export interface ToolboxWikiNavigationEntry {
   readonly type: ToolboxWikiNavigationEntryType;
   readonly id: string;
