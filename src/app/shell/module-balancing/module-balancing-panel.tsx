@@ -510,7 +510,6 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             expandedBalanceIds={expandedBalanceIds}
             index={index}
             isTouch={isTouch}
-            libraryOpen={libraryOpen}
             onAddModule={() => {
               if (libraryOpen) {
                 // 已展开 → 触发高亮闪烁引导用户点击模块库
@@ -1120,7 +1119,6 @@ const StageDetailPanel = observer(function StageDetailPanel({
   expandedBalanceIds,
   index,
   isTouch,
-  libraryOpen,
   onAddModule,
   onAddStage,
   onClearStage,
@@ -1136,7 +1134,6 @@ const StageDetailPanel = observer(function StageDetailPanel({
   expandedBalanceIds: Set<string>;
   index: ModuleBalancingIndex;
   isTouch: boolean;
-  libraryOpen: boolean;
   onAddModule: () => void;
   onAddStage: () => void;
   onClearStage: (stage: ModuleBalancingStageReadWrite) => void;
