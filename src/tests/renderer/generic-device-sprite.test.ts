@@ -2534,7 +2534,7 @@ function createSlotDefaults() {
 function createEntityDefinitionStub(): EntityDefinition {
   return {
     id: "storager_1",
-    nameKey: "registry.entity.item_port_storager_1.name",
+    nameKey: "registry.entity.storager_1.name",
     spriteId: "item_port_storager_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
@@ -2613,7 +2613,7 @@ function createLiquidInputEntityDefinitionStub(): EntityDefinition {
   return {
     ...createEntityDefinitionStub(),
     id: "liquid_filling_pd_mc_1",
-    nameKey: "registry.entity.item_port_liquid_filling_pd_mc_1.name",
+    nameKey: "registry.entity.liquid_filling_pd_mc_1.name",
     footprint: { width: 6, height: 4 },
     portGroups: [
       {
@@ -2670,7 +2670,7 @@ function createWaterPumpEntityDefinitionStub(): EntityDefinition {
   return {
     ...createEntityDefinitionStub(),
     id: "water_pump_1",
-    nameKey: "registry.entity.item_port_water_pump_1.name",
+    nameKey: "registry.entity.water_pump_1.name",
     spriteId: "item_port_water_pump_1",
     footprint: { width: 3, height: 3 },
     spriteOffset: {
@@ -2753,7 +2753,7 @@ function createBeltLogisticsEntityDefinitionStub(): EntityDefinition {
   return {
     ...createEntityDefinitionStub(),
     id: "log_splitter",
-    nameKey: "registry.entity.item_log_splitter.name",
+    nameKey: "registry.entity.log_splitter.name",
     spriteId: "item_log_splitter",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
@@ -2979,7 +2979,7 @@ function createRenderHostStub(
       app: {
         actions: {
           translate: vi.fn((key: string) => {
-            if (key === "registry.entity.item_port_storager_1.name") {
+            if (key === "registry.entity.storager_1.name") {
               return "Storage"
             }
 

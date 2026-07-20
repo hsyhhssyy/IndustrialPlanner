@@ -718,7 +718,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "storager_1",
-    nameKey: "registry.entity.item_port_storager_1.name",
+    nameKey: "registry.entity.storager_1.name",
     spriteId: "item_port_storager_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
@@ -806,7 +806,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "log_hongs_bus",
-    nameKey: "registry.entity.item_port_log_hongs_bus.name",
+    nameKey: "registry.entity.log_hongs_bus.name",
     spriteId: "item_port_log_hongs_bus",
     footprint: { width: 4, height: 8 },
     uiGroup: "warehouse",
@@ -826,7 +826,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "log_hongs_bus_source",
-    nameKey: "registry.entity.item_port_log_hongs_bus_source.name",
+    nameKey: "registry.entity.log_hongs_bus_source.name",
     spriteId: "item_port_log_hongs_bus_source",
     footprint: { width: 4, height: 4 },
     uiGroup: "warehouse",
@@ -852,7 +852,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "unloader_1",
-    nameKey: "registry.entity.item_port_unloader_1.name",
+    nameKey: "registry.entity.unloader_1.name",
     spriteId: "item_port_unloader_1",
     footprint: { width: 3, height: 1 },
     spriteOffset: {
@@ -910,7 +910,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "mix_pool_1",
-    nameKey: "registry.entity.item_port_mix_pool_1.name",
+    nameKey: "registry.entity.mix_pool_1.name",
     spriteId: "item_port_mix_pool_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
@@ -1016,7 +1016,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "grinder_1",
-    nameKey: "registry.entity.item_port_grinder_1.name",
+    nameKey: "registry.entity.grinder_1.name",
     spriteId: "item_port_grinder_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
@@ -1098,7 +1098,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "liquid_filling_pd_mc_1",
-    nameKey: "registry.entity.item_port_liquid_filling_pd_mc_1.name",
+    nameKey: "registry.entity.liquid_filling_pd_mc_1.name",
     spriteId: "item_port_liquid_filling_pd_mc_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
@@ -1172,7 +1172,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "filling_pd_mc_1",
-    nameKey: "registry.entity.item_port_filling_pd_mc_1.name",
+    nameKey: "registry.entity.filling_pd_mc_1.name",
     spriteId: "item_port_filling_pd_mc_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
@@ -1413,7 +1413,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "log_splitter",
-    nameKey: "registry.entity.item_log_splitter.name",
+    nameKey: "registry.entity.log_splitter.name",
     spriteId: "item_log_splitter",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
@@ -1476,7 +1476,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "log_converger",
-    nameKey: "registry.entity.item_log_converger.name",
+    nameKey: "registry.entity.log_converger.name",
     spriteId: "item_log_converger",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
@@ -1543,7 +1543,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "log_connector",
-    nameKey: "registry.entity.item_log_connector.name",
+    nameKey: "registry.entity.log_connector.name",
     spriteId: "item_log_connector",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
@@ -1756,7 +1756,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "pipe_splitter",
-    nameKey: "registry.entity.item_pipe_splitter.name",
+    nameKey: "registry.entity.pipe_splitter.name",
     spriteId: "item_pipe_splitter",
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
@@ -1812,7 +1812,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "pipe_converger",
-    nameKey: "registry.entity.item_pipe_converger.name",
+    nameKey: "registry.entity.pipe_converger.name",
     spriteId: "item_pipe_converger",
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
@@ -1876,7 +1876,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "pipe_connector",
-    nameKey: "registry.entity.item_pipe_connector.name",
+    nameKey: "registry.entity.pipe_connector.name",
     spriteId: "item_pipe_connector",
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
@@ -1961,7 +1961,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "udpipe_loader_1",
-    nameKey: "registry.entity.item_port_udpipe_loader_1.name",
+    nameKey: "registry.entity.udpipe_loader_1.name",
     spriteId: "item_port_udpipe_loader_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
@@ -2046,7 +2046,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "udpipe_unloader_1",
-    nameKey: "registry.entity.item_port_udpipe_unloader_1.name",
+    nameKey: "registry.entity.udpipe_unloader_1.name",
     spriteId: "item_port_udpipe_unloader_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
@@ -2119,7 +2119,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 
   createEntityDefinition({
     id: "loader_1",
-    nameKey: "registry.entity.item_port_loader_1.name",
+    nameKey: "registry.entity.loader_1.name",
     spriteId: "item_port_loader_1",
     footprint: { width: 3, height: 1 },
     spriteOffset: {
@@ -2148,7 +2148,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "furnance_1",
-    nameKey: "registry.entity.item_port_furnance_1.name",
+    nameKey: "registry.entity.furnance_1.name",
     spriteId: "item_port_furnance_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
@@ -2241,7 +2241,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "cmpt_mc_1",
-    nameKey: "registry.entity.item_port_cmpt_mc_1.name",
+    nameKey: "registry.entity.cmpt_mc_1.name",
     spriteId: "item_port_cmpt_mc_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
@@ -2270,7 +2270,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "shaper_1",
-    nameKey: "registry.entity.item_port_shaper_1.name",
+    nameKey: "registry.entity.shaper_1.name",
     spriteId: "item_port_shaper_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
@@ -2374,7 +2374,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "seedcol_1",
-    nameKey: "registry.entity.item_port_seedcol_1.name",
+    nameKey: "registry.entity.seedcol_1.name",
     spriteId: "item_port_seedcol_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
@@ -2403,7 +2403,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "planter_1",
-    nameKey: "registry.entity.item_port_planter_1.name",
+    nameKey: "registry.entity.planter_1.name",
     spriteId: "item_port_planter_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
@@ -2437,7 +2437,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "hydro_planter_1",
-    nameKey: "registry.entity.item_port_hydro_planter_1.name",
+    nameKey: "registry.entity.hydro_planter_1.name",
     spriteId: "item_port_hydro_planter_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
@@ -2486,7 +2486,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "winder_1",
-    nameKey: "registry.entity.item_port_winder_1.name",
+    nameKey: "registry.entity.winder_1.name",
     spriteId: "item_port_winder_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
@@ -2515,7 +2515,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "tools_asm_mc_1",
-    nameKey: "registry.entity.item_port_tools_asm_mc_1.name",
+    nameKey: "registry.entity.tools_asm_mc_1.name",
     spriteId: "item_port_tools_asm_mc_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
@@ -2544,7 +2544,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "thickener_1",
-    nameKey: "registry.entity.item_port_thickener_1.name",
+    nameKey: "registry.entity.thickener_1.name",
     spriteId: "item_port_thickener_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
@@ -2573,7 +2573,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "power_sta_1",
-    nameKey: "registry.entity.item_port_power_sta_1.name",
+    nameKey: "registry.entity.power_sta_1.name",
     spriteId: "item_port_power_sta_1",
     footprint: { width: 2, height: 2 },
     uiGroup: "resourcePower",
@@ -2595,7 +2595,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "mix_pool_2",
-    nameKey: "registry.entity.item_port_mix_pool_2.name",
+    nameKey: "registry.entity.mix_pool_2.name",
     spriteId: "item_port_mix_pool_2",
     footprint: { width: 6, height: 5 },
     uiGroup: "advancedManufacturing",
@@ -2682,7 +2682,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "liquid_purifier_1",
-    nameKey: "registry.entity.item_port_liquid_purifier_1.name",
+    nameKey: "registry.entity.liquid_purifier_1.name",
     spriteId: "item_port_liquid_purifier_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
@@ -2835,7 +2835,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "xiranite_oven_1",
-    nameKey: "registry.entity.item_port_xiranite_oven_1.name",
+    nameKey: "registry.entity.xiranite_oven_1.name",
     spriteId: "item_port_xiranite_oven_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
@@ -2884,7 +2884,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "dismantler_1",
-    nameKey: "registry.entity.item_port_dismantler_1.name",
+    nameKey: "registry.entity.dismantler_1.name",
     spriteId: "item_port_dismantler_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
@@ -3164,7 +3164,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "gas_reactor_1",
-    nameKey: "registry.entity.item_port_gas_reactor_1.name",
+    nameKey: "registry.entity.gas_reactor_1.name",
     spriteId: "item_port_gas_reactor_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
@@ -3450,7 +3450,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEntityDefinition({
     id: "sp_hub_1",
-    nameKey: "registry.entity.item_port_sp_hub_1.name",
+    nameKey: "registry.entity.sp_hub_1.name",
     spriteId: "item_port_sp_hub_1",
     footprint: { width: 9, height: 9 },
     uiGroup: "hidden",
@@ -3664,7 +3664,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "water_pump_1",
-    nameKey: "registry.entity.item_port_water_pump_1.name",
+    nameKey: "registry.entity.water_pump_1.name",
     spriteId: "item_port_water_pump_1",
     footprint: { width: 3, height: 3 },
     spriteOffset: {
@@ -3732,7 +3732,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "udpipe_loader_2",
-    nameKey: "registry.entity.item_port_udpipe_loader_2.name",
+    nameKey: "registry.entity.udpipe_loader_2.name",
     spriteId: "item_port_udpipe_loader_2",
     footprint: { width: 3, height: 5 },
     uiGroup: "warehouse",
@@ -3791,7 +3791,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "udpipe_unloader_2",
-    nameKey: "registry.entity.item_port_udpipe_unloader_2.name",
+    nameKey: "registry.entity.udpipe_unloader_2.name",
     spriteId: "item_port_udpipe_unloader_2",
     footprint: { width: 3, height: 5 },
     uiGroup: "warehouse",
@@ -3852,7 +3852,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "liquid_cleaner_1",
-    nameKey: "registry.entity.item_liquid_cleaner_1.name",
+    nameKey: "registry.entity.liquid_cleaner_1.name",
     spriteId: "item_liquid_cleaner_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
@@ -3885,7 +3885,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: WATER_PURIFIER_NODE_ENTITY_ID,
-    nameKey: "registry.entity.item_water_purifier_node_1.name",
+    nameKey: "registry.entity.water_purifier_node_1.name",
     spriteId: "item_water_purifier_node_1",
     footprint: { width: 27, height: 3 },
     spriteOffset: {
@@ -4029,7 +4029,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "liquid_storager_1",
-    nameKey: "registry.entity.item_port_liquid_storager_1.name",
+    nameKey: "registry.entity.liquid_storager_1.name",
     spriteId: "item_port_liquid_storager_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
@@ -4131,7 +4131,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEmptyEntityDefinition({
     id: "power_diffuser_1",
-    nameKey: "registry.entity.item_port_power_diffuser_1.name",
+    nameKey: "registry.entity.power_diffuser_1.name",
     spriteId: "item_port_power_diffuser_1",
     footprint: { width: 2, height: 2 },
     uiGroup: "resourcePower",
@@ -4248,7 +4248,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "log_admission",
-    nameKey: "registry.entity.item_log_admission.name",
+    nameKey: "registry.entity.log_admission.name",
     spriteId: "item_log_admission",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
@@ -4303,7 +4303,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "pipe_admission",
-    nameKey: "registry.entity.item_pipe_admission.name",
+    nameKey: "registry.entity.pipe_admission.name",
     spriteId: "item_pipe_admission",
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
@@ -4370,7 +4370,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEmptyEntityDefinition({
     id: "dumper_1",
-    nameKey: "registry.entity.item_port_dumper_1.name",
+    nameKey: "registry.entity.dumper_1.name",
     spriteId: "item_port_dumper_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
@@ -4424,7 +4424,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEmptyEntityDefinition({
     id: "miner_2",
-    nameKey: "registry.entity.item_port_miner_2.name",
+    nameKey: "registry.entity.miner_2.name",
     spriteId: "item_port_miner_2",
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
@@ -4438,7 +4438,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEmptyEntityDefinition({
     id: "miner_3",
-    nameKey: "registry.entity.item_port_miner_3.name",
+    nameKey: "registry.entity.miner_3.name",
     spriteId: "item_port_miner_3",
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
@@ -4452,7 +4452,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    */
   createEmptyEntityDefinition({
     id: "miner_4",
-    nameKey: "registry.entity.item_port_miner_4.name",
+    nameKey: "registry.entity.miner_4.name",
     spriteId: "item_port_miner_4",
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
