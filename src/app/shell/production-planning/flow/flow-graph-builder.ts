@@ -146,13 +146,17 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
   const producedPerMinute = findOutputFlow(row.recipeNode, row.targetItemId);
   const consumedPerMinute = sumPorts(resolveLedgerRowConsumerPorts(row));
   const flowPerMinute = Math.max(producedPerMinute, consumedPerMinute);
+  // 2026-07-20 订正：副标题中 {targetName} 的数值应对应该物品的产率，
+  // 而非所有输入端的总吞吐（例如精炼炉同时消耗矿石和水，但 target 是赤铜块，应显示赤铜块产率）。
+  // 处置类配方无产出时回退到 consumedPerMinute（处置速率）。
+  const displayRate = producedPerMinute > 0 ? producedPerMinute : consumedPerMinute;
   const kind: ProductionFlowNodeKind = context.displayMode === "item" ? "item" : "recipe";
   const title = context.displayMode === "item" ? targetName : machineName;
   const subtitle = context.displayMode === "item"
     ? `${machineName} · ${formatProductionFlow(flowPerMinute)}/min`
     : isExternal
-      ? `${targetName} · ${formatProductionFlow(flowPerMinute)}/min`
-      : `${targetName} · ${formatProductionDeviceCount(row.recipeNode.deviceCount)} ${context.translate("productionPlanning.devices")} · ${formatProductionFlow(flowPerMinute)}/min`;
+      ? `${targetName} · ${formatProductionFlow(displayRate)}/min`
+      : `${targetName} · ${formatProductionDeviceCount(row.recipeNode.deviceCount)} ${context.translate("productionPlanning.devices")} · ${formatProductionFlow(displayRate)}/min`;
   const iconSrc = context.displayMode === "item"
     ? resolveProductionPlanningItemIconSrc(row.targetItemId, context.index)
     : resolveLedgerRowMachineIconSrc(row, context.index);

@@ -2182,7 +2182,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   createEntityDefinition({
     id: "liquid_furnance_1",
-    nameKey: "registry.entity.item_port_liquid_furnance_1.name",
+    nameKey: "registry.entity.liquid_furnance_1.name",
     spriteId: "item_port_liquid_furnance_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",

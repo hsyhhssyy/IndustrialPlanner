@@ -31,7 +31,7 @@ const REGISTRY: Record<string, string> = {
   "registry.entity.item_port_grinder_1.name": "Shredding Unit",
   "registry.entity.item_port_hydro_planter_1.name": "Planting Unit",
   "registry.entity.item_port_liquid_filling_pd_mc_1.name": "Filling Unit",
-  "registry.entity.item_port_liquid_furnance_1.name": "Refining Unit",
+  "registry.entity.liquid_furnance_1.name": "Refining Unit",
   "registry.entity.transmuter_1_gastrans.name": "Fluid-Gas Transmuting Unit",
   "registry.entity.transmuter_1_liquidtrans.name": "Fluid-Gas Transmuting Unit",
   "registry.entity.item_port_liquid_purifier_1.name": "Purification Unit",

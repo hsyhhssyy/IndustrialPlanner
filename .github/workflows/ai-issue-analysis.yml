@@ -1,0 +1,26 @@
+name: AI Issue Analysis
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  analyze:
+    if: |
+      github.event_name == 'issues' ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@github-actions'))
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Analyze issue with AI
+        uses: MistEO/ai-issue-analysis@main
+        with:
+          agent: copilot
+          api-key: ${{ secrets.API_KEY }}
+          model: gpt-5.4
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          bot-name: "@github-actions"

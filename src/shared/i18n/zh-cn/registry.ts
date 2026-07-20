@@ -31,7 +31,7 @@ const REGISTRY: Record<string, string> = {
   "registry.entity.item_port_grinder_1.name": "粉碎机",
   "registry.entity.item_port_hydro_planter_1.name": "种植机",
   "registry.entity.item_port_liquid_filling_pd_mc_1.name": "灌装机",
-  "registry.entity.item_port_liquid_furnance_1.name": "精炼炉",
+  "registry.entity.liquid_furnance_1.name": "精炼炉",
   "registry.entity.transmuter_1_gastrans.name": "液气转化机",
   "registry.entity.transmuter_1_liquidtrans.name": "液气转化机",
   "registry.entity.item_port_liquid_purifier_1.name": "提纯机",
