@@ -73,18 +73,37 @@ describe("gas item and device definitions", () => {
     }
   });
 
-  it("defines gas collection pump as a hidden 3x3 gas gathering machine", () => {
+  it("defines gas collection pump as a placeable 3x3 gas gathering machine with warehouse link", () => {
     const definition = requireEntity("gas_pump_1");
 
     expect(definition.footprint).toEqual({ width: 3, height: 3 });
     expect(definition.uiGroup).toBe("resourcePower");
-    expect(definition.tags).toContain("不可摆放");
+    expect(definition.tags).not.toContain("不可摆放");
+    expect(definition.tags).toContain("OuterRingAllowed");
+    expect(definition.tags).toContain("InnerRingNotAllowed");
+    expect(definition.requiresPower).toBe(true);
+    expect(definition.powerDemand).toBe(10);
+    expect(definition.placementBehaviors).toEqual([
+      { type: "default-placement" },
+      { type: "snap-to-outer-ring-edge" },
+      { type: "no-near-same-entity", range: 2 },
+    ]);
     expect(definition.meteredConsumption).toBeUndefined();
+    expect(definition.recipeChannels).toEqual([]);
+
+    // Verify warehouse link inspector is present
+    expect(definition.inspectors?.some(
+      (inspector) => inspector.type === "warehouse-item-link"
+    )).toBe(true);
+
+    // Verify placement defaults include warehouse link to inert gas
+    expect(definition.placementDefaults?.slotLinks?.[0]?.target?.slotId).toBe("item_gas_inert");
+
     // AI-REMOVED 2026-07-16:
     // Reason: 气体收集泵已按当前注册表定义气体输出端口和缓冲槽，空壳约束属于测试漂移。
     // Trigger: 用户确认问题 2 为测试漂移并要求移除这项旧断言。
     // Evidence: gas_pump_1 当前包含 gas_output 端口组和 gas_output_buffer 储存组。
-    // Replacement: None；本用例继续验证尺寸、百科分类和不可摆放标签。
+    // Replacement: None；本用例继续验证尺寸、百科分类和可摆放标签。
     // Risk: Low - 本用例不再约束气体收集泵必须没有端口和槽位。
     // Human Review: Required
     //

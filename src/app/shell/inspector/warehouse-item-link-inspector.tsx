@@ -496,6 +496,9 @@ function resolveSlotGroupDomain(
   storageGroup: StorageSlotGroupDefinition,
 ): InspectorItemDomainFilter {
   if (storageGroup.kind === "fluid") {
+    return "fluid";
+  }
+  if (storageGroup.kind === "liquid") {
     return "liquid";
   }
   if (storageGroup.kind === "item") {

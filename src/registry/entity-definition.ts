@@ -3675,6 +3675,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge },
+      { type: PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity, range: 2 },
     ],
     requiresPower: true,
     powerDemand: 10,
@@ -3694,7 +3695,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     // r_pump_water_basic / r_pump_acid_basic 配方保留在 recipe-definition.ts（见 4）。
 
     storageSlotGroups: [
-      createStorageSlotGroup("fluid_output_buffer", "fluid",
+      createStorageSlotGroup("fluid_output_buffer", "liquid",
         createSlots("output_fluid_slot", [50], "liquid"),
       ),
     ],
@@ -4147,6 +4148,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "resourcePower",
     displayOrder: 304,
     tags: [PRODUCER_TAG],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity, range: 10 },
+    ],
     requiresPower: true,
     powerDemand: 5,
     meteredConsumption: {
@@ -4380,9 +4384,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   /**
    * gas_pump_1 — 气体收集泵（3×3）
    *
-   * 仅作为气体采集设备，1 个管道输出口在东侧。
+   * 气体采集设备，1 个管道输出口在东侧，仅限气体。
    * AI-CORRECTION 2026-07-16: 根据导出数据新增端口定义，从 createEmptyEntityDefinition 改为 createEntityDefinition。
    *   导出数据: outputPorts[0]=(x:2,y:3,z:1), rotation Y=90(E)
+   * AI-CORRECTION 2026-07-21: 改为可摆放，使用 warehouseItemLink 模式从仓库获取气体，
+   *   放置时默认链接惰气并开启无限供应。参照 water_pump_1 模式。
    */
   createEntityDefinition({
     id: "gas_pump_1",
@@ -4390,9 +4396,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "gas_pump_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
-    tags: ["不可摆放"],
-    requiresPower: false,
-    powerDemand: 0,
+    displayOrder: 302,
+    tags: ["武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge },
+      { type: PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity, range: 2 },
+    ],
+    requiresPower: true,
+    powerDemand: 10,
     portGroups: [
       createPortGroup(
         "gas_output",
@@ -4408,13 +4419,41 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "gas_output_buffer",
-        "fluid",
+        "gas",
         createSlots("output_gas_slot", [50], "gas"),
       ),
     ],
     portStorageBindings: [
       createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
     ],
+    recipeChannels: [],
+
+    inspectors: [
+      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["gas_output_buffer"] },
+      { type: INSPECTOR_TYPE.slotConfig, slotGroupIds: ["gas_output_buffer"] },
+    ],
+
+    placementDefaults: createPlacementDefaults({
+      config: {
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+      },
+      slotLinks: [
+        {
+          id: "warehouse-link:[Self]:gas_output_buffer:output_gas_slot_1",
+          linkType: "share-all",
+          source: {
+            entityId: "[Self]",
+            storageSlotGroupId: "gas_output_buffer",
+            slotId: "output_gas_slot_1",
+          },
+          target: {
+            entityId: "warehouse",
+            storageSlotGroupId: "warehouse",
+            slotId: "item_gas_inert",
+          },
+        },
+      ],
+    }),
   }),
 
   /**

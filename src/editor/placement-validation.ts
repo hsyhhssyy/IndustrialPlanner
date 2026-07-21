@@ -39,6 +39,7 @@ const PLACEMENT_REASON_MESSAGES: Record<EntityPlacementValidationReasonCode, str
   "outside-base": "必须放置在基地内",
   overlap: "不能与其他设备重叠",
   "warehouse-bus-disconnected": "未有效连接到源桩",
+  "near-same-entity": "附近有同类设备",
 };
 
 interface PlacementValidationEntry {
@@ -140,6 +141,10 @@ export function resolvePlacementValidations(options: {
     reasonsByEntityId: mutableReasonsByEntityId,
   });
   applyWarehouseConnectionReasons({
+    entries,
+    reasonsByEntityId: mutableReasonsByEntityId,
+  });
+  applyNearSameEntityReasons({
     entries,
     reasonsByEntityId: mutableReasonsByEntityId,
   });
@@ -502,6 +507,50 @@ function applyWarehouseConnectionReasons(options: {
       "warehouse-bus-disconnected",
     );
   }
+}
+
+function applyNearSameEntityReasons(options: {
+  entries: readonly PlacementValidationEntry[];
+  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+}): void {
+  for (let leftIndex = 0; leftIndex < options.entries.length; leftIndex += 1) {
+    const left = options.entries[leftIndex];
+    if (left === undefined) {
+      continue;
+    }
+
+    const behavior = left.definition.placementBehaviors.find(
+      (b) => b.type === PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity,
+    );
+    if (behavior === undefined || behavior.type !== PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity) {
+      continue;
+    }
+
+    const range = behavior.range;
+
+    for (let rightIndex = leftIndex + 1; rightIndex < options.entries.length; rightIndex += 1) {
+      const right = options.entries[rightIndex];
+      if (right === undefined || right.definition.id !== left.definition.id) {
+        continue;
+      }
+
+      if (areGridRectsWithinRange(left.gridRect, right.gridRect, range)) {
+        appendReason(options.reasonsByEntityId, left.entity.id, "near-same-entity");
+        appendReason(options.reasonsByEntityId, right.entity.id, "near-same-entity");
+      }
+    }
+  }
+}
+
+function areGridRectsWithinRange(a: GridRect, b: GridRect, range: number): boolean {
+  // 将 a 的足印向外扩展 range 格，检查 b 是否与之相交
+  const expanded: GridRect = {
+    x: a.x - range,
+    y: a.y - range,
+    width: a.width + range * 2,
+    height: a.height + range * 2,
+  };
+  return areGridRectsIntersecting(expanded, b);
 }
 
 function isWarehouseBusSeedEntry(entry: PlacementValidationEntry): boolean {

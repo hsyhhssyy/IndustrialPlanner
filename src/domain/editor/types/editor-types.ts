@@ -38,7 +38,8 @@ export interface EntityCollectionGeometry {
 export type EntityPlacementValidationReasonCode =
   | "outside-base"
   | "overlap"
-  | "warehouse-bus-disconnected";
+  | "warehouse-bus-disconnected"
+  | "near-same-entity";
 
 export interface EntityPlacementValidationReason {
   readonly code: EntityPlacementValidationReasonCode;

@@ -262,8 +262,8 @@ export interface PortGroupDefinition {
 
 export interface StorageSlotGroupDefinition {
   id: string;
-  /** 物品域：item / fluid */
-  kind: "item" | "fluid";
+  /** 物品域：item / fluid（液体+气体） / liquid / gas */
+  kind: "item" | "fluid" | "liquid" | "gas";
   // AI-CORRECTION 2026-05-13: role 字段已删除。
   // 存储组的输入/输出能力由 portStorageBindings 绑定的端口方向推导；
   // 配方原料/产物角色由 Recipe Channel 的 ingredientStorageGroupIds / productStorageGroupIds 决定。
