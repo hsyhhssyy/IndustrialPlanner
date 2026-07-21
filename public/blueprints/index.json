@@ -27,6 +27,12 @@
       "blueprints": [
         "resurrection-machine-7.1"
       ]
+    },
+    {
+      "name": "1.4向渊行版本蓝图",
+      "blueprints": [
+        "v1.4-4-core-xiranite"
+      ]
     }
   ]
 }

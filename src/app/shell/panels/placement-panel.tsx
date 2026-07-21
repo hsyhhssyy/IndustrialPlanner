@@ -20,6 +20,7 @@ import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/
 import type { PlacementGroup } from "@/app/state/state-impl";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
+import LucideChevronDown from "~icons/lucide/chevron-down";
 import {
   getVisiblePlacementOperationButtons,
   type PlacementOperationButtonDefinition,
@@ -37,9 +38,18 @@ import { cm } from "@/app/shell/shared/css-module-class";
 
 const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
 const COMPACT_DEVICE_LABEL_MAX_WIDTH = 6.5;
-const PLACEMENT_VARIANT_LONG_PRESS_MS = 500;
-const PLACEMENT_VARIANT_LONG_PRESS_MOVE_SLOP_PX = 8;
-const PLACEMENT_VARIANT_HOVER_CLOSE_DELAY_MS = 140;
+// AI-REMOVED 2026-07-21:
+// Reason: 变体菜单触发区域改为独立下拉按钮，主按钮 hover/长按不再打开菜单。
+// Trigger: 新设计要求放置主体与尾部下拉按钮分离。
+// Evidence: PlacementDeviceButton 现在只在 placement-entity-variant-trigger 上调用 openVariantMenu。
+// Replacement: PlacementDeviceButton 的 toggleVariantMenu 和 triggerButtonRef。
+// Risk: Low；触屏端仍可直接点击尾部按钮打开菜单。
+// Human Review: Required
+//
+// Original code:
+// const PLACEMENT_VARIANT_LONG_PRESS_MS = 500;
+// const PLACEMENT_VARIANT_LONG_PRESS_MOVE_SLOP_PX = 8;
+// const PLACEMENT_VARIANT_HOVER_CLOSE_DELAY_MS = 140;
 
 function estimateDeviceLabelWidth(label: string): number {
   let width = 0;
@@ -193,21 +203,44 @@ function buildPlacementDeviceSections(appHost: AppHost): readonly PlacementSecti
   return deviceSections;
 }
 
-const VARIANT_CAP_COLOR_BY_NAME: Readonly<Record<string, string>> = {
-  normal: "var(--placement-variant-cap-solid)",
-  solidtrans: "var(--placement-variant-cap-solid)",
-  liquid: "var(--placement-variant-cap-liquid)",
-  liquidtrans: "var(--placement-variant-cap-liquid)",
-  gas: "var(--placement-variant-cap-gas)",
-  gastrans: "var(--placement-variant-cap-gas)",
-};
+// AI-REMOVED 2026-07-21:
+// Reason: 放置面板不再用端帽 mask 表达变体，改为直接显示 mode 图片。
+// Trigger: 新设计要求尾部为普通样式图标加下拉按钮。
+// Evidence: entityVariant.iconPath 现在由 registry 指向 MachineMode 图标，并通过 img 渲染。
+// AI-CORRECTION 2026-07-21: MachineMode PNG 是白色 mask，当前通过普通小图标 mask 着色渲染。
+// Replacement: resolveVariantModeIconSrc。
+// Risk: Low；菜单与按钮仍使用同一 EntityVariantDefinition.iconPath。
+// Human Review: Required
+//
+// Original code:
+// const VARIANT_CAP_COLOR_BY_NAME: Readonly<Record<string, string>> = {
+//   normal: "var(--placement-variant-cap-solid)",
+//   solidtrans: "var(--placement-variant-cap-solid)",
+//   liquid: "var(--placement-variant-cap-liquid)",
+//   liquidtrans: "var(--placement-variant-cap-liquid)",
+//   gas: "var(--placement-variant-cap-gas)",
+//   gastrans: "var(--placement-variant-cap-gas)",
+// };
+//
+// function resolveVariantCapStyle(entityVariant: EntityVariantDefinition): CSSProperties {
+//   const maskImage = `url("${createPublicAssetUrl(entityVariant.iconPath)}")`;
+//
+//   return {
+//     backgroundColor: VARIANT_CAP_COLOR_BY_NAME[entityVariant.variantName]
+//       ?? "var(--placement-button-bg-end)",
+//     maskImage,
+//     WebkitMaskImage: maskImage,
+//   };
+// }
 
-function resolveVariantCapStyle(entityVariant: EntityVariantDefinition): CSSProperties {
-  const maskImage = `url("${createPublicAssetUrl(entityVariant.iconPath)}")`;
+function resolveVariantModeIconSrc(entityVariant: EntityVariantDefinition): string {
+  return createPublicAssetUrl(entityVariant.iconPath);
+}
+
+function resolveVariantModeIconStyle(entityVariant: EntityVariantDefinition): CSSProperties {
+  const maskImage = `url("${resolveVariantModeIconSrc(entityVariant)}")`;
 
   return {
-    backgroundColor: VARIANT_CAP_COLOR_BY_NAME[entityVariant.variantName]
-      ?? "var(--placement-button-bg-end)",
     maskImage,
     WebkitMaskImage: maskImage,
   };
@@ -297,15 +330,25 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
   const [menuAnchor, setMenuAnchor] = useState<DOMRect | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
   const mainButtonRef = useRef<HTMLButtonElement | null>(null);
+  const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const hoverCloseTimerRef = useRef<number | null>(null);
-  const longPressTimerRef = useRef<number | null>(null);
-  const longPressPointerRef = useRef<{
-    readonly pointerId: number;
-    readonly startX: number;
-    readonly startY: number;
-  } | null>(null);
-  const openedByLongPressRef = useRef(false);
+  // AI-REMOVED 2026-07-21:
+  // Reason: 菜单不再由主按钮 hover/长按控制，相关计时状态不再参与交互。
+  // Trigger: 新设计要求尾部独立下拉按钮是唯一展开入口。
+  // Evidence: 主按钮仅保留放置事件，触发按钮通过 triggerButtonRef 作为菜单锚点。
+  // Replacement: triggerButtonRef。
+  // Risk: Low；外部点击、Esc、resize/scroll 关闭逻辑仍保留。
+  // Human Review: Required
+  //
+  // Original code:
+  // const hoverCloseTimerRef = useRef<number | null>(null);
+  // const longPressTimerRef = useRef<number | null>(null);
+  // const longPressPointerRef = useRef<{
+  //   readonly pointerId: number;
+  //   readonly startX: number;
+  //   readonly startY: number;
+  // } | null>(null);
+  // const openedByLongPressRef = useRef(false);
   const t = appHost.actions.translate;
   const entityVariant = button.entityVariant;
   const craftGroupKey = button.craftGroupKey;
@@ -323,96 +366,41 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
     ? "placement-button placement-device-button is-active"
     : "placement-button placement-device-button";
 
-  const cancelHoverClose = () => {
-    if (hoverCloseTimerRef.current !== null) {
-      window.clearTimeout(hoverCloseTimerRef.current);
-      hoverCloseTimerRef.current = null;
-    }
-  };
-
-  const scheduleHoverClose = () => {
-    cancelHoverClose();
-    hoverCloseTimerRef.current = window.setTimeout(() => {
-      hoverCloseTimerRef.current = null;
-      setMenuAnchor(null);
-    }, PLACEMENT_VARIANT_HOVER_CLOSE_DELAY_MS);
-  };
-
   const openVariantMenu = () => {
     if (!canOpenVariantMenu) {
       return;
     }
 
-    const anchor = mainButtonRef.current?.getBoundingClientRect();
+    const anchor = triggerButtonRef.current?.getBoundingClientRect();
     if (anchor !== undefined) {
       setMenuAnchor(anchor);
     }
   };
 
-  const clearLongPressTimer = () => {
-    if (longPressTimerRef.current !== null) {
-      window.clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
-  const startLongPress = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (!canOpenVariantMenu || (event.pointerType !== "touch" && event.pointerType !== "pen")) {
-      return;
-    }
-
-    clearLongPressTimer();
-    openedByLongPressRef.current = false;
-    longPressPointerRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-    };
-    longPressTimerRef.current = window.setTimeout(() => {
-      longPressTimerRef.current = null;
-      openedByLongPressRef.current = true;
+  const toggleVariantMenu = () => {
+    if (menuAnchor === null) {
       openVariantMenu();
-    }, PLACEMENT_VARIANT_LONG_PRESS_MS);
-  };
-
-  const handleLongPressPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    const pointer = longPressPointerRef.current;
-    if (pointer === null || pointer.pointerId !== event.pointerId || openedByLongPressRef.current) {
       return;
     }
-
-    const distance = Math.hypot(
-      event.clientX - pointer.startX,
-      event.clientY - pointer.startY,
-    );
-    if (distance > PLACEMENT_VARIANT_LONG_PRESS_MOVE_SLOP_PX) {
-      clearLongPressTimer();
-      longPressPointerRef.current = null;
-    }
+    setMenuAnchor(null);
   };
 
-  const finishLongPress = (event: ReactPointerEvent<HTMLButtonElement>): boolean => {
-    const pointer = longPressPointerRef.current;
-    if (pointer === null || pointer.pointerId !== event.pointerId) {
-      return false;
-    }
-
-    clearLongPressTimer();
-    longPressPointerRef.current = null;
-    const openedByLongPress = openedByLongPressRef.current;
-    openedByLongPressRef.current = false;
-    return openedByLongPress;
-  };
-
-  const cancelLongPress = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (longPressPointerRef.current?.pointerId !== event.pointerId) {
-      return;
-    }
-
-    clearLongPressTimer();
-    longPressPointerRef.current = null;
-    openedByLongPressRef.current = false;
-  };
+  // AI-REMOVED 2026-07-21:
+  // Reason: 主按钮 hover/长按打开菜单的行为已被尾部下拉按钮替代。
+  // Trigger: 新设计要求下拉触发区域不再是主按钮任意位置。
+  // Evidence: openVariantMenu 仅读取 triggerButtonRef，主按钮 pointer 事件不再调用菜单逻辑。
+  // Replacement: toggleVariantMenu。
+  // Risk: Low；键盘和指针仍可通过真实 button 打开菜单。
+  // Human Review: Required
+  //
+  // Original code:
+  // const cancelHoverClose = () => { ... };
+  // const scheduleHoverClose = () => { ... };
+  // const clearLongPressTimer = () => { ... };
+  // const startLongPress = (event: ReactPointerEvent<HTMLButtonElement>) => { ... };
+  // const handleLongPressPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => { ... };
+  // const finishLongPress = (event: ReactPointerEvent<HTMLButtonElement>): boolean => { ... };
+  // const cancelLongPress = (event: ReactPointerEvent<HTMLButtonElement>) => { ... };
 
   useEffect(() => {
     if (!isMenuOpen) {
@@ -449,10 +437,19 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
     };
   }, [isMenuOpen]);
 
-  useEffect(() => () => {
-    cancelHoverClose();
-    clearLongPressTimer();
-  }, []);
+  // AI-REMOVED 2026-07-21:
+  // Reason: hover/长按计时器已随旧触发方式删除，不再需要卸载清理。
+  // Trigger: 菜单展开入口收敛为尾部下拉按钮。
+  // Evidence: 组件不再创建 hoverCloseTimerRef 或 longPressTimerRef。
+  // Replacement: None。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // useEffect(() => () => {
+  //   cancelHoverClose();
+  //   clearLongPressTimer();
+  // }, []);
 
   const handleVariantSelection = (
     definition: EntityDefinition,
@@ -493,38 +490,26 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
           ? "placement-device-button-shell"
           : "placement-device-button-shell has-entity-variant",
       )}
-      onPointerEnter={(event) => {
-        if (event.pointerType !== "mouse" || !canOpenVariantMenu) {
-          return;
-        }
-        cancelHoverClose();
-        openVariantMenu();
-      }}
-      onPointerLeave={(event) => {
-        if (event.pointerType === "mouse" && canOpenVariantMenu) {
-          scheduleHoverClose();
-        }
-      }}
       ref={shellRef}
     >
+      {/* AI-REMOVED 2026-07-21:
+          Reason: 主按钮区域不再负责展开变体菜单，避免放置与展开边界混杂。
+          Trigger: 新设计要求尾部下拉按钮是唯一菜单触发区域。
+          Evidence: 下方 placement-entity-variant-trigger 是独立 button。
+          Replacement: placement-entity-variant-trigger 的 pointer/key handlers。
+          Risk: Low。
+          Human Review: Required
+
+          Original code:
+          onPointerEnter={(event) => { ... openVariantMenu(); }}
+          onPointerLeave={(event) => { ... scheduleHoverClose(); }}
+      */}
       <button
-        aria-expanded={canOpenVariantMenu ? isMenuOpen : undefined}
-        aria-haspopup={canOpenVariantMenu ? "menu" : undefined}
         aria-pressed={isActive ? isActive : undefined}
         className={cm(styles, className, entityVariant === undefined ? null : "has-entity-variant")}
         data-ui-button-id={button.uiButtonId}
-        onPointerCancel={cancelLongPress}
-        onPointerDown={(event) => {
-          onButtonPointerDown(event);
-          startLongPress(event);
-        }}
-        onPointerMove={handleLongPressPointerMove}
+        onPointerDown={onButtonPointerDown}
         onPointerUp={(event) => {
-          if (finishLongPress(event)) {
-            event.preventDefault();
-            event.stopPropagation();
-            return;
-          }
           onButtonPointerUp(event, button, true);
         }}
         ref={mainButtonRef}
@@ -539,52 +524,77 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
         </span>
         <span className={cm(styles, labelClassName)}>{buttonLabel}</span>
         {showDeviceHotkey ? <span className={cm(styles, "placement-button-hotkey")}>{hotkey}</span> : null}
-        {entityVariant === undefined ? null : (
-          <span
-            aria-hidden="true"
-            className={cm(styles, "placement-entity-variant-cap")}
-            style={resolveVariantCapStyle(entityVariant)}
-            title={variantLongName ?? undefined}
-          />
-        )}
+        {/* AI-REMOVED 2026-07-21:
+            Reason: 变体端帽已替换为尾部独立 mode 图标下拉按钮。
+            Trigger: 新设计要求去掉端帽，只在下拉按钮显示 mode 图标。
+            Evidence: placement-entity-variant-trigger 内渲染 placement-entity-variant-mode-icon。
+            Replacement: placement-entity-variant-trigger。
+            Risk: Low。
+            Human Review: Required
+
+            Original code:
+            {entityVariant === undefined ? null : (
+              <span
+                aria-hidden="true"
+                className={cm(styles, "placement-entity-variant-cap")}
+                style={resolveVariantCapStyle(entityVariant)}
+                title={variantLongName ?? undefined}
+              />
+            )}
+        */}
       </button>
+      {entityVariant !== undefined && !canOpenVariantMenu ? (
+        <span
+          aria-hidden="true"
+          className={cm(styles, "placement-entity-variant-indicator")}
+          data-entity-variant-name={entityVariant.variantName}
+          title={variantLongName ?? undefined}
+        >
+          <span
+            className={cm(styles, "placement-entity-variant-mode-icon")}
+            data-machine-mode-icon="true"
+            style={resolveVariantModeIconStyle(entityVariant)}
+          />
+        </span>
+      ) : null}
       {canOpenVariantMenu ? (
         <button
           aria-expanded={isMenuOpen}
           aria-haspopup="menu"
           aria-label={variantLongName ?? buttonLabel}
           className={cm(styles, "placement-entity-variant-trigger")}
+          data-entity-variant-name={entityVariant.variantName}
+          data-ui-button-id={`${button.uiButtonId}-variant-trigger`}
           onKeyDown={(event) => {
             if (event.key !== "Enter" && event.key !== " ") {
               return;
             }
             event.preventDefault();
-            if (menuAnchor === null) {
-              openVariantMenu();
-            } else {
-              setMenuAnchor(null);
-            }
+            toggleVariantMenu();
           }}
-          onPointerCancel={cancelLongPress}
           onPointerDown={(event) => {
             event.stopPropagation();
             onButtonPointerDown(event);
-            startLongPress(event);
           }}
-          onPointerMove={handleLongPressPointerMove}
           onPointerUp={(event) => {
             event.stopPropagation();
-            if (finishLongPress(event)) {
-              event.preventDefault();
+            if (event.pointerType === "mouse" && event.button !== 0) {
               return;
             }
-            if (event.pointerType === "touch" || event.pointerType === "pen") {
-              openVariantMenu();
-            }
+            toggleVariantMenu();
           }}
+          ref={triggerButtonRef}
           title={variantLongName ?? undefined}
           type="button"
-        />
+        >
+          <span
+            aria-hidden="true"
+            className={cm(styles, "placement-entity-variant-mode-icon")}
+            data-machine-mode-icon="true"
+            style={resolveVariantModeIconStyle(entityVariant as EntityVariantDefinition)}
+          />
+          <LucideChevronDown className={cm(styles, "placement-entity-variant-chevron")} aria-hidden="true" />
+        </button>
       ) : null}
       <OverlayStackLayer
         kind="system"
@@ -611,16 +621,6 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
             <div
               aria-label={buttonLabel}
               className={cm(styles, "placement-variant-menu")}
-              onPointerEnter={(event) => {
-                if (event.pointerType === "mouse") {
-                  cancelHoverClose();
-                }
-              }}
-              onPointerLeave={(event) => {
-                if (event.pointerType === "mouse") {
-                  scheduleHoverClose();
-                }
-              }}
               onPointerDown={(event) => event.stopPropagation()}
               ref={menuRef}
               role="menu"
@@ -656,14 +656,30 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
                     type="button"
                   >
                     <span className={cm(styles, "placement-variant-menu-icon")} aria-hidden="true">
-                      <img alt="" src={resolveDeviceIconPath(definition)} />
+                      <span
+                        className={cm(styles, "placement-entity-variant-mode-icon")}
+                        data-machine-mode-icon="true"
+                        style={resolveVariantModeIconStyle(variantDefinition)}
+                      />
                     </span>
                     <span className={cm(styles, "placement-variant-menu-label")}>{menuItemLabel}</span>
-                    <span
-                      aria-hidden="true"
-                      className={cm(styles, "placement-entity-variant-cap placement-variant-menu-cap")}
-                      style={resolveVariantCapStyle(variantDefinition)}
-                    />
+                    {/* AI-REMOVED 2026-07-21:
+                        Reason: 菜单项头部图标改为 mode 图标，不再渲染尾部端帽。
+                        Trigger: 新设计要求打开的菜单里头部图标是 mode 图标。
+                        Evidence: placement-variant-menu-icon 现在使用 resolveVariantModeIconSrc。
+                        AI-CORRECTION 2026-07-21: MachineMode PNG 为白色 mask，当前由 placement-entity-variant-mode-icon 以 mask 样式渲染。
+                        Replacement: placement-variant-menu-icon img。
+                        AI-CORRECTION 2026-07-21: 实际替代实现是 placement-variant-menu-icon 内的 placement-entity-variant-mode-icon span。
+                        Risk: Low。
+                        Human Review: Required
+
+                        Original code:
+                        <span
+                          aria-hidden="true"
+                          className={cm(styles, "placement-entity-variant-cap placement-variant-menu-cap")}
+                          style={resolveVariantCapStyle(variantDefinition)}
+                        />
+                    */}
                   </button>
                 );
               })}

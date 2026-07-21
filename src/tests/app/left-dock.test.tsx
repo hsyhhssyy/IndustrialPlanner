@@ -298,27 +298,34 @@ describe("Left dock panel switching", () => {
     expect(compactDeviceLabel?.textContent).toBe("固气转化机");
     expect(compactDeviceLabel?.classList.contains("is-compact")).toBe(false);
     expect(regularDeviceLabel?.classList.contains("is-compact")).toBe(false);
-    const gasVariantCap = visiblePanel.querySelector(
-      '[data-ui-button-id="placement-transmuter_2_gastrans"] .placement-entity-variant-cap',
+    const gasVariantTrigger = visiblePanel.querySelector(
+      '[data-ui-button-id="placement-transmuter_2_gastrans"] + .placement-entity-variant-trigger',
+    ) as HTMLButtonElement | null;
+    const gasVariantIcon = gasVariantTrigger?.querySelector(
+      ".placement-entity-variant-mode-icon",
     ) as HTMLElement | null;
-    const normalVariantCap = visiblePanel.querySelector(
-      '[data-ui-button-id="placement-filling_pd_mc_1"] .placement-entity-variant-cap',
+    const normalVariantTrigger = visiblePanel.querySelector(
+      '[data-ui-button-id="placement-filling_pd_mc_1"] + .placement-entity-variant-trigger',
+    ) as HTMLButtonElement | null;
+    const normalVariantIcon = normalVariantTrigger?.querySelector(
+      ".placement-entity-variant-mode-icon",
     ) as HTMLElement | null;
-    expect(visiblePanel.querySelectorAll(".placement-entity-variant-cap")).toHaveLength(7);
-    expect(gasVariantCap?.getAttribute("title")).toBe("气体模式");
-    expect(gasVariantCap?.style.maskImage).toContain(
-      "/assets/entity-variant-icons/icon_port_gas.png",
+    expect(visiblePanel.querySelectorAll(".placement-entity-variant-cap")).toHaveLength(0);
+    expect(visiblePanel.querySelectorAll(".placement-entity-variant-trigger")).toHaveLength(7);
+    expect(visiblePanel.querySelectorAll(".placement-entity-variant-mode-icon")).toHaveLength(7);
+    expect(gasVariantTrigger?.title).toBe("气体模式");
+    expect(gasVariantIcon?.style.maskImage).toContain(
+      "/assets/machine-mode-icons/icon_port_gastrans.png",
     );
-    expect(normalVariantCap?.style.maskImage).toContain(
-      "/assets/entity-variant-icons/icon_port_solid.png",
+    expect(normalVariantIcon?.style.maskImage).toContain(
+      "/assets/machine-mode-icons/icon_port_normal.png",
     );
-    expect(normalVariantCap?.style.backgroundColor).toBe("var(--placement-variant-cap-solid)");
     expect(
       visiblePanel.querySelector('[data-ui-button-id="placement-transmuter_2_solidtrans"]'),
     ).toBeNull();
     expect(
       visiblePanel.querySelector(
-        '[data-ui-button-id="placement-storager_1"] .placement-entity-variant-cap',
+        '[data-ui-button-id="placement-storager_1"] + .placement-entity-variant-trigger',
       ),
     ).toBeNull();
     expect(visiblePanel.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(
@@ -335,7 +342,7 @@ describe("Left dock panel switching", () => {
     expect(appHost.internalState.activeTool).toBe("select");
   });
 
-  it("opens the variant menu when hovering anywhere on the main button and left-aligns it", () => {
+  it("opens the variant menu from the trailing trigger and left-aligns it", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
     const placementTap = vi.spyOn(appHost.gestureAdapter, "handleUiButtonMouseTap")
@@ -349,14 +356,18 @@ describe("Left dock panel switching", () => {
       '[data-ui-button-id="placement-filling_pd_mc_1"]',
     );
     expect(fillingButton).not.toBeNull();
-    vi.spyOn(fillingButton as HTMLElement, "getBoundingClientRect").mockReturnValue({
+    const fillingTrigger = fillingButton?.parentElement?.querySelector(
+      ".placement-entity-variant-trigger",
+    ) as HTMLButtonElement | null;
+    expect(fillingTrigger).not.toBeNull();
+    vi.spyOn(fillingTrigger as HTMLElement, "getBoundingClientRect").mockReturnValue({
       bottom: 140,
       height: 40,
-      left: 64,
+      left: 178,
       right: 224,
       top: 100,
-      width: 160,
-      x: 64,
+      width: 46,
+      x: 178,
       y: 100,
       toJSON: () => ({}),
     });
@@ -368,14 +379,38 @@ describe("Left dock panel switching", () => {
         clientY: 120,
       });
     });
+    expect(container.querySelector(".placement-variant-menu")).toBeNull();
+
+    act(() => {
+      dispatchPointerEvent(fillingTrigger as HTMLElement, "pointerdown", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 200,
+        clientY: 120,
+        buttons: 1,
+      });
+      dispatchPointerEvent(fillingTrigger as HTMLElement, "pointerup", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 200,
+        clientY: 120,
+      });
+    });
 
     expect(placementTap).not.toHaveBeenCalled();
     expect((container.querySelector(".placement-variant-menu") as HTMLElement | null)?.style.left)
-      .toBe("64px");
+      .toBe("178px");
     const menuItems = Array.from(container.querySelectorAll(".placement-variant-menu-item"));
     expect(menuItems.map((item) => item.textContent)).toEqual([
       "灌装机 · 基础模式",
       "灌装机 · 液体模式",
+    ]);
+    const menuIconMasks = Array.from(
+      container.querySelectorAll<HTMLElement>(".placement-variant-menu-icon .placement-entity-variant-mode-icon"),
+    ).map((icon) => icon.style.maskImage);
+    expect(menuIconMasks).toEqual([
+      expect.stringContaining("/assets/machine-mode-icons/icon_port_normal.png"),
+      expect.stringContaining("/assets/machine-mode-icons/icon_port_liquid.png"),
     ]);
 
     const liquidItem = container.querySelector(
@@ -438,8 +473,7 @@ describe("Left dock panel switching", () => {
     }));
   });
 
-  it("opens the variant menu by long-pressing while preserving short-tap placement", () => {
-    vi.useFakeTimers();
+  it("opens the variant menu from the touch trigger while preserving main-button placement", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
     const placementTap = vi.spyOn(appHost.gestureAdapter, "handleUiButtonTouchTap")
@@ -453,31 +487,27 @@ describe("Left dock panel switching", () => {
       '[data-ui-button-id="placement-filling_pd_mc_1"]',
     ) as HTMLButtonElement | null;
     expect(fillingButton).not.toBeNull();
+    const fillingTrigger = fillingButton?.parentElement?.querySelector(
+      ".placement-entity-variant-trigger",
+    ) as HTMLButtonElement | null;
+    expect(fillingTrigger).not.toBeNull();
 
     act(() => {
-      dispatchPointerEvent(fillingButton as HTMLButtonElement, "pointerdown", {
+      dispatchPointerEvent(fillingTrigger as HTMLButtonElement, "pointerdown", {
         pointerId: 8,
         pointerType: "touch",
         clientX: 40,
         clientY: 60,
         buttons: 1,
       });
-    });
-    expect(container.querySelector(".placement-variant-menu")).toBeNull();
-
-    act(() => {
-      vi.advanceTimersByTime(500);
-    });
-    expect(container.querySelector(".placement-variant-menu")).not.toBeNull();
-
-    act(() => {
-      dispatchPointerEvent(fillingButton as HTMLButtonElement, "pointerup", {
+      dispatchPointerEvent(fillingTrigger as HTMLButtonElement, "pointerup", {
         pointerId: 8,
         pointerType: "touch",
         clientX: 40,
         clientY: 60,
       });
     });
+    expect(container.querySelector(".placement-variant-menu")).not.toBeNull();
     expect(placementTap).not.toHaveBeenCalled();
 
     act(() => {
@@ -518,7 +548,9 @@ describe("Left dock panel switching", () => {
     });
 
     const visiblePanel = queryVisibleLeftDockPanel(container);
-    expect(visiblePanel?.querySelectorAll(".placement-entity-variant-cap")).toHaveLength(14);
+    expect(visiblePanel?.querySelectorAll(".placement-entity-variant-cap")).toHaveLength(0);
+    expect(visiblePanel?.querySelectorAll(".placement-entity-variant-indicator")).toHaveLength(14);
+    expect(visiblePanel?.querySelectorAll(".placement-entity-variant-mode-icon")).toHaveLength(14);
     expect(
       visiblePanel?.querySelector('[data-ui-button-id="placement-filling_pd_mc_1"]'),
     ).not.toBeNull();
@@ -528,7 +560,7 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.querySelector(".placement-entity-variant-trigger")).toBeNull();
     expect(
       visiblePanel?.querySelector(
-        '[data-ui-button-id="placement-storager_1"] .placement-entity-variant-cap',
+        '[data-ui-button-id="placement-storager_1"] + .placement-entity-variant-indicator',
       ),
     ).toBeNull();
   });

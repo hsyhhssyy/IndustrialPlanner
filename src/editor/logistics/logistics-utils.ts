@@ -103,7 +103,10 @@ export function resolveLogisticsEndpointAtGridPoint(options: {
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   baseDefinitions?: readonly BaseDefinition[];
 }): LogisticsDraftEndpoint | null {
-  const entity = findTopEntityAtGridPoint(options);
+  // 跳过对端物流类型的专用设备：belt 模式下跳过 pipe 段，pipe 模式下跳过 belt 段。
+  // 使被管道覆盖的分流器/汇流器/桥接器等设备能被正常匹配。
+  const skipLogisticsKind: LogisticsKind = options.kind === "belt" ? "pipe" : "belt";
+  const entity = findTopEntityAtGridPoint({ ...options, skipLogisticsKind });
 
   if (
     entity === null
@@ -113,7 +116,7 @@ export function resolveLogisticsEndpointAtGridPoint(options: {
     )
   ) {
     // 空地和普通物流格优先视为相邻设备的固定输出端口外侧格。
-    const adjacentOutput = resolveAdjacentFixedOutputPortEndpoint(options);
+    const adjacentOutput = resolveAdjacentFixedOutputPortEndpoint({ ...options, skipLogisticsKind });
     if (adjacentOutput !== null) {
       return adjacentOutput;
     }
@@ -151,6 +154,7 @@ function resolveAdjacentFixedOutputPortEndpoint(options: {
   drafts: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   baseDefinitions?: readonly BaseDefinition[];
+  skipLogisticsKind?: LogisticsKind;
 }): DevicePortEndpoint | null {
   for (const offset of ADJACENT_OUTPUT_SOURCE_OFFSETS) {
     const neighborGridPoint = {
@@ -233,6 +237,7 @@ export function resolveInputEndpointAtPointer(options: {
     drafts: options.drafts,
     entityDefinitionMap: options.entityDefinitionMap,
     baseDefinitions: options.baseDefinitions,
+    skipLogisticsKind: options.kind === "belt" ? "pipe" : "belt",
   });
   if (
     entity === null
@@ -298,6 +303,7 @@ export function resolveInputEndpointOnPath(options: {
       drafts: [],
       entityDefinitionMap: options.entityDefinitionMap,
       baseDefinitions: options.baseDefinitions,
+      skipLogisticsKind: options.kind === "belt" ? "pipe" : "belt",
     });
     if (
       entity === null
@@ -534,11 +540,13 @@ export function findTopEntityAtGridPoint(options: {
   drafts: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   baseDefinitions?: readonly BaseDefinition[];
+  skipLogisticsKind?: LogisticsKind;
 }): WorldEntity | null {
   const draft = findTopEntityInListAtGridPoint({
     gridPoint: options.gridPoint,
     entities: options.drafts,
     entityDefinitionMap: options.entityDefinitionMap,
+    skipLogisticsKind: options.skipLogisticsKind,
   });
   if (draft !== null) {
     return draft;
@@ -552,6 +560,7 @@ export function findTopEntityAtGridPoint(options: {
     gridPoint: options.gridPoint,
     entities: orderedEntities,
     entityDefinitionMap: options.entityDefinitionMap,
+    skipLogisticsKind: options.skipLogisticsKind,
   });
   if (entity !== null) {
     return entity;
@@ -561,6 +570,7 @@ export function findTopEntityAtGridPoint(options: {
     gridPoint: options.gridPoint,
     entities: resolveOptionalBaseBuiltinEntities(options),
     entityDefinitionMap: options.entityDefinitionMap,
+    skipLogisticsKind: options.skipLogisticsKind,
   });
 }
 
@@ -661,6 +671,7 @@ function findTopEntityInListAtGridPoint(options: {
   gridPoint: GridPoint;
   entities: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  skipLogisticsKind?: LogisticsKind;
 }): WorldEntity | null {
   for (let index = options.entities.length - 1; index >= 0; index -= 1) {
     const entity = options.entities[index];
@@ -679,6 +690,14 @@ function findTopEntityInListAtGridPoint(options: {
         resolveEntityGridRect({ entity, definition }),
       )
     ) {
+      // 跳过对端物流类型的专用设备（如 belt 模式下跳过 pipe 段，pipe 模式下跳过 belt 段），
+      // 使其下方的设备（如分流器/汇流器/桥接器）能被正常匹配。
+      if (
+        options.skipLogisticsKind !== undefined
+        && isOrdinaryLogisticsDefinitionId(entity.definitionId, options.skipLogisticsKind)
+      ) {
+        continue;
+      }
       return entity;
     }
   }

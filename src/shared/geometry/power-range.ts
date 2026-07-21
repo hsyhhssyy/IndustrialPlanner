@@ -34,6 +34,33 @@ export function resolvePowerRangeGridRect(options: {
   };
 }
 
+export function resolveGasDiffusionRangeGridRect(options: {
+  entity: WorldEntity;
+  definition: EntityDefinition;
+}): GridRect | null {
+  const gasDiffusionRange = options.definition.meteredConsumption?.gasDiffusionRange;
+  if (gasDiffusionRange === null || gasDiffusionRange === undefined || gasDiffusionRange <= 0) {
+    return null;
+  }
+
+  const rotatedFootprint = getRotatedGridFootprint(
+    options.definition.footprint,
+    options.entity.rotation,
+  );
+  const center = getGridFootprintCenterCells(
+    options.entity.position,
+    rotatedFootprint,
+  );
+  const halfRange = gasDiffusionRange / 2;
+
+  return {
+    x: center.x - halfRange,
+    y: center.y - halfRange,
+    width: gasDiffusionRange,
+    height: gasDiffusionRange,
+  };
+}
+
 export function resolveEntityGridRect(options: {
   entity: WorldEntity;
   definition: EntityDefinition;

@@ -155,40 +155,72 @@
 .placement-device-button.has-entity-variant {
   isolation: isolate;
   overflow: hidden;
+  padding-inline-end: 18px;
 }
 
-.placement-entity-variant-cap {
-  position: absolute;
-  z-index: 0;
-  inset-block: 0;
-  inset-inline-end: 0;
-  width: auto;
-  height: 100%;
-  aspect-ratio: 65 / 60;
-  border-start-end-radius: 7px;
-  border-end-end-radius: 7px;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: 42% 50%;
-  mask-position: 42% 50%;
-  -webkit-mask-size: auto 140%;
-  mask-size: auto 140%;
-  pointer-events: none;
+.placement-device-button-shell.has-entity-variant:hover .placement-device-button,
+.placement-device-button-shell.has-entity-variant:focus-within .placement-device-button {
+  border-color: var(--line-strong);
+  background: var(--surface-4);
 }
+
+.placement-device-button-shell.has-entity-variant:has(.placement-entity-variant-trigger[aria-expanded="true"]) .placement-device-button {
+  border-color: var(--line-strong);
+  background: var(--surface-4);
+}
+
+.placement-device-button-shell.has-entity-variant:has(.placement-entity-variant-trigger:active) .placement-device-button {
+  transform: translateY(1px);
+}
+
+/* AI-REMOVED 2026-07-21:
+ * Reason: 放置面板变体区分不再使用端帽 mask，而是使用 mode 图标下拉按钮。
+ * Trigger: 新设计要求尾部显示普通图标和下拉按钮。
+ * Evidence: placement-panel.tsx 不再渲染 placement-entity-variant-cap。
+ * Replacement: .placement-entity-variant-trigger 和 .placement-entity-variant-mode-icon。
+ * Risk: Low。
+ * Human Review: Required
+ *
+ * Original code:
+ * .placement-entity-variant-cap {
+ *   position: absolute;
+ *   z-index: 0;
+ *   inset-block: 0;
+ *   inset-inline-end: 0;
+ *   width: auto;
+ *   height: 100%;
+ *   aspect-ratio: 65 / 60;
+ *   border-start-end-radius: 7px;
+ *   border-end-end-radius: 7px;
+ *   -webkit-mask-repeat: no-repeat;
+ *   mask-repeat: no-repeat;
+ *   -webkit-mask-position: 42% 50%;
+ *   mask-position: 42% 50%;
+ *   -webkit-mask-size: auto 140%;
+ *   mask-size: auto 140%;
+ *   pointer-events: none;
+ * }
+ */
 
 .placement-entity-variant-trigger {
+  --placement-entity-variant-mode-color: var(--placement-variant-cap-solid);
   position: absolute;
   z-index: 2;
   inset-block: 0;
   inset-inline-end: 0;
-  width: auto;
+  display: grid;
+  grid-template-columns: 24px 12px;
+  align-items: center;
+  justify-content: center;
+  column-gap: 2px;
+  width: 46px;
   height: 100%;
-  aspect-ratio: 65 / 60;
-  padding: 0;
-  border: 0;
+  padding: 0 5px;
+  border: 1px solid transparent;
   border-start-end-radius: 8px;
   border-end-end-radius: 8px;
   background: transparent;
+  color: var(--text-1);
   cursor: pointer;
 }
 
@@ -196,8 +228,9 @@
 .placement-entity-variant-trigger:active,
 .placement-entity-variant-trigger:focus,
 .placement-entity-variant-trigger[aria-expanded="true"] {
-  border: 0;
+  border-color: transparent;
   background: transparent;
+  color: var(--text-0);
   box-shadow: none;
   transform: none;
 }
@@ -207,9 +240,69 @@
   outline-offset: -2px;
 }
 
-.placement-device-button > .placement-entity-variant-cap {
-  inset-block: -1px;
-  height: calc(100% + 2px);
+.placement-entity-variant-trigger[data-entity-variant-name="liquid"],
+.placement-entity-variant-trigger[data-entity-variant-name="liquidtrans"],
+.placement-entity-variant-indicator[data-entity-variant-name="liquid"],
+.placement-entity-variant-indicator[data-entity-variant-name="liquidtrans"],
+.placement-variant-menu-item[data-entity-variant-name="liquid"],
+.placement-variant-menu-item[data-entity-variant-name="liquidtrans"] {
+  --placement-entity-variant-mode-color: var(--placement-variant-cap-liquid);
+}
+
+.placement-entity-variant-trigger[data-entity-variant-name="gas"],
+.placement-entity-variant-trigger[data-entity-variant-name="gastrans"],
+.placement-entity-variant-indicator[data-entity-variant-name="gas"],
+.placement-entity-variant-indicator[data-entity-variant-name="gastrans"],
+.placement-variant-menu-item[data-entity-variant-name="gas"],
+.placement-variant-menu-item[data-entity-variant-name="gastrans"] {
+  --placement-entity-variant-mode-color: var(--placement-variant-cap-gas);
+}
+
+.placement-entity-variant-indicator {
+  --placement-entity-variant-mode-color: var(--placement-variant-cap-solid);
+  position: absolute;
+  z-index: 1;
+  inset-block: 0;
+  inset-inline-end: 0;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 100%;
+  padding: 0 8px;
+  pointer-events: none;
+}
+
+/* AI-REMOVED 2026-07-21:
+ * Reason: 主按钮内部不再渲染端帽元素。
+ * Trigger: 端帽被独立下拉按钮替代。
+ * Evidence: placement-device-button 内没有 placement-entity-variant-cap 子元素。
+ * Replacement: .placement-entity-variant-trigger。
+ * Risk: Low。
+ * Human Review: Required
+ *
+ * Original code:
+ * .placement-device-button > .placement-entity-variant-cap {
+ *   inset-block: -1px;
+ *   height: calc(100% + 2px);
+ * }
+ */
+
+.placement-entity-variant-mode-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+  background: var(--placement-entity-variant-mode-color);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 50% 50%;
+  mask-position: 50% 50%;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.placement-entity-variant-chevron {
+  width: 12px;
+  height: 12px;
 }
 
 .placement-device-button.has-entity-variant .button-icon,
@@ -219,6 +312,7 @@
 }
 
 .placement-device-button.has-entity-variant .placement-button-hotkey {
+  inset-inline-end: 42px;
   z-index: 1;
 }
 
@@ -260,6 +354,7 @@
 }
 
 .placement-variant-menu-item {
+  --placement-entity-variant-mode-color: var(--placement-variant-cap-solid);
   position: relative;
   isolation: isolate;
   display: grid;
@@ -292,7 +387,7 @@
 }
 
 .placement-variant-menu-icon,
-.placement-variant-menu-icon img {
+.placement-variant-menu-icon .placement-entity-variant-mode-icon {
   position: relative;
   z-index: 1;
   width: 28px;
@@ -309,10 +404,20 @@
   overflow-wrap: anywhere;
 }
 
-.placement-variant-menu-cap {
-  border-start-end-radius: 6px;
-  border-end-end-radius: 6px;
-}
+/* AI-REMOVED 2026-07-21:
+ * Reason: 变体菜单项不再显示尾部端帽。
+ * Trigger: 菜单头部图标改为 mode 图标。
+ * Evidence: placement-panel.tsx 不再渲染 placement-variant-menu-cap。
+ * Replacement: .placement-variant-menu-icon img。
+ * Risk: Low。
+ * Human Review: Required
+ *
+ * Original code:
+ * .placement-variant-menu-cap {
+ *   border-start-end-radius: 6px;
+ *   border-end-end-radius: 6px;
+ * }
+ */
 
 .placement-operation-button-list.is-mobile-icon-grid .placement-action-button {
   grid-template-columns: minmax(0, 1fr);

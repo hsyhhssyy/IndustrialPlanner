@@ -1,0 +1,2012 @@
+{
+  "schemaVersion": 3,
+  "blueprintId": "e88f7150-4c25-4285-8c0f-4709362a3fe8",
+  "version": "v1.3.0",
+  "name": "1.4 满速4核息壤",
+  "description": "来自B站大佬 莱特雷 视频(https://www.bilibili.com/video/BV126Kj6rEB3) 评论区大家接力创建的蓝图，蓝图码 EF015i2U5Uo8Uua7eUoe",
+  "baseId": "wuling_tianwangping_aid",
+  "initialGridPoint": {
+    "x": 21,
+    "y": 34
+  },
+  "entities": {
+    "logistics-draft:belt:2:0": {
+      "id": "logistics-draft:belt:2:0",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 28,
+        "y": 31
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:11:0": {
+      "id": "logistics-draft:belt:11:0",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 27,
+        "y": 32
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:22:0": {
+      "id": "logistics-draft:belt:22:0",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 22,
+        "y": 32
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:3:1": {
+      "id": "logistics-draft:belt:3:1",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 28,
+        "y": 32
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:8:0": {
+      "id": "logistics-draft:belt:8:0",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 27,
+        "y": 30
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:14:0": {
+      "id": "logistics-draft:belt:14:0",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 25,
+        "y": 26
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:29:0": {
+      "id": "logistics-draft:belt:29:0",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 18,
+        "y": 34
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:43:1": {
+      "id": "logistics-draft:pipe:43:1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 30,
+        "y": 37
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:44:2": {
+      "id": "logistics-draft:pipe:44:2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 29,
+        "y": 37
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "xiranite_oven_1:1": {
+      "id": "xiranite_oven_1:1",
+      "definitionId": "xiranite_oven_1",
+      "position": {
+        "x": 14,
+        "y": 27
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "vaporizer_1:1": {
+      "id": "vaporizer_1:1",
+      "definitionId": "vaporizer_1",
+      "position": {
+        "x": 19,
+        "y": 32
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "xiranite_oven_1:2": {
+      "id": "xiranite_oven_1:2",
+      "definitionId": "xiranite_oven_1",
+      "position": {
+        "x": 21,
+        "y": 27
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "xiranite_oven_1:3": {
+      "id": "xiranite_oven_1:3",
+      "definitionId": "xiranite_oven_1",
+      "position": {
+        "x": 15,
+        "y": 35
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "xiranite_oven_1:4": {
+      "id": "xiranite_oven_1:4",
+      "definitionId": "xiranite_oven_1",
+      "position": {
+        "x": 21,
+        "y": 35
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "udpipe_unloader_1:1": {
+      "id": "udpipe_unloader_1:1",
+      "definitionId": "udpipe_unloader_1",
+      "position": {
+        "x": 6,
+        "y": 26
+      },
+      "rotation": 90,
+      "config": {
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "logistics-draft:belt:39:1": {
+      "id": "logistics-draft:belt:39:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 37
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:41:2": {
+      "id": "logistics-draft:belt:41:2",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 26,
+        "y": 38
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:124:0": {
+      "id": "logistics-draft:belt:124:0",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 34,
+        "y": 32
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:124:1": {
+      "id": "logistics-draft:belt:124:1",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 34,
+        "y": 31
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "storager_1:1": {
+      "id": "storager_1:1",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 27,
+        "y": 38
+      },
+      "rotation": 90,
+      "config": {
+        "channelRecipes": {
+          "warehouse_submit": "r_warehouse_submit"
+        }
+      },
+      "tags": []
+    },
+    "logistics-draft:pipe:160:0": {
+      "id": "logistics-draft:pipe:160:0",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 13,
+        "y": 26
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "power_diffuser_1:1": {
+      "id": "power_diffuser_1:1",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 13,
+        "y": 32
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:8:1": {
+      "id": "logistics-draft:belt:8:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 27,
+        "y": 31
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:38:0": {
+      "id": "logistics-draft:belt:38:0",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 36
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "furnance_1:1": {
+      "id": "furnance_1:1",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 15,
+        "y": 32
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "storager_1:2": {
+      "id": "storager_1:2",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 9,
+        "y": 26
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "warehouse_submit": "r_warehouse_submit"
+        }
+      },
+      "tags": []
+    },
+    "furnance_1:2": {
+      "id": "furnance_1:2",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 23,
+        "y": 32
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "pipe_splitter:1": {
+      "id": "pipe_splitter:1",
+      "definitionId": "pipe_splitter",
+      "position": {
+        "x": 31,
+        "y": 26
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:102:3": {
+      "id": "logistics-draft:pipe:102:3",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 27,
+        "y": 29
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "pipe_splitter:2": {
+      "id": "pipe_splitter:2",
+      "definitionId": "pipe_splitter",
+      "position": {
+        "x": 27,
+        "y": 27
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "power_diffuser_1:2": {
+      "id": "power_diffuser_1:2",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 27,
+        "y": 35
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "hydro_planter_1:1": {
+      "id": "hydro_planter_1:1",
+      "definitionId": "hydro_planter_1",
+      "position": {
+        "x": 7,
+        "y": 35
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "seedcol_1:1": {
+      "id": "seedcol_1:1",
+      "definitionId": "seedcol_1",
+      "position": {
+        "x": 29,
+        "y": 32
+      },
+      "rotation": 90,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[0].slots[0].ignoreStock": false
+      },
+      "tags": []
+    },
+    "pipe_splitter:3": {
+      "id": "pipe_splitter:3",
+      "definitionId": "pipe_splitter",
+      "position": {
+        "x": 14,
+        "y": 39
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "seedcol_1:2": {
+      "id": "seedcol_1:2",
+      "definitionId": "seedcol_1",
+      "position": {
+        "x": 7,
+        "y": 30
+      },
+      "rotation": 270,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[0].slots[0].ignoreStock": false
+      },
+      "tags": []
+    },
+    "pipe_splitter:4": {
+      "id": "pipe_splitter:4",
+      "definitionId": "pipe_splitter",
+      "position": {
+        "x": 20,
+        "y": 40
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:16:0": {
+      "id": "logistics-draft:belt:16:0",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 26,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:25:0": {
+      "id": "logistics-draft:belt:25:0",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 22,
+        "y": 34
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:27:0": {
+      "id": "logistics-draft:belt:27:0",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 18,
+        "y": 32
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "planter_1:1": {
+      "id": "planter_1:1",
+      "definitionId": "hydro_planter_1",
+      "position": {
+        "x": 29,
+        "y": 27
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:5:0": {
+      "id": "logistics-draft:belt:5:0",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 28,
+        "y": 30
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:16:1": {
+      "id": "logistics-draft:belt:16:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 27
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:17:2": {
+      "id": "logistics-draft:belt:17:2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 28
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:18:3": {
+      "id": "logistics-draft:belt:18:3",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 29
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:19:4": {
+      "id": "logistics-draft:belt:19:4",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 30
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:20:5": {
+      "id": "logistics-draft:belt:20:5",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 31
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:22:6": {
+      "id": "logistics-draft:belt:22:6",
+      "definitionId": "log_connector",
+      "position": {
+        "x": 26,
+        "y": 32
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:22:7": {
+      "id": "logistics-draft:belt:22:7",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 33
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:23:8": {
+      "id": "logistics-draft:belt:23:8",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 34
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:24:9": {
+      "id": "logistics-draft:belt:24:9",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 35
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:36:0": {
+      "id": "logistics-draft:belt:36:0",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 25,
+        "y": 40
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:36:1": {
+      "id": "logistics-draft:belt:36:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 40
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "udpipe_unloader_2:1": {
+      "id": "udpipe_unloader_2:1",
+      "definitionId": "udpipe_unloader_2",
+      "position": {
+        "x": 30,
+        "y": 38
+      },
+      "rotation": 90,
+      "config": {
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "logistics-draft:pipe:43:0": {
+      "id": "logistics-draft:pipe:43:0",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 31,
+        "y": 37
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:45:3": {
+      "id": "logistics-draft:pipe:45:3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 28,
+        "y": 37
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:46:4": {
+      "id": "logistics-draft:pipe:46:4",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 27,
+        "y": 37
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:50:0": {
+      "id": "logistics-draft:pipe:50:0",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 26,
+        "y": 37
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:50:1": {
+      "id": "logistics-draft:pipe:50:1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 38
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:51:2": {
+      "id": "logistics-draft:pipe:51:2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 39
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:54:0": {
+      "id": "logistics-draft:pipe:54:0",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 26,
+        "y": 40
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:54:1": {
+      "id": "logistics-draft:pipe:54:1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 25,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:55:2": {
+      "id": "logistics-draft:pipe:55:2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 24,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:56:3": {
+      "id": "logistics-draft:pipe:56:3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:57:4": {
+      "id": "logistics-draft:pipe:57:4",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 22,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:58:5": {
+      "id": "logistics-draft:pipe:58:5",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 21,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:61:1": {
+      "id": "logistics-draft:pipe:61:1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 39
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:62:2": {
+      "id": "logistics-draft:pipe:62:2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 38
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:64:3": {
+      "id": "logistics-draft:pipe:64:3",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 20,
+        "y": 37
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:66:1": {
+      "id": "logistics-draft:pipe:66:1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 19,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:67:2": {
+      "id": "logistics-draft:pipe:67:2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 18,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:68:3": {
+      "id": "logistics-draft:pipe:68:3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 17,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:69:4": {
+      "id": "logistics-draft:pipe:69:4",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 16,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:70:5": {
+      "id": "logistics-draft:pipe:70:5",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 15,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:72:6": {
+      "id": "logistics-draft:pipe:72:6",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 14,
+        "y": 40
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:73:8": {
+      "id": "logistics-draft:pipe:73:8",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 14,
+        "y": 38
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:75:9": {
+      "id": "logistics-draft:pipe:75:9",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 14,
+        "y": 37
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:77:0": {
+      "id": "logistics-draft:pipe:77:0",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 33,
+        "y": 37
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:79:0": {
+      "id": "logistics-draft:pipe:79:0",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 34,
+        "y": 37
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:79:1": {
+      "id": "logistics-draft:pipe:79:1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 34,
+        "y": 36
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:80:2": {
+      "id": "logistics-draft:pipe:80:2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 34,
+        "y": 35
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:81:3": {
+      "id": "logistics-draft:pipe:81:3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 34,
+        "y": 34
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:82:4": {
+      "id": "logistics-draft:pipe:82:4",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 34,
+        "y": 33
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:83:5": {
+      "id": "logistics-draft:pipe:83:5",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 34,
+        "y": 32
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:84:6": {
+      "id": "logistics-draft:pipe:84:6",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 34,
+        "y": 31
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:85:7": {
+      "id": "logistics-draft:pipe:85:7",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 34,
+        "y": 30
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:86:8": {
+      "id": "logistics-draft:pipe:86:8",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 34,
+        "y": 29
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:87:9": {
+      "id": "logistics-draft:pipe:87:9",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 34,
+        "y": 28
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:88:10": {
+      "id": "logistics-draft:pipe:88:10",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 34,
+        "y": 27
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:91:0": {
+      "id": "logistics-draft:pipe:91:0",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 34,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:91:1": {
+      "id": "logistics-draft:pipe:91:1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 33,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:92:2": {
+      "id": "logistics-draft:pipe:92:2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 32,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:94:4": {
+      "id": "logistics-draft:pipe:94:4",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 30,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:95:5": {
+      "id": "logistics-draft:pipe:95:5",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 29,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:100:2": {
+      "id": "logistics-draft:pipe:100:2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 27,
+        "y": 28
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:102:4": {
+      "id": "logistics-draft:pipe:102:4",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 29
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:107:3": {
+      "id": "logistics-draft:pipe:107:3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 24,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:108:4": {
+      "id": "logistics-draft:pipe:108:4",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:109:5": {
+      "id": "logistics-draft:pipe:109:5",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 22,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:110:6": {
+      "id": "logistics-draft:pipe:110:6",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 21,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:120:7": {
+      "id": "logistics-draft:pipe:120:7",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 20,
+        "y": 26
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:120:8": {
+      "id": "logistics-draft:pipe:120:8",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 27
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:118:9": {
+      "id": "logistics-draft:pipe:118:9",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 28
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:122:0": {
+      "id": "logistics-draft:pipe:122:0",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 20,
+        "y": 29
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:149:0": {
+      "id": "logistics-draft:pipe:149:0",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 7,
+        "y": 29
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:149:1": {
+      "id": "logistics-draft:pipe:149:1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 8,
+        "y": 29
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:150:2": {
+      "id": "logistics-draft:pipe:150:2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 29
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:151:3": {
+      "id": "logistics-draft:pipe:151:3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 29
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:152:4": {
+      "id": "logistics-draft:pipe:152:4",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 11,
+        "y": 29
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:153:5": {
+      "id": "logistics-draft:pipe:153:5",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 29
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:156:0": {
+      "id": "logistics-draft:pipe:156:0",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 13,
+        "y": 29
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:156:1": {
+      "id": "logistics-draft:pipe:156:1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 13,
+        "y": 28
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:157:2": {
+      "id": "logistics-draft:pipe:157:2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 13,
+        "y": 27
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:160:1": {
+      "id": "logistics-draft:pipe:160:1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 14,
+        "y": 26
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:161:2": {
+      "id": "logistics-draft:pipe:161:2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 15,
+        "y": 26
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:162:3": {
+      "id": "logistics-draft:pipe:162:3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 16,
+        "y": 26
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:163:4": {
+      "id": "logistics-draft:pipe:163:4",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 17,
+        "y": 26
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:164:5": {
+      "id": "logistics-draft:pipe:164:5",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 18,
+        "y": 26
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:173:6": {
+      "id": "logistics-draft:pipe:173:6",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 19,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:173:7": {
+      "id": "logistics-draft:pipe:173:7",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 19,
+        "y": 27
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:167:8": {
+      "id": "logistics-draft:pipe:167:8",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 19,
+        "y": 28
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:173:9": {
+      "id": "logistics-draft:pipe:173:9",
+      "definitionId": "pipe_connector",
+      "position": {
+        "x": 19,
+        "y": 29
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:179:0": {
+      "id": "logistics-draft:pipe:179:0",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 19,
+        "y": 30
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:181:0": {
+      "id": "logistics-draft:pipe:181:0",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 20,
+        "y": 30
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:181:1": {
+      "id": "logistics-draft:pipe:181:1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 31
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:187:0": {
+      "id": "logistics-draft:belt:187:0",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 14,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:187:1": {
+      "id": "logistics-draft:belt:187:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 13,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:188:2": {
+      "id": "logistics-draft:belt:188:2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:191:0": {
+      "id": "logistics-draft:belt:191:0",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 6,
+        "y": 34
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:192:1": {
+      "id": "logistics-draft:belt:192:1",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 6,
+        "y": 35
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:196:0": {
+      "id": "logistics-draft:belt:196:0",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 13,
+        "y": 35
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:200:1": {
+      "id": "logistics-draft:belt:200:1",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 13,
+        "y": 34
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:205:0": {
+      "id": "logistics-draft:belt:205:0",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 15,
+        "y": 40
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:205:1": {
+      "id": "logistics-draft:belt:205:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 14,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:206:2": {
+      "id": "logistics-draft:belt:206:2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 13,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:209:0": {
+      "id": "logistics-draft:belt:209:0",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 12,
+        "y": 40
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:209:1": {
+      "id": "logistics-draft:belt:209:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 39
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:210:2": {
+      "id": "logistics-draft:belt:210:2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 38
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:211:3": {
+      "id": "logistics-draft:belt:211:3",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 37
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:215:5": {
+      "id": "logistics-draft:belt:215:5",
+      "definitionId": "log_connector",
+      "position": {
+        "x": 12,
+        "y": 35
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:215:6": {
+      "id": "logistics-draft:belt:215:6",
+      "definitionId": "log_connector",
+      "position": {
+        "x": 12,
+        "y": 34
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:216:7": {
+      "id": "logistics-draft:belt:216:7",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 33
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:217:8": {
+      "id": "logistics-draft:belt:217:8",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 32
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:218:9": {
+      "id": "logistics-draft:belt:218:9",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 31
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:219:10": {
+      "id": "logistics-draft:belt:219:10",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 30
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:220:11": {
+      "id": "logistics-draft:belt:220:11",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 29
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:222:12": {
+      "id": "logistics-draft:belt:222:12",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 12,
+        "y": 28
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:223:0": {
+      "id": "logistics-draft:pipe:223:0",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 28,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:225:1": {
+      "id": "logistics-draft:pipe:225:1",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 27,
+        "y": 26
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:228:0": {
+      "id": "logistics-draft:pipe:228:0",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 26,
+        "y": 27
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:232:1": {
+      "id": "logistics-draft:pipe:232:1",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 26,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:232:2": {
+      "id": "logistics-draft:pipe:232:2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 25,
+        "y": 26
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:238:0": {
+      "id": "logistics-draft:pipe:238:0",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 13,
+        "y": 39
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:238:1": {
+      "id": "logistics-draft:pipe:238:1",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 13,
+        "y": 40
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:238:2": {
+      "id": "logistics-draft:pipe:238:2",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:239:3": {
+      "id": "logistics-draft:pipe:239:3",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 11,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:240:4": {
+      "id": "logistics-draft:pipe:240:4",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:pipe:242:5": {
+      "id": "logistics-draft:pipe:242:5",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 9,
+        "y": 40
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:249:0": {
+      "id": "logistics-draft:belt:249:0",
+      "definitionId": "log_connector",
+      "position": {
+        "x": 12,
+        "y": 36
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:248:1": {
+      "id": "logistics-draft:belt:248:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 13,
+        "y": 36
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:251:0": {
+      "id": "logistics-draft:belt:251:0",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 14,
+        "y": 36
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:251:1": {
+      "id": "logistics-draft:belt:251:1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 14,
+        "y": 35
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "logistics-draft:belt:253:2": {
+      "id": "logistics-draft:belt:253:2",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 14,
+        "y": 34
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "logistics-draft:belt:2:0",
+    "logistics-draft:belt:11:0",
+    "logistics-draft:belt:22:0",
+    "logistics-draft:belt:3:1",
+    "logistics-draft:belt:8:0",
+    "logistics-draft:belt:14:0",
+    "logistics-draft:belt:29:0",
+    "logistics-draft:pipe:43:1",
+    "logistics-draft:pipe:44:2",
+    "xiranite_oven_1:1",
+    "vaporizer_1:1",
+    "xiranite_oven_1:2",
+    "xiranite_oven_1:3",
+    "xiranite_oven_1:4",
+    "udpipe_unloader_1:1",
+    "logistics-draft:belt:39:1",
+    "logistics-draft:belt:41:2",
+    "logistics-draft:belt:124:0",
+    "logistics-draft:belt:124:1",
+    "storager_1:1",
+    "logistics-draft:pipe:160:0",
+    "power_diffuser_1:1",
+    "logistics-draft:belt:8:1",
+    "logistics-draft:belt:38:0",
+    "furnance_1:1",
+    "storager_1:2",
+    "furnance_1:2",
+    "pipe_splitter:1",
+    "logistics-draft:pipe:102:3",
+    "pipe_splitter:2",
+    "power_diffuser_1:2",
+    "hydro_planter_1:1",
+    "seedcol_1:1",
+    "pipe_splitter:3",
+    "seedcol_1:2",
+    "pipe_splitter:4",
+    "logistics-draft:belt:16:0",
+    "logistics-draft:belt:25:0",
+    "logistics-draft:belt:27:0",
+    "planter_1:1",
+    "logistics-draft:belt:5:0",
+    "logistics-draft:belt:16:1",
+    "logistics-draft:belt:17:2",
+    "logistics-draft:belt:18:3",
+    "logistics-draft:belt:19:4",
+    "logistics-draft:belt:20:5",
+    "logistics-draft:belt:22:6",
+    "logistics-draft:belt:22:7",
+    "logistics-draft:belt:23:8",
+    "logistics-draft:belt:24:9",
+    "logistics-draft:belt:36:0",
+    "logistics-draft:belt:36:1",
+    "udpipe_unloader_2:1",
+    "logistics-draft:pipe:43:0",
+    "logistics-draft:pipe:45:3",
+    "logistics-draft:pipe:46:4",
+    "logistics-draft:pipe:50:0",
+    "logistics-draft:pipe:50:1",
+    "logistics-draft:pipe:51:2",
+    "logistics-draft:pipe:54:0",
+    "logistics-draft:pipe:54:1",
+    "logistics-draft:pipe:55:2",
+    "logistics-draft:pipe:56:3",
+    "logistics-draft:pipe:57:4",
+    "logistics-draft:pipe:58:5",
+    "logistics-draft:pipe:61:1",
+    "logistics-draft:pipe:62:2",
+    "logistics-draft:pipe:64:3",
+    "logistics-draft:pipe:66:1",
+    "logistics-draft:pipe:67:2",
+    "logistics-draft:pipe:68:3",
+    "logistics-draft:pipe:69:4",
+    "logistics-draft:pipe:70:5",
+    "logistics-draft:pipe:72:6",
+    "logistics-draft:pipe:73:8",
+    "logistics-draft:pipe:75:9",
+    "logistics-draft:pipe:77:0",
+    "logistics-draft:pipe:79:0",
+    "logistics-draft:pipe:79:1",
+    "logistics-draft:pipe:80:2",
+    "logistics-draft:pipe:81:3",
+    "logistics-draft:pipe:82:4",
+    "logistics-draft:pipe:83:5",
+    "logistics-draft:pipe:84:6",
+    "logistics-draft:pipe:85:7",
+    "logistics-draft:pipe:86:8",
+    "logistics-draft:pipe:87:9",
+    "logistics-draft:pipe:88:10",
+    "logistics-draft:pipe:91:0",
+    "logistics-draft:pipe:91:1",
+    "logistics-draft:pipe:92:2",
+    "logistics-draft:pipe:94:4",
+    "logistics-draft:pipe:95:5",
+    "logistics-draft:pipe:100:2",
+    "logistics-draft:pipe:102:4",
+    "logistics-draft:pipe:107:3",
+    "logistics-draft:pipe:108:4",
+    "logistics-draft:pipe:109:5",
+    "logistics-draft:pipe:110:6",
+    "logistics-draft:pipe:120:7",
+    "logistics-draft:pipe:120:8",
+    "logistics-draft:pipe:118:9",
+    "logistics-draft:pipe:122:0",
+    "logistics-draft:pipe:149:0",
+    "logistics-draft:pipe:149:1",
+    "logistics-draft:pipe:150:2",
+    "logistics-draft:pipe:151:3",
+    "logistics-draft:pipe:152:4",
+    "logistics-draft:pipe:153:5",
+    "logistics-draft:pipe:156:0",
+    "logistics-draft:pipe:156:1",
+    "logistics-draft:pipe:157:2",
+    "logistics-draft:pipe:160:1",
+    "logistics-draft:pipe:161:2",
+    "logistics-draft:pipe:162:3",
+    "logistics-draft:pipe:163:4",
+    "logistics-draft:pipe:164:5",
+    "logistics-draft:pipe:173:6",
+    "logistics-draft:pipe:173:7",
+    "logistics-draft:pipe:167:8",
+    "logistics-draft:pipe:173:9",
+    "logistics-draft:pipe:179:0",
+    "logistics-draft:pipe:181:0",
+    "logistics-draft:pipe:181:1",
+    "logistics-draft:belt:187:0",
+    "logistics-draft:belt:187:1",
+    "logistics-draft:belt:188:2",
+    "logistics-draft:belt:191:0",
+    "logistics-draft:belt:192:1",
+    "logistics-draft:belt:196:0",
+    "logistics-draft:belt:200:1",
+    "logistics-draft:belt:205:0",
+    "logistics-draft:belt:205:1",
+    "logistics-draft:belt:206:2",
+    "logistics-draft:belt:209:0",
+    "logistics-draft:belt:209:1",
+    "logistics-draft:belt:210:2",
+    "logistics-draft:belt:211:3",
+    "logistics-draft:belt:215:5",
+    "logistics-draft:belt:215:6",
+    "logistics-draft:belt:216:7",
+    "logistics-draft:belt:217:8",
+    "logistics-draft:belt:218:9",
+    "logistics-draft:belt:219:10",
+    "logistics-draft:belt:220:11",
+    "logistics-draft:belt:222:12",
+    "logistics-draft:pipe:223:0",
+    "logistics-draft:pipe:225:1",
+    "logistics-draft:pipe:228:0",
+    "logistics-draft:pipe:232:1",
+    "logistics-draft:pipe:232:2",
+    "logistics-draft:pipe:238:0",
+    "logistics-draft:pipe:238:1",
+    "logistics-draft:pipe:238:2",
+    "logistics-draft:pipe:239:3",
+    "logistics-draft:pipe:240:4",
+    "logistics-draft:pipe:242:5",
+    "logistics-draft:belt:249:0",
+    "logistics-draft:belt:248:1",
+    "logistics-draft:belt:251:0",
+    "logistics-draft:belt:251:1",
+    "logistics-draft:belt:253:2"
+  ],
+  "slotLinks": [
+    {
+      "id": "warehouse-link:udpipe_unloader_2:1:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "udpipe_unloader_2:1",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_liquid_water"
+      }
+    },
+    {
+      "id": "warehouse-link:udpipe_unloader_1:1:unloader_buffer:slot_1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "udpipe_unloader_1:1",
+        "storageSlotGroupId": "unloader_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "warehouse",
+        "storageSlotGroupId": "warehouse",
+        "slotId": "item_gas_inert"
+      }
+    }
+  ],
+  "createdAt": "2026-07-21T14:30:04.341Z",
+  "updatedAt": "2026-07-21T14:30:04.341Z"
+}

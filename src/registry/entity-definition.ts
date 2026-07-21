@@ -798,6 +798,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         type: INSPECTOR_TYPE.submitToWarehouse,
       },
     ],
+    placementDefaults: createPlacementDefaults({
+      config: { channelRecipes: { warehouse_submit: "r_warehouse_submit" } },
+    }),
   }),
 
   /**

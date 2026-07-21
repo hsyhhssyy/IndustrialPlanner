@@ -89,6 +89,17 @@ describe("entity variant definitions", () => {
     }
   });
 
+  it("uses MachineMode icons for every placement variant", () => {
+    expect(createRegistryContract().entityVariantDefinitions).toMatchObject({
+      normal: { iconPath: "assets/machine-mode-icons/icon_port_normal.png" },
+      gas: { iconPath: "assets/machine-mode-icons/icon_port_gas.png" },
+      gastrans: { iconPath: "assets/machine-mode-icons/icon_port_gastrans.png" },
+      liquid: { iconPath: "assets/machine-mode-icons/icon_port_liquid.png" },
+      liquidtrans: { iconPath: "assets/machine-mode-icons/icon_port_liquidtrans.png" },
+      solidtrans: { iconPath: "assets/machine-mode-icons/icon_port_solidtrans.png" },
+    });
+  });
+
   it("uses the requested Chinese normal, solid, liquid, and gas labels", () => {
     expect(lookupText("zh-CN", "registry.entityVariant.normal.shortName")).toBe("基础");
     expect(lookupText("zh-CN", "registry.entityVariant.normal.longName")).toBe("基础模式");
