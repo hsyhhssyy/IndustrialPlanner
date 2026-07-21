@@ -61,6 +61,20 @@ export function areGridRectsIntersecting(
     && left.y < right.y + right.height;
 }
 
+/**
+ * container 是否完全包含 contained（包含贴边）。
+ * contained 任一边界超出 container 则返回 false。
+ */
+export function areGridRectsContaining(
+  container: GridRect,
+  contained: GridRect,
+): boolean {
+  return contained.x >= container.x
+    && contained.y >= container.y
+    && contained.x + contained.width <= container.x + container.width
+    && contained.y + contained.height <= container.y + container.height;
+}
+
 function normalizePowerRange(value: number | undefined): number | null {
   if (value === undefined || !Number.isFinite(value) || value <= 0) {
     return null;

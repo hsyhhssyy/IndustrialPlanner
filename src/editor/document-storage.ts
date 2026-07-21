@@ -17,10 +17,13 @@ import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-mi
 import type { EditorHistoryDocumentDelta } from "@/domain/editor/editor-history";
 import { runInAction } from "mobx";
 
+import { createLogger } from "@/shared/logging/logger";
 import type { EditorHost } from "./editor-host";
 import { createWorldDocumentDelta } from "./history";
 import { createSyncShadowReplayValidator } from "./sync-shadow-replay-validator";
 import { ensureProtocolCoreEntity } from "./ensure-protocol-core";
+
+const logger = createLogger("document-storage");
 
 const DOCUMENT_DATABASE_NAME = "v3-industrial-planner";
 const WORD_DOCUMENT_STORE_NAME = "worddocument";
@@ -135,10 +138,20 @@ async function resolveInitialDocument(
   editorHost: EditorHost,
 ): Promise<WorldDocument> {
   const lastDocumentId = resolveLastDocumentId(editorHost);
+  logger.info("resolveInitialDocument start", { lastDocumentId });
+
   let document: WorldDocument | null = null;
 
   if (lastDocumentId !== null) {
     document = await readWorldDocument(lastDocumentId);
+    logger.info("resolveInitialDocument readWorldDocument", {
+      lastDocumentId,
+      found: document !== null,
+      baseId: document?.baseId,
+      entityCount: document !== null ? Object.keys(document.entities).length : 0,
+    });
+  } else {
+    logger.info("resolveInitialDocument no lastDocumentId, will create new");
   }
 
   // 校验 baseId 有效性。IndexedDB 可能残留已废弃基地的旧文档，或 V2 迁移引入了不存在的 baseId。
@@ -146,19 +159,37 @@ async function resolveInitialDocument(
     const isValidBase = editorHost.workspace.registry.baseDefinitions
       .some((definition) => definition.id === document!.baseId);
     if (!isValidBase) {
+      logger.warn("resolveInitialDocument baseId invalid, discarding document", {
+        baseId: document.baseId,
+      });
       document = null;
     }
   }
 
   if (document === null) {
     document = createWorldDocument();
+    logger.info("resolveInitialDocument created new document", {
+      baseId: document.baseId,
+      documentKey: document.documentKey,
+    });
   }
 
   // 确保协议核心实体在首次加载时即存在，与 loadLatestBaseDocument 路径保持一致。
-  return ensureProtocolCoreEntity({
+  const result = ensureProtocolCoreEntity({
     document,
     queries: editorHost.workspace.registry.queries,
   });
+
+  logger.info("resolveInitialDocument done", {
+    baseId: result.baseId,
+    documentKey: result.documentKey,
+    entityCount: Object.keys(result.entities).length,
+    hasProtocolCore: Object.values(result.entities).some(
+      (e) => editorHost.workspace.registry.queries.isProtocolCore(e.definitionId),
+    ),
+  });
+
+  return result;
 }
 
 export async function readWorldDocument(
@@ -168,7 +199,17 @@ export async function readWorldDocument(
     createWordDocumentLocation(documentKey),
   );
 
-  return normalizeWorldDocument(persistedDocument);
+  const result = normalizeWorldDocument(persistedDocument);
+
+  logger.info("readWorldDocument", {
+    documentKey,
+    hasRawData: persistedDocument !== undefined,
+    normalized: result !== null,
+    baseId: result?.baseId ?? null,
+    entityCount: result !== null ? Object.keys(result.entities).length : 0,
+  });
+
+  return result;
 }
 
 export async function writeWorldDocument(
@@ -221,19 +262,43 @@ export async function resolveLatestWorldDocumentForBase(options: {
 }): Promise<WorldDocument | null> {
   const latestDocumentId = options.latestDocumentIdByBaseId[options.baseId];
 
+  logger.info("resolveLatestWorldDocumentForBase start", {
+    baseId: options.baseId,
+    latestDocumentId: latestDocumentId ?? null,
+  });
+
   if (typeof latestDocumentId === "string" && latestDocumentId.trim() !== "") {
     const document = await readWorldDocument(latestDocumentId);
 
     if (document?.baseId === options.baseId) {
+      logger.info("resolveLatestWorldDocumentForBase found by latestDocumentId", {
+        baseId: options.baseId,
+        documentKey: document.documentKey,
+        entityCount: Object.keys(document.entities).length,
+      });
       return document;
     }
   }
 
   const documents = await listWorldDocuments();
+  const matched = documents.filter((d) => d.baseId === options.baseId);
 
-  return documents
-    .filter((document) => document.baseId === options.baseId)
-    .sort(compareWorldDocumentRecency)[0] ?? null;
+  logger.info("resolveLatestWorldDocumentForBase listWorldDocuments", {
+    baseId: options.baseId,
+    totalDocuments: documents.length,
+    matchedForBase: matched.length,
+  });
+
+  const result = matched.sort(compareWorldDocumentRecency)[0] ?? null;
+
+  logger.info("resolveLatestWorldDocumentForBase done", {
+    baseId: options.baseId,
+    found: result !== null,
+    documentKey: result?.documentKey ?? null,
+    entityCount: result !== null ? Object.keys(result.entities).length : 0,
+  });
+
+  return result;
 }
 
 export async function listLatestWorldDocumentsByBase(

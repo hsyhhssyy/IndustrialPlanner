@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type {
   SimulationDeviceRuntimeChannelRecipeStatus,
   SimulationDeviceRuntimeStatusReadModel,
@@ -98,12 +99,50 @@ export function SimulationRecipeStatusRuntimeInspector({
   // 运行时 channel 配方状态
   const channelRecipeStatus = runtimeStatus?.channelRecipes ?? {};
 
+  // 气体环境 tag
+  const gasEnvTag = useMemo(() => {
+    if (!appHost || !entity || !definition) return null;
+
+    // 先判断该设备是否有任意配方需要气体环境
+    let needsGasEnv = false;
+    for (const recipe of index.recipeById.values()) {
+      if (recipe.machineId === definition.id && recipe.requiredGasDiffusion) {
+        needsGasEnv = true;
+        break;
+      }
+    }
+    if (!needsGasEnv) return null;
+
+    // 通过 SimulationQuery 获取设备当前完全处于的气体
+    const gasItemIds = appHost.workspace.simulation?.queries.getDeviceActiveGasItemIds(entity.id) ?? null;
+    const isInGas = gasItemIds !== null && gasItemIds.length > 0;
+    const gasNames = gasItemIds?.map((itemId) => {
+      const gasItem = index.itemById.get(itemId);
+      return gasItem ? t(gasItem.nameKey) : itemId;
+    }) ?? [];
+
+    return (
+      <span
+        className={cm(
+          styles,
+          "recipe-gas-env-tag",
+          isInGas ? "recipe-gas-env-tag--in-gas" : "recipe-gas-env-tag--no-gas",
+        )}
+      >
+        {isInGas
+          ? `当前所处气体环境: ${gasNames.join(", ")}`
+          : "未处于气体环境"}
+      </span>
+    );
+  }, [appHost, entity, definition, index, t]);
+
   return (
     <InspectorCollapsiblePanel
       className={cm(styles, "simulation-recipe-status-runtime-inspector")}
       dataInspectorKey={SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY}
       title="配方状态"
       titleClassName={cm(styles, "recipe-status-panel-title")}
+      headerActions={gasEnvTag}
     >
       {hasAuto && (
         <AutoRecipeSection

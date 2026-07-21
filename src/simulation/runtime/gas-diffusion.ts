@@ -5,7 +5,7 @@ import type {
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import {
-  areGridRectsIntersecting,
+  areGridRectsContaining,
 } from "@/shared/geometry/power-range";
 import {
   getGridFootprintCenterCells,
@@ -65,6 +65,16 @@ export function isDeviceInRequiredGasDiffusion(options: {
   return runtimeIndex.coveredGasItemIdsByDeviceId
     .get(options.device.id)
     ?.has(options.requiredGasDiffusion) ?? false;
+}
+
+/** 获取设备当前完全处于的气体 itemId 集合。无任何气体覆盖时返回 null。 */
+export function getDeviceCoveredGasItemIds(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  deviceId: string,
+): ReadonlySet<string> | null {
+  const runtimeIndex = ensureGasDiffusionRuntimeIndex(topology, state);
+  return runtimeIndex.coveredGasItemIdsByDeviceId.get(deviceId) ?? null;
 }
 
 function ensureGasDiffusionRuntimeIndex(
@@ -211,7 +221,7 @@ function collectActiveGasDiffusions(
   return result;
 }
 
-function buildDeviceGasCoverage(
+export function buildDeviceGasCoverage(
   topology: CompiledSimulationTopology,
   activeGasDiffusions: readonly RuntimeGasDiffusionSnapshot[],
 ): ReadonlyMap<string, ReadonlySet<string>> {
@@ -232,7 +242,7 @@ function buildDeviceGasCoverage(
 
     let coveredGasItemIds: Set<string> | null = null;
     for (const diffusion of activeGasDiffusions) {
-      if (!areGridRectsIntersecting(deviceGridRect, diffusion.gridRect)) {
+      if (!areGridRectsContaining(diffusion.gridRect, deviceGridRect)) {
         continue;
       }
       coveredGasItemIds ??= new Set<string>();

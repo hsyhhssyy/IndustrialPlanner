@@ -12,6 +12,7 @@ import {
   createSnapshotStore,
   type SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
+import { buildDeviceGasCoverage } from "./runtime/gas-diffusion";
 
 import {
   SimulationActionImpl,
@@ -261,6 +262,16 @@ export function createSimulationHost(
           gasItemId: diffusion.gasItemId,
           gridRect: { ...diffusion.gridRect },
         })),
+      getDeviceActiveGasItemIds: (deviceId: string): readonly string[] | null => {
+        const snapshot = internalState.currentSnapshot;
+        const topology = topologyStore.getSnapshot();
+        if (snapshot === null || topology === null) return null;
+        const diffusions = snapshot.gasDiffusions;
+        if (diffusions.length === 0) return null;
+        const coverage = buildDeviceGasCoverage(topology, diffusions);
+        const itemIds = coverage.get(deviceId);
+        return itemIds !== undefined ? [...itemIds] : null;
+      },
       getWarehouseStats: (): WarehouseStatsReadModel | null => {
         const snapshot = internalState.currentSnapshot;
         if (snapshot === null || snapshot.warehouseStats === null) {
