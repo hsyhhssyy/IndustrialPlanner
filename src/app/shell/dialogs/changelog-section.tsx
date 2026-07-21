@@ -153,17 +153,25 @@ function resolveCurrentEntryIndex(displayEntries: DisplayEntry[], currentVersion
   const currentVersion = currentVersionText === undefined ? null : parseChangelogVersion(currentVersionText);
 
   if (currentVersion !== null) {
-    // 精确匹配
-    const exactIndex = displayEntries.findIndex(
-      (de) => de.version?.canonical === currentVersion.canonical,
-    );
+    // 精确匹配：主版本优先匹配独立条目，避免与同 canonical 的增量组混淆
+    if (currentVersion.isMain) {
+      const mainIndex = displayEntries.findIndex(
+        (de) => de.version?.canonical === currentVersion.canonical && de.version?.isMain === true,
+      );
 
-    if (exactIndex >= 0) {
-      return exactIndex;
-    }
+      if (mainIndex >= 0) {
+        return mainIndex;
+      }
+    } else {
+      const exactIndex = displayEntries.findIndex(
+        (de) => de.version?.canonical === currentVersion.canonical,
+      );
 
-    // 增量版本按基础版本号匹配合并后的分组
-    if (!currentVersion.isMain) {
+      if (exactIndex >= 0) {
+        return exactIndex;
+      }
+
+      // 增量版本按基础版本号匹配合并后的分组
       const baseVersion = getBaseVersion(currentVersion.canonical);
       const groupIndex = displayEntries.findIndex(
         (de) =>
@@ -190,7 +198,16 @@ function createDefaultExpandedSet(displayEntries: DisplayEntry[]): Set<number> {
   }
 
   const currentIndex = resolveCurrentEntryIndex(displayEntries, getCurrentAppVersionText());
+  const currentEntry = displayEntries[currentIndex]!;
   expanded.add(currentIndex);
+
+  // 当前条目为增量组或增量条目时，同时展开下一条（通常是其父主版本）
+  if (currentEntry?.version !== null && !currentEntry.version.isMain) {
+    if (currentIndex + 1 < displayEntries.length) {
+      expanded.add(currentIndex + 1);
+    }
+  }
+
   return expanded;
 }
 

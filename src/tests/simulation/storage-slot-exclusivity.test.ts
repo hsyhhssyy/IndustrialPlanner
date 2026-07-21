@@ -136,9 +136,10 @@ describe("存储槽位组内互斥规则", () => {
     ).toBeLessThanOrEqual(1);
 
     // 应有产出增加
-    if (liquidXiraniteSlots.length === 1) {
+    const liquidXiraniteSlot = liquidXiraniteSlots[0];
+    if (liquidXiraniteSlot) {
       expect(
-        liquidXiraniteSlots[0].count,
+        liquidXiraniteSlot.count,
         "液化息壤数量应在 10 基础上增加",
       ).toBeGreaterThan(10);
     }
