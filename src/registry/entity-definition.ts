@@ -4151,8 +4151,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity, range: 10 },
     ],
-    requiresPower: true,
-    powerDemand: 5,
+    requiresPower: false,
+    powerDemand: 0,
     meteredConsumption: {
       inputPortGroupId: "gas_input",
       itemIds: [
@@ -4396,7 +4396,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "gas_pump_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
-    displayOrder: 302,
+    displayOrder: 300,
     tags: ["武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge },

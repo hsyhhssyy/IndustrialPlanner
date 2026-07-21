@@ -32,7 +32,7 @@ type SlotConsistencyFailure = {
   storageGroupId: string;
   groupKind: string;
   slotId: string;
-  itemFilterType: string;
+  itemFilterType: string | undefined;
   expected: string;
 };
 

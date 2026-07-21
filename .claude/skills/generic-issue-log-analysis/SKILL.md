@@ -17,9 +17,17 @@ IndustrialPlanner 是一个运行在浏览器中的工厂规划工具（纯前�
 - `src/shared/i18n/` — 多语言翻译文件（以中文为主）
 - `src/renderer/` — 渲染层（设备精灵、画布绘制）
 - `src/simulation/` — 仿真引擎
-- `.temp/json-export.json` — 游戏解包数据（端口坐标、设备变体、渲染模板等，用于校验数据准确性）
 - `blueprints/` — 示例蓝图文件
 - `help/` — 帮助文档
+
+## 分析时的数据使用限制（强制）
+
+本项目存在不可对外公开的私有数据，issue 分析时 **禁止** 引用或依赖以下数据源：
+
+- **解包数据**（`.temp/json-export.json`）：游戏客户端解包得到的原始数据，不对外公开。
+- **`.docs/` 子模块**：项目设计文档、stage 计划等内容，属于私有 submodule，不可在公开 issue 分析中引用。
+
+分析必须仅基于：公开的仓库代码、issue 正文与评论、截图附件、用户提供的控制台输出等公开可获取的证据。
 
 ## Scope
 
@@ -53,8 +61,8 @@ IndustrialPlanner 是一个运行在浏览器中的工厂规划工具（纯前�
    - 先看 `src/registry/` 确认数据定义是否正确（如配方数据、设备端口坐标）。
    - 再看 `src/domain/` 和 `src/editor/` 确认业务逻辑。
    - 最后看 `src/app/` 确认 UI 渲染逻辑。
-   - 如果涉及解包数据准确性，对照 `.temp/json-export.json` 校验。
    - 如果涉及设备/物品名称，先在 `src/shared/i18n/` 查找中文名和对应 id。
+   - 禁止引用 `.temp/json-export.json`（解包数据）和 `.docs/`（私有子模块）中的内容。
 
 5.5. 判断是否为仿真与游戏行为不一致问题。
    - 确认用户表达的根因是否是"仿真的实现与游戏内行为不一致"。
@@ -102,10 +110,6 @@ IndustrialPlanner 是一个运行在浏览器中的工厂规划工具（纯前�
   - 蓝图数据是否正确
   - 导入/导出是否损坏
 
-### 解包数据对照
-
-- 当 issue 涉及设备数据、端口坐标、配方数值的准确性时，对照 `.temp/json-export.json` 校验。
-
 ## How To Filter Evidence
 
 1. 从 issue 文本提取锚点：
@@ -132,7 +136,7 @@ IndustrialPlanner 是一个运行在浏览器中的工厂规划工具（纯前�
 
 - **问题在截图和描述不一致**：以截图为准，指出描述与截图不符之处。
 
-- **问题涉及数据值不对**：优先检查 `src/registry/` 中的定义数据，必要时对照 `.temp/json-export.json`。
+- **问题涉及数据值不对**：优先检查 `src/registry/` 中的定义数据。
 
 - **问题只在特定设备/分辨率出现**：检查 `src/shared/browser/` 的响应式判断逻辑。
 
@@ -152,7 +156,6 @@ IndustrialPlanner 是一个运行在浏览器中的工厂规划工具（纯前�
 5. `src/app/` — UI 层
 6. `src/shared/i18n/` — 翻译文案
 7. `help/` — 帮助文档
-8. `.temp/json-export.json` — 解包数据校验
 
 ## 中文文案查找
 

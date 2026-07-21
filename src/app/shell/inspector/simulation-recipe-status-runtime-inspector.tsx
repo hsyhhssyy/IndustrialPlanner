@@ -76,30 +76,7 @@ export function SimulationRecipeStatusRuntimeInspector({
   entity,
   definition,
 }: SimulationRecipeStatusRuntimeInspectorProps) {
-  if (channelIds.length === 0) return null;
-
-  // 分离 auto 与 manual channel
-  const autoChannels = channels.filter(
-    (ch) => channelIds.includes(ch.id) && !ch.manualRecipeOnly,
-  );
-  const manualChannels = channels.filter(
-    (ch) => channelIds.includes(ch.id) && ch.manualRecipeOnly,
-  );
-
-  const hasAuto = autoChannels.length > 0;
-  const hasManual = manualChannels.length > 0;
-
-  if (runtimeStatus === null && !hasManual) {
-    return null;
-  }
-
-  // 实体配置中已选配方
-  const storedRecipes = (entity?.config?.channelRecipes as Record<string, string> | undefined) ?? {};
-
-  // 运行时 channel 配方状态
-  const channelRecipeStatus = runtimeStatus?.channelRecipes ?? {};
-
-  // 气体环境 tag
+  // 气体环境 tag（必须在所有 early return 之前调用，遵循 hooks 规则）
   const gasEnvTag = useMemo(() => {
     if (!appHost || !entity || !definition) return null;
 
@@ -135,6 +112,29 @@ export function SimulationRecipeStatusRuntimeInspector({
       </span>
     );
   }, [appHost, entity, definition, index, t]);
+
+  if (channelIds.length === 0) return null;
+
+  // 分离 auto 与 manual channel
+  const autoChannels = channels.filter(
+    (ch) => channelIds.includes(ch.id) && !ch.manualRecipeOnly,
+  );
+  const manualChannels = channels.filter(
+    (ch) => channelIds.includes(ch.id) && ch.manualRecipeOnly,
+  );
+
+  const hasAuto = autoChannels.length > 0;
+  const hasManual = manualChannels.length > 0;
+
+  // 实体配置中已选配方
+  const storedRecipes = (entity?.config?.channelRecipes as Record<string, string> | undefined) ?? {};
+
+  // 运行时 channel 配方状态
+  const channelRecipeStatus = runtimeStatus?.channelRecipes ?? {};
+
+  if (runtimeStatus === null && !hasManual) {
+    return null;
+  }
 
   return (
     <InspectorCollapsiblePanel

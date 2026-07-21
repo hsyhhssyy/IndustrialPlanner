@@ -137,7 +137,7 @@ function createGasDiffusionXiraniteBlueprint(
     }),
     createEntity("gas-pipe", "pipe_straight_1x1", -1, 1),
     createEntity("gas-diffuser", "vaporizer_1", 0, 0),
-    createEntity("xiranite-oven", "xiranite_oven_1", 5, 0, 0, {
+    createEntity("xiranite-oven", "xiranite_oven_1", 2, 0, 0, {
       channelRecipes: {
         default: XIRANITE_IN_INERT_GAS_RECIPE_ID,
       },

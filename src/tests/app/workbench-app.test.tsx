@@ -1203,6 +1203,7 @@ describe("WorkbenchApp", () => {
         getPipeFluidItemId: () => null,
         isPipeDeviceSlotOccupied: () => false,
         getActiveGasDiffusionRanges: () => [],
+        getDeviceActiveGasItemIds: () => null,
         getWarehouseStats: () => null,
       },
       actions: {

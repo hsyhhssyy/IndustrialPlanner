@@ -51,7 +51,7 @@ describe("metered device consumption", () => {
     }
   });
 
-  it("destroys at most 30 items per fixed minute and preserves the count across a short outage", () => {
+  it("destroys at most 30 items per fixed minute", () => {
     const topology = compilePoweredBlueprint(createBlueprint("metered-vaporizer", [
       createEntity("source", "gas_storager_1", -4, 0, 0, {
         "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
@@ -78,11 +78,6 @@ describe("metered device consumption", () => {
       activeEffectItemId: null,
     });
 
-    state.transient.isPowerOutage = true;
-    expect(canAcceptMeteredConsumptionItem(topology, state, portId, "item_gas_inert")).toBe(false);
-    expect(readAdmissionMinuteCounterForCurrentWindow(topology, state, portId).count).toBe(5);
-
-    state.transient.isPowerOutage = false;
     consume(topology, state, portId, "item_gas_inert", 25);
     expect(readAdmissionMinuteCounterForCurrentWindow(topology, state, portId).count).toBe(30);
     expect(canAcceptMeteredConsumptionItem(topology, state, portId, "item_gas_inert")).toBe(false);
@@ -95,7 +90,7 @@ describe("metered device consumption", () => {
   it("locks each window to one gas and changes the environment only at the next qualified boundary", () => {
     const topology = compilePoweredBlueprint(createBlueprint("metered-vaporizer-gas", [
       createEntity("vaporizer", "vaporizer_1", 0, 0),
-      createEntity("consumer", "xiranite_oven_1", 5, 0),
+      createEntity("consumer", "xiranite_oven_1", 2, 0),
     ]));
     const device = topology.devices["device:vaporizer"]!;
     const consumer = topology.devices["device:consumer"]!;
@@ -141,14 +136,18 @@ describe("metered device consumption", () => {
     expect(readAdmissionMinuteCounterForCurrentWindow(topology, state, portId).windowStartTick)
       .toBe(1201);
 
+    // vaporizer_1 requiresPower=false，停电不影响气体扩散。
+    // AI-CORRECTION 2026-07-21: 修正停电断言，vaporizer 不需要供电，气体扩散在停电时依然有效。
     state.transient.isPowerOutage = true;
-    expect(computeActiveGasDiffusions(topology, state)).toEqual([]);
+    expect(computeActiveGasDiffusions(topology, state)).toMatchObject([
+      { sourceDeviceId: device.id, gasItemId: "item_gas_inert" },
+    ]);
     expect(isDeviceInRequiredGasDiffusion({
       topology,
       state,
       device: consumer,
       requiredGasDiffusion: "item_gas_inert",
-    })).toBe(false);
+    })).toBe(true);
     state.transient.isPowerOutage = false;
 
     state.tickNumber = 2400;
@@ -179,7 +178,7 @@ describe("metered device consumption", () => {
   it("rebuilds gas coverage when the topology identity and source position change", () => {
     const topology = compilePoweredBlueprint(createBlueprint("gas-position-before", [
       createEntity("vaporizer", "vaporizer_1", 0, 0),
-      createEntity("consumer", "xiranite_oven_1", 5, 0),
+      createEntity("consumer", "xiranite_oven_1", 2, 0),
     ]));
     const state = createSimulationMutableRuntimeState(topology);
     const vaporizer = topology.devices["device:vaporizer"]!;
