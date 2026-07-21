@@ -41,7 +41,7 @@ export interface LocalSyncTelemetryPayload {
   readonly source: "industrial-planner";
   readonly trigger: string;
   readonly createdAt: string;
-  readonly appVersion: string | null;
+  readonly appVersion: string;
   readonly userAgentHash: string | null;
   readonly installIdHash: string;
   readonly deviceIdHash: string;
@@ -233,10 +233,19 @@ function sanitizeTelemetryDetails(
   );
 }
 
-function normalizeAppVersion(): string | null {
-  const value = import.meta.env.VITE_APP_VERSION;
+function normalizeAppVersion(): string {
+  const envValue = import.meta.env.VITE_APP_VERSION;
+  if (typeof envValue === "string" && envValue.trim() !== "") {
+    return envValue;
+  }
 
-  return typeof value === "string" && value.trim() !== "" ? value : null;
+  const windowValue = (globalThis as { window?: { __APP_VERSION__?: string } }).window
+    ?.__APP_VERSION__;
+  if (typeof windowValue === "string" && windowValue.trim() !== "") {
+    return windowValue;
+  }
+
+  return "0.0.0.1";
 }
 
 function resolveUserAgent(): string | null {

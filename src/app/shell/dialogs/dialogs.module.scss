@@ -1630,6 +1630,17 @@
     border: none;
     border-top: 1px solid var(--line);
   }
+
+  .changelog-sub-heading {
+    margin: 18px 0 4px;
+    font-size: 0.8rem;
+    font-weight: 650;
+    color: var(--text-1);
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
 }
 
 .changelog-loading,

@@ -228,15 +228,24 @@ export function findInputSlotForItem(options: {
 
     const storageSlotId = resolveStorageSlotId(options.state, slotId);
     const slotState = options.state.persistent.slots[storageSlotId];
-    if (slotState === undefined || getRemainingCapacity(options.topology, options.state, slotId) <= 0) {
+    if (slotState === undefined) {
       continue;
     }
 
+    // 组内互斥规则（§3.4）：同一槽位组内不同槽不可容纳相同物品。
+    // 若该槽位已持有目标物品 → 有容量就追加，满容则直接失败。
     if (slotState.itemType === options.itemType) {
-      return slotId;
+      if (getRemainingCapacity(options.topology, options.state, slotId) > 0) {
+        return slotId;
+      }
+      return null;
     }
+
+    // 空槽位：容量必须大于 0 才能写入。
     if (slotState.count === 0 && slotState.itemType === null && !excluded.has(options.itemType)) {
-      return slotId;
+      if (getRemainingCapacity(options.topology, options.state, slotId) > 0) {
+        return slotId;
+      }
     }
   }
 

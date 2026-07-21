@@ -8,6 +8,7 @@ import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import {
   CHANGELOG_IMG_BASE,
   type ChangelogIndexEntry,
+  type ChangelogVersion,
   loadChangelogIndexEntries,
   parseChangelogVersion,
 } from "@/app/shell/dialogs/changelog-data";
@@ -58,49 +59,138 @@ interface ChangelogEntry extends ChangelogIndexEntry {
   error: string | null;
 }
 
+interface DisplayEntry {
+  key: string;
+  label: string;
+  loaded: boolean;
+  html: string | null;
+  error: string | null;
+  version: ChangelogVersion | null;
+}
+
+function getBaseVersion(version: string): string {
+  return version.split(".").slice(0, 3).join(".");
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function groupEntries(entries: ChangelogEntry[]): DisplayEntry[] {
+  const result: DisplayEntry[] = [];
+  let i = 0;
+
+  while (i < entries.length) {
+    const entry = entries[i]!;
+
+    if (entry.version === null || entry.version.isMain) {
+      result.push({
+        key: entry.file,
+        label: entry.title,
+        loaded: entry.loaded,
+        html: entry.html,
+        error: entry.error,
+        version: entry.version,
+      });
+      i += 1;
+      continue;
+    }
+
+    // 增量版本：收集连续的同基础版本号增量条目
+    const baseVersion = getBaseVersion(entry.version.canonical);
+    const group: ChangelogEntry[] = [];
+
+    while (i < entries.length) {
+      const e = entries[i]!;
+      if (e.version !== null && !e.version.isMain && getBaseVersion(e.version.canonical) === baseVersion) {
+        group.push(e);
+        i += 1;
+      } else {
+        break;
+      }
+    }
+
+    const allLoaded = group.every((e) => e.loaded);
+    let mergedHtml: string | null = null;
+
+    if (allLoaded) {
+      const errors = group.filter((e) => e.error !== null);
+
+      if (errors.length === 0) {
+        mergedHtml = group
+          .map((e) => {
+            const subLabel = escapeHtml(e.title);
+            return `<p class="changelog-sub-heading">${subLabel}</p>${e.html ?? ""}`;
+          })
+          .join("\n");
+      }
+    }
+
+    const groupErrors = group.filter((e) => e.error !== null).map((e) => e.error);
+
+    result.push({
+      key: `group-${baseVersion}`,
+      label: `v${baseVersion} 增量更新`,
+      loaded: allLoaded,
+      html: mergedHtml,
+      error: groupErrors.length > 0 ? groupErrors.join("; ") : null,
+      version: { canonical: baseVersion, isMain: false },
+    });
+  }
+
+  return result;
+}
+
 function getCurrentAppVersionText(): string | undefined {
   return typeof window === "undefined" ? undefined : window.__APP_VERSION__;
 }
 
-function resolveCurrentEntryIndex(entries: ChangelogEntry[], currentVersionText: string | undefined): number {
+function resolveCurrentEntryIndex(displayEntries: DisplayEntry[], currentVersionText: string | undefined): number {
   const currentVersion = currentVersionText === undefined ? null : parseChangelogVersion(currentVersionText);
 
   if (currentVersion !== null) {
-    const matchedIndex = entries.findIndex((entry) => entry.version?.canonical === currentVersion.canonical);
+    // 精确匹配
+    const exactIndex = displayEntries.findIndex(
+      (de) => de.version?.canonical === currentVersion.canonical,
+    );
 
-    if (matchedIndex >= 0) {
-      return matchedIndex;
+    if (exactIndex >= 0) {
+      return exactIndex;
+    }
+
+    // 增量版本按基础版本号匹配合并后的分组
+    if (!currentVersion.isMain) {
+      const baseVersion = getBaseVersion(currentVersion.canonical);
+      const groupIndex = displayEntries.findIndex(
+        (de) =>
+          de.version !== null
+          && !de.version.isMain
+          && getBaseVersion(de.version.canonical) === baseVersion,
+      );
+
+      if (groupIndex >= 0) {
+        return groupIndex;
+      }
     }
   }
 
-  const latestVersionedIndex = entries.findIndex((entry) => entry.version !== null);
-
+  const latestVersionedIndex = displayEntries.findIndex((de) => de.version !== null);
   return latestVersionedIndex >= 0 ? latestVersionedIndex : 0;
 }
 
-function createDefaultExpandedSet(entries: ChangelogEntry[]): Set<number> {
+function createDefaultExpandedSet(displayEntries: DisplayEntry[]): Set<number> {
   const expanded = new Set<number>();
 
-  if (entries.length === 0) {
+  if (displayEntries.length === 0) {
     return expanded;
   }
 
-  const currentIndex = resolveCurrentEntryIndex(entries, getCurrentAppVersionText());
-  const currentVersion = entries[currentIndex]?.version ?? null;
+  const currentIndex = resolveCurrentEntryIndex(displayEntries, getCurrentAppVersionText());
   expanded.add(currentIndex);
-
-  if (currentVersion === null || currentVersion.isMain) {
-    return expanded;
-  }
-
-  for (let index = currentIndex + 1; index < entries.length; index += 1) {
-    expanded.add(index);
-
-    if (entries[index]?.version?.isMain === true) {
-      break;
-    }
-  }
-
   return expanded;
 }
 
@@ -142,11 +232,10 @@ async function loadSingleEntry(entry: ChangelogEntry): Promise<ChangelogEntry> {
 }
 
 export function ChangelogSection() {
-  const [entries, setEntries] = useState<ChangelogEntry[] | null>(null);
+  const [displayEntries, setDisplayEntries] = useState<DisplayEntry[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [expandedSet, setExpandedSet] = useState<Set<number>>(() => new Set());
 
-  // 首次加载索引，然后加载每个条目的内容
   useEffect(() => {
     let cancelled = false;
 
@@ -158,14 +247,15 @@ export function ChangelogSection() {
           return;
         }
 
-        setEntries(list);
-        setExpandedSet(createDefaultExpandedSet(list));
+        const initialGrouped = groupEntries(list);
+        setDisplayEntries(initialGrouped);
+        setExpandedSet(createDefaultExpandedSet(initialGrouped));
 
-        // 逐个加载每条内容
         const updated = await Promise.all(list.map((entry) => loadSingleEntry(entry)));
 
         if (!cancelled) {
-          setEntries(updated);
+          const finalGrouped = groupEntries(updated);
+          setDisplayEntries(finalGrouped);
         }
       } catch (err) {
         if (!cancelled) {
@@ -216,7 +306,7 @@ export function ChangelogSection() {
     );
   }
 
-  if (entries === null) {
+  if (displayEntries === null) {
     return (
       <div className={cm(styles, "changelog-placeholder")}>
         <h3>版本更新</h3>
@@ -227,14 +317,14 @@ export function ChangelogSection() {
 
   return (
     <div className={cm(styles, "changelog-section")}>
-      {entries.map((entry, index) => {
+      {displayEntries.map((entry, index) => {
         const expanded = expandedSet.has(index);
 
         return (
           <div
             className={cm(styles, "changelog-accordion")}
             data-expanded={expanded ? "true" : "false"}
-            key={entry.file}
+            key={entry.key}
           >
             <button
               aria-expanded={expanded}
@@ -243,7 +333,7 @@ export function ChangelogSection() {
               type="button"
             >
               <span className={cm(styles, "changelog-accordion-chevron")} />
-              <span className={cm(styles, "changelog-accordion-title")}>{entry.title}</span>
+              <span className={cm(styles, "changelog-accordion-title")}>{entry.label}</span>
             </button>
             <div className={cm(styles, "changelog-accordion-body")}>
               <div className={cm(styles, "changelog-accordion-content")}>
@@ -260,7 +350,7 @@ export function ChangelogSection() {
                 {expanded ? (
                   <div className={cm(styles, "changelog-collapse-row")}>
                     <button
-                      aria-label={`收起 ${entry.title}`}
+                      aria-label={`收起 ${entry.label}`}
                       className={cm(styles, "changelog-collapse-button")}
                       onClick={() => collapse(index)}
                       type="button"
