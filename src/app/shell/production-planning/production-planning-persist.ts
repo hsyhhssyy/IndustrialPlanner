@@ -33,6 +33,7 @@ export function hookPlannerIndexedDbPersistence(
           waterPolicy: normalizeByproductPolicy(persisted.sourceConfig?.waterPolicy),
           acidPolicy: normalizeByproductPolicy(persisted.sourceConfig?.acidPolicy),
           sewagePolicy: normalizeSewagePolicy(persisted.sourceConfig?.sewagePolicy),
+          waterPurifierPolicy: normalizeWaterPurifierPolicy(persisted.sourceConfig?.waterPurifierPolicy),
         };
         const demandSignature = createProductionPlanningDemandSignature({
           targets,
@@ -114,6 +115,7 @@ export function createProductionPlanningDemandSignature(state: {
       waterPolicy: state.sourceConfig.waterPolicy,
       acidPolicy: state.sourceConfig.acidPolicy,
       sewagePolicy: state.sourceConfig.sewagePolicy,
+      waterPurifierPolicy: state.sourceConfig.waterPurifierPolicy,
     },
   });
 }
@@ -170,6 +172,12 @@ function normalizeSewagePolicy(
   v: unknown,
 ): "external-supply" | "self-produce" {
   return v === "self-produce" ? "self-produce" : "external-supply";
+}
+
+function normalizeWaterPurifierPolicy(
+  value: unknown,
+): "disabled" | "use-when-available" {
+  return value === "use-when-available" ? "use-when-available" : "disabled";
 }
 
 function clonePort(p: ProductionPlanningPort): ProductionPlanningPort {

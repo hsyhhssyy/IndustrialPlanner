@@ -21,6 +21,7 @@ export class ProductionPlanningInputStore {
     waterPolicy: "use-byproduct",
     acidPolicy: "use-byproduct",
     sewagePolicy: "external-supply",
+    waterPurifierPolicy: "disabled",
   };
   session: PlannerSessionState = createDefaultPlannerSessionState();
 
@@ -41,6 +42,7 @@ export class ProductionPlanningInputStore {
       waterPolicy: "use-byproduct",
       acidPolicy: "use-byproduct",
       sewagePolicy: "external-supply",
+      waterPurifierPolicy: "disabled",
     };
     this.session = createDefaultPlannerSessionState();
   }

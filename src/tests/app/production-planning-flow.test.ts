@@ -96,6 +96,7 @@ const DEFAULT_SOURCE_CONFIG: ProductionPlanningSourceConfig = {
   waterPolicy: "use-byproduct",
   acidPolicy: "use-byproduct",
   sewagePolicy: "external-supply",
+  waterPurifierPolicy: "disabled",
 };
 
 function makeInfiniteItemIds(

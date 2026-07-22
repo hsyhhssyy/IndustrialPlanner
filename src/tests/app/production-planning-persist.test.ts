@@ -31,6 +31,7 @@ function createPlannerState(patch: Partial<PlannerPersistedState> = {}): Planner
       waterPolicy: "use-byproduct",
       acidPolicy: "use-byproduct",
       sewagePolicy: "external-supply",
+      waterPurifierPolicy: "disabled",
     },
     session: createDefaultPlannerSessionState(),
     ...patch,
@@ -49,6 +50,12 @@ describe("production planning persistence", () => {
   it("persists and reloads planner session state", async () => {
     const state = createPlannerState({
       viewMode: "flow",
+      sourceConfig: {
+        waterPolicy: "use-byproduct",
+        acidPolicy: "use-byproduct",
+        sewagePolicy: "external-supply",
+        waterPurifierPolicy: "use-when-available",
+      },
       session: {
         activeScreen: "result",
         flowViewport: { x: 120, y: -64, scale: 1.75 },
@@ -91,6 +98,10 @@ describe("production planning persistence", () => {
 
     expect(loaded).toEqual({
       ...legacyState,
+      sourceConfig: {
+        ...legacyState.sourceConfig,
+        waterPurifierPolicy: "disabled",
+      },
       recipeChoicesDemandSignature: null,
       session: createDefaultPlannerSessionState(),
     });
@@ -120,6 +131,7 @@ describe("production planning persistence", () => {
 
     expect(normalized?.session).toEqual(createDefaultPlannerSessionState());
     expect(normalized?.recipeChoicesDemandSignature).toBeNull();
+    expect(normalized?.sourceConfig.waterPurifierPolicy).toBe("disabled");
   });
 
   it("creates stable demand signatures without row ids", () => {
@@ -127,6 +139,7 @@ describe("production planning persistence", () => {
       waterPolicy: "use-byproduct" as const,
       acidPolicy: "use-byproduct" as const,
       sewagePolicy: "external-supply" as const,
+      waterPurifierPolicy: "disabled" as const,
     };
 
     expect(createProductionPlanningDemandSignature({

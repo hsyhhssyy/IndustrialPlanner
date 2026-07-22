@@ -34,6 +34,7 @@ import {
   createProductionPlanningId,
   formatProductionDeviceCount,
   formatProductionFlow,
+  isWaterPurifierNodeRecipe,
   resolveProductionPlanningEntityIconSrc,
   resolveProductionPlanningItemIconSrc,
   resolveProductionPlanningItemName,
@@ -47,6 +48,7 @@ import {
   type ProductionPlanningResult,
   type ProductionPlanningSewagePolicy,
   type ProductionPlanningSourceConfig,
+  type ProductionPlanningWaterPurifierPolicy,
   type ProductionPlanningViewMode,
 } from "@/app/shell/production-planning/production-planning-model";
 import { ProductionFlowGraph } from "@/app/shell/production-planning/flow";
@@ -57,6 +59,7 @@ import { cm } from "@/app/shell/shared/css-module-class";
 import { NumberInput } from "@/app/shell/shared/number-input";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 import { createDeviceIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
+import { WATER_PURIFIER_BYPRODUCT_RECIPE_ID } from "@/shared/water-purifier-node";
 
 type ProductionPlanningScreen = "input" | "result";
 
@@ -278,6 +281,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       waterPolicy: sourceConfig.waterPolicy,
       acidPolicy: sourceConfig.acidPolicy,
       sewagePolicy: sourceConfig.sewagePolicy,
+      waterPurifierPolicy: sourceConfig.waterPurifierPolicy,
     };
     const plan = computeProductionPlan({
       targets: calculationTargets,
@@ -305,6 +309,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     sourceConfig.acidPolicy,
     sourceConfig.sewagePolicy,
     sourceConfig.waterPolicy,
+    sourceConfig.waterPurifierPolicy,
     store,
     supplies,
     targets,
@@ -470,6 +475,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       waterPolicy: sourceConfig.waterPolicy,
       acidPolicy: sourceConfig.acidPolicy,
       sewagePolicy: sourceConfig.sewagePolicy,
+      waterPurifierPolicy: sourceConfig.waterPurifierPolicy,
     };
     const plan = computeProductionPlan({
       targets: calculationTargets,
@@ -874,6 +880,12 @@ function SourcePolicyPanel({
           onChange={(policy) => onUpdate({ sewagePolicy: policy })}
           t={t}
         />
+        <WaterPurifierPolicyToggle
+          index={index}
+          policy={sourceConfig.waterPurifierPolicy}
+          onChange={(policy) => onUpdate({ waterPurifierPolicy: policy })}
+          t={t}
+        />
       </div>
     </section>
   );
@@ -957,6 +969,43 @@ function SewagePolicyToggle({
           onClick={() => onChange("self-produce")}
         >
           {_t("productionPlanning.selfProduce")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function WaterPurifierPolicyToggle({
+  index,
+  policy,
+  onChange,
+  t,
+}: {
+  index: ProductionPlanningIndex;
+  policy: ProductionPlanningWaterPurifierPolicy;
+  onChange: (policy: ProductionPlanningWaterPurifierPolicy) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <div className={cm(styles, "production-planning-special-source")}>
+      <div className={cm(styles, "production-planning-special-source-label")}>
+        <img alt="" src={resolveProductionPlanningEntityIconSrc("water_purifier_node_1", index)} />
+        <span>{t("productionPlanning.waterPurifierNode")}</span>
+      </div>
+      <div className={cm(styles, "production-planning-two-option-toggle")}>
+        <button
+          type="button"
+          className={cm(styles, policy === "disabled" ? "is-active" : "")}
+          onClick={() => onChange("disabled")}
+        >
+          {t("productionPlanning.waterPurifierDisabled")}
+        </button>
+        <button
+          type="button"
+          className={cm(styles, policy === "use-when-available" ? "is-active" : "")}
+          onClick={() => onChange("use-when-available")}
+        >
+          {t("productionPlanning.waterPurifierUseWhenAvailable")}
         </button>
       </div>
     </div>
@@ -1555,7 +1604,8 @@ function ProductionPlanningTreeDetail({
         ? createDeviceIconAssetUrl("item_port_grinder_1")
         : resolveProductionPlanningEntityIconSrc(machine.id, index);
   const availableRecipes = row.targetItemId.length > 0
-    ? index.recipesByOutputItem.get(row.targetItemId) ?? []
+    ? (index.recipesByOutputItem.get(row.targetItemId) ?? [])
+      .filter((candidate) => !isWaterPurifierNodeRecipe(candidate))
     : [];
 
   return (
@@ -2117,6 +2167,7 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
 
   markLedgerByproductRows(rowById, byproductRowIds);
   connectDisposalRowsToByproductSources(rowById, surplusProducerRowIdsByItem, plan, nextOrder);
+  connectWaterPurifierRowToSewageSources(rowById, surplusProducerRowIdsByItem, plan);
 
   const rootRowIds = new Set(
     Array.from(rowById.values())
@@ -2214,12 +2265,83 @@ function connectDisposalRowsToByproductSources(
   }
 }
 
+function connectWaterPurifierRowToSewageSources(
+  rowById: Map<string, MutableProductionPlanningTreeRow>,
+  producerRowIdsByItem: ReadonlyMap<string, ReadonlySet<string>>,
+  plan: ProductionPlanningResult,
+): void {
+  const sewageItemId = "item_liquid_sewage";
+  // 只要仍有污水需要处置，就维持“废水处理机 -> 污水来源”的现有树关系。
+  if (plan.byproductItemIds.has(sewageItemId)) {
+    return;
+  }
+
+  const waterPurifierRow = Array.from(rowById.values()).find((row) => (
+    row.recipeId === WATER_PURIFIER_BYPRODUCT_RECIPE_ID
+    && row.recipeNode.inputs.some((input) => (
+      input.itemId === sewageItemId && input.perMinute > PRODUCTION_PLANNING_EPSILON
+    ))
+  ));
+  const producerRowIds = producerRowIdsByItem.get(sewageItemId);
+  if (waterPurifierRow === undefined || producerRowIds === undefined) {
+    return;
+  }
+
+  let nextOrder = Math.max(0, ...Array.from(rowById.values()).map((row) => row.order + 1));
+  for (const producerRowId of producerRowIds) {
+    const producerRow = rowById.get(producerRowId);
+    if (producerRow === undefined || producerRow.id === waterPurifierRow.id) {
+      continue;
+    }
+
+    if (producerRow.parentIds.size === 0) {
+      addProductionPlanningTreeEdge(rowById, waterPurifierRow.id, producerRow.id);
+      continue;
+    }
+
+    const cloneRowId = buildProductionPlanningTreeWaterPurifierSourceRowId(
+      waterPurifierRow.id,
+      producerRow.id,
+    );
+    if (rowById.has(cloneRowId)) {
+      addProductionPlanningTreeEdge(rowById, waterPurifierRow.id, cloneRowId);
+      continue;
+    }
+
+    const cloneRow: MutableProductionPlanningTreeRow = {
+      id: cloneRowId,
+      depth: 0,
+      order: nextOrder,
+      parentIds: new Set(),
+      childIds: new Set(),
+      recipeId: producerRow.recipeId,
+      targetItemId: producerRow.targetItemId,
+      recipeNode: producerRow.recipeNode,
+      recipeNodes: [...producerRow.recipeNodes],
+      total: producerRow.total,
+      inputItemIds: new Set(producerRow.inputItemIds),
+      outputItemIds: new Set(producerRow.outputItemIds),
+      isByproduct: producerRow.isByproduct,
+    };
+    nextOrder += 1;
+    rowById.set(cloneRowId, cloneRow);
+    addProductionPlanningTreeEdge(rowById, waterPurifierRow.id, cloneRow.id);
+  }
+}
+
 function isProductionPlanningDisposalRecipeId(recipeId: string): boolean {
   return recipeId.startsWith("r_dumper_void_") || recipeId.startsWith("r_chrono_wastewater_treatment");
 }
 
 function buildProductionPlanningTreeDisposalSourceRowId(disposalRowId: string, producerRowId: string): string {
   return `disposal-source:${disposalRowId}:${producerRowId}`;
+}
+
+function buildProductionPlanningTreeWaterPurifierSourceRowId(
+  waterPurifierRowId: string,
+  producerRowId: string,
+): string {
+  return `water-purifier-source:${waterPurifierRowId}:${producerRowId}`;
 }
 
 // AI-REMOVED 2026-05-23:

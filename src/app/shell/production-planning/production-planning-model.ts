@@ -8,6 +8,13 @@ import {
   isRecipeAvailableByActivity,
 } from "@/shared/registry/activity-availability";
 import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
+import {
+  WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
+  WATER_PURIFIER_BYPRODUCT_SEWAGE_PER_OUTPUT,
+  WATER_PURIFIER_COLLECT_RECIPE_ID,
+  WATER_PURIFIER_INPUT_DERIVED_OUTPUT_PER_MINUTE,
+  WATER_PURIFIER_OUTPUT_ITEM_ID,
+} from "@/shared/water-purifier-node";
 
 // AI-CORRECTION 2026-05-20: SPECIAL_INFINITE_ITEM_IDS retained for backward compat in tests;
 // panel no longer uses it. New logic uses ProductionPlanningSourceConfig.
@@ -23,11 +30,13 @@ export const PRODUCTION_PLANNING_BYPRODUCT_ITEM_IDS = new Set([
 
 export type ProductionPlanningByproductPolicy = "use-byproduct" | "dump-byproduct";
 export type ProductionPlanningSewagePolicy = "external-supply" | "self-produce";
+export type ProductionPlanningWaterPurifierPolicy = "disabled" | "use-when-available";
 
 export interface ProductionPlanningSourceConfig {
   waterPolicy: ProductionPlanningByproductPolicy;
   acidPolicy: ProductionPlanningByproductPolicy;
   sewagePolicy: ProductionPlanningSewagePolicy;
+  waterPurifierPolicy: ProductionPlanningWaterPurifierPolicy;
 }
 
 export type ProductionPlanningDisplayMode = "item" | "device";
@@ -190,10 +199,61 @@ export function computeProductionPlan(
   request: ProductionPlanningRequest,
   index: ProductionPlanningIndex,
 ): ProductionPlanningResult {
+  const baseline = computeProductionPlanPass(request, index, 0);
+  if (request.sourceConfig.waterPurifierPolicy !== "use-when-available") {
+    return baseline;
+  }
+
+  const replaceableOutputPerMinute = resolveReplaceableWaterPurifierOutputPerMinute(baseline);
+  const surplusSewagePerMinute = resolveWasteTreatmentInputPerMinute(baseline, "item_liquid_sewage");
+  let requestedOutputPerMinute = roundFlow(Math.min(
+    replaceableOutputPerMinute,
+    surplusSewagePerMinute / WATER_PURIFIER_BYPRODUCT_SEWAGE_PER_OUTPUT,
+    WATER_PURIFIER_INPUT_DERIVED_OUTPUT_PER_MINUTE,
+  ));
+
+  if (requestedOutputPerMinute <= EPSILON) {
+    return baseline;
+  }
+
+  for (let pass = 0; pass < 12; pass += 1) {
+    const candidate = computeProductionPlanPass(request, index, requestedOutputPerMinute);
+    const actualOutputPerMinute = resolveRecipeOutputPerMinute(
+      candidate,
+      WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
+      WATER_PURIFIER_OUTPUT_ITEM_ID,
+    );
+    if (actualOutputPerMinute <= EPSILON) {
+      return baseline;
+    }
+
+    const additionalOutputPerMinute = Math.min(
+      resolveReplaceableWaterPurifierOutputPerMinute(candidate),
+      resolveWasteTreatmentInputPerMinute(candidate, "item_liquid_sewage")
+        / WATER_PURIFIER_BYPRODUCT_SEWAGE_PER_OUTPUT,
+      Math.max(0, WATER_PURIFIER_INPUT_DERIVED_OUTPUT_PER_MINUTE - actualOutputPerMinute),
+    );
+    const nextOutputPerMinute = roundFlow(actualOutputPerMinute + additionalOutputPerMinute);
+    if (Math.abs(nextOutputPerMinute - requestedOutputPerMinute) <= EPSILON) {
+      return candidate;
+    }
+    requestedOutputPerMinute = nextOutputPerMinute;
+  }
+
+  return computeProductionPlanPass(request, index, requestedOutputPerMinute);
+}
+
+function computeProductionPlanPass(
+  request: ProductionPlanningRequest,
+  index: ProductionPlanningIndex,
+  waterPurifierOutputPerMinute: number,
+): ProductionPlanningResult {
   const context: SolverContext = {
     index,
     manualSupplyRemaining: buildSupplyMap(request.supplies),
-    surplusSupplyRemaining: new Map(),
+    surplusSupplyRemaining: waterPurifierOutputPerMinute > EPSILON
+      ? new Map([[WATER_PURIFIER_OUTPUT_ITEM_ID, waterPurifierOutputPerMinute]])
+      : new Map(),
     infiniteItemIds: buildInfiniteItemIds(request.infiniteItemIds, request.supplies, index),
     recipeChoices: request.recipeChoices,
     sourceConfig: request.sourceConfig,
@@ -219,8 +279,14 @@ export function computeProductionPlan(
   }
 
   const dumperRecipeNodes = buildDumperRecipeNodes(context);
+  const waterPurifierRecipeNodes = buildWaterPurifierRecipeNodes(context, waterPurifierOutputPerMinute);
   const wasteTreatmentRecipeNodes = buildWasteTreatmentRecipeNodes(context);
-  const allRecipeNodes = [...recipeNodes, ...dumperRecipeNodes, ...wasteTreatmentRecipeNodes];
+  const allRecipeNodes = [
+    ...recipeNodes,
+    ...dumperRecipeNodes,
+    ...waterPurifierRecipeNodes,
+    ...wasteTreatmentRecipeNodes,
+  ];
 
   const itemTotals = aggregateItemTotals(roots, allRecipeNodes, index);
   const recipeTotals = aggregateRecipeTotals(allRecipeNodes, index);
@@ -343,11 +409,17 @@ export function formatProductionDeviceCount(value: number): string {
 
 export function isRecipeExcludedFromProductionPlanningAuto(recipe: RecipeDefinition): boolean {
   return !isRecipeVisibleInToolbox(recipe)
+    || isWaterPurifierNodeRecipe(recipe)
     || recipe.tags.includes("liquid_bottle_dismantle")
     || (
       recipe.inputs.some((input) => input.itemId === "item_iron_enr_powder")
       && recipe.outputs.some((output) => output.itemId === "item_iron_enr")
     );
+}
+
+export function isWaterPurifierNodeRecipe(recipe: RecipeDefinition): boolean {
+  return recipe.id === WATER_PURIFIER_COLLECT_RECIPE_ID
+    || recipe.id === WATER_PURIFIER_BYPRODUCT_RECIPE_ID;
 }
 
 export function createProductionPlanningId(prefix: string): string {
@@ -541,7 +613,11 @@ function resolveRecipeForItem(itemId: string, context: SolverContext): RecipeDef
 
   if (selectedRecipeId !== undefined) {
     const selected = context.index.recipeById.get(selectedRecipeId);
-    if (selected?.outputs.some((output) => output.itemId === itemId)) {
+    if (
+      selected !== undefined
+      && !isWaterPurifierNodeRecipe(selected)
+      && selected.outputs.some((output) => output.itemId === itemId)
+    ) {
       return selected;
     }
   }
@@ -876,6 +952,101 @@ function buildWasteTreatmentRecipeNodes(context: SolverContext): ProductionPlann
   }
 
   return nodes;
+}
+
+function buildWaterPurifierRecipeNodes(
+  context: SolverContext,
+  requestedOutputPerMinute: number,
+): ProductionPlanningRecipeNode[] {
+  if (requestedOutputPerMinute <= EPSILON) {
+    return [];
+  }
+
+  const recipe = context.index.recipeById.get(WATER_PURIFIER_BYPRODUCT_RECIPE_ID);
+  if (recipe === undefined) {
+    return [];
+  }
+
+  const requestedSewagePerMinute = roundFlow(
+    requestedOutputPerMinute * WATER_PURIFIER_BYPRODUCT_SEWAGE_PER_OUTPUT,
+  );
+  // 壤晶废液按四位精度求解后再乘 30 会留下低于一个输出精度单位的伪污水；
+  // 仅在未触及 360/min 上限时闭合这部分量化余量，真实的超限污水仍进入废水处理。
+  const availableSewagePerMinute = context.surplusSupplyRemaining.get("item_liquid_sewage") ?? 0;
+  const remainingSewagePerMinute = roundFlow(availableSewagePerMinute - requestedSewagePerMinute);
+  const maximumSewagePerMinute = WATER_PURIFIER_INPUT_DERIVED_OUTPUT_PER_MINUTE
+    * WATER_PURIFIER_BYPRODUCT_SEWAGE_PER_OUTPUT;
+  const sewageQuantizationTolerance = WATER_PURIFIER_BYPRODUCT_SEWAGE_PER_OUTPUT * EPSILON;
+  const sewageDemandPerMinute = availableSewagePerMinute <= maximumSewagePerMinute
+    && remainingSewagePerMinute > EPSILON
+    && remainingSewagePerMinute < sewageQuantizationTolerance
+    ? availableSewagePerMinute
+    : requestedSewagePerMinute;
+  const sewagePerMinute = consumeSupply(
+    context.surplusSupplyRemaining,
+    "item_liquid_sewage",
+    sewageDemandPerMinute,
+  );
+  const outputPerMinute = roundFlow(sewagePerMinute / WATER_PURIFIER_BYPRODUCT_SEWAGE_PER_OUTPUT);
+  if (outputPerMinute <= EPSILON) {
+    return [];
+  }
+
+  const recipeOutputAmount = recipe.outputs.find(
+    (output) => output.itemId === WATER_PURIFIER_OUTPUT_ITEM_ID,
+  )?.amount ?? 1;
+  const cyclesPerMinute = roundFlow(outputPerMinute / recipeOutputAmount);
+
+  return [{
+    id: createNodeId("water-purifier", context),
+    kind: "recipe",
+    recipeId: recipe.id,
+    targetItemId: WATER_PURIFIER_OUTPUT_ITEM_ID,
+    durationSeconds: recipe.durationSeconds,
+    cyclesPerMinute,
+    deviceCount: roundFlow(outputPerMinute / WATER_PURIFIER_INPUT_DERIVED_OUTPUT_PER_MINUTE),
+    inputs: [{
+      id: `${recipe.id}-in-item_liquid_sewage`,
+      itemId: "item_liquid_sewage",
+      perMinute: sewagePerMinute,
+    }],
+    outputs: [{
+      id: `${recipe.id}-out-${WATER_PURIFIER_OUTPUT_ITEM_ID}`,
+      itemId: WATER_PURIFIER_OUTPUT_ITEM_ID,
+      perMinute: outputPerMinute,
+    }],
+    inputItems: [],
+  }];
+}
+
+function resolveReplaceableWaterPurifierOutputPerMinute(
+  result: ProductionPlanningResult,
+): number {
+  return roundFlow(flattenProductionPlanningItemNodes(result.roots)
+    .filter((node) => node.itemId === WATER_PURIFIER_OUTPUT_ITEM_ID)
+    .reduce((sum, node) => sum + node.producedPerMinute + node.unresolvedPerMinute, 0));
+}
+
+function resolveWasteTreatmentInputPerMinute(
+  result: ProductionPlanningResult,
+  itemId: string,
+): number {
+  const treatmentRecipeId = WASTE_TREATMENT_RECIPE_MAP[itemId]?.recipeId;
+  if (treatmentRecipeId === undefined) {
+    return 0;
+  }
+
+  const treatment = result.recipeTotals.find((total) => total.recipeId === treatmentRecipeId);
+  return treatment?.inputs.find((input) => input.itemId === itemId)?.perMinute ?? 0;
+}
+
+function resolveRecipeOutputPerMinute(
+  result: ProductionPlanningResult,
+  recipeId: string,
+  itemId: string,
+): number {
+  const recipe = result.recipeTotals.find((total) => total.recipeId === recipeId);
+  return recipe?.outputs.find((output) => output.itemId === itemId)?.perMinute ?? 0;
 }
 
 function isAllowedProductivePlantCycle(itemId: string, stack: readonly string[]): boolean {

@@ -12,6 +12,7 @@ import type { ProductionPlanningPort } from "@/app/shell/production-planning/pro
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { createRegistryContract } from "@/registry";
 import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
+import { WATER_PURIFIER_BYPRODUCT_RECIPE_ID } from "@/shared/water-purifier-node";
 
 function port(itemId: string, perMinute: number): ProductionPlanningPort {
   return {
@@ -34,7 +35,42 @@ const DEFAULT_SOURCE_CONFIG: ProductionPlanningSourceConfig = {
   waterPolicy: "use-byproduct",
   acidPolicy: "use-byproduct",
   sewagePolicy: "external-supply",
+  waterPurifierPolicy: "disabled",
 };
+
+const TEST_SEWAGE_BYPRODUCT_RECIPE_ID = "test_sewage_byproduct";
+const TEST_XIRANITE_WASTE_FALLBACK_RECIPE_ID = "test_xiranite_waste_fallback";
+
+function createWaterPurifierPlanningIndex(sewageOutputAmount = 600) {
+  const registry = createRegistryContract();
+  const recipes: RecipeDefinition[] = [
+    {
+      id: TEST_SEWAGE_BYPRODUCT_RECIPE_ID,
+      nameKey: "recipe.test_sewage_byproduct",
+      durationSeconds: 1,
+      inputs: [],
+      outputs: [
+        { itemId: "item_iron_nugget", amount: 1 },
+        { itemId: "item_liquid_sewage", amount: sewageOutputAmount },
+      ],
+      machineId: "furnance_1",
+      recipeType: "immediate-consume",
+      tags: [],
+    },
+    {
+      id: TEST_XIRANITE_WASTE_FALLBACK_RECIPE_ID,
+      nameKey: "recipe.test_xiranite_waste_fallback",
+      durationSeconds: 1,
+      inputs: [],
+      outputs: [{ itemId: "item_liquid_xiranite_poly", amount: 1 }],
+      machineId: "mix_pool_1",
+      recipeType: "immediate-consume",
+      tags: [],
+    },
+  ];
+  registry.recipeDefinitions = [...recipes, ...registry.recipeDefinitions];
+  return buildProductionPlanningIndex(registry);
+}
 
 // AI-CORRECTION 2026-05-22:
 // 自然资源不再通过 infiniteItemIds 补齐；缺失时走 null 配方生产。
@@ -258,6 +294,158 @@ describe("production planning model", () => {
     const extItems = flattenNodes(externalResult.roots);
     const extSewageNode = extItems.find((node) => node.itemId === "item_liquid_sewage");
     expect(extSewageNode?.isInfiniteSource).toBe(true);
+  });
+
+  it("uses at most 360/min surplus sewage in the water purifier and falls back for the remainder", () => {
+    const index = createWaterPurifierPlanningIndex();
+    const result = computeProductionPlan({
+      targets: [
+        port("item_iron_nugget", 1),
+        port("item_liquid_xiranite_poly", 20),
+      ],
+      supplies: [],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map([
+        ["item_iron_nugget", TEST_SEWAGE_BYPRODUCT_RECIPE_ID],
+        ["item_liquid_xiranite_poly", TEST_XIRANITE_WASTE_FALLBACK_RECIPE_ID],
+      ]),
+      sourceConfig: { ...DEFAULT_SOURCE_CONFIG, waterPurifierPolicy: "use-when-available" },
+    }, index);
+
+    const waterPurifier = result.recipeTotals.find(
+      (total) => total.recipeId === WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
+    );
+    const fallback = result.recipeTotals.find(
+      (total) => total.recipeId === TEST_XIRANITE_WASTE_FALLBACK_RECIPE_ID,
+    );
+    const sewageTreatment = result.recipeTotals.find(
+      (total) => total.recipeId === "r_chrono_wastewater_treatment_void_wastewater_basic",
+    );
+
+    expect(waterPurifier?.inputs).toEqual([
+      expect.objectContaining({ itemId: "item_liquid_sewage", perMinute: 360 }),
+    ]);
+    expect(waterPurifier?.outputs).toEqual([
+      expect.objectContaining({ itemId: "item_liquid_xiranite_poly", perMinute: 12 }),
+    ]);
+    expect(waterPurifier?.deviceCount).toBe(1);
+    expect(fallback?.outputs).toEqual([
+      expect.objectContaining({ itemId: "item_liquid_xiranite_poly", perMinute: 8 }),
+    ]);
+    expect(sewageTreatment?.inputs).toEqual([
+      expect.objectContaining({ itemId: "item_liquid_sewage", perMinute: 240 }),
+    ]);
+
+    const rows = buildProductionPlanningTreeRows(result, "device");
+    const sewageTreatmentRow = rows.find((row) => (
+      row.recipeId === "r_chrono_wastewater_treatment_void_wastewater_basic"
+      && row.targetItemId === "item_liquid_sewage"
+    ));
+    const waterPurifierRow = rows.find((row) => (
+      row.recipeId === WATER_PURIFIER_BYPRODUCT_RECIPE_ID
+      && row.targetItemId === "item_liquid_xiranite_poly"
+    ));
+    const sewageSourceRow = rows.find((row) => (
+      row.recipeId === TEST_SEWAGE_BYPRODUCT_RECIPE_ID
+      && row.targetItemId === "item_liquid_sewage"
+      && row.parentIds.includes(sewageTreatmentRow?.id ?? "")
+    ));
+    expect(sewageTreatmentRow).toBeDefined();
+    expect(waterPurifierRow).toBeDefined();
+    expect(sewageSourceRow).toBeDefined();
+    expect(waterPurifierRow?.childIds).not.toContain(sewageSourceRow?.id);
+  });
+
+  it("routes the fully consumed sewage in the 6x enriched xiranite and quality Yazhen injection plan under the water purifier", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [
+        port("item_xiranite_enr_powder", 6),
+        port("item_bottled_rec_hp_5", 6),
+      ],
+      supplies: [],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map(),
+      sourceConfig: {
+        ...DEFAULT_SOURCE_CONFIG,
+        sewagePolicy: "self-produce",
+        waterPurifierPolicy: "use-when-available",
+      },
+    }, index);
+
+    const sewageTreatmentRecipeId = "r_chrono_wastewater_treatment_void_wastewater_basic";
+    const sewageFurnaceRecipeId = "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic";
+    const waterPurifier = result.recipeTotals.find(
+      (total) => total.recipeId === WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
+    );
+    const sewageFurnace = result.recipeTotals.find(
+      (total) => total.recipeId === sewageFurnaceRecipeId,
+    );
+
+    expect(result.unresolvedPerMinute).toBe(0);
+    expect(result.recipeTotals.map((total) => total.recipeId)).not.toContain(sewageTreatmentRecipeId);
+    expect(waterPurifier?.inputs.find((input) => input.itemId === "item_liquid_sewage")?.perMinute)
+      .toBeCloseTo(93.1034, 4);
+    expect(sewageFurnace?.deviceCount).toBe(4);
+    expect(sewageFurnace?.outputs.find((output) => output.itemId === "item_liquid_sewage")?.perMinute)
+      .toBe(120);
+
+    const rows = buildProductionPlanningTreeRows(result, "device");
+    const waterPurifierRow = rows.find((row) => (
+      row.recipeId === WATER_PURIFIER_BYPRODUCT_RECIPE_ID
+      && row.targetItemId === "item_liquid_xiranite_poly"
+    ));
+    const purifierSewageSourceRow = rows.find((row) => (
+      row.recipeId === sewageFurnaceRecipeId
+      && row.targetItemId === "item_liquid_sewage"
+      && row.parentIds.includes(waterPurifierRow?.id ?? "")
+    ));
+
+    expect(rows.some((row) => row.recipeId === sewageTreatmentRecipeId)).toBe(false);
+    expect(waterPurifierRow).toBeDefined();
+    expect(purifierSewageSourceRow).toBeDefined();
+    expect(waterPurifierRow?.childIds).toContain(purifierSewageSourceRow?.id);
+  });
+
+  it("does not use the water purifier without xiranite waste demand", () => {
+    const index = createWaterPurifierPlanningIndex();
+    const result = computeProductionPlan({
+      targets: [port("item_iron_nugget", 1)],
+      supplies: [],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map([["item_iron_nugget", TEST_SEWAGE_BYPRODUCT_RECIPE_ID]]),
+      sourceConfig: { ...DEFAULT_SOURCE_CONFIG, waterPurifierPolicy: "use-when-available" },
+    }, index);
+
+    expect(result.recipeTotals.map((total) => total.recipeId))
+      .not.toContain(WATER_PURIFIER_BYPRODUCT_RECIPE_ID);
+    expect(result.recipeTotals.find(
+      (total) => total.recipeId === "r_chrono_wastewater_treatment_void_wastewater_basic",
+    )?.inputs).toEqual([
+      expect.objectContaining({ itemId: "item_liquid_sewage", perMinute: 600 }),
+    ]);
+  });
+
+  it("keeps water purifier recipes unavailable when the switch is disabled", () => {
+    const index = createWaterPurifierPlanningIndex();
+    const result = computeProductionPlan({
+      targets: [
+        port("item_iron_nugget", 1),
+        port("item_liquid_xiranite_poly", 20),
+      ],
+      supplies: [],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map([
+        ["item_iron_nugget", TEST_SEWAGE_BYPRODUCT_RECIPE_ID],
+        ["item_liquid_xiranite_poly", WATER_PURIFIER_BYPRODUCT_RECIPE_ID],
+      ]),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    expect(result.recipeTotals.map((total) => total.recipeId))
+      .not.toContain(WATER_PURIFIER_BYPRODUCT_RECIPE_ID);
+    expect(result.roots.find((root) => root.itemId === "item_liquid_xiranite_poly")?.recipeNode?.recipeId)
+      .toBe(TEST_XIRANITE_WASTE_FALLBACK_RECIPE_ID);
   });
 
   it("marks only the leftover output as byproduct and nests it under waste treatment", () => {
