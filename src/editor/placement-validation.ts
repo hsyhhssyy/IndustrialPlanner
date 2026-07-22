@@ -415,7 +415,6 @@ function applyOverlapReasons(options: {
       if (isAllowedPipeOverlapPair({
         left,
         right,
-        registry: options.registry,
       })) {
         continue;
       }
@@ -759,22 +758,14 @@ function hasPlacementBehavior(
 function isAllowedPipeOverlapPair(options: {
   left: PlacementValidationEntry;
   right: PlacementValidationEntry;
-  registry: WorkspaceContract["registry"];
 }): boolean {
   return (
     hasPlacementBehavior(options.left.definition, PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap)
-    && isDedicatedPipeDefinition(options.right.definition, options.registry)
+    && hasPlacementBehavior(options.right.definition, PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap)
   ) || (
     hasPlacementBehavior(options.right.definition, PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap)
-    && isDedicatedPipeDefinition(options.left.definition, options.registry)
+    && hasPlacementBehavior(options.left.definition, PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap)
   );
-}
-
-function isDedicatedPipeDefinition(
-  definition: EntityDefinition,
-  registry: WorkspaceContract["registry"],
-): boolean {
-  return registry.queries.resolveDedicatedLogisticsKind(definition.id) === "pipe";
 }
 
 function resolveCurrentBaseDefinition(options: {

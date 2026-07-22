@@ -499,7 +499,7 @@ describe("placement validation", () => {
     ).toBe(true);
   });
 
-  it("does NOT allow cross-family replacement: PipeFamily over BeltFamily", () => {
+  it("allows PipeFamily device placement over BeltFamily belt without overlap error", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithEntities([
@@ -508,23 +508,13 @@ describe("placement validation", () => {
 
     editorHost.internalDocument.setSnapshot(document);
 
-    // PipeFamily 的 connector 放到 BeltFamily 的 belt 上（管道设备没有 allowPipeOverlap）
+    // PipeFamily 的 connector 放到 BeltFamily 的 belt 上
+    // pipe_connector 有 allowBeltOverlap，belt_straight 有 allowPipeOverlap → 放行
     editorHost.actions.createSinglePlacementDraft("pipe_connector", { x: 5, y: 5 });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
-    // 跨族应仍然报 overlap
-    expect(
-      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(draftId ?? ""),
-    ).toBe(true);
-    expect(
-      editorHost.queries.getEntityPlacementValidation(draftId ?? "").reasons.map((r) => r.code),
-    ).toEqual(["overlap"]);
-
-    // 即使强行 apply，也不应删除旧实体
-    editorHost.actions.applyPlacementDraft();
-    const finalDoc = editorHost.document.getSnapshot();
-    expect(finalDoc.entities["belt"]).toBeDefined();
+    expect(editorHost.queries.getEntityPlacementValidation(draftId ?? "").canPlace).toBe(true);
   });
 
   it("does NOT allow replacement when draft is placed on non-family entity", () => {
