@@ -258,7 +258,10 @@ function RecipePickerItemList({
           {items.map((item) => (
             <span className={cm(styles, "recipe-picker-item-chip")} key={item.itemId}>
               <img alt="" src={resolveItemIcon(item.itemId, index)} />
-              <span>{resolveItemName(item.itemId, index, t)}</span>
+              <span className={cm(styles, "recipe-picker-item-name")}>
+                {resolveItemName(item.itemId, index, t)}
+              </span>
+              <span className={cm(styles, "recipe-picker-item-amount")}>x{item.amount}</span>
             </span>
           ))}
         </div>

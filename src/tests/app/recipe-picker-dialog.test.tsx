@@ -158,6 +158,20 @@ describe("RecipePickerDialog", () => {
     return expect(selectionPromise).resolves.toBeNull();
   });
 
+  it("shows the amount after every ingredient and product", () => {
+    const recipe = findRecipe(appHost, "r_thickener_iron_enr_powder_from_iron_and_moss_powder_basic");
+
+    act(() => {
+      void appHost.recipePicker.pickRecipe({ recipes: [recipe] });
+    });
+
+    const recipeButton = queryRecipeButton(container, recipe.id);
+    const amounts = Array.from(recipeButton?.querySelectorAll(".recipe-picker-item-amount") ?? [])
+      .map((element) => element.textContent);
+
+    expect(amounts).toEqual(["x2", "x1", "x1"]);
+  });
+
   it("hides toolbox-hidden recipes from explicit recipe sources", () => {
     const hiddenRecipe = findRecipe(appHost, "r_udpipe_loader_void_fluid_any_internal");
     const visibleRecipe = findRecipe(appHost, "r_furnace_iron_nugget_from_iron_ore_basic");

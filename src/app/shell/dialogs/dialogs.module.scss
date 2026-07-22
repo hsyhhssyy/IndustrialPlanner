@@ -1170,7 +1170,7 @@
 
 .recipe-picker-item-chip {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: center;
   gap: 5px;
   min-width: 0;
@@ -1189,6 +1189,14 @@
   white-space: nowrap;
   color: var(--text-0);
   font-size: 0.78rem;
+}
+
+.recipe-picker-item-chip .recipe-picker-item-amount {
+  overflow: visible;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  text-overflow: clip;
 }
 
 .recipe-picker-item-empty {
@@ -1247,7 +1255,7 @@
 }
 
 .recipe-picker-dialog-touch .recipe-picker-item-chip {
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: 22px minmax(0, 1fr) auto;
 }
 
 .recipe-picker-dialog-touch .recipe-picker-item-chip img {
