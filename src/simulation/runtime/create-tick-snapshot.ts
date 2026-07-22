@@ -306,5 +306,8 @@ function buildWarehouseStats(
     };
   }
 
-  return { items };
+  return {
+    items,
+    statsWindowReady: recipeStats.coveredStandardTicks >= recipeStats.windowCapacity,
+  };
 }

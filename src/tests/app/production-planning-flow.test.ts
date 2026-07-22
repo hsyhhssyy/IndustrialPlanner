@@ -11,6 +11,7 @@ import {
   type ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
 import { buildProductionFlowGraph, createSankeyLayout } from "@/app/shell/production-planning/flow";
+import { isProductionPlanningDeviceMinimumConsumptionRecipeId } from "@/app/shell/production-planning/production-planning-ledger";
 import { createRegistryContract } from "@/registry";
 
 function port(itemId: string, perMinute: number): ProductionPlanningPort {
@@ -28,6 +29,8 @@ function recipeNode(
   inputs: readonly ProductionPlanningPort[],
   outputs: readonly ProductionPlanningPort[],
   inputItems: readonly ProductionPlanningItemNode[] = [],
+  deviceMinimumConsumptionInputs: readonly ProductionPlanningPort[] = [],
+  deviceMinimumConsumptionItems: readonly ProductionPlanningItemNode[] = [],
 ): ProductionPlanningRecipeNode {
   return {
     id,
@@ -38,8 +41,10 @@ function recipeNode(
     cyclesPerMinute: Math.max(...outputs.map((output) => output.perMinute), 1),
     deviceCount: 1,
     inputs: inputs.map((input) => ({ ...input })),
+    deviceMinimumConsumptionInputs: deviceMinimumConsumptionInputs.map((input) => ({ ...input })),
     outputs: outputs.map((output) => ({ ...output })),
     inputItems: [...inputItems],
+    deviceMinimumConsumptionItems: [...deviceMinimumConsumptionItems],
   };
 }
 
@@ -166,7 +171,7 @@ describe("production planning flow graph", () => {
     expect(byproductLink?.value).toBeGreaterThan(0);
   });
 
-  it("keeps self-consumed device input as a self flow at the gross output rate", () => {
+  it("shows self-consumed device input as an independent consumption node at the gross output rate", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const recipeId = "liquid_transmuter_1_liquid_liquid_xiranite_1";
     const result = computeProductionPlan({
@@ -179,15 +184,22 @@ describe("production planning flow graph", () => {
 
     const graph = buildProductionFlowGraph(result, index, t, "device");
     const recipeNode = graph.nodes.find((node) => node.recipeId === recipeId);
-    const selfConsumptionLink = graph.links.find((link) => (
+    const consumptionNode = graph.nodes.find((node) => (
+      node.recipeId !== undefined
+      && isProductionPlanningDeviceMinimumConsumptionRecipeId(node.recipeId)
+      && node.itemId === "item_liquid_xiranite"
+    ));
+    const consumptionLink = graph.links.find((link) => (
       link.source === recipeNode?.id
-      && link.target === recipeNode?.id
+      && link.target === consumptionNode?.id
       && link.itemId === "item_liquid_xiranite"
     ));
 
     expect(recipeNode?.subtitle).toContain("1.25");
     expect(recipeNode?.subtitle).toContain("37.5/min");
-    expect(selfConsumptionLink?.value).toBe(7.5);
+    expect(consumptionNode?.subtitle).toContain("7.5/min");
+    expect(consumptionLink?.value).toBe(7.5);
+    expect(graph.links.some((link) => link.source === link.target)).toBe(false);
     expect(() => createSankeyLayout(graph, {
       width: 720,
       height: 320,

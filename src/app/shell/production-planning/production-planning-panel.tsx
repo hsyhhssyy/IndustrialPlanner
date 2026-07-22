@@ -52,6 +52,12 @@ import {
   type ProductionPlanningViewMode,
 } from "@/app/shell/production-planning/production-planning-model";
 import { ProductionFlowGraph } from "@/app/shell/production-planning/flow";
+import {
+  buildProductionPlanningDeviceMinimumConsumptionRecipeId,
+  isProductionPlanningDeviceMinimumConsumptionRecipeId,
+  resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId,
+  resolveProductionPlanningRecipeInputPorts,
+} from "@/app/shell/production-planning/production-planning-ledger";
 import { ProductionPlanningInputStore } from "./production-planning-state";
 import { hookPlannerIndexedDbPersistence } from "./production-planning-persist";
 import styles from "@/app/shell/app-shell.module.scss";
@@ -889,6 +895,16 @@ function SourcePolicyPanel({
           onChange={(policy) => onUpdate({ waterPurifierPolicy: policy })}
           t={t}
         />
+        {/*
+        AI-REMOVED 2026-07-22:
+        Reason: 原生 checkbox 滑块与同一区域现有的二选一分段控件交互不一致。
+        Trigger: 用户明确指出该 switch 与其他 switch 不是同一种交互逻辑。
+        Evidence: SourcePolicyPanel 中水、酸、污水及净水节点策略均使用 production-planning-two-option-toggle。
+        Replacement: DeviceMinimumConsumptionToggle
+        Risk: Low；配置字段及默认值不变，仅统一交互形式。
+        Human Review: Required
+
+        Original code:
         <label className={cm(styles, "production-planning-switch-row")}>
           <span>{t("productionPlanning.deviceMinimumConsumption")}</span>
           <input
@@ -901,6 +917,12 @@ function SourcePolicyPanel({
             <span className={cm(styles, "production-planning-switch-thumb")} />
           </span>
         </label>
+        */}
+        <DeviceMinimumConsumptionToggle
+          enabled={sourceConfig.includeDeviceMinimumConsumption}
+          onChange={(enabled) => onUpdate({ includeDeviceMinimumConsumption: enabled })}
+          t={t}
+        />
       </div>
     </section>
   );
@@ -1021,6 +1043,43 @@ function WaterPurifierPolicyToggle({
           onClick={() => onChange("use-when-available")}
         >
           {t("productionPlanning.waterPurifierUseWhenAvailable")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DeviceMinimumConsumptionToggle({
+  enabled,
+  onChange,
+  t,
+}: {
+  enabled: boolean;
+  onChange: (enabled: boolean) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <div className={cm(styles, "production-planning-special-source")}>
+      <div className={cm(styles, "production-planning-special-source-label")}>
+        <LucideFactory />
+        <span>{t("productionPlanning.deviceMinimumConsumption")}</span>
+      </div>
+      <div className={cm(styles, "production-planning-two-option-toggle")}>
+        <button
+          type="button"
+          className={cm(styles, !enabled ? "is-active" : "")}
+          aria-pressed={!enabled}
+          onClick={() => onChange(false)}
+        >
+          {t("productionPlanning.deviceMinimumConsumptionDisabled")}
+        </button>
+        <button
+          type="button"
+          className={cm(styles, enabled ? "is-active" : "")}
+          aria-pressed={enabled}
+          onClick={() => onChange(true)}
+        >
+          {t("productionPlanning.deviceMinimumConsumptionEnabled")}
         </button>
       </div>
     </div>
@@ -1380,13 +1439,23 @@ function ProductionPlanningTreeTableRow({
             aria-pressed={selected}
             onClick={onSelect}
           >
-            <RecipeIdentity
-              recipeNode={row.recipeNode}
-              targetItemId={row.targetItemId}
-              displayMode={displayMode}
-              index={index}
-              t={t}
-            />
+            {isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId) ? (
+              <div className={cm(styles, "production-planning-recipe-identity")}>
+                <img alt="" src={resolveProductionPlanningItemIconSrc(row.targetItemId, index)} />
+                <div>
+                  <strong>{resolveProductionPlanningItemName(row.targetItemId, index, t)}</strong>
+                  <span>{t("productionPlanning.deviceMinimumConsumptionNode")}</span>
+                </div>
+              </div>
+            ) : (
+              <RecipeIdentity
+                recipeNode={row.recipeNode}
+                targetItemId={row.targetItemId}
+                displayMode={displayMode}
+                index={index}
+                t={t}
+              />
+            )}
             {row.parentIds.length > 1 && (
               <span className={cm(styles, "production-planning-tree-table-chip")}>
                 {t("productionPlanning.shared")}
@@ -1498,6 +1567,18 @@ function ProductionPlanningTreeRowRate({
   index: ProductionPlanningIndex;
   t: (key: string) => string;
 }) {
+  if (isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)) {
+    const consumedPerMinute = row.recipeNode.inputs.find((input) => input.itemId === row.targetItemId)?.perMinute ?? 0;
+    return (
+      <div className={cm(styles, "production-planning-tree-table-rate")}>
+        <span className={cm(styles, "production-planning-tree-rate-piece")}>
+          <span>{t("productionPlanning.consumed")}</span>
+          <strong>{formatProductionFlow(consumedPerMinute)}/min</strong>
+        </span>
+      </div>
+    );
+  }
+
   if (isProductionPlanningExternalSupplyRecipeId(row.recipeId)) {
     const outputFlow = resolveProductionPlanningRecipeDisplayFlow(row);
     const logisticsItemId = resolveProductionPlanningRecipeDisplayItemId(row);
@@ -1596,6 +1677,18 @@ function ProductionPlanningTreeDetail({
   onRemoveExternalSupply: (itemId: string) => void;
   t: (key: string) => string;
 }) {
+  if (isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)) {
+    return (
+      <ProductionPlanningDeviceMinimumConsumptionDetail
+        row={row}
+        rowById={rowById}
+        index={index}
+        onSelectRow={onSelectRow}
+        t={t}
+      />
+    );
+  }
+
   const recipe = index.recipeById.get(row.recipeNode.recipeId);
   const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
   const isExternal = isProductionPlanningExternalSupplyRecipeId(row.recipeId);
@@ -1654,6 +1747,59 @@ function ProductionPlanningTreeDetail({
       <div className={cm(styles, "production-planning-recipe-ports")}>
         <PortChipList title={t("productionPlanning.requiredInputs")} ports={row.recipeNode.inputs} index={index} t={t} />
         <PortChipList title={t("productionPlanning.totalOutputs")} ports={row.recipeNode.outputs} index={index} t={t} />
+      </div>
+      <ProductionPlanningTreeRelations
+        groups={[
+          {
+            label: t("productionPlanning.inputSources"),
+            rowIds: row.childIds,
+          },
+          {
+            label: t("productionPlanning.outputTargets"),
+            rowIds: row.parentIds,
+          },
+        ]}
+        rowById={rowById}
+        index={index}
+        onSelectRow={onSelectRow}
+        t={t}
+      />
+    </article>
+  );
+}
+
+function ProductionPlanningDeviceMinimumConsumptionDetail({
+  row,
+  rowById,
+  index,
+  onSelectRow,
+  t,
+}: {
+  row: ProductionPlanningTreeRow;
+  rowById: ReadonlyMap<string, ProductionPlanningTreeRow>;
+  index: ProductionPlanningIndex;
+  onSelectRow: (rowId: string) => void;
+  t: (key: string) => string;
+}) {
+  const hostRecipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId);
+  const hostRecipe = hostRecipeId === null ? undefined : index.recipeById.get(hostRecipeId);
+  const hostMachine = hostRecipe === undefined ? undefined : index.entityById.get(hostRecipe.machineId);
+  const machineName = hostMachine === undefined ? hostRecipeId : t(hostMachine.nameKey);
+
+  return (
+    <article className={cm(styles, "production-planning-tree-detail-stack")}>
+      <div className={cm(styles, "production-planning-recipe-header")}>
+        <img alt="" src={resolveProductionPlanningItemIconSrc(row.targetItemId, index)} />
+        <div>
+          <h4>{resolveProductionPlanningItemName(row.targetItemId, index, t)}</h4>
+          <span>
+            {t("productionPlanning.deviceMinimumConsumptionNode")}
+            {machineName === null ? "" : ` · ${machineName}`}
+          </span>
+        </div>
+      </div>
+      <div className={cm(styles, "production-planning-recipe-ports")}>
+        <PortChipList title={t("productionPlanning.consumed")} ports={row.recipeNode.inputs} index={index} t={t} />
       </div>
       <ProductionPlanningTreeRelations
         groups={[
@@ -1829,6 +1975,18 @@ function ProductionPlanningTreeRelationIdentity({
   index: ProductionPlanningIndex;
   t: (key: string) => string;
 }) {
+  if (isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)) {
+    return (
+      <>
+        <img alt="" src={resolveProductionPlanningItemIconSrc(row.targetItemId, index)} />
+        <span>
+          {t("productionPlanning.deviceMinimumConsumptionNode")}
+          {` · ${resolveProductionPlanningItemName(row.targetItemId, index, t)}`}
+        </span>
+      </>
+    );
+  }
+
   const recipe = index.recipeById.get(row.recipeId);
   const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
   const isExternal = isProductionPlanningExternalSupplyRecipeId(row.recipeId);
@@ -2030,6 +2188,9 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
       if (targetItemId.length > 0) {
         existing.outputItemIds.add(targetItemId);
       }
+      for (const input of resolveProductionPlanningRecipeInputPorts(targetRecipeNode)) {
+        existing.inputItemIds.add(input.itemId);
+      }
       return existing;
     }
 
@@ -2044,7 +2205,7 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
       recipeNode: targetRecipeNode,
       recipeNodes: [targetRecipeNode],
       total,
-      inputItemIds: new Set(targetRecipeNode.inputs.map((input) => input.itemId)),
+      inputItemIds: new Set(resolveProductionPlanningRecipeInputPorts(targetRecipeNode).map((input) => input.itemId)),
       outputItemIds: targetItemId.length > 0 ? new Set([targetItemId]) : new Set(),
       isByproduct: false,
     };
@@ -2103,6 +2264,9 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
 
     registerRecipeOutputs(node.recipeNode);
     for (const child of node.recipeNode.inputItems) {
+      collectRowsFromItemNode(child);
+    }
+    for (const child of node.recipeNode.deviceMinimumConsumptionItems) {
       collectRowsFromItemNode(child);
     }
   };
@@ -2169,6 +2333,22 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
     const parentRow = ensureRecipeRow(recipeNode.recipeId, recipeNode.targetItemId, recipeNode);
     for (const child of recipeNode.inputItems) {
       connectItemSources(child, parentRow);
+    }
+    for (const [index, input] of recipeNode.deviceMinimumConsumptionInputs.entries()) {
+      const consumptionItem = recipeNode.deviceMinimumConsumptionItems[index];
+      if (consumptionItem === undefined) {
+        continue;
+      }
+
+      const consumptionNode = createProductionPlanningTreeDeviceMinimumConsumptionRecipeNode(recipeNode, input);
+      const consumptionRow = ensureRecipeRow(
+        consumptionNode.recipeId,
+        input.itemId,
+        consumptionNode,
+        `${parentRow.id}:device-minimum-consumption:${input.itemId}`,
+      );
+      addProductionPlanningTreeEdge(rowById, parentRow.id, consumptionRow.id);
+      connectItemSources(consumptionItem, consumptionRow);
     }
   }
 
@@ -2621,8 +2801,10 @@ function createProductionPlanningTreeSyntheticRecipeNode(
       cyclesPerMinute: 0,
       deviceCount: 0,
       inputs: [],
+      deviceMinimumConsumptionInputs: [],
       outputs: [],
       inputItems: [],
+      deviceMinimumConsumptionItems: [],
     };
   }
 
@@ -2635,8 +2817,10 @@ function createProductionPlanningTreeSyntheticRecipeNode(
     cyclesPerMinute: total.cyclesPerMinute,
     deviceCount: total.deviceCount,
     inputs: total.inputs.map(clonePort),
+    deviceMinimumConsumptionInputs: total.deviceMinimumConsumptionInputs.map(clonePort),
     outputs: total.outputs.map(clonePort),
     inputItems: fallback?.inputItems ?? [],
+    deviceMinimumConsumptionItems: fallback?.deviceMinimumConsumptionItems ?? [],
   };
 }
 
@@ -2653,8 +2837,13 @@ function mergeProductionPlanningTreeRecipeNodes(
     cyclesPerMinute: left.cyclesPerMinute + right.cyclesPerMinute,
     deviceCount: left.deviceCount + right.deviceCount,
     inputs: mergeProductionPlanningTreePorts(left.inputs, right.inputs),
+    deviceMinimumConsumptionInputs: mergeProductionPlanningTreePorts(
+      left.deviceMinimumConsumptionInputs,
+      right.deviceMinimumConsumptionInputs,
+    ),
     outputs: mergeProductionPlanningTreePorts(left.outputs, right.outputs),
     inputItems: left.inputItems,
+    deviceMinimumConsumptionItems: left.deviceMinimumConsumptionItems,
   };
 }
 
@@ -2713,6 +2902,9 @@ function resolveProductionPlanningTreeRowTitle(
   t: (key: string) => string,
 ): string {
   const isExternal = isProductionPlanningExternalSupplyRecipeId(row.recipeId);
+  if (isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)) {
+    return `${t("productionPlanning.deviceMinimumConsumptionNode")} · ${resolveProductionPlanningItemName(row.targetItemId, index, t)}`;
+  }
   const recipe = index.recipeById.get(row.recipeId);
   const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
   const title = isExternal
@@ -2891,8 +3083,31 @@ function createProductionPlanningExternalSupplyRecipeNode(
     cyclesPerMinute: 0,
     deviceCount: 0,
     inputs: [],
+    deviceMinimumConsumptionInputs: [],
     outputs: [{ id: `${node.id}-external-supply-out-${node.itemId}`, itemId: node.itemId, perMinute }],
     inputItems: [],
+    deviceMinimumConsumptionItems: [],
+  };
+}
+
+function createProductionPlanningTreeDeviceMinimumConsumptionRecipeNode(
+  hostRecipeNode: ProductionPlanningRecipeNode,
+  input: ProductionPlanningPort,
+): ProductionPlanningRecipeNode {
+  const recipeId = buildProductionPlanningDeviceMinimumConsumptionRecipeId(hostRecipeNode.recipeId);
+  return {
+    id: `${recipeId}:${hostRecipeNode.id}:${input.itemId}`,
+    kind: "recipe",
+    recipeId,
+    targetItemId: input.itemId,
+    durationSeconds: 0,
+    cyclesPerMinute: 0,
+    deviceCount: 0,
+    inputs: [clonePort(input)],
+    deviceMinimumConsumptionInputs: [],
+    outputs: [],
+    inputItems: [],
+    deviceMinimumConsumptionItems: [],
   };
 }
 

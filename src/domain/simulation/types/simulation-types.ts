@@ -140,6 +140,8 @@ export interface WarehouseItemStatsReadModel {
 export interface WarehouseStatsReadModel {
   /** key 为 itemType */
   readonly items: Record<string, WarehouseItemStatsReadModel>;
+  /** 首个 1 分钟统计窗口是否已就绪 */
+  readonly statsWindowReady: boolean;
 }
 
 export interface SimulationRuntimeSlotPatch {

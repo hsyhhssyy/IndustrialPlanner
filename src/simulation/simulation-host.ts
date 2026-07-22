@@ -289,6 +289,7 @@ export function createSimulationHost(
               },
             ]),
           ),
+          statsWindowReady: snapshot.warehouseStats.statsWindowReady,
         };
       },
     },

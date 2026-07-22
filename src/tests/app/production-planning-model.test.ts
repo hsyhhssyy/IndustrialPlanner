@@ -8,6 +8,7 @@ import {
   type ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
 import { buildProductionPlanningTreeRows } from "@/app/shell/production-planning/production-planning-panel";
+import { isProductionPlanningDeviceMinimumConsumptionRecipeId } from "@/app/shell/production-planning/production-planning-ledger";
 import type { ProductionPlanningPort } from "@/app/shell/production-planning/production-planning-model";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { createRegistryContract } from "@/registry";
@@ -266,6 +267,25 @@ describe("production planning model", () => {
       itemId: "item_liquid_xiranite",
       perMinute: 7.5,
     }));
+    expect(total?.deviceMinimumConsumptionInputs).toEqual([
+      expect.objectContaining({
+        itemId: "item_liquid_xiranite",
+        perMinute: 7.5,
+      }),
+    ]);
+
+    const rows = buildProductionPlanningTreeRows(result, "device");
+    const productionRow = rows.find((row) => row.recipeId === recipeId);
+    const consumptionRow = rows.find((row) => (
+      isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)
+      && row.targetItemId === "item_liquid_xiranite"
+    ));
+    expect(productionRow?.childIds).toContain(consumptionRow?.id);
+    expect(consumptionRow?.parentIds).toEqual([productionRow?.id]);
+    expect(consumptionRow?.recipeNode.inputs).toEqual([
+      expect.objectContaining({ itemId: "item_liquid_xiranite", perMinute: 7.5 }),
+    ]);
+    expect(consumptionRow?.recipeNode.outputs).toEqual([]);
     expect(result.unresolvedPerMinute).toBe(0);
   });
 
@@ -287,6 +307,10 @@ describe("production planning model", () => {
       perMinute: 30,
     }));
     expect(total?.inputs.some((input) => input.itemId === "item_liquid_xiranite")).toBe(false);
+    expect(total?.deviceMinimumConsumptionInputs).toEqual([]);
+    expect(buildProductionPlanningTreeRows(result, "device").some((row) => (
+      isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)
+    ))).toBe(false);
   });
 
   it("treats seed and plant growth loops as productive cycles", () => {

@@ -15,8 +15,11 @@ import {
 } from "../production-planning-model";
 import {
   buildProductionPlanningLedgerRows,
+  isProductionPlanningDeviceMinimumConsumptionRecipeId,
   isProductionPlanningDisposalRecipeId,
   isProductionPlanningExternalSupplyRecipeId,
+  resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId,
+  resolveProductionPlanningRecipeInputPorts,
   type ProductionPlanningLedgerRow,
 } from "../production-planning-ledger";
 import { createDeviceIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
@@ -141,6 +144,7 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
   }
 
   const isExternal = isProductionPlanningExternalSupplyRecipeId(row.recipeId);
+  const isDeviceMinimumConsumption = isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId);
   const targetName = resolveProductionPlanningItemName(row.targetItemId, context.index, context.translate);
   const machineName = resolveLedgerRowMachineName(row, context.index, context.translate);
   const producedPerMinute = findOutputFlow(row.recipeNode, row.targetItemId);
@@ -151,13 +155,19 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
   // 处置类配方无产出时回退到 consumedPerMinute（处置速率）。
   const displayRate = producedPerMinute > 0 ? producedPerMinute : consumedPerMinute;
   const kind: ProductionFlowNodeKind = context.displayMode === "item" ? "item" : "recipe";
-  const title = context.displayMode === "item" ? targetName : machineName;
-  const subtitle = context.displayMode === "item"
-    ? `${machineName} · ${formatProductionFlow(flowPerMinute)}/min`
-    : isExternal
-      ? `${targetName} · ${formatProductionFlow(displayRate)}/min`
-      : `${targetName} · ${formatProductionDeviceCount(row.recipeNode.deviceCount)} ${context.translate("productionPlanning.devices")} · ${formatProductionFlow(displayRate)}/min`;
-  const iconSrc = context.displayMode === "item"
+  const title = isDeviceMinimumConsumption
+    ? context.displayMode === "item" ? targetName : context.translate("productionPlanning.deviceMinimumConsumptionNode")
+    : context.displayMode === "item" ? targetName : machineName;
+  const subtitle = isDeviceMinimumConsumption
+    ? context.displayMode === "item"
+      ? `${context.translate("productionPlanning.deviceMinimumConsumptionNode")} · ${context.translate("productionPlanning.consumed")} ${formatProductionFlow(consumedPerMinute)}/min`
+      : `${targetName} · ${context.translate("productionPlanning.consumed")} ${formatProductionFlow(consumedPerMinute)}/min`
+    : context.displayMode === "item"
+      ? `${machineName} · ${formatProductionFlow(flowPerMinute)}/min`
+      : isExternal
+        ? `${targetName} · ${formatProductionFlow(displayRate)}/min`
+        : `${targetName} · ${formatProductionDeviceCount(row.recipeNode.deviceCount)} ${context.translate("productionPlanning.devices")} · ${formatProductionFlow(displayRate)}/min`;
+  const iconSrc = isDeviceMinimumConsumption || context.displayMode === "item"
     ? resolveProductionPlanningItemIconSrc(row.targetItemId, context.index)
     : resolveLedgerRowMachineIconSrc(row, context.index);
 
@@ -198,7 +208,8 @@ function resolveLedgerRowMachineName(
     return translate("productionPlanning.externalSupply");
   }
 
-  const recipe = index.recipeById.get(row.recipeId);
+  const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;
+  const recipe = index.recipeById.get(recipeId);
   const machine = recipe === undefined ? undefined : index.entityById.get(recipe.machineId);
   if (machine !== undefined) {
     return translate(machine.nameKey);
@@ -207,7 +218,8 @@ function resolveLedgerRowMachineName(
 }
 
 function resolveLedgerRowMachineId(row: ProductionPlanningLedgerRow, index: ProductionPlanningIndex): string | null {
-  return index.recipeById.get(row.recipeId)?.machineId ?? null;
+  const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;
+  return index.recipeById.get(recipeId)?.machineId ?? null;
 }
 
 function resolveLedgerRowMachineIconSrc(row: ProductionPlanningLedgerRow, index: ProductionPlanningIndex): string {
@@ -215,7 +227,8 @@ function resolveLedgerRowMachineIconSrc(row: ProductionPlanningLedgerRow, index:
     return EXTERNAL_SUPPLY_ENTITY_ICON_SRC;
   }
 
-  const recipe = index.recipeById.get(row.recipeId);
+  const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;
+  const recipe = index.recipeById.get(recipeId);
   return recipe === undefined
     ? createDeviceIconAssetUrl("item_port_grinder_1")
     : resolveProductionPlanningEntityIconSrc(recipe.machineId, index);
@@ -232,7 +245,7 @@ function resolveLedgerRowConsumerPorts(row: ProductionPlanningLedgerRow): Produc
       continue;
     }
 
-    for (const input of recipeNode.inputs) {
+    for (const input of resolveProductionPlanningRecipeInputPorts(recipeNode)) {
       const existing = ports.get(input.itemId);
       if (existing === undefined) {
         ports.set(input.itemId, { ...input });

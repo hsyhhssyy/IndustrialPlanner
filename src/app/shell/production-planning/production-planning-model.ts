@@ -95,8 +95,10 @@ export interface ProductionPlanningRecipeNode {
   cyclesPerMinute: number;
   deviceCount: number;
   inputs: ProductionPlanningPort[];
+  deviceMinimumConsumptionInputs: ProductionPlanningPort[];
   outputs: ProductionPlanningPort[];
   inputItems: ProductionPlanningItemNode[];
+  deviceMinimumConsumptionItems: ProductionPlanningItemNode[];
 }
 
 export interface ProductionPlanningItemTotal {
@@ -114,6 +116,7 @@ export interface ProductionPlanningRecipeTotal {
   cyclesPerMinute: number;
   deviceCount: number;
   inputs: ProductionPlanningPort[];
+  deviceMinimumConsumptionInputs: ProductionPlanningPort[];
   outputs: ProductionPlanningPort[];
 }
 
@@ -332,6 +335,7 @@ export function flattenProductionPlanningItemNodes(
     result.push(node);
     if (node.recipeNode !== null) {
       result.push(...flattenProductionPlanningItemNodes(node.recipeNode.inputItems));
+      result.push(...flattenProductionPlanningItemNodes(node.recipeNode.deviceMinimumConsumptionItems));
     }
   }
 
@@ -350,6 +354,7 @@ export function flattenProductionPlanningRecipeNodes(
 
     result.push(node.recipeNode);
     result.push(...flattenProductionPlanningRecipeNodes(node.recipeNode.inputItems));
+    result.push(...flattenProductionPlanningRecipeNodes(node.recipeNode.deviceMinimumConsumptionItems));
   }
 
   return result;
@@ -591,16 +596,14 @@ function resolveDemand(
     }
   }
 
-  const inputItems = [
-    ...recipeInputPorts.map((input) => (
-      resolveDemand(input.itemId, input.perMinute, context, [...stack, itemId])
-    )),
-    ...deviceConsumptionPorts.map((input) => (
-      input.itemId === itemId
-        ? createProductionPlanningCycleSupplyItemNode(input.itemId, input.perMinute, context)
-        : resolveDemand(input.itemId, input.perMinute, context, [...stack, itemId])
-    )),
-  ];
+  const inputItems = recipeInputPorts.map((input) => (
+    resolveDemand(input.itemId, input.perMinute, context, [...stack, itemId])
+  ));
+  const deviceMinimumConsumptionItems = deviceConsumptionPorts.map((input) => (
+    input.itemId === itemId
+      ? createProductionPlanningCycleSupplyItemNode(input.itemId, input.perMinute, context)
+      : resolveDemand(input.itemId, input.perMinute, context, [...stack, itemId])
+  ));
   const recipeNode: ProductionPlanningRecipeNode = {
     id: createNodeId("recipe", context),
     kind: "recipe",
@@ -610,8 +613,10 @@ function resolveDemand(
     cyclesPerMinute,
     deviceCount: roundFlow(cyclesPerMinute / (60 / recipe.durationSeconds)),
     inputs: inputPorts,
+    deviceMinimumConsumptionInputs: deviceConsumptionPorts,
     outputs: outputPorts,
     inputItems,
+    deviceMinimumConsumptionItems,
   };
 
   return createItemNode({
@@ -834,6 +839,7 @@ function aggregateRecipeTotals(
         cyclesPerMinute: node.cyclesPerMinute,
         deviceCount: node.deviceCount,
         inputs: node.inputs.map(clonePort),
+        deviceMinimumConsumptionInputs: node.deviceMinimumConsumptionInputs.map(clonePort),
         outputs: node.outputs.map(clonePort),
       });
       continue;
@@ -842,6 +848,10 @@ function aggregateRecipeTotals(
     total.cyclesPerMinute = roundFlow(total.cyclesPerMinute + node.cyclesPerMinute);
     total.deviceCount = roundFlow(total.deviceCount + node.deviceCount);
     total.inputs = mergePorts(total.inputs, node.inputs);
+    total.deviceMinimumConsumptionInputs = mergePorts(
+      total.deviceMinimumConsumptionInputs,
+      node.deviceMinimumConsumptionInputs,
+    );
     total.outputs = mergePorts(total.outputs, node.outputs);
   }
 
@@ -998,8 +1008,10 @@ function buildDumperRecipeNodes(context: SolverContext): ProductionPlanningRecip
       cyclesPerMinute,
       deviceCount,
       inputs: [{ id: `${dumperDef.recipeId}-in-${itemId}`, itemId, perMinute }],
+      deviceMinimumConsumptionInputs: [],
       outputs: [],
       inputItems: [],
+      deviceMinimumConsumptionItems: [],
     });
   }
 
@@ -1036,8 +1048,10 @@ function buildWasteTreatmentRecipeNodes(context: SolverContext): ProductionPlann
       cyclesPerMinute,
       deviceCount,
       inputs: [{ id: `${treatmentDef.recipeId}-in-${itemId}`, itemId, perMinute }],
+      deviceMinimumConsumptionInputs: [],
       outputs: [],
       inputItems: [],
+      deviceMinimumConsumptionItems: [],
     });
   }
 
@@ -1100,12 +1114,14 @@ function buildWaterPurifierRecipeNodes(
       itemId: "item_liquid_sewage",
       perMinute: sewagePerMinute,
     }],
+    deviceMinimumConsumptionInputs: [],
     outputs: [{
       id: `${recipe.id}-out-${WATER_PURIFIER_OUTPUT_ITEM_ID}`,
       itemId: WATER_PURIFIER_OUTPUT_ITEM_ID,
       perMinute: outputPerMinute,
     }],
     inputItems: [],
+    deviceMinimumConsumptionItems: [],
   }];
 }
 

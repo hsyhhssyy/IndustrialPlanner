@@ -32,6 +32,7 @@ interface MutableProductionPlanningLedgerRow {
 
 const PRODUCTION_PLANNING_EPSILON = 0.0001;
 const EXTERNAL_SUPPLY_RECIPE_ID_PREFIX = "external-supply:";
+const DEVICE_MINIMUM_CONSUMPTION_RECIPE_ID_PREFIX = "device-minimum-consumption:";
 
 export function buildProductionPlanningLedgerRows(
   plan: ProductionPlanningResult,
@@ -68,7 +69,7 @@ export function buildProductionPlanningLedgerRows(
       if (targetItemId.length > 0) {
         existing.outputItemIds.add(targetItemId);
       }
-      for (const input of targetRecipeNode.inputs) {
+      for (const input of resolveProductionPlanningRecipeInputPorts(targetRecipeNode)) {
         existing.inputItemIds.add(input.itemId);
       }
       return existing;
@@ -82,7 +83,7 @@ export function buildProductionPlanningLedgerRows(
       recipeNode: targetRecipeNode,
       recipeNodes: [targetRecipeNode],
       total,
-      inputItemIds: new Set(targetRecipeNode.inputs.map((input) => input.itemId)),
+      inputItemIds: new Set(resolveProductionPlanningRecipeInputPorts(targetRecipeNode).map((input) => input.itemId)),
       outputItemIds: targetItemId.length > 0 ? new Set([targetItemId]) : new Set(),
       isByproduct: false,
     };
@@ -119,6 +120,17 @@ export function buildProductionPlanningLedgerRows(
     }
   };
 
+  const registerDeviceMinimumConsumptionInputs = (recipeNode: ProductionPlanningRecipeNode) => {
+    for (const input of recipeNode.deviceMinimumConsumptionInputs) {
+      if (input.perMinute <= PRODUCTION_PLANNING_EPSILON) {
+        continue;
+      }
+
+      const consumptionNode = createProductionPlanningDeviceMinimumConsumptionRecipeNode(recipeNode, input);
+      ensureRecipeRow(consumptionNode.recipeId, input.itemId, consumptionNode);
+    }
+  };
+
   const collectRowsFromItemNode = (node: ProductionPlanningItemNode): void => {
     ensureExternalSupplyRow(node);
 
@@ -127,7 +139,11 @@ export function buildProductionPlanningLedgerRows(
     }
 
     registerRecipeOutputs(node.recipeNode);
+    registerDeviceMinimumConsumptionInputs(node.recipeNode);
     for (const child of node.recipeNode.inputItems) {
+      collectRowsFromItemNode(child);
+    }
+    for (const child of node.recipeNode.deviceMinimumConsumptionItems) {
       collectRowsFromItemNode(child);
     }
   };
@@ -163,6 +179,43 @@ export function buildProductionPlanningLedgerRowId(recipeId: string, targetItemI
 
 export function isProductionPlanningExternalSupplyRecipeId(recipeId: string): boolean {
   return recipeId.startsWith(EXTERNAL_SUPPLY_RECIPE_ID_PREFIX);
+}
+
+export function isProductionPlanningDeviceMinimumConsumptionRecipeId(recipeId: string): boolean {
+  return recipeId.startsWith(DEVICE_MINIMUM_CONSUMPTION_RECIPE_ID_PREFIX);
+}
+
+export function buildProductionPlanningDeviceMinimumConsumptionRecipeId(hostRecipeId: string): string {
+  return `${DEVICE_MINIMUM_CONSUMPTION_RECIPE_ID_PREFIX}${hostRecipeId}`;
+}
+
+export function resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(recipeId: string): string | null {
+  return isProductionPlanningDeviceMinimumConsumptionRecipeId(recipeId)
+    ? recipeId.slice(DEVICE_MINIMUM_CONSUMPTION_RECIPE_ID_PREFIX.length)
+    : null;
+}
+
+export function resolveProductionPlanningRecipeInputPorts(
+  recipeNode: ProductionPlanningRecipeNode,
+): ProductionPlanningPort[] {
+  if (recipeNode.deviceMinimumConsumptionInputs.length === 0) {
+    return recipeNode.inputs.map(clonePort);
+  }
+
+  const deviceConsumptionByItemId = new Map<string, number>();
+  for (const input of recipeNode.deviceMinimumConsumptionInputs) {
+    deviceConsumptionByItemId.set(
+      input.itemId,
+      (deviceConsumptionByItemId.get(input.itemId) ?? 0) + input.perMinute,
+    );
+  }
+
+  return recipeNode.inputs.flatMap((input) => {
+    const perMinute = input.perMinute - (deviceConsumptionByItemId.get(input.itemId) ?? 0);
+    return perMinute > PRODUCTION_PLANNING_EPSILON
+      ? [{ ...clonePort(input), perMinute }]
+      : [];
+  });
 }
 
 export function isProductionPlanningDisposalRecipeId(recipeId: string): boolean {
@@ -225,8 +278,10 @@ function createProductionPlanningLedgerSyntheticRecipeNode(
       cyclesPerMinute: 0,
       deviceCount: 0,
       inputs: [],
+      deviceMinimumConsumptionInputs: [],
       outputs: [],
       inputItems: [],
+      deviceMinimumConsumptionItems: [],
     };
   }
 
@@ -239,8 +294,10 @@ function createProductionPlanningLedgerSyntheticRecipeNode(
     cyclesPerMinute: total.cyclesPerMinute,
     deviceCount: total.deviceCount,
     inputs: total.inputs.map(clonePort),
+    deviceMinimumConsumptionInputs: total.deviceMinimumConsumptionInputs.map(clonePort),
     outputs: total.outputs.map(clonePort),
     inputItems: fallback?.inputItems ?? [],
+    deviceMinimumConsumptionItems: fallback?.deviceMinimumConsumptionItems ?? [],
   };
 }
 
@@ -257,8 +314,13 @@ function mergeProductionPlanningLedgerRecipeNodes(
     cyclesPerMinute: left.cyclesPerMinute + right.cyclesPerMinute,
     deviceCount: left.deviceCount + right.deviceCount,
     inputs: mergePorts(left.inputs, right.inputs),
+    deviceMinimumConsumptionInputs: mergePorts(
+      left.deviceMinimumConsumptionInputs,
+      right.deviceMinimumConsumptionInputs,
+    ),
     outputs: mergePorts(left.outputs, right.outputs),
     inputItems: left.inputItems,
+    deviceMinimumConsumptionItems: left.deviceMinimumConsumptionItems,
   };
 }
 
@@ -312,7 +374,30 @@ function createProductionPlanningExternalSupplyRecipeNode(
     cyclesPerMinute: 0,
     deviceCount: 0,
     inputs: [],
+    deviceMinimumConsumptionInputs: [],
     outputs: [{ id: `${node.id}-external-supply-out-${node.itemId}`, itemId: node.itemId, perMinute }],
     inputItems: [],
+    deviceMinimumConsumptionItems: [],
+  };
+}
+
+function createProductionPlanningDeviceMinimumConsumptionRecipeNode(
+  hostRecipeNode: ProductionPlanningRecipeNode,
+  input: ProductionPlanningPort,
+): ProductionPlanningRecipeNode {
+  const recipeId = buildProductionPlanningDeviceMinimumConsumptionRecipeId(hostRecipeNode.recipeId);
+  return {
+    id: `${recipeId}:${hostRecipeNode.id}:${input.itemId}`,
+    kind: "recipe",
+    recipeId,
+    targetItemId: input.itemId,
+    durationSeconds: 0,
+    cyclesPerMinute: 0,
+    deviceCount: 0,
+    inputs: [clonePort(input)],
+    deviceMinimumConsumptionInputs: [],
+    outputs: [],
+    inputItems: [],
+    deviceMinimumConsumptionItems: [],
   };
 }

@@ -473,6 +473,8 @@ export interface WarehouseItemStats {
 export interface WarehouseStats {
   /** key 为 itemType */
   readonly items: Record<string, WarehouseItemStats>;
+  /** 首个 1 分钟统计窗口是否已就绪（coveredStandardTicks >= windowCapacity） */
+  readonly statsWindowReady: boolean;
 }
 
 export interface RuntimeSlotSnapshot {

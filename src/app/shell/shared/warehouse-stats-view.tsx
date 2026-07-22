@@ -24,6 +24,7 @@ type WarehouseStatsEntry = {
   readonly warehouseCount: number;
   readonly lastChangedTick: number;
   readonly pinned: boolean;
+  readonly statsWindowReady: boolean;
 };
 
 type WarehouseStatsViewMode = "compact" | "dialog";
@@ -98,6 +99,8 @@ export function buildWarehouseStatsEntries(options: {
   const itemById = new Map(options.appHost.workspace.registry.itemDefinitions.map((item) => [item.id, item]));
   const pinnedSet = new Set(options.pinnedItemIds);
 
+  const statsWindowReady = options.stats.statsWindowReady;
+
   return Object.entries(options.stats.items)
     .map(([itemId, stats]) => {
       const item = itemById.get(itemId) ?? null;
@@ -111,6 +114,7 @@ export function buildWarehouseStatsEntries(options: {
         warehouseCount: stats.warehouseCount,
         lastChangedTick: stats.lastChangedTick,
         pinned: pinnedSet.has(itemId),
+        statsWindowReady,
       };
     })
     .sort(compareWarehouseStatsEntry);
@@ -167,8 +171,8 @@ export function WarehouseStatsView({
               <img alt="" aria-hidden="true" draggable={false} src={entry.iconSrc} />
               <span>{entry.label}</span>
             </span>
-            <span className={cm(styles, "warehouse-stats-number")}>{formatStatsNumber(entry.producedPerMinute)}</span>
-            <span className={cm(styles, "warehouse-stats-number")}>{formatStatsNumber(entry.consumedPerMinute)}</span>
+            <span className={cm(styles, "warehouse-stats-number")}>{entry.statsWindowReady ? formatStatsNumber(entry.producedPerMinute) : "---"}</span>
+            <span className={cm(styles, "warehouse-stats-number")}>{entry.statsWindowReady ? formatStatsNumber(entry.consumedPerMinute) : "---"}</span>
             <span className={cm(styles, "warehouse-stats-number")}>{formatStatsNumber(entry.warehouseCount)}</span>
             {mode === "dialog" ? (
               <button

@@ -271,6 +271,7 @@
 .production-planning-item-picker-button img,
 .production-planning-item-identity img,
 .production-planning-special-source-label img,
+.production-planning-special-source-label svg,
 .production-planning-port-chip img,
 .production-planning-recipe-header img {
   width: 24px;
@@ -366,6 +367,16 @@
   font-size: 0.76rem;
 }
 
+/*
+AI-REMOVED 2026-07-22:
+Reason: 原生 checkbox 滑块被现有二选一分段控件替代，以下专用样式不再参与渲染。
+Trigger: 用户明确要求该选项与右侧其他 switch 使用相同交互逻辑。
+Evidence: DeviceMinimumConsumptionToggle 复用 production-planning-special-source 与 production-planning-two-option-toggle。
+Replacement: .production-planning-special-source / .production-planning-two-option-toggle
+Risk: Low；仅移除已无活动 DOM 引用的样式。
+Human Review: Required
+
+Original code:
 .production-planning-switch-row {
   position: relative;
   display: flex;
@@ -426,6 +437,7 @@
   outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
 }
+*/
 
 .production-planning-two-option-toggle,
 .production-planning-segmented {
