@@ -576,6 +576,60 @@ describe("物流绘制模式", () => {
     ]);
   });
 
+  it("connects a one-cell branch from an existing pipe into an adjacent device input", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("left-pipe", "pipe_straight_1x1", 40, 32),
+      createTestEntity("source-pipe", "pipe_straight_1x1", 41, 32),
+      createTestEntity("right-pipe", "pipe_straight_1x1", 42, 32),
+      createTestEntity("liquid-furnance", "liquid_furnance_1", 40, 29, 90),
+    ]));
+
+    const source = editorHost.queries.findLogisticsDraftEndpointAtGridPoint(
+      { x: 41, y: 32 },
+      "pipe",
+    );
+    expect(source).toMatchObject({
+      type: "logistics-entity",
+      entityId: "source-pipe",
+    });
+    if (source?.type !== "logistics-entity") {
+      throw new Error("Expected the existing pipe to resolve as a logistics source.");
+    }
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "pipe",
+      source: {
+        type: "logistics-entity",
+        entityId: source.entityId,
+        gridPoint: source.gridPoint,
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 41, y: 31 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+      headGridPoint: { x: 41, y: 32 },
+      targetEntityId: "liquid-furnance",
+    });
+    expect(editorHost.state.collections.ghost).toEqual(["source-pipe"]);
+    expect(findPreviewDraftAt(editorHost, 41, 32)).toMatchObject({
+      definitionId: "pipe_splitter",
+      rotation: 270,
+    });
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
+  });
+
   it("ignores stale replaced tile rotation when no predecessor is connected", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

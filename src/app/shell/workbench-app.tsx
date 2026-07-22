@@ -942,7 +942,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           </div>
         ) : null}
         <LeftToolbar appHost={appHost} />
-        {effectiveLeftDockOpen ? <LeftDock appHost={appHost} /> : null}
+        <LeftDock appHost={appHost} hidden={!effectiveLeftDockOpen} />
         <CanvasPanel appHost={appHost} />
         <OverlapEntityMenu appHost={appHost} />
         <QuickPlacePopup appHost={appHost} />

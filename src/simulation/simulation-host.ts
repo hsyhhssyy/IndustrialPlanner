@@ -268,8 +268,10 @@ export function createSimulationHost(
         if (snapshot === null || topology === null) return null;
         const diffusions = snapshot.gasDiffusions;
         if (diffusions.length === 0) return null;
+        const compiledDeviceId = resolveCompiledDeviceId(topology, deviceId);
+        if (compiledDeviceId === null) return null;
         const coverage = buildDeviceGasCoverage(topology, diffusions);
-        const itemIds = coverage.get(deviceId);
+        const itemIds = coverage.get(compiledDeviceId);
         return itemIds !== undefined ? [...itemIds] : null;
       },
       getWarehouseStats: (): WarehouseStatsReadModel | null => {

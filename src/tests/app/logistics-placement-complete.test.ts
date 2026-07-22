@@ -236,6 +236,157 @@ describe("物流布设模式完全测试集", () => {
     });
   });
 
+  it("场景4-管道从7,6经9,6布设到9,5生成逆时针弯道", async () => {
+    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_SCENE4);
+    enterPipeLogisticsPlacement(appHost);
+    pressRouteOrderShortcut(appHost);
+
+    clickCell(appHost, editorHost, { x: 7, y: 6 }, nextPointerId++);
+    expect.soft(appHost.internalState.runtime.logisticsPlacement).toMatchObject({
+      kind: "pipe",
+      phase: "drawing",
+      isHoverPreview: false,
+      lastPreviewGridPoint: { x: 7, y: 6 },
+    });
+    expect.soft(editorHost.queries.resolveLogisticsDraftState()?.source).toMatchObject({
+      type: "device-port",
+      entityId: "pipe_admission:2",
+      portDirection: "output",
+      outsideGridPoint: { x: 8, y: 6 },
+    });
+
+    moveToCell(appHost, editorHost, { x: 9, y: 6 }, nextPointerId++);
+    await waitForGestureFrame();
+    expect.soft(appHost.internalState.runtime.logisticsPlacement).toMatchObject({
+      phase: "drawing",
+      lastPreviewGridPoint: { x: 9, y: 6 },
+      headGridPoint: { x: 9, y: 6 },
+    });
+    expect.soft(editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => ({
+      position: cell.gridPoint,
+      shape: cell.shape,
+      rotation: cell.rotation,
+    }))).toEqual([
+      { position: { x: 8, y: 6 }, shape: "straight", rotation: 0 },
+      { position: { x: 9, y: 6 }, shape: "straight", rotation: 0 },
+    ]);
+
+    moveToCell(appHost, editorHost, { x: 9, y: 5 }, nextPointerId++);
+    await waitForGestureFrame();
+
+    const draftBeforeApply = editorHost.queries.resolveLogisticsDraftState();
+    expect.soft(draftBeforeApply?.canApply).toBe(true);
+    expect.soft(draftBeforeApply?.invalidReason).toBeNull();
+    expect.soft(draftBeforeApply?.cells.map((cell) => ({
+      position: cell.gridPoint,
+      shape: cell.shape,
+      rotation: cell.rotation,
+    }))).toEqual([
+      { position: { x: 8, y: 6 }, shape: "straight", rotation: 0 },
+      { position: { x: 9, y: 6 }, shape: "turn-ccw", rotation: 270 },
+      { position: { x: 9, y: 5 }, shape: "straight", rotation: 270 },
+    ]);
+    expect.soft(draftBeforeApply?.cells.find((cell) =>
+      cell.gridPoint.x === 9 && cell.gridPoint.y === 6
+    )).toMatchObject({
+      shape: "turn-ccw",
+      rotation: 270,
+    });
+
+    clickCell(appHost, editorHost, { x: 9, y: 5 }, nextPointerId++);
+    expect.soft(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
+      source: {
+        type: "logistics-entity",
+        gridPoint: { x: 9, y: 5 },
+      },
+    });
+
+    expectEntityAt(editorHost, {
+      definitionId: "pipe_turn_ccw_1x1",
+      position: { x: 9, y: 6 },
+      rotation: 270,
+    });
+  });
+
+  it("场景4-删除9,5的重叠传送带后可连接已有管道", async () => {
+    const blueprintWithoutOverlappingBelt = structuredClone(USER_PROVIDED_BLUEPRINT_SCENE4);
+    delete blueprintWithoutOverlappingBelt.entities["logistics-draft:belt:572:3"];
+    blueprintWithoutOverlappingBelt.entityOrder = blueprintWithoutOverlappingBelt.entityOrder.filter(
+      (entityId) => entityId !== "logistics-draft:belt:572:3",
+    );
+    resetCanvasFromUserBlueprint(editorHost, blueprintWithoutOverlappingBelt);
+    enterPipeLogisticsPlacement(appHost);
+    pressRouteOrderShortcut(appHost);
+
+    clickCell(appHost, editorHost, { x: 7, y: 6 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 9, y: 6 }, nextPointerId++);
+    await waitForGestureFrame();
+    moveToCell(appHost, editorHost, { x: 9, y: 5 }, nextPointerId++);
+    await waitForGestureFrame();
+    clickCell(appHost, editorHost, { x: 9, y: 5 }, nextPointerId++);
+    expect.soft(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
+      source: {
+        type: "logistics-entity",
+        gridPoint: { x: 9, y: 5 },
+      },
+    });
+
+    expectEntityAt(editorHost, {
+      definitionId: "pipe_turn_ccw_1x1",
+      position: { x: 9, y: 6 },
+      rotation: 270,
+    });
+  });
+
+  it("场景4-9,5的传送带位于管道命中层之上时仍应连接管道", async () => {
+    const blueprintWithOverlappingBeltOnTop = structuredClone(USER_PROVIDED_BLUEPRINT_SCENE4);
+    blueprintWithOverlappingBeltOnTop.entityOrder = [
+      ...blueprintWithOverlappingBeltOnTop.entityOrder.filter(
+        (entityId) => entityId !== "logistics-draft:belt:572:3",
+      ),
+      "logistics-draft:belt:572:3",
+    ];
+    resetCanvasFromUserBlueprint(editorHost, blueprintWithOverlappingBeltOnTop);
+    enterPipeLogisticsPlacement(appHost);
+    pressRouteOrderShortcut(appHost);
+
+    expect(editorHost.document.getSnapshot().entityOrder.at(-1)).toBe(
+      "logistics-draft:belt:572:3",
+    );
+    expect(editorHost.queries.findLogisticsDraftEndpointAtGridPoint(
+      { x: 9, y: 5 },
+      "pipe",
+    )).toMatchObject({
+      type: "logistics-entity",
+      entityId: "logistics-draft:pipe:584:3",
+    });
+
+    clickCell(appHost, editorHost, { x: 7, y: 6 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 9, y: 6 }, nextPointerId++);
+    await waitForGestureFrame();
+    moveToCell(appHost, editorHost, { x: 9, y: 5 }, nextPointerId++);
+    await waitForGestureFrame();
+
+    const draftBeforeApply = editorHost.queries.resolveLogisticsDraftState();
+    expect(draftBeforeApply?.cells.find((cell) =>
+      cell.gridPoint.x === 9 && cell.gridPoint.y === 6
+    )).toMatchObject({
+      shape: "turn-ccw",
+      rotation: 270,
+    });
+    expect(draftBeforeApply).toMatchObject({
+      canApply: true,
+      invalidReason: null,
+    });
+
+    clickCell(appHost, editorHost, { x: 9, y: 5 }, nextPointerId++);
+    expectEntityAt(editorHost, {
+      definitionId: "pipe_turn_ccw_1x1",
+      position: { x: 9, y: 6 },
+      rotation: 270,
+    });
+  });
+
 });
 
 
@@ -524,6 +675,68 @@ const USER_PROVIDED_BLUEPRINT_SCENE3: BlueprintDocument = {
   updatedAt: "2026-06-19T13:36:00.575Z",
 };
 
+const USER_PROVIDED_BLUEPRINT_SCENE4: BlueprintDocument = {
+  schemaVersion: 3,
+  blueprintId: "37c8e4e6-c720-4480-95bf-f584d2d257aa",
+  version: "v1.3.0",
+  name: "未命名蓝图-20260722212625",
+  description: "",
+  baseId: "wuling_tianwangping_aid",
+  initialGridPoint: { x: 9, y: 6 },
+  entities: {
+    "pipe_admission:2": {
+      id: "pipe_admission:2",
+      definitionId: "pipe_admission",
+      position: { x: 7, y: 6 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:571:2": {
+      id: "logistics-draft:belt:571:2",
+      definitionId: "belt_straight_1x1",
+      position: { x: 8, y: 5 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:572:3": {
+      id: "logistics-draft:belt:572:3",
+      definitionId: "belt_straight_1x1",
+      position: { x: 9, y: 5 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:belt:573:4": {
+      id: "logistics-draft:belt:573:4",
+      definitionId: "belt_straight_1x1",
+      position: { x: 10, y: 5 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:pipe:584:3": {
+      id: "logistics-draft:pipe:584:3",
+      definitionId: "pipe_straight_1x1",
+      position: { x: 9, y: 5 },
+      rotation: 270,
+      config: {},
+      tags: [],
+    },
+  },
+  entityOrder: [
+    "pipe_admission:2",
+    "logistics-draft:belt:571:2",
+    "logistics-draft:belt:572:3",
+    "logistics-draft:belt:573:4",
+    "logistics-draft:pipe:584:3",
+  ],
+  slotLinks: [],
+  createdAt: "2026-07-22T13:26:26.853Z",
+  updatedAt: "2026-07-22T13:26:26.853Z",
+};
+
 function createWorkspace(): WorkspaceContract {
   return {
     state: createWorkspaceState(),
@@ -549,6 +762,12 @@ async function waitForEditorInitialDocumentLoad(
   }
 
   throw new Error("等待 editor 初始文档加载超时");
+}
+
+async function waitForGestureFrame(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
 }
 
 function resetCanvasFromUserBlueprint(
@@ -588,6 +807,27 @@ function enterBeltLogisticsPlacement(appHost: AppHost): void {
     appHost.internalState.runtime.selectingPlacementGroup = "beltLogistics";
   });
   appHost.internalActions.setActiveTool("logistics-placement");
+}
+
+function enterPipeLogisticsPlacement(appHost: AppHost): void {
+  runInAction(() => {
+    const runtime = appHost.internalState.runtime.logisticsPlacement;
+    runtime.kind = "pipe";
+    runtime.shortcutPlacementGroup = "pipeLogistics";
+    runtime.pointerMode = "mouse";
+    runtime.phase = "idle";
+    runtime.routeOrder = "vertical-first";
+    appHost.internalState.runtime.selectingPlacementGroup = "pipeLogistics";
+  });
+  appHost.internalActions.setActiveTool("logistics-placement");
+  appHost.gestureAdapter.handleUiButtonMouseTap({
+    uiButtonId: "placement-action-pipe-draw",
+    button: 0,
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+  });
 }
 
 function pressRouteOrderShortcut(appHost: AppHost): void {

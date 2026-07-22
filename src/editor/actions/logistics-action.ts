@@ -1509,7 +1509,7 @@ function resolveAutoDraftPlan(options: {
 
   if (
     firstCell !== null
-    && secondCell !== null
+    && (secondCell !== null || options.target?.type === "device-port")
     && options.source.type === "logistics-entity"
   ) {
     const sourceInfo = resolveOrdinaryLogisticsConnectionInfo({
@@ -1518,7 +1518,11 @@ function resolveAutoDraftPlan(options: {
       document: currentDocument,
       entityId: options.source.entityId,
     });
-    const firstStepEdge = resolveDirectionEdge(firstCell.gridPoint, secondCell.gridPoint);
+    // AI-CORRECTION 2026-07-22:
+    // 单格路径接入相邻设备时没有 secondCell，分支方向应由设备目标写入的 firstCell.toEdge 决定。
+    const firstStepEdge = secondCell === null
+      ? firstCell.toEdge
+      : resolveDirectionEdge(firstCell.gridPoint, secondCell.gridPoint);
     if (sourceInfo !== null && sourceInfo.inputConnected && sourceInfo.outputConnected) {
       // AI-CORRECTION 2026-06-19:
       // 沿已有物流段原出口方向继续绘制属于合法复用，不应判非法或创建分流器。
@@ -1543,6 +1547,9 @@ function resolveAutoDraftPlan(options: {
       drafts: [],
       entityDefinitionMap: options.context.entityDefinitionMap,
       baseDefinitions: options.context.workspace.registry.baseDefinitions,
+      // AI-CORRECTION 2026-07-22:
+      // 终点同格存在另一类普通物流时必须跳过它，继续识别下层同类物流目标。
+      skipLogisticsKind: options.kind === "belt" ? "pipe" : "belt",
     });
     const targetInfo = targetEntity === null
       ? null
@@ -1700,7 +1707,12 @@ function resolveAutoDraftPlan(options: {
     && (
       firstCell === null
       || gridPointKey(lastCell.gridPoint) !== gridPointKey(firstCell.gridPoint)
-      || options.source.type !== "device-port"
+      // AI-CORRECTION 2026-07-22:
+      // 同一格既是既有物流源又连接设备目标时，源分支判定已经处理该格，不得再按桥接器重复分类。
+      || (
+        options.source.type !== "device-port"
+        && options.source.type !== "logistics-entity"
+      )
     )
   ) {
     invalidReason = resolveConnectorCrossingAutoDraftCell({

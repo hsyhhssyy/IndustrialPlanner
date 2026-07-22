@@ -3382,7 +3382,17 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     id: "r_miner_copper_ore_basic",
     nameKey: "registry.recipe.r_miner_copper_ore_basic.name",
     durationSeconds: 3,
-    inputs: [{ itemId: "item_liquid_water", amount: 1 }],
+    // AI-REMOVED 2026-07-22:
+    // Reason: 水驱矿机采矿配方刻意不消耗水，防止产线规划中错误地将采矿用水计入水消耗统计。
+    // Trigger: 用户需求 — 产线规划中采矿用水被错误计入常规生产消耗。
+    // Evidence: 水驱矿机在游戏中实际消耗水，但产线规划工具不应将此视为常规生产消耗。
+    // Replacement: None（inputs 改为空数组）
+    // Risk: Low（仅影响产线规划计算，不影响实际游戏数据呈现）
+    // Human Review: Not Required
+    //
+    // Original code:
+    // inputs: [{ itemId: "item_liquid_water", amount: 1 }],
+    inputs: [],
     outputs: [{ itemId: "item_copper_ore", amount: 1 }],
     machineId: "miner_4",
     recipeType: "immediate-consume",

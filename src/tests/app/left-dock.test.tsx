@@ -1049,21 +1049,105 @@ describe("Left dock panel switching", () => {
 
     expect(placementButton).not.toBeNull();
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
-    expect(container.querySelector(".dock-left")).not.toBeNull();
+    const dockBeforeCollapse = container.querySelector(".dock-left") as HTMLElement | null;
+    const dockShell = container.querySelector(".dock-shell-left") as HTMLElement | null;
+
+    expect(dockBeforeCollapse).not.toBeNull();
+    expect(dockShell?.hidden).toBe(false);
+    if (dockBeforeCollapse !== null) {
+      dockBeforeCollapse.scrollTop = 320;
+    }
 
     act(() => {
       placementButton?.click();
     });
 
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
-    expect(container.querySelector(".dock-left")).toBeNull();
+    expect(dockShell?.hidden).toBe(true);
+    expect(container.querySelector(".dock-left")).toBe(dockBeforeCollapse);
+    expect(dockBeforeCollapse?.scrollTop).toBe(320);
 
     act(() => {
       placementButton?.click();
     });
 
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
+    expect(dockShell?.hidden).toBe(false);
+    expect(container.querySelector(".dock-left")).toBe(dockBeforeCollapse);
+    expect(dockBeforeCollapse?.scrollTop).toBe(320);
     expect(queryVisibleLeftDockPanel(container)?.getAttribute("data-panel-id")).toBe("placement");
+  });
+
+  it("preserves placement panel scroll position while tablet placement suppresses the left dock", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 711,
+      height: 665,
+      userAgent:
+        "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const dockBeforeSuppression = container.querySelector(".dock-left") as HTMLElement | null;
+    const dockShell = container.querySelector(".dock-shell-left") as HTMLElement | null;
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
+    expect(dockBeforeSuppression).not.toBeNull();
+    if (dockBeforeSuppression !== null) {
+      dockBeforeSuppression.scrollTop = 480;
+    }
+
+    const waterPumpButton = container.querySelector(
+      '[data-ui-button-id="placement-water_pump_1"]',
+    ) as HTMLButtonElement | null;
+
+    expect(waterPumpButton).not.toBeNull();
+
+    act(() => {
+      if (waterPumpButton === null) {
+        throw new Error("Expected the water pump placement button to be rendered.");
+      }
+
+      dispatchPointerEvent(waterPumpButton, "pointerdown", {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: 100,
+        clientY: 100,
+        buttons: 1,
+      });
+      dispatchPointerEvent(waterPumpButton, "pointerup", {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: 100,
+        clientY: 100,
+        buttons: 0,
+      });
+    });
+
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(appHost.internalState.workbench.leftDockSuppressed).toBe(true);
+    expect(dockShell?.hidden).toBe(true);
+    expect(container.querySelector(".dock-left")).toBe(dockBeforeSuppression);
+    expect(dockBeforeSuppression?.scrollTop).toBe(480);
+
+    act(() => {
+      appHost.internalActions.setActiveTool("select");
+    });
+
+    expect(appHost.internalState.workbench.leftDockSuppressed).toBe(false);
+    expect(dockShell?.hidden).toBe(false);
+    expect(container.querySelector(".dock-left")).toBe(dockBeforeSuppression);
+    expect(dockBeforeSuppression?.scrollTop).toBe(480);
   });
 
   it("hides placement shortcut hints in mobile mode", () => {

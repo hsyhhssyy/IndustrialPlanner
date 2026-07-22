@@ -141,7 +141,20 @@ export function createSyncShadowReplayValidator(): SyncShadowReplayValidator {
           resolve(response);
         },
       });
-      activeWorker.postMessage(request);
+      try {
+        activeWorker.postMessage(request);
+      } catch (error) {
+        pendingRequests.delete(request.id);
+        globalThis.clearTimeout(timeoutId);
+        resolve({
+          id: request.id,
+          status: "failed",
+          documentKey: request.documentKey,
+          localSequence: request.localSequence,
+          expectedHash: request.expectedHash,
+          errorMessage: `DataCloneError: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
     });
   };
 

@@ -112,7 +112,7 @@ export function SimulationRecipeStatusRuntimeInspector({
           : "未处于气体环境"}
       </span>
     );
-  }, [appHost, entity, definition, index, t]);
+  }, [appHost, entity, definition, index, t, runtimeStatus]);
 
   if (channelIds.length === 0) return null;
 

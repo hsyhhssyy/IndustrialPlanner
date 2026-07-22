@@ -59,7 +59,13 @@ const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost
 // const PANEL_ORDER: LeftDockPanelId[] = ["placement", "delete", "blueprint", "history", "base", "simulation"];
 const PANEL_ORDER: LeftDockPanelId[] = ["placement", "blueprint", "history", "base", "simulation"];
 
-const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppHost }) {
+const LeftDockView = observer(function LeftDockView({
+  appHost,
+  hidden,
+}: {
+  appHost: AppHost;
+  hidden: boolean;
+}) {
   const t = appHost.actions.translate;
   const activePanel = appHost.internalState.runtime.activePanel ?? DEFAULT_ACTIVE_PANEL;
   const currentPanelLabel = t(PANEL_TITLE_KEYS[activePanel]);
@@ -105,7 +111,7 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
   };
 
   return (
-    <div className={cm(styles, "dock-shell-left")}>
+    <div className={cm(styles, "dock-shell-left")} hidden={hidden}>
       <aside className={cm(styles, "dock dock-left panel-surface")}>
         <section className={cm(styles, "dock-section")}>
           {isTouchLayout ? null : (
@@ -140,8 +146,14 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
   );
 });
 
-export function LeftDock({ appHost }: { appHost: AppHost }) {
-  return <LeftDockView appHost={appHost} />;
+export function LeftDock({
+  appHost,
+  hidden = false,
+}: {
+  appHost: AppHost;
+  hidden?: boolean;
+}) {
+  return <LeftDockView appHost={appHost} hidden={hidden} />;
 }
 
 export default LeftDock;
