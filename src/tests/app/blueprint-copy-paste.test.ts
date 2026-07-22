@@ -17,6 +17,7 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
 import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
+import { RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY } from "@/shared/recipe-channel-behavior";
 
 // ─── Helpers ───
 
@@ -126,6 +127,33 @@ describe("createSelectionBlueprintDocument", () => {
     expect(Object.keys(bp.entities)).toHaveLength(1);
     expect(bp.entities["belt-1"]).toBeDefined();
     expect(bp.slotLinks).toHaveLength(0);
+  });
+
+  it("1.1a: 反应池的 Recipe Channel 模式随蓝图保存", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(
+      createTestDocument({
+        entities: {
+          reactor: {
+            id: "reactor",
+            definitionId: "mix_pool_1",
+            position: { x: 10, y: 10 },
+            rotation: 0,
+            config: {
+              [RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY]: true,
+            },
+            tags: [],
+          },
+        },
+      }),
+    );
+
+    const blueprint = createBlueprintForEntity(editorHost, "reactor");
+
+    expect(blueprint?.entities.reactor?.config).toMatchObject({
+      [RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY]: true,
+    });
   });
 
   it("1.2: 单实体带 warehouse slotLink — 蓝图保留 slotLink", () => {

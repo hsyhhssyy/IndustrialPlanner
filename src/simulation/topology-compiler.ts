@@ -16,6 +16,7 @@ import {
   readPortPriorityGroupOverrides,
   resolvePortPriorityGroupOverrideKey,
 } from "@/shared/port-priority-groups";
+import { isAutomaticRecipeChannelMode } from "@/shared/recipe-channel-behavior";
 import {
   WATER_PURIFIER_DEFAULT_MANUAL_OUTPUT_PER_MINUTE,
   WATER_PURIFIER_DEFAULT_OUTPUT_MODE,
@@ -497,6 +498,7 @@ function compileWarehouseDevice(
       transportComponentId: null,
       nodeIds: [nodeId],
       recipeChannels: [],
+      allowDuplicateRecipesAcrossChannels: false,
       portIds: [],
       routing: {},
       configHash: hashStable({ baseId: document.baseId, itemIds: Object.keys(itemCatalog).sort() }),
@@ -605,10 +607,13 @@ function compileEntityDevice(options: {
     nodeIds: nodes.map((node) => node.id),
     recipeChannels: compileRecipeChannels(
       definition.recipeChannels,
+      definition.recipeChannelBehavior,
       nodeBindingsByStorageGroupId,
       options.entity,
       options.recipeCatalog,
     ),
+    allowDuplicateRecipesAcrossChannels:
+      definition.recipeChannelBehavior?.allowDuplicateRecipesAcrossChannels ?? false,
     portIds: ports.map((port) => port.id),
     routing: compileRouting(definition),
     configHash: hashStable({
@@ -1371,11 +1376,14 @@ function pairSourceSlotsToTargetSlots(
 // 从 Recipe Channel 声明编译 ingredientNodeIds / productNodeIds。
 function compileRecipeChannels(
   channelDefs: readonly RecipeChannelDefinition[],
+  recipeChannelBehavior: EntityDefinition["recipeChannelBehavior"],
   bindings: ReadonlyMap<string, StorageGroupNodeBinding>,
   entity: WorldEntity,
   recipeCatalog: Readonly<Record<string, CompiledSimulationRecipeDefinition>>,
 ): readonly CompiledSimulationRecipeChannel[] {
   if (!channelDefs || channelDefs.length === 0) { return []; }
+  const modeSwitchable = recipeChannelBehavior?.automaticModeConfigKey !== undefined;
+  const automaticMode = isAutomaticRecipeChannelMode(recipeChannelBehavior, entity.config);
   return channelDefs.map((ch) => {
     const selectedRecipeId = (entity.config?.channelRecipes as Record<string, string> | undefined)?.[ch.id] ?? null;
 
@@ -1387,7 +1395,7 @@ function compileRecipeChannels(
       productNodeIds: [...new Set(ch.productStorageGroupIds.flatMap(
         (gid: string) => bindings.get(gid)?.productNodeIds ?? [],
       ))],
-      manualRecipeOnly: ch.manualRecipeOnly ?? false,
+      manualRecipeOnly: modeSwitchable ? !automaticMode : ch.manualRecipeOnly ?? false,
       defaultRecipeId: selectedRecipeId !== null && recipeCatalog[selectedRecipeId] !== undefined
         ? selectedRecipeId
         : null,

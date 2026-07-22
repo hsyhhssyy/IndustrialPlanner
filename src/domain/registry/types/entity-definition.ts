@@ -104,6 +104,12 @@ export interface EntityDefinition {
   readonly placementDefaults?: EntityPlacementDefaults;
 
   /**
+   * Recipe Channel 的设备级运行行为。
+   * 未声明时不提供自动/手动切换，且不同 channel 默认不可同时运行同一配方。
+   */
+  readonly recipeChannelBehavior?: EntityRecipeChannelBehaviorDefinition;
+
+  /**
    * 配方堵塞自动清除配置。
    * 未声明时设备不具备该能力；声明后由仿真 runtime 按配置检测指定 channel 堵塞并清空指定槽位。
    */
@@ -184,6 +190,20 @@ export interface EntityPlacementDefaults {
   readonly config?: Record<string, unknown>;
   /** 放置时自动创建的 slot links。entityId 使用占位符 "[Self]" */
   readonly slotLinks?: readonly SlotLinkDefinition[];
+}
+
+// ---------------------------------------------------------------------------
+// EntityRecipeChannelBehaviorDefinition — Recipe Channel 设备级行为
+// ---------------------------------------------------------------------------
+
+export interface EntityRecipeChannelBehaviorDefinition {
+  /**
+   * 自动模式开关在 entity.config 中的 key。
+   * 未声明时设备不提供模式切换；已声明但 config 值缺失或不为 true 时按手动模式运行。
+   */
+  readonly automaticModeConfigKey?: string;
+  /** 是否允许不同 channel 同时运行同一个配方。 */
+  readonly allowDuplicateRecipesAcrossChannels: boolean;
 }
 
 // ---------------------------------------------------------------------------

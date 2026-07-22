@@ -12,6 +12,7 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition, RecipeChannelDefinition } from "@/domain/registry/types/entity-definition";
 import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-collapsible-panel";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
+import { isAutomaticRecipeChannelMode } from "@/shared/recipe-channel-behavior";
 import styles from "@/app/shell/inspector/inspector.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -115,12 +116,20 @@ export function SimulationRecipeStatusRuntimeInspector({
 
   if (channelIds.length === 0) return null;
 
+  const recipeChannelBehavior = definition?.recipeChannelBehavior;
+  const modeConfigKey = recipeChannelBehavior?.automaticModeConfigKey;
+  const modeSwitchable = modeConfigKey !== undefined;
+  const automaticMode = isAutomaticRecipeChannelMode(
+    recipeChannelBehavior,
+    entity?.config ?? {},
+  );
+
   // 分离 auto 与 manual channel
   const autoChannels = channels.filter(
-    (ch) => channelIds.includes(ch.id) && !ch.manualRecipeOnly,
+    (ch) => channelIds.includes(ch.id) && (modeSwitchable ? automaticMode : !ch.manualRecipeOnly),
   );
   const manualChannels = channels.filter(
-    (ch) => channelIds.includes(ch.id) && ch.manualRecipeOnly,
+    (ch) => channelIds.includes(ch.id) && (modeSwitchable ? !automaticMode : ch.manualRecipeOnly),
   );
 
   const hasAuto = autoChannels.length > 0;
@@ -132,9 +141,36 @@ export function SimulationRecipeStatusRuntimeInspector({
   // 运行时 channel 配方状态
   const channelRecipeStatus = runtimeStatus?.channelRecipes ?? {};
 
-  if (runtimeStatus === null && !hasManual) {
+  if (runtimeStatus === null && !hasManual && !modeSwitchable) {
     return null;
   }
+
+  const modeSwitch = modeConfigKey === undefined || entity === undefined
+    ? null
+    : (
+        <label
+          className={cm(styles, "recipe-channel-mode-switch")}
+          title={t("inspector.recipeChannelMode.label")}
+        >
+          <input
+            aria-label={t("inspector.recipeChannelMode.label")}
+            checked={automaticMode}
+            data-recipe-channel-mode-switch
+            onChange={(event) => {
+              appHost?.workspace.editor?.actions.patchEntityConfig(entity.id, {
+                [modeConfigKey]: event.currentTarget.checked,
+              });
+            }}
+            role="switch"
+            type="checkbox"
+          />
+          <span>
+            {t(automaticMode
+              ? "inspector.recipeChannelMode.automatic"
+              : "inspector.recipeChannelMode.manual")}
+          </span>
+        </label>
+      );
 
   return (
     <InspectorCollapsiblePanel
@@ -142,7 +178,12 @@ export function SimulationRecipeStatusRuntimeInspector({
       dataInspectorKey={SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY}
       title="配方状态"
       titleClassName={cm(styles, "recipe-status-panel-title")}
-      headerActions={gasEnvTag}
+      headerActions={gasEnvTag === null && modeSwitch === null ? undefined : (
+        <>
+          {gasEnvTag}
+          {modeSwitch}
+        </>
+      )}
     >
       {hasAuto && (
         <AutoRecipeSection
@@ -165,6 +206,9 @@ export function SimulationRecipeStatusRuntimeInspector({
           appHost={appHost}
           entity={entity}
           definition={definition}
+          allowDuplicateRecipesAcrossChannels={
+            recipeChannelBehavior?.allowDuplicateRecipesAcrossChannels ?? false
+          }
         />
       )}
     </InspectorCollapsiblePanel>
@@ -250,6 +294,7 @@ interface ManualRecipeSectionProps {
   appHost?: AppHost;
   entity?: WorldEntity;
   definition?: EntityDefinition;
+  allowDuplicateRecipesAcrossChannels: boolean;
 }
 
 function ManualRecipeSection({
@@ -261,6 +306,7 @@ function ManualRecipeSection({
   appHost,
   entity,
   definition,
+  allowDuplicateRecipesAcrossChannels,
 }: ManualRecipeSectionProps) {
   // 已填充的手动 channel（在 entity config 中有配方记录）
   const filledChannels = manualChannels.filter(
@@ -280,6 +326,13 @@ function ManualRecipeSection({
       const editor = appHost.workspace.editor;
       if (!editor) return;
       const next = { ...storedRecipes };
+      if (!allowDuplicateRecipesAcrossChannels) {
+        for (const [storedChannelId, storedRecipeId] of Object.entries(next)) {
+          if (storedChannelId !== channelId && storedRecipeId === pickedId) {
+            delete next[storedChannelId];
+          }
+        }
+      }
       next[channelId] = pickedId;
       editor.actions.patchEntityConfig(entity.id, { channelRecipes: next });
     }

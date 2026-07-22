@@ -1938,7 +1938,8 @@
   gap: 8px;
 }
 
-.port-priority-custom-switch {
+.port-priority-custom-switch,
+.recipe-channel-mode-switch {
   display: inline-grid;
   grid-template-columns: auto auto;
   align-items: center;
@@ -1951,7 +1952,8 @@
   white-space: nowrap;
 }
 
-.port-priority-custom-switch input {
+.port-priority-custom-switch input,
+.recipe-channel-mode-switch input {
   appearance: none;
   position: relative;
   width: 30px;
@@ -1969,7 +1971,8 @@
   cursor: pointer;
 }
 
-.port-priority-custom-switch input::after {
+.port-priority-custom-switch input::after,
+.recipe-channel-mode-switch input::after {
   content: "";
   position: absolute;
   top: 2px;
@@ -1981,7 +1984,8 @@
   transition: transform 120ms ease, background 120ms ease;
 }
 
-.port-priority-custom-switch input:checked {
+.port-priority-custom-switch input:checked,
+.recipe-channel-mode-switch input:checked {
   border-color: var(--accent-strong);
   @supports (background: color-mix(in srgb, red 50%, blue)) {
     border-color: color-mix(in srgb, var(--accent-strong) 56%, var(--line));
@@ -1992,7 +1996,8 @@
   }
 }
 
-.port-priority-custom-switch input:checked::after {
+.port-priority-custom-switch input:checked::after,
+.recipe-channel-mode-switch input:checked::after {
   background: var(--accent-strong);
   transform: translateX(12px);
 }

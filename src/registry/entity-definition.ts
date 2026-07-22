@@ -40,6 +40,7 @@ import {
 } from "@/domain/registry/types/entity-placement-behavior";
 import { DEFAULT_PORT_PRIORITY_GROUP } from "@/shared/port-priority-groups";
 import { MAIN_CRAFT_GROUP_TAG } from "@/shared/entity-variants";
+import { RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY } from "@/shared/recipe-channel-behavior";
 import {
   BLOCKAGE_AUTO_CLEARANCE_ENABLED_CONFIG_KEY,
   WATER_PURIFIER_BYPRODUCT_CHANNEL_ID,
@@ -996,6 +997,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createRecipeChannel("ch3", ["shared_input_buffer"], ["shared_input_buffer"], true),
       createRecipeChannel("ch4", ["shared_input_buffer"], ["shared_input_buffer"], true),
     ],
+    recipeChannelBehavior: {
+      automaticModeConfigKey: RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY,
+      allowDuplicateRecipesAcrossChannels: false,
+    },
+    placementDefaults: createPlacementDefaults({
+      config: {
+        [RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY]: true,
+      },
+    }),
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "shared_input_buffer"),
       createBinding("bind_fluid_input", "fluid_input", "shared_input_buffer"),
@@ -1624,6 +1634,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createRecipeChannel("NS", ["ns_buffer"], ["ns_buffer"]),
       createRecipeChannel("EW", ["ew_buffer"], ["ew_buffer"]),
     ],
+    recipeChannelBehavior: {
+      allowDuplicateRecipesAcrossChannels: true,
+    },
     portStorageBindings: [
       createBinding("bind_item_input_ns", "item_input_ns", "ns_buffer"),
       createBinding("bind_item_output_ns", "item_output_ns", "ns_buffer"),
@@ -1962,6 +1975,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createRecipeChannel("NS", ["ns_buffer"], ["ns_buffer"]),
       createRecipeChannel("EW", ["ew_buffer"], ["ew_buffer"]),
     ],
+    recipeChannelBehavior: {
+      allowDuplicateRecipesAcrossChannels: true,
+    },
     portStorageBindings: [
       createBinding("bind_fluid_input_ns", "fluid_input_ns", "ns_buffer"),
       createBinding("bind_fluid_output_ns", "fluid_output_ns", "ns_buffer"),
@@ -2674,6 +2690,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createRecipeChannel("ch7", ["shared_input_buffer"], ["shared_input_buffer"], true),
       createRecipeChannel("ch8", ["shared_input_buffer"], ["shared_input_buffer"], true),
     ],
+    recipeChannelBehavior: {
+      automaticModeConfigKey: RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY,
+      allowDuplicateRecipesAcrossChannels: false,
+    },
+    placementDefaults: createPlacementDefaults({
+      config: {
+        [RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY]: true,
+      },
+    }),
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "shared_input_buffer"),
       createBinding("bind_fluid_input", "fluid_input", "shared_input_buffer"),
@@ -3799,6 +3824,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createRecipeChannel("void_fluid_1", ["loader_buffer"], ["loader_buffer"]),
       createRecipeChannel("void_fluid_2", ["loader_buffer"], ["loader_buffer"]),
     ],
+    recipeChannelBehavior: {
+      allowDuplicateRecipesAcrossChannels: true,
+    },
     portStorageBindings: [
       createBinding("bind_fluid_input", "fluid_input", "loader_buffer"),
     ],
@@ -4013,6 +4041,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [WATER_PURIFIER_OUTPUT_STORAGE_GROUP_ID],
       ),
     ],
+    recipeChannelBehavior: {
+      allowDuplicateRecipesAcrossChannels: true,
+    },
     portStorageBindings: [
       createBinding("bind_fluid_input_1", "fluid_input_1", WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[0]),
       createBinding("bind_fluid_input_2", "fluid_input_2", WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[1]),

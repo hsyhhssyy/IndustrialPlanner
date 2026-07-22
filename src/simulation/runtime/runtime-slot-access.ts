@@ -460,13 +460,28 @@ export function resolveDeviceRecipePlans(options: {
     ingredientNodeIds: options.channel.ingredientNodeIds,
   });
 
-  return resolveRecipes({
+  const plans = resolveRecipes({
     topology: options.topology,
     state: options.state,
     device: options.device,
     channel: options.channel,
     ingredientSlotContents,
   });
+  if (options.device.allowDuplicateRecipesAcrossChannels === true) {
+    return plans;
+  }
+
+  const deviceState = options.state.persistent.devices[options.device.id];
+  if (deviceState === undefined) {
+    return plans;
+  }
+
+  const siblingRecipeIds = new Set(
+    Object.entries(deviceState.channelRecipes)
+      .filter(([channelId, recipe]) => channelId !== options.channel.id && recipe !== null)
+      .map(([, recipe]) => recipe!.recipeId),
+  );
+  return plans.filter((plan) => !siblingRecipeIds.has(plan.recipeId));
 }
 
 export function placeRecipeOutputs(

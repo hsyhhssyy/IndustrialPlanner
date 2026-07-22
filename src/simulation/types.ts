@@ -173,6 +173,8 @@ export interface CompiledSimulationDevice {
   readonly transportComponentId: string | null;
   readonly nodeIds: readonly string[];
   readonly recipeChannels: readonly CompiledSimulationRecipeChannel[];
+  /** 不同 channel 是否允许同时运行同一配方；缺失时按 false 处理。 */
+  readonly allowDuplicateRecipesAcrossChannels?: boolean;
   readonly portIds: readonly string[];
   readonly routing: Record<string, CompiledSimulationRoutingEntry>;
   readonly configHash: string;
