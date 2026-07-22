@@ -19,7 +19,7 @@ describe("system-blueprint public assets", () => {
     const rootDirectory = listSystemBlueprintDirectory(snapshot, null);
 
     expect(snapshot.version).toBe("v1.3.0");
-    expect(rootDirectory.folders).toHaveLength(4);
+    expect(rootDirectory.folders).toHaveLength(5);
     expect(rootDirectory.folders[0]).toMatchObject({
       name: "新手教程",
       parentFolderId: null,
@@ -34,6 +34,10 @@ describe("system-blueprint public assets", () => {
     });
     expect(rootDirectory.folders[3]).toMatchObject({
       name: "赤石科技",
+      parentFolderId: null,
+    });
+    expect(rootDirectory.folders[4]).toMatchObject({
+      name: "1.4向渊行版本蓝图",
       parentFolderId: null,
     });
 
