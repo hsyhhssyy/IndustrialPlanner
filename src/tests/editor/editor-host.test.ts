@@ -1346,6 +1346,85 @@ describe("createEditorHost", () => {
     });
   });
 
+  it("uses repeated real rotation steps to align a warehouse port with a building boundary", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("warehouse-source", "log_hongs_bus_source", 0, 0),
+    ]));
+    editorHost.actions.createSinglePlacementDraft("loader_1", { x: 4, y: 1 });
+    const draftId = editorHost.state.collections.preview[0];
+
+    expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
+      position: { x: 3, y: 1 },
+      rotation: 0,
+    });
+    expect(editorHost.actions.rotateCollectionToSnapOnBuilding({
+      collectionType: EntityCollectionType.preview,
+      trigger: "after-move",
+      pivotMode: "center",
+      clientPixelPoint: null,
+    })).toBe(true);
+    expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
+      position: { x: 4, y: 0 },
+      rotation: 90,
+    });
+    expect(editorHost.queries.getEntityPlacementValidation(draftId ?? "").canPlace).toBe(true);
+
+    expect(editorHost.actions.rotateCollectionToSnapOnBuilding({
+      collectionType: EntityCollectionType.preview,
+      trigger: "before-rotate",
+      pivotMode: "center",
+      clientPixelPoint: null,
+    })).toBe(true);
+    expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
+      position: { x: 4, y: 0 },
+      rotation: 90,
+    });
+  });
+
+  it("rotates a warehouse port onto the inner wall of a sealed building hole", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("top-left", "log_hongs_bus_source", 20, 20),
+      createTestEntity("top-middle", "log_hongs_bus_source", 24, 20),
+      createTestEntity("top-right", "log_hongs_bus_source", 28, 20),
+      createTestEntity("middle-left", "log_hongs_bus_source", 20, 24),
+      createTestEntity("middle-right", "log_hongs_bus_source", 28, 24),
+      createTestEntity("bottom-left", "log_hongs_bus_source", 20, 28),
+      createTestEntity("bottom-middle", "log_hongs_bus_source", 24, 28),
+      createTestEntity("bottom-right", "log_hongs_bus_source", 28, 28),
+    ]));
+    editorHost.actions.createSinglePlacementDraft("loader_1", { x: 25, y: 24 });
+    const draftId = editorHost.state.collections.preview[0];
+
+    expect(editorHost.actions.rotateCollectionToSnapOnBuilding({
+      collectionType: EntityCollectionType.preview,
+      trigger: "after-move",
+      pivotMode: "center",
+      clientPixelPoint: null,
+    })).toBe(true);
+    expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
+      position: { x: 24, y: 24 },
+      rotation: 180,
+    });
+    expect(editorHost.queries.getEntityPlacementValidation(draftId ?? "").canPlace).toBe(true);
+  });
+
+  it("leaves free rotation available when no building-snap direction exists", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.actions.createSinglePlacementDraft("unloader_1", { x: 30, y: 30 });
+
+    expect(editorHost.actions.rotateCollectionToSnapOnBuilding({
+      collectionType: EntityCollectionType.preview,
+      trigger: "before-rotate",
+      pivotMode: "pivot-cell",
+      clientPixelPoint: null,
+    })).toBe(false);
+  });
+
   it("creates and applies blueprint placement drafts with remapped slot links", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

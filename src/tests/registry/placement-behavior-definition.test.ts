@@ -18,4 +18,19 @@ describe("placement behavior definitions", () => {
         ?.placementBehaviors,
     ).toEqual(expect.arrayContaining([behavior]));
   });
+
+  it("declares warehouse-building rotation assistance on both warehouse ports", () => {
+    const registry = createRegistryContract();
+    const behavior = {
+      type: PLACEMENT_BEHAVIOR_TYPE.rotateToSnapOnBuilding,
+      targetDeviceIds: ["log_hongs_bus", "log_hongs_bus_source"],
+    };
+
+    for (const definitionId of ["loader_1", "unloader_1"]) {
+      expect(
+        registry.entityDefinitions.find((candidate) => candidate.id === definitionId)
+          ?.placementBehaviors,
+      ).toEqual(expect.arrayContaining([behavior]));
+    }
+  });
 });

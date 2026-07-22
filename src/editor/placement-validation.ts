@@ -94,6 +94,7 @@ export function resolvePlacementValidations(options: {
   document: WorldDocument;
   state: EditorStateReadWrite;
   workspace: WorkspaceContract;
+  drafts?: readonly WorldEntity[];
 }): Record<string, EntityPlacementValidationResult> {
   const definitionMap = new Map(
     options.workspace.registry.entityDefinitions.map((definition) => [
@@ -104,6 +105,7 @@ export function resolvePlacementValidations(options: {
   const entries = resolveValidationEntries({
     document: options.document,
     state: options.state,
+    drafts: options.drafts ?? options.state.drafts,
     definitionMap,
     registry: options.workspace.registry,
   });
@@ -167,6 +169,7 @@ export function resolvePlacementValidations(options: {
 function resolveValidationEntries(options: {
   document: WorldDocument;
   state: EditorStateReadWrite;
+  drafts: readonly WorldEntity[];
   definitionMap: ReadonlyMap<string, EntityDefinition>;
   registry: WorkspaceContract["registry"];
 }): PlacementValidationEntry[] {
@@ -177,7 +180,17 @@ function resolveValidationEntries(options: {
       baseDefinitions: options.registry.baseDefinitions,
       baseId: options.document.baseId,
     }),
-    ...options.state.drafts,
+    // AI-REMOVED 2026-07-22:
+    // Reason: 候选旋转校验需要传入不落盘的候选 draft 集合，不能固定读取当前 state.drafts。
+    // Trigger: RotateToSnapOnBuilding 必须先验证四个真实 R 候选，再选择实际执行方向。
+    // Evidence: resolvePlacementValidations 新增可选 drafts，默认值仍在调用入口回退到 options.state.drafts。
+    // Replacement: options.drafts
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // ...options.state.drafts,
+    ...options.drafts,
   ];
   const seenEntityIds = new Set<string>();
   const entries: PlacementValidationEntry[] = [];

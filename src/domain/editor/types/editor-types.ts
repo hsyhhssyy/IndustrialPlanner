@@ -90,6 +90,13 @@ export interface MoveCollectionToOptions {
   readonly endGridPoint: GridPoint;
 }
 
+export interface RotateCollectionToSnapOnBuildingOptions {
+  readonly collectionType: EntityCollectionType;
+  readonly trigger: "after-move" | "before-rotate";
+  readonly pivotMode: "center" | "pivot-cell";
+  readonly clientPixelPoint: ClientPixelPoint | null;
+}
+
 // ---------------------------------------------------------------------------
 // Editor Snapshot Store（从 contract 中移出）
 // ---------------------------------------------------------------------------

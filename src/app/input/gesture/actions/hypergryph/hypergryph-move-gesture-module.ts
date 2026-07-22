@@ -639,6 +639,17 @@ function finalizeMoveEnter(options: {
         EntityCollectionType.preview,
         options.initialMousePosition,
       );
+      const movedRect = options.editor.queries.findEntityCollectionGridRect(
+        EntityCollectionType.preview,
+      );
+      if (movedRect !== null && didPreviewRectChange(previewRect, movedRect)) {
+        rotateMovePreviewToBuildingSnap({
+          appHost: options.appHost,
+          editor: options.editor,
+          trigger: "after-move",
+          currentMousePosition: options.initialMousePosition,
+        });
+      }
     }
 
     options.appHost.internalActions.setActiveTool("move");
@@ -748,10 +759,28 @@ function handleMoveMouseDragStart(options: {
   }
 
   if (options.appHost.internalState.runtime.movePointerMode === "mouse") {
+    const beforeRect = options.editor.queries.findEntityCollectionGridRect(
+      EntityCollectionType.preview,
+    );
     options.editor.actions.moveCollectionCenterPointTo(
       EntityCollectionType.preview,
       options.position,
     );
+    const movedRect = options.editor.queries.findEntityCollectionGridRect(
+      EntityCollectionType.preview,
+    );
+    if (
+      beforeRect !== null
+      && movedRect !== null
+      && didPreviewRectChange(beforeRect, movedRect)
+    ) {
+      rotateMovePreviewToBuildingSnap({
+        appHost: options.appHost,
+        editor: options.editor,
+        trigger: "after-move",
+        currentMousePosition: options.position,
+      });
+    }
     return { status: "handled" };
   }
 
@@ -855,6 +884,18 @@ function driveMovePreview(options: {
       endGridPoint: nextGridPoint,
     });
 
+    const movedRect = options.editor.queries.findEntityCollectionGridRect(
+      EntityCollectionType.preview,
+    );
+    if (movedRect !== null && didPreviewRectChange(beforeRect, movedRect)) {
+      rotateMovePreviewToBuildingSnap({
+        appHost: options.appHost,
+        editor: options.editor,
+        trigger: "after-move",
+        currentMousePosition: null,
+      });
+    }
+
     const afterRect = options.editor.queries.findEntityCollectionGridRect(
       EntityCollectionType.preview,
     );
@@ -896,6 +937,17 @@ function driveMouseMovePreview(options: {
     EntityCollectionType.preview,
     options.position,
   );
+  const movedRect = options.editor.queries.findEntityCollectionGridRect(
+    EntityCollectionType.preview,
+  );
+  if (movedRect !== null && !areGridRectsEqual(beforeRect, movedRect)) {
+    rotateMovePreviewToBuildingSnap({
+      appHost: options.appHost,
+      editor: options.editor,
+      trigger: "after-move",
+      currentMousePosition: options.position,
+    });
+  }
   const afterRect = options.editor.queries.findEntityCollectionGridRect(
     EntityCollectionType.preview,
   );
@@ -969,6 +1021,16 @@ function rotateMovePreview(
   editor: EditorContract,
   currentMousePosition: GesturePosition | null,
 ): void {
+  if (rotateMovePreviewToBuildingSnap({
+    appHost,
+    editor,
+    trigger: "before-rotate",
+    currentMousePosition,
+  })) {
+    appHost.internalActions.alignCanvasFloatingToolbar();
+    return;
+  }
+
   if (appHost.internalState.runtime.movePointerMode === "mouse") {
     editor.actions.rotateCollectionAroundCenterPoint(EntityCollectionType.preview, 90);
     if (
@@ -986,6 +1048,27 @@ function rotateMovePreview(
 
   editor.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
   appHost.internalActions.alignCanvasFloatingToolbar();
+}
+
+function rotateMovePreviewToBuildingSnap(options: {
+  readonly appHost: AppHost;
+  readonly editor: EditorContract;
+  readonly trigger: "after-move" | "before-rotate";
+  readonly currentMousePosition: GesturePosition | null;
+}): boolean {
+  const isMouse = options.appHost.internalState.runtime.movePointerMode === "mouse";
+  const clientPixelPoint = isMouse
+    && options.currentMousePosition !== null
+    && isClientPointInsideViewport(options.editor, options.currentMousePosition)
+    ? options.currentMousePosition
+    : null;
+
+  return options.editor.actions.rotateCollectionToSnapOnBuilding({
+    collectionType: EntityCollectionType.preview,
+    trigger: options.trigger,
+    pivotMode: isMouse ? "center" : "pivot-cell",
+    clientPixelPoint,
+  });
 }
 
 function switchMovePreviewVariant(

@@ -12,6 +12,7 @@ export const PLACEMENT_BEHAVIOR_TYPE = {
   mustConnectToHubViaOppositePortEdge: "must-connect-to-hub-via-opposite-port-edge",
   cannotBePlacedOutsideBase: "cannot-be-placed-outside-base",
   snapToOuterRingEdge: "snap-to-outer-ring-edge",
+  rotateToSnapOnBuilding: "rotate-to-snap-on-building",
   noNearSameEntity: "no-near-same-entity",
 } as const;
 
@@ -25,4 +26,8 @@ export type EntityPlacementBehaviorDeclaration =
   | { readonly type: typeof PLACEMENT_BEHAVIOR_TYPE.mustConnectToHubViaOppositePortEdge }
   | { readonly type: typeof PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase }
   | { readonly type: typeof PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge }
+  | {
+    readonly type: typeof PLACEMENT_BEHAVIOR_TYPE.rotateToSnapOnBuilding;
+    readonly targetDeviceIds: readonly string[];
+  }
   | { readonly type: typeof PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity; readonly range: number };

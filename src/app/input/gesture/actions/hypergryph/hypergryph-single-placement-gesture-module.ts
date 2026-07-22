@@ -173,6 +173,16 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
     if (debugOn) perfMoveCollectionMs += performance.now() - t2
 
     const t3 = debugOn ? performance.now() : 0
+    const movedRect = options.editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
+    if (movedRect !== null && didPreviewRectChange(beforeRect, movedRect)) {
+      rotatePlacementPreviewToBuildingSnap({
+        appHost: options.appHost,
+        editor: options.editor,
+        trigger: "after-move",
+        pointerMode: options.appHost.internalState.runtime.singlePlacementPointerMode,
+        currentMousePosition: null,
+      });
+    }
     const afterRect = options.editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
     if (debugOn) perfAfterRectMs += performance.now() - t3
 
@@ -764,6 +774,18 @@ function finalizePlacementEnter(options: {
         EntityCollectionType.preview,
         options.initialMousePosition,
       );
+      const movedRect = options.editor.queries.findEntityCollectionGridRect(
+        EntityCollectionType.preview,
+      );
+      if (movedRect !== null && didPreviewRectChange(previewRect, movedRect)) {
+        rotatePlacementPreviewToBuildingSnap({
+          appHost: options.appHost,
+          editor: options.editor,
+          trigger: "after-move",
+          pointerMode: "mouse",
+          currentMousePosition: options.initialMousePosition,
+        });
+      }
     }
 
     runInAction(() => {
@@ -873,6 +895,19 @@ export function drivePlacementPreview(options: {
       endGridPoint: nextGridPoint,
     });
 
+    const movedRect = options.editor.queries.findEntityCollectionGridRect(
+      EntityCollectionType.preview,
+    );
+    if (movedRect !== null && didPreviewRectChange(beforeRect, movedRect)) {
+      rotatePlacementPreviewToBuildingSnap({
+        appHost: options.appHost,
+        editor: options.editor,
+        trigger: "after-move",
+        pointerMode: options.appHost.internalState.runtime.singlePlacementPointerMode,
+        currentMousePosition: null,
+      });
+    }
+
     const afterRect = options.editor.queries.findEntityCollectionGridRect(
       EntityCollectionType.preview,
     );
@@ -915,6 +950,18 @@ export function driveMousePlacementPreview(options: {
       EntityCollectionType.preview,
       options.position,
     );
+    const movedRect = options.editor.queries.findEntityCollectionGridRect(
+      EntityCollectionType.preview,
+    );
+    if (movedRect !== null && !areGridRectsEqual(beforeRect, movedRect)) {
+      rotatePlacementPreviewToBuildingSnap({
+        appHost: options.appHost,
+        editor: options.editor,
+        trigger: "after-move",
+        pointerMode: "mouse",
+        currentMousePosition: options.position,
+      });
+    }
     const afterRect = options.editor.queries.findEntityCollectionGridRect(
       EntityCollectionType.preview,
     );
@@ -977,6 +1024,17 @@ export function rotatePlacementPreview(
     currentMousePosition: null,
   },
 ): void {
+  if (rotatePlacementPreviewToBuildingSnap({
+    appHost,
+    editor,
+    trigger: "before-rotate",
+    pointerMode: options.pointerMode,
+    currentMousePosition: options.currentMousePosition,
+  })) {
+    appHost.internalActions.alignCanvasFloatingToolbar();
+    return;
+  }
+
   if (options.pointerMode === "mouse") {
     editor.actions.rotateCollectionAroundCenterPoint(EntityCollectionType.preview, 90);
     if (
@@ -994,6 +1052,28 @@ export function rotatePlacementPreview(
 
   editor.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
   appHost.internalActions.alignCanvasFloatingToolbar();
+}
+
+function rotatePlacementPreviewToBuildingSnap(options: {
+  readonly appHost: AppHost;
+  readonly editor: EditorContract;
+  readonly trigger: "after-move" | "before-rotate";
+  readonly pointerMode: "mouse" | "touch" | null;
+  readonly currentMousePosition: GesturePosition | null;
+}): boolean {
+  const isMouse = options.pointerMode === "mouse";
+  const clientPixelPoint = isMouse
+    && options.currentMousePosition !== null
+    && isClientPointInsideViewport(options.editor, options.currentMousePosition)
+    ? options.currentMousePosition
+    : null;
+
+  return options.editor.actions.rotateCollectionToSnapOnBuilding({
+    collectionType: EntityCollectionType.preview,
+    trigger: options.trigger,
+    pivotMode: isMouse ? "center" : "pivot-cell",
+    clientPixelPoint,
+  });
 }
 
 export function cleanupPlacementDraft(appHost: AppHost): void {

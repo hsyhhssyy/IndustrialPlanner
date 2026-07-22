@@ -531,6 +531,12 @@ describe("createHypergryphMoveGestureModule", () => {
       endGridPoint: { x: 6, y: 4 },
     });
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 6, y: 4 });
+    expect(editor.actions.rotateCollectionToSnapOnBuilding).toHaveBeenCalledWith({
+      collectionType: EntityCollectionType.preview,
+      trigger: "after-move",
+      pivotMode: "pivot-cell",
+      clientPixelPoint: null,
+    });
     expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
@@ -629,6 +635,28 @@ describe("createHypergryphMoveGestureModule", () => {
       90,
     );
     expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses building-snap rotation before the normal move-preview rotation", () => {
+    const { context, editor } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 5, y: 5 },
+      movePointerMode: "touch",
+    });
+    const module = createHypergryphMoveGestureModule();
+    vi.mocked(editor.actions.rotateCollectionToSnapOnBuilding).mockReturnValue(true);
+
+    expect(module.handle(keyDownEvent({ code: "KeyR", key: "r" }), context)).toEqual({
+      status: "handled",
+    });
+    expect(editor.actions.rotateCollectionToSnapOnBuilding).toHaveBeenCalledWith({
+      collectionType: EntityCollectionType.preview,
+      trigger: "before-rotate",
+      pivotMode: "pivot-cell",
+      clientPixelPoint: null,
+    });
+    expect(editor.actions.rotateCollectionAroundPivotCell).not.toHaveBeenCalled();
+    expect(editor.actions.rotateCollectionAroundCenterPoint).not.toHaveBeenCalled();
   });
 
   it("switches the move preview variant, keeps the anchor, then continues moving and applies", () => {
@@ -1054,6 +1082,7 @@ function createContext(options: {
       rotateCollection: vi.fn(),
       rotateCollectionAroundCenterPoint: vi.fn(),
       rotateCollectionAroundPivotCell: vi.fn(),
+      rotateCollectionToSnapOnBuilding: vi.fn(() => false),
       replaceEntityDefinition: vi.fn((entityId: string, nextDefinitionId: string) => {
         if (entityId !== previewEntity.id) {
           return false;
@@ -1198,6 +1227,7 @@ type MockEditor = {
     | "rotateCollection"
     | "rotateCollectionAroundCenterPoint"
     | "rotateCollectionAroundPivotCell"
+    | "rotateCollectionToSnapOnBuilding"
   >;
   queries: Pick<
     EditorContract["queries"],

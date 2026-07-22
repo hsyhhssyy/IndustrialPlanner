@@ -282,6 +282,12 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       endGridPoint: { x: 6, y: 4 },
     });
     expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 6, y: 4 });
+    expect(editor.actions.rotateCollectionToSnapOnBuilding).toHaveBeenCalledWith({
+      collectionType: EntityCollectionType.preview,
+      trigger: "after-move",
+      pivotMode: "pivot-cell",
+      clientPixelPoint: null,
+    });
     expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
@@ -437,6 +443,31 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       90,
     );
     expect(toolbar.appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses building-snap rotation before the normal placement-preview rotation", () => {
+    const { context, editor } = createContext({
+      activeTool: "single-placement",
+      placementAnchor: { x: 5, y: 5 },
+      singlePlacementDeviceId: "loader_1",
+      singlePlacementPointerMode: "touch",
+      initialPreview: true,
+      previewDefinitionId: "loader_1",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+    vi.mocked(editor.actions.rotateCollectionToSnapOnBuilding).mockReturnValue(true);
+
+    expect(
+      module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-rotate"), context),
+    ).toEqual({ status: "handled" });
+    expect(editor.actions.rotateCollectionToSnapOnBuilding).toHaveBeenCalledWith({
+      collectionType: EntityCollectionType.preview,
+      trigger: "before-rotate",
+      pivotMode: "pivot-cell",
+      clientPixelPoint: null,
+    });
+    expect(editor.actions.rotateCollectionAroundPivotCell).not.toHaveBeenCalled();
+    expect(editor.actions.rotateCollectionAroundCenterPoint).not.toHaveBeenCalled();
   });
 
   it("switches the placement preview variant from Tab and updates the touch toolbar", () => {
@@ -795,6 +826,7 @@ function createContext(options: {
       rotateCollectionAroundPivotCell: vi.fn(() => {
         previewEntity.rotation = rotateClockwise(previewEntity.rotation);
       }),
+      rotateCollectionToSnapOnBuilding: vi.fn(() => false),
       replaceEntityDefinition: vi.fn((entityId: string, nextDefinitionId: string) => {
         if (entityId !== previewEntity.id) {
           return false;
@@ -958,6 +990,7 @@ type MockEditor = {
     | "rotateCollection"
     | "rotateCollectionAroundCenterPoint"
     | "rotateCollectionAroundPivotCell"
+    | "rotateCollectionToSnapOnBuilding"
   >;
   queries: Pick<
     EditorContract["queries"],

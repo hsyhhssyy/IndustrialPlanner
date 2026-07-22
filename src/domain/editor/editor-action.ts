@@ -4,6 +4,7 @@ import type {
 	MoveViewportByClientPixelVectorOptions,
 	EntityCollectionMemberOptions,
 	MoveCollectionToOptions,
+	RotateCollectionToSnapOnBuildingOptions,
 } from "./types/editor-types";
 import type { ClientPixelPoint, ClientPixelRect } from "../shared/client-pixel";
 import type { GridPoint, GridRect, GridRotation } from "../shared/grid";
@@ -84,6 +85,9 @@ export interface EditorAction {
 		collectionType: EntityCollectionType,
 		angle: number,
 	): void;
+	rotateCollectionToSnapOnBuilding(
+		options: RotateCollectionToSnapOnBuildingOptions,
+	): boolean;
 
 	createMoveOperationDraft(): void;
 	applyMoveOerationDraft(): boolean;
