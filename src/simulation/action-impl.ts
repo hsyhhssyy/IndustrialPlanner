@@ -606,26 +606,36 @@ implements SimulationAction, SimulationInternalAction {
 
     this.diagConsecutiveRollbacks = 0;
     this.publishPlaybackSnapshot(prefetchedSnapshot);
-    actualTicksProcessed = Math.max(0, nextIntegerTickNumber - synchronizedTickNumber);
+    actualTicksProcessed = Math.max(
+      0,
+      prefetchedSnapshot.tickNumber - synchronizedTickNumber,
+    );
     this.diagTickConsumedCount += actualTicksProcessed;
     this.accumulateTps(deltaMs, actualTicksProcessed);
-    this.acknowledgePresentedTick(nextIntegerTickNumber);
+    this.acknowledgePresentedTick(prefetchedSnapshot.tickNumber);
     this.ensurePlaybackHotQueue();
   };
 
   /** 仅当目标区间完整存在时才原子消费，避免跨过缺失 Tick。 */
+  /** AI-CORRECTION 2026-07-22: 现在消费截至首个缺口前的最长连续前缀，避免部分范围响应与低水位条件形成永久等待。 */
   private takePlaybackSnapshotThrough(
     fromTickNumber: number,
     toTickNumber: number,
   ): RuntimeTickSnapshot | null {
+    let availableToTickNumber = fromTickNumber - 1;
     for (let tickNumber = fromTickNumber; tickNumber <= toTickNumber; tickNumber += 1) {
       if (!this.playbackHotQueue.has(tickNumber)) {
-        return null;
+        break;
       }
+      availableToTickNumber = tickNumber;
+    }
+
+    if (availableToTickNumber < fromTickNumber) {
+      return null;
     }
 
     let snapshot: RuntimeTickSnapshot | null = null;
-    for (let tickNumber = fromTickNumber; tickNumber <= toTickNumber; tickNumber += 1) {
+    for (let tickNumber = fromTickNumber; tickNumber <= availableToTickNumber; tickNumber += 1) {
       snapshot = this.playbackHotQueue.get(tickNumber) ?? null;
       this.playbackHotQueue.delete(tickNumber);
     }

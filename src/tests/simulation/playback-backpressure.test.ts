@@ -13,6 +13,56 @@ import type {
 } from "@/simulation/types";
 
 describe("simulation playback backpressure", () => {
+  it("consumes a partial range prefix when x16 playback crosses beyond hot queue capacity", async () => {
+    const firstRangeResponse = createDeferred<Awaited<ReturnType<SimulationWorkerBridge["getTickSnapshotRange"]>>>();
+    const secondRangeResponse = createDeferred<Awaited<ReturnType<SimulationWorkerBridge["getTickSnapshotRange"]>>>();
+    const getTickSnapshotRange = vi.fn()
+      .mockReturnValueOnce(firstRangeResponse.promise)
+      .mockReturnValueOnce(secondRangeResponse.promise);
+    const acknowledgePresentedTick = vi.fn(async (tickNumber: number, generation: number) =>
+      createAcknowledgedResponse(tickNumber, generation));
+    const state = createSimulationStateReadWrite();
+    state.runningState = "start";
+    state.simulationSpeed = 16;
+    state.currentPlaybackTickNumber = 0;
+    state.currentSnapshot = createTickSnapshot(0);
+
+    const action = new SimulationActionImpl({
+      workspace: {} as WorkspaceContract,
+      state,
+      topology: createSnapshotStore<CompiledSimulationTopology | null>(null),
+      bridge: {
+        getTickSnapshotRange,
+        acknowledgePresentedTick,
+      } as unknown as SimulationWorkerBridge,
+    });
+
+    await action.advancePlaybackByDeltaMs(100);
+    expect(state.currentPlaybackTickNumber).toBe(32);
+    expect(getTickSnapshotRange).toHaveBeenLastCalledWith(1, 20, 0, 16);
+
+    firstRangeResponse.resolve(createPartialRangeResponse(1, 20, 17, 0));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    await action.advancePlaybackByDeltaMs(0);
+
+    expect(state.currentSnapshot?.tickNumber).toBe(17);
+    expect(acknowledgePresentedTick).toHaveBeenCalledWith(17, 0);
+    await Promise.resolve();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await action.advancePlaybackByDeltaMs(0);
+    expect(getTickSnapshotRange).toHaveBeenLastCalledWith(18, 37, 0, 16);
+
+    secondRangeResponse.resolve(createRangeResponse(18, 37, 0));
+    await Promise.resolve();
+    await Promise.resolve();
+    await action.advancePlaybackByDeltaMs(0);
+
+    expect(state.currentSnapshot?.tickNumber).toBe(32);
+    expect(acknowledgePresentedTick).toHaveBeenCalledWith(32, 0);
+  });
+
   it("keeps one range prefetch in flight and consumes the hot queue in tick order", async () => {
     const rangeResponse = createDeferred<Awaited<ReturnType<SimulationWorkerBridge["getTickSnapshotRange"]>>>();
     const getTickSnapshotRange = vi.fn().mockReturnValue(rangeResponse.promise);
@@ -174,6 +224,34 @@ function createRangeResponse(
       ),
     },
     status: createRuntimeStatus(toTickNumber, toTickNumber + 1),
+  };
+}
+
+function createPartialRangeResponse(
+  fromTickNumber: number,
+  toTickNumber: number,
+  availableToTickNumber: number,
+  generation: number,
+): Awaited<ReturnType<SimulationWorkerBridge["getTickSnapshotRange"]>> {
+  return {
+    type: "tick-snapshot-range-result",
+    requestId: fromTickNumber,
+    result: {
+      generation,
+      fromTickNumber,
+      toTickNumber,
+      status: {
+        status: "ready",
+        retainedFromTick: 0,
+        latestTickNumber: availableToTickNumber,
+        bufferSize: availableToTickNumber + 1,
+      },
+      snapshots: Array.from(
+        { length: availableToTickNumber - fromTickNumber + 1 },
+        (_, index) => createTickSnapshot(fromTickNumber + index),
+      ),
+    },
+    status: createRuntimeStatus(availableToTickNumber, availableToTickNumber + 1),
   };
 }
 
