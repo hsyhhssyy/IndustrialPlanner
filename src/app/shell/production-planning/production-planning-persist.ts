@@ -34,6 +34,7 @@ export function hookPlannerIndexedDbPersistence(
           acidPolicy: normalizeByproductPolicy(persisted.sourceConfig?.acidPolicy),
           sewagePolicy: normalizeSewagePolicy(persisted.sourceConfig?.sewagePolicy),
           waterPurifierPolicy: normalizeWaterPurifierPolicy(persisted.sourceConfig?.waterPurifierPolicy),
+          includeDeviceMinimumConsumption: persisted.sourceConfig?.includeDeviceMinimumConsumption !== false,
         };
         const demandSignature = createProductionPlanningDemandSignature({
           targets,
@@ -116,6 +117,7 @@ export function createProductionPlanningDemandSignature(state: {
       acidPolicy: state.sourceConfig.acidPolicy,
       sewagePolicy: state.sourceConfig.sewagePolicy,
       waterPurifierPolicy: state.sourceConfig.waterPurifierPolicy,
+      includeDeviceMinimumConsumption: state.sourceConfig.includeDeviceMinimumConsumption,
     },
   });
 }

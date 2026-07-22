@@ -32,6 +32,7 @@ function createPlannerState(patch: Partial<PlannerPersistedState> = {}): Planner
       acidPolicy: "use-byproduct",
       sewagePolicy: "external-supply",
       waterPurifierPolicy: "disabled",
+      includeDeviceMinimumConsumption: true,
     },
     session: createDefaultPlannerSessionState(),
     ...patch,
@@ -55,6 +56,7 @@ describe("production planning persistence", () => {
         acidPolicy: "use-byproduct",
         sewagePolicy: "external-supply",
         waterPurifierPolicy: "use-when-available",
+        includeDeviceMinimumConsumption: true,
       },
       session: {
         activeScreen: "result",
@@ -72,6 +74,15 @@ describe("production planning persistence", () => {
     const state = createPlannerState({
       supplies: [{ id: "supply-1", itemId: "item_iron_nugget", perMinute: 60, isInfinite: true }],
     });
+
+    await savePlannerState(state);
+
+    await expect(loadPlannerState()).resolves.toEqual(state);
+  });
+
+  it("persists an explicitly disabled minimum device consumption option", async () => {
+    const state = createPlannerState();
+    state.sourceConfig.includeDeviceMinimumConsumption = false;
 
     await savePlannerState(state);
 
@@ -101,6 +112,7 @@ describe("production planning persistence", () => {
       sourceConfig: {
         ...legacyState.sourceConfig,
         waterPurifierPolicy: "disabled",
+        includeDeviceMinimumConsumption: true,
       },
       recipeChoicesDemandSignature: null,
       session: createDefaultPlannerSessionState(),
@@ -132,6 +144,7 @@ describe("production planning persistence", () => {
     expect(normalized?.session).toEqual(createDefaultPlannerSessionState());
     expect(normalized?.recipeChoicesDemandSignature).toBeNull();
     expect(normalized?.sourceConfig.waterPurifierPolicy).toBe("disabled");
+    expect(normalized?.sourceConfig.includeDeviceMinimumConsumption).toBe(true);
   });
 
   it("creates stable demand signatures without row ids", () => {
@@ -140,6 +153,7 @@ describe("production planning persistence", () => {
       acidPolicy: "use-byproduct" as const,
       sewagePolicy: "external-supply" as const,
       waterPurifierPolicy: "disabled" as const,
+      includeDeviceMinimumConsumption: true,
     };
 
     expect(createProductionPlanningDemandSignature({

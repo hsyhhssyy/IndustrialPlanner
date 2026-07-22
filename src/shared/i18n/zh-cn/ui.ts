@@ -416,6 +416,7 @@ const UI: Record<string, string> = {
     "productionPlanning.calculate": "计算",
     "productionPlanning.chooseRecipe": "选择配方",
     "productionPlanning.coverDemand": "覆盖需求",
+    "productionPlanning.deviceMinimumConsumption": "计算设备最低消耗",
     "productionPlanning.devices": "设备",
     "productionPlanning.displayMode": "展示模式",
     "productionPlanning.emptyLines": "添加目标物品开始计算。",

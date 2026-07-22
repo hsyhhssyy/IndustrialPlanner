@@ -412,6 +412,17 @@
   display: grid;
   min-width: 0;
   gap: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  transition: background 120ms ease;
+  &:hover {
+    background: var(--surface-3);
+  }
+  &:active {
+    background: var(--surface-4);
+  }
 }
 
 .selection-inspector-device-title-row {

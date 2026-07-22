@@ -423,6 +423,7 @@ const UI: Record<string, string> = {
     "productionPlanning.calculate": "Calculate",
     "productionPlanning.chooseRecipe": "Choose Recipe",
     "productionPlanning.coverDemand": "Cover Demand",
+    "productionPlanning.deviceMinimumConsumption": "Calculate device minimum consumption",
     "productionPlanning.devices": "Devices",
     "productionPlanning.displayMode": "Display Mode",
     "productionPlanning.emptyLines": "Add target items to start planning.",

@@ -282,6 +282,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       acidPolicy: sourceConfig.acidPolicy,
       sewagePolicy: sourceConfig.sewagePolicy,
       waterPurifierPolicy: sourceConfig.waterPurifierPolicy,
+      includeDeviceMinimumConsumption: sourceConfig.includeDeviceMinimumConsumption,
     };
     const plan = computeProductionPlan({
       targets: calculationTargets,
@@ -307,6 +308,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     infiniteItemIds,
     recipeChoices,
     sourceConfig.acidPolicy,
+    sourceConfig.includeDeviceMinimumConsumption,
     sourceConfig.sewagePolicy,
     sourceConfig.waterPolicy,
     sourceConfig.waterPurifierPolicy,
@@ -476,6 +478,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       acidPolicy: sourceConfig.acidPolicy,
       sewagePolicy: sourceConfig.sewagePolicy,
       waterPurifierPolicy: sourceConfig.waterPurifierPolicy,
+      includeDeviceMinimumConsumption: sourceConfig.includeDeviceMinimumConsumption,
     };
     const plan = computeProductionPlan({
       targets: calculationTargets,
@@ -886,6 +889,18 @@ function SourcePolicyPanel({
           onChange={(policy) => onUpdate({ waterPurifierPolicy: policy })}
           t={t}
         />
+        <label className={cm(styles, "production-planning-switch-row")}>
+          <span>{t("productionPlanning.deviceMinimumConsumption")}</span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={sourceConfig.includeDeviceMinimumConsumption}
+            onChange={(event) => onUpdate({ includeDeviceMinimumConsumption: event.target.checked })}
+          />
+          <span className={cm(styles, "production-planning-switch-track")} aria-hidden="true">
+            <span className={cm(styles, "production-planning-switch-thumb")} />
+          </span>
+        </label>
       </div>
     </section>
   );

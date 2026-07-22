@@ -37,6 +37,7 @@ export interface ProductionPlanningSourceConfig {
   acidPolicy: ProductionPlanningByproductPolicy;
   sewagePolicy: ProductionPlanningSewagePolicy;
   waterPurifierPolicy: ProductionPlanningWaterPurifierPolicy;
+  includeDeviceMinimumConsumption: boolean;
 }
 
 export type ProductionPlanningDisplayMode = "item" | "device";
@@ -543,12 +544,37 @@ function resolveDemand(
     }, context);
   }
 
-  const cyclesPerMinute = roundFlow(remaining / output.amount);
-  const inputPorts = recipe.inputs.map((input) => ({
+  const deviceConsumptionAmounts = resolveDeviceMinimumConsumptionAmountsPerCycle(recipe, context);
+  const targetDeviceConsumptionAmount = deviceConsumptionAmounts.get(itemId) ?? 0;
+  const netOutputAmount = roundFlow(output.amount - targetDeviceConsumptionAmount);
+
+  if (netOutputAmount <= EPSILON) {
+    return createItemNode({
+      itemId,
+      demandPerMinute: demand,
+      suppliedPerMinute: supplyAfterInfinite,
+      producedPerMinute: 0,
+      unresolvedPerMinute: remaining,
+      supply,
+      recipeNode: null,
+      isInfiniteSource: false,
+      isCycleSource: false,
+      blockedByCycle: false,
+    }, context);
+  }
+
+  const cyclesPerMinute = roundFlow(remaining / netOutputAmount);
+  const recipeInputPorts = recipe.inputs.map((input) => ({
     id: `${recipe.id}-in-${input.itemId}`,
     itemId: input.itemId,
     perMinute: roundFlow(input.amount * cyclesPerMinute),
   }));
+  const deviceConsumptionPorts = Array.from(deviceConsumptionAmounts, ([consumedItemId, amount]) => ({
+    id: `${recipe.id}-device-consumption-${consumedItemId}`,
+    itemId: consumedItemId,
+    perMinute: roundFlow(amount * cyclesPerMinute),
+  }));
+  const inputPorts = mergePorts(recipeInputPorts, deviceConsumptionPorts);
   const outputPorts = recipe.outputs.map((recipeOutput) => ({
     id: `${recipe.id}-out-${recipeOutput.itemId}`,
     itemId: recipeOutput.itemId,
@@ -565,7 +591,16 @@ function resolveDemand(
     }
   }
 
-  const inputItems = inputPorts.map((input) => resolveDemand(input.itemId, input.perMinute, context, [...stack, itemId]));
+  const inputItems = [
+    ...recipeInputPorts.map((input) => (
+      resolveDemand(input.itemId, input.perMinute, context, [...stack, itemId])
+    )),
+    ...deviceConsumptionPorts.map((input) => (
+      input.itemId === itemId
+        ? createProductionPlanningCycleSupplyItemNode(input.itemId, input.perMinute, context)
+        : resolveDemand(input.itemId, input.perMinute, context, [...stack, itemId])
+    )),
+  ];
   const recipeNode: ProductionPlanningRecipeNode = {
     id: createNodeId("recipe", context),
     kind: "recipe",
@@ -589,6 +624,61 @@ function resolveDemand(
     recipeNode,
     isInfiniteSource: false,
     isCycleSource: false,
+    blockedByCycle: false,
+  }, context);
+}
+
+function resolveDeviceMinimumConsumptionAmountsPerCycle(
+  recipe: RecipeDefinition,
+  context: SolverContext,
+): ReadonlyMap<string, number> {
+  if (!context.sourceConfig.includeDeviceMinimumConsumption) {
+    return new Map();
+  }
+
+  const consumption = context.index.entityById.get(recipe.machineId)?.meteredConsumption;
+  if (
+    consumption === undefined
+    || consumption.itemIds.length === 0
+    || consumption.windowSeconds <= EPSILON
+    || consumption.startThreshold <= EPSILON
+  ) {
+    return new Map();
+  }
+
+  const consumedItemId = consumption.itemIds.find((itemId) => (
+    recipe.inputs.some((input) => input.itemId === itemId)
+  )) ?? consumption.itemIds[0];
+  if (consumedItemId === undefined) {
+    return new Map();
+  }
+
+  return new Map([[
+    consumedItemId,
+    roundFlow(consumption.startThreshold * recipe.durationSeconds / consumption.windowSeconds),
+  ]]);
+}
+
+function createProductionPlanningCycleSupplyItemNode(
+  itemId: string,
+  perMinute: number,
+  context: SolverContext,
+): ProductionPlanningItemNode {
+  return createItemNode({
+    itemId,
+    demandPerMinute: perMinute,
+    suppliedPerMinute: perMinute,
+    producedPerMinute: 0,
+    unresolvedPerMinute: 0,
+    supply: {
+      manual: 0,
+      surplus: 0,
+      infinite: 0,
+      cycle: perMinute,
+    },
+    recipeNode: null,
+    isInfiniteSource: false,
+    isCycleSource: true,
     blockedByCycle: false,
   }, context);
 }

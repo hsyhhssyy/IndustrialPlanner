@@ -31,6 +31,7 @@ export interface PlannerPersistedState {
     acidPolicy: "use-byproduct" | "dump-byproduct";
     sewagePolicy: "external-supply" | "self-produce";
     waterPurifierPolicy: "disabled" | "use-when-available";
+    includeDeviceMinimumConsumption: boolean;
   };
   session: PlannerSessionState;
 }
@@ -46,6 +47,7 @@ const DEFAULT_PLANNER_SOURCE_CONFIG: PlannerPersistedState["sourceConfig"] = {
   acidPolicy: "use-byproduct",
   sewagePolicy: "external-supply",
   waterPurifierPolicy: "disabled",
+  includeDeviceMinimumConsumption: true,
 };
 
 export function createDefaultPlannerSessionState(): PlannerSessionState {
@@ -102,6 +104,7 @@ export function normalizePlannerPersistedState(value: unknown): PlannerPersisted
       waterPurifierPolicy: sourceConfig.waterPurifierPolicy === "use-when-available"
         ? "use-when-available"
         : DEFAULT_PLANNER_SOURCE_CONFIG.waterPurifierPolicy,
+      includeDeviceMinimumConsumption: sourceConfig.includeDeviceMinimumConsumption !== false,
     },
     session: normalizePlannerSessionState(value.session),
   };

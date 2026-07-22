@@ -366,6 +366,67 @@
   font-size: 0.76rem;
 }
 
+.production-planning-switch-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.production-planning-switch-row input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.production-planning-switch-track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 20px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-3);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.production-planning-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-2);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.production-planning-switch-row input:checked + .production-planning-switch-track {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.production-planning-switch-row input:checked + .production-planning-switch-track .production-planning-switch-thumb {
+  background: var(--accent-strong);
+  transform: translateX(14px);
+}
+
+.production-planning-switch-row input:focus-visible + .production-planning-switch-track {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
 .production-planning-two-option-toggle,
 .production-planning-segmented {
   display: inline-grid;

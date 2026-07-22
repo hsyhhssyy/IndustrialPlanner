@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { runInAction } from "mobx";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -348,9 +349,26 @@ function SelectionInspectorDeviceHeader({
   selectedEntity: WorldEntity;
   translate: Translate;
 }) {
+  const handleDeviceNameClick = useCallback(() => {
+    const wikiState = appHost.internalState.workbench.toolbox.wiki;
+
+    appHost.internalActions.openDialog("toolbox");
+    appHost.internalActions.setDialogTab("toolbox", "item-encyclopedia");
+
+    runInAction(() => {
+      wikiState.navigationStack = [{ type: "entity", id: selectedDefinition.id }];
+      wikiState.openedPage = { kind: "entity", id: selectedDefinition.id };
+    });
+  }, [appHost, selectedDefinition.id]);
+
   return (
     <section className={cm(styles, "selection-inspector-device-header")}>
-      <div className={cm(styles, "selection-inspector-device-copy")}>
+      <div
+        className={cm(styles, "selection-inspector-device-copy")}
+        onClick={handleDeviceNameClick}
+        role="button"
+        tabIndex={0}
+      >
         <div className={cm(styles, "selection-inspector-device-title-row")}>
           <h3>{resolveSelectedDeviceLabel(selectedDefinition, translate)}</h3>
         </div>

@@ -97,6 +97,7 @@ const DEFAULT_SOURCE_CONFIG: ProductionPlanningSourceConfig = {
   acidPolicy: "use-byproduct",
   sewagePolicy: "external-supply",
   waterPurifierPolicy: "disabled",
+  includeDeviceMinimumConsumption: true,
 };
 
 function makeInfiniteItemIds(
@@ -163,6 +164,37 @@ describe("production planning flow graph", () => {
     expect(byproduct?.id).toContain(":target:item_liquid_xiranite_lowpoly");
     expect(byproductLink?.target.startsWith("recipe:")).toBe(true);
     expect(byproductLink?.value).toBeGreaterThan(0);
+  });
+
+  it("keeps self-consumed device input as a self flow at the gross output rate", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const recipeId = "liquid_transmuter_1_liquid_liquid_xiranite_1";
+    const result = computeProductionPlan({
+      targets: [port("item_liquid_xiranite", 30)],
+      supplies: [],
+      infiniteItemIds: makeInfiniteItemIds(index, DEFAULT_SOURCE_CONFIG),
+      recipeChoices: new Map([["item_liquid_xiranite", recipeId]]),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    const graph = buildProductionFlowGraph(result, index, t, "device");
+    const recipeNode = graph.nodes.find((node) => node.recipeId === recipeId);
+    const selfConsumptionLink = graph.links.find((link) => (
+      link.source === recipeNode?.id
+      && link.target === recipeNode?.id
+      && link.itemId === "item_liquid_xiranite"
+    ));
+
+    expect(recipeNode?.subtitle).toContain("1.25");
+    expect(recipeNode?.subtitle).toContain("37.5/min");
+    expect(selfConsumptionLink?.value).toBe(7.5);
+    expect(() => createSankeyLayout(graph, {
+      width: 720,
+      height: 320,
+      nodeWidth: 120,
+      nodePadding: 16,
+      iterations: 4,
+    })).not.toThrow();
   });
 
   it("adds a transient item junction only for many-to-many material flow", () => {

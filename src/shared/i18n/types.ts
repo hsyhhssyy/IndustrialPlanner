@@ -238,6 +238,7 @@ export type UiKey =
   | "productionPlanning.calculate"
   | "productionPlanning.chooseRecipe"
   | "productionPlanning.coverDemand"
+  | "productionPlanning.deviceMinimumConsumption"
   | "productionPlanning.devices"
   | "productionPlanning.displayMode"
   | "productionPlanning.emptyLines"

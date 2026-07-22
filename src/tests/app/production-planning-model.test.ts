@@ -36,6 +36,7 @@ const DEFAULT_SOURCE_CONFIG: ProductionPlanningSourceConfig = {
   acidPolicy: "use-byproduct",
   sewagePolicy: "external-supply",
   waterPurifierPolicy: "disabled",
+  includeDeviceMinimumConsumption: true,
 };
 
 const TEST_SEWAGE_BYPRODUCT_RECIPE_ID = "test_sewage_byproduct";
@@ -242,6 +243,50 @@ describe("production planning model", () => {
     }, index);
 
     expect(result.roots[0]?.recipeNode?.recipeId).toBe(selectedRecipeId);
+  });
+
+  it("uses gross output and minimum device consumption to satisfy a self-consuming target", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const recipeId = "liquid_transmuter_1_liquid_liquid_xiranite_1";
+    const result = computeProductionPlan({
+      targets: [port("item_liquid_xiranite", 30)],
+      supplies: [],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map([["item_liquid_xiranite", recipeId]]),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    const total = result.recipeTotals.find((candidate) => candidate.recipeId === recipeId);
+    expect(total?.deviceCount).toBe(1.25);
+    expect(total?.outputs).toContainEqual(expect.objectContaining({
+      itemId: "item_liquid_xiranite",
+      perMinute: 37.5,
+    }));
+    expect(total?.inputs).toContainEqual(expect.objectContaining({
+      itemId: "item_liquid_xiranite",
+      perMinute: 7.5,
+    }));
+    expect(result.unresolvedPerMinute).toBe(0);
+  });
+
+  it("does not include minimum device consumption when the option is disabled", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const recipeId = "liquid_transmuter_1_liquid_liquid_xiranite_1";
+    const result = computeProductionPlan({
+      targets: [port("item_liquid_xiranite", 30)],
+      supplies: [],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map([["item_liquid_xiranite", recipeId]]),
+      sourceConfig: { ...DEFAULT_SOURCE_CONFIG, includeDeviceMinimumConsumption: false },
+    }, index);
+
+    const total = result.recipeTotals.find((candidate) => candidate.recipeId === recipeId);
+    expect(total?.deviceCount).toBe(1);
+    expect(total?.outputs).toContainEqual(expect.objectContaining({
+      itemId: "item_liquid_xiranite",
+      perMinute: 30,
+    }));
+    expect(total?.inputs.some((input) => input.itemId === "item_liquid_xiranite")).toBe(false);
   });
 
   it("treats seed and plant growth loops as productive cycles", () => {
