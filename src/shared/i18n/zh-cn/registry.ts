@@ -250,6 +250,8 @@ const REGISTRY: Record<string, string> = {
   "registry.recipe.r_miner_iron_ore_basic.name": "采集蓝铁矿",
   "registry.recipe.r_miner_originium_ore_basic.name": "采集源矿",
   "registry.recipe.r_miner_quartz_sand_basic.name": "采集紫晶矿",
+  "registry.recipe.r_gas_collector_inert_basic.name": "采集惰气",
+  "registry.recipe.r_gas_collector_xiranite_basic.name": "采集息壤气",
   "registry.recipe.r_pump_acid_basic.name": "抽取沉积酸",
   "registry.recipe.r_pump_water_basic.name": "抽取清水",
   "registry.recipe.r_water_purifier_node_collect_sewage_basic.name": "净水节点污水缓存",

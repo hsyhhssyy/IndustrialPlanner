@@ -79,6 +79,8 @@ const REGISTRY: Record<string, string> = {
   "registry.recipe.r_miner_iron_ore_basic.name": "Mine Iron Ore",
   "registry.recipe.r_miner_originium_ore_basic.name": "Mine Originium Ore",
   "registry.recipe.r_miner_quartz_sand_basic.name": "Mine Quartz Sand",
+  "registry.recipe.r_gas_collector_inert_basic.name": "Collect Inert Gas",
+  "registry.recipe.r_gas_collector_xiranite_basic.name": "Collect Xiragen",
   "registry.recipe.r_pump_acid_basic.name": "Pump Sediment Acid",
   "registry.recipe.r_pump_water_basic.name": "Pump Water",
   "registry.recipe.r_water_purifier_node_collect_sewage_basic.name": "Water Node Sewage Intake",
