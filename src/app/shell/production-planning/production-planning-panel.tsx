@@ -416,8 +416,11 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     }
 
     const nextSupplies = [...store.supplies, createPort(itemId, demandPerMinute)];
-    updateDemandInput(() => {
+    // 只清除被设为外部供给的物品的配方选择，保留其他物品的自定义配方
+    const nextRecipeChoices = updateRecipeChoices(store.recipeChoices, itemId, null);
+    runInAction(() => {
       store.supplies = nextSupplies;
+      store.recipeChoices = nextRecipeChoices;
     });
     setCalculation((current) => {
       if (current === null) {
@@ -428,14 +431,14 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
         targets: current.targets,
         supplies: nextSupplies,
         infiniteItemIds: current.infiniteItemIds,
-        recipeChoices: new Map(),
+        recipeChoices: new Map(Object.entries(nextRecipeChoices)),
         sourceConfig: current.sourceConfig,
       }, index);
 
       return {
         ...current,
         supplies: nextSupplies,
-        recipeChoices: {},
+        recipeChoices: nextRecipeChoices,
         plan: nextPlan,
       };
     });
@@ -443,8 +446,11 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
 
   const handleRemoveExternalSupply = (itemId: string) => {
     const nextSupplies = store.supplies.filter((s) => s.itemId !== itemId);
-    updateDemandInput(() => {
+    // 只清除被移除外部供给的物品的配方选择（该物品将改为自产），保留其他物品的自定义配方
+    const nextRecipeChoices = updateRecipeChoices(store.recipeChoices, itemId, null);
+    runInAction(() => {
       store.supplies = nextSupplies;
+      store.recipeChoices = nextRecipeChoices;
     });
     setCalculation((current) => {
       if (current === null) {
@@ -455,14 +461,14 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
         targets: current.targets,
         supplies: nextSupplies,
         infiniteItemIds: current.infiniteItemIds,
-        recipeChoices: new Map(),
+        recipeChoices: new Map(Object.entries(nextRecipeChoices)),
         sourceConfig: current.sourceConfig,
       }, index);
 
       return {
         ...current,
         supplies: nextSupplies,
-        recipeChoices: {},
+        recipeChoices: nextRecipeChoices,
         plan: nextPlan,
       };
     });
@@ -1677,7 +1683,33 @@ function ProductionPlanningTreeDetail({
   onRemoveExternalSupply: (itemId: string) => void;
   t: (key: string) => string;
 }) {
-  if (isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)) {
+  const isDeviceMinimumConsumption = isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId);
+  const detailRef = useRef<HTMLElement | null>(null);
+  const [detailWidth, setDetailWidth] = useState(0);
+
+  useLayoutEffect(() => {
+    const element = detailRef.current;
+    if (element === null) {
+      return;
+    }
+
+    const measure = () => {
+      const width = Math.floor(element.getBoundingClientRect().width || element.clientWidth);
+      setDetailWidth((current) => current === width ? current : width);
+    };
+
+    measure();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure);
+      return () => window.removeEventListener("resize", measure);
+    }
+
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(element);
+    return () => resizeObserver.disconnect();
+  }, [isDeviceMinimumConsumption]);
+
+  if (isDeviceMinimumConsumption) {
     return (
       <ProductionPlanningDeviceMinimumConsumptionDetail
         row={row}
@@ -1715,9 +1747,17 @@ function ProductionPlanningTreeDetail({
     ? (index.recipesByOutputItem.get(row.targetItemId) ?? [])
       .filter((candidate) => !isWaterPurifierNodeRecipe(candidate))
     : [];
+  const detailClassName = [
+    "production-planning-tree-detail-stack",
+    detailWidth < 340 ? "is-compact" : "",
+    detailWidth < 260 ? "is-tight" : "",
+  ].filter(Boolean).join(" ");
+  const externalSupplyActionLabel = isExternal
+    ? t("productionPlanning.removeExternalSupply")
+    : t("productionPlanning.coverDemand");
 
   return (
-    <article className={cm(styles, "production-planning-tree-detail-stack")}>
+    <article ref={detailRef} className={cm(styles, detailClassName)}>
       <div className={cm(styles, "production-planning-recipe-header")}>
         <img alt="" src={iconSrc} />
         <div>
@@ -1726,12 +1766,13 @@ function ProductionPlanningTreeDetail({
         </div>
         <button
           type="button"
-          className={cm(styles, "production-planning-icon-button")}
-          aria-label={isExternal ? t("productionPlanning.removeExternalSupply") : t("productionPlanning.coverDemand")}
-          title={isExternal ? t("productionPlanning.removeExternalSupply") : t("productionPlanning.coverDemand")}
+          className={cm(styles, "production-planning-icon-text-button production-planning-external-supply-action")}
+          aria-label={externalSupplyActionLabel}
+          title={externalSupplyActionLabel}
           onClick={() => isExternal ? onRemoveExternalSupply(row.targetItemId) : onCoverDemand(row.targetItemId)}
         >
           <LucideRepeat />
+          <span>{externalSupplyActionLabel}</span>
         </button>
       </div>
       <RecipeChoiceControls
@@ -1851,13 +1892,22 @@ function RecipeChoiceControls({
 
   return (
     <div className={cm(styles, "production-planning-recipe-choice")}>
-      <div>
+      <div className={cm(styles, "production-planning-recipe-choice-summary")}>
         <span>{t("productionPlanning.recipe")}</span>
         <strong>{label}</strong>
       </div>
       <button
         type="button"
-        className={cm(styles, "production-planning-icon-text-button")}
+        className={cm(styles, "production-planning-icon-text-button production-planning-recipe-choice-compact-auto")}
+        aria-pressed={selectedRecipeId === null}
+        onClick={() => onSelectRecipe(itemId, null)}
+      >
+        <LucideRepeat />
+        <span>{t("productionPlanning.autoRecipe")}</span>
+      </button>
+      <button
+        type="button"
+        className={cm(styles, "production-planning-icon-text-button production-planning-recipe-choice-select")}
         onClick={() => onRequestRecipeSelection(itemId, recipes)}
       >
         <LucideListTree />
@@ -1866,7 +1916,7 @@ function RecipeChoiceControls({
       {selectedRecipeId !== null && (
         <button
           type="button"
-          className={cm(styles, "production-planning-icon-text-button")}
+          className={cm(styles, "production-planning-icon-text-button production-planning-recipe-choice-wide-auto")}
           onClick={() => onSelectRecipe(itemId, null)}
         >
           <LucideRepeat />

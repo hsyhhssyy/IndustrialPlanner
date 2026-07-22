@@ -418,7 +418,7 @@ const UI: Record<string, string> = {
     "productionPlanning.byproductUse": "使用副产物",
     "productionPlanning.calculate": "计算",
     "productionPlanning.chooseRecipe": "选择配方",
-    "productionPlanning.coverDemand": "覆盖需求",
+    "productionPlanning.coverDemand": "设为原料",
     "productionPlanning.consumed": "消耗",
     "productionPlanning.deviceMinimumConsumption": "计算设备最低消耗",
     "productionPlanning.deviceMinimumConsumptionDisabled": "不计算",
