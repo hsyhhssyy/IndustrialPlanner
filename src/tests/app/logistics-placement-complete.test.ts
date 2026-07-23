@@ -126,7 +126,7 @@ describe("物流布设模式完全测试集", () => {
     });
   });
 
-  it("右键结束布设后从已有传送带端点重新起笔生成桥接器", () => {
+  it("右键结束布设后从已有传送带端点重新起笔到(5,6)生成转角", () => {
     // 第一段：从 (2,4) 到 (4,3)
     clickCell(appHost, editorHost, { x: 2, y: 4 }, nextPointerId++);
     moveToCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
@@ -141,10 +141,37 @@ describe("物流布设模式完全测试集", () => {
       rotation: 0,
     });
 
-    // 第二段：从已有传送带的 (4,3) 起笔到 (5,6)，应生成桥接器
+    // 第二段：从已有传送带的 (4,3) 起笔到 (5,6)，应生成转角
     clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
     moveToCell(appHost, editorHost, { x: 5, y: 6 }, nextPointerId++);
     clickCell(appHost, editorHost, { x: 5, y: 6 }, nextPointerId++);
+
+    expectEntityAt(editorHost, {
+      definitionId: "belt_turn_cw_1x1",
+      position: { x: 4, y: 3 },
+      rotation: 180,
+    });
+  });
+
+  it("右键结束布设后从已有传送带端点重新起笔纵穿生成桥接器", () => {
+    // 第一段：从 (2,4) 到 (4,3)
+    clickCell(appHost, editorHost, { x: 2, y: 4 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+    // 右键结束布设
+    rightClickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
+
+    expectEntityAt(editorHost, {
+      definitionId: "belt_straight_1x1",
+      position: { x: 4, y: 3 },
+      rotation: 0,
+    });
+
+    // 第二段：从已有传送带的 (4,2) 起笔纵穿到 (4,7)，(4,3) 应生成桥接器
+    clickCell(appHost, editorHost, { x: 4, y: 2 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 4, y: 7 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 4, y: 7 }, nextPointerId++);
 
     expectEntityAt(editorHost, {
       definitionId: "log_connector",
@@ -176,14 +203,9 @@ describe("物流布设模式完全测试集", () => {
     clickCell(appHost, editorHost, { x: 5, y: 6 }, nextPointerId++);
 
     expectEntityAt(editorHost, {
-      definitionId: "belt_turn_ccw_1x1",
+      definitionId: "belt_straight_1x1",
       position: { x: 4, y: 3 },
       rotation: 0,
-    });
-    expectEntityAt(editorHost, {
-      definitionId: "belt_turn_cw_1x1",
-      position: { x: 5, y: 3 },
-      rotation: 180,
     });
   });
 
@@ -405,6 +427,44 @@ describe("物流布设模式完全测试集", () => {
       definitionId: "pipe_straight_1x1",
       position: { x: 5, y: 4 },
       rotation: 0,
+    });
+  });
+
+  it("管道从已有管道起笔分叉-开启自动分流器时(51,3)应生成管道分流器", () => {
+    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_PIPE_BRANCH);
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = true;
+    });
+    enterPipeLogisticsPlacement(appHost);
+
+    // (51,3) 起笔，向 (51,2) 移动（液燃炉方向）
+    clickCell(appHost, editorHost, { x: 51, y: 3 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
+
+    // (51,3) 应生成 pipe_splitter
+    expectEntityAt(editorHost, {
+      definitionId: "pipe_splitter",
+      position: { x: 51, y: 3 },
+    });
+  });
+
+  it("管道从已有管道起笔分叉-关闭自动分流器时(51,3)应生成弯道", () => {
+    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_PIPE_BRANCH);
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = false;
+    });
+    enterPipeLogisticsPlacement(appHost);
+
+    clickCell(appHost, editorHost, { x: 51, y: 3 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
+
+    // 关闭自动分流器时，(51,3) 应转为 pipe_turn_ccw_1x1 弯道
+    expectEntityAt(editorHost, {
+      definitionId: "pipe_turn_ccw_1x1",
+      position: { x: 51, y: 3 },
+      rotation: 270,
     });
   });
 
@@ -827,6 +887,54 @@ const USER_PROVIDED_BLUEPRINT_PIPE_DEADEND: BlueprintDocument = {
   slotLinks: [],
   createdAt: "2026-07-23T02:56:24.419Z",
   updatedAt: "2026-07-23T02:56:24.419Z",
+};
+
+const USER_PROVIDED_BLUEPRINT_PIPE_BRANCH: BlueprintDocument = {
+  schemaVersion: 3,
+  blueprintId: "pipe-branch-test-001",
+  version: "v1.3.0",
+  name: "管道分叉测试",
+  description: "(50,0)液燃炉rotation=0, (50/51/52,3)三格管道",
+  baseId: "wuling_protocol_core",
+  initialGridPoint: { x: 51, y: 3 },
+  entities: {
+    "liquid-furnance": {
+      id: "liquid-furnance",
+      definitionId: "liquid_furnance_1",
+      position: { x: 50, y: 0 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "pipe-50-3": {
+      id: "pipe-50-3",
+      definitionId: "pipe_straight_1x1",
+      position: { x: 50, y: 3 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "pipe-51-3": {
+      id: "pipe-51-3",
+      definitionId: "pipe_straight_1x1",
+      position: { x: 51, y: 3 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "pipe-52-3": {
+      id: "pipe-52-3",
+      definitionId: "pipe_straight_1x1",
+      position: { x: 52, y: 3 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+  },
+  entityOrder: ["liquid-furnance", "pipe-50-3", "pipe-51-3", "pipe-52-3"],
+  slotLinks: [],
+  createdAt: "2026-07-23T10:00:00.000Z",
+  updatedAt: "2026-07-23T10:00:00.000Z",
 };
 
 function createWorkspace(): WorkspaceContract {
