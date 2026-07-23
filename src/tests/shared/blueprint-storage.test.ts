@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createBlueprintDocument } from "@/domain/document/blueprint-document";
+import {
+  BLUEPRINT_SCHEMA_VERSION,
+  createBlueprintDocument,
+} from "@/domain/document/blueprint-document";
 import { saveToIndexedDb } from "@/shared/storage/browser-storage";
 import {
   BLUEPRINT_STORE_LOCATION,
@@ -77,7 +80,7 @@ describe("blueprint-storage", () => {
 
     const record = await readBlueprintRecord(blueprint.blueprintId);
 
-    expect(record?.schemaVersion).toBe(3);
+    expect(record?.schemaVersion).toBe(BLUEPRINT_SCHEMA_VERSION);
     expect(record?.entities.pool?.definitionId).toBe("mix_pool_2");
   });
 

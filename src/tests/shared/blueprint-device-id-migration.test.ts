@@ -38,7 +38,7 @@ function migrateOneEntity(
 
 describe("blueprint device id migration version chain", () => {
   it("declares one contiguous migration for every schema version up to current", () => {
-    expect(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION).toBe(3);
+    expect(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION).toBe(4);
     expect(BLUEPRINT_SCHEMA_VERSION).toBe(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION);
     expect(WORLD_DOCUMENT_SCHEMA_VERSION).toBe(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION);
     expect(BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.map((spec) => [
@@ -47,6 +47,7 @@ describe("blueprint device id migration version chain", () => {
     ])).toEqual([
       [1, 2],
       [2, 3],
+      [3, 4],
     ]);
   });
 
@@ -54,9 +55,13 @@ describe("blueprint device id migration version chain", () => {
     { source: 1, target: 1, sourceId: "item_port_mix_pool_large_1", expectedId: "item_port_mix_pool_large_1" },
     { source: 1, target: 2, sourceId: "item_port_mix_pool_large_1", expectedId: "item_port_mix_pool_2" },
     { source: 1, target: 3, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
+    { source: 1, target: 4, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
     { source: 2, target: 2, sourceId: "item_port_mix_pool_2", expectedId: "item_port_mix_pool_2" },
     { source: 2, target: 3, sourceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
+    { source: 2, target: 4, sourceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
     { source: 3, target: 3, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    { source: 3, target: 4, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    { source: 4, target: 4, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
   ])(
     "covers the complete supported migration matrix: schema $source to $target",
     ({ source, target, sourceId, expectedId }) => {
@@ -106,9 +111,14 @@ describe("blueprint device id migration version chain", () => {
       rotation: 270,
     });
 
+    const version4 = migrateBlueprintEntityDeviceIds(version3?.entities ?? {}, 3, 4);
+
+    expect(version4?.schemaVersion).toBe(4);
+    expect(version4?.entities).toEqual(version3?.entities);
+
     const directToCurrent = migrateBlueprintEntityDeviceIds(version1Entities, 1);
 
-    expect(directToCurrent).toEqual(version3);
+    expect(directToCurrent).toEqual(version4);
   });
 
   it.each([
@@ -124,6 +134,11 @@ describe("blueprint device id migration version chain", () => {
     },
     {
       sourceSchemaVersion: 3,
+      sourceDeviceId: "mix_pool_2",
+      expectedDeviceId: "mix_pool_2",
+    },
+    {
+      sourceSchemaVersion: 4,
       sourceDeviceId: "mix_pool_2",
       expectedDeviceId: "mix_pool_2",
     },
@@ -146,8 +161,9 @@ describe("blueprint device id migration version chain", () => {
     { schemaVersion: 1, deviceId: "item_port_mix_pool_large_1" },
     { schemaVersion: 2, deviceId: "item_port_mix_pool_2" },
     { schemaVersion: 3, deviceId: "mix_pool_2" },
+    { schemaVersion: 4, deviceId: "mix_pool_2" },
   ])(
-    "normalizes blueprint and world documents from schema $schemaVersion to schema 3",
+    "normalizes blueprint and world documents from schema $schemaVersion to schema 4",
     ({ schemaVersion, deviceId }) => {
       const entity = createEntity(deviceId);
       const blueprint = normalizeBlueprintDocument({
@@ -188,11 +204,11 @@ describe("blueprint device id migration version chain", () => {
       });
 
       expect(blueprint).toMatchObject({
-        schemaVersion: 3,
+        schemaVersion: 4,
         entities: { entity: { definitionId: "mix_pool_2", rotation: 0 } },
       });
       expect(world).toMatchObject({
-        schemaVersion: 3,
+        schemaVersion: 4,
         entities: { entity: { definitionId: "mix_pool_2", rotation: 0 } },
       });
     },
@@ -223,6 +239,95 @@ describe("blueprint device id migration version chain", () => {
 
     expect(version3Spec?.deviceRules.length).toBe(47);
     expect(version3Spec?.deviceRules.every((rule) => rule.rotationOffset === 0)).toBe(true);
+  });
+
+  it.each([
+    { definitionId: "log_admission", oldRate: 0, expectedRate: 6 },
+    { definitionId: "log_admission", oldRate: 1, expectedRate: 6 },
+    { definitionId: "log_admission", oldRate: 2, expectedRate: 6 },
+    { definitionId: "log_admission", oldRate: 3, expectedRate: 6 },
+    { definitionId: "log_admission", oldRate: 7, expectedRate: 12 },
+    { definitionId: "log_admission", oldRate: 30, expectedRate: 30 },
+    { definitionId: "log_admission", oldRate: 31, expectedRate: 30 },
+    { definitionId: "pipe_admission", oldRate: 119, expectedRate: 120 },
+    { definitionId: "pipe_admission", oldRate: 121, expectedRate: 120 },
+  ])(
+    "normalizes schema 3 $definitionId rate $oldRate to $expectedRate per minute",
+    ({ definitionId, oldRate, expectedRate }) => {
+      const entity = createEntity(definitionId);
+      entity.config = {
+        retained: true,
+        "portGroups[0].ports[0].admissionRule": {
+          itemId: "item_liquid_water",
+          limit: null,
+          perMinuteLimit: oldRate,
+        },
+      };
+
+      const result = migrateBlueprintEntityDeviceIds({ entity }, 3, 4);
+
+      expect(result?.entities.entity?.config).toEqual({
+        retained: true,
+        "portGroups[0].ports[0].admissionRule": {
+          itemId: "item_liquid_water",
+          limit: null,
+          perMinuteLimit: expectedRate,
+        },
+      });
+    },
+  );
+
+  it("keeps empty admission rate settings disabled during schema 4 migration", () => {
+    const entity = createEntity("pipe_admission");
+    entity.config = {
+      "portGroups[0].ports[0].admissionRule": {
+        itemId: "item_liquid_water",
+        limit: 2,
+        perMinuteLimit: null,
+      },
+    };
+
+    const result = migrateBlueprintEntityDeviceIds({ entity }, 3, 4);
+
+    expect(result?.entities.entity?.config).toEqual(entity.config);
+  });
+
+  it("keeps an absent admission rate setting disabled during schema 4 migration", () => {
+    const entity = createEntity("log_admission");
+    entity.config = {
+      "portGroups[0].ports[0].admissionRule": {
+        itemId: "item_iron_ore",
+        limit: 2,
+      },
+    };
+
+    const result = migrateBlueprintEntityDeviceIds({ entity }, 3, 4);
+
+    expect(result?.entities.entity?.config).toEqual(entity.config);
+  });
+
+  it("normalizes admission rates after historical admission device ids are migrated", () => {
+    const entity = createEntity("item_log_admission");
+    entity.config = {
+      "portGroups[0].ports[0].admissionRule": {
+        itemId: "item_iron_ore",
+        limit: null,
+        perMinuteLimit: 1,
+      },
+    };
+
+    const result = migrateBlueprintEntityDeviceIds({ entity }, 2, 4);
+
+    expect(result?.entities.entity).toMatchObject({
+      definitionId: "log_admission",
+      config: {
+        "portGroups[0].ports[0].admissionRule": {
+          itemId: "item_iron_ore",
+          limit: null,
+          perMinuteLimit: 6,
+        },
+      },
+    });
   });
 
   it.each(
@@ -261,7 +366,7 @@ describe("blueprint device id migration version chain", () => {
     const entities = { entity: createEntity("mix_pool_2") };
 
     expect(migrateBlueprintEntityDeviceIds(entities, 0)).toBeNull();
-    expect(migrateBlueprintEntityDeviceIds(entities, 4)).toBeNull();
+    expect(migrateBlueprintEntityDeviceIds(entities, 5)).toBeNull();
     expect(migrateBlueprintEntityDeviceIds(entities, 2, 1)).toBeNull();
     expect(migrateBlueprintEntityDeviceIds(entities, 1.5)).toBeNull();
   });

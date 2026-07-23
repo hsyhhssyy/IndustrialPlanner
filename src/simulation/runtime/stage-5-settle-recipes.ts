@@ -4,6 +4,7 @@ import type {
   CompiledSimulationTopology,
 } from "../types";
 import type { RuntimeDeviceRecipeState, SimulationMutableRuntimeState } from "./runtime-state";
+import { incrementFixedWindowCounterForCurrentWindow } from "./runtime-state";
 import {
   adjustReservedAmounts,
   aggregateInputItems,
@@ -198,7 +199,7 @@ function startIdleDeviceChannels(options: {
           break;
         }
 
-        commitStartedRecipe(options.state, device, recipe);
+        commitStartedRecipe(options.topology, options.state, device, recipe);
         deviceState.channelRecipes[channel.id] = recipe;
 
         if (remainingOverflowTicks < recipe.durationTicks) {
@@ -240,7 +241,9 @@ function startIdleDeviceChannels(options: {
   }
 }
 
+// AI-CORRECTION 2026-07-23: topology 参数因准入口速率额度需要在配方启动事务中提交而恢复使用。
 function commitStartedRecipe(
+  topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   device: CompiledSimulationDevice,
   recipe: RuntimeDeviceRecipeState,
@@ -259,6 +262,18 @@ function commitStartedRecipe(
   }
 
   adjustReservedAmounts(state, recipe.reservations, 1);
+  const admissionPortId = device.portIds.find((portId) =>
+    topology.ports[portId]?.admissionRule?.perMinuteLimit !== null
+    && topology.ports[portId]?.admissionRule?.perMinuteLimit !== undefined
+  );
+  if (admissionPortId !== undefined) {
+    incrementFixedWindowCounterForCurrentWindow(
+      topology,
+      state,
+      admissionPortId,
+      recipe.inputItems.reduce((total, item) => total + item.amount, 0),
+    );
+  }
 }
 
 function cloneOverflowTicks(

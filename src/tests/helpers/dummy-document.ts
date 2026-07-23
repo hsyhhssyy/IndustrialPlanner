@@ -1,11 +1,12 @@
 import {
   DEFAULT_WORLD_BASE_ID,
+  WORLD_DOCUMENT_SCHEMA_VERSION,
   type WorldDocument,
 } from "@/domain/document/world-document";
 
 export function createDummyWorldDocument(): WorldDocument {
   return {
-    schemaVersion: 3,
+    schemaVersion: WORLD_DOCUMENT_SCHEMA_VERSION,
     documentKey: "11111111-1111-4111-8111-111111111111",
     baseId: DEFAULT_WORLD_BASE_ID,
     meta: {

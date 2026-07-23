@@ -61,8 +61,8 @@ import {
   createEmptyTransientState,
   createMigratedSimulationMutableRuntimeState,
   createSimulationMutableRuntimeState,
-  normalizeAdmissionMinuteCountersForCurrentWindow,
-  resetAdmissionMinuteCounterForCurrentWindow,
+  normalizeFixedWindowCountersForCurrentWindow,
+  resetFixedWindowCounterForCurrentWindow,
   rollRecipeStatsWindow,
   BASE_BATTERY_CAPACITY_J,
   type SimulationMutableRuntimeState,
@@ -654,7 +654,7 @@ export class SimulationWorkerRuntime {
     }
 
     const state = cloneSimulationMutableRuntimeState(runtimeState);
-    normalizeAdmissionMinuteCountersForCurrentWindow(this.topology, state);
+    normalizeFixedWindowCountersForCurrentWindow(this.topology, state);
     state.transient = createEmptyTransientState();
     buildSolveGraph(this.topology, state);
     const currentPowerGeneration = computeCurrentPowerGeneration(this.topology, state);
@@ -766,8 +766,8 @@ export class SimulationWorkerRuntime {
     const nextState = cloneSimulationMutableRuntimeState(baseState);
     nextState.tickNumber = patchTickNumber;
     nextState.lastAdvancedTickNumber = patchTickNumber;
-    if (reset.scope === "per-minute") {
-      resetAdmissionMinuteCounterForCurrentWindow(this.topology, nextState, compiledPortId);
+    if (reset.scope === "rate-window") {
+      resetFixedWindowCounterForCurrentWindow(this.topology, nextState, compiledPortId);
     } else {
       nextState.persistent.admissionCounters[compiledPortId] = 0;
     }
@@ -1384,7 +1384,7 @@ export class SimulationWorkerRuntime {
 
     const shouldAdvance = tickNumber > this.runtimeState.tickNumber;
     this.runtimeState.tickNumber = tickNumber;
-    normalizeAdmissionMinuteCountersForCurrentWindow(this.topology, this.runtimeState);
+    normalizeFixedWindowCountersForCurrentWindow(this.topology, this.runtimeState);
     const runtimeStepTicks = tickNumber - this.runtimeState.lastAdvancedTickNumber;
     // AI-CORRECTION 2026-07-17: 动态帧率与严格物流统一以 tick 1 为相位原点。
     // 粗步长 10 必须在 1、11、21... 执行；否则从时间轴 tick 301 导入后会在 311、321...

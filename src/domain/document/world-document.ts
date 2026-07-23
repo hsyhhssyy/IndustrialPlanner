@@ -12,7 +12,7 @@ import type {
 
 export type { SlotLinkDefinition, CacheLinkEndpointDefinition, LinkType };
 
-export const WORLD_DOCUMENT_SCHEMA_VERSION = 3;
+export const WORLD_DOCUMENT_SCHEMA_VERSION = 4;
 
 export interface WorldEntity {
   id: string;

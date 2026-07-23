@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createWorldDocument } from "@/domain/document/world-document";
+import {
+  createWorldDocument,
+  WORLD_DOCUMENT_SCHEMA_VERSION,
+} from "@/domain/document/world-document";
 import {
   readWorldDocument,
   WORLD_DOCUMENT_DATABASE_LOCATION,
@@ -40,7 +43,7 @@ describe("editor document storage device id migration", () => {
 
     const migratedDocument = await readWorldDocument(document.documentKey);
 
-    expect(migratedDocument?.schemaVersion).toBe(3);
+    expect(migratedDocument?.schemaVersion).toBe(WORLD_DOCUMENT_SCHEMA_VERSION);
     expect(migratedDocument?.entities.pool?.definitionId).toBe("mix_pool_2");
   });
 });

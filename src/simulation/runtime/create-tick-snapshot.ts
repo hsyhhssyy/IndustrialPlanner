@@ -5,7 +5,7 @@ import type {
   WarehouseStats,
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
-import { readAdmissionMinuteCounterForCurrentWindow } from "./runtime-state";
+import { readFixedWindowCounterForCurrentWindow } from "./runtime-state";
 import {
   resolveEffectiveIgnoreStock,
   resolveStorageSlotId,
@@ -178,7 +178,7 @@ function createMeteredConsumptionSnapshot(
   if (config === undefined || config === null || runtime === undefined) {
     return null;
   }
-  const counter = readAdmissionMinuteCounterForCurrentWindow(
+  const counter = readFixedWindowCounterForCurrentWindow(
     topology,
     state,
     config.inputPortId,
@@ -210,7 +210,7 @@ function createAdmissionCounterSnapshots(
     if (port === undefined || port.admissionRule === null) {
       continue;
     }
-    const minuteCounter = readAdmissionMinuteCounterForCurrentWindow(topology, state, portId);
+    const rateWindowCounter = readFixedWindowCounterForCurrentWindow(topology, state, portId);
 
     result[`${port.portGroupId}:${port.portDefinitionId}`] = {
       portId,
@@ -220,7 +220,7 @@ function createAdmissionCounterSnapshots(
       limit: port.admissionRule.limit,
       count: state.persistent.admissionCounters[portId] ?? 0,
       perMinuteLimit: port.admissionRule.perMinuteLimit,
-      perMinuteCount: minuteCounter.count,
+      rateWindowCount: rateWindowCounter.count,
     };
   }
 

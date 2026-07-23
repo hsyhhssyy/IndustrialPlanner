@@ -16,7 +16,7 @@ describe("admission rule runtime counter", () => {
         limit: 2,
       }),
       registry: createRegistryContract(),
-      maxTickNumber: 220,
+      maxTickNumber: 80,
     });
 
     const sourceToAdmissionTransfers = report.ticks.flatMap((tick) =>
@@ -27,7 +27,6 @@ describe("admission rule runtime counter", () => {
         )
         .map((transfer) => ({ tickNumber: tick.tickNumber, transfer })),
     );
-
     expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 41]);
     const admissionCounter = report.ticks.at(-1)?.devices.admission?.admissionCounters?.["item_input:in_w"];
     expect(admissionCounter).toBeDefined();
@@ -37,76 +36,78 @@ describe("admission rule runtime counter", () => {
         limit: 2,
         count: 2,
         perMinuteLimit: null,
-        perMinuteCount: 2,
+        rateWindowCount: 0,
       });
   });
 
-  it("resets per-minute admission count at simulation minute boundaries", async () => {
+  it("resets rate admission count at aligned ten-second boundaries", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createAdmissionBlueprint({
         sourceItemId: "item_iron_ore",
         admissionItemId: "item_iron_ore",
         limit: null,
-        perMinuteLimit: 2,
+        perMinuteLimit: 12,
       }),
       registry: createRegistryContract(),
-      maxTickNumber: 1300,
+      maxTickNumber: 260,
     });
 
-    const sourceToAdmissionTransfers = report.ticks.flatMap((tick) =>
+    const admissionToBeltTransfers = report.ticks.flatMap((tick) =>
       tick.transfers
         .filter((transfer) =>
-          transfer.sourceSlotId.includes("device:source")
-          && transfer.targetSlotId.includes("device:admission"),
+          transfer.sourceSlotId.includes("device:admission")
+          && transfer.targetSlotId.includes("device:belt"),
         )
         .map((transfer) => ({ tickNumber: tick.tickNumber, transfer })),
     );
 
-    expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 41, 1201, 1241]);
-    expect(report.ticks[1200]?.devices.admission?.admissionCounters?.["item_input:in_w"])
-      .toMatchObject({
-        limit: null,
-        count: 2,
-        perMinuteLimit: 2,
-        perMinuteCount: 2,
-      });
-    expect(report.ticks[1201]?.devices.admission?.admissionCounters?.["item_input:in_w"])
+    expect(admissionToBeltTransfers.map((entry) => entry.tickNumber)).toEqual([41, 81, 241]);
+    expect(report.ticks[200]?.devices.admission?.admissionCounters?.["item_input:in_w"])
       .toMatchObject({
         limit: null,
         count: 3,
-        perMinuteLimit: 2,
-        perMinuteCount: 1,
+        perMinuteLimit: 12,
+        rateWindowCount: 2,
       });
+    expect(report.ticks[201]?.devices.admission?.admissionCounters?.["item_input:in_w"])
+      .toMatchObject({
+        limit: null,
+        count: 3,
+        perMinuteLimit: 12,
+        rateWindowCount: 1,
+      });
+    expect(report.ticks[201]?.devices.admission?.channelRecipes.default?.recipeId)
+      .toBe("log_admission:dynamic-belt-transfer");
   });
 
-  it("applies total and per-minute limits independently", async () => {
+  it("applies total and ten-second rate limits independently", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createAdmissionBlueprint({
         sourceItemId: "item_iron_ore",
         admissionItemId: "item_iron_ore",
         limit: 3,
-        perMinuteLimit: 2,
+        perMinuteLimit: 12,
       }),
       registry: createRegistryContract(),
-      maxTickNumber: 1300,
+      maxTickNumber: 260,
     });
 
-    const sourceToAdmissionTransfers = report.ticks.flatMap((tick) =>
+    const admissionToBeltTransfers = report.ticks.flatMap((tick) =>
       tick.transfers
         .filter((transfer) =>
-          transfer.sourceSlotId.includes("device:source")
-          && transfer.targetSlotId.includes("device:admission"),
+          transfer.sourceSlotId.includes("device:admission")
+          && transfer.targetSlotId.includes("device:belt"),
         )
         .map((transfer) => ({ tickNumber: tick.tickNumber, transfer })),
     );
 
-    expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 41, 1201]);
+    expect(admissionToBeltTransfers.map((entry) => entry.tickNumber)).toEqual([41, 81, 241]);
     expect(report.ticks.at(-1)?.devices.admission?.admissionCounters?.["item_input:in_w"])
       .toMatchObject({
         limit: 3,
         count: 3,
-        perMinuteLimit: 2,
-        perMinuteCount: 1,
+        perMinuteLimit: 12,
+        rateWindowCount: 1,
       });
   });
 
@@ -135,7 +136,7 @@ describe("admission rule runtime counter", () => {
         limit: 5,
         count: 0,
         perMinuteLimit: null,
-        perMinuteCount: 0,
+        rateWindowCount: 0,
       });
   });
 });

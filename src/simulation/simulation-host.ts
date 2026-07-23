@@ -419,7 +419,7 @@ function resolveDeviceRuntimeStatus(options: {
           limit: counter.limit,
           count: counter.count,
           perMinuteLimit: counter.perMinuteLimit,
-          perMinuteCount: counter.perMinuteCount,
+          rateWindowCount: counter.rateWindowCount,
         },
       ]),
     ),

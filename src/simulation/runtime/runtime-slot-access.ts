@@ -18,6 +18,7 @@ import type {
   RuntimeSlotState,
   SimulationMutableRuntimeState,
 } from "./runtime-state";
+import { readAdmissionRateWindowRemainingAllowance } from "./runtime-state";
 import {
   canRecipeFinishAtCurrentPhase,
   resolveTransportRecipeTiming,
@@ -874,6 +875,7 @@ function sumRecipeItemAmounts(items: readonly CompiledSimulationRecipeItem[]): n
 function resolveTransportRecipePlans(
   options: {
     topology: CompiledSimulationTopology;
+    state: SimulationMutableRuntimeState;
     device: CompiledSimulationDevice;
     channel: CompiledSimulationRecipeChannel;
   },
@@ -884,7 +886,15 @@ function resolveTransportRecipePlans(
 ): readonly CompiledSimulationRecipePlan[] {
   const isPipe = options.device.transportClass === "strict-pipe"
     || (options.device.tags ?? []).includes("PipeFamily");
-  const transferAmounts = isPipe ? [2, 1] : [1];
+  const admissionPortId = options.device.portIds.find((portId) =>
+    options.topology.ports[portId]?.admissionRule !== null
+    && options.topology.ports[portId]?.admissionRule !== undefined
+  );
+  const remainingAllowance = admissionPortId === undefined
+    ? Number.MAX_SAFE_INTEGER
+    : readAdmissionRateWindowRemainingAllowance(options.topology, options.state, admissionPortId);
+  const transferAmounts = (isPipe ? [2, 1] : [1])
+    .filter((amount) => amount <= remainingAllowance);
 
   return transferAmounts.map((amount) => {
     const recipeId = amount === 1

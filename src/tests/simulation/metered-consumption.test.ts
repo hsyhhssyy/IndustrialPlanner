@@ -11,8 +11,8 @@ import {
 } from "@/simulation/runtime/metered-consumption";
 import {
   createSimulationMutableRuntimeState,
-  normalizeAdmissionMinuteCountersForCurrentWindow,
-  readAdmissionMinuteCounterForCurrentWindow,
+  normalizeFixedWindowCountersForCurrentWindow,
+  readFixedWindowCounterForCurrentWindow,
 } from "@/simulation/runtime/runtime-state";
 import { advanceDevices } from "@/simulation/runtime/stage-1-advance-devices";
 import { settleRecipes } from "@/simulation/runtime/stage-5-settle-recipes";
@@ -79,7 +79,7 @@ describe("metered device consumption", () => {
     });
 
     consume(topology, state, portId, "item_gas_inert", 25);
-    expect(readAdmissionMinuteCounterForCurrentWindow(topology, state, portId).count).toBe(30);
+    expect(readFixedWindowCounterForCurrentWindow(topology, state, portId).count).toBe(30);
     expect(canAcceptMeteredConsumptionItem(topology, state, portId, "item_gas_inert")).toBe(false);
     const sinkSlotId = topology.nodes[topology.ports[portId]!.boundNodeIds[0]!]!.slotIds[0]!;
     expect(topology.slots[sinkSlotId]?.sourceStorageSlotGroupId).toBe("synthetic-input");
@@ -98,7 +98,7 @@ describe("metered device consumption", () => {
     const state = createSimulationMutableRuntimeState(topology);
     state.tickNumber = 1;
 
-    expect(readAdmissionMinuteCounterForCurrentWindow(topology, state, portId).windowStartTick)
+    expect(readFixedWindowCounterForCurrentWindow(topology, state, portId).windowStartTick)
       .toBe(1);
 
     consume(topology, state, portId, "item_gas_inert", 6);
@@ -116,15 +116,15 @@ describe("metered device consumption", () => {
     })).toBe(true);
 
     state.tickNumber = 1200;
-    normalizeAdmissionMinuteCountersForCurrentWindow(topology, state);
-    expect(readAdmissionMinuteCounterForCurrentWindow(topology, state, portId)).toMatchObject({
+    normalizeFixedWindowCountersForCurrentWindow(topology, state);
+    expect(readFixedWindowCounterForCurrentWindow(topology, state, portId)).toMatchObject({
       windowStartTick: 1,
       count: 6,
     });
     expect(canAcceptMeteredConsumptionItem(topology, state, portId, "item_gas_acid")).toBe(false);
 
     state.tickNumber = 1201;
-    normalizeAdmissionMinuteCountersForCurrentWindow(topology, state);
+    normalizeFixedWindowCountersForCurrentWindow(topology, state);
     consume(topology, state, portId, "item_gas_acid", 6);
     expect(state.persistent.meteredConsumptions[device.id]).toMatchObject({
       previousWindowCount: 6,
@@ -133,7 +133,7 @@ describe("metered device consumption", () => {
       activeEffectItemId: "item_gas_inert",
       authorizedUntilTick: 2401,
     });
-    expect(readAdmissionMinuteCounterForCurrentWindow(topology, state, portId).windowStartTick)
+    expect(readFixedWindowCounterForCurrentWindow(topology, state, portId).windowStartTick)
       .toBe(1201);
 
     // vaporizer_1 requiresPower=false，停电不影响气体扩散。
@@ -151,13 +151,13 @@ describe("metered device consumption", () => {
     state.transient.isPowerOutage = false;
 
     state.tickNumber = 2400;
-    normalizeAdmissionMinuteCountersForCurrentWindow(topology, state);
+    normalizeFixedWindowCountersForCurrentWindow(topology, state);
     expect(computeActiveGasDiffusions(topology, state)).toMatchObject([
       { sourceDeviceId: device.id, gasItemId: "item_gas_inert" },
     ]);
 
     state.tickNumber = 2401;
-    normalizeAdmissionMinuteCountersForCurrentWindow(topology, state);
+    normalizeFixedWindowCountersForCurrentWindow(topology, state);
     expect(computeActiveGasDiffusions(topology, state)).toMatchObject([
       { sourceDeviceId: device.id, gasItemId: "item_gas_acid" },
     ]);
@@ -229,7 +229,7 @@ describe("metered device consumption", () => {
     expect(runningRecipe).toMatchObject({ recipeId, progressTicks: 0, state: "running" });
 
     state.tickNumber = 2401;
-    normalizeAdmissionMinuteCountersForCurrentWindow(topology, state);
+    normalizeFixedWindowCountersForCurrentWindow(topology, state);
     advanceDevices(topology, state, 20);
     expect(state.persistent.devices[device.id]?.channelRecipes[channelId]).toBe(runningRecipe);
     expect(runningRecipe?.progressTicks).toBe(0);

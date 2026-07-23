@@ -518,7 +518,7 @@ export interface RuntimeAdmissionCounterSnapshot {
   readonly limit: number | null;
   readonly count: number;
   readonly perMinuteLimit: number | null;
-  readonly perMinuteCount: number;
+  readonly rateWindowCount: number;
 }
 
 export interface RuntimeDeviceRecipeSnapshot {

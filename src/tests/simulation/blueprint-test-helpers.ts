@@ -5,10 +5,11 @@ import {
   createBlueprintDocument,
   type BlueprintDocument,
 } from "@/domain/document/blueprint-document";
-import type {
-  SlotLinkDefinition,
-  WorldDocument,
-  WorldEntity,
+import {
+  type SlotLinkDefinition,
+  WORLD_DOCUMENT_SCHEMA_VERSION,
+  type WorldDocument,
+  type WorldEntity,
 } from "@/domain/document/world-document";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 import type {
@@ -210,7 +211,7 @@ export function createWorldDocumentFromBlueprint(
 	blueprint: BlueprintDocument,
 ): WorldDocument {
 	return {
-		schemaVersion: 3,
+		schemaVersion: WORLD_DOCUMENT_SCHEMA_VERSION,
 		documentKey: blueprint.blueprintId,
 		baseId: blueprint.baseId,
 		meta: {

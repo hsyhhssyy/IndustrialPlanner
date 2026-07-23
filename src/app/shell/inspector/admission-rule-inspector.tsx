@@ -1,6 +1,8 @@
 import { useState } from "react";
 
 import LucideCircleDashed from "~icons/lucide/circle-dashed";
+import LucideMinus from "~icons/lucide/minus";
+import LucidePlus from "~icons/lucide/plus";
 // AI-REMOVED 2026-07-10:
 // Reason: 物品选择器本身已承担更换动作，独立铅笔按钮与当前交互重复。
 // Trigger: 用户要求删除无意义的铅笔按钮，并将垃圾桶按钮放到物品选择器同行。
@@ -34,6 +36,10 @@ import { matchesItemAcceptRule } from "./item-domain";
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
 
+const ADMISSION_RATE_STEP_PER_MINUTE = 6;
+const LOG_ADMISSION_RATE_MAX_PER_MINUTE = 30;
+const PIPE_ADMISSION_RATE_MAX_PER_MINUTE = 120;
+
 interface AdmissionPortRow {
   readonly portGroup: PortGroupDefinition;
   readonly port: PortDefinition;
@@ -44,8 +50,9 @@ interface AdmissionPortRow {
   readonly selectedItemId: string | null;
   readonly limit: number | null;
   readonly perMinuteLimit: number | null;
+  readonly maximumPerMinuteLimit: number;
   readonly runtimeCount: number;
-  readonly runtimePerMinuteCount: number;
+  readonly runtimeRateWindowCount: number;
 }
 
 function resolveItemIconSrc(item: ItemDefinition | null): string | null {
@@ -93,6 +100,8 @@ export function AdmissionRuleInspector({
   const itemIconSrc = resolveItemIconSrc(itemDefinition);
   const itemLabel = itemDefinition === null ? "未选择" : translate(itemDefinition.nameKey);
   const limitValue = row.limit === null ? "" : String(row.limit);
+  const limitEnabled = row.limit !== null;
+  const rateEnabled = row.perMinuteLimit !== null;
   const canReset = runtimeStatus !== null && row.selectedItemId !== null;
 
   const patchEntityConfig = (patch: Record<string, unknown>) => {
@@ -138,6 +147,25 @@ export function AdmissionRuleInspector({
   };
 
   const changeLimit = (rawValue: string) => {
+    if (row.selectedItemId === null || !limitEnabled) {
+      return;
+    }
+
+    const nextLimit = normalizeEnabledLimit(rawValue);
+    if (nextLimit === null) {
+      return;
+    }
+
+    patchEntityConfig({
+      [row.admissionRulePath]: {
+        itemId: row.selectedItemId,
+        limit: nextLimit,
+        perMinuteLimit: row.perMinuteLimit,
+      } satisfies EntityAdmissionRuleDefinition,
+    });
+  };
+
+  const toggleLimit = (enabled: boolean) => {
     if (row.selectedItemId === null) {
       return;
     }
@@ -145,13 +173,13 @@ export function AdmissionRuleInspector({
     patchEntityConfig({
       [row.admissionRulePath]: {
         itemId: row.selectedItemId,
-        limit: normalizeLimit(rawValue),
+        limit: enabled ? 1 : null,
         perMinuteLimit: row.perMinuteLimit,
       } satisfies EntityAdmissionRuleDefinition,
     });
   };
 
-  const changePerMinuteLimit = (rawValue: string) => {
+  const toggleRate = (enabled: boolean) => {
     if (row.selectedItemId === null) {
       return;
     }
@@ -160,7 +188,32 @@ export function AdmissionRuleInspector({
       [row.admissionRulePath]: {
         itemId: row.selectedItemId,
         limit: row.limit,
-        perMinuteLimit: normalizeLimit(rawValue),
+        perMinuteLimit: enabled ? ADMISSION_RATE_STEP_PER_MINUTE : null,
+      } satisfies EntityAdmissionRuleDefinition,
+    });
+  };
+
+  const stepRate = (delta: -1 | 1) => {
+    if (row.selectedItemId === null || row.perMinuteLimit === null) {
+      return;
+    }
+
+    const nextRate = Math.min(
+      row.maximumPerMinuteLimit,
+      Math.max(
+        ADMISSION_RATE_STEP_PER_MINUTE,
+        row.perMinuteLimit + delta * ADMISSION_RATE_STEP_PER_MINUTE,
+      ),
+    );
+    if (nextRate === row.perMinuteLimit) {
+      return;
+    }
+
+    patchEntityConfig({
+      [row.admissionRulePath]: {
+        itemId: row.selectedItemId,
+        limit: row.limit,
+        perMinuteLimit: nextRate,
       } satisfies EntityAdmissionRuleDefinition,
     });
   };
@@ -174,12 +227,12 @@ export function AdmissionRuleInspector({
     });
   };
 
-  const resetMinuteCounter = () => {
+  const resetRateWindowCounter = () => {
     void appHost.workspace.simulation?.actions.resetAdmissionCounter({
       entityId: entity.id,
       portGroupId: row.portGroup.id,
       portId: row.port.id,
-      scope: "per-minute",
+      scope: "rate-window",
     });
   };
 
@@ -237,13 +290,29 @@ export function AdmissionRuleInspector({
           data-admission-controls
           data-admission-counter-scope="total"
         >
-          <label className={cm(styles, "admission-rule-limit")}>
-            <span>总计准入</span>
+          <div className={cm(styles, "admission-rule-limit")}>
+            <label className={cm(styles, "admission-rule-limit-header")}>
+              <span>计数准入</span>
+              <input
+                aria-label="计数准入开关"
+                checked={limitEnabled}
+                className={cm(styles, "admission-rule-switch")}
+                data-admission-limit-switch
+                disabled={row.selectedItemId === null}
+                onChange={(event) => {
+                  toggleLimit(event.currentTarget.checked);
+                }}
+                role="switch"
+                type="checkbox"
+              />
+            </label>
             <input
+              aria-label="计数准入上限"
+              className={cm(styles, "admission-rule-limit-value-input")}
               data-admission-limit-input
-              disabled={row.selectedItemId === null}
+              disabled={row.selectedItemId === null || !limitEnabled}
               inputMode="numeric"
-              min={0}
+              min={1}
               onChange={(event) => {
                 changeLimit(event.currentTarget.value);
               }}
@@ -251,7 +320,7 @@ export function AdmissionRuleInspector({
               type="number"
               value={limitValue}
             />
-          </label>
+          </div>
 
           <div className={cm(styles, "admission-rule-count")} data-admission-current-count>
             <span>总计已准入</span>
@@ -298,37 +367,81 @@ export function AdmissionRuleInspector({
 
         <div
           className={cm(styles, "admission-rule-controls-row")}
-          data-admission-counter-scope="per-minute"
+          data-admission-counter-scope="rate-window"
         >
-          <label className={cm(styles, "admission-rule-limit")}>
-            <span>每分钟准入</span>
-            <input
-              data-admission-per-minute-limit-input
-              disabled={row.selectedItemId === null}
-              inputMode="numeric"
-              min={0}
-              onChange={(event) => {
-                changePerMinuteLimit(event.currentTarget.value);
-              }}
-              step={1}
-              type="number"
-              value={row.perMinuteLimit === null ? "" : String(row.perMinuteLimit)}
-            />
-          </label>
+          <div className={cm(styles, "admission-rule-limit")}>
+            <label className={cm(styles, "admission-rule-limit-header")}>
+              <span>速率准入</span>
+              <input
+                aria-label="速率准入开关"
+                checked={rateEnabled}
+                className={cm(styles, "admission-rule-switch")}
+                data-admission-rate-switch
+                disabled={row.selectedItemId === null}
+                onChange={(event) => {
+                  toggleRate(event.currentTarget.checked);
+                }}
+                role="switch"
+                type="checkbox"
+              />
+            </label>
+            <div
+              aria-label="每分钟准入速率"
+              className={cm(styles, "admission-rule-rate-stepper")}
+              data-admission-per-minute-limit={row.perMinuteLimit ?? ""}
+              role="group"
+            >
+              <button
+                aria-label="降低每分钟准入速率"
+                className={cm(styles, "admission-rule-step-button")}
+                data-admission-rate-action="decrease"
+                disabled={
+                  row.selectedItemId === null
+                  || !rateEnabled
+                  || (row.perMinuteLimit ?? 0) <= ADMISSION_RATE_STEP_PER_MINUTE
+                }
+                onClick={() => {
+                  stepRate(-1);
+                }}
+                type="button"
+              >
+                <LucideMinus aria-hidden="true" />
+              </button>
+              <output data-admission-per-minute-limit-output>
+                {row.perMinuteLimit === null ? "不限" : `${row.perMinuteLimit}/min`}
+              </output>
+              <button
+                aria-label="提高每分钟准入速率"
+                className={cm(styles, "admission-rule-step-button")}
+                data-admission-rate-action="increase"
+                disabled={
+                  row.selectedItemId === null
+                  || !rateEnabled
+                  || (row.perMinuteLimit ?? row.maximumPerMinuteLimit) >= row.maximumPerMinuteLimit
+                }
+                onClick={() => {
+                  stepRate(1);
+                }}
+                type="button"
+              >
+                <LucidePlus aria-hidden="true" />
+              </button>
+            </div>
+          </div>
 
-          <div className={cm(styles, "admission-rule-count")} data-admission-current-minute-count>
-            <span>本分钟已准入</span>
-            <strong>{row.runtimePerMinuteCount}</strong>
+          <div className={cm(styles, "admission-rule-count")} data-admission-current-rate-window-count>
+            <span>本 10 秒已准入</span>
+            <strong>{row.runtimeRateWindowCount}</strong>
           </div>
 
           <div className={cm(styles, "admission-rule-actions")}>
             <button
-              aria-label="重置本分钟"
+              aria-label="重置本 10 秒"
               className={cm(styles, "admission-rule-action-button")}
-              data-admission-action="reset-minute-count"
+              data-admission-action="reset-rate-window-count"
               disabled={!canReset}
-              onClick={resetMinuteCounter}
-              title="重置本分钟"
+              onClick={resetRateWindowCounter}
+              title="重置本 10 秒"
               type="button"
             >
               <LucideRotateCcw aria-hidden="true" />
@@ -379,8 +492,11 @@ function resolveAdmissionPortRow(
     selectedItemId,
     limit: admissionRule?.limit ?? null,
     perMinuteLimit: admissionRule?.perMinuteLimit ?? null,
+    maximumPerMinuteLimit: definition.id === "pipe_admission"
+      ? PIPE_ADMISSION_RATE_MAX_PER_MINUTE
+      : LOG_ADMISSION_RATE_MAX_PER_MINUTE,
     runtimeCount: runtimeCounter?.count ?? 0,
-    runtimePerMinuteCount: runtimeCounter?.perMinuteCount ?? 0,
+    runtimeRateWindowCount: runtimeCounter?.rateWindowCount ?? 0,
   };
 }
 
@@ -419,7 +535,7 @@ function createItemAcceptRule(itemId: string): EntityAcceptRuleDefinition {
   };
 }
 
-function normalizeLimit(rawValue: string): number | null {
+function normalizeEnabledLimit(rawValue: string): number | null {
   const trimmed = rawValue.trim();
   if (trimmed.length === 0) {
     return null;
@@ -430,5 +546,5 @@ function normalizeLimit(rawValue: string): number | null {
     return null;
   }
 
-  return Math.max(0, Math.floor(parsed));
+  return Math.max(1, Math.floor(parsed));
 }

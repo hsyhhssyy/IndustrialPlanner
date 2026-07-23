@@ -74,7 +74,7 @@ describe("AdmissionRuleInspector", () => {
     });
   });
 
-  it("edits total and per-minute limits, resets both counts, and clears both config paths", () => {
+  it("edits total and stepped rate limits, resets both counts, and clears both config paths", () => {
     const workspace = createWorkspace();
     const definition = requireDefinition(workspace, "log_admission");
     const declaration = requireAdmissionDeclaration(definition);
@@ -86,7 +86,7 @@ describe("AdmissionRuleInspector", () => {
       "portGroups[0].ports[0].admissionRule": {
         itemId: "item_iron_ore",
         limit: 2,
-        perMinuteLimit: 4,
+        perMinuteLimit: 12,
       },
     });
     const patchEntityConfig = vi.fn();
@@ -101,17 +101,15 @@ describe("AdmissionRuleInspector", () => {
     renderInspector(appHost, definition, declaration, entity, createRuntimeStatus(), root);
 
     expect(container.querySelector("[data-admission-current-count]")?.textContent).toContain("2");
-    expect(container.querySelector("[data-admission-current-minute-count]")?.textContent).toContain("1");
+    expect(container.querySelector("[data-admission-current-rate-window-count]")?.textContent).toContain("1");
     expect(container.querySelector("[data-admission-action='change-item']")).toBeNull();
 
     const input = container.querySelector<HTMLInputElement>("[data-admission-limit-input]");
     if (input === null) {
       throw new Error("Expected admission limit input.");
     }
-    const perMinuteInput = container.querySelector<HTMLInputElement>("[data-admission-per-minute-limit-input]");
-    if (perMinuteInput === null) {
-      throw new Error("Expected admission per-minute limit input.");
-    }
+    expect(container.querySelector<HTMLInputElement>("[data-admission-limit-switch]")?.checked).toBe(true);
+    expect(container.querySelector<HTMLInputElement>("[data-admission-rate-switch]")?.checked).toBe(true);
 
     act(() => {
       setInputValue(input, "5");
@@ -123,21 +121,19 @@ describe("AdmissionRuleInspector", () => {
       "portGroups[0].ports[0].admissionRule": {
         itemId: "item_iron_ore",
         limit: 5,
-        perMinuteLimit: 4,
+        perMinuteLimit: 12,
       },
     });
 
     act(() => {
-      setInputValue(perMinuteInput, "7");
-      perMinuteInput.dispatchEvent(new Event("input", { bubbles: true }));
-      perMinuteInput.dispatchEvent(new Event("change", { bubbles: true }));
+      container.querySelector<HTMLButtonElement>("[data-admission-rate-action='decrease']")?.click();
     });
 
     expect(patchEntityConfig).toHaveBeenCalledWith("admission", {
       "portGroups[0].ports[0].admissionRule": {
         itemId: "item_iron_ore",
         limit: 2,
-        perMinuteLimit: 7,
+        perMinuteLimit: 6,
       },
     });
 
@@ -153,14 +149,14 @@ describe("AdmissionRuleInspector", () => {
     });
 
     act(() => {
-      container.querySelector<HTMLButtonElement>("[data-admission-action='reset-minute-count']")?.click();
+      container.querySelector<HTMLButtonElement>("[data-admission-action='reset-rate-window-count']")?.click();
     });
 
     expect(resetAdmissionCounter).toHaveBeenCalledWith({
       entityId: "admission",
       portGroupId: "item_input",
       portId: "in_w",
-      scope: "per-minute",
+      scope: "rate-window",
     });
 
     act(() => {
@@ -171,6 +167,91 @@ describe("AdmissionRuleInspector", () => {
       "portGroups[0].ports[0].acceptRule",
       "portGroups[0].ports[0].admissionRule",
     ]);
+  });
+
+  it("uses null as the switch flag and writes defaults when enabling both rules", () => {
+    const workspace = createWorkspace();
+    const definition = requireDefinition(workspace, "log_admission");
+    const declaration = requireAdmissionDeclaration(definition);
+    const entity = createEntity("admission", definition.id, {
+      "portGroups[0].ports[0].acceptRule": {
+        base: { kind: "item", itemId: "item_iron_ore" },
+        exclude: [],
+      },
+      "portGroups[0].ports[0].admissionRule": {
+        itemId: "item_iron_ore",
+        limit: null,
+        perMinuteLimit: null,
+      },
+    });
+    const patchEntityConfig = vi.fn();
+    const appHost = buildAppHost(workspace, { patchEntityConfig });
+
+    renderInspector(appHost, definition, declaration, entity, null, root);
+
+    const countSwitch = container.querySelector<HTMLInputElement>("[data-admission-limit-switch]");
+    const rateSwitch = container.querySelector<HTMLInputElement>("[data-admission-rate-switch]");
+    expect(countSwitch?.checked).toBe(false);
+    expect(rateSwitch?.checked).toBe(false);
+    expect(container.querySelector("[data-admission-per-minute-limit-output]")?.textContent).toBe("不限");
+
+    act(() => {
+      countSwitch?.click();
+    });
+    expect(patchEntityConfig).toHaveBeenCalledWith("admission", {
+      "portGroups[0].ports[0].admissionRule": {
+        itemId: "item_iron_ore",
+        limit: 1,
+        perMinuteLimit: null,
+      },
+    });
+
+    act(() => {
+      rateSwitch?.click();
+    });
+    expect(patchEntityConfig).toHaveBeenCalledWith("admission", {
+      "portGroups[0].ports[0].admissionRule": {
+        itemId: "item_iron_ore",
+        limit: null,
+        perMinuteLimit: 6,
+      },
+    });
+  });
+
+  it("enforces rate step boundaries for item and pipe admissions", () => {
+    const workspace = createWorkspace();
+    const patchEntityConfig = vi.fn();
+    const appHost = buildAppHost(workspace, { patchEntityConfig });
+    const itemDefinition = requireDefinition(workspace, "log_admission");
+    const itemDeclaration = requireAdmissionDeclaration(itemDefinition);
+    const itemEntity = createEntity("item-admission", itemDefinition.id, {
+      "portGroups[0].ports[0].admissionRule": {
+        itemId: "item_iron_ore",
+        limit: null,
+        perMinuteLimit: 6,
+      },
+    });
+
+    renderInspector(appHost, itemDefinition, itemDeclaration, itemEntity, null, root);
+
+    expect(container.querySelector<HTMLButtonElement>("[data-admission-rate-action='decrease']")?.disabled)
+      .toBe(true);
+
+    const pipeDefinition = requireDefinition(workspace, "pipe_admission");
+    const pipeDeclaration = requireAdmissionDeclaration(pipeDefinition);
+    const pipeEntity = createEntity("pipe-admission", pipeDefinition.id, {
+      "portGroups[0].ports[0].admissionRule": {
+        itemId: "item_liquid_water",
+        limit: null,
+        perMinuteLimit: 120,
+      },
+    });
+
+    renderInspector(appHost, pipeDefinition, pipeDeclaration, pipeEntity, null, root);
+
+    expect(container.querySelector<HTMLButtonElement>("[data-admission-rate-action='increase']")?.disabled)
+      .toBe(true);
+    expect(container.querySelector("[data-admission-per-minute-limit-output]")?.textContent).toBe("120/min");
   });
 });
 
@@ -273,8 +354,8 @@ function createRuntimeStatus(): SimulationDeviceRuntimeStatusReadModel {
         itemType: "item_iron_ore",
         limit: 2,
         count: 2,
-        perMinuteLimit: 4,
-        perMinuteCount: 1,
+        perMinuteLimit: 12,
+        rateWindowCount: 1,
       },
     },
     powerStatus: "in-power-range",

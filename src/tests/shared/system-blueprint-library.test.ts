@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createBlueprintDocument } from "@/domain/document/blueprint-document";
+import {
+  BLUEPRINT_SCHEMA_VERSION,
+  createBlueprintDocument,
+} from "@/domain/document/blueprint-document";
 import {
   listSystemBlueprintDirectory,
   readSystemBlueprintLibrary,
@@ -129,7 +132,7 @@ describe("system-blueprint-library", () => {
     const rootDirectory = listSystemBlueprintDirectory(snapshot, null);
     const directory = listSystemBlueprintDirectory(snapshot, rootDirectory.folders[0]?.folderId ?? null);
 
-    expect(directory.blueprints[0]?.schemaVersion).toBe(3);
+    expect(directory.blueprints[0]?.schemaVersion).toBe(BLUEPRINT_SCHEMA_VERSION);
     expect(directory.blueprints[0]?.entities.pool?.definitionId).toBe("mix_pool_2");
   });
 });

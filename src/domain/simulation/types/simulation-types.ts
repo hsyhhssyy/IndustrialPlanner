@@ -108,8 +108,10 @@ export interface SimulationAdmissionCounterStatusReadModel {
   readonly itemType: string | null;
   readonly limit: number | null;
   readonly count: number;
+  /** UI 配置单位仍为每分钟；运行时按该值除以 6 作为每个 10 秒窗口的额度。 */
   readonly perMinuteLimit: number | null;
-  readonly perMinuteCount: number;
+  /** 当前对齐的 10 秒速率窗口内，已由准入口搬运配方承诺放行的数量。 */
+  readonly rateWindowCount: number;
 }
 
 // AI-CORRECTION 2026-05-14: slotType 字段已删除。
@@ -157,7 +159,8 @@ export interface SimulationAdmissionCounterReset {
   readonly entityId: string;
   readonly portGroupId: string;
   readonly portId: string;
-  readonly scope?: "total" | "per-minute";
+  /** 省略时重置累计计数；rate-window 只重置当前 10 秒速率窗口。 */
+  readonly scope?: "total" | "rate-window";
 }
 
 /** 文档级仿真运行时只读视图 */

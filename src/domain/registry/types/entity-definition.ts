@@ -416,6 +416,7 @@ export interface PortDefinition {
    * 只应挂在 admission 设备的 input port 上。itemId=null 表示未选择准入物品；
    * limit=null 表示不设总量上限。计数由仿真 runtime 持久化，不随 tick 清零。
    * AI-CORRECTION 2026-07-10: 新增 perMinuteLimit 表示按仿真分钟重置的窗口上限；limit 仍只表示累计总量上限。
+   * AI-CORRECTION 2026-07-23: perMinuteLimit 保留每分钟配置单位，但实际按六个对齐的 10 秒窗口执行，每窗额度为配置值除以 6。
    */
   admissionRule?: EntityAdmissionRuleDefinition | null;
   // AI-REMOVED 2026-06-12:
@@ -456,5 +457,6 @@ export interface EntityAdmissionRuleDefinition {
   /** 跨 tick 总准入上限。null 表示无总量上限。 */
   readonly limit: number | null;
   /** 每仿真分钟准入上限。null 表示无每分钟上限。 */
+  /** AI-CORRECTION 2026-07-23: 数值必须为 6 的正整数倍；运行时每 10 秒窗口放行 perMinuteLimit / 6。 */
   readonly perMinuteLimit?: number | null;
 }

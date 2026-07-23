@@ -2,7 +2,14 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import type { GridRotation } from "@/domain/shared/grid";
 import { rotateGridRotation } from "@/shared/geometry/grid";
 
-export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 3;
+export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 4;
+
+const ADMISSION_RULE_CONFIG_PATH = "portGroups[0].ports[0].admissionRule";
+const ADMISSION_RATE_STEP_PER_MINUTE = 6;
+const ADMISSION_RATE_MAX_BY_DEFINITION_ID: Readonly<Record<string, number>> = {
+  log_admission: 30,
+  pipe_admission: 120,
+};
 
 export interface BlueprintDeviceIdMigrationRule {
   readonly fromDeviceId: string;
@@ -14,6 +21,7 @@ export interface BlueprintDeviceIdMigrationSpec {
   readonly fromVersion: number;
   readonly toVersion: number;
   readonly deviceRules: readonly BlueprintDeviceIdMigrationRule[];
+  readonly entityConfigMigration?: "normalize-admission-rate";
 }
 
 export interface BlueprintEntityDeviceIdMigrationResult<TEntity extends WorldEntity> {
@@ -32,6 +40,7 @@ export interface BlueprintDeviceReferenceMigrationResult {
  *
  * 每个版本只能迁移到紧邻的下一个版本。设备方向迁移使用：
  * `nextRotation = currentRotation + rotationOffset`。
+ * AI-CORRECTION 2026-07-23: 迁移链现同时承载准入口速率配置归一化，名称中的 DeviceId 仅保留为既有公共 API。
  */
 export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
   {
@@ -98,6 +107,12 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
       { fromDeviceId: "item_port_miner_4", toDeviceId: "miner_4", rotationOffset: 0 },
     ],
   },
+  {
+    fromVersion: 3,
+    toVersion: 4,
+    deviceRules: [],
+    entityConfigMigration: "normalize-admission-rate",
+  },
 ] as const satisfies readonly BlueprintDeviceIdMigrationSpec[];
 
 const MIGRATION_SPEC_BY_SOURCE_VERSION = createMigrationSpecBySourceVersion(
@@ -158,6 +173,9 @@ export function migrateBlueprintEntityDeviceIds<TEntity extends WorldEntity>(
     }
 
     nextEntities = applyBlueprintDeviceIdMigrationRules(nextEntities, spec.deviceRules);
+    if (spec.entityConfigMigration === "normalize-admission-rate") {
+      nextEntities = applyAdmissionRateConfigMigration(nextEntities);
+    }
     schemaVersion = spec.toVersion;
   }
 
@@ -198,6 +216,57 @@ export function applyBlueprintDeviceIdMigrationRules<TEntity extends WorldEntity
       ...entity,
       definitionId: rule.toDeviceId,
       rotation: rotateGridRotation(entity.rotation, rule.rotationOffset),
+    };
+  }
+
+  return nextEntities;
+}
+
+function applyAdmissionRateConfigMigration<TEntity extends WorldEntity>(
+  entities: Record<string, TEntity>,
+): Record<string, TEntity> {
+  let nextEntities = entities;
+
+  for (const [entityId, entity] of Object.entries(entities)) {
+    const maximumRate = ADMISSION_RATE_MAX_BY_DEFINITION_ID[entity.definitionId];
+    if (maximumRate === undefined) {
+      continue;
+    }
+
+    const rawRule = entity.config[ADMISSION_RULE_CONFIG_PATH];
+    if (!isRecord(rawRule)) {
+      continue;
+    }
+
+    const rawRate = rawRule.perMinuteLimit;
+    if (typeof rawRate !== "number" || !Number.isFinite(rawRate)) {
+      continue;
+    }
+
+    const normalizedRate = Math.min(
+      maximumRate,
+      Math.max(
+        ADMISSION_RATE_STEP_PER_MINUTE,
+        Math.ceil(rawRate / ADMISSION_RATE_STEP_PER_MINUTE) * ADMISSION_RATE_STEP_PER_MINUTE,
+      ),
+    );
+    if (rawRate === normalizedRate) {
+      continue;
+    }
+
+    if (nextEntities === entities) {
+      nextEntities = { ...entities };
+    }
+
+    nextEntities[entityId] = {
+      ...entity,
+      config: {
+        ...entity.config,
+        [ADMISSION_RULE_CONFIG_PATH]: {
+          ...rawRule,
+          perMinuteLimit: normalizedRate,
+        },
+      },
     };
   }
 
@@ -251,4 +320,8 @@ function createMigrationSpecBySourceVersion(
   }
 
   return specBySourceVersion;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

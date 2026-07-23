@@ -4,8 +4,8 @@ import type {
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import {
-  incrementAdmissionMinuteCounterForCurrentWindow,
-  readAdmissionMinuteCounterForCurrentWindow,
+  incrementFixedWindowCounterForCurrentWindow,
+  readFixedWindowCounterForCurrentWindow,
 } from "./runtime-state";
 
 /**
@@ -67,7 +67,7 @@ export function canAcceptMeteredConsumptionItem(
   if (runtime.currentItemId !== null && runtime.currentItemId !== itemType) {
     return false;
   }
-  return readAdmissionMinuteCounterForCurrentWindow(topology, state, portId).count
+  return readFixedWindowCounterForCurrentWindow(topology, state, portId).count
     < config.acceptanceLimit;
 }
 
@@ -89,9 +89,9 @@ export function recordMeteredConsumptionItem(
     return false;
   }
 
-  const counter = readAdmissionMinuteCounterForCurrentWindow(topology, state, portId);
+  const counter = readFixedWindowCounterForCurrentWindow(topology, state, portId);
   runtime.currentItemId = runtime.currentItemId ?? itemType;
-  incrementAdmissionMinuteCounterForCurrentWindow(topology, state, portId);
+  incrementFixedWindowCounterForCurrentWindow(topology, state, portId);
 
   const delta = state.transient.recipeStatsDelta;
   delta.consumed[itemType] = (delta.consumed[itemType] ?? 0) + 1;
