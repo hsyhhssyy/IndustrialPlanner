@@ -165,7 +165,7 @@ function resolveAdjacentFixedOutputPortEndpoint(options: {
       ...options,
       gridPoint: neighborGridPoint,
     });
-    if (neighbor === null || isOrdinaryLogisticsDefinitionId(neighbor.definitionId, options.kind)) {
+    if (neighbor === null) {
       continue;
     }
 

@@ -135,7 +135,8 @@ describe("machine-mode entity definitions", () => {
     expect(RECIPE_DEFINITIONS.find((recipe) => recipe.id === "r_miner_copper_ore_basic"))
       .toMatchObject({
         durationSeconds: 3,
-        inputs: [{ itemId: "item_liquid_water", amount: 1 }],
+        // 水驱矿机采矿配方刻意不消耗水，防止产线规划中错误地将采矿用水计入水消耗统计
+        inputs: [],
         outputs: [{ itemId: "item_copper_ore", amount: 1 }],
         machineId: "miner_4",
       });

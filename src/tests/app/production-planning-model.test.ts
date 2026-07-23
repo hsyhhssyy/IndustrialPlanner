@@ -277,16 +277,112 @@ describe("production planning model", () => {
     const rows = buildProductionPlanningTreeRows(result, "device");
     const productionRow = rows.find((row) => row.recipeId === recipeId);
     const consumptionRow = rows.find((row) => (
-      isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)
+      row.isSharedDemandReference
+      && row.isDeviceMinimumConsumption
       && row.targetItemId === "item_liquid_xiranite"
     ));
     expect(productionRow?.childIds).toContain(consumptionRow?.id);
     expect(consumptionRow?.parentIds).toEqual([productionRow?.id]);
+    expect(consumptionRow?.childIds).toEqual([]);
+    expect(consumptionRow?.sourceRowId).toBe(productionRow?.id);
+    expect(productionRow?.demandReferenceIds).toContain(consumptionRow?.id);
+    expect(productionRow?.isShared).toBe(true);
     expect(consumptionRow?.recipeNode.inputs).toEqual([
       expect.objectContaining({ itemId: "item_liquid_xiranite", perMinute: 7.5 }),
     ]);
     expect(consumptionRow?.recipeNode.outputs).toEqual([]);
     expect(result.unresolvedPerMinute).toBe(0);
+  });
+
+  it("keeps a non-shared minimum-consumption source real and replaces shared demand positions with leaf references", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const heavyLiquidRecipeId = "liquid_transmuter_1_liquid_liquid_xiranite_enr_1";
+    const mixedLiquidRecipeId = "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic";
+    const transmutedLiquidRecipeId = "liquid_transmuter_1_liquid_liquid_xiranite_1";
+    const createResult = (liquidRecipeId: string) => computeProductionPlan({
+      targets: [port("item_liquid_xiranite_enr", 12)],
+      supplies: [],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map([
+        ["item_liquid_xiranite_enr", heavyLiquidRecipeId],
+        ["item_liquid_xiranite", liquidRecipeId],
+      ]),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    const mixedRows = buildProductionPlanningTreeRows(createResult(mixedLiquidRecipeId), "item");
+    const mixedHeavyLiquidRow = mixedRows.find((row) => (
+      row.recipeId === heavyLiquidRecipeId
+      && row.targetItemId === "item_liquid_xiranite_enr"
+    ));
+    const mixedLiquidRow = mixedRows.find((row) => (
+      row.recipeId === mixedLiquidRecipeId
+      && row.targetItemId === "item_liquid_xiranite"
+    ));
+    expect(mixedLiquidRow?.isSharedDemandReference).toBe(false);
+    expect(mixedLiquidRow?.isDeviceMinimumConsumption).toBe(true);
+    expect(mixedLiquidRow?.isShared).toBe(false);
+    expect(mixedLiquidRow?.total?.deviceCount).toBe(0.2);
+    expect(mixedLiquidRow?.parentIds).toEqual([mixedHeavyLiquidRow?.id]);
+    expect(mixedHeavyLiquidRow?.childIds).toContain(mixedLiquidRow?.id);
+
+    const xiraniteReference = mixedRows.find((row) => (
+      row.parentIds.includes(mixedLiquidRow?.id ?? "")
+      && row.targetItemId === "item_xiranite_powder"
+      && row.isSharedDemandReference
+    ));
+    const waterReference = mixedRows.find((row) => (
+      row.parentIds.includes(mixedLiquidRow?.id ?? "")
+      && row.targetItemId === "item_liquid_water"
+      && row.isSharedDemandReference
+    ));
+    expect(xiraniteReference?.childIds).toEqual([]);
+    expect(xiraniteReference?.isDeviceMinimumConsumption).toBe(false);
+    expect(xiraniteReference?.consumedPerMinute).toBe(6);
+    expect(waterReference?.childIds).toEqual([]);
+    expect(waterReference?.isDeviceMinimumConsumption).toBe(false);
+    expect(waterReference?.consumedPerMinute).toBe(6);
+
+    const transmutedRows = buildProductionPlanningTreeRows(createResult(transmutedLiquidRecipeId), "item");
+    const transmutedHeavyLiquidRow = transmutedRows.find((row) => (
+      row.recipeId === heavyLiquidRecipeId
+      && row.targetItemId === "item_liquid_xiranite_enr"
+    ));
+    const transmutedLiquidRow = transmutedRows.find((row) => (
+      row.recipeId === transmutedLiquidRecipeId
+      && row.targetItemId === "item_liquid_xiranite"
+    ));
+    const heavyLiquidMinimumReference = transmutedRows.find((row) => (
+      row.parentIds.includes(transmutedHeavyLiquidRow?.id ?? "")
+      && row.targetItemId === "item_liquid_xiranite"
+      && row.isSharedDemandReference
+      && row.isDeviceMinimumConsumption
+    ));
+    expect(heavyLiquidMinimumReference?.childIds).toEqual([]);
+    expect(heavyLiquidMinimumReference?.sourceRowId).toBe(transmutedLiquidRow?.id);
+    expect(heavyLiquidMinimumReference?.consumedPerMinute).toBe(6);
+    expect(transmutedLiquidRow?.depth).toBe(0);
+    expect(transmutedLiquidRow?.parentIds).toEqual([]);
+    expect(transmutedLiquidRow?.isShared).toBe(true);
+    expect(transmutedLiquidRow?.total?.deviceCount).toBe(0.25);
+
+    const gasReference = transmutedRows.find((row) => (
+      row.parentIds.includes(transmutedLiquidRow?.id ?? "")
+      && row.targetItemId === "item_gas_xiranite"
+      && row.isSharedDemandReference
+      && !row.isDeviceMinimumConsumption
+    ));
+    const selfMinimumReference = transmutedRows.find((row) => (
+      row.parentIds.includes(transmutedLiquidRow?.id ?? "")
+      && row.targetItemId === "item_liquid_xiranite"
+      && row.isSharedDemandReference
+      && row.isDeviceMinimumConsumption
+    ));
+    expect(gasReference?.childIds).toEqual([]);
+    expect(gasReference?.consumedPerMinute).toBe(7.5);
+    expect(selfMinimumReference?.childIds).toEqual([]);
+    expect(selfMinimumReference?.sourceRowId).toBe(transmutedLiquidRow?.id);
+    expect(selfMinimumReference?.consumedPerMinute).toBe(1.5);
   });
 
   it("does not include minimum device consumption when the option is disabled", () => {
