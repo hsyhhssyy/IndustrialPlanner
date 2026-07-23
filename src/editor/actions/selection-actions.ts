@@ -1019,6 +1019,10 @@ export function createEditorSelectionActions({
           update: (documentSnapshot) => ({
             ...documentSnapshot,
             entities: nextEntities,
+            // 2026-07-23: 删除实体时同步清理 entityOrder，否则残留 ID 导致计数虚高。
+            entityOrder: documentSnapshot.entityOrder.filter(
+              (entityId) => !deletedEntityIds.has(entityId),
+            ),
             // AI-CORRECTION 2026-06-10: 删除实体时同步清理关联的 slotLinks，
             // 否则同名新设备会被旧链接自动连上。
             slotLinks: documentSnapshot.slotLinks.filter(

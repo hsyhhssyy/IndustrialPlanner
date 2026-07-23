@@ -1794,7 +1794,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "pipeLogistics",
     displayOrder: 202,
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
-    placementBehaviors: ALLOW_BELT_OVERLAP_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1851,7 +1850,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "pipeLogistics",
     displayOrder: 203,
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
-    placementBehaviors: ALLOW_BELT_OVERLAP_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1916,7 +1914,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "pipeLogistics",
     displayOrder: 201,
     tags: ["武陵", "PipeFamily", "ChevronHidden"],
-    placementBehaviors: ALLOW_BELT_OVERLAP_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [

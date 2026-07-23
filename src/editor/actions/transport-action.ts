@@ -133,6 +133,10 @@ export function createEditorTransportActions(
       update: (documentSnapshot) => ({
         ...documentSnapshot,
         entities: nextEntities,
+        // 2026-07-23: 删除物流段时同步清理 entityOrder，否则残留 ID 导致计数虚高。
+        entityOrder: documentSnapshot.entityOrder.filter(
+          (entityId) => !toDelete.has(entityId),
+        ),
       }),
     });
 

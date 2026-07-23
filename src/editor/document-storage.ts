@@ -422,11 +422,16 @@ function normalizeWorldDocument(
     return null;
   }
 
+  // 2026-07-23: 清理 entityOrder 中 entities 已不存在的无效 ID，
+  // 修复历史删除操作未同步清理 entityOrder 导致计数虚高的问题。
+  const validEntityOrder = Array.from(new Set(value.entityOrder))
+    .filter((entityId) => entityId in migration.entities);
+
   return {
     ...value,
     schemaVersion: migration.schemaVersion,
     entities: migration.entities,
-    entityOrder: Array.from(new Set(value.entityOrder)),
+    entityOrder: validEntityOrder,
   };
 }
 

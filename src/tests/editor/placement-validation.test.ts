@@ -499,7 +499,7 @@ describe("placement validation", () => {
     ).toBe(true);
   });
 
-  it("allows PipeFamily device placement over BeltFamily belt without overlap error", () => {
+  it("allows pipe_admission placement over BeltFamily belt without overlap error", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDocumentWithEntities([
@@ -508,13 +508,78 @@ describe("placement validation", () => {
 
     editorHost.internalDocument.setSnapshot(document);
 
-    // PipeFamily 的 connector 放到 BeltFamily 的 belt 上
-    // pipe_connector 有 allowBeltOverlap，belt_straight 有 allowPipeOverlap → 放行
-    editorHost.actions.createSinglePlacementDraft("pipe_connector", { x: 5, y: 5 });
+    // pipe_admission 有 allowBeltOverlap，belt_straight 有 allowPipeOverlap → 放行
+    editorHost.actions.createSinglePlacementDraft("pipe_admission", { x: 5, y: 5 });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
     expect(editorHost.queries.getEntityPlacementValidation(draftId ?? "").canPlace).toBe(true);
+  });
+
+  it("does NOT allow pipe_connector placement over belt (regression guard)", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithEntities([
+      createEntity("belt", "belt_straight_1x1", 5, 5),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    // pipe_connector 不应有 allowBeltOverlap → 报 overlap
+    editorHost.actions.createSinglePlacementDraft("pipe_connector", { x: 5, y: 5 });
+    const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
+
+    expect(draftId).toBeDefined();
+    expect(
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(draftId ?? ""),
+    ).toBe(true);
+    expect(
+      editorHost.queries.getEntityPlacementValidation(draftId ?? "").reasons.map((r) => r.code),
+    ).toEqual(["overlap"]);
+  });
+
+  it("does NOT allow pipe_splitter placement over belt (regression guard)", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithEntities([
+      createEntity("belt", "belt_straight_1x1", 5, 5),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    // pipe_splitter 不应有 allowBeltOverlap → 报 overlap
+    editorHost.actions.createSinglePlacementDraft("pipe_splitter", { x: 5, y: 5 });
+    const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
+
+    expect(draftId).toBeDefined();
+    expect(
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(draftId ?? ""),
+    ).toBe(true);
+    expect(
+      editorHost.queries.getEntityPlacementValidation(draftId ?? "").reasons.map((r) => r.code),
+    ).toEqual(["overlap"]);
+  });
+
+  it("does NOT allow pipe_converger placement over belt (regression guard)", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithEntities([
+      createEntity("belt", "belt_straight_1x1", 5, 5),
+    ]);
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    // pipe_converger 不应有 allowBeltOverlap → 报 overlap
+    editorHost.actions.createSinglePlacementDraft("pipe_converger", { x: 5, y: 5 });
+    const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
+
+    expect(draftId).toBeDefined();
+    expect(
+      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(draftId ?? ""),
+    ).toBe(true);
+    expect(
+      editorHost.queries.getEntityPlacementValidation(draftId ?? "").reasons.map((r) => r.code),
+    ).toEqual(["overlap"]);
   });
 
   it("does NOT allow replacement when draft is placed on non-family entity", () => {

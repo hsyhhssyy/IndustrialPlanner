@@ -26,7 +26,8 @@ export function createEditorDocumentQueries({
         return {
           baseId: baseDefinition.id,
           documentKey: latestDocument?.documentKey ?? null,
-          entityCount: latestDocument?.entityOrder.length ?? 0,
+          // 2026-07-23: 改用 entities keys 计数兜底，避免 entityOrder 残留导致虚高。
+          entityCount: latestDocument != null ? Object.keys(latestDocument.entities).length : 0,
           updatedAt: latestDocument?.meta.updatedAt ?? null,
         };
       });
