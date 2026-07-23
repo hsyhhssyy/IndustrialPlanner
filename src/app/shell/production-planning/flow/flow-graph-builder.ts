@@ -47,6 +47,7 @@ export interface ProductionFlowLink extends SankeyInputLink {
   readonly itemId: string;
   readonly title: string;
   readonly label: string;
+  readonly isDeviceMinimumConsumption: boolean;
   readonly sourceSide?: ProductionFlowLinkNodeSide;
   readonly targetSide?: ProductionFlowLinkNodeSide;
 }
@@ -77,6 +78,7 @@ interface ItemFlowEndpoint {
   readonly nodeId: string;
   readonly row: ProductionPlanningLedgerRow;
   readonly value: number;
+  readonly isDeviceMinimumConsumption: boolean;
 }
 
 const FLOW_EPSILON = 0.0001;
@@ -102,7 +104,33 @@ export function buildProductionFlowGraph(
   const producersByItemId = new Map<string, ItemFlowEndpoint[]>();
   const consumersByItemId = new Map<string, ItemFlowEndpoint[]>();
 
+  // 2026-07-23：设备最低消耗不再自建节点，而是作为宿主配方节点的入线标注。
+  // 预收集设备最低消耗，按宿主 recipeId 分组。
+  const deviceMinByHost = new Map<string, { itemId: string; perMinute: number }[]>();
   for (const row of rows) {
+    if (!isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)) {
+      continue;
+    }
+    const hostRecipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId);
+    if (hostRecipeId === null) {
+      continue;
+    }
+    for (const input of row.recipeNode.inputs) {
+      if (input.perMinute <= FLOW_EPSILON) {
+        continue;
+      }
+      const list = deviceMinByHost.get(hostRecipeId) ?? [];
+      list.push({ itemId: input.itemId, perMinute: input.perMinute });
+      deviceMinByHost.set(hostRecipeId, list);
+    }
+  }
+
+  for (const row of rows) {
+    // 设备最低消耗行不创建节点
+    if (isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)) {
+      continue;
+    }
+
     addLedgerRowNode(row, context);
     const producedPerMinute = findOutputFlow(row.recipeNode, row.targetItemId);
     if (row.targetItemId.length > 0 && producedPerMinute > FLOW_EPSILON) {
@@ -111,6 +139,7 @@ export function buildProductionFlowGraph(
         nodeId: row.id,
         row,
         value: producedPerMinute,
+        isDeviceMinimumConsumption: false,
       });
     }
 
@@ -123,7 +152,27 @@ export function buildProductionFlowGraph(
         nodeId: row.id,
         row,
         value: input.perMinute,
+        isDeviceMinimumConsumption: false,
       });
+    }
+
+    // 设备最低消耗：挂到第一个宿主配方行上。
+    // 若消耗品也是该配方产物（自消费），则跳过——内部循环不需要在流程图上显示。
+    const deviceMins = deviceMinByHost.get(row.recipeId);
+    if (deviceMins !== undefined) {
+      deviceMinByHost.delete(row.recipeId);
+      for (const dm of deviceMins) {
+        if (findOutputFlow(row.recipeNode, dm.itemId) > FLOW_EPSILON) {
+          continue;
+        }
+        appendEndpoint(consumersByItemId, dm.itemId, {
+          itemId: dm.itemId,
+          nodeId: row.id,
+          row,
+          value: dm.perMinute,
+          isDeviceMinimumConsumption: true,
+        });
+      }
     }
   }
 
@@ -144,6 +193,9 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
   }
 
   const isExternal = isProductionPlanningExternalSupplyRecipeId(row.recipeId);
+  // AI-CORRECTION 2026-07-23:
+  // 设备最低消耗行已由 buildProductionFlowGraph 主循环跳过（continue），不再创建独立节点。
+  // 此处 isDeviceMinimumConsumption 相关分支变为死代码，保留以备将来恢复独立节点形态。
   const isDeviceMinimumConsumption = isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId);
   const targetName = resolveProductionPlanningItemName(row.targetItemId, context.index, context.translate);
   const machineName = resolveLedgerRowMachineName(row, context.index, context.translate);
@@ -358,17 +410,18 @@ function resolveConsumerLinkOptions(
   producers: readonly ItemFlowEndpoint[],
   consumer: ItemFlowEndpoint,
   context: LedgerBuildContext,
-): Pick<ProductionFlowLink, "preferredFeedback" | "sourceSide" | "targetSide"> {
+): Pick<ProductionFlowLink, "preferredFeedback" | "sourceSide" | "targetSide" | "isDeviceMinimumConsumption"> {
   if (shouldEnterConsumerFromRight(itemId, producers, consumer, context)) {
     return {
       preferredFeedback: true,
       targetSide: "right",
+      isDeviceMinimumConsumption: consumer.isDeviceMinimumConsumption,
     };
   }
 
   return shouldExitProducerFromLeft(itemId, producers, consumer, context)
-    ? { sourceSide: "left" }
-    : {};
+    ? { sourceSide: "left", isDeviceMinimumConsumption: consumer.isDeviceMinimumConsumption }
+    : { isDeviceMinimumConsumption: consumer.isDeviceMinimumConsumption };
 }
 
 function shouldEnterConsumerFromRight(
@@ -438,7 +491,7 @@ function addLedgerLink(
   itemId: string,
   value: number,
   context: LedgerBuildContext,
-  options: Pick<ProductionFlowLink, "preferredFeedback" | "sourceSide" | "targetSide"> = {},
+  options: Pick<ProductionFlowLink, "preferredFeedback" | "sourceSide" | "targetSide" | "isDeviceMinimumConsumption"> = {},
 ): void {
   if (value <= FLOW_EPSILON) {
     return;
@@ -455,6 +508,7 @@ function addLedgerLink(
     value: nextValue,
     title: resolveProductionPlanningItemName(itemId, context.index, context.translate),
     label: `${formatProductionFlow(nextValue)}/min`,
+    isDeviceMinimumConsumption: options.isDeviceMinimumConsumption ?? false,
     ...options,
   });
 }

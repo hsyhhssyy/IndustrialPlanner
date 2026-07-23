@@ -360,7 +360,7 @@ export function ProductionFlowGraph({
       >
         <svg className={styles["production-flow-edges"]} width={canvasWidth} height={canvasHeight}>
           {graph.links.map((link) => (
-            <FlowEdge key={link.id} link={link} />
+            <FlowEdge key={link.id} link={link} t={t} />
           ))}
         </svg>
         <div className={styles["production-flow-nodes"]}>
@@ -417,7 +417,7 @@ function FlowNode({
   );
 }
 
-function FlowEdge({ link }: { readonly link: SankeyLink<ProductionFlowNode, ProductionFlowLink> }) {
+function FlowEdge({ link, t }: { readonly link: SankeyLink<ProductionFlowNode, ProductionFlowLink>; readonly t: (key: string) => string }) {
   const path = createLinkPath(link);
   const className = [
     styles["production-flow-edge"],
@@ -432,7 +432,7 @@ function FlowEdge({ link }: { readonly link: SankeyLink<ProductionFlowNode, Prod
       <path className={styles["production-flow-edge-path"]} d={path} strokeWidth={resolveVisibleLinkWidth(link)} />
       <text>
         <textPath href={`#${edgePathId(link.id)}`} startOffset="50%">
-          {link.original.title} {link.original.label}
+          {link.original.isDeviceMinimumConsumption ? `${t("productionPlanning.minimumConsumption")} · ` : ""}{link.original.title} {link.original.label}
         </textPath>
       </text>
     </g>

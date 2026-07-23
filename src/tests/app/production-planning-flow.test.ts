@@ -171,6 +171,9 @@ describe("production planning flow graph", () => {
     expect(byproductLink?.value).toBeGreaterThan(0);
   });
 
+  // AI-CORRECTION 2026-07-23:
+  // 设备最低消耗不再自建独立节点，改为挂到宿主配方节点上作为入线标注。
+  // 自消费场景（设备消耗品也是该配方产物）在流程图中跳过，不创建自环连线。
   it("shows self-consumed device input as an independent consumption node at the gross output rate", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const recipeId = "liquid_transmuter_1_liquid_liquid_xiranite_1";
@@ -184,22 +187,22 @@ describe("production planning flow graph", () => {
 
     const graph = buildProductionFlowGraph(result, index, t, "device");
     const recipeNode = graph.nodes.find((node) => node.recipeId === recipeId);
+
+    // 设备最低消耗不再创建独立节点
     const consumptionNode = graph.nodes.find((node) => (
       node.recipeId !== undefined
       && isProductionPlanningDeviceMinimumConsumptionRecipeId(node.recipeId)
-      && node.itemId === "item_liquid_xiranite"
     ));
-    const consumptionLink = graph.links.find((link) => (
-      link.source === recipeNode?.id
-      && link.target === consumptionNode?.id
-      && link.itemId === "item_liquid_xiranite"
-    ));
+    expect(consumptionNode).toBeUndefined();
 
+    // 自消费不创建自环连线
+    expect(graph.links.some((link) => link.source === link.target)).toBe(false);
+
+    // 配方节点仍显示毛产出率（37.5/min = 1.25台 × 30/min每台）
     expect(recipeNode?.subtitle).toContain("1.25");
     expect(recipeNode?.subtitle).toContain("37.5/min");
-    expect(consumptionNode?.subtitle).toContain("7.5/min");
-    expect(consumptionLink?.value).toBe(7.5);
-    expect(graph.links.some((link) => link.source === link.target)).toBe(false);
+
+    // Sankey 布局不抛异常
     expect(() => createSankeyLayout(graph, {
       width: 720,
       height: 320,
