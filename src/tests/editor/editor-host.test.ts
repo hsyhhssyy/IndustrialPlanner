@@ -2813,7 +2813,7 @@ describe("createEditorHost", () => {
     expect(valleySummary).toEqual({
       baseId: "valley4_protocol_core",
       documentKey: valleyDocument.documentKey,
-      entityCount: 1,
+      entityCount: 8,
       updatedAt: "2026-05-10T09:00:00.000Z",
     });
 

@@ -26,6 +26,12 @@ export function isDedicatedLogisticsDevice(
   return device.transportClass === "strict-belt" || device.transportClass === "strict-pipe";
 }
 
+export function isPhaseGatedLogisticsDevice(
+  device: CompiledSimulationDevice,
+): boolean {
+  return isDedicatedLogisticsDevice(device) || (device.tags ?? []).includes("PipeFamily");
+}
+
 export function resolveTransportRecipeTiming(
   topology: CompiledSimulationTopology,
   device: CompiledSimulationDevice,
@@ -79,10 +85,45 @@ export function resolveActiveDedicatedLogisticsTransferUnitTicks(
   return [...transferUnitTicks].sort((left, right) => left - right);
 }
 
+export function resolvePhaseGatedLogisticsTransferUnitTicks(
+  topology: CompiledSimulationTopology,
+  device: CompiledSimulationDevice,
+): number | null {
+  if (!isPhaseGatedLogisticsDevice(device)) {
+    return null;
+  }
+
+  const timing = resolveTransportRecipeTiming(topology, device);
+  if (timing === null) {
+    return null;
+  }
+
+  return Math.min(timing.durationTicks, topology.standardTickRate);
+}
+
+export function resolveActivePhaseGatedLogisticsTransferUnitTicks(
+  topology: CompiledSimulationTopology,
+): readonly number[] {
+  const transferUnitTicks = new Set<number>();
+  for (const deviceId of topology.ordering.deviceOrder) {
+    const device = topology.devices[deviceId];
+    if (device === undefined) {
+      continue;
+    }
+
+    const unitTicks = resolvePhaseGatedLogisticsTransferUnitTicks(topology, device);
+    if (unitTicks !== null) {
+      transferUnitTicks.add(unitTicks);
+    }
+  }
+
+  return [...transferUnitTicks].sort((left, right) => left - right);
+}
+
 export function resolveDynamicTickRateSwitchIntervalTicks(
   topology: CompiledSimulationTopology,
 ): number {
-  const transferUnitTicks = resolveActiveDedicatedLogisticsTransferUnitTicks(topology);
+  const transferUnitTicks = resolveActivePhaseGatedLogisticsTransferUnitTicks(topology);
   if (transferUnitTicks.length === 0) {
     return topology.standardTickRate;
   }
@@ -103,7 +144,7 @@ export function canAdjustDynamicTickRateAtTick(options: {
 export function resolveLegalDynamicTickRates(
   topology: CompiledSimulationTopology,
 ): readonly number[] {
-  const transferUnitTicks = resolveActiveDedicatedLogisticsTransferUnitTicks(topology);
+  const transferUnitTicks = resolveActivePhaseGatedLogisticsTransferUnitTicks(topology);
   return DYNAMIC_SIMULATION_TICK_RATES.filter((dynamicTickRate) =>
     isDynamicTickRateCompatibleWithTransferUnits({
       dynamicTickRate,
@@ -137,12 +178,28 @@ export function canDedicatedLogisticsTransferAtTick(options: {
   // return options.standardTick % transferUnitTicks === 0;
 }
 
+export function canPhaseGatedLogisticsTransferAtTick(options: {
+  readonly topology: CompiledSimulationTopology;
+  readonly device: CompiledSimulationDevice;
+  readonly standardTick: number;
+}): boolean {
+  const transferUnitTicks = resolvePhaseGatedLogisticsTransferUnitTicks(
+    options.topology,
+    options.device,
+  );
+  if (transferUnitTicks === null) {
+    return true;
+  }
+
+  return (options.standardTick - 1) % transferUnitTicks === 0;
+}
+
 export function canDeviceTransferAtCurrentPhase(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   device: CompiledSimulationDevice,
 ): boolean {
-  return canDedicatedLogisticsTransferAtTick({
+  return canPhaseGatedLogisticsTransferAtTick({
     topology,
     device,
     standardTick: state.tickNumber,
@@ -161,6 +218,18 @@ export function canRecipeFinishAtCurrentPhase(
 
   return canDeviceTransferAtCurrentPhase(topology, state, device);
 }
+
+// AI-REMOVED 2026-07-23:
+// Reason: 仅严格物流门禁无法覆盖分流器、汇流器、桥接器和准入口等一般 PipeFamily 组件。
+// Trigger: 用户要求所有管道类组件的输入、输出、配方完成与启动都只发生在整数秒。
+// Evidence: .docs/common/模拟器/仿真运行原理.md v5 §5.3、§6.2。
+// Replacement: resolveActivePhaseGatedLogisticsTransferUnitTicks 与 canPhaseGatedLogisticsTransferAtTick。
+// Risk: Medium - 一般管道不再在非整数秒相位搬运或启动配方。
+// Human Review: Required
+//
+// Original code:
+// const transferUnitTicks = resolveActiveDedicatedLogisticsTransferUnitTicks(topology);
+// return canDedicatedLogisticsTransferAtTick({ topology, device, standardTick: state.tickNumber });
 
 function resolveRecipeDevice(
   topology: CompiledSimulationTopology,

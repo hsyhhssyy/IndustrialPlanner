@@ -3074,8 +3074,22 @@ function resolveProductionPlanningLogisticsKind(
 
 function resolveProductionPlanningLogisticsThroughput(kind: "belt" | "pipe"): number {
   const secondsPerCell = kind === "pipe" ? PIPE_TRANSPORT_DURATION_SECONDS : BELT_TRANSPORT_DURATION_SECONDS;
-  return 60 / secondsPerCell;
+  const itemsPerCycle = kind === "pipe" ? 2 : 1;
+  return (60 * itemsPerCycle) / secondsPerCell;
 }
+
+/*
+AI-REMOVED 2026-07-23:
+Reason: 仅用周期倒数计算吞吐会在管道改为 1 秒双件配方后错误显示为 60/min。
+Trigger: 用户确认管道最高速度为 2/s，生产规划中的物流需求必须继续按 120/min 计算。
+Evidence: PIPE_TRANSPORT_DURATION_SECONDS=1，管道高优先级配方每周期运输 2 件。
+Replacement: resolveProductionPlanningLogisticsThroughput 按物流类型乘以 itemsPerCycle。
+Risk: Low；只修正规划界面的管道吞吐展示与数量估算。
+Human Review: Required
+
+Original code:
+return 60 / secondsPerCell;
+*/
 
 /*
 AI-REMOVED 2026-05-21:

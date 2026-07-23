@@ -903,6 +903,7 @@ function compileSyntheticNodesForUnboundPorts(options: {
     !boundPortGroupIds.has(portGroup.id)
     && (portGroup.direction === "output" || portGroup.direction === "bidirectional"),
   );
+  const syntheticSlotCapacity = options.definition.tags.includes("PipeFamily") ? 2 : 1;
 
   if (needsInput) {
     addSyntheticNode({
@@ -917,6 +918,7 @@ function compileSyntheticNodesForUnboundPorts(options: {
         ? "any"
         : inferStorageDomainFromPortGroups(options.definition.portGroups, "input"),
       bindDirection: "input",
+      capacity: syntheticSlotCapacity,
     });
   }
 
@@ -930,6 +932,7 @@ function compileSyntheticNodesForUnboundPorts(options: {
       nodeBindingsByStorageGroupId: options.nodeBindingsByStorageGroupId,
       domain: inferStorageDomainFromPortGroups(options.definition.portGroups, "output"),
       bindDirection: "output",
+      capacity: syntheticSlotCapacity,
     });
   }
 }
@@ -943,6 +946,7 @@ function addSyntheticNode(options: {
   readonly nodeBindingsByStorageGroupId: Map<string, StorageGroupNodeBinding>;
   readonly domain: SimulationItemDomainFilter | "any";
   readonly bindDirection: SimulationPortDirection;
+  readonly capacity: number;
 }): void {
   const nodeId = `${options.deviceId}/node:${options.sourceStorageSlotGroupId}`;
   const slotId = `${nodeId}/slot:slot_1`;
@@ -960,7 +964,7 @@ function addSyntheticNode(options: {
     nodeId,
     sourceStorageSlotGroupId: options.sourceStorageSlotGroupId,
     sourceSlotId: "slot_1",
-    capacity: 1,
+    capacity: options.capacity,
     domain: options.domain,
     lock: null,
     initialItemType: null,
@@ -996,6 +1000,17 @@ function addSyntheticNode(options: {
     productNodeIds: [nodeId],
   });
 }
+
+// AI-REMOVED 2026-07-23:
+// Reason: 所有 synthetic 槽位固定容量 1 会使严格管道的 2 件配方永远无法取得或放下 2 件。
+// Trigger: 用户要求 PipeFamily 槽位容量上限统一为 2。
+// Evidence: .docs/common/模拟器/仿真运行原理.md v5 §6.2；严格直管与弯管使用 synthetic-input/output。
+// Replacement: compileSyntheticNodesForUnboundPorts 根据 PipeFamily 计算 syntheticSlotCapacity 并传入 addSyntheticNode。
+// Risk: Low - 非 PipeFamily synthetic 槽位仍保持容量 1。
+// Human Review: Required
+//
+// Original code:
+// capacity: 1,
 
 function compileSlot(options: {
   readonly slot: StorageSlotDefinition;

@@ -460,13 +460,13 @@ export function resolveDeviceRecipePlans(options: {
     ingredientNodeIds: options.channel.ingredientNodeIds,
   });
 
-  const plans = resolveRecipes({
+  const plans = sortRecipePlansByEfficiency(resolveRecipes({
     topology: options.topology,
     state: options.state,
     device: options.device,
     channel: options.channel,
     ingredientSlotContents,
-  });
+  }));
   if (options.device.allowDuplicateRecipesAcrossChannels === true) {
     return plans;
   }
@@ -727,18 +727,7 @@ function resolveRecipes(options: {
       return [];
     }
 
-    const recipeId = `${options.device.definitionId}:${timing.recipeIdSuffix}`;
-    return [getOrCreateRecipePlan(options, recipeId, () => ({
-      recipeId,
-      recipeType: "reserved-item",
-      durationTicks: timing.durationTicks,
-      inputs: [{ itemId: "any", amount: 1 }],
-      outputs: [{ itemId: "same-as-input", amount: 1 }],
-      ingredientNodeIds: options.channel.ingredientNodeIds,
-      productNodeIds: options.channel.productNodeIds,
-      requiredGasDiffusion: null,
-      gasDiffusionOutput: null,
-    }))];
+    return resolveTransportRecipePlans(options, timing);
   }
 
   if (options.device.definitionId === WATER_PURIFIER_NODE_ENTITY_ID) {
@@ -823,20 +812,19 @@ function resolveRecipes(options: {
       return [];
     }
 
-    const recipeId = `${options.device.definitionId}:${timing.recipeIdSuffix}`;
-    return [getOrCreateRecipePlan(options, recipeId, () => ({
-      recipeId,
-      recipeType: "reserved-item",
-      durationTicks: timing.durationTicks,
-      inputs: [{ itemId: "any", amount: 1 }],
-      outputs: [{ itemId: "same-as-input", amount: 1 }],
-      ingredientNodeIds: options.channel.ingredientNodeIds,
-      productNodeIds: options.channel.productNodeIds,
-      requiredGasDiffusion: null,
-      gasDiffusionOutput: null,
-    }))];
+    return resolveTransportRecipePlans(options, timing);
   }
 
+  // AI-REMOVED 2026-07-23:
+  // Reason: recipeId 字典序不再是自动配方的首要顺序，只允许在产物总量和原料总量都相同时兜底。
+  // Trigger: 用户要求所有设备统一按“产物总量降序、原料总量升序、recipeId 升序”选择。
+  // Evidence: .docs/common/模拟器/仿真运行原理.md v5 §10.3。
+  // Replacement: resolveDeviceRecipePlans 中的 sortRecipePlansByEfficiency。
+  // Risk: Low - 手选配方仍只有一个候选，不受排序影响。
+  // Human Review: Required
+  //
+  // Original code:
+  // .sort((left, right) => left.id.localeCompare(right.id))
   return Object.values(options.topology.recipeCatalog)
     .filter((recipe) => recipe.machineId === options.device.definitionId)
     .filter((recipe) => recipeCanMatchContents(options.topology, recipe, options.ingredientSlotContents))
@@ -846,7 +834,6 @@ function resolveRecipes(options: {
       device: options.device,
       requiredGasDiffusion: recipe.requiredGasDiffusion,
     }))
-    .sort((left, right) => left.id.localeCompare(right.id))
     .map((recipe) => getOrCreateRecipePlan(options, recipe.id, () => ({
         recipeId: recipe.id,
         recipeType: recipe.recipeType,
@@ -859,6 +846,85 @@ function resolveRecipes(options: {
         gasDiffusionOutput: recipe.gasDiffusionOutput,
       })));
 }
+
+function sortRecipePlansByEfficiency(
+  plans: readonly CompiledSimulationRecipePlan[],
+): readonly CompiledSimulationRecipePlan[] {
+  return [...plans].sort((left, right) => {
+    const outputAmountDifference =
+      sumRecipeItemAmounts(right.outputs) - sumRecipeItemAmounts(left.outputs);
+    if (outputAmountDifference !== 0) {
+      return outputAmountDifference;
+    }
+
+    const inputAmountDifference =
+      sumRecipeItemAmounts(left.inputs) - sumRecipeItemAmounts(right.inputs);
+    if (inputAmountDifference !== 0) {
+      return inputAmountDifference;
+    }
+
+    return left.recipeId.localeCompare(right.recipeId);
+  });
+}
+
+function sumRecipeItemAmounts(items: readonly CompiledSimulationRecipeItem[]): number {
+  return items.reduce((total, item) => total + item.amount, 0);
+}
+
+function resolveTransportRecipePlans(
+  options: {
+    topology: CompiledSimulationTopology;
+    device: CompiledSimulationDevice;
+    channel: CompiledSimulationRecipeChannel;
+  },
+  timing: {
+    readonly durationTicks: number;
+    readonly recipeIdSuffix: string;
+  },
+): readonly CompiledSimulationRecipePlan[] {
+  const isPipe = options.device.transportClass === "strict-pipe"
+    || (options.device.tags ?? []).includes("PipeFamily");
+  const transferAmounts = isPipe ? [2, 1] : [1];
+
+  return transferAmounts.map((amount) => {
+    const recipeId = amount === 1
+      ? `${options.device.definitionId}:${timing.recipeIdSuffix}`
+      : `${options.device.definitionId}:${timing.recipeIdSuffix}-${amount}`;
+    return getOrCreateRecipePlan(options, recipeId, () => ({
+      recipeId,
+      recipeType: "reserved-item",
+      durationTicks: timing.durationTicks,
+      inputs: [{ itemId: "any", amount }],
+      outputs: [{ itemId: "same-as-input", amount }],
+      ingredientNodeIds: options.channel.ingredientNodeIds,
+      productNodeIds: options.channel.productNodeIds,
+      requiredGasDiffusion: null,
+      gasDiffusionOutput: null,
+    }));
+  });
+}
+
+// AI-REMOVED 2026-07-23:
+// Reason: 管道需要同时暴露 2 件与 1 件运输配方，并让统一效率排序优先尝试 2 件配方。
+// Trigger: 用户要求管道最高 2/s，但只有 1 件时仍可运输。
+// Evidence: .docs/common/模拟器/仿真运行原理.md v5 §6.2、§10.3。
+// Replacement: resolveTransportRecipePlans。
+// Risk: Medium - 管道输入和输出槽位必须同步扩容到 2。
+// Human Review: Required
+//
+// Original code:
+// const recipeId = `${options.device.definitionId}:${timing.recipeIdSuffix}`;
+// return [getOrCreateRecipePlan(options, recipeId, () => ({
+//   recipeId,
+//   recipeType: "reserved-item",
+//   durationTicks: timing.durationTicks,
+//   inputs: [{ itemId: "any", amount: 1 }],
+//   outputs: [{ itemId: "same-as-input", amount: 1 }],
+//   ingredientNodeIds: options.channel.ingredientNodeIds,
+//   productNodeIds: options.channel.productNodeIds,
+//   requiredGasDiffusion: null,
+//   gasDiffusionOutput: null,
+// }))];
 
 function getOrCreateRecipePlan(
   options: {

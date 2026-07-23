@@ -226,6 +226,12 @@ function searchUpstreamFromOutputNode(options: {
     return;
   }
 
+  // AI-CORRECTION 2026-07-23:
+  // 一般 PipeFamily 组件也受整数秒相位门禁约束；BeltFamily 锚点仍保持原有逐 tick 行为。
+  if (!canDeviceTransferAtCurrentPhase(options.topology, options.state, device)) {
+    return;
+  }
+
   if (!allDownstreamInputNodesResolved(options.topology, options.state, options.outputNode)) {
     return;
   }

@@ -189,13 +189,15 @@ describe("bridge-direction", () => {
 //   Tick 1: 入管 → Tick 11: 入桥 → Tick 21: 出桥 → Tick 31: 达宿
 // AI-CORRECTION 2026-05-18: dedicated pipe 以 10 标准 tick 相位接收/输出：
 //   Tick 10 入管 → Tick 20 入桥 → Tick 30 出桥 → Tick 40 达宿。
+// AI-CORRECTION 2026-07-23: 所有 PipeFamily 改为 20 tick 整秒周期：
+//   Tick 1 入管 → Tick 21 入桥 → Tick 41 出桥 → Tick 61 达宿，每次最多搬运 2 件。
 // =============================================================================
 
 function createPipeBridgeDirectionBlueprint(): BlueprintDocument {
   return createBlueprint("pipe-bridge-direction-verify", [
     createEntity("liquid-source-ew", "liquid_storager_1", -4, 0, 0, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-      "storageSlotGroups[0].slots[0].initialCount": 1,
+      "storageSlotGroups[0].slots[0].initialCount": 2,
     }),
     createEntity("pipe_ew_in", "pipe_straight_1x1", -1, 1, 0),
     createEntity("pipe-bridge", "pipe_connector", 0, 1, 0),
@@ -209,53 +211,73 @@ describe("pipe-bridge-direction", () => {
     const report = await runBlueprintSimulation({
       blueprint: createPipeBridgeDirectionBlueprint(),
       registry: createRegistryContract(),
-      maxTickNumber: 45,
+      maxTickNumber: 65,
     });
 
     // === Tick 1: 水进入首段管道 ===
     // AI-CORRECTION 2026-07-17: dedicated pipe 的首个交付相位前移到 tick 1。
     const tick1 = getTick(report, 1);
-    expect(tick1.transfers.some((t) =>
+    expect(tick1.transfers.filter((t) =>
       t.sourceSlotId.includes("device:liquid-source-ew")
       && t.targetSlotId.includes("device:pipe_ew_in"),
-    )).toBe(true);
+    )).toHaveLength(2);
 
     // === Tick 11: 水从管道进入桥接器 ===
-    const tick11 = getTick(report, 11);
-    expect(tick11.transfers.some((t) =>
+    // AI-CORRECTION 2026-07-23: 新整秒周期在 tick 21 入桥。
+    const tick21 = getTick(report, 21);
+    expect(tick21.transfers.filter((t) =>
       t.sourceSlotId.includes("device:pipe_ew_in")
       && t.targetSlotId.includes("device:pipe-bridge"),
-    )).toBe(true);
+    )).toHaveLength(2);
 
     // === Tick 12: 桥接器槽位隔离验证 ===
+    // AI-CORRECTION 2026-07-23: 入桥后的槽位隔离状态改在 tick 22 检查。
     // 水应在 ew_buffer，ns_buffer 应为空
-    const ewInSlot = findSlot(report, 12, "pipe-bridge", "ew_buffer", "ew_slot_1", "input-view");
+    const ewInSlot = findSlot(report, 22, "pipe-bridge", "ew_buffer", "ew_slot_1", "input-view");
     expect(ewInSlot.itemType).toBe("item_liquid_water");
-    expect(ewInSlot.count).toBeGreaterThan(0);
+    expect(ewInSlot.count).toBe(2);
+    expect(ewInSlot.reserved).toBe(2);
 
     // ns_buffer 应无物品（方向隔离）
-    const nsInSlot = findSlot(report, 12, "pipe-bridge", "ns_buffer", "ns_slot_1", "input-view");
+    const nsInSlot = findSlot(report, 22, "pipe-bridge", "ns_buffer", "ns_slot_1", "input-view");
     expect(nsInSlot.itemType).toBeNull();
     expect(nsInSlot.count).toBe(0);
 
     // === Tick 21: 水离开桥进入末段管道 ===
-    const tick21 = getTick(report, 21);
-    expect(tick21.transfers.some((t) =>
+    // AI-CORRECTION 2026-07-23: 新整秒周期在 tick 41 离桥。
+    const tick41 = getTick(report, 41);
+    expect(tick41.transfers.filter((t) =>
       t.sourceSlotId.includes("device:pipe-bridge")
       && t.targetSlotId.includes("device:pipe_ew_out"),
-    )).toBe(true);
+    )).toHaveLength(2);
 
     // === Tick 31: 水到达终点 ===
-    const tick31 = getTick(report, 31);
-    expect(tick31.transfers.some((t) =>
+    // AI-CORRECTION 2026-07-23: 新整秒周期在 tick 61 达宿。
+    const tick61 = getTick(report, 61);
+    expect(tick61.transfers.filter((t) =>
       t.targetSlotId.includes("device:liquid-sink-ew")
       && t.itemType === "item_liquid_water",
-    )).toBe(true);
+    )).toHaveLength(2);
 
     // === 最终：宿只有水，桥 ns_buffer 全程空 ===
-    const sinkEw = getDevice(report, 45, "liquid-sink-ew");
+    const sinkEw = getDevice(report, 65, "liquid-sink-ew");
     for (const slot of sinkEw.slotItems) {
       if (slot.count > 0) expect(slot.itemType).toBe("item_liquid_water");
     }
   });
 });
+
+// AI-REMOVED 2026-07-23:
+// Reason: 管道桥旧测试使用 0.5 秒单件时序，且只验证布尔意义上的“至少搬运 1 件”。
+// Trigger: 用户确认桥接器每个方向独立 2/s，所有管道只在整数秒搬运。
+// Evidence: 新测试在 tick 1/21/41/61 分别断言恰好 2 条搬运，并检查 EW 槽位 count/reserved=2。
+// Replacement: pipe-bridge-direction 中的 20 tick 时序与双件断言。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const tick11 = getTick(report, 11);
+// const ewInSlot = findSlot(report, 12, "pipe-bridge", "ew_buffer", "ew_slot_1", "input-view");
+// const tick21 = getTick(report, 21);
+// const tick31 = getTick(report, 31);
+// const sinkEw = getDevice(report, 45, "liquid-sink-ew");

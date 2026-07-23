@@ -223,6 +223,7 @@ function normalizePipeFamilyFluidDefinition(definition: EntityDefinitionInput): 
   // AI-CORRECTION 2026-07-18: acceptRuleFromPortKind 已改为默认返回 { kind: "fluid" }，
   //   因此本函数的 port acceptRule 转换与 slot itemFilterType 转换都已成为恒等映射。
   //   保留此函数作为安全网，避免旧蓝图或外部定义中仍有显式 { kind: "liquid" } 的残留。
+  // AI-CORRECTION 2026-07-23: PipeFamily 的所有显式流体槽位统一规范化为容量 2。
   if (!definition.tags.includes("PipeFamily")) {
     return definition;
   }
@@ -247,6 +248,7 @@ function normalizePipeFamilyFluidDefinition(definition: EntityDefinitionInput): 
             slots: storageSlotGroup.slots.map((slot) => ({
               ...slot,
               itemFilterType: slot.itemFilterType === "liquid" ? "fluid" : slot.itemFilterType,
+              capacity: 2,
             })),
           }
         : storageSlotGroup,
@@ -664,6 +666,7 @@ function acceptRuleFromPortKind(kind: PortGroupDefinition["kind"]): PortDefiniti
  *   - inputs: any(1) — 接受任意物品
  *   - outputs: same-as-input(1) — 输出与输入相同物品
  * 订正（2026-05-04）：传送带默认 2 秒；管道类设备在定义处显式传入 0.5 秒。
+ * AI-CORRECTION 2026-07-23: 管道现为 1 秒周期，并由运行时生成 2 件优先、1 件兜底的双配方。
  * 订正（2026-05-05）：推进阶段若输出缓存可接收，则立即写入产物、消耗原料并结束当前 run；仅在推进阶段无法完整输出时，才留待二次结算阶段处理。
  */
 // 订正（2026-05-06）：domain EntityDefinition 已移除 recipe 字段，createTransportRecipe 已删除。
@@ -1657,10 +1660,25 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   //   - Cache Link
   //   - reserved-item 搬运配方
   // 订正（2026-05-04）：管道类搬运配方时间为 0.5 秒。
+  // AI-CORRECTION 2026-07-23: 管道搬运周期改为 1 秒，每周期按库存选择 2 件或 1 件配方。
   //   - 仅物品域为 liquid
   // AI-CORRECTION 2026-07-10: 管道默认接受 fluid（liquid/gas），普通设备 fluid 槽位仍默认 liquid。
+  // AI-CORRECTION 2026-07-23: PipeFamily 的显式槽位容量统一改为 2；直管与弯管的 synthetic 槽位由编译器同步扩容。
   // 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks 字段，本注册表不再内联这些运行时配置。
   // =========================================================================
+
+  // AI-REMOVED 2026-07-23:
+  // Reason: 容量 1 无法容纳管道的 2 件优先配方。
+  // Trigger: 用户要求所有 PipeFamily 槽位容量上限统一为 2。
+  // Evidence: pipe_splitter、pipe_converger、pipe_connector(NS/EW)、pipe_admission 均使用显式槽位。
+  // Replacement: 对应 createSlots 容量数组改为 [2]，并由 normalizePipeFamilyFluidDefinition 兜底规范化。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // createSlots("slot", [1], "liquid")
+  // createSlots("ns_slot", [1], "liquid")
+  // createSlots("ew_slot", [1], "liquid")
 
   /**
    * pipe_straight_1x1 — 管道直段（1×1）
@@ -1821,7 +1839,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "fluid_buffer",
         "fluid",
-        createSlots("slot", [1], "liquid"),
+        createSlots("slot", [2], "liquid"),
         "share-cap",
       ),
     ],
@@ -1877,7 +1895,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "fluid_buffer",
         "fluid",
-        createSlots("slot", [1], "liquid"),
+        createSlots("slot", [2], "liquid"),
         "share-cap",
       ),
     ],
@@ -1958,13 +1976,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "ns_buffer",
         "fluid",
-        createSlots("ns_slot", [1], "liquid"),
+        createSlots("ns_slot", [2], "liquid"),
         "share-cap",
       ),
       createStorageSlotGroup(
         "ew_buffer",
         "fluid",
-        createSlots("ew_slot", [1], "liquid"),
+        createSlots("ew_slot", [2], "liquid"),
         "share-cap",
       ),
     ],
@@ -4388,7 +4406,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "fluid_buffer",
         "fluid",
-        createSlots("slot", [1], "liquid"),
+        createSlots("slot", [2], "liquid"),
         "share-cap",
       ),
     ],

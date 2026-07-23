@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { advanceDevices } from "@/simulation/runtime/stage-1-advance-devices";
+import { settleRecipes } from "@/simulation/runtime/stage-5-settle-recipes";
 import {
   createRecipeStatsState,
   createSimulationMutableRuntimeState,
@@ -13,6 +14,7 @@ import {
   getReservedAmount,
   resolveDeviceRecipePlans,
 } from "@/simulation/runtime/runtime-slot-access";
+import { canDeviceTransferAtCurrentPhase } from "@/simulation/runtime/phase-gating";
 import {
   isDynamicTickRateCompatibleWithTransferUnits,
 } from "@/simulation/tick-rate";
@@ -24,13 +26,32 @@ import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
 
 describe("REQ-080: dynamic simulation tick rate", () => {
   it("keeps only phase-safe dynamic tick rates for the current belt and pipe transfer units", () => {
-    const transferUnitTicks = [20, 10];
+    // AI-CORRECTION 2026-07-23: 管道周期由 10 tick 改为 20 tick，当前 belt/pipe 门禁单位均为 20 tick。
+    const transferUnitTicks = [20];
 
     expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 20, transferUnitTicks })).toBe(true);
     expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 10, transferUnitTicks })).toBe(true);
     expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 4, transferUnitTicks })).toBe(true);
     expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 2, transferUnitTicks })).toBe(true);
-    expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 5, transferUnitTicks })).toBe(false);
+    expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 5, transferUnitTicks })).toBe(true);
+    expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 8, transferUnitTicks })).toBe(false);
+  });
+
+  it("gates general PipeFamily anchors at integer-second phases", () => {
+    const topology = createProductionOverflowTopology(10);
+    const state = createSimulationMutableRuntimeState(topology);
+    const pipeAnchor = {
+      ...topology.devices["device:maker"]!,
+      tags: ["PipeFamily"],
+      transportClass: "anchor" as const,
+    };
+
+    state.tickNumber = 1;
+    expect(canDeviceTransferAtCurrentPhase(topology, state, pipeAnchor)).toBe(true);
+    state.tickNumber = 2;
+    expect(canDeviceTransferAtCurrentPhase(topology, state, pipeAnchor)).toBe(false);
+    state.tickNumber = 21;
+    expect(canDeviceTransferAtCurrentPhase(topology, state, pipeAnchor)).toBe(true);
   });
 
   it("adapts worker dynamic tick rate only through legal switch points", () => {
@@ -291,6 +312,21 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     expect(otherPlan).not.toBe(firstPlan);
   });
 
+  it("orders automatic recipes by output total, input total, then recipe id", () => {
+    const topology = createRecipePriorityTopology();
+    const state = createSimulationMutableRuntimeState(topology);
+    const device = topology.devices["device:maker"]!;
+    const channel = device.recipeChannels[0]!;
+
+    expect(resolveDeviceRecipePlans({ topology, state, device, channel })
+      .map((plan) => plan.recipeId)).toEqual([
+      "recipe:a-input-1",
+      "recipe:z-input-1",
+      "recipe:input-3",
+      "recipe:output-1",
+    ]);
+  });
+
   it("normalizes recipe stats by covered simulation ticks when dynamic runtime steps are coarser", () => {
     const stats = createRecipeStatsState(20);
 
@@ -326,7 +362,23 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     const state = createSimulationMutableRuntimeState(topology);
     state.persistent.devices["device:maker"]!.channelRecipes["main"] = createRunningRecipe(3);
 
-    advanceDevices(topology, state, 7);
+    const stage1AdvanceResult = advanceDevices(topology, state, 7);
+    expect(stage1AdvanceResult.overflowTicksByDeviceChannel["device:maker"]?.main).toBe(5);
+
+    expect(state.persistent.slots["slot:out"]).toMatchObject({
+      itemType: "item_test",
+      count: 1,
+    });
+    expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toBeNull();
+
+    settleRecipes(
+      topology,
+      state,
+      "infinite",
+      Infinity,
+      topology.totalPowerDemand,
+      stage1AdvanceResult,
+    );
 
     expect(state.persistent.slots["slot:out"]).toMatchObject({
       itemType: "item_test",
@@ -344,12 +396,14 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     const state = createSimulationMutableRuntimeState(topology);
     state.persistent.devices["device:maker"]!.channelRecipes["main"] = createRunningRecipe(3);
 
-    advanceDevices(topology, state, 9);
+    const stage1AdvanceResult = advanceDevices(topology, state, 9);
 
     expect(state.persistent.slots["slot:out"]).toMatchObject({
       itemType: "item_test",
       count: 1,
     });
+    expect(stage1AdvanceResult.overflowTicksByDeviceChannel["device:maker"]?.main)
+      .toBeUndefined();
     expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toMatchObject({
       recipeId: "recipe:test",
       progressTicks: 5,
@@ -431,6 +485,22 @@ describe("REQ-080: dynamic simulation tick rate", () => {
 
   });
 });
+
+// AI-REMOVED 2026-07-23:
+// Reason: 旧动态步长测试仍假设管道相位单位为 10 tick，旧溢出测试也假设 Stage1 会直接链式启动下一配方。
+// Trigger: 管道改为 1 秒周期，且所有新配方统一延后到 Stage5 启动。
+// Evidence: 新测试先断言 Stage1 返回 overflow=5 且 channel=null，再调用 Stage5 验证第二轮完成。
+// Replacement: transferUnitTicks=[20] 与 carries production overflow 测试中的 Stage1/Stage5 分段断言。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const transferUnitTicks = [20, 10];
+// advanceDevices(topology, state, 7);
+// expect(state.persistent.slots["slot:out"]).toMatchObject({
+//   itemType: "item_test",
+//   count: 2,
+// });
 
 function readProductionStatsAtSpeed(
   simulationSpeed: number,
@@ -578,6 +648,127 @@ function createProductionOverflowTopology(
       portOrder: [],
       physicalConnectionOrder: [],
       edgeOrder: [],
+    },
+  };
+}
+
+function createRecipePriorityTopology(): CompiledSimulationTopology {
+  const topology = createProductionOverflowTopology(10);
+  const maker = topology.devices["device:maker"]!;
+  const outputNode = topology.nodes["node:out"]!;
+  const outputSlot = topology.slots["slot:out"]!;
+
+  return {
+    ...topology,
+    topologyId: "topology:recipe-priority",
+    itemCatalog: {
+      ...topology.itemCatalog,
+      item_input: {
+        id: "item_input",
+        domain: "solid",
+        tags: [],
+      },
+    },
+    recipeCatalog: {
+      "recipe:a-input-1": {
+        id: "recipe:a-input-1",
+        nameKey: "recipe.a-input-1",
+        durationTicks: 5,
+        inputs: [{ itemId: "item_input", amount: 1 }],
+        outputs: [{ itemId: "item_test", amount: 2 }],
+        machineId: "test_machine",
+        recipeType: "immediate-consume",
+        powerOutput: 0,
+        requiredGasDiffusion: null,
+        gasDiffusionOutput: null,
+        tags: [],
+      },
+      "recipe:z-input-1": {
+        id: "recipe:z-input-1",
+        nameKey: "recipe.z-input-1",
+        durationTicks: 5,
+        inputs: [{ itemId: "item_input", amount: 1 }],
+        outputs: [{ itemId: "item_test", amount: 2 }],
+        machineId: "test_machine",
+        recipeType: "immediate-consume",
+        powerOutput: 0,
+        requiredGasDiffusion: null,
+        gasDiffusionOutput: null,
+        tags: [],
+      },
+      "recipe:input-3": {
+        id: "recipe:input-3",
+        nameKey: "recipe.input-3",
+        durationTicks: 5,
+        inputs: [{ itemId: "item_input", amount: 3 }],
+        outputs: [{ itemId: "item_test", amount: 2 }],
+        machineId: "test_machine",
+        recipeType: "immediate-consume",
+        powerOutput: 0,
+        requiredGasDiffusion: null,
+        gasDiffusionOutput: null,
+        tags: [],
+      },
+      "recipe:output-1": {
+        id: "recipe:output-1",
+        nameKey: "recipe.output-1",
+        durationTicks: 5,
+        inputs: [],
+        outputs: [{ itemId: "item_test", amount: 1 }],
+        machineId: "test_machine",
+        recipeType: "immediate-consume",
+        powerOutput: 0,
+        requiredGasDiffusion: null,
+        gasDiffusionOutput: null,
+        tags: [],
+      },
+    },
+    devices: {
+      "device:maker": {
+        ...maker,
+        nodeIds: ["node:in", "node:out"],
+        recipeChannels: [{
+          ...maker.recipeChannels[0]!,
+          ingredientNodeIds: ["node:in"],
+          productNodeIds: ["node:out"],
+        }],
+      },
+    },
+    nodes: {
+      "node:in": {
+        id: "node:in",
+        deviceId: "device:maker",
+        sourceStorageSlotGroupId: "input",
+        viewRole: "input-view",
+        slotIds: ["slot:in"],
+        inputPortIds: [],
+        outputPortIds: [],
+        groupOrder: 0,
+      },
+      "node:out": {
+        ...outputNode,
+        groupOrder: 1,
+      },
+    },
+    slots: {
+      "slot:in": {
+        id: "slot:in",
+        nodeId: "node:in",
+        sourceStorageSlotGroupId: "input",
+        sourceSlotId: "slot_1",
+        capacity: 10,
+        domain: "solid",
+        lock: null,
+        initialItemType: "item_input",
+        initialCount: 10,
+        ignoreStock: false,
+      },
+      "slot:out": outputSlot,
+    },
+    ordering: {
+      ...topology.ordering,
+      nodeOrder: ["node:in", "node:out"],
+      slotOrder: ["slot:in", "slot:out"],
     },
   };
 }

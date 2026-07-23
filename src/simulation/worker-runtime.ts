@@ -1481,7 +1481,7 @@ export class SimulationWorkerRuntime {
       }
 
       const t0 = this.perfEnabled ? performance.now() : 0;
-      advanceDevices(
+      const stage1AdvanceResult = advanceDevices(
         this.topology,
         this.runtimeState,
         runtimeStepTicks,
@@ -1489,6 +1489,16 @@ export class SimulationWorkerRuntime {
         effectiveGeneration,
         this.effectiveTotalPowerDemand,
       );
+      // AI-REMOVED 2026-07-23:
+      // Reason: Stage1 结果是 advanceDevices 的返回值，不能作为尚未初始化的实参传入自身调用。
+      // Trigger: 接入 Stage1 → Stage5 溢出交接时首次装配位置错误。
+      // Evidence: TypeScript 会报告 stage1AdvanceResult 在声明前被使用。
+      // Replacement: 下方 settleRecipes 的最后一个参数。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // stage1AdvanceResult,
       applyWaterPurifierManualOutput(
         this.topology,
         this.runtimeState,
@@ -1549,6 +1559,7 @@ export class SimulationWorkerRuntime {
         this.powerMode,
         effectiveGeneration,
         this.effectiveTotalPowerDemand,
+        stage1AdvanceResult,
       );
       applyBlockageAutoClearance(this.topology, this.runtimeState);
       if (this.perfEnabled) {
