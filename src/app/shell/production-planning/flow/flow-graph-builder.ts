@@ -491,7 +491,7 @@ function addLedgerLink(
   itemId: string,
   value: number,
   context: LedgerBuildContext,
-  options: Pick<ProductionFlowLink, "preferredFeedback" | "sourceSide" | "targetSide" | "isDeviceMinimumConsumption"> = {},
+  options: Partial<Pick<ProductionFlowLink, "preferredFeedback" | "sourceSide" | "targetSide" | "isDeviceMinimumConsumption">> = {},
 ): void {
   if (value <= FLOW_EPSILON) {
     return;
@@ -508,8 +508,8 @@ function addLedgerLink(
     value: nextValue,
     title: resolveProductionPlanningItemName(itemId, context.index, context.translate),
     label: `${formatProductionFlow(nextValue)}/min`,
-    isDeviceMinimumConsumption: options.isDeviceMinimumConsumption ?? false,
     ...options,
+    isDeviceMinimumConsumption: options.isDeviceMinimumConsumption ?? false,
   });
 }
 
@@ -671,6 +671,7 @@ function addLink(
     ...link,
     title: resolveProductionPlanningItemName(link.itemId, context.index, context.translate),
     label: `${formatProductionFlow(link.value)}/min`,
+    isDeviceMinimumConsumption: false,
   });
 }
 
@@ -751,6 +752,7 @@ function _archivedCollapseRecipeNodes(input: ProductionFlowGraphInput): Producti
           value,
           title: recipeNode?.title ?? outLink.title,
           label,
+          isDeviceMinimumConsumption: false,
         });
         edgeIndex += 1;
       }
@@ -839,6 +841,7 @@ function _archivedCollapseItemNodes(input: ProductionFlowGraphInput): Production
           value,
           title: itemNode?.title ?? itemId,
           label,
+          isDeviceMinimumConsumption: false,
         });
         edgeIndex += 1;
       }

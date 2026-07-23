@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import type {
   SimulationDeviceRuntimeChannelRecipeStatus,
   SimulationDeviceRuntimeStatusReadModel,
@@ -78,7 +77,7 @@ export function SimulationRecipeStatusRuntimeInspector({
   definition,
 }: SimulationRecipeStatusRuntimeInspectorProps) {
   // 气体环境 tag（必须在所有 early return 之前调用，遵循 hooks 规则）
-  const gasEnvTag = useMemo(() => {
+  const gasEnvTag = (() => {
     if (!appHost || !entity || !definition) return null;
 
     // 先判断该设备是否有任意配方需要气体环境
@@ -112,7 +111,7 @@ export function SimulationRecipeStatusRuntimeInspector({
           : "未处于气体环境"}
       </span>
     );
-  }, [appHost, entity, definition, index, t, runtimeStatus]);
+  })();
 
   if (channelIds.length === 0) return null;
 

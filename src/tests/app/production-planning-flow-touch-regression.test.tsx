@@ -83,6 +83,7 @@ function createMockGraphInput(): {
         itemId: "item_iron_ore",
         title: "铁矿",
         label: "60/min",
+        isDeviceMinimumConsumption: false,
       },
       {
         id: "link-smelt-plate",
@@ -92,6 +93,7 @@ function createMockGraphInput(): {
         itemId: "item_iron_plate",
         title: "铁板",
         label: "60/min",
+        isDeviceMinimumConsumption: false,
       },
     ],
   };
@@ -133,6 +135,7 @@ function createMockPlantSeedCycleGraphInput(): {
         itemId: "item_plant_bbflower_1",
         title: "酮化灌木",
         label: "30/min",
+        isDeviceMinimumConsumption: false,
         preferredFeedback: true,
         targetSide: "right",
       },
@@ -144,6 +147,7 @@ function createMockPlantSeedCycleGraphInput(): {
         itemId: "item_plant_bbflower_seed_1",
         title: "酮化树种",
         label: "60/min",
+        isDeviceMinimumConsumption: false,
         sourceSide: "left",
       },
     ],
