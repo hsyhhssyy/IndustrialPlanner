@@ -387,6 +387,27 @@ describe("物流布设模式完全测试集", () => {
     });
   });
 
+  it("断头管道末端前一格起笔-空地起笔关闭时从5,4布设到6,4生成直管", () => {
+    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_PIPE_DEADEND);
+
+    // 关闭空地起笔，此时仅允许从设备端口或断头物流末端前一格起笔
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = false;
+    });
+
+    enterPipeLogisticsPlacement(appHost);
+
+    clickCell(appHost, editorHost, { x: 5, y: 4 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 6, y: 4 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 6, y: 4 }, nextPointerId++);
+
+    expectEntityAt(editorHost, {
+      definitionId: "pipe_straight_1x1",
+      position: { x: 5, y: 4 },
+      rotation: 0,
+    });
+  });
+
 });
 
 
@@ -735,6 +756,77 @@ const USER_PROVIDED_BLUEPRINT_SCENE4: BlueprintDocument = {
   slotLinks: [],
   createdAt: "2026-07-22T13:26:26.853Z",
   updatedAt: "2026-07-22T13:26:26.853Z",
+};
+
+const USER_PROVIDED_BLUEPRINT_PIPE_DEADEND: BlueprintDocument = {
+  schemaVersion: 3,
+  blueprintId: "833b49ea-c832-470f-be0b-043b16890b8f",
+  version: "v1.3.0",
+  name: "未命名蓝图-20260723105623",
+  description: "",
+  baseId: "stm_hongs_3",
+  initialGridPoint: { x: 4, y: 3 },
+  entities: {
+    "logistics-draft:pipe:1:0": {
+      id: "logistics-draft:pipe:1:0",
+      definitionId: "pipe_straight_1x1",
+      position: { x: 3, y: 4 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "pipe_splitter:1": {
+      id: "pipe_splitter:1",
+      definitionId: "pipe_splitter",
+      position: { x: 5, y: 1 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "pipe_splitter:2": {
+      id: "pipe_splitter:2",
+      definitionId: "pipe_splitter",
+      position: { x: 2, y: 4 },
+      rotation: 270,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:pipe:2:1": {
+      id: "logistics-draft:pipe:2:1",
+      definitionId: "pipe_straight_1x1",
+      position: { x: 4, y: 4 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:pipe:5:0": {
+      id: "logistics-draft:pipe:5:0",
+      definitionId: "pipe_straight_1x1",
+      position: { x: 5, y: 2 },
+      rotation: 90,
+      config: {},
+      tags: [],
+    },
+    "logistics-draft:pipe:6:1": {
+      id: "logistics-draft:pipe:6:1",
+      definitionId: "pipe_straight_1x1",
+      position: { x: 5, y: 3 },
+      rotation: 90,
+      config: {},
+      tags: [],
+    },
+  },
+  entityOrder: [
+    "logistics-draft:pipe:1:0",
+    "pipe_splitter:1",
+    "pipe_splitter:2",
+    "logistics-draft:pipe:2:1",
+    "logistics-draft:pipe:5:0",
+    "logistics-draft:pipe:6:1",
+  ],
+  slotLinks: [],
+  createdAt: "2026-07-23T02:56:24.419Z",
+  updatedAt: "2026-07-23T02:56:24.419Z",
 };
 
 function createWorkspace(): WorkspaceContract {

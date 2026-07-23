@@ -131,6 +131,16 @@ function advanceChannelRecipe(options: {
 
     if (nextRecipe.recipeType === "immediate-consume") {
       consumeSelections(options.state.persistent.slots, nextRecipe.reservations);
+      // 记录 immediate-consume 链式启动的消耗统计（仅生产设备）
+      // AI-CORRECTION 2026-07-23: stage-5 startIdleDevices 已记录首次启动的消耗，
+      // 但 advanceChannelRecipe 链式启动下一轮时遗漏了，导致持续运行的 immediate-consume
+      // 设备（如提纯机）从第二轮起 consumedPerMinute 恒为 0。
+      if (options.device.isProducer) {
+        const delta = options.state.transient.recipeStatsDelta;
+        for (const input of nextRecipe.inputItems) {
+          delta.consumed[input.itemType] = (delta.consumed[input.itemType] ?? 0) + input.amount;
+        }
+      }
       nextRecipe.reservations = [];
     } else {
       adjustReservedAmounts(options.state, nextRecipe.reservations, 1);
