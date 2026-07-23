@@ -403,13 +403,45 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       count: 1,
     });
     expect(stage1AdvanceResult.overflowTicksByDeviceChannel["device:maker"]?.main)
-      .toBeUndefined();
+      .toBe(7);
+    expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toBeNull();
+
+    settleRecipes(
+      topology,
+      state,
+      "infinite",
+      Infinity,
+      topology.totalPowerDemand,
+      stage1AdvanceResult,
+    );
+
+    expect(state.persistent.slots["slot:out"]).toMatchObject({
+      itemType: "item_test",
+      count: 1,
+    });
     expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toMatchObject({
       recipeId: "recipe:test",
       progressTicks: 5,
       state: "waiting-output",
     });
   });
+
+  // AI-REMOVED 2026-07-23:
+  // Reason: Stage1 已成功完成旧配方时必须保存 overflow=7；输出阻塞发生在 Stage5 尝试完成下一配方时。
+  // Trigger: 手动全量测试发现该用例错误地把 Stage5 的“阻塞后丢弃溢出”提前断言在 Stage1。
+  // Evidence: Stage1 完成后输出槽由 0 变为 1 且 channel=null，说明旧配方成功，overflow 必须交接给 Stage5。
+  // Replacement: 先断言 overflow=7 与 channel=null，再调用 settleRecipes 验证下一配方停在 waiting-output。
+  // Risk: None
+  // Human Review: Required
+  //
+  // Original code:
+  // expect(stage1AdvanceResult.overflowTicksByDeviceChannel["device:maker"]?.main)
+  //   .toBeUndefined();
+  // expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toMatchObject({
+  //   recipeId: "recipe:test",
+  //   progressTicks: 5,
+  //   state: "waiting-output",
+  // });
 
   it("does not commit partial recipe outputs when local transaction preflight fails", () => {
     const topology = createProductionOverflowTopology(1);
