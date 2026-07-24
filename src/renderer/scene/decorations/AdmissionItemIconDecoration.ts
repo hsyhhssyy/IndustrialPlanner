@@ -10,6 +10,8 @@ import {
 } from "@/renderer/sprites/generic-device-sprite";
 import type { RenderTextureConfig } from "@/renderer/texture/texture-config";
 
+import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression";
+
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 import { createEntityDefinitionMap } from "./BeltVisualGeometry";
@@ -43,7 +45,7 @@ interface AdmissionItemIconDecoration extends DecorationLayer {
  * 当准入口设备（item_log_admission / item_pipe_admission）设置了准入物品时，
  * AI-CORRECTION 2026-07-19: 当前设备定义 ID 为 log_admission / pipe_admission；上行保留迁移前名称。
  * 在设备中心渲染 圆圈 + 物品图标，与主要产物图标样式一致。
- * 无视所有标签压制（BeltFamily/PipeFamily）和设置开关，始终显示。
+ * AI-CORRECTION 2026-07-24: 准入口被压制时，对应物品图标也隐藏。
  */
 export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration {
   const container = new Container();
@@ -218,6 +220,10 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
         return;
       }
 
+      const editorState = ctx.renderHost.workspace.editor?.state;
+      const suppressBelts = editorState?.suppressBelts ?? false;
+      const suppressPipes = editorState?.suppressPipes ?? false;
+
       const definitionMap = createEntityDefinitionMap(ctx);
       const vs = ctx.viewportState;
       const vb = ctx.viewportBounds;
@@ -239,6 +245,15 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
       let viewIndex = 0;
 
       for (const entity of entities) {
+        // 被压制的准入口不显示物品图标
+        if (isLogisticsDefinitionSuppressed({
+          definitionId: entity.definitionId,
+          suppressBelts,
+          suppressPipes,
+        })) {
+          continue;
+        }
+
         const definition = definitionMap.get(entity.definitionId);
         if (definition === undefined) {
           continue;
