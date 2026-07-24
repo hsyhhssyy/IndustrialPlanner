@@ -1,3 +1,4 @@
+import { ADMISSION_RATE_WINDOWS_PER_MINUTE } from "@/domain/registry";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { GridRotation } from "@/domain/shared/grid";
 import { rotateGridRotation } from "@/shared/geometry/grid";
@@ -5,7 +6,6 @@ import { rotateGridRotation } from "@/shared/geometry/grid";
 export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 4;
 
 const ADMISSION_RULE_CONFIG_PATH = "portGroups[0].ports[0].admissionRule";
-const ADMISSION_RATE_STEP_PER_MINUTE = 6;
 const ADMISSION_RATE_MAX_BY_DEFINITION_ID: Readonly<Record<string, number>> = {
   log_admission: 30,
   pipe_admission: 120,
@@ -246,8 +246,8 @@ function applyAdmissionRateConfigMigration<TEntity extends WorldEntity>(
     const normalizedRate = Math.min(
       maximumRate,
       Math.max(
-        ADMISSION_RATE_STEP_PER_MINUTE,
-        Math.ceil(rawRate / ADMISSION_RATE_STEP_PER_MINUTE) * ADMISSION_RATE_STEP_PER_MINUTE,
+        ADMISSION_RATE_WINDOWS_PER_MINUTE,
+        Math.ceil(rawRate / ADMISSION_RATE_WINDOWS_PER_MINUTE) * ADMISSION_RATE_WINDOWS_PER_MINUTE,
       ),
     );
     if (rawRate === normalizedRate) {

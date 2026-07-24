@@ -14,6 +14,10 @@ export const BELT_TRANSPORT_DURATION_SECONDS = 2;
 /** AI-CORRECTION 2026-07-23: 管道改为每整数秒结算一次，由 2 件与 1 件配方实现最高 2/s、单件可送。 */
 export const PIPE_TRANSPORT_DURATION_SECONDS = 1;
 
+/** 准入口速率窗口数 — 每分钟被均分为 N 个等长窗口，每窗额度 = perMinuteLimit / N。 */
+/** AI-CORRECTION 2026-07-24: 提升为 registry 层常量为三处模块（app / shared / simulation）的统一真源。 */
+export const ADMISSION_RATE_WINDOWS_PER_MINUTE = 6;
+
 // AI-REMOVED 2026-07-23:
 // Reason: 0.5 秒单件配方无法表达“只在整数秒运输、单次最多 2 件”的离散门禁模型。
 // Trigger: 用户确认管道采用每秒 2 件优先、1 件兜底的双配方。

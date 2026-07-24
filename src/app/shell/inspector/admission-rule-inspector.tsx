@@ -18,6 +18,7 @@ import LucideTrash2 from "~icons/lucide/trash-2";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
+import { ADMISSION_RATE_WINDOWS_PER_MINUTE } from "@/domain/registry";
 import type {
   EntityAcceptRuleDefinition,
   EntityAdmissionRuleDefinition,
@@ -36,7 +37,6 @@ import { matchesItemAcceptRule } from "./item-domain";
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
 
-const ADMISSION_RATE_STEP_PER_MINUTE = 6;
 const LOG_ADMISSION_RATE_MAX_PER_MINUTE = 30;
 const PIPE_ADMISSION_RATE_MAX_PER_MINUTE = 120;
 
@@ -188,7 +188,7 @@ export function AdmissionRuleInspector({
       [row.admissionRulePath]: {
         itemId: row.selectedItemId,
         limit: row.limit,
-        perMinuteLimit: enabled ? ADMISSION_RATE_STEP_PER_MINUTE : null,
+        perMinuteLimit: enabled ? ADMISSION_RATE_WINDOWS_PER_MINUTE : null,
       } satisfies EntityAdmissionRuleDefinition,
     });
   };
@@ -201,8 +201,8 @@ export function AdmissionRuleInspector({
     const nextRate = Math.min(
       row.maximumPerMinuteLimit,
       Math.max(
-        ADMISSION_RATE_STEP_PER_MINUTE,
-        row.perMinuteLimit + delta * ADMISSION_RATE_STEP_PER_MINUTE,
+        ADMISSION_RATE_WINDOWS_PER_MINUTE,
+        row.perMinuteLimit + delta * ADMISSION_RATE_WINDOWS_PER_MINUTE,
       ),
     );
     if (nextRate === row.perMinuteLimit) {
@@ -398,7 +398,7 @@ export function AdmissionRuleInspector({
                 disabled={
                   row.selectedItemId === null
                   || !rateEnabled
-                  || (row.perMinuteLimit ?? 0) <= ADMISSION_RATE_STEP_PER_MINUTE
+                  || (row.perMinuteLimit ?? 0) <= ADMISSION_RATE_WINDOWS_PER_MINUTE
                 }
                 onClick={() => {
                   stepRate(-1);

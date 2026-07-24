@@ -1,3 +1,6 @@
+import {
+  ADMISSION_RATE_WINDOWS_PER_MINUTE,
+} from "@/domain/registry";
 import type {
   CompiledSimulationDevice,
   CompiledSimulationRecipePlan,
@@ -9,7 +12,6 @@ import type {
 
 /** 基地电池满容量（焦耳）= 100MJ。940kW 负载约 106 秒耗尽。 */
 export const BASE_BATTERY_CAPACITY_J = 100_000_000;
-const ADMISSION_RATE_WINDOWS_PER_MINUTE = 6;
 
 export type RuntimeShadowState = "uncertain" | "accept" | "moved";
 
