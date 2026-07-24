@@ -720,6 +720,32 @@ describe("createEditorHost", () => {
     expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint)).toBeNull();
   });
 
+  it("skips a suppressed pipe admission and hits the overlapping belt", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("belt", "belt_straight_1x1", 5, 5),
+      createTestEntity("pipe-admission", "pipe_admission", 5, 5),
+    ]));
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+
+    const hitPoint = resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 5 });
+
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint)?.id).toBe("pipe-admission");
+
+    editorHost.actions.setLogisticsSuppression("pipe", true);
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint)?.id).toBe("belt");
+
+    editorHost.actions.setLogisticsSuppression("belt", true);
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint)).toBeNull();
+  });
+
   it("finds draft entities at a client pixel point and prioritizes them over document entities", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -1097,6 +1123,30 @@ describe("createEditorHost", () => {
 
     expect(editorHost.state.collections.selection).toEqual([
       "pipe",
+      "machine",
+    ]);
+  });
+
+  it("excludes suppressed accessory logistics from marquee range", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("belt-admission", "log_admission", 1, 1),
+      createTestEntity("pipe-admission", "pipe_admission", 2, 1),
+      createTestEntity("machine", "storager_1", 3, 1),
+    ]));
+
+    editorHost.actions.setLogisticsSuppression("pipe", true);
+    editorHost.actions.setMarqueeRange(EntityCollectionType.marquee, {
+      x: 1,
+      y: 1,
+      width: 3,
+      height: 1,
+    });
+
+    expect(editorHost.state.collections.marquee).toEqual([
+      "belt-admission",
       "machine",
     ]);
   });

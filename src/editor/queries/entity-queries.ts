@@ -11,6 +11,7 @@ import {
   getRotatedGridFootprint,
   type GridArea,
 } from "@/shared/geometry/grid";
+import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression";
 
 import {
   resolveEntityById,
@@ -132,14 +133,12 @@ export function createEditorEntityQueries({
           })
         ) {
           // 被抑制的物流设备不参与命中检测
-          if (workspace.registry.queries.isDedicatedLogisticsDevice(entity.definitionId)) {
-            const kind = workspace.registry.queries.resolveDedicatedLogisticsKind(entity.definitionId);
-            if (
-              (kind === "belt" && state.suppressBelts)
-              || (kind === "pipe" && state.suppressPipes)
-            ) {
-              continue;
-            }
+          if (isLogisticsDefinitionSuppressed({
+            definitionId: entity.definitionId,
+            suppressBelts: state.suppressBelts,
+            suppressPipes: state.suppressPipes,
+          })) {
+            continue;
           }
 
           return entity;

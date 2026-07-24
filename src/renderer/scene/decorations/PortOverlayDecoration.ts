@@ -7,6 +7,7 @@ import type { GridEdge, GridPoint, GridRectSize, GridRotation } from "@/domain/s
 import type { LogisticsDraftReadonlyState, LogisticsKind, LogisticsPortDirection, LogisticsPortKind } from "@/domain/shared/logistics";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
+import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 
 import type { DecorationLayer } from "./DecorationLayer";
@@ -202,7 +203,13 @@ export function createPortOverlayDecoration(): DecorationLayer {
         return;
       }
 
-      const entities = editor.queries.listEntities();
+      const entities = editor.queries.listEntities().filter((entity) =>
+        !isLogisticsDefinitionSuppressed({
+          definitionId: entity.definitionId,
+          suppressBelts: editor.state.suppressBelts,
+          suppressPipes: editor.state.suppressPipes,
+        })
+      );
       const entityDefinitionMap = new Map(
         ctx.renderHost.workspace.registry.entityDefinitions.map((definition) => [
           definition.id,

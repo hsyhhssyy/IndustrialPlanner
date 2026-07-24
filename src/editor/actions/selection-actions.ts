@@ -9,6 +9,7 @@ import {
   getRotatedGridFootprint,
   rotateGridRotation,
 } from "@/shared/geometry/grid";
+import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression";
 import { resolveWorldPointFromViewportPoint } from "@/shared/geometry/viewport-transform";
 
 import { type DraftEntity, isDraftEntity } from "../draft-entity";
@@ -97,17 +98,12 @@ export function createEditorSelectionActions({
 
     collection.push(entity.id);
   };
-  const isSuppressedDedicatedLogisticsEntity = (entity: WorldEntity): boolean => {
-    if (!workspace.registry.queries.isDedicatedLogisticsDevice(entity.definitionId)) {
-      return false;
-    }
-
-    const kind = workspace.registry.queries.resolveDedicatedLogisticsKind(entity.definitionId);
-    return (
-      (kind === "belt" && state.suppressBelts)
-      || (kind === "pipe" && state.suppressPipes)
-    );
-  };
+  const isSuppressedLogisticsEntity = (entity: WorldEntity): boolean =>
+    isLogisticsDefinitionSuppressed({
+      definitionId: entity.definitionId,
+      suppressBelts: state.suppressBelts,
+      suppressPipes: state.suppressPipes,
+    });
   const entityDefinitionMap = new Map(
     workspace.registry.entityDefinitions.map((definition) => [
       definition.id,
@@ -1103,7 +1099,7 @@ export function createEditorSelectionActions({
           gridRect,
           entityDefinitionMap,
         }))
-        .filter((entity) => !isSuppressedDedicatedLogisticsEntity(entity))
+        .filter((entity) => !isSuppressedLogisticsEntity(entity))
         .map((entity) => entity.id);
 
       marquee.replace(nextEntityIds);
@@ -1121,7 +1117,7 @@ export function createEditorSelectionActions({
           drafts: state.drafts,
         });
 
-        if (entity === null || isSuppressedDedicatedLogisticsEntity(entity)) {
+        if (entity === null || isSuppressedLogisticsEntity(entity)) {
           continue;
         }
 
@@ -1137,7 +1133,7 @@ export function createEditorSelectionActions({
           drafts: state.drafts,
         });
 
-        if (entity === null || isSuppressedDedicatedLogisticsEntity(entity)) {
+        if (entity === null || isSuppressedLogisticsEntity(entity)) {
           continue;
         }
 

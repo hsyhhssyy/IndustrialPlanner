@@ -5,6 +5,7 @@ import type { EditorContract } from "@/domain/editor/editor-contract";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { GridPoint } from "@/domain/shared/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression";
 
 type EntityCandidateFilter = (entity: WorldEntity) => boolean;
 
@@ -18,6 +19,7 @@ export function resolveOverlappingEntityCandidatesAtClientPoint(options: {
   const listEntities = resolveListEntitiesFn(options.editor);
   if (listEntities === null) {
     return options.pointerEntity !== null
+      && !isSuppressedLogisticsEntity(options.appHost, options.pointerEntity.definitionId)
       && (options.filterCandidate?.(options.pointerEntity) ?? true)
       ? [options.pointerEntity]
       : [];
@@ -31,6 +33,7 @@ export function resolveOverlappingEntityCandidatesAtClientPoint(options: {
   const entityDefinitions = resolveEntityDefinitions(options.appHost);
   if (entityDefinitions === null) {
     return options.pointerEntity !== null
+      && !isSuppressedLogisticsEntity(options.appHost, options.pointerEntity.definitionId)
       && (options.filterCandidate?.(options.pointerEntity) ?? true)
       ? [options.pointerEntity]
       : [];
@@ -60,7 +63,7 @@ export function resolveOverlappingEntityCandidatesAtClientPoint(options: {
       continue;
     }
 
-    if (isSuppressedDedicatedLogisticsEntity(options.appHost, entity.definitionId)) {
+    if (isSuppressedLogisticsEntity(options.appHost, entity.definitionId)) {
       continue;
     }
 
@@ -168,20 +171,20 @@ function resolveListEntitiesFn(
   return typeof queriesWithList.listEntities === "function" ? queriesWithList.listEntities : null;
 }
 
-function isSuppressedDedicatedLogisticsEntity(
+function isSuppressedLogisticsEntity(
   appHost: AppHost,
   definitionId: string,
 ): boolean {
   const editor = appHost.workspace.editor;
-  if (editor === null || !appHost.workspace.registry.queries.isDedicatedLogisticsDevice(definitionId)) {
+  if (editor === null) {
     return false;
   }
 
-  const kind = appHost.workspace.registry.queries.resolveDedicatedLogisticsKind(definitionId);
-  return (
-    (kind === "belt" && editor.state.suppressBelts)
-    || (kind === "pipe" && editor.state.suppressPipes)
-  );
+  return isLogisticsDefinitionSuppressed({
+    definitionId,
+    suppressBelts: editor.state.suppressBelts,
+    suppressPipes: editor.state.suppressPipes,
+  });
 }
 
 function isGridCellInsideEntity(options: {

@@ -17,10 +17,12 @@ import {
 } from "@/shared/geometry/grid"
 import { WORLD_GRID_CELL_PIXEL_SIZE, resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform"
 import type { GridRectSize, GridRotation } from "@/domain/shared/grid"
+import type { LogisticsKind } from "@/domain/shared/logistics"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { RenderHost } from "@/renderer/renderer-host"
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
+import { resolveAccessoryLogisticsSuppressionFamily } from "@/shared/logistics-suppression"
 import {
   readSimplifiedDeviceIconPreference,
   resolveDeviceBodyTextureKey,
@@ -57,6 +59,8 @@ const SCANLINE_TEXTURE_PATH = createPublicAssetUrl("textures/scanline-45deg-50op
 /** 扫描线超出设备边界的像素 padding（按 tile 个数 × 纹理原始宽度） */
 const SCANLINE_PADDING_TILES = 2;
 const SCANLINE_SCROLL_INTERVAL_MS = 2000;
+const SUPPRESSED_BELT_COLOR = 0xFFD54A;
+const SUPPRESSED_PIPE_COLOR = 0x448AFF;
 
 // AI-REMOVED 2026-06-14:
 // Reason: selection 不再使用 blueprint-mask 纹理，改为 scanline
@@ -227,6 +231,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private currentDeviceNameText: string | null = null
   private currentDeviceNameStyleKey: string | null = null
   private currentGridCellPixelSize = WORLD_GRID_CELL_PIXEL_SIZE
+  private currentSuppressedAccessoryFamily: LogisticsKind | null = null
   private textureLoadVersion = 0
   private deviceIconLoadVersion = 0
   private isDeviceIconReady = false
@@ -440,12 +445,19 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.currentLayout = layout
     this.currentGridCellPixelSize = this.resolveWorkspaceGridCellPixelSize(context)
     this.currentFootprintLayout = this.computeFootprintLayout(layout, context)
+    this.currentSuppressedAccessoryFamily = this.resolveSuppressedAccessoryFamily(context)
     this.syncDeviceTextures(context)
+
+    if (this.currentSuppressedAccessoryFamily !== null) {
+      this.hideSuppressedAccessoryBody()
+      return
+    }
 
     if (!this.isTextureReady) {
       return
     }
 
+    this.body.visible = true
     this.applyLayout(layout)
   }
 
@@ -453,7 +465,13 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
-    void context
+    this.currentSuppressedAccessoryFamily = this.resolveSuppressedAccessoryFamily(context)
+    if (this.currentSuppressedAccessoryFamily !== null) {
+      this.hideSuppressedAccessoryBody()
+      return
+    }
+
+    this.body.visible = this.isTextureReady
     this.syncDeviceLabel(layout)
   }
 
@@ -669,6 +687,18 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
+    if (this.currentSuppressedAccessoryFamily !== null) {
+      this.selectionEffectRoot.visible = false
+      this.defaultCollectionOverlayGraphics?.clear()
+      this.portOverlayRoot.visible = false
+      this.drawSuppressedAccessoryScanline(
+        layout,
+        context,
+        this.currentSuppressedAccessoryFamily,
+      )
+      return
+    }
+
     this.syncDeviceLabel(layout);
 
     if (this.shouldDrawLogisticsEndpointOverlay(context)) {
@@ -729,6 +759,56 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         width: options.width,
         color: options.color,
       });
+  }
+
+  private resolveSuppressedAccessoryFamily(
+    context: RenderSpriteSyncContext,
+  ): LogisticsKind | null {
+    const family = resolveAccessoryLogisticsSuppressionFamily(this.definition.id)
+    if (family === "belt" && context.suppressBelts) {
+      return family
+    }
+    if (family === "pipe" && context.suppressPipes) {
+      return family
+    }
+    return null
+  }
+
+  private hideSuppressedAccessoryBody(): void {
+    this.body.visible = false
+    this.deviceLabelRoot.visible = false
+    this.primaryOutputRoot.visible = false
+    this.portOverlayRoot.visible = false
+    this.hidePortChevronSprites()
+    this.hidePortCrossSprites()
+  }
+
+  private drawSuppressedAccessoryScanline(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+    family: LogisticsKind,
+  ): void {
+    this.loadScanlineTexture()
+
+    const footprintLayout = this.currentFootprintLayout ?? layout
+    const tilePixelSize = this.scanlineTexture?.width ?? 64
+    const phase = (context.time.nowMs % SCANLINE_SCROLL_INTERVAL_MS) / SCANLINE_SCROLL_INTERVAL_MS
+
+    this.scanlineTiling.visible = true
+    this.scanlineTiling.x = footprintLayout.x + footprintLayout.width / 2
+    this.scanlineTiling.y = footprintLayout.y + footprintLayout.height / 2
+    this.scanlineTiling.rotation = 0
+    this.scanlineTiling.width = footprintLayout.width
+    this.scanlineTiling.height = footprintLayout.height
+    this.scanlineTiling.tint = family === "belt"
+      ? SUPPRESSED_BELT_COLOR
+      : SUPPRESSED_PIPE_COLOR
+    this.scanlineTiling.tilePosition.x = phase * tilePixelSize
+    this.scanlineTiling.mask = null
+
+    this.previewBorderGraphics.clear()
+    this.previewBorderGraphics.visible = false
+    this.previewEffectRoot.visible = true
   }
 
   private loadScanlineTexture(): void {
@@ -805,7 +885,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.previewMask.texture = previewMaskTexture
       this.selectionMask.texture = previewMaskTexture
       this.isTextureReady = true
-      this.body.visible = true
+      this.body.visible = this.currentSuppressedAccessoryFamily === null
 
       if (this.currentLayout !== null) {
         this.applyLayout(this.currentLayout)
@@ -886,7 +966,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.previewMask.texture = maskTexture
       this.selectionMask.texture = maskTexture
       this.isTextureReady = true
-      this.body.visible = true
+      this.body.visible = this.currentSuppressedAccessoryFamily === null
 
       if (this.currentLayout !== null) {
         this.applyLayout(this.currentLayout)
@@ -908,6 +988,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
   private syncDeviceLabel(layout: RenderSpriteLayout): void {
     const app = this.renderHost.workspace.app;
+    if (this.currentSuppressedAccessoryFamily !== null) {
+      this.deviceLabelRoot.visible = false;
+      this.deviceIcon.visible = false;
+      this.deviceNameText.visible = false;
+      this.primaryOutputRoot.visible = false;
+      return;
+    }
+
     if (!shouldRenderDeviceLabel(this.definition)) {
       this.deviceLabelRoot.visible = false;
       this.deviceIcon.visible = false;

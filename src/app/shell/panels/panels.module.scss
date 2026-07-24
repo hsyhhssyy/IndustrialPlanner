@@ -1425,6 +1425,21 @@
   white-space: nowrap;
 }
 
+.device-stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--text-1);
+  padding: 2px 0;
+}
+
+.device-stats-row > span:last-child {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-0);
+  font-weight: 500;
+}
+
 .warehouse-stats-number {
   color: var(--text-1);
   font-size: 0.74rem;

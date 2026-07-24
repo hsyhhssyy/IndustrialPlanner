@@ -105,6 +105,7 @@ vi.mock("pixi.js", () => {
     public rotation = 0
     public roundPixels = false
     public visible = true
+    public tint = 0xffffff
     public tilePosition = { x: 0, y: 0 }
     public mask: unknown = null
     public tileScale = { set: vi.fn() }
@@ -824,6 +825,84 @@ describe("GenericDeviceSprite", () => {
     expect(previewEffectRoot?.children).toHaveLength(4)
     expect(previewMask?.texture).toBe(blueprintMaskTexture)
     expect(scanlineTiling?.mask).toBe(previewMask)
+  })
+
+  it.each([
+    {
+      family: "belt",
+      definition: createBeltLogisticsEntityDefinitionStub(),
+      bodyKey: LOGISTICS_BODY_KEY,
+      maskKey: LOGISTICS_MASK_KEY,
+      suppressBelts: true,
+      suppressPipes: false,
+      expectedTint: 0xFFD54A,
+    },
+    {
+      family: "pipe",
+      definition: createPipeAdmissionEntityDefinitionStub(),
+      bodyKey: "device-sprite-item_pipe_admission",
+      maskKey: "device-masks-item_pipe_admission",
+      suppressBelts: false,
+      suppressPipes: true,
+      expectedTint: 0x448AFF,
+    },
+  ])("renders $family accessory suppression as a full-cell tinted scanline", async ({
+    definition,
+    bodyKey,
+    maskKey,
+    suppressBelts,
+    suppressPipes,
+    expectedTint,
+  }) => {
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [bodyKey]: createLoadedTextureMock(`${definition.id}-body`),
+      [maskKey]: createLoadedTextureMock(`${definition.id}-mask`),
+    })
+    const sprite = new GenericDeviceSprite(
+      `${definition.id}-entity`,
+      definition,
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
+      logisticsBelt: {} as never,
+      logisticsPipe: {} as never,
+      draft: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+      suppressBelts,
+      suppressPipes,
+    })
+    sprite.syncLayout(createBeltLayout(), context)
+    await flushMicrotasks(8)
+    sprite.syncLayout(createBeltLayout(), context)
+
+    const previewEffectRoot = resolvePreviewEffectRoot(overlayLayer)
+    const scanlineTiling = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+
+    expect(resolveEntitySprite(entityLayer)?.visible).toBe(false)
+    expect(resolveDeviceLabelRoot(entityLayer)?.visible).toBe(false)
+    expect(previewEffectRoot?.visible).toBe(true)
+    expect(scanlineTiling).toMatchObject({
+      x: 26,
+      y: 36,
+      width: 32,
+      height: 32,
+      rotation: 0,
+      visible: true,
+      tint: expectedTint,
+      mask: null,
+    })
   })
 
   it("loads only the generated belt sprite texture through BeltSprite", async () => {
@@ -2761,6 +2840,18 @@ function createBeltLogisticsEntityDefinitionStub(): EntityDefinition {
   }
 }
 
+function createPipeAdmissionEntityDefinitionStub(): EntityDefinition {
+  return {
+    ...createEntityDefinitionStub(),
+    id: "pipe_admission",
+    nameKey: "registry.entity.pipe_admission.name",
+    spriteId: "item_pipe_admission",
+    footprint: { width: 1, height: 1 },
+    uiGroup: "pipeLogistics",
+    tags: ["PipeFamily"],
+  }
+}
+
 function createRenderContextStub(options: {
   selectionIds: readonly string[];
   previewIds: readonly string[];
@@ -2779,6 +2870,8 @@ function createRenderContextStub(options: {
   }>;
   deviceClass?: "desktop" | "tablet" | "mobile";
   activeTool?: string;
+  suppressBelts?: boolean;
+  suppressPipes?: boolean;
 }) {
   const workspace: Record<string, unknown> = {
     registry: {
@@ -2825,8 +2918,8 @@ function createRenderContextStub(options: {
     theme: options.theme ?? AYU_LIGHT_THEME,
     workspace: workspace as never,
     logisticsPortOccupancy: null,
-    suppressBelts: false,
-    suppressPipes: false,
+    suppressBelts: options.suppressBelts ?? false,
+    suppressPipes: options.suppressPipes ?? false,
     time: {
       nowMs: 1000,
       deltaMs: 16.67,

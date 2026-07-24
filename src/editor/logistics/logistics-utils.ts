@@ -22,6 +22,7 @@ import type {
 } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import { resolveLogisticsSuppressionFamily } from "@/shared/logistics-suppression";
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
@@ -692,9 +693,11 @@ function findTopEntityInListAtGridPoint(options: {
     ) {
       // 跳过对端物流类型的专用设备（如 belt 模式下跳过 pipe 段，pipe 模式下跳过 belt 段），
       // 使其下方的设备（如分流器/汇流器/桥接器）能被正常匹配。
+      // AI-CORRECTION 2026-07-24: 现在跳过对端物流类型的全部受压制设备，
+      // 包括桥接器、汇流器、分流器和准入口，使端口解析可穿透这些附属设备。
       if (
         options.skipLogisticsKind !== undefined
-        && isOrdinaryLogisticsDefinitionId(entity.definitionId, options.skipLogisticsKind)
+        && resolveLogisticsSuppressionFamily(entity.definitionId) === options.skipLogisticsKind
       ) {
         continue;
       }

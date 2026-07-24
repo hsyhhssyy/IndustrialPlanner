@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
@@ -36,6 +36,26 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
     pinnedItemIds: pinnedItems.pinnedItemIds,
   });
   const compactWarehouseEntries = resolveCompactWarehouseEntries(warehouseEntries);
+
+  // 设备统计
+  const PIPE_ATTACHMENT_IDS = new Set([
+    "pipe_splitter",
+    "pipe_converger",
+    "pipe_connector",
+    "pipe_admission",
+  ]);
+
+  const deviceStats = useMemo(() => {
+    if (currentDocument === null) {
+      return { totalDevices: 0, pipeLogisticsDevices: 0 };
+    }
+    const entities = Object.values(currentDocument.entities);
+    const totalDevices = entities.length;
+    const pipeLogisticsDevices = entities.filter((e) =>
+      PIPE_ATTACHMENT_IDS.has(e.definitionId),
+    ).length;
+    return { totalDevices, pipeLogisticsDevices };
+  }, [currentDocument]);
 
   // 主动轮询仿真文档级运行时数据（非 MobX 被动响应）
   const [totalPowerDemand, setTotalPowerDemand] = useState<number | null>(null);
@@ -213,6 +233,19 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
             pinnedItemIds={pinnedItems.pinnedItemIds}
           />
         )}
+      </article>
+      <article className={cm(styles, "inspector-card")}>
+        <div className={cm(styles, "card-header")}>
+          <h3>{t("deviceStats.title")}</h3>
+        </div>
+        <div className={cm(styles, "device-stats-row")}>
+          <span>{t("deviceStats.totalDevices")}</span>
+          <span>{deviceStats.totalDevices}</span>
+        </div>
+        <div className={cm(styles, "device-stats-row")}>
+          <span>{t("deviceStats.pipeLogisticsDevices")}</span>
+          <span>{deviceStats.pipeLogisticsDevices}</span>
+        </div>
       </article>
     </div>
   );

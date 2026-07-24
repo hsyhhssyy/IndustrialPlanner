@@ -2423,6 +2423,50 @@ describe("物流绘制模式", () => {
     });
   });
 
+  it("resolves a belt endpoint through an overlapping suppressed pipe admission", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("belt", "belt_straight_1x1", 5, 5),
+      createTestEntity("pipe-admission", "pipe_admission", 5, 5),
+    ]));
+
+    expect(
+      editorHost.queries.findLogisticsDraftEndpointAtGridPoint({ x: 5, y: 5 }, "belt"),
+    ).toMatchObject({
+      type: "logistics-entity",
+      entityId: "belt",
+    });
+    expect(
+      editorHost.queries.findLogisticsDraftEndpointAtGridPoint({ x: 5, y: 5 }, "pipe"),
+    ).toMatchObject({
+      type: "device-port",
+      entityId: "pipe-admission",
+    });
+  });
+
+  it("resolves a pipe endpoint through an overlapping suppressed item admission", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
+      createTestEntity("pipe", "pipe_straight_1x1", 5, 5),
+      createTestEntity("item-admission", "log_admission", 5, 5),
+    ]));
+
+    expect(
+      editorHost.queries.findLogisticsDraftEndpointAtGridPoint({ x: 5, y: 5 }, "pipe"),
+    ).toMatchObject({
+      type: "logistics-entity",
+      entityId: "pipe",
+    });
+    expect(
+      editorHost.queries.findLogisticsDraftEndpointAtGridPoint({ x: 5, y: 5 }, "belt"),
+    ).toMatchObject({
+      type: "device-port",
+      entityId: "item-admission",
+    });
+  });
+
   it("selects an adjacent output port in left-up-right-down order and fixes the source port", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
