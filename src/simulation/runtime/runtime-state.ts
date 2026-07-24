@@ -627,6 +627,28 @@ export function readAdmissionRateWindowRemainingAllowance(
   return Math.max(0, rateWindowRemaining);
 }
 
+export function readAdmissionOutputRemainingAllowance(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  portId: string,
+): number {
+  const rule = topology.ports[portId]?.admissionRule;
+  if (rule === undefined || rule === null || rule.itemId === null) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  const totalRemaining = rule.limit === null
+    ? Number.MAX_SAFE_INTEGER
+    : rule.limit - (state.persistent.admissionCounters[portId] ?? 0);
+  return Math.max(
+    0,
+    Math.min(
+      totalRemaining,
+      readAdmissionRateWindowRemainingAllowance(topology, state, portId),
+    ),
+  );
+}
+
 function ensureFixedWindowCounterForCurrentWindow(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,

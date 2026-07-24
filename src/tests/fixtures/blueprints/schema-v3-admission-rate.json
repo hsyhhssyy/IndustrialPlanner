@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 3,
+  "blueprintId": "test-schema-v3-admission-rate",
+  "version": "v1.3.0",
+  "name": "Schema 3 准入口速率迁移夹具",
+  "description": "固定保留的 schema 3 蓝图，用于验证准入口速率迁移和迁移后仿真。",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "source": {
+      "id": "source",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 90,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 5,
+        "storageSlotGroups[0].slots[0].ignoreStock": true
+      },
+      "tags": []
+    },
+    "admission": {
+      "id": "admission",
+      "definitionId": "log_admission",
+      "position": {
+        "x": 3,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_iron_ore",
+          "limit": null,
+          "perMinuteLimit": 7
+        }
+      },
+      "tags": []
+    },
+    "belt": {
+      "id": "belt",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 4,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "sink": {
+      "id": "sink",
+      "definitionId": "loader_1",
+      "position": {
+        "x": 5,
+        "y": 0
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "source",
+    "admission",
+    "belt",
+    "sink"
+  ],
+  "slotLinks": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

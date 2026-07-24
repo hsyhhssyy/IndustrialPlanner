@@ -16,7 +16,7 @@ describe("admission rule runtime counter", () => {
         limit: 2,
       }),
       registry: createRegistryContract(),
-      maxTickNumber: 80,
+      maxTickNumber: 100,
     });
 
     const sourceToAdmissionTransfers = report.ticks.flatMap((tick) =>
@@ -28,6 +28,15 @@ describe("admission rule runtime counter", () => {
         .map((transfer) => ({ tickNumber: tick.tickNumber, transfer })),
     );
     expect(sourceToAdmissionTransfers.map((entry) => entry.tickNumber)).toEqual([1, 41]);
+    const admissionOutputTicks = report.ticks.flatMap((tick) =>
+      tick.transfers
+        .filter((transfer) =>
+          transfer.sourceSlotId.includes("device:admission")
+          && transfer.targetSlotId.includes("device:belt"),
+        )
+        .map(() => tick.tickNumber),
+    );
+    expect(admissionOutputTicks).toEqual([41, 81]);
     const admissionCounter = report.ticks.at(-1)?.devices.admission?.admissionCounters?.["item_input:in_w"];
     expect(admissionCounter).toBeDefined();
     expect(admissionCounter)
@@ -65,16 +74,16 @@ describe("admission rule runtime counter", () => {
     expect(report.ticks[200]?.devices.admission?.admissionCounters?.["item_input:in_w"])
       .toMatchObject({
         limit: null,
-        count: 3,
+        count: 2,
         perMinuteLimit: 12,
         rateWindowCount: 2,
       });
     expect(report.ticks[201]?.devices.admission?.admissionCounters?.["item_input:in_w"])
       .toMatchObject({
         limit: null,
-        count: 3,
+        count: 2,
         perMinuteLimit: 12,
-        rateWindowCount: 1,
+        rateWindowCount: 0,
       });
     expect(report.ticks[201]?.devices.admission?.channelRecipes.default?.recipeId)
       .toBe("log_admission:dynamic-belt-transfer");

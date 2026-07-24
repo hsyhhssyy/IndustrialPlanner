@@ -18,7 +18,7 @@ import type {
   RuntimeSlotState,
   SimulationMutableRuntimeState,
 } from "./runtime-state";
-import { readAdmissionRateWindowRemainingAllowance } from "./runtime-state";
+import { readAdmissionOutputRemainingAllowance } from "./runtime-state";
 import {
   canRecipeFinishAtCurrentPhase,
   resolveTransportRecipeTiming,
@@ -488,7 +488,7 @@ export function resolveDeviceRecipePlans(options: {
     device: options.device,
     channel: options.channel,
     ingredientSlotContents,
-  }));
+  })).filter((plan) => planFitsAdmissionOutputAllowance(options, plan));
   if (
     options.channel.type === CONSUMPTION_RECIPE_CHANNEL_TYPE
     || options.device.allowDuplicateRecipesAcrossChannels === true
@@ -507,6 +507,30 @@ export function resolveDeviceRecipePlans(options: {
       .map(([, recipe]) => recipe!.recipeId),
   );
   return plans.filter((plan) => !siblingRecipeIds.has(plan.recipeId));
+}
+
+function planFitsAdmissionOutputAllowance(
+  options: {
+    readonly topology: CompiledSimulationTopology;
+    readonly state: SimulationMutableRuntimeState;
+    readonly device: CompiledSimulationDevice;
+  },
+  plan: CompiledSimulationRecipePlan,
+): boolean {
+  const admissionPortId = options.device.portIds.find((portId) =>
+    options.topology.ports[portId]?.admissionRule !== null
+    && options.topology.ports[portId]?.admissionRule !== undefined
+  );
+  if (admissionPortId === undefined) {
+    return true;
+  }
+
+  return sumRecipeItemAmounts(plan.inputs)
+    <= readAdmissionOutputRemainingAllowance(
+      options.topology,
+      options.state,
+      admissionPortId,
+    );
 }
 
 export function placeRecipeOutputs(
@@ -960,15 +984,9 @@ function resolveTransportRecipePlans(
 ): readonly CompiledSimulationRecipePlan[] {
   const isPipe = options.device.transportClass === "strict-pipe"
     || (options.device.tags ?? []).includes("PipeFamily");
-  const admissionPortId = options.device.portIds.find((portId) =>
-    options.topology.ports[portId]?.admissionRule !== null
-    && options.topology.ports[portId]?.admissionRule !== undefined
-  );
-  const remainingAllowance = admissionPortId === undefined
-    ? Number.MAX_SAFE_INTEGER
-    : readAdmissionRateWindowRemainingAllowance(options.topology, options.state, admissionPortId);
-  const transferAmounts = (isPipe ? [2, 1] : [1])
-    .filter((amount) => amount <= remainingAllowance);
+  // AI-CORRECTION 2026-07-24: 运输配方始终只描述设备固有的 2/1 搬运能力；
+  // admission 输出额度由 resolveDeviceRecipePlans 的独立候选过滤处理，不写入配方定义。
+  const transferAmounts = isPipe ? [2, 1] : [1];
 
   return transferAmounts.map((amount) => {
     const recipeId = amount === 1

@@ -285,6 +285,7 @@ export interface CompiledSimulationPort {
   readonly boundNodeIds: readonly string[];
   readonly acceptRule: SimulationAcceptRule;
   /** 仅 admission 设备 input port 使用；计数存放于 runtime persistent state。 */
+  /** AI-CORRECTION 2026-07-24: 规则配置保留在 input port，额度预留检查输入缓存，真实计数在设备 output edge 移动成功时提交。 */
   readonly admissionRule: SimulationAdmissionRule | null;
   // AI-REMOVED 2026-06-12:
   // Reason: CompiledSimulationPort 不再携带 per-tick count。

@@ -1,5 +1,8 @@
-import type {
-  SimulationMutableRuntimeState,
+import {
+  incrementFixedWindowCounterForCurrentWindow,
+  readAdmissionOutputRemainingAllowance,
+  readAdmissionRateWindowRemainingAllowance,
+  type SimulationMutableRuntimeState,
 } from "./runtime-state";
 import type {
   CompiledSimulationDevice,
@@ -277,6 +280,9 @@ function solveOutputNode(
       if (!canAdmitItemThroughTargetPort(topology, state, edge.targetPortId, edgeState.itemType)) {
         continue;
       }
+      if (!canReleaseItemThroughSourcePort(topology, state, edge.sourcePortId, edgeState.itemType)) {
+        continue;
+      }
 
       const ok = moveOneItem({
         topology,
@@ -294,7 +300,7 @@ function solveOutputNode(
       movedAny = true;
       edgeState.shadowPush = "accept";
       edgeState.amount += 1;
-      recordAdmissionMove(topology, state, edge.targetPortId, edgeState.itemType);
+      recordAdmissionMove(topology, state, edge.sourcePortId, edgeState.itemType);
       edgeState.shadowPull = "moved";
       edgeState.shadowPush = "moved";
       pushUnique(state.transient.nodes[node.id]?.acceptedOutputEdgeIds, edgeId);
@@ -355,6 +361,7 @@ function solveInputNode(
       state,
       sourceNode,
       targetNode: node,
+      sourcePortId: edge.sourcePortId,
       targetPortId: edge.targetPortId,
       acceptRule: edge.acceptRule,
     });
@@ -380,6 +387,7 @@ function selectAcceptedSourceForEdge(options: {
   readonly state: SimulationMutableRuntimeState;
   readonly sourceNode: CompiledSimulationNode;
   readonly targetNode: CompiledSimulationNode;
+  readonly sourcePortId: string;
   readonly targetPortId: string;
   readonly acceptRule: SimulationAcceptRule;
 }): SourceSelection | null {
@@ -394,6 +402,9 @@ function selectAcceptedSourceForEdge(options: {
       continue;
     }
     if (!canAdmitItemThroughTargetPort(options.topology, options.state, options.targetPortId, itemType)) {
+      continue;
+    }
+    if (!canReleaseItemThroughSourcePort(options.topology, options.state, options.sourcePortId, itemType)) {
       continue;
     }
     if (!canOutputSlotProvideItem({
@@ -432,22 +443,123 @@ function canAdmitItemThroughTargetPort(
   if (rule.itemId !== itemType) {
     return false;
   }
-  return rule.limit === null
-    || (state.persistent.admissionCounters[targetPortId] ?? 0) < rule.limit;
+  // AI-CORRECTION 2026-07-24: 输入端只预留尚未输出的准入额度，不再把进入设备缓存视为已经准入。
+  // 已输出计数与设备内同物品占用之和达到任一上限时停止预取，避免管道多拿一份后锁住其他流体。
+  const bufferedCount = countBufferedAdmissionItems(
+    topology,
+    state,
+    targetPortId,
+    itemType,
+  );
+  if (
+    rule.limit !== null
+    && (state.persistent.admissionCounters[targetPortId] ?? 0) + bufferedCount >= rule.limit
+  ) {
+    return false;
+  }
+  return bufferedCount
+    < readAdmissionRateWindowRemainingAllowance(topology, state, targetPortId);
 }
 
+function canReleaseItemThroughSourcePort(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  sourcePortId: string,
+  itemType: string,
+): boolean {
+  const admissionPort = resolveAdmissionInputPortForSourcePort(topology, sourcePortId);
+  const rule = admissionPort?.admissionRule;
+  if (admissionPort === null || rule === undefined || rule === null || rule.itemId === null) {
+    return true;
+  }
+  if (rule.itemId !== itemType) {
+    return false;
+  }
+  return readAdmissionOutputRemainingAllowance(topology, state, admissionPort.id) > 0;
+}
+
+// AI-CORRECTION 2026-07-24: admission move 现在只表示物品从准入口输出口真实离开；
+// target input 缓存写入不再提交总计数或速率窗口计数。
 function recordAdmissionMove(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
-  targetPortId: string,
+  sourcePortId: string,
   itemType: string,
 ): void {
-  const rule = topology.ports[targetPortId]?.admissionRule;
-  if (rule === undefined || rule === null || rule.itemId !== itemType) {
+  const admissionPort = resolveAdmissionInputPortForSourcePort(topology, sourcePortId);
+  const rule = admissionPort?.admissionRule;
+  if (
+    admissionPort === null
+    || rule === undefined
+    || rule === null
+    || rule.itemId !== itemType
+  ) {
     return;
   }
-  state.persistent.admissionCounters[targetPortId] =
-    (state.persistent.admissionCounters[targetPortId] ?? 0) + 1;
+  state.persistent.admissionCounters[admissionPort.id] =
+    (state.persistent.admissionCounters[admissionPort.id] ?? 0) + 1;
+  if (rule.perMinuteLimit !== null) {
+    incrementFixedWindowCounterForCurrentWindow(topology, state, admissionPort.id);
+  }
+}
+
+function resolveAdmissionInputPortForSourcePort(
+  topology: CompiledSimulationTopology,
+  sourcePortId: string,
+): CompiledSimulationPort | null {
+  const sourcePort = topology.ports[sourcePortId];
+  const sourceDevice = sourcePort === undefined
+    ? undefined
+    : topology.devices[sourcePort.deviceId];
+  if (sourceDevice === undefined) {
+    return null;
+  }
+
+  for (const portId of sourceDevice.portIds) {
+    const port = topology.ports[portId];
+    if (
+      port?.direction === "input"
+      && port.admissionRule !== null
+      && port.admissionRule !== undefined
+    ) {
+      return port;
+    }
+  }
+  return null;
+}
+
+function countBufferedAdmissionItems(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  admissionPortId: string,
+  itemType: string,
+): number {
+  const port = topology.ports[admissionPortId];
+  const device = port === undefined ? undefined : topology.devices[port.deviceId];
+  if (device === undefined) {
+    return 0;
+  }
+
+  const visitedStorageSlotIds = new Set<string>();
+  let count = 0;
+  for (const nodeId of device.nodeIds) {
+    const node = topology.nodes[nodeId];
+    if (node === undefined) {
+      continue;
+    }
+    for (const slotId of node.slotIds) {
+      const storageSlotId = resolveStorageSlotId(state, slotId);
+      if (visitedStorageSlotIds.has(storageSlotId)) {
+        continue;
+      }
+      visitedStorageSlotIds.add(storageSlotId);
+      const slotState = state.persistent.slots[storageSlotId];
+      if (slotState?.itemType === itemType) {
+        count += Math.max(0, slotState.count);
+      }
+    }
+  }
+  return count;
 }
 
 function inputNodeHasAnyCapacity(

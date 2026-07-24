@@ -4,7 +4,16 @@ import type {
   CompiledSimulationTopology,
 } from "../types";
 import type { RuntimeDeviceRecipeState, SimulationMutableRuntimeState } from "./runtime-state";
-import { incrementFixedWindowCounterForCurrentWindow } from "./runtime-state";
+// AI-REMOVED 2026-07-24:
+// Reason: 准入计数必须在物品真实离开准入口输出口时提交，不能在搬运配方启动时提前提交。
+// Trigger: 用户复现 6/min 管道准入口只输出 1 个但总计数显示 3，且多预取的液体会锁住混流。
+// Evidence: pipe-admission-rate-recipe-selection.test.ts 的一物品窗口回归用例。
+// Replacement: stage-3-layered-reverse-solve.ts::recordAdmissionMove。
+// Risk: Low - 配方选择仍会读取剩余输出额度以避免 2 → 2 超额。
+// Human Review: Required
+//
+// Original code:
+// import { incrementFixedWindowCounterForCurrentWindow } from "./runtime-state";
 import {
   adjustReservedAmounts,
   aggregateInputItems,
@@ -179,7 +188,7 @@ function startIdleDeviceChannels(options: {
           break;
         }
 
-        commitStartedRecipe(options.topology, options.state, device, recipe);
+        commitStartedRecipe(options.state, device, recipe);
         deviceState.channelRecipes[channel.id] = recipe;
 
         if (remainingOverflowTicks < recipe.durationTicks) {
@@ -224,8 +233,8 @@ function startIdleDeviceChannels(options: {
 }
 
 // AI-CORRECTION 2026-07-23: topology 参数因准入口速率额度需要在配方启动事务中提交而恢复使用。
+// AI-CORRECTION 2026-07-24: 准入额度改在 Stage3 真实输出时提交，commitStartedRecipe 不再接收 topology 或修改准入计数。
 function commitStartedRecipe(
-  topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   device: CompiledSimulationDevice,
   recipe: RuntimeDeviceRecipeState,
@@ -244,18 +253,27 @@ function commitStartedRecipe(
   }
 
   adjustReservedAmounts(state, recipe.reservations, 1);
-  const admissionPortId = device.portIds.find((portId) =>
-    topology.ports[portId]?.admissionRule?.perMinuteLimit !== null
-    && topology.ports[portId]?.admissionRule?.perMinuteLimit !== undefined
-  );
-  if (admissionPortId !== undefined) {
-    incrementFixedWindowCounterForCurrentWindow(
-      topology,
-      state,
-      admissionPortId,
-      recipe.inputItems.reduce((total, item) => total + item.amount, 0),
-    );
-  }
+  // AI-REMOVED 2026-07-24:
+  // Reason: 配方启动只预留库存，不代表物品已经穿过准入口。
+  // Trigger: 6/min 管道准入口启动单物品配方后，界面必须继续显示 0，直到下一整数秒真实输出。
+  // Evidence: pipe-admission-rate-recipe-selection.test.ts 在 tick 1/21 分别断言 0/1。
+  // Replacement: stage-3-layered-reverse-solve.ts::recordAdmissionMove。
+  // Risk: Low - runtime-slot-access.ts 仍会按剩余输出额度过滤管道批量配方。
+  // Human Review: Required
+  //
+  // Original code:
+  // const admissionPortId = device.portIds.find((portId) =>
+  //   topology.ports[portId]?.admissionRule?.perMinuteLimit !== null
+  //   && topology.ports[portId]?.admissionRule?.perMinuteLimit !== undefined
+  // );
+  // if (admissionPortId !== undefined) {
+  //   incrementFixedWindowCounterForCurrentWindow(
+  //     topology,
+  //     state,
+  //     admissionPortId,
+  //     recipe.inputItems.reduce((total, item) => total + item.amount, 0),
+  //   );
+  // }
 }
 
 function cloneOverflowTicks(
