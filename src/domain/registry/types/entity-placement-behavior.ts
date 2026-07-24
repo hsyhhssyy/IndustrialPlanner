@@ -14,6 +14,7 @@ export const PLACEMENT_BEHAVIOR_TYPE = {
   cannotBePlacedOutsideBase: "cannot-be-placed-outside-base",
   snapToOuterRingEdge: "snap-to-outer-ring-edge",
   rotateToSnapOnBuilding: "rotate-to-snap-on-building",
+  autoRotateAlignPorts: "auto-rotate-align-ports",
   noNearSameEntity: "no-near-same-entity",
 } as const;
 
@@ -32,4 +33,5 @@ export type EntityPlacementBehaviorDeclaration =
     readonly type: typeof PLACEMENT_BEHAVIOR_TYPE.rotateToSnapOnBuilding;
     readonly targetDeviceIds: readonly string[];
   }
+  | { readonly type: typeof PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts }
   | { readonly type: typeof PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity; readonly range: number };

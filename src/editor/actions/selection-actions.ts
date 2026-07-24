@@ -32,6 +32,10 @@ import {
   isEntitySnappedToBuildingShape,
   resolveRotateToSnapOnBuildingBehavior,
 } from "../rotate-to-snap-on-building";
+import {
+  findBestAlignedRotation,
+  resolveAutoRotateAlignPortsBehavior,
+} from "../auto-rotate-align-ports";
 import type { EditorActionsContext } from "./types";
 
 type EditorCollectionActions = Pick<
@@ -848,6 +852,50 @@ export function createEditorSelectionActions({
     const definition = entityDefinitionMap.get(entity.definitionId);
     if (definition === undefined) {
       return false;
+    }
+
+    // AutoRotateAlignPorts: 移动虚影结束后自动旋转到端口对齐的角度
+    // 只在 after-move 触发，before-rotate（手动 R 旋转）不触发
+    const autoAlignBehavior = resolveAutoRotateAlignPortsBehavior(definition);
+    if (autoAlignBehavior !== null) {
+      if (options.trigger !== "after-move") {
+        return false;
+      }
+
+      // 无法放置的位置不进行自动旋转计算
+      const placementValidation = resolveCandidatePlacementValidation({
+        entity,
+        currentDocument,
+      });
+      if (placementValidation && placementValidation.reasons.length > 0) {
+        return false;
+      }
+
+      const listedEntities = resolveListedEntities({
+        document: currentDocument,
+        drafts: state.drafts,
+        baseDefinitions: workspace.registry.baseDefinitions,
+      });
+      const bestRotation = findBestAlignedRotation({
+        entity,
+        definition,
+        listedEntities,
+        entityDefinitionMap,
+      });
+
+      if (bestRotation === null || bestRotation === entity.rotation) {
+        return false;
+      }
+
+      const steps = ((bestRotation - entity.rotation + 360) % 360) / 90;
+      for (let step = 0; step < steps; step += 1) {
+        rotateCollectionByAngle(options.collectionType, 90, options.pivotMode);
+        if (options.clientPixelPoint !== null) {
+          moveCollectionCenterPointTo(options.collectionType, options.clientPixelPoint);
+        }
+      }
+
+      return true;
     }
 
     const behavior = resolveRotateToSnapOnBuildingBehavior(definition);

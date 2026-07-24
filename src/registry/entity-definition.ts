@@ -176,6 +176,16 @@ const WAREHOUSE_PORT_PLACEMENT_BEHAVIORS = [
   },
 ] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
 
+const AUTO_ROTATE_ALIGN_BELT_LOGISTICS_PLACEMENT_BEHAVIORS = [
+  { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+  { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
+] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
+
+const AUTO_ROTATE_ALIGN_PIPE_ADMISSION_PLACEMENT_BEHAVIORS = [
+  { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
+  { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
+] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
+
 const WAREHOUSE_SINK_TAG = "WarehouseSink";
 const PRODUCER_TAG = "Producer";
 const VAPORIZER_CONSUMPTION_ITEM_IDS = [
@@ -1514,7 +1524,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "beltLogistics",
     displayOrder: 102,
     tags: ["BeltFamily", "OuterRingAllowed"],
-    placementBehaviors: ALLOW_PIPE_OVERLAP_PLACEMENT_BEHAVIORS,
+    placementBehaviors: AUTO_ROTATE_ALIGN_BELT_LOGISTICS_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1577,7 +1587,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "beltLogistics",
     displayOrder: 103,
     tags: ["BeltFamily", "OuterRingAllowed"],
-    placementBehaviors: ALLOW_PIPE_OVERLAP_PLACEMENT_BEHAVIORS,
+    placementBehaviors: AUTO_ROTATE_ALIGN_BELT_LOGISTICS_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1878,6 +1888,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "pipeLogistics",
     displayOrder: 202,
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1934,6 +1947,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "pipeLogistics",
     displayOrder: 203,
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -4459,7 +4475,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "beltLogistics",
     displayOrder: 104,
     tags: ["BeltFamily"],
-    placementBehaviors: ALLOW_PIPE_OVERLAP_PLACEMENT_BEHAVIORS,
+    placementBehaviors: AUTO_ROTATE_ALIGN_BELT_LOGISTICS_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -4514,7 +4530,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "pipeLogistics",
     displayOrder: 204,
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
-    placementBehaviors: ALLOW_BELT_OVERLAP_PLACEMENT_BEHAVIORS,
+    placementBehaviors: AUTO_ROTATE_ALIGN_PIPE_ADMISSION_PLACEMENT_BEHAVIORS,
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
