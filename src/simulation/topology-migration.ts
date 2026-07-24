@@ -85,12 +85,16 @@ function collectEntityResetReasons(options: {
     return reasons;
   }
 
-  if (
-    JSON.stringify(previousDevice.meteredConsumption ?? null)
-    !== JSON.stringify(nextDevice.meteredConsumption ?? null)
-  ) {
-    reasons.push("meteredConsumption changed");
-  }
+  // AI-REMOVED 2026-07-23:
+  // Reason: 拓扑不再包含独立 meteredConsumption 配置。
+  // Trigger: 用户要求消耗迁移到普通节点、槽位和频道拓扑。
+  // Evidence: 下方 nodeIds/slotIds/recipeChannels/configHash 变化会触发标准设备重置。
+  // Replacement: 通用拓扑差异检查。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // if (JSON.stringify(previousDevice.meteredConsumption) !== ...) { ... }
 
   const prevNodeIds = [...previousDevice.nodeIds].sort();
   const nextNodeIds = [...nextDevice.nodeIds].sort();

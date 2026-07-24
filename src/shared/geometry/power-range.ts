@@ -37,9 +37,10 @@ export function resolvePowerRangeGridRect(options: {
 export function resolveGasDiffusionRangeGridRect(options: {
   entity: WorldEntity;
   definition: EntityDefinition;
+  gasDiffusionRange: number;
 }): GridRect | null {
-  const gasDiffusionRange = options.definition.meteredConsumption?.gasDiffusionRange;
-  if (gasDiffusionRange === null || gasDiffusionRange === undefined || gasDiffusionRange <= 0) {
+  const gasDiffusionRange = options.gasDiffusionRange;
+  if (!Number.isFinite(gasDiffusionRange) || gasDiffusionRange <= 0) {
     return null;
   }
 

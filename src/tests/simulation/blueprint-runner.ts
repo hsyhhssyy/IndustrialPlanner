@@ -224,11 +224,16 @@ function createTickReport(options: {
           { ...counter },
         ]),
       ),
-      meteredConsumption: status.meteredConsumption === undefined
-        ? undefined
-        : status.meteredConsumption === null
-          ? null
-          : { ...status.meteredConsumption },
+      // AI-REMOVED 2026-07-23:
+      // Reason: 蓝图报告不再复制已删除的固定窗口计量快照。
+      // Trigger: 消耗状态迁移到 slotItems 与 channelRecipes。
+      // Evidence: 上方两项已经完整复制新机制持久状态的只读投影。
+      // Replacement: slotItems + channelRecipes。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // meteredConsumption: clone(status.meteredConsumption),
       // AI-CORRECTION 2026-05-30: recipeId/progressSeconds/desiredSeconds 已从 readmodel 删除，
       //   改为从 channelRecipes 获取。此处仅做浅拷贝传递给测试断言。
       powerStatus: status.powerStatus,

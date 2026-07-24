@@ -397,18 +397,27 @@ function resolveDeviceRuntimeStatus(options: {
   //     : convertSimulationTicksToSeconds(deviceSnapshot.recipe.durationTicks),
   return {
     channelRecipes,
-    meteredConsumption: deviceSnapshot.meteredConsumption === null
-      ? null
-      : {
-          currentWindowCount: deviceSnapshot.meteredConsumption.currentCount,
-          currentWindowItemId: deviceSnapshot.meteredConsumption.currentItemId,
-          previousWindowCount: deviceSnapshot.meteredConsumption.previousWindowCount,
-          previousWindowItemId: deviceSnapshot.meteredConsumption.previousWindowItemId
-            ?? (deviceSnapshot.meteredConsumption.previousWindowCount > 0
-              ? deviceSnapshot.meteredConsumption.activeEffectItemId
-              : null)
-            ?? null,
-        },
+    // AI-REMOVED 2026-07-23:
+    // Reason: 设备状态不再投影已删除的分钟计量 read model。
+    // Trigger: Inspector 改为直接读取真实消耗槽。
+    // Evidence: 下方 slotItems 已提供 count/reserved，channelRecipes 提供运行状态。
+    // Replacement: slotItems + channelRecipes。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // meteredConsumption: deviceSnapshot.meteredConsumption === null
+    //   ? null
+    //   : {
+    //       currentWindowCount: deviceSnapshot.meteredConsumption.currentCount,
+    //       currentWindowItemId: deviceSnapshot.meteredConsumption.currentItemId,
+    //       previousWindowCount: deviceSnapshot.meteredConsumption.previousWindowCount,
+    //       previousWindowItemId: deviceSnapshot.meteredConsumption.previousWindowItemId
+    //         ?? (deviceSnapshot.meteredConsumption.previousWindowCount > 0
+    //           ? deviceSnapshot.meteredConsumption.activeEffectItemId
+    //           : null)
+    //         ?? null,
+    //     },
     admissionCounters: Object.fromEntries(
       Object.entries(deviceSnapshot.admissionCounters ?? {}).map(([portRef, counter]) => [
         portRef,

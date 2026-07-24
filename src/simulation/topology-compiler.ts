@@ -46,7 +46,6 @@ import type {
   CompiledTransportComponent,
   CompiledSimulationBlockageAutoClearance,
   CompiledSimulationWaterPurifierNodeConfig,
-  CompiledSimulationMeteredConsumption,
   SimulationAcceptRule,
   SimulationAdmissionRule,
   SimulationCompileDiagnostic,
@@ -498,6 +497,7 @@ function compileWarehouseDevice(
       transportComponentId: null,
       nodeIds: [nodeId],
       recipeChannels: [],
+      consumptionChannelCount: 0,
       allowDuplicateRecipesAcrossChannels: false,
       portIds: [],
       routing: {},
@@ -505,7 +505,6 @@ function compileWarehouseDevice(
       isProducer: false,
       blockageAutoClearance: null,
       waterPurifierNode: null,
-      meteredConsumption: null,
     },
     nodes: [node],
     slots,
@@ -591,6 +590,16 @@ function compileEntityDevice(options: {
   const nodesWithPorts = attachPortsToNodes(nodes, ports);
   nodes.splice(0, nodes.length, ...nodesWithPorts);
 
+  const recipeChannels = compileRecipeChannels(
+    definition.recipeChannels,
+    definition.recipeChannelBehavior,
+    nodeBindingsByStorageGroupId,
+    options.entity,
+    options.recipeCatalog,
+  );
+  const consumptionChannelCount = recipeChannels.findIndex(
+    (channel) => channel.type !== "consumption-channel",
+  );
   const device: CompiledSimulationDevice = {
     id: deviceId,
     sourceEntityId: options.entity.id,
@@ -605,13 +614,10 @@ function compileEntityDevice(options: {
     transportClass,
     transportComponentId: null,
     nodeIds: nodes.map((node) => node.id),
-    recipeChannels: compileRecipeChannels(
-      definition.recipeChannels,
-      definition.recipeChannelBehavior,
-      nodeBindingsByStorageGroupId,
-      options.entity,
-      options.recipeCatalog,
-    ),
+    recipeChannels,
+    consumptionChannelCount: consumptionChannelCount < 0
+      ? recipeChannels.length
+      : consumptionChannelCount,
     allowDuplicateRecipesAcrossChannels:
       definition.recipeChannelBehavior?.allowDuplicateRecipesAcrossChannels ?? false,
     portIds: ports.map((port) => port.id),
@@ -623,7 +629,6 @@ function compileEntityDevice(options: {
     isProducer: definition.tags.includes("Producer"),
     blockageAutoClearance: compileBlockageAutoClearance(definition, options.entity.config),
     waterPurifierNode: compileWaterPurifierNode(definition.id, options.entity.config),
-    meteredConsumption: compileMeteredConsumption(definition, ports, options.itemCatalog),
   };
 
   return {
@@ -635,52 +640,16 @@ function compileEntityDevice(options: {
   };
 }
 
-function compileMeteredConsumption(
-  definition: EntityDefinition,
-  ports: readonly CompiledSimulationPort[],
-  itemCatalog: Readonly<Record<string, CompiledSimulationItem>>,
-): CompiledSimulationMeteredConsumption | null {
-  const source = definition.meteredConsumption;
-  if (source === undefined) {
-    return null;
-  }
-
-  const inputPorts = ports.filter((port) =>
-    port.direction === "input" && port.portGroupId === source.inputPortGroupId,
-  );
-  if (inputPorts.length !== 1) {
-    return null;
-  }
-
-  const itemIds = [...new Set(source.itemIds)]
-    .filter((itemId) => itemCatalog[itemId] !== undefined)
-    .sort();
-  if (itemIds.length === 0) {
-    return null;
-  }
-
-  const windowTicks = convertSecondsToSimulationTicks(source.windowSeconds);
-  const acceptanceLimit = Number.isFinite(source.acceptanceLimit)
-    ? Math.max(1, Math.floor(source.acceptanceLimit))
-    : 1;
-  const startThreshold = Number.isFinite(source.startThreshold)
-    ? Math.min(acceptanceLimit, Math.max(1, Math.floor(source.startThreshold)))
-    : 1;
-  const gasDiffusionRange = source.gasDiffusionRange !== null
-    && Number.isFinite(source.gasDiffusionRange)
-    && source.gasDiffusionRange > 0
-    ? source.gasDiffusionRange
-    : null;
-
-  return {
-    inputPortId: inputPorts[0]!.id,
-    itemIds,
-    windowTicks,
-    startThreshold,
-    acceptanceLimit,
-    gasDiffusionRange,
-  };
-}
+// AI-REMOVED 2026-07-23:
+// Reason: 固定窗口计量配置不再参与拓扑编译。
+// Trigger: 用户要求真实槽位与十秒 consumption-channel 配方。
+// Evidence: compileRecipeChannels 已编译频道用途和直接节点引用。
+// Replacement: compileRecipeChannels + consumptionChannelCount。
+// Risk: Medium
+// Human Review: Required
+//
+// Original code:
+// function compileMeteredConsumption(...) { ... }
 
 function compileStorageSlotGroups(options: {
   readonly deviceId: string;
@@ -913,10 +882,7 @@ function compileSyntheticNodesForUnboundPorts(options: {
       nodes: options.nodes,
       slots: options.slots,
       nodeBindingsByStorageGroupId: options.nodeBindingsByStorageGroupId,
-      domain: options.definition.meteredConsumption !== undefined
-        && !boundPortGroupIds.has(options.definition.meteredConsumption.inputPortGroupId)
-        ? "any"
-        : inferStorageDomainFromPortGroups(options.definition.portGroups, "input"),
+      domain: inferStorageDomainFromPortGroups(options.definition.portGroups, "input"),
       bindDirection: "input",
       capacity: syntheticSlotCapacity,
     });
@@ -1399,11 +1365,12 @@ function compileRecipeChannels(
   if (!channelDefs || channelDefs.length === 0) { return []; }
   const modeSwitchable = recipeChannelBehavior?.automaticModeConfigKey !== undefined;
   const automaticMode = isAutomaticRecipeChannelMode(recipeChannelBehavior, entity.config);
-  return channelDefs.map((ch) => {
+  const compiled = channelDefs.map((ch) => {
     const selectedRecipeId = (entity.config?.channelRecipes as Record<string, string> | undefined)?.[ch.id] ?? null;
 
     return {
       id: ch.id,
+      type: ch.type ?? "normal-channel",
       ingredientNodeIds: [...new Set(ch.ingredientStorageGroupIds.flatMap(
         (gid: string) => bindings.get(gid)?.ingredientNodeIds ?? [],
       ))],
@@ -1416,6 +1383,12 @@ function compileRecipeChannels(
         : null,
     };
   });
+  compiled.sort((left, right) => {
+    const leftOrder = left.type === "consumption-channel" ? 0 : 1;
+    const rightOrder = right.type === "consumption-channel" ? 0 : 1;
+    return leftOrder - rightOrder;
+  });
+  return compiled;
 }
 
 function compilePhysicalConnections(

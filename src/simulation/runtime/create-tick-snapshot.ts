@@ -162,37 +162,31 @@ function createDeviceSnapshots(
           },
       channelRecipes,
       admissionCounters: createAdmissionCounterSnapshots(topology, state, deviceId),
-      meteredConsumption: createMeteredConsumptionSnapshot(topology, state, deviceId),
+      // AI-REMOVED 2026-07-23:
+      // Reason: RuntimeDeviceSnapshot 已删除分钟计量字段。
+      // Trigger: 消耗状态改由真实槽位和频道配方表达。
+      // Evidence: 同一 tick 快照已包含 slots 与上方 channelRecipes。
+      // Replacement: RuntimeTickSnapshot.slots + channelRecipes。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // meteredConsumption: createMeteredConsumptionSnapshot(topology, state, deviceId),
     };
   }
   return devices;
 }
 
-function createMeteredConsumptionSnapshot(
-  topology: CompiledSimulationTopology,
-  state: SimulationMutableRuntimeState,
-  deviceId: string,
-): RuntimeTickSnapshot["devices"][string]["meteredConsumption"] {
-  const config = topology.devices[deviceId]?.meteredConsumption;
-  const runtime = state.persistent.meteredConsumptions[deviceId];
-  if (config === undefined || config === null || runtime === undefined) {
-    return null;
-  }
-  const counter = readFixedWindowCounterForCurrentWindow(
-    topology,
-    state,
-    config.inputPortId,
-  );
-  return {
-    windowStartTick: counter.windowStartTick,
-    currentCount: counter.count,
-    currentItemId: runtime.currentItemId,
-    previousWindowItemId: runtime.previousWindowItemId,
-    previousWindowCount: runtime.previousWindowCount,
-    authorizedUntilTick: runtime.authorizedUntilTick,
-    activeEffectItemId: runtime.activeEffectItemId,
-  };
-}
+// AI-REMOVED 2026-07-23:
+// Reason: tick 快照不再投影固定窗口计量状态。
+// Trigger: 用户要求 Inspector 直接显示真实消耗槽数量 × 6。
+// Evidence: createSlotSnapshots 与 channelRecipes 已提供库存、预留和运行状态。
+// Replacement: RuntimeTickSnapshot.slots + devices.channelRecipes。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function createMeteredConsumptionSnapshot(...) { ... }
 
 function createAdmissionCounterSnapshots(
   topology: CompiledSimulationTopology,

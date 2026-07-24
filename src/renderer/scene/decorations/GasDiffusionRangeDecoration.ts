@@ -140,9 +140,16 @@ export function createGasDiffusionRangeDecoration(): DecorationLayer {
     const entityDefinitionMap = buildEditorEntityDefinitionMap(
       ctx.renderHost.workspace.registry.entityDefinitions,
     );
+    const gasDiffusionRangeByMachineId = buildGasDiffusionRangeByMachineId(
+      ctx.renderHost.workspace.registry.recipeDefinitions,
+    );
 
     const entities = editor.queries.listEntities();
-    const previewRanges = resolveEditorGasPreviewRanges(entities, entityDefinitionMap);
+    const previewRanges = resolveEditorGasPreviewRanges(
+      entities,
+      entityDefinitionMap,
+      gasDiffusionRangeByMachineId,
+    );
 
     if (previewRanges.length === 0) {
       if (graphicsHasContent) {
@@ -264,6 +271,7 @@ function buildEditorEntityDefinitionMap(
 function resolveEditorGasPreviewRanges(
   entities: readonly WorldEntity[],
   definitionMap: ReadonlyMap<string, EntityDefinition>,
+  gasDiffusionRangeByMachineId: ReadonlyMap<string, number>,
 ): EditorGasPreviewRange[] {
   const ranges: EditorGasPreviewRange[] = [];
 
@@ -272,8 +280,16 @@ function resolveEditorGasPreviewRanges(
     if (!definition) {
       continue;
     }
+    const gasDiffusionRange = gasDiffusionRangeByMachineId.get(definition.id);
+    if (gasDiffusionRange === undefined) {
+      continue;
+    }
 
-    const gridRect = resolveGasDiffusionRangeGridRect({ entity, definition });
+    const gridRect = resolveGasDiffusionRangeGridRect({
+      entity,
+      definition,
+      gasDiffusionRange,
+    });
     if (gridRect === null) {
       continue;
     }
@@ -281,6 +297,22 @@ function resolveEditorGasPreviewRanges(
     ranges.push({ gridRect });
   }
 
+  return ranges;
+}
+
+function buildGasDiffusionRangeByMachineId(
+  recipes:
+    | DecorationSyncContext["renderHost"]["workspace"]["registry"]["recipeDefinitions"]
+    | undefined,
+): ReadonlyMap<string, number> {
+  const ranges = new Map<string, number>();
+  for (const recipe of recipes ?? []) {
+    const output = recipe.gasDiffusionOutput;
+    if (output === undefined || output.range <= 0) {
+      continue;
+    }
+    ranges.set(recipe.machineId, Math.max(ranges.get(recipe.machineId) ?? 0, output.range));
+  }
   return ranges;
 }
 

@@ -5,10 +5,17 @@ import {
   TimelineWorkerRuntime,
 } from "@/simulation/timeline-worker-runtime";
 import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
+import { compileSimulationTopology } from "@/simulation/topology-compiler";
+import { createRegistryContract } from "@/registry";
 import type {
   CompiledSimulationTopology,
   SimulationRuntimeExport,
 } from "@/simulation/types";
+import {
+  createBlueprint,
+  createEntity,
+  createWorldDocumentFromBlueprint,
+} from "./blueprint-test-helpers";
 
 describe("TimelineWorkerRuntime", () => {
   afterEach(() => {
@@ -359,6 +366,100 @@ describe("TimelineWorkerRuntime", () => {
     expect(timelineCheckpoint.runtimeExport?.snapshot).toEqual(exactRuntimeExport?.snapshot);
   });
 
+  it("keeps consumption and gas state equal at every minute after continuous fill and a large forward retarget", () => {
+    vi.useFakeTimers();
+
+    const topology = createConsumptionTimelineTopology();
+    const exactRuntime = new SimulationWorkerRuntime();
+    exactRuntime.handleRequest({
+      type: "load-topology",
+      requestId: 1,
+      topology,
+    });
+    exactRuntime.createSparseTickSnapshot(1);
+    const originRuntimeExport = exactRuntime.exportRuntimeState(1);
+    if (originRuntimeExport === null) {
+      throw new Error("Expected tick-1 consumption runtime export.");
+    }
+
+    const timelineRuntime = new TimelineWorkerRuntime();
+    timelineRuntime.handleRequest({
+      type: "load-timeline",
+      requestId: 2,
+      runtimeExport: originRuntimeExport,
+      startTimelineTickNumber: 0,
+      targetTimelineTickNumber: 240,
+      capacityTimelineTicks: 241,
+      stepStandardTicks: 10,
+    });
+    vi.runAllTimers();
+
+    const retargeted = timelineRuntime.handleRequest({
+      type: "retarget-timeline",
+      requestId: 3,
+      retainedFromTimelineTickNumber: 0,
+      targetTimelineTickNumber: 960,
+    });
+    expect(retargeted.type).toBe("timeline-retargeted");
+    vi.runAllTimers();
+
+    const exactExportsByMinute = new Map<number, SimulationRuntimeExport>();
+    for (let standardTickNumber = 2; standardTickNumber <= 9601; standardTickNumber += 1) {
+      exactRuntime.createSparseTickSnapshot(standardTickNumber);
+      if ((standardTickNumber - 1) % 1200 !== 0) {
+        continue;
+      }
+      const minute = (standardTickNumber - 1) / 1200;
+      const runtimeExport = exactRuntime.exportRuntimeState(standardTickNumber);
+      if (runtimeExport === null) {
+        throw new Error(`Expected exact runtime export at minute ${minute}.`);
+      }
+      exactExportsByMinute.set(minute, runtimeExport);
+    }
+
+    for (let minute = 1; minute <= 8; minute += 1) {
+      const timelineTickNumber = minute * 120;
+      const checkpoint = timelineRuntime.handleRequest({
+        type: "get-timeline-checkpoint",
+        requestId: 10 + minute,
+        timelineTickNumber,
+      });
+      if (checkpoint.type !== "timeline-checkpoint-result") {
+        throw new Error(`Unexpected checkpoint response "${checkpoint.type}".`);
+      }
+      const exactExport = exactExportsByMinute.get(minute);
+      expect(checkpoint.runtimeExport?.runtimeState.persistent)
+        .toEqual(exactExport?.runtimeState.persistent);
+      expect(checkpoint.runtimeExport?.snapshot).toEqual(exactExport?.snapshot);
+    }
+
+    const largeSeekCheckpoint = timelineRuntime.handleRequest({
+      type: "get-timeline-checkpoint",
+      requestId: 30,
+      timelineTickNumber: 960,
+    });
+    if (
+      largeSeekCheckpoint.type !== "timeline-checkpoint-result"
+      || largeSeekCheckpoint.runtimeExport === null
+    ) {
+      throw new Error("Expected the large forward seek checkpoint.");
+    }
+
+    const resumedRuntime = new SimulationWorkerRuntime();
+    resumedRuntime.importRuntimeState(largeSeekCheckpoint.runtimeExport, {
+      scheduleBackgroundFill: false,
+    });
+    for (let standardTickNumber = 9602; standardTickNumber <= 10801; standardTickNumber += 1) {
+      exactRuntime.createSparseTickSnapshot(standardTickNumber);
+    }
+    resumedRuntime.createSparseTickSnapshot(10801);
+
+    expect(resumedRuntime.exportRuntimeState(10801)?.runtimeState.persistent)
+      .toEqual(exactRuntime.exportRuntimeState(10801)?.runtimeState.persistent);
+    expect(resumedRuntime.exportRuntimeState(10801)?.snapshot)
+      .toEqual(exactRuntime.exportRuntimeState(10801)?.snapshot);
+  }, 20_000);
+
   it("keeps render-critical device, slot, and transfer state in lightweight presentation frames", () => {
     const runtimeExport = createRuntimeExport(20);
     const topology = {
@@ -488,7 +589,16 @@ function createPresentationTestDeviceSnapshot(deviceId: string) {
     recipe: null,
     channelRecipes: {},
     admissionCounters: {},
-    meteredConsumption: null,
+    // AI-REMOVED 2026-07-23:
+    // Reason: 展示快照测试不再构造已删除的分钟计量字段。
+    // Trigger: 消耗机制迁移到真实槽位和 consumption channel。
+    // Evidence: RuntimeDeviceSnapshot 已删除 meteredConsumption。
+    // Replacement: channelRecipes + slots。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // meteredConsumption: null,
   };
 }
 
@@ -553,6 +663,33 @@ function createEmptyTopology(): CompiledSimulationTopology {
   };
 }
 
+function createConsumptionTimelineTopology(): CompiledSimulationTopology {
+  const blueprint = createBlueprint("timeline-consumption-gas", [
+    createEntity("xiranite-oven", "xiranite_oven_1", 2, 0, 0, {
+      channelRecipes: {
+        default: "xiranite_oven_xiranite_powder_2",
+      },
+      "storageSlotGroups[0].slots[0].initialItemType": "item_carbon_mtl",
+      "storageSlotGroups[0].slots[0].initialCount": 50,
+      "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_water",
+      "storageSlotGroups[1].slots[0].initialCount": 50,
+    }),
+    createEntity("gas-source", "gas_storager_1", -4, 0, 0, {
+      "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
+      "storageSlotGroups[0].slots[0].initialCount": 50,
+    }),
+    createEntity("gas-pipe", "pipe_straight_1x1", -1, 1),
+    createEntity("gas-diffuser", "vaporizer_1", 0, 0),
+    createEntity("power", "power_diffuser_1", 3, 5),
+  ]);
+  const document = createWorldDocumentFromBlueprint(blueprint);
+  return compileSimulationTopology({
+    document,
+    registry: createRegistryContract(),
+    poweredEntityIds: new Set(document.entityOrder),
+  });
+}
+
 function createTimelinePhaseTopology(): CompiledSimulationTopology {
   return {
     ...createEmptyTopology(),
@@ -596,6 +733,7 @@ function createTimelinePhaseTopology(): CompiledSimulationTopology {
         nodeIds: ["node:out"],
         recipeChannels: [{
           id: "main",
+          type: "normal-channel",
           ingredientNodeIds: [],
           productNodeIds: ["node:out"],
           manualRecipeOnly: false,

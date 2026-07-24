@@ -71,6 +71,7 @@ const REGISTRY: Record<string, string> = {
   "registry.entity.pipe_turn_cw_1x1.name": "CW Turn Pipe",
   "registry.recipe.r_dumper_void_liquid_acid_basic.name": "Dump Sediment Acid",
   "registry.recipe.r_dumper_void_liquid_water_basic.name": "Dump Water",
+  "registry.recipe.internal_device_consumption.name": "Device Running Consumption",
   "registry.recipe.r_gas_diffuser_inert_gas_environment_basic.name": "Inert Gas Diffusion",
   "registry.recipe.r_gas_diffuser_water_gas_environment_basic.name": "Aquagen Diffusion",
   "registry.recipe.r_gas_diffuser_acid_gas_environment_basic.name": "Acridgen Diffusion",

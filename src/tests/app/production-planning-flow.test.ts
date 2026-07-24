@@ -81,6 +81,7 @@ function emptyPlanningIndex(): ProductionPlanningIndex {
     itemById: new Map(),
     entityById: new Map(),
     recipeById: new Map(),
+    consumptionRecipesByMachine: new Map(),
     recipesByOutputItem: new Map(),
     allItems: [],
     naturalResourceItemIds: new Set(),

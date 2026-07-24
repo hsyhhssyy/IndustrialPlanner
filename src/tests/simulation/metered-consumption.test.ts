@@ -2,17 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import {
-  computeActiveGasDiffusions,
-  isDeviceInRequiredGasDiffusion,
-} from "@/simulation/runtime/gas-diffusion";
-import {
-  canAcceptMeteredConsumptionItem,
-  recordMeteredConsumptionItem,
-} from "@/simulation/runtime/metered-consumption";
-import {
   createSimulationMutableRuntimeState,
-  normalizeFixedWindowCountersForCurrentWindow,
-  readFixedWindowCounterForCurrentWindow,
 } from "@/simulation/runtime/runtime-state";
 import { advanceDevices } from "@/simulation/runtime/stage-1-advance-devices";
 import { settleRecipes } from "@/simulation/runtime/stage-5-settle-recipes";
@@ -24,243 +14,264 @@ import {
   createWorldDocumentFromBlueprint,
 } from "./blueprint-test-helpers";
 
-describe("metered device consumption", () => {
-  it("compiles every metered input to an internal synthetic sink", () => {
+describe("consumption channel device mechanism", () => {
+  it("compiles every consumption input to one real capacity-five slot and five leading channels", () => {
     for (const definitionId of [
       "transmuter_1_gastrans",
       "transmuter_1_liquidtrans",
       "transmuter_2_gastrans",
       "transmuter_2_solidtrans",
       "vaporizer_1",
-    ] as const) {
+      ] as const) {
       const topology = compilePoweredBlueprint(createBlueprint(`synthetic-${definitionId}`, [
         createEntity("device", definitionId, 0, 0),
       ]));
       const device = topology.devices["device:device"]!;
-      const portId = device.meteredConsumption!.inputPortId;
+      const portId = device.portIds.find(
+        (candidate) => topology.ports[candidate]?.direction === "input"
+          && topology.nodes[topology.ports[candidate]!.boundNodeIds[0]!]
+            ?.sourceStorageSlotGroupId === "consume_buffer",
+      )!;
       const nodeId = topology.ports[portId]!.boundNodeIds[0]!;
       const slotId = topology.nodes[nodeId]!.slotIds[0]!;
 
-      expect(topology.nodes[nodeId]?.sourceStorageSlotGroupId).toBe("synthetic-input");
+      expect(topology.nodes[nodeId]?.sourceStorageSlotGroupId).toBe("consume_buffer");
       expect(topology.slots[slotId]).toMatchObject({
-        sourceStorageSlotGroupId: "synthetic-input",
-        domain: "any",
+        sourceStorageSlotGroupId: "consume_buffer",
+        capacity: 5,
         initialItemType: null,
         initialCount: 0,
       });
+      expect(device.consumptionChannelCount).toBe(5);
+      expect(device.recipeChannels.slice(0, 5).every(
+        (channel) => channel.type === "consumption-channel",
+      )).toBe(true);
+      expect(device.recipeChannels.slice(5).every(
+        (channel) => channel.type === "normal-channel",
+      )).toBe(true);
     }
   });
 
-  it("destroys at most 30 items per fixed minute", () => {
-    const topology = compilePoweredBlueprint(createBlueprint("metered-vaporizer", [
-      createEntity("source", "gas_storager_1", -4, 0, 0, {
-        "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
-        "storageSlotGroups[0].slots[0].initialCount": 6,
-      }),
-      createEntity("pipe", "pipe_straight_1x1", -1, 1),
+  it("keeps one reserved item in the slot until exactly ten seconds complete", () => {
+    const topology = compilePoweredBlueprint(createBlueprint("one-consumption-item", [
       createEntity("vaporizer", "vaporizer_1", 0, 0),
     ]));
     const device = topology.devices["device:vaporizer"]!;
-    const portId = device.meteredConsumption!.inputPortId;
     const state = createSimulationMutableRuntimeState(topology);
+    const slotId = getConsumptionSlotId(topology, device.id);
     state.tickNumber = 1;
-    expect(topology.ports[portId]?.boundNodeIds).toEqual([
-      "device:vaporizer/node:synthetic-input",
-    ]);
-    expect(Object.values(topology.transferEdges)).toEqual(expect.arrayContaining([
-      expect.objectContaining({ targetPortId: portId }),
-    ]));
+    putItems(state, slotId, "item_gas_inert", 1);
 
-    consume(topology, state, portId, "item_gas_inert", 5);
-    expect(state.persistent.meteredConsumptions[device.id]).toMatchObject({
-      currentItemId: "item_gas_inert",
-      authorizedUntilTick: null,
-      activeEffectItemId: null,
+    settleRecipes(topology, state);
+    expect(getRunningConsumptionRecipes(topology, state, device.id)).toHaveLength(1);
+    expect(state.persistent.slots[slotId]).toMatchObject({
+      itemType: "item_gas_inert",
+      count: 1,
     });
 
-    consume(topology, state, portId, "item_gas_inert", 25);
-    expect(readFixedWindowCounterForCurrentWindow(topology, state, portId).count).toBe(30);
-    expect(canAcceptMeteredConsumptionItem(topology, state, portId, "item_gas_inert")).toBe(false);
-    const sinkSlotId = topology.nodes[topology.ports[portId]!.boundNodeIds[0]!]!.slotIds[0]!;
-    expect(topology.slots[sinkSlotId]?.sourceStorageSlotGroupId).toBe("synthetic-input");
-    expect(state.persistent.slots[sinkSlotId]).toMatchObject({ itemType: null, count: 0 });
-    expect(state.transient.recipeStatsDelta.consumed.item_gas_inert).toBe(30);
+    advanceDevices(topology, state, 199);
+    expect(state.persistent.slots[slotId]?.count).toBe(1);
+    advanceDevices(topology, state, 1);
+    expect(state.persistent.slots[slotId]).toMatchObject({ itemType: null, count: 0 });
+    expect(state.transient.recipeStatsDelta.consumed.item_gas_inert).toBe(1);
   });
 
-  it("locks each window to one gas and changes the environment only at the next qualified boundary", () => {
-    const topology = compilePoweredBlueprint(createBlueprint("metered-vaporizer-gas", [
+  it("starts five recipes concurrently and leaves no capacity for a sixth item", () => {
+    const topology = compilePoweredBlueprint(createBlueprint("five-consumption-items", [
       createEntity("vaporizer", "vaporizer_1", 0, 0),
-      createEntity("consumer", "xiranite_oven_1", 2, 0),
     ]));
     const device = topology.devices["device:vaporizer"]!;
-    const consumer = topology.devices["device:consumer"]!;
-    const portId = device.meteredConsumption!.inputPortId;
     const state = createSimulationMutableRuntimeState(topology);
+    const slotId = getConsumptionSlotId(topology, device.id);
     state.tickNumber = 1;
+    putItems(state, slotId, "item_gas_inert", 5);
 
-    expect(readFixedWindowCounterForCurrentWindow(topology, state, portId).windowStartTick)
-      .toBe(1);
-
-    consume(topology, state, portId, "item_gas_inert", 6);
-    expect(canAcceptMeteredConsumptionItem(topology, state, portId, "item_gas_acid")).toBe(false);
-    const firstGasDiffusions = computeActiveGasDiffusions(topology, state);
-    expect(firstGasDiffusions).toMatchObject([
-      { sourceDeviceId: device.id, gasItemId: "item_gas_inert" },
-    ]);
-    expect(computeActiveGasDiffusions(topology, state)).toBe(firstGasDiffusions);
-    expect(isDeviceInRequiredGasDiffusion({
-      topology,
-      state,
-      device: consumer,
-      requiredGasDiffusion: "item_gas_inert",
-    })).toBe(true);
-
-    state.tickNumber = 1200;
-    normalizeFixedWindowCountersForCurrentWindow(topology, state);
-    expect(readFixedWindowCounterForCurrentWindow(topology, state, portId)).toMatchObject({
-      windowStartTick: 1,
-      count: 6,
-    });
-    expect(canAcceptMeteredConsumptionItem(topology, state, portId, "item_gas_acid")).toBe(false);
-
-    state.tickNumber = 1201;
-    normalizeFixedWindowCountersForCurrentWindow(topology, state);
-    consume(topology, state, portId, "item_gas_acid", 6);
-    expect(state.persistent.meteredConsumptions[device.id]).toMatchObject({
-      previousWindowCount: 6,
-      previousWindowItemId: "item_gas_inert",
-      currentItemId: "item_gas_acid",
-      activeEffectItemId: "item_gas_inert",
-      authorizedUntilTick: 2401,
-    });
-    expect(readFixedWindowCounterForCurrentWindow(topology, state, portId).windowStartTick)
-      .toBe(1201);
-
-    // vaporizer_1 requiresPower=false，停电不影响气体扩散。
-    // AI-CORRECTION 2026-07-21: 修正停电断言，vaporizer 不需要供电，气体扩散在停电时依然有效。
-    state.transient.isPowerOutage = true;
-    expect(computeActiveGasDiffusions(topology, state)).toMatchObject([
-      { sourceDeviceId: device.id, gasItemId: "item_gas_inert" },
-    ]);
-    expect(isDeviceInRequiredGasDiffusion({
-      topology,
-      state,
-      device: consumer,
-      requiredGasDiffusion: "item_gas_inert",
-    })).toBe(true);
-    state.transient.isPowerOutage = false;
-
-    state.tickNumber = 2400;
-    normalizeFixedWindowCountersForCurrentWindow(topology, state);
-    expect(computeActiveGasDiffusions(topology, state)).toMatchObject([
-      { sourceDeviceId: device.id, gasItemId: "item_gas_inert" },
-    ]);
-
-    state.tickNumber = 2401;
-    normalizeFixedWindowCountersForCurrentWindow(topology, state);
-    expect(computeActiveGasDiffusions(topology, state)).toMatchObject([
-      { sourceDeviceId: device.id, gasItemId: "item_gas_acid" },
-    ]);
-    expect(isDeviceInRequiredGasDiffusion({
-      topology,
-      state,
-      device: consumer,
-      requiredGasDiffusion: "item_gas_inert",
-    })).toBe(false);
-    expect(isDeviceInRequiredGasDiffusion({
-      topology,
-      state,
-      device: consumer,
-      requiredGasDiffusion: "item_gas_acid",
-    })).toBe(true);
+    settleRecipes(topology, state);
+    const recipes = getRunningConsumptionRecipes(topology, state, device.id);
+    expect(recipes).toHaveLength(5);
+    expect(new Set(recipes.map((recipe) => recipe.recipeId))).toEqual(
+      new Set(["r_gas_diffuser_inert_gas_environment_basic"]),
+    );
+    expect(recipes.reduce((total, recipe) => total + recipe.reservations.length, 0)).toBe(5);
+    expect(topology.slots[slotId]!.capacity - state.persistent.slots[slotId]!.count).toBe(0);
+    expect(state.persistent.slots[slotId]?.count).toBe(5);
   });
 
-  it("rebuilds gas coverage when the topology identity and source position change", () => {
-    const topology = compilePoweredBlueprint(createBlueprint("gas-position-before", [
-      createEntity("vaporizer", "vaporizer_1", 0, 0),
-      createEntity("consumer", "xiranite_oven_1", 2, 0),
-    ]));
+  it("starts and completes consumption while the device is outside every power range", () => {
+    const topology = compileBlueprint(createBlueprint("out-of-range-consumption", [
+      createEntity("transmuter", "transmuter_1_gastrans", 0, 0),
+    ]), false);
+    const device = topology.devices["device:transmuter"]!;
     const state = createSimulationMutableRuntimeState(topology);
+    const slotId = getConsumptionSlotId(topology, device.id);
+    putItems(state, slotId, "item_liquid_xiranite", 1);
+
+    expect(device.powerStatus).toBe("out-of-power-range");
+    settleRecipes(topology, state, "real", 0, topology.totalPowerDemand);
+    expect(getRunningConsumptionRecipes(topology, state, device.id)).toHaveLength(1);
+    advanceDevices(topology, state, 200, "real", 0, topology.totalPowerDemand);
+    expect(state.persistent.slots[slotId]).toMatchObject({ itemType: null, count: 0 });
+  });
+
+  it("keeps staggered arrivals on independent ten-second lifetimes", () => {
+    const topology = compilePoweredBlueprint(createBlueprint("staggered-consumption", [
+      createEntity("vaporizer", "vaporizer_1", 0, 0),
+    ]));
     const vaporizer = topology.devices["device:vaporizer"]!;
-    const portId = vaporizer.meteredConsumption!.inputPortId;
+    const state = createSimulationMutableRuntimeState(topology);
+    const slotId = getConsumptionSlotId(topology, vaporizer.id);
     state.tickNumber = 1;
-    consume(topology, state, portId, "item_gas_inert", 6);
+    putItems(state, slotId, "item_gas_inert", 1);
+    settleRecipes(topology, state);
+    advanceDevices(topology, state, 100);
 
-    expect(isDeviceInRequiredGasDiffusion({
-      topology,
-      state,
-      device: topology.devices["device:consumer"]!,
-      requiredGasDiffusion: "item_gas_inert",
-    })).toBe(true);
+    putItems(state, slotId, "item_gas_inert", 2);
+    settleRecipes(topology, state);
+    advanceDevices(topology, state, 100);
+    expect(state.persistent.slots[slotId]?.count).toBe(1);
+    expect(getRunningConsumptionRecipes(topology, state, vaporizer.id)).toHaveLength(1);
 
-    const movedTopology = compilePoweredBlueprint(createBlueprint("gas-position-after", [
-      createEntity("vaporizer", "vaporizer_1", 100, 100),
-      createEntity("consumer", "xiranite_oven_1", 5, 0),
-    ]));
-    expect(isDeviceInRequiredGasDiffusion({
-      topology: movedTopology,
-      state,
-      device: movedTopology.devices["device:consumer"]!,
-      requiredGasDiffusion: "item_gas_inert",
-    })).toBe(false);
+    advanceDevices(topology, state, 100);
+    expect(state.persistent.slots[slotId]).toMatchObject({ itemType: null, count: 0 });
   });
 
-  it("freezes and resumes a transmuter recipe without replacing its running recipe", () => {
-    const recipeId = "liquid_transmuter_1_gas_gas_water_1";
-    const topology = compilePoweredBlueprint(createBlueprint("metered-transmuter", [
+  it("starts a normal recipe in the same settle frame, then freezes and resumes it with consumption", () => {
+    const recipeId = "liquid_transmuter_1_gas_gas_xiranite_enr_1";
+    const topology = compilePoweredBlueprint(createBlueprint("consumption-gated-transmuter", [
       createEntity("transmuter", "transmuter_1_gastrans", 0, 0, 0, {
         channelRecipes: { default: recipeId },
-        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-        "storageSlotGroups[0].slots[0].initialCount": 2,
       }),
     ]));
     const device = topology.devices["device:transmuter"]!;
-    const portId = device.meteredConsumption!.inputPortId;
     const state = createSimulationMutableRuntimeState(topology);
+    const slotId = getConsumptionSlotId(topology, device.id);
+    const normalInputSlotId = getStorageSlotId(topology, device.id, "liquid_input_buffer");
+    const normalChannel = device.recipeChannels.find((channel) => channel.type === "normal-channel")!;
     state.tickNumber = 1;
-    const channelId = device.recipeChannels[0]!.id;
-
+    putItems(state, slotId, "item_liquid_xiranite", 1);
     settleRecipes(topology, state);
-    expect(state.persistent.devices[device.id]?.channelRecipes[channelId]).toBeUndefined();
+    advanceDevices(topology, state, 100);
 
-    consume(topology, state, portId, "item_liquid_xiranite", 6);
+    putItems(state, normalInputSlotId, "item_liquid_xiranite_enr", 2);
     settleRecipes(topology, state);
-    const runningRecipe = state.persistent.devices[device.id]?.channelRecipes[channelId];
+    const runningRecipe = state.persistent.devices[device.id]?.channelRecipes[normalChannel.id];
     expect(runningRecipe).toMatchObject({ recipeId, progressTicks: 0, state: "running" });
 
-    state.tickNumber = 2401;
-    normalizeFixedWindowCountersForCurrentWindow(topology, state);
-    advanceDevices(topology, state, 20);
-    expect(state.persistent.devices[device.id]?.channelRecipes[channelId]).toBe(runningRecipe);
-    expect(runningRecipe?.progressTicks).toBe(0);
+    advanceDevices(topology, state, 100);
+    expect(state.persistent.slots[slotId]?.count).toBe(0);
+    expect(runningRecipe?.progressTicks).toBe(100);
 
-    consume(topology, state, portId, "item_liquid_xiranite", 6);
+    state.transient.activeConsumptionDeviceIds = new Set();
     advanceDevices(topology, state, 20);
-    expect(state.persistent.devices[device.id]?.channelRecipes[channelId]).toBe(runningRecipe);
-    expect(runningRecipe?.progressTicks).toBe(20);
+    expect(state.persistent.devices[device.id]?.channelRecipes[normalChannel.id]).toBe(runningRecipe);
+    expect(runningRecipe?.progressTicks).toBe(100);
+
+    putItems(state, slotId, "item_liquid_xiranite", 1);
+    settleRecipes(topology, state);
+    advanceDevices(topology, state, 20);
+    expect(state.persistent.devices[device.id]?.channelRecipes[normalChannel.id]).toBe(runningRecipe);
+    expect(runningRecipe?.progressTicks).toBe(120);
+  });
+
+  it("runs consumption without power and commits waiting output after power and consumption stop", () => {
+    const topology = compilePoweredBlueprint(createBlueprint("powerless-consumption", [
+      createEntity("transmuter", "transmuter_1_gastrans", 0, 0, 0, {
+        channelRecipes: { default: "liquid_transmuter_1_gas_gas_water_1" },
+        "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+        "storageSlotGroups[0].slots[0].initialCount": 1,
+        "storageSlotGroups[1].slots[0].initialItemType": "item_gas_water",
+        "storageSlotGroups[1].slots[0].initialCount": 50,
+      }),
+    ]));
+    const device = topology.devices["device:transmuter"]!;
+    const state = createSimulationMutableRuntimeState(topology);
+    const consumptionSlotId = getConsumptionSlotId(topology, device.id);
+    const outputSlotId = topology.nodes[`${device.id}/node:gas_output_buffer`]!.slotIds[0]!;
+    const normalChannel = device.recipeChannels.find((channel) => channel.type === "normal-channel")!;
+    putItems(state, consumptionSlotId, "item_liquid_xiranite", 1);
+
+    settleRecipes(topology, state, "real", 0, topology.totalPowerDemand);
+    expect(getRunningConsumptionRecipes(topology, state, device.id)).toHaveLength(1);
+    expect(state.persistent.devices[device.id]?.channelRecipes[normalChannel.id] ?? null).toBeNull();
+    advanceDevices(topology, state, 200, "real", 0, topology.totalPowerDemand);
+    expect(state.persistent.slots[consumptionSlotId]?.count).toBe(0);
+
+    // 先在有电且有消耗许可时把普通配方推进到 waiting-output。
+    putItems(state, consumptionSlotId, "item_liquid_xiranite", 1);
+    settleRecipes(topology, state);
+    advanceDevices(topology, state, 40);
+    expect(state.persistent.devices[device.id]?.channelRecipes[normalChannel.id]?.state)
+      .toBe("waiting-output");
+
+    advanceDevices(topology, state, 160);
+    state.transient.activeConsumptionDeviceIds = new Set();
+    state.persistent.slots[outputSlotId]!.count = 49;
+    settleRecipes(topology, state, "real", 0, topology.totalPowerDemand);
+    expect(state.persistent.devices[device.id]?.channelRecipes[normalChannel.id] ?? null).toBeNull();
+    expect(state.persistent.slots[outputSlotId]?.count).toBe(50);
   });
 });
 
 function compilePoweredBlueprint(
   blueprint: ReturnType<typeof createBlueprint>,
 ): CompiledSimulationTopology {
+  return compileBlueprint(blueprint, true);
+}
+
+function compileBlueprint(
+  blueprint: ReturnType<typeof createBlueprint>,
+  powered: boolean,
+): CompiledSimulationTopology {
   const document = createWorldDocumentFromBlueprint(blueprint);
   return compileSimulationTopology({
     document,
     registry: createRegistryContract(),
-    poweredEntityIds: new Set(document.entityOrder),
+    poweredEntityIds: powered ? new Set(document.entityOrder) : new Set(),
   });
 }
 
-function consume(
+function getConsumptionSlotId(
+  topology: CompiledSimulationTopology,
+  deviceId: string,
+): string {
+  const device = topology.devices[deviceId]!;
+  const nodeId = device.nodeIds.find(
+    (candidate) => topology.nodes[candidate]?.sourceStorageSlotGroupId === "consume_buffer",
+  )!;
+  return topology.nodes[nodeId]!.slotIds[0]!;
+}
+
+function getStorageSlotId(
+  topology: CompiledSimulationTopology,
+  deviceId: string,
+  storageGroupId: string,
+): string {
+  const device = topology.devices[deviceId]!;
+  const nodeId = device.nodeIds.find(
+    (candidate) => topology.nodes[candidate]?.sourceStorageSlotGroupId === storageGroupId,
+  )!;
+  return topology.nodes[nodeId]!.slotIds[0]!;
+}
+
+function putItems(
+  state: ReturnType<typeof createSimulationMutableRuntimeState>,
+  slotId: string,
+  itemType: string,
+  count: number,
+): void {
+  state.persistent.slots[slotId] = { itemType, count };
+  state.transient.reservedAmountByStorageSlotId = null;
+}
+
+function getRunningConsumptionRecipes(
   topology: CompiledSimulationTopology,
   state: ReturnType<typeof createSimulationMutableRuntimeState>,
-  portId: string,
-  itemType: string,
-  amount: number,
-): void {
-  for (let index = 0; index < amount; index += 1) {
-    expect(canAcceptMeteredConsumptionItem(topology, state, portId, itemType)).toBe(true);
-    expect(recordMeteredConsumptionItem(topology, state, portId, itemType)).toBe(true);
-  }
+  deviceId: string,
+) {
+  const device = topology.devices[deviceId]!;
+  const deviceState = state.persistent.devices[deviceId]!;
+  return device.recipeChannels
+    .filter((channel) => channel.type === "consumption-channel")
+    .map((channel) => deviceState.channelRecipes[channel.id] ?? null)
+    .filter((recipe): recipe is NonNullable<typeof recipe> => recipe?.state === "running");
 }

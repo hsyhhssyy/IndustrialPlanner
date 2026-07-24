@@ -74,22 +74,35 @@ export interface SimulationDeviceRuntimeStatusReadModel {
   readonly slotItems: readonly SimulationDeviceRuntimeSlotItemReadModel[];
   /** 准入口 runtime 计数，key 为 `${portGroupId}:${portId}`。非 admission 设备或旧测试 mock 可省略。 */
   readonly admissionCounters?: Record<string, SimulationAdmissionCounterStatusReadModel>;
-  /** 销毁型计量消耗状态；非计量设备为 null，旧测试 mock 可省略。 */
-  readonly meteredConsumption?: SimulationMeteredConsumptionStatusReadModel | null;
+  // AI-REMOVED 2026-07-23:
+  // Reason: Inspector 改为直接读取真实消耗槽，运行时不再维护分钟计量快照。
+  // Trigger: 用户要求去掉计数器机制并显示槽位物品数量 × 6。
+  // Evidence: slotItems 已包含 storageGroupId、count 与 reserved，可完整表达当前消耗状态。
+  // Replacement: slotItems 中 consumption-channel 原料槽对应项。
+  // Risk: Low - 旧 Inspector 与测试 mock 需要同步迁移。
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly meteredConsumption?: SimulationMeteredConsumptionStatusReadModel | null;
   /** 设备供电范围状态（编译期确定，非运行时变化） */
   readonly powerStatus: "no-power-needed" | "in-power-range" | "out-of-power-range" | null;
 }
 
-export interface SimulationMeteredConsumptionStatusReadModel {
-  /** 当前固定分钟窗口内已经实际销毁的物品数量。 */
-  readonly currentWindowCount: number;
-  /** 当前固定分钟窗口锁定的计量物品 ID；尚未消费时为 null。 */
-  readonly currentWindowItemId: string | null;
-  /** 上一个已经完成的固定分钟窗口内实际销毁的物品数量。 */
-  readonly previousWindowCount: number;
-  /** 上一个已经完成的固定分钟窗口锁定的计量物品 ID。 */
-  readonly previousWindowItemId: string | null;
-}
+// AI-REMOVED 2026-07-23:
+// Reason: 固定分钟窗口计量状态不再存在。
+// Trigger: 用户要求以十秒 reserved-item 配方和真实容量 5 槽位表达消耗。
+// Evidence: SimulationDeviceRuntimeSlotItemReadModel 与 channelRecipes 已覆盖 Inspector 所需状态。
+// Replacement: SimulationDeviceRuntimeSlotItemReadModel + SimulationDeviceRuntimeChannelRecipeStatus。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// export interface SimulationMeteredConsumptionStatusReadModel {
+//   readonly currentWindowCount: number;
+//   readonly currentWindowItemId: string | null;
+//   readonly previousWindowCount: number;
+//   readonly previousWindowItemId: string | null;
+// }
 
 export interface SimulationGasDiffusionRangeReadModel {
   readonly sourceDeviceId: string;

@@ -43,6 +43,7 @@ import {
   findDarkPipeSlotLinkForEntity,
   resolveDarkPipeRole,
 } from "@/shared/dark-pipe-link";
+import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -124,10 +125,24 @@ function renderRecipeStatusInspector(options: {
 }) {
   const registry = options.appHost.workspace.registry;
   const index = buildProductionPlanningIndex(registry);
+  const debugMode = options.appHost.state.settings.debugMode === true;
+  const channelIds = debugMode
+    ? options.definition.recipeChannels.map((channel) => channel.id)
+    : options.declaration.channelIds.filter((channelId) =>
+        options.definition.recipeChannels.find((channel) => channel.id === channelId)?.type
+          !== "consumption-channel",
+      );
+  if (debugMode) {
+    for (const recipe of registry.recipeDefinitions) {
+      if (recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {
+        index.recipeById.set(recipe.id, recipe);
+      }
+    }
+  }
 
   return (
     <SimulationRecipeStatusRuntimeInspector
-      channelIds={options.declaration.channelIds}
+      channelIds={channelIds}
       channels={options.definition.recipeChannels}
       runtimeStatus={options.runtimeStatus}
       index={index}
@@ -149,6 +164,12 @@ function renderInspector(options: {
 }) {
   switch (options.declaration.type) {
     case INSPECTOR_TYPE.slotConfig:
+      if (
+        options.appHost.state.settings.debugMode !== true
+        && options.declaration.slotGroupIds.length === 0
+      ) {
+        return null;
+      }
       return (
         <SlotConfigInspector
           appHost={options.appHost}

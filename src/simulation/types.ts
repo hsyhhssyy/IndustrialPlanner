@@ -147,14 +147,23 @@ export interface CompiledSimulationGasDiffusionOutput {
   readonly range: number;
 }
 
-export interface CompiledSimulationMeteredConsumption {
-  readonly inputPortId: string;
-  readonly itemIds: readonly string[];
-  readonly windowTicks: number;
-  readonly startThreshold: number;
-  readonly acceptanceLimit: number;
-  readonly gasDiffusionRange: number | null;
-}
+// AI-REMOVED 2026-07-23:
+// Reason: 固定分钟窗口计量已由真实缓存与 consumption-channel 配方取代。
+// Trigger: 用户要求去掉计数器机制。
+// Evidence: CompiledSimulationRecipeChannel.type 与运行时频道配方能够直接表达许可和气体环境。
+// Replacement: CompiledSimulationRecipeChannel.type + CompiledSimulationDevice.consumptionChannelCount。
+// Risk: Medium
+// Human Review: Required
+//
+// Original code:
+// export interface CompiledSimulationMeteredConsumption {
+//   readonly inputPortId: string;
+//   readonly itemIds: readonly string[];
+//   readonly windowTicks: number;
+//   readonly startThreshold: number;
+//   readonly acceptanceLimit: number;
+//   readonly gasDiffusionRange: number | null;
+// }
 
 export interface CompiledSimulationDevice {
   readonly id: string;
@@ -173,6 +182,8 @@ export interface CompiledSimulationDevice {
   readonly transportComponentId: string | null;
   readonly nodeIds: readonly string[];
   readonly recipeChannels: readonly CompiledSimulationRecipeChannel[];
+  /** recipeChannels 前部连续的 consumption-channel 数量；生产拓扑始终由编译器填充。 */
+  readonly consumptionChannelCount?: number;
   /** 不同 channel 是否允许同时运行同一配方；缺失时按 false 处理。 */
   readonly allowDuplicateRecipesAcrossChannels?: boolean;
   readonly portIds: readonly string[];
@@ -184,8 +195,16 @@ export interface CompiledSimulationDevice {
   readonly blockageAutoClearance?: CompiledSimulationBlockageAutoClearance | null;
   /** 净水节点专用运行配置；其他设备为 null。 */
   readonly waterPurifierNode?: CompiledSimulationWaterPurifierNodeConfig | null;
-  /** 销毁型计量入口及其窗口运行许可；未声明时为 null。 */
-  readonly meteredConsumption?: CompiledSimulationMeteredConsumption | null;
+  // AI-REMOVED 2026-07-23:
+  // Reason: 设备消耗许可由运行中的 consumption-channel 配方直接决定。
+  // Trigger: 用户要求删除窗口计数器。
+  // Evidence: consumptionChannelCount 提供无查表的编译期频道边界。
+  // Replacement: consumptionChannelCount。
+  // Risk: Medium
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly meteredConsumption?: CompiledSimulationMeteredConsumption | null;
 }
 
 export interface CompiledSimulationBlockageAutoClearanceSlotRef {
@@ -210,6 +229,7 @@ export interface CompiledSimulationWaterPurifierNodeConfig {
 
 export interface CompiledSimulationRecipeChannel {
   readonly id: string;
+  readonly type: "normal-channel" | "consumption-channel";
   readonly ingredientNodeIds: readonly string[];
   readonly productNodeIds: readonly string[];
   readonly manualRecipeOnly: boolean;
@@ -497,18 +517,36 @@ export interface RuntimeDeviceSnapshot {
   readonly channelRecipes: Record<string, RuntimeDeviceRecipeSnapshot | null>;
   /** 准入口 runtime 计数，key 为 `${portGroupId}:${portId}`。 */
   readonly admissionCounters: Record<string, RuntimeAdmissionCounterSnapshot>;
-  readonly meteredConsumption: RuntimeMeteredConsumptionSnapshot | null;
+  // AI-REMOVED 2026-07-23:
+  // Reason: tick 快照改为通过真实 slot 与 channelRecipes 展示消耗状态。
+  // Trigger: 用户要求删除计数器 Inspector 数据源。
+  // Evidence: RuntimeSlotSnapshot.count/reserved 和频道配方状态已覆盖全部信息。
+  // Replacement: RuntimeTickSnapshot.slots + RuntimeDeviceSnapshot.channelRecipes。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly meteredConsumption: RuntimeMeteredConsumptionSnapshot | null;
 }
 
-export interface RuntimeMeteredConsumptionSnapshot {
-  readonly windowStartTick: number;
-  readonly currentCount: number;
-  readonly currentItemId: string | null;
-  readonly previousWindowItemId: string | null;
-  readonly previousWindowCount: number;
-  readonly authorizedUntilTick: number | null;
-  readonly activeEffectItemId: string | null;
-}
+// AI-REMOVED 2026-07-23:
+// Reason: 固定窗口计量快照不再存在。
+// Trigger: 用户要求真实缓存十秒后消耗。
+// Evidence: RuntimeSlotSnapshot 与 RuntimeDeviceRecipeSnapshot 是唯一运行时真值。
+// Replacement: RuntimeSlotSnapshot + RuntimeDeviceRecipeSnapshot。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// export interface RuntimeMeteredConsumptionSnapshot {
+//   readonly windowStartTick: number;
+//   readonly currentCount: number;
+//   readonly currentItemId: string | null;
+//   readonly previousWindowItemId: string | null;
+//   readonly previousWindowCount: number;
+//   readonly authorizedUntilTick: number | null;
+//   readonly activeEffectItemId: string | null;
+// }
 
 export interface RuntimeAdmissionCounterSnapshot {
   readonly portId: string;

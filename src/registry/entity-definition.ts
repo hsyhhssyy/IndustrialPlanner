@@ -42,6 +42,13 @@ import { DEFAULT_PORT_PRIORITY_GROUP } from "@/shared/port-priority-groups";
 import { MAIN_CRAFT_GROUP_TAG } from "@/shared/entity-variants";
 import { RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY } from "@/shared/recipe-channel-behavior";
 import {
+  CONSUMPTION_CHANNEL_IDS,
+  CONSUMPTION_RECIPE_CHANNEL_TYPE,
+  CONSUMPTION_SLOT_ID,
+  CONSUMPTION_STORAGE_GROUP_ID,
+  NORMAL_RECIPE_CHANNEL_TYPE,
+} from "@/shared/consumption-channel";
+import {
   BLOCKAGE_AUTO_CLEARANCE_ENABLED_CONFIG_KEY,
   WATER_PURIFIER_BYPRODUCT_CHANNEL_ID,
   WATER_PURIFIER_DEFAULT_MANUAL_OUTPUT_PER_MINUTE,
@@ -171,6 +178,25 @@ const WAREHOUSE_PORT_PLACEMENT_BEHAVIORS = [
 
 const WAREHOUSE_SINK_TAG = "WarehouseSink";
 const PRODUCER_TAG = "Producer";
+const VAPORIZER_CONSUMPTION_ITEM_IDS = [
+  "item_gas_acid",
+  "item_gas_inert",
+  "item_gas_water",
+  "item_gas_xiranite",
+] as const;
+
+function createGasItemWhitelistAcceptRule(
+  itemIds: readonly string[],
+): PortDefinition["acceptRule"] {
+  const allowedItemIds = new Set(itemIds);
+  return {
+    base: { kind: "gas" },
+    exclude: ITEM_DEFINITIONS
+      .filter((item) => item.tags.includes("gas") && !allowedItemIds.has(item.id))
+      .map((item) => item.id)
+      .sort(),
+  };
+}
 
 // AI-REMOVED 2026-06-06:
 // Reason: 协议核心输入缓存不再通过 submitMode 每 tick 入仓；统一走 WarehouseSink 动态入仓。
@@ -204,7 +230,9 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
   // 所有设备默认追加问题面板，用于展示放置/电力/堵塞等问题
   declaredInspectors.unshift({ type: INSPECTOR_TYPE.problem });
   if (
-    normalizedDefinition.meteredConsumption !== undefined
+    normalizedDefinition.recipeChannels?.some(
+      (channel) => channel.type === CONSUMPTION_RECIPE_CHANNEL_TYPE,
+    ) === true
     && !declaredInspectors.some((inspector) => inspector.type === INSPECTOR_TYPE.meteredConsumption)
   ) {
     declaredInspectors.push({ type: INSPECTOR_TYPE.meteredConsumption });
@@ -293,14 +321,23 @@ function createRecipeMachineIngredientSlotInspectors(
   }
 
   // 找出所有绑定了端口的存储槽组（即参与实际物流的槽组）
+  const consumptionStorageGroupIds = new Set(
+    definition.recipeChannels
+      ?.filter((channel) => channel.type === CONSUMPTION_RECIPE_CHANNEL_TYPE)
+      .flatMap((channel) => channel.ingredientStorageGroupIds)
+    ?? [],
+  );
   const boundStorageSlotGroupIds = definition.storageSlotGroups
     .filter((storageSlotGroup) =>
-      definition.portStorageBindings.some(b => b.storageSlotGroupId === storageSlotGroup.id),
+      !consumptionStorageGroupIds.has(storageSlotGroup.id)
+      && definition.portStorageBindings.some(b => b.storageSlotGroupId === storageSlotGroup.id),
     )
     .map(g => g.id);
 
   if (boundStorageSlotGroupIds.length === 0) {
-    return [];
+    return consumptionStorageGroupIds.size === 0
+      ? []
+      : [{ type: INSPECTOR_TYPE.slotConfig, slotGroupIds: [] }];
   }
 
   return [{
@@ -546,8 +583,37 @@ function createRecipeChannel(
   ingredientStorageGroupIds: string[],
   productStorageGroupIds: string[],
   manualRecipeOnly?: boolean,
+  type: RecipeChannelDefinition["type"] = NORMAL_RECIPE_CHANNEL_TYPE,
 ): RecipeChannelDefinition {
-  return { id, ingredientStorageGroupIds, productStorageGroupIds, manualRecipeOnly };
+  return { id, type, ingredientStorageGroupIds, productStorageGroupIds, manualRecipeOnly };
+}
+
+function createConsumptionRecipeChannels(): RecipeChannelDefinition[] {
+  return CONSUMPTION_CHANNEL_IDS.map((id) =>
+    createRecipeChannel(
+      id,
+      [CONSUMPTION_STORAGE_GROUP_ID],
+      [],
+      false,
+      CONSUMPTION_RECIPE_CHANNEL_TYPE,
+    ),
+  );
+}
+
+function createConsumptionStorageSlotGroup(
+  itemFilterType: FilterType,
+  itemIds: readonly string[],
+): StorageSlotGroupDefinition {
+  const slot = createSlot(CONSUMPTION_SLOT_ID, 5, itemFilterType);
+  return createStorageSlotGroup(
+    CONSUMPTION_STORAGE_GROUP_ID,
+    "fluid",
+    [{
+      ...slot,
+      itemFilter: "whitelist",
+      itemFilterIds: [...itemIds],
+    }],
+  );
 }
 
 /**
@@ -3042,14 +3108,23 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: true,
     powerDemand: 50,
-    meteredConsumption: {
-      inputPortGroupId: "consume_input",
-      itemIds: ["item_gas_xiranite"],
-      windowSeconds: 60,
-      startThreshold: 6,
-      acceptanceLimit: 30,
-      gasDiffusionRange: null,
-    },
+    // AI-REMOVED 2026-07-23:
+    // Reason: 固定分钟计量窗口改为五路十秒 consumption-channel 配方。
+    // Trigger: 用户要求移除计数器，并让真实容量 5 缓存在配方完成时扣料。
+    // Evidence: consume_buffer、五个 consumption channel 与内部 reserved-item 配方共同表达新机制。
+    // Replacement: createConsumptionStorageSlotGroup + createConsumptionRecipeChannels。
+    // Risk: Medium
+    // Human Review: Required
+    //
+    // Original code:
+    // meteredConsumption: {
+    //   inputPortGroupId: "consume_input",
+    //   itemIds: ["item_gas_xiranite"],
+    //   windowSeconds: 60,
+    //   startThreshold: 6,
+    //   acceptanceLimit: 30,
+    //   gasDiffusionRange: null,
+    // },
     portGroups: [
       createPortGroup(
         "item_input",
@@ -3087,6 +3162,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid",
         createSlots("output_gas_slot", [50], "gas"),
       ),
+      createConsumptionStorageSlotGroup("gas", ["item_gas_xiranite"]),
       // AI-REMOVED 2026-07-16:
       // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
       // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
@@ -3103,6 +3179,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       // ),
     ],
     recipeChannels: [
+      ...createConsumptionRecipeChannels(),
       createRecipeChannel(
         "default",
         ["item_input_buffer"],
@@ -3112,6 +3189,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
+      createBinding("bind_consume", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
       // AI-REMOVED 2026-07-16:
       // Reason: consume_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 consume_buffer。
       // Trigger: 用户要求删除消耗槽位并验证求解。
@@ -3140,14 +3218,23 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [PRODUCER_TAG, "武陵", "alter:transmuter_2", "alter-variant:solidtrans"],
     requiresPower: true,
     powerDemand: 50,
-    meteredConsumption: {
-      inputPortGroupId: "consume_input",
-      itemIds: ["item_gas_xiranite"],
-      windowSeconds: 60,
-      startThreshold: 6,
-      acceptanceLimit: 30,
-      gasDiffusionRange: null,
-    },
+    // AI-REMOVED 2026-07-23:
+    // Reason: 固定分钟计量窗口改为真实缓存上的五路十秒消耗配方。
+    // Trigger: 用户要求消耗配方并行预留、十秒后扣料。
+    // Evidence: consume_buffer 容量 5，频道类型显式标记 consumption-channel。
+    // Replacement: createConsumptionStorageSlotGroup + createConsumptionRecipeChannels。
+    // Risk: Medium
+    // Human Review: Required
+    //
+    // Original code:
+    // meteredConsumption: {
+    //   inputPortGroupId: "consume_input",
+    //   itemIds: ["item_gas_xiranite"],
+    //   windowSeconds: 60,
+    //   startThreshold: 6,
+    //   acceptanceLimit: 30,
+    //   gasDiffusionRange: null,
+    // },
     portGroups: [
       createPortGroup(
         "gas_input",
@@ -3185,6 +3272,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item",
         createSlots("output_item_slot", [50], "solid"),
       ),
+      createConsumptionStorageSlotGroup("gas", ["item_gas_xiranite"]),
       // AI-REMOVED 2026-07-16:
       // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
       // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
@@ -3201,11 +3289,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       // ),
     ],
     recipeChannels: [
+      ...createConsumptionRecipeChannels(),
       createRecipeChannel("default", ["gas_input_buffer"], ["item_output_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
+      createBinding("bind_consume", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
       // AI-REMOVED 2026-07-16:
       // Reason: consume_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 consume_buffer。
       // Trigger: 用户要求删除消耗槽位并验证求解。
@@ -3311,14 +3401,23 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: true,
     powerDemand: 50,
-    meteredConsumption: {
-      inputPortGroupId: "consume_input",
-      itemIds: ["item_liquid_xiranite"],
-      windowSeconds: 60,
-      startThreshold: 6,
-      acceptanceLimit: 30,
-      gasDiffusionRange: null,
-    },
+    // AI-REMOVED 2026-07-23:
+    // Reason: 固定分钟计量窗口改为真实缓存上的五路十秒消耗配方。
+    // Trigger: 用户要求消耗配方并行预留、十秒后扣料。
+    // Evidence: consume_buffer 容量 5，频道类型显式标记 consumption-channel。
+    // Replacement: createConsumptionStorageSlotGroup + createConsumptionRecipeChannels。
+    // Risk: Medium
+    // Human Review: Required
+    //
+    // Original code:
+    // meteredConsumption: {
+    //   inputPortGroupId: "consume_input",
+    //   itemIds: ["item_liquid_xiranite"],
+    //   windowSeconds: 60,
+    //   startThreshold: 6,
+    //   acceptanceLimit: 30,
+    //   gasDiffusionRange: null,
+    // },
     portGroups: [
       createPortGroup(
         "liquid_input",
@@ -3358,6 +3457,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid",
         createSlots("output_gas_slot", [50], "gas"),
       ),
+      createConsumptionStorageSlotGroup("liquid", ["item_liquid_xiranite"]),
       // AI-REMOVED 2026-07-16:
       // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
       // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
@@ -3374,6 +3474,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       // ),
     ],
     recipeChannels: [
+      ...createConsumptionRecipeChannels(),
       createRecipeChannel(
         "default",
         ["liquid_input_buffer"],
@@ -3383,6 +3484,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_liquid_input", "liquid_input", "liquid_input_buffer"),
       createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
+      createBinding("bind_consume", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
       // AI-REMOVED 2026-07-16:
       // Reason: consume_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 consume_buffer。
       // Trigger: 用户要求删除消耗槽位并验证求解。
@@ -3411,14 +3513,23 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [PRODUCER_TAG, "武陵", "alter:transmuter_1", "alter-variant:liquidtrans"],
     requiresPower: true,
     powerDemand: 50,
-    meteredConsumption: {
-      inputPortGroupId: "consume_input",
-      itemIds: ["item_liquid_xiranite"],
-      windowSeconds: 60,
-      startThreshold: 6,
-      acceptanceLimit: 30,
-      gasDiffusionRange: null,
-    },
+    // AI-REMOVED 2026-07-23:
+    // Reason: 固定分钟计量窗口改为真实缓存上的五路十秒消耗配方。
+    // Trigger: 用户要求消耗配方并行预留、十秒后扣料。
+    // Evidence: consume_buffer 容量 5，频道类型显式标记 consumption-channel。
+    // Replacement: createConsumptionStorageSlotGroup + createConsumptionRecipeChannels。
+    // Risk: Medium
+    // Human Review: Required
+    //
+    // Original code:
+    // meteredConsumption: {
+    //   inputPortGroupId: "consume_input",
+    //   itemIds: ["item_liquid_xiranite"],
+    //   windowSeconds: 60,
+    //   startThreshold: 6,
+    //   acceptanceLimit: 30,
+    //   gasDiffusionRange: null,
+    // },
     portGroups: [
       createPortGroup(
         "gas_input",
@@ -3458,6 +3569,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid",
         createSlots("output_liquid_slot", [50], "liquid"),
       ),
+      createConsumptionStorageSlotGroup("liquid", ["item_liquid_xiranite"]),
       // AI-REMOVED 2026-07-16:
       // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
       // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
@@ -3474,11 +3586,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       // ),
     ],
     recipeChannels: [
+      ...createConsumptionRecipeChannels(),
       createRecipeChannel("default", ["gas_input_buffer"], ["liquid_output_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
       createBinding("bind_liquid_output", "liquid_output", "liquid_output_buffer"),
+      createBinding("bind_consume", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
       // AI-REMOVED 2026-07-16:
       // Reason: consume_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 consume_buffer。
       // Trigger: 用户要求删除消耗槽位并验证求解。
@@ -4221,19 +4335,28 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: false,
     powerDemand: 0,
-    meteredConsumption: {
-      inputPortGroupId: "gas_input",
-      itemIds: [
-        "item_gas_acid",
-        "item_gas_inert",
-        "item_gas_water",
-        "item_gas_xiranite",
-      ],
-      windowSeconds: 60,
-      startThreshold: 6,
-      acceptanceLimit: 30,
-      gasDiffusionRange: 13,
-    },
+    // AI-REMOVED 2026-07-23:
+    // Reason: 气体环境生命周期改由十秒 consumption-channel 配方直接决定。
+    // Trigger: 用户要求单个气体只产生十秒环境，并删除分钟计量窗口。
+    // Evidence: 四个气体配方各自声明 gasDiffusionOutput，运行状态能够确定环境种类与范围。
+    // Replacement: 五个 consumption channel + 容量 5 gas_input_buffer。
+    // Risk: Medium
+    // Human Review: Required
+    //
+    // Original code:
+    // meteredConsumption: {
+    //   inputPortGroupId: "gas_input",
+    //   itemIds: [
+    //     "item_gas_acid",
+    //     "item_gas_inert",
+    //     "item_gas_water",
+    //     "item_gas_xiranite",
+    //   ],
+    //   windowSeconds: 60,
+    //   startThreshold: 6,
+    //   acceptanceLimit: 30,
+    //   gasDiffusionRange: 13,
+    // },
     portGroups: [
       createPortGroup(
         "gas_input",
@@ -4241,7 +4364,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "input",
         [
           createPort("in_w_1", 0, 1, "W", {
-            acceptRule: { base: { kind: "gas" }, exclude: [] },
+            acceptRule: createGasItemWhitelistAcceptRule(VAPORIZER_CONSUMPTION_ITEM_IDS),
           }),
         ],
       ),
@@ -4262,7 +4385,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     //     createSlots("gas_input_slot", [500], "gas"),
     //   ),
     // ],
-    storageSlotGroups: [],
+    storageSlotGroups: [
+      createConsumptionStorageSlotGroup("gas", VAPORIZER_CONSUMPTION_ITEM_IDS),
+    ],
     // AI-REMOVED 2026-07-16:
     // Reason: 气体散布机改由计量消费窗口直接销毁输入并产生气体环境，不再运行计时配方。
     // Trigger: 用户确认下限 6、上限 30 的整分钟计量机制适用于 vaporizer_1。
@@ -4275,7 +4400,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     // recipeChannels: [
     //   createRecipeChannel("default", ["gas_input_buffer"], []),
     // ],
-    recipeChannels: [],
+    recipeChannels: [
+      ...createConsumptionRecipeChannels(),
+    ],
     // AI-REMOVED 2026-07-16:
     // Reason: gas_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 gas_input_buffer。
     // Trigger: 用户要求删除消耗槽位并验证求解。
@@ -4288,8 +4415,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     // portStorageBindings: [
     //   createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
     // ],
-    portStorageBindings: [],
+    portStorageBindings: [
+      createBinding("bind_gas_input", "gas_input", CONSUMPTION_STORAGE_GROUP_ID),
+    ],
     inspectors: [
+      {
+        type: INSPECTOR_TYPE.recipeStatus,
+        channelIds: [],
+      },
       // AI-REMOVED 2026-07-16:
       // Reason: vaporizer_1 不再运行配方，配方状态面板没有有效 channel 可展示。
       // Trigger: 气体环境生命周期迁移到 meteredConsumption 运行许可。

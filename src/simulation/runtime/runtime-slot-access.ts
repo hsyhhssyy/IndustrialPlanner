@@ -31,6 +31,10 @@ import {
   WATER_PURIFIER_INTAKE_CHANNEL_IDS,
   WATER_PURIFIER_NODE_ENTITY_ID,
 } from "@/shared/water-purifier-node";
+import {
+  CONSUMPTION_RECIPE_CHANNEL_TYPE,
+  CONSUMPTION_RECIPE_TAG,
+} from "@/shared/consumption-channel";
 
 const WAREHOUSE_SINK_TAG = "WarehouseSink";
 
@@ -41,6 +45,16 @@ const WAREHOUSE_SINK_TAG = "WarehouseSink";
 const recipePlanCacheByTopology = new WeakMap<
   CompiledSimulationTopology,
   Map<string, Map<string, Map<string, CompiledSimulationRecipePlan>>>
+>();
+
+interface RecipesByChannelType {
+  readonly normal: readonly CompiledSimulationRecipeDefinition[];
+  readonly consumption: readonly CompiledSimulationRecipeDefinition[];
+}
+
+const recipesByMachineAndChannelTypeByTopology = new WeakMap<
+  CompiledSimulationTopology,
+  ReadonlyMap<string, RecipesByChannelType>
 >();
 
 export interface IngredientSlotContent {
@@ -352,8 +366,6 @@ export function moveOneItem(options: {
   sourceSlotId: string;
   targetSlotId: string;
   itemType: string;
-  /** true 时目标是销毁型虚拟入口：来源扣除后不写入目标库存。 */
-  consumeAtTarget?: boolean;
 }): boolean {
   const sourceSlot = options.topology.slots[options.sourceSlotId];
   const targetSlot = options.topology.slots[options.targetSlotId];
@@ -398,9 +410,18 @@ export function moveOneItem(options: {
     }
   }
 
-  if (options.consumeAtTarget === true) {
-    return true;
-  }
+  // AI-REMOVED 2026-07-23:
+  // Reason: 销毁型虚拟计量入口已经由真实缓存和 reserved-item 配方取代。
+  // Trigger: 用户要求物品先进入容量 5 槽位，十秒后才消耗。
+  // Evidence: 所有 moveOneItem 调用现在都必须写入目标库存。
+  // Replacement: recipe completion 消费 reservations。
+  // Risk: Medium
+  // Human Review: Required
+  //
+  // Original code:
+  // if (options.consumeAtTarget === true) {
+  //   return true;
+  // }
 
   targetState.itemType = targetState.itemType ?? options.itemType;
   targetState.count += 1;
@@ -468,7 +489,10 @@ export function resolveDeviceRecipePlans(options: {
     channel: options.channel,
     ingredientSlotContents,
   }));
-  if (options.device.allowDuplicateRecipesAcrossChannels === true) {
+  if (
+    options.channel.type === CONSUMPTION_RECIPE_CHANNEL_TYPE
+    || options.device.allowDuplicateRecipesAcrossChannels === true
+  ) {
     return plans;
   }
 
@@ -775,7 +799,10 @@ function resolveRecipes(options: {
       return [];
     }
     const selectedRecipe = options.topology.recipeCatalog[options.channel.defaultRecipeId];
-    if (selectedRecipe === undefined) {
+    if (
+      selectedRecipe === undefined
+      || !doesRecipeMatchChannelType(selectedRecipe, options.channel)
+    ) {
       return [];
     }
     if (!isDeviceInRequiredGasDiffusion({
@@ -826,8 +853,11 @@ function resolveRecipes(options: {
   //
   // Original code:
   // .sort((left, right) => left.id.localeCompare(right.id))
-  return Object.values(options.topology.recipeCatalog)
-    .filter((recipe) => recipe.machineId === options.device.definitionId)
+  return resolveRecipesForDeviceChannel(
+    options.topology,
+    options.device.definitionId,
+    options.channel,
+  )
     .filter((recipe) => recipeCanMatchContents(options.topology, recipe, options.ingredientSlotContents))
     .filter((recipe) => isDeviceInRequiredGasDiffusion({
       topology: options.topology,
@@ -846,6 +876,50 @@ function resolveRecipes(options: {
         requiredGasDiffusion: recipe.requiredGasDiffusion,
         gasDiffusionOutput: recipe.gasDiffusionOutput,
       })));
+}
+
+function resolveRecipesForDeviceChannel(
+  topology: CompiledSimulationTopology,
+  definitionId: string,
+  channel: CompiledSimulationRecipeChannel,
+): readonly CompiledSimulationRecipeDefinition[] {
+  let byMachine = recipesByMachineAndChannelTypeByTopology.get(topology);
+  if (byMachine === undefined) {
+    const mutable = new Map<string, {
+      normal: CompiledSimulationRecipeDefinition[];
+      consumption: CompiledSimulationRecipeDefinition[];
+    }>();
+    for (const recipe of Object.values(topology.recipeCatalog)) {
+      let entry = mutable.get(recipe.machineId);
+      if (entry === undefined) {
+        entry = { normal: [], consumption: [] };
+        mutable.set(recipe.machineId, entry);
+      }
+      if (recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {
+        entry.consumption.push(recipe);
+      } else {
+        entry.normal.push(recipe);
+      }
+    }
+    byMachine = mutable;
+    recipesByMachineAndChannelTypeByTopology.set(topology, byMachine);
+  }
+
+  const recipes = byMachine.get(definitionId);
+  if (recipes === undefined) {
+    return [];
+  }
+  return channel.type === CONSUMPTION_RECIPE_CHANNEL_TYPE
+    ? recipes.consumption
+    : recipes.normal;
+}
+
+function doesRecipeMatchChannelType(
+  recipe: CompiledSimulationRecipeDefinition,
+  channel: CompiledSimulationRecipeChannel,
+): boolean {
+  return recipe.tags.includes(CONSUMPTION_RECIPE_TAG)
+    === (channel.type === CONSUMPTION_RECIPE_CHANNEL_TYPE);
 }
 
 function sortRecipePlansByEfficiency(

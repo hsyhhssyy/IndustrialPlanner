@@ -1,116 +1,19 @@
-import type {
-  CompiledSimulationDevice,
-  CompiledSimulationTopology,
-} from "../types";
-import type { SimulationMutableRuntimeState } from "./runtime-state";
-import {
-  incrementFixedWindowCounterForCurrentWindow,
-  readFixedWindowCounterForCurrentWindow,
-} from "./runtime-state";
-
-/**
- * 销毁型计量消耗入口：物品进入设备后立即销毁，并按固定仿真时间窗口授予设备运行许可。
- * 该机制独立于配方，因此即使没有配方运行，只要设备有电也会持续接收并计数。
- */
-export function isMeteredConsumptionInputPort(
-  topology: CompiledSimulationTopology,
-  portId: string,
-): boolean {
-  return resolveMeteredConsumptionDeviceForPort(topology, portId) !== null;
-}
-
-export function isDeviceElectricallyPowered(
-  device: CompiledSimulationDevice,
-  state: SimulationMutableRuntimeState,
-): boolean {
-  if (device.powerStatus === "out-of-power-range") {
-    return false;
-  }
-  return !(state.transient.isPowerOutage && device.requiresPower);
-}
-
-export function isMeteredConsumptionAuthorized(
-  device: CompiledSimulationDevice,
-  state: SimulationMutableRuntimeState,
-): boolean {
-  if (device.meteredConsumption === undefined || device.meteredConsumption === null) {
-    return true;
-  }
-  const runtime = state.persistent.meteredConsumptions[device.id];
-  return runtime?.authorizedUntilTick !== null
-    && runtime?.authorizedUntilTick !== undefined
-    && state.tickNumber < runtime.authorizedUntilTick;
-}
-
-export function canAcceptMeteredConsumptionItem(
-  topology: CompiledSimulationTopology,
-  state: SimulationMutableRuntimeState,
-  portId: string,
-  itemType: string,
-): boolean {
-  const device = resolveMeteredConsumptionDeviceForPort(topology, portId);
-  const config = device?.meteredConsumption;
-  if (device === null || config === undefined || config === null) {
-    return true;
-  }
-  if (!isDeviceElectricallyPowered(device, state)) {
-    return false;
-  }
-  if (!config.itemIds.includes(itemType)) {
-    return false;
-  }
-
-  const runtime = state.persistent.meteredConsumptions[device.id];
-  if (runtime === undefined) {
-    return false;
-  }
-  if (runtime.currentItemId !== null && runtime.currentItemId !== itemType) {
-    return false;
-  }
-  return readFixedWindowCounterForCurrentWindow(topology, state, portId).count
-    < config.acceptanceLimit;
-}
-
-/** 在 Stage 3 成功从来源扣除一件物品后提交销毁计数。 */
-export function recordMeteredConsumptionItem(
-  topology: CompiledSimulationTopology,
-  state: SimulationMutableRuntimeState,
-  portId: string,
-  itemType: string,
-): boolean {
-  const device = resolveMeteredConsumptionDeviceForPort(topology, portId);
-  const config = device?.meteredConsumption;
-  if (device === null || config === undefined || config === null) {
-    return false;
-  }
-
-  const runtime = state.persistent.meteredConsumptions[device.id];
-  if (runtime === undefined) {
-    return false;
-  }
-
-  const counter = readFixedWindowCounterForCurrentWindow(topology, state, portId);
-  runtime.currentItemId = runtime.currentItemId ?? itemType;
-  incrementFixedWindowCounterForCurrentWindow(topology, state, portId);
-
-  const delta = state.transient.recipeStatsDelta;
-  delta.consumed[itemType] = (delta.consumed[itemType] ?? 0) + 1;
-
-  if (
-    counter.count >= config.startThreshold
-    && (runtime.authorizedUntilTick === null || state.tickNumber >= runtime.authorizedUntilTick)
-  ) {
-    runtime.authorizedUntilTick = counter.windowStartTick + config.windowTicks;
-    runtime.activeEffectItemId = runtime.currentItemId;
-  }
-  return true;
-}
-
-function resolveMeteredConsumptionDeviceForPort(
-  topology: CompiledSimulationTopology,
-  portId: string,
-): CompiledSimulationDevice | null {
-  const port = topology.ports[portId];
-  const device = port === undefined ? undefined : topology.devices[port.deviceId];
-  return device?.meteredConsumption?.inputPortId === portId ? device : null;
-}
+// AI-REMOVED 2026-07-23:
+// Reason: 整个销毁型计量旁路被真实容量 5 槽位和五路 reserved-item 配方取代。
+// Trigger: 用户要求去掉现有计数器机制，物品到达十秒后才消耗，且消耗不受供电影响。
+// Evidence:
+//   - Stage 3 现在始终把物品写入目标槽；
+//   - consumption-channel 通过普通 reservations 在配方完成时扣料；
+//   - 设备许可从频道运行状态直接派生。
+// Replacement:
+//   - runtime-slot-access.ts 的通用槽位事务；
+//   - stage-1-advance-devices.ts / stage-5-settle-recipes.ts 的频道类型语义。
+// Risk: High - 所有旧调用方、快照和迁移字段必须同步移除。
+// Human Review: Required
+//
+// Original code:
+// export function isMeteredConsumptionInputPort(...) { ... }
+// export function isDeviceElectricallyPowered(...) { ... }
+// export function isMeteredConsumptionAuthorized(...) { ... }
+// export function canAcceptMeteredConsumptionItem(...) { ... }
+// export function recordMeteredConsumptionItem(...) { ... }

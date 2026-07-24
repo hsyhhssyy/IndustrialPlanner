@@ -192,9 +192,8 @@ function RecipeCard({
 }) {
   const maxRows = Math.max(recipe.inputs.length, recipe.outputs.length);
   const activityIds = showActivityIcons ? resolveActivityIdsFromTags(recipe.tags) : [];
-  const machineDefinition = index.entityById.get(recipe.machineId);
   const requiredGasItemId = recipe.requiredGasDiffusion;
-  const consumedItemIds = machineDefinition?.meteredConsumption?.itemIds ?? [];
+  const consumedItemIds = index.consumptionItemIdsByMachine.get(recipe.machineId) ?? [];
   const consumptionLabel = consumedItemIds.length > 1
     ? t("encyclopedia.recipe.deviceConsumptionAny")
     : t("encyclopedia.recipe.deviceConsumption");

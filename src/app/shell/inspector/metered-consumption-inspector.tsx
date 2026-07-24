@@ -17,33 +17,39 @@ export function MeteredConsumptionInspector({
   definition: EntityDefinition;
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
 }) {
-  const config = definition.meteredConsumption;
-  if (config === undefined) {
+  const consumptionChannel = definition.recipeChannels.find(
+    (channel) => channel.type === "consumption-channel",
+  );
+  const storageGroupId = consumptionChannel?.ingredientStorageGroupIds[0] ?? null;
+  const storageGroup = storageGroupId === null
+    ? null
+    : definition.storageSlotGroups.find((group) => group.id === storageGroupId) ?? null;
+  if (storageGroupId === null || storageGroup === null) {
     return null;
   }
 
   const minimum = 0;
-  const maximum = Math.max(1, config.acceptanceLimit);
-  const threshold = Math.min(maximum, Math.max(minimum, config.startThreshold));
-  const currentWindowCount = Math.max(
-    minimum,
-    runtimeStatus?.meteredConsumption?.currentWindowCount ?? 0,
+  const maximum = Math.max(
+    1,
+    storageGroup.slots.reduce((total, slot) => total + slot.capacity, 0) * 6,
   );
-  const previousWindowCount = Math.max(
-    minimum,
-    runtimeStatus?.meteredConsumption?.previousWindowCount ?? 0,
+  const threshold = Math.min(maximum, 6);
+  const runtimeSlots = runtimeStatus?.slotItems.filter(
+    (slot) => slot.storageGroupId === storageGroupId,
+  ) ?? [];
+  const slotItemCount = runtimeSlots.reduce(
+    (total, slot) => total + Math.max(0, slot.count),
+    0,
   );
-  const displayedCount = Math.min(
-    maximum,
-    Math.max(currentWindowCount, previousWindowCount),
-  );
-  const meteredStatus = runtimeStatus?.meteredConsumption;
-  const configuredItemId = config.itemIds.length === 1 ? config.itemIds[0] ?? null : null;
-  const displayedItemId = (
-    currentWindowCount >= previousWindowCount
-      ? meteredStatus?.currentWindowItemId ?? meteredStatus?.previousWindowItemId
-      : meteredStatus?.previousWindowItemId ?? meteredStatus?.currentWindowItemId
-  ) ?? configuredItemId;
+  const displayedCount = Math.min(maximum, slotItemCount * 6);
+  const configuredItemIds = [...new Set(
+    storageGroup.slots.flatMap((slot) =>
+      slot.lock === null ? slot.itemFilterIds ?? [] : [slot.lock],
+    ),
+  )];
+  const displayedItemId = runtimeSlots.find(
+    (slot) => slot.count > 0 && slot.itemType !== null,
+  )?.itemType ?? (configuredItemIds.length === 1 ? configuredItemIds[0] ?? null : null);
   const itemDefinition = displayedItemId === null
     ? null
     : appHost.workspace.registry.itemDefinitions.find((item) => item.id === displayedItemId) ?? null;
@@ -72,14 +78,13 @@ export function MeteredConsumptionInspector({
           )}
         </span>
         <div
-          aria-label="当前与上一分钟消耗最大值"
+          aria-label="当前消耗状态"
           aria-valuemax={maximum}
           aria-valuemin={minimum}
           aria-valuenow={displayedCount}
           className={cm(styles, "metered-consumption-ruler")}
           data-metered-consumption-value={displayedCount}
-          data-metered-consumption-current={currentWindowCount}
-          data-metered-consumption-previous={previousWindowCount}
+          data-consumption-slot-count={slotItemCount}
           role="meter"
         >
           <div className={cm(styles, "metered-consumption-track")}>

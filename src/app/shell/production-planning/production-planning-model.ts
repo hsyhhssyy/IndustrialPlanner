@@ -8,6 +8,7 @@ import {
   isRecipeAvailableByActivity,
 } from "@/shared/registry/activity-availability";
 import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
+import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import {
   WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
   WATER_PURIFIER_BYPRODUCT_SEWAGE_PER_OUTPUT,
@@ -54,6 +55,7 @@ export interface ProductionPlanningIndex {
   itemById: Map<string, ItemDefinition>;
   entityById: Map<string, EntityDefinition>;
   recipeById: Map<string, RecipeDefinition>;
+  consumptionRecipesByMachine: Map<string, RecipeDefinition[]>;
   recipesByOutputItem: Map<string, RecipeDefinition[]>;
   allItems: ItemDefinition[];
   naturalResourceItemIds: Set<string>;
@@ -169,6 +171,18 @@ export function buildProductionPlanningIndex(
       || isRecipeAvailableByActivity(recipe, activeActivityIds),
     );
   const recipeById = new Map(visibleRecipes.map((recipe) => [recipe.id, recipe]));
+  const consumptionRecipesByMachine = new Map<string, RecipeDefinition[]>();
+  for (const recipe of registry.recipeDefinitions) {
+    if (!recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {
+      continue;
+    }
+    const recipes = consumptionRecipesByMachine.get(recipe.machineId);
+    if (recipes === undefined) {
+      consumptionRecipesByMachine.set(recipe.machineId, [recipe]);
+    } else {
+      recipes.push(recipe);
+    }
+  }
   const recipesByOutputItem = new Map<string, RecipeDefinition[]>();
 
   for (const recipe of visibleRecipes) {
@@ -193,6 +207,7 @@ export function buildProductionPlanningIndex(
     itemById,
     entityById,
     recipeById,
+    consumptionRecipesByMachine,
     recipesByOutputItem,
     allItems: [...itemDefinitions].sort((left, right) => left.nameKey.localeCompare(right.nameKey)),
     naturalResourceItemIds,
@@ -641,26 +656,30 @@ function resolveDeviceMinimumConsumptionAmountsPerCycle(
     return new Map();
   }
 
-  const consumption = context.index.entityById.get(recipe.machineId)?.meteredConsumption;
+  const consumptionRecipes = context.index.consumptionRecipesByMachine.get(recipe.machineId) ?? [];
+  if (consumptionRecipes.length === 0) {
+    return new Map();
+  }
+
+  const consumptionRecipe = consumptionRecipes.find((candidate) =>
+    candidate.inputs.some((consumptionInput) =>
+      recipe.inputs.some((input) => input.itemId === consumptionInput.itemId),
+    ),
+  ) ?? consumptionRecipes[0];
+  const consumptionInput = consumptionRecipe?.inputs[0];
   if (
-    consumption === undefined
-    || consumption.itemIds.length === 0
-    || consumption.windowSeconds <= EPSILON
-    || consumption.startThreshold <= EPSILON
+    consumptionRecipe === undefined
+    || consumptionInput === undefined
+    || consumptionRecipe.durationSeconds <= EPSILON
   ) {
     return new Map();
   }
 
-  const consumedItemId = consumption.itemIds.find((itemId) => (
-    recipe.inputs.some((input) => input.itemId === itemId)
-  )) ?? consumption.itemIds[0];
-  if (consumedItemId === undefined) {
-    return new Map();
-  }
-
   return new Map([[
-    consumedItemId,
-    roundFlow(consumption.startThreshold * recipe.durationSeconds / consumption.windowSeconds),
+    consumptionInput.itemId,
+    roundFlow(
+      consumptionInput.amount * recipe.durationSeconds / consumptionRecipe.durationSeconds,
+    ),
   ]]);
 }
 

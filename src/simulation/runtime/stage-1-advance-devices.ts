@@ -9,7 +9,7 @@ import type {
 } from "./runtime-state";
 import { completeRecipeIfPossible } from "./recipe-completion";
 import { isDeviceInRequiredGasDiffusion } from "./gas-diffusion";
-import { isMeteredConsumptionAuthorized } from "./metered-consumption";
+import { isDeviceConsumptionAuthorizedForFrame } from "./consumption-channel";
 
 // AI-REMOVED 2026-07-23:
 // Reason: Stage1 只推进并完成旧配方，不再选择、启动或预定下一配方。
@@ -64,28 +64,29 @@ export function advanceDevices(
     if (device === undefined || deviceState === undefined) {
       continue;
     }
-    if (device.powerStatus === "out-of-power-range") {
-      continue;
-    }
-    // 真实电力模式下发电不足 → 所有 requiresPower 设备冻结
-    if (powerInsufficient && device.requiresPower) {
-      continue;
-    }
-    if (!isMeteredConsumptionAuthorized(device, state)) {
-      continue;
-    }
+    const hasDevicePower = device.powerStatus !== "out-of-power-range"
+      && !(powerInsufficient && device.requiresPower);
+    const consumptionAuthorized = isDeviceConsumptionAuthorizedForFrame(device, state);
 
-    for (const [chId, recipe] of Object.entries(deviceState.channelRecipes)) {
+    for (const channel of device.recipeChannels) {
+      const chId = channel.id;
+      const recipe = deviceState.channelRecipes[chId] ?? null;
       if (recipe === null) {
         continue;
       }
-      if (!isDeviceInRequiredGasDiffusion({
-        topology,
-        state,
-        device,
-        requiredGasDiffusion: recipe.plan.requiredGasDiffusion,
-      })) {
-        continue;
+
+      if (recipe.state === "running" && channel.type !== "consumption-channel") {
+        if (!hasDevicePower || !consumptionAuthorized) {
+          continue;
+        }
+        if (!isDeviceInRequiredGasDiffusion({
+          topology,
+          state,
+          device,
+          requiredGasDiffusion: recipe.plan.requiredGasDiffusion,
+        })) {
+          continue;
+        }
       }
 
       const result = advanceChannelRecipe({

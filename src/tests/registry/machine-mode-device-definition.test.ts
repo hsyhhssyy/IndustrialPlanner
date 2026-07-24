@@ -56,14 +56,6 @@ describe("machine-mode entity definitions", () => {
 
     for (const entityId of ["transmuter_1_gastrans", "transmuter_1_liquidtrans"] as const) {
       const definition = requireEntity(entityId);
-      expect(definition.meteredConsumption).toEqual({
-        inputPortGroupId: "consume_input",
-        itemIds: ["item_liquid_xiranite"],
-        windowSeconds: 60,
-        startThreshold: 6,
-        acceptanceLimit: 30,
-        gasDiffusionRange: null,
-      });
       expect(definition.portGroups.find((group) => group.id === "consume_input")?.ports)
         .toMatchObject([{
           acceptRule: {
@@ -74,14 +66,6 @@ describe("machine-mode entity definitions", () => {
     }
     for (const entityId of ["transmuter_2_gastrans", "transmuter_2_solidtrans"] as const) {
       const definition = requireEntity(entityId);
-      expect(definition.meteredConsumption).toEqual({
-        inputPortGroupId: "consume_input",
-        itemIds: ["item_gas_xiranite"],
-        windowSeconds: 60,
-        startThreshold: 6,
-        acceptanceLimit: 30,
-        gasDiffusionRange: null,
-      });
       expect(definition.portGroups.find((group) => group.id === "consume_input")?.ports)
         .toMatchObject([{
           acceptRule: {
@@ -98,34 +82,48 @@ describe("machine-mode entity definitions", () => {
       "transmuter_2_solidtrans",
     ] as const) {
       const definition = requireEntity(entityId);
-      expect(definition.storageSlotGroups.some((group) => group.id === "consume_buffer")).toBe(false);
+      expect(definition.storageSlotGroups.find((group) => group.id === "consume_buffer"))
+        .toMatchObject({
+          slots: [{ id: "consume_slot", capacity: 5, itemFilter: "whitelist" }],
+        });
       expect(definition.portStorageBindings.some((binding) => binding.portGroupId === "consume_input"))
-        .toBe(false);
+        .toBe(true);
+      expect(definition.recipeChannels.filter((channel) => channel.type === "consumption-channel"))
+        .toHaveLength(5);
       expect(definition.inspectors).toContainEqual({
         type: INSPECTOR_TYPE.meteredConsumption,
       });
     }
   });
 
-  it("keeps vaporizer metered input internal instead of exposing a configurable storage slot", () => {
+  it("uses a hidden real capacity-five input buffer and five consumption channels for vaporizer", () => {
     const definition = requireEntity("vaporizer_1");
 
-    expect(definition.meteredConsumption).toEqual({
-      inputPortGroupId: "gas_input",
-      itemIds: [
-        "item_gas_acid",
-        "item_gas_inert",
-        "item_gas_water",
-        "item_gas_xiranite",
-      ],
-      windowSeconds: 60,
-      startThreshold: 6,
-      acceptanceLimit: 30,
-      gasDiffusionRange: 13,
+    expect(definition.storageSlotGroups).toMatchObject([{
+      id: "consume_buffer",
+      slots: [{
+        id: "consume_slot",
+        capacity: 5,
+        itemFilter: "whitelist",
+        itemFilterIds: [
+          "item_gas_acid",
+          "item_gas_inert",
+          "item_gas_water",
+          "item_gas_xiranite",
+        ],
+      }],
+    }]);
+    expect(definition.portStorageBindings).toContainEqual({
+      id: "bind_gas_input",
+      portGroupId: "gas_input",
+      storageSlotGroupId: "consume_buffer",
     });
-    expect(definition.storageSlotGroups).toEqual([]);
-    expect(definition.portStorageBindings).toEqual([]);
-    expect(definition.inspectors.some((inspector) => inspector.type === INSPECTOR_TYPE.slotConfig)).toBe(false);
+    expect(definition.recipeChannels.filter((channel) => channel.type === "consumption-channel"))
+      .toHaveLength(5);
+    expect(definition.inspectors).toContainEqual({
+      type: INSPECTOR_TYPE.slotConfig,
+      slotGroupIds: [],
+    });
     expect(definition.inspectors).toContainEqual({
       type: INSPECTOR_TYPE.meteredConsumption,
     });
@@ -185,8 +183,9 @@ function expectModeFlow(
   const definition = requireEntity(entityId);
 
   expect(definition.portGroups.map((portGroup) => portGroup.id)).toEqual(expected.portGroupIds);
-  expect(definition.recipeChannels).toHaveLength(1);
-  expect(definition.recipeChannels[0]).toMatchObject({
+  expect(definition.recipeChannels).toHaveLength(6);
+  expect(definition.recipeChannels.find((channel) => channel.type === "normal-channel"))
+    .toMatchObject({
     ingredientStorageGroupIds: expected.ingredientStorageGroupIds,
     productStorageGroupIds: expected.productStorageGroupIds,
   });

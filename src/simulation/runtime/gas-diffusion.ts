@@ -11,10 +11,6 @@ import {
   getGridFootprintCenterCells,
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid";
-import {
-  isDeviceElectricallyPowered,
-  isMeteredConsumptionAuthorized,
-} from "./metered-consumption";
 
 interface GasDiffusionTopologyIndex {
   readonly sourceDeviceIds: readonly string[];
@@ -23,7 +19,6 @@ interface GasDiffusionTopologyIndex {
 
 interface GasDiffusionRuntimeIndex {
   readonly topology: CompiledSimulationTopology;
-  readonly topologyIndex: GasDiffusionTopologyIndex;
   activeGasDiffusions: readonly RuntimeGasDiffusionSnapshot[];
   coveredGasItemIdsByDeviceId: ReadonlyMap<string, ReadonlySet<string>>;
 }
@@ -41,7 +36,10 @@ export function computeActiveGasDiffusions(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): readonly RuntimeGasDiffusionSnapshot[] {
-  return ensureGasDiffusionRuntimeIndex(topology, state).activeGasDiffusions;
+  const topologyIndex = ensureGasDiffusionTopologyIndex(topology);
+  return topologyIndex.sourceDeviceIds.length === 0
+    ? EMPTY_GAS_DIFFUSIONS
+    : collectActiveGasDiffusions(topology, state, topologyIndex.sourceDeviceIds);
 }
 
 /** 气体配方的首轮启动只需要访问这些设备，普通设备不应为此被重复扫描。 */
@@ -81,36 +79,20 @@ function ensureGasDiffusionRuntimeIndex(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): GasDiffusionRuntimeIndex {
-  const topologyIndex = ensureGasDiffusionTopologyIndex(topology);
+  const activeGasDiffusions = state.transient.activeGasDiffusions;
   let runtimeIndex = runtimeIndexByState.get(state);
-  if (runtimeIndex === undefined || runtimeIndex.topology !== topology) {
+  if (
+    runtimeIndex === undefined
+    || runtimeIndex.topology !== topology
+    || runtimeIndex.activeGasDiffusions !== activeGasDiffusions
+  ) {
     runtimeIndex = {
       topology,
-      topologyIndex,
-      activeGasDiffusions: EMPTY_GAS_DIFFUSIONS,
-      coveredGasItemIdsByDeviceId: EMPTY_DEVICE_GAS_COVERAGE,
+      activeGasDiffusions,
+      coveredGasItemIdsByDeviceId: buildDeviceGasCoverage(topology, activeGasDiffusions),
     };
     runtimeIndexByState.set(state, runtimeIndex);
   }
-
-  if (topologyIndex.sourceDeviceIds.length === 0) {
-    return runtimeIndex;
-  }
-
-  const observedGasDiffusions = collectActiveGasDiffusions(
-    topology,
-    state,
-    topologyIndex.sourceDeviceIds,
-  );
-  if (areGasDiffusionSnapshotsEqual(runtimeIndex.activeGasDiffusions, observedGasDiffusions)) {
-    return runtimeIndex;
-  }
-
-  runtimeIndex.activeGasDiffusions = observedGasDiffusions;
-  runtimeIndex.coveredGasItemIdsByDeviceId = buildDeviceGasCoverage(
-    topology,
-    observedGasDiffusions,
-  );
   return runtimeIndex;
 }
 
@@ -141,14 +123,7 @@ function ensureGasDiffusionTopologyIndex(
     if (canRunGasDiffusionRecipe) {
       recipeSourceDeviceIds.push(deviceId);
     }
-    if (
-      canRunGasDiffusionRecipe
-      || (
-        device.meteredConsumption !== undefined
-        && device.meteredConsumption !== null
-        && device.meteredConsumption.gasDiffusionRange !== null
-      )
-    ) {
+    if (canRunGasDiffusionRecipe) {
       sourceDeviceIds.push(deviceId);
     }
   }
@@ -164,6 +139,7 @@ function collectActiveGasDiffusions(
   sourceDeviceIds: readonly string[],
 ): readonly RuntimeGasDiffusionSnapshot[] {
   const result: RuntimeGasDiffusionSnapshot[] = [];
+  const seenSourceGasPairs = new Set<string>();
 
   for (const deviceId of sourceDeviceIds) {
     const device = topology.devices[deviceId];
@@ -171,37 +147,16 @@ function collectActiveGasDiffusions(
     if (device === undefined || deviceState === undefined) {
       continue;
     }
-    if (!isDeviceElectricallyPowered(device, state)) {
-      continue;
-    }
-
-    const metered = device.meteredConsumption;
-    const meteredState = state.persistent.meteredConsumptions[device.id];
-    if (
-      metered !== undefined
-      && metered !== null
-      && metered.gasDiffusionRange !== null
-      && meteredState?.activeEffectItemId !== null
-      && meteredState?.activeEffectItemId !== undefined
-      && isMeteredConsumptionAuthorized(device, state)
-    ) {
-      const gridRect = resolveDeviceCenteredRangeRect(device, metered.gasDiffusionRange);
-      if (gridRect !== null) {
-        result.push({
-          sourceDeviceId: device.id,
-          gasItemId: meteredState.activeEffectItemId,
-          gridRect,
-        });
-      }
-    }
-
-    if (!isMeteredConsumptionAuthorized(device, state)) {
-      continue;
-    }
-
     for (const recipe of Object.values(deviceState.channelRecipes)) {
+      if (recipe?.state !== "running") {
+        continue;
+      }
       const output = recipe?.plan.gasDiffusionOutput ?? null;
       if (output === null) {
+        continue;
+      }
+      const sourceGasKey = `${device.id}\u0000${output.gasItemId}\u0000${output.range}`;
+      if (seenSourceGasPairs.has(sourceGasKey)) {
         continue;
       }
 
@@ -215,6 +170,7 @@ function collectActiveGasDiffusions(
         gasItemId: output.gasItemId,
         gridRect,
       });
+      seenSourceGasPairs.add(sourceGasKey);
     }
   }
 
@@ -255,24 +211,16 @@ export function buildDeviceGasCoverage(
   return coveredGasItemIdsByDeviceId;
 }
 
-function areGasDiffusionSnapshotsEqual(
-  left: readonly RuntimeGasDiffusionSnapshot[],
-  right: readonly RuntimeGasDiffusionSnapshot[],
-): boolean {
-  if (left.length !== right.length) {
-    return false;
-  }
-  return left.every((leftDiffusion, index) => {
-    const rightDiffusion = right[index];
-    return rightDiffusion !== undefined
-      && leftDiffusion.sourceDeviceId === rightDiffusion.sourceDeviceId
-      && leftDiffusion.gasItemId === rightDiffusion.gasItemId
-      && leftDiffusion.gridRect.x === rightDiffusion.gridRect.x
-      && leftDiffusion.gridRect.y === rightDiffusion.gridRect.y
-      && leftDiffusion.gridRect.width === rightDiffusion.gridRect.width
-      && leftDiffusion.gridRect.height === rightDiffusion.gridRect.height;
-  });
-}
+// AI-REMOVED 2026-07-23:
+// Reason: 气体覆盖查询必须严格使用帧初冻结的 transient 快照，不能观察频道实时变化后再比较刷新。
+// Trigger: 用户指出同帧最后一 tick 不能因频道遍历顺序丢失。
+// Evidence: ensureGasDiffusionRuntimeIndex 现只按 activeGasDiffusions 引用建立覆盖索引。
+// Replacement: worker/stage-5 显式重建 activeGasDiffusions。
+// Risk: Medium
+// Human Review: Required
+//
+// Original code:
+// function areGasDiffusionSnapshotsEqual(...) { ... }
 
 function resolveDeviceGridRect(device: CompiledSimulationDevice): RuntimeGasDiffusionSnapshot["gridRect"] | null {
   if (device.position === null || device.rotation === null || device.footprint === null) {

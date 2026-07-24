@@ -115,13 +115,23 @@ export interface EntityDefinition {
    */
   readonly blockageAutoClearance?: EntityBlockageAutoClearanceDefinition;
 
-  /**
-   * 按固定时间窗口吞噬物品并授予设备运行许可的配置。
-   * 输入物品不会进入普通库存；达到 startThreshold 后设备运行到当前窗口末尾，
-   * 上一窗口达标时会授权下一整个窗口。gasDiffusionRange 非空时，运行许可同时提供
-   * 与窗口锁定物品对应的气体环境。
-   */
-  readonly meteredConsumption?: EntityMeteredConsumptionDefinition;
+  // AI-REMOVED 2026-07-23:
+  // Reason: 设备消耗改为真实缓存槽与 consumption-channel 上运行的 reserved-item 配方，
+  //   不再存在固定分钟窗口计数器。
+  // Trigger: 用户要求移除计数器机制，并以五路十秒消耗配方作为普通频道运行许可。
+  // Evidence: RecipeChannelDefinition.type 与运行中配方已经能够完整表达消耗状态和气体环境。
+  // Replacement: recipeChannels[type="consumption-channel"] + 对应真实 storageSlotGroup。
+  // Risk: Medium - 旧 meteredConsumption 定义不再参与拓扑编译，相关设备必须完成注册表迁移。
+  // Human Review: Required
+  //
+  // Original code:
+  // /**
+  //  * 按固定时间窗口吞噬物品并授予设备运行许可的配置。
+  //  * 输入物品不会进入普通库存；达到 startThreshold 后设备运行到当前窗口末尾，
+  //  * 上一窗口达标时会授权下一整个窗口。gasDiffusionRange 非空时，运行许可同时提供
+  //  * 与窗口锁定物品对应的气体环境。
+  //  */
+  // readonly meteredConsumption?: EntityMeteredConsumptionDefinition;
 
   // ---- 端口与存储槽组 ----
 
@@ -157,24 +167,23 @@ export interface EntityDefinition {
 
 }
 
-// ---------------------------------------------------------------------------
-// EntityMeteredConsumptionDefinition — 计量消费与窗口运行许可
-// ---------------------------------------------------------------------------
-
-export interface EntityMeteredConsumptionDefinition {
-  /** 承载销毁型计量入口的端口组；该组必须只有一个 input port。 */
-  readonly inputPortGroupId: string;
-  /** 允许被吞噬并计数的物品 ID；窗口内由第一个物品锁定具体类型。 */
-  readonly itemIds: readonly string[];
-  /** 固定计数窗口长度，单位秒。 */
-  readonly windowSeconds: number;
-  /** 当前或上一窗口达到该计数时授予运行许可。 */
-  readonly startThreshold: number;
-  /** 当前窗口达到该计数后停止接收，直到下一窗口。 */
-  readonly acceptanceLimit: number;
-  /** 非空时，运行许可提供与锁定物品同 ID 的气体环境。 */
-  readonly gasDiffusionRange: number | null;
-}
+// AI-REMOVED 2026-07-23:
+// Reason: 固定窗口计量对象已经被真实槽位与 consumption-channel 配方取代。
+// Trigger: 用户要求物品进入容量 5 缓存、预留十秒后消耗，并直接以运行中配方授权设备。
+// Evidence: 所有旧字段都只服务于已移除的分钟计数窗口。
+// Replacement: RecipeChannelDefinition.type + RecipeDefinition(recipeType="reserved-item")。
+// Risk: Medium - domain 公共出口与所有旧调用方必须同步迁移。
+// Human Review: Required
+//
+// Original code:
+// export interface EntityMeteredConsumptionDefinition {
+//   readonly inputPortGroupId: string;
+//   readonly itemIds: readonly string[];
+//   readonly windowSeconds: number;
+//   readonly startThreshold: number;
+//   readonly acceptanceLimit: number;
+//   readonly gasDiffusionRange: number | null;
+// }
 
 // ---------------------------------------------------------------------------
 // EntityPlacementDefaults — 设备放置时的默认行为
@@ -230,6 +239,8 @@ export interface EntityBlockageAutoClearanceDefinition {
 export interface RecipeChannelDefinition {
   /** channel 标识 */
   id: string;
+  /** 频道用途；省略时按普通生产频道处理。 */
+  readonly type?: "normal-channel" | "consumption-channel";
   /** 配方原料从哪些存储组取 */
   ingredientStorageGroupIds: string[];
   /** 配方产物写入哪些存储组 */
@@ -370,6 +381,8 @@ export interface StorageSlotDefinition extends ItemFilterDefinition {
 export interface RecipeChannelDefinition {
   /** channel 标识 */
   id: string;
+  /** 频道用途；省略时按普通生产频道处理。 */
+  readonly type?: "normal-channel" | "consumption-channel";
   /** 配方原料从哪些存储组取 */
   ingredientStorageGroupIds: string[];
   /** 配方产物写入哪些存储组 */

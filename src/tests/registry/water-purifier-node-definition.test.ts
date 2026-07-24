@@ -105,24 +105,28 @@ describe("water purifier node definition", () => {
     expect(definition.recipeChannels).toEqual([
       {
         id: WATER_PURIFIER_INTAKE_CHANNEL_IDS[0],
+        type: "normal-channel",
         ingredientStorageGroupIds: [WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[0]],
         productStorageGroupIds: [WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID],
         manualRecipeOnly: undefined,
       },
       {
         id: WATER_PURIFIER_INTAKE_CHANNEL_IDS[1],
+        type: "normal-channel",
         ingredientStorageGroupIds: [WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[1]],
         productStorageGroupIds: [WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID],
         manualRecipeOnly: undefined,
       },
       {
         id: WATER_PURIFIER_INTAKE_CHANNEL_IDS[2],
+        type: "normal-channel",
         ingredientStorageGroupIds: [WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[2]],
         productStorageGroupIds: [WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID],
         manualRecipeOnly: undefined,
       },
       {
         id: WATER_PURIFIER_BYPRODUCT_CHANNEL_ID,
+        type: "normal-channel",
         ingredientStorageGroupIds: [WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID],
         productStorageGroupIds: [WATER_PURIFIER_OUTPUT_STORAGE_GROUP_ID],
         manualRecipeOnly: undefined,

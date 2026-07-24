@@ -16,11 +16,6 @@ import {
   resolveStorageSlotId,
 } from "./runtime-slot-access";
 import { canDeviceTransferAtCurrentPhase } from "./phase-gating";
-import {
-  canAcceptMeteredConsumptionItem,
-  isMeteredConsumptionInputPort,
-  recordMeteredConsumptionItem,
-} from "./metered-consumption";
 
 // AI-REMOVED 2026-05-17:
 // Reason: TickPerfStage3Details 未在本文件使用，保留 import 会阻断 lint。
@@ -289,7 +284,6 @@ function solveOutputNode(
         sourceSlotId: edgeState.sourceSlotId,
         targetSlotId: edgeState.targetSlotId,
         itemType: edgeState.itemType,
-        consumeAtTarget: isMeteredConsumptionInputPort(topology, edge.targetPortId),
       });
       if (!ok) {
         continue;
@@ -300,9 +294,7 @@ function solveOutputNode(
       movedAny = true;
       edgeState.shadowPush = "accept";
       edgeState.amount += 1;
-      if (!recordMeteredConsumptionItem(topology, state, edge.targetPortId, edgeState.itemType)) {
-        recordAdmissionMove(topology, state, edge.targetPortId, edgeState.itemType);
-      }
+      recordAdmissionMove(topology, state, edge.targetPortId, edgeState.itemType);
       edgeState.shadowPull = "moved";
       edgeState.shadowPush = "moved";
       pushUnique(state.transient.nodes[node.id]?.acceptedOutputEdgeIds, edgeId);
@@ -433,9 +425,6 @@ function canAdmitItemThroughTargetPort(
   targetPortId: string,
   itemType: string,
 ): boolean {
-  if (!canAcceptMeteredConsumptionItem(topology, state, targetPortId, itemType)) {
-    return false;
-  }
   const rule = topology.ports[targetPortId]?.admissionRule;
   if (rule === undefined || rule === null || rule.itemId === null) {
     return true;

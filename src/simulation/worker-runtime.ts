@@ -45,6 +45,7 @@ import {
   resolveStorageSlotId,
 } from "./runtime/runtime-slot-access";
 import { computeActiveGasDiffusions } from "./runtime/gas-diffusion";
+import { computeActiveConsumptionDeviceIds } from "./runtime/consumption-channel";
 import { applyWaterPurifierManualOutput } from "./runtime/water-purifier-node";
 // AI-REMOVED 2026-06-06:
 // Reason: submitMode 全局扫描机制已删除；入仓必须走 WarehouseSink 或 r_warehouse_submit 配方。
@@ -665,6 +666,8 @@ export class SimulationWorkerRuntime {
       state.persistent.baseBatteryJoules,
     );
     state.transient.isPowerOutage = isPowerOutage;
+    state.transient.activeConsumptionDeviceIds =
+      computeActiveConsumptionDeviceIds(this.topology, state);
     state.transient.activeGasDiffusions = computeActiveGasDiffusions(this.topology, state);
     return createTickSnapshot(this.topology, state, isPowerOutage, currentPowerGeneration);
   }
@@ -1416,6 +1419,8 @@ export class SimulationWorkerRuntime {
       const isPowerOutage = this.resolveTickPowerOutage(currentPowerGeneration);
       this.runtimeState.transient = createEmptyTransientState();
       this.runtimeState.transient.isPowerOutage = isPowerOutage;
+      this.runtimeState.transient.activeConsumptionDeviceIds =
+        computeActiveConsumptionDeviceIds(this.topology, this.runtimeState);
       this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(this.topology, this.runtimeState);
       const t0 = this.perfEnabled ? performance.now() : 0;
       const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutage, currentPowerGeneration);
@@ -1472,6 +1477,8 @@ export class SimulationWorkerRuntime {
         && effectiveGeneration < this.effectiveTotalPowerDemand;
       this.runtimeState.transient.isPowerOutage = isPowerOutageRun;
       this.runtimeState.transient.reservedAmountByStorageSlotId = null;
+      this.runtimeState.transient.activeConsumptionDeviceIds =
+        computeActiveConsumptionDeviceIds(this.topology, this.runtimeState);
       this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(
         this.topology,
         this.runtimeState,
@@ -1616,6 +1623,8 @@ export class SimulationWorkerRuntime {
     const currentPowerGenForSnapshot = computeCurrentPowerGeneration(this.topology, this.runtimeState);
     const isPowerOutageForSnapshot = this.resolveTickPowerOutage(currentPowerGenForSnapshot);
     this.runtimeState.transient.isPowerOutage = isPowerOutageForSnapshot;
+    this.runtimeState.transient.activeConsumptionDeviceIds =
+      computeActiveConsumptionDeviceIds(this.topology, this.runtimeState);
     this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(this.topology, this.runtimeState);
 
     const t1 = this.perfEnabled ? performance.now() : 0;

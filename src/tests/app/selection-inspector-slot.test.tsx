@@ -2,6 +2,7 @@
 
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost, type AppHost } from "@/app/host/app-host";
@@ -307,7 +308,7 @@ describe("SelectionInspectorSlot", () => {
     expect(panel?.querySelector("input, select, textarea")).toBeNull();
   });
 
-  it("renders the larger current or previous minute count on a 0-30 ruler", () => {
+  it("renders the real consumption slot count multiplied by six on a 0-30 ruler", () => {
     const workspace = createWorkspace();
     editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldWithMeteredDevice());
@@ -315,14 +316,16 @@ describe("SelectionInspectorSlot", () => {
     attachSimulationStub(workspace, {
       state: "start",
       runtimeStatus: {
-        slotItems: [],
+        slotItems: [{
+          storageGroupId: "consume_buffer",
+          slotId: "consume_slot",
+          viewRole: "input-view",
+          itemType: "item_gas_acid",
+          count: 4,
+          reserved: 4,
+          ignoreStock: false,
+        }],
         channelRecipes: {},
-        meteredConsumption: {
-          currentWindowCount: 24,
-          currentWindowItemId: "item_gas_acid",
-          previousWindowCount: 18,
-          previousWindowItemId: "item_gas_inert",
-        },
         powerStatus: "in-power-range",
       },
     });
@@ -355,10 +358,30 @@ describe("SelectionInspectorSlot", () => {
     expect(ruler?.getAttribute("aria-valuemin")).toBe("0");
     expect(ruler?.getAttribute("aria-valuemax")).toBe("30");
     expect(ruler?.getAttribute("aria-valuenow")).toBe("24");
-    expect(ruler?.dataset.meteredConsumptionCurrent).toBe("24");
-    expect(ruler?.dataset.meteredConsumptionPrevious).toBe("18");
+    expect(ruler?.dataset.consumptionSlotCount).toBe("4");
     expect(cursor?.style.left).toBe("80%");
     expect(threshold?.style.left).toBe("20%");
+    expect(container.querySelector("[data-inspector-key='slot-config']")).toBeNull();
+    expect(container.querySelector(
+      `[data-inspector-key='${SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY}']`,
+    )).toBeNull();
+
+    act(() => {
+      runInAction(() => {
+        currentAppHost.internalState.settings.debugMode = true;
+      });
+      root.render(
+        <SelectionInspectorSlot
+          appHost={currentAppHost}
+          translate={(key) => key}
+        />,
+      );
+    });
+
+    expect(container.querySelector("[data-slot-config-group='consume_buffer']")).not.toBeNull();
+    expect(container.querySelector(
+      `[data-inspector-key='${SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY}']`,
+    )).not.toBeNull();
   });
 
   it("hides on multi selection and remounts after narrowing back to one entity", () => {

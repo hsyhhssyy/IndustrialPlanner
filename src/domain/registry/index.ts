@@ -15,7 +15,16 @@ export type {
 	PortStorageBindingDefinition,
 	EntityAcceptRuleDefinition,
 	EntityAdmissionRuleDefinition,
-	EntityMeteredConsumptionDefinition,
+	// AI-REMOVED 2026-07-23:
+	// Reason: domain 已删除固定窗口计量定义，公共出口不能继续导出不存在的类型。
+	// Trigger: 用户逐项确认删除 EntityMeteredConsumptionDefinition。
+	// Evidence: entity-definition.ts 已将原接口注释化归档。
+	// Replacement: RecipeChannelDefinition.type + storageSlotGroups。
+	// Risk: Medium
+	// Human Review: Required
+	//
+	// Original code:
+	// EntityMeteredConsumptionDefinition,
 	// AI-REMOVED 2026-06-12:
 	// Reason: 通用 port.count per-tick 限流已删除，domain API 不再导出 CountLimit。
 	// Trigger: 用户确认 per tick count 不属于设计文档，应彻底删除。

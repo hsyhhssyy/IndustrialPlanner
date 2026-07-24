@@ -638,6 +638,7 @@ function createProductionOverflowTopology(
         nodeIds: ["node:out"],
         recipeChannels: [{
           id: "main",
+          type: "normal-channel",
           ingredientNodeIds: [],
           productNodeIds: ["node:out"],
           manualRecipeOnly: false,

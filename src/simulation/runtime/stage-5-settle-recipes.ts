@@ -14,10 +14,13 @@ import {
 } from "./runtime-slot-access";
 import {
   computeActiveGasDiffusions,
-  getGasDiffusionRecipeSourceDeviceIds,
-  isDeviceInRequiredGasDiffusion,
 } from "./gas-diffusion";
-import { isMeteredConsumptionAuthorized } from "./metered-consumption";
+import {
+  computeActiveConsumptionDeviceIds,
+  getConsumptionChannelDeviceIds,
+  isDeviceConsumptionAuthorizedForFrame,
+  resolveConsumptionChannelCount,
+} from "./consumption-channel";
 import { completeRecipeIfPossible } from "./recipe-completion";
 import { canDeviceTransferAtCurrentPhase } from "./phase-gating";
 import type { Stage1AdvanceResult } from "./stage-1-advance-devices";
@@ -52,16 +55,28 @@ export function settleRecipes(
   const remainingOverflowTicksByDeviceChannel = cloneOverflowTicks(
     stage1AdvanceResult?.overflowTicksByDeviceChannel,
   );
-  state.transient.activeGasDiffusions = computeActiveGasDiffusions(topology, state);
   settleWaitingOutputs(topology, state);
-  startIdleDevices(
+  startIdleDeviceChannels({
     topology,
     state,
+    channelType: "consumption-channel",
     powerMode,
     currentPowerGeneration,
     effectiveTotalPowerDemand,
     remainingOverflowTicksByDeviceChannel,
-  );
+  });
+  state.transient.activeConsumptionDeviceIds =
+    computeActiveConsumptionDeviceIds(topology, state);
+  state.transient.activeGasDiffusions = computeActiveGasDiffusions(topology, state);
+  startIdleDeviceChannels({
+    topology,
+    state,
+    channelType: "normal-channel",
+    powerMode,
+    currentPowerGeneration,
+    effectiveTotalPowerDemand,
+    remainingOverflowTicksByDeviceChannel,
+  });
 }
 
 function settleWaitingOutputs(
@@ -78,19 +93,6 @@ function settleWaitingOutputs(
       if (recipe === null || recipe.state !== "waiting-output") {
         continue;
       }
-      const device = topology.devices[deviceId];
-      if (
-        device !== undefined
-        && !isDeviceInRequiredGasDiffusion({
-          topology,
-          state,
-          device,
-          requiredGasDiffusion: recipe.plan.requiredGasDiffusion,
-        })
-      ) {
-        continue;
-      }
-
       if (completeRecipeIfPossible({
         topology,
         state,
@@ -104,77 +106,58 @@ function settleWaitingOutputs(
   }
 }
 
-// AI-CORRECTION 2026-05-13: 空闲设备启动遍历每个 channel。
-function startIdleDevices(
-  topology: CompiledSimulationTopology,
-  state: SimulationMutableRuntimeState,
-  powerMode: "real" | "infinite" = "infinite",
-  currentPowerGeneration = Infinity,
-  effectiveTotalPowerDemand = topology.totalPowerDemand,
-  remainingOverflowTicksByDeviceChannel: Record<string, Record<string, number>> = {},
-): void {
-  const gasDiffusionRecipeSourceDeviceIds = getGasDiffusionRecipeSourceDeviceIds(topology);
-  if (gasDiffusionRecipeSourceDeviceIds.length > 0) {
-    startIdleDeviceChannels({
-      topology,
-      state,
-      powerMode,
-      currentPowerGeneration,
-      effectiveTotalPowerDemand,
-      deviceIds: gasDiffusionRecipeSourceDeviceIds,
-      shouldStartPlan: (plan) => plan.gasDiffusionOutput !== null,
-      remainingOverflowTicksByDeviceChannel,
-      discardOverflowWhenNoRecipe: false,
-    });
-    state.transient.activeGasDiffusions = computeActiveGasDiffusions(topology, state);
-  }
-  startIdleDeviceChannels({
-    topology,
-    state,
-    powerMode,
-    currentPowerGeneration,
-    effectiveTotalPowerDemand,
-    shouldStartPlan: () => true,
-    remainingOverflowTicksByDeviceChannel,
-    discardOverflowWhenNoRecipe: true,
-  });
-}
-
 function startIdleDeviceChannels(options: {
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
+  channelType: CompiledSimulationRecipeChannel["type"];
   powerMode: "real" | "infinite";
   currentPowerGeneration: number;
   effectiveTotalPowerDemand: number;
-  deviceIds?: readonly string[];
-  shouldStartPlan: (plan: RuntimeDeviceRecipeState["plan"]) => boolean;
   remainingOverflowTicksByDeviceChannel: Record<string, Record<string, number>>;
-  discardOverflowWhenNoRecipe: boolean;
 }): void {
   const powerInsufficient = options.powerMode === "real"
     && options.currentPowerGeneration < options.effectiveTotalPowerDemand;
 
-  for (const deviceId of options.deviceIds ?? options.topology.ordering.deviceOrder) {
+  const deviceIds = options.channelType === "consumption-channel"
+    ? getConsumptionChannelDeviceIds(options.topology)
+    : options.topology.ordering.deviceOrder;
+  for (const deviceId of deviceIds) {
     const device = options.topology.devices[deviceId];
     const deviceState = options.state.persistent.devices[deviceId];
     if (device === undefined || deviceState === undefined) {
       continue;
     }
-    if (device.powerStatus === "out-of-power-range") {
-      continue;
-    }
-    // 真实电力模式下发电不足 → 所有 requiresPower 设备不启动新配方
-    if (powerInsufficient && device.requiresPower) {
-      continue;
-    }
-    if (!isMeteredConsumptionAuthorized(device, options.state)) {
-      continue;
-    }
-    if (!canDeviceTransferAtCurrentPhase(options.topology, options.state, device)) {
-      continue;
+    if (options.channelType === "normal-channel") {
+      if (device.powerStatus === "out-of-power-range") {
+        continue;
+      }
+      if (powerInsufficient && device.requiresPower) {
+        continue;
+      }
+      if (!isDeviceConsumptionAuthorizedForFrame(device, options.state)) {
+        continue;
+      }
+      if (!canDeviceTransferAtCurrentPhase(options.topology, options.state, device)) {
+        continue;
+      }
     }
 
-    for (const channel of (device.recipeChannels ?? [])) {
+    const consumptionChannelCount = resolveConsumptionChannelCount(device);
+    const channelStartIndex = options.channelType === "consumption-channel"
+      ? 0
+      : consumptionChannelCount;
+    const channelEndIndex = options.channelType === "consumption-channel"
+      ? consumptionChannelCount
+      : device.recipeChannels.length;
+    for (
+      let channelIndex = channelStartIndex;
+      channelIndex < channelEndIndex;
+      channelIndex += 1
+    ) {
+      const channel = device.recipeChannels[channelIndex];
+      if (channel === undefined) {
+        continue;
+      }
       // Skip channels already running a recipe
       if (deviceState.channelRecipes[channel.id] !== undefined && deviceState.channelRecipes[channel.id] !== null) {
         continue;
@@ -190,12 +173,9 @@ function startIdleDeviceChannels(options: {
           options.state,
           device,
           channel,
-          options.shouldStartPlan,
         );
         if (recipe === null) {
-          if (options.discardOverflowWhenNoRecipe) {
-            remainingOverflowTicks = 0;
-          }
+          remainingOverflowTicks = 0;
           break;
         }
 
@@ -232,12 +212,14 @@ function startIdleDeviceChannels(options: {
       }
     }
     
-    // Block if any channel is stuck
-    const hasWaitingOutput = Object.values(deviceState.channelRecipes)
-      .some((recipe) => recipe?.state === "waiting-output");
-    const hasRunningRecipe = Object.values(deviceState.channelRecipes)
-      .some((recipe) => recipe?.state === "running");
-    deviceState.block = hasWaitingOutput || !hasRunningRecipe;
+    if (options.channelType === "normal-channel") {
+      // Block if any channel is stuck
+      const hasWaitingOutput = Object.values(deviceState.channelRecipes)
+        .some((recipe) => recipe?.state === "waiting-output");
+      const hasRunningRecipe = Object.values(deviceState.channelRecipes)
+        .some((recipe) => recipe?.state === "running");
+      deviceState.block = hasWaitingOutput || !hasRunningRecipe;
+    }
   }
 }
 

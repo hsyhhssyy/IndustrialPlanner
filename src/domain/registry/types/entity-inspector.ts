@@ -78,6 +78,8 @@ export const INSPECTOR_TYPE = {
    * 标尺左侧显示该较大值所属窗口锁定的计量物品图标。
    * 标尺范围来自 EntityDefinition.meteredConsumption，游标值来自
    * SimulationDeviceRuntimeStatusReadModel.meteredConsumption。
+   * AI-CORRECTION 2026-07-23: 数据源已改为 consumption-channel 绑定的真实槽位；
+   * 标尺游标显示槽位物品数量 × 6，不再读取已删除的计量窗口字段。
    */
   meteredConsumption: "metered-consumption",
 

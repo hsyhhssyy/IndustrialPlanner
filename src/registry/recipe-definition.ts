@@ -1,5 +1,6 @@
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { ACTIVITY_LIMITED_FORMULA_1_TAG } from "@/shared/registry/activity-availability";
+import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
 import {
   WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
@@ -3292,15 +3293,58 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     recipeType: "immediate-consume",
     tags: ["自然资源采集"],
   },
+  // =========================================================================
+  // 设备运行消耗配方 — 五个 consumption channel 共用真实容量 5 缓存
+  // =========================================================================
+  {
+    id: "r_transmuter_1_gastrans_xiranite_consumption_internal",
+    nameKey: "registry.recipe.internal_device_consumption.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_liquid_xiranite", amount: 1 }],
+    outputs: [],
+    machineId: "transmuter_1_gastrans",
+    recipeType: "reserved-item",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, CONSUMPTION_RECIPE_TAG],
+  },
+  {
+    id: "r_transmuter_1_liquidtrans_xiranite_consumption_internal",
+    nameKey: "registry.recipe.internal_device_consumption.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_liquid_xiranite", amount: 1 }],
+    outputs: [],
+    machineId: "transmuter_1_liquidtrans",
+    recipeType: "reserved-item",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, CONSUMPTION_RECIPE_TAG],
+  },
+  {
+    id: "r_transmuter_2_gastrans_xiranite_consumption_internal",
+    nameKey: "registry.recipe.internal_device_consumption.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_gas_xiranite", amount: 1 }],
+    outputs: [],
+    machineId: "transmuter_2_gastrans",
+    recipeType: "reserved-item",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, CONSUMPTION_RECIPE_TAG],
+  },
+  {
+    id: "r_transmuter_2_solidtrans_xiranite_consumption_internal",
+    nameKey: "registry.recipe.internal_device_consumption.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_gas_xiranite", amount: 1 }],
+    outputs: [],
+    machineId: "transmuter_2_solidtrans",
+    recipeType: "reserved-item",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, CONSUMPTION_RECIPE_TAG],
+  },
   {
     id: "r_gas_diffuser_inert_gas_environment_basic",
     nameKey: "registry.recipe.r_gas_diffuser_inert_gas_environment_basic.name",
-    durationSeconds: 6,
+    durationSeconds: 10,
     inputs: [{ itemId: "item_gas_inert", amount: 1 }],
     outputs: [],
     machineId: "vaporizer_1",
-    recipeType: "immediate-consume",
-    tags: [],
+    recipeType: "reserved-item",
+    tags: [CONSUMPTION_RECIPE_TAG],
     gasDiffusionOutput: {
       gasItemId: "item_gas_inert",
       range: 13,
@@ -3309,12 +3353,12 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   {
     id: "r_gas_diffuser_water_gas_environment_basic",
     nameKey: "registry.recipe.r_gas_diffuser_water_gas_environment_basic.name",
-    durationSeconds: 6,
+    durationSeconds: 10,
     inputs: [{ itemId: "item_gas_water", amount: 1 }],
     outputs: [],
     machineId: "vaporizer_1",
-    recipeType: "immediate-consume",
-    tags: [],
+    recipeType: "reserved-item",
+    tags: [CONSUMPTION_RECIPE_TAG],
     gasDiffusionOutput: {
       gasItemId: "item_gas_water",
       range: 13,
@@ -3323,12 +3367,12 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   {
     id: "r_gas_diffuser_acid_gas_environment_basic",
     nameKey: "registry.recipe.r_gas_diffuser_acid_gas_environment_basic.name",
-    durationSeconds: 6,
+    durationSeconds: 10,
     inputs: [{ itemId: "item_gas_acid", amount: 1 }],
     outputs: [],
     machineId: "vaporizer_1",
-    recipeType: "immediate-consume",
-    tags: [],
+    recipeType: "reserved-item",
+    tags: [CONSUMPTION_RECIPE_TAG],
     gasDiffusionOutput: {
       gasItemId: "item_gas_acid",
       range: 13,
@@ -3337,12 +3381,12 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   {
     id: "r_gas_diffuser_xiranite_gas_environment_basic",
     nameKey: "registry.recipe.r_gas_diffuser_xiranite_gas_environment_basic.name",
-    durationSeconds: 6,
+    durationSeconds: 10,
     inputs: [{ itemId: "item_gas_xiranite", amount: 1 }],
     outputs: [],
     machineId: "vaporizer_1",
-    recipeType: "immediate-consume",
-    tags: [],
+    recipeType: "reserved-item",
+    tags: [CONSUMPTION_RECIPE_TAG],
     gasDiffusionOutput: {
       gasItemId: "item_gas_xiranite",
       range: 13,

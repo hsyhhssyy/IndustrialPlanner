@@ -16,6 +16,7 @@ import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition
 import { createDeviceIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { resolveEntityVariantName } from "@/shared/entity-variants";
 import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
+import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { lookupText } from "@/shared/i18n";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -45,6 +46,7 @@ export interface EncyclopediaIndex {
   recipesByInputItem: Map<string, RecipeDefinition[]>;
   recipesByOutputItem: Map<string, RecipeDefinition[]>;
   recipesByMachine: Map<string, RecipeDefinition[]>;
+  consumptionItemIdsByMachine: Map<string, readonly string[]>;
   allItems: ItemDefinition[];
   allEntities: EntityDefinition[];
   /** 拼音全拼索引（无音调），key 为 item/entity id，仅中文名非空时有值 */
@@ -120,7 +122,19 @@ export function buildEncyclopediaIndex(
   const recipesByInputItem = new Map<string, RecipeDefinition[]>();
   const recipesByOutputItem = new Map<string, RecipeDefinition[]>();
   const recipesByMachine = new Map<string, RecipeDefinition[]>();
+  const consumptionItemIdsByMachine = new Map<string, readonly string[]>();
   const visibleRecipes = recipes.filter(isRecipeVisibleInToolbox);
+
+  for (const recipe of recipes) {
+    if (!recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {
+      continue;
+    }
+    const itemIds = new Set(consumptionItemIdsByMachine.get(recipe.machineId) ?? []);
+    for (const input of recipe.inputs) {
+      itemIds.add(input.itemId);
+    }
+    consumptionItemIdsByMachine.set(recipe.machineId, [...itemIds].sort());
+  }
 
   for (const recipe of visibleRecipes) {
     for (const input of recipe.inputs) {
@@ -153,6 +167,7 @@ export function buildEncyclopediaIndex(
     recipesByInputItem,
     recipesByOutputItem,
     recipesByMachine,
+    consumptionItemIdsByMachine,
     allItems: items,
     allEntities: entities
       .filter((entity) => entity.uiGroup !== "hidden")

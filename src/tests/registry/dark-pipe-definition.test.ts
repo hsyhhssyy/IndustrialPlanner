@@ -38,6 +38,7 @@ describe("dark pipe definitions", () => {
     expect(inlet.recipeChannels).toEqual([
       {
         id: "void_fluid",
+        type: "normal-channel",
         ingredientStorageGroupIds: ["loader_buffer"],
         productStorageGroupIds: ["loader_buffer"],
         manualRecipeOnly: undefined,
@@ -99,6 +100,7 @@ describe("dark pipe definitions", () => {
       expect(outlet.recipeChannels).toEqual([
         {
           id: "default",
+          type: "normal-channel",
           ingredientStorageGroupIds: ["unloader_buffer"],
           productStorageGroupIds: ["unloader_buffer"],
           manualRecipeOnly: undefined,

@@ -25,11 +25,8 @@ export interface SimulationPersistentRuntimeState {
   devices: Record<string, RuntimeDeviceState>;
   /** 准入口跨 tick 计数。key 为 compiled port id。 */
   admissionCounters: Record<string, number>;
-  /** 准入口每仿真分钟窗口计数。key 为 compiled port id。 */
-  /** AI-CORRECTION 2026-07-23: 当前字段承载通用固定窗口；准入口使用 10 秒窗口，计量消耗保留各自配置窗口。 */
+  /** 准入口每个对齐十秒窗口计数。key 为 compiled port id。 */
   fixedWindowCounters: Record<string, RuntimeFixedWindowCounterState>;
-  /** 销毁型计量入口的窗口物品锁与运行许可。key 为 compiled device id。 */
-  meteredConsumptions: Record<string, RuntimeMeteredConsumptionState>;
   routingCursors: Record<string, number>;
   shareAllTargetSlotIdBySourceSlotId: Record<string, string>;
   sharedCapacitySlotIdsBySlotId: Record<string, readonly string[]>;
@@ -97,13 +94,16 @@ export interface RuntimeDeviceState {
   channelRecipes: Record<string, RuntimeDeviceRecipeState | null>;
 }
 
-export interface RuntimeMeteredConsumptionState {
-  currentItemId: string | null;
-  previousWindowItemId: string | null;
-  previousWindowCount: number;
-  authorizedUntilTick: number | null;
-  activeEffectItemId: string | null;
-}
+// AI-REMOVED 2026-07-23:
+// Reason: 固定窗口计量状态被真实槽位与频道配方状态取代。
+// Trigger: 用户要求去掉计数器机制。
+// Evidence: RuntimeSlotState + RuntimeDeviceRecipeState 已是完整持久真值。
+// Replacement: RuntimeSlotState + RuntimeDeviceRecipeState。
+// Risk: Medium
+// Human Review: Required
+//
+// Original code:
+// export interface RuntimeMeteredConsumptionState { ... }
 
 export interface RuntimeDeviceRecipeState {
   runId: string;
@@ -143,9 +143,11 @@ export interface SimulationTickTransientState {
   blockedInputNodeIds: Set<string>;
   /** 当前 tick 的槽位预留量聚合索引；首次查询时构建，后续随配方生命周期增量维护。 */
   reservedAmountByStorageSlotId: Record<string, number> | null;
+  /** 帧开始时冻结、Stage 5 消耗启动后重算的设备运行许可。 */
+  activeConsumptionDeviceIds: ReadonlySet<string>;
   /** 当前 tick 判定用气体扩散范围。 */
   activeGasDiffusions: readonly RuntimeGasDiffusionSnapshot[];
-  /** 当前 tick 是否处于真实电力不足状态；计量入口与环境效果据此暂停。 */
+  /** 当前 tick 是否处于真实电力不足状态。 */
   isPowerOutage: boolean;
   /** Perf 埋点：当前 tick 的热点函数调用计数累积器。仅在 perfEnabled 时非空。 */
   _perf?: SimulationRuntimePerf;
@@ -243,7 +245,6 @@ export function createSimulationMutableRuntimeState(
   const devices: Record<string, RuntimeDeviceState> = {};
   const admissionCounters = createInitialAdmissionCounters(topology);
   const fixedWindowCounters = createInitialFixedWindowCounters(topology);
-  const meteredConsumptions = createInitialMeteredConsumptions(topology);
   const routingCursors: Record<string, number> = {};
   for (const deviceId of topology.ordering.deviceOrder) {
     const device = topology.devices[deviceId];
@@ -271,7 +272,6 @@ export function createSimulationMutableRuntimeState(
       devices,
       admissionCounters,
       fixedWindowCounters,
-      meteredConsumptions,
       routingCursors,
       ...linkState,
       nextRecipeRunIndex: 1,
@@ -324,16 +324,16 @@ export function createMigratedSimulationMutableRuntimeState(
     }
 
     state.persistent.devices[deviceId] = cloneRuntimeDeviceState(previousDeviceState);
-    const previousMeteredConsumption = options.previousState.persistent.meteredConsumptions?.[deviceId];
-    if (
-      nextDevice.meteredConsumption !== undefined
-      && nextDevice.meteredConsumption !== null
-      && previousMeteredConsumption !== undefined
-    ) {
-      state.persistent.meteredConsumptions[deviceId] = cloneRuntimeMeteredConsumptionState(
-        previousMeteredConsumption,
-      );
-    }
+    // AI-REMOVED 2026-07-23:
+    // Reason: 拓扑迁移不再复制已删除的计量窗口状态；真实消耗槽与频道配方随设备状态迁移。
+    // Trigger: 用户要求删除计数器机制。
+    // Evidence: 上方 listDeviceSlotIds 与 cloneRuntimeDeviceState 已覆盖新机制全部持久状态。
+    // Replacement: slot/device 通用迁移。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // state.persistent.meteredConsumptions[deviceId] = cloneRuntimeMeteredConsumptionState(...);
     if (nextDevice.waterPurifierNode !== undefined && nextDevice.waterPurifierNode !== null) {
       state.persistent.waterPurifierManualRemainders[deviceId] =
         (options.previousState.persistent.waterPurifierManualRemainders ?? {})[deviceId] ?? 0;
@@ -411,12 +411,16 @@ export function cloneSimulationMutableRuntimeState(
           cloneFixedWindowCounterState(counter),
         ]),
       ),
-      meteredConsumptions: Object.fromEntries(
-        Object.entries(state.persistent.meteredConsumptions ?? {}).map(([deviceId, metered]) => [
-          deviceId,
-          cloneRuntimeMeteredConsumptionState(metered),
-        ]),
-      ),
+      // AI-REMOVED 2026-07-23:
+      // Reason: 检查点不再序列化计量窗口旁路状态。
+      // Trigger: 用户要求真实槽位与频道配方成为唯一真值。
+      // Evidence: slots/devices 已在本对象前部完成深克隆。
+      // Replacement: slots + devices。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // meteredConsumptions: clone(...),
       routingCursors: { ...state.persistent.routingCursors },
       shareAllTargetSlotIdBySourceSlotId: { ...state.persistent.shareAllTargetSlotIdBySourceSlotId },
       sharedCapacitySlotIdsBySlotId: Object.fromEntries(
@@ -446,6 +450,7 @@ export function createEmptyTransientState(): SimulationTickTransientState {
     diagnostics: [],
     blockedInputNodeIds: new Set(),
     reservedAmountByStorageSlotId: null,
+    activeConsumptionDeviceIds: new Set(),
     activeGasDiffusions: [],
     isPowerOutage: false,
     recipeStatsDelta: createRecipeStatsDelta(),
@@ -549,25 +554,16 @@ function createInitialFixedWindowCounters(
   return counters;
 }
 
-function createInitialMeteredConsumptions(
-  topology: CompiledSimulationTopology,
-): Record<string, RuntimeMeteredConsumptionState> {
-  const states: Record<string, RuntimeMeteredConsumptionState> = {};
-  for (const deviceId of topology.ordering.deviceOrder) {
-    const device = topology.devices[deviceId];
-    if (device?.meteredConsumption === undefined || device.meteredConsumption === null) {
-      continue;
-    }
-    states[deviceId] = {
-      currentItemId: null,
-      previousWindowItemId: null,
-      previousWindowCount: 0,
-      authorizedUntilTick: null,
-      activeEffectItemId: null,
-    };
-  }
-  return states;
-}
+// AI-REMOVED 2026-07-23:
+// Reason: 初始化计量窗口状态的入口已经失去数据对象。
+// Trigger: 用户要求移除计数器。
+// Evidence: createSimulationMutableRuntimeState 会初始化真实 slots 与 devices。
+// Replacement: 通用槽位/频道初始化。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function createInitialMeteredConsumptions(...) { ... }
 
 export function normalizeFixedWindowCountersForCurrentWindow(
   topology: CompiledSimulationTopology,
@@ -607,13 +603,6 @@ export function resetFixedWindowCounterForCurrentWindow(
     windowStartTick: resolveCounterWindowStartTick(topology, state.tickNumber, portId),
     count: 0,
   };
-  const meteredDevice = resolveMeteredConsumptionDeviceForPort(topology, portId);
-  const meteredState = meteredDevice === null
-    ? undefined
-    : state.persistent.meteredConsumptions[meteredDevice.id];
-  if (meteredState !== undefined) {
-    meteredState.currentItemId = null;
-  }
 }
 
 export function readAdmissionRateWindowRemainingAllowance(
@@ -646,13 +635,6 @@ function ensureFixedWindowCounterForCurrentWindow(
   const windowStartTick = resolveCounterWindowStartTick(topology, state.tickNumber, portId);
   const counter = state.persistent.fixedWindowCounters[portId];
   if (counter === undefined || counter.windowStartTick !== windowStartTick) {
-    rolloverMeteredConsumptionWindow({
-      topology,
-      state,
-      portId,
-      counter,
-      nextWindowStartTick: windowStartTick,
-    });
     const nextCounter = { windowStartTick, count: 0 };
     state.persistent.fixedWindowCounters[portId] = nextCounter;
     return nextCounter;
@@ -660,60 +642,29 @@ function ensureFixedWindowCounterForCurrentWindow(
   return counter;
 }
 
-function rolloverMeteredConsumptionWindow(options: {
-  readonly topology: CompiledSimulationTopology;
-  readonly state: SimulationMutableRuntimeState;
-  readonly portId: string;
-  readonly counter: RuntimeFixedWindowCounterState | undefined;
-  readonly nextWindowStartTick: number;
-}): void {
-  const device = resolveMeteredConsumptionDeviceForPort(options.topology, options.portId);
-  if (device === null || device.meteredConsumption === undefined || device.meteredConsumption === null) {
-    return;
-  }
-  const meteredState = options.state.persistent.meteredConsumptions[device.id];
-  if (meteredState === undefined) {
-    return;
-  }
-
-  const previousWindowStartTick = options.counter?.windowStartTick ?? options.nextWindowStartTick;
-  const crossedWindows = Math.max(
-    0,
-    Math.floor(
-      (options.nextWindowStartTick - previousWindowStartTick)
-      / device.meteredConsumption.windowTicks,
-    ),
-  );
-  const completedCount = crossedWindows === 1 ? options.counter?.count ?? 0 : 0;
-  const completedItemId = crossedWindows === 1 ? meteredState.currentItemId : null;
-  meteredState.previousWindowItemId = completedItemId;
-  meteredState.previousWindowCount = completedCount;
-  meteredState.currentItemId = null;
-
-  if (completedCount >= device.meteredConsumption.startThreshold && completedItemId !== null) {
-    meteredState.authorizedUntilTick =
-      options.nextWindowStartTick + device.meteredConsumption.windowTicks;
-    meteredState.activeEffectItemId = completedItemId;
-    return;
-  }
-
-  meteredState.authorizedUntilTick = null;
-  meteredState.activeEffectItemId = null;
-}
+// AI-REMOVED 2026-07-23:
+// Reason: 固定窗口滚动不再产生设备运行许可或气体环境。
+// Trigger: 用户要求以运行中的 consumption recipe 直接决定许可。
+// Evidence: ensureFixedWindowCounterForCurrentWindow 仅服务准入口十秒额度。
+// Replacement: 直接重置 RuntimeFixedWindowCounterState。
+// Risk: Medium
+// Human Review: Required
+//
+// Original code:
+// function rolloverMeteredConsumptionWindow(...) { ... }
 
 function resolveCounterWindowStartTick(
   topology: CompiledSimulationTopology,
   tickNumber: number,
-  portId: string,
+  _portId: string,
 ): number {
-  const meteredDevice = resolveMeteredConsumptionDeviceForPort(topology, portId);
-  const windowTicks = meteredDevice?.meteredConsumption?.windowTicks
-    ?? Math.max(1, topology.standardTickRate * 10);
+  const windowTicks = Math.max(1, topology.standardTickRate * 10);
   const currentTick = Math.max(0, Math.trunc(tickNumber));
   // AI-CORRECTION 2026-07-17: 与动态运行帧及严格物流统一使用 tick 1 相位。
   // tick 0 是初始快照；首个有效窗口从 tick 1 开始，后续窗口为
   // 1 + N * windowTicks（例如 1、11、21 或分钟窗口的 1、1201、2401）。
   // AI-CORRECTION 2026-07-23: 普通准入口现为 10 秒窗口，20 tick/s 时边界是 1、201、401；计量入口仍按自身 windowTicks。
+  // AI-CORRECTION 2026-07-23: 计量入口已删除；_portId 仅为保留现有调用签名，所有固定窗口均是准入口十秒窗口。
   return 1 + Math.floor(Math.max(0, currentTick - 1) / windowTicks) * windowTicks;
 }
 
@@ -722,18 +673,19 @@ function portUsesFixedWindowCounter(
   portId: string,
 ): boolean {
   const port = topology.ports[portId];
-  return (port?.admissionRule !== null && port?.admissionRule !== undefined)
-    || resolveMeteredConsumptionDeviceForPort(topology, portId) !== null;
+  return port?.admissionRule !== null && port?.admissionRule !== undefined;
 }
 
-function resolveMeteredConsumptionDeviceForPort(
-  topology: CompiledSimulationTopology,
-  portId: string,
-): CompiledSimulationDevice | null {
-  const port = topology.ports[portId];
-  const device = port === undefined ? undefined : topology.devices[port.deviceId];
-  return device?.meteredConsumption?.inputPortId === portId ? device : null;
-}
+// AI-REMOVED 2026-07-23:
+// Reason: 输入端口不再映射到计量设备旁路。
+// Trigger: 用户要求物品正常进入真实缓存。
+// Evidence: portStorageBinding 已将消耗端口绑定 consume_buffer。
+// Replacement: 普通端口-槽位求解。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function resolveMeteredConsumptionDeviceForPort(...) { ... }
 
 function canPreserveFixedWindowCounter(options: {
   readonly previousTopology: CompiledSimulationTopology;
@@ -748,21 +700,7 @@ function canPreserveFixedWindowCounter(options: {
     && nextPort?.admissionRule !== undefined
     && nextPort.admissionRule !== null
     && previousPort.admissionRule.itemId === nextPort.admissionRule.itemId;
-  const previousMetered = resolveMeteredConsumptionDeviceForPort(
-    options.previousTopology,
-    options.previousPortId,
-  )?.meteredConsumption;
-  const nextMetered = resolveMeteredConsumptionDeviceForPort(
-    options.topology,
-    options.portId,
-  )?.meteredConsumption;
-  const preservesMetered = previousMetered !== undefined
-    && previousMetered !== null
-    && nextMetered !== undefined
-    && nextMetered !== null
-    && previousMetered.itemIds.join("\u0000") === nextMetered.itemIds.join("\u0000")
-    && previousMetered.windowTicks === nextMetered.windowTicks;
-  return preservesAdmission || preservesMetered;
+  return preservesAdmission;
 }
 
 // AI-REMOVED 2026-07-16:
@@ -802,14 +740,16 @@ function cloneFixedWindowCounterState(
   };
 }
 
-function cloneRuntimeMeteredConsumptionState(
-  state: RuntimeMeteredConsumptionState,
-): RuntimeMeteredConsumptionState {
-  return {
-    ...state,
-    previousWindowItemId: state.previousWindowItemId ?? state.activeEffectItemId ?? null,
-  };
-}
+// AI-REMOVED 2026-07-23:
+// Reason: 已删除的计量窗口状态无需克隆。
+// Trigger: 用户要求时间轴仅保存真实槽位与频道配方。
+// Evidence: cloneRuntimeDeviceState 已克隆配方预留与进度。
+// Replacement: cloneRuntimeSlotState + cloneRuntimeDeviceState。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function cloneRuntimeMeteredConsumptionState(...) { ... }
 
 function cloneRuntimeDeviceState(device: RuntimeDeviceState): RuntimeDeviceState {
   return {
@@ -875,6 +815,7 @@ function cloneTransientState(transient: SimulationTickTransientState): Simulatio
     reservedAmountByStorageSlotId: transient.reservedAmountByStorageSlotId === null
       ? null
       : { ...transient.reservedAmountByStorageSlotId },
+    activeConsumptionDeviceIds: new Set(transient.activeConsumptionDeviceIds),
     activeGasDiffusions: transient.activeGasDiffusions.map((diffusion) => ({
       ...diffusion,
       gridRect: { ...diffusion.gridRect },

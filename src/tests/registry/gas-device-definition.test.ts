@@ -88,7 +88,8 @@ describe("gas item and device definitions", () => {
       { type: "snap-to-outer-ring-edge" },
       { type: "no-near-same-entity", range: 2 },
     ]);
-    expect(definition.meteredConsumption).toBeUndefined();
+    expect(definition.recipeChannels.some((channel) => channel.type === "consumption-channel"))
+      .toBe(false);
     expect(definition.recipeChannels).toEqual([]);
 
     // Verify warehouse link inspector is present
@@ -128,7 +129,7 @@ describe("gas item and device definitions", () => {
       { id: "out_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
     ]);
     expectGasOnlyPorts(gasOutput);
-    expect(gasMode.recipeChannels[0]).toMatchObject({
+    expect(gasMode.recipeChannels.find((channel) => channel.type === "normal-channel")).toMatchObject({
       ingredientStorageGroupIds: ["item_input_buffer"],
       productStorageGroupIds: ["gas_output_buffer"],
     });
@@ -143,7 +144,7 @@ describe("gas item and device definitions", () => {
       { id: "out_n_1", localCellX: 1, localCellY: 0, edge: "NORTH" },
       { id: "out_n_3", localCellX: 3, localCellY: 0, edge: "NORTH" },
     ]);
-    expect(solidMode.recipeChannels[0]).toMatchObject({
+    expect(solidMode.recipeChannels.find((channel) => channel.type === "normal-channel")).toMatchObject({
       ingredientStorageGroupIds: ["gas_input_buffer"],
       productStorageGroupIds: ["item_output_buffer"],
     });
