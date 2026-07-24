@@ -1856,6 +1856,19 @@
   line-height: 1.45;
 }
 
+.feedback-channel-card-qrcode {
+  flex-shrink: 0;
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.feedback-channel-card-qqgroup {
+  flex-direction: row;
+  align-items: center;
+}
+
 .feedback-dialog.is-mobile-compact {
   .feedback-dialog-body {
     padding: 14px 16px;

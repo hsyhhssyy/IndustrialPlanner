@@ -10,12 +10,12 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
 const FEEDBACK_GITHUB_URL =
-  "https://github.com/hsyhhssyy/IndustrialPlanner/issues/new?template=bilingual-feedback.md";
+  "https://github.com/hsyhhssyy/IndustrialPlanner/issues/new/choose";
 const FEEDBACK_BILIBILI_URL = "https://www.bilibili.com/video/BV1P6NJ6LEJ8/";
 const FEEDBACK_SKLAND_URL = "https://www.skland.com/article?id=5960603";
-const FEEDBACK_TAPTAP_URL = "https://www.taptap.cn/moment/822093303359999141";
+const FEEDBACK_QQGROUP_URL = "http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=oCn06_QiOSRc0hphjo7RdNc5PJDPgMY5";
 
-type FeedbackChannel = "github" | "bilibili" | "skland" | "taptap";
+type FeedbackChannel = "github" | "bilibili" | "skland" | "qqgroup";
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -42,7 +42,7 @@ export const FeedbackDialog = observer(function FeedbackDialog({
       channel === "github" ? FEEDBACK_GITHUB_URL :
       channel === "bilibili" ? FEEDBACK_BILIBILI_URL :
       channel === "skland" ? FEEDBACK_SKLAND_URL :
-      FEEDBACK_TAPTAP_URL;
+      FEEDBACK_QQGROUP_URL;
     window.open(url, "_blank", "noopener,noreferrer");
     appHost.internalActions.closeDialog("feedback");
   };
@@ -151,27 +151,32 @@ export const FeedbackDialog = observer(function FeedbackDialog({
           </section>
 
           <section
-            aria-label={t("feedbackDialog.taptap.action")}
-            className={cm(styles, "feedback-channel-card")}
-            onClick={() => openChannel("taptap")}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openChannel("taptap"); }}}
+            aria-label={t("feedbackDialog.qqgroup.action")}
+            className={cm(styles, "feedback-channel-card", "feedback-channel-card-qqgroup")}
+            onClick={() => openChannel("qqgroup")}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openChannel("qqgroup"); }}}
             role="button"
             tabIndex={0}
           >
             <div className={cm(styles, "feedback-channel-card-icon")}>
-              <WorkbenchIcon kind="taptap" />
+              <WorkbenchIcon kind="qqgroup" />
             </div>
             <div className={cm(styles, "feedback-channel-card-content")}>
-              <h3 id="feedback-channel-taptap-title" className={cm(styles, "feedback-channel-card-title")}>
-                {t("feedbackDialog.taptap.title")}
+              <h3 id="feedback-channel-qqgroup-title" className={cm(styles, "feedback-channel-card-title")}>
+                {t("feedbackDialog.qqgroup.title")}
               </h3>
               <p className={cm(styles, "feedback-channel-card-description")}>
-                {t("feedbackDialog.taptap.description")}
+                {t("feedbackDialog.qqgroup.description")}
               </p>
               <p className={cm(styles, "feedback-channel-card-note")}>
-                {t("feedbackDialog.taptap.note")}
+                {t("feedbackDialog.qqgroup.note")}
               </p>
             </div>
+            <img
+              src="/qq-group-qrcode.png"
+              alt={t("feedbackDialog.qqgroup.qrcodeAlt")}
+              className={cm(styles, "feedback-channel-card-qrcode")}
+            />
           </section>
         </div>
       </div>

@@ -64,6 +64,7 @@ import LucideBug from "~icons/lucide/bug";
 import LucideGithub from "~icons/lucide/github";
 import LucideGamepad2 from "~icons/lucide/gamepad-2";
 import LucideMessageSquare from "~icons/lucide/message-square";
+import LucideUsers from "~icons/lucide/users";
 import MaterialSymbolsDeleteSweep from "~icons/material-symbols/delete-sweep";
 import MaterialSymbolsPauseRounded from "~icons/material-symbols/pause-rounded";
 import MaterialSymbolsPlayArrowRounded from "~icons/material-symbols/play-arrow-rounded";
@@ -136,7 +137,8 @@ type WorkbenchIconKind =
   | "chevron-right"
   | "github"
   | "skland"
-  | "taptap";
+  | "taptap"
+  | "qqgroup";
 
 interface WorkbenchIconProps {
   kind: WorkbenchIconKind;
@@ -202,6 +204,7 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   github: LucideGithub,
   skland: LucideMessageSquare,
   taptap: LucideGamepad2,
+  qqgroup: LucideUsers,
   "chevron-left": LucideChevronLeft,
   "chevron-right": LucideChevronRight,
 };
