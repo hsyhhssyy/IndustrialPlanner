@@ -7,6 +7,12 @@ export {
   saveToLocalStorage,
 } from "@/shared/storage/browser-storage";
 
+export {
+  clearAllStorageAndReload,
+  estimateTotalStorageBytes,
+  formatStorageBytesToMB,
+} from "@/shared/storage/browser-storage-estimate";
+
 export type {
   BlueprintDirectoryListing,
   BlueprintFolderRecord,

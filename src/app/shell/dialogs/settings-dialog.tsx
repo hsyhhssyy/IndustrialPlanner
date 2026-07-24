@@ -26,6 +26,11 @@ import {
 } from "@/shared/registry/activity-availability";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import {
+  clearAllStorageAndReload,
+  estimateTotalStorageBytes,
+  formatStorageBytesToMB,
+} from "@/shared/storage";
 
 const SETTINGS_DIALOG_SECTION_SCROLL_OFFSET = 10;
 
@@ -81,6 +86,36 @@ export const SettingsDialog = observer(function SettingsDialog({
   const hideGroupSidebar = appHost.state.screenProfile.deviceClass !== "desktop";
   const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
   const isNonDesktop = appHost.state.screenProfile.deviceClass !== "desktop";
+  const [storageBytes, setStorageBytes] = useState<number | null>(null);
+  const experimentalEnabled = controller.getValue("other-experimental-features") === true;
+
+  const visibleGroups = useMemo(() => {
+    return WORKBENCH_SETTINGS_GROUPS.filter((group) => {
+      if (isNonDesktop && group.mobileHidden) return false;
+      if (group.id === "experimental" && !experimentalEnabled) return false;
+
+      return true;
+    });
+  }, [isNonDesktop, experimentalEnabled]);
+
+  // 当实验性功能分组可见时，估算存储占用
+  useEffect(() => {
+    if (!isOpen || !experimentalEnabled) return;
+
+    estimateTotalStorageBytes().then((bytes) => {
+      setStorageBytes(bytes);
+    }).catch(() => {
+      setStorageBytes(null);
+    });
+  }, [isOpen, experimentalEnabled]);
+
+  // 实验性功能关闭时，若当前选中该分组则回退到默认分组
+  useEffect(() => {
+    if (!isOpen || experimentalEnabled) return;
+    if (controller.selectedGroupId === "experimental") {
+      controller.selectGroup("display-system");
+    }
+  }, [isOpen, experimentalEnabled, controller]);
   const selectedSettingGuideSetting = settingGuideSettingId === null
     ? null
     : findWorkbenchSettingDefinition(settingGuideSettingId);
@@ -157,6 +192,97 @@ export const SettingsDialog = observer(function SettingsDialog({
     conflictSettingId: null as string | null,
     newKeyValue: null as string | null,
   }), []);
+
+  const experimentalFeaturesDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 460,
+    height: null,
+    activeTab: null,
+  }), []);
+
+  const clearStorageConfirmDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 420,
+    height: null,
+    activeTab: null,
+  }), []);
+
+  const clearStorageInputDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 420,
+    height: null,
+    activeTab: null,
+  }), []);
+
+  const [clearStorageInputValue, setClearStorageInputValue] = useState("");
+
+  const handleClearStorage = useCallback(() => {
+    runInAction(() => {
+      clearStorageConfirmDialogState.visible = true;
+    });
+  }, [clearStorageConfirmDialogState]);
+
+  const handleClearStorageCancel = useCallback(() => {
+    runInAction(() => {
+      clearStorageConfirmDialogState.visible = false;
+    });
+  }, [clearStorageConfirmDialogState]);
+
+  const handleClearStorageConfirm = useCallback(() => {
+    runInAction(() => {
+      clearStorageConfirmDialogState.visible = false;
+      clearStorageInputDialogState.visible = true;
+    });
+    setClearStorageInputValue("");
+  }, [clearStorageConfirmDialogState, clearStorageInputDialogState]);
+
+  const handleClearStorageInputCancel = useCallback(() => {
+    runInAction(() => {
+      clearStorageInputDialogState.visible = false;
+    });
+    setClearStorageInputValue("");
+  }, [clearStorageInputDialogState]);
+
+  const handleClearStorageInputConfirm = useCallback(() => {
+    clearAllStorageAndReload();
+  }, []);
+
+  const clearStorageExpectedText = useMemo(
+    () => appHost.state.settings.locale === "zh-CN"
+      ? "确认清除所有存储的数据"
+      : "Confirm to clear all stored data",
+    [appHost.state.settings.locale],
+  );
+
+  const isClearStorageInputValid = clearStorageInputValue === clearStorageExpectedText;
+
+  const handleRequestToggleExperimentalFeatures = useCallback(() => {
+    runInAction(() => {
+      experimentalFeaturesDialogState.visible = true;
+    });
+  }, [experimentalFeaturesDialogState]);
+
+  const handleExperimentalFeaturesCancel = useCallback(() => {
+    runInAction(() => {
+      experimentalFeaturesDialogState.visible = false;
+    });
+  }, [experimentalFeaturesDialogState]);
+
+  const handleExperimentalFeaturesConfirm = useCallback(() => {
+    controller.updateSwitchValue("other-experimental-features", true);
+    runInAction(() => {
+      experimentalFeaturesDialogState.visible = false;
+    });
+  }, [controller, experimentalFeaturesDialogState]);
 
   // AI-REMOVED 2026-06-24:
   // Reason: conflictPendingRef 被声明但从未被使用，属于死代码
@@ -375,7 +501,7 @@ export const SettingsDialog = observer(function SettingsDialog({
             <aside className={cm(styles, "settings-dialog-sidebar")}>
               <div className={cm(styles, "settings-dialog-sidebar-title")}>{t("settingsDialog.groups")}</div>
               <div aria-label={t("settingsDialog.groups")} className={cm(styles, "settings-dialog-tree")} role="tree">
-                {WORKBENCH_SETTINGS_GROUPS.filter((group) => !isNonDesktop || !group.mobileHidden).map((group) => {
+                {visibleGroups.map((group) => {
                   const isActive = group.id === selectedGroup.id;
 
                   return (
@@ -400,7 +526,7 @@ export const SettingsDialog = observer(function SettingsDialog({
             </aside>
           )}
           <div className={cm(styles, "settings-dialog-content")} ref={contentRef}>
-            {WORKBENCH_SETTINGS_GROUPS.filter((group) => !isNonDesktop || !group.mobileHidden).map((group) => (
+            {visibleGroups.map((group) => (
               <section
                 className={cm(styles, "settings-dialog-group-section")}
                 id={`settings-dialog-group-${group.id}`}
@@ -484,6 +610,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                             isEditable,
                             capturingKeybindingId,
                             onStartCapturing: setCapturingKeybindingId,
+                            onRequestToggleExperimentalFeatures: handleRequestToggleExperimentalFeatures,
                           })}
                         </div>
                       </article>,
@@ -554,6 +681,13 @@ export const SettingsDialog = observer(function SettingsDialog({
                     <PwaSettingsSection appHost={appHost} hideHeader pwaController={pwaController} />
                   </>
                 )}
+                {group.id === "experimental" && (
+                  <StorageUsageCard
+                    onClearStorage={handleClearStorage}
+                    storageBytes={storageBytes}
+                    t={t}
+                  />
+                )}
               </section>
             ))}
           </div>
@@ -577,6 +711,28 @@ export const SettingsDialog = observer(function SettingsDialog({
         titleKey="settingsAction.resetAllSettings"
       />
     )}
+    {clearStorageConfirmDialogState.visible && (
+      <ConfirmResetDialog
+        confirmDialogState={clearStorageConfirmDialogState}
+        confirmMessageKey="settingsAction.experimental-clear-storage-confirm"
+        onCancel={handleClearStorageCancel}
+        onConfirm={handleClearStorageConfirm}
+        t={t}
+        titleKey="settingsAction.experimental-clear-storage"
+      />
+    )}
+    {clearStorageInputDialogState.visible && (
+      <ClearStorageInputDialog
+        confirmDialogState={clearStorageInputDialogState}
+        expectedText={clearStorageExpectedText}
+        inputValue={clearStorageInputValue}
+        isValid={isClearStorageInputValid}
+        onCancel={handleClearStorageInputCancel}
+        onChange={setClearStorageInputValue}
+        onConfirm={handleClearStorageInputConfirm}
+        t={t}
+      />
+    )}
     {activityDialogState.visible && (
       <ActivitySelectionDialog
         activityDialogState={activityDialogState}
@@ -595,6 +751,43 @@ export const SettingsDialog = observer(function SettingsDialog({
         onConfirm={handleConflictConfirm}
         t={t}
       />
+    )}
+    {experimentalFeaturesDialogState.visible && (
+      <DialogShell
+        bodyClassName={cm(styles, "experimental-warning-dialog-body")}
+        className="experimental-warning-dialog"
+        closeTitle={t("action.close")}
+        compactMobileLayout={isNonDesktop}
+        dialogKey="experimental-features-warning"
+        dialogState={experimentalFeaturesDialogState}
+        maximizeTitle=""
+        onClose={handleExperimentalFeaturesCancel}
+        onToggleMaximized={() => {}}
+        restoreTitle=""
+        showMaximizeButton={false}
+        title={t("settingsField.other-experimental-features-warning-title")}
+        titleId="experimental-features-warning-title"
+      >
+        <div className={cm(styles, "experimental-warning-content")}>
+          <p>{t("settingsField.other-experimental-features-warning-message")}</p>
+          <div className={cm(styles, "experimental-warning-actions")}>
+            <button
+              className={cm(styles, "experimental-warning-cancel-btn")}
+              onClick={handleExperimentalFeaturesCancel}
+              type="button"
+            >
+              {t("action.cancel")}
+            </button>
+            <button
+              className={cm(styles, "experimental-warning-confirm-btn")}
+              onClick={handleExperimentalFeaturesConfirm}
+              type="button"
+            >
+              {t("settingsField.other-experimental-features-warning-confirm")}
+            </button>
+          </div>
+        </div>
+      </DialogShell>
     )}
     {settingGuideDialogState.visible && selectedSettingGuideSetting !== null ? (
       <SettingGuideDialog
@@ -686,6 +879,37 @@ function SettingsActionCard({
           type="button"
         >
           {buttonLabel}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function StorageUsageCard({
+  onClearStorage,
+  storageBytes,
+  t,
+}: {
+  onClearStorage: () => void;
+  storageBytes: number | null;
+  t: AppHost["actions"]["translate"];
+}) {
+  return (
+    <article className={cm(styles, "settings-dialog-setting-card")}>
+      <div className={cm(styles, "settings-dialog-setting-copy")}>
+        <h4>{t("settingsField.experimental-storage-usage")}</h4>
+        <p>{t("settingsField.experimental-storage-usageDescription")}</p>
+      </div>
+      <div className={cm(styles, "settings-dialog-setting-control")}>
+        <span className={cm(styles, "settings-dialog-storage-usage-value")}>
+          {formatStorageBytesToMB(storageBytes)}
+        </span>
+        <button
+          className={cm(styles, "settings-dialog-reset-button")}
+          onClick={onClearStorage}
+          type="button"
+        >
+          {t("settingsAction.experimental-clear-storage")}
         </button>
       </div>
     </article>
@@ -875,6 +1099,7 @@ function renderSettingControl(options: {
   isEditable: boolean;
   capturingKeybindingId: string | null;
   onStartCapturing: (settingId: string | null) => void;
+  onRequestToggleExperimentalFeatures?: () => void;
 }) {
   const {
     controller,
@@ -883,6 +1108,7 @@ function renderSettingControl(options: {
     isEditable,
     capturingKeybindingId,
     onStartCapturing,
+    onRequestToggleExperimentalFeatures,
   } = options;
   const value = controller.getValue(setting.id);
 
@@ -1000,6 +1226,10 @@ function renderSettingControl(options: {
         id={`setting-${setting.id}`}
         name={setting.id}
         onChange={(event) => {
+          if (setting.id === "other-experimental-features" && event.target.checked && onRequestToggleExperimentalFeatures) {
+            onRequestToggleExperimentalFeatures();
+            return;
+          }
           controller.updateSwitchValue(setting.id, event.target.checked);
         }}
         type="checkbox"
@@ -1169,6 +1399,89 @@ function ConfirmResetDialog({
             type="button"
           >
             {t("action.confirm")}
+          </button>
+        </div>
+      </div>
+    </DialogShell>
+  );
+}
+
+// ─── 清空存储二次确认输入框 ───
+
+interface ClearStorageInputDialogProps {
+  confirmDialogState: DialogStateReadWrite;
+  expectedText: string;
+  inputValue: string;
+  isValid: boolean;
+  onCancel: () => void;
+  onChange: (value: string) => void;
+  onConfirm: () => void;
+  t: AppHost["actions"]["translate"];
+}
+
+function ClearStorageInputDialog({
+  confirmDialogState,
+  expectedText,
+  inputValue,
+  isValid,
+  onCancel,
+  onChange,
+  onConfirm,
+  t,
+}: ClearStorageInputDialogProps) {
+  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" && isValid) {
+      onConfirm();
+    }
+  }, [isValid, onConfirm]);
+
+  return (
+    <DialogShell
+      className="clear-storage-input-dialog"
+      bodyClassName={cm(styles, "confirm-reset-dialog-body")}
+      closeTitle={t("action.close")}
+      compactMobileLayout={false}
+      dialogKey="clear-storage-input"
+      dialogState={confirmDialogState}
+      maximizeTitle=""
+      onClose={onCancel}
+      onToggleMaximized={() => {}}
+      restoreTitle=""
+      showMaximizeButton={false}
+      title={t("settingsAction.experimental-clear-storage-final-title")}
+      titleId="clear-storage-input-dialog-title"
+    >
+      <div className={cm(styles, "confirm-reset-content")}>
+        <p className={cm(styles, "clear-storage-input-prompt")}>
+          {t("settingsAction.experimental-clear-storage-final-prompt")}
+        </p>
+        <p className={cm(styles, "clear-storage-input-expected")}>
+          {expectedText}
+        </p>
+        <input
+          autoFocus
+          className={cm(styles, "clear-storage-input-field")}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={expectedText}
+          type="text"
+          value={inputValue}
+        />
+        <div className={cm(styles, "confirm-reset-actions")}>
+          <button
+            className={cm(styles, "confirm-reset-cancel-btn")}
+            onClick={onCancel}
+            type="button"
+          >
+            {t("action.cancel")}
+          </button>
+          <button
+            className={cm(styles, "confirm-reset-confirm-btn")}
+            disabled={!isValid}
+            onClick={onConfirm}
+            type="button"
+          >
+            {t("settingsAction.experimental-clear-storage-final-confirm")}
           </button>
         </div>
       </div>

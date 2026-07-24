@@ -5,7 +5,7 @@ import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
 export const USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY = "v3-user-settings-dialog";
 
-export type SettingsGroupId = "display-system" | "game" | "operation" | "shortcuts" | "other" | "debug";
+export type SettingsGroupId = "display-system" | "game" | "operation" | "shortcuts" | "other" | "experimental" | "debug";
 
 export type WorkbenchSettingControlValue = string | number | boolean;
 
@@ -465,6 +465,20 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     id: "other",
     labelKey: "settingsGroup.other",
     descriptionKey: "settingsGroup.otherDescription",
+    items: [
+      {
+        id: "other-experimental-features",
+        kind: "switch",
+        labelKey: "settingsField.other-experimental-features",
+        descriptionKey: "settingsField.other-experimental-featuresDescription",
+        defaultValue: false,
+      },
+    ],
+  },
+  {
+    id: "experimental",
+    labelKey: "settingsGroup.experimental" as UiKey,
+    descriptionKey: "settingsGroup.experimentalDescription" as UiKey,
     items: [],
   },
   {
