@@ -58,6 +58,7 @@ export function createHoverCornersDecoration(): DecorationLayer {
           y: ctx.viewportState.centerY,
         },
         gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+        displayRotation: ctx.viewportState.displayRotation,
       });
 
       if (viewportRect === null) return;
