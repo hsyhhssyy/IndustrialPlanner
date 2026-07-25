@@ -283,6 +283,7 @@ export type UiKey =
   | "productionPlanning.totalOutputs"
   | "productionPlanning.viewFlow"
   | "productionPlanning.viewMode"
+  | "productionPlanning.viewProcess"
   | "productionPlanning.viewTree"
   | "productionPlanning.waterPurifierDisabled"
   | "productionPlanning.waterPurifierNode"

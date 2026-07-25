@@ -485,6 +485,7 @@ const UI: Record<string, string> = {
     "productionPlanning.totalOutputs": "Total Outputs",
     "productionPlanning.viewFlow": "Flow",
     "productionPlanning.viewMode": "View",
+    "productionPlanning.viewProcess": "Process",
     "productionPlanning.viewTree": "Tree",
     "productionPlanning.waterPurifierDisabled": "Do not use",
     "productionPlanning.waterPurifierNode": "Use Purification Node",

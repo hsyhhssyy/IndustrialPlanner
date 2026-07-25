@@ -62,6 +62,8 @@ describe("production planning persistence", () => {
         activeScreen: "result",
         flowViewport: { x: 120, y: -64, scale: 1.75 },
         treeScrollTop: 360,
+        processExpandedItems: [],
+        processViewport: { x: 22, y: 22, scale: 1 },
       },
     });
 

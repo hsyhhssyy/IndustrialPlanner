@@ -478,6 +478,7 @@ const UI: Record<string, string> = {
     "productionPlanning.totalOutputs": "总输出",
     "productionPlanning.viewFlow": "流程图",
     "productionPlanning.viewMode": "视图",
+    "productionPlanning.viewProcess": "工序图",
     "productionPlanning.viewTree": "树表",
     "productionPlanning.waterPurifierDisabled": "不使用",
     "productionPlanning.waterPurifierNode": "使用净水节点",

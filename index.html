@@ -103,60 +103,250 @@
       }
     </script>
     <script>
-      // RAF + getCoalescedEvents 圆圈追踪器，受 experimental-virtual-mouse-pointer 设置控制
+      // 虚拟鼠标指针 + 输入提示 HUD
       (() => {
         const STORAGE_KEY = 'v3-app-settings';
+        const ASSET_BASE = document.querySelector('base')?.getAttribute('href') ?? '/';
+        const SCROLL_FADE_MS = 300;
 
-        function readVirtualMousePointerEnabled() {
+        function readSettings() {
           try {
             const raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return false;
-            const parsed = JSON.parse(raw);
-            return parsed.virtualMousePointer === true;
-          } catch {
-            return false;
-          }
+            if (!raw) return null;
+            return JSON.parse(raw);
+          } catch { return null; }
         }
 
-        let latestX = -9999;
-        let latestY = -9999;
+        function readEnabled() {
+          const s = readSettings();
+          return s?.virtualMousePointer === true;
+        }
 
+        // ── 键盘 code → SVG 文件名映射 ──
+        const KEY_SVG_MAP = {};
+        for (let i = 0; i <= 9; i++) KEY_SVG_MAP['Digit' + i] = 'keyboard_' + i;
+        for (const c of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') KEY_SVG_MAP['Key' + c] = 'keyboard_' + c.toLowerCase();
+        KEY_SVG_MAP.ArrowUp = 'keyboard_arrow_up';
+        KEY_SVG_MAP.ArrowDown = 'keyboard_arrow_down';
+        KEY_SVG_MAP.ArrowLeft = 'keyboard_arrow_left';
+        KEY_SVG_MAP.ArrowRight = 'keyboard_arrow_right';
+        KEY_SVG_MAP.ControlLeft = 'keyboard_ctrl';
+        KEY_SVG_MAP.ControlRight = 'keyboard_ctrl';
+        KEY_SVG_MAP.ShiftLeft = 'keyboard_shift';
+        KEY_SVG_MAP.ShiftRight = 'keyboard_shift';
+        KEY_SVG_MAP.AltLeft = 'keyboard_alt';
+        KEY_SVG_MAP.AltRight = 'keyboard_alt';
+        KEY_SVG_MAP.Escape = 'keyboard_escape';
+        KEY_SVG_MAP.Enter = 'keyboard_enter';
+        KEY_SVG_MAP.Tab = 'keyboard_tab';
+        KEY_SVG_MAP.Backspace = 'keyboard_backspace';
+        KEY_SVG_MAP.Delete = 'keyboard_delete';
+        KEY_SVG_MAP.Space = 'keyboard_space';
+
+        for (let i = 1; i <= 12; i++) KEY_SVG_MAP['F' + i] = 'keyboard_f' + i;
+
+        // ── 图片缓存 ──
+        const imgCache = {};
+        function getImg(name) {
+          if (!imgCache[name]) {
+            const img = new Image();
+            img.src = ASSET_BASE + 'input-prompts/' + name + '.svg';
+            img.width = 32;
+            img.height = 32;
+            img.style.display = 'block';
+            imgCache[name] = img;
+          }
+          return imgCache[name];
+        }
+
+        // ── 状态 ──
+        let mouseX = -9999, mouseY = -9999;
+        let mouseLeft = false, mouseRight = false, mouseMiddle = false;
+        let scrollUpUntil = 0, scrollDownUntil = 0;
+        const activeKeys = new Set();   // Set<code>
+        let wasEnabled = false;
+
+        // ── 构建 DOM ──
+        const hud = document.createElement('div');
+        hud.id = '__vc_hud';
+        hud.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483647;display:none;';
+
+        // 光标箭头 SVG（白色填充 + 深色描边 + 阴影，深浅背景均可见）
+        const arrowSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        arrowSvg.setAttribute('width', '28');
+        arrowSvg.setAttribute('height', '28');
+        arrowSvg.setAttribute('viewBox', '0 0 28 28');
+        arrowSvg.style.cssText = 'position:absolute;left:0;top:0;';
+        const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        arrowPath.setAttribute('d', 'M1 1 L1 22 L7 17 L11.5 27 L18 24.5 L13.5 15 L22 15 Z');
+        arrowPath.setAttribute('fill', '#ffffff');
+        arrowPath.setAttribute('stroke', '#0f172a');
+        arrowPath.setAttribute('stroke-width', '2.5');
+        arrowPath.setAttribute('stroke-linejoin', 'round');
+        arrowSvg.appendChild(arrowPath);
+        hud.appendChild(arrowSvg);
+
+        // 输入提示行容器
+        const promptsRow = document.createElement('div');
+        promptsRow.style.cssText = 'position:absolute;left:32px;top:24px;display:flex;align-items:center;gap:3px;white-space:nowrap;filter:drop-shadow(1px 0 0 #0f172a) drop-shadow(-1px 0 0 #0f172a) drop-shadow(0 1px 0 #0f172a) drop-shadow(0 -1px 0 #0f172a) drop-shadow(0 2px 4px rgba(0,0,0,0.35));';
+        hud.appendChild(promptsRow);
+
+        // 加号分隔符（描边风格，深浅背景均可见）
+        function makePlus() {
+          const s = document.createElement('span');
+          s.textContent = '+';
+          s.style.cssText = 'color:#f8fafc;font-size:14px;font-weight:700;line-height:1;text-shadow:1px 0 0 #0f172a,-1px 0 0 #0f172a,0 1px 0 #0f172a,0 -1px 0 #0f172a;';
+          return s;
+        }
+
+        function makeImg(name) {
+          const img = getImg(name).cloneNode(true);
+          return img;
+        }
+
+        document.body.appendChild(hud);
+
+        // ── 事件监听 ──
         document.addEventListener('pointermove', (e) => {
-          const coalesced = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
-          if (coalesced.length > 0) {
-            const last = coalesced[coalesced.length - 1];
-            latestX = last.clientX;
-            latestY = last.clientY;
+          const c = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+          if (c.length > 0) {
+            const last = c[c.length - 1];
+            mouseX = last.clientX; mouseY = last.clientY;
           } else {
-            latestX = e.clientX;
-            latestY = e.clientY;
+            mouseX = e.clientX; mouseY = e.clientY;
           }
         }, { passive: true });
 
-        const circle = document.createElement('div');
-        circle.style.cssText = [
-          'position:fixed',
-          'width:24px',
-          'height:24px',
-          'border-radius:50%',
-          'background:rgba(56,189,248,0.35)',
-          'border:2px solid #38bdf8',
-          'pointer-events:none',
-          'z-index:2147483647',
-          'transform:translate(-50%,-50%)',
-          'display:none',
-        ].join(';');
-        document.body.appendChild(circle);
+        document.addEventListener('mousedown', (e) => {
+          if (e.button === 0) mouseLeft = true;
+          if (e.button === 1) mouseMiddle = true;
+          if (e.button === 2) mouseRight = true;
+        }, true);
+
+        document.addEventListener('mouseup', (e) => {
+          if (e.button === 0) mouseLeft = false;
+          if (e.button === 1) mouseMiddle = false;
+          if (e.button === 2) mouseRight = false;
+        }, true);
+
+        document.addEventListener('wheel', (e) => {
+          const now = performance.now();
+          if (e.deltaY < 0) scrollUpUntil = now + SCROLL_FADE_MS;
+          if (e.deltaY > 0) scrollDownUntil = now + SCROLL_FADE_MS;
+        }, { passive: true });
+
+        document.addEventListener('keydown', (e) => {
+          if (KEY_SVG_MAP[e.code]) activeKeys.add(e.code);
+        }, true);
+
+        document.addEventListener('keyup', (e) => {
+          activeKeys.delete(e.code);
+        }, true);
+
+        // 窗口失焦时清除所有按键状态
+        window.addEventListener('blur', () => {
+          mouseLeft = mouseRight = mouseMiddle = false;
+          activeKeys.clear();
+        });
+
+        // ── 渲染 ──
+        let lastRenderState = '';
+
+        function buildRenderState() {
+          const now = performance.now();
+          const parts = [];
+
+          // 鼠标按钮
+          if (mouseLeft) parts.push('mouse_left');
+          else if (mouseRight) parts.push('mouse_right');
+          else if (mouseMiddle) parts.push('mouse_move');
+
+          // 滚轮（有时效）
+          if (scrollUpUntil > now) parts.push('mouse_scroll_up');
+          if (scrollDownUntil > now) parts.push('mouse_scroll_down');
+
+          // 键盘按键
+          for (const code of activeKeys) {
+            parts.push(KEY_SVG_MAP[code]);
+          }
+
+          return parts.join(',');
+        }
+
+        function updatePrompts(state) {
+          if (!state) {
+            promptsRow.innerHTML = '';
+            return;
+          }
+
+          const parts = state.split(',');
+          if (parts.length === 0 || (parts.length === 1 && parts[0] === '')) {
+            promptsRow.innerHTML = '';
+            return;
+          }
+
+          // 快速比较避免 DOM 重建
+          const currentChildren = promptsRow.children;
+          const expectedLen = parts.length * 2 - 1;
+          if (currentChildren.length === expectedLen) {
+            let same = true;
+            for (let i = 0; i < parts.length; i++) {
+              if (currentChildren[i * 2].dataset.name !== parts[i]) { same = false; break; }
+            }
+            if (same) return;
+          }
+
+          promptsRow.innerHTML = '';
+          for (let i = 0; i < parts.length; i++) {
+            if (i > 0) promptsRow.appendChild(makePlus());
+            const img = makeImg(parts[i]);
+            img.dataset.name = parts[i];
+            promptsRow.appendChild(img);
+          }
+        }
 
         function update() {
-          const enabled = readVirtualMousePointerEnabled();
+          const enabled = readEnabled();
 
-          if (enabled && latestX >= 0) {
-            circle.style.display = '';
-            circle.style.left = (latestX + 50) + 'px';
-            circle.style.top = (latestY + 50) + 'px';
-          } else {
-            circle.style.display = 'none';
+          if (enabled !== wasEnabled) {
+            wasEnabled = enabled;
+            if (enabled) {
+              // 全局强制覆盖所有元素的 cursor，不依赖 body 继承
+              let styleEl = document.getElementById('__vc_cursor_style');
+              if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = '__vc_cursor_style';
+                document.head.appendChild(styleEl);
+              }
+              styleEl.textContent = '* { cursor: none !important; }';
+            } else {
+              const styleEl = document.getElementById('__vc_cursor_style');
+              if (styleEl) styleEl.textContent = '';
+            }
+            if (!enabled) {
+              hud.style.display = 'none';
+              promptsRow.innerHTML = '';
+            }
+          }
+
+          if (!enabled) {
+            requestAnimationFrame(update);
+            return;
+          }
+
+          if (mouseX < 0) {
+            requestAnimationFrame(update);
+            return;
+          }
+
+          hud.style.display = '';
+          hud.style.left = mouseX + 'px';
+          hud.style.top = mouseY + 'px';
+
+          const state = buildRenderState();
+          if (state !== lastRenderState) {
+            lastRenderState = state;
+            updatePrompts(state);
           }
 
           requestAnimationFrame(update);

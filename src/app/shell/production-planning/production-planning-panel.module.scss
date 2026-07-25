@@ -107,6 +107,7 @@
 }
 
 .production-planning-graph {
+  position: relative;
   overflow: auto;
 }
 
@@ -115,6 +116,10 @@
 }
 
 .production-planning-graph.is-tree-view {
+  overflow: hidden;
+}
+
+.production-planning-graph.is-process-view {
   overflow: hidden;
 }
 

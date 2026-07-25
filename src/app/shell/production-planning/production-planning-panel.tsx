@@ -14,6 +14,7 @@ import LucideTarget from "~icons/lucide/target";
 import LucideRepeat from "~icons/lucide/repeat";
 import LucideTrash2 from "~icons/lucide/trash-2";
 import LucideWorkflow from "~icons/lucide/workflow";
+import LucideGitBranch from "~icons/lucide/git-branch";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { PlannerFlowViewportState } from "@/shared/storage/planner-storage";
@@ -58,6 +59,7 @@ import {
   resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId,
   resolveProductionPlanningRecipeInputPorts,
 } from "@/app/shell/production-planning/production-planning-ledger";
+import { ProcessGraphView } from "@/app/shell/production-planning/process";
 import { ProductionPlanningInputStore } from "./production-planning-state";
 import { hookPlannerIndexedDbPersistence } from "./production-planning-persist";
 import styles from "@/app/shell/app-shell.module.scss";
@@ -247,6 +249,22 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   const setFlowViewport = (flowViewport: PlannerFlowViewportState) => {
     runInAction(() => {
       store.session = { ...store.session, flowViewport };
+    });
+  };
+
+  const setProcessViewport = (processViewport: PlannerFlowViewportState) => {
+    runInAction(() => {
+      store.session = { ...store.session, processViewport };
+    });
+  };
+
+  const toggleProcessItem = (itemId: string) => {
+    runInAction(() => {
+      const current = store.session.processExpandedItems;
+      const next = current.includes(itemId)
+        ? current.filter((id) => id !== itemId)
+        : [...current, itemId];
+      store.session = { ...store.session, processExpandedItems: next };
     });
   };
 
@@ -662,6 +680,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
                 options={[
                   { value: "tree", label: t("productionPlanning.viewTree"), icon: <LucideListTree /> },
                   { value: "flow", label: t("productionPlanning.viewFlow"), icon: <LucideWorkflow /> },
+                  { value: "process", label: t("productionPlanning.viewProcess"), icon: <LucideGitBranch /> },
                 ]}
                 onChange={(v) => {
                   runInAction(() => {
@@ -673,18 +692,20 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
           </div>
 
           <div className={cm(styles, "production-planning-main")}>
-            <div className={cm(styles, "production-planning-graph", viewMode === "tree" ? "is-tree-view" : "is-flow-view")}>
+            <div className={cm(styles, "production-planning-graph", viewMode === "tree" ? "is-tree-view" : viewMode === "flow" ? "is-flow-view" : "is-process-view")}>
               {calculation === null ? (
                 <div className={cm(styles, "production-planning-empty")}>{t("productionPlanning.noResult")}</div>
               ) : (
                 <PlanGraph
                   displayMode={displayMode}
                   flowViewport={session.flowViewport}
+                  processViewport={session.processViewport}
                   viewMode={viewMode}
                   plan={calculation.plan}
                   index={index}
                   recipeChoices={resultRecipeChoiceMap}
                   treeScrollTop={session.treeScrollTop}
+                  processExpandedItems={session.processExpandedItems}
                   isTouch={isTouch}
                   onFlowViewportChange={setFlowViewport}
                   onSelectRecipe={selectRecipe}
@@ -692,6 +713,8 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
                   onCoverDemand={handleCoverDemand}
                   onRemoveExternalSupply={handleRemoveExternalSupply}
                   onTreeScrollTopChange={setTreeScrollTop}
+                  onToggleProcessItem={toggleProcessItem}
+                  onProcessViewportChange={setProcessViewport}
                   t={t}
                 />
               )}
@@ -1130,11 +1153,13 @@ function SegmentedControl<T extends string>({
 function PlanGraph({
   displayMode,
   flowViewport,
+  processViewport,
   viewMode,
   plan,
   index,
   recipeChoices,
   treeScrollTop,
+  processExpandedItems,
   isTouch,
   onFlowViewportChange,
   onSelectRecipe,
@@ -1142,15 +1167,19 @@ function PlanGraph({
   onCoverDemand,
   onRemoveExternalSupply,
   onTreeScrollTopChange,
+  onToggleProcessItem,
+  onProcessViewportChange,
   t,
 }: {
   displayMode: ProductionPlanningDisplayMode;
   flowViewport: PlannerFlowViewportState;
+  processViewport: PlannerFlowViewportState;
   viewMode: ProductionPlanningViewMode;
   plan: ProductionPlanningResult;
   index: ProductionPlanningIndex;
   recipeChoices: ReadonlyMap<string, string>;
   treeScrollTop: number;
+  processExpandedItems: readonly string[];
   isTouch: boolean;
   onFlowViewportChange: (viewport: PlannerFlowViewportState) => void;
   onSelectRecipe: (itemId: string, recipeId: string | null) => void;
@@ -1158,8 +1187,26 @@ function PlanGraph({
   onCoverDemand: (itemId: string) => void;
   onRemoveExternalSupply: (itemId: string) => void;
   onTreeScrollTopChange: (scrollTop: number) => void;
+  onToggleProcessItem: (itemId: string) => void;
+  onProcessViewportChange: (viewport: PlannerFlowViewportState) => void;
   t: (key: string) => string;
 }) {
+  if (viewMode === "process") {
+    const expandedSet = new Set(processExpandedItems);
+    return (
+      <ProcessGraphView
+        plan={plan}
+        index={index}
+        recipeChoices={recipeChoices}
+        expandedItemIds={expandedSet}
+        initialViewport={processViewport}
+        onToggleItem={onToggleProcessItem}
+        onViewportChange={onProcessViewportChange}
+        t={t}
+      />
+    );
+  }
+
   if (viewMode === "flow") {
     return (
       <FlowGraph
@@ -3767,6 +3814,11 @@ function shouldIgnoreProductionPlanningSwipeStart(target: EventTarget | null): b
 
   // 2026-05-20 订正：流程图画布内触控拖拽用于平移/缩放，不应被误判为切屏滑动手势
   if (target.closest("[class*='production-flow-canvas']") !== null) {
+    return true;
+  }
+
+  // 2026-07-25 订正：工序图画布同样需要平移/缩放，豁免滑动手势
+  if (target.closest("[class*='process-graph-canvas']") !== null) {
     return true;
   }
 

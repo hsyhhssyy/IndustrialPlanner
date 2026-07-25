@@ -114,7 +114,21 @@ export function buildProcessGraph(
     const key = `${n.col}:${n.row}`;
     nodeMap.set(key, n);
   }
-  const nodes = [...nodeMap.values()].sort((a, b) => a.row - b.row || b.col - a.col);
+  let nodes = [...nodeMap.values()].sort((a, b) => a.row - b.row || a.col - b.col);
+
+  // Shift col values to be positive (0 = leftmost, max = target column)
+  const minCol = nodes.reduce((m, n) => Math.min(m, n.col), 0);
+  if (minCol < 0) {
+    const shift = -minCol;
+    for (const n of nodes) {
+      n.col += shift;
+    }
+    for (const l of state.links) {
+      l.fromCol += shift;
+      l.toCol += shift;
+      l.boundaryCol += shift;
+    }
+  }
 
   const maxCol = nodes.reduce((m, n) => Math.max(m, n.col), 0);
   const maxRow = nodes.reduce((m, n) => Math.max(m, n.row), 0);
