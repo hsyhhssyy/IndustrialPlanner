@@ -20,6 +20,7 @@ export interface AppSettings {
   readonly gameUseInspectorPanel: boolean;
   readonly gameShowHotkeys: boolean;
   readonly collapseDeviceModes: boolean;
+  readonly gameShowPipeExactFluidPosition: boolean;
   readonly gameAlwaysShowGridLines: boolean;
   readonly showGrassBackground: boolean;
   readonly debugShowFps: boolean;

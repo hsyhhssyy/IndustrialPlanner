@@ -321,6 +321,8 @@ export type UiKey =
   | "settingsField.game-always-show-grid-linesDescription"
   | "settingsField.game-collapse-device-modes"
   | "settingsField.game-collapse-device-modesDescription"
+  | "settingsField.game-show-pipe-exact-fluid-position"
+  | "settingsField.game-show-pipe-exact-fluid-positionDescription"
   | "settingsField.game-arknights-allow-empty-logistics-endpoints"
   | "settingsField.game-arknights-allow-empty-logistics-endpointsDescription"
   | "settingsField.game-arknights-auto-create-splitters-and-convergers"

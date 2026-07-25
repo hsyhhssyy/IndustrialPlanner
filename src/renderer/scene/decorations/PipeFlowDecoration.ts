@@ -219,15 +219,23 @@ function resolveActivePipeEntityIds(ctx: DecorationSyncContext): Set<string> {
     return new Set()
   }
 
+  const exactFluidMode = ctx.renderHost.workspace.app?.state?.settings?.gameShowPipeExactFluidPosition === true
+
   const activePipeEntityIds = new Set<string>()
   for (const entity of editor.queries.listEntities()) {
     if (!isStrictPipeDefinitionId(entity.definitionId)) {
       continue
     }
 
-    if (queries.getPipeFluidItemId(entity.id) !== null) {
-      activePipeEntityIds.add(entity.id)
+    if (queries.getPipeFluidItemId(entity.id) === null) {
+      continue
     }
+
+    if (exactFluidMode && !queries.isPipeDeviceSlotOccupied(entity.id)) {
+      continue
+    }
+
+    activePipeEntityIds.add(entity.id)
   }
 
   return activePipeEntityIds

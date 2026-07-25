@@ -119,7 +119,14 @@ export class PipeSprite extends DedicatedLogisticSprite {
       return
     }
 
-    if (PIPE_FIRST_WET_ENABLED) {
+    const exactFluidMode = context.workspace.app?.state?.settings?.gameShowPipeExactFluidPosition === true
+    if (exactFluidMode) {
+      // 精确模式：只有该节管道当前 slot 有液体才显示
+      if (!(queries?.isPipeDeviceSlotOccupied(this.entityId) ?? false)) {
+        this.bead.visible = false
+        return
+      }
+    } else if (PIPE_FIRST_WET_ENABLED) {
       // 首润模式：只有该节管道曾被液体润湿过才显示
       if (!PipeSprite.wetDevices.has(this.entityId)) {
         // 检查当前 tick 该节管道 slot 是否有液体

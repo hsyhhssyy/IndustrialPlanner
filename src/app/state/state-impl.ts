@@ -86,6 +86,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   gameUseInspectorPanel: boolean;
   gameShowHotkeys: boolean;
   collapseDeviceModes: boolean;
+  gameShowPipeExactFluidPosition: boolean;
   gameAlwaysShowGridLines: boolean;
   selectedActivityIds: string[];
   toolboxShowAllActivityContent: boolean;
@@ -690,6 +691,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     gameUseInspectorPanel: false,
     gameShowHotkeys: false,
     collapseDeviceModes: true,
+    gameShowPipeExactFluidPosition: false,
     gameAlwaysShowGridLines: true,
     selectedActivityIds: [],
     toolboxShowAllActivityContent: true,

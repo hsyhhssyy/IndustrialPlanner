@@ -359,10 +359,9 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
                     e.stopPropagation();
                     const problem = baseProblems[index];
                     if (problem === undefined) return;
-                    // 若关联了设备，优先聚焦
+                    // 若关联了设备，聚焦到该设备
                     if (problem.entityId !== undefined && editor !== null) {
                       editor.actions.focusOnEntity(problem.entityId);
-                      return;
                     }
                     if (activeProblemTooltip === index) {
                       setActiveProblemTooltip(null);

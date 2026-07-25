@@ -100,6 +100,7 @@ const SHOW_GRASS_BACKGROUND_SETTING_ID = "game-show-grass-background";
 const SHOW_DEVICE_NAMES_SETTING_ID = "game-show-device-names";
 const SHOW_DEVICE_ICONS_SETTING_ID = "game-show-device-icons";
 const COLLAPSE_DEVICE_MODES_SETTING_ID = "game-collapse-device-modes";
+const SHOW_PIPE_EXACT_FLUID_POSITION_SETTING_ID = "game-show-pipe-exact-fluid-position";
 
 export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinition[] = [
   {
@@ -247,6 +248,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         labelKey: "settingsField.game-collapse-device-modes",
         descriptionKey: "settingsField.game-collapse-device-modesDescription",
         defaultValue: true,
+      },
+      {
+        id: SHOW_PIPE_EXACT_FLUID_POSITION_SETTING_ID,
+        kind: "switch",
+        labelKey: "settingsField.game-show-pipe-exact-fluid-position",
+        descriptionKey: "settingsField.game-show-pipe-exact-fluid-positionDescription",
+        defaultValue: false,
       },
     ],
   },

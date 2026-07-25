@@ -82,13 +82,10 @@
   user-select: none;
   pointer-events: auto;
   overflow: hidden;
-  transition: max-height 0.15s;
 }
 
-.process-node.is-detail-expanded {
+.process-node.has-detail {
   cursor: pointer;
-  z-index: 6;
-  max-height: none !important;
 }
 
 .process-node-header {
@@ -97,29 +94,13 @@
   gap: 4px;
   padding: 2px 8px 2px 4px;
   flex-shrink: 0;
-  max-height: 28px;
+  height: 100%;
 }
 
 .process-node-header img {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
-}
-
-.process-node-detail {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  padding: 0 4px 2px 4px;
-  font-size: 9px;
-  line-height: 1.1;
-  display: flex;
-  align-items: center;
-}
-
-.process-node-detail > div {
-  transform: scale(0.72);
-  transform-origin: left center;
 }
 
 .process-node.is-target {
@@ -163,4 +144,58 @@
 
 .process-node-expand:hover {
   background: var(--color-accent-light, #d4f0e0);
+}
+
+/* Detail popup — positioned in screen coordinates, floats above the grid */
+.process-detail-popup {
+  position: absolute;
+  z-index: 20;
+  transform: translate(-50%, -50%) scale(0.5);
+  opacity: 0;
+  animation: process-popup-in 0.18s ease-out forwards;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 260px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--color-bg-card, #f5f5f5);
+  border: 2px solid var(--color-accent, #4a9);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+  pointer-events: auto;
+}
+
+@keyframes process-popup-in {
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.process-detail-popup-formula {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.process-detail-popup-device {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-top: 1px solid var(--color-border, #ddd);
+  width: 100%;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-2, #666);
+
+  img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    border-radius: 3px;
+  }
 }

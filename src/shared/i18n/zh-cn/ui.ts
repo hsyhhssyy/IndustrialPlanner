@@ -192,6 +192,8 @@ const UI: Record<string, string> = {
     "settingsField.game-always-show-grid-linesDescription": "开启后总是显示网格线；关闭后仅在特定模式显示附近的网格线。",
     "settingsField.game-collapse-device-modes": "折叠设备模式",
     "settingsField.game-collapse-device-modesDescription": "将同一设备的多个变体折叠为一个按钮，并通过右侧端帽选择模式。",
+    "settingsField.game-show-pipe-exact-fluid-position": "显示管道具体物流情况",
+    "settingsField.game-show-pipe-exact-fluid-positionDescription": "精确显示管道物品的当前所处位置。",
     "settingsField.game-arknights-allow-empty-logistics-endpoints": "物流允许以空地为起点",
     "settingsField.game-arknights-allow-empty-logistics-endpointsDescription": "开启后，布设传送带和管道时可以从空地起笔，否则只能从有出口的设备起笔。",
     "settingsField.game-arknights-auto-create-splitters-and-convergers": "自动创建分/汇流",

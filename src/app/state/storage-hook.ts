@@ -168,6 +168,10 @@ function normalizePersistedAppSettings(
     collapseDeviceModes: typeof persistedAppSettings.collapseDeviceModes === "boolean"
       ? persistedAppSettings.collapseDeviceModes
       : fallback.collapseDeviceModes,
+    gameShowPipeExactFluidPosition:
+      typeof persistedAppSettings.gameShowPipeExactFluidPosition === "boolean"
+        ? persistedAppSettings.gameShowPipeExactFluidPosition
+        : fallback.gameShowPipeExactFluidPosition,
     gameAlwaysShowGridLines: gameUseBlueprintStyleDeviceImages
       ? true
       : typeof persistedAppSettings.gameAlwaysShowGridLines === "boolean"

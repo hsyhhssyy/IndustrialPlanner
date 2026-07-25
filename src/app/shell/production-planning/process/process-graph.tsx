@@ -7,6 +7,7 @@ import type { ProductionPlanningIndex, ProductionPlanningResult } from "../produ
 import { buildProcessGraph } from "./process-graph-builder";
 import type { ProcessGraph, ProcessNode } from "./process-graph-model";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
+import { createDeviceIconAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "./process-graph.module.scss";
 
 interface ProcessGraphViewProps {
@@ -68,6 +69,34 @@ export function ProcessGraphView({
     onViewportChange?.(next);
   }, [onViewportChange]);
 
+  // Dismiss detail popup on click outside
+  useEffect(() => {
+    if (detailExpandedNodeKey === null) return;
+    const handler = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target === null) return;
+      // Don't dismiss if clicking inside the popup
+      if (target.closest(`.${styles["process-detail-popup"]}`) !== null) return;
+      setDetailExpandedNodeKey(null);
+    };
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [detailExpandedNodeKey]);
+
+  // Compute expanded node info for the popup
+  const expandedNode = detailExpandedNodeKey !== null
+    ? graph.nodes.find((n) => `${n.col}:${n.row}` === detailExpandedNodeKey) ?? null
+    : null;
+  const expandedNodeCanvasX = expandedNode !== null ? nodeCenterX(expandedNode.col) : 0;
+  const expandedNodeCanvasY = expandedNode !== null ? nodeCenterY(expandedNode.row) : 0;
+  const expandedRecipeId = expandedNode?.recipeId ?? expandedNode?.expandedRecipeId ?? null;
+  const expandedRecipe = expandedRecipeId !== null ? index.recipeById.get(expandedRecipeId) ?? undefined : undefined;
+  const expandedDevice = expandedRecipe !== undefined ? index.entityById.get(expandedRecipe.machineId) ?? null : null;
+
+  const handleDetailToggle = useCallback((nodeKey: string) => {
+    setDetailExpandedNodeKey((prev) => (prev === nodeKey ? null : nodeKey));
+  }, []);
+
   // Viewport anchoring: keep the toggled node at the same screen position
   const anchorRef = useRef<{ itemId: string; canvasX: number; canvasY: number } | null>(null);
 
@@ -78,10 +107,6 @@ export function ProcessGraphView({
     anchorRef.current = { itemId, canvasX, canvasY };
     onToggleItem(itemId);
   }, [onToggleItem]);
-
-  const handleDetailToggle = useCallback((nodeKey: string) => {
-    setDetailExpandedNodeKey((prev) => (prev === nodeKey ? null : nodeKey));
-  }, []);
 
   useLayoutEffect(() => {
     const anchor = anchorRef.current;
@@ -174,6 +199,10 @@ export function ProcessGraphView({
   const totalWidth = (graph.maxCol + 1) * (CELL_WIDTH + COL_GAP) + NODE_PADDING * 2;
   const totalHeight = (graph.maxRow + 1) * CELL_HEIGHT + NODE_PADDING * 2;
 
+  // Popup screen coordinates (outside the inner transform layer)
+  const popupScreenX = expandedNodeCanvasX * viewport.scale + viewport.x;
+  const popupScreenY = expandedNodeCanvasY * viewport.scale + viewport.y;
+
   return (
     <div
       className={styles["process-graph-canvas"]}
@@ -235,7 +264,7 @@ export function ProcessGraphView({
           const isExpandable = node.type === "secondary";
           const isCollapsible = expandedItemIds.has(node.itemId);
           const nodeKey = `${node.col}:${node.row}`;
-          const isDetailExpanded = detailExpandedNodeKey === nodeKey;
+          const hasRecipe = (node.recipeId ?? node.expandedRecipeId) !== null;
           return (
             <ProcessNodeCard
               key={nodeKey}
@@ -243,15 +272,44 @@ export function ProcessGraphView({
               cx={cx}
               cy={cy}
               isExpanded={isCollapsible}
-              isDetailExpanded={isDetailExpanded}
-              index={index}
-              t={t}
               onToggle={(isExpandable || isCollapsible) ? () => handleToggle(node.itemId, node.col, node.row) : undefined}
-              onDetailToggle={(node.recipeId ?? node.expandedRecipeId) !== null ? () => handleDetailToggle(nodeKey) : undefined}
+              onDetailToggle={hasRecipe ? () => handleDetailToggle(nodeKey) : undefined}
             />
           );
         })}
       </div>
+
+      {/* Detail popup — outside inner transform layer */}
+      {detailExpandedNodeKey !== null && expandedNode !== null && (
+        <div
+          className={styles["process-detail-popup"]}
+          style={{
+            left: popupScreenX,
+            top: popupScreenY,
+            transformOrigin: "center center",
+          }}
+        >
+          {expandedRecipeId !== null && (
+            <div className={styles["process-detail-popup-formula"]}>
+              <RecipeDisplay
+                recipeId={expandedRecipeId}
+                index={index}
+                t={t}
+                showDevice={false}
+              />
+            </div>
+          )}
+          {expandedDevice !== null && (
+            <div className={styles["process-detail-popup-device"]}>
+              <img
+                alt=""
+                src={createDeviceIconAssetUrl(expandedDevice.spriteId)}
+              />
+              <span>{t(expandedDevice.nameKey)}</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -261,9 +319,6 @@ function ProcessNodeCard({
   cx,
   cy,
   isExpanded,
-  isDetailExpanded,
-  index,
-  t,
   onToggle,
   onDetailToggle,
 }: {
@@ -271,9 +326,6 @@ function ProcessNodeCard({
   cx: number;
   cy: number;
   isExpanded: boolean;
-  isDetailExpanded: boolean;
-  index: ProductionPlanningIndex;
-  t: (key: string) => string;
   onToggle?: () => void;
   onDetailToggle?: () => void;
 }) {
@@ -283,16 +335,12 @@ function ProcessNodeCard({
     node.type === "natural" ? styles["is-natural"] : "",
     node.type === "cycle" ? styles["is-cycle"] : "",
     node.type === "dangling" ? styles["is-dangling"] : "",
-    isDetailExpanded ? styles["is-detail-expanded"] : "",
+    onDetailToggle ? styles["has-detail"] : "",
   ]
     .filter(Boolean)
     .join(" ");
 
   const nodeWidth = Math.max(80, CELL_WIDTH - 8);
-  const recipeId = node.recipeId ?? node.expandedRecipeId ?? null;
-  const hasRecipe = recipeId !== null;
-  const recipeDef = hasRecipe ? index.recipeById.get(recipeId!) : undefined;
-  const headerHeight = CELL_HEIGHT - 4;
 
   return (
     <>
@@ -302,8 +350,7 @@ function ProcessNodeCard({
           left: cx - nodeWidth / 2,
           top: cy - CELL_HEIGHT / 2 + 2,
           width: nodeWidth,
-          minHeight: headerHeight,
-          maxHeight: isDetailExpanded ? undefined : headerHeight,
+          height: CELL_HEIGHT - 4,
         }}
         onClick={onDetailToggle}
       >
@@ -311,15 +358,6 @@ function ProcessNodeCard({
           <img alt="" src={node.iconSrc} />
           <span>{node.name}</span>
         </div>
-        {isDetailExpanded && recipeDef !== undefined && (
-          <div className={styles["process-node-detail"]}>
-            <RecipeDisplay
-              recipeId={recipeId!}
-              index={index}
-              t={t}
-            />
-          </div>
-        )}
       </div>
       {onToggle && (
         <div

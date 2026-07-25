@@ -199,6 +199,8 @@ const UI: Record<string, string> = {
     "settingsField.game-always-show-grid-linesDescription": "When enabled, grid lines are always visible. When disabled, they only appear in specific modes near the current preview.",
     "settingsField.game-collapse-device-modes": "Collapse Device Modes",
     "settingsField.game-collapse-device-modesDescription": "Collapse variants of the same device into one button and select modes from its right cap.",
+    "settingsField.game-show-pipe-exact-fluid-position": "Show Exact Pipe Fluid Position",
+    "settingsField.game-show-pipe-exact-fluid-positionDescription": "Precisely show the current position of items inside pipes.",
     "settingsField.game-arknights-allow-empty-logistics-endpoints": "Allow Empty Logistics Starts",
     "settingsField.game-arknights-allow-empty-logistics-endpointsDescription": "When enabled, conveyors and pipes can start from empty cells. Otherwise they must start from a device with an output.",
     "settingsField.game-arknights-auto-create-splitters-and-convergers": "Auto Create Splitters/Convergers",
