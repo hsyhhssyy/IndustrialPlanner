@@ -161,7 +161,9 @@ function normalizeDisplayMode(v: unknown): ProductionPlanningDisplayMode {
 }
 
 function normalizeViewMode(v: unknown): ProductionPlanningViewMode {
-  return v === "flow" ? "flow" : "tree";
+  if (v === "flow") return "flow";
+  if (v === "process") return "process";
+  return "tree";
 }
 
 function normalizeByproductPolicy(

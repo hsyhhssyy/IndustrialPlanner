@@ -25,6 +25,7 @@ export interface AppSettings {
   readonly debugShowFps: boolean;
   readonly debugShowGestureDiagnosticsWindow: boolean;
   readonly debugMode: boolean;
+  readonly virtualMousePointer: boolean;
 }
 
 // ToolboxWiki* / ModuleBalancing* / ToolboxState 类型已搬迁至 src/app/toolbox-types.ts

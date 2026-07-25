@@ -479,7 +479,15 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     id: "experimental",
     labelKey: "settingsGroup.experimental" as UiKey,
     descriptionKey: "settingsGroup.experimentalDescription" as UiKey,
-    items: [],
+    items: [
+      {
+        id: "experimental-virtual-mouse-pointer",
+        kind: "switch",
+        labelKey: "settingsField.experimental-virtual-mouse-pointer",
+        descriptionKey: "settingsField.experimental-virtual-mouse-pointerDescription",
+        defaultValue: false,
+      },
+    ],
   },
   {
     id: "debug",

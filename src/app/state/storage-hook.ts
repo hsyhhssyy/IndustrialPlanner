@@ -197,6 +197,9 @@ function normalizePersistedAppSettings(
     debugMode: typeof persistedAppSettings.debugMode === "boolean"
       ? persistedAppSettings.debugMode
       : fallback.debugMode,
+    virtualMousePointer: typeof persistedAppSettings.virtualMousePointer === "boolean"
+      ? persistedAppSettings.virtualMousePointer
+      : fallback.virtualMousePointer,
   };
 }
 

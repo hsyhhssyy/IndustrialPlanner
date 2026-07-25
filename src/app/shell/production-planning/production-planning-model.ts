@@ -42,7 +42,7 @@ export interface ProductionPlanningSourceConfig {
 }
 
 export type ProductionPlanningDisplayMode = "item" | "device";
-export type ProductionPlanningViewMode = "tree" | "flow";
+export type ProductionPlanningViewMode = "tree" | "flow" | "process";
 
 export interface ProductionPlanningPort {
   id: string;

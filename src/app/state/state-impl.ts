@@ -94,6 +94,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   debugShowGestureDiagnosticsWindow: boolean;
   debugSimulationWorkerDetailedReport: boolean;
   debugMode: boolean;
+  virtualMousePointer: boolean;
 }
 
 export interface WorkbenchStateReadWrite extends WorkbenchState {
@@ -697,6 +698,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     debugShowGestureDiagnosticsWindow: false,
     debugSimulationWorkerDetailedReport: false,
     debugMode: false,
+    virtualMousePointer: false,
   };
 
   workbench: WorkbenchStateReadWrite = new WorkbenchStateReadWriteImpl();

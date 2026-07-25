@@ -102,5 +102,67 @@
         document.head.appendChild(script)
       }
     </script>
+    <script>
+      // RAF + getCoalescedEvents 圆圈追踪器，受 experimental-virtual-mouse-pointer 设置控制
+      (() => {
+        const STORAGE_KEY = 'v3-app-settings';
+
+        function readVirtualMousePointerEnabled() {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return false;
+            const parsed = JSON.parse(raw);
+            return parsed.virtualMousePointer === true;
+          } catch {
+            return false;
+          }
+        }
+
+        let latestX = -9999;
+        let latestY = -9999;
+
+        document.addEventListener('pointermove', (e) => {
+          const coalesced = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+          if (coalesced.length > 0) {
+            const last = coalesced[coalesced.length - 1];
+            latestX = last.clientX;
+            latestY = last.clientY;
+          } else {
+            latestX = e.clientX;
+            latestY = e.clientY;
+          }
+        }, { passive: true });
+
+        const circle = document.createElement('div');
+        circle.style.cssText = [
+          'position:fixed',
+          'width:24px',
+          'height:24px',
+          'border-radius:50%',
+          'background:rgba(56,189,248,0.35)',
+          'border:2px solid #38bdf8',
+          'pointer-events:none',
+          'z-index:2147483647',
+          'transform:translate(-50%,-50%)',
+          'display:none',
+        ].join(';');
+        document.body.appendChild(circle);
+
+        function update() {
+          const enabled = readVirtualMousePointerEnabled();
+
+          if (enabled && latestX >= 0) {
+            circle.style.display = '';
+            circle.style.left = (latestX + 50) + 'px';
+            circle.style.top = (latestY + 50) + 'px';
+          } else {
+            circle.style.display = 'none';
+          }
+
+          requestAnimationFrame(update);
+        }
+        requestAnimationFrame(update);
+      })();
+    </script>
   </body>
 </html>

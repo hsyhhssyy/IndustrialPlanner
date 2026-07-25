@@ -17,13 +17,15 @@ export interface PlannerSessionState {
   activeScreen: "input" | "result";
   flowViewport: PlannerFlowViewportState;
   treeScrollTop: number;
+  processExpandedItems: string[];
+  processViewport: PlannerFlowViewportState;
 }
 
 export interface PlannerPersistedState {
   targets: Array<{ id: string; itemId: string; perMinute: number; isInfinite?: boolean }>;
   supplies: Array<{ id: string; itemId: string; perMinute: number; isInfinite?: boolean }>;
   displayMode: "item" | "device";
-  viewMode: "tree" | "flow";
+  viewMode: "tree" | "flow" | "process";
   recipeChoices: Record<string, string>;
   recipeChoicesDemandSignature: string | null;
   sourceConfig: {
@@ -55,6 +57,8 @@ export function createDefaultPlannerSessionState(): PlannerSessionState {
     activeScreen: "input",
     flowViewport: { ...DEFAULT_PLANNER_FLOW_VIEWPORT_STATE },
     treeScrollTop: 0,
+    processExpandedItems: [],
+    processViewport: { ...DEFAULT_PLANNER_FLOW_VIEWPORT_STATE },
   };
 }
 
@@ -76,6 +80,22 @@ export function normalizePlannerSessionState(value: unknown): PlannerSessionStat
       scale: normalizePositiveNumber(flowViewport.scale, defaultFlowViewport.scale),
     },
     treeScrollTop: Math.max(0, normalizeFiniteNumber(value.treeScrollTop, 0)),
+    processExpandedItems: isRecord(value.processExpandedItems) && Array.isArray(value.processExpandedItems)
+      ? value.processExpandedItems.filter((v): v is string => typeof v === "string")
+      : [],
+    processViewport: normalizeProcessViewport(value.processViewport),
+  };
+}
+
+function normalizeProcessViewport(value: unknown): PlannerFlowViewportState {
+  if (!isRecord(value)) {
+    return { ...DEFAULT_PLANNER_FLOW_VIEWPORT_STATE };
+  }
+  const defaultViewport = DEFAULT_PLANNER_FLOW_VIEWPORT_STATE;
+  return {
+    x: normalizeFiniteNumber(value.x, defaultViewport.x),
+    y: normalizeFiniteNumber(value.y, defaultViewport.y),
+    scale: normalizePositiveNumber(value.scale, defaultViewport.scale),
   };
 }
 
@@ -92,7 +112,7 @@ export function normalizePlannerPersistedState(value: unknown): PlannerPersisted
     targets: normalizePorts(value.targets),
     supplies: normalizePorts(value.supplies),
     displayMode: value.displayMode === "device" ? "device" : "item",
-    viewMode: value.viewMode === "flow" ? "flow" : "tree",
+    viewMode: normalizePersistedViewMode(value.viewMode),
     recipeChoices: normalizeRecipeChoices(value.recipeChoices),
     recipeChoicesDemandSignature: typeof value.recipeChoicesDemandSignature === "string"
       ? value.recipeChoicesDemandSignature
@@ -198,6 +218,12 @@ function normalizeFiniteNumber(value: unknown, fallback: number): number {
 function normalizePositiveNumber(value: unknown, fallback: number): number {
   const normalized = normalizeFiniteNumber(value, fallback);
   return normalized > 0 ? normalized : fallback;
+}
+
+function normalizePersistedViewMode(value: unknown): "tree" | "flow" | "process" {
+  if (value === "flow") return "flow";
+  if (value === "process") return "process";
+  return "tree";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

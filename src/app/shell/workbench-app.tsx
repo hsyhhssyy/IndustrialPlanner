@@ -534,7 +534,22 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             appHost.internalState.settings.debugShowFps = false;
             appHost.internalState.settings.debugShowGestureDiagnosticsWindow = false;
             appHost.internalState.settings.debugSimulationWorkerDetailedReport = false;
+            appHost.internalState.settings.virtualMousePointer = false;
           }
+        }),
+      },
+      "experimental-virtual-mouse-pointer": {
+        readValue: () => appHost.state.settings.virtualMousePointer,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.virtualMousePointer === value) {
+            return;
+          }
+
+          appHost.internalState.settings.virtualMousePointer = value;
         }),
       },
       "other-toolbox-show-all-activity-content": {

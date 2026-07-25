@@ -357,6 +357,8 @@ export type UiKey =
   | "settingsField.other-experimental-features-warning-confirm"
   | "settingsField.other-experimental-features-warning-message"
   | "settingsField.other-experimental-features-warning-title"
+  | "settingsField.experimental-virtual-mouse-pointer"
+  | "settingsField.experimental-virtual-mouse-pointerDescription"
   | "settingsField.other-toolbox-show-all-activity-content"
   | "settingsField.other-toolbox-show-all-activity-contentDescription"
   | "settingsField.shortcut-basic-production"
