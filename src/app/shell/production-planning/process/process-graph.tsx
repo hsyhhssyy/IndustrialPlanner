@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import LucideChevronRight from "~icons/lucide/chevron-right";
 import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
@@ -6,6 +6,7 @@ import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 import type { ProductionPlanningIndex, ProductionPlanningResult } from "../production-planning-model";
 import { buildProcessGraph } from "./process-graph-builder";
 import type { ProcessGraph, ProcessNode } from "./process-graph-model";
+import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 import styles from "./process-graph.module.scss";
 
 interface ProcessGraphViewProps {
@@ -59,12 +60,53 @@ export function ProcessGraphView({
     () => normalizeViewportState(initialViewport),
   );
   const viewportRef = useRef(viewport);
+  const [detailExpandedNodeKey, setDetailExpandedNodeKey] = useState<string | null>(null);
 
   const setViewport = useCallback((next: ViewportState) => {
     setRawViewport(next);
     viewportRef.current = next;
     onViewportChange?.(next);
   }, [onViewportChange]);
+
+  // Viewport anchoring: keep the toggled node at the same screen position
+  const anchorRef = useRef<{ itemId: string; canvasX: number; canvasY: number } | null>(null);
+
+  const handleToggle = useCallback((itemId: string, nodeCol: number, nodeRow: number) => {
+    // Record canvas position of the toggle button before the graph changes
+    const canvasX = nodeCenterX(nodeCol) - CELL_WIDTH / 2 - COL_GAP / 2;
+    const canvasY = nodeCenterY(nodeRow);
+    anchorRef.current = { itemId, canvasX, canvasY };
+    onToggleItem(itemId);
+  }, [onToggleItem]);
+
+  const handleDetailToggle = useCallback((nodeKey: string) => {
+    setDetailExpandedNodeKey((prev) => (prev === nodeKey ? null : nodeKey));
+  }, []);
+
+  useLayoutEffect(() => {
+    const anchor = anchorRef.current;
+    if (anchor === null) return;
+    anchorRef.current = null;
+
+    // Find the new position of the anchored item
+    const anchoredNode = graph.nodes.find((n) => n.itemId === anchor.itemId);
+    if (anchoredNode === undefined) return;
+
+    const newCanvasX = nodeCenterX(anchoredNode.col) - CELL_WIDTH / 2 - COL_GAP / 2;
+    const newCanvasY = nodeCenterY(anchoredNode.row);
+
+    const current = viewportRef.current;
+    // Old screen position
+    const oldScreenX = anchor.canvasX * current.scale + current.x;
+    const oldScreenY = anchor.canvasY * current.scale + current.y;
+    // New viewport that keeps the anchor at the same screen position
+    const newX = oldScreenX - newCanvasX * current.scale;
+    const newY = oldScreenY - newCanvasY * current.scale;
+
+    if (Math.abs(newX - current.x) > 0.5 || Math.abs(newY - current.y) > 0.5) {
+      setViewport({ x: newX, y: newY, scale: current.scale });
+    }
+  }, [graph, setViewport]);
 
   const panRef = useRef<PanState | null>(null);
 
@@ -155,6 +197,7 @@ export function ProcessGraphView({
         }}
       >
         <svg
+          key={`${graph.maxCol}-${graph.maxRow}-${graph.links.length}`}
           className={styles["process-graph-svg"]}
           width={totalWidth}
           height={totalHeight}
@@ -180,8 +223,7 @@ export function ProcessGraphView({
               <path
                 key={key}
                 d={d}
-                fill="none"
-                className={link.fromRow === link.toRow ? "is-main" : undefined}
+                className={link.fromRow === link.toRow ? styles["is-main"] : undefined}
               />
             );
           })}
@@ -190,14 +232,22 @@ export function ProcessGraphView({
         {graph.nodes.map((node) => {
           const cx = nodeCenterX(node.col);
           const cy = nodeCenterY(node.row);
+          const isExpandable = node.type === "secondary";
+          const isCollapsible = expandedItemIds.has(node.itemId);
+          const nodeKey = `${node.col}:${node.row}`;
+          const isDetailExpanded = detailExpandedNodeKey === nodeKey;
           return (
             <ProcessNodeCard
-              key={`${node.col}:${node.row}`}
+              key={nodeKey}
               node={node}
               cx={cx}
               cy={cy}
-              isExpanded={expandedItemIds.has(node.itemId)}
-              onToggle={node.type === "secondary" ? () => onToggleItem(node.itemId) : undefined}
+              isExpanded={isCollapsible}
+              isDetailExpanded={isDetailExpanded}
+              index={index}
+              t={t}
+              onToggle={(isExpandable || isCollapsible) ? () => handleToggle(node.itemId, node.col, node.row) : undefined}
+              onDetailToggle={(node.recipeId ?? node.expandedRecipeId) !== null ? () => handleDetailToggle(nodeKey) : undefined}
             />
           );
         })}
@@ -211,13 +261,21 @@ function ProcessNodeCard({
   cx,
   cy,
   isExpanded,
+  isDetailExpanded,
+  index,
+  t,
   onToggle,
+  onDetailToggle,
 }: {
   node: ProcessNode;
   cx: number;
   cy: number;
   isExpanded: boolean;
+  isDetailExpanded: boolean;
+  index: ProductionPlanningIndex;
+  t: (key: string) => string;
   onToggle?: () => void;
+  onDetailToggle?: () => void;
 }) {
   const classes = [
     styles["process-node"],
@@ -225,11 +283,16 @@ function ProcessNodeCard({
     node.type === "natural" ? styles["is-natural"] : "",
     node.type === "cycle" ? styles["is-cycle"] : "",
     node.type === "dangling" ? styles["is-dangling"] : "",
+    isDetailExpanded ? styles["is-detail-expanded"] : "",
   ]
     .filter(Boolean)
     .join(" ");
 
   const nodeWidth = Math.max(80, CELL_WIDTH - 8);
+  const recipeId = node.recipeId ?? node.expandedRecipeId ?? null;
+  const hasRecipe = recipeId !== null;
+  const recipeDef = hasRecipe ? index.recipeById.get(recipeId!) : undefined;
+  const headerHeight = CELL_HEIGHT - 4;
 
   return (
     <>
@@ -239,17 +302,29 @@ function ProcessNodeCard({
           left: cx - nodeWidth / 2,
           top: cy - CELL_HEIGHT / 2 + 2,
           width: nodeWidth,
-          height: CELL_HEIGHT - 4,
+          minHeight: headerHeight,
+          maxHeight: isDetailExpanded ? undefined : headerHeight,
         }}
+        onClick={onDetailToggle}
       >
-        <img alt="" src={node.iconSrc} />
-        <span>{node.name}</span>
+        <div className={styles["process-node-header"]}>
+          <img alt="" src={node.iconSrc} />
+          <span>{node.name}</span>
+        </div>
+        {isDetailExpanded && recipeDef !== undefined && (
+          <div className={styles["process-node-detail"]}>
+            <RecipeDisplay
+              recipeId={recipeId!}
+              index={index}
+              t={t}
+            />
+          </div>
+        )}
       </div>
       {onToggle && (
         <div
           className={styles["process-node-expand"]}
           style={{
-            // Place at the left boundary of this column
             left: nodeCenterX(node.col) - CELL_WIDTH / 2 - COL_GAP / 2 - 9,
             top: cy - 9,
           }}

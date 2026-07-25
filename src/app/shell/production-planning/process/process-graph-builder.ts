@@ -102,10 +102,13 @@ export function buildProcessGraph(
       expandedRecipeId: null,
     };
     state.nodes.push(targetNode);
+    const targetRow = nextRow;
     nextRow++;
 
-    // Expand main chain for each root
-    expandMainChain(targetItemId, 0, nextRow, state, []);
+    // Expand main chain for each root, starting at the same row as target
+    const mainEndRow = expandMainChain(targetItemId, 0, targetRow, state, []);
+    // Main chain may insert additional rows; ensure nextRow moves past all inserted content
+    nextRow = Math.max(nextRow, mainEndRow);
   }
 
   // Deduplicate and sort
@@ -239,6 +242,7 @@ function expandMainChain(
   // Place main ingredient node at col-1, same row
   const mainName = resolveProductionPlanningItemName(mainInput.itemId, state.index, state.translate);
   const mainIconSrc = resolveProductionPlanningItemIconSrc(mainInput.itemId, state.index);
+  const mainRecipe = resolveRecipe(mainInput.itemId, state);
   state.nodes.push({
     itemId: mainInput.itemId,
     col: mainCol,
@@ -247,7 +251,7 @@ function expandMainChain(
     iconSrc: mainIconSrc,
     name: mainName,
     amount: mainInput.amount,
-    expandedRecipeId: recipe.id,
+    expandedRecipeId: mainRecipe?.id ?? null,
   });
   state.links.push({ fromCol: mainCol, fromRow: startRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
 

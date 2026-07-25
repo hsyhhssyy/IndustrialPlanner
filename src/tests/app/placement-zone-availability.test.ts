@@ -77,8 +77,8 @@ function createAppHostStub(
     workspace: {
       registry: {
         baseDefinitions: [
-          { id: "wuling_protocol_core", name: "协议核心区", tag: "武陵" },
-          { id: "valley4_protocol_core", name: "协议核心区", tag: "四号谷地" },
+          { id: "wuling_protocol_core", name: "协议核心区", tag: "武陵", tags: [] },
+          { id: "valley4_protocol_core", name: "协议核心区", tag: "四号谷地", tags: [] },
         ],
         entityDefinitions,
       },

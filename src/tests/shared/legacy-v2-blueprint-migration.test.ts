@@ -75,6 +75,7 @@ describe("legacy-v2-blueprint-migration", () => {
       placeableArea: { width: 70, height: 70 },
       outerRing: { top: 5, right: 5, bottom: 5, left: 5 },
       tag: "四号谷地",
+      tags: [],
       builtinEntities: [
         {
           id: "valley4_bus_source",

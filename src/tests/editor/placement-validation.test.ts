@@ -70,6 +70,7 @@ function registerBuiltinBase(
       placeableArea: { width: 40, height: 40 },
       outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
       tag: "测试",
+      tags: [],
       builtinEntities,
     },
   ];
@@ -84,6 +85,7 @@ function registerOuterRingBase(workspace: WorkspaceContract): void {
       placeableArea: { width: 10, height: 10 },
       outerRing: { top: 5, right: 5, bottom: 5, left: 5 },
       tag: "测试",
+      tags: [],
     },
   ];
 }

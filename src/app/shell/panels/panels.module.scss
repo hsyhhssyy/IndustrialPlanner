@@ -1764,3 +1764,86 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+// ---------------------------------------------------------------------------
+// 基地问题列表
+// ---------------------------------------------------------------------------
+
+.base-problem-list {
+  display: grid;
+  gap: 0;
+}
+
+.base-problem-row {
+  --base-problem-warning-color: #9a6a18;
+
+  position: relative;
+  display: grid;
+  min-width: 0;
+  border-left: 2px solid var(--line-strong);
+  border-bottom: 1px solid var(--line);
+}
+
+.base-problem-row:last-child {
+  border-bottom: 0;
+}
+
+.base-problem-row[data-problem-severity="error"] {
+  border-left-color: var(--danger);
+}
+
+.base-problem-row[data-problem-severity="warning"] {
+  border-left-color: var(--base-problem-warning-color);
+}
+
+.base-problem-button {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 9px 8px 9px 10px;
+  border: 0;
+  background: transparent;
+  font-size: 0.8rem;
+  line-height: 1.42;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  .base-problem-row[data-problem-severity="error"] & {
+    color: var(--danger);
+  }
+
+  .base-problem-row[data-problem-severity="warning"] & {
+    color: var(--base-problem-warning-color);
+  }
+}
+
+.base-problem-popover {
+  z-index: 1000;
+  min-width: 200px;
+  max-width: 300px;
+  max-height: 180px;
+  padding: 10px 12px;
+  border: 1px solid var(--floating-control-border);
+  border-radius: 8px;
+  background: var(--floating-control-bg);
+  box-shadow: 0 8px 32px var(--shadow-floating-control);
+  overflow-y: auto;
+}
+
+.base-problem-popover-text {
+  color: var(--text-0);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.base-problem-empty {
+  padding: 9px 10px;
+  color: var(--text-0);
+  font-size: 0.8rem;
+  line-height: 1.42;
+  opacity: 0.5;
+}

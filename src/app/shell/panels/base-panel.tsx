@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import { NumberInput } from "@/app/shell/shared/number-input";
 import LucideTrash2 from "~icons/lucide/trash-2";
 import type { AppHost } from "@/app/host/app-host";
-import { DEFAULT_WORLD_BASE_ID } from "@/domain/document/world-document";
+import { DEFAULT_WORLD_BASE_ID, type WorldEntity } from "@/domain/document/world-document";
 import {
   buildWarehouseStatsEntries,
   resolveCompactWarehouseEntries,
@@ -13,6 +14,9 @@ import {
   useWarehouseStats,
   WarehouseStatsView,
 } from "@/app/shell/shared/warehouse-stats-view";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { isCustomPortPriorityGroupsEnabled } from "@/shared/port-priority-groups";
+import { resolveBaseMaxPipeLogistics } from "@/shared/base-tags";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import panelStyles from "@/app/shell/panels/panels.module.scss";
@@ -56,6 +60,88 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
     ).length;
     return { totalDevices, pipeLogisticsDevices };
   }, [currentDocument]);
+
+  // -------------------------------------------------------------------------
+  // 基地问题收集
+  // -------------------------------------------------------------------------
+
+  interface BaseProblem {
+    readonly message: string;
+    readonly severity: "error" | "warning";
+    readonly tooltip: string;
+    /** 关联的设备 ID，用于点击聚焦 */
+    readonly entityId?: string;
+  }
+
+  /** 根据 definitionId 解析设备中文名 */
+  const resolveDeviceName = (definitionId: string): string => {
+    const definition = appHost.workspace.registry.entityDefinitions.find(
+      (d) => d.id === definitionId,
+    );
+    if (definition === undefined) return definitionId;
+    const translated = t(definition.nameKey);
+    return translated === definition.nameKey ? definitionId : translated;
+  };
+
+  const baseProblems = useMemo<BaseProblem[]>(() => {
+    const problems: BaseProblem[] = [];
+    if (currentDocument === null || editor === null) return problems;
+
+    const entities = Object.values(currentDocument.entities);
+    const invalidIds = editor.state.collections[EntityCollectionType.invalidPlacement];
+
+    // ① 无效放置
+    for (const entityId of invalidIds) {
+      const entity = entities.find((e) => e.id === entityId);
+      if (entity === undefined) continue;
+      const deviceName = resolveDeviceName(entity.definitionId);
+      const msg = `设备「${deviceName}」放置无效`;
+      problems.push({ message: msg, severity: "error", tooltip: msg, entityId: entity.id });
+    }
+
+    // ② 管道物流数超限
+    const maxPipe = currentBase !== null
+      ? resolveBaseMaxPipeLogistics(currentBase.tags)
+      : null;
+    if (maxPipe !== null && deviceStats.pipeLogisticsDevices > maxPipe) {
+      const msg = `管道物流设备数 (${deviceStats.pipeLogisticsDevices}) 超过基地上限 (${maxPipe})`;
+      problems.push({ message: msg, severity: "error", tooltip: msg });
+    }
+
+    // ③ 端口优先级组
+    for (const entity of entities) {
+      if (isCustomPortPriorityGroupsEnabled(entity.config)) {
+        const deviceName = resolveDeviceName(entity.definitionId);
+        const msg = `设备「${deviceName}」配置了端口优先级组`;
+        problems.push({ message: msg, severity: "warning", tooltip: msg });
+      }
+    }
+
+    return problems;
+  }, [currentDocument, editor, currentBase, deviceStats.pipeLogisticsDevices, t]);
+
+  const [activeProblemTooltip, setActiveProblemTooltip] = useState<number | null>(null);
+  const [popoverRect, setPopoverRect] = useState<{ top: number; left: number } | null>(null);
+  const problemRowRefs = useRef<Map<number, HTMLElement>>(new Map());
+
+  // 点击外部关闭 popover
+  const handleDocumentPointerDown = useCallback((e: PointerEvent) => {
+    const target = e.target as Node | null;
+    if (target === null) return;
+    // 点击在触发按钮所在行上 → 不关闭
+    if (activeProblemTooltip !== null) {
+      const rowEl = problemRowRefs.current.get(activeProblemTooltip);
+      if (rowEl?.contains(target)) return;
+    }
+    setActiveProblemTooltip(null);
+    setPopoverRect(null);
+  }, [activeProblemTooltip]);
+
+  useEffect(() => {
+    if (activeProblemTooltip === null) return;
+    document.addEventListener("pointerdown", handleDocumentPointerDown, true);
+    return () => document.removeEventListener("pointerdown", handleDocumentPointerDown, true);
+  }, [activeProblemTooltip, handleDocumentPointerDown]);
 
   // 主动轮询仿真文档级运行时数据（非 MobX 被动响应）
   const [totalPowerDemand, setTotalPowerDemand] = useState<number | null>(null);
@@ -246,6 +332,77 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
           <span>{t("deviceStats.pipeLogisticsDevices")}</span>
           <span>{deviceStats.pipeLogisticsDevices}</span>
         </div>
+      </article>
+      <article className={cm(styles, "inspector-card")}>
+        <div className={cm(styles, "card-header")}>
+          <h3>问题</h3>
+        </div>
+        <div className={cm(panelStyles, "base-problem-list")} role="list">
+          {baseProblems.length > 0 ? (
+            baseProblems.map((problem, index) => (
+              <div
+                className={cm(panelStyles, "base-problem-row")}
+                data-problem-severity={problem.severity}
+                key={index}
+                ref={(el) => {
+                  if (el !== null) {
+                    problemRowRefs.current.set(index, el);
+                  } else {
+                    problemRowRefs.current.delete(index);
+                  }
+                }}
+                role="listitem"
+              >
+                <button
+                  className={cm(panelStyles, "base-problem-button")}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const problem = baseProblems[index];
+                    if (problem === undefined) return;
+                    // 若关联了设备，优先聚焦
+                    if (problem.entityId !== undefined && editor !== null) {
+                      editor.actions.focusOnEntity(problem.entityId);
+                      return;
+                    }
+                    if (activeProblemTooltip === index) {
+                      setActiveProblemTooltip(null);
+                      setPopoverRect(null);
+                    } else {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setPopoverRect({
+                        top: rect.top,
+                        left: rect.right + 6,
+                      });
+                      setActiveProblemTooltip(index);
+                    }
+                  }}
+                  type="button"
+                >
+                  {problem.message}
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className={cm(panelStyles, "base-problem-empty")}>无</div>
+          )}
+        </div>
+        {activeProblemTooltip !== null && popoverRect !== null
+          ? createPortal(
+            <div
+              className={cm(panelStyles, "base-problem-popover")}
+              style={{
+                position: "fixed",
+                top: `${popoverRect.top}px`,
+                left: `${popoverRect.left}px`,
+              }}
+            >
+              <div className={cm(panelStyles, "base-problem-popover-text")}>
+                {baseProblems[activeProblemTooltip]?.tooltip}
+              </div>
+            </div>,
+            document.body,
+          )
+          : null}
       </article>
     </div>
   );

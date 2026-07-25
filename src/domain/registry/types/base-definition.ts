@@ -22,6 +22,8 @@ export interface BaseDefinition {
   placeableArea: GridRectSize;
   outerRing: BaseOuterRingDefinition;
   tag: string;
+  /** 语义标签，如 "maxPipeLogistics=128"。新增于 2026-07-25。 */
+  tags: string[];
   readonly builtinEntities?: readonly BaseBuiltinEntityDefinition[];
 }
 

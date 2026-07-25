@@ -1,10 +1,11 @@
 import type { EditorAction } from "@/domain/editor/editor-action";
-import { action } from "mobx";
+import { action, runInAction } from "mobx";
 import type { GridRotation } from "@/domain/shared/grid";
 import {
   resolveCompensatedViewportCenter,
   resolveWorldVectorFromViewportVector,
 } from "@/shared/geometry/viewport-transform";
+import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
 import {
   persistWorldDocumentViewportSettings,
@@ -15,6 +16,7 @@ import {
   resolveViewportGridCellPixelSize,
   resolveViewportGridSizeAfterZoom,
 } from "../viewport-settings";
+import { resolveEntityById } from "../entity-resolvers";
 import type { EditorActionsContext } from "./types";
 
 type EditorViewportActions = Pick<
@@ -23,6 +25,7 @@ type EditorViewportActions = Pick<
   | "setViewportClientRect"
   | "setViewportDisplayRotation"
   | "zoom"
+  | "focusOnEntity"
 >;
 
 export function createEditorViewportActions({
@@ -167,6 +170,79 @@ export function createEditorViewportActions({
 
       persistViewportSettings();
     }),
+    focusOnEntity: action((entityId, options) => {
+      const entity = resolveEntityById({
+        entityId,
+        document: document.getSnapshot(),
+        drafts: state.drafts,
+        baseDefinitions: workspace.registry.baseDefinitions,
+      });
+
+      if (entity === null) {
+        return;
+      }
+
+      const definition = workspace.registry.entityDefinitions.find(
+        (def) => def.id === entity.definitionId,
+      );
+
+      if (definition === undefined) {
+        return;
+      }
+
+      const rotatedFootprint = getRotatedGridFootprint(
+        definition.footprint,
+        entity.rotation,
+      );
+      const targetCenterX = entity.position.x + rotatedFootprint.width / 2;
+      const targetCenterY = entity.position.y + rotatedFootprint.height / 2;
+      const targetGridSize = 1;
+
+      const duration = options?.duration ?? 750;
+      const startCenterX = state.viewport.center.x;
+      const startCenterY = state.viewport.center.y;
+      const startGridSize = state.viewport.gridSize;
+      const startTime = performance.now();
+
+      let lastWrittenCenterX = startCenterX;
+      let lastWrittenCenterY = startCenterY;
+      let lastWrittenGridSize = startGridSize;
+
+      function tick(now: number): void {
+        // 值一致校验：上帧写入的值被外部修改 → 用户手动操作了视口 → 终止动画
+        if (
+          state.viewport.center.x !== lastWrittenCenterX
+          || state.viewport.center.y !== lastWrittenCenterY
+          || state.viewport.gridSize !== lastWrittenGridSize
+        ) {
+          return;
+        }
+
+        const rawProgress = Math.min((now - startTime) / duration, 1);
+        const t = easeInOutCubic(rawProgress);
+
+        runInAction(() => {
+          lastWrittenCenterX = startCenterX + (targetCenterX - startCenterX) * t;
+          lastWrittenCenterY = startCenterY + (targetCenterY - startCenterY) * t;
+          lastWrittenGridSize = startGridSize + (targetGridSize - startGridSize) * t;
+
+          state.viewport.center.x = lastWrittenCenterX;
+          state.viewport.center.y = lastWrittenCenterY;
+          state.viewport.gridSize = lastWrittenGridSize;
+          state.viewport.gridCellPixelSize = resolveViewportGridCellPixelSize(lastWrittenGridSize);
+        });
+
+        clampViewportCenter();
+
+        if (rawProgress < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          persistViewportSettings();
+        }
+      }
+
+      requestAnimationFrame(tick);
+    }),
   };
 }
 
@@ -227,7 +303,11 @@ function resolveViewportPixelVector(options: {
     y: options.endViewportPixel.y - options.startViewportPixel.y,
   };
 }
-
+function easeInOutCubic(t: number): number {
+  return t < 0.5
+    ? 4 * t * t * t
+    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
 function resolveViewportPixelPoint(
   clientPixelPoint: {
     x: number;

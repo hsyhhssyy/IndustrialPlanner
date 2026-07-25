@@ -24,6 +24,11 @@ export interface EditorAction {
 	): void;
 	zoom(step: number): void;
 	setViewportDisplayRotation(displayRotation: GridRotation): void;
+	/**
+	 * 平滑聚焦到指定实体：在约 0.75s 内将视口中心平移到实体中心、缩放到 gridSize=1。
+	 * 若动画期间用户手动操作了视口，动画立即终止。
+	 */
+	focusOnEntity(entityId: string, options?: { duration?: number }): void;
 
 	/** 更新鼠标 hover 位置，自动做 pixel→grid 转换和 entity 命中检测 */
 	setHoverPoint(clientPixel: ClientPixelPoint): void;

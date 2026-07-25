@@ -74,6 +74,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
       left: 10,
     },
     tag: "武陵",
+    tags: ["maxPipeLogistics=128"],
   },
   {
     id: "wuling_tianwangping_aid",
@@ -89,6 +90,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
       left: 10,
     },
     tag: "武陵",
+    tags: ["maxPipeLogistics=64"],
   },
   {
     id: "wuling_heart_repair_station",
@@ -104,6 +106,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
       left: 10,
     },
     tag: "武陵",
+    tags: ["maxPipeLogistics=64"],
   },
   {
     id: "stm_hongs_3",
@@ -119,6 +122,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
       left: 10,
     },
     tag: "武陵",
+    tags: ["maxPipeLogistics=64"],
   },
   {
     id: "valley4_protocol_core",
@@ -134,6 +138,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
       left: 5,
     },
     tag: "四号谷地",
+    tags: [],
     builtinEntities: createValley4ProtocolCoreBuiltinEntities(),
   },
   {
@@ -150,6 +155,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
       left: 5,
     },
     tag: "四号谷地",
+    tags: [],
     builtinEntities: createValley4SmallBaseBuiltinEntities(),
   },
   {
@@ -166,6 +172,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
       left: 5,
     },
     tag: "四号谷地",
+    tags: [],
     builtinEntities: createValley4SmallBaseBuiltinEntities(),
   },
   {
@@ -182,6 +189,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
       left: 5,
     },
     tag: "四号谷地",
+    tags: [],
     builtinEntities: createValley4SmallBaseBuiltinEntities(),
   },
 ];

@@ -51,21 +51,26 @@
   pointer-events: none;
 }
 
-.process-graph-svg line {
-  stroke: var(--color-process-line, #999);
+.process-graph-svg path {
+  fill: none;
+  stroke: var(--accent-strong);
+  @supports (background: color-mix(in srgb, red 50%, blue)) {
+    stroke: color-mix(in srgb, var(--accent-strong) 72%, var(--line-strong));
+  }
+  stroke-linecap: round;
   stroke-width: 1.5;
 }
 
-.process-graph-svg line.is-main {
+.is-main {
   stroke-width: 2;
 }
 
 .process-node {
   position: absolute;
   display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px 2px 4px;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
   border-radius: 4px;
   font-size: 11px;
   line-height: 1.2;
@@ -76,12 +81,45 @@
   cursor: default;
   user-select: none;
   pointer-events: auto;
+  overflow: hidden;
+  transition: max-height 0.15s;
 }
 
-.process-node img {
+.process-node.is-detail-expanded {
+  cursor: pointer;
+  z-index: 6;
+  max-height: none !important;
+}
+
+.process-node-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 4px;
+  flex-shrink: 0;
+  max-height: 28px;
+}
+
+.process-node-header img {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
+}
+
+.process-node-detail {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 4px 2px 4px;
+  font-size: 9px;
+  line-height: 1.1;
+  display: flex;
+  align-items: center;
+}
+
+.process-node-detail > div {
+  transform: scale(0.72);
+  transform-origin: left center;
 }
 
 .process-node.is-target {
