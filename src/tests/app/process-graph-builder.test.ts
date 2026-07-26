@@ -104,12 +104,19 @@ describe("buildProcessGraph", () => {
       (k: string) => k,
     );
 
-    const naturalNodes = graph.nodes.filter((n) => n.type === "natural");
-    // Copper ore is naturally a natural resource
-    const copperNode = naturalNodes.find(
+    // 自然资源作为目标时，只产生 target 节点，不再额外生成 natural 节点
+    const targetNodes = graph.nodes.filter((n) => n.type === "target");
+    const copperTargetNode = targetNodes.find(
       (n) => n.itemId === "item_copper_ore",
     );
-    expect(copperNode).toBeDefined();
+    expect(copperTargetNode).toBeDefined();
+
+    // 自然资源目标是零输入配方，不应有对应的 natural 节点
+    const naturalNodes = graph.nodes.filter((n) => n.type === "natural");
+    const copperNaturalNode = naturalNodes.find(
+      (n) => n.itemId === "item_copper_ore",
+    );
+    expect(copperNaturalNode).toBeUndefined();
   });
 
   it("detects cycles and stops recursion", () => {

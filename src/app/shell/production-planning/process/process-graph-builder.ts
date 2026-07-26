@@ -219,6 +219,10 @@ function expandMainChain(
   if (inputs.length === 0) {
     // Natural resource recipe (e.g., miner, pump)
     state.recipeStack.delete(recipe.id);
+    // 目标是自然资源时，目标节点已存在，不再额外创建 natural 节点
+    if (path.length === 0) {
+      return startRow + 1;
+    }
     const name = resolveProductionPlanningItemName(itemId, state.index, state.translate);
     const iconSrc = resolveProductionPlanningItemIconSrc(itemId, state.index);
     state.nodes.push({
@@ -238,11 +242,30 @@ function expandMainChain(
   // Main ingredient: inputs[0]
   const mainInput = inputs[0]!;
   const mainCol = col - 1;
+  const mainRecipe = resolveRecipe(mainInput.itemId, state);
+
+  // 自然资源作为主配料时直接放终端节点，避免先放 main 节点再递归展开出重复的 natural 节点
+  if (state.naturalResourceItemIds.has(mainInput.itemId)) {
+    const mainName = resolveProductionPlanningItemName(mainInput.itemId, state.index, state.translate);
+    const mainIconSrc = resolveProductionPlanningItemIconSrc(mainInput.itemId, state.index);
+    state.nodes.push({
+      itemId: mainInput.itemId,
+      col: mainCol,
+      row: startRow,
+      type: "natural",
+      iconSrc: mainIconSrc,
+      name: mainName,
+      amount: mainInput.amount,
+      recipeId: mainRecipe?.id,
+      expandedRecipeId: null,
+    });
+    state.links.push({ fromCol: mainCol, fromRow: startRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
+    return startRow + 1;
+  }
 
   // Place main ingredient node at col-1, same row
   const mainName = resolveProductionPlanningItemName(mainInput.itemId, state.index, state.translate);
   const mainIconSrc = resolveProductionPlanningItemIconSrc(mainInput.itemId, state.index);
-  const mainRecipe = resolveRecipe(mainInput.itemId, state);
   state.nodes.push({
     itemId: mainInput.itemId,
     col: mainCol,
