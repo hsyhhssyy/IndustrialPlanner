@@ -30,6 +30,31 @@ function createPlan(targets: ProductionPlanningPort[]) {
   );
 }
 
+function createPlanWithChoices(
+  targets: ProductionPlanningPort[],
+  recipeChoices: ReadonlyMap<string, string>,
+) {
+  const registry = createRegistryContract();
+  const index = buildProductionPlanningIndex(registry);
+  const sourceConfig: ProductionPlanningSourceConfig = {
+    waterPolicy: "use-byproduct",
+    acidPolicy: "use-byproduct",
+    sewagePolicy: "external-supply",
+    waterPurifierPolicy: "disabled",
+    includeDeviceMinimumConsumption: false,
+  };
+  return computeProductionPlan(
+    {
+      targets,
+      supplies: [],
+      infiniteItemIds: new Set(),
+      recipeChoices,
+      sourceConfig,
+    },
+    index,
+  );
+}
+
 describe("buildProcessGraph", () => {
   it("builds process graph for 重息壤", () => {
     const registry = createRegistryContract();
@@ -230,14 +255,13 @@ describe("buildProcessGraph", () => {
   it("uses recipe choices when specified", () => {
     const registry = createRegistryContract();
     const index = buildProductionPlanningIndex(registry);
-    const plan = createPlan([
-      { id: "t1", itemId: "item_xiranite_enr_powder", perMinute: 12 },
-    ]);
-
-    // Force a specific recipe
     const recipeChoices = new Map<string, string>([
       ["item_xiranite_enr_powder", "xiranite_oven_xiranite_enr_powder_1"],
     ]);
+    const plan = createPlanWithChoices(
+      [{ id: "t1", itemId: "item_xiranite_enr_powder", perMinute: 12 }],
+      recipeChoices,
+    );
 
     const graph = buildProcessGraph(
       plan,
@@ -248,5 +272,113 @@ describe("buildProcessGraph", () => {
     );
 
     expect(graph.nodes.length).toBeGreaterThan(0);
+  });
+
+  it("重息壤→重息壤气→分离芯展开→全链路 结构正确", () => {
+    const registry = createRegistryContract();
+    const index = buildProductionPlanningIndex(registry);
+    const recipeChoices = new Map<string, string>([
+      ["item_xiranite_enr_powder", "liquid_transmuter_2_solid_xiranite_enr_powder_1"],
+    ]);
+    const plan = createPlanWithChoices(
+      [{ id: "t1", itemId: "item_xiranite_enr_powder", perMinute: 12 }],
+      recipeChoices,
+    );
+
+    // === 未展开：4 节点 ===
+    const unexpanded = buildProcessGraph(
+      plan, index, recipeChoices, new Set(),
+      (k: string) => k,
+    );
+    expect(unexpanded.nodes.length).toBe(4);
+    expect(unexpanded.links.length).toBe(3);
+
+    const uTarget = unexpanded.nodes.find((n) => n.type === "target")!;
+    expect(uTarget.itemId).toBe("item_xiranite_enr_powder");
+
+    const uMain = unexpanded.nodes.find((n) => n.type === "main")!;
+    expect(uMain.itemId).toBe("item_gas_xiranite_enr");
+
+    const uNatural = unexpanded.nodes.find((n) => n.type === "natural" && n.itemId === "item_gas_xiranite")!;
+    expect(uNatural.row).toBe(uTarget.row);
+
+    const uSec = unexpanded.nodes.find((n) => n.type === "secondary")!;
+    expect(uSec.itemId).toBe("item_filter_core");
+    expect(uSec.row).toBe(uTarget.row + 1);
+
+    // === 展开分离芯：10 节点 ===
+    // 链路：
+    //   重息壤(target) ← 重息壤气(main) ← 息壤气(natural, 同行) + 分离芯(main, 下行)
+    //   分离芯 ← 赤铜瓶(main) ← 赤铜块(main) ← 赤铜矿(natural) + 清水(natural)
+    //   赤铜瓶 ← 惰气(natural, 副配料)
+    //   分离芯 ← 息壤(secondary, 未展开)
+    const expanded = buildProcessGraph(
+      plan, index, recipeChoices, new Set(["item_filter_core"]),
+      (k: string) => k,
+    );
+    expect(expanded.nodes.length).toBe(10);
+
+    // 断言所有节点存在且类型正确
+    const eById = new Map<string, typeof expanded.nodes[number]>();
+    for (const n of expanded.nodes) {
+      const key = `${n.itemId}@${n.col},${n.row}`;
+      eById.set(key, n);
+    }
+
+    const assertNode = (
+      itemId: string, type: string,
+      checks?: (n: typeof expanded.nodes[number]) => void,
+    ) => {
+      const found = expanded.nodes.filter((n) => n.itemId === itemId && n.type === type);
+      if (found.length === 0) {
+        const all = expanded.nodes.map((n) => `[${n.col},${n.row}] ${n.type} ${n.itemId}`);
+        throw new Error(`Node ${type}:${itemId} not found. All nodes:\n${all.join("\n")}`);
+      }
+      expect(found.length).toBe(1);
+      if (checks) checks(found[0]!);
+    };
+
+    // 主链：最右列为 target
+    assertNode("item_xiranite_enr_powder", "target", (n) => {
+      expect(n.col).toBe(expanded.maxCol);
+    });
+    assertNode("item_gas_xiranite_enr", "main", (n) => {
+      expect(n.col).toBe(expanded.maxCol - 1);
+    });
+    assertNode("item_gas_xiranite", "natural", (n) => {
+      expect(n.col).toBe(expanded.maxCol - 2);
+    });
+
+    // 分离芯展开后的分支链
+    const filterCoreNode = expanded.nodes.find((n) => n.itemId === "item_filter_core")!;
+    assertNode("item_filter_core", "main", (n) => {
+      expect(n.col).toBe(expanded.maxCol - 2);
+    });
+    assertNode("item_copper_jar", "main", (n) => {
+      // 赤铜瓶 应在 分离芯 左侧（col 更小）
+      expect(n.col).toBeLessThan(filterCoreNode.col);
+    });
+    assertNode("item_copper_ore", "natural");
+    assertNode("item_liquid_water", "natural");
+    assertNode("item_gas_inert", "natural");
+    assertNode("item_copper_nugget", "main");
+    assertNode("item_xiranite_powder", "secondary");
+
+    // 无重复节点
+    const nodeKeys = expanded.nodes.map((n) => `${n.col}:${n.row}`);
+    expect(new Set(nodeKeys).size).toBe(nodeKeys.length);
+
+    // 重息壤 target → 重息壤气 同列相邻
+    const targetNode = expanded.nodes.find((n) => n.type === "target")!;
+    const gasEnrNode = expanded.nodes.find((n) => n.itemId === "item_gas_xiranite_enr")!;
+    expect(gasEnrNode.row).toBe(targetNode.row);
+
+    // 分离芯 → 重息壤气 link exists
+    expect(
+      expanded.links.some(
+        (l) => l.fromCol === filterCoreNode.col && l.fromRow === filterCoreNode.row
+          && l.toCol === gasEnrNode.col && l.toRow === gasEnrNode.row,
+      ),
+    ).toBe(true);
   });
 });

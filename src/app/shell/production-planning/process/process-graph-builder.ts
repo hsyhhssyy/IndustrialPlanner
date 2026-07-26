@@ -92,6 +92,12 @@ export function buildProcessGraph(
     const iconSrc = resolveProductionPlanningItemIconSrc(targetItemId, index);
 
     // Place the target node at col 0
+    const targetRecipe = index.recipeById.get(
+      Array.from(index.recipesByOutputItem.get(targetItemId) ?? [])
+        .filter((r) => !isRecipeExcludedFromProductionPlanningAuto(r))
+        .find((r) => index.naturalResourceItemIds.has(targetItemId) ? r.inputs.length === 0 : true)
+        ?.id ?? "",
+    ) ?? undefined;
     const targetNode: MutableProcessNode = {
       itemId: targetItemId,
       col: 0,
@@ -99,6 +105,7 @@ export function buildProcessGraph(
       type: "target",
       iconSrc,
       name,
+      recipeId: targetRecipe?.id,
       expandedRecipeId: null,
     };
     state.nodes.push(targetNode);
@@ -210,11 +217,6 @@ function expandMainChain(
 
   state.recipeStack.add(recipe.id);
 
-  // Place dangling outputs (outputs not in path)
-  const danglingOutputs = recipe.outputs.filter(
-    (o) => !path.includes(o.itemId) && o.itemId !== itemId,
-  );
-
   const inputs = recipe.inputs;
   if (inputs.length === 0) {
     // Natural resource recipe (e.g., miner, pump)
@@ -243,46 +245,34 @@ function expandMainChain(
   const mainInput = inputs[0]!;
   const mainCol = col - 1;
   const mainRecipe = resolveRecipe(mainInput.itemId, state);
-
-  // 自然资源作为主配料时直接放终端节点，避免先放 main 节点再递归展开出重复的 natural 节点
-  if (state.naturalResourceItemIds.has(mainInput.itemId)) {
-    const mainName = resolveProductionPlanningItemName(mainInput.itemId, state.index, state.translate);
-    const mainIconSrc = resolveProductionPlanningItemIconSrc(mainInput.itemId, state.index);
-    state.nodes.push({
-      itemId: mainInput.itemId,
-      col: mainCol,
-      row: startRow,
-      type: "natural",
-      iconSrc: mainIconSrc,
-      name: mainName,
-      amount: mainInput.amount,
-      recipeId: mainRecipe?.id,
-      expandedRecipeId: null,
-    });
-    state.links.push({ fromCol: mainCol, fromRow: startRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
-    return startRow + 1;
-  }
+  const isMainNatural = state.naturalResourceItemIds.has(mainInput.itemId);
 
   // Place main ingredient node at col-1, same row
   const mainName = resolveProductionPlanningItemName(mainInput.itemId, state.index, state.translate);
   const mainIconSrc = resolveProductionPlanningItemIconSrc(mainInput.itemId, state.index);
+  const mainNodeType = isMainNatural ? "natural" : "main";
   state.nodes.push({
     itemId: mainInput.itemId,
     col: mainCol,
     row: startRow,
-    type: "main",
+    type: mainNodeType,
     iconSrc: mainIconSrc,
     name: mainName,
     amount: mainInput.amount,
-    expandedRecipeId: mainRecipe?.id ?? null,
+    recipeId: isMainNatural ? mainRecipe?.id : undefined,
+    expandedRecipeId: isMainNatural ? null : (mainRecipe?.id ?? null),
   });
   state.links.push({ fromCol: mainCol, fromRow: startRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
 
-  // Recurse main chain
+  // Recurse main chain (skip for natural resource — already terminal)
   let currentRow = startRow;
   const nextPath = [...path, itemId];
-  const mainEndRow = expandMainChain(mainInput.itemId, mainCol, currentRow, state, nextPath);
-  currentRow = mainEndRow;
+  if (isMainNatural) {
+    currentRow = startRow + 1;
+  } else {
+    const mainEndRow = expandMainChain(mainInput.itemId, mainCol, currentRow, state, nextPath);
+    currentRow = mainEndRow;
+  }
 
   // Secondary ingredients: inputs[1:]
   for (let si = 1; si < inputs.length; si++) {
@@ -337,23 +327,6 @@ function expandMainChain(
       state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
       currentRow++;
     }
-  }
-
-  // Dangling outputs
-  for (const dOutput of danglingOutputs) {
-    const dName = resolveProductionPlanningItemName(dOutput.itemId, state.index, state.translate);
-    const dIconSrc = resolveProductionPlanningItemIconSrc(dOutput.itemId, state.index);
-    state.nodes.push({
-      itemId: dOutput.itemId,
-      col: mainCol + 1,
-      row: currentRow,
-      type: "dangling",
-      iconSrc: dIconSrc,
-      name: dName,
-      amount: dOutput.amount,
-      expandedRecipeId: null,
-    });
-    currentRow++;
   }
 
   state.recipeStack.delete(recipe.id);

@@ -334,7 +334,6 @@ function ProcessNodeCard({
     node.type === "target" ? styles["is-target"] : "",
     node.type === "natural" ? styles["is-natural"] : "",
     node.type === "cycle" ? styles["is-cycle"] : "",
-    node.type === "dangling" ? styles["is-dangling"] : "",
     onDetailToggle ? styles["has-detail"] : "",
   ]
     .filter(Boolean)
