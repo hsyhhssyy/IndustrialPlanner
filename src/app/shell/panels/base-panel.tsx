@@ -6,7 +6,7 @@ import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import { NumberInput } from "@/app/shell/shared/number-input";
 import LucideTrash2 from "~icons/lucide/trash-2";
 import type { AppHost } from "@/app/host/app-host";
-import { DEFAULT_WORLD_BASE_ID, type WorldEntity } from "@/domain/document/world-document";
+import { DEFAULT_WORLD_BASE_ID } from "@/domain/document/world-document";
 import {
   buildWarehouseStatsEntries,
   resolveCompactWarehouseEntries,
@@ -22,6 +22,14 @@ import { cm } from "@/app/shell/shared/css-module-class";
 import panelStyles from "@/app/shell/panels/panels.module.scss";
 
 const BASE_PANEL_POWER_INTERVAL_MS = 250;
+
+// 管道物流附属设备 ID 集合（常量，不会变更）
+const PIPE_ATTACHMENT_IDS = new Set([
+  "pipe_splitter",
+  "pipe_converger",
+  "pipe_connector",
+  "pipe_admission",
+]);
 
 export function BasePanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
@@ -40,14 +48,6 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
     pinnedItemIds: pinnedItems.pinnedItemIds,
   });
   const compactWarehouseEntries = resolveCompactWarehouseEntries(warehouseEntries);
-
-  // 设备统计
-  const PIPE_ATTACHMENT_IDS = new Set([
-    "pipe_splitter",
-    "pipe_converger",
-    "pipe_connector",
-    "pipe_admission",
-  ]);
 
   const deviceStats = useMemo(() => {
     if (currentDocument === null) {
@@ -74,14 +74,17 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
   }
 
   /** 根据 definitionId 解析设备中文名 */
-  const resolveDeviceName = (definitionId: string): string => {
-    const definition = appHost.workspace.registry.entityDefinitions.find(
-      (d) => d.id === definitionId,
-    );
-    if (definition === undefined) return definitionId;
-    const translated = t(definition.nameKey);
-    return translated === definition.nameKey ? definitionId : translated;
-  };
+  const resolveDeviceName = useCallback(
+    (definitionId: string): string => {
+      const definition = appHost.workspace.registry.entityDefinitions.find(
+        (d) => d.id === definitionId,
+      );
+      if (definition === undefined) return definitionId;
+      const translated = t(definition.nameKey);
+      return translated === definition.nameKey ? definitionId : translated;
+    },
+    [appHost.workspace.registry.entityDefinitions, t],
+  );
 
   const baseProblems = useMemo<BaseProblem[]>(() => {
     const problems: BaseProblem[] = [];
@@ -118,7 +121,7 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
     }
 
     return problems;
-  }, [currentDocument, editor, currentBase, deviceStats.pipeLogisticsDevices, t]);
+  }, [currentDocument, editor, currentBase, deviceStats.pipeLogisticsDevices, resolveDeviceName]);
 
   const [activeProblemTooltip, setActiveProblemTooltip] = useState<number | null>(null);
   const [popoverRect, setPopoverRect] = useState<{ top: number; left: number } | null>(null);
