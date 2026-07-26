@@ -155,8 +155,12 @@ export function ProcessGraphView({
   // Pan
   const handlePointerDown = useCallback((event: React.PointerEvent) => {
     const target = event.target as HTMLElement;
-    // Don't start pan on buttons/expand icons
-    if (target.closest("button") !== null || target.closest(`.${styles["process-node-expand"]}`) !== null) {
+    // Don't start pan on buttons, expand icons, or clickable node cards
+    if (
+      target.closest("button") !== null
+      || target.closest(`.${styles["process-node-expand"]}`) !== null
+      || target.closest(`.${styles["process-node"]}.${styles["has-detail"]}`) !== null
+    ) {
       return;
     }
     event.currentTarget.setPointerCapture(event.pointerId);

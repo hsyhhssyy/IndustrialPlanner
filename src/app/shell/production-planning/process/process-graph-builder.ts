@@ -283,6 +283,7 @@ function expandMainChain(
 
     if (isNatural) {
       // Natural resource → terminal leaf
+      const secRecipe = resolveRecipe(secInput.itemId, state);
       state.nodes.push({
         itemId: secInput.itemId,
         col: mainCol,
@@ -291,6 +292,7 @@ function expandMainChain(
         iconSrc: secIconSrc,
         name: secName,
         amount: secInput.amount,
+        recipeId: secRecipe?.id,
         expandedRecipeId: null,
       });
       state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });

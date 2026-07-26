@@ -364,6 +364,14 @@ describe("buildProcessGraph", () => {
     assertNode("item_copper_nugget", "main");
     assertNode("item_xiranite_powder", "secondary");
 
+    // 所有 natural 节点应有 recipeId（可点击查看详情）
+    for (const n of expanded.nodes) {
+      if (n.type === "natural") {
+        expect(n.recipeId).toBeDefined();
+        expect(typeof n.recipeId).toBe("string");
+      }
+    }
+
     // 无重复节点
     const nodeKeys = expanded.nodes.map((n) => `${n.col}:${n.row}`);
     expect(new Set(nodeKeys).size).toBe(nodeKeys.length);

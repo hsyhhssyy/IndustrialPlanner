@@ -63,6 +63,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-device-names": true,
         "game-show-device-icons": true,
         "game-show-hotkeys": true,
+        "game-show-pipe-exact-fluid-position": false,
         "game-collapse-device-modes": true,
         "game-always-show-grid-lines": true,
         "game-show-grass-background": false,
@@ -70,10 +71,12 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-use-blueprint-style-device-images": true,
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
+        "other-experimental-features": false,
         "debug-simulation-worker-detailed-report": true,
         "debug-backend-api-address-override": "https://debug.example.test/api",
         "debug-show-fps": true,
         "debug-show-gesture-diagnostics-window": true,
+        "experimental-virtual-mouse-pointer": false,
       },
     });
 
@@ -310,6 +313,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-device-names": true,
         "game-show-device-icons": false,
         "game-show-hotkeys": true,
+        "game-show-pipe-exact-fluid-position": false,
         "game-collapse-device-modes": true,
         "game-always-show-grid-lines": true,
         "game-show-grass-background": false,
@@ -317,10 +321,12 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-use-blueprint-style-device-images": false,
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
+        "other-experimental-features": false,
         "debug-simulation-worker-detailed-report": false,
         "debug-backend-api-address-override": "",
         "debug-show-fps": false,
         "debug-show-gesture-diagnostics-window": false,
+        "experimental-virtual-mouse-pointer": false,
       },
     });
   });

@@ -73,6 +73,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   gameUseInspectorPanel: false,
   gameShowHotkeys: false,
   collapseDeviceModes: true,
+  gameShowPipeExactFluidPosition: false,
   gameAlwaysShowGridLines: true,
   selectedActivityIds: [],
   toolboxShowAllActivityContent: true,
@@ -81,6 +82,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   debugShowGestureDiagnosticsWindow: false,
   debugSimulationWorkerDetailedReport: false,
   debugMode: false,
+  virtualMousePointer: false,
 } as const;
 
 const _DEFAULT_APP_SHORTCUTS_STORAGE = {
