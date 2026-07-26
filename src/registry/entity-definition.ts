@@ -22,6 +22,13 @@
 // Inspector 声明规则（对应《模拟器抽象方式》§4）：
 //   每个设备的 inspectors[] 声明"用哪个面板编辑哪个路径"。
 //   Inspector 不持有数据，只声明 type + targetPath + 最少必要参数。
+//
+// Placement Behavior 声明规则：
+//   每个设备的 placementBehaviors 应在设备定义体内以数组字面量内联声明，
+//   不通过文件顶部的组合常量间接引用。原因：
+//   1. 保持 registry 的配置文件性质——读者无需跳转即可看清完整语义。
+//   2. 避免组合常量被惯性复用，导致设备无意间继承不需要的额外行为。
+//   3. 消除死常量问题（仅定义但无引用的孤立常量）。
 // =========================================================================
 
 import type {
@@ -137,54 +144,6 @@ function createLiquidPurifierOutputAcceptRule(
       .sort(),
   };
 }
-
-const ALLOW_PIPE_OVERLAP_PLACEMENT_BEHAVIORS = [
-  { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
-] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
-
-const ALLOW_BELT_OVERLAP_PLACEMENT_BEHAVIORS = [
-  { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
-] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
-
-const DEDICATED_PIPE_PLACEMENT_BEHAVIORS = [
-  { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
-] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
-
-const DEDICATED_BELT_PLACEMENT_BEHAVIORS = [
-  { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
-  { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
-  { type: PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase },
-] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
-
-const WAREHOUSE_BUS_SEGMENT_PLACEMENT_BEHAVIORS = [
-  { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
-  { type: PLACEMENT_BEHAVIOR_TYPE.mustConnectToHub },
-  { type: PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase },
-] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
-
-const WAREHOUSE_BUS_SOURCE_PLACEMENT_BEHAVIORS = [
-  { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
-  { type: PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase },
-] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
-
-const WAREHOUSE_PORT_PLACEMENT_BEHAVIORS = [
-  { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
-  { type: PLACEMENT_BEHAVIOR_TYPE.mustConnectToHubViaOppositePortEdge },
-  {
-    type: PLACEMENT_BEHAVIOR_TYPE.rotateToSnapOnBuilding,
-    targetDeviceIds: ["log_hongs_bus", "log_hongs_bus_source"],
-  },
-] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
-
-const AUTO_ROTATE_ALIGN_BELT_LOGISTICS_PLACEMENT_BEHAVIORS = [
-  { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
-  { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
-] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
-
-const AUTO_ROTATE_ALIGN_PIPE_ADMISSION_PLACEMENT_BEHAVIORS = [
-  { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
-  { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
-] as const satisfies readonly EntityPlacementBehaviorDeclaration[];
 
 const WAREHOUSE_SINK_TAG = "WarehouseSink";
 const PRODUCER_TAG = "Producer";
@@ -908,7 +867,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "warehouse",
     displayOrder: 405,
     tags: ["武陵", "bus"],
-    placementBehaviors: WAREHOUSE_BUS_SEGMENT_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.mustConnectToHub },
+      { type: PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [],
@@ -928,7 +891,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "warehouse",
     displayOrder: 406,
     tags: ["武陵", "bus"],
-    placementBehaviors: WAREHOUSE_BUS_SOURCE_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [],
@@ -957,7 +923,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "warehouse",
     displayOrder: 403,
     tags: ["AvatarHidden"],
-    placementBehaviors: WAREHOUSE_PORT_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.mustConnectToHubViaOppositePortEdge },
+      {
+        type: PLACEMENT_BEHAVIOR_TYPE.rotateToSnapOnBuilding,
+        targetDeviceIds: ["log_hongs_bus", "log_hongs_bus_source"],
+      },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1360,7 +1333,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     tags: ["BeltFamily", "ChevronHidden"],
-    placementBehaviors: DEDICATED_BELT_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1415,7 +1392,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     tags: ["BeltFamily", "ChevronHidden"],
-    placementBehaviors: DEDICATED_BELT_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1466,7 +1447,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     tags: ["BeltFamily", "ChevronHidden"],
-    placementBehaviors: DEDICATED_BELT_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1524,7 +1509,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "beltLogistics",
     displayOrder: 102,
     tags: ["BeltFamily", "OuterRingAllowed"],
-    placementBehaviors: AUTO_ROTATE_ALIGN_BELT_LOGISTICS_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1587,7 +1575,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "beltLogistics",
     displayOrder: 103,
     tags: ["BeltFamily", "OuterRingAllowed"],
-    placementBehaviors: AUTO_ROTATE_ALIGN_BELT_LOGISTICS_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1654,7 +1645,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "beltLogistics",
     displayOrder: 101,
     tags: ["BeltFamily", "ChevronHidden"],
-    placementBehaviors: ALLOW_PIPE_OVERLAP_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1767,7 +1760,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
-    placementBehaviors: DEDICATED_PIPE_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1807,7 +1802,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
-    placementBehaviors: DEDICATED_PIPE_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -1847,7 +1844,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
-    placementBehaviors: DEDICATED_PIPE_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -2263,7 +2262,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "warehouse",
     displayOrder: 402,
     tags: ["AvatarHidden", WAREHOUSE_SINK_TAG],
-    placementBehaviors: WAREHOUSE_PORT_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.mustConnectToHubViaOppositePortEdge },
+      {
+        type: PLACEMENT_BEHAVIOR_TYPE.rotateToSnapOnBuilding,
+        targetDeviceIds: ["log_hongs_bus", "log_hongs_bus_source"],
+      },
+    ],
     requiresPower: false,
     powerDemand: 0,
     // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°。
@@ -4475,7 +4481,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "beltLogistics",
     displayOrder: 104,
     tags: ["BeltFamily"],
-    placementBehaviors: AUTO_ROTATE_ALIGN_BELT_LOGISTICS_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -4530,7 +4539,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "pipeLogistics",
     displayOrder: 204,
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
-    placementBehaviors: AUTO_ROTATE_ALIGN_PIPE_ADMISSION_PLACEMENT_BEHAVIORS,
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
+      { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [

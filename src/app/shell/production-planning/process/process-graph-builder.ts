@@ -6,7 +6,7 @@ import {
   resolveProductionPlanningItemName,
 } from "../production-planning-model";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
-import type { ProcessGraph, ProcessLink, ProcessNode, ProcessBuildIndex } from "./process-graph-model";
+import type { ProcessGraph, ProcessNode } from "./process-graph-model";
 import type { ProductionPlanningDisplayMode } from "../production-planning-model";
 
 interface MutableProcessNode {
@@ -52,8 +52,6 @@ export function buildProcessGraph(
   translate: (key: string) => string,
   displayMode: ProductionPlanningDisplayMode = "item",
 ): ProcessGraph {
-  const itemById = new Map(plan.itemTotals.map((t) => [t.itemId, t]));
-  // Also collect from roots and recipe nodes
   const itemNodes = new Map<string, ProductionPlanningItemNode>();
   const collectItemNodes = (node: ProductionPlanningItemNode) => {
     itemNodes.set(node.itemId, node);
@@ -66,11 +64,6 @@ export function buildProcessGraph(
   for (const root of plan.roots) {
     collectItemNodes(root);
   }
-
-  const buildIndex: ProcessBuildIndex = {
-    resolveItemIconSrc: (itemId: string) => resolveProductionPlanningItemIconSrc(itemId, index),
-    resolveItemName: (itemId: string) => resolveProductionPlanningItemName(itemId, index, (k) => k),
-  };
 
   const state: BuildState = {
     plan,
@@ -127,7 +120,7 @@ export function buildProcessGraph(
     const key = `${n.col}:${n.row}`;
     nodeMap.set(key, n);
   }
-  let nodes = [...nodeMap.values()].sort((a, b) => a.row - b.row || a.col - b.col);
+  const nodes = [...nodeMap.values()].sort((a, b) => a.row - b.row || a.col - b.col);
 
   // Shift col values to be positive (0 = leftmost, max = target column)
   const minCol = nodes.reduce((m, n) => Math.min(m, n.col), 0);

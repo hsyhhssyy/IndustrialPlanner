@@ -5,7 +5,7 @@ import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 
 import type { ProductionPlanningDisplayMode, ProductionPlanningIndex, ProductionPlanningResult } from "../production-planning-model";
 import { buildProcessGraph } from "./process-graph-builder";
-import type { ProcessGraph, ProcessNode } from "./process-graph-model";
+import type { ProcessNode } from "./process-graph-model";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 import { createDeviceIconAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "./process-graph.module.scss";
