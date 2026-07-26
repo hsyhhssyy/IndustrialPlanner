@@ -1,11 +1,13 @@
 import type { ProductionPlanningItemNode, ProductionPlanningIndex, ProductionPlanningResult } from "../production-planning-model";
 import {
   isRecipeExcludedFromProductionPlanningAuto,
+  resolveProductionPlanningEntityIconSrc,
   resolveProductionPlanningItemIconSrc,
   resolveProductionPlanningItemName,
 } from "../production-planning-model";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import type { ProcessGraph, ProcessLink, ProcessNode, ProcessBuildIndex } from "./process-graph-model";
+import type { ProductionPlanningDisplayMode } from "../production-planning-model";
 
 interface MutableProcessNode {
   itemId: string;
@@ -48,6 +50,7 @@ export function buildProcessGraph(
   recipeChoices: ReadonlyMap<string, string>,
   expandedItemIds: ReadonlySet<string>,
   translate: (key: string) => string,
+  displayMode: ProductionPlanningDisplayMode = "item",
 ): ProcessGraph {
   const itemById = new Map(plan.itemTotals.map((t) => [t.itemId, t]));
   // Also collect from roots and recipe nodes
@@ -143,6 +146,11 @@ export function buildProcessGraph(
   const maxCol = nodes.reduce((m, n) => Math.max(m, n.col), 0);
   const maxRow = nodes.reduce((m, n) => Math.max(m, n.row), 0);
 
+  // 设备视图：为每个有配方的物品节点插入前置设备节点
+  if (displayMode === "device") {
+    return applyDeviceView({ nodes, links: state.links, maxCol, maxRow }, index, translate);
+  }
+
   return {
     nodes: nodes.map((n) => ({ ...n })),
     links: [...state.links],
@@ -157,6 +165,118 @@ function findTargetItemId(node: ProductionPlanningItemNode): string | null {
     return node.recipeNode.targetItemId;
   }
   return null;
+}
+
+interface RawProcessGraph {
+  nodes: MutableProcessNode[];
+  links: MutableProcessLink[];
+  maxCol: number;
+  maxRow: number;
+}
+
+/**
+ * 设备视图转换：为每个有配方的物品节点插入前置设备节点，并重定向连线。
+ *
+ * 物品视图：  [原料A] ──→ [物品B(配方P)]
+ * 设备视图：  [原料A] ──→ [设备X] ──→ [物品B]
+ */
+function applyDeviceView(raw: RawProcessGraph, index: ProductionPlanningIndex, translate: (key: string) => string): ProcessGraph {
+  // Step 1: 将所有 col 值乘以 2，为设备节点腾出位置
+  for (const n of raw.nodes) {
+    n.col *= 2;
+  }
+  for (const l of raw.links) {
+    l.fromCol *= 2;
+    l.toCol *= 2;
+    l.boundaryCol *= 2;
+  }
+
+  // Step 2: 为每个有配方的物品节点创建设备节点
+  const deviceNodes: MutableProcessNode[] = [];
+  const nodeKeyToDeviceKey = new Map<string, string>(); // "col:row" → deviceKey
+
+  for (const n of raw.nodes) {
+    const recipeId = n.recipeId ?? (n.expandedRecipeId ?? undefined);
+    if (recipeId === undefined) continue;
+
+    const recipe = index.recipeById.get(recipeId);
+    if (recipe === undefined) continue;
+
+    const machineEntity = index.entityById.get(recipe.machineId);
+    const deviceKey = `${n.col - 1}:${n.row}`;
+    nodeKeyToDeviceKey.set(`${n.col}:${n.row}`, deviceKey);
+
+    deviceNodes.push({
+      itemId: recipe.machineId,
+      col: n.col - 1,
+      row: n.row,
+      type: "device",
+      iconSrc: resolveProductionPlanningEntityIconSrc(recipe.machineId, index),
+      name: machineEntity !== undefined ? translate(machineEntity.nameKey) : recipe.machineId,
+      recipeId: undefined,
+      amount: undefined,
+      expandedRecipeId: null,
+    });
+  }
+
+  // Step 3: 重定向连线
+  //   - 所有指向物品节点的连线 → 改为指向设备节点
+  //   - 新增设备节点 → 物品节点的连线
+  const newLinks: MutableProcessLink[] = [];
+
+  for (const l of raw.links) {
+    const toKey = `${l.toCol}:${l.toRow}`;
+    const deviceKey = nodeKeyToDeviceKey.get(toKey);
+
+    if (deviceKey !== undefined) {
+      // 有设备节点：连线从原来源指向设备节点
+      const deviceCol = l.toCol - 1;
+      newLinks.push({
+        fromCol: l.fromCol,
+        fromRow: l.fromRow,
+        toCol: deviceCol,
+        toRow: l.toRow,
+        boundaryCol: l.boundaryCol, // boundary 保持不变，在 device 和原 to 之间
+      });
+    } else {
+      // 无设备节点（自然/循环/展开符号节点）：保留原连线
+      newLinks.push({ ...l });
+    }
+  }
+
+  // Step 4: 添加设备节点 → 物品节点的连线
+  for (const n of raw.nodes) {
+    const nodeKey = `${n.col}:${n.row}`;
+    const deviceKey = nodeKeyToDeviceKey.get(nodeKey);
+    if (deviceKey === undefined) continue;
+
+    newLinks.push({
+      fromCol: n.col - 1,
+      fromRow: n.row,
+      toCol: n.col,
+      toRow: n.row,
+      boundaryCol: n.col - 1,
+    });
+  }
+
+  // Step 5: 合并节点和连线，重新计算 maxCol
+  const allNodes = [...raw.nodes, ...deviceNodes];
+  allNodes.sort((a, b) => a.row - b.row || a.col - b.col);
+
+  const finalMaxCol = Math.max(
+    ...allNodes.map((n) => n.col),
+    ...newLinks.map((l) => Math.max(l.fromCol, l.toCol, l.boundaryCol)),
+  );
+  const finalMaxRow = Math.max(
+    ...allNodes.map((n) => n.row),
+  );
+
+  return {
+    nodes: allNodes.map((n) => ({ ...n })),
+    links: newLinks,
+    maxCol: finalMaxCol,
+    maxRow: finalMaxRow,
+  };
 }
 
 /**

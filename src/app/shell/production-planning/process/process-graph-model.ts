@@ -5,7 +5,8 @@ export type ProcessNodeType =
   | "main"
   | "secondary"
   | "natural"
-  | "cycle";
+  | "cycle"
+  | "device";
 
 export interface ProcessNode {
   readonly itemId: string;

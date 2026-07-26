@@ -153,6 +153,42 @@ const EXTERNAL_SUPPLY_RECIPE_ID_PREFIX = "external-supply:";
 const SHARED_DEMAND_RECIPE_ID_PREFIX = "shared-demand:";
 const EXTERNAL_SUPPLY_ENTITY_ID = "sp_hub_1";
 
+/**
+ * 从 plan 中收集所有可展开的工序图节点 ID。
+ * 可展开节点 = 所有配方中作为非主原料（inputs[1:]）出现的 item。
+ */
+function collectAllProcessExpandableItemIds(plan: ProductionPlanningResult): string[] {
+  const expandableIds = new Set<string>();
+  const visited = new Set<string>();
+
+  function traverse(node: ProductionPlanningItemNode) {
+    const itemId = node.itemId;
+    if (itemId.length === 0 || visited.has(itemId)) return;
+    visited.add(itemId);
+
+    const recipeNode = node.recipeNode;
+    if (recipeNode !== null) {
+      const inputs = recipeNode.inputs;
+      // inputs[0] 是主原料，inputs[1:] 是可在工序图中展开的二级输入
+      for (let i = 1; i < inputs.length; i++) {
+        const inputItemId = inputs[i]!.itemId;
+        if (inputItemId.length > 0) {
+          expandableIds.add(inputItemId);
+        }
+      }
+      for (const inputItem of recipeNode.inputItems) {
+        traverse(inputItem);
+      }
+    }
+  }
+
+  for (const root of plan.roots) {
+    traverse(root);
+  }
+
+  return [...expandableIds];
+}
+
 export const ProductionPlanningPanel = observer(function ProductionPlanningPanel({
   appHost,
   isTouch,
@@ -330,6 +366,12 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       recipeChoices: calculationRecipeChoices,
       sourceConfig: calculationSourceConfig,
       plan,
+    });
+
+    // 工序图默认全部展开
+    const allExpanded = collectAllProcessExpandableItemIds(plan);
+    runInAction(() => {
+      store.session = { ...store.session, processExpandedItems: allExpanded };
     });
   }, [
     activeScreen,
@@ -1199,6 +1241,7 @@ function PlanGraph({
         index={index}
         recipeChoices={recipeChoices}
         expandedItemIds={expandedSet}
+        displayMode={displayMode}
         initialViewport={processViewport}
         onToggleItem={onToggleProcessItem}
         onViewportChange={onProcessViewportChange}

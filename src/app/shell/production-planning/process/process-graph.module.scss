@@ -118,6 +118,13 @@
   opacity: 0.7;
 }
 
+.process-node.is-device {
+  border-color: var(--color-accent-dim, #c90);
+  background: var(--color-bg-card-dim, #faf5e8);
+  border-style: dashed;
+  opacity: 0.9;
+}
+
 .process-node-expand {
   position: absolute;
   display: flex;

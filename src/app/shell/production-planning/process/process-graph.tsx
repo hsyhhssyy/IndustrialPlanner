@@ -3,7 +3,7 @@ import LucideChevronRight from "~icons/lucide/chevron-right";
 import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 
-import type { ProductionPlanningIndex, ProductionPlanningResult } from "../production-planning-model";
+import type { ProductionPlanningDisplayMode, ProductionPlanningIndex, ProductionPlanningResult } from "../production-planning-model";
 import { buildProcessGraph } from "./process-graph-builder";
 import type { ProcessGraph, ProcessNode } from "./process-graph-model";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
@@ -15,6 +15,7 @@ interface ProcessGraphViewProps {
   readonly index: ProductionPlanningIndex;
   readonly recipeChoices: ReadonlyMap<string, string>;
   readonly expandedItemIds: ReadonlySet<string>;
+  readonly displayMode: ProductionPlanningDisplayMode;
   readonly initialViewport?: ViewportState;
   readonly onToggleItem: (itemId: string) => void;
   readonly onViewportChange?: (viewport: ViewportState) => void;
@@ -47,14 +48,15 @@ export function ProcessGraphView({
   index,
   recipeChoices,
   expandedItemIds,
+  displayMode,
   initialViewport,
   onToggleItem,
   onViewportChange,
   t,
 }: ProcessGraphViewProps) {
   const graph = useMemo(
-    () => buildProcessGraph(plan, index, recipeChoices, expandedItemIds, t),
-    [plan, index, recipeChoices, expandedItemIds, t],
+    () => buildProcessGraph(plan, index, recipeChoices, expandedItemIds, t, displayMode),
+    [plan, index, recipeChoices, expandedItemIds, t, displayMode],
   );
 
   const [viewport, setRawViewport] = useState<ViewportState>(
@@ -265,10 +267,18 @@ export function ProcessGraphView({
         {graph.nodes.map((node) => {
           const cx = nodeCenterX(node.col);
           const cy = nodeCenterY(node.row);
+          const isDeviceNode = node.type === "device";
           const isExpandable = node.type === "secondary";
           const isCollapsible = expandedItemIds.has(node.itemId);
           const nodeKey = `${node.col}:${node.row}`;
           const hasRecipe = (node.recipeId ?? node.expandedRecipeId) !== null;
+          // 设备节点不显示展开/收起和详情弹窗
+          const showToggle = isDeviceNode ? undefined
+            : (isExpandable || isCollapsible) ? () => handleToggle(node.itemId, node.col, node.row)
+            : undefined;
+          const showDetail = isDeviceNode ? undefined
+            : hasRecipe ? () => handleDetailToggle(nodeKey)
+            : undefined;
           return (
             <ProcessNodeCard
               key={nodeKey}
@@ -276,8 +286,8 @@ export function ProcessGraphView({
               cx={cx}
               cy={cy}
               isExpanded={isCollapsible}
-              onToggle={(isExpandable || isCollapsible) ? () => handleToggle(node.itemId, node.col, node.row) : undefined}
-              onDetailToggle={hasRecipe ? () => handleDetailToggle(nodeKey) : undefined}
+              onToggle={showToggle}
+              onDetailToggle={showDetail}
             />
           );
         })}
@@ -338,6 +348,7 @@ function ProcessNodeCard({
     node.type === "target" ? styles["is-target"] : "",
     node.type === "natural" ? styles["is-natural"] : "",
     node.type === "cycle" ? styles["is-cycle"] : "",
+    node.type === "device" ? styles["is-device"] : "",
     onDetailToggle ? styles["has-detail"] : "",
   ]
     .filter(Boolean)
