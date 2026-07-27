@@ -129,6 +129,22 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       }
 
       if (editor === null) {
+        if (
+          context.appHost.internalState.activeTool === "logistics-placement"
+          && event.type === "mouse tap"
+          && event.button === 0
+        ) {
+          const runtime = context.appHost.internalState.runtime.logisticsPlacement;
+          logMouseLogisticsPlacementFailure(
+            runtime.phase === "idle" ? "start" : "apply",
+            "editor-unavailable",
+            {
+              kind: runtime.kind,
+              longPress: event.longPress,
+              position: event.position,
+            },
+          );
+        }
         return { status: "ignored" };
       }
 
@@ -275,7 +291,20 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
             return { status: "handled" };
           }
 
-          if (event.button !== 0 || event.longPress) {
+          if (event.button !== 0) {
+            return { status: "ignored" };
+          }
+
+          if (event.longPress) {
+            const runtime = context.appHost.internalState.runtime.logisticsPlacement;
+            logMouseLogisticsPlacementFailure(
+              runtime.phase === "idle" || runtime.isHoverPreview ? "start" : "apply",
+              "long-press-does-not-place-logistics",
+              {
+                kind: runtime.kind,
+                position: event.position,
+              },
+            );
             return { status: "ignored" };
           }
 
@@ -718,7 +747,7 @@ function handleMouseLeftTap(options: {
   const kind = runtime.kind;
   const gridPoint = resolveGridPointFromGesturePosition(options.editor, options.position);
   if (kind === null) {
-    logMouseLogisticsPlacementFailure("logistics-kind-missing", {
+    logMouseLogisticsPlacementFailure("start", "logistics-kind-missing", {
       kind,
       phase: runtime.phase,
       position: options.position,
@@ -727,11 +756,15 @@ function handleMouseLeftTap(options: {
   }
 
   if (gridPoint === null) {
-    logMouseLogisticsPlacementFailure("pointer-outside-editor-grid", {
-      kind,
-      phase: runtime.phase,
-      position: options.position,
-    });
+    logMouseLogisticsPlacementFailure(
+      runtime.phase === "idle" || runtime.isHoverPreview ? "start" : "apply",
+      "pointer-outside-editor-grid",
+      {
+        kind,
+        phase: runtime.phase,
+        position: options.position,
+      },
+    );
     return { status: "ignored" };
   }
 
@@ -775,11 +808,20 @@ function handleMouseLeftTap(options: {
     const rejectedDraftState =
       options.editor.queries.resolveLogisticsDraftState() ?? draftState;
     const invalidReason = rejectedDraftState.invalidReason;
+    const previewEntityIds =
+      options.editor.state.collections[EntityCollectionType.preview];
     const failureReason = invalidReason
-      ?? (rejectedDraftState.cells.length === 0 ? "empty-path" : "editor-apply-rejected");
+      ?? (
+        !rejectedDraftState.canApply
+          ? "draft-not-applicable"
+          : rejectedDraftState.cells.length === 0
+            ? "empty-path"
+            : previewEntityIds.length === 0
+              ? "preview-collection-empty"
+              : "editor-apply-rejected"
+    );
     runtime.statusMessageKey = invalidReason ?? "unknown";
-    logMouseLogisticsPlacementFailure(failureReason, {
-      stage: "apply",
+    logMouseLogisticsPlacementFailure("apply", failureReason, {
       kind,
       gridPoint,
       phase: runtime.phase,
@@ -789,6 +831,7 @@ function handleMouseLeftTap(options: {
       sourceType: rejectedDraftState.source?.type ?? null,
       targetType: rejectedDraftState.target?.type ?? null,
       headDraftEntityId: rejectedDraftState.headDraftEntityId,
+      previewEntityCount: previewEntityIds.length,
     });
     return { status: "handled" };
   }
@@ -850,8 +893,7 @@ function createMouseLogisticsStart(options: {
     });
   } else if (options.pointerEntityId === null) {
     if (!behavior.allowEmptySource) {
-      logMouseLogisticsPlacementFailure("empty-source-disallowed", {
-        stage: "start",
+      logMouseLogisticsPlacementFailure("start", "empty-source-disallowed", {
         kind: options.kind,
         gridPoint: options.gridPoint,
         pointerEntityId: options.pointerEntityId,
@@ -875,8 +917,7 @@ function createMouseLogisticsStart(options: {
     const failureReason = endpoint?.type === "device-port"
       ? "source-port-is-not-output"
       : "clicked-entity-has-no-compatible-output";
-    logMouseLogisticsPlacementFailure(failureReason, {
-      stage: "start",
+    logMouseLogisticsPlacementFailure("start", failureReason, {
       kind: options.kind,
       gridPoint: options.gridPoint,
       pointerEntityId: options.pointerEntityId,
@@ -887,16 +928,19 @@ function createMouseLogisticsStart(options: {
   }
 
   if (result.status === "ignored") {
-    logMouseLogisticsPlacementFailure(result.invalidReason ?? "draft-start-ignored", {
-      stage: "start",
-      kind: options.kind,
-      gridPoint: options.gridPoint,
-      pointerEntityId: options.pointerEntityId,
-      endpointType: endpoint?.type ?? null,
-      actionStatus: result.status,
-      invalidReason: result.invalidReason,
-      canApply: result.canApply,
-    });
+    logMouseLogisticsPlacementFailure(
+      "start",
+      result.invalidReason ?? "draft-start-ignored",
+      {
+        kind: options.kind,
+        gridPoint: options.gridPoint,
+        pointerEntityId: options.pointerEntityId,
+        endpointType: endpoint?.type ?? null,
+        actionStatus: result.status,
+        invalidReason: result.invalidReason,
+        canApply: result.canApply,
+      },
+    );
   } else {
     logisticsLogger.debug("mouse-logistics-start OK", {
       kind: options.kind,
@@ -916,10 +960,17 @@ function createMouseLogisticsStart(options: {
 }
 
 function logMouseLogisticsPlacementFailure(
+  stage: "start" | "apply",
   reason: string,
   context: Readonly<Record<string, unknown>>,
 ): void {
-  logisticsLogger.debug(`mouse-left-tap placement rejected: ${reason}`, context);
+  const failureType = stage === "start" ? "起笔失败" : "落笔失败";
+  logisticsLogger.debug(`mouse-left-tap ${failureType}: ${reason}`, {
+    ...context,
+    failureStage: stage,
+    failureType,
+    failureReason: reason,
+  });
 }
 
 function applyTouchLogisticsPlacement(

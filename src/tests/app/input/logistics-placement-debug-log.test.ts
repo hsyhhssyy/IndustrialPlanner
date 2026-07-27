@@ -8,6 +8,7 @@ import {
 } from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { EditorContract } from "@/domain/editor/editor-contract";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type {
   LogisticsDraftReadonlyState,
   LogisticsKind,
@@ -45,9 +46,11 @@ describe("logistics placement debug logging", () => {
     expect(editor.actions.createLogisticsDraftStart).not.toHaveBeenCalled();
     expect(debugSpy).toHaveBeenCalledWith(
       "[industrial-planner:logistics-placement] "
-        + "mouse-left-tap placement rejected: empty-source-disallowed",
+        + "mouse-left-tap 起笔失败: empty-source-disallowed",
       expect.objectContaining({
-        stage: "start",
+        failureStage: "start",
+        failureType: "起笔失败",
+        failureReason: "empty-source-disallowed",
         kind: "pipe",
         gridPoint: { x: 6, y: 4 },
         pointerEntityId: null,
@@ -72,13 +75,39 @@ describe("logistics placement debug logging", () => {
     );
     expect(debugSpy).toHaveBeenCalledWith(
       "[industrial-planner:logistics-placement] "
-        + "mouse-left-tap placement rejected: overlap-existing-logistics",
+        + "mouse-left-tap 落笔失败: overlap-existing-logistics",
       expect.objectContaining({
-        stage: "apply",
+        failureStage: "apply",
+        failureType: "落笔失败",
+        failureReason: "overlap-existing-logistics",
         kind: "belt",
         invalidReason: "overlap-existing-logistics",
         canApply: false,
         cellCount: 1,
+      }),
+    );
+  });
+
+  it("logs that a long left press is not a logistics placement click", () => {
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const { context, editor } = createContext({
+      allowEmptySource: true,
+      kind: LOGISTICS_KIND.belt,
+      draftState: null,
+    });
+    const module = createHypergryphLogisticsPlacementGestureModule();
+
+    expect(module.handle(mouseLeftTapEvent(true), context)).toEqual({ status: "ignored" });
+    expect(editor.actions.createLogisticsDraftStart).not.toHaveBeenCalled();
+    expect(debugSpy).toHaveBeenCalledWith(
+      "[industrial-planner:logistics-placement] "
+        + "mouse-left-tap 起笔失败: long-press-does-not-place-logistics",
+      expect.objectContaining({
+        failureStage: "start",
+        failureType: "起笔失败",
+        failureReason: "long-press-does-not-place-logistics",
+        kind: "belt",
+        position: { x: 6, y: 4 },
       }),
     );
   });
@@ -95,7 +124,9 @@ function createContext(options: {
 } {
   const editor = {
     state: {
-      collections: {},
+      collections: {
+        [EntityCollectionType.preview]: [],
+      },
     },
     actions: {
       applyLogisticDraft: vi.fn(() => false),
@@ -178,14 +209,16 @@ function createInvalidDraftState(): LogisticsDraftReadonlyState {
   };
 }
 
-function mouseLeftTapEvent(): Extract<GestureEvent, { type: "mouse tap" }> {
+function mouseLeftTapEvent(
+  longPress = false,
+): Extract<GestureEvent, { type: "mouse tap" }> {
   return {
     type: "mouse tap",
     gestureId: "mouse-left-tap-1",
     button: 0,
     buttons: 0,
     position: { x: 6, y: 4 },
-    longPress: false,
+    longPress,
     pointerEntity: null,
     modifiers: {
       alt: false,
