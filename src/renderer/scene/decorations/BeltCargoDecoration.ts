@@ -425,7 +425,10 @@ function resolveBeltCargoEntries(
     }
 
     // 非传送带实体不可能有货物动画，跳过昂贵的 getDeviceRuntimeStatus 调用
-    if (!isStrictBeltDefinitionId(entity.definitionId)) {
+    if (!isStrictBeltDefinitionId(
+      entity.definitionId,
+      ctx.renderHost.workspace.registry.queries,
+    )) {
       continue
     }
 
@@ -439,6 +442,7 @@ function resolveBeltCargoEntries(
       entity,
       definition,
       progress: cargoState.progress,
+      queries: ctx.renderHost.workspace.registry.queries,
     })
     if (pathSample === null) {
       continue
@@ -720,7 +724,10 @@ function resolveBeltCargoClipBeltRects(
   const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
   return editor.queries.listEntities()
     .filter((entity) => {
-      if (!isStrictBeltDefinitionId(entity.definitionId)) {
+      if (!isStrictBeltDefinitionId(
+        entity.definitionId,
+        ctx.renderHost.workspace.registry.queries,
+      )) {
         return false
       }
       const definition = definitionMap.get(entity.definitionId)

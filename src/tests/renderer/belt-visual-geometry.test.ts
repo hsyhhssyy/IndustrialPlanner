@@ -184,6 +184,7 @@ describe("BeltVisualGeometry", () => {
       },
       definition,
       progress: 0.5,
+      queries: registry.queries,
     })
 
     expect(sample?.point.x).toBeCloseTo(0.6464466094)
@@ -237,6 +238,7 @@ describe("BeltVisualGeometry", () => {
       entity: createBeltEntity("belt", { x: 0, y: 0 }, 0),
       definition: straightDefinition,
       distanceCells: 0.25,
+      queries: registry.queries,
     })
     const turnLength = resolveBeltPathLengthCells(turnDefinition)
     const turnSample = resolveBeltPathSampleAtDistance({
@@ -246,6 +248,7 @@ describe("BeltVisualGeometry", () => {
       },
       definition: turnDefinition,
       distanceCells: (turnLength ?? 0) / 2,
+      queries: registry.queries,
     })
 
     expect(straightSample?.point).toEqual({

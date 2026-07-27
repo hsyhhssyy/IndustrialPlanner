@@ -35,6 +35,7 @@ import {
   CONSUMPTION_RECIPE_CHANNEL_TYPE,
   CONSUMPTION_RECIPE_TAG,
 } from "@/shared/consumption-channel";
+import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 
 const WAREHOUSE_SINK_TAG = "WarehouseSink";
 
@@ -855,10 +856,9 @@ function resolveRecipes(options: {
   // General logistics devices (splitter, converger, admission — anchor transportClass)
   // also use reserved-item transport recipes, matching §6.1.2–§6.1.5 of 仿真运行原理.
   // Detect via BeltFamily/PipeFamily tags to cover all logistics devices uniformly.
+  // AI-CORRECTION 2026-07-27: 当前使用编译期 logisticsKind 覆盖完整物流族，不再读取 family tag。
   // Strict devices are already handled above and won't re-enter here.
-  const isGeneralBelt = (options.device.tags ?? []).includes("BeltFamily");
-  const isGeneralPipe = (options.device.tags ?? []).includes("PipeFamily");
-  if ((isGeneralBelt || isGeneralPipe) && options.ingredientSlotContents.length > 0) {
+  if (options.device.logisticsKind !== null && options.ingredientSlotContents.length > 0) {
     const timing = resolveTransportRecipeTiming(options.topology, options.device);
     if (timing === null) {
       return [];
@@ -982,8 +982,7 @@ function resolveTransportRecipePlans(
     readonly recipeIdSuffix: string;
   },
 ): readonly CompiledSimulationRecipePlan[] {
-  const isPipe = options.device.transportClass === "strict-pipe"
-    || (options.device.tags ?? []).includes("PipeFamily");
+  const isPipe = options.device.logisticsKind === LOGISTICS_KIND.pipe;
   // AI-CORRECTION 2026-07-24: 运输配方始终只描述设备固有的 2/1 搬运能力；
   // admission 输出额度由 resolveDeviceRecipePlans 的独立候选过滤处理，不写入配方定义。
   const transferAmounts = isPipe ? [2, 1] : [1];

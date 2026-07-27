@@ -3,8 +3,15 @@ import { Container, Sprite, Texture } from "pixi.js";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { RegistryQuery } from "@/domain/registry/registry-query";
 import type { GridEdge, GridPoint, GridRectSize, GridRotation } from "@/domain/shared/grid";
-import type { LogisticsDraftReadonlyState, LogisticsKind, LogisticsPortDirection, LogisticsPortKind } from "@/domain/shared/logistics";
+import {
+  LOGISTICS_KIND,
+  type LogisticsDraftReadonlyState,
+  type LogisticsKind,
+  type LogisticsPortDirection,
+  type LogisticsPortKind,
+} from "@/domain/shared/logistics";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
 import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression";
@@ -55,11 +62,12 @@ export function resolveLogisticsPortOverlayEntries(options: {
   readonly entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   readonly kind: LogisticsKind;
   readonly direction: LogisticsPortDirection;
+  readonly queries: RegistryQuery;
   readonly occupiedDraftPortKeys?: ReadonlySet<string>;
   readonly basePlaceableArea?: GridRectSize;
 }): PortOverlayEntry[] {
   const entries: PortOverlayEntry[] = [];
-  const portKind = options.kind === "belt" ? "item" : "fluid";
+  const portKind = options.kind === LOGISTICS_KIND.belt ? "item" : "fluid";
 
   for (const entity of options.entities) {
     const definition = options.entityDefinitionMap.get(entity.definitionId);
@@ -86,7 +94,8 @@ export function resolveLogisticsPortOverlayEntries(options: {
         direction: endpointDirection,
         entities: options.entities,
         entityDefinitionMap: options.entityDefinitionMap,
-        basePlaceableArea: endpointKind === "belt"
+        queries: options.queries,
+        basePlaceableArea: endpointKind === LOGISTICS_KIND.belt
           ? options.basePlaceableArea
           : undefined,
       })) {
@@ -208,6 +217,7 @@ export function createPortOverlayDecoration(): DecorationLayer {
           definitionId: entity.definitionId,
           suppressBelts: editor.state.suppressBelts,
           suppressPipes: editor.state.suppressPipes,
+          queries: ctx.renderHost.workspace.registry.queries,
         })
       );
       const entityDefinitionMap = new Map(
@@ -233,6 +243,7 @@ export function createPortOverlayDecoration(): DecorationLayer {
           entityDefinitionMap,
           kind: logisticsKind,
           direction,
+          queries: ctx.renderHost.workspace.registry.queries,
           occupiedDraftPortKeys: resolveOccupiedDraftPortKeys(draft),
           basePlaceableArea: currentBase?.placeableArea,
         });
@@ -302,6 +313,7 @@ function canLegallyLeadLogisticsFromPort(options: {
   direction: LogisticsPortDirection;
   entities: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  queries: RegistryQuery;
   basePlaceableArea?: GridRectSize;
 }): boolean {
   const point = options.endpoint.outsideGridPoint;
@@ -328,13 +340,14 @@ function canLegallyLeadLogisticsFromPort(options: {
 
   const sameFamilyOccupant = occupants.find((entity) => {
     const definition = options.entityDefinitionMap.get(entity.definitionId);
-    return definition !== undefined && isDefinitionForLogisticsKind(definition, options.kind);
+    return definition !== undefined
+      && isDefinitionForLogisticsKind(definition, options.kind, options.queries);
   });
   if (sameFamilyOccupant === undefined) {
     return occupants.every((entity) => {
       const definition = options.entityDefinitionMap.get(entity.definitionId);
       return definition !== undefined
-        && isOppositeDedicatedLogisticsDefinition(definition, options.kind);
+        && isOppositeDedicatedLogisticsDefinition(definition, options.kind, options.queries);
     });
   }
 
@@ -353,7 +366,11 @@ function canLegallyLeadLogisticsFromPort(options: {
     return false;
   }
 
-  if (!isOrdinaryLogisticsDefinition(neighborDefinition, options.kind)) {
+  if (!isOrdinaryLogisticsDefinition(
+    neighborDefinition,
+    options.kind,
+    options.queries,
+  )) {
     return false;
   }
 
@@ -383,7 +400,7 @@ function hasFacingConnectedPort(options: {
   direction: LogisticsPortDirection;
 }): boolean {
   const expectedDirection = options.direction === "output" ? "input" : "output";
-  const portKind = options.kind === "belt" ? "item" : "fluid";
+  const portKind = options.kind === LOGISTICS_KIND.belt ? "item" : "fluid";
   return resolveEntityPortEndpoints(options.neighbor, options.neighborDefinition).some((endpoint) =>
     endpoint.kind === portKind
     && (endpoint.direction === expectedDirection || endpoint.direction === "bidirectional")
@@ -398,7 +415,7 @@ function hasAnyConnectedOrdinaryLogisticsPort(options: {
   entities: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
 }): boolean {
-  const portKind = options.kind === "belt" ? "item" : "fluid";
+  const portKind = options.kind === LOGISTICS_KIND.belt ? "item" : "fluid";
   return resolveEntityPortEndpoints(options.entity, options.definition).some((endpoint) => {
     if (endpoint.kind !== portKind) return false;
     const expectedDirection = endpoint.direction === "input" ? "output" : "input";
@@ -427,7 +444,7 @@ function resolveOrdinaryLogisticsAxis(options: {
   definition: EntityDefinition;
   kind: LogisticsKind;
 }): "horizontal" | "vertical" | null {
-  const portKind = options.kind === "belt" ? "item" : "fluid";
+  const portKind = options.kind === LOGISTICS_KIND.belt ? "item" : "fluid";
   const axes = new Set(
     resolveEntityPortEndpoints(options.entity, options.definition)
       .filter((endpoint) => endpoint.kind === portKind)
@@ -490,25 +507,34 @@ function findEntitiesAtGridPoint(options: {
   });
 }
 
-function isDefinitionForLogisticsKind(definition: EntityDefinition, kind: LogisticsKind): boolean {
-  return definition.tags.includes(kind === "belt" ? "BeltFamily" : "PipeFamily");
+function isDefinitionForLogisticsKind(
+  definition: EntityDefinition,
+  kind: LogisticsKind,
+  queries: RegistryQuery,
+): boolean {
+  return kind === LOGISTICS_KIND.belt
+    ? queries.isBeltFamily(definition.id)
+    : queries.isPipeFamily(definition.id);
 }
 
 function isOppositeDedicatedLogisticsDefinition(
   definition: EntityDefinition,
   kind: LogisticsKind,
+  queries: RegistryQuery,
 ): boolean {
-  return definition.tags.includes(kind === "belt" ? "PipeFamily" : "BeltFamily");
+  return kind === LOGISTICS_KIND.belt
+    ? queries.isPipeFamily(definition.id)
+    : queries.isBeltFamily(definition.id);
 }
 
 function isOrdinaryLogisticsDefinition(
   definition: EntityDefinition,
   kind: LogisticsKind,
+  queries: RegistryQuery,
 ): boolean {
-  const prefix = kind === "belt" ? "belt_" : "pipe_";
-  return definition.id === `${prefix}straight_1x1`
-    || definition.id === `${prefix}turn_cw_1x1`
-    || definition.id === `${prefix}turn_ccw_1x1`;
+  return kind === LOGISTICS_KIND.belt
+    ? queries.isBelt(definition.id)
+    : queries.isPipe(definition.id);
 }
 
 function resolveSingleSelectedOrPreviewEntityIds(ctx: DecorationSyncContext): ReadonlySet<string> {
@@ -557,7 +583,7 @@ function resolveEntityPortKey(endpoint: ResolvedPortEndpoint): string {
 }
 
 function resolveLogisticsKindForPortKind(kind: LogisticsPortKind): LogisticsKind {
-  return kind === "item" ? "belt" : "pipe";
+  return kind === "item" ? LOGISTICS_KIND.belt : LOGISTICS_KIND.pipe;
 }
 
 /**

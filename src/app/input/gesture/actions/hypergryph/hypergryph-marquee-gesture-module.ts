@@ -8,6 +8,7 @@ import {
   type MarqueeCollectionType,
 } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRect } from "@/domain/shared/grid";
+import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import { collectConnectedStrictLogisticsEntityIds } from "@/shared/transport-component";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
@@ -352,19 +353,19 @@ function handleUiButtonTap(options: {
       return { status: "handled" };
 
     case TOGGLE_PIPE_ON:
-      options.appHost.workspace.editor?.actions.setLogisticsSuppression("pipe", true);
+      options.appHost.workspace.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.pipe, true);
       return { status: "handled" };
 
     case TOGGLE_PIPE_OFF:
-      options.appHost.workspace.editor?.actions.setLogisticsSuppression("pipe", false);
+      options.appHost.workspace.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.pipe, false);
       return { status: "handled" };
 
     case TOGGLE_BELT_ON:
-      options.appHost.workspace.editor?.actions.setLogisticsSuppression("belt", true);
+      options.appHost.workspace.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.belt, true);
       return { status: "handled" };
 
     case TOGGLE_BELT_OFF:
-      options.appHost.workspace.editor?.actions.setLogisticsSuppression("belt", false);
+      options.appHost.workspace.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.belt, false);
       return { status: "handled" };
 
     default:
@@ -495,8 +496,8 @@ export function cleanupMarquee(appHost: AppHost, editor: EditorContract | null, 
 }
 
 function resetMarqueeLogisticsSuppression(editor: EditorContract | null): void {
-  editor?.actions.setLogisticsSuppression("belt", false);
-  editor?.actions.setLogisticsSuppression("pipe", false);
+  editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.belt, false);
+  editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.pipe, false);
 }
 
 export function showMarqueeRightDockToolbar(

@@ -13,6 +13,7 @@ import {
 } from "@/shared/geometry/viewport-transform"
 
 import { BELT_TRANSPORT_DURATION_SECONDS } from "@/domain/registry";
+import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 
 import type { DecorationLayer } from "./DecorationLayer"
 import type { DecorationSyncContext } from "./DecorationSyncContext"
@@ -277,7 +278,10 @@ function drawHighlightMask(ctx: DecorationSyncContext, graphics: Graphics): void
   const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
   const definitionMap = createEntityDefinitionMap(ctx)
   for (const entity of editor.queries.listEntities()) {
-    if (!isStrictBeltDefinitionId(entity.definitionId)) {
+    if (!isStrictBeltDefinitionId(
+      entity.definitionId,
+      ctx.renderHost.workspace.registry.queries,
+    )) {
       continue
     }
 
@@ -328,7 +332,10 @@ function drawArrowMask(
   const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
   const definitionMap = createEntityDefinitionMap(ctx)
   for (const entity of editor.queries.listEntities()) {
-    if (!isStrictBeltDefinitionId(entity.definitionId)) {
+    if (!isStrictBeltDefinitionId(
+      entity.definitionId,
+      ctx.renderHost.workspace.registry.queries,
+    )) {
       continue
     }
 
@@ -859,6 +866,7 @@ function resolveBeltFlowMark(options: {
     entity: options.entry.entity,
     definition: options.entry.definition,
     distanceCells: options.distanceCells,
+    queries: options.ctx.renderHost.workspace.registry.queries,
   })
   if (sample === null) {
     return null
@@ -934,8 +942,13 @@ function resolveHighlightMarksForInterval(options: {
     activeTint = null
   }
 
+  const straightDefinitionId =
+    options.ctx.renderHost.workspace.registry.queries.resolveLogisticsDefinitionId(
+      LOGISTICS_KIND.belt,
+      "straight",
+    )
   for (const chainEntry of options.chain.entries) {
-    if (chainEntry.entry.entity.definitionId !== "belt_straight_1x1") {
+    if (chainEntry.entry.entity.definitionId !== straightDefinitionId) {
       flushActiveSegments()
       continue
     }
@@ -1029,11 +1042,12 @@ function resolveHighlightPathPoints(
   const points: BeltFlowPoint[] = []
 
   for (const segment of segments) {
-    for (const distanceCells of resolveHighlightSampleDistances(segment)) {
+    for (const distanceCells of resolveHighlightSampleDistances(ctx, segment)) {
       const sample = resolveBeltPathSampleAtDistance({
         entity: segment.entry.entity,
         definition: segment.entry.definition,
         distanceCells,
+        queries: ctx.renderHost.workspace.registry.queries,
       })
       if (sample === null) {
         continue
@@ -1064,16 +1078,25 @@ function resolveHighlightPathPoints(
   return points
 }
 
-function resolveHighlightSampleDistances(segment: {
+function resolveHighlightSampleDistances(
+  ctx: DecorationSyncContext,
+  segment: {
   readonly entry: BeltVisualPathEntry;
   readonly startCells: number;
   readonly endCells: number;
-}): number[] {
+  },
+): number[] {
   if (segment.endCells - segment.startCells <= DISTANCE_EPSILON) {
     return []
   }
 
-  if (segment.entry.entity.definitionId === "belt_straight_1x1") {
+  if (
+    segment.entry.entity.definitionId
+    === ctx.renderHost.workspace.registry.queries.resolveLogisticsDefinitionId(
+      LOGISTICS_KIND.belt,
+      "straight",
+    )
+  ) {
     return [segment.startCells, segment.endCells]
   }
 

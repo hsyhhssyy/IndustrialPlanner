@@ -5,6 +5,7 @@ import {
   buildBaseBuiltinEntityId,
 } from "@/domain/registry/types/base-definition";
 import { WATER_PURIFIER_NODE_ENTITY_ID } from "@/shared/water-purifier-node";
+import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import { describe, expect, it } from "vitest";
 
 describe("createRegistryContract", () => {
@@ -87,6 +88,118 @@ describe("createRegistryContract", () => {
     expect(registry.queries.resolveDedicatedLogisticsKind("belt_straight_1x1")).toBe("belt");
     expect(registry.queries.resolveDedicatedLogisticsKind("pipe_turn_ccw_1x1")).toBe("pipe");
     expect(registry.queries.resolveDedicatedLogisticsKind("log_splitter")).toBeNull();
+  });
+
+  it("按传送带节、传送带物流设备、管道节和管道物流设备精确分类", () => {
+    const registry = createRegistryContract();
+    const beltSegments = [
+      "belt_straight_1x1",
+      "belt_turn_cw_1x1",
+      "belt_turn_ccw_1x1",
+    ];
+    const beltLogistics = [
+      "log_splitter",
+      "log_converger",
+      "log_connector",
+      "log_admission",
+    ];
+    const pipeSegments = [
+      "pipe_straight_1x1",
+      "pipe_turn_cw_1x1",
+      "pipe_turn_ccw_1x1",
+    ];
+    const pipeLogistics = [
+      "pipe_splitter",
+      "pipe_converger",
+      "pipe_connector",
+      "pipe_admission",
+    ];
+    const definitionIds = registry.entityDefinitions.map((definition) => definition.id);
+    const classifiedIds = (
+      predicate: (definitionId: string) => boolean,
+    ): string[] => definitionIds.filter(predicate).sort();
+
+    expect(classifiedIds(registry.queries.isBelt)).toEqual([...beltSegments].sort());
+    expect(classifiedIds(registry.queries.isBeltLogistics)).toEqual(
+      [...beltLogistics].sort(),
+    );
+    expect(classifiedIds(registry.queries.isBeltFamily)).toEqual(
+      [...beltSegments, ...beltLogistics].sort(),
+    );
+    expect(classifiedIds(registry.queries.isPipe)).toEqual([...pipeSegments].sort());
+    expect(classifiedIds(registry.queries.isPipeLogistics)).toEqual(
+      [...pipeLogistics].sort(),
+    );
+    expect(classifiedIds(registry.queries.isPipeFamily)).toEqual(
+      [...pipeSegments, ...pipeLogistics].sort(),
+    );
+
+    // 物流设备明确不包括路径节。
+    for (const definitionId of beltSegments) {
+      expect(registry.queries.isBeltLogistics(definitionId)).toBe(false);
+    }
+    for (const definitionId of pipeSegments) {
+      expect(registry.queries.isPipeLogistics(definitionId)).toBe(false);
+    }
+
+    expect(registry.queries.resolveLogisticsDefinitionId(
+      LOGISTICS_KIND.belt,
+      "straight",
+    )).toBe("belt_straight_1x1");
+    expect(registry.queries.resolveLogisticsDefinitionId(
+      LOGISTICS_KIND.pipe,
+      "turn-ccw",
+    )).toBe("pipe_turn_ccw_1x1");
+
+    const roles = {
+      log_splitter: "splitter",
+      log_converger: "converger",
+      log_connector: "connector",
+      log_admission: "admission",
+      pipe_splitter: "splitter",
+      pipe_converger: "converger",
+      pipe_connector: "connector",
+      pipe_admission: "admission",
+    } as const;
+    for (const [definitionId, role] of Object.entries(roles)) {
+      expect(registry.queries.resolveLogisticsRole(definitionId)).toBe(role);
+    }
+    for (const definitionId of [...beltSegments, ...pipeSegments]) {
+      expect(registry.queries.resolveLogisticsRole(definitionId)).toBeNull();
+    }
+
+    for (const definitionId of ["udpipe_loader_1", "water_pump_1", "unknown"]) {
+      expect(registry.queries.isBeltFamily(definitionId)).toBe(false);
+      expect(registry.queries.isPipeFamily(definitionId)).toBe(false);
+      expect(registry.queries.resolveLogisticsRole(definitionId)).toBeNull();
+    }
+
+    const beltSegmentDefinitions = registry.entityDefinitions.filter((definition) =>
+      registry.queries.isBelt(definition.id)
+    );
+    const pipeSegmentDefinitions = registry.entityDefinitions.filter((definition) =>
+      registry.queries.isPipe(definition.id)
+    );
+    expect(beltSegmentDefinitions.every((definition) => definition.uiGroup === "hidden"))
+      .toBe(true);
+    expect(pipeSegmentDefinitions.every((definition) => definition.uiGroup === "hidden"))
+      .toBe(true);
+    expect(
+      registry.entityDefinitions
+        .filter((definition) => registry.queries.isBeltLogistics(definition.id))
+        .every((definition) => definition.uiGroup === "beltLogistics"),
+    ).toBe(true);
+    expect(
+      registry.entityDefinitions
+        .filter((definition) => registry.queries.isPipeLogistics(definition.id))
+        .every((definition) => definition.uiGroup === "pipeLogistics"),
+    ).toBe(true);
+    expect(
+      registry.entityDefinitions.some((definition) =>
+        definition.tags.includes("BeltFamily")
+        || definition.tags.includes("PipeFamily")
+      ),
+    ).toBe(false);
   });
 
   it("mounts the read-only logistics-item inspector on every logistics device and no others", () => {

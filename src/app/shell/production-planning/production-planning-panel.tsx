@@ -29,6 +29,10 @@ import {
   PIPE_TRANSPORT_DURATION_SECONDS,
 } from "@/domain/registry";
 import {
+  LOGISTICS_KIND,
+  type LogisticsKind,
+} from "@/domain/shared/logistics";
+import {
   buildProductionPlanningIndex,
   computeItemDefaultPerMinute,
   computeProductionPlan,
@@ -1754,7 +1758,10 @@ function ProductionPlanningLogisticsRate({
 }) {
   const logisticsKind = resolveProductionPlanningLogisticsKind(itemId, index);
   const count = Math.ceil(flowPerMinute / resolveProductionPlanningLogisticsThroughput(logisticsKind));
-  const entityId = logisticsKind === "pipe" ? "pipe_straight_1x1" : "belt_straight_1x1";
+  const entityId = index.registryQueries.resolveLogisticsDefinitionId(
+    logisticsKind,
+    "straight",
+  );
   const entity = index.entityById.get(entityId);
 
   return (
@@ -3157,14 +3164,18 @@ function resolveProductionPlanningRecipeDisplayItemId(row: ProductionPlanningTre
 function resolveProductionPlanningLogisticsKind(
   itemId: string,
   index: ProductionPlanningIndex,
-): "belt" | "pipe" {
+): LogisticsKind {
   const tags = index.itemById.get(itemId)?.tags ?? [];
-  return tags.includes("liquid") || tags.includes("gas") ? "pipe" : "belt";
+  return tags.includes("liquid") || tags.includes("gas")
+    ? LOGISTICS_KIND.pipe
+    : LOGISTICS_KIND.belt;
 }
 
-function resolveProductionPlanningLogisticsThroughput(kind: "belt" | "pipe"): number {
-  const secondsPerCell = kind === "pipe" ? PIPE_TRANSPORT_DURATION_SECONDS : BELT_TRANSPORT_DURATION_SECONDS;
-  const itemsPerCycle = kind === "pipe" ? 2 : 1;
+function resolveProductionPlanningLogisticsThroughput(kind: LogisticsKind): number {
+  const secondsPerCell = kind === LOGISTICS_KIND.pipe
+    ? PIPE_TRANSPORT_DURATION_SECONDS
+    : BELT_TRANSPORT_DURATION_SECONDS;
+  const itemsPerCycle = kind === LOGISTICS_KIND.pipe ? 2 : 1;
   return (60 * itemsPerCycle) / secondsPerCell;
 }
 

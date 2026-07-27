@@ -3,6 +3,7 @@ import { Container, Graphics } from "pixi.js"
 import type { WorldEntity } from "@/domain/document/world-document"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
+import type { RegistryQuery } from "@/domain/registry/registry-query"
 import type {
   GridEdge,
   GridFloatPoint,
@@ -38,11 +39,18 @@ const DISTANCE_EPSILON = 0.000001
 
 const EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"]
 
-const STRICT_PIPE_DEFINITION_IDS = new Set([
-  "pipe_straight_1x1",
-  "pipe_turn_cw_1x1",
-  "pipe_turn_ccw_1x1",
-])
+// AI-REMOVED 2026-07-27:
+// Reason: renderer 不应维护 3 个管道节 definition ID。
+// Trigger: 用户要求 registry 外只使用 RegistryQuery。
+// Evidence: RegistryQuery.isPipe 的定义正是 3 个管道节。
+// Replacement: isStrictPipeDefinitionId 的 queries 参数。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const STRICT_PIPE_DEFINITION_IDS = new Set([
+//   "pipe_straight_1x1", "pipe_turn_cw_1x1", "pipe_turn_ccw_1x1",
+// ])
 
 interface VisibleWorldRect {
   readonly left: number;
@@ -223,7 +231,10 @@ function resolveActivePipeEntityIds(ctx: DecorationSyncContext): Set<string> {
 
   const activePipeEntityIds = new Set<string>()
   for (const entity of editor.queries.listEntities()) {
-    if (!isStrictPipeDefinitionId(entity.definitionId)) {
+    if (!isStrictPipeDefinitionId(
+      entity.definitionId,
+      ctx.renderHost.workspace.registry.queries,
+    )) {
       continue
     }
 
@@ -258,7 +269,13 @@ function drawPipeFlowMask(
   const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
   const definitionMap = createEntityDefinitionMap(ctx)
   for (const entity of editor.queries.listEntities()) {
-    if (!activePipeEntityIds.has(entity.id) || !isStrictPipeDefinitionId(entity.definitionId)) {
+    if (
+      !activePipeEntityIds.has(entity.id)
+      || !isStrictPipeDefinitionId(
+        entity.definitionId,
+        ctx.renderHost.workspace.registry.queries,
+      )
+    ) {
       continue
     }
 
@@ -530,6 +547,7 @@ function resolvePipeFlowMark(options: {
     entity: options.entry.entity,
     definition: options.entry.definition,
     distanceCells: options.distanceCells,
+    queries: options.ctx.renderHost.workspace.registry.queries,
   })
   if (sample === null) {
     return null
@@ -626,7 +644,10 @@ function resolvePipeVisualPathEntries(
     if (
       definition === undefined
       || !activePipeEntityIds.has(entity.id)
-      || !isStrictPipeDefinitionId(entity.definitionId)
+      || !isStrictPipeDefinitionId(
+        entity.definitionId,
+        ctx.renderHost.workspace.registry.queries,
+      )
     ) {
       return []
     }
@@ -783,6 +804,7 @@ function resolvePipePathSampleAtDistance(options: {
   entity: WorldEntity;
   definition: EntityDefinition;
   distanceCells: number;
+  queries: RegistryQuery;
 }): PipePathSample | null {
   const lengthCells = resolvePipePathLengthCells(options.definition)
   if (lengthCells === null || lengthCells <= 0) {
@@ -793,6 +815,7 @@ function resolvePipePathSampleAtDistance(options: {
     entity: options.entity,
     definition: options.definition,
     progress: options.distanceCells / lengthCells,
+    queries: options.queries,
   })
 }
 
@@ -800,8 +823,9 @@ function resolvePipePathSample(options: {
   entity: WorldEntity;
   definition: EntityDefinition;
   progress: number;
+  queries: RegistryQuery;
 }): PipePathSample | null {
-  if (!isStrictPipeDefinitionId(options.entity.definitionId)) {
+  if (!isStrictPipeDefinitionId(options.entity.definitionId, options.queries)) {
     return null
   }
 
@@ -1079,8 +1103,11 @@ function resolvePipeFlowTintColor(
   return ordinaryColor
 }
 
-function isStrictPipeDefinitionId(definitionId: string): boolean {
-  return STRICT_PIPE_DEFINITION_IDS.has(definitionId)
+function isStrictPipeDefinitionId(
+  definitionId: string,
+  queries: RegistryQuery,
+): boolean {
+  return queries.isPipe(definitionId)
 }
 
 function resolveVisibleWorldRect(

@@ -12,6 +12,7 @@ export type {
 } from "./grid";
 export type {
 	LogisticsKind,
+	LogisticsRole,
 	LogisticsRouteOrder,
 	LogisticsPortKind,
 	LogisticsPortDirection,
@@ -23,6 +24,10 @@ export type {
 	CreateLogisticsDraftStartOptions,
 	MoveLogisticsDraftEndOptions,
 	LogisticsDraftActionResult,
+} from "./logistics";
+export {
+	LOGISTICS_KIND,
+	LOGISTICS_KINDS,
 } from "./logistics";
 export {
 	TAG_PREFIX_ALTER_ENTITY,

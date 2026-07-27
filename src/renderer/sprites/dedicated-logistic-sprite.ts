@@ -11,6 +11,10 @@ import type { AppTheme } from "@/domain/app/types/theme"
 import type { WorkspaceContract } from "@/domain/document/workspace-contract"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
+import {
+  LOGISTICS_KIND,
+  type LogisticsKind,
+} from "@/domain/shared/logistics"
 import type { RenderHost } from "@/renderer/renderer-host"
 import { resolveDeviceBodyTextureKey } from "@/renderer/sprites/device-texture-key"
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
@@ -109,7 +113,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     this.previewBorderGraphics = new Graphics({ roundPixels: true })
     this.previewBorderGraphics.visible = false
 
-    this.selectionGlow = resolveSpriteLogisticsFamily(this.spriteId) === "pipe"
+    this.selectionGlow = resolveSpriteLogisticsFamily(this.spriteId) === LOGISTICS_KIND.pipe
       ? new Sprite(Texture.EMPTY)
       : null
     if (this.selectionGlow !== null) {
@@ -226,8 +230,8 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
 
   protected isLogisticsSuppressed(context: RenderSpriteSyncContext): boolean {
     const family = resolveSpriteLogisticsFamily(this.spriteId);
-    if (family === "belt") return context.suppressBelts;
-    if (family === "pipe") return context.suppressPipes;
+    if (family === LOGISTICS_KIND.belt) return context.suppressBelts;
+    if (family === LOGISTICS_KIND.pipe) return context.suppressPipes;
     return false;
   }
 
@@ -374,7 +378,9 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
       spriteId: this.spriteId,
       width: centeredLayout.width,
       height: centeredLayout.height,
-      color: family === "belt" ? SUPPRESSED_BELT_COLOR : SUPPRESSED_PIPE_COLOR,
+      color: family === LOGISTICS_KIND.belt
+        ? SUPPRESSED_BELT_COLOR
+        : SUPPRESSED_PIPE_COLOR,
     })
     suppressionGraphics.visible = true
   }
@@ -461,9 +467,10 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   }
 }
 
-function resolveSpriteLogisticsFamily(spriteId: string): "belt" | "pipe" | null {
-  if (spriteId.startsWith("belt_")) return "belt"
-  if (spriteId.startsWith("pipe_")) return "pipe"
+function resolveSpriteLogisticsFamily(spriteId: string): LogisticsKind | null {
+  // 这里判断的是专用绘图资源 spriteId，不是 registry definition ID 分类。
+  if (spriteId.startsWith("belt_")) return LOGISTICS_KIND.belt
+  if (spriteId.startsWith("pipe_")) return LOGISTICS_KIND.pipe
   return null
 }
 

@@ -5,6 +5,7 @@ import type {
   WorldEntity,
 } from "@/domain/document/world-document";
 import type { GridEdge, GridPoint, GridRotation } from "@/domain/shared/grid";
+import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import {
   isItemAvailableByActivity,
@@ -493,6 +494,7 @@ function compileWarehouseDevice(
       powerStatus: "no-power-needed",
       powerDemand: 0,
       requiresPower: false,
+      logisticsKind: null,
       transportClass: "anchor",
       transportComponentId: null,
       nodeIds: [nodeId],
@@ -549,6 +551,11 @@ function compileEntityDevice(options: {
     options.entity.config,
   );
   const transportClass = resolveTransportClass(options.registryQueries, definition);
+  const logisticsKind = options.registryQueries.isBeltFamily(definition.id)
+    ? LOGISTICS_KIND.belt
+    : options.registryQueries.isPipeFamily(definition.id)
+      ? LOGISTICS_KIND.pipe
+      : null;
   const powerDemand = resolvePowerDemand(definition);
   const powerStatus = resolvePowerStatus({
     entityId: options.entity.id,
@@ -573,6 +580,7 @@ function compileEntityDevice(options: {
   compileSyntheticNodesForUnboundPorts({
     deviceId,
     definition,
+    isPipeFamily: logisticsKind === LOGISTICS_KIND.pipe,
     nodes,
     slots,
     nodeBindingsByStorageGroupId,
@@ -611,6 +619,7 @@ function compileEntityDevice(options: {
     powerStatus,
     powerDemand,
     requiresPower: definition.requiresPower,
+    logisticsKind,
     transportClass,
     transportComponentId: null,
     nodeIds: nodes.map((node) => node.id),
@@ -859,6 +868,8 @@ function createCompiledNode(options: {
 function compileSyntheticNodesForUnboundPorts(options: {
   readonly deviceId: string;
   readonly definition: EntityDefinition;
+  /** 管道设备族使用容量 2；管道物流设备不包括管道节，但两者都属于该族。 */
+  readonly isPipeFamily: boolean;
   readonly nodes: CompiledSimulationNode[];
   readonly slots: CompiledSimulationSlot[];
   readonly nodeBindingsByStorageGroupId: Map<string, StorageGroupNodeBinding>;
@@ -872,7 +883,8 @@ function compileSyntheticNodesForUnboundPorts(options: {
     !boundPortGroupIds.has(portGroup.id)
     && (portGroup.direction === "output" || portGroup.direction === "bidirectional"),
   );
-  const syntheticSlotCapacity = options.definition.tags.includes("PipeFamily") ? 2 : 1;
+  // AI-CORRECTION 2026-07-27: 管道设备族由 RegistryQuery 编译结果判定，不再依赖 PipeFamily tag。
+  const syntheticSlotCapacity = options.isPipeFamily ? 2 : 1;
 
   if (needsInput) {
     addSyntheticNode({
@@ -1414,6 +1426,8 @@ function compilePhysicalConnections(
         && areGridPointsEqual(sourcePort.insideGridPoint, targetPort.outsideGridPoint)
       ) {
         // 设备间不可直接相连：两端均非通用物流设备时，跳过不建立连接。
+        // AI-CORRECTION 2026-07-27: 此处“通用物流设备”指完整传送带族或管道设备族；
+        // 传送带物流设备不包括传送带节，管道物流设备不包括管道节。
         // 允许设备紧贴摆放，但端口不生效。
         const sourceDevice = devices[sourcePort.deviceId];
         const targetDevice = devices[targetPort.deviceId];
@@ -1744,11 +1758,15 @@ function resolveAcceptRuleCandidateDomains(
  * 1. 在 DEDICATED_LOGISTICS_DEVICE_KINDS 中注册的 → strict-belt 或 strict-pipe。
  *    当前仅 belt_straight_1x1 / belt_turn_cw_1x1 / belt_turn_ccw_1x1 为 strict-belt，
  *    pipe_straight_1x1 / pipe_turn_cw_1x1 / pipe_turn_ccw_1x1 为 strict-pipe。
+ *    AI-CORRECTION 2026-07-27: 上述两组现分别称为传送带节、管道节，
+ *    由 RegistryQuery.isBelt / isPipe 判定，不再读取旧映射。
  *
  * 2. 通用物流设备（item_pipe_splitter、item_pipe_converger、item_pipe_connector、
  *    item_log_splitter、item_log_converger、item_log_connector、
  *    item_pipe_admission、item_log_admission）不在专用物流注册表中，
  *    AI-CORRECTION 2026-07-19: 当前上述设备定义 ID 已移除 item_ 前缀；原名仅作历史审计。
+ *    AI-CORRECTION 2026-07-27: “通用物流设备”现分别称为传送带物流设备、管道物流设备；
+ *    两者分别不包括传送带节、管道节。
  *    因此 resolveDedicatedLogisticsKind 返回 null → 归为 anchor。
  *    这是有意设计：这些设备有自己的 buffer 和搬运配方，不应受管道域锁约束，
  *    且它们应分割 strict-pipe 的 TransportComponent。
@@ -1763,11 +1781,11 @@ function resolveTransportClass(
 ): SimulationTransportClass {
   const dedicatedLogisticsKind = registryQueries.resolveDedicatedLogisticsKind(definition.id);
 
-  if (dedicatedLogisticsKind === "belt") {
+  if (dedicatedLogisticsKind === LOGISTICS_KIND.belt) {
     return "strict-belt";
   }
 
-  if (dedicatedLogisticsKind === "pipe") {
+  if (dedicatedLogisticsKind === LOGISTICS_KIND.pipe) {
     return "strict-pipe";
   }
 

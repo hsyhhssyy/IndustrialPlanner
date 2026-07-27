@@ -24,6 +24,7 @@ import type {
   EntityAdmissionRuleDefinition,
   EntityDefinition,
 } from "@/domain/registry/types/entity-definition";
+import type { RegistryQuery } from "@/domain/registry/registry-query";
 import type { AdmissionRuleInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
@@ -76,7 +77,13 @@ export function AdmissionRuleInspector({
 }) {
   const mode = useInspectorRenderMode();
   const [pending, setPending] = useState(false);
-  const row = resolveAdmissionPortRow(definition, entity, declaration, runtimeStatus);
+  const row = resolveAdmissionPortRow(
+    definition,
+    entity,
+    declaration,
+    runtimeStatus,
+    appHost.workspace.registry.queries,
+  );
   const deviceClass = appHost.state?.screenProfile?.deviceClass ?? "desktop";
 
   if (row === null) {
@@ -458,6 +465,7 @@ function resolveAdmissionPortRow(
   entity: WorldEntity,
   declaration: AdmissionRuleInspectorDeclaration,
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
+  registryQueries: RegistryQuery,
 ): AdmissionPortRow | null {
   const groupIndex = definition.portGroups.findIndex((group) => group.id === declaration.portGroupId);
   const portGroup = definition.portGroups[groupIndex];
@@ -492,7 +500,10 @@ function resolveAdmissionPortRow(
     selectedItemId,
     limit: admissionRule?.limit ?? null,
     perMinuteLimit: admissionRule?.perMinuteLimit ?? null,
-    maximumPerMinuteLimit: definition.id === "pipe_admission"
+    // 管道物流设备不包括管道节；这里只对角色为准入口的管道物流设备应用管道上限。
+    maximumPerMinuteLimit:
+      registryQueries.resolveLogisticsRole(definition.id) === "admission"
+      && registryQueries.isPipeLogistics(definition.id)
       ? PIPE_ADMISSION_RATE_MAX_PER_MINUTE
       : LOG_ADMISSION_RATE_MAX_PER_MINUTE,
     runtimeCount: runtimeCounter?.count ?? 0,

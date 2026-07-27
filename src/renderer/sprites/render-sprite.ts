@@ -5,8 +5,10 @@ import type { GridRotation } from "@/shared/geometry/grid"
 
 export type RenderLayerId = "background" | "entityLow" | "entity" | "entityHigh" | "logisticsBelt" | "logisticsPipe" | "draft" | "overlay";
 
+/** 传送带节绘图资源 ID；这是 sprite 协议，不是 registry 分类事实源。 */
 export type BeltRenderSpriteId = "belt_straight_1x1" | "belt_turn_cw_1x1" | "belt_turn_ccw_1x1";
 
+/** 管道节绘图资源 ID；这是 sprite 协议，不是 registry 分类事实源。 */
 export type PipeRenderSpriteId = "pipe_straight_1x1" | "pipe_turn_cw_1x1" | "pipe_turn_ccw_1x1";
 
 export type RenderSpriteId = BeltRenderSpriteId | PipeRenderSpriteId;

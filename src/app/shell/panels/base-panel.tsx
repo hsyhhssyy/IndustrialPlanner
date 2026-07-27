@@ -23,13 +23,18 @@ import panelStyles from "@/app/shell/panels/panels.module.scss";
 
 const BASE_PANEL_POWER_INTERVAL_MS = 250;
 
-// 管道物流附属设备 ID 集合（常量，不会变更）
-const PIPE_ATTACHMENT_IDS = new Set([
-  "pipe_splitter",
-  "pipe_converger",
-  "pipe_connector",
-  "pipe_admission",
-]);
+// AI-REMOVED 2026-07-27:
+// Reason: app 不应维护 4 个管道物流设备 definition ID。
+// Trigger: 用户要求 registry 外只使用 Query，并明确管道物流设备不包括管道节。
+// Evidence: RegistryQuery.isPipeLogistics 精确覆盖分流器、汇流器、桥接器和准入口。
+// Replacement: BasePanel.deviceStats 中的 registry.queries.isPipeLogistics。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const PIPE_ATTACHMENT_IDS = new Set([
+//   "pipe_splitter", "pipe_converger", "pipe_connector", "pipe_admission",
+// ]);
 
 export function BasePanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
@@ -55,11 +60,12 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
     }
     const entities = Object.values(currentDocument.entities);
     const totalDevices = entities.length;
+    // 管道物流设备仅包含四种物流角色，明确不包括管道节。
     const pipeLogisticsDevices = entities.filter((e) =>
-      PIPE_ATTACHMENT_IDS.has(e.definitionId),
+      appHost.workspace.registry.queries.isPipeLogistics(e.definitionId),
     ).length;
     return { totalDevices, pipeLogisticsDevices };
-  }, [currentDocument]);
+  }, [appHost.workspace.registry.queries, currentDocument]);
 
   // -------------------------------------------------------------------------
   // 基地问题收集
@@ -103,6 +109,7 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
     }
 
     // ② 管道物流数超限
+    // AI-CORRECTION 2026-07-27: 此处统计管道物流设备，不包括管道节。
     const maxPipe = currentBase !== null
       ? resolveBaseMaxPipeLogistics(currentBase.tags)
       : null;

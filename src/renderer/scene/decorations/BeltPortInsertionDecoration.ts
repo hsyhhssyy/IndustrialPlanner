@@ -208,6 +208,7 @@ function resolveBeltPortExtensionTint(
 ): number {
   return resolveDedicatedLogisticTintColor({
     entityId: beltEntityId,
+    // 虚拟延伸段复用直线传送带 sprite 取色；这是绘图资源 ID，不参与 definition 分类。
     spriteId: "belt_straight_1x1",
     theme: ctx.theme,
     workspace: ctx.renderHost.workspace,

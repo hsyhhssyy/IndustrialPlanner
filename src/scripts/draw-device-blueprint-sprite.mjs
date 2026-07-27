@@ -170,7 +170,7 @@ async function writeDeviceBlueprintSprite(definition, outputFilePath) {
 async function generateBlueprintSprites(registryContract, outputDirectory) {
   const generated = [];
   const failed = [];
-  const candidates = collectBlueprintGenerationCandidates(registryContract.entityDefinitions);
+  const candidates = collectBlueprintGenerationCandidates(registryContract);
 
   for (const definition of candidates) {
     const outputFilePath = path.join(outputDirectory, `${definition.spriteId}.png`);
@@ -193,9 +193,9 @@ async function generateBlueprintSprites(registryContract, outputDirectory) {
   };
 }
 
-function collectBlueprintGenerationCandidates(entityDefinitions) {
-  return entityDefinitions.filter((definition) => (
-    !isExcludedFromBlueprintBatch(definition)
+function collectBlueprintGenerationCandidates(registryContract) {
+  return registryContract.entityDefinitions.filter((definition) => (
+    !isExcludedFromBlueprintBatch(definition, registryContract.queries)
     && definition.portGroups.some((group) => group.ports.length > 0)
   ));
 }
@@ -209,23 +209,37 @@ function collectUnresolvedPortDevices(registryContract) {
 
   return registryContract.entityDefinitions
     .filter((definition) => (
-      !isExcludedFromBlueprintBatch(definition)
+      !isExcludedFromBlueprintBatch(definition, registryContract.queries)
       && definition.portGroups.length === 0
       && recipeMachineIds.has(definition.id)
     ))
     .map((definition) => definition.id);
 }
 
-function isExcludedFromBlueprintBatch(definition) {
+function isExcludedFromBlueprintBatch(definition, queries) {
   if (DIRECT_BLUEPRINT_SPRITE_IDS.has(definition.spriteId)) {
     return true;
   }
 
-  if (definition.uiGroup === 'beltLogistics' || definition.uiGroup === 'pipeLogistics') {
-    return true;
-  }
+  // AI-REMOVED 2026-07-27:
+  // Reason: uiGroup、family tag 和 definition ID 前缀都不是物流族的唯一事实源。
+  // Trigger: 用户要求 registry 外只使用 Query，避免 14 个设备分类漂移。
+  // Evidence: RegistryQuery.isBeltFamily/isPipeFamily 已覆盖两族各 7 个设备。
+  // Replacement: 下方 RegistryQuery 判定。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // if (definition.uiGroup === 'beltLogistics' || definition.uiGroup === 'pipeLogistics') return true;
+  // if (definition.tags.includes('BeltFamily') || definition.tags.includes('PipeFamily')) return true;
+  // return definition.id.startsWith('belt_')
+  //   || definition.id.startsWith('pipe_')
+  //   || definition.id.startsWith('log_')
+  //   || definition.id.includes('water_pump');
 
-  if (definition.tags.includes('BeltFamily') || definition.tags.includes('PipeFamily')) {
+  // 传送带族和管道设备族统一由 RegistryQuery 判定；
+  // 其中传送带物流设备不包括传送带节，管道物流设备不包括管道节。
+  if (queries.isBeltFamily(definition.id) || queries.isPipeFamily(definition.id)) {
     return true;
   }
 
@@ -234,10 +248,7 @@ function isExcludedFromBlueprintBatch(definition) {
   //   已恢复为 DIRECT_BLUEPRINT_SPRITE_MAPPINGS 直接素材映射，使用 bg_machine_udpipe_loader_1.png
   //   和 bg_machine_udpipe_unloader_1.png；该映射通过 DIRECT_BLUEPRINT_SPRITE_IDS 自动排除标准计算。
   // AI-CORRECTION 2026-07-19: 当前 definition.id 已移除 item_ 前缀；素材匹配改用稳定的 definition.spriteId。
-  return definition.id.startsWith('belt_')
-    || definition.id.startsWith('pipe_')
-    || definition.id.startsWith('log_')
-    || definition.id.includes('water_pump');
+  return definition.id.includes('water_pump');
 }
 
 async function loadBlueprintAsset(fileName, rotationDegrees = 0) {

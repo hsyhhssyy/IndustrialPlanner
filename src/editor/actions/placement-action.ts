@@ -6,6 +6,11 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRectSize } from "@/domain/shared/grid";
 import { createUuid } from "@/domain/shared/uuid";
 import type { EntityDefinition, EntityPlacementDefaults } from "@/domain/registry/types/entity-definition";
+import type { RegistryQuery } from "@/domain/registry/registry-query";
+import {
+  LOGISTICS_KIND,
+  type LogisticsKind,
+} from "@/domain/shared/logistics";
 
 import { syncPlacementValidationState } from "../placement-validation";
 import { action } from "mobx";
@@ -228,6 +233,7 @@ export function createEditorPlacementActions({
         previewDrafts,
         currentEntities: currentDocument.entities,
         definitionMap,
+        registryQueries: workspace.registry.queries,
       });
       const replacedEntityIds = new Set(Object.keys(replacementTargets));
 
@@ -583,16 +589,20 @@ function resolveSlotLinkEntityIdForPlacement(
 /**
  * 解析物流族标签，返回 "belt" | "pipe" | null。
  * 与 placement-validation.ts 中的同名函数保持语义一致。
+ * AI-CORRECTION 2026-07-27: 当前返回 registry 物流族类型，不再解析 tag；
+ * 字面值由 LOGISTICS_KIND 统一提供。
  */
-function resolveLogisticsFamilyTag(
+function resolveLogisticsKind(
   definition: EntityDefinition,
-): "belt" | "pipe" | null {
-  if (definition.tags.includes("BeltFamily")) {
-    return "belt";
+  registryQueries: RegistryQuery,
+): LogisticsKind | null {
+  // AI-CORRECTION 2026-07-27: 物流族由 RegistryQuery 判定，不再读取 BeltFamily / PipeFamily tag。
+  if (registryQueries.isBeltFamily(definition.id)) {
+    return LOGISTICS_KIND.belt;
   }
 
-  if (definition.tags.includes("PipeFamily")) {
-    return "pipe";
+  if (registryQueries.isPipeFamily(definition.id)) {
+    return LOGISTICS_KIND.pipe;
   }
 
   return null;
@@ -604,6 +614,7 @@ function resolveLogisticsFamilyTag(
  * 仅单设备 placement draft 参与替换：
  *   - previewDrafts 必须恰好有 1 个，且其 id 以 "placement-draft:" 开头
  *   - 该 draft 覆盖的文档实体与之属于同一物流族（BeltFamily / PipeFamily）
+ *     AI-CORRECTION 2026-07-27: 同族关系由 isBeltFamily / isPipeFamily Query 判定。
  *   - 两者占据的 grid rect 完全相同
  *
  * 蓝图放置（多个 previewDrafts）不会被此函数处理，避免批量误删。
@@ -612,6 +623,7 @@ function resolvePlacementReplacementTargets(options: {
   previewDrafts: readonly DraftEntity[];
   currentEntities: Record<string, WorldEntity>;
   definitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
 }): Record<string, WorldEntity> {
   // 仅单设备放置参与替换。
   if (options.previewDrafts.length !== 1) {
@@ -628,7 +640,7 @@ function resolvePlacementReplacementTargets(options: {
     return {};
   }
 
-  const draftFamily = resolveLogisticsFamilyTag(draftDef);
+  const draftFamily = resolveLogisticsKind(draftDef, options.registryQueries);
   if (draftFamily === null) {
     return {};
   }
@@ -649,7 +661,7 @@ function resolvePlacementReplacementTargets(options: {
       continue;
     }
 
-    if (resolveLogisticsFamilyTag(entityDef) !== draftFamily) {
+    if (resolveLogisticsKind(entityDef, options.registryQueries) !== draftFamily) {
       continue;
     }
 

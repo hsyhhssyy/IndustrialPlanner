@@ -1,5 +1,6 @@
 import type { LinkType } from "@/domain/document/world-document";
 import type { GridEdge, GridPoint, GridRect, GridRectSize, GridRotation } from "@/domain/shared/grid";
+import type { LogisticsKind } from "@/domain/shared/logistics";
 import type { RecipeDefinition, RecipeType } from "@/domain/registry/types/recipe-definition";
 import type { WaterPurifierOutputMode } from "@/shared/water-purifier-node";
 import type { SimulationMutableRuntimeState } from "./runtime/runtime-state";
@@ -24,9 +25,11 @@ export type SimulationPowerStatus = "no-power-needed" | "in-power-range" | "out-
  * 仿真运输类别，决定设备在物流拓扑中的角色。
  *
  * - `strict-belt`：专用传送带（belt_straight_1x1 / belt_turn_cw_1x1 / belt_turn_ccw_1x1）。
+ *   AI-CORRECTION 2026-07-27: 现行中文名为“传送带节”，由 RegistryQuery.isBelt 判定。
  *   可混合运输多种物品，不建 TransportComponent（无需域锁）。
  *
  * - `strict-pipe`：专用管道（pipe_straight_1x1 / pipe_turn_cw_1x1 / pipe_turn_ccw_1x1）。
+ *   AI-CORRECTION 2026-07-27: 现行中文名为“管道节”，由 RegistryQuery.isPipe 判定。
  *   独占一种液体，需要域锁。由 compileTransportComponents 构建连通分量，
  *   同一分量内管道共享 transportComponentDomain，确保不会混入第二种液体。
  *
@@ -36,6 +39,8 @@ export type SimulationPowerStatus = "no-power-needed" | "in-power-range" | "out-
  *     item_log_splitter、item_log_converger、item_log_connector、
  *     item_pipe_admission、item_log_admission）
  *   AI-CORRECTION 2026-07-19: 当前设备定义 ID 已移除 item_/item_port_ 前缀；上行保留迁移前名称。
+ *   AI-CORRECTION 2026-07-27: 上述“通用物流设备”现分别称为传送带物流设备、管道物流设备；
+ *   传送带物流设备不包括传送带节，管道物流设备不包括管道节。
  *   anchor 设备不参与 TransportComponent，且会**分割** strict-pipe 的连通分量：
  *   两个 strict-pipe 之间如果隔了一个 anchor 设备（如分流器），它们属于不同的 TransportComponent。
  *   这是有意设计——分流器/汇流器/桥接器自身有 buffer 和独立的搬运配方，不应被管道域锁约束。
@@ -177,6 +182,11 @@ export interface CompiledSimulationDevice {
   readonly powerDemand: number;
   /** 是否需要电力才能运行。对应 EntityDefinition.requiresPower。 */
   readonly requiresPower: boolean;
+  /**
+   * 物流族业务类型："belt" 表示传送带族，"pipe" 表示管道设备族，null 表示非物流族设备。
+   * 传送带物流设备不包括传送带节，管道物流设备不包括管道节；本字段覆盖两类完整族。
+   */
+  readonly logisticsKind: LogisticsKind | null;
   readonly transportClass: SimulationTransportClass;
   /** 若属于 strict-belt/strict-pipe 运输组件，则为该组件的 ID；否则为 null。 */
   readonly transportComponentId: string | null;

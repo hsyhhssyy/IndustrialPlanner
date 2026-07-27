@@ -8,13 +8,18 @@ import {
   type EntityCollectionType as EntityCollectionTypeValue,
 } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
+import type { RegistryQuery } from "@/domain/registry/registry-query"
+import { LOGISTICS_KIND } from "@/domain/shared/logistics"
 import {
   rotateGridRotation,
   resolveSpriteGridRect,
 } from "@/shared/geometry/grid"
 import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform"
 import type { GridEdge, GridPoint, GridRectSize, GridRotation } from "@/domain/shared/grid"
-import type { LogisticsDraftReadonlyState } from "@/domain/shared/logistics"
+import type {
+  LogisticsDraftReadonlyState,
+  LogisticsKind,
+} from "@/domain/shared/logistics"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import { resolveEffectiveCanvasTheme } from "@/shared/theme/canvas-theme"
 import { createMemorySnapshotCollector, type MemorySnapshotCollector } from "./memory-monitor"
@@ -100,44 +105,40 @@ const ENTITY_HIGH_DEFINITION_IDS = new Set([
   "water_pump_1",          // 抽水泵
 ])
 
-/** 传送带物流设备定义 ID —— 渲染到 logisticsBelt 层 */
-const BELT_DEFINITION_IDS = new Set([
-  "belt_straight_1x1",
-  "belt_turn_cw_1x1",
-  "belt_turn_ccw_1x1",
-  "log_splitter",
-  "log_converger",
-  "log_connector",
-  "log_admission",
-])
-
-/** 管道物流设备定义 ID —— 渲染到 logisticsPipe 层 */
-const PIPE_DEFINITION_IDS = new Set([
-  "pipe_straight_1x1",
-  "pipe_turn_cw_1x1",
-  "pipe_turn_ccw_1x1",
-  "pipe_splitter",
-  "pipe_converger",
-  "pipe_connector",
-  "pipe_admission",
-])
+// AI-REMOVED 2026-07-27:
+// Reason: renderer 不应维护传送带族和管道设备族 definition ID 集合。
+// Trigger: 用户要求设备 ID 归 registry 内部常量所有，registry 外只使用 RegistryQuery。
+// Evidence: RegistryQuery.isBeltFamily/isPipeFamily 已覆盖渲染分层。
+// Replacement: selectRenderLayerMap / resolveEntitySpriteLayerKey 的 queries 参数。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const BELT_DEFINITION_IDS = new Set([
+//   "belt_straight_1x1", "belt_turn_cw_1x1", "belt_turn_ccw_1x1",
+//   "log_splitter", "log_converger", "log_connector", "log_admission",
+// ])
+// const PIPE_DEFINITION_IDS = new Set([
+//   "pipe_straight_1x1", "pipe_turn_cw_1x1", "pipe_turn_ccw_1x1",
+//   "pipe_splitter", "pipe_converger", "pipe_connector", "pipe_admission",
+// ])
 
 function selectRenderLayerMap(
-  definitionId: string,
+  spriteLayerKey: EntitySpriteLayerKey,
   layers: RenderLayerMap,
   beltSubEntity: Container,
   pipeSubEntity: Container,
 ): RenderLayerMap {
-  if (ENTITY_LOW_DEFINITION_IDS.has(definitionId)) {
+  if (spriteLayerKey === "entityLow") {
     return { ...layers, entity: layers.entityLow }
   }
-  if (ENTITY_HIGH_DEFINITION_IDS.has(definitionId)) {
+  if (spriteLayerKey === "entityHigh") {
     return { ...layers, entity: layers.entityHigh }
   }
-  if (BELT_DEFINITION_IDS.has(definitionId)) {
+  if (spriteLayerKey === LOGISTICS_KIND.belt) {
     return { ...layers, entity: beltSubEntity }
   }
-  if (PIPE_DEFINITION_IDS.has(definitionId)) {
+  if (spriteLayerKey === LOGISTICS_KIND.pipe) {
     return { ...layers, entity: pipeSubEntity }
   }
   return layers
@@ -188,7 +189,12 @@ interface EntityGeometryStamp {
   readonly layerKey: EntitySpriteLayerKey;
 }
 
-type EntitySpriteLayerKey = "entityLow" | "entity" | "entityHigh" | "belt" | "pipe" | "draft"
+type EntitySpriteLayerKey =
+  | "entityLow"
+  | "entity"
+  | "entityHigh"
+  | LogisticsKind
+  | "draft"
 
 interface RenderFrameTimeState {
   nowMs: number;
@@ -199,7 +205,7 @@ interface AppWithLogisticsPlacementRuntime {
   internalState: {
     runtime: {
       logisticsPlacement: {
-        kind: "belt" | "pipe" | null;
+        kind: LogisticsKind | null;
       };
     };
   };
@@ -337,7 +343,10 @@ export function createRenderSceneOrchestrator(
 
     for (const entity of entities) {
       const definition = definitionMap.get(entity.definitionId);
-      if (!definition || isLogisticsEntity(definition)) {
+      if (
+        !definition
+        || isLogisticsEntity(definition, renderHost.workspace.registry.queries)
+      ) {
         continue;
       }
 
@@ -348,7 +357,10 @@ export function createRenderSceneOrchestrator(
           const neighbor = gridEntityMap.get(gridPointKey(outsideCell));
           if (neighbor !== undefined) {
             const neighborDef = definitionMap.get(neighbor.definitionId);
-            if (neighborDef !== undefined && isLogisticsEntity(neighborDef)) {
+            if (
+              neighborDef !== undefined
+              && isLogisticsEntity(neighborDef, renderHost.workspace.registry.queries)
+            ) {
               connectedKeys.add(`${portGroup.id}:${port.id}`);
             }
           }
@@ -486,7 +498,11 @@ export function createRenderSceneOrchestrator(
       "editor.listEntities",
       () => renderHost.workspace.editor!.queries.listEntities(),
     )
-    if (refreshEntityGeometryStamps(entities, entityGeometryStamps)) {
+    if (refreshEntityGeometryStamps(
+      entities,
+      entityGeometryStamps,
+      renderHost.workspace.registry.queries,
+    )) {
       documentVersion += 1
       frameVersions = {
         ...frameVersions,
@@ -785,7 +801,7 @@ function syncRendererDomOverlays(
 
 function resolveRendererLogisticsPlacementKind(
   renderHost: RenderHost,
-): "belt" | "pipe" | null {
+): LogisticsKind | null {
   const app = renderHost.workspace.app
 
   if (app === null || !("internalState" in app)) {
@@ -812,7 +828,7 @@ function createSpriteForDefinition(
   if (renderHost.workspace.registry.queries.isDedicatedLogisticsDevice(definition.id)) {
     const dedicatedLogisticsKind = renderHost.workspace.registry.queries.resolveDedicatedLogisticsKind(definition.id)
 
-    if (dedicatedLogisticsKind === "belt") {
+    if (dedicatedLogisticsKind === LOGISTICS_KIND.belt) {
       return new BeltSprite(entityId, definition, renderHost)
     }
 
@@ -964,6 +980,7 @@ function createRenderSimulationSignature(
 function refreshEntityGeometryStamps(
   entities: readonly WorldEntity[],
   stamps: Map<string, EntityGeometryStamp>,
+  queries: RegistryQuery,
 ): boolean {
   let changed = stamps.size !== entities.length
   if (!changed) {
@@ -975,7 +992,7 @@ function refreshEntityGeometryStamps(
         || stamp.x !== entity.position.x
         || stamp.y !== entity.position.y
         || stamp.rotation !== entity.rotation
-        || stamp.layerKey !== resolveEntitySpriteLayerKey(entity)
+        || stamp.layerKey !== resolveEntitySpriteLayerKey(entity, queries)
       ) {
         changed = true
         break
@@ -994,7 +1011,7 @@ function refreshEntityGeometryStamps(
       x: entity.position.x,
       y: entity.position.y,
       rotation: entity.rotation,
-      layerKey: resolveEntitySpriteLayerKey(entity),
+      layerKey: resolveEntitySpriteLayerKey(entity, queries),
     })
   }
   return true
@@ -1047,8 +1064,11 @@ function gridPointKey(point: GridPoint): string {
   return `${point.x},${point.y}`;
 }
 
-function isLogisticsEntity(definition: EntityDefinition): boolean {
-  return definition.tags.includes("BeltFamily") || definition.tags.includes("PipeFamily");
+function isLogisticsEntity(
+  definition: EntityDefinition,
+  queries: RegistryQuery,
+): boolean {
+  return queries.isBeltFamily(definition.id) || queries.isPipeFamily(definition.id);
 }
 
 function resolvePortOutsideGridPoint(
@@ -1251,7 +1271,10 @@ function syncWorldEntitySprites(options: {
       }
     }
 
-    const spriteLayerKey = resolveEntitySpriteLayerKey(entity)
+    const spriteLayerKey = resolveEntitySpriteLayerKey(
+      entity,
+      options.renderHost.workspace.registry.queries,
+    )
 
     const effectiveOffset = resolveEffectiveSpriteOffset(
       definition.spriteOffset,
@@ -1374,7 +1397,10 @@ function syncWorldEntitySprites(options: {
   return stats
 }
 
-function resolveEntitySpriteLayerKey(entity: WorldEntity): EntitySpriteLayerKey {
+function resolveEntitySpriteLayerKey(
+  entity: WorldEntity,
+  queries: RegistryQuery,
+): EntitySpriteLayerKey {
   if ("originalEntityId" in entity) {
     return "draft"
   }
@@ -1384,11 +1410,11 @@ function resolveEntitySpriteLayerKey(entity: WorldEntity): EntitySpriteLayerKey 
   if (ENTITY_HIGH_DEFINITION_IDS.has(entity.definitionId)) {
     return "entityHigh"
   }
-  if (BELT_DEFINITION_IDS.has(entity.definitionId)) {
-    return "belt"
+  if (queries.isBeltFamily(entity.definitionId)) {
+    return LOGISTICS_KIND.belt
   }
-  if (PIPE_DEFINITION_IDS.has(entity.definitionId)) {
-    return "pipe"
+  if (queries.isPipeFamily(entity.definitionId)) {
+    return LOGISTICS_KIND.pipe
   }
   return "entity"
 }
@@ -1407,7 +1433,7 @@ function syncEntitySpriteLayer(options: {
   }
 
   let layerMap = selectRenderLayerMap(
-    options.entity.definitionId,
+    options.spriteLayerKey,
     options.layers,
     options.beltSubEntity,
     options.pipeSubEntity,

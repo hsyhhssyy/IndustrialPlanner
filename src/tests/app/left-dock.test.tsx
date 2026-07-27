@@ -279,7 +279,12 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.getAttribute("data-panel-id")).toBe("placement");
     expect(visiblePanel?.textContent).toContain("批量选择");
     expect(visiblePanel.textContent).toContain("暗管出口");
-    expect(visiblePanel.textContent).not.toContain("设备");
+    expect(visiblePanel.textContent).toContain("传送带物流设备");
+    expect(visiblePanel.textContent).toContain("管道物流设备");
+    expect(
+      Array.from(visiblePanel.querySelectorAll(".placement-panel-group-header"))
+        .map((header) => header.textContent?.trim()),
+    ).not.toContain("设备");
     expect(visiblePanel.textContent).not.toContain("拖动虚影后点击确认完成放置。");
     expect(visiblePanel.querySelectorAll(".placement-panel-group")).toHaveLength(7);
     expect(visiblePanel.querySelectorAll(".placement-panel-divider")).toHaveLength(6);

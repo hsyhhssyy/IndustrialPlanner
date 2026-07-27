@@ -222,6 +222,7 @@ function searchUpstreamFromOutputNode(options: {
 
   // AI-CORRECTION 2026-07-23:
   // 一般 PipeFamily 组件也受整数秒相位门禁约束；BeltFamily 锚点仍保持原有逐 tick 行为。
+  // AI-CORRECTION 2026-07-27: 当前门禁依据编译期 logisticsKind；管道设备族全部受门禁，传送带族不受此门禁。
   if (!canDeviceTransferAtCurrentPhase(options.topology, options.state, device)) {
     return;
   }

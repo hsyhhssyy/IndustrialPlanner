@@ -4,7 +4,25 @@ import type {
   GridRotation,
 } from "./grid";
 
-export type LogisticsKind = "belt" | "pipe";
+/**
+ * 物流族业务类型。
+ *
+ * 所有业务判断和映射键必须引用此常量，避免散落的 "belt" / "pipe" 字面量拼写错误。
+ * 设备 definition ID 不属于此常量，其唯一事实源位于 registry 内部。
+ */
+export const LOGISTICS_KIND = {
+  belt: "belt",
+  pipe: "pipe",
+} as const;
+
+export type LogisticsKind =
+  (typeof LOGISTICS_KIND)[keyof typeof LOGISTICS_KIND];
+
+/** 全部物流族业务类型，供需要稳定遍历顺序的调用方使用。 */
+export const LOGISTICS_KINDS: readonly LogisticsKind[] = [
+  LOGISTICS_KIND.belt,
+  LOGISTICS_KIND.pipe,
+];
 
 export type LogisticsRouteOrder = "vertical-first" | "horizontal-first";
 
@@ -13,6 +31,18 @@ export type LogisticsPortKind = "item" | "fluid";
 export type LogisticsPortDirection = "input" | "output";
 
 export type LogisticsPathShape = "straight" | "turn-cw" | "turn-ccw";
+
+/**
+ * 物流设备角色。
+ *
+ * 仅表示分流器、汇流器、桥接器和准入口四类物流设备；
+ * 传送带物流设备不包括传送带节，管道物流设备不包括管道节。
+ */
+export type LogisticsRole =
+  | "splitter"
+  | "converger"
+  | "connector"
+  | "admission";
 
 export interface LogisticsPathCell {
   readonly gridPoint: GridPoint;

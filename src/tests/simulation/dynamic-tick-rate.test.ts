@@ -23,6 +23,7 @@ import type {
   CompiledSimulationTopology,
 } from "@/simulation/types";
 import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
+import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 
 describe("REQ-080: dynamic simulation tick rate", () => {
   it("keeps only phase-safe dynamic tick rates for the current belt and pipe transfer units", () => {
@@ -37,12 +38,12 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 8, transferUnitTicks })).toBe(false);
   });
 
-  it("gates general PipeFamily anchors at integer-second phases", () => {
+  it("gates pipe-family anchors at integer-second phases", () => {
     const topology = createProductionOverflowTopology(10);
     const state = createSimulationMutableRuntimeState(topology);
     const pipeAnchor = {
       ...topology.devices["device:maker"]!,
-      tags: ["PipeFamily"],
+      logisticsKind: LOGISTICS_KIND.pipe,
       transportClass: "anchor" as const,
     };
 
@@ -632,7 +633,8 @@ function createProductionOverflowTopology(
         tags: [],
         powerStatus: "in-power-range",
         powerDemand: 1,
-        requiresPower: true,
+      requiresPower: true,
+      logisticsKind: null,
         transportClass: "anchor",
         transportComponentId: null,
         nodeIds: ["node:out"],

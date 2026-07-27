@@ -19,10 +19,16 @@ import {
   createAdmissionItemIconEntityCache,
 } from "./AdmissionItemIconEntityCache";
 
-const ADMISSION_DEFINITION_IDS = new Set([
-  "log_admission",
-  "pipe_admission",
-]);
+// AI-REMOVED 2026-07-27:
+// Reason: renderer 不应维护传送带准入口和管道准入口 definition ID。
+// Trigger: 用户要求 registry 外只使用 Query，并将两族角色解析统一为 resolveLogisticsRole。
+// Evidence: RegistryQuery.resolveLogisticsRole 对两种准入口均返回 "admission"。
+// Replacement: AdmissionItemIconEntityCache.resolve 的 isAdmissionDefinition。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const ADMISSION_DEFINITION_IDS = new Set(["log_admission", "pipe_admission"]);
 
 interface AdmissionIconView {
   readonly root: Container;
@@ -63,9 +69,7 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
   // Original code:
   // let cachedDocumentSnapshot: unknown = null;
   // let admissionEntities: WorldEntity[] | null = null;
-  const admissionEntityCache = createAdmissionItemIconEntityCache(
-    ADMISSION_DEFINITION_IDS,
-  );
+  const admissionEntityCache = createAdmissionItemIconEntityCache();
   let textureConfig: RenderTextureConfig | null = null;
   let destroyed = false;
 
@@ -160,6 +164,9 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
       documentSnapshot: editor.document.getSnapshot(),
       entities: options.entities,
       previewEntities,
+      isAdmissionDefinition: (definitionId) =>
+        options.ctx.renderHost.workspace.registry.queries.resolveLogisticsRole(definitionId)
+          === "admission",
     });
   };
 
@@ -250,6 +257,7 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
           definitionId: entity.definitionId,
           suppressBelts,
           suppressPipes,
+          queries: ctx.renderHost.workspace.registry.queries,
         })) {
           continue;
         }

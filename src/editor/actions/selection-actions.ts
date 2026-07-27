@@ -107,6 +107,7 @@ export function createEditorSelectionActions({
       definitionId: entity.definitionId,
       suppressBelts: state.suppressBelts,
       suppressPipes: state.suppressPipes,
+      queries: workspace.registry.queries,
     });
   const entityDefinitionMap = new Map(
     workspace.registry.entityDefinitions.map((definition) => [

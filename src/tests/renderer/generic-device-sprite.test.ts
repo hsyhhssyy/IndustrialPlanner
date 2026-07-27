@@ -202,6 +202,7 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import { BeltSprite } from "@/renderer/sprites/belt-sprite"
 import { GenericDeviceSprite } from "@/renderer/sprites/generic-device-sprite"
 import { PipeSprite } from "@/renderer/sprites/pipe-sprite"
+import { createRegistryContract } from "@/registry"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
@@ -2815,7 +2816,7 @@ function createPipeEntityDefinitionStub(): EntityDefinition {
     spriteId: "pipe_straight_1x1",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
-    tags: ["PipeFamily"],
+    tags: [],
   }
 }
 
@@ -2836,7 +2837,7 @@ function createBeltLogisticsEntityDefinitionStub(): EntityDefinition {
     spriteId: "item_log_splitter",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
-    tags: ["BeltFamily"],
+    tags: [],
   }
 }
 
@@ -2848,7 +2849,7 @@ function createPipeAdmissionEntityDefinitionStub(): EntityDefinition {
     spriteId: "item_pipe_admission",
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
-    tags: ["PipeFamily"],
+    tags: [],
   }
 }
 
@@ -2876,6 +2877,7 @@ function createRenderContextStub(options: {
   const workspace: Record<string, unknown> = {
     registry: {
       itemDefinitions: options.itemDefinitions ?? [],
+      queries: createRegistryContract().queries,
     },
     editor: {
       state: {
@@ -3069,6 +3071,9 @@ function createRenderHostStub(
       },
     },
     workspace: {
+      registry: {
+        queries: createRegistryContract().queries,
+      },
       app: {
         actions: {
           translate: vi.fn((key: string) => {

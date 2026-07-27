@@ -17,12 +17,13 @@ import {
 } from "@/shared/geometry/grid"
 import { WORLD_GRID_CELL_PIXEL_SIZE, resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform"
 import type { GridRectSize, GridRotation } from "@/domain/shared/grid"
-import type { LogisticsKind } from "@/domain/shared/logistics"
+import { LOGISTICS_KIND, type LogisticsKind } from "@/domain/shared/logistics"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
+import type { RegistryQuery } from "@/domain/registry/registry-query"
 import type { RenderHost } from "@/renderer/renderer-host"
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
-import { resolveAccessoryLogisticsSuppressionFamily } from "@/shared/logistics-suppression"
+import { resolveLogisticsEquipmentSuppressionKind } from "@/shared/logistics-suppression"
 import {
   readSimplifiedDeviceIconPreference,
   resolveDeviceBodyTextureKey,
@@ -40,16 +41,19 @@ const DEGREE_TO_RADIAN = Math.PI / 180
 
 const BLUEPRINT_SPRITE_TEXTURE_PREFIX = "blueprint-sprite-"
 const BLUEPRINT_MASK_TEXTURE_PREFIX = "blueprint-masks-"
-const FORCE_BLUEPRINT_PREVIEW_DEFINITION_IDS = new Set([
-  "log_splitter",
-  "log_converger",
-  "log_connector",
-  "log_admission",
-  "pipe_splitter",
-  "pipe_converger",
-  "pipe_connector",
-  "pipe_admission",
-])
+// AI-REMOVED 2026-07-27:
+// Reason: renderer 不应重复维护 8 个物流设备 definition ID。
+// Trigger: 用户要求 registry 外只通过 Query 判断；物流设备明确不包括传送带节和管道节。
+// Evidence: RegistryQuery.isBeltLogistics/isPipeLogistics 已覆盖蓝图预览范围。
+// Replacement: shouldForceBlueprintPreviewTexture。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const FORCE_BLUEPRINT_PREVIEW_DEFINITION_IDS = new Set([
+//   "log_splitter", "log_converger", "log_connector", "log_admission",
+//   "pipe_splitter", "pipe_converger", "pipe_connector", "pipe_admission",
+// ])
 
 const DEFAULT_GHOST_ROOT_ALPHA = 0.2;
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1;
@@ -205,7 +209,7 @@ interface AppWithLogisticsPlacementRuntime {
   internalState: {
     runtime: {
       logisticsPlacement: {
-        kind: "belt" | "pipe" | null;
+        kind: LogisticsKind | null;
       };
     };
   };
@@ -764,11 +768,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private resolveSuppressedAccessoryFamily(
     context: RenderSpriteSyncContext,
   ): LogisticsKind | null {
-    const family = resolveAccessoryLogisticsSuppressionFamily(this.definition.id)
-    if (family === "belt" && context.suppressBelts) {
+    const family = resolveLogisticsEquipmentSuppressionKind(
+      this.definition.id,
+      this.renderHost.workspace.registry.queries,
+    )
+    if (family === LOGISTICS_KIND.belt && context.suppressBelts) {
       return family
     }
-    if (family === "pipe" && context.suppressPipes) {
+    if (family === LOGISTICS_KIND.pipe && context.suppressPipes) {
       return family
     }
     return null
@@ -800,7 +807,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.scanlineTiling.rotation = 0
     this.scanlineTiling.width = footprintLayout.width
     this.scanlineTiling.height = footprintLayout.height
-    this.scanlineTiling.tint = family === "belt"
+    this.scanlineTiling.tint = family === LOGISTICS_KIND.belt
       ? SUPPRESSED_BELT_COLOR
       : SUPPRESSED_PIPE_COLOR
     this.scanlineTiling.tilePosition.x = phase * tilePixelSize
@@ -996,7 +1003,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return;
     }
 
-    if (!shouldRenderDeviceLabel(this.definition)) {
+    if (!shouldRenderDeviceLabel(
+      this.definition,
+      this.renderHost.workspace.registry.queries,
+    )) {
       this.deviceLabelRoot.visible = false;
       this.deviceIcon.visible = false;
       this.deviceNameText.visible = false;
@@ -1730,7 +1740,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     const draft = context.workspace.editor?.queries?.resolveLogisticsDraftState?.();
 
     if (draft !== undefined && draft !== null) {
-      return draft.kind === "belt" ? "item" : "fluid";
+      return draft.kind === LOGISTICS_KIND.belt ? "item" : "fluid";
     }
 
     // 未起笔时从 app 运行时状态获取 logisticsPlacement.kind
@@ -1740,8 +1750,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       const kind = (app as AppWithLogisticsPlacementRuntime)
         .internalState.runtime.logisticsPlacement.kind;
 
-      if (kind === "belt") return "item";
-      if (kind === "pipe") return "fluid";
+      if (kind === LOGISTICS_KIND.belt) return "item";
+      if (kind === LOGISTICS_KIND.pipe) return "fluid";
     }
 
     return null;
@@ -1784,7 +1794,13 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   private shouldForceBlueprintPreviewTexture(context: RenderSpriteSyncContext): boolean {
-    if (!FORCE_BLUEPRINT_PREVIEW_DEFINITION_IDS.has(this.definition.id)) {
+    const queries = this.renderHost.workspace.registry.queries
+    // 这里只强制处理 8 个物流设备；传送带物流设备不包括传送带节，
+    // 管道物流设备不包括管道节。
+    if (
+      !queries.isBeltLogistics(this.definition.id)
+      && !queries.isPipeLogistics(this.definition.id)
+    ) {
       return false
     }
 
@@ -1961,8 +1977,11 @@ function resolveDeviceDisplayName(
   return translated && translated !== definition.nameKey ? translated : definition.id;
 }
 
-function shouldRenderDeviceLabel(definition: EntityDefinition): boolean {
-  return !definition.tags.some((tag) => tag === "BeltFamily" || tag === "PipeFamily");
+function shouldRenderDeviceLabel(
+  definition: EntityDefinition,
+  queries: RegistryQuery,
+): boolean {
+  return !queries.isBeltFamily(definition.id) && !queries.isPipeFamily(definition.id);
 }
 
 function createDeviceNameTextStyleKey(options: {

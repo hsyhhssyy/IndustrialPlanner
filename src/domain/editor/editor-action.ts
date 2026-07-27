@@ -11,6 +11,7 @@ import type { GridPoint, GridRect, GridRotation } from "../shared/grid";
 import type {
 	CreateLogisticsDraftStartOptions,
 	LogisticsDraftActionResult,
+	LogisticsKind,
 	MoveLogisticsDraftEndOptions,
 } from "../shared/logistics";
 import type { BlueprintDocument } from "../document/blueprint-document";
@@ -143,5 +144,5 @@ export interface EditorAction {
          * 抑制后，对应种类的物流设备在渲染时显示为简化线框，
          * 且在点击命中检测中被跳过。
          */
-        setLogisticsSuppression(family: "belt" | "pipe", value: boolean): void;
+        setLogisticsSuppression(family: LogisticsKind, value: boolean): void;
 }

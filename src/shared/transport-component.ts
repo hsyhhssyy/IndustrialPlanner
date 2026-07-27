@@ -7,6 +7,7 @@ import type {
   LogisticsPortDirection,
   LogisticsPortKind,
 } from "@/domain/shared/logistics";
+import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 
 import { getRotatedGridFootprint } from "./geometry/grid";
 import {
@@ -171,7 +172,7 @@ function resolveDevicePortEndpoints(options: {
 }
 
 function resolvePortKindForLogisticsKind(kind: LogisticsKind): LogisticsPortKind {
-  return kind === "belt" ? "item" : "fluid";
+  return kind === LOGISTICS_KIND.belt ? "item" : "fluid";
 }
 
 function resolveEntityGridRect(options: {

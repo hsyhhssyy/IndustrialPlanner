@@ -464,6 +464,8 @@ describe("createRenderSceneOrchestrator", () => {
           queries: {
             isDedicatedLogisticsDevice: vi.fn(() => false),
             resolveDedicatedLogisticsKind: vi.fn(() => null),
+            isBeltFamily: vi.fn(() => false),
+            isPipeFamily: vi.fn(() => false),
           },
         },
         app: {
@@ -610,6 +612,8 @@ describe("createRenderSceneOrchestrator", () => {
           queries: {
             isDedicatedLogisticsDevice: vi.fn(() => false),
             resolveDedicatedLogisticsKind: vi.fn(() => null),
+            isBeltFamily: vi.fn(() => false),
+            isPipeFamily: vi.fn(() => false),
           },
         },
         app: {
@@ -742,6 +746,10 @@ describe("createRenderSceneOrchestrator", () => {
               definitionId === "belt_straight_1x1",
             ),
             resolveDedicatedLogisticsKind: vi.fn(() => "belt"),
+            isBeltFamily: vi.fn((definitionId: string) =>
+              definitionId === "belt_straight_1x1",
+            ),
+            isPipeFamily: vi.fn(() => false),
           },
         },
         app: {

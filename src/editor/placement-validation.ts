@@ -8,6 +8,11 @@ import {
 } from "@/domain/editor/types/editor-types";
 import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { RegistryQuery } from "@/domain/registry/registry-query";
+import {
+  LOGISTICS_KIND,
+  type LogisticsKind,
+} from "@/domain/shared/logistics";
 import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import {
   isBaseBuiltinEntityId,
@@ -422,6 +427,7 @@ function applyOverlapReasons(options: {
       if (isAllowedLogisticsPlacementReplacement({
         left,
         right,
+        registryQueries: options.registry.queries,
       })) {
         continue;
       }
@@ -829,16 +835,19 @@ function areGridRectsEdgeAdjacent(left: GridRect, right: GridRect): boolean {
 /**
  * 返回设备定义所属的物流族标签，不存在则返回 null。
  * 用于判定两个设备是否为同一物流族（BeltFamily / PipeFamily），决定是否允许放置替换。
+ * AI-CORRECTION 2026-07-27: 当前返回 registry 物流族类型，不再解析 tag。
  */
-function resolveLogisticsFamilyTag(
+function resolveLogisticsKind(
   definition: EntityDefinition,
-): "belt" | "pipe" | null {
-  if (definition.tags.includes("BeltFamily")) {
-    return "belt";
+  registryQueries: RegistryQuery,
+): LogisticsKind | null {
+  // AI-CORRECTION 2026-07-27: 物流族由 RegistryQuery 判定，不再读取 BeltFamily / PipeFamily tag。
+  if (registryQueries.isBeltFamily(definition.id)) {
+    return LOGISTICS_KIND.belt;
   }
 
-  if (definition.tags.includes("PipeFamily")) {
-    return "pipe";
+  if (registryQueries.isPipeFamily(definition.id)) {
+    return LOGISTICS_KIND.pipe;
   }
 
   return null;
@@ -849,6 +858,7 @@ function resolveLogisticsFamilyTag(
  * 条件：
  *   1. 一方是 placement-draft 预览实体，另一方是 document 正式实体
  *   2. 双方属于同一物流族（BeltFamily / PipeFamily）
+ *      AI-CORRECTION 2026-07-27: 同族关系由 isBeltFamily / isPipeFamily Query 判定，不再依赖 tag。
  *   3. 双方占据的 grid rect 完全相同
  * 满足以上条件时不报重叠错误，放置提交时由 applyPlacementDraft 执行实际替换。
  * 移动草稿（move-draft:）不满足条件 1，因此移动时仍然会报重叠。
@@ -856,6 +866,7 @@ function resolveLogisticsFamilyTag(
 function isAllowedLogisticsPlacementReplacement(options: {
   left: PlacementValidationEntry;
   right: PlacementValidationEntry;
+  registryQueries: RegistryQuery;
 }): boolean {
   const leftIsPlacementDraft = options.left.entity.id.startsWith("placement-draft:");
   const rightIsPlacementDraft = options.right.entity.id.startsWith("placement-draft:");
@@ -865,8 +876,14 @@ function isAllowedLogisticsPlacementReplacement(options: {
     return false;
   }
 
-  const leftFamily = resolveLogisticsFamilyTag(options.left.definition);
-  const rightFamily = resolveLogisticsFamilyTag(options.right.definition);
+  const leftFamily = resolveLogisticsKind(
+    options.left.definition,
+    options.registryQueries,
+  );
+  const rightFamily = resolveLogisticsKind(
+    options.right.definition,
+    options.registryQueries,
+  );
 
   // 双方必须同族
   if (leftFamily === null || leftFamily !== rightFamily) {

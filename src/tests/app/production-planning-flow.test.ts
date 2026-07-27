@@ -78,6 +78,7 @@ function itemNode(
 
 function emptyPlanningIndex(): ProductionPlanningIndex {
   return {
+    registryQueries: createRegistryContract().queries,
     itemById: new Map(),
     entityById: new Map(),
     recipeById: new Map(),

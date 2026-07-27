@@ -14,6 +14,7 @@ import {
   BELT_TRANSPORT_DURATION_SECONDS,
   PIPE_TRANSPORT_DURATION_SECONDS,
 } from "@/domain/registry";
+import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 
 export interface TransportRecipeTiming {
   readonly durationTicks: number;
@@ -29,15 +30,15 @@ export function isDedicatedLogisticsDevice(
 export function isPhaseGatedLogisticsDevice(
   device: CompiledSimulationDevice,
 ): boolean {
-  return isDedicatedLogisticsDevice(device) || (device.tags ?? []).includes("PipeFamily");
+  return device.logisticsKind === LOGISTICS_KIND.pipe;
 }
 
 export function resolveTransportRecipeTiming(
   topology: CompiledSimulationTopology,
   device: CompiledSimulationDevice,
 ): TransportRecipeTiming | null {
-  const isBelt = device.transportClass === "strict-belt" || (device.tags ?? []).includes("BeltFamily");
-  const isPipe = device.transportClass === "strict-pipe" || (device.tags ?? []).includes("PipeFamily");
+  const isBelt = device.logisticsKind === LOGISTICS_KIND.belt;
+  const isPipe = device.logisticsKind === LOGISTICS_KIND.pipe;
 
   if (!isBelt && !isPipe) {
     return null;

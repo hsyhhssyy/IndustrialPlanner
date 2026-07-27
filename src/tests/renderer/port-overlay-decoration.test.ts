@@ -21,6 +21,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device],
       entityDefinitionMap,
+      queries: registry.queries,
       kind: "belt",
       direction: "output",
       basePlaceableArea: { width: 64, height: 64 },
@@ -40,6 +41,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device, connectedBelt],
       entityDefinitionMap,
+      queries: registry.queries,
       kind: "belt",
       direction: "output",
     });
@@ -59,6 +61,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device, left, crossing, right],
       entityDefinitionMap,
+      queries: registry.queries,
       kind: "belt",
       direction: "output",
     });
@@ -73,6 +76,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device, reversedBelt],
       entityDefinitionMap,
+      queries: registry.queries,
       kind: "belt",
       direction: "output",
     });
@@ -87,6 +91,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device, wall],
       entityDefinitionMap,
+      queries: registry.queries,
       kind: "belt",
       direction: "output",
     });
@@ -100,6 +105,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device],
       entityDefinitionMap,
+      queries: registry.queries,
       kind: "belt",
       direction: "output",
     });
@@ -119,6 +125,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device, connectedBelt],
       entityDefinitionMap,
+      queries: registry.queries,
       kind: "belt",
       direction: "output",
     });
@@ -136,6 +143,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device, wall],
       entityDefinitionMap,
+      queries: registry.queries,
       kind: "belt",
       direction: "output",
     });
@@ -152,6 +160,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device, left, crossing, right],
       entityDefinitionMap,
+      queries: registry.queries,
       kind: "belt",
       direction: "output",
     });
@@ -166,6 +175,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [device, wall],
       entityDefinitionMap,
+      queries: registry.queries,
       kind: "belt",
       direction: "output",
     });
@@ -184,6 +194,7 @@ describe("PortOverlayDecoration 端口语义", () => {
     const entries = resolveLogisticsPortOverlayEntries({
       entities: [liquid, gas],
       entityDefinitionMap,
+      queries: registry.queries,
       kind: "pipe",
       direction: "output",
     });

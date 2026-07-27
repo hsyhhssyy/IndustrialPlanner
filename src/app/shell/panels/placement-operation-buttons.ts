@@ -3,6 +3,7 @@ import type { AppHost } from "@/app/host/app-host";
 import { canCurrentBaseAcceptWulingOnlyEntities } from "@/app/placement-zone-availability";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { UiKey } from "@/shared/i18n";
+import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import { createDeviceIconAssetUrl } from "@/shared/browser/public-asset-url";
 import type { ComponentProps } from "react";
 
@@ -43,7 +44,7 @@ const BELT_DRAW_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
   hotkeyKeyId: SHORTCUT_KEY.PLACE_CONVEYOR,
   activeWhen: (appHost) =>
     appHost.state.activeTool === "logistics-placement"
-    && appHost.internalState.runtime.logisticsPlacement.kind === "belt",
+    && appHost.internalState.runtime.logisticsPlacement.kind === LOGISTICS_KIND.belt,
 };
 
 const PIPE_DRAW_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
@@ -54,7 +55,7 @@ const PIPE_DRAW_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
   visibleWhen: canCurrentBaseAcceptWulingOnlyEntities,
   activeWhen: (appHost) =>
     appHost.state.activeTool === "logistics-placement"
-    && appHost.internalState.runtime.logisticsPlacement.kind === "pipe",
+    && appHost.internalState.runtime.logisticsPlacement.kind === LOGISTICS_KIND.pipe,
 };
 
 export const PLACEMENT_OPERATION_BUTTONS = [

@@ -1,10 +1,47 @@
-import type { LogisticsKind } from "../shared/logistics";
+import type {
+	LogisticsKind,
+	LogisticsPathShape,
+	LogisticsRole,
+} from "../shared/logistics";
 import type { SlotLinkDefinition } from "../shared/slot-link";
 import type { ItemDomain } from "./types/entity-definition";
 
 export interface RegistryQuery {
+	/** 判定是否为传送带节：仅包括直线节和两个转角节。 */
+	isBelt(definitionId: string): boolean;
+	/** 判定是否为传送带物流设备；传送带物流设备不包括传送带节。 */
+	isBeltLogistics(definitionId: string): boolean;
+	/** 判定是否属于传送带族：传送带节与传送带物流设备的并集。 */
+	isBeltFamily(definitionId: string): boolean;
+
+	/** 判定是否为管道节：仅包括直线节和两个转角节。 */
+	isPipe(definitionId: string): boolean;
+	/** 判定是否为管道物流设备；管道物流设备不包括管道节。 */
+	isPipeLogistics(definitionId: string): boolean;
+	/** 判定是否属于管道设备族：管道节与管道物流设备的并集。 */
+	isPipeFamily(definitionId: string): boolean;
+
+	/** 按物流族和路径形状解析传送带节或管道节的 definition ID。 */
+	resolveLogisticsDefinitionId(
+		kind: LogisticsKind,
+		shape: LogisticsPathShape,
+	): string;
+
+	/**
+	 * 解析分流器、汇流器、桥接器或准入口的通用物流角色。
+	 * 传送带节、管道节和非物流设备均返回 null。
+	 */
+	resolveLogisticsRole(definitionId: string): LogisticsRole | null;
+
+	/** @deprecated 兼容旧调用；现行语义为“是否为传送带节或管道节”，请改用 isBelt / isPipe。 */
 	isDedicatedLogisticsDevice(definitionId: string): boolean;
+	/** @deprecated 兼容旧调用；解析传送带节或管道节类型，请优先组合 isBelt / isPipe。 */
 	resolveDedicatedLogisticsKind(definitionId: string): LogisticsKind | null;
+	/**
+	 * @deprecated 兼容旧调用；现行语义为“是否属于传送带族或管道设备族”。
+	 * 请改用 isBeltFamily / isPipeFamily。传送带物流设备不包括传送带节，
+	 * 管道物流设备不包括管道节。
+	 */
 	isGeneralLogisticsDevice(definitionId: string): boolean;
 
 	/**

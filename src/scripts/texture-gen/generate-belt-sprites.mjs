@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
+import { LOGISTICS_KIND } from '../../domain/shared/logistics.ts';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, '..', '..', '..');
@@ -15,7 +16,7 @@ const outputMaskDirectory = path.resolve(
 const SPRITE_SIZE = 256;
 const LOGISTICS_SPRITE_SPECS = [
   {
-    label: 'belt',
+    label: LOGISTICS_KIND.belt,
     straightSpriteId: 'belt_straight_1x1',
     turnSpriteIds: [
       'belt_turn_cw_1x1',
@@ -28,7 +29,7 @@ const LOGISTICS_SPRITE_SPECS = [
     edgeWidth: Math.max(6, Math.round(SPRITE_SIZE * 0.035)),
   },
   {
-    label: 'pipe',
+    label: LOGISTICS_KIND.pipe,
     straightSpriteId: 'pipe_straight_1x1',
     turnSpriteIds: [
       'pipe_turn_cw_1x1',

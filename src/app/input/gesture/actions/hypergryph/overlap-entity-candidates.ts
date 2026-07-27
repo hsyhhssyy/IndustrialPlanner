@@ -184,6 +184,7 @@ function isSuppressedLogisticsEntity(
     definitionId,
     suppressBelts: editor.state.suppressBelts,
     suppressPipes: editor.state.suppressPipes,
+    queries: appHost.workspace.registry.queries,
   });
 }
 

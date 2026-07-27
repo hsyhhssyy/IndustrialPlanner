@@ -15,6 +15,7 @@ import type {
   LogisticsKind,
   LogisticsRouteOrder,
 } from "@/domain/shared/logistics";
+import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { createLogger } from "@/shared/logging/logger";
@@ -42,11 +43,18 @@ const BELT_DRAW_BUTTON_ID = "placement-action-belt-draw";
 const PIPE_DRAW_BUTTON_ID = "placement-action-pipe-draw";
 
 const logisticsLogger = createLogger("logistics-placement");
-const ORDINARY_BELT_DEFINITION_IDS = new Set([
-  "belt_straight_1x1",
-  "belt_turn_cw_1x1",
-  "belt_turn_ccw_1x1",
-]);
+// AI-REMOVED 2026-07-27:
+// Reason: app 手势层不应维护 3 个传送带节 definition ID。
+// Trigger: 用户要求 registry 外只使用 Query。
+// Evidence: RegistryQuery.isBelt 精确表示传送带节。
+// Replacement: shouldStopAfterApplyingToExistingBeltStart。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const ORDINARY_BELT_DEFINITION_IDS = new Set([
+//   "belt_straight_1x1", "belt_turn_cw_1x1", "belt_turn_ccw_1x1",
+// ]);
 const GRID_EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
 
 interface LogisticsPlacementBehaviorOptions {
@@ -111,7 +119,9 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
           enterLogisticsPlacementMode({
             appHost: context.appHost,
             editor,
-            kind: group === "beltLogistics" ? "belt" : "pipe",
+            kind: group === "beltLogistics"
+              ? LOGISTICS_KIND.belt
+              : LOGISTICS_KIND.pipe,
             pointerMode: "mouse",
           });
           return { status: "handled" };
@@ -125,7 +135,10 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       if (event.type === "ui-button-mouse-tap" && event.button === 0) {
         const kind = resolveKindFromOperationButton(event.uiButtonId);
         if (kind !== null) {
-          if (kind === "pipe" && !canCurrentBaseAcceptWulingOnlyEntities(context.appHost)) {
+          if (
+            kind === LOGISTICS_KIND.pipe
+            && !canCurrentBaseAcceptWulingOnlyEntities(context.appHost)
+          ) {
             return { status: "ignored" };
           }
 
@@ -142,7 +155,10 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       if (event.type === "ui-button-touch-tap") {
         const kind = resolveKindFromOperationButton(event.uiButtonId);
         if (kind !== null) {
-          if (kind === "pipe" && !canCurrentBaseAcceptWulingOnlyEntities(context.appHost)) {
+          if (
+            kind === LOGISTICS_KIND.pipe
+            && !canCurrentBaseAcceptWulingOnlyEntities(context.appHost)
+          ) {
             return { status: "ignored" };
           }
 
@@ -325,17 +341,21 @@ function enterLogisticsPlacementMode(options: {
   resetLogisticsRuntime(options.appHost);
   const runtime = options.appHost.internalState.runtime.logisticsPlacement;
   runtime.kind = options.kind;
-  runtime.shortcutPlacementGroup = options.kind === "belt" ? "beltLogistics" : "pipeLogistics";
+  runtime.shortcutPlacementGroup = options.kind === LOGISTICS_KIND.belt
+    ? "beltLogistics"
+    : "pipeLogistics";
   runtime.pointerMode = options.pointerMode;
   runtime.phase = "idle";
   runtime.routeOrder = "vertical-first";
   options.appHost.internalState.runtime.selectingPlacementGroup = runtime.shortcutPlacementGroup;
   options.appHost.workspace.editor?.actions.setLogisticsSuppression(
-    options.kind === "belt" ? "pipe" : "belt",
+    options.kind === LOGISTICS_KIND.belt
+      ? LOGISTICS_KIND.pipe
+      : LOGISTICS_KIND.belt,
     true,
   );
   options.appHost.internalActions.showCanvasTopLeftCornerToolbar(
-    options.kind === "belt"
+    options.kind === LOGISTICS_KIND.belt
       ? ["canvas-top-left-corner-toolbar-button-toggle-pipe-off"]
       : ["canvas-top-left-corner-toolbar-button-toggle-belt-off"],
   );
@@ -730,7 +750,8 @@ function handleMouseLeftTap(options: {
     ? options.editor.queries.getEntityById(headDraftId)
     : null;
   const isHeadConverger = headEntity !== null
-    && (headEntity.definitionId === 'log_converger' || headEntity.definitionId === 'pipe_converger');
+    && options.appHost.workspace.registry.queries.resolveLogisticsRole(headEntity.definitionId)
+      === "converger";
   const shouldStopAtExistingBeltStart = shouldStopAfterApplyingToExistingBeltStart({
     appHost: options.appHost,
     editor: options.editor,
@@ -1146,8 +1167,8 @@ function syncLogisticsPlacementEntryUi(appHost: AppHost): void {
 
 function resetLogisticsRuntime(appHost: AppHost): void {
   const runtime = appHost.internalState.runtime.logisticsPlacement;
-  appHost.workspace.editor?.actions.setLogisticsSuppression("belt", false);
-  appHost.workspace.editor?.actions.setLogisticsSuppression("pipe", false);
+  appHost.workspace.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.belt, false);
+  appHost.workspace.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.pipe, false);
   runtime.kind = null;
   runtime.shortcutPlacementGroup = null;
   runtime.pointerMode = null;
@@ -1176,10 +1197,10 @@ function softResetLogisticsRuntime(appHost: AppHost): void {
 
 function resolveKindFromOperationButton(uiButtonId: string): LogisticsKind | null {
   if (uiButtonId === BELT_DRAW_BUTTON_ID) {
-    return "belt";
+    return LOGISTICS_KIND.belt;
   }
   if (uiButtonId === PIPE_DRAW_BUTTON_ID) {
-    return "pipe";
+    return LOGISTICS_KIND.pipe;
   }
 
   return null;
@@ -1239,7 +1260,7 @@ function shouldStopAfterApplyingToExistingBeltStart(options: {
   kind: LogisticsKind;
 }): boolean {
   if (
-    options.kind !== "belt"
+    options.kind !== LOGISTICS_KIND.belt
     || options.headGridPoint === null
     || options.targetEntityId !== null
     || options.draftState.target !== null
@@ -1256,7 +1277,7 @@ function shouldStopAfterApplyingToExistingBeltStart(options: {
   });
   if (
     originalHeadEntity === null
-    || !ORDINARY_BELT_DEFINITION_IDS.has(originalHeadEntity.definitionId)
+    || !options.appHost.workspace.registry.queries.isBelt(originalHeadEntity.definitionId)
     || !options.editor.state.collections[EntityCollectionType.ghost].includes(originalHeadEntity.id)
   ) {
     return false;
@@ -1289,13 +1310,13 @@ function resolveOrdinaryBeltConnectionInfo(options: {
   const inputEndpoint = resolveEntityPortEndpoints({
     entity: options.entity,
     definition,
-    kind: "belt",
+    kind: LOGISTICS_KIND.belt,
     direction: "input",
   })[0];
   const outputEndpoint = resolveEntityPortEndpoints({
     entity: options.entity,
     definition,
-    kind: "belt",
+    kind: LOGISTICS_KIND.belt,
     direction: "output",
   })[0];
   if (inputEndpoint === undefined || outputEndpoint === undefined) {
@@ -1344,7 +1365,7 @@ function doesNeighborOutputConnectToGridPoint(options: {
   return resolveEntityPortEndpoints({
     entity: neighbor,
     definition,
-    kind: "belt",
+    kind: LOGISTICS_KIND.belt,
     direction: "output",
   }).some((endpoint) => areGridPointsEqual(endpoint.outsideGridPoint, options.targetGridPoint));
 }
@@ -1373,7 +1394,7 @@ function doesGridPointOutputConnectToNeighborInput(options: {
   return resolveEntityPortEndpoints({
     entity: neighbor,
     definition,
-    kind: "belt",
+    kind: LOGISTICS_KIND.belt,
     direction: "input",
   }).some((endpoint) => areGridPointsEqual(endpoint.outsideGridPoint, options.sourceGridPoint));
 }
@@ -1418,7 +1439,7 @@ function resolveEntityPortEndpoints(options: {
 }): Array<{
   outsideGridPoint: GridPoint;
 }> {
-  const portKind = options.kind === "belt" ? "item" : "fluid";
+  const portKind = options.kind === LOGISTICS_KIND.belt ? "item" : "fluid";
   const endpoints: Array<{ outsideGridPoint: GridPoint }> = [];
 
   for (const portGroup of options.definition.portGroups) {

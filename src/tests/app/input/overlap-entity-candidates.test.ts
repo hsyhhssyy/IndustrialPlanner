@@ -26,6 +26,7 @@ describe("overlap entity candidates logistics suppression", () => {
             createDefinition("belt_straight_1x1"),
             createDefinition("pipe_admission"),
           ],
+          queries: createLogisticsQueries(),
         },
       },
     };
@@ -54,6 +55,7 @@ describe("overlap entity candidates logistics suppression", () => {
         editor,
         registry: {
           entityDefinitions: [createDefinition("pipe_admission")],
+          queries: createLogisticsQueries(),
         },
       },
     };
@@ -95,5 +97,14 @@ function createDefinition(id: string): EntityDefinition {
     recipeChannels: [],
     portStorageBindings: [],
     inspectors: [],
+  };
+}
+
+function createLogisticsQueries() {
+  return {
+    isBeltFamily: (definitionId: string) => definitionId === "belt_straight_1x1",
+    isPipeFamily: (definitionId: string) => definitionId === "pipe_admission",
+    isBeltLogistics: () => false,
+    isPipeLogistics: (definitionId: string) => definitionId === "pipe_admission",
   };
 }

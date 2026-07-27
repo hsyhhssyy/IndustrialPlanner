@@ -163,8 +163,9 @@ export function RecipeDisplay({
           <LucideChevronsRight aria-hidden="true" />
         </span>
         <span className={cm(styles, "recipe-display-formula-group")}>
-          {recipe.outputs.map((output, _i) => (
+          {recipe.outputs.map((output, i) => (
             <span key={`out-${output.itemId}`} className={cm(styles, "recipe-display-formula-item-group")}>
+              {i > 0 && <span className={cm(styles, "recipe-display-formula-plus")}>+</span>}
               {renderItemIcon(output.itemId, output.amount, `out-${output.itemId}`)}
             </span>
           ))}
@@ -185,8 +186,9 @@ export function RecipeDisplay({
         <span>▶▶</span>
         <span>{recipe.durationSeconds}{t("productionPlanning.second_short")}</span>
       </span>
-      {recipe.outputs.map((output) => (
+      {recipe.outputs.map((output, i) => (
         <span key={`out-${output.itemId}`} className={cm(styles, "recipe-display-formula-item-group")}>
+          {i > 0 && <span className={cm(styles, "recipe-display-formula-plus")}>+</span>}
           {renderItemIcon(output.itemId, output.amount, `out-${output.itemId}`)}
         </span>
       ))}

@@ -5,6 +5,8 @@ export interface AdmissionItemIconEntityCache {
     documentSnapshot: unknown;
     entities: readonly WorldEntity[];
     previewEntities: readonly WorldEntity[];
+    /** 由 RegistryQuery.resolveLogisticsRole 提供，避免缓存持有 definition ID。 */
+    isAdmissionDefinition: (definitionId: string) => boolean;
   }): readonly WorldEntity[];
 }
 
@@ -14,9 +16,7 @@ export interface AdmissionItemIconEntityCache {
  * 准入口图标与正式 document 和 preview 草稿都有关：移动时草稿位置变化，
  * 取消时草稿会消失，两者都不会修改正式 document。
  */
-export function createAdmissionItemIconEntityCache(
-  admissionDefinitionIds: ReadonlySet<string>,
-): AdmissionItemIconEntityCache {
+export function createAdmissionItemIconEntityCache(): AdmissionItemIconEntityCache {
   let cachedDocumentSnapshot: unknown = null;
   let cachedPreviewEntities: readonly WorldEntity[] = [];
   let cachedAdmissionEntities: readonly WorldEntity[] = [];
@@ -33,7 +33,7 @@ export function createAdmissionItemIconEntityCache(
       cachedDocumentSnapshot = options.documentSnapshot;
       cachedPreviewEntities = [...options.previewEntities];
       cachedAdmissionEntities = options.entities.filter((entity) =>
-        admissionDefinitionIds.has(entity.definitionId),
+        options.isAdmissionDefinition(entity.definitionId),
       );
 
       return cachedAdmissionEntities;

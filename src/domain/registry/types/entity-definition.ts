@@ -12,7 +12,9 @@ export type ItemFilterType = ItemDomain | "fluid" | "any";
 
 export type UiGroup =
   | "beltLogistics"           // 传送带物流
+  // AI-CORRECTION 2026-07-27: 该 UI 分组称为“传送带物流设备”，不包括传送带节。
   | "pipeLogistics"           // 管道物流
+  // AI-CORRECTION 2026-07-27: 该 UI 分组称为“管道物流设备”，不包括管道节。
   | "resourcePower"           // 资源与电力
   | "warehouse"               // 仓库存取
   | "basicProduction"         // 基础生产
@@ -67,6 +69,7 @@ export interface EntityDefinition {
   /** 展示排序权重，数字越小越靠前 */
   displayOrder: number;
   /** 语义标签，如 "BeltFamily"（传送带族）、"武陵"（场景限定） */
+  /** AI-CORRECTION 2026-07-27: 物流族分类统一通过 RegistryQuery，不再使用 BeltFamily / PipeFamily tag。 */
   tags: string[];
 
   // ---- 电力 ----

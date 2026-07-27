@@ -30,6 +30,7 @@ export function createEditorLogisticsQueries(
         document: context.document.getSnapshot(),
         drafts: [],
         entityDefinitionMap,
+        registryQueries: context.workspace.registry.queries,
         baseDefinitions: context.workspace.registry.baseDefinitions,
       });
     },
@@ -40,6 +41,7 @@ export function createEditorLogisticsQueries(
         document: context.document.getSnapshot(),
         drafts: [],
         entityDefinitionMap,
+        registryQueries: context.workspace.registry.queries,
         baseDefinitions: context.workspace.registry.baseDefinitions,
       }) !== null;
     },

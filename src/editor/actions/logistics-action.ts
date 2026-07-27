@@ -14,6 +14,7 @@ import type {
   LogisticsRouteOrder,
   MoveLogisticsDraftEndOptions,
 } from "@/domain/shared/logistics";
+import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { DraftEntity } from "../draft-entity";
 import { syncPlacementValidationState } from "../placement-validation";
@@ -37,7 +38,6 @@ import {
   resolveInputEndpointAtPointer,
   resolveInputEndpointOnPath,
   resolveCellFromEdges,
-  resolveLogisticsDefinitionId,
   resolveLogisticsPathCells,
   resolveNearestDevicePortEndpoint,
   resolveSourceStartGridPoint,
@@ -226,6 +226,7 @@ export function createEditorLogisticsActions(
         document: currentDocument,
         drafts: [],
         entityDefinitionMap: logisticsContext.entityDefinitionMap,
+        registryQueries: logisticsContext.workspace.registry.queries,
         baseDefinitions: logisticsContext.workspace.registry.baseDefinitions,
       });
 
@@ -296,6 +297,7 @@ export function createEditorLogisticsActions(
           kind: draft.kind,
           document: currentDocument,
           entityDefinitionMap: logisticsContext.entityDefinitionMap,
+          registryQueries: logisticsContext.workspace.registry.queries,
           baseDefinitions: logisticsContext.workspace.registry.baseDefinitions,
         });
 
@@ -364,6 +366,7 @@ export function createEditorLogisticsActions(
         kind: draft.kind,
         document: currentDocument,
         entityDefinitionMap: logisticsContext.entityDefinitionMap,
+        registryQueries: logisticsContext.workspace.registry.queries,
         baseDefinitions: logisticsContext.workspace.registry.baseDefinitions,
       });
 
@@ -489,7 +492,7 @@ export function createEditorLogisticsActions(
     }),
 
     setLogisticsSuppression: action((family, value) => {
-      if (family === "belt") {
+      if (family === LOGISTICS_KIND.belt) {
         logisticsContext.state.suppressBelts = value;
       } else {
         logisticsContext.state.suppressPipes = value;
@@ -575,7 +578,11 @@ function resolveCreateSourceEndpoint(
       const entity = currentDocument.entities[options.source.entityId];
       if (
         entity === undefined
-        || !isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+        || !isOrdinaryLogisticsDefinitionId(
+          entity.definitionId,
+          options.kind,
+          context.workspace.registry.queries,
+        )
       ) {
         return null;
       }
@@ -648,10 +655,15 @@ function resolveFixedSourceReplacingEntityId(options: {
     document: options.context.document.getSnapshot(),
     drafts: [],
     entityDefinitionMap: options.context.entityDefinitionMap,
+    registryQueries: options.context.workspace.registry.queries,
     baseDefinitions: options.context.workspace.registry.baseDefinitions,
   });
 
-  return entity !== null && isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+  return entity !== null && isOrdinaryLogisticsDefinitionId(
+    entity.definitionId,
+    options.kind,
+    options.context.workspace.registry.queries,
+  )
     ? entity.id
     : null;
 }
@@ -742,6 +754,7 @@ function rebuildLogisticsDraft(options: {
     target: options.target,
     document: currentDocument,
     entityDefinitionMap: options.context.entityDefinitionMap,
+    registryQueries: options.context.workspace.registry.queries,
     replacingEntity,
     replacingDefinition,
   });
@@ -879,6 +892,7 @@ function shouldKeepDraftWhenFirstStepMovesTowardFixedSourceInput(options: {
     source: options.source,
     document: currentDocument,
     entityDefinitionMap: options.context.entityDefinitionMap,
+    registryQueries: options.context.workspace.registry.queries,
     replacingEntity,
     replacingDefinition,
   });
@@ -930,10 +944,11 @@ function createDraftEntities(options: {
     }
 
     const override = options.cellOverridesByGridKey.get(key) ?? null;
-    const definitionId = override?.definitionId ?? resolveLogisticsDefinitionId({
-      kind: options.kind,
-      shape: cell.shape,
-    });
+    const definitionId = override?.definitionId
+      ?? options.context.workspace.registry.queries.resolveLogisticsDefinitionId(
+        options.kind,
+        cell.shape,
+      );
     const reusableDraft = options.previousPreviewDrafts[draftEntities.length];
     const id = reusableDraft?.definitionId === definitionId
       ? reusableDraft.id
@@ -1010,7 +1025,11 @@ function resolveInvalidReason(options: {
         continue;
       }
 
-      if (!isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)) {
+      if (!isOrdinaryLogisticsDefinitionId(
+        entity.definitionId,
+        options.kind,
+        options.context.workspace.registry.queries,
+      )) {
         continue;
       }
 
@@ -1036,6 +1055,7 @@ function resolveInvalidReason(options: {
           document: currentDocument,
           drafts: [],
           entityDefinitionMap: options.context.entityDefinitionMap,
+          registryQueries: options.context.workspace.registry.queries,
           baseDefinitions: options.context.workspace.registry.baseDefinitions,
         });
     if (targetEntity === null) {
@@ -1069,7 +1089,7 @@ function resolveInvalidReason(options: {
 
       // 传送带：检查 placeableArea 边界
       if (
-        options.kind === "belt"
+        options.kind === LOGISTICS_KIND.belt
         && (p.x < placeableRect.x
           || p.y < placeableRect.y
           || p.x >= placeableRect.x + placeableRect.width
@@ -1149,7 +1169,11 @@ function doesFirstStepOverlapExistingLogistics(options: {
     .find((entity) => (
       entity !== undefined
       && entity.id !== options.replacingEntityId
-      && isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+      && isOrdinaryLogisticsDefinitionId(
+        entity.definitionId,
+        options.kind,
+        options.context.workspace.registry.queries,
+      )
       && areGridPointsEqual(entity.position, firstStep)
     )) ?? null;
   if (overlappingEntity === null) {
@@ -1159,7 +1183,7 @@ function doesFirstStepOverlapExistingLogistics(options: {
   // AI-CORRECTION 2026-06-19:
   // 首步与旧传送带同入口重叠属于合法沿线覆盖，不应为了避让而翻转单拐路径顺序。
   // 只有入口不兼容的首步重叠才需要尝试另一种 routeOrder。
-  if (options.kind === "belt") {
+  if (options.kind === LOGISTICS_KIND.belt) {
     const stepDirection = resolveDirectionEdge(start, firstStep);
     const overlapInfo = resolveOrdinaryLogisticsConnectionInfo({
       context: options.context,
@@ -1332,6 +1356,7 @@ function resolveDeviceToDeviceRoute(options: {
           target: targetEndpoint,
           document: currentDocument,
           entityDefinitionMap: options.context.entityDefinitionMap,
+          registryQueries: options.context.workspace.registry.queries,
           replacingEntity: null,
           replacingDefinition: null,
         });
@@ -1485,7 +1510,7 @@ function resolveAutoDraftPlan(options: {
         if (resolveStraightCellAxis(firstCell) === sourceAxis) {
           cellOverridesByGridKey.set(
             gridPointKey(firstCell.gridPoint),
-            createAutoDeviceOverride(options.kind, "connector", null),
+            createAutoDeviceOverride(options.context, options.kind, "connector", null),
           );
         }
         replacingEntityIds.add(sourceInfo.entity.id);
@@ -1498,7 +1523,12 @@ function resolveAutoDraftPlan(options: {
         ) {
           cellOverridesByGridKey.set(
             gridPointKey(firstCell.gridPoint),
-            createAutoDeviceOverride(options.kind, "splitter", sourceInfo.inputEdge),
+            createAutoDeviceOverride(
+              options.context,
+              options.kind,
+              "splitter",
+              sourceInfo.inputEdge,
+            ),
           );
         }
       } else {
@@ -1531,7 +1561,12 @@ function resolveAutoDraftPlan(options: {
         if (options.autoCreateSplittersAndConvergers) {
           cellOverridesByGridKey.set(
             gridPointKey(firstCell.gridPoint),
-            createAutoDeviceOverride(options.kind, "splitter", sourceInfo.inputEdge),
+            createAutoDeviceOverride(
+              options.context,
+              options.kind,
+              "splitter",
+              sourceInfo.inputEdge,
+            ),
           );
           replacingEntityIds.add(sourceInfo.entity.id);
         }
@@ -1546,10 +1581,13 @@ function resolveAutoDraftPlan(options: {
       document: currentDocument,
       drafts: [],
       entityDefinitionMap: options.context.entityDefinitionMap,
+      registryQueries: options.context.workspace.registry.queries,
       baseDefinitions: options.context.workspace.registry.baseDefinitions,
       // AI-CORRECTION 2026-07-22:
       // 终点同格存在另一类普通物流时必须跳过它，继续识别下层同类物流目标。
-      skipLogisticsKind: options.kind === "belt" ? "pipe" : "belt",
+      skipLogisticsKind: options.kind === LOGISTICS_KIND.belt
+        ? LOGISTICS_KIND.pipe
+        : LOGISTICS_KIND.belt,
     });
     const targetInfo = targetEntity === null
       ? null
@@ -1568,12 +1606,12 @@ function resolveAutoDraftPlan(options: {
       // AI-CORRECTION 2026-06-19:
       // 从已有物流段的出口方向反向拉入会形成头对头，不能创建汇流器或普通替换。
       if (
-        options.kind === "belt"
+        options.kind === LOGISTICS_KIND.belt
         && lastCell.fromEdge === targetInfo.outputEdge
       ) {
         invalidReason = "overlap-existing-logistics";
       } else if (
-        options.kind === "belt"
+        options.kind === LOGISTICS_KIND.belt
         && lastCell.fromEdge === targetInfo.inputEdge
       ) {
         // 沿已有物流段同入口覆盖时，保留新路径形态并替换旧格。
@@ -1584,13 +1622,18 @@ function resolveAutoDraftPlan(options: {
         ) {
           cellOverridesByGridKey.set(
             gridPointKey(lastCell.gridPoint),
-            createAutoDeviceOverride(options.kind, "splitter", targetInfo.inputEdge),
+            createAutoDeviceOverride(
+              options.context,
+              options.kind,
+              "splitter",
+              targetInfo.inputEdge,
+            ),
           );
         }
         replacingEntityIds.add(targetInfo.entity.id);
       } else if (targetInfo.inputConnected) {
         if (
-          options.kind === "belt"
+          options.kind === LOGISTICS_KIND.belt
           && !options.autoCreateSplittersAndConvergers
           && lastCell.fromEdge !== null
         ) {
@@ -1601,7 +1644,8 @@ function resolveAutoDraftPlan(options: {
           cellOverridesByGridKey.set(
             gridPointKey(lastCell.gridPoint),
             {
-              definitionId: resolveLogisticsDefinitionId({ kind: options.kind, shape }),
+              definitionId: options.context.workspace.registry.queries
+                .resolveLogisticsDefinitionId(options.kind, shape),
               rotation,
             },
           );
@@ -1612,7 +1656,12 @@ function resolveAutoDraftPlan(options: {
           // 有合法上游 → 创建汇流器
           cellOverridesByGridKey.set(
             gridPointKey(lastCell.gridPoint),
-            createAutoDeviceOverride(options.kind, "converger", targetInfo.outputEdge),
+            createAutoDeviceOverride(
+              options.context,
+              options.kind,
+              "converger",
+              targetInfo.outputEdge,
+            ),
           );
           replacingEntityIds.add(targetInfo.entity.id);
         }
@@ -1626,7 +1675,8 @@ function resolveAutoDraftPlan(options: {
           cellOverridesByGridKey.set(
             gridPointKey(lastCell.gridPoint),
             {
-              definitionId: resolveLogisticsDefinitionId({ kind: options.kind, shape }),
+              definitionId: options.context.workspace.registry.queries
+                .resolveLogisticsDefinitionId(options.kind, shape),
               rotation,
             },
           );
@@ -1786,7 +1836,7 @@ function resolveAutoDraftPlan(options: {
     const edge = isLastCell ? cell.toEdge : null;
     cellOverridesByGridKey.set(
       key,
-      createAutoDeviceOverride(options.kind, overrideKind, edge),
+      createAutoDeviceOverride(options.context, options.kind, overrideKind, edge),
     );
   }
 
@@ -1814,7 +1864,7 @@ function resolveExistingLogisticsOverlapAutoDraftCell(options: {
   readonly cellOverridesByGridKey: Map<string, AutoDraftCellOverride>;
   readonly replacingEntityIds: Set<string>;
 }): LogisticsDraftInvalidReason | null {
-  if (options.kind !== "belt") {
+  if (options.kind !== LOGISTICS_KIND.belt) {
     return resolveConnectorCrossingAutoDraftCell(options);
   }
 
@@ -1823,6 +1873,7 @@ function resolveExistingLogisticsOverlapAutoDraftCell(options: {
     document: options.document,
     drafts: [],
     entityDefinitionMap: options.context.entityDefinitionMap,
+    registryQueries: options.context.workspace.registry.queries,
     baseDefinitions: options.context.workspace.registry.baseDefinitions,
   });
   const info = entity === null
@@ -1857,7 +1908,12 @@ function resolveExistingLogisticsOverlapAutoDraftCell(options: {
     ) {
       options.cellOverridesByGridKey.set(
         gridPointKey(options.cell.gridPoint),
-        createAutoDeviceOverride(options.kind, "splitter", info.inputEdge),
+        createAutoDeviceOverride(
+          options.context,
+          options.kind,
+          "splitter",
+          info.inputEdge,
+        ),
       );
     }
     return null;
@@ -1885,6 +1941,7 @@ function resolveConnectorCrossingAutoDraftCell(options: {
     document: options.document,
     drafts: [],
     entityDefinitionMap: options.context.entityDefinitionMap,
+    registryQueries: options.context.workspace.registry.queries,
     baseDefinitions: options.context.workspace.registry.baseDefinitions,
   });
   const info = entity === null
@@ -1905,7 +1962,7 @@ function resolveConnectorCrossingAutoDraftCell(options: {
 
   options.cellOverridesByGridKey.set(
     gridPointKey(options.cell.gridPoint),
-    createAutoDeviceOverride(options.kind, "connector", null),
+    createAutoDeviceOverride(options.context, options.kind, "connector", null),
   );
   options.replacingEntityIds.add(info.entity.id);
   return null;
@@ -2033,7 +2090,14 @@ function resolveOrdinaryLogisticsConnectionInfo(options: {
     drafts: [],
     baseDefinitions: options.context.workspace.registry.baseDefinitions,
   });
-  if (entity === null || !isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)) {
+  if (
+    entity === null
+    || !isOrdinaryLogisticsDefinitionId(
+      entity.definitionId,
+      options.kind,
+      options.context.workspace.registry.queries,
+    )
+  ) {
     return null;
   }
 
@@ -2097,6 +2161,7 @@ function doesNeighborOutputConnectToPoint(options: {
     document: options.document,
     drafts: [],
     entityDefinitionMap: options.context.entityDefinitionMap,
+    registryQueries: options.context.workspace.registry.queries,
     baseDefinitions: options.context.workspace.registry.baseDefinitions,
   });
   if (neighbor === null || neighbor.id === options.ignoredEntityId) {
@@ -2130,6 +2195,7 @@ function doesPointOutputConnectToNeighborInput(options: {
     document: options.document,
     drafts: [],
     entityDefinitionMap: options.context.entityDefinitionMap,
+    registryQueries: options.context.workspace.registry.queries,
     baseDefinitions: options.context.workspace.registry.baseDefinitions,
   });
   if (neighbor === null || neighbor.id === options.ignoredEntityId) {
@@ -2151,26 +2217,37 @@ function doesPointOutputConnectToNeighborInput(options: {
 }
 
 function createAutoDeviceOverride(
+  context: LogisticsActionContext,
   kind: LogisticsKind,
   deviceKind: AutoDeviceKind,
   edge: GridEdge | null,
 ): AutoDraftCellOverride {
   return {
-    definitionId: resolveAutoDeviceDefinitionId(kind, deviceKind),
+    definitionId: resolveAutoDeviceDefinitionId(context, kind, deviceKind),
     rotation: resolveAutoDeviceRotation(deviceKind, edge),
   };
 }
 
-function resolveAutoDeviceDefinitionId(kind: LogisticsKind, deviceKind: AutoDeviceKind): string {
-  const prefix = kind === "belt" ? "log" : "pipe";
-  switch (deviceKind) {
-    case "splitter":
-      return `${prefix}_splitter`;
-    case "converger":
-      return `${prefix}_converger`;
-    case "connector":
-      return `${prefix}_connector`;
+function resolveAutoDeviceDefinitionId(
+  context: LogisticsActionContext,
+  kind: LogisticsKind,
+  deviceKind: AutoDeviceKind,
+): string {
+  const queries = context.workspace.registry.queries;
+  // 自动生成对象只能是物流设备；传送带物流设备不包括传送带节，
+  // 管道物流设备不包括管道节。
+  const definition = context.workspace.registry.entityDefinitions.find((candidate) =>
+    queries.resolveLogisticsRole(candidate.id) === deviceKind
+    && (
+      kind === LOGISTICS_KIND.belt
+        ? queries.isBeltLogistics(candidate.id)
+        : queries.isPipeLogistics(candidate.id)
+    )
+  );
+  if (definition === undefined) {
+    throw new Error(`缺少 ${kind} ${deviceKind} 物流设备定义`);
   }
+  return definition.id;
 }
 
 function resolveAutoDeviceRotation(deviceKind: AutoDeviceKind, edge: GridEdge | null): GridRotation {

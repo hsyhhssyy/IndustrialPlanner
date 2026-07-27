@@ -21,25 +21,36 @@ import type {
   LogisticsRouteOrder,
 } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { RegistryQuery } from "@/domain/registry/registry-query";
+import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
-import { resolveLogisticsSuppressionFamily } from "@/shared/logistics-suppression";
+import { resolveLogisticsSuppressionKind } from "@/shared/logistics-suppression";
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
 type DevicePortEndpoint = Extract<LogisticsDraftEndpoint, { readonly type: "device-port" }>;
 
-export const LOGISTICS_DEFINITION_IDS = {
-  belt: {
-    straight: "belt_straight_1x1",
-    turnCw: "belt_turn_cw_1x1",
-    turnCcw: "belt_turn_ccw_1x1",
-  },
-  pipe: {
-    straight: "pipe_straight_1x1",
-    turnCw: "pipe_turn_cw_1x1",
-    turnCcw: "pipe_turn_ccw_1x1",
-  },
-} as const;
+// AI-REMOVED 2026-07-27:
+// Reason: editor 不应拥有传送带节和管道节 definition ID 的副本。
+// Trigger: 用户要求 definition ID 归 registry 内部常量所有，registry 外只使用 RegistryQuery。
+// Evidence: RegistryQuery.resolveLogisticsDefinitionId 与 isBelt/isPipe 已覆盖原用途。
+// Replacement: workspace.registry.queries。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// export const LOGISTICS_DEFINITION_IDS = {
+//   belt: {
+//     straight: "belt_straight_1x1",
+//     turnCw: "belt_turn_cw_1x1",
+//     turnCcw: "belt_turn_ccw_1x1",
+//   },
+//   pipe: {
+//     straight: "pipe_straight_1x1",
+//     turnCw: "pipe_turn_cw_1x1",
+//     turnCcw: "pipe_turn_ccw_1x1",
+//   },
+// } as const;
 
 const EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
 // 以起笔格为中心，设备来源方向优先级固定为左、上、右、下。
@@ -57,44 +68,50 @@ export function createEntityDefinitionMap(
 }
 
 export function resolvePortKindForLogisticsKind(kind: LogisticsKind): LogisticsPortKind {
-  return kind === "belt" ? "item" : "fluid";
+  return kind === LOGISTICS_KIND.belt ? "item" : "fluid";
 }
 
 export function isOrdinaryLogisticsDefinitionId(
   definitionId: string,
   kind: LogisticsKind,
+  registryQueries: RegistryQuery,
 ): boolean {
-  const ids = LOGISTICS_DEFINITION_IDS[kind];
+  return kind === LOGISTICS_KIND.belt
+    ? registryQueries.isBelt(definitionId)
+    : registryQueries.isPipe(definitionId);
+}
+
+export function isAnyOrdinaryLogisticsDefinitionId(
+  definitionId: string,
+  registryQueries: RegistryQuery,
+): boolean {
   return (
-    definitionId === ids.straight
-    || definitionId === ids.turnCw
-    || definitionId === ids.turnCcw
+    registryQueries.isBelt(definitionId)
+    || registryQueries.isPipe(definitionId)
   );
 }
 
-export function isAnyOrdinaryLogisticsDefinitionId(definitionId: string): boolean {
-  return (
-    isOrdinaryLogisticsDefinitionId(definitionId, "belt")
-    || isOrdinaryLogisticsDefinitionId(definitionId, "pipe")
-  );
-}
-
-export function resolveLogisticsDefinitionId(options: {
-  kind: LogisticsKind;
-  shape: LogisticsPathShape;
-}): string {
-  const ids = LOGISTICS_DEFINITION_IDS[options.kind];
-
-  switch (options.shape) {
-    case "turn-cw":
-      return ids.turnCw;
-    case "turn-ccw":
-      return ids.turnCcw;
-    case "straight":
-    default:
-      return ids.straight;
-  }
-}
+// AI-REMOVED 2026-07-27:
+// Reason: editor 本地 shape→definition ID 转换会重复 registry 的 ID 所有权。
+// Trigger: 用户要求 registry 外只调用导出 Query。
+// Evidence: RegistryQuery.resolveLogisticsDefinitionId(kind, shape) 已直接转发 registry 内部常量。
+// Replacement: workspace.registry.queries.resolveLogisticsDefinitionId。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// export function resolveLogisticsDefinitionId(options: {
+//   kind: LogisticsKind;
+//   shape: LogisticsPathShape;
+// }): string {
+//   const ids = LOGISTICS_DEFINITION_IDS[options.kind];
+//   switch (options.shape) {
+//     case "turn-cw": return ids.turnCw;
+//     case "turn-ccw": return ids.turnCcw;
+//     case "straight":
+//     default: return ids.straight;
+//   }
+// }
 
 export function resolveLogisticsEndpointAtGridPoint(options: {
   gridPoint: GridPoint;
@@ -102,17 +119,20 @@ export function resolveLogisticsEndpointAtGridPoint(options: {
   document: WorldDocument;
   drafts: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
   baseDefinitions?: readonly BaseDefinition[];
 }): LogisticsDraftEndpoint | null {
   // 跳过对端物流类型的专用设备：belt 模式下跳过 pipe 段，pipe 模式下跳过 belt 段。
   // 使被管道覆盖的分流器/汇流器/桥接器等设备能被正常匹配。
-  const skipLogisticsKind: LogisticsKind = options.kind === "belt" ? "pipe" : "belt";
+  const skipLogisticsKind: LogisticsKind = options.kind === LOGISTICS_KIND.belt
+    ? LOGISTICS_KIND.pipe
+    : LOGISTICS_KIND.belt;
   const entity = findTopEntityAtGridPoint({ ...options, skipLogisticsKind });
 
   if (
     entity === null
     || (
-      isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+      isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind, options.registryQueries)
       && !isBaseBuiltinEntityId(entity.id)
     )
   ) {
@@ -154,6 +174,7 @@ function resolveAdjacentFixedOutputPortEndpoint(options: {
   document: WorldDocument;
   drafts: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
   baseDefinitions?: readonly BaseDefinition[];
   skipLogisticsKind?: LogisticsKind;
 }): DevicePortEndpoint | null {
@@ -230,6 +251,7 @@ export function resolveInputEndpointAtPointer(options: {
   document: WorldDocument;
   drafts: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
   baseDefinitions?: readonly BaseDefinition[];
 }): DevicePortEndpoint | null {
   const entity = findTopEntityAtGridPoint({
@@ -238,12 +260,15 @@ export function resolveInputEndpointAtPointer(options: {
     drafts: options.drafts,
     entityDefinitionMap: options.entityDefinitionMap,
     baseDefinitions: options.baseDefinitions,
-    skipLogisticsKind: options.kind === "belt" ? "pipe" : "belt",
+    registryQueries: options.registryQueries,
+    skipLogisticsKind: options.kind === LOGISTICS_KIND.belt
+      ? LOGISTICS_KIND.pipe
+      : LOGISTICS_KIND.belt,
   });
   if (
     entity === null
     || (
-      isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+      isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind, options.registryQueries)
       && !isBaseBuiltinEntityId(entity.id)
     )
   ) {
@@ -288,6 +313,7 @@ export function resolveInputEndpointOnPath(options: {
   kind: LogisticsKind;
   document: WorldDocument;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
   baseDefinitions?: readonly BaseDefinition[];
 }): DevicePortEndpoint | null {
   for (let i = 0; i < options.pathPoints.length - 1; i += 1) {
@@ -303,13 +329,16 @@ export function resolveInputEndpointOnPath(options: {
       document: options.document,
       drafts: [],
       entityDefinitionMap: options.entityDefinitionMap,
+      registryQueries: options.registryQueries,
       baseDefinitions: options.baseDefinitions,
-      skipLogisticsKind: options.kind === "belt" ? "pipe" : "belt",
+      skipLogisticsKind: options.kind === LOGISTICS_KIND.belt
+        ? LOGISTICS_KIND.pipe
+        : LOGISTICS_KIND.belt,
     });
     if (
       entity === null
       || (
-        isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+        isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind, options.registryQueries)
         && !isBaseBuiltinEntityId(entity.id)
       )
     ) {
@@ -461,6 +490,7 @@ export function resolveLogisticsPathCells(options: {
   target: LogisticsDraftEndpoint | null;
   document: WorldDocument;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
   replacingEntity: WorldEntity | null;
   replacingDefinition: EntityDefinition | null;
 }): LogisticsPathCell[] {
@@ -483,6 +513,7 @@ export function resolveLogisticsPathCells(options: {
       kind: options.kind,
       document: options.document,
       entityDefinitionMap: options.entityDefinitionMap,
+      registryQueries: options.registryQueries,
       replacingEntity: index === 0 ? options.replacingEntity : null,
       replacingDefinition: index === 0 ? options.replacingDefinition : null,
     });
@@ -518,6 +549,7 @@ export function doesFirstStepMoveTowardFixedSourceInput(options: {
   source: LogisticsDraftEndpoint | null;
   document: WorldDocument;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
   replacingEntity: WorldEntity | null;
   replacingDefinition: EntityDefinition | null;
 }): boolean {
@@ -540,6 +572,7 @@ export function findTopEntityAtGridPoint(options: {
   document: WorldDocument;
   drafts: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
   baseDefinitions?: readonly BaseDefinition[];
   skipLogisticsKind?: LogisticsKind;
 }): WorldEntity | null {
@@ -547,6 +580,7 @@ export function findTopEntityAtGridPoint(options: {
     gridPoint: options.gridPoint,
     entities: options.drafts,
     entityDefinitionMap: options.entityDefinitionMap,
+    registryQueries: options.registryQueries,
     skipLogisticsKind: options.skipLogisticsKind,
   });
   if (draft !== null) {
@@ -561,6 +595,7 @@ export function findTopEntityAtGridPoint(options: {
     gridPoint: options.gridPoint,
     entities: orderedEntities,
     entityDefinitionMap: options.entityDefinitionMap,
+    registryQueries: options.registryQueries,
     skipLogisticsKind: options.skipLogisticsKind,
   });
   if (entity !== null) {
@@ -571,6 +606,7 @@ export function findTopEntityAtGridPoint(options: {
     gridPoint: options.gridPoint,
     entities: resolveOptionalBaseBuiltinEntities(options),
     entityDefinitionMap: options.entityDefinitionMap,
+    registryQueries: options.registryQueries,
     skipLogisticsKind: options.skipLogisticsKind,
   });
 }
@@ -672,6 +708,7 @@ function findTopEntityInListAtGridPoint(options: {
   gridPoint: GridPoint;
   entities: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
   skipLogisticsKind?: LogisticsKind;
 }): WorldEntity | null {
   for (let index = options.entities.length - 1; index >= 0; index -= 1) {
@@ -697,7 +734,8 @@ function findTopEntityInListAtGridPoint(options: {
       // 包括桥接器、汇流器、分流器和准入口，使端口解析可穿透这些附属设备。
       if (
         options.skipLogisticsKind !== undefined
-        && resolveLogisticsSuppressionFamily(entity.definitionId) === options.skipLogisticsKind
+        && resolveLogisticsSuppressionKind(entity.definitionId, options.registryQueries)
+          === options.skipLogisticsKind
       ) {
         continue;
       }
@@ -717,6 +755,7 @@ function resolveCellFromEdge(options: {
   kind: LogisticsKind;
   document: WorldDocument;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
   replacingEntity: WorldEntity | null;
   replacingDefinition: EntityDefinition | null;
 }): GridEdge | null {
@@ -733,6 +772,7 @@ function resolveCellFromEdge(options: {
     kind: options.kind,
     document: options.document,
     entityDefinitionMap: options.entityDefinitionMap,
+    registryQueries: options.registryQueries,
     replacingEntity: options.replacingEntity,
     replacingDefinition: options.replacingDefinition,
   });
@@ -779,6 +819,7 @@ function resolveFixedSourceInputEdge(options: {
   source: LogisticsDraftEndpoint | null;
   document: WorldDocument;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
   replacingEntity: WorldEntity | null;
   replacingDefinition: EntityDefinition | null;
 }): GridEdge | null {
@@ -794,6 +835,7 @@ function resolveFixedSourceInputEdge(options: {
     kind: options.kind,
     document: options.document,
     entityDefinitionMap: options.entityDefinitionMap,
+    registryQueries: options.registryQueries,
     replacingEntity: options.replacingEntity,
     replacingDefinition: options.replacingDefinition,
   });
@@ -856,6 +898,7 @@ function resolveConnectedReplacingInputEdge(options: {
   kind: LogisticsKind;
   document: WorldDocument;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
   replacingEntity: WorldEntity | null;
   replacingDefinition: EntityDefinition | null;
 }): GridEdge | null {
@@ -877,11 +920,16 @@ function resolveConnectedReplacingInputEdge(options: {
       document: options.document,
       drafts: [],
       entityDefinitionMap: options.entityDefinitionMap,
+      registryQueries: options.registryQueries,
     });
     if (
       predecessor === null
       || predecessor.id === options.replacingEntity.id
-      || !isOrdinaryLogisticsDefinitionId(predecessor.definitionId, options.kind)
+      || !isOrdinaryLogisticsDefinitionId(
+        predecessor.definitionId,
+        options.kind,
+        options.registryQueries,
+      )
     ) {
       continue;
     }

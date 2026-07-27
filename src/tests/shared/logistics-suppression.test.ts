@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   isLogisticsDefinitionSuppressed,
-  resolveAccessoryLogisticsSuppressionFamily,
-  resolveLogisticsSuppressionFamily,
+  resolveLogisticsEquipmentSuppressionKind,
+  resolveLogisticsSuppressionKind,
 } from "@/shared/logistics-suppression";
+import { createRegistryContract } from "@/registry";
+
+const queries = createRegistryContract().queries;
 
 describe("logistics suppression families", () => {
   it.each([
@@ -23,7 +26,7 @@ describe("logistics suppression families", () => {
     ["pipe_splitter", "pipe"],
     ["pipe_admission", "pipe"],
   ] as const)("classifies %s as %s suppression", (definitionId, family) => {
-    expect(resolveLogisticsSuppressionFamily(definitionId)).toBe(family);
+    expect(resolveLogisticsSuppressionKind(definitionId, queries)).toBe(family);
   });
 
   it.each([
@@ -36,12 +39,12 @@ describe("logistics suppression families", () => {
     ["pipe_splitter", "pipe"],
     ["pipe_admission", "pipe"],
   ] as const)("classifies %s as a %s accessory", (definitionId, family) => {
-    expect(resolveAccessoryLogisticsSuppressionFamily(definitionId)).toBe(family);
+    expect(resolveLogisticsEquipmentSuppressionKind(definitionId, queries)).toBe(family);
   });
 
   it("keeps ordinary logistics segments out of the accessory visual family", () => {
-    expect(resolveAccessoryLogisticsSuppressionFamily("belt_straight_1x1")).toBeNull();
-    expect(resolveAccessoryLogisticsSuppressionFamily("pipe_turn_ccw_1x1")).toBeNull();
+    expect(resolveLogisticsEquipmentSuppressionKind("belt_straight_1x1", queries)).toBeNull();
+    expect(resolveLogisticsEquipmentSuppressionKind("pipe_turn_ccw_1x1", queries)).toBeNull();
   });
 
   it("applies only the matching family suppression switch", () => {
@@ -49,11 +52,13 @@ describe("logistics suppression families", () => {
       definitionId: "log_admission",
       suppressBelts: true,
       suppressPipes: false,
+      queries,
     })).toBe(true);
     expect(isLogisticsDefinitionSuppressed({
       definitionId: "pipe_admission",
       suppressBelts: true,
       suppressPipes: false,
+      queries,
     })).toBe(false);
   });
 });

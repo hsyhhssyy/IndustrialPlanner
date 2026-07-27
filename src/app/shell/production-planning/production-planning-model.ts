@@ -52,6 +52,8 @@ export interface ProductionPlanningPort {
 }
 
 export interface ProductionPlanningIndex {
+  /** registry 分类与 ID 解析入口；app 不保存 definition ID 副本。 */
+  registryQueries: RegistryContract["queries"];
   itemById: Map<string, ItemDefinition>;
   entityById: Map<string, EntityDefinition>;
   recipeById: Map<string, RecipeDefinition>;
@@ -204,6 +206,7 @@ export function buildProductionPlanningIndex(
   }
 
   return {
+    registryQueries: registry.queries,
     itemById,
     entityById,
     recipeById,

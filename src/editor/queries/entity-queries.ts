@@ -137,6 +137,7 @@ export function createEditorEntityQueries({
             definitionId: entity.definitionId,
             suppressBelts: state.suppressBelts,
             suppressPipes: state.suppressPipes,
+            queries: workspace.registry.queries,
           })) {
             continue;
           }

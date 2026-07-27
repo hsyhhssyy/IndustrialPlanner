@@ -11,6 +11,7 @@ import type {
   PortDefinition,
   PortGroupDefinition,
 } from "@/domain/registry/types/entity-definition"
+import type { RegistryQuery } from "@/domain/registry/registry-query"
 
 import { getRotatedGridFootprint } from "@/shared/geometry/grid"
 import {
@@ -106,11 +107,18 @@ export function isWorldEntityVisible(
 
 export const BELT_INSERTION_DEPTH_CELLS = 0.2
 
-const STRICT_BELT_DEFINITION_IDS = new Set([
-  "belt_straight_1x1",
-  "belt_turn_cw_1x1",
-  "belt_turn_ccw_1x1",
-])
+// AI-REMOVED 2026-07-27:
+// Reason: renderer 不应维护 3 个传送带节 definition ID。
+// Trigger: 用户要求 registry 外只使用 RegistryQuery。
+// Evidence: RegistryQuery.isBelt 的定义正是 3 个传送带节。
+// Replacement: isStrictBeltDefinitionId 的 queries 参数。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const STRICT_BELT_DEFINITION_IDS = new Set([
+//   "belt_straight_1x1", "belt_turn_cw_1x1", "belt_turn_ccw_1x1",
+// ])
 
 const EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"]
 
@@ -201,8 +209,11 @@ interface BeltConnectedPortState {
   readonly extensionPort: WorldPortReference | null;
 }
 
-export function isStrictBeltDefinitionId(definitionId: string): boolean {
-  return STRICT_BELT_DEFINITION_IDS.has(definitionId)
+export function isStrictBeltDefinitionId(
+  definitionId: string,
+  queries: RegistryQuery,
+): boolean {
+  return queries.isBelt(definitionId)
 }
 
 function isBeltPortExtensionEndpointDevice(
@@ -255,7 +266,10 @@ export function resolveBeltPortConnectivityEntries(
   const includeDisconnectedPorts = options.includeDisconnectedPorts ?? true
 
   for (const outputPort of collections.outputPorts) {
-    if (!isStrictBeltDefinitionId(outputPort.entity.definitionId)) {
+    if (!isStrictBeltDefinitionId(
+      outputPort.entity.definitionId,
+      ctx.renderHost.workspace.registry.queries,
+    )) {
       continue
     }
 
@@ -292,7 +306,10 @@ export function resolveBeltPortConnectivityEntries(
   }
 
   for (const inputPort of collections.inputPorts) {
-    if (!isStrictBeltDefinitionId(inputPort.entity.definitionId)) {
+    if (!isStrictBeltDefinitionId(
+      inputPort.entity.definitionId,
+      ctx.renderHost.workspace.registry.queries,
+    )) {
       continue
     }
 
@@ -431,7 +448,13 @@ export function resolveBeltVisualPathEntries(ctx: DecorationSyncContext): BeltVi
   )
   const rawEntries = entities.flatMap((entity) => {
     const definition = definitionMap.get(entity.definitionId)
-    if (definition === undefined || !isStrictBeltDefinitionId(entity.definitionId)) {
+    if (
+      definition === undefined
+      || !isStrictBeltDefinitionId(
+        entity.definitionId,
+        ctx.renderHost.workspace.registry.queries,
+      )
+    ) {
       return []
     }
 
@@ -469,8 +492,9 @@ export function resolveBeltPathSample(options: {
   entity: WorldEntity;
   definition: EntityDefinition;
   progress: number;
+  queries: RegistryQuery;
 }): BeltPathSample | null {
-  if (!isStrictBeltDefinitionId(options.entity.definitionId)) {
+  if (!isStrictBeltDefinitionId(options.entity.definitionId, options.queries)) {
     return null
   }
 
@@ -498,6 +522,7 @@ export function resolveBeltPathSampleAtDistance(options: {
   entity: WorldEntity;
   definition: EntityDefinition;
   distanceCells: number;
+  queries: RegistryQuery;
 }): BeltPathSample | null {
   const lengthCells = resolveBeltPathLengthCells(options.definition)
   if (lengthCells === null || lengthCells <= 0) {
@@ -508,6 +533,7 @@ export function resolveBeltPathSampleAtDistance(options: {
     entity: options.entity,
     definition: options.definition,
     progress: options.distanceCells / lengthCells,
+    queries: options.queries,
   })
 }
 

@@ -2782,6 +2782,7 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
         target: null,
         document: bareDoc,
         entityDefinitionMap,
+        registryQueries: registry.queries,
         replacingEntity: bareDoc.entities[TURN_ID] ?? null,
         replacingDefinition: cwDef,
       });
@@ -2816,6 +2817,7 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
         target: null,
         document: bareDoc,
         entityDefinitionMap,
+        registryQueries: registry.queries,
         replacingEntity: bareDoc.entities[TURN_ID] ?? null,
         replacingDefinition: cwDef,
       });
@@ -2863,6 +2865,7 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
         target: null,
         document: deviceDoc,
         entityDefinitionMap,
+        registryQueries: registry.queries,
         replacingEntity: deviceDoc.entities[TURN_ID] ?? null,
         replacingDefinition: cwDef,
       });
@@ -2892,6 +2895,7 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
         target: null,
         document: deviceDoc,
         entityDefinitionMap,
+        registryQueries: registry.queries,
         replacingEntity: deviceDoc.entities[TURN_ID] ?? null,
         replacingDefinition: cwDef,
       });
@@ -2944,6 +2948,7 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
         target: eastTarget,
         document: convergerDoc,
         entityDefinitionMap,
+        registryQueries: registry.queries,
         replacingEntity: null,
         replacingDefinition: null,
       });
@@ -2983,6 +2988,7 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
         target: northTarget,
         document: convergerDoc,
         entityDefinitionMap,
+        registryQueries: registry.queries,
         replacingEntity: null,
         replacingDefinition: null,
       });
@@ -3021,6 +3027,7 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
         target: southTarget,
         document: convergerDoc,
         entityDefinitionMap,
+        registryQueries: registry.queries,
         replacingEntity: null,
         replacingDefinition: null,
       });
@@ -3045,6 +3052,7 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
         target: eastTarget,
         document: convergerDoc,
         entityDefinitionMap,
+        registryQueries: registry.queries,
         replacingEntity: null,
         replacingDefinition: null,
       });

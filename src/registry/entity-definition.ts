@@ -45,6 +45,7 @@ import {
   PLACEMENT_BEHAVIOR_TYPE,
   type EntityPlacementBehaviorDeclaration,
 } from "@/domain/registry/types/entity-placement-behavior";
+import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import { DEFAULT_PORT_PRIORITY_GROUP } from "@/shared/port-priority-groups";
 import { MAIN_CRAFT_GROUP_TAG } from "@/shared/entity-variants";
 import { RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY } from "@/shared/recipe-channel-behavior";
@@ -71,6 +72,11 @@ import {
 } from "@/shared/water-purifier-node";
 
 import { ITEM_DEFINITIONS } from "./item-definition";
+import {
+  LOGISTICS_DEFINITION_ID_BY_KIND_AND_ROLE,
+  LOGISTICS_DEFINITION_ID_BY_KIND_AND_SHAPE,
+  isLogisticsFamilyDefinitionId,
+} from "./logistics-definition-ids";
 import { RECIPE_DEFINITIONS } from "./recipe-definition";
 
 // ---------------------------------------------------------------------------
@@ -221,7 +227,8 @@ function normalizePipeFamilyFluidDefinition(definition: EntityDefinitionInput): 
   //   因此本函数的 port acceptRule 转换与 slot itemFilterType 转换都已成为恒等映射。
   //   保留此函数作为安全网，避免旧蓝图或外部定义中仍有显式 { kind: "liquid" } 的残留。
   // AI-CORRECTION 2026-07-23: PipeFamily 的所有显式流体槽位统一规范化为容量 2。
-  if (!definition.tags.includes("PipeFamily")) {
+  // AI-CORRECTION 2026-07-27: 管道设备族的身份由 registry 内部 definition ID 常量判定，不再依赖 PipeFamily tag。
+  if (!isLogisticsFamilyDefinitionId(LOGISTICS_KIND.pipe, definition.id)) {
     return definition;
   }
 
@@ -1309,6 +1316,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   // =========================================================================
   // 传送带物流设备 (uiGroup: "beltLogistics" 或 "hidden")
+  // AI-CORRECTION 2026-07-27: 本节包含传送带节与传送带物流设备；传送带物流设备不包括传送带节。
+  // 3 个传送带节使用 hidden，4 个传送带物流设备使用 beltLogistics。
   //
   // 传送带设备的特点（对应《仿真运行原理》§5.1.1-5.1.3）：
   //   - 2 个缓存组：ingredient + product（各 1 槽 × 1 容量）
@@ -1322,17 +1331,34 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   // 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks 字段，本注册表不再内联这些运行时配置。
   // =========================================================================
 
+  // AI-REMOVED 2026-07-27:
+  // Reason: BeltFamily tag 与 registry 内部 definition ID 分类重复，且无法表达“传送带节 / 传送带物流设备”的边界。
+  // Trigger: 用户要求传送带分类统一由 registry 常量和 RegistryQuery 提供。
+  // Evidence: logistics-definition-ids.ts 已定义 3 个传送带节和 4 个传送带物流设备；后者明确不包括传送带节。
+  // Replacement: RegistryQuery.isBelt / isBeltLogistics / isBeltFamily。
+  // Risk: Medium - 所有原 tag 消费端必须同步迁移到 RegistryQuery。
+  // Human Review: Required
+  //
+  // Original code:
+  // belt_straight_1x1 tags: ["BeltFamily", "ChevronHidden"]
+  // belt_turn_cw_1x1 tags: ["BeltFamily", "ChevronHidden"]
+  // belt_turn_ccw_1x1 tags: ["BeltFamily", "ChevronHidden"]
+  // log_splitter tags: ["BeltFamily", "OuterRingAllowed"]
+  // log_converger tags: ["BeltFamily", "OuterRingAllowed"]
+  // log_connector tags: ["BeltFamily", "ChevronHidden"]
+  // log_admission tags: ["BeltFamily"]
+
   /**
    * belt_straight_1x1 — 传送带直段（1×1）
    * 端口：W→E 流向
    */
   createEntityDefinition({
-    id: "belt_straight_1x1",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_SHAPE[LOGISTICS_KIND.belt].straight,
     nameKey: "registry.entity.belt_straight_1x1.name",
     spriteId: "belt_straight_1x1",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
-    tags: ["BeltFamily", "ChevronHidden"],
+    tags: ["ChevronHidden"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
@@ -1386,12 +1412,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 订正（2026-05-10）：当前端口基准改为 E→N 流向。
    */
   createEntityDefinition({
-    id: "belt_turn_cw_1x1",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_SHAPE[LOGISTICS_KIND.belt]["turn-cw"],
     nameKey: "registry.entity.belt_turn_cw_1x1.name",
     spriteId: "belt_turn_cw_1x1",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
-    tags: ["BeltFamily", "ChevronHidden"],
+    tags: ["ChevronHidden"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
@@ -1441,12 +1467,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 订正（2026-05-10）：当前端口基准改为 N→E 流向。
    */
   createEntityDefinition({
-    id: "belt_turn_ccw_1x1",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_SHAPE[LOGISTICS_KIND.belt]["turn-ccw"],
     nameKey: "registry.entity.belt_turn_ccw_1x1.name",
     spriteId: "belt_turn_ccw_1x1",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
-    tags: ["BeltFamily", "ChevronHidden"],
+    tags: ["ChevronHidden"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
@@ -1502,13 +1528,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *   调度由 port 的 priorityGroup 和 roundRobinSeed 控制。
    */
   createEntityDefinition({
-    id: "log_splitter",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_ROLE[LOGISTICS_KIND.belt].splitter,
     nameKey: "registry.entity.log_splitter.name",
     spriteId: "item_log_splitter",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
     displayOrder: 102,
-    tags: ["BeltFamily", "OuterRingAllowed"],
+    tags: ["OuterRingAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
       { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
@@ -1568,13 +1594,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *   3 个 input port → ingredient 组节点，1 个 output port → product 组节点
    */
   createEntityDefinition({
-    id: "log_converger",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_ROLE[LOGISTICS_KIND.belt].converger,
     nameKey: "registry.entity.log_converger.name",
     spriteId: "item_log_converger",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
     displayOrder: 103,
-    tags: ["BeltFamily", "OuterRingAllowed"],
+    tags: ["OuterRingAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
       { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
@@ -1638,13 +1664,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *   禁止 N↔E、N↔W 等跨方向输送。
    */
   createEntityDefinition({
-    id: "log_connector",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_ROLE[LOGISTICS_KIND.belt].connector,
     nameKey: "registry.entity.log_connector.name",
     spriteId: "item_log_connector",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
     displayOrder: 101,
-    tags: ["BeltFamily", "ChevronHidden"],
+    tags: ["ChevronHidden"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
     ],
@@ -1723,6 +1749,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   // =========================================================================
   // 管道物流设备 (uiGroup: "pipeLogistics" 或 "hidden")
+  // AI-CORRECTION 2026-07-27: 本节包含管道节与管道物流设备；管道物流设备不包括管道节。
+  // 3 个管道节使用 hidden，4 个管道物流设备使用 pipeLogistics。
   //
   // 管道设备与传送带结构相同（对应《仿真运行原理》§5.1.4）：
   //   - 2 个缓存组：ingredient + product（自动合成，kind="fluid"）
@@ -1749,17 +1777,34 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   // createSlots("ns_slot", [1], "liquid")
   // createSlots("ew_slot", [1], "liquid")
 
+  // AI-REMOVED 2026-07-27:
+  // Reason: PipeFamily tag 与 registry 内部 definition ID 分类重复，且无法表达“管道节 / 管道物流设备”的边界。
+  // Trigger: 用户要求管道分类统一由 registry 常量和 RegistryQuery 提供。
+  // Evidence: logistics-definition-ids.ts 已定义 3 个管道节和 4 个管道物流设备；后者明确不包括管道节。
+  // Replacement: RegistryQuery.isPipe / isPipeLogistics / isPipeFamily。
+  // Risk: Medium - 所有原 tag 消费端必须同步迁移到 RegistryQuery。
+  // Human Review: Required
+  //
+  // Original code:
+  // pipe_straight_1x1 tags: ["武陵", "PipeFamily", "OuterRingAllowed"]
+  // pipe_turn_cw_1x1 tags: ["武陵", "PipeFamily", "OuterRingAllowed"]
+  // pipe_turn_ccw_1x1 tags: ["武陵", "PipeFamily", "OuterRingAllowed"]
+  // pipe_splitter tags: ["武陵", "PipeFamily", "OuterRingAllowed"]
+  // pipe_converger tags: ["武陵", "PipeFamily", "OuterRingAllowed"]
+  // pipe_connector tags: ["武陵", "PipeFamily", "ChevronHidden"]
+  // pipe_admission tags: ["武陵", "PipeFamily", "OuterRingAllowed"]
+
   /**
    * pipe_straight_1x1 — 管道直段（1×1）
    * 端口：W→E 流向
    */
   createEntityDefinition({
-    id: "pipe_straight_1x1",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_SHAPE[LOGISTICS_KIND.pipe].straight,
     nameKey: "registry.entity.pipe_straight_1x1.name",
     spriteId: "pipe_straight_1x1",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
-    tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
+    tags: ["武陵", "OuterRingAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
     ],
@@ -1796,12 +1841,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 订正（2026-05-10）：当前端口基准为 E→N 流向。
    */
   createEntityDefinition({
-    id: "pipe_turn_cw_1x1",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_SHAPE[LOGISTICS_KIND.pipe]["turn-cw"],
     nameKey: "registry.entity.pipe_turn_cw_1x1.name",
     spriteId: "pipe_turn_cw_1x1",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
-    tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
+    tags: ["武陵", "OuterRingAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
     ],
@@ -1838,12 +1883,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 订正（2026-05-10）：当前端口基准为 N→E 流向。
    */
   createEntityDefinition({
-    id: "pipe_turn_ccw_1x1",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_SHAPE[LOGISTICS_KIND.pipe]["turn-ccw"],
     nameKey: "registry.entity.pipe_turn_ccw_1x1.name",
     spriteId: "pipe_turn_ccw_1x1",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
-    tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
+    tags: ["武陵", "OuterRingAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
     ],
@@ -1880,13 +1925,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 与 item_log_splitter 结构相同，kind 为 fluid。
    */
   createEntityDefinition({
-    id: "pipe_splitter",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_ROLE[LOGISTICS_KIND.pipe].splitter,
     nameKey: "registry.entity.pipe_splitter.name",
     spriteId: "item_pipe_splitter",
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
     displayOrder: 202,
-    tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
+    tags: ["武陵", "OuterRingAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
     ],
@@ -1939,13 +1984,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * item_pipe_converger — 管道汇流器（1×1）
    */
   createEntityDefinition({
-    id: "pipe_converger",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_ROLE[LOGISTICS_KIND.pipe].converger,
     nameKey: "registry.entity.pipe_converger.name",
     spriteId: "item_pipe_converger",
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
     displayOrder: 203,
-    tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
+    tags: ["武陵", "OuterRingAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
     ],
@@ -2006,13 +2051,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *   禁止 N↔E、N↔W 等跨方向输送。
    */
   createEntityDefinition({
-    id: "pipe_connector",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_ROLE[LOGISTICS_KIND.pipe].connector,
     nameKey: "registry.entity.pipe_connector.name",
     spriteId: "item_pipe_connector",
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
     displayOrder: 201,
-    tags: ["武陵", "PipeFamily", "ChevronHidden"],
+    tags: ["武陵", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -4474,13 +4519,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "log_admission",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_ROLE[LOGISTICS_KIND.belt].admission,
     nameKey: "registry.entity.log_admission.name",
     spriteId: "item_log_admission",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
     displayOrder: 104,
-    tags: ["BeltFamily"],
+    tags: [],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
       { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
@@ -4532,13 +4577,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    id: "pipe_admission",
+    id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_ROLE[LOGISTICS_KIND.pipe].admission,
     nameKey: "registry.entity.pipe_admission.name",
     spriteId: "item_pipe_admission",
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
     displayOrder: 204,
-    tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
+    tags: ["武陵", "OuterRingAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
       { type: PLACEMENT_BEHAVIOR_TYPE.autoRotateAlignPorts },
