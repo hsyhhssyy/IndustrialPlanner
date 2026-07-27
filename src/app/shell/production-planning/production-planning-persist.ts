@@ -22,7 +22,6 @@ import type {
 export function hookPlannerIndexedDbPersistence(
   store: ProductionPlanningInputStore,
 ): () => void {
-  let hydrating = true;
   // Step 1: 异步加载持久化状态
   void loadPlannerState().then((persisted) => {
     runInAction(() => {
@@ -36,25 +35,17 @@ export function hookPlannerIndexedDbPersistence(
           waterPurifierPolicy: normalizeWaterPurifierPolicy(persisted.sourceConfig?.waterPurifierPolicy),
           includeDeviceMinimumConsumption: persisted.sourceConfig?.includeDeviceMinimumConsumption !== false,
         };
-        const demandSignature = createProductionPlanningDemandSignature({
-          targets,
-          supplies,
-          sourceConfig,
-        });
 
         store.targets = targets;
         store.supplies = supplies;
         store.displayMode = normalizeDisplayMode(persisted.displayMode);
         store.viewMode = normalizeViewMode(persisted.viewMode);
-        store.recipeChoices = persisted.recipeChoicesDemandSignature === demandSignature
-          ? { ...persisted.recipeChoices }
-          : {};
+        store.recipeChoices = { ...persisted.recipeChoices };
         store.sourceConfig = sourceConfig;
         store.session = normalizePlannerSessionState(persisted.session);
       }
       store.hydrated = true;
     });
-    hydrating = false;
   });
 
   // Step 2: reaction — 仅 hydration 完成后才开始写入
@@ -67,23 +58,31 @@ export function hookPlannerIndexedDbPersistence(
     { fireImmediately: false },
   );
 
-  const disposeDemandReset = reaction(
-    () => createProductionPlanningDemandSignature(store),
-    () => {
-      if (hydrating || !store.hydrated || Object.keys(store.recipeChoices).length === 0) {
-        return;
-      }
-
-      runInAction(() => {
-        store.recipeChoices = {};
-      });
-    },
-    { fireImmediately: false },
-  );
+  // AI-REMOVED 2026-07-27:
+  // Reason: 用户配方偏好需要跨配置长期持久化，不能再由需求签名变化触发自动清空。
+  // Trigger: “持久化用户的配方偏好，并总是使用他们”。
+  // Evidence: 该 reaction 在 targets/supplies/sourceConfig 变化时会将 store.recipeChoices 置空。
+  // Replacement: 仅保留 toPersistedState 的自动写入 reaction，不再存在自动清空 recipeChoices 的 reaction。
+  // Risk: Low；历史偏好在当前上下文不可用时由求解器自动忽略。
+  // Human Review: Required
+  //
+  // Original code:
+  // const disposeDemandReset = reaction(
+  //   () => createProductionPlanningDemandSignature(store),
+  //   () => {
+  //     if (hydrating || !store.hydrated || Object.keys(store.recipeChoices).length === 0) {
+  //       return;
+  //     }
+  //
+  //     runInAction(() => {
+  //       store.recipeChoices = {};
+  //     });
+  //   },
+  //   { fireImmediately: false },
+  // );
 
   return () => {
     dispose();
-    disposeDemandReset();
   };
 }
 

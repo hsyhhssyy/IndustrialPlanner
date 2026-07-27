@@ -217,6 +217,19 @@
   cursor: not-allowed;
 }
 
+.production-planning-convert-module-button {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+  font-weight: 700;
+}
+
+.production-planning-convert-module-button:disabled {
+  border-color: var(--line);
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: not-allowed;
+}
+
 .production-planning-back-button {
   min-height: 32px;
 }

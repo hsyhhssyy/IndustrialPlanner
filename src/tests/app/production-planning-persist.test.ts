@@ -10,7 +10,11 @@ import {
 } from "@/shared/storage/planner-storage";
 import { saveToIndexedDbWithVersion } from "@/shared/storage/migration";
 import type { IndexedDbStorageLocation } from "@/shared/storage/browser-storage";
-import { createProductionPlanningDemandSignature } from "@/app/shell/production-planning/production-planning-persist";
+import {
+  createProductionPlanningDemandSignature,
+  hookPlannerIndexedDbPersistence,
+} from "@/app/shell/production-planning/production-planning-persist";
+import { ProductionPlanningInputStore } from "@/app/shell/production-planning/production-planning-state";
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 
 const PLANNER_STORE_LOCATION: IndexedDbStorageLocation = {
@@ -175,5 +179,29 @@ describe("production planning persistence", () => {
       ],
       sourceConfig,
     }));
+  });
+
+  it("restores persisted recipe choices even when demand signature changed", async () => {
+    const state = createPlannerState({
+      targets: [{ id: "target-old", itemId: "item_iron_plate", perMinute: 60 }],
+      recipeChoices: {
+        item_iron_plate: "r_assembler_iron_plate_2",
+      },
+      recipeChoicesDemandSignature: "stale-signature",
+    });
+    await savePlannerState(state);
+
+    const store = new ProductionPlanningInputStore();
+    const dispose = hookPlannerIndexedDbPersistence(store);
+
+    await vi.waitFor(() => {
+      expect(store.hydrated).toBe(true);
+    });
+
+    expect(store.recipeChoices).toEqual({
+      item_iron_plate: "r_assembler_iron_plate_2",
+    });
+
+    dispose();
   });
 });

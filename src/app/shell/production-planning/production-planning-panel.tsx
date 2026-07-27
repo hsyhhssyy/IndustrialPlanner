@@ -64,6 +64,7 @@ import {
   resolveProductionPlanningRecipeInputPorts,
 } from "@/app/shell/production-planning/production-planning-ledger";
 import { ProcessGraphView } from "@/app/shell/production-planning/process";
+import { createProductionPlanningModule } from "./production-planning-module";
 import { ProductionPlanningInputStore } from "./production-planning-state";
 import { hookPlannerIndexedDbPersistence } from "./production-planning-persist";
 import styles from "@/app/shell/app-shell.module.scss";
@@ -319,15 +320,23 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     });
   };
 
-  const clearRecipeChoicesForDemandChange = () => {
-    if (Object.keys(store.recipeChoices).length > 0) {
-      store.recipeChoices = {};
-    }
-  };
+  // AI-REMOVED 2026-07-27:
+  // Reason: 用户要求将配方选择作为长期偏好持久化，不应在修改需求/供给配置时被动清空。
+  // Trigger: “修改配置再次计算时保留并总是使用上次手动选择的配方偏好”。
+  // Evidence: 该函数会在 updateDemandInput 中对任意配置变更清空 store.recipeChoices。
+  // Replacement: updateDemandInput 仅更新输入，不再触碰 recipeChoices。
+  // Risk: Low；旧偏好可能在当前配置下不可用，但求解器会回退到可用配方，不会中断计算。
+  // Human Review: Required
+  //
+  // Original code:
+  // const clearRecipeChoicesForDemandChange = () => {
+  //   if (Object.keys(store.recipeChoices).length > 0) {
+  //     store.recipeChoices = {};
+  //   }
+  // };
 
   const updateDemandInput = (mutate: () => void) => {
     runInAction(() => {
-      clearRecipeChoicesForDemandChange();
       mutate();
     });
   };
@@ -487,11 +496,8 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     }
 
     const nextSupplies = [...store.supplies, createPort(itemId, demandPerMinute)];
-    // 只清除被设为外部供给的物品的配方选择，保留其他物品的自定义配方
-    const nextRecipeChoices = updateRecipeChoices(store.recipeChoices, itemId, null);
     runInAction(() => {
       store.supplies = nextSupplies;
-      store.recipeChoices = nextRecipeChoices;
     });
     setCalculation((current) => {
       if (current === null) {
@@ -502,14 +508,13 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
         targets: current.targets,
         supplies: nextSupplies,
         infiniteItemIds: current.infiniteItemIds,
-        recipeChoices: new Map(Object.entries(nextRecipeChoices)),
+        recipeChoices: new Map(Object.entries(current.recipeChoices)),
         sourceConfig: current.sourceConfig,
       }, index);
 
       return {
         ...current,
         supplies: nextSupplies,
-        recipeChoices: nextRecipeChoices,
         plan: nextPlan,
       };
     });
@@ -517,11 +522,8 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
 
   const handleRemoveExternalSupply = (itemId: string) => {
     const nextSupplies = store.supplies.filter((s) => s.itemId !== itemId);
-    // 只清除被移除外部供给的物品的配方选择（该物品将改为自产），保留其他物品的自定义配方
-    const nextRecipeChoices = updateRecipeChoices(store.recipeChoices, itemId, null);
     runInAction(() => {
       store.supplies = nextSupplies;
-      store.recipeChoices = nextRecipeChoices;
     });
     setCalculation((current) => {
       if (current === null) {
@@ -532,14 +534,13 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
         targets: current.targets,
         supplies: nextSupplies,
         infiniteItemIds: current.infiniteItemIds,
-        recipeChoices: new Map(Object.entries(nextRecipeChoices)),
+        recipeChoices: new Map(Object.entries(current.recipeChoices)),
         sourceConfig: current.sourceConfig,
       }, index);
 
       return {
         ...current,
         supplies: nextSupplies,
-        recipeChoices: nextRecipeChoices,
         plan: nextPlan,
       };
     });
@@ -617,6 +618,24 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
 
   const handleSwipePointerCancel = () => {
     swipeStateRef.current = null;
+  };
+
+  const convertToModule = () => {
+    if (calculation === null) {
+      return;
+    }
+
+    const nextModule = createProductionPlanningModule({
+      index,
+      plan: calculation.plan,
+      targets: calculation.targets,
+      translate: t,
+    });
+    runInAction(() => {
+      appHost.internalState.workbench.toolbox.moduleBalancing.customModules.push(nextModule);
+    });
+    appHost.internalActions.setDialogTab("toolbox", "module-balancing");
+    appHost.internalActions.setToolboxBottomDockCollapsed(false);
   };
 
   const panelClassName = [
@@ -707,6 +726,15 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
               <span>{t("productionPlanning.modify")}</span>
             </button>
             <div className={cm(styles, "production-planning-toolbar-controls")}>
+              <button
+                type="button"
+                className={cm(styles, "production-planning-icon-text-button production-planning-convert-module-button")}
+                disabled={calculation === null}
+                onClick={convertToModule}
+              >
+                <LucideBoxes />
+                <span>{t("productionPlanning.convertToModule")}</span>
+              </button>
               <SegmentedControl<ProductionPlanningDisplayMode>
                 label={t("productionPlanning.displayMode")}
                 value={displayMode}

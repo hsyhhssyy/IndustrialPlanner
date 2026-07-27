@@ -167,6 +167,7 @@ function createMockPlan(): import("@/app/shell/production-planning/production-pl
     roots: [],
     itemTotals: [],
     recipeTotals: [],
+    overflowItems: [],
     unresolvedPerMinute: 0,
     byproductItemIds: new Set(),
   };

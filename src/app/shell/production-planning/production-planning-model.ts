@@ -128,6 +128,7 @@ export interface ProductionPlanningResult {
   roots: ProductionPlanningItemNode[];
   itemTotals: ProductionPlanningItemTotal[];
   recipeTotals: ProductionPlanningRecipeTotal[];
+  overflowItems: ProductionPlanningPort[];
   unresolvedPerMinute: number;
   byproductItemIds: ReadonlySet<string>;
 }
@@ -334,11 +335,13 @@ function computeProductionPlanPass(
   for (const total of itemTotals) {
     total.isByproduct = byproductItemIds.has(total.itemId);
   }
+  const overflowItems = collectProductionPlanningOverflowItems(context, index);
 
   return {
     roots,
     itemTotals,
     recipeTotals,
+    overflowItems,
     unresolvedPerMinute: roundFlow(itemTotals.reduce((sum, item) => sum + item.unresolvedPerMinute, 0)),
     byproductItemIds,
   };
@@ -970,6 +973,32 @@ function collectProductionPlanningByproductItemIds(context: SolverContext): Set<
   }
 
   return result;
+}
+
+function collectProductionPlanningOverflowItems(
+  context: SolverContext,
+  index: ProductionPlanningIndex,
+): ProductionPlanningPort[] {
+  const totals = new Map(context.surplusSupplyRemaining);
+
+  for (const [itemId, perMinute] of context.dumperAmounts) {
+    // “使用副产物”策略会把最终剩余量同时登记到 surplus 与 dumper；
+    // 这里取较大值，既保留直接倾倒的产出，也避免重复计算同一份溢出。
+    totals.set(itemId, Math.max(totals.get(itemId) ?? 0, perMinute));
+  }
+
+  return Array.from(totals.entries())
+    .filter(([, perMinute]) => perMinute > EPSILON)
+    .sort(([leftItemId], [rightItemId]) => {
+      const leftName = index.itemById.get(leftItemId)?.nameKey ?? leftItemId;
+      const rightName = index.itemById.get(rightItemId)?.nameKey ?? rightItemId;
+      return leftName.localeCompare(rightName);
+    })
+    .map(([itemId, perMinute]) => ({
+      id: `overflow-${itemId}`,
+      itemId,
+      perMinute: roundFlow(perMinute),
+    }));
 }
 
 function isNaturalResourceItem(item: ItemDefinition): boolean {

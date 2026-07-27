@@ -94,6 +94,7 @@ function planningResult(roots: readonly ProductionPlanningItemNode[]): Productio
     roots: [...roots],
     itemTotals: [],
     recipeTotals: [],
+    overflowItems: [],
     unresolvedPerMinute: 0,
     byproductItemIds: new Set(),
   };
