@@ -54,6 +54,13 @@ export interface ToolboxWikiState {
 export interface ModuleBalancingIOPort {
   readonly itemId: string;
   readonly perMinute: number;
+  /** 仅用于画布系统输入；为 true 时该物品不参与配平与汇总。 */
+  readonly infinite?: boolean;
+}
+
+export interface ModuleBalancingFolder {
+  readonly id: string;
+  readonly name: string;
 }
 
 export interface ModuleBalancingCustomModule {
@@ -62,9 +69,21 @@ export interface ModuleBalancingCustomModule {
   readonly color: string;
   readonly iconId: string;
   readonly notes: string;
+  readonly folderId?: string | null;
   readonly inputs: readonly ModuleBalancingIOPort[];
   readonly outputs: readonly ModuleBalancingIOPort[];
   readonly sourceType: "custom";
+}
+
+export interface ModuleBalancingRecommendedModule {
+  readonly id: string;
+  readonly name: string;
+  readonly color: string;
+  readonly iconId: string;
+  readonly notes: string;
+  readonly inputs: readonly ModuleBalancingIOPort[];
+  readonly outputs: readonly ModuleBalancingIOPort[];
+  readonly sourceType: "recommended";
 }
 
 export interface ModuleBalancingSystemRecipeModule {
@@ -75,6 +94,7 @@ export interface ModuleBalancingSystemRecipeModule {
 
 export type ModuleBalancingModule =
   | ModuleBalancingCustomModule
+  | ModuleBalancingRecommendedModule
   | ModuleBalancingSystemRecipeModule;
 
 export interface ModuleBalancingStageModuleEntry {
@@ -91,6 +111,7 @@ export interface ModuleBalancingStage {
 export interface ModuleBalancingCanvas {
   readonly id: string;
   readonly name: string;
+  readonly folderId?: string | null;
   readonly globalInputs: readonly ModuleBalancingIOPort[];
   readonly stages: readonly ModuleBalancingStage[];
   readonly warehouseCapacity: number | null;
@@ -98,7 +119,9 @@ export interface ModuleBalancingCanvas {
 
 export interface ModuleBalancingState {
   readonly canvases: readonly ModuleBalancingCanvas[];
+  readonly canvasFolders?: readonly ModuleBalancingFolder[];
   readonly customModules: readonly ModuleBalancingCustomModule[];
+  readonly folders?: readonly ModuleBalancingFolder[];
   readonly activeCanvasId: string | null;
 }
 

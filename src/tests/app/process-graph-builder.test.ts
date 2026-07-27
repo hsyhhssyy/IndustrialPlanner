@@ -16,7 +16,7 @@ function createPlan(targets: ProductionPlanningPort[]) {
     acidPolicy: "use-byproduct",
     sewagePolicy: "external-supply",
     waterPurifierPolicy: "disabled",
-    includeDeviceMinimumConsumption: false,
+    includeDeviceMinimumConsumption: "none",
   };
   return computeProductionPlan(
     {
@@ -41,7 +41,7 @@ function createPlanWithChoices(
     acidPolicy: "use-byproduct",
     sewagePolicy: "external-supply",
     waterPurifierPolicy: "disabled",
-    includeDeviceMinimumConsumption: false,
+    includeDeviceMinimumConsumption: "none",
   };
   return computeProductionPlan(
     {

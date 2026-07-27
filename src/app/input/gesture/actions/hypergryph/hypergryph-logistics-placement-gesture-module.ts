@@ -717,10 +717,20 @@ function handleMouseLeftTap(options: {
   const runtime = options.appHost.internalState.runtime.logisticsPlacement;
   const kind = runtime.kind;
   const gridPoint = resolveGridPointFromGesturePosition(options.editor, options.position);
-  if (kind === null || gridPoint === null) {
-    logisticsLogger.debug("mouse-left-tap IGNORED: kind or gridPoint null", {
+  if (kind === null) {
+    logMouseLogisticsPlacementFailure("logistics-kind-missing", {
       kind,
-      gridPoint,
+      phase: runtime.phase,
+      position: options.position,
+    });
+    return { status: "ignored" };
+  }
+
+  if (gridPoint === null) {
+    logMouseLogisticsPlacementFailure("pointer-outside-editor-grid", {
+      kind,
+      phase: runtime.phase,
+      position: options.position,
     });
     return { status: "ignored" };
   }
@@ -762,7 +772,24 @@ function handleMouseLeftTap(options: {
   });
 
   if (!options.editor.actions.applyLogisticDraft()) {
-    runtime.statusMessageKey = options.editor.queries.resolveLogisticsDraftState()?.invalidReason ?? "unknown";
+    const rejectedDraftState =
+      options.editor.queries.resolveLogisticsDraftState() ?? draftState;
+    const invalidReason = rejectedDraftState.invalidReason;
+    const failureReason = invalidReason
+      ?? (rejectedDraftState.cells.length === 0 ? "empty-path" : "editor-apply-rejected");
+    runtime.statusMessageKey = invalidReason ?? "unknown";
+    logMouseLogisticsPlacementFailure(failureReason, {
+      stage: "apply",
+      kind,
+      gridPoint,
+      phase: runtime.phase,
+      invalidReason,
+      canApply: rejectedDraftState.canApply,
+      cellCount: rejectedDraftState.cells.length,
+      sourceType: rejectedDraftState.source?.type ?? null,
+      targetType: rejectedDraftState.target?.type ?? null,
+      headDraftEntityId: rejectedDraftState.headDraftEntityId,
+    });
     return { status: "handled" };
   }
 
@@ -800,19 +827,20 @@ function createMouseLogisticsStart(options: {
     options.gridPoint,
     options.kind,
   );
+  const behavior = resolveLogisticsPlacementBehaviorOptions(options.appHost);
   let result: LogisticsDraftActionResult | null = null;
 
   if (endpoint?.type === "device-port" && endpoint.portDirection === "output") {
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
-      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
+      allowEmptySource: behavior.allowEmptySource,
       source: resolveDevicePortStartSource(endpoint, options.gridPoint),
       routeOrder: options.appHost.internalState.runtime.logisticsPlacement.routeOrder,
     });
   } else if (endpoint?.type === "logistics-entity") {
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
-      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
+      allowEmptySource: behavior.allowEmptySource,
       source: {
         type: "logistics-entity",
         entityId: endpoint.entityId,
@@ -821,13 +849,20 @@ function createMouseLogisticsStart(options: {
       routeOrder: options.appHost.internalState.runtime.logisticsPlacement.routeOrder,
     });
   } else if (options.pointerEntityId === null) {
-    if (!resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource) {
+    if (!behavior.allowEmptySource) {
+      logMouseLogisticsPlacementFailure("empty-source-disallowed", {
+        stage: "start",
+        kind: options.kind,
+        gridPoint: options.gridPoint,
+        pointerEntityId: options.pointerEntityId,
+        endpointType: endpoint?.type ?? null,
+      });
       return { status: "ignored" };
     }
 
     result = options.editor.actions.createLogisticsDraftStart({
       kind: options.kind,
-      allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.appHost).allowEmptySource,
+      allowEmptySource: behavior.allowEmptySource,
       source: {
         type: "empty-cell",
         gridPoint: options.gridPoint,
@@ -837,7 +872,11 @@ function createMouseLogisticsStart(options: {
   }
 
   if (result === null) {
-    logisticsLogger.debug("mouse-logistics-start IGNORED: no matching endpoint and pointerEntityId not null", {
+    const failureReason = endpoint?.type === "device-port"
+      ? "source-port-is-not-output"
+      : "clicked-entity-has-no-compatible-output";
+    logMouseLogisticsPlacementFailure(failureReason, {
+      stage: "start",
       kind: options.kind,
       gridPoint: options.gridPoint,
       pointerEntityId: options.pointerEntityId,
@@ -847,12 +886,25 @@ function createMouseLogisticsStart(options: {
     return { status: "ignored" };
   }
 
-  logisticsLogger.debug("mouse-logistics-start OK", {
-    kind: options.kind,
-    gridPoint: options.gridPoint,
-    endpointType: endpoint?.type ?? null,
-    pointerEntityId: options.pointerEntityId,
-  });
+  if (result.status === "ignored") {
+    logMouseLogisticsPlacementFailure(result.invalidReason ?? "draft-start-ignored", {
+      stage: "start",
+      kind: options.kind,
+      gridPoint: options.gridPoint,
+      pointerEntityId: options.pointerEntityId,
+      endpointType: endpoint?.type ?? null,
+      actionStatus: result.status,
+      invalidReason: result.invalidReason,
+      canApply: result.canApply,
+    });
+  } else {
+    logisticsLogger.debug("mouse-logistics-start OK", {
+      kind: options.kind,
+      gridPoint: options.gridPoint,
+      endpointType: endpoint?.type ?? null,
+      pointerEntityId: options.pointerEntityId,
+    });
+  }
   updateRuntimeFromResult({
     appHost: options.appHost,
     pointerMode: "mouse",
@@ -861,6 +913,13 @@ function createMouseLogisticsStart(options: {
   });
   options.appHost.internalState.runtime.logisticsPlacement.lastPreviewGridPoint = options.gridPoint;
   return { status: "handled" };
+}
+
+function logMouseLogisticsPlacementFailure(
+  reason: string,
+  context: Readonly<Record<string, unknown>>,
+): void {
+  logisticsLogger.debug(`mouse-left-tap placement rejected: ${reason}`, context);
 }
 
 function applyTouchLogisticsPlacement(

@@ -85,7 +85,8 @@ function createModuleBalancingStorageSnapshot(options: {
   canvases?: Array<{
     id: string;
     name: string;
-    globalInputs: Array<{ itemId: string; perMinute: number }>;
+    folderId?: string | null;
+    globalInputs: Array<{ itemId: string; perMinute: number; infinite?: boolean }>;
     stages: Array<{
       id: string;
       name: string;
@@ -93,19 +94,22 @@ function createModuleBalancingStorageSnapshot(options: {
     }>;
     warehouseCapacity: number | null;
   }>;
+  canvasFolders?: Array<{ id: string; name: string }>;
   customModules?: Array<{
     id: string;
     name: string;
     color: string;
     iconId: string;
+    folderId?: string | null;
     sourceType: "custom";
     inputs: Array<{ itemId: string; perMinute: number }>;
     outputs: Array<{ itemId: string; perMinute: number }>;
   }>;
+  folders?: Array<{ id: string; name: string }>;
   activeCanvasId?: string | null;
 } = {}) {
   return {
-    canvases: options.canvases ?? [
+    canvases: (options.canvases ?? [
       {
         id: DEFAULT_MODULE_BALANCING_CANVAS_ID,
         name: "主基地配平",
@@ -119,8 +123,17 @@ function createModuleBalancingStorageSnapshot(options: {
         ],
         warehouseCapacity: null,
       },
-    ],
+    ]).map((canvas) => ({
+      id: canvas.id,
+      name: canvas.name,
+      folderId: canvas.folderId ?? null,
+      globalInputs: canvas.globalInputs,
+      stages: canvas.stages,
+      warehouseCapacity: canvas.warehouseCapacity,
+    })),
+    canvasFolders: options.canvasFolders ?? [],
     customModules: options.customModules ?? [],
+    folders: options.folders ?? [],
     activeCanvasId: options.activeCanvasId ?? DEFAULT_MODULE_BALANCING_CANVAS_ID,
   };
 }
@@ -238,6 +251,79 @@ describe("createAppHost", () => {
     expect(
       appHost.internalState.workbench.toolbox.moduleBalancing.customModules[0]?.iconId,
     ).toBe("grinder_1");
+    appHost.dispose();
+  });
+
+  it("restores module and canvas folders and moves missing folder references to the root", () => {
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        moduleBalancing: createModuleBalancingStorageSnapshot({
+          canvasFolders: [{ id: "canvas-folder-production", name: "画布生产区" }],
+          canvases: [
+            {
+              id: DEFAULT_MODULE_BALANCING_CANVAS_ID,
+              name: "主基地配平",
+              folderId: "canvas-folder-production",
+              globalInputs: [{ itemId: "item_liquid_water", perMinute: 0, infinite: true }],
+              stages: [],
+              warehouseCapacity: null,
+            },
+            {
+              id: "canvas-missing-folder",
+              name: "失效目录画布",
+              folderId: "canvas-folder-missing",
+              globalInputs: [],
+              stages: [],
+              warehouseCapacity: null,
+            },
+          ],
+          folders: [{ id: "folder-production", name: "生产区" }],
+          customModules: [
+            {
+              id: "custom-in-folder",
+              name: "文件夹内模块",
+              color: "#123456",
+              iconId: "grinder_1",
+              folderId: "folder-production",
+              sourceType: "custom",
+              inputs: [{ itemId: "originium_ore", perMinute: 1 }],
+              outputs: [],
+            },
+            {
+              id: "custom-missing-folder",
+              name: "失效目录模块",
+              color: "#123456",
+              iconId: "grinder_1",
+              folderId: "folder-missing",
+              sourceType: "custom",
+              inputs: [{ itemId: "originium_ore", perMinute: 1 }],
+              outputs: [],
+            },
+          ],
+        }),
+      })),
+    );
+
+    const appHost = createAppHost(createWorkspace());
+    const moduleBalancing = appHost.internalState.workbench.toolbox.moduleBalancing;
+
+    expect(moduleBalancing.canvasFolders).toEqual([{
+      id: "canvas-folder-production",
+      name: "画布生产区",
+    }]);
+    expect(moduleBalancing.canvases.map((canvas) => canvas.folderId)).toEqual([
+      "canvas-folder-production",
+      null,
+    ]);
+    expect(moduleBalancing.canvases[0]?.globalInputs).toEqual([
+      { itemId: "item_liquid_water", perMinute: 0, infinite: true },
+    ]);
+    expect(moduleBalancing.folders).toEqual([{ id: "folder-production", name: "生产区" }]);
+    expect(moduleBalancing.customModules.map((module) => module.folderId)).toEqual([
+      "folder-production",
+      null,
+    ]);
     appHost.dispose();
   });
 

@@ -22,7 +22,7 @@ export class ProductionPlanningInputStore {
     acidPolicy: "use-byproduct",
     sewagePolicy: "external-supply",
     waterPurifierPolicy: "disabled",
-    includeDeviceMinimumConsumption: true,
+    includeDeviceMinimumConsumption: "fractional",
   };
   session: PlannerSessionState = createDefaultPlannerSessionState();
 
@@ -44,7 +44,7 @@ export class ProductionPlanningInputStore {
       acidPolicy: "use-byproduct",
       sewagePolicy: "external-supply",
       waterPurifierPolicy: "disabled",
-      includeDeviceMinimumConsumption: true,
+      includeDeviceMinimumConsumption: "fractional",
     };
     this.session = createDefaultPlannerSessionState();
   }

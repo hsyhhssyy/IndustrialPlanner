@@ -105,7 +105,7 @@ const DEFAULT_SOURCE_CONFIG: ProductionPlanningSourceConfig = {
   acidPolicy: "use-byproduct",
   sewagePolicy: "external-supply",
   waterPurifierPolicy: "disabled",
-  includeDeviceMinimumConsumption: true,
+  includeDeviceMinimumConsumption: "fractional",
 };
 
 function makeInfiniteItemIds(

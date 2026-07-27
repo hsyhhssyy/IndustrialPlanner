@@ -32,13 +32,14 @@ export const PRODUCTION_PLANNING_BYPRODUCT_ITEM_IDS = new Set([
 export type ProductionPlanningByproductPolicy = "use-byproduct" | "dump-byproduct";
 export type ProductionPlanningSewagePolicy = "external-supply" | "self-produce";
 export type ProductionPlanningWaterPurifierPolicy = "disabled" | "use-when-available";
+export type ProductionPlanningDeviceMinimumConsumptionMode = "none" | "fractional" | "ceil";
 
 export interface ProductionPlanningSourceConfig {
   waterPolicy: ProductionPlanningByproductPolicy;
   acidPolicy: ProductionPlanningByproductPolicy;
   sewagePolicy: ProductionPlanningSewagePolicy;
   waterPurifierPolicy: ProductionPlanningWaterPurifierPolicy;
-  includeDeviceMinimumConsumption: boolean;
+  includeDeviceMinimumConsumption: ProductionPlanningDeviceMinimumConsumptionMode;
 }
 
 export type ProductionPlanningDisplayMode = "item" | "device";
@@ -590,6 +591,7 @@ function resolveDemand(
   }
 
   const cyclesPerMinute = roundFlow(remaining / netOutputAmount);
+  const deviceCount = roundFlow(cyclesPerMinute / (60 / recipe.durationSeconds));
   const recipeInputPorts = recipe.inputs.map((input) => ({
     id: `${recipe.id}-in-${input.itemId}`,
     itemId: input.itemId,
@@ -598,7 +600,13 @@ function resolveDemand(
   const deviceConsumptionPorts = Array.from(deviceConsumptionAmounts, ([consumedItemId, amount]) => ({
     id: `${recipe.id}-device-consumption-${consumedItemId}`,
     itemId: consumedItemId,
-    perMinute: roundFlow(amount * cyclesPerMinute),
+    perMinute: resolveDeviceMinimumConsumptionPerMinute(
+      amount,
+      cyclesPerMinute,
+      recipe.durationSeconds,
+      deviceCount,
+      context.sourceConfig.includeDeviceMinimumConsumption,
+    ),
   }));
   const inputPorts = mergePorts(recipeInputPorts, deviceConsumptionPorts);
   const outputPorts = recipe.outputs.map((recipeOutput) => ({
@@ -632,7 +640,7 @@ function resolveDemand(
     targetItemId: itemId,
     durationSeconds: recipe.durationSeconds,
     cyclesPerMinute,
-    deviceCount: roundFlow(cyclesPerMinute / (60 / recipe.durationSeconds)),
+    deviceCount,
     inputs: inputPorts,
     deviceMinimumConsumptionInputs: deviceConsumptionPorts,
     outputs: outputPorts,
@@ -658,7 +666,7 @@ function resolveDeviceMinimumConsumptionAmountsPerCycle(
   recipe: RecipeDefinition,
   context: SolverContext,
 ): ReadonlyMap<string, number> {
-  if (!context.sourceConfig.includeDeviceMinimumConsumption) {
+  if (context.sourceConfig.includeDeviceMinimumConsumption === "none") {
     return new Map();
   }
 
@@ -687,6 +695,26 @@ function resolveDeviceMinimumConsumptionAmountsPerCycle(
       consumptionInput.amount * recipe.durationSeconds / consumptionRecipe.durationSeconds,
     ),
   ]]);
+}
+
+function resolveDeviceMinimumConsumptionPerMinute(
+  amountPerCycle: number,
+  cyclesPerMinute: number,
+  hostRecipeDurationSeconds: number,
+  deviceCount: number,
+  mode: ProductionPlanningDeviceMinimumConsumptionMode,
+): number {
+  if (mode === "none") {
+    return 0;
+  }
+
+  if (mode === "ceil") {
+    const roundedDeviceCount = Math.ceil(deviceCount - EPSILON);
+    const cyclesPerMachinePerMinute = 60 / hostRecipeDurationSeconds;
+    return roundFlow(amountPerCycle * roundedDeviceCount * cyclesPerMachinePerMinute);
+  }
+
+  return roundFlow(amountPerCycle * cyclesPerMinute);
 }
 
 function createProductionPlanningCycleSupplyItemNode(

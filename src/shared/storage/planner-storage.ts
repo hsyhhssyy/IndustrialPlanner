@@ -33,7 +33,7 @@ export interface PlannerPersistedState {
     acidPolicy: "use-byproduct" | "dump-byproduct";
     sewagePolicy: "external-supply" | "self-produce";
     waterPurifierPolicy: "disabled" | "use-when-available";
-    includeDeviceMinimumConsumption: boolean;
+    includeDeviceMinimumConsumption: "none" | "fractional" | "ceil";
   };
   session: PlannerSessionState;
 }
@@ -49,7 +49,7 @@ const DEFAULT_PLANNER_SOURCE_CONFIG: PlannerPersistedState["sourceConfig"] = {
   acidPolicy: "use-byproduct",
   sewagePolicy: "external-supply",
   waterPurifierPolicy: "disabled",
-  includeDeviceMinimumConsumption: true,
+  includeDeviceMinimumConsumption: "fractional",
 };
 
 export function createDefaultPlannerSessionState(): PlannerSessionState {
@@ -124,10 +124,25 @@ export function normalizePlannerPersistedState(value: unknown): PlannerPersisted
       waterPurifierPolicy: sourceConfig.waterPurifierPolicy === "use-when-available"
         ? "use-when-available"
         : DEFAULT_PLANNER_SOURCE_CONFIG.waterPurifierPolicy,
-      includeDeviceMinimumConsumption: sourceConfig.includeDeviceMinimumConsumption !== false,
+      includeDeviceMinimumConsumption: normalizeDeviceMinimumConsumptionMode(sourceConfig.includeDeviceMinimumConsumption),
     },
     session: normalizePlannerSessionState(value.session),
   };
+}
+
+function normalizeDeviceMinimumConsumptionMode(
+  value: unknown,
+): PlannerPersistedState["sourceConfig"]["includeDeviceMinimumConsumption"] {
+  if (value === "none" || value === "fractional" || value === "ceil") {
+    return value;
+  }
+
+  // 兼容旧版布尔值：true=小数计算，false=不计算。
+  if (value === false) {
+    return "none";
+  }
+
+  return DEFAULT_PLANNER_SOURCE_CONFIG.includeDeviceMinimumConsumption;
 }
 
 // ── 数据库定位 ──

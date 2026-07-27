@@ -1,0 +1,28 @@
+{
+  "id": "recommended-canvas:iron-smelting",
+  "name": "蓝铁矿冶炼配平",
+  "globalInputs": [],
+  "stages": [
+    {
+      "id": "recommended-stage:iron-mining",
+      "name": "蓝铁矿采集",
+      "entries": [
+        {
+          "moduleId": "r_miner_iron_ore_basic",
+          "quantity": 1.5
+        }
+      ]
+    },
+    {
+      "id": "recommended-stage:iron-smelting",
+      "name": "蓝铁块冶炼",
+      "entries": [
+        {
+          "moduleId": "r_furnace_iron_nugget_from_iron_ore_basic",
+          "quantity": 1
+        }
+      ]
+    }
+  ],
+  "warehouseCapacity": null
+}

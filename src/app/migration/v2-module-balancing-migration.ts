@@ -106,7 +106,9 @@ export function migrateV2ModuleBalancingState(
   return {
     state: {
       canvases,
+      canvasFolders: currentState.canvasFolders.map((folder) => ({ ...folder })),
       customModules: [...retainedCustomModules, ...migratedCustomModules],
+      folders: currentState.folders.map((folder) => ({ ...folder })),
       activeCanvasId,
     },
     migratedCanvasCount: migratedCanvases.length,
@@ -186,6 +188,7 @@ function convertLegacyCustomModule(
     color: MODULE_COLOR_BY_LEGACY_KEY[legacyModule.colorKey] ?? "#4f8cff",
     iconId: outputs[0]?.itemId ?? inputs[0]?.itemId ?? DEFAULT_MIGRATED_MODULE_ICON_ID,
     notes: "",
+    folderId: null,
     inputs,
     outputs,
     sourceType: "custom",
@@ -199,6 +202,7 @@ function convertLegacyCanvas(
   return {
     id: createMigratedCanvasId(legacyCanvas.id),
     name: legacyCanvas.name,
+    folderId: null,
     globalInputs: legacyCanvas.systemInputs.map(convertLegacyRateRow),
     stages: legacyCanvas.stages.map((stage) => convertLegacyStage(stage, legacyCanvas.id)),
     warehouseCapacity,
@@ -363,6 +367,7 @@ function cloneCustomModule(
     color: customModule.color,
     iconId: customModule.iconId,
     notes: customModule.notes,
+    folderId: customModule.folderId,
     inputs: customModule.inputs.map((port) => ({ ...port })),
     outputs: customModule.outputs.map((port) => ({ ...port })),
     sourceType: "custom",
@@ -375,6 +380,7 @@ function cloneCanvas(
   return {
     id: canvas.id,
     name: canvas.name,
+    folderId: canvas.folderId,
     globalInputs: canvas.globalInputs.map((port) => ({ ...port })),
     stages: canvas.stages.map((stage) => ({
       id: stage.id,

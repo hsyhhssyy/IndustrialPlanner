@@ -1,9 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
 import LucideArrowLeft from "~icons/lucide/arrow-left";
+import LucideCheck from "~icons/lucide/check";
+import LucideChevronDown from "~icons/lucide/chevron-down";
+import LucideChevronRight from "~icons/lucide/chevron-right";
+import LucideDownload from "~icons/lucide/download";
 import LucideEdit3 from "~icons/lucide/edit-3";
+import LucideFolder from "~icons/lucide/folder";
+import LucideFolderInput from "~icons/lucide/folder-input";
+import LucideFolderPlus from "~icons/lucide/folder-plus";
 import LucideLayers3 from "~icons/lucide/layers-3";
+import LucidePackagePlus from "~icons/lucide/package-plus";
 import LucidePlus from "~icons/lucide/plus";
 import LucideSave from "~icons/lucide/save";
 import LucideSearch from "~icons/lucide/search";
@@ -16,6 +24,7 @@ import { ActivityIconStrip } from "@/app/shell/shared/activity-icon-strip";
 import type {
   ModuleBalancingCanvasReadWrite,
   ModuleBalancingCustomModuleReadWrite,
+  ModuleBalancingFolderReadWrite,
   ModuleBalancingIOPortReadWrite,
   ModuleBalancingStageReadWrite,
 } from "@/app/state/state-impl";
@@ -26,7 +35,17 @@ import type {
   ModuleBalancingCustomModule,
   ModuleBalancingIOPort,
   ModuleBalancingModule,
-  ModuleBalancingSystemRecipeModule,
+  ModuleBalancingRecommendedModule,
+  // AI-REMOVED 2026-07-27:
+  // Reason: ModuleCard 不再直接访问系统配方 recipeId，标题和图标统一由 module-balancing-model 解析。
+  // Trigger: 系统配方卡改为设备头图和“产物 · 设备”文本。
+  // Evidence: resolveModuleDisplayTitle 与 resolveModuleIconSrc 已覆盖显示所需数据。
+  // Replacement: ModuleBalancingModule
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // ModuleBalancingSystemRecipeModule,
 } from "@/app/toolbox-types";
 import {
   buildModuleBalancingIndex,
@@ -37,6 +56,7 @@ import {
   formatDurationMinutes,
   formatFlow,
   formatSignedFlow,
+  matchesModuleSearchQuery,
   moduleContainsInactiveActivityContent,
   resolveCanvasActivityIds,
   resolveAnyIconSrc,
@@ -44,21 +64,46 @@ import {
   resolveItemName,
   resolveModule,
   resolveModuleActivityIds,
+  resolveModuleDisplayTitle,
   resolveModuleIconSrc,
   resolveModuleInputs,
   resolveModuleOutputs,
+  resolveInfiniteSystemInputItemIds,
   type ModuleBalancingDispatchTicketSummary,
   type ModuleBalancingIndex,
   type ModuleBalancingItemBalance,
   type ModuleBalancingWarehouseForecast,
 } from "@/app/shell/module-balancing/module-balancing-model";
+import {
+  readRecommendedCanvasLibrary,
+  type RecommendedCanvasRecord,
+} from "@/app/shell/module-balancing/recommended-canvas-library";
+import { readRecommendedModuleLibrary } from "@/app/shell/module-balancing/recommended-module-library";
+import {
+  applyVersionResourcePreset,
+  readVersionResourceLibrary,
+  type VersionResourcePreset,
+} from "@/app/shell/module-balancing/version-resource-library";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { NumberInput } from "@/app/shell/shared/number-input";
 import { OverlayStackLayer, useOverlayStackLayer } from "@/app/shell/shared/overlay-stack";
+// AI-REMOVED 2026-07-27:
+// Reason: 系统配方卡改为设备图标与“产出物品 · 设备名称”单行头部，不再渲染完整配方公式。
+// Trigger: 用户要求调整系统配方模块外观。
+// Evidence: ModuleCard 的系统配方分支现由 resolveModuleDisplayTitle 提供头部文本。
+// Replacement: src/app/shell/module-balancing/module-balancing-model.ts:resolveModuleDisplayTitle
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
+// AI-CORRECTION 2026-07-27: 用户澄清设备图标与“产物 · 设备”文本仅规范头部，系统配方卡仍需保留下方的配方展示控件。
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 
 const MODULE_DRAG_TYPE = "application/x-industrial-planner-module-balancing-module";
+const CUSTOM_MODULE_FOLDER_DRAG_TYPE = "application/x-industrial-planner-module-balancing-custom-module";
+const CANVAS_FOLDER_DRAG_TYPE = "application/x-industrial-planner-module-balancing-canvas";
 const ENTRY_DRAG_TYPE = "application/x-industrial-planner-module-balancing-entry";
 
 const CUSTOM_MODULE_COLORS = [
@@ -78,7 +123,17 @@ type ModuleBalancingPage =
   | { kind: "stage"; stageId: string }
   | { kind: "summary" };
 
-type ModuleLibraryTab = "recipes" | "modules";
+// AI-REMOVED 2026-07-27:
+// Reason: 模块库由互斥 tab 改为系统配方、推荐模块、自定义模块三个可独立展开的区块。
+// Trigger: 用户要求将 tab 切换改为展开/收起形式。
+// Evidence: ModuleLibrarySectionId 与 ModuleSection 共同管理三个区块的展开状态。
+// Replacement: ModuleLibrarySectionId
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// type ModuleLibraryTab = "recipes" | "modules";
+type ModuleLibrarySectionId = "system" | "recommended" | "custom";
 
 interface QuantityDraft {
   mode: "add" | "edit";
@@ -94,6 +149,7 @@ interface CustomModuleFormState {
   color: string;
   iconId: string;
   notes: string;
+  folderId: string | null;
   inputs: ModuleBalancingIOPort[];
   outputs: ModuleBalancingIOPort[];
 }
@@ -120,9 +176,27 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   const [activePage, setActivePage] = useState<ModuleBalancingPage>({ kind: "canvas" });
   const [libraryOpen, setLibraryOpen] = useState(!isTouch);
   const [libraryHighlight, setLibraryHighlight] = useState(false);
-  const [libraryTab, setLibraryTab] = useState<ModuleLibraryTab>("recipes");
+  // AI-REMOVED 2026-07-27:
+  // Reason: 模块库不再使用互斥 tab，三个板块改为独立展开/收起。
+  // Trigger: 用户要求 tab 样式切换改为展开收起形式。
+  // Evidence: 展开状态已下沉至 ModuleLibrary 的 expandedSections。
+  // Replacement: ModuleLibrary.expandedSections
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const [libraryTab, setLibraryTab] = useState<ModuleLibraryTab>("recipes");
   const [newCanvasDialogOpen, setNewCanvasDialogOpen] = useState(false);
   const [newCanvasName, setNewCanvasName] = useState("");
+  const [canvasLibraryDialogOpen, setCanvasLibraryDialogOpen] = useState(false);
+  const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [recommendedCanvases, setRecommendedCanvases] = useState<RecommendedCanvasRecord[]>([]);
+  const [recommendedCanvasLoadFailed, setRecommendedCanvasLoadFailed] = useState(false);
+  const [recommendedModules, setRecommendedModules] = useState<ModuleBalancingRecommendedModule[]>([]);
+  const [versionResources, setVersionResources] = useState<VersionResourcePreset[]>([]);
+  const [versionResourceDialogOpen, setVersionResourceDialogOpen] = useState(false);
+  const [versionResourceLoadFailed, setVersionResourceLoadFailed] = useState(false);
   const [expandedBalanceIds, setExpandedBalanceIds] = useState<Set<string>>(() => new Set());
   const [quantityDraft, setQuantityDraft] = useState<QuantityDraft | null>(null);
   const [customModuleForm, setCustomModuleForm] = useState<CustomModuleFormState | null>(null);
@@ -131,9 +205,57 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     visible: libraryOpen,
   });
 
+  useEffect(() => {
+    let active = true;
+    // AI-REMOVED 2026-07-27:
+    // Reason: effect 首次执行时状态已默认为 false，同步 setState 会造成一次无意义的级联渲染。
+    // Trigger: 推荐画布静态资源加载接入 React effect。
+    // Evidence: recommendedCanvasLoadFailed 的 useState 初始值已是 false。
+    // Replacement: Promise rejection 分支仅在真实加载失败时写入 true。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // setRecommendedCanvasLoadFailed(false);
+    void readRecommendedCanvasLibrary()
+      .then((library) => {
+        if (active) {
+          setRecommendedCanvases([...library.canvases]);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setRecommendedCanvasLoadFailed(true);
+        }
+      });
+    void readRecommendedModuleLibrary()
+      .then((library) => {
+        if (active && library.modules.length > 0) {
+          setRecommendedModules([...library.modules]);
+        }
+      })
+      .catch(() => undefined);
+    void readVersionResourceLibrary()
+      .then((library) => {
+        if (active) {
+          setVersionResources([...library.resources]);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setVersionResourceLoadFailed(true);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const index = buildModuleBalancingIndex(appHost.workspace.registry, balancingState, {
     includeInactiveActivityContent: showAllActivityContent,
     activeActivityIds,
+    recommendedModules,
   });
   const naturalResourcesCustomFilter = useMemo(() => {
     const itemIds = appHost.workspace.registry.itemDefinitions
@@ -145,6 +267,11 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   const visibleCanvases = showAllActivityContent
     ? balancingState.canvases
     : balancingState.canvases.filter((canvas) =>
+      !canvasContainsInactiveActivityContent(canvas, index, activeActivityIds),
+    );
+  const visibleRecommendedCanvases = showAllActivityContent
+    ? recommendedCanvases
+    : recommendedCanvases.filter((canvas) =>
       !canvasContainsInactiveActivityContent(canvas, index, activeActivityIds),
     );
   const activeCanvas = visibleCanvases.find((canvas) => canvas.id === balancingState.activeCanvasId)
@@ -214,6 +341,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       color: CUSTOM_MODULE_COLORS[0],
       iconId: index.allItems[0]?.id ?? index.allEntities[0]?.id ?? "grinder_1",
       notes: "",
+      folderId: null,
       inputs: [],
       outputs: [],
     });
@@ -226,13 +354,22 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       color: customModule.color,
       iconId: customModule.iconId,
       notes: customModule.notes,
+      folderId: customModule.folderId ?? null,
       inputs: customModule.inputs.map(clonePort),
       outputs: customModule.outputs.map(clonePort),
     });
   };
 
   const openStageAsCustomModuleForm = (stage: ModuleBalancingStageReadWrite) => {
-    const stageTotals = computeStageModuleTotals(stage, index);
+    if (activeCanvas === null) {
+      return;
+    }
+
+    const stageTotals = computeStageModuleTotals(
+      stage,
+      index,
+      resolveInfiniteSystemInputItemIds(activeCanvas),
+    );
     const inputs = stageTotals
       .filter((balance) => balance.totalInput > 0)
       .map((balance) => ({ itemId: balance.itemId, perMinute: balance.totalInput }));
@@ -246,6 +383,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       color: CUSTOM_MODULE_COLORS[0],
       iconId: outputs[0]?.itemId ?? inputs[0]?.itemId ?? index.allItems[0]?.id ?? "grinder_1",
       notes: "",
+      folderId: null,
       inputs,
       outputs,
     });
@@ -269,6 +407,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       color: draft.color,
       iconId: draft.iconId,
       notes: draft.notes,
+      folderId: draft.folderId,
       inputs: inputs.map(clonePort),
       outputs: outputs.map(clonePort),
       sourceType: "custom",
@@ -357,6 +496,20 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     });
   };
 
+  const applyVersionResource = (preset: VersionResourcePreset) => {
+    if (activeCanvas === null) {
+      return;
+    }
+
+    runInAction(() => {
+      activeCanvas.globalInputs = applyVersionResourcePreset(
+        activeCanvas.globalInputs,
+        preset,
+      ).map(clonePort);
+    });
+    setVersionResourceDialogOpen(false);
+  };
+
   const requestPortSelection = async (target: PendingPortTarget) => {
     const itemId = await appHost.encyclopediaPicker.pickItem({
       customFilters: naturalResourcesCustomFilter,
@@ -391,6 +544,154 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     setNewCanvasDialogOpen(false);
   };
 
+  const createFolder = () => {
+    const normalizedName = newFolderName.trim();
+    const folder: ModuleBalancingFolderReadWrite = {
+      id: createModuleBalancingId("module-folder"),
+      name: normalizedName || `${t("moduleBalancing.newFolder")} ${balancingState.folders.length + 1}`,
+    };
+    runInAction(() => {
+      balancingState.folders.push(folder);
+    });
+    setNewFolderName("");
+    setNewFolderDialogOpen(false);
+  };
+
+  const selectCanvas = (canvasId: string) => {
+    runInAction(() => {
+      balancingState.activeCanvasId = canvasId;
+    });
+    setSelectedStageId(null);
+    setActivePage({ kind: "canvas" });
+    setCanvasLibraryDialogOpen(false);
+  };
+
+  const deleteCanvas = (canvasId: string) => {
+    runInAction(() => {
+      const indexToDelete = balancingState.canvases.findIndex((canvas) => canvas.id === canvasId);
+      if (indexToDelete < 0 || balancingState.canvases.length <= 1) {
+        return;
+      }
+
+      const deletingActiveCanvas = balancingState.activeCanvasId === canvasId;
+      balancingState.canvases.splice(indexToDelete, 1);
+      if (deletingActiveCanvas) {
+        balancingState.activeCanvasId = balancingState.canvases[
+          Math.max(0, indexToDelete - 1)
+        ]?.id ?? null;
+      }
+    });
+    setSelectedStageId(null);
+    setActivePage({ kind: "canvas" });
+  };
+
+  const createCanvasFolder = (): string => {
+    const folderId = createModuleBalancingId("canvas-folder");
+    const folder: ModuleBalancingFolderReadWrite = {
+      id: folderId,
+      name: `${t("moduleBalancing.newFolder")} ${balancingState.canvasFolders.length + 1}`,
+    };
+    runInAction(() => {
+      balancingState.canvasFolders.push(folder);
+    });
+    return folderId;
+  };
+
+  const renameCanvasFolder = (folderId: string, name: string) => {
+    const normalizedName = name.trim();
+    if (normalizedName.length === 0) {
+      return;
+    }
+
+    runInAction(() => {
+      const folder = balancingState.canvasFolders.find((entry) => entry.id === folderId);
+      if (folder !== undefined) {
+        folder.name = normalizedName;
+      }
+    });
+  };
+
+  const deleteCanvasFolder = (folderId: string) => {
+    runInAction(() => {
+      for (const canvas of balancingState.canvases) {
+        if (canvas.folderId === folderId) {
+          canvas.folderId = null;
+        }
+      }
+      balancingState.canvasFolders = balancingState.canvasFolders.filter((folder) => folder.id !== folderId);
+    });
+  };
+
+  const moveCanvasToFolder = (canvasId: string, folderId: string | null) => {
+    runInAction(() => {
+      const canvas = balancingState.canvases.find((entry) => entry.id === canvasId);
+      const safeFolderId = folderId !== null
+        && balancingState.canvasFolders.some((folder) => folder.id === folderId)
+        ? folderId
+        : null;
+      if (canvas !== undefined) {
+        canvas.folderId = safeFolderId;
+      }
+    });
+  };
+
+  const renameCanvas = (canvasId: string, name: string) => {
+    const normalizedName = name.trim();
+    if (normalizedName.length === 0) {
+      return;
+    }
+
+    runInAction(() => {
+      const canvas = balancingState.canvases.find((entry) => entry.id === canvasId);
+      if (canvas !== undefined) {
+        canvas.name = normalizedName;
+      }
+    });
+  };
+
+  const loadRecommendedCanvas = (recommendedCanvas: RecommendedCanvasRecord) => {
+    const nextCanvas: ModuleBalancingCanvasReadWrite = {
+      id: createModuleBalancingId("canvas"),
+      name: recommendedCanvas.name,
+      folderId: null,
+      globalInputs: recommendedCanvas.globalInputs.map(clonePort),
+      stages: recommendedCanvas.stages.map((stage) => ({
+        id: createModuleBalancingId("stage"),
+        name: stage.name,
+        entries: stage.entries.map((entry) => ({ ...entry })),
+      })),
+      warehouseCapacity: recommendedCanvas.warehouseCapacity,
+    };
+    runInAction(() => {
+      balancingState.canvases.push(nextCanvas);
+      balancingState.activeCanvasId = nextCanvas.id;
+    });
+    setSelectedStageId(nextCanvas.stages[0]?.id ?? null);
+    setActivePage({ kind: "canvas" });
+    setCanvasLibraryDialogOpen(false);
+  };
+
+  const canvasLibraryDialog = canvasLibraryDialogOpen ? (
+    <CanvasLibraryDialog
+      activeCanvasId={balancingState.activeCanvasId}
+      canDeleteCanvas={balancingState.canvases.length > 1}
+      canvasFolders={balancingState.canvasFolders}
+      canvases={visibleCanvases}
+      onClose={() => setCanvasLibraryDialogOpen(false)}
+      onCreateFolder={createCanvasFolder}
+      onDeleteCanvas={deleteCanvas}
+      onDeleteFolder={deleteCanvasFolder}
+      onLoadRecommendedCanvas={loadRecommendedCanvas}
+      onMoveCanvas={moveCanvasToFolder}
+      onRenameCanvas={renameCanvas}
+      onRenameFolder={renameCanvasFolder}
+      onSelectCanvas={selectCanvas}
+      recommendedCanvasLoadFailed={recommendedCanvasLoadFailed}
+      recommendedCanvases={visibleRecommendedCanvases}
+      t={t}
+    />
+  ) : null;
+
   if (activeCanvas === null || computation === null) {
     return (
       <div className={cm(styles, "toolbox-dialog-content module-balancing-panel")}>
@@ -398,6 +699,14 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           <h3>{t("toolboxDialog.tab.moduleBalancing")}</h3>
           <p>{t("moduleBalancing.filteredCanvasesEmpty")}</p>
           <div className={cm(styles, "module-balancing-filtered-empty-actions")}>
+            <button
+              className={cm(styles, "module-balancing-icon-text-button")}
+              type="button"
+              onClick={() => setCanvasLibraryDialogOpen(true)}
+            >
+              <LucideDownload aria-hidden="true" />
+              <span>{t("moduleBalancing.loadOtherCanvas")}</span>
+            </button>
             <button className={cm(styles, "module-balancing-primary-button")} type="button" onClick={createCanvas}>
               <LucidePlus aria-hidden="true" />
               <span>{t("moduleBalancing.newCanvas")}</span>
@@ -415,6 +724,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             </button>
           </div>
         </div>
+        {canvasLibraryDialog}
       </div>
     );
   }
@@ -427,6 +737,14 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
         for (const stage of canvas.stages) {
           stage.entries = stage.entries.filter((entry) => entry.moduleId !== moduleId);
         }
+      }
+    });
+  };
+  const moveCustomModuleToFolder = (moduleId: string, folderId: string | null) => {
+    runInAction(() => {
+      const customModule = balancingState.customModules.find((module) => module.id === moduleId);
+      if (customModule !== undefined) {
+        customModule.folderId = folderId;
       }
     });
   };
@@ -460,28 +778,14 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           <CanvasSettingsPanel
             activeCanvas={activeCanvas}
             activityIds={showAllActivityContent ? resolveCanvasActivityIds(activeCanvas, index) : []}
-            canDelete={visibleCanvases.length > 1}
+            canDelete={balancingState.canvases.length > 1}
             onCreateCanvas={() => {
               setNewCanvasName("");
               setNewCanvasDialogOpen(true);
             }}
-            onDeleteCanvas={() => {
-              runInAction(() => {
-                const indexToDelete = balancingState.canvases.findIndex((canvas) => canvas.id === activeCanvas.id);
-                if (indexToDelete < 0 || balancingState.canvases.length <= 1) {
-                  return;
-                }
-                balancingState.canvases.splice(indexToDelete, 1);
-                balancingState.activeCanvasId = balancingState.canvases[Math.max(0, indexToDelete - 1)]?.id ?? null;
-              });
-              setSelectedStageId(null);
-            }}
-            onSelectCanvas={(canvasId) => {
-              runInAction(() => { balancingState.activeCanvasId = canvasId; });
-              setSelectedStageId(null);
-            }}
+            onDeleteCanvas={() => deleteCanvas(activeCanvas.id)}
+            onOpenCanvasLibrary={() => setCanvasLibraryDialogOpen(true)}
             t={t}
-            visibleCanvases={visibleCanvases}
           />
         ) : null}
         {activePage.kind === "input" ? (
@@ -489,6 +793,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             canvas={activeCanvas}
             index={index}
             onOpenPortPicker={() => { void requestPortSelection({ kind: "global" }); }}
+            onOpenVersionResources={() => setVersionResourceDialogOpen(true)}
             onRequestPickItem={(portIndex) => {
               void (async () => {
                 const itemId = await appHost.encyclopediaPicker.pickItem({
@@ -549,10 +854,20 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     <>
       <header className={cm(styles, "module-balancing-drawer-header")}>
         <h3>{t("moduleBalancing.moduleLibrary")}</h3>
-        <div className={cm(styles, "module-balancing-library-tabs")}>
-          <button className={cm(styles, libraryTab === "recipes" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("recipes")}>{t("moduleBalancing.recipes")}</button>
-          <button className={cm(styles, libraryTab === "modules" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("modules")}>{t("moduleBalancing.modules")}</button>
-        </div>
+        {/* AI-REMOVED 2026-07-27:
+            Reason: recipes/modules 互斥 tab 被三个独立展开区块替代。
+            Trigger: 用户要求模块库由 tab 切换改为展开收起形式。
+            Evidence: ModuleLibrary 内固定渲染三个 ModuleSection。
+            Replacement: ModuleLibrary
+            Risk: Low
+            Human Review: Required
+
+            Original code:
+            <div className={cm(styles, "module-balancing-library-tabs")}>
+              <button className={cm(styles, libraryTab === "recipes" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("recipes")}>{t("moduleBalancing.recipes")}</button>
+              <button className={cm(styles, libraryTab === "modules" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("modules")}>{t("moduleBalancing.modules")}</button>
+            </div>
+        */}
         <button className={cm(styles, "module-balancing-icon-button")} type="button" onClick={() => setLibraryOpen(false)} aria-label={t("action.close")}>
           <LucideX aria-hidden="true" />
         </button>
@@ -563,11 +878,16 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
         highlight={libraryHighlight}
         index={index}
         isTouch={isTouch}
-        libraryTab={libraryTab}
+        folders={balancingState.folders}
         onAddModule={addModuleToSelectedStage}
         onCreateCustomModule={openNewCustomModuleForm}
+        onCreateFolder={() => {
+          setNewFolderName("");
+          setNewFolderDialogOpen(true);
+        }}
         onDeleteCustomModule={deleteCustomModule}
         onEditCustomModule={openEditCustomModuleForm}
+        onMoveCustomModule={moveCustomModuleToFolder}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         showActivityIcons={showAllActivityContent}
@@ -638,6 +958,42 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           )}
         </OverlayStackLayer>
       ) : null}
+      {canvasLibraryDialog}
+      {newFolderDialogOpen ? (
+        <OverlayStackLayer layerId="module-balancing:new-folder" visible>
+          {({ zIndex }) => (
+            <div className={cm(styles, "module-balancing-editor-backdrop")} onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setNewFolderDialogOpen(false);
+              }
+            }} style={{ zIndex }}>
+              <section className={cm(styles, "module-balancing-quantity-editor")} role="dialog" aria-modal="true">
+                <header className={cm(styles, "module-balancing-form-header")}>
+                  <h3>{t("moduleBalancing.newFolder")}</h3>
+                  <button className={cm(styles, "module-balancing-icon-button")} type="button" onClick={() => setNewFolderDialogOpen(false)} aria-label={t("action.close")}>
+                    <LucideX aria-hidden="true" />
+                  </button>
+                </header>
+                <label className={cm(styles, "module-balancing-form-field")}>
+                  <span>{t("moduleBalancing.folderName")}</span>
+                  <input autoFocus value={newFolderName} onChange={(event) => setNewFolderName(event.currentTarget.value)} onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      createFolder();
+                    }
+                  }} />
+                </label>
+                <footer className={cm(styles, "module-balancing-form-actions")}>
+                  <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={() => setNewFolderDialogOpen(false)}>{t("action.close")}</button>
+                  <button className={cm(styles, "module-balancing-primary-button")} type="button" onClick={createFolder}>
+                    <LucideFolderPlus aria-hidden="true" />
+                    <span>{t("moduleBalancing.newFolder")}</span>
+                  </button>
+                </footer>
+              </section>
+            </div>
+          )}
+        </OverlayStackLayer>
+      ) : null}
       {customModuleForm !== null ? (
         <OverlayStackLayer layerId={`module-balancing:custom-module:${customModuleForm.id}`} visible>
           {({ zIndex }) => (
@@ -648,6 +1004,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
             }} style={{ zIndex }}>
           <CustomModuleForm
             draft={customModuleForm}
+            folders={balancingState.folders}
             index={index}
             onCancel={closeCustomModuleForm}
             onOpenPortPicker={(target) => { void requestPortSelection(target); }}
@@ -689,6 +1046,16 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
           )}
         </OverlayStackLayer>
       ) : null}
+      {versionResourceDialogOpen ? (
+        <VersionResourceDialog
+          index={index}
+          loadFailed={versionResourceLoadFailed}
+          onCancel={() => setVersionResourceDialogOpen(false)}
+          onSelect={applyVersionResource}
+          presets={versionResources}
+          t={t}
+        />
+      ) : null}
       {quantityDraft !== null ? (
         <QuantityEditor
           draft={quantityDraft}
@@ -707,14 +1074,16 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
 function ModuleLibrary({
   activeCanvas,
   activeActivityIds,
+  folders,
   highlight,
   index,
   isTouch,
-  libraryTab,
   onAddModule,
   onCreateCustomModule,
+  onCreateFolder,
   onDeleteCustomModule,
   onEditCustomModule,
+  onMoveCustomModule,
   searchQuery,
   setSearchQuery,
   showActivityIcons,
@@ -722,27 +1091,103 @@ function ModuleLibrary({
 }: {
   activeCanvas: ModuleBalancingCanvasReadWrite;
   activeActivityIds: readonly string[];
+  folders: readonly ModuleBalancingFolderReadWrite[];
   highlight: boolean;
   index: ModuleBalancingIndex;
   isTouch: boolean;
-  libraryTab: ModuleLibraryTab;
   onAddModule: (moduleId: string) => void;
   onCreateCustomModule: () => void;
+  onCreateFolder: () => void;
   onDeleteCustomModule: (moduleId: string) => void;
   onEditCustomModule: (module: ModuleBalancingCustomModule) => void;
+  onMoveCustomModule: (moduleId: string, folderId: string | null) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   showActivityIcons: boolean;
   t: (key: string) => string;
 }) {
   const normalizedQuery = searchQuery.trim().toLowerCase();
+  const isSearching = normalizedQuery.length > 0;
+  const [expandedSections, setExpandedSections] = useState<Record<ModuleLibrarySectionId, boolean>>({
+    system: true,
+    recommended: true,
+    custom: true,
+  });
+  const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
+  const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
+  const activeDragModuleIdRef = useRef<string | null>(null);
   const systemModules = index.systemModules.filter((module) => matchesModuleQuery(module, normalizedQuery, index, t));
+  const recommendedModules = Array.from(index.recommendedModuleById.values())
+    .filter((module) =>
+      showActivityIcons
+      || !moduleContainsInactiveActivityContent(module, index, activeActivityIds),
+    )
+    .filter((module) => matchesModuleQuery(module, normalizedQuery, index, t));
   const customModules = Array.from(index.customModuleById.values())
     .filter((module) =>
       showActivityIcons
       || !moduleContainsInactiveActivityContent(module, index, activeActivityIds),
     )
     .filter((module) => matchesModuleQuery(module, normalizedQuery, index, t));
+  const folderIdSet = new Set(folders.map((folder) => folder.id));
+  const rootModules = customModules.filter((module) =>
+    module.folderId === null
+    || module.folderId === undefined
+    || !folderIdSet.has(module.folderId),
+  );
+
+  // AI-REMOVED 2026-07-27:
+  // Reason: 同步 effect 内直接 setState 会产生级联渲染并违反 react-hooks/set-state-in-effect。
+  // Trigger: ESLint 在模块库搜索自动展开逻辑中发现同步状态更新。
+  // Evidence: 搜索输入事件本身已是展开板块的直接触发源，可在同一事件中完成状态更新。
+  // Replacement: 下方搜索框 onChange
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // useEffect(() => {
+  //   if (!isSearching) {
+  //     return;
+  //   }
+  //
+  //   setExpandedSections({
+  //     system: true,
+  //     recommended: true,
+  //     custom: true,
+  //   });
+  // }, [isSearching]);
+
+  const toggleSection = (sectionId: ModuleLibrarySectionId) => {
+    setExpandedSections((current) => ({
+      ...current,
+      [sectionId]: !current[sectionId],
+    }));
+  };
+  const handleFolderDrop = (event: DragEvent<HTMLElement>, folderId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const transferredModuleId = event.dataTransfer.getData(CUSTOM_MODULE_FOLDER_DRAG_TYPE);
+    const moduleId = transferredModuleId || activeDragModuleIdRef.current;
+    if (moduleId === null || moduleId.length === 0) {
+      return;
+    }
+
+    onMoveCustomModule(moduleId, folderId);
+    setCollapsedFolderIds((current) => {
+      const next = new Set(current);
+      next.delete(folderId);
+      return next;
+    });
+    activeDragModuleIdRef.current = null;
+    setDropTargetFolderId(null);
+  };
+  const handleCustomModuleDragStart = (moduleId: string) => {
+    activeDragModuleIdRef.current = moduleId;
+  };
+  const handleCustomModuleDragEnd = () => {
+    activeDragModuleIdRef.current = null;
+    setDropTargetFolderId(null);
+  };
 
   return (
     <div className={cm(styles, `module-balancing-library${highlight ? " is-highlight" : ""}`)}>
@@ -751,40 +1196,166 @@ function ModuleLibrary({
         <input
           placeholder={t("moduleBalancing.searchModules")}
           value={searchQuery}
-          onChange={(event) => setSearchQuery(event.currentTarget.value)}
+          onChange={(event) => {
+            const nextQuery = event.currentTarget.value;
+            if (nextQuery.trim().length > 0) {
+              setExpandedSections({
+                system: true,
+                recommended: true,
+                custom: true,
+              });
+            }
+            setSearchQuery(nextQuery);
+          }}
         />
       </div>
-      {libraryTab === "recipes" ? (
-        <ModuleSection
-          count={systemModules.length}
+      <ModuleSection
+        count={systemModules.length}
+        expanded={expandedSections.system}
+        onToggle={() => toggleSection("system")}
+        t={t}
+        title={t("moduleBalancing.systemModules")}
+      >
+        <ModuleList
           index={index}
           isTouch={isTouch}
           modules={systemModules}
           onAddModule={onAddModule}
           showActivityIcons={showActivityIcons}
           t={t}
-          title={t("moduleBalancing.systemModules")}
         />
-      ) : (
-        <>
-          <ModuleSection
-            count={customModules.length}
+      </ModuleSection>
+      <ModuleSection
+        count={recommendedModules.length}
+        expanded={expandedSections.recommended}
+        onToggle={() => toggleSection("recommended")}
+        t={t}
+        title={t("moduleBalancing.recommendedModules")}
+      >
+        <ModuleList
+          index={index}
+          isTouch={isTouch}
+          modules={recommendedModules}
+          onAddModule={onAddModule}
+          showActivityIcons={showActivityIcons}
+          t={t}
+        />
+      </ModuleSection>
+      <ModuleSection
+        count={customModules.length}
+        expanded={expandedSections.custom}
+        onToggle={() => toggleSection("custom")}
+        t={t}
+        title={t("moduleBalancing.customModules")}
+      >
+        {isSearching ? (
+          <ModuleList
             index={index}
             isTouch={isTouch}
             modules={customModules}
             onAddModule={onAddModule}
+            onCustomModuleDragEnd={handleCustomModuleDragEnd}
+            onCustomModuleDragStart={handleCustomModuleDragStart}
             onDeleteCustomModule={onDeleteCustomModule}
             onEditCustomModule={onEditCustomModule}
             showActivityIcons={showActivityIcons}
             t={t}
-            title={t("moduleBalancing.customModules")}
           />
+        ) : (
+          <>
+            <ModuleList
+              index={index}
+              isTouch={isTouch}
+              modules={rootModules}
+              onAddModule={onAddModule}
+              onCustomModuleDragEnd={handleCustomModuleDragEnd}
+              onCustomModuleDragStart={handleCustomModuleDragStart}
+              onDeleteCustomModule={onDeleteCustomModule}
+              onEditCustomModule={onEditCustomModule}
+              showActivityIcons={showActivityIcons}
+              t={t}
+            />
+            {folders.map((folder) => {
+              const folderModules = customModules.filter((module) => module.folderId === folder.id);
+              const expanded = !collapsedFolderIds.has(folder.id);
+              return (
+                <section className={cm(styles, "module-balancing-folder")} key={folder.id}>
+                  <header
+                    className={cm(
+                      styles,
+                      "module-balancing-folder-header",
+                      dropTargetFolderId === folder.id && "is-drop-target",
+                    )}
+                    onDragEnter={(event) => {
+                      if (
+                        event.dataTransfer.types.includes(CUSTOM_MODULE_FOLDER_DRAG_TYPE)
+                        || activeDragModuleIdRef.current !== null
+                      ) {
+                        setDropTargetFolderId(folder.id);
+                      }
+                    }}
+                    onDragLeave={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                        setDropTargetFolderId((current) => current === folder.id ? null : current);
+                      }
+                    }}
+                    onDragOver={(event) => {
+                      if (
+                        event.dataTransfer.types.includes(CUSTOM_MODULE_FOLDER_DRAG_TYPE)
+                        || activeDragModuleIdRef.current !== null
+                      ) {
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = "move";
+                        setDropTargetFolderId(folder.id);
+                      }
+                    }}
+                    onDrop={(event) => handleFolderDrop(event, folder.id)}
+                  >
+                    <span className={cm(styles, "module-balancing-folder-name")}>
+                      <LucideFolder aria-hidden="true" />
+                      <span>{folder.name}</span>
+                      <small>({folderModules.length})</small>
+                    </span>
+                    <button
+                      aria-expanded={expanded}
+                      className={cm(styles, "module-balancing-section-toggle")}
+                      type="button"
+                      onClick={() => setCollapsedFolderIds(toggleSetValue(collapsedFolderIds, folder.id))}
+                    >
+                      {expanded ? <LucideChevronDown aria-hidden="true" /> : <LucideChevronRight aria-hidden="true" />}
+                      <span>{expanded ? t("moduleBalancing.collapseSection") : t("moduleBalancing.expandSection")}</span>
+                    </button>
+                  </header>
+                  {expanded ? (
+                    <ModuleList
+                      index={index}
+                      isTouch={isTouch}
+                      modules={folderModules}
+                      onAddModule={onAddModule}
+                      onCustomModuleDragEnd={handleCustomModuleDragEnd}
+                      onCustomModuleDragStart={handleCustomModuleDragStart}
+                      onDeleteCustomModule={onDeleteCustomModule}
+                      onEditCustomModule={onEditCustomModule}
+                      showActivityIcons={showActivityIcons}
+                      t={t}
+                    />
+                  ) : null}
+                </section>
+              );
+            })}
+          </>
+        )}
+        <div className={cm(styles, "module-balancing-library-create-actions")}>
           <button className={cm(styles, "module-balancing-new-module-button")} type="button" onClick={onCreateCustomModule}>
             <LucidePlus aria-hidden="true" />
             <span>{t("moduleBalancing.newModule")}</span>
           </button>
-        </>
-      )}
+          <button className={cm(styles, "module-balancing-new-module-button")} type="button" onClick={onCreateFolder}>
+            <LucideFolderPlus aria-hidden="true" />
+            <span>{t("moduleBalancing.newFolder")}</span>
+          </button>
+        </div>
+      </ModuleSection>
       {activeCanvas.stages.length === 0 ? (
         <p className={cm(styles, "module-balancing-muted")}>{t("moduleBalancing.noStages")}</p>
       ) : null}
@@ -793,47 +1364,84 @@ function ModuleLibrary({
 }
 
 function ModuleSection({
+  children,
   count,
-  index,
-  isTouch,
-  modules,
-  onAddModule,
-  onDeleteCustomModule,
-  onEditCustomModule,
-  showActivityIcons,
+  expanded,
+  onToggle,
   t,
   title,
 }: {
+  children: ReactNode;
   count: number;
-  index: ModuleBalancingIndex;
-  isTouch: boolean;
-  modules: ModuleBalancingModule[];
-  onAddModule: (moduleId: string) => void;
-  onDeleteCustomModule?: (moduleId: string) => void;
-  onEditCustomModule?: (module: ModuleBalancingCustomModule) => void;
-  showActivityIcons: boolean;
+  expanded: boolean;
+  onToggle: () => void;
   t: (key: string) => string;
   title: string;
 }) {
   return (
     <section className={cm(styles, "module-balancing-library-section")}>
-      <h3>{title} <span>({count})</span></h3>
-      <div className={cm(styles, "module-balancing-module-list")}>
-        {modules.map((module) => (
-          <ModuleCard
-            index={index}
-            isTouch={isTouch}
-            key={module.id}
-            module={module}
-            onAdd={() => onAddModule(module.id)}
-            onDeleteCustomModule={onDeleteCustomModule}
-            onEditCustomModule={onEditCustomModule}
-            showActivityIcons={showActivityIcons}
-            t={t}
-          />
-        ))}
-      </div>
+      <header className={cm(styles, "module-balancing-library-section-header")}>
+        <h3>{title} <span>({count})</span></h3>
+        <button
+          aria-expanded={expanded}
+          className={cm(styles, "module-balancing-section-toggle")}
+          type="button"
+          onClick={onToggle}
+        >
+          {expanded ? <LucideChevronDown aria-hidden="true" /> : <LucideChevronRight aria-hidden="true" />}
+          <span>{expanded ? t("moduleBalancing.collapseSection") : t("moduleBalancing.expandSection")}</span>
+        </button>
+      </header>
+      {expanded ? children : null}
     </section>
+  );
+}
+
+function ModuleList({
+  index,
+  isTouch,
+  modules,
+  onAddModule,
+  onCustomModuleDragEnd,
+  onCustomModuleDragStart,
+  onDeleteCustomModule,
+  onEditCustomModule,
+  showActivityIcons,
+  t,
+}: {
+  index: ModuleBalancingIndex;
+  isTouch: boolean;
+  modules: readonly ModuleBalancingModule[];
+  onAddModule: (moduleId: string) => void;
+  onCustomModuleDragEnd?: () => void;
+  onCustomModuleDragStart?: (moduleId: string) => void;
+  onDeleteCustomModule?: (moduleId: string) => void;
+  onEditCustomModule?: (module: ModuleBalancingCustomModule) => void;
+  showActivityIcons: boolean;
+  t: (key: string) => string;
+}) {
+  if (modules.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className={cm(styles, "module-balancing-module-list")}>
+      {modules.map((module) => (
+        <ModuleCard
+          index={index}
+          isTouch={isTouch}
+          key={module.id}
+          module={module}
+          onAdd={() => onAddModule(module.id)}
+          onCustomModuleDragEnd={onCustomModuleDragEnd}
+          onCustomModuleDragStart={onCustomModuleDragStart}
+          onDeleteCustomModule={onDeleteCustomModule}
+          onEditCustomModule={onEditCustomModule}
+          showActivityIcons={showActivityIcons}
+          t={t}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -842,6 +1450,8 @@ function ModuleCard({
   isTouch,
   module,
   onAdd,
+  onCustomModuleDragEnd,
+  onCustomModuleDragStart,
   onDeleteCustomModule,
   onEditCustomModule,
   showActivityIcons,
@@ -851,6 +1461,8 @@ function ModuleCard({
   isTouch: boolean;
   module: ModuleBalancingModule;
   onAdd: () => void;
+  onCustomModuleDragEnd?: () => void;
+  onCustomModuleDragStart?: (moduleId: string) => void;
   onDeleteCustomModule?: (moduleId: string) => void;
   onEditCustomModule?: (module: ModuleBalancingCustomModule) => void;
   showActivityIcons: boolean;
@@ -859,17 +1471,16 @@ function ModuleCard({
   const outputs = resolveModuleOutputs(module, index);
   const title = resolveModuleTitle(module, index, t);
   const activityIds = showActivityIcons ? resolveModuleActivityIds(module, index) : [];
-  const subtitle = module.sourceType === "custom"
+  const subtitle = module.sourceType !== "system-recipe"
     ? formatPortList(outputs, index, t)
     : undefined;
-  const isSystemRecipe = module.sourceType === "system-recipe";
   const hasModuleActions = module.sourceType === "custom";
-  const moduleColor = module.sourceType === "custom" ? module.color : undefined;
+  const moduleColor = module.sourceType !== "system-recipe" ? module.color : undefined;
 
   return (
     <div
       className={cm(styles, "module-balancing-module-card", hasModuleActions && "has-module-actions")}
-      draggable={!isTouch}
+      draggable={module.sourceType === "custom" || !isTouch}
       style={moduleColor !== undefined ? { borderLeftColor: moduleColor } : undefined}
       role="button"
       tabIndex={0}
@@ -882,8 +1493,21 @@ function ModuleCard({
         }
       }}
       onDragStart={(event) => {
+        event.stopPropagation();
         event.dataTransfer.setData(MODULE_DRAG_TYPE, module.id);
-        event.dataTransfer.effectAllowed = "copy";
+        if (module.sourceType === "custom") {
+          event.dataTransfer.setData(CUSTOM_MODULE_FOLDER_DRAG_TYPE, module.id);
+          event.dataTransfer.effectAllowed = "copyMove";
+          onCustomModuleDragStart?.(module.id);
+        } else {
+          event.dataTransfer.effectAllowed = "copy";
+        }
+      }}
+      onDragEnd={(event) => {
+        event.stopPropagation();
+        if (module.sourceType === "custom") {
+          onCustomModuleDragEnd?.();
+        }
       }}
     >
       <img alt="" className={cm(styles, "module-balancing-module-icon")} src={resolveModuleIconSrc(module, index)} />
@@ -892,9 +1516,24 @@ function ModuleCard({
           <span className={cm(styles, "module-balancing-module-title")}>{title}</span>
           <ActivityIconStrip activityIds={activityIds} />
         </span>
-        {isSystemRecipe ? (
-          <RecipeDisplay recipeId={(module as ModuleBalancingSystemRecipeModule).recipeId} index={index} isTouch={isTouch} t={t} variant="moduleLibrary" />
-        ) : subtitle !== undefined ? (
+        {/* AI-REMOVED 2026-07-27:
+            Reason: 系统配方卡头部改为设备图标与产物/设备文本，完整配方公式会与新头部重复。
+            Trigger: 用户要求系统配方模块外观改版。
+            Evidence: resolveModuleDisplayTitle 生成“产物 · 设备”文本，resolveModuleIconSrc 返回设备图标。
+            Replacement: 当前 ModuleCard 标题行
+            Risk: Low
+            Human Review: Required
+
+            Original code:
+            {isSystemRecipe ? (
+              <RecipeDisplay recipeId={(module as ModuleBalancingSystemRecipeModule).recipeId} index={index} isTouch={isTouch} t={t} variant="moduleLibrary" />
+            ) : null}
+        */}
+        {/* AI-CORRECTION 2026-07-27: 用户澄清新外观只约束头部，原有 RecipeDisplay 需要继续显示在头部下方。 */}
+        {module.sourceType === "system-recipe" ? (
+          <RecipeDisplay recipeId={module.recipeId} index={index} isTouch={isTouch} t={t} variant="moduleLibrary" />
+        ) : null}
+        {subtitle !== undefined ? (
           <span className={cm(styles, "module-balancing-module-subtitle")}>{subtitle}</span>
         ) : null}
       </span>
@@ -931,12 +1570,14 @@ function CanvasInputPanel({
   canvas,
   index,
   onOpenPortPicker,
+  onOpenVersionResources,
   onRequestPickItem,
   t,
 }: {
   canvas: ModuleBalancingCanvasReadWrite;
   index: ModuleBalancingIndex;
   onOpenPortPicker: () => void;
+  onOpenVersionResources: () => void;
   onRequestPickItem: (portIndex: number) => void;
   t: (key: string) => string;
 }) {
@@ -947,12 +1588,19 @@ function CanvasInputPanel({
           <h3>{t("moduleBalancing.systemInput")}</h3>
           <span>{canvas.globalInputs.length}</span>
         </div>
-        <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={onOpenPortPicker}>
-          <LucidePlus aria-hidden="true" />
-          <span>{t("moduleBalancing.addInput")}</span>
-        </button>
+        <div className={cm(styles, "module-balancing-input-actions")}>
+          <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={onOpenVersionResources}>
+            <LucidePackagePlus aria-hidden="true" />
+            <span>{t("moduleBalancing.addVersionResources")}</span>
+          </button>
+          <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={onOpenPortPicker}>
+            <LucidePlus aria-hidden="true" />
+            <span>{t("moduleBalancing.addInput")}</span>
+          </button>
+        </div>
       </header>
       <PortListEditor
+        allowInfinite
         index={index}
         onChange={(ports) => runInAction(() => { canvas.globalInputs = ports; })}
         onRequestPickItem={onRequestPickItem}
@@ -960,6 +1608,89 @@ function CanvasInputPanel({
         t={t}
       />
     </section>
+  );
+}
+
+function VersionResourceDialog({
+  index,
+  loadFailed,
+  onCancel,
+  onSelect,
+  presets,
+  t,
+}: {
+  index: ModuleBalancingIndex;
+  loadFailed: boolean;
+  onCancel: () => void;
+  onSelect: (preset: VersionResourcePreset) => void;
+  presets: readonly VersionResourcePreset[];
+  t: (key: string) => string;
+}) {
+  return (
+    <OverlayStackLayer layerId="module-balancing:version-resources" visible>
+      {({ zIndex }) => (
+        <div
+          className={cm(styles, "module-balancing-editor-backdrop")}
+          style={{ zIndex }}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              onCancel();
+            }
+          }}
+        >
+          <section
+            aria-modal="true"
+            className={cm(styles, "module-balancing-version-resource-dialog")}
+            data-module-balancing-version-resources
+            role="dialog"
+          >
+            <header className={cm(styles, "module-balancing-form-header")}>
+              <h3>{t("moduleBalancing.versionResources")}</h3>
+              <button
+                aria-label={t("action.close")}
+                className={cm(styles, "module-balancing-icon-button")}
+                type="button"
+                onClick={onCancel}
+              >
+                <LucideX aria-hidden="true" />
+              </button>
+            </header>
+            {loadFailed ? (
+              <p className={cm(styles, "module-balancing-muted")}>
+                {t("moduleBalancing.versionResourceLoadFailed")}
+              </p>
+            ) : presets.length === 0 ? (
+              <p className={cm(styles, "module-balancing-muted")}>
+                {t("moduleBalancing.versionResourceEmpty")}
+              </p>
+            ) : (
+              <div className={cm(styles, "module-balancing-version-resource-list")}>
+                {presets.map((preset) => (
+                  <button
+                    className={cm(styles, "module-balancing-version-resource-option")}
+                    key={preset.id}
+                    type="button"
+                    onClick={() => onSelect(preset)}
+                  >
+                    <LucidePackagePlus aria-hidden="true" />
+                    <span>
+                      <strong>{preset.name}</strong>
+                      <small>
+                        {preset.inputs.map((input) => (
+                          input.infinite === true
+                            ? `${resolveItemName(input.itemId, index, t)} ∞`
+                            : `${resolveItemName(input.itemId, index, t)} ${formatFlow(input.perMinute)}/min`
+                        )).join(" · ")}
+                      </small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+    </OverlayStackLayer>
   );
 }
 
@@ -1043,19 +1774,28 @@ const CanvasSettingsPanel = observer(function CanvasSettingsPanel({
   canDelete,
   onCreateCanvas,
   onDeleteCanvas,
-  onSelectCanvas,
+  onOpenCanvasLibrary,
   t,
-  visibleCanvases,
 }: {
   activeCanvas: ModuleBalancingCanvasReadWrite;
   activityIds: readonly string[];
   canDelete: boolean;
   onCreateCanvas: () => void;
   onDeleteCanvas: () => void;
-  onSelectCanvas: (canvasId: string) => void;
+  onOpenCanvasLibrary: () => void;
   t: (key: string) => string;
-  visibleCanvases: readonly ModuleBalancingCanvasReadWrite[];
 }) {
+  // AI-REMOVED 2026-07-27:
+  // Reason: 画布切换由原生下拉框升级为支持文件夹管理的独立选择对话框。
+  // Trigger: 用户要求移除画布下拉框，并在“加载其他画布”对话框中切换与管理画布。
+  // Evidence: CanvasLibraryDialog 统一承载用户画布、推荐画布与文件夹操作。
+  // Replacement: onOpenCanvasLibrary
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // onSelectCanvas: (canvasId: string) => void;
+  // visibleCanvases: readonly ModuleBalancingCanvasReadWrite[];
   return (
     <section className={cm(styles, "module-balancing-canvas-settings")}>
       <header className={cm(styles, "module-balancing-section-header")}>
@@ -1069,14 +1809,24 @@ const CanvasSettingsPanel = observer(function CanvasSettingsPanel({
         </div>
       </header>
       <div className={cm(styles, "module-balancing-canvas-form")}>
-        <label className={cm(styles, "module-balancing-form-field")}>
-          <span>{t("moduleBalancing.canvas")}</span>
-          <select value={activeCanvas.id} onChange={(event) => onSelectCanvas(event.currentTarget.value)}>
-            {visibleCanvases.map((canvas) => (
-              <option key={canvas.id} value={canvas.id}>{canvas.name}</option>
-            ))}
-          </select>
-        </label>
+        {/* AI-REMOVED 2026-07-27:
+            Reason: 原生 select 无法表达用户/推荐根目录、折叠文件夹和管理操作。
+            Trigger: 用户要求画布下拉框改为对话框选择画布。
+            Evidence: CanvasLibraryDialog 已提供完整的树形选择与管理界面。
+            Replacement: 页脚“加载其他画布”按钮与 CanvasLibraryDialog
+            Risk: Low
+            Human Review: Required
+
+            Original code:
+            <label className={cm(styles, "module-balancing-form-field")}>
+              <span>{t("moduleBalancing.canvas")}</span>
+              <select value={activeCanvas.id} onChange={(event) => onSelectCanvas(event.currentTarget.value)}>
+                {visibleCanvases.map((canvas) => (
+                  <option key={canvas.id} value={canvas.id}>{canvas.name}</option>
+                ))}
+              </select>
+            </label>
+        */}
         <label className={cm(styles, "module-balancing-form-field")}>
           <span>{t("moduleBalancing.canvasPlaceholder")}</span>
           <input value={activeCanvas.name} onChange={(event) => {
@@ -1106,6 +1856,14 @@ const CanvasSettingsPanel = observer(function CanvasSettingsPanel({
           <LucideTrash2 aria-hidden="true" />
           <span>{t("moduleBalancing.deleteCanvas")}</span>
         </button>
+        <button
+          className={cm(styles, "module-balancing-icon-text-button module-balancing-load-canvas-button")}
+          type="button"
+          onClick={onOpenCanvasLibrary}
+        >
+          <LucideDownload aria-hidden="true" />
+          <span>{t("moduleBalancing.loadOtherCanvas")}</span>
+        </button>
         <button className={cm(styles, "module-balancing-primary-button")} type="button" onClick={onCreateCanvas}>
           <LucidePlus aria-hidden="true" />
           <span>{t("moduleBalancing.newCanvas")}</span>
@@ -1114,6 +1872,437 @@ const CanvasSettingsPanel = observer(function CanvasSettingsPanel({
     </section>
   );
 });
+
+function CanvasLibraryDialog({
+  activeCanvasId,
+  canDeleteCanvas,
+  canvasFolders,
+  canvases,
+  onClose,
+  onCreateFolder,
+  onDeleteCanvas,
+  onDeleteFolder,
+  onLoadRecommendedCanvas,
+  onMoveCanvas,
+  onRenameCanvas,
+  onRenameFolder,
+  onSelectCanvas,
+  recommendedCanvasLoadFailed,
+  recommendedCanvases,
+  t,
+}: {
+  activeCanvasId: string | null;
+  canDeleteCanvas: boolean;
+  canvasFolders: readonly ModuleBalancingFolderReadWrite[];
+  canvases: readonly ModuleBalancingCanvasReadWrite[];
+  onClose: () => void;
+  onCreateFolder: () => string;
+  onDeleteCanvas: (canvasId: string) => void;
+  onDeleteFolder: (folderId: string) => void;
+  onLoadRecommendedCanvas: (canvas: RecommendedCanvasRecord) => void;
+  onMoveCanvas: (canvasId: string, folderId: string | null) => void;
+  onRenameCanvas: (canvasId: string, name: string) => void;
+  onRenameFolder: (folderId: string, name: string) => void;
+  onSelectCanvas: (canvasId: string) => void;
+  recommendedCanvasLoadFailed: boolean;
+  recommendedCanvases: readonly RecommendedCanvasRecord[];
+  t: (key: string) => string;
+}) {
+  const [collapsedRootIds, setCollapsedRootIds] = useState<Set<string>>(() => new Set());
+  const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [folderNameDraft, setFolderNameDraft] = useState("");
+  const [editingCanvasId, setEditingCanvasId] = useState<string | null>(null);
+  const [canvasNameDraft, setCanvasNameDraft] = useState("");
+  const [movingCanvasId, setMovingCanvasId] = useState<string | null>(null);
+  const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
+  const activeDragCanvasIdRef = useRef<string | null>(null);
+  const folderIdSet = new Set(canvasFolders.map((folder) => folder.id));
+  const rootCanvases = canvases.filter((canvas) =>
+    canvas.folderId === null
+    || canvas.folderId === undefined
+    || !folderIdSet.has(canvas.folderId),
+  );
+  const userExpanded = !collapsedRootIds.has("user");
+  const recommendedExpanded = !collapsedRootIds.has("recommended");
+
+  const commitFolderRename = (folderId: string) => {
+    onRenameFolder(folderId, folderNameDraft);
+    setEditingFolderId(null);
+  };
+  const commitCanvasRename = (canvasId: string) => {
+    onRenameCanvas(canvasId, canvasNameDraft);
+    setEditingCanvasId(null);
+  };
+  const moveDraggedCanvas = (event: DragEvent<HTMLElement>, folderId: string | null) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const transferredCanvasId = event.dataTransfer.getData(CANVAS_FOLDER_DRAG_TYPE);
+    const canvasId = transferredCanvasId || activeDragCanvasIdRef.current;
+    if (canvasId === null || canvasId.length === 0) {
+      return;
+    }
+
+    onMoveCanvas(canvasId, folderId);
+    if (folderId !== null) {
+      setCollapsedFolderIds((current) => {
+        const next = new Set(current);
+        next.delete(folderId);
+        return next;
+      });
+    }
+    activeDragCanvasIdRef.current = null;
+    setDropTargetFolderId(null);
+  };
+  const isCanvasDrag = (event: DragEvent<HTMLElement>) =>
+    event.dataTransfer.types.includes(CANVAS_FOLDER_DRAG_TYPE)
+    || activeDragCanvasIdRef.current !== null;
+
+  const renderUserCanvas = (canvas: ModuleBalancingCanvasReadWrite) => {
+    const isActive = canvas.id === activeCanvasId;
+    const isEditing = editingCanvasId === canvas.id;
+    const isMoving = movingCanvasId === canvas.id;
+    return (
+      <div
+        className={cm(styles, `module-balancing-canvas-library-row${isActive ? " is-active" : ""}`)}
+        draggable={!isEditing && !isMoving}
+        key={canvas.id}
+        onDragEnd={() => {
+          activeDragCanvasIdRef.current = null;
+          setDropTargetFolderId(null);
+        }}
+        onDragStart={(event) => {
+          activeDragCanvasIdRef.current = canvas.id;
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData(CANVAS_FOLDER_DRAG_TYPE, canvas.id);
+        }}
+      >
+        {isEditing ? (
+          <div className={cm(styles, "module-balancing-canvas-library-row-main is-editing")}>
+            {isActive ? <LucideCheck aria-hidden="true" /> : <LucideLayers3 aria-hidden="true" />}
+            <input
+              autoFocus
+              aria-label={t("moduleBalancing.canvasPlaceholder")}
+              value={canvasNameDraft}
+              onBlur={() => commitCanvasRename(canvas.id)}
+              onChange={(event) => setCanvasNameDraft(event.currentTarget.value)}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.currentTarget.blur();
+                } else if (event.key === "Escape") {
+                  setEditingCanvasId(null);
+                }
+              }}
+            />
+          </div>
+        ) : (
+          <button
+            className={cm(styles, "module-balancing-canvas-library-row-main")}
+            disabled={isMoving}
+            type="button"
+            onClick={() => onSelectCanvas(canvas.id)}
+          >
+            {isActive ? <LucideCheck aria-hidden="true" /> : <LucideLayers3 aria-hidden="true" />}
+            <span>{canvas.name}</span>
+          </button>
+        )}
+        <div className={cm(styles, "module-balancing-canvas-library-row-actions")}>
+          {isMoving ? (
+            <select
+              autoFocus
+              aria-label={t("moduleBalancing.moveCanvas")}
+              value={canvas.folderId ?? ""}
+              onBlur={() => setMovingCanvasId(null)}
+              onChange={(event) => {
+                onMoveCanvas(canvas.id, event.currentTarget.value || null);
+                setMovingCanvasId(null);
+              }}
+            >
+              <option value="">{t("moduleBalancing.userCanvases")}</option>
+              {canvasFolders.map((folder) => (
+                <option key={folder.id} value={folder.id}>{folder.name}</option>
+              ))}
+            </select>
+          ) : null}
+          <button
+            aria-label={t("moduleBalancing.renameCanvas")}
+            className={cm(styles, "module-balancing-mini-icon-button")}
+            type="button"
+            onClick={() => {
+              setEditingCanvasId(canvas.id);
+              setCanvasNameDraft(canvas.name);
+              setMovingCanvasId(null);
+            }}
+          >
+            <LucideEdit3 aria-hidden="true" />
+          </button>
+          <button
+            aria-label={t("moduleBalancing.moveCanvas")}
+            className={cm(styles, "module-balancing-mini-icon-button")}
+            type="button"
+            onClick={() => {
+              setMovingCanvasId(canvas.id);
+              setEditingCanvasId(null);
+            }}
+          >
+            <LucideFolderInput aria-hidden="true" />
+          </button>
+          <button
+            aria-label={t("moduleBalancing.deleteCanvas")}
+            className={cm(styles, "module-balancing-mini-icon-button is-danger")}
+            disabled={!canDeleteCanvas}
+            type="button"
+            onClick={() => onDeleteCanvas(canvas.id)}
+          >
+            <LucideTrash2 aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <OverlayStackLayer layerId="module-balancing:canvas-library" visible>
+      {({ zIndex }) => (
+        <div
+          className={cm(styles, "module-balancing-editor-backdrop")}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              onClose();
+            }
+          }}
+          style={{ zIndex }}
+        >
+          <section
+            aria-modal="true"
+            className={cm(styles, "module-balancing-canvas-library-dialog")}
+            data-module-balancing-canvas-library=""
+            role="dialog"
+          >
+            <header className={cm(styles, "module-balancing-form-header")}>
+              <h3>{t("moduleBalancing.canvasLibrary")}</h3>
+              <button
+                aria-label={t("action.close")}
+                className={cm(styles, "module-balancing-icon-button")}
+                type="button"
+                onClick={onClose}
+              >
+                <LucideX aria-hidden="true" />
+              </button>
+            </header>
+            <div className={cm(styles, "module-balancing-canvas-library-tree")}>
+              <section className={cm(styles, "module-balancing-canvas-library-root")}>
+                <header
+                  className={cm(
+                    styles,
+                    "module-balancing-canvas-library-root-header",
+                    dropTargetFolderId === "user-root" && "is-drop-target",
+                  )}
+                  onDragEnter={(event) => {
+                    if (isCanvasDrag(event)) {
+                      setDropTargetFolderId("user-root");
+                    }
+                  }}
+                  onDragLeave={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                      setDropTargetFolderId((current) => current === "user-root" ? null : current);
+                    }
+                  }}
+                  onDragOver={(event) => {
+                    if (isCanvasDrag(event)) {
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = "move";
+                      setDropTargetFolderId("user-root");
+                    }
+                  }}
+                  onDrop={(event) => moveDraggedCanvas(event, null)}
+                >
+                  <button
+                    aria-expanded={userExpanded}
+                    className={cm(styles, "module-balancing-canvas-library-root-toggle")}
+                    type="button"
+                    onClick={() => setCollapsedRootIds(toggleSetValue(collapsedRootIds, "user"))}
+                  >
+                    {userExpanded ? <LucideChevronDown aria-hidden="true" /> : <LucideChevronRight aria-hidden="true" />}
+                    <LucideFolder aria-hidden="true" />
+                    <strong>{t("moduleBalancing.userCanvases")}</strong>
+                    <small>({canvases.length})</small>
+                  </button>
+                  <div className={cm(styles, "module-balancing-canvas-library-root-actions")}>
+                    <button
+                      className={cm(styles, "module-balancing-icon-text-button")}
+                      type="button"
+                      onClick={() => {
+                        const folderId = onCreateFolder();
+                        setCollapsedRootIds((current) => {
+                          const next = new Set(current);
+                          next.delete("user");
+                          return next;
+                        });
+                        setCollapsedFolderIds((current) => {
+                          const next = new Set(current);
+                          next.delete(folderId);
+                          return next;
+                        });
+                        setEditingFolderId(folderId);
+                        setFolderNameDraft(`${t("moduleBalancing.newFolder")} ${canvasFolders.length}`);
+                      }}
+                    >
+                      <LucideFolderPlus aria-hidden="true" />
+                      <span>{t("moduleBalancing.newFolder")}</span>
+                    </button>
+                  </div>
+                </header>
+                {userExpanded ? (
+                  <div className={cm(styles, "module-balancing-canvas-library-root-content")}>
+                    {rootCanvases.map(renderUserCanvas)}
+                    {canvasFolders.map((folder) => {
+                      const folderCanvases = canvases.filter((canvas) => canvas.folderId === folder.id);
+                      const expanded = !collapsedFolderIds.has(folder.id);
+                      const isEditing = editingFolderId === folder.id;
+                      return (
+                        <section className={cm(styles, "module-balancing-canvas-library-folder")} key={folder.id}>
+                          <header
+                            className={cm(
+                              styles,
+                              "module-balancing-canvas-library-folder-header",
+                              dropTargetFolderId === folder.id && "is-drop-target",
+                            )}
+                            onDragEnter={(event) => {
+                              if (isCanvasDrag(event)) {
+                                setDropTargetFolderId(folder.id);
+                              }
+                            }}
+                            onDragLeave={(event) => {
+                              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                                setDropTargetFolderId((current) => current === folder.id ? null : current);
+                              }
+                            }}
+                            onDragOver={(event) => {
+                              if (isCanvasDrag(event)) {
+                                event.preventDefault();
+                                event.dataTransfer.dropEffect = "move";
+                                setDropTargetFolderId(folder.id);
+                              }
+                            }}
+                            onDrop={(event) => moveDraggedCanvas(event, folder.id)}
+                          >
+                            <button
+                              aria-label={`${expanded ? t("moduleBalancing.collapseSection") : t("moduleBalancing.expandSection")}: ${folder.name}`}
+                              aria-expanded={expanded}
+                              className={cm(styles, "module-balancing-canvas-library-folder-toggle")}
+                              type="button"
+                              onClick={() => setCollapsedFolderIds(toggleSetValue(collapsedFolderIds, folder.id))}
+                            >
+                              {expanded ? <LucideChevronDown aria-hidden="true" /> : <LucideChevronRight aria-hidden="true" />}
+                              <LucideFolder aria-hidden="true" />
+                            </button>
+                            {isEditing ? (
+                              <input
+                                autoFocus
+                                aria-label={t("moduleBalancing.folderName")}
+                                className={cm(styles, "module-balancing-canvas-library-name-input")}
+                                value={folderNameDraft}
+                                onBlur={() => commitFolderRename(folder.id)}
+                                onChange={(event) => setFolderNameDraft(event.currentTarget.value)}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    event.currentTarget.blur();
+                                  } else if (event.key === "Escape") {
+                                    setEditingFolderId(null);
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <strong className={cm(styles, "module-balancing-canvas-library-folder-name")}>{folder.name}</strong>
+                            )}
+                            <small>({folderCanvases.length})</small>
+                            <div className={cm(styles, "module-balancing-canvas-library-folder-actions")}>
+                              <button
+                                aria-label={isEditing ? t("action.confirm") : t("moduleBalancing.renameFolder")}
+                                className={cm(styles, "module-balancing-mini-icon-button")}
+                                type="button"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                  if (isEditing) {
+                                    commitFolderRename(folder.id);
+                                  } else {
+                                    setEditingFolderId(folder.id);
+                                    setFolderNameDraft(folder.name);
+                                  }
+                                }}
+                              >
+                                {isEditing ? <LucideSave aria-hidden="true" /> : <LucideEdit3 aria-hidden="true" />}
+                              </button>
+                              <button
+                                aria-label={t("moduleBalancing.deleteFolder")}
+                                className={cm(styles, "module-balancing-mini-icon-button is-danger")}
+                                type="button"
+                                onClick={() => onDeleteFolder(folder.id)}
+                              >
+                                <LucideTrash2 aria-hidden="true" />
+                              </button>
+                            </div>
+                          </header>
+                          {expanded ? (
+                            <div className={cm(styles, "module-balancing-canvas-library-folder-content")}>
+                              {folderCanvases.map(renderUserCanvas)}
+                            </div>
+                          ) : null}
+                        </section>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </section>
+              <section className={cm(styles, "module-balancing-canvas-library-root is-readonly")}>
+                <header className={cm(styles, "module-balancing-canvas-library-root-header")}>
+                  <button
+                    aria-expanded={recommendedExpanded}
+                    className={cm(styles, "module-balancing-canvas-library-root-toggle")}
+                    type="button"
+                    onClick={() => setCollapsedRootIds(toggleSetValue(collapsedRootIds, "recommended"))}
+                  >
+                    {recommendedExpanded ? <LucideChevronDown aria-hidden="true" /> : <LucideChevronRight aria-hidden="true" />}
+                    <LucideFolder aria-hidden="true" />
+                    <strong>{t("moduleBalancing.recommendedCanvases")}</strong>
+                    <small>({recommendedCanvases.length})</small>
+                  </button>
+                </header>
+                {recommendedExpanded ? (
+                  <div className={cm(styles, "module-balancing-canvas-library-root-content")}>
+                    {recommendedCanvasLoadFailed ? (
+                      <p className={cm(styles, "module-balancing-canvas-library-empty")}>
+                        {t("moduleBalancing.recommendedCanvasLoadFailed")}
+                      </p>
+                    ) : recommendedCanvases.length === 0 ? (
+                      <p className={cm(styles, "module-balancing-canvas-library-empty")}>
+                        {t("moduleBalancing.recommendedCanvasEmpty")}
+                      </p>
+                    ) : recommendedCanvases.map((canvas) => (
+                      <button
+                        className={cm(styles, "module-balancing-canvas-library-row is-recommended")}
+                        key={canvas.id}
+                        type="button"
+                        onClick={() => onLoadRecommendedCanvas(canvas)}
+                      >
+                        <LucideLayers3 aria-hidden="true" />
+                        <span>{canvas.name}</span>
+                        <small>{canvas.stages.length} {t("moduleBalancing.stage")}</small>
+                        <strong>{t("moduleBalancing.loadCanvas")}</strong>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+            </div>
+          </section>
+        </div>
+      )}
+    </OverlayStackLayer>
+  );
+}
 
 const StageDetailPanel = observer(function StageDetailPanel({
   expandedBalanceIds,
@@ -1437,6 +2626,7 @@ function SummaryPanel({
 
 function CustomModuleForm({
   draft,
+  folders,
   index,
   onCancel,
   onOpenPortPicker,
@@ -1447,6 +2637,7 @@ function CustomModuleForm({
   t,
 }: {
   draft: CustomModuleFormState;
+  folders: readonly ModuleBalancingFolderReadWrite[];
   index: ModuleBalancingIndex;
   onCancel: () => void;
   onOpenPortPicker: (target: PendingPortTarget) => void;
@@ -1472,6 +2663,21 @@ function CustomModuleForm({
       <label className={cm(styles, "module-balancing-form-field")}>
         <span>{t("moduleBalancing.moduleName")}</span>
         <input value={draft.name} onChange={(event) => onUpdate({ ...draft, name: event.currentTarget.value })} />
+      </label>
+      <label className={cm(styles, "module-balancing-form-field")}>
+        <span>{t("moduleBalancing.folder")}</span>
+        <select
+          value={draft.folderId ?? ""}
+          onChange={(event) => onUpdate({
+            ...draft,
+            folderId: event.currentTarget.value || null,
+          })}
+        >
+          <option value="">{t("moduleBalancing.rootFolder")}</option>
+          {folders.map((folder) => (
+            <option key={folder.id} value={folder.id}>{folder.name}</option>
+          ))}
+        </select>
       </label>
       <div className={cm(styles, "module-balancing-form-field")}>
         <span>{t("moduleBalancing.moduleIcon")}</span>
@@ -1550,12 +2756,14 @@ function CustomModuleForm({
 }
 
 function PortListEditor({
+  allowInfinite = false,
   index,
   onChange,
   onRequestPickItem,
   ports,
   t,
 }: {
+  allowInfinite?: boolean;
   index: ModuleBalancingIndex;
   onChange: (ports: ModuleBalancingIOPortReadWrite[]) => void;
   onRequestPickItem: (portIndex: number) => void;
@@ -1569,7 +2777,15 @@ function PortListEditor({
   return (
     <div className={cm(styles, "module-balancing-port-list")}>
       {ports.map((port, portIndex) => (
-        <div className={cm(styles, "module-balancing-port-row")} key={`${port.itemId}-${portIndex}`}>
+        <div
+          className={cm(
+            styles,
+            "module-balancing-port-row",
+            allowInfinite && "supports-infinite",
+            port.infinite === true && "is-infinite",
+          )}
+          key={`${port.itemId}-${portIndex}`}
+        >
           <img alt="" src={resolveItemIconSrc(port.itemId, index)} />
           <button
             type="button"
@@ -1586,11 +2802,41 @@ function PortListEditor({
               const target = nextPorts[portIndex];
               if (target !== undefined) {
                 target.perMinute = Math.max(0, next);
+                if (allowInfinite) {
+                  target.infinite = false;
+                }
               }
               onChange(nextPorts);
             }}
           />
           <span>/min</span>
+          {allowInfinite ? (
+            <button
+              aria-label={port.infinite === true
+                ? t("moduleBalancing.disableInfiniteInput")
+                : t("moduleBalancing.enableInfiniteInput")}
+              aria-pressed={port.infinite === true}
+              className={cm(
+                styles,
+                "module-balancing-infinite-button",
+                port.infinite === true && "is-active",
+              )}
+              title={port.infinite === true
+                ? t("moduleBalancing.disableInfiniteInput")
+                : t("moduleBalancing.enableInfiniteInput")}
+              type="button"
+              onClick={() => {
+                const nextPorts = ports.map(clonePort);
+                const target = nextPorts[portIndex];
+                if (target !== undefined) {
+                  target.infinite = target.infinite !== true;
+                }
+                onChange(nextPorts);
+              }}
+            >
+              ∞
+            </button>
+          ) : null}
           <button
             aria-label={t("moduleBalancing.removeInput")}
             className={cm(styles, "module-balancing-mini-icon-button")}
@@ -1694,23 +2940,9 @@ function resolveModuleTitle(
   index: ModuleBalancingIndex,
   t: (key: string) => string,
 ): string {
-  if (module.sourceType === "custom") {
-    return module.name;
-  }
-
-  const outputs = resolveModuleOutputs(module, index);
-  if (outputs.length > 0) {
-    return formatPortList(outputs, index, t, false);
-  }
-
   // 无产出配方：优先用输入物品名作为标题，而非 recipe.nameKey（后者 i18n 可能缺失导致显示 ID）
-  const inputs = resolveModuleInputs(module, index);
-  if (inputs.length > 0) {
-    return formatPortList(inputs, index, t, false);
-  }
-
-  const recipe = index.recipeById.get(module.recipeId);
-  return recipe === undefined ? module.recipeId : t(recipe.nameKey);
+  // AI-CORRECTION 2026-07-27: 系统配方标题现统一由模型层输出“产物 1 · … · 设备名称”，无产出时仍回退输入物品。
+  return resolveModuleDisplayTitle(module, index, t);
 }
 
 function formatPortList(
@@ -1745,17 +2977,7 @@ function matchesModuleQuery(
   index: ModuleBalancingIndex,
   t: (key: string) => string,
 ): boolean {
-  if (normalizedQuery.length === 0) {
-    return true;
-  }
-
-  const searchable = [
-    resolveModuleTitle(module, index, t),
-    formatModuleTooltip(module, index, t),
-    module.id,
-  ].join(" ").toLowerCase();
-
-  return searchable.includes(normalizedQuery);
+  return matchesModuleSearchQuery(module, normalizedQuery, index, t);
 }
 
 function resolveBalanceClassName(netDelta: number): string {
@@ -1806,5 +3028,6 @@ function clonePort(port: ModuleBalancingIOPort): ModuleBalancingIOPortReadWrite 
   return {
     itemId: port.itemId,
     perMinute: port.perMinute,
+    ...(port.infinite === true ? { infinite: true } : {}),
   };
 }

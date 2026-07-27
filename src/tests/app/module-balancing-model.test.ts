@@ -7,6 +7,10 @@ import {
   buildModuleBalancingIndex,
   computeModuleBalancing,
   computeStageModuleTotals,
+  matchesModuleSearchQuery,
+  resolveInfiniteSystemInputItemIds,
+  resolveModuleDisplayTitle,
+  resolveModuleIconSrc,
 } from "@/app/shell/module-balancing/module-balancing-model";
 
 const TEST_REGISTRY: RegistryContract = {
@@ -76,6 +80,19 @@ const TEST_REGISTRY: RegistryContract = {
       tags: [],
     },
     {
+      id: "split_plate_and_gear",
+      nameKey: "recipe.split_plate_and_gear",
+      durationSeconds: 4,
+      inputs: [{ itemId: "ore", amount: 2 }],
+      outputs: [
+        { itemId: "plate", amount: 1 },
+        { itemId: "gear", amount: 1 },
+      ],
+      machineId: "machine_assembler",
+      recipeType: "reserved-item",
+      tags: [],
+    },
+    {
       id: "hidden_void_plate",
       nameKey: "recipe.hidden_void_plate",
       durationSeconds: 0.5,
@@ -114,6 +131,41 @@ describe("module-balancing-model", () => {
 
     expect(index.recipeById.has("hidden_void_plate")).toBe(false);
     expect(index.systemModules.map((module) => module.recipeId)).not.toContain("hidden_void_plate");
+  });
+
+  it("uses the device icon and output/device title for system recipes", () => {
+    const index = buildModuleBalancingIndex(TEST_REGISTRY, createState());
+    const module = index.systemModules.find((entry) => entry.id === "split_plate_and_gear");
+    expect(module).toBeDefined();
+
+    const translate = (key: string) => ({
+      "item.plate": "铁板",
+      "item.gear": "齿轮",
+      "machine.assembler": "装配机",
+    })[key] ?? key;
+
+    expect(resolveModuleDisplayTitle(module!, index, translate)).toBe("铁板 · 齿轮 · 装配机");
+    expect(resolveModuleIconSrc(module!, index)).toContain("machine_assembler");
+  });
+
+  it("searches every output and device names by Chinese, full pinyin, and pinyin initials", () => {
+    const index = buildModuleBalancingIndex(TEST_REGISTRY, createState());
+    const module = index.systemModules.find((entry) => entry.id === "split_plate_and_gear");
+    expect(module).toBeDefined();
+
+    const translate = (key: string) => ({
+      "item.ore": "矿石",
+      "item.plate": "铁板",
+      "item.gear": "齿轮",
+      "machine.assembler": "装配机",
+      "recipe.split_plate_and_gear": "分流配方",
+    })[key] ?? key;
+
+    expect(matchesModuleSearchQuery(module!, "齿轮", index, translate)).toBe(true);
+    expect(matchesModuleSearchQuery(module!, "chilun", index, translate)).toBe(true);
+    expect(matchesModuleSearchQuery(module!, "cl", index, translate)).toBe(true);
+    expect(matchesModuleSearchQuery(module!, "zhuang pei ji", index, translate)).toBe(true);
+    expect(matchesModuleSearchQuery(module!, "zpj", index, translate)).toBe(true);
   });
 
   it("computes global inputs, recipe quantities, stage balances, and warehouse forecasts", () => {
@@ -156,6 +208,46 @@ describe("module-balancing-model", () => {
     ]));
   });
 
+  it("excludes infinite system inputs from every stage, summary, and warehouse forecast", () => {
+    const state = createState();
+    const index = buildModuleBalancingIndex(TEST_REGISTRY, state);
+    const canvas: ModuleBalancingCanvas = {
+      id: "canvas",
+      name: "Infinite",
+      globalInputs: [{ itemId: "ore", perMinute: 0, infinite: true }],
+      stages: [{
+        id: "stage-1",
+        name: "Smelt",
+        entries: [{ moduleId: "smelt_plate", quantity: 1 }],
+      }],
+      warehouseCapacity: 60,
+    };
+
+    const result = computeModuleBalancing(canvas, index);
+
+    expect([...resolveInfiniteSystemInputItemIds(canvas)]).toEqual(["ore"]);
+    expect(result.stageBalances[0]?.balances.some((balance) => balance.itemId === "ore")).toBe(false);
+    expect(result.summaryBalances.some((balance) => balance.itemId === "ore")).toBe(false);
+    expect(result.warehouseForecasts.some((forecast) => forecast.itemId === "ore")).toBe(false);
+    expect(result.summaryBalances).toContainEqual({
+      itemId: "plate",
+      totalInput: 0,
+      totalOutput: 30,
+      netDelta: 30,
+    });
+  });
+
+  it("excludes infinite system items when stage totals are used to generate a module", () => {
+    const state = createState();
+    const index = buildModuleBalancingIndex(TEST_REGISTRY, state);
+
+    expect(computeStageModuleTotals({
+      id: "stage",
+      name: "Smelt",
+      entries: [{ moduleId: "smelt_plate", quantity: 1 }],
+    }, index, new Set(["ore", "plate"]))).toEqual([]);
+  });
+
   it("uses custom module ports in stage totals", () => {
     const state = createState();
     const index = buildModuleBalancingIndex(TEST_REGISTRY, state);
@@ -169,6 +261,32 @@ describe("module-balancing-model", () => {
       { itemId: "plate", totalInput: 0, totalOutput: 20, netDelta: 20 },
     ]));
   });
+
+  it("uses version-provided recommended module ports in stage totals", () => {
+    const state = createState();
+    const index = buildModuleBalancingIndex(TEST_REGISTRY, state, {
+      recommendedModules: [{
+        id: "recommended:starter",
+        name: "Starter",
+        color: "#4f8cff",
+        iconId: "gear",
+        notes: "",
+        inputs: [{ itemId: "plate", perMinute: 30 }],
+        outputs: [{ itemId: "gear", perMinute: 15 }],
+        sourceType: "recommended",
+      }],
+    });
+
+    expect(computeStageModuleTotals({
+      id: "stage",
+      name: "Recommended",
+      entries: [{ moduleId: "recommended:starter", quantity: 2 }],
+    }, index)).toEqual(expect.arrayContaining([
+      { itemId: "plate", totalInput: 60, totalOutput: 0, netDelta: -60 },
+      { itemId: "gear", totalInput: 0, totalOutput: 30, netDelta: 30 },
+    ]));
+  });
+
   it("computes dispatch ticket summaries from summary balances", () => {
     const state = createState();
     const index = buildModuleBalancingIndex(TEST_REGISTRY, state);

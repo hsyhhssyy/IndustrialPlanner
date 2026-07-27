@@ -20,6 +20,7 @@ import type {
 import type {
   ModuleBalancingCanvas,
   ModuleBalancingCustomModule,
+  ModuleBalancingFolder,
   ModuleBalancingIOPort,
   ModuleBalancingStage,
   ModuleBalancingStageModuleEntry,
@@ -132,13 +133,21 @@ export interface ToolboxWikiStateReadWrite extends ToolboxWikiState {
 
 export interface ModuleBalancingStateReadWrite extends ModuleBalancingState {
   canvases: ModuleBalancingCanvasReadWrite[];
+  canvasFolders: ModuleBalancingFolderReadWrite[];
   customModules: ModuleBalancingCustomModuleReadWrite[];
+  folders: ModuleBalancingFolderReadWrite[];
   activeCanvasId: string | null;
+}
+
+export interface ModuleBalancingFolderReadWrite extends ModuleBalancingFolder {
+  id: string;
+  name: string;
 }
 
 export interface ModuleBalancingCanvasReadWrite extends ModuleBalancingCanvas {
   id: string;
   name: string;
+  folderId: string | null;
   globalInputs: ModuleBalancingIOPortReadWrite[];
   stages: ModuleBalancingStageReadWrite[];
   warehouseCapacity: number | null;
@@ -156,6 +165,7 @@ export interface ModuleBalancingCustomModuleReadWrite extends ModuleBalancingCus
   color: string;
   iconId: string;
   notes: string;
+  folderId: string | null;
   inputs: ModuleBalancingIOPortReadWrite[];
   outputs: ModuleBalancingIOPortReadWrite[];
   sourceType: "custom";
@@ -164,6 +174,7 @@ export interface ModuleBalancingCustomModuleReadWrite extends ModuleBalancingCus
 export interface ModuleBalancingIOPortReadWrite extends ModuleBalancingIOPort {
   itemId: string;
   perMinute: number;
+  infinite?: boolean;
 }
 
 export interface ModuleBalancingStageModuleEntryReadWrite extends ModuleBalancingStageModuleEntry {
@@ -317,6 +328,7 @@ export function createDefaultModuleBalancingCanvas(): ModuleBalancingCanvasReadW
   return {
     id: DEFAULT_MODULE_BALANCING_CANVAS_ID,
     name: "主基地配平",
+    folderId: null,
     globalInputs: [],
     stages: [createDefaultModuleBalancingStage()],
     warehouseCapacity: null,
@@ -326,7 +338,9 @@ export function createDefaultModuleBalancingCanvas(): ModuleBalancingCanvasReadW
 export function createDefaultModuleBalancingState(): ModuleBalancingStateReadWrite {
   return {
     canvases: [createDefaultModuleBalancingCanvas()],
+    canvasFolders: [],
     customModules: [],
+    folders: [],
     activeCanvasId: DEFAULT_MODULE_BALANCING_CANVAS_ID,
   };
 }

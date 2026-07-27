@@ -1,9 +1,12 @@
+import { pinyin } from "pinyin-pro";
+
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type {
   ModuleBalancingCanvas,
   ModuleBalancingCustomModule,
   ModuleBalancingIOPort,
   ModuleBalancingModule,
+  ModuleBalancingRecommendedModule,
   ModuleBalancingStage,
   ModuleBalancingState,
   ModuleBalancingSystemRecipeModule,
@@ -13,6 +16,7 @@ import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
 import { createDeviceIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { lookupText } from "@/shared/i18n";
 import {
   isItemAvailableByActivity,
   isRecipeAvailableByActivity,
@@ -60,6 +64,7 @@ export interface ModuleBalancingIndex {
   recipeById: Map<string, RecipeDefinition>;
   allRecipeById: Map<string, RecipeDefinition>;
   customModuleById: Map<string, ModuleBalancingCustomModule>;
+  recommendedModuleById: Map<string, ModuleBalancingRecommendedModule>;
   systemModules: ModuleBalancingSystemRecipeModule[];
   allItems: ItemDefinition[];
   allEntities: EntityDefinition[];
@@ -68,6 +73,7 @@ export interface ModuleBalancingIndex {
 interface ModuleBalancingIndexOptions {
   includeInactiveActivityContent?: boolean;
   activeActivityIds?: readonly string[];
+  recommendedModules?: readonly ModuleBalancingRecommendedModule[];
 }
 
 interface MutableItemBalance {
@@ -75,6 +81,8 @@ interface MutableItemBalance {
   totalInput: number;
   totalOutput: number;
 }
+
+const MODULE_PINYIN_SEARCH_CACHE = new Map<string, { full: string; initial: string }>();
 
 export function buildModuleBalancingIndex(
   registry: RegistryContract,
@@ -96,6 +104,11 @@ export function buildModuleBalancingIndex(
   const allRecipeById = new Map(visibleRecipes.map((recipe) => [recipe.id, recipe]));
   const recipeById = new Map(availableRecipes.map((recipe) => [recipe.id, recipe]));
   const customModuleById = new Map(state.customModules.map((module) => [module.id, module]));
+  const recommendedModuleById = new Map(
+    (options.recommendedModules ?? [])
+      .filter((module) => !customModuleById.has(module.id) && !recipeById.has(module.id))
+      .map((module) => [module.id, module]),
+  );
   const systemModules = availableRecipes.map((recipe) => ({
     id: recipe.id,
     recipeId: recipe.id,
@@ -108,6 +121,7 @@ export function buildModuleBalancingIndex(
     recipeById,
     allRecipeById,
     customModuleById,
+    recommendedModuleById,
     systemModules,
     allItems: [...itemDefinitions].sort((left, right) => left.nameKey.localeCompare(right.nameKey)),
     allEntities: registry.entityDefinitions
@@ -122,15 +136,19 @@ export function computeModuleBalancing(
 ): ModuleBalancingComputation {
   const cumulativeBalances = new Map<string, MutableItemBalance>();
   const summaryBalances = new Map<string, MutableItemBalance>();
+  const infiniteInputItemIds = resolveInfiniteSystemInputItemIds(canvas);
 
   for (const input of canvas.globalInputs) {
+    if (input.infinite === true) {
+      continue;
+    }
     addOutput(cumulativeBalances, input.itemId, input.perMinute);
     addOutput(summaryBalances, input.itemId, input.perMinute);
   }
 
   const stageBalances: ModuleBalancingStageBalance[] = [];
   for (const stage of canvas.stages) {
-    const stageTotals = computeStageModuleTotals(stage, index);
+    const stageTotals = computeStageModuleTotals(stage, index, infiniteInputItemIds);
     mergeBalances(summaryBalances, stageTotals);
     mergeBalances(cumulativeBalances, stageTotals);
     stageBalances.push({
@@ -151,6 +169,7 @@ export function computeModuleBalancing(
 export function computeStageModuleTotals(
   stage: ModuleBalancingStage,
   index: ModuleBalancingIndex,
+  excludedItemIds: ReadonlySet<string> = new Set(),
 ): ModuleBalancingItemBalance[] {
   const balances = new Map<string, MutableItemBalance>();
   for (const entry of stage.entries) {
@@ -160,14 +179,30 @@ export function computeStageModuleTotals(
     }
 
     for (const input of ports.inputs) {
+      if (excludedItemIds.has(input.itemId)) {
+        continue;
+      }
       addInput(balances, input.itemId, input.perMinute * entry.quantity);
     }
     for (const output of ports.outputs) {
+      if (excludedItemIds.has(output.itemId)) {
+        continue;
+      }
       addOutput(balances, output.itemId, output.perMinute * entry.quantity);
     }
   }
 
   return sortItemBalances(finalizeBalances(balances), index);
+}
+
+export function resolveInfiniteSystemInputItemIds(
+  canvas: ModuleBalancingCanvas,
+): ReadonlySet<string> {
+  return new Set(
+    canvas.globalInputs
+      .filter((input) => input.infinite === true)
+      .map((input) => input.itemId),
+  );
 }
 
 export function computeWarehouseForecasts(
@@ -190,6 +225,11 @@ export function resolveModule(moduleId: string, index: ModuleBalancingIndex): Mo
   const customModule = index.customModuleById.get(moduleId);
   if (customModule !== undefined) {
     return customModule;
+  }
+
+  const recommendedModule = index.recommendedModuleById.get(moduleId);
+  if (recommendedModule !== undefined) {
+    return recommendedModule;
   }
 
   if (!index.recipeById.has(moduleId)) {
@@ -215,6 +255,14 @@ export function resolveModulePorts(
     };
   }
 
+  const recommendedModule = index.recommendedModuleById.get(moduleId);
+  if (recommendedModule !== undefined) {
+    return {
+      inputs: recommendedModule.inputs.map(clonePort),
+      outputs: recommendedModule.outputs.map(clonePort),
+    };
+  }
+
   const recipe = index.recipeById.get(moduleId);
   if (recipe === undefined || recipe.durationSeconds <= 0) {
     return null;
@@ -237,7 +285,7 @@ export function resolveModuleOutputs(
   module: ModuleBalancingModule,
   index: ModuleBalancingIndex,
 ): ModuleBalancingIOPort[] {
-  if (module.sourceType === "custom") {
+  if (module.sourceType !== "system-recipe") {
     return module.outputs.map(clonePort);
   }
 
@@ -248,7 +296,7 @@ export function resolveModuleActivityIds(
   module: ModuleBalancingModule,
   index: ModuleBalancingIndex,
 ): string[] {
-  if (module.sourceType === "custom") {
+  if (module.sourceType !== "system-recipe") {
     return resolveActivityIdsFromItemIds(
       [...module.inputs, ...module.outputs].map((port) => port.itemId),
       index,
@@ -311,7 +359,7 @@ export function resolveModuleInputs(
   module: ModuleBalancingModule,
   index: ModuleBalancingIndex,
 ): ModuleBalancingIOPort[] {
-  if (module.sourceType === "custom") {
+  if (module.sourceType !== "system-recipe") {
     return module.inputs.map(clonePort);
   }
 
@@ -336,11 +384,56 @@ export function resolveEntityIconSrc(entityId: string, index: ModuleBalancingInd
   return createDeviceIconAssetUrl(index.entityById.get(entityId)?.spriteId ?? entityId);
 }
 
+export function resolveModuleDisplayTitle(
+  module: ModuleBalancingModule,
+  index: ModuleBalancingIndex,
+  translate: (key: string) => string,
+): string {
+  if (module.sourceType !== "system-recipe") {
+    return module.name;
+  }
+
+  const recipe = index.recipeById.get(module.recipeId);
+  if (recipe === undefined) {
+    return module.recipeId;
+  }
+
+  const outputNames = recipe.outputs.map((output) => resolveItemName(output.itemId, index, translate));
+  const fallbackNames = outputNames.length > 0
+    ? outputNames
+    : recipe.inputs.map((input) => resolveItemName(input.itemId, index, translate));
+  const machine = index.entityById.get(recipe.machineId);
+  const machineName = machine === undefined ? recipe.machineId : translate(machine.nameKey);
+  return [...fallbackNames, machineName].join(" · ");
+}
+
+export function matchesModuleSearchQuery(
+  module: ModuleBalancingModule,
+  query: string,
+  index: ModuleBalancingIndex,
+  translate: (key: string) => string,
+): boolean {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (normalizedQuery.length === 0) {
+    return true;
+  }
+
+  const terms = collectModuleSearchTerms(module, index, translate);
+  const searchableText = terms.join(" ").toLowerCase();
+  if (searchableText.includes(normalizedQuery)) {
+    return true;
+  }
+
+  const compactQuery = normalizedQuery.replace(/\s+/g, "");
+  const pinyinSearch = resolveModulePinyinSearch(terms);
+  return pinyinSearch.full.includes(compactQuery) || pinyinSearch.initial.includes(compactQuery);
+}
+
 export function resolveModuleIconSrc(
   module: ModuleBalancingModule,
   index: ModuleBalancingIndex,
 ): string {
-  if (module.sourceType === "custom") {
+  if (module.sourceType !== "system-recipe") {
     return resolveAnyIconSrc(module.iconId, index);
   }
 
@@ -350,11 +443,20 @@ export function resolveModuleIconSrc(
   }
 
   // 优先用第 1 个主要产物图标，其次用第 1 个产出图标，最后 fallback 到设备图标
-  const primaryId = recipe.primaryOutputs?.[0] ?? recipe.outputs[0]?.itemId;
-  if (primaryId !== undefined) {
-    return resolveItemIconSrc(primaryId, index);
-  }
-
+  // AI-CORRECTION 2026-07-27: 上述规则已不再适用于系统配方卡；本次需求统一以生产设备图标作为系统配方头图。
+  // AI-REMOVED 2026-07-27:
+  // Reason: 系统配方卡必须显示生产设备图标，产物图标不再代表卡片头图。
+  // Trigger: 用户要求系统配方模块头部改为设备图标。
+  // Evidence: recipe.machineId 可稳定解析实际生产设备，且与新标题末尾设备名称一致。
+  // Replacement: 下方 resolveEntityIconSrc(recipe.machineId, index)
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const primaryId = recipe.primaryOutputs?.[0] ?? recipe.outputs[0]?.itemId;
+  // if (primaryId !== undefined) {
+  //   return resolveItemIconSrc(primaryId, index);
+  // }
   return resolveEntityIconSrc(recipe.machineId, index);
 }
 
@@ -419,6 +521,11 @@ function resolveModuleForActivityLookup(
     return customModule;
   }
 
+  const recommendedModule = index.recommendedModuleById.get(moduleId);
+  if (recommendedModule !== undefined) {
+    return recommendedModule;
+  }
+
   if (!index.allRecipeById.has(moduleId) && !index.recipeById.has(moduleId)) {
     return null;
   }
@@ -428,6 +535,84 @@ function resolveModuleForActivityLookup(
     recipeId: moduleId,
     sourceType: "system-recipe",
   };
+}
+
+function collectModuleSearchTerms(
+  module: ModuleBalancingModule,
+  index: ModuleBalancingIndex,
+  translate: (key: string) => string,
+): string[] {
+  const terms = [
+    module.id,
+    resolveModuleDisplayTitle(module, index, translate),
+  ];
+
+  if (module.sourceType !== "system-recipe") {
+    terms.push(module.name, module.notes);
+    for (const port of [...module.inputs, ...module.outputs]) {
+      appendRegistryNameTerms(terms, index.itemById.get(port.itemId)?.nameKey, translate);
+      terms.push(port.itemId);
+    }
+    return terms;
+  }
+
+  const recipe = index.recipeById.get(module.recipeId);
+  if (recipe === undefined) {
+    return terms;
+  }
+
+  terms.push(recipe.id, ...recipe.tags);
+  appendRegistryNameTerms(terms, recipe.nameKey, translate);
+  const machine = index.entityById.get(recipe.machineId);
+  terms.push(recipe.machineId);
+  appendRegistryNameTerms(terms, machine?.nameKey, translate);
+
+  for (const port of [...recipe.inputs, ...recipe.outputs]) {
+    terms.push(port.itemId);
+    appendRegistryNameTerms(terms, index.itemById.get(port.itemId)?.nameKey, translate);
+  }
+
+  return terms;
+}
+
+function appendRegistryNameTerms(
+  terms: string[],
+  nameKey: string | undefined,
+  translate: (key: string) => string,
+): void {
+  if (nameKey === undefined) {
+    return;
+  }
+
+  terms.push(translate(nameKey));
+  const zhName = lookupText("zh-CN", nameKey);
+  if (zhName !== undefined) {
+    terms.push(zhName);
+  }
+}
+
+function resolveModulePinyinSearch(
+  terms: readonly string[],
+): { full: string; initial: string } {
+  const source = terms
+    .map((term) => term.trim().toLowerCase())
+    .filter((term) => term.length > 0)
+    .join(" ");
+  const cached = MODULE_PINYIN_SEARCH_CACHE.get(source);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const result = {
+    full: pinyin(source, { toneType: "none", separator: "" }).replace(/\s+/g, "").toLowerCase(),
+    initial: pinyin(source, {
+      pattern: "first",
+      toneType: "none",
+      separator: "",
+    }).replace(/\s+/g, "").toLowerCase(),
+  };
+  MODULE_PINYIN_SEARCH_CACHE.set(source, result);
+  return result;
 }
 
 function resolveActivityIdsFromItemIds(
@@ -511,6 +696,7 @@ function clonePort(port: ModuleBalancingIOPort): ModuleBalancingIOPort {
   return {
     itemId: port.itemId,
     perMinute: port.perMinute,
+    ...(port.infinite === true ? { infinite: true } : {}),
   };
 }
 

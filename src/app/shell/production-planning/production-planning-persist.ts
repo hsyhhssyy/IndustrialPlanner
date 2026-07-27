@@ -8,6 +8,7 @@ import {
 import type { ProductionPlanningInputStore } from "./production-planning-state";
 import type {
   ProductionPlanningDisplayMode,
+  ProductionPlanningDeviceMinimumConsumptionMode,
   ProductionPlanningViewMode,
   ProductionPlanningPort,
   ProductionPlanningSourceConfig,
@@ -33,7 +34,9 @@ export function hookPlannerIndexedDbPersistence(
           acidPolicy: normalizeByproductPolicy(persisted.sourceConfig?.acidPolicy),
           sewagePolicy: normalizeSewagePolicy(persisted.sourceConfig?.sewagePolicy),
           waterPurifierPolicy: normalizeWaterPurifierPolicy(persisted.sourceConfig?.waterPurifierPolicy),
-          includeDeviceMinimumConsumption: persisted.sourceConfig?.includeDeviceMinimumConsumption !== false,
+          includeDeviceMinimumConsumption: normalizeDeviceMinimumConsumptionMode(
+            persisted.sourceConfig?.includeDeviceMinimumConsumption,
+          ),
         };
 
         store.targets = targets;
@@ -181,6 +184,21 @@ function normalizeWaterPurifierPolicy(
   value: unknown,
 ): "disabled" | "use-when-available" {
   return value === "use-when-available" ? "use-when-available" : "disabled";
+}
+
+function normalizeDeviceMinimumConsumptionMode(
+  value: unknown,
+): ProductionPlanningDeviceMinimumConsumptionMode {
+  if (value === "none" || value === "fractional" || value === "ceil") {
+    return value;
+  }
+
+  // 兼容旧版布尔值：true=小数计算，false=不计算。
+  if (value === false) {
+    return "none";
+  }
+
+  return "fractional";
 }
 
 function clonePort(p: ProductionPlanningPort): ProductionPlanningPort {

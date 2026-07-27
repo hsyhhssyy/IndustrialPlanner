@@ -11,6 +11,7 @@ import type {
   DialogStateReadWrite,
   ModuleBalancingCanvasReadWrite,
   ModuleBalancingCustomModuleReadWrite,
+  ModuleBalancingFolderReadWrite,
   ModuleBalancingIOPortReadWrite,
   ModuleBalancingStageModuleEntryReadWrite,
   ModuleBalancingStageReadWrite,
@@ -375,11 +376,19 @@ function normalizePersistedModuleBalancingState(
     return fallbackClone;
   }
 
+  const folders = normalizePersistedModuleBalancingFolders(
+    persistedModuleBalancingState.folders,
+  );
+  const canvasFolders = normalizePersistedModuleBalancingFolders(
+    persistedModuleBalancingState.canvasFolders,
+  );
   const customModules = normalizePersistedCustomModules(
     persistedModuleBalancingState.customModules,
+    new Set(folders.map((folder) => folder.id)),
   );
   const canvases = normalizePersistedModuleBalancingCanvases(
     persistedModuleBalancingState.canvases,
+    new Set(canvasFolders.map((folder) => folder.id)),
   );
   const safeCanvases = canvases.length > 0 ? canvases : fallbackClone.canvases;
   const activeCanvasId = typeof persistedModuleBalancingState.activeCanvasId === "string"
@@ -389,7 +398,9 @@ function normalizePersistedModuleBalancingState(
 
   return {
     canvases: safeCanvases,
+    canvasFolders,
     customModules,
+    folders,
     activeCanvasId,
   };
 }
@@ -408,7 +419,9 @@ function cloneModuleBalancingState(
 
   return {
     canvases,
+    canvasFolders: fallback.canvasFolders.map((folder) => ({ ...folder })),
     customModules: fallback.customModules.map(cloneCustomModule),
+    folders: fallback.folders.map((folder) => ({ ...folder })),
     activeCanvasId,
   };
 }
@@ -419,6 +432,7 @@ function cloneModuleBalancingCanvas(
   return {
     id: canvas.id,
     name: canvas.name,
+    folderId: canvas.folderId,
     globalInputs: canvas.globalInputs.map(cloneIOPort),
     stages: canvas.stages.map(cloneStage),
     warehouseCapacity: canvas.warehouseCapacity,
@@ -442,6 +456,7 @@ function cloneCustomModule(
     color: customModule.color,
     iconId: customModule.iconId,
     notes: customModule.notes,
+    folderId: customModule.folderId,
     inputs: customModule.inputs.map(cloneIOPort),
     outputs: customModule.outputs.map(cloneIOPort),
     sourceType: "custom",
@@ -452,11 +467,13 @@ function cloneIOPort(port: ModuleBalancingIOPortReadWrite): ModuleBalancingIOPor
   return {
     itemId: port.itemId,
     perMinute: port.perMinute,
+    ...(port.infinite === true ? { infinite: true } : {}),
   };
 }
 
 function normalizePersistedModuleBalancingCanvases(
   persistedCanvases: unknown,
+  folderIds: ReadonlySet<string>,
 ): ModuleBalancingCanvasReadWrite[] {
   if (!Array.isArray(persistedCanvases)) {
     return [];
@@ -477,7 +494,10 @@ function normalizePersistedModuleBalancingCanvases(
     return [{
       id,
       name: normalizeNonEmptyString(canvas.name) ?? "未命名画布",
-      globalInputs: normalizePersistedIOPorts(canvas.globalInputs),
+      folderId: typeof canvas.folderId === "string" && folderIds.has(canvas.folderId)
+        ? canvas.folderId
+        : null,
+      globalInputs: normalizePersistedIOPorts(canvas.globalInputs, true),
       stages: normalizePersistedStages(canvas.stages),
       warehouseCapacity: normalizePositiveNumberOrNull(canvas.warehouseCapacity, null),
     }];
@@ -536,6 +556,7 @@ function normalizePersistedStageEntries(
 
 function normalizePersistedCustomModules(
   persistedCustomModules: unknown,
+  folderIds: ReadonlySet<string>,
 ): ModuleBalancingCustomModuleReadWrite[] {
   if (!Array.isArray(persistedCustomModules)) {
     return [];
@@ -570,6 +591,9 @@ function normalizePersistedCustomModules(
       color: normalizeCssColor(customModule.color),
       iconId,
       notes: typeof customModule.notes === "string" ? customModule.notes : "",
+      folderId: typeof customModule.folderId === "string" && folderIds.has(customModule.folderId)
+        ? customModule.folderId
+        : null,
       inputs,
       outputs,
       sourceType: "custom",
@@ -577,7 +601,34 @@ function normalizePersistedCustomModules(
   });
 }
 
-function normalizePersistedIOPorts(persistedPorts: unknown): ModuleBalancingIOPortReadWrite[] {
+function normalizePersistedModuleBalancingFolders(
+  persistedFolders: unknown,
+): ModuleBalancingFolderReadWrite[] {
+  if (!Array.isArray(persistedFolders)) {
+    return [];
+  }
+
+  const seenFolderIds = new Set<string>();
+  return persistedFolders.flatMap((folder) => {
+    if (!isRecord(folder)) {
+      return [];
+    }
+
+    const id = normalizeNonEmptyString(folder.id);
+    const name = normalizeNonEmptyString(folder.name);
+    if (id === null || name === null || seenFolderIds.has(id)) {
+      return [];
+    }
+    seenFolderIds.add(id);
+
+    return [{ id, name }];
+  });
+}
+
+function normalizePersistedIOPorts(
+  persistedPorts: unknown,
+  allowInfinite = false,
+): ModuleBalancingIOPortReadWrite[] {
   if (!Array.isArray(persistedPorts)) {
     return [];
   }
@@ -588,7 +639,10 @@ function normalizePersistedIOPorts(persistedPorts: unknown): ModuleBalancingIOPo
     }
 
     const itemId = normalizeNonEmptyString(port.itemId);
-    const perMinute = normalizePositiveNumber(port.perMinute);
+    const infinite = allowInfinite && port.infinite === true;
+    const perMinute = infinite
+      ? normalizeNonNegativeNumber(port.perMinute)
+      : normalizePositiveNumber(port.perMinute);
     if (itemId === null || perMinute === null) {
       return [];
     }
@@ -596,6 +650,7 @@ function normalizePersistedIOPorts(persistedPorts: unknown): ModuleBalancingIOPo
     return [{
       itemId,
       perMinute: roundToTwoDecimals(perMinute),
+      ...(infinite ? { infinite: true } : {}),
     }];
   });
 }
@@ -611,6 +666,12 @@ function normalizeNonEmptyString(value: unknown): string | null {
 
 function normalizePositiveNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : null;
+}
+
+function normalizeNonNegativeNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
     ? value
     : null;
 }

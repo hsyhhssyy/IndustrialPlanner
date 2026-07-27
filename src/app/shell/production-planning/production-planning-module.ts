@@ -13,6 +13,7 @@ import {
 
 const PRODUCTION_PLANNING_MODULE_COLOR = "#4f8cff";
 const PRODUCTION_PLANNING_MODULE_FALLBACK_ICON_ID = "grinder_1";
+const NATURAL_RESOURCE_GATHERING_RECIPE_TAG = "自然资源采集";
 const FLOW_EPSILON = 0.0001;
 
 interface CreateProductionPlanningModuleOptions {
@@ -25,7 +26,7 @@ interface CreateProductionPlanningModuleOptions {
 export function createProductionPlanningModule(
   options: CreateProductionPlanningModuleOptions,
 ) {
-  const inputs = collectExternalRecipeInputs(options.plan.roots);
+  const inputs = collectExternalRecipeInputs(options.plan.roots, options.index);
   const outputs = collectModuleOutputs(options.plan);
   const targetDescription = options.targets
     .filter((target) => target.itemId.length > 0 && target.perMinute > FLOW_EPSILON)
@@ -44,6 +45,7 @@ export function createProductionPlanningModule(
       ?? PRODUCTION_PLANNING_MODULE_FALLBACK_ICON_ID,
     notes: options.translate("productionPlanning.generatedModuleNotes")
       .replace("{targets}", targetDescription),
+    folderId: null,
     inputs,
     outputs,
     sourceType: "custom" as const,
@@ -52,11 +54,16 @@ export function createProductionPlanningModule(
 
 function collectExternalRecipeInputs(
   roots: readonly ProductionPlanningItemNode[],
+  index: ProductionPlanningIndex,
 ): ModuleBalancingIOPort[] {
   const totals = new Map<string, number>();
 
   const visitInput = (node: ProductionPlanningItemNode) => {
     addFlow(totals, node.itemId, node.supply.manual + node.supply.infinite);
+    if (isNaturalResourceGatheringNode(node, index)) {
+      addFlow(totals, node.itemId, node.producedPerMinute);
+      return;
+    }
     if (node.recipeNode !== null) {
       visitRecipe(node.recipeNode);
     }
@@ -68,12 +75,26 @@ function collectExternalRecipeInputs(
   };
 
   for (const root of roots) {
-    if (root.recipeNode !== null) {
+    if (isNaturalResourceGatheringNode(root, index)) {
+      visitInput(root);
+    } else if (root.recipeNode !== null) {
       visitRecipe(root.recipeNode);
     }
   }
 
   return toModulePorts(totals);
+}
+
+function isNaturalResourceGatheringNode(
+  node: ProductionPlanningItemNode,
+  index: ProductionPlanningIndex,
+): boolean {
+  if (!index.naturalResourceItemIds.has(node.itemId) || node.recipeNode === null) {
+    return false;
+  }
+
+  return index.recipeById.get(node.recipeNode.recipeId)
+    ?.tags.includes(NATURAL_RESOURCE_GATHERING_RECIPE_TAG) === true;
 }
 
 function collectModuleOutputs(

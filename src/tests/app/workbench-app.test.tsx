@@ -146,7 +146,8 @@ function createModuleBalancingStorageSnapshot(options: {
   canvases?: Array<{
     id: string;
     name: string;
-    globalInputs: Array<{ itemId: string; perMinute: number }>;
+    folderId?: string | null;
+    globalInputs: Array<{ itemId: string; perMinute: number; infinite?: boolean }>;
     stages: Array<{
       id: string;
       name: string;
@@ -154,6 +155,7 @@ function createModuleBalancingStorageSnapshot(options: {
     }>;
     warehouseCapacity: number | null;
   }>;
+  canvasFolders?: Array<{ id: string; name: string }>;
   customModules?: Array<{
     id: string;
     name: string;
@@ -163,10 +165,11 @@ function createModuleBalancingStorageSnapshot(options: {
     inputs: Array<{ itemId: string; perMinute: number }>;
     outputs: Array<{ itemId: string; perMinute: number }>;
   }>;
+  folders?: Array<{ id: string; name: string }>;
   activeCanvasId?: string | null;
 } = {}) {
   return {
-    canvases: options.canvases ?? [
+    canvases: (options.canvases ?? [
       {
         id: DEFAULT_MODULE_BALANCING_CANVAS_ID,
         name: "主基地配平",
@@ -180,8 +183,17 @@ function createModuleBalancingStorageSnapshot(options: {
         ],
         warehouseCapacity: null,
       },
-    ],
+    ]).map((canvas) => ({
+      id: canvas.id,
+      name: canvas.name,
+      folderId: canvas.folderId ?? null,
+      globalInputs: canvas.globalInputs,
+      stages: canvas.stages,
+      warehouseCapacity: canvas.warehouseCapacity,
+    })),
+    canvasFolders: options.canvasFolders ?? [],
     customModules: options.customModules ?? [],
+    folders: options.folders ?? [],
     activeCanvasId: options.activeCanvasId ?? DEFAULT_MODULE_BALANCING_CANVAS_ID,
   };
 }
@@ -3378,6 +3390,312 @@ describe("WorkbenchApp", () => {
     expect(container.textContent).not.toContain("现有画布均包含未启用的活动内容");
   });
 
+  it("switches canvases through the folder dialog and loads immutable recommended canvases as user copies", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.pathname
+          : input.url;
+      const payloads: Record<string, unknown> = {
+        "/module-balancing/recommended-modules/index.json": {
+          version: "1",
+          modules: [],
+        },
+        "/module-balancing/recommended-canvases/index.json": {
+          version: "1",
+          canvases: ["starter"],
+        },
+        "/module-balancing/recommended-canvases/starter.json": {
+          id: "recommended-canvas:starter",
+          name: "推荐配平",
+          globalInputs: [],
+          stages: [{
+            id: "recommended-stage:starter",
+            name: "推荐阶段",
+            entries: [],
+          }],
+          warehouseCapacity: null,
+        },
+      };
+      const payload = payloads[url];
+      return payload === undefined
+        ? new Response("Not found", { status: 404 })
+        : new Response(JSON.stringify(payload), {
+          headers: { "Content-Type": "application/json" },
+          status: 200,
+        });
+    }));
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        toolboxDialog: createDialogStateSnapshot({
+          visible: true,
+          activeTab: TOOLBOX_DIALOG_TAB_IDS[2],
+        }),
+        moduleBalancing: createModuleBalancingStorageSnapshot({
+          canvasFolders: [{ id: "canvas-folder-a", name: "炼铁" }],
+          canvases: [
+            {
+              id: DEFAULT_MODULE_BALANCING_CANVAS_ID,
+              name: "主基地配平",
+              folderId: null,
+              globalInputs: [],
+              stages: [{
+                id: DEFAULT_MODULE_BALANCING_STAGE_ID,
+                name: "Stage 1",
+                entries: [],
+              }],
+              warehouseCapacity: null,
+            },
+            {
+              id: "canvas-b",
+              name: "分基地配平",
+              folderId: "canvas-folder-a",
+              globalInputs: [],
+              stages: [{
+                id: "stage-b",
+                name: "阶段 B",
+                entries: [],
+              }],
+              warehouseCapacity: null,
+            },
+          ],
+        }),
+      })),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    await act(async () => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      await flushMicrotasks(12);
+    });
+
+    expect(container.querySelector(".module-balancing-canvas-form select")).toBeNull();
+    const loadOtherCanvasButton = Array.from(container.querySelectorAll("button"))
+      .find((button) => button.textContent === "加载其他画布") as HTMLButtonElement | undefined;
+    expect(loadOtherCanvasButton).toBeDefined();
+
+    act(() => {
+      loadOtherCanvasButton?.click();
+    });
+
+    const dialog = container.querySelector("[data-module-balancing-canvas-library]");
+    expect(dialog).not.toBeNull();
+    expect(dialog?.textContent).toContain("用户画布");
+    expect(dialog?.textContent).toContain("推荐画布");
+    expect(dialog?.textContent).toContain("炼铁");
+    expect(dialog?.textContent).toContain("推荐配平");
+
+    const renameFolderButton = dialog?.querySelector(
+      'button[aria-label="重命名文件夹"]',
+    ) as HTMLButtonElement | null;
+    act(() => {
+      renameFolderButton?.click();
+    });
+    const folderNameInput = dialog?.querySelector(
+      'input[aria-label="文件夹名称"]',
+    ) as HTMLInputElement | null;
+    expect(folderNameInput).not.toBeNull();
+    await act(async () => {
+      dispatchInputEvent(folderNameInput as HTMLInputElement, "冶炼画布");
+      folderNameInput?.blur();
+      await flushMicrotasks();
+    });
+    expect(appHost.internalState.workbench.toolbox.moduleBalancing.canvasFolders[0]?.name).toBe("冶炼画布");
+
+    const rootCanvasRow = Array.from(dialog?.querySelectorAll(".module-balancing-canvas-library-row") ?? [])
+      .find((row) => row.textContent?.includes("主基地配平"));
+    const moveCanvasButton = rootCanvasRow?.querySelector(
+      'button[aria-label="移动画布"]',
+    ) as HTMLButtonElement | null;
+    act(() => {
+      moveCanvasButton?.click();
+    });
+    const folderSelect = rootCanvasRow?.querySelector(
+      'select[aria-label="移动画布"]',
+    ) as HTMLSelectElement | null;
+    expect(folderSelect).not.toBeNull();
+    act(() => {
+      if (folderSelect !== null) {
+        folderSelect.value = "canvas-folder-a";
+        folderSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+    expect(appHost.internalState.workbench.toolbox.moduleBalancing.canvases[0]?.folderId).toBe("canvas-folder-a");
+
+    const deleteFolderButton = dialog?.querySelector(
+      'button[aria-label="删除文件夹"]',
+    ) as HTMLButtonElement | null;
+    act(() => {
+      deleteFolderButton?.click();
+    });
+    expect(appHost.internalState.workbench.toolbox.moduleBalancing.canvasFolders).toHaveLength(0);
+    expect(appHost.internalState.workbench.toolbox.moduleBalancing.canvases[0]?.folderId).toBeNull();
+    expect(appHost.internalState.workbench.toolbox.moduleBalancing.canvases[1]?.folderId).toBeNull();
+
+    const recommendedCanvasButton = dialog?.querySelector(
+      "button.module-balancing-canvas-library-row.is-recommended",
+    ) as HTMLButtonElement | null;
+    expect(recommendedCanvasButton).not.toBeNull();
+    act(() => {
+      recommendedCanvasButton?.click();
+    });
+
+    const state = appHost.internalState.workbench.toolbox.moduleBalancing;
+    expect(state.canvases).toHaveLength(3);
+    expect(state.canvases[2]).toMatchObject({
+      name: "推荐配平",
+      folderId: null,
+    });
+    expect(state.canvases[2]?.id).not.toBe("recommended-canvas:starter");
+    expect(state.canvases[2]?.stages[0]?.id).not.toBe("recommended-stage:starter");
+    expect(state.activeCanvasId).toBe(state.canvases[2]?.id);
+    expect(container.querySelector("[data-module-balancing-canvas-library]")).toBeNull();
+  });
+
+  it("applies version resources exactly and turns off infinite supply when a number is entered", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.pathname
+          : input.url;
+      const payloads: Record<string, unknown> = {
+        "/module-balancing/recommended-modules/index.json": {
+          version: "1",
+          modules: [],
+        },
+        "/module-balancing/recommended-canvases/index.json": {
+          version: "1",
+          canvases: [],
+        },
+        "/module-balancing/version-resources/index.json": {
+          version: "1",
+          resources: ["wuling-1.4"],
+        },
+        "/module-balancing/version-resources/wuling-1.4.json": {
+          id: "version-resource:wuling-1.4",
+          name: "武陵1.4版本资源",
+          inputs: [
+            { itemId: "item_originium_ore", perMinute: 540 },
+            { itemId: "item_iron_ore", perMinute: 120 },
+            { itemId: "item_copper_ore", perMinute: 420 },
+            { itemId: "item_gas_inert", perMinute: 200 },
+            { itemId: "item_gas_xiranite", perMinute: 100 },
+            { itemId: "item_liquid_water", infinite: true },
+            { itemId: "item_liquid_acid", infinite: true },
+          ],
+        },
+      };
+      const payload = payloads[url];
+      return payload === undefined
+        ? new Response("Not found", { status: 404 })
+        : new Response(JSON.stringify(payload), {
+          headers: { "Content-Type": "application/json" },
+          status: 200,
+        });
+    }));
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        toolboxDialog: createDialogStateSnapshot({
+          visible: true,
+          activeTab: TOOLBOX_DIALOG_TAB_IDS[2],
+        }),
+        moduleBalancing: createModuleBalancingStorageSnapshot({
+          canvases: [{
+            id: DEFAULT_MODULE_BALANCING_CANVAS_ID,
+            name: "主基地配平",
+            globalInputs: [
+              { itemId: "item_originium_ore", perMinute: 10, infinite: true },
+              { itemId: "item_originium_ore", perMinute: 20 },
+            ],
+            stages: [{
+              id: DEFAULT_MODULE_BALANCING_STAGE_ID,
+              name: "Stage 1",
+              entries: [],
+            }],
+            warehouseCapacity: null,
+          }],
+        }),
+      })),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    await act(async () => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      await flushMicrotasks(12);
+    });
+
+    const systemInputTab = Array.from(container.querySelectorAll("button"))
+      .find((button) => button.textContent === "系统输入") as HTMLButtonElement | undefined;
+    expect(systemInputTab).toBeDefined();
+    act(() => {
+      systemInputTab?.click();
+    });
+
+    const addVersionResourcesButton = Array.from(container.querySelectorAll("button"))
+      .find((button) => button.textContent === "一键添加版本资源") as HTMLButtonElement | undefined;
+    expect(addVersionResourcesButton).toBeDefined();
+    act(() => {
+      addVersionResourcesButton?.click();
+    });
+
+    const dialog = container.querySelector("[data-module-balancing-version-resources]");
+    expect(dialog?.textContent).toContain("武陵1.4版本资源");
+    expect(dialog?.textContent).toContain("源矿 540/min");
+    expect(dialog?.textContent).toContain("清水 ∞");
+    const presetButton = Array.from(dialog?.querySelectorAll("button") ?? [])
+      .find((button) => button.textContent?.includes("武陵1.4版本资源")) as HTMLButtonElement | undefined;
+    act(() => {
+      presetButton?.click();
+    });
+
+    const inputs = appHost.internalState.workbench.toolbox.moduleBalancing.canvases[0]?.globalInputs;
+    expect(inputs).toEqual([
+      { itemId: "item_originium_ore", perMinute: 540 },
+      { itemId: "item_iron_ore", perMinute: 120 },
+      { itemId: "item_copper_ore", perMinute: 420 },
+      { itemId: "item_gas_inert", perMinute: 200 },
+      { itemId: "item_gas_xiranite", perMinute: 100 },
+      { itemId: "item_liquid_water", perMinute: 0, infinite: true },
+      { itemId: "item_liquid_acid", perMinute: 0, infinite: true },
+    ]);
+
+    const waterRow = Array.from(container.querySelectorAll(".module-balancing-port-row"))
+      .find((row) => row.textContent?.includes("清水"));
+    const waterInfiniteButton = waterRow?.querySelector(
+      'button[aria-label="取消无限供给"]',
+    ) as HTMLButtonElement | null;
+    const waterNumberInput = waterRow?.querySelector("input") as HTMLInputElement | null;
+    expect(waterInfiniteButton?.getAttribute("aria-pressed")).toBe("true");
+    expect(waterNumberInput).not.toBeNull();
+
+    await act(async () => {
+      waterNumberInput?.focus();
+      dispatchInputEvent(waterNumberInput as HTMLInputElement, "80");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      waterNumberInput?.blur();
+      await flushMicrotasks();
+    });
+
+    expect(
+      appHost.internalState.workbench.toolbox.moduleBalancing.canvases[0]?.globalInputs
+        .find((input) => input.itemId === "item_liquid_water"),
+    ).toEqual({
+      itemId: "item_liquid_water",
+      perMinute: 80,
+      infinite: false,
+    });
+  });
+
   it("restores the full desktop workspace track when the module library closes", () => {
     localStorage.setItem(
       WORKBENCH_STATE_LOCAL_STORAGE_KEY,
@@ -3399,9 +3717,24 @@ describe("WorkbenchApp", () => {
     const desktopLayout = container.querySelector(".module-balancing-desktop-layout");
     const libraryPanel = desktopLayout?.querySelector(".module-balancing-library-panel");
     const closeLibraryButton = libraryPanel?.querySelector('button[aria-label="关闭"]') as HTMLButtonElement | null;
+    const systemRecipeCard = container.querySelector(".module-balancing-module-card");
 
     expect(desktopLayout?.classList.contains("has-library")).toBe(true);
-    expect(container.querySelector(".recipe-display-formula-module-library")).not.toBeNull();
+    // AI-REMOVED 2026-07-27:
+    // Reason: 系统配方卡不再渲染完整 RecipeDisplay 公式，旧断言与新产品外观冲突。
+    // Trigger: 用户要求系统配方头部改为设备图标及“产物 · 设备”文本。
+    // Evidence: 新断言验证卡片标题分隔符与 device-icons 设备图标。
+    // Replacement: 下方 systemRecipeCard 标题和图标断言
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(container.querySelector(".recipe-display-formula-module-library")).not.toBeNull();
+    expect(systemRecipeCard).not.toBeNull();
+    expect(systemRecipeCard?.querySelector(".module-balancing-module-title")?.textContent).toContain("·");
+    expect(systemRecipeCard?.querySelector("img")?.getAttribute("src")).toContain("device-icons/");
+    // AI-CORRECTION 2026-07-27: 新头部与原配方展示控件需要同时存在。
+    expect(systemRecipeCard?.querySelector(".recipe-display-formula-module-library")).not.toBeNull();
     expect(closeLibraryButton).not.toBeNull();
 
     act(() => {

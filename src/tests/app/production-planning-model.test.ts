@@ -37,7 +37,7 @@ const DEFAULT_SOURCE_CONFIG: ProductionPlanningSourceConfig = {
   acidPolicy: "use-byproduct",
   sewagePolicy: "external-supply",
   waterPurifierPolicy: "disabled",
-  includeDeviceMinimumConsumption: true,
+  includeDeviceMinimumConsumption: "fractional",
 };
 
 const TEST_SEWAGE_BYPRODUCT_RECIPE_ID = "test_sewage_byproduct";
@@ -393,7 +393,7 @@ describe("production planning model", () => {
       supplies: [],
       infiniteItemIds: baseInfiniteItemIds(index),
       recipeChoices: new Map([["item_liquid_xiranite", recipeId]]),
-      sourceConfig: { ...DEFAULT_SOURCE_CONFIG, includeDeviceMinimumConsumption: false },
+      sourceConfig: { ...DEFAULT_SOURCE_CONFIG, includeDeviceMinimumConsumption: "none" },
     }, index);
 
     const total = result.recipeTotals.find((candidate) => candidate.recipeId === recipeId);
@@ -407,6 +407,27 @@ describe("production planning model", () => {
     expect(buildProductionPlanningTreeRows(result, "device").some((row) => (
       isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)
     ))).toBe(false);
+  });
+
+  it("rounds up minimum device consumption by device count when mode is ceil", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const recipeId = "liquid_transmuter_1_liquid_liquid_xiranite_1";
+    const result = computeProductionPlan({
+      targets: [port("item_liquid_xiranite", 30)],
+      supplies: [],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map([["item_liquid_xiranite", recipeId]]),
+      sourceConfig: { ...DEFAULT_SOURCE_CONFIG, includeDeviceMinimumConsumption: "ceil" },
+    }, index);
+
+    const total = result.recipeTotals.find((candidate) => candidate.recipeId === recipeId);
+    expect(total?.deviceCount).toBe(1.25);
+    expect(total?.deviceMinimumConsumptionInputs).toEqual([
+      expect.objectContaining({
+        itemId: "item_liquid_xiranite",
+        perMinute: 12,
+      }),
+    ]);
   });
 
   it("treats seed and plant growth loops as productive cycles", () => {

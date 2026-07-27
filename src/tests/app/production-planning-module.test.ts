@@ -15,7 +15,7 @@ const SOURCE_CONFIG: ProductionPlanningSourceConfig = {
   acidPolicy: "use-byproduct",
   sewagePolicy: "external-supply",
   waterPurifierPolicy: "disabled",
-  includeDeviceMinimumConsumption: true,
+  includeDeviceMinimumConsumption: "fractional",
 };
 
 function port(itemId: string, perMinute: number): ProductionPlanningPort {
@@ -27,6 +27,30 @@ function port(itemId: string, perMinute: number): ProductionPlanningPort {
 }
 
 describe("production planning module conversion", () => {
+  it("converts natural-resource gathering into module input demand", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const targets = [port("item_iron_nugget", 60)];
+    const plan = computeProductionPlan({
+      targets,
+      supplies: [port("item_iron_ore", 20)],
+      infiniteItemIds: new Set(),
+      recipeChoices: new Map(),
+      sourceConfig: SOURCE_CONFIG,
+    }, index);
+
+    const module = createProductionPlanningModule({
+      index,
+      plan,
+      targets,
+      translate: (key) => lookupText("zh-CN", key) ?? key,
+    });
+
+    expect(module.inputs).toContainEqual({
+      itemId: "item_iron_ore",
+      perMinute: 60,
+    });
+  });
+
   it("uses actual external consumption and includes targets plus every overflow output", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const targets = [port("item_liquid_xiranite_poly", 30)];

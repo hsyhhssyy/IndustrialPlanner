@@ -45,6 +45,7 @@ import {
   resolveProductionPlanningItemName,
   resolveProductionPlanningRecipeName,
   type ProductionPlanningByproductPolicy,
+  type ProductionPlanningDeviceMinimumConsumptionMode,
   type ProductionPlanningDisplayMode,
   type ProductionPlanningIndex,
   type ProductionPlanningItemNode,
@@ -1014,6 +1015,9 @@ function SourcePolicyPanel({
         Risk: Low；配置字段及默认值不变，仅统一交互形式。
         Human Review: Required
 
+        AI-CORRECTION 2026-07-27: 设备最低消耗改为三态模式（不计算/小数计算/取整计算），
+        配置字段保持 includeDeviceMinimumConsumption，但类型从 boolean 升级为 mode string。
+
         Original code:
         <label className={cm(styles, "production-planning-switch-row")}>
           <span>{t("productionPlanning.deviceMinimumConsumption")}</span>
@@ -1029,8 +1033,8 @@ function SourcePolicyPanel({
         </label>
         */}
         <DeviceMinimumConsumptionToggle
-          enabled={sourceConfig.includeDeviceMinimumConsumption}
-          onChange={(enabled) => onUpdate({ includeDeviceMinimumConsumption: enabled })}
+          mode={sourceConfig.includeDeviceMinimumConsumption}
+          onChange={(mode) => onUpdate({ includeDeviceMinimumConsumption: mode })}
           t={t}
         />
       </div>
@@ -1160,12 +1164,12 @@ function WaterPurifierPolicyToggle({
 }
 
 function DeviceMinimumConsumptionToggle({
-  enabled,
+  mode,
   onChange,
   t,
 }: {
-  enabled: boolean;
-  onChange: (enabled: boolean) => void;
+  mode: ProductionPlanningDeviceMinimumConsumptionMode;
+  onChange: (mode: ProductionPlanningDeviceMinimumConsumptionMode) => void;
   t: (key: string) => string;
 }) {
   return (
@@ -1177,19 +1181,27 @@ function DeviceMinimumConsumptionToggle({
       <div className={cm(styles, "production-planning-two-option-toggle")}>
         <button
           type="button"
-          className={cm(styles, !enabled ? "is-active" : "")}
-          aria-pressed={!enabled}
-          onClick={() => onChange(false)}
+          className={cm(styles, mode === "none" ? "is-active" : "")}
+          aria-pressed={mode === "none"}
+          onClick={() => onChange("none")}
         >
           {t("productionPlanning.deviceMinimumConsumptionDisabled")}
         </button>
         <button
           type="button"
-          className={cm(styles, enabled ? "is-active" : "")}
-          aria-pressed={enabled}
-          onClick={() => onChange(true)}
+          className={cm(styles, mode === "fractional" ? "is-active" : "")}
+          aria-pressed={mode === "fractional"}
+          onClick={() => onChange("fractional")}
         >
           {t("productionPlanning.deviceMinimumConsumptionEnabled")}
+        </button>
+        <button
+          type="button"
+          className={cm(styles, mode === "ceil" ? "is-active" : "")}
+          aria-pressed={mode === "ceil"}
+          onClick={() => onChange("ceil")}
+        >
+          {t("productionPlanning.deviceMinimumConsumptionRoundedUp")}
         </button>
       </div>
     </div>
@@ -1725,6 +1737,8 @@ function ProductionPlanningTreeRowRate({
           <span>{t("productionPlanning.consumed")}</span>
           <strong>{formatProductionFlow(consumedPerMinute)}/min</strong>
         </span>
+        <span className={cm(styles, "production-planning-tree-rate-separator")}>·</span>
+        <ProductionPlanningLogisticsRate flowPerMinute={consumedPerMinute} itemId={row.targetItemId} index={index} t={t} />
       </div>
     );
   }
