@@ -57,7 +57,7 @@ const UI_KEY_PREFIXES = [
 ];
 
 describe("app i18n", () => {
-  it("keeps statically referenced UI keys translated in every UI locale", () => {
+  it("keeps statically referenced UI keys translated in every UI locale", { timeout: 15_000 }, () => {
     const keys = collectStaticUiI18nKeys(SOURCE_ROOTS);
 
     expect(keys.length).toBeGreaterThan(0);

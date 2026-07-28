@@ -322,7 +322,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
       return;
     }
 
-    const stageId = createModuleBalancingId("stage");
+    const stageId = createModuleBalancingId();
     runInAction(() => {
       activeCanvas.stages.push({
         id: stageId,
@@ -402,7 +402,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     }
 
     const nextModule: ModuleBalancingCustomModuleReadWrite = {
-      id: draft.id ?? createModuleBalancingId("custom-module"),
+      id: draft.id ?? createModuleBalancingId(),
       name: normalizedName,
       color: draft.color,
       iconId: draft.iconId,
@@ -527,10 +527,10 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   const createCanvas = () => {
     const normalizedName = newCanvasName.trim();
     const nextCanvas = createDefaultModuleBalancingCanvas();
-    nextCanvas.id = createModuleBalancingId("canvas");
+    nextCanvas.id = createModuleBalancingId();
     nextCanvas.name = normalizedName || `${t("moduleBalancing.canvas")} ${balancingState.canvases.length + 1}`;
     nextCanvas.stages[0] = {
-      id: createModuleBalancingId("stage"),
+      id: createModuleBalancingId(),
       name: `${t("moduleBalancing.stage")} 1`,
       entries: [],
     };
@@ -547,7 +547,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   const createFolder = () => {
     const normalizedName = newFolderName.trim();
     const folder: ModuleBalancingFolderReadWrite = {
-      id: createModuleBalancingId("module-folder"),
+      id: createModuleBalancingId(),
       name: normalizedName || `${t("moduleBalancing.newFolder")} ${balancingState.folders.length + 1}`,
     };
     runInAction(() => {
@@ -586,7 +586,7 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   };
 
   const createCanvasFolder = (): string => {
-    const folderId = createModuleBalancingId("canvas-folder");
+    const folderId = createModuleBalancingId();
     const folder: ModuleBalancingFolderReadWrite = {
       id: folderId,
       name: `${t("moduleBalancing.newFolder")} ${balancingState.canvasFolders.length + 1}`,
@@ -651,12 +651,12 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
 
   const loadRecommendedCanvas = (recommendedCanvas: RecommendedCanvasRecord) => {
     const nextCanvas: ModuleBalancingCanvasReadWrite = {
-      id: createModuleBalancingId("canvas"),
+      id: createModuleBalancingId(),
       name: recommendedCanvas.name,
       folderId: null,
       globalInputs: recommendedCanvas.globalInputs.map(clonePort),
       stages: recommendedCanvas.stages.map((stage) => ({
-        id: createModuleBalancingId("stage"),
+        id: createModuleBalancingId(),
         name: stage.name,
         entries: stage.entries.map((entry) => ({ ...entry })),
       })),

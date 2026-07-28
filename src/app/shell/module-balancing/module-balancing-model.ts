@@ -508,8 +508,26 @@ export function formatDurationMinutes(minutes: number): string {
   return `${hours}h ${remainingMinutes}m`;
 }
 
-export function createModuleBalancingId(prefix: string): string {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+import { createUuid } from "@/domain/shared/uuid";
+
+/** UUID v4 正则，用于判断 id 是否已迁移为 UUID。 */
+const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** 旧格式 ID 模式：prefix-时间戳36进制-6~8位随机字符，如 canvas-lrv7abc-a1b2c3。 */
+const LEGACY_ID_RE = /^[a-z][a-z-]*-[0-9a-z]+-[0-9a-z]{6,8}$/i;
+
+export function createModuleBalancingId(): string {
+  return createUuid();
+}
+
+/** 检测 id 是否为旧格式（非 UUID 且匹配旧格式模式）。 */
+export function isLegacyModuleBalancingId(id: string): boolean {
+  return !UUID_V4_RE.test(id) && LEGACY_ID_RE.test(id);
+}
+
+/** 判断 id 是否为合法的 UUID v4。 */
+export function isModuleBalancingUuid(id: string): boolean {
+  return UUID_V4_RE.test(id);
 }
 
 function resolveModuleForActivityLookup(
