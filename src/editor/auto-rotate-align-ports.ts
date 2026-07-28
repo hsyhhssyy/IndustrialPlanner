@@ -123,7 +123,7 @@ function areAllPortsIdleOrConnected(options: {
       let cellIsIdle = true;
       for (const occupyingEntity of occupyingEntities) {
         const matchResult = checkPortMatchAtCell({
-          portGroupKind: portGroup.kind,
+          isPipe: portGroup.isPipe,
           portDirection: portGroup.direction,
           portWorldCell,
           worldEdge,
@@ -206,7 +206,7 @@ type PortMatchResult = "compatible" | "idle" | "incompatible";
  * - "incompatible": 该格有同种类端口但方向冲突
  */
 function checkPortMatchAtCell(options: {
-  readonly portGroupKind: "item" | "fluid";
+  readonly isPipe: boolean;
   readonly portDirection: "input" | "output" | "bidirectional";
   readonly portWorldCell: GridPoint;
   readonly worldEdge: ReturnType<typeof rotateGridEdge>;
@@ -228,7 +228,7 @@ function checkPortMatchAtCell(options: {
   let hasOutputAtCell = false;
 
   for (const neighborPortGroup of options.neighborDefinition.portGroups) {
-    if (neighborPortGroup.kind !== options.portGroupKind) {
+    if (neighborPortGroup.isPipe !== options.isPipe) {
       continue;
     }
 

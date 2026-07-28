@@ -11,6 +11,10 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { SlotConfigInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import {
+  AnyDomain,
+  resolveRecipeItemDomainFlags,
+} from "@/domain/shared/item-domain-flags";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
 import {
   useInspectorDataScope,
@@ -100,13 +104,14 @@ export function SlotConfigInspector({
       if (recipe.machineId !== machineId) continue;
       if (recipe.tags.includes(TOOLBOX_HIDDEN_RECIPE_TAG)) continue;
       // 跳过 fluid 通配符等非具体物品
+      // AI-CORRECTION 2026-07-28: 域通配符已迁移为内部占位符，并统一通过共享解析器识别。
       for (const input of recipe.inputs) {
-        if (input.itemId !== "fluid") {
+        if (resolveRecipeItemDomainFlags(input.itemId) === null) {
           itemIdSet.add(input.itemId);
         }
       }
       for (const output of recipe.outputs) {
-        if (output.itemId !== "fluid") {
+        if (resolveRecipeItemDomainFlags(output.itemId) === null) {
           itemIdSet.add(output.itemId);
         }
       }
@@ -1134,7 +1139,10 @@ function readFilterTypeOverride(
   fallback: StorageSlotDefinition["itemFilterType"],
 ): StorageSlotDefinition["itemFilterType"] {
   const value = config[path];
-  return value === "solid" || value === "liquid" || value === "gas" || value === "fluid" || value === "any"
+  return typeof value === "number"
+    && Number.isInteger(value)
+    && value >= 0
+    && (value & ~AnyDomain) === 0
     ? value
     : fallback;
 }
@@ -1143,22 +1151,7 @@ function resolveSlotDomain(
   storageGroup: StorageSlotGroupDefinition,
   itemFilterType: StorageSlotDefinition["itemFilterType"],
 ): InspectorItemDomainFilter {
-  if (
-    itemFilterType === "solid"
-    || itemFilterType === "liquid"
-    || itemFilterType === "gas"
-    || itemFilterType === "fluid"
-    || itemFilterType === "any"
-  ) {
-    return itemFilterType;
-  }
-  if (storageGroup.kind === "fluid") {
-    return "liquid";
-  }
-  if (storageGroup.kind === "item") {
-    return "solid";
-  }
-  return "any";
+  return itemFilterType ?? storageGroup.kind;
 }
 
 function resolveItemIconSrc(item: ItemDefinition): string {

@@ -9,6 +9,7 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { PortOutputConfigInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import { rotateGridRotation } from "@/shared/geometry/grid";
 import {
   resolveOutputGroupRows,
@@ -80,7 +81,7 @@ import { matchesItemAcceptRule } from "./item-domain";
         }
       }
 
-      const kindLabel = portGroup.kind === "fluid" ? "液体输出" : "固体输出";
+      const kindLabel = portGroup.isPipe ? "管道输出" : "传送带输出";
 
       rows.push({
         portGroup,
@@ -305,7 +306,7 @@ export function PortOutputConfigInspector({
             <div
               className={cm(styles, "port-output-row")}
               data-port-group-id={row.portGroup.id}
-              data-port-kind={row.portGroup.kind}
+              data-is-pipe={row.portGroup.isPipe ? "true" : "false"}
               key={row.portGroup.id}
             >
               <PortOutputLocatorBadge
@@ -420,9 +421,10 @@ function matchesOutputPortGroupAcceptRule(
 
   if (firstPort.acceptRule.base.kind === "none") {
     const itemDomain = resolveItemDomain(item.id);
-    return row.portGroup.kind === "fluid"
-      ? itemDomain === "liquid"
-      : itemDomain === "solid";
+    const fallbackFlags = row.portGroup.isPipe
+      ? ItemDomainFlag.Liquid
+      : row.portGroup.kind;
+    return (fallbackFlags & itemDomain) !== 0;
   }
 
   return matchesItemAcceptRule(item, firstPort.acceptRule, resolveItemDomain);

@@ -6,6 +6,7 @@ import type { WorldDocument, WorldEntity } from "@/domain/document/world-documen
 import { DEFAULT_WORLD_BASE_ID } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
+import { FluidDomain, ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import { createRegistryContract } from "@/registry";
 
 function createEntityDefinition(options: {
@@ -201,7 +202,12 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
     });
 
     expect(callouts.map((callout) => callout.label)).toEqual(["P1", "P2", "P3"]);
-    expect(callouts.map((callout) => callout.portKind)).toEqual(["item", "fluid", "fluid"]);
+    expect(callouts.map((callout) => callout.portKind)).toEqual([
+      ItemDomainFlag.Solid,
+      FluidDomain,
+      FluidDomain,
+    ]);
+    expect(callouts.map((callout) => callout.isPipe)).toEqual([false, true, true]);
     expect(callouts.find((callout) => callout.id === "item_output")?.markerPoints.length).toBe(4);
     const itemOutput = callouts.find((callout) => callout.id === "item_output");
     expect(itemOutput?.labelY).toBeLessThan(itemOutput?.targetY ?? 0);
@@ -263,12 +269,12 @@ describe("resolveInspectorNeighborhoodPreviewModel", () => {
     ]);
     expect(callouts.map((callout) => callout.label)).toEqual(["P1", "P2", "P3", "P4", "P5", "P6"]);
     expect(callouts.map((callout) => callout.portKind)).toEqual([
-      "item",
-      "item",
-      "item",
-      "item",
-      "item",
-      "item",
+      ItemDomainFlag.Solid,
+      ItemDomainFlag.Solid,
+      ItemDomainFlag.Solid,
+      ItemDomainFlag.Solid,
+      ItemDomainFlag.Solid,
+      ItemDomainFlag.Solid,
     ]);
     expect(callouts.every((callout) => callout.markerPoints.length === 1)).toBe(true);
   });

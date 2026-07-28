@@ -95,8 +95,8 @@ export function PortPriorityGroupInspector({
           return (
             <div
               className={cm(styles, "port-priority-row")}
+              data-is-pipe={row.isPipe ? "true" : "false"}
               data-port-key={row.portKey}
-              data-port-kind={row.portKind}
               key={row.portKey}
             >
               <span className={cm(styles, "port-priority-port-label")}>

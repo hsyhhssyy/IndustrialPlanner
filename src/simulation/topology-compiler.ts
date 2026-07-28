@@ -5,6 +5,10 @@ import type {
   WorldEntity,
 } from "@/domain/document/world-document";
 import type { GridEdge, GridPoint, GridRotation } from "@/domain/shared/grid";
+import {
+  AnyDomain,
+  ItemDomainFlag,
+} from "@/domain/shared/item-domain-flags";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import {
@@ -50,7 +54,6 @@ import type {
   SimulationAcceptRule,
   SimulationAdmissionRule,
   SimulationCompileDiagnostic,
-  SimulationItemDomain,
   SimulationItemDomainFilter,
   SimulationNodeViewRole,
   SimulationPowerStatus,
@@ -454,7 +457,7 @@ function compileWarehouseDevice(
     sourceStorageSlotGroupId: "warehouse",
     sourceSlotId: itemId,
     capacity: Number.MAX_SAFE_INTEGER,
-    domain: itemCatalog[itemId]?.domain ?? "any",
+    domain: itemCatalog[itemId]?.domain ?? AnyDomain,
     lock: itemId,
     initialItemType: itemId,
     initialCount: 0,
@@ -922,7 +925,7 @@ function addSyntheticNode(options: {
   readonly nodes: CompiledSimulationNode[];
   readonly slots: CompiledSimulationSlot[];
   readonly nodeBindingsByStorageGroupId: Map<string, StorageGroupNodeBinding>;
-  readonly domain: SimulationItemDomainFilter | "any";
+  readonly domain: SimulationItemDomainFilter;
   readonly bindDirection: SimulationPortDirection;
   readonly capacity: number;
 }): void {
@@ -1112,6 +1115,7 @@ function compilePorts(options: {
           portGroupId: portGroup.id,
           portDefinitionId: port.id,
           kind: portGroup.kind,
+          isPipe: portGroup.isPipe,
           direction,
           insideGridPoint,
           outsideGridPoint,
@@ -1418,7 +1422,7 @@ function compilePhysicalConnections(
 
   for (const sourcePort of sourcePorts) {
     for (const targetPort of targetPorts) {
-      if (sourcePort.kind !== targetPort.kind || sourcePort.deviceId === targetPort.deviceId) {
+      if (sourcePort.isPipe !== targetPort.isPipe || sourcePort.deviceId === targetPort.deviceId) {
         continue;
       }
       if (
@@ -1504,66 +1508,44 @@ function resolveStorageGroupPortDirections(
 function resolveSlotDomain(
   storageGroup: StorageSlotGroupDefinition,
   slot: StorageSlotDefinition,
-): SimulationItemDomainFilter | "any" {
-  if (
-    slot.itemFilterType === "solid"
-    || slot.itemFilterType === "liquid"
-    || slot.itemFilterType === "gas"
-    || slot.itemFilterType === "fluid"
-  ) {
-    return slot.itemFilterType;
-  }
+): SimulationItemDomainFilter {
   // AI-CORRECTION 2026-05-30: itemFilterType="any" 必须直接返回 "any"，
   // 不能 fallthrough 到 storageGroup.kind 分支。
   // 原逻辑对 "any" 无匹配，落入 kind==="item"→返回 "solid"，
   // 导致反应池共享输入缓存（kind="item", filterType="any"）拒绝液体。
-  if (slot.itemFilterType === "any") {
-    return "any";
-  }
-  if (storageGroup.kind === "fluid") {
-    return "liquid";
-  }
-  if (storageGroup.kind === "item") {
-    return "solid";
-  }
-  return "any";
+  // AI-CORRECTION 2026-07-28: itemFilterType 与 storageGroup.kind 均为位标志，联合域无需分支展开。
+  return slot.itemFilterType ?? storageGroup.kind;
 }
 
 function inferStorageDomainFromPortGroups(
   portGroups: readonly PortGroupDefinition[],
   direction: SimulationPortDirection,
-): SimulationItemDomainFilter | "any" {
-  const matchingKinds = new Set(portGroups
-    .filter((portGroup) =>
-      portGroup.direction === direction || portGroup.direction === "bidirectional",
-    )
-    .map((portGroup) => portGroup.kind));
-  if (matchingKinds.size !== 1) {
-    return "any";
-  }
-  if (!matchingKinds.has("fluid")) {
-    return "solid";
+): SimulationItemDomainFilter {
+  const matchingPortGroups = portGroups.filter((portGroup) =>
+    portGroup.direction === direction || portGroup.direction === "bidirectional",
+  );
+  if (matchingPortGroups.length === 0) {
+    return AnyDomain;
   }
 
-  const fluidRuleKinds = portGroups
-    .filter((portGroup) =>
-      portGroup.direction === direction || portGroup.direction === "bidirectional",
-    )
-    .filter((portGroup) => portGroup.kind === "fluid")
-    .flatMap((portGroup) => portGroup.ports.map((port) => port.acceptRule.base.kind));
+  const inferredFlags = matchingPortGroups.reduce<SimulationItemDomainFilter>((groupFlags, portGroup) =>
+    groupFlags | portGroup.ports.reduce<SimulationItemDomainFilter>((portFlags, port) => {
+      if (port.acceptRule.base.kind === "none") {
+        return portFlags;
+      }
+      if (port.acceptRule.base.kind === "domain") {
+        return portFlags | (portGroup.kind & port.acceptRule.base.flags);
+      }
+      return portFlags | portGroup.kind;
+    }, ItemDomainFlag.None),
+  ItemDomainFlag.None);
 
-  if (fluidRuleKinds.includes("fluid")) {
-    return "fluid";
-  }
-  const hasLiquid = fluidRuleKinds.includes("liquid");
-  const hasGas = fluidRuleKinds.includes("gas");
-  if (hasLiquid && hasGas) {
-    return "fluid";
-  }
-  if (hasGas) {
-    return "gas";
-  }
-  return "liquid";
+  return inferredFlags === ItemDomainFlag.None
+    ? matchingPortGroups.reduce<SimulationItemDomainFilter>(
+        (flags, portGroup) => flags | portGroup.kind,
+        ItemDomainFlag.None,
+      )
+    : inferredFlags;
 }
 
 function resolvePortGroupDirections(
@@ -1577,14 +1559,14 @@ function resolvePortGroupDirections(
 
 function acceptRuleFromPortKind(kind: SimulationPortKind): SimulationAcceptRule {
   return {
-    base: kind === "fluid" ? { kind: "liquid" } : { kind: "solid" },
+    base: { kind: "domain", flags: kind },
     exclude: [],
   };
 }
 
 function acceptRuleConstraintFromPortKind(kind: SimulationPortKind): SimulationAcceptRule {
   return {
-    base: kind === "fluid" ? { kind: "fluid" } : { kind: "solid" },
+    base: { kind: "domain", flags: kind },
     exclude: [],
   };
 }
@@ -1629,9 +1611,7 @@ function intersectAcceptRules(
 ): SimulationAcceptRule | null {
   const leftCandidates = resolveAcceptRuleCandidateDomains(left, itemCatalog);
   const rightCandidates = resolveAcceptRuleCandidateDomains(right, itemCatalog);
-  const sharedDomains = leftCandidates.domains.filter((domain) =>
-    rightCandidates.domains.includes(domain),
-  );
+  const sharedFlags = leftCandidates.flags & rightCandidates.flags;
   const exclude = [...new Set([...left.exclude, ...right.exclude])].sort();
 
   if (leftCandidates.itemId !== null && rightCandidates.itemId !== null) {
@@ -1655,7 +1635,7 @@ function intersectAcceptRules(
       return null;
     }
 
-    if (!sharedDomains.includes(domain) || exclude.includes(itemId)) {
+    if ((sharedFlags & domain) === 0 || exclude.includes(itemId)) {
       return null;
     }
     return {
@@ -1664,30 +1644,12 @@ function intersectAcceptRules(
     };
   }
 
-  if (sharedDomains.length === 0) {
+  if (sharedFlags === ItemDomainFlag.None) {
     return null;
   }
 
-  if (sharedDomains.length === 1) {
-    return {
-      base: { kind: sharedDomains[0] ?? "solid" },
-      exclude,
-    };
-  }
-
-  if (
-    sharedDomains.length === 2
-    && sharedDomains.includes("liquid")
-    && sharedDomains.includes("gas")
-  ) {
-    return {
-      base: { kind: "fluid" },
-      exclude,
-    };
-  }
-
   return {
-    base: { kind: "any" },
+    base: { kind: "domain", flags: sharedFlags },
     exclude,
   };
 }
@@ -1696,36 +1658,28 @@ function resolveAcceptRuleCandidateDomains(
   rule: SimulationAcceptRule,
   itemCatalog: Record<string, CompiledSimulationItem>,
 ): {
-  readonly domains: SimulationItemDomain[];
+  readonly flags: SimulationItemDomainFilter;
   readonly itemId: string | null;
 } {
   switch (rule.base.kind) {
-    case "any":
-      return { domains: ["solid", "liquid", "gas"], itemId: null };
-    case "solid":
-      return { domains: ["solid"], itemId: null };
-    case "liquid":
-      return { domains: ["liquid"], itemId: null };
-    case "gas":
-      return { domains: ["gas"], itemId: null };
-    case "fluid":
-      return { domains: ["liquid", "gas"], itemId: null };
+    case "domain":
+      return { flags: rule.base.flags, itemId: null };
     case "item": {
       const item = itemCatalog[rule.base.itemId];
       if (item === undefined) {
         return {
-          domains: [],
+          flags: ItemDomainFlag.None,
           itemId: rule.base.itemId,
         };
       }
 
       return {
-        domains: [item.domain],
+        flags: item.domain,
         itemId: rule.base.itemId,
       };
     }
     case "none":
-      return { domains: [], itemId: null };
+      return { flags: ItemDomainFlag.None, itemId: null };
   }
 }
 

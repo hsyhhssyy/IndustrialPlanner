@@ -42,7 +42,8 @@ interface InspectorNeighborhoodPreviewHostSize {
 interface InspectorPortOutputCallout {
   readonly id: string;
   readonly label: string;
-  readonly portKind: "item" | "fluid";
+  readonly portKind: EntityDefinition["portGroups"][number]["kind"];
+  readonly isPipe: boolean;
   readonly targetX: number;
   readonly targetY: number;
   readonly labelX: number;
@@ -283,8 +284,8 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
               {portOutputCallouts.map((callout) => (
                 <g
                   className={cm(styles, "inspector-port-callout")}
+                  data-is-pipe={callout.isPipe ? "true" : "false"}
                   data-port-callout-id={callout.id}
-                  data-port-kind={callout.portKind}
                   key={callout.id}
                 >
                   <line
@@ -427,6 +428,7 @@ export function resolveInspectorPortOutputCallouts(options: {
         id: row.portKey,
         label: row.portLabel,
         portKind: row.portKind,
+        isPipe: row.isPipe,
         targetX: target.x,
         targetY: target.y,
         labelX: label.x,
@@ -488,6 +490,7 @@ export function resolveInspectorPortOutputCallouts(options: {
       id: row.portGroup.id,
       label: row.portLabel,
       portKind: resolvePortTone(row.portGroup),
+      isPipe: row.portGroup.isPipe,
       targetX: target.x,
       targetY: target.y,
       labelX: label.x,

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { WorldDocument } from "@/domain/document/world-document";
 import { createWorldDocument } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import { createRegistryContract } from "@/registry";
 import { compileSimulationTopology } from "@/simulation/topology-compiler";
 
@@ -26,7 +27,8 @@ function createTestEntityDefinition(options: {
     portGroups: [
       {
         id: "item_port",
-        kind: "item",
+        kind: ItemDomainFlag.Solid,
+        isPipe: false,
         direction: options.portDirection,
         ports: [
           {
@@ -34,7 +36,7 @@ function createTestEntityDefinition(options: {
             localCellX: 0,
             localCellY: 0,
             edge: "NORTH",
-            acceptRule: { base: { kind: "solid" }, exclude: [] },
+            acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Solid }, exclude: [] },
             // AI-REMOVED 2026-06-12:
             // Reason: PortDefinition.count per-tick 限流字段已删除。
             // Trigger: 用户确认文档没有 per tick count。
@@ -54,14 +56,14 @@ function createTestEntityDefinition(options: {
     storageSlotGroups: [
       {
         id: "buffer",
-        kind: "item",
+        kind: ItemDomainFlag.Solid,
         splitLinkType: options.splitLinkType,
         slots: [
           {
             id: "slot_1",
             capacity: 10,
             itemFilter: "type",
-            itemFilterType: "solid",
+            itemFilterType: ItemDomainFlag.Solid,
             lock: null,
             initialItemType: null,
             initialCount: 0,

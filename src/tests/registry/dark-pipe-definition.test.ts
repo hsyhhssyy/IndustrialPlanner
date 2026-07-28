@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
+import {
+  FLUID_DOMAIN_RECIPE_ITEM_ID,
+  FluidDomain,
+} from "@/domain/shared/item-domain-flags";
 import { createRegistryContract } from "@/registry";
 import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
 
@@ -23,12 +27,12 @@ describe("dark pipe definitions", () => {
     expect(inlet.storageSlotGroups).toHaveLength(1);
     expect(inlet.storageSlotGroups[0]).toMatchObject({
       id: "loader_buffer",
-      kind: "fluid",
+      kind: FluidDomain,
       slots: [
         expect.objectContaining({
           id: "slot_1",
           capacity: 500,
-          itemFilterType: "fluid",
+          itemFilterType: FluidDomain,
         }),
       ],
     });
@@ -86,14 +90,14 @@ describe("dark pipe definitions", () => {
       expect(outlet.storageSlotGroups).toHaveLength(1);
       expect(outlet.storageSlotGroups[0]).toMatchObject({
         id: "unloader_buffer",
-        kind: "fluid",
+        kind: FluidDomain,
         slots: [
           expect.objectContaining({
             id: "slot_1",
             capacity: 500,
             initialItemType: null,
             initialCount: 0,
-            itemFilterType: "fluid",
+            itemFilterType: FluidDomain,
           }),
         ],
       });
@@ -122,7 +126,7 @@ describe("dark pipe definitions", () => {
         id: "r_udpipe_loader_void_fluid_any_internal",
         machineId: "udpipe_loader_1",
         durationSeconds: 0.5,
-        inputs: [{ itemId: "fluid", amount: 1 }],
+        inputs: [{ itemId: FLUID_DOMAIN_RECIPE_ITEM_ID, amount: 1 }],
         outputs: [],
         recipeType: "immediate-consume",
         tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
@@ -131,7 +135,7 @@ describe("dark pipe definitions", () => {
         id: "r_udpipe_loader_multi_void_fluid_any_internal",
         machineId: "udpipe_loader_2",
         durationSeconds: 0.5,
-        inputs: [{ itemId: "fluid", amount: 1 }],
+        inputs: [{ itemId: FLUID_DOMAIN_RECIPE_ITEM_ID, amount: 1 }],
         outputs: [],
         recipeType: "immediate-consume",
         tags: [TOOLBOX_HIDDEN_RECIPE_TAG],

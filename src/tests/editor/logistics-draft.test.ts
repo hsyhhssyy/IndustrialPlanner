@@ -12,6 +12,7 @@ import {
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import {
   createEntityDefinitionMap,
   resolveLogisticsPathCells,
@@ -2931,7 +2932,7 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
       entityId: "test-converger",
       portGroupId: "default_input",
       portId: "in_e",
-      portKind: "item" as const,
+      portKind: ItemDomainFlag.Solid,
       portDirection: "input" as const,
       insideGridPoint: { x: 3, y: 3 },
       outsideGridPoint: { x: 4, y: 3 },
@@ -2973,7 +2974,7 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
         entityId: "test-converger",
         portGroupId: "default_input",
         portId: "in_n",
-        portKind: "item" as const,
+        portKind: ItemDomainFlag.Solid,
         portDirection: "input" as const,
         insideGridPoint: { x: 3, y: 3 },
         outsideGridPoint: { x: 3, y: 2 },
@@ -3012,7 +3013,7 @@ describe("resolveLogisticsPathCells — 弯道起点 fromEdge", () => {
         entityId: "test-converger",
         portGroupId: "default_input",
         portId: "in_s",
-        portKind: "item" as const,
+        portKind: ItemDomainFlag.Solid,
         portDirection: "input" as const,
         insideGridPoint: { x: 3, y: 3 },
         outsideGridPoint: { x: 3, y: 4 },

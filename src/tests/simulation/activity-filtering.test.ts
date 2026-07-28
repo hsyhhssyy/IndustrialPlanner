@@ -5,6 +5,7 @@ import {
   type WorldDocument,
 } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import { createRegistryContract } from "@/registry";
 import {
   ACTIVITY_LIMITED_FORMULA_1_ID,
@@ -30,7 +31,8 @@ function createActivityTestEntityDefinition(): EntityDefinition {
     portGroups: [
       {
         id: "item_port",
-        kind: "item",
+        kind: ItemDomainFlag.Solid,
+        isPipe: false,
         direction: "input",
         ports: [
           {
@@ -58,13 +60,13 @@ function createActivityTestEntityDefinition(): EntityDefinition {
     storageSlotGroups: [
       {
         id: "buffer",
-        kind: "item",
+        kind: ItemDomainFlag.Solid,
         slots: [
           {
             id: "slot_1",
             capacity: 10,
             itemFilter: "type",
-            itemFilterType: "solid",
+            itemFilterType: ItemDomainFlag.Solid,
             lock: ACTIVITY_ITEM_ID,
             initialItemType: ACTIVITY_ITEM_ID,
             initialCount: 5,

@@ -273,7 +273,7 @@ export function WarehouseItemLinkInspector({
             <div
               className={cm(styles, "warehouse-link-row")}
               data-link-domain={row.domain}
-              data-port-kind={row.boundOutputRow?.portGroup.kind}
+              data-is-pipe={row.boundOutputRow?.portGroup.isPipe ? "true" : "false"}
               data-slot-id={row.slotId}
               data-storage-group-id={row.storageGroupId}
               key={`${row.storageGroupId}:${row.slotId}`}
@@ -495,16 +495,7 @@ function expandSlotDefinitions(
 function resolveSlotGroupDomain(
   storageGroup: StorageSlotGroupDefinition,
 ): InspectorItemDomainFilter {
-  if (storageGroup.kind === "fluid") {
-    return "fluid";
-  }
-  if (storageGroup.kind === "liquid") {
-    return "liquid";
-  }
-  if (storageGroup.kind === "item") {
-    return "solid";
-  }
-  return "any";
+  return storageGroup.kind;
 }
 
 // AI-CORRECTION 2026-05-16: domain 判定统一委托 RegistryQuery.isItemLiquid，不再本地推断。

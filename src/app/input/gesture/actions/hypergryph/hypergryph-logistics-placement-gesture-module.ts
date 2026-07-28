@@ -1549,11 +1549,11 @@ function resolveEntityPortEndpoints(options: {
 }): Array<{
   outsideGridPoint: GridPoint;
 }> {
-  const portKind = options.kind === LOGISTICS_KIND.belt ? "item" : "fluid";
+  const isPipe = options.kind === LOGISTICS_KIND.pipe;
   const endpoints: Array<{ outsideGridPoint: GridPoint }> = [];
 
   for (const portGroup of options.definition.portGroups) {
-    if (portGroup.kind !== portKind || portGroup.direction !== options.direction) {
+    if (portGroup.isPipe !== isPipe || portGroup.direction !== options.direction) {
       continue;
     }
 

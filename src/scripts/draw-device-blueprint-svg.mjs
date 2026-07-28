@@ -23,6 +23,8 @@ const FLUID_INPUT_PORT_RADIUS = FLUID_INPUT_PORT_DIAMETER / 2;
 const FLUID_INPUT_PORT_STROKE_WIDTH = 5;
 const SOLID_INPUT_PLACEHOLDER_SIZE = CELL_SIZE * 4 / 5;
 const SOLID_INPUT_PLACEHOLDER_STROKE_WIDTH = 2;
+const ITEM_DOMAIN_FLAG_SOLID = 1 << 0;
+const FLUID_DOMAIN = (1 << 1) | (1 << 2);
 // Temporary editing aids only. Future drawing steps will remove this background
 // and grid, so generated artwork must not depend on either color or the grid.
 const DEVELOPMENT_BACKGROUND_COLOR = '#e9e9e9';
@@ -37,12 +39,12 @@ const SOLID_INPUT_PLACEHOLDER_STROKE_COLOR = '#7a7a7a';
 // registry migration is finished.
 const BLUEPRINT_PORT_LAYOUT_OVERRIDES = new Map([
   ['mix_pool_2', [
-    { kind: 'item', direction: 'input', localCellX: 1, localCellY: 4, edge: 'SOUTH' },
-    { kind: 'item', direction: 'input', localCellX: 4, localCellY: 4, edge: 'SOUTH' },
-    { kind: 'fluid', direction: 'output', localCellX: 0, localCellY: 1, edge: 'WEST' },
-    { kind: 'fluid', direction: 'output', localCellX: 0, localCellY: 3, edge: 'WEST' },
-    { kind: 'fluid', direction: 'input', localCellX: 5, localCellY: 1, edge: 'EAST' },
-    { kind: 'fluid', direction: 'input', localCellX: 5, localCellY: 3, edge: 'EAST' },
+    { kind: ITEM_DOMAIN_FLAG_SOLID, isPipe: false, direction: 'input', localCellX: 1, localCellY: 4, edge: 'SOUTH' },
+    { kind: ITEM_DOMAIN_FLAG_SOLID, isPipe: false, direction: 'input', localCellX: 4, localCellY: 4, edge: 'SOUTH' },
+    { kind: FLUID_DOMAIN, isPipe: true, direction: 'output', localCellX: 0, localCellY: 1, edge: 'WEST' },
+    { kind: FLUID_DOMAIN, isPipe: true, direction: 'output', localCellX: 0, localCellY: 3, edge: 'WEST' },
+    { kind: FLUID_DOMAIN, isPipe: true, direction: 'input', localCellX: 5, localCellY: 1, edge: 'EAST' },
+    { kind: FLUID_DOMAIN, isPipe: true, direction: 'input', localCellX: 5, localCellY: 3, edge: 'EAST' },
   ]],
 ]);
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -150,7 +152,7 @@ function createDeviceBorderMarkup(width, height) {
 
 function createFluidPortMarkup(definition) {
   return resolveBlueprintPorts(definition)
-    .filter((port) => port.kind === 'fluid' && (port.direction === 'input' || port.direction === 'output'))
+    .filter((port) => port.isPipe && (port.direction === 'input' || port.direction === 'output'))
     .flatMap((port) => [
       `    <path class="fluid-port-outer" d="${createSemicirclePath(definition.footprint, port, FLUID_INPUT_OUTER_PORT_RADIUS)}" />`,
       `    <path class="${resolveFluidPortClassName(port.direction)}" d="${createClosedSemicirclePath(definition.footprint, port, FLUID_INPUT_PORT_RADIUS)}" />`,
@@ -160,7 +162,7 @@ function createFluidPortMarkup(definition) {
 
 function createSolidInputPlaceholderMarkup(definition) {
   return resolveBlueprintPorts(definition)
-    .filter((port) => port.kind === 'item' && port.direction === 'input')
+    .filter((port) => !port.isPipe && port.direction === 'input')
     .map((port) => {
       const originX = port.localCellX * CELL_SIZE + (CELL_SIZE - SOLID_INPUT_PLACEHOLDER_SIZE) / 2;
       const originY = port.localCellY * CELL_SIZE + (CELL_SIZE - SOLID_INPUT_PLACEHOLDER_SIZE) / 2;
@@ -184,6 +186,7 @@ function resolveBlueprintPorts(definition) {
   const registryPorts = definition.portGroups.flatMap((group) => (
     group.ports.map((port) => ({
       kind: group.kind,
+      isPipe: group.isPipe,
       direction: group.direction,
       localCellX: port.localCellX,
       localCellY: port.localCellY,

@@ -7,6 +7,8 @@ export type {
 export type {
 	EntityDefinition,
 	UiGroup,
+	ItemDomain,
+	ItemFilterType,
 	ItemFilterDefinition,
 	PortGroupDefinition,
 	PortDefinition,

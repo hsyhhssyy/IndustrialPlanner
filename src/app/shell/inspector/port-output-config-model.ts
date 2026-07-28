@@ -4,6 +4,11 @@ import {
   INSPECTOR_TYPE,
   type PortOutputConfigInspectorDeclaration,
 } from "@/domain/registry/types/entity-inspector";
+import {
+  FluidDomain,
+  ItemDomainFlag,
+  type ItemDomainFlag as ItemDomainFlags,
+} from "@/domain/shared/item-domain-flags";
 
 export type PortGroupDefinition = EntityDefinition["portGroups"][number];
 
@@ -140,20 +145,24 @@ export function resolveOutputGroupRows(
     return "orange";
   }
 */
-export function resolvePortTone(portGroup: PortGroupDefinition): "item" | "fluid" {
-  return portGroup.kind === "fluid" ? "fluid" : "item";
+// AI-CORRECTION 2026-07-28: 返回值改为域位标志；端口物理色调由 portGroup.isPipe 单独决定。
+export function resolvePortTone(portGroup: PortGroupDefinition): ItemDomainFlags {
+  return portGroup.kind;
 }
 
 function resolveOutputKindLabel(portGroup: PortGroupDefinition): string {
-  if (portGroup.kind !== "fluid") {
+  if (!portGroup.isPipe) {
     return "固体输出";
   }
 
-  const firstPortRuleKind = portGroup.ports[0]?.acceptRule.base.kind ?? "liquid";
-  if (firstPortRuleKind === "gas") {
+  const firstPortRule = portGroup.ports[0]?.acceptRule.base;
+  const flags = firstPortRule?.kind === "domain"
+    ? firstPortRule.flags
+    : portGroup.kind;
+  if (flags === ItemDomainFlag.Gas) {
     return "气体输出";
   }
-  if (firstPortRuleKind === "fluid") {
+  if (flags === FluidDomain) {
     return "流体输出";
   }
   return "液体输出";

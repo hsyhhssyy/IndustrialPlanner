@@ -909,7 +909,7 @@ function resolveSinglePortByDirection(
   direction: "input" | "output",
 ): EntityDefinition["portGroups"][number]["ports"][number] | null {
   for (const group of definition.portGroups) {
-    if (group.kind !== "fluid" || group.direction !== direction) {
+    if (!group.isPipe || group.direction !== direction) {
       continue
     }
 
@@ -925,7 +925,7 @@ function resolveSingleWorldPortReferenceByDirection(
   direction: "input" | "output",
 ): WorldPortReference | null {
   for (const portReference of resolveWorldPortReferences(entity, definition)) {
-    if (portReference.group.kind !== "fluid" || portReference.group.direction !== direction) {
+    if (!portReference.group.isPipe || portReference.group.direction !== direction) {
       continue
     }
 

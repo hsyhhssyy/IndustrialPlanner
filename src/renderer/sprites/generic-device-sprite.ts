@@ -17,6 +17,11 @@ import {
 } from "@/shared/geometry/grid"
 import { WORLD_GRID_CELL_PIXEL_SIZE, resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform"
 import type { GridRectSize, GridRotation } from "@/domain/shared/grid"
+import {
+  FluidDomain,
+  ItemDomainFlag,
+  type ItemDomainFlag as ItemDomainFlags,
+} from "@/domain/shared/item-domain-flags"
 import { LOGISTICS_KIND, type LogisticsKind } from "@/domain/shared/logistics"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
@@ -203,7 +208,12 @@ const PORT_CHEVRON_TEXTURE_KEYS = [
   "liquid-output",
 ] as const satisfies readonly PortChevronTextureKey[];
 
-type PortKind = "item" | "fluid";
+type PortKind = ItemDomainFlags;
+
+interface LogisticsPortFilter {
+  readonly kind: PortKind;
+  readonly isPipe: boolean;
+}
 
 interface AppWithLogisticsPlacementRuntime {
   internalState: {
@@ -1571,7 +1581,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     // 物流模式下根据是否已起笔决定显示出口还是入口箭头
     const directionFilter = this.resolveLogisticsPortDirectionFilter(context);
     // 物流模式下获取当前物流类型对应的端口 kind（belt→item, pipe→fluid）
-    const kindFilter = directionFilter !== null
+    const portFilter = directionFilter !== null
       ? this.resolveLogisticsPortKindFilter(context)
       : null;
 
@@ -1592,7 +1602,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       definition: this.definition,
       layout: portLayout,
       directionFilter,
-      kindFilter,
+      portFilter,
       excludedPortKeys,
     });
 
@@ -1733,14 +1743,17 @@ export class GenericDeviceSprite extends BaseRenderSprite {
    * - pipe → "fluid"
    * - 非物流模式返回 null
    */
+  // AI-CORRECTION 2026-07-28: 返回值同时携带域位标志与显式 isPipe，物理类型不再由 kind 推断。
   private resolveLogisticsPortKindFilter(
     context: RenderSpriteSyncContext,
-  ): PortKind | null {
+  ): LogisticsPortFilter | null {
     // 优先从 draft 获取（已起笔时最准确）
     const draft = context.workspace.editor?.queries?.resolveLogisticsDraftState?.();
 
     if (draft !== undefined && draft !== null) {
-      return draft.kind === LOGISTICS_KIND.belt ? "item" : "fluid";
+      return draft.kind === LOGISTICS_KIND.belt
+        ? { kind: ItemDomainFlag.Solid, isPipe: false }
+        : { kind: FluidDomain, isPipe: true };
     }
 
     // 未起笔时从 app 运行时状态获取 logisticsPlacement.kind
@@ -1750,8 +1763,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       const kind = (app as AppWithLogisticsPlacementRuntime)
         .internalState.runtime.logisticsPlacement.kind;
 
-      if (kind === LOGISTICS_KIND.belt) return "item";
-      if (kind === LOGISTICS_KIND.pipe) return "fluid";
+      if (kind === LOGISTICS_KIND.belt) {
+        return { kind: ItemDomainFlag.Solid, isPipe: false };
+      }
+      if (kind === LOGISTICS_KIND.pipe) {
+        return { kind: FluidDomain, isPipe: true };
+      }
     }
 
     return null;
@@ -2107,7 +2124,7 @@ function resolvePortOverlaySpecs(options: {
   definition: EntityDefinition;
   layout: RenderSpriteLayout;
   directionFilter?: "input" | "output" | null;
-  kindFilter?: PortKind | null;
+  portFilter?: LogisticsPortFilter | null;
   excludedPortKeys?: ReadonlySet<string>;
 }): {
   chevrons: {
@@ -2144,16 +2161,19 @@ function resolvePortOverlaySpecs(options: {
 
   const hasDirectionFilter = options.directionFilter !== null
     && options.directionFilter !== undefined;
-  const hasKindFilter = options.kindFilter !== null
-    && options.kindFilter !== undefined;
+  const portFilter = options.portFilter;
   const excludedPortKeys = options.excludedPortKeys;
 
   for (const portGroup of options.definition.portGroups) {
     const directionMatch = !hasDirectionFilter
       || portGroup.direction === options.directionFilter
       || portGroup.direction === "bidirectional";
-    const kindMatch = !hasKindFilter
-      || portGroup.kind === options.kindFilter;
+    const kindMatch = portFilter === null
+      || portFilter === undefined
+      || (
+        portGroup.isPipe === portFilter.isPipe
+        && (portGroup.kind & portFilter.kind) !== 0
+      );
     const available = directionMatch && kindMatch;
 
     const material = resolvePortChevronMaterial(options.definition, portGroup);
@@ -2257,7 +2277,7 @@ function resolvePortChevronMaterial(
   definition: EntityDefinition,
   portGroup: PortGroupDefinition,
 ): PortChevronMaterial {
-  if (portGroup.kind === "fluid") {
+  if (portGroup.isPipe) {
     return "liquid";
   }
 
@@ -2279,7 +2299,10 @@ function resolvePortChevronMaterial(
       continue;
     }
 
-    if (storageSlotGroup.kind === "fluid") {
+    if (
+      (storageSlotGroup.kind & FluidDomain) !== 0
+      && (storageSlotGroup.kind & ItemDomainFlag.Solid) === 0
+    ) {
       return "liquid";
     }
 
@@ -2294,9 +2317,9 @@ function resolvePortChevronMaterial(
 function isFluidSlotFilter(
   itemFilterType: EntityDefinition["storageSlotGroups"][number]["slots"][number]["itemFilterType"],
 ): boolean {
-  return itemFilterType === "liquid"
-    || itemFilterType === "gas"
-    || itemFilterType === "fluid";
+  return itemFilterType !== undefined
+    && (itemFilterType & FluidDomain) !== 0
+    && (itemFilterType & ItemDomainFlag.Solid) === 0;
 }
 
 function resolvePortChevronDirection(

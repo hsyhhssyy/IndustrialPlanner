@@ -3,6 +3,7 @@ import type {
   GridPoint,
   GridRotation,
 } from "./grid";
+import type { ItemDomainFlag } from "./item-domain-flags";
 
 /**
  * 物流族业务类型。
@@ -26,7 +27,7 @@ export const LOGISTICS_KINDS: readonly LogisticsKind[] = [
 
 export type LogisticsRouteOrder = "vertical-first" | "horizontal-first";
 
-export type LogisticsPortKind = "item" | "fluid";
+export type LogisticsPortKind = ItemDomainFlag;
 
 export type LogisticsPortDirection = "input" | "output";
 

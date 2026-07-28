@@ -6,6 +6,10 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type { RegistryQuery } from "@/domain/registry/registry-query";
 import type { GridEdge, GridPoint, GridRectSize, GridRotation } from "@/domain/shared/grid";
 import {
+  FluidDomain,
+  ItemDomainFlag,
+} from "@/domain/shared/item-domain-flags";
+import {
   LOGISTICS_KIND,
   type LogisticsDraftReadonlyState,
   type LogisticsKind,
@@ -63,6 +67,7 @@ interface ResolvedPortEndpoint {
   readonly outsideGridPoint: GridPoint;
   readonly edge: GridEdge;
   readonly kind: LogisticsPortKind;
+  readonly isPipe: boolean;
   readonly direction: "input" | "output" | "bidirectional";
   readonly material: PortChevronMaterial;
 }
@@ -77,7 +82,7 @@ export function resolveLogisticsPortOverlayEntries(options: {
   readonly basePlaceableArea?: GridRectSize;
 }): PortOverlayEntry[] {
   const entries: PortOverlayEntry[] = [];
-  const portKind = options.kind === LOGISTICS_KIND.belt ? "item" : "fluid";
+  const isPipe = options.kind === LOGISTICS_KIND.pipe;
 
   for (const entity of options.entities) {
     const definition = options.entityDefinitionMap.get(entity.definitionId);
@@ -92,8 +97,8 @@ export function resolveLogisticsPortOverlayEntries(options: {
 
       const directionMatches = endpoint.direction === options.direction
         || endpoint.direction === "bidirectional";
-      const kindMatches = endpoint.kind === portKind;
-      const endpointKind = resolveLogisticsKindForPortKind(endpoint.kind);
+      const kindMatches = endpoint.isPipe === isPipe;
+      const endpointKind = resolveLogisticsKindForPortKind(endpoint.isPipe);
       const endpointDirection = endpoint.direction === "bidirectional"
         ? options.direction
         : endpoint.direction;
@@ -168,7 +173,7 @@ export function resolveProductionPipePortGhostEntries(options: {
 
     for (const endpoint of resolveEntityPortEndpoints(entity, definition)) {
       if (
-        endpoint.kind !== "fluid"
+        !endpoint.isPipe
         || !canLegallyLeadPipeFromEndpoint({
           endpoint,
           entities: options.entities,
@@ -481,9 +486,9 @@ function hasFacingConnectedPort(options: {
   direction: LogisticsPortDirection;
 }): boolean {
   const expectedDirection = options.direction === "output" ? "input" : "output";
-  const portKind = options.kind === LOGISTICS_KIND.belt ? "item" : "fluid";
+  const isPipe = options.kind === LOGISTICS_KIND.pipe;
   return resolveEntityPortEndpoints(options.neighbor, options.neighborDefinition).some((endpoint) =>
-    endpoint.kind === portKind
+    endpoint.isPipe === isPipe
     && (endpoint.direction === expectedDirection || endpoint.direction === "bidirectional")
     && pointsEqual(endpoint.outsideGridPoint, options.sourceEndpoint.insideGridPoint)
   );
@@ -496,9 +501,9 @@ function hasAnyConnectedOrdinaryLogisticsPort(options: {
   entities: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
 }): boolean {
-  const portKind = options.kind === LOGISTICS_KIND.belt ? "item" : "fluid";
+  const isPipe = options.kind === LOGISTICS_KIND.pipe;
   return resolveEntityPortEndpoints(options.entity, options.definition).some((endpoint) => {
-    if (endpoint.kind !== portKind) return false;
+    if (endpoint.isPipe !== isPipe) return false;
     const expectedDirection = endpoint.direction === "input" ? "output" : "input";
     return findEntitiesAtGridPoint({
       gridPoint: endpoint.outsideGridPoint,
@@ -509,7 +514,7 @@ function hasAnyConnectedOrdinaryLogisticsPort(options: {
       const definition = options.entityDefinitionMap.get(neighbor.definitionId);
       return definition !== undefined
         && resolveEntityPortEndpoints(neighbor, definition).some((neighborEndpoint) =>
-          neighborEndpoint.kind === portKind
+          neighborEndpoint.isPipe === isPipe
           && (
             neighborEndpoint.direction === expectedDirection
             || neighborEndpoint.direction === "bidirectional"
@@ -525,10 +530,10 @@ function resolveOrdinaryLogisticsAxis(options: {
   definition: EntityDefinition;
   kind: LogisticsKind;
 }): "horizontal" | "vertical" | null {
-  const portKind = options.kind === LOGISTICS_KIND.belt ? "item" : "fluid";
+  const isPipe = options.kind === LOGISTICS_KIND.pipe;
   const axes = new Set(
     resolveEntityPortEndpoints(options.entity, options.definition)
-      .filter((endpoint) => endpoint.kind === portKind)
+      .filter((endpoint) => endpoint.isPipe === isPipe)
       .map((endpoint) => resolveEdgeAxis(endpoint.edge)),
   );
   return axes.size === 1 ? axes.values().next().value ?? null : null;
@@ -564,6 +569,7 @@ function resolveEntityPortEndpoints(
         },
         edge,
         kind: portGroup.kind,
+        isPipe: portGroup.isPipe,
         direction: portGroup.direction,
         material,
       });
@@ -663,8 +669,8 @@ function resolveEntityPortKey(endpoint: ResolvedPortEndpoint): string {
   return `${endpoint.entityId}:${endpoint.portGroupId}:${endpoint.portId}`;
 }
 
-function resolveLogisticsKindForPortKind(kind: LogisticsPortKind): LogisticsKind {
-  return kind === "item" ? LOGISTICS_KIND.belt : LOGISTICS_KIND.pipe;
+function resolveLogisticsKindForPortKind(isPipe: boolean): LogisticsKind {
+  return isPipe ? LOGISTICS_KIND.pipe : LOGISTICS_KIND.belt;
 }
 
 /**
@@ -778,7 +784,7 @@ function resolvePortChevronMaterial(
   definition: EntityDefinition,
   portGroup: PortGroupDefinition,
 ): PortChevronMaterial {
-  if (portGroup.kind === "fluid") return "liquid";
+  if (portGroup.isPipe) return "liquid";
   const storageSlotGroupById = new Map(
     definition.storageSlotGroups.map((slotGroup) => [slotGroup.id, slotGroup]),
   );
@@ -786,7 +792,11 @@ function resolvePortChevronMaterial(
     if (binding.portGroupId !== portGroup.id) continue;
     const storageSlotGroup = storageSlotGroupById.get(binding.storageSlotGroupId);
     if (
-      storageSlotGroup?.kind === "fluid"
+      (
+        storageSlotGroup !== undefined
+        && (storageSlotGroup.kind & FluidDomain) !== 0
+        && (storageSlotGroup.kind & ItemDomainFlag.Solid) === 0
+      )
       || storageSlotGroup?.slots.some((slot) => isFluidSlotFilter(slot.itemFilterType))
     ) {
       return "liquid";
@@ -814,9 +824,9 @@ function isConsumptionPortGroup(
 function isFluidSlotFilter(
   itemFilterType: EntityDefinition["storageSlotGroups"][number]["slots"][number]["itemFilterType"],
 ): boolean {
-  return itemFilterType === "liquid"
-    || itemFilterType === "gas"
-    || itemFilterType === "fluid";
+  return itemFilterType !== undefined
+    && (itemFilterType & FluidDomain) !== 0
+    && (itemFilterType & ItemDomainFlag.Solid) === 0;
 }
 
 function rotateLocalPortCell(options: {

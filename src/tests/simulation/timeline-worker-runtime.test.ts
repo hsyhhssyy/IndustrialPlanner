@@ -5,6 +5,7 @@ import {
   TimelineWorkerRuntime,
 } from "@/simulation/timeline-worker-runtime";
 import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
+import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import { compileSimulationTopology } from "@/simulation/topology-compiler";
 import { createRegistryContract } from "@/registry";
 import type {
@@ -698,7 +699,7 @@ function createTimelinePhaseTopology(): CompiledSimulationTopology {
     itemCatalog: {
       item_test: {
         id: "item_test",
-        domain: "solid",
+        domain: ItemDomainFlag.Solid,
         tags: [],
       },
     },
@@ -766,7 +767,7 @@ function createTimelinePhaseTopology(): CompiledSimulationTopology {
         sourceStorageSlotGroupId: "output",
         sourceSlotId: "slot_1",
         capacity: 1000,
-        domain: "solid",
+        domain: ItemDomainFlag.Solid,
         lock: null,
         initialItemType: null,
         initialCount: 0,

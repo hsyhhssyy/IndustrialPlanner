@@ -1935,13 +1935,7 @@ function canPatchSlotHoldItem(
   }
 
   const itemDomain = getItemDomain(topology, itemType);
-  if (slot.domain === "any") {
-    return true;
-  }
-  if (slot.domain === "fluid") {
-    return itemDomain === "liquid" || itemDomain === "gas";
-  }
-  return itemDomain === slot.domain;
+  return (slot.domain & itemDomain) !== 0;
 }
 
 function resetRuntimeRecipesAffectedByPatch(

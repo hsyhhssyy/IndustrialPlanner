@@ -1,13 +1,14 @@
 import type { LinkType } from "@/domain/document/world-document";
 import type { GridEdge, GridPoint, GridRect, GridRectSize, GridRotation } from "@/domain/shared/grid";
+import type { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import type { LogisticsKind } from "@/domain/shared/logistics";
 import type { RecipeDefinition, RecipeType } from "@/domain/registry/types/recipe-definition";
 import type { WaterPurifierOutputMode } from "@/shared/water-purifier-node";
 import type { SimulationMutableRuntimeState } from "./runtime/runtime-state";
 
-export type SimulationItemDomain = "solid" | "liquid" | "gas";
-export type SimulationItemDomainFilter = SimulationItemDomain | "fluid";
-export type SimulationPortKind = "item" | "fluid";
+export type SimulationItemDomain = ItemDomainFlag;
+export type SimulationItemDomainFilter = ItemDomainFlag;
+export type SimulationPortKind = ItemDomainFlag;
 export type SimulationPortDirection = "input" | "output";
 export type SimulationNodeViewRole = "input-view" | "output-view";
 // AI-REMOVED 2026-06-12:
@@ -65,11 +66,7 @@ export type SimulationLinkType = LinkType;
 
 export interface SimulationAcceptRule {
   readonly base:
-    | { readonly kind: "any" }
-    | { readonly kind: "solid" }
-    | { readonly kind: "liquid" }
-    | { readonly kind: "gas" }
-    | { readonly kind: "fluid" }
+    | { readonly kind: "domain"; readonly flags: ItemDomainFlag }
     | { readonly kind: "item"; readonly itemId: string }
     | { readonly kind: "none" };
   readonly exclude: readonly string[];
@@ -264,7 +261,7 @@ export interface CompiledSimulationSlot {
   readonly sourceStorageSlotGroupId: string | null;
   readonly sourceSlotId: string | null;
   readonly capacity: number;
-  readonly domain: SimulationItemDomainFilter | "any";
+  readonly domain: SimulationItemDomainFilter;
   readonly lock: string | null;
   readonly initialItemType: string | null;
   readonly initialCount: number;
@@ -288,6 +285,8 @@ export interface CompiledSimulationPort {
   readonly portGroupId: string;
   readonly portDefinitionId: string;
   readonly kind: SimulationPortKind;
+  /** 是否为管道端口；物理连接类型只依据此字段判断。 */
+  readonly isPipe: boolean;
   readonly direction: SimulationPortDirection;
   readonly insideGridPoint: GridPoint;
   readonly outsideGridPoint: GridPoint;

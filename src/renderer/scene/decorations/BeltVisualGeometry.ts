@@ -398,7 +398,7 @@ function resolveBeltPortReferenceCollections(ctx: DecorationSyncContext): BeltPo
     }
 
     for (const portReference of resolveWorldPortReferences(entity, definition)) {
-      if (portReference.group.kind !== "item") {
+      if (portReference.group.isPipe) {
         continue
       }
 
@@ -668,7 +668,7 @@ function resolveSinglePortByDirection(
   direction: "input" | "output",
 ): PortDefinition | null {
   for (const group of definition.portGroups) {
-    if (group.kind !== "item" || group.direction !== direction) {
+    if (group.isPipe || group.direction !== direction) {
       continue
     }
 
@@ -684,7 +684,7 @@ function resolveSingleWorldPortReferenceByDirection(
   direction: "input" | "output",
 ): WorldPortReference | null {
   for (const portReference of resolveWorldPortReferences(entity, definition)) {
-    if (portReference.group.kind !== "item" || portReference.group.direction !== direction) {
+    if (portReference.group.isPipe || portReference.group.direction !== direction) {
       continue
     }
 

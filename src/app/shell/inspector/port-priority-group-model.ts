@@ -24,7 +24,8 @@ export interface PortPriorityGroupPortRow {
   readonly portLabel: string;
   readonly priorityLabel: string;
   readonly priorityGroup: number;
-  readonly portKind: "item" | "fluid";
+  readonly portKind: PortGroupDefinition["kind"];
+  readonly isPipe: boolean;
 }
 
 export function canConfigurePortPriorityGroups(definition: EntityDefinition): boolean {
@@ -60,6 +61,7 @@ export function resolvePortPriorityGroupRows(
         priorityLabel: String(priorityGroup),
         priorityGroup,
         portKind: resolvePortTone(portGroup),
+        isPipe: portGroup.isPipe,
       });
     });
   });

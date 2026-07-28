@@ -35,6 +35,10 @@ import {
   CONSUMPTION_RECIPE_CHANNEL_TYPE,
   CONSUMPTION_RECIPE_TAG,
 } from "@/shared/consumption-channel";
+import {
+  ItemDomainFlag,
+  resolveRecipeItemDomainFlags,
+} from "@/domain/shared/item-domain-flags";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 
 const WAREHOUSE_SINK_TAG = "WarehouseSink";
@@ -187,16 +191,8 @@ export function acceptsItem(
   }
 
   switch (rule.base.kind) {
-    case "any":
-      return true;
-    case "solid":
-    case "liquid":
-    case "gas":
-      return getItemDomain(topology, itemType) === rule.base.kind;
-    case "fluid": {
-      const domain = getItemDomain(topology, itemType);
-      return domain === "liquid" || domain === "gas";
-    }
+    case "domain":
+      return (getItemDomain(topology, itemType) & rule.base.flags) !== 0;
     case "item":
       return rule.base.itemId === itemType;
     case "none":
@@ -667,10 +663,10 @@ export function getItemDomain(
   return topology.itemCatalog[itemType]?.domain
     ?? (
       itemType.includes("_gas") || itemType.startsWith("gas_")
-        ? "gas"
+        ? ItemDomainFlag.Gas
         : itemType.includes("_liquid") || itemType.startsWith("liquid_")
-          ? "liquid"
-          : "solid"
+          ? ItemDomainFlag.Liquid
+          : ItemDomainFlag.Solid
     );
 }
 
@@ -1115,21 +1111,13 @@ function recipeCanMatchContents(
   }
 
   const availableByItemType = new Map<string, number>();
+  const availableByDomain = new Map<SimulationItemDomain, number>();
   let totalAvailable = 0;
-  let domainSolid = 0;
-  let domainLiquid = 0;
-  let domainGas = 0;
   for (const content of contents) {
     availableByItemType.set(content.itemType, (availableByItemType.get(content.itemType) ?? 0) + content.availableAmount);
     totalAvailable += content.availableAmount;
     const domain = getItemDomain(topology, content.itemType);
-    if (domain === "solid") {
-      domainSolid += content.availableAmount;
-    } else if (domain === "liquid") {
-      domainLiquid += content.availableAmount;
-    } else {
-      domainGas += content.availableAmount;
-    }
+    availableByDomain.set(domain, (availableByDomain.get(domain) ?? 0) + content.availableAmount);
   }
 
   for (const input of recipe.inputs) {
@@ -1143,30 +1131,28 @@ function recipeCanMatchContents(
 
     // AI-CORRECTION 2026-07-18: 支持域占位符 "fluid"/"liquid"/"gas"/"solid" 作为配方输入。
     // 原逻辑仅处理 "any" 和精确物品 ID，无法匹配使用域占位符的隐藏销毁配方（如暗管 fluid void）。
-    if (input.itemId === "solid") {
-      if (domainSolid < input.amount) return false;
-      domainSolid -= input.amount;
-      totalAvailable -= input.amount;
-      continue;
-    }
-    if (input.itemId === "liquid") {
-      if (domainLiquid < input.amount) return false;
-      domainLiquid -= input.amount;
-      totalAvailable -= input.amount;
-      continue;
-    }
-    if (input.itemId === "gas") {
-      if (domainGas < input.amount) return false;
-      domainGas -= input.amount;
-      totalAvailable -= input.amount;
-      continue;
-    }
-    if (input.itemId === "fluid") {
-      const fluidTotal = domainLiquid + domainGas;
-      if (fluidTotal < input.amount) return false;
-      const deductLiquid = Math.min(domainLiquid, input.amount);
-      domainLiquid -= deductLiquid;
-      domainGas -= (input.amount - deductLiquid);
+    // AI-CORRECTION 2026-07-28: 域占位符改为内部 ID，并统一解析为位标志。
+    const inputDomainFlags = resolveRecipeItemDomainFlags(input.itemId);
+    if (inputDomainFlags !== null) {
+      const matchingDomains = [
+        ItemDomainFlag.Solid,
+        ItemDomainFlag.Liquid,
+        ItemDomainFlag.Gas,
+      ].filter((domain) => (inputDomainFlags & domain) !== 0);
+      const domainAvailable = matchingDomains.reduce(
+        (total, domain) => total + (availableByDomain.get(domain) ?? 0),
+        0,
+      );
+      if (domainAvailable < input.amount) return false;
+
+      let remainingAmount = input.amount;
+      for (const domain of matchingDomains) {
+        const available = availableByDomain.get(domain) ?? 0;
+        const deducted = Math.min(available, remainingAmount);
+        availableByDomain.set(domain, available - deducted);
+        remainingAmount -= deducted;
+        if (remainingAmount === 0) break;
+      }
       totalAvailable -= input.amount;
       continue;
     }
@@ -1226,16 +1212,10 @@ function slotCanHold(
 }
 
 function doesDomainFilterAcceptItemDomain(
-  filter: SimulationItemDomainFilter | "any",
+  filter: SimulationItemDomainFilter,
   domain: SimulationItemDomain,
 ): boolean {
-  if (filter === "any") {
-    return true;
-  }
-  if (filter === "fluid") {
-    return domain === "liquid" || domain === "gas";
-  }
-  return domain === filter;
+  return (filter & domain) !== 0;
 }
 
 function findRecipeOutputSlot(
@@ -1310,6 +1290,7 @@ function findRecipeInputSelection(
 
 // AI-CORRECTION 2026-07-18: 支持域占位符 "fluid"/"liquid"/"gas"/"solid" 作为配方输入匹配。
 // 原逻辑仅处理 "any" 和精确物品 ID，无法匹配暗管等使用域占位符的隐藏配方。
+// AI-CORRECTION 2026-07-28: 域占位符改为内部 ID，并通过共享解析器映射为位标志。
 function recipeInputMatches(
   topology: CompiledSimulationTopology,
   input: CompiledSimulationRecipeItem,
@@ -1318,20 +1299,9 @@ function recipeInputMatches(
   if (input.itemId === "any" || input.itemId === itemType) {
     return true;
   }
-  const domain = getItemDomain(topology, itemType);
-  if (input.itemId === "fluid") {
-    return domain === "liquid" || domain === "gas";
-  }
-  if (input.itemId === "liquid") {
-    return domain === "liquid";
-  }
-  if (input.itemId === "gas") {
-    return domain === "gas";
-  }
-  if (input.itemId === "solid") {
-    return domain === "solid";
-  }
-  return false;
+  const inputDomainFlags = resolveRecipeItemDomainFlags(input.itemId);
+  return inputDomainFlags !== null
+    && (inputDomainFlags & getItemDomain(topology, itemType)) !== 0;
 }
 
 // AI-REMOVED 2026-06-20:

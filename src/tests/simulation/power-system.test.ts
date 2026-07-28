@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
+import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import {
@@ -242,8 +243,8 @@ describe("REQ-089: power generation mode caching bug", () => {
       standardTickRate: STANDARD_TICK_RATE_PER_SECOND,
       totalPowerDemand: 40_000,
       itemCatalog: {
-        item_iron_nugget: { id: "item_iron_nugget", domain: "solid", tags: [] },
-        item_iron_powder: { id: "item_iron_powder", domain: "solid", tags: [] },
+        item_iron_nugget: { id: "item_iron_nugget", domain: ItemDomainFlag.Solid, tags: [] },
+        item_iron_powder: { id: "item_iron_powder", domain: ItemDomainFlag.Solid, tags: [] },
       },
       recipeCatalog: {
         "r_test": {
@@ -306,14 +307,14 @@ describe("REQ-089: power generation mode caching bug", () => {
         "slot:input": {
           id: "slot:input", nodeId: "node:input",
           sourceStorageSlotGroupId: null, sourceSlotId: null,
-          capacity: 50, domain: "solid", lock: null,
+          capacity: 50, domain: ItemDomainFlag.Solid, lock: null,
           initialItemType: "item_iron_nugget", initialCount: 20,
           ignoreStock: false,
         },
         "slot:output": {
           id: "slot:output", nodeId: "node:output",
           sourceStorageSlotGroupId: null, sourceSlotId: null,
-          capacity: 50, domain: "solid", lock: null,
+          capacity: 50, domain: ItemDomainFlag.Solid, lock: null,
           initialItemType: null, initialCount: 0,
           ignoreStock: false,
         },

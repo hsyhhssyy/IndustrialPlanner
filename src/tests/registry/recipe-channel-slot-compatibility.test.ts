@@ -23,6 +23,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { ItemDomain } from "@/domain/registry/types/entity-definition";
+import {
+  AnyDomain,
+  ItemDomainFlag,
+  domainFlagsToLabel,
+  resolveRecipeItemDomainFlags,
+} from "@/domain/shared/item-domain-flags";
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
 import { ITEM_DEFINITIONS } from "@/registry/item-definition";
 import { RECIPE_DEFINITIONS } from "@/registry/recipe-definition";
@@ -35,31 +41,12 @@ const ITEM_DOMAIN_BY_ID = new Map<string, ItemDomain>(
   ITEM_DEFINITIONS.map((item) => [
     item.id,
     item.tags.includes("gas")
-      ? "gas"
+      ? ItemDomainFlag.Gas
       : item.tags.includes("liquid")
-        ? "liquid"
-        : "solid",
+        ? ItemDomainFlag.Liquid
+        : ItemDomainFlag.Solid,
   ]),
 );
-
-/**
- * 将 slot itemFilterType 展开为它能容纳的 ItemDomain 集合。
- */
-function slotDomains(filterType: string): Set<ItemDomain> {
-  switch (filterType) {
-    case "solid":
-      return new Set<ItemDomain>(["solid"]);
-    case "liquid":
-      return new Set<ItemDomain>(["liquid"]);
-    case "gas":
-      return new Set<ItemDomain>(["gas"]);
-    case "fluid":
-      return new Set<ItemDomain>(["liquid", "gas"]);
-    case "any":
-      return new Set<ItemDomain>(["solid", "liquid", "gas"]);
-  }
-  return new Set<ItemDomain>();
-}
 
 /**
  * 收集 channel 对应方向（ingredient 或 product）所有独立槽位的 itemFilterType。
@@ -68,13 +55,13 @@ function slotDomains(filterType: string): Set<ItemDomain> {
 function collectSlotFilterTypes(
   groupIds: string[],
   storageSlotGroups: typeof ENTITY_DEFINITIONS[number]["storageSlotGroups"],
-): string[] {
-  const filterTypes: string[] = [];
+): ItemDomain[] {
+  const filterTypes: ItemDomain[] = [];
   for (const gid of groupIds) {
     const group = storageSlotGroups.find((g) => g.id === gid);
     if (!group) continue;
     for (const slot of group.slots) {
-      filterTypes.push(slot.itemFilterType ?? "solid");
+      filterTypes.push(slot.itemFilterType ?? ItemDomainFlag.Solid);
     }
   }
   return filterTypes;
@@ -83,8 +70,8 @@ function collectSlotFilterTypes(
 /**
  * 检查单个槽位能否容纳某个配方物品的域集合。
  */
-function slotCanHoldItem(filterType: string, itemDomains: Set<ItemDomain>): boolean {
-  return isSuperset(slotDomains(filterType), itemDomains);
+function slotCanHoldItem(filterType: ItemDomain, itemDomains: ItemDomain): boolean {
+  return (filterType & itemDomains) === itemDomains;
 }
 
 /**
@@ -92,8 +79,8 @@ function slotCanHoldItem(filterType: string, itemDomains: Set<ItemDomain>): bool
  * 调用方保证 inputs 去重（每个 input 是独立分配单元）。
  */
 function canMatchAll(
-  inputDomainSets: Set<ItemDomain>[],
-  slotFilterTypes: string[],
+  inputDomainSets: ItemDomain[],
+  slotFilterTypes: ItemDomain[],
 ): boolean {
   if (inputDomainSets.length === 0) return true;
   if (slotFilterTypes.length < inputDomainSets.length) return false;
@@ -153,28 +140,14 @@ function canMatchAll(
  * "solid" → {solid}
  * 其他通过 ITEM_DEFINITIONS 查 tags。
  */
-function itemDomains(itemId: string): Set<ItemDomain> {
+// AI-CORRECTION 2026-07-28: 配方域占位符与槽位过滤均已迁移为位标志。
+function itemDomains(itemId: string): ItemDomain {
   if (itemId === "any") {
-    return new Set<ItemDomain>(["solid", "liquid", "gas"]);
+    return AnyDomain;
   }
-  if (itemId === "fluid") {
-    return new Set<ItemDomain>(["liquid", "gas"]);
-  }
-  if (itemId === "solid") {
-    return new Set<ItemDomain>(["solid"]);
-  }
-  const domain = ITEM_DOMAIN_BY_ID.get(itemId) ?? "solid";
-  return new Set<ItemDomain>([domain]);
-}
-
-/** 判断 superset ⊇ subset */
-function isSuperset<T>(superset: Set<T>, subset: Set<T>): boolean {
-  for (const item of subset) {
-    if (!superset.has(item)) {
-      return false;
-    }
-  }
-  return true;
+  return resolveRecipeItemDomainFlags(itemId)
+    ?? ITEM_DOMAIN_BY_ID.get(itemId)
+    ?? ItemDomainFlag.Solid;
 }
 
 // ---------------------------------------------------------------------------
@@ -233,14 +206,14 @@ describe("recipe channel slot compatibility", () => {
         const parts: string[] = [];
         if (!ingOk && inputDomainSets.length > 0) {
           parts.push(
-            `原料 [${inputDomainSets.map((d) => `{${[...d].join(",")}}`).join(", ")}] ` +
-            `无法匹配槽位 [${ingSlotFilterTypes.join(", ")}]`,
+            `原料 [${inputDomainSets.map((d) => `{${domainFlagsToLabel(d)}}`).join(", ")}] ` +
+            `无法匹配槽位 [${ingSlotFilterTypes.map(domainFlagsToLabel).join(", ")}]`,
           );
         }
         if (!prodOk && outputDomainSets.length > 0) {
           parts.push(
-            `产物 [${outputDomainSets.map((d) => `{${[...d].join(",")}}`).join(", ")}] ` +
-            `无法匹配槽位 [${prodSlotFilterTypes.join(", ")}]`,
+            `产物 [${outputDomainSets.map((d) => `{${domainFlagsToLabel(d)}}`).join(", ")}] ` +
+            `无法匹配槽位 [${prodSlotFilterTypes.map(domainFlagsToLabel).join(", ")}]`,
           );
         }
         channelResults.push(`  channel "${channel.id}": ${parts.join("; ")}`);

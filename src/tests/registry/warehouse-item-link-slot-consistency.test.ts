@@ -17,23 +17,20 @@
 
 import { describe, expect, it } from "vitest";
 
+import {
+  domainFlagsToLabel,
+  type ItemDomainFlag,
+} from "@/domain/shared/item-domain-flags";
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
-
-const EXPECTED_ITEM_FILTER_TYPE: Record<string, string> = {
-  item: "solid",
-  fluid: "fluid",
-  liquid: "liquid",
-  gas: "gas",
-};
 
 type SlotConsistencyFailure = {
   entityId: string;
   nameKey: string;
   storageGroupId: string;
-  groupKind: string;
+  groupKind: ItemDomainFlag;
   slotId: string;
-  itemFilterType: string | undefined;
-  expected: string;
+  itemFilterType: ItemDomainFlag | undefined | string;
+  expected: ItemDomainFlag | string;
 };
 
 describe("warehouse-item-link slot kind / itemFilterType consistency", () => {
@@ -62,19 +59,8 @@ describe("warehouse-item-link slot kind / itemFilterType consistency", () => {
           continue;
         }
 
-        const expected = EXPECTED_ITEM_FILTER_TYPE[slotGroup.kind];
-        if (expected === undefined) {
-          failures.push({
-            entityId: def.id,
-            nameKey: def.nameKey,
-            storageGroupId: slotGroup.id,
-            groupKind: slotGroup.kind,
-            slotId: "(group-level)",
-            itemFilterType: "n/a",
-            expected: "未知 kind 值",
-          });
-          continue;
-        }
+        // AI-CORRECTION 2026-07-28: 槽组与槽位均使用同一域位标志，不再需要字符串映射表。
+        const expected = slotGroup.kind;
 
         for (const slot of slotGroup.slots) {
           if (slot.itemFilterType !== expected) {
@@ -97,7 +83,9 @@ describe("warehouse-item-link slot kind / itemFilterType consistency", () => {
         .map(
           (f) =>
             `${f.entityId} (${f.nameKey}): ${f.storageGroupId}.${f.slotId} — ` +
-            `kind="${f.groupKind}" 期望 itemFilterType="${f.expected}"，实际="${f.itemFilterType}"`,
+            `kind="${domainFlagsToLabel(f.groupKind)}" ` +
+            `期望 itemFilterType="${typeof f.expected === "number" ? domainFlagsToLabel(f.expected) : f.expected}"，` +
+            `实际="${typeof f.itemFilterType === "number" ? domainFlagsToLabel(f.itemFilterType) : f.itemFilterType}"`,
         )
         .join("\n");
 

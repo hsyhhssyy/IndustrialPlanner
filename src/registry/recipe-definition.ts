@@ -1,4 +1,5 @@
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { FLUID_DOMAIN_RECIPE_ITEM_ID } from "@/domain/shared/item-domain-flags";
 import { ACTIVITY_LIMITED_FORMULA_1_TAG } from "@/shared/registry/activity-availability";
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
@@ -3230,7 +3231,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     id: "r_udpipe_loader_void_fluid_any_internal",
     nameKey: "registry.recipe.r_udpipe_loader_void_fluid_any_internal.name",
     durationSeconds: 0.5,
-    inputs: [{ itemId: "fluid", amount: 1 }],
+    inputs: [{ itemId: FLUID_DOMAIN_RECIPE_ITEM_ID, amount: 1 }],
     outputs: [],
     machineId: "udpipe_loader_1",
     recipeType: "immediate-consume",
@@ -3240,7 +3241,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     id: "r_udpipe_loader_multi_void_fluid_any_internal",
     nameKey: "registry.recipe.r_udpipe_loader_multi_void_fluid_any_internal.name",
     durationSeconds: 0.5,
-    inputs: [{ itemId: "fluid", amount: 1 }],
+    inputs: [{ itemId: FLUID_DOMAIN_RECIPE_ITEM_ID, amount: 1 }],
     outputs: [],
     machineId: "udpipe_loader_2",
     recipeType: "immediate-consume",

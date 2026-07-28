@@ -1,10 +1,11 @@
 import type { GridEdge, GridRectSize } from "../../shared/grid";
+import type { ItemDomainFlag } from "../../shared/item-domain-flags";
 import type { SlotLinkDefinition } from "../../shared/slot-link";
 import type { EntityInspectorDeclaration } from "./entity-inspector";
 import type { EntityPlacementBehaviorDeclaration } from "./entity-placement-behavior";
 
-export type ItemDomain = "solid" | "liquid" | "gas";
-export type ItemFilterType = ItemDomain | "fluid" | "any";
+export type ItemDomain = ItemDomainFlag;
+export type ItemFilterType = ItemDomainFlag;
 
 // ---------------------------------------------------------------------------
 // UI 分组 — 决定设备在放置面板中属于哪个折叠组
@@ -263,6 +264,7 @@ export interface ItemFilterDefinition {
   itemFilterIds?: string[];
   /** 按域过滤：solid（固体）、liquid（液体）、any（任意） */
   /** AI-CORRECTION 2026-07-10: 新增 gas（气体）与 fluid（液体或气体），any 扩展为 solid/liquid/gas。 */
+  /** AI-CORRECTION 2026-07-28: itemFilterType 已迁移为位标志；联合域通过位或表达。 */
   itemFilterType?: ItemFilterType;
   /** 按标签过滤 */
   itemFilterTag?: string[];
@@ -276,7 +278,10 @@ export interface PortGroupDefinition {
   /** 端口组 ID，如 "item_input"、"fluid_output" */
   id: string;
   /** 物品域：item（固体物品）/ fluid（流体，含液体与气体） */
-  kind: "item" | "fluid";
+  /** AI-CORRECTION 2026-07-28: kind 已迁移为物品域位标志，不再承担端口物理类型语义。 */
+  kind: ItemDomainFlag;
+  /** 是否为管道端口；物理连接类型只依据此字段判断。 */
+  isPipe: boolean;
   /**
    * 端口组方向：
    *   - "input"：接收方向，物品流入设备
@@ -297,7 +302,8 @@ export interface PortGroupDefinition {
 export interface StorageSlotGroupDefinition {
   id: string;
   /** 物品域：item / fluid（液体+气体） / liquid / gas */
-  kind: "item" | "fluid" | "liquid" | "gas";
+  /** AI-CORRECTION 2026-07-28: kind 已迁移为物品域位标志，联合域通过位或表达。 */
+  kind: ItemDomainFlag;
   // AI-CORRECTION 2026-05-13: role 字段已删除。
   // 存储组的输入/输出能力由 portStorageBindings 绑定的端口方向推导；
   // 配方原料/产物角色由 Recipe Channel 的 ingredientStorageGroupIds / productStorageGroupIds 决定。
@@ -457,11 +463,7 @@ export interface PortDefinition {
 
 export interface EntityAcceptRuleDefinition {
   readonly base:
-    | { readonly kind: "any" }
-    | { readonly kind: "solid" }
-    | { readonly kind: "liquid" }
-    | { readonly kind: "gas" }
-    | { readonly kind: "fluid" }
+    | { readonly kind: "domain"; readonly flags: ItemDomainFlag }
     | { readonly kind: "item"; readonly itemId: string }
     | { readonly kind: "none" };
   readonly exclude: readonly string[];

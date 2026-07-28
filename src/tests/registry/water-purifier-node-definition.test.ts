@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
+import {
+  FluidDomain,
+  ItemDomainFlag,
+} from "@/domain/shared/item-domain-flags";
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
 import { RECIPE_DEFINITIONS } from "@/registry/recipe-definition";
 import {
@@ -73,19 +77,19 @@ describe("water purifier node definition", () => {
         id,
         capacity: 2,
         lock: "item_liquid_sewage",
-        itemFilterType: "liquid",
+        itemFilterType: ItemDomainFlag.Liquid,
       })),
       {
         id: WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID,
         capacity: 500,
         lock: "item_liquid_sewage",
-        itemFilterType: "liquid",
+        itemFilterType: ItemDomainFlag.Liquid,
       },
       {
         id: WATER_PURIFIER_OUTPUT_STORAGE_GROUP_ID,
         capacity: 50,
         lock: WATER_PURIFIER_OUTPUT_ITEM_ID,
-        itemFilterType: "liquid",
+        itemFilterType: ItemDomainFlag.Liquid,
       },
     ]);
     expect(definition.inspectors).toEqual(
@@ -183,7 +187,8 @@ function expectPort(
   edge: string,
   itemId: string,
 ): void {
-  expect(portGroup.kind).toBe("fluid");
+  expect(portGroup.kind).toBe(FluidDomain);
+  expect(portGroup.isPipe).toBe(true);
   expect(portGroup.ports).toHaveLength(1);
   expect(portGroup.ports[0]).toMatchObject({
     id,

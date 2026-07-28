@@ -256,7 +256,7 @@ export function AdmissionRuleInspector({
         className={cm(styles, "admission-rule-row")}
         data-admission-port-group-id={row.portGroup.id}
         data-admission-port-id={row.port.id}
-        data-port-kind={row.portGroup.kind}
+        data-is-pipe={row.portGroup.isPipe ? "true" : "false"}
       >
         <div className={cm(styles, "admission-rule-item-row")}>
           <button

@@ -11,6 +11,10 @@ import type {
   GridRectSize,
   GridRotation,
 } from "@/domain/shared/grid";
+import {
+  FluidDomain,
+  ItemDomainFlag,
+} from "@/domain/shared/item-domain-flags";
 import type {
   LogisticsDraftEndpoint,
   LogisticsKind,
@@ -68,7 +72,7 @@ export function createEntityDefinitionMap(
 }
 
 export function resolvePortKindForLogisticsKind(kind: LogisticsKind): LogisticsPortKind {
-  return kind === LOGISTICS_KIND.belt ? "item" : "fluid";
+  return kind === LOGISTICS_KIND.belt ? ItemDomainFlag.Solid : FluidDomain;
 }
 
 export function isOrdinaryLogisticsDefinitionId(
@@ -376,10 +380,15 @@ export function resolveDevicePortEndpoints(options: {
   pointerGridPoint: GridPoint;
 }): DevicePortEndpoint[] {
   const portKind = resolvePortKindForLogisticsKind(options.kind);
+  const isPipe = options.kind === LOGISTICS_KIND.pipe;
   const endpoints: DevicePortEndpoint[] = [];
 
   for (const portGroup of options.definition.portGroups) {
-    if (portGroup.kind !== portKind || portGroup.direction !== options.direction) {
+    if (
+      portGroup.isPipe !== isPipe
+      || (portGroup.kind & portKind) === 0
+      || portGroup.direction !== options.direction
+    ) {
       continue;
     }
 
@@ -405,7 +414,7 @@ export function resolveDevicePortEndpoints(options: {
         entityId: options.entity.id,
         portGroupId: portGroup.id,
         portId: port.id,
-        portKind,
+        portKind: portGroup.kind,
         portDirection: options.direction,
         insideGridPoint,
         outsideGridPoint,

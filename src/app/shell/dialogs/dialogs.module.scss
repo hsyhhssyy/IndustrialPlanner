@@ -141,11 +141,11 @@
   --inspector-port-callout-accent: var(--text-2);
 }
 
-.inspector-port-callout[data-port-kind="item"] {
+.inspector-port-callout[data-is-pipe="false"] {
   --inspector-port-callout-accent: #b88a2f;
 }
 
-.inspector-port-callout[data-port-kind="fluid"] {
+.inspector-port-callout[data-is-pipe="true"] {
   --inspector-port-callout-accent: #4f8fa8;
 }
 

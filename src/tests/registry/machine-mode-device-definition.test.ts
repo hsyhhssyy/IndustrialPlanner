@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
 import { RECIPE_DEFINITIONS } from "@/registry/recipe-definition";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
+import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 
 function requireEntity(id: string) {
   const definition = ENTITY_DEFINITIONS.find((candidate) => candidate.id === id);
@@ -148,8 +149,14 @@ describe("machine-mode entity definitions", () => {
     expect(definition.tags).toContain("alter:liquid_purifier_1");
     expect(gasInput?.ports.map((port) => port.id)).toEqual(["in_e_2"]);
     expect(gasOutput?.ports.map((port) => port.id)).toEqual(["out_w_1", "out_w_3"]);
-    expect(gasInput?.ports.every((port) => port.acceptRule.base.kind === "gas")).toBe(true);
-    expect(gasOutput?.ports.every((port) => port.acceptRule.base.kind === "gas")).toBe(true);
+    expect(gasInput?.ports.every((port) =>
+      port.acceptRule.base.kind === "domain"
+      && port.acceptRule.base.flags === ItemDomainFlag.Gas
+    )).toBe(true);
+    expect(gasOutput?.ports.every((port) =>
+      port.acceptRule.base.kind === "domain"
+      && port.acceptRule.base.flags === ItemDomainFlag.Gas
+    )).toBe(true);
   });
 
   it("routes every affected recipe to its derived machine-mode id", () => {

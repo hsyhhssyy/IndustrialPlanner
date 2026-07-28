@@ -10,6 +10,16 @@ export type {
 	GridRotation,
 	GridEdge,
 } from "./grid";
+export {
+	AnyDomain,
+	FluidDomain,
+	FLUID_DOMAIN_RECIPE_ITEM_ID,
+	ItemDomainFlag,
+	RecipeItemDomainId,
+	domainFlagsToLabel,
+	hasDomain,
+	resolveRecipeItemDomainFlags,
+} from "./item-domain-flags";
 export type {
 	LogisticsKind,
 	LogisticsRole,

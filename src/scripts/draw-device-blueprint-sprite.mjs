@@ -35,6 +35,8 @@ const blueprintAssetDirectory = path.resolve(projectRoot, '.temp', '素材库', 
 const blueprintPortPartDirectory = path.resolve(projectRoot, 'resources', 'blueprint-port-parts');
 const blueprintAssetExistenceCache = new Map();
 const blueprintPortPartCache = new Map();
+const PIPE_PORT_ASSET_TOKEN = 'fluid';
+const SOLID_PORT_ASSET_TOKEN = 'item';
 
 void main();
 
@@ -109,8 +111,8 @@ async function createDeviceBlueprintSprite(definition) {
   const baseSvgMarkup = createDeviceBlueprintCanvasSvg(definition);
   const baseBuffer = await sharp(Buffer.from(baseSvgMarkup)).png().toBuffer();
   const borderOverlayBuffer = await sharp(Buffer.from(createDeviceBorderOverlaySvg(definition))).png().toBuffer();
-  const solidPortLayers = await createPortCompositeLayers(definition, 'item');
-  const liquidPortLayers = await createPortCompositeLayers(definition, 'fluid');
+  const solidPortLayers = await createPortCompositeLayers(definition, false);
+  const liquidPortLayers = await createPortCompositeLayers(definition, true);
 
   return sharp(baseBuffer)
     .composite([
@@ -381,33 +383,34 @@ async function composeBlueprintAsset(width, height, layers) {
   };
 }
 
-async function loadBlueprintPortPart(kind, direction, part) {
-  const cacheKey = `${kind}:${direction}:${part}`;
+async function loadBlueprintPortPart(isPipe, direction, part) {
+  const assetToken = isPipe ? PIPE_PORT_ASSET_TOKEN : SOLID_PORT_ASSET_TOKEN;
+  const cacheKey = `${assetToken}:${direction}:${part}`;
   const cached = blueprintPortPartCache.get(cacheKey);
   if (cached !== undefined) {
     return cached;
   }
 
-  const fileName = `${kind}-${direction}-${part}.png`;
+  const fileName = `${assetToken}-${direction}-${part}.png`;
   const partPromise = loadPngAssetWithoutTrim(path.join(blueprintPortPartDirectory, fileName));
   blueprintPortPartCache.set(cacheKey, partPromise);
   return partPromise;
 }
 
-async function composePortBandAsset(kind, direction, edgeSpan, portIndices, options = {}) {
+async function composePortBandAsset(isPipe, direction, edgeSpan, portIndices, options = {}) {
   if (edgeSpan <= 0) {
     throw new Error(`Unsupported port band span: ${edgeSpan}`);
   }
 
   const partByCellKind = new Map([
-    ['left', await loadBlueprintPortPart(kind, direction, 'left')],
-    ['blank', await loadBlueprintPortPart(kind, direction, 'blank')],
-    ['port', await loadBlueprintPortPart(kind, direction, 'port')],
-    ['right', await loadBlueprintPortPart(kind, direction, 'right')],
+    ['left', await loadBlueprintPortPart(isPipe, direction, 'left')],
+    ['blank', await loadBlueprintPortPart(isPipe, direction, 'blank')],
+    ['port', await loadBlueprintPortPart(isPipe, direction, 'port')],
+    ['right', await loadBlueprintPortPart(isPipe, direction, 'right')],
   ]);
   const firstPart = partByCellKind.get('left');
   if (firstPart === undefined) {
-    throw new Error(`Missing blueprint port part: ${kind}:${direction}:left`);
+    throw new Error(`Missing blueprint port part: ${isPipe ? "pipe" : "solid"}:${direction}:left`);
   }
 
   const portIndexSet = new Set(portIndices);
@@ -431,7 +434,7 @@ async function composePortBandAsset(kind, direction, edgeSpan, portIndices, opti
     const part = partByCellKind.get(partKind);
 
     if (part === undefined) {
-      throw new Error(`Missing blueprint port part: ${kind}:${direction}:${partKind}`);
+      throw new Error(`Missing blueprint port part: ${isPipe ? "pipe" : "solid"}:${direction}:${partKind}`);
     }
 
     layers.push({
@@ -499,8 +502,8 @@ async function orientBlueprintAssetForEdge(asset, edge) {
   return rotateBlueprintAsset(asset, resolveEdgeRotationDegrees(edge));
 }
 
-async function maybeCreateSpecialPortCompositeLayer(definition, kind, portEdge) {
-  if (definition.id !== 'sp_hub_1' || kind !== 'item') {
+async function maybeCreateSpecialPortCompositeLayer(definition, isPipe, portEdge) {
+  if (definition.id !== 'sp_hub_1' || isPipe) {
     return null;
   }
 
@@ -537,7 +540,7 @@ async function maybeCreateSpecialPortCompositeLayer(definition, kind, portEdge) 
 }
 
 async function createSpHubInputCompositeAsset(edge) {
-  const composedAsset = await composePortBandAsset('item', 'input', 9, [1, 2, 3, 4, 5, 6, 7]);
+  const composedAsset = await composePortBandAsset(false, 'input', 9, [1, 2, 3, 4, 5, 6, 7]);
   /*
     AI-REMOVED 2026-06-13:
     Reason: 协议核心输入边改为公共端口 cell 片段重复拼接，避免完整端口块与 overlay 块重复叠加造成元素重影。
@@ -589,7 +592,7 @@ async function createSpHubInputCompositeAsset(edge) {
 }
 
 async function createSpHubOutputCompositeAsset(edge) {
-  const composedAsset = await composePortBandAsset('item', 'output', 9, [1, 4, 7], {
+  const composedAsset = await composePortBandAsset(false, 'output', 9, [1, 4, 7], {
     useEndCaps: false,
     omitBlankEndCells: true,
   });
@@ -642,16 +645,16 @@ async function createSpHubOutputCompositeAsset(edge) {
   return rotateBlueprintAsset(composedAsset, resolveEdgeRotationDegrees(edge));
 }
 
-async function createPortCompositeLayers(definition, kind) {
-  const portEdges = collectPortEdges(definition, kind);
+async function createPortCompositeLayers(definition, isPipe) {
+  const portEdges = collectPortEdges(definition, isPipe);
 
   const edgeLayers = await Promise.all(portEdges.map(async (portEdge) => {
-    const specialCompositeLayer = await maybeCreateSpecialPortCompositeLayer(definition, kind, portEdge);
+    const specialCompositeLayer = await maybeCreateSpecialPortCompositeLayer(definition, isPipe, portEdge);
     if (specialCompositeLayer !== null) {
       return [specialCompositeLayer];
     }
 
-    const assetSource = await resolvePortAssetSource(definition, kind, portEdge);
+    const assetSource = await resolvePortAssetSource(definition, isPipe, portEdge);
     // AI-CORRECTION 2026-07-12: SOUTH 边端口需要只翻到下边，不应通过 180 度旋转镜像 registry 的 x 坐标。
     const asset = assetSource.asset === undefined
       ? await loadBlueprintAssetForEdge(assetSource.fileName, portEdge.edge)
@@ -674,10 +677,10 @@ async function createPortCompositeLayers(definition, kind) {
   return edgeLayers.flat();
 }
 
-function collectPortEdges(definition, kind) {
+function collectPortEdges(definition, isPipe) {
   const groups = new Map();
 
-  for (const port of resolveBlueprintPorts(definition, kind)) {
+  for (const port of resolveBlueprintPorts(definition, isPipe)) {
     const key = `${port.direction}:${port.edge}`;
     const existing = groups.get(key);
 
@@ -702,9 +705,9 @@ function collectPortEdges(definition, kind) {
   }));
 }
 
-function resolveBlueprintPorts(definition, kind) {
+function resolveBlueprintPorts(definition, isPipe) {
   const registryPorts = definition.portGroups.flatMap((group) => {
-    if (group.kind !== kind) {
+    if (group.isPipe !== isPipe) {
       return [];
     }
 
@@ -719,7 +722,7 @@ function resolveBlueprintPorts(definition, kind) {
     return registryPorts;
   }
 
-  const overridePorts = kind === 'fluid'
+  const overridePorts = isPipe
     ? (FLUID_BLUEPRINT_PORT_LAYOUT_OVERRIDES.get(definition.id) ?? []).map((port) => ({
       direction: normalizePortDirection(port.direction),
       localCellX: port.localCellX,
@@ -773,8 +776,8 @@ function resolveEdgeSpan(footprint, edge) {
   }
 }
 
-async function resolvePortAssetSource(definition, kind, portEdge) {
-  const directFileName = resolvePortAssetFileName(kind, portEdge);
+async function resolvePortAssetSource(definition, isPipe, portEdge) {
+  const directFileName = resolvePortAssetFileName(isPipe, portEdge);
 
   if (await hasBlueprintAsset(directFileName)) {
     return {
@@ -784,9 +787,9 @@ async function resolvePortAssetSource(definition, kind, portEdge) {
     };
   }
 
-  const fallbackSegment = resolveFallbackPortSegment(definition, kind, portEdge);
+  const fallbackSegment = resolveFallbackPortSegment(definition, isPipe, portEdge);
   if (fallbackSegment !== null) {
-    const fallbackFileName = await resolveFallbackPortAssetFileName(kind, portEdge, fallbackSegment.segmentSpan);
+    const fallbackFileName = await resolveFallbackPortAssetFileName(isPipe, portEdge, fallbackSegment.segmentSpan);
 
     if (fallbackFileName !== null) {
       return {
@@ -798,7 +801,7 @@ async function resolvePortAssetSource(definition, kind, portEdge) {
 
     return {
       asset: await composePortBandAsset(
-        kind,
+        isPipe,
         portEdge.direction,
         fallbackSegment.segmentSpan,
         portEdge.boundaryIndices.map((index) => index - fallbackSegment.segmentStart),
@@ -811,34 +814,34 @@ async function resolvePortAssetSource(definition, kind, portEdge) {
   throw new Error(`Input file is missing: ${path.join(blueprintAssetDirectory, directFileName)}`);
 }
 
-function resolvePortAssetFileName(kind, portEdge) {
-  return resolvePortAssetFileNameByValues(kind, portEdge.direction, portEdge.edgeSpan, portEdge.portCount);
+function resolvePortAssetFileName(isPipe, portEdge) {
+  return resolvePortAssetFileNameByValues(isPipe, portEdge.direction, portEdge.edgeSpan, portEdge.portCount);
 }
 
-function resolvePortAssetFileNameByValues(kind, direction, edgeSpan, portCount) {
+function resolvePortAssetFileNameByValues(isPipe, direction, edgeSpan, portCount) {
   const directionToken = direction === 'input' ? 'in' : 'out';
   const variantToken = portCount === edgeSpan
     ? `${edgeSpan}`
     : `${edgeSpan}_${portCount}`;
-  const prefix = kind === 'fluid' ? 'pipe_port' : 'port';
+  const prefix = isPipe ? 'pipe_port' : 'port';
 
   return `${prefix}_${directionToken}_${variantToken}.png`;
 }
 
-function resolveCollapsedSinglePortAssetFileName(kind, direction, edgeSpan) {
+function resolveCollapsedSinglePortAssetFileName(isPipe, direction, edgeSpan) {
   const directionToken = direction === 'input' ? 'in' : 'out';
-  const prefix = kind === 'fluid' ? 'pipe_port' : 'port';
+  const prefix = isPipe ? 'pipe_port' : 'port';
 
   return `${prefix}_${directionToken}_${edgeSpan}.png`;
 }
 
-async function resolveFallbackPortAssetFileName(kind, portEdge, segmentSpan) {
+async function resolveFallbackPortAssetFileName(isPipe, portEdge, segmentSpan) {
   const candidateFileNames = [
-    resolvePortAssetFileNameByValues(kind, portEdge.direction, segmentSpan, portEdge.portCount),
+    resolvePortAssetFileNameByValues(isPipe, portEdge.direction, segmentSpan, portEdge.portCount),
   ];
 
   if (portEdge.portCount === 1 && segmentSpan === 1) {
-    candidateFileNames.push(resolveCollapsedSinglePortAssetFileName(kind, portEdge.direction, segmentSpan));
+    candidateFileNames.push(resolveCollapsedSinglePortAssetFileName(isPipe, portEdge.direction, segmentSpan));
   }
 
   for (const fileName of candidateFileNames) {
@@ -850,12 +853,12 @@ async function resolveFallbackPortAssetFileName(kind, portEdge, segmentSpan) {
   return null;
 }
 
-function resolveFallbackPortSegment(definition, kind, portEdge) {
+function resolveFallbackPortSegment(definition, isPipe, portEdge) {
   if (portEdge.boundaryIndices.length === 0) {
     return null;
   }
 
-  const boundaryOccupancy = resolveBoundaryOccupancy(definition, kind, portEdge.edge);
+  const boundaryOccupancy = resolveBoundaryOccupancy(definition, isPipe, portEdge.edge);
   const minIndex = portEdge.boundaryIndices[0];
   const maxIndex = portEdge.boundaryIndices[portEdge.boundaryIndices.length - 1];
   let segmentStart = minIndex;
@@ -881,7 +884,7 @@ function resolveFallbackPortSegment(definition, kind, portEdge) {
   };
 }
 
-function resolveBoundaryOccupancy(definition, kind, edge) {
+function resolveBoundaryOccupancy(definition, isPipe, edge) {
   const boundarySpan = resolveEdgeSpan(definition.footprint, edge);
   const occupancy = Array.from({ length: boundarySpan }, () => 'empty');
 
@@ -897,7 +900,7 @@ function resolveBoundaryOccupancy(definition, kind, edge) {
       }
 
       const boundaryIndex = resolveBoundaryCellIndexForSide(definition.footprint, edge, normalizedPort);
-      const nextState = portGroup.kind === kind ? 'same' : 'other';
+      const nextState = portGroup.isPipe === isPipe ? 'same' : 'other';
 
       if (nextState === 'other' || occupancy[boundaryIndex] === 'empty') {
         occupancy[boundaryIndex] = nextState;

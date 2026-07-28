@@ -253,8 +253,8 @@ describe("PortOutputConfigInspector", () => {
     expect(container.querySelectorAll("[data-port-output-locator='item_output'] [data-selected-port-id]").length).toBe(4);
     expect(container.querySelectorAll("[data-port-output-locator='fluid_output_a'] [data-selected-port-id]").length).toBe(1);
     expect(container.querySelector("[data-port-output-locator='item_output']")?.textContent).toContain("P1");
-    expect(container.querySelector("[data-port-group-id='item_output']")?.getAttribute("data-port-kind")).toBe("item");
-    expect(container.querySelector("[data-port-group-id='fluid_output_a']")?.getAttribute("data-port-kind")).toBe("fluid");
+    expect(container.querySelector("[data-port-group-id='item_output']")?.getAttribute("data-is-pipe")).toBe("false");
+    expect(container.querySelector("[data-port-group-id='fluid_output_a']")?.getAttribute("data-is-pipe")).toBe("true");
     expect(container.querySelector("[data-port-group-id='item_output']")?.hasAttribute("data-port-tone")).toBe(false);
   });
 

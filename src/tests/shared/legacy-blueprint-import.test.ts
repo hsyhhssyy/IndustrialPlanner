@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import {
+  FluidDomain,
+  ItemDomainFlag,
+} from "@/domain/shared/item-domain-flags";
 
 import {
   convertLegacyBlueprintJson,
@@ -564,6 +568,42 @@ describe("legacy-blueprint-import", () => {
         config: {},
       }],
       links: [],
+    });
+  });
+
+  it("converts legacy item-domain strings at the import boundary", () => {
+    const converted = convertLegacyBlueprintJson({
+      schema: "industrial-planner-blueprint",
+      name: "域位标志迁移",
+      createdAt: "2026-03-04T15:00:38.701Z",
+      baseId: "wuling_tianwangping_aid",
+      devices: [{
+        typeId: "item_port_power_diffuser_1",
+        rotation: 0,
+        origin: { x: 0, y: 0 },
+        config: {
+          "portGroups[0].kind": "fluid",
+          "portGroups[0].ports[0].acceptRule": {
+            base: { kind: "gas" },
+            exclude: [],
+          },
+          "storageSlotGroups[0].kind": "fluid",
+          "storageSlotGroups[0].slots[0].itemFilterType": "liquid",
+        },
+      }],
+    }, {
+      entityIdPrefix: "domain_flags",
+    });
+
+    expect(converted?.entities.domain_flags_0001?.config).toEqual({
+      "portGroups[0].kind": FluidDomain,
+      "portGroups[0].isPipe": true,
+      "portGroups[0].ports[0].acceptRule": {
+        base: { kind: "domain", flags: ItemDomainFlag.Gas },
+        exclude: [],
+      },
+      "storageSlotGroups[0].kind": FluidDomain,
+      "storageSlotGroups[0].slots[0].itemFilterType": ItemDomainFlag.Liquid,
     });
   });
 });

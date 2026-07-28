@@ -45,6 +45,12 @@ import {
   PLACEMENT_BEHAVIOR_TYPE,
   type EntityPlacementBehaviorDeclaration,
 } from "@/domain/registry/types/entity-placement-behavior";
+import {
+  AnyDomain,
+  FluidDomain,
+  ItemDomainFlag,
+  type ItemDomainFlag as ItemDomainFlags,
+} from "@/domain/shared/item-domain-flags";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import { DEFAULT_PORT_PRIORITY_GROUP } from "@/shared/port-priority-groups";
 import { MAIN_CRAFT_GROUP_TAG } from "@/shared/entity-variants";
@@ -143,7 +149,7 @@ function createLiquidPurifierOutputAcceptRule(
 ): PortDefinition["acceptRule"] {
   const allowedItemIds = new Set<string>(itemIds);
   return {
-    base: { kind: "fluid" },
+    base: { kind: "domain", flags: FluidDomain },
     exclude: ITEM_DEFINITIONS
       .filter((item) => item.tags.includes("liquid") && !allowedItemIds.has(item.id))
       .map((item) => item.id)
@@ -165,7 +171,7 @@ function createGasItemWhitelistAcceptRule(
 ): PortDefinition["acceptRule"] {
   const allowedItemIds = new Set(itemIds);
   return {
-    base: { kind: "gas" },
+    base: { kind: "domain", flags: ItemDomainFlag.Gas },
     exclude: ITEM_DEFINITIONS
       .filter((item) => item.tags.includes("gas") && !allowedItemIds.has(item.id))
       .map((item) => item.id)
@@ -228,6 +234,7 @@ function normalizePipeFamilyFluidDefinition(definition: EntityDefinitionInput): 
   //   保留此函数作为安全网，避免旧蓝图或外部定义中仍有显式 { kind: "liquid" } 的残留。
   // AI-CORRECTION 2026-07-23: PipeFamily 的所有显式流体槽位统一规范化为容量 2。
   // AI-CORRECTION 2026-07-27: 管道设备族的身份由 registry 内部 definition ID 常量判定，不再依赖 PipeFamily tag。
+  // AI-CORRECTION 2026-07-28: 端口物理类型改由 isPipe 显式声明；域规范化改为位标志。
   if (!isLogisticsFamilyDefinitionId(LOGISTICS_KIND.pipe, definition.id)) {
     return definition;
   }
@@ -235,7 +242,7 @@ function normalizePipeFamilyFluidDefinition(definition: EntityDefinitionInput): 
   return {
     ...definition,
     portGroups: definition.portGroups.map((portGroup) =>
-      portGroup.kind === "fluid"
+      portGroup.isPipe
         ? {
             ...portGroup,
             ports: portGroup.ports.map((port) => ({
@@ -246,12 +253,14 @@ function normalizePipeFamilyFluidDefinition(definition: EntityDefinitionInput): 
         : portGroup,
     ),
     storageSlotGroups: definition.storageSlotGroups.map((storageSlotGroup) =>
-      storageSlotGroup.kind === "fluid"
+      (storageSlotGroup.kind & FluidDomain) !== 0
         ? {
             ...storageSlotGroup,
             slots: storageSlotGroup.slots.map((slot) => ({
               ...slot,
-              itemFilterType: slot.itemFilterType === "liquid" ? "fluid" : slot.itemFilterType,
+              itemFilterType: slot.itemFilterType === ItemDomainFlag.Liquid
+                ? FluidDomain
+                : slot.itemFilterType,
               capacity: 2,
             })),
           }
@@ -263,8 +272,10 @@ function normalizePipeFamilyFluidDefinition(definition: EntityDefinitionInput): 
 function normalizePipeFamilyAcceptRule(
   acceptRule: PortDefinition["acceptRule"],
 ): PortDefinition["acceptRule"] {
-  return acceptRule.base.kind === "liquid" && acceptRule.exclude.length === 0
-    ? { base: { kind: "fluid" }, exclude: [] }
+  return acceptRule.base.kind === "domain"
+    && acceptRule.base.flags === ItemDomainFlag.Liquid
+    && acceptRule.exclude.length === 0
+    ? { base: { kind: "domain", flags: FluidDomain }, exclude: [] }
     : acceptRule;
 }
 
@@ -416,22 +427,23 @@ function createPort(
  * direction：input（物品流入）/ output（物品流出）/ bidirectional（编译时分解为 input+output）。
  * 每个端口的 acceptRule 默认按 kind 推导，
  * priorityGroup 默认 5，roundRobinSeed 默认按 index 递增。
+ * AI-CORRECTION 2026-07-28: kind 已改为域位标志，isPipe 由端口描述符显式提供。
  *
  * 对应《仿真运行原理》§3.1 中 Port 的 accept-rule 配置。
  */
 function createPortGroup(
   id: string,
-  kind: PortGroupDefinition["kind"],
+  descriptor: Readonly<Pick<PortGroupDefinition, "kind" | "isPipe">>,
   direction: PortGroupDefinition["direction"],
   ports: PortDefinitionInput[],
 ): PortGroupDefinition {
   return {
     id,
-    kind,
+    ...descriptor,
     direction,
     ports: ports.map((port, index) => ({
       ...port,
-      acceptRule: port.acceptRule ?? acceptRuleFromPortKind(kind),
+      acceptRule: port.acceptRule ?? acceptRuleFromPortKind(descriptor.kind),
       // AI-REMOVED 2026-06-12:
       // Reason: createPortGroup 不再为端口补 count 默认值，per-tick count 已从设计中删除。
       // Trigger: 用户确认 per tick count 应删除。
@@ -457,6 +469,7 @@ function createPortGroup(
  * - lock：锁定物品 ID，null=不锁定。用户可通过 entity.config["slots[N].lock"] 覆盖
  * - ignoreStock：忽略仓库库存检查，取货口/出货口常用
  * AI-CORRECTION 2026-07-10: itemFilterType 现在还支持 gas 与 fluid；fluid 表示 liquid/gas。
+ * AI-CORRECTION 2026-07-28: itemFilterType 已改为域位标志，联合域通过位或表达。
  * AI-CORRECTION 2026-06-06: submitMode 不再作为可配置运行时语义；槽位仅保留 domain 默认字段，入仓改用 WarehouseSink 或配方。
  * AI-CORRECTION 2026-06-06: domain 默认 submitMode 字段也已删除；createSlot 不再生成旧提交字段。
  */
@@ -583,7 +596,7 @@ function createConsumptionStorageSlotGroup(
   const slot = createSlot(CONSUMPTION_SLOT_ID, 5, itemFilterType);
   return createStorageSlotGroup(
     CONSUMPTION_STORAGE_GROUP_ID,
-    "fluid",
+    FluidDomain,
     [{
       ...slot,
       itemFilter: "whitelist",
@@ -611,7 +624,8 @@ function createBlockageAutoClearance(
 }
 
 type DirectionalBufferLayoutInput = {
-  kind: StorageSlotGroupDefinition["kind"];
+  idPrefix: string;
+  domain: ItemDomainFlags;
   direction: "input" | "output";
   capacities: number[];
   // AI-REMOVED 2026-07-16:
@@ -626,8 +640,8 @@ type DirectionalBufferLayoutInput = {
   // itemFilterType?: FilterType;
 };
 
-function resolveSlotFilterType(kind: DirectionalBufferLayoutInput["kind"]): FilterType {
-  return kind === "fluid" ? "liquid" : "solid";
+function resolveSlotFilterType(domain: DirectionalBufferLayoutInput["domain"]): FilterType {
+  return domain;
 }
 
 /**
@@ -637,12 +651,13 @@ function resolveSlotFilterType(kind: DirectionalBufferLayoutInput["kind"]): Filt
  * 函数自动生成对应的定义片段，减少样板代码。
  * AI-CORRECTION 2026-07-16: layout 可显式覆盖 itemFilterType，用于声明兼容液体与气体的生产设备缓存。
  * AI-CORRECTION 2026-07-16: 上述覆盖机制已按用户要求撤回；特殊设备改用显式字典声明。
+ * AI-CORRECTION 2026-07-28: layout.kind 已拆为稳定 ID 前缀与域位标志。
  */
 function createSimpleProductionDevice(
   layouts: readonly DirectionalBufferLayoutInput[],
 ): Pick<EntityDefinition, "storageSlotGroups" | "portStorageBindings" | "recipeChannels" | "inspectors"> {
-  const ingGroupIds = layouts.filter(l => l.direction === "input").map(l => `${l.kind}_${l.direction}_buffer`);
-  const prodGroupIds = layouts.filter(l => l.direction === "output").map(l => `${l.kind}_${l.direction}_buffer`);
+  const ingGroupIds = layouts.filter(l => l.direction === "input").map(l => `${l.idPrefix}_${l.direction}_buffer`);
+  const prodGroupIds = layouts.filter(l => l.direction === "output").map(l => `${l.idPrefix}_${l.direction}_buffer`);
   const hasChannel = ingGroupIds.length > 0 || prodGroupIds.length > 0;
   return {
     recipeChannels: hasChannel
@@ -657,28 +672,29 @@ function createSimpleProductionDevice(
         ]
       : [],
     storageSlotGroups: layouts.map((layout) => createStorageSlotGroup(
-      `${layout.kind}_${layout.direction}_buffer`,
-      layout.kind,
+      `${layout.idPrefix}_${layout.direction}_buffer`,
+      layout.domain,
       createSlots(
-        `${layout.direction}_${layout.kind}_slot`,
+        `${layout.direction}_${layout.idPrefix}_slot`,
         layout.capacities,
         // AI-REMOVED 2026-07-16:
         // Reason: itemFilterType 覆盖字段已撤回，helper 恢复原有默认物态推导。
         // Trigger: 用户要求拆解机脱离 createSimpleProductionDevice，避免为单个设备扩展 helper。
         // Evidence: item_port_dismantler_1 已显式声明气液兼容缓存。
         // Replacement: resolveSlotFilterType(layout.kind)。
+        // AI-CORRECTION 2026-07-28: layout.kind 已拆为 idPrefix 与 domain，现调用 resolveSlotFilterType(layout.domain)。
         // Risk: Low
         // Human Review: Required
         //
         // Original code:
         // layout.itemFilterType ?? resolveSlotFilterType(layout.kind),
-        resolveSlotFilterType(layout.kind),
+        resolveSlotFilterType(layout.domain),
       ),
     )),
     portStorageBindings: layouts.map((layout) => createBinding(
-      `bind_${layout.kind}_${layout.direction}`,
-      `${layout.kind}_${layout.direction}`,
-      `${layout.kind}_${layout.direction}_buffer`,
+      `bind_${layout.idPrefix}_${layout.direction}`,
+      `${layout.idPrefix}_${layout.direction}`,
+      `${layout.idPrefix}_${layout.direction}_buffer`,
     )),
   };
 }
@@ -689,15 +705,26 @@ function createSimpleProductionDevice(
  * fluid → { base: { kind: "fluid" }, exclude: [] }
  * AI-CORRECTION 2026-07-18: fluid 端口默认 acceptRule 从 { kind: "liquid" } 改为 { kind: "fluid" }，
  *   使所有流体端口（含暗管系列）同时接受液体和气体。旧的 PipeFamily normalize 逻辑成为无害的恒等映射。
+ * AI-CORRECTION 2026-07-28: acceptRule 域分支改为 { kind: "domain", flags }，不再使用域字符串。
  *
  * 对应《仿真运行原理》§3.1 表格中 Port 的 acceptRule 默认值。
  */
 function acceptRuleFromPortKind(kind: PortGroupDefinition["kind"]): PortDefinition["acceptRule"] {
   return {
-    base: kind === "fluid" ? { kind: "fluid" } : { kind: "solid" },
+    base: { kind: "domain", flags: kind },
     exclude: [],
   };
 }
+
+const SOLID_BELT_PORT = {
+  kind: ItemDomainFlag.Solid,
+  isPipe: false,
+} as const satisfies Pick<PortGroupDefinition, "kind" | "isPipe">;
+
+const FLUID_PIPE_PORT = {
+  kind: FluidDomain,
+  isPipe: true,
+} as const satisfies Pick<PortGroupDefinition, "kind" | "isPipe">;
 
 /**
  * 创建搬运配方（传送带/管道用）。
@@ -788,13 +815,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
@@ -802,33 +829,33 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "storage_slot_1",
-        "item",
-        createSlots("slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("slot", [50], ItemDomainFlag.Solid),
       ),
       createStorageSlotGroup(
         "storage_slot_2",
-        "item",
-        createSlots("slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("slot", [50], ItemDomainFlag.Solid),
       ),
       createStorageSlotGroup(
         "storage_slot_3",
-        "item",
-        createSlots("slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("slot", [50], ItemDomainFlag.Solid),
       ),
       createStorageSlotGroup(
         "storage_slot_4",
-        "item",
-        createSlots("slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("slot", [50], ItemDomainFlag.Solid),
       ),
       createStorageSlotGroup(
         "storage_slot_5",
-        "item",
-        createSlots("slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("slot", [50], ItemDomainFlag.Solid),
       ),
       createStorageSlotGroup(
         "storage_slot_6",
-        "item",
-        createSlots("slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("slot", [50], ItemDomainFlag.Solid),
       ),
     ],
     recipeChannels: [
@@ -943,7 +970,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [createPort("p_out_mid", 1, 0, "S")],
       ),
@@ -951,8 +978,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "unloader_buffer",
-        "item",
-        createSlots("slot", [1], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("slot", [1], ItemDomainFlag.Solid),
       ),
     ],
     portStorageBindings: [
@@ -1014,31 +1041,31 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [1, 3].map((x) => createPort(`out_n_${x}`, x, 0, "N", { acceptRule: { base: { kind: "none" }, exclude: [] } })),
       ),
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
       ),
       createPortGroup(
         "fluid_output_a",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort(`out_w_1`, 0, 1, "W", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
       ),
       createPortGroup(
         "fluid_output_b",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort(`out_w_3`, 0, 3, "W", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
       ),
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [1, 3].map((y) => createPort(`in_e_${y}`, 4, y, "E")),
       ),
@@ -1046,8 +1073,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "shared_input_buffer",
-        "item",
-        createSlots("input_slot", [50, 50, 50, 50, 50], "any"),
+        ItemDomainFlag.Solid,
+        createSlots("input_slot", [50, 50, 50, 50, 50], AnyDomain),
       ),
     ],
     recipeChannels: [
@@ -1112,13 +1139,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
@@ -1126,13 +1153,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "item_input_buffer",
-        "item",
-        createSlots("input_slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("input_slot", [50], ItemDomainFlag.Solid),
       ),
       createStorageSlotGroup(
         "item_output_buffer",
-        "item",
-        createSlots("output_slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("output_slot", [50], ItemDomainFlag.Solid),
       ),
     ],
     recipeChannels: [
@@ -1194,21 +1221,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
       ),
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [createPort("in_e_2", 5, 2, "E", {
-          acceptRule: { base: { kind: "fluid" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: FluidDomain }, exclude: [] },
         })],
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
@@ -1216,18 +1243,18 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "item_input_buffer",
-        "item",
-        createSlots("input_item_slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("input_item_slot", [50], ItemDomainFlag.Solid),
       ),
       createStorageSlotGroup(
         "fluid_input_buffer",
-        "fluid",
-        createSlots("input_fluid_slot", [50], "fluid"),
+        FluidDomain,
+        createSlots("input_fluid_slot", [50], FluidDomain),
       ),
       createStorageSlotGroup(
         "item_output_buffer",
-        "item",
-        createSlots("output_slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("output_slot", [50], ItemDomainFlag.Solid),
       ),
     ],
     recipeChannels: [
@@ -1273,13 +1300,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
@@ -1287,13 +1314,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "item_input_buffer",
-        "item",
-        createSlots("input_item_slot", [50,50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("input_item_slot", [50,50], ItemDomainFlag.Solid),
       ),
       createStorageSlotGroup(
         "item_output_buffer",
-        "item",
-        createSlots("output_slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("output_slot", [50], ItemDomainFlag.Solid),
       ),
     ],
     recipeChannels: [
@@ -1369,13 +1396,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_w", 0, 0, "W")],
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [createPort("out_e", 0, 0, "E")],
       ),
@@ -1383,8 +1410,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "item_buffer",
-        "item",
-        createSlots("slot", [1], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("slot", [1], ItemDomainFlag.Solid),
         "share-cap",
       ),
     ],
@@ -1428,13 +1455,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_e", 0, 0, "E")],
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [createPort("out_n", 0, 0, "N")],
       ),
@@ -1442,8 +1469,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "item_buffer",
-        "item",
-        createSlots("slot", [1], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("slot", [1], ItemDomainFlag.Solid),
         "share-cap",
       ),
     ],
@@ -1483,13 +1510,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_n", 0, 0, "N")],
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [createPort("out_e", 0, 0, "E")],
       ),
@@ -1497,8 +1524,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "item_buffer",
-        "item",
-        createSlots("slot", [1], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("slot", [1], ItemDomainFlag.Solid),
         "share-cap",
       ),
     ],
@@ -1544,13 +1571,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_n", 0, 0, "N")],
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [
           createPort("out_e", 0, 0, "E"),
@@ -1568,8 +1595,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "item_buffer",
-        "item",
-        createSlots("slot", [1], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("slot", [1], ItemDomainFlag.Solid),
         "share-cap",
       ),
     ],
@@ -1610,7 +1637,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [
           createPort("in_n", 0, 0, "N"),
@@ -1620,7 +1647,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [createPort("out_s", 0, 0, "S")],
       ),
@@ -1633,8 +1660,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "item_buffer",
-        "item",
-        createSlots("slot", [1], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("slot", [1], ItemDomainFlag.Solid),
         "share-cap",
       ),
     ],
@@ -1679,7 +1706,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input_ns",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [
           createPort("in_n", 0, 0, "N"),
@@ -1688,7 +1715,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
       createPortGroup(
         "item_output_ns",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [
           createPort("out_n", 0, 0, "N"),
@@ -1697,7 +1724,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
       createPortGroup(
         "item_input_ew",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [
           createPort("in_w", 0, 0, "W"),
@@ -1706,7 +1733,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
       createPortGroup(
         "item_output_ew",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [
           createPort("out_w", 0, 0, "W"),
@@ -1717,14 +1744,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "ns_buffer",
-        "item",
-        createSlots("ns_slot", [1], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("ns_slot", [1], ItemDomainFlag.Solid),
         "share-cap",
       ),
       createStorageSlotGroup(
         "ew_buffer",
-        "item",
-        createSlots("ew_slot", [1], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("ew_slot", [1], ItemDomainFlag.Solid),
         "share-cap",
       ),
     ],
@@ -1813,13 +1840,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [createPort("in_w", 0, 0, "W")],
       ),
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort("out_e", 0, 0, "E")],
       ),
@@ -1855,13 +1882,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [createPort("in_e", 0, 0, "E")],
       ),
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort("out_n", 0, 0, "N")],
       ),
@@ -1897,13 +1924,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [createPort("in_n", 0, 0, "N")],
       ),
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort("out_e", 0, 0, "E")],
       ),
@@ -1940,13 +1967,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [createPort("in_n", 0, 0, "N")],
       ),
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [
           createPort("out_e", 0, 0, "E"),
@@ -1961,8 +1988,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "fluid_buffer",
-        "fluid",
-        createSlots("slot", [2], "liquid"),
+        FluidDomain,
+        createSlots("slot", [2], ItemDomainFlag.Liquid),
         "share-cap",
       ),
     ],
@@ -1999,7 +2026,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_n", 0, 0, "N"),
@@ -2009,7 +2036,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort("out_s", 0, 0, "S")],
       ),
@@ -2020,8 +2047,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "fluid_buffer",
-        "fluid",
-        createSlots("slot", [2], "liquid"),
+        FluidDomain,
+        createSlots("slot", [2], ItemDomainFlag.Liquid),
         "share-cap",
       ),
     ],
@@ -2063,7 +2090,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_input_ns",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_n", 0, 0, "N"),
@@ -2072,7 +2099,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
       createPortGroup(
         "fluid_output_ns",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [
           createPort("out_n", 0, 0, "N"),
@@ -2081,7 +2108,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
       createPortGroup(
         "fluid_input_ew",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_w", 0, 0, "W"),
@@ -2090,7 +2117,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
       createPortGroup(
         "fluid_output_ew",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [
           createPort("out_w", 0, 0, "W"),
@@ -2101,14 +2128,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "ns_buffer",
-        "fluid",
-        createSlots("ns_slot", [2], "liquid"),
+        FluidDomain,
+        createSlots("ns_slot", [2], ItemDomainFlag.Liquid),
         "share-cap",
       ),
       createStorageSlotGroup(
         "ew_buffer",
-        "fluid",
-        createSlots("ew_slot", [2], "liquid"),
+        FluidDomain,
+        createSlots("ew_slot", [2], ItemDomainFlag.Liquid),
         "share-cap",
       ),
     ],
@@ -2161,7 +2188,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [createPort("in_w_1", 0, 1, "W")],
       ),
@@ -2179,8 +2206,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "loader_buffer",
-        "fluid",
-        createSlots("slot", [500], "fluid"),
+        FluidDomain,
+        createSlots("slot", [500], FluidDomain),
       ),
     ],
     recipeChannels: [
@@ -2246,7 +2273,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort("out_e_1", 2, 1, "E")],
       ),
@@ -2254,8 +2281,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "unloader_buffer",
-        "fluid",
-        createSlots("slot", [500], "fluid"),
+        FluidDomain,
+        createSlots("slot", [500], FluidDomain),
       ),
     ],
     // AI-CORRECTION 2026-06-07: 暗管出口保留仓库取货式生成语义，但槽位在 channel 中同时作为原料/产物以显示为混合槽位。
@@ -2323,13 +2350,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("p_in_mid", 1, 0, "N")],
       ),
     ],
     ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [1] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "input", capacities: [1] },
     ]),
   }),
   createEntityDefinition({
@@ -2350,20 +2377,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
     ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50] },
-      { kind: "item", direction: "output", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "input", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -2379,38 +2406,38 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
       ),
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [createPort("in_e_1", 2, 1, "E", {
-          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort("out_w_1", 0, 1, "W", {
-          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
     storageSlotGroups: [
-      createStorageSlotGroup("item_input_buffer", "item", createSlots("input_item_slot", [50], "solid")),
-      createStorageSlotGroup("fluid_input_buffer", "fluid", createSlots("input_fluid_slot", [50], "liquid")),
-      createStorageSlotGroup("fluid_output_buffer", "fluid", createSlots("output_fluid_slot", [50], "liquid")),
-      createStorageSlotGroup("item_output_buffer", "item", createSlots("output_item_slot", [50], "solid")),
+      createStorageSlotGroup("item_input_buffer", ItemDomainFlag.Solid, createSlots("input_item_slot", [50], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("fluid_input_buffer", FluidDomain, createSlots("input_fluid_slot", [50], ItemDomainFlag.Liquid)),
+      createStorageSlotGroup("fluid_output_buffer", FluidDomain, createSlots("output_fluid_slot", [50], ItemDomainFlag.Liquid)),
+      createStorageSlotGroup("item_output_buffer", ItemDomainFlag.Solid, createSlots("output_item_slot", [50], ItemDomainFlag.Solid)),
     ],
     recipeChannels: [
       createRecipeChannel("default", ["item_input_buffer", "fluid_input_buffer"], ["fluid_output_buffer", "item_output_buffer"]),
@@ -2438,20 +2465,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
     ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50] },
-      { kind: "item", direction: "output", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "input", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -2472,20 +2499,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
     ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50] },
-      { kind: "item", direction: "output", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "input", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -2505,23 +2532,23 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
       createPortGroup(
         "gas_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_e_1", 2, 1, "E", {
-            acceptRule: { base: { kind: "gas" }, exclude: [] },
+            acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
           }),
         ],
       ),
@@ -2529,18 +2556,18 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "item_input_buffer",
-        "item",
-        createSlots("input_item_slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("input_item_slot", [50], ItemDomainFlag.Solid),
       ),
       createStorageSlotGroup(
         "item_output_buffer",
-        "item",
-        createSlots("output_item_slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("output_item_slot", [50], ItemDomainFlag.Solid),
       ),
       createStorageSlotGroup(
         "gas_input_buffer",
-        "fluid",
-        createSlots("input_gas_slot", [50], "gas"),
+        FluidDomain,
+        createSlots("input_gas_slot", [50], ItemDomainFlag.Gas),
       ),
     ],
     recipeChannels: [
@@ -2571,20 +2598,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
     ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50] },
-      { kind: "item", direction: "output", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "input", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -2605,20 +2632,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
     ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50] },
-      { kind: "item", direction: "output", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "input", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -2634,29 +2661,29 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
       ),
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [createPort("in_e_2", 4, 2, "E", {
-          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
     storageSlotGroups: [
-      createStorageSlotGroup("item_input_buffer", "item", createSlots("input_item_slot", [50], "solid")),
-      createStorageSlotGroup("fluid_input_buffer", "fluid", createSlots("input_fluid_slot", [50], "liquid")),
-      createStorageSlotGroup("item_output_buffer", "item", createSlots("output_item_slot", [50], "solid")),
+      createStorageSlotGroup("item_input_buffer", ItemDomainFlag.Solid, createSlots("input_item_slot", [50], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("fluid_input_buffer", FluidDomain, createSlots("input_fluid_slot", [50], ItemDomainFlag.Liquid)),
+      createStorageSlotGroup("item_output_buffer", ItemDomainFlag.Solid, createSlots("output_item_slot", [50], ItemDomainFlag.Solid)),
     ],
     recipeChannels: [
       createRecipeChannel("default", ["item_input_buffer", "fluid_input_buffer"], ["item_output_buffer"]),
@@ -2683,20 +2710,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
     ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50, 50] },
-      { kind: "item", direction: "output", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "input", capacities: [50, 50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -2712,20 +2739,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
     ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50, 50] },
-      { kind: "item", direction: "output", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "input", capacities: [50, 50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -2741,20 +2768,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
     ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50, 50] },
-      { kind: "item", direction: "output", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "input", capacities: [50, 50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -2770,13 +2797,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1].map((x) => createPort(`in_s_${x}`, x, 1, "S")),
       ),
     ],
     ...createSimpleProductionDevice([
-      { kind: "item", direction: "input", capacities: [50] },
+      { idPrefix: "item", domain: ItemDomainFlag.Solid, direction: "input", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -2792,31 +2819,31 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N", { acceptRule: { base: { kind: "none" }, exclude: [] } })),
       ),
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
       ),
       createPortGroup(
         "fluid_output_a",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort(`out_w_1`, 0, 1, "W", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
       ),
       createPortGroup(
         "fluid_output_b",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort(`out_w_3`, 0, 3, "W", { acceptRule: { base: { kind: "none" }, exclude: [] } })],
       ),
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [1, 3].map((y) => createPort(`in_e_${y}`, 5, y, "E")),
       ),
@@ -2824,8 +2851,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "shared_input_buffer",
-        "item",
-        createSlots("input_slot", [50, 50, 50, 50, 50, 50, 50, 50], "any"),
+        ItemDomainFlag.Solid,
+        createSlots("input_slot", [50, 50, 50, 50, 50, 50, 50, 50], AnyDomain),
       ),
     ],
     recipeChannels: [
@@ -2894,15 +2921,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S", {
-          acceptRule: { base: { kind: "fluid" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: FluidDomain }, exclude: [] },
         })),
       ),
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [
           createPort("out_n_1", 1, 0, "N", {
@@ -2932,13 +2959,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "fluid_input_buffer",
-        "fluid",
-        createSlots("input_fluid_slot", [50], "fluid"),
+        FluidDomain,
+        createSlots("input_fluid_slot", [50], FluidDomain),
       ),
       createStorageSlotGroup(
         "fluid_output_buffer",
-        "fluid",
-        createSlots("output_fluid_slot", [50, 50], "fluid"),
+        FluidDomain,
+        createSlots("output_fluid_slot", [50, 50], FluidDomain),
       ),
     ],
     recipeChannels: [
@@ -2973,44 +3000,44 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
       ),
       createPortGroup(
         "gas_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_e_2", 4, 2, "E", {
-            acceptRule: { base: { kind: "gas" }, exclude: [] },
+            acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
           }),
         ],
       ),
       createPortGroup(
         "gas_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W", {
-          acceptRule: { base: { kind: "gas" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
     ],
     storageSlotGroups: [
       createStorageSlotGroup(
         "gas_input_buffer",
-        "fluid",
-        createSlots("input_gas_slot", [50], "gas"),
+        FluidDomain,
+        createSlots("input_gas_slot", [50], ItemDomainFlag.Gas),
       ),
       createStorageSlotGroup(
         "gas_output_buffer",
-        "fluid",
-        createSlots("output_gas_slot", [50, 50], "gas"),
+        FluidDomain,
+        createSlots("output_gas_slot", [50, 50], ItemDomainFlag.Gas),
       ),
       createStorageSlotGroup(
         "item_input_buffer",
-        "item",
-        createSlots("input_item_slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("input_item_slot", [50], ItemDomainFlag.Solid),
       ),
     ],
     recipeChannels: [
@@ -3041,29 +3068,29 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
       ),
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [createPort("in_e_2", 4, 2, "E", {
-          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
     ],
     storageSlotGroups: [
-      createStorageSlotGroup("item_input_buffer", "item", createSlots("input_item_slot", [50], "solid")),
-      createStorageSlotGroup("fluid_input_buffer", "fluid", createSlots("input_fluid_slot", [50], "liquid")),
-      createStorageSlotGroup("item_output_buffer", "item", createSlots("output_item_slot", [50], "solid")),
+      createStorageSlotGroup("item_input_buffer", ItemDomainFlag.Solid, createSlots("input_item_slot", [50], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("fluid_input_buffer", FluidDomain, createSlots("input_fluid_slot", [50], ItemDomainFlag.Liquid)),
+      createStorageSlotGroup("item_output_buffer", ItemDomainFlag.Solid, createSlots("output_item_slot", [50], ItemDomainFlag.Solid)),
     ],
     recipeChannels: [
       createRecipeChannel("default", ["item_input_buffer", "fluid_input_buffer"], ["item_output_buffer"]),
@@ -3090,22 +3117,22 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort("out_w_2", 0, 2, "W", {
-          acceptRule: { base: { kind: "fluid" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: FluidDomain }, exclude: [] },
         })],
       ),
     ],
@@ -3126,18 +3153,18 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "item_input_buffer",
-        "item",
-        createSlots("input_item_slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("input_item_slot", [50], ItemDomainFlag.Solid),
       ),
       createStorageSlotGroup(
         "item_output_buffer",
-        "item",
-        createSlots("output_item_slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("output_item_slot", [50], ItemDomainFlag.Solid),
       ),
       createStorageSlotGroup(
         "fluid_output_buffer",
-        "fluid",
-        createSlots("output_fluid_slot", [50], "fluid"),
+        FluidDomain,
+        createSlots("output_fluid_slot", [50], FluidDomain),
       ),
     ],
     recipeChannels: [
@@ -3195,21 +3222,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
       ),
       createPortGroup(
         "gas_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W", {
-          acceptRule: { base: { kind: "gas" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
       createPortGroup(
         "consume_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_s_2", 2, 4, "S", {
@@ -3221,15 +3248,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "item_input_buffer",
-        "item",
-        createSlots("input_item_slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("input_item_slot", [50], ItemDomainFlag.Solid),
       ),
       createStorageSlotGroup(
         "gas_output_buffer",
-        "fluid",
-        createSlots("output_gas_slot", [50], "gas"),
+        FluidDomain,
+        createSlots("output_gas_slot", [50], ItemDomainFlag.Gas),
       ),
-      createConsumptionStorageSlotGroup("gas", ["item_gas_xiranite"]),
+      createConsumptionStorageSlotGroup(ItemDomainFlag.Gas, ["item_gas_xiranite"]),
       // AI-REMOVED 2026-07-16:
       // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
       // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
@@ -3305,21 +3332,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "gas_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [1, 3].map((z) => createPort(`in_e_${z}`, 4, z, "E", {
-          acceptRule: { base: { kind: "gas" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [1, 3].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
       ),
       createPortGroup(
         "consume_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_s_2", 2, 4, "S", {
@@ -3331,15 +3358,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "gas_input_buffer",
-        "fluid",
-        createSlots("input_gas_slot", [50], "gas"),
+        FluidDomain,
+        createSlots("input_gas_slot", [50], ItemDomainFlag.Gas),
       ),
       createStorageSlotGroup(
         "item_output_buffer",
-        "item",
-        createSlots("output_item_slot", [50], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("output_item_slot", [50], ItemDomainFlag.Solid),
       ),
-      createConsumptionStorageSlotGroup("gas", ["item_gas_xiranite"]),
+      createConsumptionStorageSlotGroup(ItemDomainFlag.Gas, ["item_gas_xiranite"]),
       // AI-REMOVED 2026-07-16:
       // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
       // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
@@ -3411,31 +3438,31 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "gas_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [1, 3].map((z) => createPort(`in_w_${z}`, 0, z, "W", {
-          acceptRule: { base: { kind: "gas" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
       createPortGroup(
         "gas_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [1, 3].map((z) => createPort(`out_e_${z}`, 4, z, "E", {
-          acceptRule: { base: { kind: "gas" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
     ],
     storageSlotGroups: [
       createStorageSlotGroup(
         "gas_input_buffer",
-        "fluid",
-        createSlots("input_gas_slot", [50, 50], "gas"),
+        FluidDomain,
+        createSlots("input_gas_slot", [50, 50], ItemDomainFlag.Gas),
       ),
       createStorageSlotGroup(
         "gas_output_buffer",
-        "fluid",
-        createSlots("output_gas_slot", [50], "gas"),
+        FluidDomain,
+        createSlots("output_gas_slot", [50], ItemDomainFlag.Gas),
       ),
     ],
     recipeChannels: [
@@ -3488,23 +3515,23 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "liquid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [1, 3].map((z) => createPort(`in_e_${z}`, 4, z, "E", {
-          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })),
       ),
       createPortGroup(
         "gas_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W", {
-          acceptRule: { base: { kind: "gas" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
       createPortGroup(
         "consume_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_s_2", 2, 4, "S", {
@@ -3516,15 +3543,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "liquid_input_buffer",
-        "fluid",
-        createSlots("input_liquid_slot", [50], "liquid"),
+        FluidDomain,
+        createSlots("input_liquid_slot", [50], ItemDomainFlag.Liquid),
       ),
       createStorageSlotGroup(
         "gas_output_buffer",
-        "fluid",
-        createSlots("output_gas_slot", [50], "gas"),
+        FluidDomain,
+        createSlots("output_gas_slot", [50], ItemDomainFlag.Gas),
       ),
-      createConsumptionStorageSlotGroup("liquid", ["item_liquid_xiranite"]),
+      createConsumptionStorageSlotGroup(ItemDomainFlag.Liquid, ["item_liquid_xiranite"]),
       // AI-REMOVED 2026-07-16:
       // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
       // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
@@ -3600,23 +3627,23 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "gas_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [1, 3].map((z) => createPort(`in_e_${z}`, 4, z, "E", {
-          acceptRule: { base: { kind: "gas" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
       createPortGroup(
         "liquid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [1, 3].map((z) => createPort(`out_w_${z}`, 0, z, "W", {
-          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })),
       ),
       createPortGroup(
         "consume_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_s_2", 2, 4, "S", {
@@ -3628,15 +3655,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "gas_input_buffer",
-        "fluid",
-        createSlots("input_gas_slot", [50], "gas"),
+        FluidDomain,
+        createSlots("input_gas_slot", [50], ItemDomainFlag.Gas),
       ),
       createStorageSlotGroup(
         "liquid_output_buffer",
-        "fluid",
-        createSlots("output_liquid_slot", [50], "liquid"),
+        FluidDomain,
+        createSlots("output_liquid_slot", [50], ItemDomainFlag.Liquid),
       ),
-      createConsumptionStorageSlotGroup("liquid", ["item_liquid_xiranite"]),
+      createConsumptionStorageSlotGroup(ItemDomainFlag.Liquid, ["item_liquid_xiranite"]),
       // AI-REMOVED 2026-07-16:
       // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
       // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
@@ -3704,151 +3731,151 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       // ---- 输出端口：W 侧 3 个 ----
       createPortGroup(
         "item_output_w2",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [createPort("out_w_2", 0, 1, "W")],
       ),
       createPortGroup(
         "item_output_w5",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [createPort("out_w_5", 0, 4, "W")],
       ),
       createPortGroup(
         "item_output_w8",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [createPort("out_w_8", 0, 7, "W")],
       ),
       // ---- 输出端口：E 侧 3 个 ----
       createPortGroup(
         "item_output_e2",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [createPort("out_e_2", 8, 1, "E")],
       ),
       createPortGroup(
         "item_output_e5",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [createPort("out_e_5", 8, 4, "E")],
       ),
       createPortGroup(
         "item_output_e8",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [createPort("out_e_8", 8, 7, "E")],
       ),
       // ---- 输入端口：N 侧 7 个 ----
       createPortGroup(
         "item_input_n2",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_n_2", 1, 0, "N")],
       ),
       createPortGroup(
         "item_input_n3",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_n_3", 2, 0, "N")],
       ),
       createPortGroup(
         "item_input_n4",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_n_4", 3, 0, "N")],
       ),
       createPortGroup(
         "item_input_n5",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_n_5", 4, 0, "N")],
       ),
       createPortGroup(
         "item_input_n6",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_n_6", 5, 0, "N")],
       ),
       createPortGroup(
         "item_input_n7",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_n_7", 6, 0, "N")],
       ),
       createPortGroup(
         "item_input_n8",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_n_8", 7, 0, "N")],
       ),
       // ---- 输入端口：S 侧 7 个 ----
       createPortGroup(
         "item_input_s2",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_s_2", 1, 8, "S")],
       ),
       createPortGroup(
         "item_input_s3",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_s_3", 2, 8, "S")],
       ),
       createPortGroup(
         "item_input_s4",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_s_4", 3, 8, "S")],
       ),
       createPortGroup(
         "item_input_s5",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_s_5", 4, 8, "S")],
       ),
       createPortGroup(
         "item_input_s6",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_s_6", 5, 8, "S")],
       ),
       createPortGroup(
         "item_input_s7",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_s_7", 6, 8, "S")],
       ),
       createPortGroup(
         "item_input_s8",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_s_8", 7, 8, "S")],
       ),
     ],
     storageSlotGroups: [
       // ---- 输出缓存 ----
-      createStorageSlotGroup("unbuffer_w2", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("unbuffer_w5", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("unbuffer_w8", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("unbuffer_e2", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("unbuffer_e5", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("unbuffer_e8", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("unbuffer_w2", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("unbuffer_w5", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("unbuffer_w8", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("unbuffer_e2", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("unbuffer_e5", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("unbuffer_e8", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
       // ---- 输入缓存 ----
-      createStorageSlotGroup("inbuffer_n2", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("inbuffer_n3", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("inbuffer_n4", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("inbuffer_n5", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("inbuffer_n6", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("inbuffer_n7", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("inbuffer_n8", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("inbuffer_s2", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("inbuffer_s3", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("inbuffer_s4", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("inbuffer_s5", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("inbuffer_s6", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("inbuffer_s7", "item", createSlots("slot", [1], "solid")),
-      createStorageSlotGroup("inbuffer_s8", "item", createSlots("slot", [1], "solid")),
+      createStorageSlotGroup("inbuffer_n2", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("inbuffer_n3", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("inbuffer_n4", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("inbuffer_n5", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("inbuffer_n6", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("inbuffer_n7", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("inbuffer_n8", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("inbuffer_s2", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("inbuffer_s3", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("inbuffer_s4", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("inbuffer_s5", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("inbuffer_s6", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("inbuffer_s7", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
+      createStorageSlotGroup("inbuffer_s8", ItemDomainFlag.Solid, createSlots("slot", [1], ItemDomainFlag.Solid)),
     ],
     portStorageBindings: [
       // ---- 输出绑定 ----
@@ -3925,10 +3952,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort("out_e_1", 2, 1, "E", {
-          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
     ],
@@ -3938,8 +3965,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     // r_pump_water_basic / r_pump_acid_basic 配方保留在 recipe-definition.ts（见 4）。
 
     storageSlotGroups: [
-      createStorageSlotGroup("fluid_output_buffer", "liquid",
-        createSlots("output_fluid_slot", [50], "liquid"),
+      createStorageSlotGroup("fluid_output_buffer", ItemDomainFlag.Liquid,
+        createSlots("output_fluid_slot", [50], ItemDomainFlag.Liquid),
       ),
     ],
     portStorageBindings: [
@@ -3987,7 +4014,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_w_1", 0, 1, "W"),
@@ -4011,8 +4038,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "loader_buffer",
-        "fluid",
-        createSlots("slot", [500], "fluid"),
+        FluidDomain,
+        createSlots("slot", [500], FluidDomain),
       ),
     ],
     recipeChannels: [
@@ -4049,7 +4076,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [
           createPort("out_e_1", 0, 1, "W"),
@@ -4072,8 +4099,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "unloader_buffer",
-        "fluid",
-        createSlots("slot", [500], "fluid"),
+        FluidDomain,
+        createSlots("slot", [500], FluidDomain),
       ),
     ],
     // AI-CORRECTION 2026-06-07: 暗管出口保留仓库取货式生成语义，但槽位在 channel 中同时作为原料/产物以显示为混合槽位。
@@ -4110,15 +4137,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [createPort("in_w_1", 0, 1, "W", {
-          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
     ],
     storageSlotGroups: [
-      createStorageSlotGroup("fluid_input_buffer", "fluid", createSlots("input_fluid_slot", [50], "liquid")),
+      createStorageSlotGroup("fluid_input_buffer", FluidDomain, createSlots("input_fluid_slot", [50], ItemDomainFlag.Liquid)),
     ],
     recipeChannels: [
       createRecipeChannel("default", ["fluid_input_buffer"], []),
@@ -4149,7 +4176,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_input_1",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_s_1", 1, 2, "S", {
@@ -4159,7 +4186,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
       createPortGroup(
         "fluid_input_2",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_s_9", 9, 2, "S", {
@@ -4169,7 +4196,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
       createPortGroup(
         "fluid_input_3",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_s_17", 17, 2, "S", {
@@ -4179,7 +4206,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [
           createPort("out_s_25", 25, 2, "S", {
@@ -4191,28 +4218,28 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[0],
-        "fluid",
-        createSlots("slot", [2], "liquid", { lock: "item_liquid_sewage" }),
+        FluidDomain,
+        createSlots("slot", [2], ItemDomainFlag.Liquid, { lock: "item_liquid_sewage" }),
       ),
       createStorageSlotGroup(
         WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[1],
-        "fluid",
-        createSlots("slot", [2], "liquid", { lock: "item_liquid_sewage" }),
+        FluidDomain,
+        createSlots("slot", [2], ItemDomainFlag.Liquid, { lock: "item_liquid_sewage" }),
       ),
       createStorageSlotGroup(
         WATER_PURIFIER_INPUT_STORAGE_GROUP_IDS[2],
-        "fluid",
-        createSlots("slot", [2], "liquid", { lock: "item_liquid_sewage" }),
+        FluidDomain,
+        createSlots("slot", [2], ItemDomainFlag.Liquid, { lock: "item_liquid_sewage" }),
       ),
       createStorageSlotGroup(
         WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID,
-        "fluid",
-        createSlots("slot", [500], "liquid", { lock: "item_liquid_sewage" }),
+        FluidDomain,
+        createSlots("slot", [500], ItemDomainFlag.Liquid, { lock: "item_liquid_sewage" }),
       ),
       createStorageSlotGroup(
         WATER_PURIFIER_OUTPUT_STORAGE_GROUP_ID,
-        "fluid",
-        createSlots("slot", [50], "liquid", { lock: WATER_PURIFIER_OUTPUT_ITEM_ID }),
+        FluidDomain,
+        createSlots("slot", [50], ItemDomainFlag.Liquid, { lock: WATER_PURIFIER_OUTPUT_ITEM_ID }),
       ),
     ],
     recipeChannels: [
@@ -4290,18 +4317,18 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [createPort("in_w_1", 0, 1, "W", {
-          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort("out_e_1", 2, 1, "E", {
-          acceptRule: { base: { kind: "liquid" }, exclude: [] },
+          acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
     ],
@@ -4314,8 +4341,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "liquid_storage",
-        "fluid",
-        createSlots("slot", [500], "liquid"),
+        FluidDomain,
+        createSlots("slot", [500], ItemDomainFlag.Liquid),
       ),
     ],
     portStorageBindings: [
@@ -4342,21 +4369,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "gas_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_w_1", 0, 1, "W", {
-            acceptRule: { base: { kind: "gas" }, exclude: [] },
+            acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
           }),
         ],
       ),
       createPortGroup(
         "gas_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [
           createPort("out_e_1", 2, 1, "E", {
-            acceptRule: { base: { kind: "gas" }, exclude: [] },
+            acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
           }),
         ],
       ),
@@ -4364,8 +4391,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "gas_storage",
-        "fluid",
-        createSlots("slot", [500], "gas"),
+        FluidDomain,
+        createSlots("slot", [500], ItemDomainFlag.Gas),
       ),
     ],
     portStorageBindings: [
@@ -4427,7 +4454,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "gas_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [
           createPort("in_w_1", 0, 1, "W", {
@@ -4453,7 +4480,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     //   ),
     // ],
     storageSlotGroups: [
-      createConsumptionStorageSlotGroup("gas", VAPORIZER_CONSUMPTION_ITEM_IDS),
+      createConsumptionStorageSlotGroup(ItemDomainFlag.Gas, VAPORIZER_CONSUMPTION_ITEM_IDS),
     ],
     // AI-REMOVED 2026-07-16:
     // Reason: 气体散布机改由计量消费窗口直接销毁输入并产生气体环境，不再运行计时配方。
@@ -4535,7 +4562,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "item_input",
-        "item",
+        SOLID_BELT_PORT,
         "input",
         [createPort("in_w", 0, 0, "W", {
           admissionRule: { itemId: null, limit: null, perMinuteLimit: null },
@@ -4543,7 +4570,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
       createPortGroup(
         "item_output",
-        "item",
+        SOLID_BELT_PORT,
         "output",
         [createPort("out_e", 0, 0, "E")],
       ),
@@ -4553,8 +4580,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "item_buffer",
-        "item",
-        createSlots("slot", [1], "solid"),
+        ItemDomainFlag.Solid,
+        createSlots("slot", [1], ItemDomainFlag.Solid),
         "share-cap",
       ),
     ],
@@ -4593,7 +4620,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "fluid_input",
-        "fluid",
+        FLUID_PIPE_PORT,
         "input",
         [createPort("in_w", 0, 0, "W", {
           admissionRule: { itemId: null, limit: null, perMinuteLimit: null },
@@ -4601,7 +4628,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
       createPortGroup(
         "fluid_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [createPort("out_e", 0, 0, "E")],
       ),
@@ -4611,8 +4638,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "fluid_buffer",
-        "fluid",
-        createSlots("slot", [2], "liquid"),
+        FluidDomain,
+        createSlots("slot", [2], ItemDomainFlag.Liquid),
         "share-cap",
       ),
     ],
@@ -4682,11 +4709,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [
       createPortGroup(
         "gas_output",
-        "fluid",
+        FLUID_PIPE_PORT,
         "output",
         [
           createPort("out_e_1", 2, 1, "E", {
-            acceptRule: { base: { kind: "gas" }, exclude: [] },
+            acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
           }),
         ],
       ),
@@ -4694,8 +4721,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [
       createStorageSlotGroup(
         "gas_output_buffer",
-        "gas",
-        createSlots("output_gas_slot", [50], "gas"),
+        ItemDomainFlag.Gas,
+        createSlots("output_gas_slot", [50], ItemDomainFlag.Gas),
       ),
     ],
     portStorageBindings: [

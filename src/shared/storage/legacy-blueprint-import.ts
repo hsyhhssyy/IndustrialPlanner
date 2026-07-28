@@ -4,6 +4,12 @@ import {
   type BlueprintDocument,
 } from "@/domain/document/blueprint-document";
 import type { GridPoint, GridRotation } from "@/domain/shared/grid";
+import {
+  AnyDomain,
+  FluidDomain,
+  ItemDomainFlag,
+  type ItemDomainFlag as ItemDomainFlags,
+} from "@/domain/shared/item-domain-flags";
 import type { SlotLinkDefinition } from "@/domain/document/world-document";
 import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
 
@@ -301,7 +307,9 @@ function convertLegacyDeviceConfig(options: {
   config: Record<string, unknown>;
   entityId: string;
 }): { config: Record<string, unknown>; slotLinks: SlotLinkDefinition[] } {
-  const config = removeLegacySubmitModeFields(options.config);
+  const config = removeLegacySubmitModeFields(
+    convertLegacyItemDomainConfig(options.config),
+  );
   const empty = { config, slotLinks: [] as SlotLinkDefinition[] };
 
   if (options.definitionId === "item_port_unloader_1") {
@@ -341,6 +349,84 @@ function convertLegacyDeviceConfig(options: {
   }
 
   return { ...empty, config: convertLegacyPortPriorityGroups(options.definitionId, convertLegacyPreloadInputs(config)) };
+}
+
+const LEGACY_ITEM_DOMAIN_FLAGS_BY_NAME: Readonly<Record<string, ItemDomainFlags>> = {
+  solid: ItemDomainFlag.Solid,
+  liquid: ItemDomainFlag.Liquid,
+  gas: ItemDomainFlag.Gas,
+  fluid: FluidDomain,
+  any: AnyDomain,
+};
+
+/**
+ * 旧蓝图的物品域字符串只允许在此导入边界出现；返回值只包含当前位标志结构。
+ */
+function convertLegacyItemDomainConfig(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const nextConfig: Record<string, unknown> = { ...config };
+
+  for (const [key, value] of Object.entries(config)) {
+    if (
+      key.endsWith(".itemFilterType")
+      || /^storageSlotGroups\[\d+\]\.kind$/.test(key)
+    ) {
+      const flags = resolveLegacyItemDomainFlags(value);
+      if (flags !== null) {
+        nextConfig[key] = flags;
+      }
+      continue;
+    }
+
+    const portGroupKindMatch = /^portGroups\[(\d+)\]\.kind$/.exec(key);
+    if (portGroupKindMatch !== null) {
+      const flags = resolveLegacyPortGroupDomainFlags(value);
+      if (flags !== null) {
+        nextConfig[key] = flags;
+        nextConfig[`portGroups[${portGroupKindMatch[1]}].isPipe`] = value === "fluid";
+      }
+      continue;
+    }
+
+    if (key.endsWith(".acceptRule")) {
+      nextConfig[key] = convertLegacyAcceptRule(value);
+    }
+  }
+
+  return nextConfig;
+}
+
+function resolveLegacyItemDomainFlags(value: unknown): ItemDomainFlags | null {
+  return typeof value === "string"
+    ? LEGACY_ITEM_DOMAIN_FLAGS_BY_NAME[value] ?? null
+    : null;
+}
+
+function resolveLegacyPortGroupDomainFlags(value: unknown): ItemDomainFlags | null {
+  if (value === "item") {
+    return ItemDomainFlag.Solid;
+  }
+  return resolveLegacyItemDomainFlags(value);
+}
+
+function convertLegacyAcceptRule(value: unknown): unknown {
+  if (!isRecord(value) || !isRecord(value.base)) {
+    return value;
+  }
+
+  const flags = resolveLegacyItemDomainFlags(value.base.kind);
+  if (flags === null) {
+    return value;
+  }
+
+  return {
+    ...value,
+    base: {
+      kind: "domain",
+      flags,
+    },
+  };
 }
 
 /**

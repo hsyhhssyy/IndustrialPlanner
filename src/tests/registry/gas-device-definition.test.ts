@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import {
+  FluidDomain,
+  ItemDomainFlag,
+} from "@/domain/shared/item-domain-flags";
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
 import { ITEM_DEFINITIONS } from "@/registry/item-definition";
 import { RECIPE_DEFINITIONS } from "@/registry/recipe-definition";
@@ -44,23 +48,32 @@ function expectPortLayout(
 }
 
 function expectGasOnlyPorts(portGroup: PortGroupDefinition): void {
-  expect(portGroup.kind).toBe("fluid");
+  expect(portGroup.kind).toBe(FluidDomain);
+  expect(portGroup.isPipe).toBe(true);
   expect(portGroup.ports.map((port) => port.acceptRule)).toEqual(
-    portGroup.ports.map(() => ({ base: { kind: "gas" }, exclude: [] })),
+    portGroup.ports.map(() => ({
+      base: { kind: "domain", flags: ItemDomainFlag.Gas },
+      exclude: [],
+    })),
   );
 }
 
 function expectLiquidOnlyPorts(portGroup: PortGroupDefinition): void {
-  expect(portGroup.kind).toBe("fluid");
+  expect(portGroup.kind).toBe(FluidDomain);
+  expect(portGroup.isPipe).toBe(true);
   expect(portGroup.ports.map((port) => port.acceptRule)).toEqual(
-    portGroup.ports.map(() => ({ base: { kind: "liquid" }, exclude: [] })),
+    portGroup.ports.map(() => ({
+      base: { kind: "domain", flags: ItemDomainFlag.Liquid },
+      exclude: [],
+    })),
   );
 }
 
 function expectFluidBasePorts(portGroup: PortGroupDefinition): void {
-  expect(portGroup.kind).toBe("fluid");
-  expect(portGroup.ports.map((port) => port.acceptRule.base.kind)).toEqual(
-    portGroup.ports.map(() => "fluid"),
+  expect(portGroup.kind).toBe(FluidDomain);
+  expect(portGroup.isPipe).toBe(true);
+  expect(portGroup.ports.map((port) => port.acceptRule.base)).toEqual(
+    portGroup.ports.map(() => ({ kind: "domain", flags: FluidDomain })),
   );
 }
 
@@ -204,8 +217,18 @@ describe("gas item and device definitions", () => {
       itemFilterType: slotGroup.slots[0]?.itemFilterType,
       capacity: slotGroup.slots[0]?.capacity,
     }))).toEqual([
-      { id: "gas_input_buffer", kind: "fluid", itemFilterType: "gas", capacity: 50 },
-      { id: "gas_output_buffer", kind: "fluid", itemFilterType: "gas", capacity: 50 },
+      {
+        id: "gas_input_buffer",
+        kind: FluidDomain,
+        itemFilterType: ItemDomainFlag.Gas,
+        capacity: 50,
+      },
+      {
+        id: "gas_output_buffer",
+        kind: FluidDomain,
+        itemFilterType: ItemDomainFlag.Gas,
+        capacity: 50,
+      },
     ]);
   });
 
@@ -259,15 +282,15 @@ describe("gas item and device definitions", () => {
     expect(fluidOutput.ports.flatMap((port) => port.acceptRule.exclude)).not.toContain("item_gas_xiranite");
     expect(definition.storageSlotGroups[0]).toMatchObject({
       id: "fluid_input_buffer",
-      kind: "fluid",
-      slots: [{ capacity: 50, itemFilterType: "fluid" }],
+      kind: FluidDomain,
+      slots: [{ capacity: 50, itemFilterType: FluidDomain }],
     });
     expect(definition.storageSlotGroups[1]).toMatchObject({
       id: "fluid_output_buffer",
-      kind: "fluid",
+      kind: FluidDomain,
       slots: [
-        { capacity: 50, itemFilterType: "fluid" },
-        { capacity: 50, itemFilterType: "fluid" },
+        { capacity: 50, itemFilterType: FluidDomain },
+        { capacity: 50, itemFilterType: FluidDomain },
       ],
     });
   });
@@ -281,8 +304,8 @@ describe("gas item and device definitions", () => {
 
     expectFluidBasePorts(fluidInput);
     expect(fluidInputBuffer).toMatchObject({
-      kind: "fluid",
-      slots: [{ capacity: 50, itemFilterType: "fluid" }],
+      kind: FluidDomain,
+      slots: [{ capacity: 50, itemFilterType: FluidDomain }],
     });
   });
 
@@ -295,8 +318,8 @@ describe("gas item and device definitions", () => {
 
     expectFluidBasePorts(fluidOutput);
     expect(fluidOutputBuffer).toMatchObject({
-      kind: "fluid",
-      slots: [{ capacity: 50, itemFilterType: "fluid" }],
+      kind: FluidDomain,
+      slots: [{ capacity: 50, itemFilterType: FluidDomain }],
     });
   });
 

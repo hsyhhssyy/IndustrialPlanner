@@ -10,6 +10,7 @@ import { WorkbenchEncyclopediaPickerController } from "@/app/shell/state/encyclo
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import {
   INSPECTOR_TYPE,
   type WarehouseItemLinkInspectorDeclaration,
@@ -292,13 +293,15 @@ function createMultiSlotWarehouseDefinition(): EntityDefinition {
     portGroups: [
       {
         id: "first_output",
-        kind: "item",
+        kind: ItemDomainFlag.Solid,
+        isPipe: false,
         direction: "output",
         ports: [createTestPort("first_port", 0, 0)],
       },
       {
         id: "second_output",
-        kind: "item",
+        kind: ItemDomainFlag.Solid,
+        isPipe: false,
         direction: "output",
         ports: [createTestPort("second_port", 2, 0)],
       },
@@ -306,12 +309,12 @@ function createMultiSlotWarehouseDefinition(): EntityDefinition {
     storageSlotGroups: [
       {
         id: "first_buffer",
-        kind: "item",
+        kind: ItemDomainFlag.Solid,
         slots: [createTestSlot("slot_1")],
       },
       {
         id: "second_buffer",
-        kind: "item",
+        kind: ItemDomainFlag.Solid,
         slots: [createTestSlot("slot_1")],
       },
     ],
@@ -342,7 +345,7 @@ function createTestPort(
     localCellY,
     edge: "SOUTH",
     acceptRule: {
-      base: { kind: "solid" },
+      base: { kind: "domain", flags: ItemDomainFlag.Solid },
       exclude: [],
     },
     // AI-REMOVED 2026-06-12:
@@ -382,7 +385,7 @@ function createTestSlot(
     // submitMode: "never",
     // submitIntervalSeconds: null,
     itemFilter: "type",
-    itemFilterType: "solid",
+    itemFilterType: ItemDomainFlag.Solid,
   };
 }
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 
 import { advanceDevices } from "@/simulation/runtime/stage-1-advance-devices";
 import { settleRecipes } from "@/simulation/runtime/stage-5-settle-recipes";
@@ -603,7 +604,7 @@ function createProductionOverflowTopology(
     itemCatalog: {
       item_test: {
         id: "item_test",
-        domain: "solid",
+        domain: ItemDomainFlag.Solid,
         tags: [],
       },
     },
@@ -669,7 +670,7 @@ function createProductionOverflowTopology(
         sourceStorageSlotGroupId: "output",
         sourceSlotId: "slot_1",
         capacity: outputCapacity,
-        domain: "solid",
+        domain: ItemDomainFlag.Solid,
         lock: null,
         initialItemType: null,
         initialCount: 0,
@@ -700,7 +701,7 @@ function createRecipePriorityTopology(): CompiledSimulationTopology {
       ...topology.itemCatalog,
       item_input: {
         id: "item_input",
-        domain: "solid",
+        domain: ItemDomainFlag.Solid,
         tags: [],
       },
     },
@@ -792,7 +793,7 @@ function createRecipePriorityTopology(): CompiledSimulationTopology {
         sourceStorageSlotGroupId: "input",
         sourceSlotId: "slot_1",
         capacity: 10,
-        domain: "solid",
+        domain: ItemDomainFlag.Solid,
         lock: null,
         initialItemType: "item_input",
         initialCount: 10,

@@ -199,6 +199,11 @@ vi.mock("pixi.js", () => {
 import { AYU_DARK_THEME, AYU_LIGHT_THEME } from "@/app/theme"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
+import {
+  FluidDomain,
+  ItemDomainFlag,
+  type ItemDomainFlag as ItemDomainFlags,
+} from "@/domain/shared/item-domain-flags"
 import { BeltSprite } from "@/renderer/sprites/belt-sprite"
 import { GenericDeviceSprite } from "@/renderer/sprites/generic-device-sprite"
 import { PipeSprite } from "@/renderer/sprites/pipe-sprite"
@@ -2566,14 +2571,12 @@ describe("GenericDeviceSprite", () => {
 })
 
 function createPortDefaults(
-  kind: "item" | "fluid",
+  kind: ItemDomainFlags,
   roundRobinSeed = 0,
 ) {
   return {
     acceptRule: {
-      base: kind === "fluid"
-        ? { kind: "liquid" as const }
-        : { kind: "solid" as const },
+      base: { kind: "domain" as const, flags: kind },
       exclude: [],
     },
     // AI-REMOVED 2026-06-12:
@@ -2627,32 +2630,34 @@ function createEntityDefinitionStub(): EntityDefinition {
     portGroups: [
       {
         id: "item_input",
-        kind: "item",
+        kind: ItemDomainFlag.Solid,
+        isPipe: false,
         direction: "input",
         ports: [0, 1, 2].map((x) => ({
           id: `in_s_${x}`,
           localCellX: x,
           localCellY: 2,
           edge: "SOUTH",
-          ...createPortDefaults("item", x),
+          ...createPortDefaults(ItemDomainFlag.Solid, x),
         })),
       },
       {
         id: "item_output",
-        kind: "item",
+        kind: ItemDomainFlag.Solid,
+        isPipe: false,
         direction: "output",
         ports: [0, 1, 2].map((x) => ({
           id: `out_n_${x}`,
           localCellX: x,
           localCellY: 0,
           edge: "NORTH",
-          ...createPortDefaults("item", x),
+          ...createPortDefaults(ItemDomainFlag.Solid, x),
         })),
       },
     ],
     storageSlotGroups: Array.from({ length: 6 }, (_, index) => ({
       id: `storage_slot_${index + 1}`,
-      kind: "item" as const,
+      kind: ItemDomainFlag.Solid,
       // AI-REMOVED 2026-05-17:
       // Reason: StorageSlotGroupDefinition.role 已删除，继续保留会破坏类型检查。
       // Trigger: REQ-078 验收运行全仓 typecheck 时暴露旧测试 helper 仍写 role。
@@ -2668,7 +2673,7 @@ function createEntityDefinitionStub(): EntityDefinition {
           id: "slot_1",
           capacity: 50,
           itemFilter: "type" as const,
-          itemFilterType: "solid" as const,
+          itemFilterType: ItemDomainFlag.Solid,
           ...createSlotDefaults(),
         },
       ],
@@ -2698,7 +2703,8 @@ function createLiquidInputEntityDefinitionStub(): EntityDefinition {
     portGroups: [
       {
         id: "fluid_input",
-        kind: "fluid",
+        kind: FluidDomain,
+        isPipe: true,
         direction: "input",
         ports: [
           {
@@ -2706,7 +2712,7 @@ function createLiquidInputEntityDefinitionStub(): EntityDefinition {
             localCellX: 5,
             localCellY: 2,
             edge: "EAST",
-            ...createPortDefaults("fluid"),
+            ...createPortDefaults(FluidDomain),
           },
         ],
       },
@@ -2714,7 +2720,7 @@ function createLiquidInputEntityDefinitionStub(): EntityDefinition {
     storageSlotGroups: [
       {
         id: "fluid_input_buffer",
-        kind: "fluid",
+        kind: FluidDomain,
         // AI-REMOVED 2026-05-17:
         // Reason: StorageSlotGroupDefinition.role 已删除，继续保留会破坏类型检查。
         // Trigger: REQ-078 验收运行全仓 typecheck 时暴露旧测试 helper 仍写 role。
@@ -2730,7 +2736,7 @@ function createLiquidInputEntityDefinitionStub(): EntityDefinition {
             id: "input_fluid_slot",
             capacity: 50,
             itemFilter: "type",
-            itemFilterType: "liquid",
+            itemFilterType: ItemDomainFlag.Liquid,
             ...createSlotDefaults(),
           },
         ],
@@ -2759,7 +2765,8 @@ function createWaterPumpEntityDefinitionStub(): EntityDefinition {
     portGroups: [
       {
         id: "fluid_output",
-        kind: "fluid",
+        kind: FluidDomain,
+        isPipe: true,
         direction: "output",
         ports: [
           {
@@ -2767,7 +2774,7 @@ function createWaterPumpEntityDefinitionStub(): EntityDefinition {
             localCellX: 2,
             localCellY: 1,
             edge: "EAST",
-            ...createPortDefaults("fluid"),
+            ...createPortDefaults(FluidDomain),
           },
         ],
       },
@@ -2775,13 +2782,13 @@ function createWaterPumpEntityDefinitionStub(): EntityDefinition {
     storageSlotGroups: [
       {
         id: "fluid_output_buffer",
-        kind: "fluid",
+        kind: FluidDomain,
         slots: [
           {
             id: "output_fluid_slot",
             capacity: 50,
             itemFilter: "type",
-            itemFilterType: "liquid",
+            itemFilterType: ItemDomainFlag.Liquid,
             ...createSlotDefaults(),
           },
         ],

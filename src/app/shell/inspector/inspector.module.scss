@@ -855,12 +855,12 @@
   }
 }
 
-.warehouse-link-row[data-port-kind="item"] {
+.warehouse-link-row[data-is-pipe="false"] {
   --port-output-accent: #b88a2f;
   --port-output-accent-soft: rgb(184 138 47 / 10%);
 }
 
-.warehouse-link-row[data-port-kind="fluid"] {
+.warehouse-link-row[data-is-pipe="true"] {
   --port-output-accent: #4f8fa8;
   --port-output-accent-soft: rgb(79 143 168 / 10%);
 }
@@ -1247,7 +1247,7 @@
   gap: 8px;
 }
 
-.admission-rule-row[data-port-kind="fluid"] {
+.admission-rule-row[data-is-pipe="true"] {
   --admission-accent: #4f8fa8;
   --admission-accent-soft: rgb(79 143 168 / 10%);
 }
@@ -1667,12 +1667,12 @@
   }
 }
 
-.port-output-row[data-port-kind="item"] {
+.port-output-row[data-is-pipe="false"] {
   --port-output-accent: #b88a2f;
   --port-output-accent-soft: rgb(184 138 47 / 10%);
 }
 
-.port-output-row[data-port-kind="fluid"] {
+.port-output-row[data-is-pipe="true"] {
   --port-output-accent: #4f8fa8;
   --port-output-accent-soft: rgb(79 143 168 / 10%);
 }
@@ -2122,11 +2122,11 @@
   }
 }
 
-.port-priority-row[data-port-kind="item"] {
+.port-priority-row[data-is-pipe="false"] {
   --port-priority-accent: #b88a2f;
 }
 
-.port-priority-row[data-port-kind="fluid"] {
+.port-priority-row[data-is-pipe="true"] {
   --port-priority-accent: #4f8fa8;
 }
 

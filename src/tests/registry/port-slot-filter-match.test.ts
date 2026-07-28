@@ -23,7 +23,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { ItemDomain } from "@/domain/registry/types/entity-definition";
+import type { EntityAcceptRuleDefinition, ItemDomain } from "@/domain/registry/types/entity-definition";
+import {
+  ItemDomainFlag,
+  domainFlagsToLabel,
+} from "@/domain/shared/item-domain-flags";
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
 import { ITEM_DEFINITIONS } from "@/registry/item-definition";
 
@@ -35,10 +39,10 @@ const ITEM_DOMAIN_BY_ID = new Map<string, ItemDomain>(
   ITEM_DEFINITIONS.map((item) => [
     item.id,
     item.tags.includes("gas")
-      ? "gas"
+      ? ItemDomainFlag.Gas
       : item.tags.includes("liquid")
-        ? "liquid"
-        : "solid",
+        ? ItemDomainFlag.Liquid
+        : ItemDomainFlag.Solid,
   ]),
 );
 
@@ -46,55 +50,18 @@ const ITEM_DOMAIN_BY_ID = new Map<string, ItemDomain>(
  * 将 acceptRule base 展开为它能接受的 ItemDomain 集合。
  * "none" 返回空集。
  */
+// AI-CORRECTION 2026-07-28: acceptRule 已迁移为位标志，返回值改为域位集合。
 function acceptDomains(
-  base: { kind: string; itemId?: string },
-): Set<ItemDomain> {
+  base: EntityAcceptRuleDefinition["base"],
+): ItemDomain {
   switch (base.kind) {
-    case "solid":
-      return new Set<ItemDomain>(["solid"]);
-    case "liquid":
-      return new Set<ItemDomain>(["liquid"]);
-    case "gas":
-      return new Set<ItemDomain>(["gas"]);
-    case "fluid":
-      return new Set<ItemDomain>(["liquid", "gas"]);
-    case "any":
-      return new Set<ItemDomain>(["solid", "liquid", "gas"]);
+    case "domain":
+      return base.flags;
     case "item":
-      return new Set<ItemDomain>([ITEM_DOMAIN_BY_ID.get(base.itemId!) ?? "solid"]);
+      return ITEM_DOMAIN_BY_ID.get(base.itemId) ?? ItemDomainFlag.Solid;
     case "none":
-      return new Set<ItemDomain>();
+      return ItemDomainFlag.None;
   }
-  return new Set<ItemDomain>();
-}
-
-/**
- * 将 slot itemFilterType 展开为它能容纳的 ItemDomain 集合。
- */
-function slotDomains(filterType: string): Set<ItemDomain> {
-  switch (filterType) {
-    case "solid":
-      return new Set<ItemDomain>(["solid"]);
-    case "liquid":
-      return new Set<ItemDomain>(["liquid"]);
-    case "gas":
-      return new Set<ItemDomain>(["gas"]);
-    case "fluid":
-      return new Set<ItemDomain>(["liquid", "gas"]);
-    case "any":
-      return new Set<ItemDomain>(["solid", "liquid", "gas"]);
-  }
-  return new Set<ItemDomain>();
-}
-
-/** 判断 superset ⊇ subset */
-function isSuperset<T>(superset: Set<T>, subset: Set<T>): boolean {
-  for (const item of subset) {
-    if (!superset.has(item)) {
-      return false;
-    }
-  }
-  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -106,7 +73,7 @@ describe("port-slot filter type union match", () => {
     const failures: Array<{
       entityId: string;
       slotGroupId: string;
-      slotFilterType: string;
+      slotFilterType: number;
       portUnionDesc: string;
       missingDomains: string;
     }> = [];
@@ -123,7 +90,7 @@ describe("port-slot filter type union match", () => {
         }
 
         // 计算所有绑定端口的 acceptRule 并集
-        const portUnion = new Set<ItemDomain>();
+        let portUnion = ItemDomainFlag.None;
         const portDescs: string[] = [];
 
         for (const binding of boundBindings) {
@@ -133,30 +100,26 @@ describe("port-slot filter type union match", () => {
           }
           for (const port of portGroup.ports) {
             const domains = acceptDomains(port.acceptRule.base);
-            for (const d of domains) {
-              portUnion.add(d);
-            }
+            portUnion |= domains;
             portDescs.push(`${portGroup.id}.${port.id}(${port.acceptRule.base.kind})`);
           }
         }
 
-        if (portUnion.size === 0) {
+        if (portUnion === ItemDomainFlag.None) {
           continue; // "none" 端口不产生域约束
         }
 
         // 验证槽位 filterType 覆盖 portUnion
-        const slotFilter = slotGroup.slots[0]?.itemFilterType ?? "solid";
-        const slotSet = slotDomains(slotFilter);
+        const slotFilter = slotGroup.slots[0]?.itemFilterType ?? ItemDomainFlag.Solid;
 
-        if (!isSuperset(slotSet, portUnion)) {
-          const portUnionStr = [...portUnion].join(", ");
-          const missing = [...portUnion].filter((d) => !slotSet.has(d)).join(", ");
+        if ((slotFilter & portUnion) !== portUnion) {
+          const missingFlags = portUnion & ~slotFilter;
           failures.push({
             entityId: def.id,
             slotGroupId: slotGroup.id,
             slotFilterType: slotFilter,
-            portUnionDesc: `{${portUnionStr}} ← ${portDescs.join(", ")}`,
-            missingDomains: missing,
+            portUnionDesc: `{${domainFlagsToLabel(portUnion)}} ← ${portDescs.join(", ")}`,
+            missingDomains: domainFlagsToLabel(missingFlags),
           });
         }
       }
