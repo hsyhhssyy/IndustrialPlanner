@@ -1,0 +1,8 @@
+{
+  "caches": [
+    { "source": "/index.html", "cacheTtl": 0 },
+    { "source": "/sw.js", "cacheTtl": 0 },
+    { "source": "/version.js", "cacheTtl": 0 },
+    { "source": "/manifest.webmanifest", "cacheTtl": 0 }
+  ]
+}

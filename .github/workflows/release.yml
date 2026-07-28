@@ -166,6 +166,16 @@ jobs:
           test -f dist/index.html
           test -f dist/v2/index.html
 
+      - name: Copy EdgeOne Makers config
+        run: cp edgeone.json dist/
+
+      - name: Deploy to EdgeOne Makers (beta mirror)
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+        run: |
+          npm install -g edgeone
+          edgeone makers deploy ./dist -n endfield-planner -e preview -t "$EDGEONE_API_TOKEN"
+
       - name: Package release asset
         if: env.RELEASE_CHANNEL != 'beta'
         shell: bash

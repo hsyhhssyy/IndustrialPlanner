@@ -16,6 +16,7 @@ import LucidePlus from "~icons/lucide/plus";
 import LucideSave from "~icons/lucide/save";
 import LucideSearch from "~icons/lucide/search";
 import LucideTrash2 from "~icons/lucide/trash-2";
+import LucideUpload from "~icons/lucide/upload";
 import LucideX from "~icons/lucide/x";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -74,6 +75,14 @@ import {
   type ModuleBalancingItemBalance,
   type ModuleBalancingWarehouseForecast,
 } from "@/app/shell/module-balancing/module-balancing-model";
+import {
+  buildCanvasExportData,
+  buildCanvasImportPlan,
+  downloadCanvasExportJson,
+  parseCanvasImportData,
+  applyCanvasImport,
+  type CanvasImportPlan,
+} from "@/app/shell/module-balancing/canvas-io";
 import {
   readRecommendedCanvasLibrary,
   type RecommendedCanvasRecord,
@@ -585,6 +594,113 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     setActivePage({ kind: "canvas" });
   };
 
+  const handleExportCanvas = () => {
+    if (activeCanvas === null) {
+      return;
+    }
+
+    const exportData = buildCanvasExportData(activeCanvas, balancingState.customModules);
+    downloadCanvasExportJson(exportData, activeCanvas.name);
+  };
+
+  const [importPlan, setImportPlan] = useState<CanvasImportPlan | null>(null);
+
+  const handleImportCanvas = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const raw = JSON.parse(reader.result as string);
+      const data = parseCanvasImportData(raw);
+      if (data === null) {
+        return;
+      }
+
+      const plan = buildCanvasImportPlan(data, balancingState.customModules);
+      const hasConflicts = plan.moduleActions.some((action) => action.kind === "conflict");
+      if (hasConflicts) {
+        setImportPlan(plan);
+        return;
+      }
+
+      // 无冲突，直接导入
+      const moduleIdMapping = plan.moduleIdMapping;
+      runInAction(() => {
+        const newCanvasId = applyCanvasImport(
+          data,
+          new Map(moduleIdMapping),
+          balancingState.customModules,
+          balancingState.canvases,
+        );
+        balancingState.activeCanvasId = newCanvasId;
+      });
+      setSelectedStageId(null);
+      setActivePage({ kind: "canvas" });
+    };
+    reader.onerror = () => {
+      // 文件读取失败，静默忽略
+    };
+    reader.readAsText(file);
+  };
+
+  const confirmImportWithConflicts = () => {
+    if (importPlan === null) {
+      return;
+    }
+
+    const resolvedMapping = new Map(importPlan.moduleIdMapping);
+    for (const action of importPlan.moduleActions) {
+      if (action.kind === "conflict") {
+        resolvedMapping.set(action.importId, action.importId);
+        // 覆盖本地模块
+        runInAction(() => {
+          const localIndex = balancingState.customModules.findIndex(
+            (m) => m.id === action.importId,
+          );
+          if (localIndex >= 0) {
+            balancingState.customModules[localIndex] = {
+              ...action.importModule,
+              folderId: balancingState.customModules[localIndex]!.folderId,
+              inputs: action.importModule.inputs.map((p) => ({ ...p })),
+              outputs: action.importModule.outputs.map((p) => ({ ...p })),
+            };
+          }
+        });
+      }
+    }
+
+    runInAction(() => {
+      const newCanvasId = applyCanvasImport(
+        {
+          version: 1,
+          canvas: {
+            name: importPlan.canvasData.name,
+            folderId: importPlan.canvasData.folderId,
+            globalInputs: importPlan.canvasData.globalInputs,
+            stages: importPlan.canvasData.stages.map((s) => ({
+              id: createModuleBalancingId(),
+              name: s.name,
+              entries: s.entries.map((e) => ({ moduleId: e.moduleId, quantity: e.quantity })),
+            })),
+            warehouseCapacity: importPlan.canvasData.warehouseCapacity,
+          },
+          modules: importPlan.moduleActions
+            .filter((a): a is { kind: "create"; module: ModuleBalancingCustomModule } => a.kind === "create")
+            .map((a) => a.module),
+        },
+        resolvedMapping,
+        balancingState.customModules,
+        balancingState.canvases,
+      );
+      balancingState.activeCanvasId = newCanvasId;
+    });
+    setSelectedStageId(null);
+    setActivePage({ kind: "canvas" });
+    setImportPlan(null);
+  };
+
+  const cancelImport = () => {
+    setImportPlan(null);
+  };
+
   const createCanvasFolder = (): string => {
     const folderId = createModuleBalancingId();
     const folder: ModuleBalancingFolderReadWrite = {
@@ -784,6 +900,8 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
               setNewCanvasDialogOpen(true);
             }}
             onDeleteCanvas={() => deleteCanvas(activeCanvas.id)}
+            onExportCanvas={handleExportCanvas}
+            onImportCanvas={handleImportCanvas}
             onOpenCanvasLibrary={() => setCanvasLibraryDialogOpen(true)}
             t={t}
           />
@@ -959,6 +1077,56 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
         </OverlayStackLayer>
       ) : null}
       {canvasLibraryDialog}
+      {importPlan !== null ? (() => {
+        const conflictActions = importPlan.moduleActions.filter(
+          (a): a is { kind: "conflict"; importId: string; importName: string; localName: string; importModule: ModuleBalancingCustomModule } => a.kind === "conflict",
+        );
+        const firstConflict = conflictActions[0];
+        return (
+          <OverlayStackLayer layerId="module-balancing:import-conflict" visible>
+            {({ zIndex }) => (
+              <div className={cm(styles, "module-balancing-editor-backdrop")} onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  cancelImport();
+                }
+              }} style={{ zIndex }}>
+                <section className={cm(styles, "module-balancing-quantity-editor")} role="dialog" aria-modal="true">
+                  <header className={cm(styles, "module-balancing-form-header")}>
+                    <h3>{t("moduleBalancing.importCanvasConflict")}</h3>
+                    <button className={cm(styles, "module-balancing-icon-button")} type="button" onClick={cancelImport} aria-label={t("action.close")}>
+                      <LucideX aria-hidden="true" />
+                    </button>
+                  </header>
+                  {conflictActions.length === 1 && firstConflict !== undefined ? (
+                    <p style={{ margin: "12px 0" }}>
+                      {t("moduleBalancing.importCanvasConflictMessage").replace("{importName}", firstConflict.importName)}
+                    </p>
+                  ) : (
+                    <div style={{ margin: "12px 0" }}>
+                      <p>{t("moduleBalancing.importCanvasConflict")}：</p>
+                      <ul>
+                        {conflictActions.map((action) => (
+                          <li key={action.importId}>
+                            {t("moduleBalancing.importCanvasConflictMessage").replace("{importName}", action.importName)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <footer className={cm(styles, "module-balancing-form-actions")}>
+                    <button className={cm(styles, "module-balancing-icon-text-button")} type="button" onClick={cancelImport}>
+                      {t("action.cancel")}
+                    </button>
+                    <button className={cm(styles, "module-balancing-primary-button")} type="button" onClick={confirmImportWithConflicts}>
+                      {t("action.confirm")}
+                    </button>
+                  </footer>
+                </section>
+              </div>
+            )}
+          </OverlayStackLayer>
+        );
+      })() : null}
       {newFolderDialogOpen ? (
         <OverlayStackLayer layerId="module-balancing:new-folder" visible>
           {({ zIndex }) => (
@@ -1774,6 +1942,8 @@ const CanvasSettingsPanel = observer(function CanvasSettingsPanel({
   canDelete,
   onCreateCanvas,
   onDeleteCanvas,
+  onExportCanvas,
+  onImportCanvas,
   onOpenCanvasLibrary,
   t,
 }: {
@@ -1782,9 +1952,12 @@ const CanvasSettingsPanel = observer(function CanvasSettingsPanel({
   canDelete: boolean;
   onCreateCanvas: () => void;
   onDeleteCanvas: () => void;
+  onExportCanvas: () => void;
+  onImportCanvas: (file: File) => void;
   onOpenCanvasLibrary: () => void;
   t: (key: string) => string;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   // AI-REMOVED 2026-07-27:
   // Reason: 画布切换由原生下拉框升级为支持文件夹管理的独立选择对话框。
   // Trigger: 用户要求移除画布下拉框，并在“加载其他画布”对话框中切换与管理画布。
@@ -1852,9 +2025,43 @@ const CanvasSettingsPanel = observer(function CanvasSettingsPanel({
         </label>
       </div>
       <footer className={cm(styles, "module-balancing-form-actions")}>
+        <input
+          ref={fileInputRef}
+          accept=".json"
+          hidden
+          type="file"
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            if (file !== undefined) {
+              onImportCanvas(file);
+            }
+            // 重置以允许重复选择同一文件
+            event.currentTarget.value = "";
+          }}
+        />
+        <button
+          className={cm(styles, "module-balancing-icon-text-button")}
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <LucideFolderInput aria-hidden="true" />
+          <span>{t("moduleBalancing.importCanvas")}</span>
+        </button>
         <button className={cm(styles, "module-balancing-danger-button")} disabled={!canDelete} type="button" onClick={onDeleteCanvas}>
           <LucideTrash2 aria-hidden="true" />
           <span>{t("moduleBalancing.deleteCanvas")}</span>
+        </button>
+        <button className={cm(styles, "module-balancing-primary-button")} type="button" onClick={onCreateCanvas}>
+          <LucidePlus aria-hidden="true" />
+          <span>{t("moduleBalancing.newCanvas")}</span>
+        </button>
+        <button
+          className={cm(styles, "module-balancing-icon-text-button")}
+          type="button"
+          onClick={onExportCanvas}
+        >
+          <LucideUpload aria-hidden="true" />
+          <span>{t("moduleBalancing.exportCanvas")}</span>
         </button>
         <button
           className={cm(styles, "module-balancing-icon-text-button module-balancing-load-canvas-button")}
@@ -1863,10 +2070,6 @@ const CanvasSettingsPanel = observer(function CanvasSettingsPanel({
         >
           <LucideDownload aria-hidden="true" />
           <span>{t("moduleBalancing.loadOtherCanvas")}</span>
-        </button>
-        <button className={cm(styles, "module-balancing-primary-button")} type="button" onClick={onCreateCanvas}>
-          <LucidePlus aria-hidden="true" />
-          <span>{t("moduleBalancing.newCanvas")}</span>
         </button>
       </footer>
     </section>

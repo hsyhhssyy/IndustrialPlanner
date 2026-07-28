@@ -1,5 +1,6 @@
 import { reaction, runInAction } from "mobx";
 
+import { isLegacyModuleBalancingId, createModuleBalancingId } from "../shell/module-balancing/module-balancing-model";
 import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
 import { normalizeSelectedActivityIds } from "@/shared/registry/activity-availability";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
@@ -396,12 +397,96 @@ function normalizePersistedModuleBalancingState(
     ? persistedModuleBalancingState.activeCanvasId
     : safeCanvases[0]?.id ?? null;
 
+  // ── ID 迁移：旧格式 → UUID ──
+  const migrationMap = new Map<string, string>();
+  const collectMigrationId = (id: string) => {
+    if (isLegacyModuleBalancingId(id) && !migrationMap.has(id)) {
+      migrationMap.set(id, createModuleBalancingId());
+    }
+  };
+
+  for (const folder of folders) {
+    collectMigrationId(folder.id);
+  }
+  for (const folder of canvasFolders) {
+    collectMigrationId(folder.id);
+  }
+  for (const module of customModules) {
+    collectMigrationId(module.id);
+  }
+  for (const canvas of safeCanvases) {
+    collectMigrationId(canvas.id);
+    for (const stage of canvas.stages) {
+      collectMigrationId(stage.id);
+    }
+  }
+  if (activeCanvasId !== null) {
+    collectMigrationId(activeCanvasId);
+  }
+
+  if (migrationMap.size > 0) {
+    for (const folder of folders) {
+      const newId = migrationMap.get(folder.id);
+      if (newId !== undefined) {
+        folder.id = newId;
+      }
+    }
+    for (const folder of canvasFolders) {
+      const newId = migrationMap.get(folder.id);
+      if (newId !== undefined) {
+        folder.id = newId;
+      }
+    }
+    for (const module of customModules) {
+      const newId = migrationMap.get(module.id);
+      if (newId !== undefined) {
+        module.id = newId;
+      }
+      // 迁移 module.folderId 引用
+      if (module.folderId !== null) {
+        const newFolderId = migrationMap.get(module.folderId);
+        if (newFolderId !== undefined) {
+          module.folderId = newFolderId;
+        }
+      }
+    }
+    for (const canvas of safeCanvases) {
+      const newCanvasId = migrationMap.get(canvas.id);
+      if (newCanvasId !== undefined) {
+        canvas.id = newCanvasId;
+      }
+      // 迁移 canvas.folderId 引用
+      if (canvas.folderId !== null) {
+        const newFolderId = migrationMap.get(canvas.folderId);
+        if (newFolderId !== undefined) {
+          canvas.folderId = newFolderId;
+        }
+      }
+      for (const stage of canvas.stages) {
+        const newStageId = migrationMap.get(stage.id);
+        if (newStageId !== undefined) {
+          stage.id = newStageId;
+        }
+        for (const entry of stage.entries) {
+          const newModuleId = migrationMap.get(entry.moduleId);
+          if (newModuleId !== undefined) {
+            entry.moduleId = newModuleId;
+          }
+        }
+      }
+    }
+  }
+
+  const finalActiveCanvasId = activeCanvasId !== null && migrationMap.has(activeCanvasId)
+    ? migrationMap.get(activeCanvasId) ?? activeCanvasId
+    : activeCanvasId;
+
   return {
     canvases: safeCanvases,
     canvasFolders,
     customModules,
     folders,
-    activeCanvasId,
+    activeCanvasId: finalActiveCanvasId,
   };
 }
 
