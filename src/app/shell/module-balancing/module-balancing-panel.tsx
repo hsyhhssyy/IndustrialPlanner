@@ -2726,9 +2726,11 @@ function BalanceStrip({
             <div className={cm(styles, "module-balancing-balance-detail")} key={balance.itemId}>
               <img alt="" src={resolveItemIconSrc(balance.itemId, index)} />
               <span>{resolveItemName(balance.itemId, index, t)}</span>
-              <span>{t("moduleBalancing.outputItems")} {formatFlow(balance.totalOutput)}</span>
-              <span>{t("moduleBalancing.inputItems")} {formatFlow(balance.totalInput)}</span>
-              <strong className={cm(styles, resolveBalanceClassName(balance.netDelta))}>{formatSignedFlow(balance.netDelta)}/min</strong>
+              <div className={cm(styles, "module-balancing-summary-metrics")}>
+                <span>{t("moduleBalancing.outputItems")} {formatFlow(balance.totalOutput)}</span>
+                <span>{t("moduleBalancing.inputItems")} {formatFlow(balance.totalInput)}</span>
+                <strong className={cm(styles, resolveBalanceClassName(balance.netDelta))}>{formatSignedFlow(balance.netDelta)}/min</strong>
+              </div>
             </div>
           ) : (
             <span className={cm(styles, `module-balancing-balance-chip ${resolveBalanceClassName(balance.netDelta)}`)} key={balance.itemId} title={resolveItemName(balance.itemId, index, t)}>
@@ -2782,9 +2784,11 @@ function SummaryPanel({
           <div className={cm(styles, "module-balancing-summary-row")} key={balance.itemId}>
             <img alt="" src={resolveItemIconSrc(balance.itemId, index)} />
             <strong className={cm(styles, "module-balancing-summary-item-name")}>{resolveItemName(balance.itemId, index, t)}</strong>
-            <span className={cm(styles, "module-balancing-summary-metric")}>{t("moduleBalancing.outputItems")} <strong>{formatFlow(balance.totalOutput)}</strong></span>
-            <span className={cm(styles, "module-balancing-summary-metric")}>{t("moduleBalancing.inputItems")} <strong>{formatFlow(balance.totalInput)}</strong></span>
-            <strong className={cm(styles, `module-balancing-summary-net ${resolveBalanceClassName(balance.netDelta)}`)}>{formatSignedFlow(balance.netDelta)}/min</strong>
+            <div className={cm(styles, "module-balancing-summary-metrics")}>
+              <span className={cm(styles, "module-balancing-summary-metric")}>{t("moduleBalancing.outputItems")} <strong>{formatFlow(balance.totalOutput)}</strong></span>
+              <span className={cm(styles, "module-balancing-summary-metric")}>{t("moduleBalancing.inputItems")} <strong>{formatFlow(balance.totalInput)}</strong></span>
+              <strong className={cm(styles, `module-balancing-summary-net ${resolveBalanceClassName(balance.netDelta)}`)}>{formatSignedFlow(balance.netDelta)}/min</strong>
+            </div>
           </div>
         ))}
       </div>

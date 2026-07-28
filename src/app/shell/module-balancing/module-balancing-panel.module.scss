@@ -1103,8 +1103,8 @@
 .module-balancing-summary {
   display: grid;
   align-content: start;
-  gap: 16px;
-  padding: 18px;
+  gap: 12px;
+  padding: 14px;
 }
 
 .module-balancing-port-list {
@@ -1348,7 +1348,7 @@
 
 .module-balancing-balance-detail-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 380px));
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
 }
 
 .module-balancing-balance-chip {
@@ -1393,28 +1393,34 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
-  padding: 6px;
+  padding: 5px 8px;
   border-radius: 7px;
   background: var(--surface-2);
   font-size: 0.72rem;
 }
 
 .module-balancing-balance-detail {
-  grid-template-columns: 22px minmax(90px, 1fr) auto auto auto;
+  grid-template-columns: 22px minmax(90px, 1fr) auto;
 }
 
 .module-balancing-summary-list,
 .module-balancing-warehouse-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 380px));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 4px;
 }
 
 .module-balancing-summary-row {
-  grid-template-columns: 32px minmax(120px, 1fr) minmax(90px, auto) minmax(90px, auto) minmax(92px, auto);
-  min-height: 48px;
-  padding: 10px 12px;
+  grid-template-columns: 28px 1fr auto;
+  min-height: 34px;
+  padding: 5px 10px;
   border: 1px solid transparent;
+}
+
+.module-balancing-summary-metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .module-balancing-warehouse-list {
@@ -1859,10 +1865,7 @@
   grid-template-columns: 24px minmax(90px, 1fr) auto;
 }
 
-.module-balancing-panel.is-touch .module-balancing-balance-detail span:nth-of-type(2),
-.module-balancing-panel.is-touch .module-balancing-balance-detail span:nth-of-type(3),
-.module-balancing-panel.is-touch .module-balancing-summary-row span:nth-of-type(2),
-.module-balancing-panel.is-touch .module-balancing-summary-row span:nth-of-type(3) {
+.module-balancing-panel.is-touch .module-balancing-summary-metrics > span {
   display: none;
 }
 
@@ -2040,7 +2043,7 @@
 .module-balancing-summary-list {
   grid-column: 1;
   align-content: start;
-  gap: 8px;
+  gap: 4px;
 }
 
 .module-balancing-summary.is-summary-full-width .module-balancing-summary-list {
@@ -2068,11 +2071,11 @@
 }
 
 .module-balancing-summary-net {
-  justify-self: end;
-  padding: 4px 8px;
-  border-radius: 999px;
+  padding: 2px 7px;
+  border-radius: 6px;
   background: var(--surface-1);
   white-space: nowrap;
+  font-size: 0.7rem;
 }
 
 .module-balancing-summary-count {
@@ -2200,7 +2203,7 @@
     grid-template-columns: 28px minmax(100px, 1fr) auto;
   }
 
-  .module-balancing-summary-metric {
+  .module-balancing-summary-metrics > span {
     display: none;
   }
 
