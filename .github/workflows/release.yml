@@ -223,7 +223,7 @@ jobs:
           EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
         run: |
           npm install -g edgeone
-          edgeone makers deploy ./dist -n endfield-planner -e preview -t "$EDGEONE_API_TOKEN"
+          edgeone makers deploy ./dist -n endfield-planner -t "$EDGEONE_API_TOKEN"
 
   build-docker:
     name: Docker ${{ needs.prepare.outputs.tag }}
