@@ -45,6 +45,16 @@ export interface PortOverlayEntry {
   readonly state: "chevron" | "cross";
 }
 
+export interface ProductionPipePortGhostEntry {
+  readonly entityId: string;
+  readonly portGroupId: string;
+  readonly portId: string;
+  readonly insideGridPoint: GridPoint;
+  readonly outsideGridPoint: GridPoint;
+  readonly edge: GridEdge;
+  readonly variant: "ordinary" | "consumption";
+}
+
 interface ResolvedPortEndpoint {
   readonly entityId: string;
   readonly portGroupId: string;
@@ -135,6 +145,55 @@ export function resolveSelectedPortOverlayEntries(options: {
   return resolveEntityPortEndpoints(entity, definition).map((endpoint) =>
     toPortOverlayEntry(endpoint, "chevron")
   );
+}
+
+export function resolveProductionPipePortGhostEntries(options: {
+  readonly entities: readonly WorldEntity[];
+  readonly entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  readonly queries: RegistryQuery;
+  readonly hiddenEntityIds?: ReadonlySet<string>;
+}): ProductionPipePortGhostEntry[] {
+  const entries: ProductionPipePortGhostEntry[] = [];
+
+  for (const entity of options.entities) {
+    const definition = options.entityDefinitionMap.get(entity.definitionId);
+    if (
+      definition === undefined
+      || !definition.tags.includes("Producer")
+      || definition.tags.includes("ChevronHidden")
+      || options.hiddenEntityIds?.has(entity.id)
+    ) {
+      continue;
+    }
+
+    for (const endpoint of resolveEntityPortEndpoints(entity, definition)) {
+      if (
+        endpoint.kind !== "fluid"
+        || !canLegallyLeadPipeFromEndpoint({
+          endpoint,
+          entities: options.entities,
+          entityDefinitionMap: options.entityDefinitionMap,
+          queries: options.queries,
+        })
+      ) {
+        continue;
+      }
+
+      entries.push({
+        entityId: endpoint.entityId,
+        portGroupId: endpoint.portGroupId,
+        portId: endpoint.portId,
+        insideGridPoint: endpoint.insideGridPoint,
+        outsideGridPoint: endpoint.outsideGridPoint,
+        edge: endpoint.edge,
+        variant: isConsumptionPortGroup(definition, endpoint.portGroupId)
+          ? "consumption"
+          : "ordinary",
+      });
+    }
+  }
+
+  return entries;
 }
 
 export function createPortOverlayDecoration(): DecorationLayer {
@@ -390,6 +449,28 @@ function canLegallyLeadLogisticsFromPort(options: {
     entities: options.entities,
     entityDefinitionMap: options.entityDefinitionMap,
   });
+}
+
+function canLegallyLeadPipeFromEndpoint(options: {
+  endpoint: ResolvedPortEndpoint;
+  entities: readonly WorldEntity[];
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  queries: RegistryQuery;
+}): boolean {
+  const directions: readonly LogisticsPortDirection[] = options.endpoint.direction === "bidirectional"
+    ? ["input", "output"]
+    : [options.endpoint.direction];
+
+  return directions.some((direction) =>
+    canLegallyLeadLogisticsFromPort({
+      endpoint: options.endpoint,
+      kind: LOGISTICS_KIND.pipe,
+      direction,
+      entities: options.entities,
+      entityDefinitionMap: options.entityDefinitionMap,
+      queries: options.queries,
+    })
+  );
 }
 
 function hasFacingConnectedPort(options: {
@@ -712,6 +793,22 @@ function resolvePortChevronMaterial(
     }
   }
   return "solid";
+}
+
+function isConsumptionPortGroup(
+  definition: EntityDefinition,
+  portGroupId: string,
+): boolean {
+  const consumptionIngredientStorageGroupIds = new Set(
+    definition.recipeChannels
+      .filter((channel) => channel.type === "consumption-channel")
+      .flatMap((channel) => channel.ingredientStorageGroupIds),
+  );
+
+  return definition.portStorageBindings.some((binding) =>
+    binding.portGroupId === portGroupId
+    && consumptionIngredientStorageGroupIds.has(binding.storageSlotGroupId)
+  );
 }
 
 function isFluidSlotFilter(

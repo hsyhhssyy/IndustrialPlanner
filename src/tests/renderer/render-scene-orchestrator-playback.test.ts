@@ -283,6 +283,10 @@ vi.mock("@/renderer/scene/decorations/PortOverlayDecoration", () => ({
   createPortOverlayDecoration: () => orchestratorTestState.createDecoration(),
 }))
 
+vi.mock("@/renderer/scene/decorations/PipePortGhostDecoration", () => ({
+  createPipePortGhostDecoration: () => orchestratorTestState.createDecoration(),
+}))
+
 import { createRenderSceneOrchestrator } from "@/renderer/scene/render-scene-orchestrator"
 import type { RenderHost } from "@/renderer/renderer-host"
 import { AYU_LIGHT_THEME } from "@/app/theme"

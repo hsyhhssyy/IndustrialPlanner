@@ -73,6 +73,7 @@ import { createDarkPipeLinkLineDecoration } from "./decorations/DarkPipeLinkLine
 import { createDarkPipeLinkSelectionDecoration } from "./decorations/DarkPipeLinkSelectionDecoration"
 import { createHoverCornersDecoration } from "./decorations/HoverCornersDecoration"
 import { createPortOverlayDecoration } from "./decorations/PortOverlayDecoration"
+import { createPipePortGhostDecoration } from "./decorations/PipePortGhostDecoration"
 import { createAdmissionItemIconDecoration } from "./decorations/AdmissionItemIconDecoration"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
@@ -236,6 +237,7 @@ export function createRenderSceneOrchestrator(
   const logisticsPlacementIdleCursorDecoration = createLogisticsPlacementIdleCursorDecoration()
   const hoverCornersDecoration = createHoverCornersDecoration()
   const portOverlayDecoration = createPortOverlayDecoration()
+  const pipePortGhostDecoration = createPipePortGhostDecoration()
   const admissionItemIconDecoration = createAdmissionItemIconDecoration()
   const beltFlowDecoration = createBeltFlowDecoration()
   const pipeFlowDecoration = createPipeFlowDecoration()
@@ -568,6 +570,10 @@ export function createRenderSceneOrchestrator(
       portOverlayDecoration.sync(ctx)
     })
 
+    measureRenderStage(frameProfiler, "decoration.pipePortGhost", () => {
+      pipePortGhostDecoration.sync(ctx)
+    })
+
     measureRenderStage(frameProfiler, "decoration.admissionItemIcon", () => {
       admissionItemIconDecoration.sync(ctx, entities)
     })
@@ -634,6 +640,7 @@ export function createRenderSceneOrchestrator(
   layers.logisticsBelt.addChild(beltCargoOverlayLayer)
 
   // 物流管道层级（从底到顶）
+  layers.logisticsPipe.addChild(pipePortGhostDecoration.container)
   layers.logisticsPipe.addChild(pipeSubEntity)
   layers.logisticsPipe.addChild(pipeFlowLayer)
   layers.logisticsPipe.addChild(darkPipeLinkLineLayer)
@@ -707,6 +714,7 @@ export function createRenderSceneOrchestrator(
       logisticsPlacementIdleCursorDecoration.destroy()
       hoverCornersDecoration.destroy()
       portOverlayDecoration.destroy()
+      pipePortGhostDecoration.destroy()
       admissionItemIconDecoration.destroy()
       beltFlowDecoration.destroy()
       pipeFlowDecoration.destroy()
