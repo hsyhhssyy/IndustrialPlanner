@@ -1,5 +1,6 @@
 import { createLogger } from "@/shared/logging/logger";
 import type {
+  SyncConflictDecision,
   SyncInitialSyncStage,
   SyncRunReason,
   SyncTaskKind,
@@ -9,6 +10,8 @@ import type { WebDavStorageClient } from "../webdav";
 import type { WebDavSyncSettings } from "../storage";
 import type {
   WebDavSyncAdapter,
+  WebDavSyncConflict,
+  WebDavSyncConflictDecision,
   WebDavSyncAdapterScope,
   WebDavSyncAdapterResult,
 } from "./webdav-sync-adapters";
@@ -44,6 +47,10 @@ export interface WebDavSyncRequestActivity {
   readonly queuedRequestCount: number;
 }
 
+export interface WebDavSyncClientRequestOptions {
+  readonly requestTimeoutMs?: number;
+}
+
 export interface WebDavSyncMaintenanceTask {
   readonly kind: SyncTaskKind;
   readonly run: (
@@ -76,6 +83,7 @@ export interface WebDavSyncServiceOptions {
     onRequestActivityChange: (
       activity: WebDavSyncRequestActivity,
     ) => void,
+    requestOptions: WebDavSyncClientRequestOptions,
   ) => WebDavStorageClient;
   readonly adapters: readonly WebDavSyncAdapter[];
   readonly createInitialSyncPlan?: () => WebDavInitialSyncPlan;
@@ -87,7 +95,21 @@ export interface WebDavSyncServiceOptions {
   readonly intervalMs?: number;
   readonly retryDelaysMs?: readonly number[];
   readonly onStatusChange?: (status: WebDavSyncServiceStatus) => void;
-  readonly onConflict?: (results: readonly WebDavSyncAdapterResult[]) => void;
+  readonly onConflictDiscoveryStart?: () => void;
+  readonly resolveConflicts?: (
+    conflicts: readonly WebDavSyncConflict<unknown>[],
+  ) => Promise<readonly SyncConflictDecision[]>;
+  readonly onConflictWorkflowFinished?: () => void;
+  // AI-REMOVED 2026-07-29:
+  // Reason: 适配器结果只包含 asset id，无法支撑一次性范围探测与逐项决议。
+  // Trigger: 用户要求检测到首个冲突后普查全部业务资源，只弹一个汇总窗口。
+  // Evidence: onConflict 在同步已经结束后触发，且每个适配器内部此前已逐个等待弹窗。
+  // Replacement: onConflictDiscoveryStart / resolveConflicts / onConflictWorkflowFinished。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly onConflict?: (results: readonly WebDavSyncAdapterResult[]) => void;
 }
 
 export interface WebDavSyncService {
@@ -95,13 +117,25 @@ export interface WebDavSyncService {
   stop(): void;
   syncNow(trigger: WebDavSyncTrigger): Promise<WebDavSyncServiceStatus>;
   notifyLocalChange(change: WebDavLocalChange): void;
+  notifyConflictDetected(conflict: WebDavSyncConflict<unknown>): void;
   getStatus(): WebDavSyncServiceStatus;
 }
 
 const DEFAULT_INTERVAL_MS = 60_000;
 const LOCAL_CHANGE_IDLE_UPLOAD_MS = 5_000;
 const LOCAL_CHANGE_MAX_UPLOAD_MS = 30_000;
-const DEFAULT_RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000] as const;
+const INITIAL_SYNC_REQUEST_TIMEOUT_MS = 8_000;
+// AI-REMOVED 2026-07-29:
+// Reason: 对整个同步事务做六轮退避重试会把一次 30 秒请求超时放大为数分钟，并重复已经成功的写入步骤。
+// Trigger: 用户要求首次网络失败后立即解除画布锁定并显示错误状态。
+// Evidence: retryWebDavSync 包裹 beforeSync、全部 adapter 和 maintenance，而不是单个幂等 GET。
+// Replacement: 默认不做事务级重试；一分钟轮询、切回前台和用户手动重试提供新的独立同步机会。
+// Risk: Low；短暂网络抖动会更早显示错误，但不会阻塞用户或重复部分提交。
+// Human Review: Required
+//
+// Original code:
+// const DEFAULT_RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000] as const;
+const DEFAULT_RETRY_DELAYS_MS: readonly number[] = [];
 const SYNC_TASK_KINDS: readonly SyncTaskKind[] = [
   "canvas",
   "blueprints",
@@ -109,9 +143,18 @@ const SYNC_TASK_KINDS: readonly SyncTaskKind[] = [
   "toolbox",
   "background-documents",
   "directory-maintenance",
-  "device-registration",
-  "remote-devices",
 ];
+// AI-REMOVED 2026-07-29:
+// Reason: 设备心跳和设备列表已退出同步任务。
+// Trigger: 用户确认设备列表没有意义，仅展示 revision 的远端上传时间。
+// Evidence: 设备枚举不能提供可靠 revision 归因，且真实服务器读取约 17.9 秒。
+// Replacement: 业务资源冲突元数据 committedAt。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// "device-registration",
+// "remote-devices",
 
 export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebDavSyncService {
   let status: WebDavSyncServiceStatus = createIdleStatus([]);
@@ -124,7 +167,9 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   let pendingTrigger: WebDavSyncTrigger | null = null;
   let localChangeVersion = 0;
   let acknowledgedLocalChangeVersion = 0;
+  let conflictOverlayVisible = false;
   const dirtyAssetIdsByAdapter = new Map<string, Set<string> | null>();
+  const deferredConflictFingerprints = new Map<string, string>();
 
   const setStatus = (nextStatus: WebDavSyncServiceStatus): WebDavSyncServiceStatus => {
     status = nextStatus;
@@ -205,16 +250,36 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
     logger.info(`sync triggered: ${trigger}`);
     const isInitialSync = trigger === "startup" || trigger === "foreground";
 
-    if (isInitialSync && status.initialSyncStage === "ready") {
-      setStatus({
-        ...status,
-        initialSyncStage: "canvas",
-      });
-    }
+    // AI-REMOVED 2026-07-29:
+    // Reason: 排队判定前切回 canvas 会让尚未开始的前台检查提前锁住画布。
+    // Trigger: 同步进行中切后台再切回时，进度遮罩出现但没有对应网络请求。
+    // Evidence: syncing 分支只排队，实际 queued trigger 要到当前 run 的 finally 后才执行。
+    // Replacement: 设置校验通过且当前 run 真正开始前再切换 initialSyncStage。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (isInitialSync && status.initialSyncStage === "ready") {
+    //   setStatus({
+    //     ...status,
+    //     initialSyncStage: "canvas",
+    //   });
+    // }
 
     if (syncing) {
       if (trigger === "interval") {
         logger.debug("periodic sync skipped — another sync is already in progress");
+        return status;
+      }
+
+      if (
+        trigger === "foreground"
+        && (
+          status.currentRunReason === "startup"
+          || status.currentRunReason === "foreground"
+        )
+      ) {
+        logger.debug("foreground sync coalesced — initial sync is already in progress");
         return status;
       }
 
@@ -246,6 +311,13 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
       });
     }
 
+    if (isInitialSync && status.initialSyncStage === "ready") {
+      setStatus({
+        ...status,
+        initialSyncStage: "canvas",
+      });
+    }
+
     syncing = true;
     clearLocalChangeTimers();
     const syncLocalChangeVersion = localChangeVersion;
@@ -271,13 +343,21 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
     try {
       const results = await retryWebDavSync(
         async () => {
-          const client = options.createClient(settings, (activity) => {
-            setStatus({
-              ...status,
-              activeRequestCount: activity.activeRequestCount,
-              queuedRequestCount: activity.queuedRequestCount,
-            });
-          });
+          const client = options.createClient(
+            settings,
+            (activity) => {
+              setStatus({
+                ...status,
+                activeRequestCount: activity.activeRequestCount,
+                queuedRequestCount: activity.queuedRequestCount,
+              });
+            },
+            {
+              requestTimeoutMs: isInitialSync
+                ? INITIAL_SYNC_REQUEST_TIMEOUT_MS
+                : undefined,
+            },
+          );
           activeClient = client;
           try {
             return await withWebDavSyncLock(async () => {
@@ -288,12 +368,29 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
                   client,
                   resolveRegularSyncRequests(trigger),
                 );
-              if (!adapterResults.some((result) => result.status === "conflict")) {
+              const resolvedResults = adapterResults.some(
+                (result) => result.status === "conflict",
+              )
+                ? await runConflictWorkflow(client, adapterResults)
+                : adapterResults;
+              if (
+                isInitialSync
+                && !resolvedResults.some(
+                  (result) => result.status === "conflict",
+                )
+              ) {
+                setStatus({
+                  ...status,
+                  initialSyncStage: "ready",
+                  hasCompletedInitialFeatureSync: true,
+                });
+              }
+              if (!resolvedResults.some((result) => result.status === "conflict")) {
                 await runMaintenanceTasks(client, settings);
               }
-              await options.afterSync?.(client, settings, adapterResults);
+              await options.afterSync?.(client, settings, resolvedResults);
 
-              return adapterResults;
+              return resolvedResults;
             });
           } finally {
             if (activeClient === client) {
@@ -313,13 +410,11 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
       );
 
       if (didConflict) {
-        logger.debug("sync conflict detected, triggering onConflict callback");
-        options.onConflict?.(results);
         const pendingLocalChangeCount = getPendingLocalChangeCount();
         return setStatus({
           phase: "error",
           saveState: pendingLocalChangeCount > 0 ? "error" : status.saveState,
-          initialSyncStage: status.initialSyncStage,
+          initialSyncStage: isInitialSync ? "ready" : status.initialSyncStage,
           hasCompletedInitialFeatureSync:
             status.hasCompletedInitialFeatureSync,
           currentRunReason: null,
@@ -362,6 +457,10 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
         lastResults: results,
       });
     } catch (error) {
+      if (conflictOverlayVisible) {
+        options.onConflictWorkflowFinished?.();
+        conflictOverlayVisible = false;
+      }
       logger.debug(
         `sync failed — ${error instanceof Error ? error.message : String(error)}`,
       );
@@ -370,6 +469,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
         ...status,
         phase: "error",
         saveState: pendingLocalChangeCount > 0 ? "error" : status.saveState,
+        initialSyncStage: isInitialSync ? "ready" : status.initialSyncStage,
         currentRunReason: null,
         activeRequestCount: 0,
         queuedRequestCount: 0,
@@ -593,6 +693,158 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
     return results;
   };
 
+  const runConflictWorkflow = async (
+    client: WebDavStorageClient,
+    initialResults: readonly WebDavSyncAdapterResult[],
+  ): Promise<WebDavSyncAdapterResult[]> => {
+    const completedResults = initialResults.filter(
+      (result) => result.status !== "conflict",
+    );
+
+    try {
+      while (true) {
+        if (
+          !conflictOverlayVisible
+          && deferredConflictFingerprints.size === 0
+        ) {
+          options.onConflictDiscoveryStart?.();
+          conflictOverlayVisible = true;
+        }
+
+        const discoveredConflicts = deduplicateConflicts(
+          (await Promise.all(options.adapters.map(async (adapter) =>
+            adapter.inspectConflicts === undefined
+              ? []
+              : await adapter.inspectConflicts(client)
+          ))).flat(),
+        );
+        discardResolvedDeferredConflicts(
+          deferredConflictFingerprints,
+          discoveredConflicts,
+        );
+        const actionableConflicts = discoveredConflicts.filter((conflict) =>
+          deferredConflictFingerprints.get(createConflictKey(conflict))
+          !== createConflictFingerprint(conflict)
+        );
+
+        if (actionableConflicts.length === 0) {
+          return [
+            ...completedResults,
+            ...initialResults.filter((result) => result.status === "conflict"),
+          ];
+        }
+
+        if (!conflictOverlayVisible) {
+          options.onConflictDiscoveryStart?.();
+          conflictOverlayVisible = true;
+        }
+
+        const choices = await (
+          options.resolveConflicts?.(actionableConflicts)
+          ?? Promise.resolve([])
+        );
+        const decisions = createConflictDecisions(
+          actionableConflicts,
+          choices,
+        );
+        for (const decision of decisions) {
+          const key = createConflictKey(decision);
+          if (decision.resolution === "pause") {
+            deferredConflictFingerprints.set(
+              key,
+              createConflictFingerprint(decision),
+            );
+          } else {
+            deferredConflictFingerprints.delete(key);
+          }
+        }
+
+        const resolutionResults = await runConflictDecisionRequests(
+          client,
+          decisions,
+        );
+        completedResults.push(...resolutionResults);
+        const hasDeferredDecision = decisions.some(
+          (decision) => decision.resolution === "pause",
+        );
+        const hasUnexpectedConflict = resolutionResults.some(
+          (result) => result.status === "conflict",
+        ) && !hasDeferredDecision;
+        if (!hasUnexpectedConflict) {
+          return completedResults;
+        }
+
+        options.onConflictDiscoveryStart?.();
+      }
+    } finally {
+      if (conflictOverlayVisible) {
+        options.onConflictWorkflowFinished?.();
+        conflictOverlayVisible = false;
+      }
+    }
+  };
+
+  const runConflictDecisionRequests = async (
+    client: WebDavStorageClient,
+    decisions: readonly WebDavSyncConflictDecision[],
+  ): Promise<WebDavSyncAdapterResult[]> => {
+    const adaptersByTask = new Map<SyncTaskKind, WebDavSyncAdapter[]>();
+    for (const adapter of options.adapters) {
+      const taskKind = options.resolveAdapterTaskKind?.(adapter.id)
+        ?? "canvas";
+      const taskAdapters = adaptersByTask.get(taskKind) ?? [];
+      taskAdapters.push(adapter);
+      adaptersByTask.set(taskKind, taskAdapters);
+    }
+    for (const [taskKind, taskAdapters] of adaptersByTask) {
+      beginTask(
+        taskKind,
+        getAdapterTaskTotalUnitCount(taskKind, taskAdapters.length),
+      );
+    }
+
+    let results: WebDavSyncAdapterResult[];
+    try {
+      results = await Promise.all(options.adapters.map(async (adapter) =>
+        await adapter.sync(client, {
+          conflictDecisions: decisions.filter(
+            (decision) => decision.adapterId === adapter.id,
+          ),
+        })
+      ));
+    } catch (error) {
+      for (const [taskKind, taskAdapters] of adaptersByTask) {
+        finishTask(
+          taskKind,
+          getAdapterTaskTotalUnitCount(taskKind, taskAdapters.length),
+          error,
+        );
+      }
+      throw error;
+    }
+    for (const [taskKind, taskAdapters] of adaptersByTask) {
+      const taskAdapterIds = new Set(
+        taskAdapters.map((adapter) => adapter.id),
+      );
+      const taskResults = results.filter((result) =>
+        taskAdapterIds.has(result.adapterId),
+      );
+      const totalUnitCount = getAdapterTaskTotalUnitCount(
+        taskKind,
+        taskAdapters.length,
+      );
+      finishTask(
+        taskKind,
+        totalUnitCount,
+        taskResults.some((result) => result.status === "conflict")
+          ? new Error("WebDAV sync conflict")
+          : null,
+      );
+    }
+
+    return results;
+  };
+
   const runMaintenanceTasks = async (
     client: WebDavStorageClient,
     settings: WebDavSyncSettings,
@@ -638,6 +890,18 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
       }
     },
     syncNow,
+    notifyConflictDetected: (conflict) => {
+      if (
+        conflictOverlayVisible
+        || deferredConflictFingerprints.get(createConflictKey(conflict))
+          === createConflictFingerprint(conflict)
+      ) {
+        return;
+      }
+
+      conflictOverlayVisible = true;
+      options.onConflictDiscoveryStart?.();
+    },
     notifyLocalChange: (change) => {
       if (!started || !options.readSettings().enabled) {
         return;
@@ -783,6 +1047,68 @@ function selectQueuedTrigger(
   };
 
   return priority[incoming] > priority[current] ? incoming : current;
+}
+
+function createConflictDecisions(
+  conflicts: readonly WebDavSyncConflict<unknown>[],
+  choices: readonly SyncConflictDecision[],
+): WebDavSyncConflictDecision[] {
+  return conflicts.map((conflict) => ({
+    adapterId: conflict.adapterId,
+    assetId: conflict.assetId,
+    localHash: conflict.localHash,
+    remoteHash: conflict.remoteHash,
+    remoteDeletedAt: conflict.remoteDeletedAt,
+    resolution: choices.find((choice) =>
+      choice.adapterId === conflict.adapterId
+      && choice.assetId === conflict.assetId
+    )?.resolution ?? "pause",
+  }));
+}
+
+function deduplicateConflicts(
+  conflicts: readonly WebDavSyncConflict<unknown>[],
+): WebDavSyncConflict<unknown>[] {
+  return Array.from(
+    new Map(conflicts.map((conflict) => [
+      createConflictKey(conflict),
+      conflict,
+    ])).values(),
+  );
+}
+
+function discardResolvedDeferredConflicts(
+  deferredFingerprints: Map<string, string>,
+  conflicts: readonly WebDavSyncConflict<unknown>[],
+): void {
+  const currentFingerprints = new Map(conflicts.map((conflict) => [
+    createConflictKey(conflict),
+    createConflictFingerprint(conflict),
+  ]));
+  for (const [key, fingerprint] of deferredFingerprints) {
+    if (currentFingerprints.get(key) !== fingerprint) {
+      deferredFingerprints.delete(key);
+    }
+  }
+}
+
+function createConflictKey(value: {
+  readonly adapterId: string;
+  readonly assetId: string;
+}): string {
+  return `${value.adapterId}\u0000${value.assetId}`;
+}
+
+function createConflictFingerprint(value: {
+  readonly localHash: string;
+  readonly remoteHash: string | null;
+  readonly remoteDeletedAt: string | null;
+}): string {
+  return JSON.stringify([
+    value.localHash,
+    value.remoteHash,
+    value.remoteDeletedAt,
+  ]);
 }
 
 async function withWebDavSyncLock<TValue>(task: () => Promise<TValue>): Promise<TValue> {

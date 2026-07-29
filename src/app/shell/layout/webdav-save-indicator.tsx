@@ -20,13 +20,16 @@ export const WebDavSaveIndicator = observer(function WebDavSaveIndicator({
   }
 
   const saveState = syncState.status.saveState;
-  if (saveState === "idle") {
+  const syncFailed = syncState.status.phase === "error";
+  if (saveState === "idle" && !syncFailed) {
     return null;
   }
 
-  const failed = saveState === "error";
+  const failed = saveState === "error" || syncFailed;
   const label = translate(
-    failed ? "webDavSave.failed" : "webDavSave.saving",
+    syncFailed
+      ? "webDavSave.syncFailed"
+      : failed ? "webDavSave.failed" : "webDavSave.saving",
   );
 
   return (
@@ -39,7 +42,7 @@ export const WebDavSaveIndicator = observer(function WebDavSaveIndicator({
           ? "webdav-save-indicator webdav-save-indicator-failed"
           : "webdav-save-indicator webdav-save-indicator-saving",
       )}
-      data-webdav-save-state={saveState}
+      data-webdav-save-state={failed ? "error" : saveState}
       role={failed ? "alert" : "status"}
       title={label}
     >

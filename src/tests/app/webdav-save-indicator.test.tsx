@@ -89,6 +89,38 @@ describe("WebDavSaveIndicator", () => {
     });
     expect(container.querySelector("[data-webdav-save-state]")).toBeNull();
   });
+
+  it("shows the failure asset for an initial network error without local changes", () => {
+    act(() => {
+      controller.setSettings({
+        enabled: true,
+        url: "https://example.com",
+        username: "",
+        password: "",
+        maxConcurrentRequests: 4,
+      });
+      controller.setStatus(createStatus({
+        phase: "error",
+        saveState: "idle",
+        pendingLocalChangeCount: 0,
+        lastError: "network timeout",
+      }));
+      root.render(
+        <WebDavSaveIndicator
+          syncState={controller}
+          translate={(key) => key}
+        />,
+      );
+    });
+
+    const indicator = container.querySelector(
+      "[data-webdav-save-state='error']",
+    );
+    expect(indicator?.getAttribute("aria-label"))
+      .toBe("webDavSave.syncFailed");
+    expect(indicator?.querySelector("[data-workbench-icon='save-failed']"))
+      .not.toBeNull();
+  });
 });
 
 function createStatus(

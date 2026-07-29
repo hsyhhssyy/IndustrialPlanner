@@ -3,10 +3,19 @@ import { observer } from "mobx-react-lite";
 import { makeAutoObservable, runInAction } from "mobx";
 
 import type { AppHost } from "@/app/host/app-host";
-import type {
-  SyncConflictResolution,
-  SyncPendingConflict,
-} from "@/domain/sync";
+// AI-REMOVED 2026-07-29:
+// Reason: WebDAV 冲突窗口已脱离设置窗口生命周期，不再由设置页消费冲突类型。
+// Trigger: 设置窗口关闭时冲突窗口完全未挂载，画布锁在 55% 且无可见解决入口。
+// Evidence: SettingsDialog 在 isOpen=false 时直接 return null。
+// Replacement: ./webdav-conflict-dialog.tsx。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// import type {
+//   SyncConflictResolution,
+//   SyncPendingConflict,
+// } from "@/domain/sync";
 // AI-REMOVED 2026-07-29:
 // Reason: 设置页不再内嵌读取同步 phase/state，详细数据由独立状态弹窗消费。
 // Trigger: 用户要求把设置内直接显示改为按钮，并打开多板块状态窗口。
@@ -240,15 +249,24 @@ export const SettingsDialog = observer(function SettingsDialog({
     activeTab: null,
   }), []);
 
-  const webDavConflictDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
-    visible: false,
-    maximized: false,
-    offsetX: 0,
-    offsetY: 0,
-    width: 460,
-    height: null,
-    activeTab: null,
-  }), []);
+  // AI-REMOVED 2026-07-29:
+  // Reason: 冲突窗口状态不能依赖设置窗口是否打开。
+  // Trigger: 关闭设置后 pendingConflict 存在，但整个 SettingsDialog 未挂载。
+  // Evidence: 真实冲突诊断中 pendingConflict=world-documents/wuling，DOM 中无 webdav-conflict。
+  // Replacement: WebDavConflictDialog 内部稳定 dialogState。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // const webDavConflictDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+  //   visible: false,
+  //   maximized: false,
+  //   offsetX: 0,
+  //   offsetY: 0,
+  //   width: 460,
+  //   height: null,
+  //   activeTab: null,
+  // }), []);
 
   const webDavStatusDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
     visible: false,
@@ -293,12 +311,21 @@ export const SettingsDialog = observer(function SettingsDialog({
     clearAllStorageAndReload();
   }, []);
 
-  const handleResolveWebDavConflict = useCallback((resolution: SyncConflictResolution) => {
-    sync?.actions.resolveConflict(resolution);
-    runInAction(() => {
-      webDavConflictDialogState.visible = false;
-    });
-  }, [sync, webDavConflictDialogState]);
+  // AI-REMOVED 2026-07-29:
+  // Reason: 冲突 action 由 Workbench 顶层窗口直接发送给独立同步模块。
+  // Trigger: 设置页关闭后该 handler 不存在，用户无法解除同步等待。
+  // Evidence: SyncContract 已提供公开 resolveConflict action，无需设置页代理。
+  // Replacement: ./webdav-conflict-dialog.tsx resolveConflict。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // const handleResolveWebDavConflict = useCallback((resolution: SyncConflictResolution) => {
+  //   sync?.actions.resolveConflict(resolution);
+  //   runInAction(() => {
+  //     webDavConflictDialogState.visible = false;
+  //   });
+  // }, [sync, webDavConflictDialogState]);
 
   const handleOpenWebDavStatus = useCallback(() => {
     runInAction(() => {
@@ -318,12 +345,21 @@ export const SettingsDialog = observer(function SettingsDialog({
     });
   }, [webDavStatusDialogState]);
 
-  useEffect(() => {
-    runInAction(() => {
-      webDavConflictDialogState.visible = sync?.state.pendingConflict !== null
-        && sync?.state.pendingConflict !== undefined;
-    });
-  }, [sync?.state.pendingConflict, webDavConflictDialogState]);
+  // AI-REMOVED 2026-07-29:
+  // Reason: 同步冲突本身就是公开 MobX state，不需要设置页复制第二份可见性状态。
+  // Trigger: 复制状态受 SettingsDialog 生命周期约束，造成冲突存在但窗口不可见。
+  // Evidence: WebDavConflictDialog 现在由 observer 直接订阅 sync.state.pendingConflict。
+  // Replacement: ./webdav-conflict-dialog.tsx。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // useEffect(() => {
+  //   runInAction(() => {
+  //     webDavConflictDialogState.visible = sync?.state.pendingConflict !== null
+  //       && sync?.state.pendingConflict !== undefined;
+  //   });
+  // }, [sync?.state.pendingConflict, webDavConflictDialogState]);
 
   const clearStorageExpectedText = useMemo(
     () => appHost.state.settings.locale === "zh-CN"
@@ -829,16 +865,27 @@ export const SettingsDialog = observer(function SettingsDialog({
         t={t}
       />
     )}
-    {webDavConflictDialogState.visible
-      && sync !== null
-      && sync.state.pendingConflict !== null ? (
-      <WebDavConflictDialog
-        conflict={sync.state.pendingConflict}
-        dialogState={webDavConflictDialogState}
-        onResolve={handleResolveWebDavConflict}
-        t={t}
-      />
-    ) : null}
+    {/*
+      AI-REMOVED 2026-07-29:
+      Reason: WebDAV 冲突是阻断全局同步的系统窗口，不能嵌套在可关闭的设置窗口中。
+      Trigger: 设置窗口关闭时画布遮罩停在 55%，但冲突窗口没有挂载。
+      Evidence: pendingConflict 非空时 [data-dialog-key="webdav-conflict"] 查询结果为 null。
+      Replacement: WorkbenchApp 顶层 WebDavConflictDialog。
+      Risk: Low。
+      Human Review: Required
+
+      Original code:
+      {webDavConflictDialogState.visible
+        && sync !== null
+        && sync.state.pendingConflict !== null ? (
+        <WebDavConflictDialog
+          conflict={sync.state.pendingConflict}
+          dialogState={webDavConflictDialogState}
+          onResolve={handleResolveWebDavConflict}
+          t={t}
+        />
+      ) : null}
+    */}
     {webDavStatusDialogState.visible && sync !== null ? (
       <WebDavSyncStatusDialog
         compactMobileLayout={isNonDesktop}
@@ -1713,51 +1760,60 @@ function ConflictDialog({
   );
 }
 
-function WebDavConflictDialog({
-  conflict,
-  dialogState,
-  onResolve,
-  t,
-}: {
-  conflict: SyncPendingConflict;
-  dialogState: DialogStateReadWrite;
-  onResolve: (resolution: SyncConflictResolution) => void;
-  t: AppHost["actions"]["translate"];
-}) {
-  return (
-    <DialogShell
-      className="webdav-conflict-dialog"
-      bodyClassName={cm(styles, "confirm-reset-dialog-body")}
-      closeTitle={t("action.close")}
-      compactMobileLayout={false}
-      dialogKey="webdav-conflict"
-      dialogState={dialogState}
-      maximizeTitle=""
-      onClose={() => onResolve("pause")}
-      onToggleMaximized={() => {}}
-      restoreTitle=""
-      showMaximizeButton={false}
-      title={t("settingsField.experimental-webdav-conflict-title")}
-      titleId="webdav-conflict-dialog-title"
-    >
-      <div className={cm(styles, "confirm-reset-content")}>
-        <p>{t("settingsField.experimental-webdav-conflict-message").replace("{remoteDeviceLabel}", conflict.remoteDeviceLabel)}</p>
-        <p>{conflict.adapterId} / {conflict.assetId}</p>
-        <div className={cm(styles, "confirm-reset-actions")}>
-          <button className={cm(styles, "confirm-reset-confirm-btn")} onClick={() => onResolve("use-local")} type="button">
-            {t("settingsField.experimental-webdav-conflict-use-local")}
-          </button>
-          <button className={cm(styles, "confirm-reset-confirm-btn")} onClick={() => onResolve("use-remote")} type="button">
-            {t("settingsField.experimental-webdav-conflict-use-remote").replace("{remoteDeviceLabel}", conflict.remoteDeviceLabel)}
-          </button>
-          <button className={cm(styles, "confirm-reset-cancel-btn")} onClick={() => onResolve("pause")} type="button">
-            {t("settingsField.experimental-webdav-conflict-pause")}
-          </button>
-        </div>
-      </div>
-    </DialogShell>
-  );
-}
+// AI-REMOVED 2026-07-29:
+// Reason: 冲突窗口已成为 Workbench 顶层 system overlay，不能由 SettingsDialog 私有实现。
+// Trigger: SettingsDialog 未打开时该函数没有调用点，导致冲突等待永久遮住画布。
+// Evidence: OverlayStack 已有 system 层；独立组件可直接订阅 SyncContract public state。
+// Replacement: ./webdav-conflict-dialog.tsx。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// function WebDavConflictDialog({
+//   conflict,
+//   dialogState,
+//   onResolve,
+//   t,
+// }: {
+//   conflict: SyncPendingConflict;
+//   dialogState: DialogStateReadWrite;
+//   onResolve: (resolution: SyncConflictResolution) => void;
+//   t: AppHost["actions"]["translate"];
+// }) {
+//   return (
+//     <DialogShell
+//       className="webdav-conflict-dialog"
+//       bodyClassName={cm(styles, "confirm-reset-dialog-body")}
+//       closeTitle={t("action.close")}
+//       compactMobileLayout={false}
+//       dialogKey="webdav-conflict"
+//       dialogState={dialogState}
+//       maximizeTitle=""
+//       onClose={() => onResolve("pause")}
+//       onToggleMaximized={() => {}}
+//       restoreTitle=""
+//       showMaximizeButton={false}
+//       title={t("settingsField.experimental-webdav-conflict-title")}
+//       titleId="webdav-conflict-dialog-title"
+//     >
+//       <div className={cm(styles, "confirm-reset-content")}>
+//         <p>{t("settingsField.experimental-webdav-conflict-message").replace("{remoteDeviceLabel}", conflict.remoteDeviceLabel)}</p>
+//         <p>{conflict.adapterId} / {conflict.assetId}</p>
+//         <div className={cm(styles, "confirm-reset-actions")}>
+//           <button className={cm(styles, "confirm-reset-confirm-btn")} onClick={() => onResolve("use-local")} type="button">
+//             {t("settingsField.experimental-webdav-conflict-use-local")}
+//           </button>
+//           <button className={cm(styles, "confirm-reset-confirm-btn")} onClick={() => onResolve("use-remote")} type="button">
+//             {t("settingsField.experimental-webdav-conflict-use-remote").replace("{remoteDeviceLabel}", conflict.remoteDeviceLabel)}
+//           </button>
+//           <button className={cm(styles, "confirm-reset-cancel-btn")} onClick={() => onResolve("pause")} type="button">
+//             {t("settingsField.experimental-webdav-conflict-pause")}
+//           </button>
+//         </div>
+//       </div>
+//     </DialogShell>
+//   );
+// }
 
 /** 根据 setting id 解析显示标签 */
 function resolveSettingLabelById(

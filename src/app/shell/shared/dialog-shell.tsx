@@ -11,7 +11,10 @@ import { observer } from "mobx-react-lite";
 
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
-import { useOverlayStackLayer } from "@/app/shell/shared/overlay-stack";
+import {
+  useOverlayStackLayer,
+  type OverlayStackLayerKind,
+} from "@/app/shell/shared/overlay-stack";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -90,6 +93,8 @@ interface DialogShellProps {
   resizableWidth?: boolean;
   resizableHeight?: boolean;
   modal?: boolean;
+  dismissible?: boolean;
+  overlayKind?: OverlayStackLayerKind;
   onClose: () => void;
   onToggleMaximized: () => void;
   onTabChange?: (tabId: string) => void;
@@ -118,6 +123,8 @@ export const DialogShell = observer(function DialogShell({
   resizableWidth = true,
   resizableHeight = true,
   modal = true,
+  dismissible = true,
+  overlayKind = "modal",
   onClose,
   onToggleMaximized,
   onTabChange,
@@ -132,6 +139,7 @@ export const DialogShell = observer(function DialogShell({
   const overlayLayer = useOverlayStackLayer({
     layerId: dialogKey,
     visible: dialogState.visible,
+    kind: overlayKind,
   });
   const [liveSize, setLiveSize] = useState<{ width: number | null; height: number | null }>({
     width: null,
@@ -180,7 +188,9 @@ export const DialogShell = observer(function DialogShell({
 
       event.preventDefault();
       event.stopImmediatePropagation();
-      onClose();
+      if (dismissible) {
+        onClose();
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -188,7 +198,13 @@ export const DialogShell = observer(function DialogShell({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [dialogState.visible, onClose, onWindowKeyDown, overlayLayer.isTop]);
+  }, [
+    dialogState.visible,
+    dismissible,
+    onClose,
+    onWindowKeyDown,
+    overlayLayer.isTop,
+  ]);
 
   useEffect(() => {
     if (!dialogState.visible || isEffectivelyMaximized || isFixedMobileLayout) {
@@ -439,7 +455,7 @@ export const DialogShell = observer(function DialogShell({
     <div
       className={cm(styles, backdropClassName)}
       onMouseDown={(event) => {
-        if (!modal) {
+        if (!modal || !dismissible) {
           return;
         }
 
@@ -513,18 +529,20 @@ export const DialogShell = observer(function DialogShell({
                   <span className={cm(styles, "sr-only")}>{maximizeButtonTitle}</span>
                 </button>
               ) : null}
-              <button
-                aria-label={closeTitle}
-                className={cm(styles, "dialog-shell-header-button", `${classPrefix}-header-button`, `${classPrefix}-close`)}
-                onClick={onClose}
-                title={closeTitle}
-                type="button"
-              >
-                <span className={cm(styles, "top-bar-toggle-icon")}>
-                  <WorkbenchIcon kind="cancel" />
-                </span>
-                <span className={cm(styles, "sr-only")}>{closeTitle}</span>
-              </button>
+              {dismissible ? (
+                <button
+                  aria-label={closeTitle}
+                  className={cm(styles, "dialog-shell-header-button", `${classPrefix}-header-button`, `${classPrefix}-close`)}
+                  onClick={onClose}
+                  title={closeTitle}
+                  type="button"
+                >
+                  <span className={cm(styles, "top-bar-toggle-icon")}>
+                    <WorkbenchIcon kind="cancel" />
+                  </span>
+                  <span className={cm(styles, "sr-only")}>{closeTitle}</span>
+                </button>
+              ) : null}
             </div>
           </div>
           {}

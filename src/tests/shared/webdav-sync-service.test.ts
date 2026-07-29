@@ -9,6 +9,7 @@ import type { WebDavStorageClient } from "@/sync";
 import type {
   WebDavSyncAdapter,
   WebDavSyncAdapterResult,
+  WebDavSyncServiceOptions,
 } from "@/sync";
 
 describe("webdav-sync-service", () => {
@@ -42,6 +43,33 @@ describe("webdav-sync-service", () => {
 
     expect(adapter.sync).toHaveBeenCalledTimes(1);
     expect(status.lastUploadAt).not.toBeNull();
+  });
+
+  it("fails fast and unlocks the canvas when initial network sync fails", async () => {
+    const adapter = createAdapter();
+    adapter.sync.mockRejectedValue(new Error("network timeout"));
+    const createClient = vi.fn((
+      ..._args: Parameters<WebDavSyncServiceOptions["createClient"]>
+    ) => ({} as WebDavStorageClient));
+    const service = createWebDavSyncService({
+      readSettings: () => createSettings(),
+      createClient,
+      adapters: [adapter],
+    });
+
+    const status = await service.syncNow("startup");
+
+    expect(adapter.sync).toHaveBeenCalledTimes(1);
+    expect(createClient).toHaveBeenCalledTimes(1);
+    expect(createClient.mock.calls[0]?.[2]).toEqual({
+      requestTimeoutMs: 8_000,
+    });
+    expect(status).toMatchObject({
+      phase: "error",
+      initialSyncStage: "ready",
+      currentRunReason: null,
+      lastError: "network timeout",
+    });
   });
 
   it("unlocks initial sync stages in priority order before background documents", async () => {
@@ -137,14 +165,17 @@ describe("webdav-sync-service", () => {
           kind: "directory-maintenance",
           run: vi.fn(async () => undefined),
         },
-        {
-          kind: "device-registration",
-          run: vi.fn(async () => undefined),
-        },
-        {
-          kind: "remote-devices",
-          run: vi.fn(async () => undefined),
-        },
+        // AI-REMOVED 2026-07-29:
+        // Reason: 设备注册与枚举已退出同步维护任务。
+        // Trigger: 用户确认设备列表没有业务意义。
+        // Evidence: SyncTaskKind 不再包含 device-registration / remote-devices。
+        // Replacement: directory-maintenance 是唯一维护任务。
+        // Risk: Low。
+        // Human Review: Required
+        //
+        // Original code:
+        // { kind: "device-registration", run: vi.fn(async () => undefined) },
+        // { kind: "remote-devices", run: vi.fn(async () => undefined) },
       ],
     });
 
@@ -157,8 +188,6 @@ describe("webdav-sync-service", () => {
     expect(taskPhases).toMatchObject({
       canvas: "success",
       "directory-maintenance": "success",
-      "device-registration": "success",
-      "remote-devices": "success",
     });
   });
 
@@ -313,7 +342,8 @@ describe("webdav-sync-service", () => {
   });
 
   it("reports conflicts", async () => {
-    const onConflict = vi.fn();
+    const onConflictDiscoveryStart = vi.fn();
+    const resolveConflicts = vi.fn(async () => []);
     const adapter: WebDavSyncAdapter = {
       id: "conflicting-adapter",
       mode: "full-no-revision",
@@ -323,19 +353,115 @@ describe("webdav-sync-service", () => {
         status: "conflict",
         changedAssetIds: ["single"],
       })),
+      inspectConflicts: vi.fn(async () => []),
     };
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
       createClient: () => ({} as WebDavStorageClient),
       adapters: [adapter],
-      onConflict,
+      onConflictDiscoveryStart,
+      resolveConflicts,
     });
 
     const status = await service.syncNow("manual");
 
-    expect(onConflict).toHaveBeenCalledTimes(1);
+    expect(onConflictDiscoveryStart).toHaveBeenCalledTimes(1);
     expect(status.phase).toBe("error");
     expect(status.lastError).toBe("WebDAV sync conflict");
+  });
+
+  it("discovers conflicts across all adapters and applies one batch of per-item decisions", async () => {
+    const firstConflict = {
+      adapterId: "blueprints",
+      assetId: "blueprint-a",
+      localValue: { name: "local blueprint" },
+      remoteValue: { name: "remote blueprint" },
+      localHash: "local-blueprint-hash",
+      remoteHash: "remote-blueprint-hash",
+      remoteDeletedAt: null,
+      remoteUpdatedAt: "2026-07-29T12:00:00.000Z",
+    };
+    const secondConflict = {
+      adapterId: "world-documents",
+      assetId: "base-a",
+      localValue: { name: "local canvas" },
+      remoteValue: { name: "remote canvas" },
+      localHash: "local-canvas-hash",
+      remoteHash: "remote-canvas-hash",
+      remoteDeletedAt: null,
+      remoteUpdatedAt: "2026-07-29T12:01:00.000Z",
+    };
+    const firstAdapter: WebDavSyncAdapter = {
+      id: "blueprints",
+      mode: "full-with-revision",
+      sync: vi.fn(async (
+        _client: WebDavStorageClient,
+        scope: Parameters<WebDavSyncAdapter["sync"]>[1],
+      ): Promise<WebDavSyncAdapterResult> => ({
+        adapterId: "blueprints",
+        mode: "full-with-revision",
+        status: scope?.conflictDecisions?.[0]?.resolution === "use-local"
+          ? "uploaded"
+          : "conflict",
+        changedAssetIds: ["blueprint-a"],
+      })),
+      inspectConflicts: vi.fn(async () => [firstConflict]),
+    };
+    const secondAdapter: WebDavSyncAdapter = {
+      id: "world-documents",
+      mode: "patch-with-revision",
+      sync: vi.fn(async (
+        _client: WebDavStorageClient,
+        scope: Parameters<WebDavSyncAdapter["sync"]>[1],
+      ): Promise<WebDavSyncAdapterResult> => ({
+        adapterId: "world-documents",
+        mode: "patch-with-revision",
+        status: scope?.conflictDecisions?.[0]?.resolution === "use-remote"
+          ? "downloaded"
+          : "conflict",
+        changedAssetIds: ["base-a"],
+      })),
+      inspectConflicts: vi.fn(async () => [secondConflict]),
+    };
+    const onConflictDiscoveryStart = vi.fn();
+    const onConflictWorkflowFinished = vi.fn();
+    const resolveConflicts = vi.fn(async () => [
+      {
+        adapterId: "blueprints",
+        assetId: "blueprint-a",
+        resolution: "use-local" as const,
+      },
+      {
+        adapterId: "world-documents",
+        assetId: "base-a",
+        resolution: "use-remote" as const,
+      },
+    ]);
+    const service = createWebDavSyncService({
+      readSettings: () => createSettings(),
+      createClient: () => ({} as WebDavStorageClient),
+      adapters: [firstAdapter, secondAdapter],
+      onConflictDiscoveryStart,
+      resolveConflicts,
+      onConflictWorkflowFinished,
+    });
+
+    const status = await service.syncNow("manual");
+
+    expect(firstAdapter.inspectConflicts).toHaveBeenCalledTimes(1);
+    expect(secondAdapter.inspectConflicts).toHaveBeenCalledTimes(1);
+    expect(resolveConflicts).toHaveBeenCalledWith([
+      firstConflict,
+      secondConflict,
+    ]);
+    expect(onConflictDiscoveryStart).toHaveBeenCalledTimes(1);
+    expect(onConflictWorkflowFinished).toHaveBeenCalledTimes(1);
+    expect(firstAdapter.sync).toHaveBeenCalledTimes(2);
+    expect(secondAdapter.sync).toHaveBeenCalledTimes(1);
+    expect(status.phase).toBe("idle");
+    expect(status.lastError).toBeNull();
+    expect(status.lastUploadAt).not.toBeNull();
+    expect(status.lastDownloadAt).not.toBeNull();
   });
 
   it("retries transient sync failures", async () => {
@@ -618,6 +744,108 @@ describe("webdav-sync-service", () => {
     });
 
     expect(adapter.sync).toHaveBeenCalledTimes(1);
+    service.stop();
+  });
+
+  it("coalesces foreground visibility events during an active initial sync", async () => {
+    let releaseInitialSync!: () => void;
+    const initialSyncGate = new Promise<void>((resolve) => {
+      releaseInitialSync = resolve;
+    });
+    const adapter = createAdapter();
+    adapter.sync.mockImplementationOnce(async () => {
+      await initialSyncGate;
+      return {
+        adapterId: "adapter",
+        mode: "full-no-revision",
+        status: "downloaded",
+        changedAssetIds: ["single"],
+      };
+    });
+    const service = createWebDavSyncService({
+      readSettings: () => createSettings(),
+      createClient: () => ({} as WebDavStorageClient),
+      adapters: [adapter],
+      intervalMs: 60_000,
+    });
+
+    service.start();
+    await vi.waitFor(() => {
+      expect(adapter.sync).toHaveBeenCalledTimes(1);
+    });
+    await service.syncNow("foreground");
+    releaseInitialSync();
+    await vi.waitFor(() => {
+      expect(service.getStatus().phase).toBe("idle");
+    });
+
+    expect(adapter.sync).toHaveBeenCalledTimes(1);
+    service.stop();
+  });
+
+  it("locks the canvas only when a queued foreground pass actually starts", async () => {
+    const adapter = createAdapter();
+    const service = createWebDavSyncService({
+      readSettings: () => createSettings(),
+      createClient: () => ({} as WebDavStorageClient),
+      adapters: [adapter],
+      intervalMs: 60_000,
+    });
+    service.start();
+    await vi.waitFor(() => {
+      expect(service.getStatus().phase).toBe("idle");
+    });
+    adapter.sync.mockClear();
+
+    let releaseManualSync!: () => void;
+    const manualSyncGate = new Promise<void>((resolve) => {
+      releaseManualSync = resolve;
+    });
+    let releaseForegroundSync!: () => void;
+    const foregroundSyncGate = new Promise<void>((resolve) => {
+      releaseForegroundSync = resolve;
+    });
+    adapter.sync
+      .mockImplementationOnce(async () => {
+        await manualSyncGate;
+        return {
+          adapterId: "adapter",
+          mode: "full-no-revision",
+          status: "downloaded",
+          changedAssetIds: ["single"],
+        };
+      })
+      .mockImplementationOnce(async () => {
+        await foregroundSyncGate;
+        return {
+          adapterId: "adapter",
+          mode: "full-no-revision",
+          status: "downloaded",
+          changedAssetIds: ["single"],
+        };
+      });
+
+    const manualSyncPromise = service.syncNow("manual");
+    await vi.waitFor(() => {
+      expect(adapter.sync).toHaveBeenCalledTimes(1);
+    });
+    await service.syncNow("foreground");
+    expect(service.getStatus().initialSyncStage).toBe("ready");
+
+    releaseManualSync();
+    await manualSyncPromise;
+    await vi.waitFor(() => {
+      expect(adapter.sync).toHaveBeenCalledTimes(2);
+    });
+    expect(service.getStatus().initialSyncStage).toBe("canvas");
+
+    releaseForegroundSync();
+    await vi.waitFor(() => {
+      expect(service.getStatus()).toMatchObject({
+        phase: "idle",
+        initialSyncStage: "ready",
+      });
+    });
     service.stop();
   });
 });

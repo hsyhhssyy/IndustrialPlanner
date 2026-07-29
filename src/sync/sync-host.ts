@@ -1,17 +1,24 @@
 import type {
   SyncAssetEntry,
   SyncAssetSource,
+  SyncConflictResolution,
   SyncContract,
   SyncInitialSyncStage,
-  SyncRemoteDeviceInfo,
   SyncTaskKind,
 } from "@/domain/sync";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument } from "@/domain/document/world-document";
 import { createUuid } from "@/domain/shared/uuid";
-import {
-  ensureLocalSyncOwnerState,
-} from "@/shared/storage/sync-owner-storage";
+// AI-REMOVED 2026-07-29:
+// Reason: 客户端不再注册或枚举远端设备。
+// Trigger: 用户确认不需要设备列表，冲突只展示远端上传时间。
+// Evidence: revision 归因不能由全局设备心跳推断。
+// Replacement: webdav-sync-adapters.ts committedAt。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// import { ensureLocalSyncOwnerState } from "@/shared/storage/sync-owner-storage";
 import { createStableJsonHash } from "@/shared/storage/sync-shadow-storage";
 import {
   listBlueprintStorageEntries,
@@ -47,6 +54,7 @@ import {
   createFullNoRevisionAdapter,
   createFullWithRevisionAdapter,
   createPatchCollectionWithRevisionAdapter,
+  type WebDavSyncConflict,
   type WebDavSyncAdapter,
 } from "./engine/webdav-sync-adapters";
 import {
@@ -74,6 +82,10 @@ export interface SyncHost extends SyncContract {
   dispose(): void;
 }
 
+type ResolveInteractiveConflict = <TValue>(
+  conflict: WebDavSyncConflict<TValue>,
+) => Promise<SyncConflictResolution>;
+
 export function createSyncHost(
   workspace: WorkspaceContract,
   options: SyncHostOptions,
@@ -85,6 +97,9 @@ export function createSyncHost(
   let syncStarted = false;
   let directoryTreeReadyKey: string | null = null;
   let lastEditorWebDavHash: string | null = null;
+  let notifyConflictDetected = (
+    _conflict: WebDavSyncConflict<unknown>,
+  ): void => {};
   const pendingLocalChanges = new Map<string, Set<string> | null>();
 
   const withRemoteApply = async <TValue>(task: () => Promise<TValue>): Promise<TValue> => {
@@ -141,6 +156,12 @@ export function createSyncHost(
   };
 
   const externalSources = options.assetSources ?? [];
+  const resolveInteractiveConflict: ResolveInteractiveConflict = async (
+    conflict,
+  ) => {
+    notifyConflictDetected(conflict);
+    return "pause";
+  };
   const adapters: WebDavSyncAdapter[] = [
     createFullNoRevisionAdapter<PlannerPersistedState>({
       id: "production-planning",
@@ -150,7 +171,7 @@ export function createSyncHost(
         await savePlannerState(value);
       }),
       normalizeRemote: normalizePlannerPersistedState,
-      resolveConflict: () => "use-remote",
+      resolveConflict: resolveInteractiveConflict,
     }),
     createFullWithRevisionAdapter<BlueprintRecord>({
       id: "blueprints",
@@ -166,6 +187,7 @@ export function createSyncHost(
           deletedAt: entry.deletedAt,
         });
       }),
+      resolveConflict: resolveInteractiveConflict,
     }),
     createFullWithRevisionAdapter<BlueprintFolderRecord>({
       id: "blueprint-folders",
@@ -181,31 +203,53 @@ export function createSyncHost(
           deletedAt: entry.deletedAt,
         });
       }),
+      resolveConflict: resolveInteractiveConflict,
     }),
     ...externalSources.map((source) => createAdapterFromSource(
       source,
       withRemoteApply,
+      resolveInteractiveConflict,
     )),
-    createWorldDocumentAdapter(workspace, state, withRemoteApply),
+    createWorldDocumentAdapter(
+      workspace,
+      resolveInteractiveConflict,
+      withRemoteApply,
+    ),
   ];
 
   state.setSettings(readWebDavSyncSettings());
-  if (state.settings.enabled) {
-    state.setStatus({
-      ...state.status,
-      phase: "downloading",
-      initialSyncStage: "canvas",
-    });
-  }
+  // AI-REMOVED 2026-07-29:
+  // Reason: SyncHost 构造发生在编辑器文档 hydration 之前，提前切到 canvas 会把客户端初始化时间错误计入全屏锁定。
+  // Trigger: 用户报告刷新后进度长期停在 10%，即使画布同步尚未发出任何网络请求。
+  // Evidence: service.start() 只在 editorDocument 首个 snapshot 到达后执行；原状态更新发生在此之前。
+  // Replacement: createWebDavSyncService.syncNow 在当前画布同步真正开始时切换 initialSyncStage。
+  // Risk: Low；同步启动前界面可操作，但 editor 尚未 hydration 时本来也不会接受业务编辑。
+  // Human Review: Required
+  //
+  // Original code:
+  // if (state.settings.enabled) {
+  //   state.setStatus({
+  //     ...state.status,
+  //     phase: "downloading",
+  //     initialSyncStage: "canvas",
+  //   });
+  // }
   const service: WebDavSyncService = createWebDavSyncService({
     readSettings: readWebDavSyncSettings,
-    createClient: (settings, onRequestActivityChange) => createWebDavWorkerStorageClient({
+    createClient: (
+      settings,
+      onRequestActivityChange,
+      requestOptions,
+    ) => createWebDavWorkerStorageClient({
       baseUrl: settings.url,
       username: settings.username,
       password: settings.password,
       readDebugEnabled: options.readDebugEnabled,
       maxConcurrentRequests: settings.maxConcurrentRequests,
       onRequestActivityChange,
+      ...(requestOptions.requestTimeoutMs === undefined
+        ? {}
+        : { requestTimeoutMs: requestOptions.requestTimeoutMs }),
     }),
     adapters,
     createInitialSyncPlan: () => createInitialSyncPlan(workspace, externalSources),
@@ -215,7 +259,6 @@ export function createSyncHost(
       setDirectoryTreeReadyKey: (key) => {
         directoryTreeReadyKey = key;
       },
-      state,
     }),
     resolveAdapterTaskKind: (adapterId) =>
       resolveAdapterTaskKind(adapterId, externalSources),
@@ -248,7 +291,11 @@ export function createSyncHost(
       // state.setRemoteDevices(await listRemoteDevices(client));
     },
     onStatusChange: state.setStatus,
+    onConflictDiscoveryStart: state.beginConflictDiscovery,
+    resolveConflicts: state.requestConflictResolutions,
+    onConflictWorkflowFinished: state.finishConflictWorkflow,
   });
+  notifyConflictDetected = service.notifyConflictDetected;
 
   const actions: SyncContract["actions"] = {
     updateSettings: (patch) => {
@@ -262,15 +309,25 @@ export function createSyncHost(
         state.status.initialSyncStage === "ready" ? "manual" : "foreground",
       );
     },
-    resolveConflict: (resolution) => {
-      if (resolution === "pause") {
-        writeWebDavSyncSettings({
-          ...readWebDavSyncSettings(),
-          enabled: false,
-        });
-      }
-      state.resolveConflict(resolution);
-    },
+    resolveConflicts: state.resolveConflicts,
+    // AI-REMOVED 2026-07-29:
+    // Reason: 单个 resolution 会强迫全部冲突采用同一选择，并把“暂停”错误解释为关闭 WebDAV。
+    // Trigger: 用户要求一个窗口列出全部冲突，每一项独立提供三个选项。
+    // Evidence: 新公开 action 按 adapterId/assetId 提交完整 decisions。
+    // Replacement: resolveConflicts。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // resolveConflict: (resolution) => {
+    //   if (resolution === "pause") {
+    //     writeWebDavSyncSettings({
+    //       ...readWebDavSyncSettings(),
+    //       enabled: false,
+    //     });
+    //   }
+    //   state.resolveConflict(resolution);
+    // },
   };
   const host: SyncHost = {
     state,
@@ -280,7 +337,7 @@ export function createSyncHost(
       while (disposers.length > 0) {
         disposers.pop()?.();
       }
-      state.clearConflict();
+      state.cancelConflictWorkflow();
       service.stop();
       if (workspace.sync === host) {
         workspace.sync = null;
@@ -387,19 +444,32 @@ export function createSyncHost(
   disposers.push(subscribeToWebDavSyncSettingsChanges((settings) => {
     const wasEnabled = state.settings.enabled;
     state.setSettings(settings);
+    if (!settings.enabled && state.pendingConflict !== null) {
+      state.cancelConflictWorkflow();
+    }
     if (!settings.enabled && !syncStarted) {
       state.setStatus({
         ...state.status,
         phase: "idle",
         initialSyncStage: "ready",
       });
-    } else if (settings.enabled && !syncStarted) {
-      state.setStatus({
-        ...state.status,
-        phase: "downloading",
-        initialSyncStage: "canvas",
-      });
     }
+    // AI-REMOVED 2026-07-29:
+    // Reason: 文档尚未 hydration 时开启 WebDAV 也不应提前显示无请求的画布锁定。
+    // Trigger: 用户要求锁定只覆盖当前画布远端判定，不覆盖初始化。
+    // Evidence: syncStarted=false 表示 service 尚未开始，状态中的 canvas 没有对应网络任务。
+    // Replacement: syncStarted 后由 service.syncNow("startup"/"foreground") 原子进入 canvas 阶段。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // else if (settings.enabled && !syncStarted) {
+    //   state.setStatus({
+    //     ...state.status,
+    //     phase: "downloading",
+    //     initialSyncStage: "canvas",
+    //   });
+    // }
     if (syncStarted) {
       void service.syncNow(
         settings.enabled && !wasEnabled ? "foreground" : "settings-change",
@@ -450,7 +520,6 @@ function createMaintenanceTasks(options: {
   readonly externalSources: readonly SyncAssetSource[];
   readonly getDirectoryTreeReadyKey: () => string | null;
   readonly setDirectoryTreeReadyKey: (key: string) => void;
-  readonly state: SyncStateImpl;
 }): readonly WebDavSyncMaintenanceTask[] {
   return [
     {
@@ -465,18 +534,27 @@ function createMaintenanceTasks(options: {
         options.setDirectoryTreeReadyKey(directoryTreeKey);
       },
     },
-    {
-      kind: "device-registration",
-      run: async (client) => {
-        await registerCurrentDevice(client);
-      },
-    },
-    {
-      kind: "remote-devices",
-      run: async (client) => {
-        options.state.setRemoteDevices(await listRemoteDevices(client));
-      },
-    },
+    // AI-REMOVED 2026-07-29:
+    // Reason: 设备注册和设备枚举不再是同步维护任务。
+    // Trigger: 用户确认设备列表没有意义，冲突仅展示资源 revision 的远端上传时间。
+    // Evidence: 真实服务器逐个读取 39 个设备文件约耗时 17.9 秒，且结果不能可靠归因 revision。
+    // Replacement: 资源 index/meta 的 committedAt。
+    // Risk: Low；服务器上的旧 devices 目录不会被自动删除。
+    // Human Review: Required
+    //
+    // Original code:
+    // {
+    //   kind: "device-registration",
+    //   run: async (client) => {
+    //     await registerCurrentDevice(client);
+    //   },
+    // },
+    // {
+    //   kind: "remote-devices",
+    //   run: async (client) => {
+    //     options.state.setRemoteDevices(await listRemoteDevices(client));
+    //   },
+    // },
   ];
 }
 
@@ -561,6 +639,7 @@ function createInitialSyncPlan(
 function createAdapterFromSource(
   source: SyncAssetSource,
   withRemoteApply: <TValue>(task: () => Promise<TValue>) => Promise<TValue>,
+  resolveConflict: ResolveInteractiveConflict,
 ): WebDavSyncAdapter {
   const sharedOptions = {
     id: source.id,
@@ -570,6 +649,7 @@ function createAdapterFromSource(
       await source.writeLocal(entry);
     }),
     normalizeRemote: source.normalizeRemote,
+    resolveConflict,
   };
 
   if (source.mode === "patch-with-revision") {
@@ -587,7 +667,7 @@ function createAdapterFromSource(
 
 function createWorldDocumentAdapter(
   workspace: WorkspaceContract,
-  state: SyncStateImpl,
+  resolveConflict: ResolveInteractiveConflict,
   withRemoteApply: <TValue>(task: () => Promise<TValue>) => Promise<TValue>,
 ): WebDavSyncAdapter {
   return createPatchCollectionWithRevisionAdapter<WorldDocument>({
@@ -605,7 +685,7 @@ function createWorldDocumentAdapter(
     // directoryPath: (documentKey) => `documents/${encodeURIComponent(documentKey)}`,
     indexPath: "documents/by-base/index.json",
     directoryPath: (baseId) => `documents/by-base/${encodeURIComponent(baseId)}`,
-    listLocal: async () => {
+    listLocal: async (scope) => {
       // AI-REMOVED 2026-07-29:
       // Reason: 按 documentKey 列出会把同一基地的设备副本视为不同的远端资产。
       // Trigger: 当前画布跨设备无法覆盖、下载或产生冲突。
@@ -628,17 +708,34 @@ function createWorldDocumentAdapter(
       //   value: createWorldDocumentWebDavValue(document),
       //   deletedAt: null,
       // }));
-      const documentsByBase = await listLatestWorldDocumentsByBase({});
       const currentDocument = workspace.editor?.document.getSnapshot();
+      if (
+        currentDocument !== undefined
+        && scope?.includeAssetIds?.length === 1
+        && scope.includeAssetIds[0] === currentDocument.baseId
+      ) {
+        return [{
+          id: currentDocument.baseId,
+          value: createWorldDocumentWebDavValue(currentDocument),
+          deletedAt: null,
+        }];
+      }
+
+      const documentsByBase = await listLatestWorldDocumentsByBase({});
       if (currentDocument !== undefined) {
         documentsByBase.set(currentDocument.baseId, currentDocument);
       }
 
-      return Array.from(documentsByBase.values()).map((document) => ({
-        id: document.baseId,
-        value: createWorldDocumentWebDavValue(document),
-        deletedAt: null,
-      }));
+      return Array.from(documentsByBase.values()).flatMap((document) =>
+        scope?.includeAssetIds !== undefined
+        && !scope.includeAssetIds.includes(document.baseId)
+          ? []
+          : [{
+            id: document.baseId,
+            value: createWorldDocumentWebDavValue(document),
+            deletedAt: null,
+          }]
+      );
     },
     writeLocal: async (entry) => await withRemoteApply(async () => {
       const editor = workspace.editor;
@@ -693,10 +790,7 @@ function createWorldDocumentAdapter(
         ? null
         : createWorldDocumentWebDavValue(document);
     },
-    resolveConflict: (conflict) => state.requestConflict(
-      conflict,
-      resolveRemoteDeviceLabel(state.remoteDevices),
-    ),
+    resolveConflict,
   });
 }
 
@@ -766,13 +860,22 @@ async function ensureWebDavDirectoryTree(
 ): Promise<void> {
   const directoryPaths = new Set([
     "",
-    "devices",
     "assets",
     "assets/blueprints",
     "assets/blueprint-folders",
     "documents",
     "documents/by-base",
   ]);
+  // AI-REMOVED 2026-07-29:
+  // Reason: 客户端不再注册或枚举设备，不应继续创建 devices 目录。
+  // Trigger: 用户确认设备列表没有业务意义。
+  // Evidence: 当前同步协议仅需要 assets 与 documents 资源树。
+  // Replacement: None。
+  // Risk: Low；服务器已有 devices 目录原样保留。
+  // Human Review: Required
+  //
+  // Original code:
+  // "devices",
 
   for (const source of externalSources) {
     addPathAncestors(directoryPaths, source.indexPath);
@@ -815,109 +918,95 @@ function addPathAncestors(paths: Set<string>, filePath: string): void {
   }
 }
 
-async function registerCurrentDevice(client: WebDavStorageClient): Promise<void> {
-  const now = new Date().toISOString();
-  const ownerState = await ensureLocalSyncOwnerState({ now });
-  const path = `devices/${ownerState.deviceId}.json`;
-  const existing = await readRemoteDeviceInfo(client, path);
-  const nextDevice: SyncRemoteDeviceInfo = {
-    deviceId: ownerState.deviceId,
-    label: existing?.label ?? createDefaultDeviceLabel(now),
-    firstSeen: existing?.firstSeen ?? now,
-    lastActive: now,
-  };
-
-  await client.writeTextFile(path, JSON.stringify(nextDevice));
-}
-
-async function listRemoteDevices(
-  client: WebDavStorageClient,
-): Promise<SyncRemoteDeviceInfo[]> {
-  const entries = await client.listDirectory("devices");
-  // AI-REMOVED 2026-07-29:
-  // Reason: 逐个读取设备记录会让耗时随设备数量线性叠加。
-  // Trigger: 用户要求在限制最大连接数的情况下并行下载。
-  // Evidence: 真实测试服务器已有十个设备记录，原循环产生十次串行 GET。
-  // Replacement: 下方 Promise.all；实际并发由 worker client 全局限流。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // const devices: SyncRemoteDeviceInfo[] = [];
-  //
-  // for (const entry of entries) {
-  //   if (entry.type !== "file" || !entry.basename.endsWith(".json")) {
-  //     continue;
-  //   }
-  //
-  //   const device = await readRemoteDeviceInfo(client, `devices/${entry.basename}`);
-  //   if (device !== null) {
-  //     devices.push(device);
-  //   }
-  // }
-  //
-  // return devices;
-  const devices = await Promise.all(entries.flatMap((entry) =>
-    entry.type === "file" && entry.basename.endsWith(".json")
-      ? [readRemoteDeviceInfo(client, `devices/${entry.basename}`)]
-      : []
-  ));
-
-  return devices.filter((device): device is SyncRemoteDeviceInfo => device !== null);
-}
-
-async function readRemoteDeviceInfo(
-  client: WebDavStorageClient,
-  path: string,
-): Promise<SyncRemoteDeviceInfo | null> {
-  const file = await client.readTextFile(path);
-  if (file === null) {
-    return null;
-  }
-
-  try {
-    return normalizeRemoteDeviceInfo(JSON.parse(file.content));
-  } catch {
-    return null;
-  }
-}
-
-function normalizeRemoteDeviceInfo(value: unknown): SyncRemoteDeviceInfo | null {
-  if (
-    !isRecord(value)
-    || typeof value.deviceId !== "string"
-    || typeof value.label !== "string"
-    || typeof value.firstSeen !== "string"
-    || typeof value.lastActive !== "string"
-  ) {
-    return null;
-  }
-
-  return {
-    deviceId: value.deviceId,
-    label: value.label,
-    firstSeen: value.firstSeen,
-    lastActive: value.lastActive,
-  };
-}
-
-function resolveRemoteDeviceLabel(
-  devices: readonly SyncRemoteDeviceInfo[],
-): string {
-  return devices[0]?.label ?? "远端设备";
-}
-
-function createDefaultDeviceLabel(now: string): string {
-  const navigatorValue = typeof navigator === "undefined" ? null : navigator;
-  const browser = navigatorValue?.userAgent.includes("Firefox") ? "Firefox"
-    : navigatorValue?.userAgent.includes("Edg/") ? "Edge"
-      : navigatorValue?.userAgent.includes("Chrome") ? "Chrome"
-        : "Browser";
-  const platform = navigatorValue?.platform || "Unknown OS";
-
-  return `${browser} on ${platform} (${now.slice(0, 10)})`;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
+// AI-REMOVED 2026-07-29:
+// Reason: 设备心跳、全量设备枚举和“最近设备即提交者”的猜测均退出同步协议。
+// Trigger: 用户确认不需要列出设备，仅提示远端上传时间。
+// Evidence: 设备文件无法关联到具体 revision，且 39 个文件的真实枚举约耗时 17.9 秒。
+// Replacement: webdav-sync-adapters.ts RemoteIndexEntry/RemotePatchMetaFile.committedAt。
+// Risk: Low；远端旧 devices/*.json 保留，未执行破坏性删除。
+// Human Review: Required
+//
+// Original code:
+// async function registerCurrentDevice(client: WebDavStorageClient): Promise<void> {
+//   const now = new Date().toISOString();
+//   const ownerState = await ensureLocalSyncOwnerState({ now });
+//   const path = `devices/${ownerState.deviceId}.json`;
+//   const existing = await readRemoteDeviceInfo(client, path);
+//   const nextDevice: SyncRemoteDeviceInfo = {
+//     deviceId: ownerState.deviceId,
+//     label: existing?.label ?? createDefaultDeviceLabel(now),
+//     firstSeen: existing?.firstSeen ?? now,
+//     lastActive: now,
+//   };
+//
+//   await client.writeTextFile(path, JSON.stringify(nextDevice));
+// }
+//
+// async function listRemoteDevices(
+//   client: WebDavStorageClient,
+// ): Promise<SyncRemoteDeviceInfo[]> {
+//   const entries = await client.listDirectory("devices");
+//   const devices = await Promise.all(entries.flatMap((entry) =>
+//     entry.type === "file" && entry.basename.endsWith(".json")
+//       ? [readRemoteDeviceInfo(client, `devices/${entry.basename}`)]
+//       : []
+//   ));
+//
+//   return devices.filter((device): device is SyncRemoteDeviceInfo => device !== null);
+// }
+//
+// async function readRemoteDeviceInfo(
+//   client: WebDavStorageClient,
+//   path: string,
+// ): Promise<SyncRemoteDeviceInfo | null> {
+//   const file = await client.readTextFile(path);
+//   if (file === null) {
+//     return null;
+//   }
+//
+//   try {
+//     return normalizeRemoteDeviceInfo(JSON.parse(file.content));
+//   } catch {
+//     return null;
+//   }
+// }
+//
+// function normalizeRemoteDeviceInfo(value: unknown): SyncRemoteDeviceInfo | null {
+//   if (
+//     !isRecord(value)
+//     || typeof value.deviceId !== "string"
+//     || typeof value.label !== "string"
+//     || typeof value.firstSeen !== "string"
+//     || typeof value.lastActive !== "string"
+//   ) {
+//     return null;
+//   }
+//
+//   return {
+//     deviceId: value.deviceId,
+//     label: value.label,
+//     firstSeen: value.firstSeen,
+//     lastActive: value.lastActive,
+//   };
+// }
+//
+// function resolveRemoteDeviceLabel(
+//   devices: readonly SyncRemoteDeviceInfo[],
+// ): string {
+//   return devices[0]?.label ?? "远端设备";
+// }
+//
+// function createDefaultDeviceLabel(now: string): string {
+//   const navigatorValue = typeof navigator === "undefined" ? null : navigator;
+//   const browser = navigatorValue?.userAgent.includes("Firefox") ? "Firefox"
+//     : navigatorValue?.userAgent.includes("Edg/") ? "Edge"
+//       : navigatorValue?.userAgent.includes("Chrome") ? "Chrome"
+//         : "Browser";
+//   const platform = navigatorValue?.platform || "Unknown OS";
+//
+//   return `${browser} on ${platform} (${now.slice(0, 10)})`;
+// }
+//
+// function isRecord(value: unknown): value is Record<string, unknown> {
+//   return typeof value === "object" && value !== null;
+// }

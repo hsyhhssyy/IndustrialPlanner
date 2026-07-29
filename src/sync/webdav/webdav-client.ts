@@ -26,6 +26,7 @@ export interface WebDavReadOptions {
 export interface WebDavTextFile {
   readonly content: string;
   readonly etag: string | null;
+  readonly lastModified: string | null;
 }
 
 export interface WebDavResourceStat {
@@ -67,10 +68,46 @@ export function createWebDavStorageClient(options: WebDavClientOptions): WebDavS
     makeDirectory: async (relativePath) => {
       const fullPath = resolveRemotePath(rootPath, relativePath);
       logger.debug(`MKCOL ${fullPath}`);
-      await runWithRequestTimeout(
-        requestTimeoutMs,
-        async (signal) => await client.createDirectory(fullPath, { recursive: true, signal }),
-      );
+      try {
+        await runWithRequestTimeout(
+          requestTimeoutMs,
+          async (signal) => await client.createDirectory(fullPath, {
+            recursive: true,
+            signal,
+          }),
+        );
+      } catch (error) {
+        if (!isMethodNotAllowedError(error)) {
+          throw error;
+        }
+
+        const existingResponse = await runWithRequestTimeout(
+          requestTimeoutMs,
+          async (signal) => await client.stat(fullPath, { signal }),
+        );
+        const existing = normalizeResourceStat(
+          isDetailedResponse(existingResponse)
+            ? existingResponse.data
+            : existingResponse,
+        );
+        if (existing.type !== "directory") {
+          throw error;
+        }
+        logger.debug(`MKCOL ${fullPath} → already exists`);
+      }
+      // AI-REMOVED 2026-07-29:
+      // Reason: 并行资源首次上传会并发创建相同父目录，OwnCloud 对后到请求返回 405。
+      // Trigger: 真实双资源批量冲突验证在并发创建验证根目录时失败。
+      // Evidence: 405 后对相同路径执行 PROPFIND，目标已经是 directory。
+      // Replacement: 上方仅在确认目标目录已存在时接受 405 的幂等流程。
+      // Risk: Low；非目录或其他错误仍原样抛出。
+      // Human Review: Required
+      //
+      // Original code:
+      // await runWithRequestTimeout(
+      //   requestTimeoutMs,
+      //   async (signal) => await client.createDirectory(fullPath, { recursive: true, signal }),
+      // );
     },
     listDirectory: async (relativePath) => {
       const entries = await runWithRequestTimeout(
@@ -117,14 +154,17 @@ export function createWebDavStorageClient(options: WebDavClientOptions): WebDavS
           return {
             content: normalizeTextContent(response),
             etag: null,
+            lastModified: null,
           };
         }
 
         const etag = readHeader(response.headers, "etag");
+        const lastModified = readHeader(response.headers, "last-modified");
         logger.debug(`GET ${fullPath} → ${String(response.data).length} bytes, etag=${etag ?? "null"}`);
         return {
           content: normalizeTextContent(response.data),
           etag,
+          lastModified,
         };
       } catch (error) {
         if (isNotFoundError(error)) {
@@ -319,6 +359,10 @@ function readHeader(headers: Readonly<Record<string, string>>, name: string): st
 
 function isNotFoundError(error: unknown): boolean {
   return isRecord(error) && error.status === 404;
+}
+
+function isMethodNotAllowedError(error: unknown): boolean {
+  return isRecord(error) && error.status === 405;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

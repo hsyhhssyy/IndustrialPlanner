@@ -19,9 +19,11 @@ export type {
   PatchWithRevisionEntry,
   WebDavConflictResolution,
   WebDavSyncAdapter,
+  WebDavSyncAdapterScope,
   WebDavSyncAdapterResult,
   WebDavSyncAdapterStatus,
   WebDavSyncConflict,
+  WebDavSyncConflictDecision,
   WebDavSyncMode,
 } from "./engine/webdav-sync-adapters";
 
@@ -52,10 +54,13 @@ export type {
 } from "./engine/webdav-sync-service";
 
 export {
+  clearWebDavLastSeenRemoteEtag,
   clearWebDavLastSyncedContentHash,
+  readWebDavLastSeenRemoteEtag,
   readWebDavLastSeenRemoteRevision,
   readWebDavLastSyncedContentHash,
   WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY,
+  writeWebDavLastSeenRemoteEtag,
   writeWebDavLastSeenRemoteRevision,
   writeWebDavLastSyncedContentHash,
 } from "./storage/webdav-sync-metadata";

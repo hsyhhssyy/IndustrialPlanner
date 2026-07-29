@@ -28,6 +28,7 @@ import { SaveBlueprintDialog } from "@/app/shell/dialogs/save-blueprint-dialog";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
 import { V2MigrationDialog } from "@/app/shell/dialogs/v2-migration-dialog";
 import { WarehouseStatsDialog } from "@/app/shell/dialogs/warehouse-stats-dialog";
+import { WebDavConflictDialog } from "@/app/shell/dialogs/webdav-conflict-dialog";
 import { EncyclopediaPickerDialog } from "@/app/shell/encyclopedia/encyclopedia-picker-dialog";
 import {
   ToolboxBottomDock,
@@ -1131,6 +1132,13 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           <WebDavInitialSyncGate
             sync={appHost.workspace.sync}
             translate={appHost.actions.translate}
+          />
+        )}
+        {appHost.workspace.sync === null ? null : (
+          <WebDavConflictDialog
+            compactMobileLayout={appHost.state.screenProfile.deviceClass !== "desktop"}
+            sync={appHost.workspace.sync}
+            t={appHost.actions.translate}
           />
         )}
         {showMobilePortraitGate ? <MobilePortraitGate appHost={appHost} /> : null}

@@ -11,6 +11,11 @@ export type SyncInitialSyncStage =
 
 export type SyncConflictResolution = "use-local" | "use-remote" | "pause";
 
+export type SyncConflictPhase =
+  | "discovering"
+  | "awaiting-resolution"
+  | "applying";
+
 export type SyncRunReason =
   | "startup"
   | "foreground"
@@ -25,9 +30,18 @@ export type SyncTaskKind =
   | "modules"
   | "toolbox"
   | "background-documents"
-  | "directory-maintenance"
-  | "device-registration"
-  | "remote-devices";
+  | "directory-maintenance";
+// AI-REMOVED 2026-07-29:
+// Reason: 设备枚举与设备心跳不再参与 WebDAV 同步协议。
+// Trigger: 用户确认不需要列出设备，冲突只展示远端上传时间。
+// Evidence: 真实服务器的 39 个设备文件需要约 17.9 秒读取，且无法证明具体资源由哪个设备提交。
+// Replacement: revision/index 元数据中的 committedAt。
+// Risk: Low；不再展示历史设备列表。
+// Human Review: Required
+//
+// Original code:
+//   | "device-registration"
+//   | "remote-devices";
 
 export type SyncTaskPhase =
   | "idle"
@@ -70,17 +84,37 @@ export interface SyncStatus {
   readonly lastError: string | null;
 }
 
-export interface SyncRemoteDeviceInfo {
-  readonly deviceId: string;
-  readonly label: string;
-  readonly firstSeen: string;
-  readonly lastActive: string;
+// AI-REMOVED 2026-07-29:
+// Reason: 设备列表不能可靠归因远端 revision，且枚举成本随设备数增长。
+// Trigger: 用户确认设备列表没有业务意义，仅展示远端上传时间。
+// Evidence: 当前冲突设备名只是取 remoteDevices[0]，并非 revision 的真实作者。
+// Replacement: SyncConflictItem.remoteUpdatedAt。
+// Risk: Low；旧 devices/*.json 保留在服务器，不做破坏性删除。
+// Human Review: Required
+//
+// Original code:
+// export interface SyncRemoteDeviceInfo {
+//   readonly deviceId: string;
+//   readonly label: string;
+//   readonly firstSeen: string;
+//   readonly lastActive: string;
+// }
+
+export interface SyncConflictItem {
+  readonly adapterId: string;
+  readonly assetId: string;
+  readonly remoteUpdatedAt: string | null;
+}
+
+export interface SyncConflictDecision {
+  readonly adapterId: string;
+  readonly assetId: string;
+  readonly resolution: SyncConflictResolution;
 }
 
 export interface SyncPendingConflict {
-  readonly adapterId: string;
-  readonly assetId: string;
-  readonly remoteDeviceLabel: string;
+  readonly phase: SyncConflictPhase;
+  readonly items: readonly SyncConflictItem[];
 }
 
 export interface SyncAssetEntry<TValue = unknown> {

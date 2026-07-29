@@ -1,7 +1,10 @@
 export {
+  clearWebDavLastSeenRemoteEtag,
   clearWebDavLastSyncedContentHash,
+  readWebDavLastSeenRemoteEtag,
   readWebDavLastSeenRemoteRevision,
   readWebDavLastSyncedContentHash,
+  writeWebDavLastSeenRemoteEtag,
   writeWebDavLastSeenRemoteRevision,
   writeWebDavLastSyncedContentHash,
 } from "./webdav-sync-metadata";

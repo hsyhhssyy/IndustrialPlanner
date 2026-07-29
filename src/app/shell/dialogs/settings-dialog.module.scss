@@ -463,32 +463,41 @@
   line-height: 1.35;
 }
 
-.webdav-sync-device-list {
-  display: grid;
-  gap: 6px;
-  color: var(--text-1);
-  font-size: 0.8rem;
-}
-
-.webdav-sync-device-list > article {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 9px;
-  background: var(--surface-3);
-}
-
-.webdav-sync-device-list strong {
-  min-width: 0;
-  color: var(--text-0);
-  overflow-wrap: anywhere;
-}
-
-.webdav-sync-device-list span {
-  flex: 0 0 auto;
-}
+// AI-REMOVED 2026-07-29:
+// Reason: WebDAV 状态窗口不再展示设备列表。
+// Trigger: 用户确认设备列表没有意义，仅在冲突中显示远端上传时间。
+// Evidence: 设备枚举造成显著网络延迟且无法归因具体 revision。
+// Replacement: webdav-conflict-dialog.module.scss。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// .webdav-sync-device-list {
+//   display: grid;
+//   gap: 6px;
+//   color: var(--text-1);
+//   font-size: 0.8rem;
+// }
+//
+// .webdav-sync-device-list > article {
+//   display: flex;
+//   align-items: baseline;
+//   justify-content: space-between;
+//   gap: 10px;
+//   padding: 8px 10px;
+//   border-radius: 9px;
+//   background: var(--surface-3);
+// }
+//
+// .webdav-sync-device-list strong {
+//   min-width: 0;
+//   color: var(--text-0);
+//   overflow-wrap: anywhere;
+// }
+//
+// .webdav-sync-device-list span {
+//   flex: 0 0 auto;
+// }
 
 .settings-dialog-activity-card {
   grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);

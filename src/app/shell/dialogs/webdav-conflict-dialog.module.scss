@@ -1,0 +1,151 @@
+.webdav-conflict-dialog {
+  min-width: min(680px, calc(100vw - 24px));
+}
+
+.webdav-conflict-dialog-body {
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.webdav-conflict-content {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 0;
+  height: 100%;
+  padding: 16px;
+}
+
+.webdav-conflict-summary {
+  margin: 0;
+  color: var(--text-0);
+  font-size: 0.9rem;
+}
+
+.webdav-conflict-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  padding-right: 4px;
+  overflow: auto;
+}
+
+.webdav-conflict-item {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-3);
+}
+
+.webdav-conflict-item > legend {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  max-width: 100%;
+  padding: 0 4px;
+  color: var(--text-0);
+}
+
+.webdav-conflict-item > legend span {
+  min-width: 0;
+  color: var(--text-1);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.webdav-conflict-item > p {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 0.78rem;
+}
+
+.webdav-conflict-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.webdav-conflict-options > label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  cursor: pointer;
+}
+
+.webdav-conflict-options > label:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.webdav-conflict-options input {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.webdav-conflict-options span {
+  min-width: 0;
+  text-align: center;
+}
+
+.webdav-conflict-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.webdav-conflict-actions > button {
+  min-height: 34px;
+  padding: 0 16px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.webdav-conflict-actions > button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.webdav-conflict-progress {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  min-height: 220px;
+  padding: 24px;
+  color: var(--text-0);
+  text-align: center;
+}
+
+.webdav-conflict-progress > p {
+  margin: 0;
+}
+
+.webdav-conflict-spinner {
+  width: 30px;
+  height: 30px;
+  color: var(--accent);
+  animation: webdav-conflict-spin 0.9s linear infinite;
+}
+
+@keyframes webdav-conflict-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

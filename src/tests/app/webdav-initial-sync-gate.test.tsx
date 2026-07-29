@@ -34,7 +34,7 @@ describe("WebDavInitialSyncGate", () => {
     sync = {
       state,
       actions: {
-        resolveConflict: vi.fn(),
+        resolveConflicts: vi.fn(),
         syncNow: vi.fn(async () => undefined),
         updateSettings: vi.fn(),
       },

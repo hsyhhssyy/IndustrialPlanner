@@ -8,11 +8,13 @@ export const WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY = "v3-webdav-sync-metadata";
 interface WebDavSyncMetadataState {
   readonly contentHashes: Record<string, string>;
   readonly remoteRevisions: Record<string, number>;
+  readonly remoteEtags: Record<string, string>;
 }
 
 const EMPTY_METADATA: WebDavSyncMetadataState = {
   contentHashes: {},
   remoteRevisions: {},
+  remoteEtags: {},
 };
 
 export function readWebDavLastSyncedContentHash(assetKey: string): string | null {
@@ -27,6 +29,7 @@ export function writeWebDavLastSyncedContentHash(assetKey: string, contentHash: 
       [assetKey]: contentHash,
     },
     remoteRevisions: state.remoteRevisions,
+    remoteEtags: state.remoteEtags,
   });
 
   return contentHash;
@@ -39,6 +42,7 @@ export function clearWebDavLastSyncedContentHash(assetKey: string): void {
   saveToLocalStorage<WebDavSyncMetadataState>(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY, {
     contentHashes,
     remoteRevisions: state.remoteRevisions,
+    remoteEtags: state.remoteEtags,
   });
 }
 
@@ -57,9 +61,42 @@ export function writeWebDavLastSeenRemoteRevision(
       ...state.remoteRevisions,
       [remoteStateKey]: revision,
     },
+    remoteEtags: state.remoteEtags,
   });
 
   return revision;
+}
+
+export function readWebDavLastSeenRemoteEtag(remoteStateKey: string): string | null {
+  return readWebDavSyncMetadataState().remoteEtags[remoteStateKey] ?? null;
+}
+
+export function writeWebDavLastSeenRemoteEtag(
+  remoteStateKey: string,
+  etag: string,
+): string {
+  const state = readWebDavSyncMetadataState();
+  saveToLocalStorage<WebDavSyncMetadataState>(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY, {
+    contentHashes: state.contentHashes,
+    remoteRevisions: state.remoteRevisions,
+    remoteEtags: {
+      ...state.remoteEtags,
+      [remoteStateKey]: etag,
+    },
+  });
+
+  return etag;
+}
+
+export function clearWebDavLastSeenRemoteEtag(remoteStateKey: string): void {
+  const state = readWebDavSyncMetadataState();
+  const { [remoteStateKey]: _removed, ...remoteEtags } = state.remoteEtags;
+
+  saveToLocalStorage<WebDavSyncMetadataState>(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY, {
+    contentHashes: state.contentHashes,
+    remoteRevisions: state.remoteRevisions,
+    remoteEtags,
+  });
 }
 
 function readWebDavSyncMetadataState(): WebDavSyncMetadataState {
@@ -81,6 +118,8 @@ function readWebDavSyncMetadataState(): WebDavSyncMetadataState {
   // if (!isRecord(rawState) || !isRecord(rawState.contentHashes)) {
   //   return EMPTY_METADATA;
   // }
+  // AI-CORRECTION 2026-07-29: 元数据现在包含内容哈希、revision 游标和 canonical ETag；
+  // 三个字段继续分别容错，历史客户端缺少 remoteEtags 时不得丢弃已有同步元数据。
   const contentHashes = Object.fromEntries(
     Object.entries(
       isRecord(rawState.contentHashes) ? rawState.contentHashes : {},
@@ -103,8 +142,17 @@ function readWebDavSyncMetadataState(): WebDavSyncMetadataState {
         : []
     ),
   );
+  const remoteEtags = Object.fromEntries(
+    Object.entries(
+      isRecord(rawState.remoteEtags) ? rawState.remoteEtags : {},
+    ).flatMap(([remoteStateKey, etag]) =>
+      typeof etag === "string" && etag.length > 0
+        ? [[remoteStateKey, etag]]
+        : []
+    ),
+  );
 
-  return { contentHashes, remoteRevisions };
+  return { contentHashes, remoteRevisions, remoteEtags };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
