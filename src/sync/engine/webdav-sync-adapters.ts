@@ -137,6 +137,7 @@ interface RemoteIndexState {
   readonly index: RemoteIndexFile;
   readonly etag: string | null;
   readonly canonicalEtag: string | null;
+  readonly canonicalMissing: boolean;
   readonly lastModified: string | null;
 }
 
@@ -157,6 +158,7 @@ interface RemotePatchMetaFile {
 interface RemotePatchMetaState {
   readonly meta: RemotePatchMetaFile;
   readonly etag: string | null;
+  readonly canonicalMissing: boolean;
   readonly lastModified: string | null;
 }
 
@@ -866,7 +868,7 @@ async function syncFullWithRevision<TValue>(
       options.indexPath,
       nextIndex,
       remoteIndex.revision,
-      remoteIndexState.etag,
+      remoteIndexState.canonicalMissing,
     );
   } else if (
     status !== "conflict"
@@ -1298,7 +1300,7 @@ async function syncPatchCollectionWithRevision<TValue>(
       options.indexPath,
       nextIndex,
       remoteIndex.revision,
-      remoteIndexState.etag,
+      remoteIndexState.canonicalMissing,
     );
   } else if (
     status !== "conflict"
@@ -1580,6 +1582,7 @@ async function readRemoteIndexState(
         index: normalizeRemoteIndex(JSON.parse(file.content)),
         etag: file.etag,
         canonicalEtag: file.etag,
+        canonicalMissing: false,
         lastModified: normalizeRemoteTimestamp(file.lastModified),
       };
     } catch {
@@ -1638,6 +1641,7 @@ async function readRemoteIndexState(
     index: { revision: 0, entries: {} },
     etag: file?.etag ?? null,
     canonicalEtag: null,
+    canonicalMissing: true,
     lastModified: normalizeRemoteTimestamp(file?.lastModified ?? null),
   };
   const selectedState = journalState !== null
@@ -1646,6 +1650,8 @@ async function readRemoteIndexState(
     : canonicalFallback;
   const result: RemoteIndexState = {
     ...selectedState,
+    canonicalMissing: canonicalFallback.canonicalMissing
+      && journalState === null,
     lastModified: journalState === null
       ? canonicalFallback.lastModified
       : null,
@@ -1665,14 +1671,19 @@ async function writeRemoteIndex(
   indexPath: string,
   index: RemoteIndexFile,
   expectedRevision: number,
-  _etag: string | null,
+  canonicalMissing: boolean,
 ): Promise<void> {
   clearWebDavLastSeenRemoteEtag(indexPath);
   const committedIndex: RemoteIndexFile = {
     ...index,
     revision: expectedRevision + 1,
   };
-  await writeRevisionJournalState(client, indexPath, committedIndex);
+  await writeRevisionJournalState(
+    client,
+    indexPath,
+    committedIndex,
+    createAtomicWriteOptions(canonicalMissing),
+  );
   writeWebDavLastSeenRemoteRevision(indexPath, committedIndex.revision);
 }
 
@@ -1852,6 +1863,7 @@ async function readRemotePatchMetaState(
         : {
           meta,
           etag: file.etag,
+          canonicalMissing: false,
           lastModified: normalizeRemoteTimestamp(file.lastModified),
         };
     } catch {
@@ -1916,6 +1928,7 @@ async function readRemotePatchMetaState(
     const result = {
       meta: journalState.value,
       etag: journalState.etag,
+      canonicalMissing: canonicalState === null,
       lastModified: null,
     };
     writeWebDavLastSeenRemoteRevision(metaPath, result.meta.revision);
@@ -1973,7 +1986,7 @@ async function writeRemotePatchState<TValue>(options: {
       options.client,
       options.directoryPath,
       nextMeta,
-      createMetaWriteOptions(null),
+      createAtomicWriteOptions(false),
     );
     return;
   }
@@ -1988,7 +2001,6 @@ async function writeRemotePatchState<TValue>(options: {
       options.client,
       options.directoryPath,
       options.previousState.meta,
-      options.previousState.etag,
     );
     await writeRemotePatchMeta(options.client, options.directoryPath, {
       revision: nextRevision,
@@ -2006,7 +2018,6 @@ async function writeRemotePatchState<TValue>(options: {
     options.client,
     options.directoryPath,
     options.previousState.meta,
-    options.previousState.etag,
   );
   await writeRemotePatchMeta(options.client, options.directoryPath, {
     revision: nextRevision,
@@ -2017,26 +2028,29 @@ async function writeRemotePatchState<TValue>(options: {
   }, metaWriteOptions);
 }
 
-function createMetaWriteOptions(_etag: string | null): WebDavWriteOptions {
-  return { ifNoneMatch: "*" };
+function createAtomicWriteOptions(canonicalMissing: boolean): WebDavWriteOptions {
+  return canonicalMissing ? {} : { ifNoneMatch: "*" };
 }
 
 async function resolveLatestMetaWriteOptions(
   client: WebDavStorageClient,
   directoryPath: string,
   expectedMeta: RemotePatchMetaFile,
-  fallbackEtag: string | null,
 ): Promise<WebDavWriteOptions> {
   const latestMetaState = await readRemotePatchMetaState(client, directoryPath);
   if (latestMetaState === null) {
-    return createMetaWriteOptions(fallbackEtag);
+    return createAtomicWriteOptions(true);
+  }
+
+  if (latestMetaState.canonicalMissing) {
+    return createAtomicWriteOptions(true);
   }
 
   if (!areRemotePatchMetaFilesEqual(latestMetaState.meta, expectedMeta)) {
     throw new Error("Remote patch meta changed before write.");
   }
 
-  return createMetaWriteOptions(latestMetaState.etag ?? fallbackEtag);
+  return createAtomicWriteOptions(false);
 }
 
 async function writeRemotePatchMeta(
