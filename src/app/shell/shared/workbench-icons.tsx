@@ -50,7 +50,9 @@ import LucideRectangleVertical from "~icons/lucide/rectangle-vertical";
 import LucideRedo2 from "~icons/lucide/redo-2";
 import LucideRepeat2 from "~icons/lucide/repeat-2";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
+import LucideLoaderCircle from "~icons/lucide/loader-circle";
 import LucideSave from "~icons/lucide/save";
+import LucideSaveOff from "~icons/lucide/save-off";
 import LucideSettings from "~icons/lucide/settings";
 import LucideSmartphone from "~icons/lucide/smartphone";
 import LucideSquare from "~icons/lucide/square";
@@ -88,6 +90,8 @@ type WorkbenchIconKind =
   | "timeline"
   | "debug-log"
   | "save-blueprint"
+  | "save-progress"
+  | "save-failed"
   | "copy"
   | "edit"
   | "toolbox"
@@ -156,6 +160,8 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   timeline: LucideHistory,
   "debug-log": LucideHistory,
   "save-blueprint": LucideSave,
+  "save-progress": LucideLoaderCircle,
+  "save-failed": LucideSaveOff,
   copy: LucideCopy,
   edit: LucideEdit3,
   toolbox: LucidePackage2,

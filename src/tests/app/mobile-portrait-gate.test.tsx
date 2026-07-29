@@ -18,6 +18,7 @@ function createWorkspace(): WorkspaceContract {
     editor: null,
     render: null,
     simulation: null,
+    sync: null,
   };
 }
 

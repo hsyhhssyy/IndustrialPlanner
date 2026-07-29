@@ -1,4 +1,14 @@
 import { FullscreenToggleButton } from "@/app/shell/layout/fullscreen-toggle-button";
+// AI-REMOVED 2026-07-29:
+// Reason: 保存提示改为独立悬浮在画布右上角，不再属于顶栏内容。
+// Trigger: 用户要求 PC 与移动隐藏顶栏模式都使用画布悬浮图标。
+// Evidence: 顶栏内提示无法在隐藏顶栏时保持统一位置。
+// Replacement: CanvasPanel 内的 WebDavSaveIndicator。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// import { WebDavSaveIndicator } from "@/app/shell/layout/webdav-save-indicator";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { AppHost } from "@/app/host/app-host";
@@ -291,6 +301,21 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
             <span className={cm(styles, "sr-only")}>{t("action.collapse")}</span>
           </button>
         ) : null}
+        {/* AI-REMOVED 2026-07-29:
+            Reason: 保存提示从顶栏迁移到画布独立 overlay。
+            Trigger: 用户要求 PC 端固定画布右上角。
+            Evidence: 顶栏提示会随顶栏布局移动。
+            Replacement: CanvasPanel 内的 WebDavSaveIndicator。
+            Risk: Low。
+            Human Review: Required
+
+            Original code:
+            {appHost.workspace.sync !== null ? (
+              <WebDavSaveIndicator
+                syncState={appHost.workspace.sync.state}
+                translate={appHost.actions.translate}
+              />
+            ) : null} */}
       </div>
     </header>
   );

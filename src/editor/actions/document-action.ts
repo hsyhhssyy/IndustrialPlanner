@@ -13,7 +13,10 @@ import type { EditorActionsContext } from "./types";
 
 const logger = createLogger("document-action");
 
-type EditorDocumentActions = Pick<EditorAction, "loadLatestBaseDocument" | "writeDocumentSettings">;
+type EditorDocumentActions = Pick<
+  EditorAction,
+  "applySynchronizedDocument" | "loadLatestBaseDocument" | "writeDocumentSettings"
+>;
 
 export function createEditorDocumentActions({
   document,
@@ -22,6 +25,15 @@ export function createEditorDocumentActions({
   workspace,
 }: EditorActionsContext): EditorDocumentActions {
   return {
+    applySynchronizedDocument: action((nextDocument) => {
+      if (document.getSnapshot().documentKey !== nextDocument.documentKey) {
+        return;
+      }
+
+      resetDocumentRuntimeState(state);
+      documentWriter.setSnapshot(nextDocument, { mode: "silent" });
+    }),
+
     loadLatestBaseDocument: action(async (baseId) => {
       logger.info("loadLatestBaseDocument start", { baseId });
 

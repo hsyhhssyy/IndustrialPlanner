@@ -155,6 +155,75 @@
   white-space: nowrap;
 }
 
+.webdav-save-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  box-sizing: border-box;
+  // AI-REMOVED 2026-07-29:
+  // Reason: 保存提示改为无纯色背景底的画布悬浮图标。
+  // Trigger: 用户要求移除圆形底板、边框和实体阴影。
+  // Evidence: 原样式在画布上表现为独立圆形按钮。
+  // Replacement: transparent background + icon drop-shadow。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // border: 1px solid var(--line);
+  // border-radius: 999px;
+  // background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+  // box-shadow: 0 4px 12px color-mix(in srgb, var(--text-0) 12%, transparent);
+  border: 0;
+  background: transparent;
+  filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--text-0) 28%, transparent));
+  pointer-events: none;
+}
+
+.webdav-save-indicator-saving {
+  color: var(--accent-strong);
+}
+
+.webdav-save-indicator-failed {
+  color: var(--danger);
+}
+
+.webdav-save-indicator > svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+.webdav-save-icon-stack {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+}
+
+.webdav-save-base-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.webdav-save-progress-icon {
+  position: absolute;
+  inset: 0;
+  width: 22px;
+  height: 22px;
+  animation: webdav-save-progress-spin 0.9s linear infinite;
+}
+
+@keyframes webdav-save-progress-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .left-toolbar {
   grid-area: tools;
   display: grid;

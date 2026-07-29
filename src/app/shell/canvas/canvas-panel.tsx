@@ -3,9 +3,11 @@ import type { LongPressState } from "@/app/input/gesture/adapter";
 import type { GestureDiagnosticsSnapshot } from "@/app/input/gesture/diagnostics";
 import type { SimulationRuntimeStatistics } from "@/domain/simulation";
 import { useViewportResizeAdapter } from "@/app/shell/canvas/viewport-resize-adapter";
+import { WebDavSaveIndicator } from "@/app/shell/layout/webdav-save-indicator";
+import { isTouchLandscapeScreenProfile } from "@/shared/browser/screen-profile";
 import { observer } from "mobx-react-lite";
 import { useEffect, useId, useRef, useState } from "react";
-import type { KeyboardEvent, PointerEvent, WheelEvent } from "react";
+import type { KeyboardEvent, PointerEvent, ReactNode, WheelEvent } from "react";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import {
@@ -43,12 +45,21 @@ function pollSimulationStats(
   };
 }
 
-export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost: AppHost }) {
+export const CanvasPanel = observer(function CanvasPanel({
+  appHost,
+  topRightOverlay,
+}: {
+  appHost: AppHost;
+  topRightOverlay?: ReactNode;
+}) {
   const t = appHost.actions.translate;
   const gestureAdapter = appHost.gestureAdapter;
   const gestureDiagnostics = appHost.gestureDiagnostics;
   const showGestureDiagnosticsWindow = appHost.state.settings.debugShowGestureDiagnosticsWindow;
   const showFps = appHost.state.settings.debugShowFps;
+  const useCollapsedTopBarSavePosition = isTouchLandscapeScreenProfile(
+    appHost.state.screenProfile,
+  ) && appHost.state.workbench.topBarCollapsed;
   const rendererHostRef = useRef<HTMLDivElement | null>(null);
   const viewportSurfaceRef = useRef<HTMLDivElement | null>(null);
   const renderContainer = appHost.workspace.render?.container ?? null;
@@ -246,8 +257,16 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
           {showGestureDiagnosticsWindow ? (
             <CanvasGestureDiagnosticsOverlay snapshot={diagnosticsSnapshot} />
           ) : null}
-          {showFps ? (
-            <CanvasFpsOverlay snapshot={fpsSnapshot} />
+          {showFps ? <CanvasFpsOverlay snapshot={fpsSnapshot} /> : null}
+          {topRightOverlay}
+          {appHost.workspace.sync !== null ? (
+            <WebDavSaveIndicator
+              className={useCollapsedTopBarSavePosition
+                ? "canvas-webdav-save-indicator canvas-webdav-save-indicator-collapsed"
+                : "canvas-webdav-save-indicator"}
+              syncState={appHost.workspace.sync.state}
+              translate={appHost.actions.translate}
+            />
           ) : null}
         </div>
       </div>

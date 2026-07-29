@@ -4,6 +4,7 @@ import { EditorContract } from "../editor/editor-contract";
 import { RegistryContract } from "../registry/registry-contract";
 import { RenderContract } from "../renderer/render-contract";
 import { SimulationContract } from "../simulation/simulation-contract";
+import type { SyncContract } from "../sync/sync-contract";
 
 
 export interface WorkspaceContract {
@@ -13,4 +14,5 @@ export interface WorkspaceContract {
     editor: EditorContract | null;
     render: RenderContract | null;
     simulation: SimulationContract | null;
+    sync: SyncContract | null;
 }

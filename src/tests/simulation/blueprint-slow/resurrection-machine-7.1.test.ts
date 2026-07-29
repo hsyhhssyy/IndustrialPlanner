@@ -50,6 +50,7 @@ describe("起死回生机7.1 - 覆盖电力900kW发电量验证", () => {
         },
         render: null,
         simulation: null,
+        sync: null,
       };
 
       const host = createSimulationHost(workspace, { workerMode: "runtime" });

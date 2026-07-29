@@ -4,6 +4,7 @@ import {
   type StorageMigration,
 } from "./migration";
 import type { IndexedDbStorageLocation } from "./browser-storage";
+import { emitStorageChange } from "./storage-change-event";
 
 // ── 持久化状态结构 ──
 
@@ -175,6 +176,11 @@ export async function savePlannerState(
     CURRENT_VERSION,
     state,
   );
+  emitStorageChange({
+    assetType: "production-planning",
+    assetId: "v3",
+    timestamp: Date.now(),
+  });
 }
 
 export async function loadPlannerState(): Promise<PlannerPersistedState | null> {

@@ -3,6 +3,8 @@ import ReactDOM from "react-dom/client";
 import { reaction } from "mobx";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import { createAppHost, type AppHost } from "@/app/host/app-host";
+import { createModuleBalancingSyncSources } from "@/app/module-balancing-sync-sources";
+import { createSyncHost } from "@/sync";
 import "@/styles/global.scss";
 import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
 import { createRegistryContract } from "./registry";
@@ -27,6 +29,7 @@ const workspace : WorkspaceContract = {
   editor: null,
   render: null,
   simulation: null,
+  sync: null,
 }
 
 const appHost = createAppHost(workspace);
@@ -34,6 +37,10 @@ if (import.meta.env.DEV) {
   window.__industrialPlannerAppHost = appHost;
 }
 createEditorHost(workspace);
+createSyncHost(workspace, {
+  assetSources: createModuleBalancingSyncSources(appHost),
+  readDebugEnabled: () => appHost.state.settings.debugMode,
+});
 await createRenderHost(workspace);
 const simulationHost = createSimulationHost(workspace, {
   getPerfEnabled: () => appHost.internalState.settings.debugMode,

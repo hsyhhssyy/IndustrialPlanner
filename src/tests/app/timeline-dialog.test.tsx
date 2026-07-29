@@ -97,6 +97,7 @@ function createTimelineReadinessWorkspace(
         seekTimelineToTick,
       },
     },
+    sync: null,
   };
 }
 
@@ -174,6 +175,7 @@ describe("TimelineDialog", () => {
           seekTimelineToTick,
         },
       },
+      sync: null,
     };
     appHost = createAppHost(workspace);
 

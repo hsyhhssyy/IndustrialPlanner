@@ -4,6 +4,10 @@ import { isLegacyModuleBalancingId, createModuleBalancingId } from "../shell/mod
 import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
 import { normalizeSelectedActivityIds } from "@/shared/registry/activity-availability";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
+import {
+  loadModuleBalancingState,
+  saveModuleBalancingState,
+} from "@/app/storage/module-balancing-storage";
 
 import type { AppHost } from "../host/app-host";
 import type {
@@ -73,6 +77,24 @@ export function hookLocalstorage(appHost: AppHost): () => void {
     });
   }
 
+  const moduleBalancingHydrationBaseline = JSON.stringify(appHost.internalState.workbench.toolbox.moduleBalancing);
+  void loadModuleBalancingState().then((persistedModuleBalancingState) => {
+    const currentModuleBalancingState = appHost.internalState.workbench.toolbox.moduleBalancing;
+    if (JSON.stringify(currentModuleBalancingState) !== moduleBalancingHydrationBaseline) {
+      void saveModuleBalancingState(currentModuleBalancingState);
+      return;
+    }
+
+    if (persistedModuleBalancingState !== null) {
+      runInAction(() => {
+        appHost.internalState.workbench.toolbox.moduleBalancing = persistedModuleBalancingState;
+      });
+      return;
+    }
+
+    void saveModuleBalancingState(appHost.internalState.workbench.toolbox.moduleBalancing);
+  });
+
   const disposeWorkbenchReaction = reaction(
     () => JSON.stringify(appHost.internalState.workbench),
     () => {
@@ -95,10 +117,17 @@ export function hookLocalstorage(appHost: AppHost): () => void {
       );
     },
   );
+  const disposeModuleBalancingReaction = reaction(
+    () => JSON.stringify(appHost.internalState.workbench.toolbox.moduleBalancing),
+    () => {
+      void saveModuleBalancingState(appHost.internalState.workbench.toolbox.moduleBalancing);
+    },
+  );
 
   return () => {
     disposeWorkbenchReaction();
     disposeAppSettingsReaction();
+    disposeModuleBalancingReaction();
   };
 }
 

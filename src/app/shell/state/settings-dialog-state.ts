@@ -61,11 +61,18 @@ interface WorkbenchTextSettingDefinition extends WorkbenchSettingBaseDefinition 
   readonly placeholderText?: string;
 }
 
+interface WorkbenchPasswordSettingDefinition extends WorkbenchSettingBaseDefinition {
+  readonly kind: "password";
+  readonly defaultValue: string;
+  readonly placeholderText?: string;
+}
+
 export type WorkbenchSettingDefinition =
   | WorkbenchSelectSettingDefinition
   | WorkbenchSliderSettingDefinition
   | WorkbenchSwitchSettingDefinition
   | WorkbenchKeybindingSettingDefinition
+  | WorkbenchPasswordSettingDefinition
   | WorkbenchTextSettingDefinition;
 
 export interface WorkbenchSettingsGroupDefinition {
@@ -489,6 +496,35 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     descriptionKey: "settingsGroup.experimentalDescription" as UiKey,
     items: [
       {
+        id: "experimental-webdav-sync-enabled",
+        kind: "switch",
+        labelKey: "settingsField.experimental-webdav-sync-enabled",
+        descriptionKey: "settingsField.experimental-webdav-sync-enabledDescription",
+        defaultValue: false,
+      },
+      {
+        id: "experimental-webdav-url",
+        kind: "text",
+        labelKey: "settingsField.experimental-webdav-url",
+        descriptionKey: "settingsField.experimental-webdav-urlDescription",
+        defaultValue: "",
+        placeholderText: "https://dav.example.com/remote.php/dav/",
+      },
+      {
+        id: "experimental-webdav-username",
+        kind: "text",
+        labelKey: "settingsField.experimental-webdav-username",
+        descriptionKey: "settingsField.experimental-webdav-usernameDescription",
+        defaultValue: "",
+      },
+      {
+        id: "experimental-webdav-password",
+        kind: "password",
+        labelKey: "settingsField.experimental-webdav-password",
+        descriptionKey: "settingsField.experimental-webdav-passwordDescription",
+        defaultValue: "",
+      },
+      {
         id: "experimental-virtual-mouse-pointer",
         kind: "switch",
         labelKey: "settingsField.experimental-virtual-mouse-pointer",
@@ -624,6 +660,7 @@ export class WorkbenchSettingsDialogController {
   private readonly externalBindings: ReadonlyMap<string, WorkbenchSettingExternalBinding>;
   private readonly externalBindingIds: ReadonlySet<string>;
   private readonly shortcutResetAll?: () => void;
+  private externalBindingRevision = 0;
 
   public constructor(options: WorkbenchSettingsDialogControllerOptions = {}) {
     const explicitBindings = new Map(Object.entries(options.externalBindings ?? {}));
@@ -679,10 +716,11 @@ export class WorkbenchSettingsDialogController {
       return this.values[settingId];
     }
 
+    void this.externalBindingRevision;
     const localValue = this.values[settingId];
     const setting = SETTING_DEFINITION_BY_ID.get(settingId);
 
-    if (setting?.kind === "text" && localValue !== undefined) {
+    if ((setting?.kind === "text" || setting?.kind === "password") && localValue !== undefined) {
       return localValue;
     }
 
@@ -731,7 +769,7 @@ export class WorkbenchSettingsDialogController {
 
     const externalBinding = this.externalBindings.get(settingId);
     if (externalBinding) {
-      externalBinding.writeValue(value);
+      this.writeExternalBinding(externalBinding, value);
 
       return;
     }
@@ -748,7 +786,7 @@ export class WorkbenchSettingsDialogController {
 
     const externalBinding = this.externalBindings.get(settingId);
     if (externalBinding) {
-      externalBinding.writeValue(normalizeSliderValue(setting, value));
+      this.writeExternalBinding(externalBinding, normalizeSliderValue(setting, value));
 
       return;
     }
@@ -765,7 +803,7 @@ export class WorkbenchSettingsDialogController {
 
     const externalBinding = this.externalBindings.get(settingId);
     if (externalBinding) {
-      externalBinding.writeValue(checked);
+      this.writeExternalBinding(externalBinding, checked);
 
       if (this.normalizeLocalValues()) {
         this.persist();
@@ -792,7 +830,7 @@ export class WorkbenchSettingsDialogController {
 
     const externalBinding = this.externalBindings.get(settingId);
     if (externalBinding) {
-      externalBinding.writeValue(normalizedValue);
+      this.writeExternalBinding(externalBinding, normalizedValue);
 
       return;
     }
@@ -803,13 +841,13 @@ export class WorkbenchSettingsDialogController {
 
   public updateTextValue(settingId: string, value: string): void {
     const setting = SETTING_DEFINITION_BY_ID.get(settingId);
-    if (setting?.kind !== "text" || !this.isSettingEditable(settingId)) {
+    if ((setting?.kind !== "text" && setting?.kind !== "password") || !this.isSettingEditable(settingId)) {
       return;
     }
 
     const externalBinding = this.externalBindings.get(settingId);
     if (externalBinding) {
-      externalBinding.writeValue(value);
+      this.writeExternalBinding(externalBinding, value);
       this.values[settingId] = value;
 
       return;
@@ -849,7 +887,7 @@ export class WorkbenchSettingsDialogController {
 
     const externalBinding = this.externalBindings.get(settingId);
     if (externalBinding) {
-      externalBinding.writeValue("");
+      this.writeExternalBinding(externalBinding, "");
     } else {
       this.values[settingId] = "";
     }
@@ -871,7 +909,7 @@ export class WorkbenchSettingsDialogController {
 
       const externalBinding = this.externalBindings.get(settingId);
       if (externalBinding) {
-        externalBinding.writeValue(setting.defaultValue);
+        this.writeExternalBinding(externalBinding, setting.defaultValue);
       } else {
         this.values[settingId] = setting.defaultValue;
       }
@@ -889,8 +927,8 @@ export class WorkbenchSettingsDialogController {
     for (const setting of SETTING_DEFINITION_BY_ID.values()) {
       const externalBinding = this.externalBindings.get(setting.id);
       if (externalBinding) {
-        externalBinding.writeValue(setting.defaultValue);
-        if (setting.kind === "text") {
+        this.writeExternalBinding(externalBinding, setting.defaultValue);
+        if (setting.kind === "text" || setting.kind === "password") {
           this.values[setting.id] = setting.defaultValue;
         }
       } else {
@@ -956,13 +994,21 @@ export class WorkbenchSettingsDialogController {
         continue;
       }
 
-      if (setting.kind === "text" && typeof rawValue === "string") {
+      if ((setting.kind === "text" || setting.kind === "password") && typeof rawValue === "string") {
         nextValues[settingId] = rawValue;
       }
     }
 
     this.values = nextValues;
     this.normalizeLocalValues();
+  }
+
+  private writeExternalBinding(
+    binding: WorkbenchSettingExternalBinding,
+    value: WorkbenchSettingControlValue,
+  ): void {
+    binding.writeValue(value);
+    this.externalBindingRevision += 1;
   }
 
   private persist(): PersistedUserSettingsDialogState {

@@ -48,6 +48,16 @@ import { V2MigrationController } from "@/app/migration";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
 import { RightDock } from "@/app/shell/layout/right-dock";
 import { SimulationControlButton, TimelineButton, TopBar } from "@/app/shell/layout/top-bar";
+// AI-REMOVED 2026-07-29:
+// Reason: 保存提示不再作为折叠顶栏第一排按钮组成员。
+// Trigger: 用户要求隐藏顶栏时位于右上角第二排最右侧。
+// Evidence: 第一排内提示会被 FPS 布局推动或挤压。
+// Replacement: CanvasPanel 内独立定位的 WebDavSaveIndicator。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// import { WebDavSaveIndicator } from "@/app/shell/layout/webdav-save-indicator";
 import { OverlayStackProvider } from "@/app/shell/shared/overlay-stack";
 import {
   preventMiddleMousePointerDownBrowserBehavior,
@@ -70,6 +80,18 @@ import {
   readBackendApiAddressOverride,
   writeBackendApiAddressOverride,
 } from "@/shared/storage/backend-api-address";
+// AI-REMOVED 2026-07-29:
+// Reason: 设置界面不再直接读写 WebDAV localStorage。
+// Trigger: 同步模块必须通过公开 state/action 自治。
+// Evidence: 直接调用 read/writeWebDavSync* 会绕过 MobX 状态，导致开关需刷新才更新。
+// Replacement: WorkspaceContract.sync.state.settings 与 SyncAction.updateSettings。
+// Risk: Low；持久化仍由 sync 模块使用相同 key 完成。
+// Human Review: Required
+//
+// Original code:
+// import { readWebDavSyncEnabled, readWebDavSyncPassword, readWebDavSyncUrl,
+//   readWebDavSyncUsername, writeWebDavSyncEnabled, writeWebDavSyncPassword,
+//   writeWebDavSyncUrl, writeWebDavSyncUsername } from "@/shared/storage/webdav-sync-settings";
 import {
   isMobileOrTabletScreenProfile,
   isMobileLandscapeScreenProfile,
@@ -552,6 +574,38 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.virtualMousePointer = value;
         }),
       },
+      "experimental-webdav-sync-enabled": {
+        readValue: () => appHost.workspace.sync?.state.settings.enabled ?? false,
+        writeValue: (value) => {
+          if (typeof value === "boolean") {
+            appHost.workspace.sync?.actions.updateSettings({ enabled: value });
+          }
+        },
+      },
+      "experimental-webdav-url": {
+        readValue: () => appHost.workspace.sync?.state.settings.url ?? "",
+        writeValue: (value) => {
+          if (typeof value === "string") {
+            appHost.workspace.sync?.actions.updateSettings({ url: value });
+          }
+        },
+      },
+      "experimental-webdav-username": {
+        readValue: () => appHost.workspace.sync?.state.settings.username ?? "",
+        writeValue: (value) => {
+          if (typeof value === "string") {
+            appHost.workspace.sync?.actions.updateSettings({ username: value });
+          }
+        },
+      },
+      "experimental-webdav-password": {
+        readValue: () => appHost.workspace.sync?.state.settings.password ?? "",
+        writeValue: (value) => {
+          if (typeof value === "string") {
+            appHost.workspace.sync?.actions.updateSettings({ password: value });
+          }
+        },
+      },
       "other-toolbox-show-all-activity-content": {
         readValue: () => appHost.internalState.settings.toolboxShowAllActivityContent,
         writeValue: action((value) => {
@@ -914,51 +968,86 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     >
       <OverlayStackProvider>
         <TopBar appHost={appHost} />
-        {showFloatingTopBarControls ? (
-          <div className={cm(styles, "workbench-floating-top-bar-controls")}>
-            <SimulationControlButton
-              appHost={appHost}
-              className={cm(styles, "workbench-floating-top-bar-button")}
-            />
-            <TimelineButton
-              appHost={appHost}
-              className={cm(styles, "workbench-floating-top-bar-button")}
-            />
-            <FullscreenToggleButton
-              appHost={appHost}
-              className={cm(styles, "workbench-floating-top-bar-button workbench-floating-fullscreen-button")}
-            />
-            {useInspectorPanel && !rightDockOpen ? (
+        <LeftToolbar appHost={appHost} />
+        <LeftDock appHost={appHost} hidden={!effectiveLeftDockOpen} />
+        <CanvasPanel
+          appHost={appHost}
+          topRightOverlay={showFloatingTopBarControls ? (
+            <div
+              className={cm(
+                styles,
+                "workbench-floating-top-bar-controls workbench-floating-top-bar-controls-in-canvas",
+              )}
+            >
+              <SimulationControlButton
+                appHost={appHost}
+                className={cm(styles, "workbench-floating-top-bar-button")}
+              />
+              <TimelineButton
+                appHost={appHost}
+                className={cm(styles, "workbench-floating-top-bar-button")}
+              />
+              <FullscreenToggleButton
+                appHost={appHost}
+                className={cm(
+                  styles,
+                  "workbench-floating-top-bar-button workbench-floating-fullscreen-button",
+                )}
+              />
+              {useInspectorPanel && !rightDockOpen ? (
+                <button
+                  aria-label={floatingOpenRightDockLabel}
+                  className={cm(
+                    styles,
+                    "workbench-floating-top-bar-button workbench-floating-right-dock-button",
+                  )}
+                  onClick={appHost.internalActions.toggleRightDock}
+                  title={floatingOpenRightDockLabel}
+                  type="button"
+                >
+                  <span className={cm(styles, "top-bar-toggle-icon")}>
+                    <WorkbenchIcon kind="panel-right-open" />
+                  </span>
+                  <span className={cm(styles, "sr-only")}>
+                    {floatingOpenRightDockLabel}
+                  </span>
+                </button>
+              ) : null}
               <button
-                aria-label={floatingOpenRightDockLabel}
-                className={cm(styles, "workbench-floating-top-bar-button workbench-floating-right-dock-button")}
-                onClick={appHost.internalActions.toggleRightDock}
-                title={floatingOpenRightDockLabel}
+                aria-label={`${t("action.expand")} ${t("topBar.controls")}`}
+                className={cm(
+                  styles,
+                  "workbench-floating-top-bar-button workbench-floating-top-bar-toggle",
+                )}
+                onClick={appHost.internalActions.toggleTopBarCollapsed}
+                title={`${t("action.expand")} ${t("topBar.controls")}`}
                 type="button"
               >
                 <span className={cm(styles, "top-bar-toggle-icon")}>
-                  <WorkbenchIcon kind="panel-right-open" />
+                  <WorkbenchIcon kind="panel-top-open" />
                 </span>
-                <span className={cm(styles, "sr-only")}>{floatingOpenRightDockLabel}</span>
+                <span className={cm(styles, "sr-only")}>
+                  {`${t("action.expand")} ${t("topBar.controls")}`}
+                </span>
               </button>
-            ) : null}
-            <button
-              aria-label={`${t("action.expand")} ${t("topBar.controls")}`}
-              className={cm(styles, "workbench-floating-top-bar-button workbench-floating-top-bar-toggle")}
-              onClick={appHost.internalActions.toggleTopBarCollapsed}
-              title={`${t("action.expand")} ${t("topBar.controls")}`}
-              type="button"
-            >
-              <span className={cm(styles, "top-bar-toggle-icon")}>
-                <WorkbenchIcon kind="panel-top-open" />
-              </span>
-              <span className={cm(styles, "sr-only")}>{`${t("action.expand")} ${t("topBar.controls")}`}</span>
-            </button>
-          </div>
-        ) : null}
-        <LeftToolbar appHost={appHost} />
-        <LeftDock appHost={appHost} hidden={!effectiveLeftDockOpen} />
-        <CanvasPanel appHost={appHost} />
+              {/* AI-REMOVED 2026-07-29:
+                  Reason: 保存提示迁移到折叠顶栏第二排的独立画布 overlay。
+                  Trigger: 用户要求第二排最右侧且不受 FPS 布局影响。
+                  Evidence: 原实现将提示放在第一排 floating controls 内。
+                  Replacement: CanvasPanel 内的 canvas-webdav-save-indicator-collapsed。
+                  Risk: Low。
+                  Human Review: Required
+
+                  Original code:
+                  {appHost.workspace.sync !== null ? (
+                    <WebDavSaveIndicator
+                      syncState={appHost.workspace.sync.state}
+                      translate={appHost.actions.translate}
+                    />
+                  ) : null} */}
+            </div>
+          ) : null}
+        />
         <OverlapEntityMenu appHost={appHost} />
         <QuickPlacePopup appHost={appHost} />
         <CanvasBottomLeftSecondaryToolbar

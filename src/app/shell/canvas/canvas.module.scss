@@ -226,6 +226,34 @@
 }
 
 // FPS panel — positioned top-left, reuses gesture panel CSS variables
+// AI-CORRECTION 2026-07-29: 保存提示改为独立画布 overlay；FPS 恢复固定右上角，不参与提示布局。
+// AI-REMOVED 2026-07-29:
+// Reason: 保存提示、FPS 与折叠顶栏控件改为彼此独立的绝对定位浮层。
+// Trigger: 用户要求保存图标不再受 FPS 面板布局影响。
+// Evidence: 纵向 stack 会随 FPS 高度改变保存图标位置。
+// Replacement: canvas-fps、canvas-webdav-save-indicator 与
+//   workbench-floating-top-bar-controls-in-canvas 各自定位。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// .canvas-top-right-overlay-stack {
+//   position: absolute;
+//   top: 12px;
+//   right: 12px;
+//   z-index: 5;
+//   display: flex;
+//   align-items: flex-end;
+//   flex-direction: column;
+//   gap: 8px;
+//   max-width: calc(100% - 24px);
+//   pointer-events: none;
+// }
+//
+// .canvas-top-right-overlay-stack > * {
+//   pointer-events: auto;
+// }
+
 .canvas-fps {
   position: absolute;
   right: 12px;
@@ -242,6 +270,17 @@
   line-height: 1.35;
   pointer-events: none;
   box-shadow: 0 14px 36px var(--in-canvas-gesture-panel-shadow);
+}
+
+.canvas-webdav-save-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 6;
+}
+
+.canvas-webdav-save-indicator-collapsed {
+  top: 58px;
 }
 
 .canvas-fps.is-collapsed {

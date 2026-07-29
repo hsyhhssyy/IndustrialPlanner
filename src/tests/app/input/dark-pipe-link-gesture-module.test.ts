@@ -88,6 +88,7 @@ function createContext(): {
     editor: null,
     render: null,
     simulation: null,
+    sync: null,
   };
   const editorHost = createEditorHost(workspace);
   const appHost = createAppHost(workspace);

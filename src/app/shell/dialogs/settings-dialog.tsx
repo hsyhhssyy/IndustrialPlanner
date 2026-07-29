@@ -3,6 +3,12 @@ import { observer } from "mobx-react-lite";
 import { makeAutoObservable, runInAction } from "mobx";
 
 import type { AppHost } from "@/app/host/app-host";
+import type {
+  SyncConflictResolution,
+  SyncPendingConflict,
+  SyncPhase,
+  SyncState,
+} from "@/domain/sync";
 import type { V2MigrationController } from "@/app/migration";
 import type { PwaController } from "@/app/pwa/pwa-controller";
 import { PwaSettingsSection } from "@/app/pwa/pwa-settings-section";
@@ -75,6 +81,7 @@ export const SettingsDialog = observer(function SettingsDialog({
   pwaController,
 }: SettingsDialogProps) {
   const t = appHost.actions.translate;
+  const sync = appHost.workspace.sync;
   const contentRef = useRef<HTMLDivElement | null>(null);
   const sectionRefs = useRef(new Map<SettingsGroupId, HTMLElement>());
   const [capturingKeybindingId, setCapturingKeybindingId] = useState<string | null>(null);
@@ -223,6 +230,16 @@ export const SettingsDialog = observer(function SettingsDialog({
     activeTab: null,
   }), []);
 
+  const webDavConflictDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 460,
+    height: null,
+    activeTab: null,
+  }), []);
+
   const [clearStorageInputValue, setClearStorageInputValue] = useState("");
 
   const handleClearStorage = useCallback(() => {
@@ -255,6 +272,20 @@ export const SettingsDialog = observer(function SettingsDialog({
   const handleClearStorageInputConfirm = useCallback(() => {
     clearAllStorageAndReload();
   }, []);
+
+  const handleResolveWebDavConflict = useCallback((resolution: SyncConflictResolution) => {
+    sync?.actions.resolveConflict(resolution);
+    runInAction(() => {
+      webDavConflictDialogState.visible = false;
+    });
+  }, [sync, webDavConflictDialogState]);
+
+  useEffect(() => {
+    runInAction(() => {
+      webDavConflictDialogState.visible = sync?.state.pendingConflict !== null
+        && sync?.state.pendingConflict !== undefined;
+    });
+  }, [sync?.state.pendingConflict, webDavConflictDialogState]);
 
   const clearStorageExpectedText = useMemo(
     () => appHost.state.settings.locale === "zh-CN"
@@ -549,7 +580,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                   {group.items.filter((setting) => !isNonDesktop || !setting.mobileHidden).flatMap((setting, index, _filtered) => {
                     const isEditable = controller.isSettingEditable(setting.id);
                     const isKeybinding = setting.kind === "keybinding";
-                    const isText = setting.kind === "text";
+                    const isText = setting.kind === "text" || setting.kind === "password";
                     const isDebugGroup = group.id === "debug";
                     const isGameGroup = group.id === "game";
                     const settingLabel = resolveSettingLabel(setting, t);
@@ -682,11 +713,19 @@ export const SettingsDialog = observer(function SettingsDialog({
                   </>
                 )}
                 {group.id === "experimental" && (
-                  <StorageUsageCard
-                    onClearStorage={handleClearStorage}
-                    storageBytes={storageBytes}
-                    t={t}
-                  />
+                  <>
+                    {sync === null ? null : (
+                      <WebDavSyncStatusCard
+                        state={sync.state}
+                        t={t}
+                      />
+                    )}
+                    <StorageUsageCard
+                      onClearStorage={handleClearStorage}
+                      storageBytes={storageBytes}
+                      t={t}
+                    />
+                  </>
                 )}
               </section>
             ))}
@@ -752,6 +791,16 @@ export const SettingsDialog = observer(function SettingsDialog({
         t={t}
       />
     )}
+    {webDavConflictDialogState.visible
+      && sync !== null
+      && sync.state.pendingConflict !== null ? (
+      <WebDavConflictDialog
+        conflict={sync.state.pendingConflict}
+        dialogState={webDavConflictDialogState}
+        onResolve={handleResolveWebDavConflict}
+        t={t}
+      />
+    ) : null}
     {experimentalFeaturesDialogState.visible && (
       <DialogShell
         bodyClassName={cm(styles, "experimental-warning-dialog-body")}
@@ -914,6 +963,56 @@ function StorageUsageCard({
       </div>
     </article>
   );
+}
+
+const WebDavSyncStatusCard = observer(function WebDavSyncStatusCard({
+  state,
+  t,
+}: {
+  state: SyncState;
+  t: AppHost["actions"]["translate"];
+}) {
+  const status = state.status;
+  const devices = state.remoteDevices;
+
+  return (
+    <article className={cm(styles, "settings-dialog-setting-card")}>
+      <div className={cm(styles, "settings-dialog-setting-copy")}>
+        <h4>{t("settingsField.experimental-webdav-status")}</h4>
+        <p>{t("settingsField.experimental-webdav-statusDescription")}</p>
+      </div>
+      <div className={cm(styles, "settings-dialog-webdav-status")}>
+        <span>{t(resolveWebDavPhaseKey(status.phase))}</span>
+        <span>{t("settingsField.experimental-webdav-last-upload").replace("{time}", formatNullableTime(status.lastUploadAt, t("settingsOption.none")))}</span>
+        <span>{t("settingsField.experimental-webdav-last-download").replace("{time}", formatNullableTime(status.lastDownloadAt, t("settingsOption.none")))}</span>
+        {status.lastError === null ? null : <span>{status.lastError}</span>}
+        <div className={cm(styles, "settings-dialog-webdav-devices")}>
+          <strong>{t("settingsField.experimental-webdav-devices")}</strong>
+          {devices.length === 0 ? (
+            <span>{t("settingsOption.none")}</span>
+          ) : devices.map((device) => (
+            <span key={device.deviceId}>{device.label} · {formatNullableTime(device.lastActive, t("settingsOption.none"))}</span>
+          ))}
+        </div>
+      </div>
+    </article>
+  );
+});
+
+function resolveWebDavPhaseKey(phase: SyncPhase): Parameters<AppHost["actions"]["translate"]>[0] {
+  if (phase === "uploading") return "settingsField.experimental-webdav-status-uploading";
+  if (phase === "downloading") return "settingsField.experimental-webdav-status-downloading";
+  if (phase === "error") return "settingsField.experimental-webdav-status-error";
+
+  return "settingsField.experimental-webdav-status-idle";
+}
+
+function formatNullableTime(value: string | null, fallback: string): string {
+  if (value === null) {
+    return fallback;
+  }
+
+  return new Date(value).toLocaleString();
 }
 
 const V2MigrationSettingsCard = observer(function V2MigrationSettingsCard({
@@ -1112,7 +1211,7 @@ function renderSettingControl(options: {
   } = options;
   const value = controller.getValue(setting.id);
 
-  if (setting.kind === "text") {
+  if (setting.kind === "text" || setting.kind === "password") {
     return (
       <label className={cm(styles, "settings-dialog-text-shell")} htmlFor={`setting-${setting.id}`}>
         <input
@@ -1124,7 +1223,7 @@ function renderSettingControl(options: {
             controller.updateTextValue(setting.id, event.target.value);
           }}
           placeholder={setting.placeholderText}
-          type="text"
+          type={setting.kind === "password" ? "password" : "text"}
           value={typeof value === "string" ? value : setting.defaultValue}
         />
       </label>
@@ -1565,6 +1664,52 @@ function ConflictDialog({
             type="button"
           >
             {t("settingsKeybinding.conflictReplace")}
+          </button>
+        </div>
+      </div>
+    </DialogShell>
+  );
+}
+
+function WebDavConflictDialog({
+  conflict,
+  dialogState,
+  onResolve,
+  t,
+}: {
+  conflict: SyncPendingConflict;
+  dialogState: DialogStateReadWrite;
+  onResolve: (resolution: SyncConflictResolution) => void;
+  t: AppHost["actions"]["translate"];
+}) {
+  return (
+    <DialogShell
+      className="webdav-conflict-dialog"
+      bodyClassName={cm(styles, "confirm-reset-dialog-body")}
+      closeTitle={t("action.close")}
+      compactMobileLayout={false}
+      dialogKey="webdav-conflict"
+      dialogState={dialogState}
+      maximizeTitle=""
+      onClose={() => onResolve("pause")}
+      onToggleMaximized={() => {}}
+      restoreTitle=""
+      showMaximizeButton={false}
+      title={t("settingsField.experimental-webdav-conflict-title")}
+      titleId="webdav-conflict-dialog-title"
+    >
+      <div className={cm(styles, "confirm-reset-content")}>
+        <p>{t("settingsField.experimental-webdav-conflict-message").replace("{remoteDeviceLabel}", conflict.remoteDeviceLabel)}</p>
+        <p>{conflict.adapterId} / {conflict.assetId}</p>
+        <div className={cm(styles, "confirm-reset-actions")}>
+          <button className={cm(styles, "confirm-reset-confirm-btn")} onClick={() => onResolve("use-local")} type="button">
+            {t("settingsField.experimental-webdav-conflict-use-local")}
+          </button>
+          <button className={cm(styles, "confirm-reset-confirm-btn")} onClick={() => onResolve("use-remote")} type="button">
+            {t("settingsField.experimental-webdav-conflict-use-remote").replace("{remoteDeviceLabel}", conflict.remoteDeviceLabel)}
+          </button>
+          <button className={cm(styles, "confirm-reset-cancel-btn")} onClick={() => onResolve("pause")} type="button">
+            {t("settingsField.experimental-webdav-conflict-pause")}
           </button>
         </div>
       </div>

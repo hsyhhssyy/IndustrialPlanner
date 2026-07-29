@@ -9,6 +9,7 @@ import {
   readFromIndexedDb,
   type IndexedDbStoreLocation,
 } from "./browser-storage";
+import { emitStorageChange } from "./storage-change-event";
 
 const BLUEPRINT_DATABASE_NAME = "v3-industrial-planner";
 const BLUEPRINT_STORE_NAME = "blueprints";
@@ -322,7 +323,7 @@ export async function listBlueprintDirectory(
   };
 }
 
-async function listBlueprintStorageEntries(
+export async function listBlueprintStorageEntries(
   options: BlueprintReadOptions,
 ): Promise<BlueprintStorageEntry[]> {
   const entries = await listFromIndexedDb<unknown>(BLUEPRINT_STORE_LOCATION);
@@ -340,6 +341,16 @@ async function listBlueprintStorageEntries(
 
       return [entry];
     });
+}
+
+export async function upsertBlueprintStorageEntry(
+  entry: BlueprintStorageEntry,
+): Promise<BlueprintStorageEntry | null> {
+  const key = entry.kind === "blueprint"
+    ? createBlueprintKey(entry.blueprintId)
+    : createFolderKey(entry.folderId);
+
+  return await writeBlueprintEntry(key, entry);
 }
 
 async function readBlueprintEntry(
@@ -372,11 +383,23 @@ async function writeBlueprintEntries(
     entry: BlueprintStorageEntry;
   }[],
 ): Promise<boolean> {
-  return await applyIndexedDbStoreMutations(BLUEPRINT_STORE_LOCATION, entries.map((entry) => ({
+  const saved = await applyIndexedDbStoreMutations(BLUEPRINT_STORE_LOCATION, entries.map((entry) => ({
     type: "put" as const,
     key: entry.key,
     value: entry.entry,
   })));
+
+  if (saved) {
+    for (const entry of entries) {
+      emitStorageChange({
+        assetType: entry.entry.kind === "blueprint" ? "blueprint" : "blueprint-folder",
+        assetId: entry.entry.kind === "blueprint" ? entry.entry.blueprintId : entry.entry.folderId,
+        timestamp: Date.now(),
+      });
+    }
+  }
+
+  return saved;
 }
 
 async function deleteBlueprintEntries(keys: readonly string[]): Promise<boolean> {

@@ -302,6 +302,31 @@
   margin-right: 12px;
 }
 
+.settings-dialog-webdav-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: min(100%, 280px);
+  color: var(--text-0);
+  font-size: 0.84rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.settings-dialog-webdav-devices {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 100%;
+  color: var(--text-1);
+}
+
+.settings-dialog-webdav-devices strong {
+  color: var(--text-0);
+  font-size: 0.82rem;
+}
+
 .settings-dialog-activity-card {
   grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
 }

@@ -7,7 +7,7 @@ import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 
 function createWorkspace(): WorkspaceContract {
-  return { state: createWorkspaceState(), registry: createRegistryContract(), app: null, editor: null, render: null, simulation: null };
+  return { state: createWorkspaceState(), registry: createRegistryContract(), app: null, editor: null, render: null, simulation: null, sync: null };
 }
 
 describe("调试", () => {

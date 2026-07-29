@@ -22,6 +22,17 @@ import { WorkbenchRecipePickerController } from "../shell/state/recipe-picker-st
 import { WorkbenchSaveBlueprintDialogController } from "../shell/state/save-blueprint-dialog-state";
 import { cleanupDiscardableV2LocalStorageBeforeV3Boot } from "../migration";
 import { WorkbenchOverlapEntityMenuController } from "../shell/state/overlap-entity-menu-state";
+// AI-REMOVED 2026-07-29:
+// Reason: WebDAV 生命周期和状态已由独立顶层 sync 模块拥有。
+// Trigger: 用户要求 app 不再实例化或驱动同步客户端。
+// Evidence: AppHost 原先直接构造 controller 并 hook WebDAV service。
+// Replacement: main.tsx 组合 createSyncHost；UI 通过 workspace.sync 访问公开契约。
+// Risk: Low；AppHost 不再承担网络职责。
+// Human Review: Required
+//
+// Original code:
+// import { hookWebDavSyncAppService } from "../sync/webdav-sync-app-service";
+// import { WebDavSyncAppController } from "../sync/webdav-sync-app-controller";
 
 export interface AppHost extends AppContract {
   workspace: WorkspaceContract;
@@ -36,6 +47,16 @@ export interface AppHost extends AppContract {
   encyclopediaPicker: WorkbenchEncyclopediaPickerController;
   recipePicker: WorkbenchRecipePickerController;
   overlapEntityMenu: WorkbenchOverlapEntityMenuController;
+  // AI-REMOVED 2026-07-29:
+  // Reason: 同步状态不再是 AppHost 的内部对象。
+  // Trigger: 独立顶层 sync 模块通过 WorkspaceContract.sync 发布状态。
+  // Evidence: webDavSync 属性迫使设置页依赖 app 的同步实现。
+  // Replacement: workspace.sync。
+  // Risk: Low；所有消费者迁移到领域契约。
+  // Human Review: Required
+  //
+  // Original code:
+  // webDavSync: WebDavSyncAppController;
   dispose: () => void;
 }
 
@@ -81,6 +102,16 @@ export function createAppHost(
     () => internalState.workbench.toolbox.wiki,
   );
   const recipePicker = new WorkbenchRecipePickerController();
+  // AI-REMOVED 2026-07-29:
+  // Reason: SyncStateImpl 的实例化由 createSyncHost 负责。
+  // Trigger: 顶层模块生命周期解耦。
+  // Evidence: const webDavSync = new WebDavSyncAppController();
+  // Replacement: main.tsx 中的 createSyncHost。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // const webDavSync = new WebDavSyncAppController();
   const gestureActionRouter = createGestureActionRouter<AppHost>({
     gestureAdapter,
     workspace,
@@ -191,6 +222,16 @@ export function createAppHost(
   cleanupDiscardableV2LocalStorageBeforeV3Boot();
   disposers.push(hookLocalstorage(host));
   disposers.push(hookThemeApplicator(host));
+  // AI-REMOVED 2026-07-29:
+  // Reason: AppHost 不再主动挂载 WebDAV 服务。
+  // Trigger: sync 模块自行订阅 editor snapshot 与业务资源端口。
+  // Evidence: disposers.push(hookWebDavSyncAppService(host));
+  // Replacement: createSyncHost 在自身构造时启动服务并持有 disposer。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // disposers.push(hookWebDavSyncAppService(host));
 
   return host;
 }
