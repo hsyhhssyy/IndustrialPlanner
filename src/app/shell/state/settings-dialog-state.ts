@@ -43,6 +43,7 @@ interface WorkbenchSliderSettingDefinition extends WorkbenchSettingBaseDefinitio
   readonly min: number;
   readonly max: number;
   readonly step: number;
+  readonly valueSuffix?: string;
 }
 
 interface WorkbenchSwitchSettingDefinition extends WorkbenchSettingBaseDefinition {
@@ -523,6 +524,17 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         labelKey: "settingsField.experimental-webdav-password",
         descriptionKey: "settingsField.experimental-webdav-passwordDescription",
         defaultValue: "",
+      },
+      {
+        id: "experimental-webdav-max-concurrent-requests",
+        kind: "slider",
+        labelKey: "settingsField.experimental-webdav-max-concurrent-requests",
+        descriptionKey: "settingsField.experimental-webdav-max-concurrent-requestsDescription",
+        defaultValue: 4,
+        min: 1,
+        max: 8,
+        step: 1,
+        valueSuffix: "",
       },
       {
         id: "experimental-virtual-mouse-pointer",

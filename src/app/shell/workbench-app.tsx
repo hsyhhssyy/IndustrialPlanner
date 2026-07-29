@@ -48,6 +48,10 @@ import { V2MigrationController } from "@/app/migration";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
 import { RightDock } from "@/app/shell/layout/right-dock";
 import { SimulationControlButton, TimelineButton, TopBar } from "@/app/shell/layout/top-bar";
+import {
+  WebDavInitialSyncFeatureGate,
+  WebDavInitialSyncGate,
+} from "@/app/shell/layout/webdav-initial-sync-gate";
 // AI-REMOVED 2026-07-29:
 // Reason: 保存提示不再作为折叠顶栏第一排按钮组成员。
 // Trigger: 用户要求隐藏顶栏时位于右上角第二排最右侧。
@@ -606,6 +610,17 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           }
         },
       },
+      "experimental-webdav-max-concurrent-requests": {
+        readValue: () =>
+          appHost.workspace.sync?.state.settings.maxConcurrentRequests ?? 4,
+        writeValue: (value) => {
+          if (typeof value === "number") {
+            appHost.workspace.sync?.actions.updateSettings({
+              maxConcurrentRequests: value,
+            });
+          }
+        },
+      },
       "other-toolbox-show-all-activity-content": {
         readValue: () => appHost.internalState.settings.toolboxShowAllActivityContent,
         writeValue: action((value) => {
@@ -970,6 +985,16 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         <TopBar appHost={appHost} />
         <LeftToolbar appHost={appHost} />
         <LeftDock appHost={appHost} hidden={!effectiveLeftDockOpen} />
+        {effectiveLeftDockOpen
+          && (appHost.internalState.runtime.activePanel ?? "placement") === "blueprint"
+          && appHost.workspace.sync !== null ? (
+            <WebDavInitialSyncFeatureGate
+              className="webdav-initial-sync-feature-gate-left-dock"
+              feature="blueprints"
+              state={appHost.workspace.sync.state}
+              translate={appHost.actions.translate}
+            />
+          ) : null}
         <CanvasPanel
           appHost={appHost}
           topRightOverlay={showFloatingTopBarControls ? (
@@ -1102,6 +1127,12 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         />
         <V2MigrationDialog appHost={appHost} controller={migrationController} />
         <PwaGateway appHost={appHost} pwaController={pwaController} />
+        {appHost.workspace.sync === null ? null : (
+          <WebDavInitialSyncGate
+            sync={appHost.workspace.sync}
+            translate={appHost.actions.translate}
+          />
+        )}
         {showMobilePortraitGate ? <MobilePortraitGate appHost={appHost} /> : null}
       </OverlayStackProvider>
     </div>

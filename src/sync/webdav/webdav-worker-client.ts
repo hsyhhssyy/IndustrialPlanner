@@ -13,7 +13,16 @@ import type {
 
 export interface WebDavWorkerStorageClientOptions extends WebDavClientOptions {
   readonly readDebugEnabled?: () => boolean;
+  readonly maxConcurrentRequests?: number;
+  readonly onRequestActivityChange?: (
+    activity: WebDavWorkerRequestActivity,
+  ) => void;
   readonly workerFactory?: () => Worker;
+}
+
+export interface WebDavWorkerRequestActivity {
+  readonly activeRequestCount: number;
+  readonly queuedRequestCount: number;
 }
 
 export function createWebDavWorkerStorageClient(
@@ -34,14 +43,60 @@ export function createWebDavWorkerStorageClient(
     readonly resolve: (value: unknown) => void;
     readonly reject: (error: Error) => void;
   }>();
+  const requestQueue: Array<{
+    readonly request: WebDavWorkerRequest;
+    readonly resolve: (value: unknown) => void;
+    readonly reject: (error: Error) => void;
+  }> = [];
+  const maxConcurrentRequests = normalizeMaxConcurrentRequests(
+    options.maxConcurrentRequests,
+  );
   let nextRequestId = 1;
   let disposed = false;
+
+  const emitRequestActivity = (): void => {
+    options.onRequestActivityChange?.({
+      activeRequestCount: pending.size,
+      queuedRequestCount: requestQueue.length,
+    });
+  };
 
   const rejectAll = (error: Error): void => {
     for (const handlers of pending.values()) {
       handlers.reject(error);
     }
     pending.clear();
+    while (requestQueue.length > 0) {
+      requestQueue.shift()?.reject(error);
+    }
+    emitRequestActivity();
+  };
+
+  const flushRequestQueue = (): void => {
+    while (
+      !disposed
+      && pending.size < maxConcurrentRequests
+      && requestQueue.length > 0
+    ) {
+      const queuedRequest = requestQueue.shift();
+      if (queuedRequest === undefined) {
+        break;
+      }
+
+      pending.set(queuedRequest.request.requestId, {
+        resolve: queuedRequest.resolve,
+        reject: queuedRequest.reject,
+      });
+      try {
+        worker.postMessage(queuedRequest.request);
+      } catch (error) {
+        pending.delete(queuedRequest.request.requestId);
+        queuedRequest.reject(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      }
+    }
+    emitRequestActivity();
   };
 
   worker.addEventListener("message", (event: MessageEvent<WebDavWorkerResponse>) => {
@@ -53,10 +108,11 @@ export function createWebDavWorkerStorageClient(
     pending.delete(event.data.requestId);
     if (event.data.ok) {
       handlers.resolve(event.data.result);
-      return;
+    } else {
+      handlers.reject(deserializeWorkerError(event.data.error));
     }
 
-    handlers.reject(deserializeWorkerError(event.data.error));
+    flushRequestQueue();
   });
   worker.addEventListener("error", (event) => {
     rejectAll(new Error(event.message || "WebDAV worker crashed."));
@@ -77,13 +133,14 @@ export function createWebDavWorkerStorageClient(
     };
 
     return new Promise<TValue>((resolve, reject) => {
-      pending.set(requestId, {
+      requestQueue.push({
+        request: workerRequest,
         resolve: (value) => {
           resolve(value as TValue);
         },
         reject,
       });
-      worker.postMessage(workerRequest);
+      flushRequestQueue();
     });
   };
 
@@ -134,6 +191,14 @@ export function createWebDavWorkerStorageClient(
       worker.terminate();
     },
   };
+}
+
+function normalizeMaxConcurrentRequests(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) {
+    return 4;
+  }
+
+  return Math.max(1, Math.round(value));
 }
 
 function deserializeWorkerError(value: {

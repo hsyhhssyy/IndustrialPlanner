@@ -2,13 +2,17 @@ import type {
   SyncAssetEntry,
   SyncAssetSource,
   SyncContract,
+  SyncInitialSyncStage,
   SyncRemoteDeviceInfo,
+  SyncTaskKind,
 } from "@/domain/sync";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument } from "@/domain/document/world-document";
+import { createUuid } from "@/domain/shared/uuid";
 import {
   ensureLocalSyncOwnerState,
 } from "@/shared/storage/sync-owner-storage";
+import { createStableJsonHash } from "@/shared/storage/sync-shadow-storage";
 import {
   listBlueprintStorageEntries,
   upsertBlueprintStorageEntry,
@@ -22,10 +26,21 @@ import {
   type PlannerPersistedState,
 } from "@/shared/storage/planner-storage";
 import {
-  listWorldDocuments,
+  listLatestWorldDocumentsByBase,
   normalizeWorldDocument,
+  readWorldDocument,
   writeWorldDocument,
 } from "@/shared/storage/world-document-storage";
+// AI-REMOVED 2026-07-29:
+// Reason: 当前基地集合已复用按 baseId 选择最新文档的共享查询，不再自行枚举全部文档。
+// Trigger: 跨设备远端身份从 documentKey 改为 baseId。
+// Evidence: listLatestWorldDocumentsByBase 已封装确定性的新旧文档选择。
+// Replacement: 上方 listLatestWorldDocumentsByBase import。
+// Risk: None。
+// Human Review: Required
+//
+// Original code:
+// import { listWorldDocuments } from "@/shared/storage/world-document-storage";
 import { subscribeToStorageChanges } from "@/shared/storage/storage-change-event";
 
 import {
@@ -36,6 +51,9 @@ import {
 } from "./engine/webdav-sync-adapters";
 import {
   createWebDavSyncService,
+  type WebDavInitialSyncPlan,
+  type WebDavLocalChange,
+  type WebDavSyncMaintenanceTask,
   type WebDavSyncService,
 } from "./engine/webdav-sync-service";
 import {
@@ -64,6 +82,10 @@ export function createSyncHost(
   const disposers: Array<() => void> = [];
   let remoteApplyDepth = 0;
   let localNotificationScheduled = false;
+  let syncStarted = false;
+  let directoryTreeReadyKey: string | null = null;
+  let lastEditorWebDavHash: string | null = null;
+  const pendingLocalChanges = new Map<string, Set<string> | null>();
 
   const withRemoteApply = async <TValue>(task: () => Promise<TValue>): Promise<TValue> => {
     remoteApplyDepth += 1;
@@ -73,17 +95,48 @@ export function createSyncHost(
       remoteApplyDepth -= 1;
     }
   };
-  const notifyLocalChange = () => {
-    if (remoteApplyDepth > 0 || localNotificationScheduled) {
+  const notifyLocalChange = (change: WebDavLocalChange) => {
+    if (remoteApplyDepth > 0) {
+      return;
+    }
+    if (!isAdapterReadyForLocalChanges(
+      state.status.initialSyncStage,
+      change.adapterId,
+      externalSources,
+    )) {
       return;
     }
 
+    const currentAssetIds = pendingLocalChanges.get(change.adapterId);
+    if (change.assetId === undefined) {
+      pendingLocalChanges.set(change.adapterId, null);
+    } else if (currentAssetIds !== null) {
+      const nextAssetIds = currentAssetIds ?? new Set<string>();
+      nextAssetIds.add(change.assetId);
+      pendingLocalChanges.set(change.adapterId, nextAssetIds);
+    }
+    if (localNotificationScheduled) {
+      return;
+    }
     localNotificationScheduled = true;
     globalThis.queueMicrotask(() => {
       localNotificationScheduled = false;
-      if (remoteApplyDepth === 0) {
-        service.notifyLocalChange();
+      if (remoteApplyDepth > 0) {
+        pendingLocalChanges.clear();
+        return;
       }
+
+      for (const [adapterId, assetIds] of pendingLocalChanges) {
+        if (assetIds === null) {
+          service.notifyLocalChange({ adapterId });
+          continue;
+        }
+
+        for (const assetId of assetIds) {
+          service.notifyLocalChange({ adapterId, assetId });
+        }
+      }
+      pendingLocalChanges.clear();
     });
   };
 
@@ -137,22 +190,62 @@ export function createSyncHost(
   ];
 
   state.setSettings(readWebDavSyncSettings());
+  if (state.settings.enabled) {
+    state.setStatus({
+      ...state.status,
+      phase: "downloading",
+      initialSyncStage: "canvas",
+    });
+  }
   const service: WebDavSyncService = createWebDavSyncService({
     readSettings: readWebDavSyncSettings,
-    createClient: (settings) => createWebDavWorkerStorageClient({
+    createClient: (settings, onRequestActivityChange) => createWebDavWorkerStorageClient({
       baseUrl: settings.url,
       username: settings.username,
       password: settings.password,
       readDebugEnabled: options.readDebugEnabled,
+      maxConcurrentRequests: settings.maxConcurrentRequests,
+      onRequestActivityChange,
     }),
     adapters,
-    beforeSync: async (client) => {
-      await ensureWebDavDirectoryTree(client, externalSources);
-      await registerCurrentDevice(client);
-      state.setRemoteDevices(await listRemoteDevices(client));
+    createInitialSyncPlan: () => createInitialSyncPlan(workspace, externalSources),
+    maintenanceTasks: createMaintenanceTasks({
+      externalSources,
+      getDirectoryTreeReadyKey: () => directoryTreeReadyKey,
+      setDirectoryTreeReadyKey: (key) => {
+        directoryTreeReadyKey = key;
+      },
+      state,
+    }),
+    resolveAdapterTaskKind: (adapterId) =>
+      resolveAdapterTaskKind(adapterId, externalSources),
+    canRunInterval: () =>
+      typeof document === "undefined" || document.visibilityState === "visible",
+    beforeSync: () => {
+      // AI-REMOVED 2026-07-29:
+      // Reason: 全量目录维护与设备枚举不属于当前画布检查，串行执行会让画布白屏数十秒。
+      // Trigger: 用户要求当前基地一致时快速解锁，并在限制最大连接数的前提下并行下载。
+      // Evidence: 真实服务器画布阶段包含约十次 MKCOL、设备心跳和逐设备 GET。
+      // Replacement: createMaintenanceTasks() 在 initialSyncStage=ready 后执行。
+      // Risk: Low；资产写入路径本身会递归创建所需父目录。
+      // Human Review: Required
+      //
+      // Original code:
+      // await ensureWebDavDirectoryTree(client, externalSources);
+      // await registerCurrentDevice(client);
+      // state.setRemoteDevices(await listRemoteDevices(client));
     },
-    afterSync: async (client) => {
-      state.setRemoteDevices(await listRemoteDevices(client));
+    afterSync: () => {
+      // AI-REMOVED 2026-07-29:
+      // Reason: 远端设备枚举已成为可观察的独立维护任务，避免每轮同步前后重复读取。
+      // Trigger: 用户要求详细任务状态，并降低初始画布等待时间。
+      // Evidence: 原流程 beforeSync / afterSync 各执行一次 listRemoteDevices()。
+      // Replacement: createMaintenanceTasks() 的 remote-devices 任务。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // state.setRemoteDevices(await listRemoteDevices(client));
     },
     onStatusChange: state.setStatus,
   });
@@ -165,7 +258,9 @@ export function createSyncHost(
       });
     },
     syncNow: async () => {
-      await service.syncNow("manual");
+      await service.syncNow(
+        state.status.initialSyncStage === "ready" ? "manual" : "foreground",
+      );
     },
     resolveConflict: (resolution) => {
       if (resolution === "pause") {
@@ -195,29 +290,272 @@ export function createSyncHost(
 
   workspace.sync = host;
   disposers.push(subscribeToStorageChanges((event) => {
-    if (
-      event.assetType === "world-document"
-      || event.assetType === "production-planning"
-      || event.assetType === "blueprint"
-      || event.assetType === "blueprint-folder"
-    ) {
-      notifyLocalChange();
+    if (event.assetType === "world-document") {
+      const currentDocument = workspace.editor?.document.getSnapshot();
+      if (currentDocument?.documentKey === event.assetId) {
+        const nextEditorWebDavHash = createStableJsonHash(
+          createWorldDocumentWebDavValue(currentDocument),
+        );
+        if (lastEditorWebDavHash === nextEditorWebDavHash) {
+          return;
+        }
+        lastEditorWebDavHash = nextEditorWebDavHash;
+        notifyLocalChange({
+          adapterId: "world-documents",
+          assetId: currentDocument.baseId,
+        });
+        return;
+      }
+      // AI-REMOVED 2026-07-29:
+      // Reason: IndexedDB 变更事件携带的是本机 documentKey，不能再作为按 baseId 编址的远端资产 ID。
+      // Trigger: 两台设备对同一基地生成不同 documentKey，导致远端产生两个文件且永远不冲突。
+      // Evidence: 真实双浏览器测试中相同 baseId 分别上传到两个 UUID 目录。
+      // Replacement: 当前画布在上方映射为 baseId；非当前文档缺少同步读取的 baseId，因此请求该适配器全量检查。
+      // Risk: Low；非当前文档变更会多检查一次索引，但不会错误地上传 UUID 资产。
+      // Human Review: Required
+      //
+      // Original code:
+      // notifyLocalChange({
+      //   adapterId: "world-documents",
+      //   assetId: event.assetId,
+      // });
+      notifyLocalChange({
+        adapterId: "world-documents",
+      });
+    } else if (event.assetType === "production-planning") {
+      notifyLocalChange({ adapterId: "production-planning" });
+    } else if (event.assetType === "blueprint") {
+      notifyLocalChange({
+        adapterId: "blueprints",
+        assetId: event.assetId,
+      });
+    } else if (event.assetType === "blueprint-folder") {
+      notifyLocalChange({
+        adapterId: "blueprint-folders",
+        assetId: event.assetId,
+      });
     }
   }));
   for (const source of externalSources) {
-    disposers.push(source.subscribe(notifyLocalChange));
+    disposers.push(source.subscribe(() => {
+      notifyLocalChange({ adapterId: source.id });
+    }));
   }
   const editorDocument = workspace.editor?.document;
   if (editorDocument !== undefined) {
-    disposers.push(editorDocument.subscribe(notifyLocalChange));
+    let editorDocumentHydrated = false;
+    disposers.push(editorDocument.subscribe((documentSnapshot) => {
+      const nextEditorWebDavHash = createStableJsonHash(
+        createWorldDocumentWebDavValue(documentSnapshot),
+      );
+      if (!editorDocumentHydrated) {
+        editorDocumentHydrated = true;
+        lastEditorWebDavHash = nextEditorWebDavHash;
+        syncStarted = true;
+        service.start();
+        return;
+      }
+
+      if (lastEditorWebDavHash === nextEditorWebDavHash) {
+        return;
+      }
+      lastEditorWebDavHash = nextEditorWebDavHash;
+      // AI-REMOVED 2026-07-29:
+      // Reason: 视口中心等设备本地展示状态也会产生 document snapshot，原逻辑把它误判为待上传内容。
+      // Trigger: 真实服务器诊断发现每次前台检查都因 viewport center 变化制造 delta 和新 revision。
+      // Evidence: 远端 delta 仅包含 /documentSettings/viewport/center/x、y。
+      // Replacement: 上方 WebDAV 投影哈希门控，仅业务同步内容变化时进入 notifyLocalChange。
+      // Risk: Low；视口仍照常保存到本地 IndexedDB。
+      // Human Review: Required
+      //
+      // Original code:
+      // notifyLocalChange({
+      //   adapterId: "world-documents",
+      //   assetId: documentSnapshot.documentKey,
+      // });
+      // AI-CORRECTION 2026-07-29: 远端当前画布资产现以稳定 baseId 编址；
+      // documentKey 只保留为本机 IndexedDB 与编辑器身份，不再进入上传队列。
+      notifyLocalChange({
+        adapterId: "world-documents",
+        assetId: documentSnapshot.baseId,
+      });
+    }));
+  } else {
+    syncStarted = true;
+    service.start();
   }
   disposers.push(subscribeToWebDavSyncSettingsChanges((settings) => {
+    const wasEnabled = state.settings.enabled;
     state.setSettings(settings);
-    void service.syncNow("settings-change");
+    if (!settings.enabled && !syncStarted) {
+      state.setStatus({
+        ...state.status,
+        phase: "idle",
+        initialSyncStage: "ready",
+      });
+    } else if (settings.enabled && !syncStarted) {
+      state.setStatus({
+        ...state.status,
+        phase: "downloading",
+        initialSyncStage: "canvas",
+      });
+    }
+    if (syncStarted) {
+      void service.syncNow(
+        settings.enabled && !wasEnabled ? "foreground" : "settings-change",
+      );
+    }
   }));
-  service.start();
+  if (typeof document !== "undefined") {
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === "visible"
+        && syncStarted
+        && readWebDavSyncSettings().enabled
+      ) {
+        void service.syncNow("foreground");
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    disposers.push(() => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    });
+  }
 
   return host;
+}
+
+function isAdapterReadyForLocalChanges(
+  initialSyncStage: SyncInitialSyncStage,
+  adapterId: string,
+  externalSources: readonly SyncAssetSource[],
+): boolean {
+  if (initialSyncStage === "ready") {
+    return true;
+  }
+  if (adapterId === "world-documents") {
+    return initialSyncStage !== "canvas";
+  }
+  if (adapterId === "blueprints" || adapterId === "blueprint-folders") {
+    return initialSyncStage === "modules" || initialSyncStage === "toolbox";
+  }
+  if (externalSources.some((source) => source.id === adapterId)) {
+    return initialSyncStage === "toolbox";
+  }
+
+  return false;
+}
+
+function createMaintenanceTasks(options: {
+  readonly externalSources: readonly SyncAssetSource[];
+  readonly getDirectoryTreeReadyKey: () => string | null;
+  readonly setDirectoryTreeReadyKey: (key: string) => void;
+  readonly state: SyncStateImpl;
+}): readonly WebDavSyncMaintenanceTask[] {
+  return [
+    {
+      kind: "directory-maintenance",
+      run: async (client, settings) => {
+        const directoryTreeKey = `${settings.url.trim()}\u0000${settings.username}`;
+        if (options.getDirectoryTreeReadyKey() === directoryTreeKey) {
+          return;
+        }
+
+        await ensureWebDavDirectoryTree(client, options.externalSources);
+        options.setDirectoryTreeReadyKey(directoryTreeKey);
+      },
+    },
+    {
+      kind: "device-registration",
+      run: async (client) => {
+        await registerCurrentDevice(client);
+      },
+    },
+    {
+      kind: "remote-devices",
+      run: async (client) => {
+        options.state.setRemoteDevices(await listRemoteDevices(client));
+      },
+    },
+  ];
+}
+
+function resolveAdapterTaskKind(
+  adapterId: string,
+  externalSources: readonly SyncAssetSource[],
+): SyncTaskKind {
+  if (adapterId === "blueprints" || adapterId === "blueprint-folders") {
+    return "blueprints";
+  }
+  if (adapterId === "production-planning") {
+    return "toolbox";
+  }
+  if (externalSources.some((source) => source.id === adapterId)) {
+    return "modules";
+  }
+
+  return "canvas";
+}
+
+function createInitialSyncPlan(
+  workspace: WorkspaceContract,
+  externalSources: readonly SyncAssetSource[],
+): WebDavInitialSyncPlan {
+  // AI-REMOVED 2026-07-29:
+  // Reason: documentKey 是每台设备独立生成的本机身份，不能标识跨设备的同一基地。
+  // Trigger: 刷新或另一台设备同步时，当前基地被当成 remote-only 后台文档，画布阶段检查的是本机 UUID 空目录。
+  // Evidence: 真实服务器同时存在同一 baseId 的两个 UUID 目录，另一设备刷新后画布内容未变化且 pendingConflict=null。
+  // Replacement: 下方 currentBaseId 及按 baseId 构造的前台/后台 scope。
+  // Risk: Medium；旧 UUID 目录保留为历史数据，新协议首次由当前本地画布建立 canonical 条目。
+  // Human Review: Required
+  //
+  // Original code:
+  // const currentDocumentKey = workspace.editor?.document.getSnapshot().documentKey;
+  // const currentDocumentRequest = currentDocumentKey === undefined
+  //   ? []
+  //   : [{
+  //     adapterId: "world-documents",
+  //     scope: { includeAssetIds: [currentDocumentKey] },
+  //   }];
+  const currentBaseId = workspace.editor?.document.getSnapshot().baseId;
+  const currentDocumentRequest = currentBaseId === undefined
+    ? []
+    : [{
+      adapterId: "world-documents",
+      scope: { includeAssetIds: [currentBaseId] },
+    }];
+
+  return {
+    batches: [
+      {
+        stage: "canvas",
+        requests: currentDocumentRequest,
+      },
+      {
+        stage: "blueprints",
+        requests: [
+          { adapterId: "blueprints" },
+          { adapterId: "blueprint-folders" },
+        ],
+      },
+      {
+        stage: "modules",
+        requests: externalSources.map((source) => ({
+          adapterId: source.id,
+        })),
+      },
+      {
+        stage: "toolbox",
+        requests: [{ adapterId: "production-planning" }],
+      },
+    ],
+    backgroundRequests: [{
+      adapterId: "world-documents",
+      scope: currentBaseId === undefined
+        ? undefined
+        : { excludeAssetIds: [currentBaseId] },
+    }],
+  };
 }
 
 function createAdapterFromSource(
@@ -254,39 +592,172 @@ function createWorldDocumentAdapter(
 ): WebDavSyncAdapter {
   return createPatchCollectionWithRevisionAdapter<WorldDocument>({
     id: "world-documents",
-    indexPath: "documents/index.json",
-    directoryPath: (documentKey) => `documents/${encodeURIComponent(documentKey)}`,
+    // AI-REMOVED 2026-07-29:
+    // Reason: 旧集合按本机 UUID 编址，同一基地在不同设备上无法互相发现。
+    // Trigger: 用户报告跨设备刷新后当前画布未同步，也没有冲突提示。
+    // Evidence: 真实双端测试确认 A/B 的 baseId 相同、documentKey 不同，服务器生成两个独立资产。
+    // Replacement: documents/by-base/index.json 与 documents/by-base/<baseId>。
+    // Risk: Medium；不自动删除或猜测合并旧 UUID 历史目录。
+    // Human Review: Required
+    //
+    // Original code:
+    // indexPath: "documents/index.json",
+    // directoryPath: (documentKey) => `documents/${encodeURIComponent(documentKey)}`,
+    indexPath: "documents/by-base/index.json",
+    directoryPath: (baseId) => `documents/by-base/${encodeURIComponent(baseId)}`,
     listLocal: async () => {
-      const documentsByKey = new Map(
-        (await listWorldDocuments()).map((document) => [document.documentKey, document]),
-      );
+      // AI-REMOVED 2026-07-29:
+      // Reason: 按 documentKey 列出会把同一基地的设备副本视为不同的远端资产。
+      // Trigger: 当前画布跨设备无法覆盖、下载或产生冲突。
+      // Evidence: Search-First 找到 shared 已有 listLatestWorldDocumentsByBase，可直接复用其确定性新旧排序。
+      // Replacement: 下方 documentsByBase；当前编辑器快照优先覆盖同基地的持久化副本。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // const documentsByKey = new Map(
+      //   (await listWorldDocuments()).map((document) => [document.documentKey, document]),
+      // );
+      // const currentDocument = workspace.editor?.document.getSnapshot();
+      // if (currentDocument !== undefined) {
+      //   documentsByKey.set(currentDocument.documentKey, currentDocument);
+      // }
+      //
+      // return Array.from(documentsByKey.values()).map((document) => ({
+      //   id: document.documentKey,
+      //   value: createWorldDocumentWebDavValue(document),
+      //   deletedAt: null,
+      // }));
+      const documentsByBase = await listLatestWorldDocumentsByBase({});
       const currentDocument = workspace.editor?.document.getSnapshot();
       if (currentDocument !== undefined) {
-        documentsByKey.set(currentDocument.documentKey, currentDocument);
+        documentsByBase.set(currentDocument.baseId, currentDocument);
       }
 
-      return Array.from(documentsByKey.values()).map((document) => ({
-        id: document.documentKey,
-        value: document,
+      return Array.from(documentsByBase.values()).map((document) => ({
+        id: document.baseId,
+        value: createWorldDocumentWebDavValue(document),
         deletedAt: null,
       }));
     },
     writeLocal: async (entry) => await withRemoteApply(async () => {
-      await writeWorldDocument(entry.value);
       const editor = workspace.editor;
+      const currentDocument = editor?.document.getSnapshot();
+      // AI-REMOVED 2026-07-29:
+      // Reason: 远端 canonical 文档不再携带本机 documentKey，按 entry.value.documentKey 查找会写成新的错误文档。
+      // Trigger: 用户要求远端内容应用到当前画布，同时保留每台设备的内部对象身份。
+      // Evidence: documentKey 是 IndexedDB key 与 editor 当前文档身份；替换它会断开当前编辑器和持久化记录。
+      // Replacement: 下方按 entry.id(baseId) 查找本机最新副本，并由 preserveLocalWorldDocumentIdentity 保留身份。
+      // Risk: Low；无本地副本时生成新的本机 UUID。
+      // Human Review: Required
+      //
+      // Original code:
+      // const existingDocument = currentDocument?.documentKey === entry.value.documentKey
+      //   ? currentDocument
+      //   : await readWorldDocument(entry.value.documentKey);
+      // const localValue = preserveLocalWorldDocumentViewport(
+      //   entry.value,
+      //   existingDocument,
+      // );
+      // await writeWorldDocument(localValue);
+      // if (
+      //   editor !== null
+      //   && currentDocument?.documentKey === entry.value.documentKey
+      // ) {
+      //   editor.actions.applySynchronizedDocument(localValue);
+      // }
+      const latestDocumentsByBase = await listLatestWorldDocumentsByBase({});
+      const existingDocument = currentDocument?.baseId === entry.id
+        ? currentDocument
+        : latestDocumentsByBase.get(entry.id) ?? await readWorldDocument(entry.id);
+      const localValue = preserveLocalWorldDocumentIdentity(
+        {
+          ...entry.value,
+          baseId: entry.id,
+          documentKey: entry.id,
+        },
+        existingDocument,
+      );
+      await writeWorldDocument(localValue);
       if (
         editor !== null
-        && editor.document.getSnapshot().documentKey === entry.value.documentKey
+        && currentDocument?.baseId === entry.id
       ) {
-        editor.actions.applySynchronizedDocument(entry.value);
+        editor.actions.applySynchronizedDocument(localValue);
       }
     }),
-    normalizeRemote: normalizeWorldDocument,
+    normalizeRemote: (value) => {
+      const document = normalizeWorldDocument(value);
+
+      return document === null
+        ? null
+        : createWorldDocumentWebDavValue(document);
+    },
     resolveConflict: (conflict) => state.requestConflict(
       conflict,
       resolveRemoteDeviceLabel(state.remoteDevices),
     ),
   });
+}
+
+export function createWorldDocumentWebDavValue(
+  document: WorldDocument,
+): WorldDocument {
+  return {
+    ...document,
+    documentKey: document.baseId,
+    documentSettings: {
+      ...document.documentSettings,
+      viewport: {
+        center: {
+          x: 0,
+          y: 0,
+        },
+        gridSize: 1,
+        displayRotation: 0,
+      },
+    },
+  };
+}
+
+// AI-REMOVED 2026-07-29:
+// Reason: 仅保留 viewport 会把远端 canonical documentKey 写进本机 IndexedDB，破坏编辑器内部对象身份。
+// Trigger: 当前画布改为按 baseId 编址后，远端 documentKey 被规范化为 baseId。
+// Evidence: writeWorldDocument 以 document.documentKey 为 IndexedDB key，editor 也以本机 documentKey 识别当前文档。
+// Replacement: preserveLocalWorldDocumentIdentity。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// function preserveLocalWorldDocumentViewport(
+//   remoteDocument: WorldDocument,
+//   localDocument: WorldDocument | null | undefined,
+// ): WorldDocument {
+//   if (localDocument === null || localDocument === undefined) {
+//     return remoteDocument;
+//   }
+//
+//   return {
+//     ...remoteDocument,
+//     documentSettings: {
+//       ...remoteDocument.documentSettings,
+//       viewport: localDocument.documentSettings.viewport,
+//     },
+//   };
+// }
+export function preserveLocalWorldDocumentIdentity(
+  remoteDocument: WorldDocument,
+  localDocument: WorldDocument | null | undefined,
+): WorldDocument {
+  return {
+    ...remoteDocument,
+    documentKey: localDocument?.documentKey ?? createUuid(),
+    documentSettings: {
+      ...remoteDocument.documentSettings,
+      viewport: localDocument?.documentSettings.viewport
+        ?? remoteDocument.documentSettings.viewport,
+    },
+  };
 }
 
 async function ensureWebDavDirectoryTree(
@@ -300,13 +771,37 @@ async function ensureWebDavDirectoryTree(
     "assets/blueprints",
     "assets/blueprint-folders",
     "documents",
+    "documents/by-base",
   ]);
 
   for (const source of externalSources) {
     addPathAncestors(directoryPaths, source.indexPath);
   }
+  // AI-REMOVED 2026-07-29:
+  // Reason: 目录之间并非全部相互依赖，逐项等待浪费 WebDAV 往返时间。
+  // Trigger: 用户要求在最大连接数限制下并行下载和维护请求。
+  // Evidence: worker client 已提供全局 maxConcurrentRequests 队列。
+  // Replacement: 下方按目录深度分组、组内并行的创建流程。
+  // Risk: Low；父级深度完成后才会创建子级。
+  // Human Review: Required
+  //
+  // Original code:
+  // for (const path of directoryPaths) {
+  //   await client.makeDirectory(path);
+  // }
+  const pathsByDepth = new Map<number, string[]>();
   for (const path of directoryPaths) {
-    await client.makeDirectory(path);
+    const depth = path === "" ? 0 : path.split("/").length;
+    const paths = pathsByDepth.get(depth) ?? [];
+    paths.push(path);
+    pathsByDepth.set(depth, paths);
+  }
+  for (const depth of Array.from(pathsByDepth.keys()).sort((left, right) => left - right)) {
+    await Promise.all(
+      (pathsByDepth.get(depth) ?? []).map(async (path) => {
+        await client.makeDirectory(path);
+      }),
+    );
   }
 }
 
@@ -339,20 +834,36 @@ async function listRemoteDevices(
   client: WebDavStorageClient,
 ): Promise<SyncRemoteDeviceInfo[]> {
   const entries = await client.listDirectory("devices");
-  const devices: SyncRemoteDeviceInfo[] = [];
+  // AI-REMOVED 2026-07-29:
+  // Reason: 逐个读取设备记录会让耗时随设备数量线性叠加。
+  // Trigger: 用户要求在限制最大连接数的情况下并行下载。
+  // Evidence: 真实测试服务器已有十个设备记录，原循环产生十次串行 GET。
+  // Replacement: 下方 Promise.all；实际并发由 worker client 全局限流。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // const devices: SyncRemoteDeviceInfo[] = [];
+  //
+  // for (const entry of entries) {
+  //   if (entry.type !== "file" || !entry.basename.endsWith(".json")) {
+  //     continue;
+  //   }
+  //
+  //   const device = await readRemoteDeviceInfo(client, `devices/${entry.basename}`);
+  //   if (device !== null) {
+  //     devices.push(device);
+  //   }
+  // }
+  //
+  // return devices;
+  const devices = await Promise.all(entries.flatMap((entry) =>
+    entry.type === "file" && entry.basename.endsWith(".json")
+      ? [readRemoteDeviceInfo(client, `devices/${entry.basename}`)]
+      : []
+  ));
 
-  for (const entry of entries) {
-    if (entry.type !== "file" || !entry.basename.endsWith(".json")) {
-      continue;
-    }
-
-    const device = await readRemoteDeviceInfo(client, `devices/${entry.basename}`);
-    if (device !== null) {
-      devices.push(device);
-    }
-  }
-
-  return devices;
+  return devices.filter((device): device is SyncRemoteDeviceInfo => device !== null);
 }
 
 async function readRemoteDeviceInfo(

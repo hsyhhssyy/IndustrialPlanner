@@ -10,7 +10,9 @@ import {
   type JsonPatchOperation,
 } from "@/shared/storage/json-patch-codec";
 import {
+  readWebDavLastSeenRemoteRevision,
   readWebDavLastSyncedContentHash,
+  writeWebDavLastSeenRemoteRevision,
   writeWebDavLastSyncedContentHash,
 } from "../storage";
 
@@ -39,7 +41,16 @@ export interface WebDavSyncConflict<TValue> {
 export interface WebDavSyncAdapter {
   readonly id: string;
   readonly mode: WebDavSyncMode;
-  sync(client: WebDavStorageClient): Promise<WebDavSyncAdapterResult>;
+  sync(
+    client: WebDavStorageClient,
+    scope?: WebDavSyncAdapterScope,
+  ): Promise<WebDavSyncAdapterResult>;
+}
+
+export interface WebDavSyncAdapterScope {
+  readonly includeAssetIds?: readonly string[];
+  readonly excludeAssetIds?: readonly string[];
+  readonly onProgress?: (progress: number) => void;
 }
 
 export interface FullNoRevisionAdapterOptions<TValue> {
@@ -137,7 +148,7 @@ export function createFullWithRevisionAdapter<TValue>(
   return {
     id: options.id,
     mode: "full-with-revision",
-    sync: async (client) => await syncFullWithRevision(client, options),
+    sync: async (client, scope) => await syncFullWithRevision(client, options, scope),
   };
 }
 
@@ -157,7 +168,11 @@ export function createPatchCollectionWithRevisionAdapter<TValue>(
   return {
     id: options.id,
     mode: "patch-with-revision",
-    sync: async (client) => await syncPatchCollectionWithRevision(client, options),
+    sync: async (client, scope) => await syncPatchCollectionWithRevision(
+      client,
+      options,
+      scope,
+    ),
   };
 }
 
@@ -177,6 +192,7 @@ async function syncFullNoRevision<TValue>(
     writeLastSyncedHash: (contentHash) => writeWebDavLastSyncedContentHash(assetKey, contentHash),
     writeLocal: options.writeLocal,
     writeRemote: async (value) => {
+      await ensureRemoteParentDirectory(client, options.remotePath);
       await client.writeTextFile(options.remotePath, JSON.stringify(value));
     },
     resolveConflict: options.resolveConflict,
@@ -193,14 +209,35 @@ async function syncFullNoRevision<TValue>(
 async function syncFullWithRevision<TValue>(
   client: WebDavStorageClient,
   options: FullWithRevisionAdapterOptions<TValue>,
+  scope?: WebDavSyncAdapterScope,
 ): Promise<WebDavSyncAdapterResult> {
-  const localEntries = await options.listLocal();
+  const localEntries = (await options.listLocal()).filter((entry) =>
+    isAssetIncludedInScope(entry.id, scope),
+  );
   const localEntryById = new Map(localEntries.map((entry) => [entry.id, entry]));
   const remoteIndexState = await readRemoteIndexState(client, options.indexPath);
   const remoteIndex = remoteIndexState.index;
   const changedAssetIds: string[] = [];
   let nextIndex = remoteIndex;
   let status: WebDavSyncAdapterStatus = "idle";
+  const remoteValuesByLocalId = new Map(await Promise.all(localEntries.flatMap((entry) => {
+    const remoteEntry = remoteIndex.entries[entry.id];
+    if (
+      remoteEntry?.deletedAt !== null
+      || (
+        entry.deletedAt === null
+        && createStableJsonHash(entry.value) === remoteEntry.contentHash
+      )
+    ) {
+      return [];
+    }
+
+    return [readRemoteJson(
+      client,
+      options.entryPath(entry.id),
+      options.normalizeRemote,
+    ).then((value) => [entry.id, value] as const)];
+  })));
 
   for (const localEntry of localEntries) {
     const remoteEntry = remoteIndex.entries[localEntry.id] ?? null;
@@ -227,9 +264,20 @@ async function syncFullWithRevision<TValue>(
       }
     }
 
-    const remoteValue = remoteEntry?.deletedAt === null
-      ? await readRemoteJson(client, options.entryPath(localEntry.id), options.normalizeRemote)
-      : null;
+    if (
+      localEntry.deletedAt === null
+      && remoteEntry?.deletedAt === null
+      && createStableJsonHash(localEntry.value) === remoteEntry.contentHash
+    ) {
+      logger.debug(`${options.id}/${localEntry.id}: collection index hash matches → idle`);
+      writeWebDavLastSyncedContentHash(
+        `${options.id}:${localEntry.id}`,
+        remoteEntry.contentHash,
+      );
+      continue;
+    }
+
+    const remoteValue = remoteValuesByLocalId.get(localEntry.id) ?? null;
     const assetKey = `${options.id}:${localEntry.id}`;
     const entryStatus = await syncSingleValue({
       adapterId: options.id,
@@ -245,7 +293,9 @@ async function syncFullWithRevision<TValue>(
       }),
       writeRemote: async (value) => {
         const contentHash = createStableJsonHash(value);
-        await client.writeTextFile(options.entryPath(localEntry.id), JSON.stringify(value));
+        const entryPath = options.entryPath(localEntry.id);
+        await ensureRemoteParentDirectory(client, entryPath);
+        await client.writeTextFile(entryPath, JSON.stringify(value));
         nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
           contentHash,
           deletedAt: null,
@@ -258,6 +308,8 @@ async function syncFullWithRevision<TValue>(
       status = mergeStatus(status, entryStatus);
       changedAssetIds.push(localEntry.id);
     }
+    // AI-CORRECTION 2026-07-29: 归一化后的 patch 索引修复只适用于下方 patch collection；
+    // full collection 没有 remoteState，不能在这里执行该逻辑。
 
     if (localEntry.deletedAt !== null && remoteEntry?.deletedAt !== localEntry.deletedAt) {
       nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
@@ -269,12 +321,53 @@ async function syncFullWithRevision<TValue>(
     }
   }
 
-  for (const [entryId, remoteEntry] of Object.entries(remoteIndex.entries)) {
-    if (localEntryById.has(entryId) || remoteEntry.deletedAt !== null) {
-      continue;
-    }
-
-    const remoteValue = await readRemoteJson(client, options.entryPath(entryId), options.normalizeRemote);
+  // AI-REMOVED 2026-07-29:
+  // Reason: 各 remote-only 资产文件互不依赖，逐个 GET 无法利用受限并发。
+  // Trigger: 用户要求在最大连接数限制下并行下载。
+  // Evidence: 本地写回仍可在下载全部完成后按顺序执行。
+  // Replacement: 下方 remoteOnlyValues 并行预取。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // for (const [entryId, remoteEntry] of Object.entries(remoteIndex.entries)) {
+  //   if (
+  //     !isAssetIncludedInScope(entryId, scope)
+  //     || localEntryById.has(entryId)
+  //     || remoteEntry.deletedAt !== null
+  //   ) {
+  //     continue;
+  //   }
+  //
+  //   const remoteValue = await readRemoteJson(client, options.entryPath(entryId), options.normalizeRemote);
+  //   if (remoteValue === null) {
+  //     continue;
+  //   }
+  //
+  //   logger.info(`${options.id}/${entryId}: new remote entry → downloading`);
+  //   await options.writeLocal({
+  //     id: entryId,
+  //     value: remoteValue,
+  //     deletedAt: null,
+  //   });
+  //   writeWebDavLastSyncedContentHash(`${options.id}:${entryId}`, createStableJsonHash(remoteValue));
+  //   status = mergeStatus(status, "downloaded");
+  //   changedAssetIds.push(entryId);
+  // }
+  const remoteOnlyValues = await Promise.all(
+    Object.entries(remoteIndex.entries).flatMap(([entryId, remoteEntry]) =>
+      isAssetIncludedInScope(entryId, scope)
+        && !localEntryById.has(entryId)
+        && remoteEntry.deletedAt === null
+        ? [readRemoteJson(
+          client,
+          options.entryPath(entryId),
+          options.normalizeRemote,
+        ).then((value) => ({ entryId, value }))]
+        : []
+    ),
+  );
+  for (const { entryId, value: remoteValue } of remoteOnlyValues) {
     if (remoteValue === null) {
       continue;
     }
@@ -347,16 +440,45 @@ async function syncPatchWithRevision<TValue>(
 async function syncPatchCollectionWithRevision<TValue>(
   client: WebDavStorageClient,
   options: PatchCollectionWithRevisionAdapterOptions<TValue>,
+  scope?: WebDavSyncAdapterScope,
 ): Promise<WebDavSyncAdapterResult> {
-  const localEntries = await options.listLocal();
+  reportSyncProgress(scope, 0);
+  const localEntries = (await options.listLocal()).filter((entry) =>
+    isAssetIncludedInScope(entry.id, scope),
+  );
+  reportSyncProgress(scope, 10);
   const localEntryById = new Map(localEntries.map((entry) => [entry.id, entry]));
   const remoteIndexState = await readRemoteIndexState(client, options.indexPath);
+  reportSyncProgress(scope, 35);
   const remoteIndex = remoteIndexState.index;
   const changedAssetIds: string[] = [];
   let nextIndex = remoteIndex;
   let status: WebDavSyncAdapterStatus = "idle";
+  const remoteStatesByLocalId = new Map(await Promise.all(localEntries.flatMap((entry) => {
+    const remoteEntry = remoteIndex.entries[entry.id];
+    if (
+      remoteEntry?.deletedAt !== null
+      || (
+        entry.deletedAt === null
+        && createStableJsonHash(entry.value) === remoteEntry.contentHash
+      )
+    ) {
+      return [];
+    }
 
-  for (const localEntry of localEntries) {
+    return [readRemotePatchState(
+      client,
+      options.directoryPath(entry.id),
+      options.normalizeRemote,
+    ).then((value) => [entry.id, value] as const)];
+  })));
+  reportSyncProgress(scope, 55);
+
+  for (const [localEntryIndex, localEntry] of localEntries.entries()) {
+    reportSyncProgress(
+      scope,
+      interpolateProgress(55, 75, localEntryIndex, localEntries.length),
+    );
     const remoteEntry = remoteIndex.entries[localEntry.id] ?? null;
     const assetKey = `${options.id}:${localEntry.id}`;
 
@@ -382,9 +504,17 @@ async function syncPatchCollectionWithRevision<TValue>(
       }
     }
 
-    const remoteState = remoteEntry?.deletedAt === null
-      ? await readRemotePatchState(client, options.directoryPath(localEntry.id), options.normalizeRemote)
-      : null;
+    if (
+      localEntry.deletedAt === null
+      && remoteEntry?.deletedAt === null
+      && createStableJsonHash(localEntry.value) === remoteEntry.contentHash
+    ) {
+      logger.debug(`${options.id}/${localEntry.id}: patch index hash matches → idle`);
+      writeWebDavLastSyncedContentHash(assetKey, remoteEntry.contentHash);
+      continue;
+    }
+
+    const remoteState = remoteStatesByLocalId.get(localEntry.id) ?? null;
     const entryStatus = await syncSingleValue({
       adapterId: options.id,
       assetId: localEntry.id,
@@ -418,6 +548,21 @@ async function syncPatchCollectionWithRevision<TValue>(
       status = mergeStatus(status, entryStatus);
       changedAssetIds.push(localEntry.id);
     }
+    if (
+      entryStatus === "idle"
+      && remoteEntry?.deletedAt === null
+      && remoteState !== null
+    ) {
+      const normalizedRemoteHash = createStableJsonHash(remoteState.value);
+      if (remoteEntry.contentHash !== normalizedRemoteHash) {
+        nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
+          contentHash: normalizedRemoteHash,
+          deletedAt: null,
+        });
+        status = mergeStatus(status, "uploaded");
+        changedAssetIds.push(localEntry.id);
+      }
+    }
 
     if (localEntry.deletedAt !== null && remoteEntry?.deletedAt !== localEntry.deletedAt) {
       nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
@@ -428,13 +573,63 @@ async function syncPatchCollectionWithRevision<TValue>(
       changedAssetIds.push(localEntry.id);
     }
   }
+  reportSyncProgress(scope, 75);
 
-  for (const [entryId, remoteEntry] of Object.entries(remoteIndex.entries)) {
-    if (localEntryById.has(entryId) || remoteEntry.deletedAt !== null) {
-      continue;
-    }
-
-    const remoteState = await readRemotePatchState(client, options.directoryPath(entryId), options.normalizeRemote);
+  // AI-REMOVED 2026-07-29:
+  // Reason: remote-only patch 资产的远端重建彼此独立，串行等待会累加网络延迟。
+  // Trigger: 用户要求在最大连接数限制下并行下载。
+  // Evidence: 预取完成后仍按索引顺序写回本地，避免并发修改业务状态。
+  // Replacement: 下方 remoteOnlyStates 并行预取。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // for (const [entryId, remoteEntry] of Object.entries(remoteIndex.entries)) {
+  //   if (
+  //     !isAssetIncludedInScope(entryId, scope)
+  //     || localEntryById.has(entryId)
+  //     || remoteEntry.deletedAt !== null
+  //   ) {
+  //     continue;
+  //   }
+  //
+  //   const remoteState = await readRemotePatchState(client, options.directoryPath(entryId), options.normalizeRemote);
+  //   if (remoteState === null) {
+  //     continue;
+  //   }
+  //
+  //   logger.info(`${options.id}/${entryId}: new remote patch entry → downloading`);
+  //   await options.writeLocal({
+  //     id: entryId,
+  //     value: remoteState.value,
+  //     deletedAt: null,
+  //   });
+  //   writeWebDavLastSyncedContentHash(`${options.id}:${entryId}`, createStableJsonHash(remoteState.value));
+  //   status = mergeStatus(status, "downloaded");
+  //   changedAssetIds.push(entryId);
+  // }
+  const remoteOnlyStates = await Promise.all(
+    Object.entries(remoteIndex.entries).flatMap(([entryId, remoteEntry]) =>
+      isAssetIncludedInScope(entryId, scope)
+        && !localEntryById.has(entryId)
+        && remoteEntry.deletedAt === null
+        ? [readRemotePatchState(
+          client,
+          options.directoryPath(entryId),
+          options.normalizeRemote,
+        ).then((state) => ({ entryId, state }))]
+      : []
+    ),
+  );
+  reportSyncProgress(scope, 88);
+  for (const [remoteEntryIndex, {
+    entryId,
+    state: remoteState,
+  }] of remoteOnlyStates.entries()) {
+    reportSyncProgress(
+      scope,
+      interpolateProgress(88, 94, remoteEntryIndex, remoteOnlyStates.length),
+    );
     if (remoteState === null) {
       continue;
     }
@@ -449,8 +644,10 @@ async function syncPatchCollectionWithRevision<TValue>(
     status = mergeStatus(status, "downloaded");
     changedAssetIds.push(entryId);
   }
+  reportSyncProgress(scope, 94);
 
   if (nextIndex.revision !== remoteIndex.revision) {
+    reportSyncProgress(scope, 96);
     logger.info(`${options.id}: writing collection index.json → rev=${remoteIndex.revision + 1} (was ${remoteIndex.revision}), entries=${Object.keys(nextIndex.entries).length}`);
     await writeRemoteIndex(
       client,
@@ -460,6 +657,7 @@ async function syncPatchCollectionWithRevision<TValue>(
       remoteIndexState.etag,
     );
   }
+  reportSyncProgress(scope, 100);
 
   return {
     adapterId: options.id,
@@ -467,6 +665,40 @@ async function syncPatchCollectionWithRevision<TValue>(
     status,
     changedAssetIds: Array.from(new Set(changedAssetIds)),
   };
+}
+
+function isAssetIncludedInScope(
+  assetId: string,
+  scope: WebDavSyncAdapterScope | undefined,
+): boolean {
+  if (
+    scope?.includeAssetIds !== undefined
+    && !scope.includeAssetIds.includes(assetId)
+  ) {
+    return false;
+  }
+
+  return scope?.excludeAssetIds?.includes(assetId) !== true;
+}
+
+function reportSyncProgress(
+  scope: WebDavSyncAdapterScope | undefined,
+  progress: number,
+): void {
+  scope?.onProgress?.(Math.min(100, Math.max(0, progress)));
+}
+
+function interpolateProgress(
+  start: number,
+  end: number,
+  completedUnitCount: number,
+  totalUnitCount: number,
+): number {
+  if (totalUnitCount <= 0) {
+    return end;
+  }
+
+  return start + (end - start) * completedUnitCount / totalUnitCount;
 }
 
 async function syncSingleValue<TValue>(options: {
@@ -574,7 +806,17 @@ async function readRemoteIndexState(
   client: WebDavStorageClient,
   indexPath: string,
 ): Promise<RemoteIndexState> {
-  const file = await client.readTextFile(indexPath);
+  const lastSeenRevision = readWebDavLastSeenRemoteRevision(indexPath);
+  const canonicalFilePromise = client.readTextFile(indexPath);
+  const nextRevisionStatePromise = lastSeenRevision === null
+    ? null
+    : readSpecificRevisionJournalState(
+      client,
+      indexPath,
+      lastSeenRevision + 1,
+      normalizeRemoteIndex,
+    );
+  const file = await canonicalFilePromise;
   let canonicalState: RemoteIndexState = {
     index: { revision: 0, entries: {} },
     etag: file?.etag ?? null,
@@ -593,15 +835,38 @@ async function readRemoteIndexState(
     }
   }
 
-  const journalState = await readLatestRevisionJournalState(
-    client,
-    indexPath,
-    normalizeRemoteIndex,
-  );
-
-  return journalState !== null && journalState.value.revision >= canonicalState.index.revision
+  // AI-REMOVED 2026-07-29:
+  // Reason: canonical index 与 revision journal 相互独立，串行等待增加一次网络往返。
+  // Trigger: 用户要求在最大连接数限制下并行下载。
+  // Evidence: journal 读取不依赖 canonical index 内容。
+  // Replacement: canonical GET 与“上次 revision + 1”探测并行；仅检测到变化时才完整枚举 journal。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // const journalState = await readLatestRevisionJournalState(
+  //   client,
+  //   indexPath,
+  //   normalizeRemoteIndex,
+  // );
+  const nextRevisionState = await nextRevisionStatePromise;
+  const canUseRevisionCursor = lastSeenRevision !== null
+    && nextRevisionState === null
+    && canonicalState.index.revision === lastSeenRevision;
+  const journalState = canUseRevisionCursor
+    ? null
+    : await readLatestRevisionJournalState(
+      client,
+      indexPath,
+      normalizeRemoteIndex,
+    );
+  const result = journalState !== null
+    && journalState.value.revision >= canonicalState.index.revision
     ? { index: journalState.value, etag: journalState.etag }
     : canonicalState;
+  writeWebDavLastSeenRemoteRevision(indexPath, result.index.revision);
+
+  return result;
 }
 
 async function writeRemoteIndex(
@@ -616,6 +881,7 @@ async function writeRemoteIndex(
     revision: expectedRevision + 1,
   };
   await writeRevisionJournalState(client, indexPath, committedIndex);
+  writeWebDavLastSeenRemoteRevision(indexPath, committedIndex.revision);
 }
 
 function normalizeRemoteIndex(value: unknown): RemoteIndexFile {
@@ -677,28 +943,69 @@ async function readRemotePatchState<TValue>(
   }
   const meta = metaState.meta;
 
-  const fullValue = await readRemoteJson(client, resolvePatchFullPath(directoryPath, meta.currentFullHash), normalizeRemote);
-  if (fullValue === null) {
+  // AI-REMOVED 2026-07-29:
+  // Reason: full 与每个 delta 文件的路径已由 meta 完整给出，无需串行下载。
+  // Trigger: 用户要求在最大连接数限制下并行下载。
+  // Evidence: JSON Patch 只要求按顺序应用，不要求按顺序获取文件。
+  // Replacement: 下方并行下载 full / delta，完成后仍按 deltaChain 顺序 apply。
+  // Risk: Low；worker client 统一限制实际并发请求数。
+  // Human Review: Required
+  //
+  // Original code:
+  // const fullValue = await readRemoteJson(client, resolvePatchFullPath(directoryPath, meta.currentFullHash), normalizeRemote);
+  // if (fullValue === null) {
+  //   return null;
+  // }
+  //
+  // let value = fullValue;
+  // let baseHash = meta.currentFullHash;
+  // for (const targetHash of meta.deltaChain) {
+  //   const patch = await readRemoteJson<JsonPatchOperation[]>(
+  //     client,
+  //     resolvePatchDeltaPath(directoryPath, baseHash, targetHash),
+  //     normalizeJsonPatchOperations,
+  //   );
+  //   if (patch === null) {
+  //     return null;
+  //   }
+  //
+  //   value = applyJsonPatch(value, patch);
+  //   baseHash = targetHash;
+  // }
+  const [fullValue, patches] = await Promise.all([
+    readRemoteJson(
+      client,
+      resolvePatchFullPath(directoryPath, meta.currentFullHash),
+      normalizeRemote,
+    ),
+    Promise.all(meta.deltaChain.map(async (targetHash, index) => {
+      const baseHash = index === 0
+        ? meta.currentFullHash
+        : meta.deltaChain[index - 1]!;
+
+      return await readRemoteJson<JsonPatchOperation[]>(
+        client,
+        resolvePatchDeltaPath(directoryPath, baseHash, targetHash),
+        normalizeJsonPatchOperations,
+      );
+    })),
+  ]);
+  if (fullValue === null || patches.some((patch) => patch === null)) {
     return null;
   }
 
   let value = fullValue;
-  let baseHash = meta.currentFullHash;
-  for (const targetHash of meta.deltaChain) {
-    const patch = await readRemoteJson<JsonPatchOperation[]>(
-      client,
-      resolvePatchDeltaPath(directoryPath, baseHash, targetHash),
-      normalizeJsonPatchOperations,
-    );
-    if (patch === null) {
-      return null;
-    }
-
-    value = applyJsonPatch(value, patch);
-    baseHash = targetHash;
+  for (const patch of patches) {
+    value = applyJsonPatch(value, patch!);
+  }
+  const normalizedValue = normalizeRemote === undefined
+    ? value
+    : normalizeRemote(value);
+  if (normalizedValue === null) {
+    return null;
   }
 
-  return { meta, value, etag: metaState.etag };
+  return { meta, value: normalizedValue, etag: metaState.etag };
 }
 
 async function readRemotePatchMetaState(
@@ -706,7 +1013,17 @@ async function readRemotePatchMetaState(
   directoryPath: string,
 ): Promise<RemotePatchMetaState | null> {
   const metaPath = resolvePath(directoryPath, "meta.json");
-  const file = await client.readTextFile(metaPath);
+  const lastSeenRevision = readWebDavLastSeenRemoteRevision(metaPath);
+  const canonicalFilePromise = client.readTextFile(metaPath);
+  const nextRevisionStatePromise = lastSeenRevision === null
+    ? null
+    : readSpecificRevisionJournalState(
+      client,
+      metaPath,
+      lastSeenRevision + 1,
+      normalizeRemotePatchMeta,
+    );
+  const file = await canonicalFilePromise;
   let canonicalState: RemotePatchMetaState | null = null;
   if (file !== null) {
     try {
@@ -717,11 +1034,31 @@ async function readRemotePatchMetaState(
     }
   }
 
-  const journalState = await readLatestRevisionJournalState(
-    client,
-    metaPath,
-    normalizeRemotePatchMeta,
-  );
+  // AI-REMOVED 2026-07-29:
+  // Reason: canonical meta 与 revision journal 可独立下载，串行执行浪费往返时间。
+  // Trigger: 用户要求在限制最大连接数的情况下并行下载。
+  // Evidence: 两条读取路径只在结果选择阶段合并。
+  // Replacement: canonical GET 与“上次 revision + 1”探测并行；游标失配时再完整扫描 journal。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // const journalState = await readLatestRevisionJournalState(
+  //   client,
+  //   metaPath,
+  //   normalizeRemotePatchMeta,
+  // );
+  const nextRevisionState = await nextRevisionStatePromise;
+  const canUseRevisionCursor = lastSeenRevision !== null
+    && nextRevisionState === null
+    && canonicalState?.meta.revision === lastSeenRevision;
+  const journalState = canUseRevisionCursor
+    ? null
+    : await readLatestRevisionJournalState(
+      client,
+      metaPath,
+      normalizeRemotePatchMeta,
+    );
   if (
     journalState !== null
     && (
@@ -729,12 +1066,21 @@ async function readRemotePatchMetaState(
       || journalState.value.revision >= canonicalState.meta.revision
     )
   ) {
-    return {
+    const result = {
       meta: journalState.value,
       etag: journalState.etag,
     };
+    writeWebDavLastSeenRemoteRevision(metaPath, result.meta.revision);
+
+    return result;
   }
 
+  if (canonicalState !== null) {
+    writeWebDavLastSeenRemoteRevision(
+      metaPath,
+      canonicalState.meta.revision,
+    );
+  }
   return canonicalState;
 }
 
@@ -847,12 +1193,14 @@ async function writeRemotePatchMeta(
   meta: RemotePatchMetaFile,
   writeOptions: WebDavWriteOptions,
 ): Promise<void> {
+  const metaPath = resolvePath(directoryPath, "meta.json");
   await writeRevisionJournalState(
     client,
-    resolvePath(directoryPath, "meta.json"),
+    metaPath,
     meta,
     writeOptions,
   );
+  writeWebDavLastSeenRemoteRevision(metaPath, meta.revision);
 }
 
 function areRemotePatchMetaFilesEqual(
@@ -917,6 +1265,34 @@ async function readLatestRevisionJournalState<TValue extends { readonly revision
   return null;
 }
 
+async function readSpecificRevisionJournalState<TValue extends { readonly revision: number }>(
+  client: WebDavStorageClient,
+  canonicalPath: string,
+  revision: number,
+  normalize: (value: unknown) => TValue | null,
+): Promise<{
+  readonly value: TValue;
+  readonly etag: string | null;
+} | null> {
+  const revisionPath = resolvePath(
+    resolveRevisionDirectoryPath(canonicalPath),
+    `rev-${revision.toString().padStart(12, "0")}.json`,
+  );
+  const file = await client.readTextFile(revisionPath);
+  if (file === null) {
+    return null;
+  }
+
+  try {
+    const value = normalize(JSON.parse(file.content));
+    return value?.revision === revision
+      ? { value, etag: file.etag }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 async function writeRevisionJournalState<TValue extends { readonly revision: number }>(
   client: WebDavStorageClient,
   canonicalPath: string,
@@ -961,6 +1337,18 @@ function resolvePath(directoryPath: string, fileName: string): string {
   const normalizedDirectoryPath = directoryPath.replace(/\/+$/, "");
 
   return normalizedDirectoryPath === "" ? fileName : `${normalizedDirectoryPath}/${fileName}`;
+}
+
+async function ensureRemoteParentDirectory(
+  client: WebDavStorageClient,
+  remotePath: string,
+): Promise<void> {
+  const slashIndex = remotePath.lastIndexOf("/");
+  if (slashIndex <= 0) {
+    return;
+  }
+
+  await client.makeDirectory(remotePath.slice(0, slashIndex));
 }
 
 function normalizeJsonPatchOperations(value: unknown): JsonPatchOperation[] | null {

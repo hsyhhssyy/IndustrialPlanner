@@ -18,12 +18,16 @@ import type {
 class MemoryWebDavClient implements WebDavStorageClient {
   public readonly rootPath = "/industrial-planner";
   public readonly files = new Map<string, string>();
+  public readonly madeDirectories: string[] = [];
+  public readonly readPaths: string[] = [];
 
   public async exists(relativePath: string): Promise<boolean> {
     return this.files.has(relativePath);
   }
 
-  public async makeDirectory(_relativePath: string): Promise<void> {}
+  public async makeDirectory(relativePath: string): Promise<void> {
+    this.madeDirectories.push(relativePath);
+  }
 
   public async listDirectory(_relativePath: string): Promise<WebDavResourceStat[]> {
     return [];
@@ -34,6 +38,7 @@ class MemoryWebDavClient implements WebDavStorageClient {
   }
 
   public async readTextFile(relativePath: string): Promise<WebDavTextFile | null> {
+    this.readPaths.push(relativePath);
     const content = this.files.get(relativePath);
 
     return content === undefined ? null : { content, etag: null };
@@ -73,6 +78,7 @@ describe("webdav-sync-adapters", () => {
 
     await expect(adapter.sync(client)).resolves.toMatchObject({ status: "uploaded" });
     expect(JSON.parse(client.files.get("assets/planner-state.json") ?? "null")).toEqual({ count: 1 });
+    expect(client.madeDirectories).toContain("assets");
 
     localValue = { count: 1 };
     client.files.set("assets/planner-state.json", JSON.stringify({ count: 2 }));
@@ -140,6 +146,7 @@ describe("webdav-sync-adapters", () => {
     });
 
     await expect(adapter.sync(client)).resolves.toMatchObject({ status: "uploaded" });
+    expect(client.madeDirectories).toContain("assets/blueprints");
     const index = JSON.parse(client.files.get("assets/blueprints/index.json") ?? "null") as {
       readonly revision: number;
       readonly entries: Record<string, { readonly deletedAt: string | null }>;
@@ -222,6 +229,19 @@ describe("webdav-sync-adapters", () => {
       "assets/module-canvases/index-revisions/rev-000000000001.json",
     )).toBe(true);
 
+    client.readPaths.length = 0;
+    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "idle" });
+    expect(client.readPaths).toContain("assets/module-canvases/index.json");
+    expect(client.readPaths).toContain(
+      "assets/module-canvases/index-revisions/rev-000000000002.json",
+    );
+    expect(client.readPaths).not.toContain(
+      "assets/module-canvases/index-revisions/rev-000000000001.json",
+    );
+    expect(client.readPaths.some((path) =>
+      path.startsWith("assets/module-canvases/canvas-a/")
+    )).toBe(false);
+
     entries = [{ id: "canvas-a", value: { stages: [{ id: "stage-a", count: 2 }] }, deletedAt: null }];
     await expect(adapter.sync(client)).resolves.toMatchObject({ status: "uploaded" });
     const meta = JSON.parse(client.files.get("assets/module-canvases/canvas-a/meta.json") ?? "null") as {
@@ -233,5 +253,102 @@ describe("webdav-sync-adapters", () => {
     expect(client.files.has(
       "assets/module-canvases/canvas-a/meta-revisions/rev-000000000002.json",
     )).toBe(true);
+  });
+
+  it("repairs a legacy patch index after normalizing device-local fields", async () => {
+    type Value = {
+      readonly content: number;
+      readonly viewportCenter: number;
+    };
+    const client = new MemoryWebDavClient();
+    let seedEntries = [{
+      id: "canvas-a",
+      value: { content: 1, viewportCenter: 12 },
+      deletedAt: null as string | null,
+    }];
+    const seedAdapter = createPatchCollectionWithRevisionAdapter<Value>({
+      id: "documents",
+      indexPath: "documents/index.json",
+      directoryPath: (id) => `documents/${id}`,
+      listLocal: async () => seedEntries,
+      writeLocal: async (entry) => {
+        seedEntries = [entry];
+      },
+    });
+    await expect(seedAdapter.sync(client)).resolves.toMatchObject({
+      status: "uploaded",
+    });
+    localStorage.clear();
+
+    let localEntries = [{
+      id: "canvas-a",
+      value: { content: 1, viewportCenter: 0 },
+      deletedAt: null as string | null,
+    }];
+    const normalizedAdapter = createPatchCollectionWithRevisionAdapter<Value>({
+      id: "documents",
+      indexPath: "documents/index.json",
+      directoryPath: (id) => `documents/${id}`,
+      listLocal: async () => localEntries,
+      writeLocal: async (entry) => {
+        localEntries = [entry];
+      },
+      normalizeRemote: (value) => {
+        if (
+          typeof value !== "object"
+          || value === null
+          || typeof (value as { content?: unknown }).content !== "number"
+        ) {
+          return null;
+        }
+
+        return {
+          content: (value as { content: number }).content,
+          viewportCenter: 0,
+        };
+      },
+    });
+
+    await expect(normalizedAdapter.sync(client)).resolves.toMatchObject({
+      status: "uploaded",
+    });
+    client.readPaths.length = 0;
+    await expect(normalizedAdapter.sync(client)).resolves.toMatchObject({
+      status: "idle",
+    });
+    expect(client.readPaths).toContain("documents/index.json");
+    expect(client.readPaths.some((path) =>
+      path.startsWith("documents/canvas-a/")
+    )).toBe(false);
+  });
+
+  it("reports real patch collection protocol progress monotonically", async () => {
+    const client = new MemoryWebDavClient();
+    const progress: number[] = [];
+    const adapter = createPatchCollectionWithRevisionAdapter({
+      id: "documents",
+      indexPath: "documents/by-base/index.json",
+      directoryPath: (baseId) => `documents/by-base/${baseId}`,
+      listLocal: async () => [{
+        id: "wuling_protocol_core",
+        value: { count: 1 },
+        deletedAt: null,
+      }],
+      writeLocal: async () => undefined,
+    });
+
+    await adapter.sync(client, {
+      includeAssetIds: ["wuling_protocol_core"],
+      onProgress: (value) => {
+        progress.push(value);
+      },
+    });
+
+    expect(progress[0]).toBe(0);
+    expect(progress.at(-1)).toBe(100);
+    expect(progress).toEqual([...progress].sort((left, right) => left - right));
+    expect(progress).toContain(35);
+    expect(progress).toContain(55);
+    expect(progress).toContain(94);
   });
 });

@@ -4,12 +4,16 @@ import {
 } from "@/shared/storage/browser-storage";
 
 export const WEBDAV_SYNC_SETTINGS_LOCAL_STORAGE_KEY = "v3-webdav-sync-settings";
+export const DEFAULT_WEBDAV_MAX_CONCURRENT_REQUESTS = 4;
+export const MIN_WEBDAV_MAX_CONCURRENT_REQUESTS = 1;
+export const MAX_WEBDAV_MAX_CONCURRENT_REQUESTS = 8;
 
 export interface WebDavSyncSettings {
   readonly enabled: boolean;
   readonly url: string;
   readonly username: string;
   readonly password: string;
+  readonly maxConcurrentRequests: number;
 }
 
 export type WebDavSyncSettingsChangeListener = (settings: WebDavSyncSettings) => void;
@@ -19,6 +23,7 @@ const DEFAULT_WEBDAV_SYNC_SETTINGS: WebDavSyncSettings = {
   url: "",
   username: "",
   password: "",
+  maxConcurrentRequests: DEFAULT_WEBDAV_MAX_CONCURRENT_REQUESTS,
 };
 
 const settingsChangeListeners = new Set<WebDavSyncSettingsChangeListener>();
@@ -112,7 +117,19 @@ function normalizeWebDavSyncSettings(value: unknown): WebDavSyncSettings {
     url: typeof value.url === "string" ? value.url : DEFAULT_WEBDAV_SYNC_SETTINGS.url,
     username: typeof value.username === "string" ? value.username : DEFAULT_WEBDAV_SYNC_SETTINGS.username,
     password: typeof value.password === "string" ? value.password : DEFAULT_WEBDAV_SYNC_SETTINGS.password,
+    maxConcurrentRequests: normalizeMaxConcurrentRequests(value.maxConcurrentRequests),
   };
+}
+
+function normalizeMaxConcurrentRequests(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return DEFAULT_WEBDAV_MAX_CONCURRENT_REQUESTS;
+  }
+
+  return Math.min(
+    MAX_WEBDAV_MAX_CONCURRENT_REQUESTS,
+    Math.max(MIN_WEBDAV_MAX_CONCURRENT_REQUESTS, Math.round(value)),
+  );
 }
 
 function emitWebDavSyncSettingsChange(settings: WebDavSyncSettings): void {

@@ -33,6 +33,7 @@ export {
   createWebDavWorkerStorageClient,
 } from "./webdav/webdav-worker-client";
 export type {
+  WebDavWorkerRequestActivity,
   WebDavWorkerStorageClientOptions,
 } from "./webdav/webdav-worker-client";
 
@@ -41,8 +42,10 @@ export {
 } from "./engine/webdav-sync-service";
 export type {
   WebDavSyncService,
+  WebDavSyncMaintenanceTask,
   WebDavSyncServiceOptions,
   WebDavSyncServicePhase,
+  WebDavSyncRequestActivity,
   WebDavSyncSaveState,
   WebDavSyncServiceStatus,
   WebDavSyncTrigger,
@@ -50,12 +53,17 @@ export type {
 
 export {
   clearWebDavLastSyncedContentHash,
+  readWebDavLastSeenRemoteRevision,
   readWebDavLastSyncedContentHash,
   WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY,
+  writeWebDavLastSeenRemoteRevision,
   writeWebDavLastSyncedContentHash,
 } from "./storage/webdav-sync-metadata";
 
 export {
+  DEFAULT_WEBDAV_MAX_CONCURRENT_REQUESTS,
+  MAX_WEBDAV_MAX_CONCURRENT_REQUESTS,
+  MIN_WEBDAV_MAX_CONCURRENT_REQUESTS,
   readWebDavSyncEnabled,
   readWebDavSyncPassword,
   readWebDavSyncSettings,

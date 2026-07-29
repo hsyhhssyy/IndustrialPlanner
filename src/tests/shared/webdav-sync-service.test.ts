@@ -19,7 +19,7 @@ describe("webdav-sync-service", () => {
   it("skips sync while disabled", async () => {
     const adapter = createAdapter();
     const service = createWebDavSyncService({
-      readSettings: () => ({ enabled: false, url: "", username: "", password: "" }),
+      readSettings: () => createSettings(false),
       createClient: () => ({} as WebDavStorageClient),
       adapters: [adapter],
     });
@@ -33,7 +33,7 @@ describe("webdav-sync-service", () => {
   it("runs adapters when enabled", async () => {
     const adapter = createAdapter();
     const service = createWebDavSyncService({
-      readSettings: () => ({ enabled: true, url: "https://dav.example.test", username: "", password: "" }),
+      readSettings: () => createSettings(),
       createClient: () => ({} as WebDavStorageClient),
       adapters: [adapter],
     });
@@ -42,6 +42,235 @@ describe("webdav-sync-service", () => {
 
     expect(adapter.sync).toHaveBeenCalledTimes(1);
     expect(status.lastUploadAt).not.toBeNull();
+  });
+
+  it("unlocks initial sync stages in priority order before background documents", async () => {
+    const calls: string[] = [];
+    const stages: string[] = [];
+    const adapters = [
+      createNamedAdapter("world-documents", calls),
+      createNamedAdapter("blueprints", calls),
+      createNamedAdapter("modules", calls),
+      createNamedAdapter("toolbox", calls),
+    ];
+    const service = createWebDavSyncService({
+      readSettings: () => ({
+        enabled: true,
+        url: "https://dav.example.test",
+        username: "",
+        password: "",
+        maxConcurrentRequests: 4,
+      }),
+      createClient: () => ({} as WebDavStorageClient),
+      adapters,
+      createInitialSyncPlan: () => ({
+        batches: [
+          {
+            stage: "canvas",
+            requests: [{
+              adapterId: "world-documents",
+              scope: { includeAssetIds: ["current"] },
+            }],
+          },
+          {
+            stage: "blueprints",
+            requests: [{ adapterId: "blueprints" }],
+          },
+          {
+            stage: "modules",
+            requests: [{ adapterId: "modules" }],
+          },
+          {
+            stage: "toolbox",
+            requests: [{ adapterId: "toolbox" }],
+          },
+        ],
+        backgroundRequests: [{
+          adapterId: "world-documents",
+          scope: { excludeAssetIds: ["current"] },
+        }],
+      }),
+      onStatusChange: (status) => {
+        if (stages.at(-1) !== status.initialSyncStage) {
+          stages.push(status.initialSyncStage);
+        }
+      },
+    });
+
+    const status = await service.syncNow("startup");
+
+    expect(calls).toEqual([
+      "world-documents:include=current",
+      "blueprints:all",
+      "modules:all",
+      "toolbox:all",
+      "world-documents:exclude=current",
+    ]);
+    expect(stages).toEqual([
+      "canvas",
+      "blueprints",
+      "modules",
+      "toolbox",
+      "ready",
+    ]);
+    expect(status.initialSyncStage).toBe("ready");
+    expect(status.currentRunReason).toBeNull();
+    expect(Object.fromEntries(status.tasks.map((task) => [
+      task.kind,
+      task.phase,
+    ]))).toMatchObject({
+      canvas: "success",
+      blueprints: "success",
+      modules: "success",
+      toolbox: "success",
+      "background-documents": "success",
+    });
+  });
+
+  it("reports maintenance task progress separately from adapter tasks", async () => {
+    const service = createWebDavSyncService({
+      readSettings: () => createSettings(),
+      createClient: () => ({} as WebDavStorageClient),
+      adapters: [createAdapter()],
+      maintenanceTasks: [
+        {
+          kind: "directory-maintenance",
+          run: vi.fn(async () => undefined),
+        },
+        {
+          kind: "device-registration",
+          run: vi.fn(async () => undefined),
+        },
+        {
+          kind: "remote-devices",
+          run: vi.fn(async () => undefined),
+        },
+      ],
+    });
+
+    const status = await service.syncNow("manual");
+    const taskPhases = Object.fromEntries(status.tasks.map((task) => [
+      task.kind,
+      task.phase,
+    ]));
+
+    expect(taskPhases).toMatchObject({
+      canvas: "success",
+      "directory-maintenance": "success",
+      "device-registration": "success",
+      "remote-devices": "success",
+    });
+  });
+
+  it("keeps the canvas stage locked until remote conflict resolution has applied", async () => {
+    let releaseRemoteApply!: () => void;
+    const remoteApplyGate = new Promise<void>((resolve) => {
+      releaseRemoteApply = resolve;
+    });
+    const canvasAdapter = createNamedAdapter("world-documents", []);
+    canvasAdapter.sync.mockImplementationOnce(async (
+      _client: WebDavStorageClient,
+      scope: Parameters<WebDavSyncAdapter["sync"]>[1],
+    ) => {
+      scope?.onProgress?.(55);
+      await remoteApplyGate;
+      return {
+        adapterId: "world-documents",
+        mode: "full-with-revision",
+        status: "downloaded",
+        changedAssetIds: ["current"],
+      };
+    });
+    const blueprintAdapter = createNamedAdapter("blueprints", []);
+    const service = createWebDavSyncService({
+      readSettings: () => ({
+        enabled: true,
+        url: "https://dav.example.test",
+        username: "",
+        password: "",
+        maxConcurrentRequests: 4,
+      }),
+      createClient: () => ({} as WebDavStorageClient),
+      adapters: [canvasAdapter, blueprintAdapter],
+      createInitialSyncPlan: () => ({
+        batches: [
+          {
+            stage: "canvas",
+            requests: [{ adapterId: "world-documents" }],
+          },
+          {
+            stage: "blueprints",
+            requests: [{ adapterId: "blueprints" }],
+          },
+        ],
+      }),
+    });
+
+    const syncPromise = service.syncNow("startup");
+    await vi.waitFor(() => {
+      expect(canvasAdapter.sync).toHaveBeenCalledTimes(1);
+    });
+    expect(service.getStatus().initialSyncStage).toBe("canvas");
+    expect(blueprintAdapter.sync).not.toHaveBeenCalled();
+    expect(service.getStatus().tasks.find(
+      (task) => task.kind === "canvas",
+    )).toMatchObject({
+      phase: "running",
+      completedUnitCount: 55,
+      totalUnitCount: 100,
+    });
+
+    releaseRemoteApply();
+    const status = await syncPromise;
+
+    expect(blueprintAdapter.sync).toHaveBeenCalledTimes(1);
+    expect(status.initialSyncStage).toBe("ready");
+    expect(status.tasks.find((task) => task.kind === "canvas")).toMatchObject({
+      phase: "success",
+      completedUnitCount: 100,
+      totalUnitCount: 100,
+    });
+  });
+
+  it("uploads only the dirty adapter and asset after the debounce window", async () => {
+    vi.useFakeTimers();
+    const calls: string[] = [];
+    const firstAdapter = createNamedAdapter("first", calls);
+    const secondAdapter = createNamedAdapter("second", calls);
+    const service = createWebDavSyncService({
+      readSettings: () => ({
+        enabled: true,
+        url: "https://dav.example.test",
+        username: "",
+        password: "",
+        maxConcurrentRequests: 4,
+      }),
+      createClient: () => ({} as WebDavStorageClient),
+      adapters: [firstAdapter, secondAdapter],
+      intervalMs: 60_000,
+    });
+
+    service.start();
+    await vi.waitFor(() => {
+      expect(secondAdapter.sync).toHaveBeenCalledTimes(1);
+    });
+    calls.length = 0;
+    firstAdapter.sync.mockClear();
+    secondAdapter.sync.mockClear();
+
+    service.notifyLocalChange({
+      adapterId: "second",
+      assetId: "asset-b",
+    });
+    await vi.advanceTimersByTimeAsync(5_000);
+    await vi.waitFor(() => {
+      expect(service.getStatus().saveState).toBe("idle");
+    });
+
+    expect(calls).toEqual(["second:include=asset-b"]);
+    expect(firstAdapter.sync).not.toHaveBeenCalled();
+    expect(secondAdapter.sync).toHaveBeenCalledTimes(1);
+    service.stop();
   });
 
   it("does not show save feedback for periodic downloads or empty periodic passes", async () => {
@@ -66,6 +295,7 @@ describe("webdav-sync-service", () => {
         url: "https://dav.example.test",
         username: "",
         password: "",
+        maxConcurrentRequests: 4,
       }),
       createClient: () => ({} as WebDavStorageClient),
       adapters: [adapter],
@@ -95,7 +325,7 @@ describe("webdav-sync-service", () => {
       })),
     };
     const service = createWebDavSyncService({
-      readSettings: () => ({ enabled: true, url: "https://dav.example.test", username: "", password: "" }),
+      readSettings: () => createSettings(),
       createClient: () => ({} as WebDavStorageClient),
       adapters: [adapter],
       onConflict,
@@ -120,7 +350,7 @@ describe("webdav-sync-service", () => {
         changedAssetIds: ["single"],
       });
     const service = createWebDavSyncService({
-      readSettings: () => ({ enabled: true, url: "https://dav.example.test", username: "", password: "" }),
+      readSettings: () => createSettings(),
       createClient: () => ({} as WebDavStorageClient),
       adapters: [adapter],
       retryDelaysMs: [10],
@@ -139,7 +369,7 @@ describe("webdav-sync-service", () => {
     const calls: string[] = [];
     const adapter = createAdapter();
     const service = createWebDavSyncService({
-      readSettings: () => ({ enabled: true, url: "https://dav.example.test", username: "", password: "" }),
+      readSettings: () => createSettings(),
       createClient: () => ({} as WebDavStorageClient),
       adapters: [adapter],
       beforeSync: () => { calls.push("before"); },
@@ -155,7 +385,7 @@ describe("webdav-sync-service", () => {
     vi.useFakeTimers();
     const adapter = createAdapter();
     const service = createWebDavSyncService({
-      readSettings: () => ({ enabled: true, url: "https://dav.example.test", username: "", password: "" }),
+      readSettings: () => createSettings(),
       createClient: () => ({} as WebDavStorageClient),
       adapters: [adapter],
       intervalMs: 60_000,
@@ -166,8 +396,8 @@ describe("webdav-sync-service", () => {
       expect(adapter.sync).toHaveBeenCalledTimes(1);
     });
     adapter.sync.mockClear();
-    service.notifyLocalChange();
-    service.notifyLocalChange();
+    service.notifyLocalChange({ adapterId: "adapter" });
+    service.notifyLocalChange({ adapterId: "adapter" });
     expect(service.getStatus().saveState).toBe("pending");
     expect(service.getStatus().pendingLocalChangeCount).toBe(2);
     await vi.advanceTimersByTimeAsync(4_999);
@@ -186,7 +416,7 @@ describe("webdav-sync-service", () => {
     vi.useFakeTimers();
     const adapter = createAdapter();
     const service = createWebDavSyncService({
-      readSettings: () => ({ enabled: true, url: "https://dav.example.test", username: "", password: "" }),
+      readSettings: () => createSettings(),
       createClient: () => ({} as WebDavStorageClient),
       adapters: [adapter],
       retryDelaysMs: [],
@@ -200,7 +430,7 @@ describe("webdav-sync-service", () => {
     adapter.sync.mockClear();
     adapter.sync.mockRejectedValueOnce(new Error("server unavailable"));
 
-    service.notifyLocalChange();
+    service.notifyLocalChange({ adapterId: "adapter" });
     await vi.advanceTimersByTimeAsync(5_000);
     await vi.waitFor(() => {
       expect(service.getStatus().saveState).toBe("error");
@@ -237,7 +467,7 @@ describe("webdav-sync-service", () => {
     vi.useFakeTimers();
     const adapter = createAdapter();
     const service = createWebDavSyncService({
-      readSettings: () => ({ enabled: true, url: "https://dav.example.test", username: "", password: "" }),
+      readSettings: () => createSettings(),
       createClient: () => ({} as WebDavStorageClient),
       adapters: [adapter],
       retryDelaysMs: [],
@@ -264,12 +494,12 @@ describe("webdav-sync-service", () => {
       };
     });
 
-    service.notifyLocalChange();
+    service.notifyLocalChange({ adapterId: "adapter" });
     await vi.advanceTimersByTimeAsync(5_000);
     await vi.waitFor(() => {
       expect(adapter.sync).toHaveBeenCalledTimes(1);
     });
-    service.notifyLocalChange();
+    service.notifyLocalChange({ adapterId: "adapter" });
     releaseFirstSave();
     await vi.waitFor(() => {
       expect(service.getStatus().pendingLocalChangeCount).toBe(1);
@@ -290,7 +520,7 @@ describe("webdav-sync-service", () => {
     let enabled = true;
     const adapter = createAdapter();
     const service = createWebDavSyncService({
-      readSettings: () => ({ enabled, url: "https://dav.example.test", username: "", password: "" }),
+      readSettings: () => createSettings(enabled),
       createClient: () => ({} as WebDavStorageClient),
       adapters: [adapter],
     });
@@ -299,7 +529,7 @@ describe("webdav-sync-service", () => {
     await vi.waitFor(() => {
       expect(adapter.sync).toHaveBeenCalledTimes(1);
     });
-    service.notifyLocalChange();
+    service.notifyLocalChange({ adapterId: "adapter" });
     expect(service.getStatus().saveState).toBe("pending");
 
     enabled = false;
@@ -327,7 +557,7 @@ describe("webdav-sync-service", () => {
     });
     const dispose = vi.fn();
     const service = createWebDavSyncService({
-      readSettings: () => ({ enabled: true, url: "https://dav.example.test", username: "", password: "" }),
+      readSettings: () => createSettings(),
       createClient: () => ({ dispose } as unknown as WebDavStorageClient),
       adapters: [adapter],
       intervalMs: 60_000,
@@ -337,6 +567,7 @@ describe("webdav-sync-service", () => {
     await vi.waitFor(() => {
       expect(adapter.sync).toHaveBeenCalledTimes(1);
     });
+    service.notifyLocalChange({ adapterId: "adapter" });
     void service.syncNow("local-change");
     releaseFirstSync();
 
@@ -368,6 +599,7 @@ describe("webdav-sync-service", () => {
         url: "https://dav.example.test",
         username: "",
         password: "",
+        maxConcurrentRequests: 4,
       }),
       createClient: () => ({} as WebDavStorageClient),
       adapters: [adapter],
@@ -400,5 +632,43 @@ function createAdapter(): WebDavSyncAdapter & { readonly sync: ReturnType<typeof
       status: "uploaded",
       changedAssetIds: ["single"],
     })),
+  };
+}
+
+function createNamedAdapter(
+  id: string,
+  calls: string[],
+): WebDavSyncAdapter & { readonly sync: ReturnType<typeof vi.fn> } {
+  return {
+    id,
+    mode: "full-with-revision",
+    sync: vi.fn(async (
+      _client: WebDavStorageClient,
+      scope: Parameters<WebDavSyncAdapter["sync"]>[1],
+    ): Promise<WebDavSyncAdapterResult> => {
+      const scopeText = scope?.includeAssetIds !== undefined
+        ? `include=${scope.includeAssetIds.join(",")}`
+        : scope?.excludeAssetIds !== undefined
+          ? `exclude=${scope.excludeAssetIds.join(",")}`
+          : "all";
+      calls.push(`${id}:${scopeText}`);
+
+      return {
+        adapterId: id,
+        mode: "full-with-revision",
+        status: "idle",
+        changedAssetIds: [],
+      };
+    }),
+  };
+}
+
+function createSettings(enabled = true) {
+  return {
+    enabled,
+    url: "https://dav.example.test",
+    username: "",
+    password: "",
+    maxConcurrentRequests: 4,
   };
 }

@@ -36,6 +36,7 @@ describe("WebDavSaveIndicator", () => {
         url: "https://example.com",
         username: "",
         password: "",
+        maxConcurrentRequests: 4,
       });
       controller.setStatus(createStatus({
         saveState: "pending",
@@ -57,6 +58,7 @@ describe("WebDavSaveIndicator", () => {
         url: "https://example.com",
         username: "",
         password: "",
+        maxConcurrentRequests: 4,
       });
       controller.setStatus(createStatus({
         phase: "error",
@@ -95,6 +97,12 @@ function createStatus(
   return {
     phase: "idle",
     saveState: "idle",
+    initialSyncStage: "ready",
+    hasCompletedInitialFeatureSync: true,
+    currentRunReason: null,
+    activeRequestCount: 0,
+    queuedRequestCount: 0,
+    tasks: [],
     pendingLocalChangeCount: 0,
     saveError: null,
     lastUploadAt: null,

@@ -20,6 +20,41 @@ import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
+function renderInitialSyncLockedContent(options: {
+  readonly appHost: AppHost;
+  readonly feature: "modules" | "toolbox";
+  readonly content: ReactNode;
+}): ReactNode {
+  const syncState = options.appHost.workspace.sync?.state;
+  if (syncState === undefined || !syncState.settings.enabled) {
+    return options.content;
+  }
+
+  const stage = syncState.status.initialSyncStage;
+  const locked = options.feature === "toolbox"
+    ? stage !== "ready"
+    : stage === "canvas" || stage === "blueprints" || stage === "modules";
+  if (!locked) {
+    return options.content;
+  }
+
+  return (
+    <section
+      aria-label={options.appHost.actions.translate("webDavInitialSync.syncing")}
+      aria-live="polite"
+      className={cm(styles, "webdav-initial-sync-feature-gate")}
+      data-webdav-initial-sync-feature={options.feature}
+      role="status"
+    >
+      <WorkbenchIcon
+        className={cm(styles, "webdav-initial-sync-gate-spinner")}
+        kind="save-progress"
+      />
+      <p>{options.appHost.actions.translate("webDavInitialSync.syncing")}</p>
+    </section>
+  );
+}
+
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
 ): boolean {
@@ -65,15 +100,21 @@ function createToolboxTabs(options: {
   const { appHost, isTouch } = options;
   const t = appHost.actions.translate;
   const tabContents: Record<string, ReactNode> = {
-    [TOOLBOX_DIALOG_TAB_IDS[0]]: (
-      <EncyclopediaPanel appHost={appHost} isTouch={isTouch} />
-    ),
-    [TOOLBOX_DIALOG_TAB_IDS[1]]: (
-      <ProductionPlanningPanel appHost={appHost} isTouch={isTouch} />
-    ),
-    [TOOLBOX_DIALOG_TAB_IDS[2]]: (
-      <ModuleBalancingPanel appHost={appHost} isTouch={isTouch} />
-    ),
+    [TOOLBOX_DIALOG_TAB_IDS[0]]: renderInitialSyncLockedContent({
+      appHost,
+      feature: "toolbox",
+      content: <EncyclopediaPanel appHost={appHost} isTouch={isTouch} />,
+    }),
+    [TOOLBOX_DIALOG_TAB_IDS[1]]: renderInitialSyncLockedContent({
+      appHost,
+      feature: "toolbox",
+      content: <ProductionPlanningPanel appHost={appHost} isTouch={isTouch} />,
+    }),
+    [TOOLBOX_DIALOG_TAB_IDS[2]]: renderInitialSyncLockedContent({
+      appHost,
+      feature: "modules",
+      content: <ModuleBalancingPanel appHost={appHost} isTouch={isTouch} />,
+    }),
   };
 
   const tabs: DialogShellTab[] = TOOLBOX_DIALOG_TABS.map((tab) => {

@@ -17,6 +17,7 @@ const EMPTY_SETTINGS: SyncSettings = {
   url: "",
   username: "",
   password: "",
+  maxConcurrentRequests: 4,
 };
 
 export class SyncStateImpl implements SyncState {
@@ -24,6 +25,12 @@ export class SyncStateImpl implements SyncState {
   public status: WebDavSyncServiceStatus = {
     phase: "idle",
     saveState: "idle",
+    initialSyncStage: "ready",
+    hasCompletedInitialFeatureSync: false,
+    currentRunReason: null,
+    activeRequestCount: 0,
+    queuedRequestCount: 0,
+    tasks: [],
     pendingLocalChangeCount: 0,
     saveError: null,
     lastUploadAt: null,

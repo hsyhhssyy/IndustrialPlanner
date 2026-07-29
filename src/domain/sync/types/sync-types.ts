@@ -2,18 +2,67 @@ export type SyncPhase = "idle" | "uploading" | "downloading" | "error";
 
 export type SyncSaveState = "idle" | "pending" | "saving" | "error";
 
+export type SyncInitialSyncStage =
+  | "canvas"
+  | "blueprints"
+  | "modules"
+  | "toolbox"
+  | "ready";
+
 export type SyncConflictResolution = "use-local" | "use-remote" | "pause";
+
+export type SyncRunReason =
+  | "startup"
+  | "foreground"
+  | "interval"
+  | "local-change"
+  | "settings-change"
+  | "manual";
+
+export type SyncTaskKind =
+  | "canvas"
+  | "blueprints"
+  | "modules"
+  | "toolbox"
+  | "background-documents"
+  | "directory-maintenance"
+  | "device-registration"
+  | "remote-devices";
+
+export type SyncTaskPhase =
+  | "idle"
+  | "queued"
+  | "running"
+  | "success"
+  | "error";
+
+export interface SyncTaskStatus {
+  readonly kind: SyncTaskKind;
+  readonly phase: SyncTaskPhase;
+  readonly completedUnitCount: number;
+  readonly totalUnitCount: number;
+  readonly lastStartedAt: string | null;
+  readonly lastFinishedAt: string | null;
+  readonly lastError: string | null;
+}
 
 export interface SyncSettings {
   readonly enabled: boolean;
   readonly url: string;
   readonly username: string;
   readonly password: string;
+  readonly maxConcurrentRequests: number;
 }
 
 export interface SyncStatus {
   readonly phase: SyncPhase;
   readonly saveState: SyncSaveState;
+  readonly initialSyncStage: SyncInitialSyncStage;
+  readonly hasCompletedInitialFeatureSync: boolean;
+  readonly currentRunReason: SyncRunReason | null;
+  readonly activeRequestCount: number;
+  readonly queuedRequestCount: number;
+  readonly tasks: readonly SyncTaskStatus[];
   readonly pendingLocalChangeCount: number;
   readonly saveError: string | null;
   readonly lastUploadAt: string | null;

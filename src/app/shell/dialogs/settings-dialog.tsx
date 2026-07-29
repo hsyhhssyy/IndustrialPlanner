@@ -6,9 +6,18 @@ import type { AppHost } from "@/app/host/app-host";
 import type {
   SyncConflictResolution,
   SyncPendingConflict,
-  SyncPhase,
-  SyncState,
 } from "@/domain/sync";
+// AI-REMOVED 2026-07-29:
+// Reason: 设置页不再内嵌读取同步 phase/state，详细数据由独立状态弹窗消费。
+// Trigger: 用户要求把设置内直接显示改为按钮，并打开多板块状态窗口。
+// Evidence: WebDavSyncStatusDialog 直接订阅公开 SyncState。
+// Replacement: ./webdav-sync-status-dialog.tsx。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// SyncPhase,
+// SyncState,
 import type { V2MigrationController } from "@/app/migration";
 import type { PwaController } from "@/app/pwa/pwa-controller";
 import { PwaSettingsSection } from "@/app/pwa/pwa-settings-section";
@@ -18,6 +27,7 @@ import { ActivityIconStrip } from "@/app/shell/shared/activity-icon-strip";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
 import { MarkdownTutorialOverlay } from "@/app/shell/dialogs/markdown-tutorial-overlay";
+import { WebDavSyncStatusDialog } from "@/app/shell/dialogs/webdav-sync-status-dialog";
 import {
   type SettingsGroupId,
   type WorkbenchSettingDefinition,
@@ -240,6 +250,16 @@ export const SettingsDialog = observer(function SettingsDialog({
     activeTab: null,
   }), []);
 
+  const webDavStatusDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 760,
+    height: 620,
+    activeTab: null,
+  }), []);
+
   const [clearStorageInputValue, setClearStorageInputValue] = useState("");
 
   const handleClearStorage = useCallback(() => {
@@ -279,6 +299,24 @@ export const SettingsDialog = observer(function SettingsDialog({
       webDavConflictDialogState.visible = false;
     });
   }, [sync, webDavConflictDialogState]);
+
+  const handleOpenWebDavStatus = useCallback(() => {
+    runInAction(() => {
+      webDavStatusDialogState.visible = true;
+    });
+  }, [webDavStatusDialogState]);
+
+  const handleCloseWebDavStatus = useCallback(() => {
+    runInAction(() => {
+      webDavStatusDialogState.visible = false;
+    });
+  }, [webDavStatusDialogState]);
+
+  const handleToggleWebDavStatusMaximized = useCallback(() => {
+    runInAction(() => {
+      webDavStatusDialogState.maximized = !webDavStatusDialogState.maximized;
+    });
+  }, [webDavStatusDialogState]);
 
   useEffect(() => {
     runInAction(() => {
@@ -716,7 +754,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                   <>
                     {sync === null ? null : (
                       <WebDavSyncStatusCard
-                        state={sync.state}
+                        onOpen={handleOpenWebDavStatus}
                         t={t}
                       />
                     )}
@@ -798,6 +836,16 @@ export const SettingsDialog = observer(function SettingsDialog({
         conflict={sync.state.pendingConflict}
         dialogState={webDavConflictDialogState}
         onResolve={handleResolveWebDavConflict}
+        t={t}
+      />
+    ) : null}
+    {webDavStatusDialogState.visible && sync !== null ? (
+      <WebDavSyncStatusDialog
+        compactMobileLayout={isNonDesktop}
+        dialogState={webDavStatusDialogState}
+        onClose={handleCloseWebDavStatus}
+        onToggleMaximized={handleToggleWebDavStatusMaximized}
+        state={sync.state}
         t={t}
       />
     ) : null}
@@ -966,54 +1014,46 @@ function StorageUsageCard({
 }
 
 const WebDavSyncStatusCard = observer(function WebDavSyncStatusCard({
-  state,
+  onOpen,
   t,
 }: {
-  state: SyncState;
+  onOpen: () => void;
   t: AppHost["actions"]["translate"];
 }) {
-  const status = state.status;
-  const devices = state.remoteDevices;
-
   return (
-    <article className={cm(styles, "settings-dialog-setting-card")}>
-      <div className={cm(styles, "settings-dialog-setting-copy")}>
-        <h4>{t("settingsField.experimental-webdav-status")}</h4>
-        <p>{t("settingsField.experimental-webdav-statusDescription")}</p>
-      </div>
-      <div className={cm(styles, "settings-dialog-webdav-status")}>
-        <span>{t(resolveWebDavPhaseKey(status.phase))}</span>
-        <span>{t("settingsField.experimental-webdav-last-upload").replace("{time}", formatNullableTime(status.lastUploadAt, t("settingsOption.none")))}</span>
-        <span>{t("settingsField.experimental-webdav-last-download").replace("{time}", formatNullableTime(status.lastDownloadAt, t("settingsOption.none")))}</span>
-        {status.lastError === null ? null : <span>{status.lastError}</span>}
-        <div className={cm(styles, "settings-dialog-webdav-devices")}>
-          <strong>{t("settingsField.experimental-webdav-devices")}</strong>
-          {devices.length === 0 ? (
-            <span>{t("settingsOption.none")}</span>
-          ) : devices.map((device) => (
-            <span key={device.deviceId}>{device.label} · {formatNullableTime(device.lastActive, t("settingsOption.none"))}</span>
-          ))}
-        </div>
-      </div>
-    </article>
+    <SettingsActionCard
+      buttonLabel={t("webDavStatus.open")}
+      description={t("settingsField.experimental-webdav-statusDescription")}
+      onClick={onOpen}
+      title={t("settingsField.experimental-webdav-status")}
+    />
   );
 });
 
-function resolveWebDavPhaseKey(phase: SyncPhase): Parameters<AppHost["actions"]["translate"]>[0] {
-  if (phase === "uploading") return "settingsField.experimental-webdav-status-uploading";
-  if (phase === "downloading") return "settingsField.experimental-webdav-status-downloading";
-  if (phase === "error") return "settingsField.experimental-webdav-status-error";
-
-  return "settingsField.experimental-webdav-status-idle";
-}
-
-function formatNullableTime(value: string | null, fallback: string): string {
-  if (value === null) {
-    return fallback;
-  }
-
-  return new Date(value).toLocaleString();
-}
+// AI-REMOVED 2026-07-29:
+// Reason: 设置页不再直接渲染同步 phase、时间和设备列表。
+// Trigger: 用户要求设置页只保留按钮，详细信息进入独立弹窗。
+// Evidence: WebDavSyncStatusDialog 已集中处理阶段、任务、网络和设备信息。
+// Replacement: webdav-sync-status-dialog.tsx。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// function resolveWebDavPhaseKey(phase: SyncPhase): Parameters<AppHost["actions"]["translate"]>[0] {
+//   if (phase === "uploading") return "settingsField.experimental-webdav-status-uploading";
+//   if (phase === "downloading") return "settingsField.experimental-webdav-status-downloading";
+//   if (phase === "error") return "settingsField.experimental-webdav-status-error";
+//
+//   return "settingsField.experimental-webdav-status-idle";
+// }
+//
+// function formatNullableTime(value: string | null, fallback: string): string {
+//   if (value === null) {
+//     return fallback;
+//   }
+//
+//   return new Date(value).toLocaleString();
+// }
 
 const V2MigrationSettingsCard = observer(function V2MigrationSettingsCard({
   controller,
@@ -1270,7 +1310,9 @@ function renderSettingControl(options: {
           type="range"
           value={numericValue}
         />
-        <span className={cm(styles, "settings-dialog-slider-value")}>{numericValue}%</span>
+        <span className={cm(styles, "settings-dialog-slider-value")}>
+          {numericValue}{setting.valueSuffix ?? ""}
+        </span>
       </label>
     );
   }
