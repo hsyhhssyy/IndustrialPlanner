@@ -1752,12 +1752,14 @@ async function readRemotePatchState<TValue>(
   readonly value: TValue;
   readonly etag: string | null;
   readonly remoteUpdatedAt: string | null;
+  readonly canonicalMissing: boolean;
 } | null> {
   const metaState = await readRemotePatchMetaState(client, directoryPath);
   if (metaState === null) {
     return null;
   }
   const meta = metaState.meta;
+  const canonicalMissing = metaState.canonicalMissing;
 
   // AI-REMOVED 2026-07-29:
   // Reason: full 与每个 delta 文件的路径已由 meta 完整给出，无需串行下载。
@@ -1826,6 +1828,7 @@ async function readRemotePatchState<TValue>(
     value: normalizedValue,
     etag: metaState.etag,
     remoteUpdatedAt: meta.committedAt ?? metaState.lastModified,
+    canonicalMissing,
   };
 }
 
@@ -1967,7 +1970,7 @@ async function writeRemotePatchState<TValue>(options: {
   readonly client: WebDavStorageClient;
   readonly directoryPath: string;
   readonly value: TValue;
-  readonly previousState: { readonly meta: RemotePatchMetaFile; readonly value: TValue; readonly etag: string | null } | null;
+  readonly previousState: { readonly meta: RemotePatchMetaFile; readonly value: TValue; readonly etag: string | null; readonly canonicalMissing: boolean } | null;
   readonly deltaThreshold: number;
 }): Promise<void> {
   await options.client.makeDirectory(options.directoryPath);
@@ -1997,11 +2000,7 @@ async function writeRemotePatchState<TValue>(options: {
 
   if (nextDeltaChain.length >= options.previousState.meta.deltaThreshold) {
     await options.client.writeTextFile(resolvePatchFullPath(options.directoryPath, nextHash), JSON.stringify(options.value));
-    const metaWriteOptions = await resolveLatestMetaWriteOptions(
-      options.client,
-      options.directoryPath,
-      options.previousState.meta,
-    );
+    const metaWriteOptions = createAtomicWriteOptions(options.previousState.canonicalMissing);
     await writeRemotePatchMeta(options.client, options.directoryPath, {
       revision: nextRevision,
       currentFullHash: nextHash,
@@ -2014,11 +2013,7 @@ async function writeRemotePatchState<TValue>(options: {
 
   const patch = generateJsonPatch(options.previousState.value, options.value);
   await options.client.writeTextFile(resolvePatchDeltaPath(options.directoryPath, previousHash, nextHash), JSON.stringify(patch));
-  const metaWriteOptions = await resolveLatestMetaWriteOptions(
-    options.client,
-    options.directoryPath,
-    options.previousState.meta,
-  );
+  const metaWriteOptions = createAtomicWriteOptions(options.previousState.canonicalMissing);
   await writeRemotePatchMeta(options.client, options.directoryPath, {
     revision: nextRevision,
     currentFullHash: options.previousState.meta.currentFullHash,
@@ -2032,26 +2027,35 @@ function createAtomicWriteOptions(canonicalMissing: boolean): WebDavWriteOptions
   return canonicalMissing ? {} : { ifNoneMatch: "*" };
 }
 
-async function resolveLatestMetaWriteOptions(
-  client: WebDavStorageClient,
-  directoryPath: string,
-  expectedMeta: RemotePatchMetaFile,
-): Promise<WebDavWriteOptions> {
-  const latestMetaState = await readRemotePatchMetaState(client, directoryPath);
-  if (latestMetaState === null) {
-    return createAtomicWriteOptions(true);
-  }
-
-  if (latestMetaState.canonicalMissing) {
-    return createAtomicWriteOptions(true);
-  }
-
-  if (!areRemotePatchMetaFilesEqual(latestMetaState.meta, expectedMeta)) {
-    throw new Error("Remote patch meta changed before write.");
-  }
-
-  return createAtomicWriteOptions(false);
-}
+// AI-REMOVED 2026-07-29:
+// Reason: resolveLatestMetaWriteOptions 对 meta.json 做冗余 GET，仅为确认 canonicalMissing 和检查并发修改。
+// Trigger: 每次 PUT 后约 0.5s 的额外 GET 叠加到 ~9 次请求序列中，用户感知到 10+ 秒保存延迟。
+// Evidence: previousState 已携带 canonicalMissing，revision journal 的 ifNoneMatch 原子创建机制已防止并发覆盖。
+// Replacement: writeRemotePatchState 直接使用 options.previousState.canonicalMissing 构造 writeOptions。
+// Risk: Low；跳过 stale-check 不会导致数据丢失，revision journal 的原子写入保证只有一方认领成功。
+// Human Review: Required
+//
+// Original code:
+// async function resolveLatestMetaWriteOptions(
+//   client: WebDavStorageClient,
+//   directoryPath: string,
+//   expectedMeta: RemotePatchMetaFile,
+// ): Promise<WebDavWriteOptions> {
+//   const latestMetaState = await readRemotePatchMetaState(client, directoryPath);
+//   if (latestMetaState === null) {
+//     return createAtomicWriteOptions(true);
+//   }
+//
+//   if (latestMetaState.canonicalMissing) {
+//     return createAtomicWriteOptions(true);
+//   }
+//
+//   if (!areRemotePatchMetaFilesEqual(latestMetaState.meta, expectedMeta)) {
+//     throw new Error("Remote patch meta changed before write.");
+//   }
+//
+//   return createAtomicWriteOptions(false);
+// }
 
 async function writeRemotePatchMeta(
   client: WebDavStorageClient,
@@ -2069,17 +2073,26 @@ async function writeRemotePatchMeta(
   writeWebDavLastSeenRemoteRevision(metaPath, meta.revision);
 }
 
-function areRemotePatchMetaFilesEqual(
-  left: RemotePatchMetaFile,
-  right: RemotePatchMetaFile,
-): boolean {
-  return left.revision === right.revision
-    && left.currentFullHash === right.currentFullHash
-    && left.deltaThreshold === right.deltaThreshold
-    && left.committedAt === right.committedAt
-    && left.deltaChain.length === right.deltaChain.length
-    && left.deltaChain.every((entry, index) => entry === right.deltaChain[index]);
-}
+// AI-REMOVED 2026-07-29:
+// Reason: 仅被已删除的 resolveLatestMetaWriteOptions 调用，无其他引用。
+// Trigger: resolveLatestMetaWriteOptions 已被移除。
+// Evidence: rg 仅剩本函数定义及其在 resolveLatestMetaWriteOptions 中的调用点。
+// Replacement: None.
+// Risk: Low.
+// Human Review: Required
+//
+// Original code:
+// function areRemotePatchMetaFilesEqual(
+//   left: RemotePatchMetaFile,
+//   right: RemotePatchMetaFile,
+// ): boolean {
+//   return left.revision === right.revision
+//     && left.currentFullHash === right.currentFullHash
+//     && left.deltaThreshold === right.deltaThreshold
+//     && left.committedAt === right.committedAt
+//     && left.deltaChain.length === right.deltaChain.length
+//     && left.deltaChain.every((entry, index) => entry === right.deltaChain[index]);
+// }
 
 async function readLatestRevisionJournalState<TValue extends { readonly revision: number }>(
   client: WebDavStorageClient,
@@ -2184,8 +2197,11 @@ async function writeRevisionJournalState<TValue extends { readonly revision: num
   );
 
   // 修订文件通过临时文件 + MOVE(Overwrite:F) 原子认领；canonical 文件仅是便于人工查看的镜像。
-  await client.writeTextFile(revisionPath, serializedValue, writeOptions);
-  await client.writeTextFile(canonicalPath, serializedValue);
+  // AI-CORRECTION 2026-07-29: revision 文件与 canonical 镜像无依赖，可并行写入节省一次网络往返。
+  await Promise.all([
+    client.writeTextFile(revisionPath, serializedValue, writeOptions),
+    client.writeTextFile(canonicalPath, serializedValue),
+  ]);
 }
 
 function resolveRevisionDirectoryPath(canonicalPath: string): string {

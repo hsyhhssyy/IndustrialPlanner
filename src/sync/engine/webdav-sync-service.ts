@@ -168,6 +168,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   let localChangeVersion = 0;
   let acknowledgedLocalChangeVersion = 0;
   let conflictOverlayVisible = false;
+  let syncSuppressImmediate = false;
   const dirtyAssetIdsByAdapter = new Map<string, Set<string> | null>();
   const deferredConflictFingerprints = new Map<string, string>();
 
@@ -868,6 +869,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
       }
 
       started = true;
+      syncSuppressImmediate = false;
       logger.info("sync service started");
       void syncNow("startup");
       intervalId = globalThis.setInterval(() => {
@@ -925,6 +927,14 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
         saveState: status.saveState === "error" ? "error" : "pending",
         pendingLocalChangeCount: getPendingLocalChangeCount(),
       });
+
+      // AI-CORRECTION 2026-07-29: 从 idle 状态的首次编辑立即触发保存，不再等待 5 秒空闲；
+      // 后续编辑沿用 5 秒空闲 + 30 秒上限防抖策略。
+      if (!syncSuppressImmediate && status.saveState === "idle") {
+        syncSuppressImmediate = true;
+        void syncNow("local-change");
+        return;
+      }
 
       if (idleTimerId !== null) {
         globalThis.clearTimeout(idleTimerId);
