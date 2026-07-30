@@ -20,6 +20,7 @@ export type SyncRunReason =
   | "startup"
   | "foreground"
   | "interval"
+  | "big-check"
   | "local-change"
   | "settings-change"
   | "manual";

@@ -55,6 +55,7 @@ export interface WebDavSyncConflictDecision {
 export interface WebDavSyncAdapter {
   readonly id: string;
   readonly mode: WebDavSyncMode;
+  readonly checkPath: string | null;
   sync(
     client: WebDavStorageClient,
     scope?: WebDavSyncAdapterScope,
@@ -168,6 +169,7 @@ export function createFullNoRevisionAdapter<TValue>(
   return {
     id: options.id,
     mode: "full-no-revision",
+    checkPath: options.remotePath,
     sync: async (client, scope) => await syncFullNoRevision(
       client,
       options,
@@ -184,6 +186,7 @@ export function createFullWithRevisionAdapter<TValue>(
   return {
     id: options.id,
     mode: "full-with-revision",
+    checkPath: options.indexPath,
     sync: async (client, scope) => await syncFullWithRevision(client, options, scope),
     inspectConflicts: async (client, scope) =>
       await inspectFullWithRevisionConflicts(client, options, scope),
@@ -196,6 +199,7 @@ export function createPatchWithRevisionAdapter<TValue>(
   return {
     id: options.id,
     mode: "patch-with-revision",
+    checkPath: `${options.directoryPath}/meta.json`,
     sync: async (client, scope) => await syncPatchWithRevision(
       client,
       options,
@@ -212,6 +216,7 @@ export function createPatchCollectionWithRevisionAdapter<TValue>(
   return {
     id: options.id,
     mode: "patch-with-revision",
+    checkPath: options.indexPath,
     sync: async (client, scope) => await syncPatchCollectionWithRevision(
       client,
       options,
@@ -533,6 +538,13 @@ async function syncFullNoRevision<TValue>(
       options.resolveConflict,
     ),
   });
+
+  // 更新 ETag 供小检查使用
+  if (status === "downloaded" && remoteFile?.etag != null) {
+    writeWebDavLastSeenRemoteEtag(options.remotePath, remoteFile.etag);
+  } else if (status === "uploaded") {
+    clearWebDavLastSeenRemoteEtag(options.remotePath);
+  }
 
   return {
     adapterId: options.id,
@@ -920,6 +932,14 @@ async function syncPatchWithRevision<TValue>(
     ),
   });
 
+  // 更新 meta.json ETag 供小检查使用
+  const metaPath = resolvePath(options.directoryPath, "meta.json");
+  if (status === "downloaded" && remoteState?.etag != null) {
+    writeWebDavLastSeenRemoteEtag(metaPath, remoteState.etag);
+  } else if (status === "uploaded") {
+    clearWebDavLastSeenRemoteEtag(metaPath);
+  }
+
   return {
     adapterId: options.id,
     mode: "patch-with-revision",
@@ -978,6 +998,10 @@ async function syncPatchCollectionWithRevision<TValue>(
     ).then((value) => [entry.id, value] as const)];
   })));
   reportSyncProgress(scope, 55);
+
+  // AI-CORRECTION 2026-07-30: 收集 meta 写延迟到循环结束后与 index 写并行，
+  // 避免每次上传都串行等待 meta PUT + index PUT 共 2 次额外往返。
+  const pendingMetaWrites: Promise<void>[] = [];
 
   for (const [localEntryIndex, localEntry] of localEntries.entries()) {
     reportSyncProgress(
@@ -1158,7 +1182,9 @@ async function syncPatchCollectionWithRevision<TValue>(
       }),
       writeRemote: async (value) => {
         const contentHash = createStableJsonHash(value);
-        await writeRemotePatchState({
+        // AI-CORRECTION 2026-07-30: 内容写入完成后立即更新 index 并延迟 meta 写入，
+        // 以便循环结束后将 meta 写与 index 写并行。
+        const { nextMeta, metaWriteOptions } = await writeRemotePatchContent({
           client,
           directoryPath: options.directoryPath(localEntry.id),
           value,
@@ -1169,6 +1195,9 @@ async function syncPatchCollectionWithRevision<TValue>(
           contentHash,
           deletedAt: null,
         });
+        pendingMetaWrites.push(
+          writeRemotePatchMeta(client, options.directoryPath(localEntry.id), nextMeta, metaWriteOptions),
+        );
       },
       remoteUpdatedAt:
         remoteState?.remoteUpdatedAt
@@ -1291,17 +1320,31 @@ async function syncPatchCollectionWithRevision<TValue>(
   }
   reportSyncProgress(scope, 94);
 
-  if (nextIndex.revision !== remoteIndex.revision) {
-    reportSyncProgress(scope, 96);
-    clearWebDavLastSeenRemoteEtag(options.indexPath);
-    logger.info(`${options.id}: writing collection index.json → rev=${remoteIndex.revision + 1} (was ${remoteIndex.revision}), entries=${Object.keys(nextIndex.entries).length}`);
-    await writeRemoteIndex(
-      client,
-      options.indexPath,
-      nextIndex,
-      remoteIndex.revision,
-      remoteIndexState.canonicalMissing,
-    );
+  // AI-CORRECTION 2026-07-30: index 写与所有延迟的 meta 写并行执行，
+  // 将原本串行的 meta PUT + index PUT 两次往返合并为一次。
+  const indexWritePromise: Promise<void> | null =
+    nextIndex.revision !== remoteIndex.revision
+      ? (() => {
+        reportSyncProgress(scope, 96);
+        clearWebDavLastSeenRemoteEtag(options.indexPath);
+        logger.info(`${options.id}: writing collection index.json → rev=${remoteIndex.revision + 1} (was ${remoteIndex.revision}), entries=${Object.keys(nextIndex.entries).length}`);
+        return writeRemoteIndex(
+          client,
+          options.indexPath,
+          nextIndex,
+          remoteIndex.revision,
+          remoteIndexState.canonicalMissing,
+        );
+      })()
+      : null;
+
+  const writes: Promise<void>[] = [...pendingMetaWrites];
+  if (indexWritePromise !== null) {
+    writes.push(indexWritePromise);
+  }
+
+  if (writes.length > 0) {
+    await Promise.all(writes);
   } else if (
     status !== "conflict"
     && remoteIndexState.canonicalEtag !== null
@@ -1527,6 +1570,7 @@ async function readRemoteJsonFile<TValue>(
   normalizeRemote: ((value: unknown) => TValue | null) | undefined,
 ): Promise<{
   readonly value: TValue;
+  readonly etag: string | null;
   readonly lastModified: string | null;
 } | null> {
   const file = await client.readTextFile(remotePath);
@@ -1544,6 +1588,7 @@ async function readRemoteJsonFile<TValue>(
       ? null
       : {
         value,
+        etag: file.etag,
         lastModified: normalizeRemoteTimestamp(file.lastModified),
       };
   } catch {
@@ -1966,32 +2011,33 @@ function normalizeRemotePatchMeta(value: unknown): RemotePatchMetaFile | null {
   };
 }
 
-async function writeRemotePatchState<TValue>(options: {
+interface WriteRemotePatchContentResult {
+  readonly nextMeta: RemotePatchMetaFile;
+  readonly metaWriteOptions: WebDavWriteOptions;
+}
+
+async function writeRemotePatchContent<TValue>(options: {
   readonly client: WebDavStorageClient;
   readonly directoryPath: string;
   readonly value: TValue;
   readonly previousState: { readonly meta: RemotePatchMetaFile; readonly value: TValue; readonly etag: string | null; readonly canonicalMissing: boolean } | null;
   readonly deltaThreshold: number;
-}): Promise<void> {
+}): Promise<WriteRemotePatchContentResult> {
   await options.client.makeDirectory(options.directoryPath);
   const nextHash = createStableJsonHash(options.value);
 
   if (options.previousState === null) {
     await options.client.writeTextFile(resolvePatchFullPath(options.directoryPath, nextHash), JSON.stringify(options.value));
-    const nextMeta = {
-      revision: 1,
-      currentFullHash: nextHash,
-      deltaChain: [],
-      deltaThreshold: options.deltaThreshold,
-      committedAt: new Date().toISOString(),
-    } satisfies RemotePatchMetaFile;
-    await writeRemotePatchMeta(
-      options.client,
-      options.directoryPath,
-      nextMeta,
-      createAtomicWriteOptions(false),
-    );
-    return;
+    return {
+      nextMeta: {
+        revision: 1,
+        currentFullHash: nextHash,
+        deltaChain: [],
+        deltaThreshold: options.deltaThreshold,
+        committedAt: new Date().toISOString(),
+      },
+      metaWriteOptions: createAtomicWriteOptions(false),
+    };
   }
 
   const previousHash = resolvePatchLatestHash(options.previousState.meta);
@@ -2000,27 +2046,41 @@ async function writeRemotePatchState<TValue>(options: {
 
   if (nextDeltaChain.length >= options.previousState.meta.deltaThreshold) {
     await options.client.writeTextFile(resolvePatchFullPath(options.directoryPath, nextHash), JSON.stringify(options.value));
-    const metaWriteOptions = createAtomicWriteOptions(options.previousState.canonicalMissing);
-    await writeRemotePatchMeta(options.client, options.directoryPath, {
-      revision: nextRevision,
-      currentFullHash: nextHash,
-      deltaChain: [],
-      deltaThreshold: options.previousState.meta.deltaThreshold,
-      committedAt: new Date().toISOString(),
-    }, metaWriteOptions);
-    return;
+    return {
+      nextMeta: {
+        revision: nextRevision,
+        currentFullHash: nextHash,
+        deltaChain: [],
+        deltaThreshold: options.previousState.meta.deltaThreshold,
+        committedAt: new Date().toISOString(),
+      },
+      metaWriteOptions: createAtomicWriteOptions(options.previousState.canonicalMissing),
+    };
   }
 
   const patch = generateJsonPatch(options.previousState.value, options.value);
   await options.client.writeTextFile(resolvePatchDeltaPath(options.directoryPath, previousHash, nextHash), JSON.stringify(patch));
-  const metaWriteOptions = createAtomicWriteOptions(options.previousState.canonicalMissing);
-  await writeRemotePatchMeta(options.client, options.directoryPath, {
-    revision: nextRevision,
-    currentFullHash: options.previousState.meta.currentFullHash,
-    deltaChain: nextDeltaChain,
-    deltaThreshold: options.previousState.meta.deltaThreshold,
-    committedAt: new Date().toISOString(),
-  }, metaWriteOptions);
+  return {
+    nextMeta: {
+      revision: nextRevision,
+      currentFullHash: options.previousState.meta.currentFullHash,
+      deltaChain: nextDeltaChain,
+      deltaThreshold: options.previousState.meta.deltaThreshold,
+      committedAt: new Date().toISOString(),
+    },
+    metaWriteOptions: createAtomicWriteOptions(options.previousState.canonicalMissing),
+  };
+}
+
+async function writeRemotePatchState<TValue>(options: {
+  readonly client: WebDavStorageClient;
+  readonly directoryPath: string;
+  readonly value: TValue;
+  readonly previousState: { readonly meta: RemotePatchMetaFile; readonly value: TValue; readonly etag: string | null; readonly canonicalMissing: boolean } | null;
+  readonly deltaThreshold: number;
+}): Promise<void> {
+  const { nextMeta, metaWriteOptions } = await writeRemotePatchContent(options);
+  await writeRemotePatchMeta(options.client, options.directoryPath, nextMeta, metaWriteOptions);
 }
 
 function createAtomicWriteOptions(canonicalMissing: boolean): WebDavWriteOptions {

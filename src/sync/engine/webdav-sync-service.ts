@@ -1,4 +1,5 @@
 import { createLogger } from "@/shared/logging/logger";
+import { readWebDavLastSeenRemoteEtag, type WebDavSyncSettings } from "../storage";
 import type {
   SyncConflictDecision,
   SyncInitialSyncStage,
@@ -7,7 +8,6 @@ import type {
   SyncTaskStatus,
 } from "@/domain/sync";
 import type { WebDavStorageClient } from "../webdav";
-import type { WebDavSyncSettings } from "../storage";
 import type {
   WebDavSyncAdapter,
   WebDavSyncConflict,
@@ -93,6 +93,7 @@ export interface WebDavSyncServiceOptions {
   readonly beforeSync?: (client: WebDavStorageClient, settings: WebDavSyncSettings) => Promise<void> | void;
   readonly afterSync?: (client: WebDavStorageClient, settings: WebDavSyncSettings, results: readonly WebDavSyncAdapterResult[]) => Promise<void> | void;
   readonly intervalMs?: number;
+  readonly bigCheckIntervalMs?: number;
   readonly retryDelaysMs?: readonly number[];
   readonly onStatusChange?: (status: WebDavSyncServiceStatus) => void;
   readonly onConflictDiscoveryStart?: () => void;
@@ -122,6 +123,7 @@ export interface WebDavSyncService {
 }
 
 const DEFAULT_INTERVAL_MS = 60_000;
+const DEFAULT_BIG_CHECK_INTERVAL_MS = 10 * 60_000;
 const LOCAL_CHANGE_IDLE_UPLOAD_MS = 5_000;
 const LOCAL_CHANGE_MAX_UPLOAD_MS = 30_000;
 const INITIAL_SYNC_REQUEST_TIMEOUT_MS = 8_000;
@@ -161,6 +163,8 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   let started = false;
   let syncing = false;
   let intervalId: ReturnType<typeof globalThis.setInterval> | null = null;
+  let bigCheckIntervalId: ReturnType<typeof globalThis.setInterval> | null = null;
+  let smallCheckRunning = false;
   let idleTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
   let maxTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
   let activeClient: WebDavStorageClient | null = null;
@@ -386,7 +390,15 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
                   hasCompletedInitialFeatureSync: true,
                 });
               }
-              if (!resolvedResults.some((result) => result.status === "conflict")) {
+              // AI-CORRECTION 2026-07-30: 目录维护仅在初始同步和大检查（interval）时执行，
+              // 不再每次 local-change 都防御性创建目录；adapter 自身的 makeDirectory 已处理写入路径。
+              if (
+                !resolvedResults.some((result) => result.status === "conflict")
+                && (isInitialSync || trigger === "big-check")
+              ) {
+                for (const task of options.maintenanceTasks ?? []) {
+                  queueTask(task.kind, 1);
+                }
                 await runMaintenanceTasks(client, settings);
               }
               await options.afterSync?.(client, settings, resolvedResults);
@@ -439,6 +451,12 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
         dirtyAssetIdsByAdapter.clear();
       }
       const pendingLocalChangeCount = getPendingLocalChangeCount();
+
+      // AI-CORRECTION 2026-07-30: 无挂起改动时复位 syncSuppressImmediate，
+      // 使得下次从 idle 编辑能再次立即上传。
+      if (pendingLocalChangeCount === 0) {
+        syncSuppressImmediate = false;
+      }
 
       return setStatus({
         phase: "idle",
@@ -674,9 +692,6 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
         getAdapterTaskTotalUnitCount(taskKind, taskRequests.length),
       );
     }
-    for (const task of options.maintenanceTasks ?? []) {
-      queueTask(task.kind, 1);
-    }
 
     const results: WebDavSyncAdapterResult[] = [];
     for (const [taskKind, taskRequests] of requestsByTask) {
@@ -862,6 +877,54 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
     }
   };
 
+  const runSmallCheck = async (): Promise<boolean> => {
+    const settings = options.readSettings();
+    const client = options.createClient(settings, () => {}, {});
+    try {
+      for (const adapter of options.adapters) {
+        const checkPath = adapter.checkPath;
+        if (checkPath === null) continue;
+
+        const lastEtag = readWebDavLastSeenRemoteEtag(checkPath);
+        if (lastEtag === null) return false;
+
+        const stat = await client.stat(checkPath);
+        if (stat?.etag !== lastEtag) return false;
+      }
+      return true;
+    } catch {
+      return false;
+    } finally {
+      client.dispose?.();
+    }
+  };
+
+  const runIntervalCheck = async (): Promise<void> => {
+    if (smallCheckRunning) return;
+    smallCheckRunning = true;
+    try {
+      const settings = options.readSettings();
+      if (!settings.enabled || settings.url.trim() === "") return;
+
+      // 有脏数据等上传 → 走完整同步
+      if (localChangeVersion > acknowledgedLocalChangeVersion) {
+        await syncNow("interval");
+        return;
+      }
+
+      const unchanged = await runSmallCheck();
+      if (unchanged) {
+        logger.debug("small check: remote unchanged → idle");
+        return;
+      }
+
+      logger.info("small check: remote changed → triggering full sync");
+      await syncNow("interval");
+    } finally {
+      smallCheckRunning = false;
+    }
+  };
+
   return {
     start: () => {
       if (started) {
@@ -873,11 +936,18 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
       logger.info("sync service started");
       void syncNow("startup");
       intervalId = globalThis.setInterval(() => {
-        if (options.canRunInterval?.() !== false) {
-          void syncNow("interval");
+        if (options.canRunInterval?.() !== false && !syncing) {
+          void runIntervalCheck();
         }
       }, options.intervalMs ?? DEFAULT_INTERVAL_MS);
       unrefTimer(intervalId);
+
+      bigCheckIntervalId = globalThis.setInterval(() => {
+        if (options.canRunInterval?.() !== false) {
+          void syncNow("big-check");
+        }
+      }, options.bigCheckIntervalMs ?? DEFAULT_BIG_CHECK_INTERVAL_MS);
+      unrefTimer(bigCheckIntervalId);
     },
     stop: () => {
       started = false;
@@ -889,6 +959,10 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
       if (intervalId !== null) {
         globalThis.clearInterval(intervalId);
         intervalId = null;
+      }
+      if (bigCheckIntervalId !== null) {
+        globalThis.clearInterval(bigCheckIntervalId);
+        bigCheckIntervalId = null;
       }
     },
     syncNow,
@@ -922,15 +996,18 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
         dirtyAssetIdsByAdapter.set(change.adapterId, nextDirtyAssetIds);
       }
       localChangeVersion += 1;
+      // AI-CORRECTION 2026-07-30: setStatus 同步修改 status.saveState，
+      // 原判断 status.saveState === "idle" 永远为 false；先捕获 prevSaveState 再判断。
+      const prevSaveState = status.saveState;
       setStatus({
         ...status,
-        saveState: status.saveState === "error" ? "error" : "pending",
+        saveState: prevSaveState === "error" ? "error" : "pending",
         pendingLocalChangeCount: getPendingLocalChangeCount(),
       });
 
       // AI-CORRECTION 2026-07-29: 从 idle 状态的首次编辑立即触发保存，不再等待 5 秒空闲；
       // 后续编辑沿用 5 秒空闲 + 30 秒上限防抖策略。
-      if (!syncSuppressImmediate && status.saveState === "idle") {
+      if (!syncSuppressImmediate && prevSaveState === "idle") {
         syncSuppressImmediate = true;
         void syncNow("local-change");
         return;

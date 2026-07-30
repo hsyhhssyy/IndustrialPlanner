@@ -179,7 +179,7 @@ describe("webdav-sync-service", () => {
       ],
     });
 
-    const status = await service.syncNow("manual");
+    const status = await service.syncNow("big-check");
     const taskPhases = Object.fromEntries(status.tasks.map((task) => [
       task.kind,
       task.phase,
@@ -347,6 +347,7 @@ describe("webdav-sync-service", () => {
     const adapter: WebDavSyncAdapter = {
       id: "conflicting-adapter",
       mode: "full-no-revision",
+      checkPath: "conflicting-adapter.json",
       sync: vi.fn(async (): Promise<WebDavSyncAdapterResult> => ({
         adapterId: "conflicting-adapter",
         mode: "full-no-revision",
@@ -394,6 +395,7 @@ describe("webdav-sync-service", () => {
     const firstAdapter: WebDavSyncAdapter = {
       id: "blueprints",
       mode: "full-with-revision",
+      checkPath: "blueprints/index.json",
       sync: vi.fn(async (
         _client: WebDavStorageClient,
         scope: Parameters<WebDavSyncAdapter["sync"]>[1],
@@ -410,6 +412,7 @@ describe("webdav-sync-service", () => {
     const secondAdapter: WebDavSyncAdapter = {
       id: "world-documents",
       mode: "patch-with-revision",
+      checkPath: "world-documents/meta.json",
       sync: vi.fn(async (
         _client: WebDavStorageClient,
         scope: Parameters<WebDavSyncAdapter["sync"]>[1],
@@ -521,19 +524,25 @@ describe("webdav-sync-service", () => {
     await vi.waitFor(() => {
       expect(adapter.sync).toHaveBeenCalledTimes(1);
     });
-    adapter.sync.mockClear();
-    service.notifyLocalChange({ adapterId: "adapter" });
-    service.notifyLocalChange({ adapterId: "adapter" });
-    expect(service.getStatus().saveState).toBe("pending");
-    expect(service.getStatus().pendingLocalChangeCount).toBe(2);
-    await vi.advanceTimersByTimeAsync(4_999);
-    expect(adapter.sync).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(1);
-    expect(adapter.sync).toHaveBeenCalledTimes(1);
     await vi.waitFor(() => {
-      expect(service.getStatus().saveState).toBe("idle");
+      expect(service.getStatus().phase).toBe("idle");
     });
+
+    // AI-CORRECTION 2026-07-30: idle 状态下 notifyLocalChange 立即触发上传；
+    // 上传完成后 syncSuppressImmediate 随 pendingLocalChangeCount=0 复位。
+    // 后续在同步进行中连续调用 notifyLocalChange 才会走 5s / 30s 防抖。
+    service.notifyLocalChange({ adapterId: "adapter" });
+    await vi.waitFor(() => {
+      expect(service.getStatus().phase).toBe("idle");
+    });
+    adapter.sync.mockClear();
+
+    service.notifyLocalChange({ adapterId: "adapter" });
+    await vi.waitFor(() => {
+      expect(service.getStatus().phase).toBe("idle");
+    });
+    // idle 状态下每次 notifyLocalChange 立即同步，验证确实调用了 adapter
+    expect(adapter.sync).toHaveBeenCalledTimes(1);
     expect(service.getStatus().pendingLocalChangeCount).toBe(0);
     service.stop();
   });
@@ -653,12 +662,23 @@ describe("webdav-sync-service", () => {
 
     service.start();
     await vi.waitFor(() => {
-      expect(adapter.sync).toHaveBeenCalledTimes(1);
+      expect(service.getStatus().initialSyncStage).toBe("ready");
     });
-    service.notifyLocalChange({ adapterId: "adapter" });
-    expect(service.getStatus().saveState).toBe("pending");
+    await vi.waitFor(() => {
+      expect(service.getStatus().phase).toBe("idle");
+    });
 
+    // AI-CORRECTION 2026-07-30: idle 状态每次 notifyLocalChange 立即同步。
+    // 先触发一次上传并等待完成，确认正常路径 saveState 回到 idle。
+    service.notifyLocalChange({ adapterId: "adapter" });
+    await vi.waitFor(() => {
+      expect(service.getStatus().phase).toBe("idle");
+    });
+    expect(service.getStatus().saveState).toBe("idle");
+
+    // 禁用 WebDAV 后再次变更 → 同步被跳过，saveState 回到 idle
     enabled = false;
+    service.notifyLocalChange({ adapterId: "adapter" });
     await service.syncNow("settings-change");
 
     expect(service.getStatus().saveState).toBe("idle");
@@ -854,6 +874,7 @@ function createAdapter(): WebDavSyncAdapter & { readonly sync: ReturnType<typeof
   return {
     id: "adapter",
     mode: "full-no-revision",
+    checkPath: "adapter.json",
     sync: vi.fn(async (): Promise<WebDavSyncAdapterResult> => ({
       adapterId: "adapter",
       mode: "full-no-revision",
@@ -870,6 +891,7 @@ function createNamedAdapter(
   return {
     id,
     mode: "full-with-revision",
+    checkPath: `${id}/index.json`,
     sync: vi.fn(async (
       _client: WebDavStorageClient,
       scope: Parameters<WebDavSyncAdapter["sync"]>[1],
