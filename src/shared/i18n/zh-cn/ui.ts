@@ -85,6 +85,7 @@ const UI: Record<string, string> = {
     "webDavStatus.runReason.local-change": "本地变更",
     "webDavStatus.runReason.settings-change": "设置变更",
     "webDavStatus.runReason.manual": "手动同步",
+    "webDavStatus.runReason.big-check": "大检查",
     "webDavStatus.stage.canvas": "当前画布",
     "webDavStatus.stage.blueprints": "蓝图",
     "webDavStatus.stage.modules": "模块",

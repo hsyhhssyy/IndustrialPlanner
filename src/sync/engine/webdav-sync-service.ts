@@ -1126,6 +1126,7 @@ function selectQueuedTrigger(
 
   const priority: Record<WebDavSyncTrigger, number> = {
     interval: 0,
+    "big-check": 0,
     manual: 1,
     "local-change": 2,
     foreground: 3,

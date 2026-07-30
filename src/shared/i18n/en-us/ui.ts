@@ -85,6 +85,7 @@ const UI: Record<string, string> = {
     "webDavStatus.runReason.local-change": "Local change",
     "webDavStatus.runReason.settings-change": "Settings change",
     "webDavStatus.runReason.manual": "Manual sync",
+    "webDavStatus.runReason.big-check": "Big check",
     "webDavStatus.stage.canvas": "Current canvas",
     "webDavStatus.stage.blueprints": "Blueprints",
     "webDavStatus.stage.modules": "Modules",

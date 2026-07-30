@@ -84,6 +84,7 @@ export type UiKey =
   | "webDavStatus.runReason.startup"
   | "webDavStatus.runReason.foreground"
   | "webDavStatus.runReason.interval"
+  | "webDavStatus.runReason.big-check"
   | "webDavStatus.runReason.local-change"
   | "webDavStatus.runReason.settings-change"
   | "webDavStatus.runReason.manual"
