@@ -462,8 +462,26 @@ export class PwaController {
       return;
     }
 
-    this.offlineStatus = "enabled";
-    this.progress = null;
+    // 非用户主动点击"更新"触发的 SW 接管（如 Chrome 后台自动激活等待中的 SW）。
+    // 此时页面资源版本与 SW 版本可能不一致，刷新页面以确保一致性。
+    // 使用 sessionStorage 防止刷新死循环。
+    const RELOAD_GUARD_KEY = "__pwa_controller_change_reload__";
+    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(RELOAD_GUARD_KEY) === "1") {
+      sessionStorage.removeItem(RELOAD_GUARD_KEY);
+      this.offlineStatus = "enabled";
+      this.progress = null;
+      return;
+    }
+
+    try {
+      sessionStorage.setItem(RELOAD_GUARD_KEY, "1");
+    } catch {
+      // sessionStorage 不可用（隐私模式等），回退到直接重置状态
+      this.offlineStatus = "enabled";
+      this.progress = null;
+      return;
+    }
+    window.location.reload();
   }
 
   private handleServiceWorkerMessage(event: MessageEvent<unknown>): void {
