@@ -39,7 +39,16 @@ import {
   ItemDomainFlag,
   resolveRecipeItemDomainFlags,
 } from "@/domain/shared/item-domain-flags";
-import { LOGISTICS_KIND } from "@/domain/shared/logistics";
+// AI-REMOVED 2026-07-30:
+// Reason: LOGISTICS_KIND 导入后未被使用，ESLint @typescript-eslint/no-unused-vars 报错
+// Trigger: ESLint 规则检查
+// Evidence: 全文件搜索 LOGISTICS_KIND 仅在 import 行出现，无任何引用
+// Replacement: None
+// Risk: Low
+// Human Review: Not Required
+//
+// Original code:
+// import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 
 const WAREHOUSE_SINK_TAG = "WarehouseSink";
 

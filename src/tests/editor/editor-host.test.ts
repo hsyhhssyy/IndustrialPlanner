@@ -540,7 +540,7 @@ describe("createEditorHost", () => {
     });
     editorHost.actions.zoom(2);
 
-    await flushMicrotasks();
+    await flushMicrotasks(100);
 
     const storedDocument = await readStoredWorldDocument(documentKey);
 
@@ -581,7 +581,7 @@ describe("createEditorHost", () => {
 
     editorHost.actions.setViewportDisplayRotation(270);
 
-    await flushMicrotasks();
+    await flushMicrotasks(100);
 
     const storedDocument = await readStoredWorldDocument(documentKey);
 
