@@ -54,24 +54,25 @@ import {
   createFullNoRevisionAdapter,
   createFullWithRevisionAdapter,
   createPatchCollectionWithRevisionAdapter,
-  type WebDavSyncConflict,
-  type WebDavSyncAdapter,
-} from "./engine/webdav-sync-adapters";
+  type SyncAdapterConflict,
+  type SyncAdapter,
+} from "./engine/sync-adapters";
 import {
-  createWebDavSyncService,
-  type WebDavInitialSyncPlan,
-  type WebDavLocalChange,
-  type WebDavSyncMaintenanceTask,
-  type WebDavSyncService,
-} from "./engine/webdav-sync-service";
+  createSyncService,
+  type SyncInitialPlan,
+  type SyncLocalChange,
+  type SyncMaintenanceTask,
+  type SyncService,
+} from "./engine/sync-service";
 import {
   readWebDavSyncSettings,
   subscribeToWebDavSyncSettingsChanges,
   writeWebDavSyncSettings,
 } from "./storage/webdav-sync-settings";
+import { SYNC_PROVIDER_STORAGE_KEY } from "./sync-providers";
 import { SyncStateImpl } from "./sync-state-impl";
-import type { WebDavStorageClient } from "./webdav/webdav-client";
-import { createWebDavWorkerStorageClient } from "./webdav/webdav-worker-client";
+import type { SyncStorageClient } from "./clients/types";
+import { createWebDavWorkerStorageClient } from "./clients/webdav/webdav-worker-client";
 
 export interface SyncHostOptions {
   readonly assetSources?: readonly SyncAssetSource[];
@@ -83,13 +84,47 @@ export interface SyncHost extends SyncContract {
 }
 
 type ResolveInteractiveConflict = <TValue>(
-  conflict: WebDavSyncConflict<TValue>,
+  conflict: SyncAdapterConflict<TValue>,
 ) => Promise<SyncConflictResolution>;
 
-export function createSyncHost(
+function readSyncProvider(): string {
+  try {
+    return localStorage.getItem(SYNC_PROVIDER_STORAGE_KEY) ?? "none";
+  } catch {
+    return "none";
+  }
+}
+
+function writeSyncProvider(id: string): void {
+  try {
+    localStorage.setItem(SYNC_PROVIDER_STORAGE_KEY, id);
+  } catch {
+    // 静默失败
+  }
+}
+
+/**
+ * 从 provider 选择 + URL 派生 enabled。
+ * 兼容旧用户：若 provider 未设置但旧 enabled=true 且 URL 非空，
+ * 自动迁移 provider→"webdav"。
+ */
+function deriveEnabled(settings: { url: string }, oldEnabled?: boolean): boolean {
+  const provider = readSyncProvider();
+  if (provider === "webdav") {
+    return settings.url.trim() !== "";
+  }
+  // 迁移路径：旧用户 enabled=true 且 URL 非空，自动注册为 webdav
+  if (oldEnabled === true && settings.url.trim() !== "") {
+    writeSyncProvider("webdav");
+    return true;
+  }
+  return false;
+}
+
+export async function createSyncHost(
   workspace: WorkspaceContract,
   options: SyncHostOptions,
-): SyncHost {
+): Promise<SyncHost> {
   const state = new SyncStateImpl();
   const disposers: Array<() => void> = [];
   let remoteApplyDepth = 0;
@@ -97,8 +132,15 @@ export function createSyncHost(
   let syncStarted = false;
   let directoryTreeReadyKey: string | null = null;
   let lastEditorWebDavHash: string | null = null;
+  let currentSettings = await readWebDavSyncSettings();
+  // 从 sync provider + URL 派生 enabled 标志，兼容旧用户自动迁移
+  // deriveEnabled 内部会在旧用户首次访问时将 provider 写为 "webdav"
+  currentSettings = {
+    ...currentSettings,
+    enabled: deriveEnabled(currentSettings, currentSettings.enabled),
+  };
   let notifyConflictDetected = (
-    _conflict: WebDavSyncConflict<unknown>,
+    _conflict: SyncAdapterConflict<unknown>,
   ): void => {};
   const pendingLocalChanges = new Map<string, Set<string> | null>();
 
@@ -110,7 +152,7 @@ export function createSyncHost(
       remoteApplyDepth -= 1;
     }
   };
-  const notifyLocalChange = (change: WebDavLocalChange) => {
+  const notifyLocalChange = (change: SyncLocalChange) => {
     if (remoteApplyDepth > 0) {
       return;
     }
@@ -162,7 +204,7 @@ export function createSyncHost(
     notifyConflictDetected(conflict);
     return "pause";
   };
-  const adapters: WebDavSyncAdapter[] = [
+  const adapters: SyncAdapter[] = [
     createFullNoRevisionAdapter<PlannerPersistedState>({
       id: "production-planning",
       remotePath: "assets/planner-state.json",
@@ -217,12 +259,12 @@ export function createSyncHost(
     ),
   ];
 
-  state.setSettings(readWebDavSyncSettings());
+  state.setSettings(currentSettings);
   // AI-REMOVED 2026-07-29:
   // Reason: SyncHost 构造发生在编辑器文档 hydration 之前，提前切到 canvas 会把客户端初始化时间错误计入全屏锁定。
   // Trigger: 用户报告刷新后进度长期停在 10%，即使画布同步尚未发出任何网络请求。
   // Evidence: service.start() 只在 editorDocument 首个 snapshot 到达后执行；原状态更新发生在此之前。
-  // Replacement: createWebDavSyncService.syncNow 在当前画布同步真正开始时切换 initialSyncStage。
+  // Replacement: createSyncService.syncNow 在当前画布同步真正开始时切换 initialSyncStage。
   // Risk: Low；同步启动前界面可操作，但 editor 尚未 hydration 时本来也不会接受业务编辑。
   // Human Review: Required
   //
@@ -234,8 +276,8 @@ export function createSyncHost(
   //     initialSyncStage: "canvas",
   //   });
   // }
-  const service: WebDavSyncService = createWebDavSyncService({
-    readSettings: readWebDavSyncSettings,
+  const service:  SyncService = createSyncService({
+    readSettings: () => currentSettings,
     createClient: (
       settings,
       onRequestActivityChange,
@@ -298,11 +340,17 @@ export function createSyncHost(
   notifyConflictDetected = service.notifyConflictDetected;
 
   const actions: SyncContract["actions"] = {
-    updateSettings: (patch) => {
-      writeWebDavSyncSettings({
-        ...readWebDavSyncSettings(),
-        ...patch,
-      });
+    updateSettings: async (patch) => {
+      const wasEnabled = currentSettings.enabled;
+      const merged = { ...currentSettings, ...patch };
+      // enabled 由 provider + URL 派生，忽略 patch 中的 enabled
+      merged.enabled = deriveEnabled(merged, wasEnabled ? undefined : currentSettings.enabled);
+      currentSettings = await writeWebDavSyncSettings(merged);
+      state.setSettings(currentSettings);
+      // enabled 刚从 false → true 时立即触发同步，不等下一次轮询
+      if (!wasEnabled && currentSettings.enabled) {
+        void service.syncNow("settings-change");
+      }
     },
     syncNow: async () => {
       await service.syncNow(
@@ -442,6 +490,7 @@ export function createSyncHost(
     service.start();
   }
   disposers.push(subscribeToWebDavSyncSettingsChanges((settings) => {
+    currentSettings = settings;
     const wasEnabled = state.settings.enabled;
     state.setSettings(settings);
     if (!settings.enabled && state.pendingConflict !== null) {
@@ -481,7 +530,7 @@ export function createSyncHost(
       if (
         document.visibilityState === "visible"
         && syncStarted
-        && readWebDavSyncSettings().enabled
+        && currentSettings.enabled
       ) {
         void service.syncNow("foreground");
       }
@@ -520,7 +569,7 @@ function createMaintenanceTasks(options: {
   readonly externalSources: readonly SyncAssetSource[];
   readonly getDirectoryTreeReadyKey: () => string | null;
   readonly setDirectoryTreeReadyKey: (key: string) => void;
-}): readonly WebDavSyncMaintenanceTask[] {
+}): readonly SyncMaintenanceTask[] {
   return [
     {
       kind: "directory-maintenance",
@@ -578,7 +627,7 @@ function resolveAdapterTaskKind(
 function createInitialSyncPlan(
   workspace: WorkspaceContract,
   externalSources: readonly SyncAssetSource[],
-): WebDavInitialSyncPlan {
+): SyncInitialPlan {
   // AI-REMOVED 2026-07-29:
   // Reason: documentKey 是每台设备独立生成的本机身份，不能标识跨设备的同一基地。
   // Trigger: 刷新或另一台设备同步时，当前基地被当成 remote-only 后台文档，画布阶段检查的是本机 UUID 空目录。
@@ -640,7 +689,7 @@ function createAdapterFromSource(
   source: SyncAssetSource,
   withRemoteApply: <TValue>(task: () => Promise<TValue>) => Promise<TValue>,
   resolveConflict: ResolveInteractiveConflict,
-): WebDavSyncAdapter {
+): SyncAdapter {
   const sharedOptions = {
     id: source.id,
     indexPath: source.indexPath,
@@ -669,7 +718,7 @@ function createWorldDocumentAdapter(
   workspace: WorkspaceContract,
   resolveConflict: ResolveInteractiveConflict,
   withRemoteApply: <TValue>(task: () => Promise<TValue>) => Promise<TValue>,
-): WebDavSyncAdapter {
+): SyncAdapter {
   return createPatchCollectionWithRevisionAdapter<WorldDocument>({
     id: "world-documents",
     // AI-REMOVED 2026-07-29:
@@ -855,7 +904,7 @@ export function preserveLocalWorldDocumentIdentity(
 }
 
 async function ensureWebDavDirectoryTree(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   externalSources: readonly SyncAssetSource[],
 ): Promise<void> {
   const directoryPaths = new Set([
@@ -927,7 +976,7 @@ function addPathAncestors(paths: Set<string>, filePath: string): void {
 // Human Review: Required
 //
 // Original code:
-// async function registerCurrentDevice(client: WebDavStorageClient): Promise<void> {
+// async function registerCurrentDevice(client: SyncStorageClient): Promise<void> {
 //   const now = new Date().toISOString();
 //   const ownerState = await ensureLocalSyncOwnerState({ now });
 //   const path = `devices/${ownerState.deviceId}.json`;
@@ -943,7 +992,7 @@ function addPathAncestors(paths: Set<string>, filePath: string): void {
 // }
 //
 // async function listRemoteDevices(
-//   client: WebDavStorageClient,
+//   client: SyncStorageClient,
 // ): Promise<SyncRemoteDeviceInfo[]> {
 //   const entries = await client.listDirectory("devices");
 //   const devices = await Promise.all(entries.flatMap((entry) =>
@@ -956,7 +1005,7 @@ function addPathAncestors(paths: Set<string>, filePath: string): void {
 // }
 //
 // async function readRemoteDeviceInfo(
-//   client: WebDavStorageClient,
+//   client: SyncStorageClient,
 //   path: string,
 // ): Promise<SyncRemoteDeviceInfo | null> {
 //   const file = await client.readTextFile(path);

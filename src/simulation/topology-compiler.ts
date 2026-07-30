@@ -886,8 +886,9 @@ function compileSyntheticNodesForUnboundPorts(options: {
     !boundPortGroupIds.has(portGroup.id)
     && (portGroup.direction === "output" || portGroup.direction === "bidirectional"),
   );
-  // AI-CORRECTION 2026-07-27: 管道设备族由 RegistryQuery 编译结果判定，不再依赖 PipeFamily tag。
-  const syntheticSlotCapacity = options.isPipeFamily ? 2 : 1;
+  // AI-CORRECTION 2026-07-30: 回滚 — 管道设备族槽位容量恢复为 1，
+  // 配合 0.5 秒单件配方实现 2/s 最大吞吐。
+  const syntheticSlotCapacity = 1;
 
   if (needsInput) {
     addSyntheticNode({
@@ -989,8 +990,10 @@ function addSyntheticNode(options: {
 // Replacement: compileSyntheticNodesForUnboundPorts 根据 PipeFamily 计算 syntheticSlotCapacity 并传入 addSyntheticNode。
 // Risk: Low - 非 PipeFamily synthetic 槽位仍保持容量 1。
 // Human Review: Required
+// AI-CORRECTION 2026-07-30: 回滚 — 管道恢复 0.5s 单件配方，槽位容量恢复为 1。
+// syntheticSlotCapacity 恢复为固定 1，不区分 PipeFamily。
 //
-// Original code:
+// Original code (restored):
 // capacity: 1,
 
 function compileSlot(options: {

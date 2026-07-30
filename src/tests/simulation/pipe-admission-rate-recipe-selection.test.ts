@@ -10,6 +10,9 @@ import {
 } from "./blueprint-test-helpers";
 
 describe("pipe admission rate-aware recipe selection", () => {
+  // AI-CORRECTION 2026-07-30: 回滚 — 恢复 0.5s(10tick) 单件配方 + 容量 1。
+  // 准入计数在物品离开准入口时递增，而非进入时。
+  // 时序：tick 1 入 → tick 11 出（第一个配方完成）→ tick 21 出（第二个）...
   it("counts only released items and does not prefetch beyond a one-item window allowance", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("pipe-admission-one-item-window", [
@@ -34,6 +37,7 @@ describe("pipe admission rate-aware recipe selection", () => {
       maxTickNumber: 21,
     });
 
+    // tick 1: 1 件入准入（容量 1）
     expect(getTick(report, 1).transfers.filter((transfer) =>
       transfer.sourceSlotId.includes("device:source")
       && transfer.targetSlotId.includes("device:admission"),
@@ -44,10 +48,23 @@ describe("pipe admission rate-aware recipe selection", () => {
         perMinuteLimit: 6,
         rateWindowCount: 0,
       });
-    expect(getTick(report, 21).transfers.filter((transfer) =>
+    // AI-CORRECTION 2026-07-30: 回滚 — 单配方无 -2 后缀。
+    expect(getDevice(report, 1, "admission").channelRecipes.default?.recipeId)
+      .toBe("pipe_admission:dynamic-pipe-transfer");
+    // tick 11: 1 件出准入口（配方 0.5s 完成），准入计数递增，速率额度耗尽
+    expect(getTick(report, 11).transfers.filter((transfer) =>
       transfer.sourceSlotId.includes("device:admission")
       && transfer.targetSlotId.includes("device:sink"),
     )).toHaveLength(1);
+    expect(getTick(report, 11).transfers.filter((transfer) =>
+      transfer.sourceSlotId.includes("device:source")
+      && transfer.targetSlotId.includes("device:admission"),
+    )).toHaveLength(0);
+    // tick 21: 无出无入（速率额度已用尽）
+    expect(getTick(report, 21).transfers.filter((transfer) =>
+      transfer.sourceSlotId.includes("device:admission")
+      && transfer.targetSlotId.includes("device:sink"),
+    )).toHaveLength(0);
     expect(getTick(report, 21).transfers.filter((transfer) =>
       transfer.sourceSlotId.includes("device:source")
       && transfer.targetSlotId.includes("device:admission"),
@@ -64,7 +81,9 @@ describe("pipe admission rate-aware recipe selection", () => {
     )).toBe(0);
   });
 
-  it("selects the one-item recipe when only one item remains in the ten-second allowance", async () => {
+  // AI-CORRECTION 2026-07-30: 回滚 — 单配方下速率窗口按每 0.5s 搬运 1 件累进。
+  // 每 10 tick（0.5s）出 1 件，同时入 1 件。18/min → 每窗口 3 件额度。
+  it("transfers exactly one item per 0.5s tick within the rate allowance", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("pipe-admission-rate-recipe-selection", [
         createEntity("source", "liquid_storager_1", 0, 0, 0, {
@@ -88,6 +107,7 @@ describe("pipe admission rate-aware recipe selection", () => {
       maxTickNumber: 41,
     });
 
+    // tick 1: 2 件预缓冲入准入（bufferedCount=0 < rateRemaining=3，两件均通过速率检查）
     expect(getTick(report, 1).transfers.filter((transfer) =>
       transfer.sourceSlotId.includes("device:source")
       && transfer.targetSlotId.includes("device:admission"),
@@ -99,25 +119,51 @@ describe("pipe admission rate-aware recipe selection", () => {
         rateWindowCount: 0,
       });
     expect(getDevice(report, 1, "admission").channelRecipes.default?.recipeId)
-      .toBe("pipe_admission:dynamic-pipe-transfer-2");
+      .toBe("pipe_admission:dynamic-pipe-transfer");
+    // tick 11: 第 1 件出准入 + 第 2 件入
+    expect(getTick(report, 11).transfers.filter((transfer) =>
+      transfer.sourceSlotId.includes("device:admission")
+      && transfer.targetSlotId.includes("device:sink"),
+    )).toHaveLength(1);
+    expect(getTick(report, 11).transfers.filter((transfer) =>
+      transfer.sourceSlotId.includes("device:source")
+      && transfer.targetSlotId.includes("device:admission"),
+    )).toHaveLength(1);
+    expect(getDevice(report, 11, "admission").admissionCounters?.["fluid_input:in_w"])
+      .toMatchObject({
+        count: 1,
+        perMinuteLimit: 18,
+        rateWindowCount: 1,
+      });
+    // tick 21: 第 2 件出准入，不再入（rateRemaining=1, bufferedCount=1 → 1<1=false）
     expect(getTick(report, 21).transfers.filter((transfer) =>
       transfer.sourceSlotId.includes("device:admission")
       && transfer.targetSlotId.includes("device:sink"),
-    )).toHaveLength(2);
+    )).toHaveLength(1);
+    expect(getTick(report, 21).transfers.filter((transfer) =>
+      transfer.sourceSlotId.includes("device:source")
+      && transfer.targetSlotId.includes("device:admission"),
+    )).toHaveLength(0);
     expect(getDevice(report, 21, "admission").admissionCounters?.["fluid_input:in_w"])
       .toMatchObject({
         count: 2,
         perMinuteLimit: 18,
         rateWindowCount: 2,
       });
-    expect(getDevice(report, 21, "admission").channelRecipes.default?.recipeId)
-      .toBe("pipe_admission:dynamic-pipe-transfer");
-    expect(getDevice(report, 21, "admission").channelRecipes.default?.recipeId)
-      .not.toBe("pipe_admission:dynamic-pipe-transfer-2");
-    expect(getTick(report, 41).transfers.filter((transfer) =>
+    // tick 31: 第 3 件出准入，速率额度用尽，不再入
+    expect(getTick(report, 31).transfers.filter((transfer) =>
       transfer.sourceSlotId.includes("device:admission")
       && transfer.targetSlotId.includes("device:sink"),
     )).toHaveLength(1);
+    expect(getTick(report, 31).transfers.filter((transfer) =>
+      transfer.sourceSlotId.includes("device:source")
+      && transfer.targetSlotId.includes("device:admission"),
+    )).toHaveLength(0);
+    // tick 41: 无剩余物品
+    expect(getTick(report, 41).transfers.filter((transfer) =>
+      transfer.sourceSlotId.includes("device:admission")
+      && transfer.targetSlotId.includes("device:sink"),
+    )).toHaveLength(0);
     expect(getDevice(report, 41, "admission").admissionCounters?.["fluid_input:in_w"])
       .toMatchObject({
         count: 3,

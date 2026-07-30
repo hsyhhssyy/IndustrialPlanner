@@ -1,9 +1,19 @@
 import {
-  readFromLocalStorage,
-  saveToLocalStorage,
+  readFromIndexedDb,
+  saveToIndexedDb,
+  type IndexedDbStorageLocation,
 } from "@/shared/storage/browser-storage";
 
-export const WEBDAV_SYNC_SETTINGS_LOCAL_STORAGE_KEY = "v3-webdav-sync-settings";
+const WEBDAV_SYNC_SETTINGS_DATABASE_NAME = "v3-industrial-planner";
+const WEBDAV_SYNC_SETTINGS_STORE_NAME = "webdav-sync-settings";
+const WEBDAV_SYNC_SETTINGS_KEY = "settings";
+
+const WEBDAV_SYNC_SETTINGS_LOCATION: IndexedDbStorageLocation = {
+  databaseName: WEBDAV_SYNC_SETTINGS_DATABASE_NAME,
+  storeName: WEBDAV_SYNC_SETTINGS_STORE_NAME,
+  key: WEBDAV_SYNC_SETTINGS_KEY,
+};
+
 export const DEFAULT_WEBDAV_MAX_CONCURRENT_REQUESTS = 4;
 export const MIN_WEBDAV_MAX_CONCURRENT_REQUESTS = 1;
 export const MAX_WEBDAV_MAX_CONCURRENT_REQUESTS = 8;
@@ -38,73 +48,20 @@ export function subscribeToWebDavSyncSettingsChanges(
   };
 }
 
-export function readWebDavSyncSettings(): WebDavSyncSettings {
-  return normalizeWebDavSyncSettings(
-    readFromLocalStorage<unknown>(WEBDAV_SYNC_SETTINGS_LOCAL_STORAGE_KEY),
-  );
+export async function readWebDavSyncSettings(): Promise<WebDavSyncSettings> {
+  const raw = await readFromIndexedDb<unknown>(WEBDAV_SYNC_SETTINGS_LOCATION);
+
+  return normalizeWebDavSyncSettings(raw);
 }
 
-export function writeWebDavSyncSettings(settings: WebDavSyncSettings): WebDavSyncSettings {
-  const savedSettings = saveToLocalStorage(
-    WEBDAV_SYNC_SETTINGS_LOCAL_STORAGE_KEY,
-    normalizeWebDavSyncSettings(settings),
-  );
+export async function writeWebDavSyncSettings(
+  settings: WebDavSyncSettings,
+): Promise<WebDavSyncSettings> {
+  const normalized = normalizeWebDavSyncSettings(settings);
+  await saveToIndexedDb(WEBDAV_SYNC_SETTINGS_LOCATION, normalized);
+  emitWebDavSyncSettingsChange(normalized);
 
-  emitWebDavSyncSettingsChange(savedSettings);
-
-  return savedSettings;
-}
-
-export function readWebDavSyncEnabled(): boolean {
-  return readWebDavSyncSettings().enabled;
-}
-
-export function writeWebDavSyncEnabled(enabled: boolean): boolean {
-  writeWebDavSyncSettings({
-    ...readWebDavSyncSettings(),
-    enabled,
-  });
-
-  return enabled;
-}
-
-export function readWebDavSyncUrl(): string {
-  return readWebDavSyncSettings().url;
-}
-
-export function writeWebDavSyncUrl(url: string): string {
-  writeWebDavSyncSettings({
-    ...readWebDavSyncSettings(),
-    url,
-  });
-
-  return url;
-}
-
-export function readWebDavSyncUsername(): string {
-  return readWebDavSyncSettings().username;
-}
-
-export function writeWebDavSyncUsername(username: string): string {
-  writeWebDavSyncSettings({
-    ...readWebDavSyncSettings(),
-    username,
-  });
-
-  return username;
-}
-
-export function readWebDavSyncPassword(): string {
-  return readWebDavSyncSettings().password;
-}
-
-export function writeWebDavSyncPassword(password: string): string {
-  writeWebDavSyncSettings({
-    ...readWebDavSyncSettings(),
-    password,
-  });
-
-  return password;
+  return normalized;
 }
 
 function normalizeWebDavSyncSettings(value: unknown): WebDavSyncSettings {

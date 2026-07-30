@@ -1,4 +1,5 @@
 import { observer } from "mobx-react-lite";
+import { useCallback } from "react";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
@@ -10,6 +11,8 @@ import type {
   SyncTaskKind,
   SyncTaskPhase,
 } from "@/domain/sync";
+import type { WebDavSyncSettings } from "@/sync";
+import { MAX_WEBDAV_MAX_CONCURRENT_REQUESTS, MIN_WEBDAV_MAX_CONCURRENT_REQUESTS } from "@/sync";
 import type { UiKey } from "@/shared/i18n";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -30,6 +33,7 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
   dialogState,
   onClose,
   onToggleMaximized,
+  onUpdateSettings,
   state,
   t,
 }: {
@@ -37,10 +41,40 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
   dialogState: DialogStateReadWrite;
   onClose: () => void;
   onToggleMaximized: () => void;
+  onUpdateSettings: (patch: Partial<WebDavSyncSettings>) => void;
   state: SyncState;
   t: AppHost["actions"]["translate"];
 }) {
   const status = state.status;
+  const settings = state.settings;
+
+  const handleUrlChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onUpdateSettings({ url: e.target.value });
+    },
+    [onUpdateSettings],
+  );
+
+  const handleUsernameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onUpdateSettings({ username: e.target.value });
+    },
+    [onUpdateSettings],
+  );
+
+  const handlePasswordChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onUpdateSettings({ password: e.target.value });
+    },
+    [onUpdateSettings],
+  );
+
+  const handleConcurrentChange = useCallback(
+    (concurrent: number) => {
+      onUpdateSettings({ maxConcurrentRequests: concurrent });
+    },
+    [onUpdateSettings],
+  );
 
   return (
     <DialogShell
@@ -62,6 +96,62 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
         className={cm(styles, "webdav-sync-status-content")}
         data-webdav-sync-status-dialog
       >
+        <section
+          className={cm(styles, "webdav-sync-status-section", "webdav-config-section")}
+        >
+          <h3>{t("webDavConfig.url")}</h3>
+          <p>{t("webDavConfig.urlDescription")}</p>
+          <div className={cm(styles, "webdav-config-form")}>
+            <label className={cm(styles, "webdav-config-field")}>
+              <span>{t("webDavConfig.url")}</span>
+              <input
+                onChange={handleUrlChange}
+                placeholder="https://dav.example.com/remote.php/dav/"
+                type="text"
+                value={settings.url}
+              />
+              <small>{t("webDavConfig.urlDescription")}</small>
+            </label>
+
+            <label className={cm(styles, "webdav-config-field")}>
+              <span>{t("webDavConfig.username")}</span>
+              <input
+                onChange={handleUsernameChange}
+                type="text"
+                value={settings.username}
+              />
+              <small>{t("webDavConfig.usernameDescription")}</small>
+            </label>
+
+            <label className={cm(styles, "webdav-config-field")}>
+              <span>{t("webDavConfig.password")}</span>
+              <input
+                onChange={handlePasswordChange}
+                type="password"
+                value={settings.password}
+              />
+              <small>{t("webDavConfig.passwordDescription")}</small>
+            </label>
+
+            <label className={cm(styles, "webdav-config-field")}>
+              <span>
+                {t("webDavConfig.maxConcurrent")}
+                {": "}
+                {settings.maxConcurrentRequests}
+              </span>
+              <input
+                max={MAX_WEBDAV_MAX_CONCURRENT_REQUESTS}
+                min={MIN_WEBDAV_MAX_CONCURRENT_REQUESTS}
+                onChange={(e) => handleConcurrentChange(Number(e.target.value))}
+                step={1}
+                type="range"
+                value={settings.maxConcurrentRequests}
+              />
+              <small>{t("webDavConfig.maxConcurrentDescription")}</small>
+            </label>
+          </div>
+        </section>
+
         <section className={cm(styles, "webdav-sync-status-section")}>
           <h3>{t("webDavStatus.overview")}</h3>
           <dl className={cm(styles, "webdav-sync-status-summary-grid")}>

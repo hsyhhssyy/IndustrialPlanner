@@ -7,9 +7,9 @@ import type {
   SyncState,
 } from "@/domain/sync";
 import type {
-  WebDavSyncConflict,
-} from "./engine/webdav-sync-adapters";
-import type { WebDavSyncServiceStatus } from "./engine/webdav-sync-service";
+  SyncAdapterConflict,
+} from "./engine/sync-adapters";
+import type { SyncServiceStatus } from "./engine/sync-service";
 
 const EMPTY_SETTINGS: SyncSettings = {
   enabled: false,
@@ -21,7 +21,7 @@ const EMPTY_SETTINGS: SyncSettings = {
 
 export class SyncStateImpl implements SyncState {
   public settings: SyncSettings = EMPTY_SETTINGS;
-  public status: WebDavSyncServiceStatus = {
+  public status: SyncServiceStatus = {
     phase: "idle",
     saveState: "idle",
     initialSyncStage: "ready",
@@ -50,7 +50,7 @@ export class SyncStateImpl implements SyncState {
     }, { autoBind: true });
   }
 
-  public setStatus(status: WebDavSyncServiceStatus): void {
+  public setStatus(status: SyncServiceStatus): void {
     this.status = status;
   }
 
@@ -80,7 +80,7 @@ export class SyncStateImpl implements SyncState {
   }
 
   public requestConflictResolutions(
-    conflicts: readonly WebDavSyncConflict<unknown>[],
+    conflicts: readonly SyncAdapterConflict<unknown>[],
   ): Promise<readonly SyncConflictDecision[]> {
     if (!this.settings.enabled) {
       return Promise.resolve(conflicts.map((conflict) => ({

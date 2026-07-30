@@ -2,6 +2,7 @@ import { makeAutoObservable } from "mobx";
 
 import type { UiKey } from "@/shared/i18n";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
+import { SYNC_PROVIDER_CONFIGS, type SyncProviderId } from "@/sync/sync-providers";
 
 export const USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY = "v3-user-settings-dialog";
 
@@ -497,44 +498,15 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     descriptionKey: "settingsGroup.experimentalDescription" as UiKey,
     items: [
       {
-        id: "experimental-webdav-sync-enabled",
-        kind: "switch",
-        labelKey: "settingsField.experimental-webdav-sync-enabled",
-        descriptionKey: "settingsField.experimental-webdav-sync-enabledDescription",
-        defaultValue: false,
-      },
-      {
-        id: "experimental-webdav-url",
-        kind: "text",
-        labelKey: "settingsField.experimental-webdav-url",
-        descriptionKey: "settingsField.experimental-webdav-urlDescription",
-        defaultValue: "",
-        placeholderText: "https://dav.example.com/remote.php/dav/",
-      },
-      {
-        id: "experimental-webdav-username",
-        kind: "text",
-        labelKey: "settingsField.experimental-webdav-username",
-        descriptionKey: "settingsField.experimental-webdav-usernameDescription",
-        defaultValue: "",
-      },
-      {
-        id: "experimental-webdav-password",
-        kind: "password",
-        labelKey: "settingsField.experimental-webdav-password",
-        descriptionKey: "settingsField.experimental-webdav-passwordDescription",
-        defaultValue: "",
-      },
-      {
-        id: "experimental-webdav-max-concurrent-requests",
-        kind: "slider",
-        labelKey: "settingsField.experimental-webdav-max-concurrent-requests",
-        descriptionKey: "settingsField.experimental-webdav-max-concurrent-requestsDescription",
-        defaultValue: 4,
-        min: 1,
-        max: 8,
-        step: 1,
-        valueSuffix: "",
+        id: "sync-provider",
+        kind: "select",
+        labelKey: "settingsField.sync-provider" as UiKey,
+        descriptionKey: "settingsField.sync-providerDescription" as UiKey,
+        defaultValue: "none" satisfies SyncProviderId,
+        options: SYNC_PROVIDER_CONFIGS.map((c) => ({
+          value: c.id,
+          labelKey: c.labelKey,
+        })),
       },
       {
         id: "experimental-virtual-mouse-pointer",

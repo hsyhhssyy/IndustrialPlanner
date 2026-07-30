@@ -410,6 +410,20 @@ function expandMainChain(
       });
       state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
       currentRow++;
+    } else if (state.itemNodes.get(secInput.itemId)?.recipeNode === null) {
+      // 外部供给或已完全满足 → 终端节点，不展开
+      state.nodes.push({
+        itemId: secInput.itemId,
+        col: mainCol,
+        row: currentRow,
+        type: "natural",
+        iconSrc: secIconSrc,
+        name: secName,
+        amount: secInput.amount,
+        expandedRecipeId: null,
+      });
+      state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
+      currentRow++;
     } else if (state.expandedItemIds.has(secInput.itemId)) {
       // Already expanded → expand further (show as expanded with the recipe)
       const secRecipe = resolveRecipe(secInput.itemId, state);

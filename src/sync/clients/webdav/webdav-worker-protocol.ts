@@ -1,8 +1,8 @@
 import type {
-  WebDavClientOptions,
-  WebDavReadOptions,
-  WebDavWriteOptions,
-} from "./webdav-client";
+  SyncClientOptions,
+  SyncReadOptions,
+  SyncWriteOptions,
+} from "../types";
 
 export type WebDavWorkerOperation =
   | {
@@ -24,13 +24,13 @@ export type WebDavWorkerOperation =
   | {
     readonly type: "read-text-file";
     readonly relativePath: string;
-    readonly options: WebDavReadOptions;
+    readonly options: SyncReadOptions;
   }
   | {
     readonly type: "write-text-file";
     readonly relativePath: string;
     readonly content: string;
-    readonly options: WebDavWriteOptions;
+    readonly options: SyncWriteOptions;
   }
   | {
     readonly type: "delete-resource";
@@ -39,7 +39,7 @@ export type WebDavWorkerOperation =
 
 export interface WebDavWorkerRequest {
   readonly requestId: number;
-  readonly clientOptions: WebDavClientOptions;
+  readonly clientOptions: SyncClientOptions;
   readonly debugEnabled: boolean;
   readonly operation: WebDavWorkerOperation;
 }

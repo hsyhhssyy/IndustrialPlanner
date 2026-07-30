@@ -1,9 +1,9 @@
 import { createStableJsonHash } from "@/shared/storage/sync-shadow-storage";
 import { createLogger } from "@/shared/logging/logger";
 import type {
-  WebDavStorageClient,
-  WebDavWriteOptions,
-} from "../webdav";
+  SyncStorageClient,
+  SyncWriteOptions,
+} from "../clients/types";
 import {
   applyJsonPatch,
   generateJsonPatch,
@@ -21,18 +21,18 @@ import {
 
 const logger = createLogger("webdav-adapter");
 
-export type WebDavSyncMode = "patch-with-revision" | "full-with-revision" | "full-no-revision";
-export type WebDavConflictResolution = "use-local" | "use-remote" | "pause";
-export type WebDavSyncAdapterStatus = "idle" | "uploaded" | "downloaded" | "conflict" | "skipped";
+export type SyncAdapterMode = "patch-with-revision" | "full-with-revision" | "full-no-revision";
+export type SyncAdapterConflictResolution = "use-local" | "use-remote" | "pause";
+export type SyncAdapterStatus = "idle" | "uploaded" | "downloaded" | "conflict" | "skipped";
 
-export interface WebDavSyncAdapterResult {
+export interface SyncAdapterResult {
   readonly adapterId: string;
-  readonly mode: WebDavSyncMode;
-  readonly status: WebDavSyncAdapterStatus;
+  readonly mode: SyncAdapterMode;
+  readonly status: SyncAdapterStatus;
   readonly changedAssetIds: readonly string[];
 }
 
-export interface WebDavSyncConflict<TValue> {
+export interface SyncAdapterConflict<TValue> {
   readonly adapterId: string;
   readonly assetId: string;
   readonly localValue: TValue;
@@ -43,34 +43,34 @@ export interface WebDavSyncConflict<TValue> {
   readonly remoteUpdatedAt: string | null;
 }
 
-export interface WebDavSyncConflictDecision {
+export interface SyncAdapterConflictDecision {
   readonly adapterId: string;
   readonly assetId: string;
   readonly localHash: string;
   readonly remoteHash: string | null;
   readonly remoteDeletedAt: string | null;
-  readonly resolution: WebDavConflictResolution;
+  readonly resolution: SyncAdapterConflictResolution;
 }
 
-export interface WebDavSyncAdapter {
+export interface SyncAdapter {
   readonly id: string;
-  readonly mode: WebDavSyncMode;
+  readonly mode: SyncAdapterMode;
   readonly checkPath: string | null;
   sync(
-    client: WebDavStorageClient,
-    scope?: WebDavSyncAdapterScope,
-  ): Promise<WebDavSyncAdapterResult>;
+    client: SyncStorageClient,
+    scope?: SyncAdapterScope,
+  ): Promise<SyncAdapterResult>;
   inspectConflicts?(
-    client: WebDavStorageClient,
-    scope?: WebDavSyncAdapterScope,
-  ): Promise<readonly WebDavSyncConflict<unknown>[]>;
+    client: SyncStorageClient,
+    scope?: SyncAdapterScope,
+  ): Promise<readonly SyncAdapterConflict<unknown>[]>;
 }
 
-export interface WebDavSyncAdapterScope {
+export interface SyncAdapterScope {
   readonly includeAssetIds?: readonly string[];
   readonly excludeAssetIds?: readonly string[];
   readonly onProgress?: (progress: number) => void;
-  readonly conflictDecisions?: readonly WebDavSyncConflictDecision[];
+  readonly conflictDecisions?: readonly SyncAdapterConflictDecision[];
 }
 
 export interface FullNoRevisionAdapterOptions<TValue> {
@@ -79,7 +79,7 @@ export interface FullNoRevisionAdapterOptions<TValue> {
   readonly readLocal: () => Promise<TValue | null>;
   readonly writeLocal: (value: TValue) => Promise<void>;
   readonly normalizeRemote?: (value: unknown) => TValue | null;
-  readonly resolveConflict?: (conflict: WebDavSyncConflict<TValue>) => Promise<WebDavConflictResolution> | WebDavConflictResolution;
+  readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
 }
 
 export interface FullWithRevisionEntry<TValue> {
@@ -93,11 +93,11 @@ export interface FullWithRevisionAdapterOptions<TValue> {
   readonly indexPath: string;
   readonly entryPath: (entryId: string) => string;
   readonly listLocal: (
-    scope?: WebDavSyncAdapterScope,
+    scope?: SyncAdapterScope,
   ) => Promise<readonly FullWithRevisionEntry<TValue>[]>;
   readonly writeLocal: (entry: FullWithRevisionEntry<TValue>) => Promise<void>;
   readonly normalizeRemote?: (value: unknown) => TValue | null;
-  readonly resolveConflict?: (conflict: WebDavSyncConflict<TValue>) => Promise<WebDavConflictResolution> | WebDavConflictResolution;
+  readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
 }
 
 export interface PatchWithRevisionAdapterOptions<TValue> {
@@ -107,7 +107,7 @@ export interface PatchWithRevisionAdapterOptions<TValue> {
   readonly writeLocal: (value: TValue) => Promise<void>;
   readonly normalizeRemote?: (value: unknown) => TValue | null;
   readonly deltaThreshold?: number;
-  readonly resolveConflict?: (conflict: WebDavSyncConflict<TValue>) => Promise<WebDavConflictResolution> | WebDavConflictResolution;
+  readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
 }
 
 export interface PatchWithRevisionEntry<TValue> {
@@ -121,12 +121,12 @@ export interface PatchCollectionWithRevisionAdapterOptions<TValue> {
   readonly indexPath: string;
   readonly directoryPath: (entryId: string) => string;
   readonly listLocal: (
-    scope?: WebDavSyncAdapterScope,
+    scope?: SyncAdapterScope,
   ) => Promise<readonly PatchWithRevisionEntry<TValue>[]>;
   readonly writeLocal: (entry: PatchWithRevisionEntry<TValue>) => Promise<void>;
   readonly normalizeRemote?: (value: unknown) => TValue | null;
   readonly deltaThreshold?: number;
-  readonly resolveConflict?: (conflict: WebDavSyncConflict<TValue>) => Promise<WebDavConflictResolution> | WebDavConflictResolution;
+  readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
 }
 
 interface RemoteIndexFile {
@@ -165,7 +165,7 @@ interface RemotePatchMetaState {
 
 export function createFullNoRevisionAdapter<TValue>(
   options: FullNoRevisionAdapterOptions<TValue>,
-): WebDavSyncAdapter {
+): SyncAdapter {
   return {
     id: options.id,
     mode: "full-no-revision",
@@ -182,7 +182,7 @@ export function createFullNoRevisionAdapter<TValue>(
 
 export function createFullWithRevisionAdapter<TValue>(
   options: FullWithRevisionAdapterOptions<TValue>,
-): WebDavSyncAdapter {
+): SyncAdapter {
   return {
     id: options.id,
     mode: "full-with-revision",
@@ -195,7 +195,7 @@ export function createFullWithRevisionAdapter<TValue>(
 
 export function createPatchWithRevisionAdapter<TValue>(
   options: PatchWithRevisionAdapterOptions<TValue>,
-): WebDavSyncAdapter {
+): SyncAdapter {
   return {
     id: options.id,
     mode: "patch-with-revision",
@@ -212,7 +212,7 @@ export function createPatchWithRevisionAdapter<TValue>(
 
 export function createPatchCollectionWithRevisionAdapter<TValue>(
   options: PatchCollectionWithRevisionAdapterOptions<TValue>,
-): WebDavSyncAdapter {
+): SyncAdapter {
   return {
     id: options.id,
     mode: "patch-with-revision",
@@ -228,10 +228,10 @@ export function createPatchCollectionWithRevisionAdapter<TValue>(
 }
 
 async function inspectFullNoRevisionConflicts<TValue>(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   options: FullNoRevisionAdapterOptions<TValue>,
-  scope?: WebDavSyncAdapterScope,
-): Promise<readonly WebDavSyncConflict<TValue>[]> {
+  scope?: SyncAdapterScope,
+): Promise<readonly SyncAdapterConflict<TValue>[]> {
   if (!isAssetIncludedInScope("single", scope)) {
     return [];
   }
@@ -258,10 +258,10 @@ async function inspectFullNoRevisionConflicts<TValue>(
 }
 
 async function inspectFullWithRevisionConflicts<TValue>(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   options: FullWithRevisionAdapterOptions<TValue>,
-  scope?: WebDavSyncAdapterScope,
-): Promise<readonly WebDavSyncConflict<TValue>[]> {
+  scope?: SyncAdapterScope,
+): Promise<readonly SyncAdapterConflict<TValue>[]> {
   const [localEntries, remoteIndexState] = await Promise.all([
     options.listLocal(scope),
     readRemoteIndexState(client, options.indexPath),
@@ -294,10 +294,10 @@ async function inspectFullWithRevisionConflicts<TValue>(
 }
 
 async function inspectPatchWithRevisionConflicts<TValue>(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   options: PatchWithRevisionAdapterOptions<TValue>,
-  scope?: WebDavSyncAdapterScope,
-): Promise<readonly WebDavSyncConflict<TValue>[]> {
+  scope?: SyncAdapterScope,
+): Promise<readonly SyncAdapterConflict<TValue>[]> {
   if (!isAssetIncludedInScope("snapshot", scope)) {
     return [];
   }
@@ -326,10 +326,10 @@ async function inspectPatchWithRevisionConflicts<TValue>(
 }
 
 async function inspectPatchCollectionWithRevisionConflicts<TValue>(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   options: PatchCollectionWithRevisionAdapterOptions<TValue>,
-  scope?: WebDavSyncAdapterScope,
-): Promise<readonly WebDavSyncConflict<TValue>[]> {
+  scope?: SyncAdapterScope,
+): Promise<readonly SyncAdapterConflict<TValue>[]> {
   const [localEntries, remoteIndexState] = await Promise.all([
     options.listLocal(scope),
     readRemoteIndexState(client, options.indexPath),
@@ -373,7 +373,7 @@ function inspectCollectionConflicts<TValue>(options: {
   readonly remoteIndexState: RemoteIndexState;
   readonly readRemoteValue: (entryId: string) => TValue | null;
   readonly readRemoteUpdatedAt: (entryId: string) => string | null;
-}): readonly WebDavSyncConflict<TValue>[] {
+}): readonly SyncAdapterConflict<TValue>[] {
   return options.localEntries.flatMap((localEntry) => {
     const remoteEntry =
       options.remoteIndexState.index.entries[localEntry.id] ?? null;
@@ -453,7 +453,7 @@ function createValueConflict<TValue>(options: {
   readonly lastSyncedHash: string | null;
   readonly remoteDeletedAt: string | null;
   readonly remoteUpdatedAt: string | null;
-}): WebDavSyncConflict<TValue> | null {
+}): SyncAdapterConflict<TValue> | null {
   if (options.localValue === null || options.remoteValue === null) {
     return null;
   }
@@ -481,15 +481,15 @@ function createValueConflict<TValue>(options: {
 }
 
 function createScopedConflictResolver<TValue>(
-  scope: WebDavSyncAdapterScope | undefined,
+  scope: SyncAdapterScope | undefined,
   fallback:
     | ((
-      conflict: WebDavSyncConflict<TValue>,
-    ) => Promise<WebDavConflictResolution> | WebDavConflictResolution)
+      conflict: SyncAdapterConflict<TValue>,
+    ) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution)
     | undefined,
 ): (
-  conflict: WebDavSyncConflict<TValue>,
-) => Promise<WebDavConflictResolution> | WebDavConflictResolution {
+  conflict: SyncAdapterConflict<TValue>,
+) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution {
   return (conflict) => {
     if (scope?.conflictDecisions !== undefined) {
       const decision = scope.conflictDecisions.find((candidate) =>
@@ -508,10 +508,10 @@ function createScopedConflictResolver<TValue>(
 }
 
 async function syncFullNoRevision<TValue>(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   options: FullNoRevisionAdapterOptions<TValue>,
-  scope?: WebDavSyncAdapterScope,
-): Promise<WebDavSyncAdapterResult> {
+  scope?: SyncAdapterScope,
+): Promise<SyncAdapterResult> {
   const assetKey = `${options.id}:single`;
   const localValue = await options.readLocal();
   const remoteFile = await readRemoteJsonFile(
@@ -555,10 +555,10 @@ async function syncFullNoRevision<TValue>(
 }
 
 async function syncFullWithRevision<TValue>(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   options: FullWithRevisionAdapterOptions<TValue>,
-  scope?: WebDavSyncAdapterScope,
-): Promise<WebDavSyncAdapterResult> {
+  scope?: SyncAdapterScope,
+): Promise<SyncAdapterResult> {
   const localEntries = (await options.listLocal(scope)).filter((entry) =>
     isAssetIncludedInScope(entry.id, scope),
   );
@@ -580,7 +580,7 @@ async function syncFullWithRevision<TValue>(
   const remoteIndex = remoteIndexState.index;
   const changedAssetIds: string[] = [];
   let nextIndex = remoteIndex;
-  let status: WebDavSyncAdapterStatus = "idle";
+  let status: SyncAdapterStatus = "idle";
   const remoteValuesByLocalId = new Map(await Promise.all(localEntries.flatMap((entry) => {
     const remoteEntry = remoteIndex.entries[entry.id];
     if (
@@ -901,10 +901,10 @@ async function syncFullWithRevision<TValue>(
 }
 
 async function syncPatchWithRevision<TValue>(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   options: PatchWithRevisionAdapterOptions<TValue>,
-  scope?: WebDavSyncAdapterScope,
-): Promise<WebDavSyncAdapterResult> {
+  scope?: SyncAdapterScope,
+): Promise<SyncAdapterResult> {
   const assetKey = `${options.id}:snapshot`;
   const localValue = await options.readLocal();
   const remoteState = await readRemotePatchState(client, options.directoryPath, options.normalizeRemote);
@@ -949,10 +949,10 @@ async function syncPatchWithRevision<TValue>(
 }
 
 async function syncPatchCollectionWithRevision<TValue>(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   options: PatchCollectionWithRevisionAdapterOptions<TValue>,
-  scope?: WebDavSyncAdapterScope,
-): Promise<WebDavSyncAdapterResult> {
+  scope?: SyncAdapterScope,
+): Promise<SyncAdapterResult> {
   reportSyncProgress(scope, 0);
   const localEntries = (await options.listLocal(scope)).filter((entry) =>
     isAssetIncludedInScope(entry.id, scope),
@@ -978,7 +978,7 @@ async function syncPatchCollectionWithRevision<TValue>(
   const remoteIndex = remoteIndexState.index;
   const changedAssetIds: string[] = [];
   let nextIndex = remoteIndex;
-  let status: WebDavSyncAdapterStatus = "idle";
+  let status: SyncAdapterStatus = "idle";
   const remoteStatesByLocalId = new Map(await Promise.all(localEntries.flatMap((entry) => {
     const remoteEntry = remoteIndex.entries[entry.id];
     if (
@@ -1366,7 +1366,7 @@ async function syncPatchCollectionWithRevision<TValue>(
 
 function isAssetIncludedInScope(
   assetId: string,
-  scope: WebDavSyncAdapterScope | undefined,
+  scope: SyncAdapterScope | undefined,
 ): boolean {
   if (
     scope?.includeAssetIds !== undefined
@@ -1379,7 +1379,7 @@ function isAssetIncludedInScope(
 }
 
 function reportSyncProgress(
-  scope: WebDavSyncAdapterScope | undefined,
+  scope: SyncAdapterScope | undefined,
   progress: number,
 ): void {
   scope?.onProgress?.(Math.min(100, Math.max(0, progress)));
@@ -1387,7 +1387,7 @@ function reportSyncProgress(
 
 async function isRemoteIndexUnchangedForCleanLocalEntries<TValue>(options: {
   readonly adapterId: string;
-  readonly client: WebDavStorageClient;
+  readonly client: SyncStorageClient;
   readonly indexPath: string;
   readonly localEntries: readonly {
     readonly id: string;
@@ -1445,9 +1445,9 @@ async function resolveCollectionConflict<TValue>(options: {
   readonly remoteDeletedAt: string | null;
   readonly remoteUpdatedAt: string | null;
   readonly resolveConflict?: (
-    conflict: WebDavSyncConflict<TValue>,
-  ) => Promise<WebDavConflictResolution> | WebDavConflictResolution;
-}): Promise<WebDavConflictResolution> {
+    conflict: SyncAdapterConflict<TValue>,
+  ) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
+}): Promise<SyncAdapterConflictResolution> {
   const resolution = await (options.resolveConflict?.({
     adapterId: options.adapterId,
     assetId: options.assetId,
@@ -1476,8 +1476,8 @@ async function syncSingleValue<TValue>(options: {
   readonly writeLastSyncedHash: (contentHash: string) => void;
   readonly writeLocal: (value: TValue) => Promise<void>;
   readonly writeRemote: (value: TValue) => Promise<void>;
-  readonly resolveConflict?: (conflict: WebDavSyncConflict<TValue>) => Promise<WebDavConflictResolution> | WebDavConflictResolution;
-}): Promise<WebDavSyncAdapterStatus> {
+  readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
+}): Promise<SyncAdapterStatus> {
   if (options.localValue === null && options.remoteValue === null) {
     return "idle";
   }
@@ -1553,7 +1553,7 @@ async function syncSingleValue<TValue>(options: {
 }
 
 async function readRemoteJson<TValue>(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   remotePath: string,
   normalizeRemote: ((value: unknown) => TValue | null) | undefined,
 ): Promise<TValue | null> {
@@ -1565,7 +1565,7 @@ async function readRemoteJson<TValue>(
 }
 
 async function readRemoteJsonFile<TValue>(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   remotePath: string,
   normalizeRemote: ((value: unknown) => TValue | null) | undefined,
 ): Promise<{
@@ -1597,7 +1597,7 @@ async function readRemoteJsonFile<TValue>(
 }
 
 async function readRemoteIndexState(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   indexPath: string,
 ): Promise<RemoteIndexState> {
   const lastSeenRevision = readWebDavLastSeenRemoteRevision(indexPath);
@@ -1712,7 +1712,7 @@ async function readRemoteIndexState(
 }
 
 async function writeRemoteIndex(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   indexPath: string,
   index: RemoteIndexFile,
   expectedRevision: number,
@@ -1789,7 +1789,7 @@ function upsertRemoteIndexEntry(
 }
 
 async function readRemotePatchState<TValue>(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   directoryPath: string,
   normalizeRemote: ((value: unknown) => TValue | null) | undefined,
 ): Promise<{
@@ -1878,7 +1878,7 @@ async function readRemotePatchState<TValue>(
 }
 
 async function readRemotePatchMetaState(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   directoryPath: string,
 ): Promise<RemotePatchMetaState | null> {
   const metaPath = resolvePath(directoryPath, "meta.json");
@@ -2013,11 +2013,11 @@ function normalizeRemotePatchMeta(value: unknown): RemotePatchMetaFile | null {
 
 interface WriteRemotePatchContentResult {
   readonly nextMeta: RemotePatchMetaFile;
-  readonly metaWriteOptions: WebDavWriteOptions;
+  readonly metaWriteOptions: SyncWriteOptions;
 }
 
 async function writeRemotePatchContent<TValue>(options: {
-  readonly client: WebDavStorageClient;
+  readonly client: SyncStorageClient;
   readonly directoryPath: string;
   readonly value: TValue;
   readonly previousState: { readonly meta: RemotePatchMetaFile; readonly value: TValue; readonly etag: string | null; readonly canonicalMissing: boolean } | null;
@@ -2073,7 +2073,7 @@ async function writeRemotePatchContent<TValue>(options: {
 }
 
 async function writeRemotePatchState<TValue>(options: {
-  readonly client: WebDavStorageClient;
+  readonly client: SyncStorageClient;
   readonly directoryPath: string;
   readonly value: TValue;
   readonly previousState: { readonly meta: RemotePatchMetaFile; readonly value: TValue; readonly etag: string | null; readonly canonicalMissing: boolean } | null;
@@ -2083,7 +2083,7 @@ async function writeRemotePatchState<TValue>(options: {
   await writeRemotePatchMeta(options.client, options.directoryPath, nextMeta, metaWriteOptions);
 }
 
-function createAtomicWriteOptions(canonicalMissing: boolean): WebDavWriteOptions {
+function createAtomicWriteOptions(canonicalMissing: boolean): SyncWriteOptions {
   return canonicalMissing ? {} : { ifNoneMatch: "*" };
 }
 
@@ -2097,10 +2097,10 @@ function createAtomicWriteOptions(canonicalMissing: boolean): WebDavWriteOptions
 //
 // Original code:
 // async function resolveLatestMetaWriteOptions(
-//   client: WebDavStorageClient,
+//   client: SyncStorageClient,
 //   directoryPath: string,
 //   expectedMeta: RemotePatchMetaFile,
-// ): Promise<WebDavWriteOptions> {
+// ): Promise<SyncWriteOptions> {
 //   const latestMetaState = await readRemotePatchMetaState(client, directoryPath);
 //   if (latestMetaState === null) {
 //     return createAtomicWriteOptions(true);
@@ -2118,10 +2118,10 @@ function createAtomicWriteOptions(canonicalMissing: boolean): WebDavWriteOptions
 // }
 
 async function writeRemotePatchMeta(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   directoryPath: string,
   meta: RemotePatchMetaFile,
-  writeOptions: WebDavWriteOptions,
+  writeOptions: SyncWriteOptions,
 ): Promise<void> {
   const metaPath = resolvePath(directoryPath, "meta.json");
   await writeRevisionJournalState(
@@ -2155,7 +2155,7 @@ async function writeRemotePatchMeta(
 // }
 
 async function readLatestRevisionJournalState<TValue extends { readonly revision: number }>(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   canonicalPath: string,
   normalize: (value: unknown) => TValue | null,
 ): Promise<{
@@ -2215,7 +2215,7 @@ async function readLatestRevisionJournalState<TValue extends { readonly revision
 //
 // Original code:
 // async function readSpecificRevisionJournalState<TValue extends { readonly revision: number }>(
-//   client: WebDavStorageClient,
+//   client: SyncStorageClient,
 //   canonicalPath: string,
 //   revision: number,
 //   normalize: (value: unknown) => TValue | null,
@@ -2243,10 +2243,10 @@ async function readLatestRevisionJournalState<TValue extends { readonly revision
 // }
 
 async function writeRevisionJournalState<TValue extends { readonly revision: number }>(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   canonicalPath: string,
   value: TValue,
-  writeOptions: WebDavWriteOptions = { ifNoneMatch: "*" },
+  writeOptions: SyncWriteOptions = { ifNoneMatch: "*" },
 ): Promise<void> {
   const revisionDirectoryPath = resolveRevisionDirectoryPath(canonicalPath);
   await client.makeDirectory(revisionDirectoryPath);
@@ -2292,7 +2292,7 @@ function resolvePath(directoryPath: string, fileName: string): string {
 }
 
 async function ensureRemoteParentDirectory(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   remotePath: string,
 ): Promise<void> {
   const slashIndex = remotePath.lastIndexOf("/");
@@ -2312,9 +2312,9 @@ function normalizeJsonPatchOperations(value: unknown): JsonPatchOperation[] | nu
 }
 
 function mergeStatus(
-  current: WebDavSyncAdapterStatus,
-  next: WebDavSyncAdapterStatus,
-): WebDavSyncAdapterStatus {
+  current: SyncAdapterStatus,
+  next: SyncAdapterStatus,
+): SyncAdapterStatus {
   if (current === "conflict" || next === "conflict") {
     return "conflict";
   }

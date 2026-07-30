@@ -178,7 +178,8 @@ function collectAllProcessExpandableItemIds(plan: ProductionPlanningResult): str
       // inputs[0] 是主原料，inputs[1:] 是可在工序图中展开的二级输入
       for (let i = 1; i < inputs.length; i++) {
         const inputItemId = inputs[i]!.itemId;
-        if (inputItemId.length > 0) {
+        // 外部供给的物品 recipeNode 为 null，不需要展开
+        if (inputItemId.length > 0 && recipeNode.inputItems[i]?.recipeNode !== null) {
           expandableIds.add(inputItemId);
         }
       }
@@ -513,6 +514,12 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
         sourceConfig: current.sourceConfig,
       }, index);
 
+      // 工序图重新收集可展开项（外部供给的物品不再展开）
+      const nextExpandedItems = collectAllProcessExpandableItemIds(nextPlan);
+      runInAction(() => {
+        store.session = { ...store.session, processExpandedItems: nextExpandedItems };
+      });
+
       return {
         ...current,
         supplies: nextSupplies,
@@ -538,6 +545,12 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
         recipeChoices: new Map(Object.entries(current.recipeChoices)),
         sourceConfig: current.sourceConfig,
       }, index);
+
+      // 工序图重新收集可展开项（移除外部供给后可能恢复展开）
+      const nextExpandedItems = collectAllProcessExpandableItemIds(nextPlan);
+      runInAction(() => {
+        store.session = { ...store.session, processExpandedItems: nextExpandedItems };
+      });
 
       return {
         ...current,
@@ -3217,7 +3230,8 @@ function resolveProductionPlanningLogisticsThroughput(kind: LogisticsKind): numb
   const secondsPerCell = kind === LOGISTICS_KIND.pipe
     ? PIPE_TRANSPORT_DURATION_SECONDS
     : BELT_TRANSPORT_DURATION_SECONDS;
-  const itemsPerCycle = kind === LOGISTICS_KIND.pipe ? 2 : 1;
+  // AI-CORRECTION 2026-07-30: 回滚 — 单件配方下 itemsPerCycle 恢复为 1。
+  const itemsPerCycle = 1;
   return (60 * itemsPerCycle) / secondsPerCell;
 }
 
@@ -3229,6 +3243,8 @@ Evidence: PIPE_TRANSPORT_DURATION_SECONDS=1，管道高优先级配方每周期�
 Replacement: resolveProductionPlanningLogisticsThroughput 按物流类型乘以 itemsPerCycle。
 Risk: Low；只修正规划界面的管道吞吐展示与数量估算。
 Human Review: Required
+// AI-CORRECTION 2026-07-30: 回滚 — 恢复 PIPE_TRANSPORT_DURATION_SECONDS=0.5 + 单件配方。
+// itemsPerCycle 恢复为 1，吞吐 = 60 * 1 / 0.5 = 120/min。
 
 Original code:
 return 60 / secondsPerCell;

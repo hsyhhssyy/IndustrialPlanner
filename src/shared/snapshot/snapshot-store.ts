@@ -46,6 +46,8 @@ export function createSnapshotStore<TSnapshot>(
     },
     subscribe: (listener) => {
       listeners.add(listener);
+      // BehaviorSubject 语义：立即用当前值回调新订阅者，消除时序竞态。
+      listener(snapshot);
 
       return () => {
         listeners.delete(listener);

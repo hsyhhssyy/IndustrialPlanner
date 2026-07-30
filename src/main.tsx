@@ -37,7 +37,7 @@ if (import.meta.env.DEV) {
   window.__industrialPlannerAppHost = appHost;
 }
 createEditorHost(workspace);
-createSyncHost(workspace, {
+await createSyncHost(workspace, {
   assetSources: createModuleBalancingSyncSources(appHost),
   readDebugEnabled: () => appHost.state.settings.debugMode,
 });

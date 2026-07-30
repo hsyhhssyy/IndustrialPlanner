@@ -102,7 +102,7 @@ export function createEditorHost(
 }
 
 function hookPlacementValidation(editorHost: EditorHost): () => void {
-  const syncPlacementValidation = (document: WorldDocument): void => {
+  return editorHost.internalDocument.subscribe((document) => {
     runInAction(() => {
       syncPlacementValidationState({
         document,
@@ -110,15 +110,11 @@ function hookPlacementValidation(editorHost: EditorHost): () => void {
         workspace: editorHost.workspace,
       });
     });
-  };
-
-  syncPlacementValidation(editorHost.internalDocument.getSnapshot());
-
-  return editorHost.internalDocument.subscribe(syncPlacementValidation);
+  });
 }
 
 function hookPoweredCollection(editorHost: EditorHost): () => void {
-  const syncPowered = (document: WorldDocument): void => {
+  return editorHost.internalDocument.subscribe((document) => {
     runInAction(() => {
       syncPoweredEntityCollection({
         document,
@@ -126,34 +122,26 @@ function hookPoweredCollection(editorHost: EditorHost): () => void {
         workspace: editorHost.workspace,
       });
     });
-  };
-
-  syncPowered(editorHost.internalDocument.getSnapshot());
-
-  return editorHost.internalDocument.subscribe(syncPowered);
+  });
 }
 
 function hookDocumentHistory(editorHost: EditorHost): () => void {
   let documentKey: string | null = null;
 
-  const loadHistoryForDocument = (document: WorldDocument): void => {
+  return editorHost.internalDocument.subscribe((document) => {
     if (documentKey === document.documentKey) {
       return;
     }
 
     documentKey = document.documentKey;
     editorHost.internalHistory.loadDocumentHistory(document.documentKey);
-  };
-
-  loadHistoryForDocument(editorHost.internalDocument.getSnapshot());
-
-  return editorHost.internalDocument.subscribe(loadHistoryForDocument);
+  });
 }
 
 function hookDocumentViewport(editorHost: EditorHost): () => void {
   let documentKey: string | null = null;
 
-  const loadViewportForDocument = (document: WorldDocument): void => {
+  return editorHost.internalDocument.subscribe((document) => {
     if (documentKey === document.documentKey) {
       return;
     }
@@ -166,9 +154,5 @@ function hookDocumentViewport(editorHost: EditorHost): () => void {
         workspace: editorHost.workspace,
       });
     });
-  };
-
-  loadViewportForDocument(editorHost.internalDocument.getSnapshot());
-
-  return editorHost.internalDocument.subscribe(loadViewportForDocument);
+  });
 }

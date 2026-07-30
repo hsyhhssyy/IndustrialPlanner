@@ -368,7 +368,7 @@ describe("webdav-sync-service", () => {
 
     expect(onConflictDiscoveryStart).toHaveBeenCalledTimes(1);
     expect(status.phase).toBe("error");
-    expect(status.lastError).toBe("WebDAV sync conflict");
+    expect(status.lastError).toBe("Sync conflict");
   });
 
   it("discovers conflicts across all adapters and applies one batch of per-item decisions", async () => {

@@ -74,6 +74,7 @@ describe("WebDavSyncStatusDialog", () => {
             dialogState={dialogState}
             onClose={vi.fn()}
             onToggleMaximized={vi.fn()}
+            onUpdateSettings={vi.fn()}
             state={state}
             t={(key) => key}
           />

@@ -49,6 +49,7 @@ import { V2MigrationController } from "@/app/migration";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
 import { RightDock } from "@/app/shell/layout/right-dock";
 import { SimulationControlButton, TimelineButton, TopBar } from "@/app/shell/layout/top-bar";
+import { SYNC_PROVIDER_STORAGE_KEY } from "@/sync/sync-providers";
 import {
   WebDavInitialSyncFeatureGate,
   WebDavInitialSyncGate,
@@ -371,6 +372,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.collapseDeviceModes = value;
         }),
       },
+      "game-show-pipe-exact-fluid-position": {
+        readValue: () => appHost.state.settings.gameShowPipeExactFluidPosition,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.gameShowPipeExactFluidPosition === value) {
+            return;
+          }
+
+          appHost.internalState.settings.gameShowPipeExactFluidPosition = value;
+        }),
+      },
       "game-show-device-names": {
         readValue: () => appHost.state.settings.gameShowDeviceNames,
         writeValue: action((value) => {
@@ -579,48 +594,24 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.virtualMousePointer = value;
         }),
       },
-      "experimental-webdav-sync-enabled": {
-        readValue: () => appHost.workspace.sync?.state.settings.enabled ?? false,
-        writeValue: (value) => {
-          if (typeof value === "boolean") {
-            appHost.workspace.sync?.actions.updateSettings({ enabled: value });
+      "sync-provider": {
+        readValue: () => {
+          try {
+            return localStorage.getItem(SYNC_PROVIDER_STORAGE_KEY) ?? "none";
+          } catch {
+            return "none";
           }
         },
-      },
-      "experimental-webdav-url": {
-        readValue: () => appHost.workspace.sync?.state.settings.url ?? "",
-        writeValue: (value) => {
-          if (typeof value === "string") {
-            appHost.workspace.sync?.actions.updateSettings({ url: value });
+        writeValue: action((value) => {
+          const id = typeof value === "string" ? value : "none";
+          try {
+            localStorage.setItem(SYNC_PROVIDER_STORAGE_KEY, id);
+          } catch {
+            // 静默失败；sync-host 下次读取时回退到默认值
           }
-        },
-      },
-      "experimental-webdav-username": {
-        readValue: () => appHost.workspace.sync?.state.settings.username ?? "",
-        writeValue: (value) => {
-          if (typeof value === "string") {
-            appHost.workspace.sync?.actions.updateSettings({ username: value });
-          }
-        },
-      },
-      "experimental-webdav-password": {
-        readValue: () => appHost.workspace.sync?.state.settings.password ?? "",
-        writeValue: (value) => {
-          if (typeof value === "string") {
-            appHost.workspace.sync?.actions.updateSettings({ password: value });
-          }
-        },
-      },
-      "experimental-webdav-max-concurrent-requests": {
-        readValue: () =>
-          appHost.workspace.sync?.state.settings.maxConcurrentRequests ?? 4,
-        writeValue: (value) => {
-          if (typeof value === "number") {
-            appHost.workspace.sync?.actions.updateSettings({
-              maxConcurrentRequests: value,
-            });
-          }
-        },
+          // 通知 sync-host 重新派生 enabled
+          appHost.workspace.sync?.actions.updateSettings({});
+        }),
       },
       "other-toolbox-show-all-activity-content": {
         readValue: () => appHost.internalState.settings.toolboxShowAllActivityContent,

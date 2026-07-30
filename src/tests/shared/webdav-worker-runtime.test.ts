@@ -12,7 +12,7 @@ import type {
   WebDavTextFile,
   WebDavWriteOptions,
 } from "@/sync";
-import { WebDavWorkerRuntime } from "@/sync/webdav/webdav-worker-runtime";
+import { WebDavWorkerRuntime } from "@/sync/clients/webdav/webdav-worker-runtime";
 
 class MemoryWorkerWebDavClient implements WebDavStorageClient {
   public readonly rootPath = "/industrial-planner";

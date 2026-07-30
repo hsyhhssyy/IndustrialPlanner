@@ -1,5 +1,5 @@
 import { createLogger } from "@/shared/logging/logger";
-import { readWebDavLastSeenRemoteEtag, type WebDavSyncSettings } from "../storage";
+import { readWebDavLastSeenRemoteEtag, type WebDavSyncSettings as SyncConnectionSettings } from "../storage";
 import type {
   SyncConflictDecision,
   SyncInitialSyncStage,
@@ -7,61 +7,61 @@ import type {
   SyncTaskKind,
   SyncTaskStatus,
 } from "@/domain/sync";
-import type { WebDavStorageClient } from "../webdav";
+import type { SyncStorageClient } from "../clients/types";
 import type {
-  WebDavSyncAdapter,
-  WebDavSyncConflict,
-  WebDavSyncConflictDecision,
-  WebDavSyncAdapterScope,
-  WebDavSyncAdapterResult,
-} from "./webdav-sync-adapters";
+  SyncAdapter,
+  SyncAdapterConflict,
+  SyncAdapterConflictDecision,
+  SyncAdapterScope,
+  SyncAdapterResult,
+} from "./sync-adapters";
 
-const logger = createLogger("webdav-sync");
+const logger = createLogger("sync-service");
 
-export type WebDavSyncServicePhase = "idle" | "uploading" | "downloading" | "error";
-export type WebDavSyncSaveState = "idle" | "pending" | "saving" | "error";
-export type WebDavSyncTrigger = SyncRunReason;
+export type SyncServicePhase = "idle" | "uploading" | "downloading" | "error";
+export type SyncServiceSaveState = "idle" | "pending" | "saving" | "error";
+export { type SyncRunReason };
 
-export interface WebDavSyncAdapterRequest {
+export interface SyncAdapterRequest {
   readonly adapterId: string;
-  readonly scope?: WebDavSyncAdapterScope;
+  readonly scope?: SyncAdapterScope;
 }
 
-export interface WebDavInitialSyncBatch {
+export interface SyncInitialBatch {
   readonly stage: Exclude<SyncInitialSyncStage, "ready">;
-  readonly requests: readonly WebDavSyncAdapterRequest[];
+  readonly requests: readonly SyncAdapterRequest[];
 }
 
-export interface WebDavInitialSyncPlan {
-  readonly batches: readonly WebDavInitialSyncBatch[];
-  readonly backgroundRequests?: readonly WebDavSyncAdapterRequest[];
+export interface SyncInitialPlan {
+  readonly batches: readonly SyncInitialBatch[];
+  readonly backgroundRequests?: readonly SyncAdapterRequest[];
 }
 
-export interface WebDavLocalChange {
+export interface SyncLocalChange {
   readonly adapterId: string;
   readonly assetId?: string;
 }
 
-export interface WebDavSyncRequestActivity {
+export interface SyncRequestActivity {
   readonly activeRequestCount: number;
   readonly queuedRequestCount: number;
 }
 
-export interface WebDavSyncClientRequestOptions {
+export interface SyncClientRequestOptions {
   readonly requestTimeoutMs?: number;
 }
 
-export interface WebDavSyncMaintenanceTask {
+export interface SyncMaintenanceTask {
   readonly kind: SyncTaskKind;
   readonly run: (
-    client: WebDavStorageClient,
-    settings: WebDavSyncSettings,
+    client: SyncStorageClient,
+    settings: SyncConnectionSettings,
   ) => Promise<void> | void;
 }
 
-export interface WebDavSyncServiceStatus {
-  readonly phase: WebDavSyncServicePhase;
-  readonly saveState: WebDavSyncSaveState;
+export interface SyncServiceStatus {
+  readonly phase: SyncServicePhase;
+  readonly saveState: SyncServiceSaveState;
   readonly initialSyncStage: SyncInitialSyncStage;
   readonly hasCompletedInitialFeatureSync: boolean;
   readonly currentRunReason: SyncRunReason | null;
@@ -73,32 +73,32 @@ export interface WebDavSyncServiceStatus {
   readonly lastUploadAt: string | null;
   readonly lastDownloadAt: string | null;
   readonly lastError: string | null;
-  readonly lastResults: readonly WebDavSyncAdapterResult[];
+  readonly lastResults: readonly SyncAdapterResult[];
 }
 
-export interface WebDavSyncServiceOptions {
-  readonly readSettings: () => WebDavSyncSettings;
+export interface SyncServiceOptions {
+  readonly readSettings: () => SyncConnectionSettings;
   readonly createClient: (
-    settings: WebDavSyncSettings,
+    settings: SyncConnectionSettings,
     onRequestActivityChange: (
-      activity: WebDavSyncRequestActivity,
+      activity: SyncRequestActivity,
     ) => void,
-    requestOptions: WebDavSyncClientRequestOptions,
-  ) => WebDavStorageClient;
-  readonly adapters: readonly WebDavSyncAdapter[];
-  readonly createInitialSyncPlan?: () => WebDavInitialSyncPlan;
-  readonly maintenanceTasks?: readonly WebDavSyncMaintenanceTask[];
+    requestOptions: SyncClientRequestOptions,
+  ) => SyncStorageClient;
+  readonly adapters: readonly SyncAdapter[];
+  readonly createInitialSyncPlan?: () => SyncInitialPlan;
+  readonly maintenanceTasks?: readonly SyncMaintenanceTask[];
   readonly resolveAdapterTaskKind?: (adapterId: string) => SyncTaskKind;
   readonly canRunInterval?: () => boolean;
-  readonly beforeSync?: (client: WebDavStorageClient, settings: WebDavSyncSettings) => Promise<void> | void;
-  readonly afterSync?: (client: WebDavStorageClient, settings: WebDavSyncSettings, results: readonly WebDavSyncAdapterResult[]) => Promise<void> | void;
+  readonly beforeSync?: (client: SyncStorageClient, settings: SyncConnectionSettings) => Promise<void> | void;
+  readonly afterSync?: (client: SyncStorageClient, settings: SyncConnectionSettings, results: readonly SyncAdapterResult[]) => Promise<void> | void;
   readonly intervalMs?: number;
   readonly bigCheckIntervalMs?: number;
   readonly retryDelaysMs?: readonly number[];
-  readonly onStatusChange?: (status: WebDavSyncServiceStatus) => void;
+  readonly onStatusChange?: (status: SyncServiceStatus) => void;
   readonly onConflictDiscoveryStart?: () => void;
   readonly resolveConflicts?: (
-    conflicts: readonly WebDavSyncConflict<unknown>[],
+    conflicts: readonly SyncAdapterConflict<unknown>[],
   ) => Promise<readonly SyncConflictDecision[]>;
   readonly onConflictWorkflowFinished?: () => void;
   // AI-REMOVED 2026-07-29:
@@ -110,16 +110,16 @@ export interface WebDavSyncServiceOptions {
   // Human Review: Required
   //
   // Original code:
-  // readonly onConflict?: (results: readonly WebDavSyncAdapterResult[]) => void;
+  // readonly onConflict?: (results: readonly SyncAdapterResult[]) => void;
 }
 
-export interface WebDavSyncService {
+export interface SyncService {
   start(): void;
   stop(): void;
-  syncNow(trigger: WebDavSyncTrigger): Promise<WebDavSyncServiceStatus>;
-  notifyLocalChange(change: WebDavLocalChange): void;
-  notifyConflictDetected(conflict: WebDavSyncConflict<unknown>): void;
-  getStatus(): WebDavSyncServiceStatus;
+  syncNow(trigger: SyncRunReason): Promise<SyncServiceStatus>;
+  notifyLocalChange(change: SyncLocalChange): void;
+  notifyConflictDetected(conflict: SyncAdapterConflict<unknown>): void;
+  getStatus(): SyncServiceStatus;
 }
 
 const DEFAULT_INTERVAL_MS = 60_000;
@@ -130,7 +130,7 @@ const INITIAL_SYNC_REQUEST_TIMEOUT_MS = 8_000;
 // AI-REMOVED 2026-07-29:
 // Reason: 对整个同步事务做六轮退避重试会把一次 30 秒请求超时放大为数分钟，并重复已经成功的写入步骤。
 // Trigger: 用户要求首次网络失败后立即解除画布锁定并显示错误状态。
-// Evidence: retryWebDavSync 包裹 beforeSync、全部 adapter 和 maintenance，而不是单个幂等 GET。
+// Evidence: retrySync 包裹 beforeSync、全部 adapter 和 maintenance，而不是单个幂等 GET。
 // Replacement: 默认不做事务级重试；一分钟轮询、切回前台和用户手动重试提供新的独立同步机会。
 // Risk: Low；短暂网络抖动会更早显示错误，但不会阻塞用户或重复部分提交。
 // Human Review: Required
@@ -158,8 +158,8 @@ const SYNC_TASK_KINDS: readonly SyncTaskKind[] = [
 // "device-registration",
 // "remote-devices",
 
-export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebDavSyncService {
-  let status: WebDavSyncServiceStatus = createIdleStatus([]);
+export function createSyncService(options: SyncServiceOptions): SyncService {
+  let status: SyncServiceStatus = createIdleStatus([]);
   let started = false;
   let syncing = false;
   let intervalId: ReturnType<typeof globalThis.setInterval> | null = null;
@@ -167,8 +167,8 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   let smallCheckRunning = false;
   let idleTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
   let maxTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
-  let activeClient: WebDavStorageClient | null = null;
-  let pendingTrigger: WebDavSyncTrigger | null = null;
+  let activeClient: SyncStorageClient | null = null;
+  let pendingTrigger: SyncRunReason | null = null;
   let localChangeVersion = 0;
   let acknowledgedLocalChangeVersion = 0;
   let conflictOverlayVisible = false;
@@ -176,7 +176,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   const dirtyAssetIdsByAdapter = new Map<string, Set<string> | null>();
   const deferredConflictFingerprints = new Map<string, string>();
 
-  const setStatus = (nextStatus: WebDavSyncServiceStatus): WebDavSyncServiceStatus => {
+  const setStatus = (nextStatus: SyncServiceStatus): SyncServiceStatus => {
     status = nextStatus;
     options.onStatusChange?.(status);
 
@@ -251,7 +251,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   const getTaskCompletedUnitCount = (kind: SyncTaskKind): number =>
     status.tasks.find((task) => task.kind === kind)?.completedUnitCount ?? 0;
 
-  const syncNow = async (trigger: WebDavSyncTrigger): Promise<WebDavSyncServiceStatus> => {
+  const syncNow = async (trigger: SyncRunReason): Promise<SyncServiceStatus> => {
     logger.info(`sync triggered: ${trigger}`);
     const isInitialSync = trigger === "startup" || trigger === "foreground";
 
@@ -303,7 +303,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
     }
 
     if (settings.url.trim() === "") {
-      const saveError = "WebDAV URL is empty";
+      const saveError = "Sync URL is empty";
       logger.info("sync skipped — empty URL");
       clearLocalChangeTimers();
       return setStatus({
@@ -327,7 +327,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
     clearLocalChangeTimers();
     const syncLocalChangeVersion = localChangeVersion;
     const hasPendingLocalChanges = syncLocalChangeVersion > acknowledgedLocalChangeVersion;
-    const activePhase: WebDavSyncServicePhase = hasPendingLocalChanges || trigger === "local-change"
+    const activePhase: SyncServicePhase = hasPendingLocalChanges || trigger === "local-change"
       ? "uploading"
       : "downloading";
     setStatus({
@@ -346,7 +346,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
     logger.info(`sync phase: ${activePhase}`);
 
     try {
-      const results = await retryWebDavSync(
+      const results = await retrySync(
         async () => {
           const client = options.createClient(
             settings,
@@ -365,7 +365,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
           );
           activeClient = client;
           try {
-            return await withWebDavSyncLock(async () => {
+            return await withSyncLock(async () => {
               await options.beforeSync?.(client, settings);
               const adapterResults = isInitialSync
                 ? await runInitialSyncPlan(client)
@@ -435,10 +435,10 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
           queuedRequestCount: 0,
           tasks: status.tasks,
           pendingLocalChangeCount,
-          saveError: pendingLocalChangeCount > 0 ? "WebDAV sync conflict" : status.saveError,
+          saveError: pendingLocalChangeCount > 0 ? "Sync conflict" : status.saveError,
           lastUploadAt: status.lastUploadAt,
           lastDownloadAt: status.lastDownloadAt,
-          lastError: "WebDAV sync conflict",
+          lastError: "Sync conflict",
           lastResults: results,
         });
       }
@@ -515,15 +515,15 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   };
 
   const runInitialSyncPlan = async (
-    client: WebDavStorageClient,
-  ): Promise<WebDavSyncAdapterResult[]> => {
-    const plan: WebDavInitialSyncPlan = options.createInitialSyncPlan?.() ?? {
+    client: SyncStorageClient,
+  ): Promise<SyncAdapterResult[]> => {
+    const plan: SyncInitialPlan = options.createInitialSyncPlan?.() ?? {
       batches: [{
         stage: "canvas",
         requests: options.adapters.map((adapter) => ({ adapterId: adapter.id })),
       }],
     };
-    const results: WebDavSyncAdapterResult[] = [];
+    const results: SyncAdapterResult[] = [];
 
     for (const batch of plan.batches) {
       queueTask(
@@ -576,12 +576,12 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   };
 
   const runAdapterRequests = async (
-    client: WebDavStorageClient,
-    requests: readonly WebDavSyncAdapterRequest[],
+    client: SyncStorageClient,
+    requests: readonly SyncAdapterRequest[],
     taskKind?: SyncTaskKind,
-  ): Promise<WebDavSyncAdapterResult[]> => {
+  ): Promise<SyncAdapterResult[]> => {
     logger.info(`sync starting — ${requests.length} adapter request(s)`);
-    const adapterResults: WebDavSyncAdapterResult[] = [];
+    const adapterResults: SyncAdapterResult[] = [];
     const totalUnitCount = taskKind === undefined
       ? 0
       : getAdapterTaskTotalUnitCount(taskKind, requests.length);
@@ -640,7 +640,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
             finishTask(
               taskKind,
               totalUnitCount,
-              new Error("WebDAV sync conflict"),
+              new Error("Sync conflict"),
             );
           }
           return adapterResults;
@@ -660,8 +660,8 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   };
 
   const resolveRegularSyncRequests = (
-    trigger: WebDavSyncTrigger,
-  ): readonly WebDavSyncAdapterRequest[] => {
+    trigger: SyncRunReason,
+  ): readonly SyncAdapterRequest[] => {
     if (trigger !== "local-change") {
       return options.adapters.map((adapter) => ({ adapterId: adapter.id }));
     }
@@ -675,10 +675,10 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   };
 
   const runRegularSyncRequests = async (
-    client: WebDavStorageClient,
-    requests: readonly WebDavSyncAdapterRequest[],
-  ): Promise<WebDavSyncAdapterResult[]> => {
-    const requestsByTask = new Map<SyncTaskKind, WebDavSyncAdapterRequest[]>();
+    client: SyncStorageClient,
+    requests: readonly SyncAdapterRequest[],
+  ): Promise<SyncAdapterResult[]> => {
+    const requestsByTask = new Map<SyncTaskKind, SyncAdapterRequest[]>();
     for (const request of requests) {
       const taskKind = options.resolveAdapterTaskKind?.(request.adapterId)
         ?? "canvas";
@@ -693,7 +693,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
       );
     }
 
-    const results: WebDavSyncAdapterResult[] = [];
+    const results: SyncAdapterResult[] = [];
     for (const [taskKind, taskRequests] of requestsByTask) {
       const taskResults = await runAdapterRequests(
         client,
@@ -710,9 +710,9 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   };
 
   const runConflictWorkflow = async (
-    client: WebDavStorageClient,
-    initialResults: readonly WebDavSyncAdapterResult[],
-  ): Promise<WebDavSyncAdapterResult[]> => {
+    client: SyncStorageClient,
+    initialResults: readonly SyncAdapterResult[],
+  ): Promise<SyncAdapterResult[]> => {
     const completedResults = initialResults.filter(
       (result) => result.status !== "conflict",
     );
@@ -801,10 +801,10 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   };
 
   const runConflictDecisionRequests = async (
-    client: WebDavStorageClient,
-    decisions: readonly WebDavSyncConflictDecision[],
-  ): Promise<WebDavSyncAdapterResult[]> => {
-    const adaptersByTask = new Map<SyncTaskKind, WebDavSyncAdapter[]>();
+    client: SyncStorageClient,
+    decisions: readonly SyncAdapterConflictDecision[],
+  ): Promise<SyncAdapterResult[]> => {
+    const adaptersByTask = new Map<SyncTaskKind, SyncAdapter[]>();
     for (const adapter of options.adapters) {
       const taskKind = options.resolveAdapterTaskKind?.(adapter.id)
         ?? "canvas";
@@ -819,7 +819,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
       );
     }
 
-    let results: WebDavSyncAdapterResult[];
+    let results: SyncAdapterResult[];
     try {
       results = await Promise.all(options.adapters.map(async (adapter) =>
         await adapter.sync(client, {
@@ -853,7 +853,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
         taskKind,
         totalUnitCount,
         taskResults.some((result) => result.status === "conflict")
-          ? new Error("WebDAV sync conflict")
+          ? new Error("Sync conflict")
           : null,
       );
     }
@@ -862,8 +862,8 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   };
 
   const runMaintenanceTasks = async (
-    client: WebDavStorageClient,
-    settings: WebDavSyncSettings,
+    client: SyncStorageClient,
+    settings: SyncConnectionSettings,
   ): Promise<void> => {
     for (const task of options.maintenanceTasks ?? []) {
       beginTask(task.kind, 1);
@@ -1047,7 +1047,7 @@ export function createWebDavSyncService(options: WebDavSyncServiceOptions): WebD
   }
 }
 
-async function retryWebDavSync<TValue>(
+async function retrySync<TValue>(
   task: () => Promise<TValue>,
   retryDelaysMs: readonly number[],
 ): Promise<TValue> {
@@ -1076,7 +1076,7 @@ function wait(delayMs: number): Promise<void> {
   });
 }
 
-function createIdleStatus(lastResults: readonly WebDavSyncAdapterResult[]): WebDavSyncServiceStatus {
+function createIdleStatus(lastResults: readonly SyncAdapterResult[]): SyncServiceStatus {
   return {
     phase: "idle",
     saveState: "idle",
@@ -1117,14 +1117,14 @@ function getAdapterTaskTotalUnitCount(
 }
 
 function selectQueuedTrigger(
-  current: WebDavSyncTrigger | null,
-  incoming: WebDavSyncTrigger,
-): WebDavSyncTrigger {
+  current: SyncRunReason | null,
+  incoming: SyncRunReason,
+): SyncRunReason {
   if (current === null) {
     return incoming;
   }
 
-  const priority: Record<WebDavSyncTrigger, number> = {
+  const priority: Record<SyncRunReason, number> = {
     interval: 0,
     "big-check": 0,
     manual: 1,
@@ -1138,9 +1138,9 @@ function selectQueuedTrigger(
 }
 
 function createConflictDecisions(
-  conflicts: readonly WebDavSyncConflict<unknown>[],
+  conflicts: readonly SyncAdapterConflict<unknown>[],
   choices: readonly SyncConflictDecision[],
-): WebDavSyncConflictDecision[] {
+): SyncAdapterConflictDecision[] {
   return conflicts.map((conflict) => ({
     adapterId: conflict.adapterId,
     assetId: conflict.assetId,
@@ -1155,8 +1155,8 @@ function createConflictDecisions(
 }
 
 function deduplicateConflicts(
-  conflicts: readonly WebDavSyncConflict<unknown>[],
-): WebDavSyncConflict<unknown>[] {
+  conflicts: readonly SyncAdapterConflict<unknown>[],
+): SyncAdapterConflict<unknown>[] {
   return Array.from(
     new Map(conflicts.map((conflict) => [
       createConflictKey(conflict),
@@ -1167,7 +1167,7 @@ function deduplicateConflicts(
 
 function discardResolvedDeferredConflicts(
   deferredFingerprints: Map<string, string>,
-  conflicts: readonly WebDavSyncConflict<unknown>[],
+  conflicts: readonly SyncAdapterConflict<unknown>[],
 ): void {
   const currentFingerprints = new Map(conflicts.map((conflict) => [
     createConflictKey(conflict),
@@ -1199,7 +1199,7 @@ function createConflictFingerprint(value: {
   ]);
 }
 
-async function withWebDavSyncLock<TValue>(task: () => Promise<TValue>): Promise<TValue> {
+async function withSyncLock<TValue>(task: () => Promise<TValue>): Promise<TValue> {
   const locks = typeof navigator === "undefined"
     ? undefined
     : (navigator as Navigator & {
@@ -1212,7 +1212,7 @@ async function withWebDavSyncLock<TValue>(task: () => Promise<TValue>): Promise<
     return await task();
   }
 
-  return await locks.request("webdav-sync", task);
+  return await locks.request("sync-service", task);
 }
 
 function unrefTimer(timer: ReturnType<typeof globalThis.setInterval> | ReturnType<typeof globalThis.setTimeout>): void {

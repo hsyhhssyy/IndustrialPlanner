@@ -463,6 +463,82 @@
   line-height: 1.35;
 }
 
+.webdav-config-section {
+  border-color: var(--accent-soft);
+}
+
+.webdav-config-form {
+  display: grid;
+  gap: 14px;
+}
+
+.webdav-config-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--text-0);
+
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-strong);
+    cursor: pointer;
+  }
+
+  span {
+    font-weight: 600;
+  }
+}
+
+.webdav-config-field {
+  display: grid;
+  gap: 4px;
+
+  > span {
+    color: var(--text-0);
+    font-size: 0.84rem;
+    font-weight: 600;
+  }
+
+  input[type="text"],
+  input[type="password"] {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-3);
+    color: var(--text-0);
+    font-size: 0.88rem;
+    outline: none;
+
+    &:focus {
+      border-color: var(--accent-strong);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent-strong);
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+
+  small {
+    color: var(--text-1);
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+}
+
 // AI-REMOVED 2026-07-29:
 // Reason: WebDAV 状态窗口不再展示设备列表。
 // Trigger: 用户确认设备列表没有意义，仅在冲突中显示远端上传时间。

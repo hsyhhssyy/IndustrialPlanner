@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from "vitest";
-import { autorun } from "mobx";
 
 import {
   USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY,
@@ -73,16 +72,12 @@ describe("WorkbenchSettingsDialogController", () => {
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "other-experimental-features": false,
-        "experimental-webdav-sync-enabled": false,
-        "experimental-webdav-url": "",
-        "experimental-webdav-username": "",
-        "experimental-webdav-password": "",
-        "experimental-webdav-max-concurrent-requests": 4,
         "debug-simulation-worker-detailed-report": true,
         "debug-backend-api-address-override": "https://debug.example.test/api",
         "debug-show-fps": true,
         "debug-show-gesture-diagnostics-window": true,
         "experimental-virtual-mouse-pointer": false,
+        "sync-provider": "none",
       },
     });
 
@@ -122,10 +117,6 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["game-use-blueprint-style-device-images"]).toBe(true);
     expect(hydratedController.values["other-toolbox-show-all-activity-content"]).toBe(true);
     expect(hydratedController.values["other-debug-mode"]).toBe(true);
-    expect(hydratedController.values["experimental-webdav-sync-enabled"]).toBe(false);
-    expect(hydratedController.values["experimental-webdav-url"]).toBe("");
-    expect(hydratedController.values["experimental-webdav-username"]).toBe("");
-    expect(hydratedController.values["experimental-webdav-password"]).toBe("");
     expect(hydratedController.values["debug-simulation-worker-detailed-report"]).toBe(true);
     expect(hydratedController.values["debug-backend-api-address-override"]).toBe(
       "https://debug.example.test/api",
@@ -254,69 +245,7 @@ describe("WorkbenchSettingsDialogController", () => {
     ).toBeUndefined();
   });
 
-  it("uses password settings as string settings", () => {
-    const controller = new WorkbenchSettingsDialogController();
-
-    controller.updateTextValue("experimental-webdav-password", "secret-pass");
-
-    expect(controller.getValue("experimental-webdav-password")).toBe("secret-pass");
-    expect(
-      JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")
-        .values["experimental-webdav-password"],
-    ).toBe("secret-pass");
-  });
-
-  it("uses external bindings as the source of truth for password settings", () => {
-    let webDavPassword = "";
-    const controller = new WorkbenchSettingsDialogController({
-      externalBindings: {
-        "experimental-webdav-password": {
-          readValue: () => webDavPassword,
-          writeValue: (value) => {
-            if (typeof value === "string") {
-              webDavPassword = value;
-            }
-          },
-        },
-      },
-    });
-
-    controller.updateTextValue("experimental-webdav-password", "bound-secret");
-
-    expect(webDavPassword).toBe("bound-secret");
-    expect(controller.getValue("experimental-webdav-password")).toBe("bound-secret");
-    expect(controller.values["experimental-webdav-password"]).toBe("bound-secret");
-    expect(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY)).toBeNull();
-  });
-
-  it("invalidates observers after writing a non-observable external switch", () => {
-    let webDavEnabled = false;
-    const observedValues: boolean[] = [];
-    const controller = new WorkbenchSettingsDialogController({
-      externalBindings: {
-        "experimental-webdav-sync-enabled": {
-          readValue: () => webDavEnabled,
-          writeValue: (value) => {
-            if (typeof value === "boolean") {
-              webDavEnabled = value;
-            }
-          },
-        },
-      },
-    });
-    const dispose = autorun(() => {
-      observedValues.push(
-        controller.getValue("experimental-webdav-sync-enabled") === true,
-      );
-    });
-
-    controller.updateSwitchValue("experimental-webdav-sync-enabled", true);
-
-    expect(observedValues).toEqual([false, true]);
-    dispose();
-  });
-
-  it("uses external bindings as the source of truth for connected settings", () => {
+  it("disables grass and grid toggles when simplified device icons are enabled", () => {
     let locale = "zh-CN";
     let themeId = "ayu-light";
     const controller = new WorkbenchSettingsDialogController({
@@ -394,16 +323,12 @@ describe("WorkbenchSettingsDialogController", () => {
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "other-experimental-features": false,
-        "experimental-webdav-sync-enabled": false,
-        "experimental-webdav-url": "",
-        "experimental-webdav-username": "",
-        "experimental-webdav-password": "",
-        "experimental-webdav-max-concurrent-requests": 4,
         "debug-simulation-worker-detailed-report": false,
         "debug-backend-api-address-override": "",
         "debug-show-fps": false,
         "debug-show-gesture-diagnostics-window": false,
         "experimental-virtual-mouse-pointer": false,
+        "sync-provider": "none",
       },
     });
   });

@@ -28,14 +28,15 @@ import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 
 describe("REQ-080: dynamic simulation tick rate", () => {
   it("keeps only phase-safe dynamic tick rates for the current belt and pipe transfer units", () => {
-    // AI-CORRECTION 2026-07-23: 管道周期由 10 tick 改为 20 tick，当前 belt/pipe 门禁单位均为 20 tick。
-    const transferUnitTicks = [20];
+    // AI-CORRECTION 2026-07-30: 回滚 — 管道恢复 10 tick 周期，当前 belt 为 20 tick、pipe 为 10 tick。
+    // 最严格约束是 pipe 的 10 tick，因此测试使用 [10]。
+    const transferUnitTicks = [10];
 
     expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 20, transferUnitTicks })).toBe(true);
     expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 10, transferUnitTicks })).toBe(true);
     expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 4, transferUnitTicks })).toBe(true);
     expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 2, transferUnitTicks })).toBe(true);
-    expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 5, transferUnitTicks })).toBe(true);
+    expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 5, transferUnitTicks })).toBe(false);
     expect(isDynamicTickRateCompatibleWithTransferUnits({ dynamicTickRate: 8, transferUnitTicks })).toBe(false);
   });
 
@@ -52,6 +53,9 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     expect(canDeviceTransferAtCurrentPhase(topology, state, pipeAnchor)).toBe(true);
     state.tickNumber = 2;
     expect(canDeviceTransferAtCurrentPhase(topology, state, pipeAnchor)).toBe(false);
+    // AI-CORRECTION 2026-07-30: 回滚 — 0.5s 门禁，tick 11 也是合法相位。
+    state.tickNumber = 11;
+    expect(canDeviceTransferAtCurrentPhase(topology, state, pipeAnchor)).toBe(true);
     state.tickNumber = 21;
     expect(canDeviceTransferAtCurrentPhase(topology, state, pipeAnchor)).toBe(true);
   });

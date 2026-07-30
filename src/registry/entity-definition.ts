@@ -1989,7 +1989,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "fluid_buffer",
         FluidDomain,
-        createSlots("slot", [2], ItemDomainFlag.Liquid),
+        // AI-CORRECTION 2026-07-30: 容量从 2 改为 1，配合 0.5s 单件配方回滚。
+        createSlots("slot", [1], ItemDomainFlag.Liquid),
         "share-cap",
       ),
     ],
@@ -2048,7 +2049,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "fluid_buffer",
         FluidDomain,
-        createSlots("slot", [2], ItemDomainFlag.Liquid),
+        // AI-CORRECTION 2026-07-30: 容量从 2 改为 1，配合 0.5s 单件配方回滚。
+        createSlots("slot", [1], ItemDomainFlag.Liquid),
         "share-cap",
       ),
     ],
@@ -2129,13 +2131,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "ns_buffer",
         FluidDomain,
-        createSlots("ns_slot", [2], ItemDomainFlag.Liquid),
+      // AI-CORRECTION 2026-07-30: 容量从 2 改为 1，配合 0.5s 单件配方回滚。
+        createSlots("ns_slot", [1], ItemDomainFlag.Liquid),
         "share-cap",
       ),
       createStorageSlotGroup(
         "ew_buffer",
         FluidDomain,
-        createSlots("ew_slot", [2], ItemDomainFlag.Liquid),
+        createSlots("ew_slot", [1], ItemDomainFlag.Liquid),
         "share-cap",
       ),
     ],
@@ -4639,7 +4642,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "fluid_buffer",
         FluidDomain,
-        createSlots("slot", [2], ItemDomainFlag.Liquid),
+        // AI-CORRECTION 2026-07-30: 容量从 2 改为 1，配合 0.5s 单件配方回滚。
+        createSlots("slot", [1], ItemDomainFlag.Liquid),
         "share-cap",
       ),
     ],

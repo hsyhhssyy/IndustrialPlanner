@@ -186,11 +186,10 @@ describe("bridge-direction", () => {
 //   [LiquidSrc](-4,0)rot0 → pipe(-1,1)rot0 → [PipeBridge](0,1)rot0 → pipe(1,1)rot0 → [LiquidSink](2,0)rot0
 //
 // 时序（pipe 0.5s=10tick，bridge anchor 0.5s=10tick）：
-//   Tick 1: 入管 → Tick 11: 入桥 → Tick 21: 出桥 → Tick 31: 达宿
-// AI-CORRECTION 2026-05-18: dedicated pipe 以 10 标准 tick 相位接收/输出：
-//   Tick 10 入管 → Tick 20 入桥 → Tick 30 出桥 → Tick 40 达宿。
-// AI-CORRECTION 2026-07-23: 所有 PipeFamily 改为 20 tick 整秒周期：
-//   Tick 1 入管 → Tick 21 入桥 → Tick 41 出桥 → Tick 61 达宿，每次最多搬运 2 件。
+//   Tick 1: 入管 → Tick 11: 入桥 → Tick 21: 出桥入末段管 → Tick 31: 达宿第1件 → Tick 41: 达宿第2件
+// AI-CORRECTION 2026-05-18: dedicated pipe 以 10 标准 tick 相位接收/输出。
+// AI-CORRECTION 2026-07-23: 所有 PipeFamily 改为 20 tick 整秒周期。
+// AI-CORRECTION 2026-07-30: 回滚 — 恢复 0.5s(10tick) + 单件配方时序。
 // =============================================================================
 
 function createPipeBridgeDirectionBlueprint(): BlueprintDocument {
@@ -211,56 +210,73 @@ describe("pipe-bridge-direction", () => {
     const report = await runBlueprintSimulation({
       blueprint: createPipeBridgeDirectionBlueprint(),
       registry: createRegistryContract(),
-      maxTickNumber: 65,
+      maxTickNumber: 45,
     });
 
-    // === Tick 1: 水进入首段管道 ===
-    // AI-CORRECTION 2026-07-17: dedicated pipe 的首个交付相位前移到 tick 1。
+    // === Tick 1: 第 1 件水进入首段管道 ===
     const tick1 = getTick(report, 1);
     expect(tick1.transfers.filter((t) =>
       t.sourceSlotId.includes("device:liquid-source-ew")
       && t.targetSlotId.includes("device:pipe_ew_in"),
-    )).toHaveLength(2);
+    )).toHaveLength(1);
 
-    // === Tick 11: 水从管道进入桥接器 ===
-    // AI-CORRECTION 2026-07-23: 新整秒周期在 tick 21 入桥。
-    const tick21 = getTick(report, 21);
-    expect(tick21.transfers.filter((t) =>
+    // === Tick 11: 第 1 件入桥 + 第 2 件入首段管 ===
+    // AI-CORRECTION 2026-07-30: 回滚 — 0.5s 门禁，tick 11 入桥。
+    const tick11 = getTick(report, 11);
+    expect(tick11.transfers.filter((t) =>
       t.sourceSlotId.includes("device:pipe_ew_in")
       && t.targetSlotId.includes("device:pipe-bridge"),
-    )).toHaveLength(2);
+    )).toHaveLength(1);
+    expect(tick11.transfers.filter((t) =>
+      t.sourceSlotId.includes("device:liquid-source-ew")
+      && t.targetSlotId.includes("device:pipe_ew_in"),
+    )).toHaveLength(1);
 
     // === Tick 12: 桥接器槽位隔离验证 ===
-    // AI-CORRECTION 2026-07-23: 入桥后的槽位隔离状态改在 tick 22 检查。
-    // 水应在 ew_buffer，ns_buffer 应为空
-    const ewInSlot = findSlot(report, 22, "pipe-bridge", "ew_buffer", "ew_slot_1", "input-view");
+    const ewInSlot = findSlot(report, 12, "pipe-bridge", "ew_buffer", "ew_slot_1", "input-view");
     expect(ewInSlot.itemType).toBe("item_liquid_water");
-    expect(ewInSlot.count).toBe(2);
-    expect(ewInSlot.reserved).toBe(2);
+    expect(ewInSlot.count).toBe(1);
+    expect(ewInSlot.reserved).toBe(1);
 
     // ns_buffer 应无物品（方向隔离）
-    const nsInSlot = findSlot(report, 22, "pipe-bridge", "ns_buffer", "ns_slot_1", "input-view");
+    const nsInSlot = findSlot(report, 12, "pipe-bridge", "ns_buffer", "ns_slot_1", "input-view");
     expect(nsInSlot.itemType).toBeNull();
     expect(nsInSlot.count).toBe(0);
 
-    // === Tick 21: 水离开桥进入末段管道 ===
-    // AI-CORRECTION 2026-07-23: 新整秒周期在 tick 41 离桥。
-    const tick41 = getTick(report, 41);
-    expect(tick41.transfers.filter((t) =>
+    // === Tick 21: 第 1 件出桥入末段管 + 第 2 件入桥 ===
+    // AI-CORRECTION 2026-07-30: 回滚 — 0.5s 门禁，tick 21 出桥。
+    const tick21 = getTick(report, 21);
+    expect(tick21.transfers.filter((t) =>
       t.sourceSlotId.includes("device:pipe-bridge")
       && t.targetSlotId.includes("device:pipe_ew_out"),
-    )).toHaveLength(2);
+    )).toHaveLength(1);
+    expect(tick21.transfers.filter((t) =>
+      t.sourceSlotId.includes("device:pipe_ew_in")
+      && t.targetSlotId.includes("device:pipe-bridge"),
+    )).toHaveLength(1);
 
-    // === Tick 31: 水到达终点 ===
-    // AI-CORRECTION 2026-07-23: 新整秒周期在 tick 61 达宿。
-    const tick61 = getTick(report, 61);
-    expect(tick61.transfers.filter((t) =>
+    // === Tick 31: 第 1 件达宿 + 第 2 件出桥入末段管 ===
+    // AI-CORRECTION 2026-07-30: 回滚 — 0.5s 门禁，tick 31 达宿第 1 件。
+    const tick31 = getTick(report, 31);
+    expect(tick31.transfers.filter((t) =>
       t.targetSlotId.includes("device:liquid-sink-ew")
       && t.itemType === "item_liquid_water",
-    )).toHaveLength(2);
+    )).toHaveLength(1);
+    expect(tick31.transfers.filter((t) =>
+      t.sourceSlotId.includes("device:pipe-bridge")
+      && t.targetSlotId.includes("device:pipe_ew_out"),
+    )).toHaveLength(1);
+
+    // === Tick 41: 第 2 件达宿 ===
+    // AI-CORRECTION 2026-07-30: 回滚 — 0.5s 门禁，tick 41 达宿第 2 件。
+    const tick41 = getTick(report, 41);
+    expect(tick41.transfers.filter((t) =>
+      t.targetSlotId.includes("device:liquid-sink-ew")
+      && t.itemType === "item_liquid_water",
+    )).toHaveLength(1);
 
     // === 最终：宿只有水，桥 ns_buffer 全程空 ===
-    const sinkEw = getDevice(report, 65, "liquid-sink-ew");
+    const sinkEw = getDevice(report, 45, "liquid-sink-ew");
     for (const slot of sinkEw.slotItems) {
       if (slot.count > 0) expect(slot.itemType).toBe("item_liquid_water");
     }
@@ -274,10 +290,6 @@ describe("pipe-bridge-direction", () => {
 // Replacement: pipe-bridge-direction 中的 20 tick 时序与双件断言。
 // Risk: Low
 // Human Review: Required
+// AI-CORRECTION 2026-07-30: 回滚 — 上述 AI-REMOVED 块判断方向错误，恢复 0.5s 单件时序。
 //
-// Original code:
-// const tick11 = getTick(report, 11);
-// const ewInSlot = findSlot(report, 12, "pipe-bridge", "ew_buffer", "ew_slot_1", "input-view");
-// const tick21 = getTick(report, 21);
-// const tick31 = getTick(report, 31);
-// const sinkEw = getDevice(report, 45, "liquid-sink-ew");
+// Original code (was restored above):

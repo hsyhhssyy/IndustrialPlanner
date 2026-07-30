@@ -137,17 +137,18 @@ export interface RuntimeFixedWindowCounterState {
 }
 
 export interface SimulationTickTransientState {
+  /** Stage 2 构建的求解节点状态。excludedItemTypes 在 overlay 配方完成路径中不可直接读取 —— 该字段包含上一 tick 的 buildSolveGraph 残留，createSlotOverlayState 会重建它。 */
   nodes: Record<string, RuntimeTickNodeState>;
   edges: Record<string, RuntimeTickEdgeState>;
   transfers: RuntimeTransferRecord[];
   diagnostics: RuntimeTickDiagnosticRecord[];
   /** Stage 3 增量优化：被阻塞的 input-view node ID 集合，避免 refreshBlockedInputNodesAfterMove 每次全量扫描 nodeOrder。 */
   blockedInputNodeIds: Set<string>;
-  /** 当前 tick 的槽位预留量聚合索引；首次查询时构建，后续随配方生命周期增量维护。 */
+  /** 当前 tick 的槽位预留量聚合索引（lazy build）；首次查询时从所有设备配方遍历构建。在 overlay 配方完成路径中不可直接读取 —— 预留量在 commitSlotOverlay 之后由 adjustReservedAmounts 在原 state 上修正。 */
   reservedAmountByStorageSlotId: Record<string, number> | null;
-  /** 帧开始时冻结、Stage 5 消耗启动后重算的设备运行许可。 */
+  /** 帧开始时冻结、Stage 5 消耗启动后重算的设备运行许可。跨 tick 的 overlay 配方完成路径不可依赖此字段 —— 它是上一 tick 的快照。 */
   activeConsumptionDeviceIds: ReadonlySet<string>;
-  /** 当前 tick 判定用气体扩散范围。 */
+  /** 当前 tick 判定用气体扩散范围。跨 tick 的 overlay 配方完成路径不可依赖此字段 —— 它是上一 tick 的快照。 */
   activeGasDiffusions: readonly RuntimeGasDiffusionSnapshot[];
   /** 当前 tick 是否处于真实电力不足状态。 */
   isPowerOutage: boolean;

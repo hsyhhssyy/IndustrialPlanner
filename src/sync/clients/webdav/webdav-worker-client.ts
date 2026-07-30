@@ -1,5 +1,6 @@
 import {
   normalizeWebDavRootPath,
+  // AI-CORRECTION 2026-07-30: 以下类型别名来自 webdav-client.ts，底层指向 ../types。
   type WebDavClientOptions,
   type WebDavResourceStat,
   type WebDavStorageClient,
@@ -10,8 +11,9 @@ import type {
   WebDavWorkerRequest,
   WebDavWorkerResponse,
 } from "./webdav-worker-protocol";
+import type { SyncClientOptions } from "../types";
 
-export interface WebDavWorkerStorageClientOptions extends WebDavClientOptions {
+export interface WebDavWorkerStorageClientOptions extends SyncClientOptions {
   readonly readDebugEnabled?: () => boolean;
   readonly maxConcurrentRequests?: number;
   readonly onRequestActivityChange?: (

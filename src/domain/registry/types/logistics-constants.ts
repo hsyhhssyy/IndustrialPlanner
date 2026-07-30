@@ -11,20 +11,21 @@
 export const BELT_TRANSPORT_DURATION_SECONDS = 2;
 
 /** 管道每格运输时间（秒） */
-/** AI-CORRECTION 2026-07-23: 管道改为每整数秒结算一次，由 2 件与 1 件配方实现最高 2/s、单件可送。 */
-export const PIPE_TRANSPORT_DURATION_SECONDS = 1;
+export const PIPE_TRANSPORT_DURATION_SECONDS = 0.5;
 
 /** 准入口速率窗口数 — 每分钟被均分为 N 个等长窗口，每窗额度 = perMinuteLimit / N。 */
 /** AI-CORRECTION 2026-07-24: 提升为 registry 层常量为三处模块（app / shared / simulation）的统一真源。 */
 export const ADMISSION_RATE_WINDOWS_PER_MINUTE = 6;
 
 // AI-REMOVED 2026-07-23:
-// Reason: 0.5 秒单件配方无法表达“只在整数秒运输、单次最多 2 件”的离散门禁模型。
+// Reason: 0.5 秒单件配方无法表达"只在整数秒运输、单次最多 2 件"的离散门禁模型。
 // Trigger: 用户确认管道采用每秒 2 件优先、1 件兜底的双配方。
 // Evidence: .docs/common/模拟器/仿真运行原理.md v5 §6.2。
 // Replacement: PIPE_TRANSPORT_DURATION_SECONDS = 1，单次数量由运行时管道配方决定。
 // Risk: Medium - 依赖该常量的动画与规划吞吐展示会同步改为 1 秒周期。
 // Human Review: Required
+// AI-CORRECTION 2026-07-30: 回滚 — 恢复 0.5 秒单件管道。上述 AI-REMOVED 块的判断被证明错误，
+// 0.5 秒门禁 + 单配方不影响时间轴、加减速、准入口测速，且行为更贴近实际游戏。
 //
-// Original code:
+// Original code (restored):
 // export const PIPE_TRANSPORT_DURATION_SECONDS = 0.5;

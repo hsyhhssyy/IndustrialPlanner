@@ -22,36 +22,51 @@ function createLiquidPipeTransportBlueprint(initialCount = 2): BlueprintDocument
 }
 
 describe("REQ-076: pipe transport", () => {
+  // AI-CORRECTION 2026-07-30: 回滚 — 恢复 0.5s 门禁（10 tick）+ 单件配方。
+  // 时序：tick 1 入管 1 件 → tick 11 出管 1 件 + 入管第 2 件 → tick 21 出管第 2 件。
   it("covers pipe transport components and pipe dynamic recipes through a liquid blueprint", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createLiquidPipeTransportBlueprint(),
       registry: createRegistryContract(),
-      maxTickNumber: 21,
+      maxTickNumber: 25,
     });
     const tickOne = getTick(report, 1);
     const tickTwo = getTick(report, 2);
+    const tickEleven = getTick(report, 11);
     const tickTwentyOne = getTick(report, 21);
     const pipe = getDevice(report, 1, "pipe");
 
+    // tick 1: 第 1 件进入管道
     expect(tickOne.transfers.filter((transfer) =>
       transfer.sourceSlotId.includes("device:source-liquid-storage")
       && transfer.targetSlotId.includes("device:pipe"),
-    )).toHaveLength(2);
+    )).toHaveLength(1);
+    // tick 2: 无管道搬运（门禁关闭）
     expect(tickTwo.transfers.some((transfer) =>
       transfer.sourceSlotId.includes("device:pipe")
       || transfer.targetSlotId.includes("device:pipe"),
     )).toBe(false);
+    // tick 11: 第 1 件出管到 sink + 第 2 件入管
+    expect(tickEleven.transfers.filter((transfer) =>
+      transfer.sourceSlotId.includes("device:pipe")
+      && transfer.targetSlotId.includes("device:sink-liquid-storage"),
+    )).toHaveLength(1);
+    expect(tickEleven.transfers.filter((transfer) =>
+      transfer.sourceSlotId.includes("device:source-liquid-storage")
+      && transfer.targetSlotId.includes("device:pipe"),
+    )).toHaveLength(1);
+    // tick 21: 第 2 件出管到 sink
     expect(tickTwentyOne.transfers.filter((transfer) =>
       transfer.sourceSlotId.includes("device:pipe")
       && transfer.targetSlotId.includes("device:sink-liquid-storage"),
-    )).toHaveLength(2);
+    )).toHaveLength(1);
     expect(pipe.slotItems).toEqual(expect.arrayContaining([
       expect.objectContaining({
         storageGroupId: "synthetic-input",
         slotId: "slot_1",
         viewRole: "single-view",
-        count: 2,
-        reserved: 2,
+        count: 1,
+        reserved: 1,
       }),
       expect.objectContaining({
         storageGroupId: "synthetic-output",
@@ -69,23 +84,30 @@ describe("REQ-076: pipe transport", () => {
       }),
     ]));
     // AI-CORRECTION 2026-05-30: recipeId 已迁移到 channelRecipes["default"]。
-    // AI-CORRECTION 2026-07-23: 2 件配方产物总量更高，在库存充足时必须优先于 1 件配方。
-    expect(pipe.channelRecipes["default"]?.recipeId).toBe("pipe_straight_1x1:dynamic-pipe-transfer-2");
+    // AI-CORRECTION 2026-07-30: 回滚 — 单配方无 -2 后缀。
+    expect(pipe.channelRecipes["default"]?.recipeId).toBe("pipe_straight_1x1:dynamic-pipe-transfer");
   });
 
-  it("falls back to the one-item recipe when only one fluid item is available", async () => {
+  // AI-CORRECTION 2026-07-30: 回滚 — 单配方下 1 件与 2 件行为一致，只验证 1 件场景。
+  it("transports a single fluid item through the pipe in 0.5s ticks", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createLiquidPipeTransportBlueprint(1),
       registry: createRegistryContract(),
       maxTickNumber: 21,
     });
 
-    expect(getDevice(report, 1, "pipe").channelRecipes["default"]?.recipeId)
-      .toBe("pipe_straight_1x1:dynamic-pipe-transfer");
-    expect(getTick(report, 21).transfers.filter((transfer) =>
+    // tick 1: 入管
+    expect(getTick(report, 1).transfers.filter((transfer) =>
+      transfer.sourceSlotId.includes("device:source-liquid-storage")
+      && transfer.targetSlotId.includes("device:pipe"),
+    )).toHaveLength(1);
+    // tick 11: 出管到 sink
+    expect(getTick(report, 11).transfers.filter((transfer) =>
       transfer.sourceSlotId.includes("device:pipe")
       && transfer.targetSlotId.includes("device:sink-liquid-storage"),
     )).toHaveLength(1);
+    expect(getDevice(report, 1, "pipe").channelRecipes["default"]?.recipeId)
+      .toBe("pipe_straight_1x1:dynamic-pipe-transfer");
   });
 });
 
@@ -96,11 +118,6 @@ describe("REQ-076: pipe transport", () => {
 // Replacement: 上述两个 REQ-076 测试。
 // Risk: Low
 // Human Review: Required
+// AI-CORRECTION 2026-07-30: 回滚 — 上述 AI-REMOVED 块的判断被证明方向错误，恢复 0.5 秒单件测试。
 //
-// Original code:
-// const tickEleven = getTick(report, 11);
-// const pipe = getDevice(report, 10, "pipe");
-// expect(tickEleven.transfers.some((transfer) =>
-//   transfer.sourceSlotId.includes("device:pipe")
-//   && transfer.targetSlotId.includes("device:sink-liquid-storage"),
-// )).toBe(true);
+// Original code (was restored above):

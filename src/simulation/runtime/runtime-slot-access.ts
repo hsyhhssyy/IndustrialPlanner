@@ -536,7 +536,7 @@ export function placeRecipeOutputs(
   plan: CompiledSimulationRecipePlan,
   inputItems: readonly RuntimeRecipeItem[],
 ): boolean {
-  const overlayState = createSlotOverlayState(state);
+  const overlayState = createSlotOverlayState(topology, state);
   if (!placeRecipeOutputsIntoOverlay(topology, overlayState, plan, inputItems)) {
     return false;
   }
@@ -565,13 +565,44 @@ function placeRecipeOutputsIntoOverlay(
 }
 
 function createSlotOverlayState(
+  topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): SimulationMutableRuntimeState {
+  // AI-CORRECTION 2026-07-30: 旧实现 {...state} 共享整个 transient 对象。
+  // transient.nodes[nodeId].excludedItemTypes 包含上一 tick 的 buildSolveGraph 残留，
+  // 当 advanceDevices 在粗步长模式下通过本 overlay 调用 findInputSlotForItem 时，
+  // 会读到 stale 的排除列表，错误地将空槽视为"已被同组其他槽占用"而跳过，
+  // 导致 strict-pipe 等设备的 dynamic-pipe-transfer 配方输出放置失败。
+  //
+  // 修复方式：基于当前 persistent.slots 重建每个 node 的 excludedItemTypes，
+  // 保留组内互斥规则的正确性（§3.4：同一槽位组内不同槽不可容纳相同物品）。
+  // 其他 transient 字段（edges、transfers、blockedInputNodeIds 等）属于 Stage 3 求解数据，
+  // 在 overlay 配方完成路径中不会被读取，无需重建。
+  // _perf 和 recipeStatsDelta 继续共享引用 —— finishRecipeIfPossible 向其中写入统计。
+  const nodes: Record<string, { excludedItemTypes: readonly string[] }> = {};
+  for (const nodeId of topology.ordering.nodeOrder) {
+    const node = topology.nodes[nodeId];
+    if (node === undefined) continue;
+    const items = new Set<string>();
+    for (const slotId of node.slotIds) {
+      const storageSlotId = resolveStorageSlotId(state, slotId);
+      const itemType = state.persistent.slots[storageSlotId]?.itemType ?? null;
+      if (itemType !== null) items.add(itemType);
+    }
+    if (items.size > 0) {
+      nodes[nodeId] = { excludedItemTypes: [...items].sort() };
+    }
+  }
+
   return {
     ...state,
     persistent: {
       ...state.persistent,
       slots: Object.create(state.persistent.slots) as Record<string, RuntimeSlotState>,
+    },
+    transient: {
+      ...state.transient,
+      nodes: nodes as Record<string, SimulationMutableRuntimeState['transient']['nodes'][string]>,
     },
   };
 }
@@ -686,7 +717,7 @@ export function finishRecipeIfPossible(
     return false;
   }
 
-  const overlayState = createSlotOverlayState(state);
+  const overlayState = createSlotOverlayState(topology, state);
   const hadReservations = recipe.reservations.length > 0;
   if (hadReservations) {
     for (const reservation of recipe.reservations) {
@@ -978,15 +1009,12 @@ function resolveTransportRecipePlans(
     readonly recipeIdSuffix: string;
   },
 ): readonly CompiledSimulationRecipePlan[] {
-  const isPipe = options.device.logisticsKind === LOGISTICS_KIND.pipe;
-  // AI-CORRECTION 2026-07-24: 运输配方始终只描述设备固有的 2/1 搬运能力；
-  // admission 输出额度由 resolveDeviceRecipePlans 的独立候选过滤处理，不写入配方定义。
-  const transferAmounts = isPipe ? [2, 1] : [1];
+  // AI-CORRECTION 2026-07-30: 管道容量已统一改为 1，0.5s 单件配方；
+  // 不再生成 amount=2 的双件变体。
+  const transferAmounts: readonly number[] = [1];
 
   return transferAmounts.map((amount) => {
-    const recipeId = amount === 1
-      ? `${options.device.definitionId}:${timing.recipeIdSuffix}`
-      : `${options.device.definitionId}:${timing.recipeIdSuffix}-${amount}`;
+    const recipeId = `${options.device.definitionId}:${timing.recipeIdSuffix}`;
     return getOrCreateRecipePlan(options, recipeId, () => ({
       recipeId,
       recipeType: "reserved-item",

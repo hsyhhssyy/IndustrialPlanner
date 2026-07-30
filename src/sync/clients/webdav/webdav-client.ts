@@ -1,57 +1,27 @@
 import { createClient } from "webdav";
 import { createLogger } from "@/shared/logging/logger";
+import type {
+  SyncClientOptions,
+  SyncReadOptions,
+  SyncResourceStat,
+  SyncStorageClient,
+  SyncTextFile,
+  SyncWriteOptions,
+} from "../types";
 
 const logger = createLogger("webdav-client");
 const DEFAULT_ROOT_PATH = "/industrial-planner";
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 
-export interface WebDavClientOptions {
-  readonly baseUrl: string;
-  readonly username?: string;
-  readonly password?: string;
-  readonly rootPath?: string;
-  readonly requestTimeoutMs?: number;
-}
+// AI-CORRECTION 2026-07-30: 类型已迁移到通用 ../types，以下别名保持向后兼容。
+export type WebDavClientOptions = SyncClientOptions;
+export type WebDavWriteOptions = SyncWriteOptions;
+export type WebDavReadOptions = SyncReadOptions;
+export type WebDavTextFile = SyncTextFile;
+export type WebDavResourceStat = SyncResourceStat;
+export type WebDavStorageClient = SyncStorageClient;
 
-export interface WebDavWriteOptions {
-  readonly ifMatch?: string;
-  readonly ifNoneMatch?: string;
-  readonly contentType?: string;
-}
-
-export interface WebDavReadOptions {
-  readonly ifNoneMatch?: string;
-}
-
-export interface WebDavTextFile {
-  readonly content: string;
-  readonly etag: string | null;
-  readonly lastModified: string | null;
-}
-
-export interface WebDavResourceStat {
-  readonly path: string;
-  readonly basename: string;
-  readonly type: "file" | "directory";
-  readonly etag: string | null;
-  readonly lastModified: string;
-  readonly size: number;
-  readonly mime?: string;
-}
-
-export interface WebDavStorageClient {
-  readonly rootPath: string;
-  exists(relativePath: string): Promise<boolean>;
-  makeDirectory(relativePath: string): Promise<void>;
-  listDirectory(relativePath: string): Promise<WebDavResourceStat[]>;
-  stat(relativePath: string): Promise<WebDavResourceStat | null>;
-  readTextFile(relativePath: string, options?: WebDavReadOptions): Promise<WebDavTextFile | null>;
-  writeTextFile(relativePath: string, content: string, options?: WebDavWriteOptions): Promise<boolean>;
-  deleteResource(relativePath: string): Promise<void>;
-  dispose?(): void;
-}
-
-export function createWebDavStorageClient(options: WebDavClientOptions): WebDavStorageClient {
+export function createWebDavStorageClient(options: SyncClientOptions): SyncStorageClient {
   const client = createClient(options.baseUrl, {
     username: options.username,
     password: options.password,

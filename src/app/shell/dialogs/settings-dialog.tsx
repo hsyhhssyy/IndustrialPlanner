@@ -788,12 +788,12 @@ export const SettingsDialog = observer(function SettingsDialog({
                 )}
                 {group.id === "experimental" && (
                   <>
-                    {sync === null ? null : (
+                    {controller.getValue("sync-provider") === "webdav" ? (
                       <WebDavSyncStatusCard
                         onOpen={handleOpenWebDavStatus}
                         t={t}
                       />
-                    )}
+                    ) : null}
                     <StorageUsageCard
                       onClearStorage={handleClearStorage}
                       storageBytes={storageBytes}
@@ -892,6 +892,7 @@ export const SettingsDialog = observer(function SettingsDialog({
         dialogState={webDavStatusDialogState}
         onClose={handleCloseWebDavStatus}
         onToggleMaximized={handleToggleWebDavStatusMaximized}
+        onUpdateSettings={(patch) => sync.actions.updateSettings(patch)}
         state={sync.state}
         t={t}
       />
@@ -1072,7 +1073,7 @@ const WebDavSyncStatusCard = observer(function WebDavSyncStatusCard({
       buttonLabel={t("webDavStatus.open")}
       description={t("settingsField.experimental-webdav-statusDescription")}
       onClick={onOpen}
-      title={t("settingsField.experimental-webdav-status")}
+      title={t("webDavConfig.title")}
     />
   );
 });
