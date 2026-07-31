@@ -42,6 +42,7 @@ import { applyBlockageAutoClearance } from "./runtime/blockage-auto-clearance";
 import {
   getItemDomain,
   maintainTransportComponentDomains,
+  rebuildExcludedItemTypesForTick,
   resolveStorageSlotId,
 } from "./runtime/runtime-slot-access";
 import { computeActiveGasDiffusions } from "./runtime/gas-diffusion";
@@ -1486,6 +1487,11 @@ export class SimulationWorkerRuntime {
       if (this.perfEnabled) {
         this.runtimeState.transient._perf = createRuntimePerfCounters();
       }
+
+      // AI-CORRECTION 2026-07-31: 在 tick 开头统一重建 excludedItemTypes 快照，
+      // 写入 transient.nodes。Stage 1 通过 finishRecipeIfPossible → createSlotOverlayState → 
+      // findInputSlotForItem 可安全读取基于当前库存的正确值，无需每次配方完成时全拓扑扫描。
+      rebuildExcludedItemTypesForTick(this.topology, this.runtimeState);
 
       const t0 = this.perfEnabled ? performance.now() : 0;
       const stage1AdvanceResult = advanceDevices(

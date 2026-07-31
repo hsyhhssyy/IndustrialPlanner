@@ -573,21 +573,18 @@ function placeRecipeOutputsIntoOverlay(
   return true;
 }
 
-function createSlotOverlayState(
+/**
+ * 每 tick 执行一次：基于当前 persistent.slots 重建所有 node 的 excludedItemTypes。
+ *
+ * Stage 1 (advanceDevices) 在 buildSolveGraph 之前运行，无法使用 transient.nodes 中
+ * 的 excludedItemTypes（那是上一 tick 残留）。本函数在 tick 开头提供一份基于当前库存的
+ * 快照写入 transient.nodes，供 createSlotOverlayState 浅拷贝使用，消除每次配方完成时
+ * 的全拓扑重复扫描。
+ */
+export function rebuildExcludedItemTypesForTick(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
-): SimulationMutableRuntimeState {
-  // AI-CORRECTION 2026-07-30: 旧实现 {...state} 共享整个 transient 对象。
-  // transient.nodes[nodeId].excludedItemTypes 包含上一 tick 的 buildSolveGraph 残留，
-  // 当 advanceDevices 在粗步长模式下通过本 overlay 调用 findInputSlotForItem 时，
-  // 会读到 stale 的排除列表，错误地将空槽视为"已被同组其他槽占用"而跳过，
-  // 导致 strict-pipe 等设备的 dynamic-pipe-transfer 配方输出放置失败。
-  //
-  // 修复方式：基于当前 persistent.slots 重建每个 node 的 excludedItemTypes，
-  // 保留组内互斥规则的正确性（§3.4：同一槽位组内不同槽不可容纳相同物品）。
-  // 其他 transient 字段（edges、transfers、blockedInputNodeIds 等）属于 Stage 3 求解数据，
-  // 在 overlay 配方完成路径中不会被读取，无需重建。
-  // _perf 和 recipeStatsDelta 继续共享引用 —— finishRecipeIfPossible 向其中写入统计。
+): void {
   const nodes: Record<string, { excludedItemTypes: readonly string[] }> = {};
   for (const nodeId of topology.ordering.nodeOrder) {
     const node = topology.nodes[nodeId];
@@ -602,7 +599,24 @@ function createSlotOverlayState(
       nodes[nodeId] = { excludedItemTypes: [...items].sort() };
     }
   }
+  state.transient.nodes = nodes as Record<string, SimulationMutableRuntimeState['transient']['nodes'][string]>;
+}
 
+function createSlotOverlayState(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+): SimulationMutableRuntimeState {
+  // AI-CORRECTION 2026-07-30: 旧实现 {...state} 共享整个 transient 对象。
+  // transient.nodes[nodeId].excludedItemTypes 包含上一 tick 的 buildSolveGraph 残留，
+  // 当 advanceDevices 在粗步长模式下通过本 overlay 调用 findInputSlotForItem 时，
+  // 会读到 stale 的排除列表，错误地将空槽视为"已被同组其他槽占用"而跳过，
+  // 导致 strict-pipe 等设备的 dynamic-pipe-transfer 配方输出放置失败。
+  //
+  // AI-CORRECTION 2026-07-31: excludedItemTypes 现在由 rebuildExcludedItemTypesForTick
+  // 在每 tick 开头统一重建并写入 transient.nodes。overlay 恢复浅拷贝即可安全读取。
+  // 其他 transient 字段（edges、transfers、blockedInputNodeIds 等）属于 Stage 3 求解数据，
+  // 在 overlay 配方完成路径中不会被读取，无需重建。
+  // _perf 和 recipeStatsDelta 继续共享引用 —— finishRecipeIfPossible 向其中写入统计。
   return {
     ...state,
     persistent: {
@@ -611,7 +625,6 @@ function createSlotOverlayState(
     },
     transient: {
       ...state.transient,
-      nodes: nodes as Record<string, SimulationMutableRuntimeState['transient']['nodes'][string]>,
     },
   };
 }
