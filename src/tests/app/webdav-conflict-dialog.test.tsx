@@ -82,6 +82,7 @@ describe("WebDavConflictDialog", () => {
       actions: {
         updateSettings: vi.fn(),
         syncNow: vi.fn(async () => undefined),
+        deleteRemoteData: vi.fn(async () => undefined),
         resolveConflicts: (decisions) => {
           state.resolveConflicts(decisions);
         },

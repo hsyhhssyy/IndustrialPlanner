@@ -56,6 +56,7 @@ import {
   estimateTotalStorageBytes,
   formatStorageBytesToMB,
 } from "@/shared/storage";
+import { writeSyncProvider } from "@/sync/sync-providers";
 
 const SETTINGS_DIALOG_SECTION_SCROLL_OFFSET = 10;
 
@@ -249,24 +250,25 @@ export const SettingsDialog = observer(function SettingsDialog({
     activeTab: null,
   }), []);
 
-  // AI-REMOVED 2026-07-29:
-  // Reason: 冲突窗口状态不能依赖设置窗口是否打开。
-  // Trigger: 关闭设置后 pendingConflict 存在，但整个 SettingsDialog 未挂载。
-  // Evidence: 真实冲突诊断中 pendingConflict=world-documents/wuling，DOM 中无 webdav-conflict。
-  // Replacement: WebDavConflictDialog 内部稳定 dialogState。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // const webDavConflictDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
-  //   visible: false,
-  //   maximized: false,
-  //   offsetX: 0,
-  //   offsetY: 0,
-  //   width: 460,
-  //   height: null,
-  //   activeTab: null,
-  // }), []);
+  const webDavDeleteConfirmDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 420,
+    height: null,
+    activeTab: null,
+  }), []);
+
+  const webDavDeleteInputDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 420,
+    height: null,
+    activeTab: null,
+  }), []);
 
   const webDavStatusDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
     visible: false,
@@ -310,6 +312,60 @@ export const SettingsDialog = observer(function SettingsDialog({
   const handleClearStorageInputConfirm = useCallback(() => {
     clearAllStorageAndReload();
   }, []);
+
+  const [webDavDeleteInputValue, setWebDavDeleteInputValue] = useState("");
+  const [webDavDeleting, setWebDavDeleting] = useState(false);
+
+  const handleWebDavDelete = useCallback(() => {
+    runInAction(() => {
+      webDavDeleteConfirmDialogState.visible = true;
+    });
+  }, [webDavDeleteConfirmDialogState]);
+
+  const handleWebDavDeleteCancel = useCallback(() => {
+    runInAction(() => {
+      webDavDeleteConfirmDialogState.visible = false;
+    });
+  }, [webDavDeleteConfirmDialogState]);
+
+  const handleWebDavDeleteConfirm = useCallback(() => {
+    runInAction(() => {
+      webDavDeleteConfirmDialogState.visible = false;
+      webDavDeleteInputDialogState.visible = true;
+    });
+    setWebDavDeleteInputValue("");
+  }, [webDavDeleteConfirmDialogState, webDavDeleteInputDialogState]);
+
+  const handleWebDavDeleteInputCancel = useCallback(() => {
+    runInAction(() => {
+      webDavDeleteInputDialogState.visible = false;
+    });
+    setWebDavDeleteInputValue("");
+  }, [webDavDeleteInputDialogState]);
+
+  const handleWebDavDeleteInputConfirm = useCallback(async () => {
+    runInAction(() => {
+      webDavDeleteInputDialogState.visible = false;
+    });
+    setWebDavDeleting(true);
+    // 1. 将 sync-provider 持久化为 none，触发 sync-host 重新派生 enabled=false
+    //    防止删除过程中定时器触发保存或检查
+    writeSyncProvider("none");
+    sync?.actions.updateSettings({});
+
+    // 2. 删除远端数据
+    try {
+      await sync?.actions.deleteRemoteData();
+    } catch {
+      // 删除失败静默处理，用户可重试
+    }
+
+    // 3. 关闭弹窗
+    runInAction(() => {
+      webDavStatusDialogState.visible = false;
+    });
+    setWebDavDeleting(false);
+  }, [sync, webDavDeleteInputDialogState, webDavStatusDialogState]);
 
   // AI-REMOVED 2026-07-29:
   // Reason: 冲突 action 由 Workbench 顶层窗口直接发送给独立同步模块。
@@ -369,6 +425,15 @@ export const SettingsDialog = observer(function SettingsDialog({
   );
 
   const isClearStorageInputValid = clearStorageInputValue === clearStorageExpectedText;
+
+  const webDavDeleteExpectedText = useMemo(
+    () => appHost.state.settings.locale === "zh-CN"
+      ? "删除服务器端所有保存内容"
+      : "Delete all saved content on the server",
+    [appHost.state.settings.locale],
+  );
+
+  const isWebDavDeleteInputValid = webDavDeleteInputValue === webDavDeleteExpectedText;
 
   const handleRequestToggleExperimentalFeatures = useCallback(() => {
     runInAction(() => {
@@ -846,6 +911,31 @@ export const SettingsDialog = observer(function SettingsDialog({
         t={t}
       />
     )}
+    {webDavDeleteConfirmDialogState.visible && (
+      <ConfirmResetDialog
+        confirmDialogState={webDavDeleteConfirmDialogState}
+        confirmMessageKey="webDavConfig.deleteAllDataConfirm"
+        onCancel={handleWebDavDeleteCancel}
+        onConfirm={handleWebDavDeleteConfirm}
+        t={t}
+        titleKey="webDavConfig.deleteAllData"
+      />
+    )}
+    {webDavDeleteInputDialogState.visible && (
+      <ClearStorageInputDialog
+        confirmButtonKey="webDavConfig.deleteAllDataFinalConfirm"
+        confirmDialogState={webDavDeleteInputDialogState}
+        expectedText={webDavDeleteExpectedText}
+        inputValue={webDavDeleteInputValue}
+        isValid={isWebDavDeleteInputValid}
+        onCancel={handleWebDavDeleteInputCancel}
+        onChange={setWebDavDeleteInputValue}
+        onConfirm={handleWebDavDeleteInputConfirm}
+        promptKey="webDavConfig.deleteAllDataFinalPrompt"
+        t={t}
+        titleKey="webDavConfig.deleteAllDataFinalTitle"
+      />
+    )}
     {activityDialogState.visible && (
       <ActivitySelectionDialog
         activityDialogState={activityDialogState}
@@ -889,8 +979,10 @@ export const SettingsDialog = observer(function SettingsDialog({
     {webDavStatusDialogState.visible && sync !== null ? (
       <WebDavSyncStatusDialog
         compactMobileLayout={isNonDesktop}
+        deleting={webDavDeleting}
         dialogState={webDavStatusDialogState}
         onClose={handleCloseWebDavStatus}
+        onDeleteAllData={handleWebDavDelete}
         onToggleMaximized={handleToggleWebDavStatusMaximized}
         onUpdateSettings={(patch) => sync.actions.updateSettings(patch)}
         state={sync.state}
@@ -1606,6 +1698,9 @@ interface ClearStorageInputDialogProps {
   onChange: (value: string) => void;
   onConfirm: () => void;
   t: AppHost["actions"]["translate"];
+  titleKey?: string;
+  promptKey?: string;
+  confirmButtonKey?: string;
 }
 
 function ClearStorageInputDialog({
@@ -1617,6 +1712,9 @@ function ClearStorageInputDialog({
   onChange,
   onConfirm,
   t,
+  titleKey,
+  promptKey,
+  confirmButtonKey,
 }: ClearStorageInputDialogProps) {
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter" && isValid) {
@@ -1637,12 +1735,12 @@ function ClearStorageInputDialog({
       onToggleMaximized={() => {}}
       restoreTitle=""
       showMaximizeButton={false}
-      title={t("settingsAction.experimental-clear-storage-final-title")}
+      title={t(titleKey ?? "settingsAction.experimental-clear-storage-final-title")}
       titleId="clear-storage-input-dialog-title"
     >
       <div className={cm(styles, "confirm-reset-content")}>
         <p className={cm(styles, "clear-storage-input-prompt")}>
-          {t("settingsAction.experimental-clear-storage-final-prompt")}
+          {t(promptKey ?? "settingsAction.experimental-clear-storage-final-prompt")}
         </p>
         <p className={cm(styles, "clear-storage-input-expected")}>
           {expectedText}
@@ -1670,7 +1768,7 @@ function ClearStorageInputDialog({
             onClick={onConfirm}
             type="button"
           >
-            {t("settingsAction.experimental-clear-storage-final-confirm")}
+            {t(confirmButtonKey ?? "settingsAction.experimental-clear-storage-final-confirm")}
           </button>
         </div>
       </div>

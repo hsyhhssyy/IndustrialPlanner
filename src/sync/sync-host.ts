@@ -69,7 +69,10 @@ import {
   subscribeToWebDavSyncSettingsChanges,
   writeWebDavSyncSettings,
 } from "./storage/webdav-sync-settings";
-import { SYNC_PROVIDER_STORAGE_KEY } from "./sync-providers";
+import {
+  readSyncProvider,
+  writeSyncProvider,
+} from "./sync-providers";
 import { SyncStateImpl } from "./sync-state-impl";
 import type { SyncStorageClient } from "./clients/types";
 import { createWebDavWorkerStorageClient } from "./clients/webdav/webdav-worker-client";
@@ -86,22 +89,6 @@ export interface SyncHost extends SyncContract {
 type ResolveInteractiveConflict = <TValue>(
   conflict: SyncAdapterConflict<TValue>,
 ) => Promise<SyncConflictResolution>;
-
-function readSyncProvider(): string {
-  try {
-    return localStorage.getItem(SYNC_PROVIDER_STORAGE_KEY) ?? "none";
-  } catch {
-    return "none";
-  }
-}
-
-function writeSyncProvider(id: string): void {
-  try {
-    localStorage.setItem(SYNC_PROVIDER_STORAGE_KEY, id);
-  } catch {
-    // 静默失败
-  }
-}
 
 /**
  * 从 provider 选择 + URL 派生 enabled。
@@ -358,6 +345,26 @@ export async function createSyncHost(
       );
     },
     resolveConflicts: state.resolveConflicts,
+    deleteRemoteData: async () => {
+      const settings = currentSettings;
+      if (!settings.enabled || settings.url.trim() === "") {
+        return;
+      }
+
+      const client = createWebDavWorkerStorageClient({
+        baseUrl: settings.url,
+        username: settings.username,
+        password: settings.password,
+        readDebugEnabled: options.readDebugEnabled,
+        maxConcurrentRequests: settings.maxConcurrentRequests,
+      });
+      try {
+        // WebDAV DELETE 目录时多数服务端（Nextcloud/Apache mod_dav）会递归删除内容
+        await client.deleteResource("");
+      } finally {
+        client.dispose?.();
+      }
+    },
     // AI-REMOVED 2026-07-29:
     // Reason: 单个 resolution 会强迫全部冲突采用同一选择，并把“暂停”错误解释为关闭 WebDAV。
     // Trigger: 用户要求一个窗口列出全部冲突，每一项独立提供三个选项。

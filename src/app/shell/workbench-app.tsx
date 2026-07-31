@@ -49,7 +49,7 @@ import { V2MigrationController } from "@/app/migration";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
 import { RightDock } from "@/app/shell/layout/right-dock";
 import { SimulationControlButton, TimelineButton, TopBar } from "@/app/shell/layout/top-bar";
-import { SYNC_PROVIDER_STORAGE_KEY } from "@/sync/sync-providers";
+import { readSyncProvider, writeSyncProvider } from "@/sync/sync-providers";
 import {
   WebDavInitialSyncFeatureGate,
   WebDavInitialSyncGate,
@@ -595,20 +595,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         }),
       },
       "sync-provider": {
-        readValue: () => {
-          try {
-            return localStorage.getItem(SYNC_PROVIDER_STORAGE_KEY) ?? "none";
-          } catch {
-            return "none";
-          }
-        },
+        readValue: () => readSyncProvider(),
         writeValue: action((value) => {
-          const id = typeof value === "string" ? value : "none";
-          try {
-            localStorage.setItem(SYNC_PROVIDER_STORAGE_KEY, id);
-          } catch {
-            // 静默失败；sync-host 下次读取时回退到默认值
-          }
+          writeSyncProvider(typeof value === "string" ? value : "none");
           // 通知 sync-host 重新派生 enabled
           appHost.workspace.sync?.actions.updateSettings({});
         }),

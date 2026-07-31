@@ -30,16 +30,20 @@ import styles from "./settings-dialog.module.scss";
 
 export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
   compactMobileLayout,
+  deleting,
   dialogState,
   onClose,
+  onDeleteAllData,
   onToggleMaximized,
   onUpdateSettings,
   state,
   t,
 }: {
   compactMobileLayout: boolean;
+  deleting: boolean;
   dialogState: DialogStateReadWrite;
   onClose: () => void;
+  onDeleteAllData: () => void;
   onToggleMaximized: () => void;
   onUpdateSettings: (patch: Partial<WebDavSyncSettings>) => void;
   state: SyncState;
@@ -273,6 +277,22 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
               </article>
             ))}
           </div>
+        </section>
+
+        <section className={cm(styles, "webdav-sync-status-section", "webdav-delete-section")}>
+          {deleting ? (
+            <div className={cm(styles, "webdav-delete-progress")}>
+              {t("webDavConfig.deleteAllDataDeleting")}
+            </div>
+          ) : (
+            <button
+              className={cm(styles, "webdav-delete-all-btn")}
+              onClick={onDeleteAllData}
+              type="button"
+            >
+              {t("webDavConfig.deleteAllData")}
+            </button>
+          )}
         </section>
 
         {/*

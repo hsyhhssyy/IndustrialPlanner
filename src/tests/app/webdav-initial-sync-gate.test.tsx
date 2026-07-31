@@ -36,6 +36,7 @@ describe("WebDavInitialSyncGate", () => {
       actions: {
         resolveConflicts: vi.fn(),
         syncNow: vi.fn(async () => undefined),
+        deleteRemoteData: vi.fn(async () => undefined),
         updateSettings: vi.fn(),
       },
       queries: {},

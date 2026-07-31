@@ -71,8 +71,10 @@ describe("WebDavSyncStatusDialog", () => {
         <OverlayStackProvider>
           <WebDavSyncStatusDialog
             compactMobileLayout={false}
+            deleting={false}
             dialogState={dialogState}
             onClose={vi.fn()}
+            onDeleteAllData={vi.fn()}
             onToggleMaximized={vi.fn()}
             onUpdateSettings={vi.fn()}
             state={state}

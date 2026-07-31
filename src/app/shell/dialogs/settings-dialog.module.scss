@@ -539,6 +539,43 @@
   }
 }
 
+.webdav-delete-section {
+  border-color: var(--danger-soft, rgba(var(--danger-rgb, 220, 38, 38), 0.25));
+  background: var(--surface-2);
+}
+
+.webdav-delete-all-btn {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--danger, #dc2626);
+  border-radius: 8px;
+  background: var(--danger, #dc2626);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 0.85;
+  }
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.webdav-delete-progress {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--danger-soft, rgba(var(--danger-rgb, 220, 38, 38), 0.15));
+  color: var(--danger, #dc2626);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 // AI-REMOVED 2026-07-29:
 // Reason: WebDAV 状态窗口不再展示设备列表。
 // Trigger: 用户确认设备列表没有意义，仅在冲突中显示远端上传时间。

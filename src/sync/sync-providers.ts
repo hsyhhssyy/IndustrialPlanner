@@ -27,3 +27,21 @@ export function isActiveSyncProvider(id: string): boolean {
 
 /** localStorage key，供 settings dialog 和 sync-host 共享读取。 */
 export const SYNC_PROVIDER_STORAGE_KEY = "v3-sync-provider";
+
+/** 从 localStorage 读取当前 sync provider。不可用时返回 "none"。 */
+export function readSyncProvider(): string {
+  try {
+    return localStorage.getItem(SYNC_PROVIDER_STORAGE_KEY) ?? "none";
+  } catch {
+    return "none";
+  }
+}
+
+/** 将 sync provider 写入 localStorage。不可用时静默失败。 */
+export function writeSyncProvider(id: string): void {
+  try {
+    localStorage.setItem(SYNC_PROVIDER_STORAGE_KEY, id);
+  } catch {
+    // 静默失败
+  }
+}
