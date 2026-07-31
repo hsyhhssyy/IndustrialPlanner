@@ -88,8 +88,8 @@ function ensureOutputDir(): void {
 function ensureHeader(): void {
   const absFile = resolve(OUTPUT_FILE);
   if (!existsSync(absFile)) {
-    appendFileSync(absFile, "| 提交 SHA | 执行时间 | 平均耗时 (ms) |\n");
-    appendFileSync(absFile, "|----------|----------|---------------|\n");
+    appendFileSync(absFile, "| Run ID | 提交 SHA | 执行时间 | 平均耗时 (ms) |\n");
+    appendFileSync(absFile, "|--------|----------|----------|---------------|\n");
   }
 }
 
@@ -136,9 +136,12 @@ function createTeeLogger(filePath: string): {
 // ---- 主流程 ----
 
 async function main(): Promise<void> {
-  // 1. 检查未提交改动
-  if (hasUncommittedChanges()) {
+  const isDirty = hasUncommittedChanges();
+
+  // 1. 检查未提交改动：-n 1 快速验证模式可跳过
+  if (isDirty && ITERATIONS !== 1) {
     console.error("❌ 检测到未提交的改动，请先提交代码再执行性能测试。");
+    console.error("   提示：使用 -n 1 可跳过此检查进行快速验证。");
     process.exit(1);
   }
 
@@ -180,12 +183,12 @@ async function main(): Promise<void> {
   const avg = durations.reduce((sum, d) => sum + d, 0) / durations.length;
 
   // 记录到文件
-  const sha = getGitHeadSha();
+  const sha = isDirty ? `${getGitHeadSha()}+WT` : getGitHeadSha();
   const dateTime = formatDateTime();
 
   ensureOutputDir();
   ensureHeader();
-  appendFileSync(resolve(OUTPUT_FILE), `| ${sha} | ${dateTime} | ${avg.toFixed(1)} |\n`);
+  appendFileSync(resolve(OUTPUT_FILE), `| ${RUN_HASH} | ${sha} | ${dateTime} | ${avg.toFixed(1)} |\n`);
 
   console.log("");
   console.log("========================================");
