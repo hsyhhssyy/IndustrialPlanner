@@ -164,6 +164,7 @@ async function main(): Promise<void> {
       blueprint,
       maxTickNumber: MAX_TICK,
       registry,
+      perfEnabled: true,
     });
     const elapsed = performance.now() - start;
 
