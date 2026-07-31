@@ -162,7 +162,7 @@ export async function runBlueprintSimulation(
     }
 
     const tTotal = performance.now() - tStart;
-    console.log(`   [perf] 总耗时: ${tTotal.toFixed(0)}ms | sync=${tickSyncTotal.toFixed(0)}ms(${(tickSyncTotal/tTotal*100).toFixed(1)}%) report=${tickReportTotal.toFixed(0)}ms(${(tickReportTotal/tTotal*100).toFixed(1)}%) 其他=${(tTotal-tickSyncTotal-tickReportTotal).toFixed(0)}ms($.{((tTotal-tickSyncTotal-tickReportTotal)/tTotal*100).toFixed(1)}%)`);
+    console.log(`   [perf] 总耗时: ${tTotal.toFixed(0)}ms | sync=${tickSyncTotal.toFixed(0)}ms(${(tickSyncTotal/tTotal*100).toFixed(1)}%) report=${tickReportTotal.toFixed(0)}ms(${(tickReportTotal/tTotal*100).toFixed(1)}%) 其他=${(tTotal-tickSyncTotal-tickReportTotal).toFixed(0)}ms(${((tTotal-tickSyncTotal-tickReportTotal)/tTotal*100).toFixed(1)}%)`);
 
     return {
       blueprint: {

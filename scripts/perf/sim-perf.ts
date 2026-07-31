@@ -9,7 +9,7 @@
  */
 
 import { execSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 
@@ -36,6 +36,19 @@ const MAX_TICK = 3600;
 const ITERATIONS = parseIterations();
 const OUTPUT_FILE = ".temp/sim-perf.md";
 const OUTPUT_DIR = ".temp";
+
+// 生成本次运行的唯一标识
+function generateRunHash(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
+    `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+  );
+}
+
+const RUN_HASH = generateRunHash();
+const RUNS_DIR = resolve(`.temp/sim-perf/runs/${RUN_HASH}`);
 
 // ---- 辅助函数 ----
 
@@ -80,6 +93,46 @@ function ensureHeader(): void {
   }
 }
 
+// ---- 日志 Tee ----
+
+function createTeeLogger(filePath: string): {
+  log: (...args: unknown[]) => void;
+  restore: () => void;
+} {
+  const originalLog = console.log;
+  const originalDebug = console.debug;
+  const lines: string[] = [];
+
+  const teeLog = (level: "log" | "debug", ...args: unknown[]) => {
+    const line = args.map(a => (typeof a === "string" ? a : JSON.stringify(a))).join(" ");
+    lines.push(`[${level}] ${line}`);
+    // 终端只输出非 perf 日志：debug 级别和 [perf] 前缀的 log 只写文件
+    if (level === "debug") {
+      // 不进终端
+    } else {
+      const text = args[0];
+      if (typeof text === "string" && /^\s*\[perf\]/.test(text)) {
+        // [perf] 前缀的 log 只写文件
+      } else {
+        originalLog(...args);
+      }
+    }
+  };
+
+  console.log = (...args: unknown[]) => teeLog("log", ...args);
+  console.debug = (...args: unknown[]) => teeLog("debug", ...args);
+
+  return {
+    log: (...args: unknown[]) => teeLog("log", ...args),
+    restore: () => {
+      console.log = originalLog;
+      console.debug = originalDebug;
+      mkdirSync(resolve(filePath, ".."), { recursive: true });
+      writeFileSync(filePath, lines.join("\n") + "\n", "utf-8");
+    },
+  };
+}
+
 // ---- 主流程 ----
 
 async function main(): Promise<void> {
@@ -92,6 +145,7 @@ async function main(): Promise<void> {
   console.log(`📋 蓝图: ${BLUEPRINT_PATH}`);
   console.log(`⏱️  目标 tick: ${MAX_TICK}`);
   console.log(`🔁 迭代次数: ${ITERATIONS}`);
+  console.log(`📂 运行日志: ${RUNS_DIR}/`);
   console.log("");
 
   const blueprint = loadBlueprintFromFile(BLUEPRINT_PATH);
@@ -100,6 +154,9 @@ async function main(): Promise<void> {
   const durations: number[] = [];
 
   for (let i = 1; i <= ITERATIONS; i++) {
+    const logFile = resolve(`${RUNS_DIR}/run-${i}.console.log`);
+    const tee = createTeeLogger(logFile);
+
     console.log(`▶️  第 ${i}/${ITERATIONS} 次执行...`);
 
     const start = performance.now();
@@ -112,6 +169,10 @@ async function main(): Promise<void> {
 
     durations.push(elapsed);
     console.log(`   ✅ 耗时: ${elapsed.toFixed(1)} ms`);
+
+    tee.restore();
+    // restore 后补一行原始 console 输出
+    console.log(`   📝 日志已写入: ${logFile}`);
   }
 
   // 计算平均值
