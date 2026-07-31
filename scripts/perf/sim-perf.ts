@@ -1,10 +1,10 @@
 /**
  * 仿真性能基线记录脚本
  *
- * 用法: npx tsx --tsconfig tsconfig.app.json scripts/perf/sim-perf.ts
+ * 用法: npx tsx --tsconfig tsconfig.app.json scripts/perf/sim-perf.ts [-n N]
  *
  * 使用蓝图 7核息壤 (utimate-xiranite) 运行到 3600 tick，
- * 重复执行 10 次，取平均值毫秒数，
+ * 重复执行 N 次（默认 10），取平均值毫秒数，
  * 记录到 .temp/sim-perf.md
  */
 
@@ -17,9 +17,23 @@ import { runBlueprintSimulation } from "../../src/tests/simulation/blueprint-run
 import { loadBlueprintFromFile } from "../../src/tests/simulation/blueprint-test-helpers";
 import { createRegistryContract } from "../../src/registry";
 
+// 解析 -n 参数
+function parseIterations(): number {
+  const nIndex = process.argv.indexOf("-n");
+  if (nIndex !== -1 && nIndex + 1 < process.argv.length) {
+    const n = Number(process.argv[nIndex + 1]);
+    if (Number.isFinite(n) && n > 0 && Number.isInteger(n)) {
+      return n;
+    }
+    console.error(`❌ -n 参数无效: ${process.argv[nIndex + 1]}，应为正整数`);
+    process.exit(1);
+  }
+  return 10; // 默认值
+}
+
 const BLUEPRINT_PATH = "public/blueprints/utimate-xiranite.json";
 const MAX_TICK = 3600;
-const ITERATIONS = 10;
+const ITERATIONS = parseIterations();
 const OUTPUT_FILE = ".temp/sim-perf.md";
 const OUTPUT_DIR = ".temp";
 

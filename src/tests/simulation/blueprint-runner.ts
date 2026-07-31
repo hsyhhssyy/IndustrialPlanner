@@ -1,3 +1,4 @@
+import { performance } from "node:perf_hooks";
 import { createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -20,6 +21,8 @@ export interface RunBlueprintSimulationOptions {
   readonly blueprint: BlueprintDocument;
   readonly maxTickNumber: number;
   readonly registry: RegistryContract;
+  /** 启用轻量性能统计，输出逐 tick 阶段耗时报告 */
+  readonly perfEnabled?: boolean;
 }
 
 export interface BlueprintSimulationReport {
@@ -102,14 +105,21 @@ export async function runBlueprintSimulation(
     throw new Error(`Expected maxTickNumber to be a non-negative integer, received: ${options.maxTickNumber}`);
   }
 
+  const tStart = performance.now();
+
   const document = createWorldDocumentFromBlueprint(options.blueprint);
   const workspace = createHeadlessWorkspace(document, options.registry);
   const host = createSimulationHost(workspace, {
     workerMode: "runtime",
+    getPerfEnabled: options.perfEnabled ? () => true : undefined,
   });
 
   try {
+    const tRefreshStart = performance.now();
     const startResult = await host.internalActions.refreshFromCurrentDocument();
+    const tRefreshEnd = performance.now();
+    console.log(`   [perf] 启动编译: ${(tRefreshEnd - tRefreshStart).toFixed(1)} ms`);
+
     const topology = host.topology.getSnapshot();
 
     if (startResult.status !== "started" || topology === null) {
@@ -120,8 +130,15 @@ export async function runBlueprintSimulation(
     const sourceEntityIds = resolveSourceEntityIds(topology);
     const ticks: BlueprintSimulationTickReport[] = [];
 
-    for (let tickNumber = 0; tickNumber <= options.maxTickNumber; tickNumber += 1) {
+    let tickSyncTotal = 0;
+    let tickReportTotal = 0;
+    const maxTick = options.maxTickNumber;
+
+    for (let tickNumber = 0; tickNumber <= maxTick; tickNumber += 1) {
+      const tTickStart = performance.now();
       const tickStatus = await host.internalActions.syncToTick(tickNumber);
+      const tTickEnd = performance.now();
+      tickSyncTotal += tTickEnd - tTickStart;
       if (tickStatus.status !== "ready") {
         throw new Error(formatUnavailableTickMessage(tickNumber, tickStatus));
       }
@@ -131,12 +148,21 @@ export async function runBlueprintSimulation(
         throw new Error(`Simulation produced no snapshot for tick ${tickNumber}.`);
       }
 
+      const tReportStart = performance.now();
       ticks.push(createTickReport({
         host,
         snapshot,
         sourceEntityIds,
       }));
+      tickReportTotal += performance.now() - tReportStart;
+
+      if (tickNumber > 0 && tickNumber % 600 === 0) {
+        console.log(`   [perf] tick ${tickNumber}: sync累计=${tickSyncTotal.toFixed(0)}ms report累计=${tickReportTotal.toFixed(0)}ms`);
+      }
     }
+
+    const tTotal = performance.now() - tStart;
+    console.log(`   [perf] 总耗时: ${tTotal.toFixed(0)}ms | sync=${tickSyncTotal.toFixed(0)}ms(${(tickSyncTotal/tTotal*100).toFixed(1)}%) report=${tickReportTotal.toFixed(0)}ms(${(tickReportTotal/tTotal*100).toFixed(1)}%) 其他=${(tTotal-tickSyncTotal-tickReportTotal).toFixed(0)}ms($.{((tTotal-tickSyncTotal-tickReportTotal)/tTotal*100).toFixed(1)}%)`);
 
     return {
       blueprint: {
