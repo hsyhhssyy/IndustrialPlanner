@@ -222,12 +222,9 @@ export function createPipeFlowDecoration(): DecorationLayer {
 
 function resolveActivePipeEntityIds(ctx: DecorationSyncContext): Set<string> {
   const editor = ctx.renderHost.workspace.editor
-  const queries = ctx.renderHost.workspace.simulation?.queries
-  if (editor === null || queries === undefined) {
+  if (editor === null) {
     return new Set()
   }
-
-  const exactFluidMode = ctx.renderHost.workspace.app?.state?.settings?.gameShowPipeExactFluidPosition === true
 
   const activePipeEntityIds = new Set<string>()
   for (const entity of editor.queries.listEntities()) {
@@ -235,14 +232,6 @@ function resolveActivePipeEntityIds(ctx: DecorationSyncContext): Set<string> {
       entity.definitionId,
       ctx.renderHost.workspace.registry.queries,
     )) {
-      continue
-    }
-
-    if (queries.getPipeFluidItemId(entity.id) === null) {
-      continue
-    }
-
-    if (exactFluidMode && !queries.isPipeDeviceSlotOccupied(entity.id)) {
       continue
     }
 
