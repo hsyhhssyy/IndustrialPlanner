@@ -1392,7 +1392,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     id: "item_gas_acid",
     nameKey: "registry.item.item_gas_acid.name",
     iconId: "item_gas_acid",
-    tags: ["gas"],
+    tags: ["gas", "gas_color:#f0b840"],
     displayOrder: 10000,
   },
 ];

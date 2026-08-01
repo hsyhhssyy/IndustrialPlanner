@@ -385,6 +385,61 @@ describe("SelectionInspectorSlot", () => {
     )).not.toBeNull();
   });
 
+  it("fires the consumption priming button to refill the slot to 5", async () => {
+    const workspace = createWorkspace();
+    editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldWithMeteredDevice());
+    editorHost.internalState.collections.selection.replace(["dummy-metered-device"]);
+    attachSimulationStub(workspace, {
+      state: "start",
+      runtimeStatus: {
+        slotItems: [{
+          storageGroupId: "consume_buffer",
+          slotId: "consume_slot",
+          viewRole: "input-view",
+          itemType: "item_gas_acid",
+          count: 2,
+          reserved: 2,
+          ignoreStock: false,
+        }],
+        channelRecipes: {},
+        powerStatus: "in-power-range",
+      },
+    });
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    act(() => {
+      root.render(
+        <SelectionInspectorSlot
+          appHost={currentAppHost}
+          translate={(key) => key}
+        />,
+      );
+      vi.advanceTimersByTime(50);
+    });
+
+    const panel = container.querySelector<HTMLElement>("[data-inspector-key='metered-consumption']");
+    expect(panel).not.toBeNull();
+
+    const fireButton = panel!.querySelector<HTMLButtonElement>("[aria-label='启动消耗']");
+    expect(fireButton).not.toBeNull();
+    expect(fireButton!.textContent).toContain("启动");
+
+    act(() => {
+      fireButton!.click();
+    });
+
+    expect(workspace.simulation?.actions.patchRuntimeSlot).toHaveBeenCalledWith({
+      entityId: "dummy-metered-device",
+      storageGroupId: "consume_buffer",
+      slotId: "consume_slot",
+      itemType: "item_gas_acid",
+      count: 5,
+      ignoreStock: false,
+    });
+  });
+
   it("hides on multi selection and remounts after narrowing back to one entity", () => {
     const workspace = createWorkspace();
     editorHost = createEditorHost(workspace);

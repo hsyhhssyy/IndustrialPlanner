@@ -650,6 +650,10 @@ function resolveFixedSourceReplacingEntityId(options: {
   kind: LogisticsKind;
   source: DevicePortEndpoint;
 }): string | null {
+  // 跳过对端物流族被压制的设备，穿透到下层同族物流段。
+  const skipLogisticsKind: LogisticsKind = options.kind === LOGISTICS_KIND.belt
+    ? LOGISTICS_KIND.pipe
+    : LOGISTICS_KIND.belt;
   const entity = findTopEntityAtGridPoint({
     gridPoint: options.source.outsideGridPoint,
     document: options.context.document.getSnapshot(),
@@ -657,6 +661,7 @@ function resolveFixedSourceReplacingEntityId(options: {
     entityDefinitionMap: options.context.entityDefinitionMap,
     registryQueries: options.context.workspace.registry.queries,
     baseDefinitions: options.context.workspace.registry.baseDefinitions,
+    skipLogisticsKind,
   });
 
   return entity !== null && isOrdinaryLogisticsDefinitionId(

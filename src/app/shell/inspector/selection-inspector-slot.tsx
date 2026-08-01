@@ -276,6 +276,7 @@ function renderInspector(options: {
         <MeteredConsumptionInspector
           appHost={options.appHost}
           definition={options.definition}
+          entity={options.entity}
           runtimeStatus={options.runtimeStatus}
         />
       );

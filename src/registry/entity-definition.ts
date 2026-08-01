@@ -81,7 +81,6 @@ import { ITEM_DEFINITIONS } from "./item-definition";
 import {
   LOGISTICS_DEFINITION_ID_BY_KIND_AND_ROLE,
   LOGISTICS_DEFINITION_ID_BY_KIND_AND_SHAPE,
-  isLogisticsFamilyDefinitionId,
 } from "./logistics-definition-ids";
 import { RECIPE_DEFINITIONS } from "./recipe-definition";
 
@@ -204,7 +203,10 @@ function createGasItemWhitelistAcceptRule(
  * AI-CORRECTION 2026-06-09: links 字段已从 EntityDefinition 移除，所有槽位链接统一存于 document.slotLinks。
  */
 function createEntityDefinition(definition: EntityDefinitionInput): EntityDefinition {
-  const normalizedDefinition = normalizePipeFamilyFluidDefinition(definition);
+  // AI-CORRECTION 2026-08-01: normalizePipeFamilyFluidDefinition 已移除。
+  // 其 acceptRule/itemFilterType 转换为恒等映射，capacity 强制覆盖与当前显式定义冲突。
+  // 管道族实体定义已直接使用 FluidDomain。
+  const normalizedDefinition = definition;
   const declaredInspectors = [...(normalizedDefinition.inspectors ?? [])];
   const recipeMachineInspectors = createRecipeMachineIngredientSlotInspectors(normalizedDefinition);
 
@@ -228,56 +230,60 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
   };
 }
 
-function normalizePipeFamilyFluidDefinition(definition: EntityDefinitionInput): EntityDefinitionInput {
-  // AI-CORRECTION 2026-07-18: acceptRuleFromPortKind 已改为默认返回 { kind: "fluid" }，
-  //   因此本函数的 port acceptRule 转换与 slot itemFilterType 转换都已成为恒等映射。
-  //   保留此函数作为安全网，避免旧蓝图或外部定义中仍有显式 { kind: "liquid" } 的残留。
-  // AI-CORRECTION 2026-07-23: PipeFamily 的所有显式流体槽位统一规范化为容量 2。
-  // AI-CORRECTION 2026-07-27: 管道设备族的身份由 registry 内部 definition ID 常量判定，不再依赖 PipeFamily tag。
-  // AI-CORRECTION 2026-07-28: 端口物理类型改由 isPipe 显式声明；域规范化改为位标志。
-  if (!isLogisticsFamilyDefinitionId(LOGISTICS_KIND.pipe, definition.id)) {
-    return definition;
-  }
-
-  return {
-    ...definition,
-    portGroups: definition.portGroups.map((portGroup) =>
-      portGroup.isPipe
-        ? {
-            ...portGroup,
-            ports: portGroup.ports.map((port) => ({
-              ...port,
-              acceptRule: normalizePipeFamilyAcceptRule(port.acceptRule),
-            })),
-          }
-        : portGroup,
-    ),
-    storageSlotGroups: definition.storageSlotGroups.map((storageSlotGroup) =>
-      (storageSlotGroup.kind & FluidDomain) !== 0
-        ? {
-            ...storageSlotGroup,
-            slots: storageSlotGroup.slots.map((slot) => ({
-              ...slot,
-              itemFilterType: slot.itemFilterType === ItemDomainFlag.Liquid
-                ? FluidDomain
-                : slot.itemFilterType,
-              capacity: 2,
-            })),
-          }
-        : storageSlotGroup,
-    ),
-  };
-}
-
-function normalizePipeFamilyAcceptRule(
-  acceptRule: PortDefinition["acceptRule"],
-): PortDefinition["acceptRule"] {
-  return acceptRule.base.kind === "domain"
-    && acceptRule.base.flags === ItemDomainFlag.Liquid
-    && acceptRule.exclude.length === 0
-    ? { base: { kind: "domain", flags: FluidDomain }, exclude: [] }
-    : acceptRule;
-}
+// AI-REMOVED 2026-08-01:
+// Reason: normalizePipeFamilyFluidDefinition 与 normalizePipeFamilyAcceptRule 已删除。
+//   前者对 acceptRule 和 itemFilterType 的转换为恒等映射（acceptRuleFromPortKind 默认返回 FluidDomain），
+//   且其对 capacity 的强制覆盖（capacity: 2）与管道族实体定义中显式声明的 capacity: 1 冲突。
+// Trigger: 用户发现 pipe_splitter 定义 capacity=1 但运行时显示 capacity=2。
+// Evidence: normalizePipeFamilyFluidDefinition 中无条件 `capacity: 2` 覆盖了 createSlots 中的 [1]。
+// Replacement: 管道族实体定义（splitter/converger/connector/admission）直接使用 FluidDomain 作为 itemFilterType。
+// Risk: Low — acceptRuleFromPortKind 已保证端口 acceptRule 默认即为 FluidDomain。
+// Human Review: Not Required
+//
+// Original code:
+// function normalizePipeFamilyFluidDefinition(definition: EntityDefinitionInput): EntityDefinitionInput {
+//   if (!isLogisticsFamilyDefinitionId(LOGISTICS_KIND.pipe, definition.id)) {
+//     return definition;
+//   }
+//   return {
+//     ...definition,
+//     portGroups: definition.portGroups.map((portGroup) =>
+//       portGroup.isPipe
+//         ? {
+//             ...portGroup,
+//             ports: portGroup.ports.map((port) => ({
+//               ...port,
+//               acceptRule: normalizePipeFamilyAcceptRule(port.acceptRule),
+//             })),
+//           }
+//         : portGroup,
+//     ),
+//     storageSlotGroups: definition.storageSlotGroups.map((storageSlotGroup) =>
+//       (storageSlotGroup.kind & FluidDomain) !== 0
+//         ? {
+//             ...storageSlotGroup,
+//             slots: storageSlotGroup.slots.map((slot) => ({
+//               ...slot,
+//               itemFilterType: slot.itemFilterType === ItemDomainFlag.Liquid
+//                 ? FluidDomain
+//                 : slot.itemFilterType,
+//               capacity: 2,
+//             })),
+//           }
+//         : storageSlotGroup,
+//     ),
+//   };
+// }
+//
+// function normalizePipeFamilyAcceptRule(
+//   acceptRule: PortDefinition["acceptRule"],
+// ): PortDefinition["acceptRule"] {
+//   return acceptRule.base.kind === "domain"
+//     && acceptRule.base.flags === ItemDomainFlag.Liquid
+//     && acceptRule.exclude.length === 0
+//     ? { base: { kind: "domain", flags: FluidDomain }, exclude: [] }
+//     : acceptRule;
+// }
 
 function normalizePlacementBehaviors(
   behaviors: readonly EntityPlacementBehaviorDeclaration[],
@@ -1990,7 +1996,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_buffer",
         FluidDomain,
         // AI-CORRECTION 2026-07-30: 容量从 2 改为 1，配合 0.5s 单件配方回滚。
-        createSlots("slot", [1], ItemDomainFlag.Liquid),
+        createSlots("slot", [1], FluidDomain),
         "share-cap",
       ),
     ],
@@ -2050,7 +2056,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_buffer",
         FluidDomain,
         // AI-CORRECTION 2026-07-30: 容量从 2 改为 1，配合 0.5s 单件配方回滚。
-        createSlots("slot", [1], ItemDomainFlag.Liquid),
+        createSlots("slot", [1], FluidDomain),
         "share-cap",
       ),
     ],
@@ -2132,13 +2138,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "ns_buffer",
         FluidDomain,
       // AI-CORRECTION 2026-07-30: 容量从 2 改为 1，配合 0.5s 单件配方回滚。
-        createSlots("ns_slot", [1], ItemDomainFlag.Liquid),
+        createSlots("ns_slot", [1], FluidDomain),
         "share-cap",
       ),
       createStorageSlotGroup(
         "ew_buffer",
         FluidDomain,
-        createSlots("ew_slot", [1], ItemDomainFlag.Liquid),
+        createSlots("ew_slot", [1], FluidDomain),
         "share-cap",
       ),
     ],
@@ -3728,6 +3734,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 9, height: 9 },
     uiGroup: "hidden",
     tags: [WAREHOUSE_SINK_TAG],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase },
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
@@ -4643,7 +4652,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_buffer",
         FluidDomain,
         // AI-CORRECTION 2026-07-30: 容量从 2 改为 1，配合 0.5s 单件配方回滚。
-        createSlots("slot", [1], ItemDomainFlag.Liquid),
+        createSlots("slot", [1], FluidDomain),
         "share-cap",
       ),
     ],

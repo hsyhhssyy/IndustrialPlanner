@@ -576,6 +576,105 @@
   text-align: center;
 }
 
+// AI-CORRECTION 2026-08-01: 新增测试连接和应用设置按钮样式。
+.webdav-config-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.webdav-config-test-result {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+
+  &.is-success {
+    border: 1px solid var(--accent-strong);
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+
+  &.is-failed {
+    border: 1px solid var(--danger, #dc2626);
+    background: var(--danger-soft, rgba(var(--danger-rgb, 220, 38, 38), 0.15));
+    color: var(--danger, #dc2626);
+  }
+}
+
+.webdav-config-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.webdav-test-connection-btn {
+  flex: 1;
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--text-0);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent-strong);
+    background: var(--surface-4);
+  }
+
+  &:active:not(:disabled) {
+    background: var(--surface-5);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.webdav-apply-settings-btn {
+  flex: 1;
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+
+  &.is-clean {
+    background: var(--surface-2);
+    color: var(--text-1);
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  &.is-dirty {
+    border-color: var(--success, #16a34a);
+    background: var(--success, #16a34a);
+    color: #fff;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 0.88;
+    }
+
+    &:active {
+      opacity: 0.72;
+    }
+  }
+}
+
+// AI-CORRECTION 2026-08-01: 卡片增加四周 margin，与其他弹窗风格统一。
+.webdav-sync-status-section {
+  margin: 0 4px;
+}
+
 // AI-REMOVED 2026-07-29:
 // Reason: WebDAV 状态窗口不再展示设备列表。
 // Trigger: 用户确认设备列表没有意义，仅在冲突中显示远端上传时间。

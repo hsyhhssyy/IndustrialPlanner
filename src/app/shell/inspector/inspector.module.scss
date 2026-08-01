@@ -170,9 +170,9 @@
 
 .metered-consumption-content {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
+  grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -259,6 +259,35 @@
   color: var(--text-2);
   font-size: 0.68rem;
   font-variant-numeric: tabular-nums;
+}
+
+.metered-consumption-fire-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 28px;
+  padding: 0 6px 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-1);
+  cursor: pointer;
+  font-size: 0.72rem;
+  transition: background 120ms ease;
+}
+
+.metered-consumption-fire-button:hover {
+  background: var(--surface-1);
+  border-color: var(--accent);
+}
+
+.metered-consumption-fire-button:active {
+  background: var(--surface-0);
+}
+
+.metered-consumption-fire-button svg {
+  width: 14px;
+  height: 14px;
 }
 
 // AI-REMOVED 2026-07-16:

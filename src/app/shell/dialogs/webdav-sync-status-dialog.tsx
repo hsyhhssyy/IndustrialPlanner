@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
@@ -28,12 +28,18 @@ import styles from "./settings-dialog.module.scss";
 // Original code:
 // import styles from "@/app/shell/app-shell.module.scss";
 
+// AI-CORRECTION 2026-08-01: 新增 useEffect/useState/useMemo 用于草稿状态和测试连接状态。
+// 原组件只有 useCallback，即时保存每个字段。现在改为草稿模式，点击"应用设置"才提交。
+
 export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
   compactMobileLayout,
   deleting,
   dialogState,
   onClose,
   onDeleteAllData,
+  onOffsetChange,
+  onResize,
+  onTestConnection,
   onToggleMaximized,
   onUpdateSettings,
   state,
@@ -44,6 +50,9 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
   dialogState: DialogStateReadWrite;
   onClose: () => void;
   onDeleteAllData: () => void;
+  onOffsetChange: (offsetX: number, offsetY: number) => void;
+  onResize: (width: number, height: number) => void;
+  onTestConnection: (draft: Pick<WebDavSyncSettings, "url" | "username" | "password">) => Promise<boolean>;
   onToggleMaximized: () => void;
   onUpdateSettings: (patch: Partial<WebDavSyncSettings>) => void;
   state: SyncState;
@@ -52,33 +61,94 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
   const status = state.status;
   const settings = state.settings;
 
+  // 草稿状态：对话框可见时从当前设置初始化
+  const [draftUrl, setDraftUrl] = useState(settings.url);
+  const [draftUsername, setDraftUsername] = useState(settings.username);
+  const [draftPassword, setDraftPassword] = useState(settings.password);
+  const [draftConcurrent, setDraftConcurrent] = useState(settings.maxConcurrentRequests);
+
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<"success" | "failed" | null>(null);
+
+  // 对话框打开时重置草稿为当前设置
+  useEffect(() => {
+    if (dialogState.visible) {
+      setDraftUrl(settings.url);
+      setDraftUsername(settings.username);
+      setDraftPassword(settings.password);
+      setDraftConcurrent(settings.maxConcurrentRequests);
+      setTesting(false);
+      setTestResult(null);
+    }
+  }, [dialogState.visible, settings.url, settings.username, settings.password, settings.maxConcurrentRequests]);
+
+  // 判断草稿是否有修改
+  const isDirty = useMemo(
+    () =>
+      draftUrl !== settings.url
+      || draftUsername !== settings.username
+      || draftPassword !== settings.password
+      || draftConcurrent !== settings.maxConcurrentRequests,
+    [draftUrl, draftUsername, draftPassword, draftConcurrent, settings],
+  );
+
   const handleUrlChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      onUpdateSettings({ url: e.target.value });
+      setDraftUrl(e.target.value);
+      setTestResult(null);
     },
-    [onUpdateSettings],
+    [],
   );
 
   const handleUsernameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      onUpdateSettings({ username: e.target.value });
+      setDraftUsername(e.target.value);
+      setTestResult(null);
     },
-    [onUpdateSettings],
+    [],
   );
 
   const handlePasswordChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      onUpdateSettings({ password: e.target.value });
+      setDraftPassword(e.target.value);
+      setTestResult(null);
     },
-    [onUpdateSettings],
+    [],
   );
 
   const handleConcurrentChange = useCallback(
     (concurrent: number) => {
-      onUpdateSettings({ maxConcurrentRequests: concurrent });
+      setDraftConcurrent(concurrent);
     },
-    [onUpdateSettings],
+    [],
   );
+
+  const handleApplySettings = useCallback(() => {
+    onUpdateSettings({
+      url: draftUrl,
+      username: draftUsername,
+      password: draftPassword,
+      maxConcurrentRequests: draftConcurrent,
+    });
+    setTestResult(null);
+  }, [onUpdateSettings, draftUrl, draftUsername, draftPassword, draftConcurrent]);
+
+  const handleTestConnection = useCallback(async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const ok = await onTestConnection({
+        url: draftUrl,
+        username: draftUsername,
+        password: draftPassword,
+      });
+      setTestResult(ok ? "success" : "failed");
+    } catch {
+      setTestResult("failed");
+    } finally {
+      setTesting(false);
+    }
+  }, [onTestConnection, draftUrl, draftUsername, draftPassword]);
 
   return (
     <DialogShell
@@ -90,6 +160,8 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
       dialogState={dialogState}
       maximizeTitle={t("dialog.maximize")}
       onClose={onClose}
+      onOffsetChange={onOffsetChange}
+      onResize={onResize}
       onToggleMaximized={onToggleMaximized}
       restoreTitle={t("dialog.restore")}
       title={t("webDavStatus.title")}
@@ -103,8 +175,7 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
         <section
           className={cm(styles, "webdav-sync-status-section", "webdav-config-section")}
         >
-          <h3>{t("webDavConfig.url")}</h3>
-          <p>{t("webDavConfig.urlDescription")}</p>
+          <h3>{t("webDavConfig.title")}</h3>
           <div className={cm(styles, "webdav-config-form")}>
             <label className={cm(styles, "webdav-config-field")}>
               <span>{t("webDavConfig.url")}</span>
@@ -112,9 +183,8 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
                 onChange={handleUrlChange}
                 placeholder="https://dav.example.com/remote.php/dav/"
                 type="text"
-                value={settings.url}
+                value={draftUrl}
               />
-              <small>{t("webDavConfig.urlDescription")}</small>
             </label>
 
             <label className={cm(styles, "webdav-config-field")}>
@@ -122,9 +192,8 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
               <input
                 onChange={handleUsernameChange}
                 type="text"
-                value={settings.username}
+                value={draftUsername}
               />
-              <small>{t("webDavConfig.usernameDescription")}</small>
             </label>
 
             <label className={cm(styles, "webdav-config-field")}>
@@ -132,16 +201,15 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
               <input
                 onChange={handlePasswordChange}
                 type="password"
-                value={settings.password}
+                value={draftPassword}
               />
-              <small>{t("webDavConfig.passwordDescription")}</small>
             </label>
 
             <label className={cm(styles, "webdav-config-field")}>
               <span>
                 {t("webDavConfig.maxConcurrent")}
                 {": "}
-                {settings.maxConcurrentRequests}
+                {draftConcurrent}
               </span>
               <input
                 max={MAX_WEBDAV_MAX_CONCURRENT_REQUESTS}
@@ -149,10 +217,46 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
                 onChange={(e) => handleConcurrentChange(Number(e.target.value))}
                 step={1}
                 type="range"
-                value={settings.maxConcurrentRequests}
+                value={draftConcurrent}
               />
               <small>{t("webDavConfig.maxConcurrentDescription")}</small>
             </label>
+          </div>
+
+          {/*
+            AI-CORRECTION 2026-08-01: 新增测试连接和应用设置按钮。
+            测试连接始终可点，应用设置在草稿无改动时灰色禁用。
+          */}
+          <div className={cm(styles, "webdav-config-actions")}>
+            {testResult !== null && (
+              <span
+                className={cm(
+                  styles,
+                  "webdav-config-test-result",
+                  testResult === "success" ? "is-success" : "is-failed",
+                )}
+              >
+                {t(testResult === "success" ? "webDavConfig.testSuccess" : "webDavConfig.testFailed")}
+              </span>
+            )}
+            <div className={cm(styles, "webdav-config-buttons")}>
+              <button
+                className={cm(styles, "webdav-test-connection-btn")}
+                disabled={testing}
+                onClick={handleTestConnection}
+                type="button"
+              >
+                {testing ? t("webDavConfig.testing") : t("webDavConfig.testConnection")}
+              </button>
+              <button
+                className={cm(styles, "webdav-apply-settings-btn", isDirty ? "is-dirty" : "is-clean")}
+                disabled={!isDirty}
+                onClick={handleApplySettings}
+                type="button"
+              >
+                {t("webDavConfig.applySettings")}
+              </button>
+            </div>
           </div>
         </section>
 

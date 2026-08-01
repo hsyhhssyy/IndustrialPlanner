@@ -1,20 +1,25 @@
 import LucideCircleDashed from "~icons/lucide/circle-dashed";
+import LucidePlay from "~icons/lucide/play";
 
 import type { AppHost } from "@/app/host/app-host";
+import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
 import { InspectorCollapsiblePanel } from "./inspector-collapsible-panel";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { CONSUMPTION_SLOT_ID, CONSUMPTION_STORAGE_GROUP_ID } from "@/shared/consumption-channel";
 
 export function MeteredConsumptionInspector({
   appHost,
   definition,
+  entity,
   runtimeStatus,
 }: {
   appHost: AppHost;
   definition: EntityDefinition;
+  entity: WorldEntity;
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
 }) {
   const consumptionChannel = definition.recipeChannels.find(
@@ -108,6 +113,25 @@ export function MeteredConsumptionInspector({
             <span>{maximum}</span>
           </div>
         </div>
+        <button
+          aria-label="启动消耗"
+          className={cm(styles, "metered-consumption-fire-button")}
+          onClick={() => {
+            if (displayedItemId === null) return;
+            appHost.workspace.simulation?.actions.patchRuntimeSlot({
+              entityId: entity.id,
+              storageGroupId: CONSUMPTION_STORAGE_GROUP_ID,
+              slotId: CONSUMPTION_SLOT_ID,
+              itemType: displayedItemId,
+              count: 5,
+              ignoreStock: false,
+            });
+          }}
+          type="button"
+        >
+          <LucidePlay aria-hidden="true" />
+          <span>启动</span>
+        </button>
       </div>
       {/* AI-REMOVED 2026-07-16:
           Reason: 用户要求去掉标尺下方的文字说明行，只保留物品图标和标尺。

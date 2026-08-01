@@ -107,11 +107,11 @@ describe("pipe admission rate-aware recipe selection", () => {
       maxTickNumber: 41,
     });
 
-    // tick 1: 2 件预缓冲入准入（bufferedCount=0 < rateRemaining=3，两件均通过速率检查）
+    // AI-CORRECTION 2026-08-01: 容量从 2 降为 1，tick 1 只能预缓冲 1 件（旧断言 toHaveLength(2)）。
     expect(getTick(report, 1).transfers.filter((transfer) =>
       transfer.sourceSlotId.includes("device:source")
       && transfer.targetSlotId.includes("device:admission"),
-    )).toHaveLength(2);
+    )).toHaveLength(1);
     expect(getDevice(report, 1, "admission").admissionCounters?.["fluid_input:in_w"])
       .toMatchObject({
         count: 0,
@@ -120,7 +120,7 @@ describe("pipe admission rate-aware recipe selection", () => {
       });
     expect(getDevice(report, 1, "admission").channelRecipes.default?.recipeId)
       .toBe("pipe_admission:dynamic-pipe-transfer");
-    // tick 11: 第 1 件出准入 + 第 2 件入
+    // tick 11: 第 1 件出准入 + 补入 1 件（buffer 恢复满）
     expect(getTick(report, 11).transfers.filter((transfer) =>
       transfer.sourceSlotId.includes("device:admission")
       && transfer.targetSlotId.includes("device:sink"),
@@ -135,7 +135,7 @@ describe("pipe admission rate-aware recipe selection", () => {
         perMinuteLimit: 18,
         rateWindowCount: 1,
       });
-    // tick 21: 第 2 件出准入，不再入（rateRemaining=1, bufferedCount=1 → 1<1=false）
+    // AI-CORRECTION 2026-08-01: 容量 1 下 tick 21 出 1 后 bufferedCount=0 < rateRemaining=1，仍可入 1 件（旧断言 toHaveLength(0)）。
     expect(getTick(report, 21).transfers.filter((transfer) =>
       transfer.sourceSlotId.includes("device:admission")
       && transfer.targetSlotId.includes("device:sink"),
@@ -143,7 +143,7 @@ describe("pipe admission rate-aware recipe selection", () => {
     expect(getTick(report, 21).transfers.filter((transfer) =>
       transfer.sourceSlotId.includes("device:source")
       && transfer.targetSlotId.includes("device:admission"),
-    )).toHaveLength(0);
+    )).toHaveLength(1);
     expect(getDevice(report, 21, "admission").admissionCounters?.["fluid_input:in_w"])
       .toMatchObject({
         count: 2,

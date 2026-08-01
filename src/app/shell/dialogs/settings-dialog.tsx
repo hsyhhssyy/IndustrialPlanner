@@ -401,6 +401,47 @@ export const SettingsDialog = observer(function SettingsDialog({
     });
   }, [webDavStatusDialogState]);
 
+  const handleWebDavStatusOffsetChange = useCallback((offsetX: number, offsetY: number) => {
+    runInAction(() => {
+      webDavStatusDialogState.offsetX = offsetX;
+      webDavStatusDialogState.offsetY = offsetY;
+    });
+  }, [webDavStatusDialogState]);
+
+  const handleWebDavStatusResize = useCallback((width: number, height: number) => {
+    runInAction(() => {
+      webDavStatusDialogState.width = width;
+      webDavStatusDialogState.height = height;
+    });
+  }, [webDavStatusDialogState]);
+
+  // AI-CORRECTION 2026-08-01: 测试 WebDAV 连接。
+  // 通过 fetch 发送 PROPFIND 请求验证 URL/用户名/密码是否可达。
+  const handleWebDavTestConnection = useCallback(
+    async (draft: { url: string; username: string; password: string }) => {
+      const url = draft.url.trim().replace(/\/+$/, "");
+      if (!url) {
+        return false;
+      }
+      try {
+        const headers: Record<string, string> = {
+          Depth: "1",
+        };
+        if (draft.username || draft.password) {
+          headers.Authorization = `Basic ${btoa(`${draft.username}:${draft.password}`)}`;
+        }
+        const response = await fetch(url, {
+          method: "PROPFIND",
+          headers,
+        });
+        return response.ok;
+      } catch {
+        return false;
+      }
+    },
+    [],
+  );
+
   // AI-REMOVED 2026-07-29:
   // Reason: 同步冲突本身就是公开 MobX state，不需要设置页复制第二份可见性状态。
   // Trigger: 复制状态受 SettingsDialog 生命周期约束，造成冲突存在但窗口不可见。
@@ -983,6 +1024,9 @@ export const SettingsDialog = observer(function SettingsDialog({
         dialogState={webDavStatusDialogState}
         onClose={handleCloseWebDavStatus}
         onDeleteAllData={handleWebDavDelete}
+        onOffsetChange={handleWebDavStatusOffsetChange}
+        onResize={handleWebDavStatusResize}
+        onTestConnection={handleWebDavTestConnection}
         onToggleMaximized={handleToggleWebDavStatusMaximized}
         onUpdateSettings={(patch) => sync.actions.updateSettings(patch)}
         state={sync.state}

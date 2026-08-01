@@ -468,6 +468,23 @@ describe("物流布设模式完全测试集", () => {
     });
   });
 
+  it("被压制的管道不干扰传送带布设-从(2,3)到(4,3)生成直道", () => {
+    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_SUPPRESSION_OVERLAP);
+    enterBeltLogisticsPlacement(appHost);
+    // belt 模式下压制管道
+    editorHost.actions.setLogisticsSuppression("pipe", true);
+
+    clickCell(appHost, editorHost, { x: 2, y: 3 }, nextPointerId++);
+    moveToCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+    clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
+
+    expectEntityAt(editorHost, {
+      definitionId: "belt_straight_1x1",
+      position: { x: 3, y: 3 },
+      rotation: 0,
+    });
+  });
+
 });
 
 
@@ -1154,6 +1171,72 @@ function keyEvent(
     ...overrides,
   };
 }
+
+const USER_PROVIDED_BLUEPRINT_SUPPRESSION_OVERLAP: BlueprintDocument = {
+  schemaVersion: 4,
+  blueprintId: "dea0569d-2e5d-44d3-913a-ab30dd84fca4",
+  version: "v1.3.0",
+  name: "未命名蓝图-20260801141942",
+  description: "",
+  baseId: "stm_hongs_3",
+  initialGridPoint: { x: 4, y: 4 },
+  entities: {
+    "belt_straight_1x1:13": {
+      id: "belt_straight_1x1:13",
+      definitionId: "belt_straight_1x1",
+      position: { x: 1, y: 3 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "belt_straight_1x1:14": {
+      id: "belt_straight_1x1:14",
+      definitionId: "belt_straight_1x1",
+      position: { x: 2, y: 3 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "pipe_straight_1x1:23": {
+      id: "pipe_straight_1x1:23",
+      definitionId: "pipe_straight_1x1",
+      position: { x: 1, y: 3 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "pipe_straight_1x1:24": {
+      id: "pipe_straight_1x1:24",
+      definitionId: "pipe_straight_1x1",
+      position: { x: 2, y: 3 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+    "storager_1:2": {
+      id: "storager_1:2",
+      definitionId: "storager_1",
+      position: { x: 4, y: 2 },
+      rotation: 90,
+      config: {
+        channelRecipes: {
+          warehouse_submit: "r_warehouse_submit",
+        },
+      },
+      tags: [],
+    },
+  },
+  entityOrder: [
+    "belt_straight_1x1:13",
+    "belt_straight_1x1:14",
+    "pipe_straight_1x1:23",
+    "pipe_straight_1x1:24",
+    "storager_1:2",
+  ],
+  slotLinks: [],
+  createdAt: "2026-08-01T06:19:44.518Z",
+  updatedAt: "2026-08-01T06:19:44.518Z",
+};
 
 function resolveClientPixelPointForGridCell(
   editorHost: EditorHost,
