@@ -61,7 +61,7 @@ function buildGuideData(resolveShortcut: ShortcutResolver, ss: SettingsSnapshot)
       title: "画布浏览",
       rows: [
         { label: "平移画布", pc: panPC, touch: "单指在空白区域滑动" },
-        { label: "WASD 平移", pc: "按住 W / A / S / D 键", touch: null },
+        { label: "WASD 平移", pc: `按住 ${s(SHORTCUT_KEY.PAN_VIEWPORT_UP)} / ${s(SHORTCUT_KEY.PAN_VIEWPORT_DOWN)} / ${s(SHORTCUT_KEY.PAN_VIEWPORT_LEFT)} / ${s(SHORTCUT_KEY.PAN_VIEWPORT_RIGHT)} 键`, touch: null },
         { label: "缩放画布", pc: "滚动鼠标滚轮", touch: "双指捏合缩放" },
         { label: "旋转画布", pc: `按 ${s(SHORTCUT_KEY.ROTATE_VIEWPORT)}`, touch: "双指旋转 / 点击旋转视角按钮", shortcutKey: SHORTCUT_KEY.ROTATE_VIEWPORT },
         { label: "将基地居中", pc: "按 H 键", touch: null },

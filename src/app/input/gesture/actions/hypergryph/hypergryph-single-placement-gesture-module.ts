@@ -1478,9 +1478,17 @@ function isRotatePlacementShortcut(options: {
     meta: boolean;
   };
 }): boolean {
-  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-    return false;
-  }
+  // AI-REMOVED 2026-08-02:
+  // Reason: 放置模式快捷键不再拒绝修饰键组合
+  // Trigger: Ctrl 连续放置时按 R 误触 Ctrl+R 旋转画布；用户要求放置/移动模式快捷键可与任意 modifier 组合
+  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后 viewport-rotation 模块不再收到
+  // Replacement: 移除 modifier 检查，isShortcutFor 未传 modifiers 时仅匹配主键
+  // Risk: 放置模式下 Ctrl+R 不再旋转画布（预期）；浏览器级组合键可能同时触发系统行为（如 Ctrl+F 查找）
+  // Human Review: Required
+  //
+  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
+  //   return false;
+  // }
 
   return options.appHost.internalActions.isShortcutFor(
     SHORTCUT_KEY.ROTATE,
@@ -1499,9 +1507,17 @@ function isSwitchDeviceModeShortcut(options: {
     meta: boolean;
   };
 }): boolean {
-  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-    return false;
-  }
+  // AI-REMOVED 2026-08-02:
+  // Reason: 放置模式快捷键不再拒绝修饰键组合
+  // Trigger: Ctrl 连续放置时按快捷键无响应；用户要求放置/移动模式快捷键可与任意 modifier 组合
+  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后后续模块不再收到
+  // Replacement: 移除 modifier 检查，isShortcutFor 未传 modifiers 时仅匹配主键
+  // Risk: 放置模式下 Ctrl+Tab 同时触发切换设备变体与浏览器标签行为（浏览器组合键无法被 JS 完全拦截）
+  // Human Review: Required
+  //
+  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
+  //   return false;
+  // }
 
   return options.appHost.internalActions.isShortcutFor(
     SHORTCUT_KEY.SWITCH_DEVICE_MODE,
@@ -1519,8 +1535,16 @@ export function resolvePlacementGroupByShortcut(options: {
     ctrl: boolean;
     meta: boolean;
   };
+  // 2026-08-02 新增：放置模式调用方传 true 以允许修饰键组合；select 模式默认仍拒绝。
+  allowModifierKeys?: boolean;
 }): PlacementGroup | null {
-  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
+  // AI-CORRECTION 2026-08-02:
+  // 原逻辑：带 alt/ctrl/meta 一律拒绝。
+  // 新行为：allowModifierKeys=true（物流放置模式）时不再拒绝；select 模式默认仍拒绝。
+  if (
+    options.allowModifierKeys !== true
+    && (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta)
+  ) {
     return null;
   }
 
@@ -1542,12 +1566,20 @@ export function resolveDeviceShortcutIndex(options: {
     meta: boolean;
     shift: boolean;
   };
+  // 2026-08-02 新增：放置模式调用方传 true 以允许修饰键组合；select 模式默认仍拒绝。
+  allowModifierKeys?: boolean;
 }): number | null {
+  // AI-CORRECTION 2026-08-02:
+  // 原逻辑：带 alt/ctrl/meta/shift 一律拒绝。
+  // 新行为：allowModifierKeys=true（物流放置模式）时不再拒绝；select 模式默认仍拒绝。
   if (
-    options.modifiers.alt
-    || options.modifiers.ctrl
-    || options.modifiers.meta
-    || options.modifiers.shift
+    options.allowModifierKeys !== true
+    && (
+      options.modifiers.alt
+      || options.modifiers.ctrl
+      || options.modifiers.meta
+      || options.modifiers.shift
+    )
   ) {
     return null;
   }

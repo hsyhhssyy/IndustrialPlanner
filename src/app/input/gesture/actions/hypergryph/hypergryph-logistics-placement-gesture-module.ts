@@ -100,11 +100,14 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       }
 
       if (event.type === "key down") {
+        // 2026-08-02 订正：物流放置模式下允许修饰键组合（Ctrl 连续放置时按 E/Q 切换种类仍生效）；
+        // select 模式进入物流放置的入口保持拒绝修饰键，避免影响全局快捷键（如 Ctrl+E 浏览器地址栏）。
         const group = resolvePlacementGroupByShortcut({
           appHost: context.appHost,
           code: event.code,
           key: event.key,
           modifiers: event.modifiers,
+          allowModifierKeys: context.appHost.internalState.activeTool === "logistics-placement",
         });
 
         if (group === "beltLogistics" || group === "pipeLogistics") {
@@ -1096,9 +1099,17 @@ function handleRouteOrderShortcut(options: {
   key: string | null;
   modifiers: { alt: boolean; ctrl: boolean; meta: boolean };
 }): boolean {
-  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-    return false;
-  }
+  // AI-REMOVED 2026-08-02:
+  // Reason: 物流放置模式快捷键不再拒绝修饰键组合
+  // Trigger: Ctrl 连续放置时按 R 误触 Ctrl+R 旋转画布；用户要求放置/移动模式快捷键可与任意 modifier 组合
+  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后 viewport-rotation 模块不再收到
+  // Replacement: 移除 modifier 检查，R 键路由翻转在物流放置模式下始终生效
+  // Risk: 物流放置模式下 Ctrl+R 不再旋转画布（预期）
+  // Human Review: Required
+  //
+  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
+  //   return false;
+  // }
 
   const isRouteShortcut = options.code === "KeyR" || options.key?.trim().toLowerCase() === "r";
   if (!isRouteShortcut) {
@@ -1141,7 +1152,11 @@ function handleLogisticsDeviceShortcut(options: {
   key: string | null;
   modifiers: { alt: boolean; ctrl: boolean; meta: boolean; shift: boolean };
 }): GestureHandleResult {
-  const shortcutIndex = resolveDeviceShortcutIndex(options);
+  // 2026-08-02 订正：物流放置模式允许修饰键组合（Ctrl 连续放置时按 1-0 切换设备仍生效）。
+  const shortcutIndex = resolveDeviceShortcutIndex({
+    ...options,
+    allowModifierKeys: true,
+  });
   if (shortcutIndex === null) {
     return { status: "ignored" };
   }

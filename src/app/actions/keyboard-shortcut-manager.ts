@@ -32,6 +32,10 @@ export const SHORTCUT_KEY = {
   TOGGLE_BASE_PANEL:      "shortcut-toggle-base-panel",
   QUICK_PLACE:            "shortcut-quick-place",
   OPEN_TOOLBOX:           "shortcut-open-toolbox",
+  PAN_VIEWPORT_UP:        "shortcut-pan-viewport-up",
+  PAN_VIEWPORT_DOWN:      "shortcut-pan-viewport-down",
+  PAN_VIEWPORT_LEFT:      "shortcut-pan-viewport-left",
+  PAN_VIEWPORT_RIGHT:     "shortcut-pan-viewport-right",
 } as const;
 
 /** 从 SHORTCUT_KEY 推导出的联合类型 */
@@ -73,6 +77,10 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.TOGGLE_BASE_PANEL]:      "K",
   [SHORTCUT_KEY.QUICK_PLACE]:            "Z",
   [SHORTCUT_KEY.OPEN_TOOLBOX]:           "T",
+  [SHORTCUT_KEY.PAN_VIEWPORT_UP]:        "W",
+  [SHORTCUT_KEY.PAN_VIEWPORT_DOWN]:      "S",
+  [SHORTCUT_KEY.PAN_VIEWPORT_LEFT]:      "A",
+  [SHORTCUT_KEY.PAN_VIEWPORT_RIGHT]:     "D",
 };
 
 const LEGACY_SHORTCUT_MIGRATIONS: Partial<Record<ShortcutKeyId, string>> = {

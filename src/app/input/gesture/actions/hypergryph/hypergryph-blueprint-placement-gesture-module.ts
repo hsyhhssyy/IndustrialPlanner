@@ -647,9 +647,17 @@ function isRotatePlacementShortcut(options: {
     meta: boolean;
   };
 }): boolean {
-  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-    return false;
-  }
+  // AI-REMOVED 2026-08-02:
+  // Reason: 放置模式快捷键不再拒绝修饰键组合
+  // Trigger: Ctrl 连续放置时按 R 误触 Ctrl+R 旋转画布；用户要求放置/移动模式快捷键可与任意 modifier 组合
+  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后 viewport-rotation 模块不再收到
+  // Replacement: 移除 modifier 检查，isShortcutFor 未传 modifiers 时仅匹配主键
+  // Risk: 放置模式下 Ctrl+R 不再旋转画布（预期）
+  // Human Review: Required
+  //
+  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
+  //   return false;
+  // }
 
   return options.appHost.internalActions.isShortcutFor(
     SHORTCUT_KEY.ROTATE,

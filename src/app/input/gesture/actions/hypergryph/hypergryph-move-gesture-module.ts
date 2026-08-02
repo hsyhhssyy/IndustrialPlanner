@@ -1432,9 +1432,17 @@ function isRotateMoveShortcut(options: {
     meta: boolean;
   };
 }): boolean {
-  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-    return false;
-  }
+  // AI-REMOVED 2026-08-02:
+  // Reason: 移动模式快捷键不再拒绝修饰键组合
+  // Trigger: Ctrl 连续放置时按 R 误触 Ctrl+R 旋转画布；用户要求放置/移动模式快捷键可与任意 modifier 组合
+  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后 viewport-rotation 模块不再收到
+  // Replacement: 移除 modifier 检查，isShortcutFor 未传 modifiers 时仅匹配主键
+  // Risk: 移动模式下 Ctrl+R 不再旋转画布（预期）
+  // Human Review: Required
+  //
+  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
+  //   return false;
+  // }
 
   return options.appHost.internalActions.isShortcutFor(
     SHORTCUT_KEY.ROTATE,
@@ -1453,9 +1461,17 @@ function isDeleteDeviceShortcut(options: {
     meta: boolean;
   };
 }): boolean {
-  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-    return false;
-  }
+  // AI-REMOVED 2026-08-02:
+  // Reason: 移动模式快捷键不再拒绝修饰键组合
+  // Trigger: 用户要求放置/移动模式快捷键可与任意 modifier 组合（如 Ctrl+F 删除设备）
+  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后后续模块不再收到
+  // Replacement: 移除 modifier 检查，isShortcutFor 未传 modifiers 时仅匹配主键
+  // Risk: 浏览器级组合键 Ctrl+F（查找）无法被 JS 完全拦截，可能同时触发删除设备与浏览器查找
+  // Human Review: Required
+  //
+  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
+  //   return false;
+  // }
 
   return options.appHost.internalActions.isShortcutFor(
     SHORTCUT_KEY.DELETE_DEVICE,
@@ -1474,9 +1490,17 @@ function isSwitchDeviceModeShortcut(options: {
     meta: boolean;
   };
 }): boolean {
-  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-    return false;
-  }
+  // AI-REMOVED 2026-08-02:
+  // Reason: 移动模式快捷键不再拒绝修饰键组合
+  // Trigger: 用户要求放置/移动模式快捷键可与任意 modifier 组合
+  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后后续模块不再收到
+  // Replacement: 移除 modifier 检查，isShortcutFor 未传 modifiers 时仅匹配主键
+  // Risk: 移动模式下 Ctrl+Tab 同时触发切换设备变体与浏览器标签行为（浏览器组合键无法被 JS 完全拦截）
+  // Human Review: Required
+  //
+  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
+  //   return false;
+  // }
 
   return options.appHost.internalActions.isShortcutFor(
     SHORTCUT_KEY.SWITCH_DEVICE_MODE,
