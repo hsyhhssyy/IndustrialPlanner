@@ -54,6 +54,7 @@ interface AdmissionPortRow {
   readonly maximumPerMinuteLimit: number;
   readonly runtimeCount: number;
   readonly runtimeRateWindowCount: number;
+  readonly runtimeOneMinuteCount: number;
 }
 
 function resolveItemIconSrc(item: ItemDefinition | null): string | null {
@@ -437,8 +438,8 @@ export function AdmissionRuleInspector({
           </div>
 
           <div className={cm(styles, "admission-rule-count")} data-admission-current-rate-window-count>
-            <span>本 10 秒已准入</span>
-            <strong>{row.runtimeRateWindowCount}</strong>
+            <span>过去一分钟已准入</span>
+            <strong>{row.runtimeOneMinuteCount}</strong>
           </div>
 
           <div className={cm(styles, "admission-rule-actions")}>
@@ -508,6 +509,7 @@ function resolveAdmissionPortRow(
       : LOG_ADMISSION_RATE_MAX_PER_MINUTE,
     runtimeCount: runtimeCounter?.count ?? 0,
     runtimeRateWindowCount: runtimeCounter?.rateWindowCount ?? 0,
+    runtimeOneMinuteCount: runtimeCounter?.oneMinuteCount ?? 0,
   };
 }
 

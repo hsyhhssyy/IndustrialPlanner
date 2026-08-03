@@ -124,9 +124,11 @@ export interface SimulationAdmissionCounterStatusReadModel {
   readonly count: number;
   /** UI 配置单位仍为每分钟；运行时按该值除以 6 作为每个 10 秒窗口的额度。 */
   readonly perMinuteLimit: number | null;
-  /** 当前对齐的 10 秒速率窗口内，已由准入口搬运配方承诺放行的数量。 */
+  /** 当前对齐的 10 秒速率窗口内，已由准入口输出口真实移动到下游的数量。 */
   /** AI-CORRECTION 2026-07-24: 只统计已经从准入口输出口真实移动到下游的数量；缓存和运行中配方不计入。 */
   readonly rateWindowCount: number;
+  /** 过去 6 个 10 秒窗口（含当前窗口）内累计通过的物品数量 = 过去一分钟真实经过总量。 */
+  readonly oneMinuteCount: number;
 }
 
 // AI-CORRECTION 2026-05-14: slotType 字段已删除。

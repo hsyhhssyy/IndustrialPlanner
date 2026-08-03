@@ -357,6 +357,7 @@ function createRuntimeStatus(): SimulationDeviceRuntimeStatusReadModel {
         count: 2,
         perMinuteLimit: 12,
         rateWindowCount: 1,
+        oneMinuteCount: 1,
       },
     },
     powerStatus: "in-power-range",

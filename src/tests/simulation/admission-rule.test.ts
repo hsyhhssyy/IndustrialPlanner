@@ -45,7 +45,8 @@ describe("admission rule runtime counter", () => {
         limit: 2,
         count: 2,
         perMinuteLimit: null,
-        rateWindowCount: 0,
+        rateWindowCount: 2,
+        oneMinuteCount: 2,
       });
   });
 

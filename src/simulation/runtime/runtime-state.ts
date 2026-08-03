@@ -134,6 +134,8 @@ export interface RuntimeReservedItem {
 export interface RuntimeFixedWindowCounterState {
   windowStartTick: number;
   count: number;
+  /** 已完成窗口的计数环形缓冲（最多 6 个，即 60 秒）；不含当前窗口。 */
+  pastWindowCounts: readonly number[];
 }
 
 export interface SimulationTickTransientState {
@@ -551,7 +553,7 @@ function createInitialFixedWindowCounters(
   const counters: Record<string, RuntimeFixedWindowCounterState> = {};
   for (const portId of topology.ordering.portOrder) {
     if (portUsesFixedWindowCounter(topology, portId)) {
-      counters[portId] = { windowStartTick: 1, count: 0 };
+      counters[portId] = { windowStartTick: 1, count: 0, pastWindowCounts: [] };
     }
   }
   return counters;
@@ -605,6 +607,7 @@ export function resetFixedWindowCounterForCurrentWindow(
   state.persistent.fixedWindowCounters[portId] = {
     windowStartTick: resolveCounterWindowStartTick(topology, state.tickNumber, portId),
     count: 0,
+    pastWindowCounts: [],
   };
 }
 
@@ -660,7 +663,13 @@ function ensureFixedWindowCounterForCurrentWindow(
   const windowStartTick = resolveCounterWindowStartTick(topology, state.tickNumber, portId);
   const counter = state.persistent.fixedWindowCounters[portId];
   if (counter === undefined || counter.windowStartTick !== windowStartTick) {
-    const nextCounter = { windowStartTick, count: 0 };
+    // 窗口滚动时，将旧窗口计数推入环形缓冲。
+    const oldCount = counter?.count ?? 0;
+    const oldPast = counter?.pastWindowCounts ?? [];
+    const nextPast = oldPast.length >= 6
+      ? [...oldPast.slice(1), oldCount]
+      : [...oldPast, oldCount];
+    const nextCounter = { windowStartTick, count: 0, pastWindowCounts: nextPast };
     state.persistent.fixedWindowCounters[portId] = nextCounter;
     return nextCounter;
   }
@@ -762,6 +771,7 @@ function cloneFixedWindowCounterState(
   return {
     windowStartTick: counter.windowStartTick,
     count: counter.count,
+    pastWindowCounts: [...counter.pastWindowCounts],
   };
 }
 

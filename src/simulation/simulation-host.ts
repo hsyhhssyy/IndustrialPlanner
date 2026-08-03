@@ -429,6 +429,9 @@ function resolveDeviceRuntimeStatus(options: {
           count: counter.count,
           perMinuteLimit: counter.perMinuteLimit,
           rateWindowCount: counter.rateWindowCount,
+          oneMinuteCount:
+            (counter.pastWindowCounts ?? []).reduce((sum, c) => sum + c, 0)
+            + counter.rateWindowCount,
         },
       ]),
     ),

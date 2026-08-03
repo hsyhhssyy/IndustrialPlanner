@@ -521,9 +521,7 @@ function recordAdmissionMove(
   }
   state.persistent.admissionCounters[admissionPort.id] =
     (state.persistent.admissionCounters[admissionPort.id] ?? 0) + 1;
-  if (rule.perMinuteLimit !== null) {
-    incrementFixedWindowCounterForCurrentWindow(topology, state, admissionPort.id);
-  }
+  incrementFixedWindowCounterForCurrentWindow(topology, state, admissionPort.id);
 }
 
 function resolveAdmissionInputPortForSourcePort(
