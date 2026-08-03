@@ -16,6 +16,26 @@ describe("createRegistryContract", () => {
     expect(registry.baseDefinitions).not.toBe(BASE_DEFINITIONS);
   });
 
+  it("exposes exact definition and machine-recipe queries from the same registry instance", () => {
+    const registry = createRegistryContract();
+    const entity = registry.entityDefinitions[0]!;
+    const item = registry.itemDefinitions[0]!;
+    const recipe = registry.recipeDefinitions[0]!;
+
+    expect(registry.queries.findEntityDefinition(entity.id)).toBe(entity);
+    expect(registry.queries.findItemDefinition(item.id)).toBe(item);
+    expect(registry.queries.findRecipeDefinition(recipe.id)).toBe(recipe);
+    expect(registry.queries.findRecipeDefinitionsByMachine(recipe.machineId)).toEqual(
+      registry.recipeDefinitions.filter((candidate) => candidate.machineId === recipe.machineId),
+    );
+    expect(registry.queries.resolveItemDomain(item.id)).not.toBeNull();
+    expect(registry.queries.findEntityDefinition("unknown")).toBeNull();
+    expect(registry.queries.findItemDefinition("unknown")).toBeNull();
+    expect(registry.queries.findRecipeDefinition("unknown")).toBeNull();
+    expect(registry.queries.findRecipeDefinitionsByMachine("unknown")).toEqual([]);
+    expect(registry.queries.resolveItemDomain("unknown")).toBeNull();
+  });
+
   it("keeps base definitions structurally valid", () => {
     const seenIds = new Set<string>();
 

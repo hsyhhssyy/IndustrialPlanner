@@ -1,8 +1,10 @@
 import type { RegistryQuery } from "@/domain/registry/registry-query"
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
+import type { ItemDefinition } from "@/domain/registry/types/item-definition"
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition"
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags"
 import { LOGISTICS_KIND } from "@/domain/shared/logistics"
 import type { ItemDomain } from "@/domain/registry/types/entity-definition"
-import { ITEM_DEFINITIONS } from "./item-definition"
 import {
     LOGISTICS_DEFINITION_ID_BY_KIND_AND_SHAPE,
     isLogisticsEquipmentDefinitionId,
@@ -11,16 +13,31 @@ import {
     resolveLogisticsRoleByDefinitionId,
 } from "./logistics-definition-ids"
 
-const ITEM_DOMAIN_BY_ID = new Map<string, ItemDomain>(
-    ITEM_DEFINITIONS.map((item) => [
-        item.id,
-        item.tags.includes("gas")
-            ? ItemDomainFlag.Gas
-            : item.tags.includes("liquid")
-                ? ItemDomainFlag.Liquid
-                : ItemDomainFlag.Solid,
-    ]),
-)
+// AI-REMOVED 2026-08-02:
+// Reason: RegistryQuery 必须索引当前 RegistryContract 实例持有的 definitions，不能绕过实例读取模块级 ITEM_DEFINITIONS。
+// Trigger: simulation Worker 在入口独立构造 registry，并向下游传递唯一 RegistryContract。
+// Evidence: createRegistryContract 已持有 itemDefinitions；新增的精确查询也需要与该实例保持一致。
+// Replacement: createRegistryQuery(options) 内的 itemDomainById。
+// Risk: Low - 生产 registry 仍使用同一批静态 definitions，但测试和 Worker 实例语义更严格。
+// Human Review: Required
+//
+// Original code:
+// const ITEM_DOMAIN_BY_ID = new Map<string, ItemDomain>(
+//     ITEM_DEFINITIONS.map((item) => [
+//         item.id,
+//         item.tags.includes("gas")
+//             ? ItemDomainFlag.Gas
+//             : item.tags.includes("liquid")
+//                 ? ItemDomainFlag.Liquid
+//                 : ItemDomainFlag.Solid,
+//     ]),
+// )
+
+interface CreateRegistryQueryOptions {
+    readonly entityDefinitions: readonly EntityDefinition[];
+    readonly itemDefinitions: readonly ItemDefinition[];
+    readonly recipeDefinitions: readonly RecipeDefinition[];
+}
 
 /**
  * 专用物流设备 → 运输类别映射。
@@ -77,8 +94,46 @@ const PROTOCOL_CORE_DEVICE_IDS = new Set<string>([
     "sp_hub_1",
 ])
 
-export const createRegistryQuery = (): RegistryQuery => {
+export const createRegistryQuery = (options: CreateRegistryQueryOptions): RegistryQuery => {
+    const entityDefinitionById = new Map(
+        options.entityDefinitions.map((definition) => [definition.id, definition]),
+    )
+    const itemDefinitionById = new Map(
+        options.itemDefinitions.map((definition) => [definition.id, definition]),
+    )
+    const recipeDefinitionById = new Map(
+        options.recipeDefinitions.map((definition) => [definition.id, definition]),
+    )
+    const recipeDefinitionsByMachineId = new Map<string, RecipeDefinition[]>()
+    for (const recipe of options.recipeDefinitions) {
+        const recipes = recipeDefinitionsByMachineId.get(recipe.machineId) ?? []
+        recipes.push(recipe)
+        recipeDefinitionsByMachineId.set(recipe.machineId, recipes)
+    }
+    const itemDomainById = new Map<string, ItemDomain>(
+        options.itemDefinitions.map((item) => [
+            item.id,
+            item.tags.includes("gas")
+                ? ItemDomainFlag.Gas
+                : item.tags.includes("liquid")
+                    ? ItemDomainFlag.Liquid
+                    : ItemDomainFlag.Solid,
+        ]),
+    )
+
     return {
+        findEntityDefinition(definitionId) {
+            return entityDefinitionById.get(definitionId) ?? null
+        },
+        findItemDefinition(itemId) {
+            return itemDefinitionById.get(itemId) ?? null
+        },
+        findRecipeDefinition(recipeId) {
+            return recipeDefinitionById.get(recipeId) ?? null
+        },
+        findRecipeDefinitionsByMachine(machineId) {
+            return recipeDefinitionsByMachineId.get(machineId) ?? []
+        },
         isBelt(definitionId) {
             return isLogisticsSegmentDefinitionId(LOGISTICS_KIND.belt, definitionId)
         },
@@ -124,10 +179,10 @@ export const createRegistryQuery = (): RegistryQuery => {
             return PROTOCOL_CORE_DEVICE_IDS.has(definitionId)
         },
         isItemLiquid(itemId) {
-            return ITEM_DOMAIN_BY_ID.get(itemId) === ItemDomainFlag.Liquid
+            return itemDomainById.get(itemId) === ItemDomainFlag.Liquid
         },
         resolveItemDomain(itemId) {
-            return ITEM_DOMAIN_BY_ID.get(itemId) ?? ItemDomainFlag.Solid
+            return itemDomainById.get(itemId) ?? null
         },
         buildWarehouseSlotLinkForEntity({
             entityId,

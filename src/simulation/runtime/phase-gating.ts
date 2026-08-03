@@ -2,6 +2,7 @@ import type {
   CompiledSimulationDevice,
   CompiledSimulationTopology,
 } from "../types";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type {
   RuntimeDeviceRecipeState,
   SimulationMutableRuntimeState,
@@ -14,7 +15,16 @@ import {
   BELT_TRANSPORT_DURATION_SECONDS,
   PIPE_TRANSPORT_DURATION_SECONDS,
 } from "@/domain/registry";
-import { LOGISTICS_KIND } from "@/domain/shared/logistics";
+// AI-REMOVED 2026-08-02:
+// Reason: 物流族不再从 topology.logisticsKind 副本读取。
+// Trigger: Worker runtime 持有唯一 RegistryContract。
+// Evidence: RegistryQuery.isBeltFamily/isPipeFamily 是公开真相层。
+// Replacement: 各 phase-gating 函数的 registry 参数。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 
 export interface TransportRecipeTiming {
   readonly durationTicks: number;
@@ -28,17 +38,19 @@ export function isDedicatedLogisticsDevice(
 }
 
 export function isPhaseGatedLogisticsDevice(
+  registry: RegistryContract,
   device: CompiledSimulationDevice,
 ): boolean {
-  return device.logisticsKind === LOGISTICS_KIND.pipe;
+  return registry.queries.isPipeFamily(device.definitionId);
 }
 
 export function resolveTransportRecipeTiming(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   device: CompiledSimulationDevice,
 ): TransportRecipeTiming | null {
-  const isBelt = device.logisticsKind === LOGISTICS_KIND.belt;
-  const isPipe = device.logisticsKind === LOGISTICS_KIND.pipe;
+  const isBelt = registry.queries.isBeltFamily(device.definitionId);
+  const isPipe = registry.queries.isPipeFamily(device.definitionId);
 
   if (!isBelt && !isPipe) {
     return null;
@@ -52,6 +64,7 @@ export function resolveTransportRecipeTiming(
 }
 
 export function resolveDedicatedLogisticsTransferUnitTicks(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   device: CompiledSimulationDevice,
 ): number | null {
@@ -59,7 +72,7 @@ export function resolveDedicatedLogisticsTransferUnitTicks(
     return null;
   }
 
-  const timing = resolveTransportRecipeTiming(topology, device);
+  const timing = resolveTransportRecipeTiming(registry, topology, device);
   if (timing === null) {
     return null;
   }
@@ -68,6 +81,7 @@ export function resolveDedicatedLogisticsTransferUnitTicks(
 }
 
 export function resolveActiveDedicatedLogisticsTransferUnitTicks(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
 ): readonly number[] {
   const transferUnitTicks = new Set<number>();
@@ -77,7 +91,7 @@ export function resolveActiveDedicatedLogisticsTransferUnitTicks(
       continue;
     }
 
-    const unitTicks = resolveDedicatedLogisticsTransferUnitTicks(topology, device);
+    const unitTicks = resolveDedicatedLogisticsTransferUnitTicks(registry, topology, device);
     if (unitTicks !== null) {
       transferUnitTicks.add(unitTicks);
     }
@@ -87,14 +101,15 @@ export function resolveActiveDedicatedLogisticsTransferUnitTicks(
 }
 
 export function resolvePhaseGatedLogisticsTransferUnitTicks(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   device: CompiledSimulationDevice,
 ): number | null {
-  if (!isPhaseGatedLogisticsDevice(device)) {
+  if (!isPhaseGatedLogisticsDevice(registry, device)) {
     return null;
   }
 
-  const timing = resolveTransportRecipeTiming(topology, device);
+  const timing = resolveTransportRecipeTiming(registry, topology, device);
   if (timing === null) {
     return null;
   }
@@ -103,6 +118,7 @@ export function resolvePhaseGatedLogisticsTransferUnitTicks(
 }
 
 export function resolveActivePhaseGatedLogisticsTransferUnitTicks(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
 ): readonly number[] {
   const transferUnitTicks = new Set<number>();
@@ -112,7 +128,7 @@ export function resolveActivePhaseGatedLogisticsTransferUnitTicks(
       continue;
     }
 
-    const unitTicks = resolvePhaseGatedLogisticsTransferUnitTicks(topology, device);
+    const unitTicks = resolvePhaseGatedLogisticsTransferUnitTicks(registry, topology, device);
     if (unitTicks !== null) {
       transferUnitTicks.add(unitTicks);
     }
@@ -122,9 +138,10 @@ export function resolveActivePhaseGatedLogisticsTransferUnitTicks(
 }
 
 export function resolveDynamicTickRateSwitchIntervalTicks(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
 ): number {
-  const transferUnitTicks = resolveActivePhaseGatedLogisticsTransferUnitTicks(topology);
+  const transferUnitTicks = resolveActivePhaseGatedLogisticsTransferUnitTicks(registry, topology);
   if (transferUnitTicks.length === 0) {
     return topology.standardTickRate;
   }
@@ -135,17 +152,19 @@ export function resolveDynamicTickRateSwitchIntervalTicks(
 }
 
 export function canAdjustDynamicTickRateAtTick(options: {
+  readonly registry: RegistryContract;
   readonly topology: CompiledSimulationTopology;
   readonly standardTick: number;
 }): boolean {
-  const switchIntervalTicks = resolveDynamicTickRateSwitchIntervalTicks(options.topology);
+  const switchIntervalTicks = resolveDynamicTickRateSwitchIntervalTicks(options.registry, options.topology);
   return switchIntervalTicks > 0 && options.standardTick % switchIntervalTicks === 0;
 }
 
 export function resolveLegalDynamicTickRates(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
 ): readonly number[] {
-  const transferUnitTicks = resolveActivePhaseGatedLogisticsTransferUnitTicks(topology);
+  const transferUnitTicks = resolveActivePhaseGatedLogisticsTransferUnitTicks(registry, topology);
   return DYNAMIC_SIMULATION_TICK_RATES.filter((dynamicTickRate) =>
     isDynamicTickRateCompatibleWithTransferUnits({
       dynamicTickRate,
@@ -156,11 +175,16 @@ export function resolveLegalDynamicTickRates(
 }
 
 export function canDedicatedLogisticsTransferAtTick(options: {
+  readonly registry: RegistryContract;
   readonly topology: CompiledSimulationTopology;
   readonly device: CompiledSimulationDevice;
   readonly standardTick: number;
 }): boolean {
-  const transferUnitTicks = resolveDedicatedLogisticsTransferUnitTicks(options.topology, options.device);
+  const transferUnitTicks = resolveDedicatedLogisticsTransferUnitTicks(
+    options.registry,
+    options.topology,
+    options.device,
+  );
   if (transferUnitTicks === null) {
     return true;
   }
@@ -180,11 +204,13 @@ export function canDedicatedLogisticsTransferAtTick(options: {
 }
 
 export function canPhaseGatedLogisticsTransferAtTick(options: {
+  readonly registry: RegistryContract;
   readonly topology: CompiledSimulationTopology;
   readonly device: CompiledSimulationDevice;
   readonly standardTick: number;
 }): boolean {
   const transferUnitTicks = resolvePhaseGatedLogisticsTransferUnitTicks(
+    options.registry,
     options.topology,
     options.device,
   );
@@ -196,11 +222,13 @@ export function canPhaseGatedLogisticsTransferAtTick(options: {
 }
 
 export function canDeviceTransferAtCurrentPhase(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   device: CompiledSimulationDevice,
 ): boolean {
   return canPhaseGatedLogisticsTransferAtTick({
+    registry,
     topology,
     device,
     standardTick: state.tickNumber,
@@ -208,6 +236,7 @@ export function canDeviceTransferAtCurrentPhase(
 }
 
 export function canRecipeFinishAtCurrentPhase(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   recipe: RuntimeDeviceRecipeState,
@@ -217,7 +246,7 @@ export function canRecipeFinishAtCurrentPhase(
     return true;
   }
 
-  return canDeviceTransferAtCurrentPhase(topology, state, device);
+  return canDeviceTransferAtCurrentPhase(registry, topology, state, device);
 }
 
 // AI-REMOVED 2026-07-23:

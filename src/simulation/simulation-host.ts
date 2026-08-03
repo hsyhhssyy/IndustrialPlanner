@@ -66,7 +66,7 @@ export function createSimulationHost(
   workspace: WorkspaceContract,
   options: CreateSimulationHostOptions = {},
 ): SimulationHost {
-  const bridge = createSimulationWorkerBridge(options.workerMode ?? "auto");
+  const bridge = createSimulationWorkerBridge(options.workerMode ?? "auto", workspace.registry);
   const disposers: Array<() => void> = [];
   const topologyStore: SnapshotStoreReadWrite<CompiledSimulationTopology | null> = createSnapshotStore<CompiledSimulationTopology | null>(null);
   const internalState = createSimulationStateReadWrite();
@@ -75,7 +75,7 @@ export function createSimulationHost(
     state: internalState,
     topology: topologyStore,
     bridge,
-    createTimelineBridge: () => createTimelineWorkerBridge(options.workerMode ?? "auto"),
+    createTimelineBridge: () => createTimelineWorkerBridge(options.workerMode ?? "auto", workspace.registry),
     getPerfEnabled: options.getPerfEnabled,
     getDebugDataEnabled: options.getDebugDataEnabled,
     getActiveActivityIds: options.getActiveActivityIds,
@@ -519,20 +519,26 @@ function resolveDeviceRuntimeSlotItems(options: {
   return [...slotItemsByRealSlotKey.values()];
 }
 
-function createSimulationWorkerBridge(workerMode: SimulationHostWorkerMode): SimulationWorkerBridge {
+function createSimulationWorkerBridge(
+  workerMode: SimulationHostWorkerMode,
+  registry: WorkspaceContract["registry"],
+): SimulationWorkerBridge {
   if (workerMode === "auto" && typeof Worker === "function") {
     return new BrowserSimulationWorkerBridge();
   }
 
-  return new LocalSimulationWorkerBridge();
+  return new LocalSimulationWorkerBridge(registry);
 }
 
-function createTimelineWorkerBridge(workerMode: SimulationHostWorkerMode): TimelineWorkerBridge {
+function createTimelineWorkerBridge(
+  workerMode: SimulationHostWorkerMode,
+  registry: WorkspaceContract["registry"],
+): TimelineWorkerBridge {
   if (workerMode === "auto" && typeof Worker === "function") {
     return new BrowserTimelineWorkerBridge();
   }
 
-  return new LocalTimelineWorkerBridge();
+  return new LocalTimelineWorkerBridge(registry);
 }
 
 class BrowserTimelineWorkerBridge implements TimelineWorkerBridge {
@@ -681,8 +687,12 @@ class BrowserTimelineWorkerBridge implements TimelineWorkerBridge {
 }
 
 class LocalTimelineWorkerBridge implements TimelineWorkerBridge {
-  private readonly runtime = new TimelineWorkerRuntime();
+  private readonly runtime: TimelineWorkerRuntime;
   private nextRequestId = 1;
+
+  public constructor(registry: WorkspaceContract["registry"]) {
+    this.runtime = new TimelineWorkerRuntime(registry);
+  }
 
   public loadTimeline(options: Parameters<TimelineWorkerBridge["loadTimeline"]>[0]): Promise<Extract<
     TimelineWorkerResponse,
@@ -1042,8 +1052,12 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
 }
 
 class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
-  private readonly runtime = new SimulationWorkerRuntime();
+  private readonly runtime: SimulationWorkerRuntime;
   private nextRequestId = 1;
+
+  public constructor(registry: WorkspaceContract["registry"]) {
+    this.runtime = new SimulationWorkerRuntime(registry);
+  }
 
   public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean, simulationSpeed?: number, debugDataEnabled?: boolean): Promise<Extract<
     SimulationWorkerResponse,

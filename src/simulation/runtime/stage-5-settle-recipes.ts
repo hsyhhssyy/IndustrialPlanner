@@ -33,6 +33,7 @@ import {
 import { completeRecipeIfPossible } from "./recipe-completion";
 import { canDeviceTransferAtCurrentPhase } from "./phase-gating";
 import type { Stage1AdvanceResult } from "./stage-1-advance-devices";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
 
 // AI-REMOVED 2026-07-23:
 // Reason: Stage5 必须通过统一配方完成入口执行仓库提交等副作用，不能只完成槽位事务。
@@ -54,6 +55,7 @@ import type { Stage1AdvanceResult } from "./stage-1-advance-devices";
  */
 /** AI-CORRECTION 2026-05-12: immediate-consume 与 reserved-item 都会在启动后进入 running，并按 durationTicks 累积进度；前者只是在启动时立即扣除输入，不会在同一 tick 直接完成。 */
 export function settleRecipes(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   powerMode: "real" | "infinite" = "infinite",
@@ -64,8 +66,9 @@ export function settleRecipes(
   const remainingOverflowTicksByDeviceChannel = cloneOverflowTicks(
     stage1AdvanceResult?.overflowTicksByDeviceChannel,
   );
-  settleWaitingOutputs(topology, state);
+  settleWaitingOutputs(registry, topology, state);
   startIdleDeviceChannels({
+    registry,
     topology,
     state,
     channelType: "consumption-channel",
@@ -76,8 +79,9 @@ export function settleRecipes(
   });
   state.transient.activeConsumptionDeviceIds =
     computeActiveConsumptionDeviceIds(topology, state);
-  state.transient.activeGasDiffusions = computeActiveGasDiffusions(topology, state);
+  state.transient.activeGasDiffusions = computeActiveGasDiffusions(registry, topology, state);
   startIdleDeviceChannels({
+    registry,
     topology,
     state,
     channelType: "normal-channel",
@@ -89,6 +93,7 @@ export function settleRecipes(
 }
 
 function settleWaitingOutputs(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): void {
@@ -103,6 +108,7 @@ function settleWaitingOutputs(
         continue;
       }
       if (completeRecipeIfPossible({
+        registry,
         topology,
         state,
         deviceId,
@@ -116,6 +122,7 @@ function settleWaitingOutputs(
 }
 
 function startIdleDeviceChannels(options: {
+  registry: RegistryContract;
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
   channelType: CompiledSimulationRecipeChannel["type"];
@@ -146,7 +153,7 @@ function startIdleDeviceChannels(options: {
       if (!isDeviceConsumptionAuthorizedForFrame(device, options.state)) {
         continue;
       }
-      if (!canDeviceTransferAtCurrentPhase(options.topology, options.state, device)) {
+      if (!canDeviceTransferAtCurrentPhase(options.registry, options.topology, options.state, device)) {
         continue;
       }
     }
@@ -178,6 +185,7 @@ function startIdleDeviceChannels(options: {
       while (deviceState.channelRecipes[channel.id] === undefined
         || deviceState.channelRecipes[channel.id] === null) {
         const recipe = selectStartableRecipe(
+          options.registry,
           options.topology,
           options.state,
           device,
@@ -188,7 +196,7 @@ function startIdleDeviceChannels(options: {
           break;
         }
 
-        commitStartedRecipe(options.state, device, recipe);
+        commitStartedRecipe(options.registry, options.state, device, recipe);
         deviceState.channelRecipes[channel.id] = recipe;
 
         if (remainingOverflowTicks < recipe.durationTicks) {
@@ -200,6 +208,7 @@ function startIdleDeviceChannels(options: {
         recipe.progressTicks = recipe.durationTicks;
         recipe.state = "waiting-output";
         if (!completeRecipeIfPossible({
+          registry: options.registry,
           topology: options.topology,
           state: options.state,
           deviceId,
@@ -235,6 +244,7 @@ function startIdleDeviceChannels(options: {
 // AI-CORRECTION 2026-07-23: topology 参数因准入口速率额度需要在配方启动事务中提交而恢复使用。
 // AI-CORRECTION 2026-07-24: 准入额度改在 Stage3 真实输出时提交，commitStartedRecipe 不再接收 topology 或修改准入计数。
 function commitStartedRecipe(
+  registry: RegistryContract,
   state: SimulationMutableRuntimeState,
   device: CompiledSimulationDevice,
   recipe: RuntimeDeviceRecipeState,
@@ -242,7 +252,7 @@ function commitStartedRecipe(
   if (recipe.recipeType === "immediate-consume") {
     consumeSelections(state.persistent.slots, recipe.reservations);
     // 记录 immediate-consume 配方的消耗统计（仅生产设备）
-    if (device.isProducer) {
+    if (registry.queries.findEntityDefinition(device.definitionId)?.tags.includes("Producer") === true) {
       const delta = state.transient.recipeStatsDelta;
       for (const input of recipe.inputItems) {
         delta.consumed[input.itemType] = (delta.consumed[input.itemType] ?? 0) + input.amount;
@@ -360,6 +370,7 @@ function cloneOverflowTicks(
 
 // AI-CORRECTION 2026-05-13: selectStartableRecipe 现在接受 channel 参数。
 function selectStartableRecipe(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   device: CompiledSimulationDevice,
@@ -367,6 +378,7 @@ function selectStartableRecipe(
   shouldStartPlan: (plan: RuntimeDeviceRecipeState["plan"]) => boolean = () => true,
 ): RuntimeDeviceRecipeState | null {
   for (const plan of resolveDeviceRecipePlans({
+    registry,
     topology,
     state,
     device,
@@ -375,7 +387,7 @@ function selectStartableRecipe(
     if (!shouldStartPlan(plan)) {
       continue;
     }
-    const reservations = selectRecipeInputs({ topology, state, plan });
+    const reservations = selectRecipeInputs({ registry, topology, state, plan });
     if (reservations === null) {
       continue;
     }

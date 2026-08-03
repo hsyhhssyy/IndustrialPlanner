@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 
 import { advanceDevices } from "@/simulation/runtime/stage-1-advance-devices";
 import { settleRecipes } from "@/simulation/runtime/stage-5-settle-recipes";
@@ -24,7 +25,25 @@ import type {
   CompiledSimulationTopology,
 } from "@/simulation/types";
 import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
-import { LOGISTICS_KIND } from "@/domain/shared/logistics";
+import { createSimulationTestRegistry } from "./simulation-test-registry";
+
+const registry = createSimulationTestRegistry({
+  itemDomains: {
+    item_test: ItemDomainFlag.Solid,
+    item_input: ItemDomainFlag.Solid,
+  },
+  entityTags: {
+    test_overflow_machine: ["Producer"],
+    test_priority_machine: ["Producer"],
+  },
+  recipeDefinitions: [
+    createTestRecipe("recipe:test", "test_overflow_machine", [], [{ itemId: "item_test", amount: 1 }]),
+    createTestRecipe("recipe:a-input-1", "test_priority_machine", [{ itemId: "item_input", amount: 1 }], [{ itemId: "item_test", amount: 2 }]),
+    createTestRecipe("recipe:z-input-1", "test_priority_machine", [{ itemId: "item_input", amount: 1 }], [{ itemId: "item_test", amount: 2 }]),
+    createTestRecipe("recipe:input-3", "test_priority_machine", [{ itemId: "item_input", amount: 3 }], [{ itemId: "item_test", amount: 2 }]),
+    createTestRecipe("recipe:output-1", "test_priority_machine", [], [{ itemId: "item_test", amount: 1 }]),
+  ],
+});
 
 describe("REQ-080: dynamic simulation tick rate", () => {
   it("keeps only phase-safe dynamic tick rates for the current belt and pipe transfer units", () => {
@@ -45,23 +64,23 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     const state = createSimulationMutableRuntimeState(topology);
     const pipeAnchor = {
       ...topology.devices["device:maker"]!,
-      logisticsKind: LOGISTICS_KIND.pipe,
+      definitionId: "pipe_straight_1x1",
       transportClass: "anchor" as const,
     };
 
     state.tickNumber = 1;
-    expect(canDeviceTransferAtCurrentPhase(topology, state, pipeAnchor)).toBe(true);
+    expect(canDeviceTransferAtCurrentPhase(registry, topology, state, pipeAnchor)).toBe(true);
     state.tickNumber = 2;
-    expect(canDeviceTransferAtCurrentPhase(topology, state, pipeAnchor)).toBe(false);
+    expect(canDeviceTransferAtCurrentPhase(registry, topology, state, pipeAnchor)).toBe(false);
     // AI-CORRECTION 2026-07-30: 回滚 — 0.5s 门禁，tick 11 也是合法相位。
     state.tickNumber = 11;
-    expect(canDeviceTransferAtCurrentPhase(topology, state, pipeAnchor)).toBe(true);
+    expect(canDeviceTransferAtCurrentPhase(registry, topology, state, pipeAnchor)).toBe(true);
     state.tickNumber = 21;
-    expect(canDeviceTransferAtCurrentPhase(topology, state, pipeAnchor)).toBe(true);
+    expect(canDeviceTransferAtCurrentPhase(registry, topology, state, pipeAnchor)).toBe(true);
   });
 
   it("adapts worker dynamic tick rate only through legal switch points", () => {
-    const runtime = new SimulationWorkerRuntime();
+    const runtime = new SimulationWorkerRuntime(registry);
     runtime.handleRequest({
       type: "load-topology",
       requestId: 1,
@@ -98,7 +117,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
   });
 
   it("keeps normal-speed runtime exact when the buffer is exhausted", () => {
-    const runtime = new SimulationWorkerRuntime();
+    const runtime = new SimulationWorkerRuntime(registry);
     runtime.handleRequest({
       type: "load-topology",
       requestId: 1,
@@ -120,7 +139,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
   });
 
   it("exposes the current dynamic tick rate through runtime status", () => {
-    const runtime = new SimulationWorkerRuntime();
+    const runtime = new SimulationWorkerRuntime(registry);
     expect(runtime.getStatus().dynamicTickRate).toBeNull();
 
     const loaded = runtime.handleRequest({
@@ -134,7 +153,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
   });
 
   it("keeps perf reporting enabled without constructing debugData until detailed reporting is enabled", () => {
-    const normalRuntime = new SimulationWorkerRuntime();
+    const normalRuntime = new SimulationWorkerRuntime(registry);
     normalRuntime.handleRequest({
       type: "load-topology",
       requestId: 1,
@@ -153,7 +172,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     }
     expect(normalTick.result.currentTick?.debugData).toBeUndefined();
 
-    const debugRuntime = new SimulationWorkerRuntime();
+    const debugRuntime = new SimulationWorkerRuntime(registry);
     debugRuntime.handleRequest({
       type: "load-topology",
       requestId: 3,
@@ -301,12 +320,13 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     const device = topology.devices["device:maker"]!;
     const channel = device.recipeChannels[0]!;
 
-    const firstPlan = resolveDeviceRecipePlans({ topology, state, device, channel })[0];
-    const secondPlan = resolveDeviceRecipePlans({ topology, state, device, channel })[0];
+    const firstPlan = resolveDeviceRecipePlans({ registry, topology, state, device, channel })[0];
+    const secondPlan = resolveDeviceRecipePlans({ registry, topology, state, device, channel })[0];
 
     const otherTopology = createProductionOverflowTopology(10);
     const otherDevice = otherTopology.devices["device:maker"]!;
     const otherPlan = resolveDeviceRecipePlans({
+      registry,
       topology: otherTopology,
       state: createSimulationMutableRuntimeState(otherTopology),
       device: otherDevice,
@@ -324,7 +344,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     const device = topology.devices["device:maker"]!;
     const channel = device.recipeChannels[0]!;
 
-    expect(resolveDeviceRecipePlans({ topology, state, device, channel })
+    expect(resolveDeviceRecipePlans({ registry, topology, state, device, channel })
       .map((plan) => plan.recipeId)).toEqual([
       "recipe:a-input-1",
       "recipe:z-input-1",
@@ -368,7 +388,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     const state = createSimulationMutableRuntimeState(topology);
     state.persistent.devices["device:maker"]!.channelRecipes["main"] = createRunningRecipe(3);
 
-    const stage1AdvanceResult = advanceDevices(topology, state, 7);
+    const stage1AdvanceResult = advanceDevices(registry, topology, state, 7);
     expect(stage1AdvanceResult.overflowTicksByDeviceChannel["device:maker"]?.main).toBe(5);
 
     expect(state.persistent.slots["slot:out"]).toMatchObject({
@@ -378,6 +398,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toBeNull();
 
     settleRecipes(
+      registry,
       topology,
       state,
       "infinite",
@@ -402,7 +423,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     const state = createSimulationMutableRuntimeState(topology);
     state.persistent.devices["device:maker"]!.channelRecipes["main"] = createRunningRecipe(3);
 
-    const stage1AdvanceResult = advanceDevices(topology, state, 9);
+    const stage1AdvanceResult = advanceDevices(registry, topology, state, 9);
 
     expect(state.persistent.slots["slot:out"]).toMatchObject({
       itemType: "item_test",
@@ -413,6 +434,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toBeNull();
 
     settleRecipes(
+      registry,
       topology,
       state,
       "infinite",
@@ -455,7 +477,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     state.persistent.devices["device:maker"]!.channelRecipes["main"] =
       createRunningRecipe(5, 2);
 
-    advanceDevices(topology, state, 1);
+    advanceDevices(registry, topology, state, 1);
 
     expect(state.persistent.slots["slot:out"]).toEqual({
       itemType: null,
@@ -489,7 +511,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
   });
 
   it("reports indexed hot-path and local recipe transaction timings", () => {
-    const runtime = new SimulationWorkerRuntime();
+    const runtime = new SimulationWorkerRuntime(registry);
     runtime.handleRequest({
       type: "load-topology",
       requestId: 1,
@@ -543,7 +565,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
 function readProductionStatsAtSpeed(
   simulationSpeed: number,
 ): { readonly initialDynamicTickRate: number; readonly producedPerMinute: number } {
-  const runtime = new SimulationWorkerRuntime();
+  const runtime = new SimulationWorkerRuntime(registry);
   const loaded = runtime.handleRequest({
     type: "load-topology",
     requestId: 1,
@@ -570,15 +592,14 @@ function readProductionStatsAtSpeed(
 
 function createEmptyTopology(): CompiledSimulationTopology {
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     topologyId: "topology:empty",
     documentKey: "document:test",
     documentHash: "hash:test",
     registryHash: "registry:test",
     standardTickRate: 20,
     totalPowerDemand: 0,
-    itemCatalog: {},
-    recipeCatalog: {},
+    activeActivityIds: [],
     devices: {},
     nodes: {},
     slots: {},
@@ -605,41 +626,17 @@ function createProductionOverflowTopology(
   return {
     ...createEmptyTopology(),
     topologyId: `topology:production-overflow:${outputCapacity}`,
-    itemCatalog: {
-      item_test: {
-        id: "item_test",
-        domain: ItemDomainFlag.Solid,
-        tags: [],
-      },
-    },
-    recipeCatalog: {
-      "recipe:test": {
-        id: "recipe:test",
-        nameKey: "recipe.test",
-        durationTicks: 5,
-        inputs: [],
-        outputs: [{ itemId: "item_test", amount: 1 }],
-        machineId: "test_machine",
-        recipeType: "immediate-consume",
-        powerOutput: 0,
-        requiredGasDiffusion: null,
-        gasDiffusionOutput: null,
-        tags: [],
-      },
-    },
     devices: {
       "device:maker": {
         id: "device:maker",
         sourceEntityId: "maker",
-        definitionId: "test_machine",
+        definitionId: "test_overflow_machine",
         position: null,
         rotation: null,
         footprint: null,
-        tags: [],
         powerStatus: "in-power-range",
         powerDemand: 1,
       requiresPower: true,
-      logisticsKind: null,
         transportClass: "anchor",
         transportComponentId: null,
         nodeIds: ["node:out"],
@@ -653,7 +650,8 @@ function createProductionOverflowTopology(
         }],
         portIds: [],
         routing: {},
-        configHash: "config:test",        isProducer: true,      },
+        configHash: "config:test",
+      },
     },
     nodes: {
       "node:out": {
@@ -701,71 +699,10 @@ function createRecipePriorityTopology(): CompiledSimulationTopology {
   return {
     ...topology,
     topologyId: "topology:recipe-priority",
-    itemCatalog: {
-      ...topology.itemCatalog,
-      item_input: {
-        id: "item_input",
-        domain: ItemDomainFlag.Solid,
-        tags: [],
-      },
-    },
-    recipeCatalog: {
-      "recipe:a-input-1": {
-        id: "recipe:a-input-1",
-        nameKey: "recipe.a-input-1",
-        durationTicks: 5,
-        inputs: [{ itemId: "item_input", amount: 1 }],
-        outputs: [{ itemId: "item_test", amount: 2 }],
-        machineId: "test_machine",
-        recipeType: "immediate-consume",
-        powerOutput: 0,
-        requiredGasDiffusion: null,
-        gasDiffusionOutput: null,
-        tags: [],
-      },
-      "recipe:z-input-1": {
-        id: "recipe:z-input-1",
-        nameKey: "recipe.z-input-1",
-        durationTicks: 5,
-        inputs: [{ itemId: "item_input", amount: 1 }],
-        outputs: [{ itemId: "item_test", amount: 2 }],
-        machineId: "test_machine",
-        recipeType: "immediate-consume",
-        powerOutput: 0,
-        requiredGasDiffusion: null,
-        gasDiffusionOutput: null,
-        tags: [],
-      },
-      "recipe:input-3": {
-        id: "recipe:input-3",
-        nameKey: "recipe.input-3",
-        durationTicks: 5,
-        inputs: [{ itemId: "item_input", amount: 3 }],
-        outputs: [{ itemId: "item_test", amount: 2 }],
-        machineId: "test_machine",
-        recipeType: "immediate-consume",
-        powerOutput: 0,
-        requiredGasDiffusion: null,
-        gasDiffusionOutput: null,
-        tags: [],
-      },
-      "recipe:output-1": {
-        id: "recipe:output-1",
-        nameKey: "recipe.output-1",
-        durationTicks: 5,
-        inputs: [],
-        outputs: [{ itemId: "item_test", amount: 1 }],
-        machineId: "test_machine",
-        recipeType: "immediate-consume",
-        powerOutput: 0,
-        requiredGasDiffusion: null,
-        gasDiffusionOutput: null,
-        tags: [],
-      },
-    },
     devices: {
       "device:maker": {
         ...maker,
+        definitionId: "test_priority_machine",
         nodeIds: ["node:in", "node:out"],
         recipeChannels: [{
           ...maker.recipeChannels[0]!,
@@ -839,5 +776,23 @@ function createRunningRecipe(
     plan,
     reservations: [],
     inputItems: [],
+  };
+}
+
+function createTestRecipe(
+  id: string,
+  machineId: string,
+  inputs: RecipeDefinition["inputs"],
+  outputs: RecipeDefinition["outputs"],
+): RecipeDefinition {
+  return {
+    id,
+    nameKey: `test.recipe.${id}`,
+    durationSeconds: 0.25,
+    inputs,
+    outputs,
+    machineId,
+    recipeType: "immediate-consume",
+    tags: [],
   };
 }

@@ -5,8 +5,20 @@ import type {
 } from "../shared/logistics";
 import type { SlotLinkDefinition } from "../shared/slot-link";
 import type { ItemDomain } from "./types/entity-definition";
+import type { EntityDefinition } from "./types/entity-definition";
+import type { ItemDefinition } from "./types/item-definition";
+import type { RecipeDefinition } from "./types/recipe-definition";
 
 export interface RegistryQuery {
+	/** 按 ID 精确查找实体定义；未注册时返回 null。 */
+	findEntityDefinition(definitionId: string): EntityDefinition | null;
+	/** 按 ID 精确查找物品定义；未注册时返回 null。 */
+	findItemDefinition(itemId: string): ItemDefinition | null;
+	/** 按 ID 精确查找配方定义；未注册时返回 null。 */
+	findRecipeDefinition(recipeId: string): RecipeDefinition | null;
+	/** 返回指定设备的全部已注册配方；结果顺序与 registry 定义顺序一致。 */
+	findRecipeDefinitionsByMachine(machineId: string): readonly RecipeDefinition[];
+
 	/** 判定是否为传送带节：仅包括直线节和两个转角节。 */
 	isBelt(definitionId: string): boolean;
 	/** 判定是否为传送带物流设备；传送带物流设备不包括传送带节。 */
@@ -59,9 +71,9 @@ export interface RegistryQuery {
 
 	/**
 	 * 解析物品域。
-	 * gas 标记优先于 liquid；未标记或不在注册表中的物品按 solid 处理。
+	 * gas 标记优先于 liquid；已注册但未标记的物品按 solid 处理，未注册物品返回 null。
 	 */
-	resolveItemDomain(itemId: string): ItemDomain;
+	resolveItemDomain(itemId: string): ItemDomain | null;
 
 	/**
 	 * 构建"实体槽位 → 仓库槽位"的 Slot Link 定义。

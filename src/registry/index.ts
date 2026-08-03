@@ -10,15 +10,25 @@ import { createRegistryQuery } from "./registry-query"
 import { RECIPE_DEFINITIONS } from "./recipe-definition"
 
 export const createRegistryContract = (): RegistryContract => {
+    const baseDefinitions = [...BASE_DEFINITIONS]
+    const entityDefinitions = [...ENTITY_DEFINITIONS]
+    const entityVariantDefinitions = { ...ENTITY_VARIANT_DEFINITIONS }
+    const itemDefinitions = [...ITEM_DEFINITIONS]
+    const recipeDefinitions = RECIPE_DEFINITIONS.map((recipe) => ({
+        ...recipe,
+        primaryOutputs: recipe.outputs.length > 0 ? [recipe.outputs[0]!.itemId] : [],
+    }))
+
     return {
-        queries: createRegistryQuery(),
-        baseDefinitions: [...BASE_DEFINITIONS],
-        entityDefinitions: [...ENTITY_DEFINITIONS],
-        entityVariantDefinitions: { ...ENTITY_VARIANT_DEFINITIONS },
-        itemDefinitions: [...ITEM_DEFINITIONS],
-        recipeDefinitions: RECIPE_DEFINITIONS.map((recipe) => ({
-            ...recipe,
-            primaryOutputs: recipe.outputs.length > 0 ? [recipe.outputs[0]!.itemId] : [],
-        })),
+        queries: createRegistryQuery({
+            entityDefinitions,
+            itemDefinitions,
+            recipeDefinitions,
+        }),
+        baseDefinitions,
+        entityDefinitions,
+        entityVariantDefinitions,
+        itemDefinitions,
+        recipeDefinitions,
     }
 }

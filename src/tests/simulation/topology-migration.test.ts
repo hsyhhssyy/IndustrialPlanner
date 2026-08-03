@@ -144,7 +144,7 @@ describe("REQ-076: topology migration", () => {
       registry,
       poweredEntityIds: new Set(nextDocument.entityOrder),
     });
-    const runtime = new SimulationWorkerRuntime();
+    const runtime = new SimulationWorkerRuntime(registry);
 
     runtime.handleRequest({
       type: "load-topology",
@@ -217,7 +217,7 @@ describe("REQ-076: topology migration", () => {
       registry,
       poweredEntityIds: new Set(nextDocument.entityOrder),
     });
-    const runtime = new SimulationWorkerRuntime();
+    const runtime = new SimulationWorkerRuntime(registry);
 
     runtime.handleRequest({
       type: "load-topology",
@@ -270,7 +270,7 @@ describe("REQ-076: topology migration", () => {
       registry,
       poweredEntityIds: new Set(nextDocument.entityOrder),
     });
-    const runtime = new SimulationWorkerRuntime();
+    const runtime = new SimulationWorkerRuntime(registry);
 
     runtime.handleRequest({
       type: "load-topology",

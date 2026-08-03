@@ -1,10 +1,12 @@
+import { createRegistryContract } from "@/registry";
 import { TimelineWorkerRuntime } from "./timeline-worker-runtime";
 import type {
   TimelineWorkerRequest,
   TimelineWorkerResponse,
 } from "./timeline-worker-protocol";
 
-const runtime = new TimelineWorkerRuntime();
+const registry = createRegistryContract();
+const runtime = new TimelineWorkerRuntime(registry);
 const workerScope = globalThis as unknown as {
   addEventListener(
     type: "message",
@@ -17,4 +19,3 @@ workerScope.addEventListener("message", (event: MessageEvent<TimelineWorkerReque
   const response = runtime.handleRequest(event.data);
   workerScope.postMessage(response);
 });
-

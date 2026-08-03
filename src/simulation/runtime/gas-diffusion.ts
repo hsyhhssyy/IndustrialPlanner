@@ -4,6 +4,8 @@ import type {
   RuntimeGasDiffusionSnapshot,
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
+import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
 import {
   areGridRectsContaining,
 } from "@/shared/geometry/power-range";
@@ -33,10 +35,11 @@ const runtimeIndexByState = new WeakMap<SimulationMutableRuntimeState, GasDiffus
  * 派生索引通过 WeakMap 绑定运行时状态，不进入每 tick 的深拷贝；拓扑迁移或状态恢复会自然创建新索引。
  */
 export function computeActiveGasDiffusions(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): readonly RuntimeGasDiffusionSnapshot[] {
-  const topologyIndex = ensureGasDiffusionTopologyIndex(topology);
+  const topologyIndex = ensureGasDiffusionTopologyIndex(registry, topology);
   return topologyIndex.sourceDeviceIds.length === 0
     ? EMPTY_GAS_DIFFUSIONS
     : collectActiveGasDiffusions(topology, state, topologyIndex.sourceDeviceIds);
@@ -44,9 +47,10 @@ export function computeActiveGasDiffusions(
 
 /** 气体配方的首轮启动只需要访问这些设备，普通设备不应为此被重复扫描。 */
 export function getGasDiffusionRecipeSourceDeviceIds(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
 ): readonly string[] {
-  return ensureGasDiffusionTopologyIndex(topology).recipeSourceDeviceIds;
+  return ensureGasDiffusionTopologyIndex(registry, topology).recipeSourceDeviceIds;
 }
 
 export function isDeviceInRequiredGasDiffusion(options: {
@@ -97,6 +101,7 @@ function ensureGasDiffusionRuntimeIndex(
 }
 
 function ensureGasDiffusionTopologyIndex(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
 ): GasDiffusionTopologyIndex {
   const cached = topologyIndexByTopology.get(topology);
@@ -104,11 +109,6 @@ function ensureGasDiffusionTopologyIndex(
     return cached;
   }
 
-  const recipeSourceDefinitionIds = new Set(
-    Object.values(topology.recipeCatalog)
-      .filter((recipe) => recipe.gasDiffusionOutput !== null)
-      .map((recipe) => recipe.machineId),
-  );
   const recipeSourceDeviceIds: string[] = [];
   const sourceDeviceIds: string[] = [];
 
@@ -118,7 +118,12 @@ function ensureGasDiffusionTopologyIndex(
       continue;
     }
 
-    const canRunGasDiffusionRecipe = recipeSourceDefinitionIds.has(device.definitionId)
+    const canRunGasDiffusionRecipe = registry.queries
+      .findRecipeDefinitionsByMachine(device.definitionId)
+      .some((recipe) =>
+        isRecipeAvailableByActivity(recipe, topology.activeActivityIds)
+        && recipe.gasDiffusionOutput !== undefined,
+      )
       && (device.recipeChannels ?? []).length > 0;
     if (canRunGasDiffusionRecipe) {
       recipeSourceDeviceIds.push(deviceId);

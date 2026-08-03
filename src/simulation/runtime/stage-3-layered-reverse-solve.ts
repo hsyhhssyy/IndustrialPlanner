@@ -19,6 +19,7 @@ import {
   resolveStorageSlotId,
 } from "./runtime-slot-access";
 import { canDeviceTransferAtCurrentPhase } from "./phase-gating";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
 
 // AI-REMOVED 2026-05-17:
 // Reason: TickPerfStage3Details 未在本文件使用，保留 import 会阻断 lint。
@@ -56,11 +57,12 @@ export interface SolveTransferGraphPerf {
  * 无容量的 input-view 会标记为 blocked-resolved，不再误阻塞同 output-view 的其他出口。
  */
 export function solveTransferGraph(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   perf?: SolveTransferGraphPerf,
 ): void {
-  let currentLayer = collectFirstLayerAnchors(topology, state);
+  let currentLayer = collectFirstLayerAnchors(registry, topology, state);
 
   while (currentLayer.length > 0) {
     if (perf !== undefined) perf.layerCount += 1;
@@ -70,6 +72,7 @@ export function solveTransferGraph(
     for (const node of currentLayer) {
       if (perf !== undefined) perf.anchorCount += 1;
       processInputAnchor({
+        registry,
         topology,
         state,
         node,
@@ -79,6 +82,7 @@ export function solveTransferGraph(
     }
 
     currentLayer = collectAvailableInputAnchors(
+      registry,
       topology,
       state,
       [...nextAnchors.values()],
@@ -92,6 +96,7 @@ export function solveTransferGraph(
  * 在后续锚点处理中不会被 isNodeVisited 跳过。
  */
 function unvisitUpstreamNonStrictOutputViews(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   inputNode: CompiledSimulationNode,
@@ -114,7 +119,7 @@ function unvisitUpstreamNonStrictOutputViews(
       // 确保本层遍历即可通过 processInputAnchor → searchUpstreamFromOutputNode
       // 重新进入该设备处理。
       for (const inputNode of getDeviceInputViewNodes(topology, device)) {
-        if (prepareInputNodeForAnchor(topology, state, inputNode)) {
+        if (prepareInputNodeForAnchor(registry, topology, state, inputNode)) {
           nextAnchors.set(inputNode.id, inputNode);
         }
       }
@@ -123,10 +128,12 @@ function unvisitUpstreamNonStrictOutputViews(
 }
 
 function collectFirstLayerAnchors(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): readonly CompiledSimulationNode[] {
   return collectAvailableInputAnchors(
+    registry,
     topology,
     state,
     topology.ordering.nodeOrder.map((nodeId) => topology.nodes[nodeId]),
@@ -134,6 +141,7 @@ function collectFirstLayerAnchors(
 }
 
 function processInputAnchor(options: {
+  readonly registry: RegistryContract;
   readonly topology: CompiledSimulationTopology;
   readonly state: SimulationMutableRuntimeState;
   readonly node: CompiledSimulationNode;
@@ -144,11 +152,11 @@ function processInputAnchor(options: {
     return;
   }
 
-  if (!prepareInputNodeForProcessing(options.topology, options.state, options.node)) {
+  if (!prepareInputNodeForProcessing(options.registry, options.topology, options.state, options.node)) {
     return;
   }
 
-  solveInputNode(options.topology, options.state, options.node);
+  solveInputNode(options.registry, options.topology, options.state, options.node);
   markNodeVisited(options.state, options.node);
 
   for (const edgeId of getOrderedInputEdgeIds(options.topology, options.state, options.node)) {
@@ -159,6 +167,7 @@ function processInputAnchor(options: {
     }
 
     searchUpstreamFromOutputNode({
+      registry: options.registry,
       topology: options.topology,
       state: options.state,
       outputNode: sourceNode,
@@ -169,6 +178,7 @@ function processInputAnchor(options: {
 }
 
 function searchUpstreamFromOutputNode(options: {
+  readonly registry: RegistryContract;
   readonly topology: CompiledSimulationTopology;
   readonly state: SimulationMutableRuntimeState;
   readonly outputNode: CompiledSimulationNode;
@@ -185,11 +195,11 @@ function searchUpstreamFromOutputNode(options: {
   }
 
   if (isStrictLogisticsDevice(device)) {
-    if (!canDeviceTransferAtCurrentPhase(options.topology, options.state, device)) {
+    if (!canDeviceTransferAtCurrentPhase(options.registry, options.topology, options.state, device)) {
       return;
     }
 
-    const outputMoved = solveOutputNode(options.topology, options.state, options.outputNode, options.nextAnchors, options.perf);
+    const outputMoved = solveOutputNode(options.registry, options.topology, options.state, options.outputNode, options.nextAnchors, options.perf);
     if (outputMoved) {
       markNodeVisited(options.state, options.outputNode);
     }
@@ -198,17 +208,18 @@ function searchUpstreamFromOutputNode(options: {
     if (inputNode === undefined || isNodeVisited(options.state, inputNode)) {
       return;
     }
-    if (!prepareInputNodeForProcessing(options.topology, options.state, inputNode)) {
+    if (!prepareInputNodeForProcessing(options.registry, options.topology, options.state, inputNode)) {
       return;
     }
 
-    solveInputNode(options.topology, options.state, inputNode);
+    solveInputNode(options.registry, options.topology, options.state, inputNode);
     markNodeVisited(options.state, inputNode);
     for (const edgeId of getOrderedInputEdgeIds(options.topology, options.state, inputNode)) {
       const edge = options.topology.transferEdges[edgeId];
       const sourceNode = edge === undefined ? undefined : options.topology.nodes[edge.sourceNodeId];
       if (sourceNode !== undefined) {
         searchUpstreamFromOutputNode({
+          registry: options.registry,
           topology: options.topology,
           state: options.state,
           outputNode: sourceNode,
@@ -223,7 +234,7 @@ function searchUpstreamFromOutputNode(options: {
   // AI-CORRECTION 2026-07-23:
   // 一般 PipeFamily 组件也受整数秒相位门禁约束；BeltFamily 锚点仍保持原有逐 tick 行为。
   // AI-CORRECTION 2026-07-27: 当前门禁依据编译期 logisticsKind；管道设备族全部受门禁，传送带族不受此门禁。
-  if (!canDeviceTransferAtCurrentPhase(options.topology, options.state, device)) {
+  if (!canDeviceTransferAtCurrentPhase(options.registry, options.topology, options.state, device)) {
     return;
   }
 
@@ -231,17 +242,18 @@ function searchUpstreamFromOutputNode(options: {
     return;
   }
 
-  solveOutputNode(options.topology, options.state, options.outputNode, options.nextAnchors, options.perf);
+  solveOutputNode(options.registry, options.topology, options.state, options.outputNode, options.nextAnchors, options.perf);
   markNodeVisited(options.state, options.outputNode);
 
   for (const inputNode of getDeviceInputViewNodes(options.topology, device)) {
-    if (prepareInputNodeForAnchor(options.topology, options.state, inputNode)) {
+    if (prepareInputNodeForAnchor(options.registry, options.topology, options.state, inputNode)) {
       options.nextAnchors.set(inputNode.id, inputNode);
     }
   }
 }
 
 function solveOutputNode(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   node: CompiledSimulationNode,
@@ -286,6 +298,7 @@ function solveOutputNode(
       }
 
       const ok = moveOneItem({
+        registry,
         topology,
         state,
         sourceSlotId: edgeState.sourceSlotId,
@@ -315,6 +328,7 @@ function solveOutputNode(
 
       const tRefresh = perf !== undefined ? performance.now() : 0;
       refreshBlockedInputNodesAfterMove(
+        registry,
         topology,
         state,
         nextAnchors,
@@ -327,7 +341,7 @@ function solveOutputNode(
 
       const targetNode = topology.nodes[edge.targetNodeId];
       if (targetNode !== undefined) {
-        solveInputNode(topology, state, targetNode);
+        solveInputNode(registry, topology, state, targetNode);
       }
       moved = true;
     }
@@ -336,6 +350,7 @@ function solveOutputNode(
 }
 
 function solveInputNode(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   node: CompiledSimulationNode,
@@ -358,6 +373,7 @@ function solveInputNode(
     }
 
     const selection = selectAcceptedSourceForEdge({
+      registry,
       topology,
       state,
       sourceNode,
@@ -384,6 +400,7 @@ function solveInputNode(
 }
 
 function selectAcceptedSourceForEdge(options: {
+  readonly registry: RegistryContract;
   readonly topology: CompiledSimulationTopology;
   readonly state: SimulationMutableRuntimeState;
   readonly sourceNode: CompiledSimulationNode;
@@ -399,7 +416,11 @@ function selectAcceptedSourceForEdge(options: {
     const slot = options.topology.slots[sourceSlotId];
     const storageSlotId = resolveStorageSlotId(options.state, sourceSlotId);
     const itemType = options.state.persistent.slots[storageSlotId]?.itemType ?? slot?.lock ?? null;
-    if (slot === undefined || itemType === null || !acceptsItem(options.topology, options.acceptRule, itemType)) {
+    if (
+      slot === undefined
+      || itemType === null
+      || !acceptsItem(options.registry, options.topology, options.acceptRule, itemType)
+    ) {
       continue;
     }
     if (!canAdmitItemThroughTargetPort(options.topology, options.state, options.targetPortId, itemType)) {
@@ -418,6 +439,7 @@ function selectAcceptedSourceForEdge(options: {
     }
 
     const targetSlotId = findInputSlotForItem({
+      registry: options.registry,
       topology: options.topology,
       state: options.state,
       node: options.targetNode,
@@ -645,6 +667,7 @@ function getReadableSourceSlotIds(
 }
 
 function collectAvailableInputAnchors(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   maybeNodes: readonly (CompiledSimulationNode | undefined)[],
@@ -659,7 +682,7 @@ function collectAvailableInputAnchors(
     if (node.inputPortIds.length === 0) {
       continue;
     }
-    if (prepareInputNodeForAnchor(topology, state, node)) {
+    if (prepareInputNodeForAnchor(registry, topology, state, node)) {
       anchors.push(node);
     }
   }
@@ -667,6 +690,7 @@ function collectAvailableInputAnchors(
 }
 
 function prepareInputNodeForAnchor(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   node: CompiledSimulationNode,
@@ -674,7 +698,7 @@ function prepareInputNodeForAnchor(
   if (node.viewRole !== "input-view" || isNodeVisited(state, node)) {
     return false;
   }
-  if (inputNodeCanAcceptAtCurrentTick(topology, state, node)) {
+  if (inputNodeCanAcceptAtCurrentTick(registry, topology, state, node)) {
     markInputNodeUnresolved(state, node);
     return true;
   }
@@ -683,14 +707,16 @@ function prepareInputNodeForAnchor(
 }
 
 function prepareInputNodeForProcessing(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   node: CompiledSimulationNode,
 ): boolean {
-  return prepareInputNodeForAnchor(topology, state, node);
+  return prepareInputNodeForAnchor(registry, topology, state, node);
 }
 
 function refreshBlockedInputNodesAfterMove(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   nextAnchors: Map<string, CompiledSimulationNode>,
@@ -713,12 +739,12 @@ function refreshBlockedInputNodesAfterMove(
     if (!inputNodeCapacityDependsOnStorageSlot(state, node, sourceStorageSlotId)) {
       continue;
     }
-    if (inputNodeCanAcceptAtCurrentTick(topology, state, node)) {
+    if (inputNodeCanAcceptAtCurrentTick(registry, topology, state, node)) {
       markInputNodeUnresolved(state, node);
       nextAnchors.set(node.id, node);
       // AI-CORRECTION 2026-05-27: 解除 blocked 时，撤销上游非严格 output-view 的 visited，
       // 并立即将该设备的 input-view 加入下一层锚点，确保本层即可重新处理上传。
-      unvisitUpstreamNonStrictOutputViews(topology, state, node, nextAnchors);
+      unvisitUpstreamNonStrictOutputViews(registry, topology, state, node, nextAnchors);
     }
   }
 
@@ -806,12 +832,13 @@ function markNodeVisited(
 }
 
 function inputNodeCanAcceptAtCurrentTick(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   node: CompiledSimulationNode,
 ): boolean {
   const device = topology.devices[node.deviceId];
-  if (device !== undefined && !canDeviceTransferAtCurrentPhase(topology, state, device)) {
+  if (device !== undefined && !canDeviceTransferAtCurrentPhase(registry, topology, state, device)) {
     return false;
   }
 

@@ -29,6 +29,7 @@ import {
   getDevice,
   getTick,
 } from "./blueprint-test-helpers";
+import { createSimulationTestRegistry } from "./simulation-test-registry";
 
 describe("REQ-084: simulation power system", () => {
   it("runs powered recipes and exposes total power demand through topology and snapshots", async () => {
@@ -235,32 +236,14 @@ describe("REQ-089: power generation mode caching bug", () => {
     // demand=40_000kW → 每 tick 消耗 2MJ，100MJ 电池约 50 ticks 耗尽。
     // 配方 durationTicks=100，原料充足，避免电池耗尽前后配方做完导致不可比较。
     const topology: CompiledSimulationTopology = {
-      schemaVersion: 4,
+      schemaVersion: 5,
       topologyId: "topology:power-mode-cache-test",
       documentKey: "document:test",
       documentHash: "hash:test",
       registryHash: "registry:test",
       standardTickRate: STANDARD_TICK_RATE_PER_SECOND,
       totalPowerDemand: 40_000,
-      itemCatalog: {
-        item_iron_nugget: { id: "item_iron_nugget", domain: ItemDomainFlag.Solid, tags: [] },
-        item_iron_powder: { id: "item_iron_powder", domain: ItemDomainFlag.Solid, tags: [] },
-      },
-      recipeCatalog: {
-        "r_test": {
-          id: "r_test",
-          nameKey: "recipe.test",
-          durationTicks: 100,
-          inputs: [{ itemId: "item_iron_nugget", amount: 1 }],
-          outputs: [{ itemId: "item_iron_powder", amount: 1 }],
-          machineId: "test_machine",
-          recipeType: "immediate-consume",
-          tags: [],
-          powerOutput: 0,
-          requiredGasDiffusion: null,
-          gasDiffusionOutput: null,
-        },
-      },
+      activeActivityIds: [],
       devices: {
         "device:grinder": {
           id: "device:grinder",
@@ -269,11 +252,9 @@ describe("REQ-089: power generation mode caching bug", () => {
           position: null,
           rotation: null,
           footprint: null,
-          tags: [],
           powerStatus: "in-power-range",
           powerDemand: 40_000,
         requiresPower: true,
-        logisticsKind: null,
           transportClass: "anchor",
           transportComponentId: null,
           nodeIds: ["node:input", "node:output"],
@@ -287,7 +268,8 @@ describe("REQ-089: power generation mode caching bug", () => {
           }],
           portIds: [],
           routing: {},
-          configHash: "config:test",          isProducer: true,        },
+          configHash: "config:test",
+        },
       },
       nodes: {
         "node:input": {
@@ -335,7 +317,21 @@ describe("REQ-089: power generation mode caching bug", () => {
       diagnostics: [],
     };
 
-    const runtime = new SimulationWorkerRuntime();
+    const runtimeRegistry = createSimulationTestRegistry({
+      entityTags: { test_machine: ["Producer"] },
+      recipeDefinitions: [{
+        id: "r_test",
+        nameKey: "recipe.test",
+        durationSeconds: 5,
+        inputs: [{ itemId: "item_iron_nugget", amount: 1 }],
+        outputs: [{ itemId: "item_iron_powder", amount: 1 }],
+        machineId: "test_machine",
+        recipeType: "immediate-consume",
+        tags: [],
+        powerOutput: 0,
+      }],
+    });
+    const runtime = new SimulationWorkerRuntime(runtimeRegistry);
 
     // 1. 真实电力模式启动。电池 100MJ，demand=40_000kW → ~50 ticks 耗尽。
     //    先跑到 tick 10：电池还没耗尽，grinder 应正在运行配方。

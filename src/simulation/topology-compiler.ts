@@ -11,6 +11,7 @@ import {
 } from "@/domain/shared/item-domain-flags";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import {
   isItemAvailableByActivity,
   isRecipeAvailableByActivity,
@@ -37,11 +38,9 @@ import { hashStable } from "./deterministic";
 import { STANDARD_TICK_RATE_PER_SECOND } from "./tick-rate";
 import type {
   CompiledSimulationDevice,
-  CompiledSimulationItem,
   CompiledSimulationNode,
   CompiledSimulationPhysicalConnection,
   CompiledSimulationPort,
-  CompiledSimulationRecipeDefinition,
   CompiledSimulationRecipeChannel,
   CompiledSimulationRoutingEntry,
   CompiledSimulationSlot,
@@ -61,7 +60,6 @@ import type {
   SimulationPortKind,
   SimulationTransportClass,
 } from "./types";
-import { compileRecipeDefinition } from "./types";
 
 // 从 EntityDefinition 解构的子类型别名。
 // 订正（2026-05-06）：domain 当前只导出 EntityDefinition 顶层类型，simulation 通过索引类型取子结构。
@@ -113,9 +111,14 @@ export function compileSimulationTopology(
   const entityDefinitionMap = new Map(
     options.registry.entityDefinitions.map((definition) => [definition.id, definition]),
   );
-  const activeActivityIds = options.activeActivityIds ?? [];
-  const itemCatalog = compileItemCatalog(options.registry, activeActivityIds);
-  const recipeCatalog = compileRecipeCatalog(options.registry, activeActivityIds);
+  const activeActivityIds = [...new Set(options.activeActivityIds ?? [])].sort();
+  const activeItemDefinitions = [...options.registry.itemDefinitions]
+    .filter((item) => isItemAvailableByActivity(item, activeActivityIds))
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const activeItemIds = new Set(activeItemDefinitions.map((item) => item.id));
+  const activeRecipeIds = new Set(options.registry.recipeDefinitions
+    .filter((recipe) => isRecipeAvailableByActivity(recipe, activeActivityIds))
+    .map((recipe) => recipe.id));
   const inactiveActivityItemIds = new Set(options.registry.itemDefinitions
     .filter((item) => !isItemAvailableByActivity(item, activeActivityIds))
     .map((item) => item.id));
@@ -137,7 +140,11 @@ export function compileSimulationTopology(
   const edgeIdsByOutputPortId: Record<string, string[]> = {};
 
   addDeviceCompileResult({
-    result: compileWarehouseDevice(options.document, itemCatalog),
+    result: compileWarehouseDevice(
+      options.document,
+      activeItemDefinitions,
+      options.registry.queries,
+    ),
     devices,
     nodes,
     slots,
@@ -178,8 +185,8 @@ export function compileSimulationTopology(
         entity,
         definition,
         registryQueries: options.registry.queries,
-        itemCatalog,
-        recipeCatalog,
+        activeItemIds,
+        activeRecipeIds,
         inactiveActivityItemIds,
         baseId: options.document.baseId,
         poweredEntityIds: options.poweredEntityIds,
@@ -245,7 +252,8 @@ export function compileSimulationTopology(
         const acceptRule = intersectAcceptRules(
           sourcePort.acceptRule,
           targetPort.acceptRule,
-          itemCatalog,
+          options.registry.queries,
+          activeItemIds,
         );
         if (acceptRule === null) {
           diagnostics.push({
@@ -306,8 +314,7 @@ export function compileSimulationTopology(
     registryHash,
     standardTickRate,
     totalPowerDemand,
-    itemCatalog,
-    recipeCatalog,
+    activeActivityIds,
     devices,
     nodes,
     slots,
@@ -330,15 +337,14 @@ export function compileSimulationTopology(
   };
 
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     topologyId: hashStable(topologyHashInput),
     documentKey: options.document.documentKey,
     documentHash,
     registryHash,
     standardTickRate,
     totalPowerDemand,
-    itemCatalog,
-    recipeCatalog,
+    activeActivityIds,
     devices,
     nodes,
     slots,
@@ -397,45 +403,54 @@ function addDeviceCompileResult(options: {
   }
 }
 
-function compileItemCatalog(
-  registry: RegistryContract,
-  activeActivityIds: readonly string[],
-): Record<string, CompiledSimulationItem> {
-  const catalog: Record<string, CompiledSimulationItem> = {};
-
-  for (const item of [...registry.itemDefinitions].sort((left, right) =>
-    left.id.localeCompare(right.id),
-  )) {
-    if (!isItemAvailableByActivity(item, activeActivityIds)) {
-      continue;
-    }
-
-    catalog[item.id] = {
-      id: item.id,
-      domain: registry.queries.resolveItemDomain(item.id),
-      tags: [...item.tags].sort(),
-    };
-  }
-
-  return catalog;
-}
-
-function compileRecipeCatalog(
-  registry: RegistryContract,
-  activeActivityIds: readonly string[],
-): Record<string, CompiledSimulationRecipeDefinition> {
-  const catalog: Record<string, CompiledSimulationRecipeDefinition> = {};
-  for (const recipe of [...registry.recipeDefinitions].sort((left, right) =>
-    left.id.localeCompare(right.id),
-  )) {
-    if (!isRecipeAvailableByActivity(recipe, activeActivityIds)) {
-      continue;
-    }
-
-    catalog[recipe.id] = compileRecipeDefinition(recipe, convertSecondsToSimulationTicks(recipe.durationSeconds));
-  }
-  return catalog;
-}
+// AI-REMOVED 2026-08-02:
+// Reason: topology 不再携带 registry item/recipe 镜像。
+// Trigger: Worker 入口独立构造唯一 RegistryContract。
+// Evidence: compileSimulationTopology 仅保留 active item/recipe ID 集用于编译期校验。
+// Replacement: activeItemDefinitions/activeItemIds/activeRecipeIds 局部视图。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function compileItemCatalog(
+//   registry: RegistryContract,
+//   activeActivityIds: readonly string[],
+// ): Record<string, CompiledSimulationItem> {
+//   const catalog: Record<string, CompiledSimulationItem> = {};
+//
+//   for (const item of [...registry.itemDefinitions].sort((left, right) =>
+//     left.id.localeCompare(right.id),
+//   )) {
+//     if (!isItemAvailableByActivity(item, activeActivityIds)) {
+//       continue;
+//     }
+//
+//     catalog[item.id] = {
+//       id: item.id,
+//       domain: registry.queries.resolveItemDomain(item.id),
+//       tags: [...item.tags].sort(),
+//     };
+//   }
+//
+//   return catalog;
+// }
+//
+// function compileRecipeCatalog(
+//   registry: RegistryContract,
+//   activeActivityIds: readonly string[],
+// ): Record<string, CompiledSimulationRecipeDefinition> {
+//   const catalog: Record<string, CompiledSimulationRecipeDefinition> = {};
+//   for (const recipe of [...registry.recipeDefinitions].sort((left, right) =>
+//     left.id.localeCompare(right.id),
+//   )) {
+//     if (!isRecipeAvailableByActivity(recipe, activeActivityIds)) {
+//       continue;
+//     }
+//
+//     catalog[recipe.id] = compileRecipeDefinition(recipe, convertSecondsToSimulationTicks(recipe.durationSeconds));
+//   }
+//   return catalog;
+// }
 
 function computeTotalPowerDemand(
   devices: Readonly<Record<string, CompiledSimulationDevice>>,
@@ -447,10 +462,33 @@ function computeTotalPowerDemand(
 
 function compileWarehouseDevice(
   document: WorldDocument,
-  itemCatalog: Record<string, CompiledSimulationItem>,
+  itemDefinitions: readonly ItemDefinition[],
+  registryQueries: RegistryContract["queries"],
 ): DeviceCompileResult {
   const deviceId = `device:warehouse:${document.baseId}`;
   const nodeId = `${deviceId}/node:warehouse`;
+  const slots: CompiledSimulationSlot[] = itemDefinitions.map((item) => ({
+    id: `${nodeId}/slot:${item.id}`,
+    nodeId,
+    sourceStorageSlotGroupId: "warehouse",
+    sourceSlotId: item.id,
+    capacity: Number.MAX_SAFE_INTEGER,
+    domain: requireRegisteredItemDomain(registryQueries, item.id),
+    lock: item.id,
+    initialItemType: item.id,
+    initialCount: 0,
+    ignoreStock: false,
+  }));
+  // AI-REMOVED 2026-08-02:
+  // Reason: 仓库槽位直接由活动可用 ItemDefinition 编译，不再经过 itemCatalog。
+  // Trigger: 删除 topology.itemCatalog。
+  // Evidence: itemDefinitions 已按 ID 排序并通过活动过滤。
+  // Replacement: 上方 itemDefinitions.map。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  /*
   const slots: CompiledSimulationSlot[] = Object.keys(itemCatalog).sort().map((itemId) => ({
     id: `${nodeId}/slot:${itemId}`,
     nodeId,
@@ -474,6 +512,7 @@ function compileWarehouseDevice(
     // submitMode: "never" as const,
     // submitIntervalTicks: null,
   }));
+  */
   const node: CompiledSimulationNode = {
     id: nodeId,
     deviceId,
@@ -493,11 +532,9 @@ function compileWarehouseDevice(
       position: null,
       rotation: null,
       footprint: null,
-      tags: ["warehouse"],
       powerStatus: "no-power-needed",
       powerDemand: 0,
       requiresPower: false,
-      logisticsKind: null,
       transportClass: "anchor",
       transportComponentId: null,
       nodeIds: [nodeId],
@@ -506,8 +543,7 @@ function compileWarehouseDevice(
       allowDuplicateRecipesAcrossChannels: false,
       portIds: [],
       routing: {},
-      configHash: hashStable({ baseId: document.baseId, itemIds: Object.keys(itemCatalog).sort() }),
-      isProducer: false,
+      configHash: hashStable({ baseId: document.baseId, itemIds: itemDefinitions.map((item) => item.id) }),
       blockageAutoClearance: null,
       waterPurifierNode: null,
     },
@@ -516,6 +552,17 @@ function compileWarehouseDevice(
     ports: [],
     links: [],
   };
+}
+
+function requireRegisteredItemDomain(
+  registryQueries: RegistryContract["queries"],
+  itemId: string,
+): SimulationItemDomainFilter {
+  const domain = registryQueries.resolveItemDomain(itemId);
+  if (domain === null) {
+    throw new Error(`Registry item "${itemId}" has no registered item domain.`);
+  }
+  return domain;
 }
 
 function resolvePowerDemand(definition: EntityDefinition): number {
@@ -542,8 +589,8 @@ function compileEntityDevice(options: {
   readonly entity: WorldEntity;
   readonly definition: EntityDefinition;
   readonly registryQueries: RegistryContract["queries"];
-  readonly itemCatalog: Record<string, CompiledSimulationItem>;
-  readonly recipeCatalog: Record<string, CompiledSimulationRecipeDefinition>;
+  readonly activeItemIds: ReadonlySet<string>;
+  readonly activeRecipeIds: ReadonlySet<string>;
   readonly inactiveActivityItemIds: ReadonlySet<string>;
   readonly baseId: string;
   readonly poweredEntityIds: ReadonlySet<string>;
@@ -578,7 +625,7 @@ function compileEntityDevice(options: {
     slots,
     links,
     nodeBindingsByStorageGroupId,
-    itemCatalog: options.itemCatalog,
+    activeItemIds: options.activeItemIds,
   });
   compileSyntheticNodesForUnboundPorts({
     deviceId,
@@ -593,7 +640,8 @@ function compileEntityDevice(options: {
     entity: options.entity,
     definition,
     nodeBindingsByStorageGroupId,
-    itemCatalog: options.itemCatalog,
+    registryQueries: options.registryQueries,
+    activeItemIds: options.activeItemIds,
     ports,
     inactiveActivityItemIds: options.inactiveActivityItemIds,
   });
@@ -606,7 +654,7 @@ function compileEntityDevice(options: {
     definition.recipeChannelBehavior,
     nodeBindingsByStorageGroupId,
     options.entity,
-    options.recipeCatalog,
+    options.activeRecipeIds,
   );
   const consumptionChannelCount = recipeChannels.findIndex(
     (channel) => channel.type !== "consumption-channel",
@@ -618,11 +666,9 @@ function compileEntityDevice(options: {
     position: { ...options.entity.position },
     rotation: options.entity.rotation,
     footprint: { ...definition.footprint },
-    tags: [...definition.tags].sort(),
     powerStatus,
     powerDemand,
     requiresPower: definition.requiresPower,
-    logisticsKind,
     transportClass,
     transportComponentId: null,
     nodeIds: nodes.map((node) => node.id),
@@ -638,7 +684,6 @@ function compileEntityDevice(options: {
       entity: options.entity,
       definition,
     }),
-    isProducer: definition.tags.includes("Producer"),
     blockageAutoClearance: compileBlockageAutoClearance(definition, options.entity.config),
     waterPurifierNode: compileWaterPurifierNode(definition.id, options.entity.config),
   };
@@ -670,7 +715,7 @@ function compileStorageSlotGroups(options: {
   readonly slots: CompiledSimulationSlot[];
   readonly links: CompiledSimulationSlotLink[];
   readonly nodeBindingsByStorageGroupId: Map<string, StorageGroupNodeBinding>;
-  readonly itemCatalog: Record<string, CompiledSimulationItem>;
+  readonly activeItemIds: ReadonlySet<string>;
 }): void {
   options.definition.storageSlotGroups.forEach((storageGroup, groupIndex) => {
     const portDirections = resolveStorageGroupPortDirections(options.definition, storageGroup.id);
@@ -686,7 +731,7 @@ function compileStorageSlotGroups(options: {
       nodes: options.nodes,
       compiledSlots: options.slots,
       links: options.links,
-      itemCatalog: options.itemCatalog,
+      activeItemIds: options.activeItemIds,
     });
     options.nodeBindingsByStorageGroupId.set(storageGroup.id, nodeSet);
   });
@@ -704,7 +749,7 @@ function compileStorageNodeSet(options: {
   readonly nodes: CompiledSimulationNode[];
   readonly compiledSlots: CompiledSimulationSlot[];
   readonly links: CompiledSimulationSlotLink[];
-  readonly itemCatalog: Record<string, CompiledSimulationItem>;
+  readonly activeItemIds: ReadonlySet<string>;
 }): StorageGroupNodeBinding {
   if (options.hasInputBinding && options.hasOutputBinding) {
     const linkType = options.storageGroup.splitLinkType ?? "share-all";
@@ -724,7 +769,7 @@ function compileStorageNodeSet(options: {
         slotIdSuffix: ".in-view",
         initialItemType: null,
         initialCount: 0,
-        itemCatalog: options.itemCatalog,
+        activeItemIds: options.activeItemIds,
       });
       const outputSlot = compileSlot({
         slot,
@@ -732,7 +777,7 @@ function compileStorageNodeSet(options: {
         nodeId: outputNodeId,
         storageGroup: options.storageGroup,
         slotIdSuffix: ".out-view",
-        itemCatalog: options.itemCatalog,
+        activeItemIds: options.activeItemIds,
       });
       options.compiledSlots.push(inputSlot, outputSlot);
       inputSlotIds.push(inputSlot.id);
@@ -778,7 +823,7 @@ function compileStorageNodeSet(options: {
       slotIndex: options.slotStartIndex + slotOffset,
       nodeId,
       storageGroup: options.storageGroup,
-      itemCatalog: options.itemCatalog,
+      activeItemIds: options.activeItemIds,
     });
     options.compiledSlots.push(compiledSlot);
     slotIds.push(compiledSlot.id);
@@ -1001,7 +1046,7 @@ function compileSlot(options: {
   readonly slotIndex: number;
   readonly nodeId: string;
   readonly storageGroup: StorageSlotGroupDefinition;
-  readonly itemCatalog: Record<string, CompiledSimulationItem>;
+  readonly activeItemIds: ReadonlySet<string>;
   readonly slotIdSuffix?: string;
   readonly initialItemType?: string | null;
   readonly initialCount?: number;
@@ -1020,14 +1065,14 @@ function compileSlot(options: {
   //   ? convertSecondsToSimulationTicks(options.slot.submitIntervalSeconds ?? 10)
   //   : null;
   const rawLock = options.slot.lock;
-  const lock = rawLock !== null && options.itemCatalog[rawLock] !== undefined
+  const lock = rawLock !== null && options.activeItemIds.has(rawLock)
     ? rawLock
     : null;
   const hasInitialItemTypeOverride = Object.prototype.hasOwnProperty.call(options, "initialItemType");
   const rawItemType = hasInitialItemTypeOverride
     ? options.initialItemType ?? null
     : options.slot.initialItemType ?? rawLock;
-  const itemType = rawItemType !== null && options.itemCatalog[rawItemType] !== undefined
+  const itemType = rawItemType !== null && options.activeItemIds.has(rawItemType)
     ? rawItemType
     : null;
   const initialCount = itemType === null
@@ -1065,7 +1110,8 @@ function compilePorts(options: {
   readonly entity: WorldEntity;
   readonly definition: EntityDefinition;
   readonly nodeBindingsByStorageGroupId: ReadonlyMap<string, StorageGroupNodeBinding>;
-  readonly itemCatalog: Record<string, CompiledSimulationItem>;
+  readonly registryQueries: RegistryContract["queries"];
+  readonly activeItemIds: ReadonlySet<string>;
   readonly ports: CompiledSimulationPort[];
   readonly inactiveActivityItemIds: ReadonlySet<string>;
 }): void {
@@ -1109,7 +1155,8 @@ function compilePorts(options: {
           : (intersectAcceptRules(
               acceptRuleConstraintFromPortKind(portGroup.kind),
               portAcceptRule,
-              options.itemCatalog,
+              options.registryQueries,
+              options.activeItemIds,
             ) ?? fallbackAcceptRule);
 
         options.ports.push({
@@ -1379,7 +1426,7 @@ function compileRecipeChannels(
   recipeChannelBehavior: EntityDefinition["recipeChannelBehavior"],
   bindings: ReadonlyMap<string, StorageGroupNodeBinding>,
   entity: WorldEntity,
-  recipeCatalog: Readonly<Record<string, CompiledSimulationRecipeDefinition>>,
+  activeRecipeIds: ReadonlySet<string>,
 ): readonly CompiledSimulationRecipeChannel[] {
   if (!channelDefs || channelDefs.length === 0) { return []; }
   const modeSwitchable = recipeChannelBehavior?.automaticModeConfigKey !== undefined;
@@ -1397,7 +1444,7 @@ function compileRecipeChannels(
         (gid: string) => bindings.get(gid)?.productNodeIds ?? [],
       ))],
       manualRecipeOnly: modeSwitchable ? !automaticMode : ch.manualRecipeOnly ?? false,
-      defaultRecipeId: selectedRecipeId !== null && recipeCatalog[selectedRecipeId] !== undefined
+      defaultRecipeId: selectedRecipeId !== null && activeRecipeIds.has(selectedRecipeId)
         ? selectedRecipeId
         : null,
     };
@@ -1610,10 +1657,11 @@ function readPortAdmissionRule(port: PortDefinition): SimulationAdmissionRule | 
 function intersectAcceptRules(
   left: SimulationAcceptRule,
   right: SimulationAcceptRule,
-  itemCatalog: Record<string, CompiledSimulationItem>,
+  registryQueries: RegistryContract["queries"],
+  activeItemIds: ReadonlySet<string>,
 ): SimulationAcceptRule | null {
-  const leftCandidates = resolveAcceptRuleCandidateDomains(left, itemCatalog);
-  const rightCandidates = resolveAcceptRuleCandidateDomains(right, itemCatalog);
+  const leftCandidates = resolveAcceptRuleCandidateDomains(left, registryQueries, activeItemIds);
+  const rightCandidates = resolveAcceptRuleCandidateDomains(right, registryQueries, activeItemIds);
   const sharedFlags = leftCandidates.flags & rightCandidates.flags;
   const exclude = [...new Set([...left.exclude, ...right.exclude])].sort();
 
@@ -1621,7 +1669,7 @@ function intersectAcceptRules(
     if (
       leftCandidates.itemId !== rightCandidates.itemId
       || exclude.includes(leftCandidates.itemId)
-      || itemCatalog[leftCandidates.itemId] === undefined
+      || !activeItemIds.has(leftCandidates.itemId)
     ) {
       return null;
     }
@@ -1633,8 +1681,8 @@ function intersectAcceptRules(
 
   const itemId = leftCandidates.itemId ?? rightCandidates.itemId;
   if (itemId !== null) {
-    const domain = itemCatalog[itemId]?.domain;
-    if (domain === undefined) {
+    const domain = registryQueries.resolveItemDomain(itemId);
+    if (domain === null || !activeItemIds.has(itemId)) {
       return null;
     }
 
@@ -1659,7 +1707,8 @@ function intersectAcceptRules(
 
 function resolveAcceptRuleCandidateDomains(
   rule: SimulationAcceptRule,
-  itemCatalog: Record<string, CompiledSimulationItem>,
+  registryQueries: RegistryContract["queries"],
+  activeItemIds: ReadonlySet<string>,
 ): {
   readonly flags: SimulationItemDomainFilter;
   readonly itemId: string | null;
@@ -1668,8 +1717,8 @@ function resolveAcceptRuleCandidateDomains(
     case "domain":
       return { flags: rule.base.flags, itemId: null };
     case "item": {
-      const item = itemCatalog[rule.base.itemId];
-      if (item === undefined) {
+      const domain = registryQueries.resolveItemDomain(rule.base.itemId);
+      if (domain === null || !activeItemIds.has(rule.base.itemId)) {
         return {
           flags: ItemDomainFlag.None,
           itemId: rule.base.itemId,
@@ -1677,7 +1726,7 @@ function resolveAcceptRuleCandidateDomains(
       }
 
       return {
-        flags: item.domain,
+        flags: domain,
         itemId: rule.base.itemId,
       };
     }
@@ -1926,9 +1975,18 @@ function areGridPointsEqual(left: GridPoint, right: GridPoint): boolean {
   return left.x === right.x && left.y === right.y;
 }
 
-function convertSecondsToSimulationTicks(durationSeconds: number): number {
-  return Math.max(1, Math.round(durationSeconds * STANDARD_TICK_RATE_PER_SECOND));
-}
+// AI-REMOVED 2026-08-02:
+// Reason: Registry recipe 不再编译进 topology，compiler 已无秒到 tick 的配方换算职责。
+// Trigger: runtime 从 RegistryContract 构造 CompiledSimulationRecipePlan。
+// Evidence: topology compiler 中剩余引用仅存在于历史审计注释。
+// Replacement: runtime-slot-access.ts::getOrCreateRegistryRecipePlan。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function convertSecondsToSimulationTicks(durationSeconds: number): number {
+//   return Math.max(1, Math.round(durationSeconds * STANDARD_TICK_RATE_PER_SECOND));
+// }
 
 function mergeEntityDefinitionConfig(
   definition: EntityDefinition,

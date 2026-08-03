@@ -5,6 +5,7 @@ import type {
 } from "./runtime-state";
 import { finishRecipeIfPossible } from "./runtime-slot-access";
 import { submitSlotsToWarehouse } from "./warehouse-submit";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
 
 /**
  * 配方完成的唯一业务入口。
@@ -13,12 +14,13 @@ import { submitSlotsToWarehouse } from "./warehouse-submit";
  * 遗漏仓库提交等配方级副作用。
  */
 export function completeRecipeIfPossible(options: {
+  readonly registry: RegistryContract;
   readonly topology: CompiledSimulationTopology;
   readonly state: SimulationMutableRuntimeState;
   readonly deviceId: string;
   readonly recipe: RuntimeDeviceRecipeState;
 }): boolean {
-  if (!finishRecipeIfPossible(options.topology, options.state, options.recipe)) {
+  if (!finishRecipeIfPossible(options.registry, options.topology, options.state, options.recipe)) {
     return false;
   }
 

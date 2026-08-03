@@ -8,12 +8,13 @@ import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
 describe("simulation playback hot queue protocol", () => {
   it("returns a contiguous ready prefix without pruning until presentation is acknowledged", () => {
     const document = createWorldDocument({ baseId: "test-no-builtin-base" });
+    const registry = createRegistryContract();
     const topology = compileSimulationTopology({
       document,
-      registry: createRegistryContract(),
+      registry,
       poweredEntityIds: new Set(),
     });
-    const runtime = new SimulationWorkerRuntime();
+    const runtime = new SimulationWorkerRuntime(registry);
 
     runtime.handleRequest({
       type: "load-topology",

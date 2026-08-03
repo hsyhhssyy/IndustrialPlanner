@@ -2,7 +2,6 @@ import type {
   CompiledSimulationDevice,
   CompiledSimulationNode,
   CompiledSimulationRecipeChannel,
-  CompiledSimulationRecipeDefinition,
   CompiledSimulationRecipeItem,
   CompiledSimulationRecipePlan,
   CompiledSimulationSlot,
@@ -11,6 +10,8 @@ import type {
   SimulationItemDomain,
   SimulationItemDomainFilter,
 } from "../types";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import type {
   RuntimeDeviceRecipeState,
   RuntimeRecipeItem,
@@ -39,6 +40,10 @@ import {
   ItemDomainFlag,
   resolveRecipeItemDomainFlags,
 } from "@/domain/shared/item-domain-flags";
+import {
+  isItemAvailableByActivity,
+  isRecipeAvailableByActivity,
+} from "@/shared/registry/activity-availability";
 // AI-REMOVED 2026-07-30:
 // Reason: LOGISTICS_KIND 导入后未被使用，ESLint @typescript-eslint/no-unused-vars 报错
 // Trigger: ESLint 规则检查
@@ -61,15 +66,33 @@ const recipePlanCacheByTopology = new WeakMap<
   Map<string, Map<string, Map<string, CompiledSimulationRecipePlan>>>
 >();
 
-interface RecipesByChannelType {
-  readonly normal: readonly CompiledSimulationRecipeDefinition[];
-  readonly consumption: readonly CompiledSimulationRecipeDefinition[];
-}
+// AI-REMOVED 2026-08-02:
+// Reason: RegistryQuery 已按 machine 建立配方索引，runtime 不再需要 topology 局部二次分组类型。
+// Trigger: resolveRecipesForDeviceChannel 改为直接查询 registry。
+// Evidence: RegistryQuery.findRecipeDefinitionsByMachine 返回当前 registry 实例的配方定义。
+// Replacement: None
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// interface RecipesByChannelType {
+//   readonly normal: readonly RecipeDefinition[];
+//   readonly consumption: readonly RecipeDefinition[];
+// }
 
-const recipesByMachineAndChannelTypeByTopology = new WeakMap<
-  CompiledSimulationTopology,
-  ReadonlyMap<string, RecipesByChannelType>
->();
+// AI-REMOVED 2026-08-02:
+// Reason: machine recipe 索引由 Worker 内唯一 RegistryQuery 统一持有，不再按 topology 扫描 recipeCatalog。
+// Trigger: 删除 topology.recipeCatalog。
+// Evidence: RegistryQuery.findRecipeDefinitionsByMachine 已提供稳定索引。
+// Replacement: resolveRecipesForDeviceChannel 直接查询 registry。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const recipesByMachineAndChannelTypeByTopology = new WeakMap<
+//   CompiledSimulationTopology,
+//   ReadonlyMap<string, RecipesByChannelType>
+// >();
 
 export interface IngredientSlotContent {
   readonly slotId: string;
@@ -191,6 +214,7 @@ export function adjustReservedAmounts(
 }
 
 export function acceptsItem(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   rule: SimulationAcceptRule,
   itemType: string,
@@ -201,7 +225,7 @@ export function acceptsItem(
 
   switch (rule.base.kind) {
     case "domain":
-      return (getItemDomain(topology, itemType) & rule.base.flags) !== 0;
+      return (requireActiveItemDomain(registry, topology, itemType) & rule.base.flags) !== 0;
     case "item":
       return rule.base.itemId === itemType;
     case "none":
@@ -210,6 +234,7 @@ export function acceptsItem(
 }
 
 export function findInputSlotForItem(options: {
+  registry: RegistryContract;
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
   node: CompiledSimulationNode;
@@ -229,6 +254,7 @@ export function findInputSlotForItem(options: {
   }
 
   const warehouseSinkSlotId = findWarehouseSinkTargetSlotForItem({
+    registry: options.registry,
     topology: options.topology,
     state: options.state,
     node: options.node,
@@ -243,7 +269,7 @@ export function findInputSlotForItem(options: {
 
   for (const slotId of options.node.slotIds) {
     const slot = options.topology.slots[slotId];
-    if (slot === undefined || !slotCanHold(options.topology, slot, options.itemType)) {
+    if (slot === undefined || !slotCanHold(options.registry, options.topology, slot, options.itemType)) {
       continue;
     }
 
@@ -274,12 +300,13 @@ export function findInputSlotForItem(options: {
 }
 
 function findWarehouseSinkTargetSlotForItem(options: {
+  registry: RegistryContract;
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
   node: CompiledSimulationNode;
   itemType: string;
 }): string | null {
-  if (!isWarehouseSinkInputNode(options.topology, options.node)) {
+  if (!isWarehouseSinkInputNode(options.registry, options.topology, options.node)) {
     return null;
   }
 
@@ -289,7 +316,7 @@ function findWarehouseSinkTargetSlotForItem(options: {
   }
 
   const slot = options.topology.slots[warehouseSlotId];
-  if (slot === undefined || !slotCanHold(options.topology, slot, options.itemType)) {
+  if (slot === undefined || !slotCanHold(options.registry, options.topology, slot, options.itemType)) {
     return null;
   }
 
@@ -299,6 +326,7 @@ function findWarehouseSinkTargetSlotForItem(options: {
 }
 
 function isWarehouseSinkInputNode(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   node: CompiledSimulationNode,
 ): boolean {
@@ -307,7 +335,8 @@ function isWarehouseSinkInputNode(
   }
 
   const device = topology.devices[node.deviceId];
-  return device?.tags.includes(WAREHOUSE_SINK_TAG) === true;
+  return device !== undefined
+    && registry.queries.findEntityDefinition(device.definitionId)?.tags.includes(WAREHOUSE_SINK_TAG) === true;
 }
 
 function findWarehouseSlotId(
@@ -367,6 +396,7 @@ export function canOutputSlotProvideItem(options: {
 }
 
 export function moveOneItem(options: {
+  registry: RegistryContract;
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
   sourceSlotId: string;
@@ -397,7 +427,7 @@ export function moveOneItem(options: {
     return false;
   }
 
-  if (!slotCanHold(options.topology, targetSlot, options.itemType)) {
+  if (!slotCanHold(options.registry, options.topology, targetSlot, options.itemType)) {
     return false;
   }
 
@@ -435,18 +465,21 @@ export function moveOneItem(options: {
 }
 
 export function createStartableRecipeForChannel(options: {
+  registry: RegistryContract;
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
   device: CompiledSimulationDevice;
   channel: CompiledSimulationRecipeChannel;
 }): RuntimeDeviceRecipeState | null {
   for (const plan of resolveDeviceRecipePlans({
+    registry: options.registry,
     topology: options.topology,
     state: options.state,
     device: options.device,
     channel: options.channel,
   })) {
     const reservations = selectRecipeInputs({
+      registry: options.registry,
       topology: options.topology,
       state: options.state,
       plan,
@@ -477,6 +510,7 @@ export function createStartableRecipeForChannel(options: {
 // ingredientNodeIds / productNodeIds 从 channel 获取而非从 device 全局获取。
 // AI-CORRECTION 2026-05-14: 签名重构为 device + channel 对象，消除字段散落导致的传参遗漏 bug。
 export function resolveDeviceRecipePlans(options: {
+  registry: RegistryContract;
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
   device: CompiledSimulationDevice;
@@ -489,6 +523,7 @@ export function resolveDeviceRecipePlans(options: {
   });
 
   const plans = sortRecipePlansByEfficiency(resolveRecipes({
+    registry: options.registry,
     topology: options.topology,
     state: options.state,
     device: options.device,
@@ -540,13 +575,14 @@ function planFitsAdmissionOutputAllowance(
 }
 
 export function placeRecipeOutputs(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   plan: CompiledSimulationRecipePlan,
   inputItems: readonly RuntimeRecipeItem[],
 ): boolean {
   const overlayState = createSlotOverlayState(topology, state);
-  if (!placeRecipeOutputsIntoOverlay(topology, overlayState, plan, inputItems)) {
+  if (!placeRecipeOutputsIntoOverlay(registry, topology, overlayState, plan, inputItems)) {
     return false;
   }
   commitSlotOverlay(state.persistent.slots, overlayState.persistent.slots);
@@ -554,6 +590,7 @@ export function placeRecipeOutputs(
 }
 
 function placeRecipeOutputsIntoOverlay(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   plan: CompiledSimulationRecipePlan,
@@ -561,7 +598,7 @@ function placeRecipeOutputsIntoOverlay(
 ): boolean {
   for (const output of resolveRecipeOutputItems(plan.outputs, inputItems)) {
     for (let amount = 0; amount < output.amount; amount += 1) {
-      const targetSlotId = findRecipeOutputSlot(topology, state, plan, output.itemType);
+      const targetSlotId = findRecipeOutputSlot(registry, topology, state, plan, output.itemType);
       if (targetSlotId === null) return false;
       const storageSlotId = resolveStorageSlotId(state, targetSlotId);
       const slotState = cloneSlotIntoOverlay(state.persistent.slots, storageSlotId);
@@ -653,6 +690,7 @@ function commitSlotOverlay(
 }
 
 export function selectRecipeInputs(options: {
+  registry: RegistryContract;
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
   plan: CompiledSimulationRecipePlan;
@@ -663,7 +701,14 @@ export function selectRecipeInputs(options: {
   for (const input of options.plan.inputs) {
     let remainingAmount = input.amount;
     while (remainingAmount > 0) {
-      const selection = findRecipeInputSelection(options.topology, options.state, options.plan, input, localTakenBySlot);
+      const selection = findRecipeInputSelection(
+        options.registry,
+        options.topology,
+        options.state,
+        options.plan,
+        input,
+        localTakenBySlot,
+      );
       if (selection === null) {
         return null;
       }
@@ -709,21 +754,50 @@ export function aggregateInputItems(selections: readonly RuntimeReservedItem[]):
   return [...amountByItemType.entries()].map(([itemType, amount]) => ({ itemType, amount }));
 }
 
-export function getItemDomain(
+// AI-REMOVED 2026-08-02:
+// Reason: 未知物品不得再根据 ID 中的 gas/liquid 字符串猜测物品域。
+// Trigger: Worker runtime 持有完整 RegistryContract。
+// Evidence: RegistryQuery.resolveItemDomain 现在对未注册物品返回 null。
+// Replacement: requireActiveItemDomain。
+// Risk: Medium - 旧测试中伪造但未注册的 itemType 将显式失败。
+// Human Review: Required
+//
+// Original code:
+// export function getItemDomain(
+//   topology: CompiledSimulationTopology,
+//   itemType: string,
+// ): SimulationItemDomain {
+//   return topology.itemCatalog[itemType]?.domain
+//     ?? (
+//       itemType.includes("_gas") || itemType.startsWith("gas_")
+//         ? ItemDomainFlag.Gas
+//         : itemType.includes("_liquid") || itemType.startsWith("liquid_")
+//           ? ItemDomainFlag.Liquid
+//           : ItemDomainFlag.Solid
+//     );
+// }
+
+export function requireActiveItemDomain(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   itemType: string,
 ): SimulationItemDomain {
-  return topology.itemCatalog[itemType]?.domain
-    ?? (
-      itemType.includes("_gas") || itemType.startsWith("gas_")
-        ? ItemDomainFlag.Gas
-        : itemType.includes("_liquid") || itemType.startsWith("liquid_")
-          ? ItemDomainFlag.Liquid
-          : ItemDomainFlag.Solid
-    );
+  const item = registry.queries.findItemDefinition(itemType);
+  if (
+    item === null
+    || !isItemAvailableByActivity(item, topology.activeActivityIds)
+  ) {
+    throw new Error(`Simulation item "${itemType}" is not registered or active.`);
+  }
+  const domain = registry.queries.resolveItemDomain(itemType);
+  if (domain === null) {
+    throw new Error(`Simulation item "${itemType}" has no registered domain.`);
+  }
+  return domain;
 }
 
 export function finishRecipeIfPossible(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   recipe: RuntimeDeviceRecipeState,
@@ -731,7 +805,7 @@ export function finishRecipeIfPossible(
   const perf = state.transient._perf;
   const preflightStartedAt = perf === undefined ? 0 : performance.now();
   if (perf !== undefined) perf.recipeFinishCalls += 1;
-  if (!canRecipeFinishAtCurrentPhase(topology, state, recipe)) {
+  if (!canRecipeFinishAtCurrentPhase(registry, topology, state, recipe)) {
     if (perf !== undefined) {
       perf.recipeFinishFailures += 1;
       perf.recipeFinishPreflightMs += performance.now() - preflightStartedAt;
@@ -754,7 +828,7 @@ export function finishRecipeIfPossible(
     consumeSelections(overlayState.persistent.slots, recipe.reservations);
   }
 
-  if (!placeRecipeOutputsIntoOverlay(topology, overlayState, recipe.plan, recipe.inputItems)) {
+  if (!placeRecipeOutputsIntoOverlay(registry, topology, overlayState, recipe.plan, recipe.inputItems)) {
     if (perf !== undefined) {
       perf.recipeFinishFailures += 1;
       perf.recipeFinishPreflightMs += performance.now() - preflightStartedAt;
@@ -776,8 +850,12 @@ export function finishRecipeIfPossible(
   }
 
   // 只统计生产设备的配方（编译期 isProducer 缓存，零开销判断）
+  // AI-CORRECTION 2026-08-02: isProducer 不再编译进 topology，改为查询 Worker 持有的 registry definition tags。
   const producerDevice = resolveRecipeProducerDevice(topology, recipe.plan);
-  if (producerDevice?.isProducer) {
+  if (
+    producerDevice !== undefined
+    && registry.queries.findEntityDefinition(producerDevice.definitionId)?.tags.includes("Producer") === true
+  ) {
     const delta = state.transient.recipeStatsDelta;
     if (hadReservations) {
       for (const input of recipe.inputItems) {
@@ -810,6 +888,7 @@ function resolveRecipeProducerDevice(
 // AI-CORRECTION 2026-05-14: definitionId/tags 已从签名中移除。
 // 函数体内本身就从 options.device 读取 definitionId 和 tags，签名中的冗余参数从未被使用。
 function resolveRecipes(options: {
+  registry: RegistryContract;
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
   device: CompiledSimulationDevice;
@@ -821,7 +900,7 @@ function resolveRecipes(options: {
       return [];
     }
 
-    const timing = resolveTransportRecipeTiming(options.topology, options.device);
+    const timing = resolveTransportRecipeTiming(options.registry, options.topology, options.device);
     if (timing === null) {
       return [];
     }
@@ -840,31 +919,22 @@ function resolveRecipes(options: {
     ) {
       return [];
     }
-    const recipe = options.topology.recipeCatalog[allowedRecipeId];
+    const recipe = options.registry.queries.findRecipeDefinition(allowedRecipeId);
     if (
-      recipe === undefined
-      || !recipeCanMatchContents(options.topology, recipe, options.ingredientSlotContents)
+      recipe === null
+      || !isRecipeAvailableByActivity(recipe, options.topology.activeActivityIds)
+      || !recipeCanMatchContents(options.registry, options.topology, recipe, options.ingredientSlotContents)
       || !isDeviceInRequiredGasDiffusion({
         topology: options.topology,
         state: options.state,
         device: options.device,
-        requiredGasDiffusion: recipe.requiredGasDiffusion,
+        requiredGasDiffusion: recipe.requiredGasDiffusion ?? null,
       })
     ) {
       return [];
     }
 
-    return [getOrCreateRecipePlan(options, recipe.id, () => ({
-      recipeId: recipe.id,
-      recipeType: recipe.recipeType,
-      durationTicks: recipe.durationTicks,
-      inputs: recipe.inputs,
-      outputs: recipe.outputs,
-      ingredientNodeIds: options.channel.ingredientNodeIds,
-      productNodeIds: options.channel.productNodeIds,
-      requiredGasDiffusion: recipe.requiredGasDiffusion,
-      gasDiffusionOutput: recipe.gasDiffusionOutput,
-    }))];
+    return [getOrCreateRegistryRecipePlan(options, recipe)];
   }
 
   // 手选配方设备：不自动根据原料匹配配方，必须由用户手动指定配方后设备才运行
@@ -872,9 +942,10 @@ function resolveRecipes(options: {
     if (options.channel.defaultRecipeId === null) {
       return [];
     }
-    const selectedRecipe = options.topology.recipeCatalog[options.channel.defaultRecipeId];
+    const selectedRecipe = options.registry.queries.findRecipeDefinition(options.channel.defaultRecipeId);
     if (
-      selectedRecipe === undefined
+      selectedRecipe === null
+      || !isRecipeAvailableByActivity(selectedRecipe, options.topology.activeActivityIds)
       || !doesRecipeMatchChannelType(selectedRecipe, options.channel)
     ) {
       return [];
@@ -883,21 +954,11 @@ function resolveRecipes(options: {
       topology: options.topology,
       state: options.state,
       device: options.device,
-      requiredGasDiffusion: selectedRecipe.requiredGasDiffusion,
+      requiredGasDiffusion: selectedRecipe.requiredGasDiffusion ?? null,
     })) {
       return [];
     }
-    return [getOrCreateRecipePlan(options, selectedRecipe.id, () => ({
-      recipeId: selectedRecipe.id,
-      recipeType: selectedRecipe.recipeType,
-      durationTicks: selectedRecipe.durationTicks,
-      inputs: selectedRecipe.inputs,
-      outputs: selectedRecipe.outputs,
-      ingredientNodeIds: options.channel.ingredientNodeIds,
-      productNodeIds: options.channel.productNodeIds,
-      requiredGasDiffusion: selectedRecipe.requiredGasDiffusion,
-      gasDiffusionOutput: selectedRecipe.gasDiffusionOutput,
-    }))];
+    return [getOrCreateRegistryRecipePlan(options, selectedRecipe)];
   }
 
 
@@ -906,9 +967,16 @@ function resolveRecipes(options: {
   // also use reserved-item transport recipes, matching §6.1.2–§6.1.5 of 仿真运行原理.
   // Detect via BeltFamily/PipeFamily tags to cover all logistics devices uniformly.
   // AI-CORRECTION 2026-07-27: 当前使用编译期 logisticsKind 覆盖完整物流族，不再读取 family tag。
+  // AI-CORRECTION 2026-08-02: logisticsKind 已移除，改为直接查询 Worker RegistryQuery 的完整物流族分类。
   // Strict devices are already handled above and won't re-enter here.
-  if (options.device.logisticsKind !== null && options.ingredientSlotContents.length > 0) {
-    const timing = resolveTransportRecipeTiming(options.topology, options.device);
+  if (
+    (
+      options.registry.queries.isBeltFamily(options.device.definitionId)
+      || options.registry.queries.isPipeFamily(options.device.definitionId)
+    )
+    && options.ingredientSlotContents.length > 0
+  ) {
+    const timing = resolveTransportRecipeTiming(options.registry, options.topology, options.device);
     if (timing === null) {
       return [];
     }
@@ -927,68 +995,39 @@ function resolveRecipes(options: {
   // Original code:
   // .sort((left, right) => left.id.localeCompare(right.id))
   return resolveRecipesForDeviceChannel(
+    options.registry,
     options.topology,
     options.device.definitionId,
     options.channel,
   )
-    .filter((recipe) => recipeCanMatchContents(options.topology, recipe, options.ingredientSlotContents))
+    .filter((recipe) => recipeCanMatchContents(
+      options.registry,
+      options.topology,
+      recipe,
+      options.ingredientSlotContents,
+    ))
     .filter((recipe) => isDeviceInRequiredGasDiffusion({
       topology: options.topology,
       state: options.state,
       device: options.device,
-      requiredGasDiffusion: recipe.requiredGasDiffusion,
+      requiredGasDiffusion: recipe.requiredGasDiffusion ?? null,
     }))
-    .map((recipe) => getOrCreateRecipePlan(options, recipe.id, () => ({
-        recipeId: recipe.id,
-        recipeType: recipe.recipeType,
-        durationTicks: recipe.durationTicks,
-        inputs: recipe.inputs,
-        outputs: recipe.outputs,
-        ingredientNodeIds: options.channel.ingredientNodeIds,
-        productNodeIds: options.channel.productNodeIds,
-        requiredGasDiffusion: recipe.requiredGasDiffusion,
-        gasDiffusionOutput: recipe.gasDiffusionOutput,
-      })));
+    .map((recipe) => getOrCreateRegistryRecipePlan(options, recipe));
 }
 
 function resolveRecipesForDeviceChannel(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   definitionId: string,
   channel: CompiledSimulationRecipeChannel,
-): readonly CompiledSimulationRecipeDefinition[] {
-  let byMachine = recipesByMachineAndChannelTypeByTopology.get(topology);
-  if (byMachine === undefined) {
-    const mutable = new Map<string, {
-      normal: CompiledSimulationRecipeDefinition[];
-      consumption: CompiledSimulationRecipeDefinition[];
-    }>();
-    for (const recipe of Object.values(topology.recipeCatalog)) {
-      let entry = mutable.get(recipe.machineId);
-      if (entry === undefined) {
-        entry = { normal: [], consumption: [] };
-        mutable.set(recipe.machineId, entry);
-      }
-      if (recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {
-        entry.consumption.push(recipe);
-      } else {
-        entry.normal.push(recipe);
-      }
-    }
-    byMachine = mutable;
-    recipesByMachineAndChannelTypeByTopology.set(topology, byMachine);
-  }
-
-  const recipes = byMachine.get(definitionId);
-  if (recipes === undefined) {
-    return [];
-  }
-  return channel.type === CONSUMPTION_RECIPE_CHANNEL_TYPE
-    ? recipes.consumption
-    : recipes.normal;
+): readonly RecipeDefinition[] {
+  return registry.queries.findRecipeDefinitionsByMachine(definitionId)
+    .filter((recipe) => isRecipeAvailableByActivity(recipe, topology.activeActivityIds))
+    .filter((recipe) => doesRecipeMatchChannelType(recipe, channel));
 }
 
 function doesRecipeMatchChannelType(
-  recipe: CompiledSimulationRecipeDefinition,
+  recipe: RecipeDefinition,
   channel: CompiledSimulationRecipeChannel,
 ): boolean {
   return recipe.tags.includes(CONSUMPTION_RECIPE_TAG)
@@ -1110,6 +1149,49 @@ function getOrCreateRecipePlan(
   return plan;
 }
 
+function getOrCreateRegistryRecipePlan(
+  options: {
+    topology: CompiledSimulationTopology;
+    device: CompiledSimulationDevice;
+    channel: CompiledSimulationRecipeChannel;
+  },
+  recipe: RecipeDefinition,
+): CompiledSimulationRecipePlan {
+  return getOrCreateRecipePlan(options, recipe.id, () => ({
+    recipeId: recipe.id,
+    recipeType: recipe.recipeType,
+    durationTicks: Math.max(
+      1,
+      Math.round(recipe.durationSeconds * options.topology.standardTickRate),
+    ),
+    inputs: recipe.inputs.map((input) => ({ ...input })),
+    outputs: recipe.outputs.map((output) => ({ ...output })),
+    ingredientNodeIds: options.channel.ingredientNodeIds,
+    productNodeIds: options.channel.productNodeIds,
+    requiredGasDiffusion: normalizeRecipeGasItemId(recipe.requiredGasDiffusion),
+    gasDiffusionOutput: normalizeRecipeGasDiffusionOutput(recipe.gasDiffusionOutput),
+  }));
+}
+
+function normalizeRecipeGasItemId(itemId: string | undefined): string | null {
+  return typeof itemId === "string" && itemId.length > 0 ? itemId : null;
+}
+
+function normalizeRecipeGasDiffusionOutput(
+  output: RecipeDefinition["gasDiffusionOutput"],
+): CompiledSimulationRecipePlan["gasDiffusionOutput"] {
+  if (
+    output === undefined
+    || typeof output.gasItemId !== "string"
+    || output.gasItemId.length === 0
+    || !Number.isFinite(output.range)
+    || output.range <= 0
+  ) {
+    return null;
+  }
+  return { gasItemId: output.gasItemId, range: output.range };
+}
+
 function resolveWaterPurifierAllowedRecipeId(channelId: string): string | null {
   if ((WATER_PURIFIER_INTAKE_CHANNEL_IDS as readonly string[]).includes(channelId)) {
     return WATER_PURIFIER_COLLECT_RECIPE_ID;
@@ -1152,8 +1234,9 @@ function readIngredientSlotContents(options: {
 }
 
 function recipeCanMatchContents(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
-  recipe: CompiledSimulationRecipeDefinition,
+  recipe: RecipeDefinition,
   contents: readonly IngredientSlotContent[],
 ): boolean {
   if (recipe.inputs.length === 0) {
@@ -1166,7 +1249,7 @@ function recipeCanMatchContents(
   for (const content of contents) {
     availableByItemType.set(content.itemType, (availableByItemType.get(content.itemType) ?? 0) + content.availableAmount);
     totalAvailable += content.availableAmount;
-    const domain = getItemDomain(topology, content.itemType);
+    const domain = requireActiveItemDomain(registry, topology, content.itemType);
     availableByDomain.set(domain, (availableByDomain.get(domain) ?? 0) + content.availableAmount);
   }
 
@@ -1251,6 +1334,7 @@ function getRemainingCapacity(
 }
 
 function slotCanHold(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   slot: CompiledSimulationSlot,
   itemType: string,
@@ -1258,7 +1342,10 @@ function slotCanHold(
   if (slot.lock !== null && slot.lock !== itemType) {
     return false;
   }
-  return doesDomainFilterAcceptItemDomain(slot.domain, getItemDomain(topology, itemType));
+  return doesDomainFilterAcceptItemDomain(
+    slot.domain,
+    requireActiveItemDomain(registry, topology, itemType),
+  );
 }
 
 function doesDomainFilterAcceptItemDomain(
@@ -1269,6 +1356,7 @@ function doesDomainFilterAcceptItemDomain(
 }
 
 function findRecipeOutputSlot(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   plan: CompiledSimulationRecipePlan,
@@ -1279,7 +1367,7 @@ function findRecipeOutputSlot(
     if (node === undefined) {
       continue;
     }
-    const targetSlotId = findInputSlotForItem({ topology, state, node, itemType });
+    const targetSlotId = findInputSlotForItem({ registry, topology, state, node, itemType });
     if (targetSlotId !== null) {
       return targetSlotId;
     }
@@ -1301,6 +1389,7 @@ function resolveRecipeOutputItems(
 }
 
 function findRecipeInputSelection(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   plan: CompiledSimulationRecipePlan,
@@ -1320,7 +1409,11 @@ function findRecipeInputSelection(
     for (const slotId of node.slotIds) {
       const storageSlotId = resolveStorageSlotId(state, slotId);
       const slotState = state.persistent.slots[storageSlotId];
-      if (slotState === undefined || slotState.itemType === null || !recipeInputMatches(topology, input, slotState.itemType)) {
+      if (
+        slotState === undefined
+        || slotState.itemType === null
+        || !recipeInputMatches(registry, topology, input, slotState.itemType)
+      ) {
         continue;
       }
       const itemType = slotState.itemType;
@@ -1342,6 +1435,7 @@ function findRecipeInputSelection(
 // 原逻辑仅处理 "any" 和精确物品 ID，无法匹配暗管等使用域占位符的隐藏配方。
 // AI-CORRECTION 2026-07-28: 域占位符改为内部 ID，并通过共享解析器映射为位标志。
 function recipeInputMatches(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   input: CompiledSimulationRecipeItem,
   itemType: string,
@@ -1351,7 +1445,7 @@ function recipeInputMatches(
   }
   const inputDomainFlags = resolveRecipeItemDomainFlags(input.itemId);
   return inputDomainFlags !== null
-    && (inputDomainFlags & getItemDomain(topology, itemType)) !== 0;
+    && (inputDomainFlags & requireActiveItemDomain(registry, topology, itemType)) !== 0;
 }
 
 // AI-REMOVED 2026-06-20:

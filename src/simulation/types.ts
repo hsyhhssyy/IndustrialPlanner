@@ -1,8 +1,17 @@
 import type { LinkType } from "@/domain/document/world-document";
 import type { GridEdge, GridPoint, GridRect, GridRectSize, GridRotation } from "@/domain/shared/grid";
 import type { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
-import type { LogisticsKind } from "@/domain/shared/logistics";
-import type { RecipeDefinition, RecipeType } from "@/domain/registry/types/recipe-definition";
+// AI-REMOVED 2026-08-02:
+// Reason: logisticsKind 不再镜像到 CompiledSimulationDevice，Worker 直接使用自己持有的 RegistryQuery。
+// Trigger: 用户允许 simulation Worker 入口构造唯一 registry 实例并向下传递。
+// Evidence: RegistryQuery 已公开 isBelt/isPipe/isBeltFamily/isPipeFamily。
+// Replacement: SimulationWorkerRuntime.registry。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import type { LogisticsKind } from "@/domain/shared/logistics";
+import type { RecipeType } from "@/domain/registry/types/recipe-definition";
 import type { WaterPurifierOutputMode } from "@/shared/water-purifier-node";
 import type { SimulationMutableRuntimeState } from "./runtime/runtime-state";
 
@@ -87,15 +96,26 @@ export interface SimulationCompileDiagnostic {
 }
 
 export interface CompiledSimulationTopology {
-  readonly schemaVersion: 4;
+  readonly schemaVersion: 5;
   readonly topologyId: string;
   readonly documentKey: string;
   readonly documentHash: string;
   readonly registryHash: string;
   readonly standardTickRate: number;
   readonly totalPowerDemand: number;
-  readonly itemCatalog: Record<string, CompiledSimulationItem>;
-  readonly recipeCatalog: Record<string, CompiledSimulationRecipeDefinition>;
+  /** 编译该拓扑时的确定性活动上下文；Worker 不得自行根据时间推断。 */
+  readonly activeActivityIds: readonly string[];
+  // AI-REMOVED 2026-08-02:
+  // Reason: Worker 已持有自己的 RegistryContract，topology 不再序列化 registry 的 item/recipe 镜像。
+  // Trigger: 用户要求删除 itemCatalog 等间接数据和运行时启发式。
+  // Evidence: 两个 Worker 入口均只构造一次 registry，并向 runtime 传递。
+  // Replacement: activeActivityIds + SimulationWorkerRuntime.registry。
+  // Risk: Medium - topology schema 升级为 5，旧 runtime export 不再兼容。
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly itemCatalog: Record<string, CompiledSimulationItem>;
+  // readonly recipeCatalog: Record<string, CompiledSimulationRecipeDefinition>;
   readonly devices: Record<string, CompiledSimulationDevice>;
   readonly nodes: Record<string, CompiledSimulationNode>;
   readonly slots: Record<string, CompiledSimulationSlot>;
@@ -121,28 +141,37 @@ export interface CompiledSimulationTopology {
   readonly diagnostics: readonly SimulationCompileDiagnostic[];
 }
 
-export interface CompiledSimulationItem {
-  readonly id: string;
-  readonly domain: SimulationItemDomain;
-  readonly tags: readonly string[];
-}
-
-export interface CompiledSimulationRecipeDefinition {
-  readonly id: string;
-  readonly nameKey: string;
-  readonly durationTicks: number;
-  readonly inputs: readonly CompiledSimulationRecipeItem[];
-  readonly outputs: readonly CompiledSimulationRecipeItem[];
-  readonly machineId: string;
-  readonly recipeType: SimulationRecipeType;
-  readonly tags: readonly string[];
-  /** 配方运行时发电量（kW），默认 0。 */
-  readonly powerOutput: number;
-  /** 配方运行/启动所需气体扩散范围。值为气体物品 ID。 */
-  readonly requiredGasDiffusion: string | null;
-  /** 配方运行期间提供的气体扩散范围。 */
-  readonly gasDiffusionOutput: CompiledSimulationGasDiffusionOutput | null;
-}
+// AI-REMOVED 2026-08-02:
+// Reason: 物品与配方定义由 Worker 内唯一 RegistryContract 直接提供，不再维护仿真专用副本类型。
+// Trigger: 删除 topology.itemCatalog/recipeCatalog。
+// Evidence: RegistryQuery 提供精确 definition 查询与 machine recipe 索引。
+// Replacement: domain RecipeDefinition/ItemDefinition + RegistryQuery。
+// Risk: Medium - runtime recipe plan 仍保留绑定节点后的仿真专用形状。
+// Human Review: Required
+//
+// Original code:
+// export interface CompiledSimulationItem {
+//   readonly id: string;
+//   readonly domain: SimulationItemDomain;
+//   readonly tags: readonly string[];
+// }
+//
+// export interface CompiledSimulationRecipeDefinition {
+//   readonly id: string;
+//   readonly nameKey: string;
+//   readonly durationTicks: number;
+//   readonly inputs: readonly CompiledSimulationRecipeItem[];
+//   readonly outputs: readonly CompiledSimulationRecipeItem[];
+//   readonly machineId: string;
+//   readonly recipeType: SimulationRecipeType;
+//   readonly tags: readonly string[];
+//   /** 配方运行时发电量（kW），默认 0。 */
+//   readonly powerOutput: number;
+//   /** 配方运行/启动所需气体扩散范围。值为气体物品 ID。 */
+//   readonly requiredGasDiffusion: string | null;
+//   /** 配方运行期间提供的气体扩散范围。 */
+//   readonly gasDiffusionOutput: CompiledSimulationGasDiffusionOutput | null;
+// }
 
 export interface CompiledSimulationGasDiffusionOutput {
   readonly gasItemId: string;
@@ -174,16 +203,34 @@ export interface CompiledSimulationDevice {
   readonly position: GridPoint | null;
   readonly rotation: GridRotation | null;
   readonly footprint: GridRectSize | null;
-  readonly tags: readonly string[];
+  // AI-REMOVED 2026-08-02:
+  // Reason: entity tags 是 registry 定义事实，Worker 不再从 topology 读取副本。
+  // Trigger: Worker 入口构造完整 RegistryContract。
+  // Evidence: runtime 仅用 tags 判定 Producer/WarehouseSink。
+  // Replacement: RegistryQuery.findEntityDefinition。
+  // Risk: Medium - entity.config 不再能通过覆盖 tags 改变仿真分类。
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly tags: readonly string[];
   readonly powerStatus: SimulationPowerStatus;
   readonly powerDemand: number;
   /** 是否需要电力才能运行。对应 EntityDefinition.requiresPower。 */
   readonly requiresPower: boolean;
-  /**
-   * 物流族业务类型："belt" 表示传送带族，"pipe" 表示管道设备族，null 表示非物流族设备。
-   * 传送带物流设备不包括传送带节，管道物流设备不包括管道节；本字段覆盖两类完整族。
-   */
-  readonly logisticsKind: LogisticsKind | null;
+  // AI-REMOVED 2026-08-02:
+  // Reason: 物流族必须由 registry 公开 Query 实时解析，不再进入 topology 镜像。
+  // Trigger: Worker runtime 已持有完整 registry 实例。
+  // Evidence: RegistryQuery.isBeltFamily/isPipeFamily 是唯一设备 ID 分类事实层。
+  // Replacement: RegistryQuery.isBeltFamily/isPipeFamily。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // /**
+  //  * 物流族业务类型："belt" 表示传送带族，"pipe" 表示管道设备族，null 表示非物流族设备。
+  //  * 传送带物流设备不包括传送带节，管道物流设备不包括管道节；本字段覆盖两类完整族。
+  //  */
+  // readonly logisticsKind: LogisticsKind | null;
   readonly transportClass: SimulationTransportClass;
   /** 若属于 strict-belt/strict-pipe 运输组件，则为该组件的 ID；否则为 null。 */
   readonly transportComponentId: string | null;
@@ -196,8 +243,17 @@ export interface CompiledSimulationDevice {
   readonly portIds: readonly string[];
   readonly routing: Record<string, CompiledSimulationRoutingEntry>;
   readonly configHash: string;
-  /** 编译期缓存：该设备是否有实质生产配方（非运输、非仓库提交）。运行时零开销判断。 */
-  readonly isProducer: boolean;
+  // AI-REMOVED 2026-08-02:
+  // Reason: isProducer 是 registry EntityDefinition.tags 的重复派生值。
+  // Trigger: Worker runtime 直接查询 registry definition。
+  // Evidence: 字段原实现仅为 definition.tags.includes("Producer")。
+  // Replacement: RegistryQuery.findEntityDefinition(device.definitionId)?.tags。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // /** 编译期缓存：该设备是否有实质生产配方（非运输、非仓库提交）。运行时零开销判断。 */
+  // readonly isProducer: boolean;
   /** 显式声明的阻塞清理机制；未配置的设备运行时完全不生效。 */
   readonly blockageAutoClearance?: CompiledSimulationBlockageAutoClearance | null;
   /** 净水节点专用运行配置；其他设备为 null。 */
@@ -601,46 +657,55 @@ export interface RuntimeDiagnosticSnapshot {
   readonly message: string;
 }
 
-export function compileRecipeDefinition(
-  recipe: RecipeDefinition,
-  durationTicks: number,
-): CompiledSimulationRecipeDefinition {
-  return {
-    id: recipe.id,
-    nameKey: recipe.nameKey,
-    durationTicks,
-    inputs: recipe.inputs.map((input) => ({ ...input })),
-    outputs: recipe.outputs.map((output) => ({ ...output })),
-    machineId: recipe.machineId,
-    recipeType: recipe.recipeType,
-    tags: [...recipe.tags].sort(),
-    powerOutput: recipe.powerOutput ?? 0,
-    requiredGasDiffusion: normalizeRecipeGasItemId(recipe.requiredGasDiffusion),
-    gasDiffusionOutput: normalizeRecipeGasDiffusionOutput(recipe.gasDiffusionOutput),
-  };
-}
-
-function normalizeRecipeGasItemId(itemId: string | undefined): string | null {
-  return typeof itemId === "string" && itemId.length > 0 ? itemId : null;
-}
-
-function normalizeRecipeGasDiffusionOutput(
-  output: RecipeDefinition["gasDiffusionOutput"],
-): CompiledSimulationGasDiffusionOutput | null {
-  if (output === undefined || output === null) {
-    return null;
-  }
-  if (typeof output.gasItemId !== "string" || output.gasItemId.length === 0) {
-    return null;
-  }
-  if (!Number.isFinite(output.range) || output.range <= 0) {
-    return null;
-  }
-  return {
-    gasItemId: output.gasItemId,
-    range: output.range,
-  };
-}
+// AI-REMOVED 2026-08-02:
+// Reason: Registry recipe 不再先复制成 topology catalog DTO；runtime 在构造 CompiledSimulationRecipePlan 时完成必要的 tick 换算。
+// Trigger: 删除 topology.recipeCatalog。
+// Evidence: Worker 持有完整 RegistryContract，RecipeDefinition 可直接查询。
+// Replacement: runtime-slot-access.ts::createRegistryRecipePlan。
+// Risk: Medium - optional 气体字段必须在 plan 边界收口为 null。
+// Human Review: Required
+//
+// Original code:
+// export function compileRecipeDefinition(
+//   recipe: RecipeDefinition,
+//   durationTicks: number,
+// ): CompiledSimulationRecipeDefinition {
+//   return {
+//     id: recipe.id,
+//     nameKey: recipe.nameKey,
+//     durationTicks,
+//     inputs: recipe.inputs.map((input) => ({ ...input })),
+//     outputs: recipe.outputs.map((output) => ({ ...output })),
+//     machineId: recipe.machineId,
+//     recipeType: recipe.recipeType,
+//     tags: [...recipe.tags].sort(),
+//     powerOutput: recipe.powerOutput ?? 0,
+//     requiredGasDiffusion: normalizeRecipeGasItemId(recipe.requiredGasDiffusion),
+//     gasDiffusionOutput: normalizeRecipeGasDiffusionOutput(recipe.gasDiffusionOutput),
+//   };
+// }
+//
+// function normalizeRecipeGasItemId(itemId: string | undefined): string | null {
+//   return typeof itemId === "string" && itemId.length > 0 ? itemId : null;
+// }
+//
+// function normalizeRecipeGasDiffusionOutput(
+//   output: RecipeDefinition["gasDiffusionOutput"],
+// ): CompiledSimulationGasDiffusionOutput | null {
+//   if (output === undefined || output === null) {
+//     return null;
+//   }
+//   if (typeof output.gasItemId !== "string" || output.gasItemId.length === 0) {
+//     return null;
+//   }
+//   if (!Number.isFinite(output.range) || output.range <= 0) {
+//     return null;
+//   }
+//   return {
+//     gasItemId: output.gasItemId,
+//     range: output.range,
+//   };
+// }
 
 // ============================================================
 // Perf instrumentation types

@@ -127,14 +127,12 @@ function compileWithActivities(activeActivityIds: readonly string[]) {
 }
 
 describe("simulation activity filtering", () => {
-  it("excludes inactive activity items and recipes from compiled catalogs", () => {
+  it("records the activity set instead of compiling registry catalogs into topology", () => {
     const inactiveTopology = compileWithActivities([]);
     const activeTopology = compileWithActivities([ACTIVITY_LIMITED_FORMULA_1_ID]);
 
-    expect(inactiveTopology.itemCatalog[ACTIVITY_ITEM_ID]).toBeUndefined();
-    expect(inactiveTopology.recipeCatalog[ACTIVITY_RECIPE_ID]).toBeUndefined();
-    expect(activeTopology.itemCatalog[ACTIVITY_ITEM_ID]).toBeDefined();
-    expect(activeTopology.recipeCatalog[ACTIVITY_RECIPE_ID]).toBeDefined();
+    expect(inactiveTopology.activeActivityIds).toEqual([]);
+    expect(activeTopology.activeActivityIds).toEqual([ACTIVITY_LIMITED_FORMULA_1_ID]);
   });
 
   it("treats inactive activity slot configuration and links as empty", () => {

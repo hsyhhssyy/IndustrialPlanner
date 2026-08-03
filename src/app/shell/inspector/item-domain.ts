@@ -10,16 +10,16 @@ export type InspectorItemDomainFilter = ItemDomainFlag;
 export function matchesItemDomainFilter(
   item: ItemDefinition,
   domain: InspectorItemDomainFilter,
-  resolveItemDomain: (itemId: string) => ItemDomain,
+  resolveItemDomain: (itemId: string) => ItemDomain | null,
 ): boolean {
   const itemDomain = resolveItemDomain(item.id);
-  return (itemDomain & domain) !== 0;
+  return itemDomain !== null && (itemDomain & domain) !== 0;
 }
 
 export function matchesItemAcceptRule(
   item: ItemDefinition,
   acceptRule: EntityAcceptRuleDefinition,
-  resolveItemDomain: (itemId: string) => ItemDomain,
+  resolveItemDomain: (itemId: string) => ItemDomain | null,
 ): boolean {
   if (acceptRule.exclude.includes(item.id)) {
     return false;
@@ -27,7 +27,7 @@ export function matchesItemAcceptRule(
 
   switch (acceptRule.base.kind) {
     case "domain":
-      return (resolveItemDomain(item.id) & acceptRule.base.flags) !== 0;
+      return ((resolveItemDomain(item.id) ?? 0) & acceptRule.base.flags) !== 0;
     case "item":
       return item.id === acceptRule.base.itemId;
     case "none":

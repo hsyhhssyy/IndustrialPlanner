@@ -18,6 +18,7 @@ import type {
   SimulationAdmissionCounterReset,
   SimulationRuntimeSlotPatch,
 } from "@/domain/simulation/types/simulation-types";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type {
   SimulationTickSnapshotRangeResult,
   SimulationWorkerRequest,
@@ -40,9 +41,9 @@ import { rotateRoutingCursors } from "./runtime/stage-4-rotate-routing-cursors";
 import { settleRecipes } from "./runtime/stage-5-settle-recipes";
 import { applyBlockageAutoClearance } from "./runtime/blockage-auto-clearance";
 import {
-  getItemDomain,
   maintainTransportComponentDomains,
   rebuildExcludedItemTypesForTick,
+  requireActiveItemDomain,
   resolveStorageSlotId,
 } from "./runtime/runtime-slot-access";
 import { computeActiveGasDiffusions } from "./runtime/gas-diffusion";
@@ -249,6 +250,10 @@ export class SimulationWorkerRuntime {
 
   /** Worker 线程内异步路径（setTimeout 回调等）错误时的回调，由 simulation-worker.ts 注入。 */
   private onError: ((error: string, tickNumber: number | null) => void) | null = null;
+
+  public constructor(
+    private readonly registry: RegistryContract,
+  ) {}
 
   public setOnError(callback: (error: string, tickNumber: number | null) => void): void {
     this.onError = callback;
@@ -659,7 +664,7 @@ export class SimulationWorkerRuntime {
     normalizeFixedWindowCountersForCurrentWindow(this.topology, state);
     state.transient = createEmptyTransientState();
     buildSolveGraph(this.topology, state);
-    const currentPowerGeneration = computeCurrentPowerGeneration(this.topology, state);
+    const currentPowerGeneration = computeCurrentPowerGeneration(this.registry, state);
     const isPowerOutage = computeEffectivePowerState(
       this.powerMode,
       currentPowerGeneration,
@@ -669,7 +674,7 @@ export class SimulationWorkerRuntime {
     state.transient.isPowerOutage = isPowerOutage;
     state.transient.activeConsumptionDeviceIds =
       computeActiveConsumptionDeviceIds(this.topology, state);
-    state.transient.activeGasDiffusions = computeActiveGasDiffusions(this.topology, state);
+    state.transient.activeGasDiffusions = computeActiveGasDiffusions(this.registry, this.topology, state);
     return createTickSnapshot(this.topology, state, isPowerOutage, currentPowerGeneration);
   }
 
@@ -711,7 +716,7 @@ export class SimulationWorkerRuntime {
       ? nextTopology
       : patchSlotIgnoreStock(nextTopology, slotIds, normalizedIgnoreStock);
 
-    if (!canPatchSlotsHoldItem(effectiveTopology, slotIds, normalizedItemType)) {
+    if (!canPatchSlotsHoldItem(this.registry, effectiveTopology, slotIds, normalizedItemType)) {
       return;
     }
 
@@ -1416,13 +1421,17 @@ export class SimulationWorkerRuntime {
 
     if (shouldAdvance && !shouldRunRuntime) {
       // 非运行时 tick：仿真未推进，但需正确反映当前电力状态（含电池缓冲）
-      const currentPowerGeneration = computeCurrentPowerGeneration(this.topology, this.runtimeState);
+      const currentPowerGeneration = computeCurrentPowerGeneration(this.registry, this.runtimeState);
       const isPowerOutage = this.resolveTickPowerOutage(currentPowerGeneration);
       this.runtimeState.transient = createEmptyTransientState();
       this.runtimeState.transient.isPowerOutage = isPowerOutage;
       this.runtimeState.transient.activeConsumptionDeviceIds =
         computeActiveConsumptionDeviceIds(this.topology, this.runtimeState);
-      this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(this.topology, this.runtimeState);
+      this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(
+        this.registry,
+        this.topology,
+        this.runtimeState,
+      );
       const t0 = this.perfEnabled ? performance.now() : 0;
       const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutage, currentPowerGeneration);
       if (this.perfEnabled) {
@@ -1448,7 +1457,7 @@ export class SimulationWorkerRuntime {
     if (shouldRunRuntime) {
       // 在 Stage 1 之前计算动态发电量
       const currentPowerGeneration = computeCurrentPowerGeneration(
-        this.topology,
+        this.registry,
         this.runtimeState,
       );
 
@@ -1481,6 +1490,7 @@ export class SimulationWorkerRuntime {
       this.runtimeState.transient.activeConsumptionDeviceIds =
         computeActiveConsumptionDeviceIds(this.topology, this.runtimeState);
       this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(
+        this.registry,
         this.topology,
         this.runtimeState,
       );
@@ -1495,6 +1505,7 @@ export class SimulationWorkerRuntime {
 
       const t0 = this.perfEnabled ? performance.now() : 0;
       const stage1AdvanceResult = advanceDevices(
+        this.registry,
         this.topology,
         this.runtimeState,
         runtimeStepTicks,
@@ -1513,6 +1524,7 @@ export class SimulationWorkerRuntime {
       // Original code:
       // stage1AdvanceResult,
       applyWaterPurifierManualOutput(
+        this.registry,
         this.topology,
         this.runtimeState,
         runtimeStepTicks,
@@ -1530,7 +1542,7 @@ export class SimulationWorkerRuntime {
       const stage3Perf: SolveTransferGraphPerf | undefined = this.perfEnabled
         ? { layerCount: 0, anchorCount: 0, outputNodeCount: 0, moveCount: 0, refreshBlockedMs: 0, refreshBlockedCalls: 0 }
         : undefined;
-      solveTransferGraph(this.topology, this.runtimeState, stage3Perf);
+      solveTransferGraph(this.registry, this.topology, this.runtimeState, stage3Perf);
       if (this.perfEnabled) {
         perfTiming!.stages["solveTransferGraph"] = performance.now() - t2;
         const p = this.runtimeState.transient._perf!;
@@ -1567,6 +1579,7 @@ export class SimulationWorkerRuntime {
 
       const t4 = this.perfEnabled ? performance.now() : 0;
       settleRecipes(
+        this.registry,
         this.topology,
         this.runtimeState,
         this.powerMode,
@@ -1592,7 +1605,7 @@ export class SimulationWorkerRuntime {
         this.runtimeState.transient.recipeStatsDelta,
         tickNumber,
         runtimeStepTicks,
-        resolveDynamicTickRateSwitchIntervalTicks(this.topology),
+        resolveDynamicTickRateSwitchIntervalTicks(this.registry, this.topology),
       );
       this.runtimeState.transient.recipeStatsDelta = createEmptyTransientState().recipeStatsDelta;
 
@@ -1626,12 +1639,16 @@ export class SimulationWorkerRuntime {
     buildSolveGraph(this.topology, this.runtimeState);
     if (this.perfEnabled) { perfTiming!.stages["buildSolveGraph"] = performance.now() - t0; }
 
-    const currentPowerGenForSnapshot = computeCurrentPowerGeneration(this.topology, this.runtimeState);
+    const currentPowerGenForSnapshot = computeCurrentPowerGeneration(this.registry, this.runtimeState);
     const isPowerOutageForSnapshot = this.resolveTickPowerOutage(currentPowerGenForSnapshot);
     this.runtimeState.transient.isPowerOutage = isPowerOutageForSnapshot;
     this.runtimeState.transient.activeConsumptionDeviceIds =
       computeActiveConsumptionDeviceIds(this.topology, this.runtimeState);
-    this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(this.topology, this.runtimeState);
+    this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(
+      this.registry,
+      this.topology,
+      this.runtimeState,
+    );
 
     const t1 = this.perfEnabled ? performance.now() : 0;
     const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutageForSnapshot, currentPowerGenForSnapshot);
@@ -1685,7 +1702,14 @@ export class SimulationWorkerRuntime {
       return;
     }
 
-    if (this.topology === null || !canAdjustDynamicTickRateAtTick({ topology: this.topology, standardTick })) {
+    if (
+      this.topology === null
+      || !canAdjustDynamicTickRateAtTick({
+        registry: this.registry,
+        topology: this.topology,
+        standardTick,
+      })
+    ) {
       return;
     }
     // AI-REMOVED 2026-07-15:
@@ -1710,7 +1734,7 @@ export class SimulationWorkerRuntime {
 
     this.lastDynamicRateAdjustmentTick = standardTick;
 
-    const legalDynamicTickRates = resolveLegalDynamicTickRates(this.topology);
+    const legalDynamicTickRates = resolveLegalDynamicTickRates(this.registry, this.topology);
     if (legalDynamicTickRates.length === 0) {
       this.setDynamicTickRate(this.topology.standardTickRate);
       return;
@@ -1917,6 +1941,7 @@ function resolvePatchCapacity(
 }
 
 function canPatchSlotsHoldItem(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   slotIds: readonly string[],
   itemType: string | null,
@@ -1927,11 +1952,12 @@ function canPatchSlotsHoldItem(
 
   return slotIds.every((slotId) => {
     const slot = topology.slots[slotId];
-    return slot !== undefined && canPatchSlotHoldItem(topology, slot, itemType);
+    return slot !== undefined && canPatchSlotHoldItem(registry, topology, slot, itemType);
   });
 }
 
 function canPatchSlotHoldItem(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   slot: CompiledSimulationSlot,
   itemType: string,
@@ -1940,7 +1966,7 @@ function canPatchSlotHoldItem(
     return false;
   }
 
-  const itemDomain = getItemDomain(topology, itemType);
+  const itemDomain = requireActiveItemDomain(registry, topology, itemType);
   return (slot.domain & itemDomain) !== 0;
 }
 
@@ -1990,7 +2016,7 @@ function createNotFoundStatus(
 const BASE_POWER_GENERATION_KW = 200;
 
 function computeCurrentPowerGeneration(
-  topology: CompiledSimulationTopology,
+  registry: RegistryContract,
   state: SimulationMutableRuntimeState,
 ): number {
   let total = BASE_POWER_GENERATION_KW;
@@ -1999,9 +2025,9 @@ function computeCurrentPowerGeneration(
       if (recipe === null || recipe.state !== "running") {
         continue;
       }
-      const compiledRecipe = topology.recipeCatalog[recipe.recipeId];
-      if (compiledRecipe !== undefined) {
-        total += compiledRecipe.powerOutput;
+      const recipeDefinition = registry.queries.findRecipeDefinition(recipe.recipeId);
+      if (recipeDefinition !== null) {
+        total += recipeDefinition.powerOutput ?? 0;
       }
     }
   }

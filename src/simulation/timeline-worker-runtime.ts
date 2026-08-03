@@ -1,3 +1,4 @@
+import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { SimulationWorkerRuntime } from "./worker-runtime";
 import type { SimulationRuntimeExport } from "./types";
 import type {
@@ -27,6 +28,10 @@ export class TimelineWorkerRuntime {
   private nextTimelineTickNumber: number | null = null;
   private targetTimelineTickNumber: number | null = null;
   private fillTimerId: ReturnType<typeof setTimeout> | null = null;
+
+  public constructor(
+    private readonly registry: RegistryContract,
+  ) {}
 
   public handleRequest(request: TimelineWorkerRequest): TimelineWorkerResponse {
     switch (request.type) {
@@ -171,7 +176,7 @@ export class TimelineWorkerRuntime {
       }
     }
 
-    const runtime = new SimulationWorkerRuntime();
+    const runtime = new SimulationWorkerRuntime(this.registry);
     runtime.importRuntimeState(options.runtimeExport, { scheduleBackgroundFill: false });
     const fixedDynamicTickRate = options.runtimeExport.topology.standardTickRate / stepStandardTicks;
     runtime.setFixedDynamicTickRate(fixedDynamicTickRate);
@@ -269,7 +274,7 @@ export class TimelineWorkerRuntime {
       return;
     }
 
-    const runtime = new SimulationWorkerRuntime();
+    const runtime = new SimulationWorkerRuntime(this.registry);
     runtime.importRuntimeState(latestCheckpoint.runtimeExport, { scheduleBackgroundFill: false });
     const fixedDynamicTickRate =
       latestCheckpoint.runtimeExport.topology.standardTickRate / this.stepStandardTicks;

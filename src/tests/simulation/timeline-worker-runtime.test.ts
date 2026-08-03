@@ -7,7 +7,6 @@ import {
 import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import { compileSimulationTopology } from "@/simulation/topology-compiler";
-import { createRegistryContract } from "@/registry";
 import type {
   CompiledSimulationTopology,
   SimulationRuntimeExport,
@@ -17,6 +16,22 @@ import {
   createEntity,
   createWorldDocumentFromBlueprint,
 } from "./blueprint-test-helpers";
+import { createSimulationTestRegistry } from "./simulation-test-registry";
+
+const registry = createSimulationTestRegistry({
+  itemDomains: { item_test: ItemDomainFlag.Solid },
+  entityTags: { test_machine: ["Producer"] },
+  recipeDefinitions: [{
+    id: "recipe:test",
+    nameKey: "recipe.test",
+    durationSeconds: 2,
+    inputs: [],
+    outputs: [{ itemId: "item_test", amount: 1 }],
+    machineId: "test_machine",
+    recipeType: "immediate-consume",
+    tags: [],
+  }],
+});
 
 describe("TimelineWorkerRuntime", () => {
   afterEach(() => {
@@ -27,7 +42,7 @@ describe("TimelineWorkerRuntime", () => {
     vi.useFakeTimers();
 
     const runtimeExport = createRuntimeExport();
-    const timelineRuntime = new TimelineWorkerRuntime();
+    const timelineRuntime = new TimelineWorkerRuntime(registry);
 
     const loaded = timelineRuntime.handleRequest({
       type: "load-timeline",
@@ -121,7 +136,7 @@ describe("TimelineWorkerRuntime", () => {
   it("preserves earlier checkpoints when reloading from a timeline rebase point", () => {
     vi.useFakeTimers();
 
-    const timelineRuntime = new TimelineWorkerRuntime();
+    const timelineRuntime = new TimelineWorkerRuntime(registry);
     timelineRuntime.handleRequest({
       type: "load-timeline",
       requestId: 1,
@@ -181,7 +196,7 @@ describe("TimelineWorkerRuntime", () => {
   it("lets presentation requests pause background prediction until interaction is idle", () => {
     vi.useFakeTimers();
 
-    const timelineRuntime = new TimelineWorkerRuntime();
+    const timelineRuntime = new TimelineWorkerRuntime(registry);
     timelineRuntime.handleRequest({
       type: "load-timeline",
       requestId: 1,
@@ -219,7 +234,7 @@ describe("TimelineWorkerRuntime", () => {
   it("retargets the rolling window beyond the initial five minute cache", () => {
     vi.useFakeTimers();
 
-    const timelineRuntime = new TimelineWorkerRuntime();
+    const timelineRuntime = new TimelineWorkerRuntime(registry);
     timelineRuntime.handleRequest({
       type: "load-timeline",
       requestId: 1,
@@ -274,7 +289,7 @@ describe("TimelineWorkerRuntime", () => {
   it("continues filling after retargeting backward and then forward again", () => {
     vi.useFakeTimers();
 
-    const timelineRuntime = new TimelineWorkerRuntime();
+    const timelineRuntime = new TimelineWorkerRuntime(registry);
     timelineRuntime.handleRequest({
       type: "load-timeline",
       requestId: 1,
@@ -325,7 +340,7 @@ describe("TimelineWorkerRuntime", () => {
     vi.useFakeTimers();
 
     const topology = createTimelinePhaseTopology();
-    const exactRuntime = new SimulationWorkerRuntime();
+    const exactRuntime = new SimulationWorkerRuntime(registry);
     exactRuntime.handleRequest({
       type: "load-topology",
       requestId: 1,
@@ -337,7 +352,7 @@ describe("TimelineWorkerRuntime", () => {
       throw new Error("Expected tick-1 runtime export.");
     }
 
-    const timelineRuntime = new TimelineWorkerRuntime();
+    const timelineRuntime = new TimelineWorkerRuntime(registry);
     timelineRuntime.handleRequest({
       type: "load-timeline",
       requestId: 2,
@@ -371,7 +386,7 @@ describe("TimelineWorkerRuntime", () => {
     vi.useFakeTimers();
 
     const topology = createConsumptionTimelineTopology();
-    const exactRuntime = new SimulationWorkerRuntime();
+    const exactRuntime = new SimulationWorkerRuntime(registry);
     exactRuntime.handleRequest({
       type: "load-topology",
       requestId: 1,
@@ -383,7 +398,7 @@ describe("TimelineWorkerRuntime", () => {
       throw new Error("Expected tick-1 consumption runtime export.");
     }
 
-    const timelineRuntime = new TimelineWorkerRuntime();
+    const timelineRuntime = new TimelineWorkerRuntime(registry);
     timelineRuntime.handleRequest({
       type: "load-timeline",
       requestId: 2,
@@ -446,7 +461,7 @@ describe("TimelineWorkerRuntime", () => {
       throw new Error("Expected the large forward seek checkpoint.");
     }
 
-    const resumedRuntime = new SimulationWorkerRuntime();
+    const resumedRuntime = new SimulationWorkerRuntime(registry);
     resumedRuntime.importRuntimeState(largeSeekCheckpoint.runtimeExport, {
       scheduleBackgroundFill: false,
     });
@@ -527,7 +542,7 @@ describe("TimelineWorkerRuntime", () => {
         transfers: [expectedTransfer],
       },
     };
-    const importedRuntime = new SimulationWorkerRuntime();
+    const importedRuntime = new SimulationWorkerRuntime(registry);
 
     const imported = importedRuntime.importRuntimeState(checkpointExport, {
       scheduleBackgroundFill: false,
@@ -551,11 +566,9 @@ function createPresentationTestDevice(
     position: null,
     rotation: null,
     footprint: null,
-    tags: [],
     powerStatus: "no-power-needed",
     powerDemand: 0,
     requiresPower: false,
-    logisticsKind: null,
     transportClass: "non-graph",
     transportComponentId: null,
     nodeIds,
@@ -563,7 +576,6 @@ function createPresentationTestDevice(
     portIds: [],
     routing: {},
     configHash: "",
-    isProducer: false,
   };
 }
 
@@ -615,7 +627,7 @@ function createPresentationTestSlotSnapshot(slotId: string) {
 }
 
 function createRuntimeExport(tickNumber = 1): SimulationRuntimeExport {
-  const workerRuntime = new SimulationWorkerRuntime();
+  const workerRuntime = new SimulationWorkerRuntime(registry);
   const loaded = workerRuntime.handleRequest({
     type: "load-topology",
     requestId: 1,
@@ -636,15 +648,14 @@ function createRuntimeExport(tickNumber = 1): SimulationRuntimeExport {
 
 function createEmptyTopology(): CompiledSimulationTopology {
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     topologyId: "topology:timeline-empty",
     documentKey: "document:timeline",
     documentHash: "hash:timeline",
     registryHash: "registry:timeline",
     standardTickRate: 20,
     totalPowerDemand: 0,
-    itemCatalog: {},
-    recipeCatalog: {},
+    activeActivityIds: [],
     devices: {},
     nodes: {},
     slots: {},
@@ -687,7 +698,7 @@ function createConsumptionTimelineTopology(): CompiledSimulationTopology {
   const document = createWorldDocumentFromBlueprint(blueprint);
   return compileSimulationTopology({
     document,
-    registry: createRegistryContract(),
+    registry,
     poweredEntityIds: new Set(document.entityOrder),
   });
 }
@@ -696,28 +707,6 @@ function createTimelinePhaseTopology(): CompiledSimulationTopology {
   return {
     ...createEmptyTopology(),
     topologyId: "topology:timeline-phase",
-    itemCatalog: {
-      item_test: {
-        id: "item_test",
-        domain: ItemDomainFlag.Solid,
-        tags: [],
-      },
-    },
-    recipeCatalog: {
-      "recipe:test": {
-        id: "recipe:test",
-        nameKey: "recipe.test",
-        durationTicks: 40,
-        inputs: [],
-        outputs: [{ itemId: "item_test", amount: 1 }],
-        machineId: "test_machine",
-        recipeType: "immediate-consume",
-        powerOutput: 0,
-        requiredGasDiffusion: null,
-        gasDiffusionOutput: null,
-        tags: [],
-      },
-    },
     devices: {
       "device:maker": {
         id: "device:maker",
@@ -726,11 +715,9 @@ function createTimelinePhaseTopology(): CompiledSimulationTopology {
         position: null,
         rotation: null,
         footprint: null,
-        tags: [],
         powerStatus: "no-power-needed",
         powerDemand: 0,
       requiresPower: false,
-      logisticsKind: null,
         transportClass: "anchor",
         transportComponentId: null,
         nodeIds: ["node:out"],
@@ -745,7 +732,6 @@ function createTimelinePhaseTopology(): CompiledSimulationTopology {
         portIds: [],
         routing: {},
         configHash: "config:timeline-phase",
-        isProducer: true,
       },
     },
     nodes: {

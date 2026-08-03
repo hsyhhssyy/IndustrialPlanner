@@ -1,3 +1,4 @@
+import { createRegistryContract } from "@/registry";
 import { SimulationWorkerRuntime } from "./worker-runtime";
 import type {
   SimulationWorkerErrorNotification,
@@ -5,7 +6,8 @@ import type {
   SimulationWorkerResponse,
 } from "./worker-protocol";
 
-const runtime = new SimulationWorkerRuntime();
+const registry = createRegistryContract();
+const runtime = new SimulationWorkerRuntime(registry);
 const workerScope = globalThis as unknown as {
   addEventListener(
     type: "message",

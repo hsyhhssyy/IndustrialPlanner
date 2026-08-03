@@ -1,8 +1,10 @@
 import type { CompiledSimulationDevice, CompiledSimulationTopology } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import { resolveStorageSlotId } from "./runtime-slot-access";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
 
 export function applyWaterPurifierManualOutput(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   standardStepTicks: number,
@@ -40,7 +42,10 @@ export function applyWaterPurifierManualOutput(
     }
 
     const produced = produceIntoWaterPurifierOutput(topology, state, device, amount);
-    if (produced > 0 && device.isProducer) {
+    if (
+      produced > 0
+      && registry.queries.findEntityDefinition(device.definitionId)?.tags.includes("Producer") === true
+    ) {
       state.transient.recipeStatsDelta.produced[config.outputItemId] =
         (state.transient.recipeStatsDelta.produced[config.outputItemId] ?? 0) + produced;
     }

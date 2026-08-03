@@ -10,6 +10,7 @@ import type {
 import { completeRecipeIfPossible } from "./recipe-completion";
 import { isDeviceInRequiredGasDiffusion } from "./gas-diffusion";
 import { isDeviceConsumptionAuthorizedForFrame } from "./consumption-channel";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
 
 // AI-REMOVED 2026-07-23:
 // Reason: Stage1 只推进并完成旧配方，不再选择、启动或预定下一配方。
@@ -46,6 +47,7 @@ interface AdvanceChannelRecipeResult {
  */
 // AI-CORRECTION 2026-05-13: 推进阶段遍历每个设备的所有 channel recipe。
 export function advanceDevices(
+  registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   standardStepTicks = 1,
@@ -90,6 +92,7 @@ export function advanceDevices(
       }
 
       const result = advanceChannelRecipe({
+        registry,
         topology,
         state,
         device,
@@ -110,6 +113,7 @@ export function advanceDevices(
 }
 
 function advanceChannelRecipe(options: {
+  readonly registry: RegistryContract;
   readonly topology: CompiledSimulationTopology;
   readonly state: SimulationMutableRuntimeState;
   readonly device: CompiledSimulationDevice;
@@ -129,6 +133,7 @@ function advanceChannelRecipe(options: {
 
   const overflowTicks = Math.max(0, recipe.progressTicks - recipe.durationTicks);
   if (!completeRecipeIfPossible({
+    registry: options.registry,
     topology: options.topology,
     state: options.state,
     deviceId: options.device.id,

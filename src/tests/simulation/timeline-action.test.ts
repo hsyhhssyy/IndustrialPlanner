@@ -1082,15 +1082,14 @@ function createRuntimeExport(
 
 function createEmptyTopology(documentHash = "hash:timeline-test"): CompiledSimulationTopology {
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     topologyId: "topology:timeline-test",
     documentKey: "document:timeline-test",
     documentHash,
     registryHash: "registry:timeline-test",
     standardTickRate: 20,
     totalPowerDemand: 0,
-    itemCatalog: {},
-    recipeCatalog: {},
+    activeActivityIds: [],
     devices: {},
     nodes: {},
     slots: {},

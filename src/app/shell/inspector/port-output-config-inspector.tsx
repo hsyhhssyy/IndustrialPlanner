@@ -424,7 +424,7 @@ function matchesOutputPortGroupAcceptRule(
     const fallbackFlags = row.portGroup.isPipe
       ? ItemDomainFlag.Liquid
       : row.portGroup.kind;
-    return (fallbackFlags & itemDomain) !== 0;
+    return itemDomain !== null && (fallbackFlags & itemDomain) !== 0;
   }
 
   return matchesItemAcceptRule(item, firstPort.acceptRule, resolveItemDomain);
