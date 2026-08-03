@@ -36,6 +36,7 @@ import { ActivityIconStrip } from "@/app/shell/shared/activity-icon-strip";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
 import { MarkdownTutorialOverlay } from "@/app/shell/dialogs/markdown-tutorial-overlay";
+import { KeyboardShortcutSettingsDialog } from "@/app/shell/dialogs/keyboard-shortcut-settings-dialog";
 import { WebDavSyncStatusDialog } from "@/app/shell/dialogs/webdav-sync-status-dialog";
 import {
   type SettingsGroupId,
@@ -104,7 +105,16 @@ export const SettingsDialog = observer(function SettingsDialog({
   const sync = appHost.workspace.sync;
   const contentRef = useRef<HTMLDivElement | null>(null);
   const sectionRefs = useRef(new Map<SettingsGroupId, HTMLElement>());
-  const [capturingKeybindingId, setCapturingKeybindingId] = useState<string | null>(null);
+  // AI-REMOVED 2026-08-03:
+  // Reason: 快捷键捕获状态已迁入独立快捷键设置对话框。
+  // Trigger: ST2-RQ-002 要求通用设置页面只保留入口。
+  // Evidence: KeyboardShortcutSettingsDialog 内部持有 capturingSlot。
+  // Replacement: keyboard-shortcut-settings-dialog.tsx。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const [capturingKeybindingId, setCapturingKeybindingId] = useState<string | null>(null);
   const dialogState = appHost.internalState.workbench.dialogState.settings;
   const selectedActivityIds = appHost.internalState.settings.selectedActivityIds;
   const effectiveActivityIds = resolveEffectiveActivityIds({ selectedActivityIds });
@@ -158,7 +168,16 @@ export const SettingsDialog = observer(function SettingsDialog({
   }), []);
 
   const handleClose = useCallback(() => {
-    setCapturingKeybindingId(null);
+    // AI-REMOVED 2026-08-03:
+    // Reason: 快捷键捕获状态已迁入独立快捷键设置对话框。
+    // Trigger: ST2-RQ-002 快捷键录入收拢。
+    // Evidence: KeyboardShortcutSettingsDialog 在 visible=false 时清理 capturingSlot。
+    // Replacement: keyboard-shortcut-settings-dialog.tsx。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // setCapturingKeybindingId(null);
     setSettingGuideSettingId(null);
     runInAction(() => {
       settingGuideDialogState.visible = false;
@@ -213,12 +232,31 @@ export const SettingsDialog = observer(function SettingsDialog({
     activeTab: null,
   }), []);
 
-  const conflictDialogState = useMemo(() => makeAutoObservable({
+  const keyboardShortcutDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
     visible: false,
-    currentSettingId: null as string | null,
-    conflictSettingId: null as string | null,
-    newKeyValue: null as string | null,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 820,
+    height: 680,
+    activeTab: null,
   }), []);
+
+  // AI-REMOVED 2026-08-03:
+  // Reason: 快捷键冲突状态已迁入独立快捷键设置对话框。
+  // Trigger: ST2-RQ-002 要求快捷键录入规则与帮助代码统一收拢。
+  // Evidence: KeyboardShortcutSettingsDialog 内部持有 ShortcutConflict。
+  // Replacement: keyboard-shortcut-settings-dialog.tsx。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const conflictDialogState = useMemo(() => makeAutoObservable({
+  //   visible: false,
+  //   currentSettingId: null as string | null,
+  //   conflictSettingId: null as string | null,
+  //   newKeyValue: null as string | null,
+  // }), []);
 
   const experimentalFeaturesDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
     visible: false,
@@ -506,14 +544,24 @@ export const SettingsDialog = observer(function SettingsDialog({
   // Original code:
   // const conflictPendingRef = useRef<{ settingId: string; value: string } | null>(null);
 
-  const handleResetOperationAndShortcuts = useCallback(() => {
+  // AI-REMOVED 2026-08-03:
+  // Reason: 操作设置与快捷键不再共用重置入口。
+  // Trigger: ST2-RQ-002 独立快捷键设置对话框。
+  // Evidence: 当前 handler 只打开操作设置重置确认框。
+  // Replacement: handleResetOperation in this file。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const handleResetOperationAndShortcuts = useCallback(() => {
+  const handleResetOperation = useCallback(() => {
     runInAction(() => {
       confirmDialogState.visible = true;
     });
   }, [confirmDialogState]);
 
   const handleResetConfirm = useCallback(() => {
-    controller.resetArknightsOperationAndShortcuts();
+    controller.resetArknightsOperation();
     runInAction(() => {
       confirmDialogState.visible = false;
     });
@@ -550,6 +598,21 @@ export const SettingsDialog = observer(function SettingsDialog({
     });
   }, [activityDialogState]);
 
+  const handleOpenKeyboardShortcutDialog = useCallback(() => {
+    runInAction(() => {
+      keyboardShortcutDialogState.visible = true;
+      keyboardShortcutDialogState.maximized = false;
+      keyboardShortcutDialogState.offsetX = 0;
+      keyboardShortcutDialogState.offsetY = 0;
+    });
+  }, [keyboardShortcutDialogState]);
+
+  const handleCloseKeyboardShortcutDialog = useCallback(() => {
+    runInAction(() => {
+      keyboardShortcutDialogState.visible = false;
+    });
+  }, [keyboardShortcutDialogState]);
+
   const handleCloseActivityDialog = useCallback(() => {
     runInAction(() => {
       activityDialogState.visible = false;
@@ -569,6 +632,15 @@ export const SettingsDialog = observer(function SettingsDialog({
     });
   }, [appHost]);
 
+  /* AI-REMOVED 2026-08-03:
+  Reason: 通用设置对话框不再负责快捷键冲突、捕获和写入。
+  Trigger: ST2-RQ-002 新建独立快捷键设置对话框并要求相关规则统一迁移。
+  Evidence: keyboard-shortcut-settings-dialog.tsx 已实现逐槽捕获与冲突替换。
+  Replacement: KeyboardShortcutSettingsDialog in keyboard-shortcut-settings-dialog.tsx。
+  Risk: Low
+  Human Review: Required
+
+  Original code:
   const handleConflictCancel = useCallback(() => {
     runInAction(() => {
       conflictDialogState.visible = false;
@@ -642,18 +714,29 @@ export const SettingsDialog = observer(function SettingsDialog({
 
     return true;
   }, [capturingKeybindingId, controller, conflictDialogState]);
+  */
 
   useEffect(() => {
     if (isOpen) {
       return;
     }
 
-    setCapturingKeybindingId(null);
+    // AI-REMOVED 2026-08-03:
+    // Reason: 捕获状态由独立快捷键设置对话框在自身关闭时清理。
+    // Trigger: ST2-RQ-002 快捷键录入收拢。
+    // Evidence: KeyboardShortcutSettingsDialog useEffect 监听 visible。
+    // Replacement: keyboard-shortcut-settings-dialog.tsx。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // setCapturingKeybindingId(null);
     setSettingGuideSettingId(null);
     runInAction(() => {
       settingGuideDialogState.visible = false;
+      keyboardShortcutDialogState.visible = false;
     });
-  }, [isOpen, settingGuideDialogState]);
+  }, [isOpen, keyboardShortcutDialogState, settingGuideDialogState]);
 
   useEffect(() => {
     if (!isOpen || hideGroupSidebar) {
@@ -680,6 +763,17 @@ export const SettingsDialog = observer(function SettingsDialog({
 
   return (
     <>
+    {/* AI-REMOVED 2026-08-03:
+        Reason: 通用设置窗口不再捕获快捷键。
+        Trigger: ST2-RQ-002 快捷键录入收拢。
+        Evidence: KeyboardShortcutSettingsDialog 向自己的 DialogShell 提供 onWindowKeyDown。
+        Replacement: keyboard-shortcut-settings-dialog.tsx。
+        Risk: Low
+        Human Review: Required
+
+        Original code:
+        onWindowKeyDown={handleWindowKeyDown}
+    */}
     <DialogShell
       className="settings-dialog"
       closeTitle={t("action.close")}
@@ -698,7 +792,6 @@ export const SettingsDialog = observer(function SettingsDialog({
       onToggleMaximized={() => {
         appHost.internalActions.toggleDialogMaximized("settings");
       }}
-      onWindowKeyDown={handleWindowKeyDown}
       restoreTitle={t("dialog.restore")}
       title={t("settingsDialog.title")}
       titleId="settings-dialog-title"
@@ -759,7 +852,16 @@ export const SettingsDialog = observer(function SettingsDialog({
                 <div className={cm(styles, "settings-dialog-settings-list")}>
                   {group.items.filter((setting) => !isNonDesktop || !setting.mobileHidden).flatMap((setting, index, _filtered) => {
                     const isEditable = controller.isSettingEditable(setting.id);
-                    const isKeybinding = setting.kind === "keybinding";
+                    // AI-REMOVED 2026-08-03:
+                    // Reason: 通用设置组已不包含 keybinding 类型。
+                    // Trigger: ST2-RQ-002 快捷键设置独立化。
+                    // Evidence: WORKBENCH_SETTINGS_GROUPS 已归档 shortcuts 分组。
+                    // Replacement: KeyboardShortcutSettingsDialog。
+                    // Risk: Low
+                    // Human Review: Required
+                    //
+                    // Original code:
+                    // const isKeybinding = setting.kind === "keybinding";
                     const isText = setting.kind === "text" || setting.kind === "password";
                     const isDebugGroup = group.id === "debug";
                     const isGameGroup = group.id === "game";
@@ -795,7 +897,16 @@ export const SettingsDialog = observer(function SettingsDialog({
                         className={cm(styles, [
                           "settings-dialog-setting-card",
                           isEditable ? "" : "is-disabled",
-                          isKeybinding ? "is-keybinding" : "",
+                          // AI-REMOVED 2026-08-03:
+                          // Reason: 通用设置卡片不再渲染快捷键专用样式。
+                          // Trigger: ST2-RQ-002 快捷键设置独立化。
+                          // Evidence: keybinding 行已迁入独立对话框。
+                          // Replacement: keyboard-shortcut-settings-dialog.module.scss。
+                          // Risk: Low
+                          // Human Review: Required
+                          //
+                          // Original code:
+                          // isKeybinding ? "is-keybinding" : "",
                           isText ? "is-text" : "",
                         ].filter(Boolean).join(" "))}
                         key={setting.id}
@@ -811,7 +922,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                               />
                             ) : null}
                           </h4>
-                          {!isKeybinding && <p>{resolveSettingDescription(setting, t)}</p>}
+                          <p>{resolveSettingDescription(setting, t)}</p>
                         </div>
                         <div className={cm(styles, "settings-dialog-setting-control")}>
                           {renderSettingControl({
@@ -819,8 +930,6 @@ export const SettingsDialog = observer(function SettingsDialog({
                             setting,
                             t,
                             isEditable,
-                            capturingKeybindingId,
-                            onStartCapturing: setCapturingKeybindingId,
                             onRequestToggleExperimentalFeatures: handleRequestToggleExperimentalFeatures,
                           })}
                         </div>
@@ -851,12 +960,19 @@ export const SettingsDialog = observer(function SettingsDialog({
                    *   </button>
                    * </div>
                    */
-                  <SettingsActionCard
-                    buttonLabel={t("settingsAction.resetOperationAndShortcuts")}
-                    description={t("settingsAction.resetOperationAndShortcutsConfirm")}
-                    onClick={handleResetOperationAndShortcuts}
-                    title={t("settingsAction.resetOperationAndShortcuts")}
-                  />
+                  <>
+                    <SettingsActionCard
+                      buttonLabel={t("settingsAction.resetOperation")}
+                      description={t("settingsAction.resetOperationConfirm")}
+                      onClick={handleResetOperation}
+                      title={t("settingsAction.resetOperation")}
+                    />
+                    <SettingsActionCard
+                      buttonLabel={t("keyboardShortcutDialog.open")}
+                      onClick={handleOpenKeyboardShortcutDialog}
+                      title={t("keyboardShortcutDialog.title")}
+                    />
+                  </>
                 )}
                 {group.id === "other" && (
                   <>
@@ -915,9 +1031,11 @@ export const SettingsDialog = observer(function SettingsDialog({
     {confirmDialogState.visible && (
       <ConfirmResetDialog
         confirmDialogState={confirmDialogState}
+        confirmMessageKey="settingsAction.resetOperationConfirm"
         onCancel={handleResetCancel}
         onConfirm={handleResetConfirm}
         t={t}
+        titleKey="settingsAction.resetOperation"
       />
     )}
     {resetAllConfirmDialogState.visible && (
@@ -987,15 +1105,11 @@ export const SettingsDialog = observer(function SettingsDialog({
         t={t}
       />
     )}
-    {conflictDialogState.visible && (
-      <ConflictDialog
-        conflictDialogState={conflictDialogState}
-        controller={controller}
-        onCancel={handleConflictCancel}
-        onConfirm={handleConflictConfirm}
-        t={t}
-      />
-    )}
+    <KeyboardShortcutSettingsDialog
+      appHost={appHost}
+      dialogState={keyboardShortcutDialogState}
+      onClose={handleCloseKeyboardShortcutDialog}
+    />
     {/*
       AI-REMOVED 2026-07-29:
       Reason: WebDAV 冲突是阻断全局同步的系统窗口，不能嵌套在可关闭的设置窗口中。
@@ -1143,7 +1257,7 @@ function SettingsActionCard({
   title,
 }: {
   buttonLabel: string;
-  description: string;
+  description?: string;
   onClick: () => void;
   title: string;
 }) {
@@ -1151,7 +1265,7 @@ function SettingsActionCard({
     <article className={cm(styles, "settings-dialog-setting-card")}>
       <div className={cm(styles, "settings-dialog-setting-copy")}>
         <h4>{title}</h4>
-        <p>{description}</p>
+        {description === undefined ? null : <p>{description}</p>}
       </div>
       <div className={cm(styles, "settings-dialog-setting-control")}>
         <button
@@ -1420,8 +1534,6 @@ function renderSettingControl(options: {
   setting: WorkbenchSettingDefinition;
   t: AppHost["actions"]["translate"];
   isEditable: boolean;
-  capturingKeybindingId: string | null;
-  onStartCapturing: (settingId: string | null) => void;
   onRequestToggleExperimentalFeatures?: () => void;
 }) {
   const {
@@ -1429,8 +1541,6 @@ function renderSettingControl(options: {
     setting,
     t,
     isEditable,
-    capturingKeybindingId,
-    onStartCapturing,
     onRequestToggleExperimentalFeatures,
   } = options;
   const value = controller.getValue(setting.id);
@@ -1501,6 +1611,15 @@ function renderSettingControl(options: {
     );
   }
 
+  /* AI-REMOVED 2026-08-03:
+  Reason: 通用设置控件渲染器不再承载快捷键录入按钮。
+  Trigger: ST2-RQ-002 新建独立快捷键设置对话框。
+  Evidence: KeyboardShortcutSettingsDialog 每行渲染两个图片化快捷键选择框。
+  Replacement: keyboard-shortcut-settings-dialog.tsx。
+  Risk: Low
+  Human Review: Required
+
+  Original code:
   if (setting.kind === "keybinding") {
     const isCapturing = capturingKeybindingId === setting.id;
     const buttonLabel = isCapturing
@@ -1535,6 +1654,7 @@ function renderSettingControl(options: {
       </button>
     );
   }
+  */
 
   const checked = typeof value === "boolean" ? value : setting.defaultValue;
 
@@ -1569,6 +1689,15 @@ function renderSettingControl(options: {
   );
 }
 
+/* AI-REMOVED 2026-08-03:
+Reason: 快捷键捕获格式化、键名规范化与 modifier-only 判断已迁入独立快捷键设置对话框。
+Trigger: ST2-RQ-002 要求相关规则与帮助函数统一收拢。
+Evidence: keyboard-shortcut-settings-dialog.tsx 已提供同名职责函数，并增加双槽位与 Escape 禁止规则。
+Replacement: keyboard-shortcut-settings-dialog.tsx。
+Risk: Low
+Human Review: Required
+
+Original code:
 function formatCapturedKeybinding(event: KeyboardEvent): string | null {
   if (isModifierOnlyKey(event.key)) {
     return null;
@@ -1643,6 +1772,7 @@ function normalizeCapturedKeyLabel(key: string): string | null {
 function isModifierOnlyKey(key: string): boolean {
   return key === "Shift" || key === "Control" || key === "Alt" || key === "Meta";
 }
+*/
 
 function formatActivityTimeRange(startTime: number | undefined, endTime: number | undefined): string {
   const formatTime = (timestamp: number) => new Intl.DateTimeFormat("zh-CN", {
@@ -1822,6 +1952,15 @@ function ClearStorageInputDialog({
 
 // ─── 快捷键冲突对话框 ───
 
+/* AI-REMOVED 2026-08-03:
+Reason: 快捷键冲突对话框已迁入独立快捷键设置模块，并升级为逐槽冲突处理和图片化键位展示。
+Trigger: ST2-RQ-002 快捷键录入收拢与图片化展示。
+Evidence: KeyboardShortcutConflictDialog 位于 keyboard-shortcut-settings-dialog.tsx。
+Replacement: keyboard-shortcut-settings-dialog.tsx。
+Risk: Low
+Human Review: Required
+
+Original code:
 interface ConflictDialogProps {
   conflictDialogState: {
     visible: boolean;
@@ -1902,6 +2041,7 @@ function ConflictDialog({
     </DialogShell>
   );
 }
+*/
 
 // AI-REMOVED 2026-07-29:
 // Reason: 冲突窗口已成为 Workbench 顶层 system overlay，不能由 SettingsDialog 私有实现。
@@ -1958,7 +2098,16 @@ function ConflictDialog({
 //   );
 // }
 
-/** 根据 setting id 解析显示标签 */
+/* AI-REMOVED 2026-08-03:
+Reason: 通用设置页不再解析快捷键冲突条目的标签。
+Trigger: 快捷键冲突对话框迁入独立模块。
+Evidence: keyboard-shortcut-settings-dialog.tsx 使用 KEYBOARD_SHORTCUT_SETTING_BY_ID 解析标签。
+Replacement: keyboard-shortcut-settings-dialog.tsx。
+Risk: Low
+Human Review: Required
+
+Original code:
+// 根据 setting id 解析显示标签
 function resolveSettingLabelById(
   settingId: string,
   controller: WorkbenchSettingsDialogController,
@@ -1975,3 +2124,4 @@ function resolveSettingLabelById(
 
   return settingId;
 }
+*/

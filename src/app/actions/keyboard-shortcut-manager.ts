@@ -16,7 +16,16 @@ export const SHORTCUT_KEY = {
   BASIC_PRODUCTION:    "shortcut-basic-production",
   SYNTHESIS:           "shortcut-synthesis",
   SAVE_BLUEPRINT:      "shortcut-save-blueprint",
-  RETURN_SELECT:       "shortcut-return-select",
+  // AI-REMOVED 2026-08-03:
+  // Reason: Escape 类功能必须保持硬编码，不允许进入可配置快捷键体系。
+  // Trigger: ST2-RQ-002 明确禁止任何快捷键绑定 Escape。
+  // Evidence: 返回选择模式由 hypergryph-select-gesture-module.ts 直接判断 Escape。
+  // Replacement: hypergryph-select-gesture-module.ts 的 Escape 硬编码判断。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // RETURN_SELECT:       "shortcut-return-select",
   ROTATE:              "shortcut-rotate",
   SWITCH_DEVICE_MODE:  "shortcut-switch-device-mode",
   ROTATE_VIEWPORT:     "shortcut-rotate-viewport",
@@ -36,6 +45,7 @@ export const SHORTCUT_KEY = {
   PAN_VIEWPORT_DOWN:      "shortcut-pan-viewport-down",
   PAN_VIEWPORT_LEFT:      "shortcut-pan-viewport-left",
   PAN_VIEWPORT_RIGHT:     "shortcut-pan-viewport-right",
+  MARQUEE:                "shortcut-marquee",
 } as const;
 
 /** 从 SHORTCUT_KEY 推导出的联合类型 */
@@ -61,7 +71,16 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]:        "B",
   [SHORTCUT_KEY.SAVE_BLUEPRINT]:   "Ctrl+S",
-  [SHORTCUT_KEY.RETURN_SELECT]:    "Esc",
+  // AI-REMOVED 2026-08-03:
+  // Reason: 返回选择使用硬编码 Escape，不再属于可配置快捷键默认值。
+  // Trigger: ST2-RQ-002 禁止绑定 Escape。
+  // Evidence: SHORTCUT_KEY.RETURN_SELECT 已从有效快捷键常量中归档。
+  // Replacement: hypergryph-select-gesture-module.ts 的 Escape 硬编码判断。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // [SHORTCUT_KEY.RETURN_SELECT]:    "Esc",
   [SHORTCUT_KEY.ROTATE]:           "R",
   [SHORTCUT_KEY.SWITCH_DEVICE_MODE]: "Tab",
   [SHORTCUT_KEY.ROTATE_VIEWPORT]:  "Ctrl+R",
@@ -77,10 +96,11 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.TOGGLE_BASE_PANEL]:      "K",
   [SHORTCUT_KEY.QUICK_PLACE]:            "Z",
   [SHORTCUT_KEY.OPEN_TOOLBOX]:           "T",
-  [SHORTCUT_KEY.PAN_VIEWPORT_UP]:        "W",
-  [SHORTCUT_KEY.PAN_VIEWPORT_DOWN]:      "S",
-  [SHORTCUT_KEY.PAN_VIEWPORT_LEFT]:      "A",
-  [SHORTCUT_KEY.PAN_VIEWPORT_RIGHT]:     "D",
+  [SHORTCUT_KEY.PAN_VIEWPORT_UP]:        "W;ArrowUp",
+  [SHORTCUT_KEY.PAN_VIEWPORT_DOWN]:      "S;ArrowDown",
+  [SHORTCUT_KEY.PAN_VIEWPORT_LEFT]:      "A;ArrowLeft",
+  [SHORTCUT_KEY.PAN_VIEWPORT_RIGHT]:     "D;ArrowRight",
+  [SHORTCUT_KEY.MARQUEE]:                "X",
 };
 
 const LEGACY_SHORTCUT_MIGRATIONS: Partial<Record<ShortcutKeyId, string>> = {
@@ -121,7 +141,19 @@ export class KeyboardShortcutManager {
     if (persisted !== null) {
       for (const [k, v] of Object.entries(persisted)) {
         if (isShortcutKey(k) && typeof v === "string") {
-          initial[k] = migrateLegacyShortcutValue(k, v.trim());
+          // AI-REMOVED 2026-08-03:
+          // Reason: 旧存储中的 Escape 绑定也必须按保留键规则清除。
+          // Trigger: ST2-RQ-002 禁止配置 Escape。
+          // Evidence: normalizeConfigurableShortcutValue 会逐槽剔除 Escape 绑定。
+          // Replacement: 下方规范化后的赋值。
+          // Risk: Low
+          // Human Review: Required
+          //
+          // Original code:
+          // initial[k] = migrateLegacyShortcutValue(k, v.trim());
+          initial[k] = normalizeConfigurableShortcutValue(
+            migrateLegacyShortcutValue(k, v.trim()),
+          );
         }
       }
     }
@@ -167,7 +199,7 @@ export class KeyboardShortcutManager {
   public readonly setShortcutFor = (key: string, value: string): void => {
     if (!isShortcutKey(key)) return;
 
-    const normalized = value.trim();
+    const normalized = normalizeConfigurableShortcutValue(value);
     if (normalized === "") {
       // 清空快捷键：显式设为空字符串，表示该功能无快捷键
       this.shortcuts[key] = "";
@@ -200,6 +232,7 @@ export class KeyboardShortcutManager {
     modifiers: ShortcutEventModifiers = {},
   ): boolean {
     if (!isShortcutKey(key)) return false;
+    if (isEscapeKeyEvent(code, eventKey)) return false;
 
     return doesShortcutMatchKeyEvent({
       shortcut: this.getKeyboardShortcutFor(key),
@@ -337,16 +370,12 @@ function doesShortcutMatchKeyEvent(options: {
   key: string | null;
   modifiers: ShortcutEventModifiers;
 }): boolean {
-  const parsedShortcut = parseShortcutBinding(options.shortcut);
-  if (parsedShortcut === null) {
-    return false;
-  }
+  const parsedShortcuts = parseShortcutBindings(options.shortcut);
 
-  if (!doShortcutModifiersMatch(parsedShortcut.modifiers, options.modifiers)) {
-    return false;
-  }
-
-  return doesShortcutPrimaryKeyMatch(parsedShortcut.primaryKey, options.code, options.key);
+  return parsedShortcuts.some((parsedShortcut) => (
+    doShortcutModifiersMatch(parsedShortcut.modifiers, options.modifiers)
+    && doesShortcutPrimaryKeyMatch(parsedShortcut.primaryKey, options.code, options.key)
+  ));
 }
 
 function doesShortcutPrimaryKeyMatch(
@@ -371,10 +400,20 @@ function doesShortcutPrimaryKeyMatch(
   return normalizeShortcutCode(normalizedCode) === primaryKey;
 }
 
-function parseShortcutBinding(shortcut: string): {
-  modifiers: Required<ShortcutEventModifiers>;
-  primaryKey: string;
-} | null {
+interface ParsedShortcutBinding {
+  readonly modifiers: Required<ShortcutEventModifiers>;
+  readonly primaryKey: string;
+}
+
+function parseShortcutBindings(shortcut: string): readonly ParsedShortcutBinding[] {
+  return shortcut
+    .split(";")
+    .slice(0, 2)
+    .map((binding) => parseShortcutBinding(binding))
+    .filter((binding): binding is ParsedShortcutBinding => binding !== null);
+}
+
+function parseShortcutBinding(shortcut: string): ParsedShortcutBinding | null {
   const parts = shortcut
     .split("+")
     .map((part) => normalizeShortcut(part))
@@ -443,7 +482,9 @@ function doShortcutModifiersMatch(
 }
 
 function normalizeShortcut(shortcut: string): string {
-  return shortcut.trim().toLowerCase();
+  const normalized = shortcut.trim().toLowerCase();
+
+  return normalized === "+" ? "plus" : normalized;
 }
 
 function normalizeShortcutCode(code: string): string {
@@ -468,6 +509,33 @@ function normalizeShortcutCode(code: string): string {
   }
 
   return code.trim().toLowerCase();
+}
+
+function normalizeConfigurableShortcutValue(value: string): string {
+  const [first = "", second = ""] = value
+    .trim()
+    .split(";", 2)
+    .map((binding) => binding.trim());
+  const normalizedSlots: [string, string] = [
+    isReservedEscapeBinding(first) ? "" : first,
+    isReservedEscapeBinding(second) ? "" : second,
+  ];
+
+  if (normalizedSlots[1] === "") {
+    return normalizedSlots[0];
+  }
+
+  return `${normalizedSlots[0]};${normalizedSlots[1]}`;
+}
+
+function isReservedEscapeBinding(binding: string): boolean {
+  const parsedBinding = parseShortcutBinding(binding);
+
+  return parsedBinding?.primaryKey === "esc" || parsedBinding?.primaryKey === "escape";
+}
+
+function isEscapeKeyEvent(code: string | null, eventKey: string | null): boolean {
+  return code === "Escape" || normalizeShortcut(eventKey ?? "") === "escape";
 }
 
 function migrateLegacyShortcutValue(key: ShortcutKeyId, value: string): string {

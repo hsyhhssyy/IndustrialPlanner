@@ -71,15 +71,30 @@
 }
 
 .placement-panel-group-shortcut {
+  /* AI-REMOVED 2026-08-03:
+   * Reason: 分组快捷键从文字胶囊改为 SVG 键帽，外层不再重复绘制胶囊。
+   * Trigger: ST2-RQ-002 快捷键图片化展示。
+   * Evidence: 内部 KeyboardShortcutPrompt 自带可辨识背景与边框。
+   * Replacement: 下方 30px 透明承载容器。
+   * Risk: Low
+   * Human Review: Required
+   *
+   * Original code:
+   * min-width: 16px;
+   * height: 16px;
+   * padding: 0 4px;
+   * border: 1px solid var(--placement-shortcut-border);
+   * border-radius: 999px;
+   * background: var(--placement-shortcut-bg);
+   */
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border: 1px solid var(--placement-shortcut-border);
-  border-radius: 999px;
-  background: var(--placement-shortcut-bg);
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--placement-shortcut-text);
   font-size: 0.62rem;
   font-weight: 700;
@@ -482,18 +497,33 @@
 }
 
 .placement-button-hotkey {
+  /* AI-REMOVED 2026-08-03:
+   * Reason: 按钮快捷键从文字胶囊改为 SVG 键帽，外层不再重复绘制胶囊。
+   * Trigger: ST2-RQ-002 快捷键图片化展示。
+   * Evidence: 内部 KeyboardShortcutPrompt 自带可辨识背景与边框。
+   * Replacement: 下方 30px 透明承载容器。
+   * Risk: Low
+   * Human Review: Required
+   *
+   * Original code:
+   * min-width: 16px;
+   * height: 16px;
+   * padding: 0 4px;
+   * border: 1px solid var(--line-strong);
+   * border-radius: 999px;
+   * background: var(--surface-4);
+   */
   position: absolute;
   top: 3px;
   inset-inline-end: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: var(--surface-4);
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--text-1);
   font-size: 0.62rem;
   font-weight: 700;

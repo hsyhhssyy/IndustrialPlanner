@@ -485,6 +485,40 @@ describe("物流布设模式完全测试集", () => {
     });
   });
 
+  it.only("从8,5起笔平滑移动到10,6生成逆时针弯道", () => {
+    clickCell(appHost, editorHost, { x: 8, y: 5 }, nextPointerId++);
+    console.log("Phase after clickCell(8,5):", appHost.internalState.runtime.logisticsPlacement.phase);
+
+    // 平滑移动：逐步经过中间格子
+    moveToCell(appHost, editorHost, { x: 9, y: 5 }, nextPointerId++);
+    const d1 = editorHost.queries.resolveLogisticsDraftState();
+    console.log("After moveToCell(9,5): cells=", d1?.cells.map(c => `(${c.gridPoint.x},${c.gridPoint.y}) ${c.shape}`));
+
+    moveToCell(appHost, editorHost, { x: 10, y: 5 }, nextPointerId++);
+    const d2 = editorHost.queries.resolveLogisticsDraftState();
+    console.log("After moveToCell(10,5): cells=", d2?.cells.map(c => `(${c.gridPoint.x},${c.gridPoint.y}) ${c.shape}`));
+
+    moveToCell(appHost, editorHost, { x: 10, y: 6 }, nextPointerId++);
+    const d3 = editorHost.queries.resolveLogisticsDraftState();
+    console.log("After moveToCell(10,6): cells=", d3?.cells.map(c => `(${c.gridPoint.x},${c.gridPoint.y}) ${c.shape}`));
+
+    clickCell(appHost, editorHost, { x: 10, y: 6 }, nextPointerId++);
+    console.log("Phase after clickCell(10,6):", appHost.internalState.runtime.logisticsPlacement.phase);
+
+    // DEBUG: dump all entities
+    const allEntities = Object.values(editorHost.document.getSnapshot().entities);
+    console.log("=== ALL ENTITIES ===");
+    for (const e of allEntities) {
+      console.log(`  (${e.position.x}, ${e.position.y}) ${e.definitionId} rotation=${e.rotation} id=${e.id}`);
+    }
+
+    expectEntityAt(editorHost, {
+      definitionId: "belt_turn_ccw_1x1",
+      position: { x: 7, y: 6 },
+      rotation: 0,
+    });
+  });
+
 });
 
 

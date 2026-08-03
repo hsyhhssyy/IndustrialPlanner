@@ -1,5 +1,6 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
+import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import { canCurrentBaseAcceptWulingOnlyEntities } from "@/app/placement-zone-availability";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EditorContract } from "@/domain/editor/editor-contract";
@@ -94,7 +95,12 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
             return { status: "handled" };
           }
 
-          if (event.code !== "KeyX") {
+          if (!context.appHost.internalActions.isShortcutFor(
+            SHORTCUT_KEY.MARQUEE,
+            event.code,
+            event.key,
+            event.modifiers,
+          )) {
             return { status: "ignored" };
           }
 

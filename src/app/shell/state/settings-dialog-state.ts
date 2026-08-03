@@ -6,7 +6,18 @@ import { SYNC_PROVIDER_CONFIGS, type SyncProviderId } from "@/sync/sync-provider
 
 export const USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY = "v3-user-settings-dialog";
 
+/* AI-REMOVED 2026-08-03:
+Reason: 快捷键不再作为通用设置页面分组。
+Trigger: ST2-RQ-002 要求取消“快捷键”组，并在“游戏”组只保留独立对话框入口。
+Evidence: SettingsDialog 通过 KeyboardShortcutSettingsDialog 展示快捷键。
+Replacement: keyboard-shortcut-settings-dialog.tsx。
+Risk: 旧 localStorage 中 selectedGroupId="shortcuts" 将回退到默认分组。
+Human Review: Required
+
+Original code:
 export type SettingsGroupId = "display-system" | "game" | "operation" | "shortcuts" | "other" | "experimental" | "debug";
+*/
+export type SettingsGroupId = "display-system" | "game" | "operation" | "other" | "experimental" | "debug";
 
 export type WorkbenchSettingControlValue = string | number | boolean;
 
@@ -52,10 +63,20 @@ interface WorkbenchSwitchSettingDefinition extends WorkbenchSettingBaseDefinitio
   readonly defaultValue: boolean;
 }
 
+/* AI-REMOVED 2026-08-03:
+Reason: 通用设置定义不再包含快捷键控件类型。
+Trigger: ST2-RQ-002 快捷键录入收拢。
+Evidence: KeyboardShortcutSettingDefinition 已位于独立快捷键设置模块。
+Replacement: keyboard-shortcut-settings-dialog.tsx。
+Risk: Low
+Human Review: Required
+
+Original code:
 interface WorkbenchKeybindingSettingDefinition extends WorkbenchSettingBaseDefinition {
   readonly kind: "keybinding";
   readonly defaultValue: string;
 }
+*/
 
 interface WorkbenchTextSettingDefinition extends WorkbenchSettingBaseDefinition {
   readonly kind: "text";
@@ -73,7 +94,16 @@ export type WorkbenchSettingDefinition =
   | WorkbenchSelectSettingDefinition
   | WorkbenchSliderSettingDefinition
   | WorkbenchSwitchSettingDefinition
-  | WorkbenchKeybindingSettingDefinition
+  // AI-REMOVED 2026-08-03:
+  // Reason: keybinding 控件定义已迁出通用设置模型。
+  // Trigger: ST2-RQ-002 快捷键录入收拢。
+  // Evidence: 独立快捷键设置对话框直接使用 ShortcutKeyId。
+  // Replacement: keyboard-shortcut-settings-dialog.tsx。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // | WorkbenchKeybindingSettingDefinition
   | WorkbenchPasswordSettingDefinition
   | WorkbenchTextSettingDefinition;
 
@@ -93,9 +123,18 @@ interface WorkbenchSettingExternalBinding {
 
 interface WorkbenchSettingsDialogControllerOptions {
   readonly externalBindings?: Readonly<Record<string, WorkbenchSettingExternalBinding>>;
-  readonly shortcutReader?: (key: string) => string;
-  readonly shortcutWriter?: (key: string, value: string) => void;
-  readonly shortcutResetAll?: () => void;
+  // AI-REMOVED 2026-08-03:
+  // Reason: 通用设置控制器不再代理快捷键读写与重置。
+  // Trigger: ST2-RQ-002 快捷键设置独立化。
+  // Evidence: KeyboardShortcutSettingsDialog 直接调用 appHost internalActions。
+  // Replacement: keyboard-shortcut-settings-dialog.tsx。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly shortcutReader?: (key: string) => string;
+  // readonly shortcutWriter?: (key: string, value: string) => void;
+  // readonly shortcutResetAll?: () => void;
 }
 
 interface PersistedUserSettingsDialogState {
@@ -316,6 +355,15 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       },
     ],
   },
+  /* AI-REMOVED 2026-08-03:
+  Reason: 通用设置页面不再存在“快捷键”分组。
+  Trigger: ST2-RQ-002 新建独立快捷键设置对话框。
+  Evidence: SettingsDialog 的“游戏”组新增 KeyboardShortcutSettingsDialog 入口。
+  Replacement: keyboard-shortcut-settings-dialog.tsx。
+  Risk: Low
+  Human Review: Required
+
+  Original code:
   {
     id: "shortcuts",
     labelKey: "settingsGroup.shortcuts",
@@ -506,6 +554,7 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       },
     ],
   },
+  */
   {
     id: "other",
     labelKey: "settingsGroup.other",
@@ -601,21 +650,30 @@ const SETTING_DEFINITION_BY_ID = new Map<string, WorkbenchSettingDefinition>(
   ),
 );
 
-/** 所有 keybinding 类型的 setting 定义 */
-export const ALL_KEYBINDING_SETTINGS: readonly WorkbenchKeybindingSettingDefinition[] =
-  WORKBENCH_SETTINGS_GROUPS.flatMap((group) =>
-    group.items.filter((setting) => setting.kind === "keybinding"),
-  ) as WorkbenchKeybindingSettingDefinition[];
-
-/** 从 shortcut setting id 推导 i18n label key。前缀 `settingsField.` + setting id */
-function shortcutKeybindingLabelKey(id: string): UiKey {
-  return `settingsField.${id}` as UiKey;
-}
-
-/** 从 shortcut setting id 推导 i18n description key。前缀 `settingsField.` + setting id + `Description` */
-function shortcutKeybindingDescriptionKey(id: string): UiKey {
-  return `settingsField.${id}Description` as UiKey;
-}
+// AI-REMOVED 2026-08-03:
+// Reason: 快捷键定义、标签与描述推导已迁入独立快捷键设置模块。
+// Trigger: ST2-RQ-002 快捷键录入收拢。
+// Evidence: KEYBOARD_SHORTCUT_SETTINGS 统一声明所有可配置快捷键。
+// Replacement: keyboard-shortcut-settings-dialog.tsx。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// /** 所有 keybinding 类型的 setting 定义 */
+// export const ALL_KEYBINDING_SETTINGS: readonly WorkbenchKeybindingSettingDefinition[] =
+//   WORKBENCH_SETTINGS_GROUPS.flatMap((group) =>
+//     group.items.filter((setting) => setting.kind === "keybinding"),
+//   ) as WorkbenchKeybindingSettingDefinition[];
+//
+// /** 从 shortcut setting id 推导 i18n label key。前缀 `settingsField.` + setting id */
+// function shortcutKeybindingLabelKey(id: string): UiKey {
+//   return `settingsField.${id}` as UiKey;
+// }
+//
+// /** 从 shortcut setting id 推导 i18n description key。前缀 `settingsField.` + setting id + `Description` */
+// function shortcutKeybindingDescriptionKey(id: string): UiKey {
+//   return `settingsField.${id}Description` as UiKey;
+// }
 
 function createDefaultValues(externalBindingIds: ReadonlySet<string> = new Set()): Record<string, WorkbenchSettingControlValue> {
   const values = Object.fromEntries(
@@ -636,7 +694,18 @@ export class WorkbenchSettingsDialogController {
   public values: Record<string, WorkbenchSettingControlValue> = {};
 
   // Hardcoded：重置「操作」和「快捷键」时需要恢复为默认值的 setting id。
-  private static readonly RESET_OPERATION_AND_SHORTCUT_KEYS: readonly string[] = [
+  // AI-CORRECTION 2026-08-03: 快捷键重置已迁入独立对话框；此列表现在只负责“操作”设置。
+  // AI-REMOVED 2026-08-03:
+  // Reason: 原常量名包含已迁出的快捷键职责。
+  // Trigger: ST2-RQ-002 快捷键设置独立化。
+  // Evidence: 新列表仅保留 game-* 操作项。
+  // Replacement: RESET_OPERATION_KEYS in this class。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // private static readonly RESET_OPERATION_AND_SHORTCUT_KEYS: readonly string[] = [
+  private static readonly RESET_OPERATION_KEYS: readonly string[] = [
     // 操作
     "game-quick-place",
     "game-arknights-immediate-move",
@@ -644,60 +713,87 @@ export class WorkbenchSettingsDialogController {
     "game-arknights-immediate-marquee",
     "game-arknights-allow-empty-logistics-endpoints",
     "game-arknights-auto-create-splitters-and-convergers",
-    // 快捷键
-    "shortcut-quick-place",
-    "shortcut-place-conveyor",
-    "shortcut-place-pipe",
-    "shortcut-resources-power",
-    "shortcut-warehouse",
-    "shortcut-basic-production",
-    "shortcut-synthesis",
-    "shortcut-save-blueprint",
-    "shortcut-return-select",
-    "shortcut-rotate",
-    "shortcut-switch-device-mode",
-    "shortcut-rotate-viewport",
-    "shortcut-pan-viewport-up",
-    "shortcut-pan-viewport-down",
-    "shortcut-pan-viewport-left",
-    "shortcut-pan-viewport-right",
-    "shortcut-delete-device",
-    "shortcut-move-selection",
-    "shortcut-copy-selection",
-    "shortcut-paste-selection",
-    "shortcut-undo",
-    "shortcut-redo",
-    "shortcut-toggle-placement-panel",
-    "shortcut-toggle-blueprint-panel",
-    "shortcut-toggle-history-panel",
-    "shortcut-toggle-base-panel",
+    // AI-REMOVED 2026-08-03:
+    // Reason: 快捷键由独立对话框单独重置。
+    // Trigger: ST2-RQ-002 快捷键设置独立化。
+    // Evidence: KeyboardShortcutSettingsDialog 调用 resetAllShortcutsToDefaults。
+    // Replacement: keyboard-shortcut-settings-dialog.tsx。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // // 快捷键
+    // "shortcut-quick-place",
+    // "shortcut-place-conveyor",
+    // "shortcut-place-pipe",
+    // "shortcut-resources-power",
+    // "shortcut-warehouse",
+    // "shortcut-basic-production",
+    // "shortcut-synthesis",
+    // "shortcut-save-blueprint",
+    // "shortcut-return-select",
+    // "shortcut-rotate",
+    // "shortcut-switch-device-mode",
+    // "shortcut-rotate-viewport",
+    // "shortcut-pan-viewport-up",
+    // "shortcut-pan-viewport-down",
+    // "shortcut-pan-viewport-left",
+    // "shortcut-pan-viewport-right",
+    // "shortcut-delete-device",
+    // "shortcut-move-selection",
+    // "shortcut-copy-selection",
+    // "shortcut-paste-selection",
+    // "shortcut-undo",
+    // "shortcut-redo",
+    // "shortcut-toggle-placement-panel",
+    // "shortcut-toggle-blueprint-panel",
+    // "shortcut-toggle-history-panel",
+    // "shortcut-toggle-base-panel",
   ];
 
   private readonly externalBindings: ReadonlyMap<string, WorkbenchSettingExternalBinding>;
   private readonly externalBindingIds: ReadonlySet<string>;
-  private readonly shortcutResetAll?: () => void;
+  // AI-REMOVED 2026-08-03:
+  // Reason: 通用设置控制器不再持有快捷键重置回调。
+  // Trigger: ST2-RQ-002 快捷键设置独立化。
+  // Evidence: 独立对话框直接调用 appHost internalActions。
+  // Replacement: keyboard-shortcut-settings-dialog.tsx。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // private readonly shortcutResetAll?: () => void;
   private externalBindingRevision = 0;
 
   public constructor(options: WorkbenchSettingsDialogControllerOptions = {}) {
     const explicitBindings = new Map(Object.entries(options.externalBindings ?? {}));
 
-    // 自动为所有 keybinding 类型生成 externalBinding
-    if (options.shortcutReader && options.shortcutWriter) {
-      for (const setting of ALL_KEYBINDING_SETTINGS) {
-        if (explicitBindings.has(setting.id)) continue;
-
-        explicitBindings.set(setting.id, {
-          readValue: () => options.shortcutReader!(setting.id),
-          writeValue: (value: WorkbenchSettingControlValue) => {
-            if (typeof value === "string") {
-              options.shortcutWriter!(setting.id, value);
-            }
-          },
-        });
-      }
-    }
-
-    this.shortcutResetAll = options.shortcutResetAll;
+    // AI-REMOVED 2026-08-03:
+    // Reason: 通用设置控制器不再为快捷键生成 externalBinding，也不再保存快捷键重置回调。
+    // Trigger: ST2-RQ-002 快捷键设置独立化。
+    // Evidence: KeyboardShortcutSettingsDialog 直接读写 KeyboardShortcutManager。
+    // Replacement: keyboard-shortcut-settings-dialog.tsx。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // // 自动为所有 keybinding 类型生成 externalBinding
+    // if (options.shortcutReader && options.shortcutWriter) {
+    //   for (const setting of ALL_KEYBINDING_SETTINGS) {
+    //     if (explicitBindings.has(setting.id)) continue;
+    //
+    //     explicitBindings.set(setting.id, {
+    //       readValue: () => options.shortcutReader!(setting.id),
+    //       writeValue: (value: WorkbenchSettingControlValue) => {
+    //         if (typeof value === "string") {
+    //           options.shortcutWriter!(setting.id, value);
+    //         }
+    //       },
+    //     });
+    //   }
+    // }
+    //
+    // this.shortcutResetAll = options.shortcutResetAll;
     this.externalBindings = explicitBindings;
     this.externalBindingIds = new Set(this.externalBindings.keys());
     this.values = createDefaultValues(this.externalBindingIds);
@@ -833,6 +929,15 @@ export class WorkbenchSettingsDialogController {
     this.persist();
   }
 
+  /* AI-REMOVED 2026-08-03:
+  Reason: 快捷键写入已迁入独立快捷键设置对话框。
+  Trigger: ST2-RQ-002 快捷键录入收拢。
+  Evidence: KeyboardShortcutSettingsDialog 的 updateSlot 统一写入 manager。
+  Replacement: keyboard-shortcut-settings-dialog.tsx。
+  Risk: Low
+  Human Review: Required
+
+  Original code:
   public updateKeybindingValue(settingId: string, value: string): void {
     const setting = SETTING_DEFINITION_BY_ID.get(settingId);
     if (setting?.kind !== "keybinding" || !this.isSettingEditable(settingId)) {
@@ -854,6 +959,7 @@ export class WorkbenchSettingsDialogController {
     this.values[settingId] = normalizedValue;
     this.persist();
   }
+  */
 
   public updateTextValue(settingId: string, value: string): void {
     const setting = SETTING_DEFINITION_BY_ID.get(settingId);
@@ -873,11 +979,20 @@ export class WorkbenchSettingsDialogController {
     this.persist();
   }
 
-  /**
-   * 查找与给定值冲突的快捷键设置。
-   * 返回冲突的 settingId，若没有冲突返回 null。
-   * 排除 currentSettingId 自身。
-   */
+  /* AI-REMOVED 2026-08-03:
+  Reason: 冲突检测与逐槽清空已迁入独立快捷键设置对话框。
+  Trigger: ST2-RQ-002 双槽位与快捷键录入收拢。
+  Evidence: keyboard-shortcut-settings-dialog.tsx 的 findKeybindingConflict / updateSlot。
+  Replacement: keyboard-shortcut-settings-dialog.tsx。
+  Risk: Low
+  Human Review: Required
+
+  Original code:
+  // [Original documentation start]
+  //  * 查找与给定值冲突的快捷键设置。
+  //  * 返回冲突的 settingId，若没有冲突返回 null。
+  //  * 排除 currentSettingId 自身。
+  // [Original documentation end]
   public findKeybindingConflict(currentSettingId: string, value: string): string | null {
     const normalizedValue = normalizeKeybindingValue(value);
     if (normalizedValue === null) {
@@ -896,7 +1011,7 @@ export class WorkbenchSettingsDialogController {
     return null;
   }
 
-  /** 清空指定快捷键设置的值（设为空字符串）。 */
+  // [Original documentation] 清空指定快捷键设置的值（设为空字符串）。
   public clearKeybinding(settingId: string): void {
     const setting = SETTING_DEFINITION_BY_ID.get(settingId);
     if (setting?.kind !== "keybinding") return;
@@ -910,16 +1025,44 @@ export class WorkbenchSettingsDialogController {
 
     this.persist();
   }
+  */
 
-  /**
-   * 将鹰角操作模式相关开关和所有快捷键恢复为默认值。
-   * 快捷键通过 shortcutResetAll 直接批量重置。
-   */
-  public resetArknightsOperationAndShortcuts(): void {
-    // 先批量重置快捷键默认值
-    this.shortcutResetAll?.();
+  // AI-REMOVED 2026-08-03:
+  // Reason: 操作设置与快捷键不再共用重置动作。
+  // Trigger: ST2-RQ-002 独立快捷键设置对话框。
+  // Evidence: 快捷键重置位于 KeyboardShortcutSettingsDialog；本控制器只重置操作项。
+  // Replacement: resetArknightsOperation in this class；快捷键重置见 keyboard-shortcut-settings-dialog.tsx。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // /**
+  //  * 将鹰角操作模式相关开关和所有快捷键恢复为默认值。
+  //  * 快捷键通过 shortcutResetAll 直接批量重置。
+  //  */
+  // public resetArknightsOperationAndShortcuts(): void {
+  //   // 先批量重置快捷键默认值
+  //   this.shortcutResetAll?.();
+  //
+  //   for (const settingId of WorkbenchSettingsDialogController.RESET_OPERATION_AND_SHORTCUT_KEYS) {
+  //     const setting = SETTING_DEFINITION_BY_ID.get(settingId);
+  //     if (!setting) continue;
+  //
+  //     const externalBinding = this.externalBindings.get(settingId);
+  //     if (externalBinding) {
+  //       this.writeExternalBinding(externalBinding, setting.defaultValue);
+  //     } else {
+  //       this.values[settingId] = setting.defaultValue;
+  //     }
+  //   }
+  //
+  //   this.normalizeLocalValues();
+  //   this.persist();
+  // }
 
-    for (const settingId of WorkbenchSettingsDialogController.RESET_OPERATION_AND_SHORTCUT_KEYS) {
+  /** 将鹰角操作模式相关开关恢复为默认值。 */
+  public resetArknightsOperation(): void {
+    for (const settingId of WorkbenchSettingsDialogController.RESET_OPERATION_KEYS) {
       const setting = SETTING_DEFINITION_BY_ID.get(settingId);
       if (!setting) continue;
 
@@ -936,9 +1079,19 @@ export class WorkbenchSettingsDialogController {
   }
 
   /** 重置所有设置为默认值，包括快捷键、外部绑定和本地值。 */
+  // AI-CORRECTION 2026-08-03: 快捷键已迁出通用设置控制器；此方法只重置通用设置、外部绑定和本地值。
   public resetAllSettings(): void {
-    // 先批量重置快捷键默认值
-    this.shortcutResetAll?.();
+    // AI-REMOVED 2026-08-03:
+    // Reason: 通用设置的全部重置不再跨界重置独立快捷键设置。
+    // Trigger: ST2-RQ-002 快捷键设置独立化。
+    // Evidence: KeyboardShortcutSettingsDialog 提供独立重置按钮。
+    // Replacement: keyboard-shortcut-settings-dialog.tsx。
+    // Risk: 用户需在快捷键设置对话框中单独重置快捷键。
+    // Human Review: Required
+    //
+    // Original code:
+    // // 先批量重置快捷键默认值
+    // this.shortcutResetAll?.();
 
     for (const setting of SETTING_DEFINITION_BY_ID.values()) {
       const externalBinding = this.externalBindings.get(setting.id);
@@ -1001,14 +1154,23 @@ export class WorkbenchSettingsDialogController {
         continue;
       }
 
-      if (setting.kind === "keybinding" && typeof rawValue === "string") {
-        const normalizedValue = normalizeKeybindingValue(rawValue);
-        if (normalizedValue !== null) {
-          nextValues[settingId] = normalizedValue;
-        }
-
-        continue;
-      }
+      // AI-REMOVED 2026-08-03:
+      // Reason: 通用设置 localStorage 不再持久化快捷键。
+      // Trigger: ST2-RQ-002 快捷键设置独立化。
+      // Evidence: KeyboardShortcutManager 使用 v3-app-shortcuts 独立持久化。
+      // Replacement: keyboard-shortcut-manager.ts。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // if (setting.kind === "keybinding" && typeof rawValue === "string") {
+      //   const normalizedValue = normalizeKeybindingValue(rawValue);
+      //   if (normalizedValue !== null) {
+      //     nextValues[settingId] = normalizedValue;
+      //   }
+      //
+      //   continue;
+      // }
 
       if ((setting.kind === "text" || setting.kind === "password") && typeof rawValue === "string") {
         nextValues[settingId] = rawValue;
@@ -1093,11 +1255,20 @@ function countDecimals(step: number): number {
   return decimals.length;
 }
 
-function normalizeKeybindingValue(value: string): string | null {
-  const normalized = value.trim();
-
-  return normalized === "" ? null : normalized;
-}
+// AI-REMOVED 2026-08-03:
+// Reason: 快捷键值规范化已迁入独立快捷键设置对话框与 manager。
+// Trigger: ST2-RQ-002 快捷键录入收拢。
+// Evidence: keyboard-shortcut-settings-dialog.tsx 负责槽位序列化，manager 负责写入 trim。
+// Replacement: keyboard-shortcut-settings-dialog.tsx and keyboard-shortcut-manager.ts。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function normalizeKeybindingValue(value: string): string | null {
+//   const normalized = value.trim();
+//
+//   return normalized === "" ? null : normalized;
+// }
 
 function isSettingsGroupId(value: unknown): value is SettingsGroupId {
   return WORKBENCH_SETTINGS_GROUPS.some((group) => group.id === value);

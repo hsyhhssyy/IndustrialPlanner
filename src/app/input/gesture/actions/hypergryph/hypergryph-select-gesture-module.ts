@@ -1,4 +1,13 @@
-import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
+// AI-REMOVED 2026-08-03:
+// Reason: 返回选择模式的 Escape 必须硬编码，不再读取可配置快捷键。
+// Trigger: ST2-RQ-002 禁止任何快捷键绑定 Escape。
+// Evidence: key down 分支已直接匹配 event.code / event.key。
+// Replacement: createHypergryphSelectGestureModule 的 key down 分支。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
@@ -13,12 +22,7 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
     when: isHypergryphGestureEnabled,
     handle(event, context) {
       if (event.type === "key down") {
-        if (!context.appHost.internalActions.isShortcutFor(
-          SHORTCUT_KEY.RETURN_SELECT,
-          event.code,
-          event.key,
-          event.modifiers,
-        )) {
+        if (event.code !== "Escape" && event.key !== "Escape") {
           return { status: "ignored" };
         }
 

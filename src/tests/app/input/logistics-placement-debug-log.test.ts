@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SHORTCUT_KEY } from "@/app/actions";
 import type { AppHost } from "@/app/host/app-host";
 import type { GestureEvent, KeyboardSnapshot } from "@/app/input/gesture/adapter";
 import {
@@ -111,6 +112,25 @@ describe("logistics placement debug logging", () => {
       }),
     );
   });
+
+  it("switches route order through the configured rotate shortcut", () => {
+    const { context, appHost } = createContext({
+      allowEmptySource: true,
+      kind: LOGISTICS_KIND.belt,
+      draftState: null,
+    });
+    const module = createHypergryphLogisticsPlacementGestureModule();
+
+    expect(module.handle(keyDownEvent("KeyR", "r"), context)).toEqual({ status: "ignored" });
+    expect(appHost.internalState.runtime.logisticsPlacement.routeOrder).toBe("vertical-first");
+    expect(module.handle(keyDownEvent("KeyT", "t"), context)).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.logisticsPlacement.routeOrder).toBe("horizontal-first");
+    expect(appHost.internalActions.isShortcutFor).toHaveBeenCalledWith(
+      SHORTCUT_KEY.ROTATE,
+      "KeyT",
+      "t",
+    );
+  });
 });
 
 function createContext(options: {
@@ -172,6 +192,11 @@ function createContext(options: {
         },
       },
     },
+    internalActions: {
+      isShortcutFor: vi.fn((shortcutKey: string, code: string | null) => (
+        shortcutKey === SHORTCUT_KEY.ROTATE && code === "KeyT"
+      )),
+    },
     workspace,
   } as unknown as AppHost;
 
@@ -220,6 +245,23 @@ function mouseLeftTapEvent(
     position: { x: 6, y: 4 },
     longPress,
     pointerEntity: null,
+    modifiers: {
+      alt: false,
+      ctrl: false,
+      meta: false,
+      shift: false,
+    },
+    sourceEvent: null,
+  };
+}
+
+function keyDownEvent(code: string, key: string): Extract<GestureEvent, { type: "key down" }> {
+  return {
+    type: "key down",
+    gestureId: `key-down-${code}`,
+    code,
+    key,
+    keyCode: 0,
     modifiers: {
       alt: false,
       ctrl: false,

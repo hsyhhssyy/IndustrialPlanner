@@ -1,5 +1,6 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
+import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import {
   canCurrentBaseAcceptWulingOnlyEntities,
   canPlaceEntityDefinitionInCurrentBase,
@@ -1111,7 +1112,11 @@ function handleRouteOrderShortcut(options: {
   //   return false;
   // }
 
-  const isRouteShortcut = options.code === "KeyR" || options.key?.trim().toLowerCase() === "r";
+  const isRouteShortcut = options.appHost.internalActions.isShortcutFor(
+    SHORTCUT_KEY.ROTATE,
+    options.code,
+    options.key,
+  );
   if (!isRouteShortcut) {
     return false;
   }

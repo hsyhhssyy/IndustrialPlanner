@@ -15,7 +15,17 @@ describe("WorkbenchSettingsDialogController", () => {
   it("persists schema-driven values and hydrates them on the next controller", () => {
     const controller = new WorkbenchSettingsDialogController();
 
-    controller.selectGroup("shortcuts");
+    // AI-REMOVED 2026-08-03:
+    // Reason: 通用设置控制器不再包含 shortcuts 分组。
+    // Trigger: ST2-RQ-002 独立快捷键设置对话框。
+    // Evidence: WORKBENCH_SETTINGS_GROUPS 已取消 shortcuts。
+    // Replacement: 下方 game 分组选择。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // controller.selectGroup("shortcuts");
+    controller.selectGroup("game");
     controller.updateSelectValue("system-language", "en-US");
     controller.updateSelectValue("system-theme", "ayu-dark");
     controller.updateSwitchValue("game-use-blueprint-style-device-images", true);
@@ -26,7 +36,7 @@ describe("WorkbenchSettingsDialogController", () => {
     controller.updateSwitchValue("debug-show-gesture-diagnostics-window", true);
 
     expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
-      selectedGroupId: "shortcuts",
+      selectedGroupId: "game",
       values: {
         "system-language": "en-US",
         "system-theme": "ayu-dark",
@@ -38,32 +48,41 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-quick-place": true,
         "game-arknights-selection-right-dock-sync": true,
         "game-arknights-inspector-open-on-second-click": false,
-        "shortcut-quick-place": "Z",
-        "shortcut-place-conveyor": "E",
-        "shortcut-place-pipe": "Q",
-        "shortcut-resources-power": "G",
-        "shortcut-warehouse": "C",
-        "shortcut-basic-production": "V",
-        "shortcut-synthesis": "B",
-        "shortcut-save-blueprint": "Ctrl+S",
-        "shortcut-return-select": "Esc",
-        "shortcut-rotate": "R",
-        "shortcut-switch-device-mode": "Tab",
-        "shortcut-rotate-viewport": "Ctrl+R",
-        "shortcut-delete-device": "F",
-        "shortcut-move-selection": "M",
-        "shortcut-pan-viewport-up": "W",
-        "shortcut-pan-viewport-down": "S",
-        "shortcut-pan-viewport-left": "A",
-        "shortcut-pan-viewport-right": "D",
-        "shortcut-copy-selection": "Ctrl+C",
-        "shortcut-paste-selection": "Ctrl+V",
-        "shortcut-toggle-base-panel": "K",
-        "shortcut-toggle-blueprint-panel": "L",
-        "shortcut-toggle-history-panel": "H",
-        "shortcut-toggle-placement-panel": "P",
-        "shortcut-undo": "Ctrl+Z",
-        "shortcut-redo": "Ctrl+Y",
+        // AI-REMOVED 2026-08-03:
+        // Reason: 通用设置 localStorage 不再保存快捷键默认值。
+        // Trigger: ST2-RQ-002 快捷键设置独立化。
+        // Evidence: 快捷键由 v3-app-shortcuts 独立持久化。
+        // Replacement: KeyboardShortcutManager tests。
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        // "shortcut-quick-place": "Z",
+        // "shortcut-place-conveyor": "E",
+        // "shortcut-place-pipe": "Q",
+        // "shortcut-resources-power": "G",
+        // "shortcut-warehouse": "C",
+        // "shortcut-basic-production": "V",
+        // "shortcut-synthesis": "B",
+        // "shortcut-save-blueprint": "Ctrl+S",
+        // "shortcut-return-select": "Esc",
+        // "shortcut-rotate": "R",
+        // "shortcut-switch-device-mode": "Tab",
+        // "shortcut-rotate-viewport": "Ctrl+R",
+        // "shortcut-delete-device": "F",
+        // "shortcut-move-selection": "M",
+        // "shortcut-pan-viewport-up": "W",
+        // "shortcut-pan-viewport-down": "S",
+        // "shortcut-pan-viewport-left": "A",
+        // "shortcut-pan-viewport-right": "D",
+        // "shortcut-copy-selection": "Ctrl+C",
+        // "shortcut-paste-selection": "Ctrl+V",
+        // "shortcut-toggle-base-panel": "K",
+        // "shortcut-toggle-blueprint-panel": "L",
+        // "shortcut-toggle-history-panel": "H",
+        // "shortcut-toggle-placement-panel": "P",
+        // "shortcut-undo": "Ctrl+Z",
+        // "shortcut-redo": "Ctrl+Y",
         "game-show-device-names": true,
         "game-show-device-icons": true,
         "game-show-hotkeys": true,
@@ -87,7 +106,7 @@ describe("WorkbenchSettingsDialogController", () => {
 
     const hydratedController = new WorkbenchSettingsDialogController();
 
-  expect(hydratedController.selectedGroupId).toBe("shortcuts");
+    expect(hydratedController.selectedGroupId).toBe("game");
     expect(hydratedController.values["system-language"]).toBe("en-US");
     expect(hydratedController.values["system-theme"]).toBe("ayu-dark");
     expect(hydratedController.values["game-arknights-immediate-move"]).toBe(true);
@@ -100,19 +119,29 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["game-quick-place"]).toBe(true);
     expect(hydratedController.values["game-arknights-selection-right-dock-sync"]).toBe(true);
     expect(hydratedController.values["game-arknights-inspector-open-on-second-click"]).toBe(false);
-    expect(hydratedController.values["shortcut-quick-place"]).toBe("Z");
-    expect(hydratedController.values["shortcut-place-conveyor"]).toBe("E");
-    expect(hydratedController.values["shortcut-place-pipe"]).toBe("Q");
-    expect(hydratedController.values["shortcut-resources-power"]).toBe("G");
-    expect(hydratedController.values["shortcut-warehouse"]).toBe("C");
-    expect(hydratedController.values["shortcut-basic-production"]).toBe("V");
-    expect(hydratedController.values["shortcut-synthesis"]).toBe("B");
-    expect(hydratedController.values["shortcut-save-blueprint"]).toBe("Ctrl+S");
-    expect(hydratedController.values["shortcut-return-select"]).toBe("Esc");
-    expect(hydratedController.values["shortcut-rotate"]).toBe("R");
-    expect(hydratedController.values["shortcut-switch-device-mode"]).toBe("Tab");
-    expect(hydratedController.values["shortcut-rotate-viewport"]).toBe("Ctrl+R");
-    expect(hydratedController.values["shortcut-delete-device"]).toBe("F");
+    // AI-REMOVED 2026-08-03:
+    // Reason: 通用设置控制器不再 hydrate 快捷键值。
+    // Trigger: ST2-RQ-002 快捷键设置独立化。
+    // Evidence: values 中不应出现 shortcut-* 键。
+    // Replacement: 下方 shortcut-* 缺失断言。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(hydratedController.values["shortcut-quick-place"]).toBe("Z");
+    // expect(hydratedController.values["shortcut-place-conveyor"]).toBe("E");
+    // expect(hydratedController.values["shortcut-place-pipe"]).toBe("Q");
+    // expect(hydratedController.values["shortcut-resources-power"]).toBe("G");
+    // expect(hydratedController.values["shortcut-warehouse"]).toBe("C");
+    // expect(hydratedController.values["shortcut-basic-production"]).toBe("V");
+    // expect(hydratedController.values["shortcut-synthesis"]).toBe("B");
+    // expect(hydratedController.values["shortcut-save-blueprint"]).toBe("Ctrl+S");
+    // expect(hydratedController.values["shortcut-return-select"]).toBe("Esc");
+    // expect(hydratedController.values["shortcut-rotate"]).toBe("R");
+    // expect(hydratedController.values["shortcut-switch-device-mode"]).toBe("Tab");
+    // expect(hydratedController.values["shortcut-rotate-viewport"]).toBe("Ctrl+R");
+    // expect(hydratedController.values["shortcut-delete-device"]).toBe("F");
+    expect(Object.keys(hydratedController.values).some((key) => key.startsWith("shortcut-"))).toBe(false);
     expect(hydratedController.values["game-show-device-names"]).toBe(true);
     expect(hydratedController.values["game-show-device-icons"]).toBe(true);
     expect(hydratedController.values["game-collapse-device-modes"]).toBe(true);
@@ -293,32 +322,41 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-quick-place": true,
         "game-arknights-selection-right-dock-sync": true,
         "game-arknights-inspector-open-on-second-click": false,
-        "shortcut-quick-place": "Z",
-        "shortcut-place-conveyor": "E",
-        "shortcut-place-pipe": "Q",
-        "shortcut-resources-power": "G",
-        "shortcut-warehouse": "C",
-        "shortcut-basic-production": "V",
-        "shortcut-synthesis": "B",
-        "shortcut-save-blueprint": "Ctrl+S",
-        "shortcut-return-select": "Esc",
-        "shortcut-rotate": "R",
-        "shortcut-switch-device-mode": "Tab",
-        "shortcut-rotate-viewport": "Ctrl+R",
-        "shortcut-delete-device": "F",
-        "shortcut-move-selection": "M",
-        "shortcut-pan-viewport-up": "W",
-        "shortcut-pan-viewport-down": "S",
-        "shortcut-pan-viewport-left": "A",
-        "shortcut-pan-viewport-right": "D",
-        "shortcut-copy-selection": "Ctrl+C",
-        "shortcut-paste-selection": "Ctrl+V",
-        "shortcut-toggle-base-panel": "K",
-        "shortcut-toggle-blueprint-panel": "L",
-        "shortcut-toggle-history-panel": "H",
-        "shortcut-toggle-placement-panel": "P",
-        "shortcut-undo": "Ctrl+Z",
-        "shortcut-redo": "Ctrl+Y",
+        // AI-REMOVED 2026-08-03:
+        // Reason: 通用设置 localStorage 不再保存快捷键默认值。
+        // Trigger: ST2-RQ-002 快捷键设置独立化。
+        // Evidence: 快捷键由 v3-app-shortcuts 独立持久化。
+        // Replacement: KeyboardShortcutManager tests。
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        // "shortcut-quick-place": "Z",
+        // "shortcut-place-conveyor": "E",
+        // "shortcut-place-pipe": "Q",
+        // "shortcut-resources-power": "G",
+        // "shortcut-warehouse": "C",
+        // "shortcut-basic-production": "V",
+        // "shortcut-synthesis": "B",
+        // "shortcut-save-blueprint": "Ctrl+S",
+        // "shortcut-return-select": "Esc",
+        // "shortcut-rotate": "R",
+        // "shortcut-switch-device-mode": "Tab",
+        // "shortcut-rotate-viewport": "Ctrl+R",
+        // "shortcut-delete-device": "F",
+        // "shortcut-move-selection": "M",
+        // "shortcut-pan-viewport-up": "W",
+        // "shortcut-pan-viewport-down": "S",
+        // "shortcut-pan-viewport-left": "A",
+        // "shortcut-pan-viewport-right": "D",
+        // "shortcut-copy-selection": "Ctrl+C",
+        // "shortcut-paste-selection": "Ctrl+V",
+        // "shortcut-toggle-base-panel": "K",
+        // "shortcut-toggle-blueprint-panel": "L",
+        // "shortcut-toggle-history-panel": "H",
+        // "shortcut-toggle-placement-panel": "P",
+        // "shortcut-undo": "Ctrl+Z",
+        // "shortcut-redo": "Ctrl+Y",
         "game-show-device-names": true,
         "game-show-device-icons": false,
         "game-show-hotkeys": true,

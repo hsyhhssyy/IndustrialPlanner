@@ -20,6 +20,7 @@ import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/
 import type { PlacementGroup } from "@/app/state/state-impl";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
+import { KeyboardShortcutPrompt } from "@/app/shell/shared";
 import LucideChevronDown from "~icons/lucide/chevron-down";
 import {
   getVisiblePlacementOperationButtons,
@@ -523,7 +524,22 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
           />
         </span>
         <span className={cm(styles, labelClassName)}>{buttonLabel}</span>
-        {showDeviceHotkey ? <span className={cm(styles, "placement-button-hotkey")}>{hotkey}</span> : null}
+        {/* AI-REMOVED 2026-08-03:
+            Reason: 设备快捷键提示不再直接渲染文字。
+            Trigger: ST2-RQ-002 快捷键图片化展示。
+            Evidence: 下方 KeyboardShortcutPrompt 使用 input-prompts SVG。
+            Replacement: 下方 showDeviceHotkey 分支。
+            Risk: Low
+            Human Review: Required
+
+            Original code:
+            {showDeviceHotkey ? <span className={cm(styles, "placement-button-hotkey")}>{hotkey}</span> : null}
+        */}
+        {showDeviceHotkey ? (
+          <span className={cm(styles, "placement-button-hotkey")}>
+            <KeyboardShortcutPrompt shortcut={hotkey ?? ""} size="small" />
+          </span>
+        ) : null}
         {/* AI-REMOVED 2026-07-21:
             Reason: 变体端帽已替换为尾部独立 mode 图标下拉按钮。
             Trigger: 新设计要求去掉端帽，只在下拉按钮显示 mode 图标。
@@ -770,8 +786,21 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
           {button.iconSrc ? <img alt="" className={cm(styles, "button-icon-image")} src={button.iconSrc} /> : null}
         </span>
         {isTouchLayout ? null : <span className={cm(styles, "placement-button-label")}>{buttonLabel}</span>}
+        {/* AI-REMOVED 2026-08-03:
+            Reason: 操作按钮快捷键提示不再直接渲染文字。
+            Trigger: ST2-RQ-002 快捷键图片化展示。
+            Evidence: 下方 KeyboardShortcutPrompt 使用 input-prompts SVG。
+            Replacement: 下方快捷键提示分支。
+            Risk: Low
+            Human Review: Required
+
+            Original code:
+            <span className={cm(styles, "placement-button-hotkey")}>{hotkey}</span>
+        */}
         {!isTouchLayout && showShortcutHints && hotkey ? (
-          <span className={cm(styles, "placement-button-hotkey")}>{hotkey}</span>
+          <span className={cm(styles, "placement-button-hotkey")}>
+            <KeyboardShortcutPrompt shortcut={hotkey} size="small" />
+          </span>
         ) : null}
       </button>
     );
@@ -823,8 +852,21 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
             >
               <div className={cm(styles, "placement-panel-group-header")}>
                 <h3 id={sectionTitleId}>{t(section.titleKey)}</h3>
+                {/* AI-REMOVED 2026-08-03:
+                    Reason: 分组快捷键提示不再直接渲染文字。
+                    Trigger: ST2-RQ-002 快捷键图片化展示。
+                    Evidence: 下方 KeyboardShortcutPrompt 使用 input-prompts SVG。
+                    Replacement: 下方分组快捷键提示分支。
+                    Risk: Low
+                    Human Review: Required
+
+                    Original code:
+                    <span className={cm(styles, "placement-panel-group-shortcut")}>{section.shortcutKey}</span>
+                */}
                 {showShortcutHints && section.shortcutKey ? (
-                  <span className={cm(styles, "placement-panel-group-shortcut")}>{section.shortcutKey}</span>
+                  <span className={cm(styles, "placement-panel-group-shortcut")}>
+                    <KeyboardShortcutPrompt shortcut={section.shortcutKey} size="small" />
+                  </span>
                 ) : null}
               </div>
               <div className={cm(styles, isTouchLayout ? "placement-button-list is-single-column" : "placement-button-list")}>

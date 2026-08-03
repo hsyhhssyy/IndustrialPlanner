@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
 import { WorkbenchOverlapEntityMenuController } from "@/app/shell/state/overlap-entity-menu-state";
@@ -30,6 +31,12 @@ describe("createHypergryphMarqueeGestureModule", () => {
     const module = createHypergryphMarqueeGestureModule();
 
     expect(module.handle(keyDownEvent("KeyX"), context)).toEqual({ status: "handled" });
+    expect(appHost.internalActions.isShortcutFor).toHaveBeenCalledWith(
+      SHORTCUT_KEY.MARQUEE,
+      "KeyX",
+      "x",
+      { alt: false, ctrl: false, meta: false, shift: false },
+    );
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
       [
@@ -607,6 +614,9 @@ function createContext(options: {
       },
     },
     internalActions: {
+      isShortcutFor: vi.fn((shortcutId, code) => (
+        shortcutId === SHORTCUT_KEY.MARQUEE && code === "KeyX"
+      )),
       setActiveTool: vi.fn((activeTool) => {
         appHost.internalState.activeTool = activeTool;
       }),

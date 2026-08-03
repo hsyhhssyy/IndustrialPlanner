@@ -94,7 +94,16 @@ const _DEFAULT_APP_SHORTCUTS_STORAGE = {
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]: "B",
   [SHORTCUT_KEY.SAVE_BLUEPRINT]: "Ctrl+S",
-  [SHORTCUT_KEY.RETURN_SELECT]: "Esc",
+  // AI-REMOVED 2026-08-03:
+  // Reason: Escape 返回选择不再属于可配置快捷键默认值。
+  // Trigger: ST2-RQ-002 禁止绑定 Escape。
+  // Evidence: SHORTCUT_KEY.RETURN_SELECT 已归档。
+  // Replacement: select 手势硬编码 Escape。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // [SHORTCUT_KEY.RETURN_SELECT]: "Esc",
   [SHORTCUT_KEY.ROTATE]: "R",
   [SHORTCUT_KEY.SWITCH_DEVICE_MODE]: "Tab",
   [SHORTCUT_KEY.ROTATE_VIEWPORT]: "Ctrl+R",
@@ -1830,13 +1839,25 @@ describe("WorkbenchApp", () => {
     expect(toolbar).not.toBeNull();
     expect(toolbar?.classList.contains("canvas-right-dock-toolbar--shortcut")).toBe(true);
 
-    // 快捷键模式应渲染 kbd 徽章，而非 WorkbenchIcon SVG
+    // AI-CORRECTION 2026-08-03: 快捷键模式渲染 input-prompts 图片，而非文字 kbd 徽章。
     const iconElements = toolbar?.querySelectorAll("svg[data-workbench-icon]");
     expect(iconElements?.length).toBe(0);
 
-    const keyBadges = toolbar?.querySelectorAll(".canvas-right-dock-toolbar-shortcut-key");
-    expect(keyBadges).not.toBeNull();
-    expect(keyBadges!.length).toBeGreaterThan(0);
+    // AI-REMOVED 2026-08-03:
+    // Reason: 旧文字快捷键徽章已被共享图片提示组件替代。
+    // Trigger: ST2-RQ-002 图片化快捷键展示。
+    // Evidence: KeyboardShortcutPrompt 输出 img[data-key-token]。
+    // Replacement: 下方 input-prompts 图片断言。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // const keyBadges = toolbar?.querySelectorAll(".canvas-right-dock-toolbar-shortcut-key");
+    // expect(keyBadges).not.toBeNull();
+    // expect(keyBadges!.length).toBeGreaterThan(0);
+    const shortcutImages = toolbar?.querySelectorAll('img[data-key-token]');
+    expect(shortcutImages).not.toBeNull();
+    expect(shortcutImages!.length).toBeGreaterThan(0);
 
     // 标签应有外发光样式
     const labels = toolbar?.querySelectorAll(".canvas-right-dock-toolbar-label--glow");
@@ -2604,15 +2625,34 @@ describe("WorkbenchApp", () => {
     expect(dialog).not.toBeNull();
     // 2026-06-14: system 与 display 合并为「显示与系统」；arknights-operation 改为「操作」；
     // PWA 区域移入「其他」分组内部。
-    expect(groupTitles).toEqual(["显示与系统", "游戏", "操作", "快捷键", "其他", "调试"]);
+    // AI-REMOVED 2026-08-03:
+    // Reason: “快捷键”分组已取消，入口移入“游戏”分组并打开独立对话框。
+    // Trigger: ST2-RQ-002 快捷键设置收拢。
+    // Evidence: SettingsDialog 渲染 keyboardShortcutDialog.open action card。
+    // Replacement: 下方不含快捷键分组的断言。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(groupTitles).toEqual(["显示与系统", "游戏", "操作", "快捷键", "其他", "调试"]);
+    // expect(groupDescriptions).toEqual([
+    //   "语言、主题与显示设置。",
+    //   "显示风格调整",
+    //   "调整仿真工具中的操作逻辑。可以选择与游戏操作习惯对齐或开启增强选项。",
+    //   "编辑当前可自定义的快捷键设置。",
+    //   "其他功能与设置",
+    //   "一系列用于调试的设置内容。",
+    // ]);
+    expect(groupTitles).toEqual(["显示与系统", "游戏", "操作", "其他", "调试"]);
     expect(groupDescriptions).toEqual([
       "语言、主题与显示设置。",
       "显示风格调整",
       "调整仿真工具中的操作逻辑。可以选择与游戏操作习惯对齐或开启增强选项。",
-      "编辑当前可自定义的快捷键设置。",
       "其他功能与设置",
       "一系列用于调试的设置内容。",
     ]);
+    expect(dialog?.textContent).toContain("快捷键设置");
+    expect(dialog?.textContent).toContain("打开快捷键设置");
     expect(dialog?.textContent).toContain("自动创建分/汇流");
     expect(dialog?.textContent).toContain(
       "传送带/管道绘制到交汇处时，自动创建分流器和汇流器。",
@@ -2696,7 +2736,18 @@ describe("WorkbenchApp", () => {
 
     expect(shortcutsTab?.getAttribute("aria-selected")).toBe("true");
     expect(container.querySelector(".help-dialog")?.textContent).toContain("旋转画布");
-    expect(container.querySelector(".help-dialog")?.textContent).toContain("Ctrl+R");
+    // AI-REMOVED 2026-08-03:
+    // Reason: 操作说明中的快捷键已改为 input-prompts 图片。
+    // Trigger: ST2-RQ-002 图片化快捷键展示。
+    // Evidence: KeyboardShortcutPrompt 为组合键分别渲染 Ctrl、R 图片。
+    // Replacement: 下方图片 token 断言。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(container.querySelector(".help-dialog")?.textContent).toContain("Ctrl+R");
+    expect(container.querySelector('.help-dialog img[data-key-token="Ctrl"]')).not.toBeNull();
+    expect(container.querySelector('.help-dialog img[data-key-token="R"]')).not.toBeNull();
 
     act(() => {
       featureGuideTab?.click();

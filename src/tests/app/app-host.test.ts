@@ -1861,6 +1861,34 @@ describe("createAppHost", () => {
     expect(previewEntity?.definitionId).toBe("storager_1");
   });
 
+  it("uses the configured copy shortcut instead of the legacy hard-coded key", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "dummy-entity-2",
+    });
+    appHost.internalActions.setActiveTool("marquee");
+    appHost.internalActions.setShortcutFor(SHORTCUT_KEY.COPY_SELECTION, "Ctrl+J");
+
+    expect(appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyC",
+      key: "c",
+      keyCode: 67,
+      ctrlKey: true,
+    }))).toBe(false);
+    expect(appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyJ",
+      key: "j",
+      keyCode: 74,
+      ctrlKey: true,
+    }))).toBe(true);
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+  });
+
   it("copies the current selection as a temporary blueprint from the marquee touch button", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

@@ -4,10 +4,20 @@ import type { AppHost } from "@/app/host/app-host";
 import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
+import { KeyboardShortcutPrompt } from "@/app/shell/shared";
 import type { CanvasRightDockToolbarButtonId } from "@/app/state/state-impl";
 import type { UiKey } from "@/shared/i18n";
 import {
-  Fragment,
+  // AI-REMOVED 2026-08-03:
+  // Reason: 快捷键组合不再通过 Fragment 拼接文字 kbd。
+  // Trigger: ST2-RQ-002 快捷键图片化展示。
+  // Evidence: KeyboardShortcutPrompt 统一渲染组合键图片。
+  // Replacement: KeyboardShortcutPrompt from @/app/shell/shared。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // Fragment,
   type ComponentProps,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -24,6 +34,7 @@ interface CanvasRightDockToolbarDefinition {
   readonly labelKey: UiKey;
   icon: CanvasRightDockToolbarIconKind;
   tone?: CanvasRightDockToolbarTone;
+  shortcut?: string;
   shortcutKeyId?: ShortcutKeyId;
 }
 
@@ -41,7 +52,17 @@ const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
     labelKey: "action.exit",
     icon: "cancel",
     tone: "exit",
-    shortcutKeyId: SHORTCUT_KEY.RETURN_SELECT,
+    // AI-REMOVED 2026-08-03:
+    // Reason: Escape 不再属于可配置快捷键，退出按钮提示改用硬编码键名。
+    // Trigger: ST2-RQ-002 禁止任何快捷键绑定 Escape。
+    // Evidence: 返回选择手势已直接匹配 Escape。
+    // Replacement: 本对象的 shortcut: "Esc"。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // shortcutKeyId: SHORTCUT_KEY.RETURN_SELECT,
+    shortcut: "Esc",
   },
   "canvas-right-dock-toolbar-button-move": {
     labelKey: "tool.move",
@@ -147,12 +168,21 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
     }
   };
 
-  function renderShortcutKeys(shortcutString: string): string[] {
-    return shortcutString
-      .split("+")
-      .map((part) => part.trim())
-      .filter((part) => part !== "");
-  }
+  // AI-REMOVED 2026-08-03:
+  // Reason: 快捷键字符串拆分与文字 kbd 渲染已由共享图片组件替代。
+  // Trigger: ST2-RQ-002 快捷键图片化展示。
+  // Evidence: KeyboardShortcutPrompt 同时支持组合键与双槽位。
+  // Replacement: KeyboardShortcutPrompt from @/app/shell/shared。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // function renderShortcutKeys(shortcutString: string): string[] {
+  //   return shortcutString
+  //     .split("+")
+  //     .map((part) => part.trim())
+  //     .filter((part) => part !== "");
+  // }
 
   return (
     <div
@@ -174,17 +204,14 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
         const definition = CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS[buttonId];
         const label = t(definition.labelKey);
 
-        const shortcutString =
-          isShortcutMode && definition.shortcutKeyId
-            ? appHost.internalActions.getKeyboardShortcutFor(definition.shortcutKeyId)
-            : null;
+        const shortcutString = isShortcutMode
+          ? definition.shortcut
+            ?? (definition.shortcutKeyId
+              ? appHost.internalActions.getKeyboardShortcutFor(definition.shortcutKeyId)
+              : null)
+          : null;
 
-        const shortcutKeys =
-          shortcutString !== null && shortcutString !== ""
-            ? renderShortcutKeys(shortcutString)
-            : null;
-
-        const showShortcutBadge = isShortcutMode && shortcutKeys !== null && shortcutKeys.length > 0;
+        const showShortcutBadge = isShortcutMode && shortcutString !== null && shortcutString !== "";
 
         return (
           <button
@@ -207,18 +234,20 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
           >
             {showShortcutBadge ? (
               <>
-                {shortcutKeys.map((key, i) => (
-                  <Fragment key={i}>
-                    {i > 0 && (
-                      <span className={cm(styles, "canvas-right-dock-toolbar-shortcut-plus")}>
-                        +
-                      </span>
-                    )}
-                    <kbd className={cm(styles, "canvas-right-dock-toolbar-shortcut-key")}>
-                      {key}
-                    </kbd>
-                  </Fragment>
-                ))}
+                {/* AI-REMOVED 2026-08-03:
+                    Reason: 画布工具栏快捷键不再以文字 kbd 与加号拼接。
+                    Trigger: ST2-RQ-002 快捷键图片化展示。
+                    Evidence: KeyboardShortcutPrompt 使用 public/input-prompts SVG。
+                    Replacement: 下方 KeyboardShortcutPrompt。
+                    Risk: Low
+                    Human Review: Required
+
+                    Original code:
+                    shortcutKeys.map((key, i) => (
+                      <Fragment key={i}>...</Fragment>
+                    ))
+                */}
+                <KeyboardShortcutPrompt shortcut={shortcutString ?? ""} size="small" />
               </>
             ) : (
               <WorkbenchIcon

@@ -69,6 +69,13 @@ const PAN_SHORTCUT_CODE: Record<string, string> = {
   [SHORTCUT_KEY.PAN_VIEWPORT_RIGHT]: "KeyD",
 };
 
+const PAN_SECONDARY_SHORTCUT_CODE: Record<string, string> = {
+  [SHORTCUT_KEY.PAN_VIEWPORT_UP]: "ArrowUp",
+  [SHORTCUT_KEY.PAN_VIEWPORT_DOWN]: "ArrowDown",
+  [SHORTCUT_KEY.PAN_VIEWPORT_LEFT]: "ArrowLeft",
+  [SHORTCUT_KEY.PAN_VIEWPORT_RIGHT]: "ArrowRight",
+};
+
 function createContext(options: { hypergryphOperationMode?: boolean } = {}): {
   context: GestureActionContext<AppHost>;
   moveViewportByClientPixelVector: ReturnType<typeof vi.fn>;
@@ -76,8 +83,22 @@ function createContext(options: { hypergryphOperationMode?: boolean } = {}): {
 } {
   const { hypergryphOperationMode = true } = options;
   const moveViewportByClientPixelVector = vi.fn();
+  // AI-REMOVED 2026-08-03:
+  // Reason: mock 不能再只识别 WASD 主槽位，否则无法验证方向键等效绑定。
+  // Trigger: ST2-RQ-002 双槽位视口平移。
+  // Evidence: 下方 mock 同时检查 PAN_SHORTCUT_CODE 与 PAN_SECONDARY_SHORTCUT_CODE。
+  // Replacement: 下方 isShortcutFor mock。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const isShortcutFor = vi.fn(
+  //   (key: string, code: string | null) => PAN_SHORTCUT_CODE[key] === code,
+  // );
   const isShortcutFor = vi.fn(
-    (key: string, code: string | null) => PAN_SHORTCUT_CODE[key] === code,
+    (key: string, code: string | null) => (
+      PAN_SHORTCUT_CODE[key] === code || PAN_SECONDARY_SHORTCUT_CODE[key] === code
+    ),
   );
 
   const workspace = {
@@ -174,6 +195,29 @@ describe("createHypergryphKeyboardViewportPanModule", () => {
       advanceRafFrame(1000);
 
       expect(moveViewportByClientPixelVector).toHaveBeenCalledTimes(1);
+      expect(moveViewportByClientPixelVector).toHaveBeenCalledWith({
+        startClientPixel: { x: 0, y: 0 },
+        endClientPixel: expectedDelta,
+      });
+    }
+  });
+
+  it("treats all four arrow keys as equivalent viewport pan bindings", () => {
+    const expectations: Array<[string, { x: number; y: number }]> = [
+      ["ArrowUp", { x: 0, y: 320 }],
+      ["ArrowDown", { x: 0, y: -320 }],
+      ["ArrowLeft", { x: 320, y: 0 }],
+      ["ArrowRight", { x: -320, y: 0 }],
+    ];
+
+    for (const [code, expectedDelta] of expectations) {
+      const { context, moveViewportByClientPixelVector } = createContext();
+      const module = createHypergryphKeyboardViewportPanModule();
+
+      module.handle(keyDownEvent(code, code), context);
+      advanceRafFrame(0);
+      advanceRafFrame(1000);
+
       expect(moveViewportByClientPixelVector).toHaveBeenCalledWith({
         startClientPixel: { x: 0, y: 0 },
         endClientPixel: expectedDelta,

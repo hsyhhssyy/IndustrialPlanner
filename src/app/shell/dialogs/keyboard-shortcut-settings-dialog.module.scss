@@ -1,0 +1,240 @@
+.keyboard-shortcut-dialog-body {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.keyboard-shortcut-list {
+  display: grid;
+  min-height: 0;
+  max-height: 100%;
+  overflow: auto;
+  background: var(--surface-1);
+}
+
+.keyboard-shortcut-list-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(288px, auto);
+  align-items: center;
+  gap: 14px;
+  min-height: 30px;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--surface-2) 92%, var(--surface-1));
+  color: var(--text-2);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+
+.keyboard-shortcut-list-header-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(132px, 144px));
+  justify-content: end;
+  gap: 8px;
+  text-align: center;
+}
+
+.keyboard-shortcut-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(288px, auto);
+  align-items: center;
+  gap: 14px;
+  min-height: 50px;
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
+}
+
+.keyboard-shortcut-row:last-child {
+  border-bottom: 0;
+}
+
+.keyboard-shortcut-label {
+  min-width: 0;
+  margin: 0;
+  color: var(--text-0);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.keyboard-shortcut-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(132px, 144px));
+  justify-content: end;
+  gap: 8px;
+}
+
+.keyboard-shortcut-slot {
+  position: relative;
+  min-width: 0;
+}
+
+.keyboard-shortcut-slot-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 40px;
+  padding: 3px 20px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.keyboard-shortcut-slot-button:hover,
+.keyboard-shortcut-slot-button:focus-visible,
+.keyboard-shortcut-slot-button.is-capturing {
+  border-color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface-2));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-soft) 76%, transparent);
+}
+
+.keyboard-shortcut-slot[data-empty="true"] .keyboard-shortcut-slot-button {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--surface-2) 62%, var(--surface-1));
+}
+
+.keyboard-shortcut-clear-button {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.58;
+}
+
+.keyboard-shortcut-slot:hover .keyboard-shortcut-clear-button,
+.keyboard-shortcut-clear-button:focus-visible {
+  background: var(--surface-3);
+  color: var(--text-0);
+  opacity: 1;
+}
+
+.keyboard-shortcut-capture-text,
+.keyboard-shortcut-empty-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+}
+
+.keyboard-shortcut-empty-text {
+  color: var(--text-2);
+}
+
+.keyboard-shortcut-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 9px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-1);
+}
+
+.keyboard-shortcut-reset-button,
+.keyboard-shortcut-confirm-actions button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-0);
+}
+
+.keyboard-shortcut-confirm-body {
+  padding: 0;
+}
+
+.keyboard-shortcut-confirm-content {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+  color: var(--text-1);
+}
+
+.keyboard-shortcut-conflict-message {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+}
+
+.keyboard-shortcut-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.keyboard-shortcut-confirm-actions .is-primary {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: #fff;
+}
+
+@media (max-width: 800px) {
+  .keyboard-shortcut-list-header {
+    grid-template-columns: minmax(118px, 1fr) minmax(286px, auto);
+    gap: 8px;
+    padding-inline: 8px;
+  }
+
+  .keyboard-shortcut-list-header-slots {
+    grid-template-columns: repeat(2, minmax(132px, 140px));
+    gap: 6px;
+  }
+
+  .keyboard-shortcut-row {
+    grid-template-columns: minmax(118px, 1fr) minmax(286px, auto);
+    gap: 8px;
+    min-height: 48px;
+    padding: 4px 8px;
+  }
+
+  .keyboard-shortcut-slots {
+    grid-template-columns: repeat(2, minmax(132px, 140px));
+    gap: 6px;
+  }
+
+  .keyboard-shortcut-slot-button {
+    min-height: 38px;
+  }
+}
+
+@media (max-height: 420px) {
+  .keyboard-shortcut-row {
+    min-height: 44px;
+    padding-block: 3px;
+  }
+
+  .keyboard-shortcut-slot-button {
+    min-height: 36px;
+  }
+
+  .keyboard-shortcut-footer {
+    padding-block: 7px;
+  }
+}
+
+@media (hover: none) {
+  .keyboard-shortcut-clear-button {
+    opacity: 0.78;
+  }
+}

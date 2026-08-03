@@ -53,6 +53,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
 
       if (event.type === "key down") {
         const shortcut = resolveTempBlueprintShortcut({
+          appHost: context.appHost,
           code: event.code,
           key: event.key,
           modifiers: event.modifiers,
@@ -709,6 +710,7 @@ function copySelectionAsTempBlueprint(options: {
 }
 
 function resolveTempBlueprintShortcut(options: {
+  appHost: AppHost;
   code: string | null;
   key: string | null;
   modifiers: {
@@ -718,35 +720,46 @@ function resolveTempBlueprintShortcut(options: {
     shift: boolean;
   };
 }): TempBlueprintShortcut | null {
-  if (
-    options.modifiers.alt
-    || options.modifiers.shift
-    || (!options.modifiers.ctrl && !options.modifiers.meta)
-  ) {
-    return null;
-  }
-
-  if (matchesKeyboardKey(options, "KeyC", "c")) {
+  if (options.appHost.internalActions.isShortcutFor(
+    SHORTCUT_KEY.COPY_SELECTION,
+    options.code,
+    options.key,
+    options.modifiers,
+  )) {
     return "copy";
   }
 
-  if (matchesKeyboardKey(options, "KeyV", "v")) {
+  if (options.appHost.internalActions.isShortcutFor(
+    SHORTCUT_KEY.PASTE_SELECTION,
+    options.code,
+    options.key,
+    options.modifiers,
+  )) {
     return "paste";
   }
 
   return null;
 }
 
-function matchesKeyboardKey(
-  options: {
-    code: string | null;
-    key: string | null;
-  },
-  code: string,
-  key: string,
-): boolean {
-  return options.code === code || options.key?.toLowerCase() === key;
-}
+// AI-REMOVED 2026-08-03:
+// Reason: 临时蓝图复制/粘贴已统一通过 KeyboardShortcutManager 匹配，不再需要本地硬编码键名比较。
+// Trigger: ST2-RQ-002 要求 COPY_SELECTION / PASTE_SELECTION 修改后立即影响蓝图放置模式。
+// Evidence: resolveTempBlueprintShortcut 已调用 appHost.internalActions.isShortcutFor。
+// Replacement: resolveTempBlueprintShortcut in this file。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function matchesKeyboardKey(
+//   options: {
+//     code: string | null;
+//     key: string | null;
+//   },
+//   code: string,
+//   key: string,
+// ): boolean {
+//   return options.code === code || options.key?.toLowerCase() === key;
+// }
 
 function isEditableKeyboardTarget(sourceEvent: unknown): boolean {
   const target = (sourceEvent as { target?: unknown } | null)?.target;

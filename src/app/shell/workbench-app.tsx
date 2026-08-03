@@ -617,14 +617,23 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         }),
       },
     },
-    // 所有 keybinding 类型设置统一走 shortcutReader/shortcutWriter
-    shortcutReader: (key) => appHost.internalActions.getKeyboardShortcutFor(key),
-    shortcutWriter: (key, value) => {
-      appHost.internalActions.setShortcutFor(key, value);
-    },
-    shortcutResetAll: () => {
-      appHost.internalActions.resetAllShortcutsToDefaults();
-    },
+    // AI-REMOVED 2026-08-03:
+    // Reason: 通用设置控制器不再代理快捷键读写与重置。
+    // Trigger: ST2-RQ-002 新建独立快捷键设置对话框。
+    // Evidence: KeyboardShortcutSettingsDialog 直接调用 appHost internalActions。
+    // Replacement: keyboard-shortcut-settings-dialog.tsx。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // // 所有 keybinding 类型设置统一走 shortcutReader/shortcutWriter
+    // shortcutReader: (key) => appHost.internalActions.getKeyboardShortcutFor(key),
+    // shortcutWriter: (key, value) => {
+    //   appHost.internalActions.setShortcutFor(key, value);
+    // },
+    // shortcutResetAll: () => {
+    //   appHost.internalActions.resetAllShortcutsToDefaults();
+    // },
   }));
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const leftDockSuppressed = appHost.internalState.workbench.leftDockSuppressed;

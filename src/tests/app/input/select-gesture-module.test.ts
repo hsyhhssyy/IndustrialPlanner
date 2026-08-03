@@ -1,7 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { makeAutoObservable } from "mobx";
 
-import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
+// AI-REMOVED 2026-08-03:
+// Reason: 返回选择模式不再依赖 SHORTCUT_KEY.RETURN_SELECT。
+// Trigger: ST2-RQ-002 禁止绑定 Escape。
+// Evidence: select 手势直接匹配 Escape，测试断言 isShortcutFor 未被调用。
+// Replacement: 本文件的 Escape 硬编码测试。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
 import {
@@ -642,7 +651,7 @@ describe("createHypergryphSelectGestureModule", () => {
     expect(setActiveTool).not.toHaveBeenCalled();
   });
 
-  it("returns to select mode when the return-select shortcut is pressed", () => {
+  it("returns to select mode when the hardcoded Escape key is pressed", () => {
     const { context, isShortcutFor, setActiveTool } = createContext("logistics-placement");
     const module = createHypergryphSelectGestureModule();
 
@@ -655,12 +664,22 @@ describe("createHypergryphSelectGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "handled" });
-    expect(isShortcutFor).toHaveBeenCalledWith(
-      SHORTCUT_KEY.RETURN_SELECT,
-      "Escape",
-      "Escape",
-      { alt: false, ctrl: false, meta: false, shift: false },
-    );
+    // AI-REMOVED 2026-08-03:
+    // Reason: Escape 不再经过可配置快捷键匹配。
+    // Trigger: ST2-RQ-002 禁止绑定 Escape。
+    // Evidence: 结果 handled 且 isShortcutFor 未被调用。
+    // Replacement: 下方 not.toHaveBeenCalled 断言。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(isShortcutFor).toHaveBeenCalledWith(
+    //   SHORTCUT_KEY.RETURN_SELECT,
+    //   "Escape",
+    //   "Escape",
+    //   { alt: false, ctrl: false, meta: false, shift: false },
+    // );
+    expect(isShortcutFor).not.toHaveBeenCalled();
     expect(setActiveTool).toHaveBeenCalledWith("select");
   });
 
@@ -776,9 +795,19 @@ function createContext(
   const setRightDockActiveTab = vi.fn();
   const toggleRightDock = vi.fn();
   const openDialog = vi.fn();
-  const isShortcutFor = vi.fn((shortcutKeyId: string, code: string | null) => (
-    shortcutKeyId === SHORTCUT_KEY.RETURN_SELECT && code === "Escape"
-  ));
+  // AI-REMOVED 2026-08-03:
+  // Reason: select 手势不再通过可配置 RETURN_SELECT 快捷键匹配 Escape。
+  // Trigger: ST2-RQ-002 禁止绑定 Escape。
+  // Evidence: createHypergryphSelectGestureModule 直接判断 event.code / event.key。
+  // Replacement: 下方只用于验证未调用的 mock。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const isShortcutFor = vi.fn((shortcutKeyId: string, code: string | null) => (
+  //   shortcutKeyId === SHORTCUT_KEY.RETURN_SELECT && code === "Escape"
+  // ));
+  const isShortcutFor = vi.fn(() => false);
   const isDedicatedLogisticsDevice = vi.fn((definitionId: string) => [
     "belt_straight_1x1",
     "belt_turn_cw_1x1",

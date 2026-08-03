@@ -341,9 +341,21 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(6);
     expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-select"]')?.classList.contains("is-active")).toBe(true);
     expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-marquee"]')?.classList.contains("is-active")).toBe(false);
-    expect(visiblePanel.textContent).toContain("Esc");
-    expect(visiblePanel.textContent).toContain("X");
-    expect(visiblePanel.textContent).toContain("G");
+    // AI-REMOVED 2026-08-03:
+    // Reason: 快捷键提示已从文字改为 public/input-prompts 图片。
+    // Trigger: ST2-RQ-002 图片化快捷键展示。
+    // Evidence: KeyboardShortcutPrompt 在 img[data-key-token] 上保留语义 token。
+    // Replacement: 下方图片 token 断言。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(visiblePanel.textContent).toContain("Esc");
+    // expect(visiblePanel.textContent).toContain("X");
+    // expect(visiblePanel.textContent).toContain("G");
+    expect(visiblePanel.querySelector('img[data-key-token="Esc"]')).not.toBeNull();
+    expect(visiblePanel.querySelector('img[data-key-token="X"]')).not.toBeNull();
+    expect(visiblePanel.querySelector('img[data-key-token="G"]')).not.toBeNull();
     expect(appHost.internalState.runtime.activePanel).toBeNull();
     expect(appHost.internalState.activeTool).toBe("select");
   });
