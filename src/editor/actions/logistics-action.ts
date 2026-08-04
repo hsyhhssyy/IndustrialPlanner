@@ -682,42 +682,115 @@ function resolveEffectiveSingleBendRouteOrder(options: {
   routeOrder: LogisticsRouteOrder;
   allowTemporaryOrderFlip: boolean;
 }): LogisticsRouteOrder {
-  if (!options.allowTemporaryOrderFlip || options.replacingEntityId === null) {
+  if (!options.allowTemporaryOrderFlip) {
     return options.routeOrder;
   }
 
-  const start = resolveSourceStartGridPoint(options.source);
-  const currentPoints = generateSingleBendPathPoints({
-    start,
-    target: options.targetPoint,
-    routeOrder: options.routeOrder,
-  });
-  if (
-    !doesFirstStepOverlapExistingLogistics({
+  // 从已有物流续接时，检查首步是否与现有物流重叠。
+  if (options.replacingEntityId !== null) {
+    const start = resolveSourceStartGridPoint(options.source);
+    const currentPoints = generateSingleBendPathPoints({
+      start,
+      target: options.targetPoint,
+      routeOrder: options.routeOrder,
+    });
+    if (
+      !doesFirstStepOverlapExistingLogistics({
+        context: options.context,
+        kind: options.kind,
+        points: currentPoints,
+        replacingEntityId: options.replacingEntityId,
+      })
+    ) {
+      return options.routeOrder;
+    }
+
+    const flippedOrder = flipRouteOrder(options.routeOrder);
+    const flippedPoints = generateSingleBendPathPoints({
+      start,
+      target: options.targetPoint,
+      routeOrder: flippedOrder,
+    });
+
+    return doesFirstStepOverlapExistingLogistics({
       context: options.context,
       kind: options.kind,
-      points: currentPoints,
+      points: flippedPoints,
       replacingEntityId: options.replacingEntityId,
     })
-  ) {
-    return options.routeOrder;
+      ? options.routeOrder
+      : flippedOrder;
   }
 
-  const flippedOrder = flipRouteOrder(options.routeOrder);
-  const flippedPoints = generateSingleBendPathPoints({
-    start,
-    target: options.targetPoint,
-    routeOrder: flippedOrder,
-  });
+  // 从设备端口全新起笔时，当前线序可能使路径穿入源设备内部，
+  // 此时尝试翻转为另一线序。
+  if (options.source.type === "device-port") {
+    const start = resolveSourceStartGridPoint(options.source);
+    const currentPoints = generateSingleBendPathPoints({
+      start,
+      target: options.targetPoint,
+      routeOrder: options.routeOrder,
+    });
+    if (doesSingleBendPathCrossSourceDevice({
+      context: options.context,
+      source: options.source,
+      points: currentPoints,
+    })) {
+      const flippedOrder = flipRouteOrder(options.routeOrder);
+      const flippedPoints = generateSingleBendPathPoints({
+        start,
+        target: options.targetPoint,
+        routeOrder: flippedOrder,
+      });
+      if (!doesSingleBendPathCrossSourceDevice({
+        context: options.context,
+        source: options.source,
+        points: flippedPoints,
+      })) {
+        return flippedOrder;
+      }
+    }
+  }
 
-  return doesFirstStepOverlapExistingLogistics({
-    context: options.context,
-    kind: options.kind,
-    points: flippedPoints,
-    replacingEntityId: options.replacingEntityId,
-  })
-    ? options.routeOrder
-    : flippedOrder;
+  return options.routeOrder;
+}
+
+/**
+ * 检查单拐路径是否穿入源设备内部。
+ * 路径起点是 outsideGridPoint（已在设备外），因此从 index=1 开始检查。
+ */
+function doesSingleBendPathCrossSourceDevice(options: {
+  context: LogisticsActionContext;
+  source: DevicePortEndpoint;
+  points: readonly GridPoint[];
+}): boolean {
+  const currentDocument = options.context.document.getSnapshot();
+  const entity = findEntityById({
+    entityId: options.source.entityId,
+    document: currentDocument,
+    drafts: [],
+    baseDefinitions: options.context.workspace.registry.baseDefinitions,
+  });
+  if (entity === null) {
+    return false;
+  }
+
+  const definition = options.context.entityDefinitionMap.get(entity.definitionId);
+  if (definition === undefined) {
+    return false;
+  }
+
+  const deviceRect = resolveEntityGridRect({ entity, definition });
+
+  // 跳过起点（outsideGridPoint 已在设备外），从 index=1 开始检查。
+  for (let index = 1; index < options.points.length; index += 1) {
+    const point = options.points[index];
+    if (point !== undefined && isGridPointInsideRect(point, deviceRect)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function rebuildLogisticsDraft(options: {
