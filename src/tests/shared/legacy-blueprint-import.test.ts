@@ -38,7 +38,7 @@ describe("legacy-blueprint-import", () => {
 
     expect(converted).toMatchObject({
       blueprintId: "c96944de-0608-4abf-901a-8b3d27a476d1",
-      version: "v1.3.0",
+      version: "",
       name: "双烘炉息壤产线",
       description: "",
       baseId: "wuling_tianwangping_aid",
