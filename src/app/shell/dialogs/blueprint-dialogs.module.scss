@@ -421,7 +421,8 @@
 
 .save-blueprint-dialog .save-blueprint-form-content {
   gap: 14px;
-  overflow: hidden;
+  grid-auto-rows: max-content;
+  overflow: auto;
   padding-right: 0;
 }
 

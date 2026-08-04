@@ -9,7 +9,7 @@ export function normalizeBlueprintDocument(value: unknown): BlueprintDocument | 
   if (
     typeof value.schemaVersion !== "number"
     || !isNonEmptyString(value.blueprintId)
-    || !isNonEmptyString(value.version)
+    || typeof value.version !== "string"
     || !isNonEmptyString(value.name)
     || typeof value.description !== "string"
     || !isNonEmptyString(value.baseId)

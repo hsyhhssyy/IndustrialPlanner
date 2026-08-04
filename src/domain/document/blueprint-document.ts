@@ -6,7 +6,6 @@ import type {
 } from "./world-document";
 
 export const BLUEPRINT_SCHEMA_VERSION = 4;
-export const BLUEPRINT_VERSION = "v1.3.0";
 
 export interface BlueprintDocument {
 	schemaVersion: number;
@@ -45,7 +44,7 @@ export function createBlueprintDocument(
 	return {
 		schemaVersion: BLUEPRINT_SCHEMA_VERSION,
 		blueprintId: input.blueprintId ?? createUuid(),
-		version: input.version ?? BLUEPRINT_VERSION,
+		version: input.version ?? "",
 		name: input.name.trim(),
 		description: input.description?.trim() ?? "",
 		baseId: input.baseId,

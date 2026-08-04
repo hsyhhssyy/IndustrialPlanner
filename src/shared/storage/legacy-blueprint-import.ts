@@ -1,5 +1,4 @@
 import {
-  BLUEPRINT_VERSION,
   createBlueprintDocument,
   type BlueprintDocument,
 } from "@/domain/document/blueprint-document";
@@ -232,7 +231,7 @@ export function convertLegacyBlueprintJson(
   const initialVersionDocument: BlueprintDocument = {
     ...createBlueprintDocument({
       blueprintId,
-      version: normalizeOptionalString(options.version) ?? BLUEPRINT_VERSION,
+      version: normalizeOptionalString(options.version) ?? "",
       name: legacyBlueprint.name,
       description: legacyBlueprint.description,
       baseId: legacyBlueprint.baseId,

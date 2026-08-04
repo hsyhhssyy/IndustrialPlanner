@@ -38,6 +38,16 @@ interface SourceSelection {
   readonly itemType: string;
 }
 
+interface OutputSolveResult {
+  readonly movedAny: boolean;
+  readonly drainedStorageSlotIds: ReadonlySet<string>;
+}
+
+const inputViewNodeIdsByStorageSlotIdByTopology = new WeakMap<
+  CompiledSimulationTopology,
+  ReadonlyMap<string, readonly string[]>
+>();
+
 /** Stage 3 内部分段计时累加器，perfEnabled 时由 createNextTickSnapshot 注入。 */
 export interface SolveTransferGraphPerf {
   layerCount: number;
@@ -199,8 +209,8 @@ function searchUpstreamFromOutputNode(options: {
       return;
     }
 
-    const outputMoved = solveOutputNode(options.registry, options.topology, options.state, options.outputNode, options.nextAnchors, options.perf);
-    if (outputMoved) {
+    const outputResult = solveOutputNode(options.registry, options.topology, options.state, options.outputNode, options.nextAnchors, options.perf);
+    if (outputResult.movedAny) {
       markNodeVisited(options.state, options.outputNode);
     }
 
@@ -242,10 +252,30 @@ function searchUpstreamFromOutputNode(options: {
     return;
   }
 
-  solveOutputNode(options.registry, options.topology, options.state, options.outputNode, options.nextAnchors, options.perf);
+  const outputResult = solveOutputNode(
+    options.registry,
+    options.topology,
+    options.state,
+    options.outputNode,
+    options.nextAnchors,
+    options.perf,
+  );
   markNodeVisited(options.state, options.outputNode);
 
-  for (const inputNode of getDeviceInputViewNodes(options.topology, device)) {
+  for (const inputNode of getStorageCoupledInputViewNodes(
+    options.topology,
+    options.state,
+    device,
+    options.outputNode,
+  )) {
+    refreshStorageCoupledInputNodeAfterDrain({
+      registry: options.registry,
+      topology: options.topology,
+      state: options.state,
+      inputNode,
+      drainedStorageSlotIds: outputResult.drainedStorageSlotIds,
+      nextAnchors: options.nextAnchors,
+    });
     if (prepareInputNodeForAnchor(options.registry, options.topology, options.state, inputNode)) {
       options.nextAnchors.set(inputNode.id, inputNode);
     }
@@ -259,10 +289,11 @@ function solveOutputNode(
   node: CompiledSimulationNode,
   nextAnchors: Map<string, CompiledSimulationNode>,
   perf?: SolveTransferGraphPerf,
-): boolean {
+): OutputSolveResult {
   if (perf !== undefined) perf.outputNodeCount += 1;
 
   let movedAny = false;
+  const drainedStorageSlotIds = new Set<string>();
   let moved = true;
   while (moved) {
     moved = false;
@@ -297,6 +328,10 @@ function solveOutputNode(
         continue;
       }
 
+      const sourceStorageSlotId = resolveStorageSlotId(state, edgeState.sourceSlotId);
+      const sourceStateBeforeMove = state.persistent.slots[sourceStorageSlotId];
+      const sourceCountBeforeMove = sourceStateBeforeMove?.count ?? 0;
+      const sourceItemTypeBeforeMove = sourceStateBeforeMove?.itemType ?? null;
       const ok = moveOneItem({
         registry,
         topology,
@@ -312,6 +347,13 @@ function solveOutputNode(
       if (perf !== undefined) perf.moveCount += 1;
 
       movedAny = true;
+      const sourceStateAfterMove = state.persistent.slots[sourceStorageSlotId];
+      if (
+        sourceStateAfterMove?.count !== sourceCountBeforeMove
+        || sourceStateAfterMove?.itemType !== sourceItemTypeBeforeMove
+      ) {
+        drainedStorageSlotIds.add(sourceStorageSlotId);
+      }
       edgeState.shadowPush = "accept";
       edgeState.amount += 1;
       recordAdmissionMove(topology, state, edge.sourcePortId, edgeState.itemType);
@@ -346,7 +388,7 @@ function solveOutputNode(
       moved = true;
     }
   }
-  return movedAny;
+  return { movedAny, drainedStorageSlotIds };
 }
 
 function solveInputNode(
@@ -644,6 +686,110 @@ function getDeviceInputViewNodes(
     .map((nodeId) => topology.nodes[nodeId])
     .filter((node): node is CompiledSimulationNode => node !== undefined && node.viewRole === "input-view")
     .sort((left, right) => left.groupOrder - right.groupOrder);
+}
+
+function getStorageCoupledInputViewNodes(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  device: CompiledSimulationDevice,
+  outputNode: CompiledSimulationNode,
+): readonly CompiledSimulationNode[] {
+  // share-all 两端可能属于不同设备，但读写的是同一 canonical storage。
+  // 求解调度必须把这些 input-view 与设备自己的 input-view 一并处理。
+  const inputNodesByStorageSlotId = getInputViewNodeIdsByStorageSlotId(topology, state);
+  const inputNodeIds = new Set(getDeviceInputViewNodes(topology, device).map((node) => node.id));
+
+  for (const slotId of outputNode.slotIds) {
+    const storageSlotId = resolveStorageSlotId(state, slotId);
+    for (const inputNodeId of inputNodesByStorageSlotId.get(storageSlotId) ?? []) {
+      inputNodeIds.add(inputNodeId);
+    }
+  }
+
+  return topology.ordering.nodeOrder.flatMap((nodeId) => {
+    if (!inputNodeIds.has(nodeId)) {
+      return [];
+    }
+    const node = topology.nodes[nodeId];
+    return node === undefined ? [] : [node];
+  });
+}
+
+function getInputViewNodeIdsByStorageSlotId(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+): ReadonlyMap<string, readonly string[]> {
+  const cached = inputViewNodeIdsByStorageSlotIdByTopology.get(topology);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const mutableIndex = new Map<string, string[]>();
+  for (const nodeId of topology.ordering.nodeOrder) {
+    const node = topology.nodes[nodeId];
+    if (node === undefined || node.viewRole !== "input-view") {
+      continue;
+    }
+    const visitedStorageSlotIds = new Set<string>();
+    for (const slotId of node.slotIds) {
+      const storageSlotId = resolveStorageSlotId(state, slotId);
+      if (visitedStorageSlotIds.has(storageSlotId)) {
+        continue;
+      }
+      visitedStorageSlotIds.add(storageSlotId);
+      const nodeIds = mutableIndex.get(storageSlotId) ?? [];
+      nodeIds.push(node.id);
+      mutableIndex.set(storageSlotId, nodeIds);
+    }
+  }
+
+  inputViewNodeIdsByStorageSlotIdByTopology.set(topology, mutableIndex);
+  return mutableIndex;
+}
+
+function refreshStorageCoupledInputNodeAfterDrain(options: {
+  readonly registry: RegistryContract;
+  readonly topology: CompiledSimulationTopology;
+  readonly state: SimulationMutableRuntimeState;
+  readonly inputNode: CompiledSimulationNode;
+  readonly drainedStorageSlotIds: ReadonlySet<string>;
+  readonly nextAnchors: Map<string, CompiledSimulationNode>;
+}): void {
+  if (!options.inputNode.slotIds.some((slotId) =>
+    options.drainedStorageSlotIds.has(resolveStorageSlotId(options.state, slotId)),
+  )) {
+    return;
+  }
+
+  const nodeState = options.state.transient.nodes[options.inputNode.id];
+  if (nodeState === undefined) {
+    return;
+  }
+  // Stage 2 的组内互斥快照可能仍包含刚被清空的物品类型；若不刷新，
+  // share-all 入口会把已经空出的槽位误判为重复物品槽，并隔一个相位才恢复。
+  const currentItemTypes = new Set<string>();
+  for (const slotId of options.inputNode.slotIds) {
+    const storageSlotId = resolveStorageSlotId(options.state, slotId);
+    const itemType = options.state.persistent.slots[storageSlotId]?.itemType ?? null;
+    if (itemType !== null) {
+      currentItemTypes.add(itemType);
+    }
+  }
+  nodeState.excludedItemTypes = [...currentItemTypes].sort();
+
+  if (nodeState.resolveState !== "visited" || nodeState.result !== "solved-block") {
+    return;
+  }
+  nodeState.resolveState = "unresolved";
+  nodeState.result = "uncertain";
+  nodeState.blockReason = undefined;
+  unvisitUpstreamNonStrictOutputViews(
+    options.registry,
+    options.topology,
+    options.state,
+    options.inputNode,
+    options.nextAnchors,
+  );
 }
 
 function isStrictLogisticsDevice(device: CompiledSimulationDevice): boolean {

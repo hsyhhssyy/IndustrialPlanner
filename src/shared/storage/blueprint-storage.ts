@@ -573,7 +573,7 @@ function normalizeBlueprintDocument(
   if (
     typeof value.schemaVersion !== "number" ||
     !isNonEmptyString(value.blueprintId) ||
-    !isNonEmptyString(value.version) ||
+    typeof value.version !== "string" ||
     name === null ||
     description === null ||
     !isNonEmptyString(value.baseId) ||
