@@ -134,8 +134,10 @@ export interface RuntimeReservedItem {
 export interface RuntimeFixedWindowCounterState {
   windowStartTick: number;
   count: number;
-  /** 已完成窗口的计数环形缓冲（最多 6 个，即 60 秒）；不含当前窗口。 */
+  /** 已完成窗口的计数环形缓冲（最多 6 个 = ADMISSION_RATE_WINDOWS_PER_MINUTE）。最旧窗口可能仅部分落入过去 60 秒，oneMinuteCount 需配合 moveTicks 精确计算该窗口覆盖部分。 */
   pastWindowCounts: readonly number[];
+  /** 准入口每次输出的 tick 号（用于精确计算过去一分钟真实通过数量）。窗口滚动时 trim 60 秒以外的旧条目。 */
+  moveTicks: number[];
 }
 
 export interface SimulationTickTransientState {
@@ -553,7 +555,7 @@ function createInitialFixedWindowCounters(
   const counters: Record<string, RuntimeFixedWindowCounterState> = {};
   for (const portId of topology.ordering.portOrder) {
     if (portUsesFixedWindowCounter(topology, portId)) {
-      counters[portId] = { windowStartTick: 1, count: 0, pastWindowCounts: [] };
+      counters[portId] = { windowStartTick: 1, count: 0, pastWindowCounts: [], moveTicks: [] };
     }
   }
   return counters;
@@ -597,6 +599,9 @@ export function incrementFixedWindowCounterForCurrentWindow(
 ): void {
   const counter = ensureFixedWindowCounterForCurrentWindow(topology, state, portId);
   counter.count += Math.max(0, Math.trunc(amount));
+  for (let i = 0; i < Math.max(0, Math.trunc(amount)); i++) {
+    counter.moveTicks.push(state.tickNumber);
+  }
 }
 
 export function resetFixedWindowCounterForCurrentWindow(
@@ -608,6 +613,7 @@ export function resetFixedWindowCounterForCurrentWindow(
     windowStartTick: resolveCounterWindowStartTick(topology, state.tickNumber, portId),
     count: 0,
     pastWindowCounts: [],
+    moveTicks: [],
   };
 }
 
@@ -666,10 +672,15 @@ function ensureFixedWindowCounterForCurrentWindow(
     // 窗口滚动时，将旧窗口计数推入环形缓冲。
     const oldCount = counter?.count ?? 0;
     const oldPast = counter?.pastWindowCounts ?? [];
-    const nextPast = oldPast.length >= 6
+    // 环形缓冲最多保留 ADMISSION_RATE_WINDOWS_PER_MINUTE（6）个已完成窗口。
+    // oneMinuteCount 在最旧窗口上使用 moveTicks 精确计算，故这里保存完整计数。
+    const nextPast = oldPast.length >= ADMISSION_RATE_WINDOWS_PER_MINUTE
       ? [...oldPast.slice(1), oldCount]
       : [...oldPast, oldCount];
-    const nextCounter = { windowStartTick, count: 0, pastWindowCounts: nextPast };
+    // Trim moveTicks to last 60 seconds.
+    const cutoff = state.tickNumber - topology.standardTickRate * 60;
+    const nextMoveTicks = (counter?.moveTicks ?? []).filter((t) => t > cutoff);
+    const nextCounter = { windowStartTick, count: 0, pastWindowCounts: nextPast, moveTicks: nextMoveTicks };
     state.persistent.fixedWindowCounters[portId] = nextCounter;
     return nextCounter;
   }
@@ -772,6 +783,7 @@ function cloneFixedWindowCounterState(
     windowStartTick: counter.windowStartTick,
     count: counter.count,
     pastWindowCounts: [...counter.pastWindowCounts],
+    moveTicks: [...counter.moveTicks],
   };
 }
 

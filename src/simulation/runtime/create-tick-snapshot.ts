@@ -216,6 +216,7 @@ function createAdmissionCounterSnapshots(
       perMinuteLimit: port.admissionRule.perMinuteLimit,
       rateWindowCount: rateWindowCounter.count,
       pastWindowCounts: rateWindowCounter.pastWindowCounts,
+      moveTicks: rateWindowCounter.moveTicks,
     };
   }
 

@@ -331,7 +331,7 @@ export function AdmissionRuleInspector({
           </div>
 
           <div className={cm(styles, "admission-rule-count")} data-admission-current-count>
-            <span>总计已准入</span>
+            <span>总计</span>
             <strong>{row.runtimeCount}</strong>
           </div>
 
@@ -438,7 +438,7 @@ export function AdmissionRuleInspector({
           </div>
 
           <div className={cm(styles, "admission-rule-count")} data-admission-current-rate-window-count>
-            <span>过去一分钟已准入</span>
+            <span>过去一分钟</span>
             <strong>{row.runtimeOneMinuteCount}</strong>
           </div>
 

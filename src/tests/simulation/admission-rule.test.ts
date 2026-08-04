@@ -121,6 +121,25 @@ describe("admission rule runtime counter", () => {
       });
   });
 
+  it("oneMinuteCount spans exactly 6 ten-second windows, not 7", async () => {
+    const report = await runBlueprintSimulation({
+      blueprint: createAdmissionBlueprint({
+        sourceItemId: "item_iron_ore",
+        admissionItemId: "item_iron_ore",
+        limit: null,
+        perMinuteLimit: 6,
+      }),
+      registry: createRegistryContract(),
+      maxTickNumber: 2400,
+    });
+
+    const admissionCounter = report.ticks.at(-1)?.devices.admission?.admissionCounters?.["item_input:in_w"];
+    expect(admissionCounter).toBeDefined();
+    // 6/min = 每窗 1 个，过去一分钟 = 6 窗，预期 = 6。
+    // Bug: pastWindowCounts 最多存 6 个已完成窗口 + 当前窗口 = 7 窗 → 7 件。
+    expect(admissionCounter!.oneMinuteCount).toBe(6);
+  });
+
   it("does not admit a different item", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createAdmissionBlueprint({

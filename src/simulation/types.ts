@@ -623,8 +623,10 @@ export interface RuntimeAdmissionCounterSnapshot {
   readonly count: number;
   readonly perMinuteLimit: number | null;
   readonly rateWindowCount: number;
-  /** 已完成窗口的计数环形缓冲（最多 6 个 10 秒窗口 = 60 秒）；不含当前窗口。 */
+  /** 已完成窗口的计数环形缓冲（最多 6 个 = ADMISSION_RATE_WINDOWS_PER_MINUTE）。最旧窗口可能仅部分落入 60 秒，oneMinuteCount 需配合 moveTicks 精确计算。 */
   readonly pastWindowCounts: readonly number[];
+  /** 每次物品通过准入口输出口的 tick 号（用于精确计算过去一分钟真实通过数量）。 */
+  readonly moveTicks: readonly number[];
 }
 
 export interface RuntimeDeviceRecipeSnapshot {

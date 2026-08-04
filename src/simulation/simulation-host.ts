@@ -21,6 +21,7 @@ import {
   type SimulationWorkerBridge,
 } from "./action-impl";
 import { convertSimulationTicksToSeconds } from "./tick-rate";
+import { ADMISSION_RATE_WINDOWS_PER_MINUTE } from "@/domain/registry";
 import {
   createSimulationStateReadWrite,
   type SimulationStateReadWrite,
@@ -419,21 +420,37 @@ function resolveDeviceRuntimeStatus(options: {
     //         ?? null,
     //     },
     admissionCounters: Object.fromEntries(
-      Object.entries(deviceSnapshot.admissionCounters ?? {}).map(([portRef, counter]) => [
-        portRef,
-        {
-          portGroupId: counter.portGroupId,
-          portId: counter.portDefinitionId,
-          itemType: counter.itemId,
-          limit: counter.limit,
-          count: counter.count,
-          perMinuteLimit: counter.perMinuteLimit,
-          rateWindowCount: counter.rateWindowCount,
-          oneMinuteCount:
-            (counter.pastWindowCounts ?? []).reduce((sum, c) => sum + c, 0)
-            + counter.rateWindowCount,
-        },
-      ]),
+      Object.entries(deviceSnapshot.admissionCounters ?? {}).map(([portRef, counter]) => {
+        const windowTicks = options.topology!.standardTickRate * 10;
+        // AI-CORRECTION 2026-08-04: 窗口对齐起点复用 resolveCounterWindowStartTick 逻辑（tick 1 相位）。
+        const currentWindowStartTick = options.topology!.standardTickRate > 0
+          ? 1 + Math.floor(Math.max(0, options.snapshot!.tickNumber - 1) / windowTicks) * windowTicks
+          : 1;
+        const cutoff = options.snapshot!.tickNumber - options.topology!.standardTickRate * 60;
+        // pastWindowCounts 存 6 个已完成窗口：[0]=最旧（可能部分超出 60s）, [1..5]=完整窗口。
+        // oneMinuteCount = 精算最旧窗口在 cutoff 内的部分 + 累加 [1..5] + 当前窗口。
+        const oldestWindowStart = currentWindowStartTick - ADMISSION_RATE_WINDOWS_PER_MINUTE * windowTicks;
+        const earliestFullWindowStart = currentWindowStartTick - (ADMISSION_RATE_WINDOWS_PER_MINUTE - 1) * windowTicks;
+        const oldestPartial = (counter.moveTicks ?? []).reduce(
+          (sum, t) => t >= oldestWindowStart && t < earliestFullWindowStart && t > cutoff ? sum + 1 : sum,
+          0,
+        );
+        const fullWindowsSum = counter.pastWindowCounts.slice(1).reduce((sum, c) => sum + c, 0);
+        const oneMinuteCount = oldestPartial + fullWindowsSum + counter.rateWindowCount;
+        return [
+          portRef,
+          {
+            portGroupId: counter.portGroupId,
+            portId: counter.portDefinitionId,
+            itemType: counter.itemId,
+            limit: counter.limit,
+            count: counter.count,
+            perMinuteLimit: counter.perMinuteLimit,
+            rateWindowCount: counter.rateWindowCount,
+            oneMinuteCount,
+          },
+        ] as const;
+      }),
     ),
     powerStatus: options.topology.devices[compiledDeviceId]?.powerStatus ?? null,
     slotItems: resolveDeviceRuntimeSlotItems({
