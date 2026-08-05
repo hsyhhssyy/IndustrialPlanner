@@ -1,6 +1,6 @@
 ---
 
-description: "对当前工作区执行完整的代码质量检查（eslint、tsc、test、build、test:blueprint），并以表格汇总未通过的测试"
+description: "对当前工作区执行完整的代码质量检查（eslint、tsc、test、build、e2e、test:blueprint），并以表格汇总未通过的测试"
 argument-hint: "[额外说明...]"
 agent: "agent"
 ---
@@ -107,8 +107,8 @@ bash scripts/check/full-check.sh eslint "$RUN_DIR"
 * 必须按顺序执行脚本。
 * 每次终端调用只能执行一条命令。
 * 不得使用 `&&`、`||`、`;`、`|` 拼接多个命令。
-* 不得自行拼写 eslint、tsc、test、build、test:blueprint 的原始命令，只能调用 `scripts/check/full-check.sh` 的子命令。
-* `test` 和 `blueprint` 必须后台启动后用 `poll` 轮询，不可同步等待。
+* 不得自行拼写 eslint、tsc、test、build、test:e2e、test:blueprint 的原始命令，只能调用 `scripts/check/full-check.sh` 的子命令。
+* `test`、`e2e` 和 `blueprint` 必须后台启动后用 `poll` 轮询，不可同步等待。
 * `poll` 的等待间隔不得超过 60 秒。
 * `sleep 60` 和 `poll` 必须拆成两次独立终端调用。
 * 不得重新初始化多个 `RUN_DIR`。
@@ -202,7 +202,43 @@ bash scripts/check/full-check.sh build "<RUN_DIR>"
 
 即使失败，也继续下一步。
 
-### 5. Blueprint 测试
+### 5. E2E 测试
+
+后台启动：
+
+```bash
+bash scripts/check/full-check.sh e2e "<RUN_DIR>" &
+```
+
+然后轮询，直到输出显示"已完成"。
+
+每次轮询前执行：
+
+```bash
+sleep 60
+```
+
+然后执行：
+
+```bash
+bash scripts/check/full-check.sh poll e2e "<RUN_DIR>"
+```
+
+注意：`sleep 60` 和 `poll` 必须分成两次终端调用，禁止写成 `sleep 60 && bash ...`。
+
+如果 `poll` 显示尚未完成，继续重复：
+
+```bash
+sleep 60
+```
+
+```bash
+bash scripts/check/full-check.sh poll e2e "<RUN_DIR>"
+```
+
+直到显示"已完成"。
+
+### 6. Blueprint 测试
 
 后台启动：
 
@@ -238,7 +274,7 @@ bash scripts/check/full-check.sh poll blueprint "<RUN_DIR>"
 
 直到显示“已完成”。
 
-### 6. 汇总
+### 7. 汇总
 
 执行：
 
@@ -268,6 +304,7 @@ bash scripts/check/full-check.sh summary "<RUN_DIR>"
 | TypeScript   | `npx tsc -b --noEmit`         | 通过/失败 | 退出码 | 摘要 |
 | Vitest 全量测试  | `npm run test`                | 通过/失败 | 退出码 | 摘要 |
 | Build        | `npm run build`               | 通过/失败 | 退出码 | 摘要 |
+| E2E 测试     | `npm run test:e2e`            | 通过/失败 | 退出码 | 摘要 |
 | Blueprint 测试 | `npm run test:blueprint`      | 通过/失败 | 退出码 | 摘要 |
 
 ### 未通过的测试
