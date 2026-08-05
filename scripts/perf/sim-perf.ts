@@ -8,14 +8,26 @@
  * 记录到 .temp/sim-perf.md
  */
 
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
 
 import { runBlueprintSimulation } from "../../src/tests/simulation/blueprint-runner";
 import { loadBlueprintFromFile } from "../../src/tests/simulation/blueprint-test-helpers";
 import { createRegistryContract } from "../../src/registry";
+
+const __filename = fileURLToPath(import.meta.url);
+
+// ---- 常量 ----
+
+const BLUEPRINT_PATH = "public/blueprints/utimate-xiranite.json";
+const MAX_TICK = 3600;
+const OUTPUT_FILE = ".temp/sim-perf.md";
+const OUTPUT_DIR = ".temp";
+
+// ---- 辅助函数 ----
 
 // 解析 -n 参数
 function parseIterations(): number {
@@ -31,12 +43,6 @@ function parseIterations(): number {
   return 10; // 默认值
 }
 
-const BLUEPRINT_PATH = "public/blueprints/utimate-xiranite.json";
-const MAX_TICK = 3600;
-const ITERATIONS = parseIterations();
-const OUTPUT_FILE = ".temp/sim-perf.md";
-const OUTPUT_DIR = ".temp";
-
 // 生成本次运行的唯一标识
 function generateRunHash(): string {
   const now = new Date();
@@ -46,11 +52,6 @@ function generateRunHash(): string {
     `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
   );
 }
-
-const RUN_HASH = generateRunHash();
-const RUNS_DIR = resolve(`.temp/sim-perf/runs/${RUN_HASH}`);
-
-// ---- 辅助函数 ----
 
 function getGitHeadSha(): string {
   try {
@@ -133,7 +134,42 @@ function createTeeLogger(filePath: string): {
   };
 }
 
-// ---- 主流程 ----
+// ---- 子进程单次执行 ----
+
+async function runSingleAndExit(logFile: string): Promise<never> {
+  const tee = createTeeLogger(logFile);
+  const blueprint = loadBlueprintFromFile(BLUEPRINT_PATH);
+  const registry = createRegistryContract();
+  const start = performance.now();
+  await runBlueprintSimulation({
+    blueprint,
+    maxTickNumber: MAX_TICK,
+    registry,
+    perfEnabled: true,
+  });
+  const elapsed = performance.now() - start;
+  tee.restore();
+  // 父进程通过解析 stdout 获取耗时
+  console.log(`RESULT:${elapsed.toFixed(1)}`);
+  process.exit(0);
+}
+
+// --single 模式：子进程入口，执行单次仿真后退出
+const SINGLE_MODE_INDEX = process.argv.indexOf("--single");
+if (SINGLE_MODE_INDEX !== -1) {
+  const logFile = process.argv[SINGLE_MODE_INDEX + 1];
+  if (!logFile) {
+    console.error("--single requires a log file path");
+    process.exit(1);
+  }
+  await runSingleAndExit(logFile);
+}
+
+// ---- 正常模式 ----
+
+const ITERATIONS = parseIterations();
+const RUN_HASH = generateRunHash();
+const RUNS_DIR = resolve(`.temp/sim-perf/runs/${RUN_HASH}`);
 
 async function main(): Promise<void> {
   const isDirty = hasUncommittedChanges();
@@ -151,32 +187,37 @@ async function main(): Promise<void> {
   console.log(`📂 运行日志: ${RUNS_DIR}/`);
   console.log("");
 
-  const blueprint = loadBlueprintFromFile(BLUEPRINT_PATH);
-  const registry = createRegistryContract();
-
   const durations: number[] = [];
 
   for (let i = 1; i <= ITERATIONS; i++) {
     const logFile = resolve(`${RUNS_DIR}/run-${i}.console.log`);
-    const tee = createTeeLogger(logFile);
-
     console.log(`▶️  第 ${i}/${ITERATIONS} 次执行...`);
 
-    const start = performance.now();
-    await runBlueprintSimulation({
-      blueprint,
-      maxTickNumber: MAX_TICK,
-      registry,
-      perfEnabled: true,
-    });
-    const elapsed = performance.now() - start;
+    const result = spawnSync(
+      "npx",
+      ["tsx", "--tsconfig", "tsconfig.app.json", __filename, "--single", logFile],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] },
+    );
 
-    durations.push(elapsed);
-    console.log(`   ✅ 耗时: ${elapsed.toFixed(1)} ms`);
+    if (result.status !== 0) {
+      console.error(`   ❌ 第 ${i} 次执行失败，子进程退出码: ${result.status}`);
+      continue;
+    }
 
-    tee.restore();
-    // restore 后补一行原始 console 输出
-    console.log(`   📝 日志已写入: ${logFile}`);
+    const match = result.stdout.match(/RESULT:([\d.]+)/);
+    if (match) {
+      const elapsed = Number(match[1]);
+      durations.push(elapsed);
+      console.log(`   ✅ 耗时: ${elapsed.toFixed(1)} ms`);
+      console.log(`   📝 日志已写入: ${logFile}`);
+    } else {
+      console.error(`   ❌ 第 ${i} 次执行失败，无法解析耗时`);
+    }
+  }
+
+  if (durations.length === 0) {
+    console.error("❌ 所有迭代均失败，无法计算平均值。");
+    process.exit(1);
   }
 
   // 计算平均值
