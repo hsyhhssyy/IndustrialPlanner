@@ -7,7 +7,17 @@ import { WebDavSaveIndicator } from "@/app/shell/layout/webdav-save-indicator";
 import { isTouchLandscapeScreenProfile } from "@/shared/browser/screen-profile";
 import { observer } from "mobx-react-lite";
 import { useEffect, useId, useRef, useState } from "react";
-import type { KeyboardEvent, PointerEvent, ReactNode, WheelEvent } from "react";
+// AI-REMOVED 2026-08-05:
+// Reason: CanvasPanel 不再接收可交互的 topRightOverlay，避免 overlay 进入画布手势输入树。
+// Trigger: 手机端折叠顶栏按钮的 pointer 被 CanvasPanel 捕获，导致 pointerup/click 无法到达按钮。
+// Evidence: 真实触摸事件中 pointerdown 命中按钮后被 canvas-panel 的 document capture 拦截并重定向 pointerup。
+// Replacement: WorkbenchApp 中与 CanvasPanel 并列的 workbench-floating-top-bar-controls。
+// Risk: Low；WebDAV 保存状态与 FPS 仍由 CanvasPanel 内部独立渲染。
+// Human Review: Required
+//
+// Original code:
+// import type { KeyboardEvent, PointerEvent, ReactNode, WheelEvent } from "react";
+import type { KeyboardEvent, PointerEvent, WheelEvent } from "react";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import {
@@ -45,13 +55,23 @@ function pollSimulationStats(
   };
 }
 
-export const CanvasPanel = observer(function CanvasPanel({
-  appHost,
-  topRightOverlay,
-}: {
-  appHost: AppHost;
-  topRightOverlay?: ReactNode;
-}) {
+// AI-REMOVED 2026-08-05:
+// Reason: CanvasPanel 的 topRightOverlay API 把普通 UI 错误纳入画布输入边界。
+// Trigger: 折叠顶栏四个按钮在触摸设备上被 CanvasPanel setPointerCapture 接管。
+// Evidence: topRightOverlay 是 CanvasPanel 中唯一由 Workbench 注入的可交互 ReactNode。
+// Replacement: WorkbenchApp 中与 CanvasPanel 并列的 workbench-floating-top-bar-controls。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// export const CanvasPanel = observer(function CanvasPanel({
+//   appHost,
+//   topRightOverlay,
+// }: {
+//   appHost: AppHost;
+//   topRightOverlay?: ReactNode;
+// }) {
+export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const gestureAdapter = appHost.gestureAdapter;
   const gestureDiagnostics = appHost.gestureDiagnostics;
@@ -258,7 +278,16 @@ export const CanvasPanel = observer(function CanvasPanel({
             <CanvasGestureDiagnosticsOverlay snapshot={diagnosticsSnapshot} />
           ) : null}
           {showFps ? <CanvasFpsOverlay snapshot={fpsSnapshot} /> : null}
-          {topRightOverlay}
+          {/* AI-REMOVED 2026-08-05:
+              Reason: 可交互顶栏按钮不能渲染在 CanvasPanel 的手势输入树内。
+              Trigger: CanvasPanel 的 pointer capture 与 compat click 拦截导致手机端按钮失效。
+              Evidence: pointerup 被重定向到 canvas-panel，且合成 click 被 preventDefault 抑制。
+              Replacement: WorkbenchApp 中 CanvasPanel 后方的 sibling overlay。
+              Risk: Low
+              Human Review: Required
+
+              Original code:
+              {topRightOverlay} */}
           {appHost.workspace.sync !== null ? (
             <WebDavSaveIndicator
               className={useCollapsedTopBarSavePosition

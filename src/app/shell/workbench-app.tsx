@@ -985,84 +985,78 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
               translate={appHost.actions.translate}
             />
           ) : null}
-        <CanvasPanel
-          appHost={appHost}
-          topRightOverlay={showFloatingTopBarControls ? (
-            <div
+        <CanvasPanel appHost={appHost} />
+        {/* AI-CORRECTION 2026-08-05: 折叠顶栏控件改为 CanvasPanel 的 sibling overlay，保持画布定位但隔离画布手势。 */}
+        {showFloatingTopBarControls ? (
+          <div className={cm(styles, "workbench-floating-top-bar-controls")}>
+            <SimulationControlButton
+              appHost={appHost}
+              className={cm(styles, "workbench-floating-top-bar-button")}
+            />
+            <TimelineButton
+              appHost={appHost}
+              className={cm(styles, "workbench-floating-top-bar-button")}
+            />
+            <FullscreenToggleButton
+              appHost={appHost}
               className={cm(
                 styles,
-                "workbench-floating-top-bar-controls workbench-floating-top-bar-controls-in-canvas",
+                "workbench-floating-top-bar-button workbench-floating-fullscreen-button",
               )}
-            >
-              <SimulationControlButton
-                appHost={appHost}
-                className={cm(styles, "workbench-floating-top-bar-button")}
-              />
-              <TimelineButton
-                appHost={appHost}
-                className={cm(styles, "workbench-floating-top-bar-button")}
-              />
-              <FullscreenToggleButton
-                appHost={appHost}
-                className={cm(
-                  styles,
-                  "workbench-floating-top-bar-button workbench-floating-fullscreen-button",
-                )}
-              />
-              {useInspectorPanel && !rightDockOpen ? (
-                <button
-                  aria-label={floatingOpenRightDockLabel}
-                  className={cm(
-                    styles,
-                    "workbench-floating-top-bar-button workbench-floating-right-dock-button",
-                  )}
-                  onClick={appHost.internalActions.toggleRightDock}
-                  title={floatingOpenRightDockLabel}
-                  type="button"
-                >
-                  <span className={cm(styles, "top-bar-toggle-icon")}>
-                    <WorkbenchIcon kind="panel-right-open" />
-                  </span>
-                  <span className={cm(styles, "sr-only")}>
-                    {floatingOpenRightDockLabel}
-                  </span>
-                </button>
-              ) : null}
+            />
+            {useInspectorPanel && !rightDockOpen ? (
               <button
-                aria-label={`${t("action.expand")} ${t("topBar.controls")}`}
+                aria-label={floatingOpenRightDockLabel}
                 className={cm(
                   styles,
-                  "workbench-floating-top-bar-button workbench-floating-top-bar-toggle",
+                  "workbench-floating-top-bar-button workbench-floating-right-dock-button",
                 )}
-                onClick={appHost.internalActions.toggleTopBarCollapsed}
-                title={`${t("action.expand")} ${t("topBar.controls")}`}
+                onClick={appHost.internalActions.toggleRightDock}
+                title={floatingOpenRightDockLabel}
                 type="button"
               >
                 <span className={cm(styles, "top-bar-toggle-icon")}>
-                  <WorkbenchIcon kind="panel-top-open" />
+                  <WorkbenchIcon kind="panel-right-open" />
                 </span>
                 <span className={cm(styles, "sr-only")}>
-                  {`${t("action.expand")} ${t("topBar.controls")}`}
+                  {floatingOpenRightDockLabel}
                 </span>
               </button>
-              {/* AI-REMOVED 2026-07-29:
-                  Reason: 保存提示迁移到折叠顶栏第二排的独立画布 overlay。
-                  Trigger: 用户要求第二排最右侧且不受 FPS 布局影响。
-                  Evidence: 原实现将提示放在第一排 floating controls 内。
-                  Replacement: CanvasPanel 内的 canvas-webdav-save-indicator-collapsed。
-                  Risk: Low。
-                  Human Review: Required
+            ) : null}
+            <button
+              aria-label={`${t("action.expand")} ${t("topBar.controls")}`}
+              className={cm(
+                styles,
+                "workbench-floating-top-bar-button workbench-floating-top-bar-toggle",
+              )}
+              onClick={appHost.internalActions.toggleTopBarCollapsed}
+              title={`${t("action.expand")} ${t("topBar.controls")}`}
+              type="button"
+            >
+              <span className={cm(styles, "top-bar-toggle-icon")}>
+                <WorkbenchIcon kind="panel-top-open" />
+              </span>
+              <span className={cm(styles, "sr-only")}>
+                {`${t("action.expand")} ${t("topBar.controls")}`}
+              </span>
+            </button>
+            {/* AI-REMOVED 2026-07-29:
+                Reason: 保存提示迁移到折叠顶栏第二排的独立画布 overlay。
+                Trigger: 用户要求第二排最右侧且不受 FPS 布局影响。
+                Evidence: 原实现将提示放在第一排 floating controls 内。
+                Replacement: CanvasPanel 内的 canvas-webdav-save-indicator-collapsed。
+                Risk: Low。
+                Human Review: Required
 
-                  Original code:
-                  {appHost.workspace.sync !== null ? (
-                    <WebDavSaveIndicator
-                      syncState={appHost.workspace.sync.state}
-                      translate={appHost.actions.translate}
-                    />
-                  ) : null} */}
-            </div>
-          ) : null}
-        />
+                Original code:
+                {appHost.workspace.sync !== null ? (
+                  <WebDavSaveIndicator
+                    syncState={appHost.workspace.sync.state}
+                    translate={appHost.actions.translate}
+                  />
+                ) : null} */}
+          </div>
+        ) : null}
         <OverlapEntityMenu appHost={appHost} />
         <QuickPlacePopup appHost={appHost} />
         <CanvasBottomLeftSecondaryToolbar

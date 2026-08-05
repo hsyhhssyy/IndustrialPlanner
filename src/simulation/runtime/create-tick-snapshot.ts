@@ -215,8 +215,8 @@ function createAdmissionCounterSnapshots(
       count: state.persistent.admissionCounters[portId] ?? 0,
       perMinuteLimit: port.admissionRule.perMinuteLimit,
       rateWindowCount: rateWindowCounter.count,
-      pastWindowCounts: rateWindowCounter.pastWindowCounts,
-      moveTicks: rateWindowCounter.moveTicks,
+      pastWindowCounts: [...rateWindowCounter.pastWindowCounts],
+      moveTicks: [...rateWindowCounter.moveTicks],
     };
   }
 

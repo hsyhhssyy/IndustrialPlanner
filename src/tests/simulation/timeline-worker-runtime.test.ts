@@ -476,6 +476,73 @@ describe("TimelineWorkerRuntime", () => {
       .toEqual(exactRuntime.exportRuntimeState(10801)?.snapshot);
   }, 20_000);
 
+  it("keeps stored admission snapshots immutable while predicting later checkpoints", () => {
+    vi.useFakeTimers();
+
+    const topology = createAdmissionTimelineTopology();
+    const exactRuntime = new SimulationWorkerRuntime(registry);
+    exactRuntime.handleRequest({
+      type: "load-topology",
+      requestId: 1,
+      topology,
+    });
+    exactRuntime.createSparseTickSnapshot(1);
+    const originRuntimeExport = exactRuntime.exportRuntimeState(1);
+    if (originRuntimeExport === null) {
+      throw new Error("Expected tick-1 admission runtime export.");
+    }
+
+    const timelineRuntime = new TimelineWorkerRuntime(registry);
+    timelineRuntime.handleRequest({
+      type: "load-timeline",
+      requestId: 2,
+      runtimeExport: originRuntimeExport,
+      startTimelineTickNumber: 0,
+      targetTimelineTickNumber: 140,
+      capacityTimelineTicks: 141,
+      stepStandardTicks: 10,
+    });
+
+    for (let timelineTickNumber = 1; timelineTickNumber <= 120; timelineTickNumber += 1) {
+      vi.advanceTimersToNextTimer();
+    }
+    const checkpointAt1201 = timelineRuntime.handleRequest({
+      type: "get-timeline-checkpoint",
+      requestId: 3,
+      timelineTickNumber: 120,
+    });
+    if (
+      checkpointAt1201.type !== "timeline-checkpoint-result"
+      || checkpointAt1201.runtimeExport === null
+    ) {
+      throw new Error("Expected the tick-1201 admission checkpoint.");
+    }
+
+    const snapshotAt1201 = structuredClone(checkpointAt1201.runtimeExport.snapshot);
+    const admissionCounterAt1201 = snapshotAt1201.devices["device:admission"]
+      ?.admissionCounters["item_input:in_w"];
+    if (admissionCounterAt1201 === undefined) {
+      throw new Error("Expected the admission counter snapshot at tick 1201.");
+    }
+    expect(admissionCounterAt1201.moveTicks).toEqual(
+      checkpointAt1201.runtimeExport.runtimeState.persistent
+        .fixedWindowCounters[admissionCounterAt1201.portId]?.moveTicks,
+    );
+
+    vi.runAllTimers();
+
+    expect(checkpointAt1201.runtimeExport.snapshot).toEqual(snapshotAt1201);
+    const storedCheckpointAt1201 = timelineRuntime.handleRequest({
+      type: "get-timeline-checkpoint",
+      requestId: 4,
+      timelineTickNumber: 120,
+    });
+    if (storedCheckpointAt1201.type !== "timeline-checkpoint-result") {
+      throw new Error(`Unexpected checkpoint response "${storedCheckpointAt1201.type}".`);
+    }
+    expect(storedCheckpointAt1201.runtimeExport?.snapshot).toEqual(snapshotAt1201);
+  });
+
   it("keeps render-critical device, slot, and transfer state in lightweight presentation frames", () => {
     const runtimeExport = createRuntimeExport(20);
     const topology = {
@@ -694,6 +761,35 @@ function createConsumptionTimelineTopology(): CompiledSimulationTopology {
     createEntity("gas-pipe", "pipe_straight_1x1", -1, 1),
     createEntity("gas-diffuser", "vaporizer_1", 0, 0),
     createEntity("power", "power_diffuser_1", 3, 5),
+  ]);
+  const document = createWorldDocumentFromBlueprint(blueprint);
+  return compileSimulationTopology({
+    document,
+    registry,
+    poweredEntityIds: new Set(document.entityOrder),
+  });
+}
+
+function createAdmissionTimelineTopology(): CompiledSimulationTopology {
+  const blueprint = createBlueprint("timeline-admission-snapshot", [
+    createEntity("source", "storager_1", 0, 0, 90, {
+      "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+      "storageSlotGroups[0].slots[0].initialCount": 200,
+      "storageSlotGroups[0].slots[0].ignoreStock": true,
+    }),
+    createEntity("admission", "log_admission", 3, 1, 0, {
+      "portGroups[0].ports[0].acceptRule": {
+        base: { kind: "item", itemId: "item_iron_ore" },
+        exclude: [],
+      },
+      "portGroups[0].ports[0].admissionRule": {
+        itemId: "item_iron_ore",
+        limit: null,
+        perMinuteLimit: null,
+      },
+    }),
+    createEntity("belt", "belt_straight_1x1", 4, 1),
+    createEntity("sink", "loader_1", 5, 0, 270),
   ]);
   const document = createWorldDocumentFromBlueprint(blueprint);
   return compileSimulationTopology({

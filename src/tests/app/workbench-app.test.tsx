@@ -856,6 +856,10 @@ describe("WorkbenchApp", () => {
     const floatingControls = container.querySelector(
       ".workbench-floating-top-bar-controls",
     ) as HTMLDivElement | null;
+    const canvasPanel = container.querySelector(".canvas-panel") as HTMLElement | null;
+    const floatingTimelineButton = container.querySelector(
+      '[data-ui-button-id="top-bar-timeline"]',
+    ) as HTMLButtonElement | null;
     const floatingFullscreenButton = container.querySelector(
       ".workbench-floating-fullscreen-button",
     ) as HTMLButtonElement | null;
@@ -872,12 +876,28 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".status-bar")).toBeNull();
     expect(container.querySelector(".top-bar")).toBeNull();
     expect(floatingControls).not.toBeNull();
+    expect(floatingControls?.parentElement).toBe(workbench);
+    expect(canvasPanel?.contains(floatingControls)).toBe(false);
     expect(floatingFullscreenButton?.title).toBe("进入全屏");
     expect(floatingRightDockButton).toBeNull();
     expect(floatingToggle?.title).toBe("展开 运行控制");
     expect(
       floatingFullscreenButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
     ).toBe("expand");
+
+    if (!floatingTimelineButton) {
+      throw new Error("Floating timeline button did not render.");
+    }
+
+    const touchPointerDownEvent = dispatchPointerEvent(floatingTimelineButton, "pointerdown", {
+      pointerId: 1,
+      pointerType: "touch",
+      clientX: 740,
+      clientY: 29,
+      buttons: 1,
+    });
+
+    expect(touchPointerDownEvent.defaultPrevented).toBe(false);
 
     await act(async () => {
       floatingFullscreenButton?.click();

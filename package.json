@@ -13,6 +13,7 @@
     "test": "vitest run --project normal",
     "test:normal": "vitest run --project normal",
     "test:blueprint": "vitest run --project blueprint",
+    "test:e2e": "playwright test",
     "test:watch": "vitest",
     "blueprint:convert": "tsx --tsconfig tsconfig.app.json src/scripts/convert-legacy-blueprint.ts",
     "draw-device-blueprint-svg": "tsx --tsconfig tsconfig.app.json src/scripts/draw-device-blueprint-svg.mjs",

@@ -9,13 +9,14 @@
 #   bash scripts/check/full-check.sh tsc      [RUN_DIR]    仅 TypeScript
 #   bash scripts/check/full-check.sh test     [RUN_DIR]    仅 Vitest 全量测试
 #   bash scripts/check/full-check.sh build    [RUN_DIR]    仅 Build
+#   bash scripts/check/full-check.sh e2e      [RUN_DIR]    仅 E2E 测试
 #   bash scripts/check/full-check.sh blueprint [RUN_DIR]   仅 Blueprint 测试
 #   bash scripts/check/full-check.sh poll     <step> [RUN_DIR]  查询长时间步骤进度
 #   bash scripts/check/full-check.sh summary  [RUN_DIR]    输出汇总报告
 #   bash scripts/check/full-check.sh all                   全量执行
 #   bash scripts/check/full-check.sh status   [RUN_DIR]    查看各步骤状态
 #
-# 长时间步骤（test / blueprint）建议后台启动 + poll 轮询：
+# 长时间步骤（test / e2e / blueprint）建议后台启动 + poll 轮询：
 #   bash scripts/check/full-check.sh test "$RUN_DIR" &
 #   bash scripts/check/full-check.sh poll test "$RUN_DIR"   # 反复调用查看进度
 # ============================================================
@@ -114,7 +115,7 @@ case "$CMD" in
     echo "RUN_DIR: $RUN_DIR"
     echo ""
     echo "各步骤状态:"
-    for STEP in eslint tsc test build blueprint; do
+    for STEP in eslint tsc test build e2e blueprint; do
       if [ -f "$RUN_DIR/$STEP.exit" ]; then
         EC=$(cat "$RUN_DIR/$STEP.exit")
         echo "  $STEP: $(pass_fail "$EC") (退出码: $EC)"
@@ -163,6 +164,15 @@ case "$CMD" in
     tail -n 20 "$RUN_DIR/build.log" || true
     ;;
 
+  e2e)
+    RUN_DIR=$(get_run_dir "$RUN_DIR_ARG")
+    run_step "E2E" \
+      "npm run test:e2e" \
+      "$RUN_DIR/e2e.log" \
+      "$RUN_DIR/e2e.exit"
+    print_fail_summary "$RUN_DIR/e2e.log"
+    ;;
+
   blueprint)
     RUN_DIR=$(get_run_dir "$RUN_DIR_ARG")
     run_step "Blueprint" \
@@ -186,7 +196,7 @@ case "$CMD" in
     if [ -f "$EXIT_FILE" ]; then
       EC=$(cat "$EXIT_FILE")
       echo "==== [$POLL_STEP] 已完成，退出码: $EC ===="
-      if [ "$POLL_STEP" = "test" ] || [ "$POLL_STEP" = "blueprint" ]; then
+      if [ "$POLL_STEP" = "test" ] || [ "$POLL_STEP" = "e2e" ] || [ "$POLL_STEP" = "blueprint" ]; then
         print_fail_summary "$LOG_FILE"
       fi
     elif [ -f "$LOG_FILE" ]; then
@@ -219,6 +229,7 @@ case "$CMD" in
     TSC_EXIT=$(cat "$RUN_DIR/tsc.exit" 2>/dev/null || echo "?")
     TEST_EXIT=$(cat "$RUN_DIR/test.exit" 2>/dev/null || echo "?")
     BUILD_EXIT=$(cat "$RUN_DIR/build.exit" 2>/dev/null || echo "?")
+    E2E_EXIT=$(cat "$RUN_DIR/e2e.exit" 2>/dev/null || echo "?")
     BLUEPRINT_EXIT=$(cat "$RUN_DIR/blueprint.exit" 2>/dev/null || echo "?")
 
     echo ""
@@ -238,12 +249,13 @@ case "$CMD" in
     echo "| TypeScript | npx tsc -b --noEmit | $(pass_fail "$TSC_EXIT") | $TSC_EXIT |"
     echo "| Vitest 全量测试 | npm run test | $(pass_fail "$TEST_EXIT") | $TEST_EXIT |"
     echo "| Build | npm run build | $(pass_fail "$BUILD_EXIT") | $BUILD_EXIT |"
+    echo "| E2E 测试 | npm run test:e2e | $(pass_fail "$E2E_EXIT") | $E2E_EXIT |"
     echo "| Blueprint 测试 | npm run test:blueprint | $(pass_fail "$BLUEPRINT_EXIT") | $BLUEPRINT_EXIT |"
     echo ""
 
     echo "未通过的测试"
     FAIL_FOUND=0
-    for LOG in "$RUN_DIR/test.log" "$RUN_DIR/blueprint.log"; do
+    for LOG in "$RUN_DIR/test.log" "$RUN_DIR/e2e.log" "$RUN_DIR/blueprint.log"; do
       if [ -f "$LOG" ]; then
         grep -nE "^(FAIL|✗|×)\b|AssertionError|Expected |Received " "$LOG" 2>/dev/null | head -n 50 || true
         if grep -qE "^(FAIL|✗|×)\b" "$LOG" 2>/dev/null; then
@@ -260,7 +272,7 @@ case "$CMD" in
     ls -la "$RUN_DIR/"*.log "$RUN_DIR/"*.exit 2>/dev/null || true
 
     OVERALL_EXIT=0
-    for EC in "$ESLINT_EXIT" "$TSC_EXIT" "$TEST_EXIT" "$BUILD_EXIT" "$BLUEPRINT_EXIT"; do
+    for EC in "$ESLINT_EXIT" "$TSC_EXIT" "$TEST_EXIT" "$BUILD_EXIT" "$E2E_EXIT" "$BLUEPRINT_EXIT"; do
       if [ "$EC" != "0" ] && [ "$EC" != "?" ]; then
         OVERALL_EXIT=1
       fi
@@ -299,6 +311,12 @@ case "$CMD" in
     echo "Build 日志摘要:"
     tail -n 20 "$RUN_DIR/build.log" || true
 
+    run_step "E2E" \
+      "npm run test:e2e" \
+      "$RUN_DIR/e2e.log" \
+      "$RUN_DIR/e2e.exit"
+    print_fail_summary "$RUN_DIR/e2e.log"
+
     run_step "Blueprint" \
       "npm run test:blueprint" \
       "$RUN_DIR/blueprint.log" \
@@ -317,6 +335,7 @@ case "$CMD" in
     echo "  tsc        仅执行 TypeScript 类型检查"
     echo "  test       仅执行 Vitest 全量测试（耗时长，建议后台启动）"
     echo "  build      仅执行 Build"
+    echo "  e2e        仅执行 E2E 测试（耗时长，建议后台启动）"
     echo "  blueprint  仅执行 Blueprint 测试（耗时长，建议后台启动）"
     echo "  poll <step> 查询 test/blueprint 等长时间步骤的进度"
     echo "  summary    输出汇总报告"

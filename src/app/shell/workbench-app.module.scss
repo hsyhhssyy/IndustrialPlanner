@@ -49,12 +49,21 @@
   gap: 8px;
 }
 
-.workbench-floating-top-bar-controls-in-canvas {
-  // AI-CORRECTION 2026-07-29: FPS 与控件不再共用 stack，折叠顶栏按钮恢复画布右上角第一排绝对定位。
-  position: absolute;
-  top: 10px;
-  right: 12px;
-}
+// AI-REMOVED 2026-08-05:
+// Reason: 折叠顶栏控件不再作为 CanvasPanel 后代，不需要覆盖 workbench 级右侧定位。
+// Trigger: CanvasPanel 内部 overlay 被画布 pointer capture 与触摸 click 拦截接管。
+// Evidence: workbench-floating-top-bar-controls 已通过 right-dock-width 对齐实际画布右边缘。
+// Replacement: workbench-floating-top-bar-controls。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// .workbench-floating-top-bar-controls-in-canvas {
+//   // AI-CORRECTION 2026-07-29: FPS 与控件不再共用 stack，折叠顶栏按钮恢复画布右上角第一排绝对定位。
+//   position: absolute;
+//   top: 10px;
+//   right: 12px;
+// }
 
 .workbench-floating-top-bar-button {
   display: inline-flex;
