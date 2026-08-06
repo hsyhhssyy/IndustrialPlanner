@@ -1,27 +1,34 @@
-import { createStableJsonHash } from "@/shared/storage/sync-shadow-storage";
+import {
+  createSha256CanonicalHash,
+  createStableJsonHash,
+} from "@/shared/storage/sync-shadow-storage";
 import { createLogger } from "@/shared/logging/logger";
 import type {
+  RemoteCollectionIndex,
+  SyncRemoteAdapterMode,
+  SyncRemoteCollection,
+  SyncRemoteSession,
   SyncStorageClient,
   SyncWriteOptions,
-} from "../clients/types";
+} from "../clients";
 import {
   applyJsonPatch,
   generateJsonPatch,
   type JsonPatchOperation,
 } from "@/shared/storage/json-patch-codec";
 import {
+  createSyncAssetKey,
+  createSyncRemoteCollection,
+} from "../remote-collections";
+import {
   clearWebDavLastSeenRemoteEtag,
-  readWebDavLastSeenRemoteEtag,
   readWebDavLastSeenRemoteRevision,
-  readWebDavLastSyncedContentHash,
-  writeWebDavLastSeenRemoteEtag,
   writeWebDavLastSeenRemoteRevision,
-  writeWebDavLastSyncedContentHash,
 } from "../storage";
 
 const logger = createLogger("webdav-adapter");
 
-export type SyncAdapterMode = "patch-with-revision" | "full-with-revision" | "full-no-revision";
+export type SyncAdapterMode = SyncRemoteAdapterMode;
 export type SyncAdapterConflictResolution = "use-local" | "use-remote" | "pause";
 export type SyncAdapterStatus = "idle" | "uploaded" | "downloaded" | "conflict" | "skipped";
 
@@ -55,13 +62,14 @@ export interface SyncAdapterConflictDecision {
 export interface SyncAdapter {
   readonly id: string;
   readonly mode: SyncAdapterMode;
+  readonly collection: SyncRemoteCollection;
   readonly checkPath: string | null;
   sync(
-    client: SyncStorageClient,
+    session: SyncRemoteSession,
     scope?: SyncAdapterScope,
   ): Promise<SyncAdapterResult>;
   inspectConflicts?(
-    client: SyncStorageClient,
+    session: SyncRemoteSession,
     scope?: SyncAdapterScope,
   ): Promise<readonly SyncAdapterConflict<unknown>[]>;
 }
@@ -75,6 +83,7 @@ export interface SyncAdapterScope {
 
 export interface FullNoRevisionAdapterOptions<TValue> {
   readonly id: string;
+  readonly collection?: SyncRemoteCollection;
   readonly remotePath: string;
   readonly readLocal: () => Promise<TValue | null>;
   readonly writeLocal: (value: TValue) => Promise<void>;
@@ -90,6 +99,7 @@ export interface FullWithRevisionEntry<TValue> {
 
 export interface FullWithRevisionAdapterOptions<TValue> {
   readonly id: string;
+  readonly collection?: SyncRemoteCollection;
   readonly indexPath: string;
   readonly entryPath: (entryId: string) => string;
   readonly listLocal: (
@@ -102,6 +112,7 @@ export interface FullWithRevisionAdapterOptions<TValue> {
 
 export interface PatchWithRevisionAdapterOptions<TValue> {
   readonly id: string;
+  readonly collection?: SyncRemoteCollection;
   readonly directoryPath: string;
   readonly readLocal: () => Promise<TValue | null>;
   readonly writeLocal: (value: TValue) => Promise<void>;
@@ -118,6 +129,7 @@ export interface PatchWithRevisionEntry<TValue> {
 
 export interface PatchCollectionWithRevisionAdapterOptions<TValue> {
   readonly id: string;
+  readonly collection?: SyncRemoteCollection;
   readonly indexPath: string;
   readonly directoryPath: (entryId: string) => string;
   readonly listLocal: (
@@ -143,6 +155,7 @@ interface RemoteIndexState {
 }
 
 interface RemoteIndexEntry {
+  readonly revision?: number;
   readonly contentHash: string;
   readonly deletedAt: string | null;
   readonly committedAt: string | null;
@@ -163,72 +176,215 @@ interface RemotePatchMetaState {
   readonly lastModified: string | null;
 }
 
+interface NormalizedRemoteAsset<TValue> {
+  readonly value: TValue;
+  readonly contentHash: string;
+  readonly revision: number;
+  readonly committedAt: string | null;
+  readonly etag: string | null;
+}
+
+interface WriteRemoteValueOptions<TValue> {
+  readonly session: SyncRemoteSession;
+  readonly collection: SyncRemoteCollection;
+  readonly assetId: string;
+  readonly value: TValue;
+  readonly contentHash: string;
+  readonly baseRevision: number | null;
+  readonly baseContentHash: string | null;
+}
+
+async function createSyncContentHash(
+  collection: SyncRemoteCollection,
+  value: unknown,
+): Promise<string> {
+  return collection.hashAlgorithm === "sha256-canonical-json-v1"
+    ? await createSha256CanonicalHash(value)
+    : createStableJsonHash(value);
+}
+
+async function readRemoteAssetValue<TValue>(
+  session: SyncRemoteSession,
+  collection: SyncRemoteCollection,
+  assetId: string,
+  normalizeRemote: ((value: unknown) => TValue | null) | undefined,
+): Promise<NormalizedRemoteAsset<TValue> | null> {
+  const asset = await session.readAsset({ collection, assetId });
+  if (asset === null) {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(asset.content);
+    const value = normalizeRemote === undefined
+      ? parsed as TValue
+      : normalizeRemote(parsed);
+    if (value === null) {
+      return null;
+    }
+
+    return {
+      value,
+      contentHash: await createSyncContentHash(collection, value),
+      revision: asset.revision,
+      committedAt: asset.committedAt,
+      etag: asset.etag ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function toRemoteIndexFile(index: RemoteCollectionIndex): RemoteIndexFile {
+  return {
+    revision: index.revision,
+    entries: Object.fromEntries(
+      Object.entries(index.entries).flatMap(([assetId, entry]) =>
+        entry.contentHash === null
+          ? []
+          : [[assetId, {
+              contentHash: entry.contentHash,
+              deletedAt: entry.deletedAt,
+              committedAt: entry.committedAt,
+              revision: entry.revision,
+            } satisfies RemoteIndexEntry]]
+      ),
+    ),
+  };
+}
+
+async function writeRemoteValue<TValue>(options: WriteRemoteValueOptions<TValue>): Promise<void> {
+  const batch = options.session.beginWriteBatch();
+  batch.putAsset({
+    collection: options.collection,
+    assetId: options.assetId,
+    content: JSON.stringify(options.value),
+    contentHash: options.contentHash,
+    baseRevision: options.baseRevision,
+    baseContentHash: options.baseContentHash,
+  });
+  await batch.commit();
+}
+
 export function createFullNoRevisionAdapter<TValue>(
   options: FullNoRevisionAdapterOptions<TValue>,
 ): SyncAdapter {
+  const collection = options.collection ?? createSyncRemoteCollection({
+    adapterId: options.id,
+    mode: "full-no-revision",
+    stateKey: options.remotePath,
+    webDav: {
+      kind: "full-no-revision",
+      remotePath: options.remotePath,
+    },
+  });
+
   return {
     id: options.id,
     mode: "full-no-revision",
+    collection,
     checkPath: options.remotePath,
-    sync: async (client, scope) => await syncFullNoRevision(
-      client,
+    sync: async (session, scope) => await syncFullNoRevision(
+      session,
+      collection,
       options,
       scope,
     ),
-    inspectConflicts: async (client, scope) =>
-      await inspectFullNoRevisionConflicts(client, options, scope),
+    inspectConflicts: async (session, scope) =>
+      await inspectFullNoRevisionConflicts(session, collection, options, scope),
   };
 }
 
 export function createFullWithRevisionAdapter<TValue>(
   options: FullWithRevisionAdapterOptions<TValue>,
 ): SyncAdapter {
+  const collection = options.collection ?? createSyncRemoteCollection({
+    adapterId: options.id,
+    mode: "full-with-revision",
+    stateKey: options.indexPath,
+    webDav: {
+      kind: "full-with-revision",
+      indexPath: options.indexPath,
+      entryPath: options.entryPath,
+    },
+  });
+
   return {
     id: options.id,
     mode: "full-with-revision",
+    collection,
     checkPath: options.indexPath,
-    sync: async (client, scope) => await syncFullWithRevision(client, options, scope),
-    inspectConflicts: async (client, scope) =>
-      await inspectFullWithRevisionConflicts(client, options, scope),
+    sync: async (session, scope) => await syncFullWithRevision(session, collection, options, scope),
+    inspectConflicts: async (session, scope) =>
+      await inspectFullWithRevisionConflicts(session, collection, options, scope),
   };
 }
 
 export function createPatchWithRevisionAdapter<TValue>(
   options: PatchWithRevisionAdapterOptions<TValue>,
 ): SyncAdapter {
+  const metaPath = `${options.directoryPath}/meta.json`;
+  const collection = options.collection ?? createSyncRemoteCollection({
+    adapterId: options.id,
+    mode: "patch-with-revision",
+    stateKey: metaPath,
+    webDav: {
+      kind: "patch-with-revision",
+      directoryPath: options.directoryPath,
+      ...(options.deltaThreshold === undefined ? {} : { deltaThreshold: options.deltaThreshold }),
+    },
+  });
+
   return {
     id: options.id,
     mode: "patch-with-revision",
-    checkPath: `${options.directoryPath}/meta.json`,
-    sync: async (client, scope) => await syncPatchWithRevision(
-      client,
+    collection,
+    checkPath: metaPath,
+    sync: async (session, scope) => await syncPatchWithRevision(
+      session,
+      collection,
       options,
       scope,
     ),
-    inspectConflicts: async (client, scope) =>
-      await inspectPatchWithRevisionConflicts(client, options, scope),
+    inspectConflicts: async (session, scope) =>
+      await inspectPatchWithRevisionConflicts(session, collection, options, scope),
   };
 }
 
 export function createPatchCollectionWithRevisionAdapter<TValue>(
   options: PatchCollectionWithRevisionAdapterOptions<TValue>,
 ): SyncAdapter {
+  const collection = options.collection ?? createSyncRemoteCollection({
+    adapterId: options.id,
+    mode: "patch-with-revision",
+    stateKey: options.indexPath,
+    webDav: {
+      kind: "patch-collection-with-revision",
+      indexPath: options.indexPath,
+      directoryPath: options.directoryPath,
+      ...(options.deltaThreshold === undefined ? {} : { deltaThreshold: options.deltaThreshold }),
+    },
+  });
+
   return {
     id: options.id,
     mode: "patch-with-revision",
+    collection,
     checkPath: options.indexPath,
-    sync: async (client, scope) => await syncPatchCollectionWithRevision(
-      client,
+    sync: async (session, scope) => await syncPatchCollectionWithRevision(
+      session,
+      collection,
       options,
       scope,
     ),
-    inspectConflicts: async (client, scope) =>
-      await inspectPatchCollectionWithRevisionConflicts(client, options, scope),
+    inspectConflicts: async (session, scope) =>
+      await inspectPatchCollectionWithRevisionConflicts(session, collection, options, scope),
   };
 }
 
 async function inspectFullNoRevisionConflicts<TValue>(
-  client: SyncStorageClient,
+  session: SyncRemoteSession,
+  collection: SyncRemoteCollection,
   options: FullNoRevisionAdapterOptions<TValue>,
   scope?: SyncAdapterScope,
 ): Promise<readonly SyncAdapterConflict<TValue>[]> {
@@ -237,64 +393,73 @@ async function inspectFullNoRevisionConflicts<TValue>(
   }
 
   const localValuePromise = options.readLocal();
-  const remoteFilePromise = readRemoteJsonFile(
-    client,
-    options.remotePath,
+  const remoteAssetPromise = readRemoteAssetValue(
+    session,
+    collection,
+    "single",
     options.normalizeRemote,
   );
   const localValue = await localValuePromise;
-  const remoteFile = await remoteFilePromise;
-  const conflict = createValueConflict<TValue>({
+  const remoteAsset = await remoteAssetPromise;
+  const conflict = await createValueConflict<TValue>({
+    collection,
     adapterId: options.id,
     assetId: "single",
     localValue,
-    remoteValue: remoteFile?.value ?? null,
-    lastSyncedHash: readWebDavLastSyncedContentHash(`${options.id}:single`),
+    remoteValue: remoteAsset?.value ?? null,
+    lastSyncedHash: await session.localState.getLastSyncedHash(
+      createSyncAssetKey(collection, "single"),
+    ),
     remoteDeletedAt: null,
-    remoteUpdatedAt: remoteFile?.lastModified ?? null,
+    remoteUpdatedAt: remoteAsset?.committedAt ?? null,
   });
 
   return conflict === null ? [] : [conflict];
 }
 
 async function inspectFullWithRevisionConflicts<TValue>(
-  client: SyncStorageClient,
+  session: SyncRemoteSession,
+  collection: SyncRemoteCollection,
   options: FullWithRevisionAdapterOptions<TValue>,
   scope?: SyncAdapterScope,
 ): Promise<readonly SyncAdapterConflict<TValue>[]> {
   const [localEntries, remoteIndexState] = await Promise.all([
     options.listLocal(scope),
-    readRemoteIndexState(client, options.indexPath),
+    session.readIndex(collection),
   ]);
   const includedLocalEntries = localEntries.filter((entry) =>
     isAssetIncludedInScope(entry.id, scope),
   );
   const remoteValues = new Map(await Promise.all(
     includedLocalEntries.flatMap((entry) => {
-      const remoteEntry = remoteIndexState.index.entries[entry.id];
+      const remoteEntry = remoteIndexState.entries[entry.id];
       return remoteEntry === undefined || remoteEntry.deletedAt !== null
         ? []
-        : [readRemoteJson(
-          client,
-          options.entryPath(entry.id),
+        : [readRemoteAssetValue(
+          session,
+          collection,
+          entry.id,
           options.normalizeRemote,
         ).then((value) => [entry.id, value] as const)];
     }),
   ));
 
-  return inspectCollectionConflicts({
+  return await inspectCollectionConflicts({
+    session,
+    collection,
     adapterId: options.id,
     localEntries: includedLocalEntries,
     remoteIndexState,
-    readRemoteValue: (entryId) => remoteValues.get(entryId) ?? null,
+    readRemoteValue: (entryId) => remoteValues.get(entryId)?.value ?? null,
     readRemoteUpdatedAt: (entryId) =>
-      remoteIndexState.index.entries[entryId]?.committedAt
-      ?? remoteIndexState.lastModified,
+      remoteIndexState.entries[entryId]?.committedAt
+      ?? remoteIndexState.committedAt,
   });
 }
 
 async function inspectPatchWithRevisionConflicts<TValue>(
-  client: SyncStorageClient,
+  session: SyncRemoteSession,
+  collection: SyncRemoteCollection,
   options: PatchWithRevisionAdapterOptions<TValue>,
   scope?: SyncAdapterScope,
 ): Promise<readonly SyncAdapterConflict<TValue>[]> {
@@ -303,87 +468,96 @@ async function inspectPatchWithRevisionConflicts<TValue>(
   }
 
   const localValuePromise = options.readLocal();
-  const remoteStatePromise = readRemotePatchState(
-    client,
-    options.directoryPath,
+  const remoteAssetPromise = readRemoteAssetValue(
+    session,
+    collection,
+    "snapshot",
     options.normalizeRemote,
   );
   const localValue = await localValuePromise;
-  const remoteState = await remoteStatePromise;
-  const conflict = createValueConflict<TValue>({
+  const remoteAsset = await remoteAssetPromise;
+  const conflict = await createValueConflict<TValue>({
+    collection,
     adapterId: options.id,
     assetId: "snapshot",
     localValue,
-    remoteValue: remoteState?.value ?? null,
-    lastSyncedHash: readWebDavLastSyncedContentHash(
-      `${options.id}:snapshot`,
+    remoteValue: remoteAsset?.value ?? null,
+    lastSyncedHash: await session.localState.getLastSyncedHash(
+      createSyncAssetKey(collection, "snapshot"),
     ),
     remoteDeletedAt: null,
-    remoteUpdatedAt: remoteState?.remoteUpdatedAt ?? null,
+    remoteUpdatedAt: remoteAsset?.committedAt ?? null,
   });
 
   return conflict === null ? [] : [conflict];
 }
 
 async function inspectPatchCollectionWithRevisionConflicts<TValue>(
-  client: SyncStorageClient,
+  session: SyncRemoteSession,
+  collection: SyncRemoteCollection,
   options: PatchCollectionWithRevisionAdapterOptions<TValue>,
   scope?: SyncAdapterScope,
 ): Promise<readonly SyncAdapterConflict<TValue>[]> {
   const [localEntries, remoteIndexState] = await Promise.all([
     options.listLocal(scope),
-    readRemoteIndexState(client, options.indexPath),
+    session.readIndex(collection),
   ]);
   const includedLocalEntries = localEntries.filter((entry) =>
     isAssetIncludedInScope(entry.id, scope),
   );
   const remoteStates = new Map(await Promise.all(
     includedLocalEntries.flatMap((entry) => {
-      const remoteEntry = remoteIndexState.index.entries[entry.id];
+      const remoteEntry = remoteIndexState.entries[entry.id];
       return remoteEntry === undefined || remoteEntry.deletedAt !== null
         ? []
-        : [readRemotePatchState(
-          client,
-          options.directoryPath(entry.id),
+        : [readRemoteAssetValue(
+          session,
+          collection,
+          entry.id,
           options.normalizeRemote,
         ).then((state) => [entry.id, state] as const)];
     }),
   ));
 
-  return inspectCollectionConflicts({
+  return await inspectCollectionConflicts({
+    session,
+    collection,
     adapterId: options.id,
     localEntries: includedLocalEntries,
     remoteIndexState,
     readRemoteValue: (entryId) =>
       remoteStates.get(entryId)?.value ?? null,
     readRemoteUpdatedAt: (entryId) =>
-      remoteStates.get(entryId)?.remoteUpdatedAt
-      ?? remoteIndexState.index.entries[entryId]?.committedAt
-      ?? remoteIndexState.lastModified,
+      remoteStates.get(entryId)?.committedAt
+      ?? remoteIndexState.entries[entryId]?.committedAt
+      ?? remoteIndexState.committedAt,
   });
 }
 
-function inspectCollectionConflicts<TValue>(options: {
+async function inspectCollectionConflicts<TValue>(options: {
+  readonly session: SyncRemoteSession;
+  readonly collection: SyncRemoteCollection;
   readonly adapterId: string;
   readonly localEntries: readonly {
     readonly id: string;
     readonly value: TValue;
     readonly deletedAt: string | null;
   }[];
-  readonly remoteIndexState: RemoteIndexState;
+  readonly remoteIndexState: RemoteCollectionIndex;
   readonly readRemoteValue: (entryId: string) => TValue | null;
   readonly readRemoteUpdatedAt: (entryId: string) => string | null;
-}): readonly SyncAdapterConflict<TValue>[] {
-  return options.localEntries.flatMap((localEntry) => {
+}): Promise<readonly SyncAdapterConflict<TValue>[]> {
+  const conflicts: SyncAdapterConflict<TValue>[] = [];
+  for (const localEntry of options.localEntries) {
     const remoteEntry =
-      options.remoteIndexState.index.entries[localEntry.id] ?? null;
+      options.remoteIndexState.entries[localEntry.id] ?? null;
     if (remoteEntry === null) {
-      return [];
+      continue;
     }
 
-    const localHash = createStableJsonHash(localEntry.value);
-    const lastSyncedHash = readWebDavLastSyncedContentHash(
-      `${options.adapterId}:${localEntry.id}`,
+    const localHash = await createSyncContentHash(options.collection, localEntry.value);
+    const lastSyncedHash = await options.session.localState.getLastSyncedHash(
+      createSyncAssetKey(options.collection, localEntry.id),
     );
     if (remoteEntry.deletedAt !== null) {
       if (
@@ -391,10 +565,10 @@ function inspectCollectionConflicts<TValue>(options: {
         || lastSyncedHash === localHash
         || localHash === remoteEntry.contentHash
       ) {
-        return [];
+        continue;
       }
 
-      return [{
+      conflicts.push({
         adapterId: options.adapterId,
         assetId: localEntry.id,
         localValue: localEntry.value,
@@ -403,23 +577,24 @@ function inspectCollectionConflicts<TValue>(options: {
         remoteHash: remoteEntry.contentHash,
         remoteDeletedAt: remoteEntry.deletedAt,
         remoteUpdatedAt: options.readRemoteUpdatedAt(localEntry.id),
-      }];
+      });
+      continue;
     }
 
     const remoteValue = options.readRemoteValue(localEntry.id);
     if (localEntry.deletedAt !== null) {
       if (remoteValue === null) {
-        return [];
+        continue;
       }
-      const remoteHash = createStableJsonHash(remoteValue);
+      const remoteHash = await createSyncContentHash(options.collection, remoteValue);
       if (
         localHash === remoteHash
         || lastSyncedHash === remoteHash
       ) {
-        return [];
+        continue;
       }
 
-      return [{
+      conflicts.push({
         adapterId: options.adapterId,
         assetId: localEntry.id,
         localValue: localEntry.value,
@@ -428,10 +603,12 @@ function inspectCollectionConflicts<TValue>(options: {
         remoteHash,
         remoteDeletedAt: null,
         remoteUpdatedAt: options.readRemoteUpdatedAt(localEntry.id),
-      }];
+      });
+      continue;
     }
 
-    const conflict = createValueConflict({
+    const conflict = await createValueConflict({
+      collection: options.collection,
       adapterId: options.adapterId,
       assetId: localEntry.id,
       localValue: localEntry.value,
@@ -441,11 +618,16 @@ function inspectCollectionConflicts<TValue>(options: {
       remoteUpdatedAt: options.readRemoteUpdatedAt(localEntry.id),
     });
 
-    return conflict === null ? [] : [conflict];
-  });
+    if (conflict !== null) {
+      conflicts.push(conflict);
+    }
+  }
+
+  return conflicts;
 }
 
-function createValueConflict<TValue>(options: {
+async function createValueConflict<TValue>(options: {
+  readonly collection: SyncRemoteCollection;
   readonly adapterId: string;
   readonly assetId: string;
   readonly localValue: TValue | null;
@@ -453,13 +635,13 @@ function createValueConflict<TValue>(options: {
   readonly lastSyncedHash: string | null;
   readonly remoteDeletedAt: string | null;
   readonly remoteUpdatedAt: string | null;
-}): SyncAdapterConflict<TValue> | null {
+}): Promise<SyncAdapterConflict<TValue> | null> {
   if (options.localValue === null || options.remoteValue === null) {
     return null;
   }
 
-  const localHash = createStableJsonHash(options.localValue);
-  const remoteHash = createStableJsonHash(options.remoteValue);
+  const localHash = await createSyncContentHash(options.collection, options.localValue);
+  const remoteHash = await createSyncContentHash(options.collection, options.remoteValue);
   if (
     localHash === remoteHash
     || options.lastSyncedHash === localHash
@@ -508,43 +690,55 @@ function createScopedConflictResolver<TValue>(
 }
 
 async function syncFullNoRevision<TValue>(
-  client: SyncStorageClient,
+  session: SyncRemoteSession,
+  collection: SyncRemoteCollection,
   options: FullNoRevisionAdapterOptions<TValue>,
   scope?: SyncAdapterScope,
 ): Promise<SyncAdapterResult> {
-  const assetKey = `${options.id}:single`;
+  const assetId = "single";
+  const assetKey = createSyncAssetKey(collection, assetId);
   const localValue = await options.readLocal();
-  const remoteFile = await readRemoteJsonFile(
-    client,
-    options.remotePath,
+  const remoteAsset = await readRemoteAssetValue(
+    session,
+    collection,
+    assetId,
     options.normalizeRemote,
   );
-  const remoteValue = remoteFile?.value ?? null;
+  const remoteValue = remoteAsset?.value ?? null;
   const status = await syncSingleValue({
+    collection,
     adapterId: options.id,
-    assetId: "single",
+    assetId,
     localValue,
     remoteValue,
-    remoteUpdatedAt: remoteFile?.lastModified ?? null,
-    readLastSyncedHash: () => readWebDavLastSyncedContentHash(assetKey),
-    writeLastSyncedHash: (contentHash) => writeWebDavLastSyncedContentHash(assetKey, contentHash),
-    writeLocal: options.writeLocal,
-    writeRemote: async (value) => {
-      await ensureRemoteParentDirectory(client, options.remotePath);
-      await client.writeTextFile(options.remotePath, JSON.stringify(value));
+    remoteUpdatedAt: remoteAsset?.committedAt ?? null,
+    readLastSyncedHash: async () => await session.localState.getLastSyncedHash(assetKey),
+    writeLastSyncedHash: async (contentHash) => {
+      await session.localState.setLastSyncedHash(assetKey, contentHash);
     },
+    writeLocal: options.writeLocal,
+    writeRemote: async (value, contentHash) => await writeRemoteValue({
+      session,
+      collection,
+      assetId,
+      value,
+      contentHash,
+      baseRevision: remoteAsset?.revision ?? null,
+      baseContentHash: remoteAsset?.contentHash ?? null,
+    }),
     resolveConflict: createScopedConflictResolver(
       scope,
       options.resolveConflict,
     ),
   });
 
-  // 更新 ETag 供小检查使用
-  if (status === "downloaded" && remoteFile?.etag != null) {
-    writeWebDavLastSeenRemoteEtag(options.remotePath, remoteFile.etag);
-  } else if (status === "uploaded") {
-    clearWebDavLastSeenRemoteEtag(options.remotePath);
-  }
+  await session.markApplied({
+    collection,
+    assetIds: [assetId],
+    scopeComplete: true,
+    collectionRevision: remoteAsset?.revision ?? null,
+    collectionEtag: status === "uploaded" ? null : remoteAsset?.etag ?? null,
+  });
 
   return {
     adapterId: options.id,
@@ -555,7 +749,8 @@ async function syncFullNoRevision<TValue>(
 }
 
 async function syncFullWithRevision<TValue>(
-  client: SyncStorageClient,
+  session: SyncRemoteSession,
+  collection: SyncRemoteCollection,
   options: FullWithRevisionAdapterOptions<TValue>,
   scope?: SyncAdapterScope,
 ): Promise<SyncAdapterResult> {
@@ -564,9 +759,8 @@ async function syncFullWithRevision<TValue>(
   );
   const localEntryById = new Map(localEntries.map((entry) => [entry.id, entry]));
   if (await isRemoteIndexUnchangedForCleanLocalEntries({
-    adapterId: options.id,
-    client,
-    indexPath: options.indexPath,
+    session,
+    collection,
     localEntries,
   })) {
     return {
@@ -576,11 +770,12 @@ async function syncFullWithRevision<TValue>(
       changedAssetIds: [],
     };
   }
-  const remoteIndexState = await readRemoteIndexState(client, options.indexPath);
-  const remoteIndex = remoteIndexState.index;
+  const remoteIndexState = await session.readIndex(collection);
+  const remoteIndex = toRemoteIndexFile(remoteIndexState);
   const changedAssetIds: string[] = [];
-  let nextIndex = remoteIndex;
   let status: SyncAdapterStatus = "idle";
+  const remoteWriteBatch = session.beginWriteBatch();
+  let hasRemoteWrites = false;
   const remoteValuesByLocalId = new Map(await Promise.all(localEntries.flatMap((entry) => {
     const remoteEntry = remoteIndex.entries[entry.id];
     if (
@@ -593,18 +788,19 @@ async function syncFullWithRevision<TValue>(
       return [];
     }
 
-    return [readRemoteJson(
-      client,
-      options.entryPath(entry.id),
+    return [readRemoteAssetValue(
+      session,
+      collection,
+      entry.id,
       options.normalizeRemote,
     ).then((value) => [entry.id, value] as const)];
   })));
 
   for (const localEntry of localEntries) {
     const remoteEntry = remoteIndex.entries[localEntry.id] ?? null;
-    const assetKey = `${options.id}:${localEntry.id}`;
-    const localContentHash = createStableJsonHash(localEntry.value);
-    const lastSyncedHash = readWebDavLastSyncedContentHash(assetKey);
+    const assetKey = createSyncAssetKey(collection, localEntry.id);
+    const localContentHash = await createSyncContentHash(collection, localEntry.value);
+    const lastSyncedHash = await session.localState.getLastSyncedHash(assetKey);
     const remoteValue = remoteValuesByLocalId.get(localEntry.id) ?? null;
 
     if (remoteEntry?.deletedAt !== null && remoteEntry?.deletedAt !== undefined) {
@@ -618,7 +814,7 @@ async function syncFullWithRevision<TValue>(
           status = mergeStatus(status, "downloaded");
           changedAssetIds.push(localEntry.id);
         }
-        writeWebDavLastSyncedContentHash(assetKey, remoteEntry.contentHash);
+        await session.localState.setLastSyncedHash(assetKey, remoteEntry.contentHash);
         continue;
       }
 
@@ -632,7 +828,7 @@ async function syncFullWithRevision<TValue>(
           value: localEntry.value,
           deletedAt: remoteEntry.deletedAt,
         });
-        writeWebDavLastSyncedContentHash(assetKey, remoteEntry.contentHash);
+        await session.localState.setLastSyncedHash(assetKey, remoteEntry.contentHash);
         status = mergeStatus(status, "downloaded");
         changedAssetIds.push(localEntry.id);
         continue;
@@ -647,21 +843,23 @@ async function syncFullWithRevision<TValue>(
         remoteHash: remoteEntry.contentHash,
         remoteDeletedAt: remoteEntry.deletedAt,
         remoteUpdatedAt:
-          remoteEntry.committedAt ?? remoteIndexState.lastModified,
+          remoteEntry.committedAt ?? remoteIndexState.committedAt,
         resolveConflict: createScopedConflictResolver(
           scope,
           options.resolveConflict,
         ),
       });
       if (resolution === "use-local") {
-        const entryPath = options.entryPath(localEntry.id);
-        await ensureRemoteParentDirectory(client, entryPath);
-        await client.writeTextFile(entryPath, JSON.stringify(localEntry.value));
-        nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
+        remoteWriteBatch.putAsset({
+          collection,
+          assetId: localEntry.id,
+          content: JSON.stringify(localEntry.value),
           contentHash: localContentHash,
-          deletedAt: null,
+          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
+          baseContentHash: remoteEntry.contentHash,
         });
-        writeWebDavLastSyncedContentHash(assetKey, localContentHash);
+        hasRemoteWrites = true;
+        await session.localState.setLastSyncedHash(assetKey, localContentHash);
         status = mergeStatus(status, "uploaded");
       } else if (resolution === "use-remote") {
         await options.writeLocal({
@@ -669,7 +867,7 @@ async function syncFullWithRevision<TValue>(
           value: localEntry.value,
           deletedAt: remoteEntry.deletedAt,
         });
-        writeWebDavLastSyncedContentHash(assetKey, remoteEntry.contentHash);
+        await session.localState.setLastSyncedHash(assetKey, remoteEntry.contentHash);
         status = mergeStatus(status, "downloaded");
       } else {
         status = mergeStatus(status, "conflict");
@@ -680,26 +878,36 @@ async function syncFullWithRevision<TValue>(
 
     if (localEntry.deletedAt !== null) {
       if (remoteEntry === null || remoteValue === null) {
-        nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
-          contentHash: localContentHash,
+        remoteWriteBatch.putTombstone({
+          collection,
+          assetId: localEntry.id,
           deletedAt: localEntry.deletedAt,
+          targetContentHash: localContentHash,
+          baseRevision: remoteEntry?.revision ?? null,
+          baseContentHash: remoteEntry?.contentHash ?? null,
         });
-        writeWebDavLastSyncedContentHash(assetKey, localContentHash);
+        hasRemoteWrites = true;
+        await session.localState.setLastSyncedHash(assetKey, localContentHash);
         status = mergeStatus(status, "uploaded");
         changedAssetIds.push(localEntry.id);
         continue;
       }
 
-      const remoteContentHash = createStableJsonHash(remoteValue);
+      const remoteContentHash = remoteValue.contentHash;
       if (
         localContentHash === remoteContentHash
         || lastSyncedHash === remoteContentHash
       ) {
-        nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
-          contentHash: localContentHash,
+        remoteWriteBatch.putTombstone({
+          collection,
+          assetId: localEntry.id,
           deletedAt: localEntry.deletedAt,
+          targetContentHash: localContentHash,
+          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
+          baseContentHash: remoteEntry.contentHash,
         });
-        writeWebDavLastSyncedContentHash(assetKey, localContentHash);
+        hasRemoteWrites = true;
+        await session.localState.setLastSyncedHash(assetKey, localContentHash);
         status = mergeStatus(status, "uploaded");
         changedAssetIds.push(localEntry.id);
         continue;
@@ -709,31 +917,36 @@ async function syncFullWithRevision<TValue>(
         adapterId: options.id,
         assetId: localEntry.id,
         localValue: localEntry.value,
-        remoteValue,
+        remoteValue: remoteValue.value,
         localHash: localContentHash,
         remoteHash: remoteContentHash,
         remoteDeletedAt: null,
         remoteUpdatedAt:
-          remoteEntry.committedAt ?? remoteIndexState.lastModified,
+          remoteEntry.committedAt ?? remoteIndexState.committedAt,
         resolveConflict: createScopedConflictResolver(
           scope,
           options.resolveConflict,
         ),
       });
       if (resolution === "use-local") {
-        nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
-          contentHash: localContentHash,
+        remoteWriteBatch.putTombstone({
+          collection,
+          assetId: localEntry.id,
           deletedAt: localEntry.deletedAt,
+          targetContentHash: localContentHash,
+          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
+          baseContentHash: remoteEntry.contentHash,
         });
-        writeWebDavLastSyncedContentHash(assetKey, localContentHash);
+        hasRemoteWrites = true;
+        await session.localState.setLastSyncedHash(assetKey, localContentHash);
         status = mergeStatus(status, "uploaded");
       } else if (resolution === "use-remote") {
         await options.writeLocal({
           id: localEntry.id,
-          value: remoteValue,
+          value: remoteValue.value,
           deletedAt: null,
         });
-        writeWebDavLastSyncedContentHash(assetKey, remoteContentHash);
+        await session.localState.setLastSyncedHash(assetKey, remoteContentHash);
         status = mergeStatus(status, "downloaded");
       } else {
         status = mergeStatus(status, "conflict");
@@ -747,7 +960,7 @@ async function syncFullWithRevision<TValue>(
       && localContentHash === remoteEntry.contentHash
     ) {
       logger.debug(`${options.id}/${localEntry.id}: collection index hash matches → idle`);
-      writeWebDavLastSyncedContentHash(
+      await session.localState.setLastSyncedHash(
         assetKey,
         remoteEntry.contentHash,
       );
@@ -755,29 +968,31 @@ async function syncFullWithRevision<TValue>(
     }
 
     const entryStatus = await syncSingleValue({
+      collection,
       adapterId: options.id,
       assetId: localEntry.id,
       localValue: localEntry.value,
-      remoteValue,
-      readLastSyncedHash: () => readWebDavLastSyncedContentHash(assetKey),
-      writeLastSyncedHash: (contentHash) => writeWebDavLastSyncedContentHash(assetKey, contentHash),
+      remoteValue: remoteValue?.value ?? null,
+      readLastSyncedHash: async () => await session.localState.getLastSyncedHash(assetKey),
+      writeLastSyncedHash: async (contentHash) => {
+        await session.localState.setLastSyncedHash(assetKey, contentHash);
+      },
       writeLocal: async (value) => await options.writeLocal({
         id: localEntry.id,
         value,
         deletedAt: null,
       }),
-      writeRemote: async (value) => {
-        const contentHash = createStableJsonHash(value);
-        const entryPath = options.entryPath(localEntry.id);
-        await ensureRemoteParentDirectory(client, entryPath);
-        await client.writeTextFile(entryPath, JSON.stringify(value));
-        nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
-          contentHash,
-          deletedAt: null,
-        });
-      },
+      writeRemote: async (value, contentHash) => await writeRemoteValue({
+        session,
+        collection,
+        assetId: localEntry.id,
+        value,
+        contentHash,
+        baseRevision: remoteEntry?.revision ?? null,
+        baseContentHash: remoteEntry?.contentHash ?? null,
+      }),
       remoteUpdatedAt:
-        remoteEntry?.committedAt ?? remoteIndexState.lastModified,
+        remoteEntry?.committedAt ?? remoteIndexState.committedAt,
       resolveConflict: createScopedConflictResolver(
         scope,
         options.resolveConflict,
@@ -848,49 +1063,45 @@ async function syncFullWithRevision<TValue>(
       isAssetIncludedInScope(entryId, scope)
         && !localEntryById.has(entryId)
         && remoteEntry.deletedAt === null
-        ? [readRemoteJson(
-          client,
-          options.entryPath(entryId),
+        ? [readRemoteAssetValue(
+          session,
+          collection,
+          entryId,
           options.normalizeRemote,
         ).then((value) => ({ entryId, value }))]
         : []
     ),
   );
-  for (const { entryId, value: remoteValue } of remoteOnlyValues) {
-    if (remoteValue === null) {
+  for (const { entryId, value: remoteAsset } of remoteOnlyValues) {
+    if (remoteAsset === null) {
       continue;
     }
 
     logger.info(`${options.id}/${entryId}: new remote entry → downloading`);
     await options.writeLocal({
       id: entryId,
-      value: remoteValue,
+      value: remoteAsset.value,
       deletedAt: null,
     });
-    writeWebDavLastSyncedContentHash(`${options.id}:${entryId}`, createStableJsonHash(remoteValue));
+    await session.localState.setLastSyncedHash(
+      createSyncAssetKey(collection, entryId),
+      remoteAsset.contentHash,
+    );
     status = mergeStatus(status, "downloaded");
     changedAssetIds.push(entryId);
   }
 
-  if (nextIndex.revision !== remoteIndex.revision) {
-    clearWebDavLastSeenRemoteEtag(options.indexPath);
-    logger.info(`${options.id}: writing index.json → rev=${remoteIndex.revision + 1} (was ${remoteIndex.revision}), entries=${Object.keys(nextIndex.entries).length}`);
-    await writeRemoteIndex(
-      client,
-      options.indexPath,
-      nextIndex,
-      remoteIndex.revision,
-      remoteIndexState.canonicalMissing,
-    );
-  } else if (
-    status !== "conflict"
-    && remoteIndexState.canonicalEtag !== null
-  ) {
-    writeWebDavLastSeenRemoteEtag(
-      options.indexPath,
-      remoteIndexState.canonicalEtag,
-    );
+  if (hasRemoteWrites) {
+    await remoteWriteBatch.commit();
   }
+
+  await session.markApplied({
+    collection,
+    assetIds: Array.from(new Set(changedAssetIds)),
+    scopeComplete: isScopeComplete(scope),
+    collectionRevision: remoteIndexState.revision,
+    collectionEtag: hasRemoteWrites ? null : remoteIndexState.etag ?? null,
+  });
 
   return {
     adapterId: options.id,
@@ -901,44 +1112,54 @@ async function syncFullWithRevision<TValue>(
 }
 
 async function syncPatchWithRevision<TValue>(
-  client: SyncStorageClient,
+  session: SyncRemoteSession,
+  collection: SyncRemoteCollection,
   options: PatchWithRevisionAdapterOptions<TValue>,
   scope?: SyncAdapterScope,
 ): Promise<SyncAdapterResult> {
-  const assetKey = `${options.id}:snapshot`;
+  const assetId = "snapshot";
+  const assetKey = createSyncAssetKey(collection, assetId);
   const localValue = await options.readLocal();
-  const remoteState = await readRemotePatchState(client, options.directoryPath, options.normalizeRemote);
+  const remoteAsset = await readRemoteAssetValue(
+    session,
+    collection,
+    assetId,
+    options.normalizeRemote,
+  );
   const status = await syncSingleValue({
+    collection,
     adapterId: options.id,
-    assetId: "snapshot",
+    assetId,
     localValue,
-    remoteValue: remoteState?.value ?? null,
-    remoteUpdatedAt: remoteState?.remoteUpdatedAt ?? null,
-    readLastSyncedHash: () => readWebDavLastSyncedContentHash(assetKey),
-    writeLastSyncedHash: (contentHash) => writeWebDavLastSyncedContentHash(assetKey, contentHash),
-    writeLocal: options.writeLocal,
-    writeRemote: async (value) => {
-      await writeRemotePatchState({
-        client,
-        directoryPath: options.directoryPath,
-        value,
-        previousState: remoteState,
-        deltaThreshold: options.deltaThreshold ?? 50,
-      });
+    remoteValue: remoteAsset?.value ?? null,
+    remoteUpdatedAt: remoteAsset?.committedAt ?? null,
+    readLastSyncedHash: async () => await session.localState.getLastSyncedHash(assetKey),
+    writeLastSyncedHash: async (contentHash) => {
+      await session.localState.setLastSyncedHash(assetKey, contentHash);
     },
+    writeLocal: options.writeLocal,
+    writeRemote: async (value, contentHash) => await writeRemoteValue({
+      session,
+      collection,
+      assetId,
+      value,
+      contentHash,
+      baseRevision: remoteAsset?.revision ?? null,
+      baseContentHash: remoteAsset?.contentHash ?? null,
+    }),
     resolveConflict: createScopedConflictResolver(
       scope,
       options.resolveConflict,
     ),
   });
 
-  // 更新 meta.json ETag 供小检查使用
-  const metaPath = resolvePath(options.directoryPath, "meta.json");
-  if (status === "downloaded" && remoteState?.etag != null) {
-    writeWebDavLastSeenRemoteEtag(metaPath, remoteState.etag);
-  } else if (status === "uploaded") {
-    clearWebDavLastSeenRemoteEtag(metaPath);
-  }
+  await session.markApplied({
+    collection,
+    assetIds: [assetId],
+    scopeComplete: true,
+    collectionRevision: remoteAsset?.revision ?? null,
+    collectionEtag: status === "uploaded" ? null : remoteAsset?.etag ?? null,
+  });
 
   return {
     adapterId: options.id,
@@ -949,7 +1170,8 @@ async function syncPatchWithRevision<TValue>(
 }
 
 async function syncPatchCollectionWithRevision<TValue>(
-  client: SyncStorageClient,
+  session: SyncRemoteSession,
+  collection: SyncRemoteCollection,
   options: PatchCollectionWithRevisionAdapterOptions<TValue>,
   scope?: SyncAdapterScope,
 ): Promise<SyncAdapterResult> {
@@ -960,9 +1182,8 @@ async function syncPatchCollectionWithRevision<TValue>(
   reportSyncProgress(scope, 10);
   const localEntryById = new Map(localEntries.map((entry) => [entry.id, entry]));
   if (await isRemoteIndexUnchangedForCleanLocalEntries({
-    adapterId: options.id,
-    client,
-    indexPath: options.indexPath,
+    session,
+    collection,
     localEntries,
   })) {
     reportSyncProgress(scope, 100);
@@ -973,12 +1194,13 @@ async function syncPatchCollectionWithRevision<TValue>(
       changedAssetIds: [],
     };
   }
-  const remoteIndexState = await readRemoteIndexState(client, options.indexPath);
+  const remoteIndexState = await session.readIndex(collection);
   reportSyncProgress(scope, 35);
-  const remoteIndex = remoteIndexState.index;
+  const remoteIndex = toRemoteIndexFile(remoteIndexState);
   const changedAssetIds: string[] = [];
-  let nextIndex = remoteIndex;
   let status: SyncAdapterStatus = "idle";
+  const remoteWriteBatch = session.beginWriteBatch();
+  let hasRemoteWrites = false;
   const remoteStatesByLocalId = new Map(await Promise.all(localEntries.flatMap((entry) => {
     const remoteEntry = remoteIndex.entries[entry.id];
     if (
@@ -991,17 +1213,14 @@ async function syncPatchCollectionWithRevision<TValue>(
       return [];
     }
 
-    return [readRemotePatchState(
-      client,
-      options.directoryPath(entry.id),
+    return [readRemoteAssetValue(
+      session,
+      collection,
+      entry.id,
       options.normalizeRemote,
     ).then((value) => [entry.id, value] as const)];
   })));
   reportSyncProgress(scope, 55);
-
-  // AI-CORRECTION 2026-07-30: 收集 meta 写延迟到循环结束后与 index 写并行，
-  // 避免每次上传都串行等待 meta PUT + index PUT 共 2 次额外往返。
-  const pendingMetaWrites: Promise<void>[] = [];
 
   for (const [localEntryIndex, localEntry] of localEntries.entries()) {
     reportSyncProgress(
@@ -1009,9 +1228,9 @@ async function syncPatchCollectionWithRevision<TValue>(
       interpolateProgress(55, 75, localEntryIndex, localEntries.length),
     );
     const remoteEntry = remoteIndex.entries[localEntry.id] ?? null;
-    const assetKey = `${options.id}:${localEntry.id}`;
-    const localContentHash = createStableJsonHash(localEntry.value);
-    const lastSyncedHash = readWebDavLastSyncedContentHash(assetKey);
+    const assetKey = createSyncAssetKey(collection, localEntry.id);
+    const localContentHash = await createSyncContentHash(collection, localEntry.value);
+    const lastSyncedHash = await session.localState.getLastSyncedHash(assetKey);
     const remoteState = remoteStatesByLocalId.get(localEntry.id) ?? null;
 
     if (remoteEntry?.deletedAt !== null && remoteEntry?.deletedAt !== undefined) {
@@ -1025,7 +1244,7 @@ async function syncPatchCollectionWithRevision<TValue>(
           status = mergeStatus(status, "downloaded");
           changedAssetIds.push(localEntry.id);
         }
-        writeWebDavLastSyncedContentHash(assetKey, remoteEntry.contentHash);
+        await session.localState.setLastSyncedHash(assetKey, remoteEntry.contentHash);
         continue;
       }
 
@@ -1038,7 +1257,7 @@ async function syncPatchCollectionWithRevision<TValue>(
           value: localEntry.value,
           deletedAt: remoteEntry.deletedAt,
         });
-        writeWebDavLastSyncedContentHash(assetKey, remoteEntry.contentHash);
+        await session.localState.setLastSyncedHash(assetKey, remoteEntry.contentHash);
         status = mergeStatus(status, "downloaded");
         changedAssetIds.push(localEntry.id);
         continue;
@@ -1053,30 +1272,23 @@ async function syncPatchCollectionWithRevision<TValue>(
         remoteHash: remoteEntry.contentHash,
         remoteDeletedAt: remoteEntry.deletedAt,
         remoteUpdatedAt:
-          remoteEntry.committedAt ?? remoteIndexState.lastModified,
+          remoteEntry.committedAt ?? remoteIndexState.committedAt,
         resolveConflict: createScopedConflictResolver(
           scope,
           options.resolveConflict,
         ),
       });
       if (resolution === "use-local") {
-        const previousState = await readRemotePatchState(
-          client,
-          options.directoryPath(localEntry.id),
-          options.normalizeRemote,
-        );
-        await writeRemotePatchState({
-          client,
-          directoryPath: options.directoryPath(localEntry.id),
-          value: localEntry.value,
-          previousState,
-          deltaThreshold: options.deltaThreshold ?? 50,
-        });
-        nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
+        remoteWriteBatch.putAsset({
+          collection,
+          assetId: localEntry.id,
+          content: JSON.stringify(localEntry.value),
           contentHash: localContentHash,
-          deletedAt: null,
+          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
+          baseContentHash: remoteEntry.contentHash,
         });
-        writeWebDavLastSyncedContentHash(assetKey, localContentHash);
+        hasRemoteWrites = true;
+        await session.localState.setLastSyncedHash(assetKey, localContentHash);
         status = mergeStatus(status, "uploaded");
       } else if (resolution === "use-remote") {
         await options.writeLocal({
@@ -1084,7 +1296,7 @@ async function syncPatchCollectionWithRevision<TValue>(
           value: localEntry.value,
           deletedAt: remoteEntry.deletedAt,
         });
-        writeWebDavLastSyncedContentHash(assetKey, remoteEntry.contentHash);
+        await session.localState.setLastSyncedHash(assetKey, remoteEntry.contentHash);
         status = mergeStatus(status, "downloaded");
       } else {
         status = mergeStatus(status, "conflict");
@@ -1095,26 +1307,36 @@ async function syncPatchCollectionWithRevision<TValue>(
 
     if (localEntry.deletedAt !== null) {
       if (remoteEntry === null || remoteState === null) {
-        nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
-          contentHash: localContentHash,
+        remoteWriteBatch.putTombstone({
+          collection,
+          assetId: localEntry.id,
           deletedAt: localEntry.deletedAt,
+          targetContentHash: localContentHash,
+          baseRevision: remoteEntry?.revision ?? null,
+          baseContentHash: remoteEntry?.contentHash ?? null,
         });
-        writeWebDavLastSyncedContentHash(assetKey, localContentHash);
+        hasRemoteWrites = true;
+        await session.localState.setLastSyncedHash(assetKey, localContentHash);
         status = mergeStatus(status, "uploaded");
         changedAssetIds.push(localEntry.id);
         continue;
       }
 
-      const remoteContentHash = createStableJsonHash(remoteState.value);
+      const remoteContentHash = remoteState.contentHash;
       if (
         localContentHash === remoteContentHash
         || lastSyncedHash === remoteContentHash
       ) {
-        nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
-          contentHash: localContentHash,
+        remoteWriteBatch.putTombstone({
+          collection,
+          assetId: localEntry.id,
           deletedAt: localEntry.deletedAt,
+          targetContentHash: localContentHash,
+          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
+          baseContentHash: remoteEntry.contentHash,
         });
-        writeWebDavLastSyncedContentHash(assetKey, localContentHash);
+        hasRemoteWrites = true;
+        await session.localState.setLastSyncedHash(assetKey, localContentHash);
         status = mergeStatus(status, "uploaded");
         changedAssetIds.push(localEntry.id);
         continue;
@@ -1129,20 +1351,25 @@ async function syncPatchCollectionWithRevision<TValue>(
         remoteHash: remoteContentHash,
         remoteDeletedAt: null,
         remoteUpdatedAt:
-          remoteState.remoteUpdatedAt
+          remoteState.committedAt
           ?? remoteEntry.committedAt
-          ?? remoteIndexState.lastModified,
+          ?? remoteIndexState.committedAt,
         resolveConflict: createScopedConflictResolver(
           scope,
           options.resolveConflict,
         ),
       });
       if (resolution === "use-local") {
-        nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
-          contentHash: localContentHash,
+        remoteWriteBatch.putTombstone({
+          collection,
+          assetId: localEntry.id,
           deletedAt: localEntry.deletedAt,
+          targetContentHash: localContentHash,
+          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
+          baseContentHash: remoteEntry.contentHash,
         });
-        writeWebDavLastSyncedContentHash(assetKey, localContentHash);
+        hasRemoteWrites = true;
+        await session.localState.setLastSyncedHash(assetKey, localContentHash);
         status = mergeStatus(status, "uploaded");
       } else if (resolution === "use-remote") {
         await options.writeLocal({
@@ -1150,7 +1377,7 @@ async function syncPatchCollectionWithRevision<TValue>(
           value: remoteState.value,
           deletedAt: null,
         });
-        writeWebDavLastSyncedContentHash(assetKey, remoteContentHash);
+        await session.localState.setLastSyncedHash(assetKey, remoteContentHash);
         status = mergeStatus(status, "downloaded");
       } else {
         status = mergeStatus(status, "conflict");
@@ -1164,45 +1391,40 @@ async function syncPatchCollectionWithRevision<TValue>(
       && localContentHash === remoteEntry.contentHash
     ) {
       logger.debug(`${options.id}/${localEntry.id}: patch index hash matches → idle`);
-      writeWebDavLastSyncedContentHash(assetKey, remoteEntry.contentHash);
+      await session.localState.setLastSyncedHash(assetKey, remoteEntry.contentHash);
       continue;
     }
 
     const entryStatus = await syncSingleValue({
+      collection,
       adapterId: options.id,
       assetId: localEntry.id,
       localValue: localEntry.value,
       remoteValue: remoteState?.value ?? null,
-      readLastSyncedHash: () => readWebDavLastSyncedContentHash(assetKey),
-      writeLastSyncedHash: (contentHash) => writeWebDavLastSyncedContentHash(assetKey, contentHash),
+      readLastSyncedHash: async () => await session.localState.getLastSyncedHash(assetKey),
+      writeLastSyncedHash: async (contentHash) => {
+        await session.localState.setLastSyncedHash(assetKey, contentHash);
+      },
       writeLocal: async (value) => await options.writeLocal({
         id: localEntry.id,
         value,
         deletedAt: null,
       }),
-      writeRemote: async (value) => {
-        const contentHash = createStableJsonHash(value);
-        // AI-CORRECTION 2026-07-30: 内容写入完成后立即更新 index 并延迟 meta 写入，
-        // 以便循环结束后将 meta 写与 index 写并行。
-        const { nextMeta, metaWriteOptions } = await writeRemotePatchContent({
-          client,
-          directoryPath: options.directoryPath(localEntry.id),
-          value,
-          previousState: remoteState,
-          deltaThreshold: options.deltaThreshold ?? 50,
-        });
-        nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
+      writeRemote: async (value, contentHash) => {
+        remoteWriteBatch.putAsset({
+          collection,
+          assetId: localEntry.id,
+          content: JSON.stringify(value),
           contentHash,
-          deletedAt: null,
+          baseRevision: remoteEntry?.revision ?? remoteIndex.revision,
+          baseContentHash: remoteEntry?.contentHash ?? null,
         });
-        pendingMetaWrites.push(
-          writeRemotePatchMeta(client, options.directoryPath(localEntry.id), nextMeta, metaWriteOptions),
-        );
+        hasRemoteWrites = true;
       },
       remoteUpdatedAt:
-        remoteState?.remoteUpdatedAt
+        remoteState?.committedAt
         ?? remoteEntry?.committedAt
-        ?? remoteIndexState.lastModified,
+        ?? remoteIndexState.committedAt,
       resolveConflict: createScopedConflictResolver(
         scope,
         options.resolveConflict,
@@ -1218,12 +1440,17 @@ async function syncPatchCollectionWithRevision<TValue>(
       && remoteEntry?.deletedAt === null
       && remoteState !== null
     ) {
-      const normalizedRemoteHash = createStableJsonHash(remoteState.value);
+      const normalizedRemoteHash = remoteState.contentHash;
       if (remoteEntry.contentHash !== normalizedRemoteHash) {
-        nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
+        remoteWriteBatch.putAsset({
+          collection,
+          assetId: localEntry.id,
+          content: JSON.stringify(remoteState.value),
           contentHash: normalizedRemoteHash,
-          deletedAt: null,
+          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
+          baseContentHash: remoteEntry.contentHash,
         });
+        hasRemoteWrites = true;
         status = mergeStatus(status, "uploaded");
         changedAssetIds.push(localEntry.id);
       }
@@ -1287,9 +1514,10 @@ async function syncPatchCollectionWithRevision<TValue>(
       isAssetIncludedInScope(entryId, scope)
         && !localEntryById.has(entryId)
         && remoteEntry.deletedAt === null
-        ? [readRemotePatchState(
-          client,
-          options.directoryPath(entryId),
+        ? [readRemoteAssetValue(
+          session,
+          collection,
+          entryId,
           options.normalizeRemote,
         ).then((state) => ({ entryId, state }))]
       : []
@@ -1314,46 +1542,26 @@ async function syncPatchCollectionWithRevision<TValue>(
       value: remoteState.value,
       deletedAt: null,
     });
-    writeWebDavLastSyncedContentHash(`${options.id}:${entryId}`, createStableJsonHash(remoteState.value));
+    await session.localState.setLastSyncedHash(
+      createSyncAssetKey(collection, entryId),
+      remoteState.contentHash,
+    );
     status = mergeStatus(status, "downloaded");
     changedAssetIds.push(entryId);
   }
   reportSyncProgress(scope, 94);
 
-  // AI-CORRECTION 2026-07-30: index 写与所有延迟的 meta 写并行执行，
-  // 将原本串行的 meta PUT + index PUT 两次往返合并为一次。
-  const indexWritePromise: Promise<void> | null =
-    nextIndex.revision !== remoteIndex.revision
-      ? (() => {
-        reportSyncProgress(scope, 96);
-        clearWebDavLastSeenRemoteEtag(options.indexPath);
-        logger.info(`${options.id}: writing collection index.json → rev=${remoteIndex.revision + 1} (was ${remoteIndex.revision}), entries=${Object.keys(nextIndex.entries).length}`);
-        return writeRemoteIndex(
-          client,
-          options.indexPath,
-          nextIndex,
-          remoteIndex.revision,
-          remoteIndexState.canonicalMissing,
-        );
-      })()
-      : null;
-
-  const writes: Promise<void>[] = [...pendingMetaWrites];
-  if (indexWritePromise !== null) {
-    writes.push(indexWritePromise);
+  if (hasRemoteWrites) {
+    await remoteWriteBatch.commit();
   }
 
-  if (writes.length > 0) {
-    await Promise.all(writes);
-  } else if (
-    status !== "conflict"
-    && remoteIndexState.canonicalEtag !== null
-  ) {
-    writeWebDavLastSeenRemoteEtag(
-      options.indexPath,
-      remoteIndexState.canonicalEtag,
-    );
-  }
+  await session.markApplied({
+    collection,
+    assetIds: Array.from(new Set(changedAssetIds)),
+    scopeComplete: isScopeComplete(scope),
+    collectionRevision: remoteIndexState.revision,
+    collectionEtag: hasRemoteWrites ? null : remoteIndexState.etag ?? null,
+  });
   reportSyncProgress(scope, 100);
 
   return {
@@ -1385,37 +1593,46 @@ function reportSyncProgress(
   scope?.onProgress?.(Math.min(100, Math.max(0, progress)));
 }
 
+function isScopeComplete(scope: SyncAdapterScope | undefined): boolean {
+  return scope?.includeAssetIds === undefined && scope?.excludeAssetIds === undefined;
+}
+
 async function isRemoteIndexUnchangedForCleanLocalEntries<TValue>(options: {
-  readonly adapterId: string;
-  readonly client: SyncStorageClient;
-  readonly indexPath: string;
+  readonly session: SyncRemoteSession;
+  readonly collection: SyncRemoteCollection;
   readonly localEntries: readonly {
     readonly id: string;
     readonly value: TValue;
     readonly deletedAt: string | null;
   }[];
 }): Promise<boolean> {
-  const lastSeenEtag = readWebDavLastSeenRemoteEtag(options.indexPath);
+  const lastSeenEtag = await options.session.localState.getRemoteEtag(
+    options.collection.stateKey,
+  );
   if (
     lastSeenEtag === null
     || options.localEntries.length === 0
     || options.localEntries.some((entry) =>
       entry.deletedAt !== null
-      || readWebDavLastSyncedContentHash(
-        `${options.adapterId}:${entry.id}`,
-      ) !== createStableJsonHash(entry.value)
     )
   ) {
     return false;
   }
 
-  const remoteStat = await options.client.stat(options.indexPath);
-  const unchanged = remoteStat?.type === "file"
-    && remoteStat.etag !== null
-    && remoteStat.etag === lastSeenEtag;
+  for (const entry of options.localEntries) {
+    const lastSyncedHash = await options.session.localState.getLastSyncedHash(
+      createSyncAssetKey(options.collection, entry.id),
+    );
+    if (lastSyncedHash !== await createSyncContentHash(options.collection, entry.value)) {
+      return false;
+    }
+  }
+
+  const result = await options.session.checkCollections([options.collection]);
+  const unchanged = !result.changedCollections.includes(options.collection.adapterId);
   if (unchanged) {
     logger.debug(
-      `${options.adapterId}: canonical index ETag unchanged and local hashes clean → idle`,
+      `${options.collection.adapterId}: canonical index ETag unchanged and local hashes clean → idle`,
     );
   }
 
@@ -1467,36 +1684,41 @@ async function resolveCollectionConflict<TValue>(options: {
 }
 
 async function syncSingleValue<TValue>(options: {
+  readonly collection: SyncRemoteCollection;
   readonly adapterId: string;
   readonly assetId: string;
   readonly localValue: TValue | null;
   readonly remoteValue: TValue | null;
   readonly remoteUpdatedAt: string | null;
-  readonly readLastSyncedHash: () => string | null;
-  readonly writeLastSyncedHash: (contentHash: string) => void;
+  readonly readLastSyncedHash: () => Promise<string | null>;
+  readonly writeLastSyncedHash: (contentHash: string) => Promise<void>;
   readonly writeLocal: (value: TValue) => Promise<void>;
-  readonly writeRemote: (value: TValue) => Promise<void>;
+  readonly writeRemote: (value: TValue, contentHash: string) => Promise<void>;
   readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
 }): Promise<SyncAdapterStatus> {
   if (options.localValue === null && options.remoteValue === null) {
     return "idle";
   }
 
-  const lastSyncedHash = options.readLastSyncedHash();
-  const localHash = options.localValue === null ? null : createStableJsonHash(options.localValue);
-  const remoteHash = options.remoteValue === null ? null : createStableJsonHash(options.remoteValue);
+  const lastSyncedHash = await options.readLastSyncedHash();
+  const localHash = options.localValue === null
+    ? null
+    : await createSyncContentHash(options.collection, options.localValue);
+  const remoteHash = options.remoteValue === null
+    ? null
+    : await createSyncContentHash(options.collection, options.remoteValue);
 
   if (options.localValue !== null && options.remoteValue === null) {
     logger.info(`${options.adapterId}/${options.assetId}: local exists, remote absent → uploading`);
-    await options.writeRemote(options.localValue);
-    options.writeLastSyncedHash(localHash!);
+    await options.writeRemote(options.localValue, localHash!);
+    await options.writeLastSyncedHash(localHash!);
     return "uploaded";
   }
 
   if (options.localValue === null && options.remoteValue !== null) {
     logger.info(`${options.adapterId}/${options.assetId}: local absent, remote exists → downloading`);
     await options.writeLocal(options.remoteValue);
-    options.writeLastSyncedHash(remoteHash!);
+    await options.writeLastSyncedHash(remoteHash!);
     return "downloaded";
   }
 
@@ -1506,21 +1728,21 @@ async function syncSingleValue<TValue>(options: {
 
   if (localHash === remoteHash) {
     logger.debug(`${options.adapterId}/${options.assetId}: hashes match → idle`);
-    options.writeLastSyncedHash(localHash);
+    await options.writeLastSyncedHash(localHash);
     return "idle";
   }
 
   if (lastSyncedHash === remoteHash) {
     logger.info(`${options.adapterId}/${options.assetId}: local changed, remote unchanged → uploading`);
-    await options.writeRemote(options.localValue);
-    options.writeLastSyncedHash(localHash);
+    await options.writeRemote(options.localValue, localHash);
+    await options.writeLastSyncedHash(localHash);
     return "uploaded";
   }
 
   if (lastSyncedHash === localHash) {
     logger.info(`${options.adapterId}/${options.assetId}: remote changed, local unchanged → downloading`);
     await options.writeLocal(options.remoteValue);
-    options.writeLastSyncedHash(remoteHash);
+    await options.writeLastSyncedHash(remoteHash);
     return "downloaded";
   }
 
@@ -1538,14 +1760,14 @@ async function syncSingleValue<TValue>(options: {
   logger.debug(`${options.adapterId}/${options.assetId}: conflict detected, resolved as "${resolution}"`);
 
   if (resolution === "use-local") {
-    await options.writeRemote(options.localValue);
-    options.writeLastSyncedHash(localHash);
+    await options.writeRemote(options.localValue, localHash);
+    await options.writeLastSyncedHash(localHash);
     return "uploaded";
   }
 
   if (resolution === "use-remote") {
     await options.writeLocal(options.remoteValue);
-    options.writeLastSyncedHash(remoteHash);
+    await options.writeLastSyncedHash(remoteHash);
     return "downloaded";
   }
 
@@ -1596,7 +1818,7 @@ async function readRemoteJsonFile<TValue>(
   }
 }
 
-async function readRemoteIndexState(
+async function _readRemoteIndexState(
   client: SyncStorageClient,
   indexPath: string,
 ): Promise<RemoteIndexState> {
@@ -1711,7 +1933,7 @@ async function readRemoteIndexState(
   return result;
 }
 
-async function writeRemoteIndex(
+async function _writeRemoteIndex(
   client: SyncStorageClient,
   indexPath: string,
   index: RemoteIndexFile,
@@ -1762,7 +1984,7 @@ function normalizeRemoteIndex(value: unknown): RemoteIndexFile {
   };
 }
 
-function upsertRemoteIndexEntry(
+function _upsertRemoteIndexEntry(
   index: RemoteIndexFile,
   entryId: string,
   entry: Omit<RemoteIndexEntry, "committedAt">,
@@ -1788,7 +2010,7 @@ function upsertRemoteIndexEntry(
   };
 }
 
-async function readRemotePatchState<TValue>(
+async function _readRemotePatchState<TValue>(
   client: SyncStorageClient,
   directoryPath: string,
   normalizeRemote: ((value: unknown) => TValue | null) | undefined,
@@ -2072,7 +2294,7 @@ async function writeRemotePatchContent<TValue>(options: {
   };
 }
 
-async function writeRemotePatchState<TValue>(options: {
+async function _writeRemotePatchState<TValue>(options: {
   readonly client: SyncStorageClient;
   readonly directoryPath: string;
   readonly value: TValue;
@@ -2291,7 +2513,7 @@ function resolvePath(directoryPath: string, fileName: string): string {
   return normalizedDirectoryPath === "" ? fileName : `${normalizedDirectoryPath}/${fileName}`;
 }
 
-async function ensureRemoteParentDirectory(
+async function _ensureRemoteParentDirectory(
   client: SyncStorageClient,
   remotePath: string,
 ): Promise<void> {

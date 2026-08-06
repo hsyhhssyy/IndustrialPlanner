@@ -74,8 +74,8 @@ import {
   writeSyncProvider,
 } from "./sync-providers";
 import { SyncStateImpl } from "./sync-state-impl";
-import type { SyncStorageClient } from "./clients/types";
 import { createWebDavWorkerStorageClient } from "./clients/webdav/webdav-worker-client";
+import { createWebDavSyncRemote } from "./clients/webdav/webdav-remote";
 
 export interface SyncHostOptions {
   readonly assetSources?: readonly SyncAssetSource[];
@@ -265,25 +265,27 @@ export async function createSyncHost(
   // }
   const service:  SyncService = createSyncService({
     readSettings: () => currentSettings,
-    createClient: (
+    createRemote: (
       settings,
       onRequestActivityChange,
       requestOptions,
-    ) => createWebDavWorkerStorageClient({
-      baseUrl: settings.url,
-      username: settings.username,
-      password: settings.password,
-      readDebugEnabled: options.readDebugEnabled,
-      maxConcurrentRequests: settings.maxConcurrentRequests,
-      onRequestActivityChange,
-      ...(requestOptions.requestTimeoutMs === undefined
-        ? {}
-        : { requestTimeoutMs: requestOptions.requestTimeoutMs }),
+    ) => createWebDavSyncRemote({
+      client: createWebDavWorkerStorageClient({
+        baseUrl: settings.url,
+        username: settings.username,
+        password: settings.password,
+        readDebugEnabled: options.readDebugEnabled,
+        maxConcurrentRequests: settings.maxConcurrentRequests,
+        onRequestActivityChange,
+        ...(requestOptions.requestTimeoutMs === undefined
+          ? {}
+          : { requestTimeoutMs: requestOptions.requestTimeoutMs }),
+      }),
     }),
     adapters,
     createInitialSyncPlan: () => createInitialSyncPlan(workspace, externalSources),
     maintenanceTasks: createMaintenanceTasks({
-      externalSources,
+      collections: adapters.map((adapter) => adapter.collection),
       getDirectoryTreeReadyKey: () => directoryTreeReadyKey,
       setDirectoryTreeReadyKey: (key) => {
         directoryTreeReadyKey = key;
@@ -351,18 +353,19 @@ export async function createSyncHost(
         return;
       }
 
-      const client = createWebDavWorkerStorageClient({
-        baseUrl: settings.url,
-        username: settings.username,
-        password: settings.password,
-        readDebugEnabled: options.readDebugEnabled,
-        maxConcurrentRequests: settings.maxConcurrentRequests,
+      const remote = createWebDavSyncRemote({
+        client: createWebDavWorkerStorageClient({
+          baseUrl: settings.url,
+          username: settings.username,
+          password: settings.password,
+          readDebugEnabled: options.readDebugEnabled,
+          maxConcurrentRequests: settings.maxConcurrentRequests,
+        }),
       });
       try {
-        // WebDAV DELETE 目录时多数服务端（Nextcloud/Apache mod_dav）会递归删除内容
-        await client.deleteResource("");
+        await remote.resetRemote?.();
       } finally {
-        client.dispose?.();
+        remote.dispose?.();
       }
     },
     // AI-REMOVED 2026-07-29:
@@ -573,7 +576,7 @@ function isAdapterReadyForLocalChanges(
 }
 
 function createMaintenanceTasks(options: {
-  readonly externalSources: readonly SyncAssetSource[];
+  readonly collections: readonly SyncAdapter["collection"][];
   readonly getDirectoryTreeReadyKey: () => string | null;
   readonly setDirectoryTreeReadyKey: (key: string) => void;
 }): readonly SyncMaintenanceTask[] {
@@ -586,7 +589,7 @@ function createMaintenanceTasks(options: {
           return;
         }
 
-        await ensureWebDavDirectoryTree(client, options.externalSources);
+        await client.prepareCollections?.(options.collections);
         options.setDirectoryTreeReadyKey(directoryTreeKey);
       },
     },
@@ -910,69 +913,55 @@ export function preserveLocalWorldDocumentIdentity(
   };
 }
 
-async function ensureWebDavDirectoryTree(
-  client: SyncStorageClient,
-  externalSources: readonly SyncAssetSource[],
-): Promise<void> {
-  const directoryPaths = new Set([
-    "",
-    "assets",
-    "assets/blueprints",
-    "assets/blueprint-folders",
-    "documents",
-    "documents/by-base",
-  ]);
-  // AI-REMOVED 2026-07-29:
-  // Reason: 客户端不再注册或枚举设备，不应继续创建 devices 目录。
-  // Trigger: 用户确认设备列表没有业务意义。
-  // Evidence: 当前同步协议仅需要 assets 与 documents 资源树。
-  // Replacement: None。
-  // Risk: Low；服务器已有 devices 目录原样保留。
-  // Human Review: Required
-  //
-  // Original code:
-  // "devices",
-
-  for (const source of externalSources) {
-    addPathAncestors(directoryPaths, source.indexPath);
-  }
-  // AI-REMOVED 2026-07-29:
-  // Reason: 目录之间并非全部相互依赖，逐项等待浪费 WebDAV 往返时间。
-  // Trigger: 用户要求在最大连接数限制下并行下载和维护请求。
-  // Evidence: worker client 已提供全局 maxConcurrentRequests 队列。
-  // Replacement: 下方按目录深度分组、组内并行的创建流程。
-  // Risk: Low；父级深度完成后才会创建子级。
-  // Human Review: Required
-  //
-  // Original code:
-  // for (const path of directoryPaths) {
-  //   await client.makeDirectory(path);
-  // }
-  const pathsByDepth = new Map<number, string[]>();
-  for (const path of directoryPaths) {
-    const depth = path === "" ? 0 : path.split("/").length;
-    const paths = pathsByDepth.get(depth) ?? [];
-    paths.push(path);
-    pathsByDepth.set(depth, paths);
-  }
-  for (const depth of Array.from(pathsByDepth.keys()).sort((left, right) => left - right)) {
-    await Promise.all(
-      (pathsByDepth.get(depth) ?? []).map(async (path) => {
-        await client.makeDirectory(path);
-      }),
-    );
-  }
-}
-
-function addPathAncestors(paths: Set<string>, filePath: string): void {
-  const segments = filePath.split("/").filter(Boolean);
-  segments.pop();
-  let current = "";
-  for (const segment of segments) {
-    current = current === "" ? segment : `${current}/${segment}`;
-    paths.add(current);
-  }
-}
+// AI-REMOVED 2026-08-06:
+// Reason: REQ-005 将 WebDAV 目录维护移动到 WebDavSyncRemoteSession.prepareCollections，sync-host 不再直接持有 WebDAV 文件系统 client。
+// Trigger: SyncRemote 重构要求 app/service/adapter 调用面面向同步业务 session，而不是 WebDAV 目录和文件操作。
+// Evidence: createMaintenanceTasks 现在调用 session.prepareCollections?.(collections)，WebDavSyncRemoteSession 内部按 collection.webDav binding 维护目录层级。
+// Replacement: src/sync/clients/webdav/webdav-remote.ts WebDavSyncRemoteSession.prepareCollections。
+// Risk: Low；目录创建顺序仍按深度分组并行，写入路径仍由 WebDAV remote 确保父目录存在。
+// Human Review: Required
+//
+// Original code:
+// async function ensureWebDavDirectoryTree(
+//   client: SyncStorageClient,
+//   externalSources: readonly SyncAssetSource[],
+// ): Promise<void> {
+//   const directoryPaths = new Set([
+//     "",
+//     "assets",
+//     "assets/blueprints",
+//     "assets/blueprint-folders",
+//     "documents",
+//     "documents/by-base",
+//   ]);
+//   for (const source of externalSources) {
+//     addPathAncestors(directoryPaths, source.indexPath);
+//   }
+//   const pathsByDepth = new Map<number, string[]>();
+//   for (const path of directoryPaths) {
+//     const depth = path === "" ? 0 : path.split("/").length;
+//     const paths = pathsByDepth.get(depth) ?? [];
+//     paths.push(path);
+//     pathsByDepth.set(depth, paths);
+//   }
+//   for (const depth of Array.from(pathsByDepth.keys()).sort((left, right) => left - right)) {
+//     await Promise.all(
+//       (pathsByDepth.get(depth) ?? []).map(async (path) => {
+//         await client.makeDirectory(path);
+//       }),
+//     );
+//   }
+// }
+//
+// function addPathAncestors(paths: Set<string>, filePath: string): void {
+//   const segments = filePath.split("/").filter(Boolean);
+//   segments.pop();
+//   let current = "";
+//   for (const segment of segments) {
+//     current = current === "" ? segment : `${current}/${segment}`;
+//     paths.add(current);
+//   }
+// }
 
 // AI-REMOVED 2026-07-29:
 // Reason: 设备心跳、全量设备枚举和“最近设备即提交者”的猜测均退出同步协议。

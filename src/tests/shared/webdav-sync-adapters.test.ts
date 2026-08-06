@@ -7,9 +7,15 @@ import {
   createFullWithRevisionAdapter,
   createPatchCollectionWithRevisionAdapter,
   createPatchWithRevisionAdapter,
+  createWebDavSyncRemote,
 } from "@/sync";
 import { createStableJsonHash } from "@/shared/storage/sync-shadow-storage";
 import type {
+  SyncAdapter,
+  SyncAdapterConflict,
+  SyncAdapterResult,
+  SyncAdapterScope,
+  SyncRemoteSession,
   WebDavResourceStat,
   WebDavStorageClient,
   WebDavTextFile,
@@ -66,6 +72,35 @@ class MemoryWebDavClient implements WebDavStorageClient {
   }
 }
 
+async function createSession(
+  client: MemoryWebDavClient,
+  adapters: readonly SyncAdapter[],
+): Promise<SyncRemoteSession> {
+  return await createWebDavSyncRemote({ client }).beginSession({
+    reason: "manual",
+    collections: adapters.map((adapter) => adapter.collection),
+  });
+}
+
+async function syncAdapter(
+  adapter: SyncAdapter,
+  client: MemoryWebDavClient,
+  scope?: SyncAdapterScope,
+): Promise<SyncAdapterResult> {
+  const session = await createSession(client, [adapter]);
+
+  return await adapter.sync(session, scope);
+}
+
+async function inspectAdapterConflicts(
+  adapter: SyncAdapter,
+  client: MemoryWebDavClient,
+): Promise<readonly SyncAdapterConflict<unknown>[] | undefined> {
+  const session = await createSession(client, [adapter]);
+
+  return await adapter.inspectConflicts?.(session);
+}
+
 describe("webdav-sync-adapters", () => {
   afterEach(() => {
     localStorage.clear();
@@ -83,13 +118,13 @@ describe("webdav-sync-adapters", () => {
       },
     });
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "uploaded" });
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "uploaded" });
     expect(JSON.parse(client.files.get("assets/planner-state.json") ?? "null")).toEqual({ count: 1 });
     expect(client.madeDirectories).toContain("assets");
 
     localValue = { count: 1 };
     client.files.set("assets/planner-state.json", JSON.stringify({ count: 2 }));
-    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "downloaded" });
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "downloaded" });
     expect(localValue).toEqual({ count: 2 });
   });
 
@@ -106,11 +141,11 @@ describe("webdav-sync-adapters", () => {
       resolveConflict: () => "use-local",
     });
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "uploaded" });
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "uploaded" });
     localValue = { count: 2 };
     client.files.set("assets/conflict-use-local.json", JSON.stringify({ count: 3 }));
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "uploaded" });
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "uploaded" });
     expect(localValue).toEqual({ count: 2 });
     expect(JSON.parse(client.files.get("assets/conflict-use-local.json") ?? "null"))
       .toEqual({ count: 2 });
@@ -129,11 +164,11 @@ describe("webdav-sync-adapters", () => {
       resolveConflict: () => "use-remote",
     });
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "uploaded" });
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "uploaded" });
     localValue = { count: 2 };
     client.files.set("assets/conflict-use-remote.json", JSON.stringify({ count: 3 }));
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "downloaded" });
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "downloaded" });
     expect(localValue).toEqual({ count: 3 });
     expect(JSON.parse(client.files.get("assets/conflict-use-remote.json") ?? "null"))
       .toEqual({ count: 3 });
@@ -152,7 +187,7 @@ describe("webdav-sync-adapters", () => {
       },
     });
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "uploaded" });
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "uploaded" });
     expect(client.madeDirectories).toContain("assets/blueprints");
     const index = JSON.parse(client.files.get("assets/blueprints/index.json") ?? "null") as {
       readonly revision: number;
@@ -177,7 +212,7 @@ describe("webdav-sync-adapters", () => {
       },
     }));
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "downloaded" });
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "downloaded" });
     expect(entries.find((entry) => entry.id === "blueprint-b")?.value).toEqual({ name: "B" });
   });
 
@@ -200,7 +235,7 @@ describe("webdav-sync-adapters", () => {
       listLocal: async () => entries,
       writeLocal,
     });
-    await adapter.sync(client);
+    await syncAdapter(adapter, client);
     writeLocal.mockClear();
 
     entries = [{
@@ -227,7 +262,7 @@ describe("webdav-sync-adapters", () => {
     }));
     const filesBeforeInspection = new Map(client.files);
 
-    const conflicts = await adapter.inspectConflicts?.(client);
+    const conflicts = await inspectAdapterConflicts(adapter, client);
 
     expect(conflicts).toHaveLength(1);
     expect(conflicts?.[0]).toMatchObject({
@@ -242,7 +277,7 @@ describe("webdav-sync-adapters", () => {
 
     const conflict = conflicts?.[0];
     expect(conflict).toBeDefined();
-    await expect(adapter.sync(client, {
+    await expect(syncAdapter(adapter, client, {
       includeAssetIds: ["blueprint-a"],
       conflictDecisions: [{
         adapterId: "blueprints",
@@ -269,14 +304,14 @@ describe("webdav-sync-adapters", () => {
       deltaThreshold: 5,
     });
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "uploaded" });
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "uploaded" });
     expect(client.files.has("documents/main/meta.json")).toBe(true);
     expect(client.files.has(
       "documents/main/meta-revisions/rev-000000000001.json",
     )).toBe(true);
 
     localValue = { entities: { a: { x: 2 } } };
-    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "uploaded" });
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "uploaded" });
 
     const meta = JSON.parse(client.files.get("documents/main/meta.json") ?? "null") as {
       readonly revision: number;
@@ -303,7 +338,7 @@ describe("webdav-sync-adapters", () => {
       deltaThreshold: 5,
     });
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "uploaded" });
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "uploaded" });
     expect(client.files.has("assets/module-canvases/canvas-a/meta.json")).toBe(true);
     const index = JSON.parse(client.files.get("assets/module-canvases/index.json") ?? "null") as {
       readonly revision: number;
@@ -316,7 +351,7 @@ describe("webdav-sync-adapters", () => {
     )).toBe(true);
 
     client.readPaths.length = 0;
-    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "idle" });
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "idle" });
     expect(client.readPaths).toContain("assets/module-canvases/index.json");
     // AI-REMOVED 2026-07-29:
     // Reason: 未变化同步不再探测不存在的 next revision，测试应验证没有这次额外 GET。
@@ -341,7 +376,7 @@ describe("webdav-sync-adapters", () => {
     )).toBe(false);
 
     entries = [{ id: "canvas-a", value: { stages: [{ id: "stage-a", count: 2 }] }, deletedAt: null }];
-    await expect(adapter.sync(client)).resolves.toMatchObject({ status: "uploaded" });
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "uploaded" });
     const meta = JSON.parse(client.files.get("assets/module-canvases/canvas-a/meta.json") ?? "null") as {
       readonly revision: number;
       readonly deltaChain: readonly string[];
@@ -393,15 +428,15 @@ describe("webdav-sync-adapters", () => {
       writeLocal: vi.fn(async () => undefined),
     });
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({
       status: "uploaded",
     });
-    await expect(adapter.sync(client)).resolves.toMatchObject({
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({
       status: "idle",
     });
     const readCountAfterCacheWarmup = client.readPaths.length;
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({
       status: "idle",
     });
 
@@ -429,7 +464,7 @@ describe("webdav-sync-adapters", () => {
         seedEntries = [entry];
       },
     });
-    await expect(seedAdapter.sync(client)).resolves.toMatchObject({
+    await expect(syncAdapter(seedAdapter, client)).resolves.toMatchObject({
       status: "uploaded",
     });
     localStorage.clear();
@@ -463,11 +498,11 @@ describe("webdav-sync-adapters", () => {
       },
     });
 
-    await expect(normalizedAdapter.sync(client)).resolves.toMatchObject({
+    await expect(syncAdapter(normalizedAdapter, client)).resolves.toMatchObject({
       status: "uploaded",
     });
     client.readPaths.length = 0;
-    await expect(normalizedAdapter.sync(client)).resolves.toMatchObject({
+    await expect(syncAdapter(normalizedAdapter, client)).resolves.toMatchObject({
       status: "idle",
     });
     expect(client.readPaths).toContain("documents/index.json");
@@ -491,7 +526,7 @@ describe("webdav-sync-adapters", () => {
       writeLocal: async () => undefined,
     });
 
-    await adapter.sync(client, {
+    await syncAdapter(adapter, client, {
       includeAssetIds: ["wuling_protocol_core"],
       onProgress: (value) => {
         progress.push(value);
@@ -524,7 +559,7 @@ describe("webdav-sync-adapters", () => {
       },
       resolveConflict,
     });
-    await adapter.sync(client);
+    await syncAdapter(adapter, client);
     const initialIndex = JSON.parse(
       client.files.get("assets/blueprints/index.json") ?? "null",
     ) as {
@@ -548,7 +583,7 @@ describe("webdav-sync-adapters", () => {
       },
     }));
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({
       status: "uploaded",
     });
     expect(resolveConflict).toHaveBeenCalledWith(expect.objectContaining({
@@ -588,7 +623,7 @@ describe("webdav-sync-adapters", () => {
       },
       resolveConflict,
     });
-    await adapter.sync(client);
+    await syncAdapter(adapter, client);
     entries = [{
       id: "blueprint-a",
       value: { name: "initial" },
@@ -609,7 +644,7 @@ describe("webdav-sync-adapters", () => {
       },
     }));
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({
       status: "downloaded",
     });
     expect(resolveConflict).toHaveBeenCalledTimes(1);
@@ -638,7 +673,7 @@ describe("webdav-sync-adapters", () => {
       },
       resolveConflict,
     });
-    await adapter.sync(client);
+    await syncAdapter(adapter, client);
     const initialHash = createStableJsonHash(entries[0]!.value);
     entries = [{
       id: "canvas-a",
@@ -655,7 +690,7 @@ describe("webdav-sync-adapters", () => {
       },
     }));
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({
       status: "downloaded",
     });
     expect(resolveConflict).toHaveBeenCalledWith(expect.objectContaining({
@@ -686,7 +721,7 @@ describe("webdav-sync-adapters", () => {
       },
       resolveConflict,
     });
-    await adapter.sync(client);
+    await syncAdapter(adapter, client);
     entries = [{
       id: "canvas-a",
       value: { count: 1 },
@@ -717,7 +752,7 @@ describe("webdav-sync-adapters", () => {
       },
     }));
 
-    await expect(adapter.sync(client)).resolves.toMatchObject({
+    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({
       status: "uploaded",
     });
     expect(resolveConflict).toHaveBeenCalledTimes(1);

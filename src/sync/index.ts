@@ -106,6 +106,35 @@ export type WebDavSyncTrigger = import("@/domain/sync").SyncRunReason;
 // Clients: 通用存储客户端接口
 // ============================================================
 export type {
+  RemoteApplyResult,
+  RemoteAssetContent,
+  RemoteAssetMeta,
+  RemoteAssetPutParams,
+  RemoteAssetRef,
+  RemoteAssetTombstoneParams,
+  RemoteCheckResult,
+  RemoteCollectionIndex,
+  RemoteWriteBatchResult,
+  RemoteWriteResult,
+  SyncAssetType,
+  SyncHashAlgorithm,
+  SyncLocalState,
+  SyncRemote,
+  SyncRemoteAdapterMode,
+  SyncRemoteAssetIdCodec,
+  SyncRemoteCollection,
+  SyncRemoteSession,
+  SyncRemoteSessionContext,
+  SyncRemoteWebDavBinding,
+  SyncRemoteWriteBatch,
+} from "./clients";
+
+export {
+  createSyncAssetKey,
+  createSyncRemoteCollection,
+} from "./remote-collections";
+
+export type {
   SyncStorageClient,
   SyncClientOptions,
   SyncWriteOptions,
@@ -145,10 +174,17 @@ export type {
   WebDavWorkerStorageClientOptions,
 } from "./clients/webdav/webdav-worker-client";
 
+export {
+  createWebDavSyncRemote,
+  WebDavSyncRemote,
+  type WebDavSyncRemoteOptions,
+} from "./clients/webdav/webdav-remote";
+
 // ============================================================
 // Storage
 // ============================================================
 export {
+  clearWebDavLastSeenRemoteRevision,
   clearWebDavLastSeenRemoteEtag,
   clearWebDavLastSyncedContentHash,
   readWebDavLastSeenRemoteEtag,

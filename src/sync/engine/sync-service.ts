@@ -1,5 +1,5 @@
 import { createLogger } from "@/shared/logging/logger";
-import { readWebDavLastSeenRemoteEtag, type WebDavSyncSettings as SyncConnectionSettings } from "../storage";
+import { type WebDavSyncSettings as SyncConnectionSettings } from "../storage";
 import type {
   SyncConflictDecision,
   SyncInitialSyncStage,
@@ -7,7 +7,10 @@ import type {
   SyncTaskKind,
   SyncTaskStatus,
 } from "@/domain/sync";
-import type { SyncStorageClient } from "../clients/types";
+import type {
+  SyncRemote,
+  SyncRemoteSession,
+} from "../clients";
 import type {
   SyncAdapter,
   SyncAdapterConflict,
@@ -54,7 +57,7 @@ export interface SyncClientRequestOptions {
 export interface SyncMaintenanceTask {
   readonly kind: SyncTaskKind;
   readonly run: (
-    client: SyncStorageClient,
+    session: SyncRemoteSession,
     settings: SyncConnectionSettings,
   ) => Promise<void> | void;
 }
@@ -78,20 +81,20 @@ export interface SyncServiceStatus {
 
 export interface SyncServiceOptions {
   readonly readSettings: () => SyncConnectionSettings;
-  readonly createClient: (
+  readonly createRemote: (
     settings: SyncConnectionSettings,
     onRequestActivityChange: (
       activity: SyncRequestActivity,
     ) => void,
     requestOptions: SyncClientRequestOptions,
-  ) => SyncStorageClient;
+  ) => SyncRemote;
   readonly adapters: readonly SyncAdapter[];
   readonly createInitialSyncPlan?: () => SyncInitialPlan;
   readonly maintenanceTasks?: readonly SyncMaintenanceTask[];
   readonly resolveAdapterTaskKind?: (adapterId: string) => SyncTaskKind;
   readonly canRunInterval?: () => boolean;
-  readonly beforeSync?: (client: SyncStorageClient, settings: SyncConnectionSettings) => Promise<void> | void;
-  readonly afterSync?: (client: SyncStorageClient, settings: SyncConnectionSettings, results: readonly SyncAdapterResult[]) => Promise<void> | void;
+  readonly beforeSync?: (session: SyncRemoteSession, settings: SyncConnectionSettings) => Promise<void> | void;
+  readonly afterSync?: (session: SyncRemoteSession, settings: SyncConnectionSettings, results: readonly SyncAdapterResult[]) => Promise<void> | void;
   readonly intervalMs?: number;
   readonly bigCheckIntervalMs?: number;
   readonly retryDelaysMs?: readonly number[];
@@ -167,7 +170,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   let smallCheckRunning = false;
   let idleTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
   let maxTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
-  let activeClient: SyncStorageClient | null = null;
+  let activeRemote: SyncRemote | null = null;
   let pendingTrigger: SyncRunReason | null = null;
   let localChangeVersion = 0;
   let acknowledgedLocalChangeVersion = 0;
@@ -348,7 +351,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     try {
       const results = await retrySync(
         async () => {
-          const client = options.createClient(
+          const remote = options.createRemote(
             settings,
             (activity) => {
               setStatus({
@@ -363,20 +366,24 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
                 : undefined,
             },
           );
-          activeClient = client;
+          activeRemote = remote;
+          const session = await remote.beginSession({
+            reason: trigger,
+            collections: options.adapters.map((adapter) => adapter.collection),
+          });
           try {
             return await withSyncLock(async () => {
-              await options.beforeSync?.(client, settings);
+              await options.beforeSync?.(session, settings);
               const adapterResults = isInitialSync
-                ? await runInitialSyncPlan(client)
+                ? await runInitialSyncPlan(session)
                 : await runRegularSyncRequests(
-                  client,
+                  session,
                   resolveRegularSyncRequests(trigger),
                 );
               const resolvedResults = adapterResults.some(
                 (result) => result.status === "conflict",
               )
-                ? await runConflictWorkflow(client, adapterResults)
+                ? await runConflictWorkflow(session, adapterResults)
                 : adapterResults;
               if (
                 isInitialSync
@@ -399,17 +406,18 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
                 for (const task of options.maintenanceTasks ?? []) {
                   queueTask(task.kind, 1);
                 }
-                await runMaintenanceTasks(client, settings);
+                await runMaintenanceTasks(session, settings);
               }
-              await options.afterSync?.(client, settings, resolvedResults);
+              await options.afterSync?.(session, settings, resolvedResults);
 
               return resolvedResults;
             });
           } finally {
-            if (activeClient === client) {
-              activeClient = null;
+            session.dispose?.();
+            if (activeRemote === remote) {
+              activeRemote = null;
             }
-            client.dispose?.();
+            remote.dispose?.();
           }
         },
         options.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS,
@@ -515,7 +523,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   };
 
   const runInitialSyncPlan = async (
-    client: SyncStorageClient,
+    session: SyncRemoteSession,
   ): Promise<SyncAdapterResult[]> => {
     const plan: SyncInitialPlan = options.createInitialSyncPlan?.() ?? {
       batches: [{
@@ -547,7 +555,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         `initial sync stage: ${batch.stage} (${batch.requests.length} request(s))`,
       );
       const batchResults = await runAdapterRequests(
-        client,
+        session,
         batch.requests,
         batch.stage,
       );
@@ -566,7 +574,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
 
     if (plan.backgroundRequests !== undefined) {
       results.push(...await runAdapterRequests(
-        client,
+        session,
         plan.backgroundRequests,
         "background-documents",
       ));
@@ -576,12 +584,19 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   };
 
   const runAdapterRequests = async (
-    client: SyncStorageClient,
+    session: SyncRemoteSession,
     requests: readonly SyncAdapterRequest[],
     taskKind?: SyncTaskKind,
   ): Promise<SyncAdapterResult[]> => {
     logger.info(`sync starting — ${requests.length} adapter request(s)`);
     const adapterResults: SyncAdapterResult[] = [];
+    const requestedAdapters = requests.flatMap((request) => {
+      const adapter = options.adapters.find((candidate) =>
+        candidate.id === request.adapterId,
+      );
+
+      return adapter === undefined ? [] : [adapter];
+    });
     const totalUnitCount = taskKind === undefined
       ? 0
       : getAdapterTaskTotalUnitCount(taskKind, requests.length);
@@ -590,6 +605,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       beginTask(taskKind, totalUnitCount);
     }
     try {
+      await session.prefetchIndexes(requestedAdapters.map((adapter) => adapter.collection));
       for (const request of requests) {
         const adapter = options.adapters.find((candidate) =>
           candidate.id === request.adapterId,
@@ -621,7 +637,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
             },
           }
           : request.scope;
-        const result = await adapter.sync(client, requestScope);
+        const result = await adapter.sync(session, requestScope);
         const elapsed = Date.now() - beforeMs;
         logger.info(
           `adapter "${result.adapterId}" → ${result.status} ` +
@@ -675,7 +691,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   };
 
   const runRegularSyncRequests = async (
-    client: SyncStorageClient,
+    session: SyncRemoteSession,
     requests: readonly SyncAdapterRequest[],
   ): Promise<SyncAdapterResult[]> => {
     const requestsByTask = new Map<SyncTaskKind, SyncAdapterRequest[]>();
@@ -696,7 +712,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     const results: SyncAdapterResult[] = [];
     for (const [taskKind, taskRequests] of requestsByTask) {
       const taskResults = await runAdapterRequests(
-        client,
+        session,
         taskRequests,
         taskKind,
       );
@@ -710,7 +726,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   };
 
   const runConflictWorkflow = async (
-    client: SyncStorageClient,
+    session: SyncRemoteSession,
     initialResults: readonly SyncAdapterResult[],
   ): Promise<SyncAdapterResult[]> => {
     const completedResults = initialResults.filter(
@@ -731,7 +747,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
           (await Promise.all(options.adapters.map(async (adapter) =>
             adapter.inspectConflicts === undefined
               ? []
-              : await adapter.inspectConflicts(client)
+              : await adapter.inspectConflicts(session)
           ))).flat(),
         );
         discardResolvedDeferredConflicts(
@@ -776,7 +792,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         }
 
         const resolutionResults = await runConflictDecisionRequests(
-          client,
+          session,
           decisions,
         );
         completedResults.push(...resolutionResults);
@@ -801,7 +817,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   };
 
   const runConflictDecisionRequests = async (
-    client: SyncStorageClient,
+    session: SyncRemoteSession,
     decisions: readonly SyncAdapterConflictDecision[],
   ): Promise<SyncAdapterResult[]> => {
     const adaptersByTask = new Map<SyncTaskKind, SyncAdapter[]>();
@@ -822,7 +838,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     let results: SyncAdapterResult[];
     try {
       results = await Promise.all(options.adapters.map(async (adapter) =>
-        await adapter.sync(client, {
+        await adapter.sync(session, {
           conflictDecisions: decisions.filter(
             (decision) => decision.adapterId === adapter.id,
           ),
@@ -862,13 +878,13 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   };
 
   const runMaintenanceTasks = async (
-    client: SyncStorageClient,
+    session: SyncRemoteSession,
     settings: SyncConnectionSettings,
   ): Promise<void> => {
     for (const task of options.maintenanceTasks ?? []) {
       beginTask(task.kind, 1);
       try {
-        await task.run(client, settings);
+        await task.run(session, settings);
         finishTask(task.kind, 1);
       } catch (error) {
         finishTask(task.kind, 1, error);
@@ -879,23 +895,21 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
 
   const runSmallCheck = async (): Promise<boolean> => {
     const settings = options.readSettings();
-    const client = options.createClient(settings, () => {}, {});
+    const remote = options.createRemote(settings, () => {}, {});
+    const session = await remote.beginSession({
+      reason: "interval",
+      collections: options.adapters.map((adapter) => adapter.collection),
+    });
     try {
-      for (const adapter of options.adapters) {
-        const checkPath = adapter.checkPath;
-        if (checkPath === null) continue;
-
-        const lastEtag = readWebDavLastSeenRemoteEtag(checkPath);
-        if (lastEtag === null) return false;
-
-        const stat = await client.stat(checkPath);
-        if (stat?.etag !== lastEtag) return false;
-      }
-      return true;
+      const result = await session.checkCollections(
+        options.adapters.map((adapter) => adapter.collection),
+      );
+      return result.changedCollections.length === 0;
     } catch {
       return false;
     } finally {
-      client.dispose?.();
+      session.dispose?.();
+      remote.dispose?.();
     }
   };
 
@@ -954,8 +968,8 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       logger.info("sync service stopped");
       pendingTrigger = null;
       clearLocalChangeTimers();
-      activeClient?.dispose?.();
-      activeClient = null;
+      activeRemote?.dispose?.();
+      activeRemote = null;
       if (intervalId !== null) {
         globalThis.clearInterval(intervalId);
         intervalId = null;

@@ -117,6 +117,7 @@ export type {
 export {
   appendLocalSyncDiagnosticEvent,
   compactWorldDocumentShadowOutbox,
+  createSha256CanonicalHash,
   createStableJsonHash,
   listLocalSyncCompactSummaries,
   listLocalSyncDiagnosticEvents,

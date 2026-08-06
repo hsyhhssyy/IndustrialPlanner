@@ -67,6 +67,17 @@ export function writeWebDavLastSeenRemoteRevision(
   return revision;
 }
 
+export function clearWebDavLastSeenRemoteRevision(remoteStateKey: string): void {
+  const state = readWebDavSyncMetadataState();
+  const { [remoteStateKey]: _removed, ...remoteRevisions } = state.remoteRevisions;
+
+  saveToLocalStorage<WebDavSyncMetadataState>(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY, {
+    contentHashes: state.contentHashes,
+    remoteRevisions,
+    remoteEtags: state.remoteEtags,
+  });
+}
+
 export function readWebDavLastSeenRemoteEtag(remoteStateKey: string): string | null {
   return readWebDavSyncMetadataState().remoteEtags[remoteStateKey] ?? null;
 }

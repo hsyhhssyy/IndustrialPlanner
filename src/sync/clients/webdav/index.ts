@@ -9,3 +9,9 @@ export {
   type WebDavTextFile,
   type WebDavResourceStat,
 } from "./webdav-client";
+
+export {
+  createWebDavSyncRemote,
+  WebDavSyncRemote,
+  type WebDavSyncRemoteOptions,
+} from "./webdav-remote";

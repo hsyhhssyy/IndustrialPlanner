@@ -1,0 +1,33 @@
+export type {
+  RemoteApplyResult,
+  RemoteAssetContent,
+  RemoteAssetMeta,
+  RemoteAssetPutParams,
+  RemoteAssetRef,
+  RemoteAssetTombstoneParams,
+  RemoteCheckResult,
+  RemoteCollectionIndex,
+  RemoteWriteBatchResult,
+  RemoteWriteResult,
+  SyncAssetType,
+  SyncHashAlgorithm,
+  SyncLocalState,
+  SyncMaintenanceTaskRequest,
+  SyncRemote,
+  SyncRemoteAdapterMode,
+  SyncRemoteAssetIdCodec,
+  SyncRemoteCollection,
+  SyncRemoteSession,
+  SyncRemoteSessionContext,
+  SyncRemoteWebDavBinding,
+  SyncRemoteWriteBatch,
+} from "./remote-types";
+
+export type {
+  SyncClientOptions,
+  SyncReadOptions,
+  SyncResourceStat,
+  SyncStorageClient,
+  SyncTextFile,
+  SyncWriteOptions,
+} from "./types";

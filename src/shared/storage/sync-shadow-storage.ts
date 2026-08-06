@@ -645,6 +645,15 @@ export function createStableJsonHash(value: unknown): string {
   return `fnv1a32:${hashStringFNV1a32(stableStringify(value)).toString(16).padStart(8, "0")}`;
 }
 
+export async function createSha256CanonicalHash(value: unknown): Promise<string> {
+  const bytes = new TextEncoder().encode(stableStringify(value));
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+
+  return `sha256:${Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
 function createWorldDocumentShadowOperationPayload(options: {
   readonly document: WorldDocument;
   readonly baseDocument?: WorldDocument;

@@ -4,13 +4,49 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   createWebDavSyncService,
+  createSyncRemoteCollection,
 } from "@/sync";
-import type { WebDavStorageClient } from "@/sync";
 import type {
+  SyncRemote,
+  SyncRemoteSession,
   WebDavSyncAdapter,
   WebDavSyncAdapterResult,
   WebDavSyncServiceOptions,
 } from "@/sync";
+
+function createTestRemote(options: {
+  readonly dispose?: () => void;
+} = {}): SyncRemote {
+  const session: SyncRemoteSession = {
+    localState: {
+      getLastSyncedHash: async () => null,
+      setLastSyncedHash: async () => undefined,
+      getRemoteRevision: async () => null,
+      setRemoteRevision: async () => undefined,
+      getRemoteEtag: async () => null,
+      setRemoteEtag: async () => undefined,
+    },
+    prefetchIndexes: async () => undefined,
+    readIndex: async () => ({ revision: 0, entries: {}, committedAt: null }),
+    readAsset: async () => null,
+    checkCollections: async () => ({ changedCollections: [] }),
+    beginWriteBatch: () => ({
+      putAsset: () => undefined,
+      putTombstone: () => undefined,
+      commit: async () => ({ writes: [] }),
+      discard: async () => undefined,
+    }),
+    markApplied: async () => undefined,
+  };
+
+  return {
+    localState: session.localState,
+    beginSession: async () => session,
+    dispose: options.dispose,
+  };
+}
+
+const createRemote: WebDavSyncServiceOptions["createRemote"] = () => createTestRemote();
 
 describe("webdav-sync-service", () => {
   afterEach(() => {
@@ -21,7 +57,7 @@ describe("webdav-sync-service", () => {
     const adapter = createAdapter();
     const service = createWebDavSyncService({
       readSettings: () => createSettings(false),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [adapter],
     });
 
@@ -35,7 +71,7 @@ describe("webdav-sync-service", () => {
     const adapter = createAdapter();
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [adapter],
     });
 
@@ -48,20 +84,20 @@ describe("webdav-sync-service", () => {
   it("fails fast and unlocks the canvas when initial network sync fails", async () => {
     const adapter = createAdapter();
     adapter.sync.mockRejectedValue(new Error("network timeout"));
-    const createClient = vi.fn((
-      ..._args: Parameters<WebDavSyncServiceOptions["createClient"]>
-    ) => ({} as WebDavStorageClient));
+    const createRemoteMock = vi.fn((
+      ..._args: Parameters<WebDavSyncServiceOptions["createRemote"]>
+    ) => createTestRemote());
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createClient,
+      createRemote: createRemoteMock,
       adapters: [adapter],
     });
 
     const status = await service.syncNow("startup");
 
     expect(adapter.sync).toHaveBeenCalledTimes(1);
-    expect(createClient).toHaveBeenCalledTimes(1);
-    expect(createClient.mock.calls[0]?.[2]).toEqual({
+    expect(createRemoteMock).toHaveBeenCalledTimes(1);
+    expect(createRemoteMock.mock.calls[0]?.[2]).toEqual({
       requestTimeoutMs: 8_000,
     });
     expect(status).toMatchObject({
@@ -89,7 +125,7 @@ describe("webdav-sync-service", () => {
         password: "",
         maxConcurrentRequests: 4,
       }),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters,
       createInitialSyncPlan: () => ({
         batches: [
@@ -158,7 +194,7 @@ describe("webdav-sync-service", () => {
   it("reports maintenance task progress separately from adapter tasks", async () => {
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [createAdapter()],
       maintenanceTasks: [
         {
@@ -198,7 +234,7 @@ describe("webdav-sync-service", () => {
     });
     const canvasAdapter = createNamedAdapter("world-documents", []);
     canvasAdapter.sync.mockImplementationOnce(async (
-      _client: WebDavStorageClient,
+      _session: SyncRemoteSession,
       scope: Parameters<WebDavSyncAdapter["sync"]>[1],
     ) => {
       scope?.onProgress?.(55);
@@ -219,7 +255,7 @@ describe("webdav-sync-service", () => {
         password: "",
         maxConcurrentRequests: 4,
       }),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [canvasAdapter, blueprintAdapter],
       createInitialSyncPlan: () => ({
         batches: [
@@ -274,7 +310,7 @@ describe("webdav-sync-service", () => {
         password: "",
         maxConcurrentRequests: 4,
       }),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [firstAdapter, secondAdapter],
       intervalMs: 60_000,
     });
@@ -326,7 +362,7 @@ describe("webdav-sync-service", () => {
         password: "",
         maxConcurrentRequests: 4,
       }),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [adapter],
       onStatusChange: (status) => {
         observedSaveStates.push(status.saveState);
@@ -347,6 +383,11 @@ describe("webdav-sync-service", () => {
     const adapter: WebDavSyncAdapter = {
       id: "conflicting-adapter",
       mode: "full-no-revision",
+      collection: createSyncRemoteCollection({
+        adapterId: "conflicting-adapter",
+        mode: "full-no-revision",
+        stateKey: "conflicting-adapter.json",
+      }),
       checkPath: "conflicting-adapter.json",
       sync: vi.fn(async (): Promise<WebDavSyncAdapterResult> => ({
         adapterId: "conflicting-adapter",
@@ -358,7 +399,7 @@ describe("webdav-sync-service", () => {
     };
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [adapter],
       onConflictDiscoveryStart,
       resolveConflicts,
@@ -395,9 +436,14 @@ describe("webdav-sync-service", () => {
     const firstAdapter: WebDavSyncAdapter = {
       id: "blueprints",
       mode: "full-with-revision",
+      collection: createSyncRemoteCollection({
+        adapterId: "blueprints",
+        mode: "full-with-revision",
+        stateKey: "blueprints/index.json",
+      }),
       checkPath: "blueprints/index.json",
       sync: vi.fn(async (
-        _client: WebDavStorageClient,
+        _session: SyncRemoteSession,
         scope: Parameters<WebDavSyncAdapter["sync"]>[1],
       ): Promise<WebDavSyncAdapterResult> => ({
         adapterId: "blueprints",
@@ -412,9 +458,14 @@ describe("webdav-sync-service", () => {
     const secondAdapter: WebDavSyncAdapter = {
       id: "world-documents",
       mode: "patch-with-revision",
+      collection: createSyncRemoteCollection({
+        adapterId: "world-documents",
+        mode: "patch-with-revision",
+        stateKey: "world-documents/meta.json",
+      }),
       checkPath: "world-documents/meta.json",
       sync: vi.fn(async (
-        _client: WebDavStorageClient,
+        _session: SyncRemoteSession,
         scope: Parameters<WebDavSyncAdapter["sync"]>[1],
       ): Promise<WebDavSyncAdapterResult> => ({
         adapterId: "world-documents",
@@ -442,7 +493,7 @@ describe("webdav-sync-service", () => {
     ]);
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [firstAdapter, secondAdapter],
       onConflictDiscoveryStart,
       resolveConflicts,
@@ -480,7 +531,7 @@ describe("webdav-sync-service", () => {
       });
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [adapter],
       retryDelaysMs: [10],
     });
@@ -499,7 +550,7 @@ describe("webdav-sync-service", () => {
     const adapter = createAdapter();
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [adapter],
       beforeSync: () => { calls.push("before"); },
       afterSync: () => { calls.push("after"); },
@@ -515,7 +566,7 @@ describe("webdav-sync-service", () => {
     const adapter = createAdapter();
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [adapter],
       intervalMs: 60_000,
     });
@@ -552,7 +603,7 @@ describe("webdav-sync-service", () => {
     const adapter = createAdapter();
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [adapter],
       retryDelaysMs: [],
       intervalMs: 60_000,
@@ -603,7 +654,7 @@ describe("webdav-sync-service", () => {
     const adapter = createAdapter();
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [adapter],
       retryDelaysMs: [],
       intervalMs: 60_000,
@@ -656,7 +707,7 @@ describe("webdav-sync-service", () => {
     const adapter = createAdapter();
     const service = createWebDavSyncService({
       readSettings: () => createSettings(enabled),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [adapter],
     });
 
@@ -704,7 +755,7 @@ describe("webdav-sync-service", () => {
     const dispose = vi.fn();
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createClient: () => ({ dispose } as unknown as WebDavStorageClient),
+      createRemote: () => createTestRemote({ dispose }),
       adapters: [adapter],
       intervalMs: 60_000,
     });
@@ -747,7 +798,7 @@ describe("webdav-sync-service", () => {
         password: "",
         maxConcurrentRequests: 4,
       }),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [adapter],
       intervalMs: 60_000,
     });
@@ -784,7 +835,7 @@ describe("webdav-sync-service", () => {
     });
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [adapter],
       intervalMs: 60_000,
     });
@@ -807,7 +858,7 @@ describe("webdav-sync-service", () => {
     const adapter = createAdapter();
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createClient: () => ({} as WebDavStorageClient),
+      createRemote,
       adapters: [adapter],
       intervalMs: 60_000,
     });
@@ -874,6 +925,11 @@ function createAdapter(): WebDavSyncAdapter & { readonly sync: ReturnType<typeof
   return {
     id: "adapter",
     mode: "full-no-revision",
+    collection: createSyncRemoteCollection({
+      adapterId: "adapter",
+      mode: "full-no-revision",
+      stateKey: "adapter.json",
+    }),
     checkPath: "adapter.json",
     sync: vi.fn(async (): Promise<WebDavSyncAdapterResult> => ({
       adapterId: "adapter",
@@ -891,9 +947,14 @@ function createNamedAdapter(
   return {
     id,
     mode: "full-with-revision",
+    collection: createSyncRemoteCollection({
+      adapterId: id,
+      mode: "full-with-revision",
+      stateKey: `${id}/index.json`,
+    }),
     checkPath: `${id}/index.json`,
     sync: vi.fn(async (
-      _client: WebDavStorageClient,
+      _session: SyncRemoteSession,
       scope: Parameters<WebDavSyncAdapter["sync"]>[1],
     ): Promise<WebDavSyncAdapterResult> => {
       const scopeText = scope?.includeAssetIds !== undefined

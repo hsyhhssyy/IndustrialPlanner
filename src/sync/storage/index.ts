@@ -1,4 +1,5 @@
 export {
+  clearWebDavLastSeenRemoteRevision,
   clearWebDavLastSeenRemoteEtag,
   clearWebDavLastSyncedContentHash,
   readWebDavLastSeenRemoteEtag,
