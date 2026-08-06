@@ -1098,8 +1098,6 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  font-size: 0.9rem;
-  font-weight: 650;
 }
 
 .recipe-picker-machine img {
@@ -1108,11 +1106,41 @@
   object-fit: contain;
 }
 
-.recipe-picker-machine span {
+.recipe-picker-machine-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.recipe-picker-machine-name > span:first-child {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.recipe-picker-gas-environment {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  font-size: 0.68rem;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.recipe-picker-gas-environment img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 .recipe-picker-duration {
@@ -1242,6 +1270,9 @@
 
 .recipe-picker-dialog-touch .recipe-picker-machine {
   grid-template-columns: 24px minmax(0, 1fr);
+}
+
+.recipe-picker-dialog-touch .recipe-picker-machine-name {
   font-size: 0.82rem;
 }
 

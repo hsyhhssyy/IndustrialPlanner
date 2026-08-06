@@ -222,6 +222,8 @@ async function main(): Promise<void> {
 
   // 计算平均值
   const avg = durations.reduce((sum, d) => sum + d, 0) / durations.length;
+  const avgPerTick = avg / MAX_TICK;
+  const avgTicksPerSec = (MAX_TICK / avg) * 1000;
 
   // 记录到文件
   const sha = isDirty ? `${getGitHeadSha()}+WT` : getGitHeadSha();
@@ -234,6 +236,8 @@ async function main(): Promise<void> {
   console.log("");
   console.log("========================================");
   console.log(`🏁 完成! 平均耗时: ${avg.toFixed(1)} ms`);
+  console.log(`   ⏱️  平均每 tick: ${avgPerTick.toFixed(2)} ms`);
+  console.log(`   🎯 平均模拟速率: ${avgTicksPerSec.toFixed(1)} tick/s`);
   console.log(`📝 已记录到 ${OUTPUT_FILE}`);
   console.log(`   提交: ${sha}`);
   console.log(`   时间: ${dateTime}`);

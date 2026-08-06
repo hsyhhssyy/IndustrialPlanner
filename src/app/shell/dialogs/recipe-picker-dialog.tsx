@@ -208,7 +208,15 @@ function RecipePickerCard({
         <div className={cm(styles, "recipe-picker-card-header")}>
           <span className={cm(styles, "recipe-picker-machine")}>
             <img alt="" src={resolveEntityIcon(recipe.machineId, index)} />
-            <span>{machineName}</span>
+            <span className={cm(styles, "recipe-picker-machine-name")}>
+              <span>{machineName}</span>
+              {recipe.requiredGasDiffusion && (
+                <span className={cm(styles, "recipe-picker-gas-environment")}>
+                  <img alt="" src={resolveItemIcon(recipe.requiredGasDiffusion, index)} />
+                  <span>{resolveItemName(recipe.requiredGasDiffusion, index, t)}{t("encyclopedia.recipe.gasEnvironmentSuffix")}</span>
+                </span>
+              )}
+            </span>
           </span>
           <span className={cm(styles, "recipe-picker-duration")} title={copy.duration}>
             <LucideClock3 aria-hidden="true" />
