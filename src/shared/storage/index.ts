@@ -136,7 +136,6 @@ export {
 
 export {
   ENABLE_LOCAL_SYNC_SHADOW_MODE,
-  ENABLE_LOCAL_SYNC_TELEMETRY_UPLOAD,
 } from "@/shared/storage/sync-shadow-build-flags";
 
 export type {
@@ -205,19 +204,6 @@ export {
 //   subscribeToWebDavSyncSettingsChanges, writeWebDavSyncEnabled,
 //   writeWebDavSyncPassword, writeWebDavSyncSettings, writeWebDavSyncUrl,
 //   writeWebDavSyncUsername } from "@/shared/storage/webdav-sync-settings";
-
-export type {
-  LocalSyncTelemetryCompactSummary,
-  LocalSyncTelemetryDiagnosticEvent,
-  LocalSyncTelemetryPayload,
-  LocalSyncTelemetryUploadResult,
-  LocalSyncTelemetryUploadStatus,
-} from "@/shared/storage/sync-telemetry-upload";
-
-export {
-  createLocalSyncTelemetryPayload,
-  tryUploadLocalSyncTelemetry,
-} from "@/shared/storage/sync-telemetry-upload";
 
 export type {
   EditorPersistState,

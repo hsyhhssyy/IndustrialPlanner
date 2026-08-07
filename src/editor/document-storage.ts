@@ -9,10 +9,6 @@ import {
 } from "@/shared/storage";
 import { ENABLE_LOCAL_SYNC_SHADOW_MODE } from "@/shared/storage/sync-shadow-build-flags";
 import { writeWorldDocumentShadowSaveWithResult } from "@/shared/storage/sync-shadow-storage";
-import {
-  LOCAL_SYNC_TELEMETRY_MIN_INTERVAL_MS,
-  tryUploadLocalSyncTelemetry,
-} from "@/shared/storage/sync-telemetry-upload";
 import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
 import type { EditorHistoryDocumentDelta } from "@/domain/editor/editor-history";
 import { runInAction } from "mobx";
@@ -39,16 +35,7 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
   let writeQueue = Promise.resolve();
   let shadowQueue = Promise.resolve();
   let lastShadowBaseDocument: WorldDocument | null = null;
-  let telemetryHeartbeatId: ReturnType<typeof globalThis.setInterval> | null = null;
   const shadowReplayValidator = createSyncShadowReplayValidator();
-
-  if (ENABLE_LOCAL_SYNC_SHADOW_MODE) {
-    void tryUploadLocalSyncTelemetry({ trigger: "sync-shadow-heartbeat" });
-    telemetryHeartbeatId = globalThis.setInterval(() => {
-      void tryUploadLocalSyncTelemetry({ trigger: "sync-shadow-heartbeat" });
-    }, LOCAL_SYNC_TELEMETRY_MIN_INTERVAL_MS);
-    unrefTimer(telemetryHeartbeatId);
-  }
 
   const enqueueWrite = (
     document: WorldDocument,
@@ -118,20 +105,8 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
     disposed = true;
     unsubscribeDocument?.();
     unsubscribeDocument = null;
-    if (telemetryHeartbeatId !== null) {
-      globalThis.clearInterval(telemetryHeartbeatId);
-      telemetryHeartbeatId = null;
-    }
     shadowReplayValidator.dispose();
   };
-}
-
-function unrefTimer(timer: ReturnType<typeof globalThis.setInterval>): void {
-  const nodeTimer = timer as {
-    readonly unref?: () => void;
-  };
-
-  nodeTimer.unref?.();
 }
 
 async function resolveInitialDocument(

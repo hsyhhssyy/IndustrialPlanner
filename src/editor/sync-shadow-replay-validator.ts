@@ -2,7 +2,6 @@ import {
   appendLocalSyncDiagnosticEvent,
   compactWorldDocumentShadowOutbox,
   markWorldDocumentShadowEntryValidated,
-  tryUploadLocalSyncTelemetry,
   type LocalSyncDataOwner,
   type LocalSyncOutboxEntry,
 } from "@/shared/storage";
@@ -187,7 +186,6 @@ async function handleReplayResponse(
       throughLocalSequence: response.localSequence,
       baseContentHash: response.actualHash,
     });
-    void tryUploadLocalSyncTelemetry({ trigger: "sync-shadow-replay-validated" });
     return;
   }
 
@@ -209,5 +207,4 @@ async function handleReplayResponse(
         errorMessage: response.errorMessage,
       },
   });
-  void tryUploadLocalSyncTelemetry({ trigger: `sync-shadow-replay-${response.status}` });
 }
