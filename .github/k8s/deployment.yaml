@@ -15,7 +15,7 @@ spec:
         app: industrial-planner
     spec:
       imagePullSecrets:
-        - name: docker.hsyhhssyy.net
+        - name: ${IMAGE_PULL_SECRET}
       containers:
         - name: industrial-planner
           image: ${IMAGE}

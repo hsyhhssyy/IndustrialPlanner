@@ -94,8 +94,8 @@ describe("gas item and device definitions", () => {
     expect(definition.tags).not.toContain("不可摆放");
     expect(definition.tags).toContain("OuterRingAllowed");
     expect(definition.tags).toContain("InnerRingNotAllowed");
-    expect(definition.requiresPower).toBe(true);
-    expect(definition.powerDemand).toBe(10);
+    expect(definition.requiresPower).toBe(false);
+    expect(definition.powerDemand).toBe(0);
     expect(definition.placementBehaviors).toEqual([
       { type: "default-placement" },
       { type: "snap-to-outer-ring-edge" },

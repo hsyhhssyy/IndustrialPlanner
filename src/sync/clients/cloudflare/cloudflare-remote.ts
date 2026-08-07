@@ -4,9 +4,7 @@ import {
   type IndexedDbStorageLocation,
   type IndexedDbStoreLocation,
 } from "@/shared/storage/browser-storage";
-import {
-  createSha256CanonicalHash,
-} from "@/shared/storage/sync-shadow-storage";
+import { createSha256CanonicalHash } from "@/shared/storage/sync-shadow-storage";
 import { resolveBackendApiBaseUrl } from "@/shared/storage/backend-api-address";
 import { createUuid } from "@/domain/shared/uuid";
 import type {
@@ -25,7 +23,6 @@ import type {
   SyncRemoteSession,
   SyncRemoteSessionContext,
   SyncRemoteWriteBatch,
-  SyncAssetType,
 } from "../remote-types";
 
 // ============================================================================
@@ -35,6 +32,7 @@ import type {
 const CF_DATABASE_NAME = "v3-industrial-planner";
 const CF_STATE_STORE = "cf-sync-state";
 const CF_STATE_KEY = "state";
+const CF_ASSETS_STORE = "cf-sync-assets";
 
 const CF_STATE_LOCATION: IndexedDbStorageLocation = {
   databaseName: CF_DATABASE_NAME,
@@ -42,83 +40,82 @@ const CF_STATE_LOCATION: IndexedDbStorageLocation = {
   key: CF_STATE_KEY,
 };
 
-const CF_ASSETS_STORE = "cf-sync-assets";
-
 const CF_ASSETS_LOCATION: IndexedDbStoreLocation = {
   databaseName: CF_DATABASE_NAME,
   storeName: CF_ASSETS_STORE,
 };
 
 // ============================================================================
-// 协议类型
+// 本地状态
 // ============================================================================
 
-type SyncModule = "world-documents" | "blueprints" | "modules" | "toolbox";
-
 interface CfLocalState {
-  protocol: "cf-sync-v1";
-  apiBaseUrl: string;
   spaceId: string;
   epoch: string | null;
   appliedHead: number | null;
-  moduleHeads: Partial<Record<SyncModule, number>>;
 }
 
 interface CfAssetState {
   assetKey: string;
   remoteRevision: number | null;
   lastSyncedContentHash: string | null;
-  lastSyncedDeletedAt: string | null;
 }
 
-interface CfSmallCheckResult {
+function defaultState(): CfLocalState {
+  return {
+    spaceId: "default",
+    epoch: null,
+    appliedHead: null,
+  };
+}
+
+// ============================================================================
+// 后端协议类型（与实际 Worker 返回一致）
+// ============================================================================
+
+interface CfCheckResponse {
   head: number;
   epoch: string;
   changed: boolean;
   planRequired: boolean;
-  changes: CfPlannedAsset[];
-  moduleHeads: Partial<Record<SyncModule, number>>;
+  changes: CfPlanAsset[];
+  moduleHeads: CfModuleHead[];
   serverTime: string;
 }
 
-interface CfPlanResult {
+interface CfPlanResponse {
   head: number;
   epoch: string;
   snapshotHead: number;
-  modules: CfModulePlan[];
+  modules: CfPlanModule[];
   capabilities: Record<string, unknown>;
   nextPageToken: string | null;
   minRetainedHead: number;
   serverTime: string;
 }
 
-interface CfModulePlan {
-  module: SyncModule;
-  remoteHead: number;
-  mode: "unchanged" | "changes" | "full-manifest";
-  assets: CfPlannedAsset[];
+interface CfPlanModule {
+  moduleType: string;
+  assets: CfPlanAsset[];
 }
 
-interface CfPlannedAsset {
-  assetType: SyncAssetType;
+interface CfPlanAsset {
+  assetType: string;
   assetId: string;
   revision: number;
-  contentHash: string | null;
+  contentHash: string;
+  blobHash: string;
+  byteSize: number;
   deletedAt: string | null;
-  committedAt: string;
-  downloads: CfDownloadRef[];
 }
 
-interface CfDownloadRef {
-  blobHash: string;
-  url: string;
-  expiresAt: string;
+interface CfModuleHead {
+  moduleType: string;
+  head: number;
 }
 
 interface CfPrepareResponse {
   status: "ready";
-  epoch: string;
-  observedHead: number;
   commitToken: string;
   uploads: CfUploadSlot[];
 }
@@ -131,29 +128,23 @@ interface CfUploadSlot {
   headers?: Record<string, string>;
 }
 
+interface CfDownloadSignResponse {
+  urls: Array<{ blobHash: string; url: string }>;
+}
+
 interface CfCommitResponse {
   status: "committed" | "already-committed";
-  epoch: string;
   head: number;
-  moduleHeads: Partial<Record<SyncModule, number>>;
   applied: CfAppliedMutation[];
+  serverTime: string;
 }
 
 interface CfAppliedMutation {
-  assetType: SyncAssetType;
+  clientMutationId: string;
+  assetType: string;
   assetId: string;
   revision: number;
-  contentHash: string | null;
-  deletedAt: string | null;
-  committedAt: string;
-}
-
-interface CfWriteMutation {
-  assetType: SyncAssetType;
-  assetId: string;
-  operation: "put" | "delete";
-  contentHash: string | null;
-  content: string | null;
+  contentHash: string;
 }
 
 // ============================================================================
@@ -181,19 +172,15 @@ class CloudflareSyncLocalState implements SyncLocalState {
       ]);
       return;
     }
-
-    await applyIndexedDbStoreMutations(CF_ASSETS_LOCATION, [
-      {
-        type: "put",
-        key: assetKey,
-        value: {
-          assetKey,
-          remoteRevision: existing?.remoteRevision ?? null,
-          lastSyncedContentHash: hash,
-          lastSyncedDeletedAt: existing?.lastSyncedDeletedAt ?? null,
-        },
+    await applyIndexedDbStoreMutations(CF_ASSETS_LOCATION, [{
+      type: "put",
+      key: assetKey,
+      value: {
+        assetKey,
+        remoteRevision: existing?.remoteRevision ?? null,
+        lastSyncedContentHash: hash,
       },
-    ]);
+    }]);
   }
 
   public async getRemoteRevision(key: string): Promise<number | null> {
@@ -205,54 +192,34 @@ class CloudflareSyncLocalState implements SyncLocalState {
   }
 
   public async setRemoteRevision(key: string, revision: number | null): Promise<void> {
+    if (revision === null) return;
     const existing = await readFromIndexedDb<CfAssetState>({
       ...CF_ASSETS_LOCATION,
       key,
     });
-    if (revision === null) {
-      if (existing === null) return;
-      await applyIndexedDbStoreMutations(CF_ASSETS_LOCATION, [
-        {
-          type: "put",
-          key,
-          value: {
-            ...existing,
-            remoteRevision: null,
-          },
-        },
-      ]);
-      return;
-    }
-
-    await applyIndexedDbStoreMutations(CF_ASSETS_LOCATION, [
-      {
-        type: "put",
-        key,
-        value: {
-          assetKey: key,
-          remoteRevision: revision,
-          lastSyncedContentHash: existing?.lastSyncedContentHash ?? null,
-          lastSyncedDeletedAt: existing?.lastSyncedDeletedAt ?? null,
-        },
+    await applyIndexedDbStoreMutations(CF_ASSETS_LOCATION, [{
+      type: "put",
+      key,
+      value: {
+        assetKey: key,
+        remoteRevision: revision,
+        lastSyncedContentHash: existing?.lastSyncedContentHash ?? null,
       },
-    ]);
+    }]);
   }
 
   public async getRemoteEtag(key: string): Promise<string | null> {
-    // Cloudflare 不使用 ETag；返回 revision 的字符串形式作为等效游标
     const revision = await this.getRemoteRevision(key);
     return revision === null ? null : String(revision);
   }
 
   public async setRemoteEtag(_key: string, _etag: string | null): Promise<void> {
-    // Cloudflare 不使用 ETag；不操作
+    // Cloudflare 不使用 ETag
   }
-
-  // -- Cloudflare 专属方法 --
 
   public async readState(): Promise<CfLocalState> {
     const stored = await readFromIndexedDb<CfLocalState>(CF_STATE_LOCATION);
-    return stored ?? createDefaultState();
+    return stored ?? defaultState();
   }
 
   public async writeState(state: CfLocalState): Promise<void> {
@@ -260,37 +227,6 @@ class CloudflareSyncLocalState implements SyncLocalState {
       { type: "put", key: CF_STATE_KEY, value: state },
     ]);
   }
-
-  public async saveAssetState(
-    assetKey: string,
-    revision: number | null,
-    contentHash: string | null,
-    deletedAt: string | null,
-  ): Promise<void> {
-    await applyIndexedDbStoreMutations(CF_ASSETS_LOCATION, [
-      {
-        type: "put",
-        key: assetKey,
-        value: {
-          assetKey,
-          remoteRevision: revision,
-          lastSyncedContentHash: contentHash,
-          lastSyncedDeletedAt: deletedAt,
-        },
-      },
-    ]);
-  }
-}
-
-function createDefaultState(): CfLocalState {
-  return {
-    protocol: "cf-sync-v1",
-    apiBaseUrl: resolveBackendApiBaseUrl(),
-    spaceId: "default",
-    epoch: null,
-    appliedHead: null,
-    moduleHeads: {},
-  };
 }
 
 // ============================================================================
@@ -298,56 +234,30 @@ function createDefaultState(): CfLocalState {
 // ============================================================================
 
 class CloudflareSyncRemoteSession implements SyncRemoteSession {
-  private planCache: CfPlanResult | null = null;
-  private checkCache: CfSmallCheckResult | null = null;
-  private assetContentCache = new Map<string, string | null>();
+  private planCache: CfPlanResponse | null = null;
+  private downloadUrlCache = new Map<string, string | null>();
   private readonly apiBase: string;
-  private readonly spaceId: string;
 
   public constructor(
     public readonly localState: CloudflareSyncLocalState,
     private readonly context: SyncRemoteSessionContext,
   ) {
-    const state = createDefaultState();
-    this.apiBase = state.apiBaseUrl;
-    this.spaceId = state.spaceId;
+    this.apiBase = resolveBackendApiBaseUrl();
   }
 
-  public async prefetchIndexes(collections: readonly SyncRemoteCollection[]): Promise<void> {
-    // 通过 plan 批量预取所有 collection 的远端索引
-    const state = await this.localState.readState();
+  public async prefetchIndexes(_collections: readonly SyncRemoteCollection[]): Promise<void> {
+    const state = await this.ensureSpace();
     const params = new URLSearchParams();
     params.set("mode", state.appliedHead === null ? "full" : "incremental");
-    if (state.epoch !== null) {
-      params.set("epoch", state.epoch);
-    }
-    if (state.appliedHead !== null) {
-      params.set("cursor", String(state.appliedHead));
-    }
-    for (const collection of collections) {
-      const moduleHead = state.moduleHeads[toSyncModule(collection.name)];
-      if (moduleHead !== undefined) {
-        params.set(`${toSyncModule(collection.name)}Head`, String(moduleHead));
-      }
-    }
-    const focusedAssets = this.context.focusedAssets;
-    if (focusedAssets !== undefined && focusedAssets.length > 0 && focusedAssets[0] !== undefined) {
-      params.set("focusType", focusedAssets[0].collection.assetType);
-      params.set("focusId", focusedAssets[0].assetId);
-    }
+    if (state.epoch !== null) params.set("epoch", state.epoch);
+    if (state.appliedHead !== null) params.set("cursor", String(state.appliedHead));
 
-    const url = `${this.apiBase}/v1/sync/spaces/${this.spaceId}/plan?${params.toString()}`;
+    const url = `${this.apiBase}/v1/sync/spaces/${state.spaceId}/plan?${params.toString()}`;
     const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) { this.planCache = null; return; }
 
-    if (!response.ok) {
-      this.planCache = null;
-      return;
-    }
-
-    this.planCache = await response.json() as CfPlanResult;
-    // 首次同步后更新本地 epoch
+    this.planCache = await response.json() as CfPlanResponse;
     if (this.planCache.epoch) {
-      const state = await this.localState.readState();
       if (state.epoch !== this.planCache.epoch) {
         await this.localState.writeState({ ...state, epoch: this.planCache.epoch });
       }
@@ -356,14 +266,13 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
 
   public async readIndex(collection: SyncRemoteCollection): Promise<RemoteCollectionIndex> {
     const plan = this.planCache;
-    if (plan === null) {
-      return createEmptyIndex();
-    }
+    if (plan === null) return { revision: 0, entries: {}, committedAt: null };
 
-    const moduleName = toSyncModule(collection.name);
-    const modulePlan = plan.modules.find((m) => m.module === moduleName);
-    if (modulePlan === undefined || modulePlan.mode === "unchanged") {
-      return createEmptyIndex();
+    const modulePlan = plan.modules.find(
+      (m) => m.moduleType === collection.assetType,
+    );
+    if (modulePlan === undefined || modulePlan.assets.length === 0) {
+      return { revision: 0, entries: {}, committedAt: null };
     }
 
     const codec = collection.assetIdCodec;
@@ -374,94 +283,86 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
       const adapterAssetId = codec.toAdapterAssetId(asset.assetId);
       entries[adapterAssetId] = {
         revision: asset.revision,
-        contentHash: asset.contentHash,
+        contentHash: asset.contentHash || null,
         deletedAt: asset.deletedAt,
-        committedAt: asset.committedAt,
+        committedAt: null,
       };
-      if (asset.revision > maxRevision) {
-        maxRevision = asset.revision;
-      }
+      if (asset.revision > maxRevision) maxRevision = asset.revision;
     }
 
-    const firstAsset = modulePlan.assets[0];
-    return {
-      revision: maxRevision,
-      entries,
-      committedAt: firstAsset !== undefined ? firstAsset.committedAt : null,
-    };
+    return { revision: maxRevision, entries, committedAt: null };
   }
 
   public async readAsset(params: RemoteAssetRef): Promise<RemoteAssetContent | null> {
     const plan = this.planCache;
-    if (plan === null) {
-      return null;
-    }
+    if (plan === null) return null;
 
-    const moduleName = toSyncModule(params.collection.name);
-    const modulePlan = plan.modules.find((m) => m.module === moduleName);
-    if (modulePlan === undefined) {
-      return null;
-    }
+    const modulePlan = plan.modules.find(
+      (m) => m.moduleType === params.collection.assetType,
+    );
+    if (modulePlan === undefined) return null;
 
     const remoteAssetId = params.collection.assetIdCodec.toRemoteAssetId(params.assetId);
     const asset = modulePlan.assets.find((a) => a.assetId === remoteAssetId);
-    if (asset === undefined) {
-      return null;
-    }
+    if (asset === undefined) return null;
+    if (asset.deletedAt !== null) return null;
 
-    // 无内容哈希或已删除的资产跳过
-    if (asset.contentHash === null || asset.deletedAt !== null) {
+    const contentHash = asset.contentHash || null;
+    const blobHash = asset.blobHash;
+
+    // 无 blob hash 且无内容 hash — 空资产
+    if (!blobHash && !contentHash) {
       return {
         revision: asset.revision,
         content: "",
         contentHash: "",
-        committedAt: asset.committedAt,
+        committedAt: null,
       };
     }
 
-    // 尝试从缓存读取
-    const cacheKey = `${params.collection.adapterId}:${params.assetId}`;
-    const cachedContent = this.assetContentCache.get(cacheKey);
-    if (cachedContent !== undefined) {
-      if (cachedContent === null) return null;
-      return {
-        revision: asset.revision,
-        content: cachedContent,
-        contentHash: asset.contentHash,
-        committedAt: asset.committedAt,
-      };
+    // 获取或从缓存读取下载 URL
+    let downloadUrl = this.downloadUrlCache.get(blobHash);
+    if (downloadUrl === undefined) {
+      const state = await this.localState.readState();
+      const signUrl = `${this.apiBase}/v1/sync/spaces/${state.spaceId}/downloads:sign`;
+      const signResp = await fetch(signUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blobHashes: [blobHash] }),
+        cache: "no-store",
+      });
+      if (!signResp.ok) {
+        this.downloadUrlCache.set(blobHash, null);
+        return null;
+      }
+      const signResult = await signResp.json() as CfDownloadSignResponse;
+      downloadUrl = signResult.urls[0]?.url ?? null;
+      this.downloadUrlCache.set(blobHash, downloadUrl);
     }
 
-    // 通过 R2 预签名 URL 下载
-    const download = asset.downloads[0];
-    if (download === undefined) {
-      return null;
-    }
+    if (downloadUrl === null) return null;
 
+    // 下载 blob
     try {
-      const response = await fetch(download.url, { cache: "no-store" });
-      if (!response.ok) {
-        this.assetContentCache.set(cacheKey, null);
-        return null;
-      }
+      const dlResp = await fetch(downloadUrl, { cache: "no-store" });
+      if (!dlResp.ok) return null;
 
-      const content = await response.text();
-      // 校验 contentHash
+      const content = await dlResp.text();
+
+      // SHA-256 校验
       const computedHash = await createSha256CanonicalHash(JSON.parse(content));
-      if (computedHash !== asset.contentHash) {
-        this.assetContentCache.set(cacheKey, null);
-        return null;
-      }
+      const expectedHash = computedHash.startsWith("sha256:")
+        ? computedHash.slice(7)
+        : computedHash;
+      if (expectedHash !== blobHash) return null;
 
-      this.assetContentCache.set(cacheKey, content);
       return {
         revision: asset.revision,
         content,
-        contentHash: asset.contentHash,
-        committedAt: asset.committedAt,
+        contentHash: contentHash ?? "",
+        committedAt: null,
       };
     } catch {
-      this.assetContentCache.set(cacheKey, null);
       return null;
     }
   }
@@ -469,56 +370,36 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
   public async checkCollections(
     collections: readonly SyncRemoteCollection[],
   ): Promise<RemoteCheckResult> {
-    const state = await this.localState.readState();
+    const state = await this.ensureSpace();
     const params = new URLSearchParams();
-    if (state.epoch !== null) {
-      params.set("epoch", state.epoch);
-    }
-    if (state.appliedHead !== null) {
-      params.set("cursor", String(state.appliedHead));
-    }
+    if (state.epoch !== null) params.set("epoch", state.epoch);
+    if (state.appliedHead !== null) params.set("cursor", String(state.appliedHead));
 
-    const url = `${this.apiBase}/v1/sync/spaces/${this.spaceId}/check?${params.toString()}`;
+    const url = `${this.apiBase}/v1/sync/spaces/${state.spaceId}/check?${params.toString()}`;
     const response = await fetch(url, { cache: "no-store" });
 
-    // 204 = 无变化
-    if (response.status === 204) {
-      this.checkCache = null;
-      return { changedCollections: [] };
-    }
+    if (response.status === 204) return { changedCollections: [] };
+    if (!response.ok) return { changedCollections: [] };
 
-    if (!response.ok) {
-      this.checkCache = null;
-      return { changedCollections: [] };
-    }
-
-    const result = await response.json() as CfSmallCheckResult;
-    this.checkCache = result;
-
-    // 更新本地 epoch
+    const result = await response.json() as CfCheckResponse;
     if (result.epoch) {
-      const state = await this.localState.readState();
-      if (state.epoch !== result.epoch) {
-        await this.localState.writeState({ ...state, epoch: result.epoch });
+      const currentState = await this.localState.readState();
+      if (currentState.epoch !== result.epoch) {
+        await this.localState.writeState({ ...currentState, epoch: result.epoch });
       }
     }
 
-    if (result.changes.length === 0) {
-      // 无变化
+    if (!result.changed || result.changes.length === 0) {
       return { changedCollections: [] };
     }
 
-    // 从 check 内联的 changes 中找到受影响的 collection
-    const changedCollections = new Set<string>();
+    const changed = new Set<string>();
     for (const change of result.changes) {
-      for (const collection of collections) {
-        if (collection.assetType === change.assetType) {
-          changedCollections.add(collection.adapterId);
-        }
+      for (const c of collections) {
+        if (c.assetType === change.assetType) changed.add(c.adapterId);
       }
     }
-
-    return { changedCollections: Array.from(changedCollections) };
+    return { changedCollections: Array.from(changed) };
   }
 
   public beginWriteBatch(): SyncRemoteWriteBatch {
@@ -532,37 +413,44 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
         result.collectionRevision,
       );
     }
-    // Cloudflare 不使用 ETag；不操作
   }
 
   public async prepareCollections(_collections: readonly SyncRemoteCollection[]): Promise<void> {
-    // Cloudflare 后端无目录概念；no-op
+    // Cloudflare 无目录概念
   }
 
   public dispose(): void {
     this.planCache = null;
-    this.checkCache = null;
-    this.assetContentCache.clear();
+    this.downloadUrlCache.clear();
   }
 
-  /** 获取缓存的 plan 结果，供 write batch 使用 */
-  public getPlanCache(): CfPlanResult | null {
-    return this.planCache;
-  }
+  public getApiBase(): string { return this.apiBase; }
 
-  /** 获取缓存的 check 结果 */
-  public getCheckCache(): CfSmallCheckResult | null {
-    return this.checkCache;
-  }
+  // -- ensureSpace: 检测空间是否存在，不存在则自动创建 -- //
 
-  /** 获取 API base URL */
-  public getApiBase(): string {
-    return this.apiBase;
-  }
+  private async ensureSpace(): Promise<CfLocalState> {
+    const state = await this.localState.readState();
+    const checkUrl = `${this.apiBase}/v1/sync/spaces/${state.spaceId}/check`;
+    const checkResp = await fetch(checkUrl, { cache: "no-store" });
 
-  /** 获取 space ID */
-  public getSpaceId(): string {
-    return this.spaceId;
+    if (checkResp.status === 404) {
+      // 空间不存在，自动创建
+      const createUrl = `${this.apiBase}/v1/sync/spaces`;
+      const createResp = await fetch(createUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spaceId: state.spaceId }),
+        cache: "no-store",
+      });
+      if (createResp.ok) {
+        const created = await createResp.json() as { activeEpoch: string };
+        const newState = { ...state, epoch: created.activeEpoch ?? state.epoch };
+        await this.localState.writeState(newState);
+        return newState;
+      }
+    }
+
+    return state;
   }
 }
 
@@ -571,209 +459,167 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
 // ============================================================================
 
 class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
-  private mutations: CfWriteMutation[] = [];
+  private mutations: Array<{
+    assetType: string;
+    assetId: string;
+    content: string | null;
+    contentHash: string | null;
+  }> = [];
   private committed = false;
 
   public constructor(private readonly session: CloudflareSyncRemoteSession) {}
 
   public putAsset(params: RemoteAssetPutParams): void {
     if (this.committed) return;
-
     this.mutations.push({
       assetType: params.collection.assetType,
       assetId: params.collection.assetIdCodec.toRemoteAssetId(params.assetId),
-      operation: "put",
-      contentHash: params.contentHash,
       content: params.content,
+      contentHash: params.contentHash,
     });
   }
 
   public putTombstone(params: RemoteAssetTombstoneParams): void {
     if (this.committed) return;
-
     this.mutations.push({
       assetType: params.collection.assetType,
       assetId: params.collection.assetIdCodec.toRemoteAssetId(params.assetId),
-      operation: "delete",
-      contentHash: null,
       content: null,
+      contentHash: null,
     });
   }
 
   public async commit(): Promise<RemoteWriteBatchResult> {
-    if (this.committed) {
-      return { writes: [] };
-    }
+    if (this.committed) return { writes: [] };
     this.committed = true;
-
-    if (this.mutations.length === 0) {
-      return { writes: [] };
-    }
+    if (this.mutations.length === 0) return { writes: [] };
 
     const apiBase = this.session.getApiBase();
-    const spaceId = this.session.getSpaceId();
     const state = await this.session.localState.readState();
     const clientBatchId = createUuid();
 
-    // Step 1: POST /prepare
-    const prepareBody = {
-      protocol: "cf-sync-v1" as const,
-      action: "prepare" as const,
-      epoch: state.epoch ?? "",
-      clientBatchId,
-      mutations: this.mutations.map((m) => ({
-        clientMutationId: createUuid(),
+    const mutationRecords = await Promise.all(this.mutations.map(async (m) => {
+      const mutationId = createUuid();
+      let blobHash = "";
+      let blobByteSize = 0;
+      if (m.content !== null) {
+        const contentBytes = new TextEncoder().encode(m.content);
+        blobByteSize = contentBytes.length;
+        blobHash = await createSha256CanonicalHash(JSON.parse(m.content));
+        blobHash = blobHash.startsWith("sha256:") ? blobHash.slice(7) : blobHash;
+      }
+      return {
+        clientMutationId: mutationId,
         assetType: m.assetType,
         assetId: m.assetId,
-        operation: m.operation,
+        blobHash,
+        blobByteSize,
+        content: m.content,
+        contentHash: m.contentHash,
+      };
+    }));
+
+    // Step 1: POST /prepare
+    const prepareBody = {
+      protocol: "cf-sync-v1",
+      action: "prepare",
+      spaceEpoch: state.epoch ?? "",
+      clientBatchId,
+      mutations: mutationRecords.map((r) => ({
+        clientMutationId: r.clientMutationId,
+        assetType: r.assetType,
+        assetId: r.assetId,
         baseRevision: null,
         baseContentHash: null,
-        targetContentHash: m.contentHash,
+        metadata: "{}",
+        blobHash: r.blobHash,
+        blobByteSize: r.blobByteSize,
+        storageMode: "full",
         schemaVersion: 1,
-        minReadableSchemaVersion: 1,
+        encoding: "identity",
         writerAppVersion: "0.1.0",
         writerBuildId: "dev",
-        payload: m.content !== null
-          ? {
-              kind: "full" as const,
-              blobHash: "pending",
-              byteSize: new TextEncoder().encode(m.content).length,
-              encoding: "identity" as const,
-            }
-          : null,
       })),
     };
 
-    const prepareUrl = `${apiBase}/v1/sync/spaces/${spaceId}/mutations`;
-    const prepareResponse = await fetch(prepareUrl, {
+    const mutationsUrl = `${apiBase}/v1/sync/spaces/${state.spaceId}/mutations`;
+    const prepareResp = await fetch(mutationsUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(prepareBody),
       cache: "no-store",
     });
+    if (!prepareResp.ok) return { writes: [] };
 
-    if (!prepareResponse.ok) {
-      return { writes: [] };
-    }
+    const prepareResult = await prepareResp.json() as CfPrepareResponse;
 
-    const prepareResult = await prepareResponse.json() as CfPrepareResponse;
-
-    // 更新本地 epoch
-    if (prepareResult.epoch) {
-      const currentState = await this.session.localState.readState();
-      if (currentState.epoch !== prepareResult.epoch) {
-        await this.session.localState.writeState({ ...currentState, epoch: prepareResult.epoch });
-      }
-    }
-
-    // Step 2: Upload blobs to R2
-    const mutationIds = new Map<number, string>();
-    const blobHashes = new Map<number, string>();
-    for (let i = 0; i < this.mutations.length; i++) {
-      const mutation = this.mutations[i];
-      if (mutation === undefined) continue;
-      const mutationId = createUuid();
-      mutationIds.set(i, mutationId);
-      if (mutation.content !== null) {
-        const blobHash = await createSha256CanonicalHash(JSON.parse(mutation.content));
-        blobHashes.set(i, blobHash);
-      }
-    }
-
+    // Step 2: R2 PUT
     for (const upload of prepareResult.uploads) {
-      if (!upload.required || upload.url === undefined || upload.url === null) continue;
-
-      // 通过 assetType + assetId 匹配 mutation
-      let blobIdx = -1;
-      for (let i = 0; i < this.mutations.length; i++) {
-        const m = this.mutations[i];
-        if (m !== undefined && m.assetType === upload.assetType && m.assetId === upload.assetId) {
-          blobIdx = i;
-          break;
-        }
-      }
-      if (blobIdx === -1) continue;
-
-      const mutation = this.mutations[blobIdx];
-      if (mutation === undefined || mutation.content === null) continue;
+      if (!upload.required || !upload.url) continue;
+      const rec = mutationRecords.find(
+        (r) => r.assetType === upload.assetType && r.assetId === upload.assetId,
+      );
+      if (!rec || rec.content === null) continue;
 
       const headers: Record<string, string> = upload.headers ?? {};
       await fetch(upload.url, {
         method: "PUT",
         headers,
-        body: mutation.content,
+        body: rec.content,
         cache: "no-store",
       });
     }
 
-    // Step 3: POST /commit（后端要求 commit 也带 mutations 数组）
-    const commitMutations = Array.from(mutationIds.entries()).map(([idx, mutationId]) => {
-      const m = this.mutations[idx];
-      return {
-        clientMutationId: mutationId,
-        assetType: m?.assetType ?? "",
-        assetId: m?.assetId ?? "",
-      };
-    });
-
+    // Step 3: POST /commit
     const commitBody = {
-      protocol: "cf-sync-v1" as const,
-      action: "commit" as const,
-      epoch: prepareResult.epoch,
+      protocol: "cf-sync-v1",
+      action: "commit",
+      spaceEpoch: state.epoch ?? "",
       clientBatchId,
       commitToken: prepareResult.commitToken,
-      mutations: commitMutations,
+      mutations: mutationRecords.map((r) => ({
+        clientMutationId: r.clientMutationId,
+        assetType: r.assetType,
+        assetId: r.assetId,
+      })),
     };
 
-    const commitResponse = await fetch(prepareUrl, {
+    const commitResp = await fetch(mutationsUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(commitBody),
       cache: "no-store",
     });
+    if (!commitResp.ok) return { writes: [] };
 
-    if (!commitResponse.ok) {
-      return { writes: [] };
-    }
+    const commitResult = await commitResp.json() as CfCommitResponse;
 
-    const commitResult = await commitResponse.json() as CfCommitResponse;
-
-    // 更新本地状态
-    const newState: CfLocalState = {
+    await this.session.localState.writeState({
       ...state,
-      epoch: commitResult.epoch,
       appliedHead: commitResult.head,
-      moduleHeads: {
-        ...state.moduleHeads,
-        ...commitResult.moduleHeads,
-      },
-    };
-    await this.session.localState.writeState(newState);
+    });
 
-    const results: RemoteWriteResult[] = commitResult.applied.map((applied) => ({
+    const results: RemoteWriteResult[] = commitResult.applied.map((a) => ({
       collection: {
         adapterId: "",
         name: "",
-        mode: "full-no-revision",
-        assetType: applied.assetType,
+        mode: "full-no-revision" as const,
+        assetType: a.assetType as never,
         assetIdCodec: {
-          toRemoteAssetId: (id) => id,
-          toAdapterAssetId: (id) => id,
+          toRemoteAssetId: (id: string) => id,
+          toAdapterAssetId: (id: string) => id,
         },
-        hashAlgorithm: "sha256-canonical-json-v1",
+        hashAlgorithm: "sha256-canonical-json-v1" as const,
         stateKey: "",
       },
-      assetId: applied.assetId,
-      revision: applied.revision,
-      contentHash: applied.contentHash,
-      deletedAt: applied.deletedAt,
-      committedAt: applied.committedAt,
+      assetId: a.assetId,
+      revision: a.revision,
+      contentHash: a.contentHash || null,
+      deletedAt: null,
+      committedAt: "",
     }));
 
-    return {
-      writes: results,
-      globalCursor: commitResult.head,
-    };
+    return { writes: results, globalCursor: commitResult.head };
   }
 
   public async discard(): Promise<void> {
@@ -796,54 +642,17 @@ export class CloudflareSyncRemote implements SyncRemote {
   }
 
   public async resetRemote(): Promise<void> {
-    const apiBase = resolveBackendApiBaseUrl();
-    const spaceId = "default";
-
-    await fetch(`${apiBase}/v1/sync/spaces/${spaceId}/reset`, {
-      method: "POST",
-      cache: "no-store",
-    });
-
-    // 重置本地状态
-    await this.localState.writeState(createDefaultState());
+    const state = await this.localState.readState();
+    await fetch(
+      `${resolveBackendApiBaseUrl()}/v1/sync/spaces/${state.spaceId}/reset`,
+      { method: "POST", cache: "no-store" },
+    );
+    await this.localState.writeState(defaultState());
   }
 
-  public dispose(): void {
-    // no-op
-  }
+  public dispose(): void { /* no-op */ }
 }
-
-// ============================================================================
-// 工厂函数
-// ============================================================================
 
 export function createCloudflareSyncRemote(): SyncRemote {
   return new CloudflareSyncRemote();
-}
-
-// ============================================================================
-// 工具函数
-// ============================================================================
-
-function toSyncModule(collectionName: string): SyncModule {
-  switch (collectionName) {
-    case "world-documents":
-      return "world-documents";
-    case "blueprints":
-      return "blueprints";
-    case "modules":
-      return "modules";
-    case "toolbox":
-      return "toolbox";
-    default:
-      return "world-documents";
-  }
-}
-
-function createEmptyIndex(): RemoteCollectionIndex {
-  return {
-    revision: 0,
-    entries: {},
-    committedAt: null,
-  };
 }

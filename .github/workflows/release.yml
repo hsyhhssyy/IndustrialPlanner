@@ -334,10 +334,18 @@ jobs:
           echo "domain=$(jq -r '.domain' "$config_file")" >> "$GITHUB_ENV"
           echo "namespace=$(jq -r '.namespace' "$config_file")" >> "$GITHUB_ENV"
 
+          # image_pull_secret: 未配置时回退到 registry 名
+          image_pull_secret="$(jq -r '.image_pull_secret // empty' "$config_file")"
+          if [ -z "$image_pull_secret" ]; then
+            image_pull_secret="$(jq -r '.registry' "$config_file")"
+          fi
+          echo "image_pull_secret=$image_pull_secret" >> "$GITHUB_ENV"
+
       - name: Render and apply K8s manifests
         env:
           DOMAIN: ${{ env.domain }}
           NAMESPACE: ${{ env.namespace }}
+          IMAGE_PULL_SECRET: ${{ env.image_pull_secret }}
           KUBECONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
         shell: bash
         run: |

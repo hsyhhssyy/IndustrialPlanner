@@ -48,6 +48,10 @@ function clearConfiguredSlots(
       ) {
         continue;
       }
+      // 跳过用户设为无限的槽位，避免清空无限原料后产物流入时继承 ignoreStock 标记
+      if (slot.ignoreStock) {
+        continue;
+      }
       storageSlotIds.add(resolveStorageSlotId(state, slot.id));
     }
   }

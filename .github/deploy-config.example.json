@@ -1,8 +1,9 @@
 {
-  "registry": "docker.hsyhhssyy.net",
+  "registry": "docker.com",
   "username": "your-username",
   "password": "your-password",
   "image_name": "industrial-planner-v3",
-  "domain": "endfield.hsyhhssyy.net",
-  "namespace": "amiyabot"
+  "domain": "***",
+  "namespace": "amiyabot",
+  "image_pull_secret": ""
 }

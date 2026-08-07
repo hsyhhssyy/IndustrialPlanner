@@ -4705,6 +4705,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * AI-CORRECTION 2026-07-21: 改为可摆放，使用 warehouseItemLink 模式从仓库获取气体，
    *   放置时默认链接惰气并开启无限供应。参照 water_pump_1 模式。
    */
+// AI-CORRECTION 2026-08-07: 解包数据 buildingTable.gas_pump_1 中 needPower=false, powerConsume=0，
+//   游戏中描述为"无需通电即可工作"。移除 requiresPower 和 powerDemand。
   createEntityDefinition({
     id: "gas_pump_1",
     nameKey: "registry.entity.gas_pump_1.name",
@@ -4717,8 +4719,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       { type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge },
       { type: PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity, range: 2 },
     ],
-    requiresPower: true,
-    powerDemand: 10,
+    requiresPower: false,
     portGroups: [
       createPortGroup(
         "gas_output",
