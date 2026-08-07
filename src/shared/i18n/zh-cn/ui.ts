@@ -450,6 +450,7 @@ const UI: Record<string, string> = {
     "settingsOption.languageZhHans": "中文(简体)",
     "settingsOption.syncProvider.none": "关闭",
     "settingsOption.syncProvider.webdav": "WebDAV",
+    "settingsOption.syncProvider.cloudflare": "Cloudflare Worker",
     "status.edit": "编辑态聚焦文档事实与编译产物。",
     "status.ready": "Stage1 工作台脚手架已就绪。",
     "statusBar.compile": "编译版本",

@@ -76,6 +76,8 @@ import {
 import { SyncStateImpl } from "./sync-state-impl";
 import { createWebDavWorkerStorageClient } from "./clients/webdav/webdav-worker-client";
 import { createWebDavSyncRemote } from "./clients/webdav/webdav-remote";
+import { createCloudflareSyncRemote } from "./clients/cloudflare/cloudflare-remote";
+import { resolveBackendApiBaseUrl } from "@/shared/storage/backend-api-address";
 
 export interface SyncHostOptions {
   readonly assetSources?: readonly SyncAssetSource[];
@@ -99,6 +101,9 @@ function deriveEnabled(settings: { url: string }, oldEnabled?: boolean): boolean
   const provider = readSyncProvider();
   if (provider === "webdav") {
     return settings.url.trim() !== "";
+  }
+  if (provider === "cloudflare") {
+    return resolveBackendApiBaseUrl().trim() !== "";
   }
   // 迁移路径：旧用户 enabled=true 且 URL 非空，自动注册为 webdav
   if (oldEnabled === true && settings.url.trim() !== "") {
@@ -269,19 +274,25 @@ export async function createSyncHost(
       settings,
       onRequestActivityChange,
       requestOptions,
-    ) => createWebDavSyncRemote({
-      client: createWebDavWorkerStorageClient({
-        baseUrl: settings.url,
-        username: settings.username,
-        password: settings.password,
-        readDebugEnabled: options.readDebugEnabled,
-        maxConcurrentRequests: settings.maxConcurrentRequests,
-        onRequestActivityChange,
-        ...(requestOptions.requestTimeoutMs === undefined
-          ? {}
-          : { requestTimeoutMs: requestOptions.requestTimeoutMs }),
-      }),
-    }),
+    ) => {
+      const provider = readSyncProvider();
+      if (provider === "cloudflare") {
+        return createCloudflareSyncRemote();
+      }
+      return createWebDavSyncRemote({
+        client: createWebDavWorkerStorageClient({
+          baseUrl: settings.url,
+          username: settings.username,
+          password: settings.password,
+          readDebugEnabled: options.readDebugEnabled,
+          maxConcurrentRequests: settings.maxConcurrentRequests,
+          onRequestActivityChange,
+          ...(requestOptions.requestTimeoutMs === undefined
+            ? {}
+            : { requestTimeoutMs: requestOptions.requestTimeoutMs }),
+        }),
+      });
+    },
     adapters,
     createInitialSyncPlan: () => createInitialSyncPlan(workspace, externalSources),
     maintenanceTasks: createMaintenanceTasks({
@@ -348,6 +359,17 @@ export async function createSyncHost(
     },
     resolveConflicts: state.resolveConflicts,
     deleteRemoteData: async () => {
+      const provider = readSyncProvider();
+      if (provider === "cloudflare") {
+        const remote = createCloudflareSyncRemote();
+        try {
+          await remote.resetRemote?.();
+        } finally {
+          remote.dispose?.();
+        }
+        return;
+      }
+
       const settings = currentSettings;
       if (!settings.enabled || settings.url.trim() === "") {
         return;

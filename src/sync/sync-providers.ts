@@ -4,7 +4,7 @@ import type { UiKey } from "@/shared/i18n";
  * 同步后端标识符。
  * 未来新增后端只需在 SYNC_PROVIDER_CONFIGS 中添加一项即可。
  */
-export type SyncProviderId = "none" | "webdav";
+export type SyncProviderId = "none" | "webdav" | "cloudflare";
 
 export interface SyncProviderConfig {
   readonly id: SyncProviderId;
@@ -12,8 +12,9 @@ export interface SyncProviderConfig {
 }
 
 export const SYNC_PROVIDER_CONFIGS: readonly SyncProviderConfig[] = [
-  { id: "none",   labelKey: "settingsOption.syncProvider.none" },
-  { id: "webdav", labelKey: "settingsOption.syncProvider.webdav" },
+  { id: "none",      labelKey: "settingsOption.syncProvider.none" },
+  { id: "webdav",    labelKey: "settingsOption.syncProvider.webdav" },
+  { id: "cloudflare", labelKey: "settingsOption.syncProvider.cloudflare" },
 ];
 
 /** 当前支持的非关闭同步 provider 列表（用于判断何时显示 provider 专属 UI）。 */

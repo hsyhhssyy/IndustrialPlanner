@@ -611,6 +611,7 @@ export type UiKey =
   | "settingsOption.languageZhHans"
   | "settingsOption.syncProvider.none"
   | "settingsOption.syncProvider.webdav"
+  | "settingsOption.syncProvider.cloudflare"
   | "status.edit"
   | "status.ready"
   | "statusBar.compile"

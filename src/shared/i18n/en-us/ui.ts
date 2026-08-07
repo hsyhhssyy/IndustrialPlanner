@@ -457,6 +457,7 @@ const UI: Record<string, string> = {
     "settingsOption.languageZhHans": "中文(简体)",
     "settingsOption.syncProvider.none": "Off",
     "settingsOption.syncProvider.webdav": "WebDAV",
+    "settingsOption.syncProvider.cloudflare": "Cloudflare Worker",
     "status.edit": "Edit mode focuses on document facts and compiled topology.",
     "status.ready": "Stage1 workbench scaffold is ready.",
     "statusBar.compile": "Compile",
