@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import { WebDavWorkerRuntime } from "./webdav-worker-runtime";
+import { installWorkerEndpoint } from "@/shared/worker/worker-endpoint";
 import type {
   WebDavWorkerRequest,
   WebDavWorkerResponse,
@@ -8,15 +9,13 @@ import type {
 
 const runtime = new WebDavWorkerRuntime();
 const workerScope = globalThis as unknown as {
-  addEventListener(
-    type: "message",
-    listener: (event: MessageEvent<WebDavWorkerRequest>) => void,
-  ): void;
   postMessage(response: WebDavWorkerResponse): void;
 };
 
-workerScope.addEventListener("message", (event) => {
-  void runtime.handleRequest(event.data).then((response) => {
+installWorkerEndpoint({
+  workerKind: "webdav",
+  handleMessage: async (event) => {
+    const response = await runtime.handleRequest(event.data as WebDavWorkerRequest);
     workerScope.postMessage(response);
-  });
+  },
 });

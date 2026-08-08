@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useRef, useSyncExternalStore, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore, useState } from "react";
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import {
-  buildDiagnosticHeader,
-  clearDebugLogEntries,
-  getDebugLogSnapshot,
-  subscribeDebugLogSnapshot,
-} from "@/shared/logging/debug-log-store";
+  clearLogEntries,
+  getLogCollectorStatus,
+  queryLogEntries,
+  subscribeLogCollectorStatus,
+} from "@/shared/logging/log-collector-client";
+import type { PersistedLogEntry } from "@/shared/logging/log-collector-protocol";
+import { buildDiagnosticHeader } from "@/shared/logging/diagnostic-header";
+import { getDebugLogSessionStartedAt } from "@/shared/logging/debug-logging-runtime";
 import { getLogLevel } from "@/shared/logging/logger";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -24,17 +27,55 @@ const EXPORT_FILENAME_PREFIX = "industrial-planner-diagnostic";
 export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const dialogState = appHost.internalState.workbench.dialogState["debug-log"];
-  const snapshot = useSyncExternalStore(
-    subscribeDebugLogSnapshot,
-    getDebugLogSnapshot,
-    getDebugLogSnapshot,
+  const collectorStatus = useSyncExternalStore(
+    subscribeLogCollectorStatus,
+    getLogCollectorStatus,
+    getLogCollectorStatus,
   );
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [entries, setEntries] = useState<readonly PersistedLogEntry[]>([]);
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [pollGeneration, setPollGeneration] = useState(0);
+  const snapshotText = useMemo(() => formatLogEntries(entries), [entries]);
+
+  useEffect(() => {
+    if (dialogState?.visible !== true || clearing || collectorStatus !== "ready") {
+      return;
+    }
+
+    let disposed = false;
+    let queryInFlight = false;
+    const refresh = async (): Promise<void> => {
+      if (disposed || queryInFlight) {
+        return;
+      }
+      queryInFlight = true;
+      try {
+        const result = await queryLogEntries({ limit: 500 });
+        if (!disposed) {
+          setEntries(result.entries);
+        }
+      } catch {
+        // Client 会发布 collector error 状态，UI 由状态统一呈现。
+      } finally {
+        queryInFlight = false;
+      }
+    };
+
+    void refresh();
+    const intervalId = window.setInterval(() => {
+      void refresh();
+    }, 1_000);
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+    };
+  }, [clearing, collectorStatus, dialogState?.visible, pollGeneration]);
 
   const handleCopy = useCallback(async () => {
-    const text = snapshot.text;
+    const text = snapshotText;
     if (!text) return;
 
     try {
@@ -47,13 +88,17 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
         textarea.select();
       }
     }
-  }, [snapshot.text]);
+  }, [snapshotText]);
 
   const handleExport = useCallback(async () => {
     setExporting(true);
     try {
-      const header = buildDiagnosticHeader(getLogLevel());
-      const content = header + (snapshot.text || "");
+      const header = buildDiagnosticHeader({
+        entryCount: entries.length,
+        logLevel: getLogLevel(),
+        sessionStartedAt: getDebugLogSessionStartedAt(),
+      });
+      const content = header + snapshotText;
       const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -72,10 +117,19 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
     } finally {
       setExporting(false);
     }
-  }, [snapshot.text, handleCopy]);
+  }, [entries.length, snapshotText, handleCopy]);
 
-  const handleClear = useCallback(() => {
-    clearDebugLogEntries();
+  const handleClear = useCallback(async () => {
+    setClearing(true);
+    try {
+      await clearLogEntries();
+      setEntries([]);
+    } catch {
+      // collectorStatus 会切换为 error。
+    } finally {
+      setClearing(false);
+      setPollGeneration((value) => value + 1);
+    }
   }, []);
 
   useEffect(() => {
@@ -86,13 +140,13 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
     }
 
     textarea.scrollTop = textarea.scrollHeight;
-  }, [snapshot.version]);
+  }, [snapshotText]);
 
   if (dialogState === undefined) {
     return null;
   }
 
-  const hasLogs = snapshot.text.length > 0;
+  const hasLogs = snapshotText.length > 0;
   const exportLabel = exporting ? t("debugLogDialog.exporting") : t("debugLogDialog.export");
   const copyLabel = copied ? t("debugLogDialog.copied") : t("debugLogDialog.copy");
 
@@ -117,7 +171,7 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
       <button
         className={cm(styles, "debug-log-dialog-header-action")}
         disabled={!hasLogs}
-        onClick={handleClear}
+        onClick={() => void handleClear()}
         type="button"
       >
         {t("debugLogDialog.clear")}
@@ -156,19 +210,29 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
         <p>{t("debugLogDialog.guidance")}</p>
         {hasLogs ? (
           <span className={cm(styles, "debug-log-dialog-count")}>
-            {snapshot.entryCount} 条日志
+            {entries.length} 条日志
           </span>
         ) : null}
       </div>
       <textarea
         aria-label={t("debugLogDialog.title")}
         className={cm(styles, "json-debug-textarea debug-log-dialog-textarea")}
-        placeholder={t("debugLogDialog.empty")}
+        placeholder={collectorStatus === "ready"
+          ? t("debugLogDialog.empty")
+          : t("debugLogDialog.unavailable")}
         readOnly
         ref={textareaRef}
         spellCheck={false}
-        value={snapshot.text}
+        value={snapshotText}
       />
     </DialogShell>
   );
 });
+
+function formatLogEntries(entries: readonly PersistedLogEntry[]): string {
+  return entries
+    .slice()
+    .reverse()
+    .map((entry) => `${new Date(entry.occurredAt).toISOString()} [${entry.level.toUpperCase()}] [${entry.source}:${entry.instanceId}] ${entry.message}`)
+    .join("\n");
+}

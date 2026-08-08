@@ -463,34 +463,36 @@ implements SimulationAction, SimulationInternalAction {
   public readonly advancePlaybackByDeltaMs: SimulationAction["advancePlaybackByDeltaMs"] = async (
     deltaMs,
   ) => {
-    // === 诊断：每 ~600 帧（约 10 秒）输出统计 ===
-    this.diagFrameCount += 1;
-    this.diagTotalDeltaMs += deltaMs;
+    // 诊断统计必须在调用点服从 debugMode 总开关，关闭时连每帧累计都不执行。
+    if (this.getPerfEnabled?.() === true) {
+      this.diagFrameCount += 1;
+      this.diagTotalDeltaMs += deltaMs;
 
-    if (this.diagFrameCount - this.diagLastLogFrame >= 600) {
-      const intervalFrames = this.diagFrameCount - this.diagLastLogFrame;
-      const avgDeltaMs = this.diagTotalDeltaMs / intervalFrames;
-      const avgTickDelta = avgDeltaMs * STANDARD_TICK_RATE_PER_SECOND * this.stateReadWrite.simulationSpeed / 1000;
-      const playbackProgress = this.stateReadWrite.currentPlaybackTickNumber - this.diagLastLogPlaybackTick;
-      const inFlightRate = intervalFrames > 0 ? (this.diagInFlightSkipCount / intervalFrames * 100).toFixed(1) : '0';
-      const notReadyRate = intervalFrames > 0 ? (this.diagNotReadyCount / intervalFrames * 100).toFixed(1) : '0';
-      console.debug(
-        `[PlaybackDiag] +${intervalFrames}f avgMs=${avgDeltaMs.toFixed(2)} tickΔ=${avgTickDelta.toFixed(4)} ` +
-        `crosses=${this.diagCrossCount} consumed=${this.diagTickConsumedCount} ` +
-        `inFlightSkip=${this.diagInFlightSkipCount}(${inFlightRate}%) notReady=${this.diagNotReadyCount}(${notReadyRate}%) ` +
-        `rollbackMaxConsec=${this.diagMaxConsecutiveRollbacks} ` +
-        `playbackΔ=${playbackProgress.toFixed(2)} ` +
-        `tps=${this.stateReadWrite.statistics.tickPerSecond} buff=${this.stateReadWrite.runtimeStatus.bufferSize}`,
-      );
+      if (this.diagFrameCount - this.diagLastLogFrame >= 600) {
+        const intervalFrames = this.diagFrameCount - this.diagLastLogFrame;
+        const avgDeltaMs = this.diagTotalDeltaMs / intervalFrames;
+        const avgTickDelta = avgDeltaMs * STANDARD_TICK_RATE_PER_SECOND * this.stateReadWrite.simulationSpeed / 1000;
+        const playbackProgress = this.stateReadWrite.currentPlaybackTickNumber - this.diagLastLogPlaybackTick;
+        const inFlightRate = intervalFrames > 0 ? (this.diagInFlightSkipCount / intervalFrames * 100).toFixed(1) : '0';
+        const notReadyRate = intervalFrames > 0 ? (this.diagNotReadyCount / intervalFrames * 100).toFixed(1) : '0';
+        console.debug(
+          `[PlaybackDiag] +${intervalFrames}f avgMs=${avgDeltaMs.toFixed(2)} tickΔ=${avgTickDelta.toFixed(4)} ` +
+          `crosses=${this.diagCrossCount} consumed=${this.diagTickConsumedCount} ` +
+          `inFlightSkip=${this.diagInFlightSkipCount}(${inFlightRate}%) notReady=${this.diagNotReadyCount}(${notReadyRate}%) ` +
+          `rollbackMaxConsec=${this.diagMaxConsecutiveRollbacks} ` +
+          `playbackΔ=${playbackProgress.toFixed(2)} ` +
+          `tps=${this.stateReadWrite.statistics.tickPerSecond} buff=${this.stateReadWrite.runtimeStatus.bufferSize}`,
+        );
 
-      this.diagLastLogFrame = this.diagFrameCount;
-      this.diagLastLogPlaybackTick = this.stateReadWrite.currentPlaybackTickNumber;
-      this.diagTotalDeltaMs = 0;
-      this.diagCrossCount = 0;
-      this.diagInFlightSkipCount = 0;
-      this.diagNotReadyCount = 0;
-      this.diagTickConsumedCount = 0;
-      this.diagMaxConsecutiveRollbacks = 0;
+        this.diagLastLogFrame = this.diagFrameCount;
+        this.diagLastLogPlaybackTick = this.stateReadWrite.currentPlaybackTickNumber;
+        this.diagTotalDeltaMs = 0;
+        this.diagCrossCount = 0;
+        this.diagInFlightSkipCount = 0;
+        this.diagNotReadyCount = 0;
+        this.diagTickConsumedCount = 0;
+        this.diagMaxConsecutiveRollbacks = 0;
+      }
     }
 
     if (this.stateReadWrite.runningState !== "start") {
@@ -2302,11 +2304,11 @@ implements SimulationAction, SimulationInternalAction {
 
   /** 每 180 tick 阈值追赶：从 Worker 拉取 perf 报告并打印到 console */
   private async pollPerfReport(tickNumber: number): Promise<void> {
-    if (tickNumber < this.nextPerfReportTick) return;
+    if (this.getPerfEnabled?.() !== true || tickNumber < this.nextPerfReportTick) return;
 
     try {
       const response = await this.bridge.getPerfReport();
-      if (response.report !== null) {
+      if (this.getPerfEnabled?.() === true && response.report !== null) {
         const s = response.report.summary;
         const r = response.report.tickRange;
         const st = s.avgStageMs;

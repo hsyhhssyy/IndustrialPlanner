@@ -40,7 +40,16 @@ export type WebDavWorkerOperation =
 export interface WebDavWorkerRequest {
   readonly requestId: number;
   readonly clientOptions: SyncClientOptions;
-  readonly debugEnabled: boolean;
+  // AI-REMOVED 2026-08-08:
+  // Reason: 每请求 debugEnabled 会在并发请求间争用 Worker 全局 logger 级别。
+  // Trigger: ST2-RQ-009 改由 controlPort 同步唯一 debugMode 设置。
+  // Evidence: WebDavWorkerRuntime 原先在每次 handleRequest 开头调用 setLogLevel。
+  // Replacement: WorkerBootstrapV1.debugModeEnabled + debug-mode-changed。
+  // Risk: Low；日志级别现在按 Worker 生命周期更新，而不是按请求更新。
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly debugEnabled: boolean;
   readonly operation: WebDavWorkerOperation;
 }
 

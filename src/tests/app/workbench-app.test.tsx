@@ -2811,8 +2811,7 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".help-dialog")?.classList.contains("is-maximized")).toBe(true);
   });
 
-  it("shows debug logs behind the debug mode gate and closes the dialog when debug mode is turned off", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("shows the debug log UI behind the debug mode gate and closes it when disabled", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -2840,43 +2839,21 @@ describe("WorkbenchApp", () => {
 
     expect(container.querySelector(".debug-log-dialog")).not.toBeNull();
     expect(textarea).not.toBeNull();
+    expect(textarea?.placeholder).toContain("SharedWorker");
 
-    act(() => {
-      console.warn("debug log panel smoke");
-    });
-
-    expect(textarea?.value).toContain("debug log panel smoke");
-
-    act(() => {
-      const errorEvent = new Event("error");
-
-      Object.defineProperties(errorEvent, {
-        message: { value: "uncaught error smoke" },
-        filename: { value: "workbench-app.test.tsx" },
-        lineno: { value: 12 },
-        colno: { value: 34 },
-        error: { value: new Error("uncaught error smoke") },
-      });
-
-      window.dispatchEvent(errorEvent);
-    });
-
-    expect(textarea?.value).toContain("[window.error]");
-    expect(textarea?.value).toContain("uncaught error smoke");
-    expect(textarea?.value).toContain("workbench-app.test.tsx:12:34");
-
-    act(() => {
-      const rejectionEvent = new Event("unhandledrejection");
-
-      Object.defineProperty(rejectionEvent, "reason", {
-        value: new Error("unhandled rejection smoke"),
-      });
-
-      window.dispatchEvent(rejectionEvent);
-    });
-
-    expect(textarea?.value).toContain("[window.unhandledrejection]");
-    expect(textarea?.value).toContain("unhandled rejection smoke");
+    // AI-REMOVED 2026-08-08:
+    // Reason: Workbench 组件测试不再拥有同步内存日志 store，不能用一次 console 调用同步断言 textarea。
+    // Trigger: ST2-RQ-009 将日志读取改为 SharedWorker + IndexedDB + 可见时轮询。
+    // Evidence: console 捕获和全局异常已有独立单元测试；此处只验证产品开关与不可用状态。
+    // Replacement: src/tests/shared/console-intercept.test.ts 与 log-collector-storage.test.ts。
+    // Risk: 真实 SharedWorker 连接仍需浏览器集成验收。
+    // Human Review: Required
+    //
+    // Original code:
+    // act(() => { console.warn("debug log panel smoke"); });
+    // expect(textarea?.value).toContain("debug log panel smoke");
+    // window.dispatchEvent(errorEvent / rejectionEvent);
+    // expect(textarea?.value).toContain("[window.error] / [window.unhandledrejection]");
 
     act(() => {
       runInAction(() => {
@@ -2888,7 +2865,6 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".debug-log-dialog")).toBeNull();
     expect(appHost.internalState.workbench.dialogState["debug-log"]?.visible).toBe(false);
 
-    warnSpy.mockRestore();
   });
 
   it("moves the help dialog when dragging the title bar in windowed mode", () => {

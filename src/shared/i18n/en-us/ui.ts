@@ -122,6 +122,7 @@ const UI: Record<string, string> = {
     "debugLogDialog.maximize": "Maximize Debug Logs",
     "debugLogDialog.restore": "Restore Debug Logs",
     "debugLogDialog.title": "Debug Logs",
+    "debugLogDialog.unavailable": "Log collection is unavailable. Make sure this browser supports SharedWorker.",
     "device.desktop": "Desktop",
     "device.mobile": "Phone",
     "device.tablet": "Tablet",

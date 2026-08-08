@@ -43,6 +43,10 @@ import type {
   RuntimeTickSnapshot,
   SimulationTopologyMigration,
 } from "./types";
+import {
+  attachWorkerRuntime,
+  type WorkerRuntimeAttachment,
+} from "@/shared/worker/attach-worker-runtime";
 
 export interface SimulationHost extends SimulationContract {
   workspace: WorkspaceContract;
@@ -563,6 +567,7 @@ function createTimelineWorkerBridge(
 
 class BrowserTimelineWorkerBridge implements TimelineWorkerBridge {
   private readonly worker: Worker;
+  private readonly runtimeAttachment: WorkerRuntimeAttachment;
   private nextRequestId = 1;
   private readonly pending = new Map<
     number,
@@ -576,6 +581,11 @@ class BrowserTimelineWorkerBridge implements TimelineWorkerBridge {
     this.worker = new Worker(new URL("./timeline-worker.ts", import.meta.url), {
       type: "module",
     });
+    this.runtimeAttachment = attachWorkerRuntime(this.worker, "timeline", {
+      onFault: (fault) => {
+        this.rejectAll(new Error(`Timeline worker failed: ${fault.message}`));
+      },
+    });
     this.worker.addEventListener("message", (event: MessageEvent<TimelineWorkerResponse>) => {
       const handlers = this.pending.get(event.data.requestId);
       if (handlers === undefined) {
@@ -587,11 +597,8 @@ class BrowserTimelineWorkerBridge implements TimelineWorkerBridge {
     });
     this.worker.addEventListener("error", (event) => {
       const message = event.message || "Unknown timeline worker error";
-      const error = new Error(`Timeline worker crashed: ${message}`);
-      for (const handlers of this.pending.values()) {
-        handlers.reject(error);
-      }
-      this.pending.clear();
+      console.error("[TimelineWorker] startup or uncaught worker error", message);
+      this.rejectAll(new Error(`Timeline worker crashed: ${message}`));
     });
   }
 
@@ -673,11 +680,16 @@ class BrowserTimelineWorkerBridge implements TimelineWorkerBridge {
 
   public dispose(): void {
     const error = new Error("Timeline worker disposed");
+    this.rejectAll(error);
+    this.runtimeAttachment.dispose();
+    this.worker.terminate();
+  }
+
+  private rejectAll(error: Error): void {
     for (const handlers of this.pending.values()) {
       handlers.reject(error);
     }
     this.pending.clear();
-    this.worker.terminate();
   }
 
   private request<TType extends TimelineWorkerResponse["type"]>(
@@ -831,6 +843,7 @@ class LocalTimelineWorkerBridge implements TimelineWorkerBridge {
 
 class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
   private readonly worker: Worker;
+  private readonly runtimeAttachment: WorkerRuntimeAttachment;
   private nextRequestId = 1;
   private readonly pending = new Map<
     number,
@@ -844,13 +857,14 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     this.worker = new Worker(new URL("./simulation-worker.ts", import.meta.url), {
       type: "module",
     });
+    this.runtimeAttachment = attachWorkerRuntime(this.worker, "simulation", {
+      onFault: (fault) => {
+        this.rejectAll(new Error(`Simulation worker failed: ${fault.message}`));
+      },
+    });
     this.worker.addEventListener("message", (event: MessageEvent<SimulationWorkerResponse | SimulationWorkerErrorNotification>) => {
       if (event.data.type === "worker-error") {
-        // Worker 异步路径（fillOneTick/advanceToTick setTimeout 回调）中捕获的错误，
-        // 主动推送到主线程，通过 console.error 输出以纳入 debug-log 窗口。
-        const notification = event.data;
-        const tickInfo = notification.tickNumber !== null ? ` at tick ${notification.tickNumber}` : "";
-        console.error(`[SimWorker] ${notification.error}${tickInfo}`);
+        // Worker 内已经通过 console.error 进入 Collector；主线程不重复输出。
         return;
       }
 
@@ -864,12 +878,8 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     });
     this.worker.addEventListener("error", (event) => {
       const message = event.message || "Unknown worker error";
-      console.error(`[SimWorker] ${message}`, event.filename, event.lineno);
-      const error = new Error(`Simulation worker crashed: ${message}`);
-      for (const handlers of this.pending.values()) {
-        handlers.reject(error);
-      }
-      this.pending.clear();
+      console.error("[SimWorker] startup or uncaught worker error", message, event.filename, event.lineno);
+      this.rejectAll(new Error(`Simulation worker crashed: ${message}`));
     });
   }
 
@@ -1038,11 +1048,16 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
 
   public dispose(): void {
     const error = new Error("Simulation worker disposed");
+    this.rejectAll(error);
+    this.runtimeAttachment.dispose();
+    this.worker.terminate();
+  }
+
+  private rejectAll(error: Error): void {
     for (const handlers of this.pending.values()) {
       handlers.reject(error);
     }
     this.pending.clear();
-    this.worker.terminate();
   }
 
   private request<TType extends SimulationWorkerResponse["type"]>(

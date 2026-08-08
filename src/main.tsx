@@ -13,6 +13,12 @@ import { createWorkspaceState } from "./domain/document/workspace-state";
 import { createEditorHost } from "./editor/editor-host";
 import { createRenderHost } from "./renderer/renderer-host";
 import { createSimulationHost } from "./simulation/simulation-host";
+import { initializeDebugLogging } from "@/shared/logging/debug-logging-runtime";
+import { publishDebugModeEnabled } from "@/shared/logging/debug-mode-runtime";
+import {
+  DEFAULT_WORKBENCH_LOG_LEVEL,
+  setLogLevel,
+} from "@/shared/logging/logger";
 
 declare global {
   interface Window {
@@ -36,10 +42,20 @@ const appHost = createAppHost(workspace);
 if (import.meta.env.DEV) {
   window.__industrialPlannerAppHost = appHost;
 }
+initializeDebugLogging();
+reaction(
+  () => appHost.state.settings.debugMode,
+  (enabled) => {
+    publishDebugModeEnabled(enabled);
+    setLogLevel(enabled ? "debug" : DEFAULT_WORKBENCH_LOG_LEVEL, {
+      announce: enabled,
+    });
+  },
+  { fireImmediately: true },
+);
 createEditorHost(workspace);
 await createSyncHost(workspace, {
   assetSources: createModuleBalancingSyncSources(appHost),
-  readDebugEnabled: () => appHost.state.settings.debugMode,
 });
 await createRenderHost(workspace);
 const simulationHost = createSimulationHost(workspace, {

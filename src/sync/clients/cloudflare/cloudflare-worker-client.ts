@@ -6,6 +6,7 @@ import type {
   CfWorkerRequest,
   CfWorkerResponse,
 } from './cloudflare-worker-protocol';
+import { attachWorkerRuntime, type WorkerRuntimeAttachment } from '@/shared/worker/attach-worker-runtime';
 
 export interface CfWorkerClientOptions {
   readonly maxConcurrentRequests?: number;
@@ -20,6 +21,7 @@ export interface CfWorkerRequestActivity {
 
 export class CfWorkerClient {
   private readonly worker: Worker;
+  private readonly runtimeAttachment: WorkerRuntimeAttachment;
   private readonly pending = new Map<number, {
     readonly resolve: (value: unknown) => void;
     readonly reject: (error: Error) => void;
@@ -47,6 +49,11 @@ export class CfWorkerClient {
       new URL('./cloudflare-worker.ts', import.meta.url),
       { type: 'module' },
     );
+    this.runtimeAttachment = attachWorkerRuntime(this.worker, 'cloudflare', {
+      onFault: (fault) => {
+        this.rejectAll(new Error(`Cloudflare worker failed: ${fault.message}`));
+      },
+    });
 
     this.worker.addEventListener('message', this.handleMessage);
     this.worker.addEventListener('error', this.handleWorkerError);
@@ -86,6 +93,7 @@ export class CfWorkerClient {
     this.rejectAll(error);
     this.worker.removeEventListener('message', this.handleMessage);
     this.worker.removeEventListener('error', this.handleWorkerError);
+    this.runtimeAttachment.dispose();
     this.worker.terminate();
     this.emitActivity();
   }

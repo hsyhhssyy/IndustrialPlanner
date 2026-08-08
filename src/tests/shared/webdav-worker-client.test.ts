@@ -8,7 +8,8 @@ import {
 } from "@/sync";
 
 interface PostedWorkerRequest {
-  readonly requestId: number;
+  readonly requestId?: number;
+  readonly type?: string;
 }
 
 class FakeWorker {
@@ -52,7 +53,7 @@ class FakeWorker {
 }
 
 describe("webdav-worker-client", () => {
-  it("never posts more requests than the configured concurrency limit", async () => {
+  it("bootstraps first and never exceeds the business request concurrency limit", async () => {
     const worker = new FakeWorker();
     const activities: WebDavWorkerRequestActivity[] = [];
     const client = createWebDavWorkerStorageClient({
@@ -71,22 +72,27 @@ describe("webdav-worker-client", () => {
       client.readTextFile("four.json"),
     ];
 
-    expect(worker.postedRequests).toHaveLength(2);
+    expect(worker.postedRequests[0]?.type).toBe("industrial-planner/worker-bootstrap");
+    const readBusinessRequests = () => worker.postedRequests.filter(
+      (request): request is PostedWorkerRequest & { readonly requestId: number } =>
+        typeof request.requestId === "number",
+    );
+    expect(readBusinessRequests()).toHaveLength(2);
     expect(activities.at(-1)).toEqual({
       activeRequestCount: 2,
       queuedRequestCount: 2,
     });
 
-    worker.respond(worker.postedRequests[0]!.requestId);
+    worker.respond(readBusinessRequests()[0]!.requestId);
     await Promise.resolve();
-    expect(worker.postedRequests).toHaveLength(3);
+    expect(readBusinessRequests()).toHaveLength(3);
 
-    worker.respond(worker.postedRequests[1]!.requestId);
+    worker.respond(readBusinessRequests()[1]!.requestId);
     await Promise.resolve();
-    expect(worker.postedRequests).toHaveLength(4);
+    expect(readBusinessRequests()).toHaveLength(4);
 
-    worker.respond(worker.postedRequests[2]!.requestId);
-    worker.respond(worker.postedRequests[3]!.requestId);
+    worker.respond(readBusinessRequests()[2]!.requestId);
+    worker.respond(readBusinessRequests()[3]!.requestId);
     await expect(Promise.all(requests)).resolves.toEqual([
       null,
       null,

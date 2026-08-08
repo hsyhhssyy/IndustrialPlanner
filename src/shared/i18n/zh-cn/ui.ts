@@ -122,6 +122,7 @@ const UI: Record<string, string> = {
     "debugLogDialog.maximize": "最大化调试日志",
     "debugLogDialog.restore": "还原调试日志",
     "debugLogDialog.title": "调试日志",
+    "debugLogDialog.unavailable": "日志收集不可用。请确认当前浏览器支持 SharedWorker。",
     "device.desktop": "电脑",
     "device.mobile": "手机",
     "device.tablet": "平板",

@@ -124,6 +124,7 @@ export type UiKey =
   | "debugLogDialog.maximize"
   | "debugLogDialog.restore"
   | "debugLogDialog.title"
+  | "debugLogDialog.unavailable"
   | "device.desktop"
   | "device.mobile"
   | "device.tablet"

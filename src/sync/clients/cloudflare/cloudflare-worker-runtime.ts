@@ -3,6 +3,8 @@
 
 import { createSha256CanonicalHash } from '@/shared/storage/hash-utils';
 import { createUuid } from '@/domain/shared/uuid';
+import { readDebugModeEnabled } from '@/shared/logging/debug-mode-runtime';
+import { createLogger } from '@/shared/logging/logger';
 import type {
   CfWorkerRequest,
   CfWorkerResponse,
@@ -24,26 +26,41 @@ import type {
 // 主入口
 // ============================================================================
 
+const logger = createLogger('cloudflare-worker');
+
 export async function handleCfRequest(request: CfWorkerRequest): Promise<CfWorkerResponse> {
-  const startedAt = performance.now();
-  const label = formatOperationLabel(request.operation);
+  const debugEnabled = readDebugModeEnabled();
+  const startedAt = debugEnabled ? performance.now() : 0;
+  const label = debugEnabled ? formatOperationLabel(request.operation) : '';
+  if (debugEnabled) {
+    logger.debug(`${label} → started`);
+  }
 
   try {
     const result = await executeOperation(request.apiBase, request.operation);
-    const elapsed = Math.max(0, performance.now() - startedAt).toFixed(1);
+    if (debugEnabled) {
+      logger.debug(`${label} → completed in ${formatElapsedMs(startedAt)}ms`);
+    }
     return {
       requestId: request.requestId,
       ok: true,
       result,
     };
   } catch (error) {
-    const elapsed = Math.max(0, performance.now() - startedAt).toFixed(1);
+    const serializedError = serializeError(error);
+    if (debugEnabled) {
+      logger.debug(`${label} → failed in ${formatElapsedMs(startedAt)}ms: ${serializedError.message}`);
+    }
     return {
       requestId: request.requestId,
       ok: false,
-      error: serializeError(error),
+      error: serializedError,
     };
   }
+}
+
+function formatElapsedMs(startedAt: number): string {
+  return Math.max(0, performance.now() - startedAt).toFixed(1);
 }
 
 // ============================================================================

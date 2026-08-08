@@ -1,9 +1,11 @@
 /// <reference lib="webworker" />
 
+import { installWorkerEndpoint } from "@/shared/worker/worker-endpoint";
+
 // 独立遥测上报 Worker。
 //
-// 用法：任何前台线程通过 postMessage 推送 payload：
-//   worker.postMessage({ type: 'upload-telemetry', apiBaseUrl, payload });
+// AI-CORRECTION 2026-08-08: 创建方必须先通过 attachWorkerRuntime() 发送 bootstrap，
+// 再通过业务 postMessage 推送 upload-telemetry payload；直接发送业务消息会被入口忽略。
 // Worker 自动执行 health check → POST，失败静默丢弃。
 // 自带 15 分钟节流，重复调用直接跳过。
 
@@ -18,21 +20,17 @@ export interface SyncTelemetryWorkerRequest {
   readonly payload: object;
 }
 
-const workerScope = globalThis as unknown as {
-  addEventListener(
-    type: "message",
-    listener: (event: MessageEvent<SyncTelemetryWorkerRequest>) => void,
-  ): void;
-};
+installWorkerEndpoint({
+  workerKind: "sync-telemetry",
+  handleMessage: async (event) => {
+    const request = event.data as SyncTelemetryWorkerRequest;
 
-workerScope.addEventListener("message", (event) => {
-  const request = event.data;
+    if (request.type !== "upload-telemetry") {
+      return;
+    }
 
-  if (request.type !== "upload-telemetry") {
-    return;
-  }
-
-  void handleUploadTelemetry(request.apiBaseUrl, request.payload);
+    await handleUploadTelemetry(request.apiBaseUrl, request.payload);
+  },
 });
 
 async function handleUploadTelemetry(

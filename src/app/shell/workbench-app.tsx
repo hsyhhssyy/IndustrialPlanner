@@ -73,11 +73,7 @@ import type { AppHost } from "@/app/host/app-host";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
 import type { AppThemeId } from "@/domain/app/types/theme";
-import {
-  clearDebugLogEntries,
-  installDebugLogCapture,
-  setDebugLogCaptureEnabled,
-} from "@/shared/logging/debug-log-store";
+import { publishDebugModeEnabled } from "@/shared/logging/debug-mode-runtime";
 import {
   DEFAULT_WORKBENCH_LOG_LEVEL,
   setLogLevel,
@@ -787,32 +783,38 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     };
   }, [appHost]);
 
-  useEffect(() => {
-    const disposeDebugLogCapture = installDebugLogCapture();
-    clearDebugLogEntries();
+  // AI-REMOVED 2026-08-08:
+  // Reason: Workbench 不再安装或清空主线程内存日志捕获器，日志运行时在 main.tsx 按应用生命周期初始化。
+  // Trigger: ST2-RQ-009 要求刷新后保留日志，并删除 captureEnabled 冗余状态。
+  // Evidence: debug-log-store.ts 已完整归档；DebugLogDialog 改为查询 SharedWorker。
+  // Replacement: initializeDebugLogging() 与 publishDebugModeEnabled()。
+  // Risk: Low；Workbench 单独挂载时不创建 Collector，只同步设置镜像和 logger 级别。
+  // Human Review: Required
+  //
+  // Original code:
+  // useEffect(() => {
+  //   const disposeDebugLogCapture = installDebugLogCapture();
+  //   clearDebugLogEntries();
+  //   return () => {
+  //     setDebugLogCaptureEnabled(false);
+  //     setLogLevel(DEFAULT_WORKBENCH_LOG_LEVEL);
+  //     disposeDebugLogCapture();
+  //   };
+  // }, []);
 
-    return () => {
-      setDebugLogCaptureEnabled(false);
-      setLogLevel(DEFAULT_WORKBENCH_LOG_LEVEL);
-      disposeDebugLogCapture();
-    };
-  }, []);
-
   useEffect(() => {
+    publishDebugModeEnabled(appHost.state.settings.debugMode);
     if (!appHost.state.settings.debugMode) {
       setLogLevel(DEFAULT_WORKBENCH_LOG_LEVEL);
-      setDebugLogCaptureEnabled(false);
       if (appHost.internalState.workbench.dialogState["debug-log"]?.visible) {
         appHost.internalActions.closeDialog("debug-log");
       }
       return;
     }
 
-    setDebugLogCaptureEnabled(true);
     setLogLevel("debug", { announce: true });
 
-    // 初始 screen profile 日志在 debug log capture 安装前就已输出，
-    // 此处 capture 已启用，重置去重状态后重新触发，确保初始 profile 出现在捕获日志中。
+    // 调试模式刚启用时重放一次初始 profile，确保它进入持久化日志。
     resetScreenProfileConsoleDiagnosticsForTest();
     resolveScreenProfileFromWindow();
   }, [appHost, appHost.state.settings.debugMode]);

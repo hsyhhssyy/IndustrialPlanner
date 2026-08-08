@@ -1,4 +1,5 @@
-import { createLogger, setLogLevel } from "@/shared/logging/logger";
+import { createLogger } from "@/shared/logging/logger";
+import { readDebugModeEnabled } from "@/shared/logging/debug-mode-runtime";
 import {
   createWebDavStorageClient,
   type WebDavClientOptions,
@@ -26,17 +27,31 @@ export class WebDavWorkerRuntime {
   }
 
   public async handleRequest(request: WebDavWorkerRequest): Promise<WebDavWorkerResponse> {
-    setLogLevel(request.debugEnabled ? "debug" : "silent");
-    const startedAt = performance.now();
-    const operationLabel = formatOperationLabel(request.operation);
-    logger.debug(`${operationLabel} → started`);
+    // AI-REMOVED 2026-08-08:
+    // Reason: 并发请求不能各自修改 Worker 进程级日志级别。
+    // Trigger: ST2-RQ-009 将 debugMode 同步移到公共 controlPort。
+    // Evidence: maxConcurrentRequests 默认允许四个请求同时执行。
+    // Replacement: worker-endpoint.ts 在 bootstrap/control 消息时设置 logger 级别。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // setLogLevel(request.debugEnabled ? "debug" : "silent");
+    const debugEnabled = readDebugModeEnabled();
+    const startedAt = debugEnabled ? performance.now() : 0;
+    const operationLabel = debugEnabled ? formatOperationLabel(request.operation) : "";
+    if (debugEnabled) {
+      logger.debug(`${operationLabel} → started`);
+    }
 
     try {
       const result = await runOperation(
         this.resolveClient(request.clientOptions),
         request.operation,
       );
-      logger.debug(`${operationLabel} → completed in ${formatElapsedMs(startedAt)}ms`);
+      if (debugEnabled) {
+        logger.debug(`${operationLabel} → completed in ${formatElapsedMs(startedAt)}ms`);
+      }
       return {
         requestId: request.requestId,
         ok: true,
@@ -44,9 +59,11 @@ export class WebDavWorkerRuntime {
       };
     } catch (error) {
       const serializedError = serializeWorkerError(error);
-      logger.debug(
-        `${operationLabel} → failed in ${formatElapsedMs(startedAt)}ms: ${serializedError.message}`,
-      );
+      if (debugEnabled) {
+        logger.debug(
+          `${operationLabel} → failed in ${formatElapsedMs(startedAt)}ms: ${serializedError.message}`,
+        );
+      }
       return {
         requestId: request.requestId,
         ok: false,

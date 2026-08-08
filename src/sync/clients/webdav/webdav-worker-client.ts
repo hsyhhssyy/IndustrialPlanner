@@ -12,9 +12,19 @@ import type {
   WebDavWorkerResponse,
 } from "./webdav-worker-protocol";
 import type { SyncClientOptions } from "../types";
+import { attachWorkerRuntime } from "@/shared/worker/attach-worker-runtime";
 
 export interface WebDavWorkerStorageClientOptions extends SyncClientOptions {
-  readonly readDebugEnabled?: () => boolean;
+  // AI-REMOVED 2026-08-08:
+  // Reason: debugMode 已通过公共 Worker controlPort 发布，不再由 WebDAV 客户端逐请求读取。
+  // Trigger: ST2-RQ-009 单一调试开关与 Worker Runtime Contract。
+  // Evidence: attachWorkerRuntime() 在第一条业务消息前发送当前值并订阅后续变化。
+  // Replacement: src/shared/worker/attach-worker-runtime.ts。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly readDebugEnabled?: () => boolean;
   readonly maxConcurrentRequests?: number;
   readonly onRequestActivityChange?: (
     activity: WebDavWorkerRequestActivity,
@@ -73,6 +83,11 @@ export function createWebDavWorkerStorageClient(
     }
     emitRequestActivity();
   };
+  const runtimeAttachment = attachWorkerRuntime(worker, "webdav", {
+    onFault: (fault) => {
+      rejectAll(new Error(`WebDAV worker failed: ${fault.message}`));
+    },
+  });
 
   const flushRequestQueue = (): void => {
     while (
@@ -130,7 +145,16 @@ export function createWebDavWorkerStorageClient(
     const workerRequest: WebDavWorkerRequest = {
       requestId,
       clientOptions,
-      debugEnabled: options.readDebugEnabled?.() === true,
+      // AI-REMOVED 2026-08-08:
+      // Reason: 不再把调试状态混入业务请求协议。
+      // Trigger: ST2-RQ-009 controlPort 接管运行态设置同步。
+      // Evidence: bootstrap 是 Worker 收到的第一条消息。
+      // Replacement: attachWorkerRuntime(worker, "webdav")。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // debugEnabled: options.readDebugEnabled?.() === true,
       operation,
     };
 
@@ -190,6 +214,7 @@ export function createWebDavWorkerStorageClient(
 
       disposed = true;
       rejectAll(new Error("WebDAV worker client is disposed."));
+      runtimeAttachment.dispose();
       worker.terminate();
     },
   };

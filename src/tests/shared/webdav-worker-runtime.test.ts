@@ -6,6 +6,7 @@ import {
   getLogLevel,
   setLogLevel,
 } from "@/shared/logging/logger";
+import { publishDebugModeEnabled } from "@/shared/logging/debug-mode-runtime";
 import type {
   WebDavResourceStat,
   WebDavStorageClient,
@@ -60,6 +61,7 @@ describe("WebDavWorkerRuntime", () => {
   const previousLogLevel = getLogLevel();
 
   afterEach(() => {
+    publishDebugModeEnabled(false);
     setLogLevel(previousLogLevel);
     vi.restoreAllMocks();
   });
@@ -71,10 +73,11 @@ describe("WebDavWorkerRuntime", () => {
       createClient: () => client,
     });
 
+    setLogLevel("warn");
+    publishDebugModeEnabled(false);
     await runtime.handleRequest({
       requestId: 1,
       clientOptions: { baseUrl: "https://dav.example.test/" },
-      debugEnabled: false,
       operation: {
         type: "write-text-file",
         relativePath: "assets/test.json",
@@ -85,10 +88,11 @@ describe("WebDavWorkerRuntime", () => {
     expect(consoleDebug).not.toHaveBeenCalled();
     expect(client.files.get("assets/test.json")).toBe("{\"value\":1}");
 
+    setLogLevel("debug");
+    publishDebugModeEnabled(true);
     await runtime.handleRequest({
       requestId: 2,
       clientOptions: { baseUrl: "https://dav.example.test/" },
-      debugEnabled: true,
       operation: {
         type: "read-text-file",
         relativePath: "assets/test.json",
@@ -116,10 +120,11 @@ describe("WebDavWorkerRuntime", () => {
       createClient: () => client,
     });
 
+    setLogLevel("warn");
+    publishDebugModeEnabled(false);
     const response = await runtime.handleRequest({
       requestId: 3,
       clientOptions: { baseUrl: "https://dav.example.test/" },
-      debugEnabled: false,
       operation: {
         type: "read-text-file",
         relativePath: "assets/test.json",

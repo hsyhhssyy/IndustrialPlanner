@@ -81,7 +81,16 @@ import { resolveBackendApiBaseUrl } from "@/shared/storage/backend-api-address";
 
 export interface SyncHostOptions {
   readonly assetSources?: readonly SyncAssetSource[];
-  readonly readDebugEnabled: () => boolean;
+  // AI-REMOVED 2026-08-08:
+  // Reason: SyncHost 不再把 debugMode 注入 WebDAV 业务请求。
+  // Trigger: ST2-RQ-009 统一由主线程 debug-mode runtime 向各 Worker 发布。
+  // Evidence: createWebDavWorkerStorageClient 已接入 attachWorkerRuntime。
+  // Replacement: src/shared/logging/debug-mode-runtime.ts。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly readDebugEnabled: () => boolean;
 }
 
 export interface SyncHost extends SyncContract {
@@ -288,7 +297,6 @@ export async function createSyncHost(
           baseUrl: settings.url,
           username: settings.username,
           password: settings.password,
-          readDebugEnabled: options.readDebugEnabled,
           maxConcurrentRequests: settings.maxConcurrentRequests,
           onRequestActivityChange,
           ...(requestOptions.requestTimeoutMs === undefined
@@ -384,7 +392,6 @@ export async function createSyncHost(
           baseUrl: settings.url,
           username: settings.username,
           password: settings.password,
-          readDebugEnabled: options.readDebugEnabled,
           maxConcurrentRequests: settings.maxConcurrentRequests,
         }),
       });
