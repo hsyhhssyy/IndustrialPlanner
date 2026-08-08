@@ -2,6 +2,7 @@ export {
   clearWebDavLastSeenRemoteRevision,
   clearWebDavLastSeenRemoteEtag,
   clearWebDavLastSyncedContentHash,
+  clearWebDavSyncMetadata,
   readWebDavLastSeenRemoteEtag,
   readWebDavLastSeenRemoteRevision,
   readWebDavLastSyncedContentHash,

@@ -10,6 +10,7 @@ import { attachWorkerRuntime, type WorkerRuntimeAttachment } from '@/shared/work
 
 export interface CfWorkerClientOptions {
   readonly maxConcurrentRequests?: number;
+  readonly requestTimeoutMs?: number;
   readonly onRequestActivityChange?: (activity: CfWorkerRequestActivity) => void;
   readonly workerFactory?: () => Worker;
 }
@@ -35,6 +36,8 @@ export class CfWorkerClient {
   private nextRequestId = 1;
   private disposed = false;
   private readonly apiBase: string;
+  private readonly requestTimeoutMs: number;
+  private readonly maxConcurrentRequests: number;
   private readonly onRequestActivityChange?: (activity: CfWorkerRequestActivity) => void;
 
   public constructor(
@@ -42,7 +45,9 @@ export class CfWorkerClient {
     options: CfWorkerClientOptions = {},
   ) {
     this.apiBase = apiBase;
+    this.requestTimeoutMs = normalizeRequestTimeout(options.requestTimeoutMs);
     this.maxConcurrent = normalizeMaxConcurrent(options.maxConcurrentRequests);
+    this.maxConcurrentRequests = this.maxConcurrent;
     this.onRequestActivityChange = options.onRequestActivityChange;
 
     this.worker = options.workerFactory?.() ?? new Worker(
@@ -72,6 +77,8 @@ export class CfWorkerClient {
     const workerRequest: CfWorkerRequest = {
       requestId,
       apiBase: this.apiBase,
+      requestTimeoutMs: this.requestTimeoutMs,
+      maxConcurrentRequests: this.maxConcurrentRequests,
       operation,
     };
 
@@ -109,9 +116,14 @@ export class CfWorkerClient {
     if (event.data.ok) {
       handlers.resolve(event.data.result);
     } else {
-      const err = new Error(event.data.error.message);
+      const err = new Error(event.data.error.message) as Error & {
+        status?: number;
+        details?: unknown;
+      };
       err.name = event.data.error.name;
       if (event.data.error.stack) err.stack = event.data.error.stack;
+      if (event.data.error.status !== undefined) err.status = event.data.error.status;
+      if (event.data.error.details !== undefined) err.details = event.data.error.details;
       handlers.reject(err);
     }
 
@@ -168,4 +180,9 @@ export class CfWorkerClient {
 function normalizeMaxConcurrent(value: number | undefined): number {
   if (value === undefined || !Number.isFinite(value)) return 4;
   return Math.max(1, Math.min(value, 16));
+}
+
+function normalizeRequestTimeout(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) return 30_000;
+  return Math.max(1_000, Math.round(value));
 }

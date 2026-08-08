@@ -29,6 +29,7 @@ import {
   clearWebDavLastSeenRemoteEtag,
   clearWebDavLastSeenRemoteRevision,
   clearWebDavLastSyncedContentHash,
+  clearWebDavSyncMetadata,
   readWebDavLastSeenRemoteEtag,
   readWebDavLastSeenRemoteRevision,
   readWebDavLastSyncedContentHash,
@@ -36,6 +37,7 @@ import {
   writeWebDavLastSeenRemoteRevision,
   writeWebDavLastSyncedContentHash,
 } from "../../storage";
+import { clearActiveSyncTombstoneScope } from "@/shared/storage/sync-tombstone-storage";
 
 export interface WebDavSyncRemoteOptions {
   readonly client: SyncStorageClient;
@@ -110,6 +112,8 @@ export class WebDavSyncRemote implements SyncRemote {
 
   public async resetRemote(): Promise<void> {
     await this.client.deleteResource("");
+    clearWebDavSyncMetadata();
+    await clearActiveSyncTombstoneScope();
   }
 
   public dispose(): void {

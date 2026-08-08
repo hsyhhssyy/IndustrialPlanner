@@ -83,9 +83,11 @@ export interface SyncRemoteSession {
   readIndex(collection: SyncRemoteCollection): Promise<RemoteCollectionIndex>;
   readAsset(params: RemoteAssetRef): Promise<RemoteAssetContent | null>;
   checkCollections(collections: readonly SyncRemoteCollection[]): Promise<RemoteCheckResult>;
+  refreshIndexes?(collections: readonly SyncRemoteCollection[]): Promise<void>;
   beginWriteBatch(): SyncRemoteWriteBatch;
   markApplied(result: RemoteApplyResult): Promise<void>;
   prepareCollections?(collections: readonly SyncRemoteCollection[]): Promise<void>;
+  complete?(): Promise<void>;
   dispose?(): void;
 }
 
@@ -106,6 +108,8 @@ export interface RemoteCollectionIndex {
 export interface RemoteAssetMeta {
   readonly revision: number;
   readonly contentHash: string | null;
+  /** 远端协议的权威 hash；与适配器本地比较算法不同时用于乐观并发基线。 */
+  readonly protocolContentHash?: string | null;
   readonly deletedAt: string | null;
   readonly committedAt: string | null;
 }
@@ -167,6 +171,23 @@ export interface RemoteApplyResult {
 export interface RemoteCheckResult {
   readonly changedCollections: readonly string[];
   readonly globalCursor?: number;
+}
+
+export interface RemoteWriteConflict {
+  readonly assetType: string;
+  readonly assetId: string;
+  readonly reason: string;
+  readonly expectedRevision: number | null;
+  readonly actualRevision: number | null;
+  readonly expectedHash: string | null;
+  readonly actualHash: string | null;
+}
+
+export class RemoteWriteConflictError extends Error {
+  public constructor(public readonly conflicts: readonly RemoteWriteConflict[]) {
+    super('Remote write conflict.');
+    this.name = 'RemoteWriteConflictError';
+  }
 }
 
 export interface SyncMaintenanceTaskRequest {

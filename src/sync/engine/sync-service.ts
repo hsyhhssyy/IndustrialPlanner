@@ -11,6 +11,7 @@ import type {
   SyncRemote,
   SyncRemoteSession,
 } from "../clients";
+import { RemoteWriteConflictError } from "../clients";
 import type {
   SyncAdapter,
   SyncAdapterConflict,
@@ -83,6 +84,7 @@ export interface SyncServiceStatus {
 
 export interface SyncServiceOptions {
   readonly readSettings: () => SyncConnectionSettings;
+  readonly validateSettings?: (settings: SyncConnectionSettings) => string | null;
   readonly createRemote: (
     settings: SyncConnectionSettings,
     onRequestActivityChange: (
@@ -178,6 +180,10 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   let pendingTrigger: SyncRunReason | null = null;
   let localChangeVersion = 0;
   let acknowledgedLocalChangeVersion = 0;
+  const getSettingsError = (settings: SyncConnectionSettings): string | null =>
+    options.validateSettings === undefined
+      ? settings.url.trim() === "" ? "Sync URL is empty" : null
+      : options.validateSettings(settings);
   let conflictOverlayVisible = false;
   let syncSuppressImmediate = false;
   const dirtyAssetIdsByAdapter = new Map<string, Set<string> | null>();
@@ -309,9 +315,10 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       return setStatus(createIdleStatus(status.lastResults));
     }
 
-    if (settings.url.trim() === "") {
-      const saveError = "Sync URL is empty";
-      logger.info("sync skipped — empty URL");
+    const settingsError = getSettingsError(settings);
+    if (settingsError !== null) {
+      const saveError = settingsError;
+      logger.info(`sync skipped — invalid settings: ${settingsError}`);
       clearLocalChangeTimers();
       return setStatus({
         ...status,
@@ -418,6 +425,9 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
                 await runMaintenanceTasks(session, settings);
               }
               await options.afterSync?.(session, settings, resolvedResults);
+              if (!resolvedResults.some((result) => result.status === "conflict")) {
+                await session.complete?.();
+              }
 
               return resolvedResults;
             });
@@ -657,7 +667,18 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
             },
           }
           : request.scope;
-        const result = await adapter.sync(session, requestScope);
+        let result: SyncAdapterResult;
+        try {
+          result = await adapter.sync(session, requestScope);
+        } catch (error) {
+          if (!(error instanceof RemoteWriteConflictError) || session.refreshIndexes === undefined) {
+            throw error;
+          }
+          // AI-CORRECTION 2026-08-08: revision 竞争不是网络重试；先刷新权威索引，再让适配器重新做一次三方判断。
+          logger.info(`adapter "${adapter.id}" remote revision changed → refreshing index once`);
+          await session.refreshIndexes([adapter.collection]);
+          result = await adapter.sync(session, requestScope);
+        }
         const elapsed = Date.now() - beforeMs;
         logger.info(
           `adapter "${result.adapterId}" → ${result.status} ` +
@@ -942,7 +963,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     beginTask("interval-check", 1);
     try {
       const settings = options.readSettings();
-      if (!settings.enabled || settings.url.trim() === "") {
+      if (!settings.enabled || getSettingsError(settings) !== null) {
         finishTask("interval-check", 1);
         setStatus({
           ...status,

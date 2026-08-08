@@ -8,6 +8,7 @@ export type {
   RemoteCheckResult,
   RemoteCollectionIndex,
   RemoteWriteBatchResult,
+  RemoteWriteConflict,
   RemoteWriteResult,
   SyncAssetType,
   SyncHashAlgorithm,
@@ -22,6 +23,8 @@ export type {
   SyncRemoteWebDavBinding,
   SyncRemoteWriteBatch,
 } from "./remote-types";
+
+export { RemoteWriteConflictError } from "./remote-types";
 
 export type {
   SyncClientOptions,

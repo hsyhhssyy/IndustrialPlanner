@@ -5,19 +5,36 @@
  *
  * 受测范围：CloudflareSyncRemote / Session / WriteBatch
  * Mock 策略：vi.stubGlobal("fetch") + createFakeIndexedDbFactory()
- * 不依赖远端 Worker，纯本地运行。
+ * AI-CORRECTION 2026-08-08: 通过注入的 in-process client 执行真实 Worker runtime，
+ * 避免在单元测试中伪造浏览器 Worker，同时覆盖网络协议映射。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCloudflareSyncRemote } from "@/sync/clients/cloudflare/cloudflare-remote";
+import { handleCfRequest } from "@/sync/clients/cloudflare/cloudflare-worker-runtime";
+import type { CfWorkerOperation } from "@/sync/clients/cloudflare/cloudflare-worker-protocol";
 import { createFakeIndexedDbFactory } from "./fake-indexed-db";
+import { RemoteWriteConflictError } from "@/sync/clients/remote-types";
+import {
+  listActiveSyncTombstones,
+  writeActiveSyncTombstone,
+} from "@/shared/storage/sync-tombstone-storage";
 import type {
   RemoteCollectionIndex,
   RemoteWriteBatchResult,
   SyncRemote,
   SyncRemoteCollection,
-  SyncRemoteSession,
 } from "@/sync/clients/remote-types";
+// AI-REMOVED 2026-08-08:
+// Reason: in-process Worker client 不再直接声明 SyncRemoteSession。
+// Trigger: createTestRemote 通过公开 remote 工厂返回会话。
+// Evidence: 本文件无该类型引用。
+// Replacement: SyncRemote。
+// Risk: None
+// Human Review: Required
+//
+// Original code:
+// import type { SyncRemoteSession } from "@/sync/clients/remote-types";
 
 // 受测模块中 createSha256CanonicalHash 需要真实浏览器 crypto API；
 // jsdom 环境下 mock 它，测试保持确定性。
@@ -102,6 +119,35 @@ function makeCollection(overrides: Partial<SyncRemoteCollection> = {}): SyncRemo
 // 64 字符 hex 字符串
 const BLOB_HASH = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
 
+function createTestRemote(): SyncRemote {
+  let nextRequestId = 1;
+  return createCloudflareSyncRemote({
+    apiBase: "https://cf-mock.local",
+    spaceId: "default",
+    workerClientFactory: (apiBase, options) => ({
+      request: async <TResult,>(operation: CfWorkerOperation): Promise<TResult> => {
+        const response = await handleCfRequest({
+          requestId: nextRequestId++,
+          apiBase,
+          requestTimeoutMs: options.requestTimeoutMs ?? 30_000,
+          maxConcurrentRequests: options.maxConcurrentRequests ?? 4,
+          operation,
+        });
+        if (response.ok) return response.result as TResult;
+        const error = new Error(response.error.message) as Error & {
+          status?: number;
+          details?: unknown;
+        };
+        error.name = response.error.name;
+        if (response.error.status !== undefined) error.status = response.error.status;
+        if (response.error.details !== undefined) error.details = response.error.details;
+        throw error;
+      },
+      dispose: () => {},
+    }),
+  });
+}
+
 // ============================================================================
 // 测试
 // ============================================================================
@@ -132,7 +178,7 @@ describe("cloudflare-sync-remote", () => {
     fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
     fetchMock.add("GET:/plan", () => ({ json: { head: 0, epoch: "ep-1", snapshotHead: 0, modules: [], capabilities: {}, nextPageToken: null, minRetainedHead: 0, serverTime: "" } }));
 
-    const remote: SyncRemote = createCloudflareSyncRemote();
+    const remote: SyncRemote = createTestRemote();
     expect(remote.localState).toBeDefined();
 
     const session = await remote.beginSession({
@@ -151,7 +197,7 @@ describe("cloudflare-sync-remote", () => {
     fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
     fetchMock.add("GET:/plan", () => ({ json: { head: 0, epoch: "ep-1", snapshotHead: 0, modules: [], capabilities: {}, nextPageToken: null, minRetainedHead: 0, serverTime: "" } }));
 
-    const remote = createCloudflareSyncRemote();
+    const remote = createTestRemote();
     const session = await remote.beginSession({
       reason: "interval",
       collections: [makeCollection()],
@@ -180,7 +226,7 @@ describe("cloudflare-sync-remote", () => {
     }));
     fetchMock.add("GET:/plan", () => ({ json: { head: 1, epoch: "ep-1", snapshotHead: 1, modules: [{ moduleType: "planner-state", assets: [{ assetType: "planner-state", assetId: "default", revision: 1, contentHash: "abc", deletedAt: null }] }], capabilities: {}, nextPageToken: null, minRetainedHead: 0, serverTime: "" } }));
 
-    const remote = createCloudflareSyncRemote();
+    const remote = createTestRemote();
     const session = await remote.beginSession({
       reason: "interval",
       collections: [makeCollection()],
@@ -216,7 +262,7 @@ describe("cloudflare-sync-remote", () => {
       },
     }));
 
-    const remote = createCloudflareSyncRemote();
+    const remote = createTestRemote();
     const collection = makeCollection();
     const session = await remote.beginSession({
       reason: "foreground",
@@ -229,7 +275,8 @@ describe("cloudflare-sync-remote", () => {
     expect(index.revision).toBe(3);
     expect(index.entries["default"]).toEqual({
       revision: 1,
-      contentHash: "abc",
+      contentHash: "sha256:abc",
+      protocolContentHash: "sha256:abc",
       deletedAt: null,
       committedAt: null,
     });
@@ -245,7 +292,7 @@ describe("cloudflare-sync-remote", () => {
     fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
     fetchMock.add("GET:/plan", () => ({ json: { head: 0, epoch: "ep-1", snapshotHead: 0, modules: [], capabilities: {}, nextPageToken: null, minRetainedHead: 0, serverTime: "" } }));
 
-    const remote = createCloudflareSyncRemote();
+    const remote = createTestRemote();
     const collection = makeCollection();
     const session = await remote.beginSession({
       reason: "foreground",
@@ -273,7 +320,7 @@ describe("cloudflare-sync-remote", () => {
         modules: [{
           moduleType: "planner-state",
           assets: [
-            { assetType: "planner-state", assetId: "tombstone", revision: 5, contentHash: "xyz", blobHash: "abc", byteSize: 10, deletedAt: "2026-01-01T00:00:00Z" },
+            { assetType: "planner-state", assetId: "tombstone", revision: 5, contentHash: "xyz", blobHash: BLOB_HASH, byteSize: 10, deletedAt: "2026-01-01T00:00:00Z" },
           ],
         }],
         capabilities: {},
@@ -283,7 +330,7 @@ describe("cloudflare-sync-remote", () => {
       },
     }));
 
-    const remote = createCloudflareSyncRemote();
+    const remote = createTestRemote();
     const collection = makeCollection();
     const session = await remote.beginSession({
       reason: "foreground",
@@ -303,7 +350,7 @@ describe("cloudflare-sync-remote", () => {
 
   it("readAsset downloads and verifies content via downloads:sign", async () => {
     const testContent = '{"value":42}';
-    let signCalled = false;
+    let signCallCount = 0;
 
     fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
     fetchMock.add("GET:/plan", () => ({
@@ -328,7 +375,7 @@ describe("cloudflare-sync-remote", () => {
     vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url.includes("/downloads:sign") && init?.method === "POST") {
-        signCalled = true;
+        signCallCount += 1;
         return Promise.resolve(new Response(JSON.stringify({ urls: [{ blobHash: TEST_HASH, url: "https://cf-mock.local/blob/dl" }] }), { status: 200 }));
       }
       if (url.includes("/blob/dl") && init?.method === undefined) {
@@ -337,7 +384,7 @@ describe("cloudflare-sync-remote", () => {
       return fetchMock.dispatch(input, init);
     });
 
-    const remote = createCloudflareSyncRemote();
+    const remote = createTestRemote();
     const collection = makeCollection();
     const session = await remote.beginSession({
       reason: "foreground",
@@ -347,7 +394,7 @@ describe("cloudflare-sync-remote", () => {
     await session.prefetchIndexes([collection]);
     const asset = await session.readAsset({ collection, assetId: "default" });
 
-    expect(signCalled).toBe(true);
+    expect(signCallCount).toBe(1);
     expect(asset).not.toBeNull();
     expect(asset?.content).toBe(testContent);
     expect(asset?.revision).toBe(2);
@@ -355,8 +402,24 @@ describe("cloudflare-sync-remote", () => {
     // 二次读取应走缓存
     const asset2 = await session.readAsset({ collection, assetId: "default" });
     expect(asset2?.content).toBe(testContent);
+    expect(signCallCount).toBe(1);
 
-    await session.dispose?.();
+    // 适配器归一化后写入自己的比较 hash；下一会话应复用映射，而不是因 SHA/FNV 不同再次下载。
+    await session.localState.setLastSyncedHash("planner:default", "fnv:normalized");
+    session.dispose?.();
+    const secondSession = await remote.beginSession({
+      reason: "foreground",
+      collections: [collection],
+    });
+    await secondSession.prefetchIndexes([collection]);
+    const mappedIndex = await secondSession.readIndex(collection);
+    expect(mappedIndex.entries["default"]).toMatchObject({
+      contentHash: "fnv:normalized",
+      protocolContentHash: `sha256:${TEST_HASH}`,
+    });
+    expect(signCallCount).toBe(1);
+
+    secondSession.dispose?.();
     remote.dispose?.();
     vi.unstubAllGlobals();
     // 恢复 fetch mock
@@ -392,18 +455,19 @@ describe("cloudflare-sync-remote", () => {
       })
       .add("POST:/mutations/commit", (req) => {
         capturedCommitBody = req.body;
+        const mutations = (req.body as { mutations: Array<{ clientMutationId: string }> }).mutations;
         return {
           json: {
             status: "committed",
             head: 1,
-            applied: [{ clientMutationId: "m1", assetType: "planner-state", assetId: "default", revision: 1, contentHash: "sha256:xyz" }],
-            serverTime: "",
+            applied: [{ clientMutationId: mutations[0]?.clientMutationId, assetType: "planner-state", assetId: "default", revision: 1, contentHash: TEST_HASH }],
+            serverTime: "2026-08-08T00:00:00.000Z",
           },
         };
       });
 
     // mock R2 PUT
-    const originalFetch = globalThis.fetch;
+    // AI-CORRECTION 2026-08-08: fetch 恢复统一由 afterEach 的 vi.unstubAllGlobals 负责。
     vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url.includes("/blobs/upload") && init?.method === "PUT") {
@@ -413,7 +477,7 @@ describe("cloudflare-sync-remote", () => {
       return fetchMock.dispatch(input, init);
     });
 
-    const remote = createCloudflareSyncRemote();
+    const remote = createTestRemote();
     const collection = makeCollection();
     const session = await remote.beginSession({
       reason: "manual",
@@ -430,8 +494,8 @@ describe("cloudflare-sync-remote", () => {
       assetId: "default",
       content: JSON.stringify({ test: true }),
       contentHash: "sha256:abc",
-      baseRevision: null,
-      baseContentHash: null,
+      baseRevision: 7,
+      baseContentHash: "sha256:previous",
     });
 
     const result: RemoteWriteBatchResult = await batch.commit();
@@ -443,12 +507,16 @@ describe("cloudflare-sync-remote", () => {
     expect(pb.spaceEpoch).toBe("ep-1");
     const pmuts = (pb.mutations as Array<Record<string, unknown>>);
     expect(pmuts.length).toBe(1);
-    expect(pmuts[0].assetType).toBe("planner-state");
-    expect(pmuts[0].assetId).toBe("default");
-    expect(pmuts[0].storageMode).toBe("full");
-    expect(pmuts[0].encoding).toBe("identity");
-    expect(typeof pmuts[0].blobHash).toBe("string");
-    expect(typeof pmuts[0].blobByteSize).toBe("number");
+    const preparedMutation = pmuts[0];
+    if (preparedMutation === undefined) throw new Error("missing prepared mutation");
+    expect(preparedMutation.assetType).toBe("planner-state");
+    expect(preparedMutation.assetId).toBe("default");
+    expect(preparedMutation.storageMode).toBe("full");
+    expect(preparedMutation.encoding).toBe("identity");
+    expect(preparedMutation.baseRevision).toBe(7);
+    expect(preparedMutation.baseContentHash).toBe("previous");
+    expect(typeof preparedMutation.blobHash).toBe("string");
+    expect(typeof preparedMutation.blobByteSize).toBe("number");
 
     // R2 PUT 已调用
     expect(r2PutCalled).toBe(true);
@@ -459,11 +527,19 @@ describe("cloudflare-sync-remote", () => {
     expect(cb.commitToken).toBe("mock-commit-token");
     const cmuts = (cb.mutations as Array<Record<string, unknown>>);
     expect(cmuts.length).toBe(1);
-    expect(cmuts[0].assetType).toBe("planner-state");
+    const committedMutation = cmuts[0];
+    if (committedMutation === undefined) throw new Error("missing committed mutation");
+    expect(committedMutation.assetType).toBe("planner-state");
+    expect(committedMutation.baseRevision).toBe(7);
+    expect(committedMutation.baseContentHash).toBe("previous");
 
     // 结果
     expect(result.writes.length).toBe(1);
-    expect(result.writes[0].revision).toBe(1);
+    const writeResult = result.writes[0];
+    if (writeResult === undefined) throw new Error("missing write result");
+    expect(writeResult.revision).toBe(1);
+    expect(writeResult.collection).toBe(collection);
+    expect(writeResult.committedAt).toBe("2026-08-08T00:00:00.000Z");
     expect(result.globalCursor).toBe(1);
 
     await session.dispose?.();
@@ -480,7 +556,7 @@ describe("cloudflare-sync-remote", () => {
   it("returns empty writes for zero mutations", async () => {
     fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
 
-    const remote = createCloudflareSyncRemote();
+    const remote = createTestRemote();
     const session = await remote.beginSession({
       reason: "manual",
       collections: [makeCollection()],
@@ -495,13 +571,13 @@ describe("cloudflare-sync-remote", () => {
     remote.dispose?.();
   });
 
-  // -- write batch: prepare 失败返回空 -- //
+  // -- write batch: prepare 失败必须上抛 -- //
 
-  it("returns empty writes when prepare returns non-ok", async () => {
+  it("rejects when prepare returns a conflict", async () => {
     fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
     fetchMock.add("POST:/mutations/prepare", () => ({ json: { status: "conflict", conflicts: [] }, status: 409 }));
 
-    const remote = createCloudflareSyncRemote();
+    const remote = createTestRemote();
     const session = await remote.beginSession({
       reason: "manual",
       collections: [makeCollection()],
@@ -518,10 +594,50 @@ describe("cloudflare-sync-remote", () => {
       baseContentHash: null,
     });
 
-    const result = await batch.commit();
-    expect(result.writes).toEqual([]);
+    await expect(batch.commit()).rejects.toBeInstanceOf(RemoteWriteConflictError);
 
     await session.dispose?.();
+    remote.dispose?.();
+  });
+
+  it("refuses tombstones until the backend protocol supports deletes", async () => {
+    const remote = createTestRemote();
+    const collection = makeCollection();
+    const session = await remote.beginSession({
+      reason: "manual",
+      collections: [collection],
+    });
+    const batch = session.beginWriteBatch();
+    batch.putTombstone({
+      collection,
+      assetId: "default",
+      deletedAt: "2026-08-08T00:00:00.000Z",
+      targetContentHash: "sha256:target",
+      baseRevision: 1,
+      baseContentHash: "sha256:previous",
+    });
+
+    await expect(batch.commit()).rejects.toThrow("refusing to delete");
+
+    session.dispose?.();
+    remote.dispose?.();
+  });
+
+  it("fails closed when the plan endpoint is unavailable", async () => {
+    fetchMock
+      .add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }))
+      .add("GET:/plan", () => ({ json: { message: "temporary outage" }, status: 503 }));
+
+    const remote = createTestRemote();
+    const collection = makeCollection();
+    const session = await remote.beginSession({
+      reason: "foreground",
+      collections: [collection],
+    });
+
+    await expect(session.prefetchIndexes([collection])).rejects.toThrow("HTTP 503");
+
+    session.dispose?.();
     remote.dispose?.();
   });
 
@@ -539,7 +655,7 @@ describe("cloudflare-sync-remote", () => {
         }
         return { json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } };
       })
-      .add("POST:/mutations/prepare", (req) => {
+      .add("POST:/mutations/prepare", (_req) => {
         // 不直接 add — 我们只是要验证 create 逻辑
         createCalled = true;
         return { json: { ok: true, spaceId: "default", activeEpoch: "ep-1", createdAt: "" }, status: 201 };
@@ -547,7 +663,7 @@ describe("cloudflare-sync-remote", () => {
       .add("GET:/plan", () => ({ json: { head: 0, epoch: "ep-1", snapshotHead: 0, modules: [], capabilities: {}, nextPageToken: null, minRetainedHead: 0, serverTime: "" } }));
 
     // 覆盖 fetch mock，让 POST /spaces 也被匹配
-    const originalFetch = globalThis.fetch;
+    // AI-CORRECTION 2026-08-08: fetch 恢复统一由 afterEach 的 vi.unstubAllGlobals 负责。
     vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url.includes("/spaces") && init?.method === "POST" && !url.includes("/mutations")) {
@@ -557,7 +673,7 @@ describe("cloudflare-sync-remote", () => {
       return fetchMock.dispatch(input, init);
     });
 
-    const remote = createCloudflareSyncRemote();
+    const remote = createTestRemote();
     const session = await remote.beginSession({
       reason: "foreground",
       collections: [makeCollection()],
@@ -580,13 +696,36 @@ describe("cloudflare-sync-remote", () => {
   it("dispose clears caches without throwing", async () => {
     fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
 
-    const remote = createCloudflareSyncRemote();
+    const remote = createTestRemote();
     const session = await remote.beginSession({
       reason: "manual",
       collections: [makeCollection()],
     });
 
     expect(() => session.dispose?.()).not.toThrow();
+    remote.dispose?.();
+  });
+
+  it("reset clears all local Cloudflare metadata and tombstones after remote success", async () => {
+    localStorage.setItem("v3-sync-provider", "cloudflare");
+    fetchMock.add("POST:/reset", () => ({ json: { ok: true } }));
+
+    const remote = createTestRemote();
+    await remote.localState.setLastSyncedHash("planner:default", "local-hash");
+    await writeActiveSyncTombstone({
+      adapterId: "blueprints",
+      assetId: "deleted-blueprint",
+      value: { blueprintId: "deleted-blueprint" },
+      deletedAt: "2026-08-08T00:00:00.000Z",
+    });
+
+    await expect(listActiveSyncTombstones("blueprints")).resolves.toHaveLength(1);
+    await remote.resetRemote?.();
+
+    await expect(
+      remote.localState.getLastSyncedHash("planner:default"),
+    ).resolves.toBeNull();
+    await expect(listActiveSyncTombstones("blueprints")).resolves.toEqual([]);
     remote.dispose?.();
   });
 });

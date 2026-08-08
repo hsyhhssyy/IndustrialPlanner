@@ -106,6 +106,22 @@ describe("webdav-sync-adapters", () => {
     localStorage.clear();
   });
 
+  it("clears local WebDAV metadata after deleting the remote root", async () => {
+    const client = new MemoryWebDavClient();
+    const remote = createWebDavSyncRemote({ client });
+    localStorage.setItem("v3-sync-provider", "webdav");
+    localStorage.setItem("v3-webdav-sync-metadata", JSON.stringify({
+      contentHashes: { "blueprints:item-a": "hash-a" },
+      remoteRevisions: {},
+      remoteEtags: {},
+    }));
+
+    await remote.resetRemote?.();
+
+    expect(localStorage.getItem("v3-webdav-sync-metadata")).toBeNull();
+    remote.dispose?.();
+  });
+
   it("uploads and downloads a full-no-revision value", async () => {
     const client = new MemoryWebDavClient();
     let localValue: { count: number } | null = { count: 1 };
@@ -214,6 +230,98 @@ describe("webdav-sync-adapters", () => {
 
     await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "downloaded" });
     expect(entries.find((entry) => entry.id === "blueprint-b")?.value).toEqual({ name: "B" });
+  });
+
+  it("does not advance lastSyncedHash when a collection batch fails", async () => {
+    const setLastSyncedHash = vi.fn(async () => undefined);
+    const collection = createFullWithRevisionAdapter({
+      id: "transactional-baseline",
+      indexPath: "assets/transactional/index.json",
+      entryPath: (id) => `assets/transactional/${id}.json`,
+      listLocal: async () => [{ id: "item-a", value: { count: 1 }, deletedAt: null }],
+      writeLocal: async () => undefined,
+    });
+    const session: SyncRemoteSession = {
+      localState: {
+        getLastSyncedHash: async () => null,
+        setLastSyncedHash,
+        getRemoteRevision: async () => null,
+        setRemoteRevision: async () => undefined,
+        getRemoteEtag: async () => null,
+        setRemoteEtag: async () => undefined,
+      },
+      prefetchIndexes: async () => undefined,
+      readIndex: async () => ({ revision: 0, entries: {}, committedAt: null }),
+      readAsset: async () => null,
+      checkCollections: async () => ({ changedCollections: [] }),
+      beginWriteBatch: () => ({
+        putAsset: () => undefined,
+        putTombstone: () => undefined,
+        commit: async () => { throw new Error("commit failed"); },
+        discard: async () => undefined,
+      }),
+      markApplied: async () => undefined,
+    };
+
+    await expect(collection.sync(session)).rejects.toThrow("commit failed");
+    expect(setLastSyncedHash).not.toHaveBeenCalled();
+  });
+
+  it("uses the protocol hash instead of the comparison hash as the write base", async () => {
+    const remoteValue = { count: 1 };
+    const remoteComparisonHash = createStableJsonHash(remoteValue);
+    const protocolHash = "sha256:server-authoritative";
+    let capturedBaseContentHash: string | null | undefined;
+    const adapter = createFullWithRevisionAdapter({
+      id: "dual-hash-baseline",
+      indexPath: "assets/dual-hash/index.json",
+      entryPath: (id) => `assets/dual-hash/${id}.json`,
+      listLocal: async () => [{ id: "item-a", value: { count: 2 }, deletedAt: null }],
+      writeLocal: async () => undefined,
+    });
+    const session: SyncRemoteSession = {
+      localState: {
+        getLastSyncedHash: async () => remoteComparisonHash,
+        setLastSyncedHash: async () => undefined,
+        getRemoteRevision: async () => null,
+        setRemoteRevision: async () => undefined,
+        getRemoteEtag: async () => null,
+        setRemoteEtag: async () => undefined,
+      },
+      prefetchIndexes: async () => undefined,
+      readIndex: async () => ({
+        revision: 1,
+        entries: {
+          "item-a": {
+            revision: 1,
+            contentHash: remoteComparisonHash,
+            protocolContentHash: protocolHash,
+            deletedAt: null,
+            committedAt: null,
+          },
+        },
+        committedAt: null,
+      }),
+      readAsset: async () => ({
+        revision: 1,
+        content: JSON.stringify(remoteValue),
+        contentHash: protocolHash,
+        committedAt: null,
+      }),
+      checkCollections: async () => ({ changedCollections: [adapter.id] }),
+      beginWriteBatch: () => ({
+        putAsset: (params) => {
+          capturedBaseContentHash = params.baseContentHash;
+        },
+        putTombstone: () => undefined,
+        commit: async () => ({ writes: [] }),
+        discard: async () => undefined,
+      }),
+      markApplied: async () => undefined,
+    };
+
+    await expect(adapter.sync(session)).resolves.toMatchObject({ status: "uploaded" });
+    expect(capturedBaseContentHash).toBe(protocolHash);
   });
 
   it("discovers every collection conflict without mutating either side", async () => {

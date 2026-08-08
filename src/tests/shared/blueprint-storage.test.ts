@@ -4,7 +4,10 @@ import {
   BLUEPRINT_SCHEMA_VERSION,
   createBlueprintDocument,
 } from "@/domain/document/blueprint-document";
-import { saveToIndexedDb } from "@/shared/storage/browser-storage";
+import {
+  readFromIndexedDb,
+  saveToIndexedDb,
+} from "@/shared/storage/browser-storage";
 import {
   BLUEPRINT_STORE_LOCATION,
   canDeleteBlueprintFolder,
@@ -12,14 +15,17 @@ import {
   deleteBlueprintFolder,
   deleteBlueprintDocument,
   listBlueprintDirectory,
+  listBlueprintSyncEntries,
   readBlueprintFolder,
   readBlueprintRecord,
   renameBlueprintFolder,
   saveBlueprintDocument,
 } from "@/shared/storage/blueprint-storage";
+import { writeActiveSyncTombstone } from "@/shared/storage/sync-tombstone-storage";
 import { createFakeIndexedDbFactory } from "./fake-indexed-db";
 
 afterEach(() => {
+  localStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -40,10 +46,14 @@ describe("blueprint-storage", () => {
       name: "仓储总线",
       description: "四路汇流测试",
       parentFolderId: null,
-      deletedAt: null,
     });
 
     await expect(readBlueprintRecord(blueprint.blueprintId)).resolves.toEqual(saved);
+    const persisted = await readFromIndexedDb<Record<string, unknown>>({
+      ...BLUEPRINT_STORE_LOCATION,
+      key: `blueprint:${blueprint.blueprintId}`,
+    });
+    expect(persisted).not.toHaveProperty("deletedAt");
   });
 
   it("migrates historical device ids when reading blueprint records", async () => {
@@ -171,6 +181,7 @@ describe("blueprint-storage", () => {
 
   it("keeps logically deleted blueprints out of default listings", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    localStorage.setItem("v3-sync-provider", "webdav");
 
     const blueprint = createTestBlueprint({
       name: "待删除蓝图",
@@ -179,11 +190,18 @@ describe("blueprint-storage", () => {
     await saveBlueprintDocument(blueprint);
     const deleted = await deleteBlueprintDocument(blueprint.blueprintId);
 
-    expect(deleted?.deletedAt).not.toBeNull();
+    expect(deleted).not.toHaveProperty("deletedAt");
     await expect(readBlueprintRecord(blueprint.blueprintId)).resolves.toBeNull();
-    await expect(
-      readBlueprintRecord(blueprint.blueprintId, { includeDeleted: true }),
-    ).resolves.toEqual(deleted);
+    await expect(readBlueprintRecord(blueprint.blueprintId)).resolves.toBeNull();
+    const syncEntries = await listBlueprintSyncEntries("blueprint");
+    expect(syncEntries).toMatchObject([
+      {
+        id: blueprint.blueprintId,
+        value: { blueprintId: blueprint.blueprintId },
+        deletedAt: expect.any(String),
+      },
+    ]);
+    expect(syncEntries[0]?.value).not.toHaveProperty("deletedAt");
     await expect(listBlueprintDirectory()).resolves.toMatchObject({
       folders: [],
       blueprints: [],
@@ -279,6 +297,7 @@ describe("blueprint-storage", () => {
 
   it("deletes empty folders", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    localStorage.setItem("v3-sync-provider", "webdav");
 
     const folder = await createBlueprintFolder({
       name: "空目录",
@@ -288,14 +307,16 @@ describe("blueprint-storage", () => {
 
     const deletedFolder = await deleteBlueprintFolder(folder?.folderId ?? "");
 
-    expect(deletedFolder?.deletedAt).not.toBeNull();
+    expect(deletedFolder).not.toHaveProperty("deletedAt");
     await expect(readBlueprintFolder(folder?.folderId ?? "")).resolves.toBeNull();
-    await expect(
-      readBlueprintFolder(folder?.folderId ?? "", { includeDeleted: true }),
-    ).resolves.toMatchObject({
-      folderId: folder?.folderId,
-      deletedAt: deletedFolder?.deletedAt,
-    });
+    await expect(readBlueprintFolder(folder?.folderId ?? "")).resolves.toBeNull();
+    await expect(listBlueprintSyncEntries("folder")).resolves.toMatchObject([
+      {
+        id: folder?.folderId,
+        value: { folderId: folder?.folderId },
+        deletedAt: expect.any(String),
+      },
+    ]);
     await expect(listBlueprintDirectory(null)).resolves.toMatchObject({
       folders: [],
       blueprints: [],
@@ -304,6 +325,7 @@ describe("blueprint-storage", () => {
 
   it("purges blueprints that have been deleted for at least 30 days", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    localStorage.setItem("v3-sync-provider", "webdav");
 
     const expiredDeletedBlueprint = createTestBlueprint({
       blueprintId: "expired-deleted-blueprint",
@@ -314,12 +336,11 @@ describe("blueprint-storage", () => {
       name: "未过期已删除蓝图",
     });
 
-    await saveToIndexedDb(
-      {
-        ...BLUEPRINT_STORE_LOCATION,
-        key: "folder:expired-deleted-folder",
-      },
-      {
+    await writeActiveSyncTombstone({
+      adapterId: "blueprint-folders",
+      assetId: "expired-deleted-folder",
+      deletedAt: "2026-04-08T11:59:59.000Z",
+      value: {
         schemaVersion: 1,
         kind: "folder" as const,
         folderId: "expired-deleted-folder",
@@ -329,13 +350,12 @@ describe("blueprint-storage", () => {
         updatedAt: "2026-04-08T11:59:59.000Z",
         deletedAt: "2026-04-08T11:59:59.000Z",
       },
-    );
-    await saveToIndexedDb(
-      {
-        ...BLUEPRINT_STORE_LOCATION,
-        key: "folder:retained-deleted-folder",
-      },
-      {
+    });
+    await writeActiveSyncTombstone({
+      adapterId: "blueprint-folders",
+      assetId: "retained-deleted-folder",
+      deletedAt: "2026-04-10T12:00:01.000Z",
+      value: {
         schemaVersion: 1,
         kind: "folder" as const,
         folderId: "retained-deleted-folder",
@@ -345,63 +365,47 @@ describe("blueprint-storage", () => {
         updatedAt: "2026-04-10T12:00:01.000Z",
         deletedAt: "2026-04-10T12:00:01.000Z",
       },
-    );
-    await saveToIndexedDb(
-      {
-        ...BLUEPRINT_STORE_LOCATION,
-        key: `blueprint:${expiredDeletedBlueprint.blueprintId}`,
-      },
-      {
+    });
+    await writeActiveSyncTombstone({
+      adapterId: "blueprints",
+      assetId: expiredDeletedBlueprint.blueprintId,
+      deletedAt: "2026-04-08T11:59:59.000Z",
+      value: {
         ...expiredDeletedBlueprint,
         kind: "blueprint" as const,
         parentFolderId: null,
         deletedAt: "2026-04-08T11:59:59.000Z",
       },
-    );
-    await saveToIndexedDb(
-      {
-        ...BLUEPRINT_STORE_LOCATION,
-        key: `blueprint:${retainedDeletedBlueprint.blueprintId}`,
-      },
-      {
+    });
+    await writeActiveSyncTombstone({
+      adapterId: "blueprints",
+      assetId: retainedDeletedBlueprint.blueprintId,
+      deletedAt: "2026-04-10T12:00:01.000Z",
+      value: {
         ...retainedDeletedBlueprint,
         kind: "blueprint" as const,
         parentFolderId: null,
         deletedAt: "2026-04-10T12:00:01.000Z",
       },
-    );
+    });
 
     vi.setSystemTime(new Date("2026-05-10T12:00:00.000Z"));
 
-    await expect(
-      readBlueprintRecord(expiredDeletedBlueprint.blueprintId, { includeDeleted: true }),
-    ).resolves.toBeNull();
-    await expect(
-      readBlueprintFolder("expired-deleted-folder", { includeDeleted: true }),
-    ).resolves.toBeNull();
-    await expect(
-      readBlueprintRecord(retainedDeletedBlueprint.blueprintId, { includeDeleted: true }),
-    ).resolves.toMatchObject({
-      blueprintId: retainedDeletedBlueprint.blueprintId,
-      deletedAt: "2026-04-10T12:00:01.000Z",
-    });
-    await expect(
-      readBlueprintFolder("retained-deleted-folder", { includeDeleted: true }),
-    ).resolves.toMatchObject({
-      folderId: "retained-deleted-folder",
-      deletedAt: "2026-04-10T12:00:01.000Z",
-    });
-    await expect(listBlueprintDirectory(null, { includeDeleted: true })).resolves.toMatchObject({
-      folders: [
-        {
-          folderId: "retained-deleted-folder",
-        },
-      ],
-      blueprints: [
-        {
-          blueprintId: retainedDeletedBlueprint.blueprintId,
-        },
-      ],
+    await expect(listBlueprintSyncEntries("blueprint")).resolves.toMatchObject([
+      {
+        id: retainedDeletedBlueprint.blueprintId,
+        deletedAt: "2026-04-10T12:00:01.000Z",
+      },
+    ]);
+    await expect(listBlueprintSyncEntries("folder")).resolves.toMatchObject([
+      {
+        id: "retained-deleted-folder",
+        deletedAt: "2026-04-10T12:00:01.000Z",
+      },
+    ]);
+    await expect(listBlueprintDirectory()).resolves.toMatchObject({
+      folders: [],
+      blueprints: [],
     });
   });
 

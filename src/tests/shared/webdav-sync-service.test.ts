@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createWebDavSyncService,
   createSyncRemoteCollection,
+  RemoteWriteConflictError,
 } from "@/sync";
 import type {
   SyncRemote,
@@ -16,6 +17,8 @@ import type {
 
 function createTestRemote(options: {
   readonly dispose?: () => void;
+  readonly refreshIndexes?: SyncRemoteSession["refreshIndexes"];
+  readonly complete?: SyncRemoteSession["complete"];
 } = {}): SyncRemote {
   const session: SyncRemoteSession = {
     localState: {
@@ -37,6 +40,10 @@ function createTestRemote(options: {
       discard: async () => undefined,
     }),
     markApplied: async () => undefined,
+    ...(options.refreshIndexes === undefined
+      ? {}
+      : { refreshIndexes: options.refreshIndexes }),
+    ...(options.complete === undefined ? {} : { complete: options.complete }),
   };
 
   return {
@@ -543,6 +550,56 @@ describe("webdav-sync-service", () => {
     expect(adapter.sync).toHaveBeenCalledTimes(2);
     expect(status.phase).toBe("idle");
     expect(status.lastError).toBeNull();
+  });
+
+  it("refreshes the remote index once after an optimistic write conflict", async () => {
+    const adapter = createAdapter();
+    adapter.sync
+      .mockRejectedValueOnce(new RemoteWriteConflictError([{
+        assetType: "planner-state",
+        assetId: "single",
+        reason: "revision-mismatch",
+        expectedRevision: 1,
+        actualRevision: 2,
+        expectedHash: "old",
+        actualHash: "new",
+      }]))
+      .mockResolvedValueOnce({
+        adapterId: "adapter",
+        mode: "full-no-revision",
+        status: "downloaded",
+        changedAssetIds: ["single"],
+      });
+    const refreshIndexes = vi.fn(async () => undefined);
+    const complete = vi.fn(async () => undefined);
+    const service = createWebDavSyncService({
+      readSettings: () => createSettings(),
+      createRemote: () => createTestRemote({ refreshIndexes, complete }),
+      adapters: [adapter],
+    });
+
+    const status = await service.syncNow("manual");
+
+    expect(adapter.sync).toHaveBeenCalledTimes(2);
+    expect(refreshIndexes).toHaveBeenCalledWith([adapter.collection]);
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(status.phase).toBe("idle");
+    expect(status.lastDownloadAt).not.toBeNull();
+  });
+
+  it("allows a provider-specific validator to accept an empty WebDAV URL", async () => {
+    const adapter = createAdapter();
+    const service = createWebDavSyncService({
+      readSettings: () => ({ ...createSettings(), url: "" }),
+      validateSettings: () => null,
+      createRemote,
+      adapters: [adapter],
+    });
+
+    const status = await service.syncNow("manual");
+
+    expect(adapter.sync).toHaveBeenCalledTimes(1);
+    expect(status.phase).toBe("idle");
   });
 
   it("runs before and after hooks around adapters", async () => {

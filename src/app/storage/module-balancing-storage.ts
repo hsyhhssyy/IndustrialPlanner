@@ -11,8 +11,22 @@ import {
   type StorageMigration,
 } from "@/shared/storage/migration";
 import type { IndexedDbStorageLocation } from "@/shared/storage/browser-storage";
-import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage/browser-storage";
+// AI-REMOVED 2026-08-08:
+// Reason: 模块墓碑已从全局 localStorage 迁入按 provider/target 隔离的 IndexedDB store。
+// Trigger: 用户要求同步数据不得混入业务存储或跨同步目标共享。
+// Evidence: 新实现只通过 sync-tombstone-storage 读写墓碑。
+// Replacement: 下方 sync-tombstone-storage import。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage/browser-storage";
 import { emitStorageChange } from "@/shared/storage/storage-change-event";
+import {
+  clearActiveSyncTombstone,
+  listActiveSyncTombstones,
+  writeActiveSyncTombstone,
+} from "@/shared/storage/sync-tombstone-storage";
 
 const MODULE_BALANCING_STORE_LOCATION: IndexedDbStorageLocation = {
   databaseName: "v3-industrial-planner",
@@ -21,7 +35,16 @@ const MODULE_BALANCING_STORE_LOCATION: IndexedDbStorageLocation = {
 };
 
 const CURRENT_VERSION = 1;
-const MODULE_BALANCING_TOMBSTONE_LOCAL_STORAGE_KEY = "v3-module-balancing-tombstones";
+// AI-REMOVED 2026-08-08:
+// Reason: 模块墓碑不应跨 Cloudflare/WebDAV 目标共享，也不应留在全局 localStorage。
+// Trigger: 用户要求同步属性和缓存全部收归对应同步存储。
+// Evidence: 原 key 没有 provider、后端地址、owner 或空间名称维度。
+// Replacement: src/shared/storage/sync-tombstone-storage.ts。
+// Risk: Low；实验性旧墓碑不迁移。
+// Human Review: Required
+//
+// Original code:
+// const MODULE_BALANCING_TOMBSTONE_LOCAL_STORAGE_KEY = "v3-module-balancing-tombstones";
 const MIGRATIONS: StorageMigration<ModuleBalancingStateReadWrite>[] = [
   {
     version: 1,
@@ -47,7 +70,7 @@ export async function saveModuleBalancingState(
   const normalizedState = normalizeModuleBalancingState(state);
 
   if (previousState !== null) {
-    recordDeletedModuleBalancingEntries(previousState, normalizedState);
+    await recordDeletedModuleBalancingEntries(previousState, normalizedState);
   }
 
   await saveToIndexedDbWithVersion(
@@ -73,7 +96,7 @@ export async function listModuleBalancingCustomModuleEntries(): Promise<Array<{
   readonly deletedAt: string | null;
 }>> {
   const state = await loadModuleBalancingState() ?? createDefaultModuleBalancingState();
-  const tombstones = readModuleBalancingTombstones();
+  const tombstones = await readModuleBalancingTombstones();
 
   return [
     ...state.customModules.map((value) => ({ id: value.id, value, deletedAt: null })),
@@ -97,10 +120,10 @@ export async function writeModuleBalancingCustomModuleEntry(entry: {
 
   if (entry.deletedAt === null) {
     nextState.customModules = upsertById(nextState.customModules, nextModule, (module) => module.id);
-    clearModuleBalancingTombstone("customModules", entry.id);
+    await clearModuleBalancingTombstone("customModules", entry.id);
   } else {
     nextState.customModules = nextState.customModules.filter((module) => module.id !== entry.id);
-    writeModuleBalancingTombstone("customModules", entry.id, nextModule, entry.deletedAt);
+    await writeModuleBalancingTombstone("customModules", entry.id, nextModule, entry.deletedAt);
   }
 
   await saveModuleBalancingState(nextState);
@@ -113,7 +136,7 @@ export async function listModuleBalancingFolderEntries(kind: "folders" | "canvas
 }>> {
   const state = await loadModuleBalancingState() ?? createDefaultModuleBalancingState();
   const activeFolders = kind === "folders" ? state.folders : state.canvasFolders;
-  const tombstones = readModuleBalancingTombstones()[kind];
+  const tombstones = (await readModuleBalancingTombstones())[kind];
 
   return [
     ...activeFolders.map((value) => ({ id: value.id, value, deletedAt: null })),
@@ -140,10 +163,10 @@ export async function writeModuleBalancingFolderEntry(
 
   if (entry.deletedAt === null) {
     nextState[kind] = upsertById(nextState[kind], nextFolder, (folder) => folder.id);
-    clearModuleBalancingTombstone(kind, entry.id);
+    await clearModuleBalancingTombstone(kind, entry.id);
   } else {
     nextState[kind] = nextState[kind].filter((folder) => folder.id !== entry.id);
-    writeModuleBalancingTombstone(kind, entry.id, nextFolder, entry.deletedAt);
+    await writeModuleBalancingTombstone(kind, entry.id, nextFolder, entry.deletedAt);
   }
 
   await saveModuleBalancingState(nextState);
@@ -155,7 +178,7 @@ export async function listModuleBalancingCanvasEntries(): Promise<Array<{
   readonly deletedAt: string | null;
 }>> {
   const state = await loadModuleBalancingState() ?? createDefaultModuleBalancingState();
-  const tombstones = readModuleBalancingTombstones();
+  const tombstones = await readModuleBalancingTombstones();
 
   return [
     ...state.canvases.map((value) => ({ id: value.id, value, deletedAt: null })),
@@ -180,13 +203,13 @@ export async function writeModuleBalancingCanvasEntry(entry: {
   if (entry.deletedAt === null) {
     nextState.canvases = upsertById(nextState.canvases, nextCanvas, (canvas) => canvas.id);
     nextState.activeCanvasId = nextState.activeCanvasId ?? nextCanvas.id;
-    clearModuleBalancingTombstone("canvases", entry.id);
+    await clearModuleBalancingTombstone("canvases", entry.id);
   } else {
     nextState.canvases = nextState.canvases.filter((canvas) => canvas.id !== entry.id);
     nextState.activeCanvasId = nextState.activeCanvasId === entry.id
       ? nextState.canvases[0]?.id ?? null
       : nextState.activeCanvasId;
-    writeModuleBalancingTombstone("canvases", entry.id, nextCanvas, entry.deletedAt);
+    await writeModuleBalancingTombstone("canvases", entry.id, nextCanvas, entry.deletedAt);
   }
 
   await saveModuleBalancingState(nextState);
@@ -418,44 +441,50 @@ interface ModuleBalancingTombstoneState {
   readonly canvasFolders: Record<string, { readonly value: ModuleBalancingFolderReadWrite; readonly deletedAt: string }>;
 }
 
-function recordDeletedModuleBalancingEntries(
+async function recordDeletedModuleBalancingEntries(
   previousState: ModuleBalancingStateReadWrite,
   nextState: ModuleBalancingStateReadWrite,
-): void {
+): Promise<void> {
   const timestamp = new Date().toISOString();
+  const writes: Promise<void>[] = [];
   for (const module of previousState.customModules) {
     if (!nextState.customModules.some((candidate) => candidate.id === module.id)) {
-      writeModuleBalancingTombstone("customModules", module.id, module, timestamp);
+      writes.push(writeModuleBalancingTombstone("customModules", module.id, module, timestamp));
     }
   }
   for (const canvas of previousState.canvases) {
     if (!nextState.canvases.some((candidate) => candidate.id === canvas.id)) {
-      writeModuleBalancingTombstone("canvases", canvas.id, canvas, timestamp);
+      writes.push(writeModuleBalancingTombstone("canvases", canvas.id, canvas, timestamp));
     }
   }
   for (const folder of previousState.folders) {
     if (!nextState.folders.some((candidate) => candidate.id === folder.id)) {
-      writeModuleBalancingTombstone("folders", folder.id, folder, timestamp);
+      writes.push(writeModuleBalancingTombstone("folders", folder.id, folder, timestamp));
     }
   }
   for (const folder of previousState.canvasFolders) {
     if (!nextState.canvasFolders.some((candidate) => candidate.id === folder.id)) {
-      writeModuleBalancingTombstone("canvasFolders", folder.id, folder, timestamp);
+      writes.push(writeModuleBalancingTombstone("canvasFolders", folder.id, folder, timestamp));
     }
   }
+  await Promise.all(writes);
 }
 
-function readModuleBalancingTombstones(): ModuleBalancingTombstoneState {
-  const rawState = readFromLocalStorage<unknown>(MODULE_BALANCING_TOMBSTONE_LOCAL_STORAGE_KEY);
-  if (!isRecord(rawState)) {
-    return createEmptyTombstoneState();
-  }
+async function readModuleBalancingTombstones(): Promise<ModuleBalancingTombstoneState> {
+  const emptyState = createEmptyTombstoneState();
+  const [customModules, canvases, folders, canvasFolders] = await Promise.all([
+    listActiveSyncTombstones<ModuleBalancingCustomModuleReadWrite>("custom-modules"),
+    listActiveSyncTombstones<ModuleBalancingCanvasReadWrite>("module-canvases"),
+    listActiveSyncTombstones<ModuleBalancingFolderReadWrite>("custom-module-folders"),
+    listActiveSyncTombstones<ModuleBalancingFolderReadWrite>("module-canvas-folders"),
+  ]);
 
   return {
-    customModules: normalizeTombstoneRecord(rawState.customModules, (value) => normalizeModuleBalancingState({ customModules: [value] }).customModules[0]),
-    canvases: normalizeTombstoneRecord(rawState.canvases, (value) => normalizeModuleBalancingState({ canvases: [value] }).canvases[0]),
-    folders: normalizeTombstoneRecord(rawState.folders, (value) => normalizeFolders([value])[0]),
-    canvasFolders: normalizeTombstoneRecord(rawState.canvasFolders, (value) => normalizeFolders([value])[0]),
+    ...emptyState,
+    customModules: normalizeTombstoneList(customModules, (value) => normalizeModuleBalancingState({ customModules: [value] }).customModules[0]),
+    canvases: normalizeTombstoneList(canvases, (value) => normalizeModuleBalancingState({ canvases: [value] }).canvases[0]),
+    folders: normalizeTombstoneList(folders, (value) => normalizeFolders([value])[0]),
+    canvasFolders: normalizeTombstoneList(canvasFolders, (value) => normalizeFolders([value])[0]),
   };
 }
 
@@ -468,51 +497,80 @@ function createEmptyTombstoneState(): ModuleBalancingTombstoneState {
   };
 }
 
-function normalizeTombstoneRecord<TValue>(
-  value: unknown,
+function normalizeTombstoneList<TValue>(
+  tombstones: readonly {
+    readonly assetId: string;
+    readonly value: TValue;
+    readonly deletedAt: string;
+  }[],
   normalizeValue: (value: unknown) => TValue | undefined,
 ): Record<string, { readonly value: TValue; readonly deletedAt: string }> {
-  if (!isRecord(value)) {
-    return {};
-  }
-
-  return Object.fromEntries(Object.entries(value).flatMap(([id, entry]) => {
-    if (!isRecord(entry) || typeof entry.deletedAt !== "string") {
-      return [];
-    }
-
-    const normalizedValue = normalizeValue(entry.value);
-    return normalizedValue === undefined ? [] : [[id, { value: normalizedValue, deletedAt: entry.deletedAt }]];
+  return Object.fromEntries(tombstones.flatMap((tombstone) => {
+    const normalizedValue = normalizeValue(tombstone.value);
+    return normalizedValue === undefined
+      ? []
+      : [[tombstone.assetId, {
+          value: normalizedValue,
+          deletedAt: tombstone.deletedAt,
+        }]];
   }));
 }
 
-function writeModuleBalancingTombstone<TKey extends keyof ModuleBalancingTombstoneState>(
+// AI-REMOVED 2026-08-08:
+// Reason: 新墓碑 store 已返回结构化列表，不再读取全局 localStorage 的嵌套 record。
+// Trigger: 模块删除状态需要按 provider 和远端目标隔离。
+// Evidence: readModuleBalancingTombstones 现在调用 listActiveSyncTombstones。
+// Replacement: 上方 normalizeTombstoneList。
+// Risk: Low；旧实验性 localStorage 墓碑不迁移。
+// Human Review: Required
+//
+// Original code:
+// function normalizeTombstoneRecord<TValue>(
+//   value: unknown,
+//   normalizeValue: (value: unknown) => TValue | undefined,
+// ): Record<string, { readonly value: TValue; readonly deletedAt: string }> {
+//   if (!isRecord(value)) {
+//     return {};
+//   }
+//
+//   return Object.fromEntries(Object.entries(value).flatMap(([id, entry]) => {
+//     if (!isRecord(entry) || typeof entry.deletedAt !== "string") {
+//       return [];
+//     }
+//
+//     const normalizedValue = normalizeValue(entry.value);
+//     return normalizedValue === undefined ? [] : [[id, { value: normalizedValue, deletedAt: entry.deletedAt }]];
+//   }));
+// }
+
+async function writeModuleBalancingTombstone<TKey extends keyof ModuleBalancingTombstoneState>(
   key: TKey,
   id: string,
   value: ModuleBalancingTombstoneState[TKey][string]["value"],
   deletedAt: string,
-): void {
-  const state = readModuleBalancingTombstones();
-  saveToLocalStorage(MODULE_BALANCING_TOMBSTONE_LOCAL_STORAGE_KEY, {
-    ...state,
-    [key]: {
-      ...state[key],
-      [id]: { value, deletedAt },
-    },
+): Promise<void> {
+  await writeActiveSyncTombstone({
+    adapterId: resolveModuleBalancingAdapterId(key),
+    assetId: id,
+    value,
+    deletedAt,
   });
 }
 
-function clearModuleBalancingTombstone(
+async function clearModuleBalancingTombstone(
   key: keyof ModuleBalancingTombstoneState,
   id: string,
-): void {
-  const state = readModuleBalancingTombstones();
-  const nextEntries = { ...state[key] };
-  delete nextEntries[id];
-  saveToLocalStorage(MODULE_BALANCING_TOMBSTONE_LOCAL_STORAGE_KEY, {
-    ...state,
-    [key]: nextEntries,
-  });
+): Promise<void> {
+  await clearActiveSyncTombstone(resolveModuleBalancingAdapterId(key), id);
+}
+
+function resolveModuleBalancingAdapterId(
+  key: keyof ModuleBalancingTombstoneState,
+): string {
+  if (key === "customModules") return "custom-modules";
+  if (key === "canvases") return "module-canvases";
+  if (key === "folders") return "custom-module-folders";
+  return "module-canvas-folders";
 }
 
 function upsertById<TValue>(

@@ -232,6 +232,42 @@ export async function deleteFromIndexedDb(
   }]);
 }
 
+export async function clearIndexedDbStores(
+  location: IndexedDbDatabaseLocation,
+  storeNames: readonly string[],
+): Promise<boolean> {
+  const activeStoreNames = Array.from(new Set(
+    storeNames.filter((storeName) => storeName.trim() !== ""),
+  ));
+
+  if (activeStoreNames.length === 0) {
+    return true;
+  }
+
+  const database = await openIndexedDbStores(location, activeStoreNames);
+
+  if (database === null) {
+    return false;
+  }
+
+  try {
+    const transaction = database.transaction(activeStoreNames, "readwrite");
+    const completion = waitForTransaction(transaction);
+
+    for (const storeName of activeStoreNames) {
+      await waitForRequest(transaction.objectStore(storeName).clear());
+    }
+
+    await completion;
+
+    return true;
+  } catch {
+    return false;
+  } finally {
+    database.close();
+  }
+}
+
 export async function trySaveToIndexedDb<TValue>(
   location: IndexedDbStorageLocation,
   value: TValue,

@@ -16,8 +16,18 @@ export {
 export type {
   BlueprintDirectoryListing,
   BlueprintFolderRecord,
-  BlueprintReadOptions,
+  // AI-REMOVED 2026-08-08:
+  // Reason: 业务读取 API 不再接受 includeDeleted 同步选项。
+  // Trigger: 同步墓碑与业务记录隔离。
+  // Evidence: BlueprintSyncEntry 是新的同步专用接口。
+  // Replacement: BlueprintSyncEntry。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // BlueprintReadOptions,
   BlueprintRecord,
+  BlueprintSyncEntry,
   BlueprintStorageEntry,
   CreateBlueprintFolderInput,
   RenameBlueprintFolderInput,
@@ -27,15 +37,26 @@ export type {
 
 export {
   createBlueprintFolder,
+  applyBlueprintSyncEntry,
   deleteBlueprintFolder,
   deleteBlueprintDocument,
   listBlueprintDirectory,
   listBlueprintStorageEntries,
+  listBlueprintSyncEntries,
   readBlueprintFolder,
   readBlueprintRecord,
   renameBlueprintFolder,
   saveBlueprintDocument,
-  upsertBlueprintStorageEntry,
+  // AI-REMOVED 2026-08-08:
+  // Reason: 同步写入不再把 deletedAt 合并进 BlueprintStorageEntry。
+  // Trigger: 用户要求同步属性不得进入业务对象。
+  // Evidence: applyBlueprintSyncEntry 接收独立 BlueprintSyncEntry。
+  // Replacement: applyBlueprintSyncEntry。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // upsertBlueprintStorageEntry,
   upsertBlueprintFolder,
   BLUEPRINT_STORE_LOCATION,
 } from "@/shared/storage/blueprint-storage";

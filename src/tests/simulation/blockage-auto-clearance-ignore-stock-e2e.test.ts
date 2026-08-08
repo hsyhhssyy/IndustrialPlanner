@@ -25,7 +25,7 @@ describe("扩容反应池自动清堵 - ignoreStock 保护 (端到端复现 #26)
   const TICK_COUNT = 600;
 
   const REACTOR_ID = "reactor";
-  const SHARED_BUFFER = "shared_input_buffer";
+  const _SHARED_BUFFER = "shared_input_buffer";
   const REACTOR_DEVICE_KEY = "reactor";
 
   /** 用户设为无限的 4 种原料 */

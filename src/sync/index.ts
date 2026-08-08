@@ -128,6 +128,7 @@ export type {
   SyncRemoteWebDavBinding,
   SyncRemoteWriteBatch,
 } from "./clients";
+export { RemoteWriteConflictError } from "./clients";
 
 export {
   createSyncAssetKey,
@@ -187,6 +188,7 @@ export {
   clearWebDavLastSeenRemoteRevision,
   clearWebDavLastSeenRemoteEtag,
   clearWebDavLastSyncedContentHash,
+  clearWebDavSyncMetadata,
   readWebDavLastSeenRemoteEtag,
   readWebDavLastSeenRemoteRevision,
   readWebDavLastSyncedContentHash,

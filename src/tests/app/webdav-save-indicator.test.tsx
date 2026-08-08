@@ -140,6 +140,8 @@ function createStatus(
     lastUploadAt: null,
     lastDownloadAt: null,
     lastError: null,
+    lastSmallCheckAt: null,
+    lastBigCheckAt: null,
     lastResults: [],
     ...overrides,
   };

@@ -69,10 +69,20 @@ describe("扩容反应池自动清堵 - ignoreStock 保护", () => {
       id: "node:shared_input_buffer",
       deviceId: DEVICE_ID,
     };
-    // 确保所有 slot 节点都引用同一个 node
-    for (const slot of Object.values(slots)) {
-      slot.nodeId = "node:shared_input_buffer";
-    }
+    // AI-REMOVED 2026-08-08:
+    // Reason: CompiledSimulationSlot.nodeId 已改为 readonly，不可通过赋值修改。
+    //   且每个 slot 在创建时已设置 nodeId: "node:shared_input_buffer"，此循环为冗余操作。
+    // Trigger: TS2540: Cannot assign to 'nodeId' because it is a read-only property.
+    // Evidence: src/simulation/types.ts:316 readonly nodeId
+    // Replacement: None - slot 创建时已内联设置 nodeId。
+    // Risk: Low
+    // Human Review: Not Required
+    //
+    // Original code:
+    // // 确保所有 slot 节点都引用同一个 node
+    // for (const slot of Object.values(slots)) {
+    //     slot.nodeId = "node:shared_input_buffer";
+    // }
 
     return {
       ordering: {

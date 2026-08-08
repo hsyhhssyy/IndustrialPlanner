@@ -4720,6 +4720,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       { type: PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity, range: 2 },
     ],
     requiresPower: false,
+    // AI-CORRECTION 2026-08-08: powerDemand 是 EntityDefinitionInput 的必填字段，
+    //   解包数据 powerConsume=0，补充 powerDemand: 0 以通过类型检查。
+    powerDemand: 0,
     portGroups: [
       createPortGroup(
         "gas_output",

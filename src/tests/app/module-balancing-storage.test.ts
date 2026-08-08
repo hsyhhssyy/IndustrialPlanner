@@ -42,6 +42,7 @@ describe("module-balancing-storage", () => {
 
   it("keeps custom module tombstones for WebDAV deletion sync", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    localStorage.setItem("v3-sync-provider", "webdav");
 
     const state = createDefaultModuleBalancingState();
     state.customModules.push({

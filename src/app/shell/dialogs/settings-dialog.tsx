@@ -58,7 +58,16 @@ import {
   estimateTotalStorageBytes,
   formatStorageBytesToMB,
 } from "@/shared/storage";
-import { writeSyncProvider } from "@/sync/sync-providers";
+// AI-REMOVED 2026-08-08:
+// Reason: 删除目标 provider 必须由 sync-host 在 reset 成功后原子关闭，UI 不能提前切成 none。
+// Trigger: UI 先切 provider 会让 deleteRemoteData 看见 none，从而完全不删除远端。
+// Evidence: deleteRemoteData 内部通过 readSyncProvider() 选择 Cloudflare/WebDAV。
+// Replacement: sync-host.ts deleteRemoteData action。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { writeSyncProvider } from "@/sync/sync-providers";
 
 const SETTINGS_DIALOG_SECTION_SCROLL_OFFSET = 10;
 
@@ -420,19 +429,27 @@ export const SettingsDialog = observer(function SettingsDialog({
       webDavDeleteInputDialogState.visible = false;
     });
     setWebDavDeleting(true);
-    // 1. 将 sync-provider 持久化为 none，触发 sync-host 重新派生 enabled=false
-    //    防止删除过程中定时器触发保存或检查
-    writeSyncProvider("none");
-    sync?.actions.updateSettings({});
-
-    // 2. 删除远端数据
+    // AI-REMOVED 2026-08-08:
+    // Reason: UI 提前关闭 provider 后，sync-host 无法再判断应删除 WebDAV 还是 Cloudflare。
+    // Trigger: deleteRemoteData 读取 provider 时已经得到 none，删除请求被直接跳过。
+    // Evidence: sync-host.ts 的删除 action 必须先捕获并 reset 原 provider。
+    // Replacement: sync-host.ts deleteRemoteData 在 reset 成功后关闭 provider。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // writeSyncProvider("none");
+    // sync?.actions.updateSettings({});
     try {
       await sync?.actions.deleteRemoteData();
     } catch {
-      // 删除失败静默处理，用户可重试
+      runInAction(() => {
+        webDavDeleteInputDialogState.visible = true;
+      });
+      setWebDavDeleting(false);
+      return;
     }
 
-    // 3. 关闭弹窗
     runInAction(() => {
       webDavStatusDialogState.visible = false;
     });
@@ -507,13 +524,26 @@ export const SettingsDialog = observer(function SettingsDialog({
       cfDeleteInputDialogState.visible = false;
     });
     setCfDeleting(true);
-    writeSyncProvider("none");
-    sync?.actions.updateSettings({});
+    // AI-REMOVED 2026-08-08:
+    // Reason: Cloudflare 删除也不能在调用 action 前把 provider 改成 none。
+    // Trigger: 该顺序让 deleteRemoteData 无法进入 Cloudflare reset 分支。
+    // Evidence: 原 handler 的 provider 写入发生在 await deleteRemoteData 之前。
+    // Replacement: sync-host.ts deleteRemoteData。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // writeSyncProvider("none");
+    // sync?.actions.updateSettings({});
 
     try {
       await sync?.actions.deleteRemoteData();
     } catch {
-      // 删除失败静默处理，用户可重试
+      runInAction(() => {
+        cfDeleteInputDialogState.visible = true;
+      });
+      setCfDeleting(false);
+      return;
     }
 
     runInAction(() => {

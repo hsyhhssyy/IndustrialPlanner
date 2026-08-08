@@ -12,6 +12,11 @@ import type {
   SyncTaskPhase,
 } from "@/domain/sync";
 import type { UiKey } from "@/shared/i18n";
+import {
+  MAX_CLOUDFLARE_SPACE_NAME_LENGTH,
+  readCloudflareSyncSettings,
+  writeCloudflareSyncSettings,
+} from "@/shared/storage/cloudflare-sync-settings";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { cm } from "@/app/shell/shared/css-module-class";
 import styles from "./settings-dialog.module.scss";
@@ -25,6 +30,8 @@ import styles from "./settings-dialog.module.scss";
 // - 服务器端错误置顶醒目展示（role="alert"）
 // - 显示大小检查倒计时
 // - 显示 interval-check 和 big-check 任务卡片
+// AI-CORRECTION 2026-08-08: Cloudflare 弹窗现包含独立的空间名称配置表单；
+// 输入先保留为本地草稿，只有按下保存按钮后才写入设置并切换同步空间。
 
 const DEFAULT_SMALL_CHECK_INTERVAL_MS = 60_000;
 const DEFAULT_BIG_CHECK_INTERVAL_MS = 10 * 60_000;
@@ -45,7 +52,7 @@ const TASK_ORDER: Record<SyncTaskKind, number> = {
   "directory-maintenance": 99,
 };
 
-function sortTasks(tasks: readonly { readonly kind: SyncTaskKind }[]): typeof tasks {
+function sortTasks<TTask extends { readonly kind: SyncTaskKind }>(tasks: readonly TTask[]): TTask[] {
   return [...tasks].sort((a, b) => (TASK_ORDER[a.kind] ?? 50) - (TASK_ORDER[b.kind] ?? 50));
 }
 
@@ -73,6 +80,53 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
   t: AppHost["actions"]["translate"];
 }) {
   const status = state.status;
+  const [savedSpaceName, setSavedSpaceName] = useState("");
+  const [draftSpaceName, setDraftSpaceName] = useState("");
+  const [loadingSpaceName, setLoadingSpaceName] = useState(true);
+  const [savingSpaceName, setSavingSpaceName] = useState(false);
+  const [spaceNameSaveFailed, setSpaceNameSaveFailed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void readCloudflareSyncSettings().then((settings) => {
+      if (!active) {
+        return;
+      }
+      setSavedSpaceName(settings.spaceName);
+      setDraftSpaceName(settings.spaceName);
+      setLoadingSpaceName(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const normalizedDraftSpaceName = draftSpaceName.trim();
+  const spaceNameIsDirty = normalizedDraftSpaceName !== savedSpaceName;
+  const canSaveSpaceName = !loadingSpaceName
+    && !savingSpaceName
+    && normalizedDraftSpaceName !== ""
+    && spaceNameIsDirty;
+  const handleSaveSpaceName = async () => {
+    if (!canSaveSpaceName) {
+      return;
+    }
+
+    setSavingSpaceName(true);
+    setSpaceNameSaveFailed(false);
+    try {
+      const settings = await writeCloudflareSyncSettings({
+        spaceName: normalizedDraftSpaceName,
+      });
+      setSavedSpaceName(settings.spaceName);
+      setDraftSpaceName(settings.spaceName);
+    } catch {
+      setSpaceNameSaveFailed(true);
+    } finally {
+      setSavingSpaceName(false);
+    }
+  };
 
   const filteredTasks = useMemo(
     () => sortTasks(status.tasks.filter((task) => !CLOUDFLARE_EXCLUDED_TASK_KINDS.has(task.kind))),
@@ -126,6 +180,56 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
         className={cm(styles, "webdav-sync-status-content")}
         data-cloudflare-sync-status-dialog
       >
+        <section
+          className={cm(styles, "webdav-sync-status-section", "webdav-config-section")}
+        >
+          <h3>{t("cloudflareStatus.spaceSettings")}</h3>
+          <div className={cm(styles, "webdav-config-form")}>
+            <label className={cm(styles, "webdav-config-field")}>
+              <span>{t("cloudflareStatus.spaceName")}</span>
+              <input
+                data-cloudflare-space-name-input
+                disabled={loadingSpaceName || savingSpaceName}
+                maxLength={MAX_CLOUDFLARE_SPACE_NAME_LENGTH}
+                onChange={(event) => {
+                  setDraftSpaceName(event.target.value);
+                  setSpaceNameSaveFailed(false);
+                }}
+                type="text"
+                value={draftSpaceName}
+              />
+              <small>{t("cloudflareStatus.spaceNameDescription")}</small>
+            </label>
+          </div>
+          <div className={cm(styles, "webdav-config-actions")}>
+            {spaceNameSaveFailed ? (
+              <span
+                className={cm(styles, "webdav-config-test-result", "is-failed")}
+                role="alert"
+              >
+                {t("cloudflareStatus.spaceNameSaveFailed")}
+              </span>
+            ) : null}
+            <div className={cm(styles, "webdav-config-buttons")}>
+              <button
+                className={cm(
+                  styles,
+                  "webdav-apply-settings-btn",
+                  spaceNameIsDirty ? "is-dirty" : "is-clean",
+                )}
+                data-cloudflare-space-name-save
+                disabled={!canSaveSpaceName}
+                onClick={() => void handleSaveSpaceName()}
+                type="button"
+              >
+                {t(savingSpaceName
+                  ? "cloudflareStatus.savingSpaceName"
+                  : "cloudflareStatus.saveSpaceName")}
+              </button>
+            </div>
+          </div>
+        </section>
+
         {/* 服务器端错误 — 置顶醒目展示 */}
         {status.lastError === null ? null : (
           <section
@@ -345,4 +449,3 @@ function formatDuration(ms: number): string {
   }
   return `${seconds}s`;
 }
-

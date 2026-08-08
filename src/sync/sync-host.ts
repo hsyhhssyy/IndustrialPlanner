@@ -19,13 +19,39 @@ import { createUuid } from "@/domain/shared/uuid";
 //
 // Original code:
 // import { ensureLocalSyncOwnerState } from "@/shared/storage/sync-owner-storage";
+// AI-CORRECTION 2026-08-08: Cloudflare 空间需要稳定且隔离的 owner scope；设备枚举仍保持移除。
+// AI-CORRECTION 2026-08-08: 上述 owner scope 判断已撤销；空间名称本身就是共享远端 ID，
+// 不得拼接安装 ID、账户 ID 或浏览器随机 ID，否则不同浏览器无法加入同一空间。
+// AI-REMOVED 2026-08-08:
+// Reason: Cloudflare 共享空间不能绑定本地 owner。
+// Trigger: 用户明确要求不同用户通过相同空间名称共享数据。
+// Evidence: ownerId 对每个浏览器/账户不同，拼接后会生成不同远端 spaceId。
+// Replacement: resolveCloudflareSpaceId。
+// Risk: 任何知道空间名称的人都可能访问同一空间；后端若需访问控制应独立实现鉴权。
+// Human Review: Required
+//
+// Original code:
+// import {
+//   createLocalSyncOwnerScopeKey,
+//   ensureLocalSyncOwnerState,
+// } from "@/shared/storage/sync-owner-storage";
 import { createStableJsonHash } from "@/shared/storage/hash-utils";
 import {
-  listBlueprintStorageEntries,
-  upsertBlueprintStorageEntry,
+  applyBlueprintSyncEntry,
+  listBlueprintSyncEntries,
   type BlueprintFolderRecord,
   type BlueprintRecord,
 } from "@/shared/storage/blueprint-storage";
+// AI-REMOVED 2026-08-08:
+// Reason: 同步模块不再通过业务存储列表读取混入 deletedAt 的记录。
+// Trigger: 用户要求业务对象与同步墓碑彻底隔离。
+// Evidence: listBlueprintSyncEntries 返回独立的同步传输条目。
+// Replacement: 上方 listBlueprintSyncEntries import。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// import { listBlueprintStorageEntries } from "@/shared/storage/blueprint-storage";
 import {
   loadPlannerState,
   normalizePlannerPersistedState,
@@ -78,6 +104,13 @@ import { createWebDavWorkerStorageClient } from "./clients/webdav/webdav-worker-
 import { createWebDavSyncRemote } from "./clients/webdav/webdav-remote";
 import { createCloudflareSyncRemote } from "./clients/cloudflare/cloudflare-remote";
 import { resolveBackendApiBaseUrl } from "@/shared/storage/backend-api-address";
+import {
+  clearCloudflareSyncSettings,
+  readCloudflareSyncSettings,
+  resolveCloudflareSpaceId,
+  subscribeToCloudflareSyncSettingsChanges,
+  type CloudflareSyncSettings,
+} from "@/shared/storage/cloudflare-sync-settings";
 
 export interface SyncHostOptions {
   readonly assetSources?: readonly SyncAssetSource[];
@@ -133,6 +166,22 @@ export async function createSyncHost(
   let syncStarted = false;
   let directoryTreeReadyKey: string | null = null;
   let lastEditorWebDavHash: string | null = null;
+  // AI-REMOVED 2026-08-08:
+  // Reason: 本地 owner 不能参与共享 Cloudflare spaceId。
+  // Trigger: 相同空间名称必须在不同浏览器中解析为同一个远端空间。
+  // Evidence: anonymous ownerId 是每次安装随机生成的 UUID。
+  // Replacement: 下方 getCloudflareSpaceId 只解析已保存的 spaceName。
+  // Risk: Low；本地同步状态仍按 apiBase + spaceId 隔离。
+  // Human Review: Required
+  //
+  // Original code:
+  // const syncOwnerState = await ensureLocalSyncOwnerState();
+  // const cloudflareOwnerScope = createLocalSyncOwnerScopeKey(syncOwnerState.activeOwner);
+  let currentCloudflareSettings = await readCloudflareSyncSettings();
+  let suppressCloudflareSettingsSync = false;
+  const getCloudflareSpaceId = (
+    settings: CloudflareSyncSettings = currentCloudflareSettings,
+  ) => resolveCloudflareSpaceId(settings);
   let currentSettings = await readWebDavSyncSettings();
   // 从 sync provider + URL 派生 enabled 标志，兼容旧用户自动迁移
   // deriveEnabled 内部会在旧用户首次访问时将 provider 写为 "webdav"
@@ -140,10 +189,18 @@ export async function createSyncHost(
     ...currentSettings,
     enabled: deriveEnabled(currentSettings, currentSettings.enabled),
   };
-  // Cloudflare 模式下不依赖 settings.url，但 sync-service 要求 url 非空才启动同步
-  if (readSyncProvider() === "cloudflare" && currentSettings.url.trim() === "") {
-    currentSettings = { ...currentSettings, url: "cloudflare://sync" };
-  }
+  // AI-REMOVED 2026-08-08:
+  // Reason: Cloudflare 不使用 WebDAV URL；伪造 URL 会污染持久设置且切换 provider 后留下错误目标。
+  // Trigger: sync-service 现在支持 provider-aware validateSettings。
+  // Evidence: Cloudflare 后端地址由 resolveBackendApiBaseUrl() 独立提供。
+  // Replacement: 下方 validateSettings。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // if (readSyncProvider() === "cloudflare" && currentSettings.url.trim() === "") {
+  //   currentSettings = { ...currentSettings, url: "cloudflare://sync" };
+  // }
   let notifyConflictDetected = (
     _conflict: SyncAdapterConflict<unknown>,
   ): void => {};
@@ -224,15 +281,9 @@ export async function createSyncHost(
       id: "blueprints",
       indexPath: "assets/blueprints/index.json",
       entryPath: (blueprintId) => `assets/blueprints/${blueprintId}.json`,
-      listLocal: async () => (await listBlueprintStorageEntries({ includeDeleted: true }))
-        .flatMap((entry) => entry.kind === "blueprint"
-          ? [{ id: entry.blueprintId, value: entry, deletedAt: entry.deletedAt }]
-          : []),
+      listLocal: async () => await listBlueprintSyncEntries<BlueprintRecord>("blueprint"),
       writeLocal: async (entry) => await withRemoteApply(async () => {
-        await upsertBlueprintStorageEntry({
-          ...entry.value,
-          deletedAt: entry.deletedAt,
-        });
+        await applyBlueprintSyncEntry(entry);
       }),
       resolveConflict: resolveInteractiveConflict,
     }),
@@ -240,15 +291,9 @@ export async function createSyncHost(
       id: "blueprint-folders",
       indexPath: "assets/blueprint-folders/index.json",
       entryPath: (folderId) => `assets/blueprint-folders/${folderId}.json`,
-      listLocal: async () => (await listBlueprintStorageEntries({ includeDeleted: true }))
-        .flatMap((entry) => entry.kind === "folder"
-          ? [{ id: entry.folderId, value: entry, deletedAt: entry.deletedAt }]
-          : []),
+      listLocal: async () => await listBlueprintSyncEntries<BlueprintFolderRecord>("folder"),
       writeLocal: async (entry) => await withRemoteApply(async () => {
-        await upsertBlueprintStorageEntry({
-          ...entry.value,
-          deletedAt: entry.deletedAt,
-        });
+        await applyBlueprintSyncEntry(entry);
       }),
       resolveConflict: resolveInteractiveConflict,
     }),
@@ -283,6 +328,15 @@ export async function createSyncHost(
   // }
   const service:  SyncService = createSyncService({
     readSettings: () => currentSettings,
+    validateSettings: (settings) => {
+      const provider = readSyncProvider();
+      if (provider === "cloudflare") {
+        return resolveBackendApiBaseUrl().trim() === ""
+          ? "Cloudflare backend URL is empty"
+          : null;
+      }
+      return settings.url.trim() === "" ? "Sync URL is empty" : null;
+    },
     createRemote: (
       settings,
       onRequestActivityChange,
@@ -290,7 +344,15 @@ export async function createSyncHost(
     ) => {
       const provider = readSyncProvider();
       if (provider === "cloudflare") {
-        return createCloudflareSyncRemote();
+        return createCloudflareSyncRemote({
+          apiBase: resolveBackendApiBaseUrl(),
+          spaceId: getCloudflareSpaceId(),
+          maxConcurrentRequests: settings.maxConcurrentRequests,
+          onRequestActivityChange,
+          ...(requestOptions.requestTimeoutMs === undefined
+            ? {}
+            : { requestTimeoutMs: requestOptions.requestTimeoutMs }),
+        });
       }
       return createWebDavSyncRemote({
         client: createWebDavWorkerStorageClient({
@@ -359,10 +421,18 @@ export async function createSyncHost(
       merged.enabled = deriveEnabled(merged, wasEnabled ? undefined : currentSettings.enabled);
       currentSettings = await writeWebDavSyncSettings(merged);
       state.setSettings(currentSettings);
-      // enabled 刚从 false → true 时立即触发同步，不等下一次轮询
-      if (!wasEnabled && currentSettings.enabled) {
-        void service.syncNow("settings-change");
-      }
+      // AI-REMOVED 2026-08-08:
+      // Reason: writeWebDavSyncSettings 会同步通知下方订阅者；这里再次 syncNow 会排入第二轮重复同步。
+      // Trigger: provider 切换时观察到 settings-change 与 foreground 连续运行。
+      // Evidence: emitWebDavSyncSettingsChange 在 writeWebDavSyncSettings 返回前逐个调用 listener。
+      // Replacement: subscribeToWebDavSyncSettingsChanges 中的单次触发。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // if (!wasEnabled && currentSettings.enabled) {
+      //   void service.syncNow("settings-change");
+      // }
     },
     syncNow: async () => {
       await service.syncNow(
@@ -370,35 +440,95 @@ export async function createSyncHost(
       );
     },
     resolveConflicts: state.resolveConflicts,
+    // AI-REMOVED 2026-08-08:
+    // Reason: 原删除流程未暂停同步、Cloudflare 使用固定 default，成功后也不统一关闭 provider；
+    // UI 若提前写 none，整个 action 还会删到错误目标或什么都不做。
+    // Trigger: 设置页删除操作在真实交互中稳定跳过 reset。
+    // Evidence: provider 是 action 内唯一的后端分派依据，而旧 UI 在调用 action 前已经覆盖它。
+    // Replacement: 下方捕获 provider → stop → reset 同一实例配置 → 成功后 disable → restart。
+    // Risk: Medium；失败时保留原 provider，用户可以重试且不会误报删除成功。
+    // Human Review: Required
+    //
+    // Original code:
+    // deleteRemoteData: async () => {
+    //   const provider = readSyncProvider();
+    //   if (provider === "cloudflare") {
+    //     const remote = createCloudflareSyncRemote();
+    //     try {
+    //       await remote.resetRemote?.();
+    //     } finally {
+    //       remote.dispose?.();
+    //     }
+    //     return;
+    //   }
+    //   const settings = currentSettings;
+    //   if (!settings.enabled || settings.url.trim() === "") return;
+    //   const remote = createWebDavSyncRemote({
+    //     client: createWebDavWorkerStorageClient({
+    //       baseUrl: settings.url,
+    //       username: settings.username,
+    //       password: settings.password,
+    //       maxConcurrentRequests: settings.maxConcurrentRequests,
+    //     }),
+    //   });
+    //   try {
+    //     await remote.resetRemote?.();
+    //   } finally {
+    //     remote.dispose?.();
+    //   }
+    // },
     deleteRemoteData: async () => {
       const provider = readSyncProvider();
-      if (provider === "cloudflare") {
-        const remote = createCloudflareSyncRemote();
+      if (provider === "none") {
+        return;
+      }
+      const settings = currentSettings;
+      const cloudflareSettings = currentCloudflareSettings;
+      if (provider === "webdav" && settings.url.trim() === "") {
+        throw new Error("Cannot delete WebDAV data because the sync URL is empty.");
+      }
+      service.stop();
+      try {
+        const remote = provider === "cloudflare"
+          ? createCloudflareSyncRemote({
+              apiBase: resolveBackendApiBaseUrl(),
+              spaceId: getCloudflareSpaceId(cloudflareSettings),
+              maxConcurrentRequests: settings.maxConcurrentRequests,
+            })
+          : createWebDavSyncRemote({
+              client: createWebDavWorkerStorageClient({
+                baseUrl: settings.url,
+                username: settings.username,
+                password: settings.password,
+                maxConcurrentRequests: settings.maxConcurrentRequests,
+              }),
+            });
         try {
           await remote.resetRemote?.();
         } finally {
           remote.dispose?.();
         }
-        return;
-      }
 
-      const settings = currentSettings;
-      if (!settings.enabled || settings.url.trim() === "") {
-        return;
-      }
+        if (provider === "cloudflare") {
+          suppressCloudflareSettingsSync = true;
+          try {
+            await clearCloudflareSyncSettings();
+          } finally {
+            suppressCloudflareSettingsSync = false;
+          }
+        }
 
-      const remote = createWebDavSyncRemote({
-        client: createWebDavWorkerStorageClient({
-          baseUrl: settings.url,
-          username: settings.username,
-          password: settings.password,
-          maxConcurrentRequests: settings.maxConcurrentRequests,
-        }),
-      });
-      try {
-        await remote.resetRemote?.();
+        // 只有远端确认 reset 成功后才关闭 provider，避免先改 provider 导致删到另一个后端。
+        writeSyncProvider("none");
+        currentSettings = await writeWebDavSyncSettings({
+          ...currentSettings,
+          enabled: false,
+        });
+        state.setSettings(currentSettings);
       } finally {
-        remote.dispose?.();
+        if (syncStarted) {
+          service.start();
+        }
       }
     },
     // AI-REMOVED 2026-07-29:
@@ -566,6 +696,18 @@ export async function createSyncHost(
       void service.syncNow(
         settings.enabled && !wasEnabled ? "foreground" : "settings-change",
       );
+    }
+  }));
+  disposers.push(subscribeToCloudflareSyncSettingsChanges((settings) => {
+    const changed = settings.spaceName !== currentCloudflareSettings.spaceName;
+    currentCloudflareSettings = settings;
+    if (
+      changed
+      && !suppressCloudflareSettingsSync
+      && syncStarted
+      && readSyncProvider() === "cloudflare"
+    ) {
+      void service.syncNow("settings-change");
     }
   }));
   if (typeof document !== "undefined") {

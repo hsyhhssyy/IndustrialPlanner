@@ -47,8 +47,13 @@ export interface CfWorkerMutationRecord {
   readonly clientMutationId: string;
   readonly assetType: string;
   readonly assetId: string;
+  readonly operation: 'put' | 'delete';
   readonly content: string | null;
   readonly contentHash: string | null;
+  readonly deletedAt: string | null;
+  readonly targetContentHash: string | null;
+  readonly baseRevision: number | null;
+  readonly baseContentHash: string | null;
 }
 
 // -- Worker 请求/响应 -- //
@@ -56,6 +61,8 @@ export interface CfWorkerMutationRecord {
 export interface CfWorkerRequest {
   readonly requestId: number;
   readonly apiBase: string;
+  readonly requestTimeoutMs: number;
+  readonly maxConcurrentRequests: number;
   readonly operation: CfWorkerOperation;
 }
 
@@ -64,6 +71,7 @@ export interface CfWorkerError {
   readonly message: string;
   readonly stack?: string;
   readonly status?: number;
+  readonly details?: unknown;
 }
 
 export type CfWorkerResponse =
@@ -94,11 +102,13 @@ export interface CfReadAssetResult {
 export interface CfCheckCollectionsResult {
   readonly changedAssetTypes: string[];
   readonly epoch: string | null;
+  readonly head: number | null;
 }
 
 export interface CfCommitBatchResult {
   readonly head: number;
   readonly epoch: string | null;
+  readonly serverTime: string;
   readonly applied: readonly CfWorkerAppliedMutation[];
 }
 
@@ -141,6 +151,7 @@ export interface CfWorkerPlanAsset {
   readonly blobHash: string;
   readonly byteSize: number;
   readonly deletedAt: string | null;
+  readonly downloadUrl?: string;
 }
 
 export interface CfWorkerCheckResponse {
@@ -176,4 +187,19 @@ export interface CfWorkerCommitResponse {
   readonly head: number;
   readonly applied: readonly CfWorkerAppliedMutation[];
   readonly serverTime: string;
+}
+
+export interface CfWorkerConflictResponse {
+  readonly status: 'conflict';
+  readonly conflicts: readonly CfWorkerConflict[];
+}
+
+export interface CfWorkerConflict {
+  readonly assetType: string;
+  readonly assetId: string;
+  readonly reason: string;
+  readonly expectedRevision: number | null;
+  readonly actualRevision: number | null;
+  readonly expectedHash: string | null;
+  readonly actualHash: string | null;
 }

@@ -110,6 +110,14 @@ export function clearWebDavLastSeenRemoteEtag(remoteStateKey: string): void {
   });
 }
 
+export function clearWebDavSyncMetadata(): void {
+  try {
+    globalThis.localStorage?.removeItem(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY);
+  } catch (error) {
+    throw new Error("Failed to clear WebDAV sync metadata.", { cause: error });
+  }
+}
+
 function readWebDavSyncMetadataState(): WebDavSyncMetadataState {
   const rawState = readFromLocalStorage<unknown>(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY);
 
