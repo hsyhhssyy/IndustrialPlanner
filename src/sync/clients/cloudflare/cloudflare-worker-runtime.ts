@@ -130,7 +130,7 @@ async function doPrefetchIndexes(
     if (pageToken !== null) params.set('pageToken', pageToken);
 
     const url = `${createSpaceUrl(apiBase, spaceId, '/plan')}?${params.toString()}`;
-    const response = await fetchWithTimeout(url, { cache: 'no-store' }, requestTimeoutMs);
+    const response = await debugFetch('Plan', url, { cache: 'no-store' }, requestTimeoutMs);
     const page = await readJsonResponse<CfWorkerPlanResponse>(response, 'Plan');
     firstPage ??= page;
 
@@ -267,7 +267,8 @@ async function doCheckCollections(
   if (appliedHead !== null) params.set('cursor', String(appliedHead));
 
   const url = `${createSpaceUrl(apiBase, spaceId, '/check')}?${params.toString()}`;
-  const response = await fetchWithTimeout(
+  const response = await debugFetch(
+    'Check',
     url,
     { cache: 'no-store' },
     requestTimeoutMs,
@@ -391,12 +392,12 @@ async function doCommitBatch(
       })),
     };
 
-    const prepareResp = await fetchWithTimeout(mutationsUrl, {
+    const prepareResp = await debugFetch('Prepare', mutationsUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(prepareBody),
       cache: 'no-store',
-    }, requestTimeoutMs);
+    }, requestTimeoutMs, prepareBody);
 
     if (prepareResp.status === 409) {
       const conflict = await readConflictResponse(prepareResp, 'Prepare');
@@ -405,7 +406,8 @@ async function doCommitBatch(
       }
       // epoch 冲突：从 check 端点获取最新 epoch 后重试
       const checkUrl = createSpaceUrl(apiBase, spaceId, '/check');
-      const checkResp = await fetchWithTimeout(
+      const checkResp = await debugFetch(
+        'Prepare-EpochRefresh',
         checkUrl,
         { cache: 'no-store' },
         requestTimeoutMs,
@@ -467,12 +469,12 @@ async function doCommitBatch(
       })),
     };
 
-    const commitResp = await fetchWithTimeout(mutationsUrl, {
+    const commitResp = await debugFetch('Commit', mutationsUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(commitBody),
       cache: 'no-store',
-    }, requestTimeoutMs);
+    }, requestTimeoutMs, commitBody);
 
     if (commitResp.status === 409) {
       const conflict = await readConflictResponse(commitResp, 'Commit');
@@ -480,7 +482,8 @@ async function doCommitBatch(
         throw new CfHttpError('Commit conflict.', 409, conflict);
       }
       const checkUrl = createSpaceUrl(apiBase, spaceId, '/check');
-      const checkResp = await fetchWithTimeout(
+      const checkResp = await debugFetch(
+        'Commit-EpochRefresh',
         checkUrl,
         { cache: 'no-store' },
         requestTimeoutMs,
@@ -528,7 +531,8 @@ async function doEnsureSpace(
   requestTimeoutMs: number,
 ): Promise<CfEnsureSpaceResult> {
   const checkUrl = createSpaceUrl(apiBase, spaceId, '/check');
-  const checkResp = await fetchWithTimeout(
+  const checkResp = await debugFetch(
+    'Ensure-Check',
     checkUrl,
     { cache: 'no-store' },
     requestTimeoutMs,
@@ -542,19 +546,21 @@ async function doEnsureSpace(
   if (checkResp.status === 404) {
     // 空间不存在，自动创建
     const createUrl = `${apiBase}/v1/sync/spaces`;
-    const createResp = await fetchWithTimeout(createUrl, {
+    const createBody = { spaceId };
+    const createResp = await debugFetch('Ensure-Create', createUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ spaceId }),
+      body: JSON.stringify(createBody),
       cache: 'no-store',
-    }, requestTimeoutMs);
+    }, requestTimeoutMs, createBody);
     if (createResp.ok) {
       const created = await createResp.json() as { activeEpoch: string };
       return { spaceId, epoch: created.activeEpoch ?? null };
     }
     if (createResp.status === 409) {
       // 另一标签页可能在 check 与 create 之间完成了同一空间创建。
-      const racedCheckResp = await fetchWithTimeout(
+      const racedCheckResp = await debugFetch(
+        'Ensure-RaceCheck',
         checkUrl,
         { cache: 'no-store' },
         requestTimeoutMs,
@@ -580,7 +586,8 @@ async function doResetRemote(
   spaceId: string,
   requestTimeoutMs: number,
 ): Promise<void> {
-  const response = await fetchWithTimeout(
+  const response = await debugFetch(
+    'Reset',
     createSpaceUrl(apiBase, spaceId, '/reset'),
     { method: 'POST', cache: 'no-store' },
     requestTimeoutMs,
@@ -623,6 +630,23 @@ async function fetchWithTimeout(
   } finally {
     globalThis.clearTimeout(timer);
   }
+}
+
+// AI-CORRECTION 2026-08-08: 非 blob 端点（plan/check/mutations/ensure/reset）的请求 URL 和 body
+// 进入 debug 日志，方便排查后端交互问题。
+function debugFetch(
+  label: string,
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs: number,
+  body?: unknown,
+): Promise<Response> {
+  const method = init.method ?? 'GET';
+  logger.debug(`CF-REQ ${label}: ${method} ${input}`);
+  if (body !== undefined) {
+    logger.debug(`CF-REQ ${label} BODY:`, body);
+  }
+  return fetchWithTimeout(input, init, timeoutMs);
 }
 
 async function readJsonResponse<TResult>(

@@ -1467,7 +1467,7 @@ async function syncPatchCollectionWithRevision<TValue>(
           assetId: localEntry.id,
           content: JSON.stringify(value),
           contentHash,
-          baseRevision: remoteEntry?.revision ?? remoteIndex.revision,
+          baseRevision: remoteEntry?.revision ?? null,
           baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
         });
         hasRemoteWrites = true;
