@@ -19,7 +19,7 @@ import { createUuid } from "@/domain/shared/uuid";
 //
 // Original code:
 // import { ensureLocalSyncOwnerState } from "@/shared/storage/sync-owner-storage";
-import { createStableJsonHash } from "@/shared/storage/sync-shadow-storage";
+import { createStableJsonHash } from "@/shared/storage/hash-utils";
 import {
   listBlueprintStorageEntries,
   upsertBlueprintStorageEntry,
@@ -131,6 +131,10 @@ export async function createSyncHost(
     ...currentSettings,
     enabled: deriveEnabled(currentSettings, currentSettings.enabled),
   };
+  // Cloudflare 模式下不依赖 settings.url，但 sync-service 要求 url 非空才启动同步
+  if (readSyncProvider() === "cloudflare" && currentSettings.url.trim() === "") {
+    currentSettings = { ...currentSettings, url: "cloudflare://sync" };
+  }
   let notifyConflictDetected = (
     _conflict: SyncAdapterConflict<unknown>,
   ): void => {};

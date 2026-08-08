@@ -22,7 +22,7 @@ import type {
 // 受测模块中 createSha256CanonicalHash 需要真实浏览器 crypto API；
 // jsdom 环境下 mock 它，测试保持确定性。
 const TEST_HASH = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2";
-vi.mock("@/shared/storage/sync-shadow-storage", () => ({
+vi.mock("@/shared/storage/hash-utils", () => ({
   createSha256CanonicalHash: async () => `sha256:${TEST_HASH}`,
   createStableJsonHash: (v: unknown) => JSON.stringify(v),
 }));

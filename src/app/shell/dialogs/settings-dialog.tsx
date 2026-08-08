@@ -38,6 +38,7 @@ import type { DialogStateReadWrite } from "@/app/state/state-impl";
 import { MarkdownTutorialOverlay } from "@/app/shell/dialogs/markdown-tutorial-overlay";
 import { KeyboardShortcutSettingsDialog } from "@/app/shell/dialogs/keyboard-shortcut-settings-dialog";
 import { WebDavSyncStatusDialog } from "@/app/shell/dialogs/webdav-sync-status-dialog";
+import { CloudflareSyncStatusDialog } from "@/app/shell/dialogs/cloudflare-sync-status-dialog";
 import {
   type SettingsGroupId,
   type WorkbenchSettingDefinition,
@@ -318,6 +319,36 @@ export const SettingsDialog = observer(function SettingsDialog({
     activeTab: null,
   }), []);
 
+  const cloudflareStatusDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 760,
+    height: 620,
+    activeTab: null,
+  }), []);
+
+  const cfDeleteConfirmDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 420,
+    height: null,
+    activeTab: null,
+  }), []);
+
+  const cfDeleteInputDialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
+    visible: false,
+    maximized: false,
+    offsetX: 0,
+    offsetY: 0,
+    width: 420,
+    height: null,
+    activeTab: null,
+  }), []);
+
   const [clearStorageInputValue, setClearStorageInputValue] = useState("");
 
   const handleClearStorage = useCallback(() => {
@@ -353,6 +384,9 @@ export const SettingsDialog = observer(function SettingsDialog({
 
   const [webDavDeleteInputValue, setWebDavDeleteInputValue] = useState("");
   const [webDavDeleting, setWebDavDeleting] = useState(false);
+
+  const [cfDeleteInputValue, setCfDeleteInputValue] = useState("");
+  const [cfDeleting, setCfDeleting] = useState(false);
 
   const handleWebDavDelete = useCallback(() => {
     runInAction(() => {
@@ -404,6 +438,89 @@ export const SettingsDialog = observer(function SettingsDialog({
     });
     setWebDavDeleting(false);
   }, [sync, webDavDeleteInputDialogState, webDavStatusDialogState]);
+
+  // -- Cloudflare 同步状态弹窗 handlers -- //
+
+  const handleOpenCloudflareStatus = useCallback(() => {
+    runInAction(() => {
+      cloudflareStatusDialogState.visible = true;
+    });
+  }, [cloudflareStatusDialogState]);
+
+  const handleCloseCloudflareStatus = useCallback(() => {
+    runInAction(() => {
+      cloudflareStatusDialogState.visible = false;
+    });
+  }, [cloudflareStatusDialogState]);
+
+  const handleToggleCloudflareStatusMaximized = useCallback(() => {
+    runInAction(() => {
+      cloudflareStatusDialogState.maximized = !cloudflareStatusDialogState.maximized;
+    });
+  }, [cloudflareStatusDialogState]);
+
+  const handleCloudflareStatusOffsetChange = useCallback((offsetX: number, offsetY: number) => {
+    runInAction(() => {
+      cloudflareStatusDialogState.offsetX = offsetX;
+      cloudflareStatusDialogState.offsetY = offsetY;
+    });
+  }, [cloudflareStatusDialogState]);
+
+  const handleCloudflareStatusResize = useCallback((width: number, height: number) => {
+    runInAction(() => {
+      cloudflareStatusDialogState.width = width;
+      cloudflareStatusDialogState.height = height;
+    });
+  }, [cloudflareStatusDialogState]);
+
+  // -- Cloudflare 删除远端数据 handlers -- //
+
+  const handleCfDelete = useCallback(() => {
+    runInAction(() => {
+      cfDeleteConfirmDialogState.visible = true;
+    });
+  }, [cfDeleteConfirmDialogState]);
+
+  const handleCfDeleteCancel = useCallback(() => {
+    runInAction(() => {
+      cfDeleteConfirmDialogState.visible = false;
+    });
+  }, [cfDeleteConfirmDialogState]);
+
+  const handleCfDeleteConfirm = useCallback(() => {
+    runInAction(() => {
+      cfDeleteConfirmDialogState.visible = false;
+      cfDeleteInputDialogState.visible = true;
+    });
+    setCfDeleteInputValue("");
+  }, [cfDeleteConfirmDialogState, cfDeleteInputDialogState]);
+
+  const handleCfDeleteInputCancel = useCallback(() => {
+    runInAction(() => {
+      cfDeleteInputDialogState.visible = false;
+    });
+    setCfDeleteInputValue("");
+  }, [cfDeleteInputDialogState]);
+
+  const handleCfDeleteInputConfirm = useCallback(async () => {
+    runInAction(() => {
+      cfDeleteInputDialogState.visible = false;
+    });
+    setCfDeleting(true);
+    writeSyncProvider("none");
+    sync?.actions.updateSettings({});
+
+    try {
+      await sync?.actions.deleteRemoteData();
+    } catch {
+      // 删除失败静默处理，用户可重试
+    }
+
+    runInAction(() => {
+      cloudflareStatusDialogState.visible = false;
+    });
+    setCfDeleting(false);
+  }, [sync, cfDeleteInputDialogState, cloudflareStatusDialogState]);
 
   // AI-REMOVED 2026-07-29:
   // Reason: 冲突 action 由 Workbench 顶层窗口直接发送给独立同步模块。
@@ -513,6 +630,15 @@ export const SettingsDialog = observer(function SettingsDialog({
   );
 
   const isWebDavDeleteInputValid = webDavDeleteInputValue === webDavDeleteExpectedText;
+
+  const cfDeleteExpectedText = useMemo(
+    () => appHost.state.settings.locale === "zh-CN"
+      ? "删除"
+      : "DELETE",
+    [appHost.state.settings.locale],
+  );
+
+  const isCfDeleteInputValid = cfDeleteInputValue === cfDeleteExpectedText;
 
   const handleRequestToggleExperimentalFeatures = useCallback(() => {
     runInAction(() => {
@@ -1016,6 +1142,12 @@ export const SettingsDialog = observer(function SettingsDialog({
                         t={t}
                       />
                     ) : null}
+                    {controller.getValue("sync-provider") === "cloudflare" ? (
+                      <CloudflareSyncStatusCard
+                        onOpen={handleOpenCloudflareStatus}
+                        t={t}
+                      />
+                    ) : null}
                     <StorageUsageCard
                       onClearStorage={handleClearStorage}
                       storageBytes={storageBytes}
@@ -1095,6 +1227,31 @@ export const SettingsDialog = observer(function SettingsDialog({
         titleKey="webDavConfig.deleteAllDataFinalTitle"
       />
     )}
+    {cfDeleteConfirmDialogState.visible && (
+      <ConfirmResetDialog
+        confirmDialogState={cfDeleteConfirmDialogState}
+        confirmMessageKey="cloudflareStatus.deleteAllDataConfirm"
+        onCancel={handleCfDeleteCancel}
+        onConfirm={handleCfDeleteConfirm}
+        t={t}
+        titleKey="cloudflareStatus.deleteAllData"
+      />
+    )}
+    {cfDeleteInputDialogState.visible && (
+      <ClearStorageInputDialog
+        confirmButtonKey="webDavConfig.deleteAllDataFinalConfirm"
+        confirmDialogState={cfDeleteInputDialogState}
+        expectedText={cfDeleteExpectedText}
+        inputValue={cfDeleteInputValue}
+        isValid={isCfDeleteInputValid}
+        onCancel={handleCfDeleteInputCancel}
+        onChange={setCfDeleteInputValue}
+        onConfirm={handleCfDeleteInputConfirm}
+        promptKey="cloudflareStatus.deleteAllDataFinalPrompt"
+        t={t}
+        titleKey="cloudflareStatus.deleteAllData"
+      />
+    )}
     {activityDialogState.visible && (
       <ActivitySelectionDialog
         activityDialogState={activityDialogState}
@@ -1143,6 +1300,20 @@ export const SettingsDialog = observer(function SettingsDialog({
         onTestConnection={handleWebDavTestConnection}
         onToggleMaximized={handleToggleWebDavStatusMaximized}
         onUpdateSettings={(patch) => sync.actions.updateSettings(patch)}
+        state={sync.state}
+        t={t}
+      />
+    ) : null}
+    {cloudflareStatusDialogState.visible && sync !== null ? (
+      <CloudflareSyncStatusDialog
+        compactMobileLayout={isNonDesktop}
+        deleting={cfDeleting}
+        dialogState={cloudflareStatusDialogState}
+        onClose={handleCloseCloudflareStatus}
+        onDeleteAllData={handleCfDelete}
+        onOffsetChange={handleCloudflareStatusOffsetChange}
+        onResize={handleCloudflareStatusResize}
+        onToggleMaximized={handleToggleCloudflareStatusMaximized}
         state={sync.state}
         t={t}
       />
@@ -1324,6 +1495,23 @@ const WebDavSyncStatusCard = observer(function WebDavSyncStatusCard({
       description={t("settingsField.experimental-webdav-statusDescription")}
       onClick={onOpen}
       title={t("webDavConfig.title")}
+    />
+  );
+});
+
+const CloudflareSyncStatusCard = observer(function CloudflareSyncStatusCard({
+  onOpen,
+  t,
+}: {
+  onOpen: () => void;
+  t: AppHost["actions"]["translate"];
+}) {
+  return (
+    <SettingsActionCard
+      buttonLabel={t("webDavStatus.open")}
+      description={t("settingsField.experimental-webdav-statusDescription")}
+      onClick={onOpen}
+      title={t("cloudflareStatus.title")}
     />
   );
 });

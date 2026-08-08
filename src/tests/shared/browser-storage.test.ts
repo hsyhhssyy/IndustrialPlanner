@@ -109,7 +109,7 @@ describe("browser-storage", () => {
             }],
           },
           {
-            storeName: "sync-shadow-state",
+            storeName: "test-store",
             operations: [{
               type: "put",
               key: "world-document:document-a",
@@ -130,7 +130,7 @@ describe("browser-storage", () => {
     await expect(
       readFromIndexedDb({
         databaseName,
-        storeName: "sync-shadow-state",
+        storeName: "test-store",
         key: "world-document:document-a",
       }),
     ).resolves.toEqual({ documentKey: "document-a", nextLocalSequence: 2 });

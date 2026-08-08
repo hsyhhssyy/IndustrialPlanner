@@ -100,43 +100,57 @@ export {
   SYNC_OWNER_STATE_STORE_LOCATION,
 } from "@/shared/storage/sync-owner-storage";
 
-export type {
-  LocalDocumentSyncState,
-  LocalSyncCompactSummary,
-  LocalSyncDiagnosticCategory,
-  LocalSyncDiagnosticEvent,
-  LocalSyncDiagnosticSeverity,
-  LocalSyncShadowSaveResult,
-  LocalSyncOutboxEntry,
-  LocalSyncOutboxEntryStatus,
-  WorldDocumentShadowDeltaPayload,
-  WorldDocumentShadowOperationPayload,
-  WorldDocumentShadowSnapshotPayload,
-} from "@/shared/storage/sync-shadow-storage";
-
 export {
-  appendLocalSyncDiagnosticEvent,
-  compactWorldDocumentShadowOutbox,
   createSha256CanonicalHash,
   createStableJsonHash,
-  listLocalSyncCompactSummaries,
-  listLocalSyncDiagnosticEvents,
-  listLocalSyncOutboxEntriesForAsset,
-  markWorldDocumentShadowEntryValidated,
-  markWorldDocumentShadowEntriesValidated,
-  readLocalDocumentSyncState,
-  SYNC_SHADOW_COMPACT_SUMMARY_STORE_LOCATION,
-  SYNC_SHADOW_DIAGNOSTIC_STORE_LOCATION,
-  SYNC_SHADOW_OUTBOX_STORE_LOCATION,
-  SYNC_SHADOW_STATE_STORE_LOCATION,
-  writeWorldDocumentShadowSave,
-  writeWorldDocumentShadowSaveWithResult,
-  writeWorldDocumentWithShadowSave,
-} from "@/shared/storage/sync-shadow-storage";
+} from "@/shared/storage/hash-utils";
 
-export {
-  ENABLE_LOCAL_SYNC_SHADOW_MODE,
-} from "@/shared/storage/sync-shadow-build-flags";
+// AI-REMOVED 2026-08-08:
+// Reason: Sync Shadow 基础设施已整体移除（ST2-RQ-008）。
+// Trigger: Shadow 为同步开发早期的预演机制，现在 WebDAV 和 Cloudflare Worker 同步已成型。
+// Evidence: 所有 Shadow 写入/读取函数和类型已无调用方。
+// Replacement: 两个 hash 函数提取到 hash-utils.ts。遥测 Worker 独立为 sync-telemetry-worker.ts。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// export type {
+//   LocalDocumentSyncState,
+//   LocalSyncCompactSummary,
+//   LocalSyncDiagnosticCategory,
+//   LocalSyncDiagnosticEvent,
+//   LocalSyncDiagnosticSeverity,
+//   LocalSyncShadowSaveResult,
+//   LocalSyncOutboxEntry,
+//   LocalSyncOutboxEntryStatus,
+//   WorldDocumentShadowDeltaPayload,
+//   WorldDocumentShadowOperationPayload,
+//   WorldDocumentShadowSnapshotPayload,
+// } from "@/shared/storage/sync-shadow-storage";
+//
+// export {
+//   appendLocalSyncDiagnosticEvent,
+//   compactWorldDocumentShadowOutbox,
+//   createSha256CanonicalHash,
+//   createStableJsonHash,
+//   listLocalSyncCompactSummaries,
+//   listLocalSyncDiagnosticEvents,
+//   listLocalSyncOutboxEntriesForAsset,
+//   markWorldDocumentShadowEntryValidated,
+//   markWorldDocumentShadowEntriesValidated,
+//   readLocalDocumentSyncState,
+//   SYNC_SHADOW_COMPACT_SUMMARY_STORE_LOCATION,
+//   SYNC_SHADOW_DIAGNOSTIC_STORE_LOCATION,
+//   SYNC_SHADOW_OUTBOX_STORE_LOCATION,
+//   SYNC_SHADOW_STATE_STORE_LOCATION,
+//   writeWorldDocumentShadowSave,
+//   writeWorldDocumentShadowSaveWithResult,
+//   writeWorldDocumentWithShadowSave,
+// } from "@/shared/storage/sync-shadow-storage";
+//
+// export {
+//   ENABLE_LOCAL_SYNC_SHADOW_MODE,
+// } from "@/shared/storage/sync-shadow-build-flags";
 
 export type {
   JsonPatchOperation,

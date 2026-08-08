@@ -1,7 +1,7 @@
 import {
   createSha256CanonicalHash,
   createStableJsonHash,
-} from "@/shared/storage/sync-shadow-storage";
+} from "@/shared/storage/hash-utils";
 import { createLogger } from "@/shared/logging/logger";
 import type {
   RemoteCollectionIndex,
@@ -877,7 +877,14 @@ async function syncFullWithRevision<TValue>(
     }
 
     if (localEntry.deletedAt !== null) {
-      if (remoteEntry === null || remoteValue === null) {
+      if (remoteEntry === null) {
+        // 远端从未有过该资产（例如从 WebDAV 迁移到 Cloudflare），
+        // 墓碑无意义，直接标记为已同步。
+        logger.debug(`${options.id}/${localEntry.id}: local tombstone has no remote entry → skip`);
+        await session.localState.setLastSyncedHash(assetKey, localContentHash);
+        continue;
+      }
+      if (remoteValue === null) {
         remoteWriteBatch.putTombstone({
           collection,
           assetId: localEntry.id,
@@ -1306,7 +1313,13 @@ async function syncPatchCollectionWithRevision<TValue>(
     }
 
     if (localEntry.deletedAt !== null) {
-      if (remoteEntry === null || remoteState === null) {
+      if (remoteEntry === null) {
+        // 远端从未有过该资产，墓碑无意义，直接标记为已同步。
+        logger.debug(`${options.id}/${localEntry.id}: local tombstone has no remote entry → skip`);
+        await session.localState.setLastSyncedHash(assetKey, localContentHash);
+        continue;
+      }
+      if (remoteState === null) {
         remoteWriteBatch.putTombstone({
           collection,
           assetId: localEntry.id,

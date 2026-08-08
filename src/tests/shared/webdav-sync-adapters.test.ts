@@ -9,7 +9,7 @@ import {
   createPatchWithRevisionAdapter,
   createWebDavSyncRemote,
 } from "@/sync";
-import { createStableJsonHash } from "@/shared/storage/sync-shadow-storage";
+import { createStableJsonHash } from "@/shared/storage/hash-utils";
 import type {
   SyncAdapter,
   SyncAdapterConflict,

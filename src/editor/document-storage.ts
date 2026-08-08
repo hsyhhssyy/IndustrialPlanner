@@ -7,16 +7,11 @@ import {
   readFromIndexedDb,
   saveToIndexedDb,
 } from "@/shared/storage";
-import { ENABLE_LOCAL_SYNC_SHADOW_MODE } from "@/shared/storage/sync-shadow-build-flags";
-import { writeWorldDocumentShadowSaveWithResult } from "@/shared/storage/sync-shadow-storage";
 import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
-import type { EditorHistoryDocumentDelta } from "@/domain/editor/editor-history";
 import { runInAction } from "mobx";
 
 import { createLogger } from "@/shared/logging/logger";
 import type { EditorHost } from "./editor-host";
-import { createWorldDocumentDelta } from "./history";
-import { createSyncShadowReplayValidator } from "./sync-shadow-replay-validator";
 import { ensureProtocolCoreEntity } from "./ensure-protocol-core";
 
 const logger = createLogger("document-storage");
@@ -33,45 +28,13 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
   let disposed = false;
   let unsubscribeDocument: (() => void) | null = null;
   let writeQueue = Promise.resolve();
-  let shadowQueue = Promise.resolve();
-  let lastShadowBaseDocument: WorldDocument | null = null;
-  const shadowReplayValidator = createSyncShadowReplayValidator();
 
   const enqueueWrite = (
     document: WorldDocument,
-    options: {
-      baseDocument?: WorldDocument;
-      delta?: EditorHistoryDocumentDelta | null;
-      recordShadow?: boolean;
-    } = {},
   ): void => {
-    const snapshotWrite = writeQueue
+    writeQueue = writeQueue
       .catch(() => undefined)
-      .then(() => writeWorldDocument(document, { recordShadow: false }));
-
-    writeQueue = snapshotWrite;
-
-    if (options.recordShadow === false || !ENABLE_LOCAL_SYNC_SHADOW_MODE) {
-      return;
-    }
-
-    shadowQueue = shadowQueue
-      .catch(() => undefined)
-      .then(() => snapshotWrite)
-      .then(async () => {
-        const result = await writeWorldDocumentShadowSaveWithResult({
-          document,
-          baseDocument: options.baseDocument,
-          delta: options.delta,
-        });
-
-        if (result !== null && options.baseDocument !== undefined) {
-          shadowReplayValidator.validate({
-            baseDocument: options.baseDocument,
-            outboxEntry: result.outboxEntry,
-          });
-        }
-      });
+      .then(() => writeWorldDocument(document));
   };
 
   void (async () => {
@@ -83,21 +46,11 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
 
     rememberLatestWorldDocument(editorHost, initialDocument);
     editorHost.internalDocument.setSnapshot(initialDocument);
-    lastShadowBaseDocument = initialDocument;
-    enqueueWrite(initialDocument, { recordShadow: false });
+    enqueueWrite(initialDocument);
 
     unsubscribeDocument = editorHost.internalDocument.subscribe((document) => {
       rememberLatestWorldDocument(editorHost, document);
-      const baseDocument = lastShadowBaseDocument;
-      const delta = baseDocument === null
-        ? null
-        : createWorldDocumentDelta(baseDocument, document);
-
-      lastShadowBaseDocument = document;
-      enqueueWrite(document, {
-        baseDocument: baseDocument ?? undefined,
-        delta,
-      });
+      enqueueWrite(document);
     });
   })();
 
@@ -105,7 +58,6 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
     disposed = true;
     unsubscribeDocument?.();
     unsubscribeDocument = null;
-    shadowReplayValidator.dispose();
   };
 }
 
@@ -189,34 +141,11 @@ export async function readWorldDocument(
 
 export async function writeWorldDocument(
   document: WorldDocument,
-  options: {
-    baseDocument?: WorldDocument;
-    delta?: EditorHistoryDocumentDelta | null;
-    recordShadow?: boolean;
-  } = {},
 ): Promise<void> {
-  if (options.recordShadow === false) {
-    await saveToIndexedDb(
-      createWordDocumentLocation(document.documentKey),
-      document,
-    );
-    return;
-  }
-
   await saveToIndexedDb(
     createWordDocumentLocation(document.documentKey),
     document,
   );
-
-  if (!ENABLE_LOCAL_SYNC_SHADOW_MODE) {
-    return;
-  }
-
-  await writeWorldDocumentShadowSaveWithResult({
-    document,
-    baseDocument: options.baseDocument,
-    delta: options.delta,
-  });
 }
 
 export async function listWorldDocuments(): Promise<WorldDocument[]> {

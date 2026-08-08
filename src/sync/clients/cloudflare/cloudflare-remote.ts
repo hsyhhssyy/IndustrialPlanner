@@ -4,9 +4,17 @@ import {
   type IndexedDbStorageLocation,
   type IndexedDbStoreLocation,
 } from "@/shared/storage/browser-storage";
-import { createSha256CanonicalHash } from "@/shared/storage/sync-shadow-storage";
 import { resolveBackendApiBaseUrl } from "@/shared/storage/backend-api-address";
 import { createUuid } from "@/domain/shared/uuid";
+import { CfWorkerClient } from "./cloudflare-worker-client";
+import type {
+  CfPrefetchIndexesResult,
+  CfReadAssetResult,
+  CfCheckCollectionsResult,
+  CfCommitBatchResult,
+  CfEnsureSpaceResult,
+  CfWorkerPlanResponse,
+} from "./cloudflare-worker-protocol";
 import type {
   RemoteApplyResult,
   RemoteAssetContent,
@@ -70,85 +78,7 @@ function defaultState(): CfLocalState {
 }
 
 // ============================================================================
-// 后端协议类型（与实际 Worker 返回一致）
-// ============================================================================
-
-interface CfCheckResponse {
-  head: number;
-  epoch: string;
-  changed: boolean;
-  planRequired: boolean;
-  changes: CfPlanAsset[];
-  moduleHeads: CfModuleHead[];
-  serverTime: string;
-}
-
-interface CfPlanResponse {
-  head: number;
-  epoch: string;
-  snapshotHead: number;
-  modules: CfPlanModule[];
-  capabilities: Record<string, unknown>;
-  nextPageToken: string | null;
-  minRetainedHead: number;
-  serverTime: string;
-}
-
-interface CfPlanModule {
-  moduleType: string;
-  assets: CfPlanAsset[];
-}
-
-interface CfPlanAsset {
-  assetType: string;
-  assetId: string;
-  revision: number;
-  contentHash: string;
-  blobHash: string;
-  byteSize: number;
-  deletedAt: string | null;
-}
-
-interface CfModuleHead {
-  moduleType: string;
-  head: number;
-}
-
-interface CfPrepareResponse {
-  status: "ready";
-  commitToken: string;
-  uploads: CfUploadSlot[];
-}
-
-interface CfUploadSlot {
-  assetType: string;
-  assetId: string;
-  required: boolean;
-  url?: string | null;
-  headers?: Record<string, string>;
-}
-
-interface CfDownloadSignResponse {
-  urls: Array<{ blobHash: string; url: string }>;
-}
-
-interface CfCommitResponse {
-  status: "committed" | "already-committed";
-  head: number;
-  applied: CfAppliedMutation[];
-  serverTime: string;
-}
-
-interface CfAppliedMutation {
-  clientMutationId: string;
-  assetType: string;
-  assetId: string;
-  revision: number;
-  contentHash: string;
-}
-
-// ============================================================================
-// CloudflareSyncLocalState
+// CloudflareSyncLocalState（保留在主线程，操作 IndexedDB）
 // ============================================================================
 
 class CloudflareSyncLocalState implements SyncLocalState {
@@ -230,39 +160,39 @@ class CloudflareSyncLocalState implements SyncLocalState {
 }
 
 // ============================================================================
-// CloudflareSyncRemoteSession
+// CloudflareSyncRemoteSession（Worker 薄代理）
 // ============================================================================
 
 class CloudflareSyncRemoteSession implements SyncRemoteSession {
-  private planCache: CfPlanResponse | null = null;
-  private downloadUrlCache = new Map<string, string | null>();
-  private readonly apiBase: string;
+  // planCache 保留在主线程，供 readIndex() 纯计算使用
+  private planCache: CfWorkerPlanResponse | null = null;
+  private readonly workerClient: CfWorkerClient;
 
   public constructor(
     public readonly localState: CloudflareSyncLocalState,
     private readonly context: SyncRemoteSessionContext,
   ) {
-    this.apiBase = resolveBackendApiBaseUrl();
+    this.workerClient = new CfWorkerClient(resolveBackendApiBaseUrl());
   }
+
+  // -- prefetchIndexes: 委托 Worker 获取 plan -- //
 
   public async prefetchIndexes(_collections: readonly SyncRemoteCollection[]): Promise<void> {
     const state = await this.ensureSpace();
-    const params = new URLSearchParams();
-    params.set("mode", state.appliedHead === null ? "full" : "incremental");
-    if (state.epoch !== null) params.set("epoch", state.epoch);
-    if (state.appliedHead !== null) params.set("cursor", String(state.appliedHead));
+    const result = await this.workerClient.request<CfPrefetchIndexesResult>({
+      type: "prefetch-indexes",
+      spaceId: state.spaceId,
+      appliedHead: state.appliedHead,
+      epoch: state.epoch,
+    });
 
-    const url = `${this.apiBase}/v1/sync/spaces/${state.spaceId}/plan?${params.toString()}`;
-    const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) { this.planCache = null; return; }
-
-    this.planCache = await response.json() as CfPlanResponse;
-    if (this.planCache.epoch) {
-      if (state.epoch !== this.planCache.epoch) {
-        await this.localState.writeState({ ...state, epoch: this.planCache.epoch });
-      }
+    this.planCache = result.plan;
+    if (result.epoch && state.epoch !== result.epoch) {
+      await this.localState.writeState({ ...state, epoch: result.epoch });
     }
   }
+
+  // -- readIndex: 纯内存计算，保留在主线程 -- //
 
   public async readIndex(collection: SyncRemoteCollection): Promise<RemoteCollectionIndex> {
     const plan = this.planCache;
@@ -293,6 +223,8 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
     return { revision: maxRevision, entries, committedAt: null };
   }
 
+  // -- readAsset: 主线程查 plan → Worker 下载 + 校验 -- //
+
   public async readAsset(params: RemoteAssetRef): Promise<RemoteAssetContent | null> {
     const plan = this.planCache;
     if (plan === null) return null;
@@ -320,83 +252,57 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
       };
     }
 
-    // 获取或从缓存读取下载 URL
-    let downloadUrl = this.downloadUrlCache.get(blobHash);
-    if (downloadUrl === undefined) {
-      const state = await this.localState.readState();
-      const signUrl = `${this.apiBase}/v1/sync/spaces/${state.spaceId}/downloads:sign`;
-      const signResp = await fetch(signUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blobHashes: [blobHash] }),
-        cache: "no-store",
-      });
-      if (!signResp.ok) {
-        this.downloadUrlCache.set(blobHash, null);
-        return null;
-      }
-      const signResult = await signResp.json() as CfDownloadSignResponse;
-      downloadUrl = signResult.urls[0]?.url ?? null;
-      this.downloadUrlCache.set(blobHash, downloadUrl);
-    }
+    // 委托 Worker 做签名 URL 获取 + 下载 + SHA-256 校验
+    const state = await this.localState.readState();
+    const result = await this.workerClient.request<CfReadAssetResult | null>({
+      type: "read-asset",
+      spaceId: state.spaceId,
+      assetType: params.collection.assetType,
+      assetId: remoteAssetId,
+      blobHash,
+      contentHash,
+      revision: asset.revision,
+      deletedAt: asset.deletedAt,
+    });
 
-    if (downloadUrl === null) return null;
+    if (result === null) return null;
 
-    // 下载 blob
-    try {
-      const dlResp = await fetch(downloadUrl, { cache: "no-store" });
-      if (!dlResp.ok) return null;
-
-      const content = await dlResp.text();
-
-      // SHA-256 校验
-      const computedHash = await createSha256CanonicalHash(JSON.parse(content));
-      const expectedHash = computedHash.startsWith("sha256:")
-        ? computedHash.slice(7)
-        : computedHash;
-      if (expectedHash !== blobHash) return null;
-
-      return {
-        revision: asset.revision,
-        content,
-        contentHash: contentHash ?? "",
-        committedAt: null,
-      };
-    } catch {
-      return null;
-    }
+    return {
+      revision: result.revision,
+      content: result.content,
+      contentHash: result.contentHash,
+      committedAt: null,
+    };
   }
+
+  // -- checkCollections: 委托 Worker 检查变更 -- //
 
   public async checkCollections(
     collections: readonly SyncRemoteCollection[],
   ): Promise<RemoteCheckResult> {
     const state = await this.ensureSpace();
-    const params = new URLSearchParams();
-    if (state.epoch !== null) params.set("epoch", state.epoch);
-    if (state.appliedHead !== null) params.set("cursor", String(state.appliedHead));
+    const assetTypes = collections.map((c) => c.assetType);
 
-    const url = `${this.apiBase}/v1/sync/spaces/${state.spaceId}/check?${params.toString()}`;
-    const response = await fetch(url, { cache: "no-store" });
+    const result = await this.workerClient.request<CfCheckCollectionsResult>({
+      type: "check-collections",
+      spaceId: state.spaceId,
+      appliedHead: state.appliedHead,
+      epoch: state.epoch,
+      assetTypes,
+    });
 
-    if (response.status === 204) return { changedCollections: [] };
-    if (!response.ok) return { changedCollections: [] };
-
-    const result = await response.json() as CfCheckResponse;
-    if (result.epoch) {
-      const currentState = await this.localState.readState();
-      if (currentState.epoch !== result.epoch) {
-        await this.localState.writeState({ ...currentState, epoch: result.epoch });
-      }
+    if (result.epoch && state.epoch !== result.epoch) {
+      await this.localState.writeState({ ...state, epoch: result.epoch });
     }
 
-    if (!result.changed || result.changes.length === 0) {
+    if (result.changedAssetTypes.length === 0) {
       return { changedCollections: [] };
     }
 
     const changed = new Set<string>();
-    for (const change of result.changes) {
+    for (const assetType of result.changedAssetTypes) {
       for (const c of collections) {
-        if (c.assetType === change.assetType) changed.add(c.adapterId);
+        if (c.assetType === assetType) changed.add(c.adapterId);
       }
     }
     return { changedCollections: Array.from(changed) };
@@ -421,33 +327,28 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
 
   public dispose(): void {
     this.planCache = null;
-    this.downloadUrlCache.clear();
+    this.workerClient.dispose();
   }
 
-  public getApiBase(): string { return this.apiBase; }
+  // -- 供 CloudflareSyncWriteBatch 访问 Worker 客户端 -- //
 
-  // -- ensureSpace: 检测空间是否存在，不存在则自动创建 -- //
+  public getWorkerClient(): CfWorkerClient {
+    return this.workerClient;
+  }
+
+  // -- ensureSpace: 委托 Worker 检测 / 创建空间 -- //
 
   private async ensureSpace(): Promise<CfLocalState> {
     const state = await this.localState.readState();
-    const checkUrl = `${this.apiBase}/v1/sync/spaces/${state.spaceId}/check`;
-    const checkResp = await fetch(checkUrl, { cache: "no-store" });
+    const result = await this.workerClient.request<CfEnsureSpaceResult>({
+      type: "ensure-space",
+      spaceId: state.spaceId,
+    });
 
-    if (checkResp.status === 404) {
-      // 空间不存在，自动创建
-      const createUrl = `${this.apiBase}/v1/sync/spaces`;
-      const createResp = await fetch(createUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ spaceId: state.spaceId }),
-        cache: "no-store",
-      });
-      if (createResp.ok) {
-        const created = await createResp.json() as { activeEpoch: string };
-        const newState = { ...state, epoch: created.activeEpoch ?? state.epoch };
-        await this.localState.writeState(newState);
-        return newState;
-      }
+    if (result.epoch && state.epoch !== result.epoch) {
+      const newState = { ...state, epoch: result.epoch };
+      await this.localState.writeState(newState);
+      return newState;
     }
 
     return state;
@@ -455,7 +356,7 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
 }
 
 // ============================================================================
-// CloudflareSyncWriteBatch
+// CloudflareSyncWriteBatch（commit 委托 Worker）
 // ============================================================================
 
 class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
@@ -494,112 +395,35 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
     this.committed = true;
     if (this.mutations.length === 0) return { writes: [] };
 
-    const apiBase = this.session.getApiBase();
     const state = await this.session.localState.readState();
     const clientBatchId = createUuid();
 
-    const mutationRecords = await Promise.all(this.mutations.map(async (m) => {
-      const mutationId = createUuid();
-      let blobHash = "";
-      let blobByteSize = 0;
-      if (m.content !== null) {
-        const contentBytes = new TextEncoder().encode(m.content);
-        blobByteSize = contentBytes.length;
-        blobHash = await createSha256CanonicalHash(JSON.parse(m.content));
-        blobHash = blobHash.startsWith("sha256:") ? blobHash.slice(7) : blobHash;
-      }
-      return {
-        clientMutationId: mutationId,
+    // 全部委托 Worker：hash 计算 + prepare + R2 PUT + commit
+    const result = await this.session.getWorkerClient().request<CfCommitBatchResult>({
+      type: "commit-batch",
+      spaceId: state.spaceId,
+      epoch: state.epoch ?? "",
+      clientBatchId,
+      mutations: this.mutations.map((m) => ({
+        clientMutationId: "", // Worker 内重新生成
         assetType: m.assetType,
         assetId: m.assetId,
-        blobHash,
-        blobByteSize,
         content: m.content,
         contentHash: m.contentHash,
-      };
-    }));
-
-    // Step 1: POST /prepare
-    const prepareBody = {
-      protocol: "cf-sync-v1",
-      action: "prepare",
-      spaceEpoch: state.epoch ?? "",
-      clientBatchId,
-      mutations: mutationRecords.map((r) => ({
-        clientMutationId: r.clientMutationId,
-        assetType: r.assetType,
-        assetId: r.assetId,
-        baseRevision: null,
-        baseContentHash: null,
-        metadata: "{}",
-        blobHash: r.blobHash,
-        blobByteSize: r.blobByteSize,
-        storageMode: "full",
-        schemaVersion: 1,
-        encoding: "identity",
-        writerAppVersion: "0.1.0",
-        writerBuildId: "dev",
       })),
-    };
-
-    const mutationsUrl = `${apiBase}/v1/sync/spaces/${state.spaceId}/mutations`;
-    const prepareResp = await fetch(mutationsUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(prepareBody),
-      cache: "no-store",
     });
-    if (!prepareResp.ok) return { writes: [] };
 
-    const prepareResult = await prepareResp.json() as CfPrepareResponse;
-
-    // Step 2: R2 PUT
-    for (const upload of prepareResult.uploads) {
-      if (!upload.required || !upload.url) continue;
-      const rec = mutationRecords.find(
-        (r) => r.assetType === upload.assetType && r.assetId === upload.assetId,
-      );
-      if (!rec || rec.content === null) continue;
-
-      const headers: Record<string, string> = upload.headers ?? {};
-      await fetch(upload.url, {
-        method: "PUT",
-        headers,
-        body: rec.content,
-        cache: "no-store",
-      });
-    }
-
-    // Step 3: POST /commit
-    const commitBody = {
-      protocol: "cf-sync-v1",
-      action: "commit",
-      spaceEpoch: state.epoch ?? "",
-      clientBatchId,
-      commitToken: prepareResult.commitToken,
-      mutations: mutationRecords.map((r) => ({
-        clientMutationId: r.clientMutationId,
-        assetType: r.assetType,
-        assetId: r.assetId,
-      })),
-    };
-
-    const commitResp = await fetch(mutationsUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(commitBody),
-      cache: "no-store",
-    });
-    if (!commitResp.ok) return { writes: [] };
-
-    const commitResult = await commitResp.json() as CfCommitResponse;
-
-    await this.session.localState.writeState({
+    // 更新 IndexedDB 状态：appliedHead 和 epoch（如果 Worker 返回了更新后的 epoch）
+    const nextState: CfLocalState = {
       ...state,
-      appliedHead: commitResult.head,
-    });
+      appliedHead: result.head,
+    };
+    if (result.epoch !== null) {
+      nextState.epoch = result.epoch;
+    }
+    await this.session.localState.writeState(nextState);
 
-    const results: RemoteWriteResult[] = commitResult.applied.map((a) => ({
+    const results: RemoteWriteResult[] = result.applied.map((a) => ({
       collection: {
         adapterId: "",
         name: "",
@@ -619,7 +443,7 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
       committedAt: "",
     }));
 
-    return { writes: results, globalCursor: commitResult.head };
+    return { writes: results, globalCursor: result.head };
   }
 
   public async discard(): Promise<void> {
@@ -629,7 +453,7 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
 }
 
 // ============================================================================
-// CloudflareSyncRemote
+// CloudflareSyncRemote（入口保持不变）
 // ============================================================================
 
 export class CloudflareSyncRemote implements SyncRemote {
@@ -643,10 +467,17 @@ export class CloudflareSyncRemote implements SyncRemote {
 
   public async resetRemote(): Promise<void> {
     const state = await this.localState.readState();
-    await fetch(
-      `${resolveBackendApiBaseUrl()}/v1/sync/spaces/${state.spaceId}/reset`,
-      { method: "POST", cache: "no-store" },
-    );
+    // reset-remote 也委托 Worker
+    const apiBase = resolveBackendApiBaseUrl();
+    const workerClient = new CfWorkerClient(apiBase);
+    try {
+      await workerClient.request<void>({
+        type: "reset-remote",
+        spaceId: state.spaceId,
+      });
+    } finally {
+      workerClient.dispose();
+    }
     await this.localState.writeState(defaultState());
   }
 
