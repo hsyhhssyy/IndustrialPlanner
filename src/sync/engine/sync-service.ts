@@ -76,6 +76,8 @@ export interface SyncServiceStatus {
   readonly lastUploadAt: string | null;
   readonly lastDownloadAt: string | null;
   readonly lastError: string | null;
+  readonly lastSmallCheckAt: string | null;
+  readonly lastBigCheckAt: string | null;
   readonly lastResults: readonly SyncAdapterResult[];
 }
 
@@ -148,6 +150,8 @@ const SYNC_TASK_KINDS: readonly SyncTaskKind[] = [
   "toolbox",
   "background-documents",
   "directory-maintenance",
+  "interval-check",
+  "big-check",
 ];
 // AI-REMOVED 2026-07-29:
 // Reason: 设备心跳和设备列表已退出同步任务。
@@ -348,6 +352,11 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     });
     logger.info(`sync phase: ${activePhase}`);
 
+    // 大检查任务初始化
+    if (trigger === "big-check") {
+      beginTask("big-check", 1);
+    }
+
     try {
       const results = await retrySync(
         async () => {
@@ -447,6 +456,8 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
           lastUploadAt: status.lastUploadAt,
           lastDownloadAt: status.lastDownloadAt,
           lastError: "Sync conflict",
+          lastSmallCheckAt: status.lastSmallCheckAt,
+          lastBigCheckAt: trigger === "big-check" ? new Date().toISOString() : status.lastBigCheckAt,
           lastResults: results,
         });
       }
@@ -466,6 +477,10 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         syncSuppressImmediate = false;
       }
 
+      if (trigger === "big-check") {
+        finishTask("big-check", 1);
+      }
+
       return setStatus({
         phase: "idle",
         saveState: pendingLocalChangeCount > 0 ? "pending" : "idle",
@@ -481,9 +496,14 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         lastUploadAt: didUpload || hasPendingLocalChanges ? timestamp : status.lastUploadAt,
         lastDownloadAt: didDownload ? timestamp : status.lastDownloadAt,
         lastError: null,
+        lastSmallCheckAt: status.lastSmallCheckAt,
+        lastBigCheckAt: trigger === "big-check" ? timestamp : status.lastBigCheckAt,
         lastResults: results,
       });
     } catch (error) {
+      if (trigger === "big-check") {
+        finishTask("big-check", 1, error);
+      }
       if (conflictOverlayVisible) {
         options.onConflictWorkflowFinished?.();
         conflictOverlayVisible = false;
@@ -916,12 +936,28 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   const runIntervalCheck = async (): Promise<void> => {
     if (smallCheckRunning) return;
     smallCheckRunning = true;
+    const now = new Date().toISOString();
+
+    // 任务初始化为 running 态
+    beginTask("interval-check", 1);
     try {
       const settings = options.readSettings();
-      if (!settings.enabled || settings.url.trim() === "") return;
+      if (!settings.enabled || settings.url.trim() === "") {
+        finishTask("interval-check", 1);
+        setStatus({
+          ...status,
+          lastSmallCheckAt: now,
+        });
+        return;
+      }
 
       // 有脏数据等上传 → 走完整同步
       if (localChangeVersion > acknowledgedLocalChangeVersion) {
+        finishTask("interval-check", 1);
+        setStatus({
+          ...status,
+          lastSmallCheckAt: now,
+        });
         await syncNow("interval");
         return;
       }
@@ -929,11 +965,28 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       const unchanged = await runSmallCheck();
       if (unchanged) {
         logger.debug("small check: remote unchanged → idle");
+        finishTask("interval-check", 1);
+        setStatus({
+          ...status,
+          lastSmallCheckAt: now,
+        });
         return;
       }
 
       logger.info("small check: remote changed → triggering full sync");
+      finishTask("interval-check", 1);
+      setStatus({
+        ...status,
+        lastSmallCheckAt: now,
+      });
       await syncNow("interval");
+    } catch (error) {
+      finishTask("interval-check", 1, error);
+      setStatus({
+        ...status,
+        lastSmallCheckAt: now,
+        lastError: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       smallCheckRunning = false;
     }
@@ -1105,6 +1158,8 @@ function createIdleStatus(lastResults: readonly SyncAdapterResult[]): SyncServic
     lastUploadAt: null,
     lastDownloadAt: null,
     lastError: null,
+    lastSmallCheckAt: null,
+    lastBigCheckAt: null,
     lastResults,
   };
 }

@@ -31,7 +31,9 @@ export type SyncTaskKind =
   | "modules"
   | "toolbox"
   | "background-documents"
-  | "directory-maintenance";
+  | "directory-maintenance"
+  | "interval-check"
+  | "big-check";
 // AI-REMOVED 2026-07-29:
 // Reason: 设备枚举与设备心跳不再参与 WebDAV 同步协议。
 // Trigger: 用户确认不需要列出设备，冲突只展示远端上传时间。
@@ -83,6 +85,8 @@ export interface SyncStatus {
   readonly lastUploadAt: string | null;
   readonly lastDownloadAt: string | null;
   readonly lastError: string | null;
+  readonly lastSmallCheckAt: string | null;
+  readonly lastBigCheckAt: string | null;
 }
 
 // AI-REMOVED 2026-07-29:

@@ -35,6 +35,8 @@ export class SyncStateImpl implements SyncState {
     lastUploadAt: null,
     lastDownloadAt: null,
     lastError: null,
+    lastSmallCheckAt: null,
+    lastBigCheckAt: null,
     lastResults: [],
   };
 

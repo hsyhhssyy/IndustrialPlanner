@@ -1,4 +1,5 @@
 import { observer } from "mobx-react-lite";
+import { useEffect, useMemo, useState } from "react";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
@@ -20,14 +21,33 @@ import styles from "./settings-dialog.module.scss";
 // 与 WebDavSyncStatusDialog 的关键差异：
 // - 无配置表单（URL 等复用 debug-backend-api-address-override）
 // - 无并发数显示
-// - 过滤掉 directory-maintenance 任务（Cloudflare 无目录概念，prepareCollections 是 no-op）
+// - 过滤掉 directory-maintenance 任务（Cloudflare 无目录概念）
 // - 服务器端错误置顶醒目展示（role="alert"）
-// - 删除远端数据按钮保留，并有二次确认流程
+// - 显示大小检查倒计时
+// - 显示 interval-check 和 big-check 任务卡片
 
-// Cloudflare 不需要展示的任务类型
+const DEFAULT_SMALL_CHECK_INTERVAL_MS = 60_000;
+const DEFAULT_BIG_CHECK_INTERVAL_MS = 10 * 60_000;
+
 const CLOUDFLARE_EXCLUDED_TASK_KINDS: ReadonlySet<SyncTaskKind> = new Set([
   "directory-maintenance",
 ]);
+
+// 大小检查任务放在任务列表的最前面
+const TASK_ORDER: Record<SyncTaskKind, number> = {
+  "interval-check": 0,
+  "big-check": 1,
+  "canvas": 2,
+  "blueprints": 3,
+  "modules": 4,
+  "toolbox": 5,
+  "background-documents": 6,
+  "directory-maintenance": 99,
+};
+
+function sortTasks(tasks: readonly { readonly kind: SyncTaskKind }[]): typeof tasks {
+  return [...tasks].sort((a, b) => (TASK_ORDER[a.kind] ?? 50) - (TASK_ORDER[b.kind] ?? 50));
+}
 
 export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatusDialog({
   compactMobileLayout,
@@ -54,9 +74,35 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
 }) {
   const status = state.status;
 
-  const filteredTasks = status.tasks.filter(
-    (task) => !CLOUDFLARE_EXCLUDED_TASK_KINDS.has(task.kind),
+  const filteredTasks = useMemo(
+    () => sortTasks(status.tasks.filter((task) => !CLOUDFLARE_EXCLUDED_TASK_KINDS.has(task.kind))),
+    [status.tasks],
   );
+
+  // 倒计时 — 每秒更新
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = globalThis.setInterval(() => setNow(Date.now()), 1000);
+    return () => globalThis.clearInterval(timer);
+  }, []);
+
+  const smallCountdown = useMemo(() => {
+    if (status.lastSmallCheckAt === null) return null;
+    const last = new Date(status.lastSmallCheckAt).getTime();
+    const next = last + DEFAULT_SMALL_CHECK_INTERVAL_MS;
+    const remaining = Math.max(0, next - now);
+    if (remaining <= 0) return "...";
+    return formatDuration(remaining);
+  }, [status.lastSmallCheckAt, now]);
+
+  const bigCountdown = useMemo(() => {
+    if (status.lastBigCheckAt === null) return null;
+    const last = new Date(status.lastBigCheckAt).getTime();
+    const next = last + DEFAULT_BIG_CHECK_INTERVAL_MS;
+    const remaining = Math.max(0, next - now);
+    if (remaining <= 0) return "...";
+    return formatDuration(remaining);
+  }, [status.lastBigCheckAt, now]);
 
   return (
     <DialogShell
@@ -93,18 +139,18 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
           </section>
         )}
 
-        {/* 概览 */}
+        {/* 概览 — 使用 Cloudflare 专用 label */}
         <section className={cm(styles, "webdav-sync-status-section")}>
           <h3>{t("webDavStatus.overview")}</h3>
           <dl className={cm(styles, "webdav-sync-status-summary-grid")}>
             <StatusValue
-              label={t("webDavStatus.syncEnabled")}
+              label={t("cloudflareStatus.syncEnabled")}
               value={t(state.settings.enabled
                 ? "webDavStatus.enabled"
                 : "webDavStatus.disabled")}
             />
             <StatusValue
-              label={t("settingsField.experimental-webdav-status")}
+              label={t("cloudflareStatus.phase")}
               value={t(resolvePhaseKey(status.phase))}
             />
             <StatusValue
@@ -135,6 +181,19 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
                 t("settingsOption.none"),
               )}
             />
+            {/* 大小检查倒计时 */}
+            {smallCountdown === null ? null : (
+              <StatusValue
+                label={t("cloudflareStatus.smallCountdown")}
+                value={smallCountdown}
+              />
+            )}
+            {bigCountdown === null ? null : (
+              <StatusValue
+                label={t("cloudflareStatus.bigCountdown")}
+                value={bigCountdown}
+              />
+            )}
           </dl>
         </section>
 
@@ -153,7 +212,7 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
           </dl>
         </section>
 
-        {/* 任务 — 过滤掉 directory-maintenance */}
+        {/* 任务 — 含 interval-check 和 big-check，按顺序排列 */}
         <section className={cm(styles, "webdav-sync-status-section")}>
           <h3>{t("webDavStatus.tasks")}</h3>
           <div className={cm(styles, "webdav-sync-task-list")}>
@@ -275,3 +334,15 @@ function resolveTaskPhaseKey(phase: SyncTaskPhase): UiKey {
 function formatNullableTime(value: string | null, fallback: string): string {
   return value === null ? fallback : new Date(value).toLocaleString();
 }
+
+function formatDuration(ms: number): string {
+  if (ms <= 0) return "0s";
+  const totalSeconds = Math.ceil(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes > 0) {
+    return `${minutes}m${seconds}s`;
+  }
+  return `${seconds}s`;
+}
+

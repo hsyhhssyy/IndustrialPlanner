@@ -1508,7 +1508,7 @@ const CloudflareSyncStatusCard = observer(function CloudflareSyncStatusCard({
 }) {
   return (
     <SettingsActionCard
-      buttonLabel={t("webDavStatus.open")}
+      buttonLabel={t("cloudflareStatus.open")}
       description={t("settingsField.experimental-webdav-statusDescription")}
       onClick={onOpen}
       title={t("cloudflareStatus.title")}
