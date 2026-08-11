@@ -48,8 +48,7 @@ describe("WebDavSyncStatusDialog", () => {
       queuedRequestCount: 3,
       tasks: [{
         kind: "canvas",
-        phase: "running",
-        completedUnitCount: 0,
+        phase: "running",        direction: null,        completedUnitCount: 0,
         totalUnitCount: 1,
         lastStartedAt: "2026-07-29T07:00:00.000Z",
         lastFinishedAt: null,

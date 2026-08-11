@@ -222,7 +222,7 @@ describe("webdav-sync-service", () => {
       ],
     });
 
-    const status = await service.syncNow("big-check");
+    const status = await service.syncNow("startup");
     const taskPhases = Object.fromEntries(status.tasks.map((task) => [
       task.kind,
       task.phase,
@@ -523,6 +523,88 @@ describe("webdav-sync-service", () => {
     expect(status.lastError).toBeNull();
     expect(status.lastUploadAt).not.toBeNull();
     expect(status.lastDownloadAt).not.toBeNull();
+  });
+
+  it("persists use-local conflict baselines only after the shared batch commits", async () => {
+    const setLastSyncedHash = vi.fn(async () => undefined);
+    const commit = vi.fn(async () => {
+      throw new Error("commit failed");
+    });
+    const collection = createSyncRemoteCollection({
+      adapterId: "blueprints",
+      mode: "full-with-revision",
+      stateKey: "blueprints/index.json",
+    });
+    const conflict = {
+      adapterId: "blueprints",
+      assetId: "blueprint-a",
+      localValue: { name: "local" },
+      remoteValue: { name: "remote" },
+      localHash: "local-hash",
+      remoteHash: "remote-hash",
+      remoteDeletedAt: null,
+      remoteUpdatedAt: null,
+    };
+    const adapter: WebDavSyncAdapter = {
+      id: "blueprints",
+      mode: "full-with-revision",
+      collection,
+      checkPath: "blueprints/index.json",
+      sync: vi.fn(async () => ({
+        adapterId: "blueprints",
+        mode: "full-with-revision" as const,
+        status: "conflict" as const,
+        changedAssetIds: ["blueprint-a"],
+      })),
+      inspectConflicts: vi.fn(async () => [conflict]),
+      executeConflictDecisions: vi.fn(async () => ({
+        adapterId: "blueprints",
+        mode: "full-with-revision" as const,
+        status: "uploaded" as const,
+        changedAssetIds: ["blueprint-a"],
+      })),
+    };
+    const session: SyncRemoteSession = {
+      localState: {
+        getLastSyncedHash: async () => null,
+        setLastSyncedHash,
+        getRemoteRevision: async () => null,
+        setRemoteRevision: async () => undefined,
+        getRemoteEtag: async () => null,
+        setRemoteEtag: async () => undefined,
+      },
+      prefetchIndexes: async () => undefined,
+      readIndex: async () => ({ revision: 0, entries: {}, committedAt: null }),
+      readAsset: async () => null,
+      checkCollections: async () => ({ changedCollections: [] }),
+      beginWriteBatch: () => ({
+        putAsset: () => undefined,
+        putTombstone: () => undefined,
+        commit,
+        discard: async () => undefined,
+      }),
+      markApplied: async () => undefined,
+    };
+    const service = createWebDavSyncService({
+      readSettings: () => createSettings(),
+      createRemote: () => ({
+        localState: session.localState,
+        beginSession: async () => session,
+      }),
+      adapters: [adapter],
+      retryDelaysMs: [],
+      resolveConflicts: async () => [{
+        adapterId: "blueprints",
+        assetId: "blueprint-a",
+        resolution: "use-local",
+      }],
+    });
+
+    const status = await service.syncNow("manual");
+
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(setLastSyncedHash).not.toHaveBeenCalled();
+    expect(status.lastError).toBe("commit failed");
   });
 
   it("retries transient sync failures", async () => {

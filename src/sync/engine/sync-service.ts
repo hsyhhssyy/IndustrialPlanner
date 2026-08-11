@@ -4,6 +4,7 @@ import type {
   SyncConflictDecision,
   SyncInitialSyncStage,
   SyncRunReason,
+  SyncTaskDirection,
   SyncTaskKind,
   SyncTaskStatus,
 } from "@/domain/sync";
@@ -12,6 +13,7 @@ import type {
   SyncRemoteSession,
 } from "../clients";
 import { RemoteWriteConflictError } from "../clients";
+import { createSyncAssetKey } from "../remote-collections";
 import type {
   SyncAdapter,
   SyncAdapterConflict,
@@ -78,7 +80,15 @@ export interface SyncServiceStatus {
   readonly lastDownloadAt: string | null;
   readonly lastError: string | null;
   readonly lastSmallCheckAt: string | null;
-  readonly lastBigCheckAt: string | null;
+  // AI-REMOVED 2026-08-10:
+  // Reason: 大检查功能已删除。
+  // Trigger: 用户确认大检查无额外价值。
+  // Replacement: None。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly lastBigCheckAt: string | null;
   readonly lastResults: readonly SyncAdapterResult[];
 }
 
@@ -100,7 +110,15 @@ export interface SyncServiceOptions {
   readonly beforeSync?: (session: SyncRemoteSession, settings: SyncConnectionSettings) => Promise<void> | void;
   readonly afterSync?: (session: SyncRemoteSession, settings: SyncConnectionSettings, results: readonly SyncAdapterResult[]) => Promise<void> | void;
   readonly intervalMs?: number;
-  readonly bigCheckIntervalMs?: number;
+  // AI-REMOVED 2026-08-10:
+  // Reason: 大检查功能已删除。
+  // Trigger: 用户确认大检查无额外价值。
+  // Replacement: None。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly bigCheckIntervalMs?: number;
   readonly retryDelaysMs?: readonly number[];
   readonly onStatusChange?: (status: SyncServiceStatus) => void;
   readonly onConflictDiscoveryStart?: () => void;
@@ -130,7 +148,15 @@ export interface SyncService {
 }
 
 const DEFAULT_INTERVAL_MS = 60_000;
-const DEFAULT_BIG_CHECK_INTERVAL_MS = 10 * 60_000;
+// AI-REMOVED 2026-08-10:
+// Reason: 大检查功能已删除。
+// Trigger: 用户确认大检查无额外价值。
+// Replacement: None。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// const DEFAULT_BIG_CHECK_INTERVAL_MS = 10 * 60_000;
 const LOCAL_CHANGE_IDLE_UPLOAD_MS = 5_000;
 const LOCAL_CHANGE_MAX_UPLOAD_MS = 30_000;
 const INITIAL_SYNC_REQUEST_TIMEOUT_MS = 8_000;
@@ -153,8 +179,16 @@ const SYNC_TASK_KINDS: readonly SyncTaskKind[] = [
   "background-documents",
   "directory-maintenance",
   "interval-check",
-  "big-check",
 ];
+// AI-REMOVED 2026-08-10:
+// Reason: 大检查任务类型已删除。
+// Trigger: 用户确认大检查无额外价值。
+// Replacement: 仅保留 interval-check。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+//   "big-check",
 // AI-REMOVED 2026-07-29:
 // Reason: 设备心跳和设备列表已退出同步任务。
 // Trigger: 用户确认设备列表没有意义，仅展示 revision 的远端上传时间。
@@ -172,7 +206,15 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   let started = false;
   let syncing = false;
   let intervalId: ReturnType<typeof globalThis.setInterval> | null = null;
-  let bigCheckIntervalId: ReturnType<typeof globalThis.setInterval> | null = null;
+  // AI-REMOVED 2026-08-10:
+  // Reason: 大检查定时器已删除。
+  // Trigger: 用户确认大检查无额外价值。
+  // Replacement: None。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // let bigCheckIntervalId: ReturnType<typeof globalThis.setInterval> | null = null;
   let smallCheckRunning = false;
   let idleTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
   let maxTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
@@ -209,7 +251,16 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   };
 
   const resetTasks = (): readonly SyncTaskStatus[] =>
-    SYNC_TASK_KINDS.map((kind) => createIdleTaskStatus(kind));
+    SYNC_TASK_KINDS.map((kind) => {
+      // AI-CORRECTION 2026-08-10: big-check 已删除，仅保留 interval-check 的跳过逻辑。
+      if (kind === "interval-check") {
+        const existing = status.tasks.find((t) => t.kind === kind);
+        if (existing !== undefined && existing.lastStartedAt !== null) {
+          return existing;
+        }
+      }
+      return createIdleTaskStatus(kind);
+    });
 
   const updateTask = (
     kind: SyncTaskKind,
@@ -223,9 +274,10 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     });
   };
 
-  const beginTask = (kind: SyncTaskKind, totalUnitCount: number): void => {
+  const beginTask = (kind: SyncTaskKind, totalUnitCount: number, direction?: SyncTaskDirection): void => {
     updateTask(kind, {
       phase: "running",
+      direction: direction ?? null,
       completedUnitCount: 0,
       totalUnitCount,
       lastStartedAt: new Date().toISOString(),
@@ -249,9 +301,11 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     kind: SyncTaskKind,
     totalUnitCount: number,
     error: unknown = null,
+    direction?: SyncTaskDirection,
   ): void => {
     updateTask(kind, {
       phase: error === null ? "success" : "error",
+      direction: direction ?? null,
       completedUnitCount: error === null ? totalUnitCount : getTaskCompletedUnitCount(kind),
       totalUnitCount,
       lastFinishedAt: new Date().toISOString(),
@@ -359,11 +413,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     });
     logger.info(`sync phase: ${activePhase}`);
 
-    // 大检查任务初始化
-    if (trigger === "big-check") {
-      beginTask("big-check", 1);
-    }
-
     try {
       const results = await retrySync(
         async () => {
@@ -413,11 +462,10 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
                   hasCompletedInitialFeatureSync: true,
                 });
               }
-              // AI-CORRECTION 2026-07-30: 目录维护仅在初始同步和大检查（interval）时执行，
-              // 不再每次 local-change 都防御性创建目录；adapter 自身的 makeDirectory 已处理写入路径。
+              // AI-CORRECTION 2026-08-10: big-check 已删除，目录维护仅在初始同步时执行。
               if (
                 !resolvedResults.some((result) => result.status === "conflict")
-                && (isInitialSync || trigger === "big-check")
+                && isInitialSync
               ) {
                 for (const task of options.maintenanceTasks ?? []) {
                   queueTask(task.kind, 1);
@@ -467,7 +515,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
           lastDownloadAt: status.lastDownloadAt,
           lastError: "Sync conflict",
           lastSmallCheckAt: status.lastSmallCheckAt,
-          lastBigCheckAt: trigger === "big-check" ? new Date().toISOString() : status.lastBigCheckAt,
           lastResults: results,
         });
       }
@@ -487,10 +534,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         syncSuppressImmediate = false;
       }
 
-      if (trigger === "big-check") {
-        finishTask("big-check", 1);
-      }
-
       return setStatus({
         phase: "idle",
         saveState: pendingLocalChangeCount > 0 ? "pending" : "idle",
@@ -507,13 +550,9 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         lastDownloadAt: didDownload ? timestamp : status.lastDownloadAt,
         lastError: null,
         lastSmallCheckAt: status.lastSmallCheckAt,
-        lastBigCheckAt: trigger === "big-check" ? timestamp : status.lastBigCheckAt,
         lastResults: results,
       });
     } catch (error) {
-      if (trigger === "big-check") {
-        finishTask("big-check", 1, error);
-      }
       if (conflictOverlayVisible) {
         options.onConflictWorkflowFinished?.();
         conflictOverlayVisible = false;
@@ -631,8 +670,13 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       ? 0
       : getAdapterTaskTotalUnitCount(taskKind, requests.length);
     const tracksProtocolProgress = taskKind === "canvas" && requests.length === 1;
+    // 同一批次的任务方向一致（全上传或全下载），从全局 phase 推导
+    const taskDirection: SyncTaskDirection | undefined =
+      status.phase === "uploading" ? "upload"
+      : status.phase === "downloading" ? "download"
+      : undefined;
     if (taskKind !== undefined) {
-      beginTask(taskKind, totalUnitCount);
+      beginTask(taskKind, totalUnitCount, taskDirection);
     }
     try {
       await session.prefetchIndexes(requestedAdapters.map((adapter) => adapter.collection));
@@ -694,23 +738,19 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         }
         if (result.status === "conflict") {
           if (taskKind !== undefined) {
-            finishTask(
-              taskKind,
-              totalUnitCount,
-              new Error("Sync conflict"),
-            );
+            finishTask(taskKind, totalUnitCount, new Error("Sync conflict"), taskDirection);
           }
           return adapterResults;
         }
       }
     } catch (error) {
       if (taskKind !== undefined) {
-        finishTask(taskKind, totalUnitCount, error);
+        finishTask(taskKind, totalUnitCount, error, taskDirection);
       }
       throw error;
     }
     if (taskKind !== undefined) {
-      finishTask(taskKind, totalUnitCount);
+      finishTask(taskKind, totalUnitCount, undefined, taskDirection);
     }
 
     return adapterResults;
@@ -861,30 +901,132 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     session: SyncRemoteSession,
     decisions: readonly SyncAdapterConflictDecision[],
   ): Promise<SyncAdapterResult[]> => {
+    if (decisions.length === 0) return [];
+
+    // 按 adapter 分组决策
+    const decisionsByAdapter = new Map<string, SyncAdapterConflictDecision[]>();
+    for (const decision of decisions) {
+      const list = decisionsByAdapter.get(decision.adapterId) ?? [];
+      list.push(decision);
+      decisionsByAdapter.set(decision.adapterId, list);
+    }
+
+    // 收集涉及的 adapter
+    const involvedAdapterIds = new Set(decisionsByAdapter.keys());
+    const involvedAdapters = options.adapters.filter((a) => involvedAdapterIds.has(a.id));
+
+    // 任务追踪
     const adaptersByTask = new Map<SyncTaskKind, SyncAdapter[]>();
-    for (const adapter of options.adapters) {
-      const taskKind = options.resolveAdapterTaskKind?.(adapter.id)
-        ?? "canvas";
+    for (const adapter of involvedAdapters) {
+      const taskKind = options.resolveAdapterTaskKind?.(adapter.id) ?? "canvas";
       const taskAdapters = adaptersByTask.get(taskKind) ?? [];
       taskAdapters.push(adapter);
       adaptersByTask.set(taskKind, taskAdapters);
     }
     for (const [taskKind, taskAdapters] of adaptersByTask) {
-      beginTask(
-        taskKind,
-        getAdapterTaskTotalUnitCount(taskKind, taskAdapters.length),
-      );
+      beginTask(taskKind, getAdapterTaskTotalUnitCount(taskKind, taskAdapters.length));
     }
 
     let results: SyncAdapterResult[];
     try {
-      results = await Promise.all(options.adapters.map(async (adapter) =>
-        await adapter.sync(session, {
-          conflictDecisions: decisions.filter(
-            (decision) => decision.adapterId === adapter.id,
-          ),
-        })
-      ));
+      const useRemoteDecisions = decisions.filter((d) => d.resolution === "use-remote");
+      const useLocalDecisions = decisions.filter((d) => d.resolution === "use-local");
+
+      // Phase 1: 并行下载所有 "use-remote"
+      const downloadResults: SyncAdapterResult[] = [];
+      if (useRemoteDecisions.length > 0) {
+        const byAdapter = new Map<string, SyncAdapterConflictDecision[]>();
+        for (const d of useRemoteDecisions) {
+          const list = byAdapter.get(d.adapterId) ?? [];
+          list.push(d);
+          byAdapter.set(d.adapterId, list);
+        }
+        const downloaded = await Promise.all(
+          Array.from(byAdapter.entries()).map(async ([adapterId, adapterDecisions]) => {
+            const adapter = options.adapters.find((a) => a.id === adapterId);
+            if (adapter?.executeConflictDecisions !== undefined) {
+              return await adapter.executeConflictDecisions(session, adapterDecisions);
+            }
+            // 回退：使用 sync() + conflictDecisions（仅 use-remote）
+            return await adapter!.sync(session, { conflictDecisions: adapterDecisions });
+          }),
+        );
+        downloadResults.push(...downloaded);
+      }
+
+      // Phase 2: 共享批次上传所有 "use-local"
+      const uploadResults: SyncAdapterResult[] = [];
+      if (useLocalDecisions.length > 0) {
+        const batch = session.beginWriteBatch();
+        const byAdapter = new Map<string, SyncAdapterConflictDecision[]>();
+        for (const d of useLocalDecisions) {
+          const list = byAdapter.get(d.adapterId) ?? [];
+          list.push(d);
+          byAdapter.set(d.adapterId, list);
+        }
+        const uploaded = await Promise.all(
+          Array.from(byAdapter.entries()).map(async ([adapterId, adapterDecisions]) => {
+            const adapter = options.adapters.find((a) => a.id === adapterId);
+            if (adapter?.executeConflictDecisions !== undefined) {
+              return await adapter.executeConflictDecisions(session, adapterDecisions, batch);
+            }
+            // 回退：使用 sync() + conflictDecisions（仅 use-local）
+            return await adapter!.sync(session, { conflictDecisions: adapterDecisions });
+          }),
+        );
+        await batch.commit();
+        for (const decision of useLocalDecisions) {
+          const adapter = options.adapters.find((item) => item.id === decision.adapterId);
+          if (adapter === undefined) continue;
+          await session.localState.setLastSyncedHash(
+            createSyncAssetKey(adapter.collection, decision.assetId),
+            decision.localHash,
+          );
+        }
+        uploadResults.push(...uploaded);
+      }
+
+      // pause 决策的 adapter 标记为 conflict
+      const pauseAdapterIds = new Set(
+        decisions.filter((d) => d.resolution === "pause").map((d) => d.adapterId),
+      );
+      for (const adapterId of pauseAdapterIds) {
+        if (!downloadResults.some((r) => r.adapterId === adapterId)
+          && !uploadResults.some((r) => r.adapterId === adapterId)) {
+          const adapter = options.adapters.find((a) => a.id === adapterId);
+          if (adapter !== undefined) {
+            uploadResults.push({
+              adapterId: adapter.id,
+              mode: adapter.mode,
+              status: "conflict",
+              changedAssetIds: [],
+            });
+          }
+        }
+      }
+
+      // 合并结果：download + upload，同一 adapter 的结果合并
+      const merged = new Map<string, SyncAdapterResult>();
+      for (const r of [...downloadResults, ...uploadResults]) {
+        const existing = merged.get(r.adapterId);
+        if (existing === undefined) {
+          merged.set(r.adapterId, r);
+        } else {
+          merged.set(r.adapterId, {
+            adapterId: r.adapterId,
+            mode: r.mode,
+            status: existing.status === "conflict" || r.status === "conflict"
+              ? "conflict"
+              : existing.status === "uploaded" || r.status === "uploaded"
+                ? "uploaded"
+                : existing.status === "downloaded" || r.status === "downloaded"
+                  ? "downloaded"
+                  : "idle",
+            changedAssetIds: Array.from(new Set([...existing.changedAssetIds, ...r.changedAssetIds])),
+          });
+        }
+      }
+      results = Array.from(merged.values());
     } catch (error) {
       for (const [taskKind, taskAdapters] of adaptersByTask) {
         finishTask(
@@ -896,16 +1038,9 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       throw error;
     }
     for (const [taskKind, taskAdapters] of adaptersByTask) {
-      const taskAdapterIds = new Set(
-        taskAdapters.map((adapter) => adapter.id),
-      );
-      const taskResults = results.filter((result) =>
-        taskAdapterIds.has(result.adapterId),
-      );
-      const totalUnitCount = getAdapterTaskTotalUnitCount(
-        taskKind,
-        taskAdapters.length,
-      );
+      const taskAdapterIds = new Set(taskAdapters.map((adapter) => adapter.id));
+      const taskResults = results.filter((result) => taskAdapterIds.has(result.adapterId));
+      const totalUnitCount = getAdapterTaskTotalUnitCount(taskKind, taskAdapters.length);
       finishTask(
         taskKind,
         totalUnitCount,
@@ -1029,13 +1164,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         }
       }, options.intervalMs ?? DEFAULT_INTERVAL_MS);
       unrefTimer(intervalId);
-
-      bigCheckIntervalId = globalThis.setInterval(() => {
-        if (options.canRunInterval?.() !== false) {
-          void syncNow("big-check");
-        }
-      }, options.bigCheckIntervalMs ?? DEFAULT_BIG_CHECK_INTERVAL_MS);
-      unrefTimer(bigCheckIntervalId);
     },
     stop: () => {
       started = false;
@@ -1047,10 +1175,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       if (intervalId !== null) {
         globalThis.clearInterval(intervalId);
         intervalId = null;
-      }
-      if (bigCheckIntervalId !== null) {
-        globalThis.clearInterval(bigCheckIntervalId);
-        bigCheckIntervalId = null;
       }
     },
     syncNow,
@@ -1180,7 +1304,6 @@ function createIdleStatus(lastResults: readonly SyncAdapterResult[]): SyncServic
     lastDownloadAt: null,
     lastError: null,
     lastSmallCheckAt: null,
-    lastBigCheckAt: null,
     lastResults,
   };
 }
@@ -1189,6 +1312,7 @@ function createIdleTaskStatus(kind: SyncTaskKind): SyncTaskStatus {
   return {
     kind,
     phase: "idle",
+    direction: null,
     completedUnitCount: 0,
     totalUnitCount: 0,
     lastStartedAt: null,
@@ -1216,7 +1340,6 @@ function selectQueuedTrigger(
 
   const priority: Record<SyncRunReason, number> = {
     interval: 0,
-    "big-check": 0,
     manual: 1,
     "local-change": 2,
     foreground: 3,

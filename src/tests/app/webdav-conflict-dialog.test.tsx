@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { AppHost } from "@/app/host/app-host";
 import { WebDavConflictDialog } from "@/app/shell/dialogs/webdav-conflict-dialog";
 import { WebDavInitialSyncGate } from "@/app/shell/layout/webdav-initial-sync-gate";
 import { OverlayStackProvider } from "@/app/shell/shared/overlay-stack";
@@ -46,6 +47,7 @@ describe("WebDavConflictDialog", () => {
       tasks: [{
         kind: "canvas",
         phase: "running",
+        direction: null,
         completedUnitCount: 55,
         totalUnitCount: 100,
         lastStartedAt: "2026-07-29T10:00:00.000Z",
@@ -86,17 +88,49 @@ describe("WebDavConflictDialog", () => {
         resolveConflicts: (decisions) => {
           state.resolveConflicts(decisions);
         },
+        abortCurrentTransaction: vi.fn(async () => undefined),
       },
     };
+    const translate: AppHost["actions"]["translate"] = (key) => ({
+      "webDavConflict.itemLabel": "{type} - {name}",
+      "webDavConflict.type.base": "基地",
+      "webDavConflict.type.blueprint": "蓝图",
+      "webDavConflict.nameUnavailable": "名称不可用",
+    }[key] ?? key);
+    const appHost = {
+      workspace: {
+        registry: {
+          baseDefinitions: [{
+            id: "base-a",
+            name: "天王坪援建点",
+          }],
+        },
+      },
+      internalState: {
+        workbench: {
+          toolbox: {
+            moduleBalancing: {
+              customModules: [],
+              folders: [],
+              canvases: [],
+              canvasFolders: [],
+            },
+          },
+        },
+      },
+    } as unknown as AppHost;
+    const stopSync = vi.fn();
 
     await act(async () => {
       root.render(
         <OverlayStackProvider>
           <WebDavInitialSyncGate sync={sync} translate={(key) => key} />
           <WebDavConflictDialog
+            appHost={appHost}
             compactMobileLayout={false}
+            onStopSync={stopSync}
             sync={sync}
-            t={(key) => key}
+            t={translate}
           />
         </OverlayStackProvider>,
       );
@@ -117,6 +151,10 @@ describe("WebDavConflictDialog", () => {
     expect(document.querySelector(
       "button[aria-label='action.close']",
     )).toBeNull();
+    expect(dialog?.textContent).toContain("基地 - 天王坪援建点");
+    expect(dialog?.textContent).not.toContain("world-documents");
+    expect(dialog?.textContent).not.toContain("base-a");
+    expect(document.querySelector("input[value='pause']")).toBeNull();
 
     await act(async () => {
       dialogBackdrop?.dispatchEvent(new MouseEvent("mousedown", {
@@ -132,14 +170,30 @@ describe("WebDavConflictDialog", () => {
       "[data-dialog-key='webdav-conflict']",
     )).not.toBeNull();
 
+    const stopSyncButton = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("button"),
+    ).find((button) => button.textContent?.includes(
+      "webDavConflict.stopSync",
+    ));
+    await act(async () => {
+      stopSyncButton?.click();
+    });
+    expect(stopSync).toHaveBeenCalledOnce();
+
+    const batchUseRemoteButton = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("button"),
+    ).find((button) => button.textContent?.includes(
+      "webDavConflict.batchUseRemote",
+    ));
+    await act(async () => {
+      batchUseRemoteButton?.click();
+    });
     const useRemoteInputs = Array.from(
       document.querySelectorAll<HTMLInputElement>(
         "input[value='use-remote']",
       ),
     );
-    await act(async () => {
-      useRemoteInputs.forEach((input) => input.click());
-    });
+    expect(useRemoteInputs.every((input) => input.checked)).toBe(true);
     const applyButton = Array.from(
       document.querySelectorAll<HTMLButtonElement>("button"),
     ).find((button) => button.textContent?.includes(

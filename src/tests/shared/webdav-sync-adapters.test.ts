@@ -144,6 +144,20 @@ describe("webdav-sync-adapters", () => {
     expect(localValue).toEqual({ count: 2 });
   });
 
+  it("fails closed instead of overwriting malformed remote JSON", async () => {
+    const client = new MemoryWebDavClient();
+    client.files.set("assets/malformed.json", "{not-json");
+    const adapter = createFullNoRevisionAdapter({
+      id: "malformed-remote",
+      remotePath: "assets/malformed.json",
+      readLocal: async () => ({ count: 1 }),
+      writeLocal: async () => undefined,
+    });
+
+    await expect(syncAdapter(adapter, client)).rejects.toThrow("contains invalid JSON");
+    expect(client.files.get("assets/malformed.json")).toBe("{not-json");
+  });
+
   it("uses the local value to overwrite the remote value after a conflict", async () => {
     const client = new MemoryWebDavClient();
     let localValue: { count: number } | null = { count: 1 };

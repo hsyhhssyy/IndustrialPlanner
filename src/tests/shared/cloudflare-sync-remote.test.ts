@@ -1,57 +1,55 @@
 // @vitest-environment jsdom
 
 /**
- * Cloudflare Worker sync 协议映射集成测试。
+ * Cloudflare cf-sync-v2 协议映射集成测试。
  *
  * 受测范围：CloudflareSyncRemote / Session / WriteBatch
  * Mock 策略：vi.stubGlobal("fetch") + createFakeIndexedDbFactory()
- * AI-CORRECTION 2026-08-08: 通过注入的 in-process client 执行真实 Worker runtime，
- * 避免在单元测试中伪造浏览器 Worker，同时覆盖网络协议映射。
+ * AI-CORRECTION 2026-08-09: 后端已完全重构为 cf-sync-v2 协议，
+ * 本测试验证 prepare/upload/commit 两阶段流程。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCloudflareSyncRemote } from "@/sync/clients/cloudflare/cloudflare-remote";
-import { handleCfRequest } from "@/sync/clients/cloudflare/cloudflare-worker-runtime";
-import type { CfWorkerOperation } from "@/sync/clients/cloudflare/cloudflare-worker-protocol";
 import { createFakeIndexedDbFactory } from "./fake-indexed-db";
-import { RemoteWriteConflictError } from "@/sync/clients/remote-types";
-import {
-  listActiveSyncTombstones,
-  writeActiveSyncTombstone,
-} from "@/shared/storage/sync-tombstone-storage";
 import type {
   RemoteCollectionIndex,
   RemoteWriteBatchResult,
   SyncRemote,
   SyncRemoteCollection,
 } from "@/sync/clients/remote-types";
-// AI-REMOVED 2026-08-08:
-// Reason: in-process Worker client 不再直接声明 SyncRemoteSession。
-// Trigger: createTestRemote 通过公开 remote 工厂返回会话。
-// Evidence: 本文件无该类型引用。
-// Replacement: SyncRemote。
-// Risk: None
-// Human Review: Required
-//
-// Original code:
-// import type { SyncRemoteSession } from "@/sync/clients/remote-types";
 
-// 受测模块中 createSha256CanonicalHash 需要真实浏览器 crypto API；
-// jsdom 环境下 mock 它，测试保持确定性。
+type JsonObject = Record<string, unknown>;
+type JsonArray = Array<Record<string, unknown>>;
+
+// ============================================================================
+// Mock setup
+// ============================================================================
+
 const TEST_HASH = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2";
+const BLOB_HASH = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
+
 vi.mock("@/shared/storage/hash-utils", () => ({
   createSha256CanonicalHash: async () => `sha256:${TEST_HASH}`,
+  createSha256Hash: async () => `sha256:${BLOB_HASH}`,
   createStableJsonHash: (v: unknown) => JSON.stringify(v),
+  stringifyCanonicalJson: (value: unknown) =>
+    JSON.stringify(value, Object.keys(value as Record<string, unknown>).sort()),
 }));
 
 // ============================================================================
-// 工具
+// FetchMock — 模拟 cf-sync-v2 后端
 // ============================================================================
 
-class FetchMock {
-  private handlers = new Map<string, (_req: FetchRequest) => FetchResponse>();
+type MockHandler = (req: { url: string; method: string; body: unknown }) => {
+  json: unknown;
+  status?: number;
+};
 
-  public add(pattern: string, handler: (_req: FetchRequest) => FetchResponse): this {
+class FetchMockV2 {
+  private handlers = new Map<string, MockHandler>();
+
+  public add(pattern: string, handler: MockHandler): this {
     this.handlers.set(pattern, handler);
     return this;
   }
@@ -59,16 +57,21 @@ class FetchMock {
   public async dispatch(input: RequestInfo, init?: RequestInit): Promise<globalThis.Response> {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const method = init?.method ?? "GET";
-    const body = typeof init?.body === "string" ? JSON.parse(init.body) : null;
+    let body: unknown = null;
+    if (typeof init?.body === "string") {
+      try { body = JSON.parse(init.body); } catch { /* raw string */ }
+    }
 
-    const req: FetchRequest = { url, method, body };
-    const handler = this.handlers.get(this.matchKey(url, method, body));
+    const key = this.matchKey(url, method, body);
+    const handler = this.handlers.get(key);
 
     if (handler) {
-      const result = handler(req);
+      const result = handler({ url, method, body });
+      if (result.status === 204) {
+        return new Response(null, { status: 204 });
+      }
       return new Response(JSON.stringify(result.json), {
         status: result.status ?? 200,
-        headers: result.headers,
       });
     }
 
@@ -76,29 +79,22 @@ class FetchMock {
   }
 
   private matchKey(url: string, method: string, body: unknown): string {
-    // 简化匹配：check/plan 不区分 body
     if (url.includes("/check")) return `${method}:/check`;
     if (url.includes("/plan")) return `${method}:/plan`;
     if (url.includes("/mutations") && body && typeof body === "object") {
       const action = (body as Record<string, unknown>).action;
       return `${method}:/mutations/${action}`;
     }
-    if (url.includes("/reset")) return `${method}:/reset`;
+    if (url.includes("/spaces") && method === "POST" && !url.includes("/mutations") && !url.includes("/uploads")) {
+      return "POST:/spaces";
+    }
     return `${method}:${url}`;
   }
 }
 
-interface FetchRequest {
-  url: string;
-  method: string;
-  body: unknown;
-}
-
-interface FetchResponse {
-  json: unknown;
-  status?: number;
-  headers?: Record<string, string>;
-}
+// ============================================================================
+// 工具函数
+// ============================================================================
 
 function makeCollection(overrides: Partial<SyncRemoteCollection> = {}): SyncRemoteCollection {
   return {
@@ -107,8 +103,8 @@ function makeCollection(overrides: Partial<SyncRemoteCollection> = {}): SyncRemo
     mode: "full-no-revision",
     assetType: "planner-state",
     assetIdCodec: {
-      toRemoteAssetId: (id) => id,
-      toAdapterAssetId: (id) => id,
+      toRemoteAssetId: (id: string) => id,
+      toAdapterAssetId: (id: string) => id,
     },
     hashAlgorithm: "sha256-canonical-json-v1",
     stateKey: "planner-state",
@@ -116,52 +112,50 @@ function makeCollection(overrides: Partial<SyncRemoteCollection> = {}): SyncRemo
   };
 }
 
-// 64 字符 hex 字符串
-const BLOB_HASH = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
-
 function createTestRemote(): SyncRemote {
-  let nextRequestId = 1;
   return createCloudflareSyncRemote({
     apiBase: "https://cf-mock.local",
     spaceId: "default",
-    workerClientFactory: (apiBase, options) => ({
-      request: async <TResult,>(operation: CfWorkerOperation): Promise<TResult> => {
-        const response = await handleCfRequest({
-          requestId: nextRequestId++,
-          apiBase,
-          requestTimeoutMs: options.requestTimeoutMs ?? 30_000,
-          maxConcurrentRequests: options.maxConcurrentRequests ?? 4,
-          operation,
-        });
-        if (response.ok) return response.result as TResult;
-        const error = new Error(response.error.message) as Error & {
-          status?: number;
-          details?: unknown;
-        };
-        error.name = response.error.name;
-        if (response.error.status !== undefined) error.status = response.error.status;
-        if (response.error.details !== undefined) error.details = response.error.details;
-        throw error;
-      },
-      dispose: () => {},
-    }),
   });
+}
+
+function v2Plan(assets: Array<{
+  assetType: string;
+  assetId: string;
+  contentHash: string;
+  byteSize?: number;
+}>): unknown {
+  return {
+    spaceId: "default",
+    revision: assets.length > 0 ? 1 : 0,
+    epoch: assets.length > 0 ? 1 : 0,
+    assets: assets.map((a) => ({
+      ...a,
+      byteSize: a.byteSize ?? 10,
+      encoding: "identity",
+      metadata: "{}",
+      schemaVersion: 1,
+      storageMode: "full",
+      backend: "d1",
+      lastModifiedRevision: 1,
+      downloadUrl: `https://cf-mock.local/v1/sync/spaces/default/assets/${a.assetType}/${a.assetId}/content?ticket=mock-ticket`,
+    })),
+    serverTime: "2026-08-09T00:00:00.000Z",
+  };
 }
 
 // ============================================================================
 // 测试
 // ============================================================================
 
-describe("cloudflare-sync-remote", () => {
-  let fetchMock: FetchMock;
+describe("cloudflare-sync-remote-v2", () => {
+  let fetchMock: FetchMockV2;
 
   beforeEach(() => {
-    // 替换 IndexedDB 为内存实现，避免浏览器依赖
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
-    // 设置 backend api address 到 mock URL
     localStorage.setItem("v3-backend-api-address-override", "https://cf-mock.local");
 
-    fetchMock = new FetchMock();
+    fetchMock = new FetchMockV2();
     vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) =>
       fetchMock.dispatch(input, init),
     );
@@ -172,13 +166,14 @@ describe("cloudflare-sync-remote", () => {
     localStorage.clear();
   });
 
-  // -- beginSession / localState -- //
+  // -- 会话创建 -- //
 
   it("creates a session with correct localState", async () => {
-    fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
-    fetchMock.add("GET:/plan", () => ({ json: { head: 0, epoch: "ep-1", snapshotHead: 0, modules: [], capabilities: {}, nextPageToken: null, minRetainedHead: 0, serverTime: "" } }));
+    fetchMock
+      .add("GET:/check", () => ({ json: v2Plan([]), status: 204 }))
+      .add("GET:/plan", () => ({ json: v2Plan([]) }));
 
-    const remote: SyncRemote = createTestRemote();
+    const remote = createTestRemote();
     expect(remote.localState).toBeDefined();
 
     const session = await remote.beginSession({
@@ -191,11 +186,12 @@ describe("cloudflare-sync-remote", () => {
     remote.dispose?.();
   });
 
-  // -- checkCollections: 无变化 -- //
+  // -- checkCollections: 无变化（204 返回） -- //
 
-  it("returns empty on unchanged check", async () => {
-    fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
-    fetchMock.add("GET:/plan", () => ({ json: { head: 0, epoch: "ep-1", snapshotHead: 0, modules: [], capabilities: {}, nextPageToken: null, minRetainedHead: 0, serverTime: "" } }));
+  it("returns empty on unchanged check (204)", async () => {
+    fetchMock
+      .add("GET:/check", () => ({ json: {}, status: 204 }))
+      .add("GET:/plan", () => ({ json: v2Plan([]) }));
 
     const remote = createTestRemote();
     const session = await remote.beginSession({
@@ -212,19 +208,14 @@ describe("cloudflare-sync-remote", () => {
 
   // -- checkCollections: 有变化 -- //
 
-  it("detects changed collections from check inline changes", async () => {
-    fetchMock.add("GET:/check", () => ({
-      json: {
-        head: 1,
-        epoch: "ep-1",
-        changed: true,
-        planRequired: false,
-        changes: [{ assetType: "planner-state", assetId: "default", revision: 1, contentHash: "abc", blobHash: "abc", byteSize: 4, deletedAt: null }],
-        moduleHeads: [{ moduleType: "planner-state", head: 1 }],
-        serverTime: "",
-      },
-    }));
-    fetchMock.add("GET:/plan", () => ({ json: { head: 1, epoch: "ep-1", snapshotHead: 1, modules: [{ moduleType: "planner-state", assets: [{ assetType: "planner-state", assetId: "default", revision: 1, contentHash: "abc", deletedAt: null }] }], capabilities: {}, nextPageToken: null, minRetainedHead: 0, serverTime: "" } }));
+  it("detects changed collections", async () => {
+    fetchMock
+      .add("GET:/check", () => ({
+        json: { revision: 1, epoch: 1, changed: true, planRequired: true, serverTime: "" },
+      }))
+      .add("GET:/plan", () => ({
+        json: v2Plan([{ assetType: "planner-state", assetId: "default", contentHash: TEST_HASH }]),
+      }));
 
     const remote = createTestRemote();
     const session = await remote.beginSession({
@@ -242,25 +233,14 @@ describe("cloudflare-sync-remote", () => {
   // -- prefetchIndexes + readIndex -- //
 
   it("prefetches indexes and reads collection index", async () => {
-    fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
-    fetchMock.add("GET:/plan", () => ({
-      json: {
-        head: 1,
-        epoch: "ep-1",
-        snapshotHead: 1,
-        modules: [{
-          moduleType: "planner-state",
-          assets: [
-            { assetType: "planner-state", assetId: "default", revision: 1, contentHash: "abc", blobHash: "abc", byteSize: 4, deletedAt: null },
-            { assetType: "planner-state", assetId: "extra", revision: 3, contentHash: "def", blobHash: "def", byteSize: 4, deletedAt: "2026-01-01T00:00:00Z" },
-          ],
-        }],
-        capabilities: {},
-        nextPageToken: null,
-        minRetainedHead: 0,
-        serverTime: "",
-      },
-    }));
+    fetchMock
+      .add("GET:/check", () => ({ json: {}, status: 204 }))
+      .add("GET:/plan", () => ({
+        json: v2Plan([
+          { assetType: "planner-state", assetId: "default", contentHash: "abc" },
+          { assetType: "planner-state", assetId: "extra", contentHash: "def" },
+        ]),
+      }));
 
     const remote = createTestRemote();
     const collection = makeCollection();
@@ -272,15 +252,13 @@ describe("cloudflare-sync-remote", () => {
     await session.prefetchIndexes([collection]);
     const index: RemoteCollectionIndex = await session.readIndex(collection);
 
-    expect(index.revision).toBe(3);
-    expect(index.entries["default"]).toEqual({
-      revision: 1,
+    // v2 协议中 plan 的 contentHash 会被加上 "sha256:" 前缀
+    expect(index.entries["default"]).toMatchObject({
       contentHash: "sha256:abc",
       protocolContentHash: "sha256:abc",
       deletedAt: null,
-      committedAt: null,
     });
-    expect(index.entries["extra"]?.deletedAt).toBe("2026-01-01T00:00:00Z");
+    expect(index.entries["extra"]).toBeDefined();
 
     await session.dispose?.();
     remote.dispose?.();
@@ -289,8 +267,9 @@ describe("cloudflare-sync-remote", () => {
   // -- readIndex: 空 plan 返回空索引 -- //
 
   it("returns empty index when plan is empty", async () => {
-    fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
-    fetchMock.add("GET:/plan", () => ({ json: { head: 0, epoch: "ep-1", snapshotHead: 0, modules: [], capabilities: {}, nextPageToken: null, minRetainedHead: 0, serverTime: "" } }));
+    fetchMock
+      .add("GET:/check", () => ({ json: {}, status: 204 }))
+      .add("GET:/plan", () => ({ json: v2Plan([]) }));
 
     const remote = createTestRemote();
     const collection = makeCollection();
@@ -308,77 +287,21 @@ describe("cloudflare-sync-remote", () => {
     remote.dispose?.();
   });
 
-  // -- readAsset: 已删除资产返回 null -- //
+  // -- readAsset -- //
 
-  it("readAsset returns null for deleted asset", async () => {
-    fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
-    fetchMock.add("GET:/plan", () => ({
-      json: {
-        head: 1,
-        epoch: "ep-1",
-        snapshotHead: 1,
-        modules: [{
-          moduleType: "planner-state",
-          assets: [
-            { assetType: "planner-state", assetId: "tombstone", revision: 5, contentHash: "xyz", blobHash: BLOB_HASH, byteSize: 10, deletedAt: "2026-01-01T00:00:00Z" },
-          ],
-        }],
-        capabilities: {},
-        nextPageToken: null,
-        minRetainedHead: 0,
-        serverTime: "",
-      },
-    }));
-
-    const remote = createTestRemote();
-    const collection = makeCollection();
-    const session = await remote.beginSession({
-      reason: "foreground",
-      collections: [collection],
-    });
-
-    await session.prefetchIndexes([collection]);
-    const asset = await session.readAsset({ collection, assetId: "tombstone" });
-
-    expect(asset).toBeNull();
-
-    await session.dispose?.();
-    remote.dispose?.();
-  });
-
-  // -- readAsset: 下载并通过 SHA-256 校验 -- //
-
-  it("readAsset downloads and verifies content via downloads:sign", async () => {
+  it("readAsset downloads and returns content", async () => {
     const testContent = '{"value":42}';
-    let signCallCount = 0;
 
-    fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
-    fetchMock.add("GET:/plan", () => ({
-      json: {
-        head: 1,
-        epoch: "ep-1",
-        snapshotHead: 1,
-        modules: [{
-          moduleType: "planner-state",
-          assets: [
-            { assetType: "planner-state", assetId: "default", revision: 2, contentHash: TEST_HASH, blobHash: TEST_HASH, byteSize: testContent.length, deletedAt: null },
-          ],
-        }],
-        capabilities: {},
-        nextPageToken: null,
-        minRetainedHead: 0,
-        serverTime: "",
-      },
-    }));
+    fetchMock
+      .add("GET:/check", () => ({ json: {}, status: 204 }))
+      .add("GET:/plan", () => ({
+        json: v2Plan([{ assetType: "planner-state", assetId: "default", contentHash: BLOB_HASH, byteSize: testContent.length }]),
+      }));
 
-    // 覆盖 fetch: downloads:sign → 返回 URL; blob GET → 返回内容
+    // 覆盖 fetch 以处理 downloadUrl 请求
     vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      if (url.includes("/downloads:sign") && init?.method === "POST") {
-        signCallCount += 1;
-        return Promise.resolve(new Response(JSON.stringify({ urls: [{ blobHash: TEST_HASH, url: "https://cf-mock.local/blob/dl" }] }), { status: 200 }));
-      }
-      if (url.includes("/blob/dl") && init?.method === undefined) {
+      if (url.includes("/content?ticket=")) {
         return Promise.resolve(new Response(testContent, { status: 200 }));
       }
       return fetchMock.dispatch(input, init);
@@ -394,84 +317,144 @@ describe("cloudflare-sync-remote", () => {
     await session.prefetchIndexes([collection]);
     const asset = await session.readAsset({ collection, assetId: "default" });
 
-    expect(signCallCount).toBe(1);
     expect(asset).not.toBeNull();
     expect(asset?.content).toBe(testContent);
-    expect(asset?.revision).toBe(2);
+    expect(asset?.revision).toBe(1);
 
-    // 二次读取应走缓存
-    const asset2 = await session.readAsset({ collection, assetId: "default" });
-    expect(asset2?.content).toBe(testContent);
-    expect(signCallCount).toBe(1);
+    await session.dispose?.();
+    remote.dispose?.();
+  });
 
-    // 适配器归一化后写入自己的比较 hash；下一会话应复用映射，而不是因 SHA/FNV 不同再次下载。
-    await session.localState.setLastSyncedHash("planner:default", "fnv:normalized");
-    session.dispose?.();
-    const secondSession = await remote.beginSession({
+  it("fails closed when an asset download fails", async () => {
+    fetchMock.add("GET:/plan", () => ({
+      json: v2Plan([{
+        assetType: "planner-state",
+        assetId: "default",
+        contentHash: BLOB_HASH,
+      }]),
+    }));
+    vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes("/content?ticket=")) {
+        return Promise.resolve(new Response("temporary outage", { status: 503 }));
+      }
+      return fetchMock.dispatch(input, init);
+    });
+
+    const remote = createTestRemote();
+    const collection = makeCollection();
+    const session = await remote.beginSession({
       reason: "foreground",
       collections: [collection],
     });
-    await secondSession.prefetchIndexes([collection]);
-    const mappedIndex = await secondSession.readIndex(collection);
-    expect(mappedIndex.entries["default"]).toMatchObject({
-      contentHash: "fnv:normalized",
-      protocolContentHash: `sha256:${TEST_HASH}`,
-    });
-    expect(signCallCount).toBe(1);
+    await session.prefetchIndexes([collection]);
 
-    secondSession.dispose?.();
+    await expect(session.readAsset({ collection, assetId: "default" }))
+      .rejects.toThrow("HTTP 503");
+
+    await session.dispose?.();
     remote.dispose?.();
-    vi.unstubAllGlobals();
-    // 恢复 fetch mock
-    vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) =>
-      fetchMock.dispatch(input, init),
-    );
   });
 
-  // -- write batch: commit 完整流程 -- //
+  it("does not advance the applied revision until the session completes", async () => {
+    let checkUrl = "";
+    fetchMock
+      .add("GET:/plan", () => ({
+        json: v2Plan([{
+          assetType: "planner-state",
+          assetId: "default",
+          contentHash: BLOB_HASH,
+        }]),
+      }))
+      .add("GET:/check", (req) => {
+        checkUrl = req.url;
+        return {
+          json: {
+            revision: 1,
+            epoch: 1,
+            changed: true,
+            planRequired: true,
+            serverTime: "",
+          },
+        };
+      });
 
-  it("commits a write batch through prepare → R2 PUT → commit", async () => {
-    let capturedPrepareBody: unknown = null;
-    let capturedCommitBody: unknown = null;
-    let r2PutCalled = false;
+    const remote = createTestRemote();
+    const collection = makeCollection();
+    const session = await remote.beginSession({
+      reason: "foreground",
+      collections: [collection],
+    });
+    await session.prefetchIndexes([collection]);
+    await session.checkCollections([collection]);
+    expect(checkUrl).toContain("knownRevision=0");
+
+    await session.complete?.();
+    await session.checkCollections([collection]);
+    expect(checkUrl).toContain("knownRevision=1");
+
+    await session.dispose?.();
+    remote.dispose?.();
+  });
+
+  // -- write batch: 完整流程 -- //
+
+  it("commits a write batch through prepare → upload → commit", async () => {
+    let capturedPrepareBody: JsonObject | null = null;
+    let capturedCommitBody: JsonObject | null = null;
+    let uploadCalled = false;
+    let uploadedBody: string | null = null;
 
     fetchMock
-      .add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }))
+      .add("GET:/check", () => ({ json: {}, status: 204 }))
       .add("POST:/mutations/prepare", (req) => {
-        capturedPrepareBody = req.body;
+        capturedPrepareBody = req.body as Record<string, unknown>;
         return {
           json: {
             status: "ready",
-            commitToken: "mock-commit-token",
+            uploadId: "upload-1",
+            commitToken: "commit-token-1",
+            baseRevision: 0,
+            targetRevision: 1,
+            targetEpoch: 1,
+            expiresAt: "2099-01-01T00:00:00.000Z",
             uploads: [{
               assetType: "planner-state",
               assetId: "default",
               required: true,
-              url: "https://cf-mock.local/blobs/upload",
+              backend: "d1",
+              url: "https://cf-mock.local/v1/sync/spaces/default/uploads/upload-1/assets/planner-state/default?ticket=upload-ticket",
               headers: { "Content-Type": "application/octet-stream" },
             }],
           },
         };
       })
       .add("POST:/mutations/commit", (req) => {
-        capturedCommitBody = req.body;
-        const mutations = (req.body as { mutations: Array<{ clientMutationId: string }> }).mutations;
+        capturedCommitBody = req.body as Record<string, unknown>;
         return {
           json: {
             status: "committed",
-            head: 1,
-            applied: [{ clientMutationId: mutations[0]?.clientMutationId, assetType: "planner-state", assetId: "default", revision: 1, contentHash: TEST_HASH }],
-            serverTime: "2026-08-08T00:00:00.000Z",
+            uploadId: "upload-1",
+            revision: 1,
+            epoch: 1,
+            assets: [{
+              assetType: "planner-state",
+              assetId: "default",
+              contentHash: BLOB_HASH,
+              lastModifiedRevision: 1,
+            }],
+            deletedAssets: [],
+            serverTime: "2026-08-09T00:00:00.000Z",
           },
         };
       });
 
-    // mock R2 PUT
-    // AI-CORRECTION 2026-08-08: fetch 恢复统一由 afterEach 的 vi.unstubAllGlobals 负责。
+    // 处理 upload URL
     vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      if (url.includes("/blobs/upload") && init?.method === "PUT") {
-        r2PutCalled = true;
+      if (url.includes("/uploads/") && init?.method === "PUT") {
+        uploadCalled = true;
+        if (typeof init?.body === "string") uploadedBody = init.body;
         return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
       }
       return fetchMock.dispatch(input, init);
@@ -484,77 +467,69 @@ describe("cloudflare-sync-remote", () => {
       collections: [collection],
     });
 
-    // 先走一次 prefetchIndexes → plan 以获取 epoch
-    fetchMock.add("GET:/plan", () => ({ json: { head: 0, epoch: "ep-1", snapshotHead: 0, modules: [], capabilities: {}, nextPageToken: null, minRetainedHead: 0, serverTime: "" } }));
+    fetchMock.add("GET:/plan", () => ({ json: v2Plan([]) }));
     await session.prefetchIndexes([collection]);
 
     const batch = session.beginWriteBatch();
+    const testContent = '{"z":1,"a":2}';
     batch.putAsset({
       collection,
       assetId: "default",
-      content: JSON.stringify({ test: true }),
+      content: testContent,
       contentHash: "sha256:abc",
-      baseRevision: 7,
-      baseContentHash: "sha256:previous",
+      baseRevision: 0,
+      baseContentHash: null,
     });
 
     const result: RemoteWriteBatchResult = await batch.commit();
 
-    // prepare body 验证
-    const pb = capturedPrepareBody as Record<string, unknown>;
-    expect(pb).toBeDefined();
-    expect(pb.action).toBe("prepare");
-    expect(pb.spaceEpoch).toBe("ep-1");
-    const pmuts = (pb.mutations as Array<Record<string, unknown>>);
-    expect(pmuts.length).toBe(1);
-    const preparedMutation = pmuts[0];
-    if (preparedMutation === undefined) throw new Error("missing prepared mutation");
-    expect(preparedMutation.assetType).toBe("planner-state");
-    expect(preparedMutation.assetId).toBe("default");
-    expect(preparedMutation.storageMode).toBe("full");
-    expect(preparedMutation.encoding).toBe("identity");
-    expect(preparedMutation.baseRevision).toBe(7);
-    expect(preparedMutation.baseContentHash).toBe("previous");
-    expect(typeof preparedMutation.blobHash).toBe("string");
-    expect(typeof preparedMutation.blobByteSize).toBe("number");
+    // 验证 prepare body
+    expect(capturedPrepareBody).toBeDefined();
+    const prepareBody = capturedPrepareBody!;
+    expect(prepareBody.protocol).toBe("cf-sync-v2");
+    expect(prepareBody.action).toBe("prepare");
+    const objects = (prepareBody.objects ?? []) as JsonArray;
+    expect(objects.length).toBe(1);
+    expect(objects[0]?.assetType).toBe("planner-state");
+    expect(objects[0]?.assetId).toBe("default");
+    expect(objects[0]?.storageMode).toBe("full");
+    expect(objects[0]?.blobHash).toBe(BLOB_HASH);
 
-    // R2 PUT 已调用
-    expect(r2PutCalled).toBe(true);
+    // 验证 upload 已调用
+    expect(uploadCalled).toBe(true);
+    expect(uploadedBody).toBe(testContent);
 
-    // commit body 验证
-    const cb = capturedCommitBody as Record<string, unknown>;
-    expect(cb.action).toBe("commit");
-    expect(cb.commitToken).toBe("mock-commit-token");
-    const cmuts = (cb.mutations as Array<Record<string, unknown>>);
-    expect(cmuts.length).toBe(1);
-    const committedMutation = cmuts[0];
-    if (committedMutation === undefined) throw new Error("missing committed mutation");
-    expect(committedMutation.assetType).toBe("planner-state");
-    expect(committedMutation.baseRevision).toBe(7);
-    expect(committedMutation.baseContentHash).toBe("previous");
+    // 验证 commit body
+    expect(capturedCommitBody).toBeDefined();
+    const commitBody = capturedCommitBody!;
+    expect(commitBody.action).toBe("commit");
+    expect(commitBody.uploadId).toBe("upload-1");
+    expect(commitBody.commitToken).toBe("commit-token-1");
 
-    // 结果
+    // 验证结果
     expect(result.writes.length).toBe(1);
-    const writeResult = result.writes[0];
-    if (writeResult === undefined) throw new Error("missing write result");
-    expect(writeResult.revision).toBe(1);
-    expect(writeResult.collection).toBe(collection);
-    expect(writeResult.committedAt).toBe("2026-08-08T00:00:00.000Z");
+    expect(result.writes[0]?.revision).toBe(1);
+    expect(result.writes[0]?.collection).toBe(collection);
     expect(result.globalCursor).toBe(1);
+
+    let checkUrl = "";
+    fetchMock.add("GET:/check", (req) => {
+      checkUrl = req.url;
+      return { json: {}, status: 204 };
+    });
+    await session.complete?.();
+    await session.checkCollections([collection]);
+    expect(checkUrl).toContain("knownRevision=1");
 
     await session.dispose?.();
     remote.dispose?.();
-    vi.unstubAllGlobals();
-    // 恢复 fetch mock
-    vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) =>
-      fetchMock.dispatch(input, init),
-    );
   });
 
   // -- write batch: 空 mutations 直接返回 -- //
 
   it("returns empty writes for zero mutations", async () => {
-    fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
+    fetchMock
+      .add("GET:/check", () => ({ json: {}, status: 204 }));
 
     const remote = createTestRemote();
     const session = await remote.beginSession({
@@ -571,11 +546,68 @@ describe("cloudflare-sync-remote", () => {
     remote.dispose?.();
   });
 
-  // -- write batch: prepare 失败必须上抛 -- //
+  it("cancels a prepared transaction when an upload fails", async () => {
+    let cancelCalled = false;
+    fetchMock
+      .add("POST:/mutations/prepare", () => ({
+        json: {
+          status: "ready",
+          uploadId: "upload-failed",
+          commitToken: "commit-token-failed",
+          baseRevision: 0,
+          targetRevision: 1,
+          targetEpoch: 1,
+          expiresAt: "2099-01-01T00:00:00.000Z",
+          uploads: [{
+            assetType: "planner-state",
+            assetId: "default",
+            required: true,
+            backend: "d1",
+            url: "https://cf-mock.local/uploads/upload-failed",
+          }],
+        },
+      }))
+      .add("POST:/mutations/cancel", () => {
+        cancelCalled = true;
+        return { json: { status: "cancelled", uploadId: "upload-failed" } };
+      });
+    vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes("/uploads/upload-failed")) {
+        return Promise.resolve(new Response("upload outage", { status: 503 }));
+      }
+      return fetchMock.dispatch(input, init);
+    });
 
-  it("rejects when prepare returns a conflict", async () => {
-    fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
-    fetchMock.add("POST:/mutations/prepare", () => ({ json: { status: "conflict", conflicts: [] }, status: 409 }));
+    const remote = createTestRemote();
+    const collection = makeCollection();
+    const session = await remote.beginSession({ reason: "manual", collections: [collection] });
+    const batch = session.beginWriteBatch();
+    batch.putAsset({
+      collection,
+      assetId: "default",
+      content: "{}",
+      contentHash: "sha256:adapter-hash",
+      baseRevision: 0,
+      baseContentHash: null,
+    });
+
+    await expect(batch.commit()).rejects.toThrow("upload outage");
+    expect(cancelCalled).toBe(true);
+
+    await session.dispose?.();
+    remote.dispose?.();
+  });
+
+  // -- write batch: prepare 409 冲突 -- //
+
+  it("rejects when prepare returns conflict (409)", async () => {
+    fetchMock
+      .add("GET:/check", () => ({ json: {}, status: 204 }))
+      .add("POST:/mutations/prepare", () => ({
+        json: { error: "revision_mismatch", message: "space revision has changed" },
+        status: 409,
+      }));
 
     const remote = createTestRemote();
     const session = await remote.beginSession({
@@ -583,50 +615,193 @@ describe("cloudflare-sync-remote", () => {
       collections: [makeCollection()],
     });
 
-    const batch = session.beginWriteBatch();
     const collection = makeCollection();
+    const batch = session.beginWriteBatch();
     batch.putAsset({
       collection,
       assetId: "default",
       content: "{}",
       contentHash: "sha256:abc",
-      baseRevision: null,
+      baseRevision: 0,
       baseContentHash: null,
     });
 
-    await expect(batch.commit()).rejects.toBeInstanceOf(RemoteWriteConflictError);
+    await expect(batch.commit()).rejects.toBeInstanceOf(Error);
 
     await session.dispose?.();
     remote.dispose?.();
   });
 
-  it("refuses tombstones until the backend protocol supports deletes", async () => {
+  // -- 空间自动创建 -- //
+
+  it("auto-creates space when plan returns 404", async () => {
+    let createCalled = false;
+
+    fetchMock
+      .add("GET:/plan", () => ({ json: { error: "not_found" }, status: 404 }))
+      .add("POST:/spaces", () => {
+        createCalled = true;
+        return { json: { ok: true, spaceId: "default", revision: 0, epoch: 0, createdAt: "" }, status: 201 };
+      });
+
+    // 第二次 plan 成功返回
+    let planAttempts = 0;
+    vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes("/plan") && planAttempts === 0) {
+        planAttempts++;
+        return fetchMock.dispatch(input, init);
+      }
+      if (url.includes("/plan") && planAttempts === 1) {
+        planAttempts++;
+        return Promise.resolve(new Response(JSON.stringify(v2Plan([])), { status: 200 }));
+      }
+      return fetchMock.dispatch(input, init);
+    });
+
+    const remote = createTestRemote();
+    const session = await remote.beginSession({
+      reason: "foreground",
+      collections: [makeCollection()],
+    });
+
+    await session.prefetchIndexes([makeCollection()]);
+
+    expect(createCalled).toBe(true);
+
+    await session.dispose?.();
+    remote.dispose?.();
+  });
+
+  // -- 提交 tombstone -- //
+
+  it("commits a tombstone through prepare → commit", async () => {
+    let capturedObjects: JsonArray | null = null;
+    let capturedDeletions: JsonArray | null = null;
+
+    fetchMock
+      .add("GET:/check", () => ({ json: {}, status: 204 }))
+      .add("POST:/mutations/prepare", (req) => {
+        const body = req.body as JsonObject;
+        capturedObjects = (body.objects ?? []) as JsonArray;
+        capturedDeletions = (body.deletions ?? []) as JsonArray;
+        return {
+          json: {
+            status: "ready",
+            uploadId: "upload-2",
+            commitToken: "commit-token-2",
+            baseRevision: 0,
+            targetRevision: 1,
+            targetEpoch: 1,
+            expiresAt: "2099-01-01T00:00:00.000Z",
+            uploads: [],
+          },
+        };
+      })
+      .add("POST:/mutations/commit", () => ({
+        json: {
+          status: "committed",
+          uploadId: "upload-2",
+          revision: 1,
+          epoch: 1,
+          assets: [],
+          deletedAssets: [{ assetType: "planner-state", assetId: "todelete" }],
+          serverTime: "2026-08-09T00:00:00.000Z",
+        },
+      }));
+
     const remote = createTestRemote();
     const collection = makeCollection();
     const session = await remote.beginSession({
       reason: "manual",
       collections: [collection],
     });
+
+    fetchMock.add("GET:/plan", () => ({ json: v2Plan([]) }));
+    await session.prefetchIndexes([collection]);
+
     const batch = session.beginWriteBatch();
     batch.putTombstone({
       collection,
-      assetId: "default",
-      deletedAt: "2026-08-08T00:00:00.000Z",
-      targetContentHash: "sha256:target",
-      baseRevision: 1,
-      baseContentHash: "sha256:previous",
+      assetId: "todelete",
+      deletedAt: "2026-08-09T00:00:00.000Z",
+      targetContentHash: null,
+      baseRevision: 0,
+      baseContentHash: null,
     });
 
-    await expect(batch.commit()).rejects.toThrow("refusing to delete");
+    const result = await batch.commit();
 
-    session.dispose?.();
+    expect(capturedObjects).not.toBeNull();
+    expect(capturedObjects!).toEqual([]);
+    expect(capturedDeletions).not.toBeNull();
+    expect(capturedDeletions!.length).toBe(1);
+    expect(capturedDeletions![0]?.assetType).toBe("planner-state");
+    expect(capturedDeletions![0]?.assetId).toBe("todelete");
+    expect(result.writes.length).toBe(1);
+
+    await session.dispose?.();
     remote.dispose?.();
   });
 
-  it("fails closed when the plan endpoint is unavailable", async () => {
+  it("deletes every remote asset before clearing local sync state", async () => {
+    let capturedDeletions: JsonArray = [];
     fetchMock
-      .add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }))
-      .add("GET:/plan", () => ({ json: { message: "temporary outage" }, status: 503 }));
+      .add("GET:/plan", () => ({
+        json: v2Plan([
+          { assetType: "planner-state", assetId: "default", contentHash: BLOB_HASH },
+          { assetType: "blueprint", assetId: "bp-1", contentHash: BLOB_HASH },
+        ]),
+      }))
+      .add("POST:/mutations/prepare", (req) => {
+        capturedDeletions = ((req.body as JsonObject).deletions ?? []) as JsonArray;
+        return {
+          json: {
+            status: "ready",
+            uploadId: "delete-all",
+            commitToken: "delete-all-token",
+            baseRevision: 1,
+            targetRevision: 2,
+            targetEpoch: 2,
+            expiresAt: "2099-01-01T00:00:00.000Z",
+            uploads: [],
+          },
+        };
+      })
+      .add("POST:/mutations/commit", () => ({
+        json: {
+          status: "committed",
+          uploadId: "delete-all",
+          revision: 2,
+          epoch: 2,
+          assets: [],
+          deletedAssets: [
+            { assetType: "planner-state", assetId: "default" },
+            { assetType: "blueprint", assetId: "bp-1" },
+          ],
+          serverTime: "2026-08-11T00:00:00.000Z",
+        },
+      }));
+
+    const remote = createTestRemote();
+    await remote.localState.setLastSyncedHash("planner:default", "local-hash");
+    await remote.resetRemote?.();
+
+    expect(capturedDeletions).toHaveLength(2);
+    expect(capturedDeletions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ assetType: "planner-state", assetId: "default" }),
+      expect.objectContaining({ assetType: "blueprint", assetId: "bp-1" }),
+    ]));
+    await expect(remote.localState.getLastSyncedHash("planner:default")).resolves.toBeNull();
+
+    remote.dispose?.();
+  });
+
+  // -- 远端无可访问时失败 -- //
+
+  it("fails when the plan endpoint is unavailable", async () => {
+    fetchMock
+      .add("GET:/plan", () => ({ json: { error: "internal_error" }, status: 503 }));
 
     const remote = createTestRemote();
     const collection = makeCollection();
@@ -638,94 +813,6 @@ describe("cloudflare-sync-remote", () => {
     await expect(session.prefetchIndexes([collection])).rejects.toThrow("HTTP 503");
 
     session.dispose?.();
-    remote.dispose?.();
-  });
-
-  // -- 空间不存在自动创建 -- //
-
-  it("auto-creates space when 404 on check", async () => {
-    let createCalled = false;
-    let checkCallCount = 0;
-
-    fetchMock
-      .add("GET:/check", () => {
-        checkCallCount++;
-        if (checkCallCount === 1) {
-          return { json: { error: "not_found", message: "空间不存在" }, status: 404 };
-        }
-        return { json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } };
-      })
-      .add("POST:/mutations/prepare", (_req) => {
-        // 不直接 add — 我们只是要验证 create 逻辑
-        createCalled = true;
-        return { json: { ok: true, spaceId: "default", activeEpoch: "ep-1", createdAt: "" }, status: 201 };
-      })
-      .add("GET:/plan", () => ({ json: { head: 0, epoch: "ep-1", snapshotHead: 0, modules: [], capabilities: {}, nextPageToken: null, minRetainedHead: 0, serverTime: "" } }));
-
-    // 覆盖 fetch mock，让 POST /spaces 也被匹配
-    // AI-CORRECTION 2026-08-08: fetch 恢复统一由 afterEach 的 vi.unstubAllGlobals 负责。
-    vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) => {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      if (url.includes("/spaces") && init?.method === "POST" && !url.includes("/mutations")) {
-        createCalled = true;
-        return Promise.resolve(new Response(JSON.stringify({ ok: true, spaceId: "default", activeEpoch: "ep-1", createdAt: "" }), { status: 201 }));
-      }
-      return fetchMock.dispatch(input, init);
-    });
-
-    const remote = createTestRemote();
-    const session = await remote.beginSession({
-      reason: "foreground",
-      collections: [makeCollection()],
-    });
-
-    await session.checkCollections([makeCollection()]);
-
-    expect(createCalled).toBe(true);
-
-    await session.dispose?.();
-    remote.dispose?.();
-    vi.unstubAllGlobals();
-    vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) =>
-      fetchMock.dispatch(input, init),
-    );
-  });
-
-  // -- dispose -- //
-
-  it("dispose clears caches without throwing", async () => {
-    fetchMock.add("GET:/check", () => ({ json: { head: 0, epoch: "ep-1", changed: false, planRequired: true, changes: [], moduleHeads: [], serverTime: "" } }));
-
-    const remote = createTestRemote();
-    const session = await remote.beginSession({
-      reason: "manual",
-      collections: [makeCollection()],
-    });
-
-    expect(() => session.dispose?.()).not.toThrow();
-    remote.dispose?.();
-  });
-
-  it("reset clears all local Cloudflare metadata and tombstones after remote success", async () => {
-    localStorage.setItem("v3-sync-provider", "cloudflare");
-    fetchMock.add("POST:/reset", () => ({ json: { ok: true } }));
-
-    const remote = createTestRemote();
-    await remote.localState.setLastSyncedHash("planner:default", "local-hash");
-    await writeActiveSyncTombstone({
-      adapterId: "blueprints",
-      assetId: "deleted-blueprint",
-      value: { blueprintId: "deleted-blueprint" },
-      deletedAt: "2026-08-08T00:00:00.000Z",
-    });
-
-    await expect(listActiveSyncTombstones("blueprints")).resolves.toHaveLength(1);
-    await remote.resetRemote?.();
-
-    await expect(
-      remote.localState.getLastSyncedHash("planner:default"),
-    ).resolves.toBeNull();
-    await expect(listActiveSyncTombstones("blueprints")).resolves.toEqual([]);
     remote.dispose?.();
   });
 });

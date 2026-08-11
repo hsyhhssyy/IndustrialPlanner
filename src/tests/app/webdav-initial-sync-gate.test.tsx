@@ -38,6 +38,7 @@ describe("WebDavInitialSyncGate", () => {
         syncNow: vi.fn(async () => undefined),
         deleteRemoteData: vi.fn(async () => undefined),
         updateSettings: vi.fn(),
+        abortCurrentTransaction: vi.fn(async () => undefined),
       },
       queries: {},
     };
@@ -78,6 +79,7 @@ describe("WebDavInitialSyncGate", () => {
         tasks: [{
           kind: "canvas",
           phase: "running",
+          direction: null,
           completedUnitCount: 55,
           totalUnitCount: 100,
           lastStartedAt: null,

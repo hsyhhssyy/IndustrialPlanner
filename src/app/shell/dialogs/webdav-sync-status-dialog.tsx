@@ -8,6 +8,7 @@ import type {
   SyncPhase,
   SyncRunReason,
   SyncState,
+  SyncTaskDirection,
   SyncTaskKind,
   SyncTaskPhase,
 } from "@/domain/sync";
@@ -340,13 +341,18 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
                   styles,
                   `webdav-sync-task-card is-${task.phase}`,
                 )}
+                data-sync-task-direction={task.direction ?? "none"}
                 data-sync-task-kind={task.kind}
                 data-sync-task-phase={task.phase}
                 key={task.kind}
               >
                 <header>
                   <strong>{t(resolveTaskKindKey(task.kind))}</strong>
-                  <span>{t(resolveTaskPhaseKey(task.phase))}</span>
+                  <span>
+                    {task.direction === null
+                      ? t(resolveTaskPhaseKey(task.phase))
+                      : `${t(resolveTaskPhaseKey(task.phase))} (${t(resolveTaskDirectionKey(task.direction))})`}
+                  </span>
                 </header>
                 <div className={cm(styles, "webdav-sync-task-metadata")}>
                   <span>
@@ -471,6 +477,12 @@ function resolveTaskKindKey(kind: SyncTaskKind): UiKey {
 
 function resolveTaskPhaseKey(phase: SyncTaskPhase): UiKey {
   return `webDavStatus.taskPhase.${phase}`;
+}
+
+function resolveTaskDirectionKey(direction: SyncTaskDirection): UiKey {
+  return direction === "upload"
+    ? "settingsField.experimental-webdav-status-uploading"
+    : "settingsField.experimental-webdav-status-downloading";
 }
 
 function formatNullableTime(value: string | null, fallback: string): string {

@@ -16,16 +16,25 @@ import type {
   SyncConflictResolution,
   SyncContract,
 } from "@/domain/sync";
+import {
+  listBlueprintSyncEntries,
+  type BlueprintFolderRecord,
+  type BlueprintRecord,
+} from "@/shared/storage";
 import styles from "./webdav-conflict-dialog.module.scss";
 
 interface WebDavConflictDialogProps {
+  readonly appHost: AppHost;
   readonly compactMobileLayout: boolean;
+  readonly onStopSync: () => void;
   readonly sync: SyncContract;
   readonly t: AppHost["actions"]["translate"];
 }
 
 export const WebDavConflictDialog = observer(function WebDavConflictDialog({
+  appHost,
   compactMobileLayout,
+  onStopSync,
   sync,
   t,
 }: WebDavConflictDialogProps) {
@@ -41,14 +50,38 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
   const [decisions, setDecisions] = useState(
     () => new Map<string, SyncConflictResolution>(),
   );
+  const [storedItemNames, setStoredItemNames] = useState(
+    () => new Map<string, string>(),
+  );
   const conflict = sync.state.pendingConflict;
   const itemKey = conflict?.items.map(
     (item) => createConflictItemKey(item.adapterId, item.assetId),
   ).join("\u0001") ?? "";
+  const nameLookupItems = useMemo(
+    () => conflict?.items.map((item) => ({
+      adapterId: item.adapterId,
+      assetId: item.assetId,
+    })) ?? [],
+    [conflict?.items],
+  );
 
   useEffect(() => {
     setDecisions(new Map());
   }, [itemKey]);
+
+  useEffect(() => {
+    let active = true;
+    setStoredItemNames(new Map());
+    void loadStoredConflictItemNames(nameLookupItems).then((names) => {
+      if (active) {
+        setStoredItemNames(names);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [nameLookupItems]);
 
   if (!sync.state.settings.enabled || conflict === null) {
     return null;
@@ -70,6 +103,14 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
         createConflictItemKey(item.adapterId, item.assetId),
       )!,
     } satisfies SyncConflictDecision)));
+  };
+  const selectAll = (
+    resolution: "use-local" | "use-remote",
+  ): void => {
+    setDecisions(new Map(conflict.items.map((item) => [
+      createConflictItemKey(item.adapterId, item.assetId),
+      resolution,
+    ])));
   };
 
   return (
@@ -111,6 +152,17 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
                 item.assetId,
               );
               const selectedResolution = decisions.get(key);
+              const typeLabel = resolveConflictItemTypeLabel(item.adapterId, t);
+              const itemName = resolveConflictItemName({
+                adapterId: item.adapterId,
+                assetId: item.assetId,
+                appHost,
+                storedItemNames,
+                t,
+              });
+              const itemLabel = t("webDavConflict.itemLabel")
+                .replace("{type}", typeLabel)
+                .replace("{name}", itemName);
 
               return (
                 <fieldset
@@ -118,8 +170,19 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
                   key={key}
                 >
                   <legend>
-                    <strong>{item.adapterId}</strong>
-                    <span>{item.assetId}</span>
+                    <strong>{itemLabel}</strong>
+                    {/*
+                      AI-REMOVED 2026-08-08:
+                      Reason: 内部 assetId 不是面向用户的资源名称，且长 ID 会破坏弹窗对齐。
+                      Trigger: 用户要求移除基地 ID、蓝图 ID，并将类型与名称合并展示。
+                      Evidence: 三种规定屏幕尺寸截图均显示 ID 折行或挤占标题空间。
+                      Replacement: 上方本地化的 itemLabel。
+                      Risk: Low；内部 ID 仍保留在表单 key 与提交决议中。
+                      Human Review: Required
+
+                      Original code:
+                      <span>{item.assetId}</span>
+                    */}
                   </legend>
                   <p>
                     {t("webDavConflict.remoteUpdatedAt").replace(
@@ -156,6 +219,28 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
           </div>
           <div className={cm(styles, "webdav-conflict-actions")}>
             <button
+              className={cm(styles, "webdav-conflict-batch-action")}
+              onClick={() => selectAll("use-local")}
+              type="button"
+            >
+              {t("webDavConflict.batchUseLocal")}
+            </button>
+            <button
+              className={cm(styles, "webdav-conflict-batch-action")}
+              onClick={() => selectAll("use-remote")}
+              type="button"
+            >
+              {t("webDavConflict.batchUseRemote")}
+            </button>
+            <button
+              className={cm(styles, "webdav-conflict-stop-sync")}
+              onClick={onStopSync}
+              type="button"
+            >
+              {t("webDavConflict.stopSync")}
+            </button>
+            <button
+              className={cm(styles, "webdav-conflict-apply")}
               disabled={!allDecisionsSelected}
               type="submit"
             >
@@ -187,7 +272,16 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
 const CONFLICT_RESOLUTIONS: readonly SyncConflictResolution[] = [
   "use-local",
   "use-remote",
-  "pause",
+  // AI-REMOVED 2026-08-08:
+  // Reason: pause 是关闭整个同步流程的全局决议，不是单项资源的独立选择。
+  // Trigger: 用户要求从子项移除拒绝冲突，并改为底部红色全局操作按钮。
+  // Evidence: 任意一个 pause 都会保留双方数据并结束本次同步，逐项重复展示会误导用户。
+  // Replacement: WebDavConflictDialog 的 webdav-conflict-stop-sync 按钮。
+  // Risk: Low；pause 仍由同步状态的 cancelConflictWorkflow 为全部冲突统一提交。
+  // Human Review: Required
+  //
+  // Original code:
+  // "pause",
 ];
 
 function createConflictItemKey(adapterId: string, assetId: string): string {
@@ -220,4 +314,113 @@ function formatRemoteUpdatedAt(
 
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? fallback : date.toLocaleString();
+}
+
+async function loadStoredConflictItemNames(
+  items: readonly { readonly adapterId: string; readonly assetId: string }[],
+): Promise<Map<string, string>> {
+  const blueprintIds = new Set(items.flatMap((item) =>
+    item.adapterId === "blueprints" ? [item.assetId] : []
+  ));
+  const blueprintFolderIds = new Set(items.flatMap((item) =>
+    item.adapterId === "blueprint-folders" ? [item.assetId] : []
+  ));
+  if (blueprintIds.size === 0 && blueprintFolderIds.size === 0) {
+    return new Map();
+  }
+
+  try {
+    const [blueprints, blueprintFolders] = await Promise.all([
+      blueprintIds.size === 0
+        ? Promise.resolve([])
+        : listBlueprintSyncEntries<BlueprintRecord>("blueprint"),
+      blueprintFolderIds.size === 0
+        ? Promise.resolve([])
+        : listBlueprintSyncEntries<BlueprintFolderRecord>("folder"),
+    ]);
+    const names = new Map<string, string>();
+    for (const entry of blueprints) {
+      if (blueprintIds.has(entry.id)) {
+        names.set(createConflictItemKey("blueprints", entry.id), entry.value.name);
+      }
+    }
+    for (const entry of blueprintFolders) {
+      if (blueprintFolderIds.has(entry.id)) {
+        names.set(
+          createConflictItemKey("blueprint-folders", entry.id),
+          entry.value.name,
+        );
+      }
+    }
+
+    return names;
+  } catch {
+    return new Map();
+  }
+}
+
+function resolveConflictItemTypeLabel(
+  adapterId: string,
+  t: AppHost["actions"]["translate"],
+): string {
+  switch (adapterId) {
+    case "world-documents":
+      return t("webDavConflict.type.base");
+    case "blueprints":
+      return t("webDavConflict.type.blueprint");
+    case "blueprint-folders":
+      return t("webDavConflict.type.blueprintFolder");
+    case "custom-modules":
+      return t("webDavConflict.type.module");
+    case "custom-module-folders":
+      return t("webDavConflict.type.moduleFolder");
+    case "module-canvases":
+      return t("webDavConflict.type.moduleCanvas");
+    case "module-canvas-folders":
+      return t("webDavConflict.type.moduleCanvasFolder");
+    case "production-planning":
+      return t("webDavConflict.type.productionPlanning");
+    default:
+      return t("webDavConflict.type.syncData");
+  }
+}
+
+function resolveConflictItemName(options: {
+  readonly adapterId: string;
+  readonly assetId: string;
+  readonly appHost: AppHost;
+  readonly storedItemNames: ReadonlyMap<string, string>;
+  readonly t: AppHost["actions"]["translate"];
+}): string {
+  const { adapterId, assetId, appHost, storedItemNames, t } = options;
+  const moduleBalancing = appHost.internalState.workbench.toolbox.moduleBalancing;
+  let name: string | undefined;
+
+  switch (adapterId) {
+    case "world-documents":
+      name = appHost.workspace.registry.baseDefinitions.find(
+        (definition) => definition.id === assetId,
+      )?.name;
+      break;
+    case "blueprints":
+    case "blueprint-folders":
+      name = storedItemNames.get(createConflictItemKey(adapterId, assetId));
+      break;
+    case "custom-modules":
+      name = moduleBalancing.customModules.find((item) => item.id === assetId)?.name;
+      break;
+    case "custom-module-folders":
+      name = moduleBalancing.folders.find((item) => item.id === assetId)?.name;
+      break;
+    case "module-canvases":
+      name = moduleBalancing.canvases.find((item) => item.id === assetId)?.name;
+      break;
+    case "module-canvas-folders":
+      name = moduleBalancing.canvasFolders.find((item) => item.id === assetId)?.name;
+      break;
+    case "production-planning":
+      return t("webDavConflict.currentPlan");
+  }
+
+  return name?.trim() || t("webDavConflict.nameUnavailable");
 }

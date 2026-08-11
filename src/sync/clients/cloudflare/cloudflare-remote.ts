@@ -1,3 +1,15 @@
+// Cloudflare cf-sync-v2 远端实现。
+// 协议版本：cf-sync-v2，直接 HTTP fetch，不使用 Web Worker。
+//
+// 协议流程：
+//   plan:      GET  /v1/sync/spaces/:spaceId/plan
+//   check:     GET  /v1/sync/spaces/:spaceId/check?knownRevision=N
+//   写入:      POST /v1/sync/spaces/:spaceId/mutations { action: "prepare" }
+//              → 上传 blob 到 upload instructions 中的 URL
+//              → POST /v1/sync/spaces/:spaceId/mutations { action: "commit" }
+//   下载:      从 plan 的 downloadUrl + ticket 直接 GET
+//   创建空间:  POST /v1/sync/spaces
+
 import {
   applyIndexedDbStoreMutations,
   clearIndexedDbStores,
@@ -9,16 +21,17 @@ import {
 import { resolveBackendApiBaseUrl } from "@/shared/storage/backend-api-address";
 import { CLOUDFLARE_SYNC_TOMBSTONE_STORE_NAME } from "@/shared/storage/sync-tombstone-storage";
 import { createUuid } from "@/domain/shared/uuid";
-import { CfWorkerClient } from "./cloudflare-worker-client";
+import { createLogger } from "@/shared/logging/logger";
+import { createSha256Hash } from "@/shared/storage/hash-utils";
 import type {
-  CfWorkerOperation,
-  CfPrefetchIndexesResult,
-  CfReadAssetResult,
-  CfCheckCollectionsResult,
-  CfCommitBatchResult,
-  CfEnsureSpaceResult,
-  CfWorkerPlanResponse,
-} from "./cloudflare-worker-protocol";
+  CfV2PlanResponse,
+  CfV2CheckResponse,
+  CfV2PrepareResponse,
+  CfV2CommitResult,
+  CfV2PrepareObject,
+  CfV2PrepareDeletion,
+} from "./cloudflare-v2-types";
+import { CF_SYNC_V2_PROTOCOL, CfV2HttpError } from "./cloudflare-v2-types";
 import type {
   RemoteApplyResult,
   RemoteAssetContent,
@@ -38,6 +51,8 @@ import type {
 } from "../remote-types";
 import { RemoteWriteConflictError } from "../remote-types";
 
+const logger = createLogger("cloudflare-v2");
+
 // ============================================================================
 // IndexedDB 配置
 // ============================================================================
@@ -46,21 +61,6 @@ const CF_DATABASE_NAME = "v3-industrial-planner";
 const CF_STATE_STORE = "cf-sync-state";
 const CF_STATE_KEY_PREFIX = "state";
 const CF_ASSETS_STORE = "cf-sync-assets";
-
-// AI-REMOVED 2026-08-08:
-// Reason: 固定状态键会让不同后端地址、不同用户空间共享 epoch/cursor，造成串号与漏同步。
-// Trigger: Cloudflare 空间改为使用本地 ownerId，并允许显式传入开发后端地址。
-// Evidence: 原状态位置只有全局 key "state"，没有 apiBase/spaceId 维度。
-// Replacement: CloudflareSyncLocalState 构造器生成的 stateLocation。
-// Risk: Low；旧的未隔离状态会被忽略，不会删除。
-// Human Review: Required
-//
-// Original code:
-// const CF_STATE_LOCATION: IndexedDbStorageLocation = {
-//   databaseName: CF_DATABASE_NAME,
-//   storeName: CF_STATE_STORE,
-//   key: "state",
-// };
 
 const CF_ASSETS_LOCATION: IndexedDbStoreLocation = {
   databaseName: CF_DATABASE_NAME,
@@ -72,12 +72,18 @@ const CF_ASSETS_LOCATION: IndexedDbStoreLocation = {
 // ============================================================================
 
 interface CfLocalState {
-  schemaVersion: 2;
+  schemaVersion: 3;
   spaceId: string;
-  epoch: string | null;
-  appliedHead: number | null;
-  generation: string;
+  revision: string; // 当前已同步的远端 revision（字符串，仅比较相等性）
 }
+
+// AI-CORRECTION 2026-08-10: spaceEpoch 与 generation 已移除。
+// Reason: epoch 是服务端内部概念，客户端不应持久化；generation 的唯一作用是
+// 在 epoch 变更时作废本地缓存，但 epoch 每次 commit 都变，导致 foreground sync
+// 的 checkCollections(204) 短路永远无法生效。
+// Replacement: createAssetStorageKey 直接使用 assetKey，getRemoteEtag 使用
+// CF_STATE_STORE 独立存储 collection 级 revision。
+// Risk: Low；空间重置时 revision 不连续，adapters 的 hash 比对仍能检测差异。
 
 interface CfAssetState {
   assetKey: string;
@@ -87,59 +93,45 @@ interface CfAssetState {
   remoteAdapterContentHash: string | null;
 }
 
+// AI-CORRECTION 2026-08-10: collection 级 etag（用来给 checkCollections 传 knownRevision）。
+// 存储在 CF_STATE_STORE 下，不受 generation/epoch 影响。
+const CF_COLLECTION_ETAG_PREFIX = "col-etag";
+
 function defaultState(spaceId: string): CfLocalState {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     spaceId,
-    epoch: null,
-    appliedHead: null,
-    generation: createUuid(),
+    revision: "0",
   };
 }
 
-interface CloudflareWorkerClientLike {
-  request<TResult>(operation: CfWorkerOperation): Promise<TResult>;
-  dispose(): void;
-}
-
-export interface CloudflareSyncRemoteOptions {
-  readonly apiBase?: string;
-  readonly spaceId?: string;
-  readonly maxConcurrentRequests?: number;
-  readonly requestTimeoutMs?: number;
-  readonly onRequestActivityChange?: (activity: {
-    readonly activeRequestCount: number;
-    readonly queuedRequestCount: number;
-  }) => void;
-  readonly workerClientFactory?: (
-    apiBase: string,
-    options: {
-      readonly maxConcurrentRequests?: number;
-      readonly requestTimeoutMs?: number;
-      readonly onRequestActivityChange?: (activity: {
-        readonly activeRequestCount: number;
-        readonly queuedRequestCount: number;
-      }) => void;
-    },
-  ) => CloudflareWorkerClientLike;
-}
-
 // ============================================================================
-// CloudflareSyncLocalState（保留在主线程，操作 IndexedDB）
+// CloudflareSyncLocalState
 // ============================================================================
 
 class CloudflareSyncLocalState implements SyncLocalState {
   private readonly stateLocation: IndexedDbStorageLocation;
   private cachedState: CfLocalState | null = null;
+  // AI-CORRECTION 2026-08-10: pendingAdapterHashStorageKeys 已移除。
+  // Reason: 其唯一清空时机是 epoch 变更，epoch 已从客户端移除。
+  // Replacement: noteRemoteHashMapping 中 pendingAdapterHashStorageKeys 逻辑替换为直接比较。
+  // Risk: Low。
+  // AI-CORRECTION 2026-08-11: 远端协议 hash 与适配器 hash 算法不同，下载后仍需等待
+  // setLastSyncedHash 提供归一化后的适配器 hash，才能建立可比较映射。
   private readonly pendingAdapterHashStorageKeys = new Set<string>();
 
-  public constructor(apiBase: string, private readonly spaceId: string) {
+  public constructor(
+    private readonly apiBase: string,
+    private readonly spaceId: string,
+  ) {
     this.stateLocation = {
       databaseName: CF_DATABASE_NAME,
       storeName: CF_STATE_STORE,
       key: `${CF_STATE_KEY_PREFIX}\u0000${apiBase}\u0000${spaceId}`,
     };
   }
+
+  // ---- SyncLocalState 接口 ---- //
 
   public async getLastSyncedHash(assetKey: string): Promise<string | null> {
     const storageKey = await this.createAssetStorageKey(assetKey);
@@ -176,6 +168,11 @@ class CloudflareSyncLocalState implements SyncLocalState {
         remoteRevision: existing?.remoteRevision ?? null,
         lastSyncedContentHash: hash,
         remoteProtocolContentHash: existing?.remoteProtocolContentHash ?? null,
+        // AI-CORRECTION 2026-08-10: pendingAdapterHashStorageKeys 已移除。
+        // 原逻辑：pendingAdapterHashStorageKeys 中有 storageKey 时用 hash填充 remoteAdapterContentHash。
+        // 新逻辑：lastSyncedContentHash 正常更新，remoteAdapterContentHash 不在此处设置（由 noteRemoteHashMapping 负责）。
+        // AI-CORRECTION 2026-08-11: noteRemoteHashMapping 无法独立计算适配器归一化 hash；
+        // 下载后的首次 setLastSyncedHash 必须完成协议 hash → 适配器 hash 映射。
         remoteAdapterContentHash: this.pendingAdapterHashStorageKeys.has(storageKey)
           ? hash
           : existing?.remoteAdapterContentHash ?? null,
@@ -260,13 +257,28 @@ class CloudflareSyncLocalState implements SyncLocalState {
   }
 
   public async getRemoteEtag(key: string): Promise<string | null> {
-    const revision = await this.getRemoteRevision(key);
-    return revision === null ? null : String(revision);
+    const record = await readFromIndexedDb<{ etag: string | null }>({
+      databaseName: CF_DATABASE_NAME,
+      storeName: CF_STATE_STORE,
+      key: `${CF_COLLECTION_ETAG_PREFIX}\u0000${key}`,
+    });
+    return record?.etag ?? null;
   }
 
-  public async setRemoteEtag(_key: string, _etag: string | null): Promise<void> {
-    // Cloudflare 不使用 ETag
+  public async setRemoteEtag(key: string, etag: string | null): Promise<void> {
+    const storageKey = `${CF_COLLECTION_ETAG_PREFIX}\u0000${key}`;
+    await applyIndexedDbStoreMutations(
+      {
+        databaseName: CF_DATABASE_NAME,
+        storeName: CF_STATE_STORE,
+      },
+      etag === null
+        ? [{ type: "delete", key: storageKey }]
+        : [{ type: "put", key: storageKey, value: { etag } }],
+    );
   }
+
+  // ---- 内部方法 ---- //
 
   public async readState(): Promise<CfLocalState> {
     if (this.cachedState !== null) return this.cachedState;
@@ -288,23 +300,15 @@ class CloudflareSyncLocalState implements SyncLocalState {
     this.cachedState = state;
   }
 
-  public async replaceEpoch(epoch: string): Promise<CfLocalState> {
+  public async advanceToRevision(revision: string): Promise<void> {
     const state = await this.readState();
-    if (state.epoch === epoch) return state;
-    const nextState: CfLocalState = {
-      ...state,
-      epoch,
-      appliedHead: null,
-      generation: createUuid(),
-    };
-    this.pendingAdapterHashStorageKeys.clear();
-    await this.writeState(nextState);
-    return nextState;
+    if (state.revision === revision) return;
+    await this.writeState({ ...state, revision });
   }
 
   public async reset(): Promise<void> {
-    this.pendingAdapterHashStorageKeys.clear();
     this.cachedState = null;
+    this.pendingAdapterHashStorageKeys.clear();
     const cleared = await clearIndexedDbStores(
       { databaseName: CF_DATABASE_NAME },
       [
@@ -319,8 +323,10 @@ class CloudflareSyncLocalState implements SyncLocalState {
   }
 
   private async createAssetStorageKey(assetKey: string): Promise<string> {
-    const state = await this.readState();
-    return `${state.generation}\u0000${assetKey}`;
+    // AI-CORRECTION 2026-08-10: generation 前缀已移除。
+    // Reason: generation 在 epoch 变更时重新生成，导致所有旧缓存 key 变孤儿。
+    // Replacement: assetKey 直接作为存储 key，不再需要 generation 作用域。
+    return assetKey;
   }
 
   private async applyAssetMutations(
@@ -334,12 +340,11 @@ class CloudflareSyncLocalState implements SyncLocalState {
 function normalizeState(value: unknown, spaceId: string): CfLocalState | null {
   if (typeof value !== "object" || value === null) return null;
   const candidate = value as Partial<CfLocalState>;
+  // AI-CORRECTION 2026-08-10: spaceEpoch 和 generation 校验已移除，revision 改为 string 校验。
   if (
-    candidate.schemaVersion !== 2
+    candidate.schemaVersion !== 3
     || candidate.spaceId !== spaceId
-    || (candidate.epoch !== null && typeof candidate.epoch !== "string")
-    || (candidate.appliedHead !== null && typeof candidate.appliedHead !== "number")
-    || typeof candidate.generation !== "string"
+    || typeof candidate.revision !== "string"
   ) {
     return null;
   }
@@ -360,209 +365,271 @@ function normalizeAssetState(
 }
 
 // ============================================================================
-// CloudflareSyncRemoteSession（Worker 薄代理）
+// HTTP 工具函数
+// ============================================================================
+
+async function cfV2Fetch(apiBase: string, path: string, init?: RequestInit): Promise<Response> {
+  const url = `${apiBase}${path}`;
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      ...(init?.body ? { "content-type": "application/json" } : {}),
+      ...init?.headers,
+    },
+  });
+  if (!response.ok && response.status !== 204) {
+    let body: Record<string, unknown> = {};
+    try { body = await response.json() as Record<string, unknown>; } catch { /* ignore */ }
+    throw new CfV2HttpError(
+      response.status,
+      typeof body.error === "string" ? body.error : "unknown",
+      typeof body.message === "string" ? body.message : `HTTP ${response.status}`,
+      body,
+    );
+  }
+  return response;
+}
+
+async function cfV2GetJson<T>(apiBase: string, path: string): Promise<T> {
+  const response = await cfV2Fetch(apiBase, path);
+  if (response.status === 204) return undefined as unknown as T;
+  return response.json() as Promise<T>;
+}
+
+async function cfV2PostJson<T>(apiBase: string, path: string, body: unknown): Promise<T> {
+  const response = await cfV2Fetch(apiBase, path, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return response.json() as Promise<T>;
+}
+
+async function cancelPreparedBatch(
+  apiBase: string,
+  spaceId: string,
+  prepare: CfV2PrepareResponse,
+): Promise<void> {
+  try {
+    await cfV2PostJson(
+      apiBase,
+      `/v1/sync/spaces/${encodeURIComponent(spaceId)}/mutations`,
+      {
+        protocol: CF_SYNC_V2_PROTOCOL,
+        action: "cancel",
+        uploadId: prepare.uploadId,
+        commitToken: prepare.commitToken,
+      },
+    );
+  } catch (cancelError) {
+    // commit 可能已经开始或完成；此时后端只允许向前恢复，不能取消。
+    logger.warn(`Failed to cancel Cloudflare transaction ${prepare.uploadId}.`, cancelError);
+  }
+}
+
+async function commitPreparedBatch(
+  apiBase: string,
+  spaceId: string,
+  prepare: CfV2PrepareResponse,
+): Promise<CfV2CommitResult> {
+  return await cfV2PostJson<CfV2CommitResult>(
+    apiBase,
+    `/v1/sync/spaces/${encodeURIComponent(spaceId)}/mutations`,
+    {
+      protocol: CF_SYNC_V2_PROTOCOL,
+      action: "commit",
+      uploadId: prepare.uploadId,
+      commitToken: prepare.commitToken,
+    },
+  );
+}
+
+// ============================================================================
+// CloudflareSyncRemoteSession
 // ============================================================================
 
 class CloudflareSyncRemoteSession implements SyncRemoteSession {
-  // planCache 保留在主线程，供 readIndex() 纯计算使用
-  private planCache: CfWorkerPlanResponse | null = null;
-  private readonly assetContentCache = new Map<string, Promise<CfReadAssetResult>>();
-  private readonly workerClient: CloudflareWorkerClientLike;
-  private latestCommittedHead: number | null = null;
+  private planCache: CfV2PlanResponse | null = null;
+  private readonly apiBase: string;
+  private latestCommittedRevision: number | null = null;
 
   public constructor(
     public readonly localState: CloudflareSyncLocalState,
     private readonly context: SyncRemoteSessionContext,
     apiBase: string,
-    options: CloudflareSyncRemoteOptions,
   ) {
-    const clientOptions = {
-      ...(options.maxConcurrentRequests === undefined
-        ? {}
-        : { maxConcurrentRequests: options.maxConcurrentRequests }),
-      ...(options.requestTimeoutMs === undefined
-        ? {}
-        : { requestTimeoutMs: options.requestTimeoutMs }),
-      ...(options.onRequestActivityChange === undefined
-        ? {}
-        : { onRequestActivityChange: options.onRequestActivityChange }),
-    };
-    this.workerClient = options.workerClientFactory?.(apiBase, clientOptions)
-      ?? new CfWorkerClient(apiBase, clientOptions);
+    this.apiBase = apiBase;
   }
 
-  // -- prefetchIndexes: 委托 Worker 获取 plan -- //
+  // -- 确保空间存在 -- //
+
+  private async ensureSpace(): Promise<CfLocalState> {
+    const state = await this.localState.readState();
+    try {
+      await cfV2Fetch(this.apiBase, `/v1/sync/spaces/${encodeURIComponent(state.spaceId)}/plan`);
+      return state;
+    } catch (error) {
+      if (error instanceof CfV2HttpError && error.status === 404) {
+        logger.info(`Creating Cloudflare space: ${state.spaceId}`);
+        await cfV2PostJson(this.apiBase, "/v1/sync/spaces", {
+          spaceId: state.spaceId,
+        });
+        return state;
+      }
+      throw error;
+    }
+  }
+
+  // -- prefetchIndexes：获取 plan -- //
 
   public async prefetchIndexes(_collections: readonly SyncRemoteCollection[]): Promise<void> {
     if (this.planCache !== null) return;
-    const state = await this.ensureSpace();
-    const result = await this.workerClient.request<CfPrefetchIndexesResult>({
-      type: "prefetch-indexes",
-      spaceId: state.spaceId,
-      appliedHead: state.appliedHead,
-      epoch: state.epoch,
-    });
-
-    this.planCache = result.plan;
-    if (result.plan === null) {
-      throw new Error("Cloudflare plan request returned no plan.");
-    }
-    if (result.epoch && state.epoch !== result.epoch) {
-      await this.localState.replaceEpoch(result.epoch);
-    }
+    await this.ensureSpace();
+    const state = await this.localState.readState();
+    const plan = await cfV2GetJson<CfV2PlanResponse>(
+      this.apiBase,
+      `/v1/sync/spaces/${encodeURIComponent(state.spaceId)}/plan`,
+    );
+    this.planCache = plan;
+    // AI-CORRECTION 2026-08-10: epoch 比较已移除，revision 改为字符串相等性比较。
+    // AI-REMOVED 2026-08-11:
+    // Reason: plan 只表示已观察到远端版本，不表示所有资产已经成功应用到本地。
+    // Trigger: 提前推进 revision 会让后续 /check 返回 204，从而跳过尚未下载的远端更新。
+    // Evidence: isRemoteIndexUnchangedForCleanLocalEntries 在 prefetchIndexes 后调用 checkCollections。
+    // Replacement: complete() 在整次同步成功后推进 plan revision；成功 commit 则立即推进 commit revision。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // const planRevision = String(plan.revision);
+    // if (planRevision !== state.revision) {
+    //   await this.localState.advanceToRevision(planRevision);
+    // }
   }
 
   public async refreshIndexes(collections: readonly SyncRemoteCollection[]): Promise<void> {
     this.planCache = null;
-    this.assetContentCache.clear();
     await this.prefetchIndexes(collections);
   }
 
-  // -- readIndex: 纯内存计算，保留在主线程 -- //
+  // -- readIndex：从 plan cache 计算 -- //
 
   public async readIndex(collection: SyncRemoteCollection): Promise<RemoteCollectionIndex> {
     const plan = this.planCache;
     if (plan === null) return { revision: 0, entries: {}, committedAt: null };
 
-    const modulePlan = plan.modules.find(
-      (m) => m.moduleType === collection.assetType,
-    );
-    if (modulePlan === undefined || modulePlan.assets.length === 0) {
-      return { revision: 0, entries: {}, committedAt: null };
+    const assets = plan.assets.filter((a) => a.assetType === collection.assetType);
+    if (assets.length === 0) {
+      return { revision: plan.revision, entries: {}, committedAt: null };
     }
 
     const codec = collection.assetIdCodec;
     const entries: Record<string, RemoteCollectionIndex["entries"][string]> = {};
-    let maxRevision = 0;
 
-    await Promise.all(modulePlan.assets.map(async (asset) => {
+    await Promise.all(assets.map(async (asset) => {
       const adapterAssetId = codec.toAdapterAssetId(asset.assetId);
-      const protocolContentHash = asset.contentHash
-        ? toAdapterContentHash(asset.contentHash)
-        : null;
-      const comparableContentHash = protocolContentHash === null
-        ? null
-        : await this.localState.getComparableRemoteHash(
-            createAssetStateKey(collection, adapterAssetId),
-            protocolContentHash,
-          ) ?? protocolContentHash;
+      const protocolContentHash = toAdapterContentHash(asset.contentHash);
+      const comparableContentHash = await this.localState.getComparableRemoteHash(
+        createAssetStateKey(collection, adapterAssetId),
+        protocolContentHash,
+      ) ?? protocolContentHash;
       entries[adapterAssetId] = {
-        revision: asset.revision,
+        revision: asset.lastModifiedRevision,
         contentHash: comparableContentHash,
         protocolContentHash,
-        deletedAt: asset.deletedAt,
+        deletedAt: null,
         committedAt: null,
       };
-      if (asset.revision > maxRevision) maxRevision = asset.revision;
     }));
 
-    return { revision: maxRevision, entries, committedAt: null };
+    return { revision: plan.revision, entries, committedAt: plan.serverTime };
   }
 
-  // -- readAsset: 主线程查 plan → Worker 下载 + 校验 -- //
+  // -- readAsset：下载远端资产内容 -- //
 
   public async readAsset(params: RemoteAssetRef): Promise<RemoteAssetContent | null> {
     const plan = this.planCache;
     if (plan === null) return null;
 
-    const modulePlan = plan.modules.find(
-      (m) => m.moduleType === params.collection.assetType,
-    );
-    if (modulePlan === undefined) return null;
-
     const remoteAssetId = params.collection.assetIdCodec.toRemoteAssetId(params.assetId);
-    const asset = modulePlan.assets.find((a) => a.assetId === remoteAssetId);
+    const asset = plan.assets.find(
+      (a) => a.assetType === params.collection.assetType && a.assetId === remoteAssetId,
+    );
     if (asset === undefined) return null;
-    if (asset.deletedAt !== null) return null;
 
-    const contentHash = asset.contentHash ? toAdapterContentHash(asset.contentHash) : null;
-    const blobHash = asset.blobHash;
+    const contentHash = toAdapterContentHash(asset.contentHash);
 
-    // 无 blob hash 且无内容 hash — 空资产
-    if (!blobHash && !contentHash) {
-      return {
-        revision: asset.revision,
-        content: "",
-        contentHash: "",
-        committedAt: null,
-      };
-    }
-
-    // 委托 Worker 做签名 URL 获取 + 下载 + SHA-256 校验
-    const state = await this.localState.readState();
-    let resultPromise = this.assetContentCache.get(blobHash);
-    if (resultPromise === undefined) {
-      resultPromise = this.workerClient.request<CfReadAssetResult>({
-        type: "read-asset",
-        spaceId: state.spaceId,
-        assetType: params.collection.assetType,
-        assetId: remoteAssetId,
-        blobHash,
-        contentHash,
-        revision: asset.revision,
-        deletedAt: asset.deletedAt,
-      });
-      this.assetContentCache.set(blobHash, resultPromise);
-      void resultPromise.catch(() => {
-        if (this.assetContentCache.get(blobHash) === resultPromise) {
-          this.assetContentCache.delete(blobHash);
-        }
-      });
-    }
-    const result = await resultPromise;
-    if (contentHash !== null) {
-      await this.localState.noteRemoteHashMapping(
-        createAssetStateKey(params.collection, params.assetId),
-        contentHash,
+    // 直接使用 downloadUrl 下载内容
+    const response = await fetch(asset.downloadUrl);
+    if (!response.ok) {
+      throw new CfV2HttpError(
+        response.status,
+        "download_failed",
+        `Failed to download ${asset.assetType}/${asset.assetId}: HTTP ${response.status}`,
       );
     }
+    const contentBytes = new Uint8Array(await response.arrayBuffer());
+    const receivedHash = (await createSha256Hash(contentBytes)).slice(7);
+    const expectedHash = asset.contentHash.startsWith("sha256:")
+      ? asset.contentHash.slice(7)
+      : asset.contentHash;
+    if (receivedHash !== expectedHash) {
+      throw new Error(
+        `Downloaded content hash mismatch for ${asset.assetType}/${asset.assetId}: `
+        + `expected ${expectedHash}, received ${receivedHash}.`,
+      );
+    }
+    const content = new TextDecoder().decode(contentBytes);
+
+    await this.localState.noteRemoteHashMapping(
+      createAssetStateKey(params.collection, params.assetId),
+      contentHash,
+    );
 
     return {
-      revision: asset.revision,
-      content: result.content,
-      contentHash: contentHash ?? "",
-      committedAt: null,
+      revision: plan.revision,
+      content,
+      contentHash,
+      committedAt: plan.serverTime,
     };
   }
 
-  // -- checkCollections: 委托 Worker 检查变更 -- //
+  // -- checkCollections：检查远端是否有变更 -- //
 
   public async checkCollections(
     collections: readonly SyncRemoteCollection[],
   ): Promise<RemoteCheckResult> {
-    const state = await this.ensureSpace();
-    const assetTypes = collections.map((c) => c.assetType);
+    await this.ensureSpace();
+    const state = await this.localState.readState();
 
-    const result = await this.workerClient.request<CfCheckCollectionsResult>({
-      type: "check-collections",
-      spaceId: state.spaceId,
-      appliedHead: state.appliedHead,
-      epoch: state.epoch,
-      assetTypes,
-    });
+    const response = await cfV2Fetch(
+      this.apiBase,
+      `/v1/sync/spaces/${encodeURIComponent(state.spaceId)}/check?knownRevision=${state.revision}`,
+    );
 
-    if (result.epoch && state.epoch !== result.epoch) {
-      await this.localState.replaceEpoch(result.epoch);
+    // 204 = 未变化
+    if (response.status === 204) {
+      return { changedCollections: [] };
     }
 
-    if (result.changedAssetTypes.length === 0) {
-      return {
-        changedCollections: [],
-        ...(result.head === null ? {} : { globalCursor: result.head }),
-      };
+    const check = await response.json() as CfV2CheckResponse;
+
+    if (!check.changed) {
+      return { changedCollections: [], globalCursor: check.revision };
     }
 
-    const changed = new Set<string>();
-    for (const assetType of result.changedAssetTypes) {
-      for (const c of collections) {
-        if (c.assetType === assetType) changed.add(c.adapterId);
-      }
-    }
+    // 有变更 → 标记所有请求的集合为已变更
+    const assetTypes = new Set(collections.map((c) => c.assetType));
+    const changedCollections = collections
+      .filter((c) => assetTypes.has(c.assetType))
+      .map((c) => c.adapterId);
+
     return {
-      changedCollections: Array.from(changed),
-      ...(result.head === null ? {} : { globalCursor: result.head }),
+      changedCollections,
+      globalCursor: check.revision,
     };
   }
+
+  // -- 写入相关 -- //
 
   public beginWriteBatch(): SyncRemoteWriteBatch {
     return new CloudflareSyncWriteBatch(this);
@@ -575,76 +642,76 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
         result.collectionRevision,
       );
     }
+    // AI-CORRECTION 2026-08-10: 补充 setRemoteEtag 调用，确保 collection 级 etag
+    // 在每次同步完成后写入 CF_STATE_STORE，供下次 foreground sync 的
+    // isRemoteIndexUnchangedForCleanLocalEntries 使用。
+    if (result.collectionEtag !== undefined) {
+      await this.localState.setRemoteEtag(
+        result.collection.stateKey,
+        result.collectionEtag,
+      );
+    } else if (result.collectionRevision !== null) {
+      await this.localState.setRemoteEtag(
+        result.collection.stateKey,
+        String(result.collectionRevision),
+      );
+    }
   }
 
   public async prepareCollections(_collections: readonly SyncRemoteCollection[]): Promise<void> {
-    // Cloudflare 无目录概念
+    // Cloudflare v2 无目录概念
   }
 
   public async complete(): Promise<void> {
-    // local-change 只处理脏 adapter/asset，不能把全局 cursor 推进到 plan.head，
-    // 否则同一 head 内其他集合的远端变更可能被永久跳过。
     if (this.context.reason === "local-change" || this.planCache === null) return;
     const state = await this.localState.readState();
-    if (state.epoch !== this.planCache.epoch) return;
-    await this.localState.writeState({
-      ...state,
-      appliedHead: Math.max(this.planCache.head, this.latestCommittedHead ?? 0),
-    });
+    // AI-CORRECTION 2026-08-10: Math.max → 直接使用 planCache.revision，
+    // epoch 参数已移除。revision 仅比较相等性，不存在大小关系。
+    // AI-CORRECTION 2026-08-11: 本会话发生提交时，planCache 仍是提交前快照；
+    // complete 必须保留 commit 返回的新 revision，不能回退到旧 plan revision。
+    const targetRevision = String(
+      this.latestCommittedRevision ?? this.planCache.revision,
+    );
+    if (targetRevision !== state.revision) {
+      await this.localState.advanceToRevision(targetRevision);
+    }
   }
 
   public dispose(): void {
     this.planCache = null;
-    this.assetContentCache.clear();
-    this.workerClient.dispose();
   }
 
-  // -- 供 CloudflareSyncWriteBatch 访问 Worker 客户端 -- //
+  // -- 供 CloudflareSyncWriteBatch 使用 -- //
 
-  public getWorkerClient(): CloudflareWorkerClientLike {
-    return this.workerClient;
+  public registerCommittedRevision(revision: number): void {
+    // AI-CORRECTION 2026-08-10: Math.max → 直接赋值。
+    // Reason: revision 仅比较相等性，不存在大小关系。
+    this.latestCommittedRevision = revision;
   }
 
-  public registerCommittedHead(head: number): void {
-    this.latestCommittedHead = Math.max(this.latestCommittedHead ?? 0, head);
-  }
-
-  // -- ensureSpace: 委托 Worker 检测 / 创建空间 -- //
-
-  private async ensureSpace(): Promise<CfLocalState> {
-    const state = await this.localState.readState();
-    const result = await this.workerClient.request<CfEnsureSpaceResult>({
-      type: "ensure-space",
-      spaceId: state.spaceId,
-    });
-
-    if (result.epoch && state.epoch !== result.epoch) {
-      return await this.localState.replaceEpoch(result.epoch);
-    }
-
-    return state;
+  public getApiBase(): string {
+    return this.apiBase;
   }
 }
 
 // ============================================================================
-// CloudflareSyncWriteBatch（commit 委托 Worker）
+// CloudflareSyncWriteBatch（两阶段提交）
 // ============================================================================
 
+interface BatchMutation {
+  clientMutationId: string;
+  operation: "put" | "delete";
+  collection: SyncRemoteCollection;
+  adapterAssetId: string;
+  assetType: string;
+  assetId: string;
+  content: string | null;
+  contentHash: string | null;
+  deletedAt: string | null;
+}
+
 class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
-  private mutations: Array<{
-    clientMutationId: string;
-    operation: "put" | "delete";
-    collection: SyncRemoteCollection;
-    adapterAssetId: string;
-    assetType: string;
-    assetId: string;
-    content: string | null;
-    contentHash: string | null;
-    deletedAt: string | null;
-    targetContentHash: string | null;
-    baseRevision: number | null;
-    baseContentHash: string | null;
-  }> = [];
+  private mutations: BatchMutation[] = [];
   private committed = false;
 
   public constructor(private readonly session: CloudflareSyncRemoteSession) {}
@@ -661,9 +728,6 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
       content: params.content,
       contentHash: params.contentHash,
       deletedAt: null,
-      targetContentHash: null,
-      baseRevision: params.baseRevision,
-      baseContentHash: params.baseContentHash,
     });
   }
 
@@ -679,9 +743,6 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
       content: null,
       contentHash: null,
       deletedAt: params.deletedAt,
-      targetContentHash: params.targetContentHash,
-      baseRevision: params.baseRevision,
-      baseContentHash: params.baseContentHash,
     });
   }
 
@@ -690,110 +751,170 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
     this.committed = true;
     if (this.mutations.length === 0) return { writes: [] };
 
-    const writes: RemoteWriteResult[] = [];
-    let globalCursor: number | undefined;
+    const apiBase = this.session.getApiBase();
+    const state = await this.session.localState.readState();
+    const clientBatchId = createUuid();
 
-    // 后端 capabilities 当前限制每批最多 32 条；分片按顺序提交，保证后一批使用最新 epoch。
+    // 分片提交：后端限制每批最多 32 条
+    const writes: RemoteWriteResult[] = [];
+    const baseRev = Number(state.revision);
+    let latestRevision = baseRev;
+
     for (let offset = 0; offset < this.mutations.length; offset += 32) {
       const chunk = this.mutations.slice(offset, offset + 32);
-      const state = await this.session.localState.readState();
-      try {
-        const result = await this.session.getWorkerClient().request<CfCommitBatchResult>({
-          type: "commit-batch",
-          spaceId: state.spaceId,
-          epoch: state.epoch ?? "",
-          clientBatchId: createUuid(),
-          mutations: chunk.map((mutation) => ({
-            clientMutationId: mutation.clientMutationId,
-            operation: mutation.operation,
-            assetType: mutation.assetType,
-            assetId: mutation.assetId,
-            content: mutation.content,
-            contentHash: mutation.contentHash,
-            deletedAt: mutation.deletedAt,
-            targetContentHash: mutation.targetContentHash,
-            baseRevision: mutation.baseRevision,
-            baseContentHash: mutation.baseContentHash,
-          })),
+      latestRevision = await this.commitChunk(
+        apiBase, state.spaceId, clientBatchId, offset,
+        chunk, writes, latestRevision,
+      );
+    }
+
+    // AI-CORRECTION 2026-08-10: > 0 → !== baseRev。
+    // Reason: revision 现在是字符串，且不需要比较大小，只需判断是否发生了提交。
+    if (latestRevision !== baseRev) {
+      this.session.registerCommittedRevision(latestRevision);
+    }
+
+    return { writes, globalCursor: latestRevision };
+  }
+
+  private async commitChunk(
+    apiBase: string,
+    spaceId: string,
+    clientBatchId: string,
+    offset: number,
+    chunk: BatchMutation[],
+    writes: RemoteWriteResult[],
+    baseRevision: number,
+  ): Promise<number> {
+    // Phase 1: Prepare
+    const objects: CfV2PrepareObject[] = [];
+    const deletions: CfV2PrepareDeletion[] = [];
+
+    for (const m of chunk) {
+      if (m.operation === "put") {
+        const content = m.content ?? "";
+        const contentBytes = new TextEncoder().encode(content);
+        // blobHash 必须是原始内容字节的 SHA-256 hex（不含 "sha256:" 前缀）
+        // AI-CORRECTION 2026-08-11: contentHash 是适配器的规范化比较 hash，可能来自
+        // canonical JSON；上传协议 hash 必须始终对实际传输字节重新计算。
+        const blobHash = (await createSha256Hash(contentBytes)).slice(7);
+        objects.push({
+          clientMutationId: m.clientMutationId,
+          assetType: m.assetType,
+          assetId: m.assetId,
+          metadata: "{}",
+          blobHash,
+          blobByteSize: contentBytes.byteLength,
+          storageMode: "full",
+          schemaVersion: 1,
+          encoding: "identity",
+          writerAppVersion: "0.0.0",
+          writerBuildId: "browser",
         });
-        if (result.epoch !== null && result.epoch !== state.epoch) {
-          await this.session.localState.replaceEpoch(result.epoch);
-        }
-        globalCursor = result.head;
-        this.session.registerCommittedHead(result.head);
-        for (const applied of result.applied) {
-          const mutation = chunk.find(
-            (candidate) => candidate.clientMutationId === applied.clientMutationId,
-          );
-          if (mutation === undefined) {
-            throw new Error(
-              `Cloudflare commit returned unknown mutation "${applied.clientMutationId}".`,
-            );
-          }
-          writes.push({
-            collection: mutation.collection,
-            assetId: mutation.adapterAssetId,
-            revision: applied.revision,
-            contentHash: applied.contentHash || null,
-            deletedAt: mutation.deletedAt,
-            committedAt: result.serverTime,
-          });
-          if (applied.contentHash) {
-            await this.session.localState.noteRemoteHashMapping(
-              createAssetStateKey(mutation.collection, mutation.adapterAssetId),
-              toAdapterContentHash(applied.contentHash),
-              mutation.contentHash ?? undefined,
-            );
-          }
-        }
-      } catch (error) {
-        throw translateWriteError(error);
+      } else {
+        deletions.push({
+          clientMutationId: m.clientMutationId,
+          assetType: m.assetType,
+          assetId: m.assetId,
+        });
       }
     }
 
-    return {
-      writes,
-      ...(globalCursor === undefined ? {} : { globalCursor }),
-    };
+    const suffix = offset > 0 ? `-${offset}` : "";
 
-    // AI-REMOVED 2026-08-08:
-    // Reason: 旧 batch 丢弃 base revision/hash、生成空 mutation id、提前推进 cursor，并返回伪造 collection。
-    // Trigger: 开发后端更新提交稳定复现 revision-mismatch，且失败后本地会误认为已同步。
-    // Evidence: 真实后端要求 prepare 与 commit 都重复携带同一 baseRevision/baseContentHash。
-    // Replacement: 上方 32 条分片、稳定 mutation id、权威结果映射与延迟 cursor 提交。
-    // Risk: Medium；写入错误现在会上抛并触发重新判定。
-    // Human Review: Required
-    //
-    // Original code:
-    // const state = await this.session.localState.readState();
-    // const clientBatchId = createUuid();
-    // const result = await this.session.getWorkerClient().request<CfCommitBatchResult>({
-    //   type: "commit-batch",
-    //   spaceId: state.spaceId,
-    //   epoch: state.epoch ?? "",
-    //   clientBatchId,
-    //   mutations: this.mutations.map((m) => ({
-    //     clientMutationId: "",
-    //     assetType: m.assetType,
-    //     assetId: m.assetId,
-    //     content: m.content,
-    //     contentHash: m.contentHash,
-    //   })),
-    // });
-    // await this.session.localState.writeState({
-    //   ...state,
-    //   appliedHead: result.head,
-    //   ...(result.epoch === null ? {} : { epoch: result.epoch }),
-    // });
-    // const results = result.applied.map((a) => ({
-    //   collection: { adapterId: "", name: "", stateKey: "", /* ...伪造字段... */ },
-    //   assetId: a.assetId,
-    //   revision: a.revision,
-    //   contentHash: a.contentHash || null,
-    //   deletedAt: null,
-    //   committedAt: "",
-    // }));
-    // return { writes: results, globalCursor: result.head };
+    let prepare: CfV2PrepareResponse;
+    try {
+      prepare = await cfV2PostJson<CfV2PrepareResponse>(
+        apiBase,
+        `/v1/sync/spaces/${encodeURIComponent(spaceId)}/mutations`,
+        {
+          protocol: CF_SYNC_V2_PROTOCOL,
+          action: "prepare",
+          baseRevision,
+          clientBatchId: `${clientBatchId}${suffix}`,
+          objects,
+          deletions,
+        },
+      );
+    } catch (error) {
+      throw translateWriteError(error);
+    }
+
+    try {
+      // Phase 2: Upload blobs
+      for (const instruction of prepare.uploads) {
+        if (!instruction.required || !instruction.url) continue;
+        const mutation = chunk.find(
+          (m) => m.assetType === instruction.assetType && m.assetId === instruction.assetId,
+        );
+        if (!mutation || mutation.content === null) continue;
+
+        const uploadResponse = await fetch(instruction.url, {
+          method: "PUT",
+          headers: {
+            "content-type": "application/octet-stream",
+            ...instruction.headers,
+          },
+          body: mutation.content,
+        });
+        if (!uploadResponse.ok) {
+          let errorBody = "";
+          try { errorBody = await uploadResponse.text(); } catch { /* ignore */ }
+          throw new CfV2HttpError(
+            uploadResponse.status,
+            "upload_failed",
+            `Failed to upload ${instruction.assetType}/${instruction.assetId}: ${errorBody}`,
+          );
+        }
+      }
+
+      // Phase 3: Commit
+      const result = await commitPreparedBatch(apiBase, spaceId, prepare);
+
+      // 更新本地状态
+      // AI-CORRECTION 2026-08-10: epoch 比较已移除，revision 仅比较相等性。
+      const currentState = await this.session.localState.readState();
+      const resultRevision = String(result.revision);
+      if (resultRevision !== currentState.revision) {
+        await this.session.localState.advanceToRevision(resultRevision);
+      }
+
+      // 映射结果
+      for (const mutation of chunk) {
+        const applied = result.assets.find(
+          (a) => a.assetType === mutation.assetType && a.assetId === mutation.assetId,
+        );
+        if (applied) {
+          writes.push({
+            collection: mutation.collection,
+            assetId: mutation.adapterAssetId,
+            revision: result.revision,
+            contentHash: toAdapterContentHash(applied.contentHash),
+            deletedAt: null,
+            committedAt: result.serverTime,
+          });
+        } else {
+          const deleted = result.deletedAssets.find(
+            (a) => a.assetType === mutation.assetType && a.assetId === mutation.assetId,
+          );
+          if (deleted) {
+            writes.push({
+              collection: mutation.collection,
+              assetId: mutation.adapterAssetId,
+              revision: result.revision,
+              contentHash: null,
+              deletedAt: mutation.deletedAt,
+              committedAt: result.serverTime,
+            });
+          }
+        }
+      }
+
+      return result.revision;
+    } catch (error) {
+      await cancelPreparedBatch(apiBase, spaceId, prepare);
+      throw translateWriteError(error);
+    }
   }
 
   public async discard(): Promise<void> {
@@ -803,20 +924,32 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
 }
 
 // ============================================================================
-// AI-CORRECTION 2026-08-08: 入口现在接收 apiBase/spaceId/并发与测试 client factory。
 // CloudflareSyncRemote
 // ============================================================================
+
+export interface CloudflareSyncRemoteOptions {
+  readonly apiBase?: string;
+  readonly spaceId?: string;
+  // 以下选项保留以兼容 sync-host.ts 的调用方式，
+  // cf-sync-v2 使用直接 HTTP fetch，不使用 Web Worker。
+  readonly maxConcurrentRequests?: number;
+  readonly requestTimeoutMs?: number;
+  readonly onRequestActivityChange?: (activity: {
+    readonly activeRequestCount: number;
+    readonly queuedRequestCount: number;
+  }) => void;
+  readonly workerClientFactory?: unknown;
+}
 
 export class CloudflareSyncRemote implements SyncRemote {
   public readonly localState: CloudflareSyncLocalState;
   private readonly apiBase: string;
-  private readonly options: CloudflareSyncRemoteOptions;
+  private readonly spaceId: string;
 
   public constructor(options: CloudflareSyncRemoteOptions = {}) {
     this.apiBase = (options.apiBase ?? resolveBackendApiBaseUrl()).replace(/\/$/, "");
-    const spaceId = options.spaceId?.trim() || "default";
-    this.options = { ...options, apiBase: this.apiBase, spaceId };
-    this.localState = new CloudflareSyncLocalState(this.apiBase, spaceId);
+    this.spaceId = options.spaceId?.trim() || "default";
+    this.localState = new CloudflareSyncLocalState(this.apiBase, this.spaceId);
   }
 
   public async beginSession(
@@ -826,35 +959,77 @@ export class CloudflareSyncRemote implements SyncRemote {
       this.localState,
       context,
       this.apiBase,
-      this.options,
     );
   }
 
   public async resetRemote(): Promise<void> {
     const state = await this.localState.readState();
-    // reset-remote 也委托 Worker
-    const clientOptions = {
-      ...(this.options.maxConcurrentRequests === undefined
-        ? {}
-        : { maxConcurrentRequests: this.options.maxConcurrentRequests }),
-      ...(this.options.requestTimeoutMs === undefined
-        ? {}
-        : { requestTimeoutMs: this.options.requestTimeoutMs }),
-      ...(this.options.onRequestActivityChange === undefined
-        ? {}
-        : { onRequestActivityChange: this.options.onRequestActivityChange }),
-    };
-    const workerClient = this.options.workerClientFactory?.(this.apiBase, clientOptions)
-      ?? new CfWorkerClient(this.apiBase, clientOptions);
+    // 远端 reset：尝试创建新空间（若已存在则忽略），然后本地重置状态
+    // AI-CORRECTION 2026-08-11: cf-sync-v2 没有 reset 路由；清除远端必须把 plan
+    // 中的全部资产按 deletion 事务分批提交，确保 D1/R2 都走服务端删除状态机。
+    let plan: CfV2PlanResponse;
     try {
-      await workerClient.request<void>({
-        type: "reset-remote",
+      plan = await cfV2GetJson<CfV2PlanResponse>(
+        this.apiBase,
+        `/v1/sync/spaces/${encodeURIComponent(state.spaceId)}/plan`,
+      );
+    } catch (error) {
+      if (!(error instanceof CfV2HttpError && error.status === 404)) {
+        throw error;
+      }
+      await cfV2PostJson(this.apiBase, "/v1/sync/spaces", {
         spaceId: state.spaceId,
       });
-    } finally {
-      workerClient.dispose();
+      plan = {
+        spaceId: state.spaceId,
+        revision: 0,
+        epoch: 0,
+        assets: [],
+        serverTime: new Date().toISOString(),
+      };
+    }
+
+    let baseRevision = plan.revision;
+    for (let offset = 0; offset < plan.assets.length; offset += 32) {
+      const chunk = plan.assets.slice(offset, offset + 32);
+      const prepare = await cfV2PostJson<CfV2PrepareResponse>(
+        this.apiBase,
+        `/v1/sync/spaces/${encodeURIComponent(state.spaceId)}/mutations`,
+        {
+          protocol: CF_SYNC_V2_PROTOCOL,
+          action: "prepare",
+          baseRevision,
+          clientBatchId: createUuid(),
+          objects: [],
+          deletions: chunk.map((asset) => ({
+            clientMutationId: createUuid(),
+            assetType: asset.assetType,
+            assetId: asset.assetId,
+          })),
+        },
+      );
+      try {
+        const result = await commitPreparedBatch(
+          this.apiBase,
+          state.spaceId,
+          prepare,
+        );
+        baseRevision = result.revision;
+      } catch (error) {
+        await cancelPreparedBatch(this.apiBase, state.spaceId, prepare);
+        throw error;
+      }
     }
     await this.localState.reset();
+  }
+
+  public async abortTransaction(): Promise<void> {
+    const state = await this.localState.readState();
+    await cfV2PostJson(
+      this.apiBase,
+      `/v1/sync/spaces/${encodeURIComponent(state.spaceId)}/transaction/abort`,
+      {},
+    );
   }
 
   public dispose(): void { /* no-op */ }
@@ -866,44 +1041,21 @@ export function createCloudflareSyncRemote(
   return new CloudflareSyncRemote(options);
 }
 
-// AI-REMOVED 2026-08-08:
-// Reason: 固定 default 空间与全局后端地址会让所有安装共享远端数据和本地 cursor。
-// Trigger: 同步空间需要绑定本地/账户 owner scope，并在删除时命中完全相同的目标。
-// Evidence: 原构造器无法接收 spaceId，resetRemote 还会重新解析可能已变化的后端地址。
-// Replacement: 上方 CloudflareSyncRemoteOptions 与实例级 apiBase/localState。
-// Risk: Medium；未显式传参的调用仍兼容 default，仅正式 host 改用 owner scope。
-// Human Review: Required
-//
-// Original code:
-// export class CloudflareSyncRemote implements SyncRemote {
-//   public readonly localState = new CloudflareSyncLocalState();
-//   public async beginSession(context: SyncRemoteSessionContext): Promise<SyncRemoteSession> {
-//     return new CloudflareSyncRemoteSession(this.localState, context);
-//   }
-//   public async resetRemote(): Promise<void> {
-//     const state = await this.localState.readState();
-//     const apiBase = resolveBackendApiBaseUrl();
-//     const workerClient = new CfWorkerClient(apiBase);
-//     try {
-//       await workerClient.request<void>({ type: "reset-remote", spaceId: state.spaceId });
-//     } finally {
-//       workerClient.dispose();
-//     }
-//     await this.localState.writeState(defaultState());
-//   }
-// }
-// export function createCloudflareSyncRemote(): SyncRemote {
-//   return new CloudflareSyncRemote();
-// }
-// AI-CORRECTION 2026-08-08: 上述归档说明中的 owner scope 方案已撤销；正式 host 现在直接使用
-// 用户保存的共享空间名称作为 spaceId，本地状态仍由 apiBase + spaceId 隔离。
+// ============================================================================
+// 工具函数
+// ============================================================================
+
+function toAdapterContentHash(value: string): string {
+  return value.startsWith("sha256:") ? value : `sha256:${value}`;
+}
+
+function createAssetStateKey(collection: SyncRemoteCollection, assetId: string): string {
+  return `${collection.adapterId}:${assetId}`;
+}
 
 function translateWriteError(error: unknown): unknown {
-  if (
-    error instanceof Error
-    && (error as Error & { readonly status?: unknown }).status === 409
-  ) {
-    const details = (error as Error & { readonly details?: unknown }).details;
+  if (error instanceof CfV2HttpError && error.status === 409) {
+    const details = error.details;
     if (
       typeof details === "object"
       && details !== null
@@ -933,10 +1085,18 @@ function translateWriteError(error: unknown): unknown {
   return error;
 }
 
-function toAdapterContentHash(value: string): string {
-  return value.startsWith("sha256:") ? value : `sha256:${value}`;
-}
-
-function createAssetStateKey(collection: SyncRemoteCollection, assetId: string): string {
-  return `${collection.adapterId}:${assetId}`;
-}
+// ============================================================================
+// AI-REMOVED 2026-08-09:
+// Reason: 旧 cf-sync-v1 协议使用 Web Worker 进行 epoch/appliedHead 游标同步，
+//         后端已完全重构为 cf-sync-v2 协议（revision + 两阶段提交）。
+// Trigger: 后端 cf-sync-v2 上线后，v1 协议已不可用。
+// Evidence: 后端 packages/sync/src/ 中 space_http.ts 使用 SPACE_PROTOCOL_VERSION="cf-sync-v2"，
+//          space_service.ts 中使用 prepareSpaceUpload/commitSpaceUpload/planSpace/checkSpaceRevision。
+// Replacement: 本文件 — 直接 HTTP fetch，使用 revision 游标 + prepare/upload/commit 两阶段提交。
+// Risk: Medium；旧 epoch/appliedHead 状态与 v2 的 revision/epoch 不兼容，
+//       首次同步会把远端视为全新版本。
+// Human Review: Required
+//
+// 旧 cloudflare-remote.ts 基于 Web Worker 的 cf-sync-v1 实现已被完全替换。
+// 归档原始代码可在 git history 中查看（commit 之前版本的 cloudflare-remote.ts）。
+// ============================================================================

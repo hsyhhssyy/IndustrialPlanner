@@ -380,19 +380,34 @@ export async function createSyncHost(
       resolveAdapterTaskKind(adapterId, externalSources),
     canRunInterval: () =>
       typeof document === "undefined" || document.visibilityState === "visible",
-    beforeSync: () => {
-      // AI-REMOVED 2026-07-29:
-      // Reason: 全量目录维护与设备枚举不属于当前画布检查，串行执行会让画布白屏数十秒。
-      // Trigger: 用户要求当前基地一致时快速解锁，并在限制最大连接数的前提下并行下载。
-      // Evidence: 真实服务器画布阶段包含约十次 MKCOL、设备心跳和逐设备 GET。
-      // Replacement: createMaintenanceTasks() 在 initialSyncStage=ready 后执行。
-      // Risk: Low；资产写入路径本身会递归创建所需父目录。
-      // Human Review: Required
-      //
-      // Original code:
-      // await ensureWebDavDirectoryTree(client, externalSources);
-      // await registerCurrentDevice(client);
-      // state.setRemoteDevices(await listRemoteDevices(client));
+    beforeSync: async (session) => {
+      // 首次同步时侦查远端状态，决定 UI 显示"上传中"还是"下载中"
+      if (
+        state.status.phase === "downloading"
+        && (state.status.currentRunReason === "startup" || state.status.currentRunReason === "foreground")
+      ) {
+        try {
+          const allCollections = adapters.map((a) => a.collection);
+          await session.prefetchIndexes(allCollections);
+          // 读取第一个集合的 index 判断远端是否为空
+          let remoteHasContent = false;
+          for (const collection of allCollections) {
+            const index = await session.readIndex(collection);
+            if (Object.keys(index.entries).length > 0) {
+              remoteHasContent = true;
+              break;
+            }
+          }
+          if (!remoteHasContent) {
+            state.setStatus({
+              ...state.status,
+              phase: "uploading",
+            });
+          }
+        } catch {
+          // 侦查失败不阻塞同步，保留 downloading 显示
+        }
+      }
     },
     afterSync: () => {
       // AI-REMOVED 2026-07-29:
@@ -525,6 +540,31 @@ export async function createSyncHost(
           enabled: false,
         });
         state.setSettings(currentSettings);
+      } finally {
+        if (syncStarted) {
+          service.start();
+        }
+      }
+    },
+    abortCurrentTransaction: async () => {
+      const provider = readSyncProvider();
+      if (provider !== "cloudflare") {
+        return;
+      }
+      const settings = currentSettings;
+      const cloudflareSettings = currentCloudflareSettings;
+      service.stop();
+      try {
+        const remote = createCloudflareSyncRemote({
+          apiBase: resolveBackendApiBaseUrl(),
+          spaceId: getCloudflareSpaceId(cloudflareSettings),
+          maxConcurrentRequests: settings.maxConcurrentRequests,
+        });
+        try {
+          await remote.abortTransaction?.();
+        } finally {
+          remote.dispose?.();
+        }
       } finally {
         if (syncStarted) {
           service.start();

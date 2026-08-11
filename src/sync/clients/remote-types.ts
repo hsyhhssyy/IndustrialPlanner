@@ -74,6 +74,7 @@ export interface SyncRemote {
   readonly localState: SyncLocalState;
   beginSession(context: SyncRemoteSessionContext): Promise<SyncRemoteSession>;
   resetRemote?(): Promise<void>;
+  abortTransaction?(): Promise<void>;
   dispose?(): void;
 }
 
@@ -185,7 +186,11 @@ export interface RemoteWriteConflict {
 
 export class RemoteWriteConflictError extends Error {
   public constructor(public readonly conflicts: readonly RemoteWriteConflict[]) {
-    super('Remote write conflict.');
+    super(conflicts.length === 0
+      ? 'Remote write conflict.'
+      : `Remote write conflict: ${conflicts.map((conflict) =>
+        `${conflict.assetType}/${conflict.assetId} reason=${conflict.reason}`
+      ).join(', ')}.`);
     this.name = 'RemoteWriteConflictError';
   }
 }

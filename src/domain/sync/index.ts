@@ -17,6 +17,7 @@ export type {
   SyncSaveState,
   SyncSettings,
   SyncStatus,
+  SyncTaskDirection,
   SyncTaskKind,
   SyncTaskPhase,
   SyncTaskStatus,

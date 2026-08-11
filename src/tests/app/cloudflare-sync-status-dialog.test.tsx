@@ -55,9 +55,11 @@ describe("CloudflareSyncStatusDialog", () => {
       root.render(
         <OverlayStackProvider>
           <CloudflareSyncStatusDialog
+            aborting={false}
             compactMobileLayout={false}
             deleting={false}
             dialogState={dialogState}
+            onAbortCurrentTransaction={vi.fn()}
             onClose={vi.fn()}
             onDeleteAllData={vi.fn()}
             onOffsetChange={vi.fn()}

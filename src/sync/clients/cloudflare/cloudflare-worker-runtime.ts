@@ -1,7 +1,10 @@
 // Cloudflare 同步 Worker 运行时。
 // 在 Worker 线程内处理所有网络 I/O + JSON 解析 + SHA-256 哈希计算。
 
-import { createSha256CanonicalHash } from '@/shared/storage/hash-utils';
+import {
+  createSha256Hash,
+  stringifyCanonicalJson,
+} from '@/shared/storage/hash-utils';
 // AI-REMOVED 2026-08-08:
 // Reason: clientMutationId 现在由主线程 batch 创建并保持稳定，Worker 不再生成新 ID。
 // Trigger: 服务端幂等键不能在每次网络重试时变化。
@@ -64,7 +67,10 @@ export async function handleCfRequest(request: CfWorkerRequest): Promise<CfWorke
   } catch (error) {
     const serializedError = serializeError(error);
     if (debugEnabled) {
-      logger.debug(`${label} → failed in ${formatElapsedMs(startedAt)}ms: ${serializedError.message}`);
+      logger.debug(
+        `${label} → failed in ${formatElapsedMs(startedAt)}ms: ${serializedError.message}`,
+        serializedError.details,
+      );
     }
     return {
       requestId: request.requestId,
@@ -228,10 +234,13 @@ async function doReadAsset(
     throw await createHttpError(dlResp, 'Blob download');
   }
 
-  const content = await dlResp.text();
+  const contentBytes = new Uint8Array(await dlResp.arrayBuffer());
+  const content = new TextDecoder().decode(contentBytes);
 
   // SHA-256 校验
-  const computedHash = await createSha256CanonicalHash(JSON.parse(content));
+  // AI-CORRECTION 2026-08-09: blobHash 校验实际下载字节；JSON canonical hash 属于内容比较语义，
+  // 不能替代存储对象的逐字节完整性校验。
+  const computedHash = await createSha256Hash(contentBytes);
   const expectedHash = computedHash.startsWith('sha256:')
     ? computedHash.slice(7)
     : computedHash;
@@ -242,6 +251,7 @@ async function doReadAsset(
       + `expected ${blobHash}, received ${expectedHash}.`,
     );
   }
+  JSON.parse(content);
 
   return {
     revision: params.revision,
@@ -345,10 +355,15 @@ async function doCommitBatch(
     const mutationId = m.clientMutationId;
     let blobHash = '';
     let blobByteSize = 0;
+    let uploadContent = m.content;
+    let uploadBytes: Uint8Array<ArrayBuffer> | null = null;
     if (m.content !== null) {
-      const contentBytes = new TextEncoder().encode(m.content);
-      blobByteSize = contentBytes.length;
-      blobHash = await createSha256CanonicalHash(JSON.parse(m.content));
+      // AI-CORRECTION 2026-08-09: cf-sync-v1 上传 canonical JSON；同一份 UTF-8 字节同时用于
+      // blobHash、blobByteSize 与 R2 PUT，避免 JSON.stringify 键顺序导致 checksum mismatch。
+      uploadContent = stringifyCanonicalJson(JSON.parse(m.content));
+      uploadBytes = new TextEncoder().encode(uploadContent);
+      blobByteSize = uploadBytes.length;
+      blobHash = await createSha256Hash(uploadBytes);
       blobHash = blobHash.startsWith('sha256:') ? blobHash.slice(7) : blobHash;
     }
     return {
@@ -357,7 +372,8 @@ async function doCommitBatch(
       assetId: m.assetId,
       blobHash,
       blobByteSize,
-      content: m.content,
+      content: uploadContent,
+      uploadBytes,
       contentHash: m.contentHash,
       baseRevision: m.baseRevision,
       baseContentHash: normalizeProtocolHash(m.baseContentHash),
@@ -402,7 +418,7 @@ async function doCommitBatch(
     if (prepareResp.status === 409) {
       const conflict = await readConflictResponse(prepareResp, 'Prepare');
       if (!isEpochConflict(conflict)) {
-        throw new CfHttpError('Prepare conflict.', 409, conflict);
+        throw new CfHttpError(formatConflictMessage('Prepare', conflict), 409, conflict);
       }
       // epoch 冲突：从 check 端点获取最新 epoch 后重试
       const checkUrl = createSpaceUrl(apiBase, spaceId, '/check');
@@ -437,7 +453,7 @@ async function doCommitBatch(
       const rec = mutationRecords.find(
         (r) => r.assetType === upload.assetType && r.assetId === upload.assetId,
       );
-      if (!rec || rec.content === null) {
+      if (!rec || rec.content === null || rec.uploadBytes === null) {
         throw new Error(`Prepare requested unavailable content for ${upload.assetType}/${upload.assetId}.`);
       }
 
@@ -445,7 +461,7 @@ async function doCommitBatch(
       const uploadResponse = await fetchWithTimeout(upload.url, {
         method: 'PUT',
         headers,
-        body: rec.content,
+        body: rec.uploadBytes,
         cache: 'no-store',
       }, requestTimeoutMs);
       if (!uploadResponse.ok) {
@@ -460,13 +476,23 @@ async function doCommitBatch(
       spaceEpoch: currentEpoch ?? '',
       clientBatchId,
       commitToken: prepareResult.commitToken,
-      mutations: mutationRecords.map((r) => ({
-        clientMutationId: r.clientMutationId,
-        assetType: r.assetType,
-        assetId: r.assetId,
-        baseRevision: r.baseRevision,
-        baseContentHash: r.baseContentHash,
-      })),
+      mutations: prepareBody.mutations,
+      // AI-REMOVED 2026-08-09:
+      // Reason: 分层存储后端会按 prepare 完整 mutation 重新计算 mutationFingerprint，简化 commit mutation 固定校验失败。
+      // Trigger: endfield-api.richetriotour.net 联调中 prepare 与上传成功，但 commit 返回 409 token-invalid。
+      // Evidence: 同一 commitToken 下，简化 mutation 返回 409，完整复用 prepare mutation 后 D1/R2 提交与幂等重试均返回 200。
+      // Replacement: 上方 mutations: prepareBody.mutations，保证 prepare 与 commit 使用完全相同的协议字段。
+      // Risk: Low；commit 请求体增大，但不改变 mutation 内容与批次数量上限。
+      // Human Review: Required
+      //
+      // Original code:
+      // mutations: mutationRecords.map((r) => ({
+      //   clientMutationId: r.clientMutationId,
+      //   assetType: r.assetType,
+      //   assetId: r.assetId,
+      //   baseRevision: r.baseRevision,
+      //   baseContentHash: r.baseContentHash,
+      // })),
     };
 
     const commitResp = await debugFetch('Commit', mutationsUrl, {
@@ -479,7 +505,7 @@ async function doCommitBatch(
     if (commitResp.status === 409) {
       const conflict = await readConflictResponse(commitResp, 'Commit');
       if (!isEpochConflict(conflict)) {
-        throw new CfHttpError('Commit conflict.', 409, conflict);
+        throw new CfHttpError(formatConflictMessage('Commit', conflict), 409, conflict);
       }
       const checkUrl = createSpaceUrl(apiBase, spaceId, '/check');
       const checkResp = await debugFetch(
@@ -716,6 +742,16 @@ async function readConflictResponse(
 function isEpochConflict(response: CfWorkerConflictResponse): boolean {
   return response.conflicts.length > 0
     && response.conflicts.every((conflict) => conflict.reason === 'space-epoch-changed');
+}
+
+function formatConflictMessage(
+  operation: string,
+  response: CfWorkerConflictResponse,
+): string {
+  if (response.conflicts.length === 0) return `${operation} conflict.`;
+  return `${operation} conflict: ${response.conflicts.map((conflict) =>
+    `${conflict.assetType}/${conflict.assetId} reason=${conflict.reason}`
+  ).join(', ')}.`;
 }
 
 function normalizeProtocolHash(value: string | null): string | null {

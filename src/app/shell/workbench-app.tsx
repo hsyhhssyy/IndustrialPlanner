@@ -1121,7 +1121,12 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         )}
         {appHost.workspace.sync === null ? null : (
           <WebDavConflictDialog
+            appHost={appHost}
             compactMobileLayout={appHost.state.screenProfile.deviceClass !== "desktop"}
+            onStopSync={() => {
+              writeSyncProvider("none");
+              appHost.workspace.sync?.actions.updateSettings({});
+            }}
             sync={appHost.workspace.sync}
             t={appHost.actions.translate}
           />

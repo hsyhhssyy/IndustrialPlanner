@@ -396,6 +396,7 @@ export const SettingsDialog = observer(function SettingsDialog({
 
   const [cfDeleteInputValue, setCfDeleteInputValue] = useState("");
   const [cfDeleting, setCfDeleting] = useState(false);
+  const [cfAborting, setCfAborting] = useState(false);
 
   const handleWebDavDelete = useCallback(() => {
     runInAction(() => {
@@ -551,6 +552,17 @@ export const SettingsDialog = observer(function SettingsDialog({
     });
     setCfDeleting(false);
   }, [sync, cfDeleteInputDialogState, cloudflareStatusDialogState]);
+
+  const handleCfAbortCurrentTransaction = useCallback(async () => {
+    setCfAborting(true);
+    try {
+      await sync?.actions.abortCurrentTransaction();
+    } catch {
+      // abort 失败静默处理，用户可重试
+    } finally {
+      setCfAborting(false);
+    }
+  }, [sync]);
 
   // AI-REMOVED 2026-07-29:
   // Reason: 冲突 action 由 Workbench 顶层窗口直接发送给独立同步模块。
@@ -1336,9 +1348,11 @@ export const SettingsDialog = observer(function SettingsDialog({
     ) : null}
     {cloudflareStatusDialogState.visible && sync !== null ? (
       <CloudflareSyncStatusDialog
+        aborting={cfAborting}
         compactMobileLayout={isNonDesktop}
         deleting={cfDeleting}
         dialogState={cloudflareStatusDialogState}
+        onAbortCurrentTransaction={handleCfAbortCurrentTransaction}
         onClose={handleCloseCloudflareStatus}
         onDeleteAllData={handleCfDelete}
         onOffsetChange={handleCloudflareStatusOffsetChange}

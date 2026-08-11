@@ -4,17 +4,27 @@
 // 这两个 hash 函数被 sync/sync-host.ts、sync/engine/sync-adapters.ts、
 // sync/clients/webdav/webdav-remote.ts、sync/clients/cloudflare/cloudflare-worker-runtime.ts 使用，
 // 与 Sync Shadow 完全无关。
+// AI-CORRECTION 2026-08-09: 本文件现在也提供 canonical JSON 序列化与原始字节 SHA-256，
+// 供 blob 协议保证“声明的哈希、字节数、实际传输体”来自同一份字节。
 export function createStableJsonHash(value: unknown): string {
-  return `fnv1a32:${hashStringFNV1a32(stableStringify(value)).toString(16).padStart(8, "0")}`;
+  return `fnv1a32:${hashStringFNV1a32(stringifyCanonicalJson(value)).toString(16).padStart(8, "0")}`;
 }
 
 export async function createSha256CanonicalHash(value: unknown): Promise<string> {
-  const bytes = new TextEncoder().encode(stableStringify(value));
+  const bytes = new TextEncoder().encode(stringifyCanonicalJson(value));
+  return await createSha256Hash(bytes);
+}
+
+export async function createSha256Hash(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
   const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
 
   return `sha256:${Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("")}`;
+}
+
+export function stringifyCanonicalJson(value: unknown): string {
+  return stableStringify(value);
 }
 
 function stableStringify(value: unknown): string {
