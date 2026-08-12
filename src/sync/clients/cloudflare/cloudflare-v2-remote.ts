@@ -1,0 +1,543 @@
+// AI-CORRECTION 2026-08-12:
+// cf-sync-v2 的网络、JSON/UTF-8、哈希和两阶段提交已迁入 Dedicated Worker。
+// 本文件只保留 SyncRemote 值语义适配、assetId codec 以及业务同步状态编排。
+
+import { createUuid } from "@/domain/shared/uuid";
+import { resolveBackendApiBaseUrl } from "@/shared/storage/backend-api-address";
+
+import type {
+  RemoteApplyResult,
+  RemoteAssetContent,
+  RemoteAssetPutParams,
+  RemoteAssetRef,
+  RemoteAssetTombstoneParams,
+  RemoteCheckResult,
+  RemoteCollectionIndex,
+  RemoteWriteBatchResult,
+  RemoteWriteResult,
+  SyncContentHashRequest,
+  SyncLocalState,
+  SyncRemote,
+  SyncRemoteCollection,
+  SyncRemoteSession,
+  SyncRemoteSessionContext,
+  SyncRemoteWriteBatch,
+} from "../remote-types";
+import { RemoteWriteConflictError } from "../remote-types";
+import type {
+  CfV2CommitBatchResult,
+  CfV2LoadPlanResult,
+  CfV2ReadAssetResult,
+  CfV2TransactionRecoveryResult,
+  CfV2WorkerConfig,
+  CfV2WorkerMutation,
+} from "./cloudflare-v2-worker-protocol";
+import {
+  CloudflareV2WorkerClient,
+  type CloudflareV2WorkerActivity,
+  type CloudflareV2WorkerBridge,
+} from "./cloudflare-v2-worker-client";
+import type { CfV2CheckResponse, CfV2Revision } from "./cloudflare-v2-types";
+import { CfV2HttpError } from "./cloudflare-v2-types";
+
+export interface CloudflareSyncRemoteOptions {
+  readonly apiBase?: string;
+  readonly spaceId?: string;
+  readonly maxConcurrentRequests?: number;
+  readonly requestTimeoutMs?: number;
+  readonly onRequestActivityChange?: (activity: CloudflareV2WorkerActivity) => void;
+  readonly workerClient?: CloudflareV2WorkerBridge;
+  readonly workerClientFactory?: () => CloudflareV2WorkerBridge;
+}
+
+export class CloudflareSyncRemote implements SyncRemote {
+  public readonly localState: SyncLocalState;
+  private readonly workerClient: CloudflareV2WorkerBridge;
+  private readonly ownsWorkerClient: boolean;
+  private readonly config: CfV2WorkerConfig;
+
+  public constructor(private readonly options: CloudflareSyncRemoteOptions = {}) {
+    this.config = {
+      apiBase: (options.apiBase ?? resolveBackendApiBaseUrl()).replace(/\/$/, ""),
+      spaceId: options.spaceId?.trim() || "default",
+      maxConcurrentRequests: normalizeConcurrency(options.maxConcurrentRequests),
+      requestTimeoutMs: normalizeTimeout(options.requestTimeoutMs),
+    };
+    this.workerClient = options.workerClient
+      ?? options.workerClientFactory?.()
+      ?? new CloudflareV2WorkerClient();
+    this.ownsWorkerClient = options.workerClient === undefined;
+    this.localState = new CloudflareV2SyncLocalState(
+      this.workerClient,
+      this.config,
+      options.onRequestActivityChange,
+    );
+  }
+
+  public async beginSession(context: SyncRemoteSessionContext): Promise<SyncRemoteSession> {
+    const recovery = await this.request<CfV2TransactionRecoveryResult>({
+      type: "recover-pending-upload",
+    });
+    return new CloudflareV2SyncRemoteSession(
+      this.workerClient,
+      this.config,
+      this.localState,
+      context,
+      this.options.onRequestActivityChange,
+      recovery,
+    );
+  }
+
+  public async resetRemote(): Promise<void> {
+    await this.request<void>({ type: "reset-remote" });
+  }
+
+  public async abortTransaction(): Promise<void> {
+    await this.request<void>({ type: "abort-transaction" });
+  }
+
+  public dispose(): void {
+    if (this.ownsWorkerClient) {
+      this.workerClient.dispose();
+    }
+  }
+
+  private async request<TResult>(
+    operation: Parameters<CloudflareV2WorkerBridge["request"]>[1],
+  ): Promise<TResult> {
+    return await this.workerClient.request<TResult>(
+      this.config,
+      operation,
+      this.options.onRequestActivityChange,
+    );
+  }
+}
+
+class CloudflareV2SyncLocalState implements SyncLocalState {
+  public constructor(
+    private readonly workerClient: CloudflareV2WorkerBridge,
+    private readonly config: CfV2WorkerConfig,
+    private readonly onActivity?: (activity: CloudflareV2WorkerActivity) => void,
+  ) {}
+
+  public async getLastSyncedHash(assetKey: string): Promise<string | null> {
+    return await this.request<string | null>({
+      type: "state-get-last-synced-hash",
+      assetKey,
+    });
+  }
+
+  public async setLastSyncedHash(assetKey: string, hash: string | null): Promise<void> {
+    await this.request<void>({ type: "state-set-last-synced-hash", assetKey, hash });
+  }
+
+  public async getRemoteRevision(key: string): Promise<number | null> {
+    return await this.request<number | null>({ type: "state-get-remote-revision", key });
+  }
+
+  public async setRemoteRevision(key: string, revision: number | null): Promise<void> {
+    await this.request<void>({ type: "state-set-remote-revision", key, revision });
+  }
+
+  public async getRemoteEtag(key: string): Promise<string | null> {
+    return await this.request<string | null>({ type: "state-get-remote-etag", key });
+  }
+
+  public async setRemoteEtag(key: string, etag: string | null): Promise<void> {
+    await this.request<void>({ type: "state-set-remote-etag", key, etag });
+  }
+
+  private async request<TResult>(
+    operation: Parameters<CloudflareV2WorkerBridge["request"]>[1],
+  ): Promise<TResult> {
+    return await this.workerClient.request<TResult>(this.config, operation, this.onActivity);
+  }
+}
+
+class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
+  private planCache: CfV2LoadPlanResult | null = null;
+  private latestCommittedRevision: CfV2Revision | null;
+  private pendingJournalAck: boolean;
+
+  public constructor(
+    private readonly workerClient: CloudflareV2WorkerBridge,
+    private readonly config: CfV2WorkerConfig,
+    public readonly localState: SyncLocalState,
+    private readonly context: SyncRemoteSessionContext,
+    private readonly onActivity: ((activity: CloudflareV2WorkerActivity) => void) | undefined,
+    recovery: CfV2TransactionRecoveryResult,
+  ) {
+    this.latestCommittedRevision = recovery.commit?.revision ?? null;
+    this.pendingJournalAck = recovery.commit !== null;
+  }
+
+  public async computeContentHashes(
+    requests: readonly SyncContentHashRequest[],
+  ): Promise<readonly string[]> {
+    return await this.request<readonly string[]>({
+      type: "compute-content-hashes",
+      requests,
+    });
+  }
+
+  public async prefetchIndexes(_collections: readonly SyncRemoteCollection[]): Promise<void> {
+    if (this.planCache === null) {
+      this.planCache = await this.request<CfV2LoadPlanResult>({ type: "load-plan" });
+    }
+  }
+
+  public async refreshIndexes(collections: readonly SyncRemoteCollection[]): Promise<void> {
+    this.planCache = null;
+    await this.prefetchIndexes(collections);
+  }
+
+  public async readIndex(collection: SyncRemoteCollection): Promise<RemoteCollectionIndex> {
+    const plan = this.planCache;
+    if (plan === null) {
+      return { revision: 0, entries: {}, committedAt: null };
+    }
+    const assets = plan.assets.filter((asset) => asset.assetType === collection.assetType);
+    if (assets.length === 0) {
+      return { revision: toAdapterRevision(plan.revision), entries: {}, committedAt: null };
+    }
+    const mappedAssets = assets.map((asset) => {
+      const adapterAssetId = collection.assetIdCodec.toAdapterAssetId(asset.assetId);
+      const protocolContentHash = toProtocolContentHash(asset.contentHash);
+      return {
+        asset,
+        adapterAssetId,
+        protocolContentHash,
+        assetKey: createAssetStateKey(collection, adapterAssetId),
+      };
+    });
+    const comparableHashes = await this.request<readonly (string | null)[]>({
+      type: "state-read-comparable-hashes",
+      assets: mappedAssets.map((asset) => ({
+        assetKey: asset.assetKey,
+        protocolContentHash: asset.protocolContentHash,
+      })),
+    });
+    const entries: RemoteCollectionIndex["entries"] = {};
+    mappedAssets.forEach((mapped, index) => {
+      entries[mapped.adapterAssetId] = {
+        revision: toAdapterRevision(mapped.asset.lastModifiedRevision),
+        contentHash: comparableHashes[index] ?? mapped.protocolContentHash,
+        protocolContentHash: mapped.protocolContentHash,
+        deletedAt: null,
+        committedAt: null,
+      };
+    });
+    return {
+      revision: toAdapterRevision(plan.revision),
+      entries,
+      committedAt: plan.serverTime,
+    };
+  }
+
+  public async readAsset(params: RemoteAssetRef): Promise<RemoteAssetContent | null> {
+    const plan = this.planCache;
+    if (plan === null) {
+      return null;
+    }
+    const remoteAssetId = params.collection.assetIdCodec.toRemoteAssetId(params.assetId);
+    const asset = plan.assets.find((candidate) =>
+      candidate.assetType === params.collection.assetType
+      && candidate.assetId === remoteAssetId
+    );
+    if (asset === undefined) {
+      return null;
+    }
+    const result = await this.request<CfV2ReadAssetResult>({
+      type: "read-asset",
+      asset,
+      planRevision: plan.revision,
+      planServerTime: plan.serverTime,
+    });
+    await this.request<void>({
+      type: "state-note-remote-hash",
+      assetKey: createAssetStateKey(params.collection, params.assetId),
+      protocolContentHash: result.contentHash,
+    });
+    return result;
+  }
+
+  public async checkCollections(
+    collections: readonly SyncRemoteCollection[],
+  ): Promise<RemoteCheckResult> {
+    const knownRevision = await this.request<string>({
+      type: "state-read-applied-revision",
+    });
+    const check = await this.request<CfV2CheckResponse | null>({
+      type: "check",
+      knownRevision,
+    });
+    if (check === null || !check.changed) {
+      return {
+        changedCollections: [],
+        ...(check === null ? {} : { globalCursor: toAdapterRevision(check.revision) }),
+      };
+    }
+    return {
+      changedCollections: collections.map((collection) => collection.adapterId),
+      globalCursor: toAdapterRevision(check.revision),
+    };
+  }
+
+  public beginWriteBatch(): SyncRemoteWriteBatch {
+    return new CloudflareV2SyncWriteBatch(this);
+  }
+
+  public async markApplied(result: RemoteApplyResult): Promise<void> {
+    if (result.collectionRevision !== null) {
+      await this.localState.setRemoteRevision(
+        result.collection.stateKey,
+        result.collectionRevision,
+      );
+    }
+    if (result.collectionEtag !== undefined) {
+      await this.localState.setRemoteEtag(result.collection.stateKey, result.collectionEtag);
+    } else if (result.collectionRevision !== null) {
+      await this.localState.setRemoteEtag(
+        result.collection.stateKey,
+        String(result.collectionRevision),
+      );
+    }
+  }
+
+  public async prepareCollections(_collections: readonly SyncRemoteCollection[]): Promise<void> {
+    // Cloudflare v2 没有目录维护步骤。
+  }
+
+  public async complete(): Promise<void> {
+    const targetRevision = this.latestCommittedRevision
+      ?? (this.context.reason === "local-change" ? null : this.planCache?.revision ?? null);
+    if (targetRevision !== null) {
+      await this.request<void>({
+        type: "state-write-applied-revision",
+        revision: targetRevision,
+      });
+    }
+    if (this.pendingJournalAck) {
+      await this.request<void>({ type: "ack-pending-upload" });
+      this.pendingJournalAck = false;
+    }
+  }
+
+  public dispose(): void {
+    this.planCache = null;
+  }
+
+  public getObservedRemoteRevision(): CfV2Revision | null {
+    return this.planCache?.revision ?? null;
+  }
+
+  public async readAppliedRevision(): Promise<CfV2Revision> {
+    return await this.request<string>({ type: "state-read-applied-revision" });
+  }
+
+  public registerCommittedRevision(revision: CfV2Revision): void {
+    this.latestCommittedRevision = revision;
+    this.pendingJournalAck = true;
+  }
+
+  public async commitWorkerBatch(options: {
+    readonly baseRevision: CfV2Revision;
+    readonly clientBatchId: string;
+    readonly mutations: readonly CfV2WorkerMutation[];
+  }): Promise<CfV2CommitBatchResult> {
+    return await this.request<CfV2CommitBatchResult>({
+      type: "commit-batch",
+      ...options,
+    });
+  }
+
+  private async request<TResult>(
+    operation: Parameters<CloudflareV2WorkerBridge["request"]>[1],
+  ): Promise<TResult> {
+    return await this.workerClient.request<TResult>(this.config, operation, this.onActivity);
+  }
+}
+
+interface PendingMutation {
+  readonly collection: SyncRemoteCollection;
+  readonly mutation: CfV2WorkerMutation;
+}
+
+class CloudflareV2SyncWriteBatch implements SyncRemoteWriteBatch {
+  private mutations: PendingMutation[] = [];
+  private committed = false;
+
+  public constructor(private readonly session: CloudflareV2SyncRemoteSession) {}
+
+  public putAsset(params: RemoteAssetPutParams): void {
+    if (this.committed) {
+      return;
+    }
+    this.mutations.push({
+      collection: params.collection,
+      mutation: {
+        clientMutationId: createUuid(),
+        operation: "put",
+        adapterId: params.collection.adapterId,
+        adapterAssetId: params.assetId,
+        assetType: params.collection.assetType,
+        assetId: params.collection.assetIdCodec.toRemoteAssetId(params.assetId),
+        value: params.value,
+        adapterContentHash: params.contentHash,
+        deletedAt: null,
+      },
+    });
+  }
+
+  public putTombstone(params: RemoteAssetTombstoneParams): void {
+    if (this.committed) {
+      return;
+    }
+    this.mutations.push({
+      collection: params.collection,
+      mutation: {
+        clientMutationId: createUuid(),
+        operation: "delete",
+        adapterId: params.collection.adapterId,
+        adapterAssetId: params.assetId,
+        assetType: params.collection.assetType,
+        assetId: params.collection.assetIdCodec.toRemoteAssetId(params.assetId),
+        value: null,
+        adapterContentHash: params.targetContentHash,
+        deletedAt: params.deletedAt,
+      },
+    });
+  }
+
+  public async commit(): Promise<RemoteWriteBatchResult> {
+    if (this.committed) {
+      return { writes: [] };
+    }
+    this.committed = true;
+    if (this.mutations.length === 0) {
+      return { writes: [] };
+    }
+    const baseRevision = this.session.getObservedRemoteRevision()
+      ?? await this.session.readAppliedRevision();
+    let latestRevision = baseRevision;
+    const writes: RemoteWriteResult[] = [];
+    const clientBatchId = createUuid();
+
+    for (let offset = 0; offset < this.mutations.length; offset += 32) {
+      const chunk = this.mutations.slice(offset, offset + 32);
+      let result: CfV2CommitBatchResult;
+      try {
+        result = await this.session.commitWorkerBatch({
+          baseRevision: latestRevision,
+          clientBatchId: offset === 0 ? clientBatchId : `${clientBatchId}-${offset}`,
+          mutations: chunk.map((entry) => entry.mutation),
+        });
+      } catch (error) {
+        throw translateWriteError(error);
+      }
+      latestRevision = result.revision;
+      for (const applied of result.applied) {
+        const pending = chunk.find((entry) =>
+          entry.mutation.clientMutationId === applied.clientMutationId
+        );
+        if (pending === undefined) {
+          continue;
+        }
+        writes.push({
+          collection: pending.collection,
+          assetId: applied.adapterAssetId,
+          revision: applied.revision,
+          contentHash: applied.contentHash,
+          deletedAt: applied.deletedAt,
+          committedAt: applied.committedAt,
+        });
+      }
+      // 后续 chunk 需要先释放前一笔已提交日志；Worker 会在下一次 commit 前执行该步骤。
+      this.session.registerCommittedRevision(latestRevision);
+    }
+    return { writes, globalCursor: toAdapterRevision(latestRevision) };
+  }
+
+  public async discard(): Promise<void> {
+    this.mutations = [];
+    this.committed = true;
+  }
+}
+
+export function createCloudflareSyncRemote(
+  options: CloudflareSyncRemoteOptions = {},
+): SyncRemote {
+  return new CloudflareSyncRemote(options);
+}
+
+function translateWriteError(error: unknown): unknown {
+  if (error instanceof CfV2HttpError && error.status === 409) {
+    const details = error.details;
+    if (
+      typeof details === "object"
+      && details !== null
+      && "conflicts" in details
+      && Array.isArray(details.conflicts)
+    ) {
+      return new RemoteWriteConflictError(details.conflicts.map((conflict) => {
+        const value = conflict as Record<string, unknown>;
+        return {
+          assetType: typeof value.assetType === "string" ? value.assetType : "",
+          assetId: typeof value.assetId === "string" ? value.assetId : "",
+          reason: typeof value.reason === "string" ? value.reason : error.code,
+          expectedRevision: typeof value.expectedRevision === "number"
+            ? value.expectedRevision
+            : null,
+          actualRevision: typeof value.actualRevision === "number"
+            ? value.actualRevision
+            : null,
+          expectedHash: typeof value.expectedHash === "string" ? value.expectedHash : null,
+          actualHash: typeof value.actualHash === "string" ? value.actualHash : null,
+        };
+      }));
+    }
+  }
+  return error;
+}
+
+function createAssetStateKey(collection: SyncRemoteCollection, assetId: string): string {
+  return `${collection.adapterId}:${assetId}`;
+}
+
+function toProtocolContentHash(hash: string): string {
+  return hash.startsWith("sha256:") ? hash : `sha256:${hash}`;
+}
+
+function toAdapterRevision(revision: CfV2Revision): number {
+  if (/^\d+$/.test(revision)) {
+    const numeric = Number(revision);
+    if (Number.isSafeInteger(numeric)) {
+      return numeric;
+    }
+  }
+  const timestampMatch = /-(\d+)$/.exec(revision);
+  if (timestampMatch?.[1] !== undefined) {
+    const timestamp = Number(timestampMatch[1]);
+    if (Number.isSafeInteger(timestamp)) {
+      return timestamp;
+    }
+  }
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < revision.length; index += 1) {
+    hash ^= revision.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+function normalizeConcurrency(value: number | undefined): number {
+  return value === undefined || !Number.isFinite(value)
+    ? 4
+    : Math.max(1, Math.min(16, Math.round(value)));
+}
+
+function normalizeTimeout(value: number | undefined): number {
+  return value === undefined || !Number.isFinite(value)
+    ? 30_000
+    : Math.max(1_000, Math.round(value));
+}

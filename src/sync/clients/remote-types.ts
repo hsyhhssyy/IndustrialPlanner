@@ -80,6 +80,9 @@ export interface SyncRemote {
 
 export interface SyncRemoteSession {
   readonly localState: SyncLocalState;
+  computeContentHashes(
+    requests: readonly SyncContentHashRequest[],
+  ): Promise<readonly string[]>;
   prefetchIndexes(collections: readonly SyncRemoteCollection[]): Promise<void>;
   readIndex(collection: SyncRemoteCollection): Promise<RemoteCollectionIndex>;
   readAsset(params: RemoteAssetRef): Promise<RemoteAssetContent | null>;
@@ -122,7 +125,7 @@ export interface RemoteAssetRef {
 
 export interface RemoteAssetContent {
   readonly revision: number;
-  readonly content: string;
+  readonly value: unknown;
   readonly contentHash: string;
   readonly committedAt: string | null;
   readonly etag?: string | null;
@@ -131,10 +134,15 @@ export interface RemoteAssetContent {
 export interface RemoteAssetPutParams {
   readonly collection: SyncRemoteCollection;
   readonly assetId: string;
-  readonly content: string;
+  readonly value: unknown;
   readonly contentHash: string;
   readonly baseRevision: number | null;
   readonly baseContentHash: string | null;
+}
+
+export interface SyncContentHashRequest {
+  readonly algorithm: SyncHashAlgorithm;
+  readonly value: unknown;
 }
 
 export interface RemoteAssetTombstoneParams {

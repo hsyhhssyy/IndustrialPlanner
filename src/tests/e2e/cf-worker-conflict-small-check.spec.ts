@@ -2,6 +2,8 @@
  * CF Worker 同步 e2e：冲突解决 → 小检查短路 → 增量同步
  * AI-CORRECTION 2026-08-12: Cloudflare 同步当前由主线程直接请求 cf-sync-v2 后端；
  * 本测试名称保留历史称呼，但场景验证的是当前 HTTP 同步实现。
+ * AI-CORRECTION 2026-08-12: 上述主线程实现已被 Dedicated Worker v2 链路取代；
+ * 本场景继续验证相同后端协议下的冲突、小检查与增量同步。
  *
  * 全部使用文本/role/data 选择器（CSS Module 在 dev 模式被哈希）。
  */
@@ -89,7 +91,7 @@ async function readRemotePlan(
 async function tryReadRemoteRevision(
   request: APIRequestContext,
   spaceId: string,
-): Promise<number | null> {
+): Promise<string | null> {
   const response = await request.get(
     `${BACKEND_API_BASE_URL}/v1/sync/spaces/${encodeURIComponent(spaceId)}/plan`,
   );
@@ -106,7 +108,7 @@ async function seedRemoteWorldDocument(
   spaceId: string,
   assetId: string,
   content: string,
-): Promise<number> {
+): Promise<string> {
   const createResponse = await request.post(
     `${BACKEND_API_BASE_URL}/v1/sync/spaces`,
     { data: { spaceId } },
@@ -120,7 +122,7 @@ async function seedRemoteWorldDocument(
       data: {
         protocol: CF_SYNC_V2_PROTOCOL,
         action: "prepare",
-        baseRevision: 0,
+        baseRevision: "0",
         clientBatchId: randomUUID(),
         objects: [{
           clientMutationId: randomUUID(),
@@ -440,7 +442,7 @@ async function runConflictScenario(options: {
     remoteSeed.assetId,
     remoteSeed.content,
   );
-  expect(seededRevision).toBeGreaterThan(0);
+  expect(seededRevision).not.toBe("0");
 
   // ─── Phase 4: 开启实验性功能 + CF Worker 同步 ───
   await page.getByTitle("设置").click();
@@ -566,11 +568,14 @@ async function runConflictScenario(options: {
     expect((await readRemotePlan(request, spaceId)).revision).toBe(seededRevision);
   } else {
     expect(localFurnaceCountAfterResolution).toBeGreaterThan(0);
-    await expect.poll(async () => await tryReadRemoteRevision(request, spaceId), {
+    await expect.poll(async () => {
+      const revision = await tryReadRemoteRevision(request, spaceId);
+      return revision !== null && revision !== seededRevision;
+    }, {
       message: "使用本地应将本地冲突内容上传并推进远端 revision",
       timeout: 45_000,
       intervals: [1000],
-    }).toBeGreaterThan(seededRevision);
+    }).toBe(true);
 
     const planAfterUseLocal = await readRemotePlan(request, spaceId);
     const remoteWorldDocumentAfterUseLocal = planAfterUseLocal.assets.find((asset) =>
@@ -677,11 +682,14 @@ async function runConflictScenario(options: {
     message: "第二次放置应在当前文档中创建精炼炉",
     timeout: 10_000,
   }).toBeGreaterThan(furnaceCountBeforeIncrementalSync);
-  await expect.poll(async () => await tryReadRemoteRevision(request, spaceId), {
+  await expect.poll(async () => {
+    const revision = await tryReadRemoteRevision(request, spaceId);
+    return revision !== null && revision !== revisionBeforeIncrementalSync;
+  }, {
     message: "本地变化应触发增量上传并推进远端 revision",
     timeout: 45_000,
     intervals: [1000],
-  }).toBeGreaterThan(revisionBeforeIncrementalSync);
+  }).toBe(true);
   const planAfterIncrementalSync = await readRemotePlan(request, spaceId);
   const remoteWorldDocument = planAfterIncrementalSync.assets.find((asset) =>
     asset.assetType === TEST_WORLD_DOCUMENT_ASSET_TYPE

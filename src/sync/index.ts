@@ -117,6 +117,7 @@ export type {
   RemoteWriteBatchResult,
   RemoteWriteResult,
   SyncAssetType,
+  SyncContentHashRequest,
   SyncHashAlgorithm,
   SyncLocalState,
   SyncRemote,

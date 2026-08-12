@@ -2,6 +2,8 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createStableJsonHash } from "@/shared/storage/hash-utils";
+
 import {
   createWebDavSyncService,
   createSyncRemoteCollection,
@@ -29,6 +31,9 @@ function createTestRemote(options: {
       getRemoteEtag: async () => null,
       setRemoteEtag: async () => undefined,
     },
+    computeContentHashes: async (requests) => requests.map((request) =>
+      createStableJsonHash(request.value)
+    ),
     prefetchIndexes: async () => undefined,
     readIndex: async () => ({ revision: 0, entries: {}, committedAt: null }),
     readAsset: async () => null,
@@ -573,6 +578,9 @@ describe("webdav-sync-service", () => {
         getRemoteEtag: async () => null,
         setRemoteEtag: async () => undefined,
       },
+      computeContentHashes: async (requests) => requests.map((request) =>
+        createStableJsonHash(request.value)
+      ),
       prefetchIndexes: async () => undefined,
       readIndex: async () => ({ revision: 0, entries: {}, committedAt: null }),
       readAsset: async () => null,

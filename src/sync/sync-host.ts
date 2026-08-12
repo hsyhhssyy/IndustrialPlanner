@@ -103,7 +103,20 @@ import {
 import { SyncStateImpl } from "./sync-state-impl";
 import { createWebDavWorkerStorageClient } from "./clients/webdav/webdav-worker-client";
 import { createWebDavSyncRemote } from "./clients/webdav/webdav-remote";
-import { createCloudflareSyncRemote } from "./clients/cloudflare/cloudflare-remote";
+// AI-REMOVED 2026-08-12:
+// Reason: 直接引用旧主线程 Cloudflare remote 会绕过新的长生命周期 Worker。
+// Trigger: 用户要求上传开始后即使标签页切到后台也继续上传，并降低主线程渲染压力。
+// Evidence: clients/cloudflare 公共入口现在导出 v2 Worker remote 与 transport。
+// Replacement: 下方公共入口导入。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// import { createCloudflareSyncRemote } from "./clients/cloudflare/cloudflare-remote";
+import {
+  CloudflareV2WorkerClient,
+  createCloudflareSyncRemote,
+} from "./clients/cloudflare";
 import { resolveBackendApiBaseUrl } from "@/shared/storage/backend-api-address";
 import {
   clearCloudflareSyncSettings,
@@ -162,6 +175,13 @@ export async function createSyncHost(
 ): Promise<SyncHost> {
   const state = new SyncStateImpl();
   const disposers: Array<() => void> = [];
+  // Cloudflare transport 归 SyncHost 所有；单轮 SyncRemote dispose 不终止正在后台执行的上传。
+  // 延迟创建避免未选择 Cloudflare 时加载或初始化对应 Worker。
+  let cloudflareWorkerClient: CloudflareV2WorkerClient | null = null;
+  const getCloudflareWorkerClient = (): CloudflareV2WorkerClient => {
+    cloudflareWorkerClient ??= new CloudflareV2WorkerClient();
+    return cloudflareWorkerClient;
+  };
   // AI-REMOVED 2026-08-12:
   // Reason: 远端落地已由 storage/snapshot change origin 显式标记，不再需要动态作用域猜测变更来源。
   // Trigger: Cloudflare 冲突选择 use-remote 后，remoteApplyDepth 依赖回调发生在 Promise 释放前的时序。
@@ -418,6 +438,7 @@ export async function createSyncHost(
         return createCloudflareSyncRemote({
           apiBase: resolveBackendApiBaseUrl(),
           spaceId: getCloudflareSpaceId(),
+          workerClient: getCloudflareWorkerClient(),
           maxConcurrentRequests: settings.maxConcurrentRequests,
           onRequestActivityChange,
           ...(requestOptions.requestTimeoutMs === undefined
@@ -579,6 +600,7 @@ export async function createSyncHost(
           ? createCloudflareSyncRemote({
               apiBase: resolveBackendApiBaseUrl(),
               spaceId: getCloudflareSpaceId(cloudflareSettings),
+              workerClient: getCloudflareWorkerClient(),
               maxConcurrentRequests: settings.maxConcurrentRequests,
             })
           : createWebDavSyncRemote({
@@ -629,6 +651,7 @@ export async function createSyncHost(
         const remote = createCloudflareSyncRemote({
           apiBase: resolveBackendApiBaseUrl(),
           spaceId: getCloudflareSpaceId(cloudflareSettings),
+          workerClient: getCloudflareWorkerClient(),
           maxConcurrentRequests: settings.maxConcurrentRequests,
         });
         try {
@@ -671,6 +694,8 @@ export async function createSyncHost(
       }
       state.cancelConflictWorkflow();
       service.stop();
+      cloudflareWorkerClient?.dispose();
+      cloudflareWorkerClient = null;
       if (workspace.sync === host) {
         workspace.sync = null;
       }

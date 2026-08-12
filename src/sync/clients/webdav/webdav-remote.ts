@@ -1,4 +1,7 @@
-import { createStableJsonHash } from "@/shared/storage/hash-utils";
+import {
+  createSha256CanonicalHash,
+  createStableJsonHash,
+} from "@/shared/storage/hash-utils";
 import {
   applyJsonPatch,
   generateJsonPatch,
@@ -20,6 +23,7 @@ import type {
   SyncRemoteSession,
   SyncRemoteSessionContext,
   SyncRemoteWriteBatch,
+  SyncContentHashRequest,
 } from "../remote-types";
 import type {
   SyncStorageClient,
@@ -173,6 +177,16 @@ class WebDavSyncRemoteSession implements SyncRemoteSession {
     public readonly localState: SyncLocalState,
     private readonly context: SyncRemoteSessionContext,
   ) {}
+
+  public async computeContentHashes(
+    requests: readonly SyncContentHashRequest[],
+  ): Promise<readonly string[]> {
+    return await Promise.all(requests.map(async (request) =>
+      request.algorithm === "sha256-canonical-json-v1"
+        ? await createSha256CanonicalHash(request.value)
+        : createStableJsonHash(request.value)
+    ));
+  }
 
   public async prefetchIndexes(collections: readonly SyncRemoteCollection[]): Promise<void> {
     await Promise.all(collections.map(async (collection) => {
@@ -363,10 +377,9 @@ class WebDavSyncRemoteSession implements SyncRemoteSession {
       return null;
     }
 
-    const content = JSON.stringify(patchState.value);
     return {
       revision: patchState.meta.revision,
-      content,
+      value: patchState.value,
       contentHash: createStableJsonHash(patchState.value),
       committedAt: patchState.remoteUpdatedAt,
       etag: patchState.etag,
@@ -446,7 +459,7 @@ class WebDavSyncRemoteWriteBatch implements SyncRemoteWriteBatch {
       }
 
       await ensureRemoteParentDirectory(client, remotePath);
-      await client.writeTextFile(remotePath, mutation.params.content);
+      await client.writeTextFile(remotePath, JSON.stringify(mutation.params.value));
       writes.push({
         collection: mutation.params.collection,
         assetId: mutation.params.assetId,
@@ -475,7 +488,7 @@ class WebDavSyncRemoteWriteBatch implements SyncRemoteWriteBatch {
       if (mutation.type === "put") {
         const entryPath = binding.entryPath(mutation.params.assetId);
         await ensureRemoteParentDirectory(client, entryPath);
-        await client.writeTextFile(entryPath, mutation.params.content);
+        await client.writeTextFile(entryPath, JSON.stringify(mutation.params.value));
         nextIndex = upsertRemoteIndexEntry(nextIndex, mutation.params.assetId, {
           contentHash: mutation.params.contentHash,
           deletedAt: null,
@@ -521,11 +534,10 @@ class WebDavSyncRemoteWriteBatch implements SyncRemoteWriteBatch {
         collection,
         mutation.params.assetId,
       );
-      const value = parseJsonContent(mutation.params.content);
       await writeRemotePatchState({
         client,
         directoryPath,
-        value,
+        value: mutation.params.value,
         previousState,
         deltaThreshold,
       });
@@ -557,11 +569,10 @@ class WebDavSyncRemoteWriteBatch implements SyncRemoteWriteBatch {
           collection,
           mutation.params.assetId,
         );
-        const value = parseJsonContent(mutation.params.content);
         const { nextMeta, metaWriteOptions } = await writeRemotePatchContent({
           client,
           directoryPath: binding.directoryPath(mutation.params.assetId),
-          value,
+          value: mutation.params.value,
           previousState,
           deltaThreshold: binding.deltaThreshold ?? 50,
         });
@@ -655,7 +666,8 @@ async function readRemoteTextAsset(
 
   return {
     revision,
-    content: file.content,
+    // AI-CORRECTION 2026-08-12: Remote 内容边界已改为值语义；WebDAV 在 provider 边界解析 JSON。
+    value: parseJsonContent(file.content, remotePath),
     contentHash: createRemoteContentHash(file.content),
     committedAt: committedAt ?? normalizeRemoteTimestamp(file.lastModified),
     etag: file.etag,
@@ -699,8 +711,15 @@ function createTombstoneResult(
   };
 }
 
-function parseJsonContent(content: string): unknown {
-  return JSON.parse(content);
+function parseJsonContent(content: string, remotePath: string): unknown {
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Remote file "${remotePath}" contains invalid JSON: ${message}`, {
+      cause: error,
+    });
+  }
 }
 
 async function readRemoteJson<TValue>(

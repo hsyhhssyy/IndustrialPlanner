@@ -264,6 +264,9 @@ describe("webdav-sync-adapters", () => {
         getRemoteEtag: async () => null,
         setRemoteEtag: async () => undefined,
       },
+      computeContentHashes: async (requests) => requests.map((request) =>
+        createStableJsonHash(request.value)
+      ),
       prefetchIndexes: async () => undefined,
       readIndex: async () => ({ revision: 0, entries: {}, committedAt: null }),
       readAsset: async () => null,
@@ -302,6 +305,9 @@ describe("webdav-sync-adapters", () => {
         getRemoteEtag: async () => null,
         setRemoteEtag: async () => undefined,
       },
+      computeContentHashes: async (requests) => requests.map((request) =>
+        createStableJsonHash(request.value)
+      ),
       prefetchIndexes: async () => undefined,
       readIndex: async () => ({
         revision: 1,
@@ -318,7 +324,7 @@ describe("webdav-sync-adapters", () => {
       }),
       readAsset: async () => ({
         revision: 1,
-        content: JSON.stringify(remoteValue),
+        value: remoteValue,
         contentHash: protocolHash,
         committedAt: null,
       }),

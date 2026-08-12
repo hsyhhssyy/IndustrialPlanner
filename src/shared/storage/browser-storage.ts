@@ -34,6 +34,82 @@ export interface IndexedDbStoreMutationBatch<TValue> {
   operations: readonly IndexedDbMutationOperation<TValue>[];
 }
 
+/**
+ * 读取 IndexedDB 中由 structured clone 保存的原始值。
+ *
+ * JSON 存储 API 仍是业务数据的默认边界；该 API 仅供必须保留二进制载荷的基础设施使用。
+ */
+export async function readRawFromIndexedDb<TValue>(
+  location: IndexedDbStorageLocation,
+): Promise<TValue | null> {
+  const database = await openIndexedDb(location);
+
+  if (database === null) {
+    return null;
+  }
+
+  try {
+    const request = database
+      .transaction(location.storeName, "readonly")
+      .objectStore(location.storeName)
+      .get(location.key);
+    const value = await waitForRequest<unknown>(request);
+
+    return value === undefined ? null : value as TValue;
+  } catch {
+    return null;
+  } finally {
+    database.close();
+  }
+}
+
+/** 原子写入一组 structured-clone 值，不经过 JSON 编解码。 */
+export async function applyRawIndexedDbTransactionMutations<TValue>(
+  location: IndexedDbDatabaseLocation,
+  batches: readonly IndexedDbStoreMutationBatch<TValue>[],
+): Promise<boolean> {
+  const activeBatches = batches.filter((batch) => batch.operations.length > 0);
+
+  if (activeBatches.length === 0) {
+    return true;
+  }
+
+  const database = await openIndexedDbStores(
+    location,
+    activeBatches.map((batch) => batch.storeName),
+  );
+
+  if (database === null) {
+    return false;
+  }
+
+  try {
+    const storeNames = Array.from(new Set(activeBatches.map((batch) => batch.storeName)));
+    const transaction = database.transaction(storeNames, "readwrite");
+    const completion = waitForTransaction(transaction);
+
+    for (const batch of activeBatches) {
+      const objectStore = transaction.objectStore(batch.storeName);
+
+      for (const operation of batch.operations) {
+        if (operation.type === "put") {
+          await waitForRequest(objectStore.put(operation.value, operation.key));
+          continue;
+        }
+
+        await waitForRequest(objectStore.delete(operation.key));
+      }
+    }
+
+    await completion;
+    return true;
+  } catch {
+    return false;
+  } finally {
+    database.close();
+  }
+}
+
 export function readFromLocalStorage<TValue>(
   key: string,
   codec: JsonStorageCodec<TValue> = {},

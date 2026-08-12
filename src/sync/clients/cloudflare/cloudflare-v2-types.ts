@@ -1,8 +1,12 @@
 // cf-sync-v2 协议类型定义。
 // 对应后端 /home/coder/IndustrialPlanner-Backend/packages/sync/src/space_model.ts
 // 协议版本: cf-sync-v2，直接 HTTP fetch，不需要 Web Worker。
+// AI-CORRECTION 2026-08-12: 协议本身与执行线程无关；浏览器生产链路现由 Dedicated Worker 发起 fetch。
 
 export const CF_SYNC_V2_PROTOCOL = "cf-sync-v2";
+
+/** 服务端 revision 是不透明字符串；客户端只允许比较相等性，不做大小运算。 */
+export type CfV2Revision = string;
 
 // ============================================================================
 // 后端响应类型
@@ -10,7 +14,7 @@ export const CF_SYNC_V2_PROTOCOL = "cf-sync-v2";
 
 export interface CfV2PlanResponse {
   readonly spaceId: string;
-  readonly revision: number;
+  readonly revision: CfV2Revision;
   readonly epoch: number;
   readonly assets: readonly CfV2PlanAsset[];
   readonly serverTime: string;
@@ -26,12 +30,12 @@ export interface CfV2PlanAsset {
   readonly schemaVersion: number;
   readonly storageMode: "full";
   readonly backend: "d1" | "r2";
-  readonly lastModifiedRevision: number;
+  readonly lastModifiedRevision: CfV2Revision;
   readonly downloadUrl: string;
 }
 
 export interface CfV2CheckResponse {
-  readonly revision: number;
+  readonly revision: CfV2Revision;
   readonly epoch: number;
   readonly changed: boolean;
   readonly planRequired: boolean;
@@ -41,7 +45,7 @@ export interface CfV2CheckResponse {
 export interface CfV2PrepareRequest {
   readonly protocol: typeof CF_SYNC_V2_PROTOCOL;
   readonly action: "prepare";
-  readonly baseRevision: number;
+  readonly baseRevision: CfV2Revision;
   readonly clientBatchId: string;
   readonly objects: readonly CfV2PrepareObject[];
   readonly deletions: readonly CfV2PrepareDeletion[];
@@ -71,8 +75,8 @@ export interface CfV2PrepareResponse {
   readonly status: "ready";
   readonly uploadId: string;
   readonly commitToken: string;
-  readonly baseRevision: number;
-  readonly targetRevision: number;
+  readonly baseRevision: CfV2Revision;
+  readonly targetRevision: CfV2Revision;
   readonly targetEpoch: number;
   readonly expiresAt: string;
   readonly uploads: readonly CfV2UploadInstruction[];
@@ -104,7 +108,7 @@ export interface CfV2CancelRequest {
 export interface CfV2CommitResult {
   readonly status: "committed" | "already-committed";
   readonly uploadId: string;
-  readonly revision: number;
+  readonly revision: CfV2Revision;
   readonly epoch: number;
   readonly assets: readonly CfV2CommittedAsset[];
   readonly deletedAssets: readonly CfV2DeletedAsset[];
@@ -115,7 +119,7 @@ export interface CfV2CommittedAsset {
   readonly assetType: string;
   readonly assetId: string;
   readonly contentHash: string;
-  readonly lastModifiedRevision: number;
+  readonly lastModifiedRevision: CfV2Revision;
 }
 
 export interface CfV2DeletedAsset {
@@ -131,7 +135,7 @@ export interface CfV2CancelResult {
 export interface CfV2CreateSpaceResult {
   readonly ok: boolean;
   readonly spaceId: string;
-  readonly revision: number;
+  readonly revision: CfV2Revision;
   readonly epoch: number;
   readonly createdAt: string;
 }

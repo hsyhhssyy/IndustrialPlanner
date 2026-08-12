@@ -11,6 +11,7 @@ export type {
   RemoteWriteConflict,
   RemoteWriteResult,
   SyncAssetType,
+  SyncContentHashRequest,
   SyncHashAlgorithm,
   SyncLocalState,
   SyncMaintenanceTaskRequest,

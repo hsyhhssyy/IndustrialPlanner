@@ -1,7 +1,4 @@
-import {
-  createSha256CanonicalHash,
-  createStableJsonHash,
-} from "@/shared/storage/hash-utils";
+import { createStableJsonHash } from "@/shared/storage/hash-utils";
 import { createLogger } from "@/shared/logging/logger";
 import type {
   RemoteAssetMeta,
@@ -214,12 +211,18 @@ interface WriteRemoteValueOptions<TValue> {
 }
 
 async function createSyncContentHash(
+  session: SyncRemoteSession,
   collection: SyncRemoteCollection,
   value: unknown,
 ): Promise<string> {
-  return collection.hashAlgorithm === "sha256-canonical-json-v1"
-    ? await createSha256CanonicalHash(value)
-    : createStableJsonHash(value);
+  const [hash] = await session.computeContentHashes([{
+    algorithm: collection.hashAlgorithm,
+    value,
+  }]);
+  if (hash === undefined) {
+    throw new Error(`Content hash worker returned no result for "${collection.adapterId}".`);
+  }
+  return hash;
 }
 
 async function readRemoteAssetValue<TValue>(
@@ -262,15 +265,8 @@ async function readRemoteAssetValue<TValue>(
   // } catch {
   //   return null;
   // }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(asset.content);
-  } catch (error) {
-    throw new Error(
-      `Remote asset ${collection.adapterId}/${assetId} contains invalid JSON.`,
-      { cause: error },
-    );
-  }
+  // AI-CORRECTION 2026-08-12: JSON 解析已下沉到 provider 边界；适配器只消费结构化值。
+  const parsed = asset.value;
   const value = normalizeRemote === undefined
     ? parsed as TValue
     : normalizeRemote(parsed);
@@ -282,7 +278,7 @@ async function readRemoteAssetValue<TValue>(
 
   return {
     value,
-    contentHash: await createSyncContentHash(collection, value),
+    contentHash: await createSyncContentHash(session, collection, value),
     remoteContentHash: asset.contentHash,
     revision: asset.revision,
     committedAt: asset.committedAt,
@@ -316,7 +312,7 @@ async function writeRemoteValue<TValue>(options: WriteRemoteValueOptions<TValue>
   batch.putAsset({
     collection: options.collection,
     assetId: options.assetId,
-    content: JSON.stringify(options.value),
+    value: options.value,
     contentHash: options.contentHash,
     baseRevision: options.baseRevision,
     baseContentHash: options.baseContentHash,
@@ -410,7 +406,7 @@ async function executeCollectionConflictDecisions<TValue>(
       const localDeletedAt = await ctx.getLocalDeletedAt(decision.assetId);
       if (localDeletedAt !== null) {
         // 本地墓碑：putTombstone
-        const contentHash = await createSyncContentHash(ctx.collection, null);
+        const contentHash = await createSyncContentHash(session, ctx.collection, null);
         const baseRevision = await ctx.getRemoteRevision(session, decision.assetId);
         const baseContentHash = await ctx.getRemoteBaseContentHash(session, decision.assetId);
         batch.putTombstone({
@@ -442,13 +438,13 @@ async function executeCollectionConflictDecisions<TValue>(
         logger.warn(`${ctx.adapterId}/${decision.assetId}: use-local but local value not found → skipping`);
         continue;
       }
-      const contentHash = await createSyncContentHash(ctx.collection, localValue);
+      const contentHash = await createSyncContentHash(session, ctx.collection, localValue);
       const baseRevision = await ctx.getRemoteRevision(session, decision.assetId);
       const baseContentHash = await ctx.getRemoteBaseContentHash(session, decision.assetId);
       batch.putAsset({
         collection: ctx.collection,
         assetId: decision.assetId,
-        content: JSON.stringify(localValue),
+        value: localValue,
         contentHash,
         baseRevision,
         baseContentHash,
@@ -736,6 +732,7 @@ async function inspectFullNoRevisionConflicts<TValue>(
   const localValue = await localValuePromise;
   const remoteAsset = await remoteAssetPromise;
   const conflict = await createValueConflict<TValue>({
+    session,
     collection,
     adapterId: options.id,
     assetId: "single",
@@ -811,6 +808,7 @@ async function inspectPatchWithRevisionConflicts<TValue>(
   const localValue = await localValuePromise;
   const remoteAsset = await remoteAssetPromise;
   const conflict = await createValueConflict<TValue>({
+    session,
     collection,
     adapterId: options.id,
     assetId: "snapshot",
@@ -889,7 +887,7 @@ async function inspectCollectionConflicts<TValue>(options: {
       continue;
     }
 
-    const localHash = await createSyncContentHash(options.collection, localEntry.value);
+    const localHash = await createSyncContentHash(options.session, options.collection, localEntry.value);
     const lastSyncedHash = await options.session.localState.getLastSyncedHash(
       createSyncAssetKey(options.collection, localEntry.id),
     );
@@ -920,7 +918,7 @@ async function inspectCollectionConflicts<TValue>(options: {
       if (remoteValue === null) {
         continue;
       }
-      const remoteHash = await createSyncContentHash(options.collection, remoteValue);
+      const remoteHash = await createSyncContentHash(options.session, options.collection, remoteValue);
       if (
         localHash === remoteHash
         || lastSyncedHash === remoteHash
@@ -942,6 +940,7 @@ async function inspectCollectionConflicts<TValue>(options: {
     }
 
     const conflict = await createValueConflict({
+      session: options.session,
       collection: options.collection,
       adapterId: options.adapterId,
       assetId: localEntry.id,
@@ -961,6 +960,7 @@ async function inspectCollectionConflicts<TValue>(options: {
 }
 
 async function createValueConflict<TValue>(options: {
+  readonly session: SyncRemoteSession;
   readonly collection: SyncRemoteCollection;
   readonly adapterId: string;
   readonly assetId: string;
@@ -974,8 +974,8 @@ async function createValueConflict<TValue>(options: {
     return null;
   }
 
-  const localHash = await createSyncContentHash(options.collection, options.localValue);
-  const remoteHash = await createSyncContentHash(options.collection, options.remoteValue);
+  const localHash = await createSyncContentHash(options.session, options.collection, options.localValue);
+  const remoteHash = await createSyncContentHash(options.session, options.collection, options.remoteValue);
   if (
     localHash === remoteHash
     || options.lastSyncedHash === localHash
@@ -1040,6 +1040,7 @@ async function syncFullNoRevision<TValue>(
   );
   const remoteValue = remoteAsset?.value ?? null;
   const status = await syncSingleValue({
+    session,
     collection,
     adapterId: options.id,
     assetId,
@@ -1118,7 +1119,7 @@ async function syncFullWithRevision<TValue>(
   };
   const localContentHashesById = new Map(await Promise.all(localEntries.map(async (entry) => [
     entry.id,
-    await createSyncContentHash(collection, entry.value),
+    await createSyncContentHash(session, collection, entry.value),
   ] as const)));
   const remoteValuesByLocalId = new Map(await Promise.all(localEntries.flatMap((entry) => {
     const remoteEntry = remoteIndex.entries[entry.id];
@@ -1144,7 +1145,7 @@ async function syncFullWithRevision<TValue>(
     const remoteEntry = remoteIndex.entries[localEntry.id] ?? null;
     const assetKey = createSyncAssetKey(collection, localEntry.id);
     const localContentHash = localContentHashesById.get(localEntry.id)
-      ?? await createSyncContentHash(collection, localEntry.value);
+      ?? await createSyncContentHash(session, collection, localEntry.value);
     const lastSyncedHash = await session.localState.getLastSyncedHash(assetKey);
     const remoteValue = remoteValuesByLocalId.get(localEntry.id) ?? null;
 
@@ -1198,7 +1199,7 @@ async function syncFullWithRevision<TValue>(
         remoteWriteBatch.putAsset({
           collection,
           assetId: localEntry.id,
-          content: JSON.stringify(localEntry.value),
+          value: localEntry.value,
           contentHash: localContentHash,
           baseRevision: remoteEntry.revision ?? remoteIndex.revision,
           baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
@@ -1317,6 +1318,7 @@ async function syncFullWithRevision<TValue>(
     }
 
     const entryStatus = await syncSingleValue({
+      session,
       collection,
       adapterId: options.id,
       assetId: localEntry.id,
@@ -1335,10 +1337,10 @@ async function syncFullWithRevision<TValue>(
         remoteWriteBatch.putAsset({
           collection,
           assetId: localEntry.id,
-          content: JSON.stringify(value),
+          value,
           contentHash,
           baseRevision: remoteEntry?.revision ?? null,
-        baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
+          baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
         });
         hasRemoteWrites = true;
       },
@@ -1481,6 +1483,7 @@ async function syncPatchWithRevision<TValue>(
     options.normalizeRemote,
   );
   const status = await syncSingleValue({
+    session,
     collection,
     adapterId: options.id,
     assetId,
@@ -1563,7 +1566,7 @@ async function syncPatchCollectionWithRevision<TValue>(
   };
   const localContentHashesById = new Map(await Promise.all(localEntries.map(async (entry) => [
     entry.id,
-    await createSyncContentHash(collection, entry.value),
+    await createSyncContentHash(session, collection, entry.value),
   ] as const)));
   const remoteStatesByLocalId = new Map(await Promise.all(localEntries.flatMap((entry) => {
     const remoteEntry = remoteIndex.entries[entry.id];
@@ -1594,7 +1597,7 @@ async function syncPatchCollectionWithRevision<TValue>(
     const remoteEntry = remoteIndex.entries[localEntry.id] ?? null;
     const assetKey = createSyncAssetKey(collection, localEntry.id);
     const localContentHash = localContentHashesById.get(localEntry.id)
-      ?? await createSyncContentHash(collection, localEntry.value);
+      ?? await createSyncContentHash(session, collection, localEntry.value);
     const lastSyncedHash = await session.localState.getLastSyncedHash(assetKey);
     const remoteState = remoteStatesByLocalId.get(localEntry.id) ?? null;
 
@@ -1647,7 +1650,7 @@ async function syncPatchCollectionWithRevision<TValue>(
         remoteWriteBatch.putAsset({
           collection,
           assetId: localEntry.id,
-          content: JSON.stringify(localEntry.value),
+          value: localEntry.value,
           contentHash: localContentHash,
           baseRevision: remoteEntry.revision ?? remoteIndex.revision,
           baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
@@ -1767,6 +1770,7 @@ async function syncPatchCollectionWithRevision<TValue>(
     }
 
     const entryStatus = await syncSingleValue({
+      session,
       collection,
       adapterId: options.id,
       assetId: localEntry.id,
@@ -1785,7 +1789,7 @@ async function syncPatchCollectionWithRevision<TValue>(
         remoteWriteBatch.putAsset({
           collection,
           assetId: localEntry.id,
-          content: JSON.stringify(value),
+          value,
           contentHash,
           baseRevision: remoteEntry?.revision ?? null,
           baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
@@ -1816,7 +1820,7 @@ async function syncPatchCollectionWithRevision<TValue>(
         remoteWriteBatch.putAsset({
           collection,
           assetId: localEntry.id,
-          content: JSON.stringify(remoteState.value),
+          value: remoteState.value,
           contentHash: normalizedRemoteHash,
           baseRevision: remoteEntry.revision ?? remoteIndex.revision,
           baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
@@ -1997,7 +2001,7 @@ async function isRemoteIndexUnchangedForCleanLocalEntries<TValue>(options: {
     const lastSyncedHash = await options.session.localState.getLastSyncedHash(
       createSyncAssetKey(options.collection, entry.id),
     );
-    if (lastSyncedHash !== await createSyncContentHash(options.collection, entry.value)) {
+    if (lastSyncedHash !== await createSyncContentHash(options.session, options.collection, entry.value)) {
       return false;
     }
   }
@@ -2058,6 +2062,7 @@ async function resolveCollectionConflict<TValue>(options: {
 }
 
 async function syncSingleValue<TValue>(options: {
+  readonly session: SyncRemoteSession;
   readonly collection: SyncRemoteCollection;
   readonly adapterId: string;
   readonly assetId: string;
@@ -2077,10 +2082,10 @@ async function syncSingleValue<TValue>(options: {
   const lastSyncedHash = await options.readLastSyncedHash();
   const localHash = options.localValue === null
     ? null
-    : await createSyncContentHash(options.collection, options.localValue);
+    : await createSyncContentHash(options.session, options.collection, options.localValue);
   const remoteHash = options.remoteValue === null
     ? null
-    : await createSyncContentHash(options.collection, options.remoteValue);
+    : await createSyncContentHash(options.session, options.collection, options.remoteValue);
 
   if (options.localValue !== null && options.remoteValue === null) {
     logger.info(`${options.adapterId}/${options.assetId}: local exists, remote absent → uploading`);

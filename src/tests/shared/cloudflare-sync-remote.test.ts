@@ -10,7 +10,13 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createCloudflareSyncRemote } from "@/sync/clients/cloudflare/cloudflare-remote";
+// AI-CORRECTION 2026-08-12: 公共入口现在覆盖生产使用的 cf-sync-v2 Worker remote；
+// jsdom 无 Worker 时使用同一个 runtime 的进程内测试适配器。
+import {
+  CloudflareV2WorkerClient,
+  createCloudflareSyncRemote,
+} from "@/sync/clients/cloudflare";
+import { CloudflareV2WorkerRuntime } from "@/sync/clients/cloudflare/cloudflare-v2-worker-runtime";
 import { createFakeIndexedDbFactory } from "./fake-indexed-db";
 import type {
   RemoteCollectionIndex,
@@ -116,6 +122,9 @@ function createTestRemote(): SyncRemote {
   return createCloudflareSyncRemote({
     apiBase: "https://cf-mock.local",
     spaceId: "default",
+    workerClientFactory: () => new CloudflareV2WorkerClient({
+      runtimeFactory: () => new CloudflareV2WorkerRuntime(),
+    }),
   });
 }
 
@@ -318,7 +327,7 @@ describe("cloudflare-sync-remote-v2", () => {
     const asset = await session.readAsset({ collection, assetId: "default" });
 
     expect(asset).not.toBeNull();
-    expect(asset?.content).toBe(testContent);
+    expect(asset?.value).toEqual(JSON.parse(testContent));
     expect(asset?.revision).toBe(1);
 
     await session.dispose?.();
@@ -397,6 +406,44 @@ describe("cloudflare-sync-remote-v2", () => {
     remote.dispose?.();
   });
 
+  it("preserves opaque protocol revisions and only projects them at the SyncRemote boundary", async () => {
+    const opaqueRevision = "abcdef0123456789-1786492800123";
+    let checkUrl = "";
+    const plan = v2Plan([{
+      assetType: "planner-state",
+      assetId: "default",
+      contentHash: BLOB_HASH,
+    }]) as Record<string, unknown>;
+    plan.revision = opaqueRevision;
+    plan.assets = (plan.assets as Array<Record<string, unknown>>).map((asset) => ({
+      ...asset,
+      lastModifiedRevision: opaqueRevision,
+    }));
+    fetchMock
+      .add("GET:/plan", () => ({ json: plan }))
+      .add("GET:/check", (request) => {
+        checkUrl = request.url;
+        return { json: {}, status: 204 };
+      });
+
+    const remote = createTestRemote();
+    const collection = makeCollection();
+    const session = await remote.beginSession({
+      reason: "foreground",
+      collections: [collection],
+    });
+    await session.prefetchIndexes([collection]);
+    const index = await session.readIndex(collection);
+    expect(index.revision).toBe(1786492800123);
+
+    await session.complete?.();
+    await session.checkCollections([collection]);
+    expect(checkUrl).toContain(`knownRevision=${encodeURIComponent(opaqueRevision)}`);
+
+    session.dispose?.();
+    remote.dispose?.();
+  });
+
   // -- write batch: 完整流程 -- //
 
   it("commits a write batch through prepare → upload → commit", async () => {
@@ -454,7 +501,11 @@ describe("cloudflare-sync-remote-v2", () => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url.includes("/uploads/") && init?.method === "PUT") {
         uploadCalled = true;
-        if (typeof init?.body === "string") uploadedBody = init.body;
+        if (typeof init?.body === "string") {
+          uploadedBody = init.body;
+        } else if (ArrayBuffer.isView(init?.body)) {
+          uploadedBody = new TextDecoder().decode(init.body as ArrayBufferView<ArrayBuffer>);
+        }
         return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
       }
       return fetchMock.dispatch(input, init);
@@ -475,7 +526,7 @@ describe("cloudflare-sync-remote-v2", () => {
     batch.putAsset({
       collection,
       assetId: "default",
-      content: testContent,
+      value: JSON.parse(testContent),
       contentHash: "sha256:abc",
       baseRevision: 0,
       baseContentHash: null,
@@ -586,15 +637,109 @@ describe("cloudflare-sync-remote-v2", () => {
     batch.putAsset({
       collection,
       assetId: "default",
-      content: "{\"local\":true}",
+      value: { local: true },
       contentHash: "sha256:local-adapter-hash",
       baseRevision: 1,
       baseContentHash: `sha256:${TEST_HASH}`,
     });
     await batch.commit();
 
-    expect(capturedBaseRevision).toBe(1);
+    expect(capturedBaseRevision).toBe("1");
     await session.dispose?.();
+    remote.dispose?.();
+  });
+
+  it("uploads required blobs in the Worker without exceeding configured concurrency", async () => {
+    let activeUploads = 0;
+    let startedUploads = 0;
+    let maxActiveUploads = 0;
+    const releaseUploads: Array<() => void> = [];
+    fetchMock
+      .add("POST:/mutations/prepare", () => ({
+        json: {
+          status: "ready",
+          uploadId: "parallel-upload",
+          commitToken: "parallel-token",
+          baseRevision: "0",
+          targetRevision: "opaque-1",
+          targetEpoch: 1,
+          expiresAt: "2099-01-01T00:00:00.000Z",
+          uploads: ["one", "two", "three"].map((assetId) => ({
+            assetType: "planner-state",
+            assetId,
+            required: true,
+            backend: "d1",
+            url: `https://cf-mock.local/uploads/parallel/${assetId}`,
+          })),
+        },
+      }))
+      .add("POST:/mutations/commit", () => ({
+        json: {
+          status: "committed",
+          uploadId: "parallel-upload",
+          revision: "opaque-1",
+          epoch: 1,
+          assets: ["one", "two", "three"].map((assetId) => ({
+            assetType: "planner-state",
+            assetId,
+            contentHash: BLOB_HASH,
+            lastModifiedRevision: "opaque-1",
+          })),
+          deletedAssets: [],
+          serverTime: "2026-08-12T00:00:00.000Z",
+        },
+      }));
+    vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes("/uploads/parallel/") && init?.method === "PUT") {
+        activeUploads += 1;
+        startedUploads += 1;
+        maxActiveUploads = Math.max(maxActiveUploads, activeUploads);
+        return new Promise<Response>((resolve) => {
+          releaseUploads.push(() => {
+            activeUploads -= 1;
+            resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+          });
+        });
+      }
+      return fetchMock.dispatch(input, init);
+    });
+
+    const remote = createCloudflareSyncRemote({
+      apiBase: "https://cf-mock.local",
+      spaceId: "default",
+      maxConcurrentRequests: 2,
+      workerClientFactory: () => new CloudflareV2WorkerClient({
+        runtimeFactory: () => new CloudflareV2WorkerRuntime(),
+      }),
+    });
+    const collection = makeCollection();
+    const session = await remote.beginSession({ reason: "manual", collections: [collection] });
+    const batch = session.beginWriteBatch();
+    for (const assetId of ["one", "two", "three"]) {
+      batch.putAsset({
+        collection,
+        assetId,
+        value: { assetId },
+        contentHash: `sha256:${assetId}`,
+        baseRevision: 0,
+        baseContentHash: null,
+      });
+    }
+    const commit = batch.commit();
+
+    await vi.waitFor(() => expect(startedUploads).toBe(2));
+    expect(maxActiveUploads).toBe(2);
+    releaseUploads.shift()?.();
+    await vi.waitFor(() => expect(startedUploads).toBe(3));
+    for (const release of releaseUploads.splice(0)) {
+      release();
+    }
+    await expect(commit).resolves.toMatchObject({ writes: expect.any(Array) });
+    expect(maxActiveUploads).toBe(2);
+
+    await session.complete?.();
+    session.dispose?.();
     remote.dispose?.();
   });
 
@@ -619,8 +764,10 @@ describe("cloudflare-sync-remote-v2", () => {
     remote.dispose?.();
   });
 
-  it("cancels a prepared transaction when an upload fails", async () => {
+  it("keeps a prepared transaction journal and recovers it after an upload failure", async () => {
     let cancelCalled = false;
+    let uploadAttempts = 0;
+    let commitCalled = false;
     fetchMock
       .add("POST:/mutations/prepare", () => ({
         json: {
@@ -643,11 +790,33 @@ describe("cloudflare-sync-remote-v2", () => {
       .add("POST:/mutations/cancel", () => {
         cancelCalled = true;
         return { json: { status: "cancelled", uploadId: "upload-failed" } };
+      })
+      .add("POST:/mutations/commit", () => {
+        commitCalled = true;
+        return {
+          json: {
+            status: "committed",
+            uploadId: "upload-failed",
+            revision: 1,
+            epoch: 1,
+            assets: [{
+              assetType: "planner-state",
+              assetId: "default",
+              contentHash: BLOB_HASH,
+              lastModifiedRevision: 1,
+            }],
+            deletedAssets: [],
+            serverTime: "2026-08-12T00:00:00.000Z",
+          },
+        };
       });
     vi.stubGlobal("fetch", (input: RequestInfo, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url.includes("/uploads/upload-failed")) {
-        return Promise.resolve(new Response("upload outage", { status: 503 }));
+        uploadAttempts += 1;
+        return Promise.resolve(uploadAttempts === 1
+          ? new Response("upload outage", { status: 503 })
+          : new Response(JSON.stringify({ ok: true }), { status: 200 }));
       }
       return fetchMock.dispatch(input, init);
     });
@@ -659,17 +828,29 @@ describe("cloudflare-sync-remote-v2", () => {
     batch.putAsset({
       collection,
       assetId: "default",
-      content: "{}",
+      value: {},
       contentHash: "sha256:adapter-hash",
       baseRevision: 0,
       baseContentHash: null,
     });
 
     await expect(batch.commit()).rejects.toThrow("upload outage");
-    expect(cancelCalled).toBe(true);
+    expect(cancelCalled).toBe(false);
+
+    remote.dispose?.();
+
+    const recoveredRemote = createTestRemote();
+    const recoveredSession = await recoveredRemote.beginSession({
+      reason: "foreground",
+      collections: [collection],
+    });
+    expect(uploadAttempts).toBe(2);
+    expect(commitCalled).toBe(true);
+    await recoveredSession.complete?.();
+    recoveredSession.dispose?.();
+    recoveredRemote.dispose?.();
 
     await session.dispose?.();
-    remote.dispose?.();
   });
 
   // -- write batch: prepare 409 冲突 -- //
@@ -693,7 +874,7 @@ describe("cloudflare-sync-remote-v2", () => {
     batch.putAsset({
       collection,
       assetId: "default",
-      content: "{}",
+      value: {},
       contentHash: "sha256:abc",
       baseRevision: 0,
       baseContentHash: null,

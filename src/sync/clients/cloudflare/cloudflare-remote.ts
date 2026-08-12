@@ -1,5 +1,7 @@
 // Cloudflare cf-sync-v2 远端实现。
 // 协议版本：cf-sync-v2，直接 HTTP fetch，不使用 Web Worker。
+// AI-CORRECTION 2026-08-12: 本文件已退出生产入口，仅作为旧主线程实现保留；
+// 当前实现位于 cloudflare-v2-remote.ts 与 cloudflare-v2-worker-runtime.ts。
 //
 // 协议流程：
 //   plan:      GET  /v1/sync/spaces/:spaceId/plan
@@ -22,7 +24,11 @@ import { resolveBackendApiBaseUrl } from "@/shared/storage/backend-api-address";
 import { CLOUDFLARE_SYNC_TOMBSTONE_STORE_NAME } from "@/shared/storage/sync-tombstone-storage";
 import { createUuid } from "@/domain/shared/uuid";
 import { createLogger } from "@/shared/logging/logger";
-import { createSha256Hash } from "@/shared/storage/hash-utils";
+import {
+  createSha256CanonicalHash,
+  createSha256Hash,
+  createStableJsonHash,
+} from "@/shared/storage/hash-utils";
 import type {
   CfV2PlanResponse,
   CfV2CheckResponse,
@@ -48,6 +54,7 @@ import type {
   SyncRemoteSession,
   SyncRemoteSessionContext,
   SyncRemoteWriteBatch,
+  SyncContentHashRequest,
 } from "../remote-types";
 import { RemoteWriteConflictError } from "../remote-types";
 
@@ -460,6 +467,16 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
     this.apiBase = apiBase;
   }
 
+  public async computeContentHashes(
+    requests: readonly SyncContentHashRequest[],
+  ): Promise<readonly string[]> {
+    return await Promise.all(requests.map(async (request) =>
+      request.algorithm === "sha256-canonical-json-v1"
+        ? await createSha256CanonicalHash(request.value)
+        : createStableJsonHash(request.value)
+    ));
+  }
+
   // -- 确保空间存在 -- //
 
   private async ensureSpace(): Promise<CfLocalState> {
@@ -519,7 +536,7 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
 
     const assets = plan.assets.filter((a) => a.assetType === collection.assetType);
     if (assets.length === 0) {
-      return { revision: plan.revision, entries: {}, committedAt: null };
+      return { revision: toLegacyNumericRevision(plan.revision), entries: {}, committedAt: null };
     }
 
     const codec = collection.assetIdCodec;
@@ -533,7 +550,7 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
         protocolContentHash,
       ) ?? protocolContentHash;
       entries[adapterAssetId] = {
-        revision: asset.lastModifiedRevision,
+        revision: toLegacyNumericRevision(asset.lastModifiedRevision),
         contentHash: comparableContentHash,
         protocolContentHash,
         deletedAt: null,
@@ -541,7 +558,7 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
       };
     }));
 
-    return { revision: plan.revision, entries, committedAt: plan.serverTime };
+    return { revision: toLegacyNumericRevision(plan.revision), entries, committedAt: plan.serverTime };
   }
 
   // -- readAsset：下载远端资产内容 -- //
@@ -579,6 +596,7 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
       );
     }
     const content = new TextDecoder().decode(contentBytes);
+    const value = JSON.parse(content) as unknown;
 
     await this.localState.noteRemoteHashMapping(
       createAssetStateKey(params.collection, params.assetId),
@@ -586,8 +604,8 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
     );
 
     return {
-      revision: plan.revision,
-      content,
+      revision: toLegacyNumericRevision(plan.revision),
+      value,
       contentHash,
       committedAt: plan.serverTime,
     };
@@ -614,7 +632,7 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
     const check = await response.json() as CfV2CheckResponse;
 
     if (!check.changed) {
-      return { changedCollections: [], globalCursor: check.revision };
+      return { changedCollections: [], globalCursor: toLegacyNumericRevision(check.revision) };
     }
 
     // 有变更 → 标记所有请求的集合为已变更
@@ -625,7 +643,7 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
 
     return {
       changedCollections,
-      globalCursor: check.revision,
+      globalCursor: toLegacyNumericRevision(check.revision),
     };
   }
 
@@ -694,7 +712,9 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
   }
 
   public getObservedRemoteRevision(): number | null {
-    return this.planCache?.revision ?? null;
+    return this.planCache === null
+      ? null
+      : toLegacyNumericRevision(this.planCache.revision);
   }
 }
 
@@ -709,7 +729,7 @@ interface BatchMutation {
   adapterAssetId: string;
   assetType: string;
   assetId: string;
-  content: string | null;
+  value: unknown;
   contentHash: string | null;
   deletedAt: string | null;
 }
@@ -729,7 +749,7 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
       adapterAssetId: params.assetId,
       assetType: params.collection.assetType,
       assetId: params.collection.assetIdCodec.toRemoteAssetId(params.assetId),
-      content: params.content,
+      value: params.value,
       contentHash: params.contentHash,
       deletedAt: null,
     });
@@ -744,7 +764,7 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
       adapterAssetId: params.assetId,
       assetType: params.collection.assetType,
       assetId: params.collection.assetIdCodec.toRemoteAssetId(params.assetId),
-      content: null,
+      value: null,
       contentHash: null,
       deletedAt: params.deletedAt,
     });
@@ -809,7 +829,7 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
 
     for (const m of chunk) {
       if (m.operation === "put") {
-        const content = m.content ?? "";
+        const content = JSON.stringify(m.value);
         const contentBytes = new TextEncoder().encode(content);
         // blobHash 必须是原始内容字节的 SHA-256 hex（不含 "sha256:" 前缀）
         // AI-CORRECTION 2026-08-11: contentHash 是适配器的规范化比较 hash，可能来自
@@ -864,7 +884,7 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
         const mutation = chunk.find(
           (m) => m.assetType === instruction.assetType && m.assetId === instruction.assetId,
         );
-        if (!mutation || mutation.content === null) continue;
+        if (!mutation || mutation.operation !== "put") continue;
 
         const uploadResponse = await fetch(instruction.url, {
           method: "PUT",
@@ -872,7 +892,7 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
             "content-type": "application/octet-stream",
             ...instruction.headers,
           },
-          body: mutation.content,
+          body: JSON.stringify(mutation.value),
         });
         if (!uploadResponse.ok) {
           let errorBody = "";
@@ -905,7 +925,7 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
           writes.push({
             collection: mutation.collection,
             assetId: mutation.adapterAssetId,
-            revision: result.revision,
+            revision: toLegacyNumericRevision(result.revision),
             contentHash: toAdapterContentHash(applied.contentHash),
             deletedAt: null,
             committedAt: result.serverTime,
@@ -918,7 +938,7 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
             writes.push({
               collection: mutation.collection,
               assetId: mutation.adapterAssetId,
-              revision: result.revision,
+              revision: toLegacyNumericRevision(result.revision),
               contentHash: null,
               deletedAt: mutation.deletedAt,
               committedAt: result.serverTime,
@@ -927,7 +947,7 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
         }
       }
 
-      return result.revision;
+      return toLegacyNumericRevision(result.revision);
     } catch (error) {
       await cancelPreparedBatch(apiBase, spaceId, prepare);
       throw translateWriteError(error);
@@ -999,7 +1019,7 @@ export class CloudflareSyncRemote implements SyncRemote {
       });
       plan = {
         spaceId: state.spaceId,
-        revision: 0,
+        revision: "0",
         epoch: 0,
         assets: [],
         serverTime: new Date().toISOString(),
@@ -1064,6 +1084,12 @@ export function createCloudflareSyncRemote(
 
 function toAdapterContentHash(value: string): string {
   return value.startsWith("sha256:") ? value : `sha256:${value}`;
+}
+
+// 旧主线程实现已经停用；该转换仅保持历史文件可类型检查，不参与生产 Worker 链路。
+function toLegacyNumericRevision(revision: string): number {
+  const numeric = Number(revision);
+  return Number.isSafeInteger(numeric) ? numeric : 0;
 }
 
 function createAssetStateKey(collection: SyncRemoteCollection, assetId: string): string {
