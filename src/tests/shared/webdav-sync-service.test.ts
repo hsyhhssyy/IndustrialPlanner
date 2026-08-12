@@ -684,6 +684,37 @@ describe("webdav-sync-service", () => {
     expect(status.phase).toBe("idle");
   });
 
+  it("allows the next local edit to upload immediately after a download", async () => {
+    const adapter = createAdapter();
+    adapter.sync.mockResolvedValueOnce({
+      adapterId: "adapter",
+      mode: "full-no-revision",
+      status: "downloaded",
+      changedAssetIds: ["single"],
+    });
+    const service = createWebDavSyncService({
+      readSettings: () => createSettings(),
+      createRemote,
+      adapters: [adapter],
+      intervalMs: 60_000,
+    });
+
+    service.start();
+    await vi.waitFor(() => {
+      expect(service.getStatus().phase).toBe("idle");
+    });
+    adapter.sync.mockClear();
+
+    service.notifyLocalChange({ adapterId: "adapter" });
+    await vi.waitFor(() => {
+      expect(adapter.sync).toHaveBeenCalledTimes(1);
+    });
+
+    expect(service.getStatus().currentRunReason).toBeNull();
+    expect(service.getStatus().pendingLocalChangeCount).toBe(0);
+    service.stop();
+  });
+
   it("runs before and after hooks around adapters", async () => {
     const calls: string[] = [];
     const adapter = createAdapter();

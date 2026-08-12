@@ -6,9 +6,16 @@ export type StorageAssetType =
   | "module-canvas"
   | "production-planning";
 
+export type StorageChangeOrigin = "local" | "remote-sync";
+
+export interface StorageWriteOptions {
+  readonly origin?: StorageChangeOrigin;
+}
+
 export interface StorageChangeEvent {
   readonly assetType: StorageAssetType;
   readonly assetId: string;
+  readonly origin: StorageChangeOrigin;
   readonly timestamp: number;
 }
 

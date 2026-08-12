@@ -692,6 +692,10 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
   public getApiBase(): string {
     return this.apiBase;
   }
+
+  public getObservedRemoteRevision(): number | null {
+    return this.planCache?.revision ?? null;
+  }
 }
 
 // ============================================================================
@@ -757,7 +761,20 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
 
     // 分片提交：后端限制每批最多 32 条
     const writes: RemoteWriteResult[] = [];
-    const baseRev = Number(state.revision);
+    // AI-CORRECTION 2026-08-12: 写入必须以本会话已观测并用于冲突判定的 plan revision 为基线。
+    // localState.revision 只表示上一次完整应用的远端版本，初次 use-local 冲突时它仍可能是 0。
+    // AI-REMOVED 2026-08-12:
+    // Reason: 仅使用 localState.revision 会让初次 use-local 以过期 revision 提交。
+    // Trigger: 独立 use-local Cloudflare E2E 稳定返回“space revision 已变化”。
+    // Evidence: 冲突判定使用 plan revision=1，localState.revision 仍为 0。
+    // Replacement: 下方 getObservedRemoteRevision() 优先，未 prefetch 时才回退本地 revision。
+    // Risk: 若 plan 后远端再发生并发写入，后端仍会正常以 409 拒绝过期 plan。
+    // Human Review: Required
+    //
+    // Original code:
+    // const baseRev = Number(state.revision);
+    const baseRev = this.session.getObservedRemoteRevision()
+      ?? Number(state.revision);
     let latestRevision = baseRev;
 
     for (let offset = 0; offset < this.mutations.length; offset += 32) {

@@ -1,4 +1,17 @@
-export type SnapshotListener<TSnapshot> = (snapshot: TSnapshot) => void;
+export type SnapshotChangeOrigin = "initial" | "local" | "remote-sync";
+
+export interface SnapshotChangeContext {
+  readonly origin: SnapshotChangeOrigin;
+}
+
+export interface SnapshotWriteOptions {
+  readonly origin?: Exclude<SnapshotChangeOrigin, "initial">;
+}
+
+export type SnapshotListener<TSnapshot> = (
+  snapshot: TSnapshot,
+  context: SnapshotChangeContext,
+) => void;
 
 export type SnapshotUpdater<TSnapshot> =
   | TSnapshot
@@ -11,8 +24,14 @@ export interface SnapshotStore<TSnapshot> {
 
 export interface SnapshotStoreReadWrite<TSnapshot>
   extends SnapshotStore<TSnapshot> {
-  setSnapshot(nextSnapshot: TSnapshot): TSnapshot;
-  update(updater: SnapshotUpdater<TSnapshot>): TSnapshot;
+  setSnapshot(
+    nextSnapshot: TSnapshot,
+    options?: SnapshotWriteOptions,
+  ): TSnapshot;
+  update(
+    updater: SnapshotUpdater<TSnapshot>,
+    options?: SnapshotWriteOptions,
+  ): TSnapshot;
 }
 
 export function createSnapshotStore<TSnapshot>(
@@ -21,33 +40,36 @@ export function createSnapshotStore<TSnapshot>(
   let snapshot = initialSnapshot;
   const listeners = new Set<SnapshotListener<TSnapshot>>();
 
-  const notify = () => {
+  const notify = (context: SnapshotChangeContext) => {
     for (const listener of listeners) {
-      listener(snapshot);
+      listener(snapshot, context);
     }
   };
 
-  const setSnapshot = (nextSnapshot: TSnapshot) => {
+  const setSnapshot = (
+    nextSnapshot: TSnapshot,
+    options: SnapshotWriteOptions = {},
+  ) => {
     snapshot = nextSnapshot;
-    notify();
+    notify({ origin: options.origin ?? "local" });
     return snapshot;
   };
 
   return {
     getSnapshot: () => snapshot,
     setSnapshot,
-    update: (updater) => {
+    update: (updater, options) => {
       const nextSnapshot =
         typeof updater === "function"
           ? (updater as (currentSnapshot: TSnapshot) => TSnapshot)(snapshot)
           : updater;
 
-      return setSnapshot(nextSnapshot);
+      return setSnapshot(nextSnapshot, options);
     },
     subscribe: (listener) => {
       listeners.add(listener);
       // BehaviorSubject 语义：立即用当前值回调新订阅者，消除时序竞态。
-      listener(snapshot);
+      listener(snapshot, { origin: "initial" });
 
       return () => {
         listeners.delete(listener);

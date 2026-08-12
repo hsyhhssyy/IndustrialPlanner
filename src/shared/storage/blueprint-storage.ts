@@ -9,7 +9,10 @@ import {
   readFromIndexedDb,
   type IndexedDbStoreLocation,
 } from "./browser-storage";
-import { emitStorageChange } from "./storage-change-event";
+import {
+  emitStorageChange,
+  type StorageWriteOptions,
+} from "./storage-change-event";
 import {
   clearActiveSyncTombstone,
   clearActiveSyncTombstones,
@@ -400,6 +403,7 @@ export async function listBlueprintSyncEntries<
 
 export async function applyBlueprintSyncEntry<TValue extends BlueprintStorageEntry>(
   entry: BlueprintSyncEntry<TValue>,
+  options: StorageWriteOptions = {},
 ): Promise<void> {
   if (readBlueprintStorageEntryId(entry.value) !== entry.id) {
     throw new Error("Blueprint sync asset id does not match its content id.");
@@ -423,7 +427,7 @@ export async function applyBlueprintSyncEntry<TValue extends BlueprintStorageEnt
     return;
   }
 
-  await writeBlueprintEntry(key, entry.value);
+  await writeBlueprintEntry(key, entry.value, options);
 }
 
 // AI-REMOVED 2026-08-08:
@@ -459,8 +463,9 @@ async function readBlueprintEntry(
 async function writeBlueprintEntry<TEntry extends BlueprintStorageEntry>(
   key: string,
   entry: TEntry,
+  options: StorageWriteOptions = {},
 ): Promise<TEntry | null> {
-  const didWrite = await writeBlueprintEntries([{ key, entry }]);
+  const didWrite = await writeBlueprintEntries([{ key, entry }], options);
 
   if (!didWrite) {
     return null;
@@ -481,6 +486,7 @@ async function writeBlueprintEntries(
     key: string;
     entry: BlueprintStorageEntry;
   }[],
+  options: StorageWriteOptions = {},
 ): Promise<boolean> {
   const saved = await applyIndexedDbStoreMutations(BLUEPRINT_STORE_LOCATION, entries.map((entry) => ({
     type: "put" as const,
@@ -493,6 +499,7 @@ async function writeBlueprintEntries(
       emitStorageChange({
         assetType: entry.entry.kind === "blueprint" ? "blueprint" : "blueprint-folder",
         assetId: entry.entry.kind === "blueprint" ? entry.entry.blueprintId : entry.entry.folderId,
+        origin: options.origin ?? "local",
         timestamp: Date.now(),
       });
     }

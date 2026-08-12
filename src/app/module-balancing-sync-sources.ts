@@ -28,7 +28,10 @@ export function createModuleBalancingSyncSources(
   appHost: AppHost,
 ): readonly SyncAssetSource[] {
   const subscribe = (listener: () => void) => subscribeToStorageChanges((event) => {
-    if (event.assetType === "custom-module" || event.assetType === "module-canvas") {
+    if (
+      event.origin === "local"
+      && (event.assetType === "custom-module" || event.assetType === "module-canvas")
+    ) {
       listener();
     }
   });
@@ -53,6 +56,7 @@ export function createModuleBalancingSyncSources(
       writeLocal: async (entry) => {
         await writeModuleBalancingCustomModuleEntry(
           entry as SyncAssetEntry<ModuleBalancingCustomModuleReadWrite>,
+          { origin: "remote-sync" },
         );
         await refreshState();
       },
@@ -68,6 +72,7 @@ export function createModuleBalancingSyncSources(
         await writeModuleBalancingFolderEntry(
           "folders",
           entry as SyncAssetEntry<ModuleBalancingFolderReadWrite>,
+          { origin: "remote-sync" },
         );
         await refreshState();
       },
@@ -83,6 +88,7 @@ export function createModuleBalancingSyncSources(
         await writeModuleBalancingFolderEntry(
           "canvasFolders",
           entry as SyncAssetEntry<ModuleBalancingFolderReadWrite>,
+          { origin: "remote-sync" },
         );
         await refreshState();
       },
@@ -97,6 +103,7 @@ export function createModuleBalancingSyncSources(
       writeLocal: async (entry) => {
         await writeModuleBalancingCanvasEntry(
           entry as SyncAssetEntry<ModuleBalancingCanvasReadWrite>,
+          { origin: "remote-sync" },
         );
         await refreshState();
       },

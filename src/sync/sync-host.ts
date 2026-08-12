@@ -75,6 +75,7 @@ import {
 // Original code:
 // import { listWorldDocuments } from "@/shared/storage/world-document-storage";
 import { subscribeToStorageChanges } from "@/shared/storage/storage-change-event";
+import type { SnapshotChangeContext } from "@/shared/snapshot/snapshot-store";
 
 import {
   createFullNoRevisionAdapter,
@@ -161,7 +162,16 @@ export async function createSyncHost(
 ): Promise<SyncHost> {
   const state = new SyncStateImpl();
   const disposers: Array<() => void> = [];
-  let remoteApplyDepth = 0;
+  // AI-REMOVED 2026-08-12:
+  // Reason: 远端落地已由 storage/snapshot change origin 显式标记，不再需要动态作用域猜测变更来源。
+  // Trigger: Cloudflare 冲突选择 use-remote 后，remoteApplyDepth 依赖回调发生在 Promise 释放前的时序。
+  // Evidence: storage-change-event 和 snapshot-store 现在携带 local/remote-sync origin。
+  // Replacement: subscribeToStorageChanges 与 editorDocument.subscribe 的 origin 过滤。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // let remoteApplyDepth = 0;
   let localNotificationScheduled = false;
   let syncStarted = false;
   let directoryTreeReadyKey: string | null = null;
@@ -206,18 +216,36 @@ export async function createSyncHost(
   ): void => {};
   const pendingLocalChanges = new Map<string, Set<string> | null>();
 
-  const withRemoteApply = async <TValue>(task: () => Promise<TValue>): Promise<TValue> => {
-    remoteApplyDepth += 1;
-    try {
-      return await task();
-    } finally {
-      remoteApplyDepth -= 1;
-    }
-  };
+  // AI-REMOVED 2026-08-12:
+  // Reason: 动态 remote apply depth 无法表达跨异步边界的变更因果。
+  // Trigger: use-remote 落地后仍可能在 depth 释放后收到变更通知。
+  // Evidence: 用 didDownload 延迟 5 秒只能回避竞态，不能消除竞态。
+  // Replacement: 远端资产写入显式传递 origin: "remote-sync"。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // const withRemoteApply = async <TValue>(task: () => Promise<TValue>): Promise<TValue> => {
+  //   remoteApplyDepth += 1;
+  //   try {
+  //     return await task();
+  //   } finally {
+  //     remoteApplyDepth -= 1;
+  //   }
+  // };
   const notifyLocalChange = (change: SyncLocalChange) => {
-    if (remoteApplyDepth > 0) {
-      return;
-    }
+    // AI-REMOVED 2026-08-12:
+    // Reason: 变更来源已在通知边界过滤，不再读取动态 depth。
+    // Trigger: remoteApplyDepth 只在回调与远端写入同步重入时可靠。
+    // Evidence: 所有内建远端落地均标记 remote-sync。
+    // Replacement: 下方 storage/snapshot 订阅者的 origin 分支。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (remoteApplyDepth > 0) {
+    //   return;
+    // }
     if (!isAdapterReadyForLocalChanges(
       state.status.initialSyncStage,
       change.adapterId,
@@ -240,10 +268,19 @@ export async function createSyncHost(
     localNotificationScheduled = true;
     globalThis.queueMicrotask(() => {
       localNotificationScheduled = false;
-      if (remoteApplyDepth > 0) {
-        pendingLocalChanges.clear();
-        return;
-      }
+      // AI-REMOVED 2026-08-12:
+      // Reason: microtask 不再负责猜测远端写入是否已经释放。
+      // Trigger: 用 microtask 与 remoteApplyDepth 的相对时序过滤通知会遗漏异步事件。
+      // Evidence: origin 在事件创建时已固定，不受后续调度影响。
+      // Replacement: microtask 仅合并本地变更通知。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // if (remoteApplyDepth > 0) {
+      //   pendingLocalChanges.clear();
+      //   return;
+      // }
 
       for (const [adapterId, assetIds] of pendingLocalChanges) {
         if (assetIds === null) {
@@ -271,9 +308,21 @@ export async function createSyncHost(
       id: "production-planning",
       remotePath: "assets/planner-state.json",
       readLocal: async () => await loadPlannerState(),
-      writeLocal: async (value) => await withRemoteApply(async () => {
-        await savePlannerState(value);
-      }),
+      // AI-REMOVED 2026-08-12:
+      // Reason: 远端落地不再由 withRemoteApply 时序窗口抑制通知。
+      // Trigger: Cloudflare use-remote 会在抑制释放后被误判为本地修改。
+      // Evidence: savePlannerState 现在支持显式 StorageWriteOptions.origin。
+      // Replacement: 下方 origin: "remote-sync" 写入。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // writeLocal: async (value) => await withRemoteApply(async () => {
+      //   await savePlannerState(value);
+      // }),
+      writeLocal: async (value) => {
+        await savePlannerState(value, { origin: "remote-sync" });
+      },
       normalizeRemote: normalizePlannerPersistedState,
       resolveConflict: resolveInteractiveConflict,
     }),
@@ -282,9 +331,21 @@ export async function createSyncHost(
       indexPath: "assets/blueprints/index.json",
       entryPath: (blueprintId) => `assets/blueprints/${blueprintId}.json`,
       listLocal: async () => await listBlueprintSyncEntries<BlueprintRecord>("blueprint"),
-      writeLocal: async (entry) => await withRemoteApply(async () => {
-        await applyBlueprintSyncEntry(entry);
-      }),
+      // AI-REMOVED 2026-08-12:
+      // Reason: 蓝图远端落地改用显式 origin，不再依赖动态 depth。
+      // Trigger: 远端覆盖本地不应产生上传意图。
+      // Evidence: applyBlueprintSyncEntry 已向 storage change 传递 origin。
+      // Replacement: 下方 origin: "remote-sync" 写入。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // writeLocal: async (entry) => await withRemoteApply(async () => {
+      //   await applyBlueprintSyncEntry(entry);
+      // }),
+      writeLocal: async (entry) => {
+        await applyBlueprintSyncEntry(entry, { origin: "remote-sync" });
+      },
       resolveConflict: resolveInteractiveConflict,
     }),
     createFullWithRevisionAdapter<BlueprintFolderRecord>({
@@ -292,20 +353,30 @@ export async function createSyncHost(
       indexPath: "assets/blueprint-folders/index.json",
       entryPath: (folderId) => `assets/blueprint-folders/${folderId}.json`,
       listLocal: async () => await listBlueprintSyncEntries<BlueprintFolderRecord>("folder"),
-      writeLocal: async (entry) => await withRemoteApply(async () => {
-        await applyBlueprintSyncEntry(entry);
-      }),
+      // AI-REMOVED 2026-08-12:
+      // Reason: 蓝图文件夹远端落地改用显式 origin，不再依赖动态 depth。
+      // Trigger: 远端覆盖本地不应产生上传意图。
+      // Evidence: applyBlueprintSyncEntry 已向 storage change 传递 origin。
+      // Replacement: 下方 origin: "remote-sync" 写入。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // writeLocal: async (entry) => await withRemoteApply(async () => {
+      //   await applyBlueprintSyncEntry(entry);
+      // }),
+      writeLocal: async (entry) => {
+        await applyBlueprintSyncEntry(entry, { origin: "remote-sync" });
+      },
       resolveConflict: resolveInteractiveConflict,
     }),
     ...externalSources.map((source) => createAdapterFromSource(
       source,
-      withRemoteApply,
       resolveInteractiveConflict,
     )),
     createWorldDocumentAdapter(
       workspace,
       resolveInteractiveConflict,
-      withRemoteApply,
     ),
   ];
 
@@ -608,6 +679,10 @@ export async function createSyncHost(
 
   workspace.sync = host;
   disposers.push(subscribeToStorageChanges((event) => {
+    if (event.origin === "remote-sync") {
+      return;
+    }
+
     if (event.assetType === "world-document") {
       const currentDocument = workspace.editor?.document.getSnapshot();
       if (currentDocument?.documentKey === event.assetId) {
@@ -662,7 +737,10 @@ export async function createSyncHost(
   const editorDocument = workspace.editor?.document;
   if (editorDocument !== undefined) {
     let editorDocumentHydrated = false;
-    disposers.push(editorDocument.subscribe((documentSnapshot) => {
+    disposers.push(editorDocument.subscribe((
+      documentSnapshot,
+      changeContext?: SnapshotChangeContext,
+    ) => {
       const nextEditorWebDavHash = createStableJsonHash(
         createWorldDocumentWebDavValue(documentSnapshot),
       );
@@ -678,6 +756,9 @@ export async function createSyncHost(
         return;
       }
       lastEditorWebDavHash = nextEditorWebDavHash;
+      if (changeContext?.origin === "remote-sync") {
+        return;
+      }
       // AI-REMOVED 2026-07-29:
       // Reason: 视口中心等设备本地展示状态也会产生 document snapshot，原逻辑把它误判为待上传内容。
       // Trigger: 真实服务器诊断发现每次前台检查都因 viewport center 变化制造 delta 和新 revision。
@@ -912,16 +993,37 @@ function createInitialSyncPlan(
 
 function createAdapterFromSource(
   source: SyncAssetSource,
-  withRemoteApply: <TValue>(task: () => Promise<TValue>) => Promise<TValue>,
+  // AI-REMOVED 2026-08-12:
+  // Reason: SyncAssetSource.writeLocal 实现已负责以 remote-sync origin 写入，适配器不再注入动态抑制器。
+  // Trigger: 远端落地与通知回调的时序不应影响是否上传。
+  // Evidence: createModuleBalancingSyncSources 的全部写入均显式传递 remote-sync。
+  // Replacement: sharedOptions.writeLocal 直接调用 source.writeLocal。
+  // Risk: 新的 SyncAssetSource 实现必须遵守远端落地不发出 local 通知的 contract。
+  // Human Review: Required
+  //
+  // Original code:
+  // withRemoteApply: <TValue>(task: () => Promise<TValue>) => Promise<TValue>,
   resolveConflict: ResolveInteractiveConflict,
 ): SyncAdapter {
   const sharedOptions = {
     id: source.id,
     indexPath: source.indexPath,
     listLocal: source.listLocal,
-    writeLocal: async (entry: SyncAssetEntry) => await withRemoteApply(async () => {
+    // AI-REMOVED 2026-08-12:
+    // Reason: 删除基于调用栈深度的远端写入抑制。
+    // Trigger: 异步通知可以逃出 withRemoteApply 作用域。
+    // Evidence: 资产 source 的写入路径已用 remote-sync origin 标记。
+    // Replacement: 下方直接 source.writeLocal。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // writeLocal: async (entry: SyncAssetEntry) => await withRemoteApply(async () => {
+    //   await source.writeLocal(entry);
+    // }),
+    writeLocal: async (entry: SyncAssetEntry) => {
       await source.writeLocal(entry);
-    }),
+    },
     normalizeRemote: source.normalizeRemote,
     resolveConflict,
   };
@@ -942,7 +1044,16 @@ function createAdapterFromSource(
 function createWorldDocumentAdapter(
   workspace: WorkspaceContract,
   resolveConflict: ResolveInteractiveConflict,
-  withRemoteApply: <TValue>(task: () => Promise<TValue>) => Promise<TValue>,
+  // AI-REMOVED 2026-08-12:
+  // Reason: editor snapshot 现在直接携带 remote-sync origin。
+  // Trigger: 当前画布远端覆盖不应依赖 withRemoteApply 释放时机。
+  // Evidence: applySynchronizedDocument 使用 EditorDocumentWriteMode "remote-sync"。
+  // Replacement: writeLocal 直接持久化并应用同步文档。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // withRemoteApply: <TValue>(task: () => Promise<TValue>) => Promise<TValue>,
 ): SyncAdapter {
   return createPatchCollectionWithRevisionAdapter<WorldDocument>({
     id: "world-documents",
@@ -1011,7 +1122,17 @@ function createWorldDocumentAdapter(
           }]
       );
     },
-    writeLocal: async (entry) => await withRemoteApply(async () => {
+    // AI-REMOVED 2026-08-12:
+    // Reason: 文档远端落地不再使用动态 depth 抑制订阅。
+    // Trigger: Cloudflare use-remote 冲突解决后会误排入本地上传。
+    // Evidence: editor document snapshot 的 remote-sync origin 在变更产生时即固定。
+    // Replacement: 下方直接写入，sync-host 订阅者按 origin 过滤。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // writeLocal: async (entry) => await withRemoteApply(async () => {
+    writeLocal: async (entry) => {
       const editor = workspace.editor;
       const currentDocument = editor?.document.getSnapshot();
       // AI-REMOVED 2026-07-29:
@@ -1056,7 +1177,17 @@ function createWorldDocumentAdapter(
       ) {
         editor.actions.applySynchronizedDocument(localValue);
       }
-    }),
+    },
+    // AI-REMOVED 2026-08-12:
+    // Reason: 上方 writeLocal 已不再由 withRemoteApply 包裹。
+    // Trigger: 改用显式 remote-sync origin。
+    // Evidence: writeLocal 的完整旧起始行已在上方审计记录保留。
+    // Replacement: 上方 writeLocal 实现。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // }),
     normalizeRemote: (value) => {
       const document = normalizeWorldDocument(value);
 

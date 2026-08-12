@@ -15,7 +15,11 @@ import type {
   EditorHistoryRuntime,
 } from "./history-runtime";
 
-export type EditorDocumentWriteMode = "record" | "silent" | "replay";
+export type EditorDocumentWriteMode =
+  | "record"
+  | "silent"
+  | "replay"
+  | "remote-sync";
 
 const DEFAULT_DOCUMENT_ACTION: EditorHistoryActionDescriptor = {
   type: "document.unknown",
@@ -61,7 +65,9 @@ export function createEditorDocumentWriter(options: {
       return null;
     }
 
-    const committedDocument = options.document.setSnapshot(documentToWrite);
+    const committedDocument = options.document.setSnapshot(documentToWrite, {
+      origin: mode === "remote-sync" ? "remote-sync" : "local",
+    });
 
     if (mode === "record") {
       options.history.record({

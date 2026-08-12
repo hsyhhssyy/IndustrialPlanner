@@ -530,6 +530,22 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
 
       // AI-CORRECTION 2026-07-30: 无挂起改动时复位 syncSuppressImmediate，
       // 使得下次从 idle 编辑能再次立即上传。
+      // AI-CORRECTION 2026-08-12: 同步中包含下载（含冲突 use-remote）时，
+      // 写入本地会触发 notifyLocalChange → 立即 syncNow 会把刚下载的数据重新上传 →
+      // 远端 revision 已变化 → 必然失败。因此在有下载时保持 syncSuppressImmediate=true，
+      // 让后续通知走 5s idle timer（此时 hash 匹配，不会造成无意义上传）。
+      // AI-CORRECTION 2026-08-12: 上述延迟规避已被变更来源 contract 取代；
+      // remote-sync 落地不会进入 notifyLocalChange，因此正常复位立即上传门禁即可。
+      // AI-REMOVED 2026-08-12:
+      // Reason: didDownload 不再需要延迟释放本地编辑的立即上传能力。
+      // Trigger: storage/snapshot 远端落地均以 remote-sync origin 在通知边界被过滤。
+      // Evidence: 冲突 use-remote 不再增加 localChangeVersion 或 dirtyAssetIdsByAdapter。
+      // Replacement: 下方仅依赖 pendingLocalChangeCount 的状态复位。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // if (pendingLocalChangeCount === 0 && !didDownload) {
       if (pendingLocalChangeCount === 0) {
         syncSuppressImmediate = false;
       }

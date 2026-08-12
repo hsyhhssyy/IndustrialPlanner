@@ -525,6 +525,79 @@ describe("cloudflare-sync-remote-v2", () => {
     remote.dispose?.();
   });
 
+  it("uses the observed plan revision when resolving a conflict with local data", async () => {
+    let capturedBaseRevision: unknown = null;
+    fetchMock
+      .add("GET:/plan", () => ({
+        json: v2Plan([{
+          assetType: "planner-state",
+          assetId: "default",
+          contentHash: TEST_HASH,
+        }]),
+      }))
+      .add("POST:/mutations/prepare", (req) => {
+        capturedBaseRevision = (req.body as JsonObject).baseRevision;
+        return {
+          json: {
+            status: "ready",
+            uploadId: "upload-conflict-local",
+            commitToken: "commit-token-conflict-local",
+            baseRevision: 1,
+            targetRevision: 2,
+            targetEpoch: 2,
+            expiresAt: "2099-01-01T00:00:00.000Z",
+            uploads: [{
+              assetType: "planner-state",
+              assetId: "default",
+              required: false,
+              backend: "d1",
+              url: null,
+              headers: {},
+            }],
+          },
+        };
+      })
+      .add("POST:/mutations/commit", () => ({
+        json: {
+          status: "committed",
+          uploadId: "upload-conflict-local",
+          revision: 2,
+          epoch: 2,
+          assets: [{
+            assetType: "planner-state",
+            assetId: "default",
+            contentHash: BLOB_HASH,
+            lastModifiedRevision: 2,
+          }],
+          deletedAssets: [],
+          serverTime: "2026-08-12T00:00:00.000Z",
+        },
+      }));
+
+    const remote = createTestRemote();
+    const collection = makeCollection();
+    const session = await remote.beginSession({
+      reason: "foreground",
+      collections: [collection],
+    });
+    await session.prefetchIndexes([collection]);
+
+    const batch = session.beginWriteBatch();
+    batch.putAsset({
+      collection,
+      assetId: "default",
+      content: "{\"local\":true}",
+      contentHash: "sha256:local-adapter-hash",
+      baseRevision: 1,
+      baseContentHash: `sha256:${TEST_HASH}`,
+    });
+    await batch.commit();
+
+    expect(capturedBaseRevision).toBe(1);
+    await session.dispose?.();
+    remote.dispose?.();
+  });
+
   // -- write batch: 空 mutations 直接返回 -- //
 
   it("returns empty writes for zero mutations", async () => {

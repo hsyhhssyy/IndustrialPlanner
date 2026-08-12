@@ -21,7 +21,10 @@ import type { IndexedDbStorageLocation } from "@/shared/storage/browser-storage"
 //
 // Original code:
 // import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage/browser-storage";
-import { emitStorageChange } from "@/shared/storage/storage-change-event";
+import {
+  emitStorageChange,
+  type StorageWriteOptions,
+} from "@/shared/storage/storage-change-event";
 import {
   clearActiveSyncTombstone,
   listActiveSyncTombstones,
@@ -65,6 +68,7 @@ export async function loadModuleBalancingState(): Promise<ModuleBalancingStateRe
 
 export async function saveModuleBalancingState(
   state: ModuleBalancingStateReadWrite,
+  options: StorageWriteOptions = {},
 ): Promise<void> {
   const previousState = await loadModuleBalancingState();
   const normalizedState = normalizeModuleBalancingState(state);
@@ -81,11 +85,13 @@ export async function saveModuleBalancingState(
   emitStorageChange({
     assetType: "module-canvas",
     assetId: "all",
+    origin: options.origin ?? "local",
     timestamp: Date.now(),
   });
   emitStorageChange({
     assetType: "custom-module",
     assetId: "all",
+    origin: options.origin ?? "local",
     timestamp: Date.now(),
   });
 }
@@ -110,7 +116,7 @@ export async function writeModuleBalancingCustomModuleEntry(entry: {
   readonly id: string;
   readonly value: ModuleBalancingCustomModuleReadWrite;
   readonly deletedAt: string | null;
-}): Promise<void> {
+}, options: StorageWriteOptions = {}): Promise<void> {
   const state = await loadModuleBalancingState() ?? createDefaultModuleBalancingState();
   const nextState = cloneModuleBalancingState(state);
   const nextModule = normalizeModuleBalancingState({ customModules: [entry.value], canvases: state.canvases }).customModules[0];
@@ -126,7 +132,7 @@ export async function writeModuleBalancingCustomModuleEntry(entry: {
     await writeModuleBalancingTombstone("customModules", entry.id, nextModule, entry.deletedAt);
   }
 
-  await saveModuleBalancingState(nextState);
+  await saveModuleBalancingState(nextState, options);
 }
 
 export async function listModuleBalancingFolderEntries(kind: "folders" | "canvasFolders"): Promise<Array<{
@@ -153,6 +159,7 @@ export async function writeModuleBalancingFolderEntry(
     readonly value: ModuleBalancingFolderReadWrite;
     readonly deletedAt: string | null;
   },
+  options: StorageWriteOptions = {},
 ): Promise<void> {
   const state = await loadModuleBalancingState() ?? createDefaultModuleBalancingState();
   const nextState = cloneModuleBalancingState(state);
@@ -169,7 +176,7 @@ export async function writeModuleBalancingFolderEntry(
     await writeModuleBalancingTombstone(kind, entry.id, nextFolder, entry.deletedAt);
   }
 
-  await saveModuleBalancingState(nextState);
+  await saveModuleBalancingState(nextState, options);
 }
 
 export async function listModuleBalancingCanvasEntries(): Promise<Array<{
@@ -192,7 +199,7 @@ export async function writeModuleBalancingCanvasEntry(entry: {
   readonly id: string;
   readonly value: ModuleBalancingCanvasReadWrite;
   readonly deletedAt: string | null;
-}): Promise<void> {
+}, options: StorageWriteOptions = {}): Promise<void> {
   const state = await loadModuleBalancingState() ?? createDefaultModuleBalancingState();
   const nextState = cloneModuleBalancingState(state);
   const nextCanvas = normalizeModuleBalancingState({ ...state, canvases: [entry.value] }).canvases[0];
@@ -212,7 +219,7 @@ export async function writeModuleBalancingCanvasEntry(entry: {
     await writeModuleBalancingTombstone("canvases", entry.id, nextCanvas, entry.deletedAt);
   }
 
-  await saveModuleBalancingState(nextState);
+  await saveModuleBalancingState(nextState, options);
 }
 
 export function normalizeModuleBalancingState(value: unknown): ModuleBalancingStateReadWrite {

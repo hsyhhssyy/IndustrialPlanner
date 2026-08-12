@@ -4,7 +4,10 @@ import {
   type StorageMigration,
 } from "./migration";
 import type { IndexedDbStorageLocation } from "./browser-storage";
-import { emitStorageChange } from "./storage-change-event";
+import {
+  emitStorageChange,
+  type StorageWriteOptions,
+} from "./storage-change-event";
 
 // ── 持久化状态结构 ──
 
@@ -170,6 +173,7 @@ const MIGRATIONS: StorageMigration<PlannerPersistedState>[] = [
 
 export async function savePlannerState(
   state: PlannerPersistedState,
+  options: StorageWriteOptions = {},
 ): Promise<void> {
   await saveToIndexedDbWithVersion(
     PLANNER_STORE_LOCATION,
@@ -179,6 +183,7 @@ export async function savePlannerState(
   emitStorageChange({
     assetType: "production-planning",
     assetId: "v3",
+    origin: options.origin ?? "local",
     timestamp: Date.now(),
   });
 }

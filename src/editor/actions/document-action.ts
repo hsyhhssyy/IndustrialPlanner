@@ -31,7 +31,7 @@ export function createEditorDocumentActions({
       }
 
       resetDocumentRuntimeState(state);
-      documentWriter.setSnapshot(nextDocument, { mode: "silent" });
+      documentWriter.setSnapshot(nextDocument, { mode: "remote-sync" });
     }),
 
     loadLatestBaseDocument: action(async (baseId) => {
