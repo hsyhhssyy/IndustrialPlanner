@@ -2,6 +2,7 @@ import {
   attachWorkerRuntime,
   type WorkerRuntimeAttachment,
 } from "@/shared/worker/attach-worker-runtime";
+import { createLogger } from "@/shared/logging/logger";
 
 import type {
   CfV2WorkerConfig,
@@ -12,6 +13,8 @@ import type {
 } from "./cloudflare-v2-worker-protocol";
 import type { CloudflareV2WorkerRuntime } from "./cloudflare-v2-worker-runtime";
 import { CfV2HttpError } from "./cloudflare-v2-types";
+
+const logger = createLogger("cf-v2-worker-client");
 
 export interface CloudflareV2WorkerActivity {
   readonly activeRequestCount: number;
@@ -129,8 +132,18 @@ export class CloudflareV2WorkerClient implements CloudflareV2WorkerBridge {
         continue;
       }
       try {
-        this.ensureWorker().postMessage(queued.request);
+        const worker = this.ensureWorker();
+        worker.postMessage(queued.request);
       } catch (error) {
+        logger.debug(
+          `postMessage failed for requestId=${queued.request.requestId} ` +
+          `op=${queued.request.operation.type} ` +
+          `workerAlive=${this.worker !== null} ` +
+          `jsonSerializable=${isJsonSerializable(queued.request)} ` +
+          `error=${error instanceof Error ? error.message : String(error)}`,
+        );
+        // postMessage 克隆失败意味着 Worker 可能已处于异常状态，销毁以便下轮重建
+        this.destroyWorker();
         this.finish(
           queued.request.requestId,
           error instanceof Error ? error : new Error(String(error)),
@@ -237,6 +250,15 @@ function deserializeError(value: CfV2WorkerError): Error {
     error.stack = value.stack;
   }
   return error;
+}
+
+function isJsonSerializable(value: unknown): boolean {
+  try {
+    JSON.stringify(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function normalizeConcurrency(value: number): number {
