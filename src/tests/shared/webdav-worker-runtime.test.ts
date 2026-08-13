@@ -8,14 +8,14 @@ import {
 } from "@/shared/logging/logger";
 import { publishDebugModeEnabled } from "@/shared/logging/debug-mode-runtime";
 import type {
-  WebDavResourceStat,
-  WebDavStorageClient,
-  WebDavTextFile,
-  WebDavWriteOptions,
+  SyncResourceStat,
+  SyncStorageClient,
+  SyncTextFile,
+  SyncWriteOptions,
 } from "@/sync";
 import { WebDavWorkerRuntime } from "@/sync/clients/webdav/webdav-worker-runtime";
 
-class MemoryWorkerWebDavClient implements WebDavStorageClient {
+class MemoryWorkerWebDavClient implements SyncStorageClient {
   public readonly rootPath = "/industrial-planner";
   public readonly files = new Map<string, string>();
 
@@ -25,15 +25,15 @@ class MemoryWorkerWebDavClient implements WebDavStorageClient {
 
   public async makeDirectory(_relativePath: string): Promise<void> {}
 
-  public async listDirectory(_relativePath: string): Promise<WebDavResourceStat[]> {
+  public async listDirectory(_relativePath: string): Promise<SyncResourceStat[]> {
     return [];
   }
 
-  public async stat(_relativePath: string): Promise<WebDavResourceStat | null> {
+  public async stat(_relativePath: string): Promise<SyncResourceStat | null> {
     return null;
   }
 
-  public async readTextFile(relativePath: string): Promise<WebDavTextFile | null> {
+  public async readTextFile(relativePath: string): Promise<SyncTextFile | null> {
     const content = this.files.get(relativePath);
 
     return content === undefined ? null : {
@@ -46,7 +46,7 @@ class MemoryWorkerWebDavClient implements WebDavStorageClient {
   public async writeTextFile(
     relativePath: string,
     content: string,
-    _options?: WebDavWriteOptions,
+    _options?: SyncWriteOptions,
   ): Promise<boolean> {
     this.files.set(relativePath, content);
     return true;

@@ -5,17 +5,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createStableJsonHash } from "@/shared/storage/hash-utils";
 
 import {
-  createWebDavSyncService,
+  createSyncService,
   createSyncRemoteCollection,
   RemoteWriteConflictError,
 } from "@/sync";
 import type {
+  SyncAdapter,
+  SyncAdapterResult,
   SyncPlanItem,
   SyncRemote,
   SyncRemoteSession,
-  WebDavSyncAdapter,
-  WebDavSyncAdapterResult,
-  WebDavSyncServiceOptions,
+  SyncServiceOptions,
 } from "@/sync";
 
 function createTestRemote(options: {
@@ -59,16 +59,16 @@ function createTestRemote(options: {
   };
 }
 
-const createRemote: WebDavSyncServiceOptions["createRemote"] = () => createTestRemote();
+const createRemote: SyncServiceOptions["createRemote"] = () => createTestRemote();
 
-describe("webdav-sync-service", () => {
+describe("sync-service", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
   it("skips sync while disabled", async () => {
     const adapter = createAdapter();
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(false),
       createRemote,
       adapters: [adapter],
@@ -82,7 +82,7 @@ describe("webdav-sync-service", () => {
 
   it("runs adapters when enabled", async () => {
     const adapter = createAdapter();
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote,
       adapters: [adapter],
@@ -98,9 +98,9 @@ describe("webdav-sync-service", () => {
     const adapter = createAdapter();
     adapter.sync.mockRejectedValue(new Error("network timeout"));
     const createRemoteMock = vi.fn((
-      ..._args: Parameters<WebDavSyncServiceOptions["createRemote"]>
+      ..._args: Parameters<SyncServiceOptions["createRemote"]>
     ) => createTestRemote());
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote: createRemoteMock,
       adapters: [adapter],
@@ -130,7 +130,7 @@ describe("webdav-sync-service", () => {
       createNamedAdapter("modules", calls),
       createNamedAdapter("toolbox", calls),
     ];
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => ({
         enabled: true,
         url: "https://dav.example.test",
@@ -205,7 +205,7 @@ describe("webdav-sync-service", () => {
   });
 
   it("reports maintenance task progress separately from adapter tasks", async () => {
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote,
       adapters: [createAdapter()],
@@ -248,7 +248,7 @@ describe("webdav-sync-service", () => {
     const canvasAdapter = createNamedAdapter("world-documents", []);
     canvasAdapter.sync.mockImplementationOnce(async (
       _session: SyncRemoteSession,
-      options: Parameters<WebDavSyncAdapter["sync"]>[1],
+      options: Parameters<SyncAdapter["sync"]>[1],
     ) => {
       options.scope?.onProgress?.(55);
       await remoteApplyGate;
@@ -260,7 +260,7 @@ describe("webdav-sync-service", () => {
       };
     });
     const blueprintAdapter = createNamedAdapter("blueprints", []);
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => ({
         enabled: true,
         url: "https://dav.example.test",
@@ -315,7 +315,7 @@ describe("webdav-sync-service", () => {
     const calls: string[] = [];
     const firstAdapter = createNamedAdapter("first", calls);
     const secondAdapter = createNamedAdapter("second", calls);
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => ({
         enabled: true,
         url: "https://dav.example.test",
@@ -367,7 +367,7 @@ describe("webdav-sync-service", () => {
         status: "idle",
         changedAssetIds: [],
       });
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => ({
         enabled: true,
         url: "https://dav.example.test",
@@ -393,7 +393,7 @@ describe("webdav-sync-service", () => {
   it("reports conflicts", async () => {
     const onConflictDiscoveryStart = vi.fn();
     const resolveConflicts = vi.fn(async () => []);
-    const adapter: WebDavSyncAdapter = {
+    const adapter: SyncAdapter = {
       id: "conflicting-adapter",
       mode: "full-no-revision",
       collection: createSyncRemoteCollection({
@@ -404,8 +404,8 @@ describe("webdav-sync-service", () => {
       checkPath: "conflicting-adapter.json",
       sync: vi.fn(async (
         _session: SyncRemoteSession,
-        options: Parameters<WebDavSyncAdapter["sync"]>[1],
-      ): Promise<WebDavSyncAdapterResult> => {
+        options: Parameters<SyncAdapter["sync"]>[1],
+      ): Promise<SyncAdapterResult> => {
         // AI-CORRECTION 2026-08-13: 冲突以 SyncPlanItem 登记，引擎统一弹框决议。
         options.transaction.recordItem(
           createPlanItemStub("conflicting-adapter", "single", "conflict"),
@@ -418,7 +418,7 @@ describe("webdav-sync-service", () => {
         };
       }),
     };
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote,
       adapters: [adapter],
@@ -447,7 +447,7 @@ describe("webdav-sync-service", () => {
       "conflict",
       vi.fn(async () => undefined),
     );
-    const firstAdapter: WebDavSyncAdapter = {
+    const firstAdapter: SyncAdapter = {
       id: "blueprints",
       mode: "full-with-revision",
       collection: createSyncRemoteCollection({
@@ -458,8 +458,8 @@ describe("webdav-sync-service", () => {
       checkPath: "blueprints/index.json",
       sync: vi.fn(async (
         _session: SyncRemoteSession,
-        options: Parameters<WebDavSyncAdapter["sync"]>[1],
-      ): Promise<WebDavSyncAdapterResult> => {
+        options: Parameters<SyncAdapter["sync"]>[1],
+      ): Promise<SyncAdapterResult> => {
         options.transaction.recordItem(firstUpload);
         return {
           adapterId: "blueprints",
@@ -469,7 +469,7 @@ describe("webdav-sync-service", () => {
         };
       }),
     };
-    const secondAdapter: WebDavSyncAdapter = {
+    const secondAdapter: SyncAdapter = {
       id: "world-documents",
       mode: "patch-with-revision",
       collection: createSyncRemoteCollection({
@@ -480,8 +480,8 @@ describe("webdav-sync-service", () => {
       checkPath: "world-documents/meta.json",
       sync: vi.fn(async (
         _session: SyncRemoteSession,
-        options: Parameters<WebDavSyncAdapter["sync"]>[1],
-      ): Promise<WebDavSyncAdapterResult> => {
+        options: Parameters<SyncAdapter["sync"]>[1],
+      ): Promise<SyncAdapterResult> => {
         options.transaction.recordItem(secondConflict);
         return {
           adapterId: "world-documents",
@@ -505,7 +505,7 @@ describe("webdav-sync-service", () => {
         resolution: "use-remote" as const,
       },
     ]);
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote,
       adapters: [firstAdapter, secondAdapter],
@@ -547,15 +547,15 @@ describe("webdav-sync-service", () => {
       mode: "full-with-revision",
       stateKey: "blueprints/index.json",
     });
-    const adapter: WebDavSyncAdapter = {
+    const adapter: SyncAdapter = {
       id: "blueprints",
       mode: "full-with-revision",
       collection,
       checkPath: "blueprints/index.json",
       sync: vi.fn(async (
         _session: SyncRemoteSession,
-        options: Parameters<WebDavSyncAdapter["sync"]>[1],
-      ): Promise<WebDavSyncAdapterResult> => {
+        options: Parameters<SyncAdapter["sync"]>[1],
+      ): Promise<SyncAdapterResult> => {
         const transaction = options.transaction;
         options.transaction.recordItem({
           ...createPlanItemStub("blueprints", "blueprint-a", "conflict"),
@@ -606,7 +606,7 @@ describe("webdav-sync-service", () => {
       }),
       markApplied: async () => undefined,
     };
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote: () => ({
         localState: session.localState,
@@ -639,7 +639,7 @@ describe("webdav-sync-service", () => {
         status: "uploaded",
         changedAssetIds: ["single"],
       });
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote,
       adapters: [adapter],
@@ -677,7 +677,7 @@ describe("webdav-sync-service", () => {
     const createRemoteMock = vi.fn(() =>
       createTestRemote({ complete })
     );
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote: createRemoteMock,
       adapters: [adapter],
@@ -696,7 +696,7 @@ describe("webdav-sync-service", () => {
 
   it("allows a provider-specific validator to accept an empty WebDAV URL", async () => {
     const adapter = createAdapter();
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => ({ ...createSettings(), url: "" }),
       validateSettings: () => null,
       createRemote,
@@ -717,7 +717,7 @@ describe("webdav-sync-service", () => {
       status: "downloaded",
       changedAssetIds: ["single"],
     });
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote,
       adapters: [adapter],
@@ -743,7 +743,7 @@ describe("webdav-sync-service", () => {
   it("runs before and after hooks around adapters", async () => {
     const calls: string[] = [];
     const adapter = createAdapter();
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote,
       adapters: [adapter],
@@ -759,7 +759,7 @@ describe("webdav-sync-service", () => {
   it("debounces local changes", async () => {
     vi.useFakeTimers();
     const adapter = createAdapter();
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote,
       adapters: [adapter],
@@ -796,7 +796,7 @@ describe("webdav-sync-service", () => {
   it("keeps a failed save visible until a later sync succeeds", async () => {
     vi.useFakeTimers();
     const adapter = createAdapter();
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote,
       adapters: [adapter],
@@ -847,7 +847,7 @@ describe("webdav-sync-service", () => {
   it("does not acknowledge a newer local change with an older in-flight snapshot", async () => {
     vi.useFakeTimers();
     const adapter = createAdapter();
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote,
       adapters: [adapter],
@@ -897,10 +897,10 @@ describe("webdav-sync-service", () => {
     service.stop();
   });
 
-  it("clears pending save feedback when WebDAV is disabled", async () => {
+  it("clears pending save feedback when sync is disabled", async () => {
     let enabled = true;
     const adapter = createAdapter();
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(enabled),
       createRemote,
       adapters: [adapter],
@@ -922,7 +922,7 @@ describe("webdav-sync-service", () => {
     });
     expect(service.getStatus().saveState).toBe("idle");
 
-    // 禁用 WebDAV 后再次变更 → 同步被跳过，saveState 回到 idle
+    // 禁用同步后再次变更 → 同步被跳过，saveState 回到 idle
     enabled = false;
     service.notifyLocalChange({ adapterId: "adapter" });
     await service.syncNow("settings-change");
@@ -948,7 +948,7 @@ describe("webdav-sync-service", () => {
       };
     });
     const dispose = vi.fn();
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote: () => createTestRemote({ dispose }),
       adapters: [adapter],
@@ -985,7 +985,7 @@ describe("webdav-sync-service", () => {
         changedAssetIds: ["single"],
       };
     });
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => ({
         enabled: true,
         url: "https://dav.example.test",
@@ -1028,7 +1028,7 @@ describe("webdav-sync-service", () => {
         changedAssetIds: ["single"],
       };
     });
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote,
       adapters: [adapter],
@@ -1051,7 +1051,7 @@ describe("webdav-sync-service", () => {
 
   it("locks the canvas only when a queued foreground pass actually starts", async () => {
     const adapter = createAdapter();
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote,
       adapters: [adapter],
@@ -1116,7 +1116,7 @@ describe("webdav-sync-service", () => {
   });
 });
 
-function createAdapter(): WebDavSyncAdapter & { readonly sync: ReturnType<typeof vi.fn> } {
+function createAdapter(): SyncAdapter & { readonly sync: ReturnType<typeof vi.fn> } {
   return {
     id: "adapter",
     mode: "full-no-revision",
@@ -1126,7 +1126,7 @@ function createAdapter(): WebDavSyncAdapter & { readonly sync: ReturnType<typeof
       stateKey: "adapter.json",
     }),
     checkPath: "adapter.json",
-    sync: vi.fn(async (): Promise<WebDavSyncAdapterResult> => ({
+    sync: vi.fn(async (): Promise<SyncAdapterResult> => ({
       adapterId: "adapter",
       mode: "full-no-revision",
       status: "uploaded",
@@ -1138,7 +1138,7 @@ function createAdapter(): WebDavSyncAdapter & { readonly sync: ReturnType<typeof
 function createNamedAdapter(
   id: string,
   calls: string[],
-): WebDavSyncAdapter & { readonly sync: ReturnType<typeof vi.fn> } {
+): SyncAdapter & { readonly sync: ReturnType<typeof vi.fn> } {
   return {
     id,
     mode: "full-with-revision",
@@ -1150,8 +1150,8 @@ function createNamedAdapter(
     checkPath: `${id}/index.json`,
     sync: vi.fn(async (
       _session: SyncRemoteSession,
-      options: Parameters<WebDavSyncAdapter["sync"]>[1],
-    ): Promise<WebDavSyncAdapterResult> => {
+      options: Parameters<SyncAdapter["sync"]>[1],
+    ): Promise<SyncAdapterResult> => {
       const scope = options.scope;
       const scopeText = scope?.includeAssetIds !== undefined
         ? `include=${scope.includeAssetIds.join(",")}`

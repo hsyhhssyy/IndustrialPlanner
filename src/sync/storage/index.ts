@@ -1,18 +1,18 @@
 export {
-  clearWebDavLastSeenRemoteRevision,
-  clearWebDavLastSeenRemoteEtag,
-  clearWebDavLastSyncedContentHash,
-  clearWebDavSyncMetadata,
-  readWebDavLastSeenRemoteEtag,
-  readWebDavLastSeenRemoteRevision,
-  readWebDavLastSyncedContentHash,
-  writeWebDavLastSeenRemoteEtag,
-  writeWebDavLastSeenRemoteRevision,
-  writeWebDavLastSyncedContentHash,
-} from "./webdav-sync-metadata";
-export type { WebDavSyncSettings } from "./webdav-sync-settings";
+  clearLastSeenRemoteRevision,
+  clearLastSeenRemoteEtag,
+  clearLastSyncedContentHash,
+  clearSyncMetadata,
+  readLastSeenRemoteEtag,
+  readLastSeenRemoteRevision,
+  readLastSyncedContentHash,
+  writeLastSeenRemoteEtag,
+  writeLastSeenRemoteRevision,
+  writeLastSyncedContentHash,
+} from "./sync-metadata";
+export type { SyncConnectionSettings } from "./sync-connection-settings";
 export {
-  DEFAULT_WEBDAV_MAX_CONCURRENT_REQUESTS,
-  MAX_WEBDAV_MAX_CONCURRENT_REQUESTS,
-  MIN_WEBDAV_MAX_CONCURRENT_REQUESTS,
-} from "./webdav-sync-settings";
+  DEFAULT_MAX_CONCURRENT_REQUESTS,
+  MAX_MAX_CONCURRENT_REQUESTS,
+  MIN_MAX_CONCURRENT_REQUESTS,
+} from "./sync-connection-settings";

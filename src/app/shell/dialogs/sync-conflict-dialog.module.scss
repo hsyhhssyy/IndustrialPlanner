@@ -1,14 +1,14 @@
-.webdav-conflict-dialog {
+.sync-conflict-dialog {
   min-width: min(680px, calc(100vw - 24px));
 }
 
-.webdav-conflict-dialog-body {
+.sync-conflict-dialog-body {
   min-height: 0;
   padding: 0;
   overflow: hidden;
 }
 
-.webdav-conflict-content {
+.sync-conflict-content {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 12px;
@@ -17,14 +17,14 @@
   padding: 16px;
 }
 
-.webdav-conflict-summary {
+.sync-conflict-summary {
   margin: 0;
   color: var(--text-0);
   font-size: 0.9rem;
   line-height: 1.4;
 }
 
-.webdav-conflict-list {
+.sync-conflict-list {
   display: grid;
   align-content: start;
   gap: 10px;
@@ -33,7 +33,7 @@
   overflow: auto;
 }
 
-.webdav-conflict-item {
+.sync-conflict-item {
   display: grid;
   gap: 8px;
   min-width: 0;
@@ -44,14 +44,14 @@
   background: var(--surface-3);
 }
 
-.webdav-conflict-item > legend {
+.sync-conflict-item > legend {
   display: block;
   max-width: 100%;
   padding: 0 4px;
   color: var(--text-0);
 }
 
-.webdav-conflict-item > legend strong {
+.sync-conflict-item > legend strong {
   display: block;
   min-width: 0;
   max-width: 100%;
@@ -60,7 +60,7 @@
   overflow-wrap: anywhere;
 }
 
-.webdav-conflict-item-kind {
+.sync-conflict-item-kind {
   display: inline-block;
   margin-top: 4px;
   padding: 1px 8px;
@@ -72,19 +72,19 @@
   line-height: 1.5;
 }
 
-.webdav-conflict-item > p {
+.sync-conflict-item > p {
   margin: 0;
   color: var(--text-1);
   font-size: 0.78rem;
 }
 
-.webdav-conflict-options {
+.sync-conflict-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.webdav-conflict-options > label {
+.sync-conflict-options > label {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -99,31 +99,31 @@
   cursor: pointer;
 }
 
-.webdav-conflict-options > label:has(input:checked) {
+.sync-conflict-options > label:has(input:checked) {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
 
-.webdav-conflict-options input {
+.sync-conflict-options input {
   flex: 0 0 auto;
   margin: 0;
 }
 
-.webdav-conflict-options span {
+.sync-conflict-options span {
   min-width: 0;
   text-align: center;
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
 
-.webdav-conflict-actions {
+.sync-conflict-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
   gap: 8px;
 }
 
-.webdav-conflict-actions > button {
+.sync-conflict-actions > button {
   min-width: 0;
   min-height: 38px;
   padding: 8px 12px;
@@ -138,30 +138,30 @@
   cursor: pointer;
 }
 
-.webdav-conflict-actions > .webdav-conflict-batch-action {
+.sync-conflict-actions > .sync-conflict-batch-action {
   flex: 1 1 140px;
 }
 
-.webdav-conflict-actions > .webdav-conflict-stop-sync {
+.sync-conflict-actions > .sync-conflict-stop-sync {
   flex: 2 1 280px;
   border-color: var(--danger);
   background: var(--danger);
   color: #fff;
 }
 
-.webdav-conflict-actions > .webdav-conflict-apply {
+.sync-conflict-actions > .sync-conflict-apply {
   flex: 1 1 145px;
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
 }
 
-.webdav-conflict-actions > button:disabled {
+.sync-conflict-actions > button:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
-.webdav-conflict-progress {
+.sync-conflict-progress {
   display: grid;
   place-content: center;
   justify-items: center;
@@ -172,18 +172,18 @@
   text-align: center;
 }
 
-.webdav-conflict-progress > p {
+.sync-conflict-progress > p {
   margin: 0;
 }
 
-.webdav-conflict-spinner {
+.sync-conflict-spinner {
   width: 30px;
   height: 30px;
   color: var(--accent);
-  animation: webdav-conflict-spin 0.9s linear infinite;
+  animation: sync-conflict-spin 0.9s linear infinite;
 }
 
-@keyframes webdav-conflict-spin {
+@keyframes sync-conflict-spin {
   to {
     transform: rotate(360deg);
   }

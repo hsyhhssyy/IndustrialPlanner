@@ -1,5 +1,5 @@
 import { createLogger } from "@/shared/logging/logger";
-import { type WebDavSyncSettings as SyncConnectionSettings } from "../storage";
+import { type SyncConnectionSettings } from "../storage";
 import type {
   SyncConflictDecision,
   SyncInitialSyncStage,

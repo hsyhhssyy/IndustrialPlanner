@@ -4,11 +4,11 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { WebDavSaveIndicator } from "@/app/shell/layout/webdav-save-indicator";
+import { SyncSaveIndicator } from "@/app/shell/layout/sync-save-indicator";
 import { SyncStateImpl } from "@/sync/sync-state-impl";
-import type { WebDavSyncServiceStatus } from "@/sync";
+import type { SyncServiceStatus } from "@/sync";
 
-describe("WebDavSaveIndicator", () => {
+describe("SyncSaveIndicator", () => {
   let container: HTMLDivElement;
   let root: Root;
   let controller: SyncStateImpl;
@@ -42,10 +42,10 @@ describe("WebDavSaveIndicator", () => {
         saveState: "pending",
         pendingLocalChangeCount: 2,
       }));
-      root.render(<WebDavSaveIndicator syncState={controller} translate={(key) => key} />);
+      root.render(<SyncSaveIndicator syncState={controller} translate={(key) => key} />);
     });
 
-    const indicator = container.querySelector("[data-webdav-save-state='pending']");
+    const indicator = container.querySelector("[data-sync-save-state='pending']");
     expect(indicator?.getAttribute("role")).toBe("status");
     expect(indicator?.querySelector("[data-workbench-icon='save-blueprint']")).not.toBeNull();
     expect(indicator?.querySelector("[data-workbench-icon='save-progress']")).not.toBeNull();
@@ -67,7 +67,7 @@ describe("WebDavSaveIndicator", () => {
         saveError: "server unavailable",
         lastError: "server unavailable",
       }));
-      root.render(<WebDavSaveIndicator syncState={controller} translate={(key) => key} />);
+      root.render(<SyncSaveIndicator syncState={controller} translate={(key) => key} />);
     });
 
     expect(container.querySelector("[role='alert'] [data-workbench-icon='save-failed']")).not.toBeNull();
@@ -78,7 +78,7 @@ describe("WebDavSaveIndicator", () => {
         enabled: false,
       });
     });
-    expect(container.querySelector("[data-webdav-save-state]")).toBeNull();
+    expect(container.querySelector("[data-sync-save-state]")).toBeNull();
 
     act(() => {
       controller.setSettings({
@@ -87,7 +87,7 @@ describe("WebDavSaveIndicator", () => {
       });
       controller.setStatus(createStatus());
     });
-    expect(container.querySelector("[data-webdav-save-state]")).toBeNull();
+    expect(container.querySelector("[data-sync-save-state]")).toBeNull();
   });
 
   it("shows the failure asset for an initial network error without local changes", () => {
@@ -106,7 +106,7 @@ describe("WebDavSaveIndicator", () => {
         lastError: "network timeout",
       }));
       root.render(
-        <WebDavSaveIndicator
+        <SyncSaveIndicator
           syncState={controller}
           translate={(key) => key}
         />,
@@ -114,18 +114,18 @@ describe("WebDavSaveIndicator", () => {
     });
 
     const indicator = container.querySelector(
-      "[data-webdav-save-state='error']",
+      "[data-sync-save-state='error']",
     );
     expect(indicator?.getAttribute("aria-label"))
-      .toBe("webDavSave.syncFailed");
+      .toBe("syncSave.syncFailed");
     expect(indicator?.querySelector("[data-workbench-icon='save-failed']"))
       .not.toBeNull();
   });
 });
 
 function createStatus(
-  overrides: Partial<WebDavSyncServiceStatus> = {},
-): WebDavSyncServiceStatus {
+  overrides: Partial<SyncServiceStatus> = {},
+): SyncServiceStatus {
   return {
     phase: "idle",
     saveState: "idle",

@@ -13,7 +13,7 @@
  * AI-CORRECTION 2026-08-12: 无本地未提交改动时，不管远端如何变化都直接使用远端内容，
  * 不触发冲突对话框。
  * AI-CORRECTION 2026-08-13: 小检查发现远端变化触发的下载期间应锁定画布
- * （断言 data-webdav-initial-sync-stage="canvas" 遮罩可见）。
+ * （断言 data-sync-initial-sync-stage="canvas" 遮罩可见）。
  */
 import { createHash, randomUUID } from "node:crypto";
 
@@ -458,7 +458,7 @@ async function runAutoDownloadScenario(options: {
 
   // 初始同步完成后，画布锁定遮罩应消失
   expect(
-    await page.locator('[data-webdav-initial-sync-stage="canvas"]').isVisible().catch(() => false)
+    await page.locator('[data-sync-initial-sync-stage="canvas"]').isVisible().catch(() => false)
   ).toBe(false);
 
   // ─── Phase 3: 切换基地 → 盈天台建设站 ───
@@ -703,7 +703,7 @@ async function runAutoDownloadScenario(options: {
     lastDownloadAt: lastDownloadAtBeforeCheck,
   });
   expect(
-    await page.locator('[data-webdav-initial-sync-stage="canvas"]').isVisible().catch(() => false)
+    await page.locator('[data-sync-initial-sync-stage="canvas"]').isVisible().catch(() => false)
   ).toBe(false);
   const localFurnaceCountAfterCheck = await page.evaluate(() =>
     Object.values(
@@ -763,7 +763,7 @@ async function runAutoDownloadScenario(options: {
         if (sync.state.status.phase === "downloading") {
           clearInterval(timer);
           const gate = document.querySelector(
-            '[data-webdav-initial-sync-stage="canvas"]'
+            '[data-sync-initial-sync-stage="canvas"]'
           );
           resolve(gate !== null ? "locked" : "unlocked");
           return;
@@ -803,7 +803,7 @@ async function runAutoDownloadScenario(options: {
 
   // 下载完成后画布锁定遮罩应消失（解锁）
   expect(
-    await page.locator('[data-webdav-initial-sync-stage="canvas"]').isVisible().catch(() => false)
+    await page.locator('[data-sync-initial-sync-stage="canvas"]').isVisible().catch(() => false)
   ).toBe(false);
 
   // ─── Phase 8: 验证画布反映远端内容（精炼炉被移除） ───

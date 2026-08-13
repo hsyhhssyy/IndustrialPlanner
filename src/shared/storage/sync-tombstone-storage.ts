@@ -22,9 +22,10 @@ import { readCloudflareSyncSettings } from "./cloudflare-sync-settings";
 
 const SYNC_PROVIDER_STORAGE_KEY = "v3-sync-provider";
 const SYNC_DATABASE_NAME = "v3-industrial-planner";
-const WEBDAV_SYNC_SETTINGS_LOCATION = {
+// 同步连接设置 store：与 src/sync/storage/sync-connection-settings.ts 保持一致。
+const SYNC_CONNECTION_SETTINGS_LOCATION = {
   databaseName: SYNC_DATABASE_NAME,
-  storeName: "webdav-sync-settings",
+  storeName: "sync-connection-settings",
   key: "settings",
 } as const;
 
@@ -202,7 +203,7 @@ async function resolveActiveSyncTombstoneScope(): Promise<ActiveSyncTombstoneSco
   }
 
   const rawSettings = await readFromIndexedDb<unknown>(
-    WEBDAV_SYNC_SETTINGS_LOCATION,
+    SYNC_CONNECTION_SETTINGS_LOCATION,
   );
   const settings = isRecord(rawSettings) ? rawSettings : {};
   const url = typeof settings.url === "string" ? settings.url.trim() : "";

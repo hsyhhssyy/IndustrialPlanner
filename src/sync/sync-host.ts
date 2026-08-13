@@ -92,10 +92,10 @@ import {
   type SyncService,
 } from "./engine/sync-service";
 import {
-  readWebDavSyncSettings,
-  subscribeToWebDavSyncSettingsChanges,
-  writeWebDavSyncSettings,
-} from "./storage/webdav-sync-settings";
+  readSyncConnectionSettings,
+  subscribeToSyncConnectionSettingsChanges,
+  writeSyncConnectionSettings,
+} from "./storage/sync-connection-settings";
 import {
   readSyncProvider,
   writeSyncProvider,
@@ -195,7 +195,7 @@ export async function createSyncHost(
   let localNotificationScheduled = false;
   let syncStarted = false;
   let directoryTreeReadyKey: string | null = null;
-  let lastEditorWebDavHash: string | null = null;
+  let lastEditorDocumentHash: string | null = null;
   // AI-REMOVED 2026-08-08:
   // Reason: 本地 owner 不能参与共享 Cloudflare spaceId。
   // Trigger: 相同空间名称必须在不同浏览器中解析为同一个远端空间。
@@ -212,7 +212,7 @@ export async function createSyncHost(
   const getCloudflareSpaceId = (
     settings: CloudflareSyncSettings = currentCloudflareSettings,
   ) => resolveCloudflareSpaceId(settings);
-  let currentSettings = await readWebDavSyncSettings();
+  let currentSettings = await readSyncConnectionSettings();
   // 从 sync provider + URL 派生 enabled 标志，兼容旧用户自动迁移
   // deriveEnabled 内部会在旧用户首次访问时将 provider 写为 "webdav"
   currentSettings = {
@@ -526,7 +526,7 @@ export async function createSyncHost(
       const merged = { ...currentSettings, ...patch };
       // enabled 由 provider + URL 派生，忽略 patch 中的 enabled
       merged.enabled = deriveEnabled(merged, wasEnabled ? undefined : currentSettings.enabled);
-      currentSettings = await writeWebDavSyncSettings(merged);
+      currentSettings = await writeSyncConnectionSettings(merged);
       state.setSettings(currentSettings);
       // AI-REMOVED 2026-08-08:
       // Reason: writeWebDavSyncSettings 会同步通知下方订阅者；这里再次 syncNow 会排入第二轮重复同步。
@@ -628,7 +628,7 @@ export async function createSyncHost(
 
         // 只有远端确认 reset 成功后才关闭 provider，避免先改 provider 导致删到另一个后端。
         writeSyncProvider("none");
-        currentSettings = await writeWebDavSyncSettings({
+        currentSettings = await writeSyncConnectionSettings({
           ...currentSettings,
           enabled: false,
         });
@@ -711,13 +711,13 @@ export async function createSyncHost(
     if (event.assetType === "world-document") {
       const currentDocument = workspace.editor?.document.getSnapshot();
       if (currentDocument?.documentKey === event.assetId) {
-        const nextEditorWebDavHash = createStableJsonHash(
-          createWorldDocumentWebDavValue(currentDocument),
+        const nextEditorDocumentHash = createStableJsonHash(
+          createWorldDocumentRemoteValue(currentDocument),
         );
-        if (lastEditorWebDavHash === nextEditorWebDavHash) {
+        if (lastEditorDocumentHash === nextEditorDocumentHash) {
           return;
         }
-        lastEditorWebDavHash = nextEditorWebDavHash;
+        lastEditorDocumentHash = nextEditorDocumentHash;
         notifyLocalChange({
           adapterId: "world-documents",
           assetId: currentDocument.baseId,
@@ -766,21 +766,21 @@ export async function createSyncHost(
       documentSnapshot,
       changeContext?: SnapshotChangeContext,
     ) => {
-      const nextEditorWebDavHash = createStableJsonHash(
-        createWorldDocumentWebDavValue(documentSnapshot),
+      const nextEditorDocumentHash = createStableJsonHash(
+        createWorldDocumentRemoteValue(documentSnapshot),
       );
       if (!editorDocumentHydrated) {
         editorDocumentHydrated = true;
-        lastEditorWebDavHash = nextEditorWebDavHash;
+        lastEditorDocumentHash = nextEditorDocumentHash;
         syncStarted = true;
         service.start();
         return;
       }
 
-      if (lastEditorWebDavHash === nextEditorWebDavHash) {
+      if (lastEditorDocumentHash === nextEditorDocumentHash) {
         return;
       }
-      lastEditorWebDavHash = nextEditorWebDavHash;
+      lastEditorDocumentHash = nextEditorDocumentHash;
       if (changeContext?.origin === "remote-sync") {
         return;
       }
@@ -808,7 +808,7 @@ export async function createSyncHost(
     syncStarted = true;
     service.start();
   }
-  disposers.push(subscribeToWebDavSyncSettingsChanges((settings) => {
+  disposers.push(subscribeToSyncConnectionSettingsChanges((settings) => {
     currentSettings = settings;
     const wasEnabled = state.settings.enabled;
     state.setSettings(settings);
@@ -1126,7 +1126,7 @@ function createWorldDocumentAdapter(
       ) {
         return [{
           id: currentDocument.baseId,
-          value: createWorldDocumentWebDavValue(currentDocument),
+          value: createWorldDocumentRemoteValue(currentDocument),
           deletedAt: null,
         }];
       }
@@ -1142,7 +1142,7 @@ function createWorldDocumentAdapter(
           ? []
           : [{
             id: document.baseId,
-            value: createWorldDocumentWebDavValue(document),
+            value: createWorldDocumentRemoteValue(document),
             deletedAt: null,
           }]
       );
@@ -1218,13 +1218,13 @@ function createWorldDocumentAdapter(
 
       return document === null
         ? null
-        : createWorldDocumentWebDavValue(document);
+        : createWorldDocumentRemoteValue(document);
     },
     resolveConflict,
   });
 }
 
-export function createWorldDocumentWebDavValue(
+export function createWorldDocumentRemoteValue(
   document: WorldDocument,
 ): WorldDocument {
   return {

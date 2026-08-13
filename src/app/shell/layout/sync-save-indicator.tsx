@@ -6,7 +6,7 @@ import { observer } from "mobx-react-lite";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
-export const WebDavSaveIndicator = observer(function WebDavSaveIndicator({
+export const SyncSaveIndicator = observer(function SyncSaveIndicator({
   className,
   syncState,
   translate,
@@ -28,8 +28,8 @@ export const WebDavSaveIndicator = observer(function WebDavSaveIndicator({
   const failed = saveState === "error" || syncFailed;
   const label = translate(
     syncFailed
-      ? "webDavSave.syncFailed"
-      : failed ? "webDavSave.failed" : "webDavSave.saving",
+      ? "syncSave.syncFailed"
+      : failed ? "syncSave.failed" : "syncSave.saving",
   );
 
   return (
@@ -39,23 +39,23 @@ export const WebDavSaveIndicator = observer(function WebDavSaveIndicator({
         styles,
         className,
         failed
-          ? "webdav-save-indicator webdav-save-indicator-failed"
-          : "webdav-save-indicator webdav-save-indicator-saving",
+          ? "sync-save-indicator sync-save-indicator-failed"
+          : "sync-save-indicator sync-save-indicator-saving",
       )}
-      data-webdav-save-state={failed ? "error" : saveState}
+      data-sync-save-state={failed ? "error" : saveState}
       role={failed ? "alert" : "status"}
       title={label}
     >
       {failed ? (
         <WorkbenchIcon kind="save-failed" />
       ) : (
-        <span className={cm(styles, "webdav-save-icon-stack")}>
+        <span className={cm(styles, "sync-save-icon-stack")}>
           <WorkbenchIcon
-            className={cm(styles, "webdav-save-base-icon")}
+            className={cm(styles, "sync-save-base-icon")}
             kind="save-blueprint"
           />
           <WorkbenchIcon
-            className={cm(styles, "webdav-save-progress-icon")}
+            className={cm(styles, "sync-save-progress-icon")}
             kind="save-progress"
           />
         </span>

@@ -5,7 +5,6 @@ import type {
   SyncReadOptions,
   SyncResourceStat,
   SyncStorageClient,
-  SyncTextFile,
   SyncWriteOptions,
 } from "../types";
 
@@ -14,12 +13,21 @@ const DEFAULT_ROOT_PATH = "/industrial-planner";
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 
 // AI-CORRECTION 2026-07-30: 类型已迁移到通用 ../types，以下别名保持向后兼容。
-export type WebDavClientOptions = SyncClientOptions;
-export type WebDavWriteOptions = SyncWriteOptions;
-export type WebDavReadOptions = SyncReadOptions;
-export type WebDavTextFile = SyncTextFile;
-export type WebDavResourceStat = SyncResourceStat;
-export type WebDavStorageClient = SyncStorageClient;
+// AI-REMOVED 2026-08-13:
+// Reason: 旧别名已无消费者，全部引用改回通用 ../types 类型。
+// Trigger: 用户要求删除带 WebDAV 字样但实为公共内容的命名。
+// Evidence: 全库引用点（worker-client、worker-runtime、测试）均已迁移到 Sync* 通用类型。
+// Replacement: 直接导入 ../types 的 SyncClientOptions / SyncWriteOptions / SyncReadOptions / SyncTextFile / SyncResourceStat / SyncStorageClient。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// export type WebDavClientOptions = SyncClientOptions;
+// export type WebDavWriteOptions = SyncWriteOptions;
+// export type WebDavReadOptions = SyncReadOptions;
+// export type WebDavTextFile = SyncTextFile;
+// export type WebDavResourceStat = SyncResourceStat;
+// export type WebDavStorageClient = SyncStorageClient;
 
 export function createWebDavStorageClient(options: SyncClientOptions): SyncStorageClient {
   const client = createClient(options.baseUrl, {
@@ -260,7 +268,7 @@ function normalizeResourceStat(value: {
   lastmod: string;
   size: number;
   mime?: string;
-}): WebDavResourceStat {
+}): SyncResourceStat {
   return {
     path: value.filename,
     basename: value.basename,
@@ -272,7 +280,7 @@ function normalizeResourceStat(value: {
   };
 }
 
-function createConditionalHeaders(options: WebDavReadOptions | WebDavWriteOptions): Record<string, string> {
+function createConditionalHeaders(options: SyncReadOptions | SyncWriteOptions): Record<string, string> {
   return {
     ...(options.ifNoneMatch === undefined ? {} : { "If-None-Match": options.ifNoneMatch }),
     ...("ifMatch" in options && options.ifMatch !== undefined ? { "If-Match": options.ifMatch } : {}),

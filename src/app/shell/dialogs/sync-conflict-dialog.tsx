@@ -22,9 +22,9 @@ import {
   type BlueprintFolderRecord,
   type BlueprintRecord,
 } from "@/shared/storage";
-import styles from "./webdav-conflict-dialog.module.scss";
+import styles from "./sync-conflict-dialog.module.scss";
 
-interface WebDavConflictDialogProps {
+interface SyncConflictDialogProps {
   readonly appHost: AppHost;
   readonly compactMobileLayout: boolean;
   readonly onStopSync: () => void;
@@ -32,13 +32,13 @@ interface WebDavConflictDialogProps {
   readonly t: AppHost["actions"]["translate"];
 }
 
-export const WebDavConflictDialog = observer(function WebDavConflictDialog({
+export const SyncConflictDialog = observer(function SyncConflictDialog({
   appHost,
   compactMobileLayout,
   onStopSync,
   sync,
   t,
-}: WebDavConflictDialogProps) {
+}: SyncConflictDialogProps) {
   const dialogState = useMemo(() => makeAutoObservable<DialogStateReadWrite>({
     visible: true,
     maximized: false,
@@ -125,11 +125,11 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
 
   return (
     <DialogShell
-      bodyClassName={cm(styles, "webdav-conflict-dialog-body")}
-      className={cm(styles, "webdav-conflict-dialog")}
+      bodyClassName={cm(styles, "sync-conflict-dialog-body")}
+      className={cm(styles, "sync-conflict-dialog")}
       closeTitle={t("action.close")}
       compactMobileLayout={compactMobileLayout}
-      dialogKey="webdav-conflict"
+      dialogKey="sync-conflict"
       dialogState={dialogState}
       dismissible={false}
       maximizeTitle=""
@@ -138,24 +138,24 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
       overlayKind="system"
       restoreTitle=""
       showMaximizeButton={false}
-      title={t("settingsField.experimental-webdav-conflict-title")}
-      titleId="webdav-conflict-dialog-title"
+      title={t("settingsField.experimental-sync-conflict-title")}
+      titleId="sync-conflict-dialog-title"
     >
       {conflict.phase === "awaiting-resolution" ? (
         <form
-          className={cm(styles, "webdav-conflict-content")}
+          className={cm(styles, "sync-conflict-content")}
           onSubmit={(event) => {
             event.preventDefault();
             submitDecisions();
           }}
         >
-          <p className={cm(styles, "webdav-conflict-summary")}>
-            {t("webDavConflict.summary").replace(
+          <p className={cm(styles, "sync-conflict-summary")}>
+            {t("syncConflict.summary").replace(
               "{count}",
               String(conflict.items.length),
             )}
           </p>
-          <div className={cm(styles, "webdav-conflict-list")}>
+          <div className={cm(styles, "sync-conflict-list")}>
             {conflict.items.map((item) => {
               const key = createConflictItemKey(
                 item.adapterId,
@@ -170,19 +170,19 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
                 storedItemNames,
                 t,
               });
-              const itemLabel = t("webDavConflict.itemLabel")
+              const itemLabel = t("syncConflict.itemLabel")
                 .replace("{type}", typeLabel)
                 .replace("{name}", itemName);
               const kindLabel = resolveConflictItemKindLabel(item.kind, t);
 
               return (
                 <fieldset
-                  className={cm(styles, "webdav-conflict-item")}
+                  className={cm(styles, "sync-conflict-item")}
                   key={key}
                 >
                   <legend>
                     <strong>{itemLabel}</strong>
-                    <span className={cm(styles, "webdav-conflict-item-kind")}>
+                    <span className={cm(styles, "sync-conflict-item-kind")}>
                       {kindLabel}
                     </span>
                     {/*
@@ -200,21 +200,21 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
                   </legend>
                   {item.kind === "conflict" ? (
                     <p>
-                      {t("webDavConflict.remoteUpdatedAt").replace(
+                      {t("syncConflict.remoteUpdatedAt").replace(
                         "{time}",
                         formatRemoteUpdatedAt(
                           item.remoteUpdatedAt,
-                          t("webDavConflict.unknownTime"),
+                          t("syncConflict.unknownTime"),
                         ),
                       )}
                     </p>
                   ) : null}
-                  <div className={cm(styles, "webdav-conflict-options")}>
+                  <div className={cm(styles, "sync-conflict-options")}>
                     {CONFLICT_RESOLUTIONS.map((resolution) => (
                       <label key={resolution}>
                         <input
                           checked={selectedResolution === resolution}
-                          name={`webdav-conflict-${key}`}
+                          name={`sync-conflict-${key}`}
                           onChange={() => {
                             setDecisions((current) => {
                               const next = new Map(current);
@@ -233,51 +233,51 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
               );
             })}
           </div>
-          <div className={cm(styles, "webdav-conflict-actions")}>
+          <div className={cm(styles, "sync-conflict-actions")}>
             <button
-              className={cm(styles, "webdav-conflict-batch-action")}
+              className={cm(styles, "sync-conflict-batch-action")}
               onClick={() => selectAll("use-local")}
               type="button"
             >
-              {t("webDavConflict.batchUseLocal")}
+              {t("syncConflict.batchUseLocal")}
             </button>
             <button
-              className={cm(styles, "webdav-conflict-batch-action")}
+              className={cm(styles, "sync-conflict-batch-action")}
               onClick={() => selectAll("use-remote")}
               type="button"
             >
-              {t("webDavConflict.batchUseRemote")}
+              {t("syncConflict.batchUseRemote")}
             </button>
             <button
-              className={cm(styles, "webdav-conflict-stop-sync")}
+              className={cm(styles, "sync-conflict-stop-sync")}
               onClick={onStopSync}
               type="button"
             >
-              {t("webDavConflict.stopSync")}
+              {t("syncConflict.stopSync")}
             </button>
             <button
-              className={cm(styles, "webdav-conflict-apply")}
+              className={cm(styles, "sync-conflict-apply")}
               disabled={!allDecisionsSelected}
               type="submit"
             >
-              {t("webDavConflict.apply")}
+              {t("syncConflict.apply")}
             </button>
           </div>
         </form>
       ) : (
         <div
           aria-live="polite"
-          className={cm(styles, "webdav-conflict-progress")}
+          className={cm(styles, "sync-conflict-progress")}
           role="status"
         >
           <WorkbenchIcon
-            className={cm(styles, "webdav-conflict-spinner")}
+            className={cm(styles, "sync-conflict-spinner")}
             kind="save-progress"
           />
           <p>
             {t(conflict.phase === "discovering"
-              ? "webDavConflict.discovering"
-              : "webDavConflict.applying")}
+              ? "syncConflict.discovering"
+              : "syncConflict.applying")}
           </p>
         </div>
       )}
@@ -308,23 +308,23 @@ function resolveConflictItemKindLabel(
   kind: SyncConflictItemKind,
   t: AppHost["actions"]["translate"],
 ): string {
-  return t(`webDavConflict.kind.${kind}`);
+  return t(`syncConflict.kind.${kind}`);
 }
 
 function resolveResolutionLabel(
   resolution: SyncConflictResolution,
 ):
-  | "settingsField.experimental-webdav-conflict-use-local"
-  | "settingsField.experimental-webdav-conflict-use-remote"
-  | "settingsField.experimental-webdav-conflict-pause" {
+  | "settingsField.experimental-sync-conflict-use-local"
+  | "settingsField.experimental-sync-conflict-use-remote"
+  | "settingsField.experimental-sync-conflict-pause" {
   if (resolution === "use-local") {
-    return "settingsField.experimental-webdav-conflict-use-local";
+    return "settingsField.experimental-sync-conflict-use-local";
   }
   if (resolution === "use-remote") {
-    return "settingsField.experimental-webdav-conflict-use-remote";
+    return "settingsField.experimental-sync-conflict-use-remote";
   }
 
-  return "settingsField.experimental-webdav-conflict-pause";
+  return "settingsField.experimental-sync-conflict-pause";
 }
 
 function formatRemoteUpdatedAt(
@@ -388,23 +388,23 @@ function resolveConflictItemTypeLabel(
 ): string {
   switch (adapterId) {
     case "world-documents":
-      return t("webDavConflict.type.base");
+      return t("syncConflict.type.base");
     case "blueprints":
-      return t("webDavConflict.type.blueprint");
+      return t("syncConflict.type.blueprint");
     case "blueprint-folders":
-      return t("webDavConflict.type.blueprintFolder");
+      return t("syncConflict.type.blueprintFolder");
     case "custom-modules":
-      return t("webDavConflict.type.module");
+      return t("syncConflict.type.module");
     case "custom-module-folders":
-      return t("webDavConflict.type.moduleFolder");
+      return t("syncConflict.type.moduleFolder");
     case "module-canvases":
-      return t("webDavConflict.type.moduleCanvas");
+      return t("syncConflict.type.moduleCanvas");
     case "module-canvas-folders":
-      return t("webDavConflict.type.moduleCanvasFolder");
+      return t("syncConflict.type.moduleCanvasFolder");
     case "production-planning":
-      return t("webDavConflict.type.productionPlanning");
+      return t("syncConflict.type.productionPlanning");
     default:
-      return t("webDavConflict.type.syncData");
+      return t("syncConflict.type.syncData");
   }
 }
 
@@ -442,8 +442,8 @@ function resolveConflictItemName(options: {
       name = moduleBalancing.canvasFolders.find((item) => item.id === assetId)?.name;
       break;
     case "production-planning":
-      return t("webDavConflict.currentPlan");
+      return t("syncConflict.currentPlan");
   }
 
-  return name?.trim() || t("webDavConflict.nameUnavailable");
+  return name?.trim() || t("syncConflict.nameUnavailable");
 }

@@ -22,12 +22,12 @@ import {
   createSyncRemoteCollection,
 } from "../remote-collections";
 import {
-  clearWebDavLastSeenRemoteEtag,
-  readWebDavLastSeenRemoteRevision,
-  writeWebDavLastSeenRemoteRevision,
+  clearLastSeenRemoteEtag,
+  readLastSeenRemoteRevision,
+  writeLastSeenRemoteRevision,
 } from "../storage";
 
-const logger = createLogger("webdav-adapter");
+const logger = createLogger("sync-adapter");
 
 export type SyncAdapterMode = SyncRemoteAdapterMode;
 export type SyncAdapterConflictResolution = "use-local" | "use-remote" | "pause";
@@ -2847,7 +2847,7 @@ async function _readRemoteIndexState(
   client: SyncStorageClient,
   indexPath: string,
 ): Promise<RemoteIndexState> {
-  const lastSeenRevision = readWebDavLastSeenRemoteRevision(indexPath);
+  const lastSeenRevision = readLastSeenRemoteRevision(indexPath);
   const canonicalFilePromise = client.readTextFile(indexPath);
   // AI-REMOVED 2026-07-29:
   // Reason: 每次读取 canonical 时并行 GET “已知 revision + 1”仍会让 OwnCloud 的不存在文件探测拖慢首屏，且成功提交的 canonical 已包含最新 revision。
@@ -2953,7 +2953,7 @@ async function _readRemoteIndexState(
       ? canonicalFallback.canonicalEtag
       : null,
   };
-  writeWebDavLastSeenRemoteRevision(indexPath, result.index.revision);
+  writeLastSeenRemoteRevision(indexPath, result.index.revision);
 
   return result;
 }
@@ -2965,7 +2965,7 @@ async function _writeRemoteIndex(
   expectedRevision: number,
   canonicalMissing: boolean,
 ): Promise<void> {
-  clearWebDavLastSeenRemoteEtag(indexPath);
+  clearLastSeenRemoteEtag(indexPath);
   const committedIndex: RemoteIndexFile = {
     ...index,
     revision: expectedRevision + 1,
@@ -2976,7 +2976,7 @@ async function _writeRemoteIndex(
     committedIndex,
     createAtomicWriteOptions(canonicalMissing),
   );
-  writeWebDavLastSeenRemoteRevision(indexPath, committedIndex.revision);
+  writeLastSeenRemoteRevision(indexPath, committedIndex.revision);
 }
 
 function normalizeRemoteIndex(value: unknown): RemoteIndexFile {
@@ -3129,7 +3129,7 @@ async function readRemotePatchMetaState(
   directoryPath: string,
 ): Promise<RemotePatchMetaState | null> {
   const metaPath = resolvePath(directoryPath, "meta.json");
-  const lastSeenRevision = readWebDavLastSeenRemoteRevision(metaPath);
+  const lastSeenRevision = readLastSeenRemoteRevision(metaPath);
   const canonicalFilePromise = client.readTextFile(metaPath);
   // AI-REMOVED 2026-07-29:
   // Reason: canonical meta 已携带 revision，额外读取 next revision 会让未变化画布多一次无收益的 404。
@@ -3226,13 +3226,13 @@ async function readRemotePatchMetaState(
       canonicalMissing: canonicalState === null,
       lastModified: null,
     };
-    writeWebDavLastSeenRemoteRevision(metaPath, result.meta.revision);
+    writeLastSeenRemoteRevision(metaPath, result.meta.revision);
 
     return result;
   }
 
   if (canonicalState !== null) {
-    writeWebDavLastSeenRemoteRevision(
+    writeLastSeenRemoteRevision(
       metaPath,
       canonicalState.meta.revision,
     );
@@ -3377,7 +3377,7 @@ async function writeRemotePatchMeta(
     meta,
     writeOptions,
   );
-  writeWebDavLastSeenRemoteRevision(metaPath, meta.revision);
+  writeLastSeenRemoteRevision(metaPath, meta.revision);
 }
 
 // AI-REMOVED 2026-07-29:

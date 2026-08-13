@@ -5,13 +5,13 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppHost } from "@/app/host/app-host";
-import { WebDavConflictDialog } from "@/app/shell/dialogs/webdav-conflict-dialog";
-import { WebDavInitialSyncGate } from "@/app/shell/layout/webdav-initial-sync-gate";
+import { SyncConflictDialog } from "@/app/shell/dialogs/sync-conflict-dialog";
+import { SyncInitialSyncGate } from "@/app/shell/layout/sync-initial-sync-gate";
 import { OverlayStackProvider } from "@/app/shell/shared/overlay-stack";
 import type { SyncContract } from "@/domain/sync";
 import { SyncStateImpl } from "@/sync/sync-state-impl";
 
-describe("WebDavConflictDialog", () => {
+describe("SyncConflictDialog", () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -92,10 +92,10 @@ describe("WebDavConflictDialog", () => {
       },
     };
     const translate: AppHost["actions"]["translate"] = (key) => ({
-      "webDavConflict.itemLabel": "{type} - {name}",
-      "webDavConflict.type.base": "基地",
-      "webDavConflict.type.blueprint": "蓝图",
-      "webDavConflict.nameUnavailable": "名称不可用",
+      "syncConflict.itemLabel": "{type} - {name}",
+      "syncConflict.type.base": "基地",
+      "syncConflict.type.blueprint": "蓝图",
+      "syncConflict.nameUnavailable": "名称不可用",
     }[key] ?? key);
     const appHost = {
       workspace: {
@@ -124,8 +124,8 @@ describe("WebDavConflictDialog", () => {
     await act(async () => {
       root.render(
         <OverlayStackProvider>
-          <WebDavInitialSyncGate sync={sync} translate={(key) => key} />
-          <WebDavConflictDialog
+          <SyncInitialSyncGate sync={sync} translate={(key) => key} />
+          <SyncConflictDialog
             appHost={appHost}
             compactMobileLayout={false}
             onStopSync={stopSync}
@@ -137,10 +137,10 @@ describe("WebDavConflictDialog", () => {
     });
 
     const gate = document.querySelector<HTMLElement>(
-      "[data-webdav-initial-sync-stage='canvas']",
+      "[data-sync-initial-sync-stage='canvas']",
     );
     const dialog = document.querySelector<HTMLElement>(
-      "[data-dialog-key='webdav-conflict']",
+      "[data-dialog-key='sync-conflict']",
     );
     const dialogBackdrop = dialog?.parentElement;
     expect(gate).not.toBeNull();
@@ -167,13 +167,13 @@ describe("WebDavConflictDialog", () => {
     });
     expect(state.pendingConflict).not.toBeNull();
     expect(document.querySelector(
-      "[data-dialog-key='webdav-conflict']",
+      "[data-dialog-key='sync-conflict']",
     )).not.toBeNull();
 
     const stopSyncButton = Array.from(
       document.querySelectorAll<HTMLButtonElement>("button"),
     ).find((button) => button.textContent?.includes(
-      "webDavConflict.stopSync",
+      "syncConflict.stopSync",
     ));
     await act(async () => {
       stopSyncButton?.click();
@@ -183,7 +183,7 @@ describe("WebDavConflictDialog", () => {
     const batchUseRemoteButton = Array.from(
       document.querySelectorAll<HTMLButtonElement>("button"),
     ).find((button) => button.textContent?.includes(
-      "webDavConflict.batchUseRemote",
+      "syncConflict.batchUseRemote",
     ));
     await act(async () => {
       batchUseRemoteButton?.click();
@@ -197,7 +197,7 @@ describe("WebDavConflictDialog", () => {
     const applyButton = Array.from(
       document.querySelectorAll<HTMLButtonElement>("button"),
     ).find((button) => button.textContent?.includes(
-      "webDavConflict.apply",
+      "syncConflict.apply",
     ));
     await act(async () => {
       applyButton?.click();
@@ -218,14 +218,14 @@ describe("WebDavConflictDialog", () => {
     ]);
     expect(state.pendingConflict?.phase).toBe("applying");
     expect(document.querySelector(
-      "[data-dialog-key='webdav-conflict']",
+      "[data-dialog-key='sync-conflict']",
     )).not.toBeNull();
 
     await act(async () => {
       state.finishConflictWorkflow();
     });
     expect(document.querySelector(
-      "[data-dialog-key='webdav-conflict']",
+      "[data-dialog-key='sync-conflict']",
     )).toBeNull();
   });
 });

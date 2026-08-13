@@ -3,7 +3,7 @@ import type { LongPressState } from "@/app/input/gesture/adapter";
 import type { GestureDiagnosticsSnapshot } from "@/app/input/gesture/diagnostics";
 import type { SimulationRuntimeStatistics } from "@/domain/simulation";
 import { useViewportResizeAdapter } from "@/app/shell/canvas/viewport-resize-adapter";
-import { WebDavSaveIndicator } from "@/app/shell/layout/webdav-save-indicator";
+import { SyncSaveIndicator } from "@/app/shell/layout/sync-save-indicator";
 import { isTouchLandscapeScreenProfile } from "@/shared/browser/screen-profile";
 import { observer } from "mobx-react-lite";
 import { useEffect, useId, useRef, useState } from "react";
@@ -289,10 +289,10 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
               Original code:
               {topRightOverlay} */}
           {appHost.workspace.sync !== null ? (
-            <WebDavSaveIndicator
+            <SyncSaveIndicator
               className={useCollapsedTopBarSavePosition
-                ? "canvas-webdav-save-indicator canvas-webdav-save-indicator-collapsed"
-                : "canvas-webdav-save-indicator"}
+                ? "canvas-sync-save-indicator canvas-sync-save-indicator-collapsed"
+                : "canvas-sync-save-indicator"}
               syncState={appHost.workspace.sync.state}
               translate={appHost.actions.translate}
             />

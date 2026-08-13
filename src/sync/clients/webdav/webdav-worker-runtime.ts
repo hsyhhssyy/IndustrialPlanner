@@ -1,10 +1,10 @@
 import { createLogger } from "@/shared/logging/logger";
 import { readDebugModeEnabled } from "@/shared/logging/debug-mode-runtime";
-import {
-  createWebDavStorageClient,
-  type WebDavClientOptions,
-  type WebDavStorageClient,
-} from "./webdav-client";
+import { createWebDavStorageClient } from "./webdav-client";
+import type {
+  SyncClientOptions,
+  SyncStorageClient,
+} from "../types";
 import type {
   WebDavWorkerOperation,
   WebDavWorkerRequest,
@@ -14,12 +14,12 @@ import type {
 const logger = createLogger("webdav-worker");
 
 export interface WebDavWorkerRuntimeOptions {
-  readonly createClient?: (options: WebDavClientOptions) => WebDavStorageClient;
+  readonly createClient?: (options: SyncClientOptions) => SyncStorageClient;
 }
 
 export class WebDavWorkerRuntime {
-  private readonly createClient: (options: WebDavClientOptions) => WebDavStorageClient;
-  private client: WebDavStorageClient | null = null;
+  private readonly createClient: (options: SyncClientOptions) => SyncStorageClient;
+  private client: SyncStorageClient | null = null;
   private clientKey: string | null = null;
 
   public constructor(options: WebDavWorkerRuntimeOptions = {}) {
@@ -78,7 +78,7 @@ export class WebDavWorkerRuntime {
     this.clientKey = null;
   }
 
-  private resolveClient(options: WebDavClientOptions): WebDavStorageClient {
+  private resolveClient(options: SyncClientOptions): SyncStorageClient {
     const clientKey = JSON.stringify(options);
     if (this.client !== null && this.clientKey === clientKey) {
       return this.client;
@@ -92,7 +92,7 @@ export class WebDavWorkerRuntime {
 }
 
 async function runOperation(
-  client: WebDavStorageClient,
+  client: SyncStorageClient,
   operation: WebDavWorkerOperation,
 ): Promise<unknown> {
   if (operation.type === "exists") {

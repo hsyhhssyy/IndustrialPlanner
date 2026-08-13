@@ -90,8 +90,8 @@ describe("WebDavSyncStatusDialog", () => {
     expect(document.querySelector(
       "[data-sync-task-kind='canvas'][data-sync-task-phase='running']",
     )).not.toBeNull();
-    expect(document.body.textContent).toContain("webDavStatus.maxConcurrentRequests");
-    expect(document.body.textContent).toContain("webDavStatus.activeRequests");
-    expect(document.body.textContent).toContain("webDavStatus.queuedRequests");
+    expect(document.body.textContent).toContain("syncStatus.maxConcurrentRequests");
+    expect(document.body.textContent).toContain("syncStatus.activeRequests");
+    expect(document.body.textContent).toContain("syncStatus.queuedRequests");
   });
 });

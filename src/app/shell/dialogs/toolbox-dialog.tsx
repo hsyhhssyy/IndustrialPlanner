@@ -40,17 +40,17 @@ function renderInitialSyncLockedContent(options: {
 
   return (
     <section
-      aria-label={options.appHost.actions.translate("webDavInitialSync.syncing")}
+      aria-label={options.appHost.actions.translate("syncInitialSync.syncing")}
       aria-live="polite"
-      className={cm(styles, "webdav-initial-sync-feature-gate")}
-      data-webdav-initial-sync-feature={options.feature}
+      className={cm(styles, "sync-initial-sync-feature-gate")}
+      data-sync-initial-sync-feature={options.feature}
       role="status"
     >
       <WorkbenchIcon
-        className={cm(styles, "webdav-initial-sync-gate-spinner")}
+        className={cm(styles, "sync-initial-sync-gate-spinner")}
         kind="save-progress"
       />
-      <p>{options.appHost.actions.translate("webDavInitialSync.syncing")}</p>
+      <p>{options.appHost.actions.translate("syncInitialSync.syncing")}</p>
     </section>
   );
 }

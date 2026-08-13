@@ -12,8 +12,8 @@ import type {
   SyncTaskKind,
   SyncTaskPhase,
 } from "@/domain/sync";
-import type { WebDavSyncSettings } from "@/sync";
-import { MAX_WEBDAV_MAX_CONCURRENT_REQUESTS, MIN_WEBDAV_MAX_CONCURRENT_REQUESTS } from "@/sync";
+import type { SyncConnectionSettings } from "@/sync";
+import { MAX_MAX_CONCURRENT_REQUESTS, MIN_MAX_CONCURRENT_REQUESTS } from "@/sync";
 import type { UiKey } from "@/shared/i18n";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -53,9 +53,9 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
   onDeleteAllData: () => void;
   onOffsetChange: (offsetX: number, offsetY: number) => void;
   onResize: (width: number, height: number) => void;
-  onTestConnection: (draft: Pick<WebDavSyncSettings, "url" | "username" | "password">) => Promise<boolean>;
+  onTestConnection: (draft: Pick<SyncConnectionSettings, "url" | "username" | "password">) => Promise<boolean>;
   onToggleMaximized: () => void;
-  onUpdateSettings: (patch: Partial<WebDavSyncSettings>) => void;
+  onUpdateSettings: (patch: Partial<SyncConnectionSettings>) => void;
   state: SyncState;
   t: AppHost["actions"]["translate"];
 }) {
@@ -153,8 +153,8 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
 
   return (
     <DialogShell
-      bodyClassName={cm(styles, "webdav-sync-status-dialog-body")}
-      className="webdav-sync-status-dialog"
+      bodyClassName={cm(styles, "sync-status-dialog-body")}
+      className="sync-status-dialog"
       closeTitle={t("action.close")}
       compactMobileLayout={compactMobileLayout}
       dialogKey="webdav-sync-status"
@@ -165,20 +165,20 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
       onResize={onResize}
       onToggleMaximized={onToggleMaximized}
       restoreTitle={t("dialog.restore")}
-      title={t("webDavStatus.title")}
+      title={t("syncStatus.title")}
       titleId="webdav-sync-status-dialog-title"
     >
       <div
         aria-live="polite"
-        className={cm(styles, "webdav-sync-status-content")}
+        className={cm(styles, "sync-status-content")}
         data-webdav-sync-status-dialog
       >
         <section
-          className={cm(styles, "webdav-sync-status-section", "webdav-config-section")}
+          className={cm(styles, "sync-status-section", "sync-config-section")}
         >
           <h3>{t("webDavConfig.title")}</h3>
-          <div className={cm(styles, "webdav-config-form")}>
-            <label className={cm(styles, "webdav-config-field")}>
+          <div className={cm(styles, "sync-config-form")}>
+            <label className={cm(styles, "sync-config-field")}>
               <span>{t("webDavConfig.url")}</span>
               <input
                 onChange={handleUrlChange}
@@ -188,7 +188,7 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
               />
             </label>
 
-            <label className={cm(styles, "webdav-config-field")}>
+            <label className={cm(styles, "sync-config-field")}>
               <span>{t("webDavConfig.username")}</span>
               <input
                 onChange={handleUsernameChange}
@@ -197,7 +197,7 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
               />
             </label>
 
-            <label className={cm(styles, "webdav-config-field")}>
+            <label className={cm(styles, "sync-config-field")}>
               <span>{t("webDavConfig.password")}</span>
               <input
                 onChange={handlePasswordChange}
@@ -206,15 +206,15 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
               />
             </label>
 
-            <label className={cm(styles, "webdav-config-field")}>
+            <label className={cm(styles, "sync-config-field")}>
               <span>
                 {t("webDavConfig.maxConcurrent")}
                 {": "}
                 {draftConcurrent}
               </span>
               <input
-                max={MAX_WEBDAV_MAX_CONCURRENT_REQUESTS}
-                min={MIN_WEBDAV_MAX_CONCURRENT_REQUESTS}
+                max={MAX_MAX_CONCURRENT_REQUESTS}
+                min={MIN_MAX_CONCURRENT_REQUESTS}
                 onChange={(e) => handleConcurrentChange(Number(e.target.value))}
                 step={1}
                 type="range"
@@ -228,21 +228,21 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
             AI-CORRECTION 2026-08-01: 新增测试连接和应用设置按钮。
             测试连接始终可点，应用设置在草稿无改动时灰色禁用。
           */}
-          <div className={cm(styles, "webdav-config-actions")}>
+          <div className={cm(styles, "sync-config-actions")}>
             {testResult !== null && (
               <span
                 className={cm(
                   styles,
-                  "webdav-config-test-result",
+                  "sync-config-test-result",
                   testResult === "success" ? "is-success" : "is-failed",
                 )}
               >
                 {t(testResult === "success" ? "webDavConfig.testSuccess" : "webDavConfig.testFailed")}
               </span>
             )}
-            <div className={cm(styles, "webdav-config-buttons")}>
+            <div className={cm(styles, "sync-config-buttons")}>
               <button
-                className={cm(styles, "webdav-test-connection-btn")}
+                className={cm(styles, "sync-test-connection-btn")}
                 disabled={testing}
                 onClick={handleTestConnection}
                 type="button"
@@ -250,7 +250,7 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
                 {testing ? t("webDavConfig.testing") : t("webDavConfig.testConnection")}
               </button>
               <button
-                className={cm(styles, "webdav-apply-settings-btn", isDirty ? "is-dirty" : "is-clean")}
+                className={cm(styles, "sync-apply-settings-btn", isDirty ? "is-dirty" : "is-clean")}
                 disabled={!isDirty}
                 onClick={handleApplySettings}
                 type="button"
@@ -261,42 +261,42 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
           </div>
         </section>
 
-        <section className={cm(styles, "webdav-sync-status-section")}>
-          <h3>{t("webDavStatus.overview")}</h3>
-          <dl className={cm(styles, "webdav-sync-status-summary-grid")}>
+        <section className={cm(styles, "sync-status-section")}>
+          <h3>{t("syncStatus.overview")}</h3>
+          <dl className={cm(styles, "sync-status-summary-grid")}>
             <StatusValue
-              label={t("webDavStatus.syncEnabled")}
+              label={t("syncStatus.syncEnabled")}
               value={t(state.settings.enabled
-                ? "webDavStatus.enabled"
-                : "webDavStatus.disabled")}
+                ? "syncStatus.enabled"
+                : "syncStatus.disabled")}
             />
             <StatusValue
               label={t("settingsField.experimental-webdav-status")}
               value={t(resolvePhaseKey(status.phase))}
             />
             <StatusValue
-              label={t("webDavStatus.currentRunReason")}
+              label={t("syncStatus.currentRunReason")}
               value={status.currentRunReason === null
                 ? t("settingsOption.none")
                 : t(resolveRunReasonKey(status.currentRunReason))}
             />
             <StatusValue
-              label={t("webDavStatus.initialStage")}
+              label={t("syncStatus.initialStage")}
               value={t(resolveStageKey(status.initialSyncStage))}
             />
             <StatusValue
-              label={t("webDavStatus.pendingLocalChanges")}
+              label={t("syncStatus.pendingLocalChanges")}
               value={String(status.pendingLocalChangeCount)}
             />
             <StatusValue
-              label={t("webDavStatus.lastUpload")}
+              label={t("syncStatus.lastUpload")}
               value={formatNullableTime(
                 status.lastUploadAt,
                 t("settingsOption.none"),
               )}
             />
             <StatusValue
-              label={t("webDavStatus.lastDownload")}
+              label={t("syncStatus.lastDownload")}
               value={formatNullableTime(
                 status.lastDownloadAt,
                 t("settingsOption.none"),
@@ -305,41 +305,41 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
           </dl>
           {status.lastError === null ? null : (
             <div
-              className={cm(styles, "webdav-sync-status-error")}
+              className={cm(styles, "sync-status-error")}
               role="alert"
             >
-              <strong>{t("webDavStatus.lastError")}</strong>
+              <strong>{t("syncStatus.lastError")}</strong>
               <span>{status.lastError}</span>
             </div>
           )}
         </section>
 
-        <section className={cm(styles, "webdav-sync-status-section")}>
-          <h3>{t("webDavStatus.network")}</h3>
-          <dl className={cm(styles, "webdav-sync-status-network-grid")}>
+        <section className={cm(styles, "sync-status-section")}>
+          <h3>{t("syncStatus.network")}</h3>
+          <dl className={cm(styles, "sync-status-network-grid")}>
             <StatusValue
-              label={t("webDavStatus.maxConcurrentRequests")}
+              label={t("syncStatus.maxConcurrentRequests")}
               value={String(state.settings.maxConcurrentRequests)}
             />
             <StatusValue
-              label={t("webDavStatus.activeRequests")}
+              label={t("syncStatus.activeRequests")}
               value={String(status.activeRequestCount)}
             />
             <StatusValue
-              label={t("webDavStatus.queuedRequests")}
+              label={t("syncStatus.queuedRequests")}
               value={String(status.queuedRequestCount)}
             />
           </dl>
         </section>
 
-        <section className={cm(styles, "webdav-sync-status-section")}>
-          <h3>{t("webDavStatus.tasks")}</h3>
-          <div className={cm(styles, "webdav-sync-task-list")}>
+        <section className={cm(styles, "sync-status-section")}>
+          <h3>{t("syncStatus.tasks")}</h3>
+          <div className={cm(styles, "sync-task-list")}>
             {status.tasks.map((task) => (
               <article
                 className={cm(
                   styles,
-                  `webdav-sync-task-card is-${task.phase}`,
+                  `sync-task-card is-${task.phase}`,
                 )}
                 data-sync-task-direction={task.direction ?? "none"}
                 data-sync-task-kind={task.kind}
@@ -354,14 +354,14 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
                       : `${t(resolveTaskPhaseKey(task.phase))} (${t(resolveTaskDirectionKey(task.direction))})`}
                   </span>
                 </header>
-                <div className={cm(styles, "webdav-sync-task-metadata")}>
+                <div className={cm(styles, "sync-task-metadata")}>
                   <span>
-                    {t("webDavStatus.taskProgress")
+                    {t("syncStatus.taskProgress")
                       .replace("{completed}", String(task.completedUnitCount))
                       .replace("{total}", String(task.totalUnitCount))}
                   </span>
                   <span>
-                    {t("webDavStatus.taskLastStarted").replace(
+                    {t("syncStatus.taskLastStarted").replace(
                       "{time}",
                       formatNullableTime(
                         task.lastStartedAt,
@@ -370,7 +370,7 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
                     )}
                   </span>
                   <span>
-                    {t("webDavStatus.taskLastFinished").replace(
+                    {t("syncStatus.taskLastFinished").replace(
                       "{time}",
                       formatNullableTime(
                         task.lastFinishedAt,
@@ -379,7 +379,7 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
                     )}
                   </span>
                   {task.lastError === null ? null : (
-                    <span className={cm(styles, "webdav-sync-task-error")}>
+                    <span className={cm(styles, "sync-task-error")}>
                       {task.lastError}
                     </span>
                   )}
@@ -389,14 +389,14 @@ export const WebDavSyncStatusDialog = observer(function WebDavSyncStatusDialog({
           </div>
         </section>
 
-        <section className={cm(styles, "webdav-sync-status-section", "webdav-delete-section")}>
+        <section className={cm(styles, "sync-status-section", "sync-delete-section")}>
           {deleting ? (
-            <div className={cm(styles, "webdav-delete-progress")}>
-              {t("webDavConfig.deleteAllDataDeleting")}
+            <div className={cm(styles, "sync-delete-progress")}>
+              {t("syncConfig.deleteAllDataDeleting")}
             </div>
           ) : (
             <button
-              className={cm(styles, "webdav-delete-all-btn")}
+              className={cm(styles, "sync-delete-all-btn")}
               onClick={onDeleteAllData}
               type="button"
             >
@@ -451,38 +451,38 @@ function StatusValue({
 
 function resolvePhaseKey(phase: SyncPhase): UiKey {
   if (phase === "uploading") {
-    return "settingsField.experimental-webdav-status-uploading";
+    return "settingsField.experimental-sync-status-uploading";
   }
   if (phase === "downloading") {
-    return "settingsField.experimental-webdav-status-downloading";
+    return "settingsField.experimental-sync-status-downloading";
   }
   if (phase === "error") {
-    return "settingsField.experimental-webdav-status-error";
+    return "settingsField.experimental-sync-status-error";
   }
 
-  return "settingsField.experimental-webdav-status-idle";
+  return "settingsField.experimental-sync-status-idle";
 }
 
 function resolveRunReasonKey(reason: SyncRunReason): UiKey {
-  return `webDavStatus.runReason.${reason}`;
+  return `syncStatus.runReason.${reason}`;
 }
 
 function resolveStageKey(stage: SyncInitialSyncStage): UiKey {
-  return `webDavStatus.stage.${stage}`;
+  return `syncStatus.stage.${stage}`;
 }
 
 function resolveTaskKindKey(kind: SyncTaskKind): UiKey {
-  return `webDavStatus.task.${kind}`;
+  return `syncStatus.task.${kind}`;
 }
 
 function resolveTaskPhaseKey(phase: SyncTaskPhase): UiKey {
-  return `webDavStatus.taskPhase.${phase}`;
+  return `syncStatus.taskPhase.${phase}`;
 }
 
 function resolveTaskDirectionKey(direction: SyncTaskDirection): UiKey {
   return direction === "upload"
-    ? "settingsField.experimental-webdav-status-uploading"
-    : "settingsField.experimental-webdav-status-downloading";
+    ? "settingsField.experimental-sync-status-uploading"
+    : "settingsField.experimental-sync-status-downloading";
 }
 
 function formatNullableTime(value: string | null, fallback: string): string {

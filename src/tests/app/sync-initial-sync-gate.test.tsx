@@ -5,14 +5,14 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  WebDavInitialSyncFeatureGate,
-  WebDavInitialSyncGate,
-} from "@/app/shell/layout/webdav-initial-sync-gate";
+  SyncInitialSyncFeatureGate,
+  SyncInitialSyncGate,
+} from "@/app/shell/layout/sync-initial-sync-gate";
 import { OverlayStackProvider } from "@/app/shell/shared/overlay-stack";
 import type { SyncContract, SyncInitialSyncStage } from "@/domain/sync";
 import { SyncStateImpl } from "@/sync/sync-state-impl";
 
-describe("WebDavInitialSyncGate", () => {
+describe("SyncInitialSyncGate", () => {
   let container: HTMLDivElement;
   let root: Root;
   let state: SyncStateImpl;
@@ -89,26 +89,26 @@ describe("WebDavInitialSyncGate", () => {
       });
       root.render(
         <OverlayStackProvider>
-          <WebDavInitialSyncGate sync={sync} translate={(key) => key} />
+          <SyncInitialSyncGate sync={sync} translate={(key) => key} />
         </OverlayStackProvider>,
       );
     });
 
     expect(document.querySelector(
-      "[data-webdav-initial-sync-stage='canvas']",
+      "[data-sync-initial-sync-stage='canvas']",
     )).not.toBeNull();
     expect(document.querySelector(
-      "[data-webdav-initial-sync-progress]",
+      "[data-sync-initial-sync-progress]",
     )).toHaveProperty("value", 55);
     expect(document.querySelector("output")?.textContent).toBe("55%");
     expect(document.querySelector("section")?.getAttribute("aria-label"))
-      .toBe("webDavInitialSync.canvasSyncing");
+      .toBe("syncInitialSync.canvasSyncing");
 
     act(() => {
       setInitialStage(state, "blueprints");
     });
     expect(document.querySelector(
-      "[data-webdav-initial-sync-stage='canvas']",
+      "[data-sync-initial-sync-stage='canvas']",
     )).toBeNull();
   });
 
@@ -117,26 +117,26 @@ describe("WebDavInitialSyncGate", () => {
       setInitialStage(state, "blueprints");
       root.render(
         <>
-          <WebDavInitialSyncFeatureGate
+          <SyncInitialSyncFeatureGate
             feature="blueprints"
             state={state}
             translate={(key) => key}
           >
             <span data-feature-content="blueprints" />
-          </WebDavInitialSyncFeatureGate>
-          <WebDavInitialSyncFeatureGate
+          </SyncInitialSyncFeatureGate>
+          <SyncInitialSyncFeatureGate
             feature="modules"
             state={state}
             translate={(key) => key}
           >
             <span data-feature-content="modules" />
-          </WebDavInitialSyncFeatureGate>
+          </SyncInitialSyncFeatureGate>
         </>,
       );
     });
 
     expect(container.querySelector(
-      "[data-webdav-initial-sync-feature='blueprints']",
+      "[data-sync-initial-sync-feature='blueprints']",
     )).not.toBeNull();
     expect(container.querySelector("[data-feature-content='blueprints']")).toBeNull();
 

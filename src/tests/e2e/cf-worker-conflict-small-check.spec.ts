@@ -408,12 +408,12 @@ async function runConflictScenario(options: {
       throw new Error("Current world document is unavailable.");
     }
     const syncHostModuleUrl = "/src/sync/sync-host.ts";
-    const { createWorldDocumentWebDavValue } = await import(
+    const { createWorldDocumentRemoteValue } = await import(
       /* @vite-ignore */ syncHostModuleUrl
     );
     return {
       assetId: documentSnapshot.baseId as string,
-      content: JSON.stringify(createWorldDocumentWebDavValue(documentSnapshot)),
+      content: JSON.stringify(createWorldDocumentRemoteValue(documentSnapshot)),
     };
   });
   expect(remoteSeed.assetId).toBe("stm_hongs_3");
@@ -434,7 +434,7 @@ async function runConflictScenario(options: {
     force: true,
   });
   await page.waitForTimeout(1500);
-  await expect(page.locator('[data-webdav-save-state]')).toHaveCount(0, { timeout: 3000 });
+  await expect(page.locator('[data-sync-save-state]')).toHaveCount(0, { timeout: 3000 });
 
   const seededRevision = await seedRemoteWorldDocument(
     request,
@@ -741,7 +741,7 @@ async function runConflictScenario(options: {
   );
   expect(entityCountAfterIncrementalSync).toBeGreaterThan(entityCountBeforeIncrementalSync);
 
-  const hasError = await page.locator('[data-webdav-save-state="error"]').isVisible().catch(() => false);
+  const hasError = await page.locator('[data-sync-save-state="error"]').isVisible().catch(() => false);
   console.log(`[TEST] Save error: ${hasError}`);
 
   const incrLogs = syncLogs.slice(preCheck + checkLogs.length);

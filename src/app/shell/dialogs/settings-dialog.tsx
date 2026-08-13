@@ -1256,7 +1256,7 @@ export const SettingsDialog = observer(function SettingsDialog({
     )}
     {webDavDeleteInputDialogState.visible && (
       <ClearStorageInputDialog
-        confirmButtonKey="webDavConfig.deleteAllDataFinalConfirm"
+        confirmButtonKey="syncConfig.deleteAllDataFinalConfirm"
         confirmDialogState={webDavDeleteInputDialogState}
         expectedText={webDavDeleteExpectedText}
         inputValue={webDavDeleteInputValue}
@@ -1281,7 +1281,7 @@ export const SettingsDialog = observer(function SettingsDialog({
     )}
     {cfDeleteInputDialogState.visible && (
       <ClearStorageInputDialog
-        confirmButtonKey="webDavConfig.deleteAllDataFinalConfirm"
+        confirmButtonKey="syncConfig.deleteAllDataFinalConfirm"
         confirmDialogState={cfDeleteInputDialogState}
         expectedText={cfDeleteExpectedText}
         inputValue={cfDeleteInputValue}

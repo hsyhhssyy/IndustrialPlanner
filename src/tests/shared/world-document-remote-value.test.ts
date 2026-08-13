@@ -3,12 +3,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  createWorldDocumentWebDavValue,
+  createWorldDocumentRemoteValue,
   preserveLocalWorldDocumentIdentity,
 } from "@/sync/sync-host";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 
-describe("world document WebDAV identity", () => {
+describe("world document remote value", () => {
   it("projects device-local document identity and viewport out of remote content", () => {
     const firstDeviceDocument = createDummyWorldDocument();
     const secondDeviceDocument = {
@@ -24,10 +24,10 @@ describe("world document WebDAV identity", () => {
       },
     };
 
-    expect(createWorldDocumentWebDavValue(firstDeviceDocument)).toEqual(
-      createWorldDocumentWebDavValue(secondDeviceDocument),
+    expect(createWorldDocumentRemoteValue(firstDeviceDocument)).toEqual(
+      createWorldDocumentRemoteValue(secondDeviceDocument),
     );
-    expect(createWorldDocumentWebDavValue(firstDeviceDocument)).toMatchObject({
+    expect(createWorldDocumentRemoteValue(firstDeviceDocument)).toMatchObject({
       documentKey: firstDeviceDocument.baseId,
       documentSettings: {
         viewport: {
@@ -41,7 +41,7 @@ describe("world document WebDAV identity", () => {
 
   it("applies remote content without replacing the local document identity or viewport", () => {
     const localDocument = createDummyWorldDocument();
-    const remoteDocument = createWorldDocumentWebDavValue({
+    const remoteDocument = createWorldDocumentRemoteValue({
       ...localDocument,
       documentKey: "remote-device-key",
       meta: {

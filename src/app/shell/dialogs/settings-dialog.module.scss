@@ -327,23 +327,23 @@
   font-size: 0.82rem;
 }
 
-.webdav-sync-status-dialog {
+.sync-status-dialog {
   width: min(760px, calc(100vw - 32px));
   height: min(620px, calc(100vh - 32px));
 }
 
-.webdav-sync-status-dialog-body {
+.sync-status-dialog-body {
   min-height: 0;
   overflow: auto;
 }
 
-.webdav-sync-status-content {
+.sync-status-content {
   display: grid;
   gap: 12px;
   padding: 2px;
 }
 
-.webdav-sync-status-section {
+.sync-status-section {
   display: grid;
   gap: 10px;
   padding: 12px;
@@ -352,21 +352,21 @@
   background: var(--surface-2);
 }
 
-.webdav-sync-status-section > h3 {
+.sync-status-section > h3 {
   font-size: 0.95rem;
   color: var(--text-0);
 }
 
-.webdav-sync-status-summary-grid,
-.webdav-sync-status-network-grid {
+.sync-status-summary-grid,
+.sync-status-network-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
   gap: 8px;
   margin: 0;
 }
 
-.webdav-sync-status-summary-grid > div,
-.webdav-sync-status-network-grid > div {
+.sync-status-summary-grid > div,
+.sync-status-network-grid > div {
   display: grid;
   gap: 3px;
   min-width: 0;
@@ -375,14 +375,14 @@
   background: var(--surface-3);
 }
 
-.webdav-sync-status-summary-grid dt,
-.webdav-sync-status-network-grid dt {
+.sync-status-summary-grid dt,
+.sync-status-network-grid dt {
   color: var(--text-1);
   font-size: 0.76rem;
 }
 
-.webdav-sync-status-summary-grid dd,
-.webdav-sync-status-network-grid dd {
+.sync-status-summary-grid dd,
+.sync-status-network-grid dd {
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
@@ -391,7 +391,7 @@
   font-weight: 600;
 }
 
-.webdav-sync-status-error {
+.sync-status-error {
   display: grid;
   gap: 3px;
   padding: 9px 10px;
@@ -402,13 +402,13 @@
   overflow-wrap: anywhere;
 }
 
-.webdav-sync-task-list {
+.sync-task-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
   gap: 8px;
 }
 
-.webdav-sync-task-card {
+.sync-task-card {
   display: grid;
   gap: 8px;
   min-width: 0;
@@ -418,20 +418,20 @@
   background: var(--surface-3);
 }
 
-.webdav-sync-task-card > header {
+.sync-task-card > header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
-.webdav-sync-task-card > header strong {
+.sync-task-card > header strong {
   min-width: 0;
   color: var(--text-0);
   font-size: 0.86rem;
 }
 
-.webdav-sync-task-card > header span {
+.sync-task-card > header span {
   flex: 0 0 auto;
   padding: 2px 7px;
   border-radius: 999px;
@@ -441,21 +441,21 @@
   font-weight: 600;
 }
 
-.webdav-sync-task-card.is-running > header span {
+.sync-task-card.is-running > header span {
   background: var(--accent-soft);
   color: var(--accent-strong);
 }
 
-.webdav-sync-task-card.is-success > header span {
+.sync-task-card.is-success > header span {
   color: var(--accent-strong);
 }
 
-.webdav-sync-task-card.is-error > header span,
-.webdav-sync-task-error {
+.sync-task-card.is-error > header span,
+.sync-task-error {
   color: var(--danger);
 }
 
-.webdav-sync-task-metadata {
+.sync-task-metadata {
   display: grid;
   gap: 3px;
   color: var(--text-1);
@@ -463,16 +463,16 @@
   line-height: 1.35;
 }
 
-.webdav-config-section {
+.sync-config-section {
   border-color: var(--accent-soft);
 }
 
-.webdav-config-form {
+.sync-config-form {
   display: grid;
   gap: 14px;
 }
 
-.webdav-config-switch {
+.sync-config-switch {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -492,7 +492,7 @@
   }
 }
 
-.webdav-config-field {
+.sync-config-field {
   display: grid;
   gap: 4px;
 
@@ -539,12 +539,12 @@
   }
 }
 
-.webdav-delete-section {
+.sync-delete-section {
   border-color: var(--danger-soft, rgba(var(--danger-rgb, 220, 38, 38), 0.25));
   background: var(--surface-2);
 }
 
-.webdav-delete-all-btn {
+.sync-delete-all-btn {
   width: 100%;
   padding: 10px 16px;
   border: 1px solid var(--danger, #dc2626);
@@ -565,7 +565,7 @@
   }
 }
 
-.webdav-delete-progress {
+.sync-delete-progress {
   width: 100%;
   padding: 10px 16px;
   border-radius: 8px;
@@ -577,12 +577,12 @@
 }
 
 // AI-CORRECTION 2026-08-01: 新增测试连接和应用设置按钮样式。
-.webdav-config-actions {
+.sync-config-actions {
   display: grid;
   gap: 8px;
 }
 
-.webdav-config-test-result {
+.sync-config-test-result {
   padding: 6px 10px;
   border-radius: 8px;
   font-size: 0.82rem;
@@ -601,12 +601,12 @@
   }
 }
 
-.webdav-config-buttons {
+.sync-config-buttons {
   display: flex;
   gap: 10px;
 }
 
-.webdav-test-connection-btn {
+.sync-test-connection-btn {
   flex: 1;
   padding: 9px 14px;
   border: 1px solid var(--line);
@@ -635,7 +635,7 @@
   }
 }
 
-.webdav-apply-settings-btn {
+.sync-apply-settings-btn {
   flex: 1;
   padding: 9px 14px;
   border: 1px solid var(--line);
@@ -671,7 +671,7 @@
 }
 
 // AI-CORRECTION 2026-08-01: 卡片增加四周 margin，与其他弹窗风格统一。
-.webdav-sync-status-section {
+.sync-status-section {
   margin: 0 4px;
 }
 

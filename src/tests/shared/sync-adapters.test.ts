@@ -20,13 +20,13 @@ import type {
   SyncPlanItem,
   SyncPlanUpload,
   SyncRemoteSession,
-  WebDavResourceStat,
-  WebDavStorageClient,
-  WebDavTextFile,
-  WebDavWriteOptions,
+  SyncResourceStat,
+  SyncStorageClient,
+  SyncTextFile,
+  SyncWriteOptions,
 } from "@/sync";
 
-class MemoryWebDavClient implements WebDavStorageClient {
+class MemoryStorageClient implements SyncStorageClient {
   public readonly rootPath = "/industrial-planner";
   public readonly files = new Map<string, string>();
   public readonly madeDirectories: string[] = [];
@@ -40,15 +40,15 @@ class MemoryWebDavClient implements WebDavStorageClient {
     this.madeDirectories.push(relativePath);
   }
 
-  public async listDirectory(_relativePath: string): Promise<WebDavResourceStat[]> {
+  public async listDirectory(_relativePath: string): Promise<SyncResourceStat[]> {
     return [];
   }
 
-  public async stat(_relativePath: string): Promise<WebDavResourceStat | null> {
+  public async stat(_relativePath: string): Promise<SyncResourceStat | null> {
     return null;
   }
 
-  public async readTextFile(relativePath: string): Promise<WebDavTextFile | null> {
+  public async readTextFile(relativePath: string): Promise<SyncTextFile | null> {
     this.readPaths.push(relativePath);
     const content = this.files.get(relativePath);
 
@@ -64,7 +64,7 @@ class MemoryWebDavClient implements WebDavStorageClient {
   public async writeTextFile(
     relativePath: string,
     content: string,
-    _options?: WebDavWriteOptions,
+    _options?: SyncWriteOptions,
   ): Promise<boolean> {
     this.files.set(relativePath, content);
 
@@ -77,7 +77,7 @@ class MemoryWebDavClient implements WebDavStorageClient {
 }
 
 async function createSession(
-  client: MemoryWebDavClient,
+  client: MemoryStorageClient,
   adapters: readonly SyncAdapter[],
 ): Promise<SyncRemoteSession> {
   return await createWebDavSyncRemote({ client }).beginSession({
@@ -101,7 +101,7 @@ interface AdapterRunControls {
 
 async function createAdapterRun(
   adapter: SyncAdapter,
-  client: MemoryWebDavClient,
+  client: MemoryStorageClient,
   scope?: SyncAdapterScope,
 ): Promise<AdapterRunControls> {
   const session = await createSession(client, [adapter]);
@@ -174,7 +174,7 @@ async function createAdapterRun(
 
 async function syncAdapter(
   adapter: SyncAdapter,
-  client: MemoryWebDavClient,
+  client: MemoryStorageClient,
   scope?: SyncAdapterScope,
 ): Promise<SyncAdapterResult> {
   const run = await createAdapterRun(adapter, client, scope);
@@ -190,16 +190,16 @@ async function syncAdapter(
   return run.outcome.result;
 }
 
-describe("webdav-sync-adapters", () => {
+describe("sync-adapters", () => {
   afterEach(() => {
     localStorage.clear();
   });
 
-  it("clears local WebDAV metadata after deleting the remote root", async () => {
-    const client = new MemoryWebDavClient();
+  it("clears local sync metadata after deleting the remote root", async () => {
+    const client = new MemoryStorageClient();
     const remote = createWebDavSyncRemote({ client });
     localStorage.setItem("v3-sync-provider", "webdav");
-    localStorage.setItem("v3-webdav-sync-metadata", JSON.stringify({
+    localStorage.setItem("v3-sync-metadata", JSON.stringify({
       contentHashes: { "blueprints:item-a": "hash-a" },
       remoteRevisions: {},
       remoteEtags: {},
@@ -207,12 +207,12 @@ describe("webdav-sync-adapters", () => {
 
     await remote.resetRemote?.();
 
-    expect(localStorage.getItem("v3-webdav-sync-metadata")).toBeNull();
+    expect(localStorage.getItem("v3-sync-metadata")).toBeNull();
     remote.dispose?.();
   });
 
   it("uploads and downloads a full-no-revision value", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     let localValue: { count: number } | null = { count: 1 };
     const adapter = createFullNoRevisionAdapter({
       id: "planner",
@@ -234,7 +234,7 @@ describe("webdav-sync-adapters", () => {
   });
 
   it("fails closed instead of overwriting malformed remote JSON", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     client.files.set("assets/malformed.json", "{not-json");
     const adapter = createFullNoRevisionAdapter({
       id: "malformed-remote",
@@ -248,7 +248,7 @@ describe("webdav-sync-adapters", () => {
   });
 
   it("uses the local value to overwrite the remote value after a conflict", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     let localValue: { count: number } | null = { count: 1 };
     const adapter = createFullNoRevisionAdapter({
       id: "conflict-use-local",
@@ -275,7 +275,7 @@ describe("webdav-sync-adapters", () => {
   });
 
   it("uses the remote value to discard the local value after a conflict", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     let localValue: { count: number } | null = { count: 1 };
     const adapter = createFullNoRevisionAdapter({
       id: "conflict-use-remote",
@@ -302,7 +302,7 @@ describe("webdav-sync-adapters", () => {
   });
 
   it("syncs a full-with-revision collection through index.json", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     let entries = [{ id: "blueprint-a", value: { name: "A" }, deletedAt: null as string | null }];
     const adapter = createFullWithRevisionAdapter({
       id: "blueprints",
@@ -477,7 +477,7 @@ describe("webdav-sync-adapters", () => {
   });
 
   it("classifies collection conflicts as plan items without mutating either side", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     let entries = [{
       id: "blueprint-a",
       value: { name: "initial" },
@@ -549,7 +549,7 @@ describe("webdav-sync-adapters", () => {
   });
 
   it("stores patch-with-revision snapshots as full plus deltas", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     let localValue: { entities: Record<string, { x: number }> } | null = { entities: { a: { x: 1 } } };
     const adapter = createPatchWithRevisionAdapter({
       id: "document:main",
@@ -582,7 +582,7 @@ describe("webdav-sync-adapters", () => {
   });
 
   it("syncs a patch-with-revision collection through index.json", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     let entries = [{ id: "canvas-a", value: { stages: [{ id: "stage-a", count: 1 }] }, deletedAt: null as string | null }];
     const adapter = createPatchCollectionWithRevisionAdapter({
       id: "module-canvases",
@@ -646,7 +646,7 @@ describe("webdav-sync-adapters", () => {
   });
 
   it("uses a stable canonical ETag to skip rebuilding an unchanged patch collection", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     const originalReadTextFile = client.readTextFile.bind(client);
     client.readTextFile = vi.fn(async (relativePath: string) => {
       const file = await originalReadTextFile(relativePath);
@@ -706,7 +706,7 @@ describe("webdav-sync-adapters", () => {
       readonly content: number;
       readonly viewportCenter: number;
     };
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     let seedEntries = [{
       id: "canvas-a",
       value: { content: 1, viewportCenter: 12 },
@@ -769,7 +769,7 @@ describe("webdav-sync-adapters", () => {
   });
 
   it("reports real patch collection protocol progress monotonically", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     const progress: number[] = [];
     const adapter = createPatchCollectionWithRevisionAdapter({
       id: "documents",
@@ -799,7 +799,7 @@ describe("webdav-sync-adapters", () => {
   });
 
   it("lets a local full-collection edit restore a remotely deleted entry", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     let entries = [{
       id: "blueprint-a",
       value: { name: "initial" },
@@ -865,7 +865,7 @@ describe("webdav-sync-adapters", () => {
   });
 
   it("lets a remote full-collection edit restore a locally deleted entry", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     let entries = [{
       id: "blueprint-a",
       value: { name: "initial" },
@@ -918,7 +918,7 @@ describe("webdav-sync-adapters", () => {
   });
 
   it("lets a remote tombstone discard a conflicting local patch edit", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     let entries = [{
       id: "canvas-a",
       value: { count: 1 },
@@ -967,7 +967,7 @@ describe("webdav-sync-adapters", () => {
   });
 
   it("lets a local patch tombstone discard a conflicting remote edit", async () => {
-    const client = new MemoryWebDavClient();
+    const client = new MemoryStorageClient();
     let entries = [{
       id: "canvas-a",
       value: { count: 1 },

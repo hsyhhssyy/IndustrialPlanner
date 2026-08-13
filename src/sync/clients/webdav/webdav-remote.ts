@@ -30,16 +30,16 @@ import type {
   SyncWriteOptions,
 } from "../types";
 import {
-  clearWebDavLastSeenRemoteEtag,
-  clearWebDavLastSeenRemoteRevision,
-  clearWebDavLastSyncedContentHash,
-  clearWebDavSyncMetadata,
-  readWebDavLastSeenRemoteEtag,
-  readWebDavLastSeenRemoteRevision,
-  readWebDavLastSyncedContentHash,
-  writeWebDavLastSeenRemoteEtag,
-  writeWebDavLastSeenRemoteRevision,
-  writeWebDavLastSyncedContentHash,
+  clearLastSeenRemoteEtag,
+  clearLastSeenRemoteRevision,
+  clearLastSyncedContentHash,
+  clearSyncMetadata,
+  readLastSeenRemoteEtag,
+  readLastSeenRemoteRevision,
+  readLastSyncedContentHash,
+  writeLastSeenRemoteEtag,
+  writeLastSeenRemoteRevision,
+  writeLastSyncedContentHash,
 } from "../../storage";
 import { clearActiveSyncTombstoneScope } from "@/shared/storage/sync-tombstone-storage";
 
@@ -116,7 +116,7 @@ export class WebDavSyncRemote implements SyncRemote {
 
   public async resetRemote(): Promise<void> {
     await this.client.deleteResource("");
-    clearWebDavSyncMetadata();
+    clearSyncMetadata();
     await clearActiveSyncTombstoneScope();
   }
 
@@ -127,42 +127,42 @@ export class WebDavSyncRemote implements SyncRemote {
 
 class WebDavSyncLocalState implements SyncLocalState {
   public async getLastSyncedHash(assetKey: string): Promise<string | null> {
-    return readWebDavLastSyncedContentHash(assetKey);
+    return readLastSyncedContentHash(assetKey);
   }
 
   public async setLastSyncedHash(assetKey: string, hash: string | null): Promise<void> {
     if (hash === null) {
-      clearWebDavLastSyncedContentHash(assetKey);
+      clearLastSyncedContentHash(assetKey);
       return;
     }
 
-    writeWebDavLastSyncedContentHash(assetKey, hash);
+    writeLastSyncedContentHash(assetKey, hash);
   }
 
   public async getRemoteRevision(key: string): Promise<number | null> {
-    return readWebDavLastSeenRemoteRevision(key);
+    return readLastSeenRemoteRevision(key);
   }
 
   public async setRemoteRevision(key: string, revision: number | null): Promise<void> {
     if (revision === null) {
-      clearWebDavLastSeenRemoteRevision(key);
+      clearLastSeenRemoteRevision(key);
       return;
     }
 
-    writeWebDavLastSeenRemoteRevision(key, revision);
+    writeLastSeenRemoteRevision(key, revision);
   }
 
   public async getRemoteEtag(key: string): Promise<string | null> {
-    return readWebDavLastSeenRemoteEtag(key);
+    return readLastSeenRemoteEtag(key);
   }
 
   public async setRemoteEtag(key: string, etag: string | null): Promise<void> {
     if (etag === null) {
-      clearWebDavLastSeenRemoteEtag(key);
+      clearLastSeenRemoteEtag(key);
       return;
     }
 
-    writeWebDavLastSeenRemoteEtag(key, etag);
+    writeLastSeenRemoteEtag(key, etag);
   }
 }
 
@@ -746,7 +746,7 @@ async function readRemoteIndexState(
   client: SyncStorageClient,
   indexPath: string,
 ): Promise<RemoteIndexState> {
-  const lastSeenRevision = readWebDavLastSeenRemoteRevision(indexPath);
+  const lastSeenRevision = readLastSeenRemoteRevision(indexPath);
   const file = await client.readTextFile(indexPath);
   let canonicalState: RemoteIndexState | null = null;
   if (file !== null) {
@@ -799,7 +799,7 @@ async function readRemoteIndexState(
       ? canonicalFallback.canonicalEtag
       : null,
   };
-  writeWebDavLastSeenRemoteRevision(indexPath, result.index.revision);
+  writeLastSeenRemoteRevision(indexPath, result.index.revision);
 
   return result;
 }
@@ -811,7 +811,7 @@ async function writeRemoteIndex(
   expectedRevision: number,
   canonicalMissing: boolean,
 ): Promise<void> {
-  clearWebDavLastSeenRemoteEtag(indexPath);
+  clearLastSeenRemoteEtag(indexPath);
   const committedIndex: RemoteIndexFile = {
     ...index,
     revision: expectedRevision + 1,
@@ -822,7 +822,7 @@ async function writeRemoteIndex(
     committedIndex,
     createAtomicWriteOptions(canonicalMissing),
   );
-  writeWebDavLastSeenRemoteRevision(indexPath, committedIndex.revision);
+  writeLastSeenRemoteRevision(indexPath, committedIndex.revision);
 }
 
 function normalizeRemoteIndex(value: unknown): RemoteIndexFile {
@@ -931,7 +931,7 @@ async function readRemotePatchMetaState(
   directoryPath: string,
 ): Promise<RemotePatchMetaState | null> {
   const metaPath = resolvePath(directoryPath, "meta.json");
-  const lastSeenRevision = readWebDavLastSeenRemoteRevision(metaPath);
+  const lastSeenRevision = readLastSeenRemoteRevision(metaPath);
   const file = await client.readTextFile(metaPath);
   let canonicalState: RemotePatchMetaState | null = null;
   if (file !== null) {
@@ -975,13 +975,13 @@ async function readRemotePatchMetaState(
       canonicalMissing: canonicalState === null,
       lastModified: null,
     };
-    writeWebDavLastSeenRemoteRevision(metaPath, result.meta.revision);
+    writeLastSeenRemoteRevision(metaPath, result.meta.revision);
 
     return result;
   }
 
   if (canonicalState !== null) {
-    writeWebDavLastSeenRemoteRevision(
+    writeLastSeenRemoteRevision(
       metaPath,
       canonicalState.meta.revision,
     );
@@ -1096,7 +1096,7 @@ async function writeRemotePatchMeta(
     meta,
     writeOptions,
   );
-  writeWebDavLastSeenRemoteRevision(metaPath, meta.revision);
+  writeLastSeenRemoteRevision(metaPath, meta.revision);
 }
 
 async function readLatestRevisionJournalState<TValue extends { readonly revision: number }>(

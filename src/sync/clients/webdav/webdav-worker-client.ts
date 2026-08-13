@@ -1,17 +1,20 @@
 import {
   normalizeWebDavRootPath,
   // AI-CORRECTION 2026-07-30: 以下类型别名来自 webdav-client.ts，底层指向 ../types。
-  type WebDavClientOptions,
-  type WebDavResourceStat,
-  type WebDavStorageClient,
-  type WebDavTextFile,
+  // AI-CORRECTION 2026-08-13: 别名已删除（见 webdav-client.ts 的 AI-REMOVED 2026-08-13），
+  // 此处改为直接从 ../types 导入通用类型，行为不变。
 } from "./webdav-client";
 import type {
   WebDavWorkerOperation,
   WebDavWorkerRequest,
   WebDavWorkerResponse,
 } from "./webdav-worker-protocol";
-import type { SyncClientOptions } from "../types";
+import type {
+  SyncClientOptions,
+  SyncResourceStat,
+  SyncStorageClient,
+  SyncTextFile,
+} from "../types";
 import { attachWorkerRuntime } from "@/shared/worker/attach-worker-runtime";
 
 export interface WebDavWorkerStorageClientOptions extends SyncClientOptions {
@@ -39,12 +42,12 @@ export interface WebDavWorkerRequestActivity {
 
 export function createWebDavWorkerStorageClient(
   options: WebDavWorkerStorageClientOptions,
-): WebDavStorageClient {
+): SyncStorageClient {
   const worker = options.workerFactory?.() ?? new Worker(
     new URL("./webdav-worker.ts", import.meta.url),
     { type: "module" },
   );
-  const clientOptions: WebDavClientOptions = {
+  const clientOptions: SyncClientOptions = {
     baseUrl: options.baseUrl,
     ...(options.username === undefined ? {} : { username: options.username }),
     ...(options.password === undefined ? {} : { password: options.password }),
@@ -182,15 +185,15 @@ export function createWebDavWorkerStorageClient(
         relativePath,
       });
     },
-    listDirectory: async (relativePath) => await request<WebDavResourceStat[]>({
+    listDirectory: async (relativePath) => await request<SyncResourceStat[]>({
       type: "list-directory",
       relativePath,
     }),
-    stat: async (relativePath) => await request<WebDavResourceStat | null>({
+    stat: async (relativePath) => await request<SyncResourceStat | null>({
       type: "stat",
       relativePath,
     }),
-    readTextFile: async (relativePath, readOptions = {}) => await request<WebDavTextFile | null>({
+    readTextFile: async (relativePath, readOptions = {}) => await request<SyncTextFile | null>({
       type: "read-text-file",
       relativePath,
       options: readOptions,

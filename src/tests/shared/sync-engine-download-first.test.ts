@@ -8,19 +8,19 @@ import {
   createFullWithRevisionAdapter,
   createPatchCollectionWithRevisionAdapter,
   createSyncRemoteCollection,
-  createWebDavSyncService,
+  createSyncService,
   RemoteDownloadStaleError,
   RemoteWriteConflictError,
 } from "@/sync";
 import type {
+  SyncAdapter,
+  SyncAdapterResult,
   SyncEngineTransaction,
   SyncPlanItem,
   SyncRemote,
   SyncRemoteSession,
   SyncService,
-  WebDavSyncAdapter,
-  WebDavSyncAdapterResult,
-  WebDavSyncServiceOptions,
+  SyncServiceOptions,
 } from "@/sync";
 
 // ============================================================================
@@ -103,8 +103,8 @@ function createPlanItemStub(
 }
 
 function createStubAdapter(
-  sync: WebDavSyncAdapter["sync"],
-): WebDavSyncAdapter & { readonly sync: ReturnType<typeof vi.fn> } {
+  sync: SyncAdapter["sync"],
+): SyncAdapter & { readonly sync: ReturnType<typeof vi.fn> } {
   return {
     id: "adapter",
     mode: "full-no-revision",
@@ -121,7 +121,7 @@ function createStubAdapter(
 function createUploadAdapter(
   id: string,
   events: string[],
-): WebDavSyncAdapter & { readonly sync: ReturnType<typeof vi.fn> } {
+): SyncAdapter & { readonly sync: ReturnType<typeof vi.fn> } {
   return {
     id,
     mode: "full-no-revision",
@@ -133,8 +133,8 @@ function createUploadAdapter(
     checkPath: `${id}.json`,
     sync: vi.fn(async (
       _session: SyncRemoteSession,
-      options: Parameters<WebDavSyncAdapter["sync"]>[1],
-    ): Promise<WebDavSyncAdapterResult> => {
+      options: Parameters<SyncAdapter["sync"]>[1],
+    ): Promise<SyncAdapterResult> => {
       events.push(`${id}.sync`);
       const item = createPlanItemStub(id, "single", "upload");
       item.applyUpload.mockImplementation(async () => {
@@ -207,7 +207,7 @@ describe("sync-engine-download-first", () => {
       }),
       markApplied: async () => undefined,
     };
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote: () => ({
         localState: session.localState,
@@ -240,7 +240,7 @@ describe("sync-engine-download-first", () => {
       return { writes: [] };
     });
     const downloadItem = createPlanItemStub("downloader", "single", "download");
-    const downloader: WebDavSyncAdapter = {
+    const downloader: SyncAdapter = {
       id: "downloader",
       mode: "full-no-revision",
       collection: createSyncRemoteCollection({
@@ -251,8 +251,8 @@ describe("sync-engine-download-first", () => {
       checkPath: "downloader.json",
       sync: vi.fn(async (
         _session: SyncRemoteSession,
-        options: Parameters<WebDavSyncAdapter["sync"]>[1],
-      ): Promise<WebDavSyncAdapterResult> => {
+        options: Parameters<SyncAdapter["sync"]>[1],
+      ): Promise<SyncAdapterResult> => {
         events.push("downloader.sync");
         options.transaction.recordItem(downloadItem);
         return {
@@ -287,7 +287,7 @@ describe("sync-engine-download-first", () => {
       }),
       markApplied: async () => undefined,
     };
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote: () => ({
         localState: session.localState,
@@ -318,10 +318,10 @@ describe("sync-engine-download-first", () => {
       changedAssetIds: ["single"],
     }));
     adapter.sync.mockRejectedValueOnce(downloadStale);
-    const createRemoteMock = vi.fn<WebDavSyncServiceOptions["createRemote"]>(
+    const createRemoteMock = vi.fn<SyncServiceOptions["createRemote"]>(
       () => createTestRemote(),
     );
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote: createRemoteMock,
       adapters: [adapter],
@@ -354,7 +354,7 @@ describe("sync-engine-download-first", () => {
         actualHash: null,
       }]),
     );
-    const service = createWebDavSyncService({
+    const service = createSyncService({
       readSettings: () => createSettings(),
       createRemote: () => createTestRemote(),
       adapters: [adapter],
@@ -613,8 +613,8 @@ describe("sync-engine-dirty-generations", () => {
     let serviceUnderTest: SyncService;
     const adapter = createStubAdapter(async (
       _session: SyncRemoteSession,
-      options: Parameters<WebDavSyncAdapter["sync"]>[1],
-    ): Promise<WebDavSyncAdapterResult> => {
+      options: Parameters<SyncAdapter["sync"]>[1],
+    ): Promise<SyncAdapterResult> => {
       options.transaction.recordItem(
         createPlanItemStub("adapter", "single", "upload"),
       );
@@ -627,7 +627,7 @@ describe("sync-engine-dirty-generations", () => {
         changedAssetIds: ["single"],
       };
     });
-    serviceUnderTest = createWebDavSyncService({
+    serviceUnderTest = createSyncService({
       readSettings: () => createSettings(),
       createRemote: () => createTestRemote(),
       adapters: [adapter],
@@ -655,8 +655,8 @@ describe("sync-engine-dirty-generations", () => {
     const seenStatuses: Array<{ readonly canvasLocked: boolean }> = [];
     const adapter = createStubAdapter(async (
       _session: SyncRemoteSession,
-      options: Parameters<WebDavSyncAdapter["sync"]>[1],
-    ): Promise<WebDavSyncAdapterResult> => {
+      options: Parameters<SyncAdapter["sync"]>[1],
+    ): Promise<SyncAdapterResult> => {
       pass += 1;
       if (pass === 1) {
         options.transaction.recordItem(
@@ -687,7 +687,7 @@ describe("sync-engine-dirty-generations", () => {
       };
     });
     const resolveConflicts = vi.fn(async () => []);
-    serviceUnderTest = createWebDavSyncService({
+    serviceUnderTest = createSyncService({
       readSettings: () => createSettings(),
       createRemote: () => createTestRemote(),
       adapters: [adapter],
@@ -716,8 +716,8 @@ describe("sync-engine-dirty-generations", () => {
   it("clears the dirty flag only when the frozen snapshot did not change", async () => {
     const adapter = createStubAdapter(async (
       _session: SyncRemoteSession,
-      options: Parameters<WebDavSyncAdapter["sync"]>[1],
-    ): Promise<WebDavSyncAdapterResult> => {
+      options: Parameters<SyncAdapter["sync"]>[1],
+    ): Promise<SyncAdapterResult> => {
       options.transaction.recordItem(
         createPlanItemStub("adapter", "single", "upload"),
       );
@@ -728,7 +728,7 @@ describe("sync-engine-dirty-generations", () => {
         changedAssetIds: ["single"],
       };
     });
-    const serviceUnderTest = createWebDavSyncService({
+    const serviceUnderTest = createSyncService({
       readSettings: () => createSettings(),
       createRemote: () => createTestRemote(),
       adapters: [adapter],

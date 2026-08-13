@@ -154,7 +154,7 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
 
   return (
     <DialogShell
-      bodyClassName={cm(styles, "webdav-sync-status-dialog-body")}
+      bodyClassName={cm(styles, "sync-status-dialog-body")}
       className="cloudflare-sync-status-dialog"
       closeTitle={t("action.close")}
       compactMobileLayout={compactMobileLayout}
@@ -171,15 +171,15 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
     >
       <div
         aria-live="polite"
-        className={cm(styles, "webdav-sync-status-content")}
+        className={cm(styles, "sync-status-content")}
         data-cloudflare-sync-status-dialog
       >
         <section
-          className={cm(styles, "webdav-sync-status-section", "webdav-config-section")}
+          className={cm(styles, "sync-status-section", "sync-config-section")}
         >
           <h3>{t("cloudflareStatus.spaceSettings")}</h3>
-          <div className={cm(styles, "webdav-config-form")}>
-            <label className={cm(styles, "webdav-config-field")}>
+          <div className={cm(styles, "sync-config-form")}>
+            <label className={cm(styles, "sync-config-field")}>
               <span>{t("cloudflareStatus.spaceName")}</span>
               <input
                 data-cloudflare-space-name-input
@@ -195,20 +195,20 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
               <small>{t("cloudflareStatus.spaceNameDescription")}</small>
             </label>
           </div>
-          <div className={cm(styles, "webdav-config-actions")}>
+          <div className={cm(styles, "sync-config-actions")}>
             {spaceNameSaveFailed ? (
               <span
-                className={cm(styles, "webdav-config-test-result", "is-failed")}
+                className={cm(styles, "sync-config-test-result", "is-failed")}
                 role="alert"
               >
                 {t("cloudflareStatus.spaceNameSaveFailed")}
               </span>
             ) : null}
-            <div className={cm(styles, "webdav-config-buttons")}>
+            <div className={cm(styles, "sync-config-buttons")}>
               <button
                 className={cm(
                   styles,
-                  "webdav-apply-settings-btn",
+                  "sync-apply-settings-btn",
                   spaceNameIsDirty ? "is-dirty" : "is-clean",
                 )}
                 data-cloudflare-space-name-save
@@ -227,53 +227,53 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
         {/* 服务器端错误 — 置顶醒目展示 */}
         {status.lastError === null ? null : (
           <section
-            className={cm(styles, "webdav-sync-status-section", "cloudflare-server-error")}
+            className={cm(styles, "sync-status-section", "cloudflare-server-error")}
             role="alert"
           >
-            <h3>{t("webDavStatus.lastError")}</h3>
-            <div className={cm(styles, "webdav-sync-status-error")}>
+            <h3>{t("syncStatus.lastError")}</h3>
+            <div className={cm(styles, "sync-status-error")}>
               <span>{status.lastError}</span>
             </div>
           </section>
         )}
 
         {/* 概览 — 使用 Cloudflare 专用 label */}
-        <section className={cm(styles, "webdav-sync-status-section")}>
-          <h3>{t("webDavStatus.overview")}</h3>
-          <dl className={cm(styles, "webdav-sync-status-summary-grid")}>
+        <section className={cm(styles, "sync-status-section")}>
+          <h3>{t("syncStatus.overview")}</h3>
+          <dl className={cm(styles, "sync-status-summary-grid")}>
             <StatusValue
               label={t("cloudflareStatus.syncEnabled")}
               value={t(state.settings.enabled
-                ? "webDavStatus.enabled"
-                : "webDavStatus.disabled")}
+                ? "syncStatus.enabled"
+                : "syncStatus.disabled")}
             />
             <StatusValue
               label={t("cloudflareStatus.phase")}
               value={t(resolvePhaseKey(status.phase))}
             />
             <StatusValue
-              label={t("webDavStatus.currentRunReason")}
+              label={t("syncStatus.currentRunReason")}
               value={status.currentRunReason === null
                 ? t("settingsOption.none")
                 : t(resolveRunReasonKey(status.currentRunReason))}
             />
             <StatusValue
-              label={t("webDavStatus.initialStage")}
+              label={t("syncStatus.initialStage")}
               value={t(resolveStageKey(status.initialSyncStage))}
             />
             <StatusValue
-              label={t("webDavStatus.pendingLocalChanges")}
+              label={t("syncStatus.pendingLocalChanges")}
               value={String(status.pendingLocalChangeCount)}
             />
             <StatusValue
-              label={t("webDavStatus.lastUpload")}
+              label={t("syncStatus.lastUpload")}
               value={formatNullableTime(
                 status.lastUploadAt,
                 t("settingsOption.none"),
               )}
             />
             <StatusValue
-              label={t("webDavStatus.lastDownload")}
+              label={t("syncStatus.lastDownload")}
               value={formatNullableTime(
                 status.lastDownloadAt,
                 t("settingsOption.none"),
@@ -290,29 +290,29 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
         </section>
 
         {/* 网络 — 不含并发数 */}
-        <section className={cm(styles, "webdav-sync-status-section")}>
-          <h3>{t("webDavStatus.network")}</h3>
-          <dl className={cm(styles, "webdav-sync-status-network-grid")}>
+        <section className={cm(styles, "sync-status-section")}>
+          <h3>{t("syncStatus.network")}</h3>
+          <dl className={cm(styles, "sync-status-network-grid")}>
             <StatusValue
-              label={t("webDavStatus.activeRequests")}
+              label={t("syncStatus.activeRequests")}
               value={String(status.activeRequestCount)}
             />
             <StatusValue
-              label={t("webDavStatus.queuedRequests")}
+              label={t("syncStatus.queuedRequests")}
               value={String(status.queuedRequestCount)}
             />
           </dl>
         </section>
 
         {/* 任务 — 含 interval-check，按顺序排列 */}
-        <section className={cm(styles, "webdav-sync-status-section")}>
-          <h3>{t("webDavStatus.tasks")}</h3>
-          <div className={cm(styles, "webdav-sync-task-list")}>
+        <section className={cm(styles, "sync-status-section")}>
+          <h3>{t("syncStatus.tasks")}</h3>
+          <div className={cm(styles, "sync-task-list")}>
             {filteredTasks.map((task) => (
               <article
                 className={cm(
                   styles,
-                  `webdav-sync-task-card is-${task.phase}`,
+                  `sync-task-card is-${task.phase}`,
                 )}
                 data-sync-task-direction={task.direction ?? "none"}
                 data-sync-task-kind={task.kind}
@@ -327,14 +327,14 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
                       : `${t(resolveTaskPhaseKey(task.phase))} (${t(resolveTaskDirectionKey(task.direction))})`}
                   </span>
                 </header>
-                <div className={cm(styles, "webdav-sync-task-metadata")}>
+                <div className={cm(styles, "sync-task-metadata")}>
                   <span>
-                    {t("webDavStatus.taskProgress")
+                    {t("syncStatus.taskProgress")
                       .replace("{completed}", String(task.completedUnitCount))
                       .replace("{total}", String(task.totalUnitCount))}
                   </span>
                   <span>
-                    {t("webDavStatus.taskLastStarted").replace(
+                    {t("syncStatus.taskLastStarted").replace(
                       "{time}",
                       formatNullableTime(
                         task.lastStartedAt,
@@ -343,7 +343,7 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
                     )}
                   </span>
                   <span>
-                    {t("webDavStatus.taskLastFinished").replace(
+                    {t("syncStatus.taskLastFinished").replace(
                       "{time}",
                       formatNullableTime(
                         task.lastFinishedAt,
@@ -352,7 +352,7 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
                     )}
                   </span>
                   {task.lastError === null ? null : (
-                    <span className={cm(styles, "webdav-sync-task-error")}>
+                    <span className={cm(styles, "sync-task-error")}>
                       {task.lastError}
                     </span>
                   )}
@@ -363,14 +363,14 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
         </section>
 
         {/* 删除远端数据 */}
-        <section className={cm(styles, "webdav-sync-status-section", "webdav-delete-section")}>
+        <section className={cm(styles, "sync-status-section", "sync-delete-section")}>
           {deleting ? (
-            <div className={cm(styles, "webdav-delete-progress")}>
-              {t("webDavConfig.deleteAllDataDeleting")}
+            <div className={cm(styles, "sync-delete-progress")}>
+              {t("syncConfig.deleteAllDataDeleting")}
             </div>
           ) : (
             <button
-              className={cm(styles, "webdav-delete-all-btn")}
+              className={cm(styles, "sync-delete-all-btn")}
               onClick={onDeleteAllData}
               type="button"
             >
@@ -380,14 +380,14 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
         </section>
 
         {/* 立即结束当前事务 */}
-        <section className={cm(styles, "webdav-sync-status-section", "webdav-delete-section")}>
+        <section className={cm(styles, "sync-status-section", "sync-delete-section")}>
           {aborting ? (
-            <div className={cm(styles, "webdav-delete-progress")}>
+            <div className={cm(styles, "sync-delete-progress")}>
               {t("cloudflareStatus.abortingTransaction")}
             </div>
           ) : (
             <button
-              className={cm(styles, "webdav-delete-all-btn")}
+              className={cm(styles, "sync-delete-all-btn")}
               onClick={onAbortCurrentTransaction}
               type="button"
             >
@@ -417,38 +417,38 @@ function StatusValue({
 
 function resolvePhaseKey(phase: SyncPhase): UiKey {
   if (phase === "uploading") {
-    return "settingsField.experimental-webdav-status-uploading";
+    return "settingsField.experimental-sync-status-uploading";
   }
   if (phase === "downloading") {
-    return "settingsField.experimental-webdav-status-downloading";
+    return "settingsField.experimental-sync-status-downloading";
   }
   if (phase === "error") {
-    return "settingsField.experimental-webdav-status-error";
+    return "settingsField.experimental-sync-status-error";
   }
 
-  return "settingsField.experimental-webdav-status-idle";
+  return "settingsField.experimental-sync-status-idle";
 }
 
 function resolveRunReasonKey(reason: SyncRunReason): UiKey {
-  return `webDavStatus.runReason.${reason}`;
+  return `syncStatus.runReason.${reason}`;
 }
 
 function resolveStageKey(stage: SyncInitialSyncStage): UiKey {
-  return `webDavStatus.stage.${stage}`;
+  return `syncStatus.stage.${stage}`;
 }
 
 function resolveTaskKindKey(kind: SyncTaskKind): UiKey {
-  return `webDavStatus.task.${kind}`;
+  return `syncStatus.task.${kind}`;
 }
 
 function resolveTaskPhaseKey(phase: SyncTaskPhase): UiKey {
-  return `webDavStatus.taskPhase.${phase}`;
+  return `syncStatus.taskPhase.${phase}`;
 }
 
 function resolveTaskDirectionKey(direction: SyncTaskDirection): UiKey {
   return direction === "upload"
-    ? "settingsField.experimental-webdav-status-uploading"
-    : "settingsField.experimental-webdav-status-downloading";
+    ? "settingsField.experimental-sync-status-uploading"
+    : "settingsField.experimental-sync-status-downloading";
 }
 
 function formatNullableTime(value: string | null, fallback: string): string {

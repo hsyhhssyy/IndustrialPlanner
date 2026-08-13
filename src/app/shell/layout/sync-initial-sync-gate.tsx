@@ -12,7 +12,7 @@ import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
-export type WebDavInitialSyncFeature =
+export type SyncInitialSyncFeature =
   | "blueprints"
   | "modules"
   | "toolbox";
@@ -25,9 +25,9 @@ const INITIAL_SYNC_STAGE_ORDER: Record<SyncInitialSyncStage, number> = {
   ready: 4,
 };
 
-export function isWebDavInitialSyncFeatureLocked(
+export function isSyncInitialSyncFeatureLocked(
   state: SyncState,
-  feature: WebDavInitialSyncFeature,
+  feature: SyncInitialSyncFeature,
 ): boolean {
   return (
     state.settings.enabled
@@ -37,7 +37,7 @@ export function isWebDavInitialSyncFeatureLocked(
   );
 }
 
-export const WebDavInitialSyncGate = observer(function WebDavInitialSyncGate({
+export const SyncInitialSyncGate = observer(function SyncInitialSyncGate({
   sync,
   translate,
 }: {
@@ -84,45 +84,45 @@ export const WebDavInitialSyncGate = observer(function WebDavInitialSyncGate({
     );
 
   return (
-    <OverlayStackLayer layerId="webdav-initial-sync-gate" visible>
+    <OverlayStackLayer layerId="sync-initial-sync-gate" visible>
       {({ zIndex }) => (
         <section
           aria-label={translate(
             failed
-              ? "webDavInitialSync.failed"
-              : "webDavInitialSync.canvasSyncing",
+              ? "syncInitialSync.failed"
+              : "syncInitialSync.canvasSyncing",
           )}
           aria-live="assertive"
           aria-modal="true"
-          className={cm(styles, "webdav-initial-sync-gate")}
-          data-webdav-initial-sync-stage="canvas"
+          className={cm(styles, "sync-initial-sync-gate")}
+          data-sync-initial-sync-stage="canvas"
           role={failed ? "alertdialog" : "dialog"}
           style={{ zIndex }}
         >
-          <div className={cm(styles, "webdav-initial-sync-gate-content")}>
+          <div className={cm(styles, "sync-initial-sync-gate-content")}>
             <WorkbenchIcon
               className={cm(
                 styles,
                 failed
-                  ? "webdav-initial-sync-gate-error-icon"
-                  : "webdav-initial-sync-gate-spinner",
+                  ? "sync-initial-sync-gate-error-icon"
+                  : "sync-initial-sync-gate-spinner",
               )}
               kind={failed ? "save-failed" : "save-progress"}
             />
             <p>
               {translate(
                 failed
-                  ? "webDavInitialSync.failed"
-                  : "webDavInitialSync.canvasSyncing",
+                  ? "syncInitialSync.failed"
+                  : "syncInitialSync.canvasSyncing",
               )}
             </p>
             {!failed ? (
               <div
-                className={cm(styles, "webdav-initial-sync-gate-progress")}
+                className={cm(styles, "sync-initial-sync-gate-progress")}
               >
                 <progress
-                  aria-label={translate("webDavInitialSync.canvasProgress")}
-                  data-webdav-initial-sync-progress
+                  aria-label={translate("syncInitialSync.canvasProgress")}
+                  data-sync-initial-sync-progress
                   max={100}
                   value={canvasProgress}
                 />
@@ -130,14 +130,14 @@ export const WebDavInitialSyncGate = observer(function WebDavInitialSyncGate({
               </div>
             ) : null}
             {failed ? (
-              <div className={cm(styles, "webdav-initial-sync-gate-actions")}>
+              <div className={cm(styles, "sync-initial-sync-gate-actions")}>
                 <button
                   onClick={() => {
                     void sync.actions.syncNow();
                   }}
                   type="button"
                 >
-                  {translate("webDavInitialSync.retry")}
+                  {translate("syncInitialSync.retry")}
                 </button>
                 <button
                   onClick={() => {
@@ -145,7 +145,7 @@ export const WebDavInitialSyncGate = observer(function WebDavInitialSyncGate({
                   }}
                   type="button"
                 >
-                  {translate("webDavInitialSync.disable")}
+                  {translate("syncInitialSync.disable")}
                 </button>
               </div>
             ) : null}
@@ -156,8 +156,8 @@ export const WebDavInitialSyncGate = observer(function WebDavInitialSyncGate({
   );
 });
 
-export const WebDavInitialSyncFeatureGate = observer(
-  function WebDavInitialSyncFeatureGate({
+export const SyncInitialSyncFeatureGate = observer(
+  function SyncInitialSyncFeatureGate({
     children,
     className,
     feature,
@@ -166,33 +166,33 @@ export const WebDavInitialSyncFeatureGate = observer(
   }: {
     children?: ReactNode;
     className?: string;
-    feature: WebDavInitialSyncFeature;
+    feature: SyncInitialSyncFeature;
     state: SyncState | null;
     translate: AppAction["translate"];
   }) {
     if (
       state === null
-      || !isWebDavInitialSyncFeatureLocked(state, feature)
+      || !isSyncInitialSyncFeatureLocked(state, feature)
     ) {
       return children;
     }
 
     return (
       <section
-        aria-label={translate("webDavInitialSync.syncing")}
+        aria-label={translate("syncInitialSync.syncing")}
         aria-live="polite"
         className={cm(
           styles,
-          `webdav-initial-sync-feature-gate${className === undefined ? "" : ` ${className}`}`,
+          `sync-initial-sync-feature-gate${className === undefined ? "" : ` ${className}`}`,
         )}
-        data-webdav-initial-sync-feature={feature}
+        data-sync-initial-sync-feature={feature}
         role="status"
       >
         <WorkbenchIcon
-          className={cm(styles, "webdav-initial-sync-gate-spinner")}
+          className={cm(styles, "sync-initial-sync-gate-spinner")}
           kind="save-progress"
         />
-        <p>{translate("webDavInitialSync.syncing")}</p>
+        <p>{translate("syncInitialSync.syncing")}</p>
       </section>
     );
   },

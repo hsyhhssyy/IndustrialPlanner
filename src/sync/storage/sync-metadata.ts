@@ -3,27 +3,27 @@ import {
   saveToLocalStorage,
 } from "@/shared/storage/browser-storage";
 
-export const WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY = "v3-webdav-sync-metadata";
+export const SYNC_METADATA_LOCAL_STORAGE_KEY = "v3-sync-metadata";
 
-interface WebDavSyncMetadataState {
+interface SyncMetadataState {
   readonly contentHashes: Record<string, string>;
   readonly remoteRevisions: Record<string, number>;
   readonly remoteEtags: Record<string, string>;
 }
 
-const EMPTY_METADATA: WebDavSyncMetadataState = {
+const EMPTY_METADATA: SyncMetadataState = {
   contentHashes: {},
   remoteRevisions: {},
   remoteEtags: {},
 };
 
-export function readWebDavLastSyncedContentHash(assetKey: string): string | null {
-  return readWebDavSyncMetadataState().contentHashes[assetKey] ?? null;
+export function readLastSyncedContentHash(assetKey: string): string | null {
+  return readSyncMetadataState().contentHashes[assetKey] ?? null;
 }
 
-export function writeWebDavLastSyncedContentHash(assetKey: string, contentHash: string): string {
-  const state = readWebDavSyncMetadataState();
-  saveToLocalStorage<WebDavSyncMetadataState>(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY, {
+export function writeLastSyncedContentHash(assetKey: string, contentHash: string): string {
+  const state = readSyncMetadataState();
+  saveToLocalStorage<SyncMetadataState>(SYNC_METADATA_LOCAL_STORAGE_KEY, {
     contentHashes: {
       ...state.contentHashes,
       [assetKey]: contentHash,
@@ -35,27 +35,27 @@ export function writeWebDavLastSyncedContentHash(assetKey: string, contentHash: 
   return contentHash;
 }
 
-export function clearWebDavLastSyncedContentHash(assetKey: string): void {
-  const state = readWebDavSyncMetadataState();
+export function clearLastSyncedContentHash(assetKey: string): void {
+  const state = readSyncMetadataState();
   const { [assetKey]: _removed, ...contentHashes } = state.contentHashes;
 
-  saveToLocalStorage<WebDavSyncMetadataState>(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY, {
+  saveToLocalStorage<SyncMetadataState>(SYNC_METADATA_LOCAL_STORAGE_KEY, {
     contentHashes,
     remoteRevisions: state.remoteRevisions,
     remoteEtags: state.remoteEtags,
   });
 }
 
-export function readWebDavLastSeenRemoteRevision(remoteStateKey: string): number | null {
-  return readWebDavSyncMetadataState().remoteRevisions[remoteStateKey] ?? null;
+export function readLastSeenRemoteRevision(remoteStateKey: string): number | null {
+  return readSyncMetadataState().remoteRevisions[remoteStateKey] ?? null;
 }
 
-export function writeWebDavLastSeenRemoteRevision(
+export function writeLastSeenRemoteRevision(
   remoteStateKey: string,
   revision: number,
 ): number {
-  const state = readWebDavSyncMetadataState();
-  saveToLocalStorage<WebDavSyncMetadataState>(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY, {
+  const state = readSyncMetadataState();
+  saveToLocalStorage<SyncMetadataState>(SYNC_METADATA_LOCAL_STORAGE_KEY, {
     contentHashes: state.contentHashes,
     remoteRevisions: {
       ...state.remoteRevisions,
@@ -67,27 +67,27 @@ export function writeWebDavLastSeenRemoteRevision(
   return revision;
 }
 
-export function clearWebDavLastSeenRemoteRevision(remoteStateKey: string): void {
-  const state = readWebDavSyncMetadataState();
+export function clearLastSeenRemoteRevision(remoteStateKey: string): void {
+  const state = readSyncMetadataState();
   const { [remoteStateKey]: _removed, ...remoteRevisions } = state.remoteRevisions;
 
-  saveToLocalStorage<WebDavSyncMetadataState>(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY, {
+  saveToLocalStorage<SyncMetadataState>(SYNC_METADATA_LOCAL_STORAGE_KEY, {
     contentHashes: state.contentHashes,
     remoteRevisions,
     remoteEtags: state.remoteEtags,
   });
 }
 
-export function readWebDavLastSeenRemoteEtag(remoteStateKey: string): string | null {
-  return readWebDavSyncMetadataState().remoteEtags[remoteStateKey] ?? null;
+export function readLastSeenRemoteEtag(remoteStateKey: string): string | null {
+  return readSyncMetadataState().remoteEtags[remoteStateKey] ?? null;
 }
 
-export function writeWebDavLastSeenRemoteEtag(
+export function writeLastSeenRemoteEtag(
   remoteStateKey: string,
   etag: string,
 ): string {
-  const state = readWebDavSyncMetadataState();
-  saveToLocalStorage<WebDavSyncMetadataState>(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY, {
+  const state = readSyncMetadataState();
+  saveToLocalStorage<SyncMetadataState>(SYNC_METADATA_LOCAL_STORAGE_KEY, {
     contentHashes: state.contentHashes,
     remoteRevisions: state.remoteRevisions,
     remoteEtags: {
@@ -99,27 +99,27 @@ export function writeWebDavLastSeenRemoteEtag(
   return etag;
 }
 
-export function clearWebDavLastSeenRemoteEtag(remoteStateKey: string): void {
-  const state = readWebDavSyncMetadataState();
+export function clearLastSeenRemoteEtag(remoteStateKey: string): void {
+  const state = readSyncMetadataState();
   const { [remoteStateKey]: _removed, ...remoteEtags } = state.remoteEtags;
 
-  saveToLocalStorage<WebDavSyncMetadataState>(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY, {
+  saveToLocalStorage<SyncMetadataState>(SYNC_METADATA_LOCAL_STORAGE_KEY, {
     contentHashes: state.contentHashes,
     remoteRevisions: state.remoteRevisions,
     remoteEtags,
   });
 }
 
-export function clearWebDavSyncMetadata(): void {
+export function clearSyncMetadata(): void {
   try {
-    globalThis.localStorage?.removeItem(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY);
+    globalThis.localStorage?.removeItem(SYNC_METADATA_LOCAL_STORAGE_KEY);
   } catch (error) {
-    throw new Error("Failed to clear WebDAV sync metadata.", { cause: error });
+    throw new Error("Failed to clear sync metadata.", { cause: error });
   }
 }
 
-function readWebDavSyncMetadataState(): WebDavSyncMetadataState {
-  const rawState = readFromLocalStorage<unknown>(WEBDAV_SYNC_METADATA_LOCAL_STORAGE_KEY);
+function readSyncMetadataState(): SyncMetadataState {
+  const rawState = readFromLocalStorage<unknown>(SYNC_METADATA_LOCAL_STORAGE_KEY);
 
   if (!isRecord(rawState)) {
     return EMPTY_METADATA;
