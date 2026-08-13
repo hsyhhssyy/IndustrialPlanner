@@ -45,9 +45,19 @@ export const WebDavInitialSyncGate = observer(function WebDavInitialSyncGate({
   translate: AppAction["translate"];
 }) {
   const state = sync.state;
+  // AI-CORRECTION 2026-08-13: 小检查（interval）发现远端变化触发的下载期间也应锁定画布，
+  // 下载完成（phase 回到 idle）后自动解锁；小检查短路（远端无变化）时不进入 downloading，不锁定。
+  // 冲突待决策时由冲突对话框接管交互，不再叠加画布遮罩。
+  const locksCanvasForIntervalDownload =
+    state.status.phase === "downloading"
+    && state.status.currentRunReason === "interval"
+    && state.pendingConflict === null;
   if (
     !state.settings.enabled
-    || state.status.initialSyncStage !== "canvas"
+    || (
+      state.status.initialSyncStage !== "canvas"
+      && !locksCanvasForIntervalDownload
+    )
   ) {
     return null;
   }
