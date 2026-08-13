@@ -7,6 +7,7 @@ import {
   type DraftEntity,
   isDraftEntity,
 } from "../draft-entity";
+import { cloneEntityConfig } from "../entity-config-clone";
 import { resolveEntityById } from "../entity-resolvers";
 import {
   hasOutsideBasePlacementReason,
@@ -123,7 +124,7 @@ export function createEditorMoveActions({
             ...draft.position,
           },
           rotation: draft.rotation,
-          config: { ...draft.config },
+          config: cloneEntityConfig(draft.config),
         };
         if (currentEntity.definitionId !== draft.definitionId) {
           definitionChangedEntityIds.add(draft.originalEntityId);
@@ -263,9 +264,7 @@ function cloneEntity(entity: WorldEntity | DraftEntity): WorldEntity {
     position: {
       ...entity.position,
     },
-    config: {
-      ...entity.config,
-    },
+    config: cloneEntityConfig(entity.config),
     tags: [...entity.tags],
   };
 }

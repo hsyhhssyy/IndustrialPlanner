@@ -323,9 +323,16 @@ async function runAutoDownloadScenario(options: {
     }
   });
   page.on("response", (response) => {
+    // AI-CORRECTION 2026-08-13: ensureSpace 会先 GET .../plan 探测空间是否存在，
+    // 404 是创建空间前的预期控制流，不视为错误。
+    const isEnsureSpaceProbe =
+      response.status() === 404
+      && response.request().method() === "GET"
+      && response.url().endsWith("/plan");
     if (
       response.url().startsWith(BACKEND_API_BASE_URL)
       && response.status() >= 400
+      && !isEnsureSpaceProbe
     ) {
       backendHttpErrors.push(
         `${response.request().method()} ${response.url()}: HTTP ${response.status()}`,

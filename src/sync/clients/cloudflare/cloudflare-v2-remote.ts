@@ -157,6 +157,10 @@ class CloudflareV2SyncLocalState implements SyncLocalState {
 class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
   private planCache: CfV2LoadPlanResult | null = null;
   private latestCommittedRevision: CfV2Revision | null;
+  // AI-CORRECTION 2026-08-13: 本会话内提交产生的最新 revision，作为后续写入批次基线。
+  // plan 快照在 prefetch 后不再刷新，初始同步多个批次顺序上传时，
+  // 后续批次若仍以旧 plan revision 提交会被后端拒绝（“space revision 已变化”）。
+  private sessionCommittedRevision: CfV2Revision | null = null;
   private pendingJournalAck: boolean;
 
   public constructor(
@@ -188,6 +192,8 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
 
   public async refreshIndexes(collections: readonly SyncRemoteCollection[]): Promise<void> {
     this.planCache = null;
+    // AI-CORRECTION 2026-08-13: 重新观测远端后，本会话提交的 revision 不再是最新基线。
+    this.sessionCommittedRevision = null;
     await this.prefetchIndexes(collections);
   }
 
@@ -328,6 +334,11 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
   }
 
   public getObservedRemoteRevision(): CfV2Revision | null {
+    // AI-CORRECTION 2026-08-13: 本会话已提交的 revision 比 plan 快照更新，
+    // 初始同步多批次顺序上传时，后续批次必须以其为基线。
+    if (this.sessionCommittedRevision !== null) {
+      return this.sessionCommittedRevision;
+    }
     return this.planCache?.revision ?? null;
   }
 
@@ -337,6 +348,7 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
 
   public registerCommittedRevision(revision: CfV2Revision): void {
     this.latestCommittedRevision = revision;
+    this.sessionCommittedRevision = revision;
     this.pendingJournalAck = true;
   }
 

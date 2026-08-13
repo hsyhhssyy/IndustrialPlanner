@@ -16,6 +16,7 @@ import { syncPlacementValidationState } from "../placement-validation";
 import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 import { snapPlacementToOuterRingEdge } from "../placement-snapping";
+import { cloneEntityConfig } from "../entity-config-clone";
 
 type EditorPlacementActions = Pick<
   EditorAction,
@@ -287,7 +288,7 @@ export function createEditorPlacementActions({
 
         // AI-CORRECTION 2026-06-09: config 中不再存储 entity ID 引用（links 已迁移至 document.slotLinks），
         // 不再需要 rewriteEntityIdInConfig 重写。
-        const nextConfig = { ...draft.config };
+        const nextConfig = cloneEntityConfig(draft.config);
 
         nextEntities[newId] = {
           id: newId,
@@ -527,9 +528,7 @@ function cloneWorldEntity(entity: WorldEntity): WorldEntity {
     position: {
       ...entity.position,
     },
-    config: {
-      ...entity.config,
-    },
+    config: cloneEntityConfig(entity.config),
     tags: [...entity.tags],
   };
 }

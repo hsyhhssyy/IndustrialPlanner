@@ -17,6 +17,7 @@ import type {
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { DraftEntity } from "../draft-entity";
+import { cloneEntityConfig } from "../entity-config-clone";
 import { syncPlacementValidationState } from "../placement-validation";
 import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
@@ -455,7 +456,7 @@ export function createEditorLogisticsActions(
           definitionId: previewDraft.definitionId,
           position: { ...previewDraft.position },
           rotation: previewDraft.rotation,
-          config: { ...previewDraft.config },
+          config: cloneEntityConfig(previewDraft.config),
           tags: [...previewDraft.tags],
         };
         // 2026-05-31: 防御 entityOrder 重复——若已存在则跳过。

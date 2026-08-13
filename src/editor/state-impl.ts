@@ -121,7 +121,11 @@ export interface EditorStateReadWrite extends EditorState {
   marqueeGridRect: GridRect | null;
   history: EditorHistoryStateReadWrite;
   hoverTarget: HoverTarget | null;
+  // AI-CORRECTION 2026-08-13: drafts 由构造函数中的 observable.shallow 注解管理，
+  // MobX 只追踪数组引用替换，不深度代理 draft 内部对象，避免与文档快照共享的嵌套对象被原位 observable 化。
   drafts: DraftEntity[];
+  // AI-CORRECTION 2026-08-13: collections 同理；每个 collection 本身已是 observable.array（deep:false），
+  // 字典只需追踪引用替换，不应再由 makeAutoObservable 默认 deep 处理。
   collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite>;
   suppressBelts: boolean;
   suppressPipes: boolean;
@@ -214,7 +218,15 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
     new EditorInternalTransientStateReadWriteImpl();
 
   public constructor() {
-    makeAutoObservable(this, {}, { autoBind: true });
+    makeAutoObservable(this, {
+      // AI-CORRECTION 2026-08-13: drafts 只追踪引用替换（所有更新路径均为 state.drafts = ... 替换式），
+      // 深度代理会把 draft 内部对象（含与文档快照共享引用的 config 嵌套对象）原位 observable 化，
+      // 污染快照并导致同步 structuredClone 失败。
+      drafts: observable.shallow,
+      // AI-CORRECTION 2026-08-13: collections 字典本身可观察，字典 value（observable.array）
+      // 已显式 deep:false，不应再被 makeAutoObservable 默认 deep 处理。
+      collections: observable.shallow,
+    }, { autoBind: true });
   }
 }
 

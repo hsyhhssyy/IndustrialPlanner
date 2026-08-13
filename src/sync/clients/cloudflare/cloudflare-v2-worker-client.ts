@@ -135,12 +135,16 @@ export class CloudflareV2WorkerClient implements CloudflareV2WorkerBridge {
         const worker = this.ensureWorker();
         worker.postMessage(queued.request);
       } catch (error) {
+        // AI-CORRECTION 2026-08-13: 克隆失败时递归探测并输出全部不可克隆字段路径。
+        const unclonablePaths = findUnclonablePaths(queued.request);
         logger.debug(
           `postMessage failed for requestId=${queued.request.requestId} ` +
           `op=${queued.request.operation.type} ` +
           `workerAlive=${this.worker !== null} ` +
           `jsonSerializable=${isJsonSerializable(queued.request)} ` +
-          `error=${error instanceof Error ? error.message : String(error)}`,
+          `error=${error instanceof Error ? error.message : String(error)} ` +
+          `unclonablePaths=${JSON.stringify(unclonablePaths.slice(0, 20))}` +
+          (unclonablePaths.length > 20 ? ` (total=${unclonablePaths.length})` : ""),
         );
         // postMessage 克隆失败意味着 Worker 可能已处于异常状态，销毁以便下轮重建
         this.destroyWorker();
@@ -259,6 +263,96 @@ function isJsonSerializable(value: unknown): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * 递归找出所有无法被结构化克隆（postMessage）的字段路径。
+ *
+ * AI-CORRECTION 2026-08-13: 真机曾报 “#<Object> could not be cloned” 但无字段路径，
+ * 无法定位世界文档中哪个字段携带了运行时对象；此函数用于补齐诊断信息。
+ */
+function findUnclonablePaths(
+  value: unknown,
+  maxDepth = 40,
+  maxPaths = 200,
+): string[] {
+  const failures: string[] = [];
+
+  const isCloneable = (node: unknown): boolean => {
+    try {
+      structuredClone(node);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const describeNode = (node: unknown): string => {
+    if (typeof node === "function") return "function";
+    if (typeof node === "symbol") return "symbol";
+    if (node === null) return "null";
+    if (node instanceof Map) return "Map";
+    if (node instanceof Set) return "Set";
+    return Object.prototype.toString.call(node);
+  };
+
+  const visit = (node: unknown, path: string, depth: number): void => {
+    if (depth > maxDepth || failures.length >= maxPaths) {
+      return;
+    }
+    if (isCloneable(node)) {
+      return;
+    }
+    if (typeof node !== "object" || node === null) {
+      failures.push(`${path} (${typeof node})`);
+      return;
+    }
+    if (node instanceof Date || node instanceof RegExp) {
+      failures.push(`${path} (${describeNode(node)})`);
+      return;
+    }
+
+    const entries: Array<[string, unknown]> = [];
+    if (node instanceof Map) {
+      for (const [key, child] of node) {
+        entries.push([`<key:${describeNode(key)}>`, key]);
+        entries.push([String(key), child]);
+      }
+    } else if (node instanceof Set) {
+      Array.from(node).forEach((child, index) => {
+        entries.push([String(index), child]);
+      });
+    } else if (Array.isArray(node)) {
+      node.forEach((child, index) => {
+        entries.push([String(index), child]);
+      });
+    } else {
+      for (const key of Object.keys(node)) {
+        entries.push([key, (node as Record<string, unknown>)[key]]);
+      }
+    }
+
+    if (entries.length === 0) {
+      failures.push(`${path} (${describeNode(node)})`);
+      return;
+    }
+
+    let unclonableChildCount = 0;
+    for (const [key, child] of entries) {
+      if (isCloneable(child)) {
+        continue;
+      }
+      unclonableChildCount += 1;
+      visit(child, `${path}.${key}`, depth + 1);
+    }
+    if (unclonableChildCount === 0) {
+      // 所有可枚举子项都可克隆，不可克隆原因在对象自身（原型方法、getter、Symbol 属性等）。
+      failures.push(`${path} (${describeNode(node)})`);
+    }
+  };
+
+  visit(value, "$", 0);
+  return failures;
 }
 
 function normalizeConcurrency(value: number): number {
