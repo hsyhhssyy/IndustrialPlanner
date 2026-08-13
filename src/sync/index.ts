@@ -12,6 +12,7 @@ export {
   createFullWithRevisionAdapter,
   createPatchCollectionWithRevisionAdapter,
   createPatchWithRevisionAdapter,
+  SyncDownloadDirtyAbortError,
 } from "./engine/sync-adapters";
 export type {
   FullNoRevisionAdapterOptions,
@@ -28,6 +29,11 @@ export type {
   SyncAdapterResult,
   SyncAdapterScope,
   SyncAdapterStatus,
+  SyncAdapterSyncOptions,
+  SyncEngineTransaction,
+  SyncPlanItem,
+  SyncPlanItemKind,
+  SyncPlanUpload,
 } from "./engine/sync-adapters";
 
 // AI-CORRECTION 2026-07-30: 以下旧名称保持向后兼容。
@@ -129,7 +135,11 @@ export type {
   SyncRemoteWebDavBinding,
   SyncRemoteWriteBatch,
 } from "./clients";
-export { RemoteWriteConflictError } from "./clients";
+export {
+  isRemoteSyncStaleError,
+  RemoteDownloadStaleError,
+  RemoteWriteConflictError,
+} from "./clients";
 
 export {
   createSyncAssetKey,

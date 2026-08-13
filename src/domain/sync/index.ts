@@ -8,6 +8,7 @@ export type {
   SyncAssetSourceMode,
   SyncConflictDecision,
   SyncConflictItem,
+  SyncConflictItemKind,
   SyncConflictPhase,
   SyncConflictResolution,
   SyncInitialSyncStage,

@@ -10,6 +10,7 @@ import {
   RemoteWriteConflictError,
 } from "@/sync";
 import type {
+  SyncPlanItem,
   SyncRemote,
   SyncRemoteSession,
   WebDavSyncAdapter,
@@ -247,9 +248,9 @@ describe("webdav-sync-service", () => {
     const canvasAdapter = createNamedAdapter("world-documents", []);
     canvasAdapter.sync.mockImplementationOnce(async (
       _session: SyncRemoteSession,
-      scope: Parameters<WebDavSyncAdapter["sync"]>[1],
+      options: Parameters<WebDavSyncAdapter["sync"]>[1],
     ) => {
-      scope?.onProgress?.(55);
+      options.scope?.onProgress?.(55);
       await remoteApplyGate;
       return {
         adapterId: "world-documents",
@@ -401,13 +402,21 @@ describe("webdav-sync-service", () => {
         stateKey: "conflicting-adapter.json",
       }),
       checkPath: "conflicting-adapter.json",
-      sync: vi.fn(async (): Promise<WebDavSyncAdapterResult> => ({
-        adapterId: "conflicting-adapter",
-        mode: "full-no-revision",
-        status: "conflict",
-        changedAssetIds: ["single"],
-      })),
-      inspectConflicts: vi.fn(async () => []),
+      sync: vi.fn(async (
+        _session: SyncRemoteSession,
+        options: Parameters<WebDavSyncAdapter["sync"]>[1],
+      ): Promise<WebDavSyncAdapterResult> => {
+        // AI-CORRECTION 2026-08-13: 冲突以 SyncPlanItem 登记，引擎统一弹框决议。
+        options.transaction.recordItem(
+          createPlanItemStub("conflicting-adapter", "single", "conflict"),
+        );
+        return {
+          adapterId: "conflicting-adapter",
+          mode: "full-no-revision",
+          status: "conflict",
+          changedAssetIds: ["single"],
+        };
+      }),
     };
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
@@ -420,31 +429,24 @@ describe("webdav-sync-service", () => {
     const status = await service.syncNow("manual");
 
     expect(onConflictDiscoveryStart).toHaveBeenCalledTimes(1);
+    expect(resolveConflicts).toHaveBeenCalledTimes(1);
     expect(status.phase).toBe("error");
     expect(status.lastError).toBe("Sync conflict");
   });
 
-  it("discovers conflicts across all adapters and applies one batch of per-item decisions", async () => {
-    const firstConflict = {
-      adapterId: "blueprints",
-      assetId: "blueprint-a",
-      localValue: { name: "local blueprint" },
-      remoteValue: { name: "remote blueprint" },
-      localHash: "local-blueprint-hash",
-      remoteHash: "remote-blueprint-hash",
-      remoteDeletedAt: null,
-      remoteUpdatedAt: "2026-07-29T12:00:00.000Z",
-    };
-    const secondConflict = {
-      adapterId: "world-documents",
-      assetId: "base-a",
-      localValue: { name: "local canvas" },
-      remoteValue: { name: "remote canvas" },
-      localHash: "local-canvas-hash",
-      remoteHash: "remote-canvas-hash",
-      remoteDeletedAt: null,
-      remoteUpdatedAt: "2026-07-29T12:01:00.000Z",
-    };
+  it("shows one dialog for mixed uploads and conflicts and applies per-item decisions", async () => {
+    const firstUpload = createPlanItemStub(
+      "blueprints",
+      "blueprint-a",
+      "upload",
+      vi.fn(async () => undefined),
+    );
+    const secondConflict = createPlanItemStub(
+      "world-documents",
+      "base-a",
+      "conflict",
+      vi.fn(async () => undefined),
+    );
     const firstAdapter: WebDavSyncAdapter = {
       id: "blueprints",
       mode: "full-with-revision",
@@ -456,16 +458,16 @@ describe("webdav-sync-service", () => {
       checkPath: "blueprints/index.json",
       sync: vi.fn(async (
         _session: SyncRemoteSession,
-        scope: Parameters<WebDavSyncAdapter["sync"]>[1],
-      ): Promise<WebDavSyncAdapterResult> => ({
-        adapterId: "blueprints",
-        mode: "full-with-revision",
-        status: scope?.conflictDecisions?.[0]?.resolution === "use-local"
-          ? "uploaded"
-          : "conflict",
-        changedAssetIds: ["blueprint-a"],
-      })),
-      inspectConflicts: vi.fn(async () => [firstConflict]),
+        options: Parameters<WebDavSyncAdapter["sync"]>[1],
+      ): Promise<WebDavSyncAdapterResult> => {
+        options.transaction.recordItem(firstUpload);
+        return {
+          adapterId: "blueprints",
+          mode: "full-with-revision",
+          status: "uploaded",
+          changedAssetIds: ["blueprint-a"],
+        };
+      }),
     };
     const secondAdapter: WebDavSyncAdapter = {
       id: "world-documents",
@@ -478,16 +480,16 @@ describe("webdav-sync-service", () => {
       checkPath: "world-documents/meta.json",
       sync: vi.fn(async (
         _session: SyncRemoteSession,
-        scope: Parameters<WebDavSyncAdapter["sync"]>[1],
-      ): Promise<WebDavSyncAdapterResult> => ({
-        adapterId: "world-documents",
-        mode: "patch-with-revision",
-        status: scope?.conflictDecisions?.[0]?.resolution === "use-remote"
-          ? "downloaded"
-          : "conflict",
-        changedAssetIds: ["base-a"],
-      })),
-      inspectConflicts: vi.fn(async () => [secondConflict]),
+        options: Parameters<WebDavSyncAdapter["sync"]>[1],
+      ): Promise<WebDavSyncAdapterResult> => {
+        options.transaction.recordItem(secondConflict);
+        return {
+          adapterId: "world-documents",
+          mode: "patch-with-revision",
+          status: "conflict",
+          changedAssetIds: ["base-a"],
+        };
+      }),
     };
     const onConflictDiscoveryStart = vi.fn();
     const onConflictWorkflowFinished = vi.fn();
@@ -514,23 +516,28 @@ describe("webdav-sync-service", () => {
 
     const status = await service.syncNow("manual");
 
-    expect(firstAdapter.inspectConflicts).toHaveBeenCalledTimes(1);
-    expect(secondAdapter.inspectConflicts).toHaveBeenCalledTimes(1);
+    expect(resolveConflicts).toHaveBeenCalledTimes(1);
     expect(resolveConflicts).toHaveBeenCalledWith([
-      firstConflict,
-      secondConflict,
+      expect.objectContaining({
+        adapterId: "blueprints",
+        assetId: "blueprint-a",
+        kind: "upload",
+      }),
+      expect.objectContaining({
+        adapterId: "world-documents",
+        assetId: "base-a",
+        kind: "conflict",
+      }),
     ]);
+    expect(firstUpload.applyUpload).toHaveBeenCalledTimes(1);
+    expect(secondConflict.applyDownload).toHaveBeenCalledTimes(1);
     expect(onConflictDiscoveryStart).toHaveBeenCalledTimes(1);
     expect(onConflictWorkflowFinished).toHaveBeenCalledTimes(1);
-    expect(firstAdapter.sync).toHaveBeenCalledTimes(2);
-    expect(secondAdapter.sync).toHaveBeenCalledTimes(1);
     expect(status.phase).toBe("idle");
     expect(status.lastError).toBeNull();
-    expect(status.lastUploadAt).not.toBeNull();
-    expect(status.lastDownloadAt).not.toBeNull();
   });
 
-  it("persists use-local conflict baselines only after the shared batch commits", async () => {
+  it("persists conflict baselines only after the shared batch commits", async () => {
     const setLastSyncedHash = vi.fn(async () => undefined);
     const commit = vi.fn(async () => {
       throw new Error("commit failed");
@@ -540,34 +547,40 @@ describe("webdav-sync-service", () => {
       mode: "full-with-revision",
       stateKey: "blueprints/index.json",
     });
-    const conflict = {
-      adapterId: "blueprints",
-      assetId: "blueprint-a",
-      localValue: { name: "local" },
-      remoteValue: { name: "remote" },
-      localHash: "local-hash",
-      remoteHash: "remote-hash",
-      remoteDeletedAt: null,
-      remoteUpdatedAt: null,
-    };
     const adapter: WebDavSyncAdapter = {
       id: "blueprints",
       mode: "full-with-revision",
       collection,
       checkPath: "blueprints/index.json",
-      sync: vi.fn(async () => ({
-        adapterId: "blueprints",
-        mode: "full-with-revision" as const,
-        status: "conflict" as const,
-        changedAssetIds: ["blueprint-a"],
-      })),
-      inspectConflicts: vi.fn(async () => [conflict]),
-      executeConflictDecisions: vi.fn(async () => ({
-        adapterId: "blueprints",
-        mode: "full-with-revision" as const,
-        status: "uploaded" as const,
-        changedAssetIds: ["blueprint-a"],
-      })),
+      sync: vi.fn(async (
+        _session: SyncRemoteSession,
+        options: Parameters<WebDavSyncAdapter["sync"]>[1],
+      ): Promise<WebDavSyncAdapterResult> => {
+        const transaction = options.transaction;
+        options.transaction.recordItem({
+          ...createPlanItemStub("blueprints", "blueprint-a", "conflict"),
+          applyUpload: vi.fn(async () => {
+            transaction.recordUpload({
+              adapterId: "blueprints",
+              assetId: "blueprint-a",
+              params: {
+                collection,
+                assetId: "blueprint-a",
+                value: { name: "local" },
+                contentHash: "local-hash",
+                baseRevision: null,
+                baseContentHash: null,
+              },
+            });
+          }),
+        });
+        return {
+          adapterId: "blueprints",
+          mode: "full-with-revision" as const,
+          status: "conflict" as const,
+          changedAssetIds: ["blueprint-a"],
+        };
+      }),
     };
     const session: SyncRemoteSession = {
       localState: {
@@ -642,7 +655,7 @@ describe("webdav-sync-service", () => {
     expect(status.lastError).toBeNull();
   });
 
-  it("refreshes the remote index once after an optimistic write conflict", async () => {
+  it("restarts the whole run after an optimistic write conflict", async () => {
     const adapter = createAdapter();
     adapter.sync
       .mockRejectedValueOnce(new RemoteWriteConflictError([{
@@ -660,18 +673,22 @@ describe("webdav-sync-service", () => {
         status: "downloaded",
         changedAssetIds: ["single"],
       });
-    const refreshIndexes = vi.fn(async () => undefined);
     const complete = vi.fn(async () => undefined);
+    const createRemoteMock = vi.fn(() =>
+      createTestRemote({ complete })
+    );
     const service = createWebDavSyncService({
       readSettings: () => createSettings(),
-      createRemote: () => createTestRemote({ refreshIndexes, complete }),
+      createRemote: createRemoteMock,
       adapters: [adapter],
     });
 
     const status = await service.syncNow("manual");
 
+    // AI-CORRECTION 2026-08-13: 写 409 丢弃整轮从头开始（新 remote/session + 重新拉 plan），
+    // 不再做“刷新索引后原地重试单 adapter”。
     expect(adapter.sync).toHaveBeenCalledTimes(2);
-    expect(refreshIndexes).toHaveBeenCalledWith([adapter.collection]);
+    expect(createRemoteMock).toHaveBeenCalledTimes(2);
     expect(complete).toHaveBeenCalledTimes(1);
     expect(status.phase).toBe("idle");
     expect(status.lastDownloadAt).not.toBeNull();
@@ -1133,8 +1150,9 @@ function createNamedAdapter(
     checkPath: `${id}/index.json`,
     sync: vi.fn(async (
       _session: SyncRemoteSession,
-      scope: Parameters<WebDavSyncAdapter["sync"]>[1],
+      options: Parameters<WebDavSyncAdapter["sync"]>[1],
     ): Promise<WebDavSyncAdapterResult> => {
+      const scope = options.scope;
       const scopeText = scope?.includeAssetIds !== undefined
         ? `include=${scope.includeAssetIds.join(",")}`
         : scope?.excludeAssetIds !== undefined
@@ -1149,6 +1167,34 @@ function createNamedAdapter(
         changedAssetIds: [],
       };
     }),
+  };
+}
+
+function createPlanItemStub(
+  adapterId: string,
+  assetId: string,
+  kind: SyncPlanItem["kind"],
+  applyUpload = vi.fn(async () => undefined),
+  applyDownload = vi.fn(async () => undefined),
+  applyLocalRestore = vi.fn(async () => undefined),
+): SyncPlanItem & {
+  readonly applyUpload: ReturnType<typeof vi.fn>;
+  readonly applyDownload: ReturnType<typeof vi.fn>;
+  readonly applyLocalRestore: ReturnType<typeof vi.fn>;
+} {
+  return {
+    adapterId,
+    assetId,
+    kind,
+    localValue: { name: "local" },
+    remoteValue: kind === "download" ? { name: "remote" } : null,
+    localHash: "local-hash",
+    remoteHash: kind === "upload" ? null : "remote-hash",
+    remoteDeletedAt: null,
+    remoteUpdatedAt: null,
+    applyUpload,
+    applyDownload,
+    applyLocalRestore,
   };
 }
 

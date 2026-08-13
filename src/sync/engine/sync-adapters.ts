@@ -1,8 +1,10 @@
 import { createStableJsonHash } from "@/shared/storage/hash-utils";
 import { createLogger } from "@/shared/logging/logger";
+import type { SyncConflictItemKind } from "@/domain/sync";
 import type {
   RemoteAssetMeta,
-  RemoteCollectionIndex,
+  RemoteAssetPutParams,
+  RemoteAssetTombstoneParams,
   SyncRemoteAdapterMode,
   SyncRemoteCollection,
   SyncRemoteSession,
@@ -36,11 +38,17 @@ export interface SyncAdapterResult {
   readonly mode: SyncAdapterMode;
   readonly status: SyncAdapterStatus;
   readonly changedAssetIds: readonly string[];
+  /** 本轮观察到的 collection revision；引擎在 commit 成功后用于 markApplied。 */
+  readonly collectionRevision?: number | null;
+  /** 本轮观察到的 collection ETag；本 adapter 有上传时传 null 使检查重新探测。 */
+  readonly collectionEtag?: string | null;
 }
 
 export interface SyncAdapterConflict<TValue> {
   readonly adapterId: string;
   readonly assetId: string;
+  /** 弹框条目类型：upload（默认用我的）/ download（默认用远端）/ conflict（双向）。 */
+  readonly kind?: SyncConflictItemKind;
   readonly localValue: TValue;
   readonly remoteValue: TValue | null;
   readonly localHash: string;
@@ -58,6 +66,76 @@ export interface SyncAdapterConflictDecision {
   readonly resolution: SyncAdapterConflictResolution;
 }
 
+// ============================================================================
+// 同步引擎事务 — 先下载、后上传、单次 commit 的执行上下文
+// ============================================================================
+
+export type SyncPlanItemKind = "upload" | "download" | "conflict";
+
+/**
+ * 引擎级计划条目：一个资产的分类结果与决议执行句柄。
+ * 弹框按条目逐项选择；引擎按决议调用 applyDownload / applyUpload / applyLocalRestore。
+ */
+export interface SyncPlanItem {
+  readonly adapterId: string;
+  readonly assetId: string;
+  readonly kind: SyncPlanItemKind;
+  readonly localValue: unknown;
+  readonly remoteValue: unknown | null;
+  readonly localHash: string | null;
+  readonly remoteHash: string | null;
+  readonly remoteDeletedAt: string | null;
+  readonly remoteUpdatedAt: string | null;
+  /** 决议为“用远端”时执行；墓碑走二段删除，非墓碑立即下载落地。 */
+  readonly applyDownload: () => Promise<void>;
+  /** 决议为“用我的”时执行：登记上传 mutation + 暂存 touch。 */
+  readonly applyUpload: () => Promise<void>;
+  /** 下载条目改判“用我的”时恢复本地原值（之后引擎再登记上传）。 */
+  readonly applyLocalRestore: () => Promise<void>;
+}
+
+export interface SyncPlanUpload {
+  readonly adapterId: string;
+  readonly assetId: string;
+  readonly params: RemoteAssetPutParams | RemoteAssetTombstoneParams;
+}
+
+/**
+ * 引擎在单轮同步内注入的事务对象。
+ * adapter 只负责分类、下载落地与登记；上传 commit、touch 落盘、
+ * 二段删除落地全部由引擎在 commit 成功后统一执行。
+ */
+export interface SyncEngineTransaction {
+  /** 共享上传批次；commit 由引擎在全部下载完成后执行。 */
+  readonly writeBatch: SyncRemoteWriteBatch;
+  /** 暂存 touch（lastSyncedHash），commit 成功后由引擎统一落盘。 */
+  stageTouch(assetKey: string, contentHash: string | null): void;
+  /** 暂存二段删除：commit 成功后执行；commit 失败或本轮被丢弃时不会执行。 */
+  stageDeletion(adapterId: string, assetId: string, apply: () => Promise<void>): void;
+  /** 登记弹框条目（upload / download / conflict）。 */
+  recordItem(item: SyncPlanItem): void;
+  /** 登记上传 mutation；由引擎在弹框决议后写入共享批次。 */
+  recordUpload(upload: SyncPlanUpload): void;
+  /** 下载落地前检查二代脏标；置位则抛 SyncDownloadDirtyAbortError 终止本轮。 */
+  assertDownloadAllowed(adapterId: string, assetId: string): Promise<void>;
+}
+
+/** 下载不容忍：落地前发现第二代脏标。引擎捕获后锁定画布并从头重跑。 */
+export class SyncDownloadDirtyAbortError extends Error {
+  public constructor(
+    public readonly adapterId: string,
+    public readonly assetId: string,
+  ) {
+    super(`Download aborted — asset ${adapterId}/${assetId} was edited during sync.`);
+    this.name = "SyncDownloadDirtyAbortError";
+  }
+}
+
+export interface SyncAdapterSyncOptions {
+  readonly scope?: SyncAdapterScope;
+  readonly transaction: SyncEngineTransaction;
+}
+
 export interface SyncAdapter {
   readonly id: string;
   readonly mode: SyncAdapterMode;
@@ -65,25 +143,36 @@ export interface SyncAdapter {
   readonly checkPath: string | null;
   sync(
     session: SyncRemoteSession,
-    scope?: SyncAdapterScope,
+    options: SyncAdapterSyncOptions,
   ): Promise<SyncAdapterResult>;
-  inspectConflicts?(
-    session: SyncRemoteSession,
-    scope?: SyncAdapterScope,
-  ): Promise<readonly SyncAdapterConflict<unknown>[]>;
-  /**
-   * 执行冲突决策：Phase 1 并行下载 use-remote，Phase 2 单事务并行上传 use-local。
-   * 不走 sync() 的全量比较逻辑,只处理 decisions 中明确决定的条目。
-   *
-   * 若提供 sharedWriteBatch，use-local 条目将写入该共享批次，且不在此方法内 commit；
-   * 调用方负责在所有 adapter 完成后调用 sharedWriteBatch.commit()，并仅在提交成功后
-   * 持久化 use-local 条目的 lastSyncedHash。
-   */
-  executeConflictDecisions?(
-    session: SyncRemoteSession,
-    decisions: readonly SyncAdapterConflictDecision[],
-    sharedWriteBatch?: SyncRemoteWriteBatch,
-  ): Promise<SyncAdapterResult>;
+  // AI-REMOVED 2026-08-13:
+  // Reason: 旧“同步后探测冲突 + 分阶段执行决议”工作流已被引擎级弹框取代。
+  // Trigger: sync-model.md 要求上传/下载/冲突资产全部进入对话框逐项选择，
+  //   决议执行由引擎统一编排（先下载、后上传、单次 commit）。
+  // Evidence: 旧 runConflictWorkflow 依赖这些方法按 adapter 分组二次执行；
+  //   新引擎直接从 SyncPlanItem 的决议句柄执行，不再需要探测与执行分离。
+  // Replacement: SyncPlanItem.applyDownload / applyUpload / applyLocalRestore。
+  // Risk: Low；外部模块无这两个方法的其他调用点。
+  // Human Review: Required
+  //
+  // Original code:
+  // inspectConflicts?(
+  //   session: SyncRemoteSession,
+  //   scope?: SyncAdapterScope,
+  // ): Promise<readonly SyncAdapterConflict<unknown>[]>;
+  // /**
+  //  * 执行冲突决策：Phase 1 并行下载 use-remote，Phase 2 单事务并行上传 use-local。
+  //  * 不走 sync() 的全量比较逻辑,只处理 decisions 中明确决定的条目。
+  //  *
+  //  * 若提供 sharedWriteBatch，use-local 条目将写入该共享批次，且不在此方法内 commit；
+  //  * 调用方负责在所有 adapter 完成后调用 sharedWriteBatch.commit()，并仅在提交成功后
+  //  * 持久化 use-local 条目的 lastSyncedHash。
+  //  */
+  // executeConflictDecisions?(
+  //   session: SyncRemoteSession,
+  //   decisions: readonly SyncAdapterConflictDecision[],
+  //   sharedWriteBatch?: SyncRemoteWriteBatch,
+  // ): Promise<SyncAdapterResult>;
 }
 
 export interface SyncAdapterScope {
@@ -200,15 +289,23 @@ interface NormalizedRemoteAsset<TValue> {
   readonly etag: string | null;
 }
 
-interface WriteRemoteValueOptions<TValue> {
-  readonly session: SyncRemoteSession;
-  readonly collection: SyncRemoteCollection;
-  readonly assetId: string;
-  readonly value: TValue;
-  readonly contentHash: string;
-  readonly baseRevision: number | null;
-  readonly baseContentHash: string | null;
-}
+// AI-REMOVED 2026-08-13:
+// Reason: writeRemoteValue 已随单值 adapter 的自建批次提交一并移除，接口不再有消费方。
+// Trigger: sync-model.md“先下载、后上传、单次 commit”语义。
+// Replacement: transaction.recordUpload。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// interface WriteRemoteValueOptions<TValue> {
+//   readonly session: SyncRemoteSession;
+//   readonly collection: SyncRemoteCollection;
+//   readonly assetId: string;
+//   readonly value: TValue;
+//   readonly contentHash: string;
+//   readonly baseRevision: number | null;
+//   readonly baseContentHash: string | null;
+// }
 
 async function createSyncContentHash(
   session: SyncRemoteSession,
@@ -286,39 +383,55 @@ async function readRemoteAssetValue<TValue>(
   };
 }
 
-function toRemoteIndexFile(index: RemoteCollectionIndex): RemoteIndexFile {
-  return {
-    revision: index.revision,
-    entries: Object.fromEntries(
-      Object.entries(index.entries).flatMap(([assetId, entry]) =>
-        entry.contentHash === null
-          ? []
-          : [[assetId, {
-              contentHash: entry.contentHash,
-              ...(entry.protocolContentHash === undefined
-                ? {}
-                : { protocolContentHash: entry.protocolContentHash }),
-              deletedAt: entry.deletedAt,
-              committedAt: entry.committedAt,
-              revision: entry.revision,
-            } satisfies RemoteIndexEntry]]
-      ),
-    ),
-  };
-}
+// AI-REMOVED 2026-08-13:
+// Reason: 新编排直接消费 RemoteCollectionIndex，不再需要转换层。
+// Trigger: 先下载后上传重构，分类逻辑统一使用 RemoteAssetMeta 口径标记。
+// Replacement: syncFullWithRevision / syncPatchCollectionWithRevision 直接使用 remoteIndexState。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// function toRemoteIndexFile(index: RemoteCollectionIndex): RemoteIndexFile {
+//   return {
+//     revision: index.revision,
+//     entries: Object.fromEntries(
+//       Object.entries(index.entries).flatMap(([assetId, entry]) =>
+//         entry.contentHash === null
+//           ? []
+//           : [[assetId, {
+//               contentHash: entry.contentHash,
+//               ...(entry.protocolContentHash === undefined
+//                 ? {}
+//                 : { protocolContentHash: entry.protocolContentHash }),
+//               deletedAt: entry.deletedAt,
+//               committedAt: entry.committedAt,
+//               revision: entry.revision,
+//             } satisfies RemoteIndexEntry]]
+//       ),
+//     ),
+//   };
+// }
 
-async function writeRemoteValue<TValue>(options: WriteRemoteValueOptions<TValue>): Promise<void> {
-  const batch = options.session.beginWriteBatch();
-  batch.putAsset({
-    collection: options.collection,
-    assetId: options.assetId,
-    value: options.value,
-    contentHash: options.contentHash,
-    baseRevision: options.baseRevision,
-    baseContentHash: options.baseContentHash,
-  });
-  await batch.commit();
-}
+// AI-REMOVED 2026-08-13:
+// Reason: 单值 adapter 的上传不再自行建批次提交，统一由引擎的共享批次在下载完成后 commit。
+// Trigger: sync-model.md“先下载、后上传、单次 commit”语义。
+// Replacement: transaction.recordUpload + createPlanItem 的 applyUpload。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// async function writeRemoteValue<TValue>(options: WriteRemoteValueOptions<TValue>): Promise<void> {
+//   const batch = options.session.beginWriteBatch();
+//   batch.putAsset({
+//     collection: options.collection,
+//     assetId: options.assetId,
+//     value: options.value,
+//     contentHash: options.contentHash,
+//     baseRevision: options.baseRevision,
+//     baseContentHash: options.baseContentHash,
+//   });
+//   await batch.commit();
+// }
 
 function resolveRemoteBaseContentHash(
   entry: RemoteIndexEntry | RemoteAssetMeta | null | undefined,
@@ -327,164 +440,350 @@ function resolveRemoteBaseContentHash(
   return protocolHash ?? entry?.contentHash ?? null;
 }
 
-// ============================================================================
-// executeConflictDecisions — 两阶段冲突执行
-// ============================================================================
-
-interface ConflictExecutionContext<TValue> {
-  readonly collection: SyncRemoteCollection;
-  readonly adapterId: string;
-  /** 归一化远端 JSON → 本地 value；返回 null 视为解析失败。 */
-  readonly normalizeRemote: ((value: unknown) => TValue | null) | undefined;
-  /** 读取远端 asset 并返回 parsed + normalized 结果。 */
-  readonly readRemoteAsset: (session: SyncRemoteSession, assetId: string) => Promise<NormalizedRemoteAsset<TValue> | null>;
-  /** 读取本地 value（用于上传 use-local 条目）。 */
-  readonly readLocalValue: (assetId: string) => Promise<TValue | null>;
-  /** 获取本地墓碑的 deletedAt；非墓碑返回 null。 */
-  readonly getLocalDeletedAt: (assetId: string) => Promise<string | null>;
-  /** 将远端 value 写入本地（use-remote 下载）。remoteDeletedAt 用于墓碑场景。 */
-  readonly writeLocalForDownload: (
-    session: SyncRemoteSession,
-    assetId: string,
-    remoteValue: TValue,
-    remoteDeletedAt: string | null,
-  ) => Promise<void>;
-  /** 获取远端上传所需的乐观并发基线修订号。 */
-  readonly getRemoteRevision: (session: SyncRemoteSession, assetId: string) => Promise<number | null>;
-  /** 获取远端上传所需的 baseContentHash。 */
-  readonly getRemoteBaseContentHash: (session: SyncRemoteSession, assetId: string) => Promise<string | null>;
+/** 索引 hash 是否处于可与本地口径 hash 直接比较的口径（fallback 口径不得比较）。 */
+function isIndexHashComparable(
+  entry: RemoteAssetMeta | null | undefined,
+): boolean {
+  return (entry?.contentHashCaliber ?? "adapter") !== "protocol-fallback";
 }
 
-async function executeCollectionConflictDecisions<TValue>(
-  session: SyncRemoteSession,
-  decisions: readonly SyncAdapterConflictDecision[],
-  ctx: ConflictExecutionContext<TValue>,
-  sharedWriteBatch?: SyncRemoteWriteBatch,
-): Promise<SyncAdapterResult> {
-  const useRemote = decisions.filter((d) => d.resolution === "use-remote");
-  const useLocal = decisions.filter((d) => d.resolution === "use-local");
-  const pause = decisions.filter((d) => d.resolution === "pause");
-  const changedAssetIds: string[] = [...useRemote.map((d) => d.assetId), ...useLocal.map((d) => d.assetId)];
-  let status: SyncAdapterStatus = "idle";
+// ============================================================================
+// 三值分类（lastSyncedHash 为基线）
+// ============================================================================
 
-  // Phase 1: 并行下载所有 use-remote
-  if (useRemote.length > 0) {
-    await Promise.all(useRemote.map(async (decision) => {
-      if (decision.remoteDeletedAt !== null) {
-        // 墓碑下载：仅写本地 deletedAt，不拉取远端正文
-        await ctx.writeLocalForDownload(
-          session, decision.assetId,
-          null as unknown as TValue,
-          decision.remoteDeletedAt,
-        );
-        const assetKey = createSyncAssetKey(ctx.collection, decision.assetId);
-        // 墓碑的 lastSyncedHash 使用远端 hash
-        await session.localState.setLastSyncedHash(assetKey, decision.remoteHash);
-        logger.info(`${ctx.adapterId}/${decision.assetId}: use-remote (tombstone) → deletedAt=${decision.remoteDeletedAt}`);
-        status = mergeStatus(status, "downloaded");
+type SingleValueClassification =
+  | { readonly kind: "idle" }
+  | { readonly kind: "upload" }
+  | { readonly kind: "download" }
+  | { readonly kind: "conflict" };
+
+interface ClassifySingleValueOptions {
+  readonly localValue: unknown | null;
+  readonly remoteValue: unknown | null;
+  readonly localHash: string | null;
+  readonly remoteHash: string | null;
+  readonly lastSyncedHash: string | null;
+  /** 远端资产消失时是否允许解释为“远端墓碑下载”（否则解释为本地新增上传）。 */
+  readonly supportsRemoteTombstone: boolean;
+}
+
+function classifySingleValue(options: ClassifySingleValueOptions): SingleValueClassification {
+  if (options.localValue === null && options.remoteValue === null) {
+    return { kind: "idle" };
+  }
+
+  if (options.localValue !== null && options.remoteValue === null) {
+    // 本地有、远端无。
+    if (options.supportsRemoteTombstone && options.lastSyncedHash !== null) {
+      if (options.localHash === options.lastSyncedHash) {
+        // 曾同步过且本地未改 → 远端墓碑下载（二段删除）。
+        return { kind: "download" };
+      }
+      // 曾同步过且本地已改 → 冲突。
+      return { kind: "conflict" };
+    }
+    // 远端从未存在（或不支持墓碑的 adapter）→ 上传新增。
+    return { kind: "upload" };
+  }
+
+  if (options.localValue === null && options.remoteValue !== null) {
+    return { kind: "download" };
+  }
+
+  if (options.localHash === null || options.remoteHash === null) {
+    return { kind: "idle" };
+  }
+
+  if (options.localHash === options.remoteHash) {
+    return { kind: "idle" };
+  }
+
+  if (options.lastSyncedHash === options.remoteHash) {
+    // 本地改了、远端没变 → 静默上传。
+    return { kind: "upload" };
+  }
+
+  if (options.lastSyncedHash === options.localHash) {
+    // 远端改了、本地没变 → 静默采用远端。
+    return { kind: "download" };
+  }
+
+  return { kind: "conflict" };
+}
+
+// ============================================================================
+// 计划条目构造
+// ============================================================================
+
+interface CreatePlanItemOptions<TValue> {
+  readonly session: SyncRemoteSession;
+  readonly collection: SyncRemoteCollection;
+  readonly transaction: SyncEngineTransaction;
+  readonly adapterId: string;
+  readonly assetId: string;
+  readonly kind: SyncPlanItemKind;
+  readonly localValue: TValue | null;
+  readonly localDeletedAt: string | null;
+  readonly localHash: string | null;
+  readonly remoteValue: TValue | null;
+  readonly remoteHash: string | null;
+  readonly remoteDeletedAt: string | null;
+  readonly remoteUpdatedAt: string | null;
+  readonly writeLocal: (value: TValue, deletedAt: string | null) => Promise<void>;
+  /** 远端墓碑落地（二段删除）；不提供则该 asset 不支持墓碑下载。 */
+  readonly applyRemoteTombstone: ((remoteDeletedAt: string) => Promise<void>) | null;
+  /** 读取远端资产（决策翻转为“用远端”时执行下载）。 */
+  readonly readRemoteValue: () => Promise<NormalizedRemoteAsset<TValue> | null>;
+  /** 构造正文上传参数。 */
+  readonly createPutParams: (
+    value: TValue,
+    contentHash: string,
+  ) => Promise<RemoteAssetPutParams>;
+  /** 构造墓碑上传参数；不提供则该 asset 不支持墓碑上传。 */
+  readonly createTombstoneParams: ((
+    value: TValue,
+    deletedAt: string,
+    contentHash: string,
+  ) => Promise<RemoteAssetTombstoneParams>) | null;
+}
+
+/**
+ * 构造计划条目。下载落地（含脏标代际检查）统一走 applyDownload；
+ * 上传登记（mutation + touch 暂存）统一走 applyUpload。
+ */
+function createPlanItem<TValue>(options: CreatePlanItemOptions<TValue>): SyncPlanItem {
+  const {
+    session,
+    collection,
+    transaction,
+    adapterId,
+    assetId,
+    kind,
+    localValue,
+    localDeletedAt,
+    localHash,
+    remoteDeletedAt,
+  } = options;
+  const assetKey = createSyncAssetKey(collection, assetId);
+
+  const applyDownload = async (): Promise<void> => {
+    await transaction.assertDownloadAllowed(adapterId, assetId);
+    if (remoteDeletedAt !== null) {
+      if (options.applyRemoteTombstone === null) {
+        logger.warn(`${adapterId}/${assetId}: remote tombstone not supported → skipping`);
         return;
       }
+      transaction.stageDeletion(adapterId, assetId, () =>
+        options.applyRemoteTombstone!(remoteDeletedAt));
+      transaction.stageTouch(assetKey, options.remoteHash);
+      return;
+    }
 
-      const remoteAsset = await ctx.readRemoteAsset(session, decision.assetId);
-      if (remoteAsset === null) {
-        logger.warn(`${ctx.adapterId}/${decision.assetId}: use-remote but remote asset not found → skipping`);
+    const remoteAsset = await options.readRemoteValue();
+    if (remoteAsset === null) {
+      logger.warn(`${adapterId}/${assetId}: use-remote but remote asset not found → skipping`);
+      return;
+    }
+    await options.writeLocal(remoteAsset.value, null);
+    transaction.stageTouch(assetKey, remoteAsset.contentHash);
+  };
+
+  const applyUpload = async (): Promise<void> => {
+    if (localDeletedAt !== null) {
+      if (options.createTombstoneParams === null || localValue === null) {
+        logger.warn(`${adapterId}/${assetId}: local tombstone upload not supported → skipping`);
         return;
       }
-      await ctx.writeLocalForDownload(session, decision.assetId, remoteAsset.value, null);
-      const assetKey = createSyncAssetKey(ctx.collection, decision.assetId);
-      await session.localState.setLastSyncedHash(assetKey, remoteAsset.contentHash);
-      logger.info(`${ctx.adapterId}/${decision.assetId}: use-remote → downloaded`);
-      status = mergeStatus(status, "downloaded");
-    }));
-  }
-
-  // Phase 2: 上传所有 use-local — 写入共享批次或自建批次
-  if (useLocal.length > 0) {
-    const ownedBatch = sharedWriteBatch === undefined;
-    const batch = sharedWriteBatch ?? session.beginWriteBatch();
-    for (const decision of useLocal) {
-      const localDeletedAt = await ctx.getLocalDeletedAt(decision.assetId);
-      if (localDeletedAt !== null) {
-        // 本地墓碑：putTombstone
-        const contentHash = await createSyncContentHash(session, ctx.collection, null);
-        const baseRevision = await ctx.getRemoteRevision(session, decision.assetId);
-        const baseContentHash = await ctx.getRemoteBaseContentHash(session, decision.assetId);
-        batch.putTombstone({
-          collection: ctx.collection,
-          assetId: decision.assetId,
-          deletedAt: localDeletedAt,
-          targetContentHash: contentHash,
-          baseRevision,
-          baseContentHash,
-        });
-        // AI-REMOVED 2026-08-11:
-        // Reason: 共享批次尚未 commit，不能提前把本地墓碑标记为已同步。
-        // Trigger: commit 失败会留下虚假的同步基线，下一轮可能跳过未上传变更。
-        // Evidence: runConflictDecisionRequests 在全部 adapter 返回后才提交 sharedWriteBatch。
-        // Replacement: sync-service.ts 在 sharedWriteBatch.commit() 成功后统一写入基线。
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
-        // const assetKey = createSyncAssetKey(ctx.collection, decision.assetId);
-        // await session.localState.setLastSyncedHash(assetKey, decision.localHash);
-        logger.info(`${ctx.adapterId}/${decision.assetId}: use-local (tombstone) → uploaded`);
-        status = mergeStatus(status, "uploaded");
-        continue;
-      }
-
-      const localValue = await ctx.readLocalValue(decision.assetId);
-      if (localValue === null) {
-        logger.warn(`${ctx.adapterId}/${decision.assetId}: use-local but local value not found → skipping`);
-        continue;
-      }
-      const contentHash = await createSyncContentHash(session, ctx.collection, localValue);
-      const baseRevision = await ctx.getRemoteRevision(session, decision.assetId);
-      const baseContentHash = await ctx.getRemoteBaseContentHash(session, decision.assetId);
-      batch.putAsset({
-        collection: ctx.collection,
-        assetId: decision.assetId,
-        value: localValue,
-        contentHash,
-        baseRevision,
-        baseContentHash,
-      });
-      // AI-REMOVED 2026-08-11:
-      // Reason: 共享批次尚未 commit，不能提前把本地正文标记为已同步。
-      // Trigger: commit 失败会留下虚假的同步基线，下一轮可能跳过未上传变更。
-      // Evidence: runConflictDecisionRequests 在全部 adapter 返回后才提交 sharedWriteBatch。
-      // Replacement: sync-service.ts 在 sharedWriteBatch.commit() 成功后统一写入基线。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // const assetKey = createSyncAssetKey(ctx.collection, decision.assetId);
-      // await session.localState.setLastSyncedHash(assetKey, contentHash);
-      logger.info(`${ctx.adapterId}/${decision.assetId}: use-local → uploaded`);
-      status = mergeStatus(status, "uploaded");
+      const targetContentHash = await createSyncContentHash(session, collection, null);
+      const params = await options.createTombstoneParams(
+        localValue,
+        localDeletedAt,
+        targetContentHash,
+      );
+      transaction.recordUpload({ adapterId, assetId, params });
+      transaction.stageTouch(assetKey, localHash);
+      return;
     }
-    if (ownedBatch) {
-      await batch.commit();
-      for (const decision of useLocal) {
-        await session.localState.setLastSyncedHash(
-          createSyncAssetKey(ctx.collection, decision.assetId),
-          decision.localHash,
-        );
-      }
-    }
-  }
 
-  if (pause.length > 0) {
-    status = mergeStatus(status, "conflict");
-  }
+    if (localValue === null || localHash === null) {
+      logger.warn(`${adapterId}/${assetId}: use-local but local value not found → skipping`);
+      return;
+    }
+    const params = await options.createPutParams(localValue, localHash);
+    transaction.recordUpload({ adapterId, assetId, params });
+    transaction.stageTouch(assetKey, localHash);
+  };
+
+  const applyLocalRestore = async (): Promise<void> => {
+    if (localValue === null) {
+      return;
+    }
+    await options.writeLocal(localValue, localDeletedAt);
+  };
 
   return {
-    adapterId: ctx.adapterId,
-    mode: ctx.collection.mode,
-    status,
-    changedAssetIds: Array.from(new Set(changedAssetIds)),
+    adapterId,
+    assetId,
+    kind,
+    localValue: localValue as unknown,
+    remoteValue: options.remoteValue as unknown | null,
+    localHash,
+    remoteHash: options.remoteHash,
+    remoteDeletedAt,
+    remoteUpdatedAt: options.remoteUpdatedAt,
+    applyDownload,
+    applyUpload,
+    applyLocalRestore,
   };
 }
+
+// AI-REMOVED 2026-08-13:
+// Reason: 旧“分阶段冲突决策执行”已被引擎级弹框 + SyncPlanItem 决议句柄取代。
+// Trigger: sync-model.md 要求上传/下载/冲突资产全部进入对话框逐项选择，
+//   引擎统一执行决议并负责单次 commit；adapter 不再持有两阶段执行逻辑。
+// Evidence: 新引擎从 SyncPlanItem.applyDownload / applyUpload / applyLocalRestore 执行决议。
+// Replacement: createPlanItem（上方）与 sync-service 的决议编排。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+//
+// // ============================================================================
+// // executeConflictDecisions — 两阶段冲突执行
+// // ============================================================================
+//
+// interface ConflictExecutionContext<TValue> {
+//   readonly collection: SyncRemoteCollection;
+//   readonly adapterId: string;
+//   /** 归一化远端 JSON → 本地 value；返回 null 视为解析失败。 */
+//   readonly normalizeRemote: ((value: unknown) => TValue | null) | undefined;
+//   /** 读取远端 asset 并返回 parsed + normalized 结果。 */
+//   readonly readRemoteAsset: (session: SyncRemoteSession, assetId: string) => Promise<NormalizedRemoteAsset<TValue> | null>;
+//   /** 读取本地 value（用于上传 use-local 条目）。 */
+//   readonly readLocalValue: (assetId: string) => Promise<TValue | null>;
+//   /** 获取本地墓碑的 deletedAt；非墓碑返回 null。 */
+//   readonly getLocalDeletedAt: (assetId: string) => Promise<string | null>;
+//   /** 将远端 value 写入本地（use-remote 下载）。remoteDeletedAt 用于墓碑场景。 */
+//   readonly writeLocalForDownload: (
+//     session: SyncRemoteSession,
+//     assetId: string,
+//     remoteValue: TValue,
+//     remoteDeletedAt: string | null,
+//   ) => Promise<void>;
+//   /** 获取远端上传所需的乐观并发基线修订号。 */
+//   readonly getRemoteRevision: (session: SyncRemoteSession, assetId: string) => Promise<number | null>;
+//   /** 获取远端上传所需的 baseContentHash。 */
+//   readonly getRemoteBaseContentHash: (session: SyncRemoteSession, assetId: string) => Promise<string | null>;
+// }
+//
+// async function executeCollectionConflictDecisions<TValue>(
+//   session: SyncRemoteSession,
+//   decisions: readonly SyncAdapterConflictDecision[],
+//   ctx: ConflictExecutionContext<TValue>,
+//   sharedWriteBatch?: SyncRemoteWriteBatch,
+// ): Promise<SyncAdapterResult> {
+//   const useRemote = decisions.filter((d) => d.resolution === "use-remote");
+//   const useLocal = decisions.filter((d) => d.resolution === "use-local");
+//   const pause = decisions.filter((d) => d.resolution === "pause");
+//   const changedAssetIds: string[] = [...useRemote.map((d) => d.assetId), ...useLocal.map((d) => d.assetId)];
+//   let status: SyncAdapterStatus = "idle";
+//
+//   // Phase 1: 并行下载所有 use-remote
+//   if (useRemote.length > 0) {
+//     await Promise.all(useRemote.map(async (decision) => {
+//       if (decision.remoteDeletedAt !== null) {
+//         // 墓碑下载：仅写本地 deletedAt，不拉取远端正文
+//         await ctx.writeLocalForDownload(
+//           session, decision.assetId,
+//           null as unknown as TValue,
+//           decision.remoteDeletedAt,
+//         );
+//         const assetKey = createSyncAssetKey(ctx.collection, decision.assetId);
+//         // 墓碑的 lastSyncedHash 使用远端 hash
+//         await session.localState.setLastSyncedHash(assetKey, decision.remoteHash);
+//         logger.info(`${ctx.adapterId}/${decision.assetId}: use-remote (tombstone) → deletedAt=${decision.remoteDeletedAt}`);
+//         status = mergeStatus(status, "downloaded");
+//         return;
+//       }
+//
+//       const remoteAsset = await ctx.readRemoteAsset(session, decision.assetId);
+//       if (remoteAsset === null) {
+//         logger.warn(`${ctx.adapterId}/${decision.assetId}: use-remote but remote asset not found → skipping`);
+//         return;
+//       }
+//       await ctx.writeLocalForDownload(session, decision.assetId, remoteAsset.value, null);
+//       const assetKey = createSyncAssetKey(ctx.collection, decision.assetId);
+//       await session.localState.setLastSyncedHash(assetKey, remoteAsset.contentHash);
+//       logger.info(`${ctx.adapterId}/${decision.assetId}: use-remote → downloaded`);
+//       status = mergeStatus(status, "downloaded");
+//     }));
+//   }
+//
+//   // Phase 2: 上传所有 use-local — 写入共享批次或自建批次
+//   if (useLocal.length > 0) {
+//     const ownedBatch = sharedWriteBatch === undefined;
+//     const batch = sharedWriteBatch ?? session.beginWriteBatch();
+//     for (const decision of useLocal) {
+//       const localDeletedAt = await ctx.getLocalDeletedAt(decision.assetId);
+//       if (localDeletedAt !== null) {
+//         // 本地墓碑：putTombstone
+//         const contentHash = await createSyncContentHash(session, ctx.collection, null);
+//         const baseRevision = await ctx.getRemoteRevision(session, decision.assetId);
+//         const baseContentHash = await ctx.getRemoteBaseContentHash(session, decision.assetId);
+//         batch.putTombstone({
+//           collection: ctx.collection,
+//           assetId: decision.assetId,
+//           deletedAt: localDeletedAt,
+//           targetContentHash: contentHash,
+//           baseRevision,
+//           baseContentHash,
+//         });
+//         logger.info(`${ctx.adapterId}/${decision.assetId}: use-local (tombstone) → uploaded`);
+//         status = mergeStatus(status, "uploaded");
+//         continue;
+//       }
+//
+//       const localValue = await ctx.readLocalValue(decision.assetId);
+//       if (localValue === null) {
+//         logger.warn(`${ctx.adapterId}/${decision.assetId}: use-local but local value not found → skipping`);
+//         continue;
+//       }
+//       const contentHash = await createSyncContentHash(session, ctx.collection, localValue);
+//       const baseRevision = await ctx.getRemoteRevision(session, decision.assetId);
+//       const baseContentHash = await ctx.getRemoteBaseContentHash(session, decision.assetId);
+//       batch.putAsset({
+//         collection: ctx.collection,
+//         assetId: decision.assetId,
+//         value: localValue,
+//         contentHash,
+//         baseRevision,
+//         baseContentHash,
+//       });
+//       logger.info(`${ctx.adapterId}/${decision.assetId}: use-local → uploaded`);
+//       status = mergeStatus(status, "uploaded");
+//     }
+//     if (ownedBatch) {
+//       await batch.commit();
+//       for (const decision of useLocal) {
+//         await session.localState.setLastSyncedHash(
+//           createSyncAssetKey(ctx.collection, decision.assetId),
+//           decision.localHash,
+//         );
+//       }
+//     }
+//   }
+//
+//   if (pause.length > 0) {
+//     status = mergeStatus(status, "conflict");
+//   }
+//
+//   return {
+//     adapterId: ctx.adapterId,
+//     mode: ctx.collection.mode,
+//     status,
+//     changedAssetIds: Array.from(new Set(changedAssetIds)),
+//   };
+// }
 
 export function createFullNoRevisionAdapter<TValue>(
   options: FullNoRevisionAdapterOptions<TValue>,
@@ -504,39 +803,47 @@ export function createFullNoRevisionAdapter<TValue>(
     mode: "full-no-revision",
     collection,
     checkPath: options.remotePath,
-    sync: async (session, scope) => await syncFullNoRevision(
+    sync: async (session, syncOptions) => await syncFullNoRevision(
       session,
       collection,
       options,
-      scope,
+      syncOptions,
     ),
-    inspectConflicts: async (session, scope) =>
-      await inspectFullNoRevisionConflicts(session, collection, options, scope),
-    executeConflictDecisions: async (session, decisions, sharedWriteBatch) =>
-      await executeCollectionConflictDecisions(session, decisions, {
-        collection,
-        adapterId: options.id,
-        normalizeRemote: options.normalizeRemote,
-        readRemoteAsset: (s, assetId) => readRemoteAssetValue(s, collection, assetId, options.normalizeRemote),
-        readLocalValue: async () => await options.readLocal(),
-        getLocalDeletedAt: async () => null,
-        writeLocalForDownload: async (_s, _assetId, remoteValue, remoteDeletedAt) => {
-          if (remoteDeletedAt !== null) {
-            // full-no-revision 不支持墓碑；仅记录日志
-            logger.warn(`${options.id}: use-remote tombstone not supported for full-no-revision adapter`);
-            return;
-          }
-          await options.writeLocal(remoteValue);
-        },
-        getRemoteRevision: async (s) => {
-          const remoteAsset = await readRemoteAssetValue(s, collection, "single", options.normalizeRemote);
-          return remoteAsset?.revision ?? null;
-        },
-        getRemoteBaseContentHash: async (s) => {
-          const remoteAsset = await readRemoteAssetValue(s, collection, "single", options.normalizeRemote);
-          return remoteAsset?.remoteContentHash ?? null;
-        },
-      }, sharedWriteBatch),
+    // AI-REMOVED 2026-08-13:
+    // Reason: 旧冲突探测与两阶段决策执行工作流已移除。
+    // Trigger: sync-model.md 引擎级弹框取代 adapter 级决议执行。
+    // Replacement: syncFullNoRevision 通过 SyncPlanItem 登记条目，引擎执行决议。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // inspectConflicts: async (session, scope) =>
+    //   await inspectFullNoRevisionConflicts(session, collection, options, scope),
+    // executeConflictDecisions: async (session, decisions, sharedWriteBatch) =>
+    //   await executeCollectionConflictDecisions(session, decisions, {
+    //     collection,
+    //     adapterId: options.id,
+    //     normalizeRemote: options.normalizeRemote,
+    //     readRemoteAsset: (s, assetId) => readRemoteAssetValue(s, collection, assetId, options.normalizeRemote),
+    //     readLocalValue: async () => await options.readLocal(),
+    //     getLocalDeletedAt: async () => null,
+    //     writeLocalForDownload: async (_s, _assetId, remoteValue, remoteDeletedAt) => {
+    //       if (remoteDeletedAt !== null) {
+    //         // full-no-revision 不支持墓碑；仅记录日志
+    //         logger.warn(`${options.id}: use-remote tombstone not supported for full-no-revision adapter`);
+    //         return;
+    //       }
+    //       await options.writeLocal(remoteValue);
+    //     },
+    //     getRemoteRevision: async (s) => {
+    //       const remoteAsset = await readRemoteAssetValue(s, collection, "single", options.normalizeRemote);
+    //       return remoteAsset?.revision ?? null;
+    //     },
+    //     getRemoteBaseContentHash: async (s) => {
+    //       const remoteAsset = await readRemoteAssetValue(s, collection, "single", options.normalizeRemote);
+    //       return remoteAsset?.remoteContentHash ?? null;
+    //     },
+    //   }, sharedWriteBatch),
   };
 }
 
@@ -559,40 +866,53 @@ export function createFullWithRevisionAdapter<TValue>(
     mode: "full-with-revision",
     collection,
     checkPath: options.indexPath,
-    sync: async (session, scope) => await syncFullWithRevision(session, collection, options, scope),
-    inspectConflicts: async (session, scope) =>
-      await inspectFullWithRevisionConflicts(session, collection, options, scope),
-    executeConflictDecisions: async (session, decisions, sharedWriteBatch) => {
-      // 预读远端索引以获取 revision / baseContentHash
-      const remoteIndexState = await session.readIndex(collection);
-      return await executeCollectionConflictDecisions(session, decisions, {
-        collection,
-        adapterId: options.id,
-        normalizeRemote: options.normalizeRemote,
-        readRemoteAsset: (s, assetId) => readRemoteAssetValue(s, collection, assetId, options.normalizeRemote),
-        readLocalValue: async (assetId) => {
-          const localEntries = await options.listLocal();
-          const entry = localEntries.find((e) => e.id === assetId);
-          return entry?.value ?? null;
-        },
-        getLocalDeletedAt: async (assetId) => {
-          const localEntries = await options.listLocal();
-          const entry = localEntries.find((e) => e.id === assetId);
-          return entry?.deletedAt ?? null;
-        },
-        writeLocalForDownload: async (_s, assetId, remoteValue, remoteDeletedAt) => {
-          await options.writeLocal({ id: assetId, value: remoteValue, deletedAt: remoteDeletedAt });
-        },
-        getRemoteRevision: async (_s, assetId) => {
-          const entry = remoteIndexState.entries[assetId];
-          return entry?.revision ?? remoteIndexState.revision;
-        },
-        getRemoteBaseContentHash: async (_s, assetId) => {
-          const entry = remoteIndexState.entries[assetId];
-          return resolveRemoteBaseContentHash(entry);
-        },
-      }, sharedWriteBatch);
-    },
+    sync: async (session, syncOptions) => await syncFullWithRevision(
+      session,
+      collection,
+      options,
+      syncOptions,
+    ),
+    // AI-REMOVED 2026-08-13:
+    // Reason: 旧冲突探测与两阶段决策执行工作流已移除。
+    // Trigger: sync-model.md 引擎级弹框取代 adapter 级决议执行。
+    // Replacement: syncFullWithRevision 通过 SyncPlanItem 登记条目，引擎执行决议。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // inspectConflicts: async (session, scope) =>
+    //   await inspectFullWithRevisionConflicts(session, collection, options, scope),
+    // executeConflictDecisions: async (session, decisions, sharedWriteBatch) => {
+    //   // 预读远端索引以获取 revision / baseContentHash
+    //   const remoteIndexState = await session.readIndex(collection);
+    //   return await executeCollectionConflictDecisions(session, decisions, {
+    //     collection,
+    //     adapterId: options.id,
+    //     normalizeRemote: options.normalizeRemote,
+    //     readRemoteAsset: (s, assetId) => readRemoteAssetValue(s, collection, assetId, options.normalizeRemote),
+    //     readLocalValue: async (assetId) => {
+    //       const localEntries = await options.listLocal();
+    //       const entry = localEntries.find((e) => e.id === assetId);
+    //       return entry?.value ?? null;
+    //     },
+    //     getLocalDeletedAt: async (assetId) => {
+    //       const localEntries = await options.listLocal();
+    //       const entry = localEntries.find((e) => e.id === assetId);
+    //       return entry?.deletedAt ?? null;
+    //     },
+    //     writeLocalForDownload: async (_s, assetId, remoteValue, remoteDeletedAt) => {
+    //       await options.writeLocal({ id: assetId, value: remoteValue, deletedAt: remoteDeletedAt });
+    //     },
+    //     getRemoteRevision: async (_s, assetId) => {
+    //       const entry = remoteIndexState.entries[assetId];
+    //       return entry?.revision ?? remoteIndexState.revision;
+    //     },
+    //     getRemoteBaseContentHash: async (_s, assetId) => {
+    //       const entry = remoteIndexState.entries[assetId];
+    //       return resolveRemoteBaseContentHash(entry);
+    //     },
+    //   }, sharedWriteBatch);
+    // },
   };
 }
 
@@ -616,38 +936,46 @@ export function createPatchWithRevisionAdapter<TValue>(
     mode: "patch-with-revision",
     collection,
     checkPath: metaPath,
-    sync: async (session, scope) => await syncPatchWithRevision(
+    sync: async (session, syncOptions) => await syncPatchWithRevision(
       session,
       collection,
       options,
-      scope,
+      syncOptions,
     ),
-    inspectConflicts: async (session, scope) =>
-      await inspectPatchWithRevisionConflicts(session, collection, options, scope),
-    executeConflictDecisions: async (session, decisions, sharedWriteBatch) =>
-      await executeCollectionConflictDecisions(session, decisions, {
-        collection,
-        adapterId: options.id,
-        normalizeRemote: options.normalizeRemote,
-        readRemoteAsset: (s, assetId) => readRemoteAssetValue(s, collection, assetId, options.normalizeRemote),
-        readLocalValue: async () => await options.readLocal(),
-        getLocalDeletedAt: async () => null,
-        writeLocalForDownload: async (_s, _assetId, remoteValue, remoteDeletedAt) => {
-          if (remoteDeletedAt !== null) {
-            logger.warn(`${options.id}: use-remote tombstone not supported for patch-with-revision adapter`);
-            return;
-          }
-          await options.writeLocal(remoteValue);
-        },
-        getRemoteRevision: async (s) => {
-          const remoteAsset = await readRemoteAssetValue(s, collection, "snapshot", options.normalizeRemote);
-          return remoteAsset?.revision ?? null;
-        },
-        getRemoteBaseContentHash: async (s) => {
-          const remoteAsset = await readRemoteAssetValue(s, collection, "snapshot", options.normalizeRemote);
-          return remoteAsset?.remoteContentHash ?? null;
-        },
-      }, sharedWriteBatch),
+    // AI-REMOVED 2026-08-13:
+    // Reason: 旧冲突探测与两阶段决策执行工作流已移除。
+    // Trigger: sync-model.md 引擎级弹框取代 adapter 级决议执行。
+    // Replacement: syncPatchWithRevision 通过 SyncPlanItem 登记条目，引擎执行决议。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // inspectConflicts: async (session, scope) =>
+    //   await inspectPatchWithRevisionConflicts(session, collection, options, scope),
+    // executeConflictDecisions: async (session, decisions, sharedWriteBatch) =>
+    //   await executeCollectionConflictDecisions(session, decisions, {
+    //     collection,
+    //     adapterId: options.id,
+    //     normalizeRemote: options.normalizeRemote,
+    //     readRemoteAsset: (s, assetId) => readRemoteAssetValue(s, collection, assetId, options.normalizeRemote),
+    //     readLocalValue: async () => await options.readLocal(),
+    //     getLocalDeletedAt: async () => null,
+    //     writeLocalForDownload: async (_s, _assetId, remoteValue, remoteDeletedAt) => {
+    //       if (remoteDeletedAt !== null) {
+    //         logger.warn(`${options.id}: use-remote tombstone not supported for patch-with-revision adapter`);
+    //         return;
+    //       }
+    //       await options.writeLocal(remoteValue);
+    //     },
+    //     getRemoteRevision: async (s) => {
+    //       const remoteAsset = await readRemoteAssetValue(s, collection, "snapshot", options.normalizeRemote);
+    //       return remoteAsset?.revision ?? null;
+    //     },
+    //     getRemoteBaseContentHash: async (s) => {
+    //       const remoteAsset = await readRemoteAssetValue(s, collection, "snapshot", options.normalizeRemote);
+    //       return remoteAsset?.remoteContentHash ?? null;
+    //     },
+    //   }, sharedWriteBatch),
   };
 }
 
@@ -671,364 +999,385 @@ export function createPatchCollectionWithRevisionAdapter<TValue>(
     mode: "patch-with-revision",
     collection,
     checkPath: options.indexPath,
-    sync: async (session, scope) => await syncPatchCollectionWithRevision(
+    sync: async (session, syncOptions) => await syncPatchCollectionWithRevision(
       session,
       collection,
       options,
-      scope,
+      syncOptions,
     ),
-    inspectConflicts: async (session, scope) =>
-      await inspectPatchCollectionWithRevisionConflicts(session, collection, options, scope),
-    executeConflictDecisions: async (session, decisions, sharedWriteBatch) => {
-      const remoteIndexState = await session.readIndex(collection);
-      return await executeCollectionConflictDecisions(session, decisions, {
-        collection,
-        adapterId: options.id,
-        normalizeRemote: options.normalizeRemote,
-        readRemoteAsset: (s, assetId) => readRemoteAssetValue(s, collection, assetId, options.normalizeRemote),
-        readLocalValue: async (assetId) => {
-          const localEntries = await options.listLocal();
-          const entry = localEntries.find((e) => e.id === assetId);
-          return entry?.value ?? null;
-        },
-        getLocalDeletedAt: async (assetId) => {
-          const localEntries = await options.listLocal();
-          const entry = localEntries.find((e) => e.id === assetId);
-          return entry?.deletedAt ?? null;
-        },
-        writeLocalForDownload: async (_s, assetId, remoteValue, remoteDeletedAt) => {
-          await options.writeLocal({ id: assetId, value: remoteValue, deletedAt: remoteDeletedAt });
-        },
-        getRemoteRevision: async (_s, assetId) => {
-          const entry = remoteIndexState.entries[assetId];
-          return entry?.revision ?? remoteIndexState.revision;
-        },
-        getRemoteBaseContentHash: async (_s, assetId) => {
-          const entry = remoteIndexState.entries[assetId];
-          return resolveRemoteBaseContentHash(entry);
-        },
-      }, sharedWriteBatch);
-    },
+    // AI-REMOVED 2026-08-13:
+    // Reason: 旧冲突探测与两阶段决策执行工作流已移除。
+    // Trigger: sync-model.md 引擎级弹框取代 adapter 级决议执行。
+    // Replacement: syncPatchCollectionWithRevision 通过 SyncPlanItem 登记条目，引擎执行决议。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // inspectConflicts: async (session, scope) =>
+    //   await inspectPatchCollectionWithRevisionConflicts(session, collection, options, scope),
+    // executeConflictDecisions: async (session, decisions, sharedWriteBatch) => {
+    //   const remoteIndexState = await session.readIndex(collection);
+    //   return await executeCollectionConflictDecisions(session, decisions, {
+    //     collection,
+    //     adapterId: options.id,
+    //     normalizeRemote: options.normalizeRemote,
+    //     readRemoteAsset: (s, assetId) => readRemoteAssetValue(s, collection, assetId, options.normalizeRemote),
+    //     readLocalValue: async (assetId) => {
+    //       const localEntries = await options.listLocal();
+    //       const entry = localEntries.find((e) => e.id === assetId);
+    //       return entry?.value ?? null;
+    //     },
+    //     getLocalDeletedAt: async (assetId) => {
+    //       const localEntries = await options.listLocal();
+    //       const entry = localEntries.find((e) => e.id === assetId);
+    //       return entry?.deletedAt ?? null;
+    //     },
+    //     writeLocalForDownload: async (_s, assetId, remoteValue, remoteDeletedAt) => {
+    //       await options.writeLocal({ id: assetId, value: remoteValue, deletedAt: remoteDeletedAt });
+    //     },
+    //     getRemoteRevision: async (_s, assetId) => {
+    //       const entry = remoteIndexState.entries[assetId];
+    //       return entry?.revision ?? remoteIndexState.revision;
+    //     },
+    //     getRemoteBaseContentHash: async (_s, assetId) => {
+    //       const entry = remoteIndexState.entries[assetId];
+    //       return resolveRemoteBaseContentHash(entry);
+    //     },
+    //   }, sharedWriteBatch);
+    // },
   };
 }
 
-async function inspectFullNoRevisionConflicts<TValue>(
-  session: SyncRemoteSession,
-  collection: SyncRemoteCollection,
-  options: FullNoRevisionAdapterOptions<TValue>,
-  scope?: SyncAdapterScope,
-): Promise<readonly SyncAdapterConflict<TValue>[]> {
-  if (!isAssetIncludedInScope("single", scope)) {
-    return [];
-  }
-
-  const localValuePromise = options.readLocal();
-  const remoteAssetPromise = readRemoteAssetValue(
-    session,
-    collection,
-    "single",
-    options.normalizeRemote,
-  );
-  const localValue = await localValuePromise;
-  const remoteAsset = await remoteAssetPromise;
-  const conflict = await createValueConflict<TValue>({
-    session,
-    collection,
-    adapterId: options.id,
-    assetId: "single",
-    localValue,
-    remoteValue: remoteAsset?.value ?? null,
-    lastSyncedHash: await session.localState.getLastSyncedHash(
-      createSyncAssetKey(collection, "single"),
-    ),
-    remoteDeletedAt: null,
-    remoteUpdatedAt: remoteAsset?.committedAt ?? null,
-  });
-
-  return conflict === null ? [] : [conflict];
-}
-
-async function inspectFullWithRevisionConflicts<TValue>(
-  session: SyncRemoteSession,
-  collection: SyncRemoteCollection,
-  options: FullWithRevisionAdapterOptions<TValue>,
-  scope?: SyncAdapterScope,
-): Promise<readonly SyncAdapterConflict<TValue>[]> {
-  const [localEntries, remoteIndexState] = await Promise.all([
-    options.listLocal(scope),
-    session.readIndex(collection),
-  ]);
-  const includedLocalEntries = localEntries.filter((entry) =>
-    isAssetIncludedInScope(entry.id, scope),
-  );
-  const remoteValues = new Map(await Promise.all(
-    includedLocalEntries.flatMap((entry) => {
-      const remoteEntry = remoteIndexState.entries[entry.id];
-      return remoteEntry === undefined || remoteEntry.deletedAt !== null
-        ? []
-        : [readRemoteAssetValue(
-          session,
-          collection,
-          entry.id,
-          options.normalizeRemote,
-        ).then((value) => [entry.id, value] as const)];
-    }),
-  ));
-
-  return await inspectCollectionConflicts({
-    session,
-    collection,
-    adapterId: options.id,
-    localEntries: includedLocalEntries,
-    remoteIndexState,
-    readRemoteValue: (entryId) => remoteValues.get(entryId)?.value ?? null,
-    readRemoteUpdatedAt: (entryId) =>
-      remoteIndexState.entries[entryId]?.committedAt
-      ?? remoteIndexState.committedAt,
-  });
-}
-
-async function inspectPatchWithRevisionConflicts<TValue>(
-  session: SyncRemoteSession,
-  collection: SyncRemoteCollection,
-  options: PatchWithRevisionAdapterOptions<TValue>,
-  scope?: SyncAdapterScope,
-): Promise<readonly SyncAdapterConflict<TValue>[]> {
-  if (!isAssetIncludedInScope("snapshot", scope)) {
-    return [];
-  }
-
-  const localValuePromise = options.readLocal();
-  const remoteAssetPromise = readRemoteAssetValue(
-    session,
-    collection,
-    "snapshot",
-    options.normalizeRemote,
-  );
-  const localValue = await localValuePromise;
-  const remoteAsset = await remoteAssetPromise;
-  const conflict = await createValueConflict<TValue>({
-    session,
-    collection,
-    adapterId: options.id,
-    assetId: "snapshot",
-    localValue,
-    remoteValue: remoteAsset?.value ?? null,
-    lastSyncedHash: await session.localState.getLastSyncedHash(
-      createSyncAssetKey(collection, "snapshot"),
-    ),
-    remoteDeletedAt: null,
-    remoteUpdatedAt: remoteAsset?.committedAt ?? null,
-  });
-
-  return conflict === null ? [] : [conflict];
-}
-
-async function inspectPatchCollectionWithRevisionConflicts<TValue>(
-  session: SyncRemoteSession,
-  collection: SyncRemoteCollection,
-  options: PatchCollectionWithRevisionAdapterOptions<TValue>,
-  scope?: SyncAdapterScope,
-): Promise<readonly SyncAdapterConflict<TValue>[]> {
-  const [localEntries, remoteIndexState] = await Promise.all([
-    options.listLocal(scope),
-    session.readIndex(collection),
-  ]);
-  const includedLocalEntries = localEntries.filter((entry) =>
-    isAssetIncludedInScope(entry.id, scope),
-  );
-  const remoteStates = new Map(await Promise.all(
-    includedLocalEntries.flatMap((entry) => {
-      const remoteEntry = remoteIndexState.entries[entry.id];
-      return remoteEntry === undefined || remoteEntry.deletedAt !== null
-        ? []
-        : [readRemoteAssetValue(
-          session,
-          collection,
-          entry.id,
-          options.normalizeRemote,
-        ).then((state) => [entry.id, state] as const)];
-    }),
-  ));
-
-  return await inspectCollectionConflicts({
-    session,
-    collection,
-    adapterId: options.id,
-    localEntries: includedLocalEntries,
-    remoteIndexState,
-    readRemoteValue: (entryId) =>
-      remoteStates.get(entryId)?.value ?? null,
-    readRemoteUpdatedAt: (entryId) =>
-      remoteStates.get(entryId)?.committedAt
-      ?? remoteIndexState.entries[entryId]?.committedAt
-      ?? remoteIndexState.committedAt,
-  });
-}
-
-async function inspectCollectionConflicts<TValue>(options: {
-  readonly session: SyncRemoteSession;
-  readonly collection: SyncRemoteCollection;
-  readonly adapterId: string;
-  readonly localEntries: readonly {
-    readonly id: string;
-    readonly value: TValue;
-    readonly deletedAt: string | null;
-  }[];
-  readonly remoteIndexState: RemoteCollectionIndex;
-  readonly readRemoteValue: (entryId: string) => TValue | null;
-  readonly readRemoteUpdatedAt: (entryId: string) => string | null;
-}): Promise<readonly SyncAdapterConflict<TValue>[]> {
-  const conflicts: SyncAdapterConflict<TValue>[] = [];
-  for (const localEntry of options.localEntries) {
-    const remoteEntry =
-      options.remoteIndexState.entries[localEntry.id] ?? null;
-    if (remoteEntry === null) {
-      continue;
-    }
-
-    const localHash = await createSyncContentHash(options.session, options.collection, localEntry.value);
-    const lastSyncedHash = await options.session.localState.getLastSyncedHash(
-      createSyncAssetKey(options.collection, localEntry.id),
-    );
-    if (remoteEntry.deletedAt !== null) {
-      if (
-        localEntry.deletedAt !== null
-        || lastSyncedHash === localHash
-        || localHash === remoteEntry.contentHash
-      ) {
-        continue;
-      }
-
-      conflicts.push({
-        adapterId: options.adapterId,
-        assetId: localEntry.id,
-        localValue: localEntry.value,
-        remoteValue: null,
-        localHash,
-        remoteHash: remoteEntry.contentHash,
-        remoteDeletedAt: remoteEntry.deletedAt,
-        remoteUpdatedAt: options.readRemoteUpdatedAt(localEntry.id),
-      });
-      continue;
-    }
-
-    const remoteValue = options.readRemoteValue(localEntry.id);
-    if (localEntry.deletedAt !== null) {
-      if (remoteValue === null) {
-        continue;
-      }
-      const remoteHash = await createSyncContentHash(options.session, options.collection, remoteValue);
-      if (
-        localHash === remoteHash
-        || lastSyncedHash === remoteHash
-      ) {
-        continue;
-      }
-
-      conflicts.push({
-        adapterId: options.adapterId,
-        assetId: localEntry.id,
-        localValue: localEntry.value,
-        remoteValue,
-        localHash,
-        remoteHash,
-        remoteDeletedAt: null,
-        remoteUpdatedAt: options.readRemoteUpdatedAt(localEntry.id),
-      });
-      continue;
-    }
-
-    const conflict = await createValueConflict({
-      session: options.session,
-      collection: options.collection,
-      adapterId: options.adapterId,
-      assetId: localEntry.id,
-      localValue: localEntry.value,
-      remoteValue,
-      lastSyncedHash,
-      remoteDeletedAt: null,
-      remoteUpdatedAt: options.readRemoteUpdatedAt(localEntry.id),
-    });
-
-    if (conflict !== null) {
-      conflicts.push(conflict);
-    }
-  }
-
-  return conflicts;
-}
-
-async function createValueConflict<TValue>(options: {
-  readonly session: SyncRemoteSession;
-  readonly collection: SyncRemoteCollection;
-  readonly adapterId: string;
-  readonly assetId: string;
-  readonly localValue: TValue | null;
-  readonly remoteValue: TValue | null;
-  readonly lastSyncedHash: string | null;
-  readonly remoteDeletedAt: string | null;
-  readonly remoteUpdatedAt: string | null;
-}): Promise<SyncAdapterConflict<TValue> | null> {
-  if (options.localValue === null || options.remoteValue === null) {
-    return null;
-  }
-
-  const localHash = await createSyncContentHash(options.session, options.collection, options.localValue);
-  const remoteHash = await createSyncContentHash(options.session, options.collection, options.remoteValue);
-  if (
-    localHash === remoteHash
-    || options.lastSyncedHash === localHash
-    || options.lastSyncedHash === remoteHash
-  ) {
-    return null;
-  }
-
-  return {
-    adapterId: options.adapterId,
-    assetId: options.assetId,
-    localValue: options.localValue,
-    remoteValue: options.remoteValue,
-    localHash,
-    remoteHash,
-    remoteDeletedAt: options.remoteDeletedAt,
-    remoteUpdatedAt: options.remoteUpdatedAt,
-  };
-}
-
-function createScopedConflictResolver<TValue>(
-  scope: SyncAdapterScope | undefined,
-  fallback:
-    | ((
-      conflict: SyncAdapterConflict<TValue>,
-    ) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution)
-    | undefined,
-): (
-  conflict: SyncAdapterConflict<TValue>,
-) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution {
-  return (conflict) => {
-    if (scope?.conflictDecisions !== undefined) {
-      const decision = scope.conflictDecisions.find((candidate) =>
-        candidate.adapterId === conflict.adapterId
-        && candidate.assetId === conflict.assetId
-        && candidate.localHash === conflict.localHash
-        && candidate.remoteHash === conflict.remoteHash
-        && candidate.remoteDeletedAt === conflict.remoteDeletedAt,
-      );
-
-      return decision?.resolution ?? "pause";
-    }
-
-    return fallback?.(conflict) ?? "pause";
-  };
-}
+// AI-REMOVED 2026-08-13:
+// Reason: 旧“同步完成后探测冲突 + 分阶段执行决议”工作流已移除。
+// Trigger: sync-model.md 要求引擎级弹框：上传/下载/冲突资产全部进入对话框逐项选择，
+//   分类与决议执行已统一到 sync 函数内的 SyncPlanItem 登记。
+// Evidence: sync-service 的 runConflictWorkflow 已删除；无其他调用点。
+// Replacement: syncFullNoRevision / syncFullWithRevision / syncPatchWithRevision /
+//   syncPatchCollectionWithRevision 通过 transaction.recordItem 登记条目。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+//
+// async function inspectFullNoRevisionConflicts<TValue>(
+//   session: SyncRemoteSession,
+//   collection: SyncRemoteCollection,
+//   options: FullNoRevisionAdapterOptions<TValue>,
+//   scope?: SyncAdapterScope,
+// ): Promise<readonly SyncAdapterConflict<TValue>[]> {
+//   if (!isAssetIncludedInScope("single", scope)) {
+//     return [];
+//   }
+//
+//   const localValuePromise = options.readLocal();
+//   const remoteAssetPromise = readRemoteAssetValue(
+//     session,
+//     collection,
+//     "single",
+//     options.normalizeRemote,
+//   );
+//   const localValue = await localValuePromise;
+//   const remoteAsset = await remoteAssetPromise;
+//   const conflict = await createValueConflict<TValue>({
+//     session,
+//     collection,
+//     adapterId: options.id,
+//     assetId: "single",
+//     localValue,
+//     remoteValue: remoteAsset?.value ?? null,
+//     lastSyncedHash: await session.localState.getLastSyncedHash(
+//       createSyncAssetKey(collection, "single"),
+//     ),
+//     remoteDeletedAt: null,
+//     remoteUpdatedAt: remoteAsset?.committedAt ?? null,
+//   });
+//
+//   return conflict === null ? [] : [conflict];
+// }
+//
+// async function inspectFullWithRevisionConflicts<TValue>(
+//   session: SyncRemoteSession,
+//   collection: SyncRemoteCollection,
+//   options: FullWithRevisionAdapterOptions<TValue>,
+//   scope?: SyncAdapterScope,
+// ): Promise<readonly SyncAdapterConflict<TValue>[]> {
+//   const [localEntries, remoteIndexState] = await Promise.all([
+//     options.listLocal(scope),
+//     session.readIndex(collection),
+//   ]);
+//   const includedLocalEntries = localEntries.filter((entry) =>
+//     isAssetIncludedInScope(entry.id, scope),
+//   );
+//   const remoteValues = new Map(await Promise.all(
+//     includedLocalEntries.flatMap((entry) => {
+//       const remoteEntry = remoteIndexState.entries[entry.id];
+//       return remoteEntry === undefined || remoteEntry.deletedAt !== null
+//         ? []
+//         : [readRemoteAssetValue(
+//           session,
+//           collection,
+//           entry.id,
+//           options.normalizeRemote,
+//         ).then((value) => [entry.id, value] as const)];
+//     }),
+//   ));
+//
+//   return await inspectCollectionConflicts({
+//     session,
+//     collection,
+//     adapterId: options.id,
+//     localEntries: includedLocalEntries,
+//     remoteIndexState,
+//     readRemoteValue: (entryId) => remoteValues.get(entryId)?.value ?? null,
+//     readRemoteUpdatedAt: (entryId) =>
+//       remoteIndexState.entries[entryId]?.committedAt
+//       ?? remoteIndexState.committedAt,
+//   });
+// }
+//
+// async function inspectPatchWithRevisionConflicts<TValue>(
+//   session: SyncRemoteSession,
+//   collection: SyncRemoteCollection,
+//   options: PatchWithRevisionAdapterOptions<TValue>,
+//   scope?: SyncAdapterScope,
+// ): Promise<readonly SyncAdapterConflict<TValue>[]> {
+//   if (!isAssetIncludedInScope("snapshot", scope)) {
+//     return [];
+//   }
+//
+//   const localValuePromise = options.readLocal();
+//   const remoteAssetPromise = readRemoteAssetValue(
+//     session,
+//     collection,
+//     "snapshot",
+//     options.normalizeRemote,
+//   );
+//   const localValue = await localValuePromise;
+//   const remoteAsset = await remoteAssetPromise;
+//   const conflict = await createValueConflict<TValue>({
+//     session,
+//     collection,
+//     adapterId: options.id,
+//     assetId: "snapshot",
+//     localValue,
+//     remoteValue: remoteAsset?.value ?? null,
+//     lastSyncedHash: await session.localState.getLastSyncedHash(
+//       createSyncAssetKey(collection, "snapshot"),
+//     ),
+//     remoteDeletedAt: null,
+//     remoteUpdatedAt: remoteAsset?.committedAt ?? null,
+//   });
+//
+//   return conflict === null ? [] : [conflict];
+// }
+//
+// async function inspectPatchCollectionWithRevisionConflicts<TValue>(
+//   session: SyncRemoteSession,
+//   collection: SyncRemoteCollection,
+//   options: PatchCollectionWithRevisionAdapterOptions<TValue>,
+//   scope?: SyncAdapterScope,
+// ): Promise<readonly SyncAdapterConflict<TValue>[]> {
+//   const [localEntries, remoteIndexState] = await Promise.all([
+//     options.listLocal(scope),
+//     session.readIndex(collection),
+//   ]);
+//   const includedLocalEntries = localEntries.filter((entry) =>
+//     isAssetIncludedInScope(entry.id, scope),
+//   );
+//   const remoteStates = new Map(await Promise.all(
+//     includedLocalEntries.flatMap((entry) => {
+//       const remoteEntry = remoteIndexState.entries[entry.id];
+//       return remoteEntry === undefined || remoteEntry.deletedAt !== null
+//         ? []
+//         : [readRemoteAssetValue(
+//           session,
+//           collection,
+//           entry.id,
+//           options.normalizeRemote,
+//         ).then((state) => [entry.id, state] as const)];
+//     }),
+//   ));
+//
+//   return await inspectCollectionConflicts({
+//     session,
+//     collection,
+//     adapterId: options.id,
+//     localEntries: includedLocalEntries,
+//     remoteIndexState,
+//     readRemoteValue: (entryId) =>
+//       remoteStates.get(entryId)?.value ?? null,
+//     readRemoteUpdatedAt: (entryId) =>
+//       remoteStates.get(entryId)?.committedAt
+//       ?? remoteIndexState.entries[entryId]?.committedAt
+//       ?? remoteIndexState.committedAt,
+//   });
+// }
+//
+// async function inspectCollectionConflicts<TValue>(options: {
+//   readonly session: SyncRemoteSession;
+//   readonly collection: SyncRemoteCollection;
+//   readonly adapterId: string;
+//   readonly localEntries: readonly {
+//     readonly id: string;
+//     readonly value: TValue;
+//     readonly deletedAt: string | null;
+//   }[];
+//   readonly remoteIndexState: RemoteCollectionIndex;
+//   readonly readRemoteValue: (entryId: string) => TValue | null;
+//   readonly readRemoteUpdatedAt: (entryId: string) => string | null;
+// }): Promise<readonly SyncAdapterConflict<TValue>[]> {
+//   const conflicts: SyncAdapterConflict<TValue>[] = [];
+//   for (const localEntry of options.localEntries) {
+//     const remoteEntry =
+//       options.remoteIndexState.entries[localEntry.id] ?? null;
+//     if (remoteEntry === null) {
+//       continue;
+//     }
+//
+//     const localHash = await createSyncContentHash(options.session, options.collection, localEntry.value);
+//     const lastSyncedHash = await options.session.localState.getLastSyncedHash(
+//       createSyncAssetKey(options.collection, localEntry.id),
+//     );
+//     if (remoteEntry.deletedAt !== null) {
+//       if (
+//         localEntry.deletedAt !== null
+//         || lastSyncedHash === localHash
+//         || localHash === remoteEntry.contentHash
+//       ) {
+//         continue;
+//       }
+//
+//       conflicts.push({
+//         adapterId: options.adapterId,
+//         assetId: localEntry.id,
+//         localValue: localEntry.value,
+//         remoteValue: null,
+//         localHash,
+//         remoteHash: remoteEntry.contentHash,
+//         remoteDeletedAt: remoteEntry.deletedAt,
+//         remoteUpdatedAt: options.readRemoteUpdatedAt(localEntry.id),
+//       });
+//       continue;
+//     }
+//
+//     const remoteValue = options.readRemoteValue(localEntry.id);
+//     if (localEntry.deletedAt !== null) {
+//       if (remoteValue === null) {
+//         continue;
+//       }
+//       const remoteHash = await createSyncContentHash(options.session, options.collection, remoteValue);
+//       if (
+//         localHash === remoteHash
+//         || lastSyncedHash === remoteHash
+//       ) {
+//         continue;
+//       }
+//
+//       conflicts.push({
+//         adapterId: options.adapterId,
+//         assetId: localEntry.id,
+//         localValue: localEntry.value,
+//         remoteValue,
+//         localHash,
+//         remoteHash,
+//         remoteDeletedAt: null,
+//         remoteUpdatedAt: options.readRemoteUpdatedAt(localEntry.id),
+//       });
+//       continue;
+//     }
+//
+//     const conflict = await createValueConflict({
+//       session: options.session,
+//       collection: options.collection,
+//       adapterId: options.adapterId,
+//       assetId: localEntry.id,
+//       localValue: localEntry.value,
+//       remoteValue,
+//       lastSyncedHash,
+//       remoteDeletedAt: null,
+//       remoteUpdatedAt: options.readRemoteUpdatedAt(localEntry.id),
+//     });
+//
+//     if (conflict !== null) {
+//       conflicts.push(conflict);
+//     }
+//   }
+//
+//   return conflicts;
+// }
+//
+// async function createValueConflict<TValue>(options: {
+//   readonly session: SyncRemoteSession;
+//   readonly collection: SyncRemoteCollection;
+//   readonly adapterId: string;
+//   readonly assetId: string;
+//   readonly localValue: TValue | null;
+//   readonly remoteValue: TValue | null;
+//   readonly lastSyncedHash: string | null;
+//   readonly remoteDeletedAt: string | null;
+//   readonly remoteUpdatedAt: string | null;
+// }): Promise<SyncAdapterConflict<TValue> | null> {
+//   if (options.localValue === null || options.remoteValue === null) {
+//     return null;
+//   }
+//
+//   const localHash = await createSyncContentHash(options.session, options.collection, options.localValue);
+//   const remoteHash = await createSyncContentHash(options.session, options.collection, options.remoteValue);
+//   if (
+//     localHash === remoteHash
+//     || options.lastSyncedHash === localHash
+//     || options.lastSyncedHash === remoteHash
+//   ) {
+//     return null;
+//   }
+//
+//   return {
+//     adapterId: options.adapterId,
+//     assetId: options.assetId,
+//     localValue: options.localValue,
+//     remoteValue: options.remoteValue,
+//     localHash,
+//     remoteHash,
+//     remoteDeletedAt: options.remoteDeletedAt,
+//     remoteUpdatedAt: options.remoteUpdatedAt,
+//   };
+// }
+//
+// function createScopedConflictResolver<TValue>(
+//   scope: SyncAdapterScope | undefined,
+//   fallback:
+//     | ((
+//       conflict: SyncAdapterConflict<TValue>,
+//     ) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution)
+//     | undefined,
+// ): (
+//   conflict: SyncAdapterConflict<TValue>,
+// ) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution {
+//   return (conflict) => {
+//     if (scope?.conflictDecisions !== undefined) {
+//       const decision = scope.conflictDecisions.find((candidate) =>
+//         candidate.adapterId === conflict.adapterId
+//         && candidate.assetId === conflict.assetId
+//         && candidate.localHash === conflict.localHash
+//         && candidate.remoteHash === conflict.remoteHash
+//         && candidate.remoteDeletedAt === conflict.remoteDeletedAt,
+//       );
+//
+//       return decision?.resolution ?? "pause";
+//     }
+//
+//     return fallback?.(conflict) ?? "pause";
+//   };
+// }
 
 async function syncFullNoRevision<TValue>(
   session: SyncRemoteSession,
   collection: SyncRemoteCollection,
   options: FullNoRevisionAdapterOptions<TValue>,
-  scope?: SyncAdapterScope,
+  syncOptions: SyncAdapterSyncOptions,
 ): Promise<SyncAdapterResult> {
+  const { transaction } = syncOptions;
   const assetId = "single";
   const assetKey = createSyncAssetKey(collection, assetId);
   const localValue = await options.readLocal();
@@ -1039,48 +1388,138 @@ async function syncFullNoRevision<TValue>(
     options.normalizeRemote,
   );
   const remoteValue = remoteAsset?.value ?? null;
-  const status = await syncSingleValue({
-    session,
-    collection,
-    adapterId: options.id,
-    assetId,
+  const lastSyncedHash = await session.localState.getLastSyncedHash(assetKey);
+  const localHash = localValue === null
+    ? null
+    : await createSyncContentHash(session, collection, localValue);
+  const remoteHash = remoteValue === null
+    ? null
+    : await createSyncContentHash(session, collection, remoteValue);
+  const classification = classifySingleValue({
     localValue,
     remoteValue,
-    remoteUpdatedAt: remoteAsset?.committedAt ?? null,
-    readLastSyncedHash: async () => await session.localState.getLastSyncedHash(assetKey),
-    writeLastSyncedHash: async (contentHash) => {
-      await session.localState.setLastSyncedHash(assetKey, contentHash);
-    },
-    writeLocal: options.writeLocal,
-    writeRemote: async (value, contentHash) => await writeRemoteValue({
-      session,
-      collection,
-      assetId,
-      value,
-      contentHash,
-      baseRevision: remoteAsset?.revision ?? null,
-      // AI-CORRECTION 2026-08-08: 乐观并发必须回传服务端权威 SHA，不能使用本地 FNV 归一化 hash。
-      baseContentHash: remoteAsset?.remoteContentHash ?? null,
-    }),
-    resolveConflict: createScopedConflictResolver(
-      scope,
-      options.resolveConflict,
-    ),
+    localHash,
+    remoteHash,
+    lastSyncedHash,
+    // full-no-revision 没有墓碑存储，远端消失一律解释为本地新增上传。
+    supportsRemoteTombstone: false,
   });
 
-  await session.markApplied({
-    collection,
-    assetIds: [assetId],
-    scopeComplete: true,
-    collectionRevision: remoteAsset?.revision ?? null,
-    collectionEtag: status === "uploaded" ? null : remoteAsset?.etag ?? null,
-  });
+  let status: SyncAdapterStatus = "idle";
+  if (classification.kind === "idle") {
+    if (localHash !== null && localHash === remoteHash) {
+      transaction.stageTouch(assetKey, localHash);
+    }
+  } else if (classification.kind === "download") {
+    const item = createPlanItem<TValue>({
+      session,
+      collection,
+      transaction,
+      adapterId: options.id,
+      assetId,
+      kind: "download",
+      localValue,
+      localDeletedAt: null,
+      localHash,
+      remoteValue,
+      remoteHash,
+      remoteDeletedAt: null,
+      remoteUpdatedAt: remoteAsset?.committedAt ?? null,
+      writeLocal: async (value) => {
+        await options.writeLocal(value);
+      },
+      applyRemoteTombstone: null,
+      readRemoteValue: async () =>
+        await readRemoteAssetValue(session, collection, assetId, options.normalizeRemote),
+      createPutParams: async (value, contentHash) => ({
+        collection,
+        assetId,
+        value,
+        contentHash,
+        baseRevision: remoteAsset?.revision ?? null,
+        // AI-CORRECTION 2026-08-08: 乐观并发必须回传服务端权威 SHA，不能使用本地 FNV 归一化 hash。
+        baseContentHash: remoteAsset?.remoteContentHash ?? null,
+      }),
+      createTombstoneParams: null,
+    });
+    transaction.recordItem(item);
+    await item.applyDownload();
+    status = "downloaded";
+  } else if (classification.kind === "upload") {
+    transaction.recordItem(createPlanItem<TValue>({
+      session,
+      collection,
+      transaction,
+      adapterId: options.id,
+      assetId,
+      kind: "upload",
+      localValue,
+      localDeletedAt: null,
+      localHash,
+      remoteValue,
+      remoteHash,
+      remoteDeletedAt: null,
+      remoteUpdatedAt: remoteAsset?.committedAt ?? null,
+      writeLocal: async (value) => {
+        await options.writeLocal(value);
+      },
+      applyRemoteTombstone: null,
+      readRemoteValue: async () =>
+        await readRemoteAssetValue(session, collection, assetId, options.normalizeRemote),
+      createPutParams: async (value, contentHash) => ({
+        collection,
+        assetId,
+        value,
+        contentHash,
+        baseRevision: remoteAsset?.revision ?? null,
+        // AI-CORRECTION 2026-08-08: 乐观并发必须回传服务端权威 SHA，不能使用本地 FNV 归一化 hash。
+        baseContentHash: remoteAsset?.remoteContentHash ?? null,
+      }),
+      createTombstoneParams: null,
+    }));
+    status = "uploaded";
+  } else {
+    transaction.recordItem(createPlanItem<TValue>({
+      session,
+      collection,
+      transaction,
+      adapterId: options.id,
+      assetId,
+      kind: "conflict",
+      localValue,
+      localDeletedAt: null,
+      localHash,
+      remoteValue,
+      remoteHash,
+      remoteDeletedAt: null,
+      remoteUpdatedAt: remoteAsset?.committedAt ?? null,
+      writeLocal: async (value) => {
+        await options.writeLocal(value);
+      },
+      applyRemoteTombstone: null,
+      readRemoteValue: async () =>
+        await readRemoteAssetValue(session, collection, assetId, options.normalizeRemote),
+      createPutParams: async (value, contentHash) => ({
+        collection,
+        assetId,
+        value,
+        contentHash,
+        baseRevision: remoteAsset?.revision ?? null,
+        // AI-CORRECTION 2026-08-08: 乐观并发必须回传服务端权威 SHA，不能使用本地 FNV 归一化 hash。
+        baseContentHash: remoteAsset?.remoteContentHash ?? null,
+      }),
+      createTombstoneParams: null,
+    }));
+    status = "conflict";
+  }
 
   return {
     adapterId: options.id,
     mode: "full-no-revision",
     status,
     changedAssetIds: status === "idle" ? [] : ["single"],
+    collectionRevision: remoteAsset?.revision ?? null,
+    collectionEtag: status === "uploaded" ? null : remoteAsset?.etag ?? null,
   };
 }
 
@@ -1088,8 +1527,10 @@ async function syncFullWithRevision<TValue>(
   session: SyncRemoteSession,
   collection: SyncRemoteCollection,
   options: FullWithRevisionAdapterOptions<TValue>,
-  scope?: SyncAdapterScope,
+  syncOptions: SyncAdapterSyncOptions,
 ): Promise<SyncAdapterResult> {
+  const { transaction } = syncOptions;
+  const scope = syncOptions.scope;
   const localEntries = (await options.listLocal(scope)).filter((entry) =>
     isAssetIncludedInScope(entry.id, scope),
   );
@@ -1107,27 +1548,23 @@ async function syncFullWithRevision<TValue>(
     };
   }
   const remoteIndexState = await session.readIndex(collection);
-  const remoteIndex = toRemoteIndexFile(remoteIndexState);
   const changedAssetIds: string[] = [];
   let status: SyncAdapterStatus = "idle";
-  const remoteWriteBatch = session.beginWriteBatch();
-  let hasRemoteWrites = false;
-  // AI-CORRECTION 2026-08-08: 同步基线只能在远端 batch 成功后落盘；否则一次 409/超时会把未提交内容误标为已同步。
-  const pendingLastSyncedHashes = new Map<string, string | null>();
-  const stageLastSyncedHash = (assetKey: string, hash: string | null): void => {
-    pendingLastSyncedHashes.set(assetKey, hash);
-  };
   const localContentHashesById = new Map(await Promise.all(localEntries.map(async (entry) => [
     entry.id,
     await createSyncContentHash(session, collection, entry.value),
   ] as const)));
   const remoteValuesByLocalId = new Map(await Promise.all(localEntries.flatMap((entry) => {
-    const remoteEntry = remoteIndex.entries[entry.id];
+    const remoteEntry = remoteIndexState.entries[entry.id];
     if (
-      remoteEntry?.deletedAt !== null
-      || (
-        entry.deletedAt === null
-        && localContentHashesById.get(entry.id) === remoteEntry.contentHash
+      remoteEntry !== undefined
+      && (
+        remoteEntry.deletedAt !== null
+        || (
+          entry.deletedAt === null
+          && isIndexHashComparable(remoteEntry)
+          && localContentHashesById.get(entry.id) === remoteEntry.contentHash
+        )
       )
     ) {
       return [];
@@ -1141,106 +1578,143 @@ async function syncFullWithRevision<TValue>(
     ).then((value) => [entry.id, value] as const)];
   })));
 
+  const createEntryItem = (
+    localEntry: FullWithRevisionEntry<TValue>,
+    kind: SyncPlanItemKind,
+    itemRemote: {
+      readonly remoteValue: TValue | null;
+      readonly remoteHash: string | null;
+      readonly remoteDeletedAt: string | null;
+      readonly remoteUpdatedAt: string | null;
+    },
+  ): SyncPlanItem => {
+    const remoteEntry = remoteIndexState.entries[localEntry.id] ?? null;
+    return createPlanItem<TValue>({
+      session,
+      collection,
+      transaction,
+      adapterId: options.id,
+      assetId: localEntry.id,
+      kind,
+      localValue: localEntry.value,
+      localDeletedAt: localEntry.deletedAt,
+      localHash: localContentHashesById.get(localEntry.id) ?? null,
+      remoteValue: itemRemote.remoteValue,
+      remoteHash: itemRemote.remoteHash,
+      remoteDeletedAt: itemRemote.remoteDeletedAt,
+      remoteUpdatedAt: itemRemote.remoteUpdatedAt,
+      writeLocal: async (value, deletedAt) => {
+        await options.writeLocal({ id: localEntry.id, value, deletedAt });
+      },
+      applyRemoteTombstone: async (remoteDeletedAt) => {
+        await options.writeLocal({
+          id: localEntry.id,
+          value: localEntry.value,
+          deletedAt: remoteDeletedAt,
+        });
+      },
+      readRemoteValue: async () =>
+        await readRemoteAssetValue(session, collection, localEntry.id, options.normalizeRemote),
+      createPutParams: async (value, contentHash) => ({
+        collection,
+        assetId: localEntry.id,
+        value,
+        contentHash,
+        baseRevision: remoteEntry?.revision ?? null,
+        baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
+      }),
+      createTombstoneParams: async (_value, deletedAt, contentHash) => ({
+        collection,
+        assetId: localEntry.id,
+        deletedAt,
+        targetContentHash: contentHash,
+        baseRevision: remoteEntry?.revision ?? null,
+        baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
+      }),
+    });
+  };
+
   for (const localEntry of localEntries) {
-    const remoteEntry = remoteIndex.entries[localEntry.id] ?? null;
+    const remoteEntry = remoteIndexState.entries[localEntry.id] ?? null;
     const assetKey = createSyncAssetKey(collection, localEntry.id);
     const localContentHash = localContentHashesById.get(localEntry.id)
       ?? await createSyncContentHash(session, collection, localEntry.value);
     const lastSyncedHash = await session.localState.getLastSyncedHash(assetKey);
     const remoteValue = remoteValuesByLocalId.get(localEntry.id) ?? null;
 
-    if (remoteEntry?.deletedAt !== null && remoteEntry?.deletedAt !== undefined) {
+    // 远端墓碑（WebDAV 索引携带 deletedAt）。
+    if (remoteEntry !== null && remoteEntry.deletedAt !== null) {
       if (localEntry.deletedAt !== null) {
         if (localEntry.deletedAt !== remoteEntry.deletedAt) {
-          await options.writeLocal({
-            id: localEntry.id,
-            value: localEntry.value,
-            deletedAt: remoteEntry.deletedAt,
+          const item = createEntryItem(localEntry, "download", {
+            remoteValue: null,
+            remoteHash: remoteEntry.contentHash,
+            remoteDeletedAt: remoteEntry.deletedAt,
+            remoteUpdatedAt:
+              remoteEntry.committedAt ?? remoteIndexState.committedAt,
           });
+          transaction.recordItem(item);
+          await item.applyDownload();
           status = mergeStatus(status, "downloaded");
           changedAssetIds.push(localEntry.id);
+        } else {
+          transaction.stageTouch(assetKey, remoteEntry.contentHash);
         }
-        stageLastSyncedHash(assetKey, remoteEntry.contentHash);
         continue;
       }
 
       if (
         lastSyncedHash === localContentHash
-        || localContentHash === remoteEntry.contentHash
+        || (
+          isIndexHashComparable(remoteEntry)
+          && localContentHash === remoteEntry.contentHash
+        )
       ) {
-        logger.info(`${options.id}/${localEntry.id}: remote tombstone received → marking deletedAt="${remoteEntry.deletedAt}"`);
-        await options.writeLocal({
-          id: localEntry.id,
-          value: localEntry.value,
-          deletedAt: remoteEntry.deletedAt,
+        const item = createEntryItem(localEntry, "download", {
+          remoteValue: null,
+          remoteHash: remoteEntry.contentHash,
+          remoteDeletedAt: remoteEntry.deletedAt,
+          remoteUpdatedAt:
+            remoteEntry.committedAt ?? remoteIndexState.committedAt,
         });
-        stageLastSyncedHash(assetKey, remoteEntry.contentHash);
+        transaction.recordItem(item);
+        await item.applyDownload();
         status = mergeStatus(status, "downloaded");
         changedAssetIds.push(localEntry.id);
         continue;
       }
 
-      const resolution = await resolveCollectionConflict({
-        adapterId: options.id,
-        assetId: localEntry.id,
-        localValue: localEntry.value,
+      const item = createEntryItem(localEntry, "conflict", {
         remoteValue: null,
-        localHash: localContentHash,
         remoteHash: remoteEntry.contentHash,
         remoteDeletedAt: remoteEntry.deletedAt,
         remoteUpdatedAt:
           remoteEntry.committedAt ?? remoteIndexState.committedAt,
-        resolveConflict: createScopedConflictResolver(
-          scope,
-          options.resolveConflict,
-        ),
       });
-      if (resolution === "use-local") {
-        remoteWriteBatch.putAsset({
-          collection,
-          assetId: localEntry.id,
-          value: localEntry.value,
-          contentHash: localContentHash,
-          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
-          baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
-        });
-        hasRemoteWrites = true;
-        stageLastSyncedHash(assetKey, localContentHash);
-        status = mergeStatus(status, "uploaded");
-      } else if (resolution === "use-remote") {
-        await options.writeLocal({
-          id: localEntry.id,
-          value: localEntry.value,
-          deletedAt: remoteEntry.deletedAt,
-        });
-        stageLastSyncedHash(assetKey, remoteEntry.contentHash);
-        status = mergeStatus(status, "downloaded");
-      } else {
-        status = mergeStatus(status, "conflict");
-      }
+      transaction.recordItem(item);
+      status = mergeStatus(status, "conflict");
       changedAssetIds.push(localEntry.id);
       continue;
     }
 
+    // 本地墓碑、远端活或远端无。
     if (localEntry.deletedAt !== null) {
       if (remoteEntry === null) {
         // 远端从未有过该资产（例如从 WebDAV 迁移到 Cloudflare），
         // 墓碑无意义，直接标记为已同步。
         logger.debug(`${options.id}/${localEntry.id}: local tombstone has no remote entry → skip`);
-        stageLastSyncedHash(assetKey, localContentHash);
+        transaction.stageTouch(assetKey, localContentHash);
         continue;
       }
       if (remoteValue === null) {
-        remoteWriteBatch.putTombstone({
-          collection,
-          assetId: localEntry.id,
-          deletedAt: localEntry.deletedAt,
-          targetContentHash: localContentHash,
-          baseRevision: remoteEntry?.revision ?? null,
-          baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
+        const item = createEntryItem(localEntry, "upload", {
+          remoteValue: null,
+          remoteHash: null,
+          remoteDeletedAt: null,
+          remoteUpdatedAt:
+            remoteEntry.committedAt ?? remoteIndexState.committedAt,
         });
-        hasRemoteWrites = true;
-        stageLastSyncedHash(assetKey, localContentHash);
+        transaction.recordItem(item);
         status = mergeStatus(status, "uploaded");
         changedAssetIds.push(localEntry.id);
         continue;
@@ -1251,131 +1725,138 @@ async function syncFullWithRevision<TValue>(
         localContentHash === remoteContentHash
         || lastSyncedHash === remoteContentHash
       ) {
-        remoteWriteBatch.putTombstone({
-          collection,
-          assetId: localEntry.id,
-          deletedAt: localEntry.deletedAt,
-          targetContentHash: localContentHash,
-          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
-          baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
+        const item = createEntryItem(localEntry, "upload", {
+          remoteValue: remoteValue.value,
+          remoteHash: remoteContentHash,
+          remoteDeletedAt: null,
+          remoteUpdatedAt:
+            remoteEntry.committedAt ?? remoteIndexState.committedAt,
         });
-        hasRemoteWrites = true;
-        stageLastSyncedHash(assetKey, localContentHash);
+        transaction.recordItem(item);
         status = mergeStatus(status, "uploaded");
         changedAssetIds.push(localEntry.id);
         continue;
       }
 
-      const resolution = await resolveCollectionConflict({
-        adapterId: options.id,
-        assetId: localEntry.id,
-        localValue: localEntry.value,
+      const item = createEntryItem(localEntry, "conflict", {
         remoteValue: remoteValue.value,
-        localHash: localContentHash,
         remoteHash: remoteContentHash,
         remoteDeletedAt: null,
         remoteUpdatedAt:
           remoteEntry.committedAt ?? remoteIndexState.committedAt,
-        resolveConflict: createScopedConflictResolver(
-          scope,
-          options.resolveConflict,
-        ),
       });
-      if (resolution === "use-local") {
-        remoteWriteBatch.putTombstone({
-          collection,
-          assetId: localEntry.id,
-          deletedAt: localEntry.deletedAt,
-          targetContentHash: localContentHash,
-          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
-          baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
-        });
-        hasRemoteWrites = true;
-        stageLastSyncedHash(assetKey, localContentHash);
-        status = mergeStatus(status, "uploaded");
-      } else if (resolution === "use-remote") {
-        await options.writeLocal({
-          id: localEntry.id,
-          value: remoteValue.value,
-          deletedAt: null,
-        });
-        stageLastSyncedHash(assetKey, remoteContentHash);
-        status = mergeStatus(status, "downloaded");
-      } else {
-        status = mergeStatus(status, "conflict");
-      }
+      transaction.recordItem(item);
+      status = mergeStatus(status, "conflict");
       changedAssetIds.push(localEntry.id);
       continue;
     }
 
+    // 本地活、远端索引无条目：
+    // 从未同步过 → 上传新增；曾同步过 → 远端墓碑（CF plan 不含已删除资产）→ 下载或冲突。
+    if (remoteEntry === null) {
+      if (lastSyncedHash === null) {
+        const item = createEntryItem(localEntry, "upload", {
+          remoteValue: null,
+          remoteHash: null,
+          remoteDeletedAt: null,
+          remoteUpdatedAt: null,
+        });
+        transaction.recordItem(item);
+        status = mergeStatus(status, "uploaded");
+        changedAssetIds.push(localEntry.id);
+        continue;
+      }
+      if (localContentHash === lastSyncedHash) {
+        const item = createEntryItem(localEntry, "download", {
+          remoteValue: null,
+          remoteHash: null,
+          remoteDeletedAt:
+            remoteIndexState.committedAt ?? new Date().toISOString(),
+          remoteUpdatedAt: remoteIndexState.committedAt,
+        });
+        transaction.recordItem(item);
+        await item.applyDownload();
+        status = mergeStatus(status, "downloaded");
+        changedAssetIds.push(localEntry.id);
+        continue;
+      }
+      const item = createEntryItem(localEntry, "conflict", {
+        remoteValue: null,
+        remoteHash: null,
+        remoteDeletedAt:
+          remoteIndexState.committedAt ?? new Date().toISOString(),
+        remoteUpdatedAt: remoteIndexState.committedAt,
+      });
+      transaction.recordItem(item);
+      status = mergeStatus(status, "conflict");
+      changedAssetIds.push(localEntry.id);
+      continue;
+    }
+
+    // 本地活、远端活。
     if (
-      remoteEntry?.deletedAt === null
+      isIndexHashComparable(remoteEntry)
       && localContentHash === remoteEntry.contentHash
     ) {
       logger.debug(`${options.id}/${localEntry.id}: collection index hash matches → idle`);
-      stageLastSyncedHash(assetKey, remoteEntry.contentHash);
+      transaction.stageTouch(assetKey, remoteEntry.contentHash);
       continue;
     }
 
-    const entryStatus = await syncSingleValue({
-      session,
-      collection,
-      adapterId: options.id,
-      assetId: localEntry.id,
+    if (remoteValue === null) {
+      // 索引有条目但正文读取为空：罕见异常，跳过本资产避免误判。
+      logger.warn(`${options.id}/${localEntry.id}: remote entry exists but asset unreadable → skipping`);
+      continue;
+    }
+
+    const classification = classifySingleValue({
       localValue: localEntry.value,
-      remoteValue: remoteValue?.value ?? null,
-      readLastSyncedHash: async () => await session.localState.getLastSyncedHash(assetKey),
-      writeLastSyncedHash: async (contentHash) => {
-        stageLastSyncedHash(assetKey, contentHash);
-      },
-      writeLocal: async (value) => await options.writeLocal({
-        id: localEntry.id,
-        value,
-        deletedAt: null,
-      }),
-      writeRemote: async (value, contentHash) => {
-        remoteWriteBatch.putAsset({
-          collection,
-          assetId: localEntry.id,
-          value,
-          contentHash,
-          baseRevision: remoteEntry?.revision ?? null,
-          baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
-        });
-        hasRemoteWrites = true;
-      },
-      remoteUpdatedAt:
-        remoteEntry?.committedAt ?? remoteIndexState.committedAt,
-      resolveConflict: createScopedConflictResolver(
-        scope,
-        options.resolveConflict,
-      ),
+      remoteValue: remoteValue.value,
+      localHash: localContentHash,
+      remoteHash: remoteValue.contentHash,
+      lastSyncedHash,
+      supportsRemoteTombstone: false,
     });
 
-    if (entryStatus !== "idle") {
-      status = mergeStatus(status, entryStatus);
-      changedAssetIds.push(localEntry.id);
+    if (classification.kind === "idle") {
+      transaction.stageTouch(assetKey, localContentHash);
+      continue;
     }
-    // AI-CORRECTION 2026-07-29: 归一化后的 patch 索引修复只适用于下方 patch collection；
-    // full collection 没有 remoteState，不能在这里执行该逻辑。
-
-    // AI-REMOVED 2026-07-29:
-    // Reason: 墓碑必须在读取远端正文并完成冲突决议后提交，不能在通用 value 同步后无条件覆盖索引。
-    // Trigger: 本地删除与远端修改并发时，旧逻辑先下载远端再上传墓碑，绕过用户冲突选择。
-    // Evidence: syncSingleValue 将 localValue=null 解释为“本地不存在”，随后本块又无条件写 deletedAt。
-    // Replacement: 循环前半段 localEntry.deletedAt 分支。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // if (localEntry.deletedAt !== null && remoteEntry?.deletedAt !== localEntry.deletedAt) {
-    //   nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
-    //     contentHash: createStableJsonHash(localEntry.value),
-    //     deletedAt: localEntry.deletedAt,
-    //   });
-    //   status = mergeStatus(status, "uploaded");
-    //   changedAssetIds.push(localEntry.id);
-    // }
+    if (classification.kind === "upload") {
+      transaction.recordItem(createEntryItem(localEntry, "upload", {
+        remoteValue: remoteValue.value,
+        remoteHash: remoteValue.contentHash,
+        remoteDeletedAt: null,
+        remoteUpdatedAt:
+          remoteEntry.committedAt ?? remoteIndexState.committedAt,
+      }));
+      status = mergeStatus(status, "uploaded");
+      changedAssetIds.push(localEntry.id);
+      continue;
+    }
+    if (classification.kind === "download") {
+      const item = createEntryItem(localEntry, "download", {
+        remoteValue: remoteValue.value,
+        remoteHash: remoteValue.contentHash,
+        remoteDeletedAt: null,
+        remoteUpdatedAt:
+          remoteEntry.committedAt ?? remoteIndexState.committedAt,
+      });
+      transaction.recordItem(item);
+      await item.applyDownload();
+      status = mergeStatus(status, "downloaded");
+      changedAssetIds.push(localEntry.id);
+      continue;
+    }
+    transaction.recordItem(createEntryItem(localEntry, "conflict", {
+      remoteValue: remoteValue.value,
+      remoteHash: remoteValue.contentHash,
+      remoteDeletedAt: null,
+      remoteUpdatedAt:
+        remoteEntry.committedAt ?? remoteIndexState.committedAt,
+    }));
+    status = mergeStatus(status, "conflict");
+    changedAssetIds.push(localEntry.id);
   }
 
   // AI-REMOVED 2026-07-29:
@@ -1412,7 +1893,7 @@ async function syncFullWithRevision<TValue>(
   //   changedAssetIds.push(entryId);
   // }
   const remoteOnlyValues = await Promise.all(
-    Object.entries(remoteIndex.entries).flatMap(([entryId, remoteEntry]) =>
+    Object.entries(remoteIndexState.entries).flatMap(([entryId, remoteEntry]) =>
       isAssetIncludedInScope(entryId, scope)
         && !localEntryById.has(entryId)
         && remoteEntry.deletedAt === null
@@ -1430,40 +1911,50 @@ async function syncFullWithRevision<TValue>(
       continue;
     }
 
-    logger.info(`${options.id}/${entryId}: new remote entry → downloading`);
-    await options.writeLocal({
-      id: entryId,
-      value: remoteAsset.value,
-      deletedAt: null,
+    const item = createPlanItem<TValue>({
+      session,
+      collection,
+      transaction,
+      adapterId: options.id,
+      assetId: entryId,
+      kind: "download",
+      localValue: null,
+      localDeletedAt: null,
+      localHash: null,
+      remoteValue: remoteAsset.value,
+      remoteHash: remoteAsset.contentHash,
+      remoteDeletedAt: null,
+      remoteUpdatedAt:
+        remoteAsset.committedAt ?? remoteIndexState.committedAt,
+      writeLocal: async (value, deletedAt) => {
+        await options.writeLocal({ id: entryId, value, deletedAt });
+      },
+      applyRemoteTombstone: null,
+      readRemoteValue: async () =>
+        await readRemoteAssetValue(session, collection, entryId, options.normalizeRemote),
+      createPutParams: async (value, contentHash) => ({
+        collection,
+        assetId: entryId,
+        value,
+        contentHash,
+        baseRevision: null,
+        baseContentHash: null,
+      }),
+      createTombstoneParams: null,
     });
-    stageLastSyncedHash(
-      createSyncAssetKey(collection, entryId),
-      remoteAsset.contentHash,
-    );
+    transaction.recordItem(item);
+    await item.applyDownload();
     status = mergeStatus(status, "downloaded");
     changedAssetIds.push(entryId);
   }
-
-  if (hasRemoteWrites) {
-    await remoteWriteBatch.commit();
-  }
-  for (const [assetKey, hash] of pendingLastSyncedHashes) {
-    await session.localState.setLastSyncedHash(assetKey, hash);
-  }
-
-  await session.markApplied({
-    collection,
-    assetIds: Array.from(new Set(changedAssetIds)),
-    scopeComplete: isScopeComplete(scope),
-    collectionRevision: remoteIndexState.revision,
-    collectionEtag: hasRemoteWrites ? null : remoteIndexState.etag ?? null,
-  });
 
   return {
     adapterId: options.id,
     mode: "full-with-revision",
     status,
     changedAssetIds: Array.from(new Set(changedAssetIds)),
+    collectionRevision: remoteIndexState.revision,
+    collectionEtag: remoteIndexState.etag ?? null,
   };
 }
 
@@ -1471,8 +1962,9 @@ async function syncPatchWithRevision<TValue>(
   session: SyncRemoteSession,
   collection: SyncRemoteCollection,
   options: PatchWithRevisionAdapterOptions<TValue>,
-  scope?: SyncAdapterScope,
+  syncOptions: SyncAdapterSyncOptions,
 ): Promise<SyncAdapterResult> {
+  const { transaction } = syncOptions;
   const assetId = "snapshot";
   const assetKey = createSyncAssetKey(collection, assetId);
   const localValue = await options.readLocal();
@@ -1482,48 +1974,82 @@ async function syncPatchWithRevision<TValue>(
     assetId,
     options.normalizeRemote,
   );
-  const status = await syncSingleValue({
-    session,
-    collection,
-    adapterId: options.id,
-    assetId,
+  const remoteValue = remoteAsset?.value ?? null;
+  const lastSyncedHash = await session.localState.getLastSyncedHash(assetKey);
+  const localHash = localValue === null
+    ? null
+    : await createSyncContentHash(session, collection, localValue);
+  const remoteHash = remoteValue === null
+    ? null
+    : await createSyncContentHash(session, collection, remoteValue);
+  const classification = classifySingleValue({
     localValue,
-    remoteValue: remoteAsset?.value ?? null,
-    remoteUpdatedAt: remoteAsset?.committedAt ?? null,
-    readLastSyncedHash: async () => await session.localState.getLastSyncedHash(assetKey),
-    writeLastSyncedHash: async (contentHash) => {
-      await session.localState.setLastSyncedHash(assetKey, contentHash);
-    },
-    writeLocal: options.writeLocal,
-    writeRemote: async (value, contentHash) => await writeRemoteValue({
-      session,
-      collection,
-      assetId,
-      value,
-      contentHash,
-      baseRevision: remoteAsset?.revision ?? null,
-      // AI-CORRECTION 2026-08-08: 乐观并发必须回传服务端权威 SHA，不能使用本地 FNV 归一化 hash。
-      baseContentHash: remoteAsset?.remoteContentHash ?? null,
-    }),
-    resolveConflict: createScopedConflictResolver(
-      scope,
-      options.resolveConflict,
-    ),
+    remoteValue,
+    localHash,
+    remoteHash,
+    lastSyncedHash,
+    // patch-with-revision 单值资产没有墓碑存储，远端消失一律解释为本地新增上传。
+    supportsRemoteTombstone: false,
   });
 
-  await session.markApplied({
-    collection,
-    assetIds: [assetId],
-    scopeComplete: true,
-    collectionRevision: remoteAsset?.revision ?? null,
-    collectionEtag: status === "uploaded" ? null : remoteAsset?.etag ?? null,
-  });
+  let status: SyncAdapterStatus = "idle";
+  const createItem = (kind: SyncPlanItemKind): SyncPlanItem =>
+    createPlanItem<TValue>({
+      session,
+      collection,
+      transaction,
+      adapterId: options.id,
+      assetId,
+      kind,
+      localValue,
+      localDeletedAt: null,
+      localHash,
+      remoteValue,
+      remoteHash,
+      remoteDeletedAt: null,
+      remoteUpdatedAt: remoteAsset?.committedAt ?? null,
+      writeLocal: async (value) => {
+        await options.writeLocal(value);
+      },
+      applyRemoteTombstone: null,
+      readRemoteValue: async () =>
+        await readRemoteAssetValue(session, collection, assetId, options.normalizeRemote),
+      createPutParams: async (value, contentHash) => ({
+        collection,
+        assetId,
+        value,
+        contentHash,
+        baseRevision: remoteAsset?.revision ?? null,
+        // AI-CORRECTION 2026-08-08: 乐观并发必须回传服务端权威 SHA，不能使用本地 FNV 归一化 hash。
+        baseContentHash: remoteAsset?.remoteContentHash ?? null,
+      }),
+      createTombstoneParams: null,
+    });
+
+  if (classification.kind === "idle") {
+    if (localHash !== null && localHash === remoteHash) {
+      transaction.stageTouch(assetKey, localHash);
+    }
+  } else if (classification.kind === "download") {
+    const item = createItem("download");
+    transaction.recordItem(item);
+    await item.applyDownload();
+    status = "downloaded";
+  } else if (classification.kind === "upload") {
+    transaction.recordItem(createItem("upload"));
+    status = "uploaded";
+  } else {
+    transaction.recordItem(createItem("conflict"));
+    status = "conflict";
+  }
 
   return {
     adapterId: options.id,
     mode: "patch-with-revision",
     status,
     changedAssetIds: status === "idle" ? [] : ["snapshot"],
+    collectionRevision: remoteAsset?.revision ?? null,
+    collectionEtag: status === "uploaded" ? null : remoteAsset?.etag ?? null,
   };
 }
 
@@ -1531,8 +2057,10 @@ async function syncPatchCollectionWithRevision<TValue>(
   session: SyncRemoteSession,
   collection: SyncRemoteCollection,
   options: PatchCollectionWithRevisionAdapterOptions<TValue>,
-  scope?: SyncAdapterScope,
+  syncOptions: SyncAdapterSyncOptions,
 ): Promise<SyncAdapterResult> {
+  const { transaction } = syncOptions;
+  const scope = syncOptions.scope;
   reportSyncProgress(scope, 0);
   const localEntries = (await options.listLocal(scope)).filter((entry) =>
     isAssetIncludedInScope(entry.id, scope),
@@ -1554,27 +2082,23 @@ async function syncPatchCollectionWithRevision<TValue>(
   }
   const remoteIndexState = await session.readIndex(collection);
   reportSyncProgress(scope, 35);
-  const remoteIndex = toRemoteIndexFile(remoteIndexState);
   const changedAssetIds: string[] = [];
   let status: SyncAdapterStatus = "idle";
-  const remoteWriteBatch = session.beginWriteBatch();
-  let hasRemoteWrites = false;
-  // AI-CORRECTION 2026-08-08: 与 full collection 一致，远端提交失败时不得提前推进本地同步基线。
-  const pendingLastSyncedHashes = new Map<string, string | null>();
-  const stageLastSyncedHash = (assetKey: string, hash: string | null): void => {
-    pendingLastSyncedHashes.set(assetKey, hash);
-  };
   const localContentHashesById = new Map(await Promise.all(localEntries.map(async (entry) => [
     entry.id,
     await createSyncContentHash(session, collection, entry.value),
   ] as const)));
   const remoteStatesByLocalId = new Map(await Promise.all(localEntries.flatMap((entry) => {
-    const remoteEntry = remoteIndex.entries[entry.id];
+    const remoteEntry = remoteIndexState.entries[entry.id];
     if (
-      remoteEntry?.deletedAt !== null
-      || (
-        entry.deletedAt === null
-        && localContentHashesById.get(entry.id) === remoteEntry.contentHash
+      remoteEntry !== undefined
+      && (
+        remoteEntry.deletedAt !== null
+        || (
+          entry.deletedAt === null
+          && isIndexHashComparable(remoteEntry)
+          && localContentHashesById.get(entry.id) === remoteEntry.contentHash
+        )
       )
     ) {
       return [];
@@ -1589,108 +2113,146 @@ async function syncPatchCollectionWithRevision<TValue>(
   })));
   reportSyncProgress(scope, 55);
 
+  const createEntryItem = (
+    localEntry: PatchWithRevisionEntry<TValue>,
+    kind: SyncPlanItemKind,
+    itemRemote: {
+      readonly remoteValue: TValue | null;
+      readonly remoteHash: string | null;
+      readonly remoteDeletedAt: string | null;
+      readonly remoteUpdatedAt: string | null;
+    },
+  ): SyncPlanItem => {
+    const remoteEntry = remoteIndexState.entries[localEntry.id] ?? null;
+    return createPlanItem<TValue>({
+      session,
+      collection,
+      transaction,
+      adapterId: options.id,
+      assetId: localEntry.id,
+      kind,
+      localValue: localEntry.value,
+      localDeletedAt: localEntry.deletedAt,
+      localHash: localContentHashesById.get(localEntry.id) ?? null,
+      remoteValue: itemRemote.remoteValue,
+      remoteHash: itemRemote.remoteHash,
+      remoteDeletedAt: itemRemote.remoteDeletedAt,
+      remoteUpdatedAt: itemRemote.remoteUpdatedAt,
+      writeLocal: async (value, deletedAt) => {
+        await options.writeLocal({ id: localEntry.id, value, deletedAt });
+      },
+      applyRemoteTombstone: async (remoteDeletedAt) => {
+        await options.writeLocal({
+          id: localEntry.id,
+          value: localEntry.value,
+          deletedAt: remoteDeletedAt,
+        });
+      },
+      readRemoteValue: async () =>
+        await readRemoteAssetValue(session, collection, localEntry.id, options.normalizeRemote),
+      createPutParams: async (value, contentHash) => ({
+        collection,
+        assetId: localEntry.id,
+        value,
+        contentHash,
+        baseRevision: remoteEntry?.revision ?? null,
+        baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
+      }),
+      createTombstoneParams: async (_value, deletedAt, contentHash) => ({
+        collection,
+        assetId: localEntry.id,
+        deletedAt,
+        targetContentHash: contentHash,
+        baseRevision: remoteEntry?.revision ?? null,
+        baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
+      }),
+    });
+  };
+
   for (const [localEntryIndex, localEntry] of localEntries.entries()) {
     reportSyncProgress(
       scope,
       interpolateProgress(55, 75, localEntryIndex, localEntries.length),
     );
-    const remoteEntry = remoteIndex.entries[localEntry.id] ?? null;
+    const remoteEntry = remoteIndexState.entries[localEntry.id] ?? null;
     const assetKey = createSyncAssetKey(collection, localEntry.id);
     const localContentHash = localContentHashesById.get(localEntry.id)
       ?? await createSyncContentHash(session, collection, localEntry.value);
     const lastSyncedHash = await session.localState.getLastSyncedHash(assetKey);
     const remoteState = remoteStatesByLocalId.get(localEntry.id) ?? null;
 
-    if (remoteEntry?.deletedAt !== null && remoteEntry?.deletedAt !== undefined) {
+    // 远端墓碑（WebDAV 索引携带 deletedAt）。
+    if (remoteEntry !== null && remoteEntry.deletedAt !== null) {
       if (localEntry.deletedAt !== null) {
         if (localEntry.deletedAt !== remoteEntry.deletedAt) {
-          await options.writeLocal({
-            id: localEntry.id,
-            value: localEntry.value,
-            deletedAt: remoteEntry.deletedAt,
+          const item = createEntryItem(localEntry, "download", {
+            remoteValue: null,
+            remoteHash: remoteEntry.contentHash,
+            remoteDeletedAt: remoteEntry.deletedAt,
+            remoteUpdatedAt:
+              remoteEntry.committedAt ?? remoteIndexState.committedAt,
           });
+          transaction.recordItem(item);
+          await item.applyDownload();
           status = mergeStatus(status, "downloaded");
           changedAssetIds.push(localEntry.id);
+        } else {
+          transaction.stageTouch(assetKey, remoteEntry.contentHash);
         }
-        stageLastSyncedHash(assetKey, remoteEntry.contentHash);
         continue;
       }
 
       if (
         lastSyncedHash === localContentHash
-        || localContentHash === remoteEntry.contentHash
+        || (
+          isIndexHashComparable(remoteEntry)
+          && localContentHash === remoteEntry.contentHash
+        )
       ) {
-        await options.writeLocal({
-          id: localEntry.id,
-          value: localEntry.value,
-          deletedAt: remoteEntry.deletedAt,
+        const item = createEntryItem(localEntry, "download", {
+          remoteValue: null,
+          remoteHash: remoteEntry.contentHash,
+          remoteDeletedAt: remoteEntry.deletedAt,
+          remoteUpdatedAt:
+            remoteEntry.committedAt ?? remoteIndexState.committedAt,
         });
-        stageLastSyncedHash(assetKey, remoteEntry.contentHash);
+        transaction.recordItem(item);
+        await item.applyDownload();
         status = mergeStatus(status, "downloaded");
         changedAssetIds.push(localEntry.id);
         continue;
       }
 
-      const resolution = await resolveCollectionConflict({
-        adapterId: options.id,
-        assetId: localEntry.id,
-        localValue: localEntry.value,
+      const item = createEntryItem(localEntry, "conflict", {
         remoteValue: null,
-        localHash: localContentHash,
         remoteHash: remoteEntry.contentHash,
         remoteDeletedAt: remoteEntry.deletedAt,
         remoteUpdatedAt:
           remoteEntry.committedAt ?? remoteIndexState.committedAt,
-        resolveConflict: createScopedConflictResolver(
-          scope,
-          options.resolveConflict,
-        ),
       });
-      if (resolution === "use-local") {
-        remoteWriteBatch.putAsset({
-          collection,
-          assetId: localEntry.id,
-          value: localEntry.value,
-          contentHash: localContentHash,
-          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
-          baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
-        });
-        hasRemoteWrites = true;
-        stageLastSyncedHash(assetKey, localContentHash);
-        status = mergeStatus(status, "uploaded");
-      } else if (resolution === "use-remote") {
-        await options.writeLocal({
-          id: localEntry.id,
-          value: localEntry.value,
-          deletedAt: remoteEntry.deletedAt,
-        });
-        stageLastSyncedHash(assetKey, remoteEntry.contentHash);
-        status = mergeStatus(status, "downloaded");
-      } else {
-        status = mergeStatus(status, "conflict");
-      }
+      transaction.recordItem(item);
+      status = mergeStatus(status, "conflict");
       changedAssetIds.push(localEntry.id);
       continue;
     }
 
+    // 本地墓碑、远端活或远端无。
     if (localEntry.deletedAt !== null) {
       if (remoteEntry === null) {
         // 远端从未有过该资产，墓碑无意义，直接标记为已同步。
         logger.debug(`${options.id}/${localEntry.id}: local tombstone has no remote entry → skip`);
-        stageLastSyncedHash(assetKey, localContentHash);
+        transaction.stageTouch(assetKey, localContentHash);
         continue;
       }
       if (remoteState === null) {
-        remoteWriteBatch.putTombstone({
-          collection,
-          assetId: localEntry.id,
-          deletedAt: localEntry.deletedAt,
-          targetContentHash: localContentHash,
-          baseRevision: remoteEntry?.revision ?? null,
-          baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
+        const item = createEntryItem(localEntry, "upload", {
+          remoteValue: null,
+          remoteHash: null,
+          remoteDeletedAt: null,
+          remoteUpdatedAt:
+            remoteEntry.committedAt ?? remoteIndexState.committedAt,
         });
-        hasRemoteWrites = true;
-        stageLastSyncedHash(assetKey, localContentHash);
+        transaction.recordItem(item);
         status = mergeStatus(status, "uploaded");
         changedAssetIds.push(localEntry.id);
         continue;
@@ -1701,135 +2263,192 @@ async function syncPatchCollectionWithRevision<TValue>(
         localContentHash === remoteContentHash
         || lastSyncedHash === remoteContentHash
       ) {
-        remoteWriteBatch.putTombstone({
-          collection,
-          assetId: localEntry.id,
-          deletedAt: localEntry.deletedAt,
-          targetContentHash: localContentHash,
-          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
-          baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
+        const item = createEntryItem(localEntry, "upload", {
+          remoteValue: remoteState.value,
+          remoteHash: remoteContentHash,
+          remoteDeletedAt: null,
+          remoteUpdatedAt:
+            remoteState.committedAt
+            ?? remoteEntry.committedAt
+            ?? remoteIndexState.committedAt,
         });
-        hasRemoteWrites = true;
-        stageLastSyncedHash(assetKey, localContentHash);
+        transaction.recordItem(item);
         status = mergeStatus(status, "uploaded");
         changedAssetIds.push(localEntry.id);
         continue;
       }
 
-      const resolution = await resolveCollectionConflict({
-        adapterId: options.id,
-        assetId: localEntry.id,
-        localValue: localEntry.value,
+      const item = createEntryItem(localEntry, "conflict", {
         remoteValue: remoteState.value,
-        localHash: localContentHash,
         remoteHash: remoteContentHash,
         remoteDeletedAt: null,
         remoteUpdatedAt:
           remoteState.committedAt
           ?? remoteEntry.committedAt
           ?? remoteIndexState.committedAt,
-        resolveConflict: createScopedConflictResolver(
-          scope,
-          options.resolveConflict,
-        ),
       });
-      if (resolution === "use-local") {
-        remoteWriteBatch.putTombstone({
-          collection,
-          assetId: localEntry.id,
-          deletedAt: localEntry.deletedAt,
-          targetContentHash: localContentHash,
-          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
-          baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
-        });
-        hasRemoteWrites = true;
-        stageLastSyncedHash(assetKey, localContentHash);
-        status = mergeStatus(status, "uploaded");
-      } else if (resolution === "use-remote") {
-        await options.writeLocal({
-          id: localEntry.id,
-          value: remoteState.value,
-          deletedAt: null,
-        });
-        stageLastSyncedHash(assetKey, remoteContentHash);
-        status = mergeStatus(status, "downloaded");
-      } else {
-        status = mergeStatus(status, "conflict");
-      }
+      transaction.recordItem(item);
+      status = mergeStatus(status, "conflict");
       changedAssetIds.push(localEntry.id);
       continue;
     }
 
+    // 本地活、远端索引无条目：
+    // 从未同步过 → 上传新增；曾同步过 → 远端墓碑（CF plan 不含已删除资产）→ 下载或冲突。
+    if (remoteEntry === null) {
+      if (lastSyncedHash === null) {
+        const item = createEntryItem(localEntry, "upload", {
+          remoteValue: null,
+          remoteHash: null,
+          remoteDeletedAt: null,
+          remoteUpdatedAt: null,
+        });
+        transaction.recordItem(item);
+        status = mergeStatus(status, "uploaded");
+        changedAssetIds.push(localEntry.id);
+        continue;
+      }
+      if (localContentHash === lastSyncedHash) {
+        const item = createEntryItem(localEntry, "download", {
+          remoteValue: null,
+          remoteHash: null,
+          remoteDeletedAt:
+            remoteIndexState.committedAt ?? new Date().toISOString(),
+          remoteUpdatedAt: remoteIndexState.committedAt,
+        });
+        transaction.recordItem(item);
+        await item.applyDownload();
+        status = mergeStatus(status, "downloaded");
+        changedAssetIds.push(localEntry.id);
+        continue;
+      }
+      const item = createEntryItem(localEntry, "conflict", {
+        remoteValue: null,
+        remoteHash: null,
+        remoteDeletedAt:
+          remoteIndexState.committedAt ?? new Date().toISOString(),
+        remoteUpdatedAt: remoteIndexState.committedAt,
+      });
+      transaction.recordItem(item);
+      status = mergeStatus(status, "conflict");
+      changedAssetIds.push(localEntry.id);
+      continue;
+    }
+
+    // 本地活、远端活。
     if (
-      remoteEntry?.deletedAt === null
+      isIndexHashComparable(remoteEntry)
       && localContentHash === remoteEntry.contentHash
     ) {
       logger.debug(`${options.id}/${localEntry.id}: patch index hash matches → idle`);
-      stageLastSyncedHash(assetKey, remoteEntry.contentHash);
+      transaction.stageTouch(assetKey, remoteEntry.contentHash);
       continue;
     }
 
-    const entryStatus = await syncSingleValue({
-      session,
-      collection,
-      adapterId: options.id,
-      assetId: localEntry.id,
+    if (remoteState === null) {
+      // 索引有条目但正文读取为空：罕见异常，跳过本资产避免误判。
+      logger.warn(`${options.id}/${localEntry.id}: remote entry exists but asset unreadable → skipping`);
+      continue;
+    }
+
+    const classification = classifySingleValue({
       localValue: localEntry.value,
-      remoteValue: remoteState?.value ?? null,
-      readLastSyncedHash: async () => await session.localState.getLastSyncedHash(assetKey),
-      writeLastSyncedHash: async (contentHash) => {
-        stageLastSyncedHash(assetKey, contentHash);
-      },
-      writeLocal: async (value) => await options.writeLocal({
-        id: localEntry.id,
-        value,
-        deletedAt: null,
-      }),
-      writeRemote: async (value, contentHash) => {
-        remoteWriteBatch.putAsset({
-          collection,
-          assetId: localEntry.id,
-          value,
-          contentHash,
-          baseRevision: remoteEntry?.revision ?? null,
-          baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
-        });
-        hasRemoteWrites = true;
-      },
-      remoteUpdatedAt:
-        remoteState?.committedAt
-        ?? remoteEntry?.committedAt
-        ?? remoteIndexState.committedAt,
-      resolveConflict: createScopedConflictResolver(
-        scope,
-        options.resolveConflict,
-      ),
+      remoteValue: remoteState.value,
+      localHash: localContentHash,
+      remoteHash: remoteState.contentHash,
+      lastSyncedHash,
+      supportsRemoteTombstone: false,
     });
 
-    if (entryStatus !== "idle") {
-      status = mergeStatus(status, entryStatus);
-      changedAssetIds.push(localEntry.id);
-    }
-    if (
-      entryStatus === "idle"
-      && remoteEntry?.deletedAt === null
-      && remoteState !== null
-    ) {
-      const normalizedRemoteHash = remoteState.contentHash;
-      if (remoteEntry.contentHash !== normalizedRemoteHash) {
-        remoteWriteBatch.putAsset({
+    if (classification.kind === "idle") {
+      transaction.stageTouch(assetKey, localContentHash);
+      // AI-CORRECTION 2026-08-13: 索引 hash 为 fallback 口径（未映射/未知）时，
+      // 与本地口径归一化 hash 比较不得得出“不等”结论，回传分支必须跳过（消除 echo upload）。
+      if (
+        remoteEntry.deletedAt === null
+        && isIndexHashComparable(remoteEntry)
+        && remoteEntry.contentHash !== remoteState.contentHash
+      ) {
+        const normalizedRemoteHash = remoteState.contentHash;
+        transaction.recordItem(createPlanItem<TValue>({
+          session,
           collection,
+          transaction,
+          adapterId: options.id,
           assetId: localEntry.id,
-          value: remoteState.value,
-          contentHash: normalizedRemoteHash,
-          baseRevision: remoteEntry.revision ?? remoteIndex.revision,
-          baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
-        });
-        hasRemoteWrites = true;
+          kind: "upload",
+          localValue: localEntry.value,
+          localDeletedAt: null,
+          localHash: localContentHash,
+          remoteValue: remoteState.value,
+          remoteHash: normalizedRemoteHash,
+          remoteDeletedAt: null,
+          remoteUpdatedAt:
+            remoteState.committedAt
+            ?? remoteEntry.committedAt
+            ?? remoteIndexState.committedAt,
+          writeLocal: async (value, deletedAt) => {
+            await options.writeLocal({ id: localEntry.id, value, deletedAt });
+          },
+          applyRemoteTombstone: null,
+          readRemoteValue: async () =>
+            await readRemoteAssetValue(session, collection, localEntry.id, options.normalizeRemote),
+          createPutParams: async (_value, contentHash) => ({
+            collection,
+            assetId: localEntry.id,
+            value: remoteState.value,
+            contentHash,
+            baseRevision: remoteEntry.revision ?? remoteIndexState.revision,
+            baseContentHash: resolveRemoteBaseContentHash(remoteEntry),
+          }),
+          createTombstoneParams: null,
+        }));
         status = mergeStatus(status, "uploaded");
         changedAssetIds.push(localEntry.id);
       }
+      continue;
     }
+    if (classification.kind === "upload") {
+      transaction.recordItem(createEntryItem(localEntry, "upload", {
+        remoteValue: remoteState.value,
+        remoteHash: remoteState.contentHash,
+        remoteDeletedAt: null,
+        remoteUpdatedAt:
+          remoteState.committedAt
+          ?? remoteEntry.committedAt
+          ?? remoteIndexState.committedAt,
+      }));
+      status = mergeStatus(status, "uploaded");
+      changedAssetIds.push(localEntry.id);
+      continue;
+    }
+    if (classification.kind === "download") {
+      const item = createEntryItem(localEntry, "download", {
+        remoteValue: remoteState.value,
+        remoteHash: remoteState.contentHash,
+        remoteDeletedAt: null,
+        remoteUpdatedAt:
+          remoteState.committedAt
+          ?? remoteEntry.committedAt
+          ?? remoteIndexState.committedAt,
+      });
+      transaction.recordItem(item);
+      await item.applyDownload();
+      status = mergeStatus(status, "downloaded");
+      changedAssetIds.push(localEntry.id);
+      continue;
+    }
+    transaction.recordItem(createEntryItem(localEntry, "conflict", {
+      remoteValue: remoteState.value,
+      remoteHash: remoteState.contentHash,
+      remoteDeletedAt: null,
+      remoteUpdatedAt:
+        remoteState.committedAt
+        ?? remoteEntry.committedAt
+        ?? remoteIndexState.committedAt,
+    }));
+    status = mergeStatus(status, "conflict");
+    changedAssetIds.push(localEntry.id);
 
     // AI-REMOVED 2026-07-29:
     // Reason: patch collection 的墓碑也必须与远端正文一起完成冲突判断。
@@ -1885,7 +2504,7 @@ async function syncPatchCollectionWithRevision<TValue>(
   //   changedAssetIds.push(entryId);
   // }
   const remoteOnlyStates = await Promise.all(
-    Object.entries(remoteIndex.entries).flatMap(([entryId, remoteEntry]) =>
+    Object.entries(remoteIndexState.entries).flatMap(([entryId, remoteEntry]) =>
       isAssetIncludedInScope(entryId, scope)
         && !localEntryById.has(entryId)
         && remoteEntry.deletedAt === null
@@ -1911,35 +2530,43 @@ async function syncPatchCollectionWithRevision<TValue>(
       continue;
     }
 
-    logger.info(`${options.id}/${entryId}: new remote patch entry → downloading`);
-    await options.writeLocal({
-      id: entryId,
-      value: remoteState.value,
-      deletedAt: null,
+    const item = createPlanItem<TValue>({
+      session,
+      collection,
+      transaction,
+      adapterId: options.id,
+      assetId: entryId,
+      kind: "download",
+      localValue: null,
+      localDeletedAt: null,
+      localHash: null,
+      remoteValue: remoteState.value,
+      remoteHash: remoteState.contentHash,
+      remoteDeletedAt: null,
+      remoteUpdatedAt:
+        remoteState.committedAt ?? remoteIndexState.committedAt,
+      writeLocal: async (value, deletedAt) => {
+        await options.writeLocal({ id: entryId, value, deletedAt });
+      },
+      applyRemoteTombstone: null,
+      readRemoteValue: async () =>
+        await readRemoteAssetValue(session, collection, entryId, options.normalizeRemote),
+      createPutParams: async (value, contentHash) => ({
+        collection,
+        assetId: entryId,
+        value,
+        contentHash,
+        baseRevision: null,
+        baseContentHash: null,
+      }),
+      createTombstoneParams: null,
     });
-    stageLastSyncedHash(
-      createSyncAssetKey(collection, entryId),
-      remoteState.contentHash,
-    );
+    transaction.recordItem(item);
+    await item.applyDownload();
     status = mergeStatus(status, "downloaded");
     changedAssetIds.push(entryId);
   }
   reportSyncProgress(scope, 94);
-
-  if (hasRemoteWrites) {
-    await remoteWriteBatch.commit();
-  }
-  for (const [assetKey, hash] of pendingLastSyncedHashes) {
-    await session.localState.setLastSyncedHash(assetKey, hash);
-  }
-
-  await session.markApplied({
-    collection,
-    assetIds: Array.from(new Set(changedAssetIds)),
-    scopeComplete: isScopeComplete(scope),
-    collectionRevision: remoteIndexState.revision,
-    collectionEtag: hasRemoteWrites ? null : remoteIndexState.etag ?? null,
-  });
   reportSyncProgress(scope, 100);
 
   return {
@@ -1947,6 +2574,8 @@ async function syncPatchCollectionWithRevision<TValue>(
     mode: "patch-with-revision",
     status,
     changedAssetIds: Array.from(new Set(changedAssetIds)),
+    collectionRevision: remoteIndexState.revision,
+    collectionEtag: remoteIndexState.etag ?? null,
   };
 }
 
@@ -1971,9 +2600,17 @@ function reportSyncProgress(
   scope?.onProgress?.(Math.min(100, Math.max(0, progress)));
 }
 
-function isScopeComplete(scope: SyncAdapterScope | undefined): boolean {
-  return scope?.includeAssetIds === undefined && scope?.excludeAssetIds === undefined;
-}
+// AI-REMOVED 2026-08-13:
+// Reason: scopeComplete 由引擎基于请求 scope 计算（resolveRequestScopeComplete）。
+// Trigger: adapter 不再自行调用 markApplied。
+// Replacement: sync-service.ts 的 finalizeTransaction。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+// function isScopeComplete(scope: SyncAdapterScope | undefined): boolean {
+//   return scope?.includeAssetIds === undefined && scope?.excludeAssetIds === undefined;
+// }
 
 async function isRemoteIndexUnchangedForCleanLocalEntries<TValue>(options: {
   readonly session: SyncRemoteSession;
@@ -2030,128 +2667,137 @@ function interpolateProgress(
   return start + (end - start) * completedUnitCount / totalUnitCount;
 }
 
-async function resolveCollectionConflict<TValue>(options: {
-  readonly adapterId: string;
-  readonly assetId: string;
-  readonly localValue: TValue;
-  readonly remoteValue: TValue | null;
-  readonly localHash: string;
-  readonly remoteHash: string | null;
-  readonly remoteDeletedAt: string | null;
-  readonly remoteUpdatedAt: string | null;
-  readonly resolveConflict?: (
-    conflict: SyncAdapterConflict<TValue>,
-  ) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
-}): Promise<SyncAdapterConflictResolution> {
-  const resolution = await (options.resolveConflict?.({
-    adapterId: options.adapterId,
-    assetId: options.assetId,
-    localValue: options.localValue,
-    remoteValue: options.remoteValue,
-    localHash: options.localHash,
-    remoteHash: options.remoteHash,
-    remoteDeletedAt: options.remoteDeletedAt,
-    remoteUpdatedAt: options.remoteUpdatedAt,
-  }) ?? "pause");
-  logger.debug(
-    `${options.adapterId}/${options.assetId}: collection conflict detected, ` +
-    `resolved as "${resolution}"`,
-  );
-
-  return resolution;
-}
-
-async function syncSingleValue<TValue>(options: {
-  readonly session: SyncRemoteSession;
-  readonly collection: SyncRemoteCollection;
-  readonly adapterId: string;
-  readonly assetId: string;
-  readonly localValue: TValue | null;
-  readonly remoteValue: TValue | null;
-  readonly remoteUpdatedAt: string | null;
-  readonly readLastSyncedHash: () => Promise<string | null>;
-  readonly writeLastSyncedHash: (contentHash: string) => Promise<void>;
-  readonly writeLocal: (value: TValue) => Promise<void>;
-  readonly writeRemote: (value: TValue, contentHash: string) => Promise<void>;
-  readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
-}): Promise<SyncAdapterStatus> {
-  if (options.localValue === null && options.remoteValue === null) {
-    return "idle";
-  }
-
-  const lastSyncedHash = await options.readLastSyncedHash();
-  const localHash = options.localValue === null
-    ? null
-    : await createSyncContentHash(options.session, options.collection, options.localValue);
-  const remoteHash = options.remoteValue === null
-    ? null
-    : await createSyncContentHash(options.session, options.collection, options.remoteValue);
-
-  if (options.localValue !== null && options.remoteValue === null) {
-    logger.info(`${options.adapterId}/${options.assetId}: local exists, remote absent → uploading`);
-    await options.writeRemote(options.localValue, localHash!);
-    await options.writeLastSyncedHash(localHash!);
-    return "uploaded";
-  }
-
-  if (options.localValue === null && options.remoteValue !== null) {
-    logger.info(`${options.adapterId}/${options.assetId}: local absent, remote exists → downloading`);
-    await options.writeLocal(options.remoteValue);
-    await options.writeLastSyncedHash(remoteHash!);
-    return "downloaded";
-  }
-
-  if (options.localValue === null || options.remoteValue === null || localHash === null || remoteHash === null) {
-    return "skipped";
-  }
-
-  if (localHash === remoteHash) {
-    logger.debug(`${options.adapterId}/${options.assetId}: hashes match → idle`);
-    await options.writeLastSyncedHash(localHash);
-    return "idle";
-  }
-
-  if (lastSyncedHash === remoteHash) {
-    logger.info(`${options.adapterId}/${options.assetId}: local changed, remote unchanged → uploading`);
-    await options.writeRemote(options.localValue, localHash);
-    await options.writeLastSyncedHash(localHash);
-    return "uploaded";
-  }
-
-  if (lastSyncedHash === localHash) {
-    logger.info(`${options.adapterId}/${options.assetId}: remote changed, local unchanged → downloading`);
-    await options.writeLocal(options.remoteValue);
-    await options.writeLastSyncedHash(remoteHash);
-    return "downloaded";
-  }
-
-  const resolution = await (options.resolveConflict?.({
-    adapterId: options.adapterId,
-    assetId: options.assetId,
-    localValue: options.localValue,
-    remoteValue: options.remoteValue,
-    localHash,
-    remoteHash,
-    remoteDeletedAt: null,
-    remoteUpdatedAt: options.remoteUpdatedAt,
-  }) ?? "pause");
-
-  logger.debug(`${options.adapterId}/${options.assetId}: conflict detected, resolved as "${resolution}"`);
-
-  if (resolution === "use-local") {
-    await options.writeRemote(options.localValue, localHash);
-    await options.writeLastSyncedHash(localHash);
-    return "uploaded";
-  }
-
-  if (resolution === "use-remote") {
-    await options.writeLocal(options.remoteValue);
-    await options.writeLastSyncedHash(remoteHash);
-    return "downloaded";
-  }
-
-  return "conflict";
-}
+// AI-REMOVED 2026-08-13:
+// Reason: 冲突不再由 adapter 内联询问 resolver，而是登记 SyncPlanItem 由引擎统一弹框决议。
+// Trigger: sync-model.md“上传/下载/冲突资产全部进入对话框逐项选择”。
+// Replacement: classifySingleValue + createPlanItem + transaction.recordItem。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+//
+// async function resolveCollectionConflict<TValue>(options: {
+//   readonly adapterId: string;
+//   readonly assetId: string;
+//   readonly localValue: TValue;
+//   readonly remoteValue: TValue | null;
+//   readonly localHash: string;
+//   readonly remoteHash: string | null;
+//   readonly remoteDeletedAt: string | null;
+//   readonly remoteUpdatedAt: string | null;
+//   readonly resolveConflict?: (
+//     conflict: SyncAdapterConflict<TValue>,
+//   ) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
+// }): Promise<SyncAdapterConflictResolution> {
+//   const resolution = await (options.resolveConflict?.({
+//     adapterId: options.adapterId,
+//     assetId: options.assetId,
+//     localValue: options.localValue,
+//     remoteValue: options.remoteValue,
+//     localHash: options.localHash,
+//     remoteHash: options.remoteHash,
+//     remoteDeletedAt: options.remoteDeletedAt,
+//     remoteUpdatedAt: options.remoteUpdatedAt,
+//   }) ?? "pause");
+//   logger.debug(
+//     `${options.adapterId}/${options.assetId}: collection conflict detected, ` +
+//     `resolved as "${resolution}"`,
+//   );
+//
+//   return resolution;
+// }
+//
+// async function syncSingleValue<TValue>(options: {
+//   readonly session: SyncRemoteSession;
+//   readonly collection: SyncRemoteCollection;
+//   readonly adapterId: string;
+//   readonly assetId: string;
+//   readonly localValue: TValue | null;
+//   readonly remoteValue: TValue | null;
+//   readonly remoteUpdatedAt: string | null;
+//   readonly readLastSyncedHash: () => Promise<string | null>;
+//   readonly writeLastSyncedHash: (contentHash: string) => Promise<void>;
+//   readonly writeLocal: (value: TValue) => Promise<void>;
+//   readonly writeRemote: (value: TValue, contentHash: string) => Promise<void>;
+//   readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
+// }): Promise<SyncAdapterStatus> {
+//   if (options.localValue === null && options.remoteValue === null) {
+//     return "idle";
+//   }
+//
+//   const lastSyncedHash = await options.readLastSyncedHash();
+//   const localHash = options.localValue === null
+//     ? null
+//     : await createSyncContentHash(options.session, options.collection, options.localValue);
+//   const remoteHash = options.remoteValue === null
+//     ? null
+//     : await createSyncContentHash(options.session, options.collection, options.remoteValue);
+//
+//   if (options.localValue !== null && options.remoteValue === null) {
+//     logger.info(`${options.adapterId}/${options.assetId}: local exists, remote absent → uploading`);
+//     await options.writeRemote(options.localValue, localHash!);
+//     await options.writeLastSyncedHash(localHash!);
+//     return "uploaded";
+//   }
+//
+//   if (options.localValue === null && options.remoteValue !== null) {
+//     logger.info(`${options.adapterId}/${options.assetId}: local absent, remote exists → downloading`);
+//     await options.writeLocal(options.remoteValue);
+//     await options.writeLastSyncedHash(remoteHash!);
+//     return "downloaded";
+//   }
+//
+//   if (options.localValue === null || options.remoteValue === null || localHash === null || remoteHash === null) {
+//     return "skipped";
+//   }
+//
+//   if (localHash === remoteHash) {
+//     logger.debug(`${options.adapterId}/${options.assetId}: hashes match → idle`);
+//     await options.writeLastSyncedHash(localHash);
+//     return "idle";
+//   }
+//
+//   if (lastSyncedHash === remoteHash) {
+//     logger.info(`${options.adapterId}/${options.assetId}: local changed, remote unchanged → uploading`);
+//     await options.writeRemote(options.localValue, localHash);
+//     await options.writeLastSyncedHash(localHash);
+//     return "uploaded";
+//   }
+//
+//   if (lastSyncedHash === localHash) {
+//     logger.info(`${options.adapterId}/${options.assetId}: remote changed, local unchanged → downloading`);
+//     await options.writeLocal(options.remoteValue);
+//     await options.writeLastSyncedHash(remoteHash);
+//     return "downloaded";
+//   }
+//
+//   const resolution = await (options.resolveConflict?.({
+//     adapterId: options.adapterId,
+//     assetId: options.assetId,
+//     localValue: options.localValue,
+//     remoteValue: options.remoteValue,
+//     localHash,
+//     remoteHash,
+//     remoteDeletedAt: null,
+//     remoteUpdatedAt: options.remoteUpdatedAt,
+//   }) ?? "pause");
+//
+//   logger.debug(`${options.adapterId}/${options.assetId}: conflict detected, resolved as "${resolution}"`);
+//
+//   if (resolution === "use-local") {
+//     await options.writeRemote(options.localValue, localHash);
+//     await options.writeLastSyncedHash(localHash);
+//     return "uploaded";
+//   }
+//
+//   if (resolution === "use-remote") {
+//     await options.writeLocal(options.remoteValue);
+//     await options.writeLastSyncedHash(remoteHash);
+//     return "downloaded";
+//   }
+//
+//   return "conflict";
+// }
 
 async function readRemoteJson<TValue>(
   client: SyncStorageClient,

@@ -52,11 +52,17 @@ export const WebDavInitialSyncGate = observer(function WebDavInitialSyncGate({
     state.status.phase === "downloading"
     && state.status.currentRunReason === "interval"
     && state.pendingConflict === null;
+  // AI-CORRECTION 2026-08-13: 下载不容忍中止后引擎置 canvasLocked，
+  // 阻断继续编辑直到本轮同步（含冲突决议应用）结束。
+  const locksCanvasForDirtyAbort =
+    state.status.canvasLocked
+    && state.pendingConflict === null;
   if (
     !state.settings.enabled
     || (
       state.status.initialSyncStage !== "canvas"
       && !locksCanvasForIntervalDownload
+      && !locksCanvasForDirtyAbort
     )
   ) {
     return null;

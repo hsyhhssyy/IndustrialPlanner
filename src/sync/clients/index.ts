@@ -25,7 +25,11 @@ export type {
   SyncRemoteWriteBatch,
 } from "./remote-types";
 
-export { RemoteWriteConflictError } from "./remote-types";
+export {
+  RemoteDownloadStaleError,
+  RemoteWriteConflictError,
+  isRemoteSyncStaleError,
+} from "./remote-types";
 
 export type {
   SyncClientOptions,

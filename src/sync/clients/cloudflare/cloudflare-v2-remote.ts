@@ -23,7 +23,10 @@ import type {
   SyncRemoteSessionContext,
   SyncRemoteWriteBatch,
 } from "../remote-types";
-import { RemoteWriteConflictError } from "../remote-types";
+import {
+  RemoteDownloadStaleError,
+  RemoteWriteConflictError,
+} from "../remote-types";
 import type {
   CfV2CommitBatchResult,
   CfV2LoadPlanResult,
@@ -157,10 +160,16 @@ class CloudflareV2SyncLocalState implements SyncLocalState {
 class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
   private planCache: CfV2LoadPlanResult | null = null;
   private latestCommittedRevision: CfV2Revision | null;
-  // AI-CORRECTION 2026-08-13: 本会话内提交产生的最新 revision，作为后续写入批次基线。
-  // plan 快照在 prefetch 后不再刷新，初始同步多个批次顺序上传时，
-  // 后续批次若仍以旧 plan revision 提交会被后端拒绝（“space revision 已变化”）。
-  private sessionCommittedRevision: CfV2Revision | null = null;
+  // AI-REMOVED 2026-08-13:
+  // Reason: 同步编排已改为“先下载、后上传、单次 commit”，不再有同会话多批次顺序上传。
+  // Trigger: sync-model.md 要求上传基线固定为下载阶段开始前 plan 的最新 revision。
+  // Evidence: 新引擎每个 run 只 commit 一次；本字段让后续批次以本会话提交的 revision 为基线，与新语义冲突。
+  // Replacement: getObservedRemoteRevision 直接返回 plan revision。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // private sessionCommittedRevision: CfV2Revision | null = null;
   private pendingJournalAck: boolean;
 
   public constructor(
@@ -192,8 +201,15 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
 
   public async refreshIndexes(collections: readonly SyncRemoteCollection[]): Promise<void> {
     this.planCache = null;
-    // AI-CORRECTION 2026-08-13: 重新观测远端后，本会话提交的 revision 不再是最新基线。
-    this.sessionCommittedRevision = null;
+    // AI-REMOVED 2026-08-13:
+    // Reason: 与 sessionCommittedRevision 字段一并移除（见上）。
+    // Trigger: 新编排不再有同会话多批次上传基线。
+    // Replacement: None。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // this.sessionCommittedRevision = null;
     await this.prefetchIndexes(collections);
   }
 
@@ -225,10 +241,13 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
     });
     const entries: RemoteCollectionIndex["entries"] = {};
     mappedAssets.forEach((mapped, index) => {
+      // AI-CORRECTION 2026-08-13: fallback 口径（未映射/未知）时不得与本地口径 hash 比较。
+      const comparableHash = comparableHashes[index];
       entries[mapped.adapterAssetId] = {
         revision: toAdapterRevision(mapped.asset.lastModifiedRevision),
-        contentHash: comparableHashes[index] ?? mapped.protocolContentHash,
+        contentHash: comparableHash ?? mapped.protocolContentHash,
         protocolContentHash: mapped.protocolContentHash,
+        contentHashCaliber: comparableHash === null ? "protocol-fallback" : "adapter",
         deletedAt: null,
         committedAt: null,
       };
@@ -258,6 +277,16 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
       asset,
       planRevision: plan.revision,
       planServerTime: plan.serverTime,
+    }).catch((error: unknown) => {
+      // AI-CORRECTION 2026-08-13: 下载 409 与写 409 同语义，转换为引擎可识别的整轮重启信号。
+      if (error instanceof CfV2HttpError && error.status === 409) {
+        throw new RemoteDownloadStaleError(
+          params.collection.name,
+          params.assetId,
+          error.message,
+        );
+      }
+      throw error;
     });
     await this.request<void>({
       type: "state-note-remote-hash",
@@ -334,11 +363,17 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
   }
 
   public getObservedRemoteRevision(): CfV2Revision | null {
-    // AI-CORRECTION 2026-08-13: 本会话已提交的 revision 比 plan 快照更新，
-    // 初始同步多批次顺序上传时，后续批次必须以其为基线。
-    if (this.sessionCommittedRevision !== null) {
-      return this.sessionCommittedRevision;
-    }
+    // AI-REMOVED 2026-08-13:
+    // Reason: 同一会话内多批次顺序上传的基线机制已被“单次 commit”取代。
+    // Trigger: sync-model.md 上传基线 = 下载阶段开始前 plan 的最新 revision。
+    // Replacement: 直接返回 plan revision。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (this.sessionCommittedRevision !== null) {
+    //   return this.sessionCommittedRevision;
+    // }
     return this.planCache?.revision ?? null;
   }
 
@@ -348,7 +383,15 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
 
   public registerCommittedRevision(revision: CfV2Revision): void {
     this.latestCommittedRevision = revision;
-    this.sessionCommittedRevision = revision;
+    // AI-REMOVED 2026-08-13:
+    // Reason: 与 sessionCommittedRevision 字段一并移除（见上）。
+    // Trigger: 新编排单次 commit。
+    // Replacement: latestCommittedRevision 继续用于 complete() 的 applied revision。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // this.sessionCommittedRevision = revision;
     this.pendingJournalAck = true;
   }
 
@@ -508,6 +551,24 @@ function translateWriteError(error: unknown): unknown {
         };
       }));
     }
+    // AI-CORRECTION 2026-08-13: 后端所有 commit 409（revision_mismatch / space_locked /
+    // batch_cancelled / uploads_incomplete 等）语义均为“丢弃本次完整操作从头开始”，
+    // 统一转换为引擎的整轮重启信号，不再依赖 details.conflicts 结构。
+    return new RemoteWriteConflictError([{
+      assetType: "",
+      assetId: "",
+      reason: error.code,
+      expectedRevision: typeof details === "object" && details !== null
+        && typeof details.expectedRevision === "number"
+        ? details.expectedRevision
+        : null,
+      actualRevision: typeof details === "object" && details !== null
+        && typeof details.actualRevision === "number"
+        ? details.actualRevision
+        : null,
+      expectedHash: null,
+      actualHash: null,
+    }]);
   }
   return error;
 }

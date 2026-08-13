@@ -114,6 +114,14 @@ export interface RemoteAssetMeta {
   readonly contentHash: string | null;
   /** 远端协议的权威 hash；与适配器本地比较算法不同时用于乐观并发基线。 */
   readonly protocolContentHash?: string | null;
+  /**
+   * contentHash 的可比口径。
+   * - "adapter"：contentHash 使用 collection.hashAlgorithm 的本地口径，可直接与本地 hash 比较；
+   * - "protocol-fallback"：provider 缺少可比 hash 映射，contentHash 为远端协议原始值（如 SHA-256），
+   *   与本地口径 hash 比较不得得出“相等”或“不等”结论。
+   * 未提供时视为 "adapter"（WebDAV 索引始终由本地口径写入）。
+   */
+  readonly contentHashCaliber?: "adapter" | "protocol-fallback";
   readonly deletedAt: string | null;
   readonly committedAt: string | null;
 }
@@ -201,6 +209,27 @@ export class RemoteWriteConflictError extends Error {
       ).join(', ')}.`);
     this.name = 'RemoteWriteConflictError';
   }
+}
+
+/**
+ * 下载内容时远端 revision 已推进（CF download_stale 等）。
+ * 语义与写 409 相同：丢弃本次完整同步操作，回到流程起点重新拉 plan。
+ */
+export class RemoteDownloadStaleError extends Error {
+  public constructor(
+    public readonly collectionName: string,
+    public readonly assetId: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'RemoteDownloadStaleError';
+  }
+}
+
+/** 判断一个错误是否要求整轮同步丢弃重来（下载票据过期或提交写冲突）。 */
+export function isRemoteSyncStaleError(error: unknown): boolean {
+  return error instanceof RemoteDownloadStaleError
+    || error instanceof RemoteWriteConflictError;
 }
 
 export interface SyncMaintenanceTaskRequest {

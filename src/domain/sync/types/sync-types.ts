@@ -108,6 +108,8 @@ export interface SyncStatus {
   readonly lastDownloadAt: string | null;
   readonly lastError: string | null;
   readonly lastSmallCheckAt: string | null;
+  /** 下载不容忍中止后锁定画布，阻断继续编辑直到本轮同步结束。 */
+  readonly canvasLocked: boolean;
   // AI-REMOVED 2026-08-10:
   // Reason: lastBigCheckAt 随大检查功能一并删除。
   // Trigger: 用户确认大检查无额外价值。
@@ -136,9 +138,13 @@ export interface SyncStatus {
 //   readonly lastActive: string;
 // }
 
+export type SyncConflictItemKind = "upload" | "download" | "conflict";
+
 export interface SyncConflictItem {
   readonly adapterId: string;
   readonly assetId: string;
+  /** 条目类型：上传（默认用我的）、下载（默认用远端）或双向冲突。 */
+  readonly kind: SyncConflictItemKind;
   readonly remoteUpdatedAt: string | null;
 }
 

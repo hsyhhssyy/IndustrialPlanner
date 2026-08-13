@@ -13,6 +13,7 @@ import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
 import type {
   SyncConflictDecision,
+  SyncConflictItemKind,
   SyncConflictResolution,
   SyncContract,
 } from "@/domain/sync";
@@ -66,7 +67,16 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
   );
 
   useEffect(() => {
-    setDecisions(new Map());
+    // AI-CORRECTION 2026-08-13: 按条目类型预设默认决议——
+    // 上传条目默认“用我的”，下载条目默认“用远端”，冲突条目无默认必须显式选择。
+    setDecisions(new Map(conflict?.items.flatMap((item): Array<[string, SyncConflictResolution]> =>
+      item.kind === "upload"
+        ? [[createConflictItemKey(item.adapterId, item.assetId), "use-local"]]
+        : item.kind === "download"
+          ? [[createConflictItemKey(item.adapterId, item.assetId), "use-remote"]]
+          : []
+    ) ?? []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 重置条件由 itemKey 表达，避免 phase 变化时清空选择
   }, [itemKey]);
 
   useEffect(() => {
@@ -163,6 +173,7 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
               const itemLabel = t("webDavConflict.itemLabel")
                 .replace("{type}", typeLabel)
                 .replace("{name}", itemName);
+              const kindLabel = resolveConflictItemKindLabel(item.kind, t);
 
               return (
                 <fieldset
@@ -171,6 +182,9 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
                 >
                   <legend>
                     <strong>{itemLabel}</strong>
+                    <span className={cm(styles, "webdav-conflict-item-kind")}>
+                      {kindLabel}
+                    </span>
                     {/*
                       AI-REMOVED 2026-08-08:
                       Reason: 内部 assetId 不是面向用户的资源名称，且长 ID 会破坏弹窗对齐。
@@ -184,15 +198,17 @@ export const WebDavConflictDialog = observer(function WebDavConflictDialog({
                       <span>{item.assetId}</span>
                     */}
                   </legend>
-                  <p>
-                    {t("webDavConflict.remoteUpdatedAt").replace(
-                      "{time}",
-                      formatRemoteUpdatedAt(
-                        item.remoteUpdatedAt,
-                        t("webDavConflict.unknownTime"),
-                      ),
-                    )}
-                  </p>
+                  {item.kind === "conflict" ? (
+                    <p>
+                      {t("webDavConflict.remoteUpdatedAt").replace(
+                        "{time}",
+                        formatRemoteUpdatedAt(
+                          item.remoteUpdatedAt,
+                          t("webDavConflict.unknownTime"),
+                        ),
+                      )}
+                    </p>
+                  ) : null}
                   <div className={cm(styles, "webdav-conflict-options")}>
                     {CONFLICT_RESOLUTIONS.map((resolution) => (
                       <label key={resolution}>
@@ -286,6 +302,13 @@ const CONFLICT_RESOLUTIONS: readonly SyncConflictResolution[] = [
 
 function createConflictItemKey(adapterId: string, assetId: string): string {
   return `${adapterId}\u0000${assetId}`;
+}
+
+function resolveConflictItemKindLabel(
+  kind: SyncConflictItemKind,
+  t: AppHost["actions"]["translate"],
+): string {
+  return t(`webDavConflict.kind.${kind}`);
 }
 
 function resolveResolutionLabel(

@@ -36,6 +36,7 @@ export class SyncStateImpl implements SyncState {
     lastDownloadAt: null,
     lastError: null,
     lastSmallCheckAt: null,
+    canvasLocked: false,
     lastResults: [],
   };
 
@@ -96,6 +97,7 @@ export class SyncStateImpl implements SyncState {
       items: conflicts.map((conflict) => ({
         adapterId: conflict.adapterId,
         assetId: conflict.assetId,
+        kind: conflict.kind ?? "conflict",
         remoteUpdatedAt: conflict.remoteUpdatedAt,
       })),
     };

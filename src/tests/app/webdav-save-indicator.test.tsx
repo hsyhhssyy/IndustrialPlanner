@@ -138,6 +138,7 @@ function createStatus(
     pendingLocalChangeCount: 0,
     saveError: null,
     lastUploadAt: null,
+    canvasLocked: false,
     lastDownloadAt: null,
     lastError: null,
     lastSmallCheckAt: null,

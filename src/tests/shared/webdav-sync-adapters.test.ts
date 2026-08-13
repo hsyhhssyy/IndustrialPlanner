@@ -11,10 +11,14 @@ import {
 } from "@/sync";
 import { createStableJsonHash } from "@/shared/storage/hash-utils";
 import type {
+  RemoteAssetPutParams,
+  RemoteAssetTombstoneParams,
   SyncAdapter,
-  SyncAdapterConflict,
   SyncAdapterResult,
   SyncAdapterScope,
+  SyncEngineTransaction,
+  SyncPlanItem,
+  SyncPlanUpload,
   SyncRemoteSession,
   WebDavResourceStat,
   WebDavStorageClient,
@@ -82,23 +86,108 @@ async function createSession(
   });
 }
 
+interface AdapterRunOutcome {
+  readonly result: SyncAdapterResult;
+  readonly items: readonly SyncPlanItem[];
+  /** 与引擎一致的终局执行：提交上传、落地二段删除、写入暂存 touch。 */
+  readonly finalize: () => Promise<void>;
+}
+
+interface AdapterRunControls {
+  readonly session: SyncRemoteSession;
+  readonly transaction: SyncEngineTransaction;
+  readonly outcome: AdapterRunOutcome;
+}
+
+async function createAdapterRun(
+  adapter: SyncAdapter,
+  client: MemoryWebDavClient,
+  scope?: SyncAdapterScope,
+): Promise<AdapterRunControls> {
+  const session = await createSession(client, [adapter]);
+  const uploads: SyncPlanUpload[] = [];
+  const stagedTouches = new Map<string, string | null>();
+  const stagedDeletions: Array<() => Promise<void>> = [];
+  const items: SyncPlanItem[] = [];
+  const writeBatch = session.beginWriteBatch();
+  const transaction: SyncEngineTransaction = {
+    writeBatch,
+    stageTouch: (assetKey, contentHash) => {
+      stagedTouches.set(assetKey, contentHash);
+    },
+    stageDeletion: (_adapterId, _assetId, apply) => {
+      stagedDeletions.push(apply);
+    },
+    recordItem: (item) => {
+      items.push(item);
+    },
+    recordUpload: (upload) => {
+      uploads.push(upload);
+    },
+    assertDownloadAllowed: async () => undefined,
+  };
+
+  const result = await adapter.sync(session, { scope, transaction });
+  let finalized = false;
+  const finalize = async (): Promise<void> => {
+    if (finalized) {
+      return;
+    }
+    finalized = true;
+    for (const upload of uploads) {
+      if ("deletedAt" in upload.params) {
+        writeBatch.putTombstone(upload.params as RemoteAssetTombstoneParams);
+      } else {
+        writeBatch.putAsset(upload.params as RemoteAssetPutParams);
+      }
+    }
+    if (uploads.length > 0) {
+      await writeBatch.commit();
+    } else {
+      await writeBatch.discard();
+    }
+    for (const apply of stagedDeletions) {
+      await apply();
+    }
+    for (const [assetKey, contentHash] of stagedTouches) {
+      await session.localState.setLastSyncedHash(assetKey, contentHash);
+    }
+    // AI-CORRECTION 2026-08-13: 与引擎一致，终局推进 markApplied（含 collection ETag），
+    // 使后续同步的远端无变化快路径可用。
+    await session.markApplied({
+      collection: adapter.collection,
+      assetIds: result.changedAssetIds,
+      scopeComplete: true,
+      collectionRevision: result.collectionRevision ?? null,
+      collectionEtag: uploads.length > 0
+        ? null
+        : result.collectionEtag ?? undefined,
+    });
+  };
+
+  return {
+    session,
+    transaction,
+    outcome: { result, items, finalize },
+  };
+}
+
 async function syncAdapter(
   adapter: SyncAdapter,
   client: MemoryWebDavClient,
   scope?: SyncAdapterScope,
 ): Promise<SyncAdapterResult> {
-  const session = await createSession(client, [adapter]);
+  const run = await createAdapterRun(adapter, client, scope);
+  // AI-CORRECTION 2026-08-13: 与引擎的无弹框纯上传流程一致——
+  // upload 条目按“用我的”登记上传；download 已落地；conflict 保留不自动决议。
+  for (const item of run.outcome.items) {
+    if (item.kind === "upload") {
+      await item.applyUpload();
+    }
+  }
+  await run.outcome.finalize();
 
-  return await adapter.sync(session, scope);
-}
-
-async function inspectAdapterConflicts(
-  adapter: SyncAdapter,
-  client: MemoryWebDavClient,
-): Promise<readonly SyncAdapterConflict<unknown>[] | undefined> {
-  const session = await createSession(client, [adapter]);
-
-  return await adapter.inspectConflicts?.(session);
+  return run.outcome.result;
 }
 
 describe("webdav-sync-adapters", () => {
@@ -168,14 +257,18 @@ describe("webdav-sync-adapters", () => {
       writeLocal: async (value) => {
         localValue = value;
       },
-      resolveConflict: () => "use-local",
     });
 
     await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "uploaded" });
     localValue = { count: 2 };
     client.files.set("assets/conflict-use-local.json", JSON.stringify({ count: 3 }));
 
-    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "uploaded" });
+    // AI-CORRECTION 2026-08-13: 冲突登记为 SyncPlanItem，由引擎按决议执行。
+    const run = await createAdapterRun(adapter, client);
+    expect(run.outcome.items).toHaveLength(1);
+    expect(run.outcome.items[0]).toMatchObject({ kind: "conflict" });
+    await run.outcome.items[0]!.applyUpload();
+    await run.outcome.finalize();
     expect(localValue).toEqual({ count: 2 });
     expect(JSON.parse(client.files.get("assets/conflict-use-local.json") ?? "null"))
       .toEqual({ count: 2 });
@@ -191,14 +284,18 @@ describe("webdav-sync-adapters", () => {
       writeLocal: async (value) => {
         localValue = value;
       },
-      resolveConflict: () => "use-remote",
     });
 
     await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "uploaded" });
     localValue = { count: 2 };
     client.files.set("assets/conflict-use-remote.json", JSON.stringify({ count: 3 }));
 
-    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "downloaded" });
+    // AI-CORRECTION 2026-08-13: 冲突登记为 SyncPlanItem，由引擎按决议执行。
+    const run = await createAdapterRun(adapter, client);
+    expect(run.outcome.items).toHaveLength(1);
+    expect(run.outcome.items[0]).toMatchObject({ kind: "conflict" });
+    await run.outcome.items[0]!.applyDownload();
+    await run.outcome.finalize();
     expect(localValue).toEqual({ count: 3 });
     expect(JSON.parse(client.files.get("assets/conflict-use-remote.json") ?? "null"))
       .toEqual({ count: 3 });
@@ -280,7 +377,21 @@ describe("webdav-sync-adapters", () => {
       markApplied: async () => undefined,
     };
 
-    await expect(collection.sync(session)).rejects.toThrow("commit failed");
+    // AI-CORRECTION 2026-08-13: 上传 commit 由引擎统一执行（先下载、后上传、单次 commit）；
+    // 这里用同一 session 的事务模拟引擎终局，验证 commit 失败时 touch 不落盘。
+    const transaction: SyncEngineTransaction = {
+      writeBatch: session.beginWriteBatch(),
+      stageTouch: () => undefined,
+      stageDeletion: () => undefined,
+      recordItem: () => undefined,
+      recordUpload: () => undefined,
+      assertDownloadAllowed: async () => undefined,
+    };
+    const result = await collection.sync(session, { transaction });
+    expect(result.status).toBe("uploaded");
+
+    const commit = session.beginWriteBatch();
+    await expect(commit.commit()).rejects.toThrow("commit failed");
     expect(setLastSyncedHash).not.toHaveBeenCalled();
   });
 
@@ -340,11 +451,32 @@ describe("webdav-sync-adapters", () => {
       markApplied: async () => undefined,
     };
 
-    await expect(adapter.sync(session)).resolves.toMatchObject({ status: "uploaded" });
+    // AI-CORRECTION 2026-08-13: 上传登记由引擎通过 SyncPlanItem.applyUpload →
+    // transaction.recordUpload 写入共享批次；这里模拟引擎的纯上传决议。
+    const writeBatch = session.beginWriteBatch();
+    let recordedItem: SyncPlanItem | undefined;
+    await expect(adapter.sync(session, {
+      transaction: {
+        writeBatch,
+        stageTouch: () => undefined,
+        stageDeletion: () => undefined,
+        recordItem: (item) => {
+          recordedItem = item;
+        },
+        recordUpload: (upload) => {
+          if (!("deletedAt" in upload.params)) {
+            writeBatch.putAsset(upload.params);
+          }
+        },
+        assertDownloadAllowed: async () => undefined,
+      },
+    })).resolves.toMatchObject({ status: "uploaded" });
+    expect(recordedItem).toBeDefined();
+    await recordedItem!.applyUpload();
     expect(capturedBaseContentHash).toBe(protocolHash);
   });
 
-  it("discovers every collection conflict without mutating either side", async () => {
+  it("classifies collection conflicts as plan items without mutating either side", async () => {
     const client = new MemoryWebDavClient();
     let entries = [{
       id: "blueprint-a",
@@ -390,12 +522,17 @@ describe("webdav-sync-adapters", () => {
     }));
     const filesBeforeInspection = new Map(client.files);
 
-    const conflicts = await inspectAdapterConflicts(adapter, client);
+    // AI-CORRECTION 2026-08-13: 冲突不再由 inspectConflicts 事后探测，
+    // 而是同步时登记为 SyncPlanItem（kind="conflict"），由引擎弹框决议。
+    const run = await createAdapterRun(adapter, client, {
+      includeAssetIds: ["blueprint-a"],
+    });
 
-    expect(conflicts).toHaveLength(1);
-    expect(conflicts?.[0]).toMatchObject({
+    expect(run.outcome.items).toHaveLength(1);
+    expect(run.outcome.items[0]).toMatchObject({
       adapterId: "blueprints",
       assetId: "blueprint-a",
+      kind: "conflict",
       remoteHash,
       remoteUpdatedAt,
     });
@@ -403,19 +540,11 @@ describe("webdav-sync-adapters", () => {
     expect(entries[0]?.value).toEqual({ name: "local edit" });
     expect(client.files).toEqual(filesBeforeInspection);
 
-    const conflict = conflicts?.[0];
-    expect(conflict).toBeDefined();
-    await expect(syncAdapter(adapter, client, {
-      includeAssetIds: ["blueprint-a"],
-      conflictDecisions: [{
-        adapterId: "blueprints",
-        assetId: "blueprint-a",
-        localHash: conflict!.localHash,
-        remoteHash: conflict!.remoteHash,
-        remoteDeletedAt: conflict!.remoteDeletedAt,
-        resolution: "use-remote",
-      }],
-    })).resolves.toMatchObject({ status: "downloaded" });
+    // 引擎按“用远端”决议执行下载后落地本地。
+    const item = run.outcome.items[0];
+    expect(item).toBeDefined();
+    await item!.applyDownload();
+    await run.outcome.finalize();
     expect(entries[0]?.value).toEqual(remoteValue);
   });
 
@@ -676,7 +805,6 @@ describe("webdav-sync-adapters", () => {
       value: { name: "initial" },
       deletedAt: null as string | null,
     }];
-    const resolveConflict = vi.fn(() => "use-local" as const);
     const adapter = createFullWithRevisionAdapter({
       id: "blueprints",
       indexPath: "assets/blueprints/index.json",
@@ -685,7 +813,6 @@ describe("webdav-sync-adapters", () => {
       writeLocal: async (entry) => {
         entries = [entry];
       },
-      resolveConflict,
     });
     await syncAdapter(adapter, client);
     const initialIndex = JSON.parse(
@@ -711,15 +838,19 @@ describe("webdav-sync-adapters", () => {
       },
     }));
 
-    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({
-      status: "uploaded",
-    });
-    expect(resolveConflict).toHaveBeenCalledWith(expect.objectContaining({
+    // AI-CORRECTION 2026-08-13: 冲突登记为 SyncPlanItem，由引擎按决议执行；
+    // adapter 不再消费 options.resolveConflict。
+    const run = await createAdapterRun(adapter, client);
+    expect(run.outcome.items).toHaveLength(1);
+    expect(run.outcome.items[0]).toMatchObject({
       adapterId: "blueprints",
       assetId: "blueprint-a",
+      kind: "conflict",
       remoteValue: null,
       remoteDeletedAt: "2026-07-29T11:00:00.000Z",
-    }));
+    });
+    await run.outcome.items[0]!.applyUpload();
+    await run.outcome.finalize();
     expect(JSON.parse(
       client.files.get("assets/blueprints/blueprint-a.json") ?? "null",
     )).toEqual({ name: "local edit" });
@@ -740,7 +871,6 @@ describe("webdav-sync-adapters", () => {
       value: { name: "initial" },
       deletedAt: null as string | null,
     }];
-    const resolveConflict = vi.fn(() => "use-remote" as const);
     const adapter = createFullWithRevisionAdapter({
       id: "blueprints",
       indexPath: "assets/blueprints/index.json",
@@ -749,7 +879,6 @@ describe("webdav-sync-adapters", () => {
       writeLocal: async (entry) => {
         entries = [entry];
       },
-      resolveConflict,
     });
     await syncAdapter(adapter, client);
     entries = [{
@@ -772,10 +901,15 @@ describe("webdav-sync-adapters", () => {
       },
     }));
 
-    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({
-      status: "downloaded",
+    // AI-CORRECTION 2026-08-13: 冲突登记为 SyncPlanItem；“用远端”由引擎调 applyDownload。
+    const run = await createAdapterRun(adapter, client);
+    expect(run.outcome.items).toHaveLength(1);
+    expect(run.outcome.items[0]).toMatchObject({
+      kind: "conflict",
+      remoteDeletedAt: null,
     });
-    expect(resolveConflict).toHaveBeenCalledTimes(1);
+    await run.outcome.items[0]!.applyDownload();
+    await run.outcome.finalize();
     expect(entries).toEqual([{
       id: "blueprint-a",
       value: remoteValue,
@@ -790,7 +924,6 @@ describe("webdav-sync-adapters", () => {
       value: { count: 1 },
       deletedAt: null as string | null,
     }];
-    const resolveConflict = vi.fn(() => "use-remote" as const);
     const adapter = createPatchCollectionWithRevisionAdapter({
       id: "module-canvases",
       indexPath: "assets/module-canvases/index.json",
@@ -799,7 +932,6 @@ describe("webdav-sync-adapters", () => {
       writeLocal: async (entry) => {
         entries = [entry];
       },
-      resolveConflict,
     });
     await syncAdapter(adapter, client);
     const initialHash = createStableJsonHash(entries[0]!.value);
@@ -818,13 +950,16 @@ describe("webdav-sync-adapters", () => {
       },
     }));
 
-    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({
-      status: "downloaded",
-    });
-    expect(resolveConflict).toHaveBeenCalledWith(expect.objectContaining({
+    // AI-CORRECTION 2026-08-13: 冲突登记为 SyncPlanItem；“用远端”= 二段删除。
+    const run = await createAdapterRun(adapter, client);
+    expect(run.outcome.items).toHaveLength(1);
+    expect(run.outcome.items[0]).toMatchObject({
+      kind: "conflict",
       remoteValue: null,
       remoteDeletedAt: "2026-07-29T11:02:00.000Z",
-    }));
+    });
+    await run.outcome.items[0]!.applyDownload();
+    await run.outcome.finalize();
     expect(entries[0]).toMatchObject({
       value: { count: 2 },
       deletedAt: "2026-07-29T11:02:00.000Z",
@@ -838,7 +973,6 @@ describe("webdav-sync-adapters", () => {
       value: { count: 1 },
       deletedAt: null as string | null,
     }];
-    const resolveConflict = vi.fn(() => "use-local" as const);
     const adapter = createPatchCollectionWithRevisionAdapter({
       id: "module-canvases",
       indexPath: "assets/module-canvases/index.json",
@@ -847,7 +981,6 @@ describe("webdav-sync-adapters", () => {
       writeLocal: async (entry) => {
         entries = [entry];
       },
-      resolveConflict,
     });
     await syncAdapter(adapter, client);
     entries = [{
@@ -880,10 +1013,12 @@ describe("webdav-sync-adapters", () => {
       },
     }));
 
-    await expect(syncAdapter(adapter, client)).resolves.toMatchObject({
-      status: "uploaded",
-    });
-    expect(resolveConflict).toHaveBeenCalledTimes(1);
+    // AI-CORRECTION 2026-08-13: 冲突登记为 SyncPlanItem；“用我的”= 墓碑上传。
+    const run = await createAdapterRun(adapter, client);
+    expect(run.outcome.items).toHaveLength(1);
+    expect(run.outcome.items[0]).toMatchObject({ kind: "conflict" });
+    await run.outcome.items[0]!.applyUpload();
+    await run.outcome.finalize();
     const index = JSON.parse(
       client.files.get("assets/module-canvases/index.json") ?? "null",
     ) as {
