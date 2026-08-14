@@ -1,8 +1,12 @@
 ---
-description: "请使用提交脚本提交代码，提交信息请你自己根据改动总结"
-argument-hint: "[额外说明...]"
-agent: "agent"
+name: project-commit
+description: 提交代码时使用。使用项目提交脚本提交代码，提交信息根据改动总结。
 ---
+
+## 提交方式强度条款
+
+**禁止直接执行 commit**（`git commit` 及任何绕过脚本的提交方式），只允许运行 `./commit-all.sh <提交信息>` 完成提交。
+
 请使用提交脚本提交代码，提交信息请你自己根据改动总结。
 
 步骤：

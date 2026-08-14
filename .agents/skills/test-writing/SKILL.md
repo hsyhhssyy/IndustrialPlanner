@@ -1,7 +1,6 @@
 ---
-description: 这是项目测试文档的修改和创建说明。
-paths:
-  - "src/tests/**/*.*"
+name: test-writing
+description: 创建或修改 src/tests/ 下的测试文件时使用。规定禁止修改测试来修绿、测试失败处理流程、vitest project 划分与蓝图测试概念、各模块分层测试策略。
 ---
 
 ## 禁止修改测试
@@ -83,4 +82,3 @@ npx vitest run --project blueprint
 - **App / Editor**：Playwright E2E + 双重验证，使用真实浏览器事件。
 - **Renderer**：分层处理——纯几何计算去 mock、Sprite 视觉比对、完整场景集成。
 - **Shared**：纯逻辑单元测试，不依赖 DOM/Canvas。
-

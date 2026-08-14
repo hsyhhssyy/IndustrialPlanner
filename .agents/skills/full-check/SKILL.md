@@ -1,11 +1,13 @@
 ---
-
-description: "对当前工作区执行完整的代码质量检查（eslint、tsc、test、build、e2e、test:blueprint），并以表格汇总未通过的测试"
-argument-hint: "[额外说明...]"
-agent: "agent"
+name: full-check
+description: 对当前工作区执行完整的代码质量检查（eslint、tsc、test、build、e2e、test:blueprint），并以表格汇总未通过的测试。
 ---
 
 请使用 `scripts/check/full-check.sh` 对当前工作区执行完整检查。所有检查命令已固化为脚本，AI 只需调用脚本的子命令，不得自行拼写检查命令。
+
+## 测试范围强度条款
+
+**除非用户明确给出测试集名称要求执行单一测试集，否则任何时候执行测试都必须执行完整测试**，不得自行缩小测试范围或选择性执行。
 
 ## 最高优先级命令执行规则
 
@@ -164,7 +166,7 @@ bash scripts/check/full-check.sh tsc "<RUN_DIR>"
 bash scripts/check/full-check.sh test "<RUN_DIR>" &
 ```
 
-然后轮询，直到输出显示“已完成”。
+然后轮询，直到输出显示"已完成"。
 
 每次轮询前执行：
 
@@ -190,7 +192,7 @@ sleep 60
 bash scripts/check/full-check.sh poll test "<RUN_DIR>"
 ```
 
-直到显示“已完成”。
+直到显示"已完成"。
 
 ### 4. Build
 
@@ -246,7 +248,7 @@ bash scripts/check/full-check.sh poll e2e "<RUN_DIR>"
 bash scripts/check/full-check.sh blueprint "<RUN_DIR>" &
 ```
 
-然后轮询，直到输出显示“已完成”。
+然后轮询，直到输出显示"已完成"。
 
 每次轮询前执行：
 
@@ -272,7 +274,7 @@ sleep 60
 bash scripts/check/full-check.sh poll blueprint "<RUN_DIR>"
 ```
 
-直到显示“已完成”。
+直到显示"已完成"。
 
 ### 7. 汇总
 

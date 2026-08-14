@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(git -C /home/coder/IndustrialPlanner log --oneline -30)",
-      "Bash(git -C /home/coder/IndustrialPlanner show 14c8d57 --stat)"
-    ]
-  },
-  "plansDirectory": ".claude/plans"
-}

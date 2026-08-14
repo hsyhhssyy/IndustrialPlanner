@@ -1,7 +1,6 @@
 ---
-description: 分析解包 JSON 数据（端口坐标、设备变体、渲染模板等）时的规范，确保不产生错误的端口反转或坐标映射结论。
-paths:
-  - ".temp/json-export.json"
+name: unpack-data-analysis
+description: 分析 .temp/json-export.json 解包数据（端口坐标、设备变体、渲染模板等）时使用。防止错误的端口反转或坐标映射结论，规定两套坐标的转换方法与设备属性查找优先级。
 ---
 
 # 解包数据分析规范
@@ -25,7 +24,7 @@ paths:
 - `position.y`：端口高度；转换为本项目的二维格子端口时通常不参与 `localCellX/localCellY` 计算，但原始数据分析时仍应保留。
 - `isOutput: 0 | 1`：`0` 表示输入，`1` 表示输出；它通常与端口所在的 `inputPorts` / `outputPorts` 数组一致。
 - `isPipe: true | false`：`true` 表示流体管道端口，`false` 表示固体传送带端口。
-- 此处的 `isPipe` 是外部解包 JSON 的原始布尔字段，不是本项目 `RegistryQuery.isPipe(definitionId)`。后者表示“是否为三个管道节之一”；两者不得混用。
+- 此处的 `isPipe` 是外部解包 JSON 的原始布尔字段，不是本项目 `RegistryQuery.isPipe(definitionId)`。后者表示"是否为三个管道节之一"；两者不得混用。
 - `rotation.y`：游戏局部 Transform 的 Y 轴旋转角，不等价于本项目的 `NORTH/EAST/SOUTH/WEST`。
 
 `defaultRendererTemplate` 只表示默认 renderer 模式。现有数据不足以证明它会改变 `inputPorts` / `outputPorts` 的角色，更不能推出"所有非默认变体都要反转输入输出"。
