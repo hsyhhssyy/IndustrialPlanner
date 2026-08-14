@@ -116,6 +116,14 @@ export function collectConnectedStrictLogisticsEntityIds(options: {
             cellPoint,
             resolveEntityGridRect({ entity: otherEntity, definition: otherDefinition }),
           )
+          && hasReciprocalPortConnection({
+            endpointEntity: entity,
+            endpointDefinition: definition,
+            otherEntity,
+            otherDefinition,
+            kind,
+            directions,
+          })
         ) {
           visited.add(otherId);
           queue.push(otherId);
@@ -125,6 +133,38 @@ export function collectConnectedStrictLogisticsEntityIds(options: {
   }
 
   return connectedEntityIds;
+}
+
+function hasReciprocalPortConnection(options: {
+  endpointEntity: WorldEntity;
+  endpointDefinition: EntityDefinition;
+  otherEntity: WorldEntity;
+  otherDefinition: EntityDefinition;
+  kind: LogisticsKind;
+  directions: readonly LogisticsPortDirection[];
+}): boolean {
+  return options.directions.some((direction) => {
+    const reciprocalDirection = direction === "input" ? "output" : "input";
+    const endpoints = resolveDevicePortEndpoints({
+      entity: options.endpointEntity,
+      definition: options.endpointDefinition,
+      kind: options.kind,
+      direction,
+    });
+    const reciprocalEndpoints = resolveDevicePortEndpoints({
+      entity: options.otherEntity,
+      definition: options.otherDefinition,
+      kind: options.kind,
+      direction: reciprocalDirection,
+    });
+
+    return endpoints.some((endpoint) => reciprocalEndpoints.some((reciprocalEndpoint) =>
+      endpoint.outsideGridPoint.x === reciprocalEndpoint.insideGridPoint.x
+      && endpoint.outsideGridPoint.y === reciprocalEndpoint.insideGridPoint.y
+      && endpoint.insideGridPoint.x === reciprocalEndpoint.outsideGridPoint.x
+      && endpoint.insideGridPoint.y === reciprocalEndpoint.outsideGridPoint.y
+    ));
+  });
 }
 
 function resolveDevicePortEndpoints(options: {

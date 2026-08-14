@@ -81,10 +81,12 @@ function createPlanItemStub(
   applyUpload = vi.fn(async () => undefined),
   applyDownload = vi.fn(async () => undefined),
   applyLocalRestore = vi.fn(async () => undefined),
+  applyDiscardLocal = vi.fn(async () => undefined),
 ): SyncPlanItem & {
   readonly applyUpload: ReturnType<typeof vi.fn>;
   readonly applyDownload: ReturnType<typeof vi.fn>;
   readonly applyLocalRestore: ReturnType<typeof vi.fn>;
+  readonly applyDiscardLocal: ReturnType<typeof vi.fn>;
 } {
   return {
     adapterId,
@@ -99,6 +101,7 @@ function createPlanItemStub(
     applyUpload,
     applyDownload,
     applyLocalRestore,
+    applyDiscardLocal,
   };
 }
 

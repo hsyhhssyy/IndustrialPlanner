@@ -92,6 +92,12 @@ export interface SyncPlanItem {
   readonly applyUpload: () => Promise<void>;
   /** 下载条目改判“用我的”时恢复本地原值（之后引擎再登记上传）。 */
   readonly applyLocalRestore: () => Promise<void>;
+  /**
+   * 上传条目改判“用远端”时执行：放弃本地新增。
+   * 本地资产按远端墓碑语义二段删除（commit 成功后才落地），touch 清空，
+   * 使该资产若日后重新编辑，可再次按“远端从未存在”上传新增。
+   */
+  readonly applyDiscardLocal: () => Promise<void>;
 }
 
 export interface SyncPlanUpload {
@@ -621,6 +627,25 @@ function createPlanItem<TValue>(options: CreatePlanItemOptions<TValue>): SyncPla
     await options.writeLocal(localValue, localDeletedAt);
   };
 
+  // AI-CORRECTION 2026-08-14: 上传条目被用户决议为“用远端”时，语义为放弃本地新增——
+  // 本地资产删除（远端墓碑落地，二段式：commit 成功后才执行删除），touch 清空。
+  // 原实现走 applyDownload 的“远端资产不存在 → skipping”分支，本地原样保留、不上传，
+  // 但本轮同步照常推进 acknowledged 与脏标清理，制造“已同步”假象，
+  // 使真实上传被推迟到不可预期的下一轮同步（全量重新分类时），进而污染以
+  // 空间 revision 为等待信号的调用方。
+  const applyDiscardLocal = async (): Promise<void> => {
+    await transaction.assertDownloadAllowed(adapterId, assetId);
+    if (options.applyRemoteTombstone === null) {
+      logger.warn(
+        `${adapterId}/${assetId}: local discard not supported → skipping`,
+      );
+      return;
+    }
+    transaction.stageDeletion(adapterId, assetId, () =>
+      options.applyRemoteTombstone!(new Date().toISOString()));
+    transaction.stageTouch(assetKey, null);
+  };
+
   return {
     adapterId,
     assetId,
@@ -634,6 +659,7 @@ function createPlanItem<TValue>(options: CreatePlanItemOptions<TValue>): SyncPla
     applyDownload,
     applyUpload,
     applyLocalRestore,
+    applyDiscardLocal,
   };
 }
 

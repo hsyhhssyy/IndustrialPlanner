@@ -3,6 +3,7 @@ import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-mi
 
 import {
   applyIndexedDbStoreMutations,
+  deleteFromIndexedDb,
   listFromIndexedDb,
   readFromIndexedDb,
   saveToIndexedDb,
@@ -33,6 +34,16 @@ export async function writeWorldDocument(document: WorldDocument): Promise<void>
     createWordDocumentLocation(document.documentKey),
     document,
   );
+}
+
+/**
+ * 删除单个世界文档（按本机 documentKey）。
+ * 同步层远端墓碑落地与“放弃本地新增”决议使用；调用方负责决定删除范围。
+ */
+export async function deleteWorldDocument(
+  documentKey: string,
+): Promise<boolean> {
+  return await deleteFromIndexedDb(createWordDocumentLocation(documentKey));
 }
 
 export async function replaceWorldDocuments(

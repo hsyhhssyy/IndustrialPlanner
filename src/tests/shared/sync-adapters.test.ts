@@ -645,6 +645,63 @@ describe("sync-adapters", () => {
     )).toBe(true);
   });
 
+  it("discards a local-only asset via applyDiscardLocal with two-phase deletion", async () => {
+    // AI-CORRECTION 2026-08-14: 上传条目（本地有、远端没有）被决议为“用远端”时
+    // 走 applyDiscardLocal：登记二段删除与 touch 清空；commit 成功后才真正删除本地。
+    const client = new MemoryStorageClient();
+    type DiscardEntry = {
+      id: string;
+      value: { stages: { id: string; count: number }[] };
+      deletedAt: string | null;
+    };
+    let entries: DiscardEntry[] = [{
+      id: "canvas-a",
+      value: { stages: [{ id: "stage-a", count: 1 }] },
+      deletedAt: null,
+    }];
+    const writeLocal = vi.fn(async (entry: DiscardEntry) => {
+      entries = [
+        ...entries.filter((candidate) => candidate.id !== entry.id),
+        entry,
+      ];
+    });
+    const adapter = createPatchCollectionWithRevisionAdapter({
+      id: "module-canvases",
+      indexPath: "assets/module-canvases/index.json",
+      directoryPath: (id) => `assets/module-canvases/${id}`,
+      listLocal: async () => entries,
+      writeLocal,
+      deltaThreshold: 5,
+    });
+
+    const run = await createAdapterRun(adapter, client);
+    const uploadItem = run.outcome.items.find((item) => item.kind === "upload");
+    expect(uploadItem).toBeDefined();
+    const setLastSyncedHash = vi.spyOn(
+      run.session.localState,
+      "setLastSyncedHash",
+    );
+
+    await uploadItem!.applyDiscardLocal();
+
+    // 二段式：决议阶段只登记删除与 touch，本地与同步状态均未落盘。
+    expect(writeLocal).not.toHaveBeenCalled();
+    expect(setLastSyncedHash).not.toHaveBeenCalled();
+
+    await run.outcome.finalize();
+
+    // commit 成功后执行删除落地（deletedAt 墓碑）与 touch 清空。
+    expect(writeLocal).toHaveBeenCalledTimes(1);
+    expect(writeLocal.mock.calls[0]?.[0]).toMatchObject({
+      id: "canvas-a",
+      deletedAt: expect.any(String) as unknown,
+    });
+    const clearedTouch = setLastSyncedHash.mock.calls.some(([assetKey, hash]) =>
+      assetKey.includes("canvas-a") && hash === null
+    );
+    expect(clearedTouch).toBe(true);
+  });
+
   it("uses a stable canonical ETag to skip rebuilding an unchanged patch collection", async () => {
     const client = new MemoryStorageClient();
     const originalReadTextFile = client.readTextFile.bind(client);

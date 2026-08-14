@@ -59,7 +59,9 @@ import {
   type PlannerPersistedState,
 } from "@/shared/storage/planner-storage";
 import {
+  deleteWorldDocument,
   listLatestWorldDocumentsByBase,
+  listWorldDocuments,
   normalizeWorldDocument,
   readWorldDocument,
   writeWorldDocument,
@@ -858,12 +860,17 @@ export async function createSyncHost(
   }));
   if (typeof document !== "undefined") {
     const handleVisibilityChange = () => {
-      if (
-        document.visibilityState === "visible"
-        && syncStarted
-        && currentSettings.enabled
-      ) {
+      if (!syncStarted || !currentSettings.enabled) {
+        return;
+      }
+      if (document.visibilityState === "visible") {
         void service.syncNow("foreground");
+        return;
+      }
+      if (document.visibilityState === "hidden") {
+        // 切后台时若本地变更仍处于 5s 空闲去抖期，立即启动后台上传，
+        // 避免主线程定时器被后台节流推迟。
+        service.flushPendingChanges();
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -1160,6 +1167,20 @@ function createWorldDocumentAdapter(
     writeLocal: async (entry) => {
       const editor = workspace.editor;
       const currentDocument = editor?.document.getSnapshot();
+      // AI-CORRECTION 2026-08-14: writeLocal 支持远端墓碑（deletedAt 非空）：
+      // 删除该基地（entry.id 为远端资产 baseId）在本机的全部文档副本。
+      // 触发场景：远端墓碑下载、以及冲突弹框中上传条目被决议为“用远端”（放弃本地新增）。
+      // 原实现忽略 deletedAt，墓碑落地只推进 touch 不删本地，导致“已同步但本地仍在”的假象。
+      if (entry.deletedAt !== null) {
+        const documents = await listWorldDocuments();
+        for (const document of documents) {
+          if (document.baseId === entry.id) {
+            await deleteWorldDocument(document.documentKey);
+          }
+        }
+        return;
+      }
+
       // AI-REMOVED 2026-07-29:
       // Reason: 远端 canonical 文档不再携带本机 documentKey，按 entry.value.documentKey 查找会写成新的错误文档。
       // Trigger: 用户要求远端内容应用到当前画布，同时保留每台设备的内部对象身份。

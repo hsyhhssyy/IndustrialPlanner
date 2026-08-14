@@ -336,17 +336,17 @@ async function runConflictScenario(options: {
 
   await page.goto("/");
   // 设置 debug 日志级别、后端地址与独立 Cloudflare 空间，并检查同步状态
+  // AI-CORRECTION 2026-08-14: 不再直接调用 logger.setLogLevel——应用的 debugMode 开关
+  // effect 会在 debugMode=false 时把 logger 回写为 warn，与测试注入的 debug 级别形成竞态；
+  // 改为在 Phase 4 通过应用设置开关（other-debug-mode）开启，由应用统一管理 logger 级别。
   const configurationResult = await page.evaluate(async ({ apiBaseUrl, spaceId }) => {
     try {
-      const loggerModuleUrl = "/src/shared/logging/logger.ts";
       const backendAddressModuleUrl = "/src/shared/storage/backend-api-address.ts";
       const cloudflareSettingsModuleUrl = "/src/shared/storage/cloudflare-sync-settings.ts";
-      const [logger, backendAddress, cloudflareSettings] = await Promise.all([
-        import(/* @vite-ignore */ loggerModuleUrl),
+      const [backendAddress, cloudflareSettings] = await Promise.all([
         import(/* @vite-ignore */ backendAddressModuleUrl),
         import(/* @vite-ignore */ cloudflareSettingsModuleUrl),
       ]);
-      logger.setLogLevel("debug", { announce: true });
       backendAddress.writeBackendApiAddressOverride(apiBaseUrl);
       const settings = await cloudflareSettings.writeCloudflareSyncSettings({
         spaceName: spaceId,
@@ -354,7 +354,6 @@ async function runConflictScenario(options: {
       return {
         ok: true,
         apiBaseUrl: backendAddress.resolveBackendApiBaseUrl(),
-        logLevel: logger.getLogLevel(),
         spaceId: cloudflareSettings.resolveCloudflareSpaceId(settings),
       };
     } catch (e: unknown) {
@@ -371,7 +370,6 @@ async function runConflictScenario(options: {
   expect(configurationResult).toEqual({
     ok: true,
     apiBaseUrl: BACKEND_API_BASE_URL,
-    logLevel: "debug",
     spaceId,
   });
 
@@ -458,6 +456,23 @@ async function runConflictScenario(options: {
     await page.getByRole("button", { name: "开启实验性功能" }).click();
     await page.waitForTimeout(800);
   }
+
+  // AI-CORRECTION 2026-08-14: 通过应用设置开启调试模式，由应用 effect 统一把 logger 设为 debug；
+  // 直接调用 logger.setLogLevel 会被应用在 debugMode=false 时回写为 warn（Phase 1 断言不稳定）。
+  const debugModeToggle = page.locator('input[name="other-debug-mode"]');
+  await expect(debugModeToggle).toBeVisible({ timeout: 5000 });
+  if (!(await debugModeToggle.isChecked())) {
+    await debugModeToggle.check({ force: true });
+  }
+  await expect.poll(async () => await page.evaluate(async () => {
+    const loggerModuleUrl = "/src/shared/logging/logger.ts";
+    const logger = await import(/* @vite-ignore */ loggerModuleUrl);
+    return (logger as { getLogLevel(): string }).getLogLevel();
+  }), {
+    message: "应用设置开启调试模式后 logger 级别应变为 debug",
+    timeout: 10_000,
+    intervals: [250],
+  }).toBe("debug");
 
   if (hasSidebar) await page.getByRole("treeitem", { name: "实验性" }).click();
   await page.locator('select[name="sync-provider"]').selectOption("cloudflare");

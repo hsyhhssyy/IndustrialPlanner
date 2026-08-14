@@ -537,6 +537,94 @@ describe("sync-service", () => {
     expect(status.lastError).toBeNull();
   });
 
+  it("discards local additions when an upload item is resolved as use-remote", async () => {
+    // AI-CORRECTION 2026-08-14: 上传条目（本地有、远端没有）被决议为“用远端”时，
+    // 语义为放弃本地新增：调用 applyDiscardLocal 走二段删除，而不是 applyDownload
+    // 的“远端资产不存在 → skipping”静默路径（原路径不上传也不删除，却推进同步状态，
+    // 制造“已同步”假象）。
+    const uploadItem = createPlanItemStub(
+      "blueprints",
+      "blueprint-a",
+      "upload",
+    );
+    const conflictItem = createPlanItemStub(
+      "world-documents",
+      "base-a",
+      "conflict",
+    );
+    const firstAdapter: SyncAdapter = {
+      id: "blueprints",
+      mode: "full-with-revision",
+      collection: createSyncRemoteCollection({
+        adapterId: "blueprints",
+        mode: "full-with-revision",
+        stateKey: "blueprints/index.json",
+      }),
+      checkPath: "blueprints/index.json",
+      sync: vi.fn(async (
+        _session: SyncRemoteSession,
+        options: Parameters<SyncAdapter["sync"]>[1],
+      ): Promise<SyncAdapterResult> => {
+        options.transaction.recordItem(uploadItem);
+        return {
+          adapterId: "blueprints",
+          mode: "full-with-revision",
+          status: "uploaded",
+          changedAssetIds: ["blueprint-a"],
+        };
+      }),
+    };
+    const secondAdapter: SyncAdapter = {
+      id: "world-documents",
+      mode: "patch-with-revision",
+      collection: createSyncRemoteCollection({
+        adapterId: "world-documents",
+        mode: "patch-with-revision",
+        stateKey: "world-documents/meta.json",
+      }),
+      checkPath: "world-documents/meta.json",
+      sync: vi.fn(async (
+        _session: SyncRemoteSession,
+        options: Parameters<SyncAdapter["sync"]>[1],
+      ): Promise<SyncAdapterResult> => {
+        options.transaction.recordItem(conflictItem);
+        return {
+          adapterId: "world-documents",
+          mode: "patch-with-revision",
+          status: "conflict",
+          changedAssetIds: ["base-a"],
+        };
+      }),
+    };
+    const resolveConflicts = vi.fn(async () => [
+      {
+        adapterId: "blueprints",
+        assetId: "blueprint-a",
+        resolution: "use-remote" as const,
+      },
+      {
+        adapterId: "world-documents",
+        assetId: "base-a",
+        resolution: "use-remote" as const,
+      },
+    ]);
+    const service = createSyncService({
+      readSettings: () => createSettings(),
+      createRemote,
+      adapters: [firstAdapter, secondAdapter],
+      resolveConflicts,
+    });
+
+    const status = await service.syncNow("manual");
+
+    expect(uploadItem.applyDiscardLocal).toHaveBeenCalledTimes(1);
+    expect(uploadItem.applyUpload).not.toHaveBeenCalled();
+    expect(uploadItem.applyDownload).not.toHaveBeenCalled();
+    expect(conflictItem.applyDownload).toHaveBeenCalledTimes(1);
+    expect(status.phase).toBe("idle");
+    expect(status.lastError).toBeNull();
+  });
+
   it("persists conflict baselines only after the shared batch commits", async () => {
     const setLastSyncedHash = vi.fn(async () => undefined);
     const commit = vi.fn(async () => {
@@ -897,6 +985,85 @@ describe("sync-service", () => {
     service.stop();
   });
 
+  it("flushes a pending local change immediately when the page goes to background", async () => {
+    vi.useFakeTimers();
+    const adapter = createAdapter();
+    const service = createSyncService({
+      readSettings: () => createSettings(),
+      createRemote,
+      adapters: [adapter],
+      retryDelaysMs: [],
+      intervalMs: 60_000,
+    });
+
+    service.start();
+    await vi.waitFor(() => {
+      expect(adapter.sync).toHaveBeenCalledTimes(1);
+    });
+    adapter.sync.mockClear();
+
+    let releaseFirstSave!: () => void;
+    const firstSaveGate = new Promise<void>((resolve) => {
+      releaseFirstSave = resolve;
+    });
+    adapter.sync.mockImplementationOnce(async () => {
+      await firstSaveGate;
+      return {
+        adapterId: "adapter",
+        mode: "full-no-revision",
+        status: "uploaded",
+        changedAssetIds: ["single"],
+      };
+    });
+
+    // 首次编辑立即上传；上传挂起期间再编辑一次 → 进入 5s 空闲去抖期。
+    service.notifyLocalChange({ adapterId: "adapter" });
+    await vi.waitFor(() => {
+      expect(adapter.sync).toHaveBeenCalledTimes(1);
+    });
+    service.notifyLocalChange({ adapterId: "adapter" });
+    releaseFirstSave();
+    await vi.waitFor(() => {
+      expect(service.getStatus().pendingLocalChangeCount).toBe(1);
+    });
+    expect(service.getStatus().saveState).toBe("pending");
+    adapter.sync.mockClear();
+
+    // 去抖期未满 5s：flush 应立即触发上传，而不是等待 idle 定时器。
+    service.flushPendingChanges();
+    await vi.waitFor(() => {
+      expect(adapter.sync).toHaveBeenCalledTimes(1);
+    });
+    await vi.waitFor(() => {
+      expect(service.getStatus().saveState).toBe("idle");
+    });
+    expect(service.getStatus().pendingLocalChangeCount).toBe(0);
+    service.stop();
+  });
+
+  it("does not trigger an upload when flushing without pending local changes", async () => {
+    vi.useFakeTimers();
+    const adapter = createAdapter();
+    const service = createSyncService({
+      readSettings: () => createSettings(),
+      createRemote,
+      adapters: [adapter],
+      intervalMs: 60_000,
+    });
+
+    service.start();
+    await vi.waitFor(() => {
+      expect(adapter.sync).toHaveBeenCalledTimes(1);
+    });
+    adapter.sync.mockClear();
+
+    service.flushPendingChanges();
+    await vi.advanceTimersByTimeAsync(6_000);
+    expect(adapter.sync).not.toHaveBeenCalled();
+    expect(service.getStatus().saveState).toBe("idle");
+    service.stop();
+  });
+
   it("clears pending save feedback when sync is disabled", async () => {
     let enabled = true;
     const adapter = createAdapter();
@@ -1177,10 +1344,12 @@ function createPlanItemStub(
   applyUpload = vi.fn(async () => undefined),
   applyDownload = vi.fn(async () => undefined),
   applyLocalRestore = vi.fn(async () => undefined),
+  applyDiscardLocal = vi.fn(async () => undefined),
 ): SyncPlanItem & {
   readonly applyUpload: ReturnType<typeof vi.fn>;
   readonly applyDownload: ReturnType<typeof vi.fn>;
   readonly applyLocalRestore: ReturnType<typeof vi.fn>;
+  readonly applyDiscardLocal: ReturnType<typeof vi.fn>;
 } {
   return {
     adapterId,
@@ -1195,6 +1364,7 @@ function createPlanItemStub(
     applyUpload,
     applyDownload,
     applyLocalRestore,
+    applyDiscardLocal,
   };
 }
 

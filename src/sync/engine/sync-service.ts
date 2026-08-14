@@ -180,6 +180,8 @@ export interface SyncService {
   start(): void;
   stop(): void;
   syncNow(trigger: SyncRunReason): Promise<SyncServiceStatus>;
+  /** 存在等待中的本地变更且尚未开始上传（5s 空闲去抖期内）时，立即触发上传。 */
+  flushPendingChanges(): void;
   notifyLocalChange(change: SyncLocalChange): void;
   notifyConflictDetected(conflict: SyncAdapterConflict<unknown>): void;
   getStatus(): SyncServiceStatus;
@@ -1133,9 +1135,16 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       }
       if (decision.resolution === "use-local") {
         await item.applyUpload();
-      } else {
-        await item.applyDownload();
+        continue;
       }
+      if (item.kind === "upload") {
+        // AI-CORRECTION 2026-08-14: 上传条目 × 用远端 = 放弃本地新增，
+        // 不再走 applyDownload（远端资产不存在会静默跳过，制造“已同步”假象），
+        // 改为 applyDiscardLocal：二段删除本地资产 + touch 清空。
+        await item.applyDiscardLocal();
+        continue;
+      }
+      await item.applyDownload();
     }
   };
 
@@ -1664,6 +1673,18 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       }
     },
     syncNow,
+    flushPendingChanges: () => {
+      if (
+        !started
+        || status.pendingLocalChangeCount <= 0
+        || status.saveState !== "pending"
+      ) {
+        return;
+      }
+      // 页面切后台时跳过 5s 空闲去抖，立即把等待中的本地变更排入上传。
+      // syncNow 开头会清掉 idle/max 定时器；若另一轮同步正在执行则自动排队。
+      void syncNow("local-change");
+    },
     notifyConflictDetected: () => {
       if (conflictOverlayVisible) {
         return;
