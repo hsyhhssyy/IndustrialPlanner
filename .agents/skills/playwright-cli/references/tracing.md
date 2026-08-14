@@ -1,6 +1,18 @@
 # Tracing
 
+## Contents
+
+- [Basic Usage](#basic-usage)
+- [Trace Output Files](#trace-output-files)
+- [What Traces Capture](#what-traces-capture)
+- [Use Cases](#use-cases)
+- [Trace vs Video vs Screenshot](#trace-vs-video-vs-screenshot)
+- [Best Practices](#best-practices)
+- [Limitations](#limitations)
+
 Capture detailed execution traces for debugging and analysis. Traces include DOM snapshots, screenshots, network activity, and console logs.
+
+In this project, start the browser with a config whose `outputDir` is `.temp/playwright-test` before recording a trace. Do not write trace artifacts under `.playwright-cli/` or another project directory.
 
 ## Basic Usage
 
@@ -123,14 +135,9 @@ playwright-cli open https://example.com
 playwright-cli tracing-stop
 ```
 
-### 2. Clean Up Old Traces
+### 2. Retain Trace Artifacts
 
-Traces can consume significant disk space:
-
-```bash
-# Remove traces older than 7 days
-find .playwright-cli/traces -mtime +7 -delete
-```
+Keep trace artifacts under `.temp/playwright-test/`. Do not delete existing artifacts unless the user explicitly requests cleanup and the exact target has been verified.
 
 ## Limitations
 

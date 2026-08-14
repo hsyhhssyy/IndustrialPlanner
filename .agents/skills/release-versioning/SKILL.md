@@ -1,16 +1,14 @@
 ---
 name: release-versioning
-description: 发布 release、打 tag、发布 pre 或 beta 版本时使用。确保版本号正确、changelog 完备。
+description: 仅当用户明确要求发布 release、创建或推送正式版、pre、beta 版本标签时使用；仅讨论版本号、查看历史标签或执行普通提交时不得使用。
 ---
 
 # 版本发布
 
-## 触发时机
+## 能做什么
 
-当用户要求以下任一操作时，**必须先读取** `references/tagging-rules.md` 获取完整规则：
+- 按 [版本与标签规则](references/tagging-rules.md) 检查版本号和 changelog，并执行用户明确授权的发布或标签操作。
 
-- 打 tag（正式版 / pre / beta）
-- 发布 release
-- 推送版本标签
+## 不能做什么
 
-完成规则读取后再执行操作。
+- 不得跳过版本与 changelog 前置检查，也不得把发布授权自动扩大为源码提交授权。

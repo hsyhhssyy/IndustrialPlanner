@@ -6,10 +6,10 @@
 
 1. 检查 `public/changelog/` 下是否存在对应版本的 changelog 文件（`增量更新-v<version>.md` 或 `*正式更新*-v<version>.md`）。
 2. 如果不存在对应 changelog：
-   - 读取 `git log` 自上一正式版以来的 `feat:` 和 `fix:` 提交，生成 `增量更新-v<version>.md`
-   - 更新 `public/changelog/index.json`
-   - 提交 changelog
-   - 然后再打 tag
+   - 读取 `git log` 自上一正式版以来的 `feat:` 和 `fix:` 提交。
+   - 使用 `changelog-writing` skill 生成 `增量更新-v<version>.md` 并更新 `public/changelog/index.json`。
+   - 只有用户明确授权提交这些源码改动时，才使用 `project-commit` skill 提交 changelog；发布或打 tag 的授权本身不等于源码提交授权。
+   - 未获得源码提交授权时，停止发布流程并请求用户确认；不得在工作区仍有待提交 changelog 时继续打 tag。
 3. 如果已存在，直接打 tag。
 
 ## Pre / Beta Tag

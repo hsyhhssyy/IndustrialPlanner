@@ -1,5 +1,20 @@
 # Running Custom Playwright Code
 
+## Contents
+
+- [Syntax](#syntax)
+- [Geolocation](#geolocation)
+- [Permissions](#permissions)
+- [Media Emulation](#media-emulation)
+- [Wait Strategies](#wait-strategies)
+- [Frames and Iframes](#frames-and-iframes)
+- [File Downloads](#file-downloads)
+- [Clipboard](#clipboard)
+- [Page Information](#page-information)
+- [JavaScript Execution](#javascript-execution)
+- [Error Handling](#error-handling)
+- [Complex Workflows](#complex-workflows)
+
 Use `run-code` to execute arbitrary Playwright code for advanced scenarios not covered by CLI commands.
 
 ## Syntax
@@ -215,7 +230,7 @@ playwright-cli run-code "async page => {
   await page.fill('input[name=password]', 'secret');
   await page.click('button[type=submit]');
   await page.waitForURL('**/dashboard');
-  await page.context().storageState({ path: 'auth.json' });
+  await page.context().storageState({ path: '.temp/playwright-test/auth.json' });
   return 'Login successful';
 }"
 

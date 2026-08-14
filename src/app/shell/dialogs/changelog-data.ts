@@ -1,7 +1,18 @@
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 
 export const CHANGELOG_INDEX_PATH = createPublicAssetUrl("changelog/index.json");
-export const CHANGELOG_IMG_BASE = createPublicAssetUrl("changelog/img/");
+
+// AI-REMOVED 2026-08-14:
+// Reason: 图片不再依赖全局目录，而是按 Markdown 文件位置解析标准相对路径。
+// Trigger: 增量日志迁移到 incremental/{version}/，图片迁移到 images/v{version}/。
+// Evidence: 全局图片基址无法同时表达根目录日志的 ./images 与嵌套日志的 ../../images。
+// Replacement: changelog-section.tsx/resolveChangelogImageUrl
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// export const CHANGELOG_IMG_BASE = createPublicAssetUrl("changelog/img/");
+// AI-CORRECTION 2026-08-14: 删除发生前该常量已随本次迁移改为 createPublicAssetUrl("changelog/images/")。
 
 const CHANGELOG_VERSION_PATTERN = /(?:^|[^0-9])v?(\d+\.\d+\.\d+(?:\.\d+)?)(?=$|[^0-9])/i;
 
@@ -71,7 +82,7 @@ export async function loadChangelogIndexEntries(): Promise<ChangelogIndexEntry[]
   const reversed = [...fileList].reverse();
 
   return reversed.map((file) => {
-    const title = file.replace(/\.md$/i, "");
+    const title = file.slice(file.lastIndexOf("/") + 1).replace(/\.md$/i, "");
     return {
       file,
       title,

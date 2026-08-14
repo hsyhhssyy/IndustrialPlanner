@@ -6,26 +6,45 @@ import styles from "@/app/shell/dialogs/dialogs.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import {
-  CHANGELOG_IMG_BASE,
   type ChangelogIndexEntry,
   type ChangelogVersion,
   loadChangelogIndexEntries,
   parseChangelogVersion,
 } from "@/app/shell/dialogs/changelog-data";
 
-function createChangelogRenderer(): Renderer {
+// AI-REMOVED 2026-08-14:
+// Reason: 图片地址改为相对 Markdown 文件解析，不再读取全局图片基址。
+// Trigger: 更新日志与图片目录分层重构。
+// Evidence: resolveChangelogImageUrl 已接收 changelogFile 并能完整解析相对路径。
+// Replacement: resolveChangelogImageUrl
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// CHANGELOG_IMG_BASE,
+
+function createChangelogRenderer(changelogFile: string): Renderer {
   const renderer = new Renderer();
   renderer.image = function ({ href, title, text }: { href: string; title: string | null; text: string }) {
-    const resolvedUrl = resolveChangelogImageUrl(href);
+    const resolvedUrl = resolveChangelogImageUrl(changelogFile, href);
     const titleAttr = title !== null ? ` title="${escapeAttr(title)}"` : "";
     return `<img src="${escapeAttr(resolvedUrl)}" alt="${escapeAttr(text)}"${titleAttr} loading="lazy">`;
   };
   return renderer;
 }
 
-const changelogRenderer = createChangelogRenderer();
+// AI-REMOVED 2026-08-14:
+// Reason: 图片地址必须相对各自的 Markdown 文件解析，单例 renderer 无法携带当前日志路径。
+// Trigger: 增量日志迁移到 incremental/{version}/ 后，原单例会把 ../../images 错误解析到 changelog 根目录之外。
+// Evidence: renderer.image 需要 changelogFile 才能计算嵌套 Markdown 的资源位置。
+// Replacement: loadSingleEntry 内调用 createChangelogRenderer(entry.file)
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const changelogRenderer = createChangelogRenderer();
 
-function resolveChangelogImageUrl(url: string): string {
+function resolveChangelogImageUrl(changelogFile: string, url: string): string {
   if (url.startsWith("http://") || url.startsWith("https://")) {
     return url;
   }
@@ -34,15 +53,39 @@ function resolveChangelogImageUrl(url: string): string {
   }
 
   // ./img/xxx → /changelog/img/xxx（去掉 ./ 前缀后直接拼接 base）
-  if (url.startsWith("./")) {
-    const relative = url.slice(2);
-
-    // relative 已经是 img/xxx 的形式，直接拼 /changelog/ 前缀
-    // AI-CORRECTION 2026-06-29: 子路径部署时前缀由 createPublicAssetUrl 注入，不再直接返回 root 路径。
-    return createPublicAssetUrl(`changelog/${relative}`);
-  }
-
-  return `${CHANGELOG_IMG_BASE}${url}`;
+  // relative 已经是 img/xxx 的形式，直接拼 /changelog/ 前缀
+  // AI-CORRECTION 2026-06-29: 子路径部署时前缀由 createPublicAssetUrl 注入，不再直接返回 root 路径。
+  // AI-CORRECTION 2026-08-14: 上述说明仅适用于旧平铺结构；现在按 Markdown 文件目录解析 ./ 与 ../。
+  // AI-CORRECTION 2026-08-14: 所有非绝对图片地址均按 Markdown 标准相对路径解析，包括不带 ./ 的地址。
+  // AI-REMOVED 2026-08-14:
+  // Reason: 固定截掉 ./ 并拼接 changelog 根目录，无法解析嵌套日志中的 ../../images 路径。
+  // Trigger: 增量日志迁移到 incremental/{version}/，图片统一迁移到 images/v{version}/。
+  // Evidence: 新路径必须以 entry.file 所在目录为基准执行标准 URL 相对路径解析。
+  // Replacement: 下方 markdownUrl 与 resolvedUrl 解析逻辑
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const relative = url.slice(2);
+  // return createPublicAssetUrl(`changelog/${relative}`);
+  // AI-REMOVED 2026-08-14:
+  // Reason: 仅识别 ./ 与 ../ 会让普通 Markdown 相对地址继续走已废弃的全局图片基址。
+  // Trigger: 统一更新日志图片的相对路径语义。
+  // Evidence: Markdown 的 foo.png、./foo.png 与 ../foo.png 都应以当前文档所在目录为基准。
+  // Replacement: 下方无条件相对路径解析
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // if (url.startsWith("./") || url.startsWith("../")) {
+  //   const markdownUrl = new URL(`changelog/${changelogFile}`, "https://placeholder.local/");
+  //   const resolvedUrl = new URL(url, markdownUrl);
+  //   return createPublicAssetUrl(`${resolvedUrl.pathname}${resolvedUrl.search}${resolvedUrl.hash}`);
+  // }
+  // return `${CHANGELOG_IMG_BASE}${url}`;
+  const markdownUrl = new URL(`changelog/${changelogFile}`, "https://placeholder.local/");
+  const resolvedUrl = new URL(url, markdownUrl);
+  return createPublicAssetUrl(`${resolvedUrl.pathname}${resolvedUrl.search}${resolvedUrl.hash}`);
 }
 
 function escapeAttr(value: string): string {
@@ -236,7 +279,7 @@ async function loadSingleEntry(entry: ChangelogEntry): Promise<ChangelogEntry> {
     }
 
     const md = await resp.text();
-    const html = await marked.parse(md, { renderer: changelogRenderer });
+    const html = await marked.parse(md, { renderer: createChangelogRenderer(entry.file) });
 
     return { ...entry, loaded: true, html: html as string };
   } catch (err) {

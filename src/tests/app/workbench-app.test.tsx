@@ -696,7 +696,7 @@ describe("WorkbenchApp", () => {
     });
     stubChangelogFetch({
       "全新版本-v1.3.0.md": "# Main",
-      "增量更新-v1.3.0.1.md": "# Patch",
+      "incremental/1.3.0/增量更新-v1.3.0.1.md": "# Patch",
     });
 
     const workspace = createWorkspace();
@@ -716,7 +716,7 @@ describe("WorkbenchApp", () => {
     expect(helpState.activeTab).toBe("version");
     expect(JSON.parse(localStorage.getItem(CHANGELOG_READ_STATE_KEY) ?? "null")).toEqual({
       version: "1.3.0.1",
-      changelogKey: "1.3.0.1:增量更新-v1.3.0.1.md",
+      changelogKey: "1.3.0.1:incremental/1.3.0/增量更新-v1.3.0.1.md",
     });
     expect(localStorage.getItem(LEGACY_LAST_READ_VERSION_KEY)).toBe("1.3.0.1");
   });
@@ -724,7 +724,7 @@ describe("WorkbenchApp", () => {
   it("does not open the version help dialog when the app version changed without a matching changelog entry", async () => {
     const previousReadState = JSON.stringify({
       version: "1.3.0.1",
-      changelogKey: "1.3.0.1:增量更新-v1.3.0.1.md",
+      changelogKey: "1.3.0.1:incremental/1.3.0/增量更新-v1.3.0.1.md",
     });
     localStorage.setItem(CHANGELOG_READ_STATE_KEY, previousReadState);
     Object.defineProperty(window, "__APP_VERSION__", {
@@ -734,7 +734,7 @@ describe("WorkbenchApp", () => {
     });
     stubChangelogFetch({
       "全新版本-v1.3.0.md": "# Main",
-      "增量更新-v1.3.0.1.md": "# Patch",
+      "incremental/1.3.0/增量更新-v1.3.0.1.md": "# Patch",
     });
 
     const workspace = createWorkspace();
@@ -755,7 +755,7 @@ describe("WorkbenchApp", () => {
   it("does not open the version help dialog when the changelog entry changed without an app version change", async () => {
     const previousReadState = JSON.stringify({
       version: "1.3.0.1",
-      changelogKey: "1.3.0.1:增量更新-v1.3.0.1.md",
+      changelogKey: "1.3.0.1:incremental/1.3.0/增量更新-v1.3.0.1.md",
     });
     localStorage.setItem(CHANGELOG_READ_STATE_KEY, previousReadState);
     Object.defineProperty(window, "__APP_VERSION__", {
@@ -765,8 +765,8 @@ describe("WorkbenchApp", () => {
     });
     stubChangelogFetch({
       "全新版本-v1.3.0.md": "# Main",
-      "增量更新-v1.3.0.1.md": "# Patch",
-      "热修更新-v1.3.0.1.md": "# Hotfix",
+      "incremental/1.3.0/增量更新-v1.3.0.1.md": "# Patch",
+      "incremental/1.3.0/热修更新-v1.3.0.1.md": "# Hotfix",
     });
 
     const workspace = createWorkspace();
@@ -2987,8 +2987,8 @@ describe("WorkbenchApp", () => {
   it("opens the help dialog through app internal actions", async () => {
     stubChangelogFetch({
       "正式更新-v1.2.0.md": "# Previous Main\n\n旧主版本内容",
-      "全新版本-v1.3.0.md": "# Current Main\n\n当前主版本内容",
-      "补丁更新-v1.3.0.1.md": "# Current Patch\n\n当前子版本内容",
+      "全新版本-v1.3.0.md": "# Current Main\n\n当前主版本内容\n\n![Main image](./images/v1.3.0/main.png)",
+      "incremental/1.3.0/补丁更新-v1.3.0.1.md": "# Current Patch\n\n当前子版本内容\n\n![Patch image](../../images/v1.3.0/patch.png)",
     });
 
     const workspace = createWorkspace();
@@ -3007,6 +3007,15 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector("#help-dialog-tab-version")?.getAttribute("aria-selected")).toBe("true");
     expect(container.querySelector("#help-dialog-panel-version > .help-dialog-content")).not.toBeNull();
     expect(container.querySelector(".changelog-markdown")?.textContent).toContain("Current Patch");
+    expect(container.querySelector(".changelog-sub-heading")?.textContent).toBe("补丁更新-v1.3.0.1");
+    expect(
+      Array.from(container.querySelectorAll<HTMLImageElement>(".changelog-markdown img"))
+        .map((image) => image.getAttribute("src"))
+        .sort(),
+    ).toEqual([
+      "/changelog/images/v1.3.0/main.png",
+      "/changelog/images/v1.3.0/patch.png",
+    ]);
 
     const accordions = Array.from(container.querySelectorAll(".changelog-accordion"));
     const headers = Array.from(container.querySelectorAll(".changelog-accordion-header")) as HTMLButtonElement[];
@@ -3055,7 +3064,7 @@ describe("WorkbenchApp", () => {
     stubChangelogFetch({
       "正式更新-v1.2.0.md": "# Previous Main\n\n旧主版本内容",
       "全新版本-v1.3.0.md": "# Current Main\n\n当前主版本内容",
-      "补丁更新-v1.3.0.1.md": "# Current Patch\n\n当前子版本内容",
+      "incremental/1.3.0/补丁更新-v1.3.0.1.md": "# Current Patch\n\n当前子版本内容",
     });
 
     const workspace = createWorkspace();

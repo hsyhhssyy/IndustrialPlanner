@@ -1,5 +1,16 @@
 # Browser Session Management
 
+## Contents
+
+- [Named Browser Sessions](#named-browser-sessions)
+- [Browser Session Isolation Properties](#browser-session-isolation-properties)
+- [Browser Session Commands](#browser-session-commands)
+- [Environment Variable](#environment-variable)
+- [Common Patterns](#common-patterns)
+- [Default Browser Session](#default-browser-session)
+- [Browser Session Configuration](#browser-session-configuration)
+- [Best Practices](#best-practices)
+
 Run multiple isolated browser sessions concurrently with state persistence.
 
 ## Named Browser Sessions
@@ -102,7 +113,7 @@ By default, browser profile is kept in memory only. Use `--persistent` flag on `
 playwright-cli open https://example.com --persistent
 
 # Use persistent profile with custom directory
-playwright-cli open https://example.com --profile=/path/to/profile
+playwright-cli open https://example.com --profile=.temp/playwright-test/profile
 ```
 
 ## Default Browser Session
@@ -122,7 +133,7 @@ Configure a browser session with specific settings when opening:
 
 ```bash
 # Open with config file
-playwright-cli open https://example.com --config=.playwright/my-cli.json
+playwright-cli open https://example.com --config=.temp/playwright-test/cli.config.json
 
 # Open with specific browser
 playwright-cli open https://example.com --browser=firefox
