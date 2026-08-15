@@ -2,6 +2,8 @@ name: Release
 run-name: Release ${{ inputs.tag_name || github.ref_name }}
 
 # beta: Docker + K8s；pre: GitHub prerelease + dist zip；stable/Patch: 全量发布。
+# AI-CORRECTION 2026-08-15: 发布阶梯现为 pre: Docker + K8s；beta: Docker + K8s → EdgeOne；stable/Patch: Docker + K8s → EdgeOne → GitHub Pages。GitHub Release 和 dist zip 仅由 stable/Patch 创建。
+# AI-CORRECTION 2026-08-15: 上述箭头仅表示发布等级覆盖范围；同一 tag 面向所有允许环境的部署在 dist 构建完成后并行执行。
 
 on:
   push:
@@ -73,7 +75,7 @@ jobs:
           echo "Release channel: $channel"
 
       - name: Generate changelog
-        if: steps.classify.outputs.channel != 'beta'
+        if: steps.classify.outputs.channel == 'stable'
         id: changelog
         shell: bash
         run: |
@@ -97,7 +99,7 @@ jobs:
           echo "changelog_file=$changelog_file" >> "$GITHUB_OUTPUT"
 
       - name: Create or update GitHub Release
-        if: steps.classify.outputs.channel != 'beta'
+        if: steps.classify.outputs.channel == 'stable'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.classify.outputs.tag }}
@@ -170,7 +172,7 @@ jobs:
         run: cp edgeone.json dist/
 
       - name: Package release asset
-        if: env.RELEASE_CHANNEL != 'beta'
+        if: env.RELEASE_CHANNEL == 'stable'
         shell: bash
         run: |
           set -euo pipefail
@@ -179,7 +181,7 @@ jobs:
           echo "zip_path=$RUNNER_TEMP/$zip_name" >> "$GITHUB_ENV"
 
       - name: Upload release asset
-        if: env.RELEASE_CHANNEL != 'beta'
+        if: env.RELEASE_CHANNEL == 'stable'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$RELEASE_TAG" "$zip_path" --clobber
@@ -207,8 +209,19 @@ jobs:
 
   deploy-edgeone:
     name: EdgeOne Makers ${{ needs.prepare.outputs.tag }}
+    if: needs.prepare.outputs.channel == 'beta' || needs.prepare.outputs.channel == 'stable'
     needs:
       - prepare
+      # AI-REMOVED 2026-08-15:
+      # Reason: EdgeOne 与 Docker/K8s 是同一发布等级内的独立目标，不能被串行化。
+      # Trigger: 用户要求保持单个 tag 的多个目标并行发布。
+      # Evidence: 发布等级仅定义覆盖范围，Docker、EdgeOne、GitHub Pages 是独立环境。
+      # Replacement: build-dist；EdgeOne 在 dist 构建完成后与 Docker/K8s 并行执行。
+      # Risk: Low
+      # Human Review: Required
+      #
+      # Original code:
+      # - deploy-container
       - build-dist
     runs-on: ubuntu-latest
     steps:
@@ -227,7 +240,7 @@ jobs:
 
   build-docker:
     name: Docker ${{ needs.prepare.outputs.tag }}
-    if: needs.prepare.outputs.channel == 'beta' || needs.prepare.outputs.channel == 'stable'
+    if: needs.prepare.outputs.channel == 'pre' || needs.prepare.outputs.channel == 'beta' || needs.prepare.outputs.channel == 'stable'
     needs:
       - prepare
       - build-dist
@@ -304,7 +317,7 @@ jobs:
 
   deploy-container:
     name: Deploy container
-    if: needs.prepare.outputs.channel == 'beta' || needs.prepare.outputs.channel == 'stable'
+    if: needs.prepare.outputs.channel == 'pre' || needs.prepare.outputs.channel == 'beta' || needs.prepare.outputs.channel == 'stable'
     needs:
       - prepare
       - build-docker
@@ -365,6 +378,16 @@ jobs:
     needs:
       - prepare
       - build-dist
+      # AI-REMOVED 2026-08-15:
+      # Reason: GitHub Pages 与 Docker/K8s、EdgeOne 是同一正式版发布中的独立目标，不能被串行化。
+      # Trigger: 用户要求保持单个 tag 的多个目标并行发布。
+      # Evidence: 发布等级仅定义覆盖范围，Docker、EdgeOne、GitHub Pages 是独立环境。
+      # Replacement: build-dist；GitHub Pages 在 dist 构建完成后与 Docker/K8s、EdgeOne 并行执行。
+      # Risk: Low
+      # Human Review: Required
+      #
+      # Original code:
+      # - deploy-edgeone
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
