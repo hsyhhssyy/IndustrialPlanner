@@ -135,6 +135,7 @@ function buildGuideData(resolveShortcut: ShortcutResolver, ss: SettingsSnapshot)
         { label: "仓库存取", pc: <>按 {keyboard(s(SHORTCUT_KEY.WAREHOUSE))}</>, touch: null, shortcutKey: SHORTCUT_KEY.WAREHOUSE },
         { label: "基础生产", pc: <>按 {keyboard(s(SHORTCUT_KEY.BASIC_PRODUCTION))}</>, touch: null, shortcutKey: SHORTCUT_KEY.BASIC_PRODUCTION },
         { label: "合成制造", pc: <>按 {keyboard(s(SHORTCUT_KEY.SYNTHESIS))}</>, touch: null, shortcutKey: SHORTCUT_KEY.SYNTHESIS },
+        { label: "作弊", pc: <>按 {keyboard(s(SHORTCUT_KEY.CHEAT))}</>, touch: null, shortcutKey: SHORTCUT_KEY.CHEAT },
       ],
     },
   ];

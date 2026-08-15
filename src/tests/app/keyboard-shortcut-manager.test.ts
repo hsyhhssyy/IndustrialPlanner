@@ -19,6 +19,7 @@ describe("KeyboardShortcutManager", () => {
 
     expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.QUICK_PLACE)).toBe("Z");
     expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL)).toBe("P");
+    expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.CHEAT)).toBe("U");
   });
 
   it("defaults viewport pan to WASD and the equivalent arrow-key slot", () => {

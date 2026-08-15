@@ -351,7 +351,7 @@ describe("blueprint device id migration version chain", () => {
     const registeredIds = new Set(ENTITY_DEFINITIONS.map((definition) => definition.id));
     const version3Spec = BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.find((spec) => spec.toVersion === 3);
 
-    expect(ENTITY_DEFINITIONS).toHaveLength(62);
+    expect(ENTITY_DEFINITIONS).toHaveLength(65);
     expect(ENTITY_DEFINITIONS.filter((definition) => definition.id.startsWith("item_"))).toEqual([]);
     expect(version3Spec?.deviceRules.every((rule) => registeredIds.has(rule.toDeviceId))).toBe(true);
     expect(new Set(version3Spec?.deviceRules.map((rule) => rule.fromDeviceId)).size).toBe(

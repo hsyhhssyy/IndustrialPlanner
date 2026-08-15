@@ -435,6 +435,58 @@ describe("GenericDeviceSprite", () => {
     expect(text?.style.dropShadow).toEqual(expect.objectContaining({ color: 0x20242a }))
   })
 
+  it("hides both device icon and name for AvatarHidden devices", async () => {
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: createLoadedTextureMock("device-texture"),
+      [MASK_KEY]: createLoadedTextureMock("device-mask-texture"),
+      [TOP_VIEW_AVATAR_KEY]: createLoadedTextureMock("top-view-avatar"),
+    }, {
+      gameShowDeviceIcons: true,
+      gameShowDeviceNames: true,
+    })
+    const sprite = new GenericDeviceSprite(
+      "avatar-hidden-device",
+      {
+        ...createEntityDefinitionStub(),
+        tags: ["AvatarHidden"],
+      },
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entityLow: {} as never,
+      entityHigh: {} as never,
+      logisticsBelt: {} as never,
+      logisticsPipe: {} as never,
+      draft: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 96,
+      height: 96,
+      rotation: 0,
+    }, createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    }))
+
+    await flushMicrotasks(8)
+
+    const labelRoot = resolveDeviceLabelRoot(entityLayer)
+    const icon = labelRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+    const text = labelRoot?.children?.[1] as RenderedTextSnapshot | undefined
+
+    expect(labelRoot?.visible).toBe(false)
+    expect(icon?.visible).toBe(false)
+    expect(text?.visible).toBe(false)
+  })
+
   it("centers device label content on footprint instead of offset sprite bounds", async () => {
     const resolvedTexture = createLoadedTextureMock("water-pump-device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("water-pump-mask-texture")

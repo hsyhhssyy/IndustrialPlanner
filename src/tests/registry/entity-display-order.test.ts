@@ -93,6 +93,11 @@ describe("ENTITY_DEFINITIONS displayOrder", () => {
     gas_reactor_1: 614,
     transmuter_1_gastrans: 615,
     transmuter_1_liquidtrans: 616,
+
+    // 700 — cheat
+    cheat_infinite_solid: 701,
+    cheat_infinite_liquid: 702,
+    cheat_infinite_gas: 703,
   };
 
   for (const [id, expectedOrder] of Object.entries(EXPECTED_ORDERS)) {
@@ -116,6 +121,7 @@ describe("displayOrder uniqueness within uiGroup", () => {
     "warehouse",
     "basicProduction",
     "advancedManufacturing",
+    "cheat",
   ];
 
   for (const group of NON_HIDDEN_GROUPS) {
@@ -196,6 +202,14 @@ describe("displayOrder ascending within uiGroup", () => {
     expect(winderIdx).toBeLessThan(toolsIdx);
     expect(toolsIdx).toBeLessThan(thickenerIdx);
   });
+
+  it("cheat entities are ordered solid→liquid→gas", () => {
+    expect(sortedIdsByGroup("cheat")).toEqual([
+      "cheat_infinite_solid",
+      "cheat_infinite_liquid",
+      "cheat_infinite_gas",
+    ]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -220,6 +234,16 @@ describe("buildEncyclopediaIndex allEntities ordering", () => {
       [],
     );
     expect(index.allEntities.map((e) => e.id)).toEqual(["visible-device"]);
+  });
+
+  it("excludes cheat entities from every encyclopedia entity index", () => {
+    const cheatEntity = createEntityStub("cheat-device", "cheat", 701);
+    const visibleEntity = createEntityStub("visible-device", "basicProduction", 100);
+    const index = buildEncyclopediaIndex([], [cheatEntity, visibleEntity], []);
+
+    expect(index.allEntities.map((entity) => entity.id)).toEqual(["visible-device"]);
+    expect(index.entityById.has("cheat-device")).toBe(false);
+    expect(index.entityPinyin.has("cheat-device")).toBe(false);
   });
 
   it("uses displayOrder as primary key and id as tiebreaker", () => {

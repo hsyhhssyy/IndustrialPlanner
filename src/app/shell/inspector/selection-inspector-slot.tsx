@@ -24,6 +24,7 @@ import { SELECTION_LOGISTICS_SEGMENT_BUTTON_IDS } from "./selection-inspector-ac
 import { SimulationRecipeStatusRuntimeInspector } from "./simulation-recipe-status-runtime-inspector";
 import { SlotConfigInspector } from "./slot-config-inspector";
 import { WarehouseItemLinkInspector } from "./warehouse-item-link-inspector";
+import { InfiniteStorageInspector } from "./infinite-storage-inspector";
 import { DarkPipeLinkInspector } from "./dark-pipe-link-inspector";
 import { SubmitToWarehouseInspector } from "./submit-to-warehouse-inspector";
 import { ProblemInspector } from "./problem-inspector";
@@ -81,6 +82,7 @@ const INSPECTOR_LABELS: Partial<Record<EntityInspectorType, string>> = {
   [INSPECTOR_TYPE.structure]: "结构配置",
   [INSPECTOR_TYPE.behaviorToggle]: "行为开关",
   [INSPECTOR_TYPE.warehouseItemLink]: "仓库物品链接",
+  [INSPECTOR_TYPE.infiniteStorage]: "无限存储",
   [INSPECTOR_TYPE.portOutputConfig]: "输出端口配置",
   [INSPECTOR_TYPE.darkPipeLink]: "暗管链接",
   [INSPECTOR_TYPE.waterPurifierNode]: "净水节点",
@@ -195,6 +197,16 @@ function renderInspector(options: {
 
       return (
         <WarehouseItemLinkInspector
+          appHost={options.appHost}
+          declaration={options.declaration}
+          definition={options.definition}
+          entity={options.entity}
+          translate={options.translate}
+        />
+      );
+    case INSPECTOR_TYPE.infiniteStorage:
+      return (
+        <InfiniteStorageInspector
           appHost={options.appHost}
           declaration={options.declaration}
           definition={options.definition}
@@ -371,7 +383,12 @@ function SelectionInspectorDeviceHeader({
   selectedEntity: WorldEntity;
   translate: Translate;
 }) {
+  const canOpenEncyclopedia = selectedDefinition.uiGroup !== "cheat";
   const handleDeviceNameClick = useCallback(() => {
+    if (!canOpenEncyclopedia) {
+      return;
+    }
+
     const wikiState = appHost.internalState.workbench.toolbox.wiki;
 
     appHost.internalActions.openDialog("toolbox");
@@ -381,15 +398,15 @@ function SelectionInspectorDeviceHeader({
       wikiState.navigationStack = [{ type: "entity", id: selectedDefinition.id }];
       wikiState.openedPage = { kind: "entity", id: selectedDefinition.id };
     });
-  }, [appHost, selectedDefinition.id]);
+  }, [appHost, canOpenEncyclopedia, selectedDefinition.id]);
 
   return (
     <section className={cm(styles, "selection-inspector-device-header")}>
       <div
         className={cm(styles, "selection-inspector-device-copy")}
-        onClick={handleDeviceNameClick}
-        role="button"
-        tabIndex={0}
+        onClick={canOpenEncyclopedia ? handleDeviceNameClick : undefined}
+        role={canOpenEncyclopedia ? "button" : undefined}
+        tabIndex={canOpenEncyclopedia ? 0 : undefined}
       >
         <div className={cm(styles, "selection-inspector-device-title-row")}>
           <h3>{resolveSelectedDeviceLabel(selectedDefinition, translate)}</h3>
@@ -657,6 +674,8 @@ function resolveInspectorDiscriminator(
         ...declaration.slotGroupIds,
         ...(declaration.slotIds ?? []),
       ].join(",");
+    case INSPECTOR_TYPE.infiniteStorage:
+      return declaration.slotGroupIds.join(",");
     case INSPECTOR_TYPE.darkPipeLink:
       return "dark-pipe-link";
     case INSPECTOR_TYPE.portFilter:

@@ -4,6 +4,19 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { DIRECT_BLUEPRINT_SPRITE_IDS } from './blueprint-direct-sprite-mappings.mjs';
+// AI-REMOVED 2026-08-15:
+// Reason: 无限设备蓝图资源只需一次性合成，绘制脚本不应长期依赖一次性生成配置。
+// Trigger: 用户明确要求不要把一次性工作常态化放入脚本。
+// Evidence: 三张成品已固化到 resources/blueprint-direct-sprites，并由直接映射发布。
+// Replacement: resources/blueprint-direct-sprites 下的稳定 PNG 资源。
+// Risk: Low；今后更换 infinite icon 时需要人工重新合成资源。
+// Human Review: Required
+//
+// Original code:
+// import {
+//   DIRECT_BLUEPRINT_SPRITE_IDS,
+//   INFINITE_BLUEPRINT_SPRITE_MAPPINGS,
+// } from './blueprint-direct-sprite-mappings.mjs';
 
 const CELL_SIZE = 128;
 const DEVICE_BORDER_INSET_RATIO = 20 / 128;
@@ -49,6 +62,21 @@ async function main() {
       return;
     }
 
+    // AI-REMOVED 2026-08-15:
+    // Reason: 无限设备蓝图资源只需一次性生成，不应成为常驻 CLI 模式。
+    // Trigger: 用户明确要求清理本次加入的一次性脚本逻辑。
+    // Evidence: resources/blueprint-direct-sprites 已保存最终资源，发布流程只需直接读取。
+    // Replacement: 直接映射读取稳定 PNG，不再提供生成命令。
+    // Risk: Low；资源更新需人工执行一次性 sharp 合成。
+    // Human Review: Required
+    //
+    // Original code:
+    // if (options.mode === 'infinite-direct-resources') {
+    //   const registryContract = await loadRegistryContract();
+    //   await generateInfiniteBlueprintDirectResources(registryContract);
+    //   return;
+    // }
+
     if (options.mode === 'single') {
       const definition = await loadDeviceDefinition(options.deviceId);
       await writeDeviceBlueprintSprite(definition, options.outputFilePath);
@@ -87,6 +115,21 @@ async function main() {
 function parseCliOptions(argv) {
   const [firstArgument, secondArgument] = argv;
 
+  // AI-REMOVED 2026-08-15:
+  // Reason: 无限设备蓝图资源只需一次性生成，不应污染通用 CLI 参数。
+  // Trigger: 用户明确要求移除常态化的一次性工作入口。
+  // Evidence: 直接映射已改为读取 resources/blueprint-direct-sprites 中的成品。
+  // Replacement: None；资源已经固化。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // if (firstArgument === '--infinite-direct-resources') {
+  //   return {
+  //     mode: 'infinite-direct-resources',
+  //   };
+  // }
+
   if (firstArgument === '--all') {
     return {
       mode: 'batch',
@@ -104,8 +147,57 @@ function parseCliOptions(argv) {
 
   console.error('Usage: npx tsx --tsconfig tsconfig.app.json src/scripts/draw-device-blueprint-sprite.mjs <device-id> [output-file]');
   console.error('   or: npx tsx --tsconfig tsconfig.app.json src/scripts/draw-device-blueprint-sprite.mjs --all [output-directory]');
+  // AI-REMOVED 2026-08-15:
+  // Reason: 对应的一次性 CLI 模式已停用，帮助信息必须与当前有效入口一致。
+  // Trigger: 用户要求一次性合成逻辑不常驻脚本。
+  // Evidence: parseCliOptions 已不再接受 --infinite-direct-resources。
+  // Replacement: None
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // console.error('   or: npx tsx --tsconfig tsconfig.app.json src/scripts/draw-device-blueprint-sprite.mjs --infinite-direct-resources');
   return null;
 }
+
+// AI-REMOVED 2026-08-15:
+// Reason: 以下函数只服务三张 infinite 蓝图资源的一次性合成，不属于通用设备蓝图生成职责。
+// Trigger: 用户明确要求一次性工作不要常态化保留在脚本中，并指出脚本数量/职责需要收敛。
+// Evidence: 三张最终资源已固化到 resources/blueprint-direct-sprites；直接发布不调用这些函数。
+// Replacement: resources/blueprint-direct-sprites 下的成品由直接映射读取。
+// Risk: Low；若源 icon 变化，需要人工重新执行一次性 sharp 合成。
+// Human Review: Required
+//
+// Original code:
+// async function generateInfiniteBlueprintDirectResources(registryContract) {
+//   for (const mapping of INFINITE_BLUEPRINT_SPRITE_MAPPINGS) {
+//     const definition = registryContract.entityDefinitions.find((item) => item.id === mapping.deviceId) ?? null;
+//     if (definition === null) {
+//       throw new Error(`Unknown infinite device id: ${mapping.deviceId}`);
+//     }
+//
+//     const iconAssetPath = path.resolve(projectRoot, mapping.iconAssetPath);
+//     const outputFilePath = path.resolve(projectRoot, mapping.repositoryAssetPath);
+//     const spriteImage = await createInfiniteBlueprintDirectSprite(definition, iconAssetPath);
+//
+//     await mkdir(path.dirname(outputFilePath), { recursive: true });
+//     await spriteImage.toFile(outputFilePath);
+//     console.log(`Wrote ${path.relative(projectRoot, outputFilePath)}`);
+//   }
+// }
+//
+// async function createInfiniteBlueprintDirectSprite(definition, iconAssetPath) {
+//   const baseSvgMarkup = createDeviceBlueprintCanvasSvg(definition);
+//   const baseBuffer = await sharp(Buffer.from(baseSvgMarkup)).png().toBuffer();
+//   const borderOverlayBuffer = await sharp(Buffer.from(createDeviceBorderOverlaySvg(definition))).png().toBuffer();
+//
+//   return sharp(baseBuffer)
+//     .composite([
+//       { input: iconAssetPath, gravity: 'centre' },
+//       { input: borderOverlayBuffer, left: 0, top: 0 },
+//     ])
+//     .png();
+// }
 
 async function createDeviceBlueprintSprite(definition) {
   const baseSvgMarkup = createDeviceBlueprintCanvasSvg(definition);

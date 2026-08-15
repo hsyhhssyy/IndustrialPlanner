@@ -24,7 +24,8 @@
     "generate-liquid-port-chevron": "node src/scripts/texture-gen/generate-liquid-port-chevron.mjs",
     "generate-solid-port-chevron": "node src/scripts/texture-gen/generate-solid-port-chevron.mjs",
     "generate-flow-texture": "node src/scripts/texture-gen/generate-flow-texture.mjs",
-    "generate-logistics-delete-icon": "node src/scripts/icon-gen/generate-logistics-delete-icon.mjs"
+    "generate-logistics-delete-icon": "node src/scripts/icon-gen/generate-logistics-delete-icon.mjs",
+    "remove-white-background": "node src/scripts/remove-white-background.mjs"
   },
   "dependencies": {
     "fast-json-patch": "^3.1.1",

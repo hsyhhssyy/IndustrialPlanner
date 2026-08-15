@@ -287,8 +287,8 @@ describe("Left dock panel switching", () => {
         .map((header) => header.textContent?.trim()),
     ).not.toContain("设备");
     expect(visiblePanel.textContent).not.toContain("拖动虚影后点击确认完成放置。");
-    expect(visiblePanel.querySelectorAll(".placement-panel-group")).toHaveLength(7);
-    expect(visiblePanel.querySelectorAll(".placement-panel-divider")).toHaveLength(6);
+    expect(visiblePanel.querySelectorAll(".placement-panel-group")).toHaveLength(8);
+    expect(visiblePanel.querySelectorAll(".placement-panel-divider")).toHaveLength(7);
     expect(visiblePanel.querySelectorAll(".placement-action-button .button-icon-image")).toHaveLength(
       visiblePanel.querySelectorAll(".placement-action-button").length,
     );
@@ -338,7 +338,7 @@ describe("Left dock panel switching", () => {
       visiblePanel.querySelectorAll(".placement-action-button").length,
     );
     expect(visiblePanel.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(0);
-    expect(visiblePanel.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(6);
+    expect(visiblePanel.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(7);
     expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-select"]')?.classList.contains("is-active")).toBe(true);
     expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-marquee"]')?.classList.contains("is-active")).toBe(false);
     // AI-REMOVED 2026-08-03:
@@ -356,6 +356,7 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel.querySelector('img[data-key-token="Esc"]')).not.toBeNull();
     expect(visiblePanel.querySelector('img[data-key-token="X"]')).not.toBeNull();
     expect(visiblePanel.querySelector('img[data-key-token="G"]')).not.toBeNull();
+    expect(visiblePanel.querySelector('img[data-key-token="U"]')).not.toBeNull();
     expect(appHost.internalState.runtime.activePanel).toBeNull();
     expect(appHost.internalState.activeTool).toBe("select");
   });

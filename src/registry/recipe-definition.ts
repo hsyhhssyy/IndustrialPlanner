@@ -1,5 +1,8 @@
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
-import { FLUID_DOMAIN_RECIPE_ITEM_ID } from "@/domain/shared/item-domain-flags";
+import {
+  FLUID_DOMAIN_RECIPE_ITEM_ID,
+  RecipeItemDomainId,
+} from "@/domain/shared/item-domain-flags";
 import { ACTIVITY_LIMITED_FORMULA_1_TAG } from "@/shared/registry/activity-availability";
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
@@ -3244,6 +3247,39 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: FLUID_DOMAIN_RECIPE_ITEM_ID, amount: 1 }],
     outputs: [],
     machineId: "udpipe_loader_2",
+    recipeType: "immediate-consume",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+  },
+  // =========================================================================
+  // 作弊无限设备销毁配方 — 按设备物品域销毁任意输入
+  // =========================================================================
+  {
+    id: "r_cheat_infinite_solid_void_any_internal",
+    nameKey: "registry.recipe.r_cheat_infinite_solid_void_any_internal.name",
+    durationSeconds: 0.5,
+    inputs: [{ itemId: RecipeItemDomainId.Solid, amount: 1 }],
+    outputs: [],
+    machineId: "cheat_infinite_solid",
+    recipeType: "immediate-consume",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+  },
+  {
+    id: "r_cheat_infinite_liquid_void_any_internal",
+    nameKey: "registry.recipe.r_cheat_infinite_liquid_void_any_internal.name",
+    durationSeconds: 0.5,
+    inputs: [{ itemId: RecipeItemDomainId.Liquid, amount: 1 }],
+    outputs: [],
+    machineId: "cheat_infinite_liquid",
+    recipeType: "immediate-consume",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+  },
+  {
+    id: "r_cheat_infinite_gas_void_any_internal",
+    nameKey: "registry.recipe.r_cheat_infinite_gas_void_any_internal.name",
+    durationSeconds: 0.5,
+    inputs: [{ itemId: RecipeItemDomainId.Gas, amount: 1 }],
+    outputs: [],
+    machineId: "cheat_infinite_gas",
     recipeType: "immediate-consume",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
   },

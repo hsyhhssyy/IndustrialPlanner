@@ -1,5 +1,29 @@
 export const DEFAULT_BLUEPRINT_ASSET_TRIM_PX = 2;
 
+export const INFINITE_BLUEPRINT_SPRITE_MAPPINGS = [
+  {
+    deviceId: 'cheat_infinite_solid',
+    spriteId: 'cheat_infinite_solid',
+    iconAssetPath: 'public/assets/machine-mode-icons/icon_port_solidtrans_infinite.png',
+    repositoryAssetPath: 'resources/blueprint-direct-sprites/cheat_infinite_solid.png',
+    trimPx: 0,
+  },
+  {
+    deviceId: 'cheat_infinite_liquid',
+    spriteId: 'cheat_infinite_liquid',
+    iconAssetPath: 'public/assets/machine-mode-icons/icon_port_liquidtrans_infinite.png',
+    repositoryAssetPath: 'resources/blueprint-direct-sprites/cheat_infinite_liquid.png',
+    trimPx: 0,
+  },
+  {
+    deviceId: 'cheat_infinite_gas',
+    spriteId: 'cheat_infinite_gas',
+    iconAssetPath: 'public/assets/machine-mode-icons/icon_port_gastrans_infinite.png',
+    repositoryAssetPath: 'resources/blueprint-direct-sprites/cheat_infinite_gas.png',
+    trimPx: 0,
+  },
+];
+
 export const DIRECT_BLUEPRINT_SPRITE_MAPPINGS = [
   {
     // icon_belt_grid is already a 128x128 tile and must not be trimmed.
@@ -143,6 +167,7 @@ export const DIRECT_BLUEPRINT_SPRITE_MAPPINGS = [
     assetFileName: 'bg_logistic_log_pipe_splitter.png',
     spriteId: 'item_pipe_splitter',
   },
+  ...INFINITE_BLUEPRINT_SPRITE_MAPPINGS,
 ];
 
 export const DIRECT_BLUEPRINT_SPRITE_IDS = new Set(

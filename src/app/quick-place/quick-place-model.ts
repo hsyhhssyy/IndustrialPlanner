@@ -34,6 +34,7 @@ export function buildQuickPlaceDeviceEntries(
   return options.definitions
     .filter((definition) =>
       definition.uiGroup !== "hidden"
+      && definition.uiGroup !== "cheat"
       && !definition.tags.includes("不可摆放")
       && (options.canUseDefinition?.(definition) ?? true)
     )

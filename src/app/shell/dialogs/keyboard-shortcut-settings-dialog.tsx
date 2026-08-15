@@ -52,6 +52,7 @@ export const KEYBOARD_SHORTCUT_SETTINGS: readonly KeyboardShortcutSettingDefinit
   { id: SHORTCUT_KEY.WAREHOUSE, labelKey: "settingsField.shortcut-warehouse" },
   { id: SHORTCUT_KEY.BASIC_PRODUCTION, labelKey: "settingsField.shortcut-basic-production" },
   { id: SHORTCUT_KEY.SYNTHESIS, labelKey: "settingsField.shortcut-synthesis" },
+  { id: SHORTCUT_KEY.CHEAT, labelKey: "settingsField.shortcut-cheat" },
   { id: SHORTCUT_KEY.SAVE_BLUEPRINT, labelKey: "settingsField.shortcut-save-blueprint" },
   { id: SHORTCUT_KEY.ROTATE, labelKey: "settingsField.shortcut-rotate" },
   { id: SHORTCUT_KEY.SWITCH_DEVICE_MODE, labelKey: "settingsField.shortcut-switch-device-mode" },

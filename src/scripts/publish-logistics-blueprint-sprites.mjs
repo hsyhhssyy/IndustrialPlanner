@@ -22,7 +22,9 @@ async function main() {
     await mkdir(outputDirectory, { recursive: true });
 
     for (const mapping of DIRECT_BLUEPRINT_SPRITE_MAPPINGS) {
-      const sourceFilePath = path.join(blueprintAssetDirectory, mapping.assetFileName);
+      const sourceFilePath = mapping.repositoryAssetPath === undefined
+        ? path.join(blueprintAssetDirectory, mapping.assetFileName)
+        : path.resolve(projectRoot, mapping.repositoryAssetPath);
       const outputFilePath = path.join(outputDirectory, `${mapping.spriteId}.png`);
 
       await publishTrimmedBlueprintSprite(

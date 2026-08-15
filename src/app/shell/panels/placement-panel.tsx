@@ -64,6 +64,18 @@ function estimateDeviceLabelWidth(label: string): number {
 function resolveDeviceIconPath(definition: EntityDefinition): string {
   // 特殊映射：entity id 与图标文件名不一致的情况
   const SPECIAL_ICON_MAP: Record<string, string> = {
+    // AI-REMOVED 2026-08-14:
+    // Reason: 三个无限作弊设备现在使用各自的 device-icon 资源，entity id 已与资源文件名统一。
+    // Trigger: 用户要求无限气、无限水、无限箱分别使用指定透明图标。
+    // Evidence: public/device-icons/cheat_infinite_{gas,liquid,solid}.webp 与 registry spriteId 同名。
+    // Replacement: resolveDeviceIconPath 的 definition.spriteId 回退路径。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // "cheat_infinite_solid": "item_port_unloader_1",
+    // "cheat_infinite_liquid": "item_port_water_pump_1",
+    // "cheat_infinite_gas": "gas_pump_1",
     "liquid_filling_pd_mc_1": "item_port_filling_pd_mc_1",
   };
   return createDeviceIconAssetUrl(SPECIAL_ICON_MAP[definition.id] ?? definition.spriteId);
@@ -98,6 +110,10 @@ const UI_GROUP_SECTION_CONFIG: Record<PlacementGroup, {
     titleKey: "workbench.section.advancedManufacturing",
     shortcutKeyId: SHORTCUT_KEY.SYNTHESIS,
   },
+  cheat: {
+    titleKey: "workbench.section.cheat",
+    shortcutKeyId: SHORTCUT_KEY.CHEAT,
+  },
 };
 
 /** 设备分组在面板中的显示顺序 */
@@ -108,6 +124,7 @@ const DEVICE_SECTION_ORDER: readonly PlacementGroup[] = [
   "warehouse",
   "basicProduction",
   "advancedManufacturing",
+  "cheat",
 ];
 
 // ─── 类型定义 ───

@@ -125,7 +125,7 @@ export function buildModuleBalancingIndex(
     systemModules,
     allItems: [...itemDefinitions].sort((left, right) => left.nameKey.localeCompare(right.nameKey)),
     allEntities: registry.entityDefinitions
-      .filter((entity) => entity.uiGroup !== "hidden")
+      .filter((entity) => entity.uiGroup !== "hidden" && entity.uiGroup !== "cheat")
       .sort((left, right) => left.nameKey.localeCompare(right.nameKey)),
   };
 }

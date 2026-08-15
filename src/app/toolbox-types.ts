@@ -13,7 +13,7 @@ import type { UiGroup } from "@/domain/registry/types/entity-definition";
 // ── ToolboxWiki（百科浏览器） ────────────────────────
 
 export type ToolboxWikiNavigationEntryType = "item" | "entity";
-export type ToolboxWikiEntityGroupCategory = Exclude<UiGroup, "hidden">;
+export type ToolboxWikiEntityGroupCategory = Exclude<UiGroup, "hidden" | "cheat">;
 export type ToolboxWikiDesktopCategory =
   | "all"
   | "item"

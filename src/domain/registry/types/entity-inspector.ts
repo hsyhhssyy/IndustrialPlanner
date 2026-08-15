@@ -363,6 +363,20 @@ export const INSPECTOR_TYPE = {
   warehouseItemLink: "warehouse-item-link",
 
   /**
+   * ## 无限存储面板
+   *
+   * **编辑目标**：`storageSlotGroups[*].slots[*].initialItemType`。
+   *
+   * 绑定方式：`slotGroupIds` 直接引用 EntityDefinition.storageSlotGroups 的 id。
+   *
+   * 编辑功能：
+   * - 从百科物品选择器中选择与槽位物品域严格匹配的物品；
+   * - 选择后将槽位初始数量恢复为定义容量，并保持 ignoreStock=true；
+   * - 无限符号始终只读展示，不提供普通槽位数量与无限模式编辑控件。
+   */
+  infiniteStorage: "infinite-storage",
+
+  /**
    * ## 暗管链接面板
    *
    * **编辑目标**：暗管入口与暗管出口之间的一对一 share-all 槽位链接。
@@ -412,6 +426,13 @@ export interface WarehouseItemLinkInspectorDeclaration {
    * 若省略则展开 slotGroupIds 中所有组的全部槽位。
    */
   readonly slotIds?: readonly string[];
+}
+
+/** infiniteStorage 声明：为指定无限输出槽位选择物品 */
+export interface InfiniteStorageInspectorDeclaration {
+  readonly type: typeof INSPECTOR_TYPE.infiniteStorage;
+  /** 要编辑的存储槽组 ID 列表。 */
+  readonly slotGroupIds: readonly string[];
 }
 
 /** portFilter 声明：编辑指定端口的过滤器 */
@@ -496,6 +517,7 @@ export interface DarkPipeLinkInspectorDeclaration {
 export type EntityInspectorDeclaration =
   | SlotConfigInspectorDeclaration
   | WarehouseItemLinkInspectorDeclaration
+  | InfiniteStorageInspectorDeclaration
   | PortFilterInspectorDeclaration
   | AdmissionRuleInspectorDeclaration
   | RoutingInspectorDeclaration

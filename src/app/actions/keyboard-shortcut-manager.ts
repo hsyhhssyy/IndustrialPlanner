@@ -15,6 +15,7 @@ export const SHORTCUT_KEY = {
   WAREHOUSE:           "shortcut-warehouse",
   BASIC_PRODUCTION:    "shortcut-basic-production",
   SYNTHESIS:           "shortcut-synthesis",
+  CHEAT:               "shortcut-cheat",
   SAVE_BLUEPRINT:      "shortcut-save-blueprint",
   // AI-REMOVED 2026-08-03:
   // Reason: Escape 类功能必须保持硬编码，不允许进入可配置快捷键体系。
@@ -70,6 +71,7 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.WAREHOUSE]:        "C",
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]:        "B",
+  [SHORTCUT_KEY.CHEAT]:            "U",
   [SHORTCUT_KEY.SAVE_BLUEPRINT]:   "Ctrl+S",
   // AI-REMOVED 2026-08-03:
   // Reason: 返回选择使用硬编码 Escape，不再属于可配置快捷键默认值。

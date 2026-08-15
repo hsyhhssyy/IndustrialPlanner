@@ -76,6 +76,7 @@ const PLACEMENT_GROUP_SHORTCUTS: Readonly<Record<PlacementGroup, ShortcutKeyId>>
   warehouse: SHORTCUT_KEY.WAREHOUSE,
   basicProduction: SHORTCUT_KEY.BASIC_PRODUCTION,
   advancedManufacturing: SHORTCUT_KEY.SYNTHESIS,
+  cheat: SHORTCUT_KEY.CHEAT,
 };
 
 export function createHypergryphSinglePlacementGestureModule(): GestureMappingModule<AppHost> {

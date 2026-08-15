@@ -84,13 +84,14 @@ export function buildEncyclopediaIndex(
   recipes: RecipeDefinition[],
   entityVariantDefinitions?: Readonly<Record<string, EntityVariantDefinition>>,
 ): EncyclopediaIndex {
+  const encyclopediaEntities = entities.filter((entity) => entity.uiGroup !== "cheat");
   const itemById = new Map<string, ItemDefinition>();
   for (const item of items) {
     itemById.set(item.id, item);
   }
 
   const entityById = new Map<string, EntityDefinition>();
-  for (const entity of entities) {
+  for (const entity of encyclopediaEntities) {
     entityById.set(entity.id, entity);
   }
 
@@ -108,7 +109,7 @@ export function buildEncyclopediaIndex(
   }
 
   const entityPinyin = new Map<string, { full: string; initial: string }>();
-  for (const entity of entities) {
+  for (const entity of encyclopediaEntities) {
     const zhName = lookupText("zh-CN", entity.nameKey);
     if (zhName && zhName.length > 0) {
       const full = pinyin(zhName, { toneType: "none", separator: "" });
@@ -169,7 +170,7 @@ export function buildEncyclopediaIndex(
     recipesByMachine,
     consumptionItemIdsByMachine,
     allItems: items,
-    allEntities: entities
+    allEntities: encyclopediaEntities
       .filter((entity) => entity.uiGroup !== "hidden")
       .sort((a, b) => a.displayOrder - b.displayOrder || a.id.localeCompare(b.id)),
     itemPinyin,

@@ -18,6 +18,7 @@ describe("quick-place model", () => {
     const entries = buildQuickPlaceDeviceEntries({
       definitions: [
         createEntityDefinition("hidden-device", "hidden", 0),
+        createEntityDefinition("cheat-device", "cheat", 0),
         createEntityDefinition("blocked-device", "basicProduction", 1, ["不可摆放"]),
         createEntityDefinition("smelter", "basicProduction", 20),
         createEntityDefinition("assembler", "advancedManufacturing", 10),

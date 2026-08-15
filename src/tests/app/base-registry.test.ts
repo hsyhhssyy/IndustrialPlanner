@@ -267,15 +267,21 @@ describe("createRegistryContract", () => {
         continue;
       }
 
-      // 找出所有通过 portStorageBindings 绑定了端口的存储槽组
+      // 找出所有通过 portStorageBindings 绑定了端口、且未由专用 Inspector 接管的存储槽组
       const consumptionStorageGroupIds = new Set(
         definition.recipeChannels
           .filter((channel) => channel.type === "consumption-channel")
           .flatMap((channel) => channel.ingredientStorageGroupIds),
       );
+      const dedicatedInspectorStorageGroupIds = new Set(
+        definition.inspectors
+          .filter((inspector) => inspector.type === INSPECTOR_TYPE.infiniteStorage)
+          .flatMap((inspector) => inspector.slotGroupIds),
+      );
       const boundStorageSlotGroupIds = definition.storageSlotGroups
         .filter((storageSlotGroup) =>
           !consumptionStorageGroupIds.has(storageSlotGroup.id)
+          && !dedicatedInspectorStorageGroupIds.has(storageSlotGroup.id)
           &&
           definition.portStorageBindings.some((b) => b.storageSlotGroupId === storageSlotGroup.id),
         )

@@ -61,6 +61,9 @@ const DEVICE_SPRITE_MAPPINGS = [
   ['液气转化机', 'transmuter_1_liquidtrans', 180],
   ['气体扩散机', 'vaporizer_1'],
   ['气体反应炉', 'item_port_gas_reactor_1'],
+  ['无限箱-1', 'cheat_infinite_solid'],
+  ['无限水-1', 'cheat_infinite_liquid'],
+  ['无限气-1', 'cheat_infinite_gas'],
 ];
 
 function createMaskBuffer(sourceBuffer, width, height, channels) {

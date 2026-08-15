@@ -320,9 +320,16 @@ function createRecipeMachineIngredientSlotInspectors(
       .flatMap((channel) => channel.ingredientStorageGroupIds)
     ?? [],
   );
+  const dedicatedInspectorStorageGroupIds = new Set(
+    definition.inspectors
+      ?.filter((inspector) => inspector.type === INSPECTOR_TYPE.infiniteStorage)
+      .flatMap((inspector) => inspector.slotGroupIds)
+    ?? [],
+  );
   const boundStorageSlotGroupIds = definition.storageSlotGroups
     .filter((storageSlotGroup) =>
       !consumptionStorageGroupIds.has(storageSlotGroup.id)
+      && !dedicatedInspectorStorageGroupIds.has(storageSlotGroup.id)
       && definition.portStorageBindings.some(b => b.storageSlotGroupId === storageSlotGroup.id),
     )
     .map(g => g.id);
@@ -775,6 +782,7 @@ const FLUID_PIPE_PORT = {
 //   5. advancedManufacturing  — 高级合成制造
 //   6. resourcePower          — 资源与电力
 //   7. hidden                 — 隐藏设备（不显示在放置面板）
+// AI-CORRECTION 2026-08-14: 新增第 8 类 cheat，仅允许在放置面板显示，不进入百科等发现入口。
 //
 // 每个设备的注释标注了：
 //   - 对应的游戏设备名称
@@ -786,6 +794,103 @@ const FLUID_PIPE_PORT = {
 
 // AI-CORRECTION 2026-07-19: 下方历史段落注释中的 item_/item_port_ 设备名保留为游戏数据与素材 ID；
 // 当前 EntityDefinition.id 已统一移除这些前缀，nameKey 与 spriteId 不随设备定义 ID 改名。
+
+function createCheatInfiniteDeviceDefinition(options: {
+  id: string;
+  nameKey: string;
+  domain: ItemDomainFlags;
+  isPipe: boolean;
+  displayOrder: number;
+}): EntityDefinition {
+  const portDescriptor = {
+    kind: options.domain,
+    isPipe: options.isPipe,
+  } as const satisfies Pick<PortGroupDefinition, "kind" | "isPipe">;
+
+  return createEntityDefinition({
+    id: options.id,
+    nameKey: options.nameKey,
+    spriteId: options.id,
+    footprint: { width: 1, height: 1 },
+    uiGroup: "cheat",
+    displayOrder: options.displayOrder,
+    tags: ["AvatarHidden", "ChevronHidden"],
+    requiresPower: false,
+    powerDemand: 0,
+    portGroups: [
+      createPortGroup(
+        "infinite_input",
+        portDescriptor,
+        "input",
+        [
+          createPort("in_n", 0, 0, "N"),
+          createPort("in_e", 0, 0, "E"),
+          createPort("in_s", 0, 0, "S"),
+          createPort("in_w", 0, 0, "W"),
+        ],
+      ),
+      createPortGroup(
+        "infinite_output",
+        portDescriptor,
+        "output",
+        [
+          createPort("out_n", 0, 0, "N"),
+          createPort("out_e", 0, 0, "E"),
+          createPort("out_s", 0, 0, "S"),
+          createPort("out_w", 0, 0, "W"),
+        ],
+      ),
+    ],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "destroy_buffer",
+        options.domain,
+        createSlots("destroy_slot", [500], options.domain),
+      ),
+      createStorageSlotGroup(
+        "infinite_output_buffer",
+        options.domain,
+        createSlots("infinite_output_slot", [50], options.domain, {
+          initialCount: 50,
+          ignoreStock: true,
+        }),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("void_1", ["destroy_buffer"], []),
+      createRecipeChannel("void_2", ["destroy_buffer"], []),
+      createRecipeChannel("void_3", ["destroy_buffer"], []),
+      createRecipeChannel("void_4", ["destroy_buffer"], []),
+    ],
+    recipeChannelBehavior: {
+      allowDuplicateRecipesAcrossChannels: true,
+    },
+    portStorageBindings: [
+      createBinding("bind_infinite_input", "infinite_input", "destroy_buffer"),
+      createBinding("bind_infinite_output", "infinite_output", "infinite_output_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.infiniteStorage,
+        slotGroupIds: ["infinite_output_buffer"],
+      },
+      // AI-REMOVED 2026-08-14:
+      // Reason: 空 slotConfig 会同时隐藏输入销毁缓存；自动 Inspector 生成器现已只排除被 infiniteStorage 接管的输出槽组。
+      // Trigger: 无限输出槽不得挂载普通槽位编辑器，但 destroy_buffer 仍应遵循配方设备的可检查性约束。
+      // Evidence: createRecipeMachineIngredientSlotInspectors 已按 infiniteStorage.slotGroupIds 排除专用槽组。
+      // Replacement: createRecipeMachineIngredientSlotInspectors 生成 slotConfig(["destroy_buffer"])。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // {
+      //   type: INSPECTOR_TYPE.slotConfig,
+      //   slotGroupIds: [],
+      // },
+    ],
+  });
+}
+
 export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 
   // =========================================================================
@@ -4674,6 +4779,46 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       },
     ],
   }),
+  // =========================================================================
+  // 作弊设备 (uiGroup: "cheat")
+  // =========================================================================
+
+  /**
+   * 本设备在游戏中不存在，是规划器专用作弊设备。
+   * 只允许显示在放置面板的“作弊”分类，不应该在百科、快速放置或其他发现入口显示。
+   */
+  createCheatInfiniteDeviceDefinition({
+    id: "cheat_infinite_solid",
+    nameKey: "registry.entity.cheat_infinite_solid.name",
+    domain: ItemDomainFlag.Solid,
+    isPipe: false,
+    displayOrder: 701,
+  }),
+
+  /**
+   * 本设备在游戏中不存在，是规划器专用作弊设备。
+   * 只允许显示在放置面板的“作弊”分类，不应该在百科、快速放置或其他发现入口显示。
+   */
+  createCheatInfiniteDeviceDefinition({
+    id: "cheat_infinite_liquid",
+    nameKey: "registry.entity.cheat_infinite_liquid.name",
+    domain: ItemDomainFlag.Liquid,
+    isPipe: true,
+    displayOrder: 702,
+  }),
+
+  /**
+   * 本设备在游戏中不存在，是规划器专用作弊设备。
+   * 只允许显示在放置面板的“作弊”分类，不应该在百科、快速放置或其他发现入口显示。
+   */
+  createCheatInfiniteDeviceDefinition({
+    id: "cheat_infinite_gas",
+    nameKey: "registry.entity.cheat_infinite_gas.name",
+    domain: ItemDomainFlag.Gas,
+    isPipe: true,
+    displayOrder: 703,
+  }),
+
   // =========================================================================
   // 不可摆放设备（tag: "不可摆放"）
   //

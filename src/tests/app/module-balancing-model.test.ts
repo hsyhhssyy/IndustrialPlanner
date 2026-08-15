@@ -51,6 +51,23 @@ const TEST_REGISTRY: RegistryContract = {
       recipeChannels: [],
       portStorageBindings: [],
     },
+    {
+      id: "cheat_machine",
+      nameKey: "machine.cheat",
+      spriteId: "cheat_machine",
+      footprint: { width: 1, height: 1 },
+      uiGroup: "cheat",
+      displayOrder: 701,
+      tags: [],
+      requiresPower: false,
+      powerDemand: 0,
+      inspectors: [],
+      placementBehaviors: [],
+      portGroups: [],
+      storageSlotGroups: [],
+      recipeChannels: [],
+      portStorageBindings: [],
+    },
   ],
   entityVariantDefinitions: {},
   itemDefinitions: [
@@ -131,6 +148,7 @@ describe("module-balancing-model", () => {
 
     expect(index.recipeById.has("hidden_void_plate")).toBe(false);
     expect(index.systemModules.map((module) => module.recipeId)).not.toContain("hidden_void_plate");
+    expect(index.allEntities.map((entity) => entity.id)).not.toContain("cheat_machine");
   });
 
   it("uses the device icon and output/device title for system recipes", () => {
