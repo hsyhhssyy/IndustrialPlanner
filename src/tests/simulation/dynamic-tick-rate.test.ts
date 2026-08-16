@@ -79,6 +79,27 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     expect(canDeviceTransferAtCurrentPhase(registry, topology, state, pipeAnchor)).toBe(true);
   });
 
+  it("gates belt-family anchors at second phases", () => {
+    const topology = createProductionOverflowTopology(10);
+    const state = createSimulationMutableRuntimeState(topology);
+    const beltAnchor = {
+      ...topology.devices["device:maker"]!,
+      definitionId: "belt_straight_1x1",
+      transportClass: "anchor" as const,
+    };
+
+    // 传送带 transferUnitTicks = min(round(2*20), 20) = 20，合法相位为 tick 1、21、41…。
+    state.tickNumber = 1;
+    expect(canDeviceTransferAtCurrentPhase(registry, topology, state, beltAnchor)).toBe(true);
+    state.tickNumber = 2;
+    expect(canDeviceTransferAtCurrentPhase(registry, topology, state, beltAnchor)).toBe(false);
+    // 非相位点（tick 11）也不得传输，即使配方已满或下游腾出容量。
+    state.tickNumber = 11;
+    expect(canDeviceTransferAtCurrentPhase(registry, topology, state, beltAnchor)).toBe(false);
+    state.tickNumber = 21;
+    expect(canDeviceTransferAtCurrentPhase(registry, topology, state, beltAnchor)).toBe(true);
+  });
+
   it("adapts worker dynamic tick rate only through legal switch points", () => {
     const runtime = new SimulationWorkerRuntime(registry);
     runtime.handleRequest({
