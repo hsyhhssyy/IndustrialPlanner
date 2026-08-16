@@ -154,6 +154,7 @@ function patchStorageSlot2(runtime: SimulationWorkerRuntime, itemType: string, c
       slotId: "slot_1",
       itemType,
       count,
+      ignoreStock: false,
     },
   });
 }

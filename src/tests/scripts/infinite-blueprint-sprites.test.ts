@@ -4,10 +4,7 @@ import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 
 // @ts-expect-error 此脚本是直接由 Node 执行的 mjs，没有单独维护声明文件。
-import {
-  DIRECT_BLUEPRINT_SPRITE_IDS,
-  INFINITE_BLUEPRINT_SPRITE_MAPPINGS,
-} from "../../scripts/blueprint-direct-sprite-mappings.mjs";
+import { DIRECT_BLUEPRINT_SPRITE_IDS, INFINITE_BLUEPRINT_SPRITE_MAPPINGS } from "../../scripts/blueprint-direct-sprite-mappings.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const SPRITE_SIZE = 128;

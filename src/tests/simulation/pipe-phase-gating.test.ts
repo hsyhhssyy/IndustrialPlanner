@@ -55,6 +55,7 @@ describe("管道相位门禁（液体版）", () => {
         slotId: "slot_1",
         itemType: "item_liquid_water",
         count: 1,
+        ignoreStock: false,
       },
     });
 
