@@ -471,9 +471,24 @@ interface ClassifySingleValueOptions {
   readonly lastSyncedHash: string | null;
   /** 远端资产消失时是否允许解释为“远端墓碑下载”（否则解释为本地新增上传）。 */
   readonly supportsRemoteTombstone: boolean;
+  /** 定位埋点标签（adapterId/assetId），仅当判定为 conflict 时输出三方 hash 调试日志。 */
+  readonly debugLabel?: string;
 }
 
 function classifySingleValue(options: ClassifySingleValueOptions): SingleValueClassification {
+  // 定位埋点：conflict 判定时输出三方 hash，用于追溯 409 重启后假 conflict 的错位源。
+  const conflict = (): SingleValueClassification => {
+    if (options.debugLabel !== undefined) {
+      logger.debug(
+        `${options.debugLabel}: classified conflict — `
+        + `localHash=${options.localHash ?? "null"} `
+        + `remoteHash=${options.remoteHash ?? "null"} `
+        + `lastSyncedHash=${options.lastSyncedHash ?? "null"}`,
+      );
+    }
+    return { kind: "conflict" };
+  };
+
   if (options.localValue === null && options.remoteValue === null) {
     return { kind: "idle" };
   }
@@ -486,7 +501,7 @@ function classifySingleValue(options: ClassifySingleValueOptions): SingleValueCl
         return { kind: "download" };
       }
       // 曾同步过且本地已改 → 冲突。
-      return { kind: "conflict" };
+      return conflict();
     }
     // 远端从未存在（或不支持墓碑的 adapter）→ 上传新增。
     return { kind: "upload" };
@@ -514,7 +529,7 @@ function classifySingleValue(options: ClassifySingleValueOptions): SingleValueCl
     return { kind: "download" };
   }
 
-  return { kind: "conflict" };
+  return conflict();
 }
 
 // ============================================================================
@@ -1429,6 +1444,7 @@ async function syncFullNoRevision<TValue>(
     lastSyncedHash,
     // full-no-revision 没有墓碑存储，远端消失一律解释为本地新增上传。
     supportsRemoteTombstone: false,
+    debugLabel: `${options.id}/${assetId}`,
   });
 
   let status: SyncAdapterStatus = "idle";
@@ -1842,6 +1858,7 @@ async function syncFullWithRevision<TValue>(
       remoteHash: remoteValue.contentHash,
       lastSyncedHash,
       supportsRemoteTombstone: false,
+      debugLabel: `${options.id}/${localEntry.id}`,
     });
 
     if (classification.kind === "idle") {
@@ -2016,6 +2033,7 @@ async function syncPatchWithRevision<TValue>(
     lastSyncedHash,
     // patch-with-revision 单值资产没有墓碑存储，远端消失一律解释为本地新增上传。
     supportsRemoteTombstone: false,
+    debugLabel: `${options.id}/${assetId}`,
   });
 
   let status: SyncAdapterStatus = "idle";

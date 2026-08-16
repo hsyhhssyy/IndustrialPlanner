@@ -280,10 +280,11 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
     }).catch((error: unknown) => {
       // AI-CORRECTION 2026-08-13: 下载 409 与写 409 同语义，转换为引擎可识别的整轮重启信号。
       if (error instanceof CfV2HttpError && error.status === 409) {
+        // 定位埋点：把后端 error code 带进重启日志，区分 409 的具体语义。
         throw new RemoteDownloadStaleError(
           params.collection.name,
           params.assetId,
-          error.message,
+          `${error.message} (backendCode=${error.code})`,
         );
       }
       throw error;

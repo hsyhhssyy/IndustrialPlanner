@@ -527,16 +527,44 @@ async function readAsset(
   readonly contentHash: string;
   readonly committedAt: string;
 }> {
-  const response = await fetchWithTimeout(
+  // 423（空间锁）是后端上一轮 commit 后的瞬时状态，锁释放窗口很短。
+  // 固定 200ms 间隔重试，含首次共 10 次尝试（总窗口约 2s）；仍 423 则原样抛错，
+  // 由引擎放弃本轮同步，等待下一轮小检查或下一次编辑提供新的同步机会。
+  const maxAttempts = 10;
+  const retryDelayMs = 200;
+  let response = await fetchWithTimeout(
     operation.asset.downloadUrl,
     undefined,
     config.requestTimeoutMs,
   );
+  for (
+    let attempt = 1;
+    attempt < maxAttempts && !response.ok && response.status === 423;
+    attempt += 1
+  ) {
+    await wait(retryDelayMs);
+    response = await fetchWithTimeout(
+      operation.asset.downloadUrl,
+      undefined,
+      config.requestTimeoutMs,
+    );
+  }
   if (!response.ok) {
+    // 定位埋点：解析后端错误体，把 error code 与 details 附加到异常上，
+    // 供主线程 409 → RemoteDownloadStaleError 转换与 sync restart 日志追溯。
+    let details: Record<string, unknown> = {};
+    try {
+      details = await response.json() as Record<string, unknown>;
+    } catch {
+      // 非 JSON 错误体：仅保留状态码。
+    }
     throw new CfV2HttpError(
       response.status,
-      "download_failed",
-      `Failed to download ${operation.asset.assetType}/${operation.asset.assetId}: HTTP ${response.status}`,
+      typeof details.error === "string" ? details.error : "download_failed",
+      typeof details.message === "string"
+        ? `Failed to download ${operation.asset.assetType}/${operation.asset.assetId}: ${details.message}`
+        : `Failed to download ${operation.asset.assetType}/${operation.asset.assetId}: HTTP ${response.status}`,
+      details,
     );
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
@@ -696,6 +724,12 @@ async function fetchWithTimeout(
   } finally {
     globalThis.clearTimeout(timeoutId);
   }
+}
+
+function wait(delayMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    globalThis.setTimeout(resolve, delayMs);
+  });
 }
 
 async function runConcurrent<TValue>(
