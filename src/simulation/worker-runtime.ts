@@ -1739,7 +1739,13 @@ export class SimulationWorkerRuntime {
       cursorByItemId: proposal.cursorByItemId,
     };
     this.regionalActiveArbitration = null;
-    this.regionalSnapshotCursor = 0;
+    // AI-CORRECTION 2026-08-17: 不再在 commit 时重置 regionalSnapshotCursor。
+    // Trigger: 区域会话运行约 24 个 Epoch 后主线程播放死锁（PlaybackDiag notReady=100%、buff 恒定）。
+    // Evidence: DEBUG-TRACE 显示 enqueue 每次塞入 count=231 的全量历史快照，导致 playbackHotQueue
+    //   size 恒 ≥ 180，runRegionalSessionLoop 的背压检查永久冻结，播放等待 232+ 快照永不满足。
+    // Replacement: cursor 由 takeRegionalSnapshots 尾部推进（latestTickNumber + 1），保持增量返回。
+    // Risk: 若 authority 需重放历史快照，应在 loadRegionalTopology 处显式重置。
+    // Human Review: Required
     return proposal;
   }
 
