@@ -586,6 +586,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         })),
       },
       {
+        id: "experimental-regional-multi-base",
+        kind: "switch",
+        labelKey: "settingsField.experimental-regional-multi-base",
+        descriptionKey: "settingsField.experimental-regional-multi-baseDescription",
+        defaultValue: false,
+      },
+      {
         id: "experimental-virtual-mouse-pointer",
         kind: "switch",
         labelKey: "settingsField.experimental-virtual-mouse-pointer",

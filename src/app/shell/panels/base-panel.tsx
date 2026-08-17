@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { runInAction } from "mobx";
+import { observer } from "mobx-react-lite";
 import { createPortal } from "react-dom";
 
 import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
@@ -17,6 +19,7 @@ import {
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { isCustomPortPriorityGroupsEnabled } from "@/shared/port-priority-groups";
 import { resolveBaseMaxPipeLogistics } from "@/shared/base-tags";
+import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import panelStyles from "@/app/shell/panels/panels.module.scss";
@@ -36,7 +39,7 @@ const BASE_PANEL_POWER_INTERVAL_MS = 250;
 //   "pipe_splitter", "pipe_converger", "pipe_connector", "pipe_admission",
 // ]);
 
-export function BasePanel({ appHost }: { appHost: AppHost }) {
+export const BasePanel = observer(function BasePanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const editor = appHost.workspace.editor;
   const currentDocument = useEditorDocumentSnapshot(editor);
@@ -45,6 +48,12 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
     (definition) => definition.id === currentBaseId,
   ) ?? appHost.workspace.registry.baseDefinitions[0] ?? null;
   const currentBaseName = currentBase?.name ?? currentBaseId;
+  useEffect(() => {
+    const siblings = appHost.workspace.registry.baseDefinitions.filter((definition) =>
+      definition.tag === currentBase?.tag,
+    ).length - 1;
+    regionalSimulationUiState.siblingBaseCount = Math.max(0, siblings);
+  }, [appHost.workspace.registry.baseDefinitions, currentBase?.tag]);
   const warehouseStats = useWarehouseStats(appHost);
   const pinnedItems = useWarehousePinnedItems(appHost);
   const warehouseEntries = buildWarehouseStatsEntries({
@@ -250,6 +259,28 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
             <WorkbenchIcon kind="edit" />
           </span>
         </button>
+        {regionalSimulationUiState.experimentalEnabled && (
+          <label className={cm(styles, "base-regional-switch")}>
+            <input
+              checked={regionalSimulationUiState.allBasesEnabled}
+              disabled={
+                regionalSimulationUiState.siblingBaseCount < 1
+                || appHost.workspace.simulation?.state.runningState !== "stop"
+              }
+              onChange={(event) => {
+                const enabled = event.target.checked;
+                runInAction(() => {
+                  regionalSimulationUiState.allBasesEnabled = enabled;
+                });
+                appHost.workspace.simulation?.actions.setRegionalMultiBaseEnabled(enabled);
+              }}
+              type="checkbox"
+            />
+            <span className={cm(styles, "base-regional-switch-label")}>
+              {t("basePanel.runAllBases")}
+            </span>
+          </label>
+        )}
       </article>
       <article className={cm(styles, "inspector-card")}>
         <div className={cm(styles, "card-header")}>
@@ -415,4 +446,4 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
       </article>
     </div>
   );
-}
+});

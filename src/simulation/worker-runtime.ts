@@ -49,6 +49,20 @@ import {
 import { computeActiveGasDiffusions } from "./runtime/gas-diffusion";
 import { computeActiveConsumptionDeviceIds } from "./runtime/consumption-channel";
 import { applyWaterPurifierManualOutput } from "./runtime/water-purifier-node";
+import {
+  RegionWarehouseGate,
+  resolveRegionalEpochGateTick,
+} from "./runtime/regional-warehouse-gate";
+import {
+  arbitrateRegionalWarehouseEpoch,
+  commitRegionalWarehouseEpoch,
+  type RegionWarehouseAckBatch,
+  type RegionWarehouseArbitrationResult,
+  type RegionWarehouseAuthorityState,
+  type RegionWarehouseCommitProposal,
+  type RegionWarehouseDemandBatch,
+  type RegionalWarehouseOutletTable,
+} from "./regional";
 // AI-REMOVED 2026-06-06:
 // Reason: submitMode 全局扫描机制已删除；入仓必须走 WarehouseSink 或 r_warehouse_submit 配方。
 // Trigger: 用户要求 submit mode 机制彻底删除，避免旧蓝图 submitMode 配置影响所有 slot。
@@ -233,6 +247,24 @@ export class SimulationWorkerRuntime {
   // Original code:
   // private forceHighestDynamicTickRateAtNextLegalPoint = false;
   private powerMode: "real" | "infinite" = "infinite";
+  private regionalGate: RegionWarehouseGate | null = null;
+  private pendingRegionalDemand: readonly string[] = [];
+  private regionalGatePausedTick: number | null = null;
+  /** 区域模式下不启动单基地后台填充定时器。 */
+  private regionalRuntimeMode = false;
+
+  private regionalTable: RegionalWarehouseOutletTable | null = null;
+  private regionalExpectedBaseIds: readonly string[] = [];
+  private regionalAuthorityState: RegionWarehouseAuthorityState | null = null;
+  private regionalActiveArbitration: RegionWarehouseArbitrationResult | null = null;
+  private regionalAdvancePerTick = false;
+  private regionalGateStage1AdvanceResult:
+    | ReturnType<typeof advanceDevices>
+    | undefined = undefined;
+  private regionalGateCurrentPowerGeneration = Infinity;
+  private regionalGatePowerOutage = false;
+  private regionalGateLastAdvancedTickNumber = 0;
+  private regionalSnapshotCursor = 0;
 
   // 停止线：Worker 自主推进到该 tick 后暂停，等待外部拉取更新停止线。
   // 初始值 = 0 + MAX_RETAINED_TICKS，外部每次请求 tick N 时更新为 N + MAX_RETAINED_TICKS。
@@ -373,6 +405,76 @@ export class SimulationWorkerRuntime {
             result: this.importRuntimeState(request.runtimeExport),
             status: this.getStatus(),
           };
+        case "load-regional-topology":
+          return {
+            type: "regional-topology-loaded",
+            requestId: request.requestId,
+            result: this.loadRegionalTopology({
+              topology: request.topology,
+              baseId: request.baseId,
+              table: request.table,
+              initialWarehouseCounts: request.initialWarehouseCounts,
+              expectedBaseIds: request.expectedBaseIds,
+              fixedDynamicTickRate: request.fixedDynamicTickRate,
+              advanceMode: request.advanceMode,
+            }),
+            status: this.getStatus(),
+          };
+        case "prepare-regional-epoch":
+          return {
+            type: "regional-epoch-prepared",
+            requestId: request.requestId,
+            epochNumber: request.epochNumber,
+            ...this.prepareRegionalEpochDemand(request.epochNumber),
+            status: this.getStatus(),
+          };
+        case "apply-regional-epoch-grant":
+          return {
+            type: "regional-epoch-grant-applied",
+            requestId: request.requestId,
+            epochNumber: request.epochNumber,
+            ...this.applyRegionalEpochGrant({
+              epochNumber: request.epochNumber,
+              grantedOutletIds: request.grantedOutletIds,
+            }),
+            status: this.getStatus(),
+          };
+        case "finalize-regional-epoch":
+          return {
+            type: "regional-epoch-finalized",
+            requestId: request.requestId,
+            epochNumber: request.epochNumber,
+            ...this.finalizeRegionalEpoch({
+              epochNumber: request.epochNumber,
+              nextWarehouseCounts: request.nextWarehouseCounts,
+              includeSnapshot: request.includeSnapshot,
+              retainSnapshot: request.retainSnapshot,
+            }),
+            status: this.getStatus(),
+          };
+        case "regional-arbitrate":
+          return {
+            type: "regional-arbitrated",
+            requestId: request.requestId,
+            epochNumber: request.epochNumber,
+            result: this.arbitrateRegionalEpoch(request.epochNumber, request.demands),
+            status: this.getStatus(),
+          };
+        case "regional-commit":
+          return {
+            type: "regional-committed",
+            requestId: request.requestId,
+            epochNumber: request.epochNumber,
+            result: this.commitRegionalEpoch(request.epochNumber, request.acks),
+            status: this.getStatus(),
+          };
+        case "take-regional-snapshots":
+          return {
+            type: "regional-snapshots-taken",
+            requestId: request.requestId,
+            snapshots: this.takeRegionalSnapshots(),
+            status: this.getStatus(),
+          };
       }
     } catch (error) {
       this.mode = "error";
@@ -487,6 +589,74 @@ export class SimulationWorkerRuntime {
               status: createNotFoundStatus(0, "missing-topology", null, null, 0),
               currentTick: null,
             },
+            status,
+          };
+        case "load-regional-topology":
+          return {
+            type: "regional-topology-loaded",
+            requestId: request.requestId,
+            result: { status: "failed", topologyId: null, diagnostics: [] },
+            status,
+          };
+        case "prepare-regional-epoch":
+          return {
+            type: "regional-epoch-prepared",
+            requestId: request.requestId,
+            epochNumber: request.epochNumber,
+            tickNumber: 0,
+            demandedOutletIds: [],
+            status,
+          };
+        case "apply-regional-epoch-grant":
+          return {
+            type: "regional-epoch-grant-applied",
+            requestId: request.requestId,
+            epochNumber: request.epochNumber,
+            tickNumber: 0,
+            deposits: [],
+            status,
+          };
+        case "finalize-regional-epoch":
+          return {
+            type: "regional-epoch-finalized",
+            requestId: request.requestId,
+            epochNumber: request.epochNumber,
+            tickNumber: 0,
+            snapshot: null,
+            status,
+          };
+        case "regional-arbitrate":
+          return {
+            type: "regional-arbitrated",
+            requestId: request.requestId,
+            epochNumber: request.epochNumber,
+            result: {
+              grantsByBaseId: {},
+              provisionalCounts: {},
+              provisionalCursorByItemId: {},
+            },
+            status,
+          };
+        case "regional-commit":
+          return {
+            type: "regional-committed",
+            requestId: request.requestId,
+            epochNumber: request.epochNumber,
+            result: {
+              sessionId: "error",
+              epochNumber: request.epochNumber,
+              parentWarehouseVersion: 0,
+              nextWarehouseVersion: 1,
+              warehouseCounts: {},
+              cursorByItemId: {},
+            },
+            status,
+          };
+        case "take-regional-snapshots":
+          return {
+            type: "regional-snapshots-taken",
+            requestId: request.requestId,
+            snapshots: [],
             status,
           };
       }
@@ -1259,6 +1429,7 @@ export class SimulationWorkerRuntime {
    * 与外部 getTickSnapshot 完全解耦 — 外部拉取不触发推进，只更新停止线。
    */
   private scheduleBackgroundFill(): void {
+    if (this.regionalRuntimeMode) return;
     // 已有定时器在排队
     if (this.fillTimerId !== null) return;
     // 已达停止线，无需推进
@@ -1332,6 +1503,367 @@ export class SimulationWorkerRuntime {
         return;
       }
     }
+  }
+
+  // === 区域多基地模式 ===
+
+  /**
+   * 加载一个基地的区域 Runtime。Authority 协议由 Worker 外部的区域会话驱动；
+   * 本类只负责把 Stage 3 停在区域仓库门禁前、应用 grant，并生成该基地结果。
+   */
+  public loadRegionalTopology(options: {
+    readonly topology: CompiledSimulationTopology;
+    readonly baseId: string;
+    readonly table: RegionalWarehouseOutletTable;
+    readonly initialWarehouseCounts: Readonly<Record<string, number>>;
+    readonly expectedBaseIds?: readonly string[];
+    readonly fixedDynamicTickRate?: number;
+    readonly advanceMode: "per-tick" | "coarse";
+    readonly simulationSpeed?: number;
+    readonly powerMode?: "real" | "infinite";
+    readonly powerConsumptionOverride?: number;
+  }): SimulationStartResult {
+    this.regionalGate = createBaseRegionalGate({
+      baseId: options.baseId,
+      table: options.table,
+      topology: options.topology,
+    });
+    this.regionalTable = options.table;
+    this.regionalExpectedBaseIds = options.expectedBaseIds ?? [options.baseId];
+    this.regionalAuthorityState = {
+      warehouseVersion: 0,
+      warehouseCounts: { ...options.initialWarehouseCounts },
+      cursorByItemId: {},
+    };
+    this.regionalActiveArbitration = null;
+    this.regionalSnapshotCursor = 0;
+    this.pendingRegionalDemand = [];
+    this.regionalGatePausedTick = null;
+    this.regionalRuntimeMode = true;
+    this.regionalAdvancePerTick = options.advanceMode === "per-tick";
+    if (options.fixedDynamicTickRate !== undefined) {
+      this.fixedDynamicTickRate = options.fixedDynamicTickRate;
+    }
+    if (options.simulationSpeed !== undefined) {
+      this.simulationSpeed = options.simulationSpeed;
+    }
+    if (options.powerMode !== undefined) {
+      this.powerMode = options.powerMode;
+    }
+    if (options.powerConsumptionOverride !== undefined) {
+      this.powerConsumptionOverride = options.powerConsumptionOverride;
+    }
+
+    const result = this.loadTopology(options.topology);
+    if (result.status === "started" && this.runtimeState !== null && this.regionalGate !== null) {
+      this.regionalGate.setWarehouseProjection(this.runtimeState, options.initialWarehouseCounts);
+    }
+    return result;
+  }
+
+  /**
+   * 推进到 Epoch E 的门禁 tick 并冻结精确 demand。
+   * 后台 coarse 模式直接跨 10 个标准 tick；前台 per-tick 模式保留中间快照。
+   */
+  public prepareRegionalEpochDemand(epochNumber: number): {
+    readonly tickNumber: number;
+    readonly demandedOutletIds: readonly string[];
+  } {
+    if (this.regionalGate === null || this.topology === null || this.runtimeState === null) {
+      throw new Error("Regional runtime is not initialized.");
+    }
+    if (this.regionalGatePausedTick !== null) {
+      throw new Error(`Regional gate already paused at tick ${this.regionalGatePausedTick}.`);
+    }
+
+    const gateTick = resolveRegionalEpochGateTick(epochNumber);
+    if (gateTick < this.nextTickNumber) {
+      throw new Error(`Regional epoch ${epochNumber} gate tick ${gateTick} has already been passed.`);
+    }
+
+    if (this.regionalAdvancePerTick) {
+      while (this.nextTickNumber < gateTick) {
+        const tickNumber = this.nextTickNumber;
+        const snapshot = this.createNextTickSnapshot(tickNumber);
+        this.cacheComputedTick(tickNumber, snapshot);
+      }
+    } else {
+      // 后台粗步长：中间标准 tick 不生成展示快照，直接由门禁 tick 覆盖整段 10 tick。
+      if (this.nextTickNumber < gateTick) {
+        this.nextTickNumber = gateTick;
+      }
+    }
+
+    return this.runRegionalGateStage3A(gateTick, epochNumber);
+  }
+
+  /**
+   * 应用 grant、完成 Stage 4/5、封存 deposits，并把仓库投影更新为 W(E+1)。
+   */
+  public applyRegionalEpochGrant(options: {
+    readonly epochNumber: number;
+    readonly grantedOutletIds: readonly string[];
+  }): {
+    readonly tickNumber: number;
+    readonly deposits: readonly { readonly itemId: string; readonly amount: number }[];
+  } {
+    if (this.regionalGate === null || this.topology === null || this.runtimeState === null) {
+      throw new Error("Regional runtime is not initialized.");
+    }
+    const gateTick = resolveRegionalEpochGateTick(options.epochNumber);
+    if (this.regionalGatePausedTick !== gateTick || this.runtimeState.tickNumber !== gateTick) {
+      throw new Error(`Regional gate is not paused at epoch ${options.epochNumber}.`);
+    }
+
+    const tickNumber = gateTick;
+    this.regionalGate.applyGrantBatch(this.registry, this.runtimeState, options.grantedOutletIds);
+    rotateRoutingCursors(
+      this.topology,
+      this.runtimeState,
+      this.regionalGate.createStage3Options().excludedEdgeIds,
+    );
+    settleRecipes(
+      this.registry,
+      this.topology,
+      this.runtimeState,
+      this.powerMode,
+      this.regionalGateCurrentPowerGeneration,
+      this.effectiveTotalPowerDemand,
+      this.regionalGateStage1AdvanceResult,
+      this.regionalGate.writeContext,
+    );
+    applyBlockageAutoClearance(this.topology, this.runtimeState);
+    maintainTransportComponentDomains(this.topology, this.runtimeState);
+    this.runtimeState.lastAdvancedTickNumber = tickNumber;
+
+    rollRecipeStatsWindow(
+      this.runtimeState.persistent.recipeStats,
+      this.runtimeState.transient.recipeStatsDelta,
+      tickNumber,
+      tickNumber - this.regionalGateLastAdvancedTickNumber,
+      resolveDynamicTickRateSwitchIntervalTicks(this.registry, this.topology),
+    );
+    this.runtimeState.transient.recipeStatsDelta = createEmptyTransientState().recipeStatsDelta;
+
+    const deposits = this.regionalGate.takeDeposits();
+    return { tickNumber, deposits };
+  }
+
+  /**
+   * Authority 提交后，把 W(E+1) 写入本地只读投影并生成本基地边界结果。
+   */
+  public finalizeRegionalEpoch(options: {
+    readonly epochNumber: number;
+    readonly nextWarehouseCounts: Readonly<Record<string, number>>;
+    readonly includeSnapshot: boolean;
+    readonly retainSnapshot?: boolean;
+  }): {
+    readonly tickNumber: number;
+    readonly snapshot: RuntimeTickSnapshot | null;
+  } {
+    if (this.regionalGate === null || this.topology === null || this.runtimeState === null) {
+      throw new Error("Regional runtime is not initialized.");
+    }
+    const gateTick = resolveRegionalEpochGateTick(options.epochNumber);
+    if (this.regionalGatePausedTick !== gateTick || this.runtimeState.tickNumber !== gateTick) {
+      throw new Error(`Regional gate is not paused at epoch ${options.epochNumber}.`);
+    }
+
+    this.regionalGate.setWarehouseProjection(this.runtimeState, options.nextWarehouseCounts);
+    const snapshot = options.includeSnapshot
+      ? createTickSnapshot(
+          this.topology,
+          this.runtimeState,
+          this.regionalGatePowerOutage,
+          this.regionalGateCurrentPowerGeneration,
+        )
+      : null;
+    if (snapshot !== null && options.retainSnapshot !== false) {
+      this.cacheComputedTick(gateTick, snapshot);
+    } else {
+      // 后台基地不保留边界展示快照，但仍推进到 gate tick 之后。
+      this.latestTickNumber = gateTick;
+      this.retainedFromTick = Math.min(this.retainedFromTick ?? gateTick, gateTick);
+      this.nextTickNumber = gateTick + 1;
+    }
+    this.regionalGatePausedTick = null;
+    this.pendingRegionalDemand = [];
+    this.regionalGateStage1AdvanceResult = undefined;
+    if (snapshot !== null) {
+      this.adjustDynamicTickRateAtLegalPoint(gateTick);
+    }
+    return { tickNumber: gateTick, snapshot };
+  }
+
+  public arbitrateRegionalEpoch(
+    epochNumber: number,
+    demands: readonly RegionWarehouseDemandBatch[],
+  ): RegionWarehouseArbitrationResult {
+    if (this.regionalTable === null || this.regionalAuthorityState === null) {
+      throw new Error("Regional authority is not initialized.");
+    }
+    const arbitration = arbitrateRegionalWarehouseEpoch({
+      sessionId: demands[0]?.sessionId ?? "regional-session",
+      epochNumber,
+      table: this.regionalTable,
+      state: this.regionalAuthorityState,
+      demands,
+    });
+    this.regionalActiveArbitration = arbitration;
+    return arbitration;
+  }
+
+  public commitRegionalEpoch(
+    epochNumber: number,
+    acks: readonly RegionWarehouseAckBatch[],
+  ): RegionWarehouseCommitProposal {
+    if (
+      this.regionalTable === null
+      || this.regionalAuthorityState === null
+      || this.regionalActiveArbitration === null
+    ) {
+      throw new Error("Regional authority has no active arbitration.");
+    }
+    const proposal = commitRegionalWarehouseEpoch({
+      sessionId: acks[0]?.sessionId ?? "regional-session",
+      epochNumber,
+      table: this.regionalTable,
+      state: this.regionalAuthorityState,
+      expectedBaseIds: this.regionalExpectedBaseIds,
+      arbitration: this.regionalActiveArbitration,
+      acks,
+    });
+    this.regionalAuthorityState = {
+      warehouseVersion: proposal.nextWarehouseVersion,
+      warehouseCounts: proposal.warehouseCounts,
+      cursorByItemId: proposal.cursorByItemId,
+    };
+    this.regionalActiveArbitration = null;
+    this.regionalSnapshotCursor = 0;
+    return proposal;
+  }
+
+  public takeRegionalSnapshots(): readonly RuntimeTickSnapshot[] {
+    if (this.regionalRuntimeMode === false) {
+      return [];
+    }
+    const snapshots = [...this.tickSnapshots.entries()]
+      .filter(([tickNumber]) => tickNumber >= this.regionalSnapshotCursor)
+      .sort(([left], [right]) => left - right)
+      .map(([, snapshot]) => snapshot);
+    this.regionalSnapshotCursor = (this.latestTickNumber ?? 0) + 1;
+    return snapshots;
+  }
+
+  private runRegionalGateStage3A(tickNumber: number, epochNumber: number): {
+    readonly tickNumber: number;
+    readonly demandedOutletIds: readonly string[];
+  } {
+    const topology = this.topology;
+    const state = this.runtimeState;
+    const gate = this.regionalGate;
+    if (topology === null || state === null || gate === null) {
+      throw new Error("Regional runtime is not initialized.");
+    }
+
+    const shouldAdvance = tickNumber > state.tickNumber;
+    if (!shouldAdvance) {
+      throw new Error(`Regional gate tick ${tickNumber} is not in the future.`);
+    }
+    state.tickNumber = tickNumber;
+    normalizeFixedWindowCountersForCurrentWindow(topology, state);
+    const runtimeStepTicks = tickNumber - state.lastAdvancedTickNumber;
+    this.regionalGateLastAdvancedTickNumber = state.lastAdvancedTickNumber;
+
+    const currentPowerGeneration = computeCurrentPowerGeneration(this.registry, state);
+    let effectiveGeneration = currentPowerGeneration;
+    if (this.powerMode === "real") {
+      const netPowerKW = currentPowerGeneration - this.effectiveTotalPowerDemand;
+      const joulesPerStandardTick = 1000 / topology.standardTickRate;
+      const netJoules = netPowerKW * joulesPerStandardTick * runtimeStepTicks;
+      if (netJoules > 0) {
+        state.persistent.baseBatteryJoules = Math.min(
+          BASE_BATTERY_CAPACITY_J,
+          state.persistent.baseBatteryJoules + netJoules,
+        );
+      } else if (netJoules < 0) {
+        const deficit = -netJoules;
+        if (state.persistent.baseBatteryJoules >= deficit) {
+          state.persistent.baseBatteryJoules -= deficit;
+          effectiveGeneration = this.effectiveTotalPowerDemand;
+        } else {
+          state.persistent.baseBatteryJoules = 0;
+        }
+      }
+    }
+
+    const isPowerOutageRun = this.powerMode === "real"
+      && effectiveGeneration < this.effectiveTotalPowerDemand;
+    state.transient.isPowerOutage = isPowerOutageRun;
+    state.transient.reservedAmountByStorageSlotId = null;
+    state.transient.activeConsumptionDeviceIds =
+      computeActiveConsumptionDeviceIds(topology, state);
+    state.transient.activeGasDiffusions = computeActiveGasDiffusions(
+      this.registry,
+      topology,
+      state,
+    );
+    rebuildExcludedItemTypesForTick(topology, state);
+
+    const stage1AdvanceResult = advanceDevices(
+      this.registry,
+      topology,
+      state,
+      runtimeStepTicks,
+      this.powerMode,
+      effectiveGeneration,
+      this.effectiveTotalPowerDemand,
+      gate.writeContext,
+    );
+    applyWaterPurifierManualOutput(
+      this.registry,
+      topology,
+      state,
+      runtimeStepTicks,
+      this.powerMode,
+      effectiveGeneration,
+      this.effectiveTotalPowerDemand,
+    );
+    buildSolveGraph(topology, state);
+    solveTransferGraph(
+      this.registry,
+      topology,
+      state,
+      undefined,
+      gate.createStage3Options(),
+    );
+
+    this.regionalGateCurrentPowerGeneration = currentPowerGeneration;
+    this.regionalGatePowerOutage = isPowerOutageRun;
+    this.regionalGateStage1AdvanceResult = stage1AdvanceResult;
+    this.regionalGatePausedTick = tickNumber;
+    this.pendingRegionalDemand = gate.collectDemandBatch(this.registry, state, epochNumber);
+    return {
+      tickNumber,
+      demandedOutletIds: this.pendingRegionalDemand,
+    };
+  }
+
+  private cacheComputedTick(tickNumber: number, snapshot: RuntimeTickSnapshot): void {
+    if (this.runtimeState === null) {
+      return;
+    }
+    this.tickSnapshots.set(tickNumber, snapshot);
+    this.tickRuntimeStates.set(
+      tickNumber,
+      cloneSimulationMutableRuntimeState(this.runtimeState, this.debugDataEnabled),
+    );
+    this.latestTickNumber = tickNumber;
+    this.retainedFromTick = Math.min(
+      this.retainedFromTick ?? tickNumber,
+      tickNumber,
+    );
+    this.nextTickNumber = tickNumber + 1;
   }
 
   private fillOneTick(): void {
@@ -2014,6 +2546,36 @@ function createNotFoundStatus(
 
 /** 基地基础发电量（kW）。即使没有任何发电设备运行，系统也自带此发电量。 */
 const BASE_POWER_GENERATION_KW = 200;
+
+function createBaseRegionalGate(options: {
+  readonly baseId: string;
+  readonly table: RegionalWarehouseOutletTable;
+  readonly topology: CompiledSimulationTopology;
+}): RegionWarehouseGate {
+  const warehouseStorageSlotIds = new Set<string>();
+  for (const deviceId of options.topology.ordering.deviceOrder) {
+    const device = options.topology.devices[deviceId];
+    if (device === undefined || device.definitionId !== "warehouse") {
+      continue;
+    }
+    for (const nodeId of device.nodeIds) {
+      const node = options.topology.nodes[nodeId];
+      if (node === undefined) {
+        continue;
+      }
+      for (const slotId of node.slotIds) {
+        warehouseStorageSlotIds.add(slotId);
+      }
+    }
+  }
+  // 上方的临时 state 只用于解析 warehouse 槽位；实际 gate 直接绑定本 topology。
+  return new RegionWarehouseGate(
+    options.baseId,
+    options.table,
+    options.topology,
+    warehouseStorageSlotIds,
+  );
+}
 
 function computeCurrentPowerGeneration(
   registry: RegistryContract,

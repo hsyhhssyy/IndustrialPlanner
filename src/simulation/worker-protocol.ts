@@ -10,6 +10,14 @@ import type {
   RuntimeTickSnapshot,
 } from "./types";
 import type {
+  RegionWarehouseAckBatch,
+  RegionWarehouseArbitrationResult,
+  RegionWarehouseCommitProposal,
+  RegionWarehouseDemandBatch,
+  RegionWarehouseDeposit,
+  RegionalWarehouseOutletTable,
+} from "./regional";
+import type {
   SimulationAdmissionCounterReset,
   SimulationRuntimeSlotPatch,
 } from "@/domain/simulation/types/simulation-types";
@@ -98,6 +106,52 @@ export type SimulationWorkerRequest =
       readonly tickNumber?: number;
     }
   | {
+      readonly type: "load-regional-topology";
+      readonly requestId: number;
+      readonly topology: CompiledSimulationTopology;
+      readonly baseId: string;
+      readonly table: RegionalWarehouseOutletTable;
+      readonly initialWarehouseCounts: Readonly<Record<string, number>>;
+      readonly expectedBaseIds: readonly string[];
+      readonly fixedDynamicTickRate: number;
+      readonly advanceMode: "per-tick" | "coarse";
+    }
+  | {
+      readonly type: "prepare-regional-epoch";
+      readonly requestId: number;
+      readonly epochNumber: number;
+    }
+  | {
+      readonly type: "apply-regional-epoch-grant";
+      readonly requestId: number;
+      readonly epochNumber: number;
+      readonly grantedOutletIds: readonly string[];
+    }
+  | {
+      readonly type: "finalize-regional-epoch";
+      readonly requestId: number;
+      readonly epochNumber: number;
+      readonly nextWarehouseCounts: Readonly<Record<string, number>>;
+      readonly includeSnapshot: boolean;
+      readonly retainSnapshot: boolean;
+    }
+  | {
+      readonly type: "regional-arbitrate";
+      readonly requestId: number;
+      readonly epochNumber: number;
+      readonly demands: readonly RegionWarehouseDemandBatch[];
+    }
+  | {
+      readonly type: "regional-commit";
+      readonly requestId: number;
+      readonly epochNumber: number;
+      readonly acks: readonly RegionWarehouseAckBatch[];
+    }
+  | {
+      readonly type: "take-regional-snapshots";
+      readonly requestId: number;
+    }
+  | {
       readonly type: "import-runtime-state";
       readonly requestId: number;
       readonly runtimeExport: SimulationRuntimeExport;
@@ -181,6 +235,56 @@ export type SimulationWorkerResponse =
       readonly type: "runtime-state-imported";
       readonly requestId: number;
       readonly result: SimulationTickSnapshotResult;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "regional-topology-loaded";
+      readonly requestId: number;
+      readonly result: SimulationStartResult;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "regional-epoch-prepared";
+      readonly requestId: number;
+      readonly epochNumber: number;
+      readonly tickNumber: number;
+      readonly demandedOutletIds: readonly string[];
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "regional-epoch-grant-applied";
+      readonly requestId: number;
+      readonly epochNumber: number;
+      readonly tickNumber: number;
+      readonly deposits: readonly RegionWarehouseDeposit[];
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "regional-epoch-finalized";
+      readonly requestId: number;
+      readonly epochNumber: number;
+      readonly tickNumber: number;
+      readonly snapshot: RuntimeTickSnapshot | null;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "regional-arbitrated";
+      readonly requestId: number;
+      readonly epochNumber: number;
+      readonly result: RegionWarehouseArbitrationResult;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "regional-committed";
+      readonly requestId: number;
+      readonly epochNumber: number;
+      readonly result: RegionWarehouseCommitProposal;
+      readonly status: SimulationRuntimeStatus;
+    }
+  | {
+      readonly type: "regional-snapshots-taken";
+      readonly requestId: number;
+      readonly snapshots: readonly RuntimeTickSnapshot[];
       readonly status: SimulationRuntimeStatus;
     };
 

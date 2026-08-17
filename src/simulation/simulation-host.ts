@@ -84,6 +84,7 @@ export function createSimulationHost(
     getPerfEnabled: options.getPerfEnabled,
     getDebugDataEnabled: options.getDebugDataEnabled,
     getActiveActivityIds: options.getActiveActivityIds,
+    regionalWorkerMode: options.workerMode ?? "auto",
   });
   const actions: SimulationContract["actions"] = actionImpl;
   const internalActions: SimulationInternalAction = actionImpl;
@@ -108,6 +109,7 @@ export function createSimulationHost(
     if (
       options.getDebugDataEnabled?.() !== true
       || internalState.runningState !== "pause"
+      || internalState.regionalTotalPowerDemand !== null
       || currentSnapshot === null
       || currentSnapshot.debugData !== undefined
       || currentTickDebugRefreshInFlight
@@ -189,9 +191,11 @@ export function createSimulationHost(
         if (topology === null) return null;
         const override = workspace.editor?.document?.getSnapshot().documentSettings.powerConsumptionOverride;
         const effectiveTotalPowerDemand =
-          typeof override === "number" && Number.isFinite(override) && override >= 0
-            ? override
-            : topology.totalPowerDemand;
+          internalState.regionalTotalPowerDemand !== null
+            ? internalState.regionalTotalPowerDemand
+            : typeof override === "number" && Number.isFinite(override) && override >= 0
+              ? override
+              : topology.totalPowerDemand;
         return {
           tickNumber: internalState.currentSnapshot?.tickNumber ?? null,
           totalPowerDemand: effectiveTotalPowerDemand,

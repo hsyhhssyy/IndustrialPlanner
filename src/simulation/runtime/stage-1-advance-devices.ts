@@ -1,6 +1,7 @@
 import type {
   CompiledSimulationDevice,
   CompiledSimulationTopology,
+  RegionalWarehouseWriteContext,
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import type {
@@ -54,6 +55,7 @@ export function advanceDevices(
   powerMode: "real" | "infinite" = "infinite",
   currentPowerGeneration = Infinity,
   effectiveTotalPowerDemand = topology.totalPowerDemand,
+  regionalWarehouse?: RegionalWarehouseWriteContext,
 ): Stage1AdvanceResult {
   const progressTicks = Math.max(1, Math.trunc(standardStepTicks));
   const powerInsufficient = powerMode === "real"
@@ -99,6 +101,7 @@ export function advanceDevices(
         deviceState,
         recipe,
         progressTicks,
+        regionalWarehouse,
       });
       deviceState.channelRecipes[chId] = result.recipe;
       if (result.overflowTicks > 0) {
@@ -120,6 +123,7 @@ function advanceChannelRecipe(options: {
   readonly deviceState: RuntimeDeviceState;
   readonly recipe: RuntimeDeviceRecipeState;
   readonly progressTicks: number;
+  readonly regionalWarehouse?: RegionalWarehouseWriteContext;
 }): AdvanceChannelRecipeResult {
   const recipe = options.recipe;
 
@@ -138,6 +142,7 @@ function advanceChannelRecipe(options: {
     state: options.state,
     deviceId: options.device.id,
     recipe,
+    regionalWarehouse: options.regionalWarehouse,
   })) {
     recipe.progressTicks = recipe.durationTicks;
     recipe.state = "waiting-output";

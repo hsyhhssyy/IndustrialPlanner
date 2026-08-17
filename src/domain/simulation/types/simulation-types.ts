@@ -1,4 +1,4 @@
-export type SimulationRunState = "stop" | "start" | "pause";
+export type SimulationRunState = "stop" | "starting" | "start" | "pause";
 
 export interface SimulationRuntimeStatistics {
   /** 实测 TPS（滑动窗口均值） */

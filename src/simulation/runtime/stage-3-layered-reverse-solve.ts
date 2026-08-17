@@ -9,6 +9,7 @@ import type {
   CompiledSimulationNode,
   CompiledSimulationPort,
   CompiledSimulationTopology,
+  RegionalWarehouseStage3Options,
   SimulationAcceptRule,
 } from "../types";
 import {
@@ -71,6 +72,7 @@ export function solveTransferGraph(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   perf?: SolveTransferGraphPerf,
+  regionalOptions?: RegionalWarehouseStage3Options,
 ): void {
   let currentLayer = collectFirstLayerAnchors(registry, topology, state);
 
@@ -88,6 +90,7 @@ export function solveTransferGraph(
         node,
         nextAnchors,
         perf,
+        regionalOptions,
       });
     }
 
@@ -157,6 +160,7 @@ function processInputAnchor(options: {
   readonly node: CompiledSimulationNode;
   readonly nextAnchors: Map<string, CompiledSimulationNode>;
   readonly perf?: SolveTransferGraphPerf;
+  readonly regionalOptions?: RegionalWarehouseStage3Options;
 }): void {
   if (isNodeVisited(options.state, options.node)) {
     return;
@@ -166,10 +170,13 @@ function processInputAnchor(options: {
     return;
   }
 
-  solveInputNode(options.registry, options.topology, options.state, options.node);
+  solveInputNode(options.registry, options.topology, options.state, options.node, options.regionalOptions);
   markNodeVisited(options.state, options.node);
 
   for (const edgeId of getOrderedInputEdgeIds(options.topology, options.state, options.node)) {
+    if (options.regionalOptions?.excludedEdgeIds.has(edgeId) === true) {
+      continue;
+    }
     const edge = options.topology.transferEdges[edgeId];
     const sourceNode = edge === undefined ? undefined : options.topology.nodes[edge.sourceNodeId];
     if (edge === undefined || sourceNode === undefined) {
@@ -183,6 +190,7 @@ function processInputAnchor(options: {
       outputNode: sourceNode,
       nextAnchors: options.nextAnchors,
       perf: options.perf,
+      regionalOptions: options.regionalOptions,
     });
   }
 }
@@ -194,6 +202,7 @@ function searchUpstreamFromOutputNode(options: {
   readonly outputNode: CompiledSimulationNode;
   readonly nextAnchors: Map<string, CompiledSimulationNode>;
   readonly perf?: SolveTransferGraphPerf;
+  readonly regionalOptions?: RegionalWarehouseStage3Options;
 }): void {
   if (options.outputNode.viewRole !== "output-view" || isNodeVisited(options.state, options.outputNode)) {
     return;
@@ -209,7 +218,7 @@ function searchUpstreamFromOutputNode(options: {
       return;
     }
 
-    const outputResult = solveOutputNode(options.registry, options.topology, options.state, options.outputNode, options.nextAnchors, options.perf);
+    const outputResult = solveOutputNode(options.registry, options.topology, options.state, options.outputNode, options.nextAnchors, options.perf, options.regionalOptions);
     if (outputResult.movedAny) {
       markNodeVisited(options.state, options.outputNode);
     }
@@ -222,9 +231,12 @@ function searchUpstreamFromOutputNode(options: {
       return;
     }
 
-    solveInputNode(options.registry, options.topology, options.state, inputNode);
+    solveInputNode(options.registry, options.topology, options.state, inputNode, options.regionalOptions);
     markNodeVisited(options.state, inputNode);
     for (const edgeId of getOrderedInputEdgeIds(options.topology, options.state, inputNode)) {
+      if (options.regionalOptions?.excludedEdgeIds.has(edgeId) === true) {
+        continue;
+      }
       const edge = options.topology.transferEdges[edgeId];
       const sourceNode = edge === undefined ? undefined : options.topology.nodes[edge.sourceNodeId];
       if (sourceNode !== undefined) {
@@ -235,6 +247,7 @@ function searchUpstreamFromOutputNode(options: {
           outputNode: sourceNode,
           nextAnchors: options.nextAnchors,
           perf: options.perf,
+          regionalOptions: options.regionalOptions,
         });
       }
     }
@@ -248,7 +261,7 @@ function searchUpstreamFromOutputNode(options: {
     return;
   }
 
-  if (!allDownstreamInputNodesResolved(options.topology, options.state, options.outputNode)) {
+  if (!allDownstreamInputNodesResolved(options.topology, options.state, options.outputNode, options.regionalOptions?.excludedEdgeIds)) {
     return;
   }
 
@@ -259,6 +272,7 @@ function searchUpstreamFromOutputNode(options: {
     options.outputNode,
     options.nextAnchors,
     options.perf,
+    options.regionalOptions,
   );
   markNodeVisited(options.state, options.outputNode);
 
@@ -289,6 +303,7 @@ function solveOutputNode(
   node: CompiledSimulationNode,
   nextAnchors: Map<string, CompiledSimulationNode>,
   perf?: SolveTransferGraphPerf,
+  regionalOptions?: RegionalWarehouseStage3Options,
 ): OutputSolveResult {
   if (perf !== undefined) perf.outputNodeCount += 1;
 
@@ -298,6 +313,9 @@ function solveOutputNode(
   while (moved) {
     moved = false;
     for (const edgeId of getOrderedOutputEdgeIds(topology, state, node)) {
+      if (regionalOptions?.excludedEdgeIds.has(edgeId) === true) {
+        continue;
+      }
       const slotPerf = state.transient._perf;
       if (slotPerf !== undefined) { slotPerf.solveOutputEdgeChecks += 1; }
 
@@ -339,6 +357,7 @@ function solveOutputNode(
         sourceSlotId: edgeState.sourceSlotId,
         targetSlotId: edgeState.targetSlotId,
         itemType: edgeState.itemType,
+        regionalWarehouse: regionalOptions?.writeContext ?? undefined,
       });
       if (!ok) {
         continue;
@@ -396,6 +415,7 @@ function solveInputNode(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   node: CompiledSimulationNode,
+  regionalOptions?: RegionalWarehouseStage3Options,
 ): void {
   const nodeState = state.transient.nodes[node.id];
   if (nodeState === undefined) {
@@ -403,6 +423,9 @@ function solveInputNode(
   }
 
   for (const edgeId of getOrderedInputEdgeIds(topology, state, node)) {
+    if (regionalOptions?.excludedEdgeIds.has(edgeId) === true) {
+      continue;
+    }
     const edge = topology.transferEdges[edgeId];
     const edgeState = state.transient.edges[edgeId];
     if (edge === undefined || edgeState === undefined) {
@@ -495,7 +518,7 @@ function selectAcceptedSourceForEdge(options: {
   return null;
 }
 
-function canAdmitItemThroughTargetPort(
+export function canAdmitItemThroughTargetPort(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   targetPortId: string,
@@ -526,7 +549,7 @@ function canAdmitItemThroughTargetPort(
     < readAdmissionRateWindowRemainingAllowance(topology, state, targetPortId);
 }
 
-function canReleaseItemThroughSourcePort(
+export function canReleaseItemThroughSourcePort(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   sourcePortId: string,
@@ -545,7 +568,7 @@ function canReleaseItemThroughSourcePort(
 
 // AI-CORRECTION 2026-07-24: admission move 现在只表示物品从准入口输出口真实离开；
 // target input 缓存写入不再提交总计数或速率窗口计数。
-function recordAdmissionMove(
+export function recordAdmissionMove(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   sourcePortId: string,
@@ -667,8 +690,12 @@ function allDownstreamInputNodesResolved(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   outputNode: CompiledSimulationNode,
+  excludedEdgeIds?: ReadonlySet<string>,
 ): boolean {
   for (const edgeId of getRawOutputEdgeIds(topology, state, outputNode)) {
+    if (excludedEdgeIds?.has(edgeId) === true) {
+      continue;
+    }
     const targetNodeId = topology.transferEdges[edgeId]?.targetNodeId;
     const targetNode = targetNodeId === undefined ? undefined : topology.nodes[targetNodeId];
     if (targetNode !== undefined && !isInputNodeResolved(state, targetNode)) {

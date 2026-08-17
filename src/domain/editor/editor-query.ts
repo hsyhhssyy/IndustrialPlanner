@@ -1,4 +1,4 @@
-import type { WorldEntity } from "../document/world-document";
+import type { WorldDocument, WorldEntity } from "../document/world-document";
 import type {
 	ClientPixelPoint,
 	ClientPixelRect,
@@ -47,4 +47,9 @@ export interface EditorQuery {
 	): LogisticsDraftEndpoint | null;
 	canCreateLogisticsDraftStartHere(gridPoint: GridPoint, kind: LogisticsKind): boolean;
 	listBaseDocumentSummaries(): Promise<readonly EditorBaseDocumentSummary[]>;
+/**
+ * 读取指定基地的最新持久化世界文档。当前内存文档不在此查询范围内；
+ * 调用方负责用当前内存文档覆盖当前基地。
+ */
+readLatestBaseDocuments(baseIds: readonly string[]): Promise<readonly WorldDocument[]>;
 }

@@ -95,6 +95,24 @@ export interface SimulationCompileDiagnostic {
   readonly definitionId?: string;
 }
 
+/**
+ * 区域模式下入仓与出仓共用的仓库写边界。
+ * Stage 1/3/5 的所有合法仓库写入都必须经过该上下文，不得直接改写隐藏仓库槽。
+ */
+export interface RegionalWarehouseWriteContext {
+  /** 判断 storageSlotId 是否属于本基地隐藏仓库槽。 */
+  isWarehouseStorageSlotId(storageSlotId: string): boolean;
+  /** 把一件物品追加到当前 Epoch 的只写 deposit journal。 */
+  deposit(itemType: string, amount: number): void;
+}
+
+export interface RegionalWarehouseStage3Options {
+  /** Stage 3A 必须排除的区域仓库出货边。 */
+  readonly excludedEdgeIds: ReadonlySet<string>;
+  /** Stage 1/3/5 共用的入仓 journal 写边界；单基地模式为 null。 */
+  readonly writeContext: RegionalWarehouseWriteContext | null;
+}
+
 export interface CompiledSimulationTopology {
   readonly schemaVersion: 5;
   readonly topologyId: string;

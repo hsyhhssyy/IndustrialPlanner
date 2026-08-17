@@ -7,6 +7,7 @@ import {
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
+import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
 import type { SimulationTimelineMark } from "@/domain/simulation/types/simulation-types";
 import {
   COLLAPSED_TIMELINE_BOTTOM_DOCK_HEIGHT,
@@ -134,6 +135,7 @@ export const TimelineDialog = observer(function TimelineDialog({ appHost }: { ap
     if (
       !dialogState.visible
       || simulation === null
+      || regionalSimulationUiState.allBasesEnabled
       || timelineEnabled
       // AI-REMOVED 2026-07-17:
       // Reason: 持久化恢复的时间轴窗口必须能够从全新的 stop/idle 仿真状态重新启动。

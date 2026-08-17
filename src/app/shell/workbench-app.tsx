@@ -47,6 +47,8 @@ import LeftDock from "@/app/shell/layout/left-dock";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { V2MigrationController } from "@/app/migration";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
+import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
+import { writeRegionalMultiBaseExperimentalEnabled } from "@/shared/storage/regional-simulation-settings";
 import { RightDock } from "@/app/shell/layout/right-dock";
 import { SimulationControlButton, TimelineButton, TopBar } from "@/app/shell/layout/top-bar";
 import { readSyncProvider, writeSyncProvider } from "@/sync/sync-providers";
@@ -573,6 +575,19 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             appHost.internalState.settings.debugShowGestureDiagnosticsWindow = false;
             appHost.internalState.settings.debugSimulationWorkerDetailedReport = false;
             appHost.internalState.settings.virtualMousePointer = false;
+          }
+        }),
+      },
+      "experimental-regional-multi-base": {
+        readValue: () => regionalSimulationUiState.experimentalEnabled,
+        writeValue: action((value) => {
+          if (typeof value === "boolean") {
+            regionalSimulationUiState.experimentalEnabled = value;
+            writeRegionalMultiBaseExperimentalEnabled(value);
+            if (!value) {
+              regionalSimulationUiState.allBasesEnabled = false;
+              appHost.workspace.simulation?.actions.setRegionalMultiBaseEnabled(false);
+            }
           }
         }),
       },

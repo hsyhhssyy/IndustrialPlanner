@@ -2,6 +2,7 @@ import type {
   CompiledSimulationDevice,
   CompiledSimulationRecipeChannel,
   CompiledSimulationTopology,
+  RegionalWarehouseWriteContext,
 } from "../types";
 import type { RuntimeDeviceRecipeState, SimulationMutableRuntimeState } from "./runtime-state";
 // AI-REMOVED 2026-07-24:
@@ -62,11 +63,12 @@ export function settleRecipes(
   currentPowerGeneration = Infinity,
   effectiveTotalPowerDemand = topology.totalPowerDemand,
   stage1AdvanceResult?: Stage1AdvanceResult,
+  regionalWarehouse?: RegionalWarehouseWriteContext,
 ): void {
   const remainingOverflowTicksByDeviceChannel = cloneOverflowTicks(
     stage1AdvanceResult?.overflowTicksByDeviceChannel,
   );
-  settleWaitingOutputs(registry, topology, state);
+  settleWaitingOutputs(registry, topology, state, regionalWarehouse);
   startIdleDeviceChannels({
     registry,
     topology,
@@ -96,6 +98,7 @@ function settleWaitingOutputs(
   registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
+  regionalWarehouse?: RegionalWarehouseWriteContext,
 ): void {
   for (const deviceId of topology.ordering.deviceOrder) {
     const deviceState = state.persistent.devices[deviceId];
@@ -113,6 +116,7 @@ function settleWaitingOutputs(
         state,
         deviceId,
         recipe,
+        regionalWarehouse,
       })) {
         deviceState.channelRecipes[chId] = null;
         deviceState.block = false;
@@ -130,6 +134,7 @@ function startIdleDeviceChannels(options: {
   currentPowerGeneration: number;
   effectiveTotalPowerDemand: number;
   remainingOverflowTicksByDeviceChannel: Record<string, Record<string, number>>;
+  regionalWarehouse?: RegionalWarehouseWriteContext;
 }): void {
   const powerInsufficient = options.powerMode === "real"
     && options.currentPowerGeneration < options.effectiveTotalPowerDemand;
@@ -213,6 +218,7 @@ function startIdleDeviceChannels(options: {
           state: options.state,
           deviceId,
           recipe,
+          regionalWarehouse: options.regionalWarehouse,
         })) {
           remainingOverflowTicks = 0;
           deviceState.block = true;

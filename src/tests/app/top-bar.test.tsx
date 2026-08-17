@@ -97,6 +97,7 @@ function attachSimulationStub(
     },
     actions: {
       start,
+      setRegionalMultiBaseEnabled: vi.fn(),
       pause,
       resume,
       stop,
@@ -425,6 +426,49 @@ describe("TopBar", () => {
     });
 
     expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables all simulation control buttons while starting", async () => {
+    const workspace = createWorkspace();
+    const { start, pause, resume, stop, setSimulationSpeed } =
+      attachSimulationStub(workspace, { state: "starting" });
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<TopBar appHost={appHost} />);
+    });
+
+    const simulationButton = container.querySelector(
+      '[data-ui-button-id="top-bar-simulation-control"]',
+    ) as HTMLButtonElement | null;
+    const stopButton = container.querySelector(
+      '[data-ui-button-id="top-bar-simulation-stop"]',
+    ) as HTMLButtonElement | null;
+
+    expect(simulationButton).not.toBeNull();
+    expect(simulationButton?.disabled).toBe(true);
+    expect(stopButton).not.toBeNull();
+    expect(stopButton?.disabled).toBe(true);
+
+    for (const speed of [0.25, 1, 2, 4, 16]) {
+      const speedButton = container.querySelector(
+        `[data-ui-button-id="top-bar-speed-${speed}"]`,
+      ) as HTMLButtonElement | null;
+      expect(speedButton).not.toBeNull();
+      expect(speedButton?.disabled).toBe(true);
+    }
+
+    // disabled 按钮不派发点击事件，任何控制 action 都不得被触发。
+    await act(async () => {
+      simulationButton?.click();
+      stopButton?.click();
+    });
+
+    expect(start).not.toHaveBeenCalled();
+    expect(pause).not.toHaveBeenCalled();
+    expect(resume).not.toHaveBeenCalled();
+    expect(stop).not.toHaveBeenCalled();
+    expect(setSimulationSpeed).not.toHaveBeenCalled();
   });
 
   it("removes all top-right status text and keeps only control buttons", () => {

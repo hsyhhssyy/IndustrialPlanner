@@ -23,6 +23,7 @@ import {
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
 
 const SIMULATION_CONTROL_BUTTON_ID = "top-bar-simulation-control";
 const SIMULATION_SPEED_OPTIONS = [0.25, 1, 2, 4, 16] as const;
@@ -39,6 +40,7 @@ export const SimulationControlButton = observer(function SimulationControlButton
   className: string;
 }) {
   const simulationState = appHost.workspace.simulation?.state.runningState ?? "stop";
+  const isStarting = simulationState === "starting";
   const isRunning = simulationState === "start";
   const iconKind = simulationState === "start"
     ? "pause"
@@ -101,6 +103,7 @@ export const SimulationControlButton = observer(function SimulationControlButton
       aria-pressed={isRunning}
       className={cm(styles, className)}
       data-ui-button-id={SIMULATION_CONTROL_BUTTON_ID}
+      disabled={isStarting}
       onClick={handleClick}
       onPointerDown={preventTouchPointerCompatibilityMouseEvents}
       onPointerUp={handlePointerUp}
@@ -139,6 +142,7 @@ export const SimulationSpeedButtons = observer(function SimulationSpeedButtons({
 }) {
   const simulation = appHost.workspace.simulation;
   const currentSpeed = simulation?.state.simulationSpeed ?? 1;
+  const isStarting = simulation?.state.runningState === "starting";
   const t = appHost.actions.translate;
 
   const handleSpeedClick = (speed: number) => {
@@ -158,6 +162,7 @@ export const SimulationSpeedButtons = observer(function SimulationSpeedButtons({
           key={speed}
           aria-label={`${t("statusBar.speed")} ${formatSimulationSpeedLabel(speed)}`}
           aria-pressed={currentSpeed === speed}
+          disabled={isStarting || (regionalSimulationUiState.allBasesEnabled && (speed === 4 || speed === 16))}
           className={cm(styles, currentSpeed === speed
             ? "top-bar-speed-button top-bar-speed-active"
             : "top-bar-speed-button")}
@@ -173,6 +178,7 @@ export const SimulationSpeedButtons = observer(function SimulationSpeedButtons({
         aria-label={t("action.stop")}
         className={cm(styles, "top-bar-icon-button")}
         data-ui-button-id="top-bar-simulation-stop"
+        disabled={isStarting}
         onClick={handleStopClick}
         title={t("action.stop")}
         type="button"
@@ -195,6 +201,7 @@ export const TimelineButton = observer(function TimelineButton({
 }) {
   const label = appHost.actions.translate("timelineDialog.title");
   const active = appHost.internalState.workbench.dialogState.timeline.visible;
+  const disabled = regionalSimulationUiState.allBasesEnabled;
 
   return (
     <button
@@ -202,8 +209,11 @@ export const TimelineButton = observer(function TimelineButton({
       aria-pressed={active}
       className={cm(styles, className)}
       data-ui-button-id="top-bar-timeline"
+      disabled={disabled}
       onClick={() => {
-        appHost.internalActions.openDialog("timeline");
+        if (!disabled) {
+          appHost.internalActions.openDialog("timeline");
+        }
       }}
       title={label}
       type="button"

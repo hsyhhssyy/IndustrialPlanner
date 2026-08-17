@@ -1252,6 +1252,7 @@ describe("WorkbenchApp", () => {
       },
       actions: {
         start: vi.fn(async () => {}),
+        setRegionalMultiBaseEnabled: vi.fn(),
         pause: vi.fn(),
         resume: vi.fn(),
         stop: vi.fn(),

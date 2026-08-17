@@ -6,6 +6,7 @@ import type {
   CompiledSimulationRecipePlan,
   CompiledSimulationSlot,
   CompiledSimulationTopology,
+  RegionalWarehouseWriteContext,
   SimulationAcceptRule,
   SimulationItemDomain,
   SimulationItemDomainFilter,
@@ -402,6 +403,7 @@ export function moveOneItem(options: {
   sourceSlotId: string;
   targetSlotId: string;
   itemType: string;
+  regionalWarehouse?: RegionalWarehouseWriteContext;
 }): boolean {
   const sourceSlot = options.topology.slots[options.sourceSlotId];
   const targetSlot = options.topology.slots[options.targetSlotId];
@@ -444,6 +446,12 @@ export function moveOneItem(options: {
     if (sourceState.count === 0) {
       sourceState.itemType = null;
     }
+  }
+
+  if (options.regionalWarehouse?.isWarehouseStorageSlotId(targetStorageSlotId) === true) {
+    // 区域模式入仓只写当前 Epoch 的 deposit journal；本 Epoch 内不可被取货读取。
+    options.regionalWarehouse.deposit(options.itemType, 1);
+    return true;
   }
 
   // AI-REMOVED 2026-07-23:

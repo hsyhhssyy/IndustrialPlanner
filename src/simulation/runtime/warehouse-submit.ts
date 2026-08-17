@@ -1,4 +1,7 @@
-import type { CompiledSimulationTopology } from "../types";
+import type {
+  CompiledSimulationTopology,
+  RegionalWarehouseWriteContext,
+} from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import { resolveStorageSlotId } from "./runtime-slot-access";
 
@@ -12,6 +15,7 @@ export function submitSlotsToWarehouse(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   compiledDeviceId: string,
+  regionalWarehouse?: RegionalWarehouseWriteContext,
 ): void {
   const device = topology.devices[compiledDeviceId];
   if (device === undefined) return;
@@ -46,8 +50,12 @@ export function submitSlotsToWarehouse(
 
       // 部分提交：min(本地数量, 仓库剩余容量)
       const submitCount = Math.min(localSlot.count, remainingCap);
-      warehouseSlot.itemType = localSlot.itemType;
-      warehouseSlot.count = (warehouseSlot.count ?? 0) + submitCount;
+      if (regionalWarehouse?.isWarehouseStorageSlotId(warehouseStorageSlotId) === true) {
+        regionalWarehouse.deposit(localSlot.itemType, submitCount);
+      } else {
+        warehouseSlot.itemType = localSlot.itemType;
+        warehouseSlot.count = (warehouseSlot.count ?? 0) + submitCount;
+      }
       localSlot.count -= submitCount;
       if (localSlot.count <= 0) {
         localSlot.itemType = null;

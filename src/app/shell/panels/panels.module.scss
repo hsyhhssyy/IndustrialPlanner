@@ -1169,6 +1169,31 @@
   fill: currentColor;
 }
 
+.base-regional-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  min-height: 32px;
+  padding: 0 2px;
+  color: var(--text-0);
+  cursor: pointer;
+}
+
+.base-regional-switch:has(input:disabled) {
+  color: var(--text-2);
+  cursor: not-allowed;
+}
+
+.base-regional-switch input {
+  accent-color: var(--accent, #4c8dff);
+}
+
+.base-regional-switch-label {
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
 // 电力横条（仅文字，无填充进度条）
 .power-bar-shell {
   display: grid;

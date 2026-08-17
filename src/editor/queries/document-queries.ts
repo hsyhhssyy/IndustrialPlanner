@@ -1,10 +1,15 @@
+import { createWorldDocument } from "@/domain/document/world-document";
 import type { EditorBaseDocumentSummary } from "@/domain/editor/editor-document";
 import type { EditorQuery } from "@/domain/editor/editor-query";
 
-import { listLatestWorldDocumentsByBase } from "../document-storage";
+import {
+  listLatestWorldDocumentsByBase,
+  resolveLatestWorldDocumentForBase,
+} from "../document-storage";
+import { ensureProtocolCoreEntity } from "../ensure-protocol-core";
 import type { EditorQueriesContext } from "./types";
 
-type EditorDocumentQueries = Pick<EditorQuery, "listBaseDocumentSummaries">;
+type EditorDocumentQueries = Pick<EditorQuery, "listBaseDocumentSummaries" | "readLatestBaseDocuments">;
 
 export function createEditorDocumentQueries({
   document,
@@ -30,6 +35,18 @@ export function createEditorDocumentQueries({
           entityCount: latestDocument != null ? Object.keys(latestDocument.entities).length : 0,
           updatedAt: latestDocument?.meta.updatedAt ?? null,
         };
+      });
+    },
+    readLatestBaseDocuments: async (baseIds) => {
+      const documents = await Promise.all(baseIds.map((baseId) =>
+        resolveLatestWorldDocumentForBase({
+          baseId,
+          latestDocumentIdByBaseId: state.internalPersistState.latestDocumentIdByBaseId,
+        }),
+      ));
+      return baseIds.map((baseId, index) => {
+        const document = documents[index] ?? createWorldDocument({ baseId });
+        return ensureProtocolCoreEntity({ document, queries: workspace.registry.queries });
       });
     },
   };

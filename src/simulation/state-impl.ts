@@ -36,6 +36,8 @@ export interface SimulationStateReadWrite extends SimulationState {
   runtimeStatus: SimulationRuntimeStatus;
   currentSnapshot: RuntimeTickSnapshot | null;
   currentPlaybackTickNumber: number;
+  /** 区域模式下的全基地总耗电；单基地模式为 null。 */
+  regionalTotalPowerDemand: number | null;
 }
 
 export interface SimulationTimelineStateReadWrite extends SimulationTimelineState {
@@ -75,6 +77,7 @@ class SimulationStateReadWriteImpl implements SimulationStateReadWrite {
   public runtimeStatus: SimulationRuntimeStatus = createInitialSimulationRuntimeStatus();
   public currentSnapshot: RuntimeTickSnapshot | null = null;
   public currentPlaybackTickNumber = 0;
+  public regionalTotalPowerDemand: number | null = null;
 
   public get bufferSize(): number {
     return this.runtimeStatus.bufferSize;

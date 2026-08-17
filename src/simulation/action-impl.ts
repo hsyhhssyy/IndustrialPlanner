@@ -47,6 +47,16 @@ import type {
   TimelineWorkerResponse,
   TimelineWorkerStatus,
 } from "./timeline-worker-protocol";
+import {
+  buildRegionalWarehouseOutletTable,
+  createBrowserRegionalSessionPorts,
+  LocalRegionalBasePort,
+  RegionalSimulationSession,
+  type RegionalAuthorityPort,
+  type RegionalBasePort,
+  type RegionalBaseTopologyInput,
+  type RegionalWorkerBridge,
+} from "./regional";
 
 /** TPS 统计的累积窗口，毫秒 */
 const TPS_WINDOW_MS = 1000;
@@ -216,6 +226,7 @@ interface SimulationActionImplOptions {
   getPerfEnabled?: () => boolean;
   getDebugDataEnabled?: () => boolean;
   getActiveActivityIds?: () => readonly string[];
+  regionalWorkerMode?: "auto" | "runtime";
 }
 
 interface TimelineCheckpointMetadata {
@@ -346,6 +357,16 @@ implements SimulationAction, SimulationInternalAction {
   private readonly getPerfEnabled: (() => boolean) | undefined;
   private readonly getDebugDataEnabled: (() => boolean) | undefined;
   private readonly getActiveActivityIds: (() => readonly string[]) | undefined;
+  private readonly regionalWorkerMode: "auto" | "runtime";
+  private regionalMultiBaseEnabled = false;
+  private regionalSession: RegionalSimulationSession | null = null;
+  private regionalSessionBridges: readonly RegionalWorkerBridge[] = [];
+  private regionalSessionGeneration = 0;
+  private regionalSessionLoop: Promise<void> | null = null;
+  private regionalSessionPaused = false;
+  private regionalSessionStopped = false;
+  private regionalPreviousWarehouseCounts: Readonly<Record<string, number>> = {};
+  private regionalPreviousBaseSnapshots: readonly RuntimeTickSnapshot[] = [];
   private compiledDocument: WorldDocument | null = null;
   private compiledActivitySignature: string | null = null;
   private tpsAccumulatedTicks = 0;
@@ -408,26 +429,60 @@ implements SimulationAction, SimulationInternalAction {
     this.getPerfEnabled = options.getPerfEnabled;
     this.getDebugDataEnabled = options.getDebugDataEnabled;
     this.getActiveActivityIds = options.getActiveActivityIds;
+    this.regionalWorkerMode = options.regionalWorkerMode ?? "auto";
   }
 
   public readonly start: SimulationAction["start"] = async () => {
+    // 启动互斥：启动中重复调用直接忽略。顶部控制按钮在 starting 期间已禁用，
+    // 这里是 gesture 等非 UI 路径的兜底。
+    if (this.stateReadWrite.runningState === "starting") {
+      return;
+    }
     runInAction(() => {
       this.stateReadWrite.hasStarted = true;
+      this.stateReadWrite.runningState = "starting";
     });
 
-    const result = await this.refreshFromCurrentDocument();
-    if (result.status === "started") {
-      runInAction(() => {
-        this.stateReadWrite.runningState = "start";
-      });
-      this.ensurePlaybackHotQueue();
+    try {
+      if (this.regionalMultiBaseEnabled) {
+        await this.startRegionalSimulation();
+      } else {
+        const result = await this.refreshFromCurrentDocument();
+        if (result.status === "started") {
+          runInAction(() => {
+            this.stateReadWrite.runningState = "start";
+          });
+          this.ensurePlaybackHotQueue();
+        } else {
+          this.recoverFromStartFailure();
+        }
+      }
+    } catch (error) {
+      console.error("[Simulation] Failed to start simulation.", error);
+      this.recoverFromStartFailure(error);
     }
   };
+
+  public readonly setRegionalMultiBaseEnabled: SimulationAction["setRegionalMultiBaseEnabled"] = action((enabled) => {
+    if (enabled === this.regionalMultiBaseEnabled) {
+      return;
+    }
+    if (this.stateReadWrite.runningState !== "stop") {
+      return;
+    }
+    if (enabled && this.stateReadWrite.timeline.enabled) {
+      return;
+    }
+    this.regionalMultiBaseEnabled = enabled;
+  });
 
   public readonly pause: SimulationAction["pause"] = action(() => {
     this.timelineResumeRequestedAfterCommit = false;
     this.stateReadWrite.runningState = "pause";
     this.completeTopologyPresentationBoundary(true);
+    if (this.regionalSession !== null) {
+      this.regionalSessionPaused = true;
+    }
   });
 
   public readonly resume: SimulationAction["resume"] = action(() => {
@@ -453,7 +508,12 @@ implements SimulationAction, SimulationInternalAction {
     }
 
     this.stateReadWrite.runningState = "start";
-    this.ensurePlaybackHotQueue();
+    if (this.regionalSession !== null) {
+      this.regionalSessionPaused = false;
+      this.ensureRegionalSessionLoop();
+    } else {
+      this.ensurePlaybackHotQueue();
+    }
   });
 
   public readonly stop: SimulationAction["stop"] = action(() => {
@@ -663,6 +723,9 @@ implements SimulationAction, SimulationInternalAction {
 
   /** 低于低水位时补到容量上限；任意时刻最多一个范围请求在途。 */
   private ensurePlaybackHotQueue(): void {
+    if (this.regionalSession !== null) {
+      return;
+    }
     const currentSnapshot = this.stateReadWrite.currentSnapshot;
     if (
       currentSnapshot === null
@@ -755,6 +818,11 @@ implements SimulationAction, SimulationInternalAction {
     ) {
       return;
     }
+    if (this.regionalSession !== null) {
+      // 区域快照由区域会话管理缓存；没有单基地 Worker 呈现确认可回传。
+      this.pendingPlaybackAckTickNumber = null;
+      return;
+    }
 
     const generation = this.playbackHotQueueGeneration;
     const tickNumber = this.pendingPlaybackAckTickNumber;
@@ -811,6 +879,14 @@ implements SimulationAction, SimulationInternalAction {
   };
 
   private readonly refreshFromCurrentDocumentNow = async (): Promise<SimulationStartResult> => {
+    if (this.regionalSession !== null) {
+      const topology = this.topology.getSnapshot();
+      return {
+        status: "started",
+        topologyId: topology?.topologyId ?? null,
+        diagnostics: topology?.diagnostics ?? [],
+      };
+    }
     const playbackTickRequestCompletion = this.playbackTickRequestCompletion;
     if (playbackTickRequestCompletion !== null) {
       await playbackTickRequestCompletion;
@@ -1026,6 +1102,13 @@ implements SimulationAction, SimulationInternalAction {
     if (!Number.isFinite(value) || value < 0) {
       return;
     }
+    if (this.regionalMultiBaseEnabled && (value === 4 || value === 16)) {
+      return;
+    }
+    if (this.regionalSession !== null && value !== this.stateReadWrite.simulationSpeed) {
+      // 运行中区域提速/降速需重启重新预热；第一版仅在 stop 状态允许实际切换。
+      return;
+    }
 
     this.stateReadWrite.simulationSpeed = value;
     if (value === 0) {
@@ -1077,6 +1160,9 @@ implements SimulationAction, SimulationInternalAction {
   };
 
   public readonly enableTimeline: SimulationAction["enableTimeline"] = async () => {
+    if (this.regionalMultiBaseEnabled) {
+      return;
+    }
     runInAction(() => {
       this.stateReadWrite.timeline.enabled = true;
       this.stateReadWrite.timeline.readiness = "preparing";
@@ -2254,7 +2340,349 @@ implements SimulationAction, SimulationInternalAction {
     }
   }
 
+  private async startRegionalSimulation(): Promise<void> {
+    const sourceDocument = this.workspace.editor?.document.getSnapshot();
+    if (sourceDocument === undefined) {
+      runInAction(() => {
+        this.stateReadWrite.runtimeStatus = {
+          ...this.stateReadWrite.runtimeStatus,
+          mode: "error",
+          error: "Simulation cannot start before editor document is available.",
+        };
+      });
+      this.recoverFromStartFailure();
+      return;
+    }
+
+    const baseDefinitions = this.workspace.registry.baseDefinitions;
+    const currentBase = baseDefinitions.find((definition) => definition.id === sourceDocument.baseId);
+    if (currentBase === undefined) {
+      runInAction(() => {
+        this.stateReadWrite.runtimeStatus = {
+          ...this.stateReadWrite.runtimeStatus,
+          mode: "error",
+          error: `Unknown current base "${sourceDocument.baseId}".`,
+        };
+      });
+      this.recoverFromStartFailure();
+      return;
+    }
+
+    const regionDefinitions = baseDefinitions.filter((definition) => definition.tag === currentBase.tag);
+    if (regionDefinitions.length > 5) {
+      runInAction(() => {
+        this.stateReadWrite.runtimeStatus = {
+          ...this.stateReadWrite.runtimeStatus,
+          mode: "error",
+          error: `区域 ${currentBase.tag} 包含 ${regionDefinitions.length} 个基地，超过 5 个上限。`,
+        };
+      });
+      this.recoverFromStartFailure();
+      return;
+    }
+
+    const editor = this.workspace.editor;
+    if (regionDefinitions.length <= 1 || editor === null) {
+      // 单基地继续走现有快速路径，不创建退化区域屏障。
+      const result = await this.refreshFromCurrentDocument();
+      if (result.status === "started") {
+        runInAction(() => {
+          this.stateReadWrite.runningState = "start";
+        });
+        this.ensurePlaybackHotQueue();
+      } else {
+        this.recoverFromStartFailure();
+      }
+      return;
+    }
+
+    try {
+      const latestDocuments = await editor.queries.readLatestBaseDocuments(
+        regionDefinitions.map((definition) => definition.id),
+      );
+      const currentCompiledDocument = resolveSimulationCompileDocument({
+        document: sourceDocument,
+        workspace: this.workspace,
+      });
+      const documents = regionDefinitions.map((definition, index) => {
+        if (definition.id === sourceDocument.baseId) {
+          return currentCompiledDocument;
+        }
+        const latest = latestDocuments[index] ?? currentCompiledDocument;
+        return appendBaseBuiltinEntitiesToDocument({
+          document: latest,
+          workspace: this.workspace,
+        });
+      });
+
+      const registry = this.workspace.registry;
+      const topologies: RegionalBaseTopologyInput[] = documents.map((document, index) => ({
+        baseId: document.baseId,
+        regionBaseOrderIndex: index,
+        topology: compileSimulationTopology({
+          document,
+          registry,
+          poweredEntityIds: computePoweredEntityIds({ document, registry }),
+          activeActivityIds: normalizeActiveActivityIds(this.getActiveActivityIds?.() ?? []),
+        }),
+      }));
+
+      const admission = buildRegionalWarehouseOutletTable({ registry, topologies });
+      if (!admission.ok || admission.table === null) {
+        runInAction(() => {
+          this.stateReadWrite.runtimeStatus = {
+            ...this.stateReadWrite.runtimeStatus,
+            mode: "error",
+            error: admission.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+          };
+        });
+        this.recoverFromStartFailure();
+        return;
+      }
+
+      this.disposeRegionalSession();
+      const currentBaseId = sourceDocument.baseId;
+      const expectedBaseIds = topologies.map((input) => input.baseId);
+      const initialWarehouseCounts: Record<string, number> = {};
+      const currentSpeed = this.stateReadWrite.simulationSpeed;
+      const currentBaseDynamicTickRate = currentSpeed < 2 ? 20 : 10;
+      const backgroundDynamicTickRate = 2;
+
+      let ports: readonly RegionalBasePort[];
+      let authorityPort: RegionalAuthorityPort | null = null;
+      let bridges: readonly RegionalWorkerBridge[] = [];
+      if (this.regionalWorkerMode === "runtime" || typeof Worker !== "function") {
+        ports = topologies.map((input) => new LocalRegionalBasePort({
+          registry,
+          baseId: input.baseId,
+          regionBaseOrderIndex: input.regionBaseOrderIndex,
+          topology: input.topology,
+          table: admission.table!,
+          initialWarehouseCounts,
+          isCurrentBase: input.baseId === currentBaseId,
+          simulationSpeed: currentSpeed,
+          fixedDynamicTickRate: input.baseId === currentBaseId
+            ? currentBaseDynamicTickRate
+            : backgroundDynamicTickRate,
+          advanceMode: input.baseId === currentBaseId ? "per-tick" : "coarse",
+        }));
+      } else {
+        const created = await createBrowserRegionalSessionPorts({
+          currentBaseId,
+          topologies,
+          table: admission.table!,
+          expectedBaseIds,
+          initialWarehouseCounts,
+          currentBaseDynamicTickRate,
+          backgroundDynamicTickRate,
+        });
+        ports = created.ports;
+        authorityPort = created.authorityPort;
+        bridges = created.bridges;
+      }
+
+      this.regionalSessionBridges = bridges;
+      this.regionalPreviousWarehouseCounts = initialWarehouseCounts;
+      this.regionalSession = new RegionalSimulationSession({
+        sessionId: `regional-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+        registry,
+        topologies,
+        table: admission.table!,
+        currentBaseId,
+        expectedBaseIds,
+        initialWarehouseCounts,
+        simulationSpeed: currentSpeed,
+        currentBaseDynamicTickRate,
+        backgroundDynamicTickRate,
+      }, ports, authorityPort);
+      this.regionalSessionStopped = false;
+      this.regionalSessionPaused = false;
+      this.topology.setSnapshot(topologies.find((input) => input.baseId === currentBaseId)?.topology ?? null);
+      this.resetPlaybackHotQueue();
+      this.stateReadWrite.currentSnapshot = null;
+      this.stateReadWrite.currentPlaybackTickNumber = 0;
+      this.playbackTargetTickNumber = 0;
+
+      // 预填约 18 个稳态 Epoch，让 UI 只消费已经完成区域提交的结果。
+      for (let epoch = 0; epoch < 18 && !this.regionalSessionStopped; epoch += 1) {
+        const committed = await this.regionalSession.runEpoch(epoch);
+        this.enqueueRegionalCommittedEpoch(committed);
+      }
+
+      // stop 在预填期间被调用时，clearPlaybackProgress 已复位 runningState 与播放队列，
+      // 此处直接退出，不得再覆盖为 "start"。
+      if (this.regionalSessionStopped || this.regionalSession === null) {
+        return;
+      }
+
+      runInAction(() => {
+        this.stateReadWrite.runningState = "start";
+        this.stateReadWrite.runtimeStatus = {
+          mode: "running",
+          topologyId: this.topology.getSnapshot()?.topologyId ?? null,
+          documentHash: this.topology.getSnapshot()?.documentHash ?? null,
+          retainedFromTick: this.stateReadWrite.currentSnapshot?.tickNumber ?? 0,
+          latestTickNumber: this.latestRegionalPlaybackTickNumber(),
+          bufferSize: this.playbackHotQueue.size + (this.stateReadWrite.currentSnapshot === null ? 0 : 1),
+          maxBufferSize: 180,
+          dynamicTickRate: currentBaseDynamicTickRate,
+          error: null,
+        };
+      });
+      this.ensureRegionalSessionLoop();
+    } catch (error) {
+      console.error("[RegionalSimulation] Failed to start regional session.", error);
+      this.recoverFromStartFailure(error);
+    }
+  }
+
+  private latestRegionalPlaybackTickNumber(): number {
+    let latest = this.stateReadWrite.currentSnapshot?.tickNumber ?? 0;
+    for (const snapshot of this.playbackHotQueue.values()) {
+      latest = Math.max(latest, snapshot.tickNumber);
+    }
+    return latest;
+  }
+
+  private enqueueRegionalCommittedEpoch(committed: {
+    readonly epochNumber: number;
+    readonly gateTickNumber: number;
+    readonly warehouseCounts: Readonly<Record<string, number>>;
+    readonly snapshotsByBaseId: Readonly<Record<string, RuntimeTickSnapshot | null>>;
+    readonly playbackSnapshots: readonly RuntimeTickSnapshot[];
+  }): void {
+    const baseSnapshots = Object.values(committed.snapshotsByBaseId)
+      .filter((snapshot): snapshot is RuntimeTickSnapshot => snapshot !== null);
+    runInAction(() => {
+      for (const rawSnapshot of committed.playbackSnapshots) {
+        const tickNumber = rawSnapshot.tickNumber;
+        const isGateTick = tickNumber === committed.gateTickNumber;
+        const counts = isGateTick
+          ? committed.warehouseCounts
+          : this.regionalPreviousWarehouseCounts;
+        const snapshotsForStats = isGateTick
+          ? baseSnapshots
+          : this.regionalPreviousBaseSnapshots;
+        const snapshot: RuntimeTickSnapshot = {
+          ...rawSnapshot,
+          warehouseStats: aggregateRegionalWarehouseStats(snapshotsForStats, counts),
+        };
+        if (this.stateReadWrite.currentSnapshot === null && snapshot.tickNumber === 0) {
+          this.stateReadWrite.currentSnapshot = snapshot;
+          this.stateReadWrite.currentPlaybackTickNumber = 0;
+        } else if (snapshot.tickNumber > 0) {
+          this.playbackHotQueue.set(snapshot.tickNumber, snapshot);
+        }
+      }
+      this.regionalPreviousWarehouseCounts = committed.warehouseCounts;
+      this.regionalPreviousBaseSnapshots = baseSnapshots;
+      this.stateReadWrite.regionalTotalPowerDemand = baseSnapshots.reduce(
+        (sum, snapshot) => sum + snapshot.totalPowerDemand,
+        0,
+      );
+      this.stateReadWrite.runtimeStatus = {
+        ...this.stateReadWrite.runtimeStatus,
+        retainedFromTick: this.stateReadWrite.currentSnapshot?.tickNumber ?? 0,
+        latestTickNumber: this.latestRegionalPlaybackTickNumber(),
+        bufferSize: this.playbackHotQueue.size + (this.stateReadWrite.currentSnapshot === null ? 0 : 1),
+      };
+    });
+  }
+
+  private ensureRegionalSessionLoop(): void {
+    if (
+      this.regionalSession === null
+      || this.regionalSessionLoop !== null
+      || this.regionalSessionStopped
+      || this.regionalSessionPaused
+    ) {
+      return;
+    }
+    const generation = this.regionalSessionGeneration;
+    const loop = this.runRegionalSessionLoop();
+    const tracked = loop.finally(() => {
+      if (this.regionalSessionLoop === tracked) {
+        this.regionalSessionLoop = null;
+      }
+    });
+    this.regionalSessionLoop = tracked;
+    void loop.catch((error: unknown) => {
+      if (generation !== this.regionalSessionGeneration || this.regionalSessionStopped) {
+        return;
+      }
+      console.error("[RegionalSimulation] Session loop failed.", error);
+      runInAction(() => {
+        this.stateReadWrite.runningState = "pause";
+        this.stateReadWrite.runtimeStatus = {
+          ...this.stateReadWrite.runtimeStatus,
+          mode: "error",
+          error: error instanceof Error ? error.message : String(error),
+        };
+      });
+    });
+  }
+
+  private async runRegionalSessionLoop(): Promise<void> {
+    while (!this.regionalSessionStopped && !this.regionalSessionPaused) {
+      const session = this.regionalSession;
+      if (session === null) {
+        return;
+      }
+      if (this.playbackHotQueue.size >= 180) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        continue;
+      }
+      const committed = await session.runEpoch(session.committedEpochs.length);
+      if (this.regionalSessionStopped || this.regionalSession !== session) {
+        return;
+      }
+      this.enqueueRegionalCommittedEpoch(committed);
+    }
+  }
+
+  private disposeRegionalSession(): void {
+    this.regionalSessionGeneration += 1;
+    this.regionalSessionStopped = true;
+    this.regionalSessionPaused = false;
+    const session = this.regionalSession;
+    this.regionalSession = null;
+    this.regionalSessionLoop = null;
+    session?.dispose();
+    for (const bridge of this.regionalSessionBridges) {
+      bridge.dispose();
+    }
+    this.regionalSessionBridges = [];
+    this.regionalPreviousWarehouseCounts = {};
+    this.regionalPreviousBaseSnapshots = [];
+  }
+
+  /**
+   * 启动失败或启动被中断时复位到 stop，并清空播放队列与游标。
+   * 只在 start/startRegionalSimulation 的失败路径调用，
+   * 避免 runningState 卡在 "starting" 导致顶部控制按钮永久禁用，
+   * 以及失败后残留热队列造成 playbackDiag 空转（notReady=100%）。
+   * 传入 error 时覆盖 runtimeStatus 为 error，否则保留各失败分支已设置的具体错误信息。
+   */
+  private recoverFromStartFailure(error?: unknown): void {
+    this.disposeRegionalSession();
+    this.resetPlaybackHotQueue();
+    runInAction(() => {
+      this.stateReadWrite.runningState = "stop";
+      this.stateReadWrite.currentSnapshot = null;
+      this.stateReadWrite.currentPlaybackTickNumber = 0;
+      this.playbackTargetTickNumber = 0;
+      if (error !== undefined) {
+        this.stateReadWrite.runtimeStatus = {
+          ...this.stateReadWrite.runtimeStatus,
+          mode: "error",
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    });
+  }
+
   private clearPlaybackProgress(): void {
+    this.disposeRegionalSession();
     this.topologyRevision += 1;
     this.completeTopologyPresentationBoundary(false);
     this.stopTimelineWorker();
@@ -2265,6 +2693,7 @@ implements SimulationAction, SimulationInternalAction {
     this.stateReadWrite.runtimeStatus = createInitialSimulationRuntimeStatus();
     this.stateReadWrite.currentSnapshot = null;
     this.stateReadWrite.currentPlaybackTickNumber = 0;
+    this.stateReadWrite.regionalTotalPowerDemand = null;
     this.playbackTargetTickNumber = 0;
     this.stateReadWrite.statistics = { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 };
     this.tpsAccumulatedTicks = 0;
@@ -2390,6 +2819,48 @@ implements SimulationAction, SimulationInternalAction {
     // 追赶：跳到下一个 ≥ tickNumber 的 180 倍
     this.nextPerfReportTick = Math.ceil((tickNumber + 1) / 180) * 180;
   }
+}
+
+function aggregateRegionalWarehouseStats(
+  baseSnapshots: readonly RuntimeTickSnapshot[],
+  authorityCounts: Readonly<Record<string, number>>,
+): NonNullable<RuntimeTickSnapshot["warehouseStats"]> {
+  const items: Record<string, {
+    producedPerMinute: number;
+    consumedPerMinute: number;
+    warehouseCount: number;
+    lastChangedTick: number;
+  }> = {};
+
+  for (const snapshot of baseSnapshots) {
+    if (snapshot.warehouseStats === null) continue;
+    for (const [itemType, stats] of Object.entries(snapshot.warehouseStats.items)) {
+      const target = items[itemType] ??= {
+        producedPerMinute: 0,
+        consumedPerMinute: 0,
+        warehouseCount: 0,
+        lastChangedTick: 0,
+      };
+      target.producedPerMinute += stats.producedPerMinute;
+      target.consumedPerMinute += stats.consumedPerMinute;
+      target.lastChangedTick = Math.max(target.lastChangedTick, stats.lastChangedTick);
+    }
+  }
+  for (const [itemType, count] of Object.entries(authorityCounts)) {
+    if (count <= 0) continue;
+    const target = items[itemType] ??= {
+      producedPerMinute: 0,
+      consumedPerMinute: 0,
+      warehouseCount: 0,
+      lastChangedTick: 0,
+    };
+    target.warehouseCount = count;
+  }
+  return {
+    items,
+    statsWindowReady: baseSnapshots.every((snapshot) => snapshot.warehouseStats?.statsWindowReady === true)
+      && baseSnapshots.length > 0,
+  };
 }
 
 function cloneWorldDocument(document: WorldDocument): WorldDocument {

@@ -1,4 +1,7 @@
-import type { CompiledSimulationTopology } from "../types";
+import type {
+  CompiledSimulationTopology,
+  RegionalWarehouseWriteContext,
+} from "../types";
 import type {
   RuntimeDeviceRecipeState,
   SimulationMutableRuntimeState,
@@ -19,13 +22,14 @@ export function completeRecipeIfPossible(options: {
   readonly state: SimulationMutableRuntimeState;
   readonly deviceId: string;
   readonly recipe: RuntimeDeviceRecipeState;
+  readonly regionalWarehouse?: RegionalWarehouseWriteContext;
 }): boolean {
   if (!finishRecipeIfPossible(options.registry, options.topology, options.state, options.recipe)) {
     return false;
   }
 
   if (options.recipe.plan.recipeId === "r_warehouse_submit") {
-    submitSlotsToWarehouse(options.topology, options.state, options.deviceId);
+    submitSlotsToWarehouse(options.topology, options.state, options.deviceId, options.regionalWarehouse);
   }
 
   return true;

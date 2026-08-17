@@ -32,9 +32,10 @@ const routingTopologyCache = new WeakMap<CompiledSimulationTopology, RoutingTopo
 export function rotateRoutingCursors(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
+  excludedEdgeIds?: ReadonlySet<string>,
 ): void {
   // 预建 port→moved 缓存：一次扫描 edgeOrder，避免 portHasMovedEdge 逐 port 重复全量扫描。
-  const movedByPort = buildMovedEdgeByPort(topology, state);
+  const movedByPort = buildMovedEdgeByPort(topology, state, excludedEdgeIds);
   // 预建已连接端口集合：有 transferEdge 的 port 视为"已连接"。
   // AI-CORRECTION 2026-07-17: 连接集合和路由端口组只依赖不可变 topology，现按 topology 缓存并跨 tick 复用。
   const topologyCache = getRoutingTopologyCache(topology);
@@ -120,9 +121,13 @@ function buildConnectedPortIds(
 function buildMovedEdgeByPort(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
+  excludedEdgeIds?: ReadonlySet<string>,
 ): Map<string, boolean> {
   const moved = new Map<string, boolean>();
   for (const edgeId of topology.ordering.edgeOrder) {
+    if (excludedEdgeIds?.has(edgeId) === true) {
+      continue;
+    }
     const edge = topology.transferEdges[edgeId];
     const edgeState = state.transient.edges[edgeId];
     if (edge === undefined || edgeState === undefined) {
