@@ -90,11 +90,12 @@
 }
 
 .recipe-display-item-tooltip {
-  position: absolute;
+  position: fixed;
   z-index: 1000;
   top: calc(100% + 4px);
   left: 50%;
-  transform: translateX(-50%);
+  max-width: calc(100vw - 16px);
+  transform: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -117,10 +118,13 @@
   }
 
   span {
+    min-width: 0;
+    overflow: hidden;
     font-size: 0.75rem;
     font-weight: 600;
     color: #fff;
     line-height: 1.2;
+    text-overflow: ellipsis;
   }
 }
 

@@ -1,4 +1,14 @@
-import { type CSSProperties, type MouseEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type MouseEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
@@ -27,6 +37,51 @@ export interface RecipeDisplayProps {
   t: (key: string) => string;
 }
 
+interface RecipeTooltipPosition {
+  readonly itemId: string;
+  readonly left: number;
+  readonly top: number;
+}
+
+const RECIPE_TOOLTIP_GAP = 4;
+const RECIPE_TOOLTIP_VIEWPORT_PADDING = 8;
+
+function resolveRecipeTooltipPosition(
+  anchorRect: DOMRect,
+  tooltipRect: DOMRect,
+): Pick<RecipeTooltipPosition, "left" | "top"> {
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const maxLeft = Math.max(
+    RECIPE_TOOLTIP_VIEWPORT_PADDING,
+    viewportWidth - RECIPE_TOOLTIP_VIEWPORT_PADDING - tooltipRect.width,
+  );
+  const centeredLeft = anchorRect.left + anchorRect.width / 2 - tooltipRect.width / 2;
+  const left = Math.min(
+    maxLeft,
+    Math.max(RECIPE_TOOLTIP_VIEWPORT_PADDING, centeredLeft),
+  );
+  const spaceAbove = anchorRect.top - RECIPE_TOOLTIP_GAP - RECIPE_TOOLTIP_VIEWPORT_PADDING;
+  const spaceBelow = viewportHeight
+    - anchorRect.bottom
+    - RECIPE_TOOLTIP_GAP
+    - RECIPE_TOOLTIP_VIEWPORT_PADDING;
+  const placeBelow = spaceBelow >= tooltipRect.height || spaceBelow >= spaceAbove;
+  const preferredTop = placeBelow
+    ? anchorRect.bottom + RECIPE_TOOLTIP_GAP
+    : anchorRect.top - RECIPE_TOOLTIP_GAP - tooltipRect.height;
+  const maxTop = Math.max(
+    RECIPE_TOOLTIP_VIEWPORT_PADDING,
+    viewportHeight - RECIPE_TOOLTIP_VIEWPORT_PADDING - tooltipRect.height,
+  );
+  const top = Math.min(
+    maxTop,
+    Math.max(RECIPE_TOOLTIP_VIEWPORT_PADDING, preferredTop),
+  );
+
+  return { left, top };
+}
+
 function resolveItemIconSrc(itemId: string, index: RecipeDisplayIndex): string {
   const item = index.itemById.get(itemId);
   return createItemIconAssetUrl(item?.iconId ?? itemId);
@@ -48,8 +103,11 @@ export function RecipeDisplay({
 }: RecipeDisplayProps): ReactNode {
   const [hoverItemId, setHoverItemId] = useState<string | null>(null);
   const [clickedItemId, setClickedItemId] = useState<string | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<RecipeTooltipPosition | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const itemElements = useRef<Map<string, HTMLElement>>(new Map());
+  const hoverItemElementRef = useRef<HTMLElement | null>(null);
+  const clickedItemElementRef = useRef<HTMLElement | null>(null);
 
   // 点击外部关闭 tooltip
   useEffect(() => {
@@ -64,6 +122,7 @@ export function RecipeDisplay({
       if (tooltipEl?.contains(target)) return;
       // 点击在触发 item 上 → 不关闭，交给 item 的 onClick 处理 toggle
       if (itemEl?.contains(target)) return;
+      clickedItemElementRef.current = null;
       setClickedItemId(null);
     };
 
@@ -71,33 +130,76 @@ export function RecipeDisplay({
     return () => document.removeEventListener("pointerdown", handler);
   }, [clickedItemId]);
 
-  const handleItemClick = useCallback((itemId: string) => {
+  const handleItemClick = useCallback((itemId: string, itemElement: HTMLElement) => {
     setClickedItemId((prev) => {
       if (prev === itemId) {
+        clickedItemElementRef.current = null;
+        hoverItemElementRef.current = null;
         setHoverItemId(null);
         return null;
       }
+      clickedItemElementRef.current = itemElement;
       return itemId;
     });
   }, []);
 
-  const handleItemEnter = useCallback((itemId: string) => {
+  const handleItemEnter = useCallback((itemId: string, itemElement: HTMLElement) => {
     if (isTouch) return;
+    hoverItemElementRef.current = itemElement;
     setHoverItemId(itemId);
   }, [isTouch]);
 
   const handleItemLeave = useCallback((itemId: string) => {
     if (isTouch) return;
-    setHoverItemId((prev) => (prev === itemId ? null : prev));
+    setHoverItemId((prev) => {
+      if (prev !== itemId) return prev;
+      hoverItemElementRef.current = null;
+      return null;
+    });
   }, [isTouch]);
 
   const recipe = index.recipeById.get(recipeId);
+  const activeTooltipItemId = clickedItemId ?? hoverItemId;
+  const activeTooltipItem = activeTooltipItemId !== null ? index.itemById.get(activeTooltipItemId) ?? null : null;
+
+  useLayoutEffect(() => {
+    if (activeTooltipItemId === null || activeTooltipItem === null) return;
+
+    const updateTooltipPosition = () => {
+      const anchorElement = clickedItemId === null
+        ? hoverItemElementRef.current
+        : clickedItemElementRef.current;
+      const tooltipElement = tooltipRef.current;
+      if (anchorElement === null || tooltipElement === null) return;
+
+      const nextPosition = resolveRecipeTooltipPosition(
+        anchorElement.getBoundingClientRect(),
+        tooltipElement.getBoundingClientRect(),
+      );
+      setTooltipPosition((current) =>
+        current?.itemId === activeTooltipItemId
+          && current.left === nextPosition.left
+          && current.top === nextPosition.top
+          ? current
+          : {
+              itemId: activeTooltipItemId,
+              ...nextPosition,
+            },
+      );
+    };
+
+    updateTooltipPosition();
+    window.addEventListener("resize", updateTooltipPosition);
+    window.addEventListener("scroll", updateTooltipPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateTooltipPosition);
+      window.removeEventListener("scroll", updateTooltipPosition, true);
+    };
+  }, [activeTooltipItem, activeTooltipItemId, clickedItemId]);
+
   if (recipe === undefined) return null;
 
   const machine = index.entityById.get(recipe.machineId) ?? null;
-
-  const activeTooltipItemId = clickedItemId ?? hoverItemId;
-  const activeTooltipItem = activeTooltipItemId !== null ? index.itemById.get(activeTooltipItemId) ?? null : null;
 
   const renderItemIcon = (itemId: string, amount: number, key: string) => {
     const isActive = activeTooltipItemId === itemId;
@@ -105,6 +207,7 @@ export function RecipeDisplay({
       <span
         key={key}
         className={cm(styles, "recipe-display-formula-item")}
+        data-recipe-item-id={itemId}
         ref={(el) => {
           if (el !== null) {
             itemElements.current.set(itemId, el);
@@ -112,11 +215,11 @@ export function RecipeDisplay({
             itemElements.current.delete(itemId);
           }
         }}
-        onMouseEnter={() => handleItemEnter(itemId)}
+        onMouseEnter={(event) => handleItemEnter(itemId, event.currentTarget)}
         onMouseLeave={() => handleItemLeave(itemId)}
         onClick={(e: MouseEvent) => {
           e.stopPropagation();
-          handleItemClick(itemId);
+          handleItemClick(itemId, e.currentTarget);
         }}
       >
         <span className={cm(styles, "recipe-display-formula-icon")}>
@@ -124,13 +227,29 @@ export function RecipeDisplay({
           <span>{amount}</span>
         </span>
         {isActive && activeTooltipItem !== null ? (
-          <div
-            ref={tooltipRef}
-            className={cm(styles, "recipe-display-item-tooltip")}
-          >
-            <img alt="" src={resolveItemIconSrc(activeTooltipItem.id, index)} />
-            <span>{t(activeTooltipItem.nameKey)}</span>
-          </div>
+          createPortal(
+            <div
+              ref={tooltipRef}
+              className={cm(styles, "recipe-display-item-tooltip")}
+              data-recipe-item-tooltip
+              role="tooltip"
+              style={{
+                left: tooltipPosition?.itemId === activeTooltipItemId
+                  ? `${tooltipPosition.left}px`
+                  : "0px",
+                top: tooltipPosition?.itemId === activeTooltipItemId
+                  ? `${tooltipPosition.top}px`
+                  : "0px",
+                visibility: tooltipPosition?.itemId === activeTooltipItemId
+                  ? "visible"
+                  : "hidden",
+              }}
+            >
+              <img alt="" src={resolveItemIconSrc(activeTooltipItem.id, index)} />
+              <span>{t(activeTooltipItem.nameKey)}</span>
+            </div>,
+            document.body,
+          )
         ) : null}
       </span>
     );
