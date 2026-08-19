@@ -485,6 +485,59 @@ describe("blueprint device id migration version chain", () => {
     },
   );
 
+  it("removes obsolete recipe channel config from schema 4 dark pipe inlets only", () => {
+    const singleInlet = {
+      ...createEntity("udpipe_loader_1"),
+      id: "single-inlet",
+      config: {
+        retained: true,
+        recipeChannels: [{ manualRecipeOnly: true }],
+        "recipeChannels[0].manualRecipeOnly": true,
+        channelRecipes: { retained: "retained-recipe" },
+      },
+    };
+    const multiInlet = {
+      ...createEntity("udpipe_loader_2"),
+      id: "multi-inlet",
+      config: {
+        retained: true,
+        "recipeChannels[0].manualRecipeOnly": true,
+        "recipeChannels[1].manualRecipeOnly": false,
+      },
+    };
+    const outlet = {
+      ...createEntity("udpipe_unloader_1"),
+      id: "outlet",
+      config: {
+        retained: true,
+        "recipeChannels[0].manualRecipeOnly": true,
+      },
+    };
+
+    const result = migrateBlueprintDocumentState({
+      entities: {
+        "single-inlet": singleInlet,
+        "multi-inlet": multiInlet,
+        outlet,
+      },
+      entityOrder: ["single-inlet", "multi-inlet", "outlet"],
+      slotLinks: [],
+    }, 4, 5);
+
+    expect(result).toMatchObject({
+      schemaVersion: 5,
+      entityOrder: ["single-inlet", "multi-inlet", "outlet"],
+      slotLinks: [],
+    });
+    expect(result?.entities["single-inlet"]?.config).toEqual({
+      retained: true,
+      channelRecipes: { retained: "retained-recipe" },
+    });
+    expect(result?.entities["multi-inlet"]?.config).toEqual({ retained: true });
+    expect(result?.entities.outlet?.config).toEqual(outlet.config);
+    expect(singleInlet.config).toHaveProperty("recipeChannels[0].manualRecipeOnly", true);
+  });
+
   it.each(
     BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.flatMap((spec) =>
       spec.deviceRules.map((rule) => ({ spec, rule })),

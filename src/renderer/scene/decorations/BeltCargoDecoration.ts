@@ -38,6 +38,8 @@ const ITEM_ICON_TEXTURE_INSET_PX = 2
 const BOX_CORNER_RADIUS_RATIO = 0.1
 const BOX_STROKE_WIDTH_PX = 1
 const BOX_TURN_CLEARANCE_PX = 2
+/** 转角端点间距以 128px 格子为视觉基准，实际尺寸按世界比例随缩放变化。 */
+const BOX_TURN_CLEARANCE_REFERENCE_GRID_SIZE_PX = 128
 const EMPTY_BELT_PORT_EXTENSION_ENTRIES: readonly BeltPortExtensionEntry[] = []
 const EMPTY_BELT_DISCONNECTED_PORT_ENTRIES: readonly BeltDisconnectedPortEntry[] = []
 // AI-CORRECTION 2026-06-20:
@@ -595,8 +597,11 @@ function resolveItemIconTextureKey(
 
 export function resolveBeltCargoBoxSize(gridCellSize: number): number {
   const maxTurnEndpointNonOverlapSize = gridCellSize * 0.5
+  const turnClearanceRatio = (
+    BOX_TURN_CLEARANCE_PX / BOX_TURN_CLEARANCE_REFERENCE_GRID_SIZE_PX
+  )
 
-  return Math.max(1, Math.floor(maxTurnEndpointNonOverlapSize - BOX_TURN_CLEARANCE_PX))
+  return Math.max(1, maxTurnEndpointNonOverlapSize - gridCellSize * turnClearanceRatio)
 }
 
 function resolveBeltCargoClipMask(options: {

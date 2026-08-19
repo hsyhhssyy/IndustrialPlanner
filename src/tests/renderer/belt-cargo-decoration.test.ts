@@ -382,9 +382,19 @@ describe("createBeltCargoDecoration", () => {
     }
   })
 
-  it("sizes cargo boxes so turn endpoint boxes do not overlap", () => {
-    expect(resolveBeltCargoBoxSize(100)).toBe(48)
-    expect(resolveBeltCargoBoxSize(64)).toBe(30)
+  it("keeps cargo boxes proportional while staying below the turn endpoint overlap limit", () => {
+    const referenceGridCellSize = 128
+    const referenceBoxSize = resolveBeltCargoBoxSize(referenceGridCellSize)
+    const referenceRatio = referenceBoxSize / referenceGridCellSize
+
+    expect(referenceBoxSize).toBe(62)
+
+    for (const gridCellSize of [8, 16, 32, 64, 100]) {
+      const boxSize = resolveBeltCargoBoxSize(gridCellSize)
+
+      expect(boxSize / gridCellSize).toBeCloseTo(referenceRatio)
+      expect(boxSize).toBeLessThan(gridCellSize * 0.5)
+    }
   })
 
   it("shows stationary ingredient cargo at the belt start", () => {

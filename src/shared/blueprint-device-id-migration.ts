@@ -23,6 +23,11 @@ const RESOURCE_PUMP_FOOTPRINT = {
   width: 3,
   height: 3,
 } as const;
+const DARK_PIPE_INLET_DEFINITION_IDS: ReadonlySet<string> = new Set([
+  "udpipe_loader_1",
+  "udpipe_loader_2",
+]);
+const DARK_PIPE_RECIPE_CHANNEL_CONFIG_PREFIX = "recipeChannels[";
 const RESOURCE_PUMP_MIGRATION_BY_DEFINITION_ID = {
   gas_pump_1: {
     cheatDefinitionId: "cheat_infinite_gas",
@@ -49,6 +54,11 @@ export interface BlueprintDeviceIdMigrationRule {
   readonly rotationOffset: GridRotation;
 }
 
+type BlueprintDocumentMigration =
+  | "normalize-admission-rate"
+  | "migrate-resource-pump-sources"
+  | "remove-dark-pipe-recipe-channel-config";
+
 export interface BlueprintDeviceIdMigrationSpec {
   readonly fromVersion: number;
   readonly toVersion: number;
@@ -63,7 +73,18 @@ export interface BlueprintDeviceIdMigrationSpec {
   //
   // Original code:
   // readonly entityConfigMigration?: "normalize-admission-rate";
-  readonly documentMigration?: "normalize-admission-rate" | "migrate-resource-pump-sources";
+  // AI-CORRECTION 2026-08-19: 同一 schema 版本可能包含多个相互独立的完整文档迁移，当前替代入口为 documentMigrations。
+  // AI-REMOVED 2026-08-19:
+  // Reason: 单值迁移入口无法在 schema 4→5 同时执行资源泵转换与暗管入口旧配置清理。
+  // Trigger: schema 5 新暗管入口定义已移除 recipeChannels，但历史蓝图仍携带该配置并会重建无效通道。
+  // Evidence: getting-started-tutorial 与 utimate-xiranite 的暗管入口配置包含 recipeChannels[...].manualRecipeOnly。
+  // Replacement: documentMigrations
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly documentMigration?: "normalize-admission-rate" | "migrate-resource-pump-sources";
+  readonly documentMigrations?: readonly BlueprintDocumentMigration[];
 }
 
 export interface BlueprintEntityDeviceIdMigrationResult<TEntity extends WorldEntity> {
@@ -165,13 +186,36 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
     fromVersion: 3,
     toVersion: 4,
     deviceRules: [],
-    documentMigration: "normalize-admission-rate",
+    // AI-REMOVED 2026-08-19:
+    // Reason: 文档迁移入口已统一为可组合的迁移序列。
+    // Trigger: schema 4→5 需要在同一版本执行资源泵与暗管入口两项迁移。
+    // Evidence: BlueprintDeviceIdMigrationSpec.documentMigrations 取代单值 documentMigration。
+    // Replacement: documentMigrations
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // documentMigration: "normalize-admission-rate",
+    documentMigrations: ["normalize-admission-rate"],
   },
   {
     fromVersion: 4,
     toVersion: 5,
     deviceRules: [],
-    documentMigration: "migrate-resource-pump-sources",
+    // AI-REMOVED 2026-08-19:
+    // Reason: schema 5 的资源泵迁移需要与暗管入口旧配置清理共同执行。
+    // Trigger: 暗管入口 recipeChannels 已从 registry 移除，历史配置必须在迁移时同步移除。
+    // Evidence: 历史系统蓝图的扁平配置会被 materializeConfigOverrides 重建为不完整 recipe channel。
+    // Replacement: documentMigrations
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // documentMigration: "migrate-resource-pump-sources",
+    documentMigrations: [
+      "migrate-resource-pump-sources",
+      "remove-dark-pipe-recipe-channel-config",
+    ],
   },
 ] as const satisfies readonly BlueprintDeviceIdMigrationSpec[];
 
@@ -261,14 +305,42 @@ export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
       ...nextState,
       entities: applyBlueprintDeviceIdMigrationRules(nextState.entities, spec.deviceRules),
     };
-    if (spec.documentMigration === "normalize-admission-rate") {
-      nextState = {
-        ...nextState,
-        entities: applyAdmissionRateConfigMigration(nextState.entities),
-      };
-    }
-    if (spec.documentMigration === "migrate-resource-pump-sources") {
-      nextState = applyResourcePumpSourceMigration(nextState);
+    // AI-REMOVED 2026-08-19:
+    // Reason: 两个互斥 if 只支持每个 schema 版本执行单项迁移，无法组合 schema 5 的独立迁移步骤。
+    // Trigger: 4→5 必须同时迁移资源泵并清理暗管入口 recipeChannels 旧配置。
+    // Evidence: BlueprintDeviceIdMigrationSpec 已改为 documentMigrations 有序列表。
+    // Replacement: 下方 documentMigrations 循环与 switch。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // if (spec.documentMigration === "normalize-admission-rate") {
+    //   nextState = {
+    //     ...nextState,
+    //     entities: applyAdmissionRateConfigMigration(nextState.entities),
+    //   };
+    // }
+    // if (spec.documentMigration === "migrate-resource-pump-sources") {
+    //   nextState = applyResourcePumpSourceMigration(nextState);
+    // }
+    for (const documentMigration of spec.documentMigrations ?? []) {
+      switch (documentMigration) {
+        case "normalize-admission-rate":
+          nextState = {
+            ...nextState,
+            entities: applyAdmissionRateConfigMigration(nextState.entities),
+          };
+          break;
+        case "migrate-resource-pump-sources":
+          nextState = applyResourcePumpSourceMigration(nextState);
+          break;
+        case "remove-dark-pipe-recipe-channel-config":
+          nextState = {
+            ...nextState,
+            entities: removeLegacyDarkPipeRecipeChannelConfig(nextState.entities),
+          };
+          break;
+      }
     }
     schemaVersion = spec.toVersion;
   }
@@ -361,6 +433,38 @@ function applyAdmissionRateConfigMigration<TEntity extends WorldEntity>(
           perMinuteLimit: normalizedRate,
         },
       },
+    };
+  }
+
+  return nextEntities;
+}
+
+function removeLegacyDarkPipeRecipeChannelConfig<TEntity extends WorldEntity>(
+  entities: Record<string, TEntity>,
+): Record<string, TEntity> {
+  let nextEntities = entities;
+
+  for (const [entityId, entity] of Object.entries(entities)) {
+    if (!DARK_PIPE_INLET_DEFINITION_IDS.has(entity.definitionId)) {
+      continue;
+    }
+
+    const configEntries = Object.entries(entity.config);
+    const retainedConfigEntries = configEntries.filter(([configPath]) =>
+      configPath !== "recipeChannels"
+      && !configPath.startsWith(DARK_PIPE_RECIPE_CHANNEL_CONFIG_PREFIX),
+    );
+    if (retainedConfigEntries.length === configEntries.length) {
+      continue;
+    }
+
+    if (nextEntities === entities) {
+      nextEntities = { ...entities };
+    }
+
+    nextEntities[entityId] = {
+      ...entity,
+      config: Object.fromEntries(retainedConfigEntries),
     };
   }
 

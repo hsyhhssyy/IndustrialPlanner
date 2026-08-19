@@ -648,7 +648,7 @@ describe("SlotConfigInspector", () => {
     expectSlotGroupRole(container, "item_output_buffer", "shared");
   });
 
-  it("renders water pump and dark pipe storage groups as shared slots", () => {
+  it("renders water pump output and dark pipe shared storage groups", () => {
     const workspace = createWorkspace();
     const picker = new WorkbenchEncyclopediaPickerController(() => ({
       desktopCategory: "all",
@@ -664,12 +664,16 @@ describe("SlotConfigInspector", () => {
     appHost = currentAppHost;
 
     const cases = [
-      { definitionId: "water_pump_1", slotGroupId: "fluid_output_buffer" },
-      { definitionId: "udpipe_loader_1", slotGroupId: "loader_buffer" },
-      { definitionId: "udpipe_unloader_1", slotGroupId: "unloader_buffer" },
-      { definitionId: "udpipe_loader_2", slotGroupId: "loader_buffer" },
-      { definitionId: "udpipe_unloader_2", slotGroupId: "unloader_buffer" },
-    ];
+      {
+        definitionId: "water_pump_1",
+        slotGroupId: "fluid_output_buffer",
+        expectedRole: "output",
+      },
+      { definitionId: "udpipe_loader_1", slotGroupId: "loader_buffer", expectedRole: "shared" },
+      { definitionId: "udpipe_unloader_1", slotGroupId: "unloader_buffer", expectedRole: "shared" },
+      { definitionId: "udpipe_loader_2", slotGroupId: "loader_buffer", expectedRole: "shared" },
+      { definitionId: "udpipe_unloader_2", slotGroupId: "unloader_buffer", expectedRole: "shared" },
+    ] as const;
 
     for (const testCase of cases) {
       const definition = requireDefinition(workspace, testCase.definitionId);
@@ -697,9 +701,14 @@ describe("SlotConfigInspector", () => {
         );
       });
 
-      expectSlotGroupRole(container, testCase.slotGroupId, "shared");
-      expect(container.querySelector("[data-slot-config-role='input']")).toBeNull();
-      expect(container.querySelector("[data-slot-config-role='output']")).toBeNull();
+      expectSlotGroupRole(container, testCase.slotGroupId, testCase.expectedRole);
+      if (testCase.expectedRole === "shared") {
+        expect(container.querySelector("[data-slot-config-role='input']")).toBeNull();
+        expect(container.querySelector("[data-slot-config-role='output']")).toBeNull();
+      } else {
+        expect(container.querySelector("[data-slot-config-role='input']")).not.toBeNull();
+        expect(container.querySelector("[data-slot-config-role='output']")).not.toBeNull();
+      }
     }
   });
 
