@@ -12,7 +12,7 @@ import type { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 // Original code:
 // import type { LogisticsKind } from "@/domain/shared/logistics";
 import type { RecipeType } from "@/domain/registry/types/recipe-definition";
-import type { EntitySimulationBehaviorDeclaration } from "@/domain/registry/types/entity-simulation-mode";
+import type { EntitySimulationBehaviorDeclaration } from "@/domain/registry/types/entity-simulation-behavior";
 import type { SimulationMode } from "@/domain/shared/simulation-mode";
 import type { WaterPurifierOutputMode } from "@/shared/water-purifier-node";
 import type { SimulationMutableRuntimeState } from "./runtime/runtime-state";
@@ -115,6 +115,19 @@ export interface RegionalWarehouseStage3Options {
   readonly writeContext: RegionalWarehouseWriteContext | null;
 }
 
+/** 地区资源面板传入仿真的供给设置。有限速率统一以每分钟物品数表示。 */
+export interface RegionalResourceSupplySetting {
+  readonly itemId: string;
+  readonly mode: "infinite" | "rate";
+  readonly perMinute: number;
+}
+
+/** 编译后的地区资源供给策略；仅包含当前活动版本中仍可用的自然资源。 */
+export interface CompiledRegionalResourceSupply {
+  readonly infiniteItemIds: readonly string[];
+  readonly finitePerMinuteByItemId: Readonly<Record<string, number>>;
+}
+
 export interface CompiledSimulationTopology {
   readonly schemaVersion: 6;
   /** 编译时使用的显式模式；Worker 与 runtime 不得从区域上下文存在性推断。 */
@@ -150,6 +163,8 @@ export interface CompiledSimulationTopology {
   readonly edgeIdsByOutputPortId?: Readonly<Record<string, readonly string[]>>;
   /** 编译期设备顺序索引，避免热路径排序反复调用 indexOf。 */
   readonly deviceOrderIndexById?: Readonly<Record<string, number>>;
+  /** 地区资源供给策略。旧快照可以省略，等价于没有地区资源供给。 */
+  readonly regionalResourceSupply?: CompiledRegionalResourceSupply;
   readonly ordering: {
     readonly deviceOrder: readonly string[];
     readonly nodeOrder: readonly string[];
@@ -577,6 +592,8 @@ export interface WarehouseItemStats {
   readonly consumedPerMinute: number;
   /** 当前仓库中该物品的数量 */
   readonly warehouseCount: number;
+  /** 当前仓库是否对该物品提供无限库存。 */
+  readonly infinite: boolean;
   /** 最后一次发生变化（产出或消耗）的 tick 号 */
   readonly lastChangedTick: number;
 }

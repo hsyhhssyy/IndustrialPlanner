@@ -11,6 +11,7 @@ import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import type {
   CompiledSimulationTopology,
+  RegionalResourceSupplySetting,
   RuntimeTickSnapshot,
   RuntimeTransferSnapshot,
 } from "@/simulation/types";
@@ -23,6 +24,7 @@ export interface RunBlueprintSimulationOptions {
   readonly registry: RegistryContract;
   /** 启用轻量性能统计，输出逐 tick 阶段耗时报告 */
   readonly perfEnabled?: boolean;
+  readonly regionalResources?: readonly RegionalResourceSupplySetting[];
 }
 
 export interface BlueprintSimulationReport {
@@ -59,6 +61,7 @@ export interface BlueprintSimulationTickReport {
   readonly transfers: readonly RuntimeTransferSnapshot[];
   readonly diagnostics: readonly RuntimeTickSnapshot["diagnostics"][number][];
   readonly devices: Readonly<Record<string, SimulationDeviceRuntimeStatusReadModel>>;
+  readonly warehouseStats: RuntimeTickSnapshot["warehouseStats"];
 }
 
 export interface BlueprintSimulationSummary {
@@ -112,6 +115,9 @@ export async function runBlueprintSimulation(
   const host = createSimulationHost(workspace, {
     workerMode: "runtime",
     getPerfEnabled: options.perfEnabled ? () => true : undefined,
+    ...(options.regionalResources === undefined
+      ? {}
+      : { getRegionalResourceSettings: () => options.regionalResources! }),
   });
 
   try {
@@ -276,6 +282,17 @@ function createTickReport(options: {
     transfers: options.snapshot.transfers.map((transfer) => ({ ...transfer })),
     diagnostics: options.snapshot.diagnostics.map((diagnostic) => ({ ...diagnostic })),
     devices,
+    warehouseStats: options.snapshot.warehouseStats === null
+      ? null
+      : {
+          items: Object.fromEntries(
+            Object.entries(options.snapshot.warehouseStats.items).map(([itemId, stats]) => [
+              itemId,
+              { ...stats },
+            ]),
+          ),
+          statsWindowReady: options.snapshot.warehouseStats.statsWindowReady,
+        },
   };
 }
 

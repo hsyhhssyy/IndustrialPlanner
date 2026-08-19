@@ -248,6 +248,7 @@ function buildWarehouseStats(
 ): WarehouseStats | null {
   const recipeStats = state.persistent.recipeStats;
   const items: Record<string, WarehouseItemStats> = {};
+  const infiniteItemTypes = new Set<string>();
 
   // 收集所有在配方统计中或仓库中有数据的物品
   const allItemTypes = new Set<string>();
@@ -271,8 +272,14 @@ function buildWarehouseStats(
       for (const slotId of node.slotIds) {
         const storageSlotId = resolveStorageSlotId(state, slotId);
         const slotState = state.persistent.slots[storageSlotId];
-        if (slotState === undefined || slotState.itemType === null || slotState.count <= 0) continue;
-        allItemTypes.add(slotState.itemType);
+        const itemType = slotState?.itemType ?? topology.slots[slotId]?.lock ?? null;
+        if (itemType === null) continue;
+        if (resolveEffectiveIgnoreStock(topology, state, slotId)) {
+          infiniteItemTypes.add(itemType);
+          allItemTypes.add(itemType);
+        }
+        if (slotState === undefined || slotState.count <= 0) continue;
+        allItemTypes.add(itemType);
       }
     }
   }
@@ -298,6 +305,7 @@ function buildWarehouseStats(
       producedPerMinute: aggregated?.producedPerMinute ?? 0,
       consumedPerMinute: aggregated?.consumedPerMinute ?? 0,
       warehouseCount,
+      infinite: infiniteItemTypes.has(itemType),
       lastChangedTick: recipeStats.lastChangedTick[itemType] ?? 0,
     };
   }

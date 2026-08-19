@@ -595,7 +595,17 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
               //
               // Original code:
               // regionalSimulationUiState.allBasesEnabled = false;
-              appHost.workspace.simulation?.actions.setRegionalMultiBaseEnabled(false);
+              // AI-REMOVED 2026-08-19:
+              // Reason: 关闭开发期实验开关只能停用当前有效模式，不能清除已经同步的用户选择。
+              // Trigger: 用户要求多基地选择具备记忆，且实验性开关保持设备本地。
+              // Evidence: main.tsx 根据实验开关与 RegionalSettingsController.multiBaseEnabled 派生 SimulationMode。
+              // Replacement: src/main.tsx 的多基地有效模式 reaction。
+              // Risk: Low
+              // Human Review: Required
+              //
+              // Original code:
+              // appHost.workspace.simulation?.actions.setRegionalMultiBaseEnabled(false);
+              // AI-CORRECTION 2026-08-19: 上方旧注释所述“Action 已负责切回”不再有效；有效模式由组合根 reaction 负责。
             }
           }
         }),

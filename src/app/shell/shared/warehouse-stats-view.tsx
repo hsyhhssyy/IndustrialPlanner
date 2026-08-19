@@ -22,6 +22,7 @@ type WarehouseStatsEntry = {
   readonly producedPerMinute: number;
   readonly consumedPerMinute: number;
   readonly warehouseCount: number;
+  readonly infinite: boolean;
   readonly lastChangedTick: number;
   readonly pinned: boolean;
   readonly statsWindowReady: boolean;
@@ -112,6 +113,7 @@ export function buildWarehouseStatsEntries(options: {
         producedPerMinute: stats.producedPerMinute,
         consumedPerMinute: stats.consumedPerMinute,
         warehouseCount: stats.warehouseCount,
+        infinite: stats.infinite,
         lastChangedTick: stats.lastChangedTick,
         pinned: pinnedSet.has(itemId),
         statsWindowReady,
@@ -173,7 +175,7 @@ export function WarehouseStatsView({
             </span>
             <span className={cm(styles, "warehouse-stats-number")}>{entry.statsWindowReady ? formatStatsNumber(entry.producedPerMinute) : "---"}</span>
             <span className={cm(styles, "warehouse-stats-number")}>{entry.statsWindowReady ? formatStatsNumber(entry.consumedPerMinute) : "---"}</span>
-            <span className={cm(styles, "warehouse-stats-number")}>{formatStatsNumber(entry.warehouseCount)}</span>
+            <span className={cm(styles, "warehouse-stats-number")}>{entry.infinite ? "∞" : formatStatsNumber(entry.warehouseCount)}</span>
             {mode === "dialog" ? (
               <button
                 aria-pressed={entry.pinned}

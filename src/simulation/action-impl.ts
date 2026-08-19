@@ -34,8 +34,10 @@ import {
   STANDARD_TICK_RATE_PER_SECOND,
 } from "./tick-rate";
 import type {
+  CompiledRegionalResourceSupply,
   CompiledSimulationTopology,
   RuntimeTickSnapshot,
+  RegionalResourceSupplySetting,
   SimulationStartResult,
   SimulationTickPullStatus,
   SimulationTopologyMigration,
@@ -228,6 +230,7 @@ interface SimulationActionImplOptions {
   getPerfEnabled?: () => boolean;
   getDebugDataEnabled?: () => boolean;
   getActiveActivityIds?: () => readonly string[];
+  getRegionalResourceSettings?: (regionTag: string) => readonly import("./types").RegionalResourceSupplySetting[];
   regionalWorkerMode?: "auto" | "runtime";
 }
 
@@ -359,6 +362,7 @@ implements SimulationAction, SimulationInternalAction {
   private readonly getPerfEnabled: (() => boolean) | undefined;
   private readonly getDebugDataEnabled: (() => boolean) | undefined;
   private readonly getActiveActivityIds: (() => readonly string[]) | undefined;
+  private readonly getRegionalResourceSettings: SimulationActionImplOptions["getRegionalResourceSettings"];
   private readonly regionalWorkerMode: "auto" | "runtime";
   // AI-REMOVED 2026-08-19:
   // Reason: 区域多基地开关必须由 SimulationState.simulationMode 作为唯一事实来源，不能在 Action 内另存一份状态。
@@ -380,6 +384,7 @@ implements SimulationAction, SimulationInternalAction {
   private regionalPreviousBaseSnapshots: readonly RuntimeTickSnapshot[] = [];
   private compiledDocument: WorldDocument | null = null;
   private compiledActivitySignature: string | null = null;
+  private compiledRegionalResourceSignature: string | null = null;
   private tpsAccumulatedTicks = 0;
   private tpsAccumulatedMs = 0;
   private nextPerfReportTick = 180;
@@ -440,6 +445,7 @@ implements SimulationAction, SimulationInternalAction {
     this.getPerfEnabled = options.getPerfEnabled;
     this.getDebugDataEnabled = options.getDebugDataEnabled;
     this.getActiveActivityIds = options.getActiveActivityIds;
+    this.getRegionalResourceSettings = options.getRegionalResourceSettings;
     this.regionalWorkerMode = options.regionalWorkerMode ?? "auto";
   }
 
@@ -914,6 +920,7 @@ implements SimulationAction, SimulationInternalAction {
       this.topology.setSnapshot(null);
       this.compiledDocument = null;
       this.compiledActivitySignature = null;
+      this.compiledRegionalResourceSignature = null;
       runInAction(() => {
         this.stateReadWrite.currentSnapshot = null;
         this.stateReadWrite.currentPlaybackTickNumber = 0;
@@ -943,12 +950,22 @@ implements SimulationAction, SimulationInternalAction {
     const nextDocumentHash = createSimulationDocumentHash(document);
     const activeActivityIds = normalizeActiveActivityIds(this.getActiveActivityIds?.() ?? []);
     const nextActivitySignature = JSON.stringify(activeActivityIds);
+    const currentBase = this.workspace.registry.baseDefinitions.find(
+      (definition) => definition.id === document.baseId,
+    );
+    const regionalResources = currentBase === undefined || this.getRegionalResourceSettings === undefined
+      ? undefined
+      : normalizeRegionalResourceSettings(this.getRegionalResourceSettings(currentBase.tag));
+    const nextRegionalResourceSignature = regionalResources === undefined
+      ? "legacy-device-policy"
+      : JSON.stringify(regionalResources);
     if (
       this.compiledDocument !== null
       && previousTopology !== null
       && this.stateReadWrite.runtimeStatus.mode !== "error"
       && previousTopology.documentHash === nextDocumentHash
       && this.compiledActivitySignature === nextActivitySignature
+      && this.compiledRegionalResourceSignature === nextRegionalResourceSignature
     ) {
       return {
         status: "started",
@@ -976,6 +993,7 @@ implements SimulationAction, SimulationInternalAction {
         registry: this.workspace.registry,
       }),
       activeActivityIds,
+      regionalResources,
     });
     const previousDocument = this.compiledDocument;
     const shouldMarkTimelineDocumentChange =
@@ -1052,6 +1070,7 @@ implements SimulationAction, SimulationInternalAction {
     this.topology.setSnapshot(compiledTopology);
     this.compiledDocument = cloneWorldDocument(document);
     this.compiledActivitySignature = nextActivitySignature;
+    this.compiledRegionalResourceSignature = nextRegionalResourceSignature;
 
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = response.status;
@@ -2456,6 +2475,9 @@ implements SimulationAction, SimulationInternalAction {
       });
 
       const registry = this.workspace.registry;
+      const regionalResources = this.getRegionalResourceSettings === undefined
+        ? undefined
+        : normalizeRegionalResourceSettings(this.getRegionalResourceSettings(currentBase.tag));
       const topologies: RegionalBaseTopologyInput[] = documents.map((document, index) => ({
         baseId: document.baseId,
         regionBaseOrderIndex: index,
@@ -2465,6 +2487,7 @@ implements SimulationAction, SimulationInternalAction {
           simulationMode: SIMULATION_MODE.regionalMultiBase,
           poweredEntityIds: computePoweredEntityIds({ document, registry }),
           activeActivityIds: normalizeActiveActivityIds(this.getActiveActivityIds?.() ?? []),
+          regionalResources,
         }),
       }));
 
@@ -2606,7 +2629,11 @@ implements SimulationAction, SimulationInternalAction {
           : this.regionalPreviousBaseSnapshots;
         const snapshot: RuntimeTickSnapshot = {
           ...rawSnapshot,
-          warehouseStats: aggregateRegionalWarehouseStats(snapshotsForStats, counts),
+          warehouseStats: aggregateRegionalWarehouseStats(
+            snapshotsForStats,
+            counts,
+            this.topology.getSnapshot()?.regionalResourceSupply,
+          ),
         };
         if (this.stateReadWrite.currentSnapshot === null && snapshot.tickNumber === 0) {
           this.stateReadWrite.currentSnapshot = snapshot;
@@ -2729,6 +2756,7 @@ implements SimulationAction, SimulationInternalAction {
     this.stopTimelineWorker();
     this.topology.setSnapshot(null);
     this.compiledDocument = null;
+    this.compiledRegionalResourceSignature = null;
     this.stateReadWrite.runningState = "stop";
     this.stateReadWrite.hasStarted = false;
     this.stateReadWrite.runtimeStatus = createInitialSimulationRuntimeStatus();
@@ -2865,11 +2893,13 @@ implements SimulationAction, SimulationInternalAction {
 function aggregateRegionalWarehouseStats(
   baseSnapshots: readonly RuntimeTickSnapshot[],
   authorityCounts: Readonly<Record<string, number>>,
+  supply: CompiledRegionalResourceSupply | undefined,
 ): NonNullable<RuntimeTickSnapshot["warehouseStats"]> {
   const items: Record<string, {
     producedPerMinute: number;
     consumedPerMinute: number;
     warehouseCount: number;
+    infinite: boolean;
     lastChangedTick: number;
   }> = {};
 
@@ -2880,10 +2910,12 @@ function aggregateRegionalWarehouseStats(
         producedPerMinute: 0,
         consumedPerMinute: 0,
         warehouseCount: 0,
+        infinite: false,
         lastChangedTick: 0,
       };
       target.producedPerMinute += stats.producedPerMinute;
       target.consumedPerMinute += stats.consumedPerMinute;
+      target.infinite ||= stats.infinite;
       target.lastChangedTick = Math.max(target.lastChangedTick, stats.lastChangedTick);
     }
   }
@@ -2893,9 +2925,32 @@ function aggregateRegionalWarehouseStats(
       producedPerMinute: 0,
       consumedPerMinute: 0,
       warehouseCount: 0,
+      infinite: false,
       lastChangedTick: 0,
     };
     target.warehouseCount = count;
+  }
+  for (const itemType of supply?.infiniteItemIds ?? []) {
+    const target = items[itemType] ??= {
+      producedPerMinute: 0,
+      consumedPerMinute: 0,
+      warehouseCount: 0,
+      infinite: false,
+      lastChangedTick: 0,
+    };
+    target.infinite = true;
+  }
+  for (const [itemType, perMinute] of Object.entries(
+    supply?.finitePerMinuteByItemId ?? {},
+  )) {
+    const target = items[itemType] ??= {
+      producedPerMinute: 0,
+      consumedPerMinute: 0,
+      warehouseCount: 0,
+      infinite: false,
+      lastChangedTick: 0,
+    };
+    target.producedPerMinute += perMinute;
   }
   return {
     items,
@@ -2965,6 +3020,18 @@ function normalizeActiveActivityIds(activityIds: readonly string[]): string[] {
   return [...new Set(activityIds)]
     .filter((activityId) => activityId.length > 0)
     .sort();
+}
+
+function normalizeRegionalResourceSettings(
+  settings: readonly RegionalResourceSupplySetting[],
+): RegionalResourceSupplySetting[] {
+  return [...settings]
+    .map((setting) => ({
+      itemId: setting.itemId,
+      mode: setting.mode,
+      perMinute: setting.perMinute,
+    }))
+    .sort((left, right) => left.itemId.localeCompare(right.itemId));
 }
 
 function resolveSimulationCompileDocument(options: {

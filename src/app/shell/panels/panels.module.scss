@@ -1009,6 +1009,281 @@
   text-transform: none;
 }
 
+.regional-resources-card {
+  min-width: 0;
+}
+
+.regional-resources-header {
+  min-width: 0;
+}
+
+.regional-resources-region {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.regional-resources-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.regional-resources-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 30px;
+  padding: 5px 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-1);
+  color: var(--text-1);
+  font-size: 0.75rem;
+}
+
+.regional-resources-actions button:not(:disabled):hover {
+  border-color: var(--line-strong);
+  background: var(--surface-3);
+  color: var(--text-0);
+}
+
+.regional-resources-actions svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.regional-resources-list {
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+}
+
+.regional-resource-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px 24px;
+  grid-template-areas:
+    "item item item"
+    "rate infinity remove";
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 4px 5px;
+  border-bottom: 1px solid var(--line);
+}
+
+.regional-resource-row:last-child {
+  border-bottom: 0;
+}
+
+.regional-resource-item {
+  grid-area: item;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 4px;
+  color: var(--text-0);
+  font-size: 0.76rem;
+}
+
+.regional-resource-item img {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.regional-resource-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.regional-resource-rate {
+  grid-area: rate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  color: var(--text-2);
+  font-size: 0.68rem;
+}
+
+.regional-resource-rate-input {
+  width: 100%;
+  min-width: 0;
+  height: 26px;
+  padding: 3px 5px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  font-size: 0.75rem;
+  text-align: right;
+  outline: none;
+}
+
+.regional-resource-rate-input:focus {
+  border-color: var(--accent-strong);
+}
+
+.regional-resource-infinite-value {
+  color: var(--accent-strong);
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.regional-resource-infinity,
+.regional-resource-remove {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.regional-resource-infinity {
+  grid-area: infinity;
+}
+
+.regional-resource-remove {
+  grid-area: remove;
+}
+
+.regional-resource-infinity.is-active {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.regional-resource-remove:not(:disabled):hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.regional-resource-infinity svg,
+.regional-resource-remove svg {
+  width: 12px;
+  height: 12px;
+}
+
+.regional-resource-profile-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.regional-resource-profile-dialog {
+  display: grid;
+  gap: 12px;
+  width: min(480px, 100%);
+  max-height: min(620px, calc(100vh - 32px));
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface-1);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+}
+
+.regional-resource-profile-dialog > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.regional-resource-profile-dialog h2 {
+  margin: 0;
+  color: var(--text-0);
+  font-size: 1rem;
+}
+
+.regional-resource-profile-dialog > header button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-1);
+}
+
+.regional-resource-profile-list {
+  display: grid;
+  gap: 8px;
+}
+
+.regional-resource-profile-list > button {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  text-align: left;
+}
+
+.regional-resource-profile-list > button:hover {
+  border-color: var(--accent-strong);
+  background: var(--surface-3);
+}
+
+.regional-resource-profile-list > button > svg {
+  width: 22px;
+  height: 22px;
+  color: var(--accent-strong);
+}
+
+.regional-resource-profile-list > button > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.regional-resource-profile-list strong {
+  font-size: 0.84rem;
+}
+
+.regional-resource-profile-list small {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.regional-resource-profile-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.76rem;
+}
+
 .history-panel {
   min-width: 0;
 }

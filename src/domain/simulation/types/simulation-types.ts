@@ -155,6 +155,8 @@ export interface WarehouseItemStatsReadModel {
   readonly consumedPerMinute: number;
   /** 当前仓库中该物品的数量 */
   readonly warehouseCount: number;
+  /** 当前仓库是否对该物品提供无限库存。 */
+  readonly infinite: boolean;
   /** 最后一次发生变化（产出或消耗）的 tick 号 */
   readonly lastChangedTick: number;
 }

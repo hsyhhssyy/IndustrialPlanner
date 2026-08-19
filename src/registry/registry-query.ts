@@ -134,10 +134,19 @@ export const createRegistryQuery = (options: CreateRegistryQueryOptions): Regist
         findRecipeDefinitionsByMachine(machineId) {
             return recipeDefinitionsByMachineId.get(machineId) ?? []
         },
-        resolveEntitySimulationModeConfig(definitionId, simulationMode) {
-            return entityDefinitionById.get(definitionId)?.simulationModeConfigs?.[simulationMode]
-                ?? null
-        },
+        // AI-REMOVED 2026-08-19:
+        // Reason: RegistryQuery 不再解析设备的 SimulationMode 覆盖配置。
+        // Trigger: 用户要求删除 simulationModeConfigs 及全部对应基础设施。
+        // Evidence: EntityDefinition 仅保留基础 simulationBehaviors 与 inspectors。
+        // Replacement: findEntityDefinition。
+        // Risk: Medium - 所有调用方必须直接读取基础声明。
+        // Human Review: Required
+        //
+        // Original code:
+        // resolveEntitySimulationModeConfig(definitionId, simulationMode) {
+        //     return entityDefinitionById.get(definitionId)?.simulationModeConfigs?.[simulationMode]
+        //         ?? null
+        // },
         isBelt(definitionId) {
             return isLogisticsSegmentDefinitionId(LOGISTICS_KIND.belt, definitionId)
         },

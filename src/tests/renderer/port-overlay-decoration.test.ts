@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { WorldEntity } from "@/domain/document/world-document";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { createRegistryContract } from "@/registry";
 import {
   resolveLogisticsPortOverlayEntries,
@@ -13,6 +14,13 @@ const registry = createRegistryContract();
 const entityDefinitionMap = new Map(
   registry.entityDefinitions.map((definition) => [definition.id, definition]),
 );
+const OVERLAPPING_PORT_DEVICE_CASES = [
+  { definitionId: "cheat_infinite_solid", kind: "belt" },
+  { definitionId: "cheat_infinite_liquid", kind: "pipe" },
+  { definitionId: "cheat_infinite_gas", kind: "pipe" },
+  { definitionId: "log_connector", kind: "belt" },
+  { definitionId: "pipe_connector", kind: "pipe" },
+] as const;
 
 describe("PortOverlayDecoration 端口语义", () => {
   it("空地出口可合法引出时显示箭头", () => {
@@ -213,6 +221,120 @@ describe("PortOverlayDecoration 端口语义", () => {
     )).toBe(true);
   });
 
+  for (const deviceCase of OVERLAPPING_PORT_DEVICE_CASES) {
+    it(`${deviceCase.definitionId} 在匹配物流模式下将同位置输入叉号和输出箭头聚合为一个箭头`, () => {
+      const device = createEntity("device", deviceCase.definitionId, 5, 5, 0);
+
+      const entries = resolveLogisticsPortOverlayEntries({
+        entities: [device],
+        entityDefinitionMap,
+        queries: registry.queries,
+        kind: deviceCase.kind,
+        direction: "output",
+      });
+
+      expect(entries).toHaveLength(4);
+      expect(entries.every((entry) =>
+        entry.entityId === device.id
+        && entry.state === "chevron"
+        && entry.direction === "output"
+      )).toBe(true);
+      expect(new Set(entries.map((entry) => entry.edge))).toEqual(
+        new Set(["NORTH", "EAST", "SOUTH", "WEST"]),
+      );
+    });
+  }
+
+  it("起笔后将同位置输出叉号和输入箭头聚合为一个输入箭头", () => {
+    const device = createEntity("device", "log_connector", 5, 5, 0);
+
+    const entries = resolveLogisticsPortOverlayEntries({
+      entities: [device],
+      entityDefinitionMap,
+      queries: registry.queries,
+      kind: "belt",
+      direction: "input",
+    });
+
+    expect(entries).toHaveLength(4);
+    expect(entries.every((entry) =>
+      entry.state === "chevron" && entry.direction === "input"
+    )).toBe(true);
+  });
+
+  it("物流种类不匹配且端口位置可用时每个物理端口只显示一个叉号", () => {
+    const device = createEntity("device", "cheat_infinite_solid", 5, 5, 0);
+
+    const entries = resolveLogisticsPortOverlayEntries({
+      entities: [device],
+      entityDefinitionMap,
+      queries: registry.queries,
+      kind: "pipe",
+      direction: "output",
+    });
+
+    expect(entries).toHaveLength(4);
+    expect(entries.every((entry) => entry.state === "cross")).toBe(true);
+  });
+
+  it("草稿占用任一重叠逻辑 Port 时隐藏整个物理端口组", () => {
+    const device = createEntity("device", "cheat_infinite_solid", 5, 5, 0);
+
+    const entries = resolveLogisticsPortOverlayEntries({
+      entities: [device],
+      entityDefinitionMap,
+      queries: registry.queries,
+      kind: "belt",
+      direction: "output",
+      occupiedDraftPortKeys: new Set(["device:infinite_input:in_n"]),
+    });
+
+    expect(entries).toHaveLength(3);
+    expect(entries.some((entry) => entry.edge === "NORTH")).toBe(false);
+    expect(entries.every((entry) => entry.state === "chevron")).toBe(true);
+  });
+
+  it("同一设备投影到相同外侧格但边方向不同的物理端口不互相聚合", () => {
+    const definition = createSameOutsideCellDifferentEdgeDefinition();
+    const definitionMap = new Map(entityDefinitionMap);
+    definitionMap.set(definition.id, definition);
+    const device = createEntity("device", definition.id, 5, 5, 0);
+
+    const entries = resolveLogisticsPortOverlayEntries({
+      entities: [device],
+      entityDefinitionMap: definitionMap,
+      queries: registry.queries,
+      kind: "belt",
+      direction: "output",
+    });
+
+    expect(entries).toHaveLength(2);
+    expect(entries.map((entry) => entry.outsideGridPoint)).toEqual([
+      { x: 6, y: 5 },
+      { x: 6, y: 5 },
+    ]);
+    expect(new Set(entries.map((entry) => entry.edge))).toEqual(
+      new Set(["EAST", "NORTH"]),
+    );
+  });
+
+  it("不同设备的同位置物理端口不在语义聚合阶段合并", () => {
+    const first = createEntity("first", "cheat_infinite_solid", 5, 5, 0);
+    const second = createEntity("second", "cheat_infinite_solid", 5, 5, 0);
+
+    const entries = resolveLogisticsPortOverlayEntries({
+      entities: [first, second],
+      entityDefinitionMap,
+      queries: registry.queries,
+      kind: "belt",
+      direction: "output",
+    });
+
+    expect(entries).toHaveLength(8);
+    expect(entries.filter((entry) => entry.entityId === first.id)).toHaveLength(4);
+    expect(entries.filter((entry) => entry.entityId === second.id)).toHaveLength(4);
+  });
+
   it("单设备 selection 和 preview 语义下展示全部端口箭头", () => {
     const device = createEntity("device", "storager_1", 5, 5, 0);
 
@@ -233,6 +355,18 @@ describe("PortOverlayDecoration 端口语义", () => {
     const entries = resolveSelectedPortOverlayEntries({
       entities: [first, second],
       selectedEntityIds: new Set([first.id, second.id]),
+      entityDefinitionMap,
+    });
+
+    expect(entries).toEqual([]);
+  });
+
+  it("ChevronHidden 设备在单选和 preview 语义下仍不展示端口箭头", () => {
+    const device = createEntity("device", "cheat_infinite_solid", 5, 5, 0);
+
+    const entries = resolveSelectedPortOverlayEntries({
+      entities: [device],
+      selectedEntityIds: new Set([device.id]),
       entityDefinitionMap,
     });
 
@@ -343,6 +477,51 @@ function createEntity(
     rotation,
     config: {},
     tags: [],
+  };
+}
+
+function createSameOutsideCellDifferentEdgeDefinition(): EntityDefinition {
+  const source = entityDefinitionMap.get("cheat_infinite_solid");
+  if (source === undefined) {
+    throw new Error("Missing cheat_infinite_solid definition");
+  }
+  const sourcePortGroup = source.portGroups.find((portGroup) =>
+    portGroup.direction === "output"
+  );
+  const sourcePort = sourcePortGroup?.ports[0];
+  if (sourcePortGroup === undefined || sourcePort === undefined) {
+    throw new Error("Missing cheat_infinite_solid output port");
+  }
+
+  return {
+    ...source,
+    id: "test_same_outside_cell_different_edge",
+    footprint: { width: 2, height: 2 },
+    tags: [],
+    portGroups: [
+      {
+        ...sourcePortGroup,
+        id: "east_output",
+        ports: [{
+          ...sourcePort,
+          id: "east",
+          localCellX: 0,
+          localCellY: 0,
+          edge: "EAST",
+        }],
+      },
+      {
+        ...sourcePortGroup,
+        id: "north_output",
+        ports: [{
+          ...sourcePort,
+          id: "north",
+          localCellX: 1,
+          localCellY: 1,
+          edge: "NORTH",
+        }],
+      },
+    ],
   };
 }
 

@@ -12,6 +12,7 @@ export interface VersionResourceIndex {
 export interface VersionResourcePreset {
   readonly id: string;
   readonly name: string;
+  readonly regionTag?: string;
   readonly inputs: readonly ModuleBalancingIOPort[];
   readonly sourcePath: string;
 }
@@ -84,6 +85,9 @@ export function normalizeVersionResourcePreset(
 
   const id = normalizeNonEmptyString(value.id);
   const name = normalizeNonEmptyString(value.name);
+  const regionTag = value.regionTag === undefined
+    ? undefined
+    : normalizeNonEmptyString(value.regionTag);
   const inputs = value.inputs.flatMap((input) => {
     const normalized = normalizeVersionResourceInput(input);
     return normalized === null ? [] : [normalized];
@@ -91,6 +95,7 @@ export function normalizeVersionResourcePreset(
   if (
     id === null
     || name === null
+    || regionTag === null
     || inputs.length === 0
     || inputs.length !== value.inputs.length
     || new Set(inputs.map((input) => input.itemId)).size !== inputs.length
@@ -101,6 +106,7 @@ export function normalizeVersionResourcePreset(
   return {
     id,
     name,
+    ...(regionTag === undefined ? {} : { regionTag }),
     inputs,
   };
 }

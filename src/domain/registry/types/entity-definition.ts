@@ -3,7 +3,20 @@ import type { ItemDomainFlag } from "../../shared/item-domain-flags";
 import type { SlotLinkDefinition } from "../../shared/slot-link";
 import type { EntityInspectorDeclaration } from "./entity-inspector";
 import type { EntityPlacementBehaviorDeclaration } from "./entity-placement-behavior";
-import type { EntitySimulationModeConfigMap } from "./entity-simulation-mode";
+import type { EntitySimulationBehaviorDeclaration } from "./entity-simulation-behavior";
+// AI-REMOVED 2026-08-19:
+// Reason: EntityDefinition 不再持有按 SimulationMode 覆盖的 Registry 配置类型。
+// Trigger: 用户要求删除 simulationModeConfigs 及其基础设施。
+// Evidence: simulationBehaviors 与 inspectors 已成为所有运行模式唯一的设备声明。
+// Replacement: 上方 EntitySimulationBehaviorDeclaration 基础行为导入。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import type {
+//   EntitySimulationBehaviorDeclaration,
+//   EntitySimulationModeConfigMap,
+// } from "./entity-simulation-mode";
 
 export type ItemDomain = ItemDomainFlag;
 export type ItemFilterType = ItemDomainFlag;
@@ -94,11 +107,23 @@ export interface EntityDefinition {
    */
   inspectors: EntityInspectorDeclaration[];
 
-  /**
-   * 随仿真模式切换的静态行为与 Inspector 配置。
-   * 未声明某个模式时，设备沿用基础行为与 inspectors。
-   */
-  readonly simulationModeConfigs?: EntitySimulationModeConfigMap;
+  // AI-REMOVED 2026-08-19:
+  // Reason: Registry 不再允许设备根据 SimulationMode 覆盖 behavior 或 Inspector。
+  // Trigger: 用户要求删除 simulationModeConfigs 这类 mode override 及对应基础设施。
+  // Evidence: 当前所有设备在单基地与区域多基地模式下使用相同声明。
+  // Replacement: simulationBehaviors 与 inspectors。
+  // Risk: Medium - 未来模式差异必须重新设计，不能通过恢复该字段局部加回。
+  // Human Review: Required
+  //
+  // Original code:
+  // /**
+  //  * 随仿真模式切换的静态行为与 Inspector 配置。
+  //  * 未声明某个模式时，设备沿用基础行为与 inspectors。
+  //  */
+  // readonly simulationModeConfigs?: EntitySimulationModeConfigMap;
+
+  /** 不随仿真模式变化的基础运行行为。 */
+  readonly simulationBehaviors?: readonly EntitySimulationBehaviorDeclaration[];
 
   /**
    * 放置行为声明。

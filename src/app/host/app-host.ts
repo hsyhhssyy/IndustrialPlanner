@@ -22,6 +22,7 @@ import { WorkbenchRecipePickerController } from "../shell/state/recipe-picker-st
 import { WorkbenchSaveBlueprintDialogController } from "../shell/state/save-blueprint-dialog-state";
 import { cleanupDiscardableV2LocalStorageBeforeV3Boot } from "../migration";
 import { WorkbenchOverlapEntityMenuController } from "../shell/state/overlap-entity-menu-state";
+import { RegionalSettingsController } from "../regional-settings";
 // AI-REMOVED 2026-07-29:
 // Reason: WebDAV 生命周期和状态已由独立顶层 sync 模块拥有。
 // Trigger: 用户要求 app 不再实例化或驱动同步客户端。
@@ -47,6 +48,7 @@ export interface AppHost extends AppContract {
   encyclopediaPicker: WorkbenchEncyclopediaPickerController;
   recipePicker: WorkbenchRecipePickerController;
   overlapEntityMenu: WorkbenchOverlapEntityMenuController;
+  regionalSettings: RegionalSettingsController;
   // AI-REMOVED 2026-07-29:
   // Reason: 同步状态不再是 AppHost 的内部对象。
   // Trigger: 独立顶层 sync 模块通过 WorkspaceContract.sync 发布状态。
@@ -98,6 +100,7 @@ export function createAppHost(
     internalState.workbench.dialogState["save-blueprint"],
   );
   const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
+  const regionalSettings = new RegionalSettingsController(workspace.registry);
   const encyclopediaPicker = new WorkbenchEncyclopediaPickerController(
     () => internalState.workbench.toolbox.wiki,
   );
@@ -135,6 +138,7 @@ export function createAppHost(
     blueprintPreview,
     saveBlueprintDialog,
     overlapEntityMenu,
+    regionalSettings,
     encyclopediaPicker,
     recipePicker,
   });

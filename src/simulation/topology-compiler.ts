@@ -51,6 +51,7 @@ import type {
   CompiledTransportComponent,
   CompiledSimulationBlockageAutoClearance,
   CompiledSimulationWaterPurifierNodeConfig,
+  CompiledRegionalResourceSupply,
   SimulationAcceptRule,
   SimulationAdmissionRule,
   SimulationCompileDiagnostic,
@@ -60,6 +61,7 @@ import type {
   SimulationPortDirection,
   SimulationPortKind,
   SimulationTransportClass,
+  RegionalResourceSupplySetting,
 } from "./types";
 
 // 从 EntityDefinition 解构的子类型别名。
@@ -77,6 +79,7 @@ interface CompileOptions {
   readonly poweredEntityIds: ReadonlySet<string>;
   readonly simulationMode: SimulationMode;
   readonly activeActivityIds?: readonly string[];
+  readonly regionalResources?: readonly RegionalResourceSupplySetting[];
 }
 
 interface DeviceCompileResult {
@@ -124,6 +127,22 @@ export function compileSimulationTopology(
   const inactiveActivityItemIds = new Set(options.registry.itemDefinitions
     .filter((item) => !isItemAvailableByActivity(item, activeActivityIds))
     .map((item) => item.id));
+  const regionalResourceSupply = compileRegionalResourceSupply(
+    activeItemDefinitions,
+    options.regionalResources ?? [],
+  );
+  const regionalInfiniteItemIds = new Set(regionalResourceSupply.infiniteItemIds);
+  const controlledRegionalItemIds = new Set(
+    activeItemDefinitions
+      .filter((item) => (
+        item.tags.includes("自然资源")
+        && (
+          options.regionalResources !== undefined
+          || item.tags.includes("无限供应")
+        )
+      ))
+      .map((item) => item.id),
+  );
 
   const deviceOrder: string[] = [];
   const nodeOrder: string[] = [];
@@ -146,6 +165,7 @@ export function compileSimulationTopology(
       options.document,
       activeItemDefinitions,
       options.registry.queries,
+      regionalInfiniteItemIds,
     ),
     devices,
     nodes,
@@ -192,7 +212,16 @@ export function compileSimulationTopology(
         inactiveActivityItemIds,
         baseId: options.document.baseId,
         poweredEntityIds: options.poweredEntityIds,
-        simulationMode: options.simulationMode,
+        // AI-REMOVED 2026-08-19:
+        // Reason: 单个设备编译不再接收 SimulationMode；模式只属于拓扑运行架构。
+        // Trigger: 用户要求 Registry 删除 mode override 及对应基础设施。
+        // Evidence: compileEntityDevice 只读取基础 simulationBehaviors。
+        // Replacement: 顶层 CompiledSimulationTopology.simulationMode。
+        // Risk: Low
+        // Human Review: Required
+        //
+        // Original code:
+        // simulationMode: options.simulationMode,
       }),
       devices,
       nodes,
@@ -235,6 +264,14 @@ export function compileSimulationTopology(
   })) {
     links[link.id] = link;
   }
+  applyRegionalResourceStockPolicy({
+    itemDefinitions: activeItemDefinitions,
+    controlledItemIds: controlledRegionalItemIds,
+    infiniteItemIds: regionalInfiniteItemIds,
+    devices,
+    slots,
+    links,
+  });
 
   for (const connection of compilePhysicalConnections(
     portOrder.map((portId) => ports[portId]),
@@ -329,6 +366,7 @@ export function compileSimulationTopology(
     edgeIdsByInputPortId,
     edgeIdsByOutputPortId,
     deviceOrderIndexById,
+    regionalResourceSupply,
     ordering: {
       deviceOrder,
       nodeOrder,
@@ -360,6 +398,7 @@ export function compileSimulationTopology(
     edgeIdsByInputPortId,
     edgeIdsByOutputPortId,
     deviceOrderIndexById,
+    regionalResourceSupply,
     ordering: {
       deviceOrder,
       nodeOrder,
@@ -469,6 +508,7 @@ function compileWarehouseDevice(
   document: WorldDocument,
   itemDefinitions: readonly ItemDefinition[],
   registryQueries: RegistryContract["queries"],
+  regionalInfiniteItemIds: ReadonlySet<string>,
 ): DeviceCompileResult {
   const deviceId = `device:warehouse:${document.baseId}`;
   const nodeId = `${deviceId}/node:warehouse`;
@@ -482,7 +522,7 @@ function compileWarehouseDevice(
     lock: item.id,
     initialItemType: item.id,
     initialCount: 0,
-    ignoreStock: false,
+    ignoreStock: regionalInfiniteItemIds.has(item.id),
   }));
   // AI-REMOVED 2026-08-02:
   // Reason: 仓库槽位直接由活动可用 ItemDefinition 编译，不再经过 itemCatalog。
@@ -560,6 +600,97 @@ function compileWarehouseDevice(
   };
 }
 
+function compileRegionalResourceSupply(
+  itemDefinitions: readonly ItemDefinition[],
+  settings: readonly RegionalResourceSupplySetting[],
+): CompiledRegionalResourceSupply {
+  const naturalItemIds = new Set(
+    itemDefinitions.filter((item) => item.tags.includes("自然资源")).map((item) => item.id),
+  );
+  const fixedInfiniteItemIds = new Set(
+    itemDefinitions
+      .filter((item) => item.tags.includes("自然资源") && item.tags.includes("无限供应"))
+      .map((item) => item.id),
+  );
+  const settingByItemId = new Map(settings.map((setting) => [setting.itemId, setting]));
+  const infiniteItemIds = new Set(fixedInfiniteItemIds);
+  const finitePerMinuteByItemId: Record<string, number> = {};
+
+  for (const itemId of [...naturalItemIds].sort()) {
+    if (fixedInfiniteItemIds.has(itemId)) {
+      continue;
+    }
+    const setting = settingByItemId.get(itemId);
+    if (setting?.mode === "infinite") {
+      infiniteItemIds.add(itemId);
+      continue;
+    }
+    if (
+      setting?.mode === "rate"
+      && Number.isSafeInteger(setting.perMinute)
+      && setting.perMinute >= 10
+      && setting.perMinute % 10 === 0
+    ) {
+      finitePerMinuteByItemId[itemId] = setting.perMinute;
+    }
+  }
+
+  return {
+    infiniteItemIds: [...infiniteItemIds].sort(),
+    finitePerMinuteByItemId: Object.fromEntries(
+      Object.entries(finitePerMinuteByItemId).sort(([left], [right]) => left.localeCompare(right)),
+    ),
+  };
+}
+
+/**
+ * 地区资源是所有自然资源库存语义的唯一事实来源。设备槽位上的旧 ignoreStock
+ * 不能绕过有限 Profile，因此与隐藏仓库 share-all 相连的两端都按地区策略覆盖。
+ */
+function applyRegionalResourceStockPolicy(options: {
+  readonly itemDefinitions: readonly ItemDefinition[];
+  readonly controlledItemIds: ReadonlySet<string>;
+  readonly infiniteItemIds: ReadonlySet<string>;
+  readonly devices: Record<string, CompiledSimulationDevice>;
+  readonly slots: Record<string, CompiledSimulationSlot>;
+  readonly links: Readonly<Record<string, CompiledSimulationSlotLink>>;
+}): void {
+  const warehouseSlotIds = new Set(
+    Object.values(options.devices)
+      .filter((device) => device.definitionId === "warehouse")
+      .flatMap((device) => device.nodeIds)
+      .flatMap((nodeId) => Object.values(options.slots)
+        .filter((slot) => slot.nodeId === nodeId)
+        .map((slot) => slot.id)),
+  );
+
+  for (const link of Object.values(options.links)) {
+    if (link.linkType !== "share-all") {
+      continue;
+    }
+    const linkedSlotIds = [...link.sourceSlotIds, ...link.targetSlotIds];
+    const warehouseSlotId = linkedSlotIds.find((slotId) => warehouseSlotIds.has(slotId));
+    if (warehouseSlotId === undefined) {
+      continue;
+    }
+    const warehouseSlot = options.slots[warehouseSlotId];
+    const itemId = warehouseSlot?.lock ?? warehouseSlot?.initialItemType ?? null;
+    if (itemId === null || !options.controlledItemIds.has(itemId)) {
+      continue;
+    }
+    for (const slotId of linkedSlotIds) {
+      const slot = options.slots[slotId];
+      if (slot === undefined) {
+        continue;
+      }
+      options.slots[slotId] = {
+        ...slot,
+        ignoreStock: options.infiniteItemIds.has(itemId),
+      };
+    }
+  }
+}
+
 function requireRegisteredItemDomain(
   registryQueries: RegistryContract["queries"],
   itemId: string,
@@ -600,7 +731,16 @@ function compileEntityDevice(options: {
   readonly inactiveActivityItemIds: ReadonlySet<string>;
   readonly baseId: string;
   readonly poweredEntityIds: ReadonlySet<string>;
-  readonly simulationMode: SimulationMode;
+  // AI-REMOVED 2026-08-19:
+  // Reason: 设备编译不再根据 SimulationMode 解析 Registry 覆盖。
+  // Trigger: 用户要求删除 Registry mode override 基础设施。
+  // Evidence: simulationBehaviors 是模式无关的唯一设备行为输入。
+  // Replacement: CompileOptions.simulationMode 仅保留在拓扑层。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly simulationMode: SimulationMode;
 }): DeviceCompileResult {
   const deviceId = `device:${options.entity.id}`;
   const definition = applyPortPriorityGroupConfig(
@@ -666,13 +806,31 @@ function compileEntityDevice(options: {
   const consumptionChannelCount = recipeChannels.findIndex(
     (channel) => channel.type !== "consumption-channel",
   );
-  const simulationBehaviors = options.registryQueries.resolveEntitySimulationModeConfig(
-    definition.id,
-    options.simulationMode,
-  )?.behaviors.map((behavior) => ({
+  const simulationBehaviors = (options.definition.simulationBehaviors ?? []).map((behavior) => ({
     ...behavior,
     storageSlotGroupIds: [...behavior.storageSlotGroupIds],
-  })) ?? [];
+  }));
+  // AI-REMOVED 2026-08-19:
+  // Reason: Topology Compiler 不再从 Registry 按 SimulationMode 选择设备 behavior 覆盖。
+  // Trigger: 用户要求删除 simulationModeConfigs 及对应基础设施。
+  // Evidence: EntityDefinition.simulationBehaviors 是设备行为唯一声明，所有模式编译相同静态行为。
+  // Replacement: 上方直接编译 options.definition.simulationBehaviors。
+  // Risk: Medium - 未来真实模式差异不能在 Registry 中局部恢复。
+  // Human Review: Required
+  //
+  // Original code:
+  // const modeSimulationBehaviors = options.registryQueries.resolveEntitySimulationModeConfig(
+  //   definition.id,
+  //   options.simulationMode,
+  // )?.behaviors;
+  // const simulationBehaviors = (
+  //   modeSimulationBehaviors
+  //   ?? options.definition.simulationBehaviors
+  //   ?? []
+  // ).map((behavior) => ({
+  //   ...behavior,
+  //   storageSlotGroupIds: [...behavior.storageSlotGroupIds],
+  // }));
   const device: CompiledSimulationDevice = {
     id: deviceId,
     sourceEntityId: options.entity.id,
@@ -698,8 +856,17 @@ function compileEntityDevice(options: {
     configHash: hashStable({
       entity: options.entity,
       definition,
-      simulationMode: options.simulationMode,
       simulationBehaviors,
+      // AI-REMOVED 2026-08-19:
+      // Reason: 设备 configHash 不再因运行架构模式不同而变化。
+      // Trigger: 用户要求 Registry 删除 mode override；设备基础声明在所有模式下相同。
+      // Evidence: topologyHashInput 已独立包含 simulationMode，Worker 路由校验仍保留。
+      // Replacement: topologyHashInput.simulationMode。
+      // Risk: Low - 模式切换仍会生成不同 topologyId，但不会伪造设备配置变化。
+      // Human Review: Required
+      //
+      // Original code:
+      // simulationMode: options.simulationMode,
     }),
     blockageAutoClearance: compileBlockageAutoClearance(definition, options.entity.config),
     waterPurifierNode: compileWaterPurifierNode(definition.id, options.entity.config),

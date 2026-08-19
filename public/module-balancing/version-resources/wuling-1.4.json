@@ -1,6 +1,7 @@
 {
   "id": "version-resource:wuling-1.4",
   "name": "武陵1.4版本资源",
+  "regionTag": "武陵",
   "inputs": [
     {
       "itemId": "item_originium_ore",

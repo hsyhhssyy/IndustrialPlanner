@@ -40,6 +40,9 @@ const BOX_STROKE_WIDTH_PX = 1
 const BOX_TURN_CLEARANCE_PX = 2
 /** 转角端点间距以 128px 格子为视觉基准，实际尺寸按世界比例随缩放变化。 */
 const BOX_TURN_CLEARANCE_REFERENCE_GRID_SIZE_PX = 128
+const BOX_TURN_CLEARANCE_RATIO = (
+  BOX_TURN_CLEARANCE_PX / BOX_TURN_CLEARANCE_REFERENCE_GRID_SIZE_PX
+)
 const EMPTY_BELT_PORT_EXTENSION_ENTRIES: readonly BeltPortExtensionEntry[] = []
 const EMPTY_BELT_DISCONNECTED_PORT_ENTRIES: readonly BeltDisconnectedPortEntry[] = []
 // AI-CORRECTION 2026-06-20:
@@ -276,19 +279,27 @@ export function createBeltCargoDecoration(): DecorationLayer {
       const itemIconMap = ensureItemIconMap(ctx)
       const boxSize = resolveBeltCargoBoxSize(ctx.viewportState.gridCellPixelSize)
       const boxHalfSize = boxSize / 2
+      const boxTextureSize = Math.max(1, Math.round(boxSize))
 
       // 共享 box 纹理：只在 zoom 变化时重新烘焙
-      if (sharedBoxTextureSize !== boxSize) {
-        const boxCornerRadius = boxSize * BOX_CORNER_RADIUS_RATIO
+      // AI-CORRECTION 2026-08-19: 纹理按整数像素尺寸分桶，主体显示尺寸仍使用精确世界比例，避免连续缩放反复重建纹理。
+      if (sharedBoxTextureSize !== boxTextureSize) {
+        const boxCornerRadius = boxTextureSize * BOX_CORNER_RADIUS_RATIO
         const temp = new Graphics({ roundPixels: true })
         temp
-          .roundRect(-boxSize / 2, -boxSize / 2, boxSize, boxSize, boxCornerRadius)
+          .roundRect(
+            -boxTextureSize / 2,
+            -boxTextureSize / 2,
+            boxTextureSize,
+            boxTextureSize,
+            boxCornerRadius,
+          )
           .fill(0xffffff)
           .stroke({ width: BOX_STROKE_WIDTH_PX, color: 0x000000, pixelLine: true })
         sharedBoxTexture?.destroy(true)
         sharedBoxTexture = ctx.renderHost.app.renderer.generateTexture(temp)
         temp.destroy()
-        sharedBoxTextureSize = boxSize
+        sharedBoxTextureSize = boxTextureSize
       }
       sharedCargoLayer.mask = simplifiedDeviceIcons ? null : sharedMaskSprite
       const sharedMaskBuildStartedAtMs = performance.now()
@@ -298,7 +309,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
           beltRects: cachedBeltRects ?? [],
           portExtensionEntries: portConnectivityEntries.extensions,
           disconnectedPortEntries: portConnectivityEntries.disconnectedPorts,
-          disconnectedCapLength: boxHalfSize + BOX_STROKE_WIDTH_PX,
+          disconnectedCapLength: Math.round(boxHalfSize + BOX_STROKE_WIDTH_PX),
           source: sharedMaskSource,
           sprite: sharedMaskSprite,
           texture: sharedMaskTexture,
@@ -597,9 +608,7 @@ function resolveItemIconTextureKey(
 
 export function resolveBeltCargoBoxSize(gridCellSize: number): number {
   const maxTurnEndpointNonOverlapSize = gridCellSize * 0.5
-  const turnClearanceRatio = (
-    BOX_TURN_CLEARANCE_PX / BOX_TURN_CLEARANCE_REFERENCE_GRID_SIZE_PX
-  )
+  const turnClearanceRatio = BOX_TURN_CLEARANCE_RATIO
 
   return Math.max(1, maxTurnEndpointNonOverlapSize - gridCellSize * turnClearanceRatio)
 }
@@ -999,8 +1008,12 @@ function syncBeltCargoViews(options: {
     view.cargoRoot.rotation = entry.angleRadians
 
     // 共享 box 纹理：缩放不变时仅设 texture，无 clear / redraw 开销
+    // AI-CORRECTION 2026-08-19: 同一整数纹理桶内的缩放会复用 texture，仅同步精确世界比例对应的 Sprite 宽高。
     if (view.box.texture !== options.sharedBoxTexture) {
       view.box.texture = options.sharedBoxTexture
+      view.box.width = options.boxSize
+      view.box.height = options.boxSize
+    } else if (view.box.width !== options.boxSize || view.box.height !== options.boxSize) {
       view.box.width = options.boxSize
       view.box.height = options.boxSize
     }

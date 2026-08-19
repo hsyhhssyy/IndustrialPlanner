@@ -16,7 +16,7 @@ import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition
 import {
   ENTITY_INPUT_ROUTING_STRATEGY,
   ENTITY_SIMULATION_BEHAVIOR_TYPE,
-} from "@/domain/registry/types/entity-simulation-mode";
+} from "@/domain/registry/types/entity-simulation-behavior";
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import type {
   RuntimeDeviceRecipeState,

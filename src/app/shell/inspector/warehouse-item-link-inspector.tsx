@@ -125,9 +125,10 @@ export function WarehouseItemLinkInspector({
       });
 
       // 自然资源物品默认开启无限供应
+      // AI-CORRECTION 2026-08-19: 自然资源是否无限现由“地区资源”统一决定；设备文档槽位必须清除旧 ignoreStock，避免有限 Profile 被绕过。
       const selectedItem = itemById.get(itemId);
       if (selectedItem?.tags.includes("自然资源")) {
-        patchEntityConfig({ [row.ignoreStockPath]: true });
+        patchEntityConfig({ [row.ignoreStockPath]: false });
       }
     } finally {
       setPendingLinkIndex((current) => current === row.linkIndex ? null : current);
@@ -340,7 +341,8 @@ export function WarehouseItemLinkInspector({
                   <span className={cm(styles, "warehouse-link-ignore-stock-track")} aria-hidden="true" />
                 </label>
               */}
-              <button
+              {/* AI-CORRECTION 2026-08-19: 自然资源的无限状态只能在“地区资源”面板编辑，仓库链接行不再显示局部无限按钮。 */}
+              {itemDefinition?.tags.includes("自然资源") ? null : <button
                 aria-label={`${slotLabel} ${ignoreStockLabel}`}
                 aria-pressed={row.currentIgnoreStock}
                 className={cm(styles, "warehouse-link-infinity-button")}
@@ -352,7 +354,7 @@ export function WarehouseItemLinkInspector({
                 type="button"
               >
                 <span aria-hidden="true">∞</span>
-              </button>
+              </button>}
               <button
                 aria-label="清除"
                 className={cm(styles, "warehouse-link-action-button warehouse-link-clear-button")}

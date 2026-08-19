@@ -11,7 +11,16 @@ import type {
 } from "@/domain/registry/types/entity-inspector";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
-import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
+// AI-REMOVED 2026-08-19:
+// Reason: Inspector 声明不再根据 SimulationMode 从 Registry 选择覆盖配置。
+// Trigger: 用户要求 Registry 删除 mode override 及对应基础设施。
+// Evidence: Selection Inspector 现始终读取 EntityDefinition.inspectors。
+// Replacement: selectedDefinition.inspectors。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import {
   buildProductionPlanningIndex,
 } from "@/app/shell/production-planning/production-planning-model";
@@ -472,12 +481,22 @@ export function SelectionInspectorSlot({
         return;
       }
 
-      const simulationModeConfig = appHost.workspace.registry.queries.resolveEntitySimulationModeConfig(
-        selectedDefinition.id,
-        appHost.workspace.simulation?.state.simulationMode ?? SIMULATION_MODE.singleBase,
-      );
-      const inspectorDeclarations = simulationModeConfig?.inspectors
-        ?? selectedDefinition.inspectors;
+      const inspectorDeclarations = selectedDefinition.inspectors;
+      // AI-REMOVED 2026-08-19:
+      // Reason: App Inspector 不再消费 Registry 的 SimulationMode 覆盖配置。
+      // Trigger: 用户要求 Registry 删除 mode override 及对应基础设施。
+      // Evidence: EntityDefinition.inspectors 是所有模式唯一的 Inspector 声明。
+      // Replacement: 上方 selectedDefinition.inspectors。
+      // Risk: Low - 当前没有设备存在模式专用 Inspector。
+      // Human Review: Required
+      //
+      // Original code:
+      // const simulationModeConfig = appHost.workspace.registry.queries.resolveEntitySimulationModeConfig(
+      //   selectedDefinition.id,
+      //   appHost.workspace.simulation?.state.simulationMode ?? SIMULATION_MODE.singleBase,
+      // );
+      // const inspectorDeclarations = simulationModeConfig?.inspectors
+      //   ?? selectedDefinition.inspectors;
       const inspectors = inspectorDeclarations.map((declaration, declarationIndex) => {
         const id = [
           selectedEntity.id,

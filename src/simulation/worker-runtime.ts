@@ -50,6 +50,7 @@ import {
 import { computeActiveGasDiffusions } from "./runtime/gas-diffusion";
 import { computeActiveConsumptionDeviceIds } from "./runtime/consumption-channel";
 import { applyWaterPurifierManualOutput } from "./runtime/water-purifier-node";
+import { applySingleBaseRegionalResourceSupply } from "./runtime/regional-resource-supply";
 import {
   RegionWarehouseGate,
   resolveRegionalEpochGateTick,
@@ -2066,6 +2067,7 @@ export class SimulationWorkerRuntime {
       // 写入 transient.nodes。Stage 1 通过 finishRecipeIfPossible → createSlotOverlayState → 
       // findInputSlotForItem 可安全读取基于当前库存的正确值，无需每次配方完成时全拓扑扫描。
       rebuildExcludedItemTypesForTick(this.topology, this.runtimeState);
+      applySingleBaseRegionalResourceSupply(this.topology, this.runtimeState);
 
       const t0 = this.perfEnabled ? performance.now() : 0;
       const stage1AdvanceResult = advanceDevices(

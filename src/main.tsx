@@ -4,6 +4,7 @@ import { reaction } from "mobx";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import { createAppHost, type AppHost } from "@/app/host/app-host";
 import { createModuleBalancingSyncSources } from "@/app/module-balancing-sync-sources";
+import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
 import { createSyncHost } from "@/sync";
 import "@/styles/global.scss";
 import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
@@ -39,6 +40,7 @@ const workspace : WorkspaceContract = {
 }
 
 const appHost = createAppHost(workspace);
+await appHost.regionalSettings.hydrate();
 if (import.meta.env.DEV) {
   window.__industrialPlannerAppHost = appHost;
 }
@@ -55,7 +57,10 @@ reaction(
 );
 createEditorHost(workspace);
 await createSyncHost(workspace, {
-  assetSources: createModuleBalancingSyncSources(appHost),
+  assetSources: [
+    ...createModuleBalancingSyncSources(appHost),
+    appHost.regionalSettings.createSyncSource(),
+  ],
 });
 await createRenderHost(workspace);
 const simulationHost = createSimulationHost(workspace, {
@@ -65,7 +70,26 @@ const simulationHost = createSimulationHost(workspace, {
   getActiveActivityIds: () => resolveEffectiveActivityIds({
     selectedActivityIds: appHost.internalState.settings.selectedActivityIds,
   }),
+  getRegionalResourceSettings: (regionTag) =>
+    appHost.regionalSettings.getRegionResources(regionTag),
 });
+
+reaction(
+  () => [
+    appHost.regionalSettings.multiBaseEnabled,
+    regionalSimulationUiState.experimentalEnabled,
+    simulationHost.internalState.runningState,
+  ] as const,
+  ([persistedEnabled, experimentalEnabled, runningState]) => {
+    if (runningState !== "stop") {
+      return;
+    }
+    simulationHost.actions.setRegionalMultiBaseEnabled(
+      persistedEnabled && experimentalEnabled,
+    );
+  },
+  { fireImmediately: true },
+);
 
 reaction(
   () => JSON.stringify(appHost.internalState.settings.selectedActivityIds),

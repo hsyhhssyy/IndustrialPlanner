@@ -53,15 +53,30 @@ export type { EntityVariantDefinition } from "./types/entity-variant-definition"
 export {
 	ENTITY_INPUT_ROUTING_STRATEGY,
 	ENTITY_SIMULATION_BEHAVIOR_TYPE,
-} from "./types/entity-simulation-mode";
+} from "./types/entity-simulation-behavior";
 export type {
 	EntityInputRoutingSimulationBehaviorDeclaration,
 	EntityInputRoutingStrategy,
 	EntitySimulationBehaviorDeclaration,
 	EntitySimulationBehaviorType,
-	EntitySimulationModeConfig,
-	EntitySimulationModeConfigMap,
-} from "./types/entity-simulation-mode";
+} from "./types/entity-simulation-behavior";
+// AI-REMOVED 2026-08-19:
+// Reason: Domain Registry 公共出口不再暴露设备模式配置类型。
+// Trigger: 用户要求删除 simulationModeConfigs 及对应基础设施。
+// Evidence: entity-simulation-mode.ts 已无 Active Code，Registry 仅保留基础 behavior。
+// Replacement: 上方 entity-simulation-behavior 公共出口。
+// Risk: Medium - 外部类型引用必须迁移到基础 behavior 类型。
+// Human Review: Required
+//
+// Original code:
+// export type {
+// 	EntityInputRoutingSimulationBehaviorDeclaration,
+// 	EntityInputRoutingStrategy,
+// 	EntitySimulationBehaviorDeclaration,
+// 	EntitySimulationBehaviorType,
+// 	EntitySimulationModeConfig,
+// 	EntitySimulationModeConfigMap,
+// } from "./types/entity-simulation-mode";
 export type {
 	EntityInspectorDeclaration,
 	EntityInspectorType,

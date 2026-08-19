@@ -32,7 +32,16 @@ import {
   WarehouseStatsView,
 } from "@/app/shell/shared/warehouse-stats-view";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
+// AI-REMOVED 2026-08-19:
+// Reason: checkbox 改为读取 RegionalSettingsController，不再直接比较 SimulationMode。
+// Trigger: 用户要求多基地选择持久化、同步，实验开关仅控制当前是否生效。
+// Evidence: main.tsx 组合根根据持久选择派生有效 SimulationMode。
+// Replacement: AppHost.regionalSettings.multiBaseEnabled。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import { isCustomPortPriorityGroupsEnabled } from "@/shared/port-priority-groups";
 import { resolveBaseMaxPipeLogistics } from "@/shared/base-tags";
 import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
@@ -44,6 +53,7 @@ import {
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import panelStyles from "@/app/shell/panels/panels.module.scss";
+import { RegionalResourcesCard } from "@/app/shell/panels/regional-resources-card";
 
 const BASE_PANEL_POWER_INTERVAL_MS = 250;
 const BASE_PANEL_PROBLEM_INTERVAL_MS = 250;
@@ -170,9 +180,17 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
     return () => window.clearInterval(intervalId);
   }, [appHost, appHost.workspace.registry.entityDefinitions, currentDocument]);
 
-  const simulation = appHost.workspace.simulation;
-  const multiBaseEnabled = simulation?.state.simulationMode
-    === SIMULATION_MODE.regionalMultiBase;
+  // AI-REMOVED 2026-08-19:
+  // Reason: 多基地 checkbox 不再从 SimulationMode 读取，组件级 simulation 局部变量失去用途。
+  // Trigger: 多基地选择迁移到可持久化、可同步的 RegionalSettingsController。
+  // Evidence: 事件处理器在其局部作用域内仍会按需读取 simulation 以关闭时间轴。
+  // Replacement: appHost.regionalSettings.multiBaseEnabled。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // const simulation = appHost.workspace.simulation;
+  const multiBaseEnabled = appHost.regionalSettings.multiBaseEnabled;
 
   const baseProblems = useMemo<BaseProblem[]>(() => {
     const problems: BaseProblem[] = [];
@@ -376,7 +394,17 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
                     simulation.actions.disableTimeline();
                   }
 
-                  simulation.actions.setRegionalMultiBaseEnabled(enabled);
+                  // AI-REMOVED 2026-08-19:
+                  // Reason: 多基地选择属于可同步的地区设置资产，SimulationMode 仅保存实验开关过滤后的当前有效模式。
+                  // Trigger: 用户要求“同时运行所有基地”具备记忆并跨设备同步，同时关闭实验开关不得丢失选择。
+                  // Evidence: RegionalSettingsController.multiBaseEnabled 已是持久化与同步的唯一事实来源。
+                  // Replacement: appHost.regionalSettings.setMultiBaseEnabled(enabled)。
+                  // Risk: Low
+                  // Human Review: Required
+                  //
+                  // Original code:
+                  // simulation.actions.setRegionalMultiBaseEnabled(enabled);
+                  appHost.regionalSettings.setMultiBaseEnabled(enabled);
                   // AI-REMOVED 2026-08-19:
                   // Reason: checkbox 状态直接观察 SimulationState.simulationMode，不再同步 App 副本。
                   // Trigger: SimulationMode 单一事实源改造。
@@ -389,6 +417,7 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
                   // runInAction(() => {
                   //   regionalSimulationUiState.allBasesEnabled = enabled;
                   // });
+                  // AI-CORRECTION 2026-08-19: 当前 checkbox 读取 RegionalSettingsController，SimulationMode 由 main.tsx 的实验门控 reaction 派生。
                   if (enabled) {
                     setRegionalHelpTutorialVisible(true);
                   }
@@ -408,6 +437,10 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
           </div>
         )}
       </article>
+      <RegionalResourcesCard
+        appHost={appHost}
+        regionTag={currentBase?.tag ?? currentBaseName}
+      />
       <article className={cm(styles, "inspector-card")}>
         <div className={cm(styles, "card-header")}>
           <h3>{t("rightDock.power")}</h3>

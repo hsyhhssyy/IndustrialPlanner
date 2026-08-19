@@ -88,6 +88,8 @@ export class RegionalSimulationSession {
   private authorityState: RegionWarehouseAuthorityState;
   private activeArbitration: RegionWarehouseArbitrationResult | null = null;
   private readonly committed: RegionalCommittedEpoch[] = [];
+  private readonly regionalResourceRemainderSixths: Record<string, number> = {};
+  private completedResourceSupplyWindows = 0;
 
   public constructor(
     private readonly options: RegionalSessionRuntimeOptions,
@@ -157,6 +159,8 @@ export class RegionalSimulationSession {
       return { baseId: port.baseId, applied };
     }));
 
+    const resourceDeposits = this.createRegionalResourceDeposits(epochNumber);
+    const resourceDepositBaseId = expectedBaseIds[0] ?? null;
     const acks: RegionWarehouseAckBatch[] = expectedBaseIds.map((baseId) => {
       const result = applyResults.find((candidate) => candidate.baseId === baseId);
       const grant = arbitration.grantsByBaseId[baseId];
@@ -170,7 +174,9 @@ export class RegionalSimulationSession {
         baseId,
         grantId: grant.grantId,
         appliedOutletIds: [...grant.grantedOutletIds],
-        deposits: result.applied.deposits,
+        deposits: baseId === resourceDepositBaseId
+          ? mergeRegionalDeposits(result.applied.deposits, resourceDeposits)
+          : result.applied.deposits,
       };
     });
 
@@ -218,6 +224,46 @@ export class RegionalSimulationSession {
       port.dispose();
     }
   }
+
+  private createRegionalResourceDeposits(
+    epochNumber: number,
+  ): readonly RegionWarehouseDeposit[] {
+    const topology = this.options.topologies[0]?.topology;
+    if (topology === undefined) {
+      return [];
+    }
+    const gateTickNumber = 1 + epochNumber * 10;
+    const windowTicks = topology.standardTickRate * 10;
+    const completedWindows = Math.floor(Math.max(0, gateTickNumber - 1) / windowTicks);
+    const newWindowCount = completedWindows - this.completedResourceSupplyWindows;
+    this.completedResourceSupplyWindows = completedWindows;
+    if (newWindowCount <= 0) {
+      return [];
+    }
+
+    return Object.entries(
+      topology.regionalResourceSupply?.finitePerMinuteByItemId ?? {},
+    ).flatMap(([itemId, perMinute]) => {
+      const numerator = (this.regionalResourceRemainderSixths[itemId] ?? 0)
+        + perMinute * newWindowCount;
+      const amount = Math.floor(numerator / 6);
+      this.regionalResourceRemainderSixths[itemId] = numerator % 6;
+      return amount > 0 ? [{ itemId, amount }] : [];
+    });
+  }
+}
+
+function mergeRegionalDeposits(
+  baseDeposits: readonly RegionWarehouseDeposit[],
+  resourceDeposits: readonly RegionWarehouseDeposit[],
+): readonly RegionWarehouseDeposit[] {
+  const amountByItemId: Record<string, number> = {};
+  for (const deposit of [...baseDeposits, ...resourceDeposits]) {
+    amountByItemId[deposit.itemId] = (amountByItemId[deposit.itemId] ?? 0) + deposit.amount;
+  }
+  return Object.entries(amountByItemId)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([itemId, amount]) => ({ itemId, amount }));
 }
 
 export interface LocalRegionalBasePortOptions {

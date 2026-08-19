@@ -48,7 +48,7 @@ import {
 import {
   ENTITY_INPUT_ROUTING_STRATEGY,
   ENTITY_SIMULATION_BEHAVIOR_TYPE,
-} from "@/domain/registry/types/entity-simulation-mode";
+} from "@/domain/registry/types/entity-simulation-behavior";
 import {
   AnyDomain,
   FluidDomain,
@@ -56,7 +56,16 @@ import {
   type ItemDomainFlag as ItemDomainFlags,
 } from "@/domain/shared/item-domain-flags";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
-import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
+// AI-REMOVED 2026-08-19:
+// Reason: 暗管入口的公共 behavior 已提升到 EntityDefinition.simulationBehaviors，不再按模式键声明。
+// Trigger: 用户要求移除两个模式下完全重复的 simulationModeConfigs。
+// Evidence: 本文件已无 Active Code 使用 SIMULATION_MODE，仅审计注释保留历史模式键。
+// Replacement: None
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import { DEFAULT_PORT_PRIORITY_GROUP } from "@/shared/port-priority-groups";
 import { MAIN_CRAFT_GROUP_TAG } from "@/shared/entity-variants";
 import { RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY } from "@/shared/recipe-channel-behavior";
@@ -232,40 +241,58 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
     recipeChannels: [...(normalizedDefinition.recipeChannels ?? [])],
     placementBehaviors: normalizePlacementBehaviors(normalizedDefinition.placementBehaviors ?? []),
     inspectors: appendMissingInspectors(declaredInspectors, recipeMachineInspectors),
-    simulationModeConfigs: normalizeSimulationModeConfigs(
-      normalizedDefinition,
-      recipeMachineInspectors,
-    ),
+    // AI-REMOVED 2026-08-19:
+    // Reason: 实体定义工厂不再规范化任何按 SimulationMode 覆盖的 Registry 配置。
+    // Trigger: 用户要求删除 simulationModeConfigs 及对应基础设施。
+    // Evidence: EntityDefinition 已移除 simulationModeConfigs 属性。
+    // Replacement: 基础 inspectors 与 simulationBehaviors。
+    // Risk: Medium - 模式专用 Inspector/behavior 不再可声明。
+    // Human Review: Required
+    //
+    // Original code:
+    // simulationModeConfigs: normalizeSimulationModeConfigs(
+    //   normalizedDefinition,
+    //   recipeMachineInspectors,
+    // ),
   };
 }
 
-function normalizeSimulationModeConfigs(
-  definition: EntityDefinitionInput,
-  generatedInspectors: readonly EntityInspectorDeclaration[],
-): EntityDefinition["simulationModeConfigs"] {
-  if (definition.simulationModeConfigs === undefined) {
-    return undefined;
-  }
-
-  return Object.fromEntries(
-    Object.entries(definition.simulationModeConfigs).map(([mode, config]) => {
-      if (config === undefined) {
-        return [mode, config];
-      }
-
-      const inspectors = config.inspectors === undefined
-        ? undefined
-        : appendMissingInspectors(
-            [{ type: INSPECTOR_TYPE.problem }, ...config.inspectors],
-            generatedInspectors,
-          );
-      return [mode, {
-        behaviors: [...config.behaviors],
-        ...(inspectors === undefined ? {} : { inspectors }),
-      }];
-    }),
-  );
-}
+// AI-REMOVED 2026-08-19:
+// Reason: Registry 不再支持按 SimulationMode 覆盖 behavior 或 Inspector，因此不再需要模式配置规范化。
+// Trigger: 用户要求删除 simulationModeConfigs 及全部对应基础设施。
+// Evidence: EntityDefinition 与 RegistryQuery 已移除模式配置接口，App 和 Compiler 改读基础声明。
+// Replacement: createEntityDefinition 中现有基础 inspectors 规范化；simulationBehaviors 为静态 Registry 声明。
+// Risk: Medium - 未来若有真实模式差异必须重新设计统一模型。
+// Human Review: Required
+//
+// Original code:
+// function normalizeSimulationModeConfigs(
+//   definition: EntityDefinitionInput,
+//   generatedInspectors: readonly EntityInspectorDeclaration[],
+// ): EntityDefinition["simulationModeConfigs"] {
+//   if (definition.simulationModeConfigs === undefined) {
+//     return undefined;
+//   }
+//
+//   return Object.fromEntries(
+//     Object.entries(definition.simulationModeConfigs).map(([mode, config]) => {
+//       if (config === undefined) {
+//         return [mode, config];
+//       }
+//
+//       const inspectors = config.inspectors === undefined
+//         ? undefined
+//         : appendMissingInspectors(
+//             [{ type: INSPECTOR_TYPE.problem }, ...config.inspectors],
+//             generatedInspectors,
+//           );
+//       return [mode, {
+//         ...(config.behaviors === undefined ? {} : { behaviors: [...config.behaviors] }),
+//         ...(inspectors === undefined ? {} : { inspectors }),
+//       }];
+//     }),
+//   );
+// }
 
 // AI-REMOVED 2026-08-01:
 // Reason: normalizePipeFamilyFluidDefinition 与 normalizePipeFamilyAcceptRule 已删除。
@@ -1979,7 +2006,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "pipe_straight_1x1",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
-    tags: ["武陵", "OuterRingAllowed"],
+    tags: ["武陵", "OuterRingAllowed", "ChevronHidden"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
     ],
@@ -2021,7 +2048,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "pipe_turn_cw_1x1",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
-    tags: ["武陵", "OuterRingAllowed"],
+    tags: ["武陵", "OuterRingAllowed", "ChevronHidden"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
     ],
@@ -2063,7 +2090,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "pipe_turn_ccw_1x1",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
-    tags: ["武陵", "OuterRingAllowed"],
+    tags: ["武陵", "OuterRingAllowed", "ChevronHidden"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap },
     ],
@@ -2219,6 +2246,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   /**
    * item_pipe_connector — 管道连接器/十字路口（1×1）
    * 4 方向双通道独立运输：N↔S 与 W↔E 互不干扰，ChevronHidden=不显示方向箭头。
+   * AI-CORRECTION 2026-08-19: ChevronHidden 仅在非物流布设模式隐藏端口提示；传送带/管道布设模式仍参与箭头、叉号与隐藏判定。
    * 对应《仿真运行原理》§5.1 桥类设备双通道双槽位模型。
    * AI-CORRECTION 2026-05-16: 从单通道 synthetic 节点重构为 NS/EW 双通道。
    *   - ns_buffer: N+S 端口绑定，share-cap 拆分 input-view/output-view
@@ -2337,22 +2365,36 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    simulationModeConfigs: {
-      [SIMULATION_MODE.singleBase]: {
-        behaviors: [{
-          type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
-          strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
-          storageSlotGroupIds: ["loader_buffer"],
-        }],
-      },
-      [SIMULATION_MODE.regionalMultiBase]: {
-        behaviors: [{
-          type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
-          strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
-          storageSlotGroupIds: ["loader_buffer"],
-        }],
-      },
-    },
+    simulationBehaviors: [{
+      type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
+      strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
+      storageSlotGroupIds: ["loader_buffer"],
+    }],
+    // AI-REMOVED 2026-08-19:
+    // Reason: 两个仿真模式声明完全相同，公共行为不应伪装成模式差异。
+    // Trigger: 用户要求移除重复 simulationModeConfigs，并将暗管入口统一为基础 behavior。
+    // Evidence: single-base 与 regional-multi-base 均使用 warehouse-sink-when-unlinked，Topology Compiler 现支持基础行为回退。
+    // Replacement: 本定义的 simulationBehaviors。
+    // Risk: Low - 两种模式编译出的有效 behavior 保持不变。
+    // Human Review: Required
+    //
+    // Original code:
+    // simulationModeConfigs: {
+    //   [SIMULATION_MODE.singleBase]: {
+    //     behaviors: [{
+    //       type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
+    //       strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
+    //       storageSlotGroupIds: ["loader_buffer"],
+    //     }],
+    //   },
+    //   [SIMULATION_MODE.regionalMultiBase]: {
+    //     behaviors: [{
+    //       type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
+    //       strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
+    //       storageSlotGroupIds: ["loader_buffer"],
+    //     }],
+    //   },
+    // },
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -2392,6 +2434,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     //   createRecipeChannel("void_fluid", ["loader_buffer"], ["loader_buffer"]),
     // ],
     recipeChannels: [],
+    // AI-CORRECTION 2026-08-19: 上方审计记录中的 behavior 替代位置现为本定义的 simulationBehaviors；模式配置已不再重复声明公共行为。
     // AI-REMOVED 2026-06-06:
     // Reason: 暗管入口端口必须绑定到本地销毁槽位。
     // Trigger: 用户要求未链接暗管入口销毁进入液体，并要求槽位挂载 Slot 配置 behavior。
@@ -4215,22 +4258,36 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     requiresPower: false,
     powerDemand: 0,
     // AI-CORRECTION 2026-08-19: 未直连时不再销毁流体；单基地与区域多基地均提交到各自仓库，已直连时仍使用 loader_buffer。
-    simulationModeConfigs: {
-      [SIMULATION_MODE.singleBase]: {
-        behaviors: [{
-          type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
-          strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
-          storageSlotGroupIds: ["loader_buffer"],
-        }],
-      },
-      [SIMULATION_MODE.regionalMultiBase]: {
-        behaviors: [{
-          type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
-          strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
-          storageSlotGroupIds: ["loader_buffer"],
-        }],
-      },
-    },
+    simulationBehaviors: [{
+      type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
+      strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
+      storageSlotGroupIds: ["loader_buffer"],
+    }],
+    // AI-REMOVED 2026-08-19:
+    // Reason: 两个仿真模式声明完全相同，公共行为不应伪装成模式差异。
+    // Trigger: 用户要求移除重复 simulationModeConfigs，并将暗管入口统一为基础 behavior。
+    // Evidence: single-base 与 regional-multi-base 均使用 warehouse-sink-when-unlinked，Topology Compiler 现支持基础行为回退。
+    // Replacement: 本定义的 simulationBehaviors。
+    // Risk: Low - 两种模式编译出的有效 behavior 保持不变。
+    // Human Review: Required
+    //
+    // Original code:
+    // simulationModeConfigs: {
+    //   [SIMULATION_MODE.singleBase]: {
+    //     behaviors: [{
+    //       type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
+    //       strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
+    //       storageSlotGroupIds: ["loader_buffer"],
+    //     }],
+    //   },
+    //   [SIMULATION_MODE.regionalMultiBase]: {
+    //     behaviors: [{
+    //       type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
+    //       strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
+    //       storageSlotGroupIds: ["loader_buffer"],
+    //     }],
+    //   },
+    // },
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -4280,6 +4337,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     //   allowDuplicateRecipesAcrossChannels: true,
     // },
     recipeChannels: [],
+    // AI-CORRECTION 2026-08-19: 上方审计记录中的 behavior 替代位置现为本定义的 simulationBehaviors；模式配置已不再重复声明公共行为。
     portStorageBindings: [
       createBinding("bind_fluid_input", "fluid_input", "loader_buffer"),
     ],

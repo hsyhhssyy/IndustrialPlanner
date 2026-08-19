@@ -8,8 +8,17 @@ import type { ItemDomain } from "./types/entity-definition";
 import type { EntityDefinition } from "./types/entity-definition";
 import type { ItemDefinition } from "./types/item-definition";
 import type { RecipeDefinition } from "./types/recipe-definition";
-import type { EntitySimulationModeConfig } from "./types/entity-simulation-mode";
-import type { SimulationMode } from "../shared/simulation-mode";
+// AI-REMOVED 2026-08-19:
+// Reason: RegistryQuery 不再解析按 SimulationMode 声明的设备覆盖配置。
+// Trigger: 用户要求删除 simulationModeConfigs 及对应基础设施。
+// Evidence: Registry 设备行为与 Inspector 现在只有基础声明。
+// Replacement: findEntityDefinition 返回 EntityDefinition.simulationBehaviors 与 inspectors。
+// Risk: Medium - 调用方必须直接读取基础声明。
+// Human Review: Required
+//
+// Original code:
+// import type { EntitySimulationModeConfig } from "./types/entity-simulation-mode";
+// import type { SimulationMode } from "../shared/simulation-mode";
 
 export interface RegistryQuery {
 	/** 按 ID 精确查找实体定义；未注册时返回 null。 */
@@ -20,11 +29,20 @@ export interface RegistryQuery {
 	findRecipeDefinition(recipeId: string): RecipeDefinition | null;
 	/** 返回指定设备的全部已注册配方；结果顺序与 registry 定义顺序一致。 */
 	findRecipeDefinitionsByMachine(machineId: string): readonly RecipeDefinition[];
-	/** 解析设备在指定仿真模式下声明的静态配置；未声明时返回 null。 */
-	resolveEntitySimulationModeConfig(
-		definitionId: string,
-		simulationMode: SimulationMode,
-	): EntitySimulationModeConfig | null;
+	// AI-REMOVED 2026-08-19:
+	// Reason: RegistryQuery 不再提供设备模式覆盖解析入口。
+	// Trigger: 用户要求 Registry 不再设计 mode 开关。
+	// Evidence: EntityDefinition.simulationModeConfigs 已退出 Active Code。
+	// Replacement: findEntityDefinition。
+	// Risk: Medium - App 与 Topology Compiler 调用点必须同步删除。
+	// Human Review: Required
+	//
+	// Original code:
+	// /** 解析设备在指定仿真模式下声明的静态配置；未声明时返回 null。 */
+	// resolveEntitySimulationModeConfig(
+	// 	definitionId: string,
+	// 	simulationMode: SimulationMode,
+	// ): EntitySimulationModeConfig | null;
 
 	/** 判定是否为传送带节：仅包括直线节和两个转角节。 */
 	isBelt(definitionId: string): boolean;

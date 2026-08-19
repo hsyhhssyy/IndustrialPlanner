@@ -72,6 +72,11 @@ interface ResolvedPortEndpoint {
   readonly material: PortChevronMaterial;
 }
 
+interface PortOverlayCandidate {
+  readonly endpoint: ResolvedPortEndpoint;
+  readonly state: PortOverlayEntry["state"];
+}
+
 export function resolveLogisticsPortOverlayEntries(options: {
   readonly entities: readonly WorldEntity[];
   readonly entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
@@ -81,17 +86,23 @@ export function resolveLogisticsPortOverlayEntries(options: {
   readonly occupiedDraftPortKeys?: ReadonlySet<string>;
   readonly basePlaceableArea?: GridRectSize;
 }): PortOverlayEntry[] {
-  const entries: PortOverlayEntry[] = [];
+  const candidates: PortOverlayCandidate[] = [];
   const isPipe = options.kind === LOGISTICS_KIND.pipe;
 
   for (const entity of options.entities) {
     const definition = options.entityDefinitionMap.get(entity.definitionId);
-    if (definition === undefined || definition.tags.includes("ChevronHidden")) {
+    if (definition === undefined) {
       continue;
     }
 
-    for (const endpoint of resolveEntityPortEndpoints(entity, definition)) {
-      if (options.occupiedDraftPortKeys?.has(resolveEntityPortKey(endpoint))) {
+    const endpoints = resolveEntityPortEndpoints(entity, definition);
+    const occupiedPhysicalPortKeys = resolveOccupiedPhysicalPortKeys(
+      endpoints,
+      options.occupiedDraftPortKeys,
+    );
+
+    for (const endpoint of endpoints) {
+      if (occupiedPhysicalPortKeys.has(resolvePhysicalPortKey(endpoint))) {
         continue;
       }
 
@@ -117,14 +128,14 @@ export function resolveLogisticsPortOverlayEntries(options: {
         continue;
       }
 
-      entries.push(toPortOverlayEntry(
+      candidates.push({
         endpoint,
-        directionMatches && kindMatches ? "chevron" : "cross",
-      ));
+        state: directionMatches && kindMatches ? "chevron" : "cross",
+      });
     }
   }
 
-  return entries;
+  return resolvePhysicalPortOverlayEntries(candidates);
 }
 
 export function resolveSelectedPortOverlayEntries(options: {
@@ -147,8 +158,11 @@ export function resolveSelectedPortOverlayEntries(options: {
     return [];
   }
 
-  return resolveEntityPortEndpoints(entity, definition).map((endpoint) =>
-    toPortOverlayEntry(endpoint, "chevron")
+  return resolvePhysicalPortOverlayEntries(
+    resolveEntityPortEndpoints(entity, definition).map((endpoint) => ({
+      endpoint,
+      state: "chevron" as const,
+    })),
   );
 }
 
@@ -667,6 +681,53 @@ function resolveOccupiedDraftPortKeys(
 
 function resolveEntityPortKey(endpoint: ResolvedPortEndpoint): string {
   return `${endpoint.entityId}:${endpoint.portGroupId}:${endpoint.portId}`;
+}
+
+function resolvePhysicalPortKey(endpoint: ResolvedPortEndpoint): string {
+  return `${endpoint.entityId}:${endpoint.insideGridPoint.x},${endpoint.insideGridPoint.y}:${endpoint.edge}`;
+}
+
+function resolveOccupiedPhysicalPortKeys(
+  endpoints: readonly ResolvedPortEndpoint[],
+  occupiedDraftPortKeys: ReadonlySet<string> | undefined,
+): ReadonlySet<string> {
+  const keys = new Set<string>();
+  if (occupiedDraftPortKeys === undefined || occupiedDraftPortKeys.size === 0) {
+    return keys;
+  }
+
+  for (const endpoint of endpoints) {
+    if (occupiedDraftPortKeys.has(resolveEntityPortKey(endpoint))) {
+      keys.add(resolvePhysicalPortKey(endpoint));
+    }
+  }
+  return keys;
+}
+
+/**
+ * 同一设备、同一足印格、同一边方向的逻辑 Port 共用一个物理端口提示。
+ * 该语义聚合先于桌面拼合与触控端按外侧格覆盖，优先级为 Chevron > Cross > Hidden。
+ */
+function resolvePhysicalPortOverlayEntries(
+  candidates: readonly PortOverlayCandidate[],
+): PortOverlayEntry[] {
+  const candidateByPhysicalPort = new Map<string, PortOverlayCandidate>();
+
+  for (const candidate of candidates) {
+    const key = resolvePhysicalPortKey(candidate.endpoint);
+    const current = candidateByPhysicalPort.get(key);
+    if (
+      current === undefined
+      || (current.state === "cross" && candidate.state === "chevron")
+    ) {
+      candidateByPhysicalPort.set(key, candidate);
+    }
+  }
+
+  return Array.from(
+    candidateByPhysicalPort.values(),
+    (candidate) => toPortOverlayEntry(candidate.endpoint, candidate.state),
+  );
 }
 
 function resolveLogisticsKindForPortKind(isPipe: boolean): LogisticsKind {

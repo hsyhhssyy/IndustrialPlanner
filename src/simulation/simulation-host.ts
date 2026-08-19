@@ -65,6 +65,8 @@ export interface CreateSimulationHostOptions {
   /** 完整 Worker debugData 快照开关；应由调用方同时应用调试模式总开关。 */
   readonly getDebugDataEnabled?: () => boolean;
   readonly getActiveActivityIds?: () => readonly string[];
+  /** 按基地中文地区 tag 读取地区资源供给。 */
+  readonly getRegionalResourceSettings?: (regionTag: string) => readonly import("./types").RegionalResourceSupplySetting[];
 }
 
 export function createSimulationHost(
@@ -84,6 +86,7 @@ export function createSimulationHost(
     getPerfEnabled: options.getPerfEnabled,
     getDebugDataEnabled: options.getDebugDataEnabled,
     getActiveActivityIds: options.getActiveActivityIds,
+    getRegionalResourceSettings: options.getRegionalResourceSettings,
     regionalWorkerMode: options.workerMode ?? "auto",
   });
   const actions: SimulationContract["actions"] = actionImpl;
@@ -296,6 +299,7 @@ export function createSimulationHost(
                 producedPerMinute: stats.producedPerMinute,
                 consumedPerMinute: stats.consumedPerMinute,
                 warehouseCount: stats.warehouseCount,
+                infinite: stats.infinite,
                 lastChangedTick: stats.lastChangedTick,
               },
             ]),

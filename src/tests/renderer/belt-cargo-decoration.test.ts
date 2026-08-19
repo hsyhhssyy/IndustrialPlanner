@@ -226,6 +226,7 @@ describe("createBeltCargoDecoration", () => {
       height: number;
     }
     const boxSize = resolveBeltCargoBoxSize(100)
+    const boxTextureSize = Math.round(boxSize)
     expect(boxSprite.width).toBe(boxSize)
     expect(boxSprite.height).toBe(boxSize)
     expect(boxSprite.texture).not.toBeNull()
@@ -248,10 +249,10 @@ describe("createBeltCargoDecoration", () => {
     expect(generatedGraphics.drawCommands).toHaveLength(1)
     expect(generatedGraphics.drawCommands[0]).toMatchObject({
       type: "roundRect",
-      x: -boxSize / 2,
-      y: -boxSize / 2,
-      width: boxSize,
-      height: boxSize,
+      x: -boxTextureSize / 2,
+      y: -boxTextureSize / 2,
+      width: boxTextureSize,
+      height: boxTextureSize,
       fill: 0xffffff,
       stroke: {
         width: 1,
@@ -303,6 +304,14 @@ describe("createBeltCargoDecoration", () => {
     expect(sprite.width).toBeCloseTo(boxSize * 0.72)
     expect(sprite.height).toBeCloseTo(boxSize * 0.72)
     expect(sprite.rotation).toBeCloseTo(0)
+
+    ctx.viewportState.gridCellPixelSize = 100.1
+    decoration.sync(ctx as never)
+
+    const resizedBoxSize = resolveBeltCargoBoxSize(100.1)
+    expect(renderer.generateTexture).toHaveBeenCalledTimes(1)
+    expect(boxSprite.width).toBeCloseTo(resizedBoxSize)
+    expect(boxSprite.height).toBeCloseTo(resizedBoxSize)
 
     decoration.destroy()
   })

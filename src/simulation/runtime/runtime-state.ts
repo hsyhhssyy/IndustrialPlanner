@@ -40,6 +40,8 @@ export interface SimulationPersistentRuntimeState {
   baseBatteryJoules: number;
   /** 净水节点手动产出的跨 tick 小数余量。key 为 compiled device id。 */
   waterPurifierManualRemainders: Record<string, number>;
+  /** 地区有限资源每 10 秒提交后的六分之一物品余量。key 为 item id。 */
+  regionalResourceRemainderSixths: Record<string, number>;
   /** 配方产出/消耗统计状态（1 分钟滑动窗口） */
   recipeStats: RecipeStatsState;
 }
@@ -287,6 +289,7 @@ export function createSimulationMutableRuntimeState(
       ),
       baseBatteryJoules: BASE_BATTERY_CAPACITY_J,
       waterPurifierManualRemainders: createWaterPurifierManualRemainders(topology),
+      regionalResourceRemainderSixths: {},
       recipeStats: createRecipeStatsState(topology.standardTickRate),
     },
     transient: createEmptyTransientState(),
@@ -310,6 +313,17 @@ export function createMigratedSimulationMutableRuntimeState(
   state.lastAdvancedTickNumber = options.previousState.tickNumber;
   state.persistent.nextRecipeRunIndex = options.previousState.persistent.nextRecipeRunIndex;
   state.persistent.baseBatteryJoules = options.previousState.persistent.baseBatteryJoules;
+  for (const [itemId, perMinute] of Object.entries(
+    options.topology.regionalResourceSupply?.finitePerMinuteByItemId ?? {},
+  )) {
+    if (
+      options.previousTopology.regionalResourceSupply?.finitePerMinuteByItemId[itemId]
+      === perMinute
+    ) {
+      state.persistent.regionalResourceRemainderSixths[itemId] =
+        (options.previousState.persistent.regionalResourceRemainderSixths ?? {})[itemId] ?? 0;
+    }
+  }
 
   for (const deviceId of options.topology.ordering.deviceOrder) {
     if (resetDeviceIds.has(deviceId)) {
@@ -441,6 +455,9 @@ export function cloneSimulationMutableRuntimeState(
       transportComponentDomain: { ...state.persistent.transportComponentDomain },
       baseBatteryJoules: state.persistent.baseBatteryJoules,
       waterPurifierManualRemainders: { ...(state.persistent.waterPurifierManualRemainders ?? {}) },
+      regionalResourceRemainderSixths: {
+        ...(state.persistent.regionalResourceRemainderSixths ?? {}),
+      },
       recipeStats: cloneRecipeStatsState(state.persistent.recipeStats),
     },
     transient: includeTransientState
