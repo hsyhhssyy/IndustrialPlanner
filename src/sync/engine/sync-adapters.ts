@@ -288,6 +288,8 @@ interface NormalizedRemoteAsset<TValue> {
   readonly value: TValue;
   /** 适配器归一化后的本地比较 hash。 */
   readonly contentHash: string;
+  /** 远端结构化原值是否被适配器归一化；用于将 schema 迁移结果回写远端。 */
+  readonly normalizationChanged: boolean;
   /** 远端协议返回的权威 hash，只能用于下一次乐观并发基线。 */
   readonly remoteContentHash: string;
   readonly revision: number;
@@ -382,6 +384,9 @@ async function readRemoteAssetValue<TValue>(
   return {
     value,
     contentHash: await createSyncContentHash(session, collection, value),
+    normalizationChanged:
+      normalizeRemote !== undefined
+      && createStableJsonHash(parsed) !== createStableJsonHash(value),
     remoteContentHash: asset.contentHash,
     revision: asset.revision,
     committedAt: asset.committedAt,
@@ -2408,10 +2413,17 @@ async function syncPatchCollectionWithRevision<TValue>(
       transaction.stageTouch(assetKey, localContentHash);
       // AI-CORRECTION 2026-08-13: 索引 hash 为 fallback 口径（未映射/未知）时，
       // 与本地口径归一化 hash 比较不得得出“不等”结论，回传分支必须跳过（消除 echo upload）。
+      // AI-CORRECTION 2026-08-19: 若正文归一化确实改变了结构，则变化证据来自原值与归一化值，
+      // 不依赖 fallback 索引 hash 的跨口径比较；此时必须回传以持久化 schema 迁移结果。
       if (
         remoteEntry.deletedAt === null
-        && isIndexHashComparable(remoteEntry)
-        && remoteEntry.contentHash !== remoteState.contentHash
+        && (
+          remoteState.normalizationChanged
+          || (
+            isIndexHashComparable(remoteEntry)
+            && remoteEntry.contentHash !== remoteState.contentHash
+          )
+        )
       ) {
         const normalizedRemoteHash = remoteState.contentHash;
         transaction.recordItem(createPlanItem<TValue>({

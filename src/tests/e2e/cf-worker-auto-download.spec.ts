@@ -355,6 +355,12 @@ async function runAutoDownloadScenario(options: {
   // });
 
   await page.goto("/");
+  await page.waitForFunction(() =>
+    Boolean(
+      (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+        ?.workspace?.sync,
+    )
+  );
 
   const configurationResult = await page.evaluate(async ({ apiBaseUrl, spaceId }) => {
     try {

@@ -17,6 +17,7 @@ import type {
   SyncAdapterResult,
   SyncEngineTransaction,
   SyncPlanItem,
+  SyncPlanUpload,
   SyncRemote,
   SyncRemoteSession,
   SyncService,
@@ -460,6 +461,112 @@ describe("sync-engine-fallback-hash", () => {
     expect(recordedUploads).toBe(0);
     expect(putAsset).not.toHaveBeenCalled();
   });
+
+  it("persists normalized patch content when the fallback index hides a schema migration", async () => {
+    type Value = {
+      readonly schemaVersion: 5;
+      readonly content: number;
+    };
+    const protocolHash = "sha256:protocol-schema-4";
+    const remoteValue = { schemaVersion: 4, content: 42 };
+    const localValue: Value = { schemaVersion: 5, content: 42 };
+    const recordedItems: SyncPlanItem[] = [];
+    const recordedUploads: SyncPlanUpload[] = [];
+    const adapter = createPatchCollectionWithRevisionAdapter<Value>({
+      id: "world-documents",
+      indexPath: "assets/world-documents/index.json",
+      directoryPath: (id) => `assets/world-documents/${id}`,
+      listLocal: async () => [{
+        id: "canvas-a",
+        value: localValue,
+        deletedAt: null,
+      }],
+      writeLocal: async () => undefined,
+      normalizeRemote: (value) => {
+        if (
+          typeof value !== "object"
+          || value === null
+          || typeof (value as { content?: unknown }).content !== "number"
+        ) {
+          return null;
+        }
+        return {
+          schemaVersion: 5,
+          content: (value as { content: number }).content,
+        };
+      },
+    });
+    const session: SyncRemoteSession = {
+      localState: {
+        getLastSyncedHash: async () => createStableJsonHash(remoteValue),
+        setLastSyncedHash: async () => undefined,
+        getRemoteRevision: async () => null,
+        setRemoteRevision: async () => undefined,
+        getRemoteEtag: async () => null,
+        setRemoteEtag: async () => undefined,
+      },
+      computeContentHashes: async (requests) => requests.map((request) =>
+        createStableJsonHash(request.value)
+      ),
+      prefetchIndexes: async () => undefined,
+      readIndex: async () => ({
+        revision: 3,
+        entries: {
+          "canvas-a": {
+            revision: 3,
+            contentHash: protocolHash,
+            protocolContentHash: protocolHash,
+            contentHashCaliber: "protocol-fallback",
+            deletedAt: null,
+            committedAt: null,
+          },
+        },
+        committedAt: null,
+      }),
+      readAsset: async () => ({
+        revision: 3,
+        value: remoteValue,
+        contentHash: protocolHash,
+        committedAt: null,
+      }),
+      checkCollections: async () => ({ changedCollections: [] }),
+      beginWriteBatch: () => ({
+        putAsset: () => undefined,
+        putTombstone: () => undefined,
+        commit: async () => ({ writes: [] }),
+        discard: async () => undefined,
+      }),
+      markApplied: async () => undefined,
+    };
+    const transaction: SyncEngineTransaction = {
+      writeBatch: session.beginWriteBatch(),
+      stageTouch: () => undefined,
+      stageDeletion: () => undefined,
+      recordItem: (item) => {
+        recordedItems.push(item);
+      },
+      recordUpload: (upload) => {
+        recordedUploads.push(upload);
+      },
+      assertDownloadAllowed: async () => undefined,
+    };
+
+    const result = await adapter.sync(session, { transaction });
+
+    expect(result).toMatchObject({
+      status: "uploaded",
+      changedAssetIds: ["canvas-a"],
+    });
+    expect(recordedItems).toHaveLength(1);
+    expect(recordedItems[0]?.kind).toBe("upload");
+    await recordedItems[0]?.applyUpload();
+    expect(recordedUploads).toHaveLength(1);
+    expect(recordedUploads[0]?.params).toMatchObject({
+      value: localValue,
+      baseRevision: 3,
+      baseContentHash: protocolHash,
+    });
+  });
 });
 
 // ============================================================================
@@ -746,4 +853,3 @@ describe("sync-engine-dirty-generations", () => {
     expect(serviceUnderTest.getStatus().saveState).toBe("idle");
   });
 });
-

@@ -335,6 +335,12 @@ async function runConflictScenario(options: {
   });
 
   await page.goto("/");
+  await page.waitForFunction(() =>
+    Boolean(
+      (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
+        ?.workspace?.sync,
+    )
+  );
   // 设置 debug 日志级别、后端地址与独立 Cloudflare 空间，并检查同步状态
   // AI-CORRECTION 2026-08-14: 不再直接调用 logger.setLogLevel——应用的 debugMode 开关
   // effect 会在 debugMode=false 时把 logger 回写为 warn，与测试注入的 debug 级别形成竞态；
