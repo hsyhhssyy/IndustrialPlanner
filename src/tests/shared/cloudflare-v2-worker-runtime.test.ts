@@ -53,6 +53,15 @@ describe("CloudflareV2WorkerRuntime read-asset 423 重试", () => {
     vi.unstubAllGlobals();
   });
 
+  it("rejects an empty space ID before executing an operation", async () => {
+    const runtime = new CloudflareV2WorkerRuntime();
+
+    await expect(runtime.execute(
+      { ...config, spaceId: "   " },
+      { type: "compute-content-hashes", requests: [] },
+    )).rejects.toThrow("Cloudflare space ID must not be empty.");
+  });
+
   it("前几次 423 后成功：重试直到下载成功", async () => {
     const { asset, bytes } = await createAsset('{"entities":{}}');
     const fetchMock = vi.fn()

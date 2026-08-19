@@ -175,6 +175,16 @@ describe("cloudflare-sync-remote-v2", () => {
     localStorage.clear();
   });
 
+  it("rejects an empty space ID instead of connecting to default", () => {
+    expect(() => createCloudflareSyncRemote({
+      apiBase: "https://cf-mock.local",
+      spaceId: "   ",
+      workerClientFactory: () => new CloudflareV2WorkerClient({
+        runtimeFactory: () => new CloudflareV2WorkerRuntime(),
+      }),
+    })).toThrow("Cloudflare space ID must not be empty.");
+  });
+
   // -- 会话创建 -- //
 
   it("creates a session with correct localState", async () => {

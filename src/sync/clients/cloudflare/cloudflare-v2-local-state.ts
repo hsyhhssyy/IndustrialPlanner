@@ -14,6 +14,27 @@ const CF_ASSETS_STORE = "cf-sync-assets";
 const CF_STATE_KEY_PREFIX = "state";
 const CF_COLLECTION_ETAG_PREFIX = "col-etag";
 
+export async function hasPersistedCloudflareV2LocalState(
+  apiBase: string,
+  spaceId: string,
+): Promise<boolean> {
+  const normalizedApiBase = apiBase.replace(/\/$/, "");
+  const normalizedSpaceId = spaceId.trim();
+
+  if (normalizedSpaceId === "") {
+    return false;
+  }
+
+  const scopeKey = `${normalizedApiBase}\u0000${normalizedSpaceId}`;
+  const stored = await readFromIndexedDb<unknown>({
+    databaseName: CF_V2_DATABASE_NAME,
+    storeName: CF_STATE_STORE,
+    key: `${CF_STATE_KEY_PREFIX}\u0000${scopeKey}`,
+  });
+
+  return normalizeState(stored, normalizedSpaceId) !== null;
+}
+
 interface CfLocalStateRecord {
   readonly schemaVersion: 3;
   readonly spaceId: string;

@@ -3,7 +3,16 @@ import type { WorldDocument, WorldEntity } from "@/domain/document/world-documen
 import {
   createDarkPipeSlotLink,
   findDarkPipeSlotLinkForEntity,
-  getDarkPipeManualRecipeOnlyPatch,
+  // AI-REMOVED 2026-08-19:
+  // Reason: 暗管入口隐藏销毁配方已退出，创建直连无需再写 manualRecipeOnly。
+  // Trigger: 用户要求两个仿真模式下未直连入口均入仓并抛弃销毁机制。
+  // Evidence: shared/dark-pipe-link.ts 已归档 getDarkPipeManualRecipeOnlyPatch。
+  // Replacement: 创建链接时将入口 config 清空，移除旧文档遗留键。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // getDarkPipeManualRecipeOnlyPatch,
   isEntityInDarkPipeLink,
   resolveDarkPipeRole,
 } from "@/shared/dark-pipe-link";
@@ -16,7 +25,16 @@ type EditorDarkPipeLinkActions = Pick<EditorAction, "createDarkPipeLink" | "remo
 export function createEditorDarkPipeLinkActions({
   document,
   documentWriter,
-  workspace,
+  // AI-REMOVED 2026-08-19:
+  // Reason: workspace 仅用于查找入口定义并生成 manualRecipeOnly；销毁 channel 退出后不再需要 Registry 查询。
+  // Trigger: 用户要求抛弃暗管入口销毁机制。
+  // Evidence: createDarkPipeLink 只需文档快照、角色解析和 Slot Link 写入。
+  // Replacement: None
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // workspace,
 }: EditorActionsContext): EditorDarkPipeLinkActions {
   return {
     createDarkPipeLink: action((options) => {
@@ -31,18 +49,36 @@ export function createEditorDarkPipeLinkActions({
         return false;
       }
 
-      const inletDefinition = workspace.registry.entityDefinitions.find(
-        (definition) => definition.id === resolved.inlet.definitionId,
-      );
-      if (inletDefinition === undefined) {
-        return false;
-      }
+      // AI-REMOVED 2026-08-19:
+      // Reason: 入口定义查询只服务于隐藏销毁 channel 的 manualRecipeOnly 配置，现已无业务作用。
+      // Trigger: 用户要求暗管入口未直连时统一入仓并抛弃销毁机制。
+      // Evidence: resolveDarkPipeLinkPair 已根据已知暗管 definition ID 验证入口角色。
+      // Replacement: None
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // const inletDefinition = workspace.registry.entityDefinitions.find(
+      //   (definition) => definition.id === resolved.inlet.definitionId,
+      // );
+      // if (inletDefinition === undefined) {
+      //   return false;
+      // }
 
       const nextLink = createDarkPipeSlotLink({
         inletEntityId: resolved.inlet.id,
         outletEntityId: resolved.outlet.id,
       });
-      const nextInletConfig = getDarkPipeManualRecipeOnlyPatch(inletDefinition);
+      // AI-REMOVED 2026-08-19:
+      // Reason: 暗管直连不再需要停用销毁 channel。
+      // Trigger: 用户要求抛弃销毁机制。
+      // Evidence: udpipe_loader_1/2 的 recipeChannels 已为空。
+      // Replacement: 下方入口 config 直接清空。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // const nextInletConfig = getDarkPipeManualRecipeOnlyPatch(inletDefinition);
 
       const committedDocument = documentWriter.commit({
         action: {
@@ -75,7 +111,8 @@ export function createEditorDarkPipeLinkActions({
               ...documentSnapshot.entities,
               [inlet.id]: {
                 ...inlet,
-                config: nextInletConfig,
+                // AI-CORRECTION 2026-08-19: 不再生成 manualRecipeOnly；清空 config 可同时移除旧文档遗留的销毁 channel 配置。
+                config: {},
               },
               [outlet.id]: {
                 ...outlet,

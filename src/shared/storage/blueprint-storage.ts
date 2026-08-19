@@ -1,7 +1,7 @@
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
 import { createUuid } from "@/domain/shared/uuid";
-import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
+import { migrateBlueprintDocumentState } from "@/shared/blueprint-device-id-migration";
 
 import {
   applyIndexedDbStoreMutations,
@@ -702,10 +702,11 @@ function normalizeBlueprintDocument(
     return null;
   }
 
-  const migration = migrateBlueprintEntityDeviceIds(
-    value.entities as BlueprintDocument["entities"],
-    value.schemaVersion,
-  );
+  const migration = migrateBlueprintDocumentState({
+    entities: value.entities as BlueprintDocument["entities"],
+    entityOrder: value.entityOrder,
+    slotLinks: value.slotLinks as BlueprintDocument["slotLinks"],
+  }, value.schemaVersion);
 
   if (migration === null) {
     return null;
@@ -720,8 +721,8 @@ function normalizeBlueprintDocument(
     baseId: value.baseId,
     initialGridPoint: value.initialGridPoint,
     entities: migration.entities,
-    entityOrder: [...value.entityOrder],
-    slotLinks: [...value.slotLinks] as BlueprintDocument["slotLinks"],
+    entityOrder: [...migration.entityOrder],
+    slotLinks: [...migration.slotLinks],
     createdAt,
     updatedAt,
   };

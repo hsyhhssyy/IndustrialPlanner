@@ -648,7 +648,7 @@ describe("SlotConfigInspector", () => {
     expectSlotGroupRole(container, "item_output_buffer", "shared");
   });
 
-  it("renders water pump and dark pipe storage groups as shared recipe-channel slots", () => {
+  it("renders water pump and dark pipe storage groups as shared slots", () => {
     const workspace = createWorkspace();
     const picker = new WorkbenchEncyclopediaPickerController(() => ({
       desktopCategory: "all",

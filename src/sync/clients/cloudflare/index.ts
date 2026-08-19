@@ -17,3 +17,7 @@ export {
   type CloudflareV2WorkerBridge,
   type CloudflareV2WorkerClientOptions,
 } from "./cloudflare-v2-worker-client";
+export {
+  initializeCloudflareSpaceSettings,
+  type InitializeCloudflareSpaceSettingsOptions,
+} from "./cloudflare-space-settings";

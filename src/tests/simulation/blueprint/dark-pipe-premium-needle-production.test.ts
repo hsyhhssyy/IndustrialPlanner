@@ -50,29 +50,35 @@ const OBSERVATION_TICKS = 2400; // 预热后观察 2 分钟
 const WINDOW_STEP = 100;   // 窗口滑动步长
 const TARGET_PER_WINDOW = 6;
 
+// AI-REMOVED 2026-08-19:
+// Reason: 当前 schema 的抽水泵不能再通过输出槽初始物品和 ignoreStock 伪造无限清水。
+// Trigger: 抽水泵改为手选配方真实生产。
+// Evidence: water_pump_1.default 选择 r_pump_water_basic 后会按每秒 1 个清水运行。
+// Replacement: WATER_PUMP_RECIPE_CONFIG。
+// Risk: 产线供水现在受真实配方周期约束，属于本次需求指定行为。
+// Human Review: Required
+//
+// Original code:
+// {
+//   "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+//   "storageSlotGroups[0].slots[0].initialCount": 1,
+//   "storageSlotGroups[0].slots[0].ignoreStock": true,
+// }
+const WATER_PUMP_RECIPE_CONFIG = {
+  channelRecipes: { default: "r_pump_water_basic" },
+};
+
 /** 22 个辅助设备，提取自 .temp/testcase.json */
 const EXTRA_ENTITIES = [
   // ---- 供水 & 物流总线 ----
   createEntity("bus", "log_hongs_bus", 0, 0),
-  createEntity("pump1", "water_pump_1", -10, -7, 0, {
-    "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-    "storageSlotGroups[0].slots[0].initialCount": 1,
-    "storageSlotGroups[0].slots[0].ignoreStock": true,
-  }),
+  createEntity("pump1", "water_pump_1", -10, -7, 0, WATER_PUMP_RECIPE_CONFIG),
   createEntity("bus_source", "log_hongs_bus_source", 0, 8),
-  createEntity("pump2", "water_pump_1", -10, -4, 0, {
-    "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-    "storageSlotGroups[0].slots[0].initialCount": 1,
-    "storageSlotGroups[0].slots[0].ignoreStock": true,
-  }),
+  createEntity("pump2", "water_pump_1", -10, -4, 0, WATER_PUMP_RECIPE_CONFIG),
 
   // ---- 暗管端点（3 个新增） ----
-  createEntity("dpipe_loader_a", "udpipe_loader_1", -6, -4, 0, {
-    "recipeChannels[0].manualRecipeOnly": true,
-  }),
-  createEntity("dpipe_loader_b", "udpipe_loader_1", -6, -7, 0, {
-    "recipeChannels[0].manualRecipeOnly": true,
-  }),
+  createEntity("dpipe_loader_a", "udpipe_loader_1", -6, -4),
+  createEntity("dpipe_loader_b", "udpipe_loader_1", -6, -7),
   createEntity("dpipe_unloader_a", "udpipe_unloader_1", 0, 20, 0),
 
   // ---- 液体净化器 ×4 ----

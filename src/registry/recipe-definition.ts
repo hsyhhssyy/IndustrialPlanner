@@ -1,6 +1,15 @@
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import {
-  FLUID_DOMAIN_RECIPE_ITEM_ID,
+  // AI-REMOVED 2026-08-19:
+  // Reason: 暗管入口隐藏销毁配方已退出，Registry 不再需要任意流体配方占位 ID。
+  // Trigger: 用户明确要求暗管入口在所有模式下提交仓库并抛弃销毁机制。
+  // Evidence: 本文件其余配方均未使用 FLUID_DOMAIN_RECIPE_ITEM_ID。
+  // Replacement: None
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // FLUID_DOMAIN_RECIPE_ITEM_ID,
   RecipeItemDomainId,
 } from "@/domain/shared/item-domain-flags";
 import { ACTIVITY_LIMITED_FORMULA_1_TAG } from "@/shared/registry/activity-availability";
@@ -3230,26 +3239,36 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   // =========================================================================
   // 暗管入口销毁配方 — 默认销毁进入槽位的任意流体（液体或气体）
   // =========================================================================
-  {
-    id: "r_udpipe_loader_void_fluid_any_internal",
-    nameKey: "registry.recipe.r_udpipe_loader_void_fluid_any_internal.name",
-    durationSeconds: 0.5,
-    inputs: [{ itemId: FLUID_DOMAIN_RECIPE_ITEM_ID, amount: 1 }],
-    outputs: [],
-    machineId: "udpipe_loader_1",
-    recipeType: "immediate-consume",
-    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-  },
-  {
-    id: "r_udpipe_loader_multi_void_fluid_any_internal",
-    nameKey: "registry.recipe.r_udpipe_loader_multi_void_fluid_any_internal.name",
-    durationSeconds: 0.5,
-    inputs: [{ itemId: FLUID_DOMAIN_RECIPE_ITEM_ID, amount: 1 }],
-    outputs: [],
-    machineId: "udpipe_loader_2",
-    recipeType: "immediate-consume",
-    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-  },
+  // AI-CORRECTION 2026-08-19: 下列销毁配方已退出；暗管入口未直连时统一提交当前运行架构的仓库。
+  // AI-REMOVED 2026-08-19:
+  // Reason: 暗管入口不再具有销毁语义，保留配方会让 Registry 继续暴露不可达且误导的运行能力。
+  // Trigger: 用户明确要求单基地提交单基地仓库、多基地提交区域仓库，并抛弃销毁机制。
+  // Evidence: 两种入口的两个 SimulationMode 均选择 warehouse-sink-when-unlinked behavior。
+  // Replacement: src/registry/entity-definition.ts 中 udpipe_loader_1/2 的模式配置。
+  // Risk: 旧文档若保存了这些隐藏 recipe ID，编译时会忽略不存在的配方选择。
+  // Human Review: Required
+  //
+  // Original code:
+  // {
+  //   id: "r_udpipe_loader_void_fluid_any_internal",
+  //   nameKey: "registry.recipe.r_udpipe_loader_void_fluid_any_internal.name",
+  //   durationSeconds: 0.5,
+  //   inputs: [{ itemId: FLUID_DOMAIN_RECIPE_ITEM_ID, amount: 1 }],
+  //   outputs: [],
+  //   machineId: "udpipe_loader_1",
+  //   recipeType: "immediate-consume",
+  //   tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+  // },
+  // {
+  //   id: "r_udpipe_loader_multi_void_fluid_any_internal",
+  //   nameKey: "registry.recipe.r_udpipe_loader_multi_void_fluid_any_internal.name",
+  //   durationSeconds: 0.5,
+  //   inputs: [{ itemId: FLUID_DOMAIN_RECIPE_ITEM_ID, amount: 1 }],
+  //   outputs: [],
+  //   machineId: "udpipe_loader_2",
+  //   recipeType: "immediate-consume",
+  //   tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+  // },
   // =========================================================================
   // 作弊无限设备销毁配方 — 按设备物品域销毁任意输入
   // =========================================================================
@@ -3289,6 +3308,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   // AI-CORRECTION 2026-06-15: 抽水泵已改为 warehouse link 模式，当前不使用 recipe channel。
   // 这两个配方保留不删，供未来可能切换回 recipe 模式或作为参考定义。
   // machineId 仍指向 item_port_water_pump_1，但该设备当前 recipeChannels 为空。
+  // AI-CORRECTION 2026-08-19: 上述 warehouse link 状态已结束；四条配方现由抽水泵/气体收集泵的手选 default channel 直接执行。
   // =========================================================================
   {
     id: "r_pump_water_basic",

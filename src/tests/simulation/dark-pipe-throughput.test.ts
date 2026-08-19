@@ -26,9 +26,7 @@ describe("dark pipe linked throughput", () => {
           }),
           createEntity("input-pipe", "pipe_straight_1x1", 3, 1),
           createMeteredPipeAdmission("input-meter", 4, 1, 0),
-          createEntity("inlet", "udpipe_loader_1", 5, 0, 0, {
-            "recipeChannels[0].manualRecipeOnly": true,
-          }),
+          createEntity("inlet", "udpipe_loader_1", 5, 0),
           createEntity("outlet", "udpipe_unloader_1", 10, 0),
           createEntity("output-pipe", "pipe_straight_1x1", 13, 1),
           createEntity("sink", "liquid_storager_1", 14, 0),
@@ -50,10 +48,7 @@ describe("dark pipe linked throughput", () => {
         [
           // 保持用户问题蓝图的实体顺序；旧求解器会因该顺序让输入、输出相位交替，吞吐减半。
           createEntity("outlet", "udpipe_unloader_2", 7, 19, 90),
-          createEntity("inlet", "udpipe_loader_2", 7, 23, 270, {
-            "recipeChannels[0].manualRecipeOnly": true,
-            "recipeChannels[1].manualRecipeOnly": true,
-          }),
+          createEntity("inlet", "udpipe_loader_2", 7, 23, 270),
           createEntity("source-1", "liquid_storager_1", 9, 28, 270, {
             "storageSlotGroups[0].slots[0].initialItemType": ITEM_ID,
             "storageSlotGroups[0].slots[0].initialCount": 500,

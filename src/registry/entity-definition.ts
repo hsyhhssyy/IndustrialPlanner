@@ -2315,6 +2315,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 流体输入方向。仅 1 个 input port(西)。
    * AI-CORRECTION 2026-06-06: 默认行为改为销毁模式；进入 loader_buffer 的液体由隐藏配方消耗。
    * AI-CORRECTION 2026-07-18: 槽位 itemFilterType 已从 "liquid" 改为 "fluid"，同时接受气体进入销毁。
+   * AI-CORRECTION 2026-08-19: 未直连时不再销毁流体；单基地与区域多基地均提交到各自仓库，已直连时仍使用 loader_buffer。
    */
   createEntityDefinition({
     id: "udpipe_loader_1",
@@ -2340,7 +2341,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       [SIMULATION_MODE.singleBase]: {
         behaviors: [{
           type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
-          strategy: ENTITY_INPUT_ROUTING_STRATEGY.localStorage,
+          strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
           storageSlotGroupIds: ["loader_buffer"],
         }],
       },
@@ -2377,10 +2378,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("slot", [500], FluidDomain),
       ),
     ],
-    recipeChannels: [
-      // AI-CORRECTION 2026-06-07: loader_buffer 同时声明为产物槽，仅用于表达槽位配置的混合归属；销毁配方本身仍没有 outputs。
-      createRecipeChannel("void_fluid", ["loader_buffer"], ["loader_buffer"]),
-    ],
+    // AI-REMOVED 2026-08-19:
+    // Reason: 暗管入口在单基地与区域多基地模式下均于未直连时提交仓库，不再运行隐藏销毁配方。
+    // Trigger: 用户明确抛弃暗管入口销毁机制，统一为按当前运行架构提交仓库。
+    // Evidence: simulationModeConfigs 的两个模式均选择 warehouse-sink-when-unlinked；保留 channel 会留下无效销毁入口。
+    // Replacement: simulationModeConfigs 中统一的 warehouse-sink-when-unlinked behavior。
+    // Risk: 已保存文档中的 recipeChannels[0].manualRecipeOnly 配置会成为无效遗留键，但不会参与编译。
+    // Human Review: Required
+    //
+    // Original code:
+    // recipeChannels: [
+    //   // AI-CORRECTION 2026-06-07: loader_buffer 同时声明为产物槽，仅用于表达槽位配置的混合归属；销毁配方本身仍没有 outputs。
+    //   createRecipeChannel("void_fluid", ["loader_buffer"], ["loader_buffer"]),
+    // ],
+    recipeChannels: [],
     // AI-REMOVED 2026-06-06:
     // Reason: 暗管入口端口必须绑定到本地销毁槽位。
     // Trigger: 用户要求未链接暗管入口销毁进入液体，并要求槽位挂载 Slot 配置 behavior。
@@ -4133,6 +4144,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     // AI-CORRECTION 2026-06-15: 移除 createSimpleProductionDevice 和 recipeChannels。
     // 改用 warehouseItemLink 模式从仓库获取液体，放置时默认链接清水并开启无限供应。
     // r_pump_water_basic / r_pump_acid_basic 配方保留在 recipe-definition.ts（见 4）。
+    // AI-CORRECTION 2026-08-19: 上述仓库代理模式已退出；抽水泵改为通过单个手选配方 channel 真实生产清水或沉积酸。
 
     storageSlotGroups: [
       createStorageSlotGroup("fluid_output_buffer", ItemDomainFlag.Liquid,
@@ -4142,34 +4154,55 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_fluid_output", "fluid_output", "fluid_output_buffer"),
     ],
-    recipeChannels: [],
+    recipeChannels: [
+      createRecipeChannel("default", [], ["fluid_output_buffer"], true),
+    ],
 
     inspectors: [
-      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["fluid_output_buffer"] },
+      { type: INSPECTOR_TYPE.recipeStatus, channelIds: ["default"] },
+      // AI-REMOVED 2026-08-19:
+      // Reason: 新版抽水泵由手选配方真实生产，不再以仓库槽位链接代理自然资源。
+      // Trigger: 用户明确要求新版泵不再拥有 warehouseItemLink inspector。
+      // Evidence: default channel 的产物写入 fluid_output_buffer，r_pump_water_basic/r_pump_acid_basic 均为零输入生产配方。
+      // Replacement: recipeStatus inspector + recipeChannels.default
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["fluid_output_buffer"] },
       { type: INSPECTOR_TYPE.slotConfig, slotGroupIds: ["fluid_output_buffer"] },
     ],
 
-    placementDefaults: createPlacementDefaults({
-      config: {
-        "storageSlotGroups[0].slots[0].ignoreStock": true,
-      },
-      slotLinks: [
-        {
-          id: "warehouse-link:[Self]:fluid_output_buffer:output_fluid_slot_1",
-          linkType: "share-all",
-          source: {
-            entityId: "[Self]",
-            storageSlotGroupId: "fluid_output_buffer",
-            slotId: "output_fluid_slot_1",
-          },
-          target: {
-            entityId: "warehouse",
-            storageSlotGroupId: "warehouse",
-            slotId: "item_liquid_water",
-          },
-        },
-      ],
-    }),
+    // AI-REMOVED 2026-08-19:
+    // Reason: 新放置的抽水泵必须由用户选择配方，不能默认创建清水仓库链接或开启无限库存。
+    // Trigger: 抽水泵从仓库代理改为真实配方生产设备。
+    // Evidence: placementDefaults 是新泵产生仓库链接与 ignoreStock 的唯一注册表来源。
+    // Replacement: None；新实体 config 默认为空。
+    // Risk: 新放置的泵在选择配方前不会运行，符合手动 channel 语义。
+    // Human Review: Required
+    //
+    // Original code:
+    // placementDefaults: createPlacementDefaults({
+    //   config: {
+    //     "storageSlotGroups[0].slots[0].ignoreStock": true,
+    //   },
+    //   slotLinks: [
+    //     {
+    //       id: "warehouse-link:[Self]:fluid_output_buffer:output_fluid_slot_1",
+    //       linkType: "share-all",
+    //       source: {
+    //         entityId: "[Self]",
+    //         storageSlotGroupId: "fluid_output_buffer",
+    //         slotId: "output_fluid_slot_1",
+    //       },
+    //       target: {
+    //         entityId: "warehouse",
+    //         storageSlotGroupId: "warehouse",
+    //         slotId: "item_liquid_water",
+    //       },
+    //     },
+    //   ],
+    // }),
   }),
   createEntityDefinition({
     id: "udpipe_loader_2",
@@ -4181,11 +4214,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
+    // AI-CORRECTION 2026-08-19: 未直连时不再销毁流体；单基地与区域多基地均提交到各自仓库，已直连时仍使用 loader_buffer。
     simulationModeConfigs: {
       [SIMULATION_MODE.singleBase]: {
         behaviors: [{
           type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
-          strategy: ENTITY_INPUT_ROUTING_STRATEGY.localStorage,
+          strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
           storageSlotGroupIds: ["loader_buffer"],
         }],
       },
@@ -4228,14 +4262,24 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("slot", [500], FluidDomain),
       ),
     ],
-    recipeChannels: [
-      // AI-CORRECTION 2026-06-07: loader_buffer 同时声明为产物槽，仅用于表达槽位配置的混合归属；销毁配方本身仍没有 outputs。
-      createRecipeChannel("void_fluid_1", ["loader_buffer"], ["loader_buffer"]),
-      createRecipeChannel("void_fluid_2", ["loader_buffer"], ["loader_buffer"]),
-    ],
-    recipeChannelBehavior: {
-      allowDuplicateRecipesAcrossChannels: true,
-    },
+    // AI-REMOVED 2026-08-19:
+    // Reason: 多口暗管入口在两个仿真模式下均直接提交仓库，不再需要两个并行销毁 channel。
+    // Trigger: 用户明确抛弃暗管入口销毁机制，统一为按当前运行架构提交仓库。
+    // Evidence: 两个输入端口共享 loader_buffer，统一 warehouse-sink-when-unlinked 已覆盖两个端口的未直连输入。
+    // Replacement: simulationModeConfigs 中统一的 warehouse-sink-when-unlinked behavior。
+    // Risk: 已保存文档中的 recipeChannels[0/1].manualRecipeOnly 配置会成为无效遗留键，但不会参与编译。
+    // Human Review: Required
+    //
+    // Original code:
+    // recipeChannels: [
+    //   // AI-CORRECTION 2026-06-07: loader_buffer 同时声明为产物槽，仅用于表达槽位配置的混合归属；销毁配方本身仍没有 outputs。
+    //   createRecipeChannel("void_fluid_1", ["loader_buffer"], ["loader_buffer"]),
+    //   createRecipeChannel("void_fluid_2", ["loader_buffer"], ["loader_buffer"]),
+    // ],
+    // recipeChannelBehavior: {
+    //   allowDuplicateRecipesAcrossChannels: true,
+    // },
+    recipeChannels: [],
     portStorageBindings: [
       createBinding("bind_fluid_input", "fluid_input", "loader_buffer"),
     ],
@@ -4918,6 +4962,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *   导出数据: outputPorts[0]=(x:2,y:3,z:1), rotation Y=90(E)
    * AI-CORRECTION 2026-07-21: 改为可摆放，使用 warehouseItemLink 模式从仓库获取气体，
    *   放置时默认链接惰气并开启无限供应。参照 water_pump_1 模式。
+   * AI-CORRECTION 2026-08-19: 上述仓库代理模式已退出；气体收集泵改为通过单个手选配方 channel 真实生产惰气或息壤气。
    */
 // AI-CORRECTION 2026-08-07: 解包数据 buildingTable.gas_pump_1 中 needPower=false, powerConsume=0，
 //   游戏中描述为"无需通电即可工作"。移除 requiresPower 和 powerDemand。
@@ -4959,34 +5004,55 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
     ],
-    recipeChannels: [],
+    recipeChannels: [
+      createRecipeChannel("default", [], ["gas_output_buffer"], true),
+    ],
 
     inspectors: [
-      { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["gas_output_buffer"] },
+      { type: INSPECTOR_TYPE.recipeStatus, channelIds: ["default"] },
+      // AI-REMOVED 2026-08-19:
+      // Reason: 新版气体收集泵由手选配方真实生产，不再以仓库槽位链接代理自然资源。
+      // Trigger: 用户明确要求新版泵不再拥有 warehouseItemLink inspector。
+      // Evidence: default channel 的产物写入 gas_output_buffer，两个气体采集配方均为零输入生产配方。
+      // Replacement: recipeStatus inspector + recipeChannels.default
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["gas_output_buffer"] },
       { type: INSPECTOR_TYPE.slotConfig, slotGroupIds: ["gas_output_buffer"] },
     ],
 
-    placementDefaults: createPlacementDefaults({
-      config: {
-        "storageSlotGroups[0].slots[0].ignoreStock": true,
-      },
-      slotLinks: [
-        {
-          id: "warehouse-link:[Self]:gas_output_buffer:output_gas_slot_1",
-          linkType: "share-all",
-          source: {
-            entityId: "[Self]",
-            storageSlotGroupId: "gas_output_buffer",
-            slotId: "output_gas_slot_1",
-          },
-          target: {
-            entityId: "warehouse",
-            storageSlotGroupId: "warehouse",
-            slotId: "item_gas_inert",
-          },
-        },
-      ],
-    }),
+    // AI-REMOVED 2026-08-19:
+    // Reason: 新放置的气体收集泵必须由用户选择配方，不能默认创建惰气仓库链接或开启无限库存。
+    // Trigger: 气体收集泵从仓库代理改为真实配方生产设备。
+    // Evidence: placementDefaults 是新泵产生仓库链接与 ignoreStock 的唯一注册表来源。
+    // Replacement: None；新实体 config 默认为空。
+    // Risk: 新放置的泵在选择配方前不会运行，符合手动 channel 语义。
+    // Human Review: Required
+    //
+    // Original code:
+    // placementDefaults: createPlacementDefaults({
+    //   config: {
+    //     "storageSlotGroups[0].slots[0].ignoreStock": true,
+    //   },
+    //   slotLinks: [
+    //     {
+    //       id: "warehouse-link:[Self]:gas_output_buffer:output_gas_slot_1",
+    //       linkType: "share-all",
+    //       source: {
+    //         entityId: "[Self]",
+    //         storageSlotGroupId: "gas_output_buffer",
+    //         slotId: "output_gas_slot_1",
+    //       },
+    //       target: {
+    //         entityId: "warehouse",
+    //         storageSlotGroupId: "warehouse",
+    //         slotId: "item_gas_inert",
+    //       },
+    //     },
+    //   ],
+    // }),
   }),
 
   /**

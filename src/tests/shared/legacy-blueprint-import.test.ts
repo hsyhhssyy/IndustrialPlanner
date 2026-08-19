@@ -513,10 +513,7 @@ describe("legacy-blueprint-import", () => {
       entityIdPrefix: "dark_pipe",
     });
 
-    expect(converted?.entities.dark_pipe_0001?.config).toEqual({
-      "recipeChannels[0].manualRecipeOnly": true,
-      "recipeChannels[1].manualRecipeOnly": true,
-    });
+    expect(converted?.entities.dark_pipe_0001?.config).toEqual({});
     expect(converted?.entities.dark_pipe_0002?.config).toEqual({});
     expect(converted?.slotLinks).toEqual([{
       id: "dark-pipe-link:dark_pipe_0002:dark_pipe_0001",

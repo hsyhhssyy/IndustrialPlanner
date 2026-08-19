@@ -10,7 +10,7 @@ import {
   type ItemDomainFlag as ItemDomainFlags,
 } from "@/domain/shared/item-domain-flags";
 import type { SlotLinkDefinition } from "@/domain/document/world-document";
-import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
+import { migrateBlueprintDocumentState } from "@/shared/blueprint-device-id-migration";
 
 // AI-REMOVED 2026-07-19:
 // Reason: 旧版导入不得把历史设备 ID 直接压平到最新版本，否则会跳过 schema 1→2→3 的正式迁移链。
@@ -244,10 +244,11 @@ export function convertLegacyBlueprintJson(
     }),
     schemaVersion: 1,
   };
-  const migration = migrateBlueprintEntityDeviceIds(
-    initialVersionDocument.entities,
-    initialVersionDocument.schemaVersion,
-  );
+  const migration = migrateBlueprintDocumentState({
+    entities: initialVersionDocument.entities,
+    entityOrder: initialVersionDocument.entityOrder,
+    slotLinks: initialVersionDocument.slotLinks,
+  }, initialVersionDocument.schemaVersion);
 
   if (migration === null) {
     return null;
@@ -257,6 +258,8 @@ export function convertLegacyBlueprintJson(
     ...initialVersionDocument,
     schemaVersion: migration.schemaVersion,
     entities: migration.entities,
+    entityOrder: [...migration.entityOrder],
+    slotLinks: [...migration.slotLinks],
   };
 }
 
@@ -1127,7 +1130,8 @@ function appendLegacyDarkPipeLinks(options: {
 
     removeSlotLinksForEntity(options.slotLinks, inletEntityId);
     removeSlotLinksForEntity(options.slotLinks, outletEntityId);
-    inletEntity.config = createLegacyDarkPipeInletLinkedConfig(inletEntity.definitionId);
+    // AI-CORRECTION 2026-08-19: 暗管入口销毁 channel 已退出；迁移直连时直接清空旧模式配置，不再生成 manualRecipeOnly。
+    inletEntity.config = {};
     outletEntity.config = {};
 
     const slotLink = createLegacyDarkPipeSlotLink({ inletEntityId, outletEntityId });
@@ -1172,24 +1176,33 @@ function createLegacyDarkPipeSlotLink(options: {
   };
 }
 
-function createLegacyDarkPipeInletLinkedConfig(
-  definitionId: string,
-): Record<string, true> {
-  if (definitionId === "item_port_udpipe_loader_2") {
-    return {
-      "recipeChannels[0].manualRecipeOnly": true,
-      "recipeChannels[1].manualRecipeOnly": true,
-    };
-  }
-
-  if (definitionId === "item_port_udpipe_loader_1") {
-    return {
-      "recipeChannels[0].manualRecipeOnly": true,
-    };
-  }
-
-  return {};
-}
+// AI-REMOVED 2026-08-19:
+// Reason: 旧暗管直连迁移不再需要为入口销毁 channel 设置 manualRecipeOnly。
+// Trigger: 用户要求暗管入口在所有仿真模式下提交仓库并抛弃销毁机制。
+// Evidence: udpipe_loader_1/2 的 recipeChannels 已为空，迁移入口 config 统一清空。
+// Replacement: migrateLegacyDarkPipeLinks 中的 inletEntity.config = {}。
+// Risk: 旧蓝图迁移结果不再包含无效 recipeChannels 配置键。
+// Human Review: Required
+//
+// Original code:
+// function createLegacyDarkPipeInletLinkedConfig(
+//   definitionId: string,
+// ): Record<string, true> {
+//   if (definitionId === "item_port_udpipe_loader_2") {
+//     return {
+//       "recipeChannels[0].manualRecipeOnly": true,
+//       "recipeChannels[1].manualRecipeOnly": true,
+//     };
+//   }
+//
+//   if (definitionId === "item_port_udpipe_loader_1") {
+//     return {
+//       "recipeChannels[0].manualRecipeOnly": true,
+//     };
+//   }
+//
+//   return {};
+// }
 
 function resolveLegacyDarkPipeRole(definitionId: string): "inlet" | "outlet" | null {
   if (definitionId === "item_port_udpipe_loader_1" || definitionId === "item_port_udpipe_loader_2") {

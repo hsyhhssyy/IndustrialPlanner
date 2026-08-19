@@ -36,7 +36,20 @@ describe("recipe channel behavior definitions", () => {
     expect(requireEntity("grinder_1").recipeChannelBehavior).toBeUndefined();
   });
 
-  it.each(["log_connector", "pipe_connector", "udpipe_loader_2"])(
+  it.each([
+    "log_connector",
+    "pipe_connector",
+    // AI-REMOVED 2026-08-19:
+    // Reason: 多口暗管入口销毁 channel 已退出，不再需要允许跨 channel 重复运行同一配方。
+    // Trigger: 用户要求暗管入口在所有模式下提交仓库并抛弃销毁机制。
+    // Evidence: udpipe_loader_2.recipeChannels 为空。
+    // Replacement: 下方无 channel 行为断言。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // "udpipe_loader_2",
+  ])(
     "%s explicitly preserves independent internal channels",
     (definitionId) => {
       expect(requireEntity(definitionId).recipeChannelBehavior).toEqual({
@@ -44,4 +57,8 @@ describe("recipe channel behavior definitions", () => {
       });
     },
   );
+
+  it("does not retain recipe-channel behavior on the channel-free multi-port dark pipe inlet", () => {
+    expect(requireEntity("udpipe_loader_2").recipeChannelBehavior).toBeUndefined();
+  });
 });

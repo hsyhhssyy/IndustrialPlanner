@@ -64,7 +64,10 @@ describe("区域基地 Runtime 门禁", () => {
       const inletDevice = topology.devices["device:inlet"];
       expect(topology.topologyId).not.toBe(singleBaseTopology.topologyId);
       expect(singleBaseTopology.devices["device:inlet"]?.simulationBehaviors).toEqual([
-        expect.objectContaining({ strategy: "local-storage" }),
+        expect.objectContaining({
+          strategy: "warehouse-sink-when-unlinked",
+          storageSlotGroupIds: ["loader_buffer"],
+        }),
       ]);
       expect(inletDevice?.simulationBehaviors).toEqual([
         expect.objectContaining({
@@ -117,9 +120,7 @@ describe("区域基地 Runtime 门禁", () => {
           "storageSlotGroups[0].slots[0].initialCount": 1,
         }),
         createEntity("pipe", "pipe_straight_1x1", 3, 1),
-        createEntity("inlet", "udpipe_loader_1", 4, 0, 0, {
-          "recipeChannels[0].manualRecipeOnly": true,
-        }),
+        createEntity("inlet", "udpipe_loader_1", 4, 0),
         createEntity("linked-outlet", "udpipe_unloader_1", 10, 0),
       ],
       [createDarkPipeSlotLink({

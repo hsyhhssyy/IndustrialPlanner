@@ -18,14 +18,23 @@ const CHEAT_ITEM_PROBLEM = "使用了作弊物品";
 const MISSING_INFINITE_RESOURCE_PROBLEM = "设置了不存在的无限资源";
 const IMPOSSIBLE_INFINITE_RESOURCE_PROBLEM = "设置了不可能实现的无限资源";
 
-const GAS_PUMP_INFINITE_ITEM_IDS = new Set([
-  "item_gas_inert",
-  "item_gas_xiranite",
-]);
-const WATER_PUMP_INFINITE_ITEM_IDS = new Set([
-  "item_liquid_acid",
-  "item_liquid_water",
-]);
+// AI-REMOVED 2026-08-19:
+// Reason: 两类资源泵不再声明 warehouseItemLink inspector，也不再允许以仓库链接配置无限资源。
+// Trigger: 新版泵改为手选配方真实生产。
+// Evidence: Registry 中 gas_pump_1/water_pump_1 的仓库链接 inspector 与 placementDefaults 已移除。
+// Replacement: 泵的 recipeChannels.default；非法旧产物由 schema 5 迁移为作弊设备。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const GAS_PUMP_INFINITE_ITEM_IDS = new Set([
+//   "item_gas_inert",
+//   "item_gas_xiranite",
+// ]);
+// const WATER_PUMP_INFINITE_ITEM_IDS = new Set([
+//   "item_liquid_acid",
+//   "item_liquid_water",
+// ]);
 
 export interface BaseConfigurationProblem {
   readonly message: string;
@@ -189,12 +198,21 @@ function isAllowedSingleBaseInfiniteResource(
     return item?.tags.includes("自然资源") === true
       && item.tags.includes("矿石");
   }
-  if (definitionId === "gas_pump_1") {
-    return GAS_PUMP_INFINITE_ITEM_IDS.has(itemId);
-  }
-  if (definitionId === "water_pump_1") {
-    return WATER_PUMP_INFINITE_ITEM_IDS.has(itemId);
-  }
+  // AI-REMOVED 2026-08-19:
+  // Reason: 新版资源泵不再属于仓库无限资源白名单。
+  // Trigger: 新版泵彻底移除 warehouseItemLink inspector。
+  // Evidence: collectWarehouseSlotRefs 已无法从两类泵定义中得到任何仓库槽位。
+  // Replacement: 泵的手选配方 channel。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // if (definitionId === "gas_pump_1") {
+  //   return GAS_PUMP_INFINITE_ITEM_IDS.has(itemId);
+  // }
+  // if (definitionId === "water_pump_1") {
+  //   return WATER_PUMP_INFINITE_ITEM_IDS.has(itemId);
+  // }
   return false;
 }
 

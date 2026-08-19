@@ -1,5 +1,5 @@
 import type { WorldDocument } from "@/domain/document/world-document";
-import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
+import { migrateBlueprintDocumentState } from "@/shared/blueprint-device-id-migration";
 
 import {
   applyIndexedDbStoreMutations,
@@ -134,7 +134,11 @@ export function normalizeWorldDocument(
   }
 
   // 2026-05-31: 反序列化时对 entityOrder 做去重，作为历史数据修复的最后防线。
-  const migration = migrateBlueprintEntityDeviceIds(value.entities, value.schemaVersion);
+  const migration = migrateBlueprintDocumentState({
+    entities: value.entities,
+    entityOrder: value.entityOrder,
+    slotLinks: value.slotLinks,
+  }, value.schemaVersion);
 
   if (migration === null) {
     return null;
@@ -144,7 +148,8 @@ export function normalizeWorldDocument(
     ...value,
     schemaVersion: migration.schemaVersion,
     entities: migration.entities,
-    entityOrder: Array.from(new Set(value.entityOrder)),
+    entityOrder: Array.from(new Set(migration.entityOrder)),
+    slotLinks: [...migration.slotLinks],
   };
 }
 

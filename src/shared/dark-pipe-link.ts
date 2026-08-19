@@ -5,7 +5,16 @@ import type {
   WorldDocument,
   WorldEntity,
 } from "@/domain/document/world-document";
-import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+// AI-REMOVED 2026-08-19:
+// Reason: 暗管入口不再通过 recipe channel 销毁流体，创建直连无需读取 EntityDefinition 生成 manualRecipeOnly 配置。
+// Trigger: 用户明确要求暗管入口在所有仿真模式下提交仓库并抛弃销毁机制。
+// Evidence: getDarkPipeManualRecipeOnlyPatch 已退出，文件内不再消费 EntityDefinition。
+// Replacement: None
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 
 export type DarkPipeRole = "inlet" | "outlet";
 
@@ -152,16 +161,25 @@ export function resolveDarkPipeLinkedEntityId(
   return link.source.entityId === entityId ? link.target.entityId : link.source.entityId;
 }
 
-export function getDarkPipeManualRecipeOnlyPatch(definition: EntityDefinition): Record<string, true> {
-  const role = resolveDarkPipeRole(definition.id);
-  if (role !== "inlet") {
-    return {};
-  }
-
-  return Object.fromEntries(
-    definition.recipeChannels.map((_, index) => [
-      `recipeChannels[${index}].manualRecipeOnly`,
-      true,
-    ]),
-  );
-}
+// AI-REMOVED 2026-08-19:
+// Reason: manualRecipeOnly 只用于暗管直连时停用隐藏销毁配方；销毁配方退出后不应继续写入无效配置。
+// Trigger: 用户明确要求暗管入口在所有仿真模式下提交仓库并抛弃销毁机制。
+// Evidence: udpipe_loader_1/2 的 recipeChannels 现为空，未直连入仓由 warehouse-sink-when-unlinked behavior 决定。
+// Replacement: createEditorDarkPipeLinkActions 创建链接时直接清空入口遗留 config。
+// Risk: 旧文档中的 manualRecipeOnly 键仍可被读取，但不会参与任何 channel 编译。
+// Human Review: Required
+//
+// Original code:
+// export function getDarkPipeManualRecipeOnlyPatch(definition: EntityDefinition): Record<string, true> {
+//   const role = resolveDarkPipeRole(definition.id);
+//   if (role !== "inlet") {
+//     return {};
+//   }
+//
+//   return Object.fromEntries(
+//     definition.recipeChannels.map((_, index) => [
+//       `recipeChannels[${index}].manualRecipeOnly`,
+//       true,
+//     ]),
+//   );
+// }

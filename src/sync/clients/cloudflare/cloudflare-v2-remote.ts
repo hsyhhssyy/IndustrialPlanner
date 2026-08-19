@@ -45,7 +45,7 @@ import { CfV2HttpError } from "./cloudflare-v2-types";
 
 export interface CloudflareSyncRemoteOptions {
   readonly apiBase?: string;
-  readonly spaceId?: string;
+  readonly spaceId: string;
   readonly maxConcurrentRequests?: number;
   readonly requestTimeoutMs?: number;
   readonly onRequestActivityChange?: (activity: CloudflareV2WorkerActivity) => void;
@@ -59,10 +59,15 @@ export class CloudflareSyncRemote implements SyncRemote {
   private readonly ownsWorkerClient: boolean;
   private readonly config: CfV2WorkerConfig;
 
-  public constructor(private readonly options: CloudflareSyncRemoteOptions = {}) {
+  public constructor(private readonly options: CloudflareSyncRemoteOptions) {
+    const spaceId = options.spaceId.trim();
+    if (spaceId === "") {
+      throw new Error("Cloudflare space ID must not be empty.");
+    }
+
     this.config = {
       apiBase: (options.apiBase ?? resolveBackendApiBaseUrl()).replace(/\/$/, ""),
-      spaceId: options.spaceId?.trim() || "default",
+      spaceId,
       maxConcurrentRequests: normalizeConcurrency(options.maxConcurrentRequests),
       requestTimeoutMs: normalizeTimeout(options.requestTimeoutMs),
     };
@@ -521,7 +526,7 @@ class CloudflareV2SyncWriteBatch implements SyncRemoteWriteBatch {
 }
 
 export function createCloudflareSyncRemote(
-  options: CloudflareSyncRemoteOptions = {},
+  options: CloudflareSyncRemoteOptions,
 ): SyncRemote {
   return new CloudflareSyncRemote(options);
 }

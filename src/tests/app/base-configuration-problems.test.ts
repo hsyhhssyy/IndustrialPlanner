@@ -32,7 +32,7 @@ describe("base configuration problems", () => {
     ]);
   });
 
-  it("单基地模式允许取货口矿物与两类采集泵的真实自然资源", () => {
+  it("单基地模式允许取货口通过仓库链接无限提供矿物", () => {
     const allowedResourcesByDefinition = {
       unloader_1: [
         "item_copper_ore",
@@ -40,8 +40,17 @@ describe("base configuration problems", () => {
         "item_originium_ore",
         "item_quartz_sand",
       ],
-      gas_pump_1: ["item_gas_inert", "item_gas_xiranite"],
-      water_pump_1: ["item_liquid_acid", "item_liquid_water"],
+      // AI-REMOVED 2026-08-19:
+      // Reason: 两类采集泵不再拥有 warehouseItemLink inspector，真实自然资源改由手选配方生产。
+      // Trigger: 新版泵彻底退出仓库代理模式。
+      // Evidence: Registry 契约测试已断言两类泵无 warehouse-item-link inspector。
+      // Replacement: recipe-channel-definition.test.ts + resource-pump-production.test.ts
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // gas_pump_1: ["item_gas_inert", "item_gas_xiranite"],
+      // water_pump_1: ["item_liquid_acid", "item_liquid_water"],
     } as const;
     const entities: WorldEntity[] = [];
     const slotLinks: SlotLinkDefinition[] = [];
@@ -61,9 +70,18 @@ describe("base configuration problems", () => {
   it("单基地模式对其他仓库链接无限资源按设备报错", () => {
     const invalidEntries = [
       createWarehouseInfiniteEntry("invalid-unloader", "unloader_1", "item_liquid_water"),
-      createWarehouseInfiniteEntry("invalid-gas-pump", "gas_pump_1", "item_liquid_acid"),
-      createWarehouseInfiniteEntry("invalid-water-pump", "water_pump_1", "item_gas_inert"),
       createWarehouseInfiniteEntry("invalid-hub", "sp_hub_1", "item_copper_ore"),
+      // AI-REMOVED 2026-08-19:
+      // Reason: 新版泵没有可用于构造仓库链接的 inspector。
+      // Trigger: 泵改为真实配方生产。
+      // Evidence: createWarehouseInfiniteEntry 会拒绝没有 warehouse-item-link inspector 的设备。
+      // Replacement: schema 5 迁移测试覆盖旧泵非法物品替换。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // createWarehouseInfiniteEntry("invalid-gas-pump", "gas_pump_1", "item_liquid_acid"),
+      // createWarehouseInfiniteEntry("invalid-water-pump", "water_pump_1", "item_gas_inert"),
     ];
     const finiteEntry = createWarehouseInfiniteEntry(
       "finite-hub",
@@ -83,9 +101,18 @@ describe("base configuration problems", () => {
   it("多基地模式只禁止仓库取货口的任意无限资源", () => {
     const entries = [
       createWarehouseInfiniteEntry("multi-unloader", "unloader_1", "item_copper_ore"),
-      createWarehouseInfiniteEntry("multi-gas-pump", "gas_pump_1", "item_liquid_water"),
-      createWarehouseInfiniteEntry("multi-water-pump", "water_pump_1", "item_gas_inert"),
       createWarehouseInfiniteEntry("multi-hub", "sp_hub_1", "item_copper_ore"),
+      // AI-REMOVED 2026-08-19:
+      // Reason: 新版泵不再参与多基地仓库出口分类。
+      // Trigger: 泵移除 warehouseItemLink inspector。
+      // Evidence: 多基地与单基地均由相同泵配方生产，不再读取仓库源槽。
+      // Replacement: 真实泵仿真回归。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // createWarehouseInfiniteEntry("multi-gas-pump", "gas_pump_1", "item_liquid_water"),
+      // createWarehouseInfiniteEntry("multi-water-pump", "water_pump_1", "item_gas_inert"),
     ];
 
     expect(collectProblems({
@@ -104,31 +131,27 @@ describe("base configuration problems", () => {
     });
     const runtimeEntity = createEntity("runtime-storage", "storager_1");
     const finiteEntity = createEntity("finite-storage", "storager_1");
-    const waterPump = createWarehouseInfiniteEntry(
-      "runtime-water-pump",
-      "water_pump_1",
-      "item_liquid_water",
-    );
+    const waterPump = createEntity("runtime-water-pump", "water_pump_1");
     const runtimeSlotItemsByEntityId = new Map([
       [runtimeEntity.id, [createRuntimeSlotItem("storager_1", true)]],
       [finiteEntity.id, [createRuntimeSlotItem("storager_1", false)]],
-      [waterPump.entity.id, [createRuntimeSlotItem("water_pump_1", true)]],
+      [waterPump.id, [createRuntimeSlotItem("water_pump_1", true)]],
     ]);
-    const entities = [configuredEntity, runtimeEntity, finiteEntity, waterPump.entity];
+    const entities = [configuredEntity, runtimeEntity, finiteEntity, waterPump];
     const runtimeInfiniteStorageEntityIds = collectRuntimeInfiniteStorageEntityIds({
       entities,
       entityDefinitions: registry.entityDefinitions,
       runtimeSlotItemsByEntityId,
     });
 
-    expect([...runtimeInfiniteStorageEntityIds]).toEqual(["runtime-storage"]);
+    expect([...runtimeInfiniteStorageEntityIds]).toEqual(["runtime-storage", "runtime-water-pump"]);
     expect(collectProblems({
       entities,
-      slotLinks: [waterPump.slotLink],
       runtimeInfiniteStorageEntityIds,
     })).toEqual([
       createExpectedProblem("设置了不可能实现的无限资源", "configured-storage"),
       createExpectedProblem("设置了不可能实现的无限资源", "runtime-storage"),
+      createExpectedProblem("设置了不可能实现的无限资源", "runtime-water-pump"),
     ]);
   });
 });

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
-import type { WorldEntity } from "@/domain/document/world-document";
+import type {
+  SlotLinkDefinition,
+  WorldEntity,
+} from "@/domain/document/world-document";
 import { WORLD_DOCUMENT_SCHEMA_VERSION } from "@/domain/document/world-document";
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
@@ -9,6 +12,7 @@ import {
   applyBlueprintDeviceIdMigrationRules,
   BLUEPRINT_DEVICE_ID_MIGRATION_SPECS,
   BLUEPRINT_DEVICE_ID_SCHEMA_VERSION,
+  migrateBlueprintDocumentState,
   migrateBlueprintEntityDeviceIds,
 } from "@/shared/blueprint-device-id-migration";
 import { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
@@ -36,9 +40,49 @@ function migrateOneEntity(
   );
 }
 
+function createPumpWarehouseLink(itemId: string): SlotLinkDefinition {
+  return {
+    id: `warehouse-link:entity:${itemId}`,
+    linkType: "share-all",
+    source: {
+      entityId: "entity",
+      storageSlotGroupId: "legacy-output-buffer",
+      slotId: "legacy-output-slot",
+    },
+    target: {
+      entityId: "warehouse",
+      storageSlotGroupId: "warehouse",
+      slotId: itemId,
+    },
+  };
+}
+
+function migratePumpDocument(options: {
+  readonly definitionId: "gas_pump_1" | "water_pump_1";
+  readonly selectedItemId?: string;
+  readonly rotation?: WorldEntity["rotation"];
+  readonly ignoreStock?: boolean;
+}) {
+  const entity = createEntity(options.definitionId, options.rotation ?? 0);
+  entity.config = {
+    retained: true,
+    "storageSlotGroups[0].slots[0].initialItemType": options.selectedItemId ?? null,
+    "storageSlotGroups[0].slots[0].initialCount": 17,
+    "storageSlotGroups[0].slots[0].ignoreStock": options.ignoreStock ?? true,
+  };
+
+  return migrateBlueprintDocumentState({
+    entities: { entity },
+    entityOrder: ["entity"],
+    slotLinks: options.selectedItemId === undefined
+      ? []
+      : [createPumpWarehouseLink(options.selectedItemId)],
+  }, 4, 5);
+}
+
 describe("blueprint device id migration version chain", () => {
   it("declares one contiguous migration for every schema version up to current", () => {
-    expect(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION).toBe(4);
+    expect(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION).toBe(5);
     expect(BLUEPRINT_SCHEMA_VERSION).toBe(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION);
     expect(WORLD_DOCUMENT_SCHEMA_VERSION).toBe(BLUEPRINT_DEVICE_ID_SCHEMA_VERSION);
     expect(BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.map((spec) => [
@@ -48,6 +92,7 @@ describe("blueprint device id migration version chain", () => {
       [1, 2],
       [2, 3],
       [3, 4],
+      [4, 5],
     ]);
   });
 
@@ -56,12 +101,17 @@ describe("blueprint device id migration version chain", () => {
     { source: 1, target: 2, sourceId: "item_port_mix_pool_large_1", expectedId: "item_port_mix_pool_2" },
     { source: 1, target: 3, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
     { source: 1, target: 4, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
+    { source: 1, target: 5, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
     { source: 2, target: 2, sourceId: "item_port_mix_pool_2", expectedId: "item_port_mix_pool_2" },
     { source: 2, target: 3, sourceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
     { source: 2, target: 4, sourceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
+    { source: 2, target: 5, sourceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
     { source: 3, target: 3, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
     { source: 3, target: 4, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    { source: 3, target: 5, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
     { source: 4, target: 4, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    { source: 4, target: 5, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
+    { source: 5, target: 5, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
   ])(
     "covers the complete supported migration matrix: schema $source to $target",
     ({ source, target, sourceId, expectedId }) => {
@@ -116,9 +166,14 @@ describe("blueprint device id migration version chain", () => {
     expect(version4?.schemaVersion).toBe(4);
     expect(version4?.entities).toEqual(version3?.entities);
 
+    const version5 = migrateBlueprintEntityDeviceIds(version4?.entities ?? {}, 4, 5);
+
+    expect(version5?.schemaVersion).toBe(5);
+    expect(version5?.entities).toEqual(version4?.entities);
+
     const directToCurrent = migrateBlueprintEntityDeviceIds(version1Entities, 1);
 
-    expect(directToCurrent).toEqual(version4);
+    expect(directToCurrent).toEqual(version5);
   });
 
   it.each([
@@ -142,6 +197,11 @@ describe("blueprint device id migration version chain", () => {
       sourceDeviceId: "mix_pool_2",
       expectedDeviceId: "mix_pool_2",
     },
+    {
+      sourceSchemaVersion: 5,
+      sourceDeviceId: "mix_pool_2",
+      expectedDeviceId: "mix_pool_2",
+    },
   ])(
     "migrates schema $sourceSchemaVersion to current schema from its own canonical state",
     ({ sourceSchemaVersion, sourceDeviceId, expectedDeviceId }) => {
@@ -162,8 +222,9 @@ describe("blueprint device id migration version chain", () => {
     { schemaVersion: 2, deviceId: "item_port_mix_pool_2" },
     { schemaVersion: 3, deviceId: "mix_pool_2" },
     { schemaVersion: 4, deviceId: "mix_pool_2" },
+    { schemaVersion: 5, deviceId: "mix_pool_2" },
   ])(
-    "normalizes blueprint and world documents from schema $schemaVersion to schema 4",
+    "normalizes blueprint and world documents from schema $schemaVersion to schema 5",
     ({ schemaVersion, deviceId }) => {
       const entity = createEntity(deviceId);
       const blueprint = normalizeBlueprintDocument({
@@ -204,11 +265,11 @@ describe("blueprint device id migration version chain", () => {
       });
 
       expect(blueprint).toMatchObject({
-        schemaVersion: 4,
+        schemaVersion: 5,
         entities: { entity: { definitionId: "mix_pool_2", rotation: 0 } },
       });
       expect(world).toMatchObject({
-        schemaVersion: 4,
+        schemaVersion: 5,
         entities: { entity: { definitionId: "mix_pool_2", rotation: 0 } },
       });
     },
@@ -330,6 +391,100 @@ describe("blueprint device id migration version chain", () => {
     });
   });
 
+  it.each([
+    ["gas_pump_1", "item_gas_inert", "r_gas_collector_inert_basic", true],
+    ["gas_pump_1", "item_gas_xiranite", "r_gas_collector_xiranite_basic", false],
+    ["water_pump_1", "item_liquid_water", "r_pump_water_basic", true],
+    ["water_pump_1", "item_liquid_acid", "r_pump_acid_basic", false],
+  ] as const)(
+    "migrates schema 4 %s selection %s to manual recipe %s regardless of ignoreStock=%s",
+    (definitionId, selectedItemId, recipeId, ignoreStock) => {
+      const result = migratePumpDocument({
+        definitionId,
+        selectedItemId,
+        ignoreStock,
+      });
+
+      expect(result).toMatchObject({
+        schemaVersion: 5,
+        entityOrder: ["entity"],
+        slotLinks: [],
+        entities: {
+          entity: {
+            definitionId,
+            position: { x: 4, y: 8 },
+            config: {
+              retained: true,
+              channelRecipes: { default: recipeId },
+            },
+          },
+        },
+      });
+      expect(result?.entities.entity?.config).toEqual({
+        retained: true,
+        channelRecipes: { default: recipeId },
+      });
+    },
+  );
+
+  it.each([
+    ["gas_pump_1", "item_gas_acid", "cheat_infinite_gas"],
+    ["water_pump_1", "item_liquid_sewage", "cheat_infinite_liquid"],
+  ] as const)(
+    "replaces schema 4 %s with %s source %s for unsupported selected item",
+    (definitionId, selectedItemId, cheatDefinitionId) => {
+      const result = migratePumpDocument({ definitionId, selectedItemId });
+
+      expect(result?.entities.entity).toMatchObject({
+        definitionId: cheatDefinitionId,
+        position: { x: 6, y: 9 },
+        rotation: 0,
+        config: {
+          retained: true,
+          "storageSlotGroups[1].slots[0].initialItemType": selectedItemId,
+          "storageSlotGroups[1].slots[0].initialCount": 50,
+          "storageSlotGroups[1].slots[0].ignoreStock": true,
+        },
+      });
+      expect(result?.slotLinks).toEqual([]);
+    },
+  );
+
+  it.each([
+    [0, { x: 6, y: 9 }],
+    [90, { x: 5, y: 10 }],
+    [180, { x: 4, y: 9 }],
+    [270, { x: 5, y: 8 }],
+  ] as const)(
+    "places migrated cheat source on the old output cell at rotation %s",
+    (rotation, expectedPosition) => {
+      const result = migratePumpDocument({
+        definitionId: "gas_pump_1",
+        selectedItemId: "item_gas_acid",
+        rotation,
+      });
+
+      expect(result?.entities.entity).toMatchObject({
+        definitionId: "cheat_infinite_gas",
+        position: expectedPosition,
+        rotation: 0,
+      });
+    },
+  );
+
+  it.each(["gas_pump_1", "water_pump_1"] as const)(
+    "keeps an unconfigured schema 4 %s while clearing legacy stock configuration",
+    (definitionId) => {
+      const result = migratePumpDocument({ definitionId });
+
+      expect(result?.entities.entity).toEqual({
+        ...createEntity(definitionId),
+        config: { retained: true },
+      });
+      expect(result?.slotLinks).toEqual([]);
+    },
+  );
+
   it.each(
     BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.flatMap((spec) =>
       spec.deviceRules.map((rule) => ({ spec, rule })),
@@ -366,7 +521,7 @@ describe("blueprint device id migration version chain", () => {
     const entities = { entity: createEntity("mix_pool_2") };
 
     expect(migrateBlueprintEntityDeviceIds(entities, 0)).toBeNull();
-    expect(migrateBlueprintEntityDeviceIds(entities, 5)).toBeNull();
+    expect(migrateBlueprintEntityDeviceIds(entities, 6)).toBeNull();
     expect(migrateBlueprintEntityDeviceIds(entities, 2, 1)).toBeNull();
     expect(migrateBlueprintEntityDeviceIds(entities, 1.5)).toBeNull();
   });

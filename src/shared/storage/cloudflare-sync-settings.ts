@@ -1,3 +1,5 @@
+import { createUuid } from "@/domain/shared/uuid";
+
 import {
   deleteFromIndexedDb,
   readFromIndexedDb,
@@ -13,9 +15,14 @@ const CLOUDFLARE_SYNC_SETTINGS_LOCATION: IndexedDbStorageLocation = {
 
 export const DEFAULT_CLOUDFLARE_SPACE_NAME = "default";
 export const MAX_CLOUDFLARE_SPACE_NAME_LENGTH = 64;
+const RANDOM_CLOUDFLARE_SPACE_NAME_PREFIX = "space-";
 
 export interface CloudflareSyncSettings {
   readonly spaceName: string;
+}
+
+export interface InitializeCloudflareSyncSettingsOptions {
+  readonly preserveImplicitDefault: boolean;
 }
 
 export type CloudflareSyncSettingsChangeListener = (
@@ -43,13 +50,38 @@ export async function readCloudflareSyncSettings(): Promise<CloudflareSyncSettin
     CLOUDFLARE_SYNC_SETTINGS_LOCATION,
   );
 
-  return normalizeCloudflareSyncSettings(rawSettings);
+  return normalizeCloudflareSyncSettings(rawSettings)
+    ?? DEFAULT_CLOUDFLARE_SYNC_SETTINGS;
+}
+
+export async function initializeCloudflareSyncSettings(
+  options: InitializeCloudflareSyncSettingsOptions,
+): Promise<CloudflareSyncSettings> {
+  const rawSettings = await readFromIndexedDb<unknown>(
+    CLOUDFLARE_SYNC_SETTINGS_LOCATION,
+  );
+  const existingSettings = normalizeCloudflareSyncSettings(rawSettings);
+
+  if (existingSettings !== null) {
+    return existingSettings;
+  }
+
+  return await writeCloudflareSyncSettings({
+    spaceName: options.preserveImplicitDefault
+      ? DEFAULT_CLOUDFLARE_SPACE_NAME
+      : createRandomCloudflareSpaceName(),
+  });
 }
 
 export async function writeCloudflareSyncSettings(
   settings: CloudflareSyncSettings,
 ): Promise<CloudflareSyncSettings> {
   const normalized = normalizeCloudflareSyncSettings(settings);
+
+  if (normalized === null) {
+    throw new Error("Cloudflare space name must not be empty.");
+  }
+
   const saved = await trySaveToIndexedDb(
     CLOUDFLARE_SYNC_SETTINGS_LOCATION,
     normalized,
@@ -67,7 +99,17 @@ export async function writeCloudflareSyncSettings(
 export function resolveCloudflareSpaceId(
   settings: CloudflareSyncSettings,
 ): string {
-  return normalizeCloudflareSyncSettings(settings).spaceName;
+  const normalized = normalizeCloudflareSyncSettings(settings);
+
+  if (normalized === null) {
+    throw new Error("Cloudflare space name must not be empty.");
+  }
+
+  return normalized.spaceName;
+}
+
+export function createRandomCloudflareSpaceName(): string {
+  return `${RANDOM_CLOUDFLARE_SPACE_NAME_PREFIX}${createUuid()}`;
 }
 
 export async function clearCloudflareSyncSettings(): Promise<void> {
@@ -80,18 +122,16 @@ export async function clearCloudflareSyncSettings(): Promise<void> {
   emitCloudflareSyncSettingsChange(DEFAULT_CLOUDFLARE_SYNC_SETTINGS);
 }
 
-function normalizeCloudflareSyncSettings(value: unknown): CloudflareSyncSettings {
+function normalizeCloudflareSyncSettings(value: unknown): CloudflareSyncSettings | null {
   if (!isRecord(value)) {
-    return DEFAULT_CLOUDFLARE_SYNC_SETTINGS;
+    return null;
   }
 
   const spaceName = typeof value.spaceName === "string"
     ? value.spaceName.trim().slice(0, MAX_CLOUDFLARE_SPACE_NAME_LENGTH)
     : "";
 
-  return {
-    spaceName: spaceName || DEFAULT_CLOUDFLARE_SPACE_NAME,
-  };
+  return spaceName === "" ? null : { spaceName };
 }
 
 function emitCloudflareSyncSettingsChange(settings: CloudflareSyncSettings): void {

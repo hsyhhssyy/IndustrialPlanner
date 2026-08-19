@@ -1,15 +1,47 @@
 import { ADMISSION_RATE_WINDOWS_PER_MINUTE } from "@/domain/registry";
-import type { WorldEntity } from "@/domain/document/world-document";
+import type {
+  SlotLinkDefinition,
+  WorldEntity,
+} from "@/domain/document/world-document";
 import type { GridRotation } from "@/domain/shared/grid";
 import { rotateGridRotation } from "@/shared/geometry/grid";
+import { rotateLocalPortCell } from "@/shared/geometry/port";
 
-export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 4;
+export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = 5;
 
 const ADMISSION_RULE_CONFIG_PATH = "portGroups[0].ports[0].admissionRule";
 const ADMISSION_RATE_MAX_BY_DEFINITION_ID: Readonly<Record<string, number>> = {
   log_admission: 30,
   pipe_admission: 120,
 };
+
+const RESOURCE_PUMP_OUTPUT_PORT = {
+  localCellX: 2,
+  localCellY: 1,
+} as const;
+const RESOURCE_PUMP_FOOTPRINT = {
+  width: 3,
+  height: 3,
+} as const;
+const RESOURCE_PUMP_MIGRATION_BY_DEFINITION_ID = {
+  gas_pump_1: {
+    cheatDefinitionId: "cheat_infinite_gas",
+    recipeIdByItemId: {
+      item_gas_inert: "r_gas_collector_inert_basic",
+      item_gas_xiranite: "r_gas_collector_xiranite_basic",
+    },
+  },
+  water_pump_1: {
+    cheatDefinitionId: "cheat_infinite_liquid",
+    recipeIdByItemId: {
+      item_liquid_acid: "r_pump_acid_basic",
+      item_liquid_water: "r_pump_water_basic",
+    },
+  },
+} as const satisfies Readonly<Record<string, {
+  readonly cheatDefinitionId: string;
+  readonly recipeIdByItemId: Readonly<Record<string, string>>;
+}>>;
 
 export interface BlueprintDeviceIdMigrationRule {
   readonly fromDeviceId: string;
@@ -21,12 +53,33 @@ export interface BlueprintDeviceIdMigrationSpec {
   readonly fromVersion: number;
   readonly toVersion: number;
   readonly deviceRules: readonly BlueprintDeviceIdMigrationRule[];
-  readonly entityConfigMigration?: "normalize-admission-rate";
+  // AI-REMOVED 2026-08-19:
+  // Reason: schema 5 迁移需要同时读取并修改 entities 与 slotLinks，实体配置专用迁移类型已无法表达完整文档迁移。
+  // Trigger: 气体收集泵与抽水泵从仓库代理改为真实配方生产设备。
+  // Evidence: 旧泵所选物品只存在于 document.slotLinks，单独迁移 entity.config 无法判断配方或作弊设备替换。
+  // Replacement: documentMigration
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // readonly entityConfigMigration?: "normalize-admission-rate";
+  readonly documentMigration?: "normalize-admission-rate" | "migrate-resource-pump-sources";
 }
 
 export interface BlueprintEntityDeviceIdMigrationResult<TEntity extends WorldEntity> {
   readonly schemaVersion: number;
   readonly entities: Record<string, TEntity>;
+}
+
+export interface BlueprintDocumentMigrationState<TEntity extends WorldEntity> {
+  readonly entities: Record<string, TEntity>;
+  readonly entityOrder: readonly string[];
+  readonly slotLinks: readonly SlotLinkDefinition[];
+}
+
+export interface BlueprintDocumentMigrationResult<TEntity extends WorldEntity>
+  extends BlueprintDocumentMigrationState<TEntity> {
+  readonly schemaVersion: number;
 }
 
 export interface BlueprintDeviceReferenceMigrationResult {
@@ -41,6 +94,7 @@ export interface BlueprintDeviceReferenceMigrationResult {
  * 每个版本只能迁移到紧邻的下一个版本。设备方向迁移使用：
  * `nextRotation = currentRotation + rotationOffset`。
  * AI-CORRECTION 2026-07-23: 迁移链现同时承载准入口速率配置归一化，名称中的 DeviceId 仅保留为既有公共 API。
+ * AI-CORRECTION 2026-08-19: schema 5 起迁移链以完整文档状态为边界，同时迁移实体、实体顺序与槽位链接。
  */
 export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
   {
@@ -111,7 +165,13 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
     fromVersion: 3,
     toVersion: 4,
     deviceRules: [],
-    entityConfigMigration: "normalize-admission-rate",
+    documentMigration: "normalize-admission-rate",
+  },
+  {
+    fromVersion: 4,
+    toVersion: 5,
+    deviceRules: [],
+    documentMigration: "migrate-resource-pump-sources",
   },
 ] as const satisfies readonly BlueprintDeviceIdMigrationSpec[];
 
@@ -152,6 +212,31 @@ export function migrateBlueprintEntityDeviceIds<TEntity extends WorldEntity>(
   sourceSchemaVersion: number,
   targetSchemaVersion: number = BLUEPRINT_DEVICE_ID_SCHEMA_VERSION,
 ): BlueprintEntityDeviceIdMigrationResult<TEntity> | null {
+  const migration = migrateBlueprintDocumentState({
+    entities,
+    entityOrder: Object.keys(entities),
+    slotLinks: [],
+  }, sourceSchemaVersion, targetSchemaVersion);
+
+  return migration === null
+    ? null
+    : {
+        schemaVersion: migration.schemaVersion,
+        entities: migration.entities,
+      };
+}
+
+/**
+ * 蓝图、基地与系统蓝图共用的完整文档迁移入口。
+ *
+ * AI-CORRECTION 2026-08-19: 设备 ID 之外的迁移必须从这里进入，避免丢失
+ * entityOrder 或 slotLinks 上的跨对象语义。
+ */
+export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
+  state: BlueprintDocumentMigrationState<TEntity>,
+  sourceSchemaVersion: number,
+  targetSchemaVersion: number = BLUEPRINT_DEVICE_ID_SCHEMA_VERSION,
+): BlueprintDocumentMigrationResult<TEntity> | null {
   if (
     !Number.isInteger(sourceSchemaVersion)
     || !Number.isInteger(targetSchemaVersion)
@@ -163,7 +248,7 @@ export function migrateBlueprintEntityDeviceIds<TEntity extends WorldEntity>(
   }
 
   let schemaVersion = sourceSchemaVersion;
-  let nextEntities = entities;
+  let nextState = state;
 
   while (schemaVersion < targetSchemaVersion) {
     const spec = MIGRATION_SPEC_BY_SOURCE_VERSION.get(schemaVersion);
@@ -172,16 +257,25 @@ export function migrateBlueprintEntityDeviceIds<TEntity extends WorldEntity>(
       return null;
     }
 
-    nextEntities = applyBlueprintDeviceIdMigrationRules(nextEntities, spec.deviceRules);
-    if (spec.entityConfigMigration === "normalize-admission-rate") {
-      nextEntities = applyAdmissionRateConfigMigration(nextEntities);
+    nextState = {
+      ...nextState,
+      entities: applyBlueprintDeviceIdMigrationRules(nextState.entities, spec.deviceRules),
+    };
+    if (spec.documentMigration === "normalize-admission-rate") {
+      nextState = {
+        ...nextState,
+        entities: applyAdmissionRateConfigMigration(nextState.entities),
+      };
+    }
+    if (spec.documentMigration === "migrate-resource-pump-sources") {
+      nextState = applyResourcePumpSourceMigration(nextState);
     }
     schemaVersion = spec.toVersion;
   }
 
   return {
+    ...nextState,
     schemaVersion,
-    entities: nextEntities,
   };
 }
 
@@ -271,6 +365,135 @@ function applyAdmissionRateConfigMigration<TEntity extends WorldEntity>(
   }
 
   return nextEntities;
+}
+
+function applyResourcePumpSourceMigration<TEntity extends WorldEntity>(
+  state: BlueprintDocumentMigrationState<TEntity>,
+): BlueprintDocumentMigrationState<TEntity> {
+  let nextEntities = state.entities;
+  let nextSlotLinks = state.slotLinks;
+
+  for (const [entityId, entity] of Object.entries(state.entities)) {
+    const migration = RESOURCE_PUMP_MIGRATION_BY_DEFINITION_ID[
+      entity.definitionId as keyof typeof RESOURCE_PUMP_MIGRATION_BY_DEFINITION_ID
+    ];
+    if (migration === undefined) {
+      continue;
+    }
+
+    const warehouseLinks = nextSlotLinks.filter((link) =>
+      link.source.entityId === entity.id
+      && isWarehouseEntityId(link.target.entityId),
+    );
+    const selectedItemId = resolveLegacyPumpSelectedItemId(entity, warehouseLinks);
+    const recipeId = selectedItemId === null
+      ? null
+      : migration.recipeIdByItemId[
+          selectedItemId as keyof typeof migration.recipeIdByItemId
+        ] ?? null;
+    const baseConfig = removeLegacyPumpSourceConfig(entity.config);
+
+    if (nextEntities === state.entities) {
+      nextEntities = { ...state.entities };
+    }
+
+    if (selectedItemId === null) {
+      nextEntities[entityId] = {
+        ...entity,
+        config: baseConfig,
+      };
+      nextSlotLinks = removeLinks(nextSlotLinks, new Set(warehouseLinks.map((link) => link.id)));
+      continue;
+    }
+
+    if (recipeId !== null) {
+      nextEntities[entityId] = {
+        ...entity,
+        config: {
+          ...baseConfig,
+          channelRecipes: {
+            default: recipeId,
+          },
+        },
+      };
+      nextSlotLinks = removeLinks(nextSlotLinks, new Set(warehouseLinks.map((link) => link.id)));
+      continue;
+    }
+
+    const outputCell = rotateLocalPortCell({
+      footprint: RESOURCE_PUMP_FOOTPRINT,
+      port: RESOURCE_PUMP_OUTPUT_PORT,
+      rotation: entity.rotation,
+    });
+    nextEntities[entityId] = {
+      ...entity,
+      definitionId: migration.cheatDefinitionId,
+      position: {
+        x: entity.position.x + outputCell.x,
+        y: entity.position.y + outputCell.y,
+      },
+      rotation: 0,
+      config: {
+        ...baseConfig,
+        "storageSlotGroups[1].slots[0].initialItemType": selectedItemId,
+        "storageSlotGroups[1].slots[0].initialCount": 50,
+        "storageSlotGroups[1].slots[0].ignoreStock": true,
+      },
+    };
+    nextSlotLinks = nextSlotLinks.filter((link) =>
+      link.source.entityId !== entity.id
+      && link.target.entityId !== entity.id,
+    );
+  }
+
+  return {
+    entities: nextEntities,
+    entityOrder: state.entityOrder,
+    slotLinks: nextSlotLinks,
+  };
+}
+
+function resolveLegacyPumpSelectedItemId(
+  entity: WorldEntity,
+  warehouseLinks: readonly SlotLinkDefinition[],
+): string | null {
+  const linkedItemId = warehouseLinks.at(-1)?.target.slotId;
+  if (typeof linkedItemId === "string" && linkedItemId.length > 0) {
+    return linkedItemId;
+  }
+
+  const legacyPumpOutputItemId = entity.config.pumpOutputItemId;
+  if (typeof legacyPumpOutputItemId === "string" && legacyPumpOutputItemId.length > 0) {
+    return legacyPumpOutputItemId;
+  }
+
+  const initialItemType = entity.config["storageSlotGroups[0].slots[0].initialItemType"];
+  return typeof initialItemType === "string" && initialItemType.length > 0
+    ? initialItemType
+    : null;
+}
+
+function removeLegacyPumpSourceConfig(config: Record<string, unknown>): Record<string, unknown> {
+  const nextConfig = { ...config };
+  delete nextConfig.channelRecipes;
+  delete nextConfig.pumpOutputItemId;
+  delete nextConfig["storageSlotGroups[0].slots[0].initialItemType"];
+  delete nextConfig["storageSlotGroups[0].slots[0].initialCount"];
+  delete nextConfig["storageSlotGroups[0].slots[0].ignoreStock"];
+  return nextConfig;
+}
+
+function isWarehouseEntityId(entityId: string): boolean {
+  return entityId === "warehouse" || entityId.startsWith("warehouse:");
+}
+
+function removeLinks(
+  links: readonly SlotLinkDefinition[],
+  linkIds: ReadonlySet<string>,
+): readonly SlotLinkDefinition[] {
+  return linkIds.size === 0
+    ? links
+    : links.filter((link) => !linkIds.has(link.id));
 }
 
 export function migrateBlueprintDeviceReference(

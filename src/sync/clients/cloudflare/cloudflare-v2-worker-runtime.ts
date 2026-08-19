@@ -774,9 +774,14 @@ async function runConcurrent<TValue>(
 }
 
 function normalizeConfig(config: CfV2WorkerConfig): CfV2WorkerConfig {
+  const spaceId = config.spaceId.trim();
+  if (spaceId === "") {
+    throw new Error("Cloudflare space ID must not be empty.");
+  }
+
   return {
     apiBase: config.apiBase.replace(/\/$/, ""),
-    spaceId: config.spaceId.trim() || "default",
+    spaceId,
     maxConcurrentRequests: Number.isFinite(config.maxConcurrentRequests)
       ? Math.max(1, Math.min(16, Math.round(config.maxConcurrentRequests)))
       : 4,

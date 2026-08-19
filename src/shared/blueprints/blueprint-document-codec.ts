@@ -1,5 +1,5 @@
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
-import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
+import { migrateBlueprintDocumentState } from "@/shared/blueprint-device-id-migration";
 
 export function normalizeBlueprintDocument(value: unknown): BlueprintDocument | null {
   if (!isRecord(value)) {
@@ -23,10 +23,11 @@ export function normalizeBlueprintDocument(value: unknown): BlueprintDocument | 
     return null;
   }
 
-  const migration = migrateBlueprintEntityDeviceIds(
-    value.entities as BlueprintDocument["entities"],
-    value.schemaVersion,
-  );
+  const migration = migrateBlueprintDocumentState({
+    entities: value.entities as BlueprintDocument["entities"],
+    entityOrder: value.entityOrder,
+    slotLinks: value.slotLinks as BlueprintDocument["slotLinks"],
+  }, value.schemaVersion);
 
   if (migration === null) {
     return null;
@@ -34,7 +35,7 @@ export function normalizeBlueprintDocument(value: unknown): BlueprintDocument | 
 
   // 2026-07-23: 清理 entityOrder 中 entities 已不存在的无效 ID，
   // 修复历史删除操作未同步清理 entityOrder 导致计数虚高的问题。
-  const validEntityOrder = value.entityOrder.filter(
+  const validEntityOrder = migration.entityOrder.filter(
     (entityId) => entityId in migration.entities,
   );
 
@@ -48,7 +49,7 @@ export function normalizeBlueprintDocument(value: unknown): BlueprintDocument | 
     initialGridPoint: value.initialGridPoint,
     entities: migration.entities,
     entityOrder: validEntityOrder,
-    slotLinks: [...value.slotLinks] as BlueprintDocument["slotLinks"],
+    slotLinks: [...migration.slotLinks],
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
   };

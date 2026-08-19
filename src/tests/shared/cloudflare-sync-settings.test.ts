@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_CLOUDFLARE_SPACE_NAME,
   clearCloudflareSyncSettings,
+  initializeCloudflareSyncSettings,
   readCloudflareSyncSettings,
   resolveCloudflareSpaceId,
   subscribeToCloudflareSyncSettingsChanges,
@@ -36,6 +37,51 @@ describe("cloudflare-sync-settings", () => {
     });
     expect(resolveCloudflareSpaceId({ spaceName: " shared-space " }))
       .toBe("shared-space");
+  });
+
+  it("creates one stable random space for a first-time Cloudflare user", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const initialized = await initializeCloudflareSyncSettings({
+      preserveImplicitDefault: false,
+    });
+
+    expect(initialized.spaceName).toMatch(
+      /^space-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    await expect(initializeCloudflareSyncSettings({
+      preserveImplicitDefault: false,
+    })).resolves.toEqual(initialized);
+    await expect(readCloudflareSyncSettings()).resolves.toEqual(initialized);
+  });
+
+  it("preserves implicit and explicitly saved default spaces", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    await expect(initializeCloudflareSyncSettings({
+      preserveImplicitDefault: true,
+    })).resolves.toEqual({
+      spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
+    });
+
+    await clearCloudflareSyncSettings();
+    await writeCloudflareSyncSettings({
+      spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
+    });
+    await expect(initializeCloudflareSyncSettings({
+      preserveImplicitDefault: false,
+    })).resolves.toEqual({
+      spaceName: DEFAULT_CLOUDFLARE_SPACE_NAME,
+    });
+  });
+
+  it("rejects an empty space instead of resolving it to default", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    await expect(writeCloudflareSyncSettings({ spaceName: "   " }))
+      .rejects.toThrow("Cloudflare space name must not be empty.");
+    expect(() => resolveCloudflareSpaceId({ spaceName: "   " }))
+      .toThrow("Cloudflare space name must not be empty.");
   });
 
   it("resets to default and notifies subscribers when local CF data is cleared", async () => {

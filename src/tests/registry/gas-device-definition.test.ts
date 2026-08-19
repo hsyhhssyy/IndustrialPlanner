@@ -86,7 +86,7 @@ describe("gas item and device definitions", () => {
     }
   });
 
-  it("defines gas collection pump as a placeable 3x3 gas gathering machine with warehouse link", () => {
+  it("defines gas collection pump as a placeable 3x3 manual-recipe gathering machine", () => {
     const definition = requireEntity("gas_pump_1");
 
     expect(definition.footprint).toEqual({ width: 3, height: 3 });
@@ -103,15 +103,36 @@ describe("gas item and device definitions", () => {
     ]);
     expect(definition.recipeChannels.some((channel) => channel.type === "consumption-channel"))
       .toBe(false);
-    expect(definition.recipeChannels).toEqual([]);
-
-    // Verify warehouse link inspector is present
-    expect(definition.inspectors?.some(
-      (inspector) => inspector.type === "warehouse-item-link"
+    expect(definition.recipeChannels).toEqual([
+      expect.objectContaining({
+        id: "default",
+        ingredientStorageGroupIds: [],
+        productStorageGroupIds: ["gas_output_buffer"],
+        manualRecipeOnly: true,
+      }),
+    ]);
+    expect(definition.inspectors.some(
+      (inspector) => inspector.type === "recipe-status",
     )).toBe(true);
+    expect(definition.inspectors.some(
+      (inspector) => inspector.type === "warehouse-item-link",
+    )).toBe(false);
+    expect(definition.placementDefaults).toBeUndefined();
 
-    // Verify placement defaults include warehouse link to inert gas
-    expect(definition.placementDefaults?.slotLinks?.[0]?.target?.slotId).toBe("item_gas_inert");
+    // AI-REMOVED 2026-08-19:
+    // Reason: 新版气体收集泵不再声明仓库链接 inspector 或默认惰气仓库链接。
+    // Trigger: 气体收集泵改为手选配方真实生产。
+    // Evidence: 上方断言已覆盖 default 手动 channel、recipe-status 与无 placementDefaults。
+    // Replacement: 上方新版契约断言。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(definition.recipeChannels).toEqual([]);
+    // expect(definition.inspectors?.some(
+    //   (inspector) => inspector.type === "warehouse-item-link"
+    // )).toBe(true);
+    // expect(definition.placementDefaults?.slotLinks?.[0]?.target?.slotId).toBe("item_gas_inert");
 
     // AI-REMOVED 2026-07-16:
     // Reason: 气体收集泵已按当前注册表定义气体输出端口和缓冲槽，空壳约束属于测试漂移。

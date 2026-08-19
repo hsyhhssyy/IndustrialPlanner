@@ -420,10 +420,7 @@ describe("createEditorHost", () => {
       },
     }]);
     expect(linked.entities.outlet?.config).toEqual({});
-    expect(linked.entities.inlet?.config).toEqual({
-      "recipeChannels[0].manualRecipeOnly": true,
-      "recipeChannels[1].manualRecipeOnly": true,
-    });
+    expect(linked.entities.inlet?.config).toEqual({});
     expect(editorHost.actions.createDarkPipeLink({
       sourceEntityId: "inlet",
       targetEntityId: "outlet",
@@ -1361,7 +1358,9 @@ describe("createEditorHost", () => {
         y: 39,
       },
       rotation: 0,
+      config: {},
     });
+    expect(editorHost.internalState.internalTransientState.placementDraftSlotLinks).toBeNull();
   });
 
   it("marks water purifier node drafts too far from the outer edge invalid", () => {

@@ -6,12 +6,24 @@ import {
   ENTITY_SIMULATION_BEHAVIOR_TYPE,
 } from "@/domain/registry/types/entity-simulation-mode";
 import {
-  FLUID_DOMAIN_RECIPE_ITEM_ID,
   FluidDomain,
 } from "@/domain/shared/item-domain-flags";
 import { createRegistryContract } from "@/registry";
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
-import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
+// AI-REMOVED 2026-08-19:
+// Reason: 暗管入口销毁配方已退出，定义测试不再断言任意流体配方占位 ID 和隐藏配方标签。
+// Trigger: 用户要求暗管入口在所有模式下提交仓库并抛弃销毁机制。
+// Evidence: 下方用例改为断言两个旧 recipe ID 均未注册。
+// Replacement: registry.queries.findRecipeDefinition 空值断言。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import {
+//   FLUID_DOMAIN_RECIPE_ITEM_ID,
+//   FluidDomain,
+// } from "@/domain/shared/item-domain-flags";
+// import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
 
 function getEntity(id: string) {
   const registry = createRegistryContract();
@@ -26,7 +38,7 @@ function getEntity(id: string) {
 
 describe("dark pipe definitions", () => {
   it.each(["udpipe_loader_1", "udpipe_loader_2"])(
-    "declares mode-specific input routing for %s",
+    "declares warehouse ingress for %s in both simulation modes",
     (definitionId) => {
       const registry = createRegistryContract();
       const definition = getEntity(definitionId);
@@ -37,7 +49,7 @@ describe("dark pipe definitions", () => {
       )).toEqual({
         behaviors: [{
           type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
-          strategy: ENTITY_INPUT_ROUTING_STRATEGY.localStorage,
+          strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
           storageSlotGroupIds: ["loader_buffer"],
         }],
       });
@@ -55,7 +67,7 @@ describe("dark pipe definitions", () => {
     },
   );
 
-  it("configures the single-port inlet as a local hidden fluid sink", () => {
+  it("configures the single-port inlet as a channel-free warehouse ingress", () => {
     const inlet = getEntity("udpipe_loader_1");
 
     expect(inlet.tags).not.toContain("WarehouseSink");
@@ -74,22 +86,14 @@ describe("dark pipe definitions", () => {
     expect(inlet.portStorageBindings).toEqual([
       { id: "bind_fluid_input", portGroupId: "fluid_input", storageSlotGroupId: "loader_buffer" },
     ]);
-    expect(inlet.recipeChannels).toEqual([
-      {
-        id: "void_fluid",
-        type: "normal-channel",
-        ingredientStorageGroupIds: ["loader_buffer"],
-        productStorageGroupIds: ["loader_buffer"],
-        manualRecipeOnly: undefined,
-      },
-    ]);
+    expect(inlet.recipeChannels).toEqual([]);
     expect(inlet.inspectors).toEqual(expect.arrayContaining([
       { type: INSPECTOR_TYPE.darkPipeLink },
       { type: INSPECTOR_TYPE.slotConfig, slotGroupIds: ["loader_buffer"] },
     ]));
   });
 
-  it("configures the multi-port inlet as two hidden sink channels sharing one slot", () => {
+  it("configures the multi-port inlet as a channel-free warehouse ingress sharing one slot", () => {
     const inlet = getEntity("udpipe_loader_2");
 
     expect(inlet.storageSlotGroups).toHaveLength(1);
@@ -99,18 +103,8 @@ describe("dark pipe definitions", () => {
     expect(inlet.portStorageBindings).toEqual([
       { id: "bind_fluid_input", portGroupId: "fluid_input", storageSlotGroupId: "loader_buffer" },
     ]);
-    expect(inlet.recipeChannels).toEqual([
-      expect.objectContaining({
-        id: "void_fluid_1",
-        ingredientStorageGroupIds: ["loader_buffer"],
-        productStorageGroupIds: ["loader_buffer"],
-      }),
-      expect.objectContaining({
-        id: "void_fluid_2",
-        ingredientStorageGroupIds: ["loader_buffer"],
-        productStorageGroupIds: ["loader_buffer"],
-      }),
-    ]);
+    expect(inlet.recipeChannels).toEqual([]);
+    expect(inlet.recipeChannelBehavior).toBeUndefined();
     expect(inlet.inspectors).toEqual(expect.arrayContaining([
       { type: INSPECTOR_TYPE.darkPipeLink },
       { type: INSPECTOR_TYPE.slotConfig, slotGroupIds: ["loader_buffer"] },
@@ -153,28 +147,14 @@ describe("dark pipe definitions", () => {
     }
   });
 
-  it("registers hidden any-fluid void recipes for dark pipe inlets", () => {
+  it("does not register the retired dark pipe inlet void recipes", () => {
     const registry = createRegistryContract();
 
-    expect(registry.recipeDefinitions).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        id: "r_udpipe_loader_void_fluid_any_internal",
-        machineId: "udpipe_loader_1",
-        durationSeconds: 0.5,
-        inputs: [{ itemId: FLUID_DOMAIN_RECIPE_ITEM_ID, amount: 1 }],
-        outputs: [],
-        recipeType: "immediate-consume",
-        tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-      }),
-      expect.objectContaining({
-        id: "r_udpipe_loader_multi_void_fluid_any_internal",
-        machineId: "udpipe_loader_2",
-        durationSeconds: 0.5,
-        inputs: [{ itemId: FLUID_DOMAIN_RECIPE_ITEM_ID, amount: 1 }],
-        outputs: [],
-        recipeType: "immediate-consume",
-        tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-      }),
-    ]));
+    expect(registry.queries.findRecipeDefinition(
+      "r_udpipe_loader_void_fluid_any_internal",
+    )).toBeNull();
+    expect(registry.queries.findRecipeDefinition(
+      "r_udpipe_loader_multi_void_fluid_any_internal",
+    )).toBeNull();
   });
 });

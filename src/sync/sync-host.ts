@@ -118,13 +118,25 @@ import { createWebDavSyncRemote } from "./clients/webdav/webdav-remote";
 import {
   CloudflareV2WorkerClient,
   createCloudflareSyncRemote,
+  initializeCloudflareSpaceSettings,
 } from "./clients/cloudflare";
 import { resolveBackendApiBaseUrl } from "@/shared/storage/backend-api-address";
+// AI-REMOVED 2026-08-19:
+// Reason: 同步主机启动时必须完成随机空间初始化；删除远端数据后直接写入新的随机空间，不再留下未初始化状态。
+// Trigger: 新用户不能继续隐式进入共享 default 空间，同时已有 default 用户必须保持不动。
+// Evidence: initializeCloudflareSpaceSettings 会区分已选 provider、本地 default 状态和首次使用；删除流程已成功 reset 当前远端。
+// Replacement: initializeCloudflareSpaceSettings、createRandomCloudflareSpaceName 与 writeCloudflareSyncSettings。
+// Risk: Low。
+// Human Review: Required
+//
+// Original code:
+//   clearCloudflareSyncSettings,
+//   readCloudflareSyncSettings,
 import {
-  clearCloudflareSyncSettings,
-  readCloudflareSyncSettings,
+  createRandomCloudflareSpaceName,
   resolveCloudflareSpaceId,
   subscribeToCloudflareSyncSettingsChanges,
+  writeCloudflareSyncSettings,
   type CloudflareSyncSettings,
 } from "@/shared/storage/cloudflare-sync-settings";
 
@@ -209,7 +221,10 @@ export async function createSyncHost(
   // Original code:
   // const syncOwnerState = await ensureLocalSyncOwnerState();
   // const cloudflareOwnerScope = createLocalSyncOwnerScopeKey(syncOwnerState.activeOwner);
-  let currentCloudflareSettings = await readCloudflareSyncSettings();
+  let currentCloudflareSettings = await initializeCloudflareSpaceSettings({
+    apiBase: resolveBackendApiBaseUrl(),
+    cloudflareProviderSelected: readSyncProvider() === "cloudflare",
+  });
   let suppressCloudflareSettingsSync = false;
   const getCloudflareSpaceId = (
     settings: CloudflareSyncSettings = currentCloudflareSettings,
@@ -622,7 +637,19 @@ export async function createSyncHost(
         if (provider === "cloudflare") {
           suppressCloudflareSettingsSync = true;
           try {
-            await clearCloudflareSyncSettings();
+            // AI-REMOVED 2026-08-19:
+            // Reason: 删除设置会重新暴露隐式 default；远端清空后应直接准备新的随机空间。
+            // Trigger: 用户要求删除全部远端数据后，下次启用使用新的随机空间名。
+            // Evidence: 上方 resetRemote 已清除当前远端及其本地同步状态。
+            // Replacement: 下方 writeCloudflareSyncSettings 写入新随机空间。
+            // Risk: Low；写入失败时仍保留原空间设置，且删除 action 会失败并保持 provider 供用户重试。
+            // Human Review: Required
+            //
+            // Original code:
+            // await clearCloudflareSyncSettings();
+            currentCloudflareSettings = await writeCloudflareSyncSettings({
+              spaceName: createRandomCloudflareSpaceName(),
+            });
           } finally {
             suppressCloudflareSettingsSync = false;
           }

@@ -7,7 +7,7 @@ import {
   readFromIndexedDb,
   saveToIndexedDb,
 } from "@/shared/storage";
-import { migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
+import { migrateBlueprintDocumentState } from "@/shared/blueprint-device-id-migration";
 import { runInAction } from "mobx";
 
 import { createLogger } from "@/shared/logging/logger";
@@ -320,7 +320,11 @@ function normalizeWorldDocument(
   }
 
   // 2026-05-31: 反序列化时对 entityOrder 做去重，作为历史数据修复的最后防线。
-  const migration = migrateBlueprintEntityDeviceIds(value.entities, value.schemaVersion);
+  const migration = migrateBlueprintDocumentState({
+    entities: value.entities,
+    entityOrder: value.entityOrder,
+    slotLinks: value.slotLinks,
+  }, value.schemaVersion);
 
   if (migration === null) {
     return null;
@@ -328,7 +332,7 @@ function normalizeWorldDocument(
 
   // 2026-07-23: 清理 entityOrder 中 entities 已不存在的无效 ID，
   // 修复历史删除操作未同步清理 entityOrder 导致计数虚高的问题。
-  const validEntityOrder = Array.from(new Set(value.entityOrder))
+  const validEntityOrder = Array.from(new Set(migration.entityOrder))
     .filter((entityId) => entityId in migration.entities);
 
   return {
@@ -336,6 +340,7 @@ function normalizeWorldDocument(
     schemaVersion: migration.schemaVersion,
     entities: migration.entities,
     entityOrder: validEntityOrder,
+    slotLinks: [...migration.slotLinks],
   };
 }
 

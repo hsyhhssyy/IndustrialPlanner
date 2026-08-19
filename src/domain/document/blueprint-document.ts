@@ -5,7 +5,8 @@ import type {
 	WorldEntity,
 } from "./world-document";
 
-export const BLUEPRINT_SCHEMA_VERSION = 4;
+// AI-CORRECTION 2026-08-19: schema 5 将资源泵的仓库代理配置迁移为真实手选配方或对应作弊设备。
+export const BLUEPRINT_SCHEMA_VERSION = 5;
 
 export interface BlueprintDocument {
 	schemaVersion: number;
