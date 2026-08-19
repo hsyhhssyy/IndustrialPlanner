@@ -19,6 +19,7 @@ import type {
   SimulationRuntimeSlotPatch,
 } from "@/domain/simulation/types/simulation-types";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
+import { SIMULATION_MODE, type SimulationMode } from "@/domain/shared/simulation-mode";
 import type {
   SimulationTickSnapshotRangeResult,
   SimulationWorkerRequest,
@@ -999,7 +1000,20 @@ export class SimulationWorkerRuntime {
   private loadTopology(
     topology: CompiledSimulationTopology,
     migration?: SimulationTopologyMigration,
+    expectedSimulationMode: SimulationMode = SIMULATION_MODE.singleBase,
   ): SimulationStartResult {
+    if (topology.simulationMode !== expectedSimulationMode) {
+      return {
+        status: "failed",
+        topologyId: topology.topologyId,
+        diagnostics: topology.diagnostics,
+        error: `Topology simulation mode "${topology.simulationMode}" does not match worker route "${expectedSimulationMode}".`,
+      };
+    }
+    if (expectedSimulationMode === SIMULATION_MODE.singleBase) {
+      this.regionalRuntimeMode = false;
+      this.regionalGate = null;
+    }
     // 取消任何正在进行的后台填充
     if (this.fillTimerId !== null) {
       clearTimeout(this.fillTimerId);
@@ -1523,6 +1537,14 @@ export class SimulationWorkerRuntime {
     readonly powerMode?: "real" | "infinite";
     readonly powerConsumptionOverride?: number;
   }): SimulationStartResult {
+    if (options.topology.simulationMode !== SIMULATION_MODE.regionalMultiBase) {
+      return {
+        status: "failed",
+        topologyId: options.topology.topologyId,
+        diagnostics: options.topology.diagnostics,
+        error: `Regional worker requires topology mode "${SIMULATION_MODE.regionalMultiBase}".`,
+      };
+    }
     this.regionalGate = createBaseRegionalGate({
       baseId: options.baseId,
       table: options.table,
@@ -1554,7 +1576,11 @@ export class SimulationWorkerRuntime {
       this.powerConsumptionOverride = options.powerConsumptionOverride;
     }
 
-    const result = this.loadTopology(options.topology);
+    const result = this.loadTopology(
+      options.topology,
+      undefined,
+      SIMULATION_MODE.regionalMultiBase,
+    );
     if (result.status === "started" && this.runtimeState !== null && this.regionalGate !== null) {
       this.regionalGate.setWarehouseProjection(this.runtimeState, options.initialWarehouseCounts);
     }

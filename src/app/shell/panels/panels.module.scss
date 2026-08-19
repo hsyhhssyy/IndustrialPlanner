@@ -1177,11 +1177,22 @@
   min-height: 32px;
   padding: 0 2px;
   color: var(--text-0);
-  cursor: pointer;
+  cursor: default;
 }
 
 .base-regional-switch:has(input:disabled) {
   color: var(--text-2);
+}
+
+.base-regional-switch-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.base-regional-switch-control:has(input:disabled) {
   cursor: not-allowed;
 }
 
@@ -1192,6 +1203,62 @@
 .base-regional-switch-label {
   font-size: 0.8rem;
   line-height: 1.2;
+}
+
+.base-regional-help-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-1);
+  color: var(--accent-strong);
+  cursor: pointer;
+}
+
+.base-regional-help-button:hover,
+.base-regional-help-button[aria-expanded="true"] {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.base-regional-help-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.base-regional-help-tooltip {
+  z-index: 1000;
+  width: min(360px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  padding: 12px 14px;
+  border: 1px solid var(--floating-control-border);
+  border-radius: 10px;
+  background: var(--floating-control-bg);
+  color: var(--text-0);
+  box-shadow: 0 8px 32px var(--shadow-floating-control);
+  overflow-y: auto;
+}
+
+.base-regional-help-tooltip p {
+  margin: 0;
+}
+
+.base-regional-help-markdown {
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.base-regional-help-markdown p + p {
+  margin-top: 0.55em;
+}
+
+.base-regional-help-markdown strong {
+  color: var(--accent-strong);
 }
 
 // 电力横条（仅文字，无填充进度条）

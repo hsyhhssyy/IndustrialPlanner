@@ -3,3 +3,4 @@ export {
   MarkdownTutorialOverlay,
   type MarkdownTutorialOverlayProps,
 } from "./markdown-tutorial-overlay";
+export { fetchHelpMarkdownHtml } from "./help-markdown";

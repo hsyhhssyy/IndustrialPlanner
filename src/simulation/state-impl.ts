@@ -6,6 +6,7 @@ import type {
   SimulationTimelineMark,
   SimulationTimelineState,
 } from "@/domain/simulation/types/simulation-types";
+import { SIMULATION_MODE, type SimulationMode } from "@/domain/shared/simulation-mode";
 
 import { DEFAULT_SIMULATION_SPEED } from "./tick-rate";
 import type {
@@ -29,6 +30,7 @@ export function createInitialSimulationRuntimeStatus(): SimulationRuntimeStatus 
 
 export interface SimulationStateReadWrite extends SimulationState {
   runningState: SimulationState["runningState"];
+  simulationMode: SimulationMode;
   simulationSpeed: number;
   statistics: SimulationRuntimeStatistics;
   timeline: SimulationTimelineStateReadWrite;
@@ -70,6 +72,7 @@ export function createInitialSimulationTimelineState(): SimulationTimelineStateR
 
 class SimulationStateReadWriteImpl implements SimulationStateReadWrite {
   public runningState: SimulationState["runningState"] = "stop";
+  public simulationMode: SimulationMode = SIMULATION_MODE.singleBase;
   public simulationSpeed = DEFAULT_SIMULATION_SPEED;
   public statistics: SimulationRuntimeStatistics = { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 };
   public timeline: SimulationTimelineStateReadWrite = createInitialSimulationTimelineState();

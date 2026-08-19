@@ -12,6 +12,8 @@ import type { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 // Original code:
 // import type { LogisticsKind } from "@/domain/shared/logistics";
 import type { RecipeType } from "@/domain/registry/types/recipe-definition";
+import type { EntitySimulationBehaviorDeclaration } from "@/domain/registry/types/entity-simulation-mode";
+import type { SimulationMode } from "@/domain/shared/simulation-mode";
 import type { WaterPurifierOutputMode } from "@/shared/water-purifier-node";
 import type { SimulationMutableRuntimeState } from "./runtime/runtime-state";
 
@@ -114,7 +116,9 @@ export interface RegionalWarehouseStage3Options {
 }
 
 export interface CompiledSimulationTopology {
-  readonly schemaVersion: 5;
+  readonly schemaVersion: 6;
+  /** 编译时使用的显式模式；Worker 与 runtime 不得从区域上下文存在性推断。 */
+  readonly simulationMode: SimulationMode;
   readonly topologyId: string;
   readonly documentKey: string;
   readonly documentHash: string;
@@ -254,6 +258,8 @@ export interface CompiledSimulationDevice {
   readonly transportComponentId: string | null;
   readonly nodeIds: readonly string[];
   readonly recipeChannels: readonly CompiledSimulationRecipeChannel[];
+  /** Registry 按 simulationMode 解析后固化到拓扑的设备行为。 */
+  readonly simulationBehaviors: readonly EntitySimulationBehaviorDeclaration[];
   /** recipeChannels 前部连续的 consumption-channel 数量；生产拓扑始终由编译器填充。 */
   readonly consumptionChannelCount?: number;
   /** 不同 channel 是否允许同时运行同一配方；缺失时按 false 处理。 */

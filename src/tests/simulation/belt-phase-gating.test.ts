@@ -140,6 +140,7 @@ function createBeltPhaseGatingTopology(registry: RegistryContract): CompiledSimu
   return compileSimulationTopology({
     document,
     registry,
+    simulationMode: "single-base",
     poweredEntityIds: new Set(document.entityOrder),
   });
 }

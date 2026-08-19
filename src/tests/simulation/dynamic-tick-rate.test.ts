@@ -613,7 +613,8 @@ function readProductionStatsAtSpeed(
 
 function createEmptyTopology(): CompiledSimulationTopology {
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
+    simulationMode: "single-base",
     topologyId: "topology:empty",
     documentKey: "document:test",
     documentHash: "hash:test",
@@ -669,6 +670,7 @@ function createProductionOverflowTopology(
           manualRecipeOnly: false,
           defaultRecipeId: null,
         }],
+        simulationBehaviors: [],
         portIds: [],
         routing: {},
         configHash: "config:test",

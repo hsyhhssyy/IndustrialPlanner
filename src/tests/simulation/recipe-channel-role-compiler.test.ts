@@ -111,6 +111,7 @@ function compileTestEntity(definition: EntityDefinition) {
   const topology = compileSimulationTopology({
     document,
     registry,
+    simulationMode: "single-base",
     poweredEntityIds: new Set(["machine"]),
   });
 

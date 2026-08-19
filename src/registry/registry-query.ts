@@ -134,6 +134,10 @@ export const createRegistryQuery = (options: CreateRegistryQueryOptions): Regist
         findRecipeDefinitionsByMachine(machineId) {
             return recipeDefinitionsByMachineId.get(machineId) ?? []
         },
+        resolveEntitySimulationModeConfig(definitionId, simulationMode) {
+            return entityDefinitionById.get(definitionId)?.simulationModeConfigs?.[simulationMode]
+                ?? null
+        },
         isBelt(definitionId) {
             return isLogisticsSegmentDefinitionId(LOGISTICS_KIND.belt, definitionId)
         },

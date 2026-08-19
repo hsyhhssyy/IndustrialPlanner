@@ -640,6 +640,7 @@ function createPresentationTestDevice(
     transportComponentId: null,
     nodeIds,
     recipeChannels: [],
+    simulationBehaviors: [],
     portIds: [],
     routing: {},
     configHash: "",
@@ -715,7 +716,8 @@ function createRuntimeExport(tickNumber = 1): SimulationRuntimeExport {
 
 function createEmptyTopology(): CompiledSimulationTopology {
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
+    simulationMode: "single-base",
     topologyId: "topology:timeline-empty",
     documentKey: "document:timeline",
     documentHash: "hash:timeline",
@@ -766,6 +768,7 @@ function createConsumptionTimelineTopology(): CompiledSimulationTopology {
   return compileSimulationTopology({
     document,
     registry,
+    simulationMode: "single-base",
     poweredEntityIds: new Set(document.entityOrder),
   });
 }
@@ -795,6 +798,7 @@ function createAdmissionTimelineTopology(): CompiledSimulationTopology {
   return compileSimulationTopology({
     document,
     registry,
+    simulationMode: "single-base",
     poweredEntityIds: new Set(document.entityOrder),
   });
 }
@@ -825,6 +829,7 @@ function createTimelinePhaseTopology(): CompiledSimulationTopology {
           manualRecipeOnly: false,
           defaultRecipeId: null,
         }],
+        simulationBehaviors: [],
         portIds: [],
         routing: {},
         configHash: "config:timeline-phase",

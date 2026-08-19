@@ -8,6 +8,8 @@ import type { ItemDomain } from "./types/entity-definition";
 import type { EntityDefinition } from "./types/entity-definition";
 import type { ItemDefinition } from "./types/item-definition";
 import type { RecipeDefinition } from "./types/recipe-definition";
+import type { EntitySimulationModeConfig } from "./types/entity-simulation-mode";
+import type { SimulationMode } from "../shared/simulation-mode";
 
 export interface RegistryQuery {
 	/** 按 ID 精确查找实体定义；未注册时返回 null。 */
@@ -18,6 +20,11 @@ export interface RegistryQuery {
 	findRecipeDefinition(recipeId: string): RecipeDefinition | null;
 	/** 返回指定设备的全部已注册配方；结果顺序与 registry 定义顺序一致。 */
 	findRecipeDefinitionsByMachine(machineId: string): readonly RecipeDefinition[];
+	/** 解析设备在指定仿真模式下声明的静态配置；未声明时返回 null。 */
+	resolveEntitySimulationModeConfig(
+		definitionId: string,
+		simulationMode: SimulationMode,
+	): EntitySimulationModeConfig | null;
 
 	/** 判定是否为传送带节：仅包括直线节和两个转角节。 */
 	isBelt(definitionId: string): boolean;

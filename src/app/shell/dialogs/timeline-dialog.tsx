@@ -7,7 +7,17 @@ import {
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
-import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
+// AI-REMOVED 2026-08-19:
+// Reason: TimelineDialog 直接读取 SimulationState.simulationMode，不再读取 App 层模式副本。
+// Trigger: SimulationMode 单一事实源改造。
+// Evidence: App 层副本在 Action 拒绝切换时可能与实际仿真模式不一致。
+// Replacement: SIMULATION_MODE + simulation.state.simulationMode。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
+import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import type { SimulationTimelineMark } from "@/domain/simulation/types/simulation-types";
 import {
   COLLAPSED_TIMELINE_BOTTOM_DOCK_HEIGHT,
@@ -135,7 +145,7 @@ export const TimelineDialog = observer(function TimelineDialog({ appHost }: { ap
     if (
       !dialogState.visible
       || simulation === null
-      || regionalSimulationUiState.allBasesEnabled
+      || simulation.state.simulationMode === SIMULATION_MODE.regionalMultiBase
       || timelineEnabled
       // AI-REMOVED 2026-07-17:
       // Reason: 持久化恢复的时间轴窗口必须能够从全新的 stop/idle 仿真状态重新启动。
@@ -428,6 +438,24 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
 
   simulationRef.current = simulation;
 
+  // AI-REMOVED 2026-08-19:
+  // Reason: 冲突态提前返回会让后续 useEffect 只在部分渲染执行，破坏 React Hook 调用顺序。
+  // Trigger: 开发审计发现 allBasesEnabled 切换会改变 TimelineRuler 的 Hook 数量。
+  // Evidence: 该分支原本位于三个 useEffect 之前；冲突态必须在所有 Hook 声明完成后返回。
+  // Replacement: 本组件全部 useEffect 之后的 regionalSimulationUiState.allBasesEnabled 分支。
+  // AI-CORRECTION 2026-08-19: 模式唯一事实源改为 simulation.state.simulationMode；原注释中的 allBasesEnabled 仅为历史名称。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // if (regionalSimulationUiState.allBasesEnabled) {
+  //   return (
+  //     <div className={cm(styles, "timeline-empty-state")}>
+  //       {t("timelineDialog.regionalMultiBaseConflict")}
+  //     </div>
+  //   );
+  // }
+
   useEffect(() => {
     if (timeline === null) {
       return;
@@ -474,6 +502,14 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
       }
     };
   }, [debugMode]);
+
+  if (simulation?.state.simulationMode === SIMULATION_MODE.regionalMultiBase) {
+    return (
+      <div className={cm(styles, "timeline-empty-state")}>
+        {t("timelineDialog.regionalMultiBaseConflict")}
+      </div>
+    );
+  }
 
   if (simulation === null || timeline === null) {
     return (

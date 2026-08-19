@@ -121,6 +121,7 @@ function compileWithActivities(activeActivityIds: readonly string[]) {
   return compileSimulationTopology({
     document: createActivityTestDocument(),
     registry,
+    simulationMode: "single-base",
     poweredEntityIds: new Set(["machine"]),
     activeActivityIds,
   });

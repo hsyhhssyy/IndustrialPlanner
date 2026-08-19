@@ -23,6 +23,7 @@ describe("port priority groups", () => {
     const topology = compileSimulationTopology({
       document,
       registry,
+      simulationMode: "single-base",
       poweredEntityIds: new Set(document.entityOrder),
     });
 
@@ -128,6 +129,7 @@ function compileSplitterTopology(config: WorldEntity["config"]) {
   return compileSimulationTopology({
     document,
     registry,
+    simulationMode: "single-base",
     poweredEntityIds: new Set(["splitter"]),
   });
 }

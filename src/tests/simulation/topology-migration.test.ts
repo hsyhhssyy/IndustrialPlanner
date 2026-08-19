@@ -108,11 +108,13 @@ describe("REQ-076: topology migration", () => {
     const previousTopology = compileSimulationTopology({
       document: previousDocument,
       registry,
+      simulationMode: "single-base",
       poweredEntityIds: new Set(previousDocument.entityOrder),
     });
     const nextTopology = compileSimulationTopology({
       document: nextDocument,
       registry,
+      simulationMode: "single-base",
       poweredEntityIds: new Set(nextDocument.entityOrder),
     });
 
@@ -137,11 +139,13 @@ describe("REQ-076: topology migration", () => {
     const previousTopology = compileSimulationTopology({
       document: previousDocument,
       registry,
+      simulationMode: "single-base",
       poweredEntityIds: new Set(previousDocument.entityOrder),
     });
     const nextTopology = compileSimulationTopology({
       document: nextDocument,
       registry,
+      simulationMode: "single-base",
       poweredEntityIds: new Set(nextDocument.entityOrder),
     });
     const runtime = new SimulationWorkerRuntime(registry);
@@ -210,11 +214,13 @@ describe("REQ-076: topology migration", () => {
     const previousTopology = compileSimulationTopology({
       document: previousDocument,
       registry,
+      simulationMode: "single-base",
       poweredEntityIds: new Set(previousDocument.entityOrder),
     });
     const nextTopology = compileSimulationTopology({
       document: nextDocument,
       registry,
+      simulationMode: "single-base",
       poweredEntityIds: new Set(nextDocument.entityOrder),
     });
     const runtime = new SimulationWorkerRuntime(registry);
@@ -263,11 +269,13 @@ describe("REQ-076: topology migration", () => {
     const previousTopology = compileSimulationTopology({
       document: previousDocument,
       registry,
+      simulationMode: "single-base",
       poweredEntityIds: new Set(previousDocument.entityOrder),
     });
     const nextTopology = compileSimulationTopology({
       document: nextDocument,
       registry,
+      simulationMode: "single-base",
       poweredEntityIds: new Set(nextDocument.entityOrder),
     });
     const runtime = new SimulationWorkerRuntime(registry);

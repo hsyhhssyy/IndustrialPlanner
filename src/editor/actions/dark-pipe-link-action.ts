@@ -83,7 +83,20 @@ export function createEditorDarkPipeLinkActions({
               },
             },
             slotLinks: [
-              ...documentSnapshot.slotLinks,
+              // AI-REMOVED 2026-08-19:
+              // Reason: 暗管出口切换为暗管直连后，原仓库 share-all 必须同时移除，否则同一出口形成两个 share-all 来源链接。
+              // Trigger: 用户报告创建暗管直连会遗留出口仓库链接，形成双重 share-all。
+              // Evidence: 原实现只清空 outlet.config，但仓库链接已迁移到 document.slotLinks，不会随 config 清空。
+              // Replacement: filterDarkPipeOutletWarehouseLinks。
+              // Risk: Low - 只删除当前出口精确槽位指向仓库的 share-all，其他设备链接保持不变。
+              // Human Review: Required
+              //
+              // Original code:
+              // ...documentSnapshot.slotLinks,
+              ...filterDarkPipeOutletWarehouseLinks(
+                documentSnapshot.slotLinks,
+                snapshotResolved.outlet.id,
+              ),
               nextLink,
             ],
           };
@@ -148,6 +161,23 @@ export function createEditorDarkPipeLinkActions({
       return committedDocument !== null;
     }),
   };
+}
+
+function filterDarkPipeOutletWarehouseLinks(
+  slotLinks: WorldDocument["slotLinks"],
+  outletEntityId: string,
+): WorldDocument["slotLinks"] {
+  return slotLinks.filter((slotLink) => !(
+    slotLink.linkType === "share-all"
+    && slotLink.source.entityId === outletEntityId
+    && slotLink.source.storageSlotGroupId === "unloader_buffer"
+    && slotLink.source.slotId === "slot_1"
+    && (
+      slotLink.target.entityId === "warehouse"
+      || slotLink.target.entityId.startsWith("warehouse:")
+    )
+    && slotLink.target.storageSlotGroupId === "warehouse"
+  ));
 }
 
 function resolveDarkPipeLinkPair(options: {

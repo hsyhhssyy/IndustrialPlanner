@@ -72,10 +72,10 @@ export function MarkdownTutorialOverlay({
       onClose();
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown, true);
     };
   }, [onClose, overlayLayer.isTop, visible]);
 

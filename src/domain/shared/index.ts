@@ -48,3 +48,8 @@ export type {
 	CacheLinkEndpointDefinition,
 	LinkType,
 } from "./slot-link";
+export {
+	SIMULATION_MODE,
+	SIMULATION_MODES,
+} from "./simulation-mode";
+export type { SimulationMode } from "./simulation-mode";

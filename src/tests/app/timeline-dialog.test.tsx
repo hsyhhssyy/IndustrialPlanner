@@ -60,7 +60,8 @@ function createTimelineReadinessWorkspace(
     render: null,
     simulation: {
       state: {
-        runningState: "pause",
+      runningState: "pause",
+      simulationMode: "single-base",
         simulationSpeed: 1,
         statistics: {
           tickPerSecond: 0,
@@ -139,7 +140,8 @@ describe("TimelineDialog", () => {
       render: null,
       simulation: {
         state: {
-          runningState: "pause",
+        runningState: "pause",
+        simulationMode: "single-base",
           simulationSpeed: 1,
           statistics: {
             tickPerSecond: 0,

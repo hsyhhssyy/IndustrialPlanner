@@ -2,10 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import {
+  ENTITY_INPUT_ROUTING_STRATEGY,
+  ENTITY_SIMULATION_BEHAVIOR_TYPE,
+} from "@/domain/registry/types/entity-simulation-mode";
+import {
   FLUID_DOMAIN_RECIPE_ITEM_ID,
   FluidDomain,
 } from "@/domain/shared/item-domain-flags";
 import { createRegistryContract } from "@/registry";
+import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
 
 function getEntity(id: string) {
@@ -20,6 +25,36 @@ function getEntity(id: string) {
 }
 
 describe("dark pipe definitions", () => {
+  it.each(["udpipe_loader_1", "udpipe_loader_2"])(
+    "declares mode-specific input routing for %s",
+    (definitionId) => {
+      const registry = createRegistryContract();
+      const definition = getEntity(definitionId);
+
+      expect(registry.queries.resolveEntitySimulationModeConfig(
+        definitionId,
+        SIMULATION_MODE.singleBase,
+      )).toEqual({
+        behaviors: [{
+          type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
+          strategy: ENTITY_INPUT_ROUTING_STRATEGY.localStorage,
+          storageSlotGroupIds: ["loader_buffer"],
+        }],
+      });
+      expect(registry.queries.resolveEntitySimulationModeConfig(
+        definitionId,
+        SIMULATION_MODE.regionalMultiBase,
+      )).toEqual({
+        behaviors: [{
+          type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
+          strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
+          storageSlotGroupIds: ["loader_buffer"],
+        }],
+      });
+      expect(definition.simulationModeConfigs).toBeDefined();
+    },
+  );
+
   it("configures the single-port inlet as a local hidden fluid sink", () => {
     const inlet = getEntity("udpipe_loader_1");
 

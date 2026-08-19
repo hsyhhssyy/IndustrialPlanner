@@ -228,6 +228,7 @@ function compileBlueprint(
   return compileSimulationTopology({
     document,
     registry,
+    simulationMode: "single-base",
     poweredEntityIds: powered ? new Set(document.entityOrder) : new Set(),
   });
 }

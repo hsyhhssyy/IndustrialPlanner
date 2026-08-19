@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
+import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
 import { compileSimulationTopology } from "@/simulation/topology-compiler";
 import { buildRegionalWarehouseOutletTable } from "@/simulation/regional/warehouse-outlet-table";
 import {
@@ -16,11 +17,156 @@ import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
 import { createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
 import {
   createBlueprint,
+  // AI-REMOVED 2026-08-19:
+  // Reason: createDarkPipeSlotLink 由 shared/dark-pipe-link 导出，不属于 blueprint-test-helpers。
+  // Trigger: 新增区域暗管直连回归测试时发现导入来源错误。
+  // Evidence: blueprint-test-helpers.ts 未导出该函数。
+  // Replacement: 文件顶部 @/shared/dark-pipe-link 导入。
+  // Risk: Low
+  // Human Review: Not Required
+  //
+  // Original code:
+  // createDarkPipeSlotLink,
   createEntity,
   createWarehouseSlotLink,
 } from "./blueprint-test-helpers";
 
 describe("区域基地 Runtime 门禁", () => {
+  it.each(["udpipe_loader_1", "udpipe_loader_2"] as const)(
+    "区域模式下未链接的 %s 将流体写入区域仓库 journal",
+    (inletDefinitionId) => {
+      const registry = createRegistryContract();
+      const document = createWorldDocumentFromBlueprint(createBlueprint(
+        `regional-unlinked-${inletDefinitionId}`,
+        [
+          createEntity("source", "udpipe_unloader_1", 0, 0, 0, {
+            "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+            "storageSlotGroups[0].slots[0].initialCount": 1,
+          }),
+          createEntity("pipe", "pipe_straight_1x1", 3, 1),
+          createEntity("inlet", inletDefinitionId, 4, 0),
+        ],
+      ));
+      const topology = compileSimulationTopology({
+        document,
+        registry,
+        simulationMode: "regional-multi-base",
+        poweredEntityIds: new Set(),
+        activeActivityIds: [],
+      });
+      const singleBaseTopology = compileSimulationTopology({
+        document,
+        registry,
+        simulationMode: "single-base",
+        poweredEntityIds: new Set(),
+        activeActivityIds: [],
+      });
+      const inletDevice = topology.devices["device:inlet"];
+      expect(topology.topologyId).not.toBe(singleBaseTopology.topologyId);
+      expect(singleBaseTopology.devices["device:inlet"]?.simulationBehaviors).toEqual([
+        expect.objectContaining({ strategy: "local-storage" }),
+      ]);
+      expect(inletDevice?.simulationBehaviors).toEqual([
+        expect.objectContaining({
+          strategy: "warehouse-sink-when-unlinked",
+          storageSlotGroupIds: ["loader_buffer"],
+        }),
+      ]);
+
+      const admission = buildRegionalWarehouseOutletTable({
+        registry,
+        topologies: [{ baseId: document.baseId, regionBaseOrderIndex: 0, topology }],
+      });
+      expect(admission.ok).toBe(true);
+      const runtime = new SimulationWorkerRuntime(registry);
+      expect(runtime.loadRegionalTopology({
+        topology,
+        baseId: document.baseId,
+        table: admission.table!,
+        initialWarehouseCounts: {},
+        fixedDynamicTickRate: 2,
+        advanceMode: "coarse",
+      }).status).toBe("started");
+
+      runtime.prepareRegionalEpochDemand(0);
+      expect(runtime.applyRegionalEpochGrant({
+        epochNumber: 0,
+        grantedOutletIds: [],
+      }).deposits).toEqual([]);
+      runtime.finalizeRegionalEpoch({
+        epochNumber: 0,
+        nextWarehouseCounts: {},
+        includeSnapshot: false,
+      });
+
+      runtime.prepareRegionalEpochDemand(1);
+      expect(runtime.applyRegionalEpochGrant({
+        epochNumber: 1,
+        grantedOutletIds: [],
+      }).deposits).toEqual([{ itemId: "item_liquid_water", amount: 1 }]);
+    },
+  );
+
+  it("区域模式下已直连的暗管入口保持本地 share-all，不重复写入仓库", () => {
+    const registry = createRegistryContract();
+    const document = createWorldDocumentFromBlueprint(createBlueprint(
+      "regional-linked-dark-pipe",
+      [
+        createEntity("source", "udpipe_unloader_1", 0, 0, 0, {
+          "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
+          "storageSlotGroups[0].slots[0].initialCount": 1,
+        }),
+        createEntity("pipe", "pipe_straight_1x1", 3, 1),
+        createEntity("inlet", "udpipe_loader_1", 4, 0, 0, {
+          "recipeChannels[0].manualRecipeOnly": true,
+        }),
+        createEntity("linked-outlet", "udpipe_unloader_1", 10, 0),
+      ],
+      [createDarkPipeSlotLink({
+        inletEntityId: "inlet",
+        outletEntityId: "linked-outlet",
+      })],
+    ));
+    const topology = compileSimulationTopology({
+      document,
+      registry,
+      simulationMode: "regional-multi-base",
+      poweredEntityIds: new Set(),
+      activeActivityIds: [],
+    });
+    const admission = buildRegionalWarehouseOutletTable({
+      registry,
+      topologies: [{ baseId: document.baseId, regionBaseOrderIndex: 0, topology }],
+    });
+    expect(admission.ok).toBe(true);
+    const runtime = new SimulationWorkerRuntime(registry);
+    expect(runtime.loadRegionalTopology({
+      topology,
+      baseId: document.baseId,
+      table: admission.table!,
+      initialWarehouseCounts: {},
+      fixedDynamicTickRate: 2,
+      advanceMode: "coarse",
+    }).status).toBe("started");
+
+    runtime.prepareRegionalEpochDemand(0);
+    expect(runtime.applyRegionalEpochGrant({
+      epochNumber: 0,
+      grantedOutletIds: [],
+    }).deposits).toEqual([]);
+    runtime.finalizeRegionalEpoch({
+      epochNumber: 0,
+      nextWarehouseCounts: {},
+      includeSnapshot: false,
+    });
+
+    runtime.prepareRegionalEpochDemand(1);
+    expect(runtime.applyRegionalEpochGrant({
+      epochNumber: 1,
+      grantedOutletIds: [],
+    }).deposits).toEqual([]);
+  });
+
   it("Epoch 0 在 tick1 提货，管道/传送带相位错误时不产生 demand", () => {
     const registry = createRegistryContract();
     const document = createWorldDocumentFromBlueprint(createBlueprint("regional-runtime-belt", [
@@ -32,6 +178,7 @@ describe("区域基地 Runtime 门禁", () => {
     const topology = compileSimulationTopology({
       document,
       registry,
+      simulationMode: "regional-multi-base",
       poweredEntityIds: new Set(),
       activeActivityIds: [],
     });

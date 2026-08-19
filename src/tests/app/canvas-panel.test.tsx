@@ -399,7 +399,8 @@ describe("CanvasPanel", () => {
     };
     workspace.simulation = {
       state: {
-        runningState: "start",
+      runningState: "start",
+      simulationMode: "single-base",
         simulationSpeed: 1,
         statistics: {
           tickPerSecond: 20,

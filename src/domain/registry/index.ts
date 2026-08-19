@@ -50,6 +50,18 @@ export type {
 	StorageGroupSplitLinkType,
 } from "./types/entity-definition";
 export type { EntityVariantDefinition } from "./types/entity-variant-definition";
+export {
+	ENTITY_INPUT_ROUTING_STRATEGY,
+	ENTITY_SIMULATION_BEHAVIOR_TYPE,
+} from "./types/entity-simulation-mode";
+export type {
+	EntityInputRoutingSimulationBehaviorDeclaration,
+	EntityInputRoutingStrategy,
+	EntitySimulationBehaviorDeclaration,
+	EntitySimulationBehaviorType,
+	EntitySimulationModeConfig,
+	EntitySimulationModeConfigMap,
+} from "./types/entity-simulation-mode";
 export type {
 	EntityInspectorDeclaration,
 	EntityInspectorType,

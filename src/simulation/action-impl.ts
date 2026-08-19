@@ -9,7 +9,9 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { resolveBaseBuiltinEntities } from "@/domain/registry/types/base-definition";
+import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import { createLogger } from "@/shared/logging/logger";
+import { isRegionalSimulationSpeed } from "@/shared/regional-simulation-speed";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 import {
   areGridRectsIntersecting,
@@ -358,7 +360,16 @@ implements SimulationAction, SimulationInternalAction {
   private readonly getDebugDataEnabled: (() => boolean) | undefined;
   private readonly getActiveActivityIds: (() => readonly string[]) | undefined;
   private readonly regionalWorkerMode: "auto" | "runtime";
-  private regionalMultiBaseEnabled = false;
+  // AI-REMOVED 2026-08-19:
+  // Reason: 区域多基地开关必须由 SimulationState.simulationMode 作为唯一事实来源，不能在 Action 内另存一份状态。
+  // Trigger: 用户要求编辑态也能观察模式，并要求所有行为从显式 SimulationMode 派生。
+  // Evidence: App 状态、Action 私有字段和编译上下文此前各自推断模式，存在停止态不可观察与状态漂移风险。
+  // Replacement: SimulationStateReadWrite.simulationMode。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // private regionalMultiBaseEnabled = false;
   private regionalSession: RegionalSimulationSession | null = null;
   private regionalSessionBridges: readonly RegionalWorkerBridge[] = [];
   private regionalSessionGeneration = 0;
@@ -444,7 +455,7 @@ implements SimulationAction, SimulationInternalAction {
     });
 
     try {
-      if (this.regionalMultiBaseEnabled) {
+      if (this.stateReadWrite.simulationMode === SIMULATION_MODE.regionalMultiBase) {
         await this.startRegionalSimulation();
       } else {
         const result = await this.refreshFromCurrentDocument();
@@ -464,7 +475,10 @@ implements SimulationAction, SimulationInternalAction {
   };
 
   public readonly setRegionalMultiBaseEnabled: SimulationAction["setRegionalMultiBaseEnabled"] = action((enabled) => {
-    if (enabled === this.regionalMultiBaseEnabled) {
+    const simulationMode = enabled
+      ? SIMULATION_MODE.regionalMultiBase
+      : SIMULATION_MODE.singleBase;
+    if (simulationMode === this.stateReadWrite.simulationMode) {
       return;
     }
     if (this.stateReadWrite.runningState !== "stop") {
@@ -473,7 +487,10 @@ implements SimulationAction, SimulationInternalAction {
     if (enabled && this.stateReadWrite.timeline.enabled) {
       return;
     }
-    this.regionalMultiBaseEnabled = enabled;
+    if (enabled && !isRegionalSimulationSpeed(this.stateReadWrite.simulationSpeed)) {
+      this.setSimulationSpeed(DEFAULT_SIMULATION_SPEED);
+    }
+    this.stateReadWrite.simulationMode = simulationMode;
   });
 
   public readonly pause: SimulationAction["pause"] = action(() => {
@@ -953,6 +970,7 @@ implements SimulationAction, SimulationInternalAction {
     const compiledTopology = compileSimulationTopology({
       document,
       registry: this.workspace.registry,
+      simulationMode: this.stateReadWrite.simulationMode,
       poweredEntityIds: computePoweredEntityIds({
         document,
         registry: this.workspace.registry,
@@ -1102,7 +1120,10 @@ implements SimulationAction, SimulationInternalAction {
     if (!Number.isFinite(value) || value < 0) {
       return;
     }
-    if (this.regionalMultiBaseEnabled && (value === 4 || value === 16)) {
+    if (
+      this.stateReadWrite.simulationMode === SIMULATION_MODE.regionalMultiBase
+      && !isRegionalSimulationSpeed(value)
+    ) {
       return;
     }
     if (this.regionalSession !== null && value !== this.stateReadWrite.simulationSpeed) {
@@ -1160,7 +1181,7 @@ implements SimulationAction, SimulationInternalAction {
   };
 
   public readonly enableTimeline: SimulationAction["enableTimeline"] = async () => {
-    if (this.regionalMultiBaseEnabled) {
+    if (this.stateReadWrite.simulationMode === SIMULATION_MODE.regionalMultiBase) {
       return;
     }
     runInAction(() => {
@@ -2383,16 +2404,35 @@ implements SimulationAction, SimulationInternalAction {
 
     const editor = this.workspace.editor;
     if (regionDefinitions.length <= 1 || editor === null) {
-      // 单基地继续走现有快速路径，不创建退化区域屏障。
-      const result = await this.refreshFromCurrentDocument();
-      if (result.status === "started") {
-        runInAction(() => {
-          this.stateReadWrite.runningState = "start";
-        });
-        this.ensurePlaybackHotQueue();
-      } else {
-        this.recoverFromStartFailure();
-      }
+      // AI-REMOVED 2026-08-19:
+      // Reason: regional-multi-base 模式不能静默降级为 single-base，否则 registry 行为与用户选择的模式不一致。
+      // Trigger: 用户要求 SimulationMode 显式传入 Simulation，并成为设备行为选择的唯一依据。
+      // Evidence: 原分支调用 refreshFromCurrentDocument，会在多基地模式选中时编译单基地语义。
+      // Replacement: 当前 fail-fast 错误分支；只有具备编辑器和至少两个同区域基地时才能启动区域仿真。
+      // Risk: Low - 原先的退化启动现在会明确失败。
+      // Human Review: Required
+      //
+      // Original code:
+      // // 单基地继续走现有快速路径，不创建退化区域屏障。
+      // const result = await this.refreshFromCurrentDocument();
+      // if (result.status === "started") {
+      //   runInAction(() => {
+      //     this.stateReadWrite.runningState = "start";
+      //   });
+      //   this.ensurePlaybackHotQueue();
+      // } else {
+      //   this.recoverFromStartFailure();
+      // }
+      runInAction(() => {
+        this.stateReadWrite.runtimeStatus = {
+          ...this.stateReadWrite.runtimeStatus,
+          mode: "error",
+          error: editor === null
+            ? "Regional simulation requires an editor document provider."
+            : `区域 ${currentBase.tag} 至少需要两个基地才能启动多基地仿真。`,
+        };
+      });
+      this.recoverFromStartFailure();
       return;
     }
 
@@ -2422,6 +2462,7 @@ implements SimulationAction, SimulationInternalAction {
         topology: compileSimulationTopology({
           document,
           registry,
+          simulationMode: SIMULATION_MODE.regionalMultiBase,
           poweredEntityIds: computePoweredEntityIds({ document, registry }),
           activeActivityIds: normalizeActiveActivityIds(this.getActiveActivityIds?.() ?? []),
         }),

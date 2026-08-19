@@ -26,6 +26,7 @@ describe("武陵四基地区域会话 10 分钟长跑", () => {
       topology: compileSimulationTopology({
         document: createWorldDocument({ baseId }),
         registry,
+        simulationMode: "regional-multi-base",
         poweredEntityIds: new Set(),
         activeActivityIds: [],
       }),

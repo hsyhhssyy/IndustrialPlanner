@@ -436,6 +436,47 @@ describe("createEditorHost", () => {
     expect(unlinked.entities.outlet?.config).toEqual({});
   });
 
+  it("removes only the selected outlet warehouse link when creating a dark pipe link", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDocumentWithTestEntities([
+      createTestEntity("inlet", "udpipe_loader_1", 0, 0),
+      createTestEntity("outlet", "udpipe_unloader_1", 8, 0),
+      createTestEntity("other-outlet", "udpipe_unloader_1", 16, 0),
+    ]);
+    document.slotLinks = ["outlet", "other-outlet"].map((entityId) => ({
+      id: `warehouse-link:${entityId}:unloader_buffer:slot_1`,
+      linkType: "share-all" as const,
+      source: {
+        entityId,
+        storageSlotGroupId: "unloader_buffer",
+        slotId: "slot_1",
+      },
+      target: {
+        entityId: "warehouse",
+        storageSlotGroupId: "warehouse",
+        slotId: "item_liquid_water",
+      },
+    }));
+    editorHost.internalDocument.setSnapshot(document);
+
+    expect(editorHost.actions.createDarkPipeLink({
+      sourceEntityId: "outlet",
+      targetEntityId: "inlet",
+    })).toBe(true);
+
+    const linked = editorHost.document.getSnapshot();
+    expect(linked.slotLinks.map((slotLink) => slotLink.id)).toEqual([
+      "warehouse-link:other-outlet:unloader_buffer:slot_1",
+      "dark-pipe-link:outlet:inlet",
+    ]);
+    expect(linked.slotLinks.filter((slotLink) =>
+      slotLink.source.entityId === "outlet"
+      && slotLink.source.storageSlotGroupId === "unloader_buffer"
+      && slotLink.source.slotId === "slot_1",
+    )).toHaveLength(1);
+  });
+
   it("clamps viewport center to the current base warning bounds while panning", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

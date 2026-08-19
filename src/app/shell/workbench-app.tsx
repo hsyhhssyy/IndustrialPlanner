@@ -585,7 +585,16 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             regionalSimulationUiState.experimentalEnabled = value;
             writeRegionalMultiBaseExperimentalEnabled(value);
             if (!value) {
-              regionalSimulationUiState.allBasesEnabled = false;
+              // AI-REMOVED 2026-08-19:
+              // Reason: App UI state 不再保存多基地模式副本。
+              // Trigger: SimulationMode 单一事实源改造。
+              // Evidence: 下方 Simulation Action 已负责切回 single-base。
+              // Replacement: appHost.workspace.simulation.state.simulationMode。
+              // Risk: Low
+              // Human Review: Required
+              //
+              // Original code:
+              // regionalSimulationUiState.allBasesEnabled = false;
               appHost.workspace.simulation?.actions.setRegionalMultiBaseEnabled(false);
             }
           }

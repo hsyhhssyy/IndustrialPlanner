@@ -3,6 +3,7 @@ import type { ItemDomainFlag } from "../../shared/item-domain-flags";
 import type { SlotLinkDefinition } from "../../shared/slot-link";
 import type { EntityInspectorDeclaration } from "./entity-inspector";
 import type { EntityPlacementBehaviorDeclaration } from "./entity-placement-behavior";
+import type { EntitySimulationModeConfigMap } from "./entity-simulation-mode";
 
 export type ItemDomain = ItemDomainFlag;
 export type ItemFilterType = ItemDomainFlag;
@@ -92,6 +93,12 @@ export interface EntityDefinition {
    * 前端遍历此数组，按 type 挂载对应面板组件。
    */
   inspectors: EntityInspectorDeclaration[];
+
+  /**
+   * 随仿真模式切换的静态行为与 Inspector 配置。
+   * 未声明某个模式时，设备沿用基础行为与 inspectors。
+   */
+  readonly simulationModeConfigs?: EntitySimulationModeConfigMap;
 
   /**
    * 放置行为声明。

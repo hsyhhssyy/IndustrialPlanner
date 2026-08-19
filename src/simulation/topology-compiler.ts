@@ -12,6 +12,7 @@ import {
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import type { SimulationMode } from "@/domain/shared/simulation-mode";
 import {
   isItemAvailableByActivity,
   isRecipeAvailableByActivity,
@@ -74,6 +75,7 @@ interface CompileOptions {
   readonly document: WorldDocument;
   readonly registry: RegistryContract;
   readonly poweredEntityIds: ReadonlySet<string>;
+  readonly simulationMode: SimulationMode;
   readonly activeActivityIds?: readonly string[];
 }
 
@@ -190,6 +192,7 @@ export function compileSimulationTopology(
         inactiveActivityItemIds,
         baseId: options.document.baseId,
         poweredEntityIds: options.poweredEntityIds,
+        simulationMode: options.simulationMode,
       }),
       devices,
       nodes,
@@ -310,6 +313,7 @@ export function compileSimulationTopology(
     deviceOrder.map((deviceId, index) => [deviceId, index]),
   );
   const topologyHashInput = {
+    simulationMode: options.simulationMode,
     documentHash,
     registryHash,
     standardTickRate,
@@ -337,7 +341,8 @@ export function compileSimulationTopology(
   };
 
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
+    simulationMode: options.simulationMode,
     topologyId: hashStable(topologyHashInput),
     documentKey: options.document.documentKey,
     documentHash,
@@ -539,6 +544,7 @@ function compileWarehouseDevice(
       transportComponentId: null,
       nodeIds: [nodeId],
       recipeChannels: [],
+      simulationBehaviors: [],
       consumptionChannelCount: 0,
       allowDuplicateRecipesAcrossChannels: false,
       portIds: [],
@@ -594,6 +600,7 @@ function compileEntityDevice(options: {
   readonly inactiveActivityItemIds: ReadonlySet<string>;
   readonly baseId: string;
   readonly poweredEntityIds: ReadonlySet<string>;
+  readonly simulationMode: SimulationMode;
 }): DeviceCompileResult {
   const deviceId = `device:${options.entity.id}`;
   const definition = applyPortPriorityGroupConfig(
@@ -659,6 +666,13 @@ function compileEntityDevice(options: {
   const consumptionChannelCount = recipeChannels.findIndex(
     (channel) => channel.type !== "consumption-channel",
   );
+  const simulationBehaviors = options.registryQueries.resolveEntitySimulationModeConfig(
+    definition.id,
+    options.simulationMode,
+  )?.behaviors.map((behavior) => ({
+    ...behavior,
+    storageSlotGroupIds: [...behavior.storageSlotGroupIds],
+  })) ?? [];
   const device: CompiledSimulationDevice = {
     id: deviceId,
     sourceEntityId: options.entity.id,
@@ -673,6 +687,7 @@ function compileEntityDevice(options: {
     transportComponentId: null,
     nodeIds: nodes.map((node) => node.id),
     recipeChannels,
+    simulationBehaviors,
     consumptionChannelCount: consumptionChannelCount < 0
       ? recipeChannels.length
       : consumptionChannelCount,
@@ -683,6 +698,8 @@ function compileEntityDevice(options: {
     configHash: hashStable({
       entity: options.entity,
       definition,
+      simulationMode: options.simulationMode,
+      simulationBehaviors,
     }),
     blockageAutoClearance: compileBlockageAutoClearance(definition, options.entity.config),
     waterPurifierNode: compileWaterPurifierNode(definition.id, options.entity.config),

@@ -11,6 +11,7 @@ import type {
 } from "@/domain/registry/types/entity-inspector";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
+import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import {
   buildProductionPlanningIndex,
 } from "@/app/shell/production-planning/production-planning-model";
@@ -471,7 +472,12 @@ export function SelectionInspectorSlot({
         return;
       }
 
-      const inspectorDeclarations = selectedDefinition.inspectors;
+      const simulationModeConfig = appHost.workspace.registry.queries.resolveEntitySimulationModeConfig(
+        selectedDefinition.id,
+        appHost.workspace.simulation?.state.simulationMode ?? SIMULATION_MODE.singleBase,
+      );
+      const inspectorDeclarations = simulationModeConfig?.inspectors
+        ?? selectedDefinition.inspectors;
       const inspectors = inspectorDeclarations.map((declaration, declarationIndex) => {
         const id = [
           selectedEntity.id,

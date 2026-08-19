@@ -4,6 +4,7 @@ import type {
 } from "../types";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import { resolveStorageSlotId } from "./runtime-slot-access";
+import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 
 /**
  * 将设备（协议储存箱）所有本地槽位的物品提交到仓库。
@@ -50,6 +51,14 @@ export function submitSlotsToWarehouse(
 
       // 部分提交：min(本地数量, 仓库剩余容量)
       const submitCount = Math.min(localSlot.count, remainingCap);
+      if (
+        topology.simulationMode === SIMULATION_MODE.regionalMultiBase
+        && regionalWarehouse?.isWarehouseStorageSlotId(warehouseStorageSlotId) !== true
+      ) {
+        throw new Error(
+          `Regional warehouse write context is required for target slot "${warehouseStorageSlotId}".`,
+        );
+      }
       if (regionalWarehouse?.isWarehouseStorageSlotId(warehouseStorageSlotId) === true) {
         regionalWarehouse.deposit(localSlot.itemType, submitCount);
       } else {

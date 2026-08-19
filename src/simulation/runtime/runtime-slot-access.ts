@@ -13,6 +13,11 @@ import type {
 } from "../types";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import {
+  ENTITY_INPUT_ROUTING_STRATEGY,
+  ENTITY_SIMULATION_BEHAVIOR_TYPE,
+} from "@/domain/registry/types/entity-simulation-mode";
+import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import type {
   RuntimeDeviceRecipeState,
   RuntimeRecipeItem,
@@ -65,6 +70,12 @@ const WAREHOUSE_SINK_TAG = "WarehouseSink";
 const recipePlanCacheByTopology = new WeakMap<
   CompiledSimulationTopology,
   Map<string, Map<string, Map<string, CompiledSimulationRecipePlan>>>
+>();
+
+/** 文档级 link 涉及的设备存储组；内部 input/output-view link 不计为设备已外连。 */
+const documentLinkedStorageGroupsByTopology = new WeakMap<
+  CompiledSimulationTopology,
+  ReadonlySet<string>
 >();
 
 // AI-REMOVED 2026-08-02:
@@ -336,8 +347,59 @@ function isWarehouseSinkInputNode(
   }
 
   const device = topology.devices[node.deviceId];
-  return device !== undefined
-    && registry.queries.findEntityDefinition(device.definitionId)?.tags.includes(WAREHOUSE_SINK_TAG) === true;
+  if (device === undefined) {
+    return false;
+  }
+  if (registry.queries.findEntityDefinition(device.definitionId)?.tags.includes(WAREHOUSE_SINK_TAG) === true) {
+    return true;
+  }
+
+  const storageSlotGroupId = node.sourceStorageSlotGroupId;
+  if (storageSlotGroupId === null) {
+    return false;
+  }
+  const hasRegionalUnlinkedWarehouseBehavior = device.simulationBehaviors.some((behavior) =>
+    behavior.type === ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting
+    && behavior.strategy === ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked
+    && behavior.storageSlotGroupIds.includes(storageSlotGroupId),
+  );
+  return hasRegionalUnlinkedWarehouseBehavior
+    && !resolveDocumentLinkedStorageGroups(topology).has(
+      createDeviceStorageGroupKey(device.id, storageSlotGroupId),
+    );
+}
+
+function resolveDocumentLinkedStorageGroups(
+  topology: CompiledSimulationTopology,
+): ReadonlySet<string> {
+  const cached = documentLinkedStorageGroupsByTopology.get(topology);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const linkedStorageGroups = new Set<string>();
+  for (const link of Object.values(topology.links)) {
+    if (!link.id.startsWith("document-link:")) {
+      continue;
+    }
+    for (const slotId of [...link.sourceSlotIds, ...link.targetSlotIds]) {
+      const slot = topology.slots[slotId];
+      const node = slot === undefined ? undefined : topology.nodes[slot.nodeId];
+      if (node?.sourceStorageSlotGroupId === null || node === undefined) {
+        continue;
+      }
+      linkedStorageGroups.add(createDeviceStorageGroupKey(
+        node.deviceId,
+        node.sourceStorageSlotGroupId,
+      ));
+    }
+  }
+  documentLinkedStorageGroupsByTopology.set(topology, linkedStorageGroups);
+  return linkedStorageGroups;
+}
+
+function createDeviceStorageGroupKey(deviceId: string, storageSlotGroupId: string): string {
+  return `${deviceId}\u0000${storageSlotGroupId}`;
 }
 
 function findWarehouseSlotId(
@@ -441,6 +503,20 @@ export function moveOneItem(options: {
     return false;
   }
 
+  const targetIsWarehouseStorage = isWarehouseStorageSlotId(
+    options.topology,
+    targetStorageSlotId,
+  );
+  if (
+    options.topology.simulationMode === SIMULATION_MODE.regionalMultiBase
+    && targetIsWarehouseStorage
+    && options.regionalWarehouse?.isWarehouseStorageSlotId(targetStorageSlotId) !== true
+  ) {
+    throw new Error(
+      `Regional warehouse write context is required for target slot "${targetStorageSlotId}".`,
+    );
+  }
+
   if (!resolveEffectiveIgnoreStock(options.topology, options.state, options.sourceSlotId)) {
     sourceState.count = Math.max(0, sourceState.count - 1);
     if (sourceState.count === 0) {
@@ -448,7 +524,10 @@ export function moveOneItem(options: {
     }
   }
 
-  if (options.regionalWarehouse?.isWarehouseStorageSlotId(targetStorageSlotId) === true) {
+  if (
+    targetIsWarehouseStorage
+    && options.regionalWarehouse?.isWarehouseStorageSlotId(targetStorageSlotId) === true
+  ) {
     // 区域模式入仓只写当前 Epoch 的 deposit journal；本 Epoch 内不可被取货读取。
     options.regionalWarehouse.deposit(options.itemType, 1);
     return true;
@@ -470,6 +549,16 @@ export function moveOneItem(options: {
   targetState.itemType = targetState.itemType ?? options.itemType;
   targetState.count += 1;
   return true;
+}
+
+function isWarehouseStorageSlotId(
+  topology: CompiledSimulationTopology,
+  storageSlotId: string,
+): boolean {
+  const slot = topology.slots[storageSlotId];
+  const node = slot === undefined ? undefined : topology.nodes[slot.nodeId];
+  return node !== undefined
+    && topology.devices[node.deviceId]?.definitionId === "warehouse";
 }
 
 export function createStartableRecipeForChannel(options: {

@@ -45,14 +45,14 @@ describe("区域会话 10 分钟长跑", () => {
         baseId: consumerDoc.baseId,
         regionBaseOrderIndex: 0,
         topology: compileSimulationTopology({
-          document: consumerDoc, registry, poweredEntityIds: new Set(), activeActivityIds: [],
+          document: consumerDoc, registry, simulationMode: "regional-multi-base", poweredEntityIds: new Set(), activeActivityIds: [],
         }),
       },
       {
         baseId: producerDoc.baseId,
         regionBaseOrderIndex: 1,
         topology: compileSimulationTopology({
-          document: producerDoc, registry, poweredEntityIds: new Set(), activeActivityIds: [],
+          document: producerDoc, registry, simulationMode: "regional-multi-base", poweredEntityIds: new Set(), activeActivityIds: [],
         }),
       },
     ];

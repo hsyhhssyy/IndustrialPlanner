@@ -31,6 +31,7 @@ describe("区域仓库出口表与仲裁器", () => {
     const topology = compileSimulationTopology({
       document,
       registry,
+      simulationMode: "regional-multi-base",
       poweredEntityIds: new Set(),
       activeActivityIds: [],
     });

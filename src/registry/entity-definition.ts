@@ -46,12 +46,17 @@ import {
   type EntityPlacementBehaviorDeclaration,
 } from "@/domain/registry/types/entity-placement-behavior";
 import {
+  ENTITY_INPUT_ROUTING_STRATEGY,
+  ENTITY_SIMULATION_BEHAVIOR_TYPE,
+} from "@/domain/registry/types/entity-simulation-mode";
+import {
   AnyDomain,
   FluidDomain,
   ItemDomainFlag,
   type ItemDomainFlag as ItemDomainFlags,
 } from "@/domain/shared/item-domain-flags";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
+import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import { DEFAULT_PORT_PRIORITY_GROUP } from "@/shared/port-priority-groups";
 import { MAIN_CRAFT_GROUP_TAG } from "@/shared/entity-variants";
 import { RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY } from "@/shared/recipe-channel-behavior";
@@ -227,7 +232,39 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
     recipeChannels: [...(normalizedDefinition.recipeChannels ?? [])],
     placementBehaviors: normalizePlacementBehaviors(normalizedDefinition.placementBehaviors ?? []),
     inspectors: appendMissingInspectors(declaredInspectors, recipeMachineInspectors),
+    simulationModeConfigs: normalizeSimulationModeConfigs(
+      normalizedDefinition,
+      recipeMachineInspectors,
+    ),
   };
+}
+
+function normalizeSimulationModeConfigs(
+  definition: EntityDefinitionInput,
+  generatedInspectors: readonly EntityInspectorDeclaration[],
+): EntityDefinition["simulationModeConfigs"] {
+  if (definition.simulationModeConfigs === undefined) {
+    return undefined;
+  }
+
+  return Object.fromEntries(
+    Object.entries(definition.simulationModeConfigs).map(([mode, config]) => {
+      if (config === undefined) {
+        return [mode, config];
+      }
+
+      const inspectors = config.inspectors === undefined
+        ? undefined
+        : appendMissingInspectors(
+            [{ type: INSPECTOR_TYPE.problem }, ...config.inspectors],
+            generatedInspectors,
+          );
+      return [mode, {
+        behaviors: [...config.behaviors],
+        ...(inspectors === undefined ? {} : { inspectors }),
+      }];
+    }),
+  );
 }
 
 // AI-REMOVED 2026-08-01:
@@ -2299,6 +2336,22 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
+    simulationModeConfigs: {
+      [SIMULATION_MODE.singleBase]: {
+        behaviors: [{
+          type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
+          strategy: ENTITY_INPUT_ROUTING_STRATEGY.localStorage,
+          storageSlotGroupIds: ["loader_buffer"],
+        }],
+      },
+      [SIMULATION_MODE.regionalMultiBase]: {
+        behaviors: [{
+          type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
+          strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
+          storageSlotGroupIds: ["loader_buffer"],
+        }],
+      },
+    },
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -4128,6 +4181,22 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
+    simulationModeConfigs: {
+      [SIMULATION_MODE.singleBase]: {
+        behaviors: [{
+          type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
+          strategy: ENTITY_INPUT_ROUTING_STRATEGY.localStorage,
+          storageSlotGroupIds: ["loader_buffer"],
+        }],
+      },
+      [SIMULATION_MODE.regionalMultiBase]: {
+        behaviors: [{
+          type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
+          strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
+          storageSlotGroupIds: ["loader_buffer"],
+        }],
+      },
+    },
     portGroups: [
       createPortGroup(
         "fluid_input",

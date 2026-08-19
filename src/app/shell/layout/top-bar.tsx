@@ -23,7 +23,18 @@ import {
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
-import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
+// AI-REMOVED 2026-08-19:
+// Reason: 顶栏直接读取 SimulationState.simulationMode，不再读取 App 层模式副本。
+// Trigger: SimulationMode 单一事实源改造。
+// Evidence: 模式必须在停止态和运行态保持同一可观察来源。
+// Replacement: SIMULATION_MODE + appHost.workspace.simulation.state.simulationMode。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
+import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
+import { isRegionalSimulationSpeed } from "@/shared/regional-simulation-speed";
 
 const SIMULATION_CONTROL_BUTTON_ID = "top-bar-simulation-control";
 const SIMULATION_SPEED_OPTIONS = [0.25, 1, 2, 4, 16] as const;
@@ -144,6 +155,11 @@ export const SimulationSpeedButtons = observer(function SimulationSpeedButtons({
   const currentSpeed = simulation?.state.simulationSpeed ?? 1;
   const isStarting = simulation?.state.runningState === "starting";
   const t = appHost.actions.translate;
+  const regionalMultiBaseEnabled = simulation?.state.simulationMode
+    === SIMULATION_MODE.regionalMultiBase;
+  const visibleSpeedOptions = regionalMultiBaseEnabled
+    ? SIMULATION_SPEED_OPTIONS.filter(isRegionalSimulationSpeed)
+    : SIMULATION_SPEED_OPTIONS;
 
   const handleSpeedClick = (speed: number) => {
     if (simulation === null) return;
@@ -157,12 +173,12 @@ export const SimulationSpeedButtons = observer(function SimulationSpeedButtons({
 
   return (
     <>
-      {SIMULATION_SPEED_OPTIONS.map((speed) => (
+      {visibleSpeedOptions.map((speed) => (
         <button
           key={speed}
           aria-label={`${t("statusBar.speed")} ${formatSimulationSpeedLabel(speed)}`}
           aria-pressed={currentSpeed === speed}
-          disabled={isStarting || (regionalSimulationUiState.allBasesEnabled && (speed === 4 || speed === 16))}
+          disabled={isStarting}
           className={cm(styles, currentSpeed === speed
             ? "top-bar-speed-button top-bar-speed-active"
             : "top-bar-speed-button")}
@@ -201,7 +217,8 @@ export const TimelineButton = observer(function TimelineButton({
 }) {
   const label = appHost.actions.translate("timelineDialog.title");
   const active = appHost.internalState.workbench.dialogState.timeline.visible;
-  const disabled = regionalSimulationUiState.allBasesEnabled;
+  const disabled = appHost.workspace.simulation?.state.simulationMode
+    === SIMULATION_MODE.regionalMultiBase;
 
   return (
     <button

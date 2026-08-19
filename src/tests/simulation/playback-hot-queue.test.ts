@@ -12,6 +12,7 @@ describe("simulation playback hot queue protocol", () => {
     const topology = compileSimulationTopology({
       document,
       registry,
+      simulationMode: "single-base",
       poweredEntityIds: new Set(),
     });
     const runtime = new SimulationWorkerRuntime(registry);

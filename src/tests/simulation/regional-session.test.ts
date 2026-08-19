@@ -45,6 +45,7 @@ describe("区域会话端到端", () => {
         topology: compileSimulationTopology({
           document: consumerDoc,
           registry,
+          simulationMode: "regional-multi-base",
           poweredEntityIds: new Set(),
           activeActivityIds: [],
         }),
@@ -55,6 +56,7 @@ describe("区域会话端到端", () => {
         topology: compileSimulationTopology({
           document: producerDoc,
           registry,
+          simulationMode: "regional-multi-base",
           poweredEntityIds: new Set(),
           activeActivityIds: [],
         }),

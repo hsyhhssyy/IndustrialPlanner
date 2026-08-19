@@ -236,7 +236,8 @@ describe("REQ-089: power generation mode caching bug", () => {
     // demand=40_000kW → 每 tick 消耗 2MJ，100MJ 电池约 50 ticks 耗尽。
     // 配方 durationTicks=100，原料充足，避免电池耗尽前后配方做完导致不可比较。
     const topology: CompiledSimulationTopology = {
-      schemaVersion: 5,
+      schemaVersion: 6,
+      simulationMode: "single-base",
       topologyId: "topology:power-mode-cache-test",
       documentKey: "document:test",
       documentHash: "hash:test",
@@ -266,6 +267,7 @@ describe("REQ-089: power generation mode caching bug", () => {
             manualRecipeOnly: false,
             defaultRecipeId: null,
           }],
+          simulationBehaviors: [],
           portIds: [],
           routing: {},
           configHash: "config:test",

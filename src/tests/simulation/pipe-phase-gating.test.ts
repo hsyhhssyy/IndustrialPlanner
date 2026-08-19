@@ -77,6 +77,7 @@ function createLiquidPhaseGatingTopology(registry: RegistryContract): CompiledSi
   return compileSimulationTopology({
     document,
     registry,
+    simulationMode: "single-base",
     poweredEntityIds: new Set(document.entityOrder),
   });
 }

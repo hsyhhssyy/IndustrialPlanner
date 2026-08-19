@@ -1,9 +1,24 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+// AI-REMOVED 2026-08-19:
+// Reason: BasePanel 不再手工同步 App 层的多基地模式副本，因此无需 runInAction。
+// Trigger: SimulationMode 单一事实源改造。
+// Evidence: checkbox 直接读取 SimulationState.simulationMode，写入统一经过 SimulationAction。
+// Replacement: None
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { runInAction } from "mobx";
+// AI-CORRECTION 2026-08-19: runInAction 仍用于 effect 更新 siblingBaseCount；只移除了模式副本同步用途。
 import { runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
 import { createPortal } from "react-dom";
 
 import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
+import {
+  fetchHelpMarkdownHtml,
+  MarkdownTutorialOverlay,
+} from "@/app/shell/dialogs";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import { NumberInput } from "@/app/shell/shared/number-input";
 import LucideTrash2 from "~icons/lucide/trash-2";
@@ -17,14 +32,28 @@ import {
   WarehouseStatsView,
 } from "@/app/shell/shared/warehouse-stats-view";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import { isCustomPortPriorityGroupsEnabled } from "@/shared/port-priority-groups";
 import { resolveBaseMaxPipeLogistics } from "@/shared/base-tags";
 import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
+import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
+import {
+  collectBaseConfigurationProblems,
+  collectRuntimeInfiniteStorageEntityIds,
+} from "@/app/shell/panels/base-configuration-problems";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import panelStyles from "@/app/shell/panels/panels.module.scss";
 
 const BASE_PANEL_POWER_INTERVAL_MS = 250;
+const BASE_PANEL_PROBLEM_INTERVAL_MS = 250;
+const REGIONAL_MULTI_BASE_HELP_PATH = createPublicAssetUrl(
+  "help/config-guide/experimental-regional-multi-base.md",
+);
+
+function areStringSetsEqual(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
+  return left.size === right.size && [...left].every((value) => right.has(value));
+}
 
 // AI-REMOVED 2026-07-27:
 // Reason: app 不应维护 4 个管道物流设备 definition ID。
@@ -48,11 +77,14 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
     (definition) => definition.id === currentBaseId,
   ) ?? appHost.workspace.registry.baseDefinitions[0] ?? null;
   const currentBaseName = currentBase?.name ?? currentBaseId;
+  const [regionalHelpTutorialVisible, setRegionalHelpTutorialVisible] = useState(false);
   useEffect(() => {
     const siblings = appHost.workspace.registry.baseDefinitions.filter((definition) =>
       definition.tag === currentBase?.tag,
     ).length - 1;
-    regionalSimulationUiState.siblingBaseCount = Math.max(0, siblings);
+    runInAction(() => {
+      regionalSimulationUiState.siblingBaseCount = Math.max(0, siblings);
+    });
   }, [appHost.workspace.registry.baseDefinitions, currentBase?.tag]);
   const warehouseStats = useWarehouseStats(appHost);
   const pinnedItems = useWarehousePinnedItems(appHost);
@@ -101,6 +133,47 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
     [appHost.workspace.registry.entityDefinitions, t],
   );
 
+  const [runtimeInfiniteStorageEntityIds, setRuntimeInfiniteStorageEntityIds] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
+  useEffect(() => {
+    const tick = () => {
+      const simulation = appHost.workspace.simulation;
+      if (currentDocument === null || simulation === null) {
+        setRuntimeInfiniteStorageEntityIds((current) =>
+          current.size === 0 ? current : new Set(),
+        );
+        return;
+      }
+
+      const entities = Object.values(currentDocument.entities);
+      const runtimeSlotItemsByEntityId = new Map(
+        entities.flatMap((entity) => {
+          const runtimeStatus = simulation.queries.getDeviceRuntimeStatus(entity.id);
+          return runtimeStatus === null
+            ? []
+            : [[entity.id, runtimeStatus.slotItems] as const];
+        }),
+      );
+      const next = collectRuntimeInfiniteStorageEntityIds({
+        entities,
+        entityDefinitions: appHost.workspace.registry.entityDefinitions,
+        runtimeSlotItemsByEntityId,
+      });
+      setRuntimeInfiniteStorageEntityIds((current) =>
+        areStringSetsEqual(current, next) ? current : next,
+      );
+    };
+
+    tick();
+    const intervalId = window.setInterval(tick, BASE_PANEL_PROBLEM_INTERVAL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [appHost, appHost.workspace.registry.entityDefinitions, currentDocument]);
+
+  const simulation = appHost.workspace.simulation;
+  const multiBaseEnabled = simulation?.state.simulationMode
+    === SIMULATION_MODE.regionalMultiBase;
+
   const baseProblems = useMemo<BaseProblem[]>(() => {
     const problems: BaseProblem[] = [];
     if (currentDocument === null || editor === null) return problems;
@@ -136,8 +209,28 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
       }
     }
 
+    // ④ 作弊设备、无效无限资源与普通槽位无限配置
+    problems.push(...collectBaseConfigurationProblems({
+      entities,
+      entityDefinitions: appHost.workspace.registry.entityDefinitions,
+      itemDefinitions: appHost.workspace.registry.itemDefinitions,
+      slotLinks: currentDocument.slotLinks,
+      multiBaseEnabled,
+      runtimeInfiniteStorageEntityIds,
+    }));
+
     return problems;
-  }, [currentDocument, editor, currentBase, deviceStats.pipeLogisticsDevices, resolveDeviceName]);
+  }, [
+    appHost.workspace.registry.entityDefinitions,
+    appHost.workspace.registry.itemDefinitions,
+    currentDocument,
+    currentBase,
+    deviceStats.pipeLogisticsDevices,
+    editor,
+    multiBaseEnabled,
+    resolveDeviceName,
+    runtimeInfiniteStorageEntityIds,
+  ]);
 
   const [activeProblemTooltip, setActiveProblemTooltip] = useState<number | null>(null);
   const [popoverRect, setPopoverRect] = useState<{ top: number; left: number } | null>(null);
@@ -260,26 +353,59 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
           </span>
         </button>
         {regionalSimulationUiState.experimentalEnabled && (
-          <label className={cm(styles, "base-regional-switch")}>
-            <input
-              checked={regionalSimulationUiState.allBasesEnabled}
-              disabled={
-                regionalSimulationUiState.siblingBaseCount < 1
-                || appHost.workspace.simulation?.state.runningState !== "stop"
-              }
-              onChange={(event) => {
-                const enabled = event.target.checked;
-                runInAction(() => {
-                  regionalSimulationUiState.allBasesEnabled = enabled;
-                });
-                appHost.workspace.simulation?.actions.setRegionalMultiBaseEnabled(enabled);
-              }}
-              type="checkbox"
+          <div className={cm(styles, "base-regional-switch")}>
+            <label className={cm(styles, "base-regional-switch-control")}>
+              <input
+                checked={multiBaseEnabled}
+                disabled={
+                  regionalSimulationUiState.siblingBaseCount < 1
+                  || appHost.workspace.simulation?.state.runningState !== "stop"
+                }
+                onChange={(event) => {
+                  const simulation = appHost.workspace.simulation;
+                  if (simulation === null) return;
+
+                  const enabled = event.target.checked;
+                  if (
+                    enabled
+                    && (
+                      appHost.internalState.workbench.dialogState.timeline.visible
+                      || simulation.state.timeline.enabled
+                    )
+                  ) {
+                    simulation.actions.disableTimeline();
+                  }
+
+                  simulation.actions.setRegionalMultiBaseEnabled(enabled);
+                  // AI-REMOVED 2026-08-19:
+                  // Reason: checkbox 状态直接观察 SimulationState.simulationMode，不再同步 App 副本。
+                  // Trigger: SimulationMode 单一事实源改造。
+                  // Evidence: Action 会在非 stop 状态拒绝切换，直接读取 state 可避免 UI 错误显示已切换。
+                  // Replacement: simulation.actions.setRegionalMultiBaseEnabled(enabled)。
+                  // Risk: Low
+                  // Human Review: Required
+                  //
+                  // Original code:
+                  // runInAction(() => {
+                  //   regionalSimulationUiState.allBasesEnabled = enabled;
+                  // });
+                  if (enabled) {
+                    setRegionalHelpTutorialVisible(true);
+                  }
+                }}
+                type="checkbox"
+              />
+              <span className={cm(styles, "base-regional-switch-label")}>
+                {t("basePanel.runAllBases")}
+              </span>
+            </label>
+            <RegionalMultiBaseHelp
+              compactLayout={appHost.state.screenProfile.deviceClass === "mobile"}
+              onCloseTutorial={() => setRegionalHelpTutorialVisible(false)}
+              t={t}
+              tutorialVisible={regionalHelpTutorialVisible}
             />
-            <span className={cm(styles, "base-regional-switch-label")}>
-              {t("basePanel.runAllBases")}
-            </span>
-          </label>
+          </div>
         )}
       </article>
       <article className={cm(styles, "inspector-card")}>
@@ -447,3 +573,165 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
     </div>
   );
 });
+
+function RegionalMultiBaseHelp({
+  compactLayout,
+  onCloseTutorial,
+  t,
+  tutorialVisible,
+}: {
+  compactLayout: boolean;
+  onCloseTutorial: () => void;
+  t: AppHost["actions"]["translate"];
+  tutorialVisible: boolean;
+}) {
+  const tooltipId = useId();
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipHtml, setTooltipHtml] = useState<string | null>(null);
+  const [tooltipLoadFailed, setTooltipLoadFailed] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState<{
+    left: number;
+    maxHeight: number;
+    top?: number;
+    bottom?: number;
+  } | null>(null);
+  const title = t("basePanel.runAllBasesHelp");
+
+  useEffect(() => {
+    if (!tooltipVisible || tooltipHtml !== null || tooltipLoadFailed) return;
+
+    let cancelled = false;
+    void fetchHelpMarkdownHtml(REGIONAL_MULTI_BASE_HELP_PATH, {
+      stripLeadingH1: true,
+    }).then((html) => {
+      if (!cancelled) {
+        setTooltipHtml(html);
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setTooltipLoadFailed(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tooltipHtml, tooltipLoadFailed, tooltipVisible]);
+
+  useEffect(() => {
+    if (!tooltipVisible) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (
+        target === null
+        || buttonRef.current?.contains(target)
+        || tooltipRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setTooltipVisible(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        setTooltipVisible(false);
+      }
+    };
+    const handleViewportChange = () => {
+      setTooltipVisible(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    window.addEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [tooltipVisible]);
+
+  const handleToggleTooltip = () => {
+    if (tooltipVisible) {
+      setTooltipVisible(false);
+      return;
+    }
+
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (rect === undefined) return;
+
+    const horizontalPadding = 8;
+    const popoverWidth = Math.min(360, window.innerWidth - horizontalPadding * 2);
+    const left = Math.max(
+      horizontalPadding,
+      Math.min(
+        rect.right - popoverWidth,
+        window.innerWidth - popoverWidth - horizontalPadding,
+      ),
+    );
+    const gap = 8;
+    const spaceAbove = Math.max(0, rect.top - gap - horizontalPadding);
+    const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - gap - horizontalPadding);
+    setTooltipPosition(spaceBelow >= spaceAbove
+      ? { left, maxHeight: spaceBelow, top: rect.bottom + gap }
+      : { left, maxHeight: spaceAbove, bottom: window.innerHeight - rect.top + gap });
+    setTooltipVisible(true);
+  };
+
+  return (
+    <>
+      <button
+        aria-controls={tooltipVisible ? tooltipId : undefined}
+        aria-expanded={tooltipVisible}
+        aria-label={title}
+        className={cm(panelStyles, "base-regional-help-button")}
+        onClick={handleToggleTooltip}
+        ref={buttonRef}
+        title={title}
+        type="button"
+      >
+        <WorkbenchIcon kind="help" />
+      </button>
+      {tooltipVisible && tooltipPosition !== null
+        ? createPortal(
+          <div
+            className={cm(panelStyles, "base-regional-help-tooltip")}
+            id={tooltipId}
+            ref={tooltipRef}
+            role="tooltip"
+            style={{
+              position: "fixed",
+              ...tooltipPosition,
+            }}
+          >
+            {tooltipLoadFailed ? (
+              <p>{t("basePanel.runAllBasesHelpLoadFailed")}</p>
+            ) : tooltipHtml === null ? (
+              <p>{t("basePanel.runAllBasesHelpLoading")}</p>
+            ) : (
+              <div
+                className={cm(panelStyles, "base-regional-help-markdown")}
+                dangerouslySetInnerHTML={{ __html: tooltipHtml }}
+              />
+            )}
+          </div>,
+          document.body,
+        )
+        : null}
+      <MarkdownTutorialOverlay
+        compactLayout={compactLayout}
+        dialogKey="regional-multi-base-guide"
+        onClose={onCloseTutorial}
+        path={REGIONAL_MULTI_BASE_HELP_PATH}
+        title={title}
+        visible={tutorialVisible}
+      />
+    </>
+  );
+}
