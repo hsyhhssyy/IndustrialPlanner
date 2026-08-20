@@ -47,22 +47,33 @@
   opacity: 0.7;
 }
 
-// AI-GENERATED 2026-06-12: 旧版切换链接，紧跟标题后在标题块右侧显示。
-.top-bar-old-version-link {
-  margin-left: 12px;
-  font-size: 0.72rem;
-  font-weight: 400;
-  color: var(--text-dim);
-  text-decoration: none;
-  white-space: nowrap;
-  opacity: 0.7;
-  transition: opacity 0.15s;
-
-  &:hover {
-    opacity: 1;
-    color: var(--text-accent);
-  }
-}
+/*
+ * AI-REMOVED 2026-08-19:
+ * Reason: 顶栏旧版入口已退出，专用样式不再参与构建。
+ * Trigger: 用户要求从下个版本开始界面不再显示“返回旧版”。
+ * Evidence: top-bar-old-version-link 仅由已停用的顶栏旧版链接引用。
+ * Replacement: None
+ * Risk: Low
+ * Human Review: Required
+ *
+ * Original code:
+ * // AI-GENERATED 2026-06-12: 旧版切换链接，紧跟标题后在标题块右侧显示。
+ * .top-bar-old-version-link {
+ *   margin-left: 12px;
+ *   font-size: 0.72rem;
+ *   font-weight: 400;
+ *   color: var(--text-dim);
+ *   text-decoration: none;
+ *   white-space: nowrap;
+ *   opacity: 0.7;
+ *   transition: opacity 0.15s;
+ *
+ *   &:hover {
+ *     opacity: 1;
+ *     color: var(--text-accent);
+ *   }
+ * }
+ */
 
 .toolbar-group,
 .toolbar-meta,

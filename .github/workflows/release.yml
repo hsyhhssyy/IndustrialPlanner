@@ -117,7 +117,7 @@ jobs:
     outputs:
       source_sha: ${{ steps.source.outputs.sha }}
     steps:
-      - name: Checkout V3 release tag
+      - name: Checkout release tag
         uses: actions/checkout@v4
         with:
           ref: ${{ env.RELEASE_TAG }}
@@ -133,40 +133,70 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install V3 dependencies
+      - name: Install dependencies
         run: npm ci
 
       - name: Write version tag
         run: printf "window.__APP_VERSION__ = '%s';\n" "$RELEASE_TAG" > public/version.js
 
-      - name: Build V3
+      - name: Build application
         env:
           VITE_APP_VERSION: ${{ env.RELEASE_TAG }}
         run: npm run build
 
-      - name: Preserve V3 dist
-        run: mv dist "$RUNNER_TEMP/v3-dist"
+      # AI-REMOVED 2026-08-19:
+      # Reason: 当前版本产物不再需要为合并旧版而暂存。
+      # Trigger: 用户要求 workflow 从下个版本开始不再编译旧版。
+      # Evidence: 后续 V2 checkout、build 与 dist/v2 合并步骤同步退出。
+      # Replacement: Build application 直接保留 dist 供后续发布任务消费。
+      # Risk: Low
+      # Human Review: Required
+      #
+      # Original code:
+      # - name: Preserve V3 dist
+      #   run: mv dist "$RUNNER_TEMP/v3-dist"
 
-      - name: Checkout V2 source
-        uses: actions/checkout@v4
-        with:
-          ref: v2
-          path: .temp/v2-src
+      # AI-REMOVED 2026-08-19:
+      # Reason: 发布流程不再拉取、安装或构建 V2 分支。
+      # Trigger: 用户要求 workflow 从下个版本开始不再编译旧版。
+      # Evidence: V2 仅通过本区块进入统一发布产物，没有其他活动 workflow 调用。
+      # Replacement: 当前 release tag 的单次 Build application。
+      # Risk: 旧版不再随新发布产物部署。
+      # Human Review: Required
+      #
+      # Original code:
+      # - name: Checkout V2 source
+      #   uses: actions/checkout@v4
+      #   with:
+      #     ref: v2
+      #     path: .temp/v2-src
+      #
+      # - name: Install V2 dependencies
+      #   working-directory: .temp/v2-src
+      #   run: npm ci
+      #
+      # - name: Build V2
+      #   working-directory: .temp/v2-src
+      #   run: npm run build
 
-      - name: Install V2 dependencies
-        working-directory: .temp/v2-src
-        run: npm ci
+      # AI-REMOVED 2026-08-19:
+      # Reason: 发布产物已收敛为当前版本，不再生成 dist/v2。
+      # Trigger: 用户要求 workflow 从下个版本开始不再编译旧版。
+      # Evidence: Build application 已直接生成后续任务需要的 dist/index.html。
+      # Replacement: 下方 Verify dist 仅验证当前版本入口。
+      # Risk: Low
+      # Human Review: Required
+      #
+      # Original code:
+      # - name: Merge V2 and V3 dist
+      #   run: |
+      #     mv "$RUNNER_TEMP/v3-dist" dist
+      #     mv .temp/v2-src/dist dist/v2
+      #     test -f dist/index.html
+      #     test -f dist/v2/index.html
 
-      - name: Build V2
-        working-directory: .temp/v2-src
-        run: npm run build
-
-      - name: Merge V2 and V3 dist
-        run: |
-          mv "$RUNNER_TEMP/v3-dist" dist
-          mv .temp/v2-src/dist dist/v2
-          test -f dist/index.html
-          test -f dist/v2/index.html
+      - name: Verify dist
+        run: test -f dist/index.html
 
       - name: Copy EdgeOne Makers config
         run: cp edgeone.json dist/

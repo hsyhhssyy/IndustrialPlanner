@@ -1472,7 +1472,55 @@
 }
 
 .base-regional-switch input {
-  accent-color: var(--accent, #4c8dff);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.base-regional-switch-track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 24px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-4);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    opacity 120ms ease;
+}
+
+.base-regional-switch-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--surface-1);
+  box-shadow: 0 2px 6px var(--shadow-floating-control);
+  transition: transform 120ms ease;
+}
+
+.base-regional-switch input:checked + .base-regional-switch-track {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.base-regional-switch input:checked + .base-regional-switch-track .base-regional-switch-thumb {
+  transform: translateX(18px);
+}
+
+.base-regional-switch input:focus-visible + .base-regional-switch-track {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+.base-regional-switch-control:has(input:disabled) .base-regional-switch-track {
+  opacity: 0.55;
 }
 
 .base-regional-switch-label {

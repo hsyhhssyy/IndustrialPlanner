@@ -213,6 +213,7 @@ const UI: Record<string, string> = {
     "inspector.submitToWarehouse.label": "无线提交到仓库",
     "inspector.warehouseItemLink.description": "为每个槽位选择从仓库取出的物品。",
     "inspector.warehouseItemLink.ignoreStock": "忽略库存",
+    "inspector.warehouseItemLink.naturalResourceControlled": "自然资源现在由基地面板的地区资源卡片控制",
     "inspector.warehouseItemLink.selectItem": "选择仓库物品",
     "label.currentTickInternalData": "当前tick内部数据",
     "label.currentTickSnapshot": "当前 Tick 读模型",
@@ -724,7 +725,16 @@ const UI: Record<string, string> = {
     "topBar.screen": "屏幕",
     "topBar.settings": "设置",
     "topBar.speed": "速率",
-    "topBar.switchToOldVersion": "返回旧版",
+    // AI-REMOVED 2026-08-19:
+    // Reason: 顶栏不再显示旧版入口，对应中文文案退出有效词典。
+    // Trigger: 用户要求从下个版本开始界面不再显示“返回旧版”。
+    // Evidence: 唯一运行时调用位于已停用的 TopBar 旧版链接。
+    // Replacement: None
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // "topBar.switchToOldVersion": "返回旧版",
     "topBar.theme": "主题",
     "topBar.zoom": "缩放",
     "uiGroup.advancedManufacturing": "合成制造",

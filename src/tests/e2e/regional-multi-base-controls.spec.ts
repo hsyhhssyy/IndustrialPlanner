@@ -24,14 +24,14 @@ test("regional multi-base mode resolves conflicting speed and timeline UI", asyn
   await page.getByRole("button", { name: "速率 x16" }).click();
   await page.getByRole("button", { name: "基地" }).click();
 
-  const regionalSwitch = page.getByRole("checkbox", { name: "同时运行所有基地" });
+  const regionalSwitch = page.getByRole("switch", { name: "同时运行所有基地" });
   const helpButton = page.getByRole("button", { name: "同时运行所有基地帮助" });
   await expect(regionalSwitch).not.toBeChecked();
   await helpButton.click();
 
   const tooltip = page.getByRole("tooltip");
   await expect(tooltip).toContainText("启用该选项后，会同时运行同一地区的所有基地，共享仓库。");
-  await expect(tooltip.locator("strong")).toHaveCount(4);
+  await expect(tooltip.locator("strong")).toHaveCount(3);
   await expect(regionalSwitch).not.toBeChecked();
   await page.keyboard.press("Escape");
   await expect(tooltip).toBeHidden();
@@ -40,8 +40,10 @@ test("regional multi-base mode resolves conflicting speed and timeline UI", asyn
   await page.locator("label").filter({ hasText: "同时运行所有基地" }).click();
   const tutorial = page.locator('[data-dialog-key="regional-multi-base-guide"]');
   await expect(tutorial).toBeVisible();
-  await expect(tutorial).toContainText("你可以使用作弊工具里的虚空矿机来进行模拟采矿");
-  await expect(tutorial.locator("strong")).toHaveCount(4);
+  await expect(tutorial.locator("p").first()).toHaveText("请注意");
+  await expect(tutorial).not.toContainText("你可以使用作弊工具里的虚空矿机来进行模拟采矿");
+  await expect(tutorial.locator("strong")).toHaveCount(3);
+  await expect(tutorial.locator("p").last()).toHaveText("(点击任意位置关闭)");
   await tutorial.click({ position: { x: 4, y: 4 } });
 
   await expect(page.getByRole("button", { name: "速率 x1" })).toHaveAttribute("aria-pressed", "true");

@@ -114,9 +114,32 @@
   }
 }
 
-.markdown-tutorial-overlay-markdown {
+.markdown-tutorial-overlay-copy {
   justify-self: center;
   width: min(100%, 820px);
+}
+
+.markdown-tutorial-overlay-notice,
+.markdown-tutorial-overlay-dismiss-hint {
+  margin: 0;
+  text-align: center;
+}
+
+.markdown-tutorial-overlay-notice {
+  margin-bottom: clamp(8px, 1.5vh, 14px);
+  color: var(--accent-strong);
+  font-size: clamp(0.9rem, 1.5vw, 1.2rem);
+  font-weight: 750;
+}
+
+.markdown-tutorial-overlay-dismiss-hint {
+  margin-top: clamp(8px, 1.5vh, 14px);
+  color: var(--text-2);
+  font-size: clamp(0.72rem, 1vw, 0.9rem);
+  font-weight: 500;
+}
+
+.markdown-tutorial-overlay-markdown {
   color: var(--text-0);
   @supports (background: color-mix(in srgb, red 50%, blue)) {
     color: color-mix(in srgb, var(--text-0) 82%, var(--text-1));

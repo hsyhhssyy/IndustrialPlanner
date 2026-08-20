@@ -23,6 +23,8 @@ export interface MarkdownTutorialOverlayProps {
   compactLayout?: boolean;
   dialogKey?: string;
   durationMs?: number | null;
+  notice?: string;
+  dismissHint?: string;
 }
 
 export function MarkdownTutorialOverlay({
@@ -34,6 +36,8 @@ export function MarkdownTutorialOverlay({
   compactLayout = false,
   dialogKey = "markdown-tutorial-overlay",
   durationMs = DEFAULT_MARKDOWN_TUTORIAL_OVERLAY_DURATION_MS,
+  notice,
+  dismissHint,
 }: MarkdownTutorialOverlayProps) {
   const overlayLayer = useOverlayStackLayer({
     layerId: dialogKey,
@@ -110,7 +114,12 @@ export function MarkdownTutorialOverlay({
         }}
         role="dialog"
       >
-        <MarkdownTutorialOverlayContent path={path} title={title} />
+        <MarkdownTutorialOverlayContent
+          dismissHint={dismissHint}
+          notice={notice}
+          path={path}
+          title={title}
+        />
       </section>
     </div>
   );
@@ -128,9 +137,13 @@ function shouldKeepMarkdownTutorialOverlayOpen(target: EventTarget): boolean {
 }
 
 function MarkdownTutorialOverlayContent({
+  dismissHint,
+  notice,
   path,
   title,
 }: {
+  dismissHint?: string;
+  notice?: string;
   path: string;
   title: string;
 }) {
@@ -224,7 +237,12 @@ function MarkdownTutorialOverlayContent({
 
   return (
     <div className={cm(styles, "markdown-tutorial-overlay-body")}>
-      <MarkdownTutorialOverlayPage page={page} title={title} />
+      <MarkdownTutorialOverlayPage
+        dismissHint={dismissHint}
+        notice={notice}
+        page={page}
+        title={title}
+      />
       {pageCount > 1 ? (
         <>
           <button
@@ -266,9 +284,13 @@ function MarkdownTutorialOverlayContent({
 }
 
 function MarkdownTutorialOverlayPage({
+  dismissHint,
+  notice,
   page,
   title,
 }: {
+  dismissHint?: string;
+  notice?: string;
   page: HelpTutorialPage;
   title: string;
 }) {
@@ -277,10 +299,20 @@ function MarkdownTutorialOverlayPage({
       {page.image === null ? null : (
         <MarkdownTutorialOverlayImageFrame image={page.image} title={title} />
       )}
-      <div
-        className={cm(styles, "markdown-tutorial-overlay-markdown")}
-        dangerouslySetInnerHTML={{ __html: page.html }}
-      />
+      <div className={cm(styles, "markdown-tutorial-overlay-copy")}>
+        {notice === undefined ? null : (
+          <p className={cm(styles, "markdown-tutorial-overlay-notice")}>{notice}</p>
+        )}
+        <div
+          className={cm(styles, "markdown-tutorial-overlay-markdown")}
+          dangerouslySetInnerHTML={{ __html: page.html }}
+        />
+        {dismissHint === undefined ? null : (
+          <p className={cm(styles, "markdown-tutorial-overlay-dismiss-hint")}>
+            {dismissHint}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

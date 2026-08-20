@@ -108,6 +108,7 @@ self.addEventListener("fetch", (event) => {
   // AI-GENERATED 2026-06-13:
   // V2 旧版部署在 /v2/ 子路径下，不参与 PWA 预缓存。
   // SW 对 /v2/ 路径完全放行，避免用 v3 预缓存响应 v2 请求。
+  // AI-CORRECTION 2026-08-19: V2 已退出新发布产物；继续放行该路径，使服务器返回 410/404，避免 PWA 缓存把历史地址解析成当前版本。
   if (requestUrl.pathname.startsWith("/v2/") || requestUrl.pathname === "/v2") {
     return;
   }

@@ -223,6 +223,7 @@ export type UiKey =
   | "inspector.submitToWarehouse.label"
   | "inspector.warehouseItemLink.description"
   | "inspector.warehouseItemLink.ignoreStock"
+  | "inspector.warehouseItemLink.naturalResourceControlled"
   | "inspector.warehouseItemLink.selectItem"
   | "label.currentTickInternalData"
   | "label.currentTickSnapshot"
@@ -724,7 +725,16 @@ export type UiKey =
   | "topBar.screen"
   | "topBar.settings"
   | "topBar.speed"
-  | "topBar.switchToOldVersion"
+  // AI-REMOVED 2026-08-19:
+  // Reason: 旧版入口文案已退出有效词典，该 key 不再属于可翻译键。
+  // Trigger: 用户要求从下个版本开始界面不再显示“返回旧版”。
+  // Evidence: 唯一运行时调用位于已停用的 TopBar 旧版链接。
+  // Replacement: None
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // | "topBar.switchToOldVersion"
   | "topBar.theme"
   | "topBar.zoom"
   | "uiGroup.advancedManufacturing"

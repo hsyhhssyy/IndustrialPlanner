@@ -213,6 +213,7 @@ const UI: Record<string, string> = {
     "inspector.submitToWarehouse.label": "Wireless Submit to Warehouse",
     "inspector.warehouseItemLink.description": "Choose a warehouse item for each slot.",
     "inspector.warehouseItemLink.ignoreStock": "Ignore Stock",
+    "inspector.warehouseItemLink.naturalResourceControlled": "Natural resources are now controlled by the Regional Resources card in the Base panel.",
     "inspector.warehouseItemLink.selectItem": "Select Warehouse Item",
     "label.currentTickInternalData": "Current Tick Internal Data",
     "label.currentTickSnapshot": "Current Tick Read Model",
@@ -731,7 +732,16 @@ const UI: Record<string, string> = {
     "topBar.screen": "Screen",
     "topBar.settings": "Settings",
     "topBar.speed": "Speed",
-    "topBar.switchToOldVersion": "Switch to Old Version",
+    // AI-REMOVED 2026-08-19:
+    // Reason: 顶栏不再显示旧版入口，对应英文文案退出有效词典。
+    // Trigger: 用户要求从下个版本开始界面不再显示“返回旧版”。
+    // Evidence: 唯一运行时调用位于已停用的 TopBar 旧版链接。
+    // Replacement: None
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // "topBar.switchToOldVersion": "Switch to Old Version",
     "topBar.theme": "Theme",
     "topBar.zoom": "Zoom",
     "uiGroup.advancedManufacturing": "Advanced Manufacturing",

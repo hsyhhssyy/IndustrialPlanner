@@ -235,6 +235,7 @@ describe("TopBar", () => {
     expect(container.querySelector(".top-bar-layout-controls")).toBeNull();
     // AI-CORRECTION 2026-05-20: title 现在紧随版本标签 "(Dev)"，textContent 包含完整内容。
     expect(container.querySelector(".top-bar-title")?.textContent).toBe(appHost.actions.translate("app.title") + "(Dev)");
+    expect(container.querySelector('a[href*="v2"]')).toBeNull();
     expect(container.querySelectorAll(".top-bar-controls .top-bar-icon-button")).toHaveLength(4);
   });
 

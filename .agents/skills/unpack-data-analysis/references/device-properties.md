@@ -14,12 +14,6 @@
 
 子表缺少字段只说明该属性不由该子表管理，不能证明设备没有该属性。判断 `needPower`、端口等核心属性时必须查询 `buildingTable`，子表只作补充。
 
-原表与当前 registry 已存在以下差异：
+端口朝向不在本页维护静态差异清单。必须按 [端口坐标与变体规则](port-coordinates.md) 对当前解包文件和当前 registry 重新审计，不能为气体设备或其他设备类型设置逐台校准例外。
 
-- `item_port_gas_reactor_1` 当前是 W 输入、E 输出，不是原表的 N/S。
-- `liquid_purifier_1_gas` 当前已经是 E 输入、W 输出。
-- `transmuter_1_liquidtrans` 当前已经是 E 输入、W 输出。
-- `transmuter_2_solidtrans` 当前的气体输入已经在 E。
-- `shaper_1_gas` 当前的气体输入已经在 E。
-
-气体收集泵、储气罐、气体反应炉、提纯机、液气 / 固气转化机、气体散布机等设备不能仅凭原始 `x=0` 或 `x=width-1` 判定是否与 registry 相反，必须逐台校准或游戏内确认。
+`rendererTemplateMap` 是变体选择信息，不是设备属性坐标的第二真相源。精灵、mask、renderer 输出和 `spriteOffset` 仅在 registry 逻辑端口修改后执行视觉验收。

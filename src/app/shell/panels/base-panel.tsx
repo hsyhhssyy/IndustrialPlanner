@@ -418,12 +418,17 @@ export const BasePanel = observer(function BasePanel({ appHost }: { appHost: App
                   //   regionalSimulationUiState.allBasesEnabled = enabled;
                   // });
                   // AI-CORRECTION 2026-08-19: 当前 checkbox 读取 RegionalSettingsController，SimulationMode 由 main.tsx 的实验门控 reaction 派生。
+                  // AI-CORRECTION 2026-08-20: 当前控件使用 switch 语义与外观，状态仍读取 RegionalSettingsController。
                   if (enabled) {
                     setRegionalHelpTutorialVisible(true);
                   }
                 }}
+                role="switch"
                 type="checkbox"
               />
+              <span className={cm(styles, "base-regional-switch-track")} aria-hidden="true">
+                <span className={cm(styles, "base-regional-switch-thumb")} />
+              </span>
               <span className={cm(styles, "base-regional-switch-label")}>
                 {t("basePanel.runAllBases")}
               </span>
@@ -760,6 +765,8 @@ function RegionalMultiBaseHelp({
       <MarkdownTutorialOverlay
         compactLayout={compactLayout}
         dialogKey="regional-multi-base-guide"
+        dismissHint="(点击任意位置关闭)"
+        notice="请注意"
         onClose={onCloseTutorial}
         path={REGIONAL_MULTI_BASE_HELP_PATH}
         title={title}

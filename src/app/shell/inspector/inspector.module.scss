@@ -1086,7 +1086,7 @@
   line-height: 1;
 }
 
-.warehouse-link-infinity-button:hover:not(:disabled) {
+.warehouse-link-infinity-button:hover:not(:disabled):not([aria-disabled="true"]) {
   border-color: var(--line-strong);
   @supports (background: color-mix(in srgb, red 50%, blue)) {
     border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
@@ -1126,6 +1126,54 @@
 .warehouse-link-infinity-button:disabled {
   cursor: default;
   opacity: 0.48;
+}
+
+.warehouse-link-infinity-button.is-locked {
+  position: relative;
+  cursor: help;
+  color: var(--text-2);
+  opacity: 0.72;
+}
+
+.warehouse-link-infinity-button.is-locked:hover,
+.warehouse-link-infinity-button.is-locked[aria-expanded="true"] {
+  border-color: var(--line-strong);
+  background: var(--surface-2);
+  color: var(--text-1);
+}
+
+.warehouse-link-infinity-symbol {
+  transform: translateY(-0.5px);
+}
+
+.warehouse-link-infinity-lock-icon {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 10px;
+  height: 10px;
+  padding: 1px;
+  border-radius: 2px;
+  background: var(--surface-1);
+  stroke-width: 2.8;
+}
+
+.warehouse-link-natural-resource-tooltip {
+  position: fixed;
+  z-index: 1000;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 16px));
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgb(0 0 0 / 88%);
+  color: #fff;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 24%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.45;
+  pointer-events: none;
 }
 
 .infinite-storage-infinity-symbol {

@@ -20,7 +20,16 @@ import type {
 import {
   isTouchLandscapeScreenProfile,
 } from "@/shared/browser/screen-profile";
-import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
+// AI-REMOVED 2026-08-19:
+// Reason: 顶栏不再提供返回旧版入口，因此不再需要生成旧版公共路径。
+// Trigger: 用户要求从下个版本开始界面不再显示“返回旧版”。
+// Evidence: createPublicAssetUrl 在本文件中仅用于构造 ../v2/ 链接。
+// Replacement: None
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 // AI-REMOVED 2026-08-19:
@@ -293,12 +302,23 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
             <span className={cm(styles, "top-bar-version")}>(Dev)</span>
           )}
         </div>
-        <a
-          className={cm(styles, "top-bar-old-version-link")}
-          href={createPublicAssetUrl("../v2/")}
-        >
-          {t("topBar.switchToOldVersion")}
-        </a>
+        {/*
+          AI-REMOVED 2026-08-19:
+          Reason: 旧版从产品界面退出，不再向用户暴露返回入口。
+          Trigger: 用户要求从下个版本开始界面不再显示“返回旧版”。
+          Evidence: 该链接是运行时唯一引用 topBar.switchToOldVersion 和 ../v2/ 的界面入口。
+          Replacement: None
+          Risk: Low
+          Human Review: Required
+
+          Original code:
+          <a
+            className={cm(styles, "top-bar-old-version-link")}
+            href={createPublicAssetUrl("../v2/")}
+          >
+            {t("topBar.switchToOldVersion")}
+          </a>
+        */}
       </div>
       <div className={cm(styles, "toolbar-group top-bar-controls")}>
         <SimulationControlButton
