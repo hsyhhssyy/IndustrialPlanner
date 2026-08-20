@@ -39,12 +39,12 @@ describe("区域基地 Runtime 门禁", () => {
       const document = createWorldDocumentFromBlueprint(createBlueprint(
         `regional-unlinked-${inletDefinitionId}`,
         [
-          createEntity("source", "udpipe_unloader_1", 0, 0, 0, {
+          createEntity("source", "udpipe_unloader_1", 0, 0, 180, {
             "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
             "storageSlotGroups[0].slots[0].initialCount": 1,
           }),
           createEntity("pipe", "pipe_straight_1x1", 3, 1),
-          createEntity("inlet", inletDefinitionId, 4, 0),
+          createEntity("inlet", inletDefinitionId, 4, 0, 180),
         ],
       ));
       const topology = compileSimulationTopology({
@@ -115,13 +115,13 @@ describe("区域基地 Runtime 门禁", () => {
     const document = createWorldDocumentFromBlueprint(createBlueprint(
       "regional-linked-dark-pipe",
       [
-        createEntity("source", "udpipe_unloader_1", 0, 0, 0, {
+        createEntity("source", "udpipe_unloader_1", 0, 0, 180, {
           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
           "storageSlotGroups[0].slots[0].initialCount": 1,
         }),
         createEntity("pipe", "pipe_straight_1x1", 3, 1),
-        createEntity("inlet", "udpipe_loader_1", 4, 0),
-        createEntity("linked-outlet", "udpipe_unloader_1", 10, 0),
+        createEntity("inlet", "udpipe_loader_1", 4, 0, 180),
+        createEntity("linked-outlet", "udpipe_unloader_1", 10, 0, 180),
       ],
       [createDarkPipeSlotLink({
         inletEntityId: "inlet",

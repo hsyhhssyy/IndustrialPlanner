@@ -69,9 +69,9 @@ describe("管道相位门禁（液体版）", () => {
 function createLiquidPhaseGatingTopology(registry: RegistryContract): CompiledSimulationTopology {
   const document = createWorldDocumentFromBlueprint(
     createBlueprint("pipe-phase-gating", [
-      createEntity("source", "liquid_storager_1", 0, 0, 0),
+      createEntity("source", "liquid_storager_1", 0, 0, 180),
       createEntity("pipe", "pipe_straight_1x1", 3, 1),
-      createEntity("sink", "liquid_storager_1", 4, 0),
+      createEntity("sink", "liquid_storager_1", 4, 0, 180),
     ]),
   );
   return compileSimulationTopology({

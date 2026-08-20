@@ -232,7 +232,7 @@ describe("物流绘制模式", () => {
     const editorHost = createEditorHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
-      createTestEntity("gas-source", "gas_storager_1", 0, 0),
+      createTestEntity("gas-source", "gas_storager_1", 0, 0, 180),
     ]));
 
     const startResult = editorHost.actions.createLogisticsDraftStart({
@@ -2652,7 +2652,7 @@ describe("物流绘制模式", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
-      createTestEntity("pump", "water_pump_1", 4, 4),
+      createTestEntity("pump", "water_pump_1", 4, 4, 180),
       createTestEntity("predecessor", "pipe_straight_1x1", 7, 4, 90),
       createTestEntity("crossing", "pipe_straight_1x1", 7, 5, 90),
       createTestEntity("successor", "pipe_straight_1x1", 7, 6, 90),

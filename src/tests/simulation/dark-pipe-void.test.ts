@@ -17,12 +17,12 @@ describe("dark pipe warehouse ingress", () => {
     const finalTick = STANDARD_TICK_RATE_PER_SECOND;
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("single-dark-pipe-inlet-warehouse", [
-        createEntity("source", "udpipe_unloader_1", 0, 0, 0, {
+        createEntity("source", "udpipe_unloader_1", 0, 0, 180, {
           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
           "storageSlotGroups[0].slots[0].initialCount": 1,
         }),
         createEntity("pipe", "pipe_straight_1x1", 3, 1),
-        createEntity("inlet", "udpipe_loader_1", 4, 0),
+        createEntity("inlet", "udpipe_loader_1", 4, 0, 180),
       ]),
       maxTickNumber: finalTick,
       registry: createRegistryContract(),
@@ -42,12 +42,12 @@ describe("dark pipe warehouse ingress", () => {
     const finalTick = STANDARD_TICK_RATE_PER_SECOND;
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("multi-dark-pipe-inlet-warehouse", [
-        createEntity("source", "udpipe_unloader_1", 0, 0, 0, {
+        createEntity("source", "udpipe_unloader_1", 0, 0, 180, {
           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
           "storageSlotGroups[0].slots[0].initialCount": 1,
         }),
         createEntity("pipe", "pipe_straight_1x1", 3, 1),
-        createEntity("inlet", "udpipe_loader_2", 4, 0),
+        createEntity("inlet", "udpipe_loader_2", 4, 0, 180),
       ]),
       maxTickNumber: finalTick,
       registry: createRegistryContract(),
@@ -66,7 +66,7 @@ describe("dark pipe warehouse ingress", () => {
   it("keeps dark pipe outlets empty by default when no warehouse item is selected", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("dark-pipe-outlet-default-empty", [
-        createEntity("single-outlet", "udpipe_unloader_1", 0, 0),
+        createEntity("single-outlet", "udpipe_unloader_1", 0, 0, 180),
         createEntity("multi-outlet", "udpipe_unloader_2", 4, 0),
       ]),
       maxTickNumber: STANDARD_TICK_RATE_PER_SECOND,
@@ -85,11 +85,11 @@ describe("dark pipe warehouse ingress", () => {
       blueprint: createBlueprint(
         "linked-dark-pipe-inlet-manual-void",
         [
-          createEntity("inlet", "udpipe_loader_1", 0, 0, 0, {
+          createEntity("inlet", "udpipe_loader_1", 0, 0, 180, {
             "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
             "storageSlotGroups[0].slots[0].initialCount": 4,
           }),
-          createEntity("outlet", "udpipe_unloader_1", 6, 0),
+          createEntity("outlet", "udpipe_unloader_1", 6, 0, 180),
         ],
         [
           createDarkPipeSlotLink({
@@ -113,13 +113,13 @@ describe("dark pipe warehouse ingress", () => {
       blueprint: createBlueprint(
         "linked-dark-pipe-inlet-warehouse-source",
         [
-          createEntity("inlet", "udpipe_loader_1", -6, 0, 0, {
+          createEntity("inlet", "udpipe_loader_1", -6, 0, 180, {
             "storageSlotGroups[0].slots[0].lock": "item_liquid_sewage",
             "storageSlotGroups[0].slots[0].ignoreStock": true,
           }),
-          createEntity("outlet", "udpipe_unloader_1", 0, 0),
+          createEntity("outlet", "udpipe_unloader_1", 0, 0, 180),
           createEntity("pipe", "pipe_straight_1x1", 3, 1),
-          createEntity("sink", "udpipe_loader_1", 4, 0),
+          createEntity("sink", "udpipe_loader_1", 4, 0, 180),
         ],
         [
           createWarehouseSlotLink("inlet", "item_liquid_sewage", "loader_buffer", "slot_1"),

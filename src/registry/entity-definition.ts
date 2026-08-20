@@ -2344,6 +2344,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * AI-CORRECTION 2026-06-06: 默认行为改为销毁模式；进入 loader_buffer 的液体由隐藏配方消耗。
    * AI-CORRECTION 2026-07-18: 槽位 itemFilterType 已从 "liquid" 改为 "fluid"，同时接受气体进入销毁。
    * AI-CORRECTION 2026-08-19: 未直连时不再销毁流体；单基地与区域多基地均提交到各自仓库，已直连时仍使用 loader_buffer。
+   * AI-CORRECTION 2026-08-20: 解包坐标确认 0° 输入端口位于东侧；原“西”描述与端口定义同步订正。
    */
   createEntityDefinition({
     id: "udpipe_loader_1",
@@ -2400,7 +2401,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [createPort("in_w_1", 0, 1, "W")],
+        [createPort("in_w_1", 2, 1, "E")],
       ),
     ],
     // AI-REMOVED 2026-06-06:
@@ -2466,6 +2467,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * AI-CORRECTION 2026-06-06: 暗管系列槽位容量统一改为 500。
    * 求解图节点：1 个
    * 端口：1 fluid output(东)
+   * AI-CORRECTION 2026-08-20: 解包坐标确认 0° 输出端口位于西侧；原“东”描述与端口定义同步订正。
    *
    * 通过 warehouse-item-link 面板将槽位连接到仓库。
    * 与取货口结构一致，区别在于 kind="fluid" 限制仅可选流体（液体和气体）。
@@ -2496,7 +2498,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_output",
         FLUID_PIPE_PORT,
         "output",
-        [createPort("out_e_1", 2, 1, "E")],
+        [createPort("out_e_1", 0, 1, "W")],
       ),
     ],
     storageSlotGroups: [
@@ -2986,6 +2988,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 50,
+    // AI-CORRECTION 2026-08-20: 0° 端口按解包 liquid_purifier_1 顺时针旋转 90° 后的坐标对齐。
+    // AI-CORRECTION 2026-08-20: 上一行误挂在 thickener_1；本设备端口没有变更，订正目标见 liquid_purifier_1。
     portGroups: [
       createPortGroup(
         "item_input",
@@ -3139,12 +3143,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: true,
     powerDemand: 50,
+    // AI-CORRECTION 2026-08-20: 0° 端口按解包 liquid_purifier_1 顺时针旋转 90° 后的坐标对齐。
     portGroups: [
       createPortGroup(
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S", {
+        [1, 3].map((z) => createPort(`in_s_${z}`, 4, 4 - z, "E", {
           acceptRule: { base: { kind: "domain", flags: FluidDomain }, exclude: [] },
         })),
       ),
@@ -3153,10 +3158,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FLUID_PIPE_PORT,
         "output",
         [
-          createPort("out_n_1", 1, 0, "N", {
+          createPort("out_n_1", 0, 3, "W", {
             acceptRule: createLiquidPurifierOutputAcceptRule(LIQUID_PURIFIER_LEFT_OUTPUT_ITEM_IDS),
           }),
-          createPort("out_n_3", 3, 0, "N", {
+          createPort("out_n_3", 0, 1, "W", {
             acceptRule: createLiquidPurifierOutputAcceptRule(LIQUID_PURIFIER_RIGHT_OUTPUT_ITEM_IDS),
           }),
         ],
@@ -3440,6 +3445,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     //   acceptanceLimit: 30,
     //   gasDiffusionRange: null,
     // },
+    // AI-CORRECTION 2026-08-20: 0° 端口按解包 gas_reactor_1 的默认朝向旋转 180° 对齐。
+    // AI-CORRECTION 2026-08-20: 上一行误挂在 transmuter_2_gastrans；本设备端口没有变更，订正目标见 gas_reactor_1。
     portGroups: [
       createPortGroup(
         "item_input",
@@ -3656,12 +3663,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     //   acceptanceLimit: 30,
     //   gasDiffusionRange: null,
     // },
+    // AI-CORRECTION 2026-08-20: 0° 端口按解包 gas_reactor_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "gas_input",
         FLUID_PIPE_PORT,
         "input",
-        [1, 3].map((z) => createPort(`in_w_${z}`, 0, z, "W", {
+        [1, 3].map((z) => createPort(`in_w_${z}`, 4, 4 - z, "E", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
@@ -3669,7 +3677,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "gas_output",
         FLUID_PIPE_PORT,
         "output",
-        [1, 3].map((z) => createPort(`out_e_${z}`, 4, z, "E", {
+        [1, 3].map((z) => createPort(`out_e_${z}`, 0, 4 - z, "W", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
         })),
       ),
@@ -4162,7 +4170,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_water_pump_1",
     footprint: { width: 3, height: 3 },
     spriteOffset: {
-      topView: { x: -2, y: 0, width: 5, height: 3 },
+      // AI-CORRECTION 2026-08-20: 顶视图随解包默认朝向旋转 180°，扩展区域由西侧改到东侧。
+      topView: { x: 0, y: 0, width: 5, height: 3 },
     },
     uiGroup: "resourcePower",
     displayOrder: 301,
@@ -4173,12 +4182,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: true,
     powerDemand: 10,
+    // AI-CORRECTION 2026-08-20: 0° 输出端口按解包 pump_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "fluid_output",
         FLUID_PIPE_PORT,
         "output",
-        [createPort("out_e_1", 2, 1, "E", {
+        [createPort("out_e_1", 0, 1, "W", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
@@ -4288,14 +4298,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     //     }],
     //   },
     // },
+    // AI-CORRECTION 2026-08-20: 0° 双输入端口按解包 udpipe_loader_2 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
         [
-          createPort("in_w_1", 0, 1, "W"),
-          createPort("in_w_2", 0, 3, "W"),
+          createPort("in_w_1", 2, 3, "E"),
+          createPort("in_w_2", 2, 1, "E"),
         ],
       ),
     ],
@@ -4422,12 +4433,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [PRODUCER_TAG, "武陵", "OuterRingAllowed"],
     requiresPower: true,
     powerDemand: 50,
+    // AI-CORRECTION 2026-08-20: 0° 输入端口按解包 liquid_cleaner_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [createPort("in_w_1", 0, 1, "W", {
+        [createPort("in_w_1", 2, 1, "E", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
@@ -4461,6 +4473,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: false,
     powerDemand: 0,
+    // AI-CORRECTION 2026-08-20: 0° 输入输出端口按解包 liquid_storager_1 的默认朝向旋转 180° 对齐。
+    // AI-CORRECTION 2026-08-20: 上一行误挂在 water_purifier_node_1；本设备端口没有变更，订正目标见 liquid_storager_1。
     portGroups: [
       createPortGroup(
         "fluid_input_1",
@@ -4602,12 +4616,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
+    // AI-CORRECTION 2026-08-20: 0° 输入输出端口按解包 liquid_storager_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "fluid_input",
         FLUID_PIPE_PORT,
         "input",
-        [createPort("in_w_1", 0, 1, "W", {
+        [createPort("in_w_1", 2, 1, "E", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
@@ -4615,7 +4630,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_output",
         FLUID_PIPE_PORT,
         "output",
-        [createPort("out_e_1", 2, 1, "E", {
+        [createPort("out_e_1", 0, 1, "W", {
           acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] },
         })],
       ),
@@ -4654,13 +4669,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
+    // AI-CORRECTION 2026-08-20: 0° 输入输出端口按解包 gas_storager_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "gas_input",
         FLUID_PIPE_PORT,
         "input",
         [
-          createPort("in_w_1", 0, 1, "W", {
+          createPort("in_w_1", 2, 1, "E", {
             acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
           }),
         ],
@@ -4670,7 +4686,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         FLUID_PIPE_PORT,
         "output",
         [
-          createPort("out_e_1", 2, 1, "E", {
+          createPort("out_e_1", 0, 1, "W", {
             acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
           }),
         ],
@@ -4739,13 +4755,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     //   acceptanceLimit: 30,
     //   gasDiffusionRange: 13,
     // },
+    // AI-CORRECTION 2026-08-20: 0° 输入端口按解包 vaporizer_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "gas_input",
         FLUID_PIPE_PORT,
         "input",
         [
-          createPort("in_w_1", 0, 1, "W", {
+          createPort("in_w_1", 2, 1, "E", {
             acceptRule: createGasItemWhitelistAcceptRule(VAPORIZER_CONSUMPTION_ITEM_IDS),
           }),
         ],
@@ -5021,6 +5038,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * AI-CORRECTION 2026-07-21: 改为可摆放，使用 warehouseItemLink 模式从仓库获取气体，
    *   放置时默认链接惰气并开启无限供应。参照 water_pump_1 模式。
    * AI-CORRECTION 2026-08-19: 上述仓库代理模式已退出；气体收集泵改为通过单个手选配方 channel 真实生产惰气或息壤气。
+   * AI-CORRECTION 2026-08-20: 解包默认朝向的输出端口位于西侧；原东侧描述与旧 rotation 记录仅保留用于审计。
    */
 // AI-CORRECTION 2026-08-07: 解包数据 buildingTable.gas_pump_1 中 needPower=false, powerConsume=0，
 //   游戏中描述为"无需通电即可工作"。移除 requiresPower 和 powerDemand。
@@ -5040,13 +5058,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     // AI-CORRECTION 2026-08-08: powerDemand 是 EntityDefinitionInput 的必填字段，
     //   解包数据 powerConsume=0，补充 powerDemand: 0 以通过类型检查。
     powerDemand: 0,
+    // AI-CORRECTION 2026-08-20: 0° 输出端口按解包 gas_pump_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "gas_output",
         FLUID_PIPE_PORT,
         "output",
         [
-          createPort("out_e_1", 2, 1, "E", {
+          createPort("out_e_1", 0, 1, "W", {
             acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Gas }, exclude: [] },
           }),
         ],

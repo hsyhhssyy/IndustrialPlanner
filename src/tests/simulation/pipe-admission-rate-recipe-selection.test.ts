@@ -16,7 +16,7 @@ describe("pipe admission rate-aware recipe selection", () => {
   it("counts only released items and does not prefetch beyond a one-item window allowance", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("pipe-admission-one-item-window", [
-        createEntity("source", "liquid_storager_1", 0, 0, 0, {
+        createEntity("source", "liquid_storager_1", 0, 0, 180, {
           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
           "storageSlotGroups[0].slots[0].initialCount": 4,
         }),
@@ -31,7 +31,7 @@ describe("pipe admission rate-aware recipe selection", () => {
             perMinuteLimit: 6,
           },
         }),
-        createEntity("sink", "liquid_storager_1", 4, 0),
+        createEntity("sink", "liquid_storager_1", 4, 0, 180),
       ]),
       registry: createRegistryContract(),
       maxTickNumber: 21,
@@ -86,7 +86,7 @@ describe("pipe admission rate-aware recipe selection", () => {
   it("transfers exactly one item per 0.5s tick within the rate allowance", async () => {
     const report = await runBlueprintSimulation({
       blueprint: createBlueprint("pipe-admission-rate-recipe-selection", [
-        createEntity("source", "liquid_storager_1", 0, 0, 0, {
+        createEntity("source", "liquid_storager_1", 0, 0, 180, {
           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
           "storageSlotGroups[0].slots[0].initialCount": 4,
         }),
@@ -101,7 +101,7 @@ describe("pipe admission rate-aware recipe selection", () => {
             perMinuteLimit: 18,
           },
         }),
-        createEntity("sink", "liquid_storager_1", 4, 0),
+        createEntity("sink", "liquid_storager_1", 4, 0, 180),
       ]),
       registry: createRegistryContract(),
       maxTickNumber: 41,

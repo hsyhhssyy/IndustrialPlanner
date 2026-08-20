@@ -135,7 +135,7 @@ function createPrefilledGasDiffusionBlueprint(
     });
   return createBlueprint(name, [
     ...(includeCoveredOven ? [coveredOven] : []),
-    createEntity("gas-diffuser", "vaporizer_1", 0, 0, 0, {
+    createEntity("gas-diffuser", "vaporizer_1", 0, 0, 180, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
       "storageSlotGroups[0].slots[0].initialCount": gasCount,
     }),
@@ -145,11 +145,11 @@ function createPrefilledGasDiffusionBlueprint(
 
 function createConvergerLockBlueprint(): BlueprintDocument {
   return createBlueprint("gas-liquid-converger-lock", [
-    createEntity("gas-source", "gas_storager_1", 1, -1, 180, {
+    createEntity("gas-source", "gas_storager_1", 1, -1, 0, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
       "storageSlotGroups[0].slots[0].initialCount": 2,
     }),
-    createEntity("liquid-source", "liquid_storager_1", -4, -1, 0, {
+    createEntity("liquid-source", "liquid_storager_1", -4, -1, 180, {
       "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
       "storageSlotGroups[0].slots[0].initialCount": 2,
     }),

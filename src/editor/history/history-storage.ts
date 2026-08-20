@@ -10,9 +10,11 @@ import {
 
 const DOCUMENT_DATABASE_NAME = "v3-industrial-planner";
 const EDITOR_HISTORY_STORE_NAME = "editorhistory";
+// AI-CORRECTION 2026-08-20: schema 2 标记历史快照已执行一次设备方向迁移，避免每次读取重复旋转。
+const EDITOR_HISTORY_STORAGE_SCHEMA_VERSION = 2;
 
 export interface PersistedEditorHistoryState {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: typeof EDITOR_HISTORY_STORAGE_SCHEMA_VERSION;
   readonly documentKey: string;
   readonly cursorSequence: number;
   readonly records: readonly EditorHistoryRecord[];
@@ -24,8 +26,17 @@ export async function readEditorHistoryState(
   const persistedState = await readFromIndexedDb<unknown>(
     createEditorHistoryLocation(documentKey),
   );
+  const normalizedState = normalizePersistedEditorHistoryState(persistedState, documentKey);
 
-  return normalizePersistedEditorHistoryState(persistedState, documentKey);
+  if (
+    normalizedState !== null
+    && isRecord(persistedState)
+    && persistedState.schemaVersion === 1
+  ) {
+    await writeEditorHistoryState(normalizedState);
+  }
+
+  return normalizedState;
 }
 
 export async function writeEditorHistoryState(
@@ -51,7 +62,7 @@ function normalizePersistedEditorHistoryState(
 ): PersistedEditorHistoryState | null {
   if (
     !isRecord(value)
-    || value.schemaVersion !== 1
+    || (value.schemaVersion !== 1 && value.schemaVersion !== EDITOR_HISTORY_STORAGE_SCHEMA_VERSION)
     || value.documentKey !== expectedDocumentKey
     || typeof value.cursorSequence !== "number"
     || !Array.isArray(value.records)
@@ -60,12 +71,14 @@ function normalizePersistedEditorHistoryState(
   }
 
   return {
-    schemaVersion: 1,
+    schemaVersion: EDITOR_HISTORY_STORAGE_SCHEMA_VERSION,
     documentKey: value.documentKey,
     cursorSequence: Math.max(0, Math.floor(value.cursorSequence)),
     records: value.records
       .filter(isEditorHistoryRecordLike)
-      .map(migrateEditorHistoryRecordDeviceIds),
+      .map((record) => value.schemaVersion === 1
+        ? migrateEditorHistoryRecordDeviceIds(record)
+        : record),
   };
 }
 
@@ -106,14 +119,16 @@ function migrateHistoryEntity(entity: WorldEntity): WorldEntity {
 }
 
 function migrateHistoryDefinitionId(definitionId: string): string {
-  return migrateHistoryEntity({
-    id: "history-definition-id",
-    definitionId,
-    position: { x: 0, y: 0 },
-    rotation: 0,
-    config: {},
-    tags: [],
-  }).definitionId;
+  return migrateBlueprintEntityDeviceIds({
+    entity: {
+      id: "history-definition-id",
+      definitionId,
+      position: { x: 0, y: 0 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    },
+  }, 1, 4)?.entities.entity?.definitionId ?? definitionId;
 }
 
 function isEditorHistoryRecordLike(value: unknown): value is EditorHistoryRecord {

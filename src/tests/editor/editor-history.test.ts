@@ -10,6 +10,7 @@ import {
   writeEditorHistoryState,
 } from "@/editor/history/history-storage";
 import { createRegistryContract } from "@/registry";
+import { saveToIndexedDb } from "@/shared/storage";
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 
 function createWorkspace(): WorkspaceContract {
@@ -185,8 +186,21 @@ describe("editor document history", () => {
       definitionId: "item_port_grinder_1",
       rotation: 270 as const,
     };
+    const legacyPump = {
+      ...legacyPool,
+      id: "pump",
+      definitionId: "water_pump_1",
+    };
+    const legacyPumpAfter = {
+      ...legacyPump,
+      rotation: 180 as const,
+    };
 
-    await writeEditorHistoryState({
+    await saveToIndexedDb({
+      databaseName: "v3-industrial-planner",
+      storeName: "editorhistory",
+      key: documentKey,
+    }, {
       schemaVersion: 1,
       documentKey,
       cursorSequence: 1,
@@ -199,14 +213,19 @@ describe("editor document history", () => {
         action: {
           type: "entity.definition.replace",
           label: "迁移测试",
-          definitionIds: [legacyPool.definitionId, legacyGrinder.definitionId],
+          definitionIds: [
+            legacyPool.definitionId,
+            legacyGrinder.definitionId,
+            legacyPump.definitionId,
+          ],
         },
         delta: {
           entities: {
-            added: { pool: legacyPool },
+            added: { pool: legacyPool, pump: legacyPump },
             removed: { grinder: legacyGrinder },
             updated: {
               pool: { before: legacyPool, after: legacyGrinder },
+              pump: { before: legacyPump, after: legacyPumpAfter },
             },
           },
           entityOrder: null,
@@ -219,7 +238,12 @@ describe("editor document history", () => {
     const restored = await readEditorHistoryState(documentKey);
     const record = restored?.records[0];
 
-    expect(record?.action.definitionIds).toEqual(["mix_pool_2", "grinder_1"]);
+    expect(restored?.schemaVersion).toBe(2);
+    expect(record?.action.definitionIds).toEqual([
+      "mix_pool_2",
+      "grinder_1",
+      "water_pump_1",
+    ]);
     expect(record?.delta.entities.added.pool).toMatchObject({
       definitionId: "mix_pool_2",
       rotation: 90,
@@ -228,10 +252,23 @@ describe("editor document history", () => {
       definitionId: "grinder_1",
       rotation: 270,
     });
+    expect(record?.delta.entities.added.pump).toMatchObject({
+      definitionId: "water_pump_1",
+      rotation: 270,
+    });
     expect(record?.delta.entities.updated.pool).toMatchObject({
       before: { definitionId: "mix_pool_2", rotation: 90 },
       after: { definitionId: "grinder_1", rotation: 270 },
     });
+    expect(record?.delta.entities.updated.pump).toMatchObject({
+      before: { definitionId: "water_pump_1", rotation: 270 },
+      after: { definitionId: "water_pump_1", rotation: 0 },
+    });
+
+    if (restored !== null) {
+      await writeEditorHistoryState(restored);
+    }
+    expect(await readEditorHistoryState(documentKey)).toEqual(restored);
   });
 });
 

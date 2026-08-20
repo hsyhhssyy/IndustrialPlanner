@@ -102,7 +102,7 @@ function createSingleConnectedPortEntities(options: {
       LIQUID_PURIFIER_ENTITY_ID,
       options.purifierX,
       options.purifierY,
-      0,
+      90,
       {
         "storageSlotGroups[0].slots[0].initialItemType": options.inputItemId,
         "storageSlotGroups[0].slots[0].initialCount": 4,
@@ -110,7 +110,7 @@ function createSingleConnectedPortEntities(options: {
     ),
     createEntity(`${options.idPrefix}-power`, "power_diffuser_1", options.purifierX + 6, options.purifierY),
     createEntity(`${options.idPrefix}-pipe`, "pipe_straight_1x1", portWorldX, portWorldY - 1, 270),
-    createEntity(`${options.idPrefix}-sink`, "udpipe_loader_1", portWorldX - 1, portWorldY - 4, 270),
+    createEntity(`${options.idPrefix}-sink`, "udpipe_loader_1", portWorldX - 1, portWorldY - 4, 90),
   ];
 }
 

@@ -5,6 +5,7 @@ import {
   computeItemDefaultPerMinute,
   computeProductionPlan,
   flattenProductionPlanningItemNodes as flattenNodes,
+  isRecipeExcludedFromProductionPlanningAuto,
   type ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
 import { buildProductionPlanningTreeRows } from "@/app/shell/production-planning/production-planning-panel";
@@ -207,9 +208,67 @@ describe("production planning model", () => {
     expect(root?.recipeNode?.recipeId).toBe("r_miner_iron_ore_basic");
   });
 
-  it("does not auto-select manual-only iron enriched powder block recipe", () => {
+  it("excludes the iron-powder-to-nugget recipe from auto selection but allows manual choice", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
+    const powderRecipe = index.recipeById.get("r_furnace_iron_nugget_from_iron_powder_basic");
+    expect(powderRecipe).toBeDefined();
+    if (powderRecipe === undefined) {
+      throw new Error("Expected iron powder to nugget recipe");
+    }
+    expect(isRecipeExcludedFromProductionPlanningAuto(powderRecipe)).toBe(true);
+
     const autoResult = computeProductionPlan({
+      targets: [port("item_iron_nugget", 30)],
+      supplies: [],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    expect(autoResult.roots[0]?.recipeNode?.recipeId).toBe("r_furnace_iron_nugget_from_iron_ore_basic");
+    expect(autoResult.unresolvedPerMinute).toBe(0);
+
+    const manualResult = computeProductionPlan({
+      targets: [port("item_iron_nugget", 30)],
+      supplies: [port("item_iron_powder", 30)],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map([["item_iron_nugget", powderRecipe.id]]),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    expect(manualResult.roots[0]?.recipeNode?.recipeId).toBe(powderRecipe.id);
+    expect(manualResult.unresolvedPerMinute).toBe(0);
+  });
+
+  it("uses the iron-powder-to-nugget recipe as the only automatic fallback", () => {
+    const registry = createRegistryContract();
+    registry.recipeDefinitions = registry.recipeDefinitions.filter(
+      (recipe) => recipe.id !== "r_furnace_iron_nugget_from_iron_ore_basic",
+    );
+    const index = buildProductionPlanningIndex(registry);
+
+    const result = computeProductionPlan({
+      targets: [port("item_iron_nugget", 30)],
+      supplies: [port("item_iron_powder", 30)],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    expect(result.roots[0]?.recipeNode?.recipeId).toBe("r_furnace_iron_nugget_from_iron_powder_basic");
+    expect(result.unresolvedPerMinute).toBe(0);
+  });
+
+  it("auto-selects the steel block recipe", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const steelRecipe = index.recipeById.get("r_furnace_iron_enr_from_iron_enr_powder_basic");
+    expect(steelRecipe).toBeDefined();
+    if (steelRecipe === undefined) {
+      throw new Error("Expected enriched iron powder to steel block recipe");
+    }
+    expect(isRecipeExcludedFromProductionPlanningAuto(steelRecipe)).toBe(false);
+
+    const result = computeProductionPlan({
       targets: [port("item_iron_enr", 30)],
       supplies: [],
       infiniteItemIds: baseInfiniteItemIds(index),
@@ -217,19 +276,8 @@ describe("production planning model", () => {
       sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
 
-    expect(autoResult.roots[0]?.recipeNode).toBeNull();
-    expect(autoResult.unresolvedPerMinute).toBe(30);
-
-    const manualResult = computeProductionPlan({
-      targets: [port("item_iron_enr", 30)],
-      supplies: [],
-      infiniteItemIds: baseInfiniteItemIds(index),
-      recipeChoices: new Map([["item_iron_enr", "r_furnace_iron_enr_from_iron_enr_powder_basic"]]),
-      sourceConfig: DEFAULT_SOURCE_CONFIG,
-    }, index);
-
-    expect(manualResult.roots[0]?.recipeNode?.recipeId).toBe("r_furnace_iron_enr_from_iron_enr_powder_basic");
-    expect(manualResult.unresolvedPerMinute).toBe(0);
+    expect(result.roots[0]?.recipeNode?.recipeId).toBe(steelRecipe.id);
+    expect(result.unresolvedPerMinute).toBe(0);
   });
 
   it("uses explicit recipe choices for multi-recipe target items", () => {

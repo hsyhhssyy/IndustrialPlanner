@@ -1357,7 +1357,7 @@ describe("createEditorHost", () => {
         x: -10,
         y: 39,
       },
-      rotation: 0,
+      rotation: 180,
       config: {},
     });
     expect(editorHost.internalState.internalTransientState.placementDraftSlotLinks).toBeNull();

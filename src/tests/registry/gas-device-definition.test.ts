@@ -216,19 +216,19 @@ describe("gas item and device definitions", () => {
     expectLiquidOnlyPorts(liquidOutput);
   });
 
-  it("defines gas reactor as gas-only west input and east output", () => {
+  it("defines gas reactor as gas-only east input and west output", () => {
     const definition = requireEntity("gas_reactor_1");
     const gasInput = requirePortGroup(definition, "gas_input");
     const gasOutput = requirePortGroup(definition, "gas_output");
 
     expect(definition.footprint).toEqual({ width: 5, height: 5 });
     expectPortLayout(gasInput, [
-      { id: "in_w_1", localCellX: 0, localCellY: 1, edge: "WEST" },
-      { id: "in_w_3", localCellX: 0, localCellY: 3, edge: "WEST" },
+      { id: "in_w_1", localCellX: 4, localCellY: 3, edge: "EAST" },
+      { id: "in_w_3", localCellX: 4, localCellY: 1, edge: "EAST" },
     ]);
     expectPortLayout(gasOutput, [
-      { id: "out_e_1", localCellX: 4, localCellY: 1, edge: "EAST" },
-      { id: "out_e_3", localCellX: 4, localCellY: 3, edge: "EAST" },
+      { id: "out_e_1", localCellX: 0, localCellY: 3, edge: "WEST" },
+      { id: "out_e_3", localCellX: 0, localCellY: 1, edge: "WEST" },
     ]);
     expectGasOnlyPorts(gasInput);
     expectGasOnlyPorts(gasOutput);
@@ -290,12 +290,12 @@ describe("gas item and device definitions", () => {
     const fluidOutput = requirePortGroup(definition, "fluid_output");
 
     expectPortLayout(fluidInput, [
-      { id: "in_s_1", localCellX: 1, localCellY: 4, edge: "SOUTH" },
-      { id: "in_s_3", localCellX: 3, localCellY: 4, edge: "SOUTH" },
+      { id: "in_s_1", localCellX: 4, localCellY: 3, edge: "EAST" },
+      { id: "in_s_3", localCellX: 4, localCellY: 1, edge: "EAST" },
     ]);
     expectPortLayout(fluidOutput, [
-      { id: "out_n_1", localCellX: 1, localCellY: 0, edge: "NORTH" },
-      { id: "out_n_3", localCellX: 3, localCellY: 0, edge: "NORTH" },
+      { id: "out_n_1", localCellX: 0, localCellY: 3, edge: "WEST" },
+      { id: "out_n_3", localCellX: 0, localCellY: 1, edge: "WEST" },
     ]);
     expectFluidBasePorts(fluidInput);
     expectFluidBasePorts(fluidOutput);

@@ -1,6 +1,6 @@
 import type { ProductionPlanningItemNode, ProductionPlanningIndex, ProductionPlanningResult } from "../production-planning-model";
 import {
-  isRecipeExcludedFromProductionPlanningAuto,
+  resolveProductionPlanningAutoRecipe,
   resolveProductionPlanningEntityIconSrc,
   resolveProductionPlanningItemIconSrc,
   resolveProductionPlanningItemName,
@@ -88,12 +88,10 @@ export function buildProcessGraph(
     const iconSrc = resolveProductionPlanningItemIconSrc(targetItemId, index);
 
     // Place the target node at col 0
-    const targetRecipe = index.recipeById.get(
-      Array.from(index.recipesByOutputItem.get(targetItemId) ?? [])
-        .filter((r) => !isRecipeExcludedFromProductionPlanningAuto(r))
-        .find((r) => index.naturalResourceItemIds.has(targetItemId) ? r.inputs.length === 0 : true)
-        ?.id ?? "",
-    ) ?? undefined;
+    const targetRecipe = resolveProductionPlanningAutoRecipe(
+      index.recipesByOutputItem.get(targetItemId) ?? [],
+      index.naturalResourceItemIds.has(targetItemId),
+    );
     const targetNode: MutableProcessNode = {
       itemId: targetItemId,
       col: 0,
@@ -476,26 +474,14 @@ function resolveRecipe(
   }
 
   // AUTO fallback: first non-excluded recipe from recipesByOutputItem
+  // AI-CORRECTION 2026-08-20: 普通候选优先；没有普通候选时允许蓝铁粉末冶炼蓝铁块配方兜底。
   const recipes = state.index.recipesByOutputItem.get(itemId);
   if (recipes === undefined || recipes.length === 0) {
     return null;
   }
 
-  const candidates = recipes.filter(
-    (r) => !isRecipeExcludedFromProductionPlanningAuto(r),
-  );
-
-  if (candidates.length === 0) {
-    return null;
-  }
-
-  // Natural resources prefer null-input recipe
-  if (state.naturalResourceItemIds.has(itemId)) {
-    const nullRecipe = candidates.find((r) => r.inputs.length === 0);
-    if (nullRecipe !== undefined) {
-      return nullRecipe;
-    }
-  }
-
-  return candidates[0]!;
+  return resolveProductionPlanningAutoRecipe(
+    recipes,
+    state.naturalResourceItemIds.has(itemId),
+  ) ?? null;
 }

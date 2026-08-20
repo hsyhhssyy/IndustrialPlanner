@@ -167,7 +167,8 @@ export class EditorHistoryRuntime {
     }
 
     const snapshot = {
-      schemaVersion: 1 as const,
+      // AI-CORRECTION 2026-08-20: 持久化包装升级为 schema 2；record 自身仍使用领域定义的 schema 1。
+      schemaVersion: 2 as const,
       documentKey,
       cursorSequence: this.state.cursorSequence,
       records: this.state.records.map((record) => record),

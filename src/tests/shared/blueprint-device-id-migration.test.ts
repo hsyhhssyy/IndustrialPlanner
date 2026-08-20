@@ -413,6 +413,7 @@ describe("blueprint device id migration version chain", () => {
           entity: {
             definitionId,
             position: { x: 4, y: 8 },
+            rotation: 180,
             config: {
               retained: true,
               channelRecipes: { default: recipeId },
@@ -479,6 +480,7 @@ describe("blueprint device id migration version chain", () => {
 
       expect(result?.entities.entity).toEqual({
         ...createEntity(definitionId),
+        rotation: 180,
         config: { retained: true },
       });
       expect(result?.slotLinks).toEqual([]);
@@ -536,6 +538,54 @@ describe("blueprint device id migration version chain", () => {
     expect(result?.entities["multi-inlet"]?.config).toEqual({ retained: true });
     expect(result?.entities.outlet?.config).toEqual(outlet.config);
     expect(singleInlet.config).toHaveProperty("recipeChannels[0].manualRecipeOnly", true);
+  });
+
+  it("does not apply schema 4 to 5 orientation compensation twice", () => {
+    const sourceEntities = Object.fromEntries([
+      "udpipe_loader_1",
+      "udpipe_unloader_1",
+      "liquid_purifier_1",
+      "gas_reactor_1",
+      "water_pump_1",
+      "udpipe_loader_2",
+      "liquid_cleaner_1",
+      "liquid_storager_1",
+      "gas_storager_1",
+      "vaporizer_1",
+      "gas_pump_1",
+    ].map((definitionId, index) => [
+      definitionId,
+      {
+        ...createEntity(definitionId, [0, 90, 180, 270][index % 4] as WorldEntity["rotation"]),
+        id: definitionId,
+      },
+    ]));
+    const slotLinks = [{
+      ...createPumpWarehouseLink("item_liquid_water"),
+      id: "retained-link",
+      source: {
+        entityId: "unrelated-source",
+        storageSlotGroupId: "source-group",
+        slotId: "source-slot",
+      },
+      target: {
+        entityId: "unrelated-target",
+        storageSlotGroupId: "target-group",
+        slotId: "target-slot",
+      },
+    }];
+    const firstMigration = migrateBlueprintDocumentState({
+      entities: sourceEntities,
+      entityOrder: Object.keys(sourceEntities),
+      slotLinks,
+    }, 4, 5);
+    const secondRead = firstMigration === null
+      ? null
+      : migrateBlueprintDocumentState(firstMigration, 5, 5);
+
+    expect(firstMigration?.entityOrder).toEqual(Object.keys(sourceEntities));
+    expect(firstMigration?.slotLinks).toEqual(slotLinks);
+    expect(secondRead).toEqual(firstMigration);
   });
 
   it.each(

@@ -16,7 +16,7 @@ const ADMISSION_RATE_MAX_BY_DEFINITION_ID: Readonly<Record<string, number>> = {
 };
 
 const RESOURCE_PUMP_OUTPUT_PORT = {
-  localCellX: 2,
+  localCellX: 0,
   localCellY: 1,
 } as const;
 const RESOURCE_PUMP_FOOTPRINT = {
@@ -201,7 +201,19 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
   {
     fromVersion: 4,
     toVersion: 5,
-    deviceRules: [],
+    deviceRules: [
+      { fromDeviceId: "udpipe_loader_1", toDeviceId: "udpipe_loader_1", rotationOffset: 180 },
+      { fromDeviceId: "udpipe_unloader_1", toDeviceId: "udpipe_unloader_1", rotationOffset: 180 },
+      { fromDeviceId: "liquid_purifier_1", toDeviceId: "liquid_purifier_1", rotationOffset: 90 },
+      { fromDeviceId: "gas_reactor_1", toDeviceId: "gas_reactor_1", rotationOffset: 180 },
+      { fromDeviceId: "water_pump_1", toDeviceId: "water_pump_1", rotationOffset: 180 },
+      { fromDeviceId: "udpipe_loader_2", toDeviceId: "udpipe_loader_2", rotationOffset: 180 },
+      { fromDeviceId: "liquid_cleaner_1", toDeviceId: "liquid_cleaner_1", rotationOffset: 180 },
+      { fromDeviceId: "liquid_storager_1", toDeviceId: "liquid_storager_1", rotationOffset: 180 },
+      { fromDeviceId: "gas_storager_1", toDeviceId: "gas_storager_1", rotationOffset: 180 },
+      { fromDeviceId: "vaporizer_1", toDeviceId: "vaporizer_1", rotationOffset: 180 },
+      { fromDeviceId: "gas_pump_1", toDeviceId: "gas_pump_1", rotationOffset: 180 },
+    ],
     // AI-REMOVED 2026-08-19:
     // Reason: schema 5 的资源泵迁移需要与暗管入口旧配置清理共同执行。
     // Trigger: 暗管入口 recipeChannels 已从 registry 移除，历史配置必须在迁移时同步移除。

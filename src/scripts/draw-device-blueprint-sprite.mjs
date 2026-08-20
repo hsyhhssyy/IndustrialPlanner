@@ -342,7 +342,19 @@ function isExcludedFromBlueprintBatch(definition, queries) {
   //   已恢复为 DIRECT_BLUEPRINT_SPRITE_MAPPINGS 直接素材映射，使用 bg_machine_udpipe_loader_1.png
   //   和 bg_machine_udpipe_unloader_1.png；该映射通过 DIRECT_BLUEPRINT_SPRITE_IDS 自动排除标准计算。
   // AI-CORRECTION 2026-07-19: 当前 definition.id 已移除 item_ 前缀；素材匹配改用稳定的 definition.spriteId。
-  return definition.id.includes('water_pump');
+  // AI-REMOVED 2026-08-20:
+  // Reason: 抽水泵蓝图精灵必须从已订正的 registry 端口生成，继续排除会保留旧默认朝向。
+  // Trigger: 用户要求 schema 4→5 同步统一设备默认朝向和渲染资源。
+  // Evidence: water_pump_1 已有标准 footprint 与 fluid_output 端口，可直接走通用生成流程。
+  // Replacement: 下方 return false，设备族排除仍由 RegistryQuery 处理。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // return definition.id.includes('water_pump');
+  // AI-CORRECTION 2026-08-20: 抽水泵最终继续使用专用素材，但已注册为 DIRECT_BLUEPRINT_SPRITE_MAPPINGS，
+  // 因而无需在此保留 definition ID 特例，且不会进入通用生成流程。
+  return false;
 }
 
 async function loadBlueprintAsset(fileName, rotationDegrees = 0) {

@@ -20,16 +20,16 @@ describe("dark pipe linked throughput", () => {
       blueprint: createBlueprint(
         "single-dark-pipe-linked-throughput",
         [
-          createEntity("source", "liquid_storager_1", 0, 0, 0, {
+          createEntity("source", "liquid_storager_1", 0, 0, 180, {
             "storageSlotGroups[0].slots[0].initialItemType": ITEM_ID,
             "storageSlotGroups[0].slots[0].initialCount": 500,
           }),
           createEntity("input-pipe", "pipe_straight_1x1", 3, 1),
           createMeteredPipeAdmission("input-meter", 4, 1, 0),
-          createEntity("inlet", "udpipe_loader_1", 5, 0),
-          createEntity("outlet", "udpipe_unloader_1", 10, 0),
+          createEntity("inlet", "udpipe_loader_1", 5, 0, 180),
+          createEntity("outlet", "udpipe_unloader_1", 10, 0, 180),
           createEntity("output-pipe", "pipe_straight_1x1", 13, 1),
-          createEntity("sink", "liquid_storager_1", 14, 0),
+          createEntity("sink", "liquid_storager_1", 14, 0, 180),
         ],
         [createDarkPipeSlotLink({ inletEntityId: "inlet", outletEntityId: "outlet" })],
       ),
@@ -48,17 +48,17 @@ describe("dark pipe linked throughput", () => {
         [
           // 保持用户问题蓝图的实体顺序；旧求解器会因该顺序让输入、输出相位交替，吞吐减半。
           createEntity("outlet", "udpipe_unloader_2", 7, 19, 90),
-          createEntity("inlet", "udpipe_loader_2", 7, 23, 270),
-          createEntity("source-1", "liquid_storager_1", 9, 28, 270, {
+          createEntity("inlet", "udpipe_loader_2", 7, 23, 90),
+          createEntity("source-1", "liquid_storager_1", 9, 28, 90, {
             "storageSlotGroups[0].slots[0].initialItemType": ITEM_ID,
             "storageSlotGroups[0].slots[0].initialCount": 500,
           }),
-          createEntity("source-2", "liquid_storager_1", 6, 28, 270, {
+          createEntity("source-2", "liquid_storager_1", 6, 28, 90, {
             "storageSlotGroups[0].slots[0].initialItemType": ITEM_ID,
             "storageSlotGroups[0].slots[0].initialCount": 500,
           }),
-          createEntity("sink-1", "liquid_storager_1", 0, 16, 180),
-          createEntity("sink-2", "liquid_storager_1", 0, 19, 180),
+          createEntity("sink-1", "liquid_storager_1", 0, 16, 0),
+          createEntity("sink-2", "liquid_storager_1", 0, 19, 0),
           createEntity("output-turn-1", "pipe_turn_ccw_1x1", 8, 18, 180),
           createEntity("output-pipe-1a", "pipe_straight_1x1", 7, 18, 180),
           createEntity("output-pipe-1b", "pipe_straight_1x1", 6, 18, 180),

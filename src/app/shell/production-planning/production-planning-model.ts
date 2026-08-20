@@ -439,15 +439,36 @@ export function isRecipeExcludedFromProductionPlanningAuto(recipe: RecipeDefinit
   return !isRecipeVisibleInToolbox(recipe)
     || isWaterPurifierNodeRecipe(recipe)
     || recipe.tags.includes("liquid_bottle_dismantle")
-    || (
-      recipe.inputs.some((input) => input.itemId === "item_iron_enr_powder")
-      && recipe.outputs.some((output) => output.itemId === "item_iron_enr")
-    );
+    || isIronPowderToNuggetRecipe(recipe);
+}
+
+export function resolveProductionPlanningAutoRecipe(
+  recipes: readonly RecipeDefinition[],
+  preferInputlessRecipe = false,
+): RecipeDefinition | undefined {
+  const preferredRecipes = recipes.filter((recipe) => !isRecipeExcludedFromProductionPlanningAuto(recipe));
+  const candidates = preferredRecipes.length > 0
+    ? preferredRecipes
+    : recipes.filter(isIronPowderToNuggetRecipe);
+
+  if (preferInputlessRecipe) {
+    const inputlessRecipe = candidates.find((recipe) => recipe.inputs.length === 0);
+    if (inputlessRecipe !== undefined) {
+      return inputlessRecipe;
+    }
+  }
+
+  return candidates[0];
 }
 
 export function isWaterPurifierNodeRecipe(recipe: RecipeDefinition): boolean {
   return recipe.id === WATER_PURIFIER_COLLECT_RECIPE_ID
     || recipe.id === WATER_PURIFIER_BYPRODUCT_RECIPE_ID;
+}
+
+function isIronPowderToNuggetRecipe(recipe: RecipeDefinition): boolean {
+  return recipe.inputs.some((input) => input.itemId === "item_iron_powder")
+    && recipe.outputs.some((output) => output.itemId === "item_iron_nugget");
 }
 
 export function createProductionPlanningId(prefix: string): string {
@@ -465,8 +486,10 @@ export function computeItemDefaultPerMinute(
   const recipes = index.recipesByOutputItem.get(itemId);
   if (!recipes || recipes.length === 0) return 60;
 
-  const candidate = recipes.find((r) => !isRecipeExcludedFromProductionPlanningAuto(r))
-    ?? recipes[0];
+  const candidate = resolveProductionPlanningAutoRecipe(
+    recipes,
+    index.naturalResourceItemIds.has(itemId),
+  );
   if (!candidate) return 60;
 
   const output = candidate.outputs.find((o) => o.itemId === itemId);
@@ -770,19 +793,13 @@ function resolveRecipeForItem(itemId: string, context: SolverContext): RecipeDef
     }
   }
 
-  const candidates = recipes.filter((recipe) => !isRecipeExcludedFromProductionPlanningAuto(recipe));
-
   // AI-CORRECTION 2026-05-22:
   // 自然资源（矿石、清水、沉积酸）在 auto 模式下优先选择 null 配方（inputs 为空），
   // 避免命中净化器等其他生产同一物品的非 null 配方。
-  if (context.index.naturalResourceItemIds.has(itemId)) {
-    const nullRecipe = candidates.find((recipe) => recipe.inputs.length === 0);
-    if (nullRecipe !== undefined) {
-      return nullRecipe;
-    }
-  }
-
-  return candidates[0];
+  return resolveProductionPlanningAutoRecipe(
+    recipes,
+    context.index.naturalResourceItemIds.has(itemId),
+  );
 }
 
 function consumeAvailableSupply(
