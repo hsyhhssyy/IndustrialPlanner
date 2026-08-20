@@ -217,7 +217,7 @@ export function RecipeDisplay({
         }}
         onMouseEnter={(event) => handleItemEnter(itemId, event.currentTarget)}
         onMouseLeave={() => handleItemLeave(itemId)}
-        onClick={(e: MouseEvent) => {
+        onClick={(e: MouseEvent<HTMLSpanElement>) => {
           e.stopPropagation();
           handleItemClick(itemId, e.currentTarget);
         }}
