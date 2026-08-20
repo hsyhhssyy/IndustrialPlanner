@@ -60,6 +60,8 @@ export interface EntityDefinition {
   nameKey: string;
   /** 精灵图 ID，渲染器据此查找设备纹理 */
   spriteId: string;
+  /** 相对于 public 目录的 UI 设备图标路径；不从 id 或 spriteId 推导 */
+  iconPath: string;
   /** 设备占地尺寸（宽度 × 高度，单位：格子），基于 rotation=0 */
   footprint: GridRectSize;
 

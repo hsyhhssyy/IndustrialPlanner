@@ -26,7 +26,7 @@ import {
   getVisiblePlacementOperationButtons,
   type PlacementOperationButtonDefinition,
 } from "@/app/shell/panels/placement-operation-buttons";
-import { createDeviceIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
+import { createEntityIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
 import {
   collapseEntityVariantDefinitions,
@@ -62,23 +62,33 @@ function estimateDeviceLabelWidth(label: string): number {
 
 // ─── 设备图标路径映射 ───
 function resolveDeviceIconPath(definition: EntityDefinition): string {
-  // 特殊映射：entity id 与图标文件名不一致的情况
-  const SPECIAL_ICON_MAP: Record<string, string> = {
-    // AI-REMOVED 2026-08-14:
-    // Reason: 三个无限作弊设备现在使用各自的 device-icon 资源，entity id 已与资源文件名统一。
-    // Trigger: 用户要求无限气、无限水、无限箱分别使用指定透明图标。
-    // Evidence: public/device-icons/cheat_infinite_{gas,liquid,solid}.webp 与 registry spriteId 同名。
-    // Replacement: resolveDeviceIconPath 的 definition.spriteId 回退路径。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // "cheat_infinite_solid": "item_port_unloader_1",
-    // "cheat_infinite_liquid": "item_port_water_pump_1",
-    // "cheat_infinite_gas": "gas_pump_1",
-    "liquid_filling_pd_mc_1": "item_port_filling_pd_mc_1",
-  };
-  return createDeviceIconAssetUrl(SPECIAL_ICON_MAP[definition.id] ?? definition.spriteId);
+  // AI-REMOVED 2026-08-20:
+  // Reason: 放置面板改为读取 EntityDefinition.iconPath，局部 ID 映射与 spriteId 回退均不再有效。
+  // Trigger: 用户要求图标文件与设备 ID、spriteId 解耦，并由 definition 持有完整路径。
+  // Evidence: Registry 已为全部设备显式声明 iconPath；液体填充器的特殊路径已迁入其 definition。
+  // Replacement: 下方 createEntityIconAssetUrl(definition.iconPath)。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // // 特殊映射：entity id 与图标文件名不一致的情况
+  // const SPECIAL_ICON_MAP: Record<string, string> = {
+  //   // AI-REMOVED 2026-08-14:
+  //   // Reason: 三个无限作弊设备现在使用各自的 device-icon 资源，entity id 已与资源文件名统一。
+  //   // Trigger: 用户要求无限气、无限水、无限箱分别使用指定透明图标。
+  //   // Evidence: public/device-icons/cheat_infinite_{gas,liquid,solid}.webp 与 registry spriteId 同名。
+  //   // Replacement: resolveDeviceIconPath 的 definition.spriteId 回退路径。
+  //   // Risk: Low
+  //   // Human Review: Required
+  //   //
+  //   // Original code:
+  //   // "cheat_infinite_solid": "item_port_unloader_1",
+  //   // "cheat_infinite_liquid": "item_port_water_pump_1",
+  //   // "cheat_infinite_gas": "gas_pump_1",
+  //   "liquid_filling_pd_mc_1": "item_port_filling_pd_mc_1",
+  // };
+  // return createDeviceIconAssetUrl(SPECIAL_ICON_MAP[definition.id] ?? definition.spriteId);
+  return createEntityIconAssetUrl(definition.iconPath);
 }
 
 // ─── uiGroup → 分组配置映射 ───

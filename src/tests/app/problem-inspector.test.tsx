@@ -27,6 +27,7 @@ function createMockDefinition(overrides: Partial<EntityDefinition> = {}): Entity
     id: "grinder_1",
     nameKey: "device.grinder",
     spriteId: "item_port_grinder_1",
+    iconPath: "device-icons/item_port_grinder_1.webp",
     footprint: { width: 1, height: 1 },
     uiGroup: "basicProduction",
     tags: [],

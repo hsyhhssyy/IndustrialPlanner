@@ -85,6 +85,7 @@ function createDefinition(id: string): EntityDefinition {
     id,
     nameKey: `registry.entity.${id}.name`,
     spriteId: id,
+    iconPath: `device-icons/${id}.webp`,
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     displayOrder: 0,

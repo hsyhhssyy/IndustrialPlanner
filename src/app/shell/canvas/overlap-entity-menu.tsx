@@ -4,12 +4,21 @@ import { observer } from "mobx-react-lite";
 import type { AppHost } from "@/app/host/app-host";
 import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 import { cm } from "@/app/shell/shared/css-module-class";
-import { createDeviceIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { createEntityIconAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "@/app/shell/canvas/canvas.module.scss";
 
-const DEVICE_ICON_SPECIAL_MAP: Record<string, string> = {
-  liquid_filling_pd_mc_1: "item_port_filling_pd_mc_1",
-};
+// AI-REMOVED 2026-08-20:
+// Reason: 重叠实体菜单改为读取设备定义自身的 iconPath，不再维护局部资源映射。
+// Trigger: 用户要求图标资源路径与设备 ID、spriteId 解耦。
+// Evidence: EntityDefinition.iconPath 是必填字段，并由 Registry 契约测试校验资源存在。
+// Replacement: 下方 createEntityIconAssetUrl(definition?.iconPath)。
+// Risk: Low；缺失 definition 时统一显示缺失资源图标。
+// Human Review: Required
+//
+// Original code:
+// const DEVICE_ICON_SPECIAL_MAP: Record<string, string> = {
+//   liquid_filling_pd_mc_1: "item_port_filling_pd_mc_1",
+// };
 
 export const OverlapEntityMenu = observer(function OverlapEntityMenu({
   appHost,
@@ -73,11 +82,7 @@ export const OverlapEntityMenu = observer(function OverlapEntityMenu({
               const label = definition === undefined
                 ? candidate.definitionId
                 : t(definition.nameKey);
-              const iconSrc = createDeviceIconAssetUrl(
-                DEVICE_ICON_SPECIAL_MAP[candidate.definitionId]
-                  ?? definition?.spriteId
-                  ?? candidate.definitionId,
-              );
+              const iconSrc = createEntityIconAssetUrl(definition?.iconPath);
 
               return (
                 <button

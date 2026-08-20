@@ -52,6 +52,7 @@ interface BrowserSyncState {
   readonly status: {
     readonly phase: string;
     readonly saveState: string;
+    readonly currentRunReason: string | null;
     readonly initialSyncStage: string;
     readonly pendingLocalChangeCount: number;
     readonly lastError: string | null;
@@ -624,6 +625,7 @@ async function runConflictScenario(options: {
 
   // ─── Phase 6: 小检查 (~35s) ───
   // AI-CORRECTION 2026-08-12: 当前默认检查周期为 60 秒；等待状态时间戳变化，避免依赖固定 sleep。
+  // AI-CORRECTION 2026-08-20: 时间戳只代表小检查完成，若检查触发完整同步，还必须等待同步状态回到稳定。
   const preCheck = syncLogs.length;
   const preCheckResponseCount = backendCheckResponses.length;
   const previousSmallCheckAt = await page.evaluate(() =>
@@ -639,6 +641,31 @@ async function runConflictScenario(options: {
     timeout: 70_000,
     intervals: [1000],
   }).not.toBe(previousSmallCheckAt);
+
+  await expect.poll(async () => await page.evaluate(() => {
+    const sync = (window as unknown as BrowserTestWindow)
+      .__industrialPlannerAppHost?.workspace?.sync;
+    return sync === null || sync === undefined
+      ? null
+      : {
+          phase: sync.state.status.phase,
+          saveState: sync.state.status.saveState,
+          currentRunReason: sync.state.status.currentRunReason,
+          pendingConflict: sync.state.pendingConflict,
+          pendingLocalChangeCount: sync.state.status.pendingLocalChangeCount,
+          lastError: sync.state.status.lastError,
+        };
+  }), {
+    message: "小检查触发的后续同步应完成并回到稳定状态",
+    timeout: 60_000,
+  }).toEqual({
+    phase: "idle",
+    saveState: "idle",
+    currentRunReason: null,
+    pendingConflict: null,
+    pendingLocalChangeCount: 0,
+    lastError: null,
+  });
 
   const checkLogs = syncLogs.slice(preCheck);
   const smallCheckResponses = backendCheckResponses.slice(preCheckResponseCount);
@@ -691,7 +718,17 @@ async function runConflictScenario(options: {
   if (box2) {
     await page.locator("canvas").first().click({
       position: { x: box2.width / 2 + 150, y: box2.height / 2 + 150 },
-      force: true,
+      // AI-REMOVED 2026-08-20:
+      // Reason: 强制点击会绕过真实用户必须遵守的同步遮罩，制造产品 UI 中不可达的交错操作。
+      // Trigger: CF use-remote E2E 在 interval 同步尚未稳定时偶发读取错误的 revision 基线。
+      // Evidence: 失败日志先出现 interval 完整同步，随后测试继续放置；单项重跑及同步门禁审计确认真实点击应等待遮罩解除。
+      // Replacement: 下方 force: false，由 Playwright actionability 等待真实交互条件。
+      // Risk: Low；若遮罩无法解除，测试将以点击超时暴露真实 UI 阻塞。
+      // Human Review: Required
+      //
+      // Original code:
+      // force: true,
+      force: false,
     });
   }
   await expect.poll(async () => await page.evaluate(() =>
@@ -705,7 +742,34 @@ async function runConflictScenario(options: {
   }).toBeGreaterThan(furnaceCountBeforeIncrementalSync);
   await expect.poll(async () => {
     const revision = await tryReadRemoteRevision(request, spaceId);
-    return revision !== null && revision !== revisionBeforeIncrementalSync;
+    // AI-REMOVED 2026-08-20:
+    // Reason: 任意远端 revision 变化不能证明本轮精炼炉正文已经上传完成。
+    // Trigger: interval 同步推进 revision 后，旧断言提前通过并读取到不含第二台精炼炉的远端文档。
+    // Evidence: 全量 E2E 失败时 revision 断言通过，但紧随其后的远端正文不包含 furnance_1。
+    // Replacement: 下方同时验证 revision 推进与目标世界文档正文包含 furnance_1。
+    // Risk: Low；下载票据瞬时过期时轮询下一份 plan，不把合法 stale 当成正文成功。
+    // Human Review: Required
+    //
+    // Original code:
+    // return revision !== null && revision !== revisionBeforeIncrementalSync;
+    if (revision === null || revision === revisionBeforeIncrementalSync) {
+      return false;
+    }
+    const plan = await readRemotePlan(request, spaceId);
+    const remoteWorldDocument = plan.assets.find((asset) =>
+      asset.assetType === TEST_WORLD_DOCUMENT_ASSET_TYPE
+      && asset.assetId === remoteSeed.assetId
+    );
+    if (remoteWorldDocument === undefined) {
+      return false;
+    }
+    const response = await request.get(remoteWorldDocument.downloadUrl);
+    if (!response.ok()) {
+      return false;
+    }
+    const uploadedDocument = await response.json() as BrowserWorldDocument;
+    return Object.values(uploadedDocument.entities)
+      .some((entity) => entity.definitionId === "furnance_1");
   }, {
     message: "本地变化应触发增量上传并推进远端 revision",
     timeout: 45_000,

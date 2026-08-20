@@ -87,6 +87,7 @@ function createTestEntityDefinition(
     id: definitionId,
     nameKey: `test.entity.${definitionId}`,
     spriteId: definitionId,
+    iconPath: `device-icons/${definitionId}.webp`,
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     displayOrder: Number.MAX_SAFE_INTEGER,

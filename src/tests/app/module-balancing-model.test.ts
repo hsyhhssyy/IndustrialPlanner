@@ -21,6 +21,7 @@ const TEST_REGISTRY: RegistryContract = {
       id: "machine_smelter",
       nameKey: "machine.smelter",
       spriteId: "machine_smelter",
+      iconPath: "device-icons/smelter-ui-icon.webp",
       footprint: { width: 1, height: 1 },
       uiGroup: "basicProduction",
       displayOrder: 100,
@@ -38,6 +39,7 @@ const TEST_REGISTRY: RegistryContract = {
       id: "machine_assembler",
       nameKey: "machine.assembler",
       spriteId: "machine_assembler",
+      iconPath: "device-icons/assembler-ui-icon.webp",
       footprint: { width: 1, height: 1 },
       uiGroup: "advancedManufacturing",
       displayOrder: 100,
@@ -55,6 +57,7 @@ const TEST_REGISTRY: RegistryContract = {
       id: "cheat_machine",
       nameKey: "machine.cheat",
       spriteId: "cheat_machine",
+      iconPath: "device-icons/cheat-ui-icon.webp",
       footprint: { width: 1, height: 1 },
       uiGroup: "cheat",
       displayOrder: 701,
@@ -163,7 +166,7 @@ describe("module-balancing-model", () => {
     })[key] ?? key;
 
     expect(resolveModuleDisplayTitle(module!, index, translate)).toBe("铁板 · 齿轮 · 装配机");
-    expect(resolveModuleIconSrc(module!, index)).toContain("machine_assembler");
+    expect(resolveModuleIconSrc(module!, index)).toContain("device-icons/assembler-ui-icon.webp");
   });
 
   it("searches every output and device names by Chinese, full pinyin, and pinyin initials", () => {

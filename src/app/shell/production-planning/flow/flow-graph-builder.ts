@@ -22,7 +22,7 @@ import {
   resolveProductionPlanningRecipeInputPorts,
   type ProductionPlanningLedgerRow,
 } from "../production-planning-ledger";
-import { createDeviceIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
+import { createEntityIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import type { SankeyInputLink, SankeyInputNode } from "./sankey-layout";
 
 export type ProductionFlowNodeKind = "item" | "recipe";
@@ -282,7 +282,7 @@ function resolveLedgerRowMachineIconSrc(row: ProductionPlanningLedgerRow, index:
   const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;
   const recipe = index.recipeById.get(recipeId);
   return recipe === undefined
-    ? createDeviceIconAssetUrl("item_port_grinder_1")
+    ? createEntityIconAssetUrl(undefined)
     : resolveProductionPlanningEntityIconSrc(recipe.machineId, index);
 }
 

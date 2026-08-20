@@ -92,7 +92,7 @@ describe("PortOutputConfigInspector", () => {
   it("renders empty state when definition has no matching output port groups", () => {
     const workspace = createWorkspace();
     const definition: EntityDefinition = {
-      id: "test-no-output", nameKey: "test", spriteId: "test",
+      id: "test-no-output", nameKey: "test", spriteId: "test", iconPath: "device-icons/test.webp",
       footprint: { width: 1, height: 1 }, uiGroup: "basicProduction",
       tags: [], displayOrder: 1, portGroups: [], storageSlotGroups: [],
       recipeChannels: [], portStorageBindings: [],

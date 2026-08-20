@@ -40,6 +40,7 @@ describe("cheat infinite device definitions", () => {
       expect(definition).toBeDefined();
       expect(definition).toMatchObject({
         spriteId: deviceCase.id,
+        iconPath: `device-icons/${deviceCase.id}.webp`,
         footprint: { width: 1, height: 1 },
         uiGroup: "cheat",
         tags: ["AvatarHidden", "ChevronHidden"],

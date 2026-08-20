@@ -28,6 +28,7 @@ describe("quick-place model", () => {
     });
 
     expect(entries.map((entry) => entry.id)).toEqual(["assembler"]);
+    expect(entries[0]?.iconSrc).toContain("device-icons/assembler-ui-icon.webp");
     expect(filterQuickPlaceDeviceEntries(entries, "zz").map((entry) => entry.id)).toEqual(["assembler"]);
     expect(filterQuickPlaceDeviceEntries(entries, "zhuang").map((entry) => entry.id)).toEqual(["assembler"]);
     expect(filterQuickPlaceDeviceEntries(entries, "组装").map((entry) => entry.id)).toEqual(["assembler"]);
@@ -159,6 +160,7 @@ function createEntityDefinition(
     id,
     nameKey: `quick-place-test.${id}`,
     spriteId: id,
+    iconPath: `device-icons/${id}-ui-icon.webp`,
     footprint: { width: 1, height: 1 },
     uiGroup,
     displayOrder,

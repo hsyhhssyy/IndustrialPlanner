@@ -86,6 +86,7 @@ function createDefinition(options: {
     id: options.id,
     nameKey: `${options.id}.name`,
     spriteId: options.id,
+    iconPath: `device-icons/${options.id}.webp`,
     footprint: options.footprint,
     uiGroup: "resourcePower",
     displayOrder: 100,

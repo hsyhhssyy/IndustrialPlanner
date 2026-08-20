@@ -1,4 +1,5 @@
 const URL_SCHEME_PATTERN = /^[a-z][a-z\d+\-.]*:/i;
+const MISSING_ENTITY_ICON_ASSET_PATH = "textures/missing-sprite-texture.png";
 
 export function createPublicAssetUrl(path: string): string {
   if (URL_SCHEME_PATTERN.test(path) || path.startsWith("//")) {
@@ -18,8 +19,12 @@ export function createPublicAssetUrl(path: string): string {
   return `${normalizedBaseUrl}${normalizedPath}`;
 }
 
-export function createDeviceIconAssetUrl(entityId: string): string {
-  return createPublicAssetUrl(`device-icons/${entityId}.webp`);
+export function createDeviceIconAssetUrl(iconId: string): string {
+  return createPublicAssetUrl(`device-icons/${iconId}.webp`);
+}
+
+export function createEntityIconAssetUrl(iconPath: string | undefined): string {
+  return createPublicAssetUrl(iconPath ?? MISSING_ENTITY_ICON_ASSET_PATH);
 }
 
 export function createItemIconAssetUrl(iconId: string): string {

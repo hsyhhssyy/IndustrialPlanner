@@ -20,6 +20,7 @@ function createActivityTestEntityDefinition(): EntityDefinition {
     id: "test_activity_machine",
     nameKey: "test.activityMachine",
     spriteId: "test_activity_machine",
+    iconPath: "device-icons/test_activity_machine.webp",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     displayOrder: 10000,

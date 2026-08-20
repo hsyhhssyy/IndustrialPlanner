@@ -16,6 +16,7 @@ function createTestEntityDefinition(options: {
     id: options.id,
     nameKey: `${options.id}.name`,
     spriteId: options.id,
+    iconPath: `device-icons/${options.id}.webp`,
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     displayOrder: 10000,

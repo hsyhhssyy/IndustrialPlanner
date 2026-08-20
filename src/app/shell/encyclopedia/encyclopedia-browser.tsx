@@ -13,7 +13,7 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type { EntityVariantDefinition } from "@/domain/registry/types/entity-variant-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
-import { createDeviceIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { resolveEntityVariantName } from "@/shared/entity-variants";
 import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
@@ -195,7 +195,7 @@ export function resolveItemIcon(itemId: string, index: EncyclopediaIndex): strin
 }
 
 export function resolveEntityIcon(entityId: string, index: EncyclopediaIndex): string {
-  return createDeviceIconAssetUrl(index.entityById.get(entityId)?.spriteId ?? entityId);
+  return createEntityIconAssetUrl(index.entityById.get(entityId)?.iconPath);
 }
 
 export function resolveEntityDisplayName(

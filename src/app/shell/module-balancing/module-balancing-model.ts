@@ -15,7 +15,7 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
-import { createDeviceIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { lookupText } from "@/shared/i18n";
 import {
   isItemAvailableByActivity,
@@ -381,7 +381,7 @@ export function resolveItemIconSrc(itemId: string, index: ModuleBalancingIndex):
 }
 
 export function resolveEntityIconSrc(entityId: string, index: ModuleBalancingIndex): string {
-  return createDeviceIconAssetUrl(index.entityById.get(entityId)?.spriteId ?? entityId);
+  return createEntityIconAssetUrl(index.entityById.get(entityId)?.iconPath);
 }
 
 export function resolveModuleDisplayTitle(
@@ -439,7 +439,7 @@ export function resolveModuleIconSrc(
 
   const recipe = index.recipeById.get(module.recipeId);
   if (recipe === undefined) {
-    return createDeviceIconAssetUrl("item_port_grinder_1");
+    return createEntityIconAssetUrl(undefined);
   }
 
   // 优先用第 1 个主要产物图标，其次用第 1 个产出图标，最后 fallback 到设备图标

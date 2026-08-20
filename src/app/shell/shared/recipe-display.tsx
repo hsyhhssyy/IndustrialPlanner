@@ -15,7 +15,7 @@ import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition
 import LucideChevronsRight from "~icons/lucide/chevrons-right";
 import styles from "./recipe-display.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
-import { createDeviceIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 
 /** 配方展示所需的最小索引，同时被 ProductionPlanningIndex 和 ModuleBalancingIndex 满足 */
 export interface RecipeDisplayIndex {
@@ -88,7 +88,7 @@ function resolveItemIconSrc(itemId: string, index: RecipeDisplayIndex): string {
 }
 
 function resolveEntityIconSrc(definition: EntityDefinition): string {
-  return createDeviceIconAssetUrl(definition.spriteId);
+  return createEntityIconAssetUrl(definition.iconPath);
 }
 
 export function RecipeDisplay({
@@ -321,7 +321,7 @@ export function RecipeDisplay({
       <div className={cm(styles, "recipe-display-device")}>
         <img
           alt=""
-          src={machine === null ? createDeviceIconAssetUrl("item_port_grinder_1") : resolveEntityIconSrc(machine)}
+          src={machine === null ? createEntityIconAssetUrl(undefined) : resolveEntityIconSrc(machine)}
         />
         <span>{machine === null ? recipe.machineId : t(machine.nameKey)}</span>
       </div>

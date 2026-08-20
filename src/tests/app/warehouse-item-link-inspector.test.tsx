@@ -274,6 +274,7 @@ function createMultiSlotWarehouseDefinition(): EntityDefinition {
     id: "test_multi_slot_warehouse_link",
     nameKey: "test.multiSlotWarehouseLink",
     spriteId: "item_port_unloader_1",
+    iconPath: "device-icons/item_port_unloader_1.webp",
     footprint: { width: 3, height: 1 },
     uiGroup: "warehouse",
     displayOrder: 0,

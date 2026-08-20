@@ -2671,6 +2671,7 @@ function createEntityDefinitionStub(): EntityDefinition {
     id: "storager_1",
     nameKey: "registry.entity.storager_1.name",
     spriteId: "item_port_storager_1",
+    iconPath: "device-icons/item_port_storager_1.webp",
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
     displayOrder: 100,

@@ -100,6 +100,7 @@ function createEntityDefinition(
     id,
     nameKey: `${id}.name`,
     spriteId: id,
+    iconPath: `device-icons/${id}.webp`,
     footprint: { width: 1, height: 1 },
     uiGroup,
     displayOrder: 0,

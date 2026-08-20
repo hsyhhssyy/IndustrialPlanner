@@ -18,6 +18,7 @@ function createEntityDefinition(options: {
     id: options.id,
     nameKey: options.id,
     spriteId: options.id,
+    iconPath: `device-icons/${options.id}.webp`,
     footprint: {
       width: options.width,
       height: options.height,

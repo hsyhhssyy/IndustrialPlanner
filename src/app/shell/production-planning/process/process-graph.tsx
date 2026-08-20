@@ -7,7 +7,7 @@ import type { ProductionPlanningDisplayMode, ProductionPlanningIndex, Production
 import { buildProcessGraph } from "./process-graph-builder";
 import type { ProcessNode } from "./process-graph-model";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
-import { createDeviceIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { createEntityIconAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "./process-graph.module.scss";
 
 interface ProcessGraphViewProps {
@@ -317,7 +317,7 @@ export function ProcessGraphView({
             <div className={styles["process-detail-popup-device"]}>
               <img
                 alt=""
-                src={createDeviceIconAssetUrl(expandedDevice.spriteId)}
+                src={createEntityIconAssetUrl(expandedDevice.iconPath)}
               />
               <span>{t(expandedDevice.nameKey)}</span>
             </div>
