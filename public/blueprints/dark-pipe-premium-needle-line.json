@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 5,
   "blueprintId": "d8591492-55a4-4ce5-b1ac-8fcc6a1ea226",
   "version": "v1.3.0",
   "name": "全暗管优质芽针针剂",
@@ -113,7 +113,7 @@
         "x": 8,
         "y": 4
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },
@@ -643,7 +643,7 @@
         "x": 12,
         "y": 4
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {
         "darkPipeInletMode": "destroy"
       },
@@ -1162,7 +1162,7 @@
         "x": 20,
         "y": 0
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },

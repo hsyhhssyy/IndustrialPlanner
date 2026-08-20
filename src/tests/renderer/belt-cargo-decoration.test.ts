@@ -200,6 +200,7 @@ import {
   createBeltCargoDecoration,
   resolveBeltCargoBoxSize,
 } from "@/renderer/scene/decorations/BeltCargoDecoration"
+import { ITEM_ICON_TEXTURE_INSET_PX } from "@/renderer/texture"
 import { createRegistryContract } from "@/registry"
 
 describe("createBeltCargoDecoration", () => {
@@ -284,19 +285,20 @@ describe("createBeltCargoDecoration", () => {
 
     expect(sprite.visible).toBe(true)
     expect(sprite.texture).not.toBe(iconTexture)
+    const insetIconSize = 32 - ITEM_ICON_TEXTURE_INSET_PX * 2
     expect(sprite.texture).toMatchObject({
       source: iconTexture.source,
       frame: {
-        x: 2,
-        y: 2,
-        width: 28,
-        height: 28,
+        x: ITEM_ICON_TEXTURE_INSET_PX,
+        y: ITEM_ICON_TEXTURE_INSET_PX,
+        width: insetIconSize,
+        height: insetIconSize,
       },
       orig: {
         x: 0,
         y: 0,
-        width: 28,
-        height: 28,
+        width: insetIconSize,
+        height: insetIconSize,
       },
     })
     expect(sprite.x).toBeCloseTo(0)

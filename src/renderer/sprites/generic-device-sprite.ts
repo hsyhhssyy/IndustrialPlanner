@@ -36,6 +36,7 @@ import {
   resolveDeviceMaskTextureKey,
 } from "@/renderer/sprites/device-texture-key"
 import { applyBitmapTextureConfig, type RenderTextureConfig } from "@/renderer/texture/texture-config"
+import { createInsetItemIconTexture } from "@/renderer/texture"
 import {
   RenderSpriteLayout,
   RenderSpriteSyncContext,
@@ -1198,7 +1199,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     const circleTex = getPrimaryOutputCircleTexture(textureConfig);
     const plusTex = getPrimaryOutputPlusTexture(textureConfig);
     // 物品图标内接于圆：正方形边长 = 直径 / √2，再 -4px 减少空白
-    const itemIconInsideSize = Math.max(4, Math.floor(iconSize / Math.SQRT2) - 4);
+    // AI-CORRECTION 2026-08-20: 圆圈现为方形物品纹理的内接圆，纹理边长等于圆直径；透明边缘由统一整像素裁边处理。
+    const itemIconInsideSize = iconSize;
     const plusWidth = iconSize * PRIMARY_OUTPUT_PLUS_WIDTH_RATIO;
     const gapWidth = iconSize * 0.04;
     const totalWidth = itemIds.length * iconSize + (itemIds.length - 1) * (plusWidth + gapWidth * 2);
@@ -1309,7 +1311,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         return;
       }
 
-      sprite.texture = texture;
+      sprite.texture = createInsetItemIconTexture(texture);
       sprite.visible = true;
     }).catch(() => {
       if (this.disposed || this.primaryOutputIconLoadVersions[index] !== activeVersion) {

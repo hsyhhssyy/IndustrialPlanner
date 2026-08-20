@@ -11,11 +11,25 @@ import {
 import {
   Container,
   Graphics,
-  Rectangle,
+  // AI-REMOVED 2026-08-20:
+  // Reason: 物品纹理裁边已统一进入 renderer/texture，不再由传送带 Decoration 构造 Rectangle。
+  // Trigger: 用户要求传送带、当前产物圆圈与准入口圆圈共享整像素裁边规则。
+  // Evidence: createInsetItemIconTexture 已成为三个渲染入口的唯一裁边实现。
+  // Replacement: src/renderer/texture/item-icon-texture.ts
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // Rectangle,
   RenderTexture,
   Sprite,
   Texture,
 } from "pixi.js"
+
+import {
+  createInsetItemIconTexture,
+  ITEM_ICON_TEXTURE_INSET_PX,
+} from "@/renderer/texture"
 
 import type { DecorationLayer } from "./DecorationLayer"
 import type { DecorationProfiler, DecorationSyncContext } from "./DecorationSyncContext"
@@ -34,7 +48,16 @@ import {
 
 const ITEM_ICON_TEXTURE_PREFIX = "item-icon-"
 const BOX_ICON_SIZE_RATIO = 0.72
-const ITEM_ICON_TEXTURE_INSET_PX = 2
+// AI-REMOVED 2026-08-20:
+// Reason: 传送带私有裁边常量会让三个物品图标入口继续产生不一致。
+// Trigger: 用户要求裁边整像素数改为 shared 常量。
+// Evidence: renderer/texture 现已导出 ITEM_ICON_TEXTURE_INSET_PX 并被三处渲染链路复用。
+// Replacement: src/renderer/texture/item-icon-texture.ts
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const ITEM_ICON_TEXTURE_INSET_PX = 2
 const BOX_CORNER_RADIUS_RATIO = 0.1
 const BOX_STROKE_WIDTH_PX = 1
 const BOX_TURN_CLEARANCE_PX = 2
@@ -1071,7 +1094,7 @@ function resolveInsetItemIconTexture(options: {
     return existing
   }
 
-  const insetTexture = createInsetTexture(texture, ITEM_ICON_TEXTURE_INSET_PX)
+  const insetTexture = createInsetItemIconTexture(texture)
   if (insetTexture !== texture) {
     options.insetTextures.set(options.textureKey, insetTexture)
   }
@@ -1079,41 +1102,50 @@ function resolveInsetItemIconTexture(options: {
   return insetTexture
 }
 
-function createInsetTexture(texture: Texture, insetPx: number): Texture {
-  const frame = texture.frame
-  if (
-    frame === undefined
-    || !Number.isFinite(frame.width)
-    || !Number.isFinite(frame.height)
-  ) {
-    return texture
-  }
-
-  const maxHorizontalInset = Math.max(0, Math.floor((frame.width - 1) / 2))
-  const maxVerticalInset = Math.max(0, Math.floor((frame.height - 1) / 2))
-  const safeInset = Math.min(insetPx, maxHorizontalInset, maxVerticalInset)
-  if (safeInset <= 0) {
-    return texture
-  }
-
-  const width = frame.width - safeInset * 2
-  const height = frame.height - safeInset * 2
-
-  return new Texture({
-    source: texture.source,
-    label: texture.label,
-    frame: new Rectangle(
-      frame.x + safeInset,
-      frame.y + safeInset,
-      width,
-      height,
-    ),
-    orig: new Rectangle(0, 0, width, height),
-    defaultAnchor: texture.defaultAnchor,
-    defaultBorders: texture.defaultBorders,
-    rotate: texture.rotate,
-  })
-}
+// AI-REMOVED 2026-08-20:
+// Reason: 传送带私有 Texture frame 裁边实现会与另外两个物品圆圈重复并漂移。
+// Trigger: 用户要求三处物品纹理共用同一个整像素内收规则。
+// Evidence: createInsetItemIconTexture 已完整承接边界保护、整像素归一化与 Texture frame 构造。
+// Replacement: src/renderer/texture/item-icon-texture.ts
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function createInsetTexture(texture: Texture, insetPx: number): Texture {
+//   const frame = texture.frame
+//   if (
+//     frame === undefined
+//     || !Number.isFinite(frame.width)
+//     || !Number.isFinite(frame.height)
+//   ) {
+//     return texture
+//   }
+//
+//   const maxHorizontalInset = Math.max(0, Math.floor((frame.width - 1) / 2))
+//   const maxVerticalInset = Math.max(0, Math.floor((frame.height - 1) / 2))
+//   const safeInset = Math.min(insetPx, maxHorizontalInset, maxVerticalInset)
+//   if (safeInset <= 0) {
+//     return texture
+//   }
+//
+//   const width = frame.width - safeInset * 2
+//   const height = frame.height - safeInset * 2
+//
+//   return new Texture({
+//     source: texture.source,
+//     label: texture.label,
+//     frame: new Rectangle(
+//       frame.x + safeInset,
+//       frame.y + safeInset,
+//       width,
+//       height,
+//     ),
+//     orig: new Rectangle(0, 0, width, height),
+//     defaultAnchor: texture.defaultAnchor,
+//     defaultBorders: texture.defaultBorders,
+//     rotate: texture.rotate,
+//   })
+// }
 
 function drawBeltCargoClipMask(
   graphics: Graphics,

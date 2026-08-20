@@ -74,7 +74,7 @@ import { createDarkPipeLinkSelectionDecoration } from "./decorations/DarkPipeLin
 import { createHoverCornersDecoration } from "./decorations/HoverCornersDecoration"
 import { createPortOverlayDecoration } from "./decorations/PortOverlayDecoration"
 import { createPipePortGhostDecoration } from "./decorations/PipePortGhostDecoration"
-import { createAdmissionItemIconDecoration } from "./decorations/AdmissionItemIconDecoration"
+import { createConfiguredItemIconDecoration } from "./decorations/ConfiguredItemIconDecoration"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
@@ -238,7 +238,7 @@ export function createRenderSceneOrchestrator(
   const hoverCornersDecoration = createHoverCornersDecoration()
   const portOverlayDecoration = createPortOverlayDecoration()
   const pipePortGhostDecoration = createPipePortGhostDecoration()
-  const admissionItemIconDecoration = createAdmissionItemIconDecoration()
+  const configuredItemIconDecoration = createConfiguredItemIconDecoration()
   const beltFlowDecoration = createBeltFlowDecoration()
   const pipeFlowDecoration = createPipeFlowDecoration()
   const darkPipeLinkLineDecoration = createDarkPipeLinkLineDecoration()
@@ -574,8 +574,8 @@ export function createRenderSceneOrchestrator(
       pipePortGhostDecoration.sync(ctx)
     })
 
-    measureRenderStage(frameProfiler, "decoration.admissionItemIcon", () => {
-      admissionItemIconDecoration.sync(ctx, entities)
+    measureRenderStage(frameProfiler, "decoration.configuredItemIcon", () => {
+      configuredItemIconDecoration.sync(ctx, entities)
     })
 
     measureRenderStage(frameProfiler, "decoration.beltFlow", () => {
@@ -675,7 +675,7 @@ export function createRenderSceneOrchestrator(
   marqueeOverlayLayer.addChild(logisticsPlacementIdleCursorDecoration.container)
   marqueeOverlayLayer.addChild(hoverCornersDecoration.container)
   marqueeOverlayLayer.addChild(portOverlayDecoration.container)
-  marqueeOverlayLayer.addChild(admissionItemIconDecoration.container)
+  marqueeOverlayLayer.addChild(configuredItemIconDecoration.container)
   marqueeOverlayLayer.addChild(marqueeDecoration.container)
   marqueeOverlayLayer.addChild(darkPipeLinkSelectionDecoration.container)
   app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
@@ -715,7 +715,7 @@ export function createRenderSceneOrchestrator(
       hoverCornersDecoration.destroy()
       portOverlayDecoration.destroy()
       pipePortGhostDecoration.destroy()
-      admissionItemIconDecoration.destroy()
+      configuredItemIconDecoration.destroy()
       beltFlowDecoration.destroy()
       pipeFlowDecoration.destroy()
       darkPipeLinkLineDecoration.destroy()

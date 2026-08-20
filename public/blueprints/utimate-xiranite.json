@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 5,
   "blueprintId": "4c076c6f-56d3-4c42-a382-13deb3dcfec9",
   "version": "v1.3.0",
   "name": "天王坪小基地7核息壤",
@@ -54,7 +54,7 @@
         "x": 41,
         "y": 46
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1521,7 +1521,7 @@
         "x": 22,
         "y": 31
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -2905,7 +2905,7 @@
         "x": 6,
         "y": 11
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -4350,7 +4350,7 @@
         "x": 25,
         "y": 26
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -5708,9 +5708,11 @@
         "x": 57,
         "y": -5
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
-        "storageSlotGroups[0].slots[0].ignoreStock": true
+        "channelRecipes": {
+          "default": "r_pump_water_basic"
+        }
       },
       "tags": []
     },
@@ -5732,9 +5734,11 @@
         "x": 57,
         "y": -10
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
-        "storageSlotGroups[0].slots[0].ignoreStock": true
+        "channelRecipes": {
+          "default": "r_pump_water_basic"
+        }
       },
       "tags": []
     },
@@ -5745,10 +5749,8 @@
         "x": 53,
         "y": -10
       },
-      "rotation": 180,
-      "config": {
-        "recipeChannels[0].manualRecipeOnly": true
-      },
+      "rotation": 0,
+      "config": {},
       "tags": []
     },
     "pipe_turn_cw_1x1:9": {
@@ -5824,9 +5826,11 @@
         "x": 57,
         "y": 5
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
-        "storageSlotGroups[0].slots[0].ignoreStock": true
+        "channelRecipes": {
+          "default": "r_pump_water_basic"
+        }
       },
       "tags": []
     },
@@ -5848,9 +5852,11 @@
         "x": 57,
         "y": 0
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
-        "storageSlotGroups[0].slots[0].ignoreStock": true
+        "channelRecipes": {
+          "default": "r_pump_water_basic"
+        }
       },
       "tags": []
     },
@@ -5861,10 +5867,8 @@
         "x": 53,
         "y": 0
       },
-      "rotation": 180,
-      "config": {
-        "recipeChannels[0].manualRecipeOnly": true
-      },
+      "rotation": 0,
+      "config": {},
       "tags": []
     },
     "pipe_turn_cw_1x1:10": {
@@ -5940,9 +5944,11 @@
         "x": 50,
         "y": -10
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
-        "storageSlotGroups[0].slots[0].ignoreStock": true
+        "channelRecipes": {
+          "default": "r_pump_water_basic"
+        }
       },
       "tags": []
     },
@@ -5953,9 +5959,11 @@
         "x": 45,
         "y": -10
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
-        "storageSlotGroups[0].slots[0].ignoreStock": true
+        "channelRecipes": {
+          "default": "r_pump_water_basic"
+        }
       },
       "tags": []
     },
@@ -5966,9 +5974,11 @@
         "x": 40,
         "y": -10
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
-        "storageSlotGroups[0].slots[0].ignoreStock": true
+        "channelRecipes": {
+          "default": "r_pump_water_basic"
+        }
       },
       "tags": []
     },
@@ -5979,10 +5989,8 @@
         "x": 50,
         "y": -6
       },
-      "rotation": 90,
-      "config": {
-        "recipeChannels[0].manualRecipeOnly": true
-      },
+      "rotation": 270,
+      "config": {},
       "tags": []
     },
     "item_port_power_diffuser_1:15": {
@@ -6003,10 +6011,8 @@
         "x": 45,
         "y": -6
       },
-      "rotation": 90,
-      "config": {
-        "recipeChannels[0].manualRecipeOnly": true
-      },
+      "rotation": 270,
+      "config": {},
       "tags": []
     },
     "item_port_udpipe_loader_1:5": {
@@ -6016,10 +6022,8 @@
         "x": 40,
         "y": -6
       },
-      "rotation": 90,
-      "config": {
-        "recipeChannels[0].manualRecipeOnly": true
-      },
+      "rotation": 270,
+      "config": {},
       "tags": []
     },
     "pipe_straight_1x1:151": {
@@ -6598,7 +6602,7 @@
         "x": 40,
         "y": 6
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -8230,104 +8234,6 @@
     "pipe_turn_cw_1x1:11"
   ],
   "slotLinks": [
-    {
-      "id": "97efee31-fb21-4f1e-8703-992340ea0237",
-      "linkType": "share-all",
-      "source": {
-        "entityId": "item_port_water_pump_1:1",
-        "storageSlotGroupId": "fluid_output_buffer",
-        "slotId": "output_fluid_slot_1"
-      },
-      "target": {
-        "entityId": "warehouse",
-        "storageSlotGroupId": "warehouse",
-        "slotId": "item_liquid_water"
-      }
-    },
-    {
-      "id": "b9ef211b-d059-40cc-8df3-e1e4c3592d65",
-      "linkType": "share-all",
-      "source": {
-        "entityId": "item_port_water_pump_1:2",
-        "storageSlotGroupId": "fluid_output_buffer",
-        "slotId": "output_fluid_slot_1"
-      },
-      "target": {
-        "entityId": "warehouse",
-        "storageSlotGroupId": "warehouse",
-        "slotId": "item_liquid_water"
-      }
-    },
-    {
-      "id": "d2498555-7c2d-4734-be52-1b1da3ba78bd",
-      "linkType": "share-all",
-      "source": {
-        "entityId": "item_port_water_pump_1:3",
-        "storageSlotGroupId": "fluid_output_buffer",
-        "slotId": "output_fluid_slot_1"
-      },
-      "target": {
-        "entityId": "warehouse",
-        "storageSlotGroupId": "warehouse",
-        "slotId": "item_liquid_water"
-      }
-    },
-    {
-      "id": "e4e776f9-fdce-493e-9230-c592fd8c8f18",
-      "linkType": "share-all",
-      "source": {
-        "entityId": "item_port_water_pump_1:4",
-        "storageSlotGroupId": "fluid_output_buffer",
-        "slotId": "output_fluid_slot_1"
-      },
-      "target": {
-        "entityId": "warehouse",
-        "storageSlotGroupId": "warehouse",
-        "slotId": "item_liquid_water"
-      }
-    },
-    {
-      "id": "8a3a1aa2-1959-4eba-ad7e-8a3229aa6799",
-      "linkType": "share-all",
-      "source": {
-        "entityId": "item_port_water_pump_1:5",
-        "storageSlotGroupId": "fluid_output_buffer",
-        "slotId": "output_fluid_slot_1"
-      },
-      "target": {
-        "entityId": "warehouse",
-        "storageSlotGroupId": "warehouse",
-        "slotId": "item_liquid_water"
-      }
-    },
-    {
-      "id": "ede8747e-60a9-4687-8275-f6f0b6c58e73",
-      "linkType": "share-all",
-      "source": {
-        "entityId": "item_port_water_pump_1:6",
-        "storageSlotGroupId": "fluid_output_buffer",
-        "slotId": "output_fluid_slot_1"
-      },
-      "target": {
-        "entityId": "warehouse",
-        "storageSlotGroupId": "warehouse",
-        "slotId": "item_liquid_water"
-      }
-    },
-    {
-      "id": "5c2adb29-4c24-4b1d-92ed-4ee1433632cb",
-      "linkType": "share-all",
-      "source": {
-        "entityId": "item_port_water_pump_1:7",
-        "storageSlotGroupId": "fluid_output_buffer",
-        "slotId": "output_fluid_slot_1"
-      },
-      "target": {
-        "entityId": "warehouse",
-        "storageSlotGroupId": "warehouse",
-        "slotId": "item_liquid_water"
-      }
-    },
     {
       "id": "6cd78399-0260-4820-91ec-6cc63c44f42d",
       "linkType": "share-all",

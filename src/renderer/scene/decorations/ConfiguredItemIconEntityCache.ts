@@ -1,12 +1,12 @@
 import type { WorldEntity } from "@/domain/document/world-document";
 
-export interface AdmissionItemIconEntityCache {
+export interface ConfiguredItemIconEntityCache {
   resolve(options: {
     documentSnapshot: unknown;
     entities: readonly WorldEntity[];
     previewEntities: readonly WorldEntity[];
-    /** 由 RegistryQuery.resolveLogisticsRole 提供，避免缓存持有 definition ID。 */
-    isAdmissionDefinition: (definitionId: string) => boolean;
+    /** 由调用方统一判断哪些设备需要显示已配置物品，缓存不持有业务 ID。 */
+    isConfiguredItemIconDefinition: (definitionId: string) => boolean;
   }): readonly WorldEntity[];
 }
 
@@ -15,11 +15,12 @@ export interface AdmissionItemIconEntityCache {
  *
  * 准入口图标与正式 document 和 preview 草稿都有关：移动时草稿位置变化，
  * 取消时草稿会消失，两者都不会修改正式 document。
+ * AI-CORRECTION 2026-08-20: 缓存现同时服务准入口与仓库取货口，统一按“已配置物品图标”语义筛选实体。
  */
-export function createAdmissionItemIconEntityCache(): AdmissionItemIconEntityCache {
+export function createConfiguredItemIconEntityCache(): ConfiguredItemIconEntityCache {
   let cachedDocumentSnapshot: unknown = null;
   let cachedPreviewEntities: readonly WorldEntity[] = [];
-  let cachedAdmissionEntities: readonly WorldEntity[] = [];
+  let cachedConfiguredItemIconEntities: readonly WorldEntity[] = [];
 
   return {
     resolve(options): readonly WorldEntity[] {
@@ -27,16 +28,16 @@ export function createAdmissionItemIconEntityCache(): AdmissionItemIconEntityCac
         cachedDocumentSnapshot === options.documentSnapshot
         && haveSameEntityReferences(cachedPreviewEntities, options.previewEntities)
       ) {
-        return cachedAdmissionEntities;
+        return cachedConfiguredItemIconEntities;
       }
 
       cachedDocumentSnapshot = options.documentSnapshot;
       cachedPreviewEntities = [...options.previewEntities];
-      cachedAdmissionEntities = options.entities.filter((entity) =>
-        options.isAdmissionDefinition(entity.definitionId),
+      cachedConfiguredItemIconEntities = options.entities.filter((entity) =>
+        options.isConfiguredItemIconDefinition(entity.definitionId),
       );
 
-      return cachedAdmissionEntities;
+      return cachedConfiguredItemIconEntities;
     },
   };
 }

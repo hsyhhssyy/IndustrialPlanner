@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 5,
   "blueprintId": "e88f7150-4c25-4285-8c0f-4709362a3fe8",
   "version": "v1.3.0",
   "name": "1.4 满速4核息壤",
@@ -127,7 +127,7 @@
         "x": 19,
         "y": 32
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -171,7 +171,7 @@
         "x": 6,
         "y": 26
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },

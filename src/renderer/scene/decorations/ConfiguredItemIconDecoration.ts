@@ -1,7 +1,11 @@
 import { Container, Sprite, Texture } from "pixi.js";
 
-import type { WorldEntity } from "@/domain/document/world-document";
+import type { SlotLinkDefinition, WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import {
+  getGridFootprintCenterCells,
+  getRotatedGridFootprint,
+} from "@/shared/geometry/grid";
 import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform";
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform";
 import {
@@ -9,6 +13,7 @@ import {
   getPrimaryOutputCircleTexture,
 } from "@/renderer/sprites/generic-device-sprite";
 import type { RenderTextureConfig } from "@/renderer/texture/texture-config";
+import { createInsetItemIconTexture } from "@/renderer/texture";
 
 import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression";
 
@@ -16,8 +21,10 @@ import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 import { createEntityDefinitionMap } from "./BeltVisualGeometry";
 import {
-  createAdmissionItemIconEntityCache,
-} from "./AdmissionItemIconEntityCache";
+  createConfiguredItemIconEntityCache,
+} from "./ConfiguredItemIconEntityCache";
+
+const WAREHOUSE_PICKUP_DEFINITION_ID = "unloader_1";
 
 // AI-REMOVED 2026-07-27:
 // Reason: renderer 不应维护传送带准入口和管道准入口 definition ID。
@@ -30,7 +37,7 @@ import {
 // Original code:
 // const ADMISSION_DEFINITION_IDS = new Set(["log_admission", "pipe_admission"]);
 
-interface AdmissionIconView {
+interface ConfiguredItemIconView {
   readonly root: Container;
   readonly circle: Sprite;
   readonly icon: Sprite;
@@ -38,7 +45,7 @@ interface AdmissionIconView {
   iconTextureKey: string | null;
 }
 
-interface AdmissionItemIconDecoration extends DecorationLayer {
+interface ConfiguredItemIconDecoration extends DecorationLayer {
   sync(
     context: DecorationSyncContext,
     entities?: readonly WorldEntity[],
@@ -52,10 +59,11 @@ interface AdmissionItemIconDecoration extends DecorationLayer {
  * AI-CORRECTION 2026-07-19: 当前设备定义 ID 为 log_admission / pipe_admission；上行保留迁移前名称。
  * 在设备中心渲染 圆圈 + 物品图标，与主要产物图标样式一致。
  * AI-CORRECTION 2026-07-24: 准入口被压制时，对应物品图标也隐藏。
+ * AI-CORRECTION 2026-08-20: Decoration 已泛化为已配置物品圆圈，同时覆盖准入口与仓库取货口。
  */
-export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration {
+export function createConfiguredItemIconDecoration(): ConfiguredItemIconDecoration {
   const container = new Container();
-  const views: AdmissionIconView[] = [];
+  const views: ConfiguredItemIconView[] = [];
 
   // 缓存
   // AI-REMOVED 2026-07-15:
@@ -69,7 +77,7 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
   // Original code:
   // let cachedDocumentSnapshot: unknown = null;
   // let admissionEntities: WorldEntity[] | null = null;
-  const admissionEntityCache = createAdmissionItemIconEntityCache();
+  const configuredItemIconEntityCache = createConfiguredItemIconEntityCache();
   let textureConfig: RenderTextureConfig | null = null;
   let destroyed = false;
 
@@ -81,7 +89,7 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
     }
   };
 
-  const ensureView = (index: number): AdmissionIconView => {
+  const ensureView = (index: number): ConfiguredItemIconView => {
     let view = views[index];
     if (view !== undefined) {
       return view;
@@ -146,7 +154,7 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
   //
   //   return admissionEntities;
   // };
-  const resolveAdmissionEntities = (options: {
+  const resolveConfiguredItemIconEntities = (options: {
     ctx: DecorationSyncContext;
     entities: readonly WorldEntity[];
   }): readonly WorldEntity[] => {
@@ -160,13 +168,15 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
       return entity === null ? [] : [entity];
     });
 
-    return admissionEntityCache.resolve({
+    return configuredItemIconEntityCache.resolve({
       documentSnapshot: editor.document.getSnapshot(),
       entities: options.entities,
       previewEntities,
-      isAdmissionDefinition: (definitionId) =>
-        options.ctx.renderHost.workspace.registry.queries.resolveLogisticsRole(definitionId)
-          === "admission",
+      isConfiguredItemIconDefinition: (definitionId) => (
+        definitionId === WAREHOUSE_PICKUP_DEFINITION_ID
+        || options.ctx.renderHost.workspace.registry.queries.resolveLogisticsRole(definitionId)
+          === "admission"
+      ),
     });
   };
 
@@ -208,6 +218,36 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
     return null;
   };
 
+  const resolveWarehousePickupItemId = (
+    entity: WorldEntity,
+    slotLinks: readonly SlotLinkDefinition[],
+  ): string | null => {
+    const documentEntityId = resolveDocumentEntityId(entity);
+    const warehouseLink = slotLinks.find((link) =>
+      link.source.entityId === documentEntityId
+      && link.target.entityId === "warehouse",
+    );
+    const itemId = warehouseLink?.target.slotId;
+    return typeof itemId === "string" && itemId.length > 0 ? itemId : null;
+  };
+
+  const resolveConfiguredItemId = (options: {
+    entity: WorldEntity;
+    definition: EntityDefinition;
+    slotLinks: readonly SlotLinkDefinition[];
+    isAdmissionDefinition: boolean;
+  }): string | null => {
+    if (options.isAdmissionDefinition) {
+      return resolveAdmissionItemId(options.entity, options.definition);
+    }
+
+    if (options.entity.definitionId === WAREHOUSE_PICKUP_DEFINITION_ID) {
+      return resolveWarehousePickupItemId(options.entity, options.slotLinks);
+    }
+
+    return null;
+  };
+
   return {
     container,
 
@@ -216,7 +256,7 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
         return;
       }
 
-      const entities = resolveAdmissionEntities({
+      const entities = resolveConfiguredItemIconEntities({
         ctx,
         entities: frameEntities
           ?? ctx.renderHost.workspace.editor?.queries.listEntities()
@@ -228,6 +268,8 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
       }
 
       const editorState = ctx.renderHost.workspace.editor?.state;
+      const documentSnapshot = ctx.renderHost.workspace.editor?.document?.getSnapshot() ?? null;
+      const slotLinks = documentSnapshot?.slotLinks ?? [];
       const suppressBelts = editorState?.suppressBelts ?? false;
       const suppressPipes = editorState?.suppressPipes ?? false;
 
@@ -267,7 +309,14 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
           continue;
         }
 
-        const itemId = resolveAdmissionItemId(entity, definition);
+        const itemId = resolveConfiguredItemId({
+          entity,
+          definition,
+          slotLinks,
+          isAdmissionDefinition:
+            ctx.renderHost.workspace.registry.queries.resolveLogisticsRole(entity.definitionId)
+              === "admission",
+        });
         if (itemId === null) {
           continue;
         }
@@ -276,10 +325,10 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
         viewIndex += 1;
 
         // 居中于设备中心
-        const worldCenterX = entity.position.x + definition.footprint.width / 2;
-        const worldCenterY = entity.position.y + definition.footprint.height / 2;
+        const rotatedFootprint = getRotatedGridFootprint(definition.footprint, entity.rotation);
+        const worldCenter = getGridFootprintCenterCells(entity.position, rotatedFootprint);
         const viewportPoint = resolveViewportPointFromWorldPoint({
-          worldPoint: { x: worldCenterX, y: worldCenterY },
+          worldPoint: worldCenter,
           viewportBounds: { left: vb.left, top: vb.top, width: vb.width, height: vb.height },
           viewportCenter: { x: vs.centerX, y: vs.centerY },
           gridCellPixelSize: vs.gridCellPixelSize,
@@ -296,7 +345,8 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
         view.circle.height = iconSize;
 
         // 物品图标：先布局尺寸（每帧更新），纹理异步加载
-        const insideSize = Math.max(4, Math.floor(iconSize / Math.SQRT2) - 4);
+        // AI-CORRECTION 2026-08-20: 圆圈现为方形物品纹理的内接圆，纹理边长等于圆直径；透明边缘由统一整像素裁边处理。
+        const insideSize = iconSize;
         view.icon.width = insideSize;
         view.icon.height = insideSize;
         view.icon.anchor.set(0.5);
@@ -312,7 +362,7 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
             if (destroyed || view.iconTextureKey !== nextTextureKey) {
               return;
             }
-            view.icon.texture = texture;
+            view.icon.texture = createInsetItemIconTexture(texture);
           });
         }
 
@@ -337,4 +387,16 @@ export function createAdmissionItemIconDecoration(): AdmissionItemIconDecoration
       container.destroy({ children: true });
     },
   };
+}
+
+function resolveDocumentEntityId(entity: WorldEntity): string {
+  if (
+    "originalEntityId" in entity
+    && typeof entity.originalEntityId === "string"
+    && entity.originalEntityId.length > 0
+  ) {
+    return entity.originalEntityId;
+  }
+
+  return entity.id;
 }

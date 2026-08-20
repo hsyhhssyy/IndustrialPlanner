@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 5,
   "blueprintId": "2dec8da2-1c38-47f3-a574-a586bd4efad5",
   "version": "v1.3.0",
   "name": "中容武陵电池产线",
@@ -557,7 +557,7 @@
         "x": 26,
         "y": 13
       },
-      "rotation": 270,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -1249,7 +1249,7 @@
         "x": 20,
         "y": 7
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },
@@ -2575,7 +2575,7 @@
         "x": 4,
         "y": 13
       },
-      "rotation": 90,
+      "rotation": 270,
       "config": {
         "storageSlotGroups[0].slots[0].ignoreStock": true
       },
@@ -3563,7 +3563,7 @@
         "x": 10,
         "y": 7
       },
-      "rotation": 0,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
