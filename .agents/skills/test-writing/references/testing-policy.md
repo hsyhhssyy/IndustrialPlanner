@@ -42,6 +42,8 @@
 npx vitest run --project normal
 ```
 
+`normal` project 不包含 `src/tests/e2e/**` 下的 Playwright E2E 测试，也不包含 Blueprint 与 Blueprint Slow project。
+
 预制蓝图 JSON 大规模串行回归测试：
 
 ```bash

@@ -1785,6 +1785,23 @@ export class SimulationWorkerRuntime {
       .sort(([left], [right]) => left - right)
       .map(([, snapshot]) => snapshot);
     this.regionalSnapshotCursor = (this.latestTickNumber ?? 0) + 1;
+
+    // AI-CORRECTION 2026-08-21: 区域快照被主线程取走后，淘汰旧快照与旧运行态，只保留最新迁移锚点。
+    // Trigger: 四个武陵基地持续运行至约 tick 4811 后，Worker 因全量历史状态常驻而停止产出。
+    // Evidence: 区域模式不走 acknowledgePresentedTick；原实现仅推进 cursor，tickSnapshots/tickRuntimeStates 永不删除。
+    // Risk: 最新锚点之前的区域 Worker 内部状态不再可供历史回放；主线程已持有对应展示快照。
+    const retainedAnchorTickNumber = this.latestTickNumber;
+    for (const tickNumber of [...this.tickSnapshots.keys()]) {
+      if (tickNumber !== retainedAnchorTickNumber) {
+        this.tickSnapshots.delete(tickNumber);
+      }
+    }
+    for (const tickNumber of [...this.tickRuntimeStates.keys()]) {
+      if (tickNumber !== retainedAnchorTickNumber) {
+        this.tickRuntimeStates.delete(tickNumber);
+      }
+    }
+    this.retainedFromTick = retainedAnchorTickNumber;
     return snapshots;
   }
 

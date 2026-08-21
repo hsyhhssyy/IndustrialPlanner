@@ -66,7 +66,17 @@ describe("武陵四基地区域会话 10 分钟长跑", () => {
         expect(committed.warehouseVersion).toBe(epoch + 1);
         expect(committed.snapshotsByBaseId[wulingBaseIds[0]!]).not.toBeNull();
       }
-      expect(session.committedEpochs).toHaveLength(TEN_MINUTE_EPOCHS);
+      // AI-REMOVED 2026-08-21:
+      // Reason: 区域会话不再保留完整 Epoch 快照历史。
+      // Trigger: 真实四基地持续运行出现无界内存增长。
+      // Evidence: 会话顺序现在由 nextEpochNumber 标量维护。
+      // Replacement: 断言最终 nextEpochNumber。
+      // Risk: Low。
+      // Human Review: Required
+      //
+      // Original code:
+      // expect(session.committedEpochs).toHaveLength(TEN_MINUTE_EPOCHS);
+      expect(session.nextEpochNumber).toBe(TEN_MINUTE_EPOCHS);
     } finally {
       session.dispose();
     }

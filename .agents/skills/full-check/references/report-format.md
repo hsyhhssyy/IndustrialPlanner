@@ -16,7 +16,7 @@
 | --- | --- | ---: | ---: | --- |
 | ESLint | `npx eslint . --ext .ts,.tsx` | 通过/失败 | 退出码 | 摘要 |
 | TypeScript | `npx tsc -b --noEmit` | 通过/失败 | 退出码 | 摘要 |
-| Vitest 全量测试 | `npm run test` | 通过/失败 | 退出码 | 摘要 |
+| Vitest 常规测试 | `npm run test` | 通过/失败 | 退出码 | 摘要 |
 | Build | `npm run build` | 通过/失败 | 退出码 | 摘要 |
 | E2E 测试 | `npm run test:e2e` | 通过/失败 | 退出码 | 摘要 |
 | Blueprint 测试 | `npm run test:blueprint` | 通过/失败 | 退出码 | 摘要 |

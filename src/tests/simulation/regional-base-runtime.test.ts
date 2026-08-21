@@ -292,4 +292,57 @@ describe("区域基地 Runtime 门禁", () => {
     });
     expect(finalized1.snapshot!.tickNumber).toBe(11);
   });
+
+  it("区域前台 Runtime 取走增量快照后只保留最新 tick 锚点", () => {
+    const registry = createRegistryContract();
+    const document = createWorldDocumentFromBlueprint(createBlueprint(
+      "regional-snapshot-retention",
+      [createEntity("belt", "belt_straight_1x1", 0, 0)],
+    ));
+    const topology = compileSimulationTopology({
+      document,
+      registry,
+      simulationMode: "regional-multi-base",
+      poweredEntityIds: new Set(),
+      activeActivityIds: [],
+    });
+    const admission = buildRegionalWarehouseOutletTable({
+      registry,
+      topologies: [{ baseId: document.baseId, regionBaseOrderIndex: 0, topology }],
+    });
+    expect(admission.ok).toBe(true);
+
+    const runtime = new SimulationWorkerRuntime(registry);
+    expect(runtime.loadRegionalTopology({
+      topology,
+      baseId: document.baseId,
+      table: admission.table!,
+      initialWarehouseCounts: {},
+      fixedDynamicTickRate: 20,
+      advanceMode: "per-tick",
+    }).status).toBe("started");
+
+    for (let epochNumber = 0; epochNumber < 3; epochNumber += 1) {
+      const prepared = runtime.prepareRegionalEpochDemand(epochNumber);
+      runtime.applyRegionalEpochGrant({
+        epochNumber,
+        grantedOutletIds: [],
+      });
+      runtime.finalizeRegionalEpoch({
+        epochNumber,
+        nextWarehouseCounts: {},
+        includeSnapshot: true,
+      });
+
+      const snapshots = runtime.takeRegionalSnapshots();
+      expect(snapshots.at(-1)?.tickNumber).toBe(prepared.tickNumber);
+      expect(snapshots).toHaveLength(epochNumber === 0 ? 2 : 10);
+      expect(runtime.getStatus()).toMatchObject({
+        retainedFromTick: prepared.tickNumber,
+        latestTickNumber: prepared.tickNumber,
+        bufferSize: 1,
+      });
+      expect(runtime.takeRegionalSnapshots()).toEqual([]);
+    }
+  });
 });

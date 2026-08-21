@@ -881,6 +881,50 @@ describe("sync-service", () => {
     service.stop();
   });
 
+  it("clears a previous sync failure after an unchanged interval check succeeds", async () => {
+    vi.useFakeTimers();
+    const adapter = createAdapter();
+    adapter.sync.mockRejectedValueOnce(new Error("temporary outage"));
+    const service = createSyncService({
+      readSettings: () => createSettings(),
+      createRemote,
+      adapters: [adapter],
+      retryDelaysMs: [],
+      intervalMs: 60_000,
+    });
+
+    service.start();
+    await vi.waitFor(() => {
+      expect(service.getStatus()).toMatchObject({
+        phase: "error",
+        saveState: "idle",
+        lastError: "temporary outage",
+      });
+    });
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.waitFor(() => {
+      expect(service.getStatus()).toMatchObject({
+        phase: "idle",
+        saveState: "idle",
+        pendingLocalChangeCount: 0,
+        saveError: null,
+        lastError: null,
+      });
+    });
+
+    expect(adapter.sync).toHaveBeenCalledTimes(1);
+    expect(service.getStatus().tasks.find(
+      (task) => task.kind === "interval-check",
+    )).toMatchObject({
+      phase: "success",
+      completedUnitCount: 1,
+      totalUnitCount: 1,
+      lastError: null,
+    });
+    service.stop();
+  });
+
   it("keeps a failed save visible until a later sync succeeds", async () => {
     vi.useFakeTimers();
     const adapter = createAdapter();

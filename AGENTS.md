@@ -268,7 +268,9 @@ AI 在分析代码时必须区分：
 
 不能直接执行 `tsc -b` 或者 `npm run test`。
 
-- 完整的代码质量检查流程使用 `full-check` skill（其中固化在 `scripts/check/full-check.sh`）。
+- 完整的代码质量检查流程使用 `full-check` skill；`full-check` 与 `simple-check` 的底层命令统一固化在 `scripts/check/check-runner.sh`，不得绕过 skill 直接决定检查范围。
+- 开发或修复任务完成后由 Agent 自动发起的基础验证使用 `simple-check` skill，只执行 ESLint、TypeScript、Vitest normal 和 Build。该场景不得执行 E2E 或 Blueprint。
+- 用户明确要求 `full-check` 或完整代码质量检查时，仍按 `full-check` skill 执行全部检查，包括 E2E 和 Blueprint。用户明确点名 E2E 或 Blueprint 时，也允许执行对应测试；开发后的自动验证不构成这两项测试的授权。
 - 单项测试的运行方式（vitest project 划分、蓝图测试概念）见 `test-writing` skill。
 
 ## 提交方式

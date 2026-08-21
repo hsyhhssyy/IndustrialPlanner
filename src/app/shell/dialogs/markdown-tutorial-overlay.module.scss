@@ -147,7 +147,7 @@
   font-size: clamp(0.76rem, 1.25vw, 1.08rem);
   font-weight: 650;
   line-height: 1.38;
-  text-align: left;
+  text-align: center;
   text-wrap: normal;
   /* TapTap 手机端按 Chrome 89 兼容；Chrome 89 不支持 text-wrap: pretty，旧版保留 normal，现代浏览器由 @supports 内声明覆盖。 */
   @supports (text-wrap: pretty) {

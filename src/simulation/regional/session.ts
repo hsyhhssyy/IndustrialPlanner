@@ -87,7 +87,17 @@ export interface RegionalCommittedEpoch {
 export class RegionalSimulationSession {
   private authorityState: RegionWarehouseAuthorityState;
   private activeArbitration: RegionWarehouseArbitrationResult | null = null;
-  private readonly committed: RegionalCommittedEpoch[] = [];
+  // AI-REMOVED 2026-08-21:
+  // Reason: 完整 Epoch 历史持有逐 tick 快照与各基地边界快照，随持续运行无界增长。
+  // Trigger: 四基地真实蓝图在 tick 4811 后停止产出，主线程同时持有全部已提交 Epoch。
+  // Evidence: committedEpochs 仅用于推导下一个 Epoch 序号和测试长度断言，无运行时历史读取方。
+  // Replacement: nextEpochNumberValue 仅保存顺序提交所需的标量序号。
+  // Risk: 无法再从 RegionalSimulationSession 读取完整提交历史；调用方仍即时获得本次 committedEpoch。
+  // Human Review: Required
+  //
+  // Original code:
+  // private readonly committed: RegionalCommittedEpoch[] = [];
+  private nextEpochNumberValue = 0;
   private readonly regionalResourceRemainderSixths: Record<string, number> = {};
   private completedResourceSupplyWindows = 0;
 
@@ -103,8 +113,20 @@ export class RegionalSimulationSession {
     };
   }
 
-  public get committedEpochs(): readonly RegionalCommittedEpoch[] {
-    return this.committed;
+  // AI-REMOVED 2026-08-21:
+  // Reason: 会话不再保留完整 Epoch 历史，避免主线程快照无界常驻。
+  // Trigger: 四基地持续运行回归在第五个仿真分钟前停止推进。
+  // Evidence: 生产调用只读取 committedEpochs.length，测试也只断言数组长度。
+  // Replacement: nextEpochNumber。
+  // Risk: Low。
+  // Human Review: Required
+  //
+  // Original code:
+  // public get committedEpochs(): readonly RegionalCommittedEpoch[] {
+  //   return this.committed;
+  // }
+  public get nextEpochNumber(): number {
+    return this.nextEpochNumberValue;
   }
 
   public get authorityHead(): RegionWarehouseAuthorityState {
@@ -121,8 +143,8 @@ export class RegionalSimulationSession {
 
   public async runEpoch(epochNumber: number): Promise<RegionalCommittedEpoch> {
     const expectedBaseIds = this.options.expectedBaseIds;
-    if (epochNumber !== this.committed.length) {
-      throw new Error(`Regional epochs must run sequentially; expected ${this.committed.length}, received ${epochNumber}.`);
+    if (epochNumber !== this.nextEpochNumberValue) {
+      throw new Error(`Regional epochs must run sequentially; expected ${this.nextEpochNumberValue}, received ${epochNumber}.`);
     }
 
     const prepareResults = await Promise.all(this.ports.map((port) => port.prepareEpoch(epochNumber)));
@@ -214,7 +236,17 @@ export class RegionalSimulationSession {
       snapshotsByBaseId,
       playbackSnapshots,
     };
-    this.committed.push(committedEpoch);
+    // AI-REMOVED 2026-08-21:
+    // Reason: 已提交 Epoch 的完整快照历史没有运行时消费者，并造成持续内存增长。
+    // Trigger: 四基地真实负载长跑在 tick 4811 后停止生产新快照。
+    // Evidence: Search-First 仅发现 action-impl 读取数组长度、两处测试断言历史长度。
+    // Replacement: nextEpochNumberValue 递增；committedEpoch 继续即时返回给调用方。
+    // Risk: Low。
+    // Human Review: Required
+    //
+    // Original code:
+    // this.committed.push(committedEpoch);
+    this.nextEpochNumberValue += 1;
     this.activeArbitration = null;
     return committedEpoch;
   }

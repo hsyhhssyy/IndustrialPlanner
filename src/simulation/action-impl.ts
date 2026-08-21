@@ -2390,6 +2390,10 @@ implements SimulationAction, SimulationInternalAction {
           error: "Simulation cannot start before editor document is available.",
         };
       });
+      logger.error("Regional simulation start rejected.", {
+        code: "editor-document-unavailable",
+        error: this.stateReadWrite.runtimeStatus.error,
+      });
       this.recoverFromStartFailure();
       return;
     }
@@ -2404,6 +2408,11 @@ implements SimulationAction, SimulationInternalAction {
           error: `Unknown current base "${sourceDocument.baseId}".`,
         };
       });
+      logger.error("Regional simulation start rejected.", {
+        code: "unknown-current-base",
+        currentBaseId: sourceDocument.baseId,
+        error: this.stateReadWrite.runtimeStatus.error,
+      });
       this.recoverFromStartFailure();
       return;
     }
@@ -2416,6 +2425,13 @@ implements SimulationAction, SimulationInternalAction {
           mode: "error",
           error: `区域 ${currentBase.tag} 包含 ${regionDefinitions.length} 个基地，超过 5 个上限。`,
         };
+      });
+      logger.error("Regional simulation start rejected.", {
+        code: "regional-base-limit-exceeded",
+        currentBaseId: sourceDocument.baseId,
+        regionBaseCount: regionDefinitions.length,
+        regionTag: currentBase.tag,
+        error: this.stateReadWrite.runtimeStatus.error,
       });
       this.recoverFromStartFailure();
       return;
@@ -2450,6 +2466,13 @@ implements SimulationAction, SimulationInternalAction {
             ? "Regional simulation requires an editor document provider."
             : `区域 ${currentBase.tag} 至少需要两个基地才能启动多基地仿真。`,
         };
+      });
+      logger.error("Regional simulation start rejected.", {
+        code: editor === null ? "editor-unavailable" : "insufficient-regional-bases",
+        currentBaseId: sourceDocument.baseId,
+        regionBaseCount: regionDefinitions.length,
+        regionTag: currentBase.tag,
+        error: this.stateReadWrite.runtimeStatus.error,
       });
       this.recoverFromStartFailure();
       return;
@@ -2499,6 +2522,13 @@ implements SimulationAction, SimulationInternalAction {
             mode: "error",
             error: admission.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
           };
+        });
+        logger.error("Regional simulation start rejected.", {
+          code: "regional-warehouse-admission-failed",
+          currentBaseId: sourceDocument.baseId,
+          regionTag: currentBase.tag,
+          diagnostics: admission.diagnostics,
+          error: this.stateReadWrite.runtimeStatus.error,
         });
         this.recoverFromStartFailure();
         return;
@@ -2679,6 +2709,9 @@ implements SimulationAction, SimulationInternalAction {
         return;
       }
       console.error("[RegionalSimulation] Session loop failed.", error);
+      // AI-CORRECTION 2026-08-21: Epoch 失败后立即销毁全部区域 Worker；部分提交状态不可安全重试。
+      // Trigger: Worker RPC 超时需要终止仍在运行或无响应的 Worker，并释放其他基地的会话资源。
+      this.disposeRegionalSession();
       runInAction(() => {
         this.stateReadWrite.runningState = "pause";
         this.stateReadWrite.runtimeStatus = {
@@ -2700,7 +2733,8 @@ implements SimulationAction, SimulationInternalAction {
         await new Promise((resolve) => setTimeout(resolve, 50));
         continue;
       }
-      const committed = await session.runEpoch(session.committedEpochs.length);
+      // AI-CORRECTION 2026-08-21: Epoch 序号改由标量维护，避免为取 length 持有全部提交快照历史。
+      const committed = await session.runEpoch(session.nextEpochNumber);
       if (this.regionalSessionStopped || this.regionalSession !== session) {
         return;
       }

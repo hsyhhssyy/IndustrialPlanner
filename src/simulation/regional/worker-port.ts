@@ -6,6 +6,7 @@ import type {
   SimulationWorkerRequest,
   SimulationWorkerResponse,
 } from "../worker-protocol";
+import { ActiveTimeWatchdog } from "@/shared/worker/active-time-watchdog";
 import { attachWorkerRuntime } from "@/shared/worker/attach-worker-runtime";
 import type { WorkerRuntimeAttachment } from "@/shared/worker/attach-worker-runtime";
 import type {
@@ -22,6 +23,16 @@ import type {
   RegionalBaseTopologyInput,
 } from "./session";
 
+const REGIONAL_RPC_SLOW_WARNING_MS = 5_000;
+const REGIONAL_RPC_TIMEOUT_MS = 30_000;
+const REGIONAL_TOPOLOGY_LOAD_TIMEOUT_MS = 90_000;
+
+interface RegionalPendingRequest {
+  readonly resolve: (response: SimulationWorkerResponse) => void;
+  readonly reject: (error: Error) => void;
+  readonly watchdog: ActiveTimeWatchdog;
+}
+
 /**
  * simulation-worker.ts 的区域模式请求/响应桥。
  * 复用现有 Worker 入口与 bootstrap，不在模块外新增 Worker 文件。
@@ -30,16 +41,17 @@ export class RegionalWorkerBridge {
   private readonly worker: Worker;
   private readonly runtimeAttachment: WorkerRuntimeAttachment;
   private nextRequestId = 1;
-  private readonly pending = new Map<
-    number,
-    {
-      readonly resolve: (response: SimulationWorkerResponse) => void;
-      readonly reject: (error: Error) => void;
-    }
-  >();
+  private readonly pending = new Map<number, RegionalPendingRequest>();
+  private lastCompletedTickNumber = 0;
   private disposed = false;
+  private readonly handleVisibilityChange = (): void => {
+    const active = this.isPageActive();
+    for (const pending of this.pending.values()) {
+      pending.watchdog.setActive(active);
+    }
+  };
 
-  public constructor() {
+  public constructor(private readonly baseId: string) {
     this.worker = new Worker(new URL("../simulation-worker.ts", import.meta.url), {
       type: "module",
     });
@@ -54,6 +66,7 @@ export class RegionalWorkerBridge {
         return;
       }
       this.pending.delete(event.data.requestId);
+      pending.watchdog.complete();
       pending.resolve(event.data);
     });
     this.worker.addEventListener("error", (event) => {
@@ -61,6 +74,9 @@ export class RegionalWorkerBridge {
       console.error("[RegionalSimWorker]", message);
       this.rejectAll(new Error(`Regional simulation worker crashed: ${message}`));
     });
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", this.handleVisibilityChange);
+    }
   }
 
   public loadRegionalTopology(options: {
@@ -110,7 +126,15 @@ export class RegionalWorkerBridge {
       nextWarehouseCounts,
       includeSnapshot,
       retainSnapshot,
-    }, "regional-epoch-finalized");
+    }, "regional-epoch-finalized").then((response) => {
+      if (response.status.mode !== "error") {
+        this.lastCompletedTickNumber = Math.max(
+          this.lastCompletedTickNumber,
+          response.tickNumber,
+        );
+      }
+      return response;
+    });
   }
 
   public arbitrateRegionalEpoch(epochNumber: number, demands: readonly RegionWarehouseDemandBatch[]): Promise<Extract<SimulationWorkerResponse, { readonly type: "regional-arbitrated" }>> {
@@ -141,6 +165,9 @@ export class RegionalWorkerBridge {
   public dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+    }
     this.rejectAll(new Error("Regional simulation worker disposed."));
     this.runtimeAttachment.dispose();
     this.worker.terminate();
@@ -154,6 +181,40 @@ export class RegionalWorkerBridge {
       return Promise.reject(new Error("Regional simulation worker disposed."));
     }
     return new Promise((resolve, reject) => {
+      const timeoutMs = request.type === "load-regional-topology"
+        ? REGIONAL_TOPOLOGY_LOAD_TIMEOUT_MS
+        : REGIONAL_RPC_TIMEOUT_MS;
+      const createDiagnostic = (activeElapsedMs: number): string => {
+        const epochNumber = "epochNumber" in request ? request.epochNumber : null;
+        return [
+          `base=${this.baseId}`,
+          `operation=${request.type}`,
+          `epoch=${epochNumber ?? "n/a"}`,
+          `elapsed=${Math.round(activeElapsedMs)}ms`,
+          `lastCompletedTick=${this.lastCompletedTickNumber}`,
+          `requestId=${request.requestId}`,
+        ].join(" ");
+      };
+      const watchdog = new ActiveTimeWatchdog({
+        slowWarningMs: REGIONAL_RPC_SLOW_WARNING_MS,
+        timeoutMs,
+        initiallyActive: this.isPageActive(),
+        onSlow: (activeElapsedMs) => {
+          console.warn(`[RegionalSimWorker] Slow RPC: ${createDiagnostic(activeElapsedMs)}`);
+        },
+        onTimeout: (activeElapsedMs) => {
+          const pending = this.pending.get(request.requestId);
+          if (pending === undefined) {
+            return;
+          }
+          this.pending.delete(request.requestId);
+          const error = new Error(
+            `Regional worker request timed out: ${createDiagnostic(activeElapsedMs)}`,
+          );
+          console.error("[RegionalSimWorker]", error.message);
+          pending.reject(error);
+        },
+      });
       this.pending.set(request.requestId, {
         resolve: (response) => {
           if (response.type !== expectedType) {
@@ -163,10 +224,12 @@ export class RegionalWorkerBridge {
           resolve(response as Extract<SimulationWorkerResponse, { readonly type: TType }>);
         },
         reject,
+        watchdog,
       });
       try {
         this.worker.postMessage(request);
       } catch (error) {
+        watchdog.complete();
         this.pending.delete(request.requestId);
         reject(error instanceof Error ? error : new Error(String(error)));
       }
@@ -181,9 +244,14 @@ export class RegionalWorkerBridge {
 
   private rejectAll(error: Error): void {
     for (const pending of this.pending.values()) {
+      pending.watchdog.complete();
       pending.reject(error);
     }
     this.pending.clear();
+  }
+
+  private isPageActive(): boolean {
+    return typeof document === "undefined" || document.visibilityState === "visible";
   }
 }
 
@@ -306,7 +374,7 @@ export async function createBrowserRegionalSessionPorts(options: {
 
   const loads: Promise<unknown>[] = [];
   for (const input of options.topologies) {
-    const bridge = new RegionalWorkerBridge();
+    const bridge = new RegionalWorkerBridge(input.baseId);
     bridges.push(bridge);
     const isCurrentBase = input.baseId === options.currentBaseId;
     loads.push(bridge.loadRegionalTopology({

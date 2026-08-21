@@ -9,7 +9,7 @@
 - [硬性限制](#硬性限制)
 - [完整检查步骤](#完整检查步骤)
 
-使用 `scripts/check/full-check.sh` 对当前工作区执行完整检查。所有底层命令已经固化，禁止自行拼写 ESLint、TypeScript、Vitest、Build、E2E 或 Blueprint 命令。
+使用 `scripts/check/check-runner.sh` 对当前工作区执行完整检查。所有底层命令已经固化，禁止自行拼写 ESLint、TypeScript、Vitest、Build、E2E 或 Blueprint 命令。
 
 ## 检查范围
 
@@ -19,7 +19,7 @@
 
 1. 使用项目根目录作为终端工具的 `workdir`，禁止在命令中执行 `cd`。
 2. 终端工具支持 `login` 参数时必须设为 `false`；不支持时不得主动请求 login shell。检查不应加载 `.profile`、`.bash_profile` 或 `.bashrc`。
-3. `bash scripts/check/full-check.sh ...` 只表示用 Bash 解释器运行项目脚本，不表示启动 login shell。
+3. `bash scripts/check/check-runner.sh ...` 只表示用 Bash 解释器运行项目脚本，不表示启动 login shell。
 4. 每次终端调用只能执行一条命令。
 5. `test`、`e2e`、`blueprint` 必须以前台命令启动，禁止添加 `&`。
 6. 长任务返回 `session_id`、会话句柄或仍在运行状态时，必须续接同一进程等待完成，不得另开终端调用脚本的 `poll` 子命令。
@@ -29,7 +29,7 @@
 正确的长任务启动方式：
 
 ```bash
-bash scripts/check/full-check.sh test ".temp/full-check/runs/实际-run-dir"
+bash scripts/check/check-runner.sh test ".temp/full-check/runs/实际-run-dir"
 ```
 
 若终端返回会话句柄，续接该会话直至获得最终退出状态。会话续接不是新 shell 命令，不需要执行 `sleep`。
@@ -37,13 +37,13 @@ bash scripts/check/full-check.sh test ".temp/full-check/runs/实际-run-dir"
 禁止把包装脚本放到后台：
 
 ```bash
-bash scripts/check/full-check.sh test ".temp/full-check/runs/实际-run-dir" &
+bash scripts/check/check-runner.sh test ".temp/full-check/runs/实际-run-dir" &
 ```
 
 禁止退出原终端后从新终端调用：
 
 ```bash
-bash scripts/check/full-check.sh poll test ".temp/full-check/runs/实际-run-dir"
+bash scripts/check/check-runner.sh poll test ".temp/full-check/runs/实际-run-dir"
 ```
 
 一次性终端结束时可能终止后台包装脚本及测试子进程，留下 `.pid` 和空日志并制造假失败。不得使用 `nohup`、`setsid`、`disown` 绕过终端生命周期；工具无法续接同一会话时，必须报告限制，不得伪造检查结果。
@@ -64,15 +64,15 @@ bash scripts/check/full-check.sh poll test ".temp/full-check/runs/实际-run-dir
 错误示例：
 
 ```bash
-cd /home/coder/IndustrialPlanner && bash scripts/check/full-check.sh init
+cd /home/coder/IndustrialPlanner && bash scripts/check/check-runner.sh init
 ```
 
 ```bash
-RUN_DIR=$(bash scripts/check/full-check.sh init) && echo "$RUN_DIR"
+RUN_DIR=$(bash scripts/check/check-runner.sh init) && echo "$RUN_DIR"
 ```
 
 ```bash
-bash scripts/check/full-check.sh eslint "$RUN_DIR" && bash scripts/check/full-check.sh tsc "$RUN_DIR"
+bash scripts/check/check-runner.sh eslint "$RUN_DIR" && bash scripts/check/check-runner.sh tsc "$RUN_DIR"
 ```
 
 ## RUN_DIR
@@ -82,13 +82,13 @@ bash scripts/check/full-check.sh eslint "$RUN_DIR" && bash scripts/check/full-ch
 允许：
 
 ```bash
-bash scripts/check/full-check.sh eslint ".temp/full-check/runs/full-check-xxxxxx"
+bash scripts/check/check-runner.sh eslint ".temp/full-check/runs/full-check-xxxxxx"
 ```
 
 禁止：
 
 ```bash
-bash scripts/check/full-check.sh eslint "$RUN_DIR"
+bash scripts/check/check-runner.sh eslint "$RUN_DIR"
 ```
 
 ## 硬性限制
@@ -105,7 +105,7 @@ bash scripts/check/full-check.sh eslint "$RUN_DIR"
 ### 0. 初始化
 
 ```bash
-bash scripts/check/full-check.sh init
+bash scripts/check/check-runner.sh init
 ```
 
 记录输出的实际 `RUN_DIR`，不得重复初始化。
@@ -113,19 +113,19 @@ bash scripts/check/full-check.sh init
 ### 1. ESLint
 
 ```bash
-bash scripts/check/full-check.sh eslint "<RUN_DIR>"
+bash scripts/check/check-runner.sh eslint "<RUN_DIR>"
 ```
 
 ### 2. TypeScript
 
 ```bash
-bash scripts/check/full-check.sh tsc "<RUN_DIR>"
+bash scripts/check/check-runner.sh tsc "<RUN_DIR>"
 ```
 
-### 3. Vitest 全量测试
+### 3. Vitest 常规测试
 
 ```bash
-bash scripts/check/full-check.sh test "<RUN_DIR>"
+bash scripts/check/check-runner.sh test "<RUN_DIR>"
 ```
 
 以前台方式执行，并续接同一终端会话直至完成。
@@ -133,13 +133,13 @@ bash scripts/check/full-check.sh test "<RUN_DIR>"
 ### 4. Build
 
 ```bash
-bash scripts/check/full-check.sh build "<RUN_DIR>"
+bash scripts/check/check-runner.sh build "<RUN_DIR>"
 ```
 
 ### 5. E2E
 
 ```bash
-bash scripts/check/full-check.sh e2e "<RUN_DIR>"
+bash scripts/check/check-runner.sh e2e "<RUN_DIR>"
 ```
 
 以前台方式执行，并续接同一终端会话直至完成。
@@ -147,7 +147,7 @@ bash scripts/check/full-check.sh e2e "<RUN_DIR>"
 ### 6. Blueprint
 
 ```bash
-bash scripts/check/full-check.sh blueprint "<RUN_DIR>"
+bash scripts/check/check-runner.sh blueprint "<RUN_DIR>"
 ```
 
 以前台方式执行，并续接同一终端会话直至完成。
@@ -155,7 +155,7 @@ bash scripts/check/full-check.sh blueprint "<RUN_DIR>"
 ### 7. 汇总
 
 ```bash
-bash scripts/check/full-check.sh summary "<RUN_DIR>"
+bash scripts/check/check-runner.sh summary "<RUN_DIR>"
 ```
 
 `summary` 已包含日志摘要，不需要额外读取长日志。

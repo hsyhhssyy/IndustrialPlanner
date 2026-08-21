@@ -1085,6 +1085,11 @@
   border-bottom: 0;
 }
 
+.regional-resources-card[data-device-class="desktop"] .regional-resource-row {
+  grid-template-columns: minmax(0, 1fr) 88px 24px 24px;
+  grid-template-areas: "item rate infinity remove";
+}
+
 .regional-resource-item {
   grid-area: item;
   display: flex;

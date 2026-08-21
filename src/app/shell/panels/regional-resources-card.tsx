@@ -99,7 +99,10 @@ export const RegionalResourcesCard = observer(function RegionalResourcesCard({
 
   return (
     <>
-      <article className={cm(styles, "inspector-card regional-resources-card")}>
+      <article
+        className={cm(styles, "inspector-card regional-resources-card")}
+        data-device-class={appHost.state.screenProfile.deviceClass}
+      >
         <div className={cm(styles, "card-header regional-resources-header")}>
           <h3>{t("regionalResources.title")}</h3>
           <span className={cm(styles, "regional-resources-region")}>{regionTag}</span>

@@ -1619,6 +1619,12 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         finishTask("interval-check", 1);
         setStatus({
           ...status,
+          phase: "idle",
+          saveState: "idle",
+          currentRunReason: null,
+          pendingLocalChangeCount: 0,
+          saveError: null,
+          lastError: null,
           lastSmallCheckAt: now,
         });
         return;

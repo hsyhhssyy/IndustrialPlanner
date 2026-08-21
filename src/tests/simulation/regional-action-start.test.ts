@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { createWorldDocument } from "@/domain/document/world-document";
@@ -90,6 +90,54 @@ describe("区域多基地 SimulationAction 启动", () => {
       expect(host.queries.getWarehouseStats()).not.toBeNull();
     } finally {
       host.dispose();
+    }
+  });
+
+  it("区域启动准入拒绝时写入结构化错误日志并保留运行态原因", async () => {
+    const registry = createRegistryContract();
+    const currentDocument = createWorldDocument({ baseId: "wuling_protocol_core" });
+    registry.baseDefinitions = registry.baseDefinitions.filter((definition) =>
+      definition.id === currentDocument.baseId
+    );
+    const workspace: WorkspaceContract = {
+      state: createWorkspaceState(),
+      registry,
+      app: null,
+      editor: {
+        document: createSnapshotStore(currentDocument),
+        state: {} as never,
+        queries: {} as never,
+        actions: {} as never,
+      },
+      render: null,
+      simulation: null,
+      sync: null,
+    };
+
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const host = createSimulationHost(workspace, { workerMode: "runtime" });
+    try {
+      host.actions.setRegionalMultiBaseEnabled(true);
+      await host.actions.start();
+
+      expect(host.state.runningState).toBe("stop");
+      expect(host.internalState.runtimeStatus).toMatchObject({
+        mode: "error",
+        error: "区域 武陵 至少需要两个基地才能启动多基地仿真。",
+      });
+      expect(consoleError).toHaveBeenCalledWith(
+        "[industrial-planner:simulation-runtime] Regional simulation start rejected.",
+        {
+          code: "insufficient-regional-bases",
+          currentBaseId: "wuling_protocol_core",
+          regionBaseCount: 1,
+          regionTag: "武陵",
+          error: "区域 武陵 至少需要两个基地才能启动多基地仿真。",
+        },
+      );
+    } finally {
+      host.dispose();
+      consoleError.mockRestore();
     }
   });
 });

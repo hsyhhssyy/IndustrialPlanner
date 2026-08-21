@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# AI-CORRECTION 2026-08-21:
+# 原“全量代码质量检查脚本”说明及其中的 full-check.sh 示例保留用于审计；当前脚本已改为通用检查执行器。
+# 本脚本由 .agents/skills/full-check/SKILL.md 与 .agents/skills/simple-check/SKILL.md 共同使用。
+# 调用前必须先读取并遵循对应 skill；检查范围与授权边界由 skill 决定。
+# 不得仅根据本脚本暴露的子命令擅自执行 all、e2e 或 blueprint。
 # ============================================================
 # 全量代码质量检查脚本（分步执行版，支持 RUN_DIR 入参并行）
 # 对应 .github/prompts/check.prompt.md 中的检查流程
@@ -52,7 +57,7 @@ get_run_dir() {
   elif [ -f .temp/full-check/latest.txt ]; then
     cat .temp/full-check/latest.txt
   else
-    echo "错误: 尚未初始化，请先执行: bash scripts/check/full-check.sh init" >&2
+    echo "错误: 尚未初始化，请先执行: bash scripts/check/check-runner.sh init" >&2
     exit 1
   fi
 }
@@ -185,7 +190,7 @@ case "$CMD" in
   poll)
     POLL_STEP="${2:-}"
     if [ -z "$POLL_STEP" ]; then
-      echo "错误: 请指定要查询的步骤名，例如: bash scripts/check/full-check.sh poll test" >&2
+      echo "错误: 请指定要查询的步骤名，例如: bash scripts/check/check-runner.sh poll test" >&2
       exit 1
     fi
     RUN_DIR=$(get_run_dir "${3:-}")
@@ -247,7 +252,7 @@ case "$CMD" in
     echo "| --- | --- | --- | --- |"
     echo "| ESLint | npx eslint . --ext .ts,.tsx | $(pass_fail "$ESLINT_EXIT") | $ESLINT_EXIT |"
     echo "| TypeScript | npx tsc -b --noEmit | $(pass_fail "$TSC_EXIT") | $TSC_EXIT |"
-    echo "| Vitest 全量测试 | npm run test | $(pass_fail "$TEST_EXIT") | $TEST_EXIT |"
+    echo "| Vitest 常规测试 | npm run test | $(pass_fail "$TEST_EXIT") | $TEST_EXIT |"
     echo "| Build | npm run build | $(pass_fail "$BUILD_EXIT") | $BUILD_EXIT |"
     echo "| E2E 测试 | npm run test:e2e | $(pass_fail "$E2E_EXIT") | $E2E_EXIT |"
     echo "| Blueprint 测试 | npm run test:blueprint | $(pass_fail "$BLUEPRINT_EXIT") | $BLUEPRINT_EXIT |"
@@ -323,17 +328,17 @@ case "$CMD" in
       "$RUN_DIR/blueprint.exit"
     print_fail_summary "$RUN_DIR/blueprint.log"
 
-    bash "$(cd "$(dirname "$0")" && pwd)/full-check.sh" summary "$RUN_DIR"
+    bash "$(cd "$(dirname "$0")" && pwd)/check-runner.sh" summary "$RUN_DIR"
     ;;
 
   *)
-    echo "用法: bash scripts/check/full-check.sh <子命令> [参数...]"
+    echo "用法: bash scripts/check/check-runner.sh <子命令> [参数...]"
     echo ""
     echo "子命令:"
     echo "  init       初始化一个新的 RUN_DIR（输出 RUN_DIR 路径）"
     echo "  eslint     仅执行 ESLint 检查"
     echo "  tsc        仅执行 TypeScript 类型检查"
-    echo "  test       仅执行 Vitest 全量测试（耗时长，建议后台启动）"
+    echo "  test       仅执行 Vitest 常规测试（耗时长，建议后台启动）"
     echo "  build      仅执行 Build"
     echo "  e2e        仅执行 E2E 测试（耗时长，建议后台启动）"
     echo "  blueprint  仅执行 Blueprint 测试（耗时长，建议后台启动）"
@@ -343,8 +348,8 @@ case "$CMD" in
     echo "  status     查看 RUN_DIR 各步骤状态"
     echo ""
     echo "长时间步骤模式:"
-    echo "  bash scripts/check/full-check.sh test \"\$RUN_DIR\" &"
-    echo "  bash scripts/check/full-check.sh poll test \"\$RUN_DIR\"  # 反复调用直到完成"
+    echo "  bash scripts/check/check-runner.sh test \"\$RUN_DIR\" &"
+    echo "  bash scripts/check/check-runner.sh poll test \"\$RUN_DIR\"  # 反复调用直到完成"
     exit 1
     ;;
 esac

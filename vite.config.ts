@@ -155,7 +155,11 @@ export default defineConfig({
         test: {
           name: "normal",
           include: ["src/tests/**/*.test.ts", "src/tests/**/*.test.tsx"],
-          exclude: ["src/tests/simulation/blueprint/**", "src/tests/simulation/blueprint-slow/**"],
+          exclude: [
+            "src/tests/e2e/**",
+            "src/tests/simulation/blueprint/**",
+            "src/tests/simulation/blueprint-slow/**",
+          ],
         },
       },
       {
