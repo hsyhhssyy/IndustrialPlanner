@@ -43,7 +43,11 @@ describe("cheat infinite device definitions", () => {
         iconPath: `device-icons/${deviceCase.id}.webp`,
         footprint: { width: 1, height: 1 },
         uiGroup: "cheat",
-        tags: ["AvatarHidden", "ChevronHidden"],
+        tags: [
+          "AvatarHidden",
+          "ChevronHidden",
+          ...(deviceCase.isPipe ? [] : ["BeltPortExtensionHidden"]),
+        ],
         requiresPower: false,
         powerDemand: 0,
       });

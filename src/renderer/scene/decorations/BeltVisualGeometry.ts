@@ -218,9 +218,10 @@ export function isStrictBeltDefinitionId(
 
 function isBeltPortExtensionEndpointDevice(
   ctx: DecorationSyncContext,
-  definitionId: string,
+  definition: EntityDefinition,
 ): boolean {
-  return !ctx.renderHost.workspace.registry.queries.isGeneralLogisticsDevice(definitionId)
+  return !ctx.renderHost.workspace.registry.queries.isGeneralLogisticsDevice(definition.id)
+    && !definition.tags.includes("BeltPortExtensionHidden")
 }
 
 export function resolveBeltInsertionEntries(ctx: DecorationSyncContext): BeltInsertionEntry[] {
@@ -366,7 +367,7 @@ function resolveBeltConnectedPortState(
     }
 
     hasConnectedPort = true
-    if (isBeltPortExtensionEndpointDevice(ctx, port.entity.definitionId)) {
+    if (isBeltPortExtensionEndpointDevice(ctx, port.definition)) {
       extensionPort = port
       break
     }

@@ -882,7 +882,11 @@ function createCheatInfiniteDeviceDefinition(options: {
     footprint: { width: 1, height: 1 },
     uiGroup: "cheat",
     displayOrder: options.displayOrder,
-    tags: ["AvatarHidden", "ChevronHidden"],
+    tags: [
+      "AvatarHidden",
+      "ChevronHidden",
+      ...(options.isPipe ? [] : ["BeltPortExtensionHidden"]),
+    ],
     requiresPower: false,
     powerDemand: 0,
     portGroups: [

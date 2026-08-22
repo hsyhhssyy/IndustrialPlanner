@@ -107,7 +107,7 @@ export function areActivityTagsEffective(
   }
 
   const effectiveActivityIdSet = new Set(effectiveActivityIds);
-  return activityIds.every((activityId) => effectiveActivityIdSet.has(activityId));
+  return activityIds.some((activityId) => effectiveActivityIdSet.has(activityId));
 }
 
 export function isItemAvailableByActivity(

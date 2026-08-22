@@ -128,6 +128,38 @@ describe("BeltVisualGeometry", () => {
     expect(resolveBeltPortExtensionEntries(logisticsToBeltCtx as never)).toEqual([])
   })
 
+  it("does not create extension entries when strict belts connect to the infinite solid device", () => {
+    const beltToInfiniteCtx = createGeometryContext({
+      entities: [
+        createBeltEntity("source-belt", { x: 0, y: 0 }, 0),
+        {
+          id: "target-infinite",
+          definitionId: "cheat_infinite_solid",
+          position: { x: 1, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+      ],
+    })
+    const infiniteToBeltCtx = createGeometryContext({
+      entities: [
+        {
+          id: "source-infinite",
+          definitionId: "cheat_infinite_solid",
+          position: { x: -1, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+        createBeltEntity("target-belt", { x: 0, y: 0 }, 0),
+      ],
+    })
+
+    expect(resolveBeltPortExtensionEntries(beltToInfiniteCtx as never)).toEqual([])
+    expect(resolveBeltPortExtensionEntries(infiniteToBeltCtx as never)).toEqual([])
+  })
+
   it("resolves a device output protrusion into a strict belt input", () => {
     const ctx = createGeometryContext({
       entities: [

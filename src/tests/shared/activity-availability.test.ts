@@ -53,11 +53,21 @@ describe("activity availability", () => {
     })).toEqual([ACTIVITY_LIMITED_FORMULA_1_ID]);
   });
 
-  it("requires every activity tag on a definition to be effective", () => {
+  it("treats a definition as effective when any activity tag is effective", () => {
+    const anotherActivityId = "another-activity";
+    const anotherActivityTag = `activity:${anotherActivityId}`;
+
     expect(resolveActivityIdsFromTags(["non-activity", ACTIVITY_LIMITED_FORMULA_1_TAG]))
       .toEqual([ACTIVITY_LIMITED_FORMULA_1_ID]);
-    expect(areActivityTagsEffective([ACTIVITY_LIMITED_FORMULA_1_TAG], [])).toBe(false);
-    expect(areActivityTagsEffective([ACTIVITY_LIMITED_FORMULA_1_TAG], [ACTIVITY_LIMITED_FORMULA_1_ID])).toBe(true);
+    expect(areActivityTagsEffective([ACTIVITY_LIMITED_FORMULA_1_TAG, anotherActivityTag], [])).toBe(false);
+    expect(areActivityTagsEffective(
+      [ACTIVITY_LIMITED_FORMULA_1_TAG, anotherActivityTag],
+      [ACTIVITY_LIMITED_FORMULA_1_ID],
+    )).toBe(true);
+    expect(areActivityTagsEffective(
+      [ACTIVITY_LIMITED_FORMULA_1_TAG, anotherActivityTag],
+      [anotherActivityId],
+    )).toBe(true);
     expect(areActivityTagsEffective(["non-activity"], [])).toBe(true);
   });
 });
